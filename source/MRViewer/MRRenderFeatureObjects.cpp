@@ -47,7 +47,7 @@ static void forEachVisualSubfeature( const Features::Primitives::Variant& featur
         Features::Primitives::Variant subfeature = params.create();
 
         // Shorten cylinder/cone axis.
-        if ( std::holds_alternative<Features::Primitives::ConeSegment>( feature ) )
+        if ( auto coneSeg = std::get_if<Features::Primitives::ConeSegment>( &feature ); coneSeg && !coneSeg->isZeroRadius() )
         {
             if ( auto line = std::get_if<Features::Primitives::ConeSegment>( &subfeature ); line && line->isZeroRadius() )
             {

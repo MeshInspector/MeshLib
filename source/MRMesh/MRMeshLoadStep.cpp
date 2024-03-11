@@ -614,6 +614,8 @@ std::filesystem::path getStepTemporaryDirectory()
         std::filesystem::create_directory( path, ec );
     return path;
 }
+
+std::mutex cOpenCascadeTempFileMutex = {};
 #endif
 
 VoidOrErrStr readFromFile( STEPControl_Reader& reader, const std::filesystem::path& path )
@@ -635,6 +637,8 @@ VoidOrErrStr readFromStream( STEPControl_Reader& reader, std::istream& in )
         return unexpected( "Failed to read STEP model" );
     return {};
 #else
+    std::unique_lock lock( cOpenCascadeTempFileMutex );
+
     const auto tempFilePath = getStepTemporaryDirectory() / "tempFile.step";
     std::error_code ec;
     MR_FINALLY {
@@ -671,6 +675,8 @@ VoidOrErrStr repairStepFile( STEPControl_Reader& reader )
     reader = STEPControl_Reader();
     return readFromStream( reader, buffer );
 #else
+    std::unique_lock lock( cOpenCascadeTempFileMutex );
+
     const auto auxFilePath = getStepTemporaryDirectory() / "auxFile.step";
     std::error_code ec;
     MR_FINALLY {
@@ -872,9 +878,6 @@ Expected<std::shared_ptr<Object>, std::string> stepModelToScene( STEPControl_Rea
 }
 
 std::mutex cOpenCascadeMutex = {};
-#if !STEP_READSTREAM_SUPPORTED
-std::mutex cOpenCascadeTempFileMutex = {};
-#endif
 
 Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( std::function<VoidOrErrStr ( STEPControl_Reader& )> readFunc, const MeshLoadSettings& settings )
 {

@@ -78,6 +78,9 @@ using namespace MR;
 // https://dev.opencascade.org/doc/overview/html/occt__upgrade.html#upgrade_750_message_messenger
 // https://dev.opencascade.org/doc/overview/html/occt__upgrade.html#upgrade_750_message_printer
 #define MODERN_MESSAGE_SUPPORTED ( ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 5 ) )
+// updated progress indication API support
+// https://dev.opencascade.org/doc/overview/html/occt__upgrade.html#upgrade_750_ProgressIndicator
+#define MODERN_PROGRESS_INDICATION_SUPPORTED ( ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 5 ) )
 // reading STEP data from streams support
 // https://www.opencascade.com/open-cascade-technology-7-5-0-released/
 #define STEP_READSTREAM_SUPPORTED ( ( ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 5 ) ) )
@@ -139,6 +142,7 @@ MessageHandler messageHandler;
 #pragma message( "Log redirecting is currently unsupported for OpenCASCADE versions prior to 7.4" )
 #endif
 
+#if MODERN_PROGRESS_INDICATION_SUPPORTED
 class ProgressIndicator final : public Message_ProgressIndicator
 {
 public:
@@ -157,6 +161,9 @@ private:
     ProgressCallback callback_;
     bool interrupted_{ false };
 };
+#else
+#pragma message( "Progress indication is currently unsupported for OpenCASCADE versions prior to 7.4" )
+#endif
 
 Vector3d toVector( const gp_XYZ& xyz )
 {
@@ -191,8 +198,12 @@ public:
         {
             MR_NAMED_TIMER( "transfer roots" )
 
+#if MODERN_PROGRESS_INDICATION_SUPPORTED
             ProgressIndicator progress( subprogress( callback, 0.00f, 0.80f ) );
             reader.TransferRoots( progress.Start() );
+#else
+            reader.TransferRoots();
+#endif
         }
 
         std::deque<TopoDS_Shape> solids;
@@ -639,11 +650,15 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileExImpl( std::function<VoidOrE
     {
         MR_NAMED_TIMER( "transfer data" )
 
-        ProgressIndicator progress( subprogress( settings.callback, 0.25f, 0.85f ) );
 
         reader.SetNameMode( true );
         reader.SetColorMode( true );
+#if MODERN_PROGRESS_INDICATION_SUPPORTED
+        ProgressIndicator progress( subprogress( settings.callback, 0.25f, 0.85f ) );
         if ( reader.Transfer( document, progress.Start() ) != Standard_True )
+#else
+        if ( reader.Transfer( document ) != Standard_True )
+#endif
             return unexpected( "Failed to read STEP model" );
     }
 

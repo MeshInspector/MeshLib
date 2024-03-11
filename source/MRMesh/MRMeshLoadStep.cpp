@@ -548,7 +548,7 @@ VoidOrErrStr readFromStream( STEPControl_Reader& reader, std::istream& in )
     std::error_code ec;
     MR_FINALLY {
         std::filesystem::remove( tempFilePath, ec );
-    }
+    };
 
     {
         std::ofstream ofs( tempFileName, std::ios::binary );
@@ -587,7 +587,7 @@ VoidOrErrStr repairStepFile( STEPControl_Reader& reader )
     std::error_code ec;
     MR_FINALLY {
         std::filesystem::remove( auxFilePath, ec );
-    }
+    };
 
     {
         // NOTE: opening the file in binary mode and passing to the StepData_StepWriter object lead to segfault

@@ -26,6 +26,7 @@ namespace Cuda
         DynamicArray<float> data;
         int3 dims;
         float3 voxelSize;
+        float3 origin;
     };
 
     void pointsToDistanceVolumeKernel( const Node3* nodes, const float3* points, const float3* normals, SimpleVolume* volume, PointsToMeshParameters params );

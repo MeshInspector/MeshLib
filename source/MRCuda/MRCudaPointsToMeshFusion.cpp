@@ -27,7 +27,22 @@ namespace Cuda
             .minWeight = params.minWeight
         };
 
+        auto box = cloud.getBoundingBox();
+        auto expansion = Vector3f::diagonal( 2 * params.voxelSize );
+       
         SimpleVolume cudaVolume;
+        const auto origin = box.min - expansion;
+        cudaVolume.origin.x = origin.x;
+        cudaVolume.origin.y = origin.y;
+        cudaVolume.origin.z = origin.z;
+
+        cudaVolume.voxelSize.x = cudaVolume.voxelSize.y = cudaVolume.voxelSize.z = params.voxelSize;
+        const auto dimensions = Vector3i( ( box.max + expansion - origin ) / params.voxelSize ) + Vector3i::diagonal( 1 );
+        cudaVolume.dims.x = dimensions.x;
+        cudaVolume.dims.y = dimensions.y;
+        cudaVolume.dims.z = dimensions.z;
+        cudaVolume.data.resize( cudaVolume.dims.x * cudaVolume.dims.y * cudaVolume.dims.z );
+
         pointsToDistanceVolumeKernel( cudaNodes.data(), cudaPoints.data(), cudaNormals.data(), &cudaVolume, cudaParams );
 
         MR::SimpleVolume res;

@@ -1,5 +1,6 @@
 #include "MRMeshLoadStep.h"
 #ifndef MRMESH_NO_OPENCASCADE
+#include "MRFinally.h"
 #include "MRMesh.h"
 #include "MRMeshBuilder.h"
 #include "MRObjectMesh.h"
@@ -604,6 +605,93 @@ std::vector<Triangle3f> loadShape( const TopoDS_Shape& shape )
     return triples;
 }
 
+#if !STEP_READSTREAM_SUPPORTED
+std::filesystem::path getStepTemporaryDirectory()
+{
+    const auto path = std::filesystem::temp_directory_path() / "MeshLib_MeshLoadStep";
+    std::error_code ec;
+    if ( !std::filesystem::exists( path, ec ) )
+        std::filesystem::create_directory( path, ec );
+    return path;
+}
+#endif
+
+VoidOrErrStr readFromFile( STEPControl_Reader& reader, const std::filesystem::path& path )
+{
+    MR_TIMER
+
+    const TCollection_AsciiString pathStr( path.c_str() );
+    if ( reader.ReadFile( pathStr.ToCString() ) != IFSelect_RetDone )
+        return unexpected( "Failed to read STEP model" );
+    return {};
+}
+
+VoidOrErrStr readFromStream( STEPControl_Reader& reader, std::istream& in )
+{
+    MR_TIMER
+
+#if STEP_READSTREAM_SUPPORTED
+    if ( reader.ReadStream( "STEP file", in ) != IFSelect_RetDone )
+        return unexpected( "Failed to read STEP model" );
+    return {};
+#else
+    const auto tempFilePath = getStepTemporaryDirectory() / "tempFile.step";
+    std::error_code ec;
+    MR_FINALLY {
+        std::filesystem::remove( tempFilePath, ec );
+    }
+
+    {
+        std::ofstream ofs( tempFileName, std::ios::binary );
+        if ( !ofs )
+            return unexpected( std::string( "Cannot open buffer file" ) );
+
+        ofs << in.rdbuf();
+    }
+
+    return readFromFile( reader, tempFilePath );
+#endif
+}
+
+VoidOrErrStr repairStepFile( STEPControl_Reader& reader )
+{
+    const auto model = reader.StepModel();
+    const auto protocol = Handle( StepData_Protocol )::DownCast( model->Protocol() );
+
+    StepData_StepWriter sw( model );
+    sw.SendModel( protocol );
+
+#if STEP_READSTREAM_SUPPORTED
+    std::stringstream buffer;
+    if ( !sw.Print( buffer ) )
+        return unexpected( "Failed to repair STEP model" );
+
+    buffer.seekp( 0, std::ios::beg );
+
+    reader = STEPControl_Reader();
+    return readFromStream( reader, buffer );
+#else
+    const auto auxFilePath = getStepTemporaryDirectory() / "auxFile.step";
+    std::error_code ec;
+    MR_FINALLY {
+        std::filesystem::remove( auxFilePath, ec );
+    }
+
+    {
+        // NOTE: opening the file in binary mode and passing to the StepData_StepWriter object lead to segfault
+        std::ofstream ofs( auxFilePath );
+        if ( !ofs )
+            return unexpected( std::string( "Cannot open buffer file" ) );
+
+        if ( !sw.Print( ofs ) )
+            return unexpected( "Failed to repair STEP model" );
+    }
+
+    reader = STEPControl_Reader();
+    return readFromFile( reader, auxFilePath );
+#endif
+}
+
 #if STEP_READER_FIXED
 // read STEP file without any work-arounds
 VoidOrErrStr readStepData( STEPControl_Reader& reader, std::istream& in, const ProgressCallback& )
@@ -788,6 +876,70 @@ std::mutex cOpenCascadeMutex = {};
 std::mutex cOpenCascadeTempFileMutex = {};
 #endif
 
+Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( std::function<VoidOrErrStr ( STEPControl_Reader& )> readFunc, const MeshLoadSettings& settings )
+{
+    MR_TIMER
+
+    std::unique_lock lock( cOpenCascadeMutex );
+
+    STEPControl_Reader reader;
+    {
+        auto res = readFunc( reader );
+        if ( !res )
+            return unexpected( std::move( res.error() ) );
+    }
+
+    if ( !reportProgress( settings.callback, 0.50f ) )
+        return unexpectedOperationCanceled();
+
+    StepLoader loader;
+    loader.loadModelStructure( reader, subprogress( settings.callback, 0.50f, 1.00f ) );
+    loader.loadMeshes();
+
+    return loader.rootObject();
+}
+
+Expected<std::shared_ptr<Object>> fromSceneStepFileExImpl( std::function<VoidOrErrStr ( STEPControl_Reader& )> readFunc, const MeshLoadSettings& settings )
+{
+    MR_TIMER
+
+    std::unique_lock lock( cOpenCascadeMutex );
+
+    STEPCAFControl_Reader reader;
+    {
+        auto res = readFunc( reader.ChangeReader() );
+        if ( !res )
+            return unexpected( std::move( res.error() ) );
+    }
+
+    if ( !reportProgress( settings.callback, 0.25f ) )
+        return unexpectedOperationCanceled();
+
+    Handle( TDocStd_Document ) document = new TDocStd_Document( "MDTV-CAF" );
+    {
+        MR_NAMED_TIMER( "transfer data" )
+
+        ProgressIndicator progress( subprogress( settings.callback, 0.25f, 0.85f ) );
+
+        reader.SetNameMode( true );
+        reader.SetColorMode( true );
+        if ( reader.Transfer( document, progress.Start() ) != Standard_True )
+            return unexpected( "Failed to read STEP model" );
+    }
+
+    if ( !reportProgress( settings.callback, 0.85f ) )
+        return unexpectedOperationCanceled();
+
+    StepLoader loader;
+    loader.loadModelStructure( document );
+    loader.loadMeshes();
+
+    if ( !reportProgress( settings.callback, 1.00f ) )
+        return unexpectedOperationCanceled();
+
+    return loader.rootObject();
+}
+
 } // namespace
 
 namespace MR::MeshLoad
@@ -796,6 +948,15 @@ namespace MR::MeshLoad
 #if STEP_READSTREAM_SUPPORTED
 Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::filesystem::path& path, const MeshLoadSettings& settings )
 {
+    return fromSceneStepFileImpl( [&] ( STEPControl_Reader& reader )
+    {
+        return readFromFile( reader, path )
+#if !STEP_READER_FIXED
+        .and_then( [&] { return repairStepFile( reader ); } )
+#endif
+        ;
+    }, settings );
+
     std::ifstream in( path, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( path ) );
@@ -819,7 +980,14 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::fil
 
 Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& in, const MeshLoadSettings& settings )
 {
-    MR_TIMER
+    return fromSceneStepFileExImpl( [&] ( STEPControl_Reader& reader )
+    {
+        return readFromStream( reader, in )
+#if !STEP_READER_FIXED
+        .and_then( [&] { return repairStepFile( reader ); } )
+#endif
+        ;
+    }, settings );
 
     // NOTE: OpenCASCADE STEP reader is NOT thread-safe
     std::unique_lock lock( cOpenCascadeMutex );
@@ -865,44 +1033,30 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::fil
 }
 #endif
 
-Expected<std::shared_ptr<Object>> fromSceneStepFile2( const std::filesystem::path& path, const MeshLoadSettings& settings )
+Expected<std::shared_ptr<Object>> fromSceneStepFileEx( const std::filesystem::path& path, const MeshLoadSettings& settings )
 {
-    MR_TIMER
-
-    std::unique_lock lock( cOpenCascadeMutex );
-
-    STEPCAFControl_Reader reader;
-    reader.SetNameMode( true );
-    reader.SetColorMode( true );
-
+    return fromSceneStepFileExImpl( [&] ( STEPControl_Reader& reader )
     {
-        MR_NAMED_TIMER( "read file" )
+        return readFromFile( reader, path )
+#if !STEP_READER_FIXED
+        .and_then( [&] { return repairStepFile( reader ); } )
+#endif
+        ;
+    }, settings );
+}
 
-        const TCollection_AsciiString pathStr( path.c_str() );
-        if ( reader.ReadFile( pathStr.ToCString() ) != IFSelect_RetDone )
-            return unexpected( "Failed to read STEP model" );
-    }
-
-    reportProgress( settings.callback, 0.25f );
-
-    Handle( TDocStd_Document ) document = new TDocStd_Document( "MDTV-CAF" );
+Expected<std::shared_ptr<Object>> fromSceneStepFileEx( std::istream& in, const MeshLoadSettings& settings )
+{
+    return fromSceneStepFileExImpl( [&] ( STEPControl_Reader& reader )
     {
-        MR_NAMED_TIMER( "transfer data" )
-
-        ProgressIndicator progress( subprogress( settings.callback, 0.25f, 0.85f ) );
-
-        if ( reader.Transfer( document, progress.Start() ) != Standard_True )
-            return unexpected( "Failed to read STEP model" );
-    }
-
-    reportProgress( settings.callback, 0.85f );
-
-    StepLoader loader;
-    loader.loadModelStructure( document );
-    loader.loadMeshes();
-
-    return loader.rootObject();
+        return readFromStream( reader, in )
+#if !STEP_READER_FIXED
+        .and_then( [&] { return repairStepFile( reader ); } )
+#endif
+        ;
+    }, settings );
 }
 
 } // namespace MR::MeshLoad
-#endif
+
+#endif // MRMESH_NO_OPENCASCADE

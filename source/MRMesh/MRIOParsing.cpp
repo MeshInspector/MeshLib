@@ -99,7 +99,7 @@ VoidOrErrStr parseTextCoordinate( const std::string_view& str, Vector3<T>& v, Ve
     int ci = 0;
     const auto color = [&] ( auto& ctx ) { if ( c ) ( *c )[ci++] = uint8_t( _attr( ctx ) ); };
 
-    constexpr auto spaceRule = ( ascii::space | ',' | ';' );
+    const auto spaceRule = ( ascii::space | ',' | ';' );
     const auto coordRule = ( floatT[coord] >> floatT[coord] >> floatT[coord] );
     const auto normalRule = ( floatT[normal] >> floatT[normal] >> floatT[normal] );
     const auto colorRule = ( floatT[color] >> floatT[color] >> floatT[color] );

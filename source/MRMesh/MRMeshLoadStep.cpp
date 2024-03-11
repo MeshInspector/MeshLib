@@ -191,7 +191,7 @@ public:
         return rootObj_;
     }
 
-    void loadModelStructure( STEPControl_Reader& reader, ProgressCallback callback )
+    void loadModelStructure( STEPControl_Reader& reader, [[maybe_unused]] ProgressCallback callback )
     {
         MR_TIMER
 

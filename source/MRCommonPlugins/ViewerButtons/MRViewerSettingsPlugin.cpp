@@ -636,7 +636,8 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
     }
 
     ImGui::SetNextItemWidth( 100 * menuScaling );
-    ImGui::DragFloatValid( "Scroll modifier", &viewer->scrollForce, 0.01f, 0.2f, 3.0f );
+    ImGui::DragFloatValid( "Zoom Gain", &viewer->scrollForce, 0.01f, 0.2f, 3.0f );
+    UI::setTooltipIfHovered( "Sensitivity for mouse wheel rotation affecting the speed of zooming.", menuScaling );
 }
 
 void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth, float menuScaling )

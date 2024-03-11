@@ -6,5 +6,7 @@ project(MRPch CXX)
 
 file(GLOB HEADERS "*.h")
 
-install(FILES ${HEADERS}
-        DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}")
+install(
+  FILES ${HEADERS}
+  DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}"
+)

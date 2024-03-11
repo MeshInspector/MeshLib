@@ -2080,7 +2080,11 @@ void RibbonMenu::setupShortcuts_()
     addRibbonItemShortcut_( "Ribbon Scene Show only next", { GLFW_KEY_F4, 0 }, ShortcutManager::Category::View );
     addRibbonItemShortcut_( "Ribbon Scene Rename", { GLFW_KEY_F2, 0 }, ShortcutManager::Category::Objects );
     addRibbonItemShortcut_( "Ribbon Scene Remove selected objects", { GLFW_KEY_R, GLFW_MOD_SHIFT }, ShortcutManager::Category::Objects );
+#if defined( __APPLE__ )
+    addRibbonItemShortcut_( "Viewer settings", { GLFW_KEY_COMMA, GLFW_MOD_SUPER }, ShortcutManager::Category::Info );
+#else
     addRibbonItemShortcut_( "Viewer settings", { GLFW_KEY_COMMA, GLFW_MOD_CONTROL }, ShortcutManager::Category::Info );
+#endif
 }
 
 void RibbonMenu::drawShortcutsWindow_()
@@ -2228,6 +2232,16 @@ void RibbonMenu::drawShortcutsWindow_()
             {
                 ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
                 addReadOnlyLine( ShortcutManager::getModifierString( GLFW_MOD_SHIFT ) );
+                ImGui::SameLine( 0, style.ItemInnerSpacing.x );
+                ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
+                ImGui::Text( "+" );
+                ImGui::SameLine( 0, style.ItemInnerSpacing.x );
+            }
+
+            if ( key.mod & GLFW_MOD_SUPER )
+            {
+                ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
+                addReadOnlyLine( ShortcutManager::getModifierString( GLFW_MOD_SUPER ) );
                 ImGui::SameLine( 0, style.ItemInnerSpacing.x );
                 ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
                 ImGui::Text( "+" );

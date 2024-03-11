@@ -146,6 +146,9 @@ enum FaceIncidence
 /// \param allPointToRoots if true, then every element in the structure will point directly to the root of its respective component
 [[nodiscard]] MRMESH_API UnionFind<UndirectedEdgeId> getUnionFindStructureUndirectedEdges( const Mesh& mesh, bool allPointToRoots = false );
 
+/// returns union of connected components, each of which contains at least one seed edge
+[[nodiscard]] MRMESH_API UndirectedEdgeBitSet getComponentsUndirectedEdges( const Mesh& mesh, const UndirectedEdgeBitSet& seeds );
+
 // \}
 
 } // namespace MeshComponents

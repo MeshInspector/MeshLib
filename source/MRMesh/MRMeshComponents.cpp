@@ -131,7 +131,7 @@ FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, Fa
     MR_TIMER
 
     FaceBitSet res;
-    if ( seeds.empty() )
+    if ( seeds.none() )
         return res;
 
     auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
@@ -146,12 +146,15 @@ FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, Fa
             faceRoot = unionFindStruct.unite( faceRoot, s ).first;
     }
 
-    const auto& allRoots = unionFindStruct.roots();
-    res.resize( allRoots.size() );
-    for ( auto f : region )
+    if ( faceRoot )
     {
-        if ( allRoots[f] == faceRoot )
-            res.set( f );
+        const auto& allRoots = unionFindStruct.roots();
+        res.resize( allRoots.size() );
+        BitSetParallelFor( region, [&]( FaceId f )
+        {
+            if ( allRoots[f] == faceRoot )
+                res.set( f );
+        } );
     }
     return res;
 }
@@ -223,7 +226,7 @@ VertBitSet getComponentsVerts( const Mesh& mesh, const VertBitSet& seeds, const 
     MR_TIMER
 
     VertBitSet res;
-    if ( seeds.empty() )
+    if ( seeds.none() )
         return res;
 
     auto unionFindStruct = getUnionFindStructureVerts( mesh, region );
@@ -238,15 +241,17 @@ VertBitSet getComponentsVerts( const Mesh& mesh, const VertBitSet& seeds, const 
             vertRoot = unionFindStruct.unite( vertRoot, s ).first;
     }
 
-    const auto& allRoots = unionFindStruct.roots();
-    res.resize( allRoots.size() );
-    for ( auto v : vertRegion )
+    if ( vertRoot )
     {
-        if ( allRoots[v] == vertRoot )
-            res.set( v );
+        const auto& allRoots = unionFindStruct.roots();
+        res.resize( allRoots.size() );
+        BitSetParallelFor( vertRegion, [&]( VertId v )
+        {
+            if ( allRoots[v] == vertRoot )
+                res.set( v );
+        } );
     }
     return res;
-
 }
 
 size_t getNumComponents( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
@@ -864,6 +869,34 @@ UnionFind<UndirectedEdgeId> getUnionFindStructureUndirectedEdges( const Mesh& me
         } );
     }
 
+    return res;
+}
+
+UndirectedEdgeBitSet getComponentsUndirectedEdges( const Mesh& mesh, const UndirectedEdgeBitSet& seeds )
+{
+    MR_TIMER
+    auto unionFindStruct = getUnionFindStructureUndirectedEdges( mesh, true );
+
+    UndirectedEdgeId commonRoot;
+    for ( auto s : seeds )
+    {
+        if ( commonRoot )
+            commonRoot = unionFindStruct.unite( commonRoot, s ).first;
+        else
+            commonRoot = unionFindStruct.find( s );
+    }
+
+    UndirectedEdgeBitSet res;
+    if ( commonRoot )
+    {
+        const auto& allRoots = unionFindStruct.roots();
+        res.resize( allRoots.size() );
+        BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
+        {
+            if ( allRoots[ue] == commonRoot )
+                res.set( ue );
+        } );
+    }
     return res;
 }
 

@@ -311,11 +311,21 @@ Expected<TerrainEmbedder::MappedMeshContours, std::string> TerrainEmbedder::prep
 
 Expected<std::vector<EdgeLoop>, std::string> TerrainEmbedder::cutTerrain( const MappedMeshContours& mmc )
 {
-    auto cutRes = cutMesh( result_, mmc.contours );
+    CutMeshParameters cutParams;
+    cutParams.new2OldMap = params_.new2oldFaces;
+    auto cutRes = cutMesh( result_, mmc.contours, cutParams );
     if ( cutRes.fbsWithCountourIntersections.any() )
         return unexpected( "Wall contours have self-intersections" );
-
-    result_.topology.deleteFaces( result_.topology.getValidFaces() - fillContourLeft( result_.topology, cutRes.resultCut ) );
+    auto facesToDelete = result_.topology.getValidFaces() - fillContourLeft( result_.topology, cutRes.resultCut );
+    if ( params_.new2oldFaces )
+    {
+        for ( auto f : facesToDelete )
+        {
+            if ( f < params_.new2oldFaces->size() )
+                ( *params_.new2oldFaces )[f] = FaceId(); // invalidate removed faces
+        }
+    }
+    result_.topology.deleteFaces( facesToDelete );
     result_.invalidateCaches();
     return cutRes.resultCut;
 }

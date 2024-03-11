@@ -3,7 +3,6 @@
 #include "MRVector3.h"
 #include "MRColor.h"
 
-#include <boost/algorithm/string/trim.hpp>
 #include <boost/spirit/home/x3.hpp>
 
 // helper macro to make code cleaner
@@ -88,22 +87,57 @@ Expected<MR::Buffer<char>, std::string> readCharBuffer( std::istream& in )
     return data;
 }
 
-template<typename T>
-VoidOrErrStr parseTextCoordinate( const std::string_view& str, Vector3<T>& v )
+template <typename T>
+VoidOrErrStr parseTextCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* n, Color* c )
 {
     using namespace boost::spirit::x3;
 
-    int i = 0;
-    auto coord = [&] ( auto& ctx ) { v[i++] = _attr( ctx ); };
+    int vi = 0;
+    const auto coord = [&] ( auto& ctx ) { v[vi++] = _attr( ctx ); };
+    int ni = 0;
+    const auto normal = [&] ( auto& ctx ) { if ( n ) ( *n )[ni++] = _attr( ctx ); };
+    int ci = 0;
+    const auto color = [&] ( auto& ctx ) { if ( c ) ( *c )[ci++] = uint8_t( _attr( ctx ) ); };
 
-    bool r = phrase_parse(
-        str.begin(),
-        str.end(),
-        ( floatT[coord] >> floatT[coord] >> floatT[coord] ),
-        ascii::space | ascii::punct
-    );
+    constexpr auto spaceRule = ( ascii::space | ',' | ';' );
+    const auto coordRule = ( floatT[coord] >> floatT[coord] >> floatT[coord] );
+    const auto normalRule = ( floatT[normal] >> floatT[normal] >> floatT[normal] );
+    const auto colorRule = ( floatT[color] >> floatT[color] >> floatT[color] );
+
+    bool r;
+    if ( c != nullptr )
+    {
+        r = phrase_parse(
+            str.begin(),
+            str.end(),
+            ( coordRule >> -( normalRule >> -colorRule ) ),
+            spaceRule
+        );
+    }
+    else if ( n != nullptr )
+    {
+        r = phrase_parse(
+            str.begin(),
+            str.end(),
+            ( coordRule >> -normalRule ),
+            spaceRule
+        );
+    }
+    else
+    {
+        r = phrase_parse(
+            str.begin(),
+            str.end(),
+            coordRule,
+            spaceRule
+        );
+    }
     if ( !r )
-        return unexpected( "Failed to parse vertex" );
+        return unexpected( "Failed to parse coord" );
+
+    // explicitly set alpha value if color is present
+    if ( c != nullptr && ci == 3 )
+        c->a = 255;
 
     return {};
 }
@@ -207,51 +241,7 @@ VoidOrErrStr parseSingleNumber( const std::string_view& str, T& num )
 template <typename T>
 VoidOrErrStr parseAscCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* n, Color* c )
 {
-    using namespace boost::spirit::x3;
-
-    int vi = 0;
-    auto coord = [&] ( auto& ctx ) { v[vi++] = _attr( ctx ); };
-    int ni = 0;
-    auto normal = [&] ( auto& ctx ) { if ( n ) ( *n )[ni++] = _attr( ctx ); };
-    int ci = 0;
-    auto color = [&] ( auto& ctx ) { if ( c ) ( *c )[ci++] = uint8_t( _attr( ctx ) ); };
-
-    bool r;
-    if ( c != nullptr )
-    {
-        r = phrase_parse(
-            str.begin(),
-            str.end(),
-            ( floatT[coord] >> floatT[coord] >> floatT[coord] >> -( floatT[normal] >> floatT[normal] >> floatT[normal] >> -( floatT[color] >> floatT[color] >> floatT[color] ) ) ),
-            ascii::space
-        );
-    }
-    else if ( n != nullptr )
-    {
-        r = phrase_parse(
-            str.begin(),
-            str.end(),
-            ( floatT[coord] >> floatT[coord] >> floatT[coord] >> -( floatT[normal] >> floatT[normal] >> floatT[normal] ) ),
-            ascii::space
-        );
-    }
-    else
-    {
-        r = phrase_parse(
-            str.begin(),
-            str.end(),
-            ( floatT[coord] >> floatT[coord] >> floatT[coord] ),
-            ascii::space
-        );
-    }
-    if ( !r )
-        return unexpected( "Failed to parse coord" );
-
-    // explicitly set alpha value if color is present
-    if ( c != nullptr && ci == 3 )
-        c->a = 255;
-
-    return {};
+    return parseTextCoordinate( str, v, n, c );
 }
 
 template VoidOrErrStr parseSingleNumber<float>( const std::string_view& str, float& num );
@@ -260,8 +250,8 @@ template VoidOrErrStr parseSingleNumber<int>( const std::string_view& str, int& 
 template VoidOrErrStr parsePtsCoordinate<float>( const std::string_view& str, Vector3f& v, Color& c );
 template VoidOrErrStr parsePtsCoordinate<double>( const std::string_view& str, Vector3d& v, Color& c );
 
-template VoidOrErrStr parseTextCoordinate<float>( const std::string_view& str, Vector3f& v );
-template VoidOrErrStr parseTextCoordinate<double>( const std::string_view& str, Vector3d& v );
+template VoidOrErrStr parseTextCoordinate<float>( const std::string_view& str, Vector3f& v, Vector3f* n, Color* c );
+template VoidOrErrStr parseTextCoordinate<double>( const std::string_view& str, Vector3d& v, Vector3d* n, Color* c );
 
 template VoidOrErrStr parseObjCoordinate<float>( const std::string_view& str, Vector3f& v, Vector3f* c );
 template VoidOrErrStr parseObjCoordinate<double>( const std::string_view& str, Vector3d& v, Vector3d* c );

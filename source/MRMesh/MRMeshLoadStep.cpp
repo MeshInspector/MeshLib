@@ -183,6 +183,63 @@ public:
         return rootObj_;
     }
 
+    void loadModelStructure( STEPControl_Reader& reader, ProgressCallback callback )
+    {
+        MR_TIMER
+
+        {
+            MR_NAMED_TIMER( "transfer roots" )
+
+            ProgressIndicator progress( subprogress( callback, 0.00f, 0.80f ) );
+            reader.TransferRoots( progress.Start() );
+        }
+
+        std::deque<TopoDS_Shape> solids;
+        for ( auto shi = 1; shi <= reader.NbShapes(); ++shi )
+        {
+            const auto shape = reader.Shape( shi );
+
+            size_t solidCount = 0;
+            for ( auto explorer = TopExp_Explorer( shape, TopAbs_SOLID ); explorer.More(); explorer.Next() )
+            {
+                solids.emplace_back( explorer.Current() );
+                ++solidCount;
+            }
+
+            // import the whole shape if it doesn't consist of solids
+            if ( solidCount == 0 )
+                solids.emplace_back( shape );
+        }
+
+        rootObj_ = std::make_shared<Object>();
+        rootObj_->select( true );
+
+        auto solidIndex = 1;
+        for ( const auto& shape : solids )
+        {
+            const auto& location = shape.Location();
+            const auto xf = AffineXf3f( toXf( location.Transformation() ) );
+
+            auto objMesh = std::make_shared<ObjectMesh>();
+            objMesh->setName( fmt::format( "Solid{}", solidIndex++ ) );
+            objMesh->setMesh( std::make_shared<Mesh>() );
+            objMesh->setXf( xf );
+            objMesh->select( true );
+            rootObj_->addChild( objMesh );
+
+            meshTriangulationContexts_.emplace_back( shape, objMesh );
+        }
+
+        if ( solids.size() > 1 )
+        {
+            // create a fictional 'assembly' object
+            auto assemblyObj = rootObj_;
+            rootObj_ = std::make_shared<Object>();
+            rootObj_->select( true );
+            rootObj_->addChild( std::move( assemblyObj ) );
+        }
+    }
+
     /// load object structure without actual geometry data
     void loadModelStructure( const Handle( TDocStd_Document )& document )
     {

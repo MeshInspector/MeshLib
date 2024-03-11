@@ -259,12 +259,12 @@ Expected<MR::DistanceMap, std::string> convertImageToDistanceMap( const Image& i
     for ( int i = 0; i < image.pixels.size(); ++i )
     {
         const bool monochrome = pixels[i].r == pixels[i].g && pixels[i].g == pixels[i].b;
-        uint8_t value = pixels[i].r;
+        float value = float(pixels[i].r);
         if ( !monochrome )
         {
-            auto maxv = std::max( std::max( pixels[i].r, pixels[i].g ), pixels[i].b );
-            auto minv = std::min( std::min( pixels[i].r, pixels[i].g ), pixels[i].b );
-            value = ( maxv + minv ) / 2;
+            value = 0.299f * float( pixels[i].r ) +
+                0.587f * float( pixels[i].g ) +
+                0.114f * float( pixels[i].b );
         }
         if ( value < threshold )
             continue;

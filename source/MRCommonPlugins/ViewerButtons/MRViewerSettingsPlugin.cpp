@@ -265,12 +265,12 @@ skip:
         UI::checkbox( "Deselect on Hide",
                                                 std::bind( &RibbonMenu::getDeselectNewHiddenObjects, ribbonMenu_ ),
                                                 std::bind( &RibbonMenu::setDeselectNewHiddenObjects, ribbonMenu_, std::placeholders::_1 ) );
-        UI::checkbox( "Close Context Menu on Change",
+        UI::checkbox( "Close Context Menu on Click",
                                                 std::bind( &RibbonMenu::getCloseContextOnChange, ribbonMenu_ ),
                                                 std::bind( &RibbonMenu::setCloseContextOnChange, ribbonMenu_, std::placeholders::_1 ) );
-        UI::setTooltipIfHovered( "Close scene context menu on any change", menuScaling );
+        UI::setTooltipIfHovered( "Close scene context menu on any change or click outside", menuScaling );
 
-        UI::checkbox( "Close Tool on Activating Another One",
+        UI::checkbox( "Auto Close Previous Tool",
                                                 std::bind( &RibbonMenu::getAutoCloseBlockingPlugins, ribbonMenu_ ),
                                                 std::bind( &RibbonMenu::setAutoCloseBlockingPlugins, ribbonMenu_, std::placeholders::_1 ) );
         UI::setTooltipIfHovered( "Automatically close blocking tool when another blocking tool is activated", menuScaling );

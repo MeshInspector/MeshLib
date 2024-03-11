@@ -183,23 +183,20 @@ public:
         return rootObj_;
     }
 
-    void init( const Handle( TDocStd_Document )& document )
-    {
-        shapeTool_ = XCAFDoc_DocumentTool::ShapeTool( document->Main() );
-        colorTool_ = XCAFDoc_DocumentTool::ColorTool( document->Main() );
-    }
-
     /// load object structure without actual geometry data
-    void loadStructure()
+    void loadModelStructure( const Handle( TDocStd_Document )& document )
     {
         MR_TIMER
+
+        const auto shapeTool = XCAFDoc_DocumentTool::ShapeTool( document->Main() );
+        const auto colorTool = XCAFDoc_DocumentTool::ColorTool( document->Main() );
 
         rootObj_ = std::make_shared<Object>();
         rootObj_->select( true );
         objStack_.push( rootObj_ );
 
         TDF_LabelSequence labels;
-        shapeTool_->GetFreeShapes( labels );
+        shapeTool->GetFreeShapes( labels );
         for ( TDF_LabelSequence::Iterator it( labels ); it.More(); it.Next() )
             readLabel_( it.Value() );
 
@@ -243,15 +240,15 @@ public:
 private:
     void readLabel_( const TDF_Label& label )
     {
-        assert( !shapeTool_.IsNull() );
+        using ShapeTool = XCAFDoc_ShapeTool;
 
-        const auto shape = shapeTool_->GetShape( label );
+        const auto shape = ShapeTool::GetShape( label );
         const auto name = readName_( label );
 
         const auto& location = shape.Location();
         const auto xf = AffineXf3f( toXf( location.Transformation() ) );
 
-        if ( shapeTool_->IsAssembly( label ) )
+        if ( ShapeTool::IsAssembly( label ) )
         {
             auto obj = std::make_shared<Object>();
             obj->setName( name );
@@ -261,7 +258,7 @@ private:
 
             iterateLabel_( label, obj );
         }
-        else if ( shapeTool_->IsSubShape( label ) )
+        else if ( ShapeTool::IsSubShape( label ) )
         {
             auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( objStack_.top() );
             assert( objMesh );
@@ -280,10 +277,10 @@ private:
 
             meshTriangulationContexts_.emplace_back( shape, objMesh );
 
-            if ( shapeTool_->IsReference( label ) )
+            if ( ShapeTool::IsReference( label ) )
             {
                 TDF_Label ref;
-                [[maybe_unused]] const auto isRef = shapeTool_->GetReferredShape( label, ref );
+                [[maybe_unused]] const auto isRef = ShapeTool::GetReferredShape( label, ref );
                 assert( isRef );
 
                 iterateLabel_( ref, objMesh );
@@ -426,9 +423,6 @@ private:
     }
 
 private:
-    Handle( XCAFDoc_ShapeTool ) shapeTool_;
-    Handle( XCAFDoc_ColorTool ) colorTool_;
-
     std::shared_ptr<Object> rootObj_;
     std::stack<std::shared_ptr<Object>> objStack_;
 
@@ -821,8 +815,8 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile2( const std::filesystem::pat
     std::unique_lock lock( cOpenCascadeMutex );
 
     STEPCAFControl_Reader reader;
-    reader.SetColorMode( true );
     reader.SetNameMode( true );
+    reader.SetColorMode( true );
 
     {
         MR_NAMED_TIMER( "read file" )
@@ -847,8 +841,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile2( const std::filesystem::pat
     reportProgress( settings.callback, 0.85f );
 
     StepLoader loader;
-    loader.init( document );
-    loader.loadStructure();
+    loader.loadModelStructure( document );
     loader.loadMeshes();
 
     return loader.rootObject();

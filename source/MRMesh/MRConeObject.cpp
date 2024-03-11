@@ -30,7 +30,7 @@ float getAngleByNormalizedRadius( float fRadius )
 }
 
 
-Matrix3f getRotationMatrix( const Vector3f& normal )
+Matrix3f getConeRotationMatrix( const Vector3f& normal )
 {
     return Matrix3f::rotation( Vector3f::plusZ(), normal );
 }
@@ -58,7 +58,7 @@ void ConeObject::setHeight( float height, ViewportId id /*= {}*/ )
     auto direction = getDirection( id );
     auto currentXf = xf( id );
     auto radius = getNormalizedRadius_( id );
-    currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius * height, radius * height, height );
+    currentXf.A = getConeRotationMatrix( direction ) * Matrix3f::scale( radius * height, radius * height, height );
     setXf( currentXf, id );
 }
 
@@ -81,7 +81,7 @@ void ConeObject::setDirection( const Vector3f& normal, ViewportId id /*= {}*/ )
 {
     auto currentXf = xf( id );
 
-    currentXf.A = getRotationMatrix( normal ) * s_.get( id );
+    currentXf.A = getConeRotationMatrix( normal ) * s_.get( id );
     setXf( currentXf, id );
 }
 
@@ -102,7 +102,7 @@ void ConeObject::setBaseRadius( float radius, ViewportId id /*= {}*/ )
     auto direction = getDirection( id );
     auto currentXf = xf( id );
     auto length = getHeight( id );
-    currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, length );
+    currentXf.A = getConeRotationMatrix( direction ) * Matrix3f::scale( radius, radius, length );
     setXf( currentXf, id );
 }
 
@@ -181,23 +181,24 @@ FeatureObjectProjectPointResult ConeObject::projectPoint( const Vector3f& point,
     float angleX = angle( n, X );
 
     // This means the projection will fall on the apex of the cone.
-    if ( coneAngle + PI_F / 2.0 > angleX )
+    if ( coneAngle + PI_F / 2.0 < angleX )
         return { center, -n };
 
     // Project vector X onto the cone main axis
     Vector3f K = n * MR::dot( X, n );
     Vector3f XK = ( X - K );
 
-    // We find the point of intersection of the vector XK with the surface of the cone 
+    // We find the point of intersection of the vector XK with the surface of the cone
     // and find a guide ventor along the surface of the cone to the projection point
-    Vector3f D = K + XK.normalized() * ( K.length() * std::sin( coneAngle ) ) ;
+    Vector3f D = K + XK.normalized() * ( K.length() * std::tan( coneAngle ) );
     Vector3f normD = D.normalized();
 
     // Calculate the projected point on the conical surface
     Vector3f projection = normD * dot( normD, X );
 
     // Calculate the normal at the projected point
-    Vector3f normal = ( X - projection ).normalized();
+    Vector3f Z = cross( n, normD );
+    Vector3f normal = cross( Z, normD ).normalized();
 
     // Return the projection point and the normal
     return { projection + center, normal };

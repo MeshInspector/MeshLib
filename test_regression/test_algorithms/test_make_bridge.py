@@ -16,7 +16,7 @@ def test_make_bridge_edge(input_case, tmp_path):
     #  Load input meshes
     input_folder = Path(test_files_path) / "algorithms" / "bridge" / input_case
     case_name = f"bridge_edge_{input_case}"
-    mesh = mlib.loadMesh(input_folder / "input.mrmesh")
+    mesh = mlib.loadMesh(input_folder / "input.ctm")
 
     # make bridge edge
     topl = mesh.topology
@@ -31,8 +31,8 @@ def test_make_bridge_edge(input_case, tmp_path):
         assert topl.edgeSize() - edges_num_before == 2, "Edges number should be increased on 2"
     with check:
         assert topl.numValidFaces() == faces_num_before, "Faces number should be the same"
-    mlib.saveMesh(mesh, tmp_path / f"{case_name}.mrmesh")
-    ref_mesh_path = input_folder / f"{case_name}.mrmesh"
+    mlib.saveMesh(mesh, tmp_path / f"{case_name}.ctm")
+    ref_mesh_path = input_folder / f"{case_name}.ctm"
     ref_mesh = mlib.loadMesh(ref_mesh_path)
 
     with check:
@@ -47,7 +47,7 @@ def test_make_bridge(input_case, tmp_path):
     #  Load input meshes
     input_folder = Path(test_files_path) / "algorithms" / "bridge" / input_case
     case_name = f"bridge_{input_case}"
-    mesh = mlib.loadMesh(input_folder / "input.mrmesh")
+    mesh = mlib.loadMesh(input_folder / "input.ctm")
 
     # make bridge edge
     topl = mesh.topology
@@ -62,8 +62,8 @@ def test_make_bridge(input_case, tmp_path):
     with check:
         assert topl.numValidFaces() - faces_num_before == 2, "Faces number should be increased on 2"
 
-    mlib.saveMesh(mesh, tmp_path / f"{case_name}.mrmesh")
-    ref_mesh_path = input_folder / f"{case_name}.mrmesh"
+    mlib.saveMesh(mesh, tmp_path / f"{case_name}.ctm")
+    ref_mesh_path = input_folder / f"{case_name}.ctm"
     ref_mesh = mlib.loadMesh(ref_mesh_path)
 
     with check:

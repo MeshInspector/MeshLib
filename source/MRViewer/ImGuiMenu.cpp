@@ -64,7 +64,7 @@
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRMesh/MRChangeNameAction.h"
-#include "MRMesh/MRHistoryStore.h"
+#include "MRHistoryStore.h"
 #include "ImGuiHelpers.h"
 #include "MRAppendHistory.h"
 #include "MRMesh/MRCombinedHistoryAction.h"
@@ -296,7 +296,6 @@ void ImGuiMenu::addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const
 {
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesCyrillic() );
     builder.AddChar( 0x2116 ); // NUMERO SIGN (shift+3 on cyrillic keyboards)
-    builder.AddChar( 0x0394 ); // GREEK CAPITAL LETTER DELTA
 #ifndef __EMSCRIPTEN__
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesChineseSimplifiedCommon() );
 #endif

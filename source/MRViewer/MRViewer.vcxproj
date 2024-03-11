@@ -25,6 +25,7 @@
     <ClCompile Include="MRCreateShader.cpp" />
     <ClCompile Include="MRCudaAccessor.cpp" />
     <ClCompile Include="MRDirectionWidget.cpp" />
+    <ClCompile Include="MRHistoryStore.cpp" />
     <ClCompile Include="MRMeshBoundarySelectionWidget.cpp" />
     <ClCompile Include="MRFrameCounter.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
@@ -121,6 +122,8 @@
     <ClInclude Include="MRCudaAccessor.h" />
     <ClInclude Include="MRDirectionWidget.h" />
     <ClInclude Include="MRFitData.h" />
+    <ClInclude Include="MRHistoryStore.h" />
+    <ClInclude Include="MRISceneStateCheck.h" />
     <ClInclude Include="MRMeshBoundarySelectionWidget.h" />
     <ClInclude Include="MRFrameCounter.h" />
     <ClInclude Include="MRNotificationType.h" />

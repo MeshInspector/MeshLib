@@ -8,6 +8,7 @@
 #include "MRNoDefInit.h"
 #include "MRTimer.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRProgressReadWrite.h"
 #include "MRGridSettings.h"
 #include "MRPch/MRTBB.h"
@@ -1037,18 +1038,22 @@ VertId MeshTopology::splitFace( FaceId f, FaceBitSet * region, FaceHashMap * new
     return newv;
 }
 
-void MeshTopology::flipOrientation()
+void MeshTopology::flipOrientation( const UndirectedEdgeBitSet * fullComponents )
 {
     MR_TIMER
 
-    for ( auto & e : edgePerFace_ )
+    ParallelFor( edgePerFace_, [&]( FaceId f )
     {
-        if ( e.valid() )
-            e = e.sym();
-    }
+        auto e = edgePerFace_[f];
+        if ( e && contains( fullComponents, e.undirected() ) )
+            edgePerFace_[f] = e.sym();
+    } );
 
-    for ( EdgeId i{0}; i + 1 < edges_.size(); ++++i )
+    ParallelFor( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ), [&]( UndirectedEdgeId ue )
     {
+        if ( fullComponents && !fullComponents->test( ue ) )
+            return;
+        EdgeId i = ue;
         auto & r0 = edges_[i];
         std::swap( r0.next, r0.prev );
 
@@ -1056,7 +1061,7 @@ void MeshTopology::flipOrientation()
         std::swap( r1.next, r1.prev );
 
         std::swap( r0.left, r1.left );
-    }
+    } );
 }
 
 void MeshTopology::addPart( const MeshTopology & from,

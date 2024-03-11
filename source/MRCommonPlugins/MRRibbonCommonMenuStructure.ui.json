@@ -80,9 +80,6 @@
 					"Name": "Camera",
 					"List": [
 						{
-							"Name": "Camera"
-						},
-						{
 							"Name": "Front View"
 						},
 						{
@@ -172,6 +169,20 @@
 					]
 				}
 			]
+		},
+		{
+			"Name": "Test",
+			"Priority": 3,
+			"Groups": [
+				{
+					"Name": "Old",
+					"List": [
+						{
+							"Name": "Camera"
+						}
+					]
+				}
+			]
 		}
 	],
 	"Quick Access": [
@@ -183,9 +194,6 @@
 		},
 		{
 			"Name": "Move object"
-		},
-		{
-			"Name": "Camera"
 		},
 		{
 			"Name": "Viewer settings"

@@ -88,12 +88,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_inst_, [] ( pybind11::module_& modu
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, type ) \
 MR_ADD_PYTHON_CUSTOM_CLASS_INST( moduleName, name )
 
-// !!! It's important to add vec after adding type
-// otherwise embedded python will not be able to re-import module (due to some issues with vector types in pybind11)
 #define MR_ADD_PYTHON_VEC( moduleName, name, type) \
 PYBIND11_MAKE_OPAQUE( std::vector<type> )          \
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, std::vector<type>, std::unique_ptr<std::vector<type>> ) \
-MR_ADD_PYTHON_CUSTOM_CLASS_INST_FUNC( moduleName, name, [] ( pybind11::module_& module ) { return pybind11::bind_vector<std::vector<type>>( module, #name ); } ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_INST_FUNC( moduleName, name, [] ( pybind11::module_& module ) { return pybind11::bind_vector<std::vector<type>>( module, #name, pybind11::module_local(false) ); } ) \
 MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] ( pybind11::module_& )                                           \
 {\
     using vecType = std::vector<type>;\
@@ -109,7 +107,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] ( pybind11::module_& )           
 #define MR_ADD_PYTHON_MAP( moduleName, name, mapType ) \
 PYBIND11_MAKE_OPAQUE( mapType )                        \
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, mapType, std::unique_ptr<mapType> ) \
-MR_ADD_PYTHON_CUSTOM_CLASS_INST_FUNC( moduleName, name, [] ( pybind11::module_& module ) { return pybind11::bind_map<mapType>( module, #name ); } ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_INST_FUNC( moduleName, name, [] ( pybind11::module_& module ) { return pybind11::bind_map<mapType>( module, #name, pybind11::module_local(false) ); } ) \
 MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] ( pybind11::module_& )                       \
 {\
     MR_PYTHON_CUSTOM_CLASS( name ).\

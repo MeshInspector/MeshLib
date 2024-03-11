@@ -986,6 +986,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     subs.smoothMode = settings.useCurvature;
     subs.region = settings.region;
     subs.notFlippable = settings.notFlippable;
+    subs.projectOnOriginalMesh = settings.projectOnOriginalMesh;
     subs.onEdgeSplit = settings.onEdgeSplit;
     subs.progressCallback = subprogress( settings.progressCallback, 0.0f, 0.5f );
     subdivideMesh( mesh, subs );

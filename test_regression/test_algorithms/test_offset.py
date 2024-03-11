@@ -10,21 +10,21 @@ from constants import test_files_path
 
 @pytest.mark.parametrize("test_params", [
     {"name": "thicken_open_vdb",
-     "mesh": "closed.mrmesh",
+     "mesh": "closed.ctm",
      "params": {
          "signDetectionMode": "OpenVDB",
          "offset": 5
      }
      },
     {"name": "thicken_unsigned",
-     "mesh": "open.mrmesh",
+     "mesh": "open.ctm",
      "params": {
          "signDetectionMode": "Unsigned",
          "offset": 0.5
      }
      },
     {"name": "thicken_self-intersected",
-     "mesh": "self-intersected.mrmesh",
+     "mesh": "self-intersected.ctm",
      "skip_self-intsc_verif": True,  # Self-intersections presented in input
      "params": {
          "signDetectionMode": "WindingRule",
@@ -47,8 +47,8 @@ def test_offset_thickening(tmp_path, test_params):
     thicked_mesh = mlib.thickenMesh(mesh=mesh, offset=test_params["params"]["offset"], params=offset_params)
 
     # === Verification
-    mlib.saveMesh(thicked_mesh, tmp_path / f"{case_name}.mrmesh")
-    ref_mesh_path = input_folder / f"{case_name}.mrmesh"
+    mlib.saveMesh(thicked_mesh, tmp_path / f"{case_name}.ctm")
+    ref_mesh_path = input_folder / f"{case_name}.ctm"
     ref_mesh = mlib.loadMesh(ref_mesh_path)
 
     with check:
@@ -64,7 +64,7 @@ def test_offset_thickening(tmp_path, test_params):
 
 @pytest.mark.parametrize("test_params", [
     {"name": "double_plus_OpenVDB",
-     "mesh": "morphed.mrmesh",
+     "mesh": "morphed.ctm",
      "params": {
          "signDetectionMode": "OpenVDB",
          "offset": 2.0,
@@ -72,7 +72,7 @@ def test_offset_thickening(tmp_path, test_params):
         }
      },
     {"name": "double_minus_OpenVDB",
-     "mesh": "morphed.mrmesh",
+     "mesh": "morphed.ctm",
      "params": {
          "signDetectionMode": "OpenVDB",
          "offset": -2.0,
@@ -80,7 +80,7 @@ def test_offset_thickening(tmp_path, test_params):
         }
      },
     {"name": "double_self-intersected_WindingRule",
-     "mesh": "self-intersected.mrmesh",
+     "mesh": "self-intersected.ctm",
      "skip_self-intsc_verif": True,  # Self-intersections presented in input
      "params": {
          "signDetectionMode": "WindingRule",
@@ -110,8 +110,8 @@ def test_offset_double(tmp_path, test_params):
                                          params=offset_params)
 
     # # === Verification
-    mlib.saveMesh(offseted_mesh, tmp_path / f"{case_name}.mrmesh")
-    ref_mesh_path = input_folder / f"{case_name}.mrmesh"
+    mlib.saveMesh(offseted_mesh, tmp_path / f"{case_name}.ctm")
+    ref_mesh_path = input_folder / f"{case_name}.ctm"
     ref_mesh = mlib.loadMesh(ref_mesh_path)
 
     with check:
@@ -127,7 +127,7 @@ def test_offset_double(tmp_path, test_params):
 
 @pytest.mark.parametrize("test_params", [
     {"name": "shell",
-     "mesh": "morphed.mrmesh",
+     "mesh": "morphed.ctm",
      "params": {
          "signDetectionMode": "Unsigned",
          "offset": 1,
@@ -154,8 +154,8 @@ def test_offset_shell(tmp_path, test_params):
                                params=offset_params)
 
     # === Verification
-    mlib.saveMesh(new_mesh, tmp_path / f"{case_name}.mrmesh")
-    ref_mesh_path = input_folder / f"{case_name}.mrmesh"
+    mlib.saveMesh(new_mesh, tmp_path / f"{case_name}.ctm")
+    ref_mesh_path = input_folder / f"{case_name}.ctm"
     ref_mesh = mlib.loadMesh(ref_mesh_path)
 
     with check:
@@ -171,7 +171,7 @@ def test_offset_shell(tmp_path, test_params):
 
 @pytest.mark.parametrize("test_params", [
     {"name": "general_sharp_OpenVdb",
-     "mesh": "morphed.mrmesh",
+     "mesh": "morphed.ctm",
      "skip_self-intsc_verif": True,  # sharpening produces intersections, that decided not to fix for now
      "params": {
          "signDetectionMode": "OpenVDB",
@@ -181,7 +181,7 @@ def test_offset_shell(tmp_path, test_params):
      }
      },
     {"name": "general_smooth_OpenVdb",
-     "mesh": "morphed.mrmesh",
+     "mesh": "morphed.ctm",
      "params": {
          "signDetectionMode": "OpenVDB",
          "offset": 1,
@@ -190,7 +190,7 @@ def test_offset_shell(tmp_path, test_params):
      }
      },
     {"name": "general_Standard_ProjectionNormal",
-     "mesh": "morphed.mrmesh",
+     "mesh": "morphed.ctm",
      "params": {
          "signDetectionMode": "ProjectionNormal",
          "offset": 1,
@@ -199,7 +199,7 @@ def test_offset_shell(tmp_path, test_params):
      }
      },
     {"name": "general_Standard_WindingRule",
-     "mesh": "morphed.mrmesh",
+     "mesh": "morphed.ctm",
      "skip_self-intsc_verif": True,  # sharpening produces intersections, that decided not to fix for now
      "params": {
          "signDetectionMode": "WindingRule",
@@ -209,7 +209,7 @@ def test_offset_shell(tmp_path, test_params):
      }
      },
     {"name": "general_Standard_open_HoleWindingRule",
-     "mesh": "open.mrmesh",
+     "mesh": "open.ctm",
      "params": {
          "signDetectionMode": "HoleWindingRule",
          "offset": 1,
@@ -218,7 +218,7 @@ def test_offset_shell(tmp_path, test_params):
      }
      },
     {"name": "general_Standard_self-intersected_HoleWindingRule",
-     "mesh": "self-intersected.mrmesh",
+     "mesh": "self-intersected.ctm",
      "skip_self-intsc_verif": True,
      "params": {
          "signDetectionMode": "WindingRule",
@@ -247,8 +247,8 @@ def test_offset_general(tmp_path, test_params):
                                       params=offset_params)
 
     # === Verification
-    mlib.saveMesh(new_mesh, tmp_path / f"{case_name}.mrmesh")
-    ref_mesh_path = input_folder / f"{case_name}.mrmesh"
+    mlib.saveMesh(new_mesh, tmp_path / f"{case_name}.ctm")
+    ref_mesh_path = input_folder / f"{case_name}.ctm"
     ref_mesh = mlib.loadMesh(ref_mesh_path)
 
     with check:

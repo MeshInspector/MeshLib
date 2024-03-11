@@ -75,7 +75,7 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
 
 const std::string& ViewerSettingsPlugin::uiName() const
 {
-    static std::string name = "Settings";
+    static std::string name = std::string( "Settings" ) + UINameSuffix();
     return name;
 }
 

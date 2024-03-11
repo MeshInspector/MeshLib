@@ -2,7 +2,7 @@
 #include "MRMesh/MRSystem.h"
 #include "MRGLMacro.h"
 #include "MRViewer.h"
-#include "MRMenu.h"
+#include "ImGuiMenu.h"
 #include "MRMesh/MRImage.h"
 #include "MRMesh/MRImageLoad.h"
 #include "MRImGuiImage.h"

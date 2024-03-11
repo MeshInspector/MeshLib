@@ -255,7 +255,7 @@ TEST( MRMesh, ConeApproximation )
 
     Cone3<float> resultCone;
     auto fit = Cone3Approximation<float>();
-    
+
     Cone3ApproximationParams approxiamtorParams;
     approxiamtorParams.coneFitterType = ConeFitterType::ApproximationPCM;
 
@@ -270,10 +270,10 @@ TEST( MRMesh, ConeApproximation )
     //////////////////////////
     //    Hemisphere test   //
     //////////////////////////
-    
+
     approxiamtorParams.coneFitterType = ConeFitterType::HemisphereSearchFit;
 
-     error = fit.solve( points, resultCone, approxiamtorParams );
+    error = fit.solve( points, resultCone, approxiamtorParams );
     std::cout << "Cone apex (Hem): " << resultCone.center() << " direction:" << resultCone.direction() << " heigh:" << resultCone.height << " angle:" << resultCone.angle * 180.0f / PI_F << " (degree)" << " error:" << error << std::endl;
 
     EXPECT_NEAR( resultCone.angle, coneAngle, 0.1f );

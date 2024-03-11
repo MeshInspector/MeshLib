@@ -660,12 +660,12 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth, float menuS
         anyChanged = anyChanged || changed;
     };
 
-    ImGui::Text( "%s", "Translation scales" );
+    ImGui::Text( "%s", "Translation Sensitivity" );
     drawSlider( "X##translate", spaceMouseParams_.translateScale[0] );
     drawSlider( "Y##translate", spaceMouseParams_.translateScale[2] );
     drawSlider( "Zoom##translate", spaceMouseParams_.translateScale[1] );
 
-    ImGui::Text( "%s", "Rotation scales" );
+    ImGui::Text( "%s", "Rotation Sensitivity" );
     drawSlider( "Ox##rotate", spaceMouseParams_.rotateScale[0] );
     drawSlider( "Oy##rotate", spaceMouseParams_.rotateScale[1] );
     drawSlider( "Oz##rotate", spaceMouseParams_.rotateScale[2] );

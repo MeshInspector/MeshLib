@@ -138,7 +138,7 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
         assert( !hasNormals || normal != cInvalidNormal );
         assert( !hasColors || color != cInvalidColor );
 
-        cloud.points[v] = Vector3f( settings.outXf ? point : point - firstPoint );
+        cloud.points[v] = Vector3f( settings.outXf ? point - firstPoint : point );
         cloud.validPoints.set( v, true );
         if ( hasNormals )
             cloud.normals[v] = Vector3f( normal );

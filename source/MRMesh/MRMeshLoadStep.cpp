@@ -551,7 +551,7 @@ VoidOrErrStr readFromStream( STEPControl_Reader& reader, std::istream& in )
     };
 
     {
-        std::ofstream ofs( tempFileName, std::ios::binary );
+        std::ofstream ofs( tempFilePath, std::ios::binary );
         if ( !ofs )
             return unexpected( std::string( "Cannot open buffer file" ) );
 

@@ -31,6 +31,8 @@ template <bool IsPrimary, typename BaseObjectType>
 class WrappedModelSubobject : public BaseObjectType, public RenderWrapObject::BasicWrapperTarget
 {
 public:
+    using BasicWrapperTarget::target_;
+
     bool isSelected() const override
     {
         return target_->isSelected();
@@ -51,6 +53,8 @@ template <typename BaseObjectType>
 class WrappedModelSubobject<false, BaseObjectType> : public BaseObjectType, public RenderWrapObject::BasicWrapperTarget
 {
 public:
+    using BasicWrapperTarget::target_;
+
     ViewportMask visibilityMask() const override
     {
         if ( auto p = this->parent() )
@@ -124,6 +128,18 @@ public:
     auto& getMesh() { return Base::subobject; }
 };
 
+
+// This renderobject draws a plane normal for the target object.
+class RenderPlaneNormalComponent : public RenderFeatureMeshComponent<false>
+{
+public:
+    MRVIEWER_API RenderPlaneNormalComponent( const VisualObject& object );
+
+    MRVIEWER_API void render( const ModelRenderParams& params ) override;
+    MRVIEWER_API void renderPicker( const ModelRenderParams& params, unsigned geomId ) override;
+};
+
+
 class RenderPointFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeaturePointsComponent<true>>
 {
 public:
@@ -146,7 +162,16 @@ public:
     MRVIEWER_API RenderCircleFeatureObject( const VisualObject& object );
 };
 
-class RenderPlaneFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>, RenderFeatureLinesComponent<false>, RenderFeaturePointsComponent<false>>
+class RenderPlaneFeatureObject
+    : public RenderObjectCombinator<
+        RenderDefaultUiObject,
+        // Main mesh.
+        RenderFeatureMeshComponent<true>,
+        // Subfeatures.
+        RenderFeatureLinesComponent<false>, RenderFeaturePointsComponent<false>,
+        // Normal mesh.
+        RenderPlaneNormalComponent
+    >
 {
 public:
     MRVIEWER_API RenderPlaneFeatureObject( const VisualObject& object );

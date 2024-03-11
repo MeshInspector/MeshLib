@@ -131,6 +131,20 @@ struct ConeFittingFunctor
 };
 
 
+enum class ConeFitterType
+{
+    ApproximationPCM, // approximation of cone axis by principal component method
+    HemisphereSearchFit,
+    SpecificAxisFit
+};
+
+struct Cone3ApproximationParams {
+    int levenbergMarquardtMaxIteration = 40;
+    ConeFitterType coneFitterType = ConeFitterType::HemisphereSearchFit;
+    int hemisphereSearchPhiResolution = 30;
+    int hemisphereSearchThetaResolution = 30;
+};
+
 // Class for approximation cloud point by cone. 
 // We will calculate the initial approximation of the cone and then use a minimizer to refine the parameters. 
 // minimizer is LevenbergMarquardt now. 
@@ -139,17 +153,78 @@ template <typename T>
 class Cone3Approximation
 {
 public:
+
     Cone3Approximation() = default;
 
-    void solve( const std::vector<MR::Vector3<T>>& points,
-            Cone3<T>& cone, bool useConeInputAsInitialGuess = false )
+    // returns RMS for original points
+    T solve( const std::vector<MR::Vector3<T>>& points,
+        Cone3<T>& cone, const Cone3ApproximationParams& params = {} )
+
+    {
+        params_ = params;
+
+        switch ( params_.coneFitterType )
+        {
+        case ConeFitterType::SpecificAxisFit:
+            return solveSpecificAxisFit_( points, cone );
+            break;
+        case ConeFitterType::HemisphereSearchFit:
+            return solveHemisphereSearchFit_( points, cone );
+            break;
+        case ConeFitterType::ApproximationPCM:
+            return solveApproximationPCM_( points, cone );
+            break;
+        default:
+            return std::numeric_limits<T>::max();
+            break;
+        };
+    }
+
+
+private:
+
+    // cone fitter main params
+    Cone3ApproximationParams params_;
+
+    MR::Vector3<T> computeCenter_( const std::vector<MR::Vector3<T>>& points )
+    {
+        // Compute the average of the sample points.
+        MR::Vector3<T> center;
+        center = Vector3f();  // C in pdf 
+        for ( auto i = 0; i < points.size(); ++i )
+        {
+            center += points[i];
+        }
+        center = center / static_cast< T >( points.size() );
+        return center;
+    }
+
+    void computeCenterAndNormal_( const std::vector<MR::Vector3<T>>& points, MR::Vector3<T>& center, MR::Vector3<T>& U )
+    {
+        center = computeCenter_( points );
+
+        // The cone axis is estimated from ZZTZ (see the https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf, formula 120).
+        U = Vector3f();  // U in pdf 
+        for ( auto i = 0; i < points.size(); ++i )
+        {
+            Vector3<T> Z = points[i] - center;
+            U += Z * MR::dot( Z, Z );
+        }
+        U = U.normalized();
+    }
+
+    // solver for single axis case. 
+    T solveFixedAxis_( const std::vector<MR::Vector3<T>>& points,
+        Cone3<T>& cone, bool useConeInputAsInitialGuess = false )
 
     {
         ConeFittingFunctor<T> coneFittingFunctor;
         coneFittingFunctor.setPoints( points );
         Eigen::LevenbergMarquardt<ConeFittingFunctor<T>, T> lm( coneFittingFunctor );
-        lm.parameters.maxfev = 40;
+        lm.parameters.maxfev = params_.levenbergMarquardtMaxIteration;
 
+        MR::Vector3<T> center, U;
+        computeCenterAndNormal_( points, center, U );
 
         MR::Vector3<T>& coneAxis = cone.direction();
         if ( useConeInputAsInitialGuess )
@@ -158,117 +233,115 @@ public:
         }
         else
         {
-            MR::Vector3<T> center, U;
-            Cone3<T> bestCone;
-            compureCenterAndNormal_( points, center, U );
-
-            bestCone = computeInitialCone_( points, center, U );
-
-
-            {
-                Eigen::VectorX<T> fittedParams( 6 );
-                coneToFitParams_( bestCone, fittedParams );
-                [[maybe_unused]] Eigen::LevenbergMarquardtSpace::Status result = lm.minimize( fittedParams );
-
-                // Looks like a bug in Eigen. Eigen::LevenbergMarquardtSpace::Status have error codes only. Not return value for Success minimization. 
-                // So just log status 
-
-                fitParamsToCone_( fittedParams, bestCone );
-
-                T const one_v = static_cast< T >( 1 );
-                auto cosAngle = std::clamp( one_v / bestCone.direction().length(), static_cast< T >( 0 ), one_v );
-                bestCone.angle = std::acos( cosAngle );
-                bestCone.direction() = cone.direction().normalized();
-            }
-
-
-
-            T minError = getApproximationRMS_( points, bestCone );
-
-            constexpr int phiResolution_ = 30;
-            constexpr int thetaResolution_ = 30;
-
-            T const theraStep = static_cast< T >( 2 * PI ) / thetaResolution_;
-            T const phiStep = static_cast< T >( PI2 ) / phiResolution_;
-
-            struct BestCone {
-                Cone3<T> bestCone;
-                T minError = std::numeric_limits<T> ::max();
-            };
-            std::vector<BestCone> bestCones;
-            bestCones.resize( phiResolution_ );
-
-
-            tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), phiResolution_ + 1 ),
-                   [&] ( const tbb::blocked_range<size_t>& range )
-            {
-                for ( size_t j = range.begin(); j < range.end(); ++j )
-                {
-                    //for ( size_t j = 0; j <= phiResolution_; ++j )
-                    //{
-                    T phi = phiStep * j; //  [0 .. pi/2]
-                    T cosPhi = std::cos( phi );
-                    T sinPhi = std::sin( phi );
-                    for ( size_t i = 0; i < thetaResolution_; ++i )
-                    {
-                        T theta = theraStep * i; //  [0 .. 2*pi)
-                        T cosTheta = std::cos( theta );
-                        T sinTheta = std::sin( theta );
-                        Vector3<T> currU( cosTheta * sinPhi, sinTheta * sinPhi, cosPhi );
-
-                        auto tmpCone = computeInitialCone_( points, center, currU );
-
-                        Eigen::VectorX<T> fittedParams( 6 );
-                        coneToFitParams_( tmpCone, fittedParams );
-
-                        Eigen::LevenbergMarquardt<ConeFittingFunctor<T>, T> lm_i( coneFittingFunctor );
-                        lm_i.parameters.maxfev = 40;
-
-                        [[maybe_unused]] Eigen::LevenbergMarquardtSpace::Status result = lm_i.minimize( fittedParams );
-
-                        // Looks like a bug in Eigen. Eigen::LevenbergMarquardtSpace::Status have error codes only. Not return value for Success minimization. 
-                        // So just log status 
-
-                        fitParamsToCone_( fittedParams, tmpCone );
-
-                        T const one_v = static_cast< T >( 1 );
-                        auto cosAngle = std::clamp( one_v / tmpCone.direction().length(), static_cast< T >( 0 ), one_v );
-                        tmpCone.angle = std::acos( cosAngle );
-                        tmpCone.direction() = tmpCone.direction().normalized();
-
-                        T error = getApproximationRMS_( points, tmpCone );
-
-                        if ( error < bestCones[j].minError )
-                        {
-                            bestCones[j].minError = error;
-                            bestCones[j].bestCone = tmpCone;
-                        }
-                    }
-                }
-            } );
-
-            auto best = std::min_element( bestCones.begin(), bestCones.end(), [] ( const BestCone& a, const BestCone& b )
-            {
-                return a.minError < b.minError;
-            } );
-
-            if ( best->minError < minError )
-                cone = best->bestCone;
-            else
-                cone = bestCone;
-
+            cone = computeInitialCone_( points, center, U );
         }
 
+        Eigen::VectorX<T> fittedParams( 6 );
+        coneToFitParams_( cone, fittedParams );
+        [[maybe_unused]] Eigen::LevenbergMarquardtSpace::Status result = lm.minimize( fittedParams );
 
+        // Looks like a bug in Eigen. Eigen::LevenbergMarquardtSpace::Status have error codes only. Not return value for Success minimization. 
+        // So just log status 
 
+        fitParamsToCone_( fittedParams, cone );
 
+        T const one_v = static_cast< T >( 1 );
+        auto cosAngle = std::clamp( one_v / coneAxis.length(), static_cast< T >( 0 ), one_v );
+        cone.angle = std::acos( cosAngle );
+        cone.direction() = cone.direction().normalized();
         cone.height = calculateConeHeight_( points, cone );
 
-        return;
+        return getApproximationRMS_( points, cone );
     }
 
+    T solveApproximationPCM_( const std::vector<MR::Vector3<T>>& points, Cone3<T>& cone )
+    {
+        return solveFixedAxis_( points, cone, false );
+    }
 
-private:
+    T solveSpecificAxisFit_( const std::vector<MR::Vector3<T>>& points, Cone3<T>& cone )
+    {
+        return solveFixedAxis_( points, cone, true );
+    }
+
+    // brute force solver across hole hemisphere for cone axis original extimation. 
+    T solveHemisphereSearchFit_( const std::vector<MR::Vector3<T>>& points, Cone3<T>& cone )
+    {
+        Vector3<T> center = computeCenter_( points );
+        ConeFittingFunctor<T> coneFittingFunctor;
+        coneFittingFunctor.setPoints( points );
+
+        T const theraStep = static_cast< T >( 2 * PI ) / params_.hemisphereSearchPhiResolution;
+        T const phiStep = static_cast< T >( PI2 ) / params_.hemisphereSearchPhiResolution;
+
+        struct BestCone {
+            Cone3<T> bestCone;
+            T minError = std::numeric_limits<T> ::max();
+        };
+        std::vector<BestCone> bestCones;
+        bestCones.resize( params_.hemisphereSearchPhiResolution );
+
+        tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), params_.hemisphereSearchPhiResolution + 1 ),
+               [&] ( const tbb::blocked_range<size_t>& range )
+        {
+            for ( size_t j = range.begin(); j < range.end(); ++j )
+            {
+                T phi = phiStep * j; //  [0 .. pi/2]
+                T cosPhi = std::cos( phi );
+                T sinPhi = std::sin( phi );
+                for ( size_t i = 0; i < params_.hemisphereSearchThetaResolution; ++i )
+                {
+                    T theta = theraStep * i; //  [0 .. 2*pi)
+                    T cosTheta = std::cos( theta );
+                    T sinTheta = std::sin( theta );
+
+                    // cone main axis original extimation
+                    Vector3<T> U( cosTheta * sinPhi, sinTheta * sinPhi, cosPhi );
+
+                    auto tmpCone = computeInitialCone_( points, center, U );
+
+                    Eigen::VectorX<T> fittedParams( 6 );
+                    coneToFitParams_( tmpCone, fittedParams );
+
+                    // create approximator and minimize functor
+                    Eigen::LevenbergMarquardt<ConeFittingFunctor<T>, T> lm( coneFittingFunctor );
+                    lm.parameters.maxfev = params_.levenbergMarquardtMaxIteration;
+                    [[maybe_unused]] Eigen::LevenbergMarquardtSpace::Status result = lm.minimize( fittedParams );
+
+                    // Looks like a bug in Eigen. Eigen::LevenbergMarquardtSpace::Status have error codes only. 
+                    // Not return value for Success minimization. 
+
+                    fitParamsToCone_( fittedParams, tmpCone );
+
+                    T const one_v = static_cast< T >( 1 );
+                    auto cosAngle = std::clamp( one_v / tmpCone.direction().length(), static_cast< T >( 0 ), one_v );
+                    tmpCone.angle = std::acos( cosAngle );
+                    tmpCone.direction() = tmpCone.direction().normalized();
+
+                    // calculate approximation error and store best result.
+                    T error = getApproximationRMS_( points, tmpCone );
+                    if ( error < bestCones[j].minError )
+                    {
+                        bestCones[j].minError = error;
+                        bestCones[j].bestCone = tmpCone;
+                    }
+                }
+            }
+        } );
+
+        // find best result
+        auto bestAppox = std::min_element( bestCones.begin(), bestCones.end(), [] ( const BestCone& a, const BestCone& b )
+        {
+            return a.minError < b.minError;
+        } );
+
+        cone = bestAppox->bestCone;
+
+        // calculate cone height
+        cone.height = calculateConeHeight_( points, cone );
+
+        return bestAppox->minError;
+    }
 
     // Calculate and return a length of cone based on set of initil points and inifinite cone surface given by cone param. 
     T calculateConeHeight_( const std::vector<MR::Vector3<T>>& points, Cone3<T>& cone )
@@ -279,26 +352,6 @@ private:
             length = std::max( length, std::abs( MR::dot( points[i] - cone.apex(), cone.direction() ) ) );
         }
         return length;
-    }
-
-    void compureCenterAndNormal_( const std::vector<MR::Vector3<T>>& points, MR::Vector3<T>& center, MR::Vector3<T>& U )
-    {
-        // Compute the average of the sample points.
-        center = Vector3f();  // C in pdf 
-        for ( auto i = 0; i < points.size(); ++i )
-        {
-            center += points[i];
-        }
-        center = center / static_cast< T >( points.size() );
-
-        // The cone axis is estimated from ZZTZ (see the https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf, formula 120).
-        U = Vector3f();  // U in pdf 
-        for ( auto i = 0; i < points.size(); ++i )
-        {
-            Vector3<T> Z = points[i] - center;
-            U += Z * MR::dot( Z, Z );
-        }
-        U = U.normalized();
     }
 
     T getApproximationRMS_( const std::vector<MR::Vector3<T>>& points, const Cone3<T>& cone )
@@ -319,8 +372,6 @@ private:
         result.direction() = axis;
         MR::Vector3<T>& U = result.direction();  // coneAxis
         T& coneAngle = result.angle;
-
-
 
         // C is center, U is coneAxis, X is points
         // Compute the signed heights of the points along the cone axis relative to C.

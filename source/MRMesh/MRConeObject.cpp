@@ -115,9 +115,18 @@ ConeObject::ConeObject( const std::vector<Vector3f>& pointsToApprox )
     : ConeObject()
 {
     // calculate cone parameters.
-    Cone3<float> result;
+    Cone3<float> resultPCM, result;
     auto fit = Cone3Approximation<float>();
-    fit.solve( pointsToApprox, result );
+
+    Cone3ApproximationParams approxiamtorParams;
+    approxiamtorParams.coneFitterType = ConeFitterType::HemisphereSearchFit;
+    auto errorHemisphere = fit.solve( pointsToApprox, result, approxiamtorParams );
+
+    approxiamtorParams.coneFitterType = ConeFitterType::ApproximationPCM;
+    auto errorPCM = fit.solve( pointsToApprox, resultPCM, approxiamtorParams );
+
+    if ( errorPCM < errorHemisphere )
+        result = resultPCM;
 
     // setup parameters
     setDirection( result.direction() );
@@ -246,13 +255,32 @@ TEST( MRMesh, ConeApproximation )
 
     Cone3<float> resultCone;
     auto fit = Cone3Approximation<float>();
-    fit.solve( points, resultCone );
-    std::cout << "Cone apex: " << resultCone.center() << " direction:" << resultCone.direction() << " heigh:" << resultCone.height << " angle:" << resultCone.angle * 180.0f / PI_F << " (degree)" << std::endl;
+    
+    Cone3ApproximationParams approxiamtorParams;
+    approxiamtorParams.coneFitterType = ConeFitterType::ApproximationPCM;
+
+    auto error = fit.solve( points, resultCone, approxiamtorParams );
+    std::cout << "Cone apex: " << resultCone.center() << " direction:" << resultCone.direction() << " heigh:" << resultCone.height << " angle:" << resultCone.angle * 180.0f / PI_F << " (degree)" << " error:" << error << std::endl;
 
     EXPECT_NEAR( resultCone.angle, coneAngle, 0.1f );
     EXPECT_NEAR( resultCone.height, coneHeight, 0.1f );
     EXPECT_LE( ( resultCone.apex() - coneApex ).length(), 0.1f );
     EXPECT_GT( dot( direction, resultCone.direction() ), 0.9f );
+
+    //////////////////////////
+    //    Hemisphere test   //
+    //////////////////////////
+    
+    approxiamtorParams.coneFitterType = ConeFitterType::HemisphereSearchFit;
+
+     error = fit.solve( points, resultCone, approxiamtorParams );
+    std::cout << "Cone apex (Hem): " << resultCone.center() << " direction:" << resultCone.direction() << " heigh:" << resultCone.height << " angle:" << resultCone.angle * 180.0f / PI_F << " (degree)" << " error:" << error << std::endl;
+
+    EXPECT_NEAR( resultCone.angle, coneAngle, 0.1f );
+    EXPECT_NEAR( resultCone.height, coneHeight, 0.1f );
+    EXPECT_LE( ( resultCone.apex() - coneApex ).length(), 0.1f );
+    EXPECT_GT( dot( direction, resultCone.direction() ), 0.9f );
+
 
     //////////////////////////
     // Use cone params test //
@@ -261,8 +289,9 @@ TEST( MRMesh, ConeApproximation )
     Cone3<float> noicedCone;
     Vector3f noiceVector = { 0.3234f , -0.2341f, 0.1234f };
     noicedCone.direction() = ( direction + noiceVector ).normalized();
-    fit.solve( points, noicedCone, true );
-    std::cout << "Noiced cone apex: " << noicedCone.center() << " direction:" << noicedCone.direction() << " heigh:" << noicedCone.height << " angle:" << noicedCone.angle * 180.0f / PI_F << " (degree)" << std::endl;
+    approxiamtorParams.coneFitterType = ConeFitterType::SpecificAxisFit;
+    error = fit.solve( points, noicedCone, approxiamtorParams );
+    std::cout << "Noiced cone apex: " << noicedCone.center() << " direction:" << noicedCone.direction() << " heigh:" << noicedCone.height << " angle:" << noicedCone.angle * 180.0f / PI_F << " (degree)" << " error:" << error << std::endl;
 
     EXPECT_NEAR( noicedCone.angle, coneAngle, 0.1f );
     EXPECT_NEAR( noicedCone.height, coneHeight, 0.1f );

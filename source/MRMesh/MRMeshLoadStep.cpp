@@ -551,6 +551,7 @@ VoidOrErrStr readFromStream( STEPControl_Reader& reader, std::istream& in )
 #endif
 }
 
+#if !STEP_READER_FIXED
 VoidOrErrStr repairStepFile( STEPControl_Reader& reader )
 {
     const auto model = reader.StepModel();
@@ -591,6 +592,7 @@ VoidOrErrStr repairStepFile( STEPControl_Reader& reader )
     return readFromFile( reader, auxFilePath );
 #endif
 }
+#endif
 
 std::mutex cOpenCascadeMutex = {};
 

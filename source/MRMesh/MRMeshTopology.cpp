@@ -1045,7 +1045,7 @@ void MeshTopology::flipOrientation( const UndirectedEdgeBitSet * fullComponents 
     ParallelFor( edgePerFace_, [&]( FaceId f )
     {
         auto e = edgePerFace_[f];
-        if ( contains( fullComponents, e.undirected() ) )
+        if ( e && contains( fullComponents, e.undirected() ) )
             edgePerFace_[f] = e.sym();
     } );
 

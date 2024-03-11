@@ -259,7 +259,7 @@ TEST( MRMesh, ConeApproximation )
     Cone3ApproximationParams approxiamtorParams;
     approxiamtorParams.coneFitterType = ConeFitterType::ApproximationPCM;
 
-    auto error = fit.solve( points, resultCone, approxiamtorParams );
+    [[maybe_unused]] auto error = fit.solve( points, resultCone, approxiamtorParams );
 
     //for debug in case of test fail.
     //std::cout << "Cone apex: " << resultCone.center() << " direction:" << resultCone.direction() << " heigh:"

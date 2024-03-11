@@ -186,33 +186,6 @@ private:
     // cone fitter main params
     Cone3ApproximationParams params_;
 
-    MR::Vector3<T> computeCenter_( const std::vector<MR::Vector3<T>>& points )
-    {
-        // Compute the average of the sample points.
-        MR::Vector3<T> center;
-        center = Vector3f();  // C in pdf 
-        for ( auto i = 0; i < points.size(); ++i )
-        {
-            center += points[i];
-        }
-        center = center / static_cast< T >( points.size() );
-        return center;
-    }
-
-    void computeCenterAndNormal_( const std::vector<MR::Vector3<T>>& points, MR::Vector3<T>& center, MR::Vector3<T>& U )
-    {
-        center = computeCenter_( points );
-
-        // The cone axis is estimated from ZZTZ (see the https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf, formula 120).
-        U = Vector3f();  // U in pdf 
-        for ( auto i = 0; i < points.size(); ++i )
-        {
-            Vector3<T> Z = points[i] - center;
-            U += Z * MR::dot( Z, Z );
-        }
-        U = U.normalized();
-    }
-
     // solver for single axis case. 
     T solveFixedAxis_( const std::vector<MR::Vector3<T>>& points,
         Cone3<T>& cone, bool useConeInputAsInitialGuess = false )
@@ -363,6 +336,35 @@ private:
         }
         return error / points.size();
     }
+
+    MR::Vector3<T> computeCenter_( const std::vector<MR::Vector3<T>>& points )
+    {
+        // Compute the average of the sample points.
+        MR::Vector3<T> center;
+        center = Vector3f();  // C in pdf 
+        for ( auto i = 0; i < points.size(); ++i )
+        {
+            center += points[i];
+        }
+        center = center / static_cast< T >( points.size() );
+        return center;
+    }
+
+
+    void computeCenterAndNormal_( const std::vector<MR::Vector3<T>>& points, MR::Vector3<T>& center, MR::Vector3<T>& U )
+    {
+        center = computeCenter_( points );
+
+        // The cone axis is estimated from ZZTZ (see the https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf, formula 120).
+        U = Vector3f();  // U in pdf 
+        for ( auto i = 0; i < points.size(); ++i )
+        {
+            Vector3<T> Z = points[i] - center;
+            U += Z * MR::dot( Z, Z );
+        }
+        U = U.normalized();
+    }
+
 
     // Calculates the initial parameters of the cone, which will later be used for minimization.
     Cone3<T> computeInitialCone_( const std::vector<MR::Vector3<T>>& points, const MR::Vector3<T>& center, const MR::Vector3<T> axis )

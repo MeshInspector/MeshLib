@@ -1455,7 +1455,7 @@ float ImGuiMenu::drawSelectionInformation_()
         ImGui::Spacing();
         ImGui::Spacing();
 
-        const ImVec4 textColorForSelected = { 1.0f, 0.0f, 0.0f, 0.5f };
+        const ImVec4 textColorForSelected = { 0.886f, 0.267f, 0.267f, 1.0f };
         drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces, textColorForSelected );
         drawPrimitivesInfo( "Vertices", totalVerts );
         drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints, textColorForSelected );

@@ -2363,7 +2363,16 @@ void Viewer::enableGlobalHistory( bool on )
     if ( on == bool( globalHistoryStore_ ) )
         return;
     if ( on )
+    {
         globalHistoryStore_ = std::make_shared<HistoryStore>();
+        globalHistoryStore_->changedSignal.connect( [this]( const HistoryStore&, HistoryStore::ChangeType type )
+        {
+            if ( type == HistoryStore::ChangeType::Undo ||
+                 type == HistoryStore::ChangeType::Redo ||
+                 type == HistoryStore::ChangeType::AppendAction )
+                makeTitleFromSceneRootPath();
+        } );
+    }
     else
         globalHistoryStore_.reset();
 }
@@ -2371,30 +2380,17 @@ void Viewer::enableGlobalHistory( bool on )
 void Viewer::appendHistoryAction( const std::shared_ptr<HistoryAction>& action )
 {
     if ( globalHistoryStore_ )
-    {
         globalHistoryStore_->appendAction( action );
-        makeTitleFromSceneRootPath();
-    }
 }
 
 bool Viewer::globalHistoryUndo()
 {
-    if ( globalHistoryStore_ && globalHistoryStore_->undo() )
-    {
-        makeTitleFromSceneRootPath();
-        return true;
-    }
-    return false;
+    return globalHistoryStore_ && globalHistoryStore_->undo();
 }
 
 bool Viewer::globalHistoryRedo()
 {
-    if ( globalHistoryStore_ && globalHistoryStore_->redo() )
-    {
-        makeTitleFromSceneRootPath();
-        return true;
-    }
-    return false;
+    return globalHistoryStore_ && globalHistoryStore_->redo();
 }
 
 void Viewer::onSceneSaved( const std::filesystem::path& savePath, bool storeInRecent )

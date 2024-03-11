@@ -1,6 +1,5 @@
 #pragma once
 
-#include "MRVector4.h"
 #include "MRAffineXf3.h"
 #include "MRBox.h"
 #include "MRBitSet.h"

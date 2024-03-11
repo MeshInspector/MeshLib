@@ -41,8 +41,24 @@ static void forEachVisualSubfeature( const Features::Primitives::Variant& featur
 {
     Features::forEachSubfeature( feature, [&]( const Features::SubfeatureInfo& params )
     {
-        if ( !params.isInfinite )
-            func( params.create() );
+        if ( params.isInfinite )
+            return; // Skip infinite features.
+
+        Features::Primitives::Variant subfeature = params.create();
+
+        // Shorten cylinder/cone axis.
+        if ( auto coneSeg = std::get_if<Features::Primitives::ConeSegment>( &feature ); coneSeg && !coneSeg->isZeroRadius() )
+        {
+            if ( auto line = std::get_if<Features::Primitives::ConeSegment>( &subfeature ); line && line->isZeroRadius() )
+            {
+                float scale = 0.9f;
+                float center = ( line->positiveLength - line->negativeLength ) / 2.f;
+                line->positiveLength = center + ( line->positiveLength - center ) * scale;
+                line->negativeLength = -( center + ( -line->negativeLength - center ) * scale );
+            }
+        }
+
+        func( subfeature );
     } );
 
     std::visit( overloaded{

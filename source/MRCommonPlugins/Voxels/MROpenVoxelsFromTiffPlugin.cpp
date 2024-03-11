@@ -13,6 +13,7 @@
 #include "MRMesh/MRChangeSceneAction.h"
 #include <MRMesh/MRSceneRoot.h>
 #include "MRViewer/MRUIStyle.h"
+#include "MRViewer/MRViewer.h"
 
 namespace MR
 {

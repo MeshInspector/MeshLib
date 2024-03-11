@@ -1,10 +1,16 @@
 #include "MRHistoryStore.h"
+#include "MRViewer.h"
 #include "MRMesh/MRCombinedHistoryAction.h"
 #include "MRPch/MRSpdlog.h"
 #include <cassert>
 
 namespace MR
 {
+
+const std::shared_ptr<HistoryStore>& HistoryStore::getViewerInstance()
+{
+    return MR::getViewerInstance().getGlobalHistoryStore();
+}
 
 HistoryStore::~HistoryStore()
 {

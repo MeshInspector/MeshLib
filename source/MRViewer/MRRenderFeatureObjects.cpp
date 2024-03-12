@@ -30,7 +30,7 @@ const ObjectParams& getObjectParams()
 {
     static const ObjectParams ret{
         .pointSize = 10,
-        .pointSizeSub = 6,
+        .pointSizeSub = 8,
         .lineWidth = 3,
         .lineWidthSub = 2,
         .meshAlpha = 128,
@@ -46,21 +46,7 @@ static void forEachVisualSubfeature( const Features::Primitives::Variant& featur
         if ( params.isInfinite )
             return; // Skip infinite features.
 
-        Features::Primitives::Variant subfeature = params.create();
-
-        // Shorten cylinder/cone axis.
-        if ( auto coneSeg = std::get_if<Features::Primitives::ConeSegment>( &feature ); coneSeg && !coneSeg->isZeroRadius() )
-        {
-            if ( auto line = std::get_if<Features::Primitives::ConeSegment>( &subfeature ); line && line->isZeroRadius() )
-            {
-                float scale = 0.9f;
-                float center = ( line->positiveLength - line->negativeLength ) / 2.f;
-                line->positiveLength = center + ( line->positiveLength - center ) * scale;
-                line->negativeLength = -( center + ( -line->negativeLength - center ) * scale );
-            }
-        }
-
-        func( subfeature );
+        func( params.create() );
     } );
 
     std::visit( overloaded{

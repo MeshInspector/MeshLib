@@ -334,6 +334,8 @@ private:
     {
         using ShapeTool = XCAFDoc_ShapeTool;
 
+        assert( ShapeTool::IsShape( label ) );
+
         const auto shape = ShapeTool::GetShape( label );
         const auto name = readName_( label );
 
@@ -350,25 +352,12 @@ private:
 
             iterateLabel_( label, obj );
         }
-        else if ( ShapeTool::IsSubShape( label ) )
+        else if ( ShapeTool::IsReference( label ) )
         {
-            auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( objStack_.top() );
-            assert( objMesh );
-            assert( objMesh->mesh() );
+            TDF_Label ref;
+            [[maybe_unused]] const auto isRef = ShapeTool::GetReferredShape( label, ref );
+            assert( isRef );
 
-            std::optional<Color> faceColor, edgeColor;
-            Quantity_ColorRGBA color;
-            if ( colorTool_->GetColor( shape, XCAFDoc_ColorGen, color ) )
-                faceColor = toColor( color );
-            if ( colorTool_->GetColor( shape, XCAFDoc_ColorSurf, color ) )
-                faceColor = toColor( color );
-            if ( colorTool_->GetColor( shape, XCAFDoc_ColorCurv, color ) )
-                edgeColor = toColor( color );
-
-            meshTriangulationContexts_.emplace_back( shape, objMesh, faceColor, edgeColor );
-        }
-        else
-        {
             auto objMesh = std::make_shared<ObjectMesh>();
             objMesh->setName( name );
             objMesh->setMesh( std::make_shared<Mesh>() );
@@ -376,34 +365,75 @@ private:
             objMesh->select( true );
             objStack_.top()->addChild( objMesh );
 
+            const auto subShapeCount = iterateLabel_( ref, objMesh );
+            if ( subShapeCount == 0 )
+            {
+                assert( ShapeTool::IsSimpleShape( ref ) );
+                const auto refShape = ShapeTool::GetShape( ref );
+
+                std::optional<Color> faceColor, edgeColor;
+                Quantity_ColorRGBA color;
+                if ( colorTool_->GetColor( refShape, XCAFDoc_ColorGen, color ) )
+                    faceColor = edgeColor = toColor( color );
+                if ( colorTool_->GetColor( refShape, XCAFDoc_ColorSurf, color ) )
+                    faceColor = toColor( color );
+                if ( colorTool_->GetColor( refShape, XCAFDoc_ColorCurv, color ) )
+                    edgeColor = toColor( color );
+
+                meshTriangulationContexts_.emplace_back( refShape, objMesh, faceColor, edgeColor );
+            }
+        }
+        else
+        {
+            assert( ShapeTool::IsSimpleShape( label ) );
+
+            std::shared_ptr<ObjectMesh> objMesh;
+            if ( ShapeTool::IsSubShape( label ) )
+            {
+                objMesh = std::dynamic_pointer_cast<ObjectMesh>( objStack_.top() );
+                assert( objMesh );
+                assert( objMesh->mesh() );
+            }
+            else
+            {
+                objMesh = std::make_shared<ObjectMesh>();
+                objMesh->setName( name );
+                objMesh->setMesh( std::make_shared<Mesh>() );
+                objMesh->setXf( xf );
+                objMesh->select( true );
+                objStack_.top()->addChild( objMesh );
+            }
+
             std::optional<Color> faceColor, edgeColor;
             Quantity_ColorRGBA color;
             if ( colorTool_->GetColor( shape, XCAFDoc_ColorGen, color ) )
-                faceColor = toColor( color );
+                faceColor = edgeColor = toColor( color );
             if ( colorTool_->GetColor( shape, XCAFDoc_ColorSurf, color ) )
                 faceColor = toColor( color );
             if ( colorTool_->GetColor( shape, XCAFDoc_ColorCurv, color ) )
                 edgeColor = toColor( color );
 
             meshTriangulationContexts_.emplace_back( shape, objMesh, faceColor, edgeColor );
-
-            if ( ShapeTool::IsReference( label ) )
-            {
-                TDF_Label ref;
-                [[maybe_unused]] const auto isRef = ShapeTool::GetReferredShape( label, ref );
-                assert( isRef );
-
-                iterateLabel_( ref, objMesh );
-            }
         }
     }
 
-    void iterateLabel_( const TDF_Label& label, const std::shared_ptr<Object>& obj )
+    int iterateLabel_( const TDF_Label& label, const std::shared_ptr<Object>& obj )
     {
+        using ShapeTool = XCAFDoc_ShapeTool;
+
         objStack_.push( obj );
+
+        auto subShapeCount = 0;
         for ( TDF_ChildIterator it( label ); it.More(); it.Next() )
-            readLabel_( it.Value() );
+        {
+            const auto child = it.Value();
+            subShapeCount += int( ShapeTool::IsSubShape( child ) );
+            readLabel_( child );
+        }
+
         objStack_.pop();
+
+        return subShapeCount;
     }
 
 private:

@@ -11,6 +11,14 @@
 namespace MR
 {
 
+// structure with settings and side output parameters for loading point cloud
+struct PointsLoadSettings
+{
+    VertColors* colors = nullptr; ///< points where to load point color map
+    AffineXf3f* outXf = nullptr; ///< transform for the loaded point cloud
+    ProgressCallback callback; ///< callback for set progress and stop process
+};
+
 namespace PointsLoad
 {
 
@@ -20,8 +28,12 @@ namespace PointsLoad
 
 MRMESH_API extern const IOFilters Filters;
 
-/// loads from .csv, .xyz, .txt file
+/// loads from .csv, .asc, .xyz, .txt file
+MRMESH_API Expected<PointCloud> fromText( const std::filesystem::path& file, const PointsLoadSettings& settings );
+MRMESH_API Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& settings );
+[[deprecated( "use fromText( ..., PointsLoadSettings ) instead" )]]
 MRMESH_API Expected<PointCloud, std::string> fromText( const std::filesystem::path& file, AffineXf3f* outXf = nullptr, ProgressCallback callback = {} );
+[[deprecated( "use fromText( ..., PointsLoadSettings ) instead" )]]
 MRMESH_API Expected<PointCloud, std::string> fromText( std::istream& in, AffineXf3f* outXf = nullptr, ProgressCallback callback = {} );
 
 /// loads from .pts file
@@ -48,7 +60,9 @@ MRMESH_API Expected<PointCloud, std::string> fromObj( const std::filesystem::pat
 MRMESH_API Expected<PointCloud, std::string> fromObj( std::istream& in, ProgressCallback callback = {} );
 
 /// loads from .asc file
+[[deprecated( "use fromText() instead" )]]
 MRMESH_API Expected<PointCloud, std::string> fromAsc( const std::filesystem::path& file, VertColors* colors = nullptr, ProgressCallback callback = {} );
+[[deprecated( "use fromText() instead" )]]
 MRMESH_API Expected<PointCloud, std::string> fromAsc( std::istream& in, VertColors* colors = nullptr, ProgressCallback callback = {} );
 
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )

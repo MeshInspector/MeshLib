@@ -231,7 +231,7 @@ void BoundarySelectionWidget::calculateHoles_()
     for ( auto& object : objects )
         if ( isObjectValidToPick_( object ) )
         {
-            //  join object to signal 
+            //  join widget to objects meshChangedSignal 
             auto oMesh = std::dynamic_pointer_cast< ObjectMesh > ( object );
             if ( oMesh )
             {
@@ -242,7 +242,6 @@ void BoundarySelectionWidget::calculateHoles_()
             }
 
             // calculate holes 
-
             auto& holes = holes_[object];
             auto& polylines = holeLines_[object];
 

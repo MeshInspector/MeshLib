@@ -1,5 +1,5 @@
 #pragma once
-#include "MRMenu.h"
+#include "ImGuiMenu.h"
 #include "MRRibbonMenuItem.h"
 #include "MRRibbonMenuSearch.h"
 #include "MRRibbonFontManager.h"

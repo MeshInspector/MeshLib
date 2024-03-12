@@ -1,5 +1,5 @@
 #include "MRDemoPlugin.h"
-#include "MRMenu.h"
+#include "ImGuiMenu.h"
 #include "MRViewport.h"
 #include "MRMesh/MRMakeSphereMesh.h"
 #include "MRMesh/MRObjectMesh.h"

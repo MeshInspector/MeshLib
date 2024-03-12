@@ -75,7 +75,7 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
 
 const std::string& ViewerSettingsPlugin::uiName() const
 {
-    static std::string name = "Settings";
+    static std::string name = std::string( "Settings" ) + UINameSuffix();
     return name;
 }
 
@@ -265,12 +265,12 @@ skip:
         UI::checkbox( "Deselect on Hide",
                                                 std::bind( &RibbonMenu::getDeselectNewHiddenObjects, ribbonMenu_ ),
                                                 std::bind( &RibbonMenu::setDeselectNewHiddenObjects, ribbonMenu_, std::placeholders::_1 ) );
-        UI::checkbox( "Close Context Menu on Change",
+        UI::checkbox( "Close Context Menu on Click",
                                                 std::bind( &RibbonMenu::getCloseContextOnChange, ribbonMenu_ ),
                                                 std::bind( &RibbonMenu::setCloseContextOnChange, ribbonMenu_, std::placeholders::_1 ) );
-        UI::setTooltipIfHovered( "Close scene context menu on any change", menuScaling );
+        UI::setTooltipIfHovered( "Close scene context menu on any change or click outside", menuScaling );
 
-        UI::checkbox( "Close Tool on Activating Another One",
+        UI::checkbox( "Auto Close Previous Tool",
                                                 std::bind( &RibbonMenu::getAutoCloseBlockingPlugins, ribbonMenu_ ),
                                                 std::bind( &RibbonMenu::setAutoCloseBlockingPlugins, ribbonMenu_, std::placeholders::_1 ) );
         UI::setTooltipIfHovered( "Automatically close blocking tool when another blocking tool is activated", menuScaling );
@@ -636,7 +636,8 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
     }
 
     ImGui::SetNextItemWidth( 100 * menuScaling );
-    ImGui::DragFloatValid( "Scroll modifier", &viewer->scrollForce, 0.01f, 0.2f, 3.0f );
+    ImGui::DragFloatValid( "Zoom Gain", &viewer->scrollForce, 0.01f, 0.2f, 3.0f );
+    UI::setTooltipIfHovered( "Sensitivity for mouse wheel rotation affecting the speed of zooming.", menuScaling );
 }
 
 void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth, float menuScaling )
@@ -659,12 +660,12 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth, float menuS
         anyChanged = anyChanged || changed;
     };
 
-    ImGui::Text( "%s", "Translation scales" );
+    ImGui::Text( "%s", "Translation Sensitivity" );
     drawSlider( "X##translate", spaceMouseParams_.translateScale[0] );
     drawSlider( "Y##translate", spaceMouseParams_.translateScale[2] );
     drawSlider( "Zoom##translate", spaceMouseParams_.translateScale[1] );
 
-    ImGui::Text( "%s", "Rotation scales" );
+    ImGui::Text( "%s", "Rotation Sensitivity" );
     drawSlider( "Ox##rotate", spaceMouseParams_.rotateScale[0] );
     drawSlider( "Oy##rotate", spaceMouseParams_.rotateScale[1] );
     drawSlider( "Oz##rotate", spaceMouseParams_.rotateScale[2] );

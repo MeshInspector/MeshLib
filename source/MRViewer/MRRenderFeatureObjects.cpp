@@ -1,5 +1,6 @@
 #include "MRRenderFeatureObjects.h"
 
+#include "MRMesh/MRArrow.h"
 #include "MRMesh/MRCircleObject.h"
 #include "MRMesh/MRConeObject.h"
 #include "MRMesh/MRCylinder.h"
@@ -7,13 +8,14 @@
 #include "MRMesh/MRFeatures.h"
 #include "MRMesh/MRLineObject.h"
 #include "MRMesh/MRMakeSphereMesh.h"
+#include "MRMesh/MRMatrix4.h"
 #include "MRMesh/MRMeshNormals.h"
 #include "MRMesh/MRPlaneObject.h"
+#include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPointObject.h"
+#include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRSphereObject.h"
 #include "MRMesh/MRSubfeatures.h"
-#include "MRMesh/MRPointCloud.h"
-#include "MRMesh/MRPolyline.h"
 
 namespace MR::RenderFeatures
 {
@@ -41,8 +43,24 @@ static void forEachVisualSubfeature( const Features::Primitives::Variant& featur
 {
     Features::forEachSubfeature( feature, [&]( const Features::SubfeatureInfo& params )
     {
-        if ( !params.isInfinite )
-            func( params.create() );
+        if ( params.isInfinite )
+            return; // Skip infinite features.
+
+        Features::Primitives::Variant subfeature = params.create();
+
+        // Shorten cylinder/cone axis.
+        if ( auto coneSeg = std::get_if<Features::Primitives::ConeSegment>( &feature ); coneSeg && !coneSeg->isZeroRadius() )
+        {
+            if ( auto line = std::get_if<Features::Primitives::ConeSegment>( &subfeature ); line && line->isZeroRadius() )
+            {
+                float scale = 0.9f;
+                float center = ( line->positiveLength - line->negativeLength ) / 2.f;
+                line->positiveLength = center + ( line->positiveLength - center ) * scale;
+                line->negativeLength = -( center + ( -line->negativeLength - center ) * scale );
+            }
+        }
+
+        func( subfeature );
     } );
 
     std::visit( overloaded{
@@ -123,6 +141,47 @@ static void addSubfeatures( const VisualObject& sourceObject, ObjectLines* outpu
     } );
 }
 
+
+RenderPlaneNormalComponent::RenderPlaneNormalComponent( const VisualObject& object )
+    : RenderFeatureMeshComponent( object )
+{
+    static const auto mesh = []{
+        return std::make_shared<Mesh>( makeArrow( Vector3f( 0, 0, 0 ), Vector3f( 0, 0, 1 ), 0.05f, 0.1f, 0.2f, numCircleSegments ) );
+    }();
+    subobject.setMesh( mesh );
+    subobject.setFlatShading( true );
+}
+
+void RenderPlaneNormalComponent::render( const ModelRenderParams& params )
+{
+    Matrix3f planeScaleMat = dynamic_cast<const FeatureObject *>( subobject.target_ )->getScaleShearMatrix();
+    float normalScale = std::min( planeScaleMat.x.x, planeScaleMat.y.y );
+
+    Matrix4f newModelMatrix =
+        subobject.target_->xf() *
+        AffineXf3f::translation( Vector3f( -1, -1, 0 ) ) *
+        AffineXf3f::linear( Matrix3f::scale( Vector3f( normalScale / planeScaleMat.x.x, normalScale / planeScaleMat.y.y, normalScale / planeScaleMat.z.z ) ) );
+    ModelRenderParams newParams = {
+        static_cast<const BaseRenderParams &>( params ),
+        newModelMatrix,
+        params.normMatrixPtr,
+        params.clipPlane,
+        params.depthFunction,
+        params.lightPos,
+        params.alphaSort,
+    };
+
+    RenderFeatureMeshComponent::render( newParams );
+}
+
+void RenderPlaneNormalComponent::renderPicker( const ModelRenderParams& params, unsigned geomId )
+{
+    // No picking for the normal!
+    (void)params;
+    (void)geomId;
+}
+
+
 MR_REGISTER_RENDER_OBJECT_IMPL( PointObject, RenderPointFeatureObject )
 RenderPointFeatureObject::RenderPointFeatureObject( const VisualObject& object )
     : RenderObjectCombinator( object )
@@ -173,13 +232,13 @@ std::string RenderLineFeatureObject::getObjectNameString( const VisualObject& ob
 {
     if ( object.getVisualizeProperty( FeatureVisualizePropertyType::DetailsOnNameTag, viewportId ) )
     {
-        Vector3f delta = object.xf().A.col( 0 ) * 2.f;
+        Vector3f dir = object.xf().A.col( 0 );
         if ( object.parent() )
-            delta = object.parent()->worldXf().A * delta;
+            dir = object.parent()->worldXf().A * dir;
+        dir = dir.normalized();
         constexpr int precision = 2;
 
-        // U+0394 GREEK CAPITAL LETTER DELTA
-        return fmt::format( "{}{}\xCE\x94 {:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), nameExtrasSeparator, delta.x, precision, delta.y, precision, delta.z, precision );
+        return fmt::format( "{}{}dir {:.{}f}, {:.{}f}, {:.{}f}", RenderObjectCombinator::getObjectNameString( object, viewportId ), nameExtrasSeparator, dir.x, precision, dir.y, precision, dir.z, precision );
     }
     else
     {
@@ -231,7 +290,7 @@ RenderPlaneFeatureObject::RenderPlaneFeatureObject( const VisualObject& object )
         Triangulation t{ { VertId( 0 ), VertId( 2 ), VertId( 1 ) }, { VertId( 0 ), VertId( 3 ), VertId( 2 ) } };
         return std::make_shared<Mesh>( Mesh::fromTriangles( { cornerPoints.begin(), cornerPoints.end() }, t ) );
     }();
-    getMesh().setMesh( mesh );
+    RenderFeatureMeshComponent<true>::getMesh().setMesh( mesh );
 
     // Subfeatures.
     getPoints().setPointCloud( std::make_shared<PointCloud>() );
@@ -241,16 +300,7 @@ RenderPlaneFeatureObject::RenderPlaneFeatureObject( const VisualObject& object )
     { // Some manual decorations.
         // The square contour.
         getLines().varPolyline()->addFromPoints( cornerPoints.data(), cornerPoints.size(), true );
-
-        // The normal.
-        std::array<Vector3f, 4> normalPoints = {
-            Vector3f( 0, 0, 0 ),
-            Vector3f( 0, 0, 0.5f ),
-        };
-        getLines().varPolyline()->addFromPoints( normalPoints.data(), normalPoints.size(), true );
     }
-
-    nameUiScreenOffset = Vector2f( 0, 0.1f );
 }
 
 std::string RenderPlaneFeatureObject::getObjectNameString( const VisualObject& object, ViewportId viewportId ) const

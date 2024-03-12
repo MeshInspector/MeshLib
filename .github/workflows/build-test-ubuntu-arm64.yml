@@ -9,6 +9,14 @@ on:
       app_version:
         required: true
         type: string
+      full_config_build:
+        default: false
+        required: false
+        type: boolean
+      autotest_data_s3_url:
+        default: "s3://data-autotest/test_data_2023-mar-07"
+        required: false
+        type: string
       UPLOAD_ARTIFACTS:
         required: true
         type: boolean
@@ -95,9 +103,18 @@ jobs:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
           aws-region: us-east-1
 
+      # cache managment: https://github.com/MeshInspector/MeshLib/actions/caches
+      - name: Cache autotest data from S3 Tests
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
+        id: cache-autotest
+        uses: actions/cache@v4
+        with:
+          path: ./test_data
+          key: ${{inputs.autotest_data_s3_url}}
+
       - name: Copy autotest data from S3 Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
-        run: aws s3 cp s3://data-autotest/test_data_29-dec-23 ./test_data --recursive --no-sign-request
+        run: aws s3 sync ${{inputs.autotest_data_s3_url}} ./test_data --delete --no-sign-request --size-only
 
       - name: Python Regression Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}

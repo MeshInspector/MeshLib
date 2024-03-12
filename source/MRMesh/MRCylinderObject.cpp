@@ -24,7 +24,7 @@ constexpr int phiResolution = 180;
 constexpr int thetaResolution = 180;
 
 
-Matrix3f getRotationMatrix( const Vector3f& normal )
+Matrix3f getCylRotationMatrix( const Vector3f& normal )
 {
     return Matrix3f::rotation( Vector3f::plusZ(), normal );
 }
@@ -43,7 +43,7 @@ void CylinderObject::setLength( float length, ViewportId id /*= {}*/ )
     auto direction = getDirection( id );
     auto currentXf = xf( id );
     auto radius = getRadius( id );
-    currentXf.A = ( getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, length ) );
+    currentXf.A = ( getCylRotationMatrix( direction ) * Matrix3f::scale( radius, radius, length ) );
     setXf( currentXf, id );
 }
 
@@ -57,7 +57,7 @@ void CylinderObject::setRadius( float radius, ViewportId id /*= {}*/ )
 {
     auto direction = getDirection( id );
     auto currentXf = xf( id );
-    currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, getLength( id ) );
+    currentXf.A = getCylRotationMatrix( direction ) * Matrix3f::scale( radius, radius, getLength( id ) );
     setXf( currentXf, id );
 }
 
@@ -74,7 +74,7 @@ Vector3f CylinderObject::getCenter( ViewportId id /*= {}*/ ) const
 void CylinderObject::setDirection( const Vector3f& normal, ViewportId id /*= {}*/ )
 {
     auto currentXf = xf( id );
-    currentXf.A = getRotationMatrix( normal ) * s_.get( id );
+    currentXf.A = getCylRotationMatrix( normal ) * s_.get( id );
     setXf( currentXf, id );
 }
 

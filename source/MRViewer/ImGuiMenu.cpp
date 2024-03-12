@@ -65,7 +65,7 @@
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRMesh/MRChangeNameAction.h"
-#include "MRMesh/MRHistoryStore.h"
+#include "MRHistoryStore.h"
 #include "ImGuiHelpers.h"
 #include "MRAppendHistory.h"
 #include "MRMesh/MRCombinedHistoryAction.h"
@@ -297,7 +297,6 @@ void ImGuiMenu::addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const
 {
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesCyrillic() );
     builder.AddChar( 0x2116 ); // NUMERO SIGN (shift+3 on cyrillic keyboards)
-    builder.AddChar( 0x0394 ); // GREEK CAPITAL LETTER DELTA
 #ifndef __EMSCRIPTEN__
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesChineseSimplifiedCommon() );
 #endif
@@ -1457,7 +1456,7 @@ float ImGuiMenu::drawSelectionInformation_()
         ImGui::Spacing();
         ImGui::Spacing();
 
-        const ImVec4 textColorForSelected = { 1.0f, 0.0f, 0.0f, 0.5f };
+        const ImVec4 textColorForSelected = { 0.886f, 0.267f, 0.267f, 1.0f };
         drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces, textColorForSelected );
         drawPrimitivesInfo( "Vertices", totalVerts );
         drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints, textColorForSelected );

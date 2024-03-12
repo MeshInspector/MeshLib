@@ -86,6 +86,7 @@ public:
     virtual bool blocking() const override { return false; }
 private:
     Vector2i resolution_;
+    bool transparentBg_{ true };
 };
 
 class CaptureUIScreenshotMenuItem : public RibbonMenuItem

@@ -1,6 +1,7 @@
 #pragma once
-#include "MRMeshFwd.h"
-#include "MRHistoryAction.h"
+
+#include "MRViewerFwd.h"
+#include "MRMesh/MRHistoryAction.h"
 #include <boost/signals2/signal.hpp>
 #include <memory>
 
@@ -14,12 +15,14 @@ namespace MR
 class HistoryStore
 {
 public:
+    /// returns the instance (if any) of HistoryStore from the viewer
+    MRVIEWER_API static const std::shared_ptr<HistoryStore>& getViewerInstance();
 
-    HistoryStore() = default;
-    MRMESH_API virtual ~HistoryStore();
+    MRVIEWER_API virtual ~HistoryStore();
+
     /// Adds action in history stack (clears available redo actions)
     /// adds actions to scope block if scope mode is active (do not affect main stack)
-    MRMESH_API virtual void appendAction( const std::shared_ptr<HistoryAction>& action );
+    MRVIEWER_API virtual void appendAction( const std::shared_ptr<HistoryAction>& action );
 
     /// Returns current scope ptr
     HistoryActionsVector* getScopeBlockPtr() const { return scopedBlock_; }
@@ -32,7 +35,7 @@ public:
     void setSavedState() { savedSceneIndex_ = firstRedoIndex_; }
 
     /// Clears this HistoryStore
-    MRMESH_API void clear();
+    MRVIEWER_API void clear();
 
     /// Set memory limit for this store, if history stack exceed it - old actions are removed 
     void setMemoryLimit( size_t limit ) { storageLimit_ = limit; }
@@ -45,15 +48,15 @@ public:
     size_t getStackPointer() const { return firstRedoIndex_; }
 
     /// remove some actions according to condition
-    MRMESH_API void filterStack( HistoryStackFilter filteringCondition, bool deepFiltering = true );
+    MRVIEWER_API void filterStack( HistoryStackFilter filteringCondition, bool deepFiltering = true );
 
-    MRMESH_API virtual bool undo();
-    MRMESH_API virtual bool redo();
+    MRVIEWER_API virtual bool undo();
+    MRVIEWER_API virtual bool redo();
 
     /// Returns names of last N undo actions or first N redo actions
-    MRMESH_API std::vector<std::string> getNActions( unsigned n, HistoryAction::Type type )const;
+    MRVIEWER_API std::vector<std::string> getNActions( unsigned n, HistoryAction::Type type )const;
     /// Returns the name of last undo or redo action (or empty string if there is no such action)
-    MRMESH_API std::string getLastActionName( HistoryAction::Type type ) const;
+    MRVIEWER_API std::string getLastActionName( HistoryAction::Type type ) const;
 
     /// Signal is called after this store changed
     enum class ChangeType
@@ -80,15 +83,6 @@ private:
     /// memory limit (bytes) to this HistoryStore if stack_ exceed it, old actions are removed
     size_t storageLimit_{ size_t( ~0 ) };
 };
-
-/**
- * \brief Remove actions from history actions vector that match the condition
- * \param firstRedoIndex - set redo index for calculate how many actions removed before it
- * \param deepFiltering - filter actions into combined actions
- * \return pair (anything removed, how many removed before firstRedoIndex)
- */
-std::pair<bool, int> filterHistoryActionsVector( HistoryActionsVector& historyVector,
-    HistoryStackFilter filteringCondition, size_t firstRedoIndex = 0, bool deepFiltering = true );
 
 /// \}
 

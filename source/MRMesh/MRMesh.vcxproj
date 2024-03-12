@@ -103,7 +103,6 @@
     <ClInclude Include="MRHash.h" />
     <ClInclude Include="MRHeapBytes.h" />
     <ClInclude Include="MRHistoryAction.h" />
-    <ClInclude Include="MRHistoryStore.h" />
     <ClInclude Include="MRIdentifyVertices.h" />
     <ClInclude Include="MRImage.h" />
     <ClInclude Include="MRImageLoad.h" />
@@ -451,12 +450,12 @@
     <ClCompile Include="MRFloatGridComponents.cpp" />
     <ClCompile Include="MRGcodeProcessor.cpp" />
     <ClCompile Include="MRGcodeLoad.cpp" />
+    <ClCompile Include="MRHistoryAction.cpp" />
     <ClCompile Include="MRImage.cpp" />
     <ClCompile Include="MRLocalTriangulations.cpp" />
     <ClCompile Include="MRMapEdge.cpp" />
     <ClCompile Include="MRGraph.cpp" />
     <ClCompile Include="MRGridSampling.cpp" />
-    <ClCompile Include="MRHistoryStore.cpp" />
     <ClCompile Include="MRIdentifyVertices.cpp" />
     <ClCompile Include="MRImageLoad.cpp" />
     <ClCompile Include="MRImageSave.cpp" />

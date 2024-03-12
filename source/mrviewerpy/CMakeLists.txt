@@ -2,32 +2,33 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project (mrviewerpy CXX)
+project(mrviewerpy CXX)
 
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
-set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX ""
-                        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/meshlib")
-
+set_target_properties(${PROJECT_NAME} PROPERTIES
+  PREFIX ""
+  LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/meshlib"
+)
 
 if(APPLE)
-	set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
-	target_link_libraries(${PROJECT_NAME} PRIVATE
-        MRViewer
-        MRMesh
-        fmt
-        pybind11::module
-    )
+  set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRViewer
+    MRMesh
+    fmt
+    pybind11::module
+  )
 ELSE()
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        MRViewer
-        MRMesh
-        fmt
-        ${MR_PYTHON_LIB}
-    )
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRViewer
+    MRMesh
+    fmt
+    ${MR_PYTHON_LIB}
+  )
 ENDIF()
 
 install(TARGETS ${PROJECT_NAME} DESTINATION "${MR_PY_LIB_DIR}")

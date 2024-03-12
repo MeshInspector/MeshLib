@@ -35,7 +35,7 @@
 #include "MRViewer/MRViewerSettingsManager.h"
 #include "MRMesh/MRMeshSaveObj.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRViewer/MRMenu.h"
+#include "MRViewer/ImGuiMenu.h"
 #include "MRViewer/MRViewerIO.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewerInstance.h"
@@ -715,6 +715,7 @@ void CaptureScreenshotMenuItem::drawDialog( float menuScaling, ImGuiContext* )
 
     ImGui::DragIntValid( "Width", &resolution_.x, 1, 256 );
     ImGui::DragIntValid( "Height", &resolution_.y, 1, 256 );
+    UI::checkbox( "Transparent Background", &transparentBg_ );
     if ( UI::button( "Capture", ImVec2( -1, 0 ) ) )
     {
         auto now = std::chrono::system_clock::now();
@@ -724,7 +725,29 @@ void CaptureScreenshotMenuItem::drawDialog( float menuScaling, ImGuiContext* )
         auto savePath = saveFileDialog( { name, {},ImageSave::Filters } );
         if ( !savePath.empty() )
         {
-            auto image = Viewer::instanceRef().captureSceneScreenShot( resolution_ );
+            std::vector<Color> backgroundBackup;
+            if ( transparentBg_ )
+            {
+                for ( auto& vp : getViewerInstance().viewport_list )
+                {
+                    auto params = vp.getParameters();
+                    backgroundBackup.push_back( params.backgroundColor );
+                    params.backgroundColor = Color( 0, 0, 0, 0 );
+                    vp.setParameters( params );
+                }
+            }
+            auto image = getViewerInstance().captureSceneScreenShot( resolution_ );
+            if ( transparentBg_ )
+            {
+                int i = 0;
+                for ( auto& vp : getViewerInstance().viewport_list )
+                {
+                    auto params = vp.getParameters();
+                    params.backgroundColor = backgroundBackup[i];
+                    i++;
+                    vp.setParameters( params );
+                }
+            }
             auto res = ImageSave::toAnySupportedFormat( image, savePath );
             if ( !res.has_value() )
                 showError( "Error saving screenshot: " + res.error() );

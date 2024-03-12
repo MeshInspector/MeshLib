@@ -6,7 +6,7 @@
 #include "MRMesh/MRConfig.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
-#include "MRMesh/MRHistoryStore.h"
+#include "MRHistoryStore.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"

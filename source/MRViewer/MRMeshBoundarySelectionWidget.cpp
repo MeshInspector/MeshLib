@@ -26,9 +26,6 @@ void BoundarySelectionWidget::enable( bool isEnaled )
     isSelectorActive_ = isEnaled;
     if ( !isSelectorActive_ )
     {
-        for ( auto& [obj, signal] : onMeshChangedSignals_ )
-            signal.disconnect();
-
         onMeshChangedSignals_.clear();
         holes_.clear();
         holeLines_.clear();

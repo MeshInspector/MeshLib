@@ -1215,6 +1215,9 @@
     <ClInclude Include="MRPointsToMeshFusion.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
+    <ClInclude Include="MRMisonLoad.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2027,6 +2030,9 @@
     </ClCompile>
     <ClCompile Include="MRHistoryAction.cpp">
       <Filter>Source Files\History</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMisonLoad.cpp">
+      <Filter>Source Files\IO</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -75,7 +75,6 @@ void FeatureObject::setXf( const AffineXf3f& xf, ViewportId id )
 
 void FeatureObject::resetXf( ViewportId id )
 {
-
     r_.reset( id );
     s_.reset( id );
 

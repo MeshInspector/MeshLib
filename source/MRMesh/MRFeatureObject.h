@@ -89,14 +89,20 @@ public:
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
 
-    // Since a point on an abstract feature is difficult to uniquely parameterize, 
+    // Since a point on an abstract feature is difficult to uniquely parameterize,
     // the projection function simultaneously returns the normal to the surface at the projection point.
     [[nodiscard]] virtual FeatureObjectProjectPointResult projectPoint( const Vector3f& point, ViewportId id = {} ) const = 0;
     [[nodiscard]] std::optional<Vector3f> getNormal( const Vector3f& point ) const;
 
-    MRMESH_API virtual void setXf( const AffineXf3f& xf, ViewportId id = {} ) override;
-    MRMESH_API virtual void resetXf( ViewportId id = {} ) override;
+    MRMESH_API void setXf( const AffineXf3f& xf, ViewportId id = {} ) override;
+    MRMESH_API void resetXf( ViewportId id = {} ) override;
 
+    // The cached orthonormalized rotation matrix.
+    // `isDef` receives false if matrix is overridden for this specific viewport.
+    [[nodiscard]] Matrix3f getRotationMatrix( ViewportId id = {}, bool * isDef = nullptr ) const { return r_.get( id, isDef ); }
+    // The cached scale and shear matrix. The main diagnoal stores the scale, and some other elements store the shearing.
+    // `isDef` receives false if matrix is overridden for this specific viewport.
+    [[nodiscard]] Matrix3f getScaleShearMatrix( ViewportId id = {}, bool * isDef = nullptr ) const { return s_.get( id, isDef ); }
 
 protected:
     FeatureObject() = default;

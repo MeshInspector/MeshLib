@@ -1,5 +1,6 @@
 #include "MRRenderFeatureObjects.h"
 
+#include "MRMesh/MRArrow.h"
 #include "MRMesh/MRCircleObject.h"
 #include "MRMesh/MRConeObject.h"
 #include "MRMesh/MRCylinder.h"
@@ -7,13 +8,14 @@
 #include "MRMesh/MRFeatures.h"
 #include "MRMesh/MRLineObject.h"
 #include "MRMesh/MRMakeSphereMesh.h"
+#include "MRMesh/MRMatrix4.h"
 #include "MRMesh/MRMeshNormals.h"
 #include "MRMesh/MRPlaneObject.h"
+#include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPointObject.h"
+#include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRSphereObject.h"
 #include "MRMesh/MRSubfeatures.h"
-#include "MRMesh/MRPointCloud.h"
-#include "MRMesh/MRPolyline.h"
 
 namespace MR::RenderFeatures
 {
@@ -139,6 +141,47 @@ static void addSubfeatures( const VisualObject& sourceObject, ObjectLines* outpu
     } );
 }
 
+
+RenderPlaneNormalComponent::RenderPlaneNormalComponent( const VisualObject& object )
+    : RenderFeatureMeshComponent( object )
+{
+    static const auto mesh = []{
+        return std::make_shared<Mesh>( makeArrow( Vector3f( 0, 0, 0 ), Vector3f( 0, 0, 1 ), 0.05f, 0.1f, 0.2f, numCircleSegments ) );
+    }();
+    subobject.setMesh( mesh );
+    subobject.setFlatShading( true );
+}
+
+void RenderPlaneNormalComponent::render( const ModelRenderParams& params )
+{
+    Matrix3f planeScaleMat = dynamic_cast<const FeatureObject *>( subobject.target_ )->getScaleShearMatrix();
+    float normalScale = std::min( planeScaleMat.x.x, planeScaleMat.y.y );
+
+    Matrix4f newModelMatrix =
+        subobject.target_->xf() *
+        AffineXf3f::translation( Vector3f( -1, -1, 0 ) ) *
+        AffineXf3f::linear( Matrix3f::scale( Vector3f( normalScale / planeScaleMat.x.x, normalScale / planeScaleMat.y.y, normalScale / planeScaleMat.z.z ) ) );
+    ModelRenderParams newParams = {
+        static_cast<const BaseRenderParams &>( params ),
+        newModelMatrix,
+        params.normMatrixPtr,
+        params.clipPlane,
+        params.depthFunction,
+        params.lightPos,
+        params.alphaSort,
+    };
+
+    RenderFeatureMeshComponent::render( newParams );
+}
+
+void RenderPlaneNormalComponent::renderPicker( const ModelRenderParams& params, unsigned geomId )
+{
+    // No picking for the normal!
+    (void)params;
+    (void)geomId;
+}
+
+
 MR_REGISTER_RENDER_OBJECT_IMPL( PointObject, RenderPointFeatureObject )
 RenderPointFeatureObject::RenderPointFeatureObject( const VisualObject& object )
     : RenderObjectCombinator( object )
@@ -247,7 +290,7 @@ RenderPlaneFeatureObject::RenderPlaneFeatureObject( const VisualObject& object )
         Triangulation t{ { VertId( 0 ), VertId( 2 ), VertId( 1 ) }, { VertId( 0 ), VertId( 3 ), VertId( 2 ) } };
         return std::make_shared<Mesh>( Mesh::fromTriangles( { cornerPoints.begin(), cornerPoints.end() }, t ) );
     }();
-    getMesh().setMesh( mesh );
+    RenderFeatureMeshComponent<true>::getMesh().setMesh( mesh );
 
     // Subfeatures.
     getPoints().setPointCloud( std::make_shared<PointCloud>() );
@@ -257,16 +300,7 @@ RenderPlaneFeatureObject::RenderPlaneFeatureObject( const VisualObject& object )
     { // Some manual decorations.
         // The square contour.
         getLines().varPolyline()->addFromPoints( cornerPoints.data(), cornerPoints.size(), true );
-
-        // The normal.
-        std::array<Vector3f, 4> normalPoints = {
-            Vector3f( 0, 0, 0 ),
-            Vector3f( 0, 0, 0.5f ),
-        };
-        getLines().varPolyline()->addFromPoints( normalPoints.data(), normalPoints.size(), true );
     }
-
-    nameUiScreenOffset = Vector2f( 0, 0.1f );
 }
 
 std::string RenderPlaneFeatureObject::getObjectNameString( const VisualObject& object, ViewportId viewportId ) const

@@ -318,15 +318,15 @@ public:
 
             if ( ctx.faceColor )
             {
-                VertMap vmap;
-                mesh.addPart( ctx.part, nullptr, &vmap );
+                FaceMap fmap;
+                mesh.addPart( ctx.part, &fmap );
 
-                auto vertColors = ctx.mesh->getVertsColorMap();
-                vertColors.resizeNoInit( mesh.topology.lastValidVert() + 1 );
-                for ( const auto v : ctx.part.topology.getValidVerts() )
-                    vertColors[vmap[v]] = *ctx.faceColor;
-                ctx.mesh->setColoringType( ColoringType::VertsColorMap );
-                ctx.mesh->updateVertsColorMap( vertColors );
+                auto faceColors = ctx.mesh->getFacesColorMap();
+                faceColors.resizeNoInit( mesh.topology.lastValidFace() + 1 );
+                for ( const auto of : ctx.part.topology.getValidFaces() )
+                    faceColors[fmap[of]] = *ctx.faceColor;
+                ctx.mesh->setColoringType( ColoringType::FacesColorMap );
+                ctx.mesh->updateFacesColorMap( faceColors );
             }
             else
             {

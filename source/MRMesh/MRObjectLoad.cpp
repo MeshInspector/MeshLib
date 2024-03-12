@@ -26,6 +26,7 @@
 #include "MRMeshLoadSettings.h"
 #include "MRZip.h"
 #include "MRPointsLoadE57.h"
+#include "MRMisonLoad.h"
 #include "MRPch/MRTBB.h"
 
 #ifndef MRMESH_NO_GLTF
@@ -442,7 +443,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
 #endif //!defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
     else if ( std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const auto& filter ) { return filter.extensions.find( ext ) != std::string::npos; }) != SceneFileFilters.end() )
     {
-        const auto objTree = loadSceneFromAnySupportedFormat( filename, callback );
+        const auto objTree = loadSceneFromAnySupportedFormat( filename, loadWarn, callback );
         if ( !objTree.has_value() )
             return unexpected( objTree.error() );
         
@@ -786,7 +787,8 @@ Expected <Object, std::string> makeObjectTreeFromZip( const std::filesystem::pat
     return makeObjectTreeFromFolder( contentsFolder, callback );
 }
 
-Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, ProgressCallback callback )
+Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, std::string* loadWarn,
+    ProgressCallback callback )
 {
     auto ext = std::string( "*" ) + utf8string( path.extension().u8string() );
     for ( auto& c : ext )
@@ -825,6 +827,12 @@ Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( 
         else
             res = unexpected( result.error() );
     }
+#ifndef __EMSCRIPTEN__
+    else if ( ext == "*.mison" )
+    {
+        res = MR::fromSceneMison( path, loadWarn, callback );
+    }
+#endif // !__EMSCRIPTEN__
 
     if ( res.has_value() && ( ext != "*.mru" && ext != "*.zip" ) )
         postImportObject( res.value(), path );

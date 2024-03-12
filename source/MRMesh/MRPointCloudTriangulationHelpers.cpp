@@ -192,10 +192,15 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
         return res;
     }
 
-    const auto& a = points_[centerVert_];
-    const auto& b = points_[fanData_.neighbors[res.nextId]];
-    const auto& c = points_[fanData_.neighbors[res.id]];
-    const auto& d = points_[fanData_.neighbors[res.prevId]];
+    const auto av = centerVert_;
+    const auto bv = fanData_.neighbors[res.nextId];
+    const auto cv = fanData_.neighbors[res.id];
+    const auto dv = fanData_.neighbors[res.prevId];
+
+    const auto& a = points_[av];
+    const auto& b = points_[bv];
+    const auto& c = points_[cv];
+    const auto& d = points_[dv];
 
     auto acLengthSq = ( a - c ).lengthSq();
     if ( ( acLengthSq > ( b - a ).lengthSq() && triangleAspectRatio( a, b, c ) > CriticalAspectRatio ) ||
@@ -220,9 +225,13 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
         return res;
     }
 
-    auto deloneProf = deloneFlipProfitSq( a, b, c, d ) / normalizerSq_;
+    auto deloneProf = deloneFlipProfitSq( a, b, c, d );
+    // deloneProf == 0 iff all 4 points are located exactly on a circle;
+    // select the edge with minimal vertex indices to break the tie
+    if ( deloneProf == 0 && std::min( av, cv ) > std::min( bv, dv ) )
+        deloneProf = -1;
     auto angleProf = trisAngleProfit( a, b, c, d, critAngle );
-    if ( deloneProf <= 0.0f && angleProf <= 0.0f )
+    if ( deloneProf < 0 && angleProf <= 0 )
     {
         // removal of AC is prohibited
         res.stable = true;
@@ -230,7 +239,7 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
     }
 
     if ( deloneProf > 0.0f )
-        res.weight += deloneProf;
+        res.weight += deloneProf / normalizerSq_;
     if ( angleProf > 0.0f )
         res.weight += angleProf;
 

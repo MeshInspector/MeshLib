@@ -29,9 +29,10 @@ Expected<std::shared_ptr<MR::Object>, std::string> fromSceneMison( std::istream&
     const auto invalidFormatError = unexpected( "Mison format invalid: " + rootVal.error() );
     if ( !rootVal.has_value() )
         return invalidFormatError;
-    Json::Value& root = *rootVal;
-    if ( !root.isArray() )
+    const Json::Value& rootJSObj = *rootVal;
+    if ( !rootJSObj.isArray() && !rootJSObj["Objects"].isArray() )
         return invalidFormatError;
+    const auto& root = rootJSObj.isArray() ? rootJSObj : rootJSObj["Objects"];
     int numFiles = int( root.size() );
     std::shared_ptr<MR::Object> rootObj = std::make_shared<MR::Object>();
     for ( int i = 0; i < numFiles; ++i )
@@ -57,12 +58,10 @@ Expected<std::shared_ptr<MR::Object>, std::string> fromSceneMison( std::istream&
         std::string name;
         bool hasName = el["Name"].isString();
         if ( hasName )
-            name = el["Name"].asString();
-
-        if ( hasName )
         {
+            name = el["Name"].asString();
             if ( loadRes->size() == 1 )
-                loadRes.value()[0]->setName( name );
+                loadRes.value().front()->setName(name);
             else
                 for ( auto& obj : *loadRes )
                     obj->setName( name + ": " + obj->name() );

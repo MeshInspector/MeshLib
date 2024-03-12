@@ -15,6 +15,8 @@
 #include "MRPch/MRTBB.h"
 #include "MRProgressReadWrite.h"
 #include "MRIOParsing.h"
+#include "MRGeodesicPath.h"
+#include "MRTriMath.h"
 
 #include <array>
 #include <future>
@@ -112,11 +114,48 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
 
     for ( int i = 0; i < numPolygons; ++i )
     {
-        int k, a, b, c;
-        in >> k >> a >> b >> c;
-        if ( !in || k != 3 )
+        int k, ai, bi, ci;
+        in >> k >> ai >> bi >> ci;
+        if ( !in )
             return unexpected( std::string( "Polygons read error" ) );
-        t.push_back( { VertId( a ), VertId( b ), VertId( c ) } );
+        if ( k == 3 )
+            t.push_back( { VertId( ai ), VertId( bi ), VertId( ci ) } );
+        else if ( k == 4 )
+        {
+            int di;
+            in >> di;
+            if ( !in )
+                return unexpected( std::string( "Polygons read error" ) );
+
+            // build optimal triangulation of a quadrangle
+            const auto a = points[VertId( ai )];
+            const auto b = points[VertId( bi )];
+            const auto c = points[VertId( ci )];
+            const auto d = points[VertId( di )];
+            bool cabcd = isUnfoldQuadrangleConvex( a, b, c, d );
+            bool cbcda = isUnfoldQuadrangleConvex( b, c, d, a );
+            bool tabc = false;
+            if ( cabcd != cbcda )
+                tabc = cbcda;
+            else
+            {
+                auto metricAC = std::max( circumcircleDiameterSq( a, c, d ), circumcircleDiameterSq( c, a, b ) );
+                auto metricBD = std::max( circumcircleDiameterSq( b, d, a ), circumcircleDiameterSq( d, b, c ) );
+                tabc = metricAC <= metricBD;
+            }
+            if ( tabc )
+            {
+                t.push_back( { VertId( ai ), VertId( bi ), VertId( ci ) } );
+                t.push_back( { VertId( ai ), VertId( ci ), VertId( di ) } );
+            }
+            else
+            {
+                t.push_back( { VertId( ai ), VertId( bi ), VertId( di ) } );
+                t.push_back( { VertId( bi ), VertId( ci ), VertId( di ) } );
+            }
+        }
+        else
+            return unexpected( std::string( "Faces with more than 4 vertices are not supported" ) );
         if ( settings.callback && !( i & 0x3FF ) && !subprogress( settings.callback, 0.5f, 1.f )( float( i ) / numPolygons ) )
             return unexpected( std::string( "Loading canceled" ) );
     }

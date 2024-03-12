@@ -787,7 +787,7 @@ Expected <Object, std::string> makeObjectTreeFromZip( const std::filesystem::pat
     return makeObjectTreeFromFolder( contentsFolder, callback );
 }
 
-Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, std::string* loadWarn,
+Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, [[maybe_unused]] std::string* loadWarn,
     ProgressCallback callback )
 {
     auto ext = std::string( "*" ) + utf8string( path.extension().u8string() );

@@ -188,6 +188,7 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
         difAngle += 2.0 * PI;
     if ( difAngle > PI )
     {
+        // prohibit removal of this edge since the "angle" of remaining triangle will be more than PI
         res.stable = true;
         return res;
     }
@@ -206,7 +207,7 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
     if ( ( acLengthSq > ( b - a ).lengthSq() && triangleAspectRatio( a, b, c ) > CriticalAspectRatio ) ||
         ( acLengthSq > ( d - a ).lengthSq() && triangleAspectRatio( a, c, d ) > CriticalAspectRatio ) )
     {
-        // very thin (boundary) triangle => remove AC with maximal weight
+        // this edge belongs to a degenerate triangle and it is the longest, remove it is fast as possible
         res.weight = FLT_MAX;
         return res;
     }
@@ -279,26 +280,32 @@ void FanOptimizer::updateBorderQueueElement_( FanOptimizerQueueElement& res, boo
     int prevInd = nextEl ? res.id : res.prevId;
     int nextInd = nextEl ? res.nextId : res.id;
 
-    auto difAngle = fanData_.cacheAngleOrder[nextInd].first - fanData_.cacheAngleOrder[prevInd].first;
-    if ( difAngle < 0.0 )
-        difAngle += 2.0 * PI;
-
-    constexpr double MIN_ANGLE = 0.05; // ~2 degrees
-
-    if ( difAngle > MIN_ANGLE )
-    {
-        res.stable = true;
-        return;
-    }
     int otherId = nextEl ? res.nextId : res.prevId;
     auto lengthSq = ( points_[centerVert_] - points_[fanData_.neighbors[res.id]] ).lengthSq();
     auto otherLengthSq = ( points_[centerVert_] - points_[fanData_.neighbors[otherId]] ).lengthSq();
     if ( lengthSq < otherLengthSq )
     {
+        // prohibit removal of this boundary edge since its neighbor edge is longer
         res.stable = true;
         return;
     }
 
+    const auto av = centerVert_;
+    const auto bv = fanData_.neighbors[prevInd];
+    const auto cv = fanData_.neighbors[nextInd];
+
+    const auto& a = points_[av];
+    const auto& b = points_[bv];
+    const auto& c = points_[cv];
+
+    if ( triangleAspectRatio( a, b, c ) <= CriticalAspectRatio )
+    {
+        // prohibit removal of this boundary edge since the boundary triangle is not degenerate
+        res.stable = true;
+        return;
+    }
+
+    // remove this boundary edge as fast as possible
     res.weight = std::numeric_limits<float>::max();
 }
 

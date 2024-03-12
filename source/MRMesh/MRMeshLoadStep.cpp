@@ -322,11 +322,11 @@ public:
                 mesh.addPart( ctx.part, &fmap );
 
                 auto faceColors = ctx.mesh->getFacesColorMap();
-                faceColors.resizeNoInit( mesh.topology.lastValidFace() + 1 );
+                faceColors.resize( mesh.topology.lastValidFace() + 1, Color::gray() );
                 for ( const auto of : ctx.part.topology.getValidFaces() )
                     faceColors[fmap[of]] = *ctx.faceColor;
                 ctx.mesh->setColoringType( ColoringType::FacesColorMap );
-                ctx.mesh->updateFacesColorMap( faceColors );
+                ctx.mesh->setFacesColorMap( std::move( faceColors ) );
             }
             else
             {

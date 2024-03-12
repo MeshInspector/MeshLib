@@ -34,6 +34,24 @@ static VertId findMaxVertId( const Triangulation & t, const FaceBitSet * region 
     } );
 }
 
+static VertId findMaxVertId( const std::vector<VertId> & verts )
+{
+    MR_TIMER
+    return parallel_reduce( tbb::blocked_range( size_t(0), verts.size() ), VertId{},
+    [&] ( const auto & range, VertId currMax )
+    {
+        for ( size_t i = range.begin(); i < range.end(); ++i )
+        {
+            currMax = std::max( currMax, verts[i] );
+        }
+        return currMax;
+    },
+    [] ( VertId a, VertId b )
+    {
+        return a > b ? a : b;
+    } );
+}
+
 // returns the edge with the origin in a if it is the only such edge with invalid left face;
 // otherwise returns invalid edge
 static EdgeId edgeWithOrgAndOnlyLeftHole( const MeshTopology & m, VertId a )
@@ -241,7 +259,8 @@ static void addTrianglesSeqCore( MeshTopology& res, const Triangulation & t, con
     }
 }
 
-MeshTopology fromFaceSoup( const std::vector<VertId> & verts, std::vector<FaceRecord> & faces )
+MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const Vector<VertSpan, FaceId> & faces,
+    const BuildSettings & settings, ProgressCallback progressCb )
 {
     MR_TIMER
 
@@ -250,34 +269,42 @@ MeshTopology fromFaceSoup( const std::vector<VertId> & verts, std::vector<FaceRe
         return res;
 
     // reserve enough elements for faces and vertices
-    auto maxFaceId = std::max_element( faces.begin(), faces.end(), 
-        []( const FaceRecord & a, const FaceRecord & b ) { return a.face < b.face; } )->face;
-    auto maxVertId = *std::max_element( verts.begin(), verts.end() );
-    res.faceResize( maxFaceId + 1 );
+    auto sizeFaces = settings.region ? settings.region->size() : faces.size();
+    auto maxVertId = findMaxVertId( verts );
+    res.faceResize( sizeFaces + settings.shiftFaceId );
     res.vertResize( maxVertId + 1 );
 
+    size_t faceAdded = 0;
+    size_t target = settings.region ? settings.region->count() : faces.size();
+    float rtarget = 1.0f / target;
+
     FaceAdder fa;
-    // these are faces remaining from the previous pass to try again
-    std::vector<FaceRecord> nextPass;
+    // we will try to add these triangles in the current pass
+    FaceBitSet active = getLocalRegion( settings.region, faces.size() );
     // these are faces that cannot be added even after other faces
-    std::vector<FaceRecord> bad;
-    while ( !faces.empty() )
+    FaceBitSet bad;
+    for (;;)
     {
-        for ( const auto & faceRec : faces )
+        size_t faceAddedOnThisPass = 0;
+        for ( FaceId f : active )
         {
-            auto x = fa.add( res, faceRec.face, verts.data() + faceRec.firstVertex, verts.data() + faceRec.lastVertex );
+            auto x = fa.add( res, f + settings.shiftFaceId,
+                verts.data() + faces[f].firstVertex, verts.data() + faces[f].lastVertex, settings.allowNonManifoldEdge );
             if ( x == AddFaceResult::UnsafeTryLater )
-                nextPass.push_back( faceRec );
-            else if ( x != AddFaceResult::Success )
-                bad.push_back( faceRec );
+                continue;
+            active.reset( f );
+            if ( x != AddFaceResult::Success )
+                bad.autoResizeSet( f );
+            else
+                ++faceAddedOnThisPass;
         }
 
-        if ( nextPass.size() == faces.size() )
-            break; // no single face added during the pass
-        faces.swap( nextPass );
-        nextPass.clear();
+        if ( faceAddedOnThisPass == 0 )
+            break; // no single triangle added during the pass
+
+        faceAdded += faceAddedOnThisPass;
+        reportProgress( progressCb, faceAdded * rtarget );
     }
-    faces.insert( faces.end(), bad.begin(), bad.end() );
     return res;
 }
 
@@ -776,20 +803,6 @@ MeshTopology fromTrianglesDuplicatingNonManifoldVertices( Triangulation & t,
 
     res = fromTriangles( t, settings );
     return res;
-}
-
-MeshTopology fromVertexTriples( const std::vector<VertId> & vertTriples, ProgressCallback progressCb )
-{
-    MR_TIMER
-    const size_t numTri = vertTriples.size() / 3;
-    Triangulation t;
-    t.reserve( numTri );
-    
-    for ( size_t f = 0; f < numTri; ++f )
-    {
-        t.push_back( { vertTriples[3*f], vertTriples[3*f+1], vertTriples[3*f+2] } );
-    }
-    return fromTriangles( t, {},  progressCb );
 }
 
 Mesh fromPointTriples( const std::vector<Triangle3f> & posTriples )

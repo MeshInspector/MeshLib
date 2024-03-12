@@ -79,6 +79,18 @@ Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices(
     return res;
 }
 
+Mesh Mesh::fromFaceSoup(
+    VertCoords vertexCoordinates,
+    const std::vector<VertId> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,
+    const MeshBuilder::BuildSettings& settings, ProgressCallback cb /*= {}*/ )
+{
+    MR_TIMER
+    Mesh res;
+    res.points = std::move( vertexCoordinates );
+    res.topology = MeshBuilder::fromFaceSoup( verts, faces, settings, cb );
+    return res;
+}
+
 Mesh Mesh::fromPointTriples( const std::vector<Triangle3f> & posTriples, bool duplicateNonManifoldVertices )
 {
     MR_TIMER

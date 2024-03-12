@@ -2095,7 +2095,7 @@ void RibbonMenu::drawShortcutsWindow_()
 {
     const auto& style = ImGui::GetStyle();
     const auto scaling = menu_scaling();
-    float windowWidth = 920.0f * scaling;
+    float windowWidth = 1000.0f * scaling;
 
     const auto& shortcutList = shortcutManager_->getShortcutList();
     // header size
@@ -2125,6 +2125,7 @@ void RibbonMenu::drawShortcutsWindow_()
         rightNumKeys * ( fontManager_.getFontSizeByType( RibbonFontManager::FontType::Default ) + cButtonPadding + 2 * cDefaultItemSpacing ) ) * scaling;
     // calc window size for better positioning
     windowHeight += std::max( leftSize, rightSize );
+    windowHeight += 40.0f * scaling; // Reserve a bit more space
 
     const float minHeight = 200.0f * scaling;
     windowHeight = std::clamp( windowHeight, minHeight, float( getViewerInstance().framebufferSize.y ) - 100.0f * scaling );

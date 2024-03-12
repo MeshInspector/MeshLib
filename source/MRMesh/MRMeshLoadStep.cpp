@@ -236,29 +236,18 @@ public:
         rootObj_ = std::make_shared<Object>();
         rootObj_->select( true );
 
-        auto solidIndex = 1;
         for ( const auto& shape : solids )
         {
             const auto& location = shape.Location();
             const auto xf = AffineXf3f( toXf( location.Transformation() ) );
 
             auto objMesh = std::make_shared<ObjectMesh>();
-            objMesh->setName( fmt::format( "Solid{}", solidIndex++ ) );
             objMesh->setMesh( std::make_shared<Mesh>() );
             objMesh->setXf( xf );
             objMesh->select( true );
             rootObj_->addChild( objMesh );
 
             meshTriangulationContexts_.emplace_back( shape, objMesh, std::nullopt, std::nullopt );
-        }
-
-        if ( solids.size() > 1 )
-        {
-            // create a fictional 'assembly' object
-            auto assemblyObj = rootObj_;
-            rootObj_ = std::make_shared<Object>();
-            rootObj_->select( true );
-            rootObj_->addChild( std::move( assemblyObj ) );
         }
     }
 

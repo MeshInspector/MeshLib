@@ -9,6 +9,7 @@
 
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRObjectMeshHolder.h"
+#include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectLines.h"
 
 #include <MRMesh/MRRingIterator.h>
@@ -25,6 +26,10 @@ void BoundarySelectionWidget::enable( bool isEnaled )
     isSelectorActive_ = isEnaled;
     if ( !isSelectorActive_ )
     {
+        for ( auto& [obj, signal] : onMeshChangedSignals_ )
+            signal.disconnect();
+
+        onMeshChangedSignals_.clear();
         holes_.clear();
         holeLines_.clear();
         selectedHoleObject_ = nullptr;
@@ -226,6 +231,18 @@ void BoundarySelectionWidget::calculateHoles_()
     for ( auto& object : objects )
         if ( isObjectValidToPick_( object ) )
         {
+            //  join object to signal 
+            auto oMesh = std::dynamic_pointer_cast< ObjectMesh > ( object );
+            if ( oMesh )
+            {
+                onMeshChangedSignals_[object] = oMesh->meshChangedSignal.connect( [this] ( uint32_t )
+                {
+                    onObjectChange_();
+                } );
+            }
+
+            // calculate holes 
+
             auto& holes = holes_[object];
             auto& polylines = holeLines_[object];
 
@@ -233,6 +250,8 @@ void BoundarySelectionWidget::calculateHoles_()
             polylines.reserve( holes.size() );
             for ( auto hole : holes )
                 polylines.push_back( createAncillaryLines_( object, hole ) );
+
+
         }
 }
 
@@ -248,6 +267,15 @@ void BoundarySelectionWidget::create(
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
 }
 
+void BoundarySelectionWidget::onObjectChange_()
+{
+    if ( isSelectorActive_ )
+    {
+        // reset and recalculate all holes
+        enable( false );
+        enable( true );
+    }
+}
 
 void BoundarySelectionWidget::reset()
 {

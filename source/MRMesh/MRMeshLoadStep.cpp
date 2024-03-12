@@ -249,7 +249,7 @@ public:
             objMesh->select( true );
             rootObj_->addChild( objMesh );
 
-            meshTriangulationContexts_.emplace_back( shape, objMesh );
+            meshTriangulationContexts_.emplace_back( shape, objMesh, std::nullopt, std::nullopt );
         }
 
         if ( solids.size() > 1 )
@@ -315,7 +315,24 @@ public:
         for ( auto& ctx : meshTriangulationContexts_ )
         {
             auto& mesh = *ctx.mesh->varMesh();
-            mesh.addPart( ctx.part );
+
+            if ( ctx.faceColor )
+            {
+                FaceMap fmap;
+                mesh.addPart( ctx.part, &fmap );
+
+                auto faceColors = ctx.mesh->getFacesColorMap();
+                faceColors.resizeNoInit( mesh.topology.lastValidFace() + 1 );
+                for ( const auto of : ctx.part.topology.getValidFaces() )
+                    faceColors[fmap[of]] = *ctx.faceColor;
+                ctx.mesh->setColoringType( ColoringType::FacesColorMap );
+                ctx.mesh->updateFacesColorMap( faceColors );
+            }
+            else
+            {
+                mesh.addPart( ctx.part );
+            }
+
             ctx.part = Mesh();
         }
     }
@@ -347,15 +364,16 @@ private:
             assert( objMesh );
             assert( objMesh->mesh() );
 
+            std::optional<Color> faceColor, edgeColor;
             Quantity_ColorRGBA color;
             if ( colorTool_->GetColor( shape, XCAFDoc_ColorGen, color ) )
-                objMesh->setFrontColor( toColor( color ), true );
+                faceColor = toColor( color );
             if ( colorTool_->GetColor( shape, XCAFDoc_ColorSurf, color ) )
-                objMesh->setFrontColor( toColor( color ), true );
+                faceColor = toColor( color );
             if ( colorTool_->GetColor( shape, XCAFDoc_ColorCurv, color ) )
-                objMesh->setEdgesColor( toColor( color ) );
+                edgeColor = toColor( color );
 
-            meshTriangulationContexts_.emplace_back( shape, objMesh );
+            meshTriangulationContexts_.emplace_back( shape, objMesh, faceColor, edgeColor );
         }
         else
         {
@@ -366,15 +384,16 @@ private:
             objMesh->select( true );
             objStack_.top()->addChild( objMesh );
 
+            std::optional<Color> faceColor, edgeColor;
             Quantity_ColorRGBA color;
             if ( colorTool_->GetColor( shape, XCAFDoc_ColorGen, color ) )
-                objMesh->setFrontColor( toColor( color ), true );
+                faceColor = toColor( color );
             if ( colorTool_->GetColor( shape, XCAFDoc_ColorSurf, color ) )
-                objMesh->setFrontColor( toColor( color ), true );
+                faceColor = toColor( color );
             if ( colorTool_->GetColor( shape, XCAFDoc_ColorCurv, color ) )
-                objMesh->setEdgesColor( toColor( color ) );
+                edgeColor = toColor( color );
 
-            meshTriangulationContexts_.emplace_back( shape, objMesh );
+            meshTriangulationContexts_.emplace_back( shape, objMesh, faceColor, edgeColor );
 
             if ( ShapeTool::IsReference( label ) )
             {
@@ -531,12 +550,16 @@ private:
     {
         TopoDS_Shape shape;
         std::shared_ptr<ObjectMesh> mesh;
+        std::optional<Color> faceColor;
+        std::optional<Color> edgeColor;
         std::vector<Triangle3f> triples;
         Mesh part;
 
-        MeshTriangulationContext( TopoDS_Shape shape, std::shared_ptr<ObjectMesh> mesh )
+        MeshTriangulationContext( TopoDS_Shape shape, std::shared_ptr<ObjectMesh> mesh, std::optional<Color> faceColor, std::optional<Color> edgeColor )
             : shape( std::move( shape ) )
             , mesh( std::move( mesh ) )
+            , faceColor( std::move( faceColor ) )
+            , edgeColor( std::move( edgeColor ) )
         {}
     };
     std::deque<MeshTriangulationContext> meshTriangulationContexts_;

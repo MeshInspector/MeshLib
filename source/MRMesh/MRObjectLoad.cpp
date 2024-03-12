@@ -814,7 +814,7 @@ Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( 
 #ifndef MRMESH_NO_OPENCASCADE
     else if ( ext == "*.step" || ext == "*.stp" )
     {
-        res = MeshLoad::fromSceneStepFileEx( path, { .callback = callback } );
+        res = MeshLoad::fromSceneStepFile( path, { .callback = callback } );
     }
 #endif
     else if ( ext == "*.zip" )

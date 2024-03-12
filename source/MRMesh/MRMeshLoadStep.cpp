@@ -662,7 +662,7 @@ VoidOrErrStr repairStepFile( STEPControl_Reader& reader )
 
 std::mutex cOpenCascadeMutex = {};
 
-Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( std::function<VoidOrErrStr ( STEPControl_Reader& )> readFunc, const MeshLoadSettings& settings )
+Expected<Mesh> fromStepImpl( std::function<VoidOrErrStr ( STEPControl_Reader& )> readFunc, const MeshLoadSettings& settings )
 {
     MR_TIMER
 
@@ -682,10 +682,17 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( std::function<VoidOrErr
     loader.loadModelStructure( reader, subprogress( settings.callback, 0.50f, 1.00f ) );
     loader.loadMeshes();
 
-    return loader.rootObject();
+    Mesh result;
+    for ( auto& objMesh : getAllObjectsInTree<ObjectMesh>( loader.rootObject().get() ) )
+    {
+        auto& mesh = objMesh->varMesh();
+        mesh->transform( objMesh->worldXf() );
+        result.addPart( *mesh );
+    }
+    return result;
 }
 
-Expected<std::shared_ptr<Object>> fromSceneStepFileExImpl( std::function<VoidOrErrStr ( STEPControl_Reader& )> readFunc, const MeshLoadSettings& settings )
+Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( std::function<VoidOrErrStr ( STEPControl_Reader& )> readFunc, const MeshLoadSettings& settings )
 {
     MR_TIMER
 
@@ -704,7 +711,6 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileExImpl( std::function<VoidOrE
     Handle( TDocStd_Document ) document = new TDocStd_Document( "MDTV-CAF" );
     {
         MR_NAMED_TIMER( "transfer data" )
-
 
         reader.SetNameMode( true );
         reader.SetColorMode( true );
@@ -735,7 +741,31 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileExImpl( std::function<VoidOrE
 namespace MR::MeshLoad
 {
 
-Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::filesystem::path& path, const MeshLoadSettings& settings )
+Expected<Mesh> fromStep( const std::filesystem::path& path, const MeshLoadSettings& settings )
+{
+    return fromStepImpl( [&] ( STEPControl_Reader& reader )
+    {
+        return readFromFile( reader, path )
+#if !STEP_READER_FIXED
+        .and_then( [&] { return repairStepFile( reader ); } )
+#endif
+        ;
+    }, settings );
+}
+
+Expected<Mesh> fromStep( std::istream& in, const MeshLoadSettings& settings )
+{
+    return fromStepImpl( [&] ( STEPControl_Reader& reader )
+    {
+        return readFromStream( reader, in )
+#if !STEP_READER_FIXED
+        .and_then( [&] { return repairStepFile( reader ); } )
+#endif
+        ;
+    }, settings );
+}
+
+Expected<std::shared_ptr<Object>> fromSceneStepFile( const std::filesystem::path& path, const MeshLoadSettings& settings )
 {
     return fromSceneStepFileImpl( [&] ( STEPControl_Reader& reader )
     {
@@ -747,33 +777,9 @@ Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( const std::fil
     }, settings );
 }
 
-Expected<std::shared_ptr<Object>, std::string> fromSceneStepFile( std::istream& in, const MeshLoadSettings& settings )
+Expected<std::shared_ptr<Object>> fromSceneStepFile( std::istream& in, const MeshLoadSettings& settings )
 {
-    return fromSceneStepFileExImpl( [&] ( STEPControl_Reader& reader )
-    {
-        return readFromStream( reader, in )
-#if !STEP_READER_FIXED
-        .and_then( [&] { return repairStepFile( reader ); } )
-#endif
-        ;
-    }, settings );
-}
-
-Expected<std::shared_ptr<Object>> fromSceneStepFileEx( const std::filesystem::path& path, const MeshLoadSettings& settings )
-{
-    return fromSceneStepFileExImpl( [&] ( STEPControl_Reader& reader )
-    {
-        return readFromFile( reader, path )
-#if !STEP_READER_FIXED
-        .and_then( [&] { return repairStepFile( reader ); } )
-#endif
-        ;
-    }, settings );
-}
-
-Expected<std::shared_ptr<Object>> fromSceneStepFileEx( std::istream& in, const MeshLoadSettings& settings )
-{
-    return fromSceneStepFileExImpl( [&] ( STEPControl_Reader& reader )
+    return fromSceneStepFileImpl( [&] ( STEPControl_Reader& reader )
     {
         return readFromStream( reader, in )
 #if !STEP_READER_FIXED

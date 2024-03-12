@@ -132,7 +132,7 @@ RenderPlaneNormalComponent::RenderPlaneNormalComponent( const VisualObject& obje
     : RenderFeatureMeshComponent( object )
 {
     static const auto mesh = []{
-        return std::make_shared<Mesh>( makeArrow( Vector3f( 0, 0, 0 ), Vector3f( 0, 0, 1 ), 0.05f, 0.1f, 0.2f, numCircleSegments ) );
+        return std::make_shared<Mesh>( makeArrow( Vector3f( 0, 0, 0 ), Vector3f( 0, 0, 1 ), 0.035f, 0.07f, 0.14f, numCircleSegments ) );
     }();
     subobject.setMesh( mesh );
     subobject.setFlatShading( true );
@@ -141,7 +141,7 @@ RenderPlaneNormalComponent::RenderPlaneNormalComponent( const VisualObject& obje
 void RenderPlaneNormalComponent::render( const ModelRenderParams& params )
 {
     Matrix3f planeScaleMat = dynamic_cast<const FeatureObject *>( subobject.target_ )->getScaleShearMatrix();
-    float normalScale = std::min( planeScaleMat.x.x, planeScaleMat.y.y );
+    float normalScale = std::min( planeScaleMat.x.x, planeScaleMat.y.y ) * ( 2 / 3.f );
 
     Matrix4f newModelMatrix =
         subobject.target_->xf() *

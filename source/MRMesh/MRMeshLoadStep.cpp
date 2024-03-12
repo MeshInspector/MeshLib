@@ -201,7 +201,7 @@ public:
         return rootObj_;
     }
 
-    void loadModelStructure( STEPControl_Reader& reader, [[maybe_unused]] ProgressCallback callback )
+    void loadModelStructure( STEPControl_Reader& reader, [[maybe_unused]] const ProgressCallback& callback )
     {
         MR_TIMER
 
@@ -215,6 +215,9 @@ public:
             reader.TransferRoots();
 #endif
         }
+
+        if ( !reportProgress( callback, 0.80f ) )
+            return;
 
         std::deque<TopoDS_Shape> solids;
         for ( auto shi = 1; shi <= reader.NbShapes(); ++shi )
@@ -547,8 +550,8 @@ private:
         MeshTriangulationContext( TopoDS_Shape shape, std::shared_ptr<ObjectMesh> mesh, std::optional<Color> faceColor, std::optional<Color> edgeColor )
             : shape( std::move( shape ) )
             , mesh( std::move( mesh ) )
-            , faceColor( std::move( faceColor ) )
-            , edgeColor( std::move( edgeColor ) )
+            , faceColor( faceColor )
+            , edgeColor( edgeColor )
         {}
     };
     std::deque<MeshTriangulationContext> meshTriangulationContexts_;
@@ -651,7 +654,7 @@ VoidOrErrStr repairStepFile( STEPControl_Reader& reader )
 
 std::mutex cOpenCascadeMutex = {};
 
-Expected<Mesh> fromStepImpl( std::function<VoidOrErrStr ( STEPControl_Reader& )> readFunc, const MeshLoadSettings& settings )
+Expected<Mesh> fromStepImpl( const std::function<VoidOrErrStr ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
 {
     MR_TIMER
 
@@ -681,7 +684,7 @@ Expected<Mesh> fromStepImpl( std::function<VoidOrErrStr ( STEPControl_Reader& )>
     return result;
 }
 
-Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( std::function<VoidOrErrStr ( STEPControl_Reader& )> readFunc, const MeshLoadSettings& settings )
+Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<VoidOrErrStr ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
 {
     MR_TIMER
 

@@ -31,6 +31,7 @@ MR_SUPPRESS_WARNING( "-Wdeprecated-enum-enum-conversion", 5054 )
 #include <opencascade/Message.hxx>
 #include <opencascade/Message_Printer.hxx>
 #include <opencascade/Message_PrinterOStream.hxx>
+#include <opencascade/Quantity_ColorRGBA.hxx>
 #include <opencascade/Standard_Version.hxx>
 #include <opencascade/STEPCAFControl_Reader.hxx>
 #include <opencascade/STEPControl_Reader.hxx>
@@ -42,6 +43,7 @@ MR_SUPPRESS_WARNING( "-Wdeprecated-enum-enum-conversion", 5054 )
 #include <opencascade/TDocStd_Document.hxx>
 #include <opencascade/TopExp_Explorer.hxx>
 #include <opencascade/TopoDS.hxx>
+#include <opencascade/XCAFDoc_ColorTool.hxx>
 #include <opencascade/XCAFDoc_DocumentTool.hxx>
 #include <opencascade/XCAFDoc_ShapeTool.hxx>
 #else
@@ -50,6 +52,7 @@ MR_SUPPRESS_WARNING( "-Wdeprecated-enum-enum-conversion", 5054 )
 #include <Message.hxx>
 #include <Message_Printer.hxx>
 #include <Message_PrinterOStream.hxx>
+#include <Quantity_ColorRGBA.hxx>
 #include <Standard_Version.hxx>
 #include <STEPCAFControl_Reader.hxx>
 #include <STEPControl_Reader.hxx>
@@ -61,6 +64,7 @@ MR_SUPPRESS_WARNING( "-Wdeprecated-enum-enum-conversion", 5054 )
 #include <TDocStd_Document.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
+#include <XCAFDoc_ColorTool.hxx>
 #include <XCAFDoc_DocumentTool.hxx>
 #include <XCAFDoc_ShapeTool.hxx>
 #endif
@@ -165,6 +169,12 @@ private:
 #pragma message( "Progress indication is currently unsupported for OpenCASCADE versions prior to 7.4" )
 #endif
 
+Color toColor( const Quantity_ColorRGBA& rgba )
+{
+    const auto& rgb = rgba.GetRGB();
+    return { (float)rgb.Red(), (float)rgb.Green(), (float)rgb.Blue(), rgba.Alpha() };
+}
+
 Vector3d toVector( const gp_XYZ& xyz )
 {
     return { xyz.X(), xyz.Y(), xyz.Z() };
@@ -258,16 +268,20 @@ public:
         MR_TIMER
 
         const auto shapeTool = XCAFDoc_DocumentTool::ShapeTool( document->Main() );
-        const auto colorTool = XCAFDoc_DocumentTool::ColorTool( document->Main() );
+        colorTool_ = XCAFDoc_DocumentTool::ColorTool( document->Main() );
 
         rootObj_ = std::make_shared<Object>();
         rootObj_->select( true );
         objStack_.push( rootObj_ );
 
-        TDF_LabelSequence labels;
-        shapeTool->GetFreeShapes( labels );
-        for ( TDF_LabelSequence::Iterator it( labels ); it.More(); it.Next() )
+        TDF_LabelSequence shapes, colors;
+        shapeTool->GetFreeShapes( shapes );
+        colorTool_->GetColors( colors );
+
+        for ( TDF_LabelSequence::Iterator it( shapes ); it.More(); it.Next() )
             readLabel_( it.Value() );
+
+        colorTool_.Nullify();
 
         assert( objStack_.size() == 1 );
         assert( objStack_.top() == rootObj_ );
@@ -333,6 +347,14 @@ private:
             assert( objMesh );
             assert( objMesh->mesh() );
 
+            Quantity_ColorRGBA color;
+            if ( colorTool_->GetColor( shape, XCAFDoc_ColorGen, color ) )
+                objMesh->setFrontColor( toColor( color ), true );
+            if ( colorTool_->GetColor( shape, XCAFDoc_ColorSurf, color ) )
+                objMesh->setFrontColor( toColor( color ), true );
+            if ( colorTool_->GetColor( shape, XCAFDoc_ColorCurv, color ) )
+                objMesh->setEdgesColor( toColor( color ) );
+
             meshTriangulationContexts_.emplace_back( shape, objMesh );
         }
         else
@@ -343,6 +365,14 @@ private:
             objMesh->setXf( xf );
             objMesh->select( true );
             objStack_.top()->addChild( objMesh );
+
+            Quantity_ColorRGBA color;
+            if ( colorTool_->GetColor( shape, XCAFDoc_ColorGen, color ) )
+                objMesh->setFrontColor( toColor( color ), true );
+            if ( colorTool_->GetColor( shape, XCAFDoc_ColorSurf, color ) )
+                objMesh->setFrontColor( toColor( color ), true );
+            if ( colorTool_->GetColor( shape, XCAFDoc_ColorCurv, color ) )
+                objMesh->setEdgesColor( toColor( color ) );
 
             meshTriangulationContexts_.emplace_back( shape, objMesh );
 
@@ -492,6 +522,8 @@ private:
     }
 
 private:
+    Handle( XCAFDoc_ColorTool ) colorTool_;
+
     std::shared_ptr<Object> rootObj_;
     std::stack<std::shared_ptr<Object>> objStack_;
 

@@ -38,9 +38,6 @@ namespace Cuda
         cudaParams.dimensions.x = params.dimensions.x;
         cudaParams.dimensions.y = params.dimensions.y;
         cudaParams.dimensions.z = params.dimensions.z;
-
-        auto box = cloud.getBoundingBox();
-        auto expansion = 2.0f * params.voxelSize;
        
         DynamicArray<float> cudaVolume;
         cudaVolume.resize( params.dimensions.x * params.dimensions.y * params.dimensions.z );

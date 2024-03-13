@@ -5,6 +5,7 @@ namespace MR
 {
 namespace Cuda
 {
+    // struct similar to MR::PointsToDistanceVolumeParams
     struct PointsToDistanceVolumeParams
     {
         /// origin point of voxels box
@@ -21,6 +22,7 @@ namespace Cuda
         float minWeight = 1;
     };
     
+    // struct similar to MR::Point
     struct OrderedPoint
     {
         float3 coord;

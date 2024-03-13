@@ -15,6 +15,7 @@
 #include "MRPch/MRTBB.h"
 #include "MRProgressReadWrite.h"
 #include "MRIOParsing.h"
+#include "MRMeshDelone.h"
 
 #include <array>
 #include <future>
@@ -112,11 +113,34 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
 
     for ( int i = 0; i < numPolygons; ++i )
     {
-        int k, a, b, c;
-        in >> k >> a >> b >> c;
-        if ( !in || k != 3 )
+        int k, ai, bi, ci;
+        in >> k >> ai >> bi >> ci;
+        if ( !in )
             return unexpected( std::string( "Polygons read error" ) );
-        t.push_back( { VertId( a ), VertId( b ), VertId( c ) } );
+        if ( k == 3 )
+            t.push_back( { VertId( ai ), VertId( bi ), VertId( ci ) } );
+        else if ( k == 4 )
+        {
+            int di;
+            in >> di;
+            if ( !in )
+                return unexpected( std::string( "Polygons read error" ) );
+
+            // build optimal triangulation of a quadrangle
+            bool tabc = bestQuadrangleDiagonal( points[VertId( ai )], points[VertId( bi )], points[VertId( ci )], points[VertId( di )] );
+            if ( tabc )
+            {
+                t.push_back( { VertId( ai ), VertId( bi ), VertId( ci ) } );
+                t.push_back( { VertId( ai ), VertId( ci ), VertId( di ) } );
+            }
+            else
+            {
+                t.push_back( { VertId( ai ), VertId( bi ), VertId( di ) } );
+                t.push_back( { VertId( bi ), VertId( ci ), VertId( di ) } );
+            }
+        }
+        else
+            return unexpected( std::string( "Faces with more than 4 vertices are not supported" ) );
         if ( settings.callback && !( i & 0x3FF ) && !subprogress( settings.callback, 0.5f, 1.f )( float( i ) / numPolygons ) )
             return unexpected( std::string( "Loading canceled" ) );
     }

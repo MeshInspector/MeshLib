@@ -42,6 +42,7 @@ public:
     using HolesOnObject = std::vector<MR::EdgeId>;
     using PerObjectHoles = std::unordered_map <std::shared_ptr<MR::ObjectMeshHolder>, HolesOnObject>;
     using PerObjectHolesPolylines = std::unordered_map <std::shared_ptr<MR::ObjectMeshHolder>, std::vector<AncillaryLines>>;
+    using PerObjectMeshChangedSignals = std::unordered_map < std::shared_ptr<MR::ObjectMeshHolder>, boost::signals2::scoped_connection>;
 
 
     // enable or disable widget
@@ -56,6 +57,9 @@ public:
             BoundarySelectionWidgetCallBack onBoundarySelected,
             BoundarySelectionWidgetChecker isObjectValidToPick
     );
+
+    // meshChangedSignal processor
+    void onObjectChange_();
 
     // reset widget, clear internal variables and detach from signals.
     MRVIEWER_API void reset();
@@ -79,6 +83,7 @@ private:
 
     PerObjectHoles holes_;
     PerObjectHolesPolylines holeLines_;
+    PerObjectMeshChangedSignals  onMeshChangedSignals_;
 
     MRVIEWER_API bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
@@ -105,7 +110,6 @@ private:
     // pick processor, for both mouseDown and MouseMove events.
     bool actionByPick_( ActionType actionType );
 
-
     // CallBack functions
     BoundarySelectionWidgetCallBack onBoundarySelected_;
     BoundarySelectionWidgetChecker isObjectValidToPick_;
@@ -126,7 +130,6 @@ private:
 
     // calculate and store all holes on meshes whick allowed by isObjectValidToPick_ callback
     void calculateHoles_();
-
 };
 
 }

@@ -30,7 +30,7 @@ const ObjectParams& getObjectParams()
 {
     static const ObjectParams ret{
         .pointSize = 10,
-        .pointSizeSub = 6,
+        .pointSizeSub = 8,
         .lineWidth = 3,
         .lineWidthSub = 2,
         .meshAlpha = 128,
@@ -46,21 +46,7 @@ static void forEachVisualSubfeature( const Features::Primitives::Variant& featur
         if ( params.isInfinite )
             return; // Skip infinite features.
 
-        Features::Primitives::Variant subfeature = params.create();
-
-        // Shorten cylinder/cone axis.
-        if ( auto coneSeg = std::get_if<Features::Primitives::ConeSegment>( &feature ); coneSeg && !coneSeg->isZeroRadius() )
-        {
-            if ( auto line = std::get_if<Features::Primitives::ConeSegment>( &subfeature ); line && line->isZeroRadius() )
-            {
-                float scale = 0.9f;
-                float center = ( line->positiveLength - line->negativeLength ) / 2.f;
-                line->positiveLength = center + ( line->positiveLength - center ) * scale;
-                line->negativeLength = -( center + ( -line->negativeLength - center ) * scale );
-            }
-        }
-
-        func( subfeature );
+        func( params.create() );
     } );
 
     std::visit( overloaded{
@@ -146,7 +132,7 @@ RenderPlaneNormalComponent::RenderPlaneNormalComponent( const VisualObject& obje
     : RenderFeatureMeshComponent( object )
 {
     static const auto mesh = []{
-        return std::make_shared<Mesh>( makeArrow( Vector3f( 0, 0, 0 ), Vector3f( 0, 0, 1 ), 0.05f, 0.1f, 0.2f, numCircleSegments ) );
+        return std::make_shared<Mesh>( makeArrow( Vector3f( 0, 0, 0 ), Vector3f( 0, 0, 1 ), 0.035f, 0.07f, 0.14f, numCircleSegments ) );
     }();
     subobject.setMesh( mesh );
     subobject.setFlatShading( true );
@@ -155,7 +141,7 @@ RenderPlaneNormalComponent::RenderPlaneNormalComponent( const VisualObject& obje
 void RenderPlaneNormalComponent::render( const ModelRenderParams& params )
 {
     Matrix3f planeScaleMat = dynamic_cast<const FeatureObject *>( subobject.target_ )->getScaleShearMatrix();
-    float normalScale = std::min( planeScaleMat.x.x, planeScaleMat.y.y );
+    float normalScale = std::min( planeScaleMat.x.x, planeScaleMat.y.y ) * ( 2 / 3.f );
 
     Matrix4f newModelMatrix =
         subobject.target_->xf() *

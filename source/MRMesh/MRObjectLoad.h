@@ -51,7 +51,8 @@ MRMESH_API bool isSupportedFileInSubfolders( const std::filesystem::path& folder
 MRMESH_API Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::path& folder, ProgressCallback callback = {} );
 
 //tries to load scene from every format listed in SceneFormatFilters
-MRMESH_API Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, ProgressCallback callback = {} );
+MRMESH_API Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, 
+    std::string* loadWarn = nullptr, ProgressCallback callback = {} );
 
 /// \}
 

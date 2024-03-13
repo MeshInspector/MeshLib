@@ -55,10 +55,6 @@ MRMESH_API MeshTopology fromTrianglesDuplicatingNonManifoldVertices(
     std::vector<VertDuplication> * dups = nullptr,
     const BuildSettings & settings = {} );
 
-// construct mesh topology from vertex-index triples
-[[deprecated( "use fromTriangles(...) instead" )]]
-MRMESH_API MeshTopology fromVertexTriples( const std::vector<VertId>& vertTriples, ProgressCallback progressCb = {} );
-
 // construct mesh from point triples;
 // all coinciding points are given the same VertId in the result
 MRMESH_API Mesh fromPointTriples( const std::vector<Triangle3f> & posTriples );
@@ -88,16 +84,9 @@ MRMESH_API void addTriangles( MeshTopology & res, const Triangulation & t, const
 MRMESH_API void addTriangles( MeshTopology & res, std::vector<VertId> & vertTriples,
     FaceBitSet * createdFaces = nullptr ); //< this set receives indices of added triangles
 
-// each face is surrounded by a closed contour of vertices [fistVertex, lastVertex)
-struct FaceRecord
-{
-    FaceId face;
-    int firstVertex = 0;
-    int lastVertex = 0;
-};
-
-// construct mesh topology from face soup, where each face can have arbitrary degree (not only triangles)
-MRMESH_API MeshTopology fromFaceSoup( const std::vector<VertId> & verts, std::vector<FaceRecord> & faces );
+/// construct mesh topology from face soup, where each face can have arbitrary degree (not only triangles)
+MRMESH_API MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const Vector<VertSpan, FaceId> & faces,
+    const BuildSettings & settings = {}, ProgressCallback progressCb = {} );
 
 /// the function finds groups of mesh vertices located closer to each other than \param closeDist, and unites such vertices in one;
 /// then the mesh is rebuilt from the remaining triangles

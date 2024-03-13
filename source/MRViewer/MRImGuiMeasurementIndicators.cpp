@@ -224,6 +224,7 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
     float outlineWidth = params.outlineWidth * menuScaling;
     float leaderLineLen = params.leaderLineLen * menuScaling;
     float invertedOverhang = params.invertedOverhang * menuScaling;
+    float arrowTipBackwardOffset = params.arrowTipBackwardOffset * menuScaling;
 
     forEachElement( elem, [&]( Element thisElem )
     {
@@ -247,6 +248,8 @@ void line( Element elem, float menuScaling, const Params& params, ImVec2 a, ImVe
                 // Nothing.
                 break;
             case LineCap::Decoration::arrow:
+                if ( !bool( lineParams.flags & LineFlags::noBackwardArrowTipOffset ) && thisCap.text.isEmpty() )
+                    point -= d * arrowTipBackwardOffset;
                 arrowTriangle( thisElem, menuScaling, params, point, d );
                 if ( thisCap.text.isEmpty() )
                     point += d * ( -arrowLen + 1 ); // +1 is to avoid a hairline gap here, we intentionally don't multiply it by `menuScaling`.
@@ -385,6 +388,8 @@ void distance( Element elem, float menuScaling, const Params& params, ImVec2 a, 
                 LineParams lineParams{ .capB = LineCap{ .decoration = LineCap::Decoration::arrow } };
                 if ( useInvertedStyle && distanceParams.moveTextToLineEndIndex && *distanceParams.moveTextToLineEndIndex == front )
                     lineParams.capA.text = string;
+                if ( useInvertedStyle )
+                    lineParams.flags |= LineFlags::noBackwardArrowTipOffset;
                 line( thisElem, menuScaling, params, front ? gapB : gapA, front ? b : a, lineParams );
             };
 

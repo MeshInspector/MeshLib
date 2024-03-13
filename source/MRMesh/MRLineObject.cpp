@@ -88,7 +88,7 @@ LineObject::LineObject( const std::vector<Vector3f>& pointsToApprox )
 
     setDirection( dir );
     setCenter( box.center() );
-    setLength( box.diagonal() * 4 );
+    setLength( box.diagonal() );
 }
 
 std::shared_ptr<Object> LineObject::shallowClone() const

@@ -1,6 +1,6 @@
 #include "exports.h"
 #include "MRMesh/MRSimpleVolume.h"
-#include "MRMesh/MRPointsToMeshFusion.h"
+#include "MRMesh/MRPointsToDistanceVolume.h"
 
 namespace MR
 {
@@ -8,7 +8,7 @@ namespace MR
 namespace Cuda
 {
 
-MRCUDA_API Expected<MR::SimpleVolume> pointsToDistanceVolume( const PointCloud& cloud, const MR::PointsToMeshParameters& params );
+MRCUDA_API Expected<MR::SimpleVolume> pointsToDistanceVolume( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params );
 
 }
 }

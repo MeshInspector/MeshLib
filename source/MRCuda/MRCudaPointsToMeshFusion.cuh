@@ -5,28 +5,20 @@ namespace MR
 {
 namespace Cuda
 {
-    struct PointsToMeshParameters
+    struct PointsToDistanceVolumeParams
     {
+        /// origin point of voxels box
+        float3 origin;
+        /// size of voxel on each axis
+        float3 voxelSize;
+        /// num voxels along each axis
+        int3 dimensions;
         /// it the distance of highest influence of a point;
         /// the maximal influence distance is 3*sigma; beyond that distance the influence is strictly zero
         float sigma = 1;
 
         /// minimum sum of influence weights from surrounding points for a triangle to appear, meaning that there shall be at least this number of points in close proximity
         float minWeight = 1;
-
-        /// optional input: colors of input points
-        const uint32_t* ptColors = nullptr;
-
-        /// optional output: averaged colors of mesh vertices
-        uint32_t* vColors = nullptr;
-    };
-
-    struct SimpleVolume
-    {
-        DynamicArray<float> data;
-        int3 dims;
-        float3 voxelSize;
-        float3 origin;
     };
     
     struct OrderedPoint
@@ -35,6 +27,6 @@ namespace Cuda
         int id;
     };
 
-    void pointsToDistanceVolumeKernel( const Node3* nodes, const OrderedPoint* points, const float3* normals, SimpleVolume* volume, PointsToMeshParameters params );
+    void pointsToDistanceVolumeKernel( const Node3* nodes, const OrderedPoint* points, const float3* normals, float* volume, PointsToDistanceVolumeParams params );
 }
 }

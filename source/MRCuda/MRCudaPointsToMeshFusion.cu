@@ -5,9 +5,9 @@ namespace MR
 {
 namespace Cuda
 {
-    __global__ void kernel( const Node3* nodes, const OrderedPoint* orderedPoints, const float3* normals, float* volume, int3 dims, float3 voxelSize, float3 origin, PointsToMeshParameters params )
+    __global__ void kernel( const Node3* nodes, const OrderedPoint* orderedPoints, const float3* normals, float* volume, PointsToDistanceVolumeParams params )
     {
-        const int size = dims.x * dims.y * dims.z;
+        const int size = params.dimensions.x * params.dimensions.y * params.dimensions.z;
         if ( size == 0 )
         {
             assert( false );
@@ -18,17 +18,20 @@ namespace Cuda
         if ( id >= size )
             return;
 
-        const int sizeXY = dims.x * dims.y;
+        const unsigned char quietNan[4] = { 0x00 , 0x00, 0xc0, 0x7f };
+        volume[id] = *( float* ) quietNan;
+
+        const int sizeXY = params.dimensions.x * params.dimensions.y;
         float3 coord;
         coord.z = int( id / sizeXY ) + 0.5f;
         int sumZ = int( id % sizeXY );
-        coord.y = sumZ / dims.x + 0.5f;
-        coord.x = sumZ % dims.x + 0.5f;
+        coord.y = sumZ / params.dimensions.x + 0.5f;
+        coord.x = sumZ % params.dimensions.x + 0.5f;
 
-        float3 voxelCenter = origin;
-        voxelCenter.x += voxelSize.x * coord.x;
-        voxelCenter.y += voxelSize.y * coord.y;
-        voxelCenter.z += voxelSize.z * coord.z;
+        float3 voxelCenter = params.origin;
+        voxelCenter.x += params.voxelSize.x * coord.x;
+        voxelCenter.y += params.voxelSize.y * coord.y;
+        voxelCenter.z += params.voxelSize.z * coord.z;
 
         float sumDist = 0;
         float sumWeight = 0;
@@ -66,9 +69,8 @@ namespace Cuda
                         const auto distSq =  lengthSq(voxelCenter - coord );
                         const auto w = exp( distSq * inv2SgSq );
                         sumWeight += w;
-                        sumDist += dot( normals[i], voxelCenter - coord ) * w;
+                        sumDist += dot( normals[orderedPoints[i].id], voxelCenter - coord ) * w;
                     }
-                        //foundCallback( orderedPoints[i].id, coord );
                 }
                 continue;
             }
@@ -81,13 +83,13 @@ namespace Cuda
             volume[id] = sumDist / sumWeight;
     }
 
-    void pointsToDistanceVolumeKernel( const Node3* nodes, const OrderedPoint* points, const float3* normals, SimpleVolume* volume, PointsToMeshParameters params )
+    void pointsToDistanceVolumeKernel( const Node3* nodes, const OrderedPoint* points, const float3* normals, float* volume, PointsToDistanceVolumeParams params )
     {
         constexpr int maxThreadsPerBlock = 640;
-        const int size = volume->dims.x * volume->dims.y * volume->dims.z;
+        const int size = params.dimensions.x * params.dimensions.y * params.dimensions.z;
 
         int numBlocks = (int( size ) + maxThreadsPerBlock - 1) / maxThreadsPerBlock;
-        kernel << < numBlocks, maxThreadsPerBlock >> > ( nodes, points, normals, volume->data.data(), volume->dims, volume->voxelSize, volume->origin, params);        
+        kernel << < numBlocks, maxThreadsPerBlock >> > ( nodes, points, normals, volume, params);
     }
 }
 }

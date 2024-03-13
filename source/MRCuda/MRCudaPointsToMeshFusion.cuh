@@ -28,7 +28,13 @@ namespace Cuda
         float3 voxelSize;
         float3 origin;
     };
+    
+    struct OrderedPoint
+    {
+        float3 coord;
+        int id;
+    };
 
-    void pointsToDistanceVolumeKernel( const Node3* nodes, const float3* points, const float3* normals, SimpleVolume* volume, PointsToMeshParameters params );
+    void pointsToDistanceVolumeKernel( const Node3* nodes, const OrderedPoint* points, const float3* normals, SimpleVolume* volume, PointsToMeshParameters params );
 }
 }

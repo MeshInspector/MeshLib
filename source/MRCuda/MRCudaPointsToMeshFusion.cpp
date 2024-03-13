@@ -15,8 +15,8 @@ namespace Cuda
         DynamicArray<Node3> cudaNodes;
         cudaNodes.fromVector( nodes.vec_ );
         
-        DynamicArray<float3> cudaPoints;
-        cudaPoints.fromVector( cloud.points.vec_ );
+        DynamicArray<OrderedPoint> cudaPoints;
+        cudaPoints.fromVector( tree.orderedPoints() );
 
         DynamicArray<float3> cudaNormals;
         cudaNormals.fromVector( cloud.normals.vec_ );
@@ -48,6 +48,8 @@ namespace Cuda
         MR::SimpleVolume res;
         res.dims = { cudaVolume.dims.x, cudaVolume.dims.y, cudaVolume.dims.z };
         res.voxelSize = { cudaVolume.voxelSize.x, cudaVolume.voxelSize.y, cudaVolume.voxelSize.z };
+        res.max = params.sigma * std::exp( -0.5f );
+        res.min = -res.max;
         cudaVolume.data.toVector( res.data );
         return res;
     }

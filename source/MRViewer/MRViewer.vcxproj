@@ -102,7 +102,6 @@
     <ClCompile Include="MRImGuiMeasurementIndicators.cpp" />
     <ClCompile Include="MRRenderFeatureObjects.cpp" />
     <ClCompile Include="MRRenderNameObject.cpp" />
-    <ClCompile Include="MRRenderMeasurementsObject.cpp" />
     <ClCompile Include="MRRenderDimensions.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -217,7 +216,6 @@
     <ClInclude Include="MRRenderFeatureObjects.h" />
     <ClInclude Include="MRRenderNameObject.h" />
     <ClInclude Include="MRRenderWrapObject.h" />
-    <ClInclude Include="MRRenderMeasurementsObject.h" />
     <ClInclude Include="MRRenderDimensions.h" />
   </ItemGroup>
   <ItemGroup>

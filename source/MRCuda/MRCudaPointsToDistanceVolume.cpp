@@ -1,5 +1,5 @@
-#include "MRCudaPointsToMeshFusion.h"
-#include "MRCudaPointsToMeshFusion.cuh"
+#include "MRCudaPointsToDistanceVolume.h"
+#include "MRCudaPointsToDistanceVolume.cuh"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRAABBTreePoints.h"
 
@@ -44,7 +44,8 @@ namespace Cuda
        
         DynamicArray<float> cudaVolume;
         cudaVolume.resize( params.dimensions.x * params.dimensions.y * params.dimensions.z );
-        pointsToDistanceVolumeKernel(cudaNodes.data(), cudaPoints.data(), cudaNormals.data(), cudaVolume.data(), cudaParams);
+        if ( !pointsToDistanceVolumeKernel( cudaNodes.data(), cudaPoints.data(), cudaNormals.data(), cudaVolume.data(), cudaParams ) )
+            return unexpected( "CUDA error occured" );
 
         MR::SimpleVolume res;
         res.dims = params.dimensions;

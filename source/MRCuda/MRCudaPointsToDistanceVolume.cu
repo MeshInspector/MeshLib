@@ -1,4 +1,4 @@
-#include "MRCudaPointsToMeshFusion.cuh"
+#include "MRCudaPointsToDistanceVolume.cuh"
 #include "device_launch_parameters.h"
 
 namespace MR
@@ -83,13 +83,14 @@ namespace Cuda
             volume[id] = sumDist / sumWeight;
     }
 
-    void pointsToDistanceVolumeKernel( const Node3* nodes, const OrderedPoint* points, const float3* normals, float* volume, PointsToDistanceVolumeParams params )
+    bool pointsToDistanceVolumeKernel( const Node3* nodes, const OrderedPoint* points, const float3* normals, float* volume, PointsToDistanceVolumeParams params )
     {
         constexpr int maxThreadsPerBlock = 640;
         const int size = params.dimensions.x * params.dimensions.y * params.dimensions.z;
 
         int numBlocks = (int( size ) + maxThreadsPerBlock - 1) / maxThreadsPerBlock;
         kernel << < numBlocks, maxThreadsPerBlock >> > ( nodes, points, normals, volume, params);
+        return ( cudaGetLastError() == cudaSuccess );
     }
 }
 }

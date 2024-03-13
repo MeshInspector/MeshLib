@@ -16,8 +16,8 @@
     <CudaCompile Include="MRCudaSolarRadiation.cu">
       <Filter>SolarRadiation</Filter>
     </CudaCompile>
-    <CudaCompile Include="MRCudaPointsToMeshFusion.cu">
-      <Filter>PointsToMeshFusion</Filter>
+    <CudaCompile Include="MRCudaPointsToDistanceVolume.cu">
+      <Filter>PointsToDistanceVolume</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>
@@ -39,11 +39,11 @@
     <ClCompile Include="MRCudaSolarRadiation.cpp">
       <Filter>SolarRadiation</Filter>
     </ClCompile>
-    <ClCompile Include="MRCudaPointsToMeshFusion.cpp">
-      <Filter>PointsToMeshFusion</Filter>
+    <ClCompile Include="MRCudaPointsToDistanceVolume.cpp">
+      <Filter>PointsToDistanceVolume</Filter>
     </ClCompile>
-    <ClCompile Include="MRCudaPointsToMeshFusion.h">
-      <Filter>PointsToMeshFusion</Filter>
+    <ClCompile Include="MRCudaPointsToDistanceVolume.h">
+      <Filter>PointsToDistanceVolume</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -93,8 +93,8 @@
     <ClInclude Include="MRCudaSolarRadiation.cuh">
       <Filter>SolarRadiation</Filter>
     </ClInclude>
-    <ClInclude Include="MRCudaPointsToMeshFusion.cuh">
-      <Filter>PointsToMeshFusion</Filter>
+    <ClInclude Include="MRCudaPointsToDistanceVolume.cuh">
+      <Filter>PointsToDistanceVolume</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -116,7 +116,7 @@
     <Filter Include="SolarRadiation">
       <UniqueIdentifier>{1740019b-6425-4837-80d1-64cf6d2d5fde}</UniqueIdentifier>
     </Filter>
-    <Filter Include="PointsToMeshFusion">
+    <Filter Include="PointsToDistanceVolume">
       <UniqueIdentifier>{206d9aab-c103-4918-87fd-5ff271af314d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>

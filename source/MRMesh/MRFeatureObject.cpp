@@ -8,7 +8,7 @@ namespace MR
 
 bool FeatureObject::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const
 {
-    return type.tryGet<FeatureVisualizePropertyType>().has_value() || VisualObject::supportsVisualizeProperty( type );
+    return VisualObject::supportsVisualizeProperty( type ) || type.tryGet<FeatureVisualizePropertyType>().has_value();
 }
 
 AllVisualizeProperties FeatureObject::getAllVisualizeProperties() const

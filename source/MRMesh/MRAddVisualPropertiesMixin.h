@@ -15,7 +15,7 @@ class AddVisualProperties : public BaseObjectType
 public:
     bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const override
     {
-        return ( ( type.tryGet<decltype( Properties )>() == Properties ) || ... ) || BaseObjectType::supportsVisualizeProperty( type );
+        return BaseObjectType::supportsVisualizeProperty( type ) || ( ( type.tryGet<decltype( Properties )>() == Properties ) || ... );
     }
 
     AllVisualizeProperties getAllVisualizeProperties() const override

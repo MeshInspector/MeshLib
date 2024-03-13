@@ -129,7 +129,7 @@ size_t ObjectLinesHolder::numComponents() const
 
 bool ObjectLinesHolder::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const
 {
-    return type.tryGet<LinesVisualizePropertyType>().has_value() || VisualObject::supportsVisualizeProperty( type );
+    return VisualObject::supportsVisualizeProperty( type ) || type.tryGet<LinesVisualizePropertyType>().has_value();
 }
 
 AllVisualizeProperties ObjectLinesHolder::getAllVisualizeProperties() const

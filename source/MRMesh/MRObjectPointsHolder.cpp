@@ -110,7 +110,7 @@ void ObjectPointsHolder::setSelectedVerticesColor( const Color& color, ViewportI
 
 bool ObjectPointsHolder::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const
 {
-    return type.tryGet<PointsVisualizePropertyType>().has_value() || VisualObject::supportsVisualizeProperty( type );
+    return VisualObject::supportsVisualizeProperty( type ) || type.tryGet<PointsVisualizePropertyType>().has_value();
 }
 
 AllVisualizeProperties ObjectPointsHolder::getAllVisualizeProperties() const

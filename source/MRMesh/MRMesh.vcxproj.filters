@@ -1188,9 +1188,6 @@
     <ClInclude Include="MRAngleMeasurementObject.h">
       <Filter>Source Files\DataModel\Measurements</Filter>
     </ClInclude>
-    <ClInclude Include="MRDefaultMeasurementObjects.h">
-      <Filter>Source Files\DataModel\Measurements</Filter>
-    </ClInclude>
     <ClInclude Include="MRUnorientedTriangle.h">
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
@@ -1217,6 +1214,12 @@
     </ClInclude>
     <ClInclude Include="MRMisonLoad.h">
       <Filter>Source Files\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAddVisualPropertiesMixin.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
+    <ClInclude Include="MRObjectDimensionsEnum.h">
+      <Filter>Source Files\DataModel</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1999,9 +2002,6 @@
       <Filter>Source Files\DataModel\Measurements</Filter>
     </ClCompile>
     <ClCompile Include="MRAngleMeasurementObject.cpp">
-      <Filter>Source Files\DataModel\Measurements</Filter>
-    </ClCompile>
-    <ClCompile Include="MRDefaultMeasurementObjects.cpp">
       <Filter>Source Files\DataModel\Measurements</Filter>
     </ClCompile>
     <ClCompile Include="MRPointsComponents.cpp">

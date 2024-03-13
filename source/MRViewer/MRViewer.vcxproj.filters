@@ -349,6 +349,9 @@
     <ClCompile Include="MRHistoryStore.cpp">
       <Filter>History</Filter>
     </ClCompile>
+    <ClCompile Include="MRRenderDimensions.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -682,6 +685,9 @@
     </ClInclude>
     <ClInclude Include="MRHistoryStore.h">
       <Filter>History</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderDimensions.h">
+      <Filter>Render\Implementations</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

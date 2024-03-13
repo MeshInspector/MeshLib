@@ -144,7 +144,7 @@ void RenderPlaneNormalComponent::render( const ModelRenderParams& params )
     float normalScale = std::min( planeScaleMat.x.x, planeScaleMat.y.y ) * ( 2 / 3.f );
 
     Matrix4f newModelMatrix =
-        subobject.target_->xf() *
+        subobject.target_->worldXf() *
         AffineXf3f::translation( Vector3f( -1, -1, 0 ) ) *
         AffineXf3f::linear( Matrix3f::scale( Vector3f( normalScale / planeScaleMat.x.x, normalScale / planeScaleMat.y.y, normalScale / planeScaleMat.z.z ) ) );
     ModelRenderParams newParams = {

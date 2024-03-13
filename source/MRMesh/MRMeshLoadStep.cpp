@@ -26,6 +26,7 @@ MR_SUPPRESS_WARNING( "-Wdeprecated-enum-enum-conversion", 5054 )
 #pragma warning( disable: 5267 ) // definition of implicit copy constructor is deprecated because it has a user-provided destructor
 #endif
 // FIXME: include dir with vcpkg
+#include <opencascade/BRepBuilderAPI_Copy.hxx>
 #include <opencascade/BRepMesh_IncrementalMesh.hxx>
 #include <opencascade/BRep_Tool.hxx>
 #include <opencascade/Message.hxx>
@@ -47,6 +48,7 @@ MR_SUPPRESS_WARNING( "-Wdeprecated-enum-enum-conversion", 5054 )
 #include <opencascade/XCAFDoc_DocumentTool.hxx>
 #include <opencascade/XCAFDoc_ShapeTool.hxx>
 #else
+#include <BRepBuilderAPI_Copy.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <BRep_Tool.hxx>
 #include <Message.hxx>
@@ -284,13 +286,20 @@ public:
     {
         MR_TIMER
 
-        for ( auto& ctx : meshTriangulationContexts_ )
+        ParallelFor( 0, (int)meshTriangulationContexts_.size(), [&] ( int i )
         {
+            auto& ctx = meshTriangulationContexts_[i];
+            // deep-copy the shape for thread safety
+            {
+                BRepBuilderAPI_Copy copier;
+                copier.Perform( ctx.shape, true, false ); // leave geometry, drop triangulation
+                ctx.shape = copier.Shape();
+            }
             ctx.shape = triangulateShape_( ctx.shape );
             // reset transformation as it already is loaded
             ctx.shape.Location( TopLoc_Location() );
             ctx.triples = loadShape_( ctx.shape );
-        }
+        } );
 
         std::unordered_map<std::shared_ptr<ObjectMesh>, std::vector<MeshTriangulationContext*>> objMeshGroups;
         for ( auto& ctx : meshTriangulationContexts_ )

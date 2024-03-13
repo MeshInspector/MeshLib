@@ -99,6 +99,15 @@ float PlaneObject::getSizeY( ViewportId id /*= {}*/ ) const
     return  s_.get( id ).y.y * basePlaneObjectHalfEdgeLength_ * 2.0f;
 }
 
+Matrix3f PlaneObject::getLocalBasis( ViewportId id /*= {}*/ ) const
+{
+    Matrix3f result;
+    result.x = ( r_.get( id ) * Vector3f::plusX() ).normalized();
+    result.y = ( r_.get( id ) * Vector3f::plusY() ).normalized();
+    result.z = ( r_.get( id ) * Vector3f::plusZ() ).normalized();
+    return result;
+}
+
 const std::vector<FeatureObjectSharedProperty>& PlaneObject::getAllSharedProperties() const
 {
     static std::vector<FeatureObjectSharedProperty> ret = {
@@ -115,7 +124,6 @@ PlaneObject::PlaneObject()
 {
     setDefaultFeatureObjectParams( *this );
 }
-
 
 void PlaneObject::orientateFollowMainAxis_( ViewportId id /*= {}*/ )
 {
@@ -158,7 +166,6 @@ void PlaneObject::orientateFollowMainAxis_( ViewportId id /*= {}*/ )
     }
 
 }
-
 
 void PlaneObject::setupPlaneSize2DByOriginalPoints_( const std::vector<Vector3f>& pointsToApprox )
 {

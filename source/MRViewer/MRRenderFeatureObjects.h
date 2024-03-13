@@ -5,6 +5,7 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRViewer/MRRenderDefaultUiObject.h"
+#include "MRViewer/MRRenderDimensions.h"
 #include "MRViewer/MRRenderLinesObject.h"
 #include "MRViewer/MRRenderLinesObject.h"
 #include "MRViewer/MRRenderMeshObject.h"
@@ -158,8 +159,11 @@ public:
 
 class RenderCircleFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureLinesComponent<true>, RenderFeaturePointsComponent<false>>
 {
+    const VisualObject* object_ = nullptr;
+    RenderDimensions::RadiusTask radiusTask_;
 public:
     MRVIEWER_API RenderCircleFeatureObject( const VisualObject& object );
+    MRVIEWER_API void renderUi( const UiRenderParams& params ) override;
 };
 
 class RenderPlaneFeatureObject
@@ -181,20 +185,32 @@ public:
 
 class RenderSphereFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>, RenderFeaturePointsComponent<false>>
 {
+    const VisualObject* object_ = nullptr;
+    RenderDimensions::RadiusTask radiusTask_;
 public:
     MRVIEWER_API RenderSphereFeatureObject( const VisualObject& object );
+    MRVIEWER_API void renderUi( const UiRenderParams& params ) override;
 };
 
 class RenderCylinderFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>, RenderFeatureLinesComponent<false>, RenderFeaturePointsComponent<false>>
 {
+    const VisualObject* object_ = nullptr;
+    RenderDimensions::RadiusTask radiusTask_;
+    RenderDimensions::LengthTask lengthTask_;
 public:
     MRVIEWER_API RenderCylinderFeatureObject( const VisualObject& object );
+    MRVIEWER_API void renderUi( const UiRenderParams& params ) override;
 };
 
 class RenderConeFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>, RenderFeatureLinesComponent<false>, RenderFeaturePointsComponent<false>>
 {
+    const VisualObject* object_ = nullptr;
+    RenderDimensions::RadiusTask radiusTask_;
+    RenderDimensions::AngleTask angleTask_;
+    RenderDimensions::LengthTask lengthTask_;
 public:
     MRVIEWER_API RenderConeFeatureObject( const VisualObject& object );
+    MRVIEWER_API void renderUi( const UiRenderParams& params ) override;
 };
 
 }

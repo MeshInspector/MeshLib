@@ -82,8 +82,9 @@ public:
     /// Create and generate list of bounded getters and setters for the main properties of feature object, together with prop. name for display and edit into UI.
     virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const = 0;
 
+    [[nodiscard]] MRMESH_API bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const override;
     MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
-    MRMESH_API const ViewportMask* getVisualizePropertyMaskOpt( AnyVisualizeMaskEnum type ) const override;
+    MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
 
     MRMESH_API void serializeFields_( Json::Value& root ) const override;
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;

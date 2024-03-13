@@ -7,7 +7,7 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 ////////////////////////////////////////////////////////////////////////////////
 #include "ImGuiMenu.h"
-#include "MRMesh/MRObjectWithMeasurements.h"
+#include "MRMesh/MRObjectDimensionsEnum.h"
 #include "MRViewer.h"
 #include "MRRecentFilesStore.h"
 #include <backends/imgui_impl_glfw.h>
@@ -1827,57 +1827,56 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
     if ( viewer->isDeveloperFeaturesEnabled() )
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Clipping", VisualizeMaskType::ClippedByPlane, viewportid );
 
-    { // Measurement checkboxes.
+    { // Dimensions checkboxes.
         bool fail = false;
 
-        // How many measurements of each kind each of our objects has.
-        // If different objects have different count of a measurement, that number is set to -1.
-        std::optional<std::size_t> radiusCount;
-        std::optional<std::size_t> angleCount;
-        std::optional<std::size_t> lengthCount;
+        // Which dimensions our objects have.
+        // All objects must have the same values here, otherwise we don't draw anything.
+        bool supportedDimensions[std::size_t( DimensionsVisualizePropertyType::_count )]{};
+        bool firstObject = true;
 
         for ( const auto& object : selectedVisualObjs )
         {
-            auto* in = dynamic_cast<IObjectWithMeasurements *>( object.get() );
-            if ( !in )
+            for ( std::size_t i = 0; i < std::size_t( DimensionsVisualizePropertyType::_count ); i++ )
             {
-                // If at least one object doesn't have measurements, we don't draw anything.
-                fail = true;
-                break;
+                bool value = object->supportsVisualizeProperty( DimensionsVisualizePropertyType( i ) );
+                if ( firstObject )
+                    supportedDimensions[i] = value;
+                else if ( supportedDimensions[i] != value )
+                {
+                    fail = true;
+                    break;
+                }
             }
-
-            // Counts how many measurements of type `T` this object has.
-            // If `var` is null, sets it to that number. Otherwise, if `var` is different from that number, sets it to -1.
-            auto updateCount = [&]<MeasurementPropertyEnum T>( std::optional<std::size_t>& var )
-            {
-                std::size_t n = 0;
-                while ( object->getVisualizePropertyMaskOpt( T( n ) ) )
-                    n++;
-
-                if ( !var )
-                    var = n;
-                else if ( *var != n )
-                    var = std::size_t( -1 );
-            };
-            updateCount.operator()<RadiusVisualizePropertyType>( radiusCount );
-            updateCount.operator()<AngleVisualizePropertyType>( angleCount );
-            updateCount.operator()<LengthVisualizePropertyType>( lengthCount );
+            firstObject = false;
         }
 
-        if ( !fail )
+        if ( !fail && !firstObject )
         {
-            auto drawMeasurement = [&]<MeasurementPropertyEnum T>( std::optional<std::size_t> count, const char* name )
+            for ( std::size_t i = 0; i < std::size_t( DimensionsVisualizePropertyType::_count ); i++ )
             {
-                if ( !count || *count == std::size_t( -1 ) )
-                    return;
+                if ( !supportedDimensions[i] )
+                    break;
 
-                for ( std::size_t i = 0; i < *count; i++ )
-                    someChanges |= make_visualize_checkbox( selectedVisualObjs, i == 0 ? name : fmt::format( "{} {}", name, i + 1 ).c_str(), T( i ), viewportid );
-            };
+                const char* name = nullptr;
+                switch ( DimensionsVisualizePropertyType( i ) )
+                {
+                case DimensionsVisualizePropertyType::radius:
+                    name = "Radius";
+                    break;
+                case DimensionsVisualizePropertyType::angle:
+                    name = "Angle";
+                    break;
+                case DimensionsVisualizePropertyType::length:
+                    name = "Length";
+                    break;
+                case DimensionsVisualizePropertyType::_count:
+                    // Nothing. MSVC warns if I omit this branch.
+                    break;
+                }
 
-            drawMeasurement.operator()<RadiusVisualizePropertyType>( radiusCount, "Radius" );
-            drawMeasurement.operator()<AngleVisualizePropertyType>( angleCount, "Angle" );
-            drawMeasurement.operator()<LengthVisualizePropertyType>( lengthCount, "Length" );
+                someChanges |= make_visualize_checkbox( selectedVisualObjs, name, DimensionsVisualizePropertyType( i ), viewportid );
+            }
         }
     }
 

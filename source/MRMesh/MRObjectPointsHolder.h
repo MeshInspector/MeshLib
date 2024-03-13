@@ -52,10 +52,12 @@ public:
     MRMESH_API const ViewportProperty<Color>& getSelectedVerticesColorsForAllViewports() const;
     MRMESH_API virtual void setSelectedVerticesColorsForAllViewports( ViewportProperty<Color> val );
 
+    [[nodiscard]] MRMESH_API bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const override;
+
     /// get all visualize properties masks
     MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
     /// returns mask of viewports where given property is set
-    MRMESH_API const ViewportMask* getVisualizePropertyMaskOpt( AnyVisualizeMaskEnum type ) const override;
+    MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
 
     /// sets size of points on screen in pixels
     MRMESH_API virtual void setPointSize( float size );

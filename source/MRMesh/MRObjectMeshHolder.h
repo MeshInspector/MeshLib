@@ -90,10 +90,12 @@ public:
     bool flatShading() const
     { return getVisualizeProperty( MeshVisualizePropertyType::FlatShading, ViewportMask::any() ); }
 
+    [[nodiscard]] MRMESH_API bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const override;
+
     /// get all visualize properties masks
     MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
     /// returns mask of viewports where given property is set
-    MRMESH_API const ViewportMask* getVisualizePropertyMaskOpt( AnyVisualizeMaskEnum type ) const override;
+    MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
 
     const FaceColors& getFacesColorMap() const { return facesColorMap_; }
     virtual void setFacesColorMap( FaceColors facesColorMap )

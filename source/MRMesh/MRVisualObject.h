@@ -138,6 +138,8 @@ public:
     constexpr static const char* TypeName() noexcept { return "VisualObject"; }
     virtual const char* typeName() const override { return TypeName(); }
 
+    /// Returns true if this class supports the property `type`. Otherwise passing it to the functions below is illegal.
+    [[nodiscard]] MRMESH_API virtual bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const;
     /// set visual property in all viewports specified by the mask
     MRMESH_API void setVisualizeProperty( bool value, AnyVisualizeMaskEnum type, ViewportMask viewportMask );
     /// set visual property mask
@@ -145,13 +147,7 @@ public:
     /// returns true if the property is set at least in one viewport specified by the mask
     MRMESH_API bool getVisualizeProperty( AnyVisualizeMaskEnum type, ViewportMask viewportMask ) const;
     /// returns mask of viewports where given property is set
-    const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
-    {
-        const ViewportMask* ret = getVisualizePropertyMaskOpt( type );
-        assert( ret && "Invalid enum." );
-        return *ret;
-    }
-    MRMESH_API virtual const ViewportMask* getVisualizePropertyMaskOpt( AnyVisualizeMaskEnum type ) const;
+    MRMESH_API virtual const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const;
     /// toggle visual property in all viewports specified by the mask
     MRMESH_API void toggleVisualizeProperty( AnyVisualizeMaskEnum type, ViewportMask viewportMask );
 

@@ -140,27 +140,6 @@ void CylinderObject::setupRenderObject_() const
         renderObj_ = createRenderObject<decltype( *this )>( *this );
 }
 
-MeasurementPropertyParameters<RadiusVisualizePropertyType> CylinderObject::getMeasurementParametersFor_( RadiusVisualizePropertyType index ) const
-{
-    (void)index; // Only one measurement.
-    return {
-        .vis = {
-            .drawAsDiameter = true,
-        },
-    };
-}
-
-MeasurementPropertyParameters<LengthVisualizePropertyType> CylinderObject::getMeasurementParametersFor_( LengthVisualizePropertyType index ) const
-{
-    (void)index; // Only one measurement.
-    return {
-        .points = {
-            Vector3f( 0, 0, -0.5f ),
-            Vector3f( 0, 0, 0.5f ),
-        },
-    };
-}
-
 const std::vector<FeatureObjectSharedProperty>& CylinderObject::getAllSharedProperties() const
 {
     static std::vector<FeatureObjectSharedProperty> ret = {

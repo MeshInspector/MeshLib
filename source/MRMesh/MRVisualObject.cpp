@@ -25,6 +25,11 @@ VisualObject::VisualObject()
     setDefaultSceneProperties_();
 }
 
+bool VisualObject::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const
+{
+    return type.tryGet<VisualizeMaskType>().has_value();
+}
+
 void VisualObject::setVisualizeProperty( bool value, AnyVisualizeMaskEnum type, ViewportMask viewportMask )
 {
     auto res = getVisualizePropertyMask( type );
@@ -293,7 +298,7 @@ ViewportMask& VisualObject::getVisualizePropertyMask_( AnyVisualizeMaskEnum type
     return const_cast< ViewportMask& >( getVisualizePropertyMask( type ) );
 }
 
-const ViewportMask* VisualObject::getVisualizePropertyMaskOpt( AnyVisualizeMaskEnum type ) const
+const ViewportMask& VisualObject::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
 {
     if ( auto value = type.tryGet<VisualizeMaskType>() )
     {
@@ -301,25 +306,29 @@ const ViewportMask* VisualObject::getVisualizePropertyMaskOpt( AnyVisualizeMaskE
         {
         case VisualizeMaskType::Visibility:
             (void)visibilityMask(); // Call this for the side effects, in case it's overridden. Can't return it directly, as it returns by value.
-            return &visibilityMask_;
+            return visibilityMask_;
         case VisualizeMaskType::InvertedNormals:
-            return &invertNormals_;
+            return invertNormals_;
         case VisualizeMaskType::Labels:
-            return &showLabels_;
+            return showLabels_;
         case VisualizeMaskType::ClippedByPlane:
-            return &clipByPlane_;
+            return clipByPlane_;
         case VisualizeMaskType::Name:
-            return &showName_;
+            return showName_;
         case VisualizeMaskType::CropLabelsByViewportRect:
-            return &cropLabels_;
+            return cropLabels_;
         case VisualizeMaskType::DepthTest:
-            return &depthTest_;
+            return depthTest_;
         case VisualizeMaskType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
         }
-        return nullptr;
+        assert( false && "Invalid enum." );
+        return visibilityMask_;
     }
-
-    return nullptr;
+    else
+    {
+        assert( false && "Unknown `AnyVisualizeMaskEnum`." );
+        return visibilityMask_;
+    }
 }
 
 void VisualObject::serializeFields_( Json::Value& root ) const

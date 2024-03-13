@@ -6,6 +6,10 @@
 namespace MR
 {
 
+bool FeatureObject::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const
+{
+    return type.tryGet<FeatureVisualizePropertyType>().has_value() || VisualObject::supportsVisualizeProperty( type );
+}
 
 AllVisualizeProperties FeatureObject::getAllVisualizeProperties() const
 {
@@ -14,23 +18,24 @@ AllVisualizeProperties FeatureObject::getAllVisualizeProperties() const
     return ret;
 }
 
-const ViewportMask* FeatureObject::getVisualizePropertyMaskOpt( AnyVisualizeMaskEnum type ) const
+const ViewportMask& FeatureObject::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
 {
     if ( auto value = type.tryGet<FeatureVisualizePropertyType>() )
     {
         switch ( *value )
         {
             case FeatureVisualizePropertyType::Subfeatures:
-                return &subfeatureVisibility_;
+                return subfeatureVisibility_;
             case FeatureVisualizePropertyType::DetailsOnNameTag:
-                return &detailsOnNameTag_;
+                return detailsOnNameTag_;
             case FeatureVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
         }
-        return nullptr;
+        assert( false && "Invalid enum." );
+        return visibilityMask_;
     }
     else
     {
-        return VisualObject::getVisualizePropertyMaskOpt( type );
+        return VisualObject::getVisualizePropertyMask( type );
     }
 }
 

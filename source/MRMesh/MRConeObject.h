@@ -1,6 +1,7 @@
 #pragma once
 
-#include "MRMesh/MRObjectWithMeasurements.h"
+#include "MRMesh/MRAddVisualPropertiesMixin.h"
+#include "MRMesh/MRObjectDimensionsEnum.h"
 #include "MRMeshFwd.h"
 #include "MRFeatureObject.h"
 #include "MRVisualObject.h"
@@ -10,7 +11,11 @@ namespace MR
 
 /// Object to show Cone feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS ConeObject : public ObjectWithMeasurements<FeatureObject, RadiusVisualizePropertyType(1), AngleVisualizePropertyType(1), LengthVisualizePropertyType(1)>
+class MRMESH_CLASS ConeObject : public AddVisualProperties<FeatureObject,
+    DimensionsVisualizePropertyType::radius,
+    DimensionsVisualizePropertyType::angle,
+    DimensionsVisualizePropertyType::length
+>
 {
 public:
     /// Creates simple Cone object with center in zero and radius - 1
@@ -86,10 +91,6 @@ protected:
     }
 
     MRMESH_API void setupRenderObject_() const override;
-
-    MeasurementPropertyParameters<RadiusVisualizePropertyType> getMeasurementParametersFor_( RadiusVisualizePropertyType index ) const override;
-    MeasurementPropertyParameters<AngleVisualizePropertyType> getMeasurementParametersFor_( AngleVisualizePropertyType index ) const override;
-    MeasurementPropertyParameters<LengthVisualizePropertyType> getMeasurementParametersFor_( LengthVisualizePropertyType index ) const override;
 
 private:
     // Featue Radius fully controll by cone angle, but its need for speedup internal calculation (not use tan / atan from each estimation).

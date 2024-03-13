@@ -108,6 +108,11 @@ void ObjectPointsHolder::setSelectedVerticesColor( const Color& color, ViewportI
     needRedraw_ = true;
 }
 
+bool ObjectPointsHolder::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const
+{
+    return type.tryGet<PointsVisualizePropertyType>().has_value() || VisualObject::supportsVisualizeProperty( type );
+}
+
 AllVisualizeProperties ObjectPointsHolder::getAllVisualizeProperties() const
 {
     AllVisualizeProperties ret = VisualObject::getAllVisualizeProperties();
@@ -121,21 +126,22 @@ void ObjectPointsHolder::setAllVisualizeProperties_( const AllVisualizePropertie
     setAllVisualizePropertiesForEnum<PointsVisualizePropertyType>( properties, pos );
 }
 
-const ViewportMask *ObjectPointsHolder::getVisualizePropertyMaskOpt( AnyVisualizeMaskEnum type ) const
+const ViewportMask &ObjectPointsHolder::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
 {
     if ( auto value = type.tryGet<PointsVisualizePropertyType>() )
     {
         switch ( *value )
         {
         case PointsVisualizePropertyType::SelectedVertices:
-            return &showSelectedVertices_;
+            return showSelectedVertices_;
         case PointsVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
         }
-        return nullptr;
+        assert( false && "Invalid enum." );
+        return visibilityMask_;
     }
     else
     {
-        return VisualObject::getVisualizePropertyMaskOpt( type );
+        return VisualObject::getVisualizePropertyMask( type );
     }
 }
 

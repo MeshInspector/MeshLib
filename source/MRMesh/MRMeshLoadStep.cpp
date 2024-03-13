@@ -384,9 +384,8 @@ private:
             objStack_.top()->addChild( objMesh );
 
             const auto subShapeCount = iterateLabel_( ref, objMesh );
-            if ( subShapeCount == 0 )
+            if ( subShapeCount == 0 && ShapeTool::IsSimpleShape( ref ) )
             {
-                assert( ShapeTool::IsSimpleShape( ref ) );
                 const auto refShape = ShapeTool::GetShape( ref );
 
                 std::optional<Color> faceColor, edgeColor;

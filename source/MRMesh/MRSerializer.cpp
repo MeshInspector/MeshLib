@@ -82,6 +82,9 @@ UniqueTemporaryFolder::~UniqueTemporaryFolder()
 const IOFilters SceneFileFilters =
 {
     {"MeshInspector scene (.mru)","*.mru"},
+#ifndef __EMSCRIPTEN__
+    {"MeshInSpector Object Notation (.mison)","*.mison"},
+#endif
 #ifndef MRMESH_NO_GLTF
     {"glTF JSON scene (.gltf)","*.gltf"},
     {"glTF binary scene (.glb)","*.glb"},
@@ -122,13 +125,16 @@ Expected<Json::Value, std::string> deserializeJsonValue( const std::filesystem::
     if ( !ifs || ifs.bad() )
         return unexpected( "Cannot open json file " + utf8string( path ) );
 
-    std::string str( ( std::istreambuf_iterator<char>( ifs ) ),
+    return addFileNameInError( deserializeJsonValue( ifs ), path );
+}
+
+Expected<Json::Value, std::string> deserializeJsonValue( std::istream& in )
+{
+    std::string str( ( std::istreambuf_iterator<char>( in ) ),
                      std::istreambuf_iterator<char>() );
 
-    if ( !ifs || ifs.bad() )
-        return unexpected( "Cannot read json file " + utf8string( path ) );
-
-    ifs.close();
+    if ( !in || in.bad() )
+        return unexpected( "Cannot read json file" );
 
     return deserializeJsonValue( str );
 }

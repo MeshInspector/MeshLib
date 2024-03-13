@@ -28,6 +28,10 @@ struct Params
 
     float arrowLen = 12;
     float arrowHalfWidth = 4;
+    // The arrow tip is moved back for this amount of pixels,
+    //   to compensate for the outline that otherwise makes the tip look longer than it actually is.
+    // This only applies if the tip doesn't continue into a line.
+    float arrowTipBackwardOffset = 2.5f;
 
     // The spacing box around the text is extended by this amount.
     ImVec2 textToLineSpacingA = ImVec2( 0, 0 ); // Top-left corner.
@@ -117,6 +121,7 @@ struct LineCap
 enum class LineFlags
 {
     narrow = 1 << 0,
+    noBackwardArrowTipOffset = 1 << 1, // Overrides `params.arrowTipBackwardOffset` to zero.
 };
 MR_MAKE_FLAG_OPERATORS( LineFlags )
 

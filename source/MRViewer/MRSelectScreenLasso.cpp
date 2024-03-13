@@ -361,7 +361,7 @@ VertBitSet findVertsInViewportArea( const Viewport& viewport, const BitSet& pixB
                 cameraDir = orthoBackwards;
             else
                 cameraDir = -viewport.unprojectPixelRay( to2dim( viewport.projectToViewportSpace( pointCloud->points[i] ) ) ).d;
-            if ( dot( normals[i], cameraDir ) < 0 )
+            if ( dot( xf.A * normals[i], cameraDir ) < 0 )
                 verts.set( i, false );
         }
     } );

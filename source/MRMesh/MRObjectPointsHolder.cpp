@@ -108,6 +108,11 @@ void ObjectPointsHolder::setSelectedVerticesColor( const Color& color, ViewportI
     needRedraw_ = true;
 }
 
+bool ObjectPointsHolder::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const
+{
+    return VisualObject::supportsVisualizeProperty( type ) || type.tryGet<PointsVisualizePropertyType>().has_value();
+}
+
 AllVisualizeProperties ObjectPointsHolder::getAllVisualizeProperties() const
 {
     AllVisualizeProperties ret = VisualObject::getAllVisualizeProperties();

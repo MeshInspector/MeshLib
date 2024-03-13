@@ -1,4 +1,6 @@
 #pragma once
+#include "MRMesh/MRAddVisualPropertiesMixin.h"
+#include "MRMesh/MRObjectDimensionsEnum.h"
 #include "MRMeshFwd.h"
 #include "MRFeatureObject.h"
 #include "MRVisualObject.h"
@@ -11,7 +13,7 @@ namespace MR
 
 /// Object to show sphere feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS CircleObject : public FeatureObject
+class MRMESH_CLASS CircleObject : public AddVisualProperties<FeatureObject, DimensionsVisualizePropertyType::radius>
 {
 public:
     /// Creates simple sphere object with center in zero and radius - 1

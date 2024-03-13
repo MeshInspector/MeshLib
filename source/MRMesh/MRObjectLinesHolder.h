@@ -53,6 +53,7 @@ public:
     virtual void updateLinesColorMap( UndirectedEdgeColors& updated )
     { std::swap( linesColorMap_, updated ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
 
+    [[nodiscard]] MRMESH_API bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const override;
     /// get all visualize properties masks
     MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
     /// returns mask of viewports where given property is set

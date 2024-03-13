@@ -1,5 +1,7 @@
 #pragma once
 
+#include "MRMesh/MRAddVisualPropertiesMixin.h"
+#include "MRMesh/MRObjectDimensionsEnum.h"
 #include "MRMeshFwd.h"
 #include "MRFeatureObject.h"
 #include "MRVisualObject.h"
@@ -9,7 +11,11 @@ namespace MR
 
 /// Object to show Cone feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS ConeObject : public FeatureObject
+class MRMESH_CLASS ConeObject : public AddVisualProperties<FeatureObject,
+    DimensionsVisualizePropertyType::radius,
+    DimensionsVisualizePropertyType::angle,
+    DimensionsVisualizePropertyType::length
+>
 {
 public:
     /// Creates simple Cone object with center in zero and radius - 1

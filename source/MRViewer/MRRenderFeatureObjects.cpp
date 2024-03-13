@@ -234,7 +234,7 @@ std::string RenderLineFeatureObject::getObjectNameString( const VisualObject& ob
 
 MR_REGISTER_RENDER_OBJECT_IMPL( CircleObject, RenderCircleFeatureObject )
 RenderCircleFeatureObject::RenderCircleFeatureObject( const VisualObject& object )
-    : RenderObjectCombinator( object )
+    : RenderObjectCombinator( object ), object_( &object )
 {
     // Main visualization.
     static const auto polyline = []{
@@ -259,6 +259,15 @@ RenderCircleFeatureObject::RenderCircleFeatureObject( const VisualObject& object
     Vector3f nameTagDir = Vector3f( -1, -1, 0 ).normalized();
     nameUiPoint = nameTagDir;
     nameUiLocalOffset = nameTagDir * 2.f / 3.f;
+}
+
+void RenderCircleFeatureObject::renderUi( const UiRenderParams& params )
+{
+    if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::radius, params.viewportId ) )
+    {
+        radiusTask_ = RenderDimensions::RadiusTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .drawAsDiameter = true } );
+        params.tasks->push_back( { std::shared_ptr<void>{}, &radiusTask_ } ); // A non-owning `shared_ptr`.
+    }
 }
 
 MR_REGISTER_RENDER_OBJECT_IMPL( PlaneObject, RenderPlaneFeatureObject )
@@ -308,7 +317,7 @@ std::string RenderPlaneFeatureObject::getObjectNameString( const VisualObject& o
 
 MR_REGISTER_RENDER_OBJECT_IMPL( SphereObject, RenderSphereFeatureObject )
 RenderSphereFeatureObject::RenderSphereFeatureObject( const VisualObject& object )
-    : RenderObjectCombinator( object )
+    : RenderObjectCombinator( object ), object_( &object )
 {
     static const auto mesh = []{
         constexpr float radius = 1.0f;
@@ -328,9 +337,18 @@ RenderSphereFeatureObject::RenderSphereFeatureObject( const VisualObject& object
     nameUiRotateToScreenPlaneAroundSphereCenter = Vector3f( 0, 0, 0 );
 }
 
+void RenderSphereFeatureObject::renderUi( const UiRenderParams& params )
+{
+    if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::radius, params.viewportId ) )
+    {
+        radiusTask_ = RenderDimensions::RadiusTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .drawAsDiameter = true, .isSpherical = true } );
+        params.tasks->push_back( { std::shared_ptr<void>{}, &radiusTask_ } ); // A non-owning `shared_ptr`.
+    }
+}
+
 MR_REGISTER_RENDER_OBJECT_IMPL( CylinderObject, RenderCylinderFeatureObject )
 RenderCylinderFeatureObject::RenderCylinderFeatureObject( const VisualObject& object )
-    : RenderObjectCombinator( object )
+    : RenderObjectCombinator( object ), object_( &object )
 {
     static const auto mesh = []{
         constexpr float radius = 1.0f;
@@ -351,9 +369,24 @@ RenderCylinderFeatureObject::RenderCylinderFeatureObject( const VisualObject& ob
     nameUiLocalOffset = nameTagDir * 2.f / 3.f;
 }
 
+void RenderCylinderFeatureObject::renderUi( const UiRenderParams& params )
+{
+    if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::radius, params.viewportId ) )
+    {
+        radiusTask_ = RenderDimensions::RadiusTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .drawAsDiameter = true } );
+        params.tasks->push_back( { std::shared_ptr<void>{}, &radiusTask_ } ); // A non-owning `shared_ptr`.
+    }
+
+    if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::length, params.viewportId ) )
+    {
+        lengthTask_ = RenderDimensions::LengthTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .points = { Vector3f( 0, 0, -0.5f ), Vector3f( 0, 0, 0.5f ) } } );
+        params.tasks->push_back( { std::shared_ptr<void>{}, &lengthTask_ } ); // A non-owning `shared_ptr`.
+    }
+}
+
 MR_REGISTER_RENDER_OBJECT_IMPL( ConeObject, RenderConeFeatureObject )
 RenderConeFeatureObject::RenderConeFeatureObject( const VisualObject& object )
-    : RenderObjectCombinator( object )
+    : RenderObjectCombinator( object ), object_( &object )
 {
     static const auto mesh = []{
         constexpr float radius = 1;
@@ -373,6 +406,27 @@ RenderConeFeatureObject::RenderConeFeatureObject( const VisualObject& object )
 
     nameUiPoint = Vector3f( 0, 0, 1 ) + nameTagDir;
     nameUiLocalOffset = nameTagDir * 2.f / 3.f;
+}
+
+void RenderConeFeatureObject::renderUi( const UiRenderParams& params )
+{
+    if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::radius, params.viewportId ) )
+    {
+        radiusTask_ = RenderDimensions::RadiusTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .center = Vector3f( 0, 0, 1 ), .drawAsDiameter = true } );
+        params.tasks->push_back( { std::shared_ptr<void>{}, &radiusTask_ } ); // A non-owning `shared_ptr`.
+    }
+
+    if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::angle, params.viewportId ) )
+    {
+        angleTask_ = RenderDimensions::AngleTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .rays = { Vector3f( 0.5f, 0, 0.5f ), Vector3f( -0.5f, 0, 0.5f ) }, .isConical = true } );
+        params.tasks->push_back( { std::shared_ptr<void>{}, &angleTask_ } ); // A non-owning `shared_ptr`.
+    }
+
+    if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::length, params.viewportId ) )
+    {
+        lengthTask_ = RenderDimensions::LengthTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .points = { Vector3f{}, Vector3f( 0, 0, 1 ) } } );
+        params.tasks->push_back( { std::shared_ptr<void>{}, &lengthTask_ } ); // A non-owning `shared_ptr`.
+    }
 }
 
 }

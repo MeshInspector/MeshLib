@@ -375,9 +375,10 @@
     <ClInclude Include="MRRadiusMeasurementObject.h" />
     <ClInclude Include="MRDistanceMeasurementObject.h" />
     <ClInclude Include="MRAngleMeasurementObject.h" />
-    <ClInclude Include="MRDefaultMeasurementObjects.h" />
     <ClInclude Include="MRDefaultFeatureObjectParams.h" />
     <ClInclude Include="MRSubfeatures.h" />
+    <ClInclude Include="MRAddVisualPropertiesMixin.h" />
+    <ClInclude Include="MRObjectDimensionsEnum.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -648,7 +649,6 @@
     <ClCompile Include="MRRadiusMeasurementObject.cpp" />
     <ClCompile Include="MRDistanceMeasurementObject.cpp" />
     <ClCompile Include="MRAngleMeasurementObject.cpp" />
-    <ClCompile Include="MRDefaultMeasurementObjects.cpp" />
     <ClCompile Include="MRDefaultFeatureObjectParams.cpp" />
     <ClCompile Include="MRFeatureObject.cpp" />
     <ClCompile Include="MRSubfeatures.cpp" />

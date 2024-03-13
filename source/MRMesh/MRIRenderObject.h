@@ -52,8 +52,10 @@ struct BasicUiRenderTask
     virtual ~BasicUiRenderTask() = default;
 
     BasicUiRenderTask() = default;
-    BasicUiRenderTask( const BasicUiRenderTask& ) = delete;
-    BasicUiRenderTask& operator=( const BasicUiRenderTask& ) = delete;
+    BasicUiRenderTask( const BasicUiRenderTask& ) = default;
+    BasicUiRenderTask( BasicUiRenderTask&& ) = default;
+    BasicUiRenderTask& operator=( const BasicUiRenderTask& ) = default;
+    BasicUiRenderTask& operator=( BasicUiRenderTask&& ) = default;
 
     /// The tasks are sorted by this depth, descending (larger depth = further away).
     float renderTaskDepth = 0;

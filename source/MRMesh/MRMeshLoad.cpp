@@ -15,8 +15,7 @@
 #include "MRPch/MRTBB.h"
 #include "MRProgressReadWrite.h"
 #include "MRIOParsing.h"
-#include "MRGeodesicPath.h"
-#include "MRTriMath.h"
+#include "MRMeshDelone.h"
 
 #include <array>
 #include <future>
@@ -128,21 +127,7 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
                 return unexpected( std::string( "Polygons read error" ) );
 
             // build optimal triangulation of a quadrangle
-            const auto a = points[VertId( ai )];
-            const auto b = points[VertId( bi )];
-            const auto c = points[VertId( ci )];
-            const auto d = points[VertId( di )];
-            bool cabcd = isUnfoldQuadrangleConvex( a, b, c, d );
-            bool cbcda = isUnfoldQuadrangleConvex( b, c, d, a );
-            bool tabc = false;
-            if ( cabcd != cbcda )
-                tabc = cbcda;
-            else
-            {
-                auto metricAC = std::max( circumcircleDiameterSq( a, c, d ), circumcircleDiameterSq( c, a, b ) );
-                auto metricBD = std::max( circumcircleDiameterSq( b, d, a ), circumcircleDiameterSq( d, b, c ) );
-                tabc = metricAC <= metricBD;
-            }
+            bool tabc = bestQuadrangleDiagonal( points[VertId( ai )], points[VertId( bi )], points[VertId( ci )], points[VertId( di )] );
             if ( tabc )
             {
                 t.push_back( { VertId( ai ), VertId( bi ), VertId( ci ) } );

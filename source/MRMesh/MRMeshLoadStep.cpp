@@ -284,49 +284,58 @@ public:
     {
         MR_TIMER
 
-        tbb::task_arena taskArena;
-        taskArena.execute( [&]
-        {
-            tbb::task_group taskGroup;
-            for ( auto& ctx : meshTriangulationContexts_ )
-            {
-                ctx.shape = triangulateShape_( ctx.shape );
-                // reset transformation as it already is loaded
-                ctx.shape.Location( TopLoc_Location() );
-                ctx.triples = loadShape_( ctx.shape );
-
-                taskGroup.run( [&ctx]
-                {
-                    ctx.part = Mesh::fromPointTriples( ctx.triples, true );
-                    ctx.triples.clear();
-                } );
-            }
-            taskGroup.wait();
-        } );
-
         for ( auto& ctx : meshTriangulationContexts_ )
         {
-            auto& mesh = *ctx.mesh->varMesh();
-
-            if ( ctx.faceColor )
-            {
-                FaceMap fmap;
-                mesh.addPart( ctx.part, &fmap );
-
-                auto faceColors = ctx.mesh->getFacesColorMap();
-                faceColors.resize( mesh.topology.lastValidFace() + 1, Color::gray() );
-                for ( const auto of : ctx.part.topology.getValidFaces() )
-                    faceColors[fmap[of]] = *ctx.faceColor;
-                ctx.mesh->setColoringType( ColoringType::FacesColorMap );
-                ctx.mesh->setFacesColorMap( std::move( faceColors ) );
-            }
-            else
-            {
-                mesh.addPart( ctx.part );
-            }
-
-            ctx.part = Mesh();
+            ctx.shape = triangulateShape_( ctx.shape );
+            // reset transformation as it already is loaded
+            ctx.shape.Location( TopLoc_Location() );
+            ctx.triples = loadShape_( ctx.shape );
         }
+
+        std::unordered_map<std::shared_ptr<ObjectMesh>, std::vector<MeshTriangulationContext*>> objMeshGroups;
+        for ( auto& ctx : meshTriangulationContexts_ )
+            objMeshGroups[ctx.mesh].emplace_back( &ctx );
+
+        ParallelFor( 0, (int)objMeshGroups.size(), [&] ( int gi )
+        {
+            auto& [objMesh, ctxs] = *std::next( objMeshGroups.begin(), gi );
+
+            size_t faceCount = 0;
+            bool hasCustomColors = false;
+            for ( const auto* ctx : ctxs )
+            {
+                faceCount += ctx->triples.size();
+                hasCustomColors |= ctx->faceColor.has_value();
+            }
+
+            std::vector<Triangle3f> triples;
+            triples.reserve( faceCount );
+            FaceColors faceColors;
+            if ( hasCustomColors )
+                faceColors.resize( faceCount, objMesh->getFrontColor( false ) );
+            size_t faceOffset = 0;
+            for ( auto* ctx : ctxs )
+            {
+                std::copy( ctx->triples.begin(), ctx->triples.end(), std::back_inserter( triples ) );
+
+                if ( ctx->faceColor )
+                {
+                    for ( auto fi = 0; fi < ctx->triples.size(); ++fi )
+                        faceColors[FaceId( faceOffset + fi )] = *ctx->faceColor;
+                }
+                faceOffset += ctx->triples.size();
+
+                ctx->triples.clear();
+                ctx->triples.shrink_to_fit();
+            }
+
+            *objMesh->varMesh() = Mesh::fromPointTriples( triples, true );
+            if ( hasCustomColors )
+            {
+                objMesh->setColoringType( ColoringType::FacesColorMap );
+                objMesh->setFacesColorMap( std::move( faceColors ) );
+            }
+        } );
     }
 
 private:
@@ -575,7 +584,6 @@ private:
         std::optional<Color> faceColor;
         std::optional<Color> edgeColor;
         std::vector<Triangle3f> triples;
-        Mesh part;
 
         MeshTriangulationContext( TopoDS_Shape shape, std::shared_ptr<ObjectMesh> mesh, std::optional<Color> faceColor, std::optional<Color> edgeColor )
             : shape( std::move( shape ) )

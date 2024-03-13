@@ -104,6 +104,7 @@
     <ClInclude Include="MRCudaFloat.cuh" />
     <ClInclude Include="MRCudaMath.cuh" />
     <ClInclude Include="MRCudaPointsToDistanceVolume.cuh" />
+    <ClInclude Include="MRCudaPointsToDistanceVolume.h" />
     <ClInclude Include="MRCudaPointsToMeshProjector.cuh" />
     <ClInclude Include="MRCudaPointsToMeshProjector.h" />
     <ClInclude Include="MRCudaContoursDistanceMap.cuh" />

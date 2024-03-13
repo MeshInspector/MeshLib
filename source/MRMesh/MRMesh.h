@@ -24,8 +24,7 @@ struct [[nodiscard]] Mesh
     MeshTopology topology;
     VertCoords points;
 
-    /// construct mesh from vertex coordinates and a set of triangles with given ids;
-    /// if skippedTris is given then it receives all input triangles not added in the resulting topology due to conflicts
+    /// construct mesh from vertex coordinates and a set of triangles with given ids
     [[nodiscard]] MRMESH_API static Mesh fromTriangles(
         VertCoords vertexCoordinates,
         const Triangulation& t, const MeshBuilder::BuildSettings& settings = {}, ProgressCallback cb = {} );
@@ -37,6 +36,12 @@ struct [[nodiscard]] Mesh
         Triangulation & t,
         std::vector<MeshBuilder::VertDuplication> * dups = nullptr,
         const MeshBuilder::BuildSettings & settings = {} );
+
+    /// construct mesh from vertex coordinates and construct mesh topology from face soup, where each face can have arbitrary degree (not only triangles)
+    [[nodiscard]] MRMESH_API static Mesh fromFaceSoup(
+        VertCoords vertexCoordinates,
+        const std::vector<VertId> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,
+        const MeshBuilder::BuildSettings& settings = {}, ProgressCallback cb = {} );
 
     /// construct mesh from point triples;
     /// \param duplicateNonManifoldVertices = false, all coinciding points are given the same VertId in the result;

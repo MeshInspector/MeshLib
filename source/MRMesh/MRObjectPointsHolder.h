@@ -52,6 +52,8 @@ public:
     MRMESH_API const ViewportProperty<Color>& getSelectedVerticesColorsForAllViewports() const;
     MRMESH_API virtual void setSelectedVerticesColorsForAllViewports( ViewportProperty<Color> val );
 
+    [[nodiscard]] MRMESH_API bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const override;
+
     /// get all visualize properties masks
     MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
     /// returns mask of viewports where given property is set

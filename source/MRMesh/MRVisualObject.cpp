@@ -25,6 +25,11 @@ VisualObject::VisualObject()
     setDefaultSceneProperties_();
 }
 
+bool VisualObject::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const
+{
+    return type.tryGet<VisualizeMaskType>().has_value();
+}
+
 void VisualObject::setVisualizeProperty( bool value, AnyVisualizeMaskEnum type, ViewportMask viewportMask )
 {
     auto res = getVisualizePropertyMask( type );

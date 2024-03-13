@@ -50,8 +50,7 @@ template <typename T>
 concept AnyVisualizeMaskEnumType =
     IsVisualizeMaskEnum<T>::value &&
     std::is_same_v<std::underlying_type_t<T>, int> &&
-    std::is_same_v<T, std::remove_cvref_t<T>> &&
-    requires{ T::_count > T{}; };
+    std::is_same_v<T, std::remove_cvref_t<T>>;
 
 // Stores a `VisualizeMaskType` or any other enum that extends it (i.e. which specializes `IsVisualizeMaskEnum`).
 // To extract the value, do this:
@@ -139,6 +138,8 @@ public:
     constexpr static const char* TypeName() noexcept { return "VisualObject"; }
     virtual const char* typeName() const override { return TypeName(); }
 
+    /// Returns true if this class supports the property `type`. Otherwise passing it to the functions below is illegal.
+    [[nodiscard]] MRMESH_API virtual bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const;
     /// set visual property in all viewports specified by the mask
     MRMESH_API void setVisualizeProperty( bool value, AnyVisualizeMaskEnum type, ViewportMask viewportMask );
     /// set visual property mask

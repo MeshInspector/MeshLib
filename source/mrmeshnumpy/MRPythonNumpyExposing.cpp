@@ -23,7 +23,7 @@ MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
 } )
 
 
-MR::Mesh fromFV( const pybind11::buffer& faces, const pybind11::buffer& verts, const MR::MeshBuilder::BuildSettings & settings )
+MR::Mesh fromFV( const pybind11::buffer& faces, const pybind11::buffer& verts, const MR::MeshBuilder::BuildSettings & settings, bool duplicateNonManifoldVertices )
 {
     pybind11::buffer_info infoFaces = faces.request();
     pybind11::buffer_info infoVerts = verts.request();
@@ -31,8 +31,6 @@ MR::Mesh fromFV( const pybind11::buffer& faces, const pybind11::buffer& verts, c
         throw std::runtime_error( "shape of input python vector 'faces' should be (n,3)" );
     if ( infoVerts.ndim != 2 || infoVerts.shape[1] != 3 )
         throw std::runtime_error( "shape of input python vector 'verts' should be (n,3)" );
-
-    MR::Mesh res;
 
     // faces to topology part
     auto strideF0 = infoFaces.strides[0] / infoFaces.itemsize;
@@ -64,18 +62,18 @@ MR::Mesh fromFV( const pybind11::buffer& faces, const pybind11::buffer& verts, c
     }
     else
         throw std::runtime_error( "dtype of input python vector 'faces' should be int32 or int64" );
-    res.topology = MR::MeshBuilder::fromTriangles( t, settings );
 
     // verts to points part
     auto strideV0 = infoVerts.strides[0] / infoVerts.itemsize;
     auto strideV1 = infoVerts.strides[1] / infoVerts.itemsize;
-    res.points.resize( infoVerts.shape[0] );
+    MR::VertCoords points;
+    points.resize( infoVerts.shape[0] );
     auto fillVerts = [&] ( const auto* data )
     {
         for ( auto i = 0; i < infoVerts.shape[0]; i++ )
         {
             auto ind = strideV0 * i;
-            res.points[MR::VertId( i )] = MR::Vector3f(
+            points[MR::VertId( i )] = MR::Vector3f(
                 float( data[ind] ),
                 float( data[ind + strideV1] ),
                 float( data[ind + strideV1 * 2] ) );
@@ -93,8 +91,10 @@ MR::Mesh fromFV( const pybind11::buffer& faces, const pybind11::buffer& verts, c
     }
     else
         throw std::runtime_error( "dtype of input python vector 'verts' should be float32 or float64" );
-
-    return res;
+    if ( duplicateNonManifoldVertices )
+        return MR::Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), t, nullptr, settings );
+    else
+        return MR::Mesh::fromTriangles( std::move( points ), t, settings );
 }
 
 MR::Mesh fromUVPoints( const pybind11::buffer& xArray, const pybind11::buffer& yArray, const pybind11::buffer& zArray )
@@ -234,7 +234,9 @@ MR::Mesh fromUVPoints( const pybind11::buffer& xArray, const pybind11::buffer& y
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyMesh, [] ( pybind11::module_& m )
 {
-    m.def( "meshFromFacesVerts", &fromFV, pybind11::arg( "faces" ), pybind11::arg( "verts" ), pybind11::arg_v( "settings", MR::MeshBuilder::BuildSettings(), "MeshBuilderSettings()" ),
+    m.def( "meshFromFacesVerts", &fromFV,
+    pybind11::arg( "faces" ), pybind11::arg( "verts" ), pybind11::arg_v( "settings", MR::MeshBuilder::BuildSettings(), "MeshBuilderSettings()" ),
+    pybind11::arg( "duplicateNonManifoldVertices" ) = true,
             "constructs mesh from given numpy ndarrays of faces (N VertId x3, FaceId x1), verts (M vec3 x3)" );
     m.def( "meshFromUVPoints", &fromUVPoints, pybind11::arg( "xArray" ), pybind11::arg( "yArray" ), pybind11::arg( "zArray" ),
             "constructs mesh from three 2d numpy ndarrays with x,y,z positions of mesh" );

@@ -7,6 +7,7 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 ////////////////////////////////////////////////////////////////////////////////
 #include "ImGuiMenu.h"
+#include "MRMesh/MRObjectDimensionsEnum.h"
 #include "MRViewer.h"
 #include "MRRecentFilesStore.h"
 #include <backends/imgui_impl_glfw.h>
@@ -1825,6 +1826,59 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Labels", VisualizeMaskType::Labels, viewportid );
     if ( viewer->isDeveloperFeaturesEnabled() )
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Clipping", VisualizeMaskType::ClippedByPlane, viewportid );
+
+    { // Dimensions checkboxes.
+        bool fail = false;
+
+        // Which dimensions our objects have.
+        // All objects must have the same values here, otherwise we don't draw anything.
+        bool supportedDimensions[std::size_t( DimensionsVisualizePropertyType::_count )]{};
+        bool firstObject = true;
+
+        for ( const auto& object : selectedVisualObjs )
+        {
+            for ( std::size_t i = 0; i < std::size_t( DimensionsVisualizePropertyType::_count ); i++ )
+            {
+                bool value = object->supportsVisualizeProperty( DimensionsVisualizePropertyType( i ) );
+                if ( firstObject )
+                    supportedDimensions[i] = value;
+                else if ( supportedDimensions[i] != value )
+                {
+                    fail = true;
+                    break;
+                }
+            }
+            firstObject = false;
+        }
+
+        if ( !fail && !firstObject )
+        {
+            for ( std::size_t i = 0; i < std::size_t( DimensionsVisualizePropertyType::_count ); i++ )
+            {
+                if ( !supportedDimensions[i] )
+                    break;
+
+                const char* name = nullptr;
+                switch ( DimensionsVisualizePropertyType( i ) )
+                {
+                case DimensionsVisualizePropertyType::radius:
+                    name = "Radius";
+                    break;
+                case DimensionsVisualizePropertyType::angle:
+                    name = "Angle";
+                    break;
+                case DimensionsVisualizePropertyType::length:
+                    name = "Length";
+                    break;
+                case DimensionsVisualizePropertyType::_count:
+                    // Nothing. MSVC warns if I omit this branch.
+                    break;
+                }
+
+                someChanges |= make_visualize_checkbox( selectedVisualObjs, name, DimensionsVisualizePropertyType( i ), viewportid );
+            }
+        }
+    }
 
     return someChanges;
 }

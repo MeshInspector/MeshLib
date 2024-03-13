@@ -114,6 +114,7 @@
     <ClInclude Include="MRMeshExtrude.h" />
     <ClInclude Include="MRMeshReplicate.h" />
     <ClInclude Include="MRMeshToDistanceVolume.h" />
+    <ClInclude Include="MRMisonLoad.h" />
     <ClInclude Include="MRMovementBuildBody.h" />
     <ClInclude Include="MRMutexOwner.h" />
     <ClInclude Include="MRNormalDenoising.h" />
@@ -374,9 +375,10 @@
     <ClInclude Include="MRRadiusMeasurementObject.h" />
     <ClInclude Include="MRDistanceMeasurementObject.h" />
     <ClInclude Include="MRAngleMeasurementObject.h" />
-    <ClInclude Include="MRDefaultMeasurementObjects.h" />
     <ClInclude Include="MRDefaultFeatureObjectParams.h" />
     <ClInclude Include="MRSubfeatures.h" />
+    <ClInclude Include="MRAddVisualPropertiesMixin.h" />
+    <ClInclude Include="MRObjectDimensionsEnum.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -480,6 +482,7 @@
     <ClCompile Include="MRMeshOrPoints.cpp" />
     <ClCompile Include="MRMeshReplicate.cpp" />
     <ClCompile Include="MRMeshToDistanceVolume.cpp" />
+    <ClCompile Include="MRMisonLoad.cpp" />
     <ClCompile Include="MRMovementBuildBody.cpp" />
     <ClCompile Include="MRNormalDenoising.cpp" />
     <ClCompile Include="MRNormalsToPoints.cpp" />
@@ -646,7 +649,6 @@
     <ClCompile Include="MRRadiusMeasurementObject.cpp" />
     <ClCompile Include="MRDistanceMeasurementObject.cpp" />
     <ClCompile Include="MRAngleMeasurementObject.cpp" />
-    <ClCompile Include="MRDefaultMeasurementObjects.cpp" />
     <ClCompile Include="MRDefaultFeatureObjectParams.cpp" />
     <ClCompile Include="MRFeatureObject.cpp" />
     <ClCompile Include="MRSubfeatures.cpp" />

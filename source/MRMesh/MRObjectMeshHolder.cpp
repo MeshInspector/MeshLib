@@ -216,6 +216,11 @@ Box3f ObjectMeshHolder::computeBoundingBox_() const
     return mesh_->computeBoundingBox();
 }
 
+bool ObjectMeshHolder::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const
+{
+    return VisualObject::supportsVisualizeProperty( type ) || type.tryGet<MeshVisualizePropertyType>().has_value();
+}
+
 AllVisualizeProperties ObjectMeshHolder::getAllVisualizeProperties() const
 {
     AllVisualizeProperties ret = VisualObject::getAllVisualizeProperties();

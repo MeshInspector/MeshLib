@@ -47,12 +47,16 @@ def test_numpy_makeManifold():
     faces = np.array([[0, 1, 2], [0, 3, 1], [0, 3, 1], [0, 4, 1]])
 
     # Build the mesh allowing non-manifold edges
-    m1 = mrmeshnumpy.meshFromFacesVerts(faces, verts)
+    m1 = mrmeshnumpy.meshFromFacesVerts(faces, verts, duplicateNonManifoldVertices = False )
     assert m1.topology.getValidFaces().count() == 3
 
     # Build the mesh again without allowing manifold edges
     settings = mrmesh.MeshBuilderSettings()
     settings.allowNonManifoldEdge = False
 
-    m2 = mrmeshnumpy.meshFromFacesVerts(faces, verts, settings)
+    m2 = mrmeshnumpy.meshFromFacesVerts(faces, verts, settings, duplicateNonManifoldVertices = False)
     assert m2.topology.getValidFaces().count() == 2
+
+    # Build the mesh againd with duplication (True by default)
+    m3 = mrmeshnumpy.meshFromFacesVerts(faces, verts)
+    assert m3.topology.getValidFaces().count() == 4

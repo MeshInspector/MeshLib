@@ -88,6 +88,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="MRCudaFastWindingNumber.cu" />
+    <CudaCompile Include="MRCudaPointsToDistanceVolume.cu" />
     <CudaCompile Include="MRCudaPointsToMeshProjector.cu" />
     <CudaCompile Include="MRCudaSolarRadiation.cu" />
     <CudaCompile Include="MRCudaTest.cu" />
@@ -102,6 +103,8 @@
     <ClInclude Include="MRCudaFastWindingNumber.h" />
     <ClInclude Include="MRCudaFloat.cuh" />
     <ClInclude Include="MRCudaMath.cuh" />
+    <ClInclude Include="MRCudaPointsToDistanceVolume.cuh" />
+    <ClInclude Include="MRCudaPointsToDistanceVolume.h" />
     <ClInclude Include="MRCudaPointsToMeshProjector.cuh" />
     <ClInclude Include="MRCudaPointsToMeshProjector.h" />
     <ClInclude Include="MRCudaContoursDistanceMap.cuh" />
@@ -115,6 +118,8 @@
     <ClCompile Include="MRCudaBasic.cpp" />
     <ClCompile Include="MRCudaContoursDisntaceMap.cpp" />
     <ClCompile Include="MRCudaFastWindingNumber.cpp" />
+    <ClCompile Include="MRCudaPointsToDistanceVolume.cpp" />
+    <ClCompile Include="MRCudaPointsToDistanceVolume.h" />
     <ClCompile Include="MRCudaPointsToMeshProjector.cpp" />
     <ClCompile Include="MRCudaSolarRadiation.cpp" />
     <ClCompile Include="MRCudaTest.cpp" />

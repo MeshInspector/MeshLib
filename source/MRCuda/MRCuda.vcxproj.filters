@@ -16,6 +16,9 @@
     <CudaCompile Include="MRCudaSolarRadiation.cu">
       <Filter>SolarRadiation</Filter>
     </CudaCompile>
+    <CudaCompile Include="MRCudaPointsToDistanceVolume.cu">
+      <Filter>PointsToDistanceVolume</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRCudaTest.cpp">
@@ -35,6 +38,12 @@
     </ClCompile>
     <ClCompile Include="MRCudaSolarRadiation.cpp">
       <Filter>SolarRadiation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCudaPointsToDistanceVolume.cpp">
+      <Filter>PointsToDistanceVolume</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCudaPointsToDistanceVolume.h">
+      <Filter>PointsToDistanceVolume</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -84,6 +93,9 @@
     <ClInclude Include="MRCudaSolarRadiation.cuh">
       <Filter>SolarRadiation</Filter>
     </ClInclude>
+    <ClInclude Include="MRCudaPointsToDistanceVolume.cuh">
+      <Filter>PointsToDistanceVolume</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="CudaTest">
@@ -103,6 +115,9 @@
     </Filter>
     <Filter Include="SolarRadiation">
       <UniqueIdentifier>{1740019b-6425-4837-80d1-64cf6d2d5fde}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PointsToDistanceVolume">
+      <UniqueIdentifier>{206d9aab-c103-4918-87fd-5ff271af314d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

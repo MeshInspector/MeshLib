@@ -37,12 +37,14 @@ IF(APPLE OR MR_EMSCRIPTEN)
         tbb
         freetype
         gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF
+        cpr
         ${MR_PYTHON_LIB}
     )
   ELSE()
     target_link_libraries(${PROJECT_NAME} PRIVATE
       jsoncpp
       tbb
+      cpr
     )
   ENDIF()
 ELSE()
@@ -53,6 +55,7 @@ ELSE()
     jsoncpp
     tbb
     gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF
+    cpr
     ${MR_PYTHON_LIB}
   )
 ENDIF()

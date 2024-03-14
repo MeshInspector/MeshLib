@@ -89,7 +89,7 @@
 
 #include "OpenCTM/openctm.h"
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
 #pragma warning(push)
 #pragma warning(disable:4100) //'_unused_op': unreferenced formal parameter
 #pragma warning(disable:4189) //'has_args': local variable is initialized but not referenced

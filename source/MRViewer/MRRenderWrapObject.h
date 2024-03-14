@@ -21,10 +21,8 @@ class BasicWrapperTarget
 {
 protected:
     ~BasicWrapperTarget() = default;
-    const VisualObject* target_ = nullptr;
-
 public:
-    void setTargetObject( const VisualObject& object ) { target_ = &object; }
+    const VisualObject* target_ = nullptr;
 };
 
 // An `IRenderObject` that embeds a data model object and another render object in it.
@@ -37,7 +35,7 @@ public:
         : RenderObjectType( detail::SubobjectStorage<ObjectType>::subobject )
     {
         if constexpr ( std::derived_from<ObjectType, BasicWrapperTarget> )
-            this->subobject.setTargetObject( object );
+            this->subobject.target_ = &object;
     }
 
     Wrapper( const Wrapper& ) = delete;

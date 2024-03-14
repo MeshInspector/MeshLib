@@ -60,6 +60,10 @@ struct Node3
     {
         return l;
     }
+    __device__ int2 getLeafPointRange() const
+    { 
+        return { -(l + 1), -(r + 1) };
+    }
 };
 
 struct FaceToThreeVerts

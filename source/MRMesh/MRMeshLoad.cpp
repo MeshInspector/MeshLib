@@ -681,37 +681,6 @@ Expected<Mesh, std::string> fromCtm( std::istream& in, const MeshLoadSettings& s
 }
 #endif
 
-#ifndef MRMESH_NO_OPENCASCADE
-Expected<Mesh, std::string> fromStep( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
-{
-    std::ifstream in( file, std::ifstream::binary );
-    if ( !in )
-        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
-
-    return addFileNameInError( fromStep( in, settings ), file );
-}
-
-Expected<Mesh, std::string> fromStep( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
-{
-    MR_TIMER
-
-    auto result = fromSceneStepFile( in, settings );
-    if ( !result )
-        return unexpected( std::move( result.error() ) );
-
-    // TODO: preserve colors?
-    Mesh mesh;
-    if ( const auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( *result ) )
-        if ( const auto& subMesh = objMesh->mesh() )
-            mesh = *subMesh;
-    for ( const auto& objMesh : getAllObjectsInTree<ObjectMesh>( result->get() ) )
-        if ( const auto& subMesh = objMesh->mesh() )
-            mesh.addPart( *subMesh );
-    return mesh;
-}
-#endif
-
-
 Expected<Mesh, std::string> fromDxf( const std::filesystem::path& path, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( path, std::ifstream::binary );

@@ -26,18 +26,6 @@ static constexpr int sphereDetailLevel = 2048;
 // Separator between object name and extra information.
 static constexpr std::string_view nameExtrasSeparator = "   |   ";
 
-const ObjectParams& getObjectParams()
-{
-    static const ObjectParams ret{
-        .pointSize = 10,
-        .pointSizeSub = 8,
-        .lineWidth = 3,
-        .lineWidthSub = 2,
-        .meshAlpha = 128,
-    };
-    return ret;
-}
-
 // This is similar to `Features::forEachSubfeature`, but slightly adjusted to be suitable for visualization.
 static void forEachVisualSubfeature( const Features::Primitives::Variant& feature, std::function<void( const Features::Primitives::Variant& subfeature )> func )
 {
@@ -263,6 +251,8 @@ RenderCircleFeatureObject::RenderCircleFeatureObject( const VisualObject& object
 
 void RenderCircleFeatureObject::renderUi( const UiRenderParams& params )
 {
+    RenderObjectCombinator::renderUi( params );
+
     if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::radius, params.viewportId ) )
     {
         radiusTask_ = RenderDimensions::RadiusTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .drawAsDiameter = true } );
@@ -339,6 +329,8 @@ RenderSphereFeatureObject::RenderSphereFeatureObject( const VisualObject& object
 
 void RenderSphereFeatureObject::renderUi( const UiRenderParams& params )
 {
+    RenderObjectCombinator::renderUi( params );
+
     if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::radius, params.viewportId ) )
     {
         radiusTask_ = RenderDimensions::RadiusTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .drawAsDiameter = true, .isSpherical = true } );
@@ -371,6 +363,8 @@ RenderCylinderFeatureObject::RenderCylinderFeatureObject( const VisualObject& ob
 
 void RenderCylinderFeatureObject::renderUi( const UiRenderParams& params )
 {
+    RenderObjectCombinator::renderUi( params );
+
     if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::radius, params.viewportId ) )
     {
         radiusTask_ = RenderDimensions::RadiusTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .drawAsDiameter = true } );
@@ -410,6 +404,8 @@ RenderConeFeatureObject::RenderConeFeatureObject( const VisualObject& object )
 
 void RenderConeFeatureObject::renderUi( const UiRenderParams& params )
 {
+    RenderObjectCombinator::renderUi( params );
+
     if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::radius, params.viewportId ) )
     {
         radiusTask_ = RenderDimensions::RadiusTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .center = Vector3f( 0, 0, 1 ), .drawAsDiameter = true } );

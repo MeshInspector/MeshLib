@@ -21,7 +21,7 @@ MR_ADD_CLASS_FACTORY( VisualObject )
 
 VisualObject::VisualObject()
 {
-    useDefaultScenePropertiesOnDeserialization_ = SceneSettings::get( SceneSettings::Type::UseDefaultScenePropertiesOnDeserialization );
+    useDefaultScenePropertiesOnDeserialization_ = SceneSettings::get( SceneSettings::BoolType::UseDefaultScenePropertiesOnDeserialization );
     setDefaultSceneProperties_();
 }
 

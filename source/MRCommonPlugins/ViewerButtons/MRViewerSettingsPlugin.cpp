@@ -33,7 +33,7 @@ const char* getViewerSettingTabName( MR::ViewerSettingsPlugin::TabType tab )
         "Application",
         "Control",
         "3D View",
-        "Features"      // Reserved for custom content
+        "Features",
     };
     return tabNames[int( tab )];
 }
@@ -199,7 +199,7 @@ void ViewerSettingsPlugin::drawTab_( TabType tab, float menuWidth, float menuSca
         drawViewportTab_( menuWidth, menuScaling );
         break;
     case MR::ViewerSettingsPlugin::TabType::Features:
-        // Custom controls only
+        drawFeaturesTab_( menuScaling );
         break;
     case MR::ViewerSettingsPlugin::TabType::Count:
     default:
@@ -392,6 +392,34 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
 
     drawRenderOptions_( menuScaling );
     drawShadowsOptions_( menuWidth, menuScaling );
+}
+
+void ViewerSettingsPlugin::drawFeaturesTab_( float menuScaling )
+{
+    (void)menuScaling;
+
+    UI::separator( menuScaling, "Visuals" );
+    float value = 0;
+
+    value = SceneSettings::get( SceneSettings::FloatType::FeatureMeshAlpha );
+    if ( UI::sliderFloat( "Surface opacity", &value, 0, 1 ) )
+        SceneSettings::set( SceneSettings::FloatType::FeatureMeshAlpha, value );
+
+    value = SceneSettings::get( SceneSettings::FloatType::FeaturePointSize );
+    if ( UI::sliderFloat( "Point size", &value, 1, 20 ) )
+        SceneSettings::set( SceneSettings::FloatType::FeaturePointSize, value );
+
+    value = SceneSettings::get( SceneSettings::FloatType::FeatureSubPointSize );
+    if ( UI::sliderFloat( "Point size (subfeatures)", &value, 1, 20 ) )
+        SceneSettings::set( SceneSettings::FloatType::FeatureSubPointSize, value );
+
+    value = SceneSettings::get( SceneSettings::FloatType::FeatureLineWidth );
+    if ( UI::sliderFloat( "Line width", &value, 1, 20 ) )
+        SceneSettings::set( SceneSettings::FloatType::FeatureLineWidth, value );
+
+    value = SceneSettings::get( SceneSettings::FloatType::FeatureSubLineWidth );
+    if ( UI::sliderFloat( "Line width (subfeatures)", &value, 1, 20 ) )
+        SceneSettings::set( SceneSettings::FloatType::FeatureSubLineWidth, value );
 }
 
 void ViewerSettingsPlugin::drawRenderOptions_( float menuScaling )
@@ -613,7 +641,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
             ImGui::BeginTooltip();
             ImGui::Text( "Click here with preferred mouse button \nwith/without modifier (alt/ctrl/shift)" );
             ImGui::EndTooltip();
-            
+
             if ( ImGui::GetIO().MouseClicked[0] || ImGui::GetIO().MouseClicked[1] || ImGui::GetIO().MouseClicked[2] )
             {
                 MouseButton clikedBtn = MouseButton::Left;

@@ -1,13 +1,13 @@
 #pragma once
 
-#include "MRMesh/MRObject.h"
+#include "MRMesh/MRVisualObject.h"
 
 namespace MR
 {
 
 // A common base class for measurement objects.
 // Can't be constructed directly.
-class MeasurementObject : public Object
+class MeasurementObject : public VisualObject
 {
 protected:
     MeasurementObject() = default;

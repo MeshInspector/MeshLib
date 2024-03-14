@@ -352,6 +352,9 @@
     <ClCompile Include="MRRenderDimensions.cpp">
       <Filter>Render\Implementations</Filter>
     </ClCompile>
+    <ClCompile Include="MRRenderMeasurementObjects.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -687,6 +690,9 @@
       <Filter>History</Filter>
     </ClInclude>
     <ClInclude Include="MRRenderDimensions.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderMeasurementObjects.h">
       <Filter>Render\Implementations</Filter>
     </ClInclude>
   </ItemGroup>

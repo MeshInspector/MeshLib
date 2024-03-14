@@ -1,4 +1,5 @@
 #include "MRMesh/MRFeatureObject.h"
+#include "MRMesh/MRMeasurementObject.h"
 #include "MRViewport.h"
 #include "MRViewer.h"
 #include <MRMesh/MRMesh.h>
@@ -611,7 +612,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
             {
                 // do nothing
             }
-            else if ( obj->asType<FeatureObject>() )
+            else if ( obj->asType<FeatureObject>() || obj->asType<MeasurementObject>() )
             {
                 // Do nothing? Not ideal.
             }

@@ -33,6 +33,7 @@
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRMovementBuildBody.h"
+#include "MRMesh/MRVector2.h"
 #include <pybind11/functional.h>
 #pragma warning(push)
 #pragma warning(disable: 4464) // relative include path contains '..'

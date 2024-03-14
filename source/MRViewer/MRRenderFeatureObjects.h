@@ -46,7 +46,7 @@ namespace detail
     {
         const ViewportProperty<uint8_t>& getGlobalAlphaForAllViewports() const
         {
-            const_cast<WrappedModelSubobjectPart &>( *this ).setGlobalAlpha( std::clamp( int( target_->getGlobalAlpha() * SceneSettings::get( SceneSettings::FloatType::FeatureMeshAlpha ) ), 0, 255 ) );
+            const_cast<WrappedModelSubobjectPart &>( *this ).setGlobalAlpha( (std::uint8_t)std::clamp( int( target_->getGlobalAlpha() * SceneSettings::get( SceneSettings::FloatType::FeatureMeshAlpha ) ), 0, 255 ) );
             return ObjectMesh::getGlobalAlphaForAllViewports();
         }
     };

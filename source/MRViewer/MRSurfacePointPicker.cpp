@@ -48,6 +48,7 @@ const PickedPoint& SurfacePointWidget::create( const std::shared_ptr<VisualObjec
     pickSphere_->setAncillary( true );
     pickSphere_->setFrontColor( params_.baseColor, false );
     pickSphere_->setBackColor( Color::transparent() );
+    pickSphere_->setVisualizeProperty( false, DimensionsVisualizePropertyType::radius, ViewportMask::all() );
     baseObject_->addChild( pickSphere_ );
     currentPos_ = startPos;
     updatePositionAndRadius_();

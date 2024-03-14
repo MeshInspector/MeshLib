@@ -53,7 +53,7 @@ std::function<Vector3f(VertId)> MeshOrPoints::normals() const
         },
         []( const PointCloud * pc ) -> std::function<Vector3f(VertId)>
         { 
-            return pc->normals.empty() ? std::function<Vector3f(VertId)>{} : [pc]( VertId v ) { return pc->normals[v]; };
+            return !pc->hasNormals() ? std::function<Vector3f(VertId)>{} : [pc]( VertId v ) { return pc->normals[v]; };
         }
     }, var_ );
 }

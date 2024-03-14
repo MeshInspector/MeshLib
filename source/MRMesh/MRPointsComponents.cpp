@@ -6,6 +6,9 @@
 #include "MRProgressCallback.h"
 #include "MRPch/MRTBB.h"
 #include "MRBitSetParallelFor.h"
+#include "MRPointCloudTriangulationHelpers.h"
+#include "MRLocalTriangulations.h"
+
 
 namespace MR
 {
@@ -182,17 +185,51 @@ Expected<UnionFind<VertId>> getUnionFindStructureVerts( const PointCloud& pointC
     UnionFind<VertId> unionFindStructure( numVerts );
     const auto numThreads = int( tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) );
 
+    double timerRes[3];
+    Timer timer( "getUnionFindStructureVerts 1" );
+    ProgressCallback subPc = subprogress( pc, 0.0f, 0.3f );
+#define LOCAL_TRIANG
+#ifdef LOCAL_TRIANG
+    auto optTriang = TriangulationHelpers::buildUnitedLocalTriangulations( pointCloud,
+        { .radius = maxDist, .numNeis = 0, .automaticRadiusIncrease = false }, subPc );
+#endif
+    timer.finish();
+    timerRes[0] = timer.secondsPassed().count();
+#ifdef LOCAL_TRIANG
+    if ( !optTriang )
+        return unexpected( std::string( "Cannot make local triangulations" ) );
+    const auto& triang = *optTriang;
+    const auto& neighbors = triang.neighbors;
+    const auto& fanRecords = triang.fanRecords;
+#endif
+
+
     VertBitSet bdVerts;
-    ProgressCallback subPc = subprogress( pc, 0.f, 1.0f );
+    subPc = subprogress( pc, 0.3f, 1.0f );
     if ( numThreads > 1 )
     {
         bdVerts.resize( numVerts );
         lastPassVerts = &bdVerts;
-        subPc = subprogress( pc, 0.f, 0.7f );
+        subPc = subprogress( pc, 0.3f, 0.7f );
+        timer.start( "getUnionFindStructureVerts 2" );
         BitSetParallelForAllRanged( vertsRegion, [&] ( VertId v0, VertId, VertId vEnd )
         {
             if ( !contains( vertsRegion, v0 ) )
                 return;
+
+#ifdef LOCAL_TRIANG
+            for ( uint32_t i = fanRecords[v0].firstNei; i < fanRecords[v0 + 1].firstNei; ++i )
+            {
+                const VertId& v1 = neighbors[i];
+                if ( v0 < v1 && contains( vertsRegion, v1 ) )
+                {
+                    if ( v1 >= vEnd )
+                        bdVerts.set( v0 );
+                    else
+                        unionFindStructure.unite( v0, v1 );
+                }
+            }
+#else
             findPointsInBall( pointCloud.getAABBTree(), pointCloud.points[v0], maxDist,
                 [&] ( VertId v1, const Vector3f& )
             {
@@ -204,7 +241,10 @@ Expected<UnionFind<VertId>> getUnionFindStructureVerts( const PointCloud& pointC
                         unionFindStructure.unite( v0, v1 );
                 }
             } );
+#endif
         }, subPc );
+        timer.finish();
+        timerRes[1] = timer.secondsPassed().count();
         if ( !reportProgress( subPc, 1.f ) )
             return unexpectedOperationCanceled();
         subPc = subprogress( pc, 0.7f, 1.f );
@@ -213,8 +253,19 @@ Expected<UnionFind<VertId>> getUnionFindStructureVerts( const PointCloud& pointC
     int counterProcessedVerts = 0;
     const float counterMax = float( lastPassVerts->count() );
     const int counterDivider = int( lastPassVerts->count() ) / 100;
+    timer.start( "getUnionFindStructureVerts 3" );
     for ( auto v0 : *lastPassVerts )
     {
+#ifdef LOCAL_TRIANG
+        for ( uint32_t i = fanRecords[v0].firstNei; i < fanRecords[v0 + 1].firstNei; ++i )
+        {
+            const VertId& v1 = neighbors[i];
+            if ( v0 < v1 && contains( vertsRegion, v1 ) )
+            {
+                unionFindStructure.unite( v0, v1 );
+            }
+        }
+#else
         findPointsInBall( pointCloud.getAABBTree(), pointCloud.points[v0], maxDist,
             [&] ( VertId v1, const Vector3f& )
         {
@@ -223,10 +274,21 @@ Expected<UnionFind<VertId>> getUnionFindStructureVerts( const PointCloud& pointC
                 unionFindStructure.unite( v0, v1 );
             }
         } );
+#endif
         ++counterProcessedVerts;
         if ( !reportProgress( subPc, counterProcessedVerts / counterMax, counterProcessedVerts, counterDivider ) )
             return unexpectedOperationCanceled();
     }
+    timer.finish();
+    timerRes[2] = timer.secondsPassed().count();
+#ifdef LOCAL_TRIANG
+    spdlog::info( "LOCAL TRIANG" );
+#else
+    spdlog::info( "POINTS IN BALL" );
+#endif
+    spdlog::info( "build ULT time = {} sec", timerRes[0] );
+    spdlog::info( "unite parallel = {} sec", timerRes[1] );
+    spdlog::info( "unite remnant = {} sec", timerRes[2]);
 
     return unionFindStructure;
 }

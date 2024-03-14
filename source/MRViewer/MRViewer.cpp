@@ -2147,7 +2147,7 @@ void Viewer::incrementThisFrameGLPrimitivesCount( GLPrimitivesType type, size_t 
 void Viewer::resetAllCounters()
 {
     eventsCounter_.reset();
-    frameCounter_.reset();
+    frameCounter_->reset();
 }
 
 Image Viewer::captureSceneScreenShot( const Vector2i& resolution )

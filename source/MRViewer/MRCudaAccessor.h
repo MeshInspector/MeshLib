@@ -52,7 +52,7 @@ private:
     CudaFreeMemoryFunc freeMemFunc_;
     CudaFwnConstructor fwnCtor_;
     CudaMeshProjectorConstructor mpCtor_;
-    CudaPointsToDistanceVolumeCallback meshToDistanceVolumeCallback_;
+    CudaPointsToDistanceVolumeCallback pointsToDistanceVolumeCallback_;
 };
 
 } //namespace MR

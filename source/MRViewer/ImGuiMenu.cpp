@@ -1304,8 +1304,10 @@ float ImGuiMenu::drawSelectionInformation_()
         // Scene info update
         if ( auto vObj = obj->asType<VisualObject>() )
         {
-            selectionBbox_.include( vObj->getBoundingBox() );
-            selectionWorldBox_.include( vObj->getWorldBox() );
+            if ( auto box = vObj->getBoundingBox(); box.valid() )
+                selectionBbox_.include( box );
+            if ( auto box = vObj->getWorldBox(); box.valid() )
+                selectionWorldBox_.include( box );
         }
 
         // Typed info

@@ -405,7 +405,11 @@ MR_SUPPRESS_WARNING_POP
 
 Box3f VisualObject::getWorldBox( ViewportId id ) const
 {
-    return transformed( getBoundingBox(), worldXf( id ) );
+    Box3f localBox = getBoundingBox();
+    if ( localBox.valid() )
+        return transformed( localBox, worldXf( id ) );
+    else
+        return {};
 }
 
 size_t VisualObject::heapBytes() const

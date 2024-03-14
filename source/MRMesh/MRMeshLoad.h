@@ -61,12 +61,6 @@ MRMESH_API Expected<Mesh, std::string> from3mf( const std::filesystem::path& fil
 MRMESH_API Expected<Mesh, std::string> from3mf( std::istream& in, const MeshLoadSettings& settings = {} );
 #endif
 
-#ifndef MRMESH_NO_OPENCASCADE
-/// loads meshes from STEP file using OpenCASCADE
-MRMESH_API MR::Expected<MR::Mesh, std::string> fromStep( const std::filesystem::path& path, const MeshLoadSettings& settings = {} );
-MRMESH_API MR::Expected<MR::Mesh, std::string> fromStep( std::istream& in, const MeshLoadSettings& settings = {} );
-#endif
-
 MRMESH_API Expected<Mesh, std::string> fromDxf( const std::filesystem::path& path, const MeshLoadSettings& settings = {} );
 MRMESH_API Expected<Mesh, std::string> fromDxf( std::istream& in, const MeshLoadSettings& settings = {} );
 

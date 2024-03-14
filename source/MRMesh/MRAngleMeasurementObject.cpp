@@ -114,4 +114,10 @@ void AngleMeasurementObject::deserializeFields_( const Json::Value& root )
         shouldVisualizeRay_[1] = json.asBool();
 }
 
+void AngleMeasurementObject::setupRenderObject_() const
+{
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype( *this )>( *this );
+}
+
 } // namespace MR

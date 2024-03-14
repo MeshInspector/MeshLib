@@ -75,6 +75,7 @@
 #pragma warning(pop)
 #endif
 
+#if !defined( __EMSCRIPTEN__)
 #pragma warning(push)
 #pragma warning(disable:4244) //'initializing': conversion from 'std::streamoff' to 'int', possible loss of data
 #pragma warning(disable:4355) //'this': used in base member initializer list
@@ -82,6 +83,7 @@
 #pragma warning(disable:4458) //'this': declaration of 'size' hides class member
 #include <cpr/cpr.h>
 #pragma warning(pop)
+#endif
 
 #ifndef __EMSCRIPTEN__
 #include <libpng16/png.h>

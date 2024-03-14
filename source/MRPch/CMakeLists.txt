@@ -44,7 +44,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
     target_link_libraries(${PROJECT_NAME} PRIVATE
       jsoncpp
       tbb
-      cpr
     )
   ENDIF()
 ELSE()

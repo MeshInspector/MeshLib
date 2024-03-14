@@ -10,6 +10,8 @@ IF(NOT MR_EMSCRIPTEN)
   find_package(GDCM CONFIG REQUIRED)
   pkg_check_modules(JSONCPP jsoncpp)
   include_directories(${JSONCPP_INCLUDE_DIRS})
+  find_package(Freetype REQUIRED)
+  include_directories(${FREETYPE_INCLUDE_DIRS})
 ELSE()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_FREETYPE=1 -s USE_LIBPNG=1")
 ENDIF()
@@ -33,6 +35,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
         jsoncpp
         fmt
         tbb
+        freetype
         gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF
     )
   ELSE()
@@ -48,6 +51,7 @@ ELSE()
     Boost::boost
     jsoncpp
     tbb
+    gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF
   )
 ENDIF()
 

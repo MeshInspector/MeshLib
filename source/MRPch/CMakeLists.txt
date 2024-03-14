@@ -4,6 +4,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(MRPch CXX)
 
+IF(NOT MR_EMSCRIPTEN)
+  find_package(Boost COMPONENTS REQUIRED)
+  find_package(TBB REQUIRED)
+  pkg_check_modules(JSONCPP jsoncpp)
+  include_directories(${JSONCPP_INCLUDE_DIRS})
+ELSE()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_FREETYPE=1 -s USE_LIBPNG=1")
+ENDIF()
+
+find_package(GDCM CONFIG REQUIRED)
+
 file(GLOB HEADERS "*.h")
 
 install(

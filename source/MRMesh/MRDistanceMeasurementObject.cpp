@@ -93,4 +93,10 @@ void DistanceMeasurementObject::deserializeFields_( const Json::Value& root )
         drawAsNegative_ = json.asBool();
 }
 
+void DistanceMeasurementObject::setupRenderObject_() const
+{
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype( *this )>( *this );
+}
+
 } // namespace MR

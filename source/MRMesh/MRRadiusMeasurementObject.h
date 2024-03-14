@@ -73,6 +73,8 @@ protected:
     MRMESH_API void serializeFields_( Json::Value& root ) const override;
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
+    MRMESH_API void setupRenderObject_() const override;
+
 private:
     // Don't forget to add all the new fields to serialization.
 

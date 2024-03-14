@@ -108,4 +108,10 @@ void RadiusMeasurementObject::deserializeFields_( const Json::Value& root )
         visualLengthMultiplier_ = float( json.asDouble() );
 }
 
+void RadiusMeasurementObject::setupRenderObject_() const
+{
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype( *this )>( *this );
+}
+
 } // namespace MR

@@ -2016,7 +2016,7 @@ MR_SUPPRESS_WARNING_POP
 
     if ( !selectedVisualObjs.empty() )
     {
-        make_uint8_slider( selectedVisualObjs, "Alpha", [&] ( const VisualObject* data )
+        make_uint8_slider( selectedVisualObjs, "Opacity", [&] ( const VisualObject* data )
         {
             return data->getGlobalAlpha( selectedViewport_ );
         }, [&] ( VisualObject* data, uint8_t alpha )

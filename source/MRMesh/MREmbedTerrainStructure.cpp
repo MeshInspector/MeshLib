@@ -230,7 +230,7 @@ Expected<TerrainEmbedder::MappedMeshContours, std::string> TerrainEmbedder::prep
                 Line3f( startPoint,
                     to3dim( offCont.contour[i] ) + Vector3f( 0, 0, startPoint.z ) +
                     ( mc.cutBitSet.test( VertId( index ) ) ? Vector3f::plusZ() : Vector3f::minusZ() ) - startPoint );
-            auto interRes = rayMeshIntersect( result_, line );
+            auto interRes = rayMeshIntersect( result_, line, -1 ); // -1 here to handle vertex lying in the same plane
             if ( !interRes )
             {
                 if ( ctx.cancel_group_execution() )
@@ -242,6 +242,8 @@ Expected<TerrainEmbedder::MappedMeshContours, std::string> TerrainEmbedder::prep
 
         if ( canceled )
             return unexpected( "Cannot embed structure beyond terrain" );
+
+        mtps.erase( std::unique( mtps.begin(), mtps.end() ), mtps.end() ); // filter duplicates for simplicity
 
         Contour2f planarCont( mtps.size() + 1 );
         ParallelFor( mtps, [&] ( size_t i )

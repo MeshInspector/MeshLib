@@ -3,14 +3,24 @@
 namespace MR
 {
 
-bool SceneSettings::get( Type type )
+bool SceneSettings::get( BoolType type )
 {
-    return instance_().settings_[int( type )];
+    return instance_().boolSettings_[int( type )];
 }
 
-void SceneSettings::set( Type type, bool value )
+float SceneSettings::get( FloatType type )
 {
-    instance_().settings_[int( type )] = value;
+    return instance_().floatSettings_[int( type )];
+}
+
+void SceneSettings::set( BoolType type, bool value )
+{
+    instance_().boolSettings_[int( type )] = value;
+}
+
+void SceneSettings::set( FloatType type, float value )
+{
+    instance_().floatSettings_[int( type )] = value;
 }
 
 SceneSettings::ShadingMode SceneSettings::getDefaultShadingMode()
@@ -31,6 +41,17 @@ const CNCMachineSettings& SceneSettings::getCNCMachineSettings()
 void SceneSettings::setCNCMachineSettings( const CNCMachineSettings& settings )
 {
     instance_().cncMachineSettings_ = settings;
+}
+
+SceneSettings::SceneSettings()
+{
+    boolSettings_[int( BoolType::UseDefaultScenePropertiesOnDeserialization )] = true;
+
+    floatSettings_[int( FloatType::FeatureMeshAlpha )] = 0.5f;
+    floatSettings_[int( FloatType::FeaturePointSize )] = 10;
+    floatSettings_[int( FloatType::FeatureSubPointSize )] = 8;
+    floatSettings_[int( FloatType::FeatureLineWidth )] = 3;
+    floatSettings_[int( FloatType::FeatureSubLineWidth )] = 2;
 }
 
 SceneSettings& SceneSettings::instance_()

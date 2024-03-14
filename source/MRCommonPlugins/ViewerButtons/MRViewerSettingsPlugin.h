@@ -47,7 +47,7 @@ public:
         // the function of drawing the configuration UI
         virtual void draw( float menuScaling ) = 0;
     };
-    // add external settings with UI combo box 
+    // add external settings with UI combo box
     MRCOMMONPLUGINS_API void addComboSettings( const TabType tab, std::shared_ptr<ExternalSettings> settings);
 
 private:
@@ -60,6 +60,7 @@ private:
     void drawApplicationTab_( float menuWidth, float menuScaling );
     void drawControlTab_( float menuWidth, float menuScaling );
     void drawViewportTab_( float menuWidth, float menuScaling );
+    void drawFeaturesTab_( float menuScaling );
 
     void drawThemeSelector_( float menuWidth, float menuScaling );
     void drawShadingModeCombo_( bool inGroup, float menuScaling );

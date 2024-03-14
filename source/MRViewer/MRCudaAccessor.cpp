@@ -25,6 +25,11 @@ void CudaAccessor::setCudaMeshProjectorConstructor( CudaMeshProjectorConstructor
     instance_().mpCtor_ = mpCtor;
 }
 
+void CudaAccessor::setCudaPointsToDistanceVolumeCallback( CudaMeshToDistanceVolumeCallback callback )
+{
+    instance_().meshToDistanceVolumeCallback_ = callback;
+}
+
 bool CudaAccessor::isCudaAvailable()
 {
     auto& inst = instance_();
@@ -53,6 +58,15 @@ std::unique_ptr<IPointsToMeshProjector> CudaAccessor::getCudaPointsToMeshProject
     if ( !inst.mpCtor_ )
         return {};
     return inst.mpCtor_();
+}
+
+CudaAccessor::CudaMeshToDistanceVolumeCallback CudaAccessor::getCudaPointsToDistanceVolumeCallback()
+{
+    auto& inst = instance_();
+    if ( !inst.meshToDistanceVolumeCallback_ )
+        return {};
+
+    return inst.meshToDistanceVolumeCallback_;
 }
 
 CudaAccessor& CudaAccessor::instance_()

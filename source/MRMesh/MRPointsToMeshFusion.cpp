@@ -1,5 +1,4 @@
 #include "MRPointsToMeshFusion.h"
-#include "MRPointsToDistanceVolume.h"
 #include "MRPointCloud.h"
 #include "MRMesh.h"
 #include "MRMarchingCubes.h"
@@ -30,9 +29,8 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     vmParams.cb = subprogress( params.progress, 0.5f, ( params.ptColors && params.vColors ) ? 0.9f : 1.0f );
     vmParams.lessInside = true;
 
-    auto res =
-        pointsToDistanceVolume( cloud, p2vParams )
-        .and_then( [vmParams] ( auto&& volume ) { return marchingCubes( volume, vmParams ); } );
+    auto res = ( params.createVolumeCallback ?
+        params.createVolumeCallback( cloud, p2vParams ) : pointsToDistanceVolume( cloud, p2vParams ) ).and_then( [vmParams] ( auto&& volume ) { return marchingCubes( volume, vmParams ); } );
 
     if ( res && params.ptColors && params.vColors )
     {

@@ -2,6 +2,7 @@
 
 #include "MRExpected.h"
 #include "MRProgressCallback.h"
+#include "MRPointsToDistanceVolume.h"
 
 namespace MR
 {
@@ -27,6 +28,9 @@ struct PointsToMeshParameters
 
     /// Progress callback
     ProgressCallback progress;
+
+    /// Callback for volume creation. If null - volume will be created with default pointsToDistanceVolume function
+    std::function<Expected<SimpleVolume>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )> createVolumeCallback;
 };
 
 /// makes mesh from points with normals by constructing intermediate volume with signed distances

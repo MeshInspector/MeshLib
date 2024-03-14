@@ -4,10 +4,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(MRPch CXX)
 
-IF(APPLE)
-  target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
-ENDIF()
-
 IF(NOT MR_EMSCRIPTEN)
   find_package(Boost COMPONENTS REQUIRED)
   find_package(TBB REQUIRED)
@@ -26,6 +22,10 @@ install(
 )
 
 add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
+
+IF(APPLE)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
+ENDIF()
 
 TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRPch.h>"

@@ -2,8 +2,7 @@
 
 #include "exports.h"
 #include "MRMesh/MRMeshFwd.h"
-#include "MRMesh/MRPointsToDistanceVolume.h"
-#include "MRMesh/MRSimpleVolume.h"
+#include "MRMesh/MRExpected.h"
 #include <functional>
 #include <memory>
 
@@ -11,7 +10,7 @@ namespace MR
 {
 
 class IPointsToMeshProjector;
-
+struct PointsToDistanceVolumeParams;
 /// The purpose of this class is to access CUDA algorithms without explicit dependency on MRCuda
 class MRVIEWER_CLASS CudaAccessor
 {
@@ -23,14 +22,14 @@ public:
     /// Returns specific implementation of IPointsToMeshProjector interface projects on GPU
     using CudaMeshProjectorConstructor = std::function<std::unique_ptr<IPointsToMeshProjector>()>;
 
-    using CudaMeshToDistanceVolumeCallback = std::function<Expected<SimpleVolume>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )>;
+    using CudaPointsToDistanceVolumeCallback = std::function<Expected<SimpleVolume>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )>;
 
     // setup functions
     MRVIEWER_API static void setCudaAvailable( bool val );
     MRVIEWER_API static void setCudaFreeMemoryFunc( CudaFreeMemoryFunc freeMemFunc );
     MRVIEWER_API static void setCudaFastWindingNumberConstructor( CudaFwnConstructor fwnCtor );
     MRVIEWER_API static void setCudaMeshProjectorConstructor( CudaMeshProjectorConstructor mpCtor );
-    MRVIEWER_API static void setCudaPointsToDistanceVolumeCallback( CudaMeshToDistanceVolumeCallback callback );
+    MRVIEWER_API static void setCudaPointsToDistanceVolumeCallback( CudaPointsToDistanceVolumeCallback callback );
 
     // Returns true if CUDA is available on this computer
     MRVIEWER_API static bool isCudaAvailable();
@@ -40,8 +39,8 @@ public:
     MRVIEWER_API static std::unique_ptr<IFastWindingNumber> getCudaFastWindingNumber( const Mesh& mesh );
     // Returns cuda implementation of IPointsToMeshProjector
     MRVIEWER_API static std::unique_ptr<IPointsToMeshProjector> getCudaPointsToMeshProjector();
-    // Returns cuda implementation of MeshToDistanceVolumeCallback
-    MRVIEWER_API static CudaMeshToDistanceVolumeCallback getCudaPointsToDistanceVolumeCallback();
+    // Returns cuda implementation of PointsToDistanceVolumeCallback
+    MRVIEWER_API static CudaPointsToDistanceVolumeCallback getCudaPointsToDistanceVolumeCallback();
 
 private:
     CudaAccessor() = default;
@@ -53,7 +52,7 @@ private:
     CudaFreeMemoryFunc freeMemFunc_;
     CudaFwnConstructor fwnCtor_;
     CudaMeshProjectorConstructor mpCtor_;
-    CudaMeshToDistanceVolumeCallback meshToDistanceVolumeCallback_;
+    CudaPointsToDistanceVolumeCallback meshToDistanceVolumeCallback_;
 };
 
 } //namespace MR

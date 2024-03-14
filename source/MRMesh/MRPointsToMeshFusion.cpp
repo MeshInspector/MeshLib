@@ -5,6 +5,7 @@
 #include "MRBox.h"
 #include "MRColor.h"
 #include "MRTimer.h"
+#include "MRPointsToDistanceVolume.h"
 
 namespace MR
 {

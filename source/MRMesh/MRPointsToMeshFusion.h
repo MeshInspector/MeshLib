@@ -2,10 +2,11 @@
 
 #include "MRExpected.h"
 #include "MRProgressCallback.h"
-#include "MRPointsToDistanceVolume.h"
 
 namespace MR
 {
+
+struct PointsToDistanceVolumeParams;
 
 struct PointsToMeshParameters
 {

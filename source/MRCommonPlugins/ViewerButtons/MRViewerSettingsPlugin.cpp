@@ -33,7 +33,7 @@ const char* getViewerSettingTabName( MR::ViewerSettingsPlugin::TabType tab )
         "Application",
         "Control",
         "3D View",
-        "Features"      // Reserved for custom content
+        "Features",
     };
     return tabNames[int( tab )];
 }

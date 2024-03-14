@@ -40,9 +40,9 @@ public:
     MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
 
     MRMESH_API virtual void setLineWidth( float width );
-    float getLineWidth() const { return lineWidth_; }
+    virtual float getLineWidth() const { return lineWidth_; }
     MRMESH_API virtual void setPointSize( float size );
-    float getPointSize() const { return pointSize_; }
+    virtual float getPointSize() const { return pointSize_; }
 
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectLinesHolder( ProtectedStruct, const ObjectLinesHolder& obj ) : ObjectLinesHolder( obj ) {}

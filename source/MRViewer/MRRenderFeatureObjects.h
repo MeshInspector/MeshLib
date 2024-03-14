@@ -4,6 +4,7 @@
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
+#include "MRMesh/MRSceneSettings.h"
 #include "MRViewer/MRRenderDefaultUiObject.h"
 #include "MRViewer/MRRenderLinesObject.h"
 #include "MRViewer/MRRenderLinesObject.h"
@@ -14,25 +15,50 @@
 namespace MR::RenderFeatures
 {
 
-struct ObjectParams
+namespace detail
 {
-    float pointSize = 0;
-    float pointSizeSub = 0; // For subfeatures.
-    float lineWidth = 0;
-    float lineWidthSub = 0; // For subfeatures.
-    std::uint8_t meshAlpha = 0;
-};
-[[nodiscard]] MRVIEWER_API const ObjectParams& getObjectParams();
+    // See `WrappedModelSubobject` below. This class holds optional components for it that depend on the template parameter.
+    template <bool IsPrimary, typename BaseObjectType>
+    class WrappedModelSubobjectPart : public BaseObjectType {};
+
+    template <bool IsPrimary>
+    class WrappedModelSubobjectPart<IsPrimary, ObjectPoints> : public ObjectPoints
+    {
+        float getPointSize() const override
+        {
+            const_cast<WrappedModelSubobjectPart &>( *this ).setPointSize( SceneSettings::get( IsPrimary ? SceneSettings::FloatType::FeaturePointSize : SceneSettings::FloatType::FeatureSubPointSize ) );
+            return ObjectPoints::getPointSize();
+        }
+    };
+
+    template <bool IsPrimary>
+    class WrappedModelSubobjectPart<IsPrimary, ObjectLines> : public ObjectLines
+    {
+        float getLineWidth() const override
+        {
+            const_cast<WrappedModelSubobjectPart &>( *this ).setLineWidth( SceneSettings::get( IsPrimary ? SceneSettings::FloatType::FeatureLineWidth : SceneSettings::FloatType::FeatureSubLineWidth ) );
+            return ObjectLines::getLineWidth();
+        }
+    };
+
+    template <bool IsPrimary>
+    class WrappedModelSubobjectPart<IsPrimary, ObjectMesh> : public ObjectMesh, public virtual RenderWrapObject::BasicWrapperTarget
+    {
+        const ViewportProperty<uint8_t>& getGlobalAlphaForAllViewports() const
+        {
+            const_cast<WrappedModelSubobjectPart &>( *this ).setGlobalAlpha( std::clamp( int( target_->getGlobalAlpha() * SceneSettings::get( SceneSettings::FloatType::FeatureMeshAlpha ) ), 0, 255 ) );
+            return ObjectMesh::getGlobalAlphaForAllViewports();
+        }
+    };
+}
 
 // Wraps a datamodel object to override some of its visual properties.
 // This is used for stub datamodel objects that we store inside of renderobjects to provide them with models (aka visualization data: meshes, etc).
 // The base template handles `IsPrimary == true`. We have a specialization below for `false`.
 template <bool IsPrimary, typename BaseObjectType>
-class WrappedModelSubobject : public BaseObjectType, public RenderWrapObject::BasicWrapperTarget
+class WrappedModelSubobject : public detail::WrappedModelSubobjectPart<IsPrimary, BaseObjectType>, public virtual RenderWrapObject::BasicWrapperTarget
 {
 public:
-    using BasicWrapperTarget::target_;
-
     bool isSelected() const override
     {
         return target_->isSelected();
@@ -50,11 +76,9 @@ public:
 };
 
 template <typename BaseObjectType>
-class WrappedModelSubobject<false, BaseObjectType> : public BaseObjectType, public RenderWrapObject::BasicWrapperTarget
+class WrappedModelSubobject<false, BaseObjectType> : public detail::WrappedModelSubobjectPart<false, BaseObjectType>, public virtual RenderWrapObject::BasicWrapperTarget
 {
 public:
-    using BasicWrapperTarget::target_;
-
     ViewportMask visibilityMask() const override
     {
         if ( auto p = this->parent() )
@@ -87,12 +111,7 @@ class RenderFeaturePointsComponent : public RenderFeatureComponent<IsPrimary, Ob
 {
     using Base = RenderFeatureComponent<IsPrimary, ObjectPoints, RenderPointsObject>;
 public:
-    RenderFeaturePointsComponent( const VisualObject& object )
-        : Base( object )
-    {
-        Base::subobject.setPointSize( IsPrimary ? getObjectParams().pointSize : getObjectParams().pointSizeSub );
-    }
-
+    using Base::Base;
     auto& getPoints() { return Base::subobject; }
 };
 
@@ -103,12 +122,7 @@ class RenderFeatureLinesComponent : public RenderFeatureComponent<IsPrimary, Obj
 {
     using Base = RenderFeatureComponent<IsPrimary, ObjectLines, RenderLinesObject>;
 public:
-    RenderFeatureLinesComponent( const VisualObject& object )
-        : Base( object )
-    {
-        Base::subobject.setLineWidth( IsPrimary ? getObjectParams().lineWidth : getObjectParams().lineWidthSub );
-    }
-
+    using Base::Base;
     auto& getLines() { return Base::subobject; }
 };
 
@@ -119,12 +133,7 @@ class RenderFeatureMeshComponent : public RenderFeatureComponent<IsPrimary, Obje
 {
     using Base = RenderFeatureComponent<IsPrimary, ObjectMesh, RenderMeshObject>;
 public:
-    RenderFeatureMeshComponent( const VisualObject& object )
-        : Base( object )
-    {
-        Base::subobject.setGlobalAlpha( getObjectParams().meshAlpha );
-    }
-
+    using Base::Base;
     auto& getMesh() { return Base::subobject; }
 };
 

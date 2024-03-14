@@ -60,7 +60,7 @@ public:
     /// sets size of points on screen in pixels
     MRMESH_API virtual void setPointSize( float size );
     /// returns size of points on screen in pixels
-    float getPointSize() const { return pointSize_; }
+    virtual float getPointSize() const { return pointSize_; }
 
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectPointsHolder( ProtectedStruct, const ObjectPointsHolder& obj ) : ObjectPointsHolder( obj )

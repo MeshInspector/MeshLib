@@ -114,7 +114,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     else
         SceneSettings::setDefaultShadingMode( cfg.getBool( cFlatShadingParamKey ) ?
             SceneSettings::ShadingMode::Flat : SceneSettings::ShadingMode::AutoDetect );
-    SceneSettings::set( SceneSettings::Type::UseDefaultScenePropertiesOnDeserialization, false );
+    SceneSettings::set( SceneSettings::BoolType::UseDefaultScenePropertiesOnDeserialization, false );
     if ( cfg.hasJsonValue( cncMachineSettingsKey ) )
     {
         CNCMachineSettings cncSettings;

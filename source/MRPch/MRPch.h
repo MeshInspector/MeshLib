@@ -60,7 +60,9 @@
 #include <Commdlg.h>
 #endif
 
+#ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
+#endif
 
 #include <gtest/gtest.h>
 

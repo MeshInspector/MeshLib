@@ -119,7 +119,6 @@
     <ClCompile Include="MRCudaContoursDisntaceMap.cpp" />
     <ClCompile Include="MRCudaFastWindingNumber.cpp" />
     <ClCompile Include="MRCudaPointsToDistanceVolume.cpp" />
-    <ClCompile Include="MRCudaPointsToDistanceVolume.h" />
     <ClCompile Include="MRCudaPointsToMeshProjector.cpp" />
     <ClCompile Include="MRCudaSolarRadiation.cpp" />
     <ClCompile Include="MRCudaTest.cpp" />

@@ -42,9 +42,6 @@
     <ClCompile Include="MRCudaPointsToDistanceVolume.cpp">
       <Filter>PointsToDistanceVolume</Filter>
     </ClCompile>
-    <ClCompile Include="MRCudaPointsToDistanceVolume.h">
-      <Filter>PointsToDistanceVolume</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
@@ -92,6 +89,9 @@
     </ClInclude>
     <ClInclude Include="MRCudaSolarRadiation.cuh">
       <Filter>SolarRadiation</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaPointsToDistanceVolume.h">
+      <Filter>PointsToDistanceVolume</Filter>
     </ClInclude>
     <ClInclude Include="MRCudaPointsToDistanceVolume.cuh">
       <Filter>PointsToDistanceVolume</Filter>

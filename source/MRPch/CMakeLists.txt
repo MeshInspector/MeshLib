@@ -23,8 +23,32 @@ install(
 
 add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
-IF(APPLE)
-  target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
+IF(APPLE OR MR_EMSCRIPTEN)
+  IF(APPLE)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        spdlog
+        zip
+        Boost::boost
+        jsoncpp
+        fmt
+        tbb
+        gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF
+    )
+  ELSE()
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+      jsoncpp
+      tbb
+    )
+  ENDIF()
+ELSE()
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    fmt
+    spdlog
+    Boost::boost
+    jsoncpp
+    tbb
+  )
 ENDIF()
 
 TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} PRIVATE

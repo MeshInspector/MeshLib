@@ -251,6 +251,8 @@ RenderCircleFeatureObject::RenderCircleFeatureObject( const VisualObject& object
 
 void RenderCircleFeatureObject::renderUi( const UiRenderParams& params )
 {
+    RenderObjectCombinator::renderUi( params );
+
     if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::radius, params.viewportId ) )
     {
         radiusTask_ = RenderDimensions::RadiusTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .drawAsDiameter = true } );
@@ -327,6 +329,8 @@ RenderSphereFeatureObject::RenderSphereFeatureObject( const VisualObject& object
 
 void RenderSphereFeatureObject::renderUi( const UiRenderParams& params )
 {
+    RenderObjectCombinator::renderUi( params );
+
     if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::radius, params.viewportId ) )
     {
         radiusTask_ = RenderDimensions::RadiusTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .drawAsDiameter = true, .isSpherical = true } );
@@ -359,6 +363,8 @@ RenderCylinderFeatureObject::RenderCylinderFeatureObject( const VisualObject& ob
 
 void RenderCylinderFeatureObject::renderUi( const UiRenderParams& params )
 {
+    RenderObjectCombinator::renderUi( params );
+
     if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::radius, params.viewportId ) )
     {
         radiusTask_ = RenderDimensions::RadiusTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .drawAsDiameter = true } );
@@ -398,6 +404,8 @@ RenderConeFeatureObject::RenderConeFeatureObject( const VisualObject& object )
 
 void RenderConeFeatureObject::renderUi( const UiRenderParams& params )
 {
+    RenderObjectCombinator::renderUi( params );
+
     if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::radius, params.viewportId ) )
     {
         radiusTask_ = RenderDimensions::RadiusTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .center = Vector3f( 0, 0, 1 ), .drawAsDiameter = true } );

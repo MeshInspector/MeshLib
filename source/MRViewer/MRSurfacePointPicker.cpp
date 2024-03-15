@@ -47,8 +47,11 @@ const PickedPoint& SurfacePointWidget::create( const std::shared_ptr<VisualObjec
     pickSphere_->setName( "Pick Sphere" );
     pickSphere_->setAncillary( true );
     pickSphere_->setFrontColor( params_.baseColor, false );
-    pickSphere_->setBackColor( Color::transparent() );
+    pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
+    pickSphere_->setGlobalAlpha( 255 );
     pickSphere_->setVisualizeProperty( false, DimensionsVisualizePropertyType::radius, ViewportMask::all() );
+    pickSphere_->setDecorationsColor( Color::transparent(), false );
+
     baseObject_->addChild( pickSphere_ );
     currentPos_ = startPos;
     updatePositionAndRadius_();
@@ -90,6 +93,8 @@ void SurfacePointWidget::setParameters( const Parameters& params )
         else
             pickSphere_->setFrontColor( params.baseColor, false );
 
+        pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
+
         if ( params.positionType != params_.positionType ||
              params.radius != params_.radius )
         {
@@ -105,6 +110,7 @@ void SurfacePointWidget::setHovered( bool on )
     {
         isHovered_ = on;
         pickSphere_->setFrontColor( isHovered_ ? params_.hoveredColor : params_.baseColor, false );
+        pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
     }
 }
 
@@ -120,6 +126,7 @@ bool SurfacePointWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     pickSphere_->setPickable( false );
     isOnMove_ = true;
     pickSphere_->setFrontColor( params_.activeColor, false );
+    pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
     if ( startMove_ )
         startMove_( currentPos_ );
     return true;
@@ -132,6 +139,7 @@ bool SurfacePointWidget::onMouseUp_( Viewer::MouseButton button, int )
     isOnMove_ = false;
     pickSphere_->setPickable( true );
     pickSphere_->setFrontColor( params_.baseColor, false );
+    pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
     if ( endMove_ )
         endMove_( currentPos_ );
     return true;

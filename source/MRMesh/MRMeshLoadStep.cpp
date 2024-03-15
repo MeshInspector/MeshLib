@@ -274,9 +274,11 @@ public:
         rootObj_->select( true );
         objStack_.push( rootObj_ );
 
-        TDF_LabelSequence shapes, colors;
+        TDF_LabelSequence shapes;
         shapeTool->GetFreeShapes( shapes );
+
 #if STEP_LOAD_COLORS
+        TDF_LabelSequence colors;
         colorTool_->GetColors( colors );
 #endif
 
@@ -767,7 +769,9 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Voi
         MR_NAMED_TIMER( "transfer data" )
 
         reader.SetNameMode( true );
+#if STEP_LOAD_COLORS
         reader.SetColorMode( true );
+#endif
 #if MODERN_PROGRESS_INDICATION_SUPPORTED
         ProgressIndicator progress( subprogress( settings.callback, 0.25f, 0.85f ) );
         if ( reader.Transfer( document, progress.Start() ) != Standard_True )

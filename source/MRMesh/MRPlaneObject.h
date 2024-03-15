@@ -55,8 +55,8 @@ public:
 
     [[nodiscard]] MRMESH_API float getSizeX( ViewportId id = {} ) const;
     [[nodiscard]] MRMESH_API float getSizeY( ViewportId id = {} ) const;
-    /// calculates normalyzed directions of X,Y axis of the plane and normal as Z 
-    [[nodiscard]] MRMESH_API Matrix3f getLocalBasis( ViewportId id = {} ) const;
+    /// calculates normalized directions of X,Y axis of the plane and normal as Z 
+    [[nodiscard]] MRMESH_API Matrix3f calcLocalBasis( ViewportId id = {} ) const;
 
     MRMESH_API void setSizeX( float size, ViewportId id = {} );
     MRMESH_API void setSizeY( float size, ViewportId id = {} );

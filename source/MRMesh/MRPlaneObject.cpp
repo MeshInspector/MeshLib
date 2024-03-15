@@ -99,7 +99,7 @@ float PlaneObject::getSizeY( ViewportId id /*= {}*/ ) const
     return  s_.get( id ).y.y * basePlaneObjectHalfEdgeLength_ * 2.0f;
 }
 
-Matrix3f PlaneObject::getLocalBasis( ViewportId id /*= {}*/ ) const
+Matrix3f PlaneObject::calcLocalBasis( ViewportId id /*= {}*/ ) const
 {
     Matrix3f result;
     result.x = ( r_.get( id ) * Vector3f::plusX() ).normalized();
@@ -154,7 +154,7 @@ void PlaneObject::orientateFollowMainAxis_( ViewportId id /*= {}*/ )
     bestPlaneBasis.y = planeVectorInXY.normalized();
     bestPlaneBasis.z = n.normalized();
 
-    auto currentPlaneBasis = getLocalBasis();
+    auto currentPlaneBasis = calcLocalBasis();
     auto A = rotateBasis( currentPlaneBasis, bestPlaneBasis );
     const Matrix3f& r = r_.get( id ), s = s_.get( id );
 

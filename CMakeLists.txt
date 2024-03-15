@@ -74,6 +74,8 @@ option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
 
 include(CTest)
 
+set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
+
 find_package(PkgConfig REQUIRED)
 
 set(MR_UBUNTU FALSE) # any Ubuntu version
@@ -247,7 +249,7 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/MRPch ./MRPch)
 
 IF(MESHLIB_BUILD_MRVIEWER)
   IF(NOT IMGUI_DIR)
-    set(IMGUI_DIR "${CMAKE_SOURCE_DIR}/thirdparty/imgui/")
+    set(IMGUI_DIR "${MESHLIB_THIRDPARTY_DIR}/imgui/")
   ENDIF()
 
   IF(NOT MR_EMSCRIPTEN)

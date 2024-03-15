@@ -18,7 +18,7 @@ template <typename T>
 std::array<Vector3<T>, 8> getCorners( const Box<Vector3<T>> & box );
 
 /// Box given by its min- and max- corners
-template <typename V> 
+template <typename V>
 struct Box
 {
 public:
@@ -41,8 +41,8 @@ public:
     static Box fromMinAndSize( const V& min, const V& size ) { return Box{ min,min + size }; }
 
     /// true if the box contains at least one point
-    bool valid() const 
-    { 
+    bool valid() const
+    {
         for ( int i = 0; i < V::elements; ++i )
             if ( min[i] > max[i] )
                 return false;
@@ -143,7 +143,7 @@ public:
         return distSq;
     }
 
-    /// expands min and max to their closest representable value 
+    /// expands min and max to their closest representable value
     Box insignificantlyExpanded() const
     {
         assert( valid() );
@@ -165,7 +165,7 @@ public:
 template <typename T>
 inline std::array<Vector3<T>, 8> getCorners( const Box<Vector3<T>> & box )
 {
-    return  
+    return
     {
         Vector3<T>{ box.min.x, box.min.y, box.min.z },
         Vector3<T>{ box.max.x, box.min.y, box.min.z },
@@ -181,7 +181,7 @@ inline std::array<Vector3<T>, 8> getCorners( const Box<Vector3<T>> & box )
 template <typename T>
 inline std::array<Vector2<T>, 4> getCorners( const Box<Vector2<T>> & box )
 {
-    return  
+    return
     {
         Vector2<T>{ box.min.x, box.min.y },
         Vector2<T>{ box.max.x, box.min.y },
@@ -194,6 +194,8 @@ inline std::array<Vector2<T>, 4> getCorners( const Box<Vector2<T>> & box )
 template <typename V>
 inline Box<V> transformed( const Box<V> & box, const AffineXf<V> & xf )
 {
+    if ( !box.valid() )
+        return {};
     Box<V> res;
     for ( const auto & p : getCorners( box ) )
         res.include( xf( p ) );

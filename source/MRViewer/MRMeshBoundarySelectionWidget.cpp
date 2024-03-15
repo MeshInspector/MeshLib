@@ -105,9 +105,10 @@ bool BoundarySelectionWidget::selectHole( std::shared_ptr<MR::ObjectMeshHolder> 
     selectedHoleIndex_ = index;
 
     auto lineWidth = isSelectedAndHoveredTheSame_() ? std::max( params.hoveredLineWidth, params.selectedLineWidth ) : params.selectedLineWidth;
-    auto retult = updateHole_( selectedHoleObject_, selectedHoleIndex_, params.selectedColor, lineWidth );
-    onBoundarySelected_( object );
-    return retult;
+    auto result = updateHole_( selectedHoleObject_, selectedHoleIndex_, params.selectedColor, lineWidth );
+    if ( index >= 0 )
+        onBoundarySelected_( object );
+    return result;
 }
 
 bool BoundarySelectionWidget::hoverHole_( std::shared_ptr<MR::ObjectMeshHolder> object, int index )

@@ -4,6 +4,7 @@
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
+#include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRSceneSettings.h"
 #include "MRViewer/MRRenderDefaultUiObject.h"
 #include "MRViewer/MRRenderDimensions.h"
@@ -80,6 +81,11 @@ template <typename BaseObjectType>
 class WrappedModelSubobject<false, BaseObjectType> : public detail::WrappedModelSubobjectPart<false, BaseObjectType>, public virtual RenderWrapObject::BasicWrapperTarget
 {
 public:
+    bool isSelected() const override
+    {
+        return target_->isSelected();
+    }
+
     ViewportMask visibilityMask() const override
     {
         if ( auto p = this->parent() )
@@ -93,8 +99,7 @@ public:
 
     const ViewportProperty<Color>& getFrontColorsForAllViewports( bool selected = true ) const override
     {
-        const_cast<WrappedModelSubobject&>( *this ).setFrontColor( Color( 255, 64, 192, 255 ), selected );
-        return BaseObjectType::getFrontColorsForAllViewports( selected );
+        return dynamic_cast<const FeatureObject&>( *target_ ).getDecorationsColorForAllViewports( selected );
     }
 };
 

@@ -30,7 +30,9 @@ struct SceneColors
         SelectedFaces,
         SelectedEdges,
         SelectedPoints,
-        Count
+        SelectedFeatureDecorations,
+        UnselectedFeatureDecorations,
+        Count [[maybe_unused]],
     };
 
     MRMESH_API static const Color& get( Type type );

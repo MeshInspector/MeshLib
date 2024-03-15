@@ -1304,8 +1304,10 @@ float ImGuiMenu::drawSelectionInformation_()
         // Scene info update
         if ( auto vObj = obj->asType<VisualObject>() )
         {
-            selectionBbox_.include( vObj->getBoundingBox() );
-            selectionWorldBox_.include( vObj->getWorldBox() );
+            if ( auto box = vObj->getBoundingBox(); box.valid() )
+                selectionBbox_.include( box );
+            if ( auto box = vObj->getWorldBox(); box.valid() )
+                selectionWorldBox_.include( box );
         }
 
         // Typed info
@@ -1889,6 +1891,7 @@ bool ImGuiMenu::drawDrawOptionsColors_( const std::vector<std::shared_ptr<Visual
     const auto selectedMeshObjs = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     const auto selectedPointsObjs = getAllObjectsInTree<ObjectPointsHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     const auto selectedLabelObjs = getAllObjectsInTree<ObjectLabel>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+    const auto selectedFeatureObjs = getAllObjectsInTree<FeatureObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     if ( selectedVisualObjs.empty() )
         return someChanges;
 
@@ -2011,6 +2014,25 @@ MR_SUPPRESS_WARNING_POP
         }, [&] ( ObjectLabel* data, const Vector4f& color )
         {
             data->setContourColor( Color( color ), selectedViewport_ );
+        } );
+    }
+
+    if ( !selectedFeatureObjs.empty() )
+    {
+        make_color_selector<FeatureObject>( selectedFeatureObjs, "Decorations color (selected)", [&] ( const FeatureObject* data )
+        {
+            return Vector4f( data->getDecorationsColor( true, selectedViewport_ ) );
+        }, [&] ( FeatureObject* data, const Vector4f& color )
+        {
+            data->setDecorationsColor( Color( color ), true, selectedViewport_ );
+        } );
+
+        make_color_selector<FeatureObject>( selectedFeatureObjs, "Decorations color (unselected)", [&] ( const FeatureObject* data )
+        {
+            return Vector4f( data->getDecorationsColor( false, selectedViewport_ ) );
+        }, [&] ( FeatureObject* data, const Vector4f& color )
+        {
+            data->setDecorationsColor( Color( color ), false, selectedViewport_ );
         } );
     }
 

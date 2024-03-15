@@ -92,6 +92,8 @@ using namespace MR;
 #define STEP_READSTREAM_SUPPORTED ( ( ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 5 ) ) )
 // reading STEP data fixed
 #define STEP_READER_FIXED ( ( ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 7 ) ) )
+// TODO: full color support
+#define STEP_LOAD_COLORS 0
 
 #if MODERN_MESSAGE_SUPPORTED
 /// spdlog adaptor for OpenCASCADE logging system
@@ -171,11 +173,13 @@ private:
 #pragma message( "Progress indication is currently unsupported for OpenCASCADE versions prior to 7.4" )
 #endif
 
+#if STEP_LOAD_COLORS
 Color toColor( const Quantity_ColorRGBA& rgba )
 {
     const auto& rgb = rgba.GetRGB();
     return { (float)rgb.Red(), (float)rgb.Green(), (float)rgb.Blue(), rgba.Alpha() };
 }
+#endif
 
 Vector3d toVector( const gp_XYZ& xyz )
 {
@@ -262,7 +266,9 @@ public:
         MR_TIMER
 
         const auto shapeTool = XCAFDoc_DocumentTool::ShapeTool( document->Main() );
+#if STEP_LOAD_COLORS
         colorTool_ = XCAFDoc_DocumentTool::ColorTool( document->Main() );
+#endif
 
         rootObj_ = std::make_shared<Object>();
         rootObj_->select( true );
@@ -270,12 +276,16 @@ public:
 
         TDF_LabelSequence shapes, colors;
         shapeTool->GetFreeShapes( shapes );
+#if STEP_LOAD_COLORS
         colorTool_->GetColors( colors );
+#endif
 
         for ( TDF_LabelSequence::Iterator it( shapes ); it.More(); it.Next() )
             readLabel_( it.Value() );
 
+#if STEP_LOAD_COLORS
         colorTool_.Nullify();
+#endif
 
         assert( objStack_.size() == 1 );
         assert( objStack_.top() == rootObj_ );
@@ -389,6 +399,7 @@ private:
                 const auto refShape = ShapeTool::GetShape( ref );
 
                 std::optional<Color> faceColor, edgeColor;
+#if STEP_LOAD_COLORS
                 Quantity_ColorRGBA color;
                 if ( colorTool_->GetColor( refShape, XCAFDoc_ColorGen, color ) )
                     faceColor = edgeColor = toColor( color );
@@ -396,6 +407,7 @@ private:
                     faceColor = toColor( color );
                 if ( colorTool_->GetColor( refShape, XCAFDoc_ColorCurv, color ) )
                     edgeColor = toColor( color );
+#endif
 
                 meshTriangulationContexts_.emplace_back( refShape, objMesh, faceColor, edgeColor );
             }
@@ -422,6 +434,7 @@ private:
             }
 
             std::optional<Color> faceColor, edgeColor;
+#if STEP_LOAD_COLORS
             Quantity_ColorRGBA color;
             if ( colorTool_->GetColor( shape, XCAFDoc_ColorGen, color ) )
                 faceColor = edgeColor = toColor( color );
@@ -429,6 +442,7 @@ private:
                 faceColor = toColor( color );
             if ( colorTool_->GetColor( shape, XCAFDoc_ColorCurv, color ) )
                 edgeColor = toColor( color );
+#endif
 
             meshTriangulationContexts_.emplace_back( shape, objMesh, faceColor, edgeColor );
         }
@@ -580,7 +594,9 @@ private:
     }
 
 private:
+#if STEP_LOAD_COLORS
     Handle( XCAFDoc_ColorTool ) colorTool_;
+#endif
 
     std::shared_ptr<Object> rootObj_;
     std::stack<std::shared_ptr<Object>> objStack_;

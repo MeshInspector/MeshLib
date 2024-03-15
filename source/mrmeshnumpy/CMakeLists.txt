@@ -28,7 +28,7 @@ ELSE()
     spdlog
     tbb
     phmap::phmap
-    ${MR_PYTHON_LIB}
+    Python::Python
   )
 ENDIF()
 

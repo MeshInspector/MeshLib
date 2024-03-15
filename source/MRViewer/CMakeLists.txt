@@ -35,6 +35,8 @@ IF(MR_EMSCRIPTEN)
 ELSE() # MR_EMSCRIPTEN
   find_package(cpr REQUIRED)
   find_package(glad REQUIRED)
+  find_package(OpenVDB 9 REQUIRED COMPONENTS openvdb)
+
   IF(APPLE)
     # TODO: CMAKE_PREFIX_PATH for thirdparty
     #find_package(nfd REQUIRED)
@@ -49,15 +51,14 @@ ELSE() # MR_EMSCRIPTEN
       GTest::gtest
       fmt
       tbb
-      OpenVDB
+      OpenVDB::openvdb
       spdlog
       jsoncpp
-      cpr
+      cpr::cpr
       imgui
-      glad
-      glfw
-      #nfd::nfd
-      nfd
+      glad::glad
+      glfw3::glfw
+      nfd #nfd::nfd
       hidapi
       ${APPKIT_LIBRARY}
     )
@@ -67,11 +68,10 @@ ELSE() # MR_EMSCRIPTEN
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRMesh
       gtest
-      dl
       cpr::cpr
       imgui
       glad::glad
-      glfw
+      glfw3::glfw
       gtkmm-3.0
       glib-2.0
       glibmm-2.4
@@ -80,7 +80,7 @@ ELSE() # MR_EMSCRIPTEN
       jsoncpp
       spdlog
       fmt
-      openvdb
+      OpenVDB::openvdb
       tbb
       phmap::phmap
     )

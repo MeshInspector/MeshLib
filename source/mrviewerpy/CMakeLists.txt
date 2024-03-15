@@ -28,7 +28,7 @@ ELSE()
     MRMesh
     fmt
     phmap::phmap
-    ${MR_PYTHON_LIB}
+    Python::Python
   )
 ENDIF()
 

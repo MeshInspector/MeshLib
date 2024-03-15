@@ -30,7 +30,7 @@ ELSE()
     tbb
     openvdb
     phmap::phmap
-    ${MR_PYTHON_LIB}
+    Python::Python
   )
 ENDIF()
 

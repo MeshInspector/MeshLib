@@ -30,8 +30,7 @@ private:
     Vector3f worldStartPoint_;
     Vector3f worldBboxCenter_;
     Vector3f bboxCenter_;
-    AffineXf3f objXf_;
-    AffineXf3f objParentWorldXf_;
+    AffineXf3f objWorldXf_;
     float viewportStartPointZ_;
     Plane3f rotationPlane_;
 

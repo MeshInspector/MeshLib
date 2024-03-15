@@ -67,10 +67,8 @@ bool MoveObjectByMouse::onMouseDown_( MouseButton button, int modifier )
     shift_ = 0.f;
 
     obj_ = obj;
-    objXf_ = obj_->xf();
-    objParentWorldXf_ = obj_->parent() ? obj_->parent()->worldXf() : AffineXf3f{};
-    assert( obj_->worldXf() == objParentWorldXf_ * objXf_ );
-    worldStartPoint_ = obj_->worldXf()( pick.point );
+    objWorldXf_ = obj_->worldXf();
+    worldStartPoint_ = objWorldXf_( pick.point );
     viewportStartPointZ_ = viewer->viewport().projectToViewportSpace( worldStartPoint_ ).z;
     
     transformMode_ = ( modifier == GLFW_MOD_CONTROL ) ? TransformMode::Rotation : TransformMode::Translation;
@@ -95,9 +93,7 @@ bool MoveObjectByMouse::onMouseDown_( MouseButton button, int modifier )
         setVisualizeVectors_( { worldBboxCenter_, worldStartPoint_, worldBboxCenter_, worldStartPoint_ } );
     }
     else
-    {
         setVisualizeVectors_( { worldStartPoint_, worldStartPoint_ } );
-    }
 
     return true;
 }
@@ -133,22 +129,17 @@ bool MoveObjectByMouse::onMouseMove_( int x, int y )
 
         setVisualizeVectors_( { worldBboxCenter_, worldStartPoint_, worldBboxCenter_, worldEndPoint } );
 
-        auto worldXf = objParentWorldXf_ * objXf_;
-        auto rotation = AffineXf3f::linear( Matrix3f::rotation( vectorStart, worldEndPoint - worldBboxCenter_ ) );
-        auto worldXfA = AffineXf3f::linear( worldXf.A );
-        auto toBboxCenter = AffineXf3f::translation( worldXfA( bboxCenter_ ) );
-        worldXf = AffineXf3f::translation( worldXf.b ) * toBboxCenter * rotation * toBboxCenter.inverse() * worldXfA;
-        auto xf = objParentWorldXf_.inverse() * worldXf;
-
-        obj_->setXf( xf );
+        AffineXf3f rotation = AffineXf3f::linear( Matrix3f::rotation( vectorStart, worldEndPoint - worldBboxCenter_ ) );
+        AffineXf3f worldXfA = AffineXf3f::linear( objWorldXf_.A );
+        AffineXf3f toBboxCenter = AffineXf3f::translation( worldXfA( bboxCenter_ ) );
+        obj_->setWorldXf( AffineXf3f::translation( objWorldXf_.b ) * toBboxCenter * rotation * toBboxCenter.inverse() * worldXfA );
     }
     else
     {
         shift_ = ( worldEndPoint - worldStartPoint_ ).length();
         setVisualizeVectors_( { worldStartPoint_, worldEndPoint } );
 
-        auto worldXf = AffineXf3f::translation( worldEndPoint - worldStartPoint_ ) * objParentWorldXf_ * objXf_;
-        auto xf = objParentWorldXf_.inverse() * worldXf;
+        auto worldXf = AffineXf3f::translation( worldEndPoint - worldStartPoint_ ) * objWorldXf_;
 
         auto wbsize = transformed( obj_->getBoundingBox(), worldXf ).size();
         auto minSizeDim = wbsize.length();
@@ -156,9 +147,9 @@ bool MoveObjectByMouse::onMouseMove_( int x, int y )
             minSizeDim = 1.f;
 
         for ( auto i = 0; i < 3; i++ )
-            xf.b[i] = std::clamp( xf.b[i], -cMaxTranslationMultiplier * minSizeDim, +cMaxTranslationMultiplier * minSizeDim );
+            worldXf.b[i] = std::clamp( worldXf.b[i], -cMaxTranslationMultiplier * minSizeDim, +cMaxTranslationMultiplier * minSizeDim );
 
-        obj_->setXf( xf );
+        obj_->setWorldXf( worldXf );
     }
 
     return true;
@@ -169,10 +160,10 @@ bool MoveObjectByMouse::onMouseUp_( MouseButton btn, int /*modifiers*/ )
     if ( !obj_ || btn != Viewer::MouseButton::Left )
         return false;
 
-    auto newXf = obj_->xf();
-    obj_->setXf( objXf_ );
+    auto newWorldXf = obj_->worldXf();
+    obj_->setWorldXf( objWorldXf_ );
     AppendHistory<ChangeXfAction>( "Change Xf", obj_ );
-    obj_->setXf( newXf );
+    obj_->setWorldXf( newWorldXf );
 
     obj_ = nullptr;
     transformMode_ = TransformMode::None;

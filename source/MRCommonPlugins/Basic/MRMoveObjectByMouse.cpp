@@ -68,6 +68,8 @@ bool MoveObjectByMouse::onMouseDown_( MouseButton button, int modifier )
 
     obj_ = obj;
     objXf_ = obj_->xf();
+    objParentWorldXf_ = obj_->parent() ? obj_->parent()->worldXf() : AffineXf3f{};
+    assert( obj_->worldXf() == objParentWorldXf_ * objXf_ );
     worldStartPoint_ = obj_->worldXf()( pick.point );
     viewportStartPointZ_ = viewer->viewport().projectToViewportSpace( worldStartPoint_ ).z;
     
@@ -93,7 +95,9 @@ bool MoveObjectByMouse::onMouseDown_( MouseButton button, int modifier )
         setVisualizeVectors_( { worldBboxCenter_, worldStartPoint_, worldBboxCenter_, worldStartPoint_ } );
     }
     else
+    {
         setVisualizeVectors_( { worldStartPoint_, worldStartPoint_ } );
+    }
 
     return true;
 }
@@ -129,18 +133,22 @@ bool MoveObjectByMouse::onMouseMove_( int x, int y )
 
         setVisualizeVectors_( { worldBboxCenter_, worldStartPoint_, worldBboxCenter_, worldEndPoint } );
 
-        AffineXf3f rotation = AffineXf3f::linear( Matrix3f::rotation( vectorStart, worldEndPoint - worldBboxCenter_ ) );
-        AffineXf3f xfA = AffineXf3f::linear( objXf_.A );
-        AffineXf3f toBboxCenter = AffineXf3f::translation( xfA( bboxCenter_ ) );
-        obj_->setXf( AffineXf3f::translation(objXf_.b) * toBboxCenter * rotation * toBboxCenter.inverse() * xfA );
+        auto worldXf = objParentWorldXf_ * objXf_;
+        auto rotation = AffineXf3f::linear( Matrix3f::rotation( vectorStart, worldEndPoint - worldBboxCenter_ ) );
+        auto worldXfA = AffineXf3f::linear( worldXf.A );
+        auto toBboxCenter = AffineXf3f::translation( worldXfA( bboxCenter_ ) );
+        worldXf = AffineXf3f::translation( worldXf.b ) * toBboxCenter * rotation * toBboxCenter.inverse() * worldXfA;
+        auto xf = objParentWorldXf_.inverse() * worldXf;
+
+        obj_->setXf( xf );
     }
     else
     {
         shift_ = ( worldEndPoint - worldStartPoint_ ).length();
         setVisualizeVectors_( { worldStartPoint_, worldEndPoint } );
 
-        auto xf = AffineXf3f::translation( worldEndPoint - worldStartPoint_ ) * objXf_;
-        auto worldXf = obj_->parent() ? obj_->parent()->worldXf() * xf : xf;
+        auto worldXf = AffineXf3f::translation( worldEndPoint - worldStartPoint_ ) * objParentWorldXf_ * objXf_;
+        auto xf = objParentWorldXf_.inverse() * worldXf;
 
         auto wbsize = transformed( obj_->getBoundingBox(), worldXf ).size();
         auto minSizeDim = wbsize.length();

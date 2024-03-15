@@ -251,8 +251,8 @@ ELSE()
 ENDIF()
 
 # MRMesh library is always built
-add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRPch ./MRPch)
+add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
 
 IF(MESHLIB_BUILD_MRVIEWER)
   set(IMGUI_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)

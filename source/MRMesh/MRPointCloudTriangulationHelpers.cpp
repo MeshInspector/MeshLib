@@ -466,12 +466,6 @@ static void trianglulateFan( const VertCoords& points, VertId centerVert, Triang
     if ( triangulationData.neighbors.empty() )
         return;
     FanOptimizer optimizer( points, settings.trustedNormals, triangulationData, centerVert );
-    if ( centerVert == 768592_v )
-    {
-        int k = 0;
-        ++k;
-        (void)k;
-    }
     optimizer.optimize( settings.maxRemoves, settings.critAngle, settings.boundaryAngle );
     assert( triangulationData.neighbors.empty() || triangulationData.neighbors.size() > 1 );
 }

@@ -120,13 +120,8 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
             return;
 
         Vector3d point( noInit );
-#ifndef NDEBUG
         Vector3d normal( noInit );
         Color color( noInit );
-#else
-        auto normal = cInvalidNormal;
-        auto color = cInvalidColor;
-#endif
         auto result = parseTextCoordinate( line, point, hasNormals ? &normal : nullptr, hasColors ? &color : nullptr );
         if ( !result )
         {
@@ -134,9 +129,6 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
                 parseError = std::move( result.error() );
             return;
         }
-
-        assert( !hasNormals || normal != cInvalidNormal );
-        assert( !hasColors || color != cInvalidColor );
 
         cloud.points[v] = Vector3f( settings.outXf ? point - firstPoint : point );
         cloud.validPoints.set( v, true );

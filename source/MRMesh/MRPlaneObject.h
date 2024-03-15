@@ -19,14 +19,23 @@ public:
     PlaneObject( PlaneObject&& ) noexcept = default;
     PlaneObject& operator = ( PlaneObject&& ) noexcept = default;
 
-    constexpr static const char* TypeName() noexcept { return "PlaneObject"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* TypeName() noexcept
+    {
+        return "PlaneObject";
+    }
+    virtual const char* typeName() const override
+    {
+        return TypeName();
+    }
 
     /// \note this ctor is public only for std::make_shared used inside clone()
     PlaneObject( ProtectedStruct, const PlaneObject& obj ) : PlaneObject( obj )
     {}
 
-    virtual std::string getClassName() const override { return "Plane"; }
+    virtual std::string getClassName() const override
+    {
+        return "Plane";
+    }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
@@ -46,6 +55,8 @@ public:
 
     [[nodiscard]] MRMESH_API float getSizeX( ViewportId id = {} ) const;
     [[nodiscard]] MRMESH_API float getSizeY( ViewportId id = {} ) const;
+    /// calculates normalized directions of X,Y axis of the plane and normal as Z 
+    [[nodiscard]] MRMESH_API Matrix3f calcLocalBasis( ViewportId id = {} ) const;
 
     MRMESH_API void setSizeX( float size, ViewportId id = {} );
     MRMESH_API void setSizeY( float size, ViewportId id = {} );
@@ -53,6 +64,7 @@ public:
     [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point, ViewportId id = {} ) const override;
 
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
+
 protected:
     PlaneObject( const PlaneObject& other ) = default;
 
@@ -62,10 +74,14 @@ protected:
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 
     virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& ) const override
-        { return {}; }
+    {
+        return {};
+    }
 
     virtual VoidOrErrStr deserializeModel_( const std::filesystem::path&, ProgressCallback ) override
-        { return {}; }
+    {
+        return {};
+    }
 
     MRMESH_API void setupRenderObject_() const override;
 

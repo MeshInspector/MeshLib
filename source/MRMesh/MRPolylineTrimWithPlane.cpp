@@ -57,35 +57,37 @@ namespace MR
         return res;
     }
 
-    void dividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, Polyline3* otherPart, std::function<void( EdgeId, EdgeId, float )> onEdgeSplitCallback, bool fillAfterCut )
+    void dividePolylineWithPlane( Polyline3& polyline, const Plane3f& plane, const DividePolylineParameters& params )
     {
         if ( polyline.points.empty() )
             return;
 
-        const auto newEdges = subdividePolylineWithPlane( polyline, plane, onEdgeSplitCallback );
+        const auto newEdges = subdividePolylineWithPlane( polyline, plane, params.onEdgeSplitCallback );
         if ( newEdges.empty() )
         {            
             if ( plane.distance( polyline.points.front() ) < 0 )
             {
-                if ( otherPart )
-                    *otherPart = polyline;
+                if ( params.otherPart )
+                    *params.otherPart = polyline;
                 polyline = Polyline3{};
             }
             return;
         }
 
         std::vector<std::pair<VertId, VertId>> cutSegments;
-        const auto posEdges = fillPolylineLeft( polyline, newEdges, fillAfterCut ? &cutSegments : nullptr );
+        const auto posEdges = fillPolylineLeft( polyline, newEdges, params.fillAfterCut ? &cutSegments : nullptr );
         Polyline3 res;
         VertMap vMap;
-        res.addPartByMask( polyline, posEdges, &vMap );
+        res.addPartByMask( polyline, posEdges, &vMap, params.outEmap );
+        if ( params.outVmap )
+            *params.outVmap = vMap;
 
-        if ( fillAfterCut )
+        if ( params.fillAfterCut )
             for ( const auto& segment : cutSegments )
                 res.topology.makeEdge( vMap[segment.second], vMap[segment.first] );
                 
 
-        if ( otherPart )
+        if ( params.otherPart )
         {
             const size_t numEdges = polyline.topology.lastNotLoneEdge().undirected() + 1;
             UndirectedEdgeBitSet otherPartEdges( numEdges );
@@ -96,10 +98,12 @@ namespace MR
             }
 
             vMap.clear();
-            otherPart->addPartByMask( polyline, otherPartEdges, &vMap );
-            if ( fillAfterCut )
+            params.otherPart->addPartByMask( polyline, otherPartEdges, &vMap, params.otherOutEmap );
+            if ( params.otherOutVmap )
+                *params.otherOutVmap = vMap;
+            if ( params.fillAfterCut )
                 for ( const auto& segment : cutSegments )
-                    otherPart->topology.makeEdge( vMap[segment.first], vMap[segment.second] );
+                    params.otherPart->topology.makeEdge( vMap[segment.first], vMap[segment.second] );
         }
         polyline = res;
     }

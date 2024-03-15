@@ -100,13 +100,20 @@ public:
 
     // The cached orthonormalized rotation matrix.
     // `isDef` receives false if matrix is overridden for this specific viewport.
-    [[nodiscard]] Matrix3f getRotationMatrix( ViewportId id = {}, bool * isDef = nullptr ) const { return r_.get( id, isDef ); }
+    [[nodiscard]] Matrix3f getRotationMatrix( ViewportId id = {}, bool* isDef = nullptr ) const { return r_.get( id, isDef ); }
     // The cached scale and shear matrix. The main diagnoal stores the scale, and some other elements store the shearing.
     // `isDef` receives false if matrix is overridden for this specific viewport.
-    [[nodiscard]] Matrix3f getScaleShearMatrix( ViewportId id = {}, bool * isDef = nullptr ) const { return s_.get( id, isDef ); }
+    [[nodiscard]] Matrix3f getScaleShearMatrix( ViewportId id = {}, bool* isDef = nullptr ) const { return s_.get( id, isDef ); }
+
+    // This color is used for subfeatures.
+    // `isDef` receives false if matrix is overridden for this specific viewport.
+    MRMESH_API const Color& getDecorationsColor( bool selected, ViewportId viewportId = {}, bool* isDef = nullptr ) const;
+    MRMESH_API virtual void setDecorationsColor( const Color& color, bool selected, ViewportId viewportId = {} );
+    MRMESH_API virtual const ViewportProperty<Color>& getDecorationsColorForAllViewports( bool selected ) const;
+    MRMESH_API virtual void setDecorationsColorForAllViewports( ViewportProperty<Color> val, bool selected );
 
 protected:
-    FeatureObject() = default;
+    MRMESH_API FeatureObject();
 
     MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;
 
@@ -117,6 +124,9 @@ protected:
     // This cache need for fast calculation of feature properties w/o expensive  transformation matrix QR decomposition.
     ViewportProperty<Matrix3f> r_; // rotation
     ViewportProperty<Matrix3f> s_; // scale
+
+    // This is used for subfeatures. The index is for `isSelected()`.
+    std::array<ViewportProperty<Color>, 2> decorationsColor_;
 };
 
 }

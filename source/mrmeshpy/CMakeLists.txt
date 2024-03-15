@@ -29,6 +29,7 @@ ELSE()
     fmt
     tbb
     openvdb
+    phmap::phmap
     ${MR_PYTHON_LIB}
   )
 ENDIF()

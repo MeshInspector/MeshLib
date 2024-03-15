@@ -27,6 +27,7 @@ ELSE()
     MRMesh
     spdlog
     tbb
+    phmap::phmap
     ${MR_PYTHON_LIB}
   )
 ENDIF()

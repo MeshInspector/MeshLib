@@ -44,7 +44,6 @@ ENDIF() # NOT MR_EMSCRIPTEN
 project(MeshLib CXX)
 add_compile_definitions(MR_PROJECT_NAME=\"MeshLib\")
 add_compile_definitions(MR_FRAMEWORK)
-add_compile_definitions(IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
 
 # all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -74,18 +73,6 @@ option(MESHLIB_BUILD_MESHCONV "Build meshconv utility" ON)
 option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
 
 include(CTest)
-
-set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
-set(MESHLIB_THIRDPARTY_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
-set(THIRDPARTY_LIB_DIR "${PROJECT_SOURCE_DIR}/lib")
-set(MESHLIB_THIRDPARTY_LIB_DIR ${THIRDPARTY_LIB_DIR})
-IF(NOT MESHLIB_CUSTOM_INSTALL_PREFIX)
-  IF(NOT EXISTS "${THIRDPARTY_LIB_DIR}")
-    message(FATAL_ERROR "thirdparty build directory not found! You can build thirdparty with ./scripts/build_thirdparty.sh")
-  ENDIF()
-  include_directories(${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-  link_directories(${THIRDPARTY_LIB_DIR})
-ENDIF()
 
 find_package(PkgConfig REQUIRED)
 
@@ -201,6 +188,8 @@ IF(MR_EMSCRIPTEN)
   ENDIF() # NOT MR_DISABLE_EMSCRIPTEN_ASYNCIFY
 ENDIF() # MR_EMSCRIPTEN
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+
 IF(NOT MR_EMSCRIPTEN)
   pkg_check_modules(JSONCPP jsoncpp)
   include_directories(${JSONCPP_INCLUDE_DIRS})
@@ -212,6 +201,8 @@ IF(NOT MR_EMSCRIPTEN)
   ENDIF()
 
   add_compile_definitions(SPDLOG_COMPILED_LIB SPDLOG_SHARED_LIB)
+
+  find_package(PHMAP REQUIRED)
 ENDIF() # NOT MR_EMSCRIPTEN
 
 IF(NOT $ENV{MR_VERSION} STREQUAL "")
@@ -255,13 +246,17 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRPch ./MRPch)
 
 IF(MESHLIB_BUILD_MRVIEWER)
-  set(IMGUI_DIR ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui)
-  include_directories(${IMGUI_DIR})
+  IF(NOT IMGUI_DIR)
+    set(IMGUI_DIR "${CMAKE_SOURCE_DIR}/thirdparty/imgui/")
+  ENDIF()
 
   IF(NOT MR_EMSCRIPTEN)
     find_package(glfw3 CONFIG REQUIRED)
   ENDIF()
 
+  add_subdirectory(${PROJECT_SOURCE_DIR}/imgui ./imgui)
+  include_directories("${IMGUI_DIR}")
+  add_compile_definitions(IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRCommonPlugins ./MRCommonPlugins)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewerApp ./MRViewerApp)

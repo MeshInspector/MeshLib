@@ -5,8 +5,8 @@
 #include "MRViewer.h"
 #include "MRCommandLoop.h"
 #include "MRMesh/MRConfig.h"
-#include "imgui/imgui.h"
-#include "imgui/imgui_internal.h"
+#include "imgui.h"
+#include "imgui_internal.h"
 
 namespace MR
 {

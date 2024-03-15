@@ -33,6 +33,8 @@ IF(MR_EMSCRIPTEN)
     glfw
   )
 ELSE() # MR_EMSCRIPTEN
+  find_package(cpr REQUIRED)
+  find_package(glad REQUIRED)
   IF(APPLE)
     # TODO: CMAKE_PREFIX_PATH for thirdparty
     #find_package(nfd REQUIRED)
@@ -66,9 +68,9 @@ ELSE() # MR_EMSCRIPTEN
       MRMesh
       gtest
       dl
-      cpr
+      cpr::cpr
       imgui
-      glad
+      glad::glad
       glfw
       gtkmm-3.0
       glib-2.0
@@ -80,6 +82,7 @@ ELSE() # MR_EMSCRIPTEN
       fmt
       openvdb
       tbb
+      phmap::phmap
     )
     target_include_directories(${PROJECT_NAME} PRIVATE
       ${GTKMM_INCLUDE_DIRS}

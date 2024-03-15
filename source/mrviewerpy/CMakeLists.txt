@@ -27,6 +27,7 @@ ELSE()
     MRViewer
     MRMesh
     fmt
+    phmap::phmap
     ${MR_PYTHON_LIB}
   )
 ENDIF()

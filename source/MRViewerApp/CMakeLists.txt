@@ -25,6 +25,7 @@ ELSE() # MR_EMSCRIPTEN
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRViewer
     MRMesh
+    phmap::phmap
   )
 ENDIF() # MR_EMSCRIPTEN
 

@@ -56,7 +56,8 @@ IF(NOT MR_EMSCRIPTEN)
   ENDIF()
 
   IF(NOT MRMESH_NO_CPR)
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES cpr)
+    find_package(cpr REQUIRED)
+    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES cpr::cpr)
   ENDIF()
 
   IF(NOT MRMESH_NO_PYTHON)
@@ -97,6 +98,11 @@ IF(NOT MR_EMSCRIPTEN)
     ELSE()
       list(APPEND MRMESH_OPTIONAL_DEPENDENCIES openvdb)
     ENDIF()
+  ENDIF()
+
+  IF(NOT MRMESH_NO_GLTF)
+    find_package(TinyGLTF REQUIRED)
+    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES tinygltf::tinygltf)
   ENDIF()
 
   IF(NOT MRMESH_NO_XML)
@@ -242,6 +248,7 @@ ELSE()
     dl
     jsoncpp
     tbb
+    phmap::phmap
     ${MRMESH_OPTIONAL_DEPENDENCIES}
   )
 ENDIF()

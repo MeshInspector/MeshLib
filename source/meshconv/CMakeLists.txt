@@ -16,6 +16,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   fmt
   spdlog
   Boost::boost
+  phmap::phmap
 )
 
 install(TARGETS ${PROJECT_NAME} DESTINATION "${MR_BIN_DIR}")

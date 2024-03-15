@@ -55,10 +55,6 @@
 #include <GLFW/glfw3native.h>
 #endif
 
-#if !defined( _WIN32 ) && !defined( __EMSCRIPTEN__ )
-#include <clip/clip.h>
-#endif
-
 namespace
 {
 #ifndef __EMSCRIPTEN__
@@ -796,7 +792,7 @@ std::string CaptureScreenshotToClipBoardMenuItem::isAvailable( const std::vector
 
 bool CaptureScreenshotToClipBoardMenuItem::action()
 {
-#ifndef __EMSCRIPTEN__
+#if 0
     auto image = Viewer::instanceRef().captureSceneScreenShot();
 
 #if defined( _WIN32 )

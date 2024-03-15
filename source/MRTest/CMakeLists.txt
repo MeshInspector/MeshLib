@@ -33,6 +33,7 @@ ELSE()
       gtest
       spdlog
       mrmeshpy
+      phmap::phmap
     )
   ELSE()
     set(CMAKE_EXECUTABLE_SUFFIX ".html")

@@ -33,17 +33,19 @@ IF(MR_EMSCRIPTEN)
     spdlog
   )
 ELSE() # NOT MR_EMSCRIPTEN
+  find_package(glad REQUIRED)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     tbb
     MRMesh
     MRViewer
-    clip
-    glad
+    #clip
+    glad::glad
     glfw
     imgui
     jsoncpp
     spdlog
     fmt
+    phmap::phmap
   )
 ENDIF() # MR_EMSCRIPTEN
 

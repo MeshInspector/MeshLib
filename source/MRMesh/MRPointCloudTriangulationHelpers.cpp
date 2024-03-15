@@ -319,17 +319,25 @@ void FanOptimizer::optimize( int steps, float critAng, float boundaryAngle )
     while ( !queue.empty() )
         queue.pop();
 
+    int currentFanSize = int( fanData_.neighbors.size() );
     for ( int i = 0; i < fanData_.neighbors.size(); ++i )
     {
         if ( points_[fanData_.neighbors[i]] == points_[centerVert_] )
+        {
             fanData_.neighbors[i] = {}; // remove points coinciding with center one
+            --currentFanSize;
+        }
         else if ( auto x = calcQueueElement_( i, critAng ); !x.stable )
             queue.emplace( std::move( x ) );
+    }
+    if ( currentFanSize < 2 )
+    {
+        fanData_.neighbors.clear();
+        return;
     }
 
     // optimize fan
     int allRemoves = 0;
-    int currentFanSize = int( fanData_.neighbors.size() );
     while ( !queue.empty() )
     {
         auto topEl = queue.top();
@@ -458,6 +466,12 @@ static void trianglulateFan( const VertCoords& points, VertId centerVert, Triang
     if ( triangulationData.neighbors.empty() )
         return;
     FanOptimizer optimizer( points, settings.trustedNormals, triangulationData, centerVert );
+    if ( centerVert == 768592_v )
+    {
+        int k = 0;
+        ++k;
+        (void)k;
+    }
     optimizer.optimize( settings.maxRemoves, settings.critAngle, settings.boundaryAngle );
     assert( triangulationData.neighbors.empty() || triangulationData.neighbors.size() > 1 );
 }

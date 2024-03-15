@@ -19,16 +19,16 @@ VertBitSet findHalfSpacePoints( const PointCloud& pc, const Plane3f& plane )
     return result;
 }
 
-PointCloud divideWithPlane( const PointCloud& pc, const Plane3f& plane, PointCloud* otherPart )
+PointCloud divideWithPlane( const PointCloud& pc, const Plane3f& plane, const DividePointCloudOptionalOutput& optOut )
 {
     MR_TIMER
     const auto posVerts = findHalfSpacePoints( pc, plane );
     PointCloud res;
-    res.addPartByMask( pc, posVerts );
-    if ( otherPart )
+    res.addPartByMask( pc, posVerts, { .src2tgtVerts = optOut.outVmap } );
+    if ( optOut.otherPart )
     {
-        *otherPart = PointCloud{};
-        otherPart->addPartByMask( pc, pc.validPoints - posVerts );
+        *optOut.otherPart = PointCloud{};
+        optOut.otherPart->addPartByMask( pc, pc.validPoints - posVerts, { .src2tgtVerts = optOut.otherOutVmap } );
     }
     return res;
 }

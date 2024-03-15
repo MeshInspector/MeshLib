@@ -47,7 +47,7 @@ SceneSettings::SceneSettings()
 {
     boolSettings_[int( BoolType::UseDefaultScenePropertiesOnDeserialization )] = true;
 
-    floatSettings_[int( FloatType::FeatureMeshAlpha )] = 0.5f;
+    floatSettings_[int( FloatType::FeatureMeshAlpha )] = 1;
     floatSettings_[int( FloatType::FeaturePointSize )] = 10;
     floatSettings_[int( FloatType::FeatureSubPointSize )] = 8;
     floatSettings_[int( FloatType::FeatureLineWidth )] = 3;

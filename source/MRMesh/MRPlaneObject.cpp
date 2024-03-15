@@ -99,6 +99,15 @@ float PlaneObject::getSizeY( ViewportId id /*= {}*/ ) const
     return  s_.get( id ).y.y * basePlaneObjectHalfEdgeLength_ * 2.0f;
 }
 
+Matrix3f PlaneObject::calcLocalBasis( ViewportId id /*= {}*/ ) const
+{
+    Matrix3f result;
+    result.x = ( r_.get( id ) * Vector3f::plusX() ).normalized();
+    result.y = ( r_.get( id ) * Vector3f::plusY() ).normalized();
+    result.z = ( r_.get( id ) * Vector3f::plusZ() ).normalized();
+    return result;
+}
+
 const std::vector<FeatureObjectSharedProperty>& PlaneObject::getAllSharedProperties() const
 {
     static std::vector<FeatureObjectSharedProperty> ret = {
@@ -116,9 +125,15 @@ PlaneObject::PlaneObject()
     setDefaultFeatureObjectParams( *this );
 }
 
+// returns transformation matris which rotate initialBasis to finalBasis
+Matrix3f rotateBasis( Matrix3f initialBasis, Matrix3f finalBasis )
+{
+    return finalBasis * initialBasis.inverse();
+}
 
 void PlaneObject::orientateFollowMainAxis_( ViewportId id /*= {}*/ )
 {
+
     auto axis = Vector3f::plusZ();
     auto n = getNormal( id );
     auto planeVectorInXY = cross( axis, n );
@@ -133,32 +148,20 @@ void PlaneObject::orientateFollowMainAxis_( ViewportId id /*= {}*/ )
 
     planeVectorInXY = planeVectorInXY.normalized();
 
-    // TODO. For XY plane we need this loop, deu to problems in first rotation.
-    for ( auto i = 0; i < 10; ++i )
-    {
-        // calculate current feature oX-axis direction.
-        const Matrix3f& r = r_.get( id ), s = s_.get( id );
-        auto featureDirectionX = ( r * MR::Vector3f::plusX() ).normalized();
+    auto Y = cross( n, planeVectorInXY );
+    Matrix3f bestPlaneBasis;
+    bestPlaneBasis.x = Y.normalized();
+    bestPlaneBasis.y = planeVectorInXY.normalized();
+    bestPlaneBasis.z = n.normalized();
 
-        // both featureDirectionX and planeVectorInXY must be perpendicular to plane normal.
-        // calculate an angle to rotate around plane normal (oZ-axis) for move feature oX axis into plane, which paralell to globe XY plane.
-        auto angle = std::atan2( cross( featureDirectionX, planeVectorInXY ).length(), dot( featureDirectionX, planeVectorInXY ) );
-        auto A = Matrix3f::rotation( MR::Vector3f::plusZ(), angle );
+    auto currentPlaneBasis = calcLocalBasis();
+    auto A = rotateBasis( currentPlaneBasis, bestPlaneBasis );
+    const Matrix3f& r = r_.get( id ), s = s_.get( id );
 
-        // create new xf matrix
-        auto currXf = xf( id );
-        currXf.A = r * A * s;
-        setXf( currXf, id );
-
-        // checking result
-        auto newFeatureDirectionX = ( r * MR::Vector3f::plusX() ).normalized();
-
-        if ( MR::dot( newFeatureDirectionX, planeVectorInXY ) > 0.99f )
-            return;
-    }
-
+    auto currXf = xf( id );
+    currXf.A = r * A * s;
+    setXf( currXf, id );
 }
-
 
 void PlaneObject::setupPlaneSize2DByOriginalPoints_( const std::vector<Vector3f>& pointsToApprox )
 {

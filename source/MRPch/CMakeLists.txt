@@ -11,7 +11,7 @@ install(
   DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}"
 )
 
-# for not Emscripten builds PCH does not give any speedup, and reveals a lot of compiler bugs
+# for MacOS builds PCH not only does not give any speedup, but even vice versa
 IF(NOT APPLE)
   IF(MR_EMSCRIPTEN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_FREETYPE=1 -s USE_LIBPNG=1")

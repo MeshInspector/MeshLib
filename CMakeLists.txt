@@ -32,7 +32,9 @@ IF(NOT MR_EMSCRIPTEN)
     set(BUILD_SHARED_LIBS ON)
     set(CMAKE_FIND_LIBRARY_SUFFIXES ".dylib")
   ELSE()
+    # add flags neccessary for precompile headers
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -DBOOST_ALL_NO_LIB")
+
     # such print format is selected to simplify load in Excel with fields (user time, system time, command) subdivision by commas
     IF(EXISTS /usr/bin/time)
       set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "/usr/bin/time -f \",%U,%S,%C\" -a -o compile_timings.txt")

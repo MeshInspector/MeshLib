@@ -22,7 +22,7 @@ IF(NOT APPLE)
       jsoncpp
       tbb
     )
-  ELSE()
+  ELSEIF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     find_package(Boost COMPONENTS REQUIRED)
     find_package(TBB REQUIRED)
     find_package(GDCM CONFIG REQUIRED)

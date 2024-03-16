@@ -32,7 +32,7 @@ IF(MR_EMSCRIPTEN)
     imgui
     glfw
   )
-ELSE() # MR_EMSCRIPTEN
+ELSE() # NOT MR_EMSCRIPTEN
   IF(APPLE)
     # TODO: CMAKE_PREFIX_PATH for thirdparty
     #find_package(nfd REQUIRED)
@@ -59,7 +59,8 @@ ELSE() # MR_EMSCRIPTEN
       hidapi
       ${APPKIT_LIBRARY}
     )
-  ELSE() # NOT APPLE
+  ELSE() # NOT APPLE and NOT EMPSCRIPTEN
+    find_package(GDCM CONFIG REQUIRED)
     pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
 
     target_link_libraries(${PROJECT_NAME} PRIVATE

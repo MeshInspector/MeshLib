@@ -16,6 +16,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   fmt
   spdlog
   Boost::boost
+  tbb
   ${MR_PYTHON_LIB}
 )
 

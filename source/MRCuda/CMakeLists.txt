@@ -72,6 +72,5 @@ install(
   DESTINATION ${MR_CONFIG_DIR}
 )
 
-IF(NOT APPLE)
-  TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
-ENDIF()
+# cannot use PCH because of the
+# error: C++2b was enabled in PCH file but is currently disabled

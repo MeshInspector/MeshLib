@@ -27,6 +27,7 @@ ELSE()
     MRViewer
     MRMesh
     fmt
+    tbb
     ${MR_PYTHON_LIB}
   )
 ENDIF()

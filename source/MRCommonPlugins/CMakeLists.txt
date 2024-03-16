@@ -44,6 +44,7 @@ ELSE() # NOT MR_EMSCRIPTEN
     jsoncpp
     spdlog
     fmt
+    ${MR_PYTHON_LIB}
   )
 ENDIF() # MR_EMSCRIPTEN
 

@@ -16,6 +16,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   fmt
   spdlog
   Boost::boost
+  ${MR_PYTHON_LIB}
 )
 
 install(TARGETS ${PROJECT_NAME} DESTINATION "${MR_BIN_DIR}")

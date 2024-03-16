@@ -11,41 +11,47 @@ install(
   DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}"
 )
 
-# for MacOS builds PCH not only does not give any speedup, but even vice versa
-IF(NOT APPLE)
-  IF(MR_EMSCRIPTEN)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_FREETYPE=1 -s USE_LIBPNG=1")
+# for MacOS and GCC builds: PCH not only does not give any speedup, but even vice versa
+IF(MR_EMSCRIPTEN)
 
-    add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_FREETYPE=1 -s USE_LIBPNG=1")
 
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      jsoncpp
-      tbb
-    )
-  ELSEIF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    find_package(Boost COMPONENTS REQUIRED)
-    find_package(TBB REQUIRED)
-    find_package(GDCM CONFIG REQUIRED)
-    pkg_check_modules(JSONCPP jsoncpp)
-    include_directories(${JSONCPP_INCLUDE_DIRS})
-    find_package(Freetype REQUIRED)
-    include_directories(${FREETYPE_INCLUDE_DIRS})
+  add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
-    add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
-
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-      fmt
-      spdlog
-      Boost::boost
-      jsoncpp
-      tbb
-      gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF
-      cpr
-      ${MR_PYTHON_LIB}
-    )
-  ENDIF()
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    jsoncpp
+    tbb
+  )
 
   TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRPch.h>"
   )
+
+ELSEIF(NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+
+  find_package(Boost COMPONENTS REQUIRED)
+  find_package(TBB REQUIRED)
+  find_package(GDCM CONFIG REQUIRED)
+  pkg_check_modules(JSONCPP jsoncpp)
+  include_directories(${JSONCPP_INCLUDE_DIRS})
+  find_package(Freetype REQUIRED)
+  include_directories(${FREETYPE_INCLUDE_DIRS})
+
+  add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
+
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    fmt
+    spdlog
+    Boost::boost
+    jsoncpp
+    tbb
+    gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF
+    cpr
+    ${MR_PYTHON_LIB}
+  )
+
+  TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} PRIVATE
+    "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRPch.h>"
+  )
+
 ENDIF()

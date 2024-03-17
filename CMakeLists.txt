@@ -9,6 +9,16 @@ ENDIF()
 set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+message("CMAKE_CXX_COMPILER_ID=${CMAKE_CXX_COMPILER_ID}")
+message("CLANG_VERSION_MAJOR=${CLANG_VERSION_MAJOR}")
+# for MacOS, GCC and Clang<15 builds: PCH not only does not give any speedup, but even vice versa
+IF(MR_EMSCRIPTEN OR (NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_VERSION_MAJOR >= 15))
+  set(MR_PCH true)
+ElSE()
+  set(MR_PCH false)
+ENDIF()
+message("MR_PCH=${MR_PCH}")
+
 IF(NOT MR_EMSCRIPTEN)
   IF(APPLE)
     message("building for Apple")
@@ -32,8 +42,9 @@ IF(NOT MR_EMSCRIPTEN)
     set(BUILD_SHARED_LIBS ON)
     set(CMAKE_FIND_LIBRARY_SUFFIXES ".dylib")
   ELSE()
-    # add flags neccessary for precompile headers
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -DBOOST_ALL_NO_LIB")
+    IF(MR_PCH)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+    ENDIF()     
 
     # such print format is selected to simplify load in Excel with fields (user time, system time, command) subdivision by commas
     IF(EXISTS /usr/bin/time)

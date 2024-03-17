@@ -11,9 +11,9 @@ install(
   DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}"
 )
 
-# for MacOS builds PCH not only does not give any speedup, but even vice versa
-IF(NOT APPLE)
+IF(MR_PCH)
   IF(MR_EMSCRIPTEN)
+
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_FREETYPE=1 -s USE_LIBPNG=1")
 
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
@@ -22,7 +22,9 @@ IF(NOT APPLE)
       jsoncpp
       tbb
     )
+
   ELSE()
+
     find_package(Boost COMPONENTS REQUIRED)
     find_package(TBB REQUIRED)
     find_package(GDCM CONFIG REQUIRED)
@@ -48,4 +50,5 @@ IF(NOT APPLE)
   TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRPch.h>"
   )
+
 ENDIF()

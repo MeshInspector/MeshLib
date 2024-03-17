@@ -72,5 +72,11 @@ install(
   DESTINATION ${MR_CONFIG_DIR}
 )
 
-# cannot use PCH because of the
-# error: C++2b was enabled in PCH file but is currently disabled
+IF(MR_PCH)
+  IF(CMAKE_CXX_STANDARD EQUAL MR_CXX_STANDARD)
+    TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
+    message( "MRCuda: using PCH" )
+  ELSE()
+    message( "MRCuda: not using PCH" )
+  ENDIF()
+ENDIF()

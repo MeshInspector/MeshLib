@@ -21,10 +21,11 @@ IF(MR_EMSCRIPTEN)
     MRViewer
     -Wl,--no-whole-archive
   )
-ELSE() # MR_EMSCRIPTEN
+ELSE() # NOT MR_EMSCRIPTEN
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRViewer
     MRMesh
+    ${MR_PYTHON_LIB}
   )
 ENDIF() # MR_EMSCRIPTEN
 

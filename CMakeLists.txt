@@ -9,18 +9,6 @@ ENDIF()
 set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project(MeshLib CXX)
-
-message("CMAKE_CXX_COMPILER_ID=${CMAKE_CXX_COMPILER_ID}")
-message("CMAKE_CXX_COMPILER_VERSION=${CMAKE_CXX_COMPILER_VERSION}")
-# for MacOS, GCC and Clang<15 builds: PCH not only does not give any speedup, but even vice versa
-IF(MR_EMSCRIPTEN OR (NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 15))
-  set(MR_PCH true)
-ElSE()
-  set(MR_PCH false)
-ENDIF()
-message("MR_PCH=${MR_PCH}")
-
 IF(NOT MR_EMSCRIPTEN)
   IF(APPLE)
     message("building for Apple")
@@ -44,10 +32,6 @@ IF(NOT MR_EMSCRIPTEN)
     set(BUILD_SHARED_LIBS ON)
     set(CMAKE_FIND_LIBRARY_SUFFIXES ".dylib")
   ELSE()
-    IF(MR_PCH)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-    ENDIF()     
-
     # such print format is selected to simplify load in Excel with fields (user time, system time, command) subdivision by commas
     IF(EXISTS /usr/bin/time)
       set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "/usr/bin/time -f \",%U,%S,%C\" -a -o compile_timings.txt")
@@ -56,9 +40,23 @@ IF(NOT MR_EMSCRIPTEN)
   ENDIF() # APPLE
 ENDIF() # NOT MR_EMSCRIPTEN
 
+project(MeshLib CXX)
 add_compile_definitions(MR_PROJECT_NAME=\"MeshLib\")
 add_compile_definitions(MR_FRAMEWORK)
 add_compile_definitions(IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
+
+message("CMAKE_CXX_COMPILER_ID=${CMAKE_CXX_COMPILER_ID}")
+message("CMAKE_CXX_COMPILER_VERSION=${CMAKE_CXX_COMPILER_VERSION}")
+# for MacOS, GCC and Clang<15 builds: PCH not only does not give any speedup, but even vice versa
+IF(MR_EMSCRIPTEN OR (NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15))
+  IF(NOT MR_EMSCRIPTEN and NOT MR_APPLE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+  ENDIF()
+  set(MR_PCH true)
+ElSE()
+  set(MR_PCH false)
+ENDIF()
+message("MR_PCH=${MR_PCH}")
 
 # all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

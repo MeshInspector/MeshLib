@@ -9,15 +9,17 @@ ENDIF()
 set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-message("CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
-message("CLANG_VERSION_MAJOR: ${CLANG_VERSION_MAJOR}")
+project(MeshLib CXX)
+
+message("CMAKE_CXX_COMPILER_ID=${CMAKE_CXX_COMPILER_ID}")
+message("CLANG_VERSION_MAJOR=${CLANG_VERSION_MAJOR}")
 # for MacOS, GCC and Clang<15 builds: PCH not only does not give any speedup, but even vice versa
-IF(MR_EMSCRIPTEN OR NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_VERSION_MAJOR >= 15)
+IF(MR_EMSCRIPTEN OR (NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_VERSION_MAJOR GREATER_EQUAL 15))
   set(MR_PCH true)
 ElSE()
   set(MR_PCH false)
 ENDIF()
-message("MR_PCH: ${MR_PCH}")
+message("MR_PCH=${MR_PCH}")
 
 IF(NOT MR_EMSCRIPTEN)
   IF(APPLE)
@@ -54,7 +56,6 @@ IF(NOT MR_EMSCRIPTEN)
   ENDIF() # APPLE
 ENDIF() # NOT MR_EMSCRIPTEN
 
-project(MeshLib CXX)
 add_compile_definitions(MR_PROJECT_NAME=\"MeshLib\")
 add_compile_definitions(MR_FRAMEWORK)
 add_compile_definitions(IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")

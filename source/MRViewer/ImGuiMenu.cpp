@@ -531,9 +531,6 @@ bool ImGuiMenu::onKeyDown_( int key, int modifiers )
     if ( ImGui::GetIO().WantCaptureKeyboard )
         return true;
 
-    if ( shortcutManager_ )
-        return shortcutManager_->processShortcut( { key,modifiers } );
-
     return false;
 }
 
@@ -940,6 +937,10 @@ void ImGuiMenu::showModalMessage( const std::string& msg, NotificationType msgTy
 
 void ImGuiMenu::setupShortcuts_()
 {
+    if ( !shortcutManager_ )
+        shortcutManager_ = std::make_shared<ShortcutManager>();
+
+    shortcutManager_->connect( &getViewerInstance(), INT_MAX );
 }
 
 void ImGuiMenu::draw_scene_list()

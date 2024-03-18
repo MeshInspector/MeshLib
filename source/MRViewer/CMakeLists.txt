@@ -11,10 +11,6 @@ ELSE()
   file(GLOB SOURCES "*.cpp")
 ENDIF()
 
-IF(MR_EMSCRIPTEN)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
-ENDIF() # MR_EMSCRIPTEN
-
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 file(GLOB JSONS "*.json")
@@ -25,6 +21,7 @@ ELSE() # MR_EMSCRIPTEN
 ENDIF() # MR_EMSCRIPTEN
 
 IF(MR_EMSCRIPTEN)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     tbb
@@ -43,9 +40,8 @@ ELSE() # MR_EMSCRIPTEN
   pkg_check_modules(jsoncpp REQUIRED IMPORTED_TARGET jsoncpp)
 
   IF(APPLE)
-    # TODO: CMAKE_PREFIX_PATH for thirdparty
-    #find_package(nfd REQUIRED)
     find_library(APPKIT_LIBRARY AppKit REQUIRED)
+    find_package(nfd REQUIRED)
 
     add_definitions("-x objective-c++")
     target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -63,9 +59,9 @@ ELSE() # MR_EMSCRIPTEN
       imgui
       glad::glad
       glfw
-      nfd #nfd::nfd
+      nfd::nfd
+      PkgConfig::hidapi-hidraw
       ${APPKIT_LIBRARY}
-      ${HIDAPI_LINK_LIBRARIES}
     )
   ELSE() # NOT APPLE
     pkg_check_modules(gtkmm-3.0 REQUIRED IMPORTED_TARGET gtkmm-3.0)

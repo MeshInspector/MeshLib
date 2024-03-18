@@ -35,7 +35,11 @@ IF(MR_EMSCRIPTEN)
 ELSE() # MR_EMSCRIPTEN
   find_package(cpr REQUIRED)
   find_package(glad REQUIRED)
+  find_package(glfw3 REQUIRED)
   find_package(OpenVDB 9 REQUIRED COMPONENTS openvdb)
+
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(HIDAPI REQUIRED hidapi-hidraw)
 
   IF(APPLE)
     # TODO: CMAKE_PREFIX_PATH for thirdparty
@@ -57,10 +61,10 @@ ELSE() # MR_EMSCRIPTEN
       cpr::cpr
       imgui
       glad::glad
-      glfw3::glfw
+      glfw
       nfd #nfd::nfd
-      hidapi
       ${APPKIT_LIBRARY}
+      ${HIDAPI_LINK_LIBRARIES}
     )
   ELSE() # NOT APPLE
     pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
@@ -71,21 +75,21 @@ ELSE() # MR_EMSCRIPTEN
       cpr::cpr
       imgui
       glad::glad
-      glfw3::glfw
-      gtkmm-3.0
-      glib-2.0
-      glibmm-2.4
-      sigc-2.0
+      glfw
       hidapi-hidraw
-      jsoncpp
       spdlog
       fmt
       OpenVDB::openvdb
       tbb
       phmap::phmap
+      ${GTKMM_LINK_LIBRARIES}
+      ${HIDAPI_LINK_LIBRARIES}
+      ${JSONCPP_LINK_LIBRARIES}
     )
     target_include_directories(${PROJECT_NAME} PRIVATE
       ${GTKMM_INCLUDE_DIRS}
+      ${HIDAPI_INCLUDE_DIRS}
+      ${JSONCPP_INCLUDE_DIRS}
     )
   ENDIF() # APPLE
 ENDIF() # MR_EMSCRIPTEN

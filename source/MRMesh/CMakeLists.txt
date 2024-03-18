@@ -48,14 +48,17 @@ ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
   IF(NOT MRMESH_NO_CLIPBOARD)
+    # TODO: CMake module for clip
     list(APPEND MRMESH_OPTIONAL_DEPENDENCIES clip)
   ENDIF()
 
   IF(NOT MRMESH_NO_PDF)
+    # TODO: CMake module for libHaru
     list(APPEND MRMESH_OPTIONAL_DEPENDENCIES hpdf)
   ENDIF()
 
   IF(NOT MRMESH_NO_CPR)
+    # TODO: CMake module for CPR
     find_package(cpr REQUIRED)
     list(APPEND MRMESH_OPTIONAL_DEPENDENCIES cpr::cpr)
   ENDIF()
@@ -71,8 +74,7 @@ IF(NOT MR_EMSCRIPTEN)
 
   IF(NOT MRMESH_NO_LABEL)
     find_package(Freetype REQUIRED)
-    include_directories(${FREETYPE_INCLUDE_DIRS})
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES freetype)
+    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES Freetype::Freetype)
   ENDIF()
 
   IF(NOT MRMESH_NO_JPEG)
@@ -106,10 +108,14 @@ IF(NOT MR_EMSCRIPTEN)
   ENDIF()
 
   IF(NOT MRMESH_NO_XML)
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES tinyxml2)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(TINYXML2 REQUIRED tinyxml2)
+    list(APPEND MRMESH_OPTIONAL_INCLUDE_DIRS ${TINYXML2_INCLUDE_DIRS})
+    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES ${TINYXML2_LINK_LIBRARIES})
   ENDIF()
 
   IF(NOT MRMESH_NO_E57)
+    find_package(E57Format REQUIRED)
     list(APPEND MRMESH_OPTIONAL_DEPENDENCIES E57Format)
   ENDIF()
 
@@ -181,10 +187,13 @@ IF(DEFINED EIGEN3_FOUND)
 ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
-  find_package(Boost COMPONENTS REQUIRED)
-  find_package(TBB REQUIRED)
-  pkg_check_modules(JSONCPP jsoncpp)
-  include_directories(${JSONCPP_INCLUDE_DIRS})
+  find_package(Boost REQUIRED)
+  find_package(libzip REQUIRED)
+  find_package(TBB REQUIRED COMPONENTS tbb)
+  find_package(tl-expected REQUIRED)
+
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(JSONCPP REQUIRED jsoncpp)
 ELSE()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_FREETYPE=1 -s USE_LIBPNG=1")
 ENDIF()
@@ -233,23 +242,22 @@ IF(APPLE OR MR_EMSCRIPTEN)
     )
   ENDIF()
 ELSE()
-  find_package(tl-expected REQUIRED)
   target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
+    ${JSONCPP_INCLUDE_DIRS}
     ${MRMESH_OPTIONAL_INCLUDE_DIRS}
   )
   target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
     ${MRMESH_OPTIONAL_LIBRARY_DIRS}
   )
   target_link_libraries(${PROJECT_NAME} PRIVATE
-    tl::expected
-    fmt
-    spdlog
-    zip
     Boost::boost
-    dl
-    jsoncpp
-    tbb
+    fmt::fmt
+    libzip::zip
     phmap::phmap
+    spdlog::spdlog
+    TBB::tbb
+    tl::expected
+    ${JSONCPP_LINK_LIBRATIES}
     ${MRMESH_OPTIONAL_DEPENDENCIES}
   )
 ENDIF()

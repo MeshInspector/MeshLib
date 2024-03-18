@@ -33,7 +33,10 @@ add_library(${PROJECT_NAME} SHARED
 
 IF(NOT MR_EMSCRIPTEN)
   find_package(Freetype REQUIRED)
-  target_include_directories(${PROJECT_NAME} PRIVATE "${FREETYPE_INCLUDE_DIRS}")
+  target_link_libraries(${PROJECT_NAME} PRIVATE Freetype::Freetype)
+ELSE()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1")
+  target_link_libraries(${PROJECT_NAME} PRIVATE freetype)
 ENDIF()
 
 target_compile_definitions(${PROJECT_NAME}
@@ -42,16 +45,10 @@ target_compile_definitions(${PROJECT_NAME}
     IMGUI_ENABLE_FREETYPE
 )
 IF(MR_EMSCRIPTEN)
-  target_compile_definitions(${PROJECT_NAME}
-    PRIVATE
-      IMGUI_IMPL_OPENGL_ES3
-  )
+  target_compile_definitions(${PROJECT_NAME} PRIVATE IMGUI_IMPL_OPENGL_ES3)
 ENDIF()
 IF(WIN32 AND MINGW)
-  target_compile_definitions(${PROJECT_NAME}
-    PRIVATE
-      MRIMGUI_EXPORT
-  )
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MRIMGUI_EXPORT)
 ENDIF()
 
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -59,7 +56,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-  freetype
   glfw
   phmap::phmap
 )

@@ -103,13 +103,15 @@ void ViewerSetup::setupExtendedLibraries() const
 #else
         pluginPath /= "lib" + libName + ".so";
 #endif
-        if ( exists(pluginPath) )
+        if ( exists( pluginPath, ec ) )
         {
             spdlog::info( "Loading library {} with priority {}", utf8string( libName ), priority );
+            bool success = true;
 #if _WIN32
             auto result = LoadLibraryW( pluginPath.wstring().c_str() );
             if ( !result )
             {
+                success = false;
                 spdlog::error( "Load library {} error: {}", utf8string( pluginPath ), GetLastError() );
                 assert( false );
             }
@@ -117,10 +119,13 @@ void ViewerSetup::setupExtendedLibraries() const
             auto result = dlopen( utf8string( pluginPath ).c_str(), RTLD_LAZY );
             if ( !result )
             {
+                success = false;
                 spdlog::error( "Load library {} error: {}", utf8string( pluginPath ), dlerror() );
                 assert( false );
             }
 #endif
+            if ( success )
+                spdlog::info( "Load library {} was successful", utf8string( libName ) );
         }
     }
 #endif // ifndef __EMSCRIPTEN__

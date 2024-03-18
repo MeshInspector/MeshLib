@@ -44,6 +44,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   spdlog
   fmt
   tbb
+  ${MR_PYTHON_LIB}
 )
 
 set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
@@ -71,3 +72,12 @@ install(
   NAMESPACE MeshLib::
   DESTINATION ${MR_CONFIG_DIR}
 )
+
+IF(MR_PCH)
+  IF(CMAKE_CXX_STANDARD EQUAL MR_CXX_STANDARD)
+    TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
+    message( "MRCuda: using PCH" )
+  ELSE()
+    message( "MRCuda: not using PCH" )
+  ENDIF()
+ENDIF()

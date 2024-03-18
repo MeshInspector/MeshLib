@@ -73,9 +73,13 @@ jobs:
         run: |
           apt -y update && apt -y upgrade && apt -y install software-properties-common
           add-apt-repository -y ppa:deadsnakes/ppa && apt -y install ${{ matrix.py-cmd }}-dev ${{ matrix.py-cmd }}-distutils
+
+      - name: OpenCASCADE upgrade
+        if: ${{ matrix.platform == 'x86_64' }}
+        run: |
           add-apt-repository -y ppa:freecad-maintainers/freecad-stable \
-            && apt -y remove libocct-data-exchange-dev libocct-foundation-dev libocct-modeling-algorithms-dev libocct-modeling-data-dev libocct-ocaf-dev libocct-visualization-dev occt-misc
-            && apt -y autoremove
+            && apt -y remove libocct-data-exchange-dev libocct-foundation-dev libocct-modeling-algorithms-dev libocct-modeling-data-dev libocct-ocaf-dev libocct-visualization-dev occt-misc \
+            && apt -y autoremove \
             && apt -y install libocct-data-exchange-dev libocct-foundation-dev libocct-modeling-algorithms-dev libocct-modeling-data-dev libocct-ocaf-dev libocct-visualization-dev occt-misc
 
       - name: Pip setup

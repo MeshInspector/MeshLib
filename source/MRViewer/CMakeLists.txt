@@ -39,7 +39,8 @@ ELSE() # MR_EMSCRIPTEN
   find_package(OpenVDB 9 REQUIRED COMPONENTS openvdb)
 
   find_package(PkgConfig REQUIRED)
-  pkg_check_modules(HIDAPI REQUIRED hidapi-hidraw)
+  pkg_check_modules(hidapi-hidraw REQUIRED IMPORTED_TARGET hidapi-hidraw)
+  pkg_check_modules(jsoncpp REQUIRED IMPORTED_TARGET jsoncpp)
 
   IF(APPLE)
     # TODO: CMAKE_PREFIX_PATH for thirdparty
@@ -67,7 +68,7 @@ ELSE() # MR_EMSCRIPTEN
       ${HIDAPI_LINK_LIBRARIES}
     )
   ELSE() # NOT APPLE
-    pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
+    pkg_check_modules(gtkmm-3.0 REQUIRED IMPORTED_TARGET gtkmm-3.0)
 
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRMesh
@@ -82,14 +83,9 @@ ELSE() # MR_EMSCRIPTEN
       OpenVDB::openvdb
       tbb
       phmap::phmap
-      ${GTKMM_LINK_LIBRARIES}
-      ${HIDAPI_LINK_LIBRARIES}
-      ${JSONCPP_LINK_LIBRARIES}
-    )
-    target_include_directories(${PROJECT_NAME} PRIVATE
-      ${GTKMM_INCLUDE_DIRS}
-      ${HIDAPI_INCLUDE_DIRS}
-      ${JSONCPP_INCLUDE_DIRS}
+      PkgConfig::gtkmm-3.0
+      PkgConfig::hidapi-hidraw
+      PkgConfig::jsoncpp
     )
   ENDIF() # APPLE
 ENDIF() # MR_EMSCRIPTEN

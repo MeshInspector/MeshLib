@@ -109,9 +109,8 @@ IF(NOT MR_EMSCRIPTEN)
 
   IF(NOT MRMESH_NO_XML)
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(TINYXML2 REQUIRED tinyxml2)
-    list(APPEND MRMESH_OPTIONAL_INCLUDE_DIRS ${TINYXML2_INCLUDE_DIRS})
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES ${TINYXML2_LINK_LIBRARIES})
+    pkg_check_modules(tinyxml2 REQUIRED IMPORTED_TARGET tinyxml2)
+    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES PkgConfig::tinyxml2)
   ENDIF()
 
   IF(NOT MRMESH_NO_E57)
@@ -193,7 +192,7 @@ IF(NOT MR_EMSCRIPTEN)
   find_package(tl-expected REQUIRED)
 
   find_package(PkgConfig REQUIRED)
-  pkg_check_modules(JSONCPP REQUIRED jsoncpp)
+  pkg_check_modules(jsoncpp REQUIRED IMPORTED_TARGET jsoncpp)
 ELSE()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_FREETYPE=1 -s USE_LIBPNG=1")
 ENDIF()
@@ -243,7 +242,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
   ENDIF()
 ELSE()
   target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
-    ${JSONCPP_INCLUDE_DIRS}
     ${MRMESH_OPTIONAL_INCLUDE_DIRS}
   )
   target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
@@ -257,7 +255,7 @@ ELSE()
     spdlog::spdlog
     TBB::tbb
     tl::expected
-    ${JSONCPP_LINK_LIBRATIES}
+    PkgConfig::jsoncpp
     ${MRMESH_OPTIONAL_DEPENDENCIES}
   )
 ENDIF()

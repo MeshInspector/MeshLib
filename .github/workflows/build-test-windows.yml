@@ -121,7 +121,7 @@ jobs:
         run: py -3 scripts\check_vcxproj.py source\
 
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.3
+        uses: microsoft/setup-msbuild@v2
 
       - name: Build
         run: msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}

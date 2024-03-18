@@ -10,11 +10,11 @@
 
 // Generates operators for a enum (with a custom prefix before each function).
 #define MR_MAKE_FLAG_OPERATORS_CUSTOM( prefix, T ) \
-    [[nodiscard, maybe_unused]] prefix T operator&( T a, T b ) { return T( ::std::underlying_type_t<T>( a ) & ::std::underlying_type_t<T>( b ) ); } \
-    [[nodiscard, maybe_unused]] prefix T operator|( T a, T b ) { return T( ::std::underlying_type_t<T>( a ) | ::std::underlying_type_t<T>( b ) ); } \
-    [[nodiscard, maybe_unused]] prefix T operator~( T a ) { return T( ~::std::underlying_type_t<T>( a ) ); } \
-    [[maybe_unused]] prefix T &operator&=( T &a, T b ) { return a = a & b; } \
-    [[maybe_unused]] prefix T &operator|=( T &a, T b ) { return a = a | b; } \
-    [[nodiscard, maybe_unused]] prefix T operator*( T a, bool b ) { return b ? a : T{}; } \
-    [[nodiscard, maybe_unused]] prefix T operator*( bool a, T b ) { return a ? b : T{}; } \
-    [[maybe_unused]] prefix T &operator*=( T &a, bool b ) { return a = a * b; }
+    [[nodiscard, maybe_unused]] prefix constexpr T operator&( T a, T b ) { return T( ::std::underlying_type_t<T>( a ) & ::std::underlying_type_t<T>( b ) ); } \
+    [[nodiscard, maybe_unused]] prefix constexpr T operator|( T a, T b ) { return T( ::std::underlying_type_t<T>( a ) | ::std::underlying_type_t<T>( b ) ); } \
+    [[nodiscard, maybe_unused]] prefix constexpr T operator~( T a ) { return T( ~::std::underlying_type_t<T>( a ) ); } \
+    [[maybe_unused]] prefix constexpr T &operator&=( T &a, T b ) { return a = a & b; } \
+    [[maybe_unused]] prefix constexpr T &operator|=( T &a, T b ) { return a = a | b; } \
+    [[nodiscard, maybe_unused]] prefix constexpr T operator*( T a, bool b ) { return b ? a : T{}; } \
+    [[nodiscard, maybe_unused]] prefix constexpr T operator*( bool a, T b ) { return a ? b : T{}; } \
+    [[maybe_unused]] prefix constexpr T &operator*=( T &a, bool b ) { return a = a * b; }

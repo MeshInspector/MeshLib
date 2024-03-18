@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMesh/MRIRenderObject.h"
+#include "MRRenderPassEnum.h"
 #include "MRViewerInstance.h"
 #include "MRMouse.h"
 #include <MRMesh/MRVector2.h>

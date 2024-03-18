@@ -1,5 +1,6 @@
 #pragma once
 #include "MRMesh/MRFlagOperators.h"
+#include "MRRenderPassEnum.h"
 #include "MRMeshFwd.h"
 #include "MRViewportId.h"
 #include "MRVector2.h"
@@ -25,23 +26,6 @@ enum class DepthFunction
     Default = 8 // usually "Less" but may differ for different object types
 };
 MR_MAKE_FLAG_OPERATORS( DepthFunction )
-
-enum class ModelRenderPassMask
-{
-    Opaque = 1 << 0,
-    Transparent = 1 << 1,
-#ifndef __EMSCRIPTEN__
-    VolumeRendering = 1 << 2,
-#endif
-    NoDepthTest = 1 << 3,
-
-    All =
-        Opaque | Transparent | NoDepthTest
-#ifndef __EMSCRIPTEN__
-        | VolumeRendering
-#endif
-};
-MR_MAKE_FLAG_OPERATORS( ModelRenderPassMask )
 
 /// Common rendering parameters for meshes and UI.
 struct BaseRenderParams
@@ -177,7 +161,8 @@ public:
     bool render( const ModelRenderParams& params ) override
     {
         bool ret = false;
-        (void)( ( ret = Bases::render( params ) || ret ), ... );
+        // Clang 11 chokes on this if I fold from the right instead of from the left. But why?
+        (void)( ..., ( ret = Bases::render( params ) || ret ) );
         return ret;
     }
     void renderPicker( const ModelBaseRenderParams& params, unsigned geomId ) override { ( Bases::renderPicker( params, geomId ), ... ); }

@@ -1221,6 +1221,9 @@
     <ClInclude Include="MRObjectDimensionsEnum.h">
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
+    <ClInclude Include="MRRenderPassEnum.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

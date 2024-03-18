@@ -557,7 +557,7 @@ jobs:
       - name: Download Meshlib wheel from Artifact
         uses: actions/download-artifact@v4
         with:
-          name: Macos-${{ matrix.py-cmd }}
+          name: Macos-${{matrix.py-cmd}}-${{matrix.platform}}
           merge-multiple: true
 
       - name: Meshlib wheel install
@@ -575,19 +575,19 @@ jobs:
       - name: Download Wheels Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: ManyLinux-*
+          pattern: ManyLinux-*
           merge-multiple: true
 
       - name: Download Wheels Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: Windows-*
+          pattern: Windows-*
           merge-multiple: true
 
       - name: Download Wheels Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: Macos-*
+          pattern: Macos-*
           merge-multiple: true
 
       - name: Install twine
@@ -607,19 +607,19 @@ jobs:
     if: always()
     steps:
       - name: Delete all ManyLinux
-        uses: geekyeggo/delete-artifact@v2
+        uses: geekyeggo/delete-artifact@v5
         with:
           name: ManyLinux-*
           failOnError: false
 
       - name: Delete all Windows
-        uses: geekyeggo/delete-artifact@v2
+        uses: geekyeggo/delete-artifact@v5
         with:
           name: Windows-*
           failOnError: false
 
       - name: Delete all Macos
-        uses: geekyeggo/delete-artifact@v2
+        uses: geekyeggo/delete-artifact@v5
         with:
           name: Macos-*
           failOnError: false

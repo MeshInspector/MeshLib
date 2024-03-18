@@ -154,15 +154,13 @@ Logger::Logger()
 
 void setupLoggerByDefault()
 {
-#ifdef NDEBUG
 #ifndef __EMSCRIPTEN__
     printStacktraceOnCrash();
 #ifdef _WIN32
     // observe tbb threads creation and add signals handlers for them
     static SignalObserver tbbObserver( [] () { printStacktraceOnCrash(); } );
-#endif
-#endif
-#endif
+#endif //_WIN32
+#endif //__EMSCRIPTEN__
     redirectSTDStreamsToLogger();
     // write log to console
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();

@@ -15,6 +15,17 @@
 namespace MR
 {
 
+const std::vector<Color> Palette::DefaultColors =
+{
+    Color( Vector4f { 0.1f, 0.25f, 1.0f, 1.f } ),// almost blue   |
+    Color( Vector4f { 0.15f, 0.5f, 0.75f,1.f } ),//               | -> "inside" the ref mesh
+    Color( Vector4f { 0.2f, 0.75f, 0.5f, 1.f } ),//               |
+    Color( Vector4f { 0.25f, 1.0f, 0.25f,1.f } ),// almost green -> zero distance
+    Color( Vector4f { 0.5f, 0.75f, 0.2f, 1.f } ),//               |
+    Color( Vector4f { 0.75f, 0.5f, 0.15f,1.f } ),//               | -> "outside"
+    Color( Vector4f { 1.0f, 0.25f, 0.1f, 1.f } ),// almost red    |
+};
+
 Palette::Palette( const std::vector<Color>& colors )
 {
     setBaseColors( colors );

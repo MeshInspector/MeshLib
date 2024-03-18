@@ -26,7 +26,24 @@ enum class DepthFunction
 };
 MR_MAKE_FLAG_OPERATORS( DepthFunction )
 
-/// describes basic rendering parameters in a viewport
+enum class ModelRenderPassMask
+{
+    Opaque = 1 << 0,
+    Transparent = 1 << 1,
+#ifndef __EMSCRIPTEN__
+    VolumeRendering = 1 << 2,
+#endif
+    NoDepthTest = 1 << 3,
+
+    All =
+        Opaque | Transparent | NoDepthTest
+#ifndef __EMSCRIPTEN__
+        | VolumeRendering
+#endif
+};
+MR_MAKE_FLAG_OPERATORS( ModelRenderPassMask )
+
+/// Common rendering parameters for meshes and UI.
 struct BaseRenderParams
 {
     const Matrix4f& viewMatrix;
@@ -35,15 +52,23 @@ struct BaseRenderParams
     Vector4i viewport;           // viewport x0, y0, width, height
 };
 
-/// describes parameters necessary to render an object
-struct ModelRenderParams : BaseRenderParams
+/// Common rendering parameters for meshes (both for primary rendering and for the picker;
+/// the picker uses this as is while the primary rendering adds more fields).
+struct ModelBaseRenderParams : BaseRenderParams
 {
     const Matrix4f& modelMatrix;
-    const Matrix4f* normMatrixPtr{ nullptr }; // normal matrix, only necessary for triangles rendering
     const Plane3f& clipPlane;    // viewport clip plane (it is not applied while object does not have clipping flag set)
     DepthFunction depthFunction = DepthFunction::Default;
-    Vector3f lightPos;           // position of light source, unused for picker
-    bool alphaSort{ false };     // if this flag is true shader for alpha sorting is used, unused for picker
+};
+
+/// Mesh rendering parameters for primary rendering (as opposed to the picker).
+struct ModelRenderParams : ModelBaseRenderParams
+{
+    const Matrix4f* normMatrixPtr{ nullptr }; // normal matrix, only necessary for triangles rendering
+    Vector3f lightPos;            // position of light source
+    bool allowAlphaSort{ false }; // if true, the object can use the alpha sorting shader if it wants to
+
+    ModelRenderPassMask passMask = ModelRenderPassMask::All; // Only perform rendering if `bool( passMask & desiredPass )` is true.
 };
 
 /// `IRenderObject::renderUi()` can emit zero or more or more of those tasks. They are sorted by depth every frame.
@@ -110,12 +135,15 @@ class IRenderObject
 {
 public:
     virtual ~IRenderObject() = default;
+
     // These functions do:
     // 1) bind data
     // 2) pass shaders arguments
     // 3) draw data
-    virtual void render( const ModelRenderParams& params ) = 0;
-    virtual void renderPicker( const ModelRenderParams& params, unsigned geomId ) = 0;
+
+    // Returns true if something was rendered, or false if nothing to render.
+    virtual bool render( const ModelRenderParams& params ) = 0;
+    virtual void renderPicker( const ModelBaseRenderParams& params, unsigned geomId ) = 0;
     /// returns the amount of memory this object occupies on heap
     virtual size_t heapBytes() const = 0;
     /// returns the amount of memory this object allocated in OpenGL
@@ -131,8 +159,8 @@ public:
 };
 // Those dummy definitions remove undefined references in `RenderObjectCombinator` when it calls non-overridden pure virtual methods.
 // We could check in `RenderObjectCombinator` if they're overridden or not, but it's easier to just define them.
-inline void IRenderObject::render( const ModelRenderParams& ) {}
-inline void IRenderObject::renderPicker( const ModelRenderParams&, unsigned ) {}
+inline bool IRenderObject::render( const ModelRenderParams& ) { return false; }
+inline void IRenderObject::renderPicker( const ModelBaseRenderParams&, unsigned ) {}
 inline size_t IRenderObject::heapBytes() const { return 0; }
 inline size_t IRenderObject::glBytes() const { return 0; }
 
@@ -146,8 +174,13 @@ public:
         : Bases( object )...
     {}
 
-    void render( const ModelRenderParams& params ) override { ( Bases::render( params ), ... ); }
-    void renderPicker( const ModelRenderParams& params, unsigned geomId ) override { ( Bases::renderPicker( params, geomId ), ... ); }
+    bool render( const ModelRenderParams& params ) override
+    {
+        bool ret = false;
+        (void)( ( ret = Bases::render( params ) || ret ), ... );
+        return ret;
+    }
+    void renderPicker( const ModelBaseRenderParams& params, unsigned geomId ) override { ( Bases::renderPicker( params, geomId ), ... ); }
     size_t heapBytes() const override { return ( std::size_t{} + ... + Bases::heapBytes() ); }
     size_t glBytes() const override { return ( std::size_t{} + ... + Bases::glBytes() ); }
     void forceBindAll() override { ( Bases::forceBindAll(), ... ); }

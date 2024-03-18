@@ -150,8 +150,8 @@ class RenderPlaneNormalComponent : public RenderFeatureMeshComponent<false>
 public:
     MRVIEWER_API RenderPlaneNormalComponent( const VisualObject& object );
 
-    MRVIEWER_API void render( const ModelRenderParams& params ) override;
-    MRVIEWER_API void renderPicker( const ModelRenderParams& params, unsigned geomId ) override;
+    MRVIEWER_API bool render( const ModelRenderParams& params ) override;
+    MRVIEWER_API void renderPicker( const ModelBaseRenderParams& params, unsigned geomId ) override;
 };
 
 

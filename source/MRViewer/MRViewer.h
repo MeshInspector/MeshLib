@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMesh/MRIRenderObject.h"
 #include "MRViewerInstance.h"
 #include "MRMouse.h"
 #include <MRMesh/MRVector2.h>
@@ -627,19 +628,7 @@ private:
     bool needRedraw_() const;
     void resetRedraw_();
 
-    enum class VisualObjectRenderType
-    {
-        Opaque,
-        Transparent,
-#ifndef __EMSCRIPTEN__
-        VolumeRendering,
-#endif
-        NoDepthTest
-    };
-
-    VisualObjectRenderType getObjRenderType_( const VisualObject* obj, ViewportId viewportId ) const;
-
-    void recursiveDraw_( const Viewport& vp, const Object& obj, const AffineXf3f& parentXf, VisualObjectRenderType renderType, int* numDraws = nullptr ) const;
+    void recursiveDraw_( const Viewport& vp, const Object& obj, const AffineXf3f& parentXf, ModelRenderPassMask renderType, int* numDraws = nullptr ) const;
 
     void initGlobalBasisAxesObject_();
     void initBasisAxesObject_();

@@ -126,7 +126,7 @@ RenderPlaneNormalComponent::RenderPlaneNormalComponent( const VisualObject& obje
     subobject.setFlatShading( true );
 }
 
-void RenderPlaneNormalComponent::render( const ModelRenderParams& params )
+bool RenderPlaneNormalComponent::render( const ModelRenderParams& params )
 {
     Matrix3f planeScaleMat = dynamic_cast<const FeatureObject *>( subobject.target_ )->getScaleShearMatrix();
     float normalScale = std::min( planeScaleMat.x.x, planeScaleMat.y.y ) * ( 2 / 3.f );
@@ -136,19 +136,22 @@ void RenderPlaneNormalComponent::render( const ModelRenderParams& params )
         AffineXf3f::translation( Vector3f( -1, -1, 0 ) ) *
         AffineXf3f::linear( Matrix3f::scale( Vector3f( normalScale / planeScaleMat.x.x, normalScale / planeScaleMat.y.y, normalScale / planeScaleMat.z.z ) ) );
     ModelRenderParams newParams = {
-        static_cast<const BaseRenderParams &>( params ),
-        newModelMatrix,
+        {
+            static_cast<const BaseRenderParams &>( params ),
+            newModelMatrix,
+            params.clipPlane,
+            params.depthFunction,
+        },
         params.normMatrixPtr,
-        params.clipPlane,
-        params.depthFunction,
         params.lightPos,
-        params.alphaSort,
+        params.allowAlphaSort,
+        params.passMask,
     };
 
-    RenderFeatureMeshComponent::render( newParams );
+    return RenderFeatureMeshComponent::render( newParams );
 }
 
-void RenderPlaneNormalComponent::renderPicker( const ModelRenderParams& params, unsigned geomId )
+void RenderPlaneNormalComponent::renderPicker( const ModelBaseRenderParams& params, unsigned geomId )
 {
     // No picking for the normal!
     (void)params;

@@ -9,26 +9,26 @@
 namespace MR
 {
 
-void Viewport::draw( const VisualObject& obj, DepthFunction depthFunc, bool alphaSort ) const
+bool Viewport::draw( const VisualObject& obj, DepthFunction depthFunc, ModelRenderPassMask pass, bool allowAlphaSort ) const
 {
-    draw( obj, obj.worldXf( id ), projM_, depthFunc, alphaSort );
+    return draw( obj, obj.worldXf( id ), projM_, depthFunc, pass, allowAlphaSort );
 }
 
-void Viewport::draw(const VisualObject& obj, const AffineXf3f& xf,
-     DepthFunction depthFunc, bool alphaSort ) const
+bool Viewport::draw(const VisualObject& obj, const AffineXf3f& xf,
+     DepthFunction depthFunc, ModelRenderPassMask pass, bool allowAlphaSort ) const
 {
-    draw( obj, xf, projM_, depthFunc, alphaSort );
+    return draw( obj, xf, projM_, depthFunc, pass, allowAlphaSort );
 }
 
-void Viewport::draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f& projM,
-     DepthFunction depthFunc, bool alphaSort ) const
+bool Viewport::draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f& projM,
+     DepthFunction depthFunc, ModelRenderPassMask pass, bool allowAlphaSort ) const
 {
     Matrix4f normM;
-    obj.render( getModelRenderParams( xf, projM, &normM, depthFunc, alphaSort ) );
+    return obj.render( getModelRenderParams( xf, projM, &normM, depthFunc, pass, allowAlphaSort ) );
 }
 
 ModelRenderParams Viewport::getModelRenderParams( const Matrix4f & modelM, const Matrix4f & projM,
-    Matrix4f * normM, DepthFunction depthFunc, bool alphaSort ) const
+    Matrix4f * normM, DepthFunction depthFunc, ModelRenderPassMask pass, bool allowAlphaSort ) const
 {
     if ( normM )
     {
@@ -51,10 +51,16 @@ ModelRenderParams Viewport::getModelRenderParams( const Matrix4f & modelM, const
 
     return ModelRenderParams
     {
-        getBaseRenderParams( projM ),
-        modelM, normM,
-        params_.clippingPlane, depthFunc,
-        params_.lightPosition, alphaSort
+        {
+            getBaseRenderParams( projM ),
+            modelM,
+            params_.clippingPlane,
+            depthFunc,
+        },
+        normM,
+        params_.lightPosition,
+        allowAlphaSort,
+        pass
     };
 }
 

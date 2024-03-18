@@ -150,6 +150,14 @@ void VisualObject::setGlobalAlphaForAllViewports( ViewportProperty<uint8_t> val 
     needRedraw_ = true;
 }
 
+bool VisualObject::modelIsFullyOpaque( ViewportId viewportId ) const
+{
+    return
+        getGlobalAlpha( viewportId ) >= 255 &&
+        getFrontColor( isSelected(), viewportId ).a >= 255 &&
+        getBackColor( viewportId ).a >= 255;
+}
+
 const Color& VisualObject::getLabelsColor( ViewportId viewportId ) const
 {
     return labelsColor_.get( viewportId );
@@ -258,16 +266,16 @@ std::shared_ptr<Object> VisualObject::shallowClone() const
     return clone();
 }
 
-void VisualObject::render( const ModelRenderParams& params ) const
+bool VisualObject::render( const ModelRenderParams& params ) const
 {
     setupRenderObject_();
     if ( !renderObj_ )
-        return;
+        return false;
 
-    renderObj_->render( params );
+    return renderObj_->render( params );
 }
 
-void VisualObject::renderForPicker( const ModelRenderParams& params, unsigned id ) const
+void VisualObject::renderForPicker( const ModelBaseRenderParams& params, unsigned id ) const
 {
     setupRenderObject_();
     if ( !renderObj_ )

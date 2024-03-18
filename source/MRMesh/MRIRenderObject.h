@@ -1,6 +1,6 @@
 #pragma once
 #include "MRMesh/MRFlagOperators.h"
-#include "MRRenderPassEnum.h"
+#include "MRRenderModelParameters.h"
 #include "MRMeshFwd.h"
 #include "MRViewportId.h"
 #include "MRVector2.h"

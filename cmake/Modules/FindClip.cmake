@@ -1,0 +1,3 @@
+find_path(CLIP_INCLUDE_DIR
+  NAMES
+)

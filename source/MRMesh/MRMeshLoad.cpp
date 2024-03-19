@@ -108,52 +108,43 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
             return unexpected( std::string( "Loading canceled" ) );
     }
 
-    Triangulation t;
-    t.reserve( numPolygons );
+    std::vector<VertId> verts;
+    Vector<MeshBuilder::VertSpan, FaceId> faces;
+    faces.reserve( numPolygons + 1 );
 
     for ( int i = 0; i < numPolygons; ++i )
     {
-        int k, ai, bi, ci;
-        in >> k >> ai >> bi >> ci;
+        int k;
+        in >> k;
         if ( !in )
             return unexpected( std::string( "Polygons read error" ) );
-        if ( k == 3 )
-            t.push_back( { VertId( ai ), VertId( bi ), VertId( ci ) } );
-        else if ( k == 4 )
+        if ( k < 3 || k > 1024 )
+            return unexpected( fmt::format( "Bad number of face vertices: {}", k ) );
+
+        MeshBuilder::VertSpan vspan;
+        vspan.firstVertex = VertId( verts.size() );
+        for ( int j = 0; j < k; ++j )
         {
-            int di;
-            in >> di;
+            int v;
+            in >> v;
             if ( !in )
                 return unexpected( std::string( "Polygons read error" ) );
-
-            // build optimal triangulation of a quadrangle
-            bool tabc = bestQuadrangleDiagonal( points[VertId( ai )], points[VertId( bi )], points[VertId( ci )], points[VertId( di )] );
-            if ( tabc )
-            {
-                t.push_back( { VertId( ai ), VertId( bi ), VertId( ci ) } );
-                t.push_back( { VertId( ai ), VertId( ci ), VertId( di ) } );
-            }
-            else
-            {
-                t.push_back( { VertId( ai ), VertId( bi ), VertId( di ) } );
-                t.push_back( { VertId( bi ), VertId( ci ), VertId( di ) } );
-            }
+            if ( v < 0 || v >= numPoints )
+            return unexpected( fmt::format( "Bad vertex id: {}", v ) );
+            verts.push_back( VertId( v ) );
         }
-        else
-            return unexpected( std::string( "Faces with more than 4 vertices are not supported" ) );
-        if ( settings.callback && !( i & 0x3FF ) && !subprogress( settings.callback, 0.5f, 1.f )( float( i ) / numPolygons ) )
-            return unexpected( std::string( "Loading canceled" ) );
+        vspan.lastVertex = VertId( verts.size() );
+        faces.push_back( vspan );
     }
 
     FaceBitSet skippedFaces;
     MeshBuilder::BuildSettings buildSettings;
     if ( settings.skippedFaceCount )
     {
-        skippedFaces = FaceBitSet( t.size() );
-        skippedFaces.set();
+        skippedFaces.resize( faces.size(), true );
         buildSettings.region = &skippedFaces;
     }
-    auto res = Mesh::fromTriangles( std::move( points ), t, buildSettings );
+    auto res = Mesh::fromFaceSoup( std::move( points ), verts, faces, buildSettings );
     if ( settings.skippedFaceCount )
         *settings.skippedFaceCount = int( skippedFaces.count() );
     return res;

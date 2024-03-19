@@ -22,10 +22,7 @@ PolylineProjectionResult<V> findProjectionCore( const AABBTreePolyline<V> & tree
     PolylineProjectionResult<V> res;
     res.distSq = upDistLimitSq;
     if ( tree.nodes().empty() )
-    {
-        assert( false );
         return res;
-    }
 
     struct SubTask
     {
@@ -150,10 +147,7 @@ PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
     PolylineProjectionWithOffsetResult<V> res;
     res.dist = upDistLimit;
     if ( tree.nodes().empty() )
-    {
-        assert( false );
         return res;
-    }
 
     if ( offsetPerEdge.size() < polyline.topology.undirectedEdgeSize() )
     {

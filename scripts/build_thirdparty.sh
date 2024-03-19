@@ -86,6 +86,10 @@ else
   cmake ../${MR_THIRDPARTY_DIR} -DCMAKE_INSTALL_PREFIX=../ -DCMAKE_BUILD_TYPE=Release
   cmake --build . -j `nproc`  #VERBOSE=1
   cmake --install .
+
+  if [[ $OSTYPE != 'darwin'* ]] ; then
+    $(pwd)/thirdparty/scripts/build_all.sh "$(pwd)"
+  fi
 fi
 cd ..
 

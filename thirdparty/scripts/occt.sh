@@ -5,7 +5,7 @@ SCRIPT_DIR=$(dirname $(realpath "$0"))
 PATCH_DIR="${SCRIPT_DIR}/patches/"
 SOURCE_DIR="${SCRIPT_DIR}/../"
 BUILD_DIR="${SCRIPT_DIR}/../build/"
-INSTALL_DIR="${SCRIPT_DIR}/../../"
+INSTALL_DIR="$1"
 
 PATCHES=(
   occt-dependencies.patch

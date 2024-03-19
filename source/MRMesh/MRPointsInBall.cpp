@@ -28,10 +28,7 @@ void findPointsInBall( const AABBTreePoints& tree, const Vector3f& center, float
     }
 
     if ( tree.nodes().empty() )
-    {
-        assert( false );
         return;
-    }
 
     const auto& orderedPoints = tree.orderedPoints();
     const float radiusSq = sqr( radius );

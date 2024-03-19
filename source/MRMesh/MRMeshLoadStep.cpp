@@ -94,6 +94,8 @@ using namespace MR;
 #define STEP_READER_FIXED ( ( ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 7 ) ) )
 // TODO: full color support
 #define STEP_LOAD_COLORS 0
+// TODO: STEPCAFControl support
+#define STEPCAFCONTROL_SUPPORT 0
 
 #if MODERN_MESSAGE_SUPPORTED
 /// spdlog adaptor for OpenCASCADE logging system
@@ -260,6 +262,7 @@ public:
         }
     }
 
+#if STEPCAFCONTROL_SUPPORT
     /// load object structure without actual geometry data
     void loadModelStructure( const Handle( TDocStd_Document )& document )
     {
@@ -292,6 +295,7 @@ public:
         assert( objStack_.size() == 1 );
         assert( objStack_.top() == rootObj_ );
     }
+#endif
 
     /// load and triangulate meshes
     void loadMeshes()
@@ -360,6 +364,7 @@ public:
     }
 
 private:
+#if STEPCAFCONTROL_SUPPORT
     void readLabel_( const TDF_Label& label )
     {
         using ShapeTool = XCAFDoc_ShapeTool;
@@ -468,6 +473,7 @@ private:
 
         return subShapeCount;
     }
+#endif
 
 private:
     static std::string readName_( const TDF_Label& label )
@@ -754,6 +760,30 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Voi
 
     std::unique_lock lock( cOpenCascadeMutex );
 
+    STEPControl_Reader reader;
+    {
+        auto res = readFunc( reader );
+        if ( !res )
+            return unexpected( std::move( res.error() ) );
+    }
+
+    if ( !reportProgress( settings.callback, 0.50f ) )
+        return unexpectedOperationCanceled();
+
+    StepLoader loader;
+    loader.loadModelStructure( reader, subprogress( settings.callback, 0.50f, 1.00f ) );
+    loader.loadMeshes();
+
+    return loader.rootObject();
+}
+
+#if STEPCAFCONTROL_SUPPORT
+Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<VoidOrErrStr ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
+{
+    MR_TIMER
+
+    std::unique_lock lock( cOpenCascadeMutex );
+
     STEPCAFControl_Reader reader;
     {
         auto res = readFunc( reader.ChangeReader() );
@@ -793,6 +823,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Voi
 
     return loader.rootObject();
 }
+#endif
 
 } // namespace
 
@@ -832,7 +863,25 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( const std::filesystem::path
         .and_then( [&] { return repairStepFile( reader ); } )
 #endif
         ;
-    }, settings );
+    }, settings )
+#if !STEPCAFCONTROL_SUPPORT
+    .and_then( [&] ( std::shared_ptr<Object> result ) -> Expected<std::shared_ptr<Object>>
+    {
+        result->setName( path.stem() );
+
+        auto counter = 0;
+        for ( auto& objMesh : getAllObjectsInTree<ObjectMesh>( result.get() ) )
+            objMesh->setName( fmt::format( "Solid{}", ++counter ) );
+
+        auto sceneObj = std::make_shared<Object>();
+        sceneObj->setName( "Root" );
+        sceneObj->select( true );
+        sceneObj->addChild( std::move( result ) );
+
+        return sceneObj;
+    } )
+#endif
+    ;
 }
 
 Expected<std::shared_ptr<Object>> fromSceneStepFile( std::istream& in, const MeshLoadSettings& settings )
@@ -844,7 +893,23 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( std::istream& in, const Mes
         .and_then( [&] { return repairStepFile( reader ); } )
 #endif
         ;
-    }, settings );
+    }, settings )
+#if !STEPCAFCONTROL_SUPPORT
+    .and_then( [&] ( std::shared_ptr<Object> result ) -> Expected<std::shared_ptr<Object>>
+    {
+        auto counter = 0;
+        for ( auto& objMesh : getAllObjectsInTree<ObjectMesh>( result.get() ) )
+            objMesh->setName( fmt::format( "Solid{}", ++counter ) );
+
+        auto sceneObj = std::make_shared<Object>();
+        sceneObj->setName( "Root" );
+        sceneObj->select( true );
+        sceneObj->addChild( std::move( result ) );
+
+        return sceneObj;
+    } )
+#endif
+    ;
 }
 
 } // namespace MR::MeshLoad

@@ -108,7 +108,23 @@ public:
 // `RenderObjectType` is the underlying render object, e.g. `RenderMeshObject`.
 // If `IsPrimary` is true, the visual properties are copied from the target datamodel object.
 template <bool IsPrimary, typename ObjectType, typename RenderObjectType>
-using RenderFeatureComponent = RenderWrapObject::Wrapper<WrappedModelSubobject<IsPrimary, ObjectType>, RenderObjectType>;
+class RenderFeatureComponent : public RenderWrapObject::Wrapper<WrappedModelSubobject<IsPrimary, ObjectType>, RenderObjectType>
+{
+    using Base = RenderWrapObject::Wrapper<WrappedModelSubobject<IsPrimary, ObjectType>, RenderObjectType>;
+public:
+    using Base::Base;
+
+    bool render( const ModelRenderParams& params )
+    {
+        // Skip rendering the secondary components (aka subfeatures) if they are disabled.
+        if constexpr ( !IsPrimary )
+        {
+            if ( !this->subobject.target_->getVisualizeProperty( FeatureVisualizePropertyType::Subfeatures, params.viewportId ) )
+                return false;
+        }
+        return Base::render( params );
+    }
+};
 
 // This renderobject draws custom points.
 // If `IsPrimary` is true, the visual properties are copied from the target datamodel object.

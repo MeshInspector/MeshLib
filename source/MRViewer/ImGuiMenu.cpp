@@ -1759,6 +1759,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
     bool allIsObjLines = selectedMask == SelectedTypesMask::ObjectLinesHolderBit;
     bool allIsObjPoints = selectedMask == SelectedTypesMask::ObjectPointsHolderBit;
     bool allIsObjLabels = selectedMask == SelectedTypesMask::ObjectLabelBit;
+    bool allIsFeatureObj = selectedMask == SelectedTypesMask::ObjectFeaturesBit;
 
     const auto& viewportid = viewer->viewport().id;
 
@@ -1823,8 +1824,14 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Contour", LabelVisualizePropertyType::Contour, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Leader line", LabelVisualizePropertyType::LeaderLine, viewportid );
     }
+    if ( allIsFeatureObj )
+    {
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Subfeatures", FeatureVisualizePropertyType::Subfeatures, viewportid );
+    }
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Invert Normals", VisualizeMaskType::InvertedNormals, viewportid );
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Name", VisualizeMaskType::Name, viewportid );
+    if ( allIsFeatureObj )
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Extra information next to name", FeatureVisualizePropertyType::DetailsOnNameTag, viewportid );
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Labels", VisualizeMaskType::Labels, viewportid );
     if ( viewer->isDeveloperFeaturesEnabled() )
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Clipping", VisualizeMaskType::ClippedByPlane, viewportid );
@@ -3180,6 +3187,10 @@ SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::share
         else if ( obj->asType<ObjectLabel>() )
         {
             res |= SelectedTypesMask::ObjectLabelBit;
+        }
+        else if ( obj->asType<FeatureObject>() )
+        {
+            res |= SelectedTypesMask::ObjectFeaturesBit;
         }
         else
         {

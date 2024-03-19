@@ -31,17 +31,24 @@ RenderPointsObject::~RenderPointsObject()
     freeBuffers_();
 }
 
-void RenderPointsObject::render( const ModelRenderParams& renderParams )
+bool RenderPointsObject::render( const ModelRenderParams& renderParams )
 {
+    RenderModelPassMask desiredPass =
+        !objPoints_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
+        ( objPoints_->getGlobalAlpha( renderParams.viewportId ) < 255 || objPoints_->getFrontColor( objPoints_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
+        RenderModelPassMask::Opaque;
+    if ( !bool( renderParams.passMask & desiredPass ) )
+        return false; // Nothing to draw in this pass.
+
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objPoints_->resetDirty();
-        return;
+        return false;
     }
     update_();
 
     if ( !objPoints_->hasVisualRepresentation() )
-        return;
+        return false;
 
     // Initialize uniform
     GL_EXEC( glViewport( ( GLsizei )renderParams.viewport.x, ( GLsizei )renderParams.viewport.y,
@@ -113,9 +120,11 @@ void RenderPointsObject::render( const ModelRenderParams& renderParams )
     GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_POINTS, ( GLsizei )validIndicesSize_, GL_UNSIGNED_INT, 0 ) );
     GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
+
+    return true;
 }
 
-void RenderPointsObject::renderPicker( const ModelRenderParams& parameters, unsigned geomId )
+void RenderPointsObject::renderPicker( const ModelBaseRenderParams& parameters, unsigned geomId )
 {
     if ( !Viewer::constInstance()->isGLInitialized() )
     {

@@ -1,6 +1,7 @@
 #pragma once
 #include "MRViewerFwd.h"
 #include "MRMesh/MRphmap.h"
+#include "MRViewer/MRViewerEventsListener.h"
 #include <string>
 #include <functional>
 #include <optional>
@@ -13,7 +14,7 @@ namespace MR
 // 2) action name to shortcut
 // it can be used to process, customize and print shortcuts
 // indifferent to literals register
-class MRVIEWER_CLASS ShortcutManager
+class MRVIEWER_CLASS ShortcutManager : public MultiListener<KeyDownListener, KeyRepeatListener>
 {
 public:
     virtual ~ShortcutManager() = default;
@@ -77,6 +78,9 @@ public:
 
     // if given key has action in shortcut map - process it and returns true, otherwise returns false;
     MRVIEWER_API virtual bool processShortcut( const ShortcutKey& key, Reason = Reason::KeyDown ) const;
+
+    bool onKeyDown_( int key, int modifier ) override;
+    bool onKeyRepeat_( int key, int modifier ) override;
 
     //make string from strictly one modifier
     MRVIEWER_API static std::string getModifierString( int mod );

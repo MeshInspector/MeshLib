@@ -940,6 +940,7 @@ void ImGuiMenu::setupShortcuts_()
     if ( !shortcutManager_ )
         shortcutManager_ = std::make_shared<ShortcutManager>();
 
+    // connecting signals to events (KeyDown, KeyRepeat) with lowest priority
     shortcutManager_->connect( &getViewerInstance(), INT_MAX );
 }
 

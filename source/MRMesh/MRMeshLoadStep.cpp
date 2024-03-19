@@ -867,7 +867,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( const std::filesystem::path
 #if !STEPCAFCONTROL_SUPPORT
     .and_then( [&] ( std::shared_ptr<Object> result ) -> Expected<std::shared_ptr<Object>>
     {
-        result->setName( path.stem() );
+        result->setName( utf8string( path.stem() ) );
 
         auto counter = 0;
         for ( auto& objMesh : getAllObjectsInTree<ObjectMesh>( result.get() ) )

@@ -612,8 +612,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& )             
     MR_PYTHON_CUSTOM_CLASS( name ).\
         def( pybind11::init<>() ).\
         def( "test", &type::test ).\
-        def( "resize", &type::resize ).\
-        def( "set",( type& ( type::* )( type::IndexType, bool ) )& type::set, pybind11::return_value_policy::reference ).\
+        def( "resize", &type::resize, pybind11::arg("size"), pybind11::arg("value") = false ).\
+        def( "set",( type& ( type::* )( type::IndexType, bool ) )& type::set, pybind11::return_value_policy::reference, pybind11::arg("id"), pybind11::arg("value") = true ).\
         def( "flip",( type& ( type::* )() )& type::flip, pybind11::return_value_policy::reference ).\
         def( pybind11::self & pybind11::self ).\
         def( pybind11::self | pybind11::self ).\
@@ -622,7 +622,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& )             
         def( pybind11::self &= pybind11::self ).\
         def( pybind11::self |= pybind11::self ).\
         def( pybind11::self ^= pybind11::self ).\
-        def( pybind11::self -= pybind11::self );\
+        def( pybind11::self -= pybind11::self ).\
+        def( "__iter__", [](type& data) {\
+            return pybind11::make_iterator<pybind11::return_value_policy::copy>( begin( data ), end( data ) );\
+        }, pybind11::keep_alive<0, 1>() );\
 } )
 
 ADD_PYTHON_BITSET( VertBitSet, MR::VertBitSet )

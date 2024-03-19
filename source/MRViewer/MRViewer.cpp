@@ -1402,7 +1402,7 @@ void Viewer::resetRedraw_()
     resetRedrawFlagRecursive( SceneRoot::get() );
 }
 
-void Viewer::recursiveDraw_( const Viewport& vp, const Object& obj, const AffineXf3f& parentXf, ModelRenderPassMask renderType, int* numDraws ) const
+void Viewer::recursiveDraw_( const Viewport& vp, const Object& obj, const AffineXf3f& parentXf, RenderModelPassMask renderType, int* numDraws ) const
 {
     if ( !obj.isVisible( vp.id ) )
         return;
@@ -1580,11 +1580,11 @@ void Viewer::drawScene()
 
     for ( const auto& viewport : viewport_list )
     {
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), ModelRenderPassMask::Opaque );
+        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::Opaque );
 #ifndef __EMSCRIPTEN__
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), ModelRenderPassMask::VolumeRendering );
+        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::VolumeRendering );
 #endif
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), ModelRenderPassMask::Transparent, &numTransparent );
+        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::Transparent, &numTransparent );
     }
 
     drawSignal();
@@ -1596,7 +1596,7 @@ void Viewer::drawScene()
     }
     // draw after alpha texture
     for ( const auto& viewport : viewport_list )
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), ModelRenderPassMask::NoDepthTest );
+        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::NoDepthTest );
 
     postDrawPreViewportSignal();
 

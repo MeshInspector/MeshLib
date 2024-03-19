@@ -9,26 +9,26 @@
 namespace MR
 {
 
-bool Viewport::draw( const VisualObject& obj, DepthFunction depthFunc, ModelRenderPassMask pass, bool allowAlphaSort ) const
+bool Viewport::draw( const VisualObject& obj, DepthFunction depthFunc, RenderModelPassMask pass, bool allowAlphaSort ) const
 {
     return draw( obj, obj.worldXf( id ), projM_, depthFunc, pass, allowAlphaSort );
 }
 
 bool Viewport::draw(const VisualObject& obj, const AffineXf3f& xf,
-     DepthFunction depthFunc, ModelRenderPassMask pass, bool allowAlphaSort ) const
+     DepthFunction depthFunc, RenderModelPassMask pass, bool allowAlphaSort ) const
 {
     return draw( obj, xf, projM_, depthFunc, pass, allowAlphaSort );
 }
 
 bool Viewport::draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f& projM,
-     DepthFunction depthFunc, ModelRenderPassMask pass, bool allowAlphaSort ) const
+     DepthFunction depthFunc, RenderModelPassMask pass, bool allowAlphaSort ) const
 {
     Matrix4f normM;
     return obj.render( getModelRenderParams( xf, projM, &normM, depthFunc, pass, allowAlphaSort ) );
 }
 
 ModelRenderParams Viewport::getModelRenderParams( const Matrix4f & modelM, const Matrix4f & projM,
-    Matrix4f * normM, DepthFunction depthFunc, ModelRenderPassMask pass, bool allowAlphaSort ) const
+    Matrix4f * normM, DepthFunction depthFunc, RenderModelPassMask pass, bool allowAlphaSort ) const
 {
     if ( normM )
     {

@@ -150,14 +150,6 @@ void VisualObject::setGlobalAlphaForAllViewports( ViewportProperty<uint8_t> val 
     needRedraw_ = true;
 }
 
-bool VisualObject::modelIsFullyOpaque( ViewportId viewportId ) const
-{
-    return
-        getGlobalAlpha( viewportId ) >= 255 &&
-        getFrontColor( isSelected(), viewportId ).a >= 255 &&
-        getBackColor( viewportId ).a >= 255;
-}
-
 const Color& VisualObject::getLabelsColor( ViewportId viewportId ) const
 {
     return labelsColor_.get( viewportId );

@@ -82,17 +82,17 @@ public:
     /// Immediate draw of given object with transformation to world taken from object's scene
     /// Returns true if something was drawn.
     MRVIEWER_API bool draw( const VisualObject& obj,
-        DepthFunction depthFunc = DepthFunction::Default, ModelRenderPassMask pass = ModelRenderPassMask::All, bool allowAlphaSort = false ) const;
+        DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, bool allowAlphaSort = false ) const;
 
     /// Immediate draw of given object with given transformation to world
     /// Returns true if something was drawn.
     MRVIEWER_API bool draw( const VisualObject& obj, const AffineXf3f& xf,
-        DepthFunction depthFunc = DepthFunction::Default, ModelRenderPassMask pass = ModelRenderPassMask::All, bool allowAlphaSort = false ) const;
+        DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, bool allowAlphaSort = false ) const;
 
     /// Immediate draw of given object with given transformation to world and given projection matrix
     /// Returns true if something was drawn.
     MRVIEWER_API bool draw( const VisualObject& obj, const AffineXf3f& xf, const Matrix4f & projM,
-        DepthFunction depthFunc = DepthFunction::Default, ModelRenderPassMask pass = ModelRenderPassMask::All, bool allowAlphaSort = false ) const;
+        DepthFunction depthFunc = DepthFunction::Default, RenderModelPassMask pass = RenderModelPassMask::All, bool allowAlphaSort = false ) const;
 
     /// Rendering parameters for immediate drawing of lines and points
     struct LinePointImmediateRenderParams : BaseRenderParams
@@ -132,7 +132,7 @@ public:
          const Matrix4f & modelM, ///< model to world transformation, this matrix will be referenced in the result
          Matrix4f * normM, ///< if not null, this matrix of normals transformation will be computed and referenced in the result
          DepthFunction depthFunc = DepthFunction::Default,
-         ModelRenderPassMask pass = ModelRenderPassMask::All,
+         RenderModelPassMask pass = RenderModelPassMask::All,
          bool allowAlphaSort = false ///< If not null and the object is semitransparent, enable alpha-sorting.
     ) const
     { return getModelRenderParams( modelM, projM_, normM, depthFunc, pass, allowAlphaSort ); }
@@ -141,7 +141,7 @@ public:
     [[nodiscard]] MRVIEWER_API ModelRenderParams getModelRenderParams( const Matrix4f & modelM, const Matrix4f & projM,
          Matrix4f * normM, ///< if not null, this matrix of normals transformation will be computed and referenced in the result
          DepthFunction depthFunc = DepthFunction::Default,
-         ModelRenderPassMask pass = ModelRenderPassMask::All,
+         RenderModelPassMask pass = RenderModelPassMask::All,
          bool allowAlphaSort = false ///< If not null and the object is semitransparent, enable alpha-sorting.
     ) const;
 

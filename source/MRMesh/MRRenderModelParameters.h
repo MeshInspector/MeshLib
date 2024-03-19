@@ -6,7 +6,7 @@ namespace MR
 {
 
 /// Various passes of the 3D rendering.
-enum class ModelRenderPassMask
+enum class RenderModelPassMask
 {
     Opaque = 1 << 0,
     Transparent = 1 << 1,
@@ -21,6 +21,6 @@ enum class ModelRenderPassMask
         | VolumeRendering
 #endif
 };
-MR_MAKE_FLAG_OPERATORS( ModelRenderPassMask )
+MR_MAKE_FLAG_OPERATORS( RenderModelPassMask )
 
 }

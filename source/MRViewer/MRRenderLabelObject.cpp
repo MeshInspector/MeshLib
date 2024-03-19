@@ -45,10 +45,10 @@ RenderLabelObject::~RenderLabelObject()
 
 bool RenderLabelObject::render( const ModelRenderParams& renderParams )
 {
-    ModelRenderPassMask desiredPass =
-        !objLabel_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? ModelRenderPassMask::NoDepthTest :
-        !objLabel_->modelIsFullyOpaque( renderParams.viewportId ) ? ModelRenderPassMask::Transparent :
-        ModelRenderPassMask::Opaque;
+    RenderModelPassMask desiredPass =
+        !objLabel_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
+        ( objLabel_->getGlobalAlpha( renderParams.viewportId ) < 255 || objLabel_->getFrontColor( objLabel_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
+        RenderModelPassMask::Opaque;
     if ( !bool( renderParams.passMask & desiredPass ) )
         return false; // Nothing to draw in this pass.
 

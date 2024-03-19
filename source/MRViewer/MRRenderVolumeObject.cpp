@@ -29,10 +29,10 @@ RenderVolumeObject::~RenderVolumeObject()
 
 bool RenderVolumeObject::render( const ModelRenderParams& renderParams )
 {
-    ModelRenderPassMask desiredPass =
-        !objVoxels_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? ModelRenderPassMask::NoDepthTest :
-        !objVoxels_->modelIsFullyOpaque( renderParams.viewportId ) ? ModelRenderPassMask::Transparent :
-        ModelRenderPassMask::Opaque;
+    RenderModelPassMask desiredPass =
+        !objVoxels_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
+        ( objVoxels_->getGlobalAlpha( renderParams.viewportId ) < 255 || objVoxels_->getFrontColor( objVoxels_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
+        RenderModelPassMask::Opaque;
     if ( !bool( renderParams.passMask & desiredPass ) )
         return false; // Nothing to draw in this pass.
 

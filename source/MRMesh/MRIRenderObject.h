@@ -52,7 +52,7 @@ struct ModelRenderParams : ModelBaseRenderParams
     Vector3f lightPos;            // position of light source
     bool allowAlphaSort{ false }; // if true, the object can use the alpha sorting shader if it wants to
 
-    ModelRenderPassMask passMask = ModelRenderPassMask::All; // Only perform rendering if `bool( passMask & desiredPass )` is true.
+    RenderModelPassMask passMask = RenderModelPassMask::All; // Only perform rendering if `bool( passMask & desiredPass )` is true.
 };
 
 /// `IRenderObject::renderUi()` can emit zero or more or more of those tasks. They are sorted by depth every frame.

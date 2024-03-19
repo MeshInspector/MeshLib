@@ -201,10 +201,6 @@ public:
     /// sets global transparency alpha of object in all viewports
     MRMESH_API virtual void setGlobalAlphaForAllViewports( ViewportProperty<uint8_t> val );
 
-    /// Returns true if all currently used model colors are opaque, and if `getGlobalAlpha() == 255`.
-    /// The result can depend on `isSelected()`.
-    [[nodiscard]] MRMESH_API virtual bool modelIsFullyOpaque( ViewportId viewportId ) const;
-
     [[deprecated( "please use ObjectLabel mechanism instead" )]]
     MRMESH_API const Color& getLabelsColor( ViewportId viewportId = {} ) const;
     [[deprecated( "please use ObjectLabel mechanism instead" )]]

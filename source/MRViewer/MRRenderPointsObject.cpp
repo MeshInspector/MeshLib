@@ -33,10 +33,10 @@ RenderPointsObject::~RenderPointsObject()
 
 bool RenderPointsObject::render( const ModelRenderParams& renderParams )
 {
-    ModelRenderPassMask desiredPass =
-        !objPoints_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? ModelRenderPassMask::NoDepthTest :
-        !objPoints_->modelIsFullyOpaque( renderParams.viewportId ) ? ModelRenderPassMask::Transparent :
-        ModelRenderPassMask::Opaque;
+    RenderModelPassMask desiredPass =
+        !objPoints_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
+        ( objPoints_->getGlobalAlpha( renderParams.viewportId ) < 255 || objPoints_->getFrontColor( objPoints_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
+        RenderModelPassMask::Opaque;
     if ( !bool( renderParams.passMask & desiredPass ) )
         return false; // Nothing to draw in this pass.
 

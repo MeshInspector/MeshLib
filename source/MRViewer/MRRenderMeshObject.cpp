@@ -34,10 +34,10 @@ RenderMeshObject::~RenderMeshObject()
 
 bool RenderMeshObject::render( const ModelRenderParams& renderParams )
 {
-    ModelRenderPassMask desiredPass =
-        !objMesh_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? ModelRenderPassMask::NoDepthTest :
-        !objMesh_->modelIsFullyOpaque( renderParams.viewportId ) ? ModelRenderPassMask::Transparent :
-        ModelRenderPassMask::Opaque;
+    RenderModelPassMask desiredPass =
+        !objMesh_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
+        ( objMesh_->getGlobalAlpha( renderParams.viewportId ) < 255 || objMesh_->getFrontColor( objMesh_->isSelected(), renderParams.viewportId ).a < 255 || objMesh_->getBackColor( renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
+        RenderModelPassMask::Opaque;
     if ( !bool( renderParams.passMask & desiredPass ) )
         return false; // Nothing to draw in this pass.
 
@@ -48,7 +48,7 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
     }
     update_( renderParams.viewportId );
 
-    if ( renderParams.allowAlphaSort && desiredPass == ModelRenderPassMask::Transparent )
+    if ( renderParams.allowAlphaSort && desiredPass == RenderModelPassMask::Transparent )
     {
         GL_EXEC( glDepthMask( GL_FALSE ) );
         GL_EXEC( glColorMask( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE ) );
@@ -81,7 +81,7 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
     GL_EXEC( glEnable( GL_BLEND ) );
     GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
 
-    const bool useAlphaSort = renderParams.allowAlphaSort && desiredPass == ModelRenderPassMask::Transparent;
+    const bool useAlphaSort = renderParams.allowAlphaSort && desiredPass == RenderModelPassMask::Transparent;
     bindMesh_( useAlphaSort );
 
     auto shader = useAlphaSort ? GLStaticHolder::getShaderId( GLStaticHolder::TransparentMesh ) : GLStaticHolder::getShaderId( GLStaticHolder::Mesh );
@@ -146,7 +146,7 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedEdges, renderParams.viewportId ) )
         renderEdges_( renderParams, useAlphaSort, selectedEdgesArrayObjId_, objMesh_->getSelectedEdgesColor( renderParams.viewportId ), DIRTY_EDGES_SELECTION );
 
-    if ( renderParams.allowAlphaSort && desiredPass == ModelRenderPassMask::Transparent )
+    if ( renderParams.allowAlphaSort && desiredPass == RenderModelPassMask::Transparent )
     {
         // enable back masks, disabled for alpha sort
         GL_EXEC( glDepthMask( GL_TRUE ) );

@@ -58,3 +58,6 @@
 [submodule "thirdparty/nativefiledialog-extended"]
 	path = thirdparty/nativefiledialog-extended
 	url = https://github.com/btzy/nativefiledialog-extended.git
+[submodule "thirdparty/occt"]
+	path = thirdparty/occt
+	url = https://github.com/Open-Cascade-SAS/OCCT.git

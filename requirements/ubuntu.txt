@@ -13,7 +13,6 @@ libhidapi-dev
 libhpdf-dev
 libilmbase-dev
 libjsoncpp-dev
-libocct-data-exchange-dev
 libpython3-dev
 libspdlog-dev
 libssl-dev
@@ -24,5 +23,4 @@ libturbojpeg0-dev
 libxerces-c-dev
 libzip-dev
 libzstd-dev
-occt-misc
 pkg-config

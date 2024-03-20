@@ -45,25 +45,32 @@ Expected<VertBitSet> getLargeComponentsUnion( const PointCloud& pointCloud, floa
     auto unionStructsRes = getUnionFindStructureVerts( pointCloud, maxDist, nullptr, subPc );
     if ( !unionStructsRes.has_value() )
         return unexpectedOperationCanceled();
-    auto& unionStructs = *unionStructsRes;
-    const auto& allRoots = unionStructs.roots();
+    return getLargeComponentsUnion( *unionStructsRes, validPoints, minSize, subprogress( pc, 0.9f, 1.f ) );
+}
 
-    subPc = subprogress( pc, 0.9f, 0.95f );
+Expected<MR::VertBitSet> getLargeComponentsUnion( UnionFind<VertId>& unionStructs,
+    const VertBitSet& region, int minSize, ProgressCallback pc /*= {} */ )
+{
+    MR_TIMER
+
+    assert( minSize > 1 );
+    const auto& allRoots = unionStructs.roots();
+    ProgressCallback subPc = subprogress( pc, 0.f, 0.5f );
     int counter = 0;
-    const float counterMax = float( validPoints.count() );
-    const int counterDivider = int( validPoints.count() ) / 100;
+    const float counterMax = float( region.count() );
+    const int counterDivider = int( region.count() ) / 100;
     HashMap<VertId, int> root2size;
-    for ( auto v : validPoints )
+    for ( auto v : region )
     {
         ++root2size[allRoots[v]];
         if ( !reportProgress( subPc, counter / counterMax, counter, counterDivider ) )
             return unexpectedOperationCanceled();
     }
 
-    subPc = subprogress( pc, 0.95f, 1.f );
+    subPc = subprogress( pc, 0.5f, 1.f );
     counter = 0;
-    VertBitSet result( validPoints.find_last() + 1 );
-    for ( auto v : validPoints )
+    VertBitSet result( region.find_last() + 1 );
+    for ( auto v : region )
     {
         if ( root2size[allRoots[v]] >= minSize )
             result.set( v );

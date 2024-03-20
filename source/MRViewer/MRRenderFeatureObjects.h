@@ -23,49 +23,49 @@ namespace detail
     class WrappedModelSubobjectPart : public BaseObjectType {};
 
     template <bool IsPrimary>
-    class WrappedModelSubobjectPart<IsPrimary, ObjectPoints> : public ObjectPoints, public virtual RenderWrapObject::BasicWrapperTarget
+    class WrappedModelSubobjectPart<IsPrimary, ObjectPoints> : public ObjectPoints, public virtual RenderWrapObject::BasicWrapperTarget<FeatureObject>
     {
     public:
         float getPointSize() const override
         {
-            const_cast<WrappedModelSubobjectPart &>( *this ).setPointSize( IsPrimary ? dynamic_cast<const FeatureObject*>( target_ )->getPointSize() : dynamic_cast<const FeatureObject*>( target_ )->getSubfeaturePointSize() );
+            const_cast<WrappedModelSubobjectPart &>( *this ).setPointSize( IsPrimary ? target_->getPointSize() : target_->getSubfeaturePointSize() );
             return ObjectPoints::getPointSize();
         }
 
         const ViewportProperty<uint8_t>& getGlobalAlphaForAllViewports() const override
         {
             if ( !IsPrimary )
-                const_cast<WrappedModelSubobjectPart &>( *this ).setGlobalAlpha( (std::uint8_t)std::clamp( int( target_->getGlobalAlpha() * dynamic_cast<const FeatureObject*>( target_ )->getSubfeatureAlphaPoints() ), 0, 255 ) );
+                const_cast<WrappedModelSubobjectPart &>( *this ).setGlobalAlpha( (std::uint8_t)std::clamp( int( target_->getGlobalAlpha() * target_->getSubfeatureAlphaPoints() ), 0, 255 ) );
             return ObjectPoints::getGlobalAlphaForAllViewports();
         }
     };
 
     template <bool IsPrimary>
-    class WrappedModelSubobjectPart<IsPrimary, ObjectLines> : public ObjectLines, public virtual RenderWrapObject::BasicWrapperTarget
+    class WrappedModelSubobjectPart<IsPrimary, ObjectLines> : public ObjectLines, public virtual RenderWrapObject::BasicWrapperTarget<FeatureObject>
     {
     public:
         float getLineWidth() const override
         {
-            const_cast<WrappedModelSubobjectPart &>( *this ).setLineWidth( IsPrimary ? dynamic_cast<const FeatureObject*>( target_ )->getLineWidth() : dynamic_cast<const FeatureObject*>( target_ )->getSubfeatureLineWidth() );
+            const_cast<WrappedModelSubobjectPart &>( *this ).setLineWidth( IsPrimary ? target_->getLineWidth() : target_->getSubfeatureLineWidth() );
             return ObjectLines::getLineWidth();
         }
 
         const ViewportProperty<uint8_t>& getGlobalAlphaForAllViewports() const override
         {
             if ( !IsPrimary )
-                const_cast<WrappedModelSubobjectPart &>( *this ).setGlobalAlpha( (std::uint8_t)std::clamp( int( target_->getGlobalAlpha() * dynamic_cast<const FeatureObject*>( target_ )->getSubfeatureAlphaLines() ), 0, 255 ) );
+                const_cast<WrappedModelSubobjectPart &>( *this ).setGlobalAlpha( (std::uint8_t)std::clamp( int( target_->getGlobalAlpha() * target_->getSubfeatureAlphaLines() ), 0, 255 ) );
             return ObjectLines::getGlobalAlphaForAllViewports();
         }
     };
 
     template <bool IsPrimary>
-    class WrappedModelSubobjectPart<IsPrimary, ObjectMesh> : public ObjectMesh, public virtual RenderWrapObject::BasicWrapperTarget
+    class WrappedModelSubobjectPart<IsPrimary, ObjectMesh> : public ObjectMesh, public virtual RenderWrapObject::BasicWrapperTarget<FeatureObject>
     {
     public:
         const ViewportProperty<uint8_t>& getGlobalAlphaForAllViewports() const override
         {
             if ( !IsPrimary )
-                const_cast<WrappedModelSubobjectPart &>( *this ).setGlobalAlpha( (std::uint8_t)std::clamp( int( target_->getGlobalAlpha() * dynamic_cast<const FeatureObject*>( target_ )->getSubfeatureAlphaMesh() ), 0, 255 ) );
+                const_cast<WrappedModelSubobjectPart &>( *this ).setGlobalAlpha( (std::uint8_t)std::clamp( int( target_->getGlobalAlpha() * target_->getSubfeatureAlphaMesh() ), 0, 255 ) );
             return ObjectMesh::getGlobalAlphaForAllViewports();
         }
     };
@@ -75,7 +75,7 @@ namespace detail
 // This is used for stub datamodel objects that we store inside of renderobjects to provide them with models (aka visualization data: meshes, etc).
 // The base template handles `IsPrimary == true`. We have a specialization below for `false`.
 template <bool IsPrimary, typename BaseObjectType>
-class WrappedModelSubobject : public detail::WrappedModelSubobjectPart<IsPrimary, BaseObjectType>, public virtual RenderWrapObject::BasicWrapperTarget
+class WrappedModelSubobject : public detail::WrappedModelSubobjectPart<IsPrimary, BaseObjectType>, public virtual RenderWrapObject::BasicWrapperTarget<FeatureObject>
 {
 public:
     bool isSelected() const override
@@ -96,13 +96,13 @@ public:
     const ViewportProperty<uint8_t>& getGlobalAlphaForAllViewports() const override
     {
         if ( IsPrimary )
-            const_cast<WrappedModelSubobject &>( *this ).setGlobalAlpha( (std::uint8_t)std::clamp( int( target_->getGlobalAlpha() * dynamic_cast<const FeatureObject*>( target_ )->getMainFeatureAlpha() ), 0, 255 ) );
+            const_cast<WrappedModelSubobject &>( *this ).setGlobalAlpha( (std::uint8_t)std::clamp( int( target_->getGlobalAlpha() * target_->getMainFeatureAlpha() ), 0, 255 ) );
         return detail::WrappedModelSubobjectPart<IsPrimary, BaseObjectType>::getGlobalAlphaForAllViewports();
     }
 };
 
 template <typename BaseObjectType>
-class WrappedModelSubobject<false, BaseObjectType> : public detail::WrappedModelSubobjectPart<false, BaseObjectType>, public virtual RenderWrapObject::BasicWrapperTarget
+class WrappedModelSubobject<false, BaseObjectType> : public detail::WrappedModelSubobjectPart<false, BaseObjectType>, public virtual RenderWrapObject::BasicWrapperTarget<FeatureObject>
 {
 public:
     bool isSelected() const override

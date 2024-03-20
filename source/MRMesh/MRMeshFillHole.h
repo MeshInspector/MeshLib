@@ -140,16 +140,22 @@ struct FillHoleItem
 };
 
 /// concise representation of proposed hole triangulation
-struct FillHolePlan
+struct HoleFillPlan
 {
     std::vector<FillHoleItem> items;
     int numNewTris = 0;
 };
 
-/// similar to fillHole function, but only gets the plan how to fill given hole, not filling it immediately
-MRMESH_API FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams& params = {} );
+/// prepares the plan how to fill given hole (not filling it immediately),
+/// several getHoleFillPlan can work in parallel
+MRMESH_API HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId a0, const FillHoleParams& params = {} );
+
+/// prepares the plan how to fill given planar hole (not filling it immediately),
+/// several getPlanarHoleFillPlan can work in parallel
+MRMESH_API HoleFillPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId a0 );
+
 /// quickly fills the hole given the plan (quickly compared to fillHole function)
-MRMESH_API void executeFillHolePlan( Mesh & mesh, EdgeId a0, FillHolePlan & plan, FaceBitSet * outNewFaces = nullptr );
+MRMESH_API void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSet * outNewFaces = nullptr );
 
 /** \brief Fills hole in mesh trivially\n
   * \ingroup FillHoleGroup

@@ -506,7 +506,7 @@ static EdgeId makeNewEdge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitS
     return newEdge;
 }
 
-void executeFillHolePlan( Mesh & mesh, EdgeId a0, FillHolePlan & plan, FaceBitSet * outNewFaces )
+void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSet * outNewFaces )
 {
     [[maybe_unused]] const auto fsz0 = mesh.topology.faceSize();
     if ( plan.items.empty() )
@@ -546,9 +546,9 @@ void executeFillHolePlan( Mesh & mesh, EdgeId a0, FillHolePlan & plan, FaceBitSe
 }
 
 // Sub cubic complexity
-FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams& params )
+HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId a0, const FillHoleParams& params )
 {
-    FillHolePlan res;
+    HoleFillPlan res;
     if ( params.stopBeforeBadTriangulation )
         *params.stopBeforeBadTriangulation = false;
     if ( params.maxPolygonSubdivisions < 2 )
@@ -559,7 +559,7 @@ FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
     if ( mesh.topology.left( a0 ) )
     {
         assert( false );
-        spdlog::error( "getFillHolePlan: edge does not represent a hole" );
+        spdlog::error( "getHoleFillPlan: edge does not represent a hole" );
         return res;
     }
 
@@ -698,6 +698,19 @@ FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
     return res;
 }
 
+HoleFillPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId e )
+{
+    bool stopOnBad{ false };
+    FillHoleParams params;
+    params.metric = getPlaneNormalizedFillMetric( mesh, e );
+    params.stopBeforeBadTriangulation = &stopOnBad;
+
+    auto res = getHoleFillPlan( mesh, e, params );
+    if ( stopOnBad ) // triangulation cannot be good if we fall in this `if`, so let it create degenerated faces
+        res = getHoleFillPlan( mesh, e, { getMinAreaMetric( mesh ) } );
+    return res;
+}
+
 void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
 {
     MR_TIMER;
@@ -738,11 +751,11 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
         return;
     }
 
-    auto plan = getFillHolePlan( mesh, a0, params );
+    auto plan = getHoleFillPlan( mesh, a0, params );
     if ( params.stopBeforeBadTriangulation && *params.stopBeforeBadTriangulation )
         return;
 
-    executeFillHolePlan( mesh, a0, plan, params.outNewFaces );
+    executeHoleFillPlan( mesh, a0, plan, params.outNewFaces );
 }
 
 VertId fillHoleTrivially( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces /*= nullptr */ )

@@ -29,7 +29,7 @@ RadiusTask::RadiusTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Co
 {
     params_.center = xf( params_.center );
     params_.radiusAsVector = xf.A * params_.radiusAsVector;
-    params_.normal = xf.A * params_.normal;
+    params_.normal = ( xf.A * params_.normal ).normalized();
 
     Vector3f depthRefPoint = params_.center;
     if ( !params_.drawAsDiameter )
@@ -53,7 +53,7 @@ void RadiusTask::renderPass()
     else
     {
         // `getViewXf().A.z` is the direction towards the camera.
-        Vector3f c = cross( dirTowardsCamera, params_.normal.normalized() );
+        Vector3f c = cross( dirTowardsCamera, params_.normal );
         // I hoped this would fix the excessive spinning of the arrows, but this causes them to jump sometimes, so I'm keeping this disabled for now.
         // if ( dot( worldRadiusVec, c ) < 0 )
         //     c = -c;

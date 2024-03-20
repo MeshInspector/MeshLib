@@ -158,12 +158,20 @@ float FeatureObject::getLineWidth() const
 
 void FeatureObject::setPointSize( float pointSize )
 {
-    pointSize_ = pointSize;
+    if ( pointSize_ != pointSize )
+    {
+        pointSize_ = pointSize;
+        needRedraw_ = true;
+    }
 }
 
 void FeatureObject::setLineWidth( float lineWidth )
 {
-    lineWidth_ = lineWidth;
+    if ( lineWidth_ != lineWidth )
+    {
+        lineWidth_ = lineWidth;
+        needRedraw_ = true;
+    }
 }
 
 float FeatureObject::getSubfeaturePointSize() const
@@ -178,12 +186,20 @@ float FeatureObject::getSubfeatureLineWidth() const
 
 void FeatureObject::setSubfeaturePointSize( float pointSize )
 {
-    subPointSize_ = pointSize;
+    if ( subPointSize_ != pointSize )
+    {
+        subPointSize_ = pointSize;
+        needRedraw_ = true;
+    }
 }
 
 void FeatureObject::setSubfeatureLineWidth( float lineWidth )
 {
-    subLineWidth_ = lineWidth;
+    if ( subLineWidth_ != lineWidth )
+    {
+        subLineWidth_ = lineWidth;
+        needRedraw_ = true;
+    }
 }
 
 float FeatureObject::getMainFeatureAlpha() const
@@ -208,22 +224,38 @@ float FeatureObject::getSubfeatureAlphaMesh() const
 
 void FeatureObject::setMainFeatureAlpha( float alpha )
 {
-    mainFeatureAlpha_ = alpha;
+    if ( mainFeatureAlpha_ != alpha )
+    {
+        mainFeatureAlpha_ = alpha;
+        needRedraw_ = true;
+    }
 }
 
 void FeatureObject::setSubfeatureAlphaPoints( float alpha )
 {
-    subAlphaPoints_ = alpha;
+    if ( subAlphaPoints_ != alpha )
+    {
+        subAlphaPoints_ = alpha;
+        needRedraw_ = true;
+    }
 }
 
 void FeatureObject::setSubfeatureAlphaLines( float alpha )
 {
-    subAlphaLines_ = alpha;
+    if ( subAlphaLines_ != alpha )
+    {
+        subAlphaLines_ = alpha;
+        needRedraw_ = true;
+    }
 }
 
 void FeatureObject::setSubfeatureAlphaMesh( float alpha )
 {
-    subAlphaMesh_ = alpha;
+    if ( subAlphaMesh_ != alpha )
+    {
+        subAlphaMesh_ = alpha;
+        needRedraw_ = true;
+    }
 }
 
 FeatureObject::FeatureObject( int numDimensions )

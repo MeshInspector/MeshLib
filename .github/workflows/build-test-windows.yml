@@ -16,7 +16,7 @@ on:
         type: boolean
 
 env:
-  VCPKG-VERSION: '2024.02.14'
+  VCPKG-VERSION: '2024.03.19'
 
 jobs:
   windows-build-test:

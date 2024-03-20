@@ -1905,13 +1905,13 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
             for ( std::size_t i = 0; i < std::size_t( DimensionsVisualizePropertyType::_count ); i++ )
             {
                 if ( !supportedDimensions[i] )
-                    break;
+                    continue;
 
                 const char* name = nullptr;
                 switch ( DimensionsVisualizePropertyType( i ) )
                 {
-                case DimensionsVisualizePropertyType::radius:
-                    name = "Radius";
+                case DimensionsVisualizePropertyType::diameter:
+                    name = "Diameter";
                     break;
                 case DimensionsVisualizePropertyType::angle:
                     name = "Angle";

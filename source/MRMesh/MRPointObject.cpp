@@ -2,7 +2,6 @@
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
 #include "MRVector3.h"
-#include "MRSceneSettings.h"
 
 namespace MR
 {

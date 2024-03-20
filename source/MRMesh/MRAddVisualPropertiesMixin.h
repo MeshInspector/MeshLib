@@ -47,7 +47,7 @@ protected:
             propertyMasks_[i] = properties[pos++];
     }
 
-    // Constructor sets this to all ones by default.
+    // All enabled by default.
     std::array<ViewportMask, sizeof...(Properties)> propertyMasks_ = []{
         std::array<ViewportMask, sizeof...(Properties)> ret;
         ret.fill( ViewportMask::all() );

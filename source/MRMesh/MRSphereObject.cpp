@@ -3,7 +3,6 @@
 #include "MRMesh.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
-#include "MRSceneSettings.h"
 
 #ifdef _MSC_VER
 #pragma warning(push)

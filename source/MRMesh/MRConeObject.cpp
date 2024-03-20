@@ -8,7 +8,6 @@
 #include "MRMeshFwd.h"
 #include "MRLine.h"
 #include "MRGTest.h"
-#include "MRSceneSettings.h"
 
 #include <iostream>
 #include "MRArrow.h"

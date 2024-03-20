@@ -5,7 +5,6 @@
 #include "MRPch/MRJson.h"
 #include "MRConstants.h"
 #include "MRBestFit.h"
-#include "MRSceneSettings.h"
 
 #ifdef _MSC_VER
 #pragma warning(push)

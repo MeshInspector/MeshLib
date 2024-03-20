@@ -53,7 +53,7 @@ void RadiusTask::renderPass()
     else
     {
         // `getViewXf().A.z` is the direction towards the camera.
-        Vector3f c = cross( dirTowardsCamera, params_.normal );
+        Vector3f c = cross( dirTowardsCamera, params_.normal.normalized() );
         // I hoped this would fix the excessive spinning of the arrows, but this causes them to jump sometimes, so I'm keeping this disabled for now.
         // if ( dot( worldRadiusVec, c ) < 0 )
         //     c = -c;

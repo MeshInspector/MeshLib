@@ -1,6 +1,7 @@
 #include "MRFeatureObject.h"
 #include "MRMatrix3Decompose.h"
 #include "MRMesh/MRSceneColors.h"
+#include "MRMesh/MRSceneSettings.h"
 #include "MRMesh/MRSerializer.h"
 
 #include "json/value.h"
@@ -53,6 +54,16 @@ void FeatureObject::serializeFields_( Json::Value& root ) const
 
     serializeToJson( Vector4f( decorationsColor_[0].get() ), root["DecorationsColorUnselected"] );
     serializeToJson( Vector4f( decorationsColor_[1].get() ), root["DecorationsColorSelected"] );
+
+    root["PointSize"] = pointSize_;
+    root["LineWidth"] = lineWidth_;
+    root["SubPointSize"] = subPointSize_;
+    root["SubLineWidth"] = subLineWidth_;
+
+    root["MainAlpha"] = mainFeatureAlpha_;
+    root["SubAlphaPoints"] = subAlphaPoints_;
+    root["SubAlphaLines"] = subAlphaLines_;
+    root["SubAlphaMesh"] = subAlphaMesh_;
 }
 
 void FeatureObject::deserializeFields_( const Json::Value& root )
@@ -68,6 +79,24 @@ void FeatureObject::deserializeFields_( const Json::Value& root )
     Vector4f color;
     deserializeFromJson( root["DecorationsColorUnselected"], color ); decorationsColor_[0] = Color( color );
     deserializeFromJson( root["DecorationsColorSelected"], color ); decorationsColor_[1] = Color( color );
+
+    if ( const auto& json = root["PointSize"]; json.isDouble() )
+        pointSize_ = json.asFloat();
+    if ( const auto& json = root["LineWidth"]; json.isDouble() )
+        lineWidth_ = json.asFloat();
+    if ( const auto& json = root["SubPointSize"]; json.isDouble() )
+        subPointSize_ = json.asFloat();
+    if ( const auto& json = root["SubLineWidth"]; json.isDouble() )
+        subLineWidth_ = json.asFloat();
+
+    if ( const auto& json = root["MainAlpha"]; json.isDouble() )
+        mainFeatureAlpha_ = json.asFloat();
+    if ( const auto& json = root["SubAlphaPoints"]; json.isDouble() )
+        subAlphaPoints_ = json.asFloat();
+    if ( const auto& json = root["SubAlphaLines"]; json.isDouble() )
+        subAlphaLines_ = json.asFloat();
+    if ( const auto& json = root["SubAlphaMesh"]; json.isDouble() )
+        subAlphaMesh_ = json.asFloat();
 
     // only default xf value serialyze now.
     decomposeMatrix3( xf().A, r_.get(), s_.get() );
@@ -117,10 +146,110 @@ void FeatureObject::setDecorationsColorForAllViewports( ViewportProperty<Color> 
     decorationsColor_[selected] = std::move( val );
 }
 
-FeatureObject::FeatureObject()
+float FeatureObject::getPointSize() const
 {
+    return pointSize_;
+}
+
+float FeatureObject::getLineWidth() const
+{
+    return lineWidth_;
+}
+
+void FeatureObject::setPointSize( float pointSize )
+{
+    pointSize_ = pointSize;
+}
+
+void FeatureObject::setLineWidth( float lineWidth )
+{
+    lineWidth_ = lineWidth;
+}
+
+float FeatureObject::getSubfeaturePointSize() const
+{
+    return subPointSize_;
+}
+
+float FeatureObject::getSubfeatureLineWidth() const
+{
+    return subLineWidth_;
+}
+
+void FeatureObject::setSubfeaturePointSize( float pointSize )
+{
+    subPointSize_ = pointSize;
+}
+
+void FeatureObject::setSubfeatureLineWidth( float lineWidth )
+{
+    subLineWidth_ = lineWidth;
+}
+
+float FeatureObject::getMainFeatureAlpha() const
+{
+    return mainFeatureAlpha_;
+}
+
+float FeatureObject::getSubfeatureAlphaPoints() const
+{
+    return subAlphaPoints_;
+}
+
+float FeatureObject::getSubfeatureAlphaLines() const
+{
+    return subAlphaLines_;
+}
+
+float FeatureObject::getSubfeatureAlphaMesh() const
+{
+    return subAlphaMesh_;
+}
+
+void FeatureObject::setMainFeatureAlpha( float alpha )
+{
+    mainFeatureAlpha_ = alpha;
+}
+
+void FeatureObject::setSubfeatureAlphaPoints( float alpha )
+{
+    subAlphaPoints_ = alpha;
+}
+
+void FeatureObject::setSubfeatureAlphaLines( float alpha )
+{
+    subAlphaLines_ = alpha;
+}
+
+void FeatureObject::setSubfeatureAlphaMesh( float alpha )
+{
+    subAlphaMesh_ = alpha;
+}
+
+FeatureObject::FeatureObject( int numDimensions )
+{
+    setFrontColor( SceneColors::get( SceneColors::SelectedFeatures ), true );
+    setFrontColor( SceneColors::get( SceneColors::UnselectedFeatures ), false );
+    setBackColor( SceneColors::get( SceneColors::FeatureBackFaces ) );
+
     setDecorationsColor( SceneColors::get( SceneColors::UnselectedFeatureDecorations ), false );
     setDecorationsColor( SceneColors::get( SceneColors::SelectedFeatureDecorations ), true );
+
+    setPointSize( SceneSettings::get( SceneSettings::FloatType::FeaturePointSize ) );
+    setLineWidth( SceneSettings::get( SceneSettings::FloatType::FeatureLineWidth ) );
+    setSubfeaturePointSize( SceneSettings::get( SceneSettings::FloatType::FeatureSubPointSize ) );
+    setSubfeatureLineWidth( SceneSettings::get( SceneSettings::FloatType::FeatureSubLineWidth ) );
+
+    if ( numDimensions == 0 )
+        setMainFeatureAlpha( SceneSettings::get( SceneSettings::FloatType::FeaturePointsAlpha ) );
+    else if ( numDimensions == 1 )
+        setMainFeatureAlpha( SceneSettings::get( SceneSettings::FloatType::FeatureLinesAlpha ) );
+    else
+        setMainFeatureAlpha( SceneSettings::get( SceneSettings::FloatType::FeatureMeshAlpha ) );
+
+    setSubfeatureAlphaPoints( SceneSettings::get( SceneSettings::FloatType::FeatureSubPointsAlpha ) );
+    setSubfeatureAlphaLines( SceneSettings::get( SceneSettings::FloatType::FeatureSubLinesAlpha ) );
+    setSubfeatureAlphaMesh( SceneSettings::get( SceneSettings::FloatType::FeatureSubMeshAlpha ) );
 }
 
 void FeatureObject::setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos )

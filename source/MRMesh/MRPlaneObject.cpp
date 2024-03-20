@@ -1,12 +1,12 @@
 #include "MRPlaneObject.h"
 #include "MRMesh.h"
-#include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRMeshBuilder.h"
 #include "MRBestFit.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
 #include "MRMatrix3.h"
 #include "MRVector3.h"
+#include "MRSceneSettings.h"
 
 namespace MR
 {
@@ -59,7 +59,7 @@ void PlaneObject::setSizeX( float size, ViewportId id /*= {}*/ )
     size = size / basePlaneObjectHalfEdgeLength_ / 2.0f; // normalization for base figure dimentions
     auto currentXf = xf( id );
     const auto& s = s_.get( id );
-    currentXf.A = r_.get( id ) * Matrix3f::scale( size, s.y.y, ( s.y.y + size ) / 2.0f ); // z-scale need for correct plane normal display. 
+    currentXf.A = r_.get( id ) * Matrix3f::scale( size, s.y.y, ( s.y.y + size ) / 2.0f ); // z-scale need for correct plane normal display.
     setXf( currentXf, id );
 }
 
@@ -68,7 +68,7 @@ void PlaneObject::setSizeY( float size, ViewportId id /*= {}*/ )
     size = size / basePlaneObjectHalfEdgeLength_ / 2.0f; // normalization for base figure dimentions
     auto currentXf = xf( id );
     Matrix3f r = r_.get( id ), s = s_.get( id );
-    currentXf.A = r * Matrix3f::scale( s.x.x, size, ( s.x.x + size ) / 2.0f ); // z-scale need for correct plane normal display. 
+    currentXf.A = r * Matrix3f::scale( s.x.x, size, ( s.x.x + size ) / 2.0f ); // z-scale need for correct plane normal display.
     setXf( currentXf, id );
 }
 
@@ -121,9 +121,8 @@ const std::vector<FeatureObjectSharedProperty>& PlaneObject::getAllSharedPropert
 }
 
 PlaneObject::PlaneObject()
-{
-    setDefaultFeatureObjectParams( *this );
-}
+    : FeatureObject( 2 )
+{}
 
 // returns transformation matris which rotate initialBasis to finalBasis
 Matrix3f rotateBasis( Matrix3f initialBasis, Matrix3f finalBasis )

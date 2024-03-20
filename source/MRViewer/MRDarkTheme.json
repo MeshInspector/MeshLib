@@ -348,6 +348,24 @@
 		"g": 52,
 		"r": 204
 	},
+    "SelectedFeatures": {
+        "a": 255,
+        "b": 107,
+        "g": 40,
+        "r": 193
+    },
+    "UnselectedFeatures": {
+        "a": 255,
+        "b": 70,
+        "g": 128,
+        "r": 216
+    },
+    "FeatureBackFaces": {
+        "a": 255,
+        "b": 91,
+        "g": 124,
+        "r": 176
+    },
 	"SelectedFeatureDecorations": {
 		"a": 255,
 		"b": 192,

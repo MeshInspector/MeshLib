@@ -39,6 +39,9 @@ const char* SceneColors::getName( Type type )
         case SelectedFaces:                return "SelectedFaces";
         case SelectedEdges:                return "SelectedEdges";
         case SelectedPoints:               return "SelectedPoints";
+        case SelectedFeatures:             return "SelectedFeatures";
+        case UnselectedFeatures:           return "UnselectedFeatures";
+        case FeatureBackFaces:             return "FeatureBackFaces";
         case SelectedFeatureDecorations:   return "SelectedFeatureDecorations";
         case UnselectedFeatureDecorations: return "UnselectedFeatureDecorations";
         case Count:                        break;
@@ -69,6 +72,10 @@ SceneColors::SceneColors()
     colors_[SelectedEdges] = Color( Vector4f{ 0.7f,0.2f,0.7f,1.0f } );
     // color of selected points
     colors_[SelectedPoints] = Color( Vector4f{ 0.8f,0.2f,0.2f,1.0f } );
+
+    colors_[SelectedFeatures] = Color( 193, 40, 107, 255 );
+    colors_[UnselectedFeatures] = Color( 216, 128, 70, 255 );
+    colors_[FeatureBackFaces] = Color( 176, 124, 91, 255 );
 
     colors_[SelectedFeatureDecorations] = Color( 255, 64, 192, 255 );
     colors_[UnselectedFeatureDecorations] = Color( 255, 64, 192, 255 );

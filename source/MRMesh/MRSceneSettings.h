@@ -24,8 +24,12 @@ public:
 
     enum class FloatType
     {
-        // Mesh alpha (0..1) of mesh features (plane, cylinder, cone, ...).
+        FeaturePointsAlpha,
+        FeatureLinesAlpha,
         FeatureMeshAlpha,
+        FeatureSubPointsAlpha,
+        FeatureSubLinesAlpha,
+        FeatureSubMeshAlpha,
         // Line width of line features (line, circle, ...).
         FeatureLineWidth,
         // Line width of line subfeatures (axes, base circles, ...).

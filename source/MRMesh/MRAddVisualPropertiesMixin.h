@@ -13,6 +13,8 @@ requires ( IsVisualizeMaskEnum<decltype(Properties)>::value && ... )
 class AddVisualProperties : public BaseObjectType
 {
 public:
+    using BaseObjectType::BaseObjectType;
+
     bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const override
     {
         return BaseObjectType::supportsVisualizeProperty( type ) || ( ( type.tryGet<decltype( Properties )>() == Properties ) || ... );
@@ -38,11 +40,6 @@ public:
     }
 
 protected:
-    AddVisualProperties()
-    {
-        propertyMasks_.fill( ViewportMask::all() );
-    }
-
     void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override
     {
         BaseObjectType::setAllVisualizeProperties_( properties, pos );
@@ -51,7 +48,11 @@ protected:
     }
 
     // Constructor sets this to all ones by default.
-    std::array<ViewportMask, sizeof...(Properties)> propertyMasks_;
+    std::array<ViewportMask, sizeof...(Properties)> propertyMasks_ = []{
+        std::array<ViewportMask, sizeof...(Properties)> ret;
+        ret.fill( ViewportMask::all() );
+        return ret;
+    }();
 };
 
 }

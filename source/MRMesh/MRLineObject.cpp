@@ -1,12 +1,12 @@
 #include "MRLineObject.h"
 #include "MRMesh.h"
-#include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRMeshBuilder.h"
 #include "MRBestFit.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
 #include "MRMatrix3.h"
 #include "MRVector3.h"
+#include "MRSceneSettings.h"
 
 namespace MR
 {
@@ -64,9 +64,8 @@ Vector3f LineObject::getPointB( ViewportId id /*= {}*/ ) const
 
 
 LineObject::LineObject()
-{
-    setDefaultFeatureObjectParams( *this );
-}
+    : FeatureObject( 1 )
+{}
 
 LineObject::LineObject( const std::vector<Vector3f>& pointsToApprox )
     : LineObject()

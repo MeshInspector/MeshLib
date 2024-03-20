@@ -112,8 +112,31 @@ public:
     MRMESH_API virtual const ViewportProperty<Color>& getDecorationsColorForAllViewports( bool selected ) const;
     MRMESH_API virtual void setDecorationsColorForAllViewports( ViewportProperty<Color> val, bool selected );
 
+    // Point size and line width, for primary rendering rather than subfeatures.
+    [[nodiscard]] MRMESH_API virtual float getPointSize() const;
+    [[nodiscard]] MRMESH_API virtual float getLineWidth() const;
+    MRMESH_API virtual void setPointSize( float pointSize );
+    MRMESH_API virtual void setLineWidth( float lineWidth );
+
+    // Point size and line width, for subfeatures rather than primary rendering.
+    [[nodiscard]] MRMESH_API virtual float getSubfeaturePointSize() const;
+    [[nodiscard]] MRMESH_API virtual float getSubfeatureLineWidth() const;
+    MRMESH_API virtual void setSubfeaturePointSize( float pointSize );
+    MRMESH_API virtual void setSubfeatureLineWidth( float lineWidth );
+
+    // Per-component alpha multipliers. The global alpha is multiplied by thise.
+    [[nodiscard]] MRMESH_API virtual float getMainFeatureAlpha() const;
+    [[nodiscard]] MRMESH_API virtual float getSubfeatureAlphaPoints() const;
+    [[nodiscard]] MRMESH_API virtual float getSubfeatureAlphaLines() const;
+    [[nodiscard]] MRMESH_API virtual float getSubfeatureAlphaMesh() const;
+    MRMESH_API virtual void setMainFeatureAlpha( float alpha );
+    MRMESH_API virtual void setSubfeatureAlphaPoints( float alpha );
+    MRMESH_API virtual void setSubfeatureAlphaLines( float alpha );
+    MRMESH_API virtual void setSubfeatureAlphaMesh( float alpha );
+
 protected:
-    MRMESH_API FeatureObject();
+    // `numDimensions` is 0 for points, 1 for lines, 2 for surface meshes. We don't use 3 at the moment.
+    MRMESH_API FeatureObject( int numDimensions );
 
     MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;
 
@@ -127,6 +150,22 @@ protected:
 
     // This is used for subfeatures. The index is for `isSelected()`.
     std::array<ViewportProperty<Color>, 2> decorationsColor_;
+
+    // Those apply only to some features:
+
+    // Point size and line width, for primary rendering rather than subfeatures.
+    float pointSize_ = 10;
+    float lineWidth_ = 2;
+
+    // Point size and line width, for subfeatures rather than primary rendering.
+    float subPointSize_ = 6;
+    float subLineWidth_ = 1;
+
+    // Per-component alpha multipliers. The global alpha is multiplied by thise.
+    float mainFeatureAlpha_ = 1;
+    float subAlphaPoints_ = 1;
+    float subAlphaLines_ = 1;
+    float subAlphaMesh_ = 0.5f;
 };
 
 }

@@ -1,9 +1,9 @@
 #include "MRSphereObject.h"
 #include "MRMatrix3.h"
 #include "MRMesh.h"
-#include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
+#include "MRSceneSettings.h"
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -77,9 +77,8 @@ FeatureObjectProjectPointResult SphereObject::projectPoint( const Vector3f& poin
 }
 
 SphereObject::SphereObject()
-{
-    setDefaultFeatureObjectParams( *this );
-}
+    : AddVisualProperties( 2 )
+{}
 
 SphereObject::SphereObject( const std::vector<Vector3f>& pointsToApprox )
     : SphereObject()

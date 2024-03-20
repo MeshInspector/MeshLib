@@ -1,8 +1,8 @@
 #include "MRPointObject.h"
-#include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
 #include "MRVector3.h"
+#include "MRSceneSettings.h"
 
 namespace MR
 {
@@ -10,9 +10,8 @@ namespace MR
 MR_ADD_CLASS_FACTORY( PointObject )
 
 PointObject::PointObject()
-{
-    setDefaultFeatureObjectParams( *this );
-}
+    : FeatureObject( 0 )
+{}
 
 PointObject::PointObject( const std::vector<Vector3f>& pointsToApprox )
     : PointObject()

@@ -5,7 +5,6 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRSceneColors.h"
-#include "MRMesh/MRSceneSettings.h"
 #include "MRViewer/MRRenderDefaultUiObject.h"
 #include "MRViewer/MRRenderDimensions.h"
 #include "MRViewer/MRRenderLinesObject.h"
@@ -24,31 +23,49 @@ namespace detail
     class WrappedModelSubobjectPart : public BaseObjectType {};
 
     template <bool IsPrimary>
-    class WrappedModelSubobjectPart<IsPrimary, ObjectPoints> : public ObjectPoints
+    class WrappedModelSubobjectPart<IsPrimary, ObjectPoints> : public ObjectPoints, public virtual RenderWrapObject::BasicWrapperTarget
     {
+    public:
         float getPointSize() const override
         {
-            const_cast<WrappedModelSubobjectPart &>( *this ).setPointSize( SceneSettings::get( IsPrimary ? SceneSettings::FloatType::FeaturePointSize : SceneSettings::FloatType::FeatureSubPointSize ) );
+            const_cast<WrappedModelSubobjectPart &>( *this ).setPointSize( IsPrimary ? dynamic_cast<const FeatureObject*>( target_ )->getPointSize() : dynamic_cast<const FeatureObject*>( target_ )->getSubfeaturePointSize() );
             return ObjectPoints::getPointSize();
+        }
+
+        const ViewportProperty<uint8_t>& getGlobalAlphaForAllViewports() const override
+        {
+            if ( !IsPrimary )
+                const_cast<WrappedModelSubobjectPart &>( *this ).setGlobalAlpha( (std::uint8_t)std::clamp( int( target_->getGlobalAlpha() * dynamic_cast<const FeatureObject*>( target_ )->getSubfeatureAlphaPoints() ), 0, 255 ) );
+            return ObjectPoints::getGlobalAlphaForAllViewports();
         }
     };
 
     template <bool IsPrimary>
-    class WrappedModelSubobjectPart<IsPrimary, ObjectLines> : public ObjectLines
+    class WrappedModelSubobjectPart<IsPrimary, ObjectLines> : public ObjectLines, public virtual RenderWrapObject::BasicWrapperTarget
     {
+    public:
         float getLineWidth() const override
         {
-            const_cast<WrappedModelSubobjectPart &>( *this ).setLineWidth( SceneSettings::get( IsPrimary ? SceneSettings::FloatType::FeatureLineWidth : SceneSettings::FloatType::FeatureSubLineWidth ) );
+            const_cast<WrappedModelSubobjectPart &>( *this ).setLineWidth( IsPrimary ? dynamic_cast<const FeatureObject*>( target_ )->getLineWidth() : dynamic_cast<const FeatureObject*>( target_ )->getSubfeatureLineWidth() );
             return ObjectLines::getLineWidth();
+        }
+
+        const ViewportProperty<uint8_t>& getGlobalAlphaForAllViewports() const override
+        {
+            if ( !IsPrimary )
+                const_cast<WrappedModelSubobjectPart &>( *this ).setGlobalAlpha( (std::uint8_t)std::clamp( int( target_->getGlobalAlpha() * dynamic_cast<const FeatureObject*>( target_ )->getSubfeatureAlphaLines() ), 0, 255 ) );
+            return ObjectLines::getGlobalAlphaForAllViewports();
         }
     };
 
     template <bool IsPrimary>
     class WrappedModelSubobjectPart<IsPrimary, ObjectMesh> : public ObjectMesh, public virtual RenderWrapObject::BasicWrapperTarget
     {
-        const ViewportProperty<uint8_t>& getGlobalAlphaForAllViewports() const
+    public:
+        const ViewportProperty<uint8_t>& getGlobalAlphaForAllViewports() const override
         {
-            const_cast<WrappedModelSubobjectPart &>( *this ).setGlobalAlpha( (std::uint8_t)std::clamp( int( target_->getGlobalAlpha() * SceneSettings::get( SceneSettings::FloatType::FeatureMeshAlpha ) ), 0, 255 ) );
+            if ( !IsPrimary )
+                const_cast<WrappedModelSubobjectPart &>( *this ).setGlobalAlpha( (std::uint8_t)std::clamp( int( target_->getGlobalAlpha() * dynamic_cast<const FeatureObject*>( target_ )->getSubfeatureAlphaMesh() ), 0, 255 ) );
             return ObjectMesh::getGlobalAlphaForAllViewports();
         }
     };
@@ -74,6 +91,13 @@ public:
     const ViewportProperty<Color>& getBackColorsForAllViewports() const override
     {
         return target_->getBackColorsForAllViewports();
+    }
+
+    const ViewportProperty<uint8_t>& getGlobalAlphaForAllViewports() const override
+    {
+        if ( IsPrimary )
+            const_cast<WrappedModelSubobject &>( *this ).setGlobalAlpha( (std::uint8_t)std::clamp( int( target_->getGlobalAlpha() * dynamic_cast<const FeatureObject*>( target_ )->getMainFeatureAlpha() ), 0, 255 ) );
+        return detail::WrappedModelSubobjectPart<IsPrimary, BaseObjectType>::getGlobalAlphaForAllViewports();
     }
 };
 

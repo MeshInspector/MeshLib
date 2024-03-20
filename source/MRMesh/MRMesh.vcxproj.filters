@@ -1200,9 +1200,6 @@
     <ClInclude Include="MRPolylineTrimWithPlane.h">
       <Filter>Source Files\Polyline</Filter>
     </ClInclude>
-    <ClInclude Include="MRDefaultFeatureObjectParams.h">
-      <Filter>Source Files\DataModel\Features</Filter>
-    </ClInclude>
     <ClInclude Include="MRDistanceVolumeParams.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
@@ -2018,9 +2015,6 @@
     </ClCompile>
     <ClCompile Include="MRPolylineTrimWithPlane.cpp">
       <Filter>Source Files\Polyline</Filter>
-    </ClCompile>
-    <ClCompile Include="MRDefaultFeatureObjectParams.cpp">
-      <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRPointsToDistanceVolume.cpp">
       <Filter>Source Files\Voxels</Filter>

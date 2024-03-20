@@ -425,6 +425,10 @@ public:
     //////////////////////
     GLFWwindow* window;
 
+    // A function to reset setting to initial state
+    // Overrides should call previous function
+    std::function<void( Viewer* viewer )> resetSettingsFunction;
+
     // Stores all the viewing options
     std::vector<Viewport> viewport_list;
     size_t selected_viewport_index;
@@ -445,9 +449,9 @@ public:
     int animationMaxFps{ 30 };
     // this parameter can force up/down mouse scroll
     // useful for WebAssembler version because it has too powerful scroll
-    float scrollForce{ 1.0f };
+    float scrollForce{ }; // init in resetSettingsFunction()
     // opengl-based pick window radius in pixels
-    uint16_t glPickRadius{ 0 };
+    uint16_t glPickRadius{ }; // init in resetSettingsFunction()
     // command arguments, each parsed arg should be erased from here not to affect other parsers
     std::vector<std::string> commandArgs;
 

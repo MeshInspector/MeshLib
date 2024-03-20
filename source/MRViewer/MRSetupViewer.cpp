@@ -38,12 +38,25 @@ void ViewerSetup::setupSettingsManager( Viewer* viewer, const std::string& appNa
     viewer->setViewportSettingsManager( std::move( mng ) );
 }
 
+static void resetSettings( Viewer* viewer );
+
 void ViewerSetup::setupConfiguration( Viewer* viewer ) const
 {
     assert( viewer );
 
-    viewer->glPickRadius = 3;
     viewer->enableGlobalHistory( true );
+
+    viewer->resetSettingsFunction = [oldFunction = viewer->resetSettingsFunction] ( Viewer* viewer )
+    {
+        oldFunction( viewer );
+        resetSettings( viewer );
+    };
+    viewer->resetSettingsFunction( viewer );
+}
+
+void resetSettings( Viewer * viewer )
+{
+    viewer->glPickRadius = 3;
 
     viewer->mouseController().setMouseControl( { MouseButton::Right,0 }, MouseMode::Translation );
     MouseController::MouseControlKey rotKey = { MouseButton::Middle,0 };

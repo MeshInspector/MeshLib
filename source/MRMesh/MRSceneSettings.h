@@ -11,6 +11,8 @@ namespace MR
 class SceneSettings
 {
 public:
+    // Reset all scene settings to default values
+    MRMESH_API static void reset();
 
     enum class BoolType
     {
@@ -66,6 +68,7 @@ public:
 private:
     MRMESH_API SceneSettings();
     ~SceneSettings() = default;
+    SceneSettings& operator=( const SceneSettings& other ) = default;
 
     static SceneSettings& instance_();
 

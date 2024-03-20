@@ -159,18 +159,8 @@ bool ViewerSettingsPlugin::onEnable_()
     backgroundColor_.w = -1.0f;
 
     ribbonMenu_ = getViewerInstance().getMenuPluginAs<RibbonMenu>().get();
-    updateThemes();
 
-    auto& viewerRef = getViewerInstance();
-    spaceMouseParams_ = viewerRef.getSpaceMouseParameters();
-#if defined(_WIN32) || defined(__APPLE__)
-    if ( auto spaceMouseHandler = viewerRef.getSpaceMouseHandler() )
-    {
-        auto hidapiHandler = std::dynamic_pointer_cast< MR::SpaceMouseHandlerHidapi >( spaceMouseHandler );
-        if ( hidapiHandler )
-            activeMouseScrollZoom_ = hidapiHandler->isMouseScrollZoomActive();
-    }
-#endif
+    updateDialog_();
 
     return true;
 }
@@ -229,6 +219,9 @@ void ViewerSettingsPlugin::drawQuickTab_( float menuWidth, float menuScaling )
 
 void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScaling )
 {
+    auto& style = ImGui::GetStyle();
+    const float btnHalfSizeX = ( menuWidth - style.WindowPadding.x * 2 - style.ItemSpacing.x ) / 2.f;
+
     UI::separator( menuScaling, "Interface" );
 
     drawThemeSelector_( menuWidth, menuScaling );
@@ -249,8 +242,6 @@ skip:
     if ( savedDialogsVal != savedDialogsBackUp )
         viewer->getMenuPlugin()->enableSavedDialogPositions( savedDialogsVal );
 
-    auto& style = ImGui::GetStyle();
-    const float btnHalfSizeX = ( menuWidth - style.WindowPadding.x * 2 - style.ItemSpacing.x ) / 2.f;
     if ( UI::button( "Toolbar Customize", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu_ )
         ribbonMenu_->openToolbarCustomize();
 
@@ -278,6 +269,11 @@ skip:
         UI::checkbox( "Show Experimental Features", &RibbonSchemaHolder::schema().experimentalFeatures );
         UI::setTooltipIfHovered( "Show experimental ribbon tabs", menuScaling );
     }
+
+    UI::separator( menuScaling, "Global" );
+
+    bool resetClicked = UI::button( "Reset Settings", Vector2f( btnHalfSizeX, 0 ) );
+    drawResetDialog_( resetClicked, menuScaling );
 
     if ( !viewer->isDeveloperFeaturesEnabled() || !RibbonSchemaHolder::schema().experimentalFeatures )
         return; // TODO
@@ -554,6 +550,43 @@ void ViewerSettingsPlugin::drawThemeSelector_( float menuWidth, float menuScalin
     }
 }
 
+void ViewerSettingsPlugin::drawResetDialog_( bool activated, float menuScaling )
+{
+    if ( activated )
+        ImGui::OpenPopup( "Settings reset" );
+    const ImVec2 windowSize{ cModalWindowWidth * menuScaling, -1 };
+    ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling } );
+    if ( ImGui::BeginModalNoAnimation( "Settings reset", nullptr,
+        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar ) )
+    {
+        std::string text = "Reset all application settings?";
+        const float textWidth = ImGui::CalcTextSize( text.c_str() ).x;
+        ImGui::SetCursorPosX( ( windowSize.x - textWidth ) * 0.5f );
+        ImGui::Text( "%s", text.c_str() );
+
+        const auto style = ImGui::GetStyle();
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
+
+        const float p = ImGui::GetStyle().ItemSpacing.x;
+        const Vector2f btnSize{ ( ImGui::GetContentRegionAvail().x - p ) / 2.f, 0 };
+
+        if ( UI::buttonCommonSize( "Reset", btnSize, ImGuiKey_Enter ) )
+        {
+            resetSettings_();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine( 0, p );
+        if ( UI::buttonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
+            ImGui::CloseCurrentPopup();
+
+        ImGui::PopStyleVar();
+        ImGui::EndPopup();
+    }
+    ImGui::PopStyleVar( 2 );
+}
+
 void ViewerSettingsPlugin::drawShadingModeCombo_( bool inGroup, float menuScaling )
 {
     static std::vector<std::string> shadingModes = { "Auto Detect", "Smooth", "Flat" };
@@ -744,6 +777,52 @@ void ViewerSettingsPlugin::drawCustomSettings_( TabType tabType, float menuScali
     {
         settings->draw( menuScaling );
     }
+}
+
+void ViewerSettingsPlugin::updateDialog_()
+{
+    updateThemes();
+
+    spaceMouseParams_ = viewer->getSpaceMouseParameters();
+    touchpadParameters_ = viewer->getTouchpadParameters();
+#if defined(_WIN32) || defined(__APPLE__)
+    if ( auto spaceMouseHandler = viewer->getSpaceMouseHandler() )
+    {
+        auto hidapiHandler = std::dynamic_pointer_cast< MR::SpaceMouseHandlerHidapi >( spaceMouseHandler );
+        if ( hidapiHandler )
+            activeMouseScrollZoom_ = hidapiHandler->isMouseScrollZoomActive();
+    }
+#endif
+}
+
+void ViewerSettingsPlugin::resetSettings_()
+{
+    viewer->getViewportSettingsManager()->resetSettings( *viewer );
+
+    for ( size_t tabType = size_t( 0 ); tabType < size_t( TabType::Count ); tabType++ )
+        for ( auto& settings : comboSettings_[ tabType ] )
+            settings->reset();
+
+    CommandLoop::appendCommand( [shadowGl = shadowGl_.get()] ()
+    {
+        shadowGl->enable( false );
+    } );
+
+    storedSamples_ = 8;
+    if ( auto& settingsManager = viewer->getViewportSettingsManager() )
+        settingsManager->saveInt( "multisampleAntiAliasing", storedSamples_ );
+    needReset_ = storedSamples_ != curSamples_;
+
+#if defined(_WIN32) || defined(__APPLE__)
+    if ( auto spaceMouseHandler = viewer->getSpaceMouseHandler() )
+    {
+        auto hidapiHandler = std::dynamic_pointer_cast< MR::SpaceMouseHandlerHidapi >( spaceMouseHandler );
+        if ( hidapiHandler )
+            hidapiHandler->activateMouseScrollZoom( false );
+    }
+#endif
+
+    updateDialog_();
 }
 
 MR_REGISTER_RIBBON_ITEM( ViewerSettingsPlugin )

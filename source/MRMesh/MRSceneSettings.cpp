@@ -3,6 +3,11 @@
 namespace MR
 {
 
+void SceneSettings::reset()
+{
+    instance_() = SceneSettings();
+}
+
 bool SceneSettings::get( BoolType type )
 {
     return instance_().boolSettings_[int( type )];

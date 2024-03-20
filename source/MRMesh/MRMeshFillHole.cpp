@@ -486,10 +486,16 @@ bool buildCylinderBetweenTwoHoles( Mesh & mesh, const StitchHolesParams& params 
 
 // returns new edge connecting org(a) and org(b),
 // if left or right of new edge is triangular region then makes new faceids
-static EdgeId makeNewEdge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces )
+static EdgeId makeNewEdge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces, FaceId f = {} )
 {
     auto newFace = [&]()
     {
+        if ( f )
+        {
+            auto res = f;
+            f = {};
+            return res;
+        }
         auto res = topology.addFaceId();
         if ( outNewFaces )
             outNewFaces->autoResizeSet( res );
@@ -509,24 +515,30 @@ static EdgeId makeNewEdge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitS
 void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSet * outNewFaces )
 {
     [[maybe_unused]] const auto fsz0 = mesh.topology.faceSize();
+    const FaceId f0 = mesh.topology.left( a0 );
     if ( plan.items.empty() )
     {
         if ( mesh.topology.isLeftTri( a0 ) )
         {
-            assert( plan.numNewTris == 1 );
-            auto newFaceId = mesh.topology.addFaceId();
-            if ( outNewFaces )
-                outNewFaces->autoResizeSet( newFaceId );
-            mesh.topology.setLeft( a0, newFaceId );
+            assert( plan.numTris == 1 );
+            if ( !f0 )
+            {
+                auto newFaceId = mesh.topology.addFaceId();
+                if ( outNewFaces )
+                    outNewFaces->autoResizeSet( newFaceId );
+                mesh.topology.setLeft( a0, newFaceId );
+            }
         }
         else
         {
-            assert( plan.numNewTris >= 3 );
+            assert( plan.numTris >= 3 );
             fillHoleTrivially( mesh, a0, outNewFaces );
         }
     }
     else
     {
+        if ( f0 )
+            mesh.topology.setLeft( a0, {} );
         auto getEdge = [&]( int code )
         {
             if ( code >= 0 )
@@ -537,12 +549,12 @@ void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSe
         {
             EdgeId a = getEdge( plan.items[i].edgeCode1 );
             EdgeId b = getEdge( plan.items[i].edgeCode2 );
-            EdgeId c = makeNewEdge( mesh.topology, a, b, outNewFaces );
+            EdgeId c = makeNewEdge( mesh.topology, a, b, outNewFaces, i + 1 == plan.items.size() ? f0 : FaceId{} );
             plan.items[i].edgeCode1 = (int)c;
         }
     }
     [[maybe_unused]] const auto fsz = mesh.topology.faceSize();
-    assert( plan.numNewTris == int( fsz - fsz0 ) );
+    assert( plan.numTris == int( fsz - fsz0 + ( f0 ? 1 : 0 ) ) );
 }
 
 // Sub cubic complexity
@@ -568,7 +580,7 @@ HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
     if ( loopEdgesCounter <= 3 )
     {
         // no new edges, one triangle
-        res.numNewTris = 1;
+        res.numTris = 1;
         return res;
     }
 
@@ -651,7 +663,7 @@ HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
     if ( finConn.a == -1 || finConn.b == -1 )
     {
         // "trivial" fill
-        res.numNewTris = loopEdgesCounter;
+        res.numTris = loopEdgesCounter;
         return res;
     }
 
@@ -687,7 +699,7 @@ HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
             newEdgesQueue.push( {newEdgesMap[curConn.first.prevA][curConn.first.b],newEdgeCode} );
         }
 
-        ++res.numNewTris;
+        ++res.numTris;
     }
     return res;
 }
@@ -755,7 +767,9 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
 VertId fillHoleTrivially( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces /*= nullptr */ )
 {
     MR_WRITER( mesh );
-    assert( !mesh.topology.left( a ) );
+    const FaceId f0 = mesh.topology.left( a );
+    if ( f0 )
+        mesh.topology.setLeft( a, {} );
 
     auto addFaceId = [&]()
     {
@@ -794,7 +808,7 @@ VertId fillHoleTrivially( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces /*= nul
     }
     // and last face
     assert( mesh.topology.isLeftTri( e0 ) );
-    mesh.topology.setLeft( e0, addFaceId() );
+    mesh.topology.setLeft( e0, f0 ? f0 : addFaceId() );
 
     mesh.topology.setOrg( e0.sym(), centerVert );
 

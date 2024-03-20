@@ -1944,10 +1944,10 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     // fill contours
 
     t.restart( "run TriangulateContourPlans" );
-    int numNewTris = 0;
+    int numTris = 0;
     for ( const auto & hd : holeRepresentativeEdges )
-        numNewTris += hd.plan.numNewTris;
-    const auto expectedTotalTris = mesh.topology.faceSize() + numNewTris;
+        numTris += hd.plan.numTris;
+    const auto expectedTotalTris = mesh.topology.faceSize() + numTris;
 
     mesh.topology.faceReserve( expectedTotalTris );
     if ( params.new2OldMap )
@@ -1958,7 +1958,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
     assert( mesh.topology.faceSize() == expectedTotalTris );
     if ( params.new2OldMap )
-        assert( params.new2OldMap->size() == ( numNewTris != 0 ? expectedTotalTris : mesh.topology.lastValidFace() + 1 ) );
+        assert( params.new2OldMap->size() == ( numTris != 0 ? expectedTotalTris : mesh.topology.lastValidFace() + 1 ) );
 
     res.resultCut = std::move( preRes.paths );
 

@@ -37,7 +37,9 @@ struct [[nodiscard]] Mesh
         std::vector<MeshBuilder::VertDuplication> * dups = nullptr,
         const MeshBuilder::BuildSettings & settings = {} );
 
-    /// construct mesh from vertex coordinates and construct mesh topology from face soup, where each face can have arbitrary degree (not only triangles)
+    /// construct mesh from vertex coordinates and construct mesh topology from face soup,
+    /// where each face can have arbitrary degree (not only triangles);
+    /// all non-triangular faces will be automatically subdivided on triangles
     [[nodiscard]] MRMESH_API static Mesh fromFaceSoup(
         VertCoords vertexCoordinates,
         const std::vector<VertId> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,

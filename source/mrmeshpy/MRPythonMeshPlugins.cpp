@@ -144,6 +144,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FixUndercuts, [] ( pybind11::module_& m )
         "bottomExtension - this parameter specifies how long should bottom prolongation be, if (bottomExtension <= 0) bottomExtension = 2*voxelSize\n"
         "\tif mesh is not closed this is used to prolong hole and make bottom\n"
         "\nif voxelSize == 0.0f it will be counted automaticly" );
+
+    m.def( "findUndercuts", ( void( * )( const Mesh&, const Vector3f&, FaceBitSet& ) )& MR::FixUndercuts::findUndercuts,
+        pybind11::arg( "mesh" ), pybind11::arg( "upDirection" ), pybind11::arg( "outUndercuts" ),
+        "Adds to outUndercuts undercut faces" );
+    m.def( "findUndercuts", ( void( * )( const Mesh&, const Vector3f&, VertBitSet& ) )& MR::FixUndercuts::findUndercuts,
+        pybind11::arg( "mesh" ), pybind11::arg( "upDirection" ), pybind11::arg( "outUndercuts" ),
+        "Adds to outUndercuts undercut vertices" );
 } )
 #endif
 

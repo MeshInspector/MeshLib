@@ -140,18 +140,24 @@ struct FillHoleItem
 };
 
 /// concise representation of proposed hole triangulation
-struct FillHolePlan
+struct HoleFillPlan
 {
     std::vector<FillHoleItem> items;
-    int numNewTris = 0;
+    int numTris = 0; // the number of triangles in the filling
 };
 
-/// similar to fillHole function, but only gets the plan how to fill given hole, not filling it immediately
-MRMESH_API FillHolePlan getFillHolePlan( const Mesh& mesh, EdgeId a0, const FillHoleParams& params = {} );
-/// quickly fills the hole given the plan (quickly compared to fillHole function)
-MRMESH_API void executeFillHolePlan( Mesh & mesh, EdgeId a0, FillHolePlan & plan, FaceBitSet * outNewFaces = nullptr );
+/// prepares the plan how to triangulate the face or hole to the left of (e) (not filling it immediately),
+/// several getHoleFillPlan can work in parallel
+MRMESH_API HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId e, const FillHoleParams& params = {} );
 
-/** \brief Fills hole in mesh trivially\n
+/// prepares the plan how to triangulate the planar face or planar hole to the left of (e) (not filling it immediately),
+/// several getPlanarHoleFillPlan can work in parallel
+MRMESH_API HoleFillPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId e );
+
+/// quickly triangulates the face or hole to the left of (e) given the plan (quickly compared to fillHole function)
+MRMESH_API void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSet * outNewFaces = nullptr );
+
+/** \brief Triangulates face of hole in mesh trivially\n
   * \ingroup FillHoleGroup
   *
   * Fills given hole represented by one of its edges (having no valid left face)\n
@@ -166,7 +172,7 @@ MRMESH_API void executeFillHolePlan( Mesh & mesh, EdgeId a0, FillHolePlan & plan
   * \image html fill/fill_triv_smooth.png "Trivial fill with smooth" width = 250cm
   *
   * \param mesh mesh with hole
-  * \param a EdgeId which represents hole
+  * \param a EdgeId points on the face or hole to the left that will be triangulated
   * \param outNewFaces optional output newly generated faces
   * \return new vertex
   * 

@@ -1577,24 +1577,11 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
     return res;
 }
 
-FillHolePlan getTriangulateContourPlan( const Mesh& mesh, EdgeId e )
-{
-    bool stopOnBad{ false };
-    FillHoleParams params;
-    params.metric = getPlaneNormalizedFillMetric( mesh, e );
-    params.stopBeforeBadTriangulation = &stopOnBad;
-
-    auto res = getFillHolePlan( mesh, e, params );
-    if ( stopOnBad ) // triangulation cannot be good if we fall in this `if`, so let it create degenerated faces
-        res = getFillHolePlan( mesh, e, { getMinAreaMetric( mesh ) } );
-    return res;
-}
-
-void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, FillHolePlan & plan, FaceId oldFace, FaceMap* new2OldMap )
+void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, HoleFillPlan & plan, FaceId oldFace, FaceMap* new2OldMap )
 {
     assert( oldFace.valid() );
     const auto fsz0 = mesh.topology.faceSize();
-    executeFillHolePlan( mesh, e, plan );
+    executeHoleFillPlan( mesh, e, plan );
     if ( new2OldMap )
     {
         const auto fsz = mesh.topology.faceSize();
@@ -1604,7 +1591,7 @@ void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, FillHolePlan & plan, F
 
 void triangulateContour( Mesh& mesh, EdgeId e, FaceId oldFace, FaceMap* new2OldMap )
 {
-    auto plan = getTriangulateContourPlan( mesh, e );
+    auto plan = getPlanarHoleFillPlan( mesh, e );
     executeTriangulateContourPlan( mesh, e, plan, oldFace, new2OldMap );
 }
 
@@ -1913,7 +1900,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     {
         EdgeId e;
         FaceId oldf;
-        FillHolePlan plan;
+        HoleFillPlan plan;
     };
     std::vector<HoleDesc> holeRepresentativeEdges;
     auto addHoleDesc = [&]( EdgeId e, FaceId oldf )
@@ -1951,16 +1938,16 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         for ( size_t i = range.begin(); i < range.end(); ++i )
         {
             auto & hd = holeRepresentativeEdges[i];
-            hd.plan = getTriangulateContourPlan( mesh, hd.e );
+            hd.plan = getPlanarHoleFillPlan( mesh, hd.e );
         }
     } );
     // fill contours
 
     t.restart( "run TriangulateContourPlans" );
-    int numNewTris = 0;
+    int numTris = 0;
     for ( const auto & hd : holeRepresentativeEdges )
-        numNewTris += hd.plan.numNewTris;
-    const auto expectedTotalTris = mesh.topology.faceSize() + numNewTris;
+        numTris += hd.plan.numTris;
+    const auto expectedTotalTris = mesh.topology.faceSize() + numTris;
 
     mesh.topology.faceReserve( expectedTotalTris );
     if ( params.new2OldMap )
@@ -1971,7 +1958,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
     assert( mesh.topology.faceSize() == expectedTotalTris );
     if ( params.new2OldMap )
-        assert( params.new2OldMap->size() == ( numNewTris != 0 ? expectedTotalTris : mesh.topology.lastValidFace() + 1 ) );
+        assert( params.new2OldMap->size() == ( numTris != 0 ? expectedTotalTris : mesh.topology.lastValidFace() + 1 ) );
 
     res.resultCut = std::move( preRes.paths );
 

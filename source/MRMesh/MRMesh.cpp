@@ -4,6 +4,7 @@
 #include "MRAffineXf3.h"
 #include "MRBitSet.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRBox.h"
 #include "MRComputeBoundingBox.h"
 #include "MRConstants.h"
@@ -23,6 +24,7 @@
 #include "MRTriangleIntersection.h"
 #include "MRTriMath.h"
 #include "MRIdentifyVertices.h"
+#include "MRMeshFillHole.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -87,7 +89,31 @@ Mesh Mesh::fromFaceSoup(
     MR_TIMER
     Mesh res;
     res.points = std::move( vertexCoordinates );
-    res.topology = MeshBuilder::fromFaceSoup( verts, faces, settings, cb );
+    res.topology = MeshBuilder::fromFaceSoup( verts, faces, settings, subprogress( cb, 0.0f, 0.8f ) );
+
+    struct FaceFill
+    {
+        HoleFillPlan plan;
+        EdgeId e; // fill left of it
+    };
+    std::vector<FaceFill> faceFills;
+    for ( auto f : res.topology.getValidFaces() )
+    {
+        auto e = res.topology.edgeWithLeft( f );
+        if ( !res.topology.isLeftTri( e ) )
+            faceFills.push_back( { {}, e } );
+    }
+
+    ParallelFor( faceFills, [&]( size_t i )
+    {
+        faceFills[i].plan = getPlanarHoleFillPlan( res, faceFills[i].e );
+    }, subprogress( cb, 0.8f, 0.9f ) );
+
+    for ( auto & x : faceFills )
+        executeHoleFillPlan( res, x.e, x.plan );
+
+    reportProgress( cb, 1.0f );
+
     return res;
 }
 

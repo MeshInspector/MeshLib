@@ -556,12 +556,6 @@ HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
         assert( false );
         return res;
     }
-    if ( mesh.topology.left( a0 ) )
-    {
-        assert( false );
-        spdlog::error( "getHoleFillPlan: edge does not represent a hole" );
-        return res;
-    }
 
     unsigned loopEdgesCounter = 0;
     EdgeId a = a0;

@@ -146,13 +146,13 @@ struct HoleFillPlan
     int numNewTris = 0;
 };
 
-/// prepares the plan how to fill given hole (not filling it immediately),
+/// prepares the plan how to triangulate the face or hole to the left of (e) (not filling it immediately),
 /// several getHoleFillPlan can work in parallel
-MRMESH_API HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId a0, const FillHoleParams& params = {} );
+MRMESH_API HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId e, const FillHoleParams& params = {} );
 
-/// prepares the plan how to fill given planar hole (not filling it immediately),
+/// prepares the plan how to triangulate the planar face or planar hole to the left of (e) (not filling it immediately),
 /// several getPlanarHoleFillPlan can work in parallel
-MRMESH_API HoleFillPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId a0 );
+MRMESH_API HoleFillPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId e );
 
 /// quickly fills the hole given the plan (quickly compared to fillHole function)
 MRMESH_API void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSet * outNewFaces = nullptr );

@@ -70,9 +70,9 @@ bool MoveObjectByMouse::onMouseDown_( MouseButton button, int modifier )
     objWorldXf_ = obj_->worldXf();
     worldStartPoint_ = objWorldXf_( pick.point );
     viewportStartPointZ_ = viewer->viewport().projectToViewportSpace( worldStartPoint_ ).z;
-    
+
     transformMode_ = ( modifier == GLFW_MOD_CONTROL ) ? TransformMode::Rotation : TransformMode::Translation;
-    
+
     if ( transformMode_ == TransformMode::Rotation )
     {
         bboxCenter_ = obj_->getBoundingBox().center();
@@ -102,7 +102,7 @@ bool MoveObjectByMouse::onMouseMove_( int x, int y )
 {
     if ( !obj_ )
         return false;
-    
+
     auto viewportEnd = viewer->screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewer->viewport().id );
     auto worldEndPoint = viewer->viewport().unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
 
@@ -121,10 +121,10 @@ bool MoveObjectByMouse::onMouseMove_( int x, int y )
             angle_ = 0.f;
         else
             angle_ = angle( vectorStart, vectorEnd );
-        
+
         if ( dot( rotationPlane_.n, cross( vectorStart, vectorEnd ) ) > 0.f )
             angle_ = 2.f * PI_F - angle_;
-        
+
         angle_ = angle_ / PI_F * 180.f;
 
         setVisualizeVectors_( { worldBboxCenter_, worldStartPoint_, worldBboxCenter_, worldEndPoint } );
@@ -141,8 +141,14 @@ bool MoveObjectByMouse::onMouseMove_( int x, int y )
 
         auto worldXf = AffineXf3f::translation( worldEndPoint - worldStartPoint_ ) * objWorldXf_;
 
-        auto wbsize = transformed( obj_->getBoundingBox(), worldXf ).size();
-        auto minSizeDim = wbsize.length();
+        // Clamp movement.
+        float minSizeDim = 0;
+        if ( auto worldBox = transformed( obj_->getBoundingBox(), worldXf ); worldBox.valid() ) // Feature objects give an invalid box.
+        {
+            auto wbsize = worldBox.size();
+            minSizeDim = wbsize.length();
+        }
+
         if ( minSizeDim == 0 )
             minSizeDim = 1.f;
 

@@ -1,6 +1,5 @@
 #include "MRCircleObject.h"
 #include "MRMatrix3.h"
-#include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRPolyline.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
@@ -94,9 +93,8 @@ const std::vector<FeatureObjectSharedProperty>& CircleObject::getAllSharedProper
 }
 
 CircleObject::CircleObject()
-{
-    setDefaultFeatureObjectParams( *this );
-}
+    : AddVisualProperties( 1 )
+{}
 
 CircleObject::CircleObject( const std::vector<Vector3f>& pointsToApprox )
     : CircleObject()

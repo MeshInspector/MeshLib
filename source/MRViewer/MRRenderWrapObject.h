@@ -14,15 +14,22 @@ namespace detail
     {
         ObjectType subobject;
     };
+
+    class BasicWrapperTargetUntyped
+    {
+    protected:
+        ~BasicWrapperTargetUntyped() = default;
+    };
 }
 
 // The first template argument of `Wrapper` can inherit from this to know the object we're wrapping.
-class BasicWrapperTarget
+template <std::derived_from<Object> ObjectType>
+class BasicWrapperTarget : public detail::BasicWrapperTargetUntyped
 {
 protected:
     ~BasicWrapperTarget() = default;
 public:
-    const VisualObject* target_ = nullptr;
+    const ObjectType* target_ = nullptr;
 };
 
 // An `IRenderObject` that embeds a data model object and another render object in it.
@@ -34,8 +41,8 @@ public:
     Wrapper( const VisualObject& object )
         : RenderObjectType( detail::SubobjectStorage<ObjectType>::subobject )
     {
-        if constexpr ( std::derived_from<ObjectType, BasicWrapperTarget> )
-            this->subobject.target_ = &object;
+        if constexpr ( std::derived_from<ObjectType, detail::BasicWrapperTargetUntyped> )
+            this->subobject.target_ = &dynamic_cast<decltype(*this->subobject.target_)>( object );
     }
 
     Wrapper( const Wrapper& ) = delete;

@@ -2,7 +2,6 @@
 
 #include "MRMatrix3.h"
 #include "MRMesh.h"
-#include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
 #include "MRConeApproximator.h"
@@ -107,9 +106,8 @@ void ConeObject::setBaseRadius( float radius, ViewportId id /*= {}*/ )
 }
 
 ConeObject::ConeObject()
-{
-    setDefaultFeatureObjectParams( *this );
-}
+    : AddVisualProperties( 2 )
+{}
 
 ConeObject::ConeObject( const std::vector<Vector3f>& pointsToApprox )
     : ConeObject()
@@ -279,7 +277,7 @@ TEST( MRMesh, ConeApproximation )
     error = fit.solve( points, resultCone, approxiamtorParams );
 
     //for debug in case of test fail.
-    //std::cout << "Cone apex (Hem): " << resultCone.center() << " direction:" << resultCone.direction() << " heigh:" 
+    //std::cout << "Cone apex (Hem): " << resultCone.center() << " direction:" << resultCone.direction() << " heigh:"
     // << resultCone.height << " angle:" << resultCone.angle * 180.0f / PI_F << " (degree)" << " error:" << error << std::endl;
 
     EXPECT_NEAR( resultCone.angle, coneAngle, 0.1f );

@@ -1,4 +1,3 @@
-#include "MRMesh/MRDefaultFeatureObjectParams.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRCylinderObject.h"
 #include "MRMatrix3.h"
@@ -86,9 +85,8 @@ void CylinderObject::setCenter( const Vector3f& center, ViewportId id /*= {}*/ )
 }
 
 CylinderObject::CylinderObject()
-{
-    setDefaultFeatureObjectParams( *this );
-}
+    : AddVisualProperties( 2 )
+{}
 
 CylinderObject::CylinderObject( const std::vector<Vector3f>& pointsToApprox )
     : CylinderObject()

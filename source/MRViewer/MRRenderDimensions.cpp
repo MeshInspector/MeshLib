@@ -29,7 +29,7 @@ RadiusTask::RadiusTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Co
 {
     params_.center = xf( params_.center );
     params_.radiusAsVector = xf.A * params_.radiusAsVector;
-    params_.normal = xf.A * params_.normal;
+    params_.normal = ( xf.A * params_.normal ).normalized();
 
     Vector3f depthRefPoint = params_.center;
     if ( !params_.drawAsDiameter )

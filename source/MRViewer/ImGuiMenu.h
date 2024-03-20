@@ -280,9 +280,10 @@ public:
     std::function<float( const VisualObject* )> getter,
     std::function<void( VisualObject*, const float& )> setter);
 
-  void make_uint8_slider( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
-    std::function<uint8_t( const VisualObject* )> getter,
-    std::function<void( VisualObject*, uint8_t )> setter );
+  template <typename T, typename ObjectType>
+  void make_slider( std::vector<std::shared_ptr<ObjectType>> selectedVisualObjs, const char* label,
+    std::function<T( const ObjectType* )> getter,
+    std::function<void( ObjectType*, T )> setter, T min, T max );
 
   void make_points_discretization( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
   std::function<int( const ObjectPointsHolder* )> getter,

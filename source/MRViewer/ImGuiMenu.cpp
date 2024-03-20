@@ -1703,6 +1703,44 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
         } );
     }
 
+    bool allIsFeatureObj = selectedMask == SelectedTypesMask::ObjectFeaturesBit;
+    if ( allIsFeatureObj )
+    {
+        const auto selectedFeatureObjs = getAllObjectsInTree<FeatureObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+
+        float minPointSize = 1, maxPointSize = 20;
+        float minLineWidth = 1, maxLineWidth = 20;
+
+
+
+        make_slider<float, FeatureObject>( selectedFeatureObjs, "Point size",
+            [&] ( const FeatureObject* data ){ return data->getPointSize(); },
+            [&]( FeatureObject* data, float value ){ data->setPointSize( value ); }, minPointSize, maxPointSize );
+        make_slider<float, FeatureObject>( selectedFeatureObjs, "Line width",
+            [&] ( const FeatureObject* data ){ return data->getLineWidth(); },
+            [&]( FeatureObject* data, float value ){ data->setLineWidth( value ); }, minLineWidth, maxLineWidth );
+
+        make_slider<float, FeatureObject>( selectedFeatureObjs, "Point subfeatures size",
+            [&] ( const FeatureObject* data ){ return data->getSubfeaturePointSize(); },
+            [&]( FeatureObject* data, float value ){ data->setSubfeaturePointSize( value ); }, minPointSize, maxPointSize );
+        make_slider<float, FeatureObject>( selectedFeatureObjs, "Line subfeatures width",
+            [&] ( const FeatureObject* data ){ return data->getSubfeatureLineWidth(); },
+            [&]( FeatureObject* data, float value ){ data->setSubfeatureLineWidth( value ); }, minLineWidth, maxLineWidth );
+
+        make_slider<float, FeatureObject>( selectedFeatureObjs, "Main component alpha",
+            [&] ( const FeatureObject* data ){ return data->getMainFeatureAlpha(); },
+            [&]( FeatureObject* data, float value ){ data->setMainFeatureAlpha( value ); }, 0, 1 );
+        make_slider<float, FeatureObject>( selectedFeatureObjs, "Point subfeatures alpha",
+            [&] ( const FeatureObject* data ){ return data->getSubfeatureAlphaPoints(); },
+            [&]( FeatureObject* data, float value ){ data->setSubfeatureAlphaPoints( value ); }, 0, 1 );
+        make_slider<float, FeatureObject>( selectedFeatureObjs, "Line subfeatures alpha",
+            [&] ( const FeatureObject* data ){ return data->getSubfeatureAlphaLines(); },
+            [&]( FeatureObject* data, float value ){ data->setSubfeatureAlphaLines( value ); }, 0, 1 );
+        make_slider<float, FeatureObject>( selectedFeatureObjs, "Mesh subfeatures alpha",
+            [&] ( const FeatureObject* data ){ return data->getSubfeatureAlphaMesh(); },
+            [&]( FeatureObject* data, float value ){ data->setSubfeatureAlphaMesh( value ); }, 0, 1 );
+    }
+
     return closePopup;
 }
 
@@ -2047,13 +2085,13 @@ MR_SUPPRESS_WARNING_POP
 
     if ( !selectedVisualObjs.empty() )
     {
-        make_uint8_slider( selectedVisualObjs, "Opacity", [&] ( const VisualObject* data )
+        make_slider<std::uint8_t, VisualObject>( selectedVisualObjs, "Opacity", [&] ( const VisualObject* data )
         {
             return data->getGlobalAlpha( selectedViewport_ );
         }, [&] ( VisualObject* data, uint8_t alpha )
         {
             data->setGlobalAlpha( alpha, selectedViewport_ );
-        } );
+        }, 0, 255 );
     }
 
     return someChanges;
@@ -2348,15 +2386,17 @@ void ImGuiMenu::make_light_strength( std::vector<std::shared_ptr<VisualObject>> 
             setter( data.get(), value );
 }
 
-
-void ImGuiMenu::make_uint8_slider( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
-    std::function<uint8_t( const VisualObject* )> getter, std::function<void( VisualObject*, uint8_t )> setter )
+template <typename T, typename ObjectType>
+void ImGuiMenu::make_slider( std::vector<std::shared_ptr<ObjectType>> selectedVisualObjs, const char* label,
+    std::function<T( const ObjectType* )> getter, std::function<void( ObjectType*, T )> setter, T min, T max )
 {
     if ( selectedVisualObjs.empty() )
         return;
 
+    using AdjustedT = std::conditional_t<std::is_same_v<T, std::uint8_t>, int, T>;
+
     auto obj = selectedVisualObjs[0];
-    auto value = int( getter( obj.get() ) );
+    auto value = AdjustedT( getter( obj.get() ) );
     bool isAllTheSame = true;
     for ( int i = 1; i < selectedVisualObjs.size(); ++i )
         if ( getter( selectedVisualObjs[i].get() ) != value )
@@ -2368,19 +2408,24 @@ void ImGuiMenu::make_uint8_slider( std::vector<std::shared_ptr<VisualObject>> se
     auto backUpTextColor = ImGui::GetStyle().Colors[ImGuiCol_Text];
     if ( !isAllTheSame )
     {
-        value = 255;
+        value = max;
         ImGui::GetStyle().Colors[ImGuiCol_Text] = undefined;
     }
     const auto valueConstForComparation = value;
 
     ImGui::PushItemWidth( 100 * menu_scaling() );
-    UI::sliderInt( label, &value, 0, 255, "%d", ImGuiSliderFlags_AlwaysClamp );
+    if constexpr ( std::is_same_v<AdjustedT, int> )
+        UI::sliderInt( label, &value, min, max, "%d", ImGuiSliderFlags_AlwaysClamp );
+    else if constexpr ( std::is_same_v<AdjustedT, float> )
+        UI::sliderFloat( label, &value, min, max, "%.3f", ImGuiSliderFlags_AlwaysClamp );
+    else
+        static_assert( dependent_false<AdjustedT>, "Unknown slider value type." );
 
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
     ImGui::PopItemWidth();
     if ( value != valueConstForComparation )
         for ( const auto& data : selectedVisualObjs )
-            setter( data.get(), uint8_t( value ) );
+            setter( data.get(), T( value ) );
 }
 
 template<typename ObjType>

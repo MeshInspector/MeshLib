@@ -437,6 +437,8 @@ void Viewport::setLabel( std::string s )
 
 void Viewport::showAxes( bool on )
 {
+    if ( !Viewer::constInstance()->basisAxes )
+        return;
     Viewer::constInstance()->basisAxes->setVisible( on, id );
     needRedraw_ |= Viewer::constInstance()->basisAxes->getRedrawFlag( id );
     Viewer::constInstance()->basisAxes->resetRedrawFlag();
@@ -444,6 +446,8 @@ void Viewport::showAxes( bool on )
 
 void Viewport::showClippingPlane( bool on )
 {
+    if ( !Viewer::constInstance()->clippingPlaneObject )
+        return;
     Viewer::constInstance()->clippingPlaneObject->setVisible( on, id );
     needRedraw_ |= Viewer::constInstance()->clippingPlaneObject->getRedrawFlag( id );
     Viewer::constInstance()->clippingPlaneObject->resetRedrawFlag();
@@ -451,6 +455,8 @@ void Viewport::showClippingPlane( bool on )
 
 void Viewport::showRotationCenter( bool on )
 {
+    if ( !Viewer::constInstance()->rotationSphere )
+        return;
     Viewer::constInstance()->rotationSphere->setVisible( on, id );
 }
 
@@ -464,6 +470,8 @@ void Viewport::rotationCenterMode( Parameters::RotationCenterMode mode )
 
 void Viewport::showGlobalBasis( bool on )
 {
+    if ( !Viewer::constInstance()->globalBasisAxes )
+        return;
     Viewer::constInstance()->globalBasisAxes->setVisible( on, id );
     needRedraw_ |= Viewer::constInstance()->globalBasisAxes->getRedrawFlag( id );
     Viewer::constInstance()->globalBasisAxes->resetRedrawFlag();

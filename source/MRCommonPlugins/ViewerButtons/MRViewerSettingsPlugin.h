@@ -22,8 +22,7 @@ public:
         Control,
         Viewport,
         Features,
-        Count,
-        Settings = Application // TODO: remove it
+        Count
     };
 
     ViewerSettingsPlugin();
@@ -46,6 +45,8 @@ public:
         virtual const std::string& getName() = 0;
         // the function of drawing the configuration UI
         virtual void draw( float menuScaling ) = 0;
+        // restore the settings to their default values
+        virtual void reset() {}
     };
     // add external settings with UI combo box
     MRCOMMONPLUGINS_API void addComboSettings( const TabType tab, std::shared_ptr<ExternalSettings> settings);
@@ -63,6 +64,7 @@ private:
     void drawFeaturesTab_( float menuScaling );
 
     void drawThemeSelector_( float menuWidth, float menuScaling );
+    void drawResetDialog_( bool activated, float menuScaling );
     void drawShadingModeCombo_( bool inGroup, float menuScaling );
     void drawProjectionModeSelector_( float menuScaling );
     void drawUpDirectionSelector_();
@@ -74,6 +76,9 @@ private:
     void drawTouchpadSettings_( float menuScaling );
 
     void drawCustomSettings_( TabType tabType, float menuScaling );
+
+    void updateDialog_();
+    void resetSettings_();
 
     int curSamples_{ 0 };
     int storedSamples_{ 0 };
@@ -88,7 +93,6 @@ private:
 
     RibbonMenu* ribbonMenu_ = nullptr;
 
-    Vector4f shadowColor4f_;
     std::unique_ptr<ShadowsGL> shadowGl_;
 
     SpaceMouseParameters spaceMouseParams_;

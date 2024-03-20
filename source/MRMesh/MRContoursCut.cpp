@@ -268,6 +268,7 @@ TrianglesSortRes sortPropagateContour(
     auto getNextPrev = [&] ( IntersectionId interData, IntersectionId stopInter, bool left, bool next )->IntersectionId
     {
         const auto& contour = left ? lContour : rContour;
+        bool closed = isClosed( contour );
         int step = left ? 1 : stepRight;
         if ( !next )
             step *= -1;
@@ -276,7 +277,6 @@ TrianglesSortRes sortPropagateContour(
         for ( ;;)
         {
             int nextIndex = nextL + step;
-            bool closed = isClosed( contour );
             if ( !closed && ( nextIndex < 0 || nextIndex >= size ) )
                 return {}; // reached end of non closed contour
             nextL = IntersectionId( ( nextIndex + size ) % size );
@@ -386,6 +386,8 @@ TrianglesSortRes sortPropagateContour(
 
         return sortTrianglesSymmetrical( sortData, el, er, fl, fr, baseEdgeOr, EdgeSortState::Straight );
     };
+    bool lPassedFullRing = false;
+    bool rPassedFullRing = false;
     TrianglesSortRes res = TrianglesSortRes::Undetermined;
     for ( ; tryNext || tryPrev; )
     {
@@ -397,6 +399,14 @@ TrianglesSortRes sortPropagateContour(
             res = checkOther( false );
         if ( res != TrianglesSortRes::Undetermined )
             return res;
+
+        if ( !lPassedFullRing && lNext == il.intersectionId )
+            lPassedFullRing = true;
+        if ( !rPassedFullRing && rNext == ir.intersectionId )
+            rPassedFullRing = true;
+
+        if ( lPassedFullRing && rPassedFullRing )
+            return TrianglesSortRes::Undetermined; // both contours passed a round, so break infinite loop
     }
 
     return res;

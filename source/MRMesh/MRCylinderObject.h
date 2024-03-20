@@ -12,7 +12,7 @@ namespace MR
 /// Object to show Cylinder feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
 class MRMESH_CLASS CylinderObject : public AddVisualProperties<FeatureObject,
-    DimensionsVisualizePropertyType::radius,
+    DimensionsVisualizePropertyType::diameter,
     DimensionsVisualizePropertyType::length
 >
 {

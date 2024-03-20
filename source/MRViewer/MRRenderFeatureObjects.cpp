@@ -256,7 +256,7 @@ void RenderCircleFeatureObject::renderUi( const UiRenderParams& params )
 {
     RenderObjectCombinator::renderUi( params );
 
-    if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::radius, params.viewportId ) )
+    if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::diameter, params.viewportId ) )
     {
         radiusTask_ = RenderDimensions::RadiusTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .drawAsDiameter = true } );
         params.tasks->push_back( { std::shared_ptr<void>{}, &radiusTask_ } ); // A non-owning `shared_ptr`.
@@ -334,7 +334,7 @@ void RenderSphereFeatureObject::renderUi( const UiRenderParams& params )
 {
     RenderObjectCombinator::renderUi( params );
 
-    if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::radius, params.viewportId ) )
+    if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::diameter, params.viewportId ) )
     {
         radiusTask_ = RenderDimensions::RadiusTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .drawAsDiameter = true, .isSpherical = true } );
         params.tasks->push_back( { std::shared_ptr<void>{}, &radiusTask_ } ); // A non-owning `shared_ptr`.
@@ -368,7 +368,7 @@ void RenderCylinderFeatureObject::renderUi( const UiRenderParams& params )
 {
     RenderObjectCombinator::renderUi( params );
 
-    if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::radius, params.viewportId ) )
+    if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::diameter, params.viewportId ) )
     {
         radiusTask_ = RenderDimensions::RadiusTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .drawAsDiameter = true } );
         params.tasks->push_back( { std::shared_ptr<void>{}, &radiusTask_ } ); // A non-owning `shared_ptr`.
@@ -409,7 +409,7 @@ void RenderConeFeatureObject::renderUi( const UiRenderParams& params )
 {
     RenderObjectCombinator::renderUi( params );
 
-    if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::radius, params.viewportId ) )
+    if ( object_->getVisualizeProperty( DimensionsVisualizePropertyType::diameter, params.viewportId ) )
     {
         radiusTask_ = RenderDimensions::RadiusTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .center = Vector3f( 0, 0, 1 ), .drawAsDiameter = true } );
         params.tasks->push_back( { std::shared_ptr<void>{}, &radiusTask_ } ); // A non-owning `shared_ptr`.

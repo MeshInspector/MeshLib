@@ -12,7 +12,7 @@ namespace MR
 /// Object to show Cone feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
 class MRMESH_CLASS ConeObject : public AddVisualProperties<FeatureObject,
-    DimensionsVisualizePropertyType::radius,
+    DimensionsVisualizePropertyType::diameter,
     DimensionsVisualizePropertyType::angle,
     DimensionsVisualizePropertyType::length
 >

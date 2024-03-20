@@ -25,10 +25,17 @@ bool RibbonSchemaHolder::addItem( std::shared_ptr<RibbonMenuItem> item )
     auto& staticMap = schema().items;
     if ( !item )
         return false;
+
     if ( staticMap.find( item->name() ) != staticMap.end() )
+    {
+        spdlog::warn( "Attempt to register again ribbon item {}", item->name() );
         return false;
+    }
 
     staticMap[item->name()] = { item };
+#ifndef NDEBUG
+    spdlog::info( "Register ribbon item {}", item->name() );
+#endif
     return true;
 }
 

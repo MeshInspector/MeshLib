@@ -13,8 +13,8 @@ public:
     RenderLabelObject( const VisualObject& visObj );
     ~RenderLabelObject();
 
-    virtual void render( const ModelRenderParams& params ) override;
-    virtual void renderPicker( const ModelRenderParams& params, unsigned geomId ) override;
+    virtual bool render( const ModelRenderParams& params ) override;
+    virtual void renderPicker( const ModelBaseRenderParams& params, unsigned geomId ) override;
 
     virtual size_t heapBytes() const override;
     virtual size_t glBytes() const override;

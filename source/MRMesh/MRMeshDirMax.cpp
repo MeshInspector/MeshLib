@@ -54,10 +54,7 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
 
     VertId res;
     if ( tree.nodes().empty() )
-    {
-        assert( false );
         return res;
-    }
 
     struct SubTask
     {

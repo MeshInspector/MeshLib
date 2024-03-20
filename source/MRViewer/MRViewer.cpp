@@ -384,19 +384,19 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
             nextH = false;
             reserved = true;
         }
-        else if ( 
-            flag == "-noWindow" || 
-            flag == "-fullscreen" || 
-            flag == "-noClose" || 
-            flag == "-noEventLoop" || 
-            flag == "-hidden" || 
+        else if (
+            flag == "-noWindow" ||
+            flag == "-fullscreen" ||
+            flag == "-noClose" ||
+            flag == "-noEventLoop" ||
+            flag == "-hidden" ||
             flag == "-tryHidden" ||
-            flag == "-transparentBgOn" || 
-            flag == "-transparentBgOff" || 
+            flag == "-transparentBgOn" ||
+            flag == "-transparentBgOff" ||
             flag == "-noSplash" ||
             flag == "-console" ||
             flag == "-openGL3" ||
-            flag == "-noRenderInTexture" || 
+            flag == "-noRenderInTexture" ||
             flag == "-develop"
             )
             reserved = true;
@@ -1434,40 +1434,19 @@ void Viewer::resetRedraw_()
     resetRedrawFlagRecursive( SceneRoot::get() );
 }
 
-MR::Viewer::VisualObjectRenderType Viewer::getObjRenderType_( const VisualObject* obj, ViewportId viewportId ) const
-{
-    if ( !obj )
-        return VisualObjectRenderType::Opaque;
-
-    if ( !obj->getVisualizeProperty( VisualizeMaskType::DepthTest, viewportId ) )
-        return VisualObjectRenderType::NoDepthTest;
-#ifndef __EMSCRIPTEN__
-    if ( auto voxObj = obj->asType<ObjectVoxels>() )
-    {
-        if ( voxObj->isVolumeRenderingEnabled() )
-            return  VisualObjectRenderType::VolumeRendering;
-    }
-#endif
-    if ( obj->getGlobalAlpha( viewportId ) < 255 ||
-        obj->getFrontColor( obj->isSelected(), viewportId ).a < 255 ||
-        obj->getBackColor( viewportId ).a < 255 )
-        return VisualObjectRenderType::Transparent;
-
-    return VisualObjectRenderType::Opaque;
-}
-
-void Viewer::recursiveDraw_( const Viewport& vp, const Object& obj, const AffineXf3f& parentXf, VisualObjectRenderType renderType, int* numDraws ) const
+void Viewer::recursiveDraw_( const Viewport& vp, const Object& obj, const AffineXf3f& parentXf, RenderModelPassMask renderType, int* numDraws ) const
 {
     if ( !obj.isVisible( vp.id ) )
         return;
     auto xfCopy = parentXf * obj.xf( vp.id );
     auto visObj = obj.asType<VisualObject>();
-    if ( visObj && ( renderType == getObjRenderType_( visObj, vp.id ) ) )
+    if ( visObj )
     {
-        bool alphaNeed = renderType == VisualObjectRenderType::Transparent && alphaSortEnabled_;
-        vp.draw( *visObj, xfCopy, DepthFunction::Default, alphaNeed );
-        if ( numDraws )
-            ++( *numDraws );
+        if ( vp.draw( *visObj, xfCopy, DepthFunction::Default, renderType, alphaSortEnabled_ ) )
+        {
+            if ( numDraws )
+                ++( *numDraws );
+        }
     }
     for ( const auto& child : obj.children() )
         recursiveDraw_( vp, *child, xfCopy, renderType, numDraws );
@@ -1633,11 +1612,11 @@ void Viewer::drawScene()
 
     for ( const auto& viewport : viewport_list )
     {
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), VisualObjectRenderType::Opaque );
+        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::Opaque );
 #ifndef __EMSCRIPTEN__
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), VisualObjectRenderType::VolumeRendering );
+        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::VolumeRendering );
 #endif
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), VisualObjectRenderType::Transparent, &numTransparent );
+        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::Transparent, &numTransparent );
     }
 
     drawSignal();
@@ -1649,7 +1628,7 @@ void Viewer::drawScene()
     }
     // draw after alpha texture
     for ( const auto& viewport : viewport_list )
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), VisualObjectRenderType::NoDepthTest );
+        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::NoDepthTest );
 
     postDrawPreViewportSignal();
 

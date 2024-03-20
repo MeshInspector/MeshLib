@@ -32,7 +32,7 @@ IF(MR_EMSCRIPTEN)
     imgui
     glfw
   )
-ELSE() # MR_EMSCRIPTEN
+ELSE() # NOT MR_EMSCRIPTEN
   IF(APPLE)
     # TODO: CMAKE_PREFIX_PATH for thirdparty
     #find_package(nfd REQUIRED)
@@ -59,7 +59,8 @@ ELSE() # MR_EMSCRIPTEN
       hidapi
       ${APPKIT_LIBRARY}
     )
-  ELSE() # NOT APPLE
+  ELSE() # NOT APPLE and NOT EMPSCRIPTEN
+    find_package(GDCM CONFIG REQUIRED)
     pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
 
     target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -80,6 +81,7 @@ ELSE() # MR_EMSCRIPTEN
       fmt
       openvdb
       tbb
+      ${MR_PYTHON_LIB}
     )
     target_include_directories(${PROJECT_NAME} PRIVATE
       ${GTKMM_INCLUDE_DIRS}
@@ -137,6 +139,6 @@ install(
   DESTINATION ${MR_CONFIG_DIR}
 )
 
-IF(MR_EMSCRIPTEN)
+IF(MR_PCH)
   TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()

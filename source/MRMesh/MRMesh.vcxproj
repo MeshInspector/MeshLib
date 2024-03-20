@@ -379,6 +379,7 @@
     <ClInclude Include="MRSubfeatures.h" />
     <ClInclude Include="MRAddVisualPropertiesMixin.h" />
     <ClInclude Include="MRObjectDimensionsEnum.h" />
+    <ClInclude Include="MRRenderModelParameters.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />

@@ -214,7 +214,7 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet & changedVerts )
     }
 }
 
-TEST(MRMesh, AABBTree) 
+TEST(MRMesh, AABBTree)
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );
     AABBTree tree( sphere );
@@ -231,6 +231,13 @@ TEST(MRMesh, AABBTree)
     fs.autoResizeSet( 1_f );
     AABBTree smallerTree( { sphere, &fs } );
     EXPECT_EQ( smallerTree.nodes().size(), 1 );
+}
+
+TEST(MRMesh, ProjectionToEmptyMesh)
+{
+    Vector3f p( 1.f, 2.f, 3.f );
+    bool hasProjection = Mesh{}.projectPoint( p ).has_value();
+    EXPECT_FALSE( hasProjection );
 }
 
 } //namespace MR

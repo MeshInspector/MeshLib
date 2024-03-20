@@ -25,7 +25,7 @@ The goal which we set when designing MeshLib was to value simplicity and perform
 
 * [MeshInspector YouTube channel](https://www.youtube.com/channel/UCv9bNhwoVDPaLPPyWJeVPNg)
 
-* [MeshLib Documentation](https://meshinspector.github.io/MeshLib/html/index.html)
+* [MeshLib Documentation](https://meshlib.meshinspector.com/documentation/)
 
 * [Email us](mailto:support@meshinspector.com)
 
@@ -133,7 +133,7 @@ pip install --upgrade pip
 pip install meshlib
 ```
 
-See Python Basic Examples [here](https://meshinspector.github.io/MeshLib/html/HowToBasic.html) or search for more complex ones on [stackoverflow.com](https://stackoverflow.com/).
+See Python Basic Examples [here](https://meshlib.meshinspector.com/documentation/HowToBasic.html) or search for more complex ones on [stackoverflow.com](https://stackoverflow.com/).
 
 # Build
 ## Windows

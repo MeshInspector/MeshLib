@@ -1991,8 +1991,7 @@ void RibbonMenu::addRibbonItemShortcut_( const std::string& itemName, const Shor
 
 void RibbonMenu::setupShortcuts_()
 {
-    if ( !shortcutManager_ )
-        shortcutManager_ = std::make_shared<ShortcutManager>();
+    ImGuiMenu::setupShortcuts_();
 
     shortcutManager_->setShortcut( { GLFW_KEY_H,0 }, { ShortcutManager::Category::View, "Toggle selected objects visibility", [] ()
     {

@@ -283,9 +283,10 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     /// draws this object for visualization
-    MRMESH_API virtual void render( const ModelRenderParams& ) const;
+    /// Returns true if something was drawn.
+    MRMESH_API virtual bool render( const ModelRenderParams& ) const;
     /// draws this object for picking
-    MRMESH_API virtual void renderForPicker( const ModelRenderParams&, unsigned ) const;
+    MRMESH_API virtual void renderForPicker( const ModelBaseRenderParams&, unsigned ) const;
     /// draws this object for 2d UI
     MRMESH_API virtual void renderUi( const UiRenderParams& params ) const;
 

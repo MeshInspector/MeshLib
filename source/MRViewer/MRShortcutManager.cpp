@@ -63,6 +63,17 @@ bool ShortcutManager::processShortcut( const ShortcutKey& key, Reason reason ) c
     return false;
 }
 
+bool ShortcutManager::onKeyDown_( int key, int modifier )
+{
+    return processShortcut( {key, modifier }, Reason::KeyDown );
+}
+
+
+bool ShortcutManager::onKeyRepeat_( int key, int modifier )
+{
+    return processShortcut( { key, modifier }, Reason::KeyRepeat );
+}
+
 std::string ShortcutManager::getModifierString( int mod )
 {
     switch ( mod )

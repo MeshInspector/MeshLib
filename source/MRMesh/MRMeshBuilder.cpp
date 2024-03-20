@@ -305,6 +305,11 @@ MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const Vector<VertS
         faceAdded += faceAddedOnThisPass;
         reportProgress( progressCb, faceAdded * rtarget );
     }
+    if ( settings.region )
+    {
+        active |= bad;
+        *settings.region = std::move( active );
+    }
     return res;
 }
 

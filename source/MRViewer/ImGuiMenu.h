@@ -35,6 +35,7 @@ enum class SelectedTypesMask
     ObjectMeshHolderBit = 1 << 3,
     ObjectLabelBit = 1 << 4,
     ObjectMeshBit = 1 << 5,
+    ObjectFeaturesBit = 1 << 6,
 };
 MR_MAKE_FLAG_OPERATORS( SelectedTypesMask )
 

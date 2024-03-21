@@ -57,8 +57,9 @@ Expected<MR::VertBitSet> getLargeComponentsUnion( UnionFind<VertId>& unionStruct
     const auto& allRoots = unionStructs.roots();
     ProgressCallback subPc = subprogress( pc, 0.f, 0.5f );
     int counter = 0;
-    const float counterMax = float( region.count() );
-    const int counterDivider = int( region.count() ) / 100;
+    const auto regionCount = region.count();
+    const float counterMax = float( regionCount );
+    const int counterDivider = int( regionCount ) / 100;
     HashMap<VertId, int> root2size;
     for ( auto v : region )
     {

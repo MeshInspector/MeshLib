@@ -18,7 +18,9 @@ namespace PointCloudComponents
 /// \param minSize must be more than 1
 [[nodiscard]] MRMESH_API Expected<VertBitSet> getLargeComponentsUnion( const PointCloud& pointCloud, float maxDist,
     int minSize, ProgressCallback pc = {} );
-// \note have side effect: call unionStructs.roots() that change unionStructs
+/// returns the union of vertices components containing at least minSize points
+/// \param unionStructs prepared point union structure
+/// \note have side effect: call unionStructs.roots() that change unionStructs
 [[nodiscard]] MRMESH_API Expected<VertBitSet> getLargeComponentsUnion( UnionFind<VertId>& unionStructs,
     const VertBitSet& region, int minSize, ProgressCallback pc = {} );
 

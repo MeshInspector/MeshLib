@@ -44,6 +44,8 @@ const char* SceneColors::getName( Type type )
         case FeatureBackFaces:             return "FeatureBackFaces";
         case SelectedFeatureDecorations:   return "SelectedFeatureDecorations";
         case UnselectedFeatureDecorations: return "UnselectedFeatureDecorations";
+        case SelectedMeasurements:         return "SelectedMeasurements";
+        case UnselectedMeasurements:       return "UnselectedMeasurements";
         case Count:                        break;
     }
     assert( false && "Invalid enum." );
@@ -79,6 +81,9 @@ SceneColors::SceneColors()
 
     colors_[SelectedFeatureDecorations] = Color( 255, 64, 192, 255 );
     colors_[UnselectedFeatureDecorations] = Color( 255, 64, 192, 255 );
+
+    colors_[SelectedMeasurements] = Color( 50, 255, 240, 255 );
+    colors_[UnselectedMeasurements] = Color( 255, 255, 255, 255 );
 }
 
 }

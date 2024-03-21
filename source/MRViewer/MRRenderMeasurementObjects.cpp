@@ -5,8 +5,6 @@
 namespace MR
 {
 
-static Color cMeasurementColor( 255, 255, 255, 255 );
-
 MR_REGISTER_RENDER_OBJECT_IMPL( DistanceMeasurementObject, RenderDistanceObject )
 RenderDistanceObject::RenderDistanceObject( const VisualObject& object )
     : RenderDefaultUiObject( object ), object_( &dynamic_cast<const DistanceMeasurementObject&>( object ) )
@@ -16,7 +14,7 @@ void RenderDistanceObject::renderUi( const UiRenderParams& params )
 {
     Vector3f pointA = object_->getWorldPoint();
     Vector3f pointB = pointA + object_->getWorldDelta();
-    task_ = RenderDimensions::LengthTask( params, {}, cMeasurementColor, {
+    task_ = RenderDimensions::LengthTask( params, {}, object_->getFrontColor( object_->isSelected(), params.viewportId ), {
         .points = { pointA, pointB },
         .drawAsNegative = object_->getDrawAsNegative()
     } );
@@ -30,7 +28,7 @@ RenderRadiusObject::RenderRadiusObject( const VisualObject& object )
 
 void RenderRadiusObject::renderUi( const UiRenderParams& params )
 {
-    task_ = RenderDimensions::RadiusTask( params, {}, cMeasurementColor, {
+    task_ = RenderDimensions::RadiusTask( params, {}, object_->getFrontColor( object_->isSelected(), params.viewportId ), {
         .center = object_->getWorldCenter(),
         .radiusAsVector = object_->getWorldRadiusAsVector(),
         .normal = object_->getWorldNormal(),
@@ -48,7 +46,7 @@ RenderAngleObject::RenderAngleObject( const VisualObject& object )
 
 void RenderAngleObject::renderUi( const UiRenderParams& params )
 {
-    task_ = RenderDimensions::AngleTask( params, {}, cMeasurementColor, {
+    task_ = RenderDimensions::AngleTask( params, {}, object_->getFrontColor( object_->isSelected(), params.viewportId ), {
         .center = object_->getWorldPoint(),
         .rays = {
             object_->getWorldRay( false ),

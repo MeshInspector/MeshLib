@@ -32,8 +32,12 @@ namespace MR
 /// this metric is symmetric: m(e) == m(e.sym())
 [[nodiscard]] MRMESH_API EdgeMetric edgeCurvMetric( const Mesh & mesh, float angleSinFactor = 2, float angleSinForBoundary = 0 );
 
-/// pre-computes the metric for all mesh edges to quickly return it later for any edge
-[[nodiscard]] MRMESH_API EdgeMetric edgeTableMetric( const MeshTopology & topology, const EdgeMetric & metric );
+/// pre-computes the metric for all mesh edges to quickly return it later for any edge;
+/// input metric must be symmetric: metric(e) == metric(e.sym())
+[[nodiscard]] MRMESH_API EdgeMetric edgeTableSymMetric( const MeshTopology & topology, const EdgeMetric & metric );
+
+[[deprecated]] inline EdgeMetric edgeTableMetric( const MeshTopology & topology, const EdgeMetric & metric )
+    { return edgeTableSymMetric( topology, metric ); }
 
 /// \}
 

@@ -10,7 +10,7 @@ namespace MR
 class MeasurementObject : public VisualObject
 {
 protected:
-    MeasurementObject() = default;
+    MRMESH_API MeasurementObject();
 };
 
 }

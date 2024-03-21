@@ -35,6 +35,8 @@ struct SceneColors
         FeatureBackFaces,
         SelectedFeatureDecorations,
         UnselectedFeatureDecorations,
+        SelectedMeasurements,
+        UnselectedMeasurements,
         Count [[maybe_unused]],
     };
 

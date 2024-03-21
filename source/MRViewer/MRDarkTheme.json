@@ -378,6 +378,18 @@
 		"g": 64,
 		"r": 255
 	},
+    "SelectedMeasurements": {
+        "a": 255,
+        "b": 240,
+        "g": 55,
+        "r": 50
+    },
+    "UnselectedMeasurements": {
+        "a": 255,
+        "b": 255,
+        "g": 255,
+        "r": 255
+    },
 	"SelectedObjectMesh": {
 		"a": 255,
 		"b": 236,

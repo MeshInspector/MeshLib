@@ -18,7 +18,7 @@ static constexpr float ContourEdge = FLT_MAX;
 class GraphCut
 {
 public:
-    GraphCut( const MeshTopology & topology, const EdgeMetric & metric );
+    GraphCut( const MeshTopology & topology, const UndirectedEdgeToFloatFunc & metric );
     void addContour( const EdgePath & contour );
     void addFaces( const FaceBitSet& source, const FaceBitSet& sink );
     FaceBitSet fill();
@@ -43,7 +43,7 @@ private:
     bool checkNotSaturatedPath_( FaceId f, int side ) const;
 };
 
-GraphCut::GraphCut( const MeshTopology & topology, const EdgeMetric & metric ) : topology_( topology )
+GraphCut::GraphCut( const MeshTopology & topology, const UndirectedEdgeToFloatFunc & metric ) : topology_( topology )
 {
     MR_TIMER
 
@@ -326,7 +326,7 @@ bool GraphCut::checkNotSaturatedPath_( FaceId f, int side ) const
     }
 }
 
-FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const EdgePath & contour, const EdgeMetric & metric )
+FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const EdgePath & contour, const UndirectedEdgeToFloatFunc & metric )
 {
     MR_TIMER
     GraphCut filler( topology, metric );
@@ -334,7 +334,7 @@ FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const EdgeP
     return filler.fill();
 }
 
-FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const std::vector<EdgePath> & contours, const EdgeMetric & metric )
+FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const std::vector<EdgePath> & contours, const UndirectedEdgeToFloatFunc & metric )
 {
     MR_TIMER
     GraphCut filler( topology, metric );
@@ -343,7 +343,7 @@ FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const std::
     return filler.fill();
 }
 
-FaceBitSet segmentByGraphCut( const MeshTopology& topology, const FaceBitSet& source, const FaceBitSet& sink, const EdgeMetric& metric )
+FaceBitSet segmentByGraphCut( const MeshTopology& topology, const FaceBitSet& source, const FaceBitSet& sink, const UndirectedEdgeToFloatFunc& metric )
 {
     MR_TIMER
     GraphCut filler( topology, metric );

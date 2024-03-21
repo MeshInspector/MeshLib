@@ -37,7 +37,7 @@ constexpr float PenaltyFactor = 128.0f;
 static EdgePath smallestPathInPositiveHalfspace(
     const Mesh & mesh, const Plane3f & plane,
     EdgeId e0, EdgeId e1,
-    const EdgeMetric & edgeMetric )
+    const UndirectedEdgeToFloatFunc & edgeMetric )
 {
     assert( plane.distance( mesh.orgPnt( e0 ) ) <= 0 );
     assert( plane.distance( mesh.destPnt( e0 ) ) >= 0 );
@@ -73,7 +73,7 @@ static EdgePath smallestPathInPositiveHalfspace(
 static EdgePath smallestPathInPositiveWedge(
     const Mesh & mesh, const Plane3f & plane0, const Plane3f & plane1,
     EdgeId e0, EdgeId e1,
-    const EdgeMetric & edgeMetric )
+    const UndirectedEdgeToFloatFunc & edgeMetric )
 {
     assert( plane0.distance( mesh.orgPnt( e0 ) ) <= 0 );
     assert( plane0.distance( mesh.destPnt( e0 ) ) >= 0 );
@@ -108,7 +108,7 @@ static EdgePath smallestPathInPositiveWedge(
 static EdgePath smallestPathInPositiveHalfspace(
     const Mesh & mesh, const Plane3f & plane,
     VertId v0, VertId v1,
-    const EdgeMetric & edgeMetric )
+    const UndirectedEdgeToFloatFunc & edgeMetric )
 {
     auto planeMetric = [&]( EdgeId e ) -> float
     {
@@ -142,7 +142,7 @@ static EdgePath smallestPathInPositiveHalfspace(
 static EdgePath smallestPathInPositiveWedge(
     const Mesh & mesh, const Plane3f & plane0, const Plane3f & plane1,
     VertId v0, VertId v1,
-    const EdgeMetric & edgeMetric )
+    const UndirectedEdgeToFloatFunc & edgeMetric )
 {
     auto wedgeMetric = [&]( EdgeId e ) -> float
     {
@@ -170,7 +170,7 @@ static EdgePath smallestPathInPositiveWedge(
 EdgeLoop surroundingContour(
     const Mesh & mesh,
     std::vector<EdgeId> includeEdges,
-    const EdgeMetric & edgeMetric,
+    const UndirectedEdgeToFloatFunc & edgeMetric,
     const Vector3f & dir
 )
 {
@@ -236,7 +236,7 @@ EdgeLoop surroundingContour(
 EdgeLoop surroundingContour(
     const Mesh & mesh,
     std::vector<VertId> keyVertices,
-    const EdgeMetric & edgeMetric,
+    const UndirectedEdgeToFloatFunc & edgeMetric,
     const Vector3f & dir
 )
 {

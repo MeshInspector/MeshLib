@@ -26,7 +26,7 @@ struct EdgeCurvature
 class BasisTunnelsDetector
 {
 public:
-    BasisTunnelsDetector( const MeshPart & mp, EdgeMetric metric );
+    BasisTunnelsDetector( const MeshPart & mp, UndirectedEdgeToFloatFunc metric );
     VoidOrErrStr prepare( ProgressCallback cb );
     // after prepare(...) region can only shrink, not become larger
     Expected<std::vector<EdgeLoop>, std::string> detect( ProgressCallback cb );
@@ -34,14 +34,14 @@ public:
 private:
     std::vector<EdgeCurvature> innerEdges_; // sorted by metric
     const MeshPart & mp_;
-    EdgeMetric metric_;
+    UndirectedEdgeToFloatFunc metric_;
 
     UndirectedEdgeBitSet primaryTree_;
     UnionFind<VertId> treeConnectedVertices_;
     UnionFind<FaceId> cotreeConnectedFace_;
 };
 
-BasisTunnelsDetector::BasisTunnelsDetector( const MeshPart & mp, EdgeMetric metric )
+BasisTunnelsDetector::BasisTunnelsDetector( const MeshPart & mp, UndirectedEdgeToFloatFunc metric )
     : mp_( mp )
     , metric_( std::move( metric ) )
 {
@@ -209,7 +209,7 @@ Expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( Progr
 
 } //anonymous namespace
 
-Expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshPart & mp, EdgeMetric metric, ProgressCallback cb )
+Expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshPart & mp, UndirectedEdgeToFloatFunc metric, ProgressCallback cb )
 {
     MR_TIMER
     if ( !metric )

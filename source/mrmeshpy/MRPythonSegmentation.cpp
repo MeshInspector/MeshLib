@@ -29,7 +29,7 @@ static void myTrimWithPlane( Mesh& mesh, const Plane3f & plane, MR::FaceMap* map
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Segmentation, [] ( pybind11::module_& m )
 {
-    m.def( "surroundingContour", []( const MR::Mesh & mesh, std::vector<MR::EdgeId> includeEdges, const MR::EdgeMetric & edgeMetric, const MR::Vector3f & dir )
+    m.def( "surroundingContour", []( const MR::Mesh & mesh, std::vector<MR::EdgeId> includeEdges, const MR::UndirectedEdgeToFloatFunc & edgeMetric, const MR::Vector3f & dir )
         { return surroundingContour( mesh, std::move( includeEdges ), edgeMetric, dir ); },
         pybind11::arg( "mesh" ), pybind11::arg( "includeEdges" ), pybind11::arg( "edgeMetric" ), pybind11::arg( "dir" ),
         "Find the best closed edge loop passing through given edges, which minimizes the sum of given edge metric\n"
@@ -37,7 +37,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Segmentation, [] ( pybind11::module_& m )
         "\tedgeMetric - returned loop will minimize this metric\n"
         "\tdir - direction approximately orthogonal to the loop" );
 
-    m.def( "surroundingContour", []( const MR::Mesh & mesh, std::vector<MR::VertId> keyVertices, const MR::EdgeMetric & edgeMetric, const MR::Vector3f & dir )
+    m.def( "surroundingContour", []( const MR::Mesh & mesh, std::vector<MR::VertId> keyVertices, const MR::UndirectedEdgeToFloatFunc & edgeMetric, const MR::Vector3f & dir )
         { return surroundingContour( mesh, std::move( keyVertices ), edgeMetric, dir ); },
         pybind11::arg( "mesh" ), pybind11::arg( "keyVertices" ), pybind11::arg( "edgeMetric" ), pybind11::arg( "dir" ),
         "Find the best closed edge loop passing through given vertices, which minimizes the sum of given edge metric\n"
@@ -45,11 +45,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Segmentation, [] ( pybind11::module_& m )
         "\tedgeMetric - returned loop will minimize this metric\n"
         "\tdir - direction approximately orthogonal to the loop" );
 
-    m.def( "fillContourLeftByGraphCut", ( MR::FaceBitSet( * )( const MR::MeshTopology&, const MR::EdgePath&, const MR::EdgeMetric& ) )& MR::fillContourLeftByGraphCut,
+    m.def( "fillContourLeftByGraphCut", ( MR::FaceBitSet( * )( const MR::MeshTopology&, const MR::EdgePath&, const MR::UndirectedEdgeToFloatFunc& ) )& MR::fillContourLeftByGraphCut,
         pybind11::arg( "topology" ), pybind11::arg( "contour" ), pybind11::arg( "metric" ),
         "Fills region located to the left from given contour, by minimizing the sum of metric over the boundary" );
 
-    m.def( "fillContourLeftByGraphCut", ( MR::FaceBitSet( * )( const MR::MeshTopology&, const std::vector<MR::EdgePath>&, const MR::EdgeMetric& ) )& MR::fillContourLeftByGraphCut,
+    m.def( "fillContourLeftByGraphCut", ( MR::FaceBitSet( * )( const MR::MeshTopology&, const std::vector<MR::EdgePath>&, const MR::UndirectedEdgeToFloatFunc& ) )& MR::fillContourLeftByGraphCut,
         pybind11::arg( "topology" ), pybind11::arg( "contours" ), pybind11::arg( "metric" ),
         "Fills region located to the left from given contours, by minimizing the sum of metric over the boundary" );
 
@@ -69,7 +69,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Segmentation, [] ( pybind11::module_& m )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeMetrics, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::EdgeMetric>( m, "EdgeMetric" );
+    pybind11::class_<MR::UndirectedEdgeToFloatFunc>( m, "UndirectedEdgeToFloatFunc" );
 
     m.def( "identityMetric", &MR::identityMetric, "metric returning 1 for every edge" );
     m.def( "edgeLengthMetric", &MR::edgeLengthMetric, pybind11::arg( "mesh" ), "returns edge's length as a metric" );
@@ -86,13 +86,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeMetrics, [] ( pybind11::module_& m )
     m.def( "buildShortestPathBiDir", ( MR::EdgePath( * )( const MR::Mesh&, MR::VertId, MR::VertId, float ) ) & MR::buildShortestPathBiDir,
         pybind11::arg( "mesh" ), pybind11::arg( "start" ), pybind11::arg( "finish" ), pybind11::arg( "maxPathLen" ) = FLT_MAX,
         "builds shortest path in euclidean metric from start to finish vertices using faster search from both directions; if no path can be found then empty path is returned" );
-    m.def( "buildSmallestMetricPath", ( MR::EdgePath( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertId, MR::VertId, float ) ) & MR::buildSmallestMetricPath,
+    m.def( "buildSmallestMetricPath", ( MR::EdgePath( * )( const MR::MeshTopology&, const MR::UndirectedEdgeToFloatFunc&, MR::VertId, MR::VertId, float ) ) & MR::buildSmallestMetricPath,
         pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "start" ), pybind11::arg( "finish" ), pybind11::arg( "maxPathMetric" ) = FLT_MAX,
         "builds shortest path in given metric from start to finish vertices; if no path can be found then empty path is returned" );
-    m.def( "buildSmallestMetricPathBiDir", ( MR::EdgePath( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertId, MR::VertId, float ) ) & MR::buildSmallestMetricPathBiDir,
+    m.def( "buildSmallestMetricPathBiDir", ( MR::EdgePath( * )( const MR::MeshTopology&, const MR::UndirectedEdgeToFloatFunc&, MR::VertId, MR::VertId, float ) ) & MR::buildSmallestMetricPathBiDir,
         pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "start" ), pybind11::arg( "finish" ), pybind11::arg( "maxPathMetric" ) = FLT_MAX,
         "builds shortest path in given metric from start to finish vertices using faster search from both directions; if no path can be found then empty path is returned" );
-    m.def( "buildSmallestMetricPath", ( MR::EdgePath( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertId, const MR::VertBitSet&, float ) ) & MR::buildSmallestMetricPath,
+    m.def( "buildSmallestMetricPath", ( MR::EdgePath( * )( const MR::MeshTopology&, const MR::UndirectedEdgeToFloatFunc&, MR::VertId, const MR::VertBitSet&, float ) ) & MR::buildSmallestMetricPath,
         pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "start" ), pybind11::arg( "finish" ), pybind11::arg( "maxPathMetric" ) = FLT_MAX,
         "builds shortest path in given metric from start to finish vertices; if no path can be found then empty path is returned" );
 
@@ -109,17 +109,17 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeMetrics, [] ( pybind11::module_& m )
         pybind11::arg( "topology" ), pybind11::arg( "region" ), pybind11::arg( "hops" ) = 1,
         "removes from the region all faces within given number of hops (stars) from the initial region boundary" );
 
-    m.def( "dilateRegionByMetric", ( bool( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::FaceBitSet&, float, MR::ProgressCallback ) ) & MR::dilateRegionByMetric,
+    m.def( "dilateRegionByMetric", ( bool( * )( const MR::MeshTopology&, const MR::UndirectedEdgeToFloatFunc&, MR::FaceBitSet&, float, MR::ProgressCallback ) ) & MR::dilateRegionByMetric,
        pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ), pybind11::arg( "callback" ) = MR::ProgressCallback{},
        "expands the region (of faces or vertices) on given metric value" );
-    m.def( "dilateRegionByMetric", ( bool( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertBitSet&, float, MR::ProgressCallback ) ) & MR::dilateRegionByMetric,
+    m.def( "dilateRegionByMetric", ( bool( * )( const MR::MeshTopology&, const MR::UndirectedEdgeToFloatFunc&, MR::VertBitSet&, float, MR::ProgressCallback ) ) & MR::dilateRegionByMetric,
        pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ), pybind11::arg( "callback" ) = MR::ProgressCallback{},
        "expands the region (of faces or vertices) on given metric value" );
 
-    m.def( "erodeRegionByMetric", ( bool( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::FaceBitSet&, float, MR::ProgressCallback ) ) & MR::erodeRegionByMetric,
+    m.def( "erodeRegionByMetric", ( bool( * )( const MR::MeshTopology&, const MR::UndirectedEdgeToFloatFunc&, MR::FaceBitSet&, float, MR::ProgressCallback ) ) & MR::erodeRegionByMetric,
         pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ), pybind11::arg( "callback" ) = MR::ProgressCallback{},
         "shrinks the region (of faces or vertices) on given metric value" );
-    m.def( "erodeRegionByMetric", ( bool( * )( const MR::MeshTopology&, const MR::EdgeMetric&, MR::VertBitSet&, float, MR::ProgressCallback ) ) & MR::erodeRegionByMetric,
+    m.def( "erodeRegionByMetric", ( bool( * )( const MR::MeshTopology&, const MR::UndirectedEdgeToFloatFunc&, MR::VertBitSet&, float, MR::ProgressCallback ) ) & MR::erodeRegionByMetric,
         pybind11::arg( "topology" ), pybind11::arg( "metric" ), pybind11::arg( "region" ), pybind11::arg( "dilation" ), pybind11::arg( "callback" ) = MR::ProgressCallback{},
         "shrinks the region (of faces or vertices) on given metric value" );
 

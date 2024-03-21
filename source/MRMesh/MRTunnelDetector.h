@@ -15,7 +15,7 @@ namespace MR
 /// detects all not-contractible-in-point and not-equivalent tunnel loops on the mesh;
 /// trying to include in the loops the edges with the smallest metric;
 /// if no metric is given then discreteMinusAbsMeanCurvatureMetric will be used
-MRMESH_API Expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshPart& mp, EdgeMetric metric = {}, ProgressCallback progressCallback = {} );
+MRMESH_API Expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshPart& mp, UndirectedEdgeToFloatFunc metric = {}, ProgressCallback progressCallback = {} );
 
 struct DetectTunnelSettings
 {
@@ -25,7 +25,7 @@ struct DetectTunnelSettings
     /// on a big mesh with many tunnels even one iteration can take a while
     int maxIters = 1;
     /// if no metric is given then discreteMinusAbsMeanCurvatureMetric will be used
-    EdgeMetric metric;
+    UndirectedEdgeToFloatFunc metric;
     /// to report algorithm progress and cancel from outside
     ProgressCallback progress;
 };

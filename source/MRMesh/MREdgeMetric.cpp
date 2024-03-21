@@ -1,65 +1,72 @@
 #include "MREdgeMetric.h"
 #include "MRMesh.h"
 #include "MREdgeIterator.h"
+#include "MRParallelFor.h"
+#include "MRBuffer.h"
 #include "MRTimer.h"
 
 namespace MR
 {
 
-EdgeMetric identityMetric() 
+UndirectedEdgeToFloatFunc identityMetric() 
 { 
-    return []( EdgeId ) { return 1.0f; };
+    return []( UndirectedEdgeId ) { return 1.0f; };
 }
 
-EdgeMetric edgeLengthMetric( const Mesh & mesh )
+UndirectedEdgeToFloatFunc edgeLengthMetric( const Mesh & mesh )
 {
-    return [&mesh]( EdgeId e )
+    return [&mesh]( UndirectedEdgeId ue )
     {
-        return mesh.edgeLength( e );
+        return mesh.edgeLength( ue );
     };
 }
 
-EdgeMetric discreteAbsMeanCurvatureMetric( const Mesh & mesh )
+UndirectedEdgeToFloatFunc discreteAbsMeanCurvatureMetric( const Mesh & mesh )
 {
-    return [&mesh]( EdgeId e )
+    return [&mesh]( UndirectedEdgeId ue )
     {
-        return std::abs( mesh.discreteMeanCurvature( e.undirected() ) );
+        return std::abs( mesh.discreteMeanCurvature( ue ) );
     };
 }
 
-EdgeMetric discreteMinusAbsMeanCurvatureMetric( const Mesh & mesh )
+UndirectedEdgeToFloatFunc discreteMinusAbsMeanCurvatureMetric( const Mesh & mesh )
 {
-    return [&mesh]( EdgeId e )
+    return [&mesh]( UndirectedEdgeId ue )
     {
-        return -std::abs( mesh.discreteMeanCurvature( e.undirected() ) );
+        return -std::abs( mesh.discreteMeanCurvature( ue ) );
     };
 }
 
-EdgeMetric edgeCurvMetric( const Mesh & mesh, float angleSinFactor, float angleSinForBoundary )
+UndirectedEdgeToFloatFunc edgeCurvMetric( const Mesh & mesh, float angleSinFactor, float angleSinForBoundary )
 {
     const float bdFactor = exp( angleSinFactor * angleSinForBoundary );
 
-    return [&mesh, angleSinFactor, bdFactor ]( EdgeId e ) -> float
+    return [&mesh, angleSinFactor, bdFactor ]( UndirectedEdgeId ue ) -> float
     {
-        auto edgeLen = mesh.edgeLength( e );
-        if ( mesh.topology.isBdEdge( e, nullptr ) )
+        auto edgeLen = mesh.edgeLength( ue );
+        if ( mesh.topology.isBdEdge( ue, nullptr ) )
             return edgeLen * bdFactor;
 
-        return edgeLen * exp( angleSinFactor * mesh.dihedralAngleSin( e ) );
+        return edgeLen * exp( angleSinFactor * mesh.dihedralAngleSin( ue ) );
     };
 }
 
-EdgeMetric edgeTableMetric( const MeshTopology & topology, const EdgeMetric & metric )
+UndirectedEdgeToFloatFunc edgeTableMetric( const MeshTopology & topology, const UndirectedEdgeToFloatFunc & metric )
 {
     MR_TIMER
 
-    Vector<float, UndirectedEdgeId> table( topology.undirectedEdgeSize() );
-    for ( auto e : undirectedEdges( topology ) )
-        table[e] = metric( e );
-
-    return [table = std::move( table )]( EdgeId e )
+    Buffer<float, UndirectedEdgeId> table( topology.undirectedEdgeSize() );
+    ParallelFor( table.beginId(), table.endId(), [&]( UndirectedEdgeId ue )
     {
-        return table[e.undirected()];
+        if ( topology.isLoneEdge( ue ) )
+            return;
+        table[ue] = metric( ue );
+    } );
+
+    // shared_ptr is necessary to satisfy CopyConstructible Callable target requirement of std::function
+    return [tablePtr = std::make_shared<Buffer<float, UndirectedEdgeId>>( std::move( table ) )]( UndirectedEdgeId ue )
+    {
+        return (*tablePtr)[ue];
     };
 }
 

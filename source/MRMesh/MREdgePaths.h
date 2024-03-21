@@ -25,7 +25,7 @@ MRMESH_API void reverse( EdgePath & path );
 MRMESH_API void reverse( std::vector<EdgePath> & paths );
 
 /// computes summed metric of all edges in the path
-[[nodiscard]] MRMESH_API double calcPathMetric( const EdgePath & path, EdgeMetric metric );
+[[nodiscard]] MRMESH_API double calcPathMetric( const EdgePath & path, UndirectedEdgeToFloatFunc metric );
 [[nodiscard]] inline double calcPathLength( const EdgePath & path, const Mesh & mesh ) { return calcPathMetric( path, edgeLengthMetric( mesh ) ); }
 
 /// returns the vector with the magnitude equal to the area surrounded by the loop (if the loop is planar),
@@ -33,7 +33,7 @@ MRMESH_API void reverse( std::vector<EdgePath> & paths );
 [[nodiscard]] MRMESH_API Vector3d calcOrientedArea( const EdgeLoop & loop, const Mesh & mesh );
 
 /// sorts given paths in ascending order of their metrics
-MRMESH_API void sortPathsByMetric( std::vector<EdgePath> & paths, EdgeMetric metric );
+MRMESH_API void sortPathsByMetric( std::vector<EdgePath> & paths, UndirectedEdgeToFloatFunc metric );
 inline void sortPathsByLength( std::vector<EdgePath> & paths, const Mesh & mesh ) { sortPathsByMetric( paths, edgeLengthMetric( mesh ) ); }
 
 /// adds all faces incident to loop vertices and located to the left from the loop to given FaceBitSet
@@ -81,17 +81,17 @@ struct TerminalVertex
 [[nodiscard]] MRMESH_API EdgePath buildShortestPath( const Mesh& mesh, VertId start, const VertBitSet& finish, float maxPathLen = FLT_MAX );
 
 /// builds shortest path in given metric from start to finish vertices; if no path can be found then empty path is returned
-[[nodiscard]] MRMESH_API EdgePath buildSmallestMetricPath( const MeshTopology & topology, const EdgeMetric & metric,
+[[nodiscard]] MRMESH_API EdgePath buildSmallestMetricPath( const MeshTopology & topology, const UndirectedEdgeToFloatFunc & metric,
     VertId start, VertId finish, float maxPathMetric = FLT_MAX );
 /// finds the smallest metric path from start vertex to finish vertex,
 /// using bidirectional modification of Dijkstra algorithm, constructing the path simultaneously from both start and finish, which is faster for long paths;
 /// if no path can be found then empty path is returned
-[[nodiscard]] MRMESH_API EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const EdgeMetric & metric,
+[[nodiscard]] MRMESH_API EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const UndirectedEdgeToFloatFunc & metric,
     VertId start, VertId finish, float maxPathMetric = FLT_MAX );
 /// finds the smallest metric path from one of start vertices to one of the finish vertices,
 /// using bidirectional modification of Dijkstra algorithm, constructing the path simultaneously from both starts and finishes, which is faster for long paths;
 /// if no path can be found then empty path is returned
-[[nodiscard]] MRMESH_API EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const EdgeMetric & metric,
+[[nodiscard]] MRMESH_API EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const UndirectedEdgeToFloatFunc & metric,
     const TerminalVertex * starts, int numStarts,
     const TerminalVertex * finishes, int numFinishes,
     VertId * outPathStart = nullptr,  // if the path is found then its start vertex will be written here (even if start vertex is the same as finish vertex and the path is empty)
@@ -99,7 +99,7 @@ struct TerminalVertex
     float maxPathMetric = FLT_MAX );
 
 /// builds shortest path in given metric from start to finish vertices; if no path can be found then empty path is returned
-[[nodiscard]] MRMESH_API EdgePath buildSmallestMetricPath( const MeshTopology& topology, const EdgeMetric& metric,
+[[nodiscard]] MRMESH_API EdgePath buildSmallestMetricPath( const MeshTopology& topology, const UndirectedEdgeToFloatFunc& metric,
     VertId start, const VertBitSet& finish, float maxPathMetric = FLT_MAX );
 
 /// returns all vertices from given region ordered in each connected component in breadth-first way
@@ -112,14 +112,14 @@ struct TerminalVertex
 [[nodiscard]] MRMESH_API EdgeLoop extractLongestClosedLoop( const Mesh & mesh, const std::vector<EdgeId> & inEdges );
 
 /// expands the region (of faces or vertices) on given metric value. returns false if callback also returns false
-MRMESH_API bool dilateRegionByMetric( const MeshTopology& topology, const EdgeMetric& metric, FaceBitSet& region, float dilation, ProgressCallback callback = {} );
-MRMESH_API bool dilateRegionByMetric( const MeshTopology& topology, const EdgeMetric& metric, VertBitSet& region, float dilation, ProgressCallback callback = {} );
-MRMESH_API bool dilateRegionByMetric( const MeshTopology& topology, const EdgeMetric& metric, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback = {} );
+MRMESH_API bool dilateRegionByMetric( const MeshTopology& topology, const UndirectedEdgeToFloatFunc& metric, FaceBitSet& region, float dilation, ProgressCallback callback = {} );
+MRMESH_API bool dilateRegionByMetric( const MeshTopology& topology, const UndirectedEdgeToFloatFunc& metric, VertBitSet& region, float dilation, ProgressCallback callback = {} );
+MRMESH_API bool dilateRegionByMetric( const MeshTopology& topology, const UndirectedEdgeToFloatFunc& metric, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback = {} );
 
 /// shrinks the region (of faces or vertices) on given metric value. returns false if callback also returns false
-MRMESH_API bool erodeRegionByMetric( const MeshTopology& topology, const EdgeMetric& metric, FaceBitSet& region, float dilation, ProgressCallback callback = {} );
-MRMESH_API bool erodeRegionByMetric( const MeshTopology& topology, const EdgeMetric& metric, VertBitSet& region, float dilation, ProgressCallback callback = {} );
-MRMESH_API bool erodeRegionByMetric( const MeshTopology& topology, const EdgeMetric& metric, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback = {} );
+MRMESH_API bool erodeRegionByMetric( const MeshTopology& topology, const UndirectedEdgeToFloatFunc& metric, FaceBitSet& region, float dilation, ProgressCallback callback = {} );
+MRMESH_API bool erodeRegionByMetric( const MeshTopology& topology, const UndirectedEdgeToFloatFunc& metric, VertBitSet& region, float dilation, ProgressCallback callback = {} );
+MRMESH_API bool erodeRegionByMetric( const MeshTopology& topology, const UndirectedEdgeToFloatFunc& metric, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback = {} );
 
 /// expands the region (of faces or vertices) on given value (in meters). returns false if callback also returns false
 MRMESH_API bool dilateRegion( const Mesh& mesh, FaceBitSet& region, float dilation, ProgressCallback callback = {} );

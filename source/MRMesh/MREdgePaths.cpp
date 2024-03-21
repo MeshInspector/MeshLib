@@ -38,7 +38,7 @@ void reverse( std::vector<EdgePath> & paths )
         reverse( path );
 }
 
-double calcPathMetric( const EdgePath & path, EdgeMetric metric )
+double calcPathMetric( const EdgePath & path, UndirectedEdgeToFloatFunc metric )
 {
     double res = 0;
     for ( auto & e : path )
@@ -55,7 +55,7 @@ Vector3d calcOrientedArea( const EdgeLoop & loop, const Mesh & mesh )
     return 0.5 * dblArea;
 }
 
-void sortPathsByMetric( std::vector<EdgePath> & paths, EdgeMetric metric )
+void sortPathsByMetric( std::vector<EdgePath> & paths, UndirectedEdgeToFloatFunc metric )
 {
     MR_TIMER
     const auto sz = paths.size();
@@ -119,7 +119,7 @@ static EdgePath buildSmallestMetricPath( VertId start, EdgePathsBuilder& b, floa
     return b.getPathBack( start );
 }
 
-EdgePath buildSmallestMetricPath( const MeshTopology& topology, const EdgeMetric& metric, VertId start, const VertBitSet& finish, float maxPathMetric /*= FLT_MAX */ )
+EdgePath buildSmallestMetricPath( const MeshTopology& topology, const UndirectedEdgeToFloatFunc& metric, VertId start, const VertBitSet& finish, float maxPathMetric /*= FLT_MAX */ )
 {
     MR_TIMER
 
@@ -130,7 +130,7 @@ EdgePath buildSmallestMetricPath( const MeshTopology& topology, const EdgeMetric
 }
 
 EdgePath buildSmallestMetricPath(
-    const MeshTopology & topology, const EdgeMetric & metric,
+    const MeshTopology & topology, const UndirectedEdgeToFloatFunc & metric,
     VertId start, VertId finish, float maxPathMetric )
 {
     MR_TIMER
@@ -141,7 +141,7 @@ EdgePath buildSmallestMetricPath(
 }
 
 EdgePath buildSmallestMetricPathBiDir(
-    const MeshTopology & topology, const EdgeMetric & metric,
+    const MeshTopology & topology, const UndirectedEdgeToFloatFunc & metric,
     VertId start, VertId finish, float maxPathMetric )
 {
     TerminalVertex s{ start, 0 };
@@ -149,7 +149,7 @@ EdgePath buildSmallestMetricPathBiDir(
     return buildSmallestMetricPathBiDir( topology, metric, &s, 1, &f, 1, nullptr, nullptr, maxPathMetric );
 }
 
-EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const EdgeMetric & metric,
+EdgePath buildSmallestMetricPathBiDir( const MeshTopology & topology, const UndirectedEdgeToFloatFunc & metric,
     const TerminalVertex * starts, int numStarts,
     const TerminalVertex * finishes, int numFinishes,
     VertId * outPathStart, VertId * outPathFinish, float maxPathMetric )
@@ -435,7 +435,7 @@ EdgeLoop extractLongestClosedLoop( const Mesh & mesh, const std::vector<EdgeId> 
     return std::move( loops.back() );
 }
 
-bool dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, FaceBitSet & region, float dilation, ProgressCallback callback )
+bool dilateRegionByMetric( const MeshTopology & topology, const UndirectedEdgeToFloatFunc & metric, FaceBitSet & region, float dilation, ProgressCallback callback )
 {
     MR_TIMER
     auto vertRegion = getRegionBoundaryVerts( topology, region );
@@ -446,7 +446,7 @@ bool dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & met
     return true;
 }
 
-bool dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, VertBitSet & region, float dilation, ProgressCallback callback )
+bool dilateRegionByMetric( const MeshTopology & topology, const UndirectedEdgeToFloatFunc & metric, VertBitSet & region, float dilation, ProgressCallback callback )
 {
     MR_TIMER
 
@@ -470,7 +470,7 @@ bool dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & met
     return true;
 }
 
-bool dilateRegionByMetric( const MeshTopology& topology, const EdgeMetric& metric, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback )
+bool dilateRegionByMetric( const MeshTopology& topology, const UndirectedEdgeToFloatFunc& metric, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback )
 {
     MR_TIMER
     auto vertRegion = getIncidentVerts( topology, region );
@@ -481,7 +481,7 @@ bool dilateRegionByMetric( const MeshTopology& topology, const EdgeMetric& metri
     return true;
 }
 
-bool erodeRegionByMetric( const MeshTopology & topology, const EdgeMetric & metric, FaceBitSet & region, float dilation, ProgressCallback callback )
+bool erodeRegionByMetric( const MeshTopology & topology, const UndirectedEdgeToFloatFunc & metric, FaceBitSet & region, float dilation, ProgressCallback callback )
 {
     MR_TIMER
     auto vertRegion = getRegionBoundaryVerts( topology, region );
@@ -492,7 +492,7 @@ bool erodeRegionByMetric( const MeshTopology & topology, const EdgeMetric & metr
     return true;
 }
 
-bool erodeRegionByMetric( const MeshTopology& topology, const EdgeMetric& metric, VertBitSet& region, float dilation, ProgressCallback callback )
+bool erodeRegionByMetric( const MeshTopology& topology, const UndirectedEdgeToFloatFunc& metric, VertBitSet& region, float dilation, ProgressCallback callback )
 {
     MR_TIMER
     auto faceRegion = getInnerFaces( topology, region );
@@ -503,7 +503,7 @@ bool erodeRegionByMetric( const MeshTopology& topology, const EdgeMetric& metric
     return true;
 }
 
-bool erodeRegionByMetric( const MeshTopology& topology, const EdgeMetric& metric, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback )
+bool erodeRegionByMetric( const MeshTopology& topology, const UndirectedEdgeToFloatFunc& metric, UndirectedEdgeBitSet& region, float dilation, ProgressCallback callback )
 {
     MR_TIMER
     auto vertRegion = getIncidentVerts( topology, region );

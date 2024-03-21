@@ -27,20 +27,20 @@ namespace MR
  * \ingroup MeshSegmentationGroup
  */
 MRMESH_API FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const EdgePath & contour,
-    const EdgeMetric & metric );
+    const UndirectedEdgeToFloatFunc & metric );
 
 /**
  * \brief Fills region located to the left from given contours, by minimizing the sum of metric over the boundary
  * \ingroup MeshSegmentationGroup
  */
 MRMESH_API FaceBitSet fillContourLeftByGraphCut( const MeshTopology & topology, const std::vector<EdgePath> & contours,
-    const EdgeMetric & metric );
+    const UndirectedEdgeToFloatFunc & metric );
 
 /**
  * \brief Finds segment that divide mesh on source and sink (source included, sink excluded), by minimizing the sum of metric over the boundary
  * \ingroup MeshSegmentationGroup
  */
 MRMESH_API FaceBitSet segmentByGraphCut( const MeshTopology& topology, const FaceBitSet& source, 
-    const FaceBitSet& sink, const EdgeMetric& metric );
+    const FaceBitSet& sink, const UndirectedEdgeToFloatFunc& metric );
 
 } //namespace MR

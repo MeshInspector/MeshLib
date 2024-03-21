@@ -18,7 +18,7 @@ namespace MR
 [[nodiscard]] MRMESH_API EdgeLoop surroundingContour(
     const Mesh & mesh,
     std::vector<EdgeId> includeEdges,
-    const EdgeMetric & edgeMetric,
+    const UndirectedEdgeToFloatFunc & edgeMetric,
     const Vector3f & dir
 );
 
@@ -33,7 +33,7 @@ namespace MR
 [[nodiscard]] MRMESH_API EdgeLoop surroundingContour(
     const Mesh & mesh,
     std::vector<VertId> keyVertices,
-    const EdgeMetric & edgeMetric,
+    const UndirectedEdgeToFloatFunc & edgeMetric,
     const Vector3f & dir
 );
 

@@ -33,7 +33,7 @@ template<class MetricToPenalty>
 class EdgePathsBuilderT
 {
 public:
-    EdgePathsBuilderT( const MeshTopology & topology, const EdgeMetric & metric );
+    EdgePathsBuilderT( const MeshTopology & topology, const UndirectedEdgeToFloatFunc & metric );
     // compares proposed metric with best value known for startVert;
     // if proposed metric is smaller then adds it in the queue and returns true
     bool addStart( VertId startVert, float startMetric );
@@ -77,7 +77,7 @@ protected:
 
 private:
     const MeshTopology & topology_;
-    EdgeMetric metric_;
+    UndirectedEdgeToFloatFunc metric_;
     VertPathInfoMap vertPathInfoMap_;
 
     struct CandidateVert
@@ -109,7 +109,7 @@ struct TrivialMetricToPenalty
 using EdgePathsBuilder = EdgePathsBuilderT<TrivialMetricToPenalty>;
 
 template<class MetricToPenalty>
-EdgePathsBuilderT<MetricToPenalty>::EdgePathsBuilderT( const MeshTopology & topology, const EdgeMetric & metric )
+EdgePathsBuilderT<MetricToPenalty>::EdgePathsBuilderT( const MeshTopology & topology, const UndirectedEdgeToFloatFunc & metric )
     : topology_( topology )
     , metric_( metric )
 {

@@ -7,10 +7,10 @@ namespace MR
 
 /// extracts all iso-lines from given scalar field and iso-value=0
 [[nodiscard]] MRMESH_API IsoLines extractIsolines( const MeshTopology & topology,
-    const VertToFloatFunc & vertValues, const FaceBitSet * region = nullptr );
+    const VertMetric & vertValues, const FaceBitSet * region = nullptr );
 /// quickly returns true if extractIsolines produce not-empty set for the same arguments
 [[nodiscard]] MRMESH_API bool hasAnyIsoline( const MeshTopology & topology,
-    const VertToFloatFunc & vertValues, const FaceBitSet * region = nullptr );
+    const VertMetric & vertValues, const FaceBitSet * region = nullptr );
 
 /// extracts all iso-lines from given scalar field and iso-value
 [[nodiscard]] MRMESH_API IsoLines extractIsolines( const MeshTopology & topology,

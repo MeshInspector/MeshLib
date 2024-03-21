@@ -23,11 +23,11 @@ class Isoliner
 {
 public:
     /// prepares to find iso-lines inside given region (or whole mesh if region==nullptr)
-    Isoliner( const MeshTopology& topology, VertToFloatFunc valueInVertex, const FaceBitSet* region )
+    Isoliner( const MeshTopology& topology, VertMetric valueInVertex, const FaceBitSet* region )
         : topology_( topology ), region_( region ), valueInVertex_( valueInVertex )
         { findNegativeVerts_(); }
     /// prepares to find iso-lines crossing the edges in between given edges
-    Isoliner( const MeshTopology& topology, VertToFloatFunc valueInVertex, const VertBitSet& vertRegion )
+    Isoliner( const MeshTopology& topology, VertMetric valueInVertex, const VertBitSet& vertRegion )
         : topology_( topology ), valueInVertex_( valueInVertex )
         { findNegativeVerts_( vertRegion ); }
 
@@ -53,7 +53,7 @@ private:
 private:
     const MeshTopology& topology_;
     const FaceBitSet* region_ = nullptr;
-    VertToFloatFunc valueInVertex_;
+    VertMetric valueInVertex_;
     VertBitSet negativeVerts_;
     UndirectedEdgeBitSet activeEdges_; // the edges crossed by the iso-line, but not yet extracted
 };
@@ -299,7 +299,7 @@ IsoLine Isoliner::extractOneLine_( EdgeId first, ContinueTrack continueTrack )
 }
 
 IsoLines extractIsolines( const MeshTopology& topology,
-    const VertToFloatFunc & vertValues, const FaceBitSet* region )
+    const VertMetric & vertValues, const FaceBitSet* region )
 {
     MR_TIMER
     Isoliner s( topology, vertValues, region );
@@ -307,7 +307,7 @@ IsoLines extractIsolines( const MeshTopology& topology,
 }
 
 bool hasAnyIsoline( const MeshTopology& topology,
-    const VertToFloatFunc & vertValues, const FaceBitSet* region )
+    const VertMetric & vertValues, const FaceBitSet* region )
 {
     MR_TIMER
     Isoliner s( topology, vertValues, region );
@@ -392,7 +392,7 @@ PlaneSection trackSection( const MeshPart& mp,
     auto startPoint = mp.mesh.triPoint( start );
     auto prevPoint = startPoint;
     auto plane = Plane3f::fromDirAndPt( cross( dir, mp.mesh.pseudonormal( start ) ), prevPoint );
-    VertToFloatFunc valueInVertex = [&] ( VertId v )
+    VertMetric valueInVertex = [&] ( VertId v )
     {
         return plane.distance( mp.mesh.points[v] );
     };

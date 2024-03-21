@@ -381,7 +381,7 @@
     "SelectedMeasurements": {
         "a": 255,
         "b": 240,
-        "g": 55,
+        "g": 255,
         "r": 50
     },
     "UnselectedMeasurements": {

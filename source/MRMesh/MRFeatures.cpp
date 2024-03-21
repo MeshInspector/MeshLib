@@ -449,9 +449,16 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::Sphere>::measure( cons
     float axisToSphereCenterDist = axisToSphereCenterDelta.length();
     Vector3f axisToSphereCenterDir = axisToSphereCenterDelta;
     if ( axisToSphereCenterDist > 0 )
+    {
         axisToSphereCenterDir /= axisToSphereCenterDist;
+
+        // Make orthogonal to the cone axis to increase stability.
+        axisToSphereCenterDir = cross( a.dir, cross( axisToSphereCenterDir, a.dir ) ).normalized();
+    }
     else
+    {
         axisToSphereCenterDir = cross( a.dir, a.dir.furthestBasisVector() ).normalized(); // An arbitrary direction.
+    }
 
     // Direction parallel to the conical surface, from the sphere center towards the positive cone tip.
     Vector3f dirToPositiveTip;

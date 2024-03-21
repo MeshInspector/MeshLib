@@ -96,8 +96,13 @@ public:
 
     [[nodiscard]] auto data() { return data_.get(); }
     [[nodiscard]] auto data() const { return data_.get(); }
+
+    /// returns the identifier of the first element
+    [[nodiscard]] I beginId() const { return I{ size_t(0) }; }
+
     /// returns the identifier of the back() element
     [[nodiscard]] I backId() const { assert( !empty() ); return I{ size() - 1 }; }
+
     /// returns backId() + 1
     [[nodiscard]] I endId() const { return I{ size() }; }
 

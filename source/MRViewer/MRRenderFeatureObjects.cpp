@@ -289,6 +289,8 @@ RenderPlaneFeatureObject::RenderPlaneFeatureObject( const VisualObject& object )
         // The square contour.
         getLines().varPolyline()->addFromPoints( cornerPoints.data(), cornerPoints.size(), true );
     }
+
+    nameUiScreenOffset = Vector2f( 0, 0.1f );
 }
 
 std::string RenderPlaneFeatureObject::getObjectNameString( const VisualObject& object, ViewportId viewportId ) const

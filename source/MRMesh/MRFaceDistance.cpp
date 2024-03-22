@@ -79,7 +79,7 @@ DualEdgePathsBuider::DualEdgePathsBuider( const MeshTopology & topology, const E
     queueData.reserve( bdFaces.count() );
     for ( FaceId b : bdFaces )
         queueData.push_back( { b, 0 } );
-    nextSteps_ = { std::less<CandidateFace>(), std::move( queueData ) };
+    nextSteps_ = std::priority_queue<CandidateFace>{ std::less<CandidateFace>(), std::move( queueData ) };
 }
 
 bool DualEdgePathsBuider::addNextStep_( const CandidateFace & c )

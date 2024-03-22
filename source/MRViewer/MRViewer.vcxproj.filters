@@ -785,5 +785,47 @@
     <Image Include="resource\object_icons\X3\ObjectLabel.png">
       <Filter>resource\object_icons\X3</Filter>
     </Image>
+    <Image Include="resource\object_icons\X1\CircleObject.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\ConeObject.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\CylinderObject.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\LineObject.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\PlaneObject.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\PointObject.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\SphereObject.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\CircleObject.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\ConeObject.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\CylinderObject.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\LineObject.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\PlaneObject.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\PointObject.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\SphereObject.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
   </ItemGroup>
 </Project>

@@ -1221,6 +1221,9 @@
     <ClInclude Include="MRRenderModelParameters.h">
       <Filter>Source Files\Render</Filter>
     </ClInclude>
+    <ClInclude Include="MRFaceDistance.h">
+      <Filter>Source Files\SurfacePath</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2036,6 +2039,9 @@
     </ClCompile>
     <ClCompile Include="MRObjectDimensionsEnum.cpp">
       <Filter>Source Files\DataModel</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFaceDistance.cpp">
+      <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

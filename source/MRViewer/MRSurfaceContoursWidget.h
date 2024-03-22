@@ -35,19 +35,19 @@ public:
         bool filterHistoryonReset = true;
 
         // Parameters for configuring the surface point widget
-        // Parameters affect to future points only, if need update existing one use void  updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p )
+        // Parameters affect to future points only
         SurfacePointWidget::Parameters surfacePointParams;
 
         // Color for ordinary points in the contour
-        // Parameters affect to future points only, if need update existing one use void  updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p )
+        // Parameters affect to future points only
         MR::Color ordinaryPointColor = Color::gray();
 
         // Color for the last modified point in the contour
-        // Parameters affect to future points only, if need update existing one use void  updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p )
+        // Parameters affect to future points only
         MR::Color lastPoitColor = Color::green();
 
         // Color for the special point used to close a contour. Better do not change it. 
-        // Parameters affect to future points only, if need update existing one use void  updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p )
+        // Parameters affect to future points only
         MR::Color closeContourPointColor = Color::transparent();
     };
 
@@ -102,12 +102,12 @@ public:
     // If specified, then only in the contour on specyfied object 
     void highlightLastPoint( const std::shared_ptr<VisualObject>& obj );
 
-    // updates the parameters of all existing points ( SurfacePointWidget ) in the contours, and also sets their points that will be created later
-    MRVIEWER_API  void updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p );
-
     // shared variables. which need getters and setters.
-    MRVIEWER_API std::pair <std::shared_ptr<MR::VisualObject>, int > getActivePoint();
+    MRVIEWER_API std::pair <std::shared_ptr<MR::VisualObject>, int > getActivePoint() const;
     MRVIEWER_API void setActivePoint( std::shared_ptr<MR::VisualObject> obj, int index );
+
+    // get active surface point
+    MRVIEWER_API std::shared_ptr<SurfacePointWidget> getActiveSurfacePoint() const;
 
     // Add a point to the end of non closed contour connected with obj.
     // With carefull it is possile to use it in CallBack.

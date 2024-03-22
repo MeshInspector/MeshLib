@@ -134,6 +134,9 @@ public:
         return baseObject_;
     }
 
+    // returns whether is the widget moving
+    [[nodiscard]] bool isOnMove() const { return isOnMove_; }
+
     // Checks whether the current peak is a peak in the invisible (reverse) side of the mesh or cloud point.
     [[nodiscard]] static bool isPickIntoBackFace( const std::shared_ptr<MR::VisualObject>& obj, const MR::PointOnObject& pick, const Vector3f& cameraEye );
 

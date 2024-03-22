@@ -141,17 +141,23 @@ auto DualEdgePathsBuider::growOneEdge() -> CandidateFace
 
 } // anonymous namespace
 
-FaceScalars calcFaceDistances( const MeshTopology & topology, const EdgeMetric & metric, const FaceBitSet & starts, float * maxDist )
+std::optional<FaceScalars> calcFaceDistances( const MeshTopology & topology, const EdgeMetric & metric, const FaceBitSet & starts, float * maxDist, const ProgressCallback & cb )
 {
     MR_TIMER
     DualEdgePathsBuider builder( topology, metric, starts );
     float localMaxDist = 0;
+    size_t numDone = cb ? starts.count() : 0;
+    const float rTotal = 1.0f / topology.numValidFaces();
+    if ( !reportProgress( cb, numDone * rTotal ) )
+        return {};
     for (;;)
     {
         const auto c = builder.growOneEdge();
         if ( !c.f )
             break;
         localMaxDist = c.penalty;
+        if ( !reportProgress( cb, [&]() { return numDone * rTotal; }, ++numDone, 16384 ) )
+            return {};
     }
     if ( maxDist )
         *maxDist = localMaxDist;

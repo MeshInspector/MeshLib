@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include <optional>
 
 namespace MR
 {
@@ -10,7 +11,7 @@ namespace MR
 /// \param starts all start faces will get value 0 in the result;
 /// \param metric metric(e) says the distance of traveling from left(e) to right(e)
 /// \param maxDist optional output of the maximal distance to the most distant face
-[[nodiscard]] MRMESH_API FaceScalars calcFaceDistances( const MeshTopology & topology, const EdgeMetric & metric, const FaceBitSet & starts,
-    float * maxDist = nullptr );
+[[nodiscard]] MRMESH_API std::optional<FaceScalars> calcFaceDistances( const MeshTopology & topology, const EdgeMetric & metric, const FaceBitSet & starts,
+    float * maxDist = nullptr, const ProgressCallback & cb = {} );
 
 } // namespace MR

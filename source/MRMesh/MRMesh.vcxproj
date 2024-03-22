@@ -652,6 +652,7 @@
     <ClCompile Include="MRFeatureObject.cpp" />
     <ClCompile Include="MRSubfeatures.cpp" />
     <ClCompile Include="MRMeasurementObject.cpp" />
+    <ClCompile Include="MRObjectDimensionsEnum.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\laz-perf\laz-perf.vcxproj">

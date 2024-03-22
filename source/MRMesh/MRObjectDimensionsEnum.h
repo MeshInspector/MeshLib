@@ -16,4 +16,6 @@ enum class MRMESH_CLASS DimensionsVisualizePropertyType
 };
 template <> struct IsVisualizeMaskEnum<DimensionsVisualizePropertyType> : std::true_type {};
 
+[[nodiscard]] MRMESH_API std::string_view toString( DimensionsVisualizePropertyType value );
+
 }

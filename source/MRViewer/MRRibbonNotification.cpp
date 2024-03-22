@@ -9,7 +9,7 @@
 #include "MRMesh/MRColor.h"
 #include "MRPch/MRWasm.h"
 #include "MRProgressBar.h"
-#include <imgui.h>
+#include "MRViewer/MRImGuiVectorOperators.h"
 #include <imgui_internal.h>
 
 namespace
@@ -30,9 +30,17 @@ namespace MR
 
 void RibbonNotifier::pushNotification( const RibbonNotification& notification )
 {
-    if ( notifications_.size() == cNotificationNumberLimit )
-        notifications_.erase( notifications_.end() - 1 );
-    notifications_.insert( notifications_.begin(), NotificationWithTimer{ notification } );
+    if ( !notifications_.empty() && notifications_.front().notification == notification )
+    {
+        notifications_.front().sameCounter++;
+        notifications_.front().timer = 0.0f;
+    }
+    else
+    {
+        if ( notifications_.size() == cNotificationNumberLimit )
+            notifications_.erase( notifications_.end() - 1 );
+        notifications_.insert( notifications_.begin(), NotificationWithTimer{ notification } );
+    }
     requestClosestRedraw_();
 }
 
@@ -47,7 +55,7 @@ void RibbonNotifier::drawNotifications( float scaling )
     for ( int i = 0; i < notifications_.size(); ++i )
     {
         currentPos -= padding;
-        auto& [notification, timer] = notifications_[i];
+        auto& [notification, timer,counter] = notifications_[i];
 
         ImGui::SetNextWindowPos( currentPos, ImGuiCond_Always, ImVec2( 1.0f, 1.0f ) );
         ImGui::SetNextWindowSize( ImVec2( width, -1 ), ImGuiCond_Always );
@@ -150,6 +158,26 @@ void RibbonNotifier::drawNotifications( float scaling )
             drawList->PopClipRect();
         }
 
+        if ( counter > 1 )
+        {
+            auto drawList = window->DrawList;
+            drawList->PushClipRectFullScreen();
+            const ImU32 color = isHovered ? ImGui::GetColorU32( ImGuiCol_Text ) : notificationParams[int( notification.type )].second;
+            const ImU32 textColor = ImGui::GetColorU32( ImGuiCol_WindowBg );
+            auto countText = std::to_string( counter );
+            auto textWidth = ImGui::CalcTextSize( countText.c_str() ).x;
+            auto windRect = window->Rect();
+            ImRect rect;
+            ImVec2 size = ImVec2( textWidth + ImGui::GetStyle().FramePadding.x * 2, ImGui::GetFrameHeight() );
+            rect.Min.x = windRect.Max.x;
+            rect.Min.y = windRect.Min.y;
+            rect.Min -= size * 0.5f;
+            rect.Max = rect.Min + size;
+            drawList->AddRectFilled( rect.Min, rect.Max, color, 4.0f * scaling, 0 );
+            drawList->AddText( rect.Min + ImGui::GetStyle().FramePadding, textColor, countText.c_str() );
+            drawList->PopClipRect();
+        }
+
         ImGui::End();
         ImGui::PopStyleColor();
         ImGui::PopStyleVar( 4 );
@@ -208,6 +236,17 @@ void RibbonNotifier::requestClosestRedraw_()
     EM_ASM( postEmptyEvent( $0, 2 ), int( minTimeReq * 1000 ) + 100 );
 #pragma clang diagnostic pop
 #endif
+}
+
+bool RibbonNotification::operator==( const RibbonNotification& other ) const
+{
+    return
+        header == other.header &&
+        text == other.text &&
+        buttonName == other.buttonName &&
+        type == other.type &&
+        !onButtonClick  &&
+        !other.onButtonClick;
 }
 
 }

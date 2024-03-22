@@ -209,30 +209,9 @@ void SurfaceContoursWidget::highlightLastPoint( const std::shared_ptr<VisualObje
             updateBaseColor( contour[0], params.lastPoitColor ); // only one point in contour
 }
 
-void SurfaceContoursWidget::updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p )
+std::pair<std::shared_ptr<MR::VisualObject>, int> SurfaceContoursWidget::getActivePoint() const
 {
-    const auto& oldParams = params;
-
-    for ( auto& [parentObj, contour] : pickedPoints_ )
-        for ( auto& point : contour )
-        {
-            auto pointParams = point->getParameters();
-            point->setParameters( p.surfacePointParams );
-
-            if ( pointParams.baseColor == oldParams.ordinaryPointColor )
-                updateBaseColor( point, p.ordinaryPointColor );
-            else if ( pointParams.baseColor == oldParams.lastPoitColor )
-                updateBaseColor( point, p.lastPoitColor );
-            else if ( pointParams.baseColor == oldParams.closeContourPointColor )
-                updateBaseColor( point, p.closeContourPointColor );
-        }
-
-    params = p;
-}
-
-std::pair<std::shared_ptr<MR::VisualObject>, int> SurfaceContoursWidget::getActivePoint()
-{
-    return std::pair<std::shared_ptr<MR::VisualObject>, int>( activeObject_, activeIndex_ );
+    return { activeObject_, activeIndex_ };
 }
 
 void SurfaceContoursWidget::setActivePoint( std::shared_ptr<MR::VisualObject> obj, int index )
@@ -247,6 +226,19 @@ void SurfaceContoursWidget::setActivePoint( std::shared_ptr<MR::VisualObject> ob
 
     activeIndex_ = index;
     activeObject_ = obj;
+}
+
+std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::getActiveSurfacePoint() const
+{
+    if ( !activeObject_ )
+        return {};
+    assert( 0 <= activeIndex_ );
+
+    const auto it = pickedPoints_.find( activeObject_ );
+    assert( it != pickedPoints_.end() );
+    const auto& contour = it->second;
+    assert( activeIndex_ < contour.size() );
+    return contour[activeIndex_];
 }
 
 bool SurfaceContoursWidget::appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint )

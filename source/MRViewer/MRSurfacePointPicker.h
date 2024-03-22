@@ -74,6 +74,9 @@ public:
     }
     // set parameters for this widget
     MRVIEWER_API void setParameters( const Parameters& params );
+    /// Update the widget parameters.
+    /// \param visitor - the function that takes the widget parameters and modifies them. Then the parameters are applied by \ref setParameters.
+    MRVIEWER_API void updateParameters( const std::function<void ( Parameters& )>& visitor );
 
     // if auto hover is enabled, pick_render_object() is used
     // !note: disabling it is useful if there are many widgets, not to call `pick_render_object()` for each of them separately

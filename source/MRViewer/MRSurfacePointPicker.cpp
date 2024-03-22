@@ -104,6 +104,13 @@ void SurfacePointWidget::setParameters( const Parameters& params )
     params_ = params;
 }
 
+void SurfacePointWidget::updateParameters( const std::function<void( Parameters& )>& visitor )
+{
+    auto params = params_;
+    visitor( params );
+    setParameters( params );
+}
+
 void SurfacePointWidget::setHovered( bool on )
 {
     if ( !isOnMove_ && isHovered_ != on )

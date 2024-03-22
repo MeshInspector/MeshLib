@@ -106,7 +106,7 @@ public:
     MRVIEWER_API std::pair <std::shared_ptr<MR::VisualObject>, int > getActivePoint() const;
     MRVIEWER_API void setActivePoint( std::shared_ptr<MR::VisualObject> obj, int index );
 
-    // get active surface point
+    /// Get the active (the latest picked/moved) surface point widget.
     MRVIEWER_API std::shared_ptr<SurfacePointWidget> getActiveSurfacePoint() const;
 
     // Add a point to the end of non closed contour connected with obj.

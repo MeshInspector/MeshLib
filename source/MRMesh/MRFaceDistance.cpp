@@ -18,16 +18,29 @@ public:
     /// see calcFaceDistances(...) for the description of the parameters
     DualEdgePathsBuider( const MeshTopology & topology, const EdgeMetric & metric, const FaceBitSet & starts );
 
+    struct CandidateFace
+    {
+        FaceId f;
+        // best penalty to reach this face
+        float penalty = FLT_MAX;
+
+        // smaller penalty to be the first
+        friend bool operator <( const CandidateFace & a, const CandidateFace & b )
+        {
+            return a.penalty > b.penalty;
+        }
+    };
+
     /// include one more face in the final forest, returning the newly reached face;
     /// returns invalid FaceId if no more faces are reachable
-    FaceId reachNext();
+    CandidateFace reachNext();
 
     /// adds steps for all faces around reached face (f);
     /// returns true if at least one step was added
-    bool addRingSteps( FaceId f );
+    bool addRingSteps( const CandidateFace & c );
 
     /// the same as reachNext() + addRingSteps()
-    FaceId growOneEdge();
+    CandidateFace growOneEdge();
 
     /// returns true if no more reachable faces are available
     bool done() const { return nextSteps_.empty(); }
@@ -46,18 +59,6 @@ private:
     EdgeMetric metric_;
     FaceScalars distances_;
 
-    struct CandidateFace
-    {
-        FaceId f;
-        // best penalty to reach this face
-        float penalty = FLT_MAX;
-
-        // smaller penalty to be the first
-        friend bool operator <( const CandidateFace & a, const CandidateFace & b )
-        {
-            return a.penalty > b.penalty;
-        }
-    };
     std::priority_queue<CandidateFace> nextSteps_;
 
     // compares proposed step with the value known for this face;
@@ -95,25 +96,25 @@ bool DualEdgePathsBuider::addNextStep_( const CandidateFace & c )
     return false;
 }
 
-bool DualEdgePathsBuider::addRingSteps( FaceId f )
+bool DualEdgePathsBuider::addRingSteps( const CandidateFace & c )
 {
     bool aNextStepAdded = false;
-    if ( !f )
+    if ( !c.f )
         return aNextStepAdded;
-    const float fDist = distances_[f];
-    for ( EdgeId e : leftRing( topology_, f ) )
+    assert( c.penalty == distances_[c.f] );
+    for ( EdgeId e : leftRing( topology_, c.f ) )
     {
-        CandidateFace c;
-        c.f = topology_.right( e );
-        if ( !c.f )
+        CandidateFace n;
+        n.f = topology_.right( e );
+        if ( !n.f )
             continue;
-        c.penalty = fDist + metric_( e );
-        aNextStepAdded = addNextStep_( c ) || aNextStepAdded;
+        n.penalty = c.penalty + metric_( e );
+        aNextStepAdded = addNextStep_( n ) || aNextStepAdded;
     }
     return aNextStepAdded;
 }
 
-FaceId DualEdgePathsBuider::reachNext()
+auto DualEdgePathsBuider::reachNext() -> CandidateFace
 {
     while ( !nextSteps_.empty() )
     {
@@ -125,13 +126,13 @@ FaceId DualEdgePathsBuider::reachNext()
             continue;
         }
         assert( distances_[c.f] == c.penalty );
-        return c.f;
+        return c;
     }
     return {};
 }
 
 
-FaceId DualEdgePathsBuider::growOneEdge()
+auto DualEdgePathsBuider::growOneEdge() -> CandidateFace
 {
     auto res = reachNext();
     addRingSteps( res );
@@ -140,12 +141,20 @@ FaceId DualEdgePathsBuider::growOneEdge()
 
 } // anonymous namespace
 
-FaceScalars calcFaceDistances( const MeshTopology & topology, const EdgeMetric & metric, const FaceBitSet & starts )
+FaceScalars calcFaceDistances( const MeshTopology & topology, const EdgeMetric & metric, const FaceBitSet & starts, float * maxDist )
 {
     MR_TIMER
     DualEdgePathsBuider builder( topology, metric, starts );
-    while ( builder.growOneEdge() )
-        {}
+    float localMaxDist = 0;
+    for (;;)
+    {
+        const auto c = builder.growOneEdge();
+        if ( !c.f )
+            break;
+        localMaxDist = c.penalty;
+    }
+    if ( maxDist )
+        *maxDist = localMaxDist;
     return builder.takeDistances();
 }
 

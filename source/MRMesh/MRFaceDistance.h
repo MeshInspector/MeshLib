@@ -9,6 +9,8 @@ namespace MR
 /// all unreachable faces will get FLT_MAX value;
 /// \param starts all start faces will get value 0 in the result;
 /// \param metric metric(e) says the distance of traveling from left(e) to right(e)
-[[nodiscard]] MRMESH_API FaceScalars calcFaceDistances( const MeshTopology & topology, const EdgeMetric & metric, const FaceBitSet & starts );
+/// \param maxDist optional output of the maximal distance to the most distant face
+[[nodiscard]] MRMESH_API FaceScalars calcFaceDistances( const MeshTopology & topology, const EdgeMetric & metric, const FaceBitSet & starts,
+    float * maxDist = nullptr );
 
 } // namespace MR

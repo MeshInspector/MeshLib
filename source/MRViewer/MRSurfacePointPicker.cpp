@@ -202,75 +202,59 @@ void SurfacePointWidget::updatePositionAndRadiusLines_( const EdgePoint& /* ep *
 void SurfacePointWidget::updatePositionAndRadiusMesh_( MeshTriPoint mtp )
 {
     assert( pickSphere_ );
-    auto baseSurface = std::dynamic_pointer_cast< ObjectMeshHolder >( baseObject_ );
+    auto baseSurface = std::dynamic_pointer_cast<ObjectMeshHolder>( baseObject_ );
     assert( baseSurface );
     assert( baseSurface->mesh() );
     const auto& mesh = *baseSurface->mesh();
-    FaceId fId = mesh.topology.left( mtp.e );
+
+    const auto f = mesh.topology.left( mtp.e );
     switch ( params_.positionType )
     {
-    case PositionType::FaceCenters:
-    {
-        currentPos_ = mesh.toTriPoint( fId, mesh.triCenter( fId ) );
-        break;
-    }
-    case PositionType::Edges:
-    {
-        if ( !mtp.onEdge( mesh.topology ) )
+        case PositionType::Faces:
+            // nothing to change
+            break;
+        case PositionType::FaceCenters:
+            currentPos_ = mesh.toTriPoint( f, mesh.triCenter( f ) );
+            break;
+        case PositionType::Edges:
+            if ( !mtp.onEdge( mesh.topology ) )
+            {
+                const auto p = mesh.triPoint( mtp );
+                EdgeId e = mesh.getClosestEdge( PointOnFace{ f, p } );
+                if ( mesh.topology.left( e ) != f )
+                    e = e.sym();
+                const auto ep = mesh.edgePoint( mesh.toEdgePoint( e, p ) );
+                currentPos_ = mesh.toTriPoint( f, ep );
+            }
+            break;
+        case PositionType::EdgeCeneters:
         {
-            auto closestEdge = EdgeId( mesh.getClosestEdge( PointOnFace{ fId,mesh.triPoint( mtp ) } ) );
-            if ( mesh.topology.left( closestEdge ) != fId )
+            auto closestEdge = EdgeId( mesh.getClosestEdge( PointOnFace{ f, mesh.triPoint( mtp ) } ) );
+            if ( mesh.topology.left( closestEdge ) != f )
                 closestEdge = closestEdge.sym();
-            if ( mtp.e == closestEdge )
-                mtp.bary.b = 0.0f;
-            else if ( mtp.e == mesh.topology.next( closestEdge ).sym() )
-            {
-                mtp.e = closestEdge;
-                mtp.bary.a = mtp.bary.b;
-                mtp.bary.b = 0.0f;
-            }
-            else
-            {
-                mtp.e = closestEdge;
-                mtp.bary.a = 1.0f - mtp.bary.b;
-                mtp.bary.b = 0.0f;
-            }
+            mtp.e = closestEdge;
+            mtp.bary.a = 0.5f;
+            mtp.bary.b = 0.0f;
             currentPos_ = mtp;
+            break;
         }
-        break;
-    }
-    case PositionType::EdgeCeneters:
-    {
-        auto closestEdge = EdgeId( mesh.getClosestEdge( PointOnFace{ fId,mesh.triPoint( mtp ) } ) );
-        if ( mesh.topology.left( closestEdge ) != fId )
-            closestEdge = closestEdge.sym();
-        mtp.e = closestEdge;
-        mtp.bary.a = 0.5f;
-        mtp.bary.b = 0.0f;
-        currentPos_ = mtp;
-        break;
-    }
-    case PositionType::Verts:
-    {
-        if ( !mtp.inVertex() )
-        {
-            auto closestVert = mesh.getClosestVertex( PointOnFace{ fId,mesh.triPoint( mtp ) } );
-            for ( auto e : orgRing( mesh.topology, closestVert ) )
+        case PositionType::Verts:
+            if ( !mtp.inVertex() )
             {
-                if ( mesh.topology.left( e ) == fId )
+                auto closestVert = mesh.getClosestVertex( PointOnFace{ f, mesh.triPoint( mtp ) } );
+                for ( auto e : orgRing( mesh.topology, closestVert ) )
                 {
-                    mtp.e = e;
-                    mtp.bary.a = 0.0f;
-                    mtp.bary.b = 0.0f;
-                    currentPos_ = mtp;
-                    break;
+                    if ( mesh.topology.left( e ) == f )
+                    {
+                        mtp.e = e;
+                        mtp.bary.a = 0.0f;
+                        mtp.bary.b = 0.0f;
+                        currentPos_ = mtp;
+                        break;
+                    }
                 }
             }
-        }
-        break;
-    }
-    default:
-        break;
+            break;
     }
 
     pickSphere_->setCenter( toVector3f() );

@@ -28,4 +28,7 @@ MRMESH_API void shrink( const MeshTopology & topology, VertBitSet & region, int 
 /// \param stopEdges - neighborhood via this edges will be ignored
 [[nodiscard]] MRMESH_API FaceBitSet shrinkFaces( const MeshTopology & topology, const FaceBitSet & region, const UndirectedEdgeBitSet * stopEdges = nullptr );
 
+/// returns faces from given region that have at least one neighbor face with shared edge not from the region
+[[nodiscard]] MRMESH_API FaceBitSet getBoundaryFaces( const MeshTopology & topology, const FaceBitSet & region );
+
 } //namespace MR

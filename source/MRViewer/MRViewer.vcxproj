@@ -268,6 +268,10 @@
     </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
+    <Image Include="resource\object_icons\X1\CircleObject.png" />
+    <Image Include="resource\object_icons\X1\ConeObject.png" />
+    <Image Include="resource\object_icons\X1\CylinderObject.png" />
+    <Image Include="resource\object_icons\X1\LineObject.png" />
     <Image Include="resource\object_icons\X1\Object.png" />
     <Image Include="resource\object_icons\X1\ObjectDistanceMap.png" />
     <Image Include="resource\object_icons\X1\ObjectGcode.png" />
@@ -276,6 +280,13 @@
     <Image Include="resource\object_icons\X1\ObjectMesh.png" />
     <Image Include="resource\object_icons\X1\ObjectPoints.png" />
     <Image Include="resource\object_icons\X1\ObjectVoxels.png" />
+    <Image Include="resource\object_icons\X1\PlaneObject.png" />
+    <Image Include="resource\object_icons\X1\PointObject.png" />
+    <Image Include="resource\object_icons\X1\SphereObject.png" />
+    <Image Include="resource\object_icons\X3\CircleObject.png" />
+    <Image Include="resource\object_icons\X3\ConeObject.png" />
+    <Image Include="resource\object_icons\X3\CylinderObject.png" />
+    <Image Include="resource\object_icons\X3\LineObject.png" />
     <Image Include="resource\object_icons\X3\Object.png" />
     <Image Include="resource\object_icons\X3\ObjectDistanceMap.png" />
     <Image Include="resource\object_icons\X3\ObjectGcode.png" />
@@ -284,6 +295,9 @@
     <Image Include="resource\object_icons\X3\ObjectMesh.png" />
     <Image Include="resource\object_icons\X3\ObjectPoints.png" />
     <Image Include="resource\object_icons\X3\ObjectVoxels.png" />
+    <Image Include="resource\object_icons\X3\PlaneObject.png" />
+    <Image Include="resource\object_icons\X3\PointObject.png" />
+    <Image Include="resource\object_icons\X3\SphereObject.png" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\imgui\imgui.vcxproj">

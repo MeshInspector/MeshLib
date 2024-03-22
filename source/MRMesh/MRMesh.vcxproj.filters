@@ -2034,6 +2034,9 @@
     <ClCompile Include="MRMeasurementObject.cpp">
       <Filter>Source Files\DataModel\Measurements</Filter>
     </ClCompile>
+    <ClCompile Include="MRObjectDimensionsEnum.cpp">
+      <Filter>Source Files\DataModel</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

@@ -1907,24 +1907,9 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
                 if ( !supportedDimensions[i] )
                     continue;
 
-                const char* name = nullptr;
-                switch ( DimensionsVisualizePropertyType( i ) )
-                {
-                case DimensionsVisualizePropertyType::diameter:
-                    name = "Diameter";
-                    break;
-                case DimensionsVisualizePropertyType::angle:
-                    name = "Angle";
-                    break;
-                case DimensionsVisualizePropertyType::length:
-                    name = "Length";
-                    break;
-                case DimensionsVisualizePropertyType::_count:
-                    // Nothing. MSVC warns if I omit this branch.
-                    break;
-                }
+                auto enumValue = DimensionsVisualizePropertyType( i );
 
-                someChanges |= make_visualize_checkbox( selectedVisualObjs, name, DimensionsVisualizePropertyType( i ), viewportid );
+                someChanges |= make_visualize_checkbox( selectedVisualObjs, toString( enumValue ).data(), enumValue, viewportid );
             }
         }
     }

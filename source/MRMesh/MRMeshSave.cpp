@@ -574,11 +574,7 @@ VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path
         res = MR::MeshSave::toPly( mesh, file, settings );
 #ifndef MRMESH_NO_OPENCTM
     else if ( ext == ".ctm" )
-    {
-        CtmSaveOptions options{ settings };
-        options.rearrangeTriangles = true;
-        res = MR::MeshSave::toCtm( mesh, file, options );
-    }
+        res = MR::MeshSave::toCtm( mesh, file, { settings } );
 #endif
     else if ( ext == ".mrmesh" )
         res = MR::MeshSave::toMrmesh( mesh, file, settings );
@@ -602,11 +598,7 @@ VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const st
         res = MR::MeshSave::toPly( mesh, out, settings );
 #ifndef MRMESH_NO_OPENCTM
     else if ( ext == ".ctm" )
-    {
-        CtmSaveOptions options{ settings };
-        options.rearrangeTriangles = true;
-        res = MR::MeshSave::toCtm( mesh, out, options );
-    }
+        res = MR::MeshSave::toCtm( mesh, out, { settings } );
 #endif
     else if ( ext == ".mrmesh" )
         res = MR::MeshSave::toMrmesh( mesh, out, settings );

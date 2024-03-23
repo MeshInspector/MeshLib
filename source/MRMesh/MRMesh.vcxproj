@@ -21,6 +21,7 @@
     <ClInclude Include="MRCylinderApproximator.h" />
     <ClInclude Include="MRCylinderObject.h" />
     <ClInclude Include="MRDistanceVolumeParams.h" />
+    <ClInclude Include="MRFaceDistance.h" />
     <ClInclude Include="MRFeatureObject.h" />
     <ClInclude Include="MRFeatures.h" />
     <ClInclude Include="MRFinally.h" />
@@ -439,6 +440,7 @@
     <ClCompile Include="MRExpected.cpp" />
     <ClCompile Include="MRExtractIsolines.cpp" />
     <ClCompile Include="MRExtractIsolinesTests.cpp" />
+    <ClCompile Include="MRFaceDistance.cpp" />
     <ClCompile Include="MRFastWindingNumber.cpp" />
     <ClCompile Include="MRFeatures.cpp" />
     <ClCompile Include="MRFile.cpp" />

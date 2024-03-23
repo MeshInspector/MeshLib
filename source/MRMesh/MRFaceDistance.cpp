@@ -141,26 +141,40 @@ auto DualEdgePathsBuider::growOneEdge() -> CandidateFace
 
 } // anonymous namespace
 
-std::optional<FaceScalars> calcFaceDistances( const MeshTopology & topology, const EdgeMetric & metric, const FaceBitSet & starts, float * maxDist, const ProgressCallback & cb )
+std::optional<FaceScalars> calcFaceDistances( const MeshTopology & topology, const EdgeMetric & metric, const FaceBitSet & starts,
+    const FaceDistancesSettings & settings )
 {
     MR_TIMER
     DualEdgePathsBuider builder( topology, metric, starts );
     float localMaxDist = 0;
-    size_t numDone = cb ? starts.count() : 0;
+    size_t numDone = settings.progress ? starts.count() : 0;
     const float rTotal = 1.0f / topology.numValidFaces();
-    if ( !reportProgress( cb, numDone * rTotal ) )
+    if ( !reportProgress( settings.progress, numDone * rTotal ) )
         return {};
+
+    FaceScalars order;
+    if ( settings.out == FaceDistancesSettings::OutputFaceValues::SeqOrder )
+        order = builder.distances();
+    int lastSeq = 0;
     for (;;)
     {
         const auto c = builder.growOneEdge();
         if ( !c.f )
             break;
         localMaxDist = c.penalty;
-        if ( !reportProgress( cb, [&]() { return numDone * rTotal; }, ++numDone, 16384 ) )
+        if ( settings.out == FaceDistancesSettings::OutputFaceValues::SeqOrder )
+            order[c.f] = float( ++lastSeq );
+        if ( !reportProgress( settings.progress, [&]() { return numDone * rTotal; }, ++numDone, 16384 ) )
             return {};
     }
-    if ( maxDist )
-        *maxDist = localMaxDist;
+    if ( settings.out == FaceDistancesSettings::OutputFaceValues::SeqOrder )
+    {
+        if ( settings.maxDist )
+            *settings.maxDist = float( lastSeq );
+        return order;
+    }
+    if ( settings.maxDist )
+        *settings.maxDist = localMaxDist;
     return builder.takeDistances();
 }
 

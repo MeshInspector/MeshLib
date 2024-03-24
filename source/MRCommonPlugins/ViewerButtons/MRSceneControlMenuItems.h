@@ -1,6 +1,8 @@
 #pragma once
+
 #include "MRViewer/MRRibbonMenuItem.h"
 #include "MRViewer/MRHistoryStore.h"
+#include "MRViewer/MRViewerEventsListener.h"
 
 namespace MR
 {

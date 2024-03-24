@@ -695,6 +695,9 @@
     <ClInclude Include="MRRenderMeasurementObjects.h">
       <Filter>Render\Implementations</Filter>
     </ClInclude>
+    <ClInclude Include="MRLambdaRibbonItem.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

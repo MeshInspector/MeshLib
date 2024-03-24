@@ -1,5 +1,5 @@
 #include "MRRibbonSchema.h"
-#include "MRRibbonMenuItem.h"
+#include "MRLambdaRibbonItem.h"
 #include "imgui.h"
 #include "MRRibbonMenu.h"
 #include "MRViewer.h"

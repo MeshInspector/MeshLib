@@ -41,9 +41,10 @@
 #include "MRViewer/MRViewerInstance.h"
 #include "MRViewer/MRSwapRootAction.h"
 #include "MRViewer/MRViewerEventsListener.h"
-#include "MRPch/MRWasm.h"
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRUIStyle.h"
+#include "MRViewer/MRLambdaRibbonItem.h"
+#include "MRPch/MRWasm.h"
 
 #ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>

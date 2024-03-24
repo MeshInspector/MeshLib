@@ -69,8 +69,12 @@ jobs:
       - name: Select image tag
         id: select-tag
         run: |
-          echo "image_tag=$([ ${{steps.linux-changes.outputs.src}} == 'true' ] && [ ${{github.event_name}} != 'push' ] && echo "${{steps.branch-name.outputs.current_branch}}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g' || \
-          echo "latest")" >> $GITHUB_OUTPUT
+          if [[ ${{ steps.linux-changes.outputs.src }} == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
+            IMAGE_TAG="${{ steps.branch-name.outputs.current_branch }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g'
+          else
+            IMAGE_TAG="latest"
+          fi
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
       - name: Set image tag base path
         id: set-path
@@ -81,7 +85,11 @@ jobs:
       - name: Checking whether to start image rebuild
         id: need-rebuild
         run: |
-          echo "need_linux_rebuild=${{steps.linux-changes.outputs.src == 'true'}}" >> $GITHUB_OUTPUT
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            echo "need_linux_rebuild=false" >> $GITHUB_OUTPUT
+          else
+            echo "need_linux_rebuild=${{ steps.linux-changes.outputs.src == 'true' }}" >> $GITHUB_OUTPUT
+          fi
           if [[ ${{ steps.windows-changes.outputs.src == 'true' }} == 'true' || ${{ contains(github.event.pull_request.labels.*.name, 'bump-vcpkg') }} == 'true' ]]; then
             echo "need_windows_rebuild=true" >> $GITHUB_OUTPUT
           else

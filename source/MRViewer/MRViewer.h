@@ -576,7 +576,7 @@ private:
     // Init window
     int launchInit_( const LaunchParams& params );
     // Return true if OpenGL loaded successfully
-    bool checkOpenGL_(const LaunchParams& params );
+    bool createOpenGLContext_( const LaunchParams& params );
     // Init base objects
     void init_();
     // Init all plugins on start
@@ -626,8 +626,8 @@ private:
     } glPrimitivesCounter_;
 
 
-    // creates glfw window with gl version major.minor, false if failed;
-    bool tryCreateWindow_( bool fullscreen, int& width, int& height, const std::string& name, int major, int minor );
+    // creates glfw window, false if failed;
+    bool tryCreateWindow_( bool fullscreen, int& width, int& height, const std::string& name );
 
     bool needRedraw_() const;
     void resetRedraw_();

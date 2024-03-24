@@ -564,51 +564,64 @@ int Viewer::launch( const LaunchParams& params )
     return EXIT_SUCCESS;
 }
 
-bool Viewer::checkOpenGL_(const LaunchParams& params )
+bool Viewer::createOpenGLContext_(const LaunchParams& params )
 {
     int windowWidth = params.width;
     int windowHeight = params.height;
-#ifdef __APPLE__
-    alphaSorter_.reset();
-    spdlog::warn( "Alpha sort is not available" );
 
-    spdlog::warn( "Loading OpenGL 4.1 for macOS" );
-    if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 4, 1 ) )
-    {
-        spdlog::critical( "Cannot load OpenGL 4.1" );
-        return false;
-    }
-#else
 #ifdef __EMSCRIPTEN__
     alphaSorter_.reset();
     spdlog::warn( "Alpha sort is not available" );
     spdlog::warn( "Loading WebGL 2 (OpenGL ES 3.0)" );
-    if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 3, 3 ) )
+    glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 3 );
+    glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 3 );
+    if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name ) )
     {
         spdlog::critical( "Cannot load WebGL 2 (OpenGL ES 3.0)" );
         return false;
     }
+    return true;
 #else
-    if ( params.preferOpenGL3 || !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 4, 3 ) )
+    if ( params.preferOpenGL3 )
+    {
+        glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
+        glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 3 );
+        glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 3 );
+    }
+    if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name ) )
+    {
+        spdlog::critical( "Cannot create OpenGL context" );
+#ifdef _WIN32
+        MessageBoxA( NULL, "Cannot create OpenGL context.\n"
+            "Please verify that you have decent graphics card and its drivers are installed.",
+            "MeshInspector/MeshLib Error", MB_OK );
+#endif
+        return false;
+    }
+
+    int major, minor, rev;
+    major = glfwGetWindowAttrib( window, GLFW_CONTEXT_VERSION_MAJOR );
+    minor = glfwGetWindowAttrib( window, GLFW_CONTEXT_VERSION_MINOR );
+    rev = glfwGetWindowAttrib( window, GLFW_CONTEXT_REVISION );
+    spdlog::info( "OpenGL version received: {}.{}.{}", major, minor, rev );
+    if ( major < 3 || ( major == 3 && minor < 3 ) )
+    {
+        spdlog::critical( "At least OpenGL 3.3 is required" );
+#ifdef _WIN32
+        MessageBoxA( NULL, "At least OpenGL 3.3 is required.\n"
+            "Please verify that you have decent graphics card and its drivers are installed.",
+            "MeshInspector/MeshLib Error", MB_OK );
+#endif
+        return false;
+    }
+
+    if ( major < 4 || ( major == 4 && minor < 3 ) )
     {
         alphaSorter_.reset();
-        if ( !params.preferOpenGL3 )
-            spdlog::warn( "Cannot load OpenGL 4.3, try load OpenGL 3.3" );
-        if ( !tryCreateWindow_( params.fullscreen, windowWidth, windowHeight, params.name, 3, 3 ) )
-        {
-            spdlog::critical( "Cannot load OpenGL 3.3" );
-#ifdef _WIN32
-            MessageBoxA( NULL, "Cannot activate OpenGL 3.3.\n"
-                "Please verify that you have decent graphics card and its drivers are installed.",
-                "MeshInspector/MeshLib Error", MB_OK );
-#endif
-            return false;
-        }
-        spdlog::warn( "Alpha sort is not available" );
+        spdlog::warn( "Alpha sort is not available in OpenGL lower than 4.3" );
     }
-#endif
-#endif
     return true;
+#endif
 }
 
 int Viewer::launchInit_( const LaunchParams& params )
@@ -639,7 +652,6 @@ int Viewer::launchInit_( const LaunchParams& params )
     else
         glfwWindowHint( GLFW_SAMPLES, settingsMng_->loadInt( "multisampleAntiAliasing", 8 ) );
 #ifndef __EMSCRIPTEN__
-    glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
     glfwWindowHint( GLFW_FOCUS_ON_SHOW, GLFW_TRUE );
     glfwWindowHint( GLFW_TRANSPARENT_FRAMEBUFFER, params.enableTransparentBackground );
 #endif
@@ -653,7 +665,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         if ( params.render3dSceneInTexture )
             sceneTexture_ = std::make_unique<SceneTextureGL>();
 
-        if ( !checkOpenGL_( params ) )
+        if ( !createOpenGLContext_( params ) )
         {
             if ( params.windowMode == LaunchParams::TryHidden )
                 windowMode = false;
@@ -676,11 +688,6 @@ int Viewer::launchInit_( const LaunchParams& params )
 #ifndef __EMSCRIPTEN__
         spdlog::info( "OpenGL Version {}.{} loaded", GLVersion.major, GLVersion.minor );
 #endif
-        int major, minor, rev;
-        major = glfwGetWindowAttrib( window, GLFW_CONTEXT_VERSION_MAJOR );
-        minor = glfwGetWindowAttrib( window, GLFW_CONTEXT_VERSION_MINOR );
-        rev = glfwGetWindowAttrib( window, GLFW_CONTEXT_REVISION );
-        spdlog::info( "OpenGL version received: {}.{}.{}", major, minor, rev );
         if ( glInitialized_ )
         {
             spdlog::info( "Supported OpenGL is {}", ( const char* )glGetString( GL_VERSION ) );
@@ -1382,10 +1389,8 @@ static void resetRedrawFlagRecursive( const Object& obj )
         resetRedrawFlagRecursive( *child );
 }
 
-bool Viewer::tryCreateWindow_( bool fullscreen, int& width, int& height, const std::string& name, int major, int minor )
+bool Viewer::tryCreateWindow_( bool fullscreen, int& width, int& height, const std::string& name )
 {
-    glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, major );
-    glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, minor );
     if ( fullscreen )
     {
         GLFWmonitor* monitor = glfwGetPrimaryMonitor();

@@ -126,6 +126,7 @@
     <ClInclude Include="MRFitData.h" />
     <ClInclude Include="MRHistoryStore.h" />
     <ClInclude Include="MRISceneStateCheck.h" />
+    <ClInclude Include="MRLambdaRibbonItem.h" />
     <ClInclude Include="MRMeshBoundarySelectionWidget.h" />
     <ClInclude Include="MRFrameCounter.h" />
     <ClInclude Include="MRNotificationType.h" />

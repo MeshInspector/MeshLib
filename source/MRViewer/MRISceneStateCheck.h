@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRViewerFwd.h"
 #include "MRMesh/MRMeshFwd.h"
 #include <memory>
 #include <vector>

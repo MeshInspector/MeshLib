@@ -269,7 +269,7 @@ skip:
         UI::checkbox( "Show Info in Object Tree",
                                                 std::bind( &RibbonMenu::getShowInfoInObjectTree, ribbonMenu_ ),
                                                 std::bind( &RibbonMenu::setShowInfoInObjectTree, ribbonMenu_, std::placeholders::_1 ) );
-        UI::setTooltipIfHovered( "Show experimental ribbon tabs", menuScaling );
+        UI::setTooltipIfHovered( "Show detailed information in the object tree", menuScaling );
 
         UI::checkbox( "Show Experimental Features", &RibbonSchemaHolder::schema().experimentalFeatures );
         UI::setTooltipIfHovered( "Show experimental ribbon tabs", menuScaling );

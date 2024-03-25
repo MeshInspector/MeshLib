@@ -1567,10 +1567,12 @@ void RibbonMenu::drawRibbonSceneList_()
     // Define next window position + size
     auto& viewerRef = Viewer::instanceRef();
     ImGui::SetWindowPos( "RibbonScene", ImVec2( 0.f, float( currentTopPanelHeight_ ) * scaling - 1 ), ImGuiCond_Always );
-    sceneSize_.x = std::round( std::min( sceneSize_.x, viewerRef.framebufferSize.x - 100 * scaling ) );
+    const float cMinSceneWidth = 100 * scaling;
+    const float cMaxSceneWidth = std::max( cMinSceneWidth, std::round( viewerRef.framebufferSize.x * 0.5f ) );
+    sceneSize_.x = std::max( sceneSize_.x, cMinSceneWidth );
     sceneSize_.y = std::round( viewerRef.framebufferSize.y - float( currentTopPanelHeight_ - 2.0f ) * scaling );
     ImGui::SetWindowSize( "RibbonScene", sceneSize_, ImGuiCond_Always );
-    ImGui::SetNextWindowSizeConstraints( ImVec2( 100 * scaling, -1.f ), ImVec2( viewerRef.framebufferSize.x / 2.f, -1.f ) ); // TODO take out limits to special place
+    ImGui::SetNextWindowSizeConstraints( ImVec2( cMinSceneWidth, -1.f ), ImVec2( cMaxSceneWidth, -1.f ) ); // TODO take out limits to special place
     ImGui::PushStyleVar( ImGuiStyleVar_Alpha, 1.f );
     auto colorBg = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
     colorBg.w = 1.f;

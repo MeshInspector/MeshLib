@@ -162,7 +162,7 @@ std::optional<FaceScalars> calcFaceDistances( const MeshTopology & topology, con
         if ( !c.f )
             break;
         localMaxDist = c.penalty;
-        if ( settings.out == FaceDistancesSettings::OutputFaceValues::SeqOrder )
+        if ( settings.out == FaceDistancesSettings::OutputFaceValues::SeqOrder && !starts.test( c.f ) )
             order[c.f] = float( ++lastSeq );
         if ( !reportProgress( settings.progress, [&]() { return numDone * rTotal; }, ++numDone, 16384 ) )
             return {};

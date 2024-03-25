@@ -105,6 +105,7 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
     {
         ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, Defaults::topPanelPinned ) );
         ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
+        ribbonMenu->setShowInfoInObjectTree( cfg.getBool( cShowInfoInObjectTree, Defaults::showInfoInObjectTree ) );
         ribbonMenu->resetQuickAccessList();
         ribbonMenu->setShowNewSelectedObjects( Defaults::showSelectedObjects );
         ribbonMenu->setDeselectNewHiddenObjects( Defaults::deselectNewHiddenObjects );
@@ -142,7 +143,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     {
         ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, Defaults::topPanelPinned ) );
         ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
-        ribbonMenu->setShowInfoInObjectTree( cfg.getBool( cShowInfoInObjectTree, Defaults::autoClosePlugins ) );
+        ribbonMenu->setShowInfoInObjectTree( cfg.getBool( cShowInfoInObjectTree, Defaults::showInfoInObjectTree ) );
     }
 
     if ( cfg.hasJsonValue( cSceneControlParamKey ) )

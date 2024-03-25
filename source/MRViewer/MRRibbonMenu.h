@@ -120,6 +120,11 @@ public:
     /// sets flag defining if closing plugin on opening another one is enabled or not
     void setAutoCloseBlockingPlugins( bool value ) { autoCloseBlockingPlugins_ = value; }
 
+    /// returns flag show info in object tree
+    bool getShowInfoInObjectTree() const { return showInfoInObjectTree_; }
+    /// set flag show info in object tree
+    void setShowInfoInObjectTree( bool value ) { showInfoInObjectTree_ = value; }
+
 protected:
     // draw single item
     MRVIEWER_API virtual void drawBigButtonItem_( const MenuItemInfo& item );
@@ -256,6 +261,8 @@ private:
     float tabPanelScroll_{ 0.0f };
 
     bool autoCloseBlockingPlugins_{ true };
+
+    bool showInfoInObjectTree_{ false };
 
     enum class CollapseState
     {

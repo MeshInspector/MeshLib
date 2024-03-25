@@ -1102,7 +1102,7 @@ void ImGuiMenu::makeDragDropTarget_( Object& target, bool before, bool betweenLi
     }
 }
 
-void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all )
+void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all, bool showInfo )
 {
     std::string uniqueStr = std::to_string( intptr_t( &object ) );
     const bool isObjSelectable = !object.isAncillary();
@@ -1152,12 +1152,26 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
 
         ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
 
-        isOpen = drawCollapsingHeader_( ( object.name() + " ##" + uniqueStr ).c_str(),
-                                    ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) |
-                                    ImGuiTreeNodeFlags_OpenOnArrow |
-                                    ImGuiTreeNodeFlags_SpanAvailWidth |
-                                    ImGuiTreeNodeFlags_Framed |
-                                    ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
+        if ( !showInfo && !hasRealChildren )
+        {
+            ImGui::TreeNodeEx( ( object.name() + " ##" + uniqueStr ).c_str(),
+                ImGuiTreeNodeFlags_Leaf |
+                ImGuiTreeNodeFlags_Bullet |
+                ImGuiTreeNodeFlags_SpanAvailWidth |
+                ImGuiTreeNodeFlags_Framed |
+                ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
+            ImGui::TreePop();
+        }
+        else
+        {
+            isOpen = drawCollapsingHeader_( ( object.name() + " ##" + uniqueStr ).c_str(),
+                                        ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) |
+                                        ImGuiTreeNodeFlags_SpanAvailWidth |
+                                        ImGuiTreeNodeFlags_Framed |
+                                        ImGuiTreeNodeFlags_OpenOnArrow |
+                                        ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
+        }
+
         if ( ImGui::IsMouseDoubleClicked( 0 ) && ImGui::IsItemHovered() )
         {
             if ( auto m = getViewerInstance().getMenuPluginAs<RibbonMenu>() )
@@ -1221,35 +1235,38 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
         draw_custom_tree_object_properties( object );
         bool infoOpen = false;
         auto lines = object.getInfoLines();
-        if ( hasRealChildren && !lines.empty() )
+        if ( showInfo )
         {
-            auto infoId = std::string( "Info: ##" ) + uniqueStr;
-            infoOpen = drawCollapsingHeader_( infoId.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed );
-        }
-
-        if ( infoOpen || !hasRealChildren )
-        {
-            auto itemSpacing = ImGui::GetStyle().ItemSpacing;
-            auto framePadding = ImGui::GetStyle().FramePadding;
-            auto scaling = menu_scaling();
-            framePadding.y = 2.0f * scaling;
-            itemSpacing.y = 2.0f * scaling;
-            ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( 0, 0, 0, 0 ) );
-            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
-            ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
-            ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, cItemInfoIndent * scaling );
-            ImGui::Indent();
-
-            for ( const auto& str : lines )
+            if ( hasRealChildren && !lines.empty() )
             {
-                ImGui::TreeNodeEx( str.c_str(), ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_Framed );
-                ImGui::TreePop();
+                auto infoId = std::string( "Info: ##" ) + uniqueStr;
+                infoOpen = drawCollapsingHeader_( infoId.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed );
             }
 
-            ImGui::Unindent();
-            ImGui::PopStyleVar( 4 );
-            ImGui::PopStyleColor();
+            if ( infoOpen || !hasRealChildren )
+            {
+                auto itemSpacing = ImGui::GetStyle().ItemSpacing;
+                auto framePadding = ImGui::GetStyle().FramePadding;
+                auto scaling = menu_scaling();
+                framePadding.y = 2.0f * scaling;
+                itemSpacing.y = 2.0f * scaling;
+                ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( 0, 0, 0, 0 ) );
+                ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
+                ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+                ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
+                ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, cItemInfoIndent * scaling );
+                ImGui::Indent();
+
+                for ( const auto& str : lines )
+                {
+                    ImGui::TreeNodeEx( str.c_str(), ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_Framed );
+                    ImGui::TreePop();
+                }
+
+                ImGui::Unindent();
+                ImGui::PopStyleVar( 4 );
+                ImGui::PopStyleColor();
+            }
         }
 
         if ( hasRealChildren )
@@ -1258,7 +1275,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
             ImGui::Indent();
             for ( const auto& child : children )
             {
-                draw_object_recurse_( *child, selected, all );
+                draw_object_recurse_( *child, selected, all, showInfo );
             }
             makeDragDropTarget_( object, false, true, "0" );
             ImGui::Unindent();

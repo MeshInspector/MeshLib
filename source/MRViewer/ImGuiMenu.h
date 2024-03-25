@@ -370,7 +370,7 @@ protected:
     MRVIEWER_API void makeDragDropTarget_( Object& target, bool before, bool betweenLine, const std::string& uniqueStr );
     MRVIEWER_API void reorderSceneIfNeeded_();
 
-    MRVIEWER_API void draw_object_recurse_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all );
+    MRVIEWER_API void draw_object_recurse_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all, bool showInfo = true );
 
     MRVIEWER_API float drawSelectionInformation_();
     MRVIEWER_API void drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& object );

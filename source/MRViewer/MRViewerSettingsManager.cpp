@@ -42,6 +42,7 @@ const std::string cncMachineSettingsKey = "CNCMachineSettings";
 const std::string cTouchpadSettings = "touchpadSettings";
 const std::string cEnableSavedDialogPositions = "enableSavedDialogPositions";
 const std::string cAutoClosePlugins = "autoClosePlugins";
+const std::string cShowInfoInObjectTree = "showInfoInObjectTree";
 const std::string cShowExperimentalFeatures = "showExperimentalFeatures";
 }
 
@@ -51,6 +52,7 @@ const bool orthographic = true;
 const bool saveDialogPositions = false;
 const bool topPanelPinned = true;
 const bool autoClosePlugins = true;
+const bool showInfoInObjectTree = false;
 const bool showSelectedObjects = false;
 const bool deselectNewHiddenObjects = false;
 const bool closeContextOnChange = false;
@@ -140,6 +142,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     {
         ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, Defaults::topPanelPinned ) );
         ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
+        ribbonMenu->setShowInfoInObjectTree( cfg.getBool( cShowInfoInObjectTree, Defaults::autoClosePlugins ) );
     }
 
     if ( cfg.hasJsonValue( cSceneControlParamKey ) )
@@ -363,6 +366,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     {
         cfg.setBool( cTopPanelPinnedKey, ribbonMenu->isTopPannelPinned() );
         cfg.setBool( cAutoClosePlugins, ribbonMenu->getAutoCloseBlockingPlugins() );
+        cfg.setBool( cAutoClosePlugins, ribbonMenu->getShowInfoInObjectTree() );
     }
 
     Json::Value sceneControls;

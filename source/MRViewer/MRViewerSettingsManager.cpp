@@ -367,7 +367,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     {
         cfg.setBool( cTopPanelPinnedKey, ribbonMenu->isTopPannelPinned() );
         cfg.setBool( cAutoClosePlugins, ribbonMenu->getAutoCloseBlockingPlugins() );
-        cfg.setBool( cAutoClosePlugins, ribbonMenu->getShowInfoInObjectTree() );
+        cfg.setBool( cShowInfoInObjectTree, ribbonMenu->getShowInfoInObjectTree() );
     }
 
     Json::Value sceneControls;

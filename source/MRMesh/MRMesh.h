@@ -29,6 +29,11 @@ struct [[nodiscard]] Mesh
         VertCoords vertexCoordinates,
         const Triangulation& t, const MeshBuilder::BuildSettings& settings = {}, ProgressCallback cb = {} );
 
+    /// construct mesh from TriMesh representation
+    [[nodiscard]] MRMESH_API static Mesh fromTriMesh(
+        TriMesh && triMesh, ///< points of triMesh will be moves in the result
+        const MeshBuilder::BuildSettings& settings = {}, ProgressCallback cb = {} );
+
     /// construct mesh from vertex coordinates and a set of triangles with given ids;
     /// unlike simple fromTriangles() it tries to resolve non-manifold vertices by creating duplicate vertices
     [[nodiscard]] MRMESH_API static Mesh fromTrianglesDuplicatingNonManifoldVertices(

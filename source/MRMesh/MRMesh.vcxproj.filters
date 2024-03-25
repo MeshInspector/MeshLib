@@ -1224,6 +1224,9 @@
     <ClInclude Include="MRFaceDistance.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
+    <ClInclude Include="MRTriMesh.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

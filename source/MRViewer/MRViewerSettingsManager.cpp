@@ -41,6 +41,7 @@ const std::string cMSAA = "multisampleAntiAliasing";
 const std::string cncMachineSettingsKey = "CNCMachineSettings";
 const std::string cTouchpadSettings = "touchpadSettings";
 const std::string cEnableSavedDialogPositions = "enableSavedDialogPositions";
+const std::string cShowInfoInObjectTree = "showInfoInObjectTree";
 const std::string cAutoClosePlugins = "autoClosePlugins";
 const std::string cShowExperimentalFeatures = "showExperimentalFeatures";
 }
@@ -51,6 +52,7 @@ const bool orthographic = true;
 const bool saveDialogPositions = false;
 const bool topPanelPinned = true;
 const bool autoClosePlugins = true;
+const bool showInfoInObjectTree = false;
 const bool showSelectedObjects = false;
 const bool deselectNewHiddenObjects = false;
 const bool closeContextOnChange = false;
@@ -102,6 +104,7 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
     if ( auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>() )
     {
         ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, Defaults::topPanelPinned ) );
+        ribbonMenu->setShowInfoInObjectTree( cfg.getBool( cShowInfoInObjectTree, Defaults::showInfoInObjectTree ) );
         ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
         ribbonMenu->resetQuickAccessList();
         ribbonMenu->setShowNewSelectedObjects( Defaults::showSelectedObjects );
@@ -139,6 +142,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     if ( ribbonMenu )
     {
         ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, Defaults::topPanelPinned ) );
+        ribbonMenu->setShowInfoInObjectTree( cfg.getBool( cShowInfoInObjectTree, Defaults::showInfoInObjectTree ) );
         ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
     }
 
@@ -363,6 +367,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     {
         cfg.setBool( cTopPanelPinnedKey, ribbonMenu->isTopPannelPinned() );
         cfg.setBool( cAutoClosePlugins, ribbonMenu->getAutoCloseBlockingPlugins() );
+        cfg.setBool( cAutoClosePlugins, ribbonMenu->getShowInfoInObjectTree() );
     }
 
     Json::Value sceneControls;

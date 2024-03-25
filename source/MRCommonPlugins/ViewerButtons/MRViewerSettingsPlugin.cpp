@@ -266,6 +266,11 @@ skip:
                                                 std::bind( &RibbonMenu::setAutoCloseBlockingPlugins, ribbonMenu_, std::placeholders::_1 ) );
         UI::setTooltipIfHovered( "Automatically close blocking tool when another blocking tool is activated", menuScaling );
 
+        UI::checkbox( "Show Info in Object Tree",
+                                                std::bind( &RibbonMenu::getShowInfoInObjectTree, ribbonMenu_ ),
+                                                std::bind( &RibbonMenu::setShowInfoInObjectTree, ribbonMenu_, std::placeholders::_1 ) );
+        UI::setTooltipIfHovered( "Show detailed information in the object tree", menuScaling );
+
         UI::checkbox( "Show Experimental Features", &RibbonSchemaHolder::schema().experimentalFeatures );
         UI::setTooltipIfHovered( "Show experimental ribbon tabs", menuScaling );
     }

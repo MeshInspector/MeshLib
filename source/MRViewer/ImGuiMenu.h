@@ -123,6 +123,7 @@ protected:
   bool uniformScale_{ true };
   bool xfHistUpdated_{ false };
   bool invertedRotation_{ false };
+  bool showInfoInObjectTree_{ false };
 
   std::optional<std::pair<std::string, Vector4f>> storedColor_;
   Vector4f getStoredColor_( const std::string& str, const Color& defaultColor ) const;
@@ -322,7 +323,12 @@ public:
   bool isSavedDialogPositionsEnabled() const { return savedDialogPositionEnabled_; }
 
   // This class helps the viewer to `renderUi()` from `IRenderObject`s.
-  MRVIEWER_API virtual UiRenderManager& getUiRenderManager();
+  MRVIEWER_API virtual UiRenderManager& getUiRenderManager();  
+
+  /// returns flag show detailed information in the object tree
+  bool getShowInfoInObjectTree() const { return showInfoInObjectTree_; }
+  /// set flag show detailed information in the object tree
+  void setShowInfoInObjectTree( bool value ) { showInfoInObjectTree_ = value; }
 
 protected:
     MRVIEWER_API virtual void drawModalMessage_();

@@ -14,7 +14,6 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectLines.h"
-#include "MRMesh/MRFeatureObject.h"
 #include "MRMesh/MRPolylineProject.h"
 #include "MRMesh/MR2to3.h"
 #include "MRMesh/MRObjectVoxels.h"
@@ -240,7 +239,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
                 }
             }
         }
-        else if ( auto featureObj = renderVector[pickRes.geomId]->asType<FeatureObject>() )
+        else
         {
             res.point = renderVector[pickRes.geomId]->worldXf( id ).inverse()( unprojectFromViewportSpace( Vector3f( viewportPoints[i].x, viewportPoints[i].y, pickRes.zBuffer ) ) );
         }

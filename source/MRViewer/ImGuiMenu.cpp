@@ -1102,7 +1102,7 @@ void ImGuiMenu::makeDragDropTarget_( Object& target, bool before, bool betweenLi
     }
 }
 
-void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all, bool showInfo )
+void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all )
 {
     std::string uniqueStr = std::to_string( intptr_t( &object ) );
     const bool isObjSelectable = !object.isAncillary();
@@ -1152,7 +1152,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
 
         ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
 
-        if ( !showInfo && !hasRealChildren )
+        if ( !showInfoInObjectTree_ && !hasRealChildren )
         {
             ImGui::TreeNodeEx( ( object.name() + " ##" + uniqueStr ).c_str(),
                 ImGuiTreeNodeFlags_Leaf |
@@ -1235,7 +1235,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
         draw_custom_tree_object_properties( object );
         bool infoOpen = false;
         auto lines = object.getInfoLines();
-        if ( showInfo )
+        if ( showInfoInObjectTree_ )
         {
             if ( hasRealChildren && !lines.empty() )
             {
@@ -1275,7 +1275,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
             ImGui::Indent();
             for ( const auto& child : children )
             {
-                draw_object_recurse_( *child, selected, all, showInfo );
+                draw_object_recurse_( *child, selected, all );
             }
             makeDragDropTarget_( object, false, true, "0" );
             ImGui::Unindent();

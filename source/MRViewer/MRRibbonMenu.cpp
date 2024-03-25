@@ -1618,7 +1618,7 @@ void RibbonMenu::drawRibbonSceneListContent_( std::vector<std::shared_ptr<Object
     updateSceneWindowScrollIfNeeded_();
     auto children = SceneRoot::get().children();
     for ( const auto& child : children )
-        draw_object_recurse_( *child, selected, all, showInfoInObjectTree_ );
+        draw_object_recurse_( *child, selected, all );
     makeDragDropTarget_( SceneRoot::get(), false, true, "" );
 
     // any click on empty space below Scene Tree removes object selection

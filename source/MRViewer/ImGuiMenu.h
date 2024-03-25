@@ -123,6 +123,7 @@ protected:
   bool uniformScale_{ true };
   bool xfHistUpdated_{ false };
   bool invertedRotation_{ false };
+  bool showInfoInObjectTree_{ false };
 
   std::optional<std::pair<std::string, Vector4f>> storedColor_;
   Vector4f getStoredColor_( const std::string& str, const Color& defaultColor ) const;
@@ -322,7 +323,12 @@ public:
   bool isSavedDialogPositionsEnabled() const { return savedDialogPositionEnabled_; }
 
   // This class helps the viewer to `renderUi()` from `IRenderObject`s.
-  MRVIEWER_API virtual UiRenderManager& getUiRenderManager();
+  MRVIEWER_API virtual UiRenderManager& getUiRenderManager();  
+
+  /// returns flag show info in object tree
+  bool getShowInfoInObjectTree() const { return showInfoInObjectTree_; }
+  /// set flag show info in object tree
+  void setShowInfoInObjectTree( bool value ) { showInfoInObjectTree_ = value; }
 
 protected:
     MRVIEWER_API virtual void drawModalMessage_();
@@ -370,7 +376,7 @@ protected:
     MRVIEWER_API void makeDragDropTarget_( Object& target, bool before, bool betweenLine, const std::string& uniqueStr );
     MRVIEWER_API void reorderSceneIfNeeded_();
 
-    MRVIEWER_API void draw_object_recurse_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all, bool showInfo = true );
+    MRVIEWER_API void draw_object_recurse_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all );
 
     MRVIEWER_API float drawSelectionInformation_();
     MRVIEWER_API void drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& object );

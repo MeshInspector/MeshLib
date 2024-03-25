@@ -41,8 +41,8 @@ const std::string cMSAA = "multisampleAntiAliasing";
 const std::string cncMachineSettingsKey = "CNCMachineSettings";
 const std::string cTouchpadSettings = "touchpadSettings";
 const std::string cEnableSavedDialogPositions = "enableSavedDialogPositions";
-const std::string cAutoClosePlugins = "autoClosePlugins";
 const std::string cShowInfoInObjectTree = "showInfoInObjectTree";
+const std::string cAutoClosePlugins = "autoClosePlugins";
 const std::string cShowExperimentalFeatures = "showExperimentalFeatures";
 }
 
@@ -104,8 +104,8 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
     if ( auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>() )
     {
         ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, Defaults::topPanelPinned ) );
-        ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
         ribbonMenu->setShowInfoInObjectTree( cfg.getBool( cShowInfoInObjectTree, Defaults::showInfoInObjectTree ) );
+        ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
         ribbonMenu->resetQuickAccessList();
         ribbonMenu->setShowNewSelectedObjects( Defaults::showSelectedObjects );
         ribbonMenu->setDeselectNewHiddenObjects( Defaults::deselectNewHiddenObjects );
@@ -142,8 +142,8 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     if ( ribbonMenu )
     {
         ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, Defaults::topPanelPinned ) );
-        ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
         ribbonMenu->setShowInfoInObjectTree( cfg.getBool( cShowInfoInObjectTree, Defaults::showInfoInObjectTree ) );
+        ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
     }
 
     if ( cfg.hasJsonValue( cSceneControlParamKey ) )

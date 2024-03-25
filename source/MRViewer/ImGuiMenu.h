@@ -325,9 +325,9 @@ public:
   // This class helps the viewer to `renderUi()` from `IRenderObject`s.
   MRVIEWER_API virtual UiRenderManager& getUiRenderManager();  
 
-  /// returns flag show info in object tree
+  /// returns flag show detailed information in the object tree
   bool getShowInfoInObjectTree() const { return showInfoInObjectTree_; }
-  /// set flag show info in object tree
+  /// set flag show detailed information in the object tree
   void setShowInfoInObjectTree( bool value ) { showInfoInObjectTree_ = value; }
 
 protected:

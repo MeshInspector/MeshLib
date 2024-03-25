@@ -25,6 +25,7 @@
 #include "MRTriMath.h"
 #include "MRIdentifyVertices.h"
 #include "MRMeshFillHole.h"
+#include "MRTriMesh.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -60,6 +61,13 @@ Mesh Mesh::fromTriangles(
     res.points = std::move( vertexCoordinates );
     res.topology = MeshBuilder::fromTriangles( t, settings, cb );
     return res;
+}
+
+Mesh Mesh::fromTriMesh(
+    TriMesh && triMesh,
+    const MeshBuilder::BuildSettings& settings, ProgressCallback cb  )
+{
+    return fromTriangles( std::move( triMesh.points ), triMesh.tris, settings, cb );
 }
 
 Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices( 

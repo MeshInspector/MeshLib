@@ -214,6 +214,7 @@
     <ClInclude Include="MRTerrainTriangulation.h" />
     <ClInclude Include="MRTimeRecord.h" />
     <ClInclude Include="MRToolPath.h" />
+    <ClInclude Include="MRTriMesh.h" />
     <ClInclude Include="MRTunnelDetector.h" />
     <ClInclude Include="MRMeshDirMax.h" />
     <ClInclude Include="MRMeshIntersect.h" />

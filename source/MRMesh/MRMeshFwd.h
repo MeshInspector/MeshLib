@@ -380,6 +380,7 @@ struct MRMESH_CLASS CloudPartMapping;
 struct MRMESH_CLASS PartMapping;
 struct MeshTexture;
 struct GridSettings;
+struct TriMesh;
 
 template<typename T> class UniqueThreadSafeOwner;
 

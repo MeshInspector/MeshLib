@@ -54,7 +54,7 @@ private:
     std::string name_;
 };
 
-/// Undo action for ObjectPoints pointCloude change
+/// Undo action for ObjectPoints points pointCloude change
 /// \ingroup HistoryGroup
 class ChangePointCloudPointsAction : public HistoryAction
 {
@@ -90,7 +90,7 @@ public:
     static void setObjectDirty( const std::shared_ptr<ObjectPoints>& obj )
     {
         if ( obj )
-            obj->setDirtyFlags( DIRTY_ALL );
+            obj->setDirtyFlags( DIRTY_POSITION );
     }
 
     [[nodiscard]] virtual size_t heapBytes() const override

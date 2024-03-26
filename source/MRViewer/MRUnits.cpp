@@ -14,7 +14,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .sourceUnit = std::nullopt,
             .targetUnit = {},
             .unitSuffix = false,
-            .fixedPrecision = false,
+            .style = NumberStyle::fixed,
             .precision = 3,
             .unicodeMinusSign = true,
             .thousandsSeparator = ' ',
@@ -29,7 +29,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .sourceUnit = std::nullopt,
             .targetUnit = LengthUnit::mm,
             .unitSuffix = true,
-            .fixedPrecision = false,
+            .style = NumberStyle::normal,
             .precision = 3,
             .unicodeMinusSign = true,
             .thousandsSeparator = ' ',
@@ -44,7 +44,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .sourceUnit = AngleUnit::radians,
             .targetUnit = AngleUnit::degrees,
             .unitSuffix = true,
-            .fixedPrecision = true,
+            .style = NumberStyle::fixed,
             .precision = 1,
             .unicodeMinusSign = true,
             .thousandsSeparator = 0,
@@ -59,7 +59,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .sourceUnit = std::nullopt,
             .targetUnit = PixelSizeUnit::pixels,
             .unitSuffix = true,
-            .fixedPrecision = false,
+            .style = NumberStyle::normal,
             .precision = 2,
             .unicodeMinusSign = true,
             .thousandsSeparator = ' ',
@@ -133,8 +133,7 @@ DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
 
 template <UnitEnum E, typename T>
-requires std::is_arithmetic_v<T>
-std::string valueToString( T value, const UnitToStringParams<E>& params )
+static std::string valueToStringImpl( T value, const UnitToStringParams<E>& params )
 {
     // If `str` starts with ASCII minus minus, and `params.unicodeMinusSign` is set, replace it with a Unicode minus sign.
     auto adjustMinusSign = [&]( std::string& str )
@@ -146,10 +145,6 @@ std::string valueToString( T value, const UnitToStringParams<E>& params )
             str.insert( str.begin() + 1, { '\x88', '\x92' } );
         }
     };
-
-    // Convert to the target unit.
-    if ( params.sourceUnit )
-        value = convertUnits( *params.sourceUnit, params.targetUnit, value );
 
     std::string_view unitSuffix;
     if ( params.unitSuffix )
@@ -195,12 +190,16 @@ std::string valueToString( T value, const UnitToStringParams<E>& params )
         }
     }
 
-    auto formatValue = []( T value, int precision ) -> std::string
+    auto formatValue = [&]( T value, int precision ) -> std::string
     {
         if constexpr ( std::is_floating_point_v<T> )
         {
-            (void)precision;
-            return fmt::format( "{:.{}f}", value, precision );
+            if ( params.style == NumberStyle::maybeScientific )
+                return fmt::format( "{:.{}g}", value, precision );
+            else if ( params.style == NumberStyle::scientific )
+                return fmt::format( "{:.{}e}", value, precision );
+            else
+                return fmt::format( "{:.{}f}", value, precision );
         }
         else
         {
@@ -211,7 +210,7 @@ std::string valueToString( T value, const UnitToStringParams<E>& params )
 
     // Calculate precision after the decimal point.
     int fracPrecision = std::is_floating_point_v<T> ? params.precision : 0;
-    if ( !params.fixedPrecision && fracPrecision > 0 )
+    if ( params.style == NumberStyle::normal && fracPrecision > 0 )
     {
         int intDigits = 0;
 
@@ -231,7 +230,7 @@ std::string valueToString( T value, const UnitToStringParams<E>& params )
         // Remove the leading zero.
         if constexpr ( std::is_floating_point_v<T> )
         {
-            if ( !params.leadingZero )
+            if ( !params.leadingZero  )
             {
                 if ( formattedValue.starts_with( "0." ) )
                     formattedValue.erase( formattedValue.begin() );
@@ -257,7 +256,7 @@ std::string valueToString( T value, const UnitToStringParams<E>& params )
         // Remove the trailing zeroes.
         if constexpr ( std::is_floating_point_v<T> )
         {
-            if ( params.stripTrailingZeroes && formattedValue.find( '.' ) != std::string::npos )
+            if ( params.stripTrailingZeroes && formattedValue.find( '.' ) != std::string::npos && formattedValue.find( 'e' ) == std::string::npos )
             {
                 bool strippedAny = false;
                 while ( formattedValue.ends_with( '0' ) )
@@ -279,6 +278,23 @@ std::string valueToString( T value, const UnitToStringParams<E>& params )
     ret += unitSuffix;
 
     return ret;
+}
+
+template <UnitEnum E, typename T>
+requires std::is_arithmetic_v<T>
+std::string valueToString( T value, const UnitToStringParams<E>& params )
+{
+    // Convert to the target unit.
+    if ( unitsAreEquivalent( params.sourceUnit.value_or( params.targetUnit ), params.targetUnit ) )
+    {
+        // This can be integral or floating-point.
+        return valueToStringImpl( value, params );
+    }
+    else
+    {
+        // This is always integral.
+        return valueToStringImpl( convertUnits( *params.sourceUnit, params.targetUnit, value ), params );
+    }
 }
 
 #define MR_Y(T, E) template std::string valueToString<E, T>( T value, const UnitToStringParams<E>& params );

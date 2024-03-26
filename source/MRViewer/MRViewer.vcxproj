@@ -222,6 +222,7 @@
     <ClInclude Include="MRRenderMeasurementObjects.h" />
     <ClInclude Include="MRVectorTraits.h" />
     <ClInclude Include="MRUnits.h" />
+    <ClInclude Include="MRUnits.tpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

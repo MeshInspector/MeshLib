@@ -704,6 +704,9 @@
     <ClInclude Include="MRUnits.h">
       <Filter>UIStyle</Filter>
     </ClInclude>
+    <ClInclude Include="MRUnits.tpp">
+      <Filter>UIStyle</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

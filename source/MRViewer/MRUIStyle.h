@@ -134,6 +134,13 @@ namespace detail
         std::same_as<Bound, Target> ||
         ( VectorTraits<Bound>::size == 1 && std::same_as<typename VectorTraits<Bound>::BaseType, typename VectorTraits<Target>::BaseType> );
 
+    // Whether `Speed` is a valid drag speed type for `Target`.
+    // That is, either a single/vector of `float` or the same type as target (or its element if it's a vector).
+    template <typename Speed, typename Target>
+    concept ValidDragSpeedForTargetType =
+        std::same_as<Speed, typename VectorTraits<Target>::BaseType> || std::same_as<Speed, float> ||
+        std::same_as<Speed, Target> || std::same_as<Speed, typename VectorTraits<Target>::template ChangeBase<float>>;
+
     // A common code for sliders and other widgets dealing with measurement units.
     // `E` must be explicitly set to a measurement unit enum. The other template parameters are deduced.
     // `label` is the widget label, `v` is the target value.
@@ -152,7 +159,7 @@ namespace detail
     // Default drag speed for `UI::drag()`.
     template <UnitEnum E, VectorOrScalar T>
     requires ( VectorTraits<T>::size == 1 )
-    [[nodiscard]] T getDefaultDragSpeed();
+    [[nodiscard]] float getDefaultDragSpeed();
 
     // Default step speed for `UI::input()`.
     template <UnitEnum E, VectorOrScalar T>
@@ -181,8 +188,8 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
 // `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`.
 // By default, for angles `v` will be converted to degrees for display (but `vSpeed` is still in radians, same as `v`),
 //   while length and unit-less values will be left as is. This can be customized in `unitParams` or globally (see `MRUnits.h`).
-template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
-bool drag( const char* label, T& v, const U& vSpeed = detail::getDefaultDragSpeed<E, U>(), const U& vMin = 0, const U& vMax = 0, UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags );
+template <UnitEnum E, detail::VectorOrScalar T, detail::ValidDragSpeedForTargetType<T> SpeedType = float, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
+bool drag( const char* label, T& v, SpeedType vSpeed = detail::getDefaultDragSpeed<E, SpeedType>(), const U& vMin = 0, const U& vMax = 0, UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags );
 
 // Draw a textbox.
 // `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`.

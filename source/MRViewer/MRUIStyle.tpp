@@ -123,7 +123,7 @@ namespace detail
 
     template <UnitEnum E, VectorOrScalar T>
     requires ( VectorTraits<T>::size == 1 )
-    [[nodiscard]] T getDefaultDragSpeed()
+    [[nodiscard]] float getDefaultDragSpeed()
     {
         if constexpr ( std::is_same_v<E, NoUnit> )
             return 1;
@@ -202,8 +202,8 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
         } );
 }
 
-template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U>
-bool drag( const char* label, T& v, const U& vSpeed, const U& vMin, const U& vMax, UnitToStringParams<E> unitParams, ImGuiSliderFlags flags )
+template <UnitEnum E, detail::VectorOrScalar T, detail::ValidDragSpeedForTargetType<T> SpeedType, detail::ValidBoundForTargetType<T> U>
+bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vMax, UnitToStringParams<E> unitParams, ImGuiSliderFlags flags )
 {
     // Adjust the parameters:
     // Don't strip trailing zeroes, otherwise the numbers jump too much.
@@ -238,7 +238,7 @@ bool drag( const char* label, T& v, const U& vSpeed, const U& vMin, const U& vMa
 
             bool ret = ImGui::DragScalar(
                 elemLabel, detail::imGuiTypeEnum<ElemType>(), &elemVal,
-                VectorTraits<U>::getElem( i, fixedSpeed ), elemMin, elemMax, valueToString<E>( elemVal, unitParams ).c_str(), flags
+                float( VectorTraits<SpeedType>::getElem( i, fixedSpeed ) ), elemMin, elemMax, valueToString<E>( elemVal, unitParams ).c_str(), flags
             );
             detail::drawDragTooltip( detail::getDragRangeTooltip( VectorTraits<U>::getElem( i, fixedMin ), VectorTraits<U>::getElem( i, fixedMax ), unitParams ) );
             return ret;

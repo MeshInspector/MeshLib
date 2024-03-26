@@ -128,6 +128,8 @@ template <UnitEnum E, typename T, typename ReturnType = std::conditional_t<std::
     return ret;
 }
 
+// ---
+
 template <UnitEnum E>
 struct UnitToStringParams;
 
@@ -147,6 +149,14 @@ void setDefaultUnitParams( const UnitToStringParams<E>& newParams );
 #define MR_X(E) extern template MRVIEWER_API void setDefaultUnitParams( const UnitToStringParams<E>& newParams );
 DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
+
+enum class NumberStyle
+{
+    normal, // Like %f. The precision digits are spread across both decimal and integral parts
+    fixed, // Like %f, but the precision digits only affect the decimal part.
+    scientific, // Like %e.
+    maybeScientific, // Like %g.
+};
 
 // This controls how the degrees are printed.
 enum class DegreesMode
@@ -189,8 +199,8 @@ struct UnitToStringParams
 
     // --- Precision:
 
-    // If true, `precision` is the total number of digits. If false, `precision` is the number of digits after the decimal point.
-    bool fixedPrecision = getDefaultUnitParams<E>().fixedPrecision;
+    // The output style. (Scientific notation or not, fixed-precision or not.)
+    NumberStyle style = getDefaultUnitParams<E>().style;
 
     // How many digits of precision.
     int precision = getDefaultUnitParams<E>().precision;

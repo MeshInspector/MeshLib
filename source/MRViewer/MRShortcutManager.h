@@ -79,8 +79,8 @@ public:
     // if given key has action in shortcut map - process it and returns true, otherwise returns false;
     MRVIEWER_API virtual bool processShortcut( const ShortcutKey& key, Reason = Reason::KeyDown ) const;
 
-    bool onKeyDown_( int key, int modifier ) override;
-    bool onKeyRepeat_( int key, int modifier ) override;
+    MRVIEWER_API bool onKeyDown_( int key, int modifier ) override;
+    MRVIEWER_API bool onKeyRepeat_( int key, int modifier ) override;
 
     //make string from strictly one modifier
     MRVIEWER_API static std::string getModifierString( int mod );

@@ -1159,8 +1159,8 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
                 ImGuiTreeNodeFlags_Bullet |
                 ImGuiTreeNodeFlags_SpanAvailWidth |
                 ImGuiTreeNodeFlags_Framed |
+                ImGuiTreeNodeFlags_NoTreePushOnOpen |
                 ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
-            ImGui::TreePop();
         }
         else
         {

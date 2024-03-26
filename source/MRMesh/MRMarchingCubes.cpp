@@ -7,7 +7,7 @@
 #include "MRMeshBuilder.h"
 #include "MRVDBFloatGrid.h"
 #include "MRTimer.h"
-#include "MRPch/MRTBB.h"
+#include "MRParallelFor.h"
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRPch/MROpenvdb.h"
 #endif
@@ -688,11 +688,8 @@ Expected<Mesh> volumeToMesh( const V& volume, const MarchingCubesParams& params,
     };
     using PerThreadVertNumeration = std::vector<VertsNumeration>;
     tbb::enumerable_thread_specific<PerThreadVertNumeration> perThreadVertNumeration;
-    tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), blockCount, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
+    ParallelFor( size_t( 0 ), blockCount, [&] ( size_t blockIndex )
     {
-        assert( range.begin() + 1 == range.end() );
-        const auto blockIndex = range.begin();
-
         // vdb version cache
         [[maybe_unused]] auto acc = accessorCtor( volume );
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
@@ -821,11 +818,9 @@ Expected<Mesh> volumeToMesh( const V& volume, const MarchingCubesParams& params,
     };
 
     // update map with determined vert indices
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, hmaps.size(), 1 ),
-    [&] ( const tbb::blocked_range<size_t>& range )
+    ParallelFor( size_t( 0 ), hmaps.size(), [&] ( size_t hi )
     {
-        assert( range.begin() + 1 == range.end() );
-        for ( auto& [ind, set] : hmaps[range.begin()] )
+        for ( auto& [ind, set] : hmaps[hi] )
         {
             auto vertShift = getVertIndexShiftForVoxelId( ind );
             for ( auto& sepPoint : set )
@@ -861,11 +856,8 @@ Expected<Mesh> volumeToMesh( const V& volume, const MarchingCubesParams& params,
     };
 
     tbb::enumerable_thread_specific<PerThreadTriangulation> triangulationPerThread;
-    tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), blockCount, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
+    ParallelFor( size_t( 0 ), blockCount, [&] ( size_t blockIndex )
     {
-        assert( range.begin() + 1 == range.end() );
-        const auto blockIndex = range.begin();
-
         const auto layerBegin = blockIndex * layerPerBlockCount;
         if ( layerBegin >= layerCount )
             return;
@@ -1104,11 +1096,9 @@ Expected<Mesh> volumeToMesh( const V& volume, const MarchingCubesParams& params,
     if ( params.cb && !params.cb( 0.95f ) )
         return unexpectedOperationCanceled();
 
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, hmaps.size(), 1 ),
-        [&] ( const tbb::blocked_range<size_t>& range )
+    ParallelFor( size_t( 0 ), hmaps.size(), [&] ( size_t hi )
     {
-        assert( range.begin() + 1 == range.end() );
-        for ( auto& [_, set] : hmaps[range.begin()] )
+        for ( auto& [_, set] : hmaps[hi] )
         {
             for ( int i = int( NeighborDir::X ); i < int( NeighborDir::Count ); ++i )
                 if ( set[i].vid < result.points.size() ) // vid can be valid but beyond the range if no triangle references it (NaNs in nearby voxels)

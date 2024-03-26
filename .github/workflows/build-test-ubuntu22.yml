@@ -28,6 +28,7 @@ jobs:
     container:
       image: meshlib/meshlib-ubuntu22:${{inputs.docker_image_tag}}
     strategy:
+      fail-fast: false
       matrix:
         config: [ Debug, Release ]
         compiler: [ Clang 14, GCC 12 ]

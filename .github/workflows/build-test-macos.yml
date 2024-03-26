@@ -20,6 +20,7 @@ jobs:
     # runs-on: macos-latest
     runs-on: ${{ matrix.runner }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ x64, arm ]
         config: [Release]

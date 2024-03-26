@@ -23,6 +23,7 @@ jobs:
     timeout-minutes: 50
     runs-on: ${{ matrix.runner }}
     strategy:
+      fail-fast: false
       matrix:
         config: [ "Debug", "Release" ]
         runner: [ windows-2022, windows-2019 ]

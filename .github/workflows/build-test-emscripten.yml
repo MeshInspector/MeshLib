@@ -18,6 +18,7 @@ jobs:
       image: meshlib/meshlib-emscripten:${{inputs.docker_image_tag}}
       options: --user 1001
     strategy:
+      fail-fast: false
       matrix:
         config: [Singlethreaded, Multithreaded]
         include:

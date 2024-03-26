@@ -203,7 +203,7 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
 }
 
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U>
-bool drag( const char* label, T& v, const U& vMin, const U& vMax, const U& vSpeed, UnitToStringParams<E> unitParams, ImGuiSliderFlags flags )
+bool drag( const char* label, T& v, const U& vSpeed, const U& vMin, const U& vMax, UnitToStringParams<E> unitParams, ImGuiSliderFlags flags )
 {
     // Adjust the parameters:
     // Don't strip trailing zeroes, otherwise the numbers jump too much.

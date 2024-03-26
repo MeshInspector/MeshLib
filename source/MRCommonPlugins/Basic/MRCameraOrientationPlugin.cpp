@@ -65,7 +65,7 @@ void CameraOrientation::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::PushItemWidth( 80 * menuScaling );
     auto params = viewer->viewport().getParameters();
     auto fov = params.cameraViewAngle;
-    UI::drag<AngleUnit>( "Camera FOV", fov, 0.01f, 179.99f, 0.1f, { .sourceUnit = AngleUnit::degrees } ); // `fov` is stored in degrees?!
+    UI::drag<AngleUnit>( "Camera FOV", fov, 0.1f, 0.01f, 179.99f, { .sourceUnit = AngleUnit::degrees } ); // `fov` is stored in degrees?!
     viewer->viewport().setCameraViewAngle( fov );
 
     // Orthographic view

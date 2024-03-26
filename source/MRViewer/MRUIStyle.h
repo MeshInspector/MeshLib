@@ -182,7 +182,7 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
 // By default, for angles `v` will be converted to degrees for display (but `vSpeed` is still in radians, same as `v`),
 //   while length and unit-less values will be left as is. This can be customized in `unitParams` or globally (see `MRUnits.h`).
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
-bool drag( const char* label, T& v, const U& vMin = 0, const U& vMax = 0, const U& vSpeed = detail::getDefaultDragSpeed<E, U>(), UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags );
+bool drag( const char* label, T& v, const U& vSpeed = detail::getDefaultDragSpeed<E, U>(), const U& vMin = 0, const U& vMax = 0, UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags );
 
 // Draw a textbox.
 // `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`.

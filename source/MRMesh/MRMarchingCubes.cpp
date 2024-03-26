@@ -613,7 +613,7 @@ template<> auto accessorCtor<VdbVolume>( const VdbVolume& v ) { return v.data->g
 template<> auto accessorCtor<FunctionVolume>( const FunctionVolume& ) { return (void*)nullptr; }
 
 template<typename V, typename NaNChecker, bool UseDefaultVoxelPointPositioner>
-Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker )
+Expected<Mesh> volumeToMesh( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker )
 {
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
     if constexpr ( std::is_same_v<V, VdbVolume> )
@@ -1123,7 +1123,7 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
 }
 
 template <typename V, typename NaNChecker>
-Expected<Mesh, std::string> volumeToMeshHelper1( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker )
+Expected<Mesh> volumeToMeshHelper1( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker )
 {
     if ( !params.positioner )
         return volumeToMesh<V, NaNChecker, true>( volume, params, std::forward<NaNChecker>( nanChecker ) );
@@ -1132,7 +1132,7 @@ Expected<Mesh, std::string> volumeToMeshHelper1( const V& volume, const Marching
 }
 
 template <typename V>
-Expected<Mesh, std::string> volumeToMeshHelper2( const V& volume, const MarchingCubesParams& params )
+Expected<Mesh> volumeToMeshHelper2( const V& volume, const MarchingCubesParams& params )
 {
     if ( params.omitNaNCheck )
         return volumeToMeshHelper1( volume, params, [] ( float ) { return false; } );
@@ -1140,38 +1140,21 @@ Expected<Mesh, std::string> volumeToMeshHelper2( const V& volume, const Marching
         return volumeToMeshHelper1( volume, params, isNanFast );
 }
 
-Expected<Mesh, std::string> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params /*= {} */ )
+Expected<Mesh> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {
     return volumeToMeshHelper2( volume, params );
 }
 
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-Expected<Mesh, std::string> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params /*= {} */ )
+Expected<Mesh> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {
     return volumeToMeshHelper2( volume, params );
 }
 #endif
 
-Expected<Mesh, std::string> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params )
+Expected<Mesh> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params )
 {
     return volumeToMeshHelper2( volume, params );
-}
-
-Expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const MarchingCubesParams& params )
-{
-    return marchingCubes( volume, params );
-}
-
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-Expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const MarchingCubesParams& params )
-{
-    return marchingCubes( volume, params );
-}
-#endif
-
-Expected<Mesh, std::string> functionVolumeToMesh( const FunctionVolume& volume, const MarchingCubesParams& params )
-{
-    return marchingCubes( volume, params );
 }
 
 } //namespace MR

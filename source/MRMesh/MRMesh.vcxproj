@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRAddNoise.h" />
     <ClInclude Include="MRAligningTransform.h" />
     <ClInclude Include="MRAlphaShape.h" />
     <ClInclude Include="MRChangeValue.h" />
@@ -392,6 +393,7 @@
     <ClCompile Include="MRAABBTreePolyline.cpp" />
     <ClCompile Include="MRAABBTreePolyline3.cpp" />
     <ClCompile Include="MRAABBTreePolyline2.cpp" />
+    <ClCompile Include="MRAddNoise.h.cpp" />
     <ClCompile Include="MRAffineXf2.cpp" />
     <ClCompile Include="MRAggregateFlow.cpp" />
     <ClCompile Include="MRAlignTextToMesh.cpp" />

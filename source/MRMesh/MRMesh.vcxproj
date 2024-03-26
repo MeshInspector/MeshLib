@@ -381,6 +381,7 @@
     <ClInclude Include="MRAddVisualPropertiesMixin.h" />
     <ClInclude Include="MRObjectDimensionsEnum.h" />
     <ClInclude Include="MRRenderModelParameters.h" />
+    <ClInclude Include="MRVectorTraits.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />

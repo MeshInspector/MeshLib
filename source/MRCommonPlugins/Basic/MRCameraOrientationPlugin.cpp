@@ -23,13 +23,13 @@ void CameraOrientation::drawDialog( float menuScaling, ImGuiContext* )
     if ( viewer->viewport_list.size() > 1 )
         ImGui::Text( "Current viewport: %d", viewer->viewport().id.value() );
 
-    ImGui::DragFloatValid3( "Position", &position_.x );
+    UI::drag<LengthUnit>( "Position", position_ );
     UI::setTooltipIfHovered( "Location of camera focal point in world space. In case of Autofit, this location is automatically re-calculated.", menuScaling );
 
-    ImGui::DragFloatValid3( "Direction", &direction_.x );
+    UI::drag<NoUnit>( "Direction", direction_ );
     UI::setTooltipIfHovered( "Forward direction of the camera in world space.", menuScaling );
 
-    ImGui::DragFloatValid3( "Up", &upDir_.x );
+    UI::drag<NoUnit>( "Up", upDir_ );
     UI::setTooltipIfHovered( "Up direction of the camera in world space.", menuScaling );
 
     if ( UI::button( "Orthonormalize", Vector2f( -1, 0 ) ) )
@@ -65,7 +65,7 @@ void CameraOrientation::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::PushItemWidth( 80 * menuScaling );
     auto params = viewer->viewport().getParameters();
     auto fov = params.cameraViewAngle;
-    ImGui::DragFloatValid( "Camera FOV", &fov, 0.001f, 0.01f, 179.99f );
+    UI::drag<AngleUnit>( "Camera FOV", fov, 0.001f, 0.01f, 179.99f, { .sourceUnit = AngleUnit::degrees } ); // `fov` is stored in degrees?!
     viewer->viewport().setCameraViewAngle( fov );
 
     // Orthographic view

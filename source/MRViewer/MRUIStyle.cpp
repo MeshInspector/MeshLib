@@ -923,8 +923,8 @@ void endCombo( bool showPreview /*= true*/ )
         ImGui::PopItemWidth();
 }
 
-// copy from ImGui::SliderScalar with some changed visual parameters
-static bool sliderScalar( const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags )
+// copied from ImGui::SliderScalar with some visual changes
+bool detail::genericSlider( const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags )
 {
     using namespace ImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -1034,14 +1034,72 @@ static bool sliderScalar( const char* label, ImGuiDataType data_type, void* p_da
     return value_changed;
 }
 
+static void drawDragCursor()
+{
+    auto drawList = ImGui::GetForegroundDrawList();
+    auto mousePos = ImGui::GetMousePos();
+    mousePos.x += 5.f;
+
+    const auto menuPlugin = MR::getViewerInstance().getMenuPlugin();
+    const float scale = menuPlugin ? menuPlugin->menu_scaling() : 1.f;
+
+    const float spaceX = 10 * scale;
+    const float sizeX = 12 * scale;
+    const float sizeY_2 = 5 * scale;
+    // values are calculated so that width of the border line is 1 pixel
+    const float shiftLeftX = 2.6f * scale;
+    const float shiftRightX = 1.f * scale;
+    const float shiftRightY = 1.5f * scale;
+
+    drawList->AddTriangleFilled( ImVec2( mousePos.x - spaceX - sizeX - shiftLeftX, mousePos.y + sizeY_2 ),
+                                 ImVec2( mousePos.x - spaceX + shiftRightX, mousePos.y - shiftRightY ),
+                                 ImVec2( mousePos.x - spaceX + shiftRightX, mousePos.y + sizeY_2 * 2.f + shiftRightY ), 0xFF000000 );
+    drawList->AddTriangleFilled( ImVec2( mousePos.x - spaceX - sizeX, mousePos.y + sizeY_2 ),
+                                 ImVec2( mousePos.x - spaceX, mousePos.y ),
+                                 ImVec2( mousePos.x - spaceX, mousePos.y + sizeY_2 * 2.f ), 0xFFFFFFFF );
+
+    drawList->AddTriangleFilled( ImVec2( mousePos.x + spaceX - shiftRightX, mousePos.y - shiftRightY ),
+                                 ImVec2( mousePos.x + spaceX + sizeX + shiftLeftX, mousePos.y + sizeY_2 ),
+                                 ImVec2( mousePos.x + spaceX - shiftRightX, mousePos.y + sizeY_2 * 2.f + shiftRightY ), 0xFF000000 );
+    drawList->AddTriangleFilled( ImVec2( mousePos.x + spaceX, mousePos.y ),
+                                 ImVec2( mousePos.x + spaceX + sizeX, mousePos.y + sizeY_2 ),
+                                 ImVec2( mousePos.x + spaceX, mousePos.y + sizeY_2 * 2.f ), 0xFFFFFFFF );
+}
+
+void detail::drawDragTooltip( std::string rangeText )
+{
+    static bool inputMode = false;
+    if ( ImGui::IsItemActivated() )
+        inputMode = ( ImGui::GetIO().MouseClicked[0] && ImGui::GetIO().KeyCtrl ) || ImGui::GetIO().MouseDoubleClicked[0];
+
+    if ( ImGui::IsItemActive() )
+    {
+        if ( !inputMode )
+        {
+            ImGui::SetMouseCursor( ImGuiMouseCursor_None );
+            drawDragCursor();
+            ImGui::BeginTooltip();
+            ImGui::TextUnformatted( "Drag with Shift - faster, Alt - slower" );
+            ImGui::EndTooltip();
+        }
+
+        if ( !rangeText.empty() )
+        {
+            ImGui::BeginTooltip();
+            ImGui::TextUnformatted( rangeText.c_str() );
+            ImGui::EndTooltip();
+        }
+    }
+}
+
 bool sliderFloat( const char* label, float* v, float v_min, float v_max, const char* format, ImGuiSliderFlags flags )
 {
-    return sliderScalar( label, ImGuiDataType_Float, v, &v_min, &v_max, format, flags );
+    return detail::genericSlider( label, ImGuiDataType_Float, v, &v_min, &v_max, format, flags );
 }
 
 bool sliderInt( const char* label, int* v, int v_min, int v_max, const char* format, ImGuiSliderFlags flags )
 {
-    return sliderScalar( label, ImGuiDataType_S32, v, &v_min, &v_max, format, flags );
+    return detail::genericSlider( label, ImGuiDataType_S32, v, &v_min, &v_max, format, flags );
 }
 
 bool inputTextCentered( const char* label, std::string& str, float width /*= 0.0f*/,
@@ -1065,16 +1123,14 @@ bool inputTextCentered( const char* label, std::string& str, float width /*= 0.0
 void inputTextCenteredReadOnly( const char* label, const std::string& str, float width /*= 0.0f*/, const std::optional<ImVec4>& textColor /*= {} */ )
 {
     const auto& style = ImGui::GetStyle();
-    const auto& viewer = MR::Viewer::instanceRef();
     const auto estimatedSize = ImGui::CalcTextSize( str.c_str() );
-    const float scaling = viewer.getMenuPlugin() ? viewer.getMenuPlugin()->menu_scaling() : 1.0f;
-    const ImVec2 padding{ 2 * style.FramePadding.x * scaling , 2 * style.FramePadding.y * scaling };
+    const ImVec2 padding( 2 * style.FramePadding.x, 2 * style.FramePadding.y );
     const auto actualWidth = ( width == 0.0f ) ? estimatedSize.x + padding.x : width;
 
     ImGui::SetNextItemWidth( actualWidth );
     StyleParamHolder sh;
     if ( actualWidth > estimatedSize.x )
-        sh.addVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );
+        sh.addVar( ImGuiStyleVar_FramePadding, { std::floor( ( actualWidth - estimatedSize.x ) * 0.5f ), style.FramePadding.y } );
 
     if ( textColor )
     {
@@ -1088,11 +1144,14 @@ void inputTextCenteredReadOnly( const char* label, const std::string& str, float
     }
     ImGui::InputText( ( std::string( "##" ) + label ).c_str(), const_cast< std::string& >( str ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
     ImGui::PopStyleColor();
-    ImGui::SameLine();
 
-    if ( label && label[0] != '#' && label[0] != '\0' && label[1] != '#' )
-        ImGui::Text( "%s", label );
+    std::size_t endOfLabel = std::string_view( label ).find( "##" );
 
+    if ( endOfLabel > 0 )
+    {
+        ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+        ImGui::TextUnformatted( label, endOfLabel != std::string_view::npos ? label + endOfLabel : nullptr );
+    }
 }
 
 void transparentText( const char* fmt, ... )

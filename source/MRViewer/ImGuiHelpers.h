@@ -9,9 +9,9 @@
 
 #include "MRMesh/MRFlagOperators.h"
 #include "exports.h"
-#include "ImGuiTraits.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRColor.h"
+#include <imgui.h>
 #include <algorithm>
 #include <functional>
 #include <cstddef>

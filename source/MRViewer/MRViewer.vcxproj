@@ -104,6 +104,7 @@
     <ClCompile Include="MRRenderNameObject.cpp" />
     <ClCompile Include="MRRenderDimensions.cpp" />
     <ClCompile Include="MRRenderMeasurementObjects.cpp" />
+    <ClCompile Include="MRUnits.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -115,7 +116,6 @@
     <ClInclude Include="exports.h" />
     <ClInclude Include="ImGuiHelpers.h" />
     <ClInclude Include="ImGuiMenu.h" />
-    <ClInclude Include="ImGuiTraits.h" />
     <ClInclude Include="imgui_fonts_droid_sans.h" />
     <ClInclude Include="MRAsyncTimer.h" />
     <ClInclude Include="MRColorTheme.h" />
@@ -220,6 +220,8 @@
     <ClInclude Include="MRRenderWrapObject.h" />
     <ClInclude Include="MRRenderDimensions.h" />
     <ClInclude Include="MRRenderMeasurementObjects.h" />
+    <ClInclude Include="MRVectorTraits.h" />
+    <ClInclude Include="MRUnits.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

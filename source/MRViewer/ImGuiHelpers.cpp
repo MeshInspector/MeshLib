@@ -55,7 +55,6 @@ void drawCursorArrow()
     drawList->AddTriangleFilled( ImVec2( mousePos.x + spaceX, mousePos.y ),
                                  ImVec2( mousePos.x + spaceX + sizeX, mousePos.y + sizeY_2 ),
                                  ImVec2( mousePos.x + spaceX, mousePos.y + sizeY_2 * 2.f ), 0xFFFFFFFF );
-
 }
 
 template<typename T>

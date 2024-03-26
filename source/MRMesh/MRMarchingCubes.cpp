@@ -1089,18 +1089,19 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
             params.outVoxelPerFaceMap->vec_.insert( params.outVoxelPerFaceMap->vec_.end(),
                 std::make_move_iterator( faceMap.vec_.begin() ), std::make_move_iterator( faceMap.vec_.end() ) );
     }
-    // some points may be not referenced by any triangle due to NaNs
-    result.points.resize( totalVertices );
 
     if ( params.cb && !params.cb( 0.95f ) )
         return unexpectedOperationCanceled();
 
+    // some points may be not referenced by any triangle due to NaNs
+    result.points.resize( totalVertices );
     ParallelFor( size_t( 0 ), hmaps.size(), [&] ( size_t hi )
     {
         for ( auto& [_, set] : hmaps[hi] )
         {
             for ( int i = int( NeighborDir::X ); i < int( NeighborDir::Count ); ++i )
-                result.points[set[i].vid] = set[i].position;
+                if ( set[i].vid < result.points.size() ) // shall be false only if !set[i].vid
+                    result.points[set[i].vid] = set[i].position;
         }
     } );
 

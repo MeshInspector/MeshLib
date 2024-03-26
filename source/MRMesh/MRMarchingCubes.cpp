@@ -8,6 +8,7 @@
 #include "MRVDBFloatGrid.h"
 #include "MRTimer.h"
 #include "MRParallelFor.h"
+#include "MRTriMesh.h"
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRPch/MROpenvdb.h"
 #endif
@@ -613,7 +614,7 @@ template<> auto accessorCtor<VdbVolume>( const VdbVolume& v ) { return v.data->g
 template<> auto accessorCtor<FunctionVolume>( const FunctionVolume& ) { return (void*)nullptr; }
 
 template<typename V, typename NaNChecker, bool UseDefaultVoxelPointPositioner>
-Expected<Mesh> volumeToMesh( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker )
+Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker )
 {
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
     if constexpr ( std::is_same_v<V, VdbVolume> )
@@ -628,7 +629,7 @@ Expected<Mesh> volumeToMesh( const V& volume, const MarchingCubesParams& params,
             return unexpected( "Getter function is not specified." );
     }
 
-    Mesh result;
+    TriMesh result;
     if ( params.iso <= volume.min || params.iso >= volume.max ||
         volume.dims.x <= 0 || volume.dims.y <= 0 || volume.dims.z <= 0 )
         return result;
@@ -1078,30 +1079,28 @@ Expected<Mesh> volumeToMesh( const V& volume, const MarchingCubesParams& params,
     tbb::parallel_sort( resTriangulatoinData.begin(), resTriangulatoinData.end(), [] ( const auto& l, const auto& r ) { return l.initInd < r.initInd; } );
 
     // create result triangulation
-    Triangulation resTriangulation;
     if ( params.outVoxelPerFaceMap )
         params.outVoxelPerFaceMap->clear();
     for ( auto& [ind, t, faceMap] : resTriangulatoinData )
     {
-        resTriangulation.vec_.insert( resTriangulation.vec_.end(),
+        result.tris.vec_.insert( result.tris.vec_.end(),
             std::make_move_iterator( t.vec_.begin() ), std::make_move_iterator( t.vec_.end() ) );
         if ( params.outVoxelPerFaceMap )
             params.outVoxelPerFaceMap->vec_.insert( params.outVoxelPerFaceMap->vec_.end(),
                 std::make_move_iterator( faceMap.vec_.begin() ), std::make_move_iterator( faceMap.vec_.end() ) );
     }
-    result.topology = MeshBuilder::fromTriangles( std::move( resTriangulation ) );
-    result.points.resize( result.topology.lastValidVert() + 1 );
-    assert( result.points.size() <= totalVertices ); // totalVertices may contain inconsistent NaN neighbor that cannot be present in topology
 
     if ( params.cb && !params.cb( 0.95f ) )
         return unexpectedOperationCanceled();
 
+    // some points may be not referenced by any triangle due to NaNs
+    result.points.resize( totalVertices );
     ParallelFor( size_t( 0 ), hmaps.size(), [&] ( size_t hi )
     {
         for ( auto& [_, set] : hmaps[hi] )
         {
             for ( int i = int( NeighborDir::X ); i < int( NeighborDir::Count ); ++i )
-                if ( set[i].vid < result.points.size() ) // vid can be valid but beyond the range if no triangle references it (NaNs in nearby voxels)
+                if ( set[i].vid < result.points.size() ) // shall be false only if !set[i].vid
                     result.points[set[i].vid] = set[i].position;
         }
     } );
@@ -1113,7 +1112,7 @@ Expected<Mesh> volumeToMesh( const V& volume, const MarchingCubesParams& params,
 }
 
 template <typename V, typename NaNChecker>
-Expected<Mesh> volumeToMeshHelper1( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker )
+Expected<TriMesh> volumeToMeshHelper1( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker )
 {
     if ( !params.positioner )
         return volumeToMesh<V, NaNChecker, true>( volume, params, std::forward<NaNChecker>( nanChecker ) );
@@ -1122,7 +1121,7 @@ Expected<Mesh> volumeToMeshHelper1( const V& volume, const MarchingCubesParams& 
 }
 
 template <typename V>
-Expected<Mesh> volumeToMeshHelper2( const V& volume, const MarchingCubesParams& params )
+Expected<TriMesh> volumeToMeshHelper2( const V& volume, const MarchingCubesParams& params )
 {
     if ( params.omitNaNCheck )
         return volumeToMeshHelper1( volume, params, [] ( float ) { return false; } );
@@ -1130,21 +1129,54 @@ Expected<Mesh> volumeToMeshHelper2( const V& volume, const MarchingCubesParams& 
         return volumeToMeshHelper1( volume, params, isNanFast );
 }
 
-Expected<Mesh> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params /*= {} */ )
+Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {
     return volumeToMeshHelper2( volume, params );
+}
+
+Expected<Mesh> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params )
+{
+    MR_TIMER
+    auto p = params;
+    p.cb = subprogress( params.cb, 0.0f, 0.9f );
+    return marchingCubesAsTriMesh( volume, p ).and_then( [&params]( TriMesh && tm ) -> Expected<Mesh>
+    {
+        return Mesh::fromTriMesh( std::move( tm ), {}, subprogress( params.cb, 0.9f, 1.0f ) );
+    } );
 }
 
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-Expected<Mesh> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params /*= {} */ )
+Expected<TriMesh> marchingCubesAsTriMesh( const VdbVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {
     return volumeToMeshHelper2( volume, params );
 }
+
+Expected<Mesh> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params /*= {} */ )
+{
+    MR_TIMER
+    auto p = params;
+    p.cb = subprogress( params.cb, 0.0f, 0.9f );
+    return marchingCubesAsTriMesh( volume, p ).and_then( [&params]( TriMesh && tm ) -> Expected<Mesh>
+    {
+        return Mesh::fromTriMesh( std::move( tm ), {}, subprogress( params.cb, 0.9f, 1.0f ) );
+    } );
+}
 #endif
+
+Expected<TriMesh> marchingCubesAsTriMesh( const FunctionVolume& volume, const MarchingCubesParams& params )
+{
+    return volumeToMeshHelper2( volume, params );
+}
 
 Expected<Mesh> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params )
 {
-    return volumeToMeshHelper2( volume, params );
+    MR_TIMER
+    auto p = params;
+    p.cb = subprogress( params.cb, 0.0f, 0.9f );
+    return marchingCubesAsTriMesh( volume, p ).and_then( [&params]( TriMesh && tm ) -> Expected<Mesh>
+    {
+        return Mesh::fromTriMesh( std::move( tm ), {}, subprogress( params.cb, 0.9f, 1.0f ) );
+    } );
 }
 
 } //namespace MR

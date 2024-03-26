@@ -119,39 +119,13 @@ namespace detail
     // A type-erased slider.
     MRVIEWER_API bool genericSlider( const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags );
 
-    // Whether `T` is a scalar type we can use with our widgets.
+    // Whether `T` is a scalar type that we can use with our widgets.
     template <typename T>
-    concept ValidScalar = std::is_arithmetic_v<T> && !std::is_same_v<T, bool>;
+    concept Scalar = std::is_arithmetic_v<T> && !std::is_same_v<T, bool>;
 
-    // The `ImGuiDataType_??` constant for the given type.
-    template <ValidScalar T>
-    [[nodiscard]] constexpr int imGuiTypeEnum()
-    {
-        if constexpr ( std::is_same_v<T, float> )
-            return ImGuiDataType_Float;
-        else if constexpr ( std::is_same_v<T, double> )
-            return ImGuiDataType_Double;
-        if constexpr ( sizeof(T) == 1 )
-            return std::is_signed_v<T> ? ImGuiDataType_S8 : ImGuiDataType_U8;
-        else if constexpr ( sizeof(T) == 2 )
-            return std::is_signed_v<T> ? ImGuiDataType_S16 : ImGuiDataType_U16;
-        else if constexpr ( sizeof(T) == 4 )
-            return std::is_signed_v<T> ? ImGuiDataType_S32 : ImGuiDataType_U32;
-        else if constexpr ( sizeof(T) == 8 )
-            return std::is_signed_v<T> ? ImGuiDataType_S64 : ImGuiDataType_U64;
-        else
-            static_assert( dependent_false<T>, "Unknown type." );
-    }
-
-    // Checks following:
-    // `E` is a measurement unit enum (as per `MR::UnitEnum`), and
-    // `T` is a scalar or a vector, with the base type (aka element type) satisfying `ValidScalar`.
-    // If the base type is integral (not floating-point), `E` must be `NoUnit`.
-    template <typename T, typename E>
-    concept ValidTargetForUnitType =
-        UnitEnum<E> &&
-        ValidScalar<typename VectorTraits<T>::BaseType> &&
-        ( ( !std::is_floating_point_v<typename VectorTraits<T>::BaseType> ) <=/*implies*/ std::is_same_v<E, NoUnit> );
+    // Whether `T` is a scalar or vector that we can use with our widgets.
+    template <typename T>
+    concept VectorOrScalar = Scalar<typename VectorTraits<T>::BaseType>;
 
     // Whether `Bound` is a valid min/max bound for `Target`.
     // That is, either the same type, or if `Target` is a vector, `Bound` can also be a scalar of the same type.
@@ -164,131 +138,32 @@ namespace detail
     // `E` must be explicitly set to a measurement unit enum. The other template parameters are deduced.
     // `label` is the widget label, `v` is the target value.
     // `func` draws the widget for an individual scalar. We call it more than once for vectors.
-    // `func` is `( const char* label, A& elem, int i ) -> bool`.
+    // `func` is `( const char* label, auto& elem, int i ) -> bool`.
     // It receives `elem` already converted to the display units (so you must convert min/max bounds manually). `i` is the element index for vectors.
+    // When `v` is integral, `func` will be instantiated for both integral and floating-point element type. The latter is required if we're doing conversions.
+    // NOTE: For integral `v`, in `func` you must look at the type of `elem` and convert your min/max bounds (etc) to the same type.
     // Notice `unitParams` being accepted by an lvalue reference. For convenience, we reset the `sourceUnit` in it before calling the user callback,
     //   since at that point no further conversions are necessary.
-    template <UnitEnum E, ValidTargetForUnitType<E> T, typename F>
-    [[nodiscard]] bool unitWidget( const char* label, T& v, UnitToStringParams<E>& unitParams, F&& func )
-    {
-        constexpr bool conversionIsPossible = !std::is_integral_v<typename VectorTraits<T>::BaseType>;
-        const bool needConversion = unitParams.sourceUnit && *unitParams.sourceUnit != unitParams.targetUnit;
-
-        T* targetPtr = &v;
-        T convertedValue{};
-
-        const std::optional<E> originalSourceUnit = unitParams.sourceUnit;
-
-        if constexpr ( conversionIsPossible )
-        {
-            if ( needConversion )
-            {
-                convertedValue = convertUnits( *unitParams.sourceUnit, unitParams.targetUnit, v );
-                unitParams.sourceUnit.reset(); // To prevent the user from performing unnecessary conversions.
-                targetPtr = &convertedValue;
-            }
-        }
-
-        bool ret = false;
-        if constexpr ( VectorTraits<T>::size == 1 )
-        {
-            ret = std::forward<F>( func )( label, *targetPtr, 0 );
-        }
-        else
-        {
-            ImGui::BeginGroup();
-            MR_FINALLY{ ImGui::EndGroup(); };
-
-            float width = ( ImGui::CalcItemWidth() - ImGui::GetStyle().ItemInnerSpacing.x * ( VectorTraits<T>::size - 1 ) ) / VectorTraits<T>::size;
-            float prevX = 0;
-            for ( int i = 0; i < VectorTraits<T>::size; i++ )
-            {
-                float x = std::round( width * ( i + 1 ) );
-                if ( i > 0 )
-                    ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
-                ImGui::PushItemWidth( x - prevX );
-                MR_FINALLY{ ImGui::PopItemWidth(); };
-                prevX = x;
-                bool elemChanged = func(
-                    fmt::format( "{}{}##{}", i == VectorTraits<T>::size - 1 ? "" : "###", label, i ).c_str(),
-                    VectorTraits<T>::getElem( i, *targetPtr ),
-                    i
-                );
-                if ( elemChanged )
-                {
-                    ret = true;
-
-                    if constexpr ( conversionIsPossible )
-                    {
-                        if ( needConversion )
-                            VectorTraits<T>::getElem( i, v ) = convertUnits( unitParams.targetUnit, *originalSourceUnit, VectorTraits<T>::getElem( i, convertedValue ) );
-                    }
-                }
-            }
-        }
-
-        return ret;
-    }
-
-    // All widgets created while this object is alive are read-only.
-    struct ReadOnlyGuard
-    {
-        MRVIEWER_API ReadOnlyGuard();
-        ReadOnlyGuard( const ReadOnlyGuard& ) = delete;
-        ReadOnlyGuard& operator=( const ReadOnlyGuard& ) = delete;
-        MRVIEWER_API ~ReadOnlyGuard();
-    };
+    template <UnitEnum E, VectorOrScalar T, typename F>
+    [[nodiscard]] bool unitWidget( const char* label, T& v, UnitToStringParams<E>& unitParams, F&& func );
 
     // Some default slider parameters. For now they are hardcoded here, but we can move them elsewhere later.
 
-    template <UnitEnum E, ValidTargetForUnitType<E> T>
+    // Default drag speed for `UI::drag()`.
+    template <UnitEnum E, VectorOrScalar T>
     requires ( VectorTraits<T>::size == 1 )
-    [[nodiscard]] T getDefaultDragSpeed()
-    {
-        if constexpr ( std::is_same_v<E, NoUnit> )
-            return 1;
-        else if constexpr ( std::is_same_v<E, LengthUnit> )
-            return getDefaultUnitParams<LengthUnit>().targetUnit == LengthUnit::mm ? 1 : 1/16.f;
-        else if constexpr ( std::is_same_v<E, AngleUnit> )
-            return getDefaultUnitParams<AngleUnit>().targetUnit == AngleUnit::degrees ? 1 : PI_F / 128;
-        else
-            static_assert( dependent_false<E>, "Unknown measurement unit type." );
-    }
+    [[nodiscard]] T getDefaultDragSpeed();
 
-    template <UnitEnum E, ValidTargetForUnitType<E> T>
-    [[nodiscard]] T getDefaultStep( bool fast )
-    {
-        if constexpr ( std::is_integral_v<T> )
-            return fast ? 100 : 1;
-        else
-            return 0;
-    }
+    // Default step speed for `UI::input()`.
+    template <UnitEnum E, VectorOrScalar T>
+    [[nodiscard]] T getDefaultStep( bool fast );
 
+    // See `drawDragTooltip()` below.
+    template <UnitEnum E, VectorOrScalar T>
+    [[nodiscard]] std::string getDragRangeTooltip( T min, T max, const UnitToStringParams<E>& unitParams );
 
-    template <UnitEnum E, ValidTargetForUnitType<E> T>
-    std::string getDragRangeTooltip( T min, T max, const UnitToStringParams<E>& unitParams )
-    {
-        bool haveMin = min > std::numeric_limits<T>::lowest();
-        bool haveMax = max < std::numeric_limits<T>::max();
-
-        if constexpr ( !std::is_integral_v<typename VectorTraits<T>::BaseType> )
-        {
-            if ( unitParams.sourceUnit )
-            {
-                min = convertUnits( *unitParams.sourceUnit, unitParams.targetUnit, min );
-                max = convertUnits( *unitParams.sourceUnit, unitParams.targetUnit, max );
-            }
-        }
-
-        if ( haveMin && haveMax )
-            return fmt::format( "Range: {} .. {}", min, max );
-        if ( haveMin )
-            return fmt::format( "Range: at least {}", min );
-        if ( haveMax )
-            return fmt::format( "Range: at most {}", max );
-        return "";
-    }
-
+    // `UI::drag()` uses this internally to draw tooltips.
+    // Pass `getDragRangeTooltip()` as the parameter.
     MRVIEWER_API void drawDragTooltip( std::string rangeText );
 }
 
@@ -299,124 +174,36 @@ inline constexpr int defaultSliderFlags = ImGuiSliderFlags_AlwaysClamp;
 // `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`.
 // By default, for angles `v` will be converted to degrees for display (but `vMin`, `vMax` are still in radians, same as `v`),
 //   while length and unit-less values will be left as is. This can be customized in `unitParams` or globally (see `MRUnits.h`).
-template <UnitEnum E, detail::ValidTargetForUnitType<E> T, detail::ValidBoundForTargetType<T> U>
-bool slider( const char* label, T& v, U vMin, U vMax, UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags )
-{
-    // Adjust the parameters:
-    // Don't strip trailing zeroes, otherwise the numbers jump too much.
-    unitParams.stripTrailingZeroes = false;
-
-    if constexpr ( !std::is_integral_v<typename VectorTraits<U>::BaseType> )
-    {
-        if ( unitParams.sourceUnit && *unitParams.sourceUnit != unitParams.targetUnit )
-        {
-            // Without this flag the value changes slightly when you release the mouse.
-            flags |= ImGuiSliderFlags_NoRoundToFormat;
-            vMin = convertUnits( *unitParams.sourceUnit, unitParams.targetUnit, vMin );
-            vMax = convertUnits( *unitParams.sourceUnit, unitParams.targetUnit, vMax );
-        }
-    }
-
-    return detail::unitWidget( label, v, unitParams,
-        [&]<typename ElemType>( const char* elemLabel, ElemType& elemVal, int i )
-        {
-            return detail::genericSlider(
-                elemLabel, detail::imGuiTypeEnum<ElemType>(), &elemVal,
-                &VectorTraits<U>::getElem( i, vMin ),
-                &VectorTraits<U>::getElem( i, vMax ),
-                valueToString<E>( elemVal, unitParams ).c_str(), flags
-            );
-        } );
-}
+template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
+bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags );
 
 // Draw a dragging widget.
 // `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`.
 // By default, for angles `v` will be converted to degrees for display (but `vSpeed` is still in radians, same as `v`),
 //   while length and unit-less values will be left as is. This can be customized in `unitParams` or globally (see `MRUnits.h`).
-template <UnitEnum E, detail::ValidTargetForUnitType<E> T, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
-bool drag( const char* label, T& v, U vSpeed = detail::getDefaultDragSpeed<E, U>(), U vMin = 0, U vMax = 0, UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags )
-{
-    // Adjust the parameters:
-    // Don't strip trailing zeroes, otherwise the numbers jump too much.
-    unitParams.stripTrailingZeroes = false;
-
-    if constexpr ( !std::is_integral_v<typename VectorTraits<U>::BaseType> )
-    {
-        if ( unitParams.sourceUnit && *unitParams.sourceUnit != unitParams.targetUnit )
-        {
-            // Without this flag the value changes slightly when you release the mouse.
-            flags |= ImGuiSliderFlags_NoRoundToFormat;
-            vSpeed = convertUnits( *unitParams.sourceUnit, unitParams.targetUnit, vSpeed );
-            vMin = convertUnits( *unitParams.sourceUnit, unitParams.targetUnit, vMin );
-            vMax = convertUnits( *unitParams.sourceUnit, unitParams.targetUnit, vMax );
-        }
-    }
-
-    return detail::unitWidget( label, v, unitParams,
-        [&]<typename ElemType>( const char* elemLabel, ElemType& elemVal, int i )
-        {
-            bool ret = ImGui::DragScalar(
-                elemLabel, detail::imGuiTypeEnum<ElemType>(), &elemVal,
-                VectorTraits<U>::getElem( i, vSpeed ),
-                &VectorTraits<U>::getElem( i, vMin ),
-                &VectorTraits<U>::getElem( i, vMax ),
-                valueToString<E>( elemVal, unitParams ).c_str(), flags
-            );
-            detail::drawDragTooltip( detail::getDragRangeTooltip( vMin, vMax, unitParams ) );
-            return ret;
-        } );
-}
+template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
+bool drag( const char* label, T& v, const U& vMin = 0, const U& vMax = 0, const U& vSpeed = detail::getDefaultDragSpeed<E, U>(), UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags );
 
 // Draw a textbox.
 // `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`.
 // By default, for angles `v` will be converted to degrees for display, while length and unit-less values will be left as is.
 // This can be customized in `unitParams` or globally (see `MRUnits.h`).
-template <UnitEnum E, detail::ValidTargetForUnitType<E> T, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
+template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
 bool input(
     const char* label, T& v,
     // As with `ImGui::Drag...()`, steps default to zero for floating-point types.
-    U vStep = detail::getDefaultStep<E, U>( false ),
-    U vStepFast = detail::getDefaultStep<E, U>( true ),
+    const U& vStep = detail::getDefaultStep<E, U>( false ),
+    const U& vStepFast = detail::getDefaultStep<E, U>( true ),
     UnitToStringParams<E> unitParams = {},
     ImGuiInputTextFlags flags = 0
-)
-{
-    if constexpr ( !std::is_integral_v<typename VectorTraits<U>::BaseType> )
-    {
-        if ( unitParams.sourceUnit && *unitParams.sourceUnit != unitParams.targetUnit )
-        {
-            vStep = convertUnits( *unitParams.sourceUnit, unitParams.targetUnit, vStep );
-            vStepFast = convertUnits( *unitParams.sourceUnit, unitParams.targetUnit, vStepFast );
-        }
-
-    }
-    return detail::unitWidget( label, v, unitParams,
-        [&]<typename ElemType>( const char* elemLabel, ElemType& elemVal, int i )
-        {
-            (void)i;
-            return ImGui::InputScalar( elemLabel, detail::imGuiTypeEnum<ElemType>(), &elemVal,
-                &VectorTraits<U>::getElem( i, vStep ),
-                &VectorTraits<U>::getElem( i, vStepFast ),
-                valueToString<E>( elemVal, unitParams ).c_str(), flags
-            );
-        } );
-}
+);
 
 // Draw a read-only copyable value.
 // `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`.
 // By default, for angles `v` will be converted to degrees for display, while length and unit-less values will be left as is.
 // This can be customized in `unitParams` or globally (see `MRUnits.h`).
-template <UnitEnum E, detail::ValidTargetForUnitType<E> T>
-void readOnlyValue( const char* label, const T& v, std::optional<ImVec4> textColor = {}, UnitToStringParams<E> unitParams = {} )
-{
-    (void)detail::unitWidget( label, const_cast<T&>( v ), unitParams,
-        [&]( const char* elemLabel, auto& elemVal, int i )
-        {
-            (void)i;
-            inputTextCenteredReadOnly( elemLabel, valueToString<E>( elemVal, unitParams ), ImGui::CalcItemWidth(), textColor );
-            return false;
-        } );
-}
+template <UnitEnum E, detail::VectorOrScalar T>
+void readOnlyValue( const char* label, const T& v, std::optional<ImVec4> textColor = {}, UnitToStringParams<E> unitParams = {} );
 
 
 /// similar to ImGui::Text but use current text color with alpha channel = 0.5
@@ -453,3 +240,5 @@ MRVIEWER_API void endTabItem();
 } // namespace UI
 
 }
+
+#include "MRUIStyle.tpp"

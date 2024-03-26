@@ -96,7 +96,7 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
 #endif
         setupListUpdate_();
         connect( &getViewerInstance() );
-        // required to be deferred, for valid emscripten static constructors oreder
+        // required to be deferred, for valid emscripten static constructors order
         filters_ = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | SceneFileFilters | DistanceMapLoad::Filters | GcodeLoad::Filters;
 #ifdef __EMSCRIPTEN__
         std::erase_if( filters_, [] ( const auto& filter )
@@ -714,8 +714,8 @@ void CaptureScreenshotMenuItem::drawDialog( float menuScaling, ImGuiContext* )
     if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
         return;
 
-    UI::drag<NoUnit>( "Width", resolution_.x, 1, 256 );
-    UI::drag<NoUnit>( "Height", resolution_.y, 1, 256 );
+    UI::drag<PixelSizeUnit>( "Width", resolution_.x, 1, std::max( getViewerInstance().framebufferSize.x, 7680 ) ); // Default max size is 4k.
+    UI::drag<PixelSizeUnit>( "Height", resolution_.y, 1, std::max( getViewerInstance().framebufferSize.y, 4320 ) ); // ^
     UI::checkbox( "Transparent Background", &transparentBg_ );
     if ( UI::button( "Capture", ImVec2( -1, 0 ) ) )
     {

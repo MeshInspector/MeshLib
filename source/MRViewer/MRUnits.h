@@ -32,8 +32,23 @@ enum class AngleUnit
     _count [[maybe_unused]],
 };
 
+// Measurement units of screen sizes.
+enum class PixelSizeUnit
+{
+    pixels,
+    _count [[maybe_unused]],
+};
+
 // A list of all unit enums, for internal use.
-#define DETAIL_MR_UNIT_ENUMS(X) X(NoUnit) X(LengthUnit) X(AngleUnit)
+#define DETAIL_MR_UNIT_ENUMS(X) X(NoUnit) X(LengthUnit) X(AngleUnit) X(PixelSizeUnit)
+
+// All supported value types for `valueToString()`.
+#define DETAIL_MR_UNIT_VALUE_TYPES(X, ...) \
+    X(float      , __VA_ARGS__) X(double        , __VA_ARGS__) X(long double, __VA_ARGS__) \
+    X(signed char, __VA_ARGS__) X(unsigned char , __VA_ARGS__) \
+    X(short      , __VA_ARGS__) X(unsigned short, __VA_ARGS__) \
+    X(int        , __VA_ARGS__) X(unsigned int  , __VA_ARGS__) \
+    X(long       , __VA_ARGS__) X(unsigned long , __VA_ARGS__)
 
 // Whether `E` is one of the unit enums: NoUnit, LengthUnit, AngleUnit, ...
 template <typename T>
@@ -66,20 +81,51 @@ template <UnitEnum E>
 DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
 
-// Converts `value` from unit `from` to unit `to`. `value` is a floating-point number of a Vector2/3/4 or ImVec2/4 of them.
-template <UnitEnum E, typename T>
-requires std::is_floating_point_v<typename VectorTraits<T>::BaseType>
-[[nodiscard]] constexpr T convertUnits( E from, E to, T value )
+// Returns true if converting a value between units `a` and `b` doesn't change its value.
+template <UnitEnum E>
+[[nodiscard]] bool unitsAreEquivalent( E a, E b )
 {
-    if ( from != to )
+    return a == b || getUnitInfo( a ).conversionFactor == getUnitInfo( b ).conversionFactor;
+}
+
+// Converts `value` from unit `from` to unit `to`. `value` is a scalar of a Vector2/3/4 or ImVec2/4 of them.
+// The return type matches `T` if it's not integral. If it's integral, its element type type is changed to `float`.
+// Returns min/max floating-point values unchanged.
+template <UnitEnum E, typename T, typename ReturnType = std::conditional_t<std::is_integral_v<typename VectorTraits<T>::BaseType>, typename VectorTraits<T>::template ChangeBaseType<float>, T>>
+[[nodiscard]] ReturnType convertUnits( E from, E to, const T& value )
+{
+    bool needConversion = !unitsAreEquivalent( from, to );
+
+    if constexpr ( std::is_same_v<T, ReturnType> )
     {
-        for ( int i = 0; i < VectorTraits<T>::size; i++ )
-        {
-            auto& target = VectorTraits<T>::getElem( i, value );
-            target = target * getUnitInfo( from ).conversionFactor / getUnitInfo( to ).conversionFactor;
-        }
+        if ( !needConversion )
+            return value;
     }
-    return value;
+
+    ReturnType ret{};
+
+    for ( int i = 0; i < VectorTraits<T>::size; i++ )
+    {
+        auto& target = VectorTraits<T>::getElem( i, ret ) = (typename VectorTraits<T>::BaseType) VectorTraits<T>::getElem( i, value );
+
+        // Don't touch min/max floating-point values.
+        bool needElemConversion = needConversion;
+        if constexpr ( std::is_floating_point_v<typename VectorTraits<T>::BaseType> )
+        {
+            if ( needElemConversion &&
+                (
+                    target <= std::numeric_limits<typename VectorTraits<T>::BaseType>::lowest() ||
+                    target >= std::numeric_limits<typename VectorTraits<T>::BaseType>::max()
+                )
+            )
+                needElemConversion = false;
+        }
+
+        if ( needElemConversion )
+            target = target * getUnitInfo( from ).conversionFactor / getUnitInfo( to ).conversionFactor;
+    }
+
+    return ret;
 }
 
 template <UnitEnum E>
@@ -173,11 +219,14 @@ struct UnitToStringParams
 
 // Converts value to a string, possibly converting it to a different unit.
 // By default, length is kept as is, while angles are converted from radians to the current UI unit.
-template <UnitEnum E>
-std::string valueToString( float value, const UnitToStringParams<E>& params = getDefaultUnitParams<E>() );
+template <UnitEnum E, typename T>
+requires std::is_arithmetic_v<T>
+std::string valueToString( T value, const UnitToStringParams<E>& params = getDefaultUnitParams<E>() );
 
-#define MR_X(E) extern template MRVIEWER_API std::string valueToString( float value, const UnitToStringParams<E>& params = getDefaultUnitParams<E>() );
+#define MR_Y(T, E) extern template MRVIEWER_API std::string valueToString<E, T>( T value, const UnitToStringParams<E>& params );
+#define MR_X(E) DETAIL_MR_UNIT_VALUE_TYPES(MR_Y, E)
 DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
+#undef MR_Y
 
 }

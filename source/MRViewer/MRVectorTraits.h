@@ -14,6 +14,10 @@ struct VectorTraits<ImVec2>
     using BaseType = float;
     static constexpr int size = 2;
 
+    // Can't change the element type...
+    template <std::same_as<float>>
+    using ChangeBaseType = ImVec2;
+
     template <typename U>
     [[nodiscard]] static auto&& getElem( int i, U&& value )
     {
@@ -28,6 +32,10 @@ struct VectorTraits<ImVec4>
 {
     using BaseType = float;
     static constexpr int size = 4;
+
+    // Can't change the element type...
+    template <std::same_as<float>>
+    using ChangeBaseType = ImVec4;
 
     template <typename U>
     [[nodiscard]] static auto&& getElem( int i, U&& value )

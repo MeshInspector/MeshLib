@@ -2197,7 +2197,7 @@ void RibbonMenu::drawLastOperationTimeWindow_()
         lastTimeSec = 0.0f;
 
     const auto& title = ProgressBar::getLastOperationTitle();
-    auto timeText = fmt::format( "{:.1} sec", lastTimeSec );
+    auto timeText = fmt::format( "{:.1f} sec", lastTimeSec );
 
     const auto scaling = menu_scaling();
 

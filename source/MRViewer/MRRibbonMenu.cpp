@@ -157,6 +157,7 @@ void RibbonMenu::init( MR::Viewer* _viewer )
         drawActiveBlockingDialog_();
         drawActiveNonBlockingDialogs_();
 
+        drawLastOperationTimeWindow_();
         toolbar_.drawToolbar();
         toolbar_.drawCustomize();
         drawRibbonSceneList_();
@@ -2180,6 +2181,55 @@ void RibbonMenu::setupShortcuts_()
     addRibbonItemShortcut_( "Ribbon Scene Rename", { GLFW_KEY_F2, 0 }, ShortcutManager::Category::Objects );
     addRibbonItemShortcut_( "Ribbon Scene Remove selected objects", { GLFW_KEY_R, GLFW_MOD_SHIFT }, ShortcutManager::Category::Objects );
     addRibbonItemShortcut_( "Viewer settings", { GLFW_KEY_COMMA, CONTROL_OR_SUPER }, ShortcutManager::Category::Info );
+}
+
+void RibbonMenu::drawLastOperationTimeWindow_()
+{
+    auto bgDrawList = ImGui::GetBackgroundDrawList();
+    if ( !bgDrawList )
+        return;
+    
+    float lastTimeSec = ProgressBar::getLastOperationTime();
+    if ( lastTimeSec < 0.0f )
+        return;
+
+    if ( lastTimeSec < 1e-3f )
+        lastTimeSec = 0.0f;
+
+    const auto& title = ProgressBar::getLastOperationTitle();
+    auto timeText = fmt::format( "{:.1f} sec", lastTimeSec );
+
+    const auto scaling = menu_scaling();
+
+    auto titleTextSize = ImGui::CalcTextSize( title.c_str() );
+    auto timeTextSize = ImGui::CalcTextSize( timeText.c_str() );
+    const float padding = 8 * scaling;
+    const float stopwatchIconSize = scaling * fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons );
+    Vector2f windowSize;
+    windowSize.y = 32.0f * scaling;
+    windowSize.x = 4 * padding + stopwatchIconSize + titleTextSize.x + timeTextSize.x;
+
+    Vector2f minCorner;
+    minCorner.x = sceneSize_.x;
+    minCorner.y = getViewerInstance().framebufferSize.y - 80.0f * scaling;
+    float rounding = 4 * scaling;
+    auto maxCorner = minCorner + windowSize;
+
+    auto bgCol = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::Borders ).scaledAlpha( 0.75f ).getUInt32();
+    bgDrawList->AddRectFilled( minCorner, maxCorner - Vector2f( rounding, 0.0f ), bgCol );
+    bgDrawList->AddRectFilled( ImVec2( maxCorner.x - rounding, minCorner.y ), maxCorner, bgCol, rounding );
+    // \xef\x8b\xb2
+    auto iconFont = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
+    if ( iconFont )
+        ImGui::PushFont( iconFont );
+
+    bgDrawList->AddText( ImVec2( minCorner.x + padding, ( minCorner.y + maxCorner.y - stopwatchIconSize ) * 0.5f ), 0xff0092ff, "\xef\x8b\xb2" );
+
+    if ( iconFont )
+        ImGui::PopFont();
+
+    bgDrawList->AddText( ImVec2( minCorner.x + padding * 2 + stopwatchIconSize, ( minCorner.y + maxCorner.y - timeTextSize.y ) * 0.5f ), ImGui::GetColorU32( ImGuiCol_Text ), timeText.c_str() );
+    bgDrawList->AddText( ImVec2( minCorner.x + padding * 3 + stopwatchIconSize + timeTextSize.x, ( minCorner.y + maxCorner.y - timeTextSize.y ) * 0.5f ), ImGui::GetColorU32( ImGuiCol_Text, 0.7f ), title.c_str() );
 }
 
 void RibbonMenu::drawShortcutsWindow_()

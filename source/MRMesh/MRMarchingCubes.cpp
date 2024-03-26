@@ -1135,6 +1135,7 @@ Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolume& volume, const Marc
 
 Expected<Mesh> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params )
 {
+    MR_TIMER
     auto p = params;
     p.cb = subprogress( params.cb, 0.0f, 0.9f );
     return marchingCubesAsTriMesh( volume, p ).and_then( [&params]( TriMesh && tm ) -> Expected<Mesh>
@@ -1151,6 +1152,7 @@ Expected<TriMesh> marchingCubesAsTriMesh( const VdbVolume& volume, const Marchin
 
 Expected<Mesh> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {
+    MR_TIMER
     auto p = params;
     p.cb = subprogress( params.cb, 0.0f, 0.9f );
     return marchingCubesAsTriMesh( volume, p ).and_then( [&params]( TriMesh && tm ) -> Expected<Mesh>
@@ -1167,6 +1169,7 @@ Expected<TriMesh> marchingCubesAsTriMesh( const FunctionVolume& volume, const Ma
 
 Expected<Mesh> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params )
 {
+    MR_TIMER
     auto p = params;
     p.cb = subprogress( params.cb, 0.0f, 0.9f );
     return marchingCubesAsTriMesh( volume, p ).and_then( [&params]( TriMesh && tm ) -> Expected<Mesh>

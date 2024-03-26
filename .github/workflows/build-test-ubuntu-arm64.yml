@@ -28,6 +28,7 @@ jobs:
     container:
       image: ${{ matrix.docker-image }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ ubuntu20, ubuntu22 ]
         config: [ Release ]

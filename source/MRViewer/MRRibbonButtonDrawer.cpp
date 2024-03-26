@@ -127,7 +127,17 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
     }
 
     const auto isActive = ImGui::IsItemActive();
+    bool setOverlap = false;
+    if ( bool( flags & ImGuiTreeNodeFlags_AllowOverlap ) )
+    {
+        setOverlap = true;
+        ImGui::GetCurrentContext()->LastItemData.InFlags |= ImGuiItemFlags_AllowOverlap;
+    }
     const auto isHovered = ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem );
+    if ( setOverlap )
+    {
+        ImGui::GetCurrentContext()->LastItemData.InFlags &= ( ~ImGuiItemFlags_AllowOverlap );
+    }
 
     const auto windowBgColor = ImGui::GetStyleColorVec4( ImGuiCol_WindowBg );
     const auto headerColor = ImGui::GetStyleColorVec4( ( isActive && isHovered ) ? ImGuiCol_HeaderActive : isHovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header );

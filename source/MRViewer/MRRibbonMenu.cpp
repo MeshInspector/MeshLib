@@ -64,6 +64,11 @@
 #define CONTROL_OR_SUPER GLFW_MOD_SUPER
 #endif
 
+namespace
+{
+constexpr auto cTransformContextName = "TransformContextWindow";
+}
+
 namespace MR
 {
 
@@ -1775,12 +1780,90 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
     }
 }
 
+bool RibbonMenu::drawCollapsingHeaderTransform_()
+{
+    auto res = drawCollapsingHeader_( "Transform", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowOverlap );
+
+    const float scaling = menu_scaling();
+    auto startPos = ImGui::GetCursorPos();
+    auto contextBtnPos = startPos;
+    ImVec2 smallBtnSize = ImVec2( 22 * scaling, 22 * scaling );
+    contextBtnPos.x += ( ImGui::GetContentRegionAvail().x + ImGui::GetStyle().WindowPadding.x * 0.5f - smallBtnSize.x );
+    contextBtnPos.y += ( -ImGui::GetFrameHeightWithSpacing() + ( ImGui::GetFrameHeight() - smallBtnSize.y ) * 0.5f );
+
+    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
+
+    auto iconsFont = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
+    if ( iconsFont )
+    {
+        iconsFont->Scale = 12.f / fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons );
+        ImGui::PushFont( iconsFont );
+    }
+
+    ImGui::SetCursorPos( contextBtnPos );
+
+    if ( ImGui::Button( "\xef\x85\x82", smallBtnSize ) ) // three dots icon to open context dialog
+        ImGui::OpenPopup( cTransformContextName );
+    if ( iconsFont )
+        ImGui::PopFont();
+    UI::setTooltipIfHovered( "Open Transform Data context menu.", scaling );
+    if ( iconsFont )
+        ImGui::PushFont( iconsFont );
+
+    if ( selectedObjectsCache_.size() == 1 && selectedObjectsCache_.front()->xf() != AffineXf3f() )
+    {
+        auto obj = std::const_pointer_cast< Object >( selectedObjectsCache_.front() );
+        assert( obj );
+        contextBtnPos.x -= smallBtnSize.x;
+        ImGui::SetCursorPos( contextBtnPos );
+
+        if ( ImGui::Button( "\xef\x80\x8d", smallBtnSize ) ) // X(cross) icon for reset
+        {
+            AppendHistory<ChangeXfAction>( "Reset XF", obj );
+            obj->setXf( AffineXf3f() );
+        }
+        if ( iconsFont )
+            ImGui::PopFont();
+        UI::setTooltipIfHovered( "Resets transform value to identity.", scaling );
+        if ( iconsFont )
+            ImGui::PushFont( iconsFont );
+
+        contextBtnPos.x -= smallBtnSize.x;
+        ImGui::SetCursorPos( contextBtnPos );
+
+        auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
+        if ( item != RibbonSchemaHolder::schema().items.end() &&
+            item->second.item->isAvailable( selectedObjectsCache_ ).empty() &&
+            ImGui::Button( "\xef\x80\x8c", smallBtnSize ) ) // V(apply) icon for apply
+        {
+            item->second.item->action();
+        }
+        if ( iconsFont )
+            ImGui::PopFont();
+        UI::setTooltipIfHovered( "Transforms object and resets transform value to identity.", scaling );
+        if ( iconsFont )
+            ImGui::PushFont( iconsFont );
+    }
+    if ( iconsFont )
+    {
+        ImGui::PopFont();
+        iconsFont->Scale = 1.0f;
+    }
+    ImGui::PopStyleColor( 3 );
+    ImGui::PopStyleVar();
+    return res;
+}
+
 bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selected )
 {
-    if ( !ImGui::BeginPopupContextItem( "TransformContextWindow" ) )
+    if ( !ImGui::BeginPopupContextItem( cTransformContextName ) )
         return false;
 
-    auto buttonSize = 100.0f * menu_scaling();
+    const float scaling = menu_scaling();
+    auto buttonSize = 100.0f * scaling;
 
     struct Transform
     {
@@ -1803,6 +1886,13 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         auto uniformScale = root["UniformScale"].asBool();
         return Transform{ xf, uniformScale };
     };
+
+    auto semiBoldFont = fontManager_.getFontByType( RibbonFontManager::FontType::SemiBold );
+    if ( semiBoldFont )
+        ImGui::PushFont( semiBoldFont );
+    ImGui::Text( "Transform Data" );
+    if ( semiBoldFont )
+        ImGui::PopFont();
 
     const auto& startXf = selected->xf();
 #if !defined( __EMSCRIPTEN__ )
@@ -1906,7 +1996,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
             item->second.item->action();
             ImGui::CloseCurrentPopup();
         }
-        UI::setTooltipIfHovered( "Transforms object and resets transform value to identity.", menu_scaling() );
+        UI::setTooltipIfHovered( "Transforms object and resets transform value to identity.", scaling );
 
         if ( UI::button( "Reset", Vector2f( buttonSize, 0 ) ) )
         {
@@ -1914,7 +2004,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
             selected->setXf( AffineXf3f() );
             ImGui::CloseCurrentPopup();
         }
-        UI::setTooltipIfHovered( "Resets transform value to identity.", menu_scaling() );
+        UI::setTooltipIfHovered( "Resets transform value to identity.", scaling );
     }
     ImGui::EndPopup();
     return true;

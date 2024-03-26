@@ -2119,7 +2119,7 @@ float ImGuiMenu::drawTransform_()
         }
         resultHeight_ = ImGui::GetTextLineHeight() + style.FramePadding.y * 2 + style.ItemSpacing.y;
         bool openedContext = false;
-        if ( drawCollapsingHeader_( "Transform", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( drawCollapsingHeaderTransform_() )
         {
             openedContext = drawTransformContextMenu_( selected[0] );
             const float transformHeight = ( ImGui::GetTextLineHeight() + style.FramePadding.y * 2 ) * 3 + style.ItemSpacing.y * 2;
@@ -2293,6 +2293,11 @@ std::vector<Object*> ImGuiMenu::getPreSelection_( Object* meshclicked,
 bool ImGuiMenu::drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags flags )
 {
     return ImGui::CollapsingHeader( label, flags );
+}
+
+bool ImGuiMenu::drawCollapsingHeaderTransform_()
+{
+    return drawCollapsingHeader_( "Transform", ImGuiTreeNodeFlags_DefaultOpen );
 }
 
 void ImGuiMenu::draw_custom_tree_object_properties( Object& )

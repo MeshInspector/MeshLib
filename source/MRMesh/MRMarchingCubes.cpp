@@ -463,22 +463,11 @@ using ConstAccessor = openvdb::FloatGrid::ConstAccessor;
 using VdbCoord = openvdb::Coord;
 #endif
 
-inline Vector3f voxelPositionerLinearInline( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
-{
-    const auto ratio = std::clamp( ( iso - v0 ) / ( v1 - v0 ), 0.0f, 1.0f );
-    return ( 1.0f - ratio ) * pos0 + ratio * pos1;
-}
-
-Vector3f voxelPositionerLinear( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
-{
-    return voxelPositionerLinearInline( pos0, pos1, v0, v1, iso );
-}
-
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-template <bool UseDefaultVoxelPointPositioner>
+template <class Positioner>
 bool findSeparationPoint( SeparationPoint& sp, const VdbVolume& volume, const ConstAccessor& acc,
                           const openvdb::Coord& coord, const Vector3i& basePos, float valueB, NeighborDir dir,
-                          const MarchingCubesParams& params )
+                          const MarchingCubesParams& params, Positioner&& positioner )
 {
     if ( basePos[int( dir )] + 1 >= volume.dims[int( dir )] )
         return false;
@@ -495,17 +484,14 @@ bool findSeparationPoint( SeparationPoint& sp, const VdbVolume& volume, const Co
     Vector3f nextCoordF = Vector3f( float( nextCoord.x() ), float( nextCoord.y() ), float( nextCoord.z() ) );
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    if constexpr ( UseDefaultVoxelPointPositioner )
-        sp.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
-    else
-        sp.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
+    sp.position = positioner( bPos, dPos, valueB, valueD, params.iso );
     return true;
 }
 #endif
 
-template <typename NaNChecker, bool UseDefaultVoxelPointPositioner>
+template <typename NaNChecker, typename Positioner>
 bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const VolumeIndexer& indexer, VoxelId base,
-                          const Vector3i& basePos, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker )
+                          const Vector3i& basePos, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 {
     auto nextPos = basePos;
     nextPos[int( dir )] += 1;
@@ -526,16 +512,13 @@ bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const
     Vector3f nextCoordF = Vector3f( nextPos ) + Vector3f::diagonal( 0.5f );
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    if constexpr ( UseDefaultVoxelPointPositioner )
-        sp.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
-    else
-        sp.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
+    sp.position = positioner( bPos, dPos, valueB, valueD, params.iso );
     return true;
 }
 
-template <typename NaNChecker, bool UseDefaultVoxelPointPositioner>
+template <typename NaNChecker, typename Positioner>
 bool findSeparationPoint( SeparationPoint& sp, const FunctionVolume& volume, const Vector3i& basePos, NeighborDir dir,
-                          const MarchingCubesParams& params, NaNChecker&& nanChecker )
+                          const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 {
     auto nextPos = basePos;
     nextPos[int( dir )] += 1;
@@ -556,15 +539,12 @@ bool findSeparationPoint( SeparationPoint& sp, const FunctionVolume& volume, con
     Vector3f nextCoordF = Vector3f( nextPos ) + Vector3f::diagonal( 0.5f );
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    if constexpr ( UseDefaultVoxelPointPositioner )
-        sp.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
-    else
-        sp.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
+    sp.position = positioner( bPos, dPos, valueB, valueD, params.iso );
     return true;
 }
 
-template <bool UseDefaultVoxelPointPositioner, typename V, typename NaNChecker, typename Accessor>
-bool findSeparationPoint( SeparationPoint& sp, const V& volume, const Accessor& accessor, const Vector3i& basePos, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker )
+template <typename Positioner, typename V, typename NaNChecker, typename Accessor>
+bool findSeparationPoint( SeparationPoint& sp, const V& volume, const Accessor& accessor, const Vector3i& basePos, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 
 {
     auto nextPos = basePos;
@@ -596,10 +576,7 @@ bool findSeparationPoint( SeparationPoint& sp, const V& volume, const Accessor& 
     }
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    if constexpr ( UseDefaultVoxelPointPositioner )
-        sp.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
-    else
-        sp.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
+    sp.position = positioner( bPos, dPos, valueB, valueD, params.iso );
     return true;
 }
 
@@ -613,8 +590,8 @@ template<> auto accessorCtor<VdbVolume>( const VdbVolume& v ) { return v.data->g
 
 template<> auto accessorCtor<FunctionVolume>( const FunctionVolume& ) { return (void*)nullptr; }
 
-template<typename V, typename NaNChecker, bool UseDefaultVoxelPointPositioner>
-Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker )
+template<typename V, typename NaNChecker, typename Positioner>
+Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 {
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
     if constexpr ( std::is_same_v<V, VdbVolume> )
@@ -750,17 +727,17 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
             {
                 bool ok = false;
                 if ( cache )
-                    ok = findSeparationPoint<UseDefaultVoxelPointPositioner>( set[n], volume, *cache, basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ) );
+                    ok = findSeparationPoint( set[n], volume, *cache, basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
                 else
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
                 if constexpr ( std::is_same_v<V, VdbVolume> )
-                    ok = findSeparationPoint<UseDefaultVoxelPointPositioner>( set[n], volume, acc, baseCoord, basePos, baseValue, NeighborDir( n ), params );
+                    ok = findSeparationPoint( set[n], volume, acc, baseCoord, basePos, baseValue, NeighborDir( n ), params, std::forward<Positioner>( positioner ) );
                 else
 #endif
                 if constexpr ( std::is_same_v<V, SimpleVolume> )
-                    ok = findSeparationPoint<NaNChecker, UseDefaultVoxelPointPositioner>( set[n], volume, indexer, VoxelId( i ), basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ) );
+                    ok = findSeparationPoint( set[n], volume, indexer, VoxelId( i ), basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
                 else if constexpr ( std::is_same_v<V, FunctionVolume> )
-                    ok = findSeparationPoint<NaNChecker, UseDefaultVoxelPointPositioner>( set[n], volume, basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ) );
+                    ok = findSeparationPoint( set[n], volume, basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
                 else
                     static_assert( !sizeof( V ), "Unsupported voxel volume type." );
 
@@ -1114,10 +1091,15 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 template <typename V, typename NaNChecker>
 Expected<TriMesh> volumeToMeshHelper1( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker )
 {
-    if ( !params.positioner )
-        return volumeToMesh<V, NaNChecker, true>( volume, params, std::forward<NaNChecker>( nanChecker ) );
-    else
-        return volumeToMesh<V, NaNChecker, false>( volume, params, std::forward<NaNChecker>( nanChecker ) );
+    if ( params.positioner )
+        return volumeToMesh( volume, params, std::forward<NaNChecker>( nanChecker ), params.positioner );
+
+    return volumeToMesh( volume, params, std::forward<NaNChecker>( nanChecker ),
+        []( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
+        {
+            const auto ratio = std::clamp( ( iso - v0 ) / ( v1 - v0 ), 0.0f, 1.0f );
+            return ( 1.0f - ratio ) * pos0 + ratio * pos1;
+        } );
 }
 
 template <typename V>

@@ -98,6 +98,21 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .degreesMode = {},
         };
     }
+    else if constexpr ( std::is_same_v<E, SpeedUnit> )
+    {
+        return UnitToStringParams<SpeedUnit>{
+            .sourceUnit = std::nullopt,
+            .targetUnit = SpeedUnit::mmPerSecond,
+            .unitSuffix = true,
+            .style = NumberStyle::normal,
+            .precision = 3,
+            .unicodeMinusSign = true,
+            .thousandsSeparator = ' ',
+            .leadingZero = true,
+            .stripTrailingZeroes = true,
+            .degreesMode = {},
+        };
+    }
     else
     {
         static_assert( dependent_false<E>, "Unknown measurement unit type." );
@@ -117,7 +132,7 @@ const UnitInfo& getUnitInfo( LengthUnit length )
 {
     static const UnitInfo ret[] = {
         { .conversionFactor = 1, .prettyName = "Mm", .unitSuffix = " mm" },
-        { .conversionFactor = 25.4f, .prettyName = "Inches", .unitSuffix = " in"/* or "\"" */ },
+        { .conversionFactor = 1/25.4f, .prettyName = "Inches", .unitSuffix = " in"/* or "\"" */ },
     };
     static_assert( std::extent_v<decltype( ret )> == int( LengthUnit::_count ) );
     return ret[int( length )];
@@ -155,10 +170,20 @@ template <>
 const UnitInfo& getUnitInfo( TimeUnit time )
 {
     static const UnitInfo ret[] = {
-        { .conversionFactor = 1, .prettyName = "Seconds", .unitSuffix = " sec" },
+        { .conversionFactor = 1, .prettyName = "Seconds", .unitSuffix = " s" },
     };
     static_assert( std::extent_v<decltype( ret )> == int( TimeUnit::_count ) );
     return ret[int( time )];
+}
+template <>
+const UnitInfo& getUnitInfo( SpeedUnit speed )
+{
+    static const UnitInfo ret[] = {
+        { .conversionFactor = 1, .prettyName = "Mm per second", .unitSuffix = " mm/s" },
+        { .conversionFactor = 1/25.4f, .prettyName = "Inches per second", .unitSuffix = " in/s" },
+    };
+    static_assert( std::extent_v<decltype( ret )> == int( SpeedUnit::_count ) );
+    return ret[int( speed )];
 }
 
 template <UnitEnum E>
@@ -212,8 +237,8 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
                 if ( negative )
                     value = -value;
 
-                float wholeDegrees = 0;
-                float minutes = std::modf( value, &wholeDegrees ) * 60;
+                T wholeDegrees = 0;
+                T minutes = std::modf( value, &wholeDegrees ) * 60;
                 if ( negative )
                     wholeDegrees = -wholeDegrees;
 
@@ -222,8 +247,8 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
 
                 if ( params.degreesMode == DegreesMode::degreesMinutesSeconds )
                 {
-                    float wholeMinutes = 0;
-                    float seconds = std::modf( minutes, &wholeMinutes ) * 60;
+                    T wholeMinutes = 0;
+                    T seconds = std::modf( minutes, &wholeMinutes ) * 60;
 
                     ret += fmt::format( "{}'", wholeMinutes );
 
@@ -379,10 +404,7 @@ int guessPrecision( T value )
             return 0; // Should be impossible?
 
         // pos - 2 == the number of leading zeroes in the fractional part, then +1 to show the first digit.
-
-        if ( pos == 0 )
-            return 0;
-        return pos - 1;
+        return std::max( 0, int( pos ) - 1 );
     }
 }
 

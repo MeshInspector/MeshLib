@@ -56,8 +56,24 @@ enum class TimeUnit
     _count [[maybe_unused]],
 };
 
+// Measurement units for movement speed.
+enum class SpeedUnit
+{
+    mmPerSecond,
+    inchesPerSecond,
+    _count [[maybe_unused]],
+};
+
+// Measurement units for surface area.
+enum class AreaUnit
+{
+    mmSq,
+    inchesSq,
+    _count [[maybe_unused]],
+};
+
 // A list of all unit enums, for internal use.
-#define DETAIL_MR_UNIT_ENUMS(X) X(NoUnit) X(LengthUnit) X(AngleUnit) X(PixelSizeUnit) X(RatioUnit) X(TimeUnit)
+#define DETAIL_MR_UNIT_ENUMS(X) X(NoUnit) X(LengthUnit) X(AngleUnit) X(PixelSizeUnit) X(RatioUnit) X(TimeUnit) X(SpeedUnit)
 
 // All supported value types for `valueToString()`.
 #define DETAIL_MR_UNIT_VALUE_TYPES(X, ...) \
@@ -123,7 +139,7 @@ template <UnitEnum E, typename T, typename ReturnType = std::conditional_t<std::
 
     for ( int i = 0; i < VectorTraits<T>::size; i++ )
     {
-        auto& target = VectorTraits<T>::getElem( i, ret ) = (typename VectorTraits<T>::BaseType) VectorTraits<T>::getElem( i, value );
+        auto& target = VectorTraits<ReturnType>::getElem( i, ret ) = (typename VectorTraits<ReturnType>::BaseType) VectorTraits<T>::getElem( i, value );
 
         // Don't touch min/max floating-point values.
         bool needElemConversion = needConversion;

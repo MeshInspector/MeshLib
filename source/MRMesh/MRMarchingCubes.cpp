@@ -347,81 +347,6 @@ TriangulationPlan{}
 
 const std::array<OutEdge, size_t( NeighborDir::Count )> cOutEdgeMap { OutEdge::PlusX, OutEdge::PlusY, OutEdge::PlusZ };
 
-// each iterator has info about separation point on plus directions of it base
-// mode: 0 - (0,0,0) voxel, +x, +y, +z possible separation points
-// mode: 1 - (1,0,0) voxel,     +y, +z possible separation points
-// mode: 2 - (0,1,0) voxel, +x,     +z possible separation points
-// mode: 3 - (1,1,0) voxel,         +z possible separation points
-// mode: 4 - (0,0,1) voxel, +x, +y     possible separation points
-// mode: 5 - (1,0,1) voxel,     +y     possible separation points
-// mode: 6 - (0,1,1) voxel, +x         possible separation points
-// 
-// function returns true if given voxelsConfig requires separation points in given mode
-bool cNeedIteratorMode( int mode, uint8_t voxelsConfig )
-{
-    if ( mode == 0 )
-    {
-        auto base = ( voxelsConfig & cMapNeighbors[0] );
-        if ( base != ( voxelsConfig & cMapNeighbors[1] ) )
-            return true;
-        else if ( base != ( voxelsConfig & cMapNeighbors[2] ) )
-            return true;
-        else if ( base != ( voxelsConfig & cMapNeighbors[4] ) )
-            return true;
-        else
-            return false;
-    }
-    else if ( mode == 1 )
-    {
-        auto base = ( voxelsConfig & cMapNeighbors[1] );
-        if ( base != ( voxelsConfig & cMapNeighbors[3] ) )
-            return true;
-        else if ( base != ( voxelsConfig & cMapNeighbors[5] ) )
-            return true;
-        else
-            return false;
-    }
-    else if ( mode == 2 )
-    {
-        auto base = ( voxelsConfig & cMapNeighbors[2] );
-        if ( base != ( voxelsConfig & cMapNeighbors[3] ) )
-            return true;
-        else if ( base != ( voxelsConfig & cMapNeighbors[6] ) )
-            return true;
-        else
-            return false;
-    }
-    else if ( mode == 3 )
-    {
-        if ( ( voxelsConfig & cMapNeighbors[3] ) != ( voxelsConfig & cMapNeighbors[7] ) )
-            return true;
-        return false;
-    }
-    else if ( mode == 4 )
-    {
-        auto base = ( voxelsConfig & cMapNeighbors[4] );
-        if ( base != ( voxelsConfig & cMapNeighbors[5] ) )
-            return true;
-        else if ( base != ( voxelsConfig & cMapNeighbors[6] ) )
-            return true;
-        else
-            return false;
-    }
-    else if ( mode == 5 )
-    {
-        if ( ( voxelsConfig & cMapNeighbors[5] ) != ( voxelsConfig & cMapNeighbors[7] ) )
-            return true;
-        return false;
-    }
-    else if ( mode == 6 )
-    {
-        if ( ( voxelsConfig & cMapNeighbors[6] ) != ( voxelsConfig & cMapNeighbors[7] ) )
-            return true;
-        return false;
-    }
-    return false;
-}
-
 // mode: 0 - (0,0,0) voxel, +x, +y, +z possible separation points
 // mode: 1 - (1,0,0) voxel,     +y, +z possible separation points
 // mode: 2 - (0,1,0) voxel, +x,     +z possible separation points
@@ -892,6 +817,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
             bool voxelValid = true;
             voxelConfiguration = 0;
+            std::array<bool, 8> vx{};
             [[maybe_unused]] bool atLeastOneNan = false;
             for ( int i = 0; i < cVoxelNeighbors.size(); ++i )
             {
@@ -961,16 +887,15 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                 if ( value >= params.iso )
                     continue;
                 voxelConfiguration |= cMapNeighbors[i];
+                vx[i] = true;
             }
             if ( !voxelValid || voxelConfiguration == 0x00 || voxelConfiguration == 0xff )
                 continue;
 
+            // find only necessary neighbor separation points
             voxelValid = false;
-            for ( int i = 0; i < neis.size(); ++i )
+            auto findNei = [&]( int i )
             {
-                neis[i] = nullptr;
-                if ( !cNeedIteratorMode( i, voxelConfiguration ) )
-                    continue;
                 const auto index = ind + cVoxelNeighborsIndexAdd[i];
                 auto * pSet = findSeparationPointSet( index );
                 if ( pSet && checkSetValid( *pSet, i ) )
@@ -978,7 +903,23 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                     neis[i] = pSet;
                     voxelValid = true;
                 }
-            }
+            };
+            neis = {};
+            if ( vx[0] != vx[1] || vx[0] != vx[2] || vx[0] != vx[4] )
+                findNei( 0 );
+            if ( vx[1] != vx[3] || vx[1] != vx[5] )
+                findNei( 1 );
+            if ( vx[2] != vx[3] || vx[2] != vx[6] )
+                findNei( 2 );
+            if ( vx[3] != vx[7] )
+                findNei( 3 );
+            if ( vx[4] != vx[5] || vx[4] != vx[6] )
+                findNei( 4 );
+            if ( vx[5] != vx[7] )
+                findNei( 5 );
+            if ( vx[6] != vx[7] )
+                findNei( 6 );
+
             if constexpr ( std::is_same_v<V, SimpleVolume> || std::is_same_v<V, FunctionVolume> )
             {
                 // ensure consistent nan voxel

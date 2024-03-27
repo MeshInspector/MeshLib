@@ -351,9 +351,6 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install pytest
           ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
 
-      - name: Set MACOSX_DEPLOYMENT_TARGET
-        run: echo "MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos-target }}" >> $GITHUB_ENV
-
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh
 
@@ -384,6 +381,12 @@ jobs:
           PYTHONPATH=. pybind11-stubgen --output-dir . meshlib.mrmeshnumpy
           PYTHONPATH=. pybind11-stubgen --output-dir . meshlib.mrviewerpy
           ${{ matrix.py-cmd }} setup.py bdist_wheel --plat-name=${{matrix.plat-name}} --python-tag=${{matrix.py-tag}} --version ${{needs.setup.outputs.version_tag}}
+
+      - name: Set MACOSX_DEPLOYMENT_TARGET
+        run: echo "MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos-target }}" >> $GITHUB_ENV
+
+      - name: Delocate Wheel
+        run: |
           delocate-path meshlib
           cd ../../..
           delocate-wheel -w . -v ./scripts/wheel/meshlib/dist/*.whl

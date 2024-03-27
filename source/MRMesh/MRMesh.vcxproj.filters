@@ -2052,7 +2052,7 @@
     <ClCompile Include="MRFaceDistance.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
-    <ClCompile Include="MRAddNoisecpp">
+    <ClCompile Include="MRAddNoise.cpp">
       <Filter>Source Files\Relax</Filter>
     </ClCompile>
   </ItemGroup>

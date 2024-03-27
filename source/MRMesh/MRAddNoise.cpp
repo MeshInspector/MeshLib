@@ -3,9 +3,9 @@
 namespace MR
 {
 
-void addNoise( VertCoords& points, const VertBitSet& validVerts, float sigma, unsigned int startValue )
+void addNoise( VertCoords& points, const VertBitSet& validVerts, float sigma, unsigned int seed )
 {
-    if ( validVerts.size() > 100000 )
+    if ( validVerts.count() > 100000 )
     {
         const size_t numBlock = 256;
         const size_t step = validVerts.size() / numBlock;
@@ -21,7 +21,7 @@ void addNoise( VertCoords& points, const VertBitSet& validVerts, float sigma, un
         {
             for ( size_t pos = range.begin(); pos < range.end(); pos++ )
             {
-                std::mt19937 gen_{ startValue + ( unsigned int )pos };
+                std::mt19937 gen_{ seed + ( unsigned int )pos };
                 std::normal_distribution d{ 0.0f, sigma };
                 for ( auto i = chunk[pos]; i < chunk[pos + 1]; i++ )
                 {
@@ -33,7 +33,7 @@ void addNoise( VertCoords& points, const VertBitSet& validVerts, float sigma, un
     }
     else
     {
-        std::mt19937 gen_{ startValue };
+        std::mt19937 gen_{ seed };
         std::normal_distribution d{ 0.0f, sigma };
         for ( const auto& v : validVerts )
         {

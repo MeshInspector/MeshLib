@@ -393,7 +393,7 @@
     <ClCompile Include="MRAABBTreePolyline.cpp" />
     <ClCompile Include="MRAABBTreePolyline3.cpp" />
     <ClCompile Include="MRAABBTreePolyline2.cpp" />
-    <ClCompile Include="MRAddNoisecpp" />
+    <ClCompile Include="MRAddNoise.cpp" />
     <ClCompile Include="MRAffineXf2.cpp" />
     <ClCompile Include="MRAggregateFlow.cpp" />
     <ClCompile Include="MRAlignTextToMesh.cpp" />

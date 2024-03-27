@@ -9,7 +9,8 @@
 
 namespace MR
 {
-// Adds noise to the points, using a normal distribution with a starting value
-MRMESH_API void addNoise( VertCoords& points, const VertBitSet& validVerts, float sigma, unsigned int startValue );
+// Adds noise to the points, using a normal distribution
+// seed - start state of the random device engine
+MRMESH_API void addNoise( VertCoords& points, const VertBitSet& validVerts, float sigma, unsigned int seed );
 
 }

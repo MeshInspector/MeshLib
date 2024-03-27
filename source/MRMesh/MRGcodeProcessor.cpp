@@ -97,10 +97,15 @@ std::vector<GcodeProcessor::Command> GcodeProcessor::parseFrame_( const std::str
     std::vector<Command> commands;
     size_t it = 0;
     char* numEnd = nullptr;
+    auto commentStartInd = frame.find( ';' );
     while ( std::isspace( frame[it] ) )
         ++it;
+    if ( commentStartInd <= it )
+        return commands;
     while ( it < frame.size() )
     {
+        if ( commentStartInd <= it )
+            return commands;
         if ( frame[it] == '(' )
         {
             it = frame.find( ')', it + 1 );

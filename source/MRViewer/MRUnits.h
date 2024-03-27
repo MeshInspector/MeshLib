@@ -61,11 +61,11 @@ enum class TimeUnit
 
 // All supported value types for `valueToString()`.
 #define DETAIL_MR_UNIT_VALUE_TYPES(X, ...) \
-    X(float      , __VA_ARGS__) X(double        , __VA_ARGS__) X(long double, __VA_ARGS__) \
-    X(signed char, __VA_ARGS__) X(unsigned char , __VA_ARGS__) \
-    X(short      , __VA_ARGS__) X(unsigned short, __VA_ARGS__) \
-    X(int        , __VA_ARGS__) X(unsigned int  , __VA_ARGS__) \
-    X(long       , __VA_ARGS__) X(unsigned long , __VA_ARGS__)
+    X(float       __VA_OPT__(,)__VA_ARGS__) X(double         __VA_OPT__(,)__VA_ARGS__) X(long double __VA_OPT__(,)__VA_ARGS__) \
+    X(signed char __VA_OPT__(,)__VA_ARGS__) X(unsigned char  __VA_OPT__(,)__VA_ARGS__) \
+    X(short       __VA_OPT__(,)__VA_ARGS__) X(unsigned short __VA_OPT__(,)__VA_ARGS__) \
+    X(int         __VA_OPT__(,)__VA_ARGS__) X(unsigned int   __VA_OPT__(,)__VA_ARGS__) \
+    X(long        __VA_OPT__(,)__VA_ARGS__) X(unsigned long  __VA_OPT__(,)__VA_ARGS__)
 
 // Whether `E` is one of the unit enums: NoUnit, LengthUnit, AngleUnit, ...
 template <typename T>
@@ -247,7 +247,7 @@ struct UnitToStringParams
 // Converts value to a string, possibly converting it to a different unit.
 // By default, length is kept as is, while angles are converted from radians to the current UI unit.
 template <UnitEnum E, typename T>
-requires std::is_arithmetic_v<T>
+requires (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>)
 std::string valueToString( T value, const UnitToStringParams<E>& params = getDefaultUnitParams<E>() );
 
 #define MR_Y(T, E) extern template MRVIEWER_API std::string valueToString<E, T>( T value, const UnitToStringParams<E>& params );
@@ -255,5 +255,24 @@ std::string valueToString( T value, const UnitToStringParams<E>& params = getDef
 DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
 #undef MR_Y
+
+// Guesses the number of digits of precision for fixed-point formatting of `value`.
+// Mostly for internal use.
+template <typename T>
+requires (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>)
+MRVIEWER_API int guessPrecision( T value );
+
+// Guesses the number of digits of precision for fixed-point formatting of the min-max range.
+// If `min >= max`, always returns zero. Ignores min and/or max if they are the smallest of the largest representable value respectively.
+// Mostly for internal use.
+template <typename T>
+requires (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>)
+MRVIEWER_API int guessPrecision( T min, T max );
+
+#define MR_X(T) \
+    extern template MRVIEWER_API int guessPrecision( T value ); \
+    extern template MRVIEWER_API int guessPrecision( T min, T max );
+DETAIL_MR_UNIT_VALUE_TYPES(MR_X)
+#undef MR_X
 
 }

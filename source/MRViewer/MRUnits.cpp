@@ -14,7 +14,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .sourceUnit = std::nullopt,
             .targetUnit = {},
             .unitSuffix = false,
-            .style = NumberStyle::fixed,
+            .style = NumberStyle::normal,
             .precision = 3,
             .unicodeMinusSign = true,
             .thousandsSeparator = ' ',
@@ -330,7 +330,7 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
 }
 
 template <UnitEnum E, typename T>
-requires std::is_arithmetic_v<T>
+requires (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>)
 std::string valueToString( T value, const UnitToStringParams<E>& params )
 {
     // Convert to the target unit.
@@ -352,6 +352,80 @@ DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
 #undef MR_Y
 
+template <typename T>
+requires (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>)
+int guessPrecision( T value )
+{
+    if constexpr ( std::is_integral_v<T> )
+    {
+        (void)value;
+        return 0;
+    }
+    else
+    {
+        if ( !std::isnormal( value ) )
+            return 0; // Reject non-finite numbers and zeroes.
 
+        if ( value < 0 )
+            value = -value;
+
+        if ( value >= 1 )
+            return 0;
+
+        std::string str = fmt::format( "{:.{}f}", value, std::numeric_limits<T>::max_digits10 );
+
+        auto pos = str.find_first_not_of( "0." );
+        if ( pos == std::string::npos )
+            return 0; // Should be impossible?
+
+        // pos - 2 == the number of leading zeroes in the fractional part, then +1 to show the first digit.
+
+        if ( pos == 0 )
+            return 0;
+        return pos - 1;
+    }
+}
+
+template <typename T>
+requires (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>)
+int guessPrecision( T min, T max )
+{
+    if constexpr ( std::is_integral_v<T> )
+    {
+        (void)min;
+        (void)max;
+        return 0;
+    }
+    else
+    {
+        if ( !( min < max ) )
+            return 0;
+
+        bool haveMin = min > std::numeric_limits<T>::lowest();
+        bool haveMax = max < std::numeric_limits<T>::max();
+
+        if ( !haveMin && !haveMax )
+            return 0;
+
+        if ( haveMin && !haveMax )
+            return guessPrecision( min );
+        if ( !haveMin && haveMax )
+            return guessPrecision( max );
+
+        int a = guessPrecision( min );
+        int b = guessPrecision( max );
+
+        if ( a == b && min * 2 >= max )
+            return a + 1;
+
+        return std::max( a, b );
+    }
+}
+
+#define MR_X(T) \
+    template int guessPrecision( T value ); \
+    template int guessPrecision( T min, T max );
+DETAIL_MR_UNIT_VALUE_TYPES(MR_X)
+#undef MR_X
 
 }

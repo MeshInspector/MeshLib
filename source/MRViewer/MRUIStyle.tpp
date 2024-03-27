@@ -166,18 +166,21 @@ namespace detail
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U>
 bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToStringParams<E> unitParams, ImGuiSliderFlags flags )
 {
-    // Adjust the parameters:
-    // Don't strip trailing zeroes, otherwise the numbers jump too much.
-    unitParams.stripTrailingZeroes = false;
-
     auto fixedMin = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMin );
     auto fixedMax = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMax );
+
+    // Don't strip trailing zeroes, otherwise the numbers jump too much.
+    unitParams.stripTrailingZeroes = false;
 
     if ( !unitsAreEquivalent( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit ) )
     {
         // Without this flag the value changes slightly when you release the mouse.
         flags |= ImGuiSliderFlags_NoRoundToFormat;
     }
+
+    // Guess the precision.
+    if ( unitParams.style == NumberStyle::normal || unitParams.style == NumberStyle::fixed )
+        unitParams.precision = std::max( unitParams.precision, guessPrecision( fixedMin, fixedMax ) + int( unitParams.style == NumberStyle::normal ) );
 
     return detail::unitWidget( label, v, unitParams,
         [&]<typename ElemType>( const char* elemLabel, ElemType& elemVal, int i )
@@ -205,19 +208,22 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidDragSpeedForTargetType<T> SpeedType, detail::ValidBoundForTargetType<T> U>
 bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vMax, UnitToStringParams<E> unitParams, ImGuiSliderFlags flags )
 {
-    // Adjust the parameters:
-    // Don't strip trailing zeroes, otherwise the numbers jump too much.
-    unitParams.stripTrailingZeroes = false;
-
     auto fixedSpeed = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vSpeed );
     auto fixedMin = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMin );
     auto fixedMax = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMax );
+
+    // Don't strip trailing zeroes, otherwise the numbers jump too much.
+    unitParams.stripTrailingZeroes = false;
 
     if ( !unitsAreEquivalent( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit ) )
     {
         // Without this flag the value changes slightly when you release the mouse.
         flags |= ImGuiSliderFlags_NoRoundToFormat;
     }
+
+    // Guess the precision.
+    if ( unitParams.style == NumberStyle::normal || unitParams.style == NumberStyle::fixed )
+        unitParams.precision = std::max( unitParams.precision, guessPrecision( fixedMin, fixedMax ) + int( unitParams.style == NumberStyle::normal ) );
 
     return detail::unitWidget( label, v, unitParams,
         [&]<typename ElemType>( const char* elemLabel, ElemType& elemVal, int i )

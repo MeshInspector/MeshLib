@@ -175,13 +175,12 @@ If you would like to use another version of CUDA, please modify `MRCudaVersion` 
 4. Open solution file `MeshLib/source/MeshLib.sln` in Visual Studio. Build it and run.
 
 ## Linux
-This installation was checked on Ubuntu 22.04.3 (WSL) with CMake 3.28.3
+
+We regularly check that MeshLib can be built successfully on Ubuntu 20.04 LTS, Ubuntu 22.04 LTS (both x64 and ARM), and Fedora 37.
 
 **Install/Build dependencies. Build project. Run Test Application**
 
 Install CUDA v12.0 from [official site](https://developer.nvidia.com/cuda-toolkit-archive)
-
-Make sure CMake version at least 3.25.2 is installed
 
 Use automated installation process. It takes ~40 minutes if no required packages are already installed.
 This approach is useful for new MR developers

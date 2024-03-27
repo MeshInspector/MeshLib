@@ -57,7 +57,7 @@ enum class TimeUnit
 };
 
 // Measurement units for movement speed.
-enum class SpeedUnit
+enum class MovementSpeedUnit
 {
     mmPerSecond,
     inchesPerSecond,
@@ -67,13 +67,21 @@ enum class SpeedUnit
 // Measurement units for surface area.
 enum class AreaUnit
 {
-    mmSq,
-    inchesSq,
+    mm2,
+    inches2,
+    _count [[maybe_unused]],
+};
+
+// Measurement units for body volume.
+enum class VolumeUnit
+{
+    mm3,
+    inches3,
     _count [[maybe_unused]],
 };
 
 // A list of all unit enums, for internal use.
-#define DETAIL_MR_UNIT_ENUMS(X) X(NoUnit) X(LengthUnit) X(AngleUnit) X(PixelSizeUnit) X(RatioUnit) X(TimeUnit) X(SpeedUnit)
+#define DETAIL_MR_UNIT_ENUMS(X) X(NoUnit) X(LengthUnit) X(AngleUnit) X(PixelSizeUnit) X(RatioUnit) X(TimeUnit) X(MovementSpeedUnit) X(AreaUnit) X(VolumeUnit)
 
 // All supported value types for `valueToString()`.
 #define DETAIL_MR_UNIT_VALUE_TYPES(X, ...) \

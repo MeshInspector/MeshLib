@@ -17,7 +17,7 @@ namespace detail
             return ImGuiDataType_Float;
         else if constexpr ( std::is_same_v<T, double> )
             return ImGuiDataType_Double;
-        if constexpr ( sizeof(T) == 1 )
+        else if constexpr ( sizeof(T) == 1 )
             return std::is_signed_v<T> ? ImGuiDataType_S8 : ImGuiDataType_U8;
         else if constexpr ( sizeof(T) == 2 )
             return std::is_signed_v<T> ? ImGuiDataType_S16 : ImGuiDataType_U16;

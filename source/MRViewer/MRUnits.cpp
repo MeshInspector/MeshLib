@@ -98,11 +98,41 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .degreesMode = {},
         };
     }
-    else if constexpr ( std::is_same_v<E, SpeedUnit> )
+    else if constexpr ( std::is_same_v<E, MovementSpeedUnit> )
     {
-        return UnitToStringParams<SpeedUnit>{
+        return UnitToStringParams<MovementSpeedUnit>{
             .sourceUnit = std::nullopt,
-            .targetUnit = SpeedUnit::mmPerSecond,
+            .targetUnit = MovementSpeedUnit::mmPerSecond,
+            .unitSuffix = true,
+            .style = NumberStyle::normal,
+            .precision = 3,
+            .unicodeMinusSign = true,
+            .thousandsSeparator = ' ',
+            .leadingZero = true,
+            .stripTrailingZeroes = true,
+            .degreesMode = {},
+        };
+    }
+    else if constexpr ( std::is_same_v<E, AreaUnit> )
+    {
+        return UnitToStringParams<AreaUnit>{
+            .sourceUnit = std::nullopt,
+            .targetUnit = AreaUnit::mm2,
+            .unitSuffix = true,
+            .style = NumberStyle::normal,
+            .precision = 3,
+            .unicodeMinusSign = true,
+            .thousandsSeparator = ' ',
+            .leadingZero = true,
+            .stripTrailingZeroes = true,
+            .degreesMode = {},
+        };
+    }
+    else if constexpr ( std::is_same_v<E, VolumeUnit> )
+    {
+        return UnitToStringParams<VolumeUnit>{
+            .sourceUnit = std::nullopt,
+            .targetUnit = VolumeUnit::mm3,
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
@@ -176,14 +206,36 @@ const UnitInfo& getUnitInfo( TimeUnit time )
     return ret[int( time )];
 }
 template <>
-const UnitInfo& getUnitInfo( SpeedUnit speed )
+const UnitInfo& getUnitInfo( MovementSpeedUnit speed )
 {
     static const UnitInfo ret[] = {
         { .conversionFactor = 1, .prettyName = "Mm per second", .unitSuffix = " mm/s" },
         { .conversionFactor = 1/25.4f, .prettyName = "Inches per second", .unitSuffix = " in/s" },
     };
-    static_assert( std::extent_v<decltype( ret )> == int( SpeedUnit::_count ) );
+    static_assert( std::extent_v<decltype( ret )> == int( MovementSpeedUnit::_count ) );
     return ret[int( speed )];
+}
+template <>
+const UnitInfo& getUnitInfo( AreaUnit area )
+{
+    static const UnitInfo ret[] = {
+        // U+00B2 SUPERSCRIPT TWO
+        { .conversionFactor = 1, .prettyName = "Mm\xc2\xb2", .unitSuffix = " mm\xc2\xb2" },
+        { .conversionFactor = 1/25.4f/25.4f, .prettyName = "Inches\xc2\xb2", .unitSuffix = " in\xc2\xb2" },
+    };
+    static_assert( std::extent_v<decltype( ret )> == int( AreaUnit::_count ) );
+    return ret[int( area )];
+}
+template <>
+const UnitInfo& getUnitInfo( VolumeUnit volume )
+{
+    static const UnitInfo ret[] = {
+        // U+00B3 SUPERSCRIPT THREE
+        { .conversionFactor = 1, .prettyName = "Mm\xc2\xb3", .unitSuffix = " mm\xc2\xb3" },
+        { .conversionFactor = 1/25.4f/25.4f/25.4f, .prettyName = "Inches\xc2\xb3", .unitSuffix = " in\xc2\xb3" },
+    };
+    static_assert( std::extent_v<decltype( ret )> == int( VolumeUnit::_count ) );
+    return ret[int( volume )];
 }
 
 template <UnitEnum E>

@@ -5,28 +5,23 @@ namespace MR
 
 void addNoise( VertCoords& points, const VertBitSet& validVerts, float sigma, unsigned int seed )
 {
-    if ( validVerts.count() > 100000 )
+    if ( validVerts.count() > 1000 )
     {
-        const size_t numBlock = 256;
+        const size_t numBlock = 100;
         const size_t step = validVerts.size() / numBlock;
-        std::array<size_t, numBlock + 1> chunk;
-        for ( size_t i = 0; i < numBlock; i++ )
-        {
-            chunk[i] = step * i;
-        }
-        chunk.back() = validVerts.size() - 1;
 
         tbb::parallel_for( tbb::blocked_range<size_t>( 0, numBlock ),
         [&] ( const tbb::blocked_range<size_t>& range )
         {
+            std::mt19937 gen_{ seed + ( unsigned int )range.begin() };
+            std::normal_distribution d{ 0.0f, sigma };
             for ( size_t pos = range.begin(); pos < range.end(); pos++ )
             {
-                std::mt19937 gen_{ seed + ( unsigned int )pos };
-                std::normal_distribution d{ 0.0f, sigma };
-                for ( auto i = chunk[pos]; i < chunk[pos + 1]; i++ )
+                for ( auto i = step * pos; i < step * (pos + 1); i++ )
                 {
-                    const auto& v = validVerts.find_next( Id<VertTag>( i ) );
-                    points[v] += Vector3f( d( gen_ ), d( gen_ ), d( gen_ ) );
+                    if ( !validVerts.test( VertId( i ) ) )
+                        continue;
+                    points[VertId( i )] += Vector3f( d( gen_ ), d( gen_ ), d( gen_ ) );
                 }
             }
         } );

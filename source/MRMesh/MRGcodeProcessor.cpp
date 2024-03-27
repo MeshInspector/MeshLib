@@ -100,8 +100,6 @@ std::vector<GcodeProcessor::Command> GcodeProcessor::parseFrame_( const std::str
     auto commentStartInd = frame.find( ';' );
     while ( std::isspace( frame[it] ) )
         ++it;
-    if ( commentStartInd <= it )
-        return commands;
     while ( it < frame.size() )
     {
         if ( commentStartInd <= it )

@@ -5,9 +5,9 @@ namespace MR
 
 void addNoise( VertCoords& points, const VertBitSet& validVerts, float sigma, unsigned int seed )
 {
-    if ( validVerts.count() > 1000 )
+    if ( validVerts.count() > 100000 )
     {
-        const size_t numBlock = 100;
+        const size_t numBlock = 128;
         const size_t step = validVerts.size() / numBlock;
 
         tbb::parallel_for( tbb::blocked_range<size_t>( 0, numBlock ),

@@ -1476,11 +1476,13 @@ std::string RibbonMenu::getRequirements_( const std::shared_ptr<RibbonMenuItem>&
 void RibbonMenu::drawSceneListButtons_()
 {
     auto menuScaling = menu_scaling();
-    const float size = ( cMiddleIconSize + 8.f ) * menuScaling;
+    const float size = ( cMiddleIconSize + 9.f ) * menuScaling;
     const ImVec2 smallItemSize = { size, size };
 
     const DrawButtonParams params{ DrawButtonParams::SizeType::Small, smallItemSize, cMiddleIconSize,DrawButtonParams::RootType::Toolbar };
 
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() - 2 * menuScaling );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 6 * menuScaling, 5 * menuScaling ) );
     auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Small );
     //font->Scale = 0.75f;
     ImGui::PushFont( font );
@@ -1501,9 +1503,11 @@ void RibbonMenu::drawSceneListButtons_()
     ImGui::NewLine();
     ImGui::PopFont();
     const float separateLinePos = ImGui::GetCursorScreenPos().y;
+
+    ImGui::PopStyleVar();
     ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddLine( ImVec2( 0, separateLinePos ), ImVec2( float( sceneSize_.x ), separateLinePos ),
                                                                   ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ).getUInt32() );
-    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ImGui::GetStyle().ItemSpacing.y + 1.0f );
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ImGui::GetStyle().ItemSpacing.y + 1.0f * menuScaling );
 }
 
 void RibbonMenu::drawWelcomeWindow_()

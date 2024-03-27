@@ -387,6 +387,7 @@ jobs:
 
       - name: Delocate Wheel
         run: |
+          cd ./scripts/wheel/meshlib
           delocate-path meshlib
           cd ../../..
           delocate-wheel -w . -v ./scripts/wheel/meshlib/dist/*.whl

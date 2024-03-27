@@ -499,7 +499,7 @@ int guessPrecision( T min, T max )
 #define MR_X(T) \
     template int guessPrecision( T value ); \
     template int guessPrecision( T min, T max );
-DETAIL_MR_UNIT_VALUE_TYPES(MR_X)
+DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
 #undef MR_X
 
 }

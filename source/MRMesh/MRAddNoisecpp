@@ -33,7 +33,7 @@ void addNoise( VertCoords& points, const VertBitSet& validVerts, float sigma, un
     }
     else
     {
-        std::mt19937 gen_{ value };
+        std::mt19937 gen_{ startValue };
         std::normal_distribution d{ 0.0f, sigma };
         for ( const auto& v : validVerts )
         {

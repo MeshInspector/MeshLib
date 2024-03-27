@@ -21,7 +21,7 @@ void addNoise( VertCoords& points, const VertBitSet& validVerts, float sigma, un
         {
             for ( size_t pos = range.begin(); pos < range.end(); pos++ )
             {
-                std::mt19937 gen_{ value + ( unsigned int )pos };
+                std::mt19937 gen_{ startValue + ( unsigned int )pos };
                 std::normal_distribution d{ 0.0f, sigma };
                 for ( auto i = chunk[pos]; i < chunk[pos + 1]; i++ )
                 {

@@ -7,6 +7,8 @@
 #include <optional>
 #include <string>
 
+// Read the manual at: docs/measurement_units.md
+
 namespace MR
 {
 
@@ -39,8 +41,23 @@ enum class PixelSizeUnit
     _count [[maybe_unused]],
 };
 
+// Measurement units for factors / ratios.
+enum class RatioUnit
+{
+    factor, // 0..1 x
+    percents, // 0..100 %
+    _count [[maybe_unused]],
+};
+
+// Measurement units for time.
+enum class TimeUnit
+{
+    seconds,
+    _count [[maybe_unused]],
+};
+
 // A list of all unit enums, for internal use.
-#define DETAIL_MR_UNIT_ENUMS(X) X(NoUnit) X(LengthUnit) X(AngleUnit) X(PixelSizeUnit)
+#define DETAIL_MR_UNIT_ENUMS(X) X(NoUnit) X(LengthUnit) X(AngleUnit) X(PixelSizeUnit) X(RatioUnit) X(TimeUnit)
 
 // All supported value types for `valueToString()`.
 #define DETAIL_MR_UNIT_VALUE_TYPES(X, ...) \

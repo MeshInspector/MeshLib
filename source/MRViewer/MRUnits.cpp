@@ -68,6 +68,36 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .degreesMode = {},
         };
     }
+    else if constexpr ( std::is_same_v<E, RatioUnit> )
+    {
+        return UnitToStringParams<RatioUnit>{
+            .sourceUnit = RatioUnit::factor,
+            .targetUnit = RatioUnit::percents,
+            .unitSuffix = true,
+            .style = NumberStyle::fixed,
+            .precision = 1,
+            .unicodeMinusSign = true,
+            .thousandsSeparator = ' ',
+            .leadingZero = true,
+            .stripTrailingZeroes = true,
+            .degreesMode = {},
+        };
+    }
+    else if constexpr ( std::is_same_v<E, TimeUnit> )
+    {
+        return UnitToStringParams<TimeUnit>{
+            .sourceUnit = TimeUnit::seconds,
+            .targetUnit = TimeUnit::seconds,
+            .unitSuffix = true,
+            .style = NumberStyle::fixed,
+            .precision = 1,
+            .unicodeMinusSign = true,
+            .thousandsSeparator = ' ',
+            .leadingZero = true,
+            .stripTrailingZeroes = true,
+            .degreesMode = {},
+        };
+    }
     else
     {
         static_assert( dependent_false<E>, "Unknown measurement unit type." );
@@ -110,6 +140,25 @@ const UnitInfo& getUnitInfo( PixelSizeUnit screenSize )
     };
     static_assert( std::extent_v<decltype( ret )> == int( PixelSizeUnit::_count ) );
     return ret[int( screenSize )];
+}
+template <>
+const UnitInfo& getUnitInfo( RatioUnit ratio )
+{
+    static const UnitInfo ret[] = {
+        { .conversionFactor = 1, .prettyName = "Factor", .unitSuffix = " x" },
+        { .conversionFactor = 100, .prettyName = "Percents", .unitSuffix = " %" },
+    };
+    static_assert( std::extent_v<decltype( ret )> == int( RatioUnit::_count ) );
+    return ret[int( ratio )];
+}
+template <>
+const UnitInfo& getUnitInfo( TimeUnit time )
+{
+    static const UnitInfo ret[] = {
+        { .conversionFactor = 1, .prettyName = "Seconds", .unitSuffix = " sec" },
+    };
+    static_assert( std::extent_v<decltype( ret )> == int( TimeUnit::_count ) );
+    return ret[int( time )];
 }
 
 template <UnitEnum E>

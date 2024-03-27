@@ -13,6 +13,7 @@ We store all quantities as scalars (typically `float`s), there are no custom typ
 Our convention is:
 * Store angles in radians (converting to degrees in GUI).
 * Store lengths as is (we append `mm` or `inch` suffix in GUI depending on the settings, without converting the value).
+* Percentages should be stored as numbers between `0` and `1` (multiplied by 100 and displayed as percents in the GUI).
 
 ### Converting between units
 
@@ -72,6 +73,8 @@ Where:
 * `value` is a reference to a scalar or `Vector2/3/4` or `ImVec2/4`.
 
 Those automatically perform the measurement unit conversions, and display the units in the GUI. (Pass `E` = `NoUnit` if your value doesn't have a unit.)
+
+NOTE: They are more sensitive to argument types. If the `value` is `float`, then `min`,`max` must also be `float`, not `int`.
 
 They accept the same optional parameters as ImGui widgets, and additionally `UnitToStringParams<E>` to control the unit conversion. (See [Unit to string](#unit-to-string) for explanation.)
 

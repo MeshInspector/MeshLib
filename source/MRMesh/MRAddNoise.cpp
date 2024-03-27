@@ -10,7 +10,7 @@ namespace MR
 
 void addNoise( VertCoords& points, const VertBitSet& validVerts, float sigma, unsigned int seed )
 {
-    if ( validVerts.count() > 100000 )
+    if ( validVerts.count() > 1000 )
     {
         const size_t numBlock = 128;
         const size_t step = validVerts.size() / numBlock;

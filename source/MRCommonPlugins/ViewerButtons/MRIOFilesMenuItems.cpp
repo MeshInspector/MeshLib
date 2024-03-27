@@ -96,7 +96,7 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
 #endif
         setupListUpdate_();
         connect( &getViewerInstance() );
-        // required to be deferred, for valid emscripten static constructors oreder 
+        // required to be deferred, for valid emscripten static constructors order
         filters_ = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | SceneFileFilters | DistanceMapLoad::Filters | GcodeLoad::Filters;
 #ifdef __EMSCRIPTEN__
         std::erase_if( filters_, [] ( const auto& filter )
@@ -226,7 +226,7 @@ void OpenFilesMenuItem::setupListUpdate_()
                 pathStr = pathStr.substr( 0, fileNameLimit / 2 ) + " ... " + pathStr.substr( size - fileNameLimit / 2 );
 
             auto filesystemPath = recentPathsCache_[i];
-            dropList_[i] = std::make_shared<LambdaRibbonItem>( pathStr + "##" + std::to_string( i ), 
+            dropList_[i] = std::make_shared<LambdaRibbonItem>( pathStr + "##" + std::to_string( i ),
 #ifndef __EMSCRIPTEN__
                 [this, filesystemPath] ()
 #else
@@ -257,7 +257,7 @@ void OpenFilesMenuItem::setupListUpdate_()
     } );
     recentPathsCache_ = getViewerInstance().recentFilesStore().getStoredFiles();
     dropList_.resize( recentPathsCache_.size() );
-    cutLongFileNames();    
+    cutLongFileNames();
 }
 
 bool OpenFilesMenuItem::checkPaths_( const std::vector<std::filesystem::path>& paths )
@@ -323,7 +323,7 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
                         errors += ( !errors.empty() ? "\n" : "" ) + std::string( isoRes.error() );
                         break;
                     }
-                    
+
                     obj->select( true );
                     obj->setXf( res->xf );
                     voxelObjects.push_back( obj );
@@ -597,12 +597,12 @@ bool SaveSelectedMenuItem::action()
 {
     auto selectedMeshes = getAllObjectsInTree<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     auto selectedObjs = getAllObjectsInTree<Object>( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    
+
     IOFilters filters = SceneFileWriteFilters;
     // allow obj format only if all selected objects are meshes
     if ( selectedMeshes.size() == selectedObjs.size() )
         filters = SceneFileWriteFilters | IOFilters{ IOFilter{"OBJ meshes (.obj)","*.obj"} };
-    
+
     auto savePath = saveFileDialog( { {},{},filters } );
     if ( savePath.empty() )
         return false;
@@ -690,7 +690,7 @@ SaveSceneMenuItem::SaveSceneMenuItem() :
 }
 
 bool SaveSceneMenuItem::action()
-{   
+{
     auto savePath = SceneRoot::getScenePath();
     if ( savePath.empty() )
         savePath = saveFileDialog( { {}, {}, SceneFileWriteFilters } );
@@ -714,8 +714,8 @@ void CaptureScreenshotMenuItem::drawDialog( float menuScaling, ImGuiContext* )
     if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
         return;
 
-    ImGui::DragIntValid( "Width", &resolution_.x, 1, 256 );
-    ImGui::DragIntValid( "Height", &resolution_.y, 1, 256 );
+    UI::drag<PixelSizeUnit>( "Width", resolution_.x, 1, 256 );
+    UI::drag<PixelSizeUnit>( "Height", resolution_.y, 1, 256 );
     UI::checkbox( "Transparent Background", &transparentBg_ );
     if ( UI::button( "Capture", ImVec2( -1, 0 ) ) )
     {
@@ -865,7 +865,7 @@ bool CaptureScreenshotToClipBoardMenuItem::action()
     }
     else
         spdlog::error( "Make image for clipboard failed" );
-    
+
     res = DeleteObject( memBM );
     if ( !res )
         spdlog::error( "Cannot clear image for clipboard" );

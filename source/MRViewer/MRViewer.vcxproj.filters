@@ -355,6 +355,9 @@
     <ClCompile Include="MRRenderMeasurementObjects.cpp">
       <Filter>Render\Implementations</Filter>
     </ClCompile>
+    <ClCompile Include="MRUnits.cpp">
+      <Filter>UIStyle</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -364,9 +367,6 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="ImGuiMenu.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ImGuiTraits.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="MRMenu.h">
@@ -697,6 +697,15 @@
     </ClInclude>
     <ClInclude Include="MRLambdaRibbonItem.h">
       <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVectorTraits.h">
+      <Filter>UIStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="MRUnits.h">
+      <Filter>UIStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="MRUnits.tpp">
+      <Filter>UIStyle</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

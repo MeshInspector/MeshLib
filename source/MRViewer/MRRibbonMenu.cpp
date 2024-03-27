@@ -1832,21 +1832,23 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
         if ( iconsFont )
             ImGui::PushFont( iconsFont );
 
-        contextBtnPos.x -= smallBtnSize.x;
-        ImGui::SetCursorPos( contextBtnPos );
-
         auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
-        if ( item != RibbonSchemaHolder::schema().items.end() &&
-            item->second.item->isAvailable( selectedObjectsCache_ ).empty() &&
-            ImGui::Button( "\xef\x80\x8c", smallBtnSize ) ) // V(apply) icon for apply
+        bool drawApplyBtn = item != RibbonSchemaHolder::schema().items.end() &&
+            item->second.item->isAvailable( selectedObjectsCache_ ).empty();
+
+        if ( drawApplyBtn )
         {
-            item->second.item->action();
+            contextBtnPos.x -= smallBtnSize.x;
+            ImGui::SetCursorPos( contextBtnPos );
+
+            if ( ImGui::Button( "\xef\x80\x8c", smallBtnSize ) ) // V(apply) icon for apply
+                item->second.item->action();
+            if ( iconsFont )
+                ImGui::PopFont();
+            UI::setTooltipIfHovered( "Transforms object and resets transform value to identity.", scaling );
+            if ( iconsFont )
+                ImGui::PushFont( iconsFont );
         }
-        if ( iconsFont )
-            ImGui::PopFont();
-        UI::setTooltipIfHovered( "Transforms object and resets transform value to identity.", scaling );
-        if ( iconsFont )
-            ImGui::PushFont( iconsFont );
     }
     if ( iconsFont )
     {

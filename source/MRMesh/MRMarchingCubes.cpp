@@ -39,7 +39,7 @@ struct SeparationPoint
 };
 
 using SeparationPointSet = std::array<SeparationPoint, size_t( NeighborDir::Count )>;
-using SeparationPointMap = ParallelHashMap<size_t, SeparationPointSet>;
+using SeparationPointMap = HashMap<size_t, SeparationPointSet>;
 template <size_t N> using ItersArray = std::array<SeparationPointMap::const_iterator, N>;
 
 // lookup table from
@@ -668,6 +668,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
     tbb::enumerable_thread_specific<PerThreadVertNumeration> perThreadVertNumeration;
     ParallelFor( size_t( 0 ), blockCount, [&] ( size_t blockIndex )
     {
+        auto & myHmap = hmaps[blockIndex];
         // vdb version cache
         [[maybe_unused]] auto acc = accessorCtor( volume );
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
@@ -755,7 +756,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
             if ( !atLeastOneOk )
                 continue;
 
-            hmap( i ).insert( { i, set } );
+            myHmap.insert( { i, set } );
         }
     } );
 

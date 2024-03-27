@@ -40,7 +40,6 @@ struct SeparationPoint
 
 using SeparationPointSet = std::array<SeparationPoint, size_t( NeighborDir::Count )>;
 using SeparationPointMap = HashMap<size_t, SeparationPointSet>;
-template <size_t N> using ItersArray = std::array<SeparationPointMap::const_iterator, N>;
 
 // lookup table from
 // http://paulbourke.net/geometry/polygonise/
@@ -650,9 +649,11 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
     assert( indexer.size() <= blockSize * blockCount );
 
     std::vector<SeparationPointMap> hmaps( blockCount );
-    auto hmap = [&] ( size_t index ) -> SeparationPointMap&
+    auto findSeparationPointSet = [&] ( size_t voxelId ) -> const SeparationPointSet *
     {
-        return hmaps[index / blockSize];
+        const auto & map = hmaps[voxelId / blockSize];
+        auto it = map.find( voxelId );
+        return ( it != map.end() ) ? &it->second : nullptr;
     };
 
     // find all separate points
@@ -870,8 +871,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
         [[maybe_unused]] auto acc = accessorCtor( volume );
 
         // cell data
-        ItersArray<7> iters;
-        std::array<bool, 7> iterStatus;
+        std::array<const SeparationPointSet*, 7> neis{};
         unsigned char voxelConfiguration;
         for ( size_t ind = begin; ind < end; ++ind )
         {
@@ -966,19 +966,17 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                 continue;
 
             voxelValid = false;
-            for ( int i = 0; i < iters.size(); ++i )
+            for ( int i = 0; i < neis.size(); ++i )
             {
                 if ( !cNeedIteratorMode( i, voxelConfiguration ) )
-                {
-                    iters[i] = {};
-                    iterStatus[i] = false;
                     continue;
-                }
                 const auto index = ind + cVoxelNeighborsIndexAdd[i];
-                iters[i] = hmap( index ).find( index );
-                iterStatus[i] = ( iters[i] != hmap( index ).cend() ) && checkSetValid( iters[i]->second, i );
-                if ( !voxelValid && iterStatus[i] )
+                auto * pSet = findSeparationPointSet( index );
+                if ( pSet && checkSetValid( *pSet, i ) )
+                {
+                    neis[i] = pSet;
                     voxelValid = true;
+                }
             }
             if constexpr ( std::is_same_v<V, SimpleVolume> || std::is_same_v<V, FunctionVolume> )
             {
@@ -991,11 +989,11 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                         const auto& [interIndex0, dir0] = cEdgeIndicesMap[plan[i]];
                         const auto& [interIndex1, dir1] = cEdgeIndicesMap[plan[i + 1]];
                         const auto& [interIndex2, dir2] = cEdgeIndicesMap[plan[i + 2]];
-                        // `iterStatus` indicates that current voxel has valid point for desired triangulation
+                        // `neis` indicates that current voxel has valid point for desired triangulation
                         // as far as iter has 3 directions we use `dir` to validate (make sure that there is point in needed edge) desired direction
-                        voxelValid = voxelValid && ( iterStatus[interIndex0] && iters[interIndex0]->second[int( dir0 )].vid );
-                        voxelValid = voxelValid && ( iterStatus[interIndex1] && iters[interIndex1]->second[int( dir1 )].vid );
-                        voxelValid = voxelValid && ( iterStatus[interIndex2] && iters[interIndex2]->second[int( dir2 )].vid );
+                        voxelValid = voxelValid && ( neis[interIndex0] && (*neis[interIndex0])[int( dir0 )].vid );
+                        voxelValid = voxelValid && ( neis[interIndex1] && (*neis[interIndex1])[int( dir1 )].vid );
+                        voxelValid = voxelValid && ( neis[interIndex2] && (*neis[interIndex2])[int( dir2 )].vid );
                     }
                 }
                 if ( !voxelValid )
@@ -1008,21 +1006,21 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                 const auto& [interIndex0, dir0] = cEdgeIndicesMap[plan[i]];
                 const auto& [interIndex1, dir1] = cEdgeIndicesMap[plan[i + 1]];
                 const auto& [interIndex2, dir2] = cEdgeIndicesMap[plan[i + 2]];
-                assert( iterStatus[interIndex0] && iters[interIndex0]->second[int( dir0 )].vid );
-                assert( iterStatus[interIndex1] && iters[interIndex1]->second[int( dir1 )].vid );
-                assert( iterStatus[interIndex2] && iters[interIndex2]->second[int( dir2 )].vid );
+                assert( neis[interIndex0] && (*neis[interIndex0])[int( dir0 )].vid );
+                assert( neis[interIndex1] && (*neis[interIndex1])[int( dir1 )].vid );
+                assert( neis[interIndex2] && (*neis[interIndex2])[int( dir2 )].vid );
 
                 if ( params.lessInside )
                     t.emplace_back( ThreeVertIds{
-                    iters[interIndex0]->second[int( dir0 )].vid,
-                    iters[interIndex2]->second[int( dir2 )].vid,
-                    iters[interIndex1]->second[int( dir1 )].vid
+                        (*neis[interIndex0])[int( dir0 )].vid,
+                        (*neis[interIndex2])[int( dir2 )].vid,
+                        (*neis[interIndex1])[int( dir1 )].vid
                     } );
                 else
                     t.emplace_back( ThreeVertIds{
-                    iters[interIndex0]->second[int( dir0 )].vid,
-                    iters[interIndex1]->second[int( dir1 )].vid,
-                    iters[interIndex2]->second[int( dir2 )].vid
+                        (*neis[interIndex0])[int( dir0 )].vid,
+                        (*neis[interIndex1])[int( dir1 )].vid,
+                        (*neis[interIndex2])[int( dir2 )].vid
                     } );
                 if ( params.outVoxelPerFaceMap )
                     faceMap.emplace_back( VoxelId{ ind } );

@@ -968,11 +968,9 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
             voxelValid = false;
             for ( int i = 0; i < neis.size(); ++i )
             {
+                neis[i] = nullptr;
                 if ( !cNeedIteratorMode( i, voxelConfiguration ) )
-                {
-                    neis[i] = nullptr;
                     continue;
-                }
                 const auto index = ind + cVoxelNeighborsIndexAdd[i];
                 auto * pSet = findSeparationPointSet( index );
                 if ( pSet && checkSetValid( *pSet, i ) )

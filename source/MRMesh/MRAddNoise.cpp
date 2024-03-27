@@ -1,5 +1,10 @@
 #include "MRAddNoise.h"
 
+#include "MRPch/MRTBB.h"
+#include "MRMesh/MRBitSet.h"
+
+#include <random>
+
 namespace MR
 {
 
@@ -9,15 +14,17 @@ void addNoise( VertCoords& points, const VertBitSet& validVerts, float sigma, un
     {
         const size_t numBlock = 128;
         const size_t step = validVerts.size() / numBlock;
-
         tbb::parallel_for( tbb::blocked_range<size_t>( 0, numBlock ),
         [&] ( const tbb::blocked_range<size_t>& range )
         {
-            std::mt19937 gen_{ seed + ( unsigned int )range.begin() };
-            std::normal_distribution d{ 0.0f, sigma };
-            for ( size_t pos = range.begin(); pos < range.end(); pos++ )
+            for ( size_t block = range.begin(); block < range.end(); block++ )
             {
-                for ( auto i = step * pos; i < step * (pos + 1); i++ )
+                std::mt19937 gen_{ seed + ( unsigned int )block };
+                std::normal_distribution d{ 0.0f, sigma };
+                auto end = step * ( block + 1 );
+                if ( end > validVerts.size() )
+                    end = validVerts.size();
+                for ( auto i = step * block; i < end; i++ )
                 {
                     if ( !validVerts.test( VertId( i ) ) )
                         continue;

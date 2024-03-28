@@ -372,18 +372,6 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
     { // Format the value.
         std::string formattedValue = formatValue( value, fracPrecision );
 
-        // Remove the leading zero.
-        if constexpr ( std::is_floating_point_v<T> )
-        {
-            if ( !params.leadingZero  )
-            {
-                if ( formattedValue.starts_with( "0." ) )
-                    formattedValue.erase( formattedValue.begin() );
-                else if ( formattedValue.starts_with( "-0." ) )
-                    formattedValue.erase( formattedValue.begin() + 1 );
-            }
-        }
-
         // Add the thousands separator.
         if ( params.thousandsSeparator )
         {
@@ -431,6 +419,18 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
 
                 if ( strippedAny && formattedValue.ends_with( '.' ) )
                     formattedValue.pop_back();
+            }
+        }
+
+        // Remove the leading zero.
+        if constexpr ( std::is_floating_point_v<T> )
+        {
+            if ( !params.leadingZero  )
+            {
+                if ( formattedValue.starts_with( "0." ) )
+                    formattedValue.erase( formattedValue.begin() );
+                else if ( formattedValue.starts_with( "-0." ) )
+                    formattedValue.erase( formattedValue.begin() + 1 );
             }
         }
 

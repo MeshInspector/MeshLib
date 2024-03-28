@@ -55,7 +55,7 @@ namespace detail
                     if ( mustConvertUnits )
                         VectorTraits<T>::getElem( i, value ) = convertUnits( unitParams.targetUnit, *originalSourceUnit, VectorTraits<T>::getElem( i, value ) );
 
-                    if constexpr ( targetIsIntegral )
+                    if constexpr ( std::is_integral_v<typename VectorTraits<T>::BaseType> ) // aka `targetIsIntegral`, but MSVC 2019 chokes on that.
                     {
                         // Round back to integer, assigning to the original value.
                         VectorTraits<T>::getElem( i, v ) = (typename VectorTraits<T>::BaseType) std::round( VectorTraits<T>::getElem( i, value ) );

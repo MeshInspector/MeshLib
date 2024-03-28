@@ -47,10 +47,38 @@ namespace detail
 
         auto drawWidget = [&]<VectorOrScalar U>( U& value ) -> bool
         {
+            auto onElemChanged = [&]( int i )
+            {
+                if constexpr ( !std::is_integral_v<typename VectorTraits<U>::BaseType> )
+                {
+                    // Convert back to source units.
+                    if ( mustConvertUnits )
+                        VectorTraits<T>::getElem( i, value ) = convertUnits( unitParams.targetUnit, *originalSourceUnit, VectorTraits<T>::getElem( i, value ) );
+
+                    if constexpr ( std::is_integral_v<typename VectorTraits<T>::BaseType> ) // aka `targetIsIntegral`, but MSVC 2019 chokes on that.
+                    {
+                        // Round back to integer, assigning to the original value.
+                        VectorTraits<T>::getElem( i, v ) = (typename VectorTraits<T>::BaseType) std::round( VectorTraits<T>::getElem( i, value ) );
+                    }
+                    else if ( mustConvertUnits )
+                    {
+                        // Copy back to the unconverted original value.
+                        VectorTraits<T>::getElem( i, v ) = VectorTraits<T>::getElem( i, value );
+                    }
+                }
+                else
+                {
+                    (void)i;
+                    // If `U` is integral, then it's guaranteed that the number is being modified inplace.
+                }
+            };
+
             bool ret = false;
             if constexpr ( VectorTraits<T>::size == 1 )
             {
                 ret = std::forward<F>( func )( label, value, 0 );
+                if ( ret )
+                    onElemChanged( 0 );
             }
             else
             {
@@ -75,24 +103,7 @@ namespace detail
                     if ( elemChanged )
                     {
                         ret = true;
-
-                        if constexpr ( !std::is_integral_v<typename VectorTraits<U>::BaseType> )
-                        {
-                            // Convert back to source units.
-                            if ( mustConvertUnits )
-                                VectorTraits<T>::getElem( i, value ) = convertUnits( unitParams.targetUnit, *originalSourceUnit, VectorTraits<T>::getElem( i, value ) );
-
-                            if constexpr ( targetIsIntegral )
-                            {
-                                // Round back to integer, assigning to the original value.
-                                VectorTraits<T>::getElem( i, v ) = (typename VectorTraits<T>::BaseType) std::round( VectorTraits<T>::getElem( i, value ) );
-                            }
-                            else if ( mustConvertUnits )
-                            {
-                                // Copy back to the unconverted original value.
-                                VectorTraits<T>::getElem( i, v ) = VectorTraits<T>::getElem( i, value );
-                            }
-                        }
+                        onElemChanged( i );
                     }
                 }
             }

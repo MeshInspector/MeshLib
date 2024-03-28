@@ -2055,6 +2055,9 @@
     <ClCompile Include="MRAddNoise.cpp">
       <Filter>Source Files\Relax</Filter>
     </ClCompile>
+    <ClCompile Include="MRLogWindowsExceptions.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

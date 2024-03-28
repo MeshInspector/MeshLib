@@ -347,38 +347,6 @@ TriangulationPlan{}
 
 const std::array<OutEdge, size_t( NeighborDir::Count )> cOutEdgeMap { OutEdge::PlusX, OutEdge::PlusY, OutEdge::PlusZ };
 
-// mode: 0 - (0,0,0) voxel, +x, +y, +z possible separation points
-// mode: 1 - (1,0,0) voxel,     +y, +z possible separation points
-// mode: 2 - (0,1,0) voxel, +x,     +z possible separation points
-// mode: 3 - (1,1,0) voxel,         +z possible separation points
-// mode: 4 - (0,0,1) voxel, +x, +y     possible separation points
-// mode: 5 - (1,0,1) voxel,     +y     possible separation points
-// mode: 6 - (0,1,1) voxel, +x         possible separation points
-// 
-// function returns true if given set has at least one valid SeparationPoint
-bool checkSetValid( const SeparationPointSet& set, int mode )
-{
-    switch ( mode )
-    {
-    case 0: // base voxel
-        return true;
-    case 1: // x + 1 voxel
-        return set[int( NeighborDir::Y )] || set[int( NeighborDir::Z )];
-    case 2: // y + 1 voxel
-        return set[int( NeighborDir::X )] || set[int( NeighborDir::Z )];
-    case 3: // x + 1, y + 1 voxel
-        return bool( set[int( NeighborDir::Z )] );
-    case 4: // z + 1 voxel
-        return set[int( NeighborDir::X )] || set[int( NeighborDir::Y )];
-    case 5: // x + 1, z + 1 voxel
-        return bool( set[int( NeighborDir::Y )] );
-    case 6: // y + 1, z + 1 voxel
-        return bool( set[int( NeighborDir::X )] );
-    default:
-        return false;
-    }
-}
-
 }
 
 using namespace MarchingCubesHelper;
@@ -897,31 +865,32 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
             // separation points will not be used (and can be not searched for better performance)
             // if both ends of the edge are higher or both are lower than params.iso
             voxelValid = false;
-            auto findNei = [&]( int i )
+            auto findNei = [&]( int i, auto check )
             {
                 const auto index = ind + cVoxelNeighborsIndexAdd[i];
                 auto * pSet = findSeparationPointSet( index );
-                if ( pSet && checkSetValid( *pSet, i ) )
+                if ( pSet && check( *pSet ) )
                 {
                     neis[i] = pSet;
                     voxelValid = true;
                 }
             };
+
             neis = {};
             if ( vx[0] != vx[1] || vx[0] != vx[2] || vx[0] != vx[4] )
-                findNei( 0 );
+                findNei( 0, []( auto && ) { return true; } );
             if ( vx[1] != vx[3] || vx[1] != vx[5] )
-                findNei( 1 );
+                findNei( 1, []( auto && s ) { return s[(int)NeighborDir::Y].vid || s[(int)NeighborDir::Z].vid; } );
             if ( vx[2] != vx[3] || vx[2] != vx[6] )
-                findNei( 2 );
+                findNei( 2, []( auto && s ) { return s[(int)NeighborDir::X].vid || s[(int)NeighborDir::Z].vid; } );
             if ( vx[3] != vx[7] )
-                findNei( 3 );
+                findNei( 3, []( auto && s ) { return (bool)s[(int)NeighborDir::Z].vid; } );
             if ( vx[4] != vx[5] || vx[4] != vx[6] )
-                findNei( 4 );
+                findNei( 4, []( auto && s ) { return s[(int)NeighborDir::X].vid || s[(int)NeighborDir::Y].vid; } );
             if ( vx[5] != vx[7] )
-                findNei( 5 );
+                findNei( 5, []( auto && s ) { return (bool)s[(int)NeighborDir::Y].vid; } );
             if ( vx[6] != vx[7] )
-                findNei( 6 );
+                findNei( 6, []( auto && s ) { return (bool)s[(int)NeighborDir::X].vid; } );
 
             if constexpr ( std::is_same_v<V, SimpleVolume> || std::is_same_v<V, FunctionVolume> )
             {

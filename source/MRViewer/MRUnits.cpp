@@ -272,9 +272,13 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
         }
     };
 
-    // `str` is a value representing arcseconds or arcminutes. Pads it with zeroes on the left to have at least two digits before the point.
-    auto zeroPadArcMinutesOrSeconds = [&]( std::string& str )
+    // `str` is a value representing arcseconds or arcminutes.
+    // 1. Pads it with zeroes on the left to have at least two digits before the point.
+    // 2. Removes the leading minus, if any. (It should only be possible for the negative zero.)
+    auto adjustArcMinutesOrSeconds = [&]( std::string& str )
     {
+        if ( str.starts_with( '-' ) )
+            str.erase( str.begin() );
         if ( std::isdigit( (unsigned char)str[0] ) && !std::isdigit( (unsigned char)str[1] ) )
             str = '0' + std::move( str );
     };
@@ -298,6 +302,11 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
 
                 T wholeDegrees = 0;
                 T minutes = std::modf( value, &wholeDegrees ) * 60;
+                if ( minutes >= 59.5f )
+                {
+                    wholeDegrees += 1;
+                    minutes = 0;
+                }
                 if ( negative )
                     wholeDegrees = -wholeDegrees;
 
@@ -308,9 +317,14 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
                 {
                     T wholeMinutes = 0;
                     T seconds = std::modf( minutes, &wholeMinutes ) * 60;
+                    if ( seconds >= 59.5f )
+                    {
+                        wholeMinutes += 1;
+                        seconds = 0;
+                    }
 
                     std::string minutesStr = fmt::format( "{:.0f}'", wholeMinutes );
-                    zeroPadArcMinutesOrSeconds( minutesStr );
+                    adjustArcMinutesOrSeconds( minutesStr );
                     ret += minutesStr;
 
                     value = seconds;
@@ -334,7 +348,7 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
                 if ( params.degreesMode == DegreesMode::degreesMinutes || params.degreesMode == DegreesMode::degreesMinutesSeconds )
                 {
                     std::string part = fmt::format( "{:.{}f}", value, precision );
-                    zeroPadArcMinutesOrSeconds( part );
+                    adjustArcMinutesOrSeconds( part );
                     return part;
                 }
             }

@@ -57,8 +57,8 @@ void SphereObject::setCenter( const Vector3f& center, ViewportId id /*= {}*/ )
 const std::vector<FeatureObjectSharedProperty>& SphereObject::getAllSharedProperties() const
 {
     static std::vector<FeatureObjectSharedProperty> ret = {
-       {"Radius", &SphereObject::getRadius, &SphereObject::setRadius},
-       {"Center", &SphereObject::getCenter, &SphereObject::setCenter}
+       {"Radius", FeaturePropertyKind::linearDimension, &SphereObject::getRadius, &SphereObject::setRadius},
+       {"Center", FeaturePropertyKind::position,        &SphereObject::getCenter, &SphereObject::setCenter}
     };
     return ret;
 }

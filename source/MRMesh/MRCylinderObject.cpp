@@ -141,10 +141,10 @@ void CylinderObject::setupRenderObject_() const
 const std::vector<FeatureObjectSharedProperty>& CylinderObject::getAllSharedProperties() const
 {
     static std::vector<FeatureObjectSharedProperty> ret = {
-       {"Radius", &CylinderObject::getRadius, &CylinderObject::setRadius},
-       {"Length", &CylinderObject::getLength, &CylinderObject::setLength},
-       {"Center", &CylinderObject::getCenter, &CylinderObject::setCenter},
-       {"Main axis", &CylinderObject::getDirection, &CylinderObject::setDirection},
+       {"Radius",    FeaturePropertyKind::linearDimension, &CylinderObject::getRadius, &CylinderObject::setRadius},
+       {"Length",    FeaturePropertyKind::linearDimension, &CylinderObject::getLength, &CylinderObject::setLength},
+       {"Center",    FeaturePropertyKind::position,        &CylinderObject::getCenter, &CylinderObject::setCenter},
+       {"Main axis", FeaturePropertyKind::direction,       &CylinderObject::getDirection, &CylinderObject::setDirection},
     };
     return ret;
 }

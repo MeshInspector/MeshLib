@@ -110,11 +110,11 @@ Matrix3f PlaneObject::calcLocalBasis( ViewportId id /*= {}*/ ) const
 const std::vector<FeatureObjectSharedProperty>& PlaneObject::getAllSharedProperties() const
 {
     static std::vector<FeatureObjectSharedProperty> ret = {
-        {"Center", &PlaneObject::getCenter,&PlaneObject::setCenter},
-        {"Normal", &PlaneObject::getNormal,&PlaneObject::setNormal},
-        {"Size"  , &PlaneObject::getSize,  &PlaneObject::setSize  },
-        {"SizeX"  , &PlaneObject::getSizeX,  &PlaneObject::setSizeX  },
-        {"SizeY"  , &PlaneObject::getSizeY,  &PlaneObject::setSizeY  },
+        {"Center", FeaturePropertyKind::position,        &PlaneObject::getCenter, &PlaneObject::setCenter},
+        {"Normal", FeaturePropertyKind::direction,       &PlaneObject::getNormal, &PlaneObject::setNormal},
+        {"Size"  , FeaturePropertyKind::linearDimension, &PlaneObject::getSize,   &PlaneObject::setSize  },
+        {"SizeX" , FeaturePropertyKind::linearDimension, &PlaneObject::getSizeX,  &PlaneObject::setSizeX  },
+        {"SizeY" , FeaturePropertyKind::linearDimension, &PlaneObject::getSizeY,  &PlaneObject::setSizeY  },
     };
     return ret;
 }

@@ -231,7 +231,7 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
     if ( !viewer->isDeveloperFeaturesEnabled() || !RibbonSchemaHolder::schema().experimentalFeatures )
         goto skip;
     ImGui::SetNextItemWidth( 100.0f * menuScaling );
-    ImGui::DragInputInt( "Decimal places", &decimalPlaces, 1, 0, 10 );
+    UI::drag<NoUnit>( "Decimal places", decimalPlaces, 1, 0, 10 );
     UI::setTooltipIfHovered( "Show this number of digits after decimal dot", menuScaling );
 skip:
 
@@ -367,9 +367,9 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
         plane.n = plane.n.normalized();
         auto w = ImGui::GetContentRegionAvail().x;
         ImGui::SetNextItemWidth( w );
-        ImGui::DragFloatValid3( "##ClippingPlaneNormal", &plane.n.x, 1e-3f );
+        UI::drag<NoUnit>( "##ClippingPlaneNormal", plane.n, 1e-3f );
         ImGui::SetNextItemWidth( w / 2.0f );
-        ImGui::DragFloatValid( "##ClippingPlaneD", &plane.d, 1e-3f );
+        UI::drag<NoUnit>( "##ClippingPlaneD", plane.d, 1e-3f );
         ImGui::SameLine();
         UI::checkbox( "Show##ClippingPlane", &showPlane );
         viewer->viewport().setClippingPlane( plane );
@@ -380,7 +380,7 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
 
     ImGui::SetNextItemWidth( 100.0f * menuScaling );
     int pickRadius = int( getViewerInstance().glPickRadius );
-    ImGui::DragInputInt( "Picker Radius", &pickRadius, 1, 0, 10 );
+    UI::drag<PixelSizeUnit>( "Picker Radius", pickRadius, 1, 0, 10 );
     getViewerInstance().glPickRadius = uint16_t( pickRadius );
     UI::setTooltipIfHovered( "Radius of area under cursor to pick objects in scene.", menuScaling );
 
@@ -403,23 +403,23 @@ void ViewerSettingsPlugin::drawFeaturesTab_( float menuScaling )
     float value = 0;
 
     value = SceneSettings::get( SceneSettings::FloatType::FeatureMeshAlpha );
-    if ( UI::sliderFloat( "Surface opacity", &value, 0, 1 ) )
+    if ( UI::slider<NoUnit>( "Surface opacity", value, 0.f, 1.f ) )
         SceneSettings::set( SceneSettings::FloatType::FeatureMeshAlpha, value );
 
     value = SceneSettings::get( SceneSettings::FloatType::FeaturePointSize );
-    if ( UI::sliderFloat( "Point size", &value, 1, 20 ) )
+    if ( UI::slider<PixelSizeUnit>( "Point size", value, 1.f, 20.f ) )
         SceneSettings::set( SceneSettings::FloatType::FeaturePointSize, value );
 
     value = SceneSettings::get( SceneSettings::FloatType::FeatureSubPointSize );
-    if ( UI::sliderFloat( "Point size (subfeatures)", &value, 1, 20 ) )
+    if ( UI::slider<PixelSizeUnit>( "Point size (subfeatures)", value, 1.f, 20.f ) )
         SceneSettings::set( SceneSettings::FloatType::FeatureSubPointSize, value );
 
     value = SceneSettings::get( SceneSettings::FloatType::FeatureLineWidth );
-    if ( UI::sliderFloat( "Line width", &value, 1, 20 ) )
+    if ( UI::slider<PixelSizeUnit>( "Line width", value, 1.f, 20.f ) )
         SceneSettings::set( SceneSettings::FloatType::FeatureLineWidth, value );
 
     value = SceneSettings::get( SceneSettings::FloatType::FeatureSubLineWidth );
-    if ( UI::sliderFloat( "Line width (subfeatures)", &value, 1, 20 ) )
+    if ( UI::slider<PixelSizeUnit>( "Line width (subfeatures)", value, 1.f, 20.f ) )
         SceneSettings::set( SceneSettings::FloatType::FeatureSubLineWidth, value );
 }
 
@@ -494,20 +494,17 @@ void ViewerSettingsPlugin::drawShadowsOptions_( float menuWidth, float menuScali
             ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel );
         shadowGl_->setShadowColor( color );
 
-        const char* tooltipsShift[2] = {
-            "Shift along Ox-axis to the left",
-            "Shift along Oy-axis to the top"
-        };
         ImGui::PushItemWidth( menuWidth * 0.5f );
-        auto shfit = shadowGl_->getShadowShift();
+        auto shift = shadowGl_->getShadowShift();
         auto radius = shadowGl_->getBlurRadius();
         auto quality = shadowGl_->getQuality();
-        ImGui::DragFloatValid2( "Shift", &shfit.x, 0.4f, -200.0f, 200.0f, "%.3f px", 0, &tooltipsShift );
-        ImGui::DragFloatValid( "Blur Radius", &radius, 0.2f, 0, 200, "%.3f px" );
-        ImGui::DragFloatValid( "Quality", &quality, 0.001f, 0.0625f, 1.0f );
+        UI::drag<PixelSizeUnit>( "Shift", shift, 0.4f, -200.0f, 200.0f );
+        ImGui::SetItemTooltip( "X = shift to the left, Y = shift upwards" );
+        UI::drag<PixelSizeUnit>( "Blur Radius", radius, 0.2f, 0.f, 200.f );
+        UI::drag<NoUnit>( "Quality", quality, 0.001f, 0.0625f, 1.0f );
         ImGui::PopItemWidth();
         UI::setTooltipIfHovered( "Blur texture downscaling coefficient", menuScaling );
-        shadowGl_->setShadowShift( shfit );
+        shadowGl_->setShadowShift( shift );
         shadowGl_->setBlurRadius( radius );
         shadowGl_->setQuality( quality );
     }
@@ -702,7 +699,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
     }
 
     ImGui::SetNextItemWidth( 100 * menuScaling );
-    ImGui::DragFloatValid( "Zoom Gain", &viewer->scrollForce, 0.01f, 0.2f, 3.0f );
+    UI::drag<NoUnit>( "Zoom Gain", viewer->scrollForce, 0.01f, 0.2f, 3.0f );
     UI::setTooltipIfHovered( "Sensitivity for mouse wheel rotation affecting the speed of zooming.", menuScaling );
 }
 
@@ -716,7 +713,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth, float menuS
         int valueAbs = int( std::fabs( value ) );
         bool inverse = value < 0.f;
         ImGui::SetNextItemWidth( menuWidth * 0.6f );
-        bool changed = UI::sliderInt( label, &valueAbs, 1, 100 );
+        bool changed = UI::slider<NoUnit>( label, valueAbs, 1, 100 );
         ImGui::SameLine( menuWidth * 0.78f );
         const float cursorPosY = ImGui::GetCursorPosY();
         ImGui::SetCursorPosY( cursorPosY + 3 );

@@ -44,7 +44,7 @@ void PointObject::setPoint( const Vector3f& point, ViewportId id /*= {}*/ )
 std::vector<FeatureObjectSharedProperty>& PointObject::getAllSharedProperties() const
 {
     static std::vector<FeatureObjectSharedProperty> ret = {
-       {"Point", &PointObject::getPoint, &PointObject::setPoint}
+       {"Point", FeaturePropertyKind::position, &PointObject::getPoint, &PointObject::setPoint}
     };
     return ret;
 }

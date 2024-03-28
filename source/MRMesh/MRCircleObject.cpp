@@ -85,9 +85,9 @@ FeatureObjectProjectPointResult CircleObject::projectPoint( const Vector3f& poin
 const std::vector<FeatureObjectSharedProperty>& CircleObject::getAllSharedProperties() const
 {
     static std::vector<FeatureObjectSharedProperty> ret = {
-      {"Radius", &CircleObject::getRadius, &CircleObject::setRadius},
-      {"Center", &CircleObject::getCenter, &CircleObject::setCenter},
-      {"Normal", &CircleObject::getNormal, &CircleObject::setNormal}
+      {"Radius", FeaturePropertyKind::linearDimension, &CircleObject::getRadius, &CircleObject::setRadius},
+      {"Center", FeaturePropertyKind::position,        &CircleObject::getCenter, &CircleObject::setCenter},
+      {"Normal", FeaturePropertyKind::direction,       &CircleObject::getNormal, &CircleObject::setNormal}
     };
     return ret;
 }

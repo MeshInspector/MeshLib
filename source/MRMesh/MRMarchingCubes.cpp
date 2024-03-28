@@ -522,20 +522,9 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
     SeparationPointStorage sepStorage( blockCount, blockSize );
 
-    // find all separate points
-    // fill map in parallel
-    struct VertsNumeration
-    {
-        // explicit ctor to fix clang build with `vec.emplace_back( ind, 0 )`
-        VertsNumeration( size_t ind, int num ) :initIndex{ ind }, numVerts{ num }{}
-        size_t initIndex{ 0 };
-        int numVerts{ 0 };
-    };
-    using PerThreadVertNumeration = std::vector<VertsNumeration>;
-    tbb::enumerable_thread_specific<PerThreadVertNumeration> perThreadVertNumeration;
     ParallelFor( size_t( 0 ), blockCount, [&] ( size_t blockIndex )
     {
-        auto & myHmap = sepStorage.getBlock( blockIndex );
+        auto & block = sepStorage.getBlock( blockIndex );
         // vdb version cache
         [[maybe_unused]] auto acc = accessorCtor( volume );
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
@@ -565,10 +554,6 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
         const auto begin = layerBegin * layerSize;
         const auto end = layerEnd * layerSize;
-
-        auto& localNumeration = perThreadVertNumeration.local();
-        localNumeration.emplace_back( begin, 0 );
-        auto& thisRangeNumeration = localNumeration.back().numVerts;
 
         for ( size_t i = begin; i < end; ++i )
         {
@@ -611,7 +596,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
                 if ( ok )
                 {
-                    set[n].vid = VertId( thisRangeNumeration++ );
+                    set[n].vid = block.nextVid++;
                     atLeastOneOk = true;
                 }
             }
@@ -623,48 +608,16 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
             if ( !atLeastOneOk )
                 continue;
 
-            myHmap.insert( { i, set } );
+            block.smap.insert( { i, set } );
         }
     } );
 
     if ( params.cb && !keepGoing )
         return unexpectedOperationCanceled();
 
-    // organize vert numeration
-    std::vector<VertsNumeration> resultVertNumeration;
-    size_t totalVertices = 0;
-    for ( auto& perThreadNum : perThreadVertNumeration )
-    {
-        for ( auto & obj : perThreadNum )
-        {
-            totalVertices += obj.numVerts;
-            if ( obj.numVerts > 0 )
-                resultVertNumeration.push_back( std::move( obj ) );
-        }
-        perThreadNum.clear();
-    }
+    const auto totalVertices = sepStorage.makeUniqueVids();
     if ( totalVertices > params.maxVertices )
         return unexpected( "Vertices number limit exceeded." );
-
-    // sort by voxel index
-    std::sort( resultVertNumeration.begin(), resultVertNumeration.end(), [] ( const auto& l, const auto& r )
-    {
-        return l.initIndex < r.initIndex;
-    } );
-
-    auto getVertIndexShiftForVoxelId = [&] ( size_t ind )
-    {
-        int shift = 0;
-        for ( int i = 1; i < resultVertNumeration.size(); ++i )
-        {
-            if ( ind >= resultVertNumeration[i].initIndex )
-                shift += resultVertNumeration[i - 1].numVerts;
-        }
-        return shift;
-    };
-
-    // update map with determined vert indices
-    sepStorage.shiftVertIds( getVertIndexShiftForVoxelId );
 
     if ( params.cb && !params.cb( 0.5f ) )
         return unexpectedOperationCanceled();

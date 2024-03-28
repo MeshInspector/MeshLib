@@ -33,19 +33,26 @@ using SeparationPointMap = HashMap<size_t, SeparationPointSet>;
 class SeparationPointStorage
 {
 public:
+    struct Block
+    {
+        SeparationPointMap smap;
+        VertId nextVid{ 0 };
+    };
+
     /// prepares storage for given number of blocks, each containing given size of voxels
     explicit SeparationPointStorage( size_t blockCount, size_t blockSize );
 
     /// get block for filling in the thread responsible for it
-    SeparationPointMap & getBlock( size_t blockIndex ) { return hmaps_[blockIndex]; }
+    Block & getBlock( size_t blockIndex ) { return blocks_[blockIndex]; }
 
-    /// shifts vertex ids in each block (after they are filled) to make them unique
-    void shiftVertIds( const std::function<int(size_t)> & getVertIndexShiftForVoxelId );
+    /// shifts vertex ids in each block (after they are filled) to make them unique;
+    /// returns the total number of valid points in the storage
+    int makeUniqueVids();
 
     /// finds the set (locating the block) by voxel id
     auto findSeparationPointSet( size_t voxelId ) const -> const SeparationPointSet *
     {
-        const auto & map = hmaps_[voxelId / blockSize_];
+        const auto & map = blocks_[voxelId / blockSize_].smap;
         auto it = map.find( voxelId );
         return ( it != map.end() ) ? &it->second : nullptr;
     }
@@ -55,7 +62,7 @@ public:
 
 private:
     size_t blockSize_ = 0;
-    std::vector<SeparationPointMap> hmaps_;
+    std::vector<Block> blocks_;
 };
 
 } //namespace MR

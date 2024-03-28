@@ -7,31 +7,41 @@ namespace MR
 
 SeparationPointStorage::SeparationPointStorage( size_t blockCount, size_t blockSize )
     : blockSize_( blockSize )
-    , hmaps_( blockCount )
+    , blocks_( blockCount )
 {
 }
 
-void SeparationPointStorage::shiftVertIds( const std::function<int(size_t)> & getVertIndexShiftForVoxelId )
+int SeparationPointStorage::makeUniqueVids()
 {
     MR_TIMER
-    ParallelFor( size_t( 0 ), hmaps_.size(), [&] ( size_t hi )
+    std::vector<int> block2shift;
+    block2shift.reserve( blocks_.size() );
+    int lastShift = 0;
+    for ( auto & b : blocks_ )
     {
-        for ( auto& [ind, set] : hmaps_[hi] )
+        block2shift.push_back( lastShift );
+        lastShift += b.nextVid;
+    }
+
+    ParallelFor( size_t( 0 ), blocks_.size(), [&] ( size_t bi )
+    {
+        const auto shift = block2shift[bi];
+        for ( auto& [_, set] : blocks_[bi].smap )
         {
-            auto vertShift = getVertIndexShiftForVoxelId( ind );
             for ( auto& sepPoint : set )
                 if ( sepPoint )
-                    sepPoint.vid += vertShift;
+                    sepPoint.vid += shift;
         }
     } );
+    return lastShift;
 }
 
 void SeparationPointStorage::getPoints( VertCoords & points ) const
 {
     MR_TIMER
-    ParallelFor( size_t( 0 ), hmaps_.size(), [&] ( size_t hi )
+    ParallelFor( size_t( 0 ), blocks_.size(), [&] ( size_t hi )
     {
-        for ( auto& [_, set] : hmaps_[hi] )
+        for ( auto& [_, set] : blocks_[hi].smap )
         {
             for ( int i = int( NeighborDir::X ); i < int( NeighborDir::Count ); ++i )
                 if ( set[i].vid < points.size() )

@@ -9,6 +9,7 @@
 #endif
 
 #include <zip.h>
+#include <zipconf.h>
 
 #if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)
 #pragma clang diagnostic pop
@@ -72,7 +73,9 @@ public:
         if ( !handle_ )
             return 0;
         zip_register_progress_callback_with_state( handle_, 0.001f, zipProgressCallback, nullptr, &pd_ );
+#ifdef LIBZIP_VERSION_MINOR && LIBZIP_VERSION_MINOR >= 6
         zip_register_cancel_callback_with_state( handle_, zipCancelCallback, nullptr, &pd_ );
+#endif
         int res = zip_close( handle_ );
         handle_ = nullptr;
         return res;

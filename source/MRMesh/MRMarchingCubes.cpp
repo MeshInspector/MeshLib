@@ -515,7 +515,9 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
     const auto layerSize = indexer.sizeXY();
     assert( indexer.size() == layerCount * layerSize );
 
-    const auto blockCount = threadCount;
+    // more blocks than threads is recommended for better work distribution among threads since
+    // every block demands unique amount of processing
+    const auto blockCount = std::min( layerCount, threadCount > 1 ? 4 * threadCount : 1 );
     const auto layerPerBlockCount = (size_t)std::ceil( (float)layerCount / (float)blockCount );
     const auto blockSize = layerPerBlockCount * layerSize;
     assert( indexer.size() <= blockSize * blockCount );
@@ -601,7 +603,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                 }
             }
 
-            if ( runCallback && ( i - begin ) % 1024 == 0 )
+            if ( runCallback && ( i - begin ) % 16384 == 0 )
                 if ( !params.cb( 0.3f * float( i - begin ) / float( end - begin ) ) )
                     keepGoing.store( false, std::memory_order_relaxed );
 
@@ -856,7 +858,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                     faceMap.emplace_back( VoxelId{ ind } );
             }
 
-            if ( runCallback && ( ind - begin ) % 1024 == 0 )
+            if ( runCallback && ( ind - begin ) % 16384 == 0 )
                 if ( !subprogress2( float( ind - begin ) / float( end - begin ) ) )
                     keepGoing.store( false, std::memory_order_relaxed );
         }

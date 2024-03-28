@@ -39,6 +39,8 @@ void zipProgressCallback( zip_t* , double progress, void* data )
         pd->canceled = true;
 }
 
+#if (defined(LIBZIP_VERSION_MINOR) && LIBZIP_VERSION_MINOR >= 6 )
+
 int zipCancelCallback( zip_t* , void* data )
 {
     if ( !data )
@@ -47,6 +49,8 @@ int zipCancelCallback( zip_t* , void* data )
     auto pd = reinterpret_cast< ProgressData* >( data );
     return int( pd->canceled );
 }
+
+#endif
 
 // this object stores a handle on open zip-archive, and automatically closes it in the destructor
 class AutoCloseZip

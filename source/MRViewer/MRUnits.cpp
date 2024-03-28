@@ -6,8 +6,6 @@
 namespace MR
 {
 
-#error go implement thousands separators TO THE RIGHT of . too!!
-
 template <UnitEnum E>
 static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
     if constexpr ( std::is_same_v<E, NoUnit> )

@@ -1,4 +1,5 @@
 #include "MRMarchingCubes.h"
+#include "MRSeparationPoint.h"
 #include "MRIsNaN.h"
 #include "MRMesh.h"
 #include "MRVolumeIndexer.h"
@@ -17,29 +18,8 @@
 namespace MR
 {
 
-namespace MarchingCubesHelper
+namespace
 {
-
-enum class NeighborDir
-{
-    X, Y, Z, Count
-};
-
-// point between two neighbor voxels
-struct SeparationPoint
-{
-    Vector3f position; // coordinate
-    VertId vid; // any valid VertId is ok
-    // each SeparationPointMap element has three SeparationPoint, it is not guaranteed that all three are valid (at least one is)
-    // so there are some points present in map that are not valid
-    explicit operator bool() const
-    {
-        return vid.valid();
-    }
-};
-
-using SeparationPointSet = std::array<SeparationPoint, size_t( NeighborDir::Count )>;
-using SeparationPointMap = HashMap<size_t, SeparationPointSet>;
 
 // lookup table from
 // http://paulbourke.net/geometry/polygonise/
@@ -349,7 +329,6 @@ const std::array<OutEdge, size_t( NeighborDir::Count )> cOutEdgeMap { OutEdge::P
 
 }
 
-using namespace MarchingCubesHelper;
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 using ConstAccessor = openvdb::FloatGrid::ConstAccessor;
 using VdbCoord = openvdb::Coord;
@@ -541,28 +520,22 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
     const auto blockSize = layerPerBlockCount * layerSize;
     assert( indexer.size() <= blockSize * blockCount );
 
-    std::vector<SeparationPointMap> hmaps( blockCount );
-    auto findSeparationPointSet = [&] ( size_t voxelId ) -> const SeparationPointSet *
-    {
-        const auto & map = hmaps[voxelId / blockSize];
-        auto it = map.find( voxelId );
-        return ( it != map.end() ) ? &it->second : nullptr;
-    };
+    SeparationPointStorage sepStorage( blockCount, blockSize );
 
     // find all separate points
     // fill map in parallel
     struct VertsNumeration
     {
         // explicit ctor to fix clang build with `vec.emplace_back( ind, 0 )`
-        VertsNumeration( size_t ind, size_t num ) :initIndex{ ind }, numVerts{ num }{}
+        VertsNumeration( size_t ind, int num ) :initIndex{ ind }, numVerts{ num }{}
         size_t initIndex{ 0 };
-        size_t numVerts{ 0 };
+        int numVerts{ 0 };
     };
     using PerThreadVertNumeration = std::vector<VertsNumeration>;
     tbb::enumerable_thread_specific<PerThreadVertNumeration> perThreadVertNumeration;
     ParallelFor( size_t( 0 ), blockCount, [&] ( size_t blockIndex )
     {
-        auto & myHmap = hmaps[blockIndex];
+        auto & myHmap = sepStorage.getBlock( blockIndex );
         // vdb version cache
         [[maybe_unused]] auto acc = accessorCtor( volume );
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
@@ -681,27 +654,17 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
     auto getVertIndexShiftForVoxelId = [&] ( size_t ind )
     {
-        size_t shift = 0;
+        int shift = 0;
         for ( int i = 1; i < resultVertNumeration.size(); ++i )
         {
             if ( ind >= resultVertNumeration[i].initIndex )
                 shift += resultVertNumeration[i - 1].numVerts;
         }
-        return VertId( shift );
+        return shift;
     };
 
     // update map with determined vert indices
-    ParallelFor( size_t( 0 ), hmaps.size(), [&] ( size_t hi )
-    {
-        for ( auto& [ind, set] : hmaps[hi] )
-        {
-            auto vertShift = getVertIndexShiftForVoxelId( ind );
-            for ( auto& sepPoint : set )
-                if ( sepPoint )
-                    sepPoint.vid += vertShift;
-        }
-    } );
-
+    sepStorage.shiftVertIds( getVertIndexShiftForVoxelId );
 
     if ( params.cb && !params.cb( 0.5f ) )
         return unexpectedOperationCanceled();
@@ -868,7 +831,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
             auto findNei = [&]( int i, auto check )
             {
                 const auto index = ind + cVoxelNeighborsIndexAdd[i];
-                auto * pSet = findSeparationPointSet( index );
+                auto * pSet = sepStorage.findSeparationPointSet( index );
                 if ( pSet && check( *pSet ) )
                 {
                     neis[i] = pSet;
@@ -985,15 +948,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
     // some points may be not referenced by any triangle due to NaNs
     result.points.resize( totalVertices );
-    ParallelFor( size_t( 0 ), hmaps.size(), [&] ( size_t hi )
-    {
-        for ( auto& [_, set] : hmaps[hi] )
-        {
-            for ( int i = int( NeighborDir::X ); i < int( NeighborDir::Count ); ++i )
-                if ( set[i].vid < result.points.size() ) // shall be false only if !set[i].vid
-                    result.points[set[i].vid] = set[i].position;
-        }
-    } );
+    sepStorage.getPoints( result.points );
 
     if ( params.cb && !params.cb( 1.0f ) )
         return unexpectedOperationCanceled();

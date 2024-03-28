@@ -85,11 +85,12 @@ enum class VolumeUnit
 
 // All supported value types for `valueToString()`.
 #define DETAIL_MR_UNIT_VALUE_TYPES(X, ...) \
-    X(float       __VA_OPT__(,)__VA_ARGS__) X(double         __VA_OPT__(,)__VA_ARGS__) X(long double __VA_OPT__(,)__VA_ARGS__) \
-    X(signed char __VA_OPT__(,)__VA_ARGS__) X(unsigned char  __VA_OPT__(,)__VA_ARGS__) \
-    X(short       __VA_OPT__(,)__VA_ARGS__) X(unsigned short __VA_OPT__(,)__VA_ARGS__) \
-    X(int         __VA_OPT__(,)__VA_ARGS__) X(unsigned int   __VA_OPT__(,)__VA_ARGS__) \
-    X(long        __VA_OPT__(,)__VA_ARGS__) X(unsigned long  __VA_OPT__(,)__VA_ARGS__)
+    X(float       __VA_OPT__(,)__VA_ARGS__) X(double              __VA_OPT__(,)__VA_ARGS__) X(long double __VA_OPT__(,)__VA_ARGS__) \
+    X(signed char __VA_OPT__(,)__VA_ARGS__) X(unsigned char       __VA_OPT__(,)__VA_ARGS__) \
+    X(short       __VA_OPT__(,)__VA_ARGS__) X(unsigned short      __VA_OPT__(,)__VA_ARGS__) \
+    X(int         __VA_OPT__(,)__VA_ARGS__) X(unsigned int        __VA_OPT__(,)__VA_ARGS__) \
+    X(long        __VA_OPT__(,)__VA_ARGS__) X(unsigned long       __VA_OPT__(,)__VA_ARGS__) \
+    X(long long   __VA_OPT__(,)__VA_ARGS__) X(unsigned long long  __VA_OPT__(,)__VA_ARGS__)
 
 // Whether `E` is one of the unit enums: NoUnit, LengthUnit, AngleUnit, ...
 template <typename T>
@@ -205,15 +206,6 @@ enum class DegreesMode
     degrees, // Fractional degrees.
     degreesMinutes, // Integral degrees, fractional arcminutes.
     degreesMinutesSeconds, // Integral degrees and minutes, fractional arcseconds.
-};
-
-// How the trailing zeroes are stripped.
-// All of this only applies if the number has a decimal point.
-enum class TrailingZeroes
-{
-    keep, // Don't touch trailing zeroes.
-    stripAndKeepOne, // Strip trailing zeroes, but if the last character is `.` after that, add one zero back.
-    stripAll, // Strip trailing zeroes unconditionally.
 };
 
 namespace detail::Units

@@ -66,6 +66,11 @@ namespace detail
                         VectorTraits<T>::getElem( i, v ) = VectorTraits<T>::getElem( i, value );
                     }
                 }
+                else
+                {
+                    (void)i;
+                    // If `U` is integral, then it's guaranteed that the number is being modified inplace.
+                }
             };
 
             bool ret = false;

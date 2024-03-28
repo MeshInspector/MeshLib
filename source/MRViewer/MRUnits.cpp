@@ -272,6 +272,13 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
         }
     };
 
+    // `str` is a value representing arcseconds or arcminutes. Pads it with zeroes on the left to have at least two digits before the point.
+    auto zeroPadArcMinutesOrSeconds = [&]( std::string& str )
+    {
+        if ( std::isdigit( (unsigned char)str[0] ) && !std::isdigit( (unsigned char)str[1] ) )
+            str = '0' + std::move( str );
+    };
+
     std::string_view unitSuffix;
     if ( params.unitSuffix )
         unitSuffix = getUnitInfo( params.targetUnit ).unitSuffix;
@@ -302,7 +309,9 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
                     T wholeMinutes = 0;
                     T seconds = std::modf( minutes, &wholeMinutes ) * 60;
 
-                    ret += fmt::format( "{}'", wholeMinutes );
+                    std::string minutesStr = fmt::format( "{:.0f}'", wholeMinutes );
+                    zeroPadArcMinutesOrSeconds( minutesStr );
+                    ret += minutesStr;
 
                     value = seconds;
                     unitSuffix = "\"";
@@ -320,6 +329,16 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
     {
         if constexpr ( std::is_floating_point_v<T> )
         {
+            if constexpr ( std::is_same_v<E, AngleUnit> )
+            {
+                if ( params.degreesMode == DegreesMode::degreesMinutes || params.degreesMode == DegreesMode::degreesMinutesSeconds )
+                {
+                    std::string part = fmt::format( "{:.{}f}", value, precision );
+                    zeroPadArcMinutesOrSeconds( part );
+                    return part;
+                }
+            }
+
             if ( params.style == NumberStyle::maybeScientific )
                 return fmt::format( "{:.{}g}", value, precision );
             else if ( params.style == NumberStyle::scientific )
@@ -369,8 +388,27 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
         if ( params.thousandsSeparator )
         {
             auto pos = formattedValue.find( '.' );
-            if ( pos == std::string::npos )
+
+            if ( pos != std::string::npos )
+            {
+                // Add separator after the dot.
+
+                while ( pos + 3 < formattedValue.size() &&
+                    std::isdigit( (unsigned char)formattedValue[pos + 1] ) &&
+                    std::isdigit( (unsigned char)formattedValue[pos + 2] ) &&
+                    std::isdigit( (unsigned char)formattedValue[pos + 3] )
+                )
+                {
+                    pos += 4;
+                    formattedValue.insert( formattedValue.begin() + pos, params.thousandsSeparator );
+                }
+            }
+            else
+            {
                 pos = formattedValue.size();
+            }
+
+            // Add separator before the dot.
 
             while ( pos > 3 && std::isdigit( (unsigned char)formattedValue[pos - 4] ) )
             {

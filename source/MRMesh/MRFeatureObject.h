@@ -14,6 +14,16 @@ using FeaturesPropertyTypesVariant = std::variant<float, Vector3f>;
 
 class FeatureObject;
 
+// Classifies `FeatureObjectSharedProperty`, mostly for informational purposes.
+enum class FeaturePropertyKind
+{
+    position, // Position, normally Vector3f.
+    linearDimension, // Length or size.
+    direction, // Direction, normally Vector3f.
+    angle, // Angle, normally float. Measure in radians.
+    other,
+};
+
 // FeatureObjectSharedProperty struct is designed to represent a shared property of a feature object, enabling the use of generalized getter and setter methods for property manipulation.
 // propertyName: A string representing the name of the property.
 // getter : A std::function encapsulating a method with no parameters that returns a FeaturesPropertyTypesVariant.This allows for a generic way to retrieve the value of the property.
@@ -25,6 +35,7 @@ class FeatureObject;
 struct FeatureObjectSharedProperty
 {
     std::string propertyName;
+    FeaturePropertyKind kind;
     // due to getAllSharedProperties in FeatureObject returns static vector, we need externaly setup object to invoke setter ad getter.
     std::function<FeaturesPropertyTypesVariant( const FeatureObject* objectToInvoke, ViewportId id )> getter;
     std::function<void( const FeaturesPropertyTypesVariant&, FeatureObject* objectToInvoke, ViewportId id )> setter;
@@ -32,16 +43,16 @@ struct FeatureObjectSharedProperty
     template <typename T, typename C, typename SetterFunc>
     FeatureObjectSharedProperty(
         std::string name,
+        FeaturePropertyKind kind,
         T( C::* m_getter )( ViewportId ) const,
         SetterFunc m_setter
-    ) : propertyName( std::move( name ) ),
-        getter
-        (
-       [m_getter] ( const FeatureObject* objectToInvoke, ViewportId id ) -> FeaturesPropertyTypesVariant
-    {
-        return std::invoke( m_getter, dynamic_cast< const C* >( objectToInvoke ), id );
-    }
-        )
+    )
+        : propertyName( std::move( name ) ),
+        kind( kind ),
+        getter( [m_getter] ( const FeatureObject* objectToInvoke, ViewportId id ) -> FeaturesPropertyTypesVariant
+        {
+            return std::invoke( m_getter, dynamic_cast< const C* >( objectToInvoke ), id );
+        } )
     {
         if constexpr ( ( std::is_same_v<SetterFunc, void ( C::* )( const T&, ViewportId )> )
             || ( std::is_same_v<SetterFunc, void ( C::* )( T, ViewportId )> ) )

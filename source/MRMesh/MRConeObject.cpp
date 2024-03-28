@@ -166,10 +166,10 @@ void ConeObject::setupRenderObject_() const
 const std::vector<FeatureObjectSharedProperty>& ConeObject::getAllSharedProperties() const
 {
     static std::vector<FeatureObjectSharedProperty> ret = {
-       {"Angle",  &ConeObject::getAngle , &ConeObject::setAngle},
-       {"Height", &ConeObject::getHeight, &ConeObject::setHeight},
-       {"Center", &ConeObject::getCenter, &ConeObject::setCenter},
-       {"Main axis", &ConeObject::getDirection, &ConeObject::setDirection},
+       {"Angle",     FeaturePropertyKind::angle,           &ConeObject::getAngle , &ConeObject::setAngle},
+       {"Height",    FeaturePropertyKind::linearDimension, &ConeObject::getHeight, &ConeObject::setHeight},
+       {"Center",    FeaturePropertyKind::position,        &ConeObject::getCenter, &ConeObject::setCenter},
+       {"Main axis", FeaturePropertyKind::direction,       &ConeObject::getDirection, &ConeObject::setDirection},
     };
     return ret;
 }

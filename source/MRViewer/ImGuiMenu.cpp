@@ -1404,7 +1404,7 @@ float ImGuiMenu::drawSelectionInformation_()
             valueStr += std::to_string( value );
             labelStr += title;
 
-            UI::inputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x * menu_scaling(), selected ? textColorForSelected : std::optional<ImVec4>{} );
+            UI::inputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x, selected ? textColorForSelected : std::optional<ImVec4>{} );
         }
     };
 
@@ -1484,11 +1484,15 @@ float ImGuiMenu::drawSelectionInformation_()
         drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints, textColorForSelected );
 
         if ( totalVolume )
-            UI::inputTextCenteredReadOnly( "Volume", fmt::format( runtimeFmt( "{:.3f}" ), *totalVolume ), getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x * menu_scaling() );
+        {
+            ImGui::PushItemWidth( getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x );
+            MR_FINALLY{ ImGui::PopItemWidth(); };
+            UI::readOnlyValue<VolumeUnit>( "Volume", *totalVolume );
+        }
     }
 
     bool firstField = true;
-    auto drawVec3 = [&style, &firstField] ( std::string title, auto& value, float width, const char* formatStr )
+    auto drawDimensionsVec3 = [this, &firstField]( const char* label, const auto& value )
     {
         if ( firstField )
         {
@@ -1497,21 +1501,16 @@ float ImGuiMenu::drawSelectionInformation_()
             ImGui::Spacing();
         }
 
-        UI::inputTextCenteredReadOnly( ( "##" + title + "_x" ).c_str(), fmt::format( runtimeFmt( formatStr ), value.x ), width );
-        ImGui::SameLine(0.f, style.ItemInnerSpacing.x);
-        UI::inputTextCenteredReadOnly( ( "##" + title + "_y" ).c_str(), fmt::format( runtimeFmt( formatStr ), value.y ), width );
-        ImGui::SameLine( 0.f, style.ItemInnerSpacing.x );
-        UI::inputTextCenteredReadOnly( ( "##" + title + "_z" ).c_str(), fmt::format( runtimeFmt( formatStr ), value.z ), width );
+        ImGui::PushItemWidth( getSceneInfoItemWidth_() );
+        MR_FINALLY{ ImGui::PopItemWidth(); };
 
-        ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-        ImGui::Text( "%s", title.c_str() );
+        UI::readOnlyValue<LengthUnit>( label, value );
     };
 
-    const float fieldWidth = getSceneInfoItemWidth_( 3 );
 #ifndef __EMSCRIPTEN__
     if ( dimensions.x > 0 && dimensions.y > 0 && dimensions.z > 0 )
     {
-        drawVec3( "Dimensions", dimensions, fieldWidth,"{}" );
+        drawDimensionsVec3( "Dimensions", dimensions );
     }
 #endif
     // Feature object properties.
@@ -1536,12 +1535,12 @@ float ImGuiMenu::drawSelectionInformation_()
         && !haveFeatureProperties
     )
     {
-        drawVec3( "Box min", selectionBbox_.min, fieldWidth, "{:.3f}" );
-        drawVec3( "Box max", selectionBbox_.max, fieldWidth, "{:.3f}" );
-        drawVec3( "Box size", bsize, fieldWidth, "{:.3f}" );
+        drawDimensionsVec3( "Box min", selectionBbox_.min );
+        drawDimensionsVec3( "Box max", selectionBbox_.max );
+        drawDimensionsVec3( "Box size", bsize );
 
         if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
-            drawVec3( "World box size", wbsize, fieldWidth, "{:.3f}" );
+            drawDimensionsVec3( "World box size", wbsize );
     }
 
     // This looks a bit better.
@@ -1567,26 +1566,27 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
     {
         std::visit( [&]( auto arg )
         {
-            using ArgType = std::remove_cvref_t<decltype(arg)>;
-            constexpr bool isVec3 = std::is_same_v<ArgType, Vector3f>;
-
             float speed = 0.01f;
             float min = std::numeric_limits<float>::lowest();
             float max = std::numeric_limits<float>::max();
 
             bool alreadyWasEditing = editedFeatureObject_.lock() == object;
 
-            float* argPtr = nullptr;
-            if constexpr ( isVec3 )
-                argPtr = &arg.x;
-            else
-                argPtr = &arg;
-
             bool ret = false;
-            if constexpr ( isVec3 )
-                ret = bool( ImGui::DragFloatValid3( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), argPtr, speed, min, max ) );
+
+            if ( prop.kind == FeaturePropertyKind::position || prop.kind == FeaturePropertyKind::linearDimension )
+            {
+                UI::drag<LengthUnit>( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), arg, speed, min, max );
+            }
+            else if ( prop.kind == FeaturePropertyKind::angle )
+            {
+                UI::drag<AngleUnit>( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), arg, speed, min, max );
+            }
             else
-                ret = bool( ImGui::DragFloatValid( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), argPtr, speed, min, max ) );
+            {
+                // `FeaturePropertyKind::direction` intentionally goes here.
+                UI::drag<NoUnit>( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), arg, speed, min, max );
+            }
 
             if ( ret )
             {
@@ -2143,7 +2143,7 @@ float ImGuiMenu::drawTransform_()
             {
                 float midScale = ( scale.x + scale.y + scale.z ) / 3.0f;
                 ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
-                inputChanged = ImGui::DragFloatValid( "##scaleX", &midScale, midScale * 0.01f, 1e-3f, 1e+6f, "%.3f" );
+                inputChanged = UI::drag<NoUnit>( "##scaleX", midScale, midScale * 0.01f, 1e-3f, 1e+6f );
                 if ( inputChanged )
                     scale.x = scale.y = scale.z = midScale;
                 inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
@@ -2151,13 +2151,13 @@ float ImGuiMenu::drawTransform_()
             }
             else
             {
-                inputChanged = ImGui::DragFloatValid( "##scaleX", &scale.x, scale.x * 0.01f, 1e-3f, 1e+6f, "%.3f" );
+                inputChanged = UI::drag<NoUnit>( "##scaleX", scale.x, scale.x * 0.01f, 1e-3f, 1e+6f );
                 inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
                 ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
-                inputChanged = ImGui::DragFloatValid( "##scaleY", &scale.y, scale.y * 0.01f, 1e-3f, 1e+6f, "%.3f" ) || inputChanged;
+                inputChanged = UI::drag<NoUnit>( "##scaleY", scale.y, scale.y * 0.01f, 1e-3f, 1e+6f ) || inputChanged;
                 inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
                 ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
-                inputChanged = ImGui::DragFloatValid( "##scaleZ", &scale.z, scale.z * 0.01f, 1e-3f, 1e+6f, "%.3f" ) || inputChanged;
+                inputChanged = UI::drag<NoUnit>( "##scaleZ", scale.z, scale.z * 0.01f, 1e-3f, 1e+6f ) || inputChanged;
                 inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
                 ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
             }
@@ -2173,15 +2173,12 @@ float ImGuiMenu::drawTransform_()
             UI::setTooltipIfHovered( "Selects between uniform scaling or separate scaling along each axis", scaling );
             ImGui::PopItemWidth();
 
-            const char* tooltipsRotation[3] = {
-                "Rotation around Ox-axis, degrees",
-                "Rotation around Oy-axis, degrees",
-                "Rotation around Oz-axis, degrees"
-            };
             ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
-            auto resultRotation = ImGui::DragFloatValid3( "Rotation XYZ", &euler.x, invertedRotation_ ? -0.1f : 0.1f, -360.f, 360.f, "%.1f", 0, &tooltipsRotation );
-            inputChanged = inputChanged || resultRotation.valueChanged;
-            inputDeactivated = inputDeactivated || resultRotation.itemDeactivatedAfterEdit;
+            bool rotationChanged = UI::drag<AngleUnit>( "Rotation XYZ", euler, invertedRotation_ ? -0.1f : 0.1f, -360.f, 360.f, { .sourceUnit = AngleUnit::degrees } );
+            bool rotationDeactivatedAfterEdit = ImGui::IsItemDeactivatedAfterEdit();
+            ImGui::SetItemTooltip( "%s", "Rotation round [X, Y, Z] axes respectively." );
+            inputChanged = inputChanged || rotationChanged;
+            inputDeactivated = inputDeactivated || rotationDeactivatedAfterEdit;
             if ( ImGui::IsItemHovered() )
             {
                 ImGui::BeginTooltip();
@@ -2190,7 +2187,7 @@ float ImGuiMenu::drawTransform_()
             }
 
             constexpr float cZenithEps = 0.01f;
-            if ( resultRotation.valueChanged && ImGui::IsMouseDragging( ImGuiMouseButton_Left ) )
+            if ( rotationChanged && ImGui::IsMouseDragging( ImGuiMouseButton_Left ) )
             {
                 // resolve singularity
                 if ( std::fabs( euler.y ) > 90.f - cZenithEps )
@@ -2201,7 +2198,7 @@ float ImGuiMenu::drawTransform_()
                     euler.y = euler.y > 0.f ? 90.f - cZenithEps : -90.f + cZenithEps;
                 }
             }
-            if ( resultRotation.itemDeactivatedAfterEdit )
+            if ( rotationDeactivatedAfterEdit )
             {
                 invertedRotation_ = false;
             }
@@ -2209,11 +2206,6 @@ float ImGuiMenu::drawTransform_()
             if ( inputChanged )
                 xf.A = Matrix3f::rotationFromEuler( ( PI_F / 180 ) * euler ) * Matrix3f::scale( scale );
 
-            const char* tooltipsTranslation[3] = {
-                "Translation along Ox-axis",
-                "Translation along Oy-axis",
-                "Translation along Oz-axis"
-            };
             const auto trSpeed = ( selectionBbox_.valid() && selectionBbox_.diagonal() > std::numeric_limits<float>::epsilon() ) ? 0.003f * selectionBbox_.diagonal() : 0.003f;
 
             ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
@@ -2222,10 +2214,10 @@ float ImGuiMenu::drawTransform_()
             if ( minSizeDim == 0 )
                 minSizeDim = 1.f;
             auto translation = xf.b;
-            auto resultTranslation = ImGui::DragFloatValid3( "Translation", &translation.x, trSpeed, -cMaxTranslationMultiplier * minSizeDim, +cMaxTranslationMultiplier * minSizeDim, "%.3f", 0, &tooltipsTranslation );
-            inputDeactivated = inputDeactivated || resultTranslation.itemDeactivatedAfterEdit;
+            auto translationChanged = UI::drag<LengthUnit>( "Translation", translation, trSpeed, -cMaxTranslationMultiplier * minSizeDim, +cMaxTranslationMultiplier * minSizeDim );
+            inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
 
-            if ( resultTranslation.valueChanged )
+            if ( translationChanged )
                 xf.b = translation;
 
             if ( xfHistUpdated_ )
@@ -2385,7 +2377,7 @@ void ImGuiMenu::make_light_strength( std::vector<std::shared_ptr<VisualObject>> 
     const auto valueConstForComparation = value;
 
     ImGui::PushItemWidth( 50 * menu_scaling() );
-    ImGui::DragFloatValid( label, &value, 0.01f, -99.0f, 99.0f, "%.3f" );
+    UI::drag<NoUnit>( label, value, 0.01f, -99.0f, 99.0f );
 
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
     ImGui::PopItemWidth();
@@ -2401,10 +2393,8 @@ void ImGuiMenu::make_slider( std::vector<std::shared_ptr<ObjectType>> selectedVi
     if ( selectedVisualObjs.empty() )
         return;
 
-    using AdjustedT = std::conditional_t<std::is_same_v<T, std::uint8_t>, int, T>;
-
     auto obj = selectedVisualObjs[0];
-    auto value = AdjustedT( getter( obj.get() ) );
+    auto value = getter( obj.get() );
     bool isAllTheSame = true;
     for ( int i = 1; i < selectedVisualObjs.size(); ++i )
         if ( getter( selectedVisualObjs[i].get() ) != value )
@@ -2422,12 +2412,7 @@ void ImGuiMenu::make_slider( std::vector<std::shared_ptr<ObjectType>> selectedVi
     const auto valueConstForComparation = value;
 
     ImGui::PushItemWidth( 100 * menu_scaling() );
-    if constexpr ( std::is_same_v<AdjustedT, int> )
-        UI::sliderInt( label, &value, min, max, "%d", ImGuiSliderFlags_AlwaysClamp );
-    else if constexpr ( std::is_same_v<AdjustedT, float> )
-        UI::sliderFloat( label, &value, min, max, "%.3f", ImGuiSliderFlags_AlwaysClamp );
-    else
-        static_assert( dependent_false<AdjustedT>, "Unknown slider value type." );
+    UI::slider<NoUnit>( label, value, min, max );
 
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
     ImGui::PopItemWidth();
@@ -2461,9 +2446,9 @@ void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedV
 
     ImGui::PushItemWidth( 40 * menu_scaling() );
     if ( lineWidth )
-        ImGui::DragFloatValidLineWidth( label, &value );
+        UI::drag<PixelSizeUnit>( label, value );
     else
-        ImGui::DragFloatValid( label, &value, 0.02f, 1.0f, 10.0f, "%.1f");
+        UI::drag<PixelSizeUnit>( label, value, 0.02f, 1.0f, 10.0f );
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
     ImGui::PopItemWidth();
     if ( value != valueConstForComparation )
@@ -2493,7 +2478,7 @@ void ImGuiMenu::make_points_discretization( std::vector<std::shared_ptr<VisualOb
     const auto valueConstForComparation = value;
 
     ImGui::PushItemWidth( 40 * menu_scaling() );
-    ImGui::DragInt( label, &value, 0.1f, 1, 256 );
+    UI::drag<NoUnit>( label, value, 0.1f, 1, 256 );
 
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
     ImGui::PopItemWidth();
@@ -2904,7 +2889,7 @@ void ImGuiMenu::draw_mr_menu()
     {
         ImGui::PushItemWidth( 80 * menu_scaling() );
         auto fov = viewportParameters.cameraViewAngle;
-        ImGui::DragFloatValid( "Camera FOV", &fov, 0.001f, 0.01f, 179.99f );
+        UI::drag<AngleUnit>( "Camera FOV", fov, 0.001f, 0.01f, 179.99f, { .sourceUnit = AngleUnit::degrees } );
         viewer->viewport().setCameraViewAngle( fov );
 
         bool showGlobalBasis = viewer->globalBasisAxes->isVisible( viewer->viewport().id );
@@ -3055,9 +3040,9 @@ void ImGuiMenu::draw_mr_menu()
         plane.n = plane.n.normalized();
         auto w = ImGui::GetContentRegionAvail().x;
         ImGui::SetNextItemWidth( w );
-        ImGui::DragFloatValid3( "##ClippingPlaneNormal", &plane.n.x, 1e-3f );
+        UI::drag<NoUnit>( "##ClippingPlaneNormal", plane.n, 1e-3f );
         ImGui::SetNextItemWidth( w / 2.0f );
-        ImGui::DragFloatValid( "##ClippingPlaneD", &plane.d, 1e-3f );
+        UI::drag<NoUnit>( "##ClippingPlaneD", plane.d, 1e-3f );
         ImGui::SameLine();
         ImGui::Checkbox( "Show##ClippingPlane", &showPlane );
         viewer->viewport().setClippingPlane( plane );

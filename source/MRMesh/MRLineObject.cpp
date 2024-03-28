@@ -133,9 +133,9 @@ FeatureObjectProjectPointResult LineObject::projectPoint( const Vector3f& point,
 const std::vector<FeatureObjectSharedProperty>& LineObject::getAllSharedProperties() const
 {
     static std::vector<FeatureObjectSharedProperty> ret = {
-       {"Center"   , &LineObject::getCenter   , &LineObject::setCenter},
-       {"Direction", &LineObject::getDirection, &LineObject::setDirection},
-       {"Length"   , &LineObject::getLength   , &LineObject::setLength}
+       {"Center"   , FeaturePropertyKind::position,        &LineObject::getCenter   , &LineObject::setCenter},
+       {"Direction", FeaturePropertyKind::direction,       &LineObject::getDirection, &LineObject::setDirection},
+       {"Length"   , FeaturePropertyKind::linearDimension, &LineObject::getLength   , &LineObject::setLength}
     };
     return ret;
 }

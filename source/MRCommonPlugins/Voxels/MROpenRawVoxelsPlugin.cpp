@@ -60,8 +60,8 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cInputPadding * menuScaling } );
         ImGui::PushItemWidth( menuScaling * 200.0f );
-        ImGui::DragIntValid3( "Dimensions", &parameters_.dimensions.x, 1, 0, std::numeric_limits<int>::max() );
-        ImGui::DragFloatValid3( "Voxel size", &parameters_.voxelSize.x, 1e-3f, 0.0f );
+        UI::drag<NoUnit>( "Dimensions", parameters_.dimensions, 1, 0, std::numeric_limits<int>::max() );
+        UI::drag<LengthUnit>( "Voxel size", parameters_.voxelSize, 1e-3f, 0.0f );
         ImGui::PopItemWidth();
         ImGui::Separator();
         ImGui::PopStyleVar();
@@ -84,7 +84,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                         MR::showError( *error );
                 };
 
-                
+
                 if ( autoMode )
                     res = VoxelsLoad::fromRaw( path, ProgressBar::callBackSetProgress );
                 else

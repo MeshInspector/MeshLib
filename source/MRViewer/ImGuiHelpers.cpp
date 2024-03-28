@@ -120,7 +120,7 @@ void PlotCustomHistogram( const char* str_id,
     if ( frame_size.x == 0.0f )
         frame_size.x = CalcItemWidth();
     if ( frame_size.y == 0.0f )
-        frame_size.y = ( style.FramePadding.y * 2 );
+        frame_size.y = frame_size.x / 2.f + ( style.FramePadding.y * 2 );
 
     ImRect rect;
     rect.Min = GetCursorScreenPos();
@@ -134,6 +134,7 @@ void PlotCustomHistogram( const char* str_id,
     // ImGui::Dummy did not handle click properly (it somehow breaks modal openenig) so we changed it to ButtonBehavior
     //Dummy( frame_size );
 
+    ItemSize( rect.GetSize() );
     ItemAdd( rect, id );
     bool hovered, held;
     ButtonBehavior( rect, id, &hovered, &held );

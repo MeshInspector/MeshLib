@@ -22,17 +22,44 @@ namespace MR
 
 namespace {
 
+struct ProgressData
+{
+    ProgressCallback cb = nullptr;
+    bool canceled = false;
+};
+
+void zipProgressCallback( zip_t* , double progress, void* data )
+{
+    if ( !data )
+        return;
+    
+    auto pd = reinterpret_cast<ProgressData*>( data );
+    if ( !reportProgress( pd->cb, float( progress ) ) )
+        pd->canceled = true;
+}
+
+int zipCancelCallback( zip_t* , void* data )
+{
+    if ( !data )
+        return 0;
+
+    auto pd = reinterpret_cast< ProgressData* >( data );
+    return int( pd->canceled );
+}
+
 // this object stores a handle on open zip-archive, and automatically closes it in the destructor
 class AutoCloseZip
 {
 public:
-    AutoCloseZip( const char* path, int flags, int* err )
+    AutoCloseZip( const char* path, int flags, int* err, ProgressCallback cb = nullptr )
     {
         handle_ = zip_open( path, flags, err );
+        pd_.cb = cb;
     }
-    AutoCloseZip( zip_source_t & source, int flags, zip_error_t* err )
+    AutoCloseZip( zip_source_t & source, int flags, zip_error_t* err, ProgressCallback cb = nullptr )
     {
         handle_ = zip_open_from_source( &source, flags, err );
+        pd_.cb = cb;
     }
     ~AutoCloseZip()
     {
@@ -44,6 +71,8 @@ public:
     {
         if ( !handle_ )
             return 0;
+        zip_register_progress_callback_with_state( handle_, 0.001f, zipProgressCallback, nullptr, &pd_ );
+        zip_register_cancel_callback_with_state( handle_, zipCancelCallback, nullptr, &pd_ );
         int res = zip_close( handle_ );
         handle_ = nullptr;
         return res;
@@ -51,6 +80,7 @@ public:
 
 private:
     zip_t * handle_ = nullptr;
+    ProgressData pd_;
 };
 
 /// zip-callback for reading from std::istream
@@ -203,7 +233,7 @@ VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::files
         return unexpected( "Directory '" + utf8string( sourceFolder ) + "' does not exist" );
 
     int err;
-    AutoCloseZip zip( utf8string( zipFile ).c_str(), ZIP_CREATE | ZIP_TRUNCATE, &err );
+    AutoCloseZip zip( utf8string( zipFile ).c_str(), ZIP_CREATE | ZIP_TRUNCATE, &err, subprogress( cb, 0.5f, 1.0f ) );    
     if ( !zip )
         return unexpected( "Cannot create zip, error code: " + std::to_string( err ) );
 
@@ -239,6 +269,7 @@ VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::files
 
     // pass #2: add files in the archive
     int compressedFiles = 0;
+    auto scb = subprogress( cb, 0.0f, 0.5f );
     for ( auto entry : DirectoryRecursive{ sourceFolder, ec } )
     {
         const auto path = entry.path();
@@ -266,15 +297,17 @@ VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::files
         }
 
         ++compressedFiles;
-        if ( !reportProgress( cb, std::min( float( compressedFiles ) / totalFiles, 1.0f ) ) )
+        if ( !reportProgress( scb, std::min( float( compressedFiles ) / totalFiles, 1.0f ) ) )
             return unexpectedOperationCanceled();
     }
 
-    if ( zip.close() == -1 )
-        return unexpected( "Cannot close zip" );
+    auto closeRes = zip.close();
 
     if ( !reportProgress( cb, 1.0f ) )
         return unexpectedOperationCanceled();
+
+    if ( closeRes == -1 )
+        return unexpected( "Cannot close zip" );   
 
     return {};
 }

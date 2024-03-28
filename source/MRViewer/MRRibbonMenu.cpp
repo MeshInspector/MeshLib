@@ -1790,9 +1790,13 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
     auto res = drawCollapsingHeader_( "Transform", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowOverlap );
 
     const float scaling = menu_scaling();
+    ImVec2 smallBtnSize = ImVec2( 22 * scaling, 22 * scaling );
+    float numButtons = ( sceneSize_.x - 100 * scaling - ImGui::GetStyle().WindowPadding.x * 0.5f ) / smallBtnSize.x;
+    if ( numButtons < 1.0f )
+        return res;
+
     auto startPos = ImGui::GetCursorPos();
     auto contextBtnPos = startPos;
-    ImVec2 smallBtnSize = ImVec2( 22 * scaling, 22 * scaling );
     contextBtnPos.x += ( ImGui::GetContentRegionAvail().x + ImGui::GetStyle().WindowPadding.x * 0.5f - smallBtnSize.x );
     contextBtnPos.y += ( -ImGui::GetFrameHeightWithSpacing() + ( ImGui::GetFrameHeight() - smallBtnSize.y ) * 0.5f );
 
@@ -1818,7 +1822,7 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
     if ( iconsFont )
         ImGui::PushFont( iconsFont );
 
-    if ( selectedObjectsCache_.size() == 1 && selectedObjectsCache_.front()->xf() != AffineXf3f() )
+    if ( numButtons >= 2.0f && selectedObjectsCache_.size() == 1 && selectedObjectsCache_.front()->xf() != AffineXf3f() )
     {
         auto obj = std::const_pointer_cast< Object >( selectedObjectsCache_.front() );
         assert( obj );
@@ -1837,7 +1841,8 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
             ImGui::PushFont( iconsFont );
 
         auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
-        bool drawApplyBtn = item != RibbonSchemaHolder::schema().items.end() &&
+        bool drawApplyBtn = numButtons >=3.0f && 
+            item != RibbonSchemaHolder::schema().items.end() &&
             item->second.item->isAvailable( selectedObjectsCache_ ).empty();
 
         if ( drawApplyBtn )

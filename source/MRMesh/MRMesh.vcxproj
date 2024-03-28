@@ -461,6 +461,7 @@
     <ClCompile Include="MRHistoryAction.cpp" />
     <ClCompile Include="MRImage.cpp" />
     <ClCompile Include="MRLocalTriangulations.cpp" />
+    <ClCompile Include="MRLogWindowsExceptions.cpp" />
     <ClCompile Include="MRMapEdge.cpp" />
     <ClCompile Include="MRGraph.cpp" />
     <ClCompile Include="MRGridSampling.cpp" />

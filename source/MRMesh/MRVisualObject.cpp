@@ -182,6 +182,8 @@ void VisualObject::setDirtyFlags( uint32_t mask, bool )
     // DIRTY_UV because we need to update UV coordinates
 
     dirty_ |= mask;
+
+    needRedraw_ = true; // this is needed to differ dirty render object and dirty scene
 }
 
 void VisualObject::resetDirty() const

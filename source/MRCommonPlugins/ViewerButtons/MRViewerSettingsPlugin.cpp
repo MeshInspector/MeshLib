@@ -486,7 +486,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
                 paramsVol.targetUnit = VolumeUnit::inches3;
                 paramsMoveSpeed.targetUnit = MovementSpeedUnit::inchesPerSecond;
                 break;
-            case LengthUnit::_count; // MSVC warns otherwise.
+            case LengthUnit::_count:; // MSVC warns otherwise.
                 break;
             }
 

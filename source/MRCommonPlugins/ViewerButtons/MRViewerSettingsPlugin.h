@@ -21,6 +21,7 @@ public:
         Application,
         Control,
         Viewport,
+        MeasurementUnits,
         Features,
         Count
     };
@@ -61,6 +62,7 @@ private:
     void drawApplicationTab_( float menuWidth, float menuScaling );
     void drawControlTab_( float menuWidth, float menuScaling );
     void drawViewportTab_( float menuWidth, float menuScaling );
+    void drawMeasurementUnitsTab_( float menuScaling );
     void drawFeaturesTab_( float menuScaling );
 
     void drawThemeSelector_( float menuWidth, float menuScaling );

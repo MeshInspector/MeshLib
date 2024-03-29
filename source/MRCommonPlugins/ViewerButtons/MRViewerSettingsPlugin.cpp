@@ -12,6 +12,7 @@
 #include "MRViewer/MRGladGlfw.h"
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRViewer/MRViewer.h"
+#include "MRViewer/MRImGuiVectorOperators.h"
 #include "MRMesh/MRSystem.h"
 #include "MRViewer/MRSpaceMouseHandlerHidapi.h"
 #include "MRMesh/MRLog.h"
@@ -33,6 +34,7 @@ const char* getViewerSettingTabName( MR::ViewerSettingsPlugin::TabType tab )
         "Application",
         "Control",
         "3D View",
+        "Units",
         "Features",
     };
     return tabNames[int( tab )];
@@ -187,6 +189,9 @@ void ViewerSettingsPlugin::drawTab_( TabType tab, float menuWidth, float menuSca
         break;
     case MR::ViewerSettingsPlugin::TabType::Viewport:
         drawViewportTab_( menuWidth, menuScaling );
+        break;
+    case MR::ViewerSettingsPlugin::TabType::MeasurementUnits:
+        drawMeasurementUnitsTab_( menuScaling );
         break;
     case MR::ViewerSettingsPlugin::TabType::Features:
         drawFeaturesTab_( menuScaling );
@@ -393,6 +398,201 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
 
     drawRenderOptions_( menuScaling );
     drawShadowsOptions_( menuWidth, menuScaling );
+}
+
+void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
+{
+    (void)menuScaling;
+
+    auto paramsLen = getDefaultUnitParams<LengthUnit>();
+    auto paramsArea = getDefaultUnitParams<AreaUnit>();
+    auto paramsVol = getDefaultUnitParams<VolumeUnit>();
+    auto paramsMoveSpeed = getDefaultUnitParams<MovementSpeedUnit>();
+    auto paramsAngle = getDefaultUnitParams<AngleUnit>();
+
+    auto forAllLengthParams = [&]( auto&& func )
+    {
+        func( paramsLen );
+        func( paramsArea );
+        func( paramsVol );
+        func( paramsMoveSpeed );
+    };
+    auto forAllParams = [&]( auto&& func )
+    {
+        forAllLengthParams( func );
+        func( paramsAngle );
+    };
+
+    auto applyParams = [&]
+    {
+        forAllParams( []( const auto& params ){ setDefaultUnitParams( params ); } );
+    };
+
+    auto numberStyleCombo = [&]( NumberStyle& style ) -> bool
+    {
+        static const std::vector<std::string> styleOptions = { "Normal", "Fixed", "Scientific", "Auto" };
+        static_assert( int( NumberStyle::normal ) == 0 );
+        static_assert( int( NumberStyle::fixed ) == 1 );
+        static_assert( int( NumberStyle::scientific ) == 2 );
+        static_assert( int( NumberStyle::maybeScientific ) == 3 );
+
+        int styleOption = int( style );
+        bool ret = UI::combo( "Style", &styleOption, styleOptions );
+        if ( ret )
+            style = NumberStyle( styleOption );
+        ImGui::SetItemTooltip( "%s",
+            // U+2014 EM DASH
+            "Normal \xe2\x80\x94 Without exponent, at most 'Precision' digits in total (unless the number of digits before the decimal point is larger)\n"
+            "Fixed \xe2\x80\x94 Without exponent, 'Precision' digits after the decimal point\n"
+            "Scientific \xe2\x80\x94 With exponent\n"
+            "Auto \xe2\x80\x94 With or without exponent, depending on the magnitude\n"
+        );
+        return ret;
+    };
+
+
+    { // Length.
+        UI::separator( menuScaling, "Length" );
+
+        ImGui::PushID( "length" );
+        MR_FINALLY{ ImGui::PopID(); };
+
+        // --- Units
+
+        static const std::vector<std::string> optionNames = []{
+            std::vector<std::string> ret;
+            ret.reserve( std::size_t( LengthUnit::_count ) );
+            for ( std::size_t i = 0; i < std::size_t( LengthUnit::_count ); i++ )
+                ret.push_back( std::string( getUnitInfo( LengthUnit( i ) ).prettyName ) );
+            return ret;
+        }();
+
+        int option = int( paramsLen.targetUnit );
+        if ( UI::combo( "Unit", &option, optionNames ) )
+        {
+            paramsLen.targetUnit = LengthUnit( option );
+
+            switch ( paramsLen.targetUnit )
+            {
+            case LengthUnit::mm:
+                forAllParams( [&]( auto&& params ){ params.leadingZero = true; } );
+                paramsArea.targetUnit = AreaUnit::mm2;
+                paramsVol.targetUnit = VolumeUnit::mm3;
+                paramsMoveSpeed.targetUnit = MovementSpeedUnit::mmPerSecond;
+                break;
+            case LengthUnit::inches:
+                forAllParams( [&]( auto&& params ){ params.leadingZero = false; } );
+                paramsArea.targetUnit = AreaUnit::inches2;
+                paramsVol.targetUnit = VolumeUnit::inches3;
+                paramsMoveSpeed.targetUnit = MovementSpeedUnit::inchesPerSecond;
+                break;
+            }
+
+            applyParams();
+        }
+
+        // --- Style
+
+        if ( numberStyleCombo( paramsLen.style ) )
+        {
+            forAllLengthParams( [&]( auto& params ){ params.style = paramsLen.style; } );
+            applyParams();
+        }
+
+        // --- Precision
+
+        if ( UI::input<NoUnit>( "Precision", paramsLen.precision ) )
+        {
+            forAllLengthParams( [&]( auto& params ){ params.precision = paramsLen.precision; } );
+            applyParams();
+        }
+    }
+
+    { // Angle.
+        UI::separator( menuScaling, "Angle" );
+
+        ImGui::PushID( "angle" );
+        MR_FINALLY{ ImGui::PopID(); };
+
+        static const std::vector<std::string> flavorOptions = { "Degrees", "Degrees, minutes", "Degrees, minutes, seconds" };
+        static_assert( int( DegreesMode::degrees ) == 0 );
+        static_assert( int( DegreesMode::degreesMinutes ) == 1 );
+        static_assert( int( DegreesMode::degreesMinutesSeconds ) == 2 );
+
+        int flavorOption = int( paramsAngle.degreesMode );
+
+        // Degree mode.
+
+        if ( UI::combo( "Unit", &flavorOption, flavorOptions ) )
+        {
+            DegreesMode newMode = DegreesMode( flavorOption );
+
+            if ( ( paramsAngle.degreesMode == DegreesMode::degrees ) != ( newMode == DegreesMode::degrees ) )
+            {
+                if ( newMode == DegreesMode::degrees )
+                {
+                    paramsAngle.style = NumberStyle::fixed;
+                    paramsAngle.precision = 1;
+                }
+                else
+                {
+                    paramsAngle.style = NumberStyle::fixed;
+                    paramsAngle.precision = 0;
+                }
+            }
+
+            paramsAngle.degreesMode = newMode;
+
+            applyParams();
+        }
+
+        // Degree-mode-specific options.
+
+        if ( paramsAngle.degreesMode == DegreesMode::degrees )
+        {
+            // --- Style
+
+            if ( numberStyleCombo( paramsAngle.style ) )
+                applyParams();
+
+            // --- Precision
+
+            if ( UI::input<NoUnit>( "Precision", paramsAngle.precision ) )
+                applyParams();
+        }
+    }
+
+    { // Common.
+        UI::separator( menuScaling, "Common" );
+
+        ImGui::PushID( "common" );
+        MR_FINALLY{ ImGui::PopID(); };
+
+        // --- Leading zero
+
+        if ( UI::checkbox( "Leading zero", &paramsLen.leadingZero ) )
+        {
+            forAllParams( [&]( auto& params ){ params.leadingZero = paramsLen.leadingZero; } );
+            applyParams();
+        }
+        ImGui::SetItemTooltip( "If disabled, remove the lone zeroes before the decimal point." );
+
+        // --- Thousands separator
+
+        char thouSep[2] = { paramsLen.thousandsSeparator, '\0' };
+        if ( ImGui::InputText( "Thousands separator", thouSep, sizeof thouSep ) )
+        {
+            forAllParams( [&]( auto& params ){ params.thousandsSeparator = thouSep[0]; } );
+            applyParams();
+        }
+        // If the separator is a space, display a string explaining that on top of the textbox.
+        if ( !ImGui::IsItemActive() && thouSep[0] == ' ' )
+        {
+            std::string text = "Space";
+            ImVec2 textSize = ImGui::CalcTextSize( text.c_str() );
+            ImGui::GetWindowDrawList()->AddText( ImGui::GetItemRectMin() + ( ImGui::GetItemRectSize() - textSize ) / 2, ImGui::GetColorU32( ImGuiCol_TextDisabled ), text.c_str() );
+        }
+    }
 }
 
 void ViewerSettingsPlugin::drawFeaturesTab_( float menuScaling )

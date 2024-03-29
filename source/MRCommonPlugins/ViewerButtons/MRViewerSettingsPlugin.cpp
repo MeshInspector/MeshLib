@@ -587,12 +587,20 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
             forAllParams( [&]( auto& params ){ params.thousandsSeparator = thouSep[0]; } );
             applyParams();
         }
-        // If the separator is a space, display a string explaining that on top of the textbox.
-        if ( !ImGui::IsItemActive() && thouSep[0] == ' ' )
+        // If the separator is empty or a space, display a string explaining that on top of the textbox.
+        if ( !ImGui::IsItemActive() )
         {
-            std::string text = "Space";
-            ImVec2 textSize = ImGui::CalcTextSize( text.c_str() );
-            ImGui::GetWindowDrawList()->AddText( ImGui::GetItemRectMin() + ( ImGui::GetItemRectSize() - textSize ) / 2, ImGui::GetColorU32( ImGuiCol_TextDisabled ), text.c_str() );
+            const char* label = nullptr;
+            if ( thouSep[0] == 0 )
+                label = "None";
+            else if ( thouSep[0] == ' ' )
+                label = "Space";
+
+            if ( label )
+            {
+                ImVec2 textSize = ImGui::CalcTextSize( label );
+                ImGui::GetWindowDrawList()->AddText( ImGui::GetItemRectMin() + ( ImVec2( ImGui::CalcItemWidth(), ImGui::GetItemRectSize().y ) - textSize ) / 2, ImGui::GetColorU32( ImGuiCol_TextDisabled ), label );
+            }
         }
     }
 }

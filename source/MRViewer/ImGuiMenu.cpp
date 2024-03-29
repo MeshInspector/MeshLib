@@ -1493,7 +1493,7 @@ float ImGuiMenu::drawSelectionInformation_()
 
 #if defined(__GNUC__) && !defined(__clang__) //disable strange warning. Maybe bug in GCC
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Werror=maybe-uninitialized"
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
 
                 UI::readOnlyValue<VolumeUnit>( "Volume", *totalVolume );

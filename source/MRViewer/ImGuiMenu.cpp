@@ -1343,7 +1343,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 totalFaces += mesh->topology.numValidFaces();
                 totalSelectedFaces += mObj->numSelectedFaces();
                 totalVerts += mesh->topology.numValidVerts();
-                if ( mObj->isMeshClosed() )
+                if ( totalVolume && mObj->isMeshClosed() )
                 {
                     *totalVolume += float( mObj->volume() );
                 }
@@ -1490,7 +1490,7 @@ float ImGuiMenu::drawSelectionInformation_()
             if ( totalVolume )
             {
                 ImGui::PushItemWidth( itemWidth );
-                UI::readOnlyValue<VolumeUnit>( "Volume", *totalVolume );
+                UI::readOnlyValue<VolumeUnit>( "Volume", totalVolume.value() );
                 MR_FINALLY{ ImGui::PopItemWidth(); };
             }
             else

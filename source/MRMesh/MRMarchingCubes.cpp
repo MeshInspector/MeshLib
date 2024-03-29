@@ -336,7 +336,7 @@ using VdbCoord = openvdb::Coord;
 
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 template <class Positioner>
-bool findSeparationPoint( SeparationPoint& sp, const VdbVolume& volume, const ConstAccessor& acc,
+bool findSeparationPoint( Vector3f & pos, const VdbVolume& volume, const ConstAccessor& acc,
                           const openvdb::Coord& coord, const Vector3i& basePos, float valueB, NeighborDir dir,
                           const MarchingCubesParams& params, Positioner&& positioner )
 {
@@ -355,13 +355,13 @@ bool findSeparationPoint( SeparationPoint& sp, const VdbVolume& volume, const Co
     Vector3f nextCoordF = Vector3f( float( nextCoord.x() ), float( nextCoord.y() ), float( nextCoord.z() ) );
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    sp.position = positioner( bPos, dPos, valueB, valueD, params.iso );
+    pos = positioner( bPos, dPos, valueB, valueD, params.iso );
     return true;
 }
 #endif
 
 template <typename NaNChecker, typename Positioner>
-bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const VolumeIndexer& indexer, VoxelId base,
+bool findSeparationPoint( Vector3f & pos, const SimpleVolume& volume, const VolumeIndexer& indexer, VoxelId base,
                           const Vector3i& basePos, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 {
     auto nextPos = basePos;
@@ -383,12 +383,12 @@ bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const
     Vector3f nextCoordF = Vector3f( nextPos ) + Vector3f::diagonal( 0.5f );
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    sp.position = positioner( bPos, dPos, valueB, valueD, params.iso );
+    pos = positioner( bPos, dPos, valueB, valueD, params.iso );
     return true;
 }
 
 template <typename NaNChecker, typename Positioner>
-bool findSeparationPoint( SeparationPoint& sp, const FunctionVolume& volume, const Vector3i& basePos, NeighborDir dir,
+bool findSeparationPoint( Vector3f & pos, const FunctionVolume& volume, const Vector3i& basePos, NeighborDir dir,
                           const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 {
     auto nextPos = basePos;
@@ -410,13 +410,12 @@ bool findSeparationPoint( SeparationPoint& sp, const FunctionVolume& volume, con
     Vector3f nextCoordF = Vector3f( nextPos ) + Vector3f::diagonal( 0.5f );
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    sp.position = positioner( bPos, dPos, valueB, valueD, params.iso );
+    pos = positioner( bPos, dPos, valueB, valueD, params.iso );
     return true;
 }
 
 template <typename Positioner, typename V, typename NaNChecker, typename Accessor>
-bool findSeparationPoint( SeparationPoint& sp, const V& volume, const Accessor& accessor, const Vector3i& basePos, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
-
+bool findSeparationPoint( Vector3f & pos, const V& volume, const Accessor& accessor, const Vector3i& basePos, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 {
     auto nextPos = basePos;
     nextPos[int( dir )] += 1;
@@ -447,7 +446,7 @@ bool findSeparationPoint( SeparationPoint& sp, const V& volume, const Accessor& 
     }
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    sp.position = positioner( bPos, dPos, valueB, valueD, params.iso );
+    pos = positioner( bPos, dPos, valueB, valueD, params.iso );
     return true;
 }
 
@@ -581,24 +580,26 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
             for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
             {
                 bool ok = false;
+                Vector3f pos;
                 if ( cache )
-                    ok = findSeparationPoint( set[n], volume, *cache, basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
+                    ok = findSeparationPoint( pos, volume, *cache, basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
                 else
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
                 if constexpr ( std::is_same_v<V, VdbVolume> )
-                    ok = findSeparationPoint( set[n], volume, acc, baseCoord, basePos, baseValue, NeighborDir( n ), params, std::forward<Positioner>( positioner ) );
+                    ok = findSeparationPoint( pos, volume, acc, baseCoord, basePos, baseValue, NeighborDir( n ), params, std::forward<Positioner>( positioner ) );
                 else
 #endif
                 if constexpr ( std::is_same_v<V, SimpleVolume> )
-                    ok = findSeparationPoint( set[n], volume, indexer, VoxelId( i ), basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
+                    ok = findSeparationPoint( pos, volume, indexer, VoxelId( i ), basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
                 else if constexpr ( std::is_same_v<V, FunctionVolume> )
-                    ok = findSeparationPoint( set[n], volume, basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
+                    ok = findSeparationPoint( pos, volume, basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
                 else
                     static_assert( !sizeof( V ), "Unsupported voxel volume type." );
 
                 if ( ok )
                 {
-                    set[n].vid = block.nextVid++;
+                    set[n] = block.nextVid();
+                    block.coords.push_back( pos );
                     atLeastOneOk = true;
                 }
             }
@@ -798,17 +799,17 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
             if ( vx[0] != vx[1] || vx[0] != vx[2] || vx[0] != vx[4] )
                 findNei( 0, []( auto && ) { return true; } );
             if ( vx[1] != vx[3] || vx[1] != vx[5] )
-                findNei( 1, []( auto && s ) { return s[(int)NeighborDir::Y].vid || s[(int)NeighborDir::Z].vid; } );
+                findNei( 1, []( auto && s ) { return s[(int)NeighborDir::Y] || s[(int)NeighborDir::Z]; } );
             if ( vx[2] != vx[3] || vx[2] != vx[6] )
-                findNei( 2, []( auto && s ) { return s[(int)NeighborDir::X].vid || s[(int)NeighborDir::Z].vid; } );
+                findNei( 2, []( auto && s ) { return s[(int)NeighborDir::X] || s[(int)NeighborDir::Z]; } );
             if ( vx[3] != vx[7] )
-                findNei( 3, []( auto && s ) { return (bool)s[(int)NeighborDir::Z].vid; } );
+                findNei( 3, []( auto && s ) { return (bool)s[(int)NeighborDir::Z]; } );
             if ( vx[4] != vx[5] || vx[4] != vx[6] )
-                findNei( 4, []( auto && s ) { return s[(int)NeighborDir::X].vid || s[(int)NeighborDir::Y].vid; } );
+                findNei( 4, []( auto && s ) { return s[(int)NeighborDir::X] || s[(int)NeighborDir::Y]; } );
             if ( vx[5] != vx[7] )
-                findNei( 5, []( auto && s ) { return (bool)s[(int)NeighborDir::Y].vid; } );
+                findNei( 5, []( auto && s ) { return (bool)s[(int)NeighborDir::Y]; } );
             if ( vx[6] != vx[7] )
-                findNei( 6, []( auto && s ) { return (bool)s[(int)NeighborDir::X].vid; } );
+                findNei( 6, []( auto && s ) { return (bool)s[(int)NeighborDir::X]; } );
 
             if constexpr ( std::is_same_v<V, SimpleVolume> || std::is_same_v<V, FunctionVolume> )
             {
@@ -823,9 +824,9 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                         const auto& [interIndex2, dir2] = cEdgeIndicesMap[plan[i + 2]];
                         // `neis` indicates that current voxel has valid point for desired triangulation
                         // as far as nei has 3 directions we use `dir` to validate (make sure that there is point in needed edge) desired direction
-                        voxelValid = voxelValid && ( neis[interIndex0] && (*neis[interIndex0])[int( dir0 )].vid );
-                        voxelValid = voxelValid && ( neis[interIndex1] && (*neis[interIndex1])[int( dir1 )].vid );
-                        voxelValid = voxelValid && ( neis[interIndex2] && (*neis[interIndex2])[int( dir2 )].vid );
+                        voxelValid = voxelValid && neis[interIndex0] && (*neis[interIndex0])[int( dir0 )];
+                        voxelValid = voxelValid && neis[interIndex1] && (*neis[interIndex1])[int( dir1 )];
+                        voxelValid = voxelValid && neis[interIndex2] && (*neis[interIndex2])[int( dir2 )];
                     }
                 }
                 if ( !voxelValid )
@@ -838,21 +839,21 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                 const auto& [interIndex0, dir0] = cEdgeIndicesMap[plan[i]];
                 const auto& [interIndex1, dir1] = cEdgeIndicesMap[plan[i + 1]];
                 const auto& [interIndex2, dir2] = cEdgeIndicesMap[plan[i + 2]];
-                assert( neis[interIndex0] && (*neis[interIndex0])[int( dir0 )].vid );
-                assert( neis[interIndex1] && (*neis[interIndex1])[int( dir1 )].vid );
-                assert( neis[interIndex2] && (*neis[interIndex2])[int( dir2 )].vid );
+                assert( neis[interIndex0] && (*neis[interIndex0])[int( dir0 )] );
+                assert( neis[interIndex1] && (*neis[interIndex1])[int( dir1 )] );
+                assert( neis[interIndex2] && (*neis[interIndex2])[int( dir2 )] );
 
                 if ( params.lessInside )
                     t.emplace_back( ThreeVertIds{
-                        (*neis[interIndex0])[int( dir0 )].vid,
-                        (*neis[interIndex2])[int( dir2 )].vid,
-                        (*neis[interIndex1])[int( dir1 )].vid
+                        (*neis[interIndex0])[int( dir0 )],
+                        (*neis[interIndex2])[int( dir2 )],
+                        (*neis[interIndex1])[int( dir1 )]
                     } );
                 else
                     t.emplace_back( ThreeVertIds{
-                        (*neis[interIndex0])[int( dir0 )].vid,
-                        (*neis[interIndex1])[int( dir1 )].vid,
-                        (*neis[interIndex2])[int( dir2 )].vid
+                        (*neis[interIndex0])[int( dir0 )],
+                        (*neis[interIndex1])[int( dir1 )],
+                        (*neis[interIndex2])[int( dir2 )]
                     } );
                 if ( params.outVoxelPerFaceMap )
                     faceMap.emplace_back( VoxelId{ ind } );

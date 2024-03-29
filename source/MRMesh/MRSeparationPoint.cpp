@@ -14,23 +14,21 @@ SeparationPointStorage::SeparationPointStorage( size_t blockCount, size_t blockS
 int SeparationPointStorage::makeUniqueVids()
 {
     MR_TIMER
-    std::vector<int> block2shift;
-    block2shift.reserve( blocks_.size() );
-    int lastShift = 0;
+    VertId lastShift{ 0 };
     for ( auto & b : blocks_ )
     {
-        block2shift.push_back( lastShift );
-        lastShift += b.nextVid;
+        b.shift = lastShift;
+        lastShift += b.nextVid();
     }
 
     ParallelFor( size_t( 0 ), blocks_.size(), [&] ( size_t bi )
     {
-        const auto shift = block2shift[bi];
+        const auto shift = blocks_[bi].shift;
         for ( auto& [_, set] : blocks_[bi].smap )
         {
             for ( auto& sepPoint : set )
                 if ( sepPoint )
-                    sepPoint.vid += shift;
+                    sepPoint += shift;
         }
     } );
     return lastShift;
@@ -39,14 +37,11 @@ int SeparationPointStorage::makeUniqueVids()
 void SeparationPointStorage::getPoints( VertCoords & points ) const
 {
     MR_TIMER
-    ParallelFor( size_t( 0 ), blocks_.size(), [&] ( size_t hi )
+    ParallelFor( size_t( 0 ), blocks_.size(), [&] ( size_t bi )
     {
-        for ( auto& [_, set] : blocks_[hi].smap )
-        {
-            for ( int i = int( NeighborDir::X ); i < int( NeighborDir::Count ); ++i )
-                if ( set[i].vid < points.size() )
-                    points[set[i].vid] = set[i].position;
-        }
+        VertId v = blocks_[bi].shift;
+        for ( const auto & p : blocks_[bi].coords )
+            points[v++] = p;
     } );
 }
 

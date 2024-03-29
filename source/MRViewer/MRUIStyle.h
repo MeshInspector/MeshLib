@@ -162,7 +162,7 @@ namespace detail
     [[nodiscard]] float getDefaultDragSpeed();
 
     // Default step speed for `UI::input()`.
-    template <UnitEnum E, VectorOrScalar T>
+    template <UnitEnum E, VectorOrScalar T, VectorOrScalar TargetType>
     [[nodiscard]] T getDefaultStep( bool fast );
 
     // See `drawDragTooltip()` below.
@@ -172,41 +172,30 @@ namespace detail
     // `UI::drag()` uses this internally to draw tooltips.
     // Pass `getDragRangeTooltip()` as the parameter.
     MRVIEWER_API void drawDragTooltip( std::string rangeText );
+
+    // Wraps `ImGui::MarkItemEdited()`, to avoid including `imgui_internal.h`.
+    MRVIEWER_API void markItemEdited( ImGuiID id );
 }
 
 // Default flags for `slider()` and `drag()` below.
 inline constexpr int defaultSliderFlags = ImGuiSliderFlags_AlwaysClamp;
 
 // Draw a slider.
-// `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`.
+// `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`, ...
 // By default, for angles `v` will be converted to degrees for display (but `vMin`, `vMax` are still in radians, same as `v`),
 //   while length and unit-less values will be left as is. This can be customized in `unitParams` or globally (see `MRUnits.h`).
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
 bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags );
 
-// Draw a dragging widget.
-// `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`.
+// Draw a dragging widget. Also includes [+] and [-] buttons (for integers only by default_, like `ImGui::Input`).
+// `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`, ...
 // By default, for angles `v` will be converted to degrees for display (but `vSpeed` is still in radians, same as `v`),
 //   while length and unit-less values will be left as is. This can be customized in `unitParams` or globally (see `MRUnits.h`).
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidDragSpeedForTargetType<T> SpeedType = float, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
-bool drag( const char* label, T& v, SpeedType vSpeed = detail::getDefaultDragSpeed<E, SpeedType>(), const U& vMin = 0, const U& vMax = 0, UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags );
-
-// Draw a textbox.
-// `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`.
-// By default, for angles `v` will be converted to degrees for display, while length and unit-less values will be left as is.
-// This can be customized in `unitParams` or globally (see `MRUnits.h`).
-template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
-bool input(
-    const char* label, T& v,
-    // As with `ImGui::Drag...()`, steps default to zero for floating-point types.
-    const U& vStep = detail::getDefaultStep<E, U>( false ),
-    const U& vStepFast = detail::getDefaultStep<E, U>( true ),
-    UnitToStringParams<E> unitParams = {},
-    ImGuiInputTextFlags flags = 0
-);
+bool drag( const char* label, T& v, SpeedType vSpeed = detail::getDefaultDragSpeed<E, SpeedType>(), const U& vMin = 0, const U& vMax = 0, UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags, const U& step = detail::getDefaultStep<E, U, T>( false ), const U& stepFast = detail::getDefaultStep<E, U, T>( true ) );
 
 // Draw a read-only copyable value.
-// `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`.
+// `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`, ...
 // By default, for angles `v` will be converted to degrees for display, while length and unit-less values will be left as is.
 // This can be customized in `unitParams` or globally (see `MRUnits.h`).
 template <UnitEnum E, detail::VectorOrScalar T>

@@ -410,6 +410,9 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
     auto paramsVol = getDefaultUnitParams<VolumeUnit>();
     auto paramsMoveSpeed = getDefaultUnitParams<MovementSpeedUnit>();
     auto paramsAngle = getDefaultUnitParams<AngleUnit>();
+    auto paramsTime = getDefaultUnitParams<TimeUnit>();
+    auto paramsRatio = getDefaultUnitParams<RatioUnit>();
+    auto paramsPixelSize = getDefaultUnitParams<PixelSizeUnit>();
 
     auto forAllLengthParams = [&]( auto&& func )
     {
@@ -423,6 +426,9 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         func( paramsNoUnit );
         forAllLengthParams( func );
         func( paramsAngle );
+        func( paramsTime );
+        func( paramsRatio );
+        func( paramsPixelSize );
     };
 
     auto applyParams = [&]
@@ -505,7 +511,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 
         // --- Precision
 
-        if ( UI::input<NoUnit>( "Precision", paramsLen.precision ) )
+        if ( UI::drag<NoUnit>( "Precision", paramsLen.precision, 1, 0, 12 ) )
         {
             forAllLengthParams( [&]( auto& params ){ params.precision = paramsLen.precision; } );
             applyParams();
@@ -561,7 +567,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 
             // --- Precision
 
-            if ( UI::input<NoUnit>( "Precision", paramsAngle.precision ) )
+            if ( UI::drag<NoUnit>( "Precision", paramsAngle.precision, 1, 0, 12 ) )
                 applyParams();
         }
     }
@@ -583,27 +589,43 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 
         // --- Thousands separator
 
-        char thouSep[2] = { paramsLen.thousandsSeparator, '\0' };
-        if ( ImGui::InputText( "Thousands separator", thouSep, sizeof thouSep ) )
+        auto thousandsSeparator = [&]( bool frac )
         {
-            forAllParams( [&]( auto& params ){ params.thousandsSeparator = thouSep[0]; } );
-            applyParams();
-        }
-        // If the separator is empty or a space, display a string explaining that on top of the textbox.
-        if ( !ImGui::IsItemActive() )
-        {
-            const char* label = nullptr;
-            if ( thouSep[0] == 0 )
-                label = "None";
-            else if ( thouSep[0] == ' ' )
-                label = "Space";
+            ImGui::PushItemWidth( std::floor( ImGui::CalcItemWidth() / 2 ) );
+            MR_FINALLY{ ImGui::PopItemWidth(); };
 
-            if ( label )
+            char thouSep[2] = { frac ? paramsNoUnit.thousandsSeparatorFrac : paramsNoUnit.thousandsSeparator, '\0' };
+            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( std::floor( ( ImGui::CalcItemWidth() - ImGui::CalcTextSize( thouSep ).x ) / 2 ), ImGui::GetStyle().FramePadding.y ) );
+            MR_FINALLY{ ImGui::PopStyleVar(); };
+            if ( ImGui::InputText( frac ? "Thousands separator (fractional part)" : "Thousands separator", thouSep, sizeof thouSep, ImGuiInputTextFlags_AutoSelectAll ) )
             {
-                ImVec2 textSize = ImGui::CalcTextSize( label );
-                ImGui::GetWindowDrawList()->AddText( ImGui::GetItemRectMin() + ( ImVec2( ImGui::CalcItemWidth(), ImGui::GetItemRectSize().y ) - textSize ) / 2, ImGui::GetColorU32( ImGuiCol_TextDisabled ), label );
+                forAllParams( [&]( auto& params )
+                {
+                    if ( frac )
+                        params.thousandsSeparatorFrac = thouSep[0];
+                    else
+                        params.thousandsSeparator = thouSep[0];
+                } );
+                applyParams();
             }
-        }
+            // If the separator is empty or a space, display a string explaining that on top of the textbox.
+            if ( !ImGui::IsItemActive() )
+            {
+                const char* label = nullptr;
+                if ( thouSep[0] == 0 )
+                    label = "None";
+                else if ( thouSep[0] == ' ' )
+                    label = "Space";
+
+                if ( label )
+                {
+                    ImVec2 textSize = ImGui::CalcTextSize( label );
+                    ImGui::GetWindowDrawList()->AddText( ImGui::GetItemRectMin() + ( ImVec2( ImGui::CalcItemWidth(), ImGui::GetItemRectSize().y ) - textSize ) / 2, ImGui::GetColorU32( ImGuiCol_TextDisabled ), label );
+                }
+            }
+        };
+        thousandsSeparator( false );
+        thousandsSeparator( true );
     }
 }
 

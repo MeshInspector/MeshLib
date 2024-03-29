@@ -8,6 +8,8 @@ namespace MR
 
 template <UnitEnum E>
 static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
+    constexpr char commonThouSep = ' ', commonThouSepFrac = 0;
+
     if constexpr ( std::is_same_v<E, NoUnit> )
     {
         return UnitToStringParams<NoUnit>{
@@ -17,7 +19,8 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .style = NumberStyle::normal,
             .precision = 3,
             .unicodeMinusSign = true,
-            .thousandsSeparator = ' ',
+            .thousandsSeparator = commonThouSep,
+            .thousandsSeparatorFrac = commonThouSepFrac,
             .leadingZero = true,
             .stripTrailingZeroes = true,
             .degreesMode = {},
@@ -32,7 +35,8 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .style = NumberStyle::normal,
             .precision = 3,
             .unicodeMinusSign = true,
-            .thousandsSeparator = ' ',
+            .thousandsSeparator = commonThouSep,
+            .thousandsSeparatorFrac = commonThouSepFrac,
             .leadingZero = true,
             .stripTrailingZeroes = true,
             .degreesMode = {},
@@ -47,7 +51,8 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .style = NumberStyle::fixed,
             .precision = 1,
             .unicodeMinusSign = true,
-            .thousandsSeparator = 0,
+            .thousandsSeparator = commonThouSep,
+            .thousandsSeparatorFrac = commonThouSepFrac,
             .leadingZero = true,
             .stripTrailingZeroes = true,
             .degreesMode = {},
@@ -62,7 +67,8 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .style = NumberStyle::normal,
             .precision = 2,
             .unicodeMinusSign = true,
-            .thousandsSeparator = ' ',
+            .thousandsSeparator = commonThouSep,
+            .thousandsSeparatorFrac = commonThouSepFrac,
             .leadingZero = true,
             .stripTrailingZeroes = true,
             .degreesMode = {},
@@ -77,7 +83,8 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .style = NumberStyle::fixed,
             .precision = 1,
             .unicodeMinusSign = true,
-            .thousandsSeparator = ' ',
+            .thousandsSeparator = commonThouSep,
+            .thousandsSeparatorFrac = commonThouSepFrac,
             .leadingZero = true,
             .stripTrailingZeroes = true,
             .degreesMode = {},
@@ -92,7 +99,8 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .style = NumberStyle::fixed,
             .precision = 1,
             .unicodeMinusSign = true,
-            .thousandsSeparator = ' ',
+            .thousandsSeparator = commonThouSep,
+            .thousandsSeparatorFrac = commonThouSepFrac,
             .leadingZero = true,
             .stripTrailingZeroes = true,
             .degreesMode = {},
@@ -107,7 +115,8 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .style = NumberStyle::normal,
             .precision = 3,
             .unicodeMinusSign = true,
-            .thousandsSeparator = ' ',
+            .thousandsSeparator = commonThouSep,
+            .thousandsSeparatorFrac = commonThouSepFrac,
             .leadingZero = true,
             .stripTrailingZeroes = true,
             .degreesMode = {},
@@ -122,7 +131,8 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .style = NumberStyle::normal,
             .precision = 3,
             .unicodeMinusSign = true,
-            .thousandsSeparator = ' ',
+            .thousandsSeparator = commonThouSep,
+            .thousandsSeparatorFrac = commonThouSepFrac,
             .leadingZero = true,
             .stripTrailingZeroes = true,
             .degreesMode = {},
@@ -137,7 +147,8 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .style = NumberStyle::normal,
             .precision = 3,
             .unicodeMinusSign = true,
-            .thousandsSeparator = ' ',
+            .thousandsSeparator = commonThouSep,
+            .thousandsSeparatorFrac = commonThouSepFrac,
             .leadingZero = true,
             .stripTrailingZeroes = true,
             .degreesMode = {},
@@ -161,7 +172,7 @@ template <>
 const UnitInfo& getUnitInfo( LengthUnit length )
 {
     static const UnitInfo ret[] = {
-        { .conversionFactor = 1, .prettyName = "Mm", .unitSuffix = " mm" },
+        { .conversionFactor = 1, .prettyName = "Millimeters", .unitSuffix = " mm" },
         { .conversionFactor = 1/25.4f, .prettyName = "Inches", .unitSuffix = " in"/* or "\"" */ },
     };
     static_assert( std::extent_v<decltype( ret )> == int( LengthUnit::_count ) );
@@ -386,39 +397,6 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
     { // Format the value.
         std::string formattedValue = formatValue( value, fracPrecision );
 
-        // Add the thousands separator.
-        if ( params.thousandsSeparator )
-        {
-            auto pos = formattedValue.find( '.' );
-
-            if ( pos != std::string::npos )
-            {
-                // Add separator after the dot.
-
-                while ( pos + 3 < formattedValue.size() &&
-                    std::isdigit( (unsigned char)formattedValue[pos + 1] ) &&
-                    std::isdigit( (unsigned char)formattedValue[pos + 2] ) &&
-                    std::isdigit( (unsigned char)formattedValue[pos + 3] )
-                )
-                {
-                    pos += 4;
-                    formattedValue.insert( formattedValue.begin() + pos, params.thousandsSeparator );
-                }
-            }
-            else
-            {
-                pos = formattedValue.size();
-            }
-
-            // Add separator before the dot.
-
-            while ( pos > 3 && std::isdigit( (unsigned char)formattedValue[pos - 4] ) )
-            {
-                pos -= 3;
-                formattedValue.insert( formattedValue.begin() + pos, params.thousandsSeparator );
-            }
-        }
-
         // Remove the trailing zeroes.
         if constexpr ( std::is_floating_point_v<T> )
         {
@@ -433,6 +411,43 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
 
                 if ( strippedAny && formattedValue.ends_with( '.' ) )
                     formattedValue.pop_back();
+            }
+        }
+
+        // Add the thousands separator.
+        if ( params.thousandsSeparator || params.thousandsSeparatorFrac )
+        {
+            auto pos = formattedValue.find_first_of( ".eE" );
+
+            if ( pos != std::string::npos )
+            {
+                // Add separator after the dot.
+
+                if ( params.thousandsSeparatorFrac && formattedValue[pos] == '.' )
+                {
+                    while ( pos + 5 <= formattedValue.size() &&
+                        std::all_of( formattedValue.begin() + pos + 1, formattedValue.begin() + pos + 5, []( unsigned char ch ){ return std::isdigit( ch ); } )
+                    )
+                    {
+                        pos += 4;
+                        formattedValue.insert( formattedValue.begin() + pos, params.thousandsSeparatorFrac );
+                    }
+                }
+            }
+            else
+            {
+                pos = formattedValue.size();
+            }
+
+            // Add separator before the dot.
+
+            if ( params.thousandsSeparator )
+            {
+                while ( pos > 3 && std::isdigit( (unsigned char)formattedValue[pos - 4] ) )
+                {
+                    pos -= 3;
+                    formattedValue.insert( formattedValue.begin() + pos, params.thousandsSeparator );
+                }
             }
         }
 

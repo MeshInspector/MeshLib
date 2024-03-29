@@ -1,4 +1,5 @@
 #include "MRMarchingCubes.h"
+#include "MRSeparationPoint.h"
 #include "MRIsNaN.h"
 #include "MRMesh.h"
 #include "MRVolumeIndexer.h"
@@ -17,29 +18,8 @@
 namespace MR
 {
 
-namespace MarchingCubesHelper
+namespace
 {
-
-enum class NeighborDir
-{
-    X, Y, Z, Count
-};
-
-// point between two neighbor voxels
-struct SeparationPoint
-{
-    Vector3f position; // coordinate
-    VertId vid; // any valid VertId is ok
-    // each SeparationPointMap element has three SeparationPoint, it is not guaranteed that all three are valid (at least one is)
-    // so there are some points present in map that are not valid
-    explicit operator bool() const
-    {
-        return vid.valid();
-    }
-};
-
-using SeparationPointSet = std::array<SeparationPoint, size_t( NeighborDir::Count )>;
-using SeparationPointMap = HashMap<size_t, SeparationPointSet>;
 
 // lookup table from
 // http://paulbourke.net/geometry/polygonise/
@@ -349,7 +329,6 @@ const std::array<OutEdge, size_t( NeighborDir::Count )> cOutEdgeMap { OutEdge::P
 
 }
 
-using namespace MarchingCubesHelper;
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 using ConstAccessor = openvdb::FloatGrid::ConstAccessor;
 using VdbCoord = openvdb::Coord;
@@ -536,33 +515,18 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
     const auto layerSize = indexer.sizeXY();
     assert( indexer.size() == layerCount * layerSize );
 
-    const auto blockCount = threadCount;
+    // more blocks than threads is recommended for better work distribution among threads since
+    // every block demands unique amount of processing
+    const auto blockCount = std::min( layerCount, threadCount > 1 ? 4 * threadCount : 1 );
     const auto layerPerBlockCount = (size_t)std::ceil( (float)layerCount / (float)blockCount );
     const auto blockSize = layerPerBlockCount * layerSize;
     assert( indexer.size() <= blockSize * blockCount );
 
-    std::vector<SeparationPointMap> hmaps( blockCount );
-    auto findSeparationPointSet = [&] ( size_t voxelId ) -> const SeparationPointSet *
-    {
-        const auto & map = hmaps[voxelId / blockSize];
-        auto it = map.find( voxelId );
-        return ( it != map.end() ) ? &it->second : nullptr;
-    };
+    SeparationPointStorage sepStorage( blockCount, blockSize );
 
-    // find all separate points
-    // fill map in parallel
-    struct VertsNumeration
-    {
-        // explicit ctor to fix clang build with `vec.emplace_back( ind, 0 )`
-        VertsNumeration( size_t ind, size_t num ) :initIndex{ ind }, numVerts{ num }{}
-        size_t initIndex{ 0 };
-        size_t numVerts{ 0 };
-    };
-    using PerThreadVertNumeration = std::vector<VertsNumeration>;
-    tbb::enumerable_thread_specific<PerThreadVertNumeration> perThreadVertNumeration;
     ParallelFor( size_t( 0 ), blockCount, [&] ( size_t blockIndex )
     {
-        auto & myHmap = hmaps[blockIndex];
+        auto & block = sepStorage.getBlock( blockIndex );
         // vdb version cache
         [[maybe_unused]] auto acc = accessorCtor( volume );
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
@@ -592,10 +556,6 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
         const auto begin = layerBegin * layerSize;
         const auto end = layerEnd * layerSize;
-
-        auto& localNumeration = perThreadVertNumeration.local();
-        localNumeration.emplace_back( begin, 0 );
-        auto& thisRangeNumeration = localNumeration.back().numVerts;
 
         for ( size_t i = begin; i < end; ++i )
         {
@@ -638,70 +598,28 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
                 if ( ok )
                 {
-                    set[n].vid = VertId( thisRangeNumeration++ );
+                    set[n].vid = block.nextVid++;
                     atLeastOneOk = true;
                 }
             }
 
-            if ( runCallback && ( i - begin ) % 1024 == 0 )
+            if ( runCallback && ( i - begin ) % 16384 == 0 )
                 if ( !params.cb( 0.3f * float( i - begin ) / float( end - begin ) ) )
                     keepGoing.store( false, std::memory_order_relaxed );
 
             if ( !atLeastOneOk )
                 continue;
 
-            myHmap.insert( { i, set } );
+            block.smap.insert( { i, set } );
         }
     } );
 
     if ( params.cb && !keepGoing )
         return unexpectedOperationCanceled();
 
-    // organize vert numeration
-    std::vector<VertsNumeration> resultVertNumeration;
-    size_t totalVertices = 0;
-    for ( auto& perThreadNum : perThreadVertNumeration )
-    {
-        for ( auto & obj : perThreadNum )
-        {
-            totalVertices += obj.numVerts;
-            if ( obj.numVerts > 0 )
-                resultVertNumeration.push_back( std::move( obj ) );
-        }
-        perThreadNum.clear();
-    }
+    const auto totalVertices = sepStorage.makeUniqueVids();
     if ( totalVertices > params.maxVertices )
         return unexpected( "Vertices number limit exceeded." );
-
-    // sort by voxel index
-    std::sort( resultVertNumeration.begin(), resultVertNumeration.end(), [] ( const auto& l, const auto& r )
-    {
-        return l.initIndex < r.initIndex;
-    } );
-
-    auto getVertIndexShiftForVoxelId = [&] ( size_t ind )
-    {
-        size_t shift = 0;
-        for ( int i = 1; i < resultVertNumeration.size(); ++i )
-        {
-            if ( ind >= resultVertNumeration[i].initIndex )
-                shift += resultVertNumeration[i - 1].numVerts;
-        }
-        return VertId( shift );
-    };
-
-    // update map with determined vert indices
-    ParallelFor( size_t( 0 ), hmaps.size(), [&] ( size_t hi )
-    {
-        for ( auto& [ind, set] : hmaps[hi] )
-        {
-            auto vertShift = getVertIndexShiftForVoxelId( ind );
-            for ( auto& sepPoint : set )
-                if ( sepPoint )
-                    sepPoint.vid += vertShift;
-        }
-    } );
-
 
     if ( params.cb && !params.cb( 0.5f ) )
         return unexpectedOperationCanceled();
@@ -868,7 +786,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
             auto findNei = [&]( int i, auto check )
             {
                 const auto index = ind + cVoxelNeighborsIndexAdd[i];
-                auto * pSet = findSeparationPointSet( index );
+                auto * pSet = sepStorage.findSeparationPointSet( index );
                 if ( pSet && check( *pSet ) )
                 {
                     neis[i] = pSet;
@@ -940,7 +858,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                     faceMap.emplace_back( VoxelId{ ind } );
             }
 
-            if ( runCallback && ( ind - begin ) % 1024 == 0 )
+            if ( runCallback && ( ind - begin ) % 16384 == 0 )
                 if ( !subprogress2( float( ind - begin ) / float( end - begin ) ) )
                     keepGoing.store( false, std::memory_order_relaxed );
         }
@@ -985,15 +903,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
     // some points may be not referenced by any triangle due to NaNs
     result.points.resize( totalVertices );
-    ParallelFor( size_t( 0 ), hmaps.size(), [&] ( size_t hi )
-    {
-        for ( auto& [_, set] : hmaps[hi] )
-        {
-            for ( int i = int( NeighborDir::X ); i < int( NeighborDir::Count ); ++i )
-                if ( set[i].vid < result.points.size() ) // shall be false only if !set[i].vid
-                    result.points[set[i].vid] = set[i].position;
-        }
-    } );
+    sepStorage.getPoints( result.points );
 
     if ( params.cb && !params.cb( 1.0f ) )
         return unexpectedOperationCanceled();

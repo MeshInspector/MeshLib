@@ -353,9 +353,9 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
                 }
             }
 
-            if ( params.style == NumberStyle::maybeScientific )
+            if ( params.style == NumberStyle::maybeExponential )
                 return fmt::format( "{:.{}g}", value, precision );
-            else if ( params.style == NumberStyle::scientific )
+            else if ( params.style == NumberStyle::exponential )
                 return fmt::format( "{:.{}e}", value, precision );
             else
                 return fmt::format( "{:.{}f}", value, precision );

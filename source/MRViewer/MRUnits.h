@@ -196,8 +196,8 @@ enum class NumberStyle
 {
     normal, // Like %f. The precision digits are spread across both decimal and integral parts
     fixed, // Like %f, but the precision digits only affect the decimal part.
-    scientific, // Like %e.
-    maybeScientific, // Like %g.
+    exponential, // Like %e.
+    maybeExponential, // Like %g.
 };
 
 // This controls how the degrees are printed.

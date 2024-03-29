@@ -430,11 +430,11 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 
     auto numberStyleCombo = [&]( NumberStyle& style ) -> bool
     {
-        static const std::vector<std::string> styleOptions = { "Normal", "Fixed", "Scientific", "Auto" };
+        static const std::vector<std::string> styleOptions = { "Normal", "Fixed", "Exponential", "Auto" };
         static_assert( int( NumberStyle::normal ) == 0 );
         static_assert( int( NumberStyle::fixed ) == 1 );
-        static_assert( int( NumberStyle::scientific ) == 2 );
-        static_assert( int( NumberStyle::maybeScientific ) == 3 );
+        static_assert( int( NumberStyle::exponential ) == 2 );
+        static_assert( int( NumberStyle::maybeExponential ) == 3 );
 
         int styleOption = int( style );
         bool ret = UI::combo( "Style", &styleOption, styleOptions );
@@ -444,7 +444,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
             // U+2014 EM DASH
             "Normal \xe2\x80\x94 Without exponent, at most 'Precision' digits in total (unless the number of digits before the decimal point is larger)\n"
             "Fixed \xe2\x80\x94 Without exponent, 'Precision' digits after the decimal point\n"
-            "Scientific \xe2\x80\x94 With exponent\n"
+            "Exponential \xe2\x80\x94 With exponent\n"
             "Auto \xe2\x80\x94 With or without exponent, depending on the magnitude\n"
         );
         return ret;

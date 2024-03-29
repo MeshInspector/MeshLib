@@ -212,11 +212,15 @@ Expected<MR::Mesh, std::string> doBooleanOperation(
 
     // aPart
     BooleanResultMapper::Maps* mapsAPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::A )] : nullptr;
-    if ( operation == BooleanOperation::InsideA || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceBA )
-        dividableA = preparePart( meshACutted, pathsACpy, aPart, meshBCutted, true,
-                                  operation == BooleanOperation::DifferenceBA, true, rigidB2A, mapsAPtr, mergeAllNonIntersectingComponents );
-    else if ( operation == BooleanOperation::OutsideA || operation == BooleanOperation::Union || operation == BooleanOperation::DifferenceAB )
-        dividableA = preparePart( meshACutted, pathsACpy, aPart, meshBCutted, false, false, true, rigidB2A, mapsAPtr, mergeAllNonIntersectingComponents );
+    tbb::task_group taskGroup;
+    taskGroup.run( [&] ()
+    {
+        if ( operation == BooleanOperation::InsideA || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceBA )
+            dividableA = preparePart( meshACutted, pathsACpy, aPart, meshBCutted, true,
+                                      operation == BooleanOperation::DifferenceBA, true, rigidB2A, mapsAPtr, mergeAllNonIntersectingComponents );
+        else if ( operation == BooleanOperation::OutsideA || operation == BooleanOperation::Union || operation == BooleanOperation::DifferenceAB )
+            dividableA = preparePart( meshACutted, pathsACpy, aPart, meshBCutted, false, false, true, rigidB2A, mapsAPtr, mergeAllNonIntersectingComponents );
+    } );
     // bPart
     BooleanResultMapper::Maps* mapsBPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::B )] : nullptr;
     if ( operation == BooleanOperation::OutsideB || operation == BooleanOperation::Union || operation == BooleanOperation::DifferenceBA )
@@ -225,6 +229,7 @@ Expected<MR::Mesh, std::string> doBooleanOperation(
         dividableB = preparePart( std::move( meshBCutted ), pathsBCpy, bPart, std::move( meshACutted ), true,
                                   operation == BooleanOperation::DifferenceAB, false, rigidB2A, mapsBPtr, mergeAllNonIntersectingComponents );
 
+    taskGroup.wait();
     if ( ( ( operation == BooleanOperation::InsideA || operation == BooleanOperation::OutsideA ) && !dividableA ) ||
          ( ( operation == BooleanOperation::InsideB || operation == BooleanOperation::OutsideB ) && !dividableB ) ||
          ( ( operation == BooleanOperation::Union ||

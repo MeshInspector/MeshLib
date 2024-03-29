@@ -1606,6 +1606,8 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
         }
     }
 
+    UndirectedEdgeBitSet fromEdges = from.findNotLoneUndirectedEdges();
+    VertBitSet fromVerts = from.getValidVerts();
     // first pass: fill maps
     EdgeId firstNewEdge = edges_.endId();
     for ( ; fbegin != fend; ++fbegin )
@@ -1615,29 +1617,41 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
         for ( auto e : leftRing( from, efrom ) )
         {
             const UndirectedEdgeId ue = e.undirected();
-            if ( auto [it, inserted] = emap.insert( { ue, {} } ); inserted )
+            if ( fromEdges.test( ue ) )
             {
-                it->second = edges_.endId();
-                edges_.push_back( from.edges_[EdgeId{ue}] );
-                edges_.push_back( from.edges_[EdgeId{ue}.sym()] );
-                if ( map.tgt2srcEdges )
+                fromEdges.reset( ue );
+
+                auto [it, inserted] = emap.insert( { ue, {} } );
+                if ( inserted )
                 {
-                    map.tgt2srcEdges ->push_back( EdgeId{ue} );
+                    it->second = edges_.endId();
+                    edges_.push_back( from.edges_[EdgeId{ ue }] );
+                    edges_.push_back( from.edges_[EdgeId{ ue }.sym()] );
+                    if ( map.tgt2srcEdges )
+                    {
+                        map.tgt2srcEdges->push_back( EdgeId{ ue } );
+                    }
                 }
             }
             if ( auto v = from.org( e ); v.valid() )
             {
-                if ( auto [it, inserted] = vmap.insert( { v, {} } ); inserted )
+                if ( fromVerts.test( v ) )
                 {
-                    auto nv = addVertId();
-                    if ( map.tgt2srcVerts )
-                        map.tgt2srcVerts ->push_back( v );
-                    it->second = nv;
-                    edgePerVertex_[nv] = mapEdge( emap, e );
-                    if ( updateValids_ )
+                    fromVerts.reset( v );
+
+                    auto [it, inserted] = vmap.insert( { v, {} } );
+                    if ( inserted )
                     {
-                        validVerts_.set( nv );
-                        ++numValidVerts_;
+                        auto nv = addVertId();
+                        if ( map.tgt2srcVerts )
+                            map.tgt2srcVerts->push_back( v );
+                        it->second = nv;
+                        edgePerVertex_[nv] = mapEdge( emap, e );
+                        if ( updateValids_ )
+                        {
+                            validVerts_.set( nv );
+                            ++numValidVerts_;
+                        }
                     }
                 }
             }

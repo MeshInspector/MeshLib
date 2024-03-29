@@ -341,7 +341,7 @@ std::optional<Vector3f> findSeparationPoint( const VdbVolume& volume, const Cons
                           const MarchingCubesParams& params, Positioner&& positioner )
 {
     if ( basePos[int( dir )] + 1 >= volume.dims[int( dir )] )
-        return {};
+        return std::nullopt;
     auto nextCoord = coord;
     nextCoord[int( dir )] += 1;
     float valueD = acc.getValue( nextCoord );// volume.data[nextId];
@@ -349,7 +349,7 @@ std::optional<Vector3f> findSeparationPoint( const VdbVolume& volume, const Cons
     bool bLower = valueB < params.iso;
     bool dLower = valueD < params.iso;
     if ( bLower == dLower )
-        return {};
+        return std::nullopt;
 
     Vector3f coordF = Vector3f( float( coord.x() ), float( coord.y() ), float( coord.z() ) );
     Vector3f nextCoordF = Vector3f( float( nextCoord.x() ), float( nextCoord.y() ), float( nextCoord.z() ) );
@@ -366,17 +366,17 @@ std::optional<Vector3f> findSeparationPoint( const SimpleVolume& volume, const V
     auto nextPos = basePos;
     nextPos[int( dir )] += 1;
     if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
-        return {};
+        return std::nullopt;
 
     float valueB = volume.data[base];
     float valueD = volume.data[indexer.getExistingNeighbor( base, cOutEdgeMap[int( dir )] ).get()];
     if ( nanChecker( valueB ) || nanChecker( valueD ) )
-        return {};
+        return std::nullopt;
 
     bool bLower = valueB < params.iso;
     bool dLower = valueD < params.iso;
     if ( bLower == dLower )
-        return {};
+        return std::nullopt;
 
     Vector3f coordF = Vector3f( basePos ) + Vector3f::diagonal( 0.5f );
     Vector3f nextCoordF = Vector3f( nextPos ) + Vector3f::diagonal( 0.5f );
@@ -392,17 +392,17 @@ std::optional<Vector3f> findSeparationPoint( const FunctionVolume& volume, const
     auto nextPos = basePos;
     nextPos[int( dir )] += 1;
     if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
-        return {};
+        return std::nullopt;
 
     float valueB = volume.data( basePos );
     float valueD = volume.data( nextPos );
     if ( nanChecker( valueB ) || nanChecker( valueD ) )
-        return {};
+        return std::nullopt;
 
     bool bLower = valueB < params.iso;
     bool dLower = valueD < params.iso;
     if ( bLower == dLower )
-        return {};
+        return std::nullopt;
 
     Vector3f coordF = Vector3f( basePos ) + Vector3f::diagonal( 0.5f );
     Vector3f nextCoordF = Vector3f( nextPos ) + Vector3f::diagonal( 0.5f );
@@ -413,12 +413,11 @@ std::optional<Vector3f> findSeparationPoint( const FunctionVolume& volume, const
 
 template <typename Positioner, typename V, typename NaNChecker, typename Accessor>
 std::optional<Vector3f> findSeparationPoint( const V& volume, const Accessor& accessor, const Vector3i& basePos, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
-
 {
     auto nextPos = basePos;
     nextPos[int( dir )] += 1;
     if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
-        return {};
+        return std::nullopt;
 
     float valueB = accessor.get( basePos );
     float valueD = accessor.get( nextPos );
@@ -426,12 +425,12 @@ std::optional<Vector3f> findSeparationPoint( const V& volume, const Accessor& ac
     if constexpr ( !std::is_same_v<V, VdbVolume> )
 #endif
         if ( nanChecker( valueB ) || nanChecker( valueD ) )
-            return {};
+            return std::nullopt;
 
     bool bLower = valueB < params.iso;
     bool dLower = valueD < params.iso;
     if ( bLower == dLower )
-        return {};
+        return std::nullopt;
 
     auto coordF = Vector3f( basePos );
     auto nextCoordF = Vector3f( nextPos );

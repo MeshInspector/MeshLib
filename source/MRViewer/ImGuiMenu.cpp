@@ -1489,10 +1489,19 @@ float ImGuiMenu::drawSelectionInformation_()
             const float itemWidth = getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x;
             if ( totalVolume )
             {
-                const auto volume = totalVolume.value();
                 ImGui::PushItemWidth( itemWidth );
-                UI::readOnlyValue<VolumeUnit>( "Volume", volume );
+
+#if defined(__GNUC__) && !defined(__clang__) //disable strange warning. Maybe bug in GCC
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Werror=maybe-uninitialized"
+#endif
+
+                UI::readOnlyValue<VolumeUnit>( "Volume", *totalVolume );
                 MR_FINALLY{ ImGui::PopItemWidth(); };
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
             }
             else
             {

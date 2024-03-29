@@ -84,7 +84,10 @@ public:
             return;
 
         if ( auto m = objPoints_->varPointCloud() )
+        {
             std::swap( m->points, clonePoints_ );
+            objPoints_->setDirtyFlags( DIRTY_POSITION );
+        }
     }
 
     static void setObjectDirty( const std::shared_ptr<ObjectPoints>& obj )

@@ -921,7 +921,9 @@ Expected<TriMesh> volumeToMeshHelper1( const V& volume, const MarchingCubesParam
     return volumeToMesh( volume, params, std::forward<NaNChecker>( nanChecker ),
         []( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
         {
-            const auto ratio = std::clamp( ( iso - v0 ) / ( v1 - v0 ), 0.0f, 1.0f );
+            assert( v0 != v1 );
+            const auto ratio = ( iso - v0 ) / ( v1 - v0 );
+            assert( ratio >= 0 && ratio <= 1 );
             return ( 1.0f - ratio ) * pos0 + ratio * pos1;
         } );
 }

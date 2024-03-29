@@ -132,11 +132,11 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
         // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
         meshB.getAABBTree();
     }
-    return boolean( Mesh( meshA ), Mesh( meshB ), operation, params );
+    return boolean( Mesh( meshA ), Mesh( meshB ), operation, params, { .originalMeshA = &meshA,.originalMeshB = &meshB } );
 }
 
 
-BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
+BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */, BooleanOptionalParameters optParams )
 {
     MR_TIMER;
     BooleanResult result;
@@ -262,21 +262,48 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, c
     OneMeshContours meshBContours;
     // prepare it before as far as MeshA will be changed after cut
     Mesh meshACopyBuffer; // second copy may be necessary because sort data need mesh after separation, and cut A will break it
+    Mesh meshBCopyBuffer; // second copy may be necessary because sort data need mesh after separation, and cut A will break it
+    std::unique_ptr<SortIntersectionsData> dataForA;
     std::unique_ptr<SortIntersectionsData> dataForB;
+
+    tbb::task_group taskGroup;
+    if ( needCutMeshA )
+    {
+        taskGroup.run( [&] ()
+        {
+            if ( needCutMeshB )
+            {
+                if ( !optParams.originalMeshB )
+                {
+                    meshBCopyBuffer = meshB;
+                    optParams.originalMeshB = &meshBCopyBuffer;
+                }
+                dataForA = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ *optParams.originalMeshB,contours,converters.toInt,params.rigidB2A,meshA.topology.vertSize(),false } );
+            }
+            else
+                // B is stable so no need copy
+                dataForA = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshB,contours,converters.toInt,params.rigidB2A,meshA.topology.vertSize(),false } );
+        } );
+    }
+
     if ( needCutMeshB )
     {
         if ( needCutMeshA )
         {
             // cutMesh A will break mesh so make copy
-            meshACopyBuffer = meshA;
-            dataForB = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshACopyBuffer, contours, converters.toInt, params.rigidB2A, meshA.topology.vertSize(), true } );
+            if ( !optParams.originalMeshA )
+            {
+                meshACopyBuffer = meshA;
+                optParams.originalMeshA = &meshACopyBuffer;
+            }
+            dataForB = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ *optParams.originalMeshA, contours, converters.toInt, params.rigidB2A, meshA.topology.vertSize(), true } );
         }
         else
-        {
-            // no need to cut A, so no need to copy
+            // A is stable so no need to copy
             dataForB = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshA, contours, converters.toInt, params.rigidB2A, meshA.topology.vertSize(), true } );
-        }
     }
+    taskGroup.wait();
+
     if ( needCutMeshA )
         meshAContours = getOneMeshIntersectionContours( meshA, meshB, contours, true, converters, params.rigidB2A );
     if ( needCutMeshB )
@@ -297,39 +324,34 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, c
     }
     if ( needCutMeshA && !params.outPreCutA )
     {
-        // prepare contours per mesh
-        SortIntersectionsData dataForA{ meshB,contours,converters.toInt,params.rigidB2A,meshA.topology.vertSize(),false };
-        FaceMap* cut2oldAPtr = params.mapper ? &params.mapper->maps[int( BooleanResultMapper::MapObject::A )].cut2origin : nullptr;
-        // cut meshes
-        CutMeshParameters cmParams;
-        cmParams.sortData = &dataForA;
-        cmParams.new2OldMap = cut2oldAPtr;
-        auto res = cutMesh( meshA, meshAContours, cmParams );
-        meshAContours.clear();
-        meshAContours.shrink_to_fit(); // free memory
-        if ( cut2oldAPtr && !new2orgSubdivideMapA.empty() )
+        taskGroup.run( [&] ()
         {
-            tbb::parallel_for( tbb::blocked_range<FaceId>( FaceId( 0 ), FaceId( int( cut2oldAPtr->size() ) ) ),
-                [&] ( const tbb::blocked_range<FaceId>& range )
+            FaceMap* cut2oldAPtr = params.mapper ? &params.mapper->maps[int( BooleanResultMapper::MapObject::A )].cut2origin : nullptr;
+            // cut meshes
+            CutMeshParameters cmParams;
+            cmParams.sortData = dataForA.get();
+            cmParams.new2OldMap = cut2oldAPtr;
+            auto res = cutMesh( meshA, meshAContours, cmParams );
+            meshAContours.clear();
+            meshAContours.shrink_to_fit(); // free memory
+            if ( cut2oldAPtr && !new2orgSubdivideMapA.empty() )
             {
-                for ( FaceId i = range.begin(); i < range.end(); ++i )
+                tbb::parallel_for( tbb::blocked_range<FaceId>( FaceId( 0 ), FaceId( int( cut2oldAPtr->size() ) ) ),
+                    [&] ( const tbb::blocked_range<FaceId>& range )
                 {
-                    if ( !( *cut2oldAPtr )[i] )
-                        continue;
-                    FaceId refFace = ( *cut2oldAPtr )[i];
-                    if ( new2orgSubdivideMapA.size() > refFace && new2orgSubdivideMapA[refFace] )
-                        ( *cut2oldAPtr )[i] = new2orgSubdivideMapA[refFace];
-                }
-            } );
-        }
-        if ( res.fbsWithCountourIntersections.any() )
-        {
+                    for ( FaceId i = range.begin(); i < range.end(); ++i )
+                    {
+                        if ( !( *cut2oldAPtr )[i] )
+                            continue;
+                        FaceId refFace = ( *cut2oldAPtr )[i];
+                        if ( new2orgSubdivideMapA.size() > refFace && new2orgSubdivideMapA[refFace] )
+                            ( *cut2oldAPtr )[i] = new2orgSubdivideMapA[refFace];
+                    }
+                } );
+            }
             result.meshABadContourFaces = std::move( res.fbsWithCountourIntersections );
-            result.errorString = "Bad contour on " + std::to_string( result.meshABadContourFaces.count() ) + " mesh A faces, " +
-                "probably mesh B has self-intersections on contours lying on these faces.";
-            return result;
-        }
-        cutA = std::move( res.resultCut );
+            cutA = std::move( res.resultCut );
+        } );
     }
 
     if ( params.outPreCutB )
@@ -362,15 +384,26 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, c
                 }
             } );
         }
-        if ( res.fbsWithCountourIntersections.any() )
-        {
-            result.meshBBadContourFaces = std::move( res.fbsWithCountourIntersections );
-            result.errorString = "Bad contour on " + std::to_string( result.meshBBadContourFaces.count() ) + " mesh B faces, " +
-                "probably mesh A has self-intersections on contours lying on these faces.";
-            return result;
-        }
+        result.meshBBadContourFaces = std::move( res.fbsWithCountourIntersections );
         cutB = std::move( res.resultCut );
     }
+    taskGroup.wait();
+
+
+    if ( result.meshABadContourFaces.any() )
+    {
+        result.errorString = "Bad contour on " + std::to_string( result.meshABadContourFaces.count() ) + " mesh A faces, " +
+            "probably mesh B has self-intersections on contours lying on these faces.";
+        return result;
+    }
+    else if ( result.meshBBadContourFaces.any() )
+    {
+        result.errorString = "Bad contour on " + std::to_string( result.meshBBadContourFaces.count() ) + " mesh B faces, " +
+            "probably mesh A has self-intersections on contours lying on these faces.";
+        return result;
+    }
+
+
     if ( mainCb && !mainCb( 0.66f ) )
         return { .errorString = stringOperationCanceled() };
 
@@ -378,7 +411,7 @@ BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, c
         return {};
 
     // do operation
-    auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), cutA, cutB, operation, params.rigidB2A, params.mapper, params.mergeAllNonIntersectingComponents );
+    auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), cutA, cutB, operation, params.rigidB2A, params.mapper, optParams );
 
     if ( mainCb && !mainCb( 1.0f ) )
         return { .errorString = stringOperationCanceled() };

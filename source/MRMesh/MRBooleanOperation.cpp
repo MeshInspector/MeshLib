@@ -17,7 +17,7 @@ FaceBitSet preparePart( const Mesh& origin, const std::vector<FaceBitSet>& compo
                         const FaceBitSet& leftPart,
                         const Mesh& otherMesh, 
                         bool needInsideComps,
-                        bool originIsA, const AffineXf3f* rigidB2A, bool mergeAllNonInter )
+                        bool originIsA, const AffineXf3f* rigidB2A, const BooleanOptionalParameters& optParams )
 {
     FaceBitSet res;
     FaceBitSet connectedComp;
@@ -27,7 +27,9 @@ FaceBitSet preparePart( const Mesh& origin, const std::vector<FaceBitSet>& compo
     {
         if ( !( comp & leftPart ).any() )
         {
-            if ( mergeAllNonInter || isNonIntersectingInside( {origin,&comp}, otherMesh, originIsA ? rigidB2A : &a2b ) == needInsideComps )
+            const Mesh* otherPtr = originIsA ? optParams.originalMeshB : optParams.originalMeshA;
+            if ( optParams.mergeAllNonIntersectingComponents || 
+                isNonIntersectingInside( { origin,&comp }, otherPtr ? *otherPtr : otherMesh, originIsA ? rigidB2A : &a2b ) == needInsideComps )
                 res |= comp;
         }
         else if ( needRightPart )
@@ -67,7 +69,7 @@ bool prepareLeft( const Mesh& origin, const std::vector<EdgePath>& cutPaths, Fac
 // needFlip - normals of needed part should be flipped
 bool preparePart( const Mesh& origin, std::vector<EdgePath>& cutPaths, Mesh& outMesh,
                   const Mesh& otherMesh, bool needInsidePart, bool needFlip, bool originIsA,
-                  const AffineXf3f* rigidB2A, BooleanResultMapper::Maps* maps, bool mergeAllNonInter )
+                  const AffineXf3f* rigidB2A, BooleanResultMapper::Maps* maps, const BooleanOptionalParameters& optParams )
 {
     MR_TIMER;
     FaceBitSet leftPart;
@@ -80,7 +82,7 @@ bool preparePart( const Mesh& origin, std::vector<EdgePath>& cutPaths, Mesh& out
     VertMap* vMapPtr = maps ? &maps->old2newVerts : nullptr;
 
     auto comps = MeshComponents::getAllComponents( origin );
-    leftPart = preparePart( origin, comps, leftPart, otherMesh, needInsidePart, originIsA, rigidB2A, mergeAllNonInter );
+    leftPart = preparePart( origin, comps, leftPart, otherMesh, needInsidePart, originIsA, rigidB2A, optParams );
 
     outMesh.addPartByMask( origin, leftPart, needFlip, {}, {},
         HashToVectorMappingConverter( origin.topology, fMapPtr, vMapPtr, eMapPtr ).getPartMapping() );
@@ -142,7 +144,8 @@ void connectPreparedParts( Mesh& partA, Mesh& partB, bool pathsHaveLeftHole,
 }
 
 //  Do boolean operation based only in relative positions of meshes components (inside/outside)
-Mesh doTrivialBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut, BooleanOperation operation, const AffineXf3f* rigidB2A, BooleanResultMapper* mapper, bool mergeAllNonIntersectingComponents )
+Mesh doTrivialBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut, BooleanOperation operation, const AffineXf3f* rigidB2A, BooleanResultMapper* mapper,
+    const BooleanOptionalParameters& optParams )
 {
     Mesh aPart, bPart;
     FaceBitSet aPartFbs, bPartFbs;
@@ -152,15 +155,20 @@ Mesh doTrivialBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut, BooleanOperati
     if ( operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA )
         bComponents = MeshComponents::getAllComponents( meshBCut );
 
-    if ( operation == BooleanOperation::OutsideA || operation == BooleanOperation::Union || operation == BooleanOperation::DifferenceAB )
-        aPartFbs = preparePart( meshACut, aComponents, {}, meshBCut, false, true, rigidB2A, mergeAllNonIntersectingComponents );
-    else if ( operation == BooleanOperation::InsideA || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceBA )
-        aPartFbs = preparePart( meshACut, aComponents, {}, meshBCut, true, true, rigidB2A, mergeAllNonIntersectingComponents );
+    tbb::task_group taskGroup;
+    taskGroup.run( [&] ()
+    {
+        if ( operation == BooleanOperation::OutsideA || operation == BooleanOperation::Union || operation == BooleanOperation::DifferenceAB )
+            aPartFbs = preparePart( meshACut, aComponents, {}, meshBCut, false, true, rigidB2A, optParams );
+        else if ( operation == BooleanOperation::InsideA || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceBA )
+            aPartFbs = preparePart( meshACut, aComponents, {}, meshBCut, true, true, rigidB2A, optParams );
+    } );
 
     if ( operation == BooleanOperation::OutsideB || operation == BooleanOperation::Union || operation == BooleanOperation::DifferenceBA )
-        bPartFbs = preparePart( meshBCut, bComponents, {}, meshACut, false, false, rigidB2A, mergeAllNonIntersectingComponents );
+        bPartFbs = preparePart( meshBCut, bComponents, {}, meshACut, false, false, rigidB2A, optParams );
     else if ( operation == BooleanOperation::InsideB || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceAB )
-        bPartFbs = preparePart( meshBCut, bComponents, {}, meshACut, true, false, rigidB2A, mergeAllNonIntersectingComponents );
+        bPartFbs = preparePart( meshBCut, bComponents, {}, meshACut, true, false, rigidB2A, optParams );
+    taskGroup.wait();
 
     if ( aPartFbs.count() != 0 )
     {
@@ -193,10 +201,10 @@ Expected<MR::Mesh, std::string> doBooleanOperation(
     BooleanOperation operation, 
     const AffineXf3f* rigidB2A /*= nullptr */,
     BooleanResultMapper* mapper /*= nullptr */,
-    bool mergeAllNonIntersectingComponents /*= false */)
+    const BooleanOptionalParameters& optParams )
 {
     if ( cutEdgesA.size() == 0 && cutEdgesB.size() == 0 )
-        return doTrivialBooleanOperation( std::move( meshACutted ), std::move( meshBCutted ), operation, rigidB2A, mapper, mergeAllNonIntersectingComponents );
+        return doTrivialBooleanOperation( std::move( meshACutted ), std::move( meshBCutted ), operation, rigidB2A, mapper, optParams );
 
     if ( operation == BooleanOperation::Intersection || operation == BooleanOperation::Union ||
          operation == BooleanOperation::DifferenceAB || operation == BooleanOperation::DifferenceBA )
@@ -217,19 +225,19 @@ Expected<MR::Mesh, std::string> doBooleanOperation(
     {
         if ( operation == BooleanOperation::InsideA || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceBA )
             dividableA = preparePart( meshACutted, pathsACpy, aPart, meshBCutted, true,
-                                      operation == BooleanOperation::DifferenceBA, true, rigidB2A, mapsAPtr, mergeAllNonIntersectingComponents );
+                                      operation == BooleanOperation::DifferenceBA, true, rigidB2A, mapsAPtr, optParams );
         else if ( operation == BooleanOperation::OutsideA || operation == BooleanOperation::Union || operation == BooleanOperation::DifferenceAB )
-            dividableA = preparePart( meshACutted, pathsACpy, aPart, meshBCutted, false, false, true, rigidB2A, mapsAPtr, mergeAllNonIntersectingComponents );
+            dividableA = preparePart( meshACutted, pathsACpy, aPart, meshBCutted, false, false, true, rigidB2A, mapsAPtr, optParams );
     } );
     // bPart
     BooleanResultMapper::Maps* mapsBPtr = mapper ? &mapper->maps[int( BooleanResultMapper::MapObject::B )] : nullptr;
     if ( operation == BooleanOperation::OutsideB || operation == BooleanOperation::Union || operation == BooleanOperation::DifferenceBA )
-        dividableB = preparePart( std::move( meshBCutted ), pathsBCpy, bPart, std::move( meshACutted ), false, false, false, rigidB2A, mapsBPtr, mergeAllNonIntersectingComponents );
+        dividableB = preparePart( std::move( meshBCutted ), pathsBCpy, bPart, std::move( meshACutted ), false, false, false, rigidB2A, mapsBPtr, optParams );
     else if ( operation == BooleanOperation::InsideB || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceAB )
         dividableB = preparePart( std::move( meshBCutted ), pathsBCpy, bPart, std::move( meshACutted ), true,
-                                  operation == BooleanOperation::DifferenceAB, false, rigidB2A, mapsBPtr, mergeAllNonIntersectingComponents );
-
+                                  operation == BooleanOperation::DifferenceAB, false, rigidB2A, mapsBPtr, optParams );
     taskGroup.wait();
+
     if ( ( ( operation == BooleanOperation::InsideA || operation == BooleanOperation::OutsideA ) && !dividableA ) ||
          ( ( operation == BooleanOperation::InsideB || operation == BooleanOperation::OutsideB ) && !dividableB ) ||
          ( ( operation == BooleanOperation::Union ||

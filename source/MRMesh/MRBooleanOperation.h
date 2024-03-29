@@ -85,13 +85,26 @@ struct BooleanResultMapper
     std::array<Maps, size_t( MapObject::Count )> maps;
 };
 
+/// Parameters will be useful if specified
+struct BooleanOptionalParameters
+{
+    /// Will speedup if present
+    const Mesh* originalMeshA{ nullptr };
+    /// Will speedup if present
+    const Mesh* originalMeshB{ nullptr };
+    /// By default produce valid operation on disconnected components
+    /// if set merge all non-intersecting components
+    bool mergeAllNonIntersectingComponents = false;
+};
+
 /// Perform boolean operation on cut meshes
 /// \return mesh in space of meshA or error.
 /// \note: actually this function is meant to be internal, use "boolean" instead
 MRMESH_API Expected<Mesh, std::string> doBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut,
                                                                const std::vector<EdgePath>& cutEdgesA, const std::vector<EdgePath>& cutEdgesB,
                                                                BooleanOperation operation, const AffineXf3f* rigidB2A = nullptr,
-                                                               BooleanResultMapper* mapper = nullptr, bool mergeAllNonIntersectingComponents = false );
+                                                               BooleanResultMapper* mapper = nullptr, 
+                                                               const BooleanOptionalParameters& optParams = {} );
 
 /// \}
 

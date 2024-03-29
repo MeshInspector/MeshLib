@@ -26,12 +26,14 @@ Expected<Mesh, std::string> unitePairOfMeshes( Mesh&& a, Mesh&& b,
     BooleanParameters params;
     params.rigidB2A = shift ? &xf : nullptr;
     params.mapper = fixDegenerations || mapper ? &mapper_ : nullptr;
-    params.mergeAllNonIntersectingComponents = mergeMode;
+    BooleanOptionalParameters optParams;
+    optParams.mergeAllNonIntersectingComponents = mergeMode;
     auto res = MR::boolean(
         std::move( a ),
         std::move( b ),
         BooleanOperation::Union,
-        params
+        params,
+        optParams
     );
     if ( !res.valid() )
         return unexpected( res.errorString );

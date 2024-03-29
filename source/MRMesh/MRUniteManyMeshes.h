@@ -6,6 +6,13 @@
 
 namespace MR
 {
+// Mode of processing components
+enum class NestedComponenetsMode
+{
+    Remove, // Default: separate nested meshes and remove them, just like union operation should do, use this if input meshes are single component
+    Merge, // merge nested meshes, useful if input meshes are components of single object
+    Union // does not separate components and call union for all input meshes, works slower than Remove and Merge method but returns valid result if input meshes has mulitple components
+};
 
 // Parameters structure for uniteManyMeshes function
 struct UniteManyMeshesParams
@@ -25,8 +32,10 @@ struct UniteManyMeshesParams
     FaceBitSet* newFaces{ nullptr };
 
     // By default function separate nested meshes and remove them, just like union operation should do
-    // If set than unite all intersecting meshes and merge ones that does not intersect
-    bool mergeAllNonIntersecting{ false };
+    // read comment of NestedComponenetsMode enum for more information
+    NestedComponenetsMode nestedComponentsMode{ NestedComponenetsMode::Remove };
+
+    ProgressCallback progressCb;
 };
 
 // Computes the surface of objects' union each of which is defined by its own surface mesh

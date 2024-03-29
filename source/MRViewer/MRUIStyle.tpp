@@ -273,7 +273,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
             if ( plusMinusButtons )
             {
                 ImGui::BeginGroup();
-                ImGui::PushItemWidth( ImGui::CalcItemWidth() - ( ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x ) * 2 - plusMinusButtonsLeftOffset );
+                ImGui::PushItemWidth( ImGui::CalcItemWidth() - ImGui::GetFrameHeight() * 2 - plusMinusButtonsLeftOffset );
             }
             MR_FINALLY{
                 if ( plusMinusButtons )
@@ -302,10 +302,11 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 int action = 0;
 
                 // U+2212 MINUS SIGN
+                Vector2f buttonSize( ImGui::GetFrameHeight() - ImGui::GetStyle().ItemInnerSpacing.x, ImGui::GetFrameHeight() );
                 ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
-                action -= UI::button( "\xe2\x88\x92", Vector2f( ImGui::GetFrameHeight(), ImGui::GetFrameHeight() ) );
+                action -= UI::button( "\xe2\x88\x92", buttonSize );
                 ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
-                action += UI::button( "+", Vector2f( ImGui::GetFrameHeight(), ImGui::GetFrameHeight() ) );
+                action += UI::button( "+", buttonSize );
 
                 if ( action )
                 {

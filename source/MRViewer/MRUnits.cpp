@@ -172,7 +172,7 @@ template <>
 const UnitInfo& getUnitInfo( LengthUnit length )
 {
     static const UnitInfo ret[] = {
-        { .conversionFactor = 1, .prettyName = "Mm", .unitSuffix = " mm" },
+        { .conversionFactor = 1, .prettyName = "Millimeters", .unitSuffix = " mm" },
         { .conversionFactor = 1/25.4f, .prettyName = "Inches", .unitSuffix = " in"/* or "\"" */ },
     };
     static_assert( std::extent_v<decltype( ret )> == int( LengthUnit::_count ) );

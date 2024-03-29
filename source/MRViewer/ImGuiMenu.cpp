@@ -1398,10 +1398,10 @@ float ImGuiMenu::drawSelectionInformation_()
             std::string labelStr;
             if ( selected )
             {
-                valueStr = std::to_string( selected ) + " / ";
+                valueStr = valueToString<NoUnit>( selected ) + " / ";
                 labelStr = "Selected / ";
             }
-            valueStr += std::to_string( value );
+            valueStr += valueToString<NoUnit>( value );
             labelStr += title;
 
             UI::inputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x, selected ? textColorForSelected : std::optional<ImVec4>{} );

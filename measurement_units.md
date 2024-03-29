@@ -13,6 +13,7 @@ We store all quantities as scalars (typically `float`s), there are no custom typ
 Our convention is:
 * Store angles in radians (converting to degrees in GUI).
 * Store lengths as is (we append `mm` or `inch` suffix in GUI depending on the settings, without converting the value).
+  * Same applies to area, volume, and movement speed, which is measured in mm/s or inches/s.
 * Percentages should be stored as numbers between `0` and `1` (multiplied by 100 and displayed as percents in the GUI).
 
 ### Converting between units
@@ -126,3 +127,5 @@ If you want to create a new unit enum: (say, `EnergyUnit { joules, electronvolts
   The important thing you have to decide are: the default display unit and the default source code unit (which can be null to always match the display unit).
 
 * Add a specialization of `getUnitInfo()` to `MRViewer/MRUnits.cpp` for your enum, next to the other ones.
+
+* Add your enum to `forAllParams()` in `source/MRCommonPlugins/ViewerButtons/MRViewerSettingsPlugin.cpp`.

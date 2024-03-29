@@ -404,6 +404,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 {
     (void)menuScaling;
 
+    auto paramsNoUnit = getDefaultUnitParams<NoUnit>();
     auto paramsLen = getDefaultUnitParams<LengthUnit>();
     auto paramsArea = getDefaultUnitParams<AreaUnit>();
     auto paramsVol = getDefaultUnitParams<VolumeUnit>();
@@ -419,6 +420,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
     };
     auto forAllParams = [&]( auto&& func )
     {
+        func( paramsNoUnit );
         forAllLengthParams( func );
         func( paramsAngle );
     };

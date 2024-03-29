@@ -1489,8 +1489,9 @@ float ImGuiMenu::drawSelectionInformation_()
             const float itemWidth = getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x;
             if ( totalVolume )
             {
+                const auto volume = totalVolume.value();
                 ImGui::PushItemWidth( itemWidth );
-                UI::readOnlyValue<VolumeUnit>( "Volume", totalVolume.value() );
+                UI::readOnlyValue<VolumeUnit>( "Volume", volume );
                 MR_FINALLY{ ImGui::PopItemWidth(); };
             }
             else

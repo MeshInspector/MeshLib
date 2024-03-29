@@ -1617,10 +1617,8 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
         for ( auto e : leftRing( from, efrom ) )
         {
             const UndirectedEdgeId ue = e.undirected();
-            if ( fromEdges.test( ue ) )
+            if ( fromEdges.test_set( ue, false ) )
             {
-                fromEdges.reset( ue );
-
                 auto [it, inserted] = emap.insert( { ue, {} } );
                 if ( inserted )
                 {
@@ -1635,10 +1633,8 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             }
             if ( auto v = from.org( e ); v.valid() )
             {
-                if ( fromVerts.test( v ) )
+                if ( fromVerts.test_set( v, false ) )
                 {
-                    fromVerts.reset( v );
-
                     auto [it, inserted] = vmap.insert( { v, {} } );
                     if ( inserted )
                     {

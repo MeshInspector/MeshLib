@@ -243,8 +243,10 @@ struct UnitToStringParams
     // Use a pretty Unicode minus sign instead of the ASCII `-`.
     bool unicodeMinusSign = getDefaultUnitParams<E>().unicodeMinusSign;
 
-    // If non-zero, this character is inserted between every three digits.
+    // If non-zero, this character is inserted between every three digits to the left of the decimal point.
     char thousandsSeparator = getDefaultUnitParams<E>().thousandsSeparator;
+    // If non-zero, this character is inserted between every three digits to the right of the decimal point.
+    char thousandsSeparatorFrac = getDefaultUnitParams<E>().thousandsSeparatorFrac;
 
     // If false, remove zero before the fractional point (`.5` instead of `0.5`).
     bool leadingZero = getDefaultUnitParams<E>().leadingZero;

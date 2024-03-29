@@ -1092,6 +1092,11 @@ void detail::drawDragTooltip( std::string rangeText )
     }
 }
 
+void detail::markItemEdited( ImGuiID id )
+{
+    ImGui::MarkItemEdited( id );
+}
+
 bool sliderFloat( const char* label, float* v, float v_min, float v_max, const char* format, ImGuiSliderFlags flags )
 {
     return detail::genericSlider( label, ImGuiDataType_Float, v, &v_min, &v_max, format, flags );

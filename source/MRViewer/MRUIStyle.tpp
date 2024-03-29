@@ -146,10 +146,12 @@ namespace detail
             return 1;
     }
 
-    template <UnitEnum E, VectorOrScalar T>
+    template <UnitEnum E, VectorOrScalar T, VectorOrScalar TargetType>
     [[nodiscard]] T getDefaultStep( bool fast )
     {
-        if constexpr ( std::is_integral_v<T> )
+        if constexpr ( VectorTraits<TargetType>::size > 1 )
+            return 0; // Multi-element widgets have no step buttons by default.
+        else if constexpr ( std::is_integral_v<T> )
             return fast ? 100 : 1;
         else
             return 0;
@@ -206,8 +208,8 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
             }
             else
             {
-                elemMin = &VectorTraits<U>::getElem( i, fixedMin );
-                elemMax = &VectorTraits<U>::getElem( i, fixedMax );
+                elemMin = &VectorTraits<decltype(fixedMin)>::getElem( i, fixedMin );
+                elemMax = &VectorTraits<decltype(fixedMax)>::getElem( i, fixedMax );
             }
 
             return detail::genericSlider(
@@ -217,11 +219,13 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
 }
 
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidDragSpeedForTargetType<T> SpeedType, detail::ValidBoundForTargetType<T> U>
-bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vMax, UnitToStringParams<E> unitParams, ImGuiSliderFlags flags )
+bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vMax, UnitToStringParams<E> unitParams, ImGuiSliderFlags flags, const U& step, const U& stepFast )
 {
     auto fixedSpeed = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vSpeed );
     auto fixedMin = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMin );
     auto fixedMax = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMax );
+    auto fixedStep = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, step );
+    auto fixedStepFast = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, stepFast );
 
     // Don't strip trailing zeroes, otherwise the numbers jump too much.
     unitParams.stripTrailingZeroes = false;
@@ -241,56 +245,90 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
         {
             const ElemType *elemMin = nullptr;
             const ElemType *elemMax = nullptr;
-
-            if constexpr ( std::is_integral_v<ElemType> )
-            {
-                elemMin = &VectorTraits<U>::getElem( i, vMin );
-                elemMax = &VectorTraits<U>::getElem( i, vMax );
-            }
-            else
-            {
-                elemMin = &VectorTraits<U>::getElem( i, fixedMin );
-                elemMax = &VectorTraits<U>::getElem( i, fixedMax );
-            }
-
-            bool ret = ImGui::DragScalar(
-                elemLabel, detail::imGuiTypeEnum<ElemType>(), &elemVal,
-                float( VectorTraits<SpeedType>::getElem( i, fixedSpeed ) ), elemMin, elemMax, valueToString<E>( elemVal, unitParams ).c_str(), flags
-            );
-            detail::drawDragTooltip( detail::getDragRangeTooltip( VectorTraits<U>::getElem( i, fixedMin ), VectorTraits<U>::getElem( i, fixedMax ), unitParams ) );
-            return ret;
-        } );
-}
-
-template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U>
-bool input( const char* label, T& v, const U& vStep, const U& vStepFast, UnitToStringParams<E> unitParams, ImGuiInputTextFlags flags )
-{
-    auto fixedStep = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vStep );
-    auto fixedStepFast = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vStepFast );
-
-    return detail::unitWidget( label, v, unitParams,
-        [&]<typename ElemType>( const char* elemLabel, ElemType& elemVal, int i )
-        {
             const ElemType *elemStep = nullptr;
             const ElemType *elemStepFast = nullptr;
 
             if constexpr ( std::is_integral_v<ElemType> )
             {
-                elemStep = &VectorTraits<U>::getElem( i, vStep );
-                elemStepFast = &VectorTraits<U>::getElem( i, vStepFast );
+                elemMin = &VectorTraits<U>::getElem( i, vMin );
+                elemMax = &VectorTraits<U>::getElem( i, vMax );
+                elemStep = &VectorTraits<U>::getElem( i, step );
+                elemStepFast = &VectorTraits<U>::getElem( i, stepFast );
             }
             else
             {
-                elemStep = &VectorTraits<U>::getElem( i, fixedStep );
-                elemStepFast = &VectorTraits<U>::getElem( i, fixedStepFast );
+                elemMin = &VectorTraits<decltype(fixedMin)>::getElem( i, fixedMin );
+                elemMax = &VectorTraits<decltype(fixedMax)>::getElem( i, fixedMax );
+                elemStep = &VectorTraits<decltype(fixedStep)>::getElem( i, fixedStep );
+                elemStepFast = &VectorTraits<decltype(fixedStepFast)>::getElem( i, fixedStepFast );
             }
 
-            return ImGui::InputScalar(
-                elemLabel, detail::imGuiTypeEnum<ElemType>(), &elemVal,
-                // When the step is zero, pass nullptr to disable the buttons.
-                *elemStep ? elemStep : nullptr,  *elemStepFast ? elemStepFast : nullptr,
-                valueToString<E>( elemVal, unitParams ).c_str(), flags
+            bool plusMinusButtons = step > 0 && stepFast > 0;
+
+            bool ret = false;
+
+            // An arbitrary left offset for +/- buttons, to increase the separation to the text.
+            // Even though it makes it wider than it should be in pixels, it looks more appealing this way, because of how the buttons are colored.
+            float plusMinusButtonsLeftOffset = ImGui::GetStyle().FrameBorderSize;
+            if ( plusMinusButtons )
+            {
+                ImGui::BeginGroup();
+                ImGui::PushItemWidth( ImGui::CalcItemWidth() - ( ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x ) * 2 - plusMinusButtonsLeftOffset );
+            }
+            MR_FINALLY{
+                if ( plusMinusButtons )
+                {
+                    ImGui::PopItemWidth();
+                    ImGui::EndGroup();
+                }
+            };
+
+            ret = ImGui::DragScalar(
+                plusMinusButtons ? ( std::string( "###{}" ) + elemLabel ).c_str() : elemLabel, detail::imGuiTypeEnum<ElemType>(), &elemVal,
+                float( VectorTraits<SpeedType>::getElem( i, fixedSpeed ) ), elemMin, elemMax, valueToString<E>( elemVal, unitParams ).c_str(), flags
             );
+            auto dragId = ImGui::GetItemID();
+            detail::drawDragTooltip( detail::getDragRangeTooltip( VectorTraits<U>::getElem( i, fixedMin ), VectorTraits<U>::getElem( i, fixedMax ), unitParams ) );
+
+            if ( plusMinusButtons )
+            {
+                ImGui::PushID( ( std::string( "PlusMinusButtons:" ) + elemLabel ).c_str() );
+                // ImGui::PushButtonRepeat( true ); // Useless unless we can somehow avoid blocking the main thread while the button is pressed.
+                MR_FINALLY{
+                    // ImGui::PopButtonRepeat();
+                    ImGui::PopID();
+                };
+
+                int action = 0;
+
+                // U+2212 MINUS SIGN
+                ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+                action -= UI::button( "\xe2\x88\x92", Vector2f( ImGui::GetFrameHeight(), ImGui::GetFrameHeight() ) );
+                ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+                action += UI::button( "+", Vector2f( ImGui::GetFrameHeight(), ImGui::GetFrameHeight() ) );
+
+                if ( action )
+                {
+                    ret = true;
+                    elemVal += ( ImGui::GetIO().KeyCtrl ? *elemStepFast : *elemStep ) * action;
+                    if ( *elemMin < *elemMax )
+                        elemVal = std::clamp( elemVal, *elemMin, *elemMax );
+
+                    detail::markItemEdited( dragId );
+                }
+
+                // The label.
+                std::string_view labelView( label );
+                auto pos = labelView.find( "##" );
+                if ( pos > 0 )
+                {
+                    ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x + plusMinusButtonsLeftOffset );
+                    ImGui::AlignTextToFramePadding();
+                    ImGui::TextUnformatted( label, label + ( pos == std::string_view::npos ? labelView.size() : pos ) );
+                }
+            }
+
+            return ret;
         } );
 }
 

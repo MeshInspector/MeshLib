@@ -34,6 +34,30 @@ int SeparationPointStorage::makeUniqueVids()
     return lastShift;
 }
 
+Triangulation SeparationPointStorage::getTriangulation( Vector<VoxelId, FaceId>* outVoxelPerFaceMap ) const
+{
+    MR_TIMER
+    size_t totalTris = 0;
+    for ( const auto & b : blocks_ )
+        totalTris += b.tris.size();
+
+    Triangulation res;
+    res.reserve( totalTris );
+    if ( outVoxelPerFaceMap )
+    {
+        outVoxelPerFaceMap->clear();
+        outVoxelPerFaceMap->reserve( totalTris );
+    }
+    for ( const auto & b : blocks_ )
+    {
+        res.vec_.insert( end( res ), begin( b.tris ), end( b.tris ) );
+        if ( outVoxelPerFaceMap )
+            outVoxelPerFaceMap->vec_.insert( end( *outVoxelPerFaceMap ),
+                begin( b.faceMap ), end( b.faceMap ) );
+    }
+    return res;
+}
+
 void SeparationPointStorage::getPoints( VertCoords & points ) const
 {
     MR_TIMER

@@ -13,20 +13,7 @@ enum class NeighborDir
     X, Y, Z, Count
 };
 
-// point between two neighbor voxels
-struct SeparationPoint
-{
-    Vector3f position; // coordinate
-    VertId vid; // any valid VertId is ok
-    // each SeparationPointMap element has three SeparationPoint, it is not guaranteed that all three are valid (at least one is)
-    // so there are some points present in map that are not valid
-    explicit operator bool() const
-    {
-        return vid.valid();
-    }
-};
-
-using SeparationPointSet = std::array<SeparationPoint, size_t( NeighborDir::Count )>;
+using SeparationPointSet = std::array<VertId, size_t( NeighborDir::Count )>;
 using SeparationPointMap = HashMap<size_t, SeparationPointSet>;
 
 /// storage for points on voxel edges used in Marching Cubes algorithms
@@ -36,7 +23,12 @@ public:
     struct Block
     {
         SeparationPointMap smap;
-        VertId nextVid{ 0 };
+        std::vector<Vector3f> coords;
+        /// after makeUniqueVids(), it is the unique id of first point in coords
+        VertId shift;
+
+        /// during filling, it is the id of next valid point;
+        VertId nextVid() const { return VertId( coords.size() ); }
     };
 
     /// prepares storage for given number of blocks, each containing given size of voxels

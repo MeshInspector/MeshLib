@@ -1306,7 +1306,7 @@ float ImGuiMenu::drawSelectionInformation_()
     size_t totalFaces = 0;
     size_t totalSelectedFaces = 0;
     size_t totalVerts = 0;
-    std::optional<float> totalVolume;
+    std::optional<float> totalVolume = 0.0f;
 #ifndef __EMSCRIPTEN__
     // Voxels info
     Vector3i dimensions;
@@ -1343,12 +1343,13 @@ float ImGuiMenu::drawSelectionInformation_()
                 totalFaces += mesh->topology.numValidFaces();
                 totalSelectedFaces += mObj->numSelectedFaces();
                 totalVerts += mesh->topology.numValidVerts();
-                if ( mObj->isMeshClosed() )
+                if ( totalVolume && mObj->isMeshClosed() )
                 {
-                    if ( totalVolume )
-                        *totalVolume += float( mObj->volume() );
-                    else
-                        totalVolume = float( mObj->volume() );
+                    *totalVolume += float( mObj->volume() );
+                }
+                else
+                {
+                    totalVolume = std::nullopt;
                 }
             }
         }
@@ -1483,12 +1484,30 @@ float ImGuiMenu::drawSelectionInformation_()
         drawPrimitivesInfo( "Vertices", totalVerts );
         drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints, textColorForSelected );
 
-        if ( totalVolume )
+        if ( totalFaces )
         {
-            ImGui::PushItemWidth( getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x );
-            MR_FINALLY{ ImGui::PopItemWidth(); };
-            UI::readOnlyValue<VolumeUnit>( "Volume", *totalVolume );
-        }
+            const float itemWidth = getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x;
+            if ( totalVolume )
+            {
+                ImGui::PushItemWidth( itemWidth );
+
+#if defined(__GNUC__) && !defined(__clang__) //disable strange warning. Maybe bug in GCC
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
+                UI::readOnlyValue<VolumeUnit>( "Volume", *totalVolume );
+                MR_FINALLY{ ImGui::PopItemWidth(); };
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+            }
+            else
+            {
+                UI::inputTextCenteredReadOnly( "Volume", "Mesh is not closed", itemWidth );
+            }
+        }        
     }
 
     bool firstField = true;

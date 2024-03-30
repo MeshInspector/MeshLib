@@ -33,6 +33,8 @@ jobs:
       matrix:
         config: [Debug, Release]
         compiler: [Clang 17, GCC 13]
+        full_config_build:
+          - ${{fromJSON(inputs.full_config_build)}}
         exclude:
           - full_config_build: false
             compiler: Clang 17

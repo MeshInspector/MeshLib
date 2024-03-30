@@ -141,8 +141,8 @@ jobs:
 
       - name: Upload Fedora Developer Distribution
         if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 17'}}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: DistributivesFedora37
+          name: Distributives_fedora39-x86
           path: meshlib-dev.rpm
           retention-days: 1

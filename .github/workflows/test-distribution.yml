@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: [ 'x86-64', 'arm64']
-        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:37"]
+        os: ["ubuntu:20.04", "ubuntu:22.04", "fedora:39"]
         include:
           - platform: 'x86-64'
             runner: ubuntu-latest
@@ -29,11 +29,11 @@ jobs:
           - os: "ubuntu:22.04"
             name: "ubuntu22"
             cxx-compiler: /usr/bin/clang++-14
-          - os: "fedora:37"
-            name: "fedora37"
-            cxx-compiler: /usr/bin/clang++-15
+          - os: "fedora:39"
+            name: "fedora39"
+            cxx-compiler: /usr/bin/clang++-17
         exclude:
-          - os: "fedora:37"
+          - os: "fedora:39"
             platform: 'arm64'
 
     steps:
@@ -43,14 +43,14 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Ubuntu x86-64 Release
-        if: ${{ matrix.os != 'fedora:37' && matrix.platform == 'x86-64' }}
+        if: ${{ matrix.os != 'fedora:39' && matrix.platform == 'x86-64' }}
         uses: robinraju/release-downloader@v1.9
         with:
           releaseId: ${{inputs.release_id}}
           fileName: "*${{matrix.name}}-dev.deb"
 
       - name: Install Ubuntu x86-64 Release
-        if: ${{ matrix.os != 'fedora:37' && matrix.platform == 'x86-64' }}
+        if: ${{ matrix.os != 'fedora:39' && matrix.platform == 'x86-64' }}
         run: |
           export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
             apt-get -y install sudo xvfb curl libssl-dev python3-distutils python3-pip && \
@@ -59,14 +59,14 @@ jobs:
           python3 -m pip install --upgrade -r ./requirements/python.txt
 
       - name: Download Ubuntu arm64 Release
-        if: ${{ matrix.os != 'fedora:37' && matrix.platform == 'arm64' }}
+        if: ${{ matrix.os != 'fedora:39' && matrix.platform == 'arm64' }}
         uses: robinraju/release-downloader@v1.9
         with:
           releaseId: ${{inputs.release_id}}
           fileName: "*${{matrix.name}}-arm64-dev.deb"
 
       - name: Install Ubuntu arm64 Release
-        if: ${{ matrix.os != 'fedora:37' && matrix.platform == 'arm64' }}
+        if: ${{ matrix.os != 'fedora:39' && matrix.platform == 'arm64' }}
         run: |
           export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
             apt-get -y install sudo xvfb curl libssl-dev python3-distutils python3-pip && \
@@ -75,14 +75,14 @@ jobs:
           python3 -m pip install --upgrade -r ./requirements/python.txt
 
       - name: Download Fedora Release
-        if: ${{ matrix.os == 'fedora:37' }}
+        if: ${{ matrix.os == 'fedora:39' }}
         uses: robinraju/release-downloader@v1.9
         with:
           releaseId: ${{inputs.release_id}}
           fileName: "*.rpm"
 
       - name: Install Fedora Release
-        if: ${{ matrix.os == 'fedora:37' }}
+        if: ${{ matrix.os == 'fedora:39' }}
         run: |
           dnf --refresh -y upgrade
           dnf -y --setopt=install_weak_deps=False install xorg-x11-server-Xvfb mesa-dri-drivers mesa-libGL-devel libXi-devel util-linux python3 python3-pip
@@ -122,12 +122,12 @@ jobs:
           ./cmake-example
 
       - name: Ubuntu python test
-        if: ${{ always() && matrix.os != 'fedora:37' }}
+        if: ${{ always() && matrix.os != 'fedora:39' }}
         working-directory: test_python
         run: python3 -m pytest -s -v
 
       - name: Fedora python test
-        if: ${{ always() && matrix.os == 'fedora:37' }}
+        if: ${{ always() && matrix.os == 'fedora:39' }}
         working-directory: test_python
         run: python3 -m pytest -s -v
 

@@ -60,7 +60,9 @@
 #include <Commdlg.h>
 #endif
 
+#ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
+#endif
 
 #include <gtest/gtest.h>
 
@@ -73,6 +75,7 @@
 #pragma warning(pop)
 #endif
 
+#if !defined( __EMSCRIPTEN__)
 #pragma warning(push)
 #pragma warning(disable:4244) //'initializing': conversion from 'std::streamoff' to 'int', possible loss of data
 #pragma warning(disable:4355) //'this': used in base member initializer list
@@ -80,6 +83,7 @@
 #pragma warning(disable:4458) //'this': declaration of 'size' hides class member
 #include <cpr/cpr.h>
 #pragma warning(pop)
+#endif
 
 #ifndef __EMSCRIPTEN__
 #include <libpng16/png.h>
@@ -87,14 +91,13 @@
 
 #include "OpenCTM/openctm.h"
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
 #pragma warning(push)
 #pragma warning(disable:4100) //'_unused_op': unreferenced formal parameter
 #pragma warning(disable:4189) //'has_args': local variable is initialized but not referenced
 #pragma warning(disable:4191) //'reinterpret_cast': unsafe conversion from 'PyObject *(__cdecl *)(PyObject *,PyObject *,PyObject *)' to 'void (__cdecl *)(void)'
 #pragma warning(disable:4355) //'this': used in base member initializer list
 #pragma warning(disable:4464) //relative include path contains '..'
-#pragma warning(disable:4686) //'pybind11::detail::descr<10,T,pybind11::str>::types': possible change in behavior, change in UDT return calling convention
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include <pybind11/stl_bind.h>

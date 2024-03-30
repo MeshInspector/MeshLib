@@ -1,6 +1,6 @@
 FROM emscripten/emsdk:3.1.48
 
-# update and install req
+# Update and install req
 RUN export DEBIAN_FRONTEND=noninteractive; \
     export DEBCONF_NONINTERACTIVE_SEEN=true; \
     echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \

@@ -1,5 +1,5 @@
-from helper import *
 import pytest
+from helper import *
 
 
 def test_fill_hole():
@@ -15,4 +15,4 @@ def test_fill_hole():
 
     mrmesh.fillHole(torus, holes[0])
 
-    assert (torus.topology.findHoleRepresentiveEdges().size() == 0)
+    assert torus.topology.findHoleRepresentiveEdges().size() == 0

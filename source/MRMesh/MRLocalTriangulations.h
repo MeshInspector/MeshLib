@@ -3,7 +3,9 @@
 #include "MRId.h"
 #include "MRVector.h"
 #include "MRBuffer.h"
+#include <array>
 #include <cstdint>
+#include <functional>
 #include <optional>
 
 namespace MR
@@ -51,5 +53,38 @@ struct AllLocalTriangulations
 /// converts a set of SomeLocalTriangulations containing local triangulations of all points arbitrary distributed among them
 /// into one AllLocalTriangulations with records for all points
 [[nodiscard]] MRMESH_API std::optional<AllLocalTriangulations> uniteLocalTriangulations( const std::vector<SomeLocalTriangulations> & in, const ProgressCallback & progress = {} );
+
+/// compute normal at point by averaging neighbor triangle normals weighted by triangle's angle at the point
+[[nodiscard]] MRMESH_API Vector3f computeNormal( const AllLocalTriangulations & triangs, const VertCoords & points, VertId v );
+
+/// orient neighbors around each point so they will be in clockwise order if look from the tip of target direction
+MRMESH_API void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertNormals & targetDir );
+MRMESH_API void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const std::function<Vector3f(VertId)> & targetDir );
+
+/// orient neighbors around each point so there will be as many triangles with same (and not opposite) orientation as possible
+MRMESH_API bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTriangulations & triangs, ProgressCallback progress = {},
+    Triangulation * outRep3 = nullptr,    ///< optional output with all oriented triangles that appear in three local triangulations
+    Triangulation * outRep2 = nullptr );  ///< optional output with all oriented triangles that appear in exactly two local triangulations
+
+/// TrianglesRepetitions[0] contains the number of triangles that appear in different local triangulations with opposite orientations
+/// TrianglesRepetitions[1] contains the number of unoriented triangles that appear in one local triangulation only
+/// TrianglesRepetitions[2] contains the number of unoriented triangles that appear in exactly two local triangulations
+/// TrianglesRepetitions[3] contains the number of unoriented triangles that appear in three local triangulations
+using TrianglesRepetitions = std::array<int, 4>;
+
+/// computes statistics about the number of triangle repetitions in local triangulations
+[[nodiscard]] MRMESH_API TrianglesRepetitions computeTrianglesRepetitions( const AllLocalTriangulations & triangs );
+
+/// from local triangulations returns all unoriented triangles with given number of repetitions each in [1,3]
+[[nodiscard]] MRMESH_API std::vector<UnorientedTriangle> findRepeatedUnorientedTriangles( const AllLocalTriangulations & triangs, int repetitions );
+
+/// from local triangulations returns all oriented triangles with given number of repetitions each in [1,3]
+[[nodiscard]] MRMESH_API Triangulation findRepeatedOrientedTriangles( const AllLocalTriangulations & triangs, int repetitions );
+
+/// from local triangulations returns all oriented triangles with 3 or 2 repetitions each;
+/// if both outRep3 and outRep2 are necessary then it is faster to call this function than above one
+MRMESH_API void findRepeatedOrientedTriangles( const AllLocalTriangulations & triangs,
+    Triangulation * outRep3,    ///< optional output with all oriented triangles that appear in three local triangulations
+    Triangulation * outRep2 );  ///< optional output with all oriented triangles that appear in exactly two local triangulations
 
 } //namespace MR

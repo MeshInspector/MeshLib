@@ -4,23 +4,19 @@
 namespace MR
 {
 
-DenseBox::DenseBox( const MeshPart& meshPart, const AffineXf3f* xf )
+DenseBox::DenseBox( const MeshPart& meshPart, const AffineXf3f* xf /*= nullptr*/ )
 {
-    include( meshPart, xf );
+    include_( meshPart, xf );
 }
 
-void DenseBox::include( const MeshPart& meshPart, const AffineXf3f* xf /*= nullptr */ )
+DenseBox::DenseBox( const PointCloud& points, const AffineXf3f* xf /*= nullptr*/ )
 {
-    accumulateFaceCenters( accum_, meshPart, xf );
-    if ( !accum_.valid() )
-        return;
-    basisXf_ = AffineXf3f( accum_.getBasicXf() );
-    basisXfInv_ = basisXf_.inverse();
-    auto tempXf = basisXfInv_;
-    if ( xf )
-        tempXf = basisXfInv_ * ( *xf );
+    include_( points, xf );
+}
 
-    box_.include( meshPart.mesh.computeBoundingBox( meshPart.region, &tempXf ) );
+DenseBox::DenseBox( const Polyline3& line, const AffineXf3f* xf /*= nullptr*/ )
+{
+    include_( line, xf );
 }
 
 Vector3f DenseBox::center() const
@@ -39,6 +35,51 @@ Vector3f DenseBox::corner( const Vector3b& index ) const
 bool DenseBox::contains( const Vector3f& pt ) const
 {
     return box_.contains( basisXfInv_( pt ) );
+}
+
+void DenseBox::include_( const MeshPart& meshPart, const AffineXf3f* xf /*= nullptr */ )
+{
+    PointAccumulator accum;
+    accumulateFaceCenters( accum, meshPart, xf );
+    if ( !accum.valid() )
+        return;
+    basisXf_ = AffineXf3f( accum.getBasicXf() );
+    basisXfInv_ = basisXf_.inverse();
+    auto tempXf = basisXfInv_;
+    if ( xf )
+        tempXf = basisXfInv_ * ( *xf );
+
+    box_.include( meshPart.mesh.computeBoundingBox( &tempXf ) );
+}
+
+void DenseBox::include_( const PointCloud& points, const AffineXf3f* xf )
+{
+    PointAccumulator accum;
+    accumulatePoints( accum, points, xf );
+    if ( !accum.valid() )
+        return;
+    basisXf_ = AffineXf3f( accum.getBasicXf() );
+    basisXfInv_ = basisXf_.inverse();
+    auto tempXf = basisXfInv_;
+    if ( xf )
+        tempXf = basisXfInv_ * ( *xf );
+
+    box_.include( points.computeBoundingBox( &tempXf ) );
+}
+
+void DenseBox::include_( const Polyline3& line, const AffineXf3f* xf )
+{
+    PointAccumulator accum;
+    accumulateLineCenters( accum, line, xf );
+    if ( !accum.valid() )
+        return;
+    basisXf_ = AffineXf3f( accum.getBasicXf() );
+    basisXfInv_ = basisXf_.inverse();
+    auto tempXf = basisXfInv_;
+    if ( xf )
+        tempXf = basisXfInv_ * ( *xf );
+
+    box_.include( line.computeBoundingBox( &tempXf ) );
 }
 
 }

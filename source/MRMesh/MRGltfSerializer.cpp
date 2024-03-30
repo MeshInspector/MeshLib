@@ -111,8 +111,16 @@ Expected<int, std::string> readVertCoords( VertCoords& vertexCoordinates, const 
     if ( posAttrib == primitive.attributes.end() )
         return unexpected( "No vertex data" );
 
+    if ( posAttrib->second >= model.accessors.size() )
+        return unexpected( "Invalid accessor index" );
     const auto& accessor = model.accessors[posAttrib->second];
+
+    if ( accessor.bufferView >= model.bufferViews.size() )
+        return unexpected( "Invalid bufferView index" );
     const auto& bufferView = model.bufferViews[accessor.bufferView];
+
+    if ( bufferView.buffer >= model.buffers.size() )
+        return unexpected( "Invalid buffer index" );
     const auto& buffer = model.buffers[bufferView.buffer];
 
     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT || accessor.type != TINYGLTF_TYPE_VEC3 )
@@ -523,6 +531,9 @@ VoidOrErrStr serializeObjectTreeToGltf( const Object& root, const std::filesyste
 
     for ( size_t childIndex = 0; childIndex < root.children().size(); ++ childIndex )
     {
+        if ( root.children()[childIndex]->isAncillary() )
+            continue;
+
         objectStack.push( root.children()[childIndex] );
         size_t lastIndex = model.nodes.size();
         indexStack.push( lastIndex );
@@ -643,6 +654,9 @@ VoidOrErrStr serializeObjectTreeToGltf( const Object& root, const std::filesyste
 
             for ( auto child : curObj->children() )
             {
+                if ( child->isAncillary() )
+                    continue;
+
                 objectStack.push( child );
                 indexStack.push( ++lastIndex );
                 curNode.children.push_back( int( indexStack.top() ) );

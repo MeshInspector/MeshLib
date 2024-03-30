@@ -17,6 +17,7 @@ public:
     virtual int loadInt( const std::string& name, int def = 0 ) = 0;
     virtual void saveInt( const std::string& name, int value ) = 0;
 
+    virtual void resetSettings( Viewer& ) = 0;
     virtual void loadSettings( Viewer& ) = 0;
     virtual void saveSettings( const Viewer& ) = 0;
 };
@@ -29,6 +30,7 @@ public:
     MRVIEWER_API virtual int loadInt( const std::string& name, int def ) override;
     MRVIEWER_API virtual void saveInt( const std::string& name, int value ) override;
 
+    MRVIEWER_API virtual void resetSettings( Viewer& ) override;
     MRVIEWER_API virtual void loadSettings( Viewer& viewer ) override;
     MRVIEWER_API virtual void saveSettings( const Viewer& viewer ) override;
 

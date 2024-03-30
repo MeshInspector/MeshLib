@@ -7,14 +7,14 @@
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 
-////////////////////////////////////////////////////////////////////////////////
-#include "MRMeshViewer.h"
-#include "MRMeshViewerPlugin.h"
+#include "MRMesh/MRFlagOperators.h"
+#include "MRViewerPlugin.h"
 #include "MRViewerEventsListener.h"
 #include "MRStatePlugin.h"
 #include "MRNotificationType.h"
 #include <unordered_map>
-////////////////////////////////////////////////////////////////////////////////
+#include "MRMesh/MRIRenderObject.h" //only for BasicUiRenderTask::BackwardPassParams
+#include "MRMesh/MRBox.h"
 
 // Forward declarations
 struct ImGuiContext;
@@ -25,8 +25,21 @@ namespace MR
 
 class ShortcutManager;
 class MeshModifier;
+struct UiRenderManager;
 
-class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin, 
+enum class SelectedTypesMask
+{
+    ObjectBit = 1 << 0,
+    ObjectPointsHolderBit = 1 << 1,
+    ObjectLinesHolderBit = 1 << 2,
+    ObjectMeshHolderBit = 1 << 3,
+    ObjectLabelBit = 1 << 4,
+    ObjectMeshBit = 1 << 5,
+    ObjectFeaturesBit = 1 << 6,
+};
+MR_MAKE_FLAG_OPERATORS( SelectedTypesMask )
+
+class MRVIEWER_CLASS ImGuiMenu : public MR::ViewerPlugin,
     public MultiListener<
     MouseDownListener, MouseMoveListener, MouseUpListener, MouseScrollListener, CursorEntranceListener,
     CharPressedListener, KeyDownListener, KeyUpListener, KeyRepeatListener,
@@ -58,7 +71,7 @@ protected:
   ImGuiWindow* prevFrameFocusPlugin_ = nullptr;
 
   // if true, then pre_draw will start from polling glfw events
-  bool pollEventsInPreDraw = false; // be careful here with true, this can cause infinite recurse 
+  bool pollEventsInPreDraw = false; // be careful here with true, this can cause infinite recurse
 
   bool showShortcuts_{ false };
   bool showStatistics_{ false };
@@ -94,7 +107,7 @@ protected:
       Object* to{ nullptr }; // address object
       bool before{ false }; // if false "who" will be attached to "to" as last child, otherwise "who" will be attached to "to"'s parent as child before "to"
   } sceneReorderCommand_;
-  
+
   std::weak_ptr<Object> lastRenameObj_;
   Box3f selectionBbox_; // updated in drawSelectionInformation_
   Box3f selectionWorldBox_;
@@ -110,6 +123,7 @@ protected:
   bool uniformScale_{ true };
   bool xfHistUpdated_{ false };
   bool invertedRotation_{ false };
+  bool showInfoInObjectTree_{ false };
 
   std::optional<std::pair<std::string, Vector4f>> storedColor_;
   Vector4f getStoredColor_( const std::string& str, const Color& defaultColor ) const;
@@ -162,6 +176,8 @@ protected:
   AffineXf3f editedFeatureObjectOldXf_;
 
 public:
+  MRVIEWER_API static const std::shared_ptr<ImGuiMenu>& instance();
+
   MRVIEWER_API virtual void init(MR::Viewer *_viewer) override;
 
   // inits glfw and glsl backend
@@ -246,11 +262,12 @@ public:
   {}
   // override this to customize appearance of collapsing headers
   MRVIEWER_API virtual bool drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags flags = 0);
-
+  // override this to customize appearance of collapsing headers for transform block
+  MRVIEWER_API virtual bool drawCollapsingHeaderTransform_();
   // override this to have custom UI in "Scene" window (under opened(expanded) object line)
   MRVIEWER_API virtual void draw_custom_tree_object_properties( Object& obj );
 
-  bool make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, unsigned type, MR::ViewportMask viewportid, bool invert = false );
+  bool make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, AnyVisualizeMaskEnum type, MR::ViewportMask viewportid, bool invert = false );
   template<typename ObjectT>
   void make_color_selector( std::vector<std::shared_ptr<ObjectT>> selectedVisualObjs, const char* label,
                             std::function<Vector4f( const ObjectT* )> getter,
@@ -265,9 +282,10 @@ public:
     std::function<float( const VisualObject* )> getter,
     std::function<void( VisualObject*, const float& )> setter);
 
-  void make_uint8_slider( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
-    std::function<uint8_t( const VisualObject* )> getter,
-    std::function<void( VisualObject*, uint8_t )> setter );
+  template <typename T, typename ObjectType>
+  void make_slider( std::vector<std::shared_ptr<ObjectType>> selectedVisualObjs, const char* label,
+    std::function<T( const ObjectType* )> getter,
+    std::function<void( ObjectType*, T )> setter, T min, T max );
 
   void make_points_discretization( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
   std::function<int( const ObjectPointsHolder* )> getter,
@@ -305,13 +323,21 @@ public:
   // returns true if enabled using of saved positions of plugin windows in the config file, false otherwise
   bool isSavedDialogPositionsEnabled() const { return savedDialogPositionEnabled_; }
 
+  // This class helps the viewer to `renderUi()` from `IRenderObject`s.
+  MRVIEWER_API virtual UiRenderManager& getUiRenderManager();  
+
+  /// returns flag show detailed information in the object tree
+  bool getShowInfoInObjectTree() const { return showInfoInObjectTree_; }
+  /// set flag show detailed information in the object tree
+  void setShowInfoInObjectTree( bool value ) { showInfoInObjectTree_ = value; }
+
 protected:
     MRVIEWER_API virtual void drawModalMessage_();
 
     bool capturedMouse_{ false };
     // Mouse IO
-    MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
-    MRVIEWER_API virtual bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;
+    MRVIEWER_API virtual bool onMouseDown_( MouseButton button, int modifier ) override;
+    MRVIEWER_API virtual bool onMouseUp_( MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseMove_( int mouse_x, int mouse_y ) override;
     MRVIEWER_API virtual bool onMouseScroll_( float delta_y ) override;
     MRVIEWER_API virtual void cursorEntrance_( bool entered ) override;
@@ -356,10 +382,10 @@ protected:
     MRVIEWER_API float drawSelectionInformation_();
     MRVIEWER_API void drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& object );
     MRVIEWER_API bool drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>& selectedObjs );
-    MRVIEWER_API bool drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );
+    MRVIEWER_API bool drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedTypesMask selectedMask );
 
     MRVIEWER_API bool drawRemoveButton_( const std::vector<std::shared_ptr<Object>>& selectedObjs );
-    MRVIEWER_API bool drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );
+    MRVIEWER_API bool drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedTypesMask selectedMask );
     MRVIEWER_API bool drawDrawOptionsColors_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );
 
     MRVIEWER_API virtual void draw_custom_selection_properties( const std::vector<std::shared_ptr<Object>>& selected );
@@ -382,8 +408,30 @@ protected:
 
     // A virtual function for drawing of the dialog with shortcuts. It can be overriden in the inherited classes
     MRVIEWER_API virtual void drawShortcutsWindow_();
-    //returns width of items in Scene Info window
+    // returns width of items in Scene Info window
     MRVIEWER_API float getSceneInfoItemWidth_( int itemCount  = 1 );
+    // getting the mask of the list of selected objects
+    MRVIEWER_API SelectedTypesMask calcSelectedTypesMask( const std::vector<std::shared_ptr<Object>>& selectedObjs );
+
+    class UiRenderManagerImpl : public UiRenderManager
+    {
+    public:
+        MRVIEWER_API void preRenderViewport( ViewportId viewport ) override;
+        MRVIEWER_API void postRenderViewport( ViewportId viewport ) override;
+        MRVIEWER_API BasicUiRenderTask::BackwardPassParams beginBackwardPass() override;
+        MRVIEWER_API void finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params ) override;
+        MRVIEWER_API bool ownsMouseHover() const override;
+
+    private:
+        // `finishBackwardPass()` sets this to true when some object's UI is hovered.
+        // We then read it in `onMouseDown_()` and return true to eat that event.
+        // We intentionally don't block other events with this, especially not scrolling events, as it's
+        //   very annoying when the zoom breaks because you randomly hovered something.
+        // It also would be unwise to block `onMouseUp_()`, as you could make some plugin stuck assuming that the mouse is held.
+        bool mouseIsBlocked_ = false;
+    };
+    // This class helps the viewer to `renderUi()` from `IRenderObject`s.
+    std::unique_ptr<UiRenderManager> uiRenderManager_;
 };
 
 

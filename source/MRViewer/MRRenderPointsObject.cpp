@@ -10,9 +10,10 @@
 #include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
-#include "MRMeshViewer.h"
+#include "MRViewer.h"
 #include "MRGladGlfw.h"
 #include "MRMesh/MRParallelFor.h"
+#include "MRViewer/MRRenderDefaultUiObject.h"
 
 namespace MR
 {
@@ -30,17 +31,24 @@ RenderPointsObject::~RenderPointsObject()
     freeBuffers_();
 }
 
-void RenderPointsObject::render( const ModelRenderParams& renderParams )
+bool RenderPointsObject::render( const ModelRenderParams& renderParams )
 {
+    RenderModelPassMask desiredPass =
+        !objPoints_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
+        ( objPoints_->getGlobalAlpha( renderParams.viewportId ) < 255 || objPoints_->getFrontColor( objPoints_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
+        RenderModelPassMask::Opaque;
+    if ( !bool( renderParams.passMask & desiredPass ) )
+        return false; // Nothing to draw in this pass.
+
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objPoints_->resetDirty();
-        return;
+        return false;
     }
     update_();
 
     if ( !objPoints_->hasVisualRepresentation() )
-        return;
+        return false;
 
     // Initialize uniform
     GL_EXEC( glViewport( ( GLsizei )renderParams.viewport.x, ( GLsizei )renderParams.viewport.y,
@@ -111,10 +119,12 @@ void RenderPointsObject::render( const ModelRenderParams& renderParams )
 #endif
     GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_POINTS, ( GLsizei )validIndicesSize_, GL_UNSIGNED_INT, 0 ) );
-    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
+
+    return true;
 }
 
-void RenderPointsObject::renderPicker( const ModelRenderParams& parameters, unsigned geomId )
+void RenderPointsObject::renderPicker( const ModelBaseRenderParams& parameters, unsigned geomId )
 {
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
@@ -149,7 +159,7 @@ void RenderPointsObject::renderPicker( const ModelRenderParams& parameters, unsi
 #endif
     GL_EXEC( glDepthFunc( getDepthFunctionLess( parameters.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_POINTS, ( GLsizei )validIndicesSize_, GL_UNSIGNED_INT, 0 ) );
-    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
 }
 
 size_t RenderPointsObject::heapBytes() const
@@ -187,7 +197,7 @@ RenderBufferRef<Vector3f> RenderPointsObject::loadVertPosBuffer_()
     auto buffer = glBuffer.prepareBuffer<Vector3f>( vertPosSize_ = int( num / step ) );
 
     ParallelFor( VertId( 0 ), VertId( vertPosSize_ ), [&] ( VertId v )
-    {       
+    {
             buffer[v] = points[VertId( v * step )];
     } );
 
@@ -214,7 +224,7 @@ RenderBufferRef<Vector3f> RenderPointsObject::loadVertNormalsBuffer_()
 
     ParallelFor( VertId( 0 ), VertId( vertNormalsSize_ ), [&] ( VertId v )
     {
-        buffer[v] = normals[VertId( v * step )];        
+        buffer[v] = normals[VertId( v * step )];
     } );
 
     return buffer;
@@ -237,7 +247,7 @@ RenderBufferRef<Color> RenderPointsObject::loadVertColorsBuffer_()
 
     ParallelFor( VertId( 0 ), VertId( vertColorsSize_ ), [&] ( VertId v )
     {
-        buffer[v] = colors[VertId( v * step )];        
+        buffer[v] = colors[VertId( v * step )];
     } );
 
     return buffer;
@@ -252,10 +262,10 @@ void RenderPointsObject::bindPoints_()
     if ( objPoints_->hasVisualRepresentation() )
     {
         auto pointCloud = objPoints_->pointCloud();
-        
-        const auto positions = loadVertPosBuffer_();        
+
+        const auto positions = loadVertPosBuffer_();
         bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
-        
+
         const auto normals = loadVertNormalsBuffer_();
         bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, normals, 3, normals.dirty(), normals.glSize() != 0 );
         hasNormalsBackup_ = !pointCloud->normals.empty();
@@ -276,7 +286,7 @@ void RenderPointsObject::bindPoints_()
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
     auto vertSelectionTexture = loadVertSelectionTextureBuffer_();
     vertSelectionTex_.loadDataOpt( vertSelectionTexture.dirty(),
-        { 
+        {
             .resolution = vertSelectionTextureSize_,
             .internalFormat = GL_R32UI,
             .format = GL_RED_INTEGER,
@@ -377,7 +387,7 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
     if ( !( dirty_ & DIRTY_SELECTION ) || !objPoints_->hasVisualRepresentation() )
-        return glBuffer.prepareBuffer<unsigned>( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y, 
+        return glBuffer.prepareBuffer<unsigned>( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y,
             ( dirty_ & DIRTY_SELECTION ) && vertSelectionTextureSize_.x * vertSelectionTextureSize_.y == 0 );
 
     const auto& points = objPoints_->pointCloud();
@@ -391,7 +401,7 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
     const auto& selection = objPoints_->getSelectedPoints().m_bits;
     const unsigned* selectionData = (unsigned*) selection.data();
     ParallelFor( 0, ( int )buffer.size(), [&]( int r )
-    {       
+    {
         auto& block = buffer[r];
         if ( r * step / 2 >= selection.size() )
         {
@@ -407,17 +417,17 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
 
         for ( int bit = 0; bit < 32; ++bit )
         {
-            const auto selectionBit = std::div( ( r * 32 + bit ) * int( step ), 32 );                
+            const auto selectionBit = std::div( ( r * 32 + bit ) * int( step ), 32 );
             if ( selectionData[selectionBit.quot] & ( 1 << ( selectionBit.rem ) ) )
                 block |= 1 << bit;
             else
                 block &= ~( 1 << bit );
-        }        
+        }
     } );
 
     return buffer;
 }
 
-MR_REGISTER_RENDER_OBJECT_IMPL( ObjectPointsHolder, RenderPointsObject )
+MR_REGISTER_RENDER_OBJECT_IMPL( ObjectPointsHolder, RenderObjectCombinator<RenderDefaultUiObject, RenderPointsObject> )
 
 }

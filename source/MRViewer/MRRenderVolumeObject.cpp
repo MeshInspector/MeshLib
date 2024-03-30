@@ -9,6 +9,7 @@
 #include "MRMesh/MRMatrix4.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRPch/MRTBB.h"
+#include "MRViewer/MRRenderDefaultUiObject.h"
 
 namespace MR
 {
@@ -26,14 +27,23 @@ RenderVolumeObject::~RenderVolumeObject()
     freeBuffers_();
 }
 
-void RenderVolumeObject::render( const ModelRenderParams& renderParams )
+bool RenderVolumeObject::render( const ModelRenderParams& renderParams )
 {
-    render_( renderParams, unsigned( ~0 ) );
+    RenderModelPassMask desiredPass =
+        !objVoxels_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
+        ( objVoxels_->getGlobalAlpha( renderParams.viewportId ) < 255 || objVoxels_->getFrontColor( objVoxels_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
+        RenderModelPassMask::Opaque;
+    if ( !bool( renderParams.passMask & desiredPass ) )
+        return false; // Nothing to draw in this pass.
+
+    render_( renderParams, &renderParams, unsigned( ~0 ) );
+
+    return true;
 }
 
-void RenderVolumeObject::renderPicker( const ModelRenderParams& renderParams, unsigned geomId )
+void RenderVolumeObject::renderPicker( const ModelBaseRenderParams& renderParams, unsigned geomId )
 {
-    render_( renderParams, geomId );
+    render_( renderParams, nullptr, geomId );
 }
 
 size_t RenderVolumeObject::heapBytes() const
@@ -67,7 +77,7 @@ RenderBufferRef<unsigned> RenderVolumeObject::loadActiveVoxelsTextureBuffer_()
     assert( activeVoxelsTextureSize_.x * activeVoxelsTextureSize_.y >= size );
     auto buffer = glBuffer.prepareBuffer<unsigned>( activeVoxelsTextureSize_.x * activeVoxelsTextureSize_.y );
 
-    
+
     if ( objVoxels_->getVolumeRenderActiveVoxels().empty() )
     {
         tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
@@ -88,7 +98,7 @@ RenderBufferRef<unsigned> RenderVolumeObject::loadActiveVoxelsTextureBuffer_()
     return buffer;
 }
 
-void RenderVolumeObject::render_( const ModelRenderParams& renderParams, unsigned geomId )
+void RenderVolumeObject::render_( const ModelBaseRenderParams& renderParams, const ModelRenderParams* nonPickerParams, unsigned geomId )
 {
     if ( !getViewerInstance().isGLInitialized() )
     {
@@ -131,11 +141,11 @@ void RenderVolumeObject::render_( const ModelRenderParams& renderParams, unsigne
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrix.data() ) );
     if ( !picker )
     {
-        if ( renderParams.normMatrixPtr )
+        if ( nonPickerParams->normMatrixPtr )
         {
-            GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "normal_matrix" ), 1, GL_TRUE, renderParams.normMatrixPtr->data() ) );
+            GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "normal_matrix" ), 1, GL_TRUE, nonPickerParams->normMatrixPtr->data() ) );
         }
-        GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &renderParams.lightPos.x ) );
+        GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &nonPickerParams->lightPos.x ) );
         GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specExp" ), objVoxels_->getShininess() ) );
         GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specularStrength" ), objVoxels_->getSpecularStrength() ) );
         GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), objVoxels_->getAmbientStrength() ) );
@@ -200,7 +210,7 @@ void RenderVolumeObject::render_( const ModelRenderParams& renderParams, unsigne
 
     GL_EXEC( glBindVertexArray( volumeArrayObjId_ ) );
     bindVertexAttribArray( shader, "position", volumeVertsBuffer_, cubePoints, 3, !volumeVertsBuffer_.valid() );
-    volumeIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, !volumeIndicesBuffer_.valid(), 
+    volumeIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, !volumeIndicesBuffer_.valid(),
         cubeTriangles.data(), cubeTriangles.size() );
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 12 );
@@ -209,9 +219,9 @@ void RenderVolumeObject::render_( const ModelRenderParams& renderParams, unsigne
     GL_EXEC( glCullFace( GL_BACK ) );
 
     // currently only less supported for volume rendering
-    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Less ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Less ) ) );
     GL_EXEC( glDrawElements( GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr ) );
-    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFuncion::Default ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
 
     GL_EXEC( glDisable( GL_CULL_FACE ) );
     GL_EXEC( glEnable( GL_MULTISAMPLE ) );
@@ -312,10 +322,10 @@ void RenderVolumeObject::bindVolume_( bool picker )
             }
         }
         denseMap_.loadData(
-            { 
+            {
                 .resolution = Vector2i( (int)denseMap.size(), 1 ),
-                .internalFormat = GL_RGBA8, 
-                .format = GL_RGBA, 
+                .internalFormat = GL_RGBA8,
+                .format = GL_RGBA,
                 .type = GL_UNSIGNED_BYTE,
                 .filter = FilterType::Linear },
             denseMap );
@@ -363,7 +373,7 @@ void RenderVolumeObject::update_()
     objVoxels_->resetDirty();
 }
 
-MR_REGISTER_RENDER_OBJECT_IMPL( ObjectVoxels, RenderVolumeObject )
+MR_REGISTER_RENDER_OBJECT_IMPL( ObjectVoxels, RenderObjectCombinator<RenderDefaultUiObject, RenderVolumeObject> )
 
 }
 #endif

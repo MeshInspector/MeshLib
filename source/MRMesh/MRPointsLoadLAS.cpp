@@ -4,7 +4,7 @@
 #include "MRBox.h"
 #include "MRColor.h"
 #include "MRPointCloud.h"
-
+#include "MRStringConvert.h"
 #include "MRPch/MRFmt.h"
 
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
@@ -302,7 +302,7 @@ Expected<PointCloud, std::string> fromLas( const std::filesystem::path& file, Ve
 {
     try
     {
-        lazperf::reader::named_file reader( file.string() );
+        lazperf::reader::named_file reader( utf8string( file ) );
         return process( reader, colors, outXf, std::move( callback ) );
     }
     catch ( const std::exception& exc )

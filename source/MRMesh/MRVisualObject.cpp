@@ -21,11 +21,16 @@ MR_ADD_CLASS_FACTORY( VisualObject )
 
 VisualObject::VisualObject()
 {
-    useDefaultScenePropertiesOnDeserialization_ = SceneSettings::get( SceneSettings::Type::UseDefaultScenePropertiesOnDeserialization );
+    useDefaultScenePropertiesOnDeserialization_ = SceneSettings::get( SceneSettings::BoolType::UseDefaultScenePropertiesOnDeserialization );
     setDefaultSceneProperties_();
 }
 
-void VisualObject::setVisualizeProperty( bool value, unsigned type, ViewportMask viewportMask )
+bool VisualObject::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const
+{
+    return type.tryGet<VisualizeMaskType>().has_value();
+}
+
+void VisualObject::setVisualizeProperty( bool value, AnyVisualizeMaskEnum type, ViewportMask viewportMask )
 {
     auto res = getVisualizePropertyMask( type );
     if ( value )
@@ -36,7 +41,7 @@ void VisualObject::setVisualizeProperty( bool value, unsigned type, ViewportMask
     setVisualizePropertyMask( type, res );
 }
 
-void VisualObject::setVisualizePropertyMask( unsigned type, ViewportMask viewportMask )
+void VisualObject::setVisualizePropertyMask( AnyVisualizeMaskEnum type, ViewportMask viewportMask )
 {
     auto& mask = getVisualizePropertyMask_( type );
     if ( mask == viewportMask )
@@ -45,34 +50,32 @@ void VisualObject::setVisualizePropertyMask( unsigned type, ViewportMask viewpor
     needRedraw_ = true;
 }
 
-bool VisualObject::getVisualizeProperty( unsigned type, ViewportMask viewportMask ) const
+bool VisualObject::getVisualizeProperty( AnyVisualizeMaskEnum type, ViewportMask viewportMask ) const
 {
     return !( getVisualizePropertyMask( type ) & viewportMask ).empty();
 }
 
-void VisualObject::toggleVisualizeProperty( unsigned type, ViewportMask viewportMask )
+void VisualObject::toggleVisualizeProperty( AnyVisualizeMaskEnum type, ViewportMask viewportMask )
 {
     setVisualizePropertyMask( type, getVisualizePropertyMask( type ) ^ viewportMask );
 }
 
-void VisualObject::setAllVisualizeProperties( const AllVisualizeProperties& properties )
+void VisualObject::setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos )
 {
-    for ( int i = 0; i < properties.size(); ++i )
-        setVisualizePropertyMask( unsigned( i ), properties[i] );
+    setAllVisualizePropertiesForEnum<VisualizeMaskType>( properties, pos );
 }
 
 AllVisualizeProperties VisualObject::getAllVisualizeProperties() const
 {
     AllVisualizeProperties res;
-    res.resize( VisualizeMaskType::VisualizePropsCount );
-    for ( int i = 0; i < res.size(); ++i )
-        res[i] = getVisualizePropertyMask( unsigned( i ) );
+    getAllVisualizePropertiesForEnum<VisualizeMaskType>( res );
     return res;
 }
 
 const Color& VisualObject::getFrontColor( bool selected /*= true */, ViewportId viewportId /*= {} */ ) const
 {
-    return selected ? selectedColor_.get( viewportId ) : unselectedColor_.get( viewportId );
+    // Calling the getter in case it's overridden.
+    return getFrontColorsForAllViewports( selected ).get( viewportId );
 }
 
 void VisualObject::setFrontColor( const Color& color, bool selected, ViewportId viewportId )
@@ -112,7 +115,8 @@ void VisualObject::setBackColorsForAllViewports( ViewportProperty<Color> val )
 
 const Color& VisualObject::getBackColor( ViewportId viewportId ) const
 {
-    return backFacesColor_.get( viewportId );
+    // Calling the getter in case it's overridden.
+    return getBackColorsForAllViewports().get( viewportId );
 }
 
 void VisualObject::setBackColor( const Color& color, ViewportId viewportId )
@@ -125,7 +129,8 @@ void VisualObject::setBackColor( const Color& color, ViewportId viewportId )
 
 const uint8_t& VisualObject::getGlobalAlpha( ViewportId viewportId /*= {} */ ) const
 {
-    return globalAlpha_.get( viewportId );
+    // Calling the getter in case it's overridden.
+    return getGlobalAlphaForAllViewports().get( viewportId );
 }
 
 void VisualObject::setGlobalAlpha( uint8_t alpha, ViewportId viewportId /*= {} */ )
@@ -177,6 +182,8 @@ void VisualObject::setDirtyFlags( uint32_t mask, bool )
     // DIRTY_UV because we need to update UV coordinates
 
     dirty_ |= mask;
+
+    needRedraw_ = true; // this is needed to differ dirty render object and dirty scene
 }
 
 void VisualObject::resetDirty() const
@@ -253,16 +260,16 @@ std::shared_ptr<Object> VisualObject::shallowClone() const
     return clone();
 }
 
-void VisualObject::render( const ModelRenderParams& params ) const
+bool VisualObject::render( const ModelRenderParams& params ) const
 {
     setupRenderObject_();
     if ( !renderObj_ )
-        return;
+        return false;
 
-    renderObj_->render( params );
+    return renderObj_->render( params );
 }
 
-void VisualObject::renderForPicker( const ModelRenderParams& params, unsigned id) const
+void VisualObject::renderForPicker( const ModelBaseRenderParams& params, unsigned id ) const
 {
     setupRenderObject_();
     if ( !renderObj_ )
@@ -271,48 +278,57 @@ void VisualObject::renderForPicker( const ModelRenderParams& params, unsigned id
     renderObj_->renderPicker( params, id );
 }
 
-void VisualObject::bindAllVisualization() const
+void VisualObject::renderUi( const UiRenderParams& params ) const
 {
     setupRenderObject_();
     if ( !renderObj_ )
         return;
 
-    renderObj_->forceBindAll();
+    renderObj_->renderUi( params );
 }
 
 void VisualObject::swapBase_( Object& other )
-{    
+{
     if ( auto otherVis = other.asType<VisualObject>() )
         std::swap( *this, *otherVis );
     else
         assert( false );
 }
 
-ViewportMask& VisualObject::getVisualizePropertyMask_( unsigned type )
+ViewportMask& VisualObject::getVisualizePropertyMask_( AnyVisualizeMaskEnum type )
 {
     return const_cast< ViewportMask& >( getVisualizePropertyMask( type ) );
 }
 
-const ViewportMask& VisualObject::getVisualizePropertyMask( unsigned type ) const
+const ViewportMask& VisualObject::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
 {
-    switch ( type )
+    if ( auto value = type.tryGet<VisualizeMaskType>() )
     {
-    case VisualizeMaskType::Visibility:
+        switch ( *value )
+        {
+        case VisualizeMaskType::Visibility:
+            (void)visibilityMask(); // Call this for the side effects, in case it's overridden. Can't return it directly, as it returns by value.
+            return visibilityMask_;
+        case VisualizeMaskType::InvertedNormals:
+            return invertNormals_;
+        case VisualizeMaskType::Labels:
+            return showLabels_;
+        case VisualizeMaskType::ClippedByPlane:
+            return clipByPlane_;
+        case VisualizeMaskType::Name:
+            return showName_;
+        case VisualizeMaskType::CropLabelsByViewportRect:
+            return cropLabels_;
+        case VisualizeMaskType::DepthTest:
+            return depthTest_;
+        case VisualizeMaskType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
+        }
+        assert( false && "Invalid enum." );
         return visibilityMask_;
-    case VisualizeMaskType::InvertedNormals:
-        return invertNormals_;
-    case VisualizeMaskType::Labels:
-        return showLabels_;
-    case VisualizeMaskType::ClippedByPlane:
-        return clipByPlane_;
-    case VisualizeMaskType::Name:
-        return showName_;
-    case VisualizeMaskType::CropLabelsByViewportRect:
-        return cropLabels_;
-    case VisualizeMaskType::DepthTest:
-        return depthTest_;
-    default:
-        assert( false );
+    }
+    else
+    {
+        assert( false && "Unknown `AnyVisualizeMaskEnum`." );
         return visibilityMask_;
     }
 }
@@ -321,14 +337,15 @@ void VisualObject::serializeFields_( Json::Value& root ) const
 {
     Object::serializeFields_( root );
     root["InvertNormals"] = !invertNormals_.empty();
-MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
+MR_SUPPRESS_WARNING_PUSH
+MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
     root["ShowLabes"] = showLabels();
 MR_SUPPRESS_WARNING_POP
 
     auto writeColors = [&root]( const char * fieldName, const Color& val )
     {
         auto& colors = root["Colors"]["Faces"][fieldName];
-        serializeToJson( Vector4f( val ), colors["Diffuse"] );// To support old version 
+        serializeToJson( Vector4f( val ), colors["Diffuse"] );// To support old version
     };
 
     writeColors( "SelectedMode", selectedColor_.get() );
@@ -336,6 +353,8 @@ MR_SUPPRESS_WARNING_POP
     writeColors( "BackFaces", backFacesColor_.get() );
 
     root["Colors"]["GlobalAlpha"] = globalAlpha_.get();
+
+    root["ShowName"] = showName_.value();
 
     // labels
     serializeToJson( Vector4f( labelsColor_.get() ), root["Colors"]["Labels"] );
@@ -352,7 +371,8 @@ void VisualObject::deserializeFields_( const Json::Value& root )
 
     if ( root["InvertNormals"].isBool() ) // Support old versions
         invertNormals_ = root["InvertNormals"].asBool() ? ViewportMask::all() : ViewportMask{};
-MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
+MR_SUPPRESS_WARNING_PUSH
+MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
     if ( root["ShowLabes"].isBool() )
         showLabels( root["ShowLabes"].asBool() );
 MR_SUPPRESS_WARNING_POP
@@ -370,6 +390,9 @@ MR_SUPPRESS_WARNING_POP
 
     if ( root["Colors"]["GlobalAlpha"].isUInt() )
         globalAlpha_.get() = uint8_t( root["Colors"]["GlobalAlpha"].asUInt() );
+
+    if ( const auto& showNameJson = root["ShowName"]; showNameJson.isUInt() )
+        showName_ = ViewportMask( showNameJson.asUInt() );
 
     Vector4f resVec;
     // labels
@@ -447,7 +470,8 @@ void VisualObject::setDefaultColors_()
     setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
     setBackColor( SceneColors::get( SceneColors::BackFaces ) );
-MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
+MR_SUPPRESS_WARNING_PUSH
+MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
     setLabelsColor( SceneColors::get( SceneColors::Labels ) );
 MR_SUPPRESS_WARNING_POP
 }

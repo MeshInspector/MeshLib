@@ -1,5 +1,5 @@
-from helper import *
 import pytest
+from helper import *
 
 
 def test_fix_tunnels():
@@ -8,4 +8,4 @@ def test_fix_tunnels():
     tunnelFaces = mrmesh.detectTunnelFaces(mrmesh.MeshPart(torus), 100500)
 
     # one circle with 2-faces width
-    assert (tunnelFaces.count() == 20)
+    assert tunnelFaces.count() == 20

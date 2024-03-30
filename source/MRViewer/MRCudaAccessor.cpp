@@ -1,6 +1,7 @@
 #include "MRCudaAccessor.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include "MRMesh/MRFastWindingNumber.h"
+#include "MRMesh/MRSimpleVolume.h"
 
 namespace MR
 {
@@ -23,6 +24,11 @@ void CudaAccessor::setCudaFastWindingNumberConstructor( CudaFwnConstructor fwnCt
 void CudaAccessor::setCudaMeshProjectorConstructor( CudaMeshProjectorConstructor mpCtor )
 {
     instance_().mpCtor_ = mpCtor;
+}
+
+void CudaAccessor::setCudaPointsToDistanceVolumeCallback( CudaPointsToDistanceVolumeCallback callback )
+{
+    instance_().pointsToDistanceVolumeCallback_ = callback;
 }
 
 bool CudaAccessor::isCudaAvailable()
@@ -53,6 +59,15 @@ std::unique_ptr<IPointsToMeshProjector> CudaAccessor::getCudaPointsToMeshProject
     if ( !inst.mpCtor_ )
         return {};
     return inst.mpCtor_();
+}
+
+CudaAccessor::CudaPointsToDistanceVolumeCallback CudaAccessor::getCudaPointsToDistanceVolumeCallback()
+{
+    auto& inst = instance_();
+    if ( !inst.pointsToDistanceVolumeCallback_ )
+        return {};
+
+    return inst.pointsToDistanceVolumeCallback_;
 }
 
 CudaAccessor& CudaAccessor::instance_()

@@ -1,10 +1,10 @@
-from helper import *
 import pytest
+from helper import *
 
 
 def is_equal_vector3(a, b):
     diff = a - b
-    return diff.length() < 1.e-6
+    return diff.length() < 1.0e-6
 
 
 def test_boolean_exposing():
@@ -22,36 +22,38 @@ def test_boolean_exposing():
 
     bResMesh = bResult.mesh
 
-    assert (
-        is_equal_vector3(
-            bResMesh.computeBoundingBox(
-                bResMesh.topology.getValidFaces(),
-                mrmesh.AffineXf3f()).min,
-            pos1))
-    assert (
-        is_equal_vector3(
-            bResMesh.computeBoundingBox(
-                bResMesh.topology.getValidFaces(),
-                mrmesh.AffineXf3f()).max,
-            pos3))
+    assert is_equal_vector3(
+        bResMesh.computeBoundingBox(
+            bResMesh.topology.getValidFaces(), mrmesh.AffineXf3f()
+        ).min,
+        pos1,
+    )
+    assert is_equal_vector3(
+        bResMesh.computeBoundingBox(
+            bResMesh.topology.getValidFaces(), mrmesh.AffineXf3f()
+        ).max,
+        pos3,
+    )
 
-    assert (bResMesh.topology.getValidVerts().size() == 14)
-    assert (bResMesh.topology.getValidVerts().count() == 14)
-    assert (bResMesh.topology.findHoleRepresentiveEdges().size() == 0)
+    assert bResMesh.topology.getValidVerts().size() == 14
+    assert bResMesh.topology.getValidVerts().count() == 14
+    assert bResMesh.topology.findHoleRepresentiveEdges().size() == 0
 
-    brmmAA = bResMapper.map(
-        meshA.topology.getValidVerts(),
-        mrmesh.BooleanResMapObj.A)
-    brmmBB = bResMapper.map(
-        meshB.topology.getValidVerts(),
-        mrmesh.BooleanResMapObj.B)
+    brmmAA = bResMapper.map(meshA.topology.getValidVerts(), mrmesh.BooleanResMapObj.A)
+    brmmBB = bResMapper.map(meshB.topology.getValidVerts(), mrmesh.BooleanResMapObj.B)
 
-    assert (brmmAA.count() == 1)
-    assert (brmmBB.count() == 1)
+    assert brmmAA.count() == 1
+    assert brmmBB.count() == 1
+
 
 def test_unite_may_meshes():
     size = mrmesh.Vector3f.diagonal(2)
-    poses = [mrmesh.Vector3f.diagonal(-1),mrmesh.Vector3f.diagonal(0),mrmesh.Vector3f.diagonal(1),mrmesh.Vector3f.diagonal(2)]
+    poses = [
+        mrmesh.Vector3f.diagonal(-1),
+        mrmesh.Vector3f.diagonal(0),
+        mrmesh.Vector3f.diagonal(1),
+        mrmesh.Vector3f.diagonal(2),
+    ]
     meshes = []
     vecMeshes = mrmesh.vectorConstMeshPtr()
     vecMeshes.resize(len(poses))
@@ -59,5 +61,5 @@ def test_unite_may_meshes():
         meshes.append(mrmesh.makeCube(size, poses[i]))
         vecMeshes[i] = meshes[i]
     resMesh = mrmesh.uniteManyMeshes(vecMeshes)
-    assert ( resMesh.topology.numValidFaces() > 0 )
-    assert ( resMesh.topology.findHoleRepresentiveEdges().size() == 0 )
+    assert resMesh.topology.numValidFaces() > 0
+    assert resMesh.topology.findHoleRepresentiveEdges().size() == 0

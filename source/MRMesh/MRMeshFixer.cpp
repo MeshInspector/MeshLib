@@ -4,7 +4,6 @@
 #include "MRRingIterator.h"
 #include "MRBitSetParallelFor.h"
 #include "MRTriMath.h"
-#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -326,6 +325,94 @@ int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & region, FaceB
         if ( res == x )
             break;
     }
+    return res;
+}
+
+EdgeId isVertexRepeatedOnHoleBd( const MeshTopology& topology, VertId v )
+{
+    for ( EdgeId e0 : orgRing( topology, v ) )
+    {
+        if ( topology.left( e0 ) )
+            continue;
+        // not very optional in case of many boundary edges, but it shall be rare
+        for ( EdgeId e1 : orgRing0( topology, e0 ) )
+        {
+            if ( topology.left( e1 ) )
+                continue;
+            if ( topology.fromSameLeftRing( e0, e1 ) )
+                return e0;
+        }
+    }
+    return {};
+}
+
+/// adds in complicatingFaces the faces not from the wedge with largest angle of faces connected by edges incident to given vertex
+static void findHoleComplicatingFaces( const Mesh & mesh, VertId v, std::vector<FaceId> & complicatingFaces )
+{
+    EdgeId bd;
+    float bdAngle = -1;
+    
+    auto angle = [&]( EdgeId e )
+    {
+        assert( !mesh.topology.left( e ) );
+        float res = 0;
+        while ( mesh.topology.right( e ) )
+        {
+            auto d1 = mesh.edgeVector( e );
+            auto d0 = mesh.edgeVector( e = mesh.topology.prev( e ) );
+            res += MR::angle( d0, d1 );
+        }
+        return res;
+    };
+
+    auto report = [&]( EdgeId e )
+    {
+        assert( !mesh.topology.left( e ) );
+        while ( auto r = mesh.topology.right( e ) )
+        {
+            complicatingFaces.push_back( r );
+            e = mesh.topology.prev( e );
+        }
+    };
+
+    for ( EdgeId e : orgRing( mesh.topology, v ) )
+    {
+        if ( mesh.topology.left( e ) )
+            continue;
+        auto eAngle = angle( e );
+        if ( eAngle <= bdAngle )
+            report( e );
+        else
+        {
+            if ( bd )
+                report( bd );
+            bd = e;
+            bdAngle = eAngle;
+        }
+    }
+}
+
+FaceBitSet findHoleComplicatingFaces( const Mesh & mesh )
+{
+    MR_TIMER
+    tbb::enumerable_thread_specific<std::vector<FaceId>> threadData;
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    {
+        if ( !isVertexRepeatedOnHoleBd( mesh.topology, v ) )
+            return;
+        findHoleComplicatingFaces( mesh, v, threadData.local() );
+    } );
+
+    FaceId maxFace;
+    for ( const auto & fs : threadData )
+        for ( FaceId f : fs )
+            maxFace = std::max( maxFace, f );
+
+    FaceBitSet res;
+    res.resize( maxFace + 1 );
+    for ( const auto & fs : threadData )
+        for ( FaceId f : fs )
+            res.set( f );
     return res;
 }
 

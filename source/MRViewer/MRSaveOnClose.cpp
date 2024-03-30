@@ -1,10 +1,11 @@
 #include "MRSaveOnClose.h"
-#include "MRMenu.h"
+#include "ImGuiMenu.h"
 #include "MRFileDialog.h"
 #include "MRProgressBar.h"
 #include "MRRibbonButtonDrawer.h"
 #include "MRRibbonFontManager.h"
-#include <MRMesh/MRHistoryStore.h>
+#include "MRViewer.h"
+#include "MRHistoryStore.h"
 #include <MRMesh/MRSerializer.h>
 #include <MRMesh/MRObjectSave.h>
 #include <MRMesh/MRSceneRoot.h>

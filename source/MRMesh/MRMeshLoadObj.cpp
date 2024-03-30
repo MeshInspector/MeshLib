@@ -374,6 +374,8 @@ namespace
             result.emplace( std::move( currentMaterialName ), std::move( currentMaterial ) );
         return result;
     }
+
+    constexpr Vector3d cInvalidColor = { -1., -1., -1. };
 }
 
 namespace MR
@@ -420,9 +422,11 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
     std::string currentObjName;
     std::vector<Vector3f> points;
     std::vector<UVCoord> textureVertices;
-    std::vector<int> texCoords( points.size(), -1 );
+    std::vector<int> texCoords;
     Triangulation t;
     VertUVCoords uvCoords;
+    VertColors colors;
+    auto hasColors = false;
     Expected<MtlLibrary, std::string> mtl;
     std::string currentMaterialName;
     std::optional<Vector3d> pointOffset;
@@ -463,6 +467,12 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
             }
             result.mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices(
                 VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), t, &dups, buildSettings );
+            if ( hasColors )
+            {
+                result.colors = std::move( colors );
+                colors = {};
+                hasColors = false;
+            }
             if ( settings.duplicatedVertexCount )
                 *settings.duplicatedVertexCount = int( dups.size() );
             if ( settings.skippedFaceCount )
@@ -531,14 +541,15 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
     if ( !reportProgress( settings.callback, 0.5f ) )
         return unexpected( "Loading canceled" );
 
-    auto parseVertex = [&] ( size_t li ) -> Expected<Vector3d, std::string>
+    auto parseVertex = [&] ( size_t li ) -> Expected<std::tuple<Vector3d, Vector3d>, std::string>
     {
         Vector3d v;
+        Vector3d c { cInvalidColor };
         std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-        auto res = parseObjCoordinate( line, v );
+        auto res = parseObjCoordinate( line, v, &c );
         if ( !res.has_value() )
             return unexpected( std::move( res.error() ) );
-        return v;
+        return std::make_tuple( v, c );
     };
 
     auto parseVertices = [&] ( size_t begin, size_t end, std::string& parseError )
@@ -548,24 +559,30 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
         const size_t newSize = points.size() + ( end - begin );
         texCoords.resize( newSize, -1 );
 
-        points.resize( newSize );        
+        points.resize( newSize );
+        if ( hasColors )
+            colors.resize( newSize );
         uvCoords.resize( newSize );
 
         tbb::task_group_context ctx;
         tbb::parallel_for( tbb::blocked_range<size_t>( begin, end ), [&] ( const tbb::blocked_range<size_t>& range )
         {
-            Vector3d v;
+            Vector3d v { noInit };
+            Vector3d c { noInit };
             for ( auto li = range.begin(); li < range.end(); li++ )
             {
                 std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-                auto res = parseObjCoordinate( line, v );
+                auto res = parseObjCoordinate( line, v, hasColors ? &c : nullptr );
                 if ( !res.has_value() )
                 {
                     if ( ctx.cancel_group_execution() )
                         parseError = std::move( res.error() );
                     return;
                 }
-                points[offset + ( li - begin )] = pointOffset ? Vector3f( v - *pointOffset ) : Vector3f( v );
+                const auto n = offset + ( li - begin );
+                points[n] = pointOffset ? Vector3f( v - *pointOffset ) : Vector3f( v );
+                if ( hasColors )
+                    colors[VertId( n )] = Color( c );
             }
         }, ctx );
     };
@@ -780,7 +797,10 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
                     parseError = std::move( res1.error() );
                     break;
                 }
-                pointOffset.emplace( *res1 );
+                auto [v, c] = *res1;
+                pointOffset.emplace( v );
+                if ( c != cInvalidColor )
+                    hasColors = true;
                 *settings.xf = AffineXf3f::translation( Vector3f( *pointOffset ) );
             }
             parseVertices( group.begin, group.end, parseError );

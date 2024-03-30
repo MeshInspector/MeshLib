@@ -1,6 +1,8 @@
 #include "MREdgeMetric.h"
 #include "MRMesh.h"
 #include "MREdgeIterator.h"
+#include "MRParallelFor.h"
+#include "MRBuffer.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -49,17 +51,25 @@ EdgeMetric edgeCurvMetric( const Mesh & mesh, float angleSinFactor, float angleS
     };
 }
 
-EdgeMetric edgeTableMetric( const MeshTopology & topology, const EdgeMetric & metric )
+EdgeMetric edgeTableSymMetric( const MeshTopology & topology, const EdgeMetric & metric )
 {
     MR_TIMER
 
-    Vector<float, UndirectedEdgeId> table( topology.undirectedEdgeSize() );
-    for ( auto e : undirectedEdges( topology ) )
-        table[e] = metric( e );
-
-    return [table = std::move( table )]( EdgeId e )
+    Buffer<float, UndirectedEdgeId> table( topology.undirectedEdgeSize() );
+    ParallelFor( table.beginId(), table.endId(), [&]( UndirectedEdgeId ue )
     {
-        return table[e.undirected()];
+        if ( topology.isLoneEdge( ue ) )
+            return;
+        table[ue] = metric( EdgeId( ue ) );
+#ifndef NDEBUG
+        assert( table[ue] == metric( EdgeId( ue ).sym() ) );
+#endif
+    } );
+
+    // shared_ptr is necessary to satisfy CopyConstructible Callable target requirement of std::function
+    return [tablePtr = std::make_shared<Buffer<float, UndirectedEdgeId>>( std::move( table ) )]( UndirectedEdgeId ue )
+    {
+        return (*tablePtr)[ue];
     };
 }
 

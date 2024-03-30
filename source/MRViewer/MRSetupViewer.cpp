@@ -6,7 +6,7 @@
 #include "MRMesh/MRConfig.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
-#include "MRMesh/MRHistoryStore.h"
+#include "MRHistoryStore.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
@@ -38,13 +38,25 @@ void ViewerSetup::setupSettingsManager( Viewer* viewer, const std::string& appNa
     viewer->setViewportSettingsManager( std::move( mng ) );
 }
 
+static void resetSettings( Viewer* viewer );
+
 void ViewerSetup::setupConfiguration( Viewer* viewer ) const
 {
     assert( viewer );
 
-    viewer->glPickRadius = 3;
-    viewer->defaultLabelsBasisAxes = true;
     viewer->enableGlobalHistory( true );
+
+    viewer->resetSettingsFunction = [oldFunction = viewer->resetSettingsFunction] ( Viewer* viewer )
+    {
+        oldFunction( viewer );
+        resetSettings( viewer );
+    };
+    viewer->resetSettingsFunction( viewer );
+}
+
+void resetSettings( Viewer * viewer )
+{
+    viewer->glPickRadius = 3;
 
     viewer->mouseController().setMouseControl( { MouseButton::Right,0 }, MouseMode::Translation );
     MouseController::MouseControlKey rotKey = { MouseButton::Middle,0 };
@@ -104,13 +116,15 @@ void ViewerSetup::setupExtendedLibraries() const
 #else
         pluginPath /= "lib" + libName + ".so";
 #endif
-        if ( exists(pluginPath) )
+        if ( exists( pluginPath, ec ) )
         {
             spdlog::info( "Loading library {} with priority {}", utf8string( libName ), priority );
+            bool success = true;
 #if _WIN32
             auto result = LoadLibraryW( pluginPath.wstring().c_str() );
             if ( !result )
             {
+                success = false;
                 spdlog::error( "Load library {} error: {}", utf8string( pluginPath ), GetLastError() );
                 assert( false );
             }
@@ -118,10 +132,13 @@ void ViewerSetup::setupExtendedLibraries() const
             auto result = dlopen( utf8string( pluginPath ).c_str(), RTLD_LAZY );
             if ( !result )
             {
+                success = false;
                 spdlog::error( "Load library {} error: {}", utf8string( pluginPath ), dlerror() );
                 assert( false );
             }
 #endif
+            if ( success )
+                spdlog::info( "Load library {} was successful", utf8string( libName ) );
         }
     }
 #endif // ifndef __EMSCRIPTEN__

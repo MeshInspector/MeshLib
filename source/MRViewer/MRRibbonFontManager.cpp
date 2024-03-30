@@ -7,9 +7,22 @@
 #include "MRViewerInstance.h"
 #include "MRViewer.h"
 #include "MRRibbonMenu.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
+
+static void loadFontChecked( const char* filename, float size_pixels, const ImFontConfig* font_cfg = nullptr, const ImWchar* glyph_ranges = nullptr )
+{
+    if ( !ImGui::GetIO().Fonts->AddFontFromFileTTF( filename, size_pixels, font_cfg, glyph_ranges ) )
+    {
+        assert( false && "Failed to load font!" );
+        spdlog::error( "Failed to load font from `{}`.", filename );
+
+        ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
+            droid_sans_compressed_size, size_pixels, font_cfg, glyph_ranges );
+    }
+}
 
 void RibbonFontManager::loadAllFonts( ImWchar* charRanges, float scaling )
 {
@@ -102,7 +115,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
 #else
         config.GlyphOffset = ImVec2( 0, -3 * scaling );
 #endif
-        ImGui::GetIO().Fonts->AddFontFromFileTTF(
+        loadFontChecked(
             utf8string( fontPath ).c_str(), cDefaultFontSize * scaling,
             &config, ranges );
         fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
@@ -113,7 +126,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
         const float fontSize = cBigIconSize * scaling;
         config.GlyphMinAdvanceX = fontSize; // Use if you want to make the icon monospaced
         auto fontPath = GetFontsDirectory() / "fa-solid-900.ttf";
-        ImGui::GetIO().Fonts->AddFontFromFileTTF( utf8string( fontPath ).c_str(), fontSize, &config, ranges );
+        loadFontChecked( utf8string( fontPath ).c_str(), fontSize, &config, ranges );
         fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
     }
     else if ( type == FontType::Small )
@@ -126,7 +139,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
 #else
         config.GlyphOffset = ImVec2( 0, -2 * scaling );
 #endif
-        ImGui::GetIO().Fonts->AddFontFromFileTTF(
+        loadFontChecked(
             utf8string( fontPath ).c_str(), cSmallFontSize * scaling,
             &config, ranges );
         fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
@@ -138,7 +151,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
         // "- 3 * scaling" eliminates shift of the font in order to render this font in text fields properly
         config.GlyphOffset = ImVec2( 0, - 3 * scaling );
-        ImGui::GetIO().Fonts->AddFontFromFileTTF(
+        loadFontChecked(
             utf8string( fontPath ).c_str(), cDefaultFontSize * scaling,
             &config, ranges );
         fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
@@ -149,7 +162,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
         config.GlyphOffset = ImVec2( 0, -4 * scaling );
-        ImGui::GetIO().Fonts->AddFontFromFileTTF(
+        loadFontChecked(
             utf8string( fontPath ).c_str(), cBigFontSize * scaling,
             &config, ranges );
         fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
@@ -160,7 +173,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
         config.GlyphOffset = ImVec2( 0, -4 * scaling );
-        ImGui::GetIO().Fonts->AddFontFromFileTTF(
+        loadFontChecked(
             utf8string( fontPath ).c_str(), cBigFontSize * scaling,
             &config, ranges );
         fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
@@ -171,7 +184,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
         config.GlyphOffset = ImVec2( 0, -4 * scaling );
-        ImGui::GetIO().Fonts->AddFontFromFileTTF(
+        loadFontChecked(
             utf8string( fontPath ).c_str(), cHeadlineFontSize * scaling,
             &config, ranges );
         fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
@@ -182,7 +195,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
         config.GlyphOffset = ImVec2( 1 * scaling, -2 * scaling );
-        ImGui::GetIO().Fonts->AddFontFromFileTTF(
+        loadFontChecked(
             utf8string( fontPath ).c_str(), cDefaultFontSize * scaling,
             &config, ranges );
         fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();

@@ -1,0 +1,9 @@
+{
+  "Items": [
+    {
+      "Name": "Hello World",
+      "Tooltip": "Just hello world.",
+      "Icon": "\uE05D"
+    }
+  ]
+}

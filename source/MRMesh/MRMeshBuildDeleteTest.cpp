@@ -29,13 +29,13 @@ TEST(MRMesh, fromFaceSoup)
         1_v, 0_v, 5_v, 6_v,
         1_v, 6_v, 2_v
     };
-    std::vector<MeshBuilder::FaceRecord> faceRecs
+    Vector<MeshBuilder::VertSpan, FaceId> faces
     {
-        { 0_f, 0, 5 },
-        { 1_f, 5, 9 },
-        { 2_f, 9, 12 }
+        { 0, 5 },
+        { 5, 9 },
+        { 9, 12 }
     };
-    auto topology = fromFaceSoup( vs, faceRecs );
+    auto topology = fromFaceSoup( vs, faces );
 
     EXPECT_EQ( topology.numValidVerts(), 7 );
     EXPECT_EQ( topology.numValidFaces(), 3 );

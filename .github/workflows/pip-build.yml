@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  VCPKG-VERSION: '2024.01.12'
+  VCPKG-VERSION: '2024.03.25'
   CUDA-VERSION: '11.4.2.47141'
   CUDA-MAJOR: '11'
   CUDA-MINOR: '4'
@@ -78,7 +78,7 @@ jobs:
         run: |
           curl -sS https://bootstrap.pypa.io/get-pip.py | ${{ matrix.py-cmd }}
           ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
-          ${{ matrix.py-cmd }} -m pip install pytest 
+          ${{ matrix.py-cmd }} -m pip install pytest
 
       - name: Install thirdparty libs
         run: |
@@ -96,7 +96,7 @@ jobs:
           CMAKE_C_COMPILER: /usr/bin/clang-11
 
       - name: Run Tests
-        run: xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop
+        run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop
 
       - name: Unit Tests
         run: ./build/Release/bin/MRTest
@@ -108,7 +108,7 @@ jobs:
       - name: Create and fix Wheel
         run: |
           ${{ matrix.py-cmd }} -m pip install auditwheel wheel setuptools pybind11-stubgen
-          ${{ matrix.py-cmd }} ./scripts/wheel/setup_workspace.py 
+          ${{ matrix.py-cmd }} ./scripts/wheel/setup_workspace.py
           cd ./scripts/wheel/meshlib
           PYTHONPATH=. ${{ matrix.py-cmd }} $(which pybind11-stubgen) --output-dir . meshlib.mrmeshpy
           PYTHONPATH=. ${{ matrix.py-cmd }} $(which pybind11-stubgen) --output-dir . meshlib.mrmeshnumpy
@@ -117,16 +117,9 @@ jobs:
           ${{ matrix.py-cmd }} -m auditwheel repair --plat manylinux_2_31_${{matrix.platform}} ./dist/*.whl
 
       - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ManyLinux-${{matrix.py-cmd}}-${{matrix.platform}}
-          path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
-          retention-days: 1
-
-      - name: Upload to Release Artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: Wheelhouse
           path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
           retention-days: 1
 
@@ -221,7 +214,7 @@ jobs:
 
       - name: Setup thirdparty
         working-directory: ${{ github.workspace }}\thirdparty\python
-        run: |  
+        run: |
           curl https://www.python.org/ftp/python/${{matrix.embed-version}}/python-${{matrix.embed-version}}-embed-amd64.zip --output python-embed.zip
           tar -xf python-embed.zip ${{matrix.py-file}}.zip
 
@@ -251,7 +244,7 @@ jobs:
           (gi 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
 
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.3
+        uses: microsoft/setup-msbuild@v2
 
       - name: Build
         run: msbuild -m  source\MeshLib.sln -p:Configuration=Release -p:PythonVersion=${{matrix.py-short-version}} -p:PythonLibPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\libs\${{matrix.py-file}}.lib -p:PythonDllPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\${{matrix.py-file}}.dll -p:PythonIncludePath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\include\
@@ -280,21 +273,14 @@ jobs:
           py -${{matrix.py-version}} ..\pybind11-stubgen.py --output-dir . meshlib.mrviewerpy
           py -${{matrix.py-version}} setup.py bdist_wheel --plat-name=win-amd64 --python-tag=${{matrix.py-tag}} --version ${{needs.setup.outputs.version_tag}}
           cd ..\..\..
-          $WheelFile = (powershell -Command Get-ChildItem -Path scripts\wheel\meshlib\dist\*.whl -Name) 
+          $WheelFile = (powershell -Command Get-ChildItem -Path scripts\wheel\meshlib\dist\*.whl -Name)
           echo $WheelFile
           py -${{matrix.py-version}} -m delvewheel repair --add-path source\x64\Release scripts\wheel\meshlib\dist\$WheelFile
 
       - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Windows-python${{ matrix.py-version }}
-          path: wheelhouse\meshlib-*.whl
-          retention-days: 1
-
-      - name: Upload to Release Artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: Wheelhouse
           path: wheelhouse\meshlib-*.whl
           retention-days: 1
 
@@ -355,7 +341,7 @@ jobs:
           ${{ matrix.py-cmd }} -m venv .venv
           . .venv/bin/activate
           echo PATH=$PATH >> $GITHUB_ENV
-      
+
       - name: Python setup
         run: |
           curl -sS https://bootstrap.pypa.io/get-pip.py | ${{ matrix.py-cmd }}
@@ -398,16 +384,9 @@ jobs:
           delocate-wheel -w . -v ./scripts/wheel/meshlib/dist/*.whl
 
       - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: Macos-${{ matrix.py-cmd }}
-          path: meshlib-*.whl
-          retention-days: 1
-
-      - name: Upload to Release Artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: Wheelhouse
+          name: Macos-${{matrix.py-cmd}}-${{matrix.platform}}
           path: meshlib-*.whl
           retention-days: 1
 
@@ -466,9 +445,10 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install pytest
 
       - name: Download Meshlib wheel from Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ManyLinux-${{matrix.py-cmd}}-${{matrix.platform}}
+          merge-multiple: true
 
       - name: Meshlib wheel install
         run: ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} ./meshlib-*.whl
@@ -492,9 +472,10 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Meshlib wheel from Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: Windows-python${{matrix.py-version}}
+          merge-multiple: true
 
       - name: Python setup
         uses: actions/setup-python@v5
@@ -566,9 +547,10 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install pytest
 
       - name: Download Meshlib wheel from Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: Macos-${{ matrix.py-cmd }}
+          name: Macos-${{matrix.py-cmd}}-${{matrix.platform}}
+          merge-multiple: true
 
       - name: Meshlib wheel install
         run: ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} ./meshlib-*${{matrix.platform}}*.whl
@@ -583,9 +565,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download Wheels Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: Wheelhouse
+          pattern: ManyLinux-*
+          merge-multiple: true
+
+      - name: Download Wheels Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: Windows-*
+          merge-multiple: true
+
+      - name: Download Wheels Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: Macos-*
+          merge-multiple: true
 
       - name: Install twine
         run: python3 -m pip install --upgrade pip twine
@@ -603,26 +598,20 @@ jobs:
     needs: upload-to-release
     if: always()
     steps:
-      - name: Delete Wheelhouse
-        uses: geekyeggo/delete-artifact@v2
-        with:
-          name: Wheelhouse
-          failOnError: false
-
       - name: Delete all ManyLinux
-        uses: geekyeggo/delete-artifact@v2
+        uses: geekyeggo/delete-artifact@v5
         with:
           name: ManyLinux-*
           failOnError: false
 
       - name: Delete all Windows
-        uses: geekyeggo/delete-artifact@v2
+        uses: geekyeggo/delete-artifact@v5
         with:
           name: Windows-*
           failOnError: false
 
       - name: Delete all Macos
-        uses: geekyeggo/delete-artifact@v2
+        uses: geekyeggo/delete-artifact@v5
         with:
           name: Macos-*
           failOnError: false

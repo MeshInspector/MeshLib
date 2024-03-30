@@ -1,0 +1,104 @@
+#pragma once
+
+#include "MRMesh/MRColor.h"
+#include "MRMesh/MRIRenderObject.h"
+#include "MRMesh/MRVector2.h"
+#include "MRViewer/exports.h"
+
+namespace MR
+{
+class Viewport;
+}
+
+namespace MR::RenderDimensions
+{
+
+
+struct RadiusParams
+{
+    // The center point.
+    Vector3f center;
+
+    // The length of this is the radius. This is also the preferred drawing direction relative to `center`.
+    Vector3f radiusAsVector = Vector3f( 1, 0, 0 );
+
+    // The preferred normal for non-spherical radiuses. The length is ignored, and this is automatically adjusted to be perpendicular to `radiusAsVector`.
+    Vector3f normal = Vector3f( 0, 0, 1 );
+
+    // Whether we should draw this as a diameter instead of a radius.
+    bool drawAsDiameter = false;
+
+    // Whether this is a sphere radius, as opposed to circle/cylinder radius.
+    bool isSpherical = false;
+
+    // The visual leader line length multiplier, relative to the radius.
+    // You're recommended to set a min absolute value for the resulting length when rendering.
+    float visualLengthMultiplier = 2 / 3.f;
+};
+
+class RadiusTask : public BasicUiRenderTask
+{
+    float menuScaling_ = 1;
+    Viewport* viewport_ = nullptr;
+    Color color_;
+    RadiusParams params_;
+
+public:
+    RadiusTask() {}
+    MRVIEWER_API RadiusTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const RadiusParams& params );
+    MRVIEWER_API void renderPass();
+};
+
+struct AngleParams
+{
+    // The center point.
+    Vector3f center;
+
+    // The two rays.
+    // Use the length of the shorter ray as the arc radius.
+    std::array<Vector3f, 2> rays;
+
+    // Whether this is a conical angle. The middle line between the rays is preserved, but the rays themselves can be rotated.
+    bool isConical = false;
+
+    // Whether we should draw a ray from the center point to better visualize the angle. Enable this if there isn't already a line object there.
+    std::array<bool, 2> shouldVisualizeRay{};
+};
+
+class AngleTask : public BasicUiRenderTask
+{
+    float menuScaling_ = 1;
+    Viewport* viewport_ = nullptr;
+    Color color_;
+    AngleParams params_;
+
+public:
+    AngleTask() {}
+    MRVIEWER_API AngleTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const AngleParams& params );
+    MRVIEWER_API void renderPass();
+};
+
+
+struct LengthParams
+{
+    // The points between which we're measuring.
+    std::array<Vector3f, 2> points;
+
+    // Whether the distance should be displayed as a negative one.
+    bool drawAsNegative = false;
+};
+
+class LengthTask : public BasicUiRenderTask
+{
+    float menuScaling_ = 1;
+    Viewport* viewport_ = nullptr;
+    Color color_;
+    LengthParams params_;
+
+public:
+    LengthTask() {}
+    MRVIEWER_API LengthTask( const UiRenderParams& uiParams, const AffineXf3f& xf, Color color, const LengthParams& params );
+    MRVIEWER_API void renderPass();
+};
+
+}

@@ -53,6 +53,16 @@
 namespace MR
 {
 
+#if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
+// If true, the resources should be loaded from the executable directory, rather than from the system directories.
+[[nodiscard]] static bool resourcesAreNearExe()
+{
+    auto opt = std::getenv("MR_LOCAL_RESOURCES");
+    return opt && std::string_view(opt) == "1";
+}
+#endif
+
+
 void SetCurrentThreadName( const char * name )
 {
 #ifdef _MSC_VER
@@ -139,9 +149,7 @@ std::filesystem::path GetResourcesDirectory()
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
-    // "build" in path means that MeshInspector is not installed to system
-    // so all resources are near executable file
-    if ( std::find( exePath.begin(), exePath.end(), "build" ) != exePath.end() )
+    if ( resourcesAreNearExe() )
         return exePath;
     #ifdef __APPLE__
         #ifdef MR_FRAMEWORK
@@ -161,9 +169,7 @@ std::filesystem::path GetFontsDirectory()
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
-    // "build" in path means that MeshInspector is not installed to system
-    // so all fonts are near executable file
-    if ( std::find( exePath.begin(), exePath.end(), "build" ) != exePath.end() )
+    if ( resourcesAreNearExe() )
         return exePath;
     #ifdef __APPLE__
     return GetResourcesDirectory() / "fonts/";
@@ -179,9 +185,7 @@ std::filesystem::path GetLibsDirectory()
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
-    // "build" in path means that MeshInspector is not installed to system
-    // so all libs are near executable file
-    if ( std::find( exePath.begin(), exePath.end(), "build" ) != exePath.end() )
+    if ( resourcesAreNearExe() )
         return exePath;
     #ifdef __APPLE__
         #ifdef MR_FRAMEWORK
@@ -197,15 +201,24 @@ std::filesystem::path GetLibsDirectory()
 
 std::filesystem::path getUserConfigDir()
 {
-#ifdef _WIN32
+#if defined( _WIN32 )
     std::filesystem::path filepath( _wgetenv( L"APPDATA" ) );
 #else
-    struct passwd* pw = getpwuid( getuid() );
-    if ( !pw )
+#if defined( __EMSCRIPTEN__ )
+    std::filesystem::path filepath( "/" );
+#else
+    std::filesystem::path filepath;
+    const auto* pw = getpwuid( getuid() );
+    if ( pw )
+    {
+        filepath = pw->pw_dir;
+    }
+    else
     {
         spdlog::error( "getpwuid error! errno: {}", errno );
+        filepath = std::getenv( "HOME" );
     }
-    std::filesystem::path filepath( pw->pw_dir );
+#endif
     filepath /= ".local";
     filepath /= "share";
 #endif
@@ -385,12 +398,47 @@ void OpenLink( const std::string& url )
 #ifdef __APPLE__
     auto openres = system( ( "open " + url ).c_str() );
 #else
-    auto openres = system( ( "xdg-open " + url ).c_str() );
+    auto openres = system( ( "xdg-open " + url + " &" ).c_str() );
 #endif
     if ( openres == -1 )
     {
         spdlog::warn( "Error opening {}", url );
     }
+#endif
+#endif // _WIN32
+}
+
+// Opens given file in associated application
+bool OpenDocument( const std::filesystem::path& path )
+{
+#ifdef _WIN32
+    HINSTANCE result = ShellExecuteW( NULL, L"open", path.c_str(), NULL, NULL, SW_SHOWNORMAL);
+    // "If the function succeeds, it returns a value greater than 32"
+    if ( ( INT_PTR )result <= 32 )
+    {
+        spdlog::warn( "Error opening {}, error code {}", path.string().c_str(), ( int )( INT_PTR )result );
+        return false;
+    }
+    return true;
+
+#else
+#ifdef __EMSCRIPTEN__
+    ( void )path;
+    return false;
+#else
+    std::ostringstream command;
+#ifdef __APPLE__
+    command << "open " << std::quoted( path.string(), '\'' );
+#else
+    command << "xdg-open " << std::quoted( path.string(), '\'' ) << " &";
+#endif
+    auto openres = system( command.str().c_str() );
+    if ( openres == -1 )
+    {
+        spdlog::warn( "Error opening {}", path.string() );
+        return false;
+    }
+    return true;
 #endif
 #endif // _WIN32
 }
@@ -451,7 +499,7 @@ std::string GetCpuId()
         else if ( CPUBrandString[i] != '\0' )
             break;
     }
-            
+
     auto res = std::string( CPUBrandString );
     return res.substr( res.find_first_not_of(' ') );
 #endif

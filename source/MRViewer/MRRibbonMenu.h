@@ -1,5 +1,5 @@
 #pragma once
-#include "MRMenu.h"
+#include "ImGuiMenu.h"
 #include "MRRibbonMenuItem.h"
 #include "MRRibbonMenuSearch.h"
 #include "MRRibbonFontManager.h"
@@ -30,6 +30,9 @@ class MRVIEWER_CLASS RibbonMenu : public ImGuiMenu
         using Getter = std::function<bool( std::shared_ptr<Object> object, ViewportId id )>;
         Setter setter;
         Getter getter;
+        // display a checkBox when only these types of objects are selected
+        // by default, it is always hidden
+        SelectedTypesMask selectedMask = SelectedTypesMask( -1 );
     };
 
 public:
@@ -65,6 +68,8 @@ public:
     void setCloseContextOnChange( bool deselect ) { closeContextOnChange_ = deselect; }
     bool getCloseContextOnChange() { return closeContextOnChange_; }
 
+    /// set quick access menu item list version
+    MRVIEWER_API virtual void setQuickAccessListVersion( int version );
     /// read quick access menu items list from json
     MRVIEWER_API virtual void readQuickAccessList( const Json::Value& root );
 
@@ -109,6 +114,11 @@ public:
     using TabChangedSignal = boost::signals2::signal<void( int prevTabId, int newTabId )>;
     /// this signal is called when active tab changes
     TabChangedSignal tabChangedSignal;
+
+    /// returns flag defining if closing plugin on opening another one is enabled
+    bool getAutoCloseBlockingPlugins() const { return autoCloseBlockingPlugins_; }
+    /// sets flag defining if closing plugin on opening another one is enabled or not
+    void setAutoCloseBlockingPlugins( bool value ) { autoCloseBlockingPlugins_ = value; }
 
 protected:
     // draw single item
@@ -164,6 +174,7 @@ protected:
     MRVIEWER_API virtual void drawRibbonSceneInformation_( std::vector<std::shared_ptr<Object>>& selected );
 
     MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected ) override;
+    MRVIEWER_API virtual bool drawCollapsingHeaderTransform_() override;
     MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& selected ) override;
 
     // return icon (now it is symbol in icons font) based on typename
@@ -177,6 +188,8 @@ protected:
 
     // override this function to draw your custom version window somewhere
     virtual void drawVersionWindow_() {};
+    // draws window that shows time of last operation performed with progress bar
+    MRVIEWER_API virtual void drawLastOperationTimeWindow_();
 
     MRVIEWER_API virtual void drawShortcutsWindow_() override;
     // reads files with panel description
@@ -203,7 +216,7 @@ private:
     void drawSearchButton_();
     void drawCollapseButton_();
     void drawHelpButton_();
-    bool drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected );
+    bool drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected, SelectedTypesMask selectedMask );
 
     void sortObjectsRecursive_( std::shared_ptr<Object> object );
 
@@ -244,6 +257,8 @@ private:
 
     // current scroll position of tabs panel
     float tabPanelScroll_{ 0.0f };
+
+    bool autoCloseBlockingPlugins_{ true };
 
     enum class CollapseState
     {

@@ -17,6 +17,7 @@
 #include "MR2to3.h"
 #include "MRBitSetParallelFor.h"
 #include "MRPrecisePredicates2.h"
+#include "MRGTest.h"
 #include <queue>
 #include <algorithm>
 #include <limits>
@@ -353,10 +354,30 @@ void SweepLineQueue::injectIntersections( IntersectionsMap* interMap )
         {
             auto ind = size_t( inter.vId ) - interMap->shift;
             assert( ind < interMap->map.size() );
-            interMap->map[ind].lOrg = tp_.org( inter.lower );
-            interMap->map[ind].lDest = tp_.dest( inter.lower );
-            interMap->map[ind].uOrg = tp_.org( inter.upper );
-            interMap->map[ind].uDest = tp_.dest( inter.upper );
+            auto& mapVal = interMap->map[ind];
+            mapVal.lOrg = tp_.org( inter.lower );
+            mapVal.lDest = tp_.dest( inter.lower );
+            mapVal.uOrg = tp_.org( inter.upper );
+            mapVal.uDest = tp_.dest( inter.upper );
+
+            auto iP = converters_.toFloat( to2dim( pts_[inter.vId] ) );
+            auto lO = converters_.toFloat( to2dim( pts_[mapVal.lOrg] ) );
+            auto lD = converters_.toFloat( to2dim( pts_[mapVal.lDest] ) );
+            auto uO = converters_.toFloat( to2dim( pts_[mapVal.uOrg] ) );
+            auto uD = converters_.toFloat( to2dim( pts_[mapVal.uDest] ) );
+            auto lVec = ( lD - lO );
+            auto uVec = ( uD - uO );
+            auto lVecLSq = lVec.lengthSq();
+            auto uVecLSq = uVec.lengthSq();
+            if ( lVecLSq == 0.0f )
+                mapVal.lRatio = 0.0f;
+            else
+                mapVal.lRatio = std::clamp( dot( iP - lO, lD - lO ) / lVecLSq, 0.0f, 1.0f );
+
+            if ( uVecLSq == 0.0f )
+                mapVal.uRatio = 0.0f;
+            else
+                mapVal.uRatio = std::clamp( dot( iP - uO, uD - uO ) / uVecLSq, 0.0f, 1.0f );
         }
     }
 
@@ -1292,6 +1313,24 @@ std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, con
     return triangulateDisjointContours( contsd, holeVertsIds );
 }
 
+}
+
+TEST( MRMesh, PlanarTriangulation )
+{
+    // Create a quadrangle with three points on a straight line
+    Contour2f cont;
+    cont.push_back( Vector2f( 1.f, 0.f ) );
+    cont.push_back( Vector2f( 0.f, 0.f ) );
+    cont.push_back( Vector2f( 0.f, 1.f ) );
+    cont.push_back( Vector2f( 0.f, 2.f ) );
+    cont.push_back( Vector2f( 1.f, 0.f ) );
+
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    mesh.pack();
+    EXPECT_TRUE( mesh.topology.lastValidFace() == 1_f );
+    // Must not contain degenerate faces
+    EXPECT_TRUE( mesh.triangleAspectRatio( 0_f ) < 10.0f );
+    EXPECT_TRUE( mesh.triangleAspectRatio( 1_f ) < 10.0f );
 }
 
 }

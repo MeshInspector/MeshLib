@@ -38,6 +38,8 @@ bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d
 
     // there should be significant difference in metrics (above floating point error) to return false
     constexpr double eps = 1e-7; // when we computed in floats then even 1e-5f was too small here and did not prevent infinite loop during resolveMeshDegenerations
+    if ( !std::isfinite( metricAC ) )
+        return metricAC <= metricBD; // below line returns true if metricAC is +infinity
     return metricAC <= metricBD + eps * ( metricAC + metricBD ); // this shall work even if metricAC and metricBD are infinities, unlike ( metricAC - metricBD ), which becomes NaN
 }
 
@@ -112,6 +114,17 @@ bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSe
     }
 
     return checkDeloneQuadrangle( ap, bp, cp, dp, maxAngleChange );
+}
+
+bool bestQuadrangleDiagonal( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d )
+{
+    bool cabcd = isUnfoldQuadrangleConvex( a, b, c, d );
+    bool cbcda = isUnfoldQuadrangleConvex( b, c, d, a );
+    if ( cabcd != cbcda )
+        return cbcda;
+    auto metricAC = std::max( circumcircleDiameterSq( a, c, d ), circumcircleDiameterSq( c, a, b ) );
+    auto metricBD = std::max( circumcircleDiameterSq( b, d, a ), circumcircleDiameterSq( d, b, c ) );
+    return metricAC <= metricBD;
 }
 
 int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIters, ProgressCallback progressCallback )

@@ -4,6 +4,7 @@
 #include "MRUniqueThreadSafeOwner.h"
 #include "MRPlane3.h"
 #include "MRLineSegm.h"
+#include "MREdgePoint.h"
 
 namespace MR
 {
@@ -23,8 +24,10 @@ public:
 
     /// creates polyline from 2D contours, 3D polyline will get zero z-component
     MRMESH_API Polyline( const Contours2f& contours );
+
     /// creates polyline from 3D contours, 2D polyline will lose z-component
     MRMESH_API Polyline( const Contours3f& contours );
+
     /// creates comp2firstVert.size()-1 not-closed polylines
     /// each pair (a,b) of indices in \param comp2firstVert defines vertex range of a polyline [a,b)
     /// \param ps point coordinates
@@ -44,6 +47,7 @@ public:
     /// \param outVmap,outEmap (optionally) returns mappings: from.id -> this.id
     MRMESH_API void addPart( const Polyline<V>& from,
         VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr );
+
     /// appends polyline (from) in addition to this polyline: creates new edges, verts and points
     MRMESH_API void addPartByMask( const Polyline<V>& from, const UndirectedEdgeBitSet& mask,
         VertMap* outVmap = nullptr, EdgeMap* outEmap = nullptr );
@@ -54,31 +58,49 @@ public:
 
     /// returns coordinates of the edge origin
     [[nodiscard]] V orgPnt( EdgeId e ) const { return points[ topology.org( e ) ]; }
+
     /// returns coordinates of the edge destination
     [[nodiscard]] V destPnt( EdgeId e ) const { return points[ topology.dest( e ) ]; }
+
     /// returns a point on the edge: origin point for f=0 and destination point for f=1
     [[nodiscard]] V edgePoint( EdgeId e, float f ) const { return f * destPnt( e ) + ( 1 - f ) * orgPnt( e ); }
+
+    /// computes coordinates of point given as edge and relative position on it
+    [[nodiscard]] V edgePoint( const EdgePoint & ep ) const { return edgePoint( ep.e, ep.a ); }
+
     /// returns edge's centroid
     [[nodiscard]] V edgeCenter( EdgeId e ) const { return edgePoint( e, 0.5f ); }
 
     /// returns vector equal to edge destination point minus edge origin point
     [[nodiscard]] V edgeVector( EdgeId e ) const { return destPnt( e ) - orgPnt( e ); }
+
     /// returns line segment of given edge
     [[nodiscard]] LineSegm<V> edgeSegment( EdgeId e ) const { return LineSegm<V>( orgPnt( e ), destPnt( e ) ); }
+
+    /// converts vertex into edge-point representation
+    [[nodiscard]] EdgePoint toEdgePoint( VertId v ) const { return EdgePoint( topology, v ); }
+
+    /// converts edge and point's coordinates into edge-point representation
+    [[nodiscard]] MRMESH_API EdgePoint toEdgePoint( EdgeId e, const V & p ) const;
+
     /// returns Euclidean length of the edge
     [[nodiscard]] float edgeLength( EdgeId e ) const { return edgeVector( e ).length(); }
+
     /// returns squared Euclidean length of the edge (faster to compute than length)
     [[nodiscard]] float edgeLengthSq( EdgeId e ) const { return edgeVector( e ).lengthSq(); }
+
     /// returns total length of the polyline
     [[nodiscard]] MRMESH_API float totalLength() const;
 
     /// returns cached aabb-tree for this polyline, creating it if it did not exist in a thread-safe manner
     MRMESH_API const AABBTreePolyline<V>& getAABBTree() const;
+
     /// returns cached aabb-tree for this polyline, but does not create it if it did not exist
     [[nodiscard]] const AABBTreePolyline<V> * getAABBTreeNotCreate() const { return AABBTreeOwner_.get(); }
 
     /// returns the minimal bounding box containing all valid vertices (implemented via getAABBTree())
     [[nodiscard]] MRMESH_API Box<V> getBoundingBox() const;
+
     /// passes through all valid points and finds the minimal bounding box containing all of them
     /// \details if toWorld transformation is given then returns minimal bounding box in world space
     [[nodiscard]] MRMESH_API Box<V> computeBoundingBox( const AffineXf<V> * toWorld = nullptr ) const;
@@ -94,6 +116,7 @@ public:
     /// org(returned-edge) = org(e-before-split),
     /// dest(e) = dest(e-before-split)
     MRMESH_API EdgeId splitEdge( EdgeId e, const V & newVertPos );
+
     // same, but split given edge on two equal parts
     EdgeId splitEdge( EdgeId e ) { return splitEdge( e, edgeCenter( e ) ); }
 

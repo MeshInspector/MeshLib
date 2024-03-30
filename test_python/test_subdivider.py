@@ -1,6 +1,5 @@
-
-from helper import *
 import pytest
+from helper import *
 
 
 def test_subdivider():
@@ -14,4 +13,4 @@ def test_subdivider():
     settings.region = None
     mrmesh.subdivideMesh(torus, settings)
 
-    assert (torus.topology.getValidFaces().count() > countInit)
+    assert torus.topology.getValidFaces().count() > countInit

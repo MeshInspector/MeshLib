@@ -1,4 +1,5 @@
 #pragma once
+#include "MRMesh/MRFlagOperators.h"
 #include "MRViewerFwd.h"
 #include "MRViewerEventsListener.h"
 #include "MRMesh/MRVector2.h"
@@ -21,7 +22,7 @@ public:
     void setTrasformModifierCb( std::function<void( AffineXf3f& )> cb ) { transformModifierCb_ = cb; }
 
     // bit meaning for mode mask
-    enum ModeBit
+    enum class ModeBit : unsigned char
     {
         Translate = 0b001,
         Rotate = 0b010,
@@ -29,9 +30,11 @@ public:
         All = Translate | Rotate | Zoom,
         Any = All
     };
+    MR_MAKE_FLAG_OPERATORS_IN_CLASS( ModeBit )
+
     // mode mask can block some modes when two finger controll camera
-    unsigned char getModeMask() const { return touchModeMask_; }
-    void setModeMask( unsigned char mask ){ touchModeMask_ = mask; }
+    ModeBit getModeMask() const { return touchModeMask_; }
+    void setModeMask( ModeBit mask ){ touchModeMask_ = mask; }
 private:
     virtual bool onTouchStart_( int id, int x, int y ) override;
     virtual bool onTouchMove_( int id, int x, int y ) override;
@@ -64,7 +67,7 @@ private:
     MultiInfo multiInfo_;
     MultiInfo multiPrevInfo_;
     bool mouseMode_{ false };
-    unsigned char touchModeMask_{ ModeBit::All };
+    ModeBit touchModeMask_{ ModeBit::All };
 
     std::function<void( AffineXf3f& )> transformModifierCb_;
 };

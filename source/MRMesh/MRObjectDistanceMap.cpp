@@ -5,6 +5,7 @@
 #include "MRDistanceMapSave.h"
 #include "MRDistanceMapLoad.h"
 #include "MRSceneColors.h"
+#include "MRMesh.h"
 #include "MRHeapBytes.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
@@ -104,11 +105,6 @@ void ObjectDistanceMap::setDistanceMap( const std::shared_ptr<DistanceMap>& dmap
     toWorldParams_ = params;
 
     construct_();
-}
-
-const std::shared_ptr<MR::DistanceMap>& ObjectDistanceMap::getDistanceMap() const
-{
-    return dmap_;
 }
 
 const DistanceMapToWorld& ObjectDistanceMap::getToWorldParameters() const

@@ -26,6 +26,7 @@
 #include "MRMeshLoadSettings.h"
 #include "MRZip.h"
 #include "MRPointsLoadE57.h"
+#include "MRMisonLoad.h"
 #include "MRPch/MRTBB.h"
 
 #ifndef MRMESH_NO_GLTF
@@ -50,8 +51,7 @@ std::optional<MR::IOFilter> findFilter( const MR::IOFilters& filters, const std:
         return std::nullopt;
 }
 
-// Detect if mesh has enough sharp edges (>25 degrees):
-// sum length of all sharp edges greater than 1.0 * (diagonal of the bounding box)
+/// finds if given mesh has enough sharp edges (>25 degrees) to recommend flat shading
 bool detectFlatShading( const Mesh& mesh )
 {
     MR_TIMER
@@ -61,11 +61,11 @@ bool detectFlatShading( const Mesh& mesh )
 
     struct Data
     {
-        double sumLen = 0;
-        double sumSharpLen = 0;
+        double sumDblArea = 0;
+        double sumSharpDblArea = 0;
         Data operator + ( const Data & b ) const 
         {
-            return { sumLen + b.sumLen, sumSharpLen + b.sumSharpLen };
+            return { sumDblArea + b.sumDblArea, sumSharpDblArea + b.sumSharpDblArea };
         }
     };
 
@@ -76,20 +76,23 @@ bool detectFlatShading( const Mesh& mesh )
         {
             for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
             {
-                if ( mesh.topology.isLoneEdge( ue ) )
+                const EdgeId e = ue;
+                const auto l = mesh.topology.left( e );
+                const auto r = mesh.topology.right( e );
+                if ( !l || !r )
                     continue;
-                const auto len = mesh.edgeLength( ue );
-                current.sumLen += len;
+                const auto da = mesh.dblArea( l ) + mesh.dblArea( r );
+                current.sumDblArea += da;
                 auto dihedralCos = mesh.dihedralAngleCos( ue );
                 if ( dihedralCos <= sharpAngleCos )
-                    current.sumSharpLen += len;
+                    current.sumSharpDblArea += da;
             }
             return current;
         },
         std::plus<Data>() );
 
-    // more than 5% of edges are sharp
-    return total.sumSharpLen > 0.05 * total.sumLen;
+    // triangles' area near sharp edges is more than 5% of total area
+    return total.sumSharpDblArea > 0.05 * total.sumDblArea;
 }
 
 int chooseRenderDiscretization( size_t pointCount )
@@ -389,6 +392,11 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                     objectMesh->setTexture( { image.value(), FilterType::Linear } );
                     objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
                 }
+                if ( !resValue[i].colors.empty() )
+                {
+                    objectMesh->setVertsColorMap( std::move( resValue[i].colors ) );
+                    objectMesh->setColoringType( ColoringType::VertsColorMap );
+                }
 
                 objectMesh->setXf( xf );
 
@@ -435,7 +443,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
 #endif //!defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
     else if ( std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const auto& filter ) { return filter.extensions.find( ext ) != std::string::npos; }) != SceneFileFilters.end() )
     {
-        const auto objTree = loadSceneFromAnySupportedFormat( filename, callback );
+        const auto objTree = loadSceneFromAnySupportedFormat( filename, loadWarn, callback );
         if ( !objTree.has_value() )
             return unexpected( objTree.error() );
         
@@ -548,6 +556,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
             postImportObject( o, filename );
             if ( auto objectPoints = o->asType<ObjectPoints>(); objectPoints && !objectPoints->pointCloud()->hasNormals() && loadWarn )
             {
+                objectPoints->setRenderDiscretization( chooseRenderDiscretization( objectPoints->pointCloud()->points.size() ) );
                 *loadWarn += "Point cloud " + o->name() + " has no normals.\n";
             }
         }
@@ -778,7 +787,8 @@ Expected <Object, std::string> makeObjectTreeFromZip( const std::filesystem::pat
     return makeObjectTreeFromFolder( contentsFolder, callback );
 }
 
-Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, ProgressCallback callback )
+Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, [[maybe_unused]] std::string* loadWarn,
+    ProgressCallback callback )
 {
     auto ext = std::string( "*" ) + utf8string( path.extension().u8string() );
     for ( auto& c : ext )
@@ -817,6 +827,12 @@ Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( 
         else
             res = unexpected( result.error() );
     }
+#ifndef __EMSCRIPTEN__
+    else if ( ext == "*.mison" )
+    {
+        res = MR::fromSceneMison( path, loadWarn, callback );
+    }
+#endif // !__EMSCRIPTEN__
 
     if ( res.has_value() && ( ext != "*.mru" && ext != "*.zip" ) )
         postImportObject( res.value(), path );

@@ -8,16 +8,41 @@
 namespace MR
 {
 
-struct ContoursVertId
+struct OffsetContourIndex
 {
     // -1 means unknown index
     int contourId{ -1 };
     // -1 means unknown index
     int vertId{ -1 };
-    bool operator==( const ContoursVertId& other ) const = default;
+    bool valid() const { return contourId >= 0 && vertId >= 0; }
 };
-using ContoursVertMap = std::vector<ContoursVertId>;
-using ContoursVertMaps = std::vector<ContoursVertMap>;
+
+struct OffsetContoursOrigins
+{
+    // Should be always valid
+    // index of lower corresponding origin point on input contour
+    OffsetContourIndex lOrg;
+    // index of lower corresponding destination point on input contour
+    OffsetContourIndex lDest;
+    // index of upper corresponding origin point on input contour
+    OffsetContourIndex uOrg;
+    // index of upper corresponding destination point on input contour
+    OffsetContourIndex uDest;
+
+    // ratio of intersection point on lOrg->lDest segment
+    // 0.0 -> lOrg
+    // 1.0 -> lDest
+    float lRatio{ 0.0f };
+    // ratio of intersection point on uOrg->uDest segment
+    // 0.0 -> uOrg
+    // 1.0 -> uDest
+    float uRatio{ 0.0f };
+
+    bool valid() const { return lOrg.valid(); }
+    bool isIntersection() const { return lDest.valid(); }
+};
+using OffsetContoursVertMap = std::vector<OffsetContoursOrigins>;
+using OffsetContoursVertMaps = std::vector<OffsetContoursVertMap>;
 
 struct OffsetContoursParams
 {
@@ -48,7 +73,7 @@ struct OffsetContoursParams
     float maxSharpAngle = PI_F * 2.0f / 3.0f; // 120 deg
 
     /// optional output that maps result contour ids to input contour ids
-    ContoursVertMaps* indicesMap = nullptr;
+    OffsetContoursVertMaps* indicesMap = nullptr;
 };
 
 /// offsets 2d contours in plane
@@ -60,5 +85,24 @@ using ContoursVariableOffset = std::function<float( int, int )>;
 /// offsets 2d contours in plane
 [[nodiscard]] MRMESH_API Expected<Contours2f> offsetContours( const Contours2f& contours, 
     ContoursVariableOffset offset, const OffsetContoursParams& params = {} );
+
+/// Parameters of restoring Z coordinate of XY offset 3d contours
+struct OffsetContoursRestoreZParams
+{
+    /// if callback is set it is called to restore Z value
+    /// please note that this callback may be called in parallel
+    using OriginZCallback = std::function<float( const Contours2f& offsetCont, const OffsetContourIndex& offsetIndex, const OffsetContoursOrigins& origingContourMapoing)>;
+    OriginZCallback zCallback;
+    /// if > 0 z coordinate will be relaxed this many iterations
+    int relaxIterations = 1;
+};
+
+/// offsets 3d contours in XY plane
+[[nodiscard]] MRMESH_API Expected<Contours3f> offsetContours( const Contours3f& contours, float offset,
+    const OffsetContoursParams& params = {}, const OffsetContoursRestoreZParams& zParmas = {} );
+
+/// offsets 3d contours in XY plane
+[[nodiscard]] MRMESH_API Expected<Contours3f> offsetContours( const Contours3f& contours,
+    ContoursVariableOffset offset, const OffsetContoursParams& params = {}, const OffsetContoursRestoreZParams& zParmas = {} );
 
 }

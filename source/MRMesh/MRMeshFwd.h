@@ -3,7 +3,7 @@
 #include "config.h"
 
 // Not zero _ITERATOR_DEBUG_LEVEL in Microsoft STL greatly reduce the performance of STL containers.
-// So we change its value to zero by default. A huge restriction with this is that 
+// So we change its value to zero by default. A huge restriction with this is that
 // all other linked DLL's and LIBS' also need to define this symbol to remove STL debugging, see
 // 1) vcpkg/triplets/x64-windows-meshlib.cmake and
 // 2) MeshLib/source/common.props
@@ -37,7 +37,9 @@
 #   define MRMESH_CLASS
 #else
 #   define MRMESH_API   __attribute__((visibility("default")))
-// to fix undefined reference to `typeinfo/vtable
+// to fix undefined reference to `typeinfo/vtable`
+// Also it's important to use this on any type for which `typeid` is used in multiple shared libraries, and then passed across library boundaries.
+//   Otherwise on Mac the resulting typeids will incorrectly compare not equal.
 #   define MRMESH_CLASS __attribute__((visibility("default")))
 #endif
 
@@ -76,6 +78,7 @@ using ThreeVertIds = std::array<VertId, 3>;
 /// mapping from FaceId to a triple of vertex indices
 using Triangulation = Vector<ThreeVertIds, FaceId>;
 
+struct UnorientedTriangle;
 struct SomeLocalTriangulations;
 struct AllLocalTriangulations;
 
@@ -274,6 +277,7 @@ template <typename T> struct SegmPoint;
 using SegmPointf = SegmPoint<float>;
 using SegmPointd = SegmPoint<double>;
 struct EdgePoint;
+struct EdgeSegment;
 using MeshEdgePoint = EdgePoint;
 using SurfacePath = std::vector<MeshEdgePoint>;
 using SurfacePaths = std::vector<SurfacePath>;
@@ -295,7 +299,7 @@ template <typename T> struct IntersectionPrecomputes;
 
 template <typename I> struct IteratorRange;
 
-/// Coordinates on texture 
+/// Coordinates on texture
 /// \param x,y should be in range [0..1], otherwise result depends on wrap type of texture (no need to clamp it, it is done on GPU if wrap type is "Clamp" )
 using UVCoord = Vector2f;
 
@@ -305,7 +309,9 @@ using EdgeMap = Vector<EdgeId, EdgeId>;
 using UndirectedEdgeMap = Vector<UndirectedEdgeId, UndirectedEdgeId>;
 ///  mapping of whole edges: map[e]->f, map[e.sym()]->f.sym(), where only map[e] for even edges is stored
 using WholeEdgeMap = Vector<EdgeId, UndirectedEdgeId>;
+using UndirectedEdge2RegionMap = Vector<RegionId, UndirectedEdgeId>;
 using Face2RegionMap = Vector<RegionId, FaceId>;
+using Vert2RegionMap = Vector<RegionId, VertId>;
 
 using VertCoords = Vector<Vector3f, VertId>;
 using VertNormals = Vector<Vector3f, VertId>;
@@ -327,10 +333,10 @@ using FacePredicate = std::function<bool( FaceId )>;
 using EdgePredicate = std::function<bool( EdgeId )>;
 using UndirectedEdgePredicate = std::function<bool( UndirectedEdgeId )>;
 
-using VertToFloatFunc = std::function<float( VertId )>;
-using FaceToFloatFunc = std::function<float( FaceId )>;
-using EdgeToFloatFunc = std::function<float( EdgeId )>;
-using UndirectedEdgeToFloatFunc = std::function<float( UndirectedEdgeId )>;
+using VertMetric = std::function<float( VertId )>;
+using FaceMetric = std::function<float( FaceId )>;
+using EdgeMetric = std::function<float( EdgeId )>;
+using UndirectedEdgeMetric = std::function<float( UndirectedEdgeId )>;
 
 template <typename T, typename I> struct MRMESH_CLASS BMap;
 using FaceBMap = BMap<FaceId, FaceId>;
@@ -374,6 +380,7 @@ struct MRMESH_CLASS CloudPartMapping;
 struct MRMESH_CLASS PartMapping;
 struct MeshTexture;
 struct GridSettings;
+struct TriMesh;
 
 template<typename T> class UniqueThreadSafeOwner;
 
@@ -403,6 +410,7 @@ class DistanceMap;
 using GcodeSource = std::vector<std::string>;
 
 class Object;
+class SceneRootObject;
 class VisualObject;
 class ObjectMeshHolder;
 class ObjectMesh;
@@ -422,6 +430,7 @@ class CylinderObject;
 class ConeObject;
 
 struct Image;
+class AnyVisualizeMaskEnum;
 
 template <typename T>
 struct VoxelsVolume;
@@ -442,7 +451,6 @@ using VdbVolume = VoxelsVolume<FloatGrid>;
 #endif
 
 class HistoryAction;
-class MRMESH_CLASS HistoryStore;
 class ChangeObjectAction;
 class MRMESH_CLASS ChangeSceneAction;
 class ChangeMeshFaceSelectionAction;
@@ -507,7 +515,7 @@ constexpr inline T sqr( T x ) noexcept { return x * x; }
 template <typename T>
 constexpr inline int sgn( T x ) noexcept { return x > 0 ? 1 : ( x < 0 ? -1 : 0 ); }
 
-template<typename...> 
+template<typename...>
 inline constexpr bool dependent_false = false;
 
 template<class... Ts>
@@ -532,10 +540,13 @@ struct VertDuplication;
 
 #ifdef __cpp_lib_unreachable
 #   define MR_UNREACHABLE std::unreachable();
+#   define MR_UNREACHABLE_NO_RETURN std::unreachable();
 #else
 #   ifdef __GNUC__
 #       define MR_UNREACHABLE __builtin_unreachable();
+#       define MR_UNREACHABLE_NO_RETURN __builtin_unreachable();
 #   else
 #       define MR_UNREACHABLE { assert( false ); return {}; }
+#       define MR_UNREACHABLE_NO_RETURN assert( false );
 #   endif
 #endif

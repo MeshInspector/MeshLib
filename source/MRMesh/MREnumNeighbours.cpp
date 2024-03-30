@@ -67,4 +67,42 @@ VertBitSet findNeighborVerts( const Mesh& mesh, const PointOnFace& start, float 
     return res;
 }
 
+void EnumNeihbourFaces::run( const MeshTopology & topology, VertId start, const FacePredicate & pred )
+{
+    MR_TIMER
+
+    assert( start );
+    assert( bd_.empty() );
+    visited_.resize( topology.faceSize() );
+
+    for ( auto e : orgRing( topology, start ) )
+    {
+        auto r = topology.right( e );
+        if ( !r )
+            continue;
+        visited_.set( r );
+        bd_.push_back( r );
+    }
+
+    while ( !bd_.empty() )
+    {
+        const auto f = bd_.back();
+        bd_.pop_back();
+        if ( !pred( f ) )
+            continue;
+        for ( auto e : leftRing( topology, f ) )
+        {
+            assert( topology.left( e ) == f );
+            auto r = topology.right( e );
+            if ( !r )
+                continue;
+            if ( visited_.test_set( r ) )
+                continue;
+            bd_.push_back( r );
+        }
+    }
+
+    visited_.clear();
+}
+
 } //namespace MR

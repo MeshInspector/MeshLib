@@ -4,6 +4,7 @@
 #include "MRMesh/MRTimer.h"
 #include "MRCreateShader.h"
 #include "MRMesh/MRMesh.h"
+#include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRMatrix4.h"
 #include "MRGLMacro.h"
 #include "MRMesh/MRBitSetParallelFor.h"
@@ -42,15 +43,29 @@ RenderLabelObject::~RenderLabelObject()
     freeBuffers_();
 }
 
-void RenderLabelObject::render( const ModelRenderParams& renderParams )
+bool RenderLabelObject::render( const ModelRenderParams& renderParams )
 {
+    RenderModelPassMask desiredPass =
+        !objLabel_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
+        ( objLabel_->getGlobalAlpha( renderParams.viewportId ) < 255 || objLabel_->getFrontColor( objLabel_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
+        RenderModelPassMask::Opaque;
+    if ( !bool( renderParams.passMask & desiredPass ) )
+        return false; // Nothing to draw in this pass.
+
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objLabel_->resetDirty();
-        return;
+        return false;
     }
 
     update_();
+
+    if ( objLabel_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) )
+    {
+        Vector3f pos = renderParams.modelMatrix( objLabel_->getLabel().position );
+        if ( dot( pos, renderParams.clipPlane.n ) > renderParams.clipPlane.d )
+            return false;
+    }
 
     GL_EXEC( glDepthMask( GL_TRUE ) );
     GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
@@ -92,7 +107,7 @@ void RenderLabelObject::render( const ModelRenderParams& renderParams )
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrix.data() ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrix.data() ) );
 
-    auto height = objLabel_->getFontHeight(); 
+    auto height = objLabel_->getFontHeight();
 
     Vector2f modifier;
     modifier.y = height / ( SymbolMeshParams::MaxGeneratedFontHeight * renderParams.viewport.w );
@@ -116,7 +131,7 @@ void RenderLabelObject::render( const ModelRenderParams& renderParams )
 			getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleElementsNum, faceIndicesSize_ );
             GL_EXEC( glDepthFunc( getDepthFunctionLEqual( renderParams.depthFunction ) ) );
 			GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * int( faceIndicesSize_ ), GL_UNSIGNED_INT, 0 ) );
-            GL_EXEC( glDepthFunc( getDepthFunctionLEqual( DepthFuncion::Default ) ) );
+            GL_EXEC( glDepthFunc( getDepthFunctionLEqual( DepthFunction::Default ) ) );
 		};
 		contourFn( Vector2f( 1, 1 ) / 2.f );
 		contourFn( Vector2f( 0, 1 ) / 2.f );
@@ -137,9 +152,11 @@ void RenderLabelObject::render( const ModelRenderParams& renderParams )
 
     GL_EXEC( glDepthFunc( getDepthFunctionLEqual( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * int( faceIndicesSize_ ), GL_UNSIGNED_INT, 0 ) );
-    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( DepthFuncion::Default ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( DepthFunction::Default ) ) );
 
     GL_EXEC( glDepthFunc( GL_LESS ) );
+
+    return true;
 }
 
 void RenderLabelObject::renderSourcePoint_( const ModelRenderParams& renderParams )
@@ -183,7 +200,7 @@ void RenderLabelObject::renderSourcePoint_( const ModelRenderParams& renderParam
 #endif
     GL_EXEC( glDepthFunc( getDepthFunctionLEqual( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_POINTS, ( GLsizei )pointIndices.size(), GL_UNSIGNED_INT, 0 ) );
-    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( DepthFuncion::Default ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( DepthFunction::Default ) ) );
 
     dirtySrc_ = false;
 }
@@ -238,7 +255,7 @@ void RenderLabelObject::renderBackground_( const ModelRenderParams& renderParams
 
     GL_EXEC( glDepthFunc( getDepthFunctionLEqual( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_TRIANGLES, 3 * int( bgFacesIndicesBufferObj.size() ), GL_UNSIGNED_INT, 0 ) );
-    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( DepthFuncion::Default ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( DepthFunction::Default ) ) );
 
     dirtyBg_ = false;
 }
@@ -330,12 +347,12 @@ void RenderLabelObject::renderLeaderLine_( const ModelRenderParams& renderParams
 
     GL_EXEC( glDepthFunc( getDepthFunctionLEqual( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_LINES, 2 * int( llineEdgesIndicesSize ), GL_UNSIGNED_INT, 0 ) );
-    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( DepthFuncion::Default ) ) );
+    GL_EXEC( glDepthFunc( getDepthFunctionLEqual( DepthFunction::Default ) ) );
 
     dirtyLLine_ = false;
 }
 
-void RenderLabelObject::renderPicker( const ModelRenderParams&, unsigned )
+void RenderLabelObject::renderPicker( const ModelBaseRenderParams&, unsigned )
 {
     // no picker for labels
 }

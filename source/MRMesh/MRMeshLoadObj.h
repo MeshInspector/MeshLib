@@ -25,6 +25,7 @@ struct NamedMesh
     std::string name;
     Mesh mesh;
     VertUVCoords uvCoords;
+    VertColors colors;
     std::filesystem::path pathToTexture;
     std::optional<Color> diffuseColor;
 };

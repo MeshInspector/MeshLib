@@ -87,7 +87,7 @@ Expected<Mesh, std::string> preprocessMesh( const Mesh& inputMesh, const ToolPat
         offsetParams.callBack = subprogress( params.cb, 0.0f, 0.15f );
         const auto offsetRes = offsetMesh( inputMesh, params.millRadius, offsetParams );
         if ( !offsetRes )
-            return unexpectedOperationCanceled();
+            return unexpected( offsetRes.error() );
 
         meshCopy = *offsetRes;
     }
@@ -253,9 +253,6 @@ ExtractIsolinesResult extractAllIsolines( const Mesh& mesh, const ExtractIsoline
             const auto dstVertId = res.meshAfterCut.topology.dest( ep.e );
             if ( !orgVertId.valid() || !dstVertId.valid() )
                 continue;
-
-            // if removed then warning C4686: 'MR::findProjectionOnPolyline2': possible change in behavior, change in UDT return calling convention
-            static PolylineProjectionResult3 unused;
 
             auto proj = findProjectionOnPolyline( res.meshAfterCut.points[orgVertId], startPolyline );
             float dist = sqrt( proj.distSq );
@@ -1101,7 +1098,12 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
                 // go along the undercut if the part of section is below
                 const auto p1 = mesh.edgePoint( prevEdgePoint );
                 const auto p2 = mesh.edgePoint( *nextEdgePointIt );
-                if ( p1.z == minZ && p2.z <= minZ )
+                // tends to be gap between different selected areas
+                if ( minDistSq > 100.0f * sectionStepSq )
+                {
+                    transitOverSafeZ( *pivotIt, res, params, params.safeZ, p1.z, lastFeed );
+                }
+                else if ( p1.z == minZ && p2.z <= minZ )
                 {
                     const auto sectionStartIt = findNearestPoint( undercutContour, p1 );
                     const auto sectionEndIt = findNearestPoint( undercutContour, p2 );

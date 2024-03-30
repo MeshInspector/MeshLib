@@ -34,6 +34,11 @@ public:
 
     MRVIEWER_API static float getProgress();
 
+    // returns time of last operation in seconds, returns -1.0f if no operation was performed
+    MRVIEWER_API static float getLastOperationTime();
+    // returns title of the last operation
+    MRVIEWER_API static const std::string& getLastOperationTitle();
+
     // sets the current progress and returns false if the user has pressed Cancel button
     MRVIEWER_API static bool setProgress(float p);
 
@@ -68,6 +73,8 @@ private:
     bool tryRun_( const std::function<bool ()>& task );
     bool tryRunWithSehHandler_( const std::function<bool ()>& task );
 
+    float lastOperationTimeSec_{ -1.0f };
+    Time operationStartTime_;
     std::atomic<float> progress_;
     std::atomic<int> currentTask_, taskCount_;
     std::mutex mutex_;

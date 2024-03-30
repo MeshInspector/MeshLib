@@ -6,6 +6,7 @@
 #include "MRProgressCallback.h"
 #include "MRAffineXf3.h"
 #include "MRExpected.h"
+#include "MRBox.h"
 #include <climits>
 #include <string>
 
@@ -57,6 +58,15 @@ MRMESH_API VdbVolume floatGridToVdbVolume( const FloatGrid& grid );
 MRMESH_API FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume, ProgressCallback cb = {} );
 MRMESH_API VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, ProgressCallback cb = {} );
 
+// make SimpleVolume from VdbVolume
+// make copy of data
+MRMESH_API Expected<SimpleVolume, std::string> vdbVolumeToSimpleVolume(
+    const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} );
+// make SimpleVolumeU16 from VdbVolume
+// performs mapping from [vdbVolume.min, vdbVolume.max] to nonnegative range of uint16_t
+MRMESH_API Expected<SimpleVolumeU16, std::string> vdbVolumeToSimpleVolumeU16(
+    const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} );
+
 /// parameters of OpenVDB Grid to Mesh conversion using Dual Marching Cubes algorithm
 struct GridToMeshSettings
 {
@@ -76,37 +86,11 @@ struct GridToMeshSettings
 };
 
 /// converts OpenVDB Grid into mesh using Dual Marching Cubes algorithm
-MRMESH_API Expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const GridToMeshSettings & settings );
+MRMESH_API Expected<Mesh> gridToMesh( const FloatGrid& grid, const GridToMeshSettings & settings );
 
 /// converts OpenVDB Grid into mesh using Dual Marching Cubes algorithm;
 /// deletes grid in the middle to reduce peak memory consumption
-MRMESH_API Expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const GridToMeshSettings & settings );
-
-[[deprecated( "use gridToMesh(..., GridToMeshSettings) instead" )]]
-MRMESH_API Expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
-    float isoValue = 0.0f, float adaptivity = 0.0f, ProgressCallback cb = {} );
-[[deprecated( "use gridToMesh(..., GridToMeshSettings) instead" )]]
-MRMESH_API Expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const Vector3f& voxelSize,
-    float isoValue = 0.0f, float adaptivity = 0.0f, ProgressCallback cb = {} );
-[[deprecated( "use gridToMesh(..., GridToMeshSettings) instead" )]]
-MRMESH_API Expected<Mesh, std::string> gridToMesh( const VdbVolume& vdbVolume,
-    float isoValue = 0.0f, float adaptivity = 0.0f, ProgressCallback cb = {} );
-[[deprecated( "use gridToMesh(..., GridToMeshSettings) instead" )]]
-MRMESH_API Expected<Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume,
-    float isoValue = 0.0f, float adaptivity = 0.0f, ProgressCallback cb = {} );
-
-[[deprecated( "use gridToMesh(..., GridToMeshSettings) instead" )]]
-MRMESH_API Expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
-    int maxFaces, float isoValue = 0.0f, float adaptivity = 0.0f, ProgressCallback cb = {} );
-[[deprecated( "use gridToMesh(..., GridToMeshSettings) instead" )]]
-MRMESH_API Expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const Vector3f& voxelSize,
-    int maxFaces, float isoValue = 0.0f, float adaptivity = 0.0f, ProgressCallback cb = {} );
-[[deprecated( "use gridToMesh(..., GridToMeshSettings) instead" )]]
-MRMESH_API Expected<Mesh, std::string> gridToMesh( const VdbVolume& vdbVolume, int maxFaces,
-    float isoValue = 0.0f, float adaptivity = 0.0f, ProgressCallback cb = {} );
-[[deprecated( "use gridToMesh(..., GridToMeshSettings) instead" )]]
-MRMESH_API Expected<Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume, int maxFaces,
-    float isoValue = 0.0f, float adaptivity = 0.0f, ProgressCallback cb = {} );
+MRMESH_API Expected<Mesh> gridToMesh( FloatGrid&& grid, const GridToMeshSettings & settings );
 
 /// set signs for unsigned distance field grid using refMesh FastWindingNumber;
 /// \param meshToGridXf defines the mapping from mesh reference from to grid reference frame
@@ -119,7 +103,7 @@ MRMESH_API VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector
 // adaptivity - [0.0;1.0] ratio of combining small triangles into bigger ones 
 //                       (curvature can be lost on high values)
 /// \param fwn defines particular implementation of IFastWindingNumber interface that will compute windings. If it is not specified, default FastWindingNumber is used
-MRMESH_API Expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf,
+MRMESH_API Expected<Mesh> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf,
     float voxelSize, float offsetA, float offsetB, float adaptivity = 0.0f, std::shared_ptr<IFastWindingNumber> fwn = {}, ProgressCallback cb = {} );
 
 }

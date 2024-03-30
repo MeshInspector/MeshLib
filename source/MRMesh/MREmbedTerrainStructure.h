@@ -22,6 +22,8 @@ struct EmbeddedStructureParameters
     FaceBitSet* outFillFaces{ nullptr };
     // optional out new faces of cut part
     FaceBitSet* outCutFaces{ nullptr };
+    // optional out map new terrain faces to old terrain faces
+    FaceMap* new2oldFaces{ nullptr };
 };
 
 // Returns terrain mesh with structure embedded to it, or error string

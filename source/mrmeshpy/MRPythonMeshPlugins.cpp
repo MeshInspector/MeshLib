@@ -18,7 +18,6 @@
 #include "MRMesh/MRMeshDelone.h"
 #include "MRMesh/MRMeshSubdivide.h"
 #include "MRMesh/MRMeshComponents.h"
-#include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MRPositionVertsSmoothly.h"
 #include "MRMesh/MRAlignTextToMesh.h"
 #include "MRMesh/MRFaceFace.h"
@@ -32,6 +31,9 @@
 #include "MRMesh/MRMeshOverhangs.h"
 #include "MRMesh/MRConvexHull.h"
 #include "MRMesh/MRPointCloud.h"
+#include "MRMesh/MRPlane3.h"
+#include "MRMesh/MRMovementBuildBody.h"
+#include "MRMesh/MRVector2.h"
 #include <pybind11/functional.h>
 #pragma warning(push)
 #pragma warning(disable: 4464) // relative include path contains '..'
@@ -142,6 +144,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FixUndercuts, [] ( pybind11::module_& m )
         "bottomExtension - this parameter specifies how long should bottom prolongation be, if (bottomExtension <= 0) bottomExtension = 2*voxelSize\n"
         "\tif mesh is not closed this is used to prolong hole and make bottom\n"
         "\nif voxelSize == 0.0f it will be counted automaticly" );
+
+    m.def( "findUndercuts", ( void( * )( const Mesh&, const Vector3f&, FaceBitSet& ) )& MR::FixUndercuts::findUndercuts,
+        pybind11::arg( "mesh" ), pybind11::arg( "upDirection" ), pybind11::arg( "outUndercuts" ),
+        "Adds to outUndercuts undercut faces" );
+    m.def( "findUndercuts", ( void( * )( const Mesh&, const Vector3f&, VertBitSet& ) )& MR::FixUndercuts::findUndercuts,
+        pybind11::arg( "mesh" ), pybind11::arg( "upDirection" ), pybind11::arg( "outUndercuts" ),
+        "Adds to outUndercuts undercut vertices" );
 } )
 #endif
 
@@ -168,7 +177,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SymbolMeshParams, [] ( pybind11::module_& m 
         def_readwrite( "direction", &TextMeshAlignParams::direction, "Direction of text" ).
         def_readwrite( "fontHeight", &TextMeshAlignParams::fontHeight, "Font height, meters" ).
         def_readwrite( "surfaceOffset", &TextMeshAlignParams::surfaceOffset, "Text mesh inside and outside offset of input mesh" ).
-        def_readwrite( "textMaximumMovement", &TextMeshAlignParams::textMaximumMovement, "Maximum possible movement of text mesh alignment, meters" );
+        def_readwrite( "textMaximumMovement", &TextMeshAlignParams::textMaximumMovement, "Maximum possible movement of text mesh alignment, meters" ).
+        def_readwrite( "fontBasedSizeCalc", &TextMeshAlignParams::fontBasedSizeCalc, "If true then size of each symbol will be calculated from font height, otherwise - on bounding box of the text" );
 
     m.def( "alignTextToMesh", MR::decorateExpected( &MR::alignTextToMesh ), pybind11::arg( "mesh" ), pybind11::arg( "params" ),
         "Creates symbol mesh and aligns it to given surface" );
@@ -228,6 +238,28 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PlaneSections, [] ( pybind11::module_& m )
         "in ccw order from the vector tip" );
 } )
 
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MovementBody, [] ( pybind11::module_& m )
+{
+    pybind11::class_<MovementBuildBodyParams>( m, "MovementBuildBodyParams" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "allowRotation", &MovementBuildBodyParams::allowRotation,
+            "if this flag is set, rotate body in trajectory vertices\n"
+            "according to its rotation\n"
+            "otherwise body movement will be done without any rotation" ).
+        def_readwrite( "center", &MovementBuildBodyParams::center,
+            "point in body space that follows trajectory\n"
+            "if not set body bounding box center is used" ).
+        def_readwrite( "bodyNormal", &MovementBuildBodyParams::bodyNormal,
+            "facing direction of body, used for initial rotation (if allowRotation)\n"
+            "if not set body accumulative normal is used" ).
+        def_readwrite( "b2tXf", &MovementBuildBodyParams::b2tXf, "optional transform body space to trajectory space" );
+
+    m.def( "makeMovementBuildBody", &makeMovementBuildBody,
+        pybind11::arg( "body" ), pybind11::arg( "trajectory" ), pybind11::arg_v( "params", MovementBuildBodyParams(), "MovementBuildBodyParams()" ),
+        "makes mesh by moving `body` along `trajectory`\n"
+        "if allowRotation rotate it in corners" );
+} )
+
 
 // Relax Mesh
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Relax, [] ( pybind11::module_& m )
@@ -242,16 +274,37 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Relax, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def_readwrite( "hardSmoothTetrahedrons", &MeshRelaxParams::hardSmoothTetrahedrons, "smooth tetrahedron verts (with complete three edges ring) to base triangle (based on its edges destinations)" );
 
+    pybind11::enum_<MR::RelaxApproxType>( m, "RelaxApproxType", "Approximation strategy to use during `relaxApprox`" ).
+        value( "Planar", MR::RelaxApproxType::Planar, "Projects the new neighborhood points onto a best approximating plane." ).
+        value( "Quadric", MR::RelaxApproxType::Quadric, "Projects the new neighborhood points onto a best quadratic approximating." );
+    
+    pybind11::class_<MeshApproxRelaxParams, MeshRelaxParams>( m, "MeshApproxRelaxParams" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "surfaceDilateRadius", &MeshApproxRelaxParams::surfaceDilateRadius, "Radius to find neighbors by surface. `0.0f - default = 1e-3 * sqrt(surface area)`" ).
+        def_readwrite( "type", &MeshApproxRelaxParams::type, "" );
+
     m.def( "relax", ( bool( * )( Mesh&, const MeshRelaxParams&, ProgressCallback ) )& relax,
         pybind11::arg( "mesh" ), pybind11::arg_v( "params", MeshRelaxParams(), "MeshRelaxParams()" ), pybind11::arg( "cb" ) = ProgressCallback{},
-        "applies given number of relaxation iterations to the whole mesh ( or some region if it is specified )\n"
-        "return true if was finished successfully, false if was interrupted by progress callback");
+        "Applies the given number of relaxation iterations to the whole mesh (or some region if it is specified in the params).\n"
+        "\tReturns `True` if the operation completed succesfully, and `False` if it was interrupted by the progress callback." );
 
     m.def( "relaxKeepVolume", &relaxKeepVolume,
         pybind11::arg( "mesh" ), pybind11::arg_v( "params", MeshRelaxParams(), "MeshRelaxParams()" ), pybind11::arg( "cb" ) = ProgressCallback{},
-        "applies given number of relaxation iterations to the whole mesh ( or some region if it is specified ) \n"
+        "Applies the given number of relaxation iterations to the whole mesh (or some region if it is specified in the params).\n"
         "do not really keeps volume but tries hard \n"
-        "\treturn true if was finished successfully, false if was interrupted by progress callback" );
+        "\tReturns `True` if the operation completed succesfully, and `False` if it was interrupted by the progress callback." );
+
+    m.def( "relaxApprox", &relaxApprox,
+        pybind11::arg( "mesh" ), pybind11::arg_v( "params", MeshApproxRelaxParams(), "MeshApproxRelaxParams()" ), pybind11::arg( "cb" ) = ProgressCallback{},
+        "Applies the given number of relaxation iterations to the whole mesh (or some region if it is specified through the params).\n"
+        "The algorithm looks at approx neighborhoods to smooth the mesh\n"
+        "\tReturns `True` if the operation completed successfully, and `False` if it was interrupted by the progress callback." );
+
+    m.def( "smoothRegionBoundary", &smoothRegionBoundary,
+        pybind11::arg( "mesh" ), pybind11::arg( "regionFaces" ), pybind11::arg( "numIterations" ) = 4,
+        "Given a region of faces on the mesh, moves boundary vertices of the region\n"
+        "to make the region contour much smoother with minor optimization of mesh topology near region boundary.\n"
+        "\tnumIterations - number of smoothing iterations. An even number is recommended due to oscillation of the algorithm" );
 } )
 
 // Subdivider Plugin
@@ -262,7 +315,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
         def_readwrite( "maxEdgeLen", &SubdivideSettings::maxEdgeLen, "Maximal possible edge length created during decimation" ).
         def_readwrite( "maxEdgeSplits", &SubdivideSettings::maxEdgeSplits, "Maximum number of edge splits allowed" ).
         def_readwrite( "maxDeviationAfterFlip", &SubdivideSettings::maxDeviationAfterFlip, "Improves local mesh triangulation by doing edge flips if it does not make too big surface deviation" ).
-        def_readwrite( "maxAngleChangeAfterFlip", &SubdivideSettings::maxAngleChangeAfterFlip, "Improves local mesh triangulation by doing edge flips if it does change dihedral angle more than on this value" ).
+        def_readwrite( "maxAngleChangeAfterFlip", &SubdivideSettings::maxAngleChangeAfterFlip, "Improves local mesh triangulation by doing edge flips if it does change dihedral angle more than on this value. Unit: rad" ).
         def_readwrite( "criticalAspectRatioFlip", &SubdivideSettings::criticalAspectRatioFlip, "If this value is less than FLT_MAX then edge flips will ignore dihedral angle check if one of triangles has aspect ratio more than this value" ).
         def_readwrite( "region", &SubdivideSettings::region, "Region on mesh to be subdivided, it is updated during the operation" ).
         def_readwrite( "newVerts", &SubdivideSettings::newVerts, "New vertices appeared during subdivision will be added here" ).
@@ -279,105 +332,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
             "Puts new vertices so that they form a smooth surface together with existing vertices.\n"
             "This option works best for natural surfaces without sharp edges in between triangles" ).
         def_readwrite( "minSharpDihedralAngle", &SubdivideSettings::minSharpDihedralAngle,
-            "In case of activated smoothMode, the smoothness is locally deactivated at the edges having dihedral angle at least this value" );
+            "In case of activated smoothMode, the smoothness is locally deactivated at the edges having dihedral angle at least this value" ).
+        def_readwrite( "projectOnOriginalMesh", &SubdivideSettings::projectOnOriginalMesh,
+            "If true, then every new vertex will be projected on the original mesh (before smoothing)" );
 
     m.def( "subdivideMesh", &MR::subdivideMesh,
         pybind11::arg( "mesh" ), pybind11::arg_v( "settings", MR::SubdivideSettings(), "SubdivideSettings()" ),
         "Split edges in mesh region according to the settings;\n"
         "return The total number of edge splits performed" );
-
-} )
-
-// Distance Map
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
-{
-    pybind11::class_<MR::DistanceMap>( m, "DistanceMap" ).
-        def( pybind11::init<>() ).
-        def( "get", static_cast< std::optional<float>( MR::DistanceMap::* )( size_t, size_t ) const >( &MR::DistanceMap::get ), "read X,Y value" ).
-        def( "get", static_cast< std::optional<float>( MR::DistanceMap::* )( size_t ) const >( &MR::DistanceMap::get ), "read value by index" ).
-        def( "getInterpolated", ( std::optional<float>( MR::DistanceMap::* )( float, float ) const )& MR::DistanceMap::getInterpolated, "bilinear interpolation between 4 pixels" ).
-        def( "isValid", ( bool( MR::DistanceMap::* )( size_t, size_t ) const )& MR::DistanceMap::isValid, "check if X,Y pixel is valid" ).
-        def( "isValid", ( bool( MR::DistanceMap::* )( size_t ) const )& MR::DistanceMap::isValid, "check if index pixel is valid").
-        def( "resX", &MR::DistanceMap::resX, "X resolution" ).
-        def( "resY", &MR::DistanceMap::resY, "Y resolution" ).
-        def( "clear", &MR::DistanceMap::clear, "clear all values, set resolutions to zero" ).
-        def( "invalidateAll", &MR::DistanceMap::invalidateAll, "invalidate all pixels" ).
-        def( "set", static_cast< void( MR::DistanceMap::* )( size_t, float ) >( &MR::DistanceMap::set ), "write value by index" ).
-        def( "set", static_cast< void( MR::DistanceMap::* )( size_t, size_t, float ) >( &MR::DistanceMap::set ), "write X,Y value" ).
-        def( "unset", static_cast< void( MR::DistanceMap::* )( size_t, size_t ) >( &MR::DistanceMap::unset), "invalidate X,Y pixel" ).
-        def( "unset", static_cast< void( MR::DistanceMap::* )( size_t ) >( &MR::DistanceMap::unset), "invalidate by index" );
-
-    pybind11::class_<MR::MeshToDistanceMapParams>( m, "MeshToDistanceMapParams" ).
-        def( pybind11::init<>(), "Default constructor. Manual params initialization is required" ).
-        def( "setDistanceLimits", &MR::MeshToDistanceMapParams::setDistanceLimits, pybind11::arg( "min" ), pybind11::arg( "max" ),
-            "if distance is not in set range, pixel became invalid\n"
-            "default value: false. Any distance will be applied (include negative)" ).
-        def_readwrite( "xRange", &MR::MeshToDistanceMapParams::xRange, "Cartesian range vector between distance map borders in X direction" ).
-        def_readwrite( "yRange", &MR::MeshToDistanceMapParams::yRange, "Cartesian range vector between distance map borders in Y direction" ).
-        def_readwrite( "direction", &MR::MeshToDistanceMapParams::direction, "direction of intersection ray" ).
-        def_readwrite( "orgPoint", &MR::MeshToDistanceMapParams::orgPoint, "location of (0,0) pixel with value 0.f" ).
-        def_readwrite( "useDistanceLimits", &MR::MeshToDistanceMapParams::useDistanceLimits, "out of limits intersections will be set to non-valid" ).
-        def_readwrite( "allowNegativeValues", &MR::MeshToDistanceMapParams::allowNegativeValues, "allows to find intersections in backward to direction vector with negative values" ).
-        def_readwrite( "minValue", &MR::MeshToDistanceMapParams::minValue, "Using of this parameter depends on useDistanceLimits" ).
-        def_readwrite( "maxValue", &MR::MeshToDistanceMapParams::maxValue, "Using of this parameter depends on useDistanceLimits" ).
-        def_readwrite( "resolution", &MR::MeshToDistanceMapParams::resolution, "resolution of distance map" );
-
-    pybind11::class_<MR::ContourToDistanceMapParams>( m, "ContourToDistanceMapParams" ).
-        def( pybind11::init<>() );
-
-    pybind11::class_<MR::DistanceMapToWorld>( m, "DistanceMapToWorld", "This structure store data to transform distance map to world coordinates" ).
-        def( pybind11::init<>(), "Default ctor init all fields with zeros, make sure to fill them manually" ).
-        def( pybind11::init<const MR::MeshToDistanceMapParams&>(), "Init fields by `MeshToDistanceMapParams` struct" ).
-        def( pybind11::init<const MR::ContourToDistanceMapParams&>(), "Init fields by `ContourToDistanceMapParams` struct" ).
-        def( "toWorld", &MR::DistanceMapToWorld::toWorld, pybind11::arg( "x" ), pybind11::arg( "y" ), pybind11::arg( "depth" ),
-            "Get world coordinate by depth map info.\n"
-            "x - float X coordinate of depth map: (0.0f - left corner of pixel 0, 1.0 - right corner of pixel 0 and left corner of pixel 1)\n"
-            "y - float Y coordinate of depth map: (0.0f - left corner of pixel 0, 1.0 - right corner of pixel 0 and left corner of pixel 1)\n"
-            "depth - value in distance map, represent depth in world" ).
-        def_readwrite( "orgPoint", &MR::DistanceMapToWorld::orgPoint, "World coordinates of distance map origin corner" ).
-        def_readwrite( "pixelXVec", &MR::DistanceMapToWorld::pixelXVec, "Vector in world space of pixel x positive direction.\n"
-            "Note! Length is equal to pixel size. Typically it should be orthogonal to `pixelYVec`." ).
-        def_readwrite( "pixelYVec", &MR::DistanceMapToWorld::pixelYVec, "Vector in world space of pixel y positive direction.\n"
-            "Note! Length is equal to pixel size. Typically it should be orthogonal to `pixelXVec`." ).
-        def_readwrite( "direction", &MR::DistanceMapToWorld::direction, "Vector of depth direction."
-            "Note! Typically it should be normalized and orthogonal to `pixelXVec` `pixelYVec` plane." );
-
-    m.def( "computeDistanceMapD", []( const MeshPart& mp, const MeshToDistanceMapParams& params, ProgressCallback cb )
-        { return MR::computeDistanceMapD( mp, params, cb ); },
-        pybind11::arg( "mp" ), pybind11::arg( "params" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
-        "computes distance map for presented projection parameters\n"
-        "use MeshToDistanceMapParams constructor instead of overloads of this function\n"
-        "MeshPart - input 3d model\n"
-        "general call. You could customize params manually" );
-
-    m.def( "distanceMapToMesh", &MR::distanceMapToMesh, pybind11::arg( "mp" ), pybind11::arg( "params" ),
-        "converts distance map back to the mesh fragment with presented params" );
-    
-    m.def( "saveDistanceMapToImage",
-        MR::decorateExpected( &MR::saveDistanceMapToImage ),
-        pybind11::arg( "distMap" ), pybind11::arg( "filename" ), pybind11::arg( "threshold" ) = 1.0f / 255.0f,
-        "saves distance map to monochrome image in scales of gray:\n"
-        "\tthreshold - threshold of maximum values [0.; 1.]. invalid pixel set as 0. (black)\n"
-        "minimum (close): 1.0 (white)\n"
-        "maximum (far): threshold\n"
-        "invalid (infinity): 0.0 (black)" );
-
-    m.def( "loadDistanceMapFromImage",
-        MR::decorateExpected( &loadDistanceMapFromImage ),
-        pybind11::arg( "filename" ), pybind11::arg( "threshold" ) = 1.0f / 255.0f,
-        "load distance map from monochrome image file\n"
-        "\tthreshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid" );
-
-    m.def( "distanceMapTo2DIsoPolyline", ( Polyline2( * )(const DistanceMap&, float) ) &MR::distanceMapTo2DIsoPolyline,
-        pybind11::arg( "dm" ), pybind11::arg( "isoValue" ),
-        "Converts distance map to 2d iso-lines:\n"
-        "Iso-lines are created in space DistanceMap ( plane OXY with pixelSize = (1, 1) )" );
-
-    m.def( "distanceMapTo2DIsoPolyline", ( std::pair<Polyline2, AffineXf3f>( * )( const DistanceMap&, const DistanceMapToWorld&, float, bool ) )& MR::distanceMapTo2DIsoPolyline,
-        pybind11::arg( "dm" ), pybind11::arg( "params" ), pybind11::arg( "isoValue" ), pybind11::arg( "useDepth" ),
-        "Iso-lines are created in real space.\n"
-        "( contours plane with parameters according DistanceMapToWorld )\n"
-        "Return: pair contours in OXY & transformation from plane OXY to real contours plane" );
 
 } )
 
@@ -488,6 +450,18 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
         "if your input mesh is closed then please specify params.type == Offset, and you will get closed mesh on output;\n"
         "if your input mesh is open then please specify params.type == Shell, and you will get open mesh on output" );
 
+
+    m.def( "doubleOffsetMesh", 
+        MR::decorateExpected( [] ( const MR::MeshPart& mp, float offsetA, float offsetB, MR::OffsetParameters params )
+    {
+        if ( params.voxelSize <= 0 )
+            params.voxelSize = suggestVoxelSize( mp, 5e6f );
+        return MR::doubleOffsetMesh( mp, offsetA, offsetB, params );
+    } ), 
+        pybind11::arg( "mp" ), pybind11::arg( "offsetA" ), pybind11::arg( "offsetB" ), pybind11::arg_v( "params", MR::OffsetParameters(), "OffsetParameters()" ),
+        "Offsets mesh by converting it to voxels and back two times\n"
+        "only closed meshes allowed (only Offset mode)\n"
+        "typically offsetA and offsetB have distinct signs" );
 })
 #endif
 

@@ -9,13 +9,12 @@ namespace MR
 MR_ADD_CLASS_FACTORY( PointObject )
 
 PointObject::PointObject()
-{
-    constructPointCloud_();
-}
+    : FeatureObject( 0 )
+{}
 
 PointObject::PointObject( const std::vector<Vector3f>& pointsToApprox )
+    : PointObject()
 {
-    constructPointCloud_();
     Vector3d center;
     for ( auto& p : pointsToApprox )
         center += Vector3d( p );
@@ -24,36 +23,35 @@ PointObject::PointObject( const std::vector<Vector3f>& pointsToApprox )
 
 std::shared_ptr<MR::Object> PointObject::clone() const
 {
-    auto res = std::make_shared<PointObject>( ProtectedStruct{}, *this );
-    if ( points_ )
-        res->points_ = std::make_shared<PointCloud>( *points_ );
-    return res;
+    return std::make_shared<PointObject>( ProtectedStruct{}, *this );
 }
 
 std::shared_ptr<MR::Object> PointObject::shallowClone() const
 {
-    auto res = std::make_shared<PointObject>( ProtectedStruct{}, *this );
-    if ( points_ )
-        res->points_ = points_;
-    return res;
+    return std::make_shared<PointObject>( ProtectedStruct{}, *this );
 }
 
-Vector3f PointObject::getPoint() const
+Vector3f PointObject::getPoint( ViewportId id /*= {}*/ ) const
 {
-    return xf().b;
+    return xf( id ).b;
 }
 
-void PointObject::setPoint( const Vector3f& point )
+void PointObject::setPoint( const Vector3f& point, ViewportId id /*= {}*/ )
 {
-    setXf( AffineXf3f::translation( point ) );
+    setXf( AffineXf3f::translation( point ), id );
 }
 
 std::vector<FeatureObjectSharedProperty>& PointObject::getAllSharedProperties() const
 {
     static std::vector<FeatureObjectSharedProperty> ret = {
-       {"Point", &PointObject::getPoint, &PointObject::setPoint}
+       {"Point", FeaturePropertyKind::position, &PointObject::getPoint, &PointObject::setPoint}
     };
     return ret;
+}
+
+FeatureObjectProjectPointResult PointObject::projectPoint( const Vector3f& /*point*/, ViewportId id /*= {}*/ ) const
+{
+    return { getPoint( id ) , std::nullopt };
 }
 
 void PointObject::swapBase_( Object& other )
@@ -66,17 +64,14 @@ void PointObject::swapBase_( Object& other )
 
 void PointObject::serializeFields_( Json::Value& root ) const
 {
-    ObjectPointsHolder::serializeFields_( root );
+    FeatureObject::serializeFields_( root );
     root["Type"].append( PointObject::TypeName() );
 }
 
-void PointObject::constructPointCloud_()
+void PointObject::setupRenderObject_() const
 {
-    points_ = std::make_shared<PointCloud>();
-    points_->points.push_back( Vector3f() );
-    points_->validPoints.resize( 1, true );
-
-    setDirtyFlags( DIRTY_ALL );
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype( *this )>( *this );
 }
 
 }

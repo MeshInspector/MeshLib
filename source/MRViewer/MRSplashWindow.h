@@ -31,7 +31,7 @@ public:
     MRVIEWER_API void stop();
 
     // Returns minimum time in seconds, splash screen to be present
-    virtual float minimumTimeSec() const { return 5.0f; }
+    virtual float minimumTimeSec() const { return 2.f; }
 
 protected:
     std::string name_;

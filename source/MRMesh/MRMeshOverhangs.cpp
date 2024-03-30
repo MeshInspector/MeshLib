@@ -77,9 +77,24 @@ Expected<std::vector<FaceBitSet>> findOverhangs( const Mesh& mesh, const FindOve
     assert( settings.hops >= 0 );
     const auto minCos = -settings.maxOverhangDistance / std::hypot( settings.layerHeight, settings.maxOverhangDistance );
 
+    // compute transform from the given axis
     const auto xf = settings.xf ? *settings.xf : AffineXf3f();
+    const auto axisXf = xf * AffineXf3f::xfAround( Matrix3f::rotation( Vector3f::plusZ(), settings.axis ), mesh.computeBoundingBox( settings.xf ).center() );
+    const auto axisMeshBox = computeBoundingBox( mesh.points, nullptr, &axisXf );
+
+    // find the lowest layer's faces (never considered as an overhang)
+    const auto basementTop = axisMeshBox.min.z + settings.layerHeight;
+    VertBitSet basementVerts( mesh.topology.lastValidVert() + 1, false );
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
+    {
+        basementVerts[v] = ( axisXf( mesh.points[v] ).z <= basementTop );
+    } );
+    const auto basementFaces = getInnerFaces( mesh.topology, basementVerts );
+
     const auto isOverhanging = [&] ( FaceId f ) -> bool
     {
+        if ( basementFaces.test( f ) )
+            return false;
         const auto normal = mesh.normal( f );
         const auto cos = dot( settings.axis, xf.A * normal );
         return cos < minCos;
@@ -107,10 +122,6 @@ Expected<std::vector<FaceBitSet>> findOverhangs( const Mesh& mesh, const FindOve
         faces |= smoothFaces;
     }
 
-    // compute transform from the given axis
-    const auto axisXf = xf * AffineXf3f::xfAround( Matrix3f::rotation( Vector3f::plusZ(), settings.axis ), mesh.computeBoundingBox( settings.xf ).center() );
-    const auto axisMeshBox = computeBoundingBox( mesh.points, nullptr, &axisXf );
-
     // filter out face regions with too small overhang distance
     auto regions = MeshComponents::getAllComponents( { mesh, &faces }, MeshComponents::PerVertex );
 
@@ -126,12 +137,7 @@ Expected<std::vector<FaceBitSet>> findOverhangs( const Mesh& mesh, const FindOve
         const auto axisBox = mesh.computeBoundingBox( &region, &axisXf );
         if ( axisBox.size().z > settings.layerHeight )
             return;
-        // don't include the basement region
-        if ( axisBox.min.z == axisMeshBox.min.z )
-        {
-            region.clear();
-            return;
-        }
+
         std::vector<int> thisBds;
         for ( int bdI = 0; bdI < allBds.size(); ++bdI )
             if ( region.test( mesh.topology.right( allBds[bdI].front() ) ) )

@@ -37,6 +37,7 @@ struct Box3
 
 struct IntersectionPrecomputes
 {
+    float3 dir;
     float3 invDir;
     int maxDimIdxZ = 2;
     int idxX = 0;
@@ -59,6 +60,10 @@ struct Node3
     {
         return l;
     }
+    __device__ int2 getLeafPointRange() const
+    { 
+        return { -(l + 1), -(r + 1) };
+    }
 };
 
 struct FaceToThreeVerts
@@ -79,6 +84,22 @@ struct MeshTriPoint
     int unused = -1; //always -1, but necessary to have the same size as MeshTriPoint in CPU
     float a;
     float b;
+};
+
+struct MeshIntersectionResult
+{
+    PointOnFace proj;
+    MeshTriPoint tp;
+    float distanceAlongLine = -FLT_MAX;
+};
+
+struct TriIntersectResult
+{
+    // barycentric representation
+    float a;
+    float b;
+    // distance from ray origin to p in dir length units
+    float t = -FLT_MAX;
 };
 
 // GPU analog of CPU AffineXf3f
@@ -186,7 +207,7 @@ __device__ inline bool rayBoxIntersect( const Box3& box, const float3& rayOrigin
     return t0 <= t1;
 }
 
-__device__ inline float rayTriangleIntersect(const float* oriA, const float* oriB, const float* oriC, const IntersectionPrecomputes& prec)
+__device__ inline TriIntersectResult rayTriangleIntersect(const float* oriA, const float* oriB, const float* oriC, const IntersectionPrecomputes& prec)
 {
     const float Sx = prec.Sx;
     const float Sy = prec.Sy;
@@ -205,33 +226,41 @@ __device__ inline float rayTriangleIntersect(const float* oriA, const float* ori
     float U = Cx * By - Cy * Bx;
     float V = Ax * Cy - Ay * Cx;
     float W = Bx * Ay - By * Ax;
-
+    TriIntersectResult res;
     if ( U < -eps || V < -eps || W < -eps )
     {
         if ( U > eps || V > eps || W > eps )
         {
             // U,V,W have clearly different signs, so the ray misses the triangle
-            return -FLT_MAX;
+            return res;
         }
     }
 
     float det = U + V + W;
     if ( det == 0 )
-        return -FLT_MAX;
+        return res;
 
     const float Az = Sz * oriA[prec.maxDimIdxZ];
     const float Bz = Sz * oriB[prec.maxDimIdxZ];
     const float Cz = Sz * oriC[prec.maxDimIdxZ];
     const float t = U * Az + V * Bz + W * Cz;
     
-    return t / det;
+    res.a = V / det;
+    res.b = W / det;
+    res.t = t / det;
+    return res;
 }
 
-__device__ inline int rayMeshIntersect( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, const float3& rayOrigin, float rayStart, float rayEnd, const IntersectionPrecomputes& prec )
+__device__ inline MeshIntersectionResult rayMeshIntersect( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, const float3& rayOrigin, float rayStart, float rayEnd, const IntersectionPrecomputes& prec )
 {
     const Box3& box = nodes[0].box;
-    if ( !rayBoxIntersect( box, rayOrigin, rayStart, rayEnd, prec ) )
-        return -1;
+    MeshIntersectionResult res;
+    res.distanceAlongLine = -FLT_MAX;
+
+    float start = rayStart;
+    float end = rayEnd;
+    if ( !rayBoxIntersect( box, rayOrigin, start, end, prec ) )
+        return res;
 
     struct SubTask
     {
@@ -254,6 +283,8 @@ __device__ inline int rayMeshIntersect( const Node3* nodes, const float3* meshPo
     addSubTask( 0, rayStart );
 
     int faceId = -1;
+    float baryA = 0;
+    float baryB = 0;
 
     while ( stackSize > 0 && faceId < 0 )
     {
@@ -274,11 +305,14 @@ __device__ inline int rayMeshIntersect( const Node3* nodes, const float3* meshPo
                 float3 a = meshPoints[vs[0]] - rayOrigin;
                 float3 b = meshPoints[vs[1]] - rayOrigin;
                 float3 c = meshPoints[vs[2]] - rayOrigin;
-
-                if ( float dist = rayTriangleIntersect( ( float* ) ( &a ), ( float* ) ( &b ), ( float* ) ( &c ), prec ); dist < rayEnd && dist > rayStart )
+                
+                const auto tri = rayTriangleIntersect( ( float* ) (&a), ( float* ) (&b), ( float* ) (&c), prec );
+                if ( tri.t < rayEnd && tri.t > rayStart )
                 {
                     faceId = face;
-                    rayEnd = dist;
+                    baryA = tri.a;
+                    baryB = tri.b;
+                    rayEnd = tri.t;
                 }
             }
             else
@@ -316,8 +350,19 @@ __device__ inline int rayMeshIntersect( const Node3* nodes, const float3* meshPo
             }
         }
     }
+    if ( faceId < 0 )
+        return res;
 
-    return faceId;
+    res.proj.faceId = faceId;
+    res.proj.point.x = rayOrigin.x + rayEnd * prec.dir.x;
+    res.proj.point.y = rayOrigin.y + rayEnd * prec.dir.y;
+    res.proj.point.z = rayOrigin.z + rayEnd * prec.dir.z;
+
+    res.tp.a = baryA;
+    res.tp.b = baryB;
+
+    res.distanceAlongLine = rayEnd;
+    return res;
 }
 
 __device__ inline bool testBit( const uint64_t* bitSet, const size_t bitNumber )

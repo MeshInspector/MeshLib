@@ -1,22 +1,39 @@
 from typing import List, Union
-from helper import *
-import pytest
 
-def elementwise_comparison_3(a: List, b: Union[mrmesh.Vector3d,  mrmesh.Vector3i,  mrmesh.Vector3f]):
+import pytest
+from helper import *
+
+
+def elementwise_comparison_3(
+    a: List, b: Union[mrmesh.Vector3d, mrmesh.Vector3i, mrmesh.Vector3f]
+):
     assert a[0] == b.x
     assert a[1] == b.y
     assert a[2] == b.z
 
 
-def elementwise_comparison_2(a: List, b: Union[mrmesh.Vector2d,  mrmesh.Vector2i,  mrmesh.Vector2f]):
+def elementwise_comparison_2(
+    a: List, b: Union[mrmesh.Vector2d, mrmesh.Vector2i, mrmesh.Vector2f]
+):
     assert a[0] == b.x
     assert a[1] == b.y
 
-def iteration_check(a: Union[mrmesh.Vector3d,  mrmesh.Vector3i,  mrmesh.Vector3f, mrmesh.Vector2d,  mrmesh.Vector2i,  mrmesh.Vector2f]):
+
+def iteration_check(
+    a: Union[
+        mrmesh.Vector3d,
+        mrmesh.Vector3i,
+        mrmesh.Vector3f,
+        mrmesh.Vector2d,
+        mrmesh.Vector2i,
+        mrmesh.Vector2f,
+    ]
+):
     counter = 1
     for el in a:
         assert el == counter
         counter = counter + 1
+
 
 def test_Vector3():
     double_vec = mrmesh.Vector3d(1, 2, 3)
@@ -31,7 +48,7 @@ def test_Vector3():
     assert len(ints_list) == 3
     assert len(floats_list) == 3
 
-    assert type(doubles_list[0]) == float # Double is converted to float in python
+    assert type(doubles_list[0]) == float  # Double is converted to float in python
     assert type(ints_list[0]) == int
     assert type(floats_list[0]) == float
 
@@ -42,6 +59,7 @@ def test_Vector3():
     iteration_check(double_vec)
     iteration_check(int_vec)
     iteration_check(float_vec)
+
 
 def test_Vector2():
     double_vec = mrmesh.Vector2d(1, 2)
@@ -56,14 +74,14 @@ def test_Vector2():
     assert len(ints_list) == 2
     assert len(floats_list) == 2
 
-    assert type(doubles_list[0]) == float # Double is converted to float in python
+    assert type(doubles_list[0]) == float  # Double is converted to float in python
     assert type(ints_list[0]) == int
     assert type(floats_list[0]) == float
 
     elementwise_comparison_2(doubles_list, double_vec)
     elementwise_comparison_2(ints_list, int_vec)
     elementwise_comparison_2(floats_list, float_vec)
-    
+
     iteration_check(double_vec)
     iteration_check(int_vec)
     iteration_check(float_vec)

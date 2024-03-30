@@ -1,5 +1,8 @@
 #pragma once
+
 #include "MRViewer/MRRibbonMenuItem.h"
+#include "MRViewer/MRSceneStateCheck.h"
+#include "MRMesh/MRObject.h"
 
 namespace MR
 {
@@ -28,7 +31,7 @@ public:
     virtual bool action() override;
 };
 
-class RibbonSceneUnselectAll : public RibbonMenuItem, public SceneStateAtLeastCheck<1, Object>
+class RibbonSceneUnselectAll : public RibbonMenuItem, public SceneStateAtLeastCheck<1, Object, NoModelCheck>
 {
 public:
     RibbonSceneUnselectAll();
@@ -59,7 +62,7 @@ public:
     virtual bool action() override;
 };
 
-class RibbonSceneRename : public RibbonMenuItem, public SceneStateExactCheck<1, Object>
+class RibbonSceneRename : public RibbonMenuItem, public SceneStateExactCheck<1, Object, NoModelCheck>
 {
 public:
     RibbonSceneRename();
@@ -68,7 +71,7 @@ public:
     virtual bool action() override;
 };
 
-class RibbonSceneRemoveSelected : public RibbonMenuItem, public SceneStateAtLeastCheck<1, Object>
+class RibbonSceneRemoveSelected : public RibbonMenuItem, public SceneStateAtLeastCheck<1, Object, NoModelCheck>
 {
 public:
     RibbonSceneRemoveSelected();

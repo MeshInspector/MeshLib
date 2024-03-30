@@ -115,6 +115,42 @@
 			"g": 99,
 			"r": 95
 		},
+		"DialogTab": {
+			"a": 255,
+			"b": 71,
+			"g": 67,
+			"r": 63
+		},
+		"DialogTabHovered": {
+			"a": 255,
+			"b": 135,
+			"g": 131,
+			"r": 127
+		},
+		"DialogTabActive": {
+			"a": 255,
+			"b": 20,
+			"g": 169,
+			"r": 60
+		},
+		"DialogTabActiveHovered": {
+			"a": 255,
+			"b": 84,
+			"g": 233,
+			"r": 124
+		},
+		"DialogTabText": {
+			"a": 255,
+			"b": 255,
+			"g": 255,
+			"r": 255
+		},
+		"DialogTabActiveText": {
+			"a": 255,
+			"b": 255,
+			"g": 255,
+			"r": 255
+		},
 		"ToolbarHovered": {
 			"a": 255,
 			"b": 90,
@@ -127,11 +163,11 @@
 			"g": 99,
 			"r": 95
 		},
-		"ToolbarCustomizeBg": {
+		"ModalBackground": {
 			"a": 255,
-			"b": 30,
-			"g": 30,
-			"r": 30
+			"b": 36,
+			"g": 31,
+			"r": 28
 		},
 		"Text": {
 			"a": 255,
@@ -215,6 +251,13 @@
 			"a": 255,
 			"b": 169,
 			"g": 77,
+			"r": 0
+		},
+
+		"TextContrastBackground": {
+			"a": 0,
+			"b": 0,
+			"g": 0,
 			"r": 0
 		},
 
@@ -305,6 +348,48 @@
 		"g": 52,
 		"r": 204
 	},
+    "SelectedFeatures": {
+        "a": 255,
+        "b": 107,
+        "g": 40,
+        "r": 193
+    },
+    "UnselectedFeatures": {
+        "a": 255,
+        "b": 70,
+        "g": 128,
+        "r": 216
+    },
+    "FeatureBackFaces": {
+        "a": 255,
+        "b": 91,
+        "g": 124,
+        "r": 176
+    },
+	"SelectedFeatureDecorations": {
+		"a": 255,
+		"b": 192,
+		"g": 64,
+		"r": 255
+	},
+    "UnselectedFeatureDecorations": {
+		"a": 255,
+		"b": 192,
+		"g": 64,
+		"r": 255
+	},
+    "SelectedMeasurements": {
+        "a": 255,
+        "b": 240,
+        "g": 255,
+        "r": 50
+    },
+    "UnselectedMeasurements": {
+        "a": 255,
+        "b": 255,
+        "g": 255,
+        "r": 255
+    },
 	"SelectedObjectMesh": {
 		"a": 255,
 		"b": 236,

@@ -8,14 +8,14 @@
 
 namespace MR
 {
-class MRVIEWER_CLASS RenderMeshObject : public IRenderObject
+class MRVIEWER_CLASS RenderMeshObject : public virtual IRenderObject
 {
 public:
     MRVIEWER_API RenderMeshObject( const VisualObject& visObj );
     MRVIEWER_API virtual ~RenderMeshObject();
 
-    MRVIEWER_API virtual void render( const ModelRenderParams& params ) override;
-    MRVIEWER_API virtual void renderPicker( const ModelRenderParams& params, unsigned geomId ) override;
+    MRVIEWER_API virtual bool render( const ModelRenderParams& params ) override;
+    MRVIEWER_API virtual void renderPicker( const ModelBaseRenderParams& params, unsigned geomId ) override;
     MRVIEWER_API virtual size_t heapBytes() const override;
     MRVIEWER_API virtual size_t glBytes() const override;
     MRVIEWER_API virtual void forceBindAll() override;
@@ -73,12 +73,12 @@ protected:
 
     int maxTexSize_{ 0 };
 
-    MRVIEWER_API virtual void renderEdges_( const ModelRenderParams& parameters, GLuint vao, const Color& color, uint32_t dirtyFlag );
+    MRVIEWER_API virtual void renderEdges_( const ModelRenderParams& parameters, bool alphaSort, GLuint vao, const Color& color, uint32_t dirtyFlag );
 
-    MRVIEWER_API virtual void renderMeshEdges_( const ModelRenderParams& parameters );
+    MRVIEWER_API virtual void renderMeshEdges_( const ModelRenderParams& parameters, bool alphaSort );
 
     MRVIEWER_API virtual void bindMesh_( bool alphaSort );
-    
+
     MRVIEWER_API virtual void bindMeshPicker_();
 
     MRVIEWER_API virtual void bindEdges_();

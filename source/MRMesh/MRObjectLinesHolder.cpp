@@ -1,12 +1,13 @@
 #include "MRObjectLinesHolder.h"
+#include "MRPolyline.h"
 #include "MRObjectFactory.h"
 #include "MRSerializer.h"
 #include "MRHeapBytes.h"
-#include "MRPch/MRJson.h"
 #include "MRSceneColors.h"
-#include "MRPch/MRTBB.h"
-#include <filesystem>
 #include "MRPolylineComponents.h"
+#include "MRPch/MRTBB.h"
+#include "MRPch/MRJson.h"
+#include <filesystem>
 
 namespace MR
 {
@@ -126,24 +127,41 @@ size_t ObjectLinesHolder::numComponents() const
     return *numComponents_;
 }
 
-AllVisualizeProperties ObjectLinesHolder::getAllVisualizeProperties() const
+bool ObjectLinesHolder::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const
 {
-    AllVisualizeProperties res;
-    res.resize( LinesVisualizePropertyType::LinesVisualizePropsCount );
-    for ( int i = 0; i < res.size(); ++i )
-        res[i] = getVisualizePropertyMask( unsigned( i ) );
-    return res;
+    return VisualObject::supportsVisualizeProperty( type ) || type.tryGet<LinesVisualizePropertyType>().has_value();
 }
 
-const ViewportMask& ObjectLinesHolder::getVisualizePropertyMask( unsigned type ) const
+AllVisualizeProperties ObjectLinesHolder::getAllVisualizeProperties() const
 {
-    switch ( type )
+    AllVisualizeProperties ret = VisualObject::getAllVisualizeProperties();
+    getAllVisualizePropertiesForEnum<LinesVisualizePropertyType>( ret );
+    return ret;
+}
+
+void ObjectLinesHolder::setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos )
+{
+    VisualObject::setAllVisualizeProperties_( properties, pos );
+    setAllVisualizePropertiesForEnum<LinesVisualizePropertyType>( properties, pos );
+}
+
+const ViewportMask& ObjectLinesHolder::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
+{
+    if ( auto value = type.tryGet<LinesVisualizePropertyType>() )
     {
-    case LinesVisualizePropertyType::Points:
-        return showPoints_;
-    case LinesVisualizePropertyType::Smooth:
-        return smoothConnections_;
-    default:
+        switch ( *value )
+        {
+        case LinesVisualizePropertyType::Points:
+            return showPoints_;
+        case LinesVisualizePropertyType::Smooth:
+            return smoothConnections_;
+        case LinesVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
+        }
+        assert( false && "Invalid enum." );
+        return visibilityMask_;
+    }
+    else
+    {
         return VisualObject::getVisualizePropertyMask( type );
     }
 }
@@ -162,6 +180,8 @@ void ObjectLinesHolder::serializeBaseFields_( Json::Value& root ) const
 
     root["ColoringType"] = ( coloringType_ == ColoringType::LinesColorMap ) ? "PerLine" : "Solid";
     serializeToJson( linesColorMap_.vec_, root["LineColors"] );
+
+    root["LineWidth"] = lineWidth_;
 }
 
 void ObjectLinesHolder::serializeFields_( Json::Value& root ) const
@@ -213,6 +233,9 @@ void ObjectLinesHolder::deserializeBaseFields_( const Json::Value& root )
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
         setDefaultSceneProperties_();
+
+    if ( const auto& lineWidthJson = root["LineWidth"]; lineWidthJson.isDouble() )
+        lineWidth_ = float( lineWidthJson.asDouble() );
 }
 
 void ObjectLinesHolder::deserializeFields_( const Json::Value& root )

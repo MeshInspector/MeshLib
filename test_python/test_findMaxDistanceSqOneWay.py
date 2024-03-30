@@ -1,5 +1,5 @@
-from helper import *
 import pytest
+from helper import *
 
 
 def test_find_max_distance_sq_oneway():
@@ -13,7 +13,8 @@ def test_find_max_distance_sq_oneway():
     diffXf = mrmesh.AffineXf3f.translation(transVector)
     torus2.transform(diffXf)
 
-    distSq = mrmesh.findMaxDistanceSqOneWay(mrmesh.MeshPart(
-        torus), mrmesh.MeshPart(torus2), diffXf.inverse(), 1e35)
+    distSq = mrmesh.findMaxDistanceSqOneWay(
+        mrmesh.MeshPart(torus), mrmesh.MeshPart(torus2), diffXf.inverse(), 1e35
+    )
 
-    assert (distSq < 69.28205**2)
+    assert distSq < 69.28205**2

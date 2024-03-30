@@ -300,9 +300,6 @@ bool isInside( const Polyline2& a, const Polyline2& b, const AffineXf2f* rigidB2
     if ( rigidB2A )
         aPoint = rigidB2A->inverse()( aPoint );
 
-    // if removed then warning C4686: 'MR::findProjectionOnPolyline2': possible change in behavior, change in UDT return calling convention
-    static PolylineProjectionResult2 unused;
-
     auto projRes = findProjectionOnPolyline2( aPoint, b );
 
     // TODO: this should be separate function (e.g. findSignedProjectionOnPolyline2)

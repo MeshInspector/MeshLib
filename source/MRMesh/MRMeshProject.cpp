@@ -12,10 +12,7 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
     MeshProjectionResult res;
     res.distSq = upDistLimitSq;
     if ( tree.nodes().empty() )
-    {
-        assert( false );
         return res;
-    }
 
     struct SubTask
     {

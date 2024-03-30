@@ -105,14 +105,14 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
     std::vector<EdgePath> leftCutContours;
     if ( leftCutPosition != -FLT_MAX )
     {
-        trimWithPlane( part, Plane3f { Vector3f::plusX(), leftCutPosition }, &leftCutContours );
+        trimWithPlane( part, { .plane = Plane3f { Vector3f::plusX(), leftCutPosition } }, { .outCutContours = &leftCutContours } );
         sortEdgePaths( part, leftCutContours );
     }
 
     std::vector<EdgePath> rightCutContours;
     if ( rightCutPosition != +FLT_MAX )
     {
-        trimWithPlane( part, -Plane3f {Vector3f::plusX(), rightCutPosition }, &rightCutContours );
+        trimWithPlane( part, { .plane = -Plane3f{Vector3f::plusX(), rightCutPosition } }, { .outCutContours = &rightCutContours } );
         reverse( rightCutContours );
         sortEdgePaths( part, rightCutContours );
     }

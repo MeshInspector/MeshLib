@@ -1,10 +1,8 @@
 #include "MRSphereObject.h"
 #include "MRMatrix3.h"
-#include "MRMakeSphereMesh.h"
 #include "MRMesh.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
-#include "MRMatrix3Decompose.h"
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -14,7 +12,7 @@
 #elif defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif 
+#endif
 
 #include <Eigen/Dense>
 
@@ -23,63 +21,67 @@
 #elif defined(__clang__)
 #elif defined(__GNUC__)
 #pragma GCC diagnostic pop
-#endif 
+#endif
 
-namespace
-{
-constexpr int cDetailLevel = 2048;
-constexpr float cBaseRadius = 1.0f;
-}
 
 namespace MR
 {
 
 MR_ADD_CLASS_FACTORY( SphereObject )
 
-float SphereObject::getRadius() const
+float SphereObject::getRadius( ViewportId id /*= {}*/ ) const
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    return s.x.x;
+    return s_.get( id ).x.x;
 }
 
-Vector3f SphereObject::getCenter() const
+Vector3f SphereObject::getCenter( ViewportId id /*= {}*/ ) const
 {
-    return xf().b;
+    return xf( id ).b;
 }
 
-void SphereObject::setRadius( float radius )
+void SphereObject::setRadius( float radius, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
+    auto currentXf = xf( id );
     currentXf.A = Matrix3f::scale( radius );
-    setXf( currentXf );
+    setXf( currentXf, id );
 }
 
-void SphereObject::setCenter( const Vector3f& center )
+void SphereObject::setCenter( const Vector3f& center, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
+    auto currentXf = xf( id );
     currentXf.b = center;
-    setXf( currentXf );
+    setXf( currentXf, id );
 }
 
 
 const std::vector<FeatureObjectSharedProperty>& SphereObject::getAllSharedProperties() const
 {
     static std::vector<FeatureObjectSharedProperty> ret = {
-       {"Radius", &SphereObject::getRadius, &SphereObject::setRadius},
-       {"Center", &SphereObject::getCenter, &SphereObject::setCenter}
+       {"Radius", FeaturePropertyKind::linearDimension, &SphereObject::getRadius, &SphereObject::setRadius},
+       {"Center", FeaturePropertyKind::position,        &SphereObject::getCenter, &SphereObject::setCenter}
     };
     return ret;
 }
 
-SphereObject::SphereObject()
+FeatureObjectProjectPointResult SphereObject::projectPoint( const Vector3f& point, ViewportId id /*= {}*/ ) const
 {
-    constructMesh_();
+    const Vector3f& center = getCenter( id );
+    const float radius = getRadius( id );
+
+    auto X = point - center;
+    auto normal = X.normalized();
+
+    auto projection = center + normal * radius;
+    return { projection, normal };
 }
 
+SphereObject::SphereObject()
+    : AddVisualProperties( 2 )
+{}
+
 SphereObject::SphereObject( const std::vector<Vector3f>& pointsToApprox )
+    : SphereObject()
 {
-    constructMesh_();
     // find best radius and center
     Eigen::Matrix<double, 4, 4> accumA_;
     Eigen::Matrix<double, 4, 1> accumB_;
@@ -105,18 +107,12 @@ SphereObject::SphereObject( const std::vector<Vector3f>& pointsToApprox )
 
 std::shared_ptr<Object> SphereObject::shallowClone() const
 {
-    auto res = std::make_shared<SphereObject>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = mesh_;
-    return res;
+    return std::make_shared<SphereObject>( ProtectedStruct{}, *this );
 }
 
 std::shared_ptr<Object> SphereObject::clone() const
 {
-    auto res = std::make_shared<SphereObject>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = std::make_shared<Mesh>( *mesh_ );
-    return res;
+    return std::make_shared<SphereObject>( ProtectedStruct{}, *this );
 }
 
 void SphereObject::swapBase_( Object& other )
@@ -129,17 +125,14 @@ void SphereObject::swapBase_( Object& other )
 
 void SphereObject::serializeFields_( Json::Value& root ) const
 {
-    ObjectMeshHolder::serializeFields_( root );
+    FeatureObject::serializeFields_( root );
     root["Type"].append( SphereObject::TypeName() );
 }
 
-void SphereObject::constructMesh_()
+void SphereObject::setupRenderObject_() const
 {
-    mesh_ = std::make_shared<Mesh>( makeSphere( { cBaseRadius,cDetailLevel } ) );
-    setFlatShading( false );
-    selectFaces( {} );
-    selectEdges( {} );
-    setDirtyFlags( DIRTY_ALL );
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype( *this )>( *this );
 }
 
 }

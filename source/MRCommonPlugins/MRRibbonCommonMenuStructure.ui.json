@@ -47,6 +47,14 @@
 							"Name": "Save object"
 						}
 					]
+				},
+				{
+					"Name": "Settings",
+					"List": [
+						{
+							"Name": "Viewer settings"
+						}
+					]
 				}
 			]
 		},
@@ -61,28 +69,16 @@
 							"Name": "Fit data"
 						},
 						{
-							"Name": "Select objects"
-						},
-						{
-							"Name": "Move object"
-						},
-						{
 							"Name": "Capture screenshot"
 						},
 						{
 							"Name": "Add custom theme"
-						},
-						{
-							"Name": "Viewer settings"
 						}
 					]
 				},
 				{
 					"Name": "Camera",
 					"List": [
-						{
-							"Name": "Camera"
-						},
 						{
 							"Name": "Front View"
 						},
@@ -127,8 +123,36 @@
 			]
 		},
 		{
+			"Name": "Select",
+			"Priority": 2,
+			"Groups": [
+				{
+					"Name": "Basic",
+					"List": [
+						{
+							"Name": "Select objects"
+						}
+					]
+				}
+			]
+		},
+		{
+			"Name": "Transform",
+			"Priority": 3,
+			"Groups": [
+				{
+					"Name": "Transform",
+					"List": [
+						{
+							"Name": "Move object"
+						}
+					]
+				}
+			]
+		},
+		{
 			"Name": "Voxel",
-			"Priority": 8,
+			"Priority": 3,
 			"Groups": [
 				{
 					"Name": "Open",
@@ -145,6 +169,20 @@
 					]
 				}
 			]
+		},
+		{
+			"Name": "Test",
+			"Priority": 3,
+			"Groups": [
+				{
+					"Name": "Old",
+					"List": [
+						{
+							"Name": "Camera"
+						}
+					]
+				}
+			]
 		}
 	],
 	"Quick Access": [
@@ -156,9 +194,6 @@
 		},
 		{
 			"Name": "Move object"
-		},
-		{
-			"Name": "Camera"
 		},
 		{
 			"Name": "Viewer settings"

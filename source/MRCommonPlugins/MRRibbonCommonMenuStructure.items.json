@@ -178,11 +178,10 @@
     },
     {
       "Name": "Viewer settings",
-      "Caption": "Viewer Settings",
-      "Tooltip": "Visualize settings for active viewport and common viewer settings.",
+      "Caption": "Settings",
+      "Tooltip": "Show application settings window.",
       "Icon": "\uF013",
       "HelpLink": "https://meshinspector.com/inappvideo/viewerasettings"
-
     },
     {
       "Name": "Select objects",

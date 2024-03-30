@@ -13,9 +13,9 @@
 #include "MRStringConvert.h"
 #include "MRTimer.h"
 #include "MRParallelFor.h"
+#include "MRDirectory.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRAsyncLaunchType.h"
-#include <filesystem>
 
 namespace MR
 {
@@ -53,23 +53,15 @@ Expected<std::future<VoidOrErrStr>> ObjectMeshHolder::serializeModel_( const std
     if ( ancillary_ || !mesh_ )
         return {};
 
-#ifndef MRMESH_NO_OPENCTM
-    auto save = [mesh = mesh_, filename = utf8string( path ) + ".ctm", this]()
+    SaveSettings saveSettings;
+    saveSettings.saveValidOnly = false;
+    saveSettings.rearrangeTriangles = false;
+    if ( !vertsColorMap_.empty() )
+        saveSettings.colors = &vertsColorMap_;
+    auto save = [mesh = mesh_, filename = std::filesystem::path( path ) += saveMeshFormat_, saveSettings]()
     {
-        MR::MeshSave::CtmSaveOptions options;
-        options.saveValidOnly = false;
-        options.rearrangeTriangles = false;
-        if ( !vertsColorMap_.empty() )
-            options.colors = &vertsColorMap_;
-        return MR::MeshSave::toCtm( *mesh, pathFromUtf8( filename ), options );
+        return MR::MeshSave::toAnySupportedFormat( *mesh, filename, saveSettings );
     };
-#else
-    auto save = [mesh = mesh_, filename = utf8string( path ) + ".mrmesh"]()
-    {
-        MR::MeshSave::toMrmesh( *mesh, pathFromUtf8( filename ) );
-    };
-#endif
-
     return std::async( getAsyncLaunchType(), save );
 }
 
@@ -201,11 +193,15 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
 VoidOrErrStr ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     vertsColorMap_.clear();
-#ifndef MRMESH_NO_OPENCTM
-    auto res = MeshLoad::fromCtm( pathFromUtf8( utf8string( path ) + ".ctm" ), { .colors = &vertsColorMap_, .callback = progressCb } );
-#else
-    auto res = MeshLoad::fromMrmesh( pathFromUtf8( utf8string( path ) + ".mrmesh" ), &vertsColorMap_, progressCb );
-#endif
+    auto modelPath = pathFromUtf8( utf8string( path ) + ".ctm" ); //quick path for most used format
+    std::error_code ec;
+    if ( !is_regular_file( modelPath, ec ) )
+    {
+        modelPath = findPathWithExtension( path );
+        if ( modelPath.empty() )
+            return unexpected( "No mesh file found: " + utf8string( path ) );
+    }
+    auto res = MeshLoad::fromAnySupportedFormat( modelPath, { .colors = &vertsColorMap_, .callback = progressCb } );
     if ( !res.has_value() )
         return unexpected( res.error() );
 
@@ -220,31 +216,57 @@ Box3f ObjectMeshHolder::computeBoundingBox_() const
     return mesh_->computeBoundingBox();
 }
 
-const ViewportMask& ObjectMeshHolder::getVisualizePropertyMask( unsigned type ) const
+bool ObjectMeshHolder::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const
 {
-    switch ( type )
+    return VisualObject::supportsVisualizeProperty( type ) || type.tryGet<MeshVisualizePropertyType>().has_value();
+}
+
+AllVisualizeProperties ObjectMeshHolder::getAllVisualizeProperties() const
+{
+    AllVisualizeProperties ret = VisualObject::getAllVisualizeProperties();
+    getAllVisualizePropertiesForEnum<MeshVisualizePropertyType>( ret );
+    return ret;
+}
+
+void ObjectMeshHolder::setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos )
+{
+    VisualObject::setAllVisualizeProperties_( properties, pos );
+    setAllVisualizePropertiesForEnum<MeshVisualizePropertyType>( properties, pos );
+}
+
+const ViewportMask &ObjectMeshHolder::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
+{
+    if ( auto value = type.tryGet<MeshVisualizePropertyType>() )
     {
-    case MeshVisualizePropertyType::Faces:
-        return showFaces_;
-    case MeshVisualizePropertyType::Texture:
-        return showTexture_;
-    case MeshVisualizePropertyType::Edges:
-        return showEdges_;
-    case MeshVisualizePropertyType::FlatShading:
-        return flatShading_;
-    case MeshVisualizePropertyType::EnableShading:
-        return shadingEnabled_;
-    case MeshVisualizePropertyType::OnlyOddFragments:
-        return onlyOddFragments_;
-    case MeshVisualizePropertyType::BordersHighlight:
-        return showBordersHighlight_;
-    case MeshVisualizePropertyType::SelectedEdges:
-        return showSelectedEdges_;
-    case MeshVisualizePropertyType::SelectedFaces:
-        return showSelectedFaces_;
-    case MeshVisualizePropertyType::PolygonOffsetFromCamera:
-        return polygonOffset_;
-    default:
+        switch ( *value )
+        {
+            case MeshVisualizePropertyType::Faces:
+                return showFaces_;
+            case MeshVisualizePropertyType::Texture:
+                return showTexture_;
+            case MeshVisualizePropertyType::Edges:
+                return showEdges_;
+            case MeshVisualizePropertyType::FlatShading:
+                return flatShading_;
+            case MeshVisualizePropertyType::EnableShading:
+                return shadingEnabled_;
+            case MeshVisualizePropertyType::OnlyOddFragments:
+                return onlyOddFragments_;
+            case MeshVisualizePropertyType::BordersHighlight:
+                return showBordersHighlight_;
+            case MeshVisualizePropertyType::SelectedEdges:
+                return showSelectedEdges_;
+            case MeshVisualizePropertyType::SelectedFaces:
+                return showSelectedFaces_;
+            case MeshVisualizePropertyType::PolygonOffsetFromCamera:
+                return polygonOffset_;
+            case MeshVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
+        }
+        assert( false && "Invalid enum." );
+        return visibilityMask_;
+    }
+    else
+    {
         return VisualObject::getVisualizePropertyMask( type );
     }
 }
@@ -298,7 +320,7 @@ void ObjectMeshHolder::clearAncillaryTexture()
     if ( !ancillaryTexture_.pixels.empty() )
         setAncillaryTexture( {} );
     if ( !ancillaryUVCoordinates_.empty() )
-        setAncillaryUVCoords( {} ); 
+        setAncillaryUVCoords( {} );
 }
 
 uint32_t ObjectMeshHolder::getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const
@@ -505,6 +527,16 @@ size_t ObjectMeshHolder::heapBytes() const
         + MR::heapBytes( mesh_ );
 }
 
+void ObjectMeshHolder::setSaveMeshFormat( const char * newFormat )
+{
+    if ( !newFormat || *newFormat != '.' )
+    {
+        assert( false );
+        return;
+    }
+    saveMeshFormat_ = newFormat;
+}
+
 size_t ObjectMeshHolder::numUndirectedEdges() const
 {
     if ( !numUndirectedEdges_ )
@@ -536,7 +568,7 @@ size_t ObjectMeshHolder::numHandles() const
 
 void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
-    // selected faces and edges can be changed only by the methods of this class, 
+    // selected faces and edges can be changed only by the methods of this class,
     // which set dirty flags appropriately
     mask &= ~( DIRTY_SELECTION | DIRTY_EDGES_SELECTION );
 
@@ -600,15 +632,6 @@ void ObjectMeshHolder::swapSignals_( Object& other )
     }
     else
         assert( false );
-}
-
-AllVisualizeProperties ObjectMeshHolder::getAllVisualizeProperties() const
-{
-    AllVisualizeProperties res;
-    res.resize( MeshVisualizePropertyType::MeshVisualizePropsCount );
-    for ( int i = 0; i < res.size(); ++i )
-        res[i] = getVisualizePropertyMask( unsigned( i ) );
-    return res;
 }
 
 const ViewportProperty<Color>& ObjectMeshHolder::getSelectedEdgesColorsForAllViewports() const

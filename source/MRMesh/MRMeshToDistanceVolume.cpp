@@ -4,7 +4,6 @@
 #include "MRSimpleVolume.h"
 #include "MRTimer.h"
 #include "MRVolumeIndexer.h"
-#include "MRIntersectionPrecomputes.h"
 #include "MRFastWindingNumber.h"
 #include "MRLine3.h"
 #include "MRMeshIntersect.h"
@@ -33,7 +32,6 @@ float signedDistanceToMesh( const MeshPart& mesh, const Vector3f& p, SignDetecti
 
     if ( signMode == SignDetectionMode::WindingRule )
     {
-        const IntersectionPrecomputes<double> precomputedInter( Vector3d::plusX() );
         const Line3d ray( Vector3d( p ), Vector3d::plusX() );
         int count = 0;
         rayMeshIntersectAll( mesh, ray, [&count] ( auto&& ) { ++count; return true; } );
@@ -82,9 +80,6 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, co
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size() );
 
-    // used in Winding rule mode
-    const IntersectionPrecomputes<double> precomputedInter( Vector3d::plusX() );
-    
     if ( params.signMode == SignDetectionMode::HoleWindingRule )
     {
         assert( !mp.region ); // only whole mesh is supported for now

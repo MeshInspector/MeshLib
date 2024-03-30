@@ -1,12 +1,12 @@
 #pragma once
 
+#include "MRMesh/MRRenderModelParameters.h"
 #include "MRViewerInstance.h"
 #include "MRMouse.h"
 #include <MRMesh/MRVector2.h>
 #include <MRMesh/MRViewportId.h>
 
 #include <boost/signals2/signal.hpp>
-#include <chrono>
 #include <cstdint>
 #include <filesystem>
 
@@ -42,6 +42,38 @@ namespace MR
 
 class SpaceMouseHandler;
 
+// This struct contains rules for viewer launch
+struct LaunchParams
+{
+    bool fullscreen{ false }; // if true starts fullscreen
+    int width{ 0 };
+    int height{ 0 };
+    enum WindowMode
+    {
+        Show, // Show window immediately
+        HideInit, // Show window after init
+        Hide, // Don't show window
+        TryHidden, // Launches in "Hide" mode if OpenGL is present and "NoWindow" if it is not
+        NoWindow // Don't initialize GL window (don't call GL functions)(force `isAnimating`)
+    } windowMode{ HideInit };
+    bool enableTransparentBackground{ false };
+    bool preferOpenGL3{ false };
+    bool render3dSceneInTexture{ true }; // If not set renders scene each frame
+    bool developerFeatures{ false }; // If set shows some developer features useful for debugging
+    std::string name{ "MRViewer" }; // Window name
+    bool startEventLoop{ true }; // If false - does not start event loop
+    bool close{ true }; // If !startEventLoop close immediately after start, otherwise close on window close, make sure you call `launchShut` manually if this flag is false
+    bool console{ false }; // If true - shows developers console
+    int argc{ 0 }; // Pass argc
+    char** argv{ nullptr }; // Pass argv
+
+    bool showMRVersionInTitle{ false }; // if true - print version info in window title
+    bool isAnimating{ false }; // if true - calls render without system events
+    int animationMaxFps{ 30 }; // max fps if animating
+
+    std::shared_ptr<SplashWindow> splashWindow; // if present will show this window while initializing plugins (after menu initialization)
+};
+
 // GLFW-based mesh viewer
 class MRVIEWER_CLASS Viewer
 {
@@ -49,37 +81,7 @@ public:
     using MouseButton = MR::MouseButton;
     using MouseMode = MR::MouseMode;
 
-    // This struct contains rules for viewer launch
-    struct LaunchParams
-    {
-        bool fullscreen{ false }; // if true starts fullscreen
-        int width{ 0 }; 
-        int height{ 0 };
-        enum WindowMode
-        {
-            Show, // Show window immediately
-            HideInit, // Show window after init
-            Hide, // Don't show window
-            TryHidden, // Launches in "Hide" mode if OpenGL is present and "NoWindow" if it is not
-            NoWindow // Don't initialize GL window (don't call GL functions)(force `isAnimating`)
-        } windowMode{ HideInit };
-        bool enableTransparentBackground{ false };
-        bool preferOpenGL3{ false };
-        bool render3dSceneInTexture{ true }; // If not set renders scene each frame
-        bool developerFeatures{ false }; // If set shows some developer features useful for debugging
-        std::string name{"MRViewer"}; // Window name
-        bool startEventLoop{ true }; // If false - does not start event loop
-        bool close{ true }; // If !startEventLoop close immediately after start, otherwise close on window close, make sure you call `launchShut` manually if this flag is false
-        bool console{ false }; // If true - shows developers console
-        int argc{ 0 }; // Pass argc
-        char** argv{ nullptr }; // Pass argv
-
-        bool showMRVersionInTitle{ false }; // if true - print version info in window title
-        bool isAnimating{ false }; // if true - calls render without system events
-        int animationMaxFps{ 30 }; // max fps if animating
-
-        std::shared_ptr<SplashWindow> splashWindow; // if present will show this window while initializing plugins (after menu initialization)
-    };
+    using LaunchParams = MR::LaunchParams;
 
     // Accumulate launch params from cmd args
     MRVIEWER_API static void parseLaunchParams( LaunchParams& params );
@@ -90,8 +92,11 @@ public:
     MRVIEWER_API void launchEventLoop();
     // Terminate window
     MRVIEWER_API void launchShut();
-    
+
     bool isLaunched() const { return isLaunched_; }
+
+    // get full parameters with witch viewer was launched
+    const LaunchParams& getLaunchParams() const { return launchParams_; }
 
     // provides non const access to viewer
     static Viewer* instance() { return &getViewerInstance(); }
@@ -182,7 +187,7 @@ public:
     ////////////////////////
 
     // reset objectRoot with newRoot, append all RenderObjects and basis objects
-    MRVIEWER_API void set_root( Object& newRoot );
+    MRVIEWER_API void set_root( SceneRootObject& newRoot );
 
     // removes all objects from scene
     MRVIEWER_API void clearScene();
@@ -249,10 +254,10 @@ public:
     MRVIEWER_API void preciseFitDataViewport( MR::ViewportMask vpList = MR::ViewportMask::all() );
     MRVIEWER_API void preciseFitDataViewport( MR::ViewportMask vpList, const FitDataParams& param );
 
-    size_t getTotalFrames() const { return frameCounter_.totalFrameCounter; }
-    size_t getSwappedFrames() const { return frameCounter_.swappedFrameCounter; }
-    size_t getFPS() const { return frameCounter_.fps; }
-    double getPrevFrameDrawTimeMillisec() const { return frameCounter_.drawTimeMilliSec.count(); }
+    MRVIEWER_API size_t getTotalFrames() const;
+    MRVIEWER_API size_t getSwappedFrames() const;
+    MRVIEWER_API size_t getFPS() const;
+    MRVIEWER_API double getPrevFrameDrawTimeMillisec() const;
 
     // Returns memory amount used by shared GL memory buffer
     MRVIEWER_API size_t getStaticGLBufferSize() const;
@@ -338,7 +343,7 @@ public:
     // note that it does not clear framebuffer
     MRVIEWER_API void bindSceneTexture( bool bind );
 
-    // Sets manager of viewer settings which loads user personal settings on beginning of app 
+    // Sets manager of viewer settings which loads user personal settings on beginning of app
     // and saves it in app's ending
     MRVIEWER_API void setViewportSettingsManager( std::unique_ptr<IViewerSettingsManager> mng );
     MRVIEWER_API const std::unique_ptr<IViewerSettingsManager>& getViewportSettingsManager() const { return settingsMng_; }
@@ -380,7 +385,7 @@ public:
     MRVIEWER_API bool globalHistoryRedo();
     // Returns global history store
     const std::shared_ptr<HistoryStore>& getGlobalHistoryStore() const { return globalHistoryStore_; }
-    // Return spacemouse handler 
+    // Return spacemouse handler
     const std::shared_ptr<SpaceMouseHandler>& getSpaceMouseHandler() const { return spaceMouseHandler_; }
 
     // This method is called after successful scene saving to update scene root, window title and undo
@@ -420,6 +425,10 @@ public:
     //////////////////////
     GLFWwindow* window;
 
+    // A function to reset setting to initial state
+    // Overrides should call previous function
+    std::function<void( Viewer* viewer )> resetSettingsFunction;
+
     // Stores all the viewing options
     std::vector<Viewport> viewport_list;
     size_t selected_viewport_index;
@@ -434,19 +443,18 @@ public:
     Vector2i windowOldPos;
     bool windowMaximized{ false };
 
-    // Stores basis axes meshes
-    bool defaultLabelsBasisAxes{ false };
-    bool defaultLabelsGlobalBasisAxes{ false };
     // if true - calls render without system events
     bool isAnimating{ false };
     // max fps if animating
     int animationMaxFps{ 30 };
     // this parameter can force up/down mouse scroll
     // useful for WebAssembler version because it has too powerful scroll
-    float scrollForce{ 1.0f };
+    float scrollForce{ }; // init in resetSettingsFunction()
     // opengl-based pick window radius in pixels
-    uint16_t glPickRadius{ 0 };
-    
+    uint16_t glPickRadius{ }; // init in resetSettingsFunction()
+    // command arguments, each parsed arg should be erased from here not to affect other parsers
+    std::vector<std::string> commandArgs;
+
     std::unique_ptr<ObjectMesh> basisAxes;
     std::unique_ptr<ObjectMesh> globalBasisAxes;
     std::unique_ptr<ObjectMesh> rotationSphere;
@@ -575,14 +583,14 @@ private:
     void initPlugins_();
     // Shut all plugins at the end
     void shutdownPlugins_();
-    // Search for python script to run or file to open on init
-    void parseCommandLine_( int argc, char** argv );
 #ifdef __EMSCRIPTEN__
     void mainLoopFunc_();
     static void emsMainInfiniteLoop();
 #endif
     // returns true if was swapped
     bool draw_( bool force );
+
+    void drawUiRenderObjects_();
 
     // the minimum number of frames to be rendered even if the scene is unchanged
     int forceRedrawFrames_{ 0 };
@@ -603,21 +611,7 @@ private:
     std::unique_ptr<MouseController> mouseController_;
 
     std::unique_ptr<RecentFilesStore> recentFilesStore_;
-
-    mutable struct FrameCounter
-    {
-        size_t totalFrameCounter{ 0 };
-        size_t swappedFrameCounter{ 0 };
-        size_t startFrameNum{ 0 };
-        size_t fps{ 0 };
-        std::chrono::duration<double> drawTimeMilliSec{ 0 };
-        void startDraw();
-        void endDraw( bool swapped );
-        void reset();
-    private:
-        long long startFPSTime_{ 0 };
-        std::chrono::time_point<std::chrono::high_resolution_clock> startDrawTime_;
-    } frameCounter_;
+    std::unique_ptr<FrameCounter> frameCounter_;
 
     mutable struct EventsCounter
     {
@@ -638,19 +632,7 @@ private:
     bool needRedraw_() const;
     void resetRedraw_();
 
-    enum class VisualObjectRenderType
-    {
-        Opaque,
-        Transparent,
-#ifndef __EMSCRIPTEN__
-        VolumeRendering,
-#endif
-        NoDepthTest
-    };
-
-    VisualObjectRenderType getObjRenderType_( const VisualObject* obj, ViewportId viewportId ) const;
-
-    void recursiveDraw_( const Viewport& vp, const Object& obj, const AffineXf3f& parentXf, VisualObjectRenderType renderType, int* numDraws = nullptr ) const;
+    void recursiveDraw_( const Viewport& vp, const Object& obj, const AffineXf3f& parentXf, RenderModelPassMask renderType, int* numDraws = nullptr ) const;
 
     void initGlobalBasisAxesObject_();
     void initBasisAxesObject_();
@@ -673,6 +655,8 @@ private:
 
     bool isInDraw_{ false };
     bool dirtyScene_{ false };
+
+    LaunchParams launchParams_;
 
     ViewportId getFirstAvailableViewportId_() const;
     ViewportMask presentViewportsMask_;

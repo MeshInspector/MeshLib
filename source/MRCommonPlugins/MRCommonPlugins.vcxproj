@@ -64,6 +64,34 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Image Include="resource\icons\X0_5\BestFit Circle.png" />
+    <Image Include="resource\icons\X0_5\BestFit Cone.png" />
+    <Image Include="resource\icons\X0_5\BestFit Cylinder.png" />
+    <Image Include="resource\icons\X0_5\BestFit Line.png" />
+    <Image Include="resource\icons\X0_5\BestFit Plane.png" />
+    <Image Include="resource\icons\X0_5\BestFit Point.png" />
+    <Image Include="resource\icons\X0_5\BestFit Sphere.png" />
+    <Image Include="resource\icons\X0_75\BestFit Circle.png" />
+    <Image Include="resource\icons\X0_75\BestFit Cone.png" />
+    <Image Include="resource\icons\X0_75\BestFit Cylinder.png" />
+    <Image Include="resource\icons\X0_75\BestFit Line.png" />
+    <Image Include="resource\icons\X0_75\BestFit Plane.png" />
+    <Image Include="resource\icons\X0_75\BestFit Point.png" />
+    <Image Include="resource\icons\X0_75\BestFit Sphere.png" />
+    <Image Include="resource\icons\X1\BestFit Circle.png" />
+    <Image Include="resource\icons\X1\BestFit Cone.png" />
+    <Image Include="resource\icons\X1\BestFit Cylinder.png" />
+    <Image Include="resource\icons\X1\BestFit Line.png" />
+    <Image Include="resource\icons\X1\BestFit Plane.png" />
+    <Image Include="resource\icons\X1\BestFit Point.png" />
+    <Image Include="resource\icons\X1\BestFit Sphere.png" />
+    <Image Include="resource\icons\X3\BestFit Circle.png" />
+    <Image Include="resource\icons\X3\BestFit Cone.png" />
+    <Image Include="resource\icons\X3\BestFit Cylinder.png" />
+    <Image Include="resource\icons\X3\BestFit Line.png" />
+    <Image Include="resource\icons\X3\BestFit Plane.png" />
+    <Image Include="resource\icons\X3\BestFit Point.png" />
+    <Image Include="resource\icons\X3\BestFit Sphere.png" />
     <Image Include="resource\icons\X0_5\Add custom theme.png" />
     <Image Include="resource\icons\X0_5\Back View.png" />
     <Image Include="resource\icons\X0_5\Bottom View.png" />

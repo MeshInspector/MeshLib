@@ -12,9 +12,11 @@
 #include "MRObjectMesh.h"
 #include "MRObjectsAccess.h"
 #include "MRColor.h"
-#include "MRPch/MRTBB.h"
 #include "MRProgressReadWrite.h"
 #include "MRIOParsing.h"
+#include "MRMeshDelone.h"
+#include "MRPch/MRFmt.h"
+#include "MRPch/MRTBB.h"
 
 #include <array>
 #include <future>
@@ -107,29 +109,43 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
             return unexpected( std::string( "Loading canceled" ) );
     }
 
-    Triangulation t;
-    t.reserve( numPolygons );
+    std::vector<VertId> verts;
+    Vector<MeshBuilder::VertSpan, FaceId> faces;
+    faces.reserve( numPolygons + 1 );
 
     for ( int i = 0; i < numPolygons; ++i )
     {
-        int k, a, b, c;
-        in >> k >> a >> b >> c;
-        if ( !in || k != 3 )
+        int k;
+        in >> k;
+        if ( !in )
             return unexpected( std::string( "Polygons read error" ) );
-        t.push_back( { VertId( a ), VertId( b ), VertId( c ) } );
-        if ( settings.callback && !( i & 0x3FF ) && !subprogress( settings.callback, 0.5f, 1.f )( float( i ) / numPolygons ) )
-            return unexpected( std::string( "Loading canceled" ) );
+        if ( k < 3 || k > 1024 )
+            return unexpected( fmt::format( "Bad number of face vertices: {}", k ) );
+
+        MeshBuilder::VertSpan vspan;
+        vspan.firstVertex = VertId( verts.size() );
+        for ( int j = 0; j < k; ++j )
+        {
+            int v;
+            in >> v;
+            if ( !in )
+                return unexpected( std::string( "Polygons read error" ) );
+            if ( v < 0 || v >= numPoints )
+            return unexpected( fmt::format( "Bad vertex id: {}", v ) );
+            verts.push_back( VertId( v ) );
+        }
+        vspan.lastVertex = VertId( verts.size() );
+        faces.push_back( vspan );
     }
 
     FaceBitSet skippedFaces;
     MeshBuilder::BuildSettings buildSettings;
     if ( settings.skippedFaceCount )
     {
-        skippedFaces = FaceBitSet( t.size() );
-        skippedFaces.set();
+        skippedFaces.resize( faces.size(), true );
         buildSettings.region = &skippedFaces;
     }
-    auto res = Mesh::fromTriangles( std::move( points ), t, buildSettings );
+    auto res = Mesh::fromFaceSoup( std::move( points ), verts, faces, buildSettings );
     if ( settings.skippedFaceCount )
         *settings.skippedFaceCount = int( skippedFaces.count() );
     return res;
@@ -656,37 +672,6 @@ Expected<Mesh, std::string> fromCtm( std::istream& in, const MeshLoadSettings& s
     return mesh;
 }
 #endif
-
-#ifndef MRMESH_NO_OPENCASCADE
-Expected<Mesh, std::string> fromStep( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
-{
-    std::ifstream in( file, std::ifstream::binary );
-    if ( !in )
-        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
-
-    return addFileNameInError( fromStep( in, settings ), file );
-}
-
-Expected<Mesh, std::string> fromStep( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
-{
-    MR_TIMER
-
-    auto result = fromSceneStepFile( in, settings );
-    if ( !result )
-        return unexpected( std::move( result.error() ) );
-
-    // TODO: preserve colors?
-    Mesh mesh;
-    if ( const auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( *result ) )
-        if ( const auto& subMesh = objMesh->mesh() )
-            mesh = *subMesh;
-    for ( const auto& objMesh : getAllObjectsInTree<ObjectMesh>( result->get() ) )
-        if ( const auto& subMesh = objMesh->mesh() )
-            mesh.addPart( *subMesh );
-    return mesh;
-}
-#endif
-
 
 Expected<Mesh, std::string> fromDxf( const std::filesystem::path& path, const MeshLoadSettings& settings /*= {}*/ )
 {

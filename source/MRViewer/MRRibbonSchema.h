@@ -34,23 +34,25 @@ using ItemMap = HashMap<std::string, MenuItemInfo>;
 using TabsGroupsMap = HashMap<std::string, std::vector<std::string>>;
 using GroupsItemsMap = TabsGroupsMap;
 using MenuItemsList = std::vector<std::string>;
-struct TabNamePriority
+struct RibbonTab
 {
     std::string name;
     int priority{ 0 };
+    bool experimental{ false };
 };
 
 // This structure describes UI schema of ribbon menu
 struct RibbonSchema
 {
-
-    std::vector<TabNamePriority> tabsOrder;
+    std::vector<RibbonTab> tabsOrder;
     TabsGroupsMap tabsMap;
     GroupsItemsMap groupsMap;
     ItemMap items;
     MenuItemsList defaultQuickAccessList;
     MenuItemsList headerQuickAccessList;
     MenuItemsList sceneButtonsList;
+    // if enabled, shows experimental features in ribbon menu, and in search results
+    bool experimentalFeatures{ false };
 };
 
 // This class holds static ribbon schema,
@@ -70,7 +72,18 @@ public:
         int tabIndex{ -1 }; // -1 is default value if item has no tab
         const MenuItemInfo* item{ nullptr }; // item info to show correct caption
     };
-    MRVIEWER_API static std::vector<SearchResult> search( const std::string& searchStr );
+    // ancillary struct to hold information for search result order
+    struct SearchResultWeight
+    {
+        float captionWeight{ 1.f };
+        float captionOrderWeight{ 1.f };
+        float tooltipWeight{ 1.f };
+        float tooltipOrderWeight{ 1.f };
+    };
+    // 
+    MRVIEWER_API static std::vector<SearchResult> search( const std::string& searchStr, int* captionCount = nullptr,
+        std::vector<SearchResultWeight>* weights = nullptr );
+
 private:
     RibbonSchemaHolder() = default;
 };

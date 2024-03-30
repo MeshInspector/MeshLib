@@ -24,11 +24,15 @@ struct [[nodiscard]] Mesh
     MeshTopology topology;
     VertCoords points;
 
-    /// construct mesh from vertex coordinates and a set of triangles with given ids;
-    /// if skippedTris is given then it receives all input triangles not added in the resulting topology due to conflicts
+    /// construct mesh from vertex coordinates and a set of triangles with given ids
     [[nodiscard]] MRMESH_API static Mesh fromTriangles(
         VertCoords vertexCoordinates,
         const Triangulation& t, const MeshBuilder::BuildSettings& settings = {}, ProgressCallback cb = {} );
+
+    /// construct mesh from TriMesh representation
+    [[nodiscard]] MRMESH_API static Mesh fromTriMesh(
+        TriMesh && triMesh, ///< points of triMesh will be moves in the result
+        const MeshBuilder::BuildSettings& settings = {}, ProgressCallback cb = {} );
 
     /// construct mesh from vertex coordinates and a set of triangles with given ids;
     /// unlike simple fromTriangles() it tries to resolve non-manifold vertices by creating duplicate vertices
@@ -37,6 +41,14 @@ struct [[nodiscard]] Mesh
         Triangulation & t,
         std::vector<MeshBuilder::VertDuplication> * dups = nullptr,
         const MeshBuilder::BuildSettings & settings = {} );
+
+    /// construct mesh from vertex coordinates and construct mesh topology from face soup,
+    /// where each face can have arbitrary degree (not only triangles);
+    /// all non-triangular faces will be automatically subdivided on triangles
+    [[nodiscard]] MRMESH_API static Mesh fromFaceSoup(
+        VertCoords vertexCoordinates,
+        const std::vector<VertId> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,
+        const MeshBuilder::BuildSettings& settings = {}, ProgressCallback cb = {} );
 
     /// construct mesh from point triples;
     /// \param duplicateNonManifoldVertices = false, all coinciding points are given the same VertId in the result;
@@ -375,6 +387,9 @@ struct [[nodiscard]] Mesh
     /// packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices
     /// \param preserveAABBTree whether to keep valid mesh's AABB tree after return (it will take longer to compute and it will occupy more memory)
     MRMESH_API PackMapping packOptimally( bool preserveAABBTree = true );
+
+    /// deletes multiple given faces
+    MRMESH_API void deleteFaces( const FaceBitSet& fs );
 
     /// finds closest point on this mesh (or its region) to given point;
     /// xf is mesh-to-point transformation, if not specified then identity transformation is assumed

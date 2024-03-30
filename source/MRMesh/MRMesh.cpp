@@ -4,6 +4,7 @@
 #include "MRAffineXf3.h"
 #include "MRBitSet.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRBox.h"
 #include "MRComputeBoundingBox.h"
 #include "MRConstants.h"
@@ -23,6 +24,8 @@
 #include "MRTriangleIntersection.h"
 #include "MRTriMath.h"
 #include "MRIdentifyVertices.h"
+#include "MRMeshFillHole.h"
+#include "MRTriMesh.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -60,6 +63,13 @@ Mesh Mesh::fromTriangles(
     return res;
 }
 
+Mesh Mesh::fromTriMesh(
+    TriMesh && triMesh,
+    const MeshBuilder::BuildSettings& settings, ProgressCallback cb  )
+{
+    return fromTriangles( std::move( triMesh.points ), triMesh.tris, settings, cb );
+}
+
 Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices( 
     VertCoords vertexCoordinates,
     Triangulation & t,
@@ -76,6 +86,42 @@ Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices(
         res.points[d.dupVert] = res.points[d.srcVert];
     if ( dups )
         *dups = std::move( localDups );
+    return res;
+}
+
+Mesh Mesh::fromFaceSoup(
+    VertCoords vertexCoordinates,
+    const std::vector<VertId> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,
+    const MeshBuilder::BuildSettings& settings, ProgressCallback cb /*= {}*/ )
+{
+    MR_TIMER
+    Mesh res;
+    res.points = std::move( vertexCoordinates );
+    res.topology = MeshBuilder::fromFaceSoup( verts, faces, settings, subprogress( cb, 0.0f, 0.8f ) );
+
+    struct FaceFill
+    {
+        HoleFillPlan plan;
+        EdgeId e; // fill left of it
+    };
+    std::vector<FaceFill> faceFills;
+    for ( auto f : res.topology.getValidFaces() )
+    {
+        auto e = res.topology.edgeWithLeft( f );
+        if ( !res.topology.isLeftTri( e ) )
+            faceFills.push_back( { {}, e } );
+    }
+
+    ParallelFor( faceFills, [&]( size_t i )
+    {
+        faceFills[i].plan = getPlanarHoleFillPlan( res, faceFills[i].e );
+    }, subprogress( cb, 0.8f, 0.9f ) );
+
+    for ( auto & x : faceFills )
+        executeHoleFillPlan( res, x.e, x.plan );
+
+    reportProgress( cb, 1.0f );
+
     return res;
 }
 
@@ -638,7 +684,7 @@ QuadraticForm3f Mesh::quadraticForm( VertId v, const FaceBitSet * region ) const
             // otherwise it penalizes the shift proportionally to the distance from the line containing the edge
             qf.addDistToLine( edgeVector( e ).normalized() );
         }
-        if ( topology.isLeftInRegion( e, region ) )
+        if ( topology.left( e ) ) // intentionally do not check that left face is in region to respect its plane as well
         {
             // zero-area triangle is treated as no triangle with no penalty at all,
             // otherwise it penalizes the shift proportionally to the distance from the plane containing the triangle
@@ -1008,6 +1054,14 @@ PackMapping Mesh::packOptimally( bool preserveAABBTree )
     } );
     points = std::move( newPoints );
     return map;
+}
+
+void Mesh::deleteFaces( const FaceBitSet& fs )
+{
+    if ( fs.none() )
+        return;
+    topology.deleteFaces( fs );
+    invalidateCaches(); // some points can be deleted as well
 }
 
 bool Mesh::projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const

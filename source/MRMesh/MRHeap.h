@@ -3,6 +3,7 @@
 #include "MRVector.h"
 #include "MRTimer.h"
 #include <functional>
+#include <algorithm>
 
 namespace MR
 {

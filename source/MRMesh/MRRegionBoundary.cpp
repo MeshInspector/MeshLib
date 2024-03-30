@@ -21,7 +21,6 @@ EdgeLoop trackRegionBoundaryLoop( const MeshTopology & topology, EdgeId e0, cons
 
 EdgeLoop trackBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */, bool left )
 {
-    MR_TIMER
     std::function<EdgeId( EdgeId )> next;
     if ( left )
         next = [&] ( EdgeId e ) { return topology.nextLeftBd( e, region ); };

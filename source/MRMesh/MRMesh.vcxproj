@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRAddNoise.h" />
     <ClInclude Include="MRAligningTransform.h" />
     <ClInclude Include="MRAlphaShape.h" />
     <ClInclude Include="MRChangeValue.h" />
@@ -20,6 +21,8 @@
     <ClInclude Include="MRCylinder3.h" />
     <ClInclude Include="MRCylinderApproximator.h" />
     <ClInclude Include="MRCylinderObject.h" />
+    <ClInclude Include="MRDistanceVolumeParams.h" />
+    <ClInclude Include="MRFaceDistance.h" />
     <ClInclude Include="MRFeatureObject.h" />
     <ClInclude Include="MRFeatures.h" />
     <ClInclude Include="MRFinally.h" />
@@ -102,7 +105,6 @@
     <ClInclude Include="MRHash.h" />
     <ClInclude Include="MRHeapBytes.h" />
     <ClInclude Include="MRHistoryAction.h" />
-    <ClInclude Include="MRHistoryStore.h" />
     <ClInclude Include="MRIdentifyVertices.h" />
     <ClInclude Include="MRImage.h" />
     <ClInclude Include="MRImageLoad.h" />
@@ -114,16 +116,21 @@
     <ClInclude Include="MRMeshExtrude.h" />
     <ClInclude Include="MRMeshReplicate.h" />
     <ClInclude Include="MRMeshToDistanceVolume.h" />
+    <ClInclude Include="MRMisonLoad.h" />
     <ClInclude Include="MRMovementBuildBody.h" />
     <ClInclude Include="MRMutexOwner.h" />
     <ClInclude Include="MRNormalDenoising.h" />
     <ClInclude Include="MRNormalsToPoints.h" />
     <ClInclude Include="MROffsetContours.h" />
+    <ClInclude Include="MRPointCloudDivideWithPlane.h" />
     <ClInclude Include="MRPointOnObject.h" />
     <ClInclude Include="MROverlappingTris.h" />
     <ClInclude Include="MRObjectGcode.h" />
+    <ClInclude Include="MRPointsComponents.h" />
     <ClInclude Include="MRPointsLoadE57.h" />
     <ClInclude Include="MRPointsProject.h" />
+    <ClInclude Include="MRPointsToDistanceVolume.h" />
+    <ClInclude Include="MRPointsToMeshFusion.h" />
     <ClInclude Include="MRPointsToMeshProjector.h" />
     <ClInclude Include="MRIntersection.h" />
     <ClInclude Include="MRIntersectionContour.h" />
@@ -179,6 +186,7 @@
     <ClInclude Include="MRLinesSave.h" />
     <ClInclude Include="MRPolylineSubdivide.h" />
     <ClInclude Include="MRPolylineTopology.h" />
+    <ClInclude Include="MRPolylineTrimWithPlane.h" />
     <ClInclude Include="MRPrecipitationSimulator.h" />
     <ClInclude Include="MRPrecisePredicates2.h" />
     <ClInclude Include="MRPrimitiveMapsComposition.h" />
@@ -187,6 +195,7 @@
     <ClInclude Include="MRRayBoxIntersection2.h" />
     <ClInclude Include="MRSaveSettings.h" />
     <ClInclude Include="MRSceneLoad.h" />
+    <ClInclude Include="MRSeparationPoint.h" />
     <ClInclude Include="MRSolarRadiation.h" />
     <ClInclude Include="MRSphere.h" />
     <ClInclude Include="MRSymMatrix4.h" />
@@ -207,6 +216,7 @@
     <ClInclude Include="MRTerrainTriangulation.h" />
     <ClInclude Include="MRTimeRecord.h" />
     <ClInclude Include="MRToolPath.h" />
+    <ClInclude Include="MRTriMesh.h" />
     <ClInclude Include="MRTunnelDetector.h" />
     <ClInclude Include="MRMeshDirMax.h" />
     <ClInclude Include="MRMeshIntersect.h" />
@@ -293,6 +303,7 @@
     <ClInclude Include="MRUnionFind.h" />
     <ClInclude Include="MRUniquePtr.h" />
     <ClInclude Include="MRUniteManyMeshes.h" />
+    <ClInclude Include="MRUnorientedTriangle.h" />
     <ClInclude Include="MRUVSphere.h" />
     <ClInclude Include="MRVDBFloatGrid.h" />
     <ClInclude Include="MRVDBProgressInterrupter.h" />
@@ -363,6 +374,16 @@
     <ClInclude Include="MRObjectSave.h" />
     <ClInclude Include="MRZlib.h" />
     <ClInclude Include="MRVoxelsVolumeAccess.h" />
+    <ClInclude Include="MRFlagOperators.h" />
+    <ClInclude Include="MRMeasurementObject.h" />
+    <ClInclude Include="MRRadiusMeasurementObject.h" />
+    <ClInclude Include="MRDistanceMeasurementObject.h" />
+    <ClInclude Include="MRAngleMeasurementObject.h" />
+    <ClInclude Include="MRSubfeatures.h" />
+    <ClInclude Include="MRAddVisualPropertiesMixin.h" />
+    <ClInclude Include="MRObjectDimensionsEnum.h" />
+    <ClInclude Include="MRRenderModelParameters.h" />
+    <ClInclude Include="MRVectorTraits.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -373,6 +394,7 @@
     <ClCompile Include="MRAABBTreePolyline.cpp" />
     <ClCompile Include="MRAABBTreePolyline3.cpp" />
     <ClCompile Include="MRAABBTreePolyline2.cpp" />
+    <ClCompile Include="MRAddNoise.cpp" />
     <ClCompile Include="MRAffineXf2.cpp" />
     <ClCompile Include="MRAggregateFlow.cpp" />
     <ClCompile Include="MRAlignTextToMesh.cpp" />
@@ -399,6 +421,7 @@
     <ClCompile Include="MRCPRTests.cpp" />
     <ClCompile Include="MRCylinderObject.cpp" />
     <ClCompile Include="MRDenseBox.cpp" />
+    <ClCompile Include="MRDirectory.cpp" />
     <ClCompile Include="MRDistanceMap.cpp" />
     <ClCompile Include="MRAffineXf3.cpp" />
     <ClCompile Include="MRBestFit.cpp" />
@@ -422,6 +445,7 @@
     <ClCompile Include="MRExpected.cpp" />
     <ClCompile Include="MRExtractIsolines.cpp" />
     <ClCompile Include="MRExtractIsolinesTests.cpp" />
+    <ClCompile Include="MRFaceDistance.cpp" />
     <ClCompile Include="MRFastWindingNumber.cpp" />
     <ClCompile Include="MRFeatures.cpp" />
     <ClCompile Include="MRFile.cpp" />
@@ -435,12 +459,13 @@
     <ClCompile Include="MRFloatGridComponents.cpp" />
     <ClCompile Include="MRGcodeProcessor.cpp" />
     <ClCompile Include="MRGcodeLoad.cpp" />
+    <ClCompile Include="MRHistoryAction.cpp" />
     <ClCompile Include="MRImage.cpp" />
     <ClCompile Include="MRLocalTriangulations.cpp" />
+    <ClCompile Include="MRLogWindowsExceptions.cpp" />
     <ClCompile Include="MRMapEdge.cpp" />
     <ClCompile Include="MRGraph.cpp" />
     <ClCompile Include="MRGridSampling.cpp" />
-    <ClCompile Include="MRHistoryStore.cpp" />
     <ClCompile Include="MRIdentifyVertices.cpp" />
     <ClCompile Include="MRImageLoad.cpp" />
     <ClCompile Include="MRImageSave.cpp" />
@@ -465,15 +490,21 @@
     <ClCompile Include="MRMeshOrPoints.cpp" />
     <ClCompile Include="MRMeshReplicate.cpp" />
     <ClCompile Include="MRMeshToDistanceVolume.cpp" />
+    <ClCompile Include="MRMisonLoad.cpp" />
     <ClCompile Include="MRMovementBuildBody.cpp" />
     <ClCompile Include="MRNormalDenoising.cpp" />
     <ClCompile Include="MRNormalsToPoints.cpp" />
     <ClCompile Include="MROffsetContours.cpp" />
     <ClCompile Include="MROverlappingTris.cpp" />
     <ClCompile Include="MRObjectGcode.cpp" />
+    <ClCompile Include="MRPointOnObject.cpp" />
+    <ClCompile Include="MRPointCloudDivideWithPlane.cpp" />
+    <ClCompile Include="MRPointsComponents.cpp" />
     <ClCompile Include="MRPointsLoadE57.cpp" />
     <ClCompile Include="MRPointsLoadLas.cpp" />
     <ClCompile Include="MRPointsProject.cpp" />
+    <ClCompile Include="MRPointsToDistanceVolume.cpp" />
+    <ClCompile Include="MRPointsToMeshFusion.cpp" />
     <ClCompile Include="MRPointsToMeshProjector.cpp" />
     <ClCompile Include="MRMeshTrimWithPlane.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
@@ -515,6 +546,7 @@
     <ClCompile Include="MRLinesSave.cpp" />
     <ClCompile Include="MRPolylineSubdivide.cpp" />
     <ClCompile Include="MRPolylineTopology.cpp" />
+    <ClCompile Include="MRPolylineTrimWithPlane.cpp" />
     <ClCompile Include="MRPrecipitationSimulator.cpp" />
     <ClCompile Include="MRPrecisePredicates2.cpp" />
     <ClCompile Include="MRPrecisePredicates3.cpp" />
@@ -528,6 +560,7 @@
     <ClCompile Include="MRProgressReadWrite.cpp" />
     <ClCompile Include="MRSaveSettings.cpp" />
     <ClCompile Include="MRSceneLoad.cpp" />
+    <ClCompile Include="MRSeparationPoint.cpp" />
     <ClCompile Include="MRSolarRadiation.cpp" />
     <ClCompile Include="MRTiffIO.cpp" />
     <ClCompile Include="MRRectIndexer.cpp" />
@@ -622,6 +655,13 @@
     <ClCompile Include="MRZip.cpp" />
     <ClCompile Include="MRObjectSave.cpp" />
     <ClCompile Include="MRZlib.cpp" />
+    <ClCompile Include="MRRadiusMeasurementObject.cpp" />
+    <ClCompile Include="MRDistanceMeasurementObject.cpp" />
+    <ClCompile Include="MRAngleMeasurementObject.cpp" />
+    <ClCompile Include="MRFeatureObject.cpp" />
+    <ClCompile Include="MRSubfeatures.cpp" />
+    <ClCompile Include="MRMeasurementObject.cpp" />
+    <ClCompile Include="MRObjectDimensionsEnum.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\laz-perf\laz-perf.vcxproj">

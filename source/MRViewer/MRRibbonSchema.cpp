@@ -1,5 +1,5 @@
 #include "MRRibbonSchema.h"
-#include "MRRibbonMenuItem.h"
+#include "MRLambdaRibbonItem.h"
 #include "imgui.h"
 #include "MRRibbonMenu.h"
 #include "MRViewer.h"
@@ -25,58 +25,116 @@ bool RibbonSchemaHolder::addItem( std::shared_ptr<RibbonMenuItem> item )
     auto& staticMap = schema().items;
     if ( !item )
         return false;
+
     if ( staticMap.find( item->name() ) != staticMap.end() )
+    {
+        spdlog::warn( "Attempt to register again ribbon item {}", item->name() );
         return false;
+    }
 
     staticMap[item->name()] = { item };
+#ifndef NDEBUG
+    spdlog::info( "Register ribbon item {}", item->name() );
+#endif
     return true;
 }
 
-std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const std::string& searchStr )
+std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const std::string& searchStr, int* captionCount /*= nullptr*/,
+    std::vector<SearchResultWeight>* weights /*= nullptr*/ )
 {
-    std::vector<SearchResult> res;
+    std::vector<std::pair<SearchResult, SearchResultWeight>> rawResult;
+    
     if ( searchStr.empty() )
-        return res;
+        return {};
     auto words = split( searchStr, " " );
     std::erase_if( words, [] ( const auto& str ) { return str.empty(); } );
-    std::vector<std::pair<float, SearchResult>> resultListForSort;
-    auto enweight = [] ( const std::vector<std::string>& searchWords, const std::string& testLine )->float
+    auto calcWeight = [&words] ( const std::string& sourceStr )->Vector2f
     {
-        if ( testLine.empty() )
-            return 1.0f;
-        float sumWeight = 0.0f;
-        for ( const auto& word : searchWords )
+        if ( sourceStr.empty() )
+            return { 1.0f, 1.f };
+        
+        auto sourceWords = split( sourceStr, " " );
+        std::erase_if( sourceWords, [] ( const auto& str ) { return str.empty(); } );
+        if ( sourceWords.empty() )
+            return { 1.0f, 1.f };
+
+        const int sourceWordsSize = int( sourceWords.size() );
+        //std::vector<int> errorArr( words.size() * sourceWordsSize, -1 );
+        std::vector<bool> busyWord( sourceWordsSize, false );
+        int sumError = 0;
+        int searchCharCount = 0;
+        int posWeight = sourceWordsSize;
+        for ( int i = 0; i < words.size(); ++i )
         {
-            int minDistance = std::abs( int( word.size() ) - int( testLine.size() ) );
-            int maxDistance = std::max( int( word.size() ), int( testLine.size() ) );
-            int distance = calcDamerauLevenshteinDistance( word, testLine, false );
-            sumWeight += float( distance - minDistance ) / ( maxDistance - minDistance );
+            searchCharCount += int( words[i].size() );
+            int minError = int( words[i].size() );
+            int minErrorIndex = -1;
+            for ( int j = 0; j < sourceWordsSize; ++j )
+            {
+                if ( busyWord[j] )
+                    continue;
+                int error = calcDamerauLevenshteinDistance( words[i], sourceWords[j], false );
+                if ( i == words.size() - 1 )
+                    error -= std::max( int( sourceWords[j].size() ) - int( words[i].size() ), 0 );
+                if ( error < minError )
+                {
+                    minError = error;
+                    minErrorIndex = j;
+                }
+            }
+            if ( minErrorIndex != -1 )
+            {
+                busyWord[minErrorIndex] = true;
+                posWeight += minErrorIndex;
+            }
+            sumError += minError;
         }
-        return std::clamp( sumWeight / float( searchWords.size() ), 0.0f, 1.0f );
+        return { std::clamp( float( sumError ) / searchCharCount, 0.0f, 1.0f ), float( posWeight ) / sourceWordsSize / words.size()};
     };
 
+    const float maxWeight = 0.25f;
+    bool exactMatch = false;
+    // check item (calc difference from search item) and add item to raw results if difference less than threshold
     auto checkItem = [&] ( const MenuItemInfo& item, int t )
     {
         const auto& caption = item.caption.empty() ? item.item->name() : item.caption;
         const auto& tooltip = item.tooltip;
-        auto captionRes = enweight( words, caption );
-        auto tooltipRes = enweight( words, tooltip );
-        if ( captionRes > 0.1f && tooltipRes > 0.1f )
-            return;
-        for ( const auto& word : words )
+        std::pair<SearchResult, SearchResultWeight> itemRes;
+        itemRes.first.tabIndex = t;
+        itemRes.first.item = &item;
+        const auto posCE = findSubstringCaseInsensitive( caption, searchStr );
+        if ( posCE != std::string::npos )
         {
-            auto posC = findSubstringCaseInsensitive( caption, word );
-            auto posT = findSubstringCaseInsensitive( tooltip, word );
-            if ( posC == std::string::npos )
-                captionRes += 10.0f;
-            else
-                captionRes += 0.5f * ( float( posC ) / caption.size() );
-            if ( posT == std::string::npos )
-                tooltipRes += 10.0f;
-            else
-                tooltipRes += 0.5f * ( float( posT ) / tooltip.size() );
+            if ( !exactMatch )
+            {
+                rawResult.clear();
+                exactMatch = true;
+            }
+            itemRes.second.captionWeight = 0.f;
+            itemRes.second.captionOrderWeight = float( posCE ) / caption.size();
+            rawResult.push_back( itemRes );
+            return;
         }
-        resultListForSort.push_back( { captionRes + 0.5f * tooltipRes, SearchResult{t,&item} } );
+        else if ( exactMatch )
+        {
+            const auto posTE = findSubstringCaseInsensitive( tooltip, searchStr );
+            if ( posTE == std::string::npos )
+                return;
+            itemRes.second.tooltipWeight = 0.f;
+            itemRes.second.tooltipOrderWeight = float( posTE ) / tooltip.size();
+            rawResult.push_back( itemRes );
+            return;
+        }
+
+        Vector2f weightEP = calcWeight( caption );
+        itemRes.second.captionWeight = weightEP.x;
+        itemRes.second.captionOrderWeight = weightEP.y;
+        weightEP = calcWeight( tooltip );
+        itemRes.second.tooltipWeight = weightEP.x;
+        itemRes.second.tooltipOrderWeight = weightEP.y;
+        if ( itemRes.second.captionWeight > maxWeight && itemRes.second.tooltipWeight > maxWeight )
+            return;
+        rawResult.push_back( itemRes );
     };
     const auto& schema = RibbonSchemaHolder::schema();
     auto lookUpMenuItemList = [&] ( const MenuItemsList& list, int t )
@@ -107,6 +165,8 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     };
     for ( int t = 0; t < schema.tabsOrder.size(); ++t )
     {
+        if ( schema.tabsOrder[t].experimental && !schema.experimentalFeatures )
+            continue;
         auto tabItem = schema.tabsMap.find( schema.tabsOrder[t].name );
         if ( tabItem == schema.tabsMap.end() )
             continue;
@@ -121,25 +181,81 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     lookUpMenuItemList( schema.headerQuickAccessList, -1 );
     lookUpMenuItemList( schema.sceneButtonsList, -1 );
 
-    std::sort( resultListForSort.begin(), resultListForSort.end(), [] ( const auto& a, const auto& b )
+    // clear duplicated results
+    std::sort( rawResult.begin(), rawResult.end(), [] ( const auto& a, const auto& b )
     {
-        return intptr_t( a.second.item ) < intptr_t( b.second.item );
+        return intptr_t( a.first.item ) < intptr_t( b.first.item );
     } );
-    resultListForSort.erase(
-        std::unique( resultListForSort.begin(), resultListForSort.end(),
+    rawResult.erase(
+        std::unique( rawResult.begin(), rawResult.end(),
             [] ( const auto& a, const auto& b )
     {
-        return a.second.item == b.second.item;
+        return a.first.item == b.first.item;
     } ),
-        resultListForSort.end() );
+        rawResult.end() );
 
-    std::sort( resultListForSort.begin(), resultListForSort.end(), [] ( const auto& a, const auto& b )
+    std::sort( rawResult.begin(), rawResult.end(), [maxWeight] ( const auto& a, const auto& b )
     {
-        return a.first < b.first;
+        if ( a.second.captionWeight <= maxWeight )
+        {
+            if ( b.second.captionWeight <= maxWeight )
+            {
+                if ( a.second.captionWeight < b.second.captionWeight )
+                    return true;
+                else if ( a.second.captionWeight > b.second.captionWeight )
+                    return false;
+                else
+                    return a.second.captionOrderWeight < b.second.captionOrderWeight;
+            }
+            else
+                return true;
+        }
+        else
+        {
+            if ( b.second.captionWeight <= maxWeight )
+                return false;
+            else
+            {
+                if ( a.second.tooltipWeight < b.second.tooltipWeight )
+                    return true;
+                else if ( a.second.tooltipWeight > b.second.tooltipWeight )
+                    return false;
+                else
+                    return a.second.tooltipOrderWeight < b.second.tooltipOrderWeight;
+            }
+        }
     } );
-    res.reserve( resultListForSort.size() );
-    for ( const auto& sortedRes : resultListForSort )
-        res.push_back( sortedRes.second );
+
+    // filter results with error threshold as 3x minimum caption error 
+    if ( !rawResult.empty() && rawResult[0].second.captionWeight < maxWeight / 3.f )
+    {
+        const float maxWeightNew = rawResult[0].second.captionWeight * 3.f;
+        if ( rawResult.back().second.captionWeight > maxWeightNew )
+        {
+            auto tailIt = std::find_if( rawResult.begin(), rawResult.end(), [&] ( const auto& a )
+            {
+                return a.second.captionWeight > maxWeightNew && a.second.tooltipWeight > maxWeightNew;
+            } );
+            rawResult.erase( tailIt, rawResult.end() );
+        }
+    }
+
+    std::vector<SearchResult> res( rawResult.size() );
+    if ( weights )
+        *weights = std::vector<SearchResultWeight>( rawResult.size() );
+    if ( captionCount )
+        *captionCount = -1;
+    for ( int i = 0; i < rawResult.size(); ++i )
+    {
+        if ( !rawResult[i].first.item )
+            continue;
+        res[i] = rawResult[i].first;
+        if ( captionCount && rawResult[i].second.captionWeight > maxWeight &&
+            ( i == 0 || ( i > 0 && rawResult[i-1].second.captionWeight <= maxWeight ) ) )
+            *captionCount = i;
+        if ( weights )
+            ( *weights )[i] = rawResult[i].second;
+    }
 
     return res;
 }
@@ -433,6 +549,9 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
         auto tab = tabs[i];
         auto tabName = tab["Name"];
         auto tabPriorityJSON = tab["Priority"];
+        bool experementalTab = false;
+        if ( tab["Experimental"].isBool() )
+            experementalTab = tab["Experimental"].asBool();
         int tabPriority{ 0 };
         if ( tabPriorityJSON.isInt() )
             tabPriority = tabPriorityJSON.asInt();
@@ -507,7 +626,7 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
         auto& tabRef = RibbonSchemaHolder::schema().tabsMap[tabName.asString()];
         if ( tabRef.empty() )
         {
-            RibbonSchemaHolder::schema().tabsOrder.push_back( { tabName.asString(),tabPriority } );
+            RibbonSchemaHolder::schema().tabsOrder.push_back( { tabName.asString(),tabPriority,experementalTab } );
             tabRef = std::move( newGroupsVec );
         }
         else
@@ -515,7 +634,7 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
             auto it = std::find_if( 
                 RibbonSchemaHolder::schema().tabsOrder.begin(), 
                 RibbonSchemaHolder::schema().tabsOrder.end(),
-                [&] ( const TabNamePriority& tnp ) { return tnp.name == tabName.asString(); } );
+                [&] ( const RibbonTab& tnp ) { return tnp.name == tabName.asString(); } );
 
             if ( it != RibbonSchemaHolder::schema().tabsOrder.end() && tabPriority != 0 )
                 it->priority = tabPriority;

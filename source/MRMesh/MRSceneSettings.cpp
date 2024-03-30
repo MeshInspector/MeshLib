@@ -3,14 +3,29 @@
 namespace MR
 {
 
-bool SceneSettings::get( Type type )
+void SceneSettings::reset()
 {
-    return instance_().settings_[int( type )];
+    instance_() = SceneSettings();
 }
 
-void SceneSettings::set( Type type, bool value )
+bool SceneSettings::get( BoolType type )
 {
-    instance_().settings_[int( type )] = value;
+    return instance_().boolSettings_[int( type )];
+}
+
+float SceneSettings::get( FloatType type )
+{
+    return instance_().floatSettings_[int( type )];
+}
+
+void SceneSettings::set( BoolType type, bool value )
+{
+    instance_().boolSettings_[int( type )] = value;
+}
+
+void SceneSettings::set( FloatType type, float value )
+{
+    instance_().floatSettings_[int( type )] = value;
 }
 
 SceneSettings::ShadingMode SceneSettings::getDefaultShadingMode()
@@ -31,6 +46,22 @@ const CNCMachineSettings& SceneSettings::getCNCMachineSettings()
 void SceneSettings::setCNCMachineSettings( const CNCMachineSettings& settings )
 {
     instance_().cncMachineSettings_ = settings;
+}
+
+SceneSettings::SceneSettings()
+{
+    boolSettings_[int( BoolType::UseDefaultScenePropertiesOnDeserialization )] = true;
+
+    floatSettings_[int( FloatType::FeaturePointsAlpha )] = 1;
+    floatSettings_[int( FloatType::FeatureLinesAlpha )] = 1;
+    floatSettings_[int( FloatType::FeatureMeshAlpha )] = 0.5f;
+    floatSettings_[int( FloatType::FeatureSubPointsAlpha )] = 1;
+    floatSettings_[int( FloatType::FeatureSubLinesAlpha )] = 1;
+    floatSettings_[int( FloatType::FeatureSubMeshAlpha )] = 0.5f;
+    floatSettings_[int( FloatType::FeaturePointSize )] = 10;
+    floatSettings_[int( FloatType::FeatureSubPointSize )] = 8;
+    floatSettings_[int( FloatType::FeatureLineWidth )] = 3;
+    floatSettings_[int( FloatType::FeatureSubLineWidth )] = 2;
 }
 
 SceneSettings& SceneSettings::instance_()

@@ -49,7 +49,7 @@ QuarterParams setupQuaterParams( size_t dimsXY, int dimsX, size_t strat, size_t 
     return {startCoord,stopCoord,diff,absDiff};
 }
 
-bool isInQuater( size_t dimsXY, int dimsX, const QuarterParams& params, size_t next, char mask )
+bool isInQuater( size_t dimsXY, int dimsX, const QuarterParams& params, size_t next, QuarterBit mask )
 {
     if ( mask == QuarterBit::All )
         return true;
@@ -63,24 +63,24 @@ bool isInQuater( size_t dimsXY, int dimsX, const QuarterParams& params, size_t n
     if ( params.absDiff[other2Axis] > params.absDiff[other1Axis] )
         std::swap( other1Axis, other2Axis );
 
-    Vector3f cordOnAxis( params.diff.x() * ratio + params.start.x(), 
+    Vector3f cordOnAxis( params.diff.x() * ratio + params.start.x(),
                          params.diff.y() * ratio + params.start.y(),
                          params.diff.z() * ratio + params.start.z() );
 
     int refOther1 = int(cordOnAxis[int(other1Axis)]);
     int refOther2 = int(cordOnAxis[int(other2Axis)]);
 
-    char currentQuater;
+    QuarterBit currentQuater;
     bool firstLeft{coordNext[other1Axis] < refOther1};
     bool secondLeft{coordNext[other2Axis] < refOther2};
     if ( firstLeft && secondLeft )
-        currentQuater = LeftLeft;
+        currentQuater = QuarterBit::LeftLeft;
     else if ( firstLeft )
-        currentQuater = LeftRight;
+        currentQuater = QuarterBit::LeftRight;
     else if ( secondLeft )
-        currentQuater = RightLeft;
+        currentQuater = QuarterBit::RightLeft;
     else
-        currentQuater = RightRight;
+        currentQuater = QuarterBit::RightRight;
 
     auto startDif = coordNext - params.start;
     auto stopDif = coordNext - params.stop;

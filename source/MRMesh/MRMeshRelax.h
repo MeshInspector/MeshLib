@@ -32,12 +32,12 @@ struct MeshEqualizeTriAreasParams : MeshRelaxParams
 };
 
 /// applies given number of iterations with movement toward vertexPosEqualNeiAreas() to the whole mesh ( or some region if it is specified )
-/// \return true if was finished successfully, false if was interrupted by progress callback
+/// \return true if the operation completed succesfully, and false if it was interrupted by the progress callback.
 MRMESH_API bool equalizeTriAreas( Mesh& mesh, const MeshEqualizeTriAreasParams& params = {}, ProgressCallback cb = {} );
 
 /// applies given number of relaxation iterations to the whole mesh ( or some region if it is specified ) \n
 /// do not really keeps volume but tries hard
-/// \return true if was finished successfully, false if was interrupted by progress callback
+/// \return true if the operation completed succesfully, and false if it was interrupted by the progress callback.
 MRMESH_API bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params = {}, ProgressCallback cb = {} );
 
 struct MeshApproxRelaxParams : MeshRelaxParams
@@ -50,7 +50,7 @@ struct MeshApproxRelaxParams : MeshRelaxParams
 
 /// applies given number of relaxation iterations to the whole mesh ( or some region if it is specified )
 /// approx neighborhoods
-/// \return true if was finished successfully, false if was interrupted by progress callback
+/// \return true if the operation completed succesfully, and false if it was interrupted by the progress callback.
 MRMESH_API bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params = {}, ProgressCallback cb = {} );
 
 /// applies at most given number of relaxation iterations the spikes detected by given threshold

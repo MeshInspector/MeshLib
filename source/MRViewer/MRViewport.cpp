@@ -19,6 +19,8 @@
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRSceneRoot.h"
+#include "MRMesh/MRPointCloud.h"
+#include "MRMesh/MRPolyline.h"
 #include "MRPch/MRSuppressWarning.h"
 #include "MRPch/MRTBB.h"
 
@@ -99,7 +101,14 @@ ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& rende
     return pick_render_object( renderVector, getViewerInstance().glPickRadius );
 }
 
-ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector, uint16_t pickRadius ) const
+ObjAndPick Viewport::pick_render_object( bool exactPickFirst ) const
+{
+    VisualObjectTreeDataVector renderVector;
+    getPickerDataVector( SceneRoot::get(), id, renderVector );
+    return pick_render_object( renderVector, getViewerInstance().glPickRadius, exactPickFirst );
+}
+
+ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector, uint16_t pickRadius, bool exactPickFirst /* = true */ ) const
 {
     auto& viewer = getViewerInstance();
     const auto& mousePos = viewer.mouseController().getMousePos();
@@ -123,7 +132,7 @@ ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& rende
         auto res = multiPickObjects( renderVector, pixels );
         if ( res.empty() )
             return {};
-        if ( bool( res.front().first ) )
+        if ( ( exactPickFirst ) && ( bool( res.front().first ) ) )
             return res.front();
         int minIndex = int( res.size() );
         float minZ = FLT_MAX;
@@ -183,7 +192,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
         auto voxObj = renderVector[pickRes.geomId]->asType<ObjectVoxels>();
         if ( voxObj && voxObj->isVolumeRenderingEnabled() )
         {
-            res.point = renderVector[pickRes.geomId]->worldXf( id ).inverse()( 
+            res.point = renderVector[pickRes.geomId]->worldXf( id ).inverse()(
                 unprojectFromViewportSpace( Vector3f( viewportPoints[i].x, viewportPoints[i].y, pickRes.zBuffer ) ) );
             // TODO: support VoxelId
         }
@@ -193,7 +202,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
         {
             if ( auto pc = pointObj->pointCloud() )
             {
-                auto vid = VertId( int( pickRes.primId ) );
+                auto vid = VertId( int( pickRes.primId ) * pointObj->getRenderDiscretization() );
                 if ( !pc->validPoints.test( vid ) )
                     continue;
                 res.point = pc->points[vid];
@@ -230,6 +239,10 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
                 }
             }
         }
+        else
+        {
+            res.point = renderVector[pickRes.geomId]->worldXf( id ).inverse()( unprojectFromViewportSpace( Vector3f( viewportPoints[i].x, viewportPoints[i].y, pickRes.zBuffer ) ) );
+        }
         result[i] = { std::dynamic_pointer_cast<VisualObject>( renderVector[pickRes.geomId]->getSharedPtr() ),res };
     }
     return result;
@@ -256,7 +269,7 @@ std::vector<std::shared_ptr<MR::VisualObject>> Viewport::findObjectsInRect( cons
     return result;
 }
 
-std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> Viewport::findVisibleFaces( const BitSet& includePixBs, 
+std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> Viewport::findVisibleFaces( const BitSet& includePixBs,
     int maxRenderResolutionSide /*= 512 */ ) const
 {
     MR_TIMER;
@@ -297,7 +310,7 @@ std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> Viewport::fi
         Vector2i coord = realRect.min + Vector2i( mult( downscaledPosRatio, Vector2f( realRect.size() ) ) );
         assert( coord.x < width );
         assert( coord.y < height );
-        
+
         int realId = coord.x + coord.y * width;
         if ( !includePixBs.test( realId ) )
             continue;
@@ -408,7 +421,7 @@ void Viewport::setBackgroundColor( const Color& color )
 {
     if ( params_.backgroundColor == color )
         return;
-    params_.backgroundColor = color; 
+    params_.backgroundColor = color;
     needRedraw_ = true;
 }
 
@@ -416,7 +429,7 @@ void Viewport::setClippingPlane( const Plane3f& plane )
 {
     if ( params_.clippingPlane == plane )
         return;
-    params_.clippingPlane = plane; 
+    params_.clippingPlane = plane;
     needRedraw_ = true;
 }
 
@@ -428,6 +441,8 @@ void Viewport::setLabel( std::string s )
 
 void Viewport::showAxes( bool on )
 {
+    if ( !Viewer::constInstance()->basisAxes )
+        return;
     Viewer::constInstance()->basisAxes->setVisible( on, id );
     needRedraw_ |= Viewer::constInstance()->basisAxes->getRedrawFlag( id );
     Viewer::constInstance()->basisAxes->resetRedrawFlag();
@@ -435,6 +450,8 @@ void Viewport::showAxes( bool on )
 
 void Viewport::showClippingPlane( bool on )
 {
+    if ( !Viewer::constInstance()->clippingPlaneObject )
+        return;
     Viewer::constInstance()->clippingPlaneObject->setVisible( on, id );
     needRedraw_ |= Viewer::constInstance()->clippingPlaneObject->getRedrawFlag( id );
     Viewer::constInstance()->clippingPlaneObject->resetRedrawFlag();
@@ -442,6 +459,8 @@ void Viewport::showClippingPlane( bool on )
 
 void Viewport::showRotationCenter( bool on )
 {
+    if ( !Viewer::constInstance()->rotationSphere )
+        return;
     Viewer::constInstance()->rotationSphere->setVisible( on, id );
 }
 
@@ -455,6 +474,8 @@ void Viewport::rotationCenterMode( Parameters::RotationCenterMode mode )
 
 void Viewport::showGlobalBasis( bool on )
 {
+    if ( !Viewer::constInstance()->globalBasisAxes )
+        return;
     Viewer::constInstance()->globalBasisAxes->setVisible( on, id );
     needRedraw_ |= Viewer::constInstance()->globalBasisAxes->getRedrawFlag( id );
     Viewer::constInstance()->globalBasisAxes->resetRedrawFlag();
@@ -530,7 +551,7 @@ void Viewport::drawAxes() const
 
         float scale = (transSide - transBase).length();
         const auto basisAxesXf = AffineXf3f( Matrix3f::scale( scale ), transBase );
-        draw( *Viewer::constInstance()->basisAxes, basisAxesXf, staticProj_, DepthFuncion::Always );
+        draw( *Viewer::constInstance()->basisAxes, basisAxesXf, staticProj_, DepthFunction::Always );
         draw( *Viewer::constInstance()->basisAxes, basisAxesXf, staticProj_ );
         for ( const auto& child : getViewerInstance().basisAxes->children() )
         {
@@ -558,6 +579,11 @@ void Viewport::draw_global_basis() const
         return;
 
     draw( *Viewer::constInstance()->globalBasisAxes, params_.globalBasisAxesXf() );
+    for ( const auto& child : getViewerInstance().globalBasisAxes->children() )
+    {
+        if ( auto visualChild = child->asType<VisualObject>() )
+            draw( *visualChild, params_.globalBasisAxesXf() );
+    }
 }
 
 bool Viewport::Parameters::operator==( const Viewport::Parameters& other ) const

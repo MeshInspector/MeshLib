@@ -6,11 +6,11 @@
 #include "MRTimer.h"
 #include "MRSimpleVolume.h"
 #include "MRPch/MROpenvdb.h"
-#include "MRBox.h"
 #include "MRFastWindingNumber.h"
 #include "MRVolumeIndexer.h"
 #include "MRRegionBoundary.h"
 #include "MRParallelFor.h"
+#include "MRTriMesh.h"
 #include "MRVDBProgressInterrupter.h"
 
 namespace MR
@@ -47,9 +47,8 @@ void convertToVDMMesh( const MeshPart& mp, const AffineXf3f& xf, const Vector3f&
 }
 
 template<typename GridType>
-VoidOrErrStr gridToPointsAndTris(
+Expected<TriMesh> gridToTriMesh(
     const GridType& grid,
-    VertCoords & points, Triangulation & t,
     const GridToMeshSettings & settings )
 {
     MR_TIMER
@@ -67,21 +66,18 @@ VoidOrErrStr gridToPointsAndTris(
         return unexpected( "Vertices number limit exceeded." );
 
     // Preallocate the point list
-    points.clear();
-    points.resize(mesher.pointListSize());
+    TriMesh res;
+    res.points.resize( mesher.pointListSize() );
 
     // Copy points
     auto & inPts = mesher.pointList();
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, points.size() ), [&]( const tbb::blocked_range<size_t> & range )
+    ParallelFor( res.points, [&]( size_t i )
     {
-        for ( auto i = range.begin(); i < range.end(); ++i )
-        {
-            auto inPt = inPts[i];
-            points[ VertId{ i } ] = Vector3f{
-                inPt.x() * settings.voxelSize.x,
-                inPt.y() * settings.voxelSize.y,
-                inPt.z() * settings.voxelSize.z };
-        }
+        auto inPt = inPts[i];
+        res.points[ VertId{ i } ] = Vector3f{
+            inPt.x() * settings.voxelSize.x,
+            inPt.y() * settings.voxelSize.y,
+            inPt.z() * settings.voxelSize.z };
     } );
     inPts.reset(nullptr);
 
@@ -103,8 +99,7 @@ VoidOrErrStr gridToPointsAndTris(
     if ( tNum > settings.maxFaces )
         return unexpected( "Triangles number limit exceeded." );
 
-    t.clear();
-    t.reserve( tNum );
+    res.tris.reserve( tNum );
 
     // Copy primitives
     for (size_t n = 0, N = mesher.polygonPoolListSize(); n < N; ++n) 
@@ -121,7 +116,7 @@ VoidOrErrStr gridToPointsAndTris(
                 VertId( ( int )quad[1] ),
                 VertId( ( int )quad[0] ),
             };
-            t.push_back( newTri );
+            res.tris.push_back( newTri );
 
             newTri =
             {
@@ -129,7 +124,7 @@ VoidOrErrStr gridToPointsAndTris(
                 VertId( ( int )quad[3] ),
                 VertId( ( int )quad[2] ),
             };
-            t.push_back( newTri );
+            res.tris.push_back( newTri );
         }
 
         for ( size_t i = 0, I = polygons.numTriangles(); i < I; ++i )
@@ -142,14 +137,14 @@ VoidOrErrStr gridToPointsAndTris(
                 VertId( ( int )tri[1] ),
                 VertId( ( int )tri[0] )
             };
-            t.push_back( newTri );
+            res.tris.push_back( newTri );
         }
     }
 
     if ( !reportProgress( settings.cb, 1.0f ) )
         return unexpectedOperationCanceled();
 
-    return {};
+    return res;
 }
 
 FloatGrid meshToLevelSet( const MeshPart& mp, const AffineXf3f& xf,
@@ -285,148 +280,113 @@ VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, ProgressCal
     res.data = simpleVolumeToDenseGrid( simpleVolume, cb );
     res.dims = simpleVolume.dims;
     res.voxelSize = simpleVolume.voxelSize;
+    res.min = simpleVolume.min;
+    res.max = simpleVolume.max;
     return res;
 }
 
-Expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const GridToMeshSettings & settings )
+// make VoxelsVolume (e.g. SimpleVolume or SimpleVolumeU16) from VdbVolume
+// if VoxelsVolume values type is integral, performs mapping from [vdbVolume.min, vdbVolume.max] to
+// nonnegative range of target type
+template<typename T>
+Expected<VoxelsVolume<std::vector<T>>, std::string> vdbVolumeToSimpleVolumeImpl(
+    const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} )
+{
+    constexpr bool isFloat = std::is_same_v<float, T> || std::is_same_v<double, T> || std::is_same_v<long double, T>;
+
+    VoxelsVolume<std::vector<T>> res;
+
+    res.dims = !activeBox.valid() ? vdbVolume.dims : activeBox.size();
+    Vector3i org = activeBox.valid() ? activeBox.min : Vector3i{};
+    res.voxelSize = vdbVolume.voxelSize;
+    if constexpr ( isFloat )
+    {
+        res.min = vdbVolume.min;
+        res.max = vdbVolume.max;
+    }
+    else
+    {
+        res.min = 0;
+        res.max = std::numeric_limits<T>::max();
+    }
+    [[maybe_unused]] const float oMax = float( res.max );
+    [[maybe_unused]] const float k =
+        vdbVolume.max > vdbVolume.min ? oMax / ( vdbVolume.max - vdbVolume.min ) : 0.0f;
+
+    VolumeIndexer indexer( res.dims );
+    res.data.resize( indexer.size() );
+
+    if ( !vdbVolume.data )
+    {
+        std::fill( res.data.begin(), res.data.end(), T{} );
+        return res;
+    }
+
+    tbb::enumerable_thread_specific accessorPerThread( vdbVolume.data->getConstAccessor() );
+    if ( !ParallelFor( size_t( 0 ), indexer.size(), [&] ( size_t i )
+    {
+        auto& accessor = accessorPerThread.local();
+        auto coord = indexer.toPos( VoxelId( i ) );
+        float value = accessor.getValue( openvdb::Coord( coord.x + org.x, coord.y + org.y, coord.z + org.z ) );
+        if constexpr ( isFloat )
+            res.data[i] = T( value );
+        else
+            res.data[i] = T( std::clamp( ( value - vdbVolume.min ) * k, 0.0f, oMax ) );
+    }, cb ) )
+        return unexpectedOperationCanceled();
+    return res;
+}
+
+Expected<SimpleVolume, std::string> vdbVolumeToSimpleVolume( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
+{
+    return vdbVolumeToSimpleVolumeImpl<float>( vdbVolume, activeBox, cb );
+}
+Expected<SimpleVolumeU16, std::string> vdbVolumeToSimpleVolumeU16( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
+{
+    return vdbVolumeToSimpleVolumeImpl<uint16_t>( vdbVolume, activeBox, cb );
+}
+
+Expected<Mesh> gridToMesh( const FloatGrid& grid, const GridToMeshSettings & settings )
 {
     MR_TIMER;
     if ( !reportProgress( settings.cb, 0.0f ) )
         return unexpectedOperationCanceled();
 
-    VertCoords pts;
-    Triangulation t;
-    {
-        auto s = settings;
-        s.cb = subprogress( settings.cb, 0.0f, 0.2f );
-        if ( auto x = gridToPointsAndTris( *grid, pts, t, s ); !x )
-            return unexpected( std::move( x.error() ) );
-    }
+    auto s = settings;
+    s.cb = subprogress( settings.cb, 0.0f, 0.2f );
+    auto expTriMesh = gridToTriMesh( *grid, s );
+    if ( !expTriMesh )
+        return unexpected( std::move( expTriMesh.error() ) );
 
     if ( !reportProgress( settings.cb, 0.2f ) )
         return unexpectedOperationCanceled();
 
-    Mesh res = Mesh::fromTriangles( std::move( pts ), t, {}, subprogress( settings.cb, 0.2f, 1.0f ) );
+    Mesh res = Mesh::fromTriMesh( std::move( *expTriMesh ), {}, subprogress( settings.cb, 0.2f, 1.0f ) );
     if ( !reportProgress( settings.cb, 1.0f ) )
         return unexpectedOperationCanceled();
     return res;
 }
 
-Expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
-    int maxFaces, float offsetVoxels, float adaptivity, ProgressCallback cb )
-{
-    return gridToMesh( grid, GridToMeshSettings{
-        .voxelSize = voxelSize,
-        .isoValue = offsetVoxels,
-        .adaptivity = adaptivity,
-        .maxFaces = maxFaces,
-        .cb = cb
-    } );
-}
-
-Expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const GridToMeshSettings & settings )
+Expected<Mesh> gridToMesh( FloatGrid&& grid, const GridToMeshSettings & settings )
 {
     MR_TIMER;
     if ( !reportProgress( settings.cb, 0.0f ) )
         return unexpectedOperationCanceled();
 
-    VertCoords pts;
-    Triangulation t;
-    {
-        auto s = settings;
-        s.cb = subprogress( settings.cb, 0.0f, 0.2f );
-        if ( auto x = gridToPointsAndTris( *grid, pts, t, s ); !x )
-            return unexpected( std::move( x.error() ) );
-    }
+    auto s = settings;
+    s.cb = subprogress( settings.cb, 0.0f, 0.2f );
+    auto expTriMesh = gridToTriMesh( *grid, s );
+    if ( !expTriMesh )
+        return unexpected( std::move( expTriMesh.error() ) );
     grid.reset(); // free grid's memory
 
     if ( !reportProgress( settings.cb, 0.2f ) )
         return unexpectedOperationCanceled();
 
-    Mesh res = Mesh::fromTriangles( std::move( pts ), t, {}, subprogress( settings.cb, 0.2f, 1.0f ) );
+    Mesh res = Mesh::fromTriMesh( std::move( *expTriMesh ), {}, subprogress( settings.cb, 0.2f, 1.0f ) );
     if ( !reportProgress( settings.cb, 1.0f ) )
         return unexpectedOperationCanceled();
     return res;
-}
-
-Expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const Vector3f& voxelSize,
-    int maxFaces, float offsetVoxels, float adaptivity, ProgressCallback cb )
-{
-    return gridToMesh( std::move( grid ), GridToMeshSettings{
-        .voxelSize = voxelSize,
-        .isoValue = offsetVoxels,
-        .adaptivity = adaptivity,
-        .maxFaces = maxFaces,
-        .cb = cb
-    } );
-}
-
-Expected<MR::Mesh, std::string> gridToMesh( const VdbVolume& vdbVolume, int maxFaces,
-    float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
-{
-    return gridToMesh( vdbVolume.data, GridToMeshSettings{
-        .voxelSize = vdbVolume.voxelSize,
-        .isoValue = isoValue,
-        .adaptivity = adaptivity,
-        .maxFaces = maxFaces,
-        .cb = cb
-    } );
-}
-
-Expected<MR::Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume, int maxFaces,
-    float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
-{
-    return gridToMesh( std::move( vdbVolume.data ), GridToMeshSettings{
-        .voxelSize = vdbVolume.voxelSize,
-        .isoValue = isoValue,
-        .adaptivity = adaptivity,
-        .maxFaces = maxFaces,
-        .cb = cb
-    } );
-}
-
-Expected<Mesh, std::string> gridToMesh( const FloatGrid& grid, const Vector3f& voxelSize,
-    float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
-{
-    return gridToMesh( grid, GridToMeshSettings{
-        .voxelSize = voxelSize,
-        .isoValue = isoValue,
-        .adaptivity = adaptivity,
-        .cb = cb
-    } );
-}
-
-Expected<Mesh, std::string> gridToMesh( FloatGrid&& grid, const Vector3f& voxelSize,
-    float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
-{
-    return gridToMesh( std::move( grid ), GridToMeshSettings{
-        .voxelSize = voxelSize,
-        .isoValue = isoValue,
-        .adaptivity = adaptivity,
-        .cb = cb
-    } );
-}
-
-Expected<MR::Mesh, std::string> gridToMesh( const VdbVolume& vdbVolume,
-    float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
-{
-    return gridToMesh( vdbVolume.data, GridToMeshSettings{
-        .voxelSize = vdbVolume.voxelSize,
-        .isoValue = isoValue,
-        .adaptivity = adaptivity,
-        .cb = cb
-    } );
-}
-
-Expected<MR::Mesh, std::string> gridToMesh( VdbVolume&& vdbVolume,
-    float isoValue /*= 0.0f*/, float adaptivity /*= 0.0f*/, ProgressCallback cb /*= {} */ )
-{
-    return gridToMesh( std::move( vdbVolume.data ), GridToMeshSettings{
-        .voxelSize = vdbVolume.voxelSize,
-        .isoValue = isoValue,
-        .adaptivity = adaptivity,
-        .cb = cb
-    } );
 }
 
 VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh, const AffineXf3f& meshToGridXf, std::shared_ptr<IFastWindingNumber> fwn, ProgressCallback cb /*= {} */ )
@@ -490,7 +450,7 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
     return {};
 }
 
-Expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf, float voxelSize,
+Expected<Mesh> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf, float voxelSize,
     float offsetA, float offsetB, float adaptivity, std::shared_ptr<IFastWindingNumber> fwn, ProgressCallback cb /*= {} */ )
 {
     MR_TIMER
@@ -545,17 +505,14 @@ Expected<Mesh, std::string> levelSetDoubleConvertion( const MeshPart& mp, const 
     if ( interrupter2.getWasInterrupted() || ( cb && !cb( 0.9f ) ) )
         return unexpectedOperationCanceled();
 
-    VertCoords pts;
-    Triangulation t;
-    if ( auto x = gridToPointsAndTris( *grid, pts, t, GridToMeshSettings{
+    auto expTriMesh = gridToTriMesh( *grid, GridToMeshSettings{
         .voxelSize = Vector3f::diagonal( voxelSize ),
         .isoValue = offsetInVoxelsB,
         .adaptivity = adaptivity,
         .cb = subprogress( cb, 0.9f, 0.95f )
-    } ); !x )
-        return unexpectedOperationCanceled();
+    } );
 
-    Mesh res = Mesh::fromTriangles( std::move( pts ), t );
+    Mesh res = Mesh::fromTriMesh( std::move( *expTriMesh ) );
     cb && !cb( 1.0f );
     return res;
 }

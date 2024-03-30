@@ -25,7 +25,7 @@ The goal which we set when designing MeshLib was to value simplicity and perform
 
 * [MeshInspector YouTube channel](https://www.youtube.com/channel/UCv9bNhwoVDPaLPPyWJeVPNg)
 
-* [MeshLib Documentation](https://meshinspector.github.io/MeshLib/html/index.html)
+* [MeshLib Documentation](https://meshlib.meshinspector.com/documentation/)
 
 * [Email us](mailto:support@meshinspector.com)
 
@@ -133,7 +133,7 @@ pip install --upgrade pip
 pip install meshlib
 ```
 
-See Python Basic Examples [here](https://meshinspector.github.io/MeshLib/html/HowToBasic.html) or search for more complex ones on [stackoverflow.com](https://stackoverflow.com/).
+See Python Basic Examples [here](https://meshlib.meshinspector.com/documentation/HowToBasic.html) or search for more complex ones on [stackoverflow.com](https://stackoverflow.com/).
 
 # Build
 ## Windows
@@ -162,7 +162,7 @@ If you would like to use another version of CUDA, please modify `MRCudaVersion` 
     ```sh
     git clone https://github.com/Microsoft/vcpkg.git
     cd vcpkg
-    git checkout 2024.01.12
+    git checkout 2024.03.25
     .\bootstrap-vcpkg.bat
     .\vcpkg integrate install (with admin rights)
     ```
@@ -175,27 +175,37 @@ If you would like to use another version of CUDA, please modify `MRCudaVersion` 
 4. Open solution file `MeshLib/source/MeshLib.sln` in Visual Studio. Build it and run.
 
 ## Linux
-This installation was checked on Ubuntu 20.04.4.
+
+We regularly check that MeshLib can be built successfully on Ubuntu 20.04 LTS, Ubuntu 22.04 LTS (both x64 and ARM), and Fedora 37.
+
+**Install/Build dependencies. Build project. Run Test Application**
+
+Install CUDA v12.0 from [official site](https://developer.nvidia.com/cuda-toolkit-archive)
 
 Use automated installation process. It takes ~40 minutes if no required packages are already installed.
 This approach is useful for new MR developers
-**Install/Build dependencies. Build project. Run Test Application** Run the following in terminal:
+
+Run the following in terminal:
 
 ```sh
-git clone https://github.com/MeshInspector/MeshLib.git
+git clone --recurse-submodules https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
-sudo ./scripts/build_thirdparty.sh # need sudo to check and install dependencies
-./scripts/install_thirdparty.sh
-./scripts/build_sources.sh
+./scripts/build_thirdparty.sh  # do not select emscripten in the corresponding question
+./scripts/build_source.sh  # do not select emscripten in the corresponding question
+# create and install package for Ubuntu
 ./scripts/distribution.sh
 sudo apt install ./distr/meshlib-dev.deb
+# create and install package for Fedora
+./scripts/distribution_rpm.sh
+sudo apt install ./distr/meshlib-dev.rpm
 ```
 
 > **_NOTE:_** `./scripts/install*.sh` scripts could be used as well, but apt install is preferable.
 
-> **_NOTE:_** `./scripts/install*.sh` scripts copy MR files directly to `/usr/local/lib`. Remove this directory manually if exists before apt install deb package.
+> **_NOTE:_** `./scripts/install_thirdparty.sh` script copies MR files directly to `/usr/local/lib`. Remove this directory manually if exists before apt install deb package.
 
-> **_NOTE:_** You could specify build type to Debug by `export MESHLIB_BUILD_TYPE=Debug`. Release is default.
+> **_NOTE:_** You could specify build type to Debug by `export MESHLIB_BUILD_TYPE=Debug`. Release is default. Set `MESHLIB_KEEP_BUILD=ON` to suppress full rebuild
+
 
 ## WASM/Emscripten
 This installation was checked on Ubuntu 22.04 with Emscripten 3.1.48.
@@ -214,8 +224,9 @@ Build
 ```
 cd ~/MeshLib
 ./scripts/build_thirdparty.sh # select Emscripten in the corresponding question
-./scripts/build_sorces.sh # select Emscripten in the corresponding question
+./scripts/build_source.sh # select Emscripten in the corresponding question
 ```
+> **_NOTE:_** Set `MESHLIB_KEEP_BUILD=ON` to suppress full rebuild
 
 Run
 ```

@@ -10,6 +10,7 @@
 #include "MRMesh/MRLine3.h"
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRIntersection.h"
+#include "MRMesh/MRVisualObject.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer/ImGuiHelpers.h"
 
@@ -66,12 +67,12 @@ bool MoveObjectByMouse::onMouseDown_( MouseButton button, int modifier )
     shift_ = 0.f;
 
     obj_ = obj;
-    objXf_ = obj_->xf();
-    worldStartPoint_ = obj_->worldXf()( pick.point );
+    objWorldXf_ = obj_->worldXf();
+    worldStartPoint_ = objWorldXf_( pick.point );
     viewportStartPointZ_ = viewer->viewport().projectToViewportSpace( worldStartPoint_ ).z;
-    
+
     transformMode_ = ( modifier == GLFW_MOD_CONTROL ) ? TransformMode::Rotation : TransformMode::Translation;
-    
+
     if ( transformMode_ == TransformMode::Rotation )
     {
         bboxCenter_ = obj_->getBoundingBox().center();
@@ -101,7 +102,7 @@ bool MoveObjectByMouse::onMouseMove_( int x, int y )
 {
     if ( !obj_ )
         return false;
-    
+
     auto viewportEnd = viewer->screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewer->viewport().id );
     auto worldEndPoint = viewer->viewport().unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
 
@@ -120,36 +121,41 @@ bool MoveObjectByMouse::onMouseMove_( int x, int y )
             angle_ = 0.f;
         else
             angle_ = angle( vectorStart, vectorEnd );
-        
+
         if ( dot( rotationPlane_.n, cross( vectorStart, vectorEnd ) ) > 0.f )
             angle_ = 2.f * PI_F - angle_;
-        
+
         angle_ = angle_ / PI_F * 180.f;
 
         setVisualizeVectors_( { worldBboxCenter_, worldStartPoint_, worldBboxCenter_, worldEndPoint } );
 
         AffineXf3f rotation = AffineXf3f::linear( Matrix3f::rotation( vectorStart, worldEndPoint - worldBboxCenter_ ) );
-        AffineXf3f xfA = AffineXf3f::linear( objXf_.A );
-        AffineXf3f toBboxCenter = AffineXf3f::translation( xfA( bboxCenter_ ) );
-        obj_->setXf( AffineXf3f::translation(objXf_.b) * toBboxCenter * rotation * toBboxCenter.inverse() * xfA );
+        AffineXf3f worldXfA = AffineXf3f::linear( objWorldXf_.A );
+        AffineXf3f toBboxCenter = AffineXf3f::translation( worldXfA( bboxCenter_ ) );
+        obj_->setWorldXf( AffineXf3f::translation( objWorldXf_.b ) * toBboxCenter * rotation * toBboxCenter.inverse() * worldXfA );
     }
     else
     {
         shift_ = ( worldEndPoint - worldStartPoint_ ).length();
         setVisualizeVectors_( { worldStartPoint_, worldEndPoint } );
 
-        auto xf = AffineXf3f::translation( worldEndPoint - worldStartPoint_ ) * objXf_;
-        auto worldXf = obj_->parent() ? obj_->parent()->worldXf() * xf : xf;
+        auto worldXf = AffineXf3f::translation( worldEndPoint - worldStartPoint_ ) * objWorldXf_;
 
-        auto wbsize = transformed( obj_->getBoundingBox(), worldXf ).size();
-        auto minSizeDim = wbsize.length();
+        // Clamp movement.
+        float minSizeDim = 0;
+        if ( auto worldBox = transformed( obj_->getBoundingBox(), worldXf ); worldBox.valid() ) // Feature objects give an invalid box.
+        {
+            auto wbsize = worldBox.size();
+            minSizeDim = wbsize.length();
+        }
+
         if ( minSizeDim == 0 )
             minSizeDim = 1.f;
 
         for ( auto i = 0; i < 3; i++ )
-            xf.b[i] = std::clamp( xf.b[i], -cMaxTranslationMultiplier * minSizeDim, +cMaxTranslationMultiplier * minSizeDim );
+            worldXf.b[i] = std::clamp( worldXf.b[i], -cMaxTranslationMultiplier * minSizeDim, +cMaxTranslationMultiplier * minSizeDim );
 
-        obj_->setXf( xf );
+        obj_->setWorldXf( worldXf );
     }
 
     return true;
@@ -160,10 +166,10 @@ bool MoveObjectByMouse::onMouseUp_( MouseButton btn, int /*modifiers*/ )
     if ( !obj_ || btn != Viewer::MouseButton::Left )
         return false;
 
-    auto newXf = obj_->xf();
-    obj_->setXf( objXf_ );
+    auto newWorldXf = obj_->worldXf();
+    obj_->setWorldXf( objWorldXf_ );
     AppendHistory<ChangeXfAction>( "Change Xf", obj_ );
-    obj_->setXf( newXf );
+    obj_->setWorldXf( newWorldXf );
 
     obj_ = nullptr;
     transformMode_ = TransformMode::None;

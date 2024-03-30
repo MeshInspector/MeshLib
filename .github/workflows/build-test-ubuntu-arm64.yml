@@ -9,6 +9,14 @@ on:
       app_version:
         required: true
         type: string
+      full_config_build:
+        default: false
+        required: false
+        type: boolean
+      autotest_data_s3_url:
+        default: "s3://data-autotest/test_data_2023-mar-07"
+        required: false
+        type: string
       UPLOAD_ARTIFACTS:
         required: true
         type: boolean
@@ -20,6 +28,7 @@ jobs:
     container:
       image: ${{ matrix.docker-image }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ ubuntu20, ubuntu22 ]
         config: [ Release ]
@@ -39,6 +48,10 @@ jobs:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
 
+    env:
+      UPLOAD_TEST_ARTIFACTS: ${{ contains(github.event.pull_request.labels.*.name, 'upload-test-artifacts') }}
+      INTERNAL_BUILD: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,6 +62,9 @@ jobs:
         run: |
           ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
           ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
+
+      - name: Setup python requirements
+        run: python3 -m pip install -r ./requirements/python.txt
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -66,13 +82,13 @@ jobs:
 
       #Save timing in artifact
       - name: Upload Timings
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: Timing_Logs
+          name: Timing_Logs_${{matrix.os}}-arm64_${{matrix.config}}_${{matrix.compiler}}
           path: time_log/
 
       - name: Run Tests
-        run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
+        run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
 
       - name: Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTest
@@ -82,20 +98,33 @@ jobs:
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 
       - name: Configure AWS Credentials
-        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
+        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
           aws-region: us-east-1
 
+      # cache managment: https://github.com/MeshInspector/MeshLib/actions/caches
+      - name: Cache autotest data from S3 Tests
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
+        id: cache-autotest
+        uses: actions/cache@v4
+        with:
+          path: ./test_data
+          key: ${{inputs.autotest_data_s3_url}}
+
       - name: Copy autotest data from S3 Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
-        run: aws s3 cp s3://data-autotest/test_data_29-dec-23 ./test_data --recursive
-        
+        run: aws s3 sync ${{inputs.autotest_data_s3_url}} ./test_data --delete --no-sign-request --size-only
+
       - name: Python Regression Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
+
+      - name: Copy test artifacts to S3
+        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}
+        run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/ubuntu_arm64//${{matrix.os}}' --recursive
 
       - name: Create Deb
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler }}
@@ -108,8 +137,8 @@ jobs:
 
       - name: Upload Ubuntu Developer Distribution
         if: ${{ inputs.UPLOAD_ARTIFACTS }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: Distributives
+          name: Distributives_${{matrix.os}}_arm64
           path: meshlib-${{matrix.os}}-arm64-dev.deb
           retention-days: 1

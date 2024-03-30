@@ -27,4 +27,17 @@ private:
 [[nodiscard]] MRMESH_API VertBitSet findNeighborVerts( const Mesh& mesh, const PointOnFace& start, float range );
 
 
+class EnumNeihbourFaces
+{
+public:
+    /// invokes given predicate for faces starting from all incident to \param start,
+    /// and continuing to all immediate neighbours in depth-first order until the predicate returns false
+    MRMESH_API void run( const MeshTopology & topology, VertId start, const FacePredicate & pred );
+
+private:
+    FaceBitSet visited_;
+    std::vector<FaceId> bd_;
+};
+
+
 } //namespace MR

@@ -12,6 +12,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGuiHelpers.cpp" />
+    <ClCompile Include="MRAncillaryLabels.cpp" />
+    <ClCompile Include="MRAncillaryLines.cpp" />
+    <ClCompile Include="MRAncillaryMesh.cpp" />
+    <ClCompile Include="MRAncillaryPoints.cpp" />
     <ClCompile Include="MRAppendHistory.cpp" />
     <ClCompile Include="MRAlphaSortGL.cpp" />
     <ClCompile Include="ImGuiMenu.cpp" />
@@ -21,6 +25,9 @@
     <ClCompile Include="MRCreateShader.cpp" />
     <ClCompile Include="MRCudaAccessor.cpp" />
     <ClCompile Include="MRDirectionWidget.cpp" />
+    <ClCompile Include="MRHistoryStore.cpp" />
+    <ClCompile Include="MRMeshBoundarySelectionWidget.cpp" />
+    <ClCompile Include="MRFrameCounter.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
     <ClCompile Include="MRSelectCurvaturePreference.cpp" />
     <ClCompile Include="MRFrameRedrawRequest.cpp" />
@@ -92,14 +99,23 @@
     <ClCompile Include="MRWebRequest.cpp" />
     <ClCompile Include="MRTouchpadController.cpp" />
     <ClCompile Include="MRSurfaceManipulationWidget.cpp" />
+    <ClCompile Include="MRImGuiMeasurementIndicators.cpp" />
+    <ClCompile Include="MRRenderFeatureObjects.cpp" />
+    <ClCompile Include="MRRenderNameObject.cpp" />
+    <ClCompile Include="MRRenderDimensions.cpp" />
+    <ClCompile Include="MRRenderMeasurementObjects.cpp" />
+    <ClCompile Include="MRUnits.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
+    <ClInclude Include="MRAncillaryLabels.h" />
+    <ClInclude Include="MRAncillaryLines.h" />
+    <ClInclude Include="MRAncillaryMesh.h" />
+    <ClInclude Include="MRAncillaryPoints.h" />
     <ClInclude Include="MRAppendHistory.h" />
     <ClInclude Include="exports.h" />
     <ClInclude Include="ImGuiHelpers.h" />
     <ClInclude Include="ImGuiMenu.h" />
-    <ClInclude Include="ImGuiTraits.h" />
     <ClInclude Include="imgui_fonts_droid_sans.h" />
     <ClInclude Include="MRAsyncTimer.h" />
     <ClInclude Include="MRColorTheme.h" />
@@ -108,6 +124,11 @@
     <ClInclude Include="MRCudaAccessor.h" />
     <ClInclude Include="MRDirectionWidget.h" />
     <ClInclude Include="MRFitData.h" />
+    <ClInclude Include="MRHistoryStore.h" />
+    <ClInclude Include="MRISceneStateCheck.h" />
+    <ClInclude Include="MRLambdaRibbonItem.h" />
+    <ClInclude Include="MRMeshBoundarySelectionWidget.h" />
+    <ClInclude Include="MRFrameCounter.h" />
     <ClInclude Include="MRNotificationType.h" />
     <ClInclude Include="MRRibbonNotification.h" />
     <ClInclude Include="MRSelectCurvaturePreference.h" />
@@ -155,9 +176,6 @@
     <ClInclude Include="MRStatePlugin.h" />
     <ClInclude Include="MRDemoPlugin.h" />
     <ClInclude Include="MRGLMacro.h" />
-    <ClInclude Include="MRMeshViewer.h" />
-    <ClInclude Include="MRMeshViewerPlugin.h" />
-    <ClInclude Include="MRMeshViewport.h" />
     <ClInclude Include="MRPythonAppendCommand.h" />
     <ClInclude Include="MRRecentFilesStore.h" />
     <ClInclude Include="MRRenderGLHelpers.h" />
@@ -194,6 +212,17 @@
     <ClInclude Include="MRTouchpadController.h" />
     <ClInclude Include="MRSurfaceManipulationWidget.h" />
     <ClInclude Include="MRPointInAllSpaces.h" />
+    <ClInclude Include="MRImGuiVectorOperators.h" />
+    <ClInclude Include="MRImGuiMeasurementIndicators.h" />
+    <ClInclude Include="MRRenderDefaultUiObject.h" />
+    <ClInclude Include="MRRenderFeatureObjects.h" />
+    <ClInclude Include="MRRenderNameObject.h" />
+    <ClInclude Include="MRRenderWrapObject.h" />
+    <ClInclude Include="MRRenderDimensions.h" />
+    <ClInclude Include="MRRenderMeasurementObjects.h" />
+    <ClInclude Include="MRVectorTraits.h" />
+    <ClInclude Include="MRUnits.h" />
+    <ClInclude Include="MRUnits.tpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />
@@ -243,6 +272,10 @@
     </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
+    <Image Include="resource\object_icons\X1\CircleObject.png" />
+    <Image Include="resource\object_icons\X1\ConeObject.png" />
+    <Image Include="resource\object_icons\X1\CylinderObject.png" />
+    <Image Include="resource\object_icons\X1\LineObject.png" />
     <Image Include="resource\object_icons\X1\Object.png" />
     <Image Include="resource\object_icons\X1\ObjectDistanceMap.png" />
     <Image Include="resource\object_icons\X1\ObjectGcode.png" />
@@ -251,6 +284,13 @@
     <Image Include="resource\object_icons\X1\ObjectMesh.png" />
     <Image Include="resource\object_icons\X1\ObjectPoints.png" />
     <Image Include="resource\object_icons\X1\ObjectVoxels.png" />
+    <Image Include="resource\object_icons\X1\PlaneObject.png" />
+    <Image Include="resource\object_icons\X1\PointObject.png" />
+    <Image Include="resource\object_icons\X1\SphereObject.png" />
+    <Image Include="resource\object_icons\X3\CircleObject.png" />
+    <Image Include="resource\object_icons\X3\ConeObject.png" />
+    <Image Include="resource\object_icons\X3\CylinderObject.png" />
+    <Image Include="resource\object_icons\X3\LineObject.png" />
     <Image Include="resource\object_icons\X3\Object.png" />
     <Image Include="resource\object_icons\X3\ObjectDistanceMap.png" />
     <Image Include="resource\object_icons\X3\ObjectGcode.png" />
@@ -259,6 +299,9 @@
     <Image Include="resource\object_icons\X3\ObjectMesh.png" />
     <Image Include="resource\object_icons\X3\ObjectPoints.png" />
     <Image Include="resource\object_icons\X3\ObjectVoxels.png" />
+    <Image Include="resource\object_icons\X3\PlaneObject.png" />
+    <Image Include="resource\object_icons\X3\PointObject.png" />
+    <Image Include="resource\object_icons\X3\SphereObject.png" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\imgui\imgui.vcxproj">

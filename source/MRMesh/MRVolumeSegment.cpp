@@ -144,10 +144,9 @@ Expected<MR::Mesh, std::string> segmentVolume( const VdbVolume& volume, const st
         VoxelMetricParameters metricParams;
         metricParams.start = size_t( indexer.toVoxelId( Vector3i( mult( start, reverseVoxelsSize ) ) ) );
         metricParams.stop = size_t( indexer.toVoxelId( Vector3i( mult( stop, reverseVoxelsSize ) ) ) );
-        constexpr char mask = 1;
         for ( int i = 0; i < 4; ++i )
         {
-            metricParams.quatersMask = mask << i;
+            metricParams.quatersMask = QuarterBit( 1 << i );
             segmentator.addPathSeeds( metricParams, VolumeSegmenter::SeedType::Inside, params.buildPathExponentModifier );
         }
     }

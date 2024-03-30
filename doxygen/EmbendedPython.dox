@@ -36,12 +36,7 @@ except ValueError as e:
 # ...
 mrmeshpy.saveMesh(mesh, "mesh.ply")
 \endcode
-2. Run scritp with MeshInspector executable file (MeshInspector.exe on windows or ./MRApp on linux)
-\code
-$ ./MRApp script_path.py
-\endcode
-\note Script should still import mrmeshpy module
-3. Run script from c++ code
+2. Run script from c++ code
 \code
 MR::runScript("script.py"); // or MR::runString( stringWithScript )
 \endcode

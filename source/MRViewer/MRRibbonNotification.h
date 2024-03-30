@@ -24,6 +24,9 @@ struct RibbonNotification
     NotificationType type{ NotificationType::Info };
     // Time that notification stays visible
     float lifeTimeSec = 10.0f;
+    // if notifications are equal to last one added, it just increment counter
+    // note that if there is present `onButtonClick` this function always returns false
+    bool operator==( const RibbonNotification& other ) const;
 };
 
 // class to hold and operate with notifications
@@ -39,6 +42,7 @@ private:
     {
         RibbonNotification notification;
         float timer{ 0.0f };
+        int sameCounter = 1;
     };
     std::vector<NotificationWithTimer> notifications_;
     void filterInvalid_( int numInvalid = -1 );

@@ -1,5 +1,6 @@
 #include "MRObjectTransformWidget.h"
 #include "MRMouseController.h"
+#include "MRViewport.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRBox.h"
@@ -9,12 +10,12 @@
 #include "MRMesh/MRArrow.h"
 #include "MRMesh/MRTorus.h"
 #include "MRMesh/MRSceneRoot.h"
-#include "MRViewport.h"
-#include "MRPch/MRTBB.h"
 #include "MRMesh/MRIntersection.h"
 #include "MRMesh/MR2to3.h"
 #include "MRMesh/MRMatrix3Decompose.h"
+#include "MRMesh/MRPolyline.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRPch/MRTBB.h"
 
 namespace
 {
@@ -86,7 +87,7 @@ float findAngleDegOfPick( const Vector3f& center, const Vector3f& zeroPoint, con
         diff = to2dim( dist1 ).lengthSq() - to2dim( dist2 ).lengthSq();
     else
         diff = dist1.z - dist2.z;
-    
+
     if ( diff > 0.0f || parallel )
     {
         if ( angleRes < 0.0f )
@@ -104,7 +105,7 @@ void ObjectTransformWidget::create( const Box3f& box, const AffineXf3f& worldXf,
 {
     if ( controlsRoot_ )
         reset();
-    
+
     boxDiagonal_ = box.size();
     controls_ = controls;
     if ( !controls_ )
@@ -119,14 +120,14 @@ void ObjectTransformWidget::create( const Box3f& box, const AffineXf3f& worldXf,
     controlsRoot_ = std::make_shared<Object>();
     controlsRoot_->setName( "TransformWidgetRoot" );
     controlsRoot_->setAncillary( true );
-    
+
     controls_->setCenter( box.center() );
     controls_->init( controlsRoot_ );
 
     SceneRoot::get().addChild( controlsRoot_ );
     setControlsXf_( worldXf, true );
 
-    setTransformMode( uint8_t( ControlBit::FullMask ) );
+    setTransformMode( ControlBit::FullMask );
 
     // 10 group to imitate plugins behavior
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
@@ -169,7 +170,7 @@ void ObjectTransformWidget::reset()
     axisTransformMode_ = AxisTranslation;
 }
 
-void ObjectTransformWidget::setTransformMode( uint8_t mask, ViewportId vpId )
+void ObjectTransformWidget::setTransformMode( ControlBit mask, ViewportId vpId )
 {
     if ( !controlsRoot_ )
         return;
@@ -178,8 +179,8 @@ void ObjectTransformWidget::setTransformMode( uint8_t mask, ViewportId vpId )
 
     transformModeMask_.set( mask, vpId );
 
-    controls_->updateVisualTransformMode( mask, 
-        vpId ? vpId : ( controlsRoot_->visibilityMask() & getViewerInstance().getPresentViewports() ), 
+    controls_->updateVisualTransformMode( mask,
+        vpId ? vpId : ( controlsRoot_->visibilityMask() & getViewerInstance().getPresentViewports() ),
         getControlsXf( vpId ) );
 }
 
@@ -226,7 +227,7 @@ bool ObjectTransformWidget::onMouseUp_( Viewer::MouseButton button, int )
         return false;
     if ( !controlsRoot_ )
         return false;
-    
+
     stopModify_();
 
     return true;
@@ -290,7 +291,7 @@ void ObjectTransformWidget::activeMove_( bool press )
     if ( press )
     {
         // we now know who is picked
-        if ( uint8_t( activeControl ) & uint8_t( ControlBit::MoveMask ) )
+        if ( bool( activeControl & ControlBit::MoveMask ) )
         {
             switch ( axisTransformMode_ )
             {
@@ -769,15 +770,15 @@ void TransformControls::stopModify_()
             obj->setVisible( true );
 }
 
-void TransformControls::updateVisualTransformMode_( uint8_t showMask, ViewportMask viewportMask )
+void TransformControls::updateVisualTransformMode_( ControlBit showMask, ViewportMask viewportMask )
 {
     for ( int i = 0; i < 3; ++i )
     {
-        uint8_t checkMask = uint8_t( ControlBit::MoveX ) << i;
+        ControlBit checkMask = ControlBit( int( ControlBit::MoveX ) << i );
         bool enable = ( showMask & checkMask ) == checkMask;
         translateControls_[i]->setVisible( enable, viewportMask );
 
-        checkMask = uint8_t( ControlBit::RotX ) << i;
+        checkMask = ControlBit( int( ControlBit::RotX ) << i );
         enable = ( showMask & checkMask ) == checkMask;
         rotateControls_[i]->setVisible( enable, viewportMask );
     }
@@ -832,25 +833,25 @@ TransformModesValidator TransformControls::ThresholdDotValidator( float threshol
         auto vpPoint = getViewerInstance().viewport( vpId ).projectToViewportSpace( transformedCenter );
         auto ray = getViewerInstance().viewport( vpId ).unprojectPixelRay( Vector2f( vpPoint.x, vpPoint.y ) ).d.normalized();
 
-        uint8_t showMask = uint8_t( ControlBit::FullMask );
+        ControlBit showMask = ControlBit::FullMask;
 
         bool xHide = std::abs( dot( xf.A.col( 0 ).normalized(), ray ) ) < thresholdDot;
         bool yHide = std::abs( dot( xf.A.col( 1 ).normalized(), ray ) ) < thresholdDot;
         bool zHide = std::abs( dot( xf.A.col( 2 ).normalized(), ray ) ) < thresholdDot;
 
         if ( xHide )
-            showMask &= ~uint8_t( ControlBit::RotX );
+            showMask &= ~ControlBit::RotX;
         if ( yHide )
-            showMask &= ~uint8_t( ControlBit::RotY );
+            showMask &= ~ControlBit::RotY;
         if ( zHide )
-            showMask &= ~uint8_t( ControlBit::RotZ );
+            showMask &= ~ControlBit::RotZ;
 
         if ( xHide && yHide )
-            showMask &= ~uint8_t( ControlBit::MoveZ );
+            showMask &= ~ControlBit::MoveZ;
         if ( xHide && zHide )
-            showMask &= ~uint8_t( ControlBit::MoveY );
+            showMask &= ~ControlBit::MoveY;
         if ( yHide && zHide )
-            showMask &= ~uint8_t( ControlBit::MoveX );
+            showMask &= ~ControlBit::MoveX;
 
         return showMask;
     };
@@ -904,7 +905,7 @@ void ITransformControls::setCenter( const Vector3f& center )
     update();
 }
 
-void ITransformControls::updateVisualTransformMode( uint8_t showMask, ViewportMask viewportMask, const AffineXf3f& xf )
+void ITransformControls::updateVisualTransformMode( ControlBit showMask, ViewportMask viewportMask, const AffineXf3f& xf )
 {
     if ( !validator_ )
     {
@@ -914,7 +915,7 @@ void ITransformControls::updateVisualTransformMode( uint8_t showMask, ViewportMa
     {
         for ( auto id : viewportMask )
         {
-            uint8_t modeMask = showMask & validator_( center_, xf, id );
+            ControlBit modeMask = showMask & validator_( center_, xf, id );
             updateVisualTransformMode_( modeMask, id );
         }
     }

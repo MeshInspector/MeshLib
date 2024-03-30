@@ -1,6 +1,7 @@
 #include "MRNormalsToPoints.h"
 #include "MRMesh.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRTriMath.h"
 #include "MRTimer.h"
 
@@ -92,15 +93,11 @@ void Solver::run( const VertCoords & guide, const FaceNormals & normals, VertCoo
     if ( !topology_ )
         return;
 
-    const int nVerts = (int)topology_->vertSize();
     // every point shall be close to corresponding guide point (with small weight)
-    tbb::parallel_for( tbb::blocked_range( 0_v, VertId( nVerts ) ), [&] ( const tbb::blocked_range<VertId>& range )
+    ParallelFor( 0_v, guide.endId(), [&]( VertId v )
     {
-        for ( VertId v = range.begin(); v < range.end(); ++v )
-        {
-            for ( int i = 0; i < 3; ++i )
-                rhs_[i][v] = guideWeight_ * guide[v][i];
-        }
+        for ( int i = 0; i < 3; ++i )
+            rhs_[i][v] = guideWeight_ * guide[v][i];
     } );
 
     // add 2 equations per triangle for relative position of projected triangle points
@@ -121,20 +118,16 @@ void Solver::run( const VertCoords & guide, const FaceNormals & normals, VertCoo
 
     // solve linear equations
     Eigen::VectorXd sol[3];
-    tbb::parallel_for( tbb::blocked_range<int>( 0, 3 ), [&]( const tbb::blocked_range<int> & range )
+    ParallelFor( 0, 3, [&]( int i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-            sol[i] = ldlt_.solve( mat_.adjoint() * rhs_[i] );
+        sol[i] = ldlt_.solve( mat_.adjoint() * rhs_[i] );
     } );
 
     // copy back the solution into points
-    tbb::parallel_for( tbb::blocked_range( 0_v, VertId( nVerts ) ), [&] ( const tbb::blocked_range<VertId>& range )
+    ParallelFor( 0_v, guide.endId(), [&]( VertId v )
     {
-        for ( VertId v = range.begin(); v < range.end(); ++v )
-        {
-            for ( int i = 0; i < 3; ++i )
-                points[v][i] = (float)sol[i][v];
-        }
+        for ( int i = 0; i < 3; ++i )
+            points[v][i] = (float)sol[i][v];
     } );
 }
 

@@ -10,16 +10,8 @@
 #include "ImGuiMenu.h"
 #include "imgui_internal.h"
 #include "MRMesh/MRVector4.h"
+#include "MRViewer/MRImGuiVectorOperators.h"
 
-
-ImVec2 operator+( const ImVec2& a, const ImVec2& b )
-{
-    return ImVec2( a.x + b.x, a.y + b.y );
-}
-ImVec2 operator-( const ImVec2& a, const ImVec2& b )
-{
-    return ImVec2( a.x - b.x, a.y - b.y );
-}
 
 namespace MR
 {
@@ -87,7 +79,7 @@ bool checkKey( ImGuiKey passedKey )
     bool pressed = false;
     if ( passedKey == ImGuiKey_Enter || passedKey == ImGuiKey_KeypadEnter )
         pressed =  ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter );
-    else 
+    else
         pressed = ImGui::IsKeyPressed( passedKey );
     return pressed && ImGui::GetIO().KeyMods == ImGuiMod_None;
 }
@@ -160,7 +152,7 @@ void init()
     textureR->update( data );
 }
 
-bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/, 
+bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/,
     ImGuiButtonFlags flags /*= ImGuiButtonFlags_None*/, const ButtonCustomizationParams& custmParams )
 {
     // copy from ImGui::ButtonEx and replaced visualize part
@@ -931,6 +923,190 @@ void endCombo( bool showPreview /*= true*/ )
         ImGui::PopItemWidth();
 }
 
+// copied from ImGui::SliderScalar with some visual changes
+bool detail::genericSlider( const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags )
+{
+    using namespace ImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    if ( window->SkipItems )
+        return false;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+    const float styleFramePaddingY = style.FramePadding.y + 2.5f; // EDITED
+    const ImGuiID id = window->GetID( label );
+    const float w = CalcItemWidth();
+
+    const ImVec2 label_size = CalcTextSize( label, NULL, true );
+    const ImRect frame_bb( window->DC.CursorPos, window->DC.CursorPos + ImVec2( w, label_size.y + styleFramePaddingY * 2.0f ) );
+    const ImRect total_bb( frame_bb.Min, frame_bb.Max + ImVec2( label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f ) );
+
+    const bool temp_input_allowed = ( flags & ImGuiSliderFlags_NoInput ) == 0;
+    ItemSize( total_bb, styleFramePaddingY );
+    if ( !ItemAdd( total_bb, id, &frame_bb, temp_input_allowed ? ImGuiItemFlags_Inputable : 0 ) )
+        return false;
+
+    // Default format string when passing NULL
+    if ( format == NULL )
+        format = DataTypeGetInfo( data_type )->PrintFmt;
+
+    const bool hovered = ItemHoverable( frame_bb, id, g.LastItemData.InFlags );
+    bool temp_input_is_active = temp_input_allowed && TempInputIsActive( id );
+    if ( !temp_input_is_active )
+    {
+        // Tabbing or CTRL-clicking on Slider turns it into an input box
+        const bool input_requested_by_tabbing = temp_input_allowed && ( g.LastItemData.StatusFlags & ImGuiItemStatusFlags_FocusedByTabbing ) != 0;
+        const bool clicked = hovered && IsMouseClicked( 0, id );
+        const bool make_active = ( input_requested_by_tabbing || clicked || g.NavActivateId == id );
+        if ( make_active && clicked )
+            SetKeyOwner( ImGuiKey_MouseLeft, id );
+        if ( make_active && temp_input_allowed )
+            if ( input_requested_by_tabbing || ( clicked && g.IO.KeyCtrl ) || ( g.NavActivateId == id && ( g.NavActivateFlags & ImGuiActivateFlags_PreferInput ) ) )
+                temp_input_is_active = true;
+
+        if ( make_active && !temp_input_is_active )
+        {
+            SetActiveID( id, window );
+            SetFocusID( id, window );
+            FocusWindow( window );
+            g.ActiveIdUsingNavDirMask |= ( 1 << ImGuiDir_Left ) | ( 1 << ImGuiDir_Right );
+        }
+    }
+
+    if ( temp_input_is_active )
+    {
+        // Only clamp CTRL+Click input when ImGuiSliderFlags_AlwaysClamp is set
+        const bool is_clamp_input = ( flags & ImGuiSliderFlags_AlwaysClamp ) != 0;
+        return TempInputScalar( frame_bb, id, label, data_type, p_data, format, is_clamp_input ? p_min : NULL, is_clamp_input ? p_max : NULL );
+    }
+
+    // Draw frame
+    const ImU32 frame_col = GetColorU32( g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg );
+    RenderNavHighlight( frame_bb, id );
+    RenderFrame( frame_bb.Min, frame_bb.Max, frame_col, true, g.Style.FrameRounding );
+
+    // Slider behavior
+    ImRect grab_bb;
+    const bool value_changed = SliderBehavior( frame_bb, id, data_type, p_data, p_min, p_max, format, flags, &grab_bb );
+    if ( value_changed )
+        MarkItemEdited( id );
+
+    // EDITED: Render grab
+    grab_bb.Min.y += 1.0f;
+    grab_bb.Max.y -= 1.0f;
+    if ( grab_bb.Max.x <= grab_bb.Min.x )
+        grab_bb.Max.x = grab_bb.Min.x + 1.0f;
+    auto& texture = getTexture( TextureType::GradientBtn );
+    if ( texture )
+    {
+        const float textureU = 0.125f + ( g.ActiveId == id ? 0.5f : hovered ? 0.25f : 0.f );
+        window->DrawList->AddImageRounded(
+            texture->getImTextureId(),
+            grab_bb.Min, grab_bb.Max,
+            ImVec2( textureU, 0.25f ), ImVec2( textureU, 0.75f ),
+            Color::white().getUInt32(), style.GrabRounding );
+    }
+    else
+    {
+        window->DrawList->AddRectFilled( grab_bb.Min, grab_bb.Max, GetColorU32( g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab ), style.GrabRounding );
+        const ImGuiCol colIdx = ( g.ActiveId != id ? ImGuiCol_TextDisabled : ( temp_input_is_active && hovered ) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button );
+        const ImU32 col = ImGui::GetColorU32( colIdx );
+        ImGui::RenderFrame( grab_bb.Min, grab_bb.Max, col, true, style.FrameRounding );
+    }
+
+    // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
+    // EDITED: added small rectangle under text
+    char value_buf[64];
+    const char* value_buf_end = value_buf + DataTypeFormatString( value_buf, IM_ARRAYSIZE( value_buf ), data_type, p_data, format );
+    const ImVec2 text_size = CalcTextSize( value_buf, value_buf_end, false );
+    const ImVec2 text_rect_half_size{ text_size.x * 0.5f + 4.0f, frame_bb.GetHeight() * 0.5f - 4.0f };
+    window->DrawList->AddRectFilled( frame_bb.GetCenter() - text_rect_half_size, frame_bb.GetCenter() + text_rect_half_size,
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TextContrastBackground ).getUInt32(),
+        style.FrameRounding );
+    if ( g.LogEnabled )
+        LogSetNextTextDecoration( "{", "}" );
+    RenderTextClipped( frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, &text_size, ImVec2( 0.5f, 0.5f ) );
+
+    if ( label_size.x > 0.0f )
+        RenderText( ImVec2( frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + styleFramePaddingY ), label );
+
+    IMGUI_TEST_ENGINE_ITEM_INFO( id, label, g.LastItemData.StatusFlags | ( temp_input_allowed ? ImGuiItemStatusFlags_Inputable : 0 ) );
+    return value_changed;
+}
+
+static void drawDragCursor()
+{
+    auto drawList = ImGui::GetForegroundDrawList();
+    auto mousePos = ImGui::GetMousePos();
+    mousePos.x += 5.f;
+
+    const auto menuPlugin = MR::getViewerInstance().getMenuPlugin();
+    const float scale = menuPlugin ? menuPlugin->menu_scaling() : 1.f;
+
+    const float spaceX = 10 * scale;
+    const float sizeX = 12 * scale;
+    const float sizeY_2 = 5 * scale;
+    // values are calculated so that width of the border line is 1 pixel
+    const float shiftLeftX = 2.6f * scale;
+    const float shiftRightX = 1.f * scale;
+    const float shiftRightY = 1.5f * scale;
+
+    drawList->AddTriangleFilled( ImVec2( mousePos.x - spaceX - sizeX - shiftLeftX, mousePos.y + sizeY_2 ),
+                                 ImVec2( mousePos.x - spaceX + shiftRightX, mousePos.y - shiftRightY ),
+                                 ImVec2( mousePos.x - spaceX + shiftRightX, mousePos.y + sizeY_2 * 2.f + shiftRightY ), 0xFF000000 );
+    drawList->AddTriangleFilled( ImVec2( mousePos.x - spaceX - sizeX, mousePos.y + sizeY_2 ),
+                                 ImVec2( mousePos.x - spaceX, mousePos.y ),
+                                 ImVec2( mousePos.x - spaceX, mousePos.y + sizeY_2 * 2.f ), 0xFFFFFFFF );
+
+    drawList->AddTriangleFilled( ImVec2( mousePos.x + spaceX - shiftRightX, mousePos.y - shiftRightY ),
+                                 ImVec2( mousePos.x + spaceX + sizeX + shiftLeftX, mousePos.y + sizeY_2 ),
+                                 ImVec2( mousePos.x + spaceX - shiftRightX, mousePos.y + sizeY_2 * 2.f + shiftRightY ), 0xFF000000 );
+    drawList->AddTriangleFilled( ImVec2( mousePos.x + spaceX, mousePos.y ),
+                                 ImVec2( mousePos.x + spaceX + sizeX, mousePos.y + sizeY_2 ),
+                                 ImVec2( mousePos.x + spaceX, mousePos.y + sizeY_2 * 2.f ), 0xFFFFFFFF );
+}
+
+void detail::drawDragTooltip( std::string rangeText )
+{
+    static bool inputMode = false;
+    if ( ImGui::IsItemActivated() )
+        inputMode = ( ImGui::GetIO().MouseClicked[0] && ImGui::GetIO().KeyCtrl ) || ImGui::GetIO().MouseDoubleClicked[0];
+
+    if ( ImGui::IsItemActive() )
+    {
+        if ( !inputMode )
+        {
+            ImGui::SetMouseCursor( ImGuiMouseCursor_None );
+            drawDragCursor();
+            ImGui::BeginTooltip();
+            ImGui::TextUnformatted( "Drag with Shift - faster, Alt - slower" );
+            ImGui::EndTooltip();
+        }
+
+        if ( !rangeText.empty() )
+        {
+            ImGui::BeginTooltip();
+            ImGui::TextUnformatted( rangeText.c_str() );
+            ImGui::EndTooltip();
+        }
+    }
+}
+
+void detail::markItemEdited( ImGuiID id )
+{
+    ImGui::MarkItemEdited( id );
+}
+
+bool sliderFloat( const char* label, float* v, float v_min, float v_max, const char* format, ImGuiSliderFlags flags )
+{
+    return detail::genericSlider( label, ImGuiDataType_Float, v, &v_min, &v_max, format, flags );
+}
+
+bool sliderInt( const char* label, int* v, int v_min, int v_max, const char* format, ImGuiSliderFlags flags )
+{
+    return detail::genericSlider( label, ImGuiDataType_S32, v, &v_min, &v_max, format, flags );
+}
+
 bool inputTextCentered( const char* label, std::string& str, float width /*= 0.0f*/,
     ImGuiInputTextFlags flags /*= 0*/, ImGuiInputTextCallback callback /*= NULL*/, void* user_data /*= NULL */ )
 {
@@ -952,16 +1128,14 @@ bool inputTextCentered( const char* label, std::string& str, float width /*= 0.0
 void inputTextCenteredReadOnly( const char* label, const std::string& str, float width /*= 0.0f*/, const std::optional<ImVec4>& textColor /*= {} */ )
 {
     const auto& style = ImGui::GetStyle();
-    const auto& viewer = MR::Viewer::instanceRef();
     const auto estimatedSize = ImGui::CalcTextSize( str.c_str() );
-    const float scaling = viewer.getMenuPlugin() ? viewer.getMenuPlugin()->menu_scaling() : 1.0f;
-    const ImVec2 padding{ 2 * style.FramePadding.x * scaling , 2 * style.FramePadding.y * scaling };
+    const ImVec2 padding( 2 * style.FramePadding.x, 2 * style.FramePadding.y );
     const auto actualWidth = ( width == 0.0f ) ? estimatedSize.x + padding.x : width;
 
     ImGui::SetNextItemWidth( actualWidth );
     StyleParamHolder sh;
     if ( actualWidth > estimatedSize.x )
-        sh.addVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );
+        sh.addVar( ImGuiStyleVar_FramePadding, { std::floor( ( actualWidth - estimatedSize.x ) * 0.5f ), style.FramePadding.y } );
 
     if ( textColor )
     {
@@ -975,11 +1149,14 @@ void inputTextCenteredReadOnly( const char* label, const std::string& str, float
     }
     ImGui::InputText( ( std::string( "##" ) + label ).c_str(), const_cast< std::string& >( str ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
     ImGui::PopStyleColor();
-    ImGui::SameLine();
 
-    if ( label && label[0] != '#' && label[0] != '\0' && label[1] != '#' )
-        ImGui::Text( "%s", label );
+    std::size_t endOfLabel = std::string_view( label ).find( "##" );
 
+    if ( endOfLabel > 0 )
+    {
+        ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+        ImGui::TextUnformatted( label, endOfLabel != std::string_view::npos ? label + endOfLabel : nullptr );
+    }
 }
 
 void transparentText( const char* fmt, ... )
@@ -1029,15 +1206,15 @@ void setTooltipIfHovered( const std::string& text, float scaling )
 
 void separator( float scaling, const std::string& text /*= ""*/, int issueCount /*= -1 */ )
 {
-    separator( 
-        scaling, 
-        text, 
+    separator(
+        scaling,
+        text,
         issueCount > 0 ? ImVec4{ 0.886f, 0.267f, 0.267f, 1.0f } : ImVec4{ 0.235f, 0.663f, 0.078f, 1.0f },
         issueCount >= 0 ? std::to_string( issueCount ) : "");
 }
 
-void separator( 
-    float scaling, 
+void separator(
+    float scaling,
     const std::string& text,
     const ImVec4& color,
     const std::string& issue )
@@ -1047,7 +1224,7 @@ void separator(
     {
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling );
     }
-    
+
     if ( text.empty() )
     {
         ImGui::Separator();
@@ -1128,6 +1305,55 @@ void progressBar( float scaling, float fraction, const Vector2f& sizeArg /*= Vec
     ImVec2 realTextSize = ImGui::CalcTextSize( textBuf );
 
     ImGui::RenderText( ImVec2( bb.Max.x - realTextSize.x, bb.Min.y + ( size.y - realTextSize.y ) * 0.5f ), textBuf );
+}
+
+bool beginTabBar( const char* str_id, ImGuiTabBarFlags flags )
+{
+    const auto& style = ImGui::GetStyle();
+    // Adjust tabs size
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x + 2, style.FramePadding.y + 4 ) );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, MR::StyleConsts::pluginItemSpacing );
+
+    bool result = ImGui::BeginTabBar( str_id, flags );
+
+    ImGui::PopStyleVar( 2 );
+    return result;
+}
+
+void endTabBar()
+{
+    ImGui::EndTabBar();
+}
+
+bool beginTabItem( const char* label, bool* p_open, ImGuiTabItemFlags flags )
+{
+    // Set colors
+    ImGuiTabBar* tab_bar = ImGui::GetCurrentTabBar();
+    assert( tab_bar );
+    ImGuiID itemId = ImGui::GetCurrentWindowRead()->GetID( label );
+    bool active = tab_bar->VisibleTabId == itemId;
+    ImGui::PushStyleColor( ImGuiCol_Text,
+        ColorTheme::getRibbonColor( active ? ColorTheme::RibbonColorsType::DialogTabActiveText :
+                                             ColorTheme::RibbonColorsType::DialogTabText ) );
+    ImGui::PushStyleColor( ImGuiCol_TabHovered,
+        ColorTheme::getRibbonColor( active ? ColorTheme::RibbonColorsType::DialogTabActiveHovered :
+                                             ColorTheme::RibbonColorsType::DialogTabHovered ) );
+    const auto& style = ImGui::GetStyle();
+    // Adjust tab size
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x + 2, style.FramePadding.y + 4 ) );
+    // Set spacing between tabs
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( style.ItemInnerSpacing.x - 1, style.ItemInnerSpacing.y ) );
+
+    bool result = ImGui::BeginTabItem( label, p_open, flags );
+
+    ImGui::PopStyleVar( 2 );
+    ImGui::PopStyleColor( 2 );
+    return result;
+}
+
+void endTabItem()
+{
+    ImGui::EndTabItem();
 }
 
 } // namespace UI

@@ -101,6 +101,10 @@ Primitives::ConeSegment Primitives::ConeSegment::baseCircle( bool negative ) con
     ret.center = basePoint( negative ).center;
     ret.positiveLength = ret.negativeLength = 0;
     if ( negative )
+        ret.positiveSideRadius = ret.negativeSideRadius;
+    else
+        ret.negativeSideRadius = ret.positiveSideRadius;
+    if ( negative )
         ret.dir = -ret.dir;
     return ret;
 }
@@ -145,28 +149,28 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
         return ( s.x.x + s.y.y + s.z.z ) / 3;
     };
 
+    AffineXf3f parentXf;
+    if ( object.parent() )
+        parentXf = object.parent()->worldXf(); // Otherwise an identity xf is used, which is fine.
+
     if ( auto point = dynamic_cast<const PointObject*>( &object ) )
     {
-        return toPrimitive( point->parent()->worldXf()( point->getPoint() ) );
+        return toPrimitive( parentXf( point->getPoint() ) );
     }
     else if ( auto line = dynamic_cast<const LineObject*>( &object ) )
     {
-        auto parentXf = line->parent()->worldXf();
         return toPrimitive( LineSegm3f( parentXf( line->getPointA() ), parentXf( line->getPointB() ) ) );
     }
     else if ( auto plane = dynamic_cast<const PlaneObject*>( &object ) )
     {
-        auto parentXf = plane->parent()->worldXf();
         return Primitives::Plane{ .center = parentXf( plane->getCenter() ), .normal = ( parentXf.A * plane->getNormal() ).normalized() };
     }
     else if ( auto sphere = dynamic_cast<const SphereObject*>( &object ) )
     {
-        auto parentXf = sphere->parent()->worldXf();
         return toPrimitive( Sphere( parentXf( sphere->getCenter() ), sphere->getRadius() * getUniformScale( parentXf.A ) ) );
     }
     else if ( auto circle = dynamic_cast<const CircleObject*>( &object ) )
     {
-        auto parentXf = circle->parent()->worldXf();
         float radius = circle->getRadius() * getUniformScale( parentXf.A );
         return Primitives::ConeSegment{
             .center = parentXf( circle->getCenter() ),
@@ -178,7 +182,6 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
     }
     else if ( auto cyl = dynamic_cast<const CylinderObject*>( &object ) )
     {
-        auto parentXf = cyl->parent()->worldXf();
         float scale = getUniformScale( parentXf.A );
         float radius = cyl->getRadius() * scale;
         float halfLen = cyl->getLength() / 2 * scale;
@@ -194,7 +197,6 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
     }
     else if ( auto cone = dynamic_cast<const ConeObject*>( &object ) )
     {
-        auto parentXf = cone->parent()->worldXf();
         Primitives::ConeSegment ret{
             .center = parentXf( cone->getCenter() ),
             .dir = parentXf.A * cone->getDirection(),
@@ -447,9 +449,16 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::Sphere>::measure( cons
     float axisToSphereCenterDist = axisToSphereCenterDelta.length();
     Vector3f axisToSphereCenterDir = axisToSphereCenterDelta;
     if ( axisToSphereCenterDist > 0 )
+    {
         axisToSphereCenterDir /= axisToSphereCenterDist;
+
+        // Make orthogonal to the cone axis to increase stability.
+        axisToSphereCenterDir = cross( a.dir, cross( axisToSphereCenterDir, a.dir ) ).normalized();
+    }
     else
+    {
         axisToSphereCenterDir = cross( a.dir, a.dir.furthestBasisVector() ).normalized(); // An arbitrary direction.
+    }
 
     // Direction parallel to the conical surface, from the sphere center towards the positive cone tip.
     Vector3f dirToPositiveTip;
@@ -486,6 +495,8 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::Sphere>::measure( cons
     float slopedSignedDistToPositiveCap = ( projectedSpherePos - positiveCapPos ) / lengthFac;
     // Signed distance from the sphere center to the negative cap edge, measured in parallel to the conical surface (positive if beyond the edge).
     float slopedSignedDistToNegativeCap = ( negativeCapPos - projectedSpherePos ) / lengthFac;
+    // Whether the positive cap edge is closer to the sphere center than the negative one, measured in parallel to the conical surface.
+    bool positiveCapIsSlopedCloser = slopedSignedDistToPositiveCap > slopedSignedDistToNegativeCap;
 
     // Distance between the conical surface and the cone axis, measured along the normal from the conical surface to the spehre center.
     float axisToSurfaceSlopedDist = coneLengthIsFinite
@@ -495,11 +506,16 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::Sphere>::measure( cons
     // Signed distance from the sphere center to the conical surface (positive if outside).
     float signedDistToSurface = axisToSphereCenterDist * lengthFac - axisToSurfaceSlopedDist;
 
+    // Signed distance from the sphere center to the positive cap, measured along the cap normal.
+    float signedDistToPositiveCap = signedDistAlongAxis - a.positiveLength;
+    // Signed distance from the sphere center to the negative cap, measured along the cap normal.
+    float signedDistToNegativeCap = -a.negativeLength - signedDistAlongAxis;
+
     // Whether we're closer to the positive cap than the negative cap.
-    bool positiveCapIsCloser = slopedSignedDistToPositiveCap >= slopedSignedDistToNegativeCap;
+    bool positiveCapIsCloser = signedDistToPositiveCap > signedDistToNegativeCap;
 
     // Signed distance from the sphere center to the closest cap (positive if outside).
-    float signedDistToClosestCap = positiveCapIsCloser ? signedDistAlongAxis - a.positiveLength : -a.negativeLength - signedDistAlongAxis;
+    float signedDistToClosestCap = positiveCapIsCloser ? signedDistToPositiveCap : signedDistToNegativeCap;
 
     MeasureResult ret;
     ret.distance.status = MeasureResult::Status::ok;
@@ -508,7 +524,7 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::Sphere>::measure( cons
 
     if ( a.hollow || signedDistToSurface > signedDistToClosestCap )
     {
-        if ( signedDistToClosestCap <= 0 )
+        if ( slopedSignedDistToPositiveCap <= 0 && slopedSignedDistToNegativeCap <= 0 )
         {
             // Near the conical surface.
             ret.distance.distance = ( a.hollow ? std::abs( signedDistToSurface ) : signedDistToSurface ) - b.radius;
@@ -533,13 +549,13 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::Sphere>::measure( cons
     if ( !haveDistance )
     {
         // Distance from the sphere center to the cap edge, projected onto the normal to the cone axis.
-        float distanceTowardsAxis = axisToSphereCenterDist - ( positiveCapIsCloser ? a.positiveSideRadius : a.negativeSideRadius );
+        float distanceTowardsAxis = axisToSphereCenterDist - ( positiveCapIsSlopedCloser ? a.positiveSideRadius : a.negativeSideRadius );
         // Distance from the sphere center to the cap, projected onto the cone axis.
-        float distanceAlongAxis = signedDistAlongAxis - ( positiveCapIsCloser ? a.positiveLength : -a.negativeLength );
+        float distanceAlongAxis = signedDistAlongAxis - ( positiveCapIsSlopedCloser ? a.positiveLength : -a.negativeLength );
 
         ret.distance.distance = std::sqrt( distanceAlongAxis * distanceAlongAxis + distanceTowardsAxis * distanceTowardsAxis ) - b.radius;
-        ret.distance.closestPointA = a.center + a.dir * ( positiveCapIsCloser ? a.positiveLength : -a.negativeLength )
-            + axisToSphereCenterDir * ( positiveCapIsCloser ? a.positiveSideRadius : a.negativeSideRadius );
+        ret.distance.closestPointA = a.center + a.dir * ( positiveCapIsSlopedCloser ? a.positiveLength : -a.negativeLength )
+            + axisToSphereCenterDir * ( positiveCapIsSlopedCloser ? a.positiveSideRadius : a.negativeSideRadius );
         ret.distance.closestPointB = b.center - ( a.dir * distanceAlongAxis + axisToSphereCenterDir * distanceTowardsAxis ).normalized() * b.radius;
 
         haveDistance = true;

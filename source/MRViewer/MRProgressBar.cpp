@@ -121,12 +121,17 @@ void ProgressBar::setup( float scaling )
         }
         if ( instance.finished_ )
         {
+            if ( instance.isOrdered_ )
+            {
+                instance.lastOperationTimeSec_ = float( ( std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::system_clock::now() - instance.operationStartTime_ ) ).count() ) * 1e-3f;
+                spdlog::info( instance.lastOperationTimeSec_ );
+            }
             if ( instance.onFinish_ )
             {
                 instance.onFinish_();
                 instance.onFinish_ = {};
-                instance.isOrdered_ = false;
             }
+            instance.isOrdered_ = false;
             instance.closeDialogNextFrame_ = true;
             getViewerInstance().incrementForceRedrawFrames();
         }
@@ -291,6 +296,16 @@ float ProgressBar::getProgress()
     return instance_().progress_;
 }
 
+float ProgressBar::getLastOperationTime()
+{
+    return instance_().lastOperationTimeSec_;
+}
+
+const std::string& ProgressBar::getLastOperationTitle()
+{
+    return instance_().title_;
+}
+
 bool ProgressBar::setProgress( float p )
 {
     auto& instance = instance_();
@@ -427,6 +442,7 @@ void ProgressBar::initialize_()
     ImGui::OpenPopup( setupId_ );
     frameRequest_.reset();
 
+    operationStartTime_ = std::chrono::system_clock::now();
     if ( deferredInit_->postInit )
         deferredInit_->postInit();
 

@@ -11,6 +11,7 @@
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRPlaneObject.h"
 #include "MRMesh/MRSceneRoot.h"
+#include "MRMesh/MRPolyline.h"
 #include "imgui_internal.h"
 
 namespace MR
@@ -46,6 +47,7 @@ void PlaneWidget::definePlane()
     planeObj_->setVisualizeProperty( true, MeshVisualizePropertyType::BordersHighlight, ViewportMask::all() );
     planeObj_->setFrontColor( Color::gray(), false );
     planeObj_->setBackColor( Color::gray() );
+    planeObj_->setVisible( showPlaneByDefault_ );
     SceneRoot::get().addChild( planeObj_ );
 
     updateWidget_();
@@ -142,8 +144,7 @@ bool PlaneWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         plane_ = Plane3f::fromDirAndPt( planeObj->getNormal(), planeObj->getCenter() );
         definePlane();
         updatePlane( plane_ );
-        if ( isInLocalMode() )
-            setLocalMode( 0.0f );
+        setLocalMode( true );
         importPlaneMode_ = false;
         return true;
     }

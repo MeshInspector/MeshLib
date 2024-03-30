@@ -15,6 +15,17 @@
 namespace MR
 {
 
+const std::vector<Color> Palette::DefaultColors =
+{
+    Color( Vector4f { 0.1f, 0.25f, 1.0f, 1.f } ),// almost blue   |
+    Color( Vector4f { 0.15f, 0.5f, 0.75f,1.f } ),//               | -> "inside" the ref mesh
+    Color( Vector4f { 0.2f, 0.75f, 0.5f, 1.f } ),//               |
+    Color( Vector4f { 0.25f, 1.0f, 0.25f,1.f } ),// almost green -> zero distance
+    Color( Vector4f { 0.5f, 0.75f, 0.2f, 1.f } ),//               |
+    Color( Vector4f { 0.75f, 0.5f, 0.15f,1.f } ),//               | -> "outside"
+    Color( Vector4f { 1.0f, 0.25f, 0.1f, 1.f } ),// almost red    |
+};
+
 Palette::Palette( const std::vector<Color>& colors )
 {
     setBaseColors( colors );
@@ -349,7 +360,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     if ( paletteWindow )
     {
         const auto currentPos = paletteWindow->Pos;
-        const auto currentSize = paletteWindow->Size;
+        auto currentSize = paletteWindow->Size;
         constexpr float cornerSize = 50.0f;
         const auto ctx = ImGui::GetCurrentContext();
 
@@ -363,6 +374,14 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
            {
                 ctx->IO.MouseClickedCount[0] = 1; // prevent double-click on the corner to change window size
            }
+        if ( prevMaxLabelWidth_ == 0.0f )
+            prevMaxLabelWidth_ = maxTextSize;
+        if ( prevMaxLabelWidth_ != maxTextSize )
+        {
+            currentSize.x += ( maxTextSize - prevMaxLabelWidth_ );
+            ImGui::SetNextWindowSize( currentSize, ImGuiCond_Always );
+            prevMaxLabelWidth_ = maxTextSize;
+        }
     }
 
     ImGui::Begin( windowName.c_str(), &isWindowOpen_,

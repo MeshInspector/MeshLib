@@ -16,6 +16,10 @@ struct SaveSettings
     /// false - save all points/vertices preserving their indices
     bool saveValidOnly = true;
 
+    /// if it is turned on, then higher compression ratios are reached but the order of triangles is changed;
+    /// currently affects .ctm format only
+    bool rearrangeTriangles = true;
+
     /// optional per-vertex color to save with the geometry
     const VertColors * colors = nullptr;
 

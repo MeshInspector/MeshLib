@@ -6,6 +6,7 @@
 #include "MRPointCloud.h"
 #include "MRGTest.h"
 #include "MRTimer.h"
+#include "MRPolylineEdgeIterator.h"
 #include <cassert>
 
 namespace MR
@@ -138,6 +139,20 @@ void accumulateFaceCenters( PointAccumulator& accum, const MeshPart& mp, const A
             auto center = ( 1 / 3.0f ) * Vector3f{ mp.mesh.points[v0] + mp.mesh.points[v1] + mp.mesh.points[v2] };
             accum.addPoint( center.transformed( xf ), triArea );
         }
+    }
+}
+
+void accumulateLineCenters( PointAccumulator& accum, const Polyline3& pl, const AffineXf3f* xf )
+{
+    MR_TIMER
+    const auto& topology = pl.topology;
+    for ( auto edge : undirectedEdges(topology) )
+    {
+        const auto& p1 = pl.orgPnt( edge );
+        const auto& p2 = pl.destPnt( edge );
+        auto center = (p1 + p2) / 2.0f;
+        const float length = ( p1 - p2 ).length();
+        accum.addPoint( center.transformed( xf ), length );
     }
 }
 

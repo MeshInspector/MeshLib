@@ -6,11 +6,11 @@
 #include "MRSceneColors.h"
 #include "MRHeapBytes.h"
 #include "MRSerializer.h"
+#include "MRStringConvert.h"
+#include "MRDirectory.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
-#include "MRStringConvert.h"
-#include <filesystem>
 
 namespace MR
 {
@@ -66,7 +66,10 @@ void ObjectPointsHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
     VisualObject::setDirtyFlags( mask, invalidateCaches );
 
     if ( mask & DIRTY_FACE )
+    {
         numValidPoints_.reset();
+        setRenderDiscretization( chooseRenderDiscretization_() );
+    }
 
     if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
     {
@@ -77,10 +80,23 @@ void ObjectPointsHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
     }
 }
 
+
+void ObjectPointsHolder::swapSignals_( Object& other )
+{
+    VisualObject::swapSignals_( other );
+    if ( auto otherPoints = other.asType<ObjectPointsHolder>() )
+    {
+        std::swap( pointsSelectionChangedSignal, otherPoints->pointsSelectionChangedSignal );
+    }
+    else
+        assert( false );
+}
+
 void ObjectPointsHolder::selectPoints( VertBitSet newSelection )
 {
     selectedPoints_ = std::move( newSelection );
     numSelectedPoints_.reset();
+    pointsSelectionChangedSignal();
     dirty_ |= DIRTY_SELECTION;
 }
 
@@ -92,22 +108,39 @@ void ObjectPointsHolder::setSelectedVerticesColor( const Color& color, ViewportI
     needRedraw_ = true;
 }
 
-AllVisualizeProperties ObjectPointsHolder::getAllVisualizeProperties() const
+bool ObjectPointsHolder::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const
 {
-    AllVisualizeProperties res;
-    res.resize( PointsVisualizePropertyType::PointsVisualizePropsCount );
-    for ( int i = 0; i < res.size(); ++i )
-        res[i] = getVisualizePropertyMask( unsigned( i ) );
-    return res;
+    return VisualObject::supportsVisualizeProperty( type ) || type.tryGet<PointsVisualizePropertyType>().has_value();
 }
 
-const ViewportMask& ObjectPointsHolder::getVisualizePropertyMask( unsigned type ) const
+AllVisualizeProperties ObjectPointsHolder::getAllVisualizeProperties() const
 {
-    switch ( type )
+    AllVisualizeProperties ret = VisualObject::getAllVisualizeProperties();
+    getAllVisualizePropertiesForEnum<PointsVisualizePropertyType>( ret );
+    return ret;
+}
+
+void ObjectPointsHolder::setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos )
+{
+    VisualObject::setAllVisualizeProperties_( properties, pos );
+    setAllVisualizePropertiesForEnum<PointsVisualizePropertyType>( properties, pos );
+}
+
+const ViewportMask &ObjectPointsHolder::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
+{
+    if ( auto value = type.tryGet<PointsVisualizePropertyType>() )
     {
-    case PointsVisualizePropertyType::SelectedVertices:
-        return showSelectedVertices_;
-    default:
+        switch ( *value )
+        {
+        case PointsVisualizePropertyType::SelectedVertices:
+            return showSelectedVertices_;
+        case PointsVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
+        }
+        assert( false && "Invalid enum." );
+        return visibilityMask_;
+    }
+    else
+    {
         return VisualObject::getVisualizePropertyMask( type );
     }
 }
@@ -160,6 +193,16 @@ size_t ObjectPointsHolder::heapBytes() const
         + MR::heapBytes( points_ );
 }
 
+void ObjectPointsHolder::setSavePointsFormat( const char * newFormat )
+{
+    if ( !newFormat || *newFormat != '.' )
+    {
+        assert( false );
+        return;
+    }
+    savePointsFormat_ = newFormat;
+}
+
 void ObjectPointsHolder::swapBase_( Object& other )
 {
     if ( auto otherPointsHolder = other.asType<ObjectPointsHolder>() )
@@ -188,44 +231,34 @@ Expected<std::future<VoidOrErrStr>> ObjectPointsHolder::serializeModel_( const s
     if ( ancillary_ || !points_ )
         return {};
 
-    const auto * colorMapPtr = vertsColorMap_.empty() ? nullptr : &vertsColorMap_;
-#ifndef MRMESH_NO_OPENCTM
-    if ( points_->points.empty() ) // toCtm requires at least one point in the vector
+    if ( points_->points.empty() ) // some formats (e.g. .ctm) require at least one point in the vector
         return std::async( getAsyncLaunchType(), []{ return VoidOrErrStr{}; } );
-    return std::async( getAsyncLaunchType(),
-        [points = points_, filename = utf8string( path ) + ".ctm", ptr = colorMapPtr] ()
+
+    SaveSettings saveSettings;
+    saveSettings.saveValidOnly = false;
+    saveSettings.rearrangeTriangles = false;
+    if ( !vertsColorMap_.empty() )
+        saveSettings.colors = &vertsColorMap_;
+    auto save = [points = points_, filename = std::filesystem::path( path ) += savePointsFormat_, saveSettings]()
     {
-        MR::PointsSave::CtmSavePointsOptions settings;
-        settings.saveValidOnly = false;
-        settings.colors = ptr;
-        return MR::PointsSave::toCtm( *points, pathFromUtf8( filename ), settings );
-    } );
-#else
-    return std::async( getAsyncLaunchType(),
-        [points = points_, filename = utf8string( path ) + ".ply", ptr = colorMapPtr] ()
-    {
-        MR::PointsSave::toPly( *points, pathFromUtf8( filename ), MR::PointsSave::Settings{ .saveValidOnly = false, .colors = ptr } );
-    } );
-#endif
+        return MR::PointsSave::toAnySupportedFormat( *points, filename, saveSettings );
+    };
+    return std::async( getAsyncLaunchType(), save );
 }
 
 VoidOrErrStr ObjectPointsHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
-    auto fname = path;
-#ifndef MRMESH_NO_OPENCTM
-    fname += ".ctm";
+    auto modelPath = pathFromUtf8( utf8string( path ) + ".ctm" ); //quick path for most used format
     std::error_code ec;
-    if (   !is_regular_file( fname, ec ) // now we do not write a file for empty point cloud
-        || file_size( fname, ec ) == 0 ) // and previously an empty file was created
+    if ( !is_regular_file( modelPath, ec ) )
+        modelPath = findPathWithExtension( path );
+    if ( modelPath.empty()                   // now we do not write a file for empty point cloud
+        || file_size( modelPath, ec ) == 0 ) // and previously an empty file was created
     {
         points_ = std::make_shared<PointCloud>();
         return {};
     }
-    auto res = PointsLoad::fromCtm( fname, &vertsColorMap_, progressCb );
-#else
-    fname += ".ply";
-    auto res = PointsLoad::fromPly( fname, &vertsColorMap_, progressCb );
-#endif
+    auto res = PointsLoad::fromAnySupportedFormat( modelPath, &vertsColorMap_, nullptr, progressCb );
     if ( !res.has_value() )
         return unexpected( std::move( res.error() ) );
 
@@ -233,8 +266,7 @@ VoidOrErrStr ObjectPointsHolder::deserializeModel_( const std::filesystem::path&
         setColoringType( ColoringType::VertsColorMap );
 
     points_ = std::make_shared<PointCloud>( std::move( res.value() ) );
-    if ( int pointCount = int( points_->points.size() ); pointCount > 2'000'000 )
-        setRenderDiscretization( pointCount / 1'000'000 );
+    setRenderDiscretization( chooseRenderDiscretization_() );
     return {};
 }
 
@@ -246,6 +278,8 @@ void ObjectPointsHolder::serializeFields_( Json::Value& root ) const
     serializeToJson( selectedPoints_, root["SelectionVertBitSet"] );
     if ( points_ )
         serializeToJson( points_->validPoints, root["ValidVertBitSet"] );
+
+    root["PointSize"] = pointSize_;
 }
 
 void ObjectPointsHolder::deserializeFields_( const Json::Value& root )
@@ -262,6 +296,9 @@ void ObjectPointsHolder::deserializeFields_( const Json::Value& root )
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
         setDefaultSceneProperties_();
+
+    if ( const auto& pointSizeJson = root["PointSize"]; pointSizeJson.isDouble() )
+        pointSize_ = float( pointSizeJson.asDouble() );
 }
 
 void ObjectPointsHolder::setupRenderObject_() const
@@ -290,6 +327,24 @@ void ObjectPointsHolder::setSelectedVerticesColorsForAllViewports( ViewportPrope
 void ObjectPointsHolder::setDefaultSceneProperties_()
 {
     setDefaultColors_();
+}
+
+int ObjectPointsHolder::chooseRenderDiscretization_()
+{
+    return std::max( 1, int( numValidPoints() ) / maxRenderingPoints_ );
+}
+
+int ObjectPointsHolder::getMaxAutoRenderingPoints() const
+{
+    return maxRenderingPoints_;
+}
+
+void ObjectPointsHolder::setMaxAutoRenderingPoints( int val )
+{
+    if ( maxRenderingPoints_ == val )
+        return;
+    maxRenderingPoints_ = val;
+    setRenderDiscretization( chooseRenderDiscretization_() );
 }
 
 }

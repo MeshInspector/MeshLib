@@ -25,6 +25,7 @@ struct SubdivideSettings
     float maxAngleChangeAfterFlip = FLT_MAX;
     /// If this value is less than FLT_MAX then edge flips will
     /// ignore dihedral angle check if one of triangles has aspect ratio more than this value
+    /// Unit: rad
     float criticalAspectRatioFlip = 1000.0f;
     /// Region on mesh to be subdivided, it is updated during the operation
     FaceBitSet * region = nullptr;
@@ -47,6 +48,8 @@ struct SubdivideSettings
     /// In case of activated smoothMode, the smoothness is locally deactivated at the edges having
     /// dihedral angle at least this value
     float minSharpDihedralAngle = PI_F / 6; // 30 degrees
+    /// if true, then every new vertex will be projected on the original mesh (before smoothing)
+    bool projectOnOriginalMesh = false;
     /// this function is called each time a new vertex has been created, but before the ring is made Delone
     std::function<void(VertId)> onVertCreated;
     /// this function is called each time edge (e) is split into (e1->e), but before the ring is made Delone

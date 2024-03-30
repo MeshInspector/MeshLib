@@ -51,12 +51,12 @@ bool TouchesController::onTouchMove_( int id, int x, int y )
             viewer->draw();
         };
     }
-    else if ( multiInfo_.getNumPressed() == 2 && ( touchModeMask_ & ModeBit::Any ) )
+    else if ( multiInfo_.getNumPressed() == 2 && bool( touchModeMask_ & ModeBit::Any ) )
     {
         eventCall = [info = multiInfo_, prevInfoPtr = &multiPrevInfo_, viewer, modeMask = touchModeMask_,transformModifierCb = transformModifierCb_]() mutable
         {
             auto& prevInfoRef = *prevInfoPtr;
-            if ( !prevInfoRef.getIdByFinger( MultiInfo::Finger::First ) || 
+            if ( !prevInfoRef.getIdByFinger( MultiInfo::Finger::First ) ||
                  !prevInfoRef.getIdByFinger( MultiInfo::Finger::Second ) )
                  prevInfoRef = info;
             auto oldPos0 = *prevInfoRef.getPosition( MultiInfo::Finger::First );
@@ -85,13 +85,13 @@ bool TouchesController::onTouchMove_( int id, int x, int y )
             auto oldWorldCenter = ( oldWorldPos0 + oldWorldPos1 ) * 0.5f;
             auto newWorldCenter = ( newWorldPos0 + newWorldPos1 ) * 0.5f;
             // TRANSLATION
-            if ( modeMask & ModeBit::Translate )
+            if ( bool( modeMask & ModeBit::Translate ) )
             {
                 aggregateXf = AffineXf3f::translation( newWorldCenter - oldWorldCenter );
             }
 
             // ROTATION
-            if ( modeMask & ModeBit::Rotate )
+            if ( bool( modeMask & ModeBit::Rotate ) )
             {
                 auto a = ( oldWorldPos1 - oldWorldPos0 ).normalized();
                 auto b = ( newWorldPos1 - newWorldPos0 ).normalized();
@@ -100,7 +100,7 @@ bool TouchesController::onTouchMove_( int id, int x, int y )
             }
 
             // ZOOM
-            if ( modeMask & ModeBit::Zoom )
+            if ( bool( modeMask & ModeBit::Zoom ) )
             {
                 auto cameraPoint = vp.getCameraPoint();
                 auto vpCenter = vp.unprojectFromClipSpace( Vector3f( 0.0f, 0.0f, sceneCenterVpZ * 2.0f - 1.0f ) );
@@ -155,7 +155,7 @@ bool TouchesController::MultiInfo::update( TouchesController::Info info, bool re
         thisInfoPtr = &info_[0];
     else if ( info.id == info_[1].id )
         thisInfoPtr = &info_[1];
-    
+
     if ( remove )
     {
         if ( !thisInfoPtr )

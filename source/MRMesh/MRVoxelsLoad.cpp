@@ -912,7 +912,7 @@ Expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem::pa
 {
     if ( cb && !cb( 0.f ) )
         return unexpected( getCancelMessage( path ) );
-    openvdb::io::File file( path.string() );
+    openvdb::io::File file( utf8string( path ) );
     openvdb::initialize();
     file.open();
     std::vector<VdbVolume> res;

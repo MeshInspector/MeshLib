@@ -1,6 +1,5 @@
 #pragma once
 
-#include "MRVector4.h"
 #include "MRAffineXf3.h"
 #include "MRBox.h"
 #include "MRBitSet.h"
@@ -81,6 +80,12 @@ public:
     MRMESH_API std::shared_ptr<const Object> find( const std::string_view & name ) const;
     std::shared_ptr<Object> find( const std::string_view & name ) { return std::const_pointer_cast<Object>( const_cast<const Object*>( this )->find( name ) ); }
 
+    /// finds a direct child by type
+    template <typename T>
+    std::shared_ptr<const T> find() const;
+    template <typename T>
+    std::shared_ptr<T> find() { return std::const_pointer_cast<T>( const_cast<const Object*>( this )->find<T>() ); }
+
     /// finds a direct child by name and type
     template <typename T>
     std::shared_ptr<const T> find( const std::string_view & name ) const;
@@ -118,12 +123,26 @@ public:
     bool isLocked() const { return locked_; }
     virtual void setLocked( bool on ) { locked_ = on; }
 
+    /// If true, the scene tree GUI doesn't allow you to drag'n'drop this object into a different parent.
+    /// Defaults to false.
+    [[nodiscard]] bool isParentLocked() const { return parentLocked_; }
+    virtual void setParentLocked( bool lock ) { parentLocked_ = lock; }
+
     /// returns parent object in the tree
     const Object * parent() const { return static_cast<const Object *>( parent_ ); }
     Object * parent() { return static_cast<Object *>( parent_ ); }
 
     /// return true if given object is ancestor of this one, false otherwise
     MRMESH_API bool isAncestor( const Object* ancestor ) const;
+
+    /// Find a common ancestor between this object and the other one.
+    /// Returns null on failure (which is impossible if both are children of the scene root).
+    /// Will return `this` if `other` matches `this`.
+    [[nodiscard]] MRMESH_API Object* findCommonAncestor( Object& other );
+    [[nodiscard]] const Object* findCommonAncestor( const Object& other ) const
+    {
+        return const_cast<Object &>( *this ).findCommonAncestor( const_cast<Object &>( other ) );
+    }
 
     /// removes this from its parent children list
     /// returns false if it was already orphan
@@ -150,7 +169,7 @@ public:
 
     /// selects the object, returns true if value changed, otherwise returns false
     MRMESH_API virtual bool select( bool on );
-    bool isSelected() const { return selected_; }
+    virtual bool isSelected() const { return selected_; }
 
     /// ancillary object is an object hidden (in scene menu) from a regular user
     /// such objects cannot be selected, and if it has been selected, it is unselected when turn ancillary
@@ -160,11 +179,11 @@ public:
     /// sets the object visible in the viewports specified by the mask (by default in all viewports)
     MRMESH_API void setVisible( bool on, ViewportMask viewportMask = ViewportMask::all() );
     /// checks whether the object is visible in any of the viewports specified by the mask (by default in any viewport)
-    bool isVisible( ViewportMask viewportMask = ViewportMask::any() ) const { return !( visibilityMask_ & viewportMask ).empty(); }
+    bool isVisible( ViewportMask viewportMask = ViewportMask::any() ) const { return !( visibilityMask() & viewportMask ).empty(); }
     /// specifies object visibility as bitmask of viewports
     MRMESH_API virtual void setVisibilityMask( ViewportMask viewportMask );
     /// gets object visibility as bitmask of viewports
-    ViewportMask visibilityMask() const { return visibilityMask_; }
+    virtual ViewportMask visibilityMask() const { return visibilityMask_; }
 
     /// this method virtual because others data model types could have dirty flags or something
     virtual bool getRedrawFlag( ViewportMask ) const { return needRedraw_; }
@@ -208,10 +227,19 @@ public:
     /// returns bounding box of this object and all children visible in given (or default) viewport in world coordinates
     MRMESH_API Box3f getWorldTreeBox( ViewportId = {} ) const;
 
+    /// does the object have any visual representation (visible points, triangles, edges, etc.), no considering child objects
+    [[nodiscard]] virtual bool hasVisualRepresentation() const { return false; }
+
+    /// does the object have any model available (but possibly empty), 
+    /// e.g. ObjectMesh has valid mesh() or ObjectPoints has valid pointCloud()
+    [[nodiscard]] virtual bool hasModel() const { return false; }
+
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const;
 
-    /// signal about xf changing, triggered in setXf and setWorldXf,  it is called for children too
+    /// signal about xf changing
+    /// triggered in setXf and setWorldXf, it is called for children too
+    /// triggered in addChild and addChildBefore, it is called only for children object
     using XfChangedSignal = Signal<void() >;
     XfChangedSignal worldXfChangedSignal;
 protected:
@@ -247,14 +275,24 @@ protected:
 
     std::string name_;
     ViewportProperty<AffineXf3f> xf_;
-    ViewportMask visibilityMask_ = ViewportMask::all();
+    ViewportMask visibilityMask_ = ViewportMask::all(); // Prefer to not read directly. Use the getter, as it can be overridden.
     bool locked_ = false;
+    bool parentLocked_ = false;
     bool selected_{ false };
     bool ancillary_{ false };
     mutable bool needRedraw_{false};
 
     void propagateWorldXfChangedSignal_();
 };
+
+template <typename T>
+std::shared_ptr<const T> Object::find() const
+{
+    for ( const auto & child : children_ )
+        if ( auto res = std::dynamic_pointer_cast<T>( child ) )
+            return res;
+    return {}; // not found
+}
 
 template <typename T>
 std::shared_ptr<const T> Object::find( const std::string_view & name ) const

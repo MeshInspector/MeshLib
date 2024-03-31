@@ -1490,18 +1490,9 @@ float ImGuiMenu::drawSelectionInformation_()
             if ( totalVolume )
             {
                 ImGui::PushItemWidth( itemWidth );
-
-#if defined(__GNUC__) && !defined(__clang__) //disable strange warning. Maybe bug in GCC
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-
-                UI::readOnlyValue<VolumeUnit>( "Volume", *totalVolume );
+                float tv = *totalVolume;
+                UI::readOnlyValue<VolumeUnit>( "Volume", tv );
                 MR_FINALLY{ ImGui::PopItemWidth(); };
-
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
             }
             else
             {

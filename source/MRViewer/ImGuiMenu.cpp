@@ -1490,18 +1490,9 @@ float ImGuiMenu::drawSelectionInformation_()
             if ( totalVolume )
             {
                 ImGui::PushItemWidth( itemWidth );
-
-#if __GNUC__ == 12 // `totalVolume` may be used uninitialized. False positive in GCC
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-
-                UI::readOnlyValue<VolumeUnit>( "Volume", *totalVolume );
+                float tv = *totalVolume;
+                UI::readOnlyValue<VolumeUnit>( "Volume", tv );
                 MR_FINALLY{ ImGui::PopItemWidth(); };
-
-#if __GNUC__ == 12
-#pragma GCC diagnostic pop
-#endif
             }
             else
             {

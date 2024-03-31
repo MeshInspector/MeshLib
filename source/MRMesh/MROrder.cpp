@@ -175,7 +175,14 @@ VertBMap getVertexOrdering( const FaceBMap & faceMap, const MeshTopology & topol
     {
         for ( VertId v = range.begin(); v < range.end(); ++v )
         {
-            auto f = ~std::uint32_t(0);
+            if ( !topology.hasVert( v ) )
+            {
+                // put at the very end after sorting
+                ord[v] = OrderedVertex{ v, ~std::uint32_t(0) };
+                continue;
+            }
+             // if no incident faces, then put after other valid vertices but before invalid vertices
+            auto f = std::uint32_t( -(int)v - 2 );
             for ( EdgeId e : orgRing( topology, v ) )
                 f = std::min( f, std::uint32_t( getAt( faceMap.b, topology.left( e ) ) ) );
             ord[v] = OrderedVertex{ v, f };
@@ -228,12 +235,31 @@ UndirectedEdgeBMap getEdgeOrdering( const FaceBMap & faceMap, const MeshTopology
         int myNotLoneEdges = 0;
         for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
         {
-            auto f = std::min(
-                std::uint32_t( getAt( faceMap.b, topology.left( ue ) ) ),
-                std::uint32_t( getAt( faceMap.b, topology.right( ue ) ) ) );
-            ord[ue] = OrderedEdge{ ue, f };
-            if ( int(f) >= 0 )
+            const auto l = topology.left( ue );
+            const auto r = topology.right( ue );
+            if ( !l && !r )
+            {
+                if ( topology.isLoneEdge( ue ) )
+                {
+                    // put at the very end after sorting
+                    ord[ue] = OrderedEdge{ ue, std::uint32_t( -1 ) };
+                }
+                else
+                {
+                    // put after edges with valid left/right faces but before lone edges after sorting
+                    ord[ue] = OrderedEdge{ ue, std::uint32_t( -(int)ue - 2 ) };
+                    ++myNotLoneEdges;
+                }
+            }
+            else
+            {
+                auto f = std::min(
+                    std::uint32_t( getAt( faceMap.b, l ) ),
+                    std::uint32_t( getAt( faceMap.b, r ) ) );
+                assert ( int(f) >= 0 );
+                ord[ue] = OrderedEdge{ ue, f };
                 ++myNotLoneEdges;
+            }
         }
         notLoneEdges.fetch_add( myNotLoneEdges, std::memory_order_relaxed );
     } );

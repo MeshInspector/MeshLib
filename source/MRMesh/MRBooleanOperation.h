@@ -86,25 +86,23 @@ struct BooleanResultMapper
 };
 
 /// Parameters will be useful if specified
-struct BooleanOptionalParameters
+struct BooleanInternalParameters
 {
-    /// Will speedup if present
+    /// Instance of original mesh with tree for better speed
     const Mesh* originalMeshA{ nullptr };
-    /// Will speedup if present
+    /// Instance of original mesh with tree for better speed
     const Mesh* originalMeshB{ nullptr };
-    /// By default produce valid operation on disconnected components
-    /// if set merge all non-intersecting components
-    bool mergeAllNonIntersectingComponents = false;
 };
 
 /// Perform boolean operation on cut meshes
 /// \return mesh in space of meshA or error.
 /// \note: actually this function is meant to be internal, use "boolean" instead
 MRMESH_API Expected<Mesh, std::string> doBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut,
-                                                               const std::vector<EdgePath>& cutEdgesA, const std::vector<EdgePath>& cutEdgesB,
-                                                               BooleanOperation operation, const AffineXf3f* rigidB2A = nullptr,
-                                                               BooleanResultMapper* mapper = nullptr, 
-                                                               const BooleanOptionalParameters& optParams = {} );
+    const std::vector<EdgePath>& cutEdgesA, const std::vector<EdgePath>& cutEdgesB,
+    BooleanOperation operation, const AffineXf3f* rigidB2A = nullptr,
+    BooleanResultMapper* mapper = nullptr,
+    bool mergeAllNonIntersectingComponents = false, 
+    const BooleanInternalParameters& intParams = {} );
 
 /// \}
 

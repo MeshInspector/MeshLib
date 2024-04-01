@@ -1578,6 +1578,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
         map.tgt2srcFaces->resize( faceSize() );
 
     UndirectedEdgeBitSet existingEdges; //one of fromContours' edge
+    VertBitSet fromVerts = from.getValidVerts();
     for ( int i = 0; i < szContours; ++i )
     {
         const auto & thisContour = thisContours[i];
@@ -1598,16 +1599,19 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             auto e1 = thisContour[j];
             assert( !left( e1 ) );
             assert( ( flipOrientation && !from.left( e ) ) || ( !flipOrientation && !from.right( e ) ) );
-            set( vmap, from.org( e ), org( e1 ) );
-            set( vmap, from.dest( e ), dest( e1 ) );
+            auto fromOrg = from.org( e );
+            auto fromDest = from.dest( e );
+            set( vmap, fromOrg, org( e1 ) );
+            set( vmap, fromDest, dest( e1 ) );
+            fromVerts.reset( fromOrg );
+            fromVerts.reset( fromDest );
             [[maybe_unused]] bool eInserted = emap.insert( { e.undirected(), e.even() ? e1 : e1.sym() } ).second;
             assert( eInserted ); // all contour edges must be unique
             existingEdges.autoResizeSet( e.undirected() );
         }
     }
 
-    UndirectedEdgeBitSet fromEdges = from.findNotLoneUndirectedEdges();
-    VertBitSet fromVerts = from.getValidVerts();
+    UndirectedEdgeBitSet fromEdges = from.findNotLoneUndirectedEdges() - existingEdges;
     // first pass: fill maps
     EdgeId firstNewEdge = edges_.endId();
     for ( ; fbegin != fend; ++fbegin )
@@ -1620,6 +1624,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             if ( fromEdges.test_set( ue, false ) )
             {
                 auto [it, inserted] = emap.insert( { ue, {} } );
+                assert( inserted );
                 if ( inserted )
                 {
                     it->second = edges_.endId();
@@ -1636,6 +1641,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
                 if ( fromVerts.test_set( v, false ) )
                 {
                     auto [it, inserted] = vmap.insert( { v, {} } );
+                    assert( inserted );
                     if ( inserted )
                     {
                         auto nv = addVertId();

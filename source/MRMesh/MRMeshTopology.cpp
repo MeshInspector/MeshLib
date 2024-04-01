@@ -1625,15 +1625,12 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             {
                 auto [it, inserted] = emap.insert( { ue, {} } );
                 assert( inserted );
-                if ( inserted )
+                it->second = edges_.endId();
+                edges_.push_back( from.edges_[EdgeId{ ue }] );
+                edges_.push_back( from.edges_[EdgeId{ ue }.sym()] );
+                if ( map.tgt2srcEdges )
                 {
-                    it->second = edges_.endId();
-                    edges_.push_back( from.edges_[EdgeId{ ue }] );
-                    edges_.push_back( from.edges_[EdgeId{ ue }.sym()] );
-                    if ( map.tgt2srcEdges )
-                    {
-                        map.tgt2srcEdges->push_back( EdgeId{ ue } );
-                    }
+                    map.tgt2srcEdges->push_back( EdgeId{ ue } );
                 }
             }
             if ( auto v = from.org( e ); v.valid() )
@@ -1642,18 +1639,15 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
                 {
                     auto [it, inserted] = vmap.insert( { v, {} } );
                     assert( inserted );
-                    if ( inserted )
+                    auto nv = addVertId();
+                    if ( map.tgt2srcVerts )
+                        map.tgt2srcVerts->push_back( v );
+                    it->second = nv;
+                    edgePerVertex_[nv] = mapEdge( emap, e );
+                    if ( updateValids_ )
                     {
-                        auto nv = addVertId();
-                        if ( map.tgt2srcVerts )
-                            map.tgt2srcVerts->push_back( v );
-                        it->second = nv;
-                        edgePerVertex_[nv] = mapEdge( emap, e );
-                        if ( updateValids_ )
-                        {
-                            validVerts_.set( nv );
-                            ++numValidVerts_;
-                        }
+                        validVerts_.set( nv );
+                        ++numValidVerts_;
                     }
                 }
             }

@@ -283,7 +283,26 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, con
     for ( auto & frag : largeTriFragments )
         if ( frag.f )
             res.set( frag.f );
-    return res;
+
+    if ( !obj.getVisualizeProperty( VisualizeMaskType::ClippedByPlane, viewport.id ) )
+        return res;
+
+    const auto& edgePerFaces = mesh->topology.edgePerFace();
+    auto clippingPlane = viewport.getParameters().clippingPlane;
+    auto resCopy = res;
+    BitSetParallelFor( res, [&] ( FaceId f )
+    {
+        auto edge = edgePerFaces[f];
+        if ( !edge.valid() )
+            return;
+
+        VertId v0, v1, v2;
+        mesh->topology.getLeftTriVerts( edge, v0, v1, v2 );
+        if ( clippingPlane.distance( mesh->points[v0] ) > 0 && clippingPlane.distance( mesh->points[v1] ) > 0 && clippingPlane.distance( mesh->points[v2] ) > 0 )
+            resCopy.set( f, false );
+    } );
+
+    return resCopy;
 }
 
 void appendGPUVisibleFaces( const Viewport& viewport, const BitSet& pixBs, 
@@ -350,6 +369,7 @@ VertBitSet findVertsInViewportArea( const Viewport& viewport, const BitSet& pixB
     const auto orthoBackwards = viewport.getBackwardDirection();
     const auto& normals = pointCloud->normals;
     const bool excludeBackface = !includeBackfaces && normals.size() >= pointCloud->points.size();
+    const auto clippingPlane = viewport.getParameters().clippingPlane;
     BitSetParallelFor( verts, [&]( VertId i )
     {
         if ( !inSelectedArea( toClipSpace( pointCloud->points[i] ) ) )
@@ -363,6 +383,11 @@ VertBitSet findVertsInViewportArea( const Viewport& viewport, const BitSet& pixB
                 cameraDir = -viewport.unprojectPixelRay( to2dim( viewport.projectToViewportSpace( pointCloud->points[i] ) ) ).d;
             if ( dot( xf.A * normals[i], cameraDir ) < 0 )
                 verts.set( i, false );
+        }
+        else if ( obj.getVisualizeProperty( VisualizeMaskType::ClippedByPlane, viewport.id ) &&
+            clippingPlane.distance( pointCloud->points[i] ) > 0 )
+        {
+            verts.set( i, false );
         }
     } );
 

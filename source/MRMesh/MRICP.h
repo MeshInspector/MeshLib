@@ -30,34 +30,43 @@ enum class ICPMode
     TranslationOnly ///< only translation (3 degrees of freedom)
 };
 
-struct VertPair
+/// Stores a pair of points: one samples on the source and the closest to it on the target
+struct PointPair
 {
-    // coordinates of the closest point on reference mesh (after applying refXf)
-    Vector3f refPoint;
-    // surface normal in a vertex on the floating mesh (after applying fltXf)
-    Vector3f norm;
-    // surface normal in a vertex on the reference mesh (after applying refXf)
-    Vector3f normRef;
-    // ID of the floating mesh vertex
-    VertId vertId;
-    // This is cosine between normals in first(floating mesh) and second(reference mesh) points
-    // It evaluates how good is this pair
+    /// id of the source point
+    VertId srcVertId;
+
+    /// normal in source point after transforming in world space
+    Vector3f srcNorm;
+
+    /// coordinates of the closest point on target after transforming in world space
+    Vector3f tgtPoint;
+
+    /// normal in the target point after transforming in world space
+    Vector3f tgtNorm;
+
+    /// cosine between normals in source and target points
     float normalsAngleCos = 1.f;
-    // Storing squared distance between vertices
-    float vertDist2 = 0.f;
-    // weight of the pair with respect to the sum of adjoining triangles square
+
+    /// squared distance between source and target points
+    float distSq = 0.f;
+
+    /// weight of the pair (to prioritize over other pairs)
     float weight = 1.f;
 
-    friend bool operator == ( const VertPair&, const VertPair& ) = default;
+    friend bool operator == ( const PointPair&, const PointPair& ) = default;
 };
 
-using VertPairs = std::vector<VertPair>;
+using PointPairs = std::vector<PointPair>;
 
 /// computes root-mean-square deviation between points
-[[nodiscard]] MRMESH_API float getMeanSqDistToPoint( const VertPairs & pairs );
+[[nodiscard]] MRMESH_API float getMeanSqDistToPoint( const PointPairs & pairs );
 
-// computes root-mean-square deviation from points to target planes
-[[nodiscard]] MRMESH_API float getMeanSqDistToPlane( const VertPairs & pairs, const MeshOrPoints & floating, const AffineXf3f & floatXf );
+/// computes root-mean-square deviation from points to target planes
+[[nodiscard]] MRMESH_API float getMeanSqDistToPlane( const PointPairs & pairs, const MeshOrPoints & floating, const AffineXf3f & floatXf );
+
+/// remove from the pairs invalid ones
+MRMESH_API void removeInvalidPointPairs( PointPairs & pairs );
 
 struct ICPProperties
 {
@@ -109,7 +118,7 @@ public:
     MRMESH_API void setCosineLimit(const float cos);
     MRMESH_API void setDistanceLimit( const float dist );
     MRMESH_API void setBadIterCount( const int iter );
-    MRMESH_API void setPairsWeight(const std::vector<float> w);
+    MRMESH_API void setPairsWeight(const std::vector<float> & w);
     MRMESH_API void setDistanceFilterSigmaFactor(const float factor);
     MRMESH_API void recomputeBitSet(const float floatSamplingVoxelSize);
 
@@ -125,20 +134,20 @@ public:
     MRMESH_API AffineXf3f autoSelectFloatXf();
 
     /// recompute point pairs after manual change of transformations or parameters
-    MRMESH_API void updateVertPairs();
+    MRMESH_API void updatePointPairs();
 
     const ICPProperties& getParams() const { return prop_; }
     MRMESH_API Vector3f getShiftVector() const; // shows mean pair vector
     MRMESH_API std::string getLastICPInfo() const; // returns status info string
 
     /// computes root-mean-square deviation between points
-    float getMeanSqDistToPoint() const { return MR::getMeanSqDistToPoint( vertPairs_ ); }
+    float getMeanSqDistToPoint() const { return MR::getMeanSqDistToPoint( flt2refPairs_ ); }
 
     /// computes root-mean-square deviation from points to target planes
-    float getMeanSqDistToPlane() const { return MR::getMeanSqDistToPlane( vertPairs_, floating_, floatXf_ ); }
+    float getMeanSqDistToPlane() const { return MR::getMeanSqDistToPlane( flt2refPairs_, floating_, floatXf_ ); }
 
-    /// used to visualize generated points pairs
-    const std::vector<VertPair>& getVertPairs() const { return vertPairs_; }
+    /// returns current pairs formed from samples on floating and projections on reference
+    const PointPairs & getFlt2RefPairs() const { return flt2refPairs_; }
 
     /// finds squared minimum and maximum pairs distances
     MRMESH_API std::pair<float, float> getDistLimitsSq() const;
@@ -158,7 +167,7 @@ private:
 
     ICPProperties prop_;
 
-    std::vector<VertPair> vertPairs_;
+    PointPairs flt2refPairs_;
 
     // types of exit conditions in calculation
     enum class ExitType {
@@ -169,8 +178,6 @@ private:
         StopMsdReached // stop mean square deviation reached
     };
     ExitType resultType_{ ExitType::NotStarted };
-
-    void removeInvalidVertPairs_();
 
     void updateVertFilters_();
 

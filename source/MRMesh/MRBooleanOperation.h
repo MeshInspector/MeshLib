@@ -85,13 +85,24 @@ struct BooleanResultMapper
     std::array<Maps, size_t( MapObject::Count )> maps;
 };
 
+/// Parameters will be useful if specified
+struct BooleanInternalParameters
+{
+    /// Instance of original mesh with tree for better speed
+    const Mesh* originalMeshA{ nullptr };
+    /// Instance of original mesh with tree for better speed
+    const Mesh* originalMeshB{ nullptr };
+};
+
 /// Perform boolean operation on cut meshes
 /// \return mesh in space of meshA or error.
 /// \note: actually this function is meant to be internal, use "boolean" instead
 MRMESH_API Expected<Mesh, std::string> doBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut,
-                                                               const std::vector<EdgePath>& cutEdgesA, const std::vector<EdgePath>& cutEdgesB,
-                                                               BooleanOperation operation, const AffineXf3f* rigidB2A = nullptr,
-                                                               BooleanResultMapper* mapper = nullptr, bool mergeAllNonIntersectingComponents = false );
+    const std::vector<EdgePath>& cutEdgesA, const std::vector<EdgePath>& cutEdgesB,
+    BooleanOperation operation, const AffineXf3f* rigidB2A = nullptr,
+    BooleanResultMapper* mapper = nullptr,
+    bool mergeAllNonIntersectingComponents = false, 
+    const BooleanInternalParameters& intParams = {} );
 
 /// \}
 

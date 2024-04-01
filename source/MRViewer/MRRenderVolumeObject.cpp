@@ -9,7 +9,7 @@
 #include "MRMesh/MRMatrix4.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRPch/MRTBB.h"
-#include "MRViewer/MRRenderDefaultUiObject.h"
+#include "MRViewer/MRRenderDefaultObjects.h"
 
 namespace MR
 {

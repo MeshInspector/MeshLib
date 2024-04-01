@@ -215,7 +215,7 @@
     <ClInclude Include="MRPointInAllSpaces.h" />
     <ClInclude Include="MRImGuiVectorOperators.h" />
     <ClInclude Include="MRImGuiMeasurementIndicators.h" />
-    <ClInclude Include="MRRenderDefaultUiObject.h" />
+    <ClInclude Include="MRRenderDefaultObjects.h" />
     <ClInclude Include="MRRenderFeatureObjects.h" />
     <ClInclude Include="MRRenderNameObject.h" />
     <ClInclude Include="MRRenderWrapObject.h" />

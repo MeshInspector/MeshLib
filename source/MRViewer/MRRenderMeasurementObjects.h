@@ -4,14 +4,16 @@
 #include "MRMesh/MRDistanceMeasurementObject.h"
 #include "MRMesh/MRIRenderObject.h"
 #include "MRMesh/MRRadiusMeasurementObject.h"
-#include "MRViewer/MRRenderDefaultUiObject.h"
+#include "MRViewer/MRRenderDefaultObjects.h"
 #include "MRViewer/MRRenderDimensions.h"
 #include "MRViewer/exports.h"
 
 namespace MR
 {
 
-class RenderDistanceObject : public RenderDefaultUiObject
+using RenderDimensionObject = RenderObjectCombinator<RenderDefaultUiObject, RenderResetDirtyComponent>;
+
+class RenderDistanceObject : public RenderDimensionObject
 {
     const DistanceMeasurementObject* object_ = nullptr;
     RenderDimensions::LengthTask task_;
@@ -20,7 +22,7 @@ public:
     MRVIEWER_API void renderUi( const UiRenderParams& params ) override;
 };
 
-class RenderRadiusObject : public RenderDefaultUiObject
+class RenderRadiusObject : public RenderDimensionObject
 {
     const RadiusMeasurementObject* object_ = nullptr;
     RenderDimensions::RadiusTask task_;
@@ -29,7 +31,7 @@ public:
     MRVIEWER_API void renderUi( const UiRenderParams& params ) override;
 };
 
-class RenderAngleObject : public RenderDefaultUiObject
+class RenderAngleObject : public RenderDimensionObject
 {
     const AngleMeasurementObject* object_ = nullptr;
     RenderDimensions::AngleTask task_;

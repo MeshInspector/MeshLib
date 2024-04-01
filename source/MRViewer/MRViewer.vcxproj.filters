@@ -656,7 +656,7 @@
     <ClInclude Include="MRImGuiVectorOperators.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="MRRenderDefaultUiObject.h">
+    <ClInclude Include="MRRenderDefaultObjects.h">
       <Filter>Render\Implementations</Filter>
     </ClInclude>
     <ClInclude Include="MRRenderFeatureObjects.h">

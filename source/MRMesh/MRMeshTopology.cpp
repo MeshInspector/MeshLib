@@ -1574,10 +1574,18 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
     VertBitSet fromVerts = from.getValidVerts();
     auto setVmap = [&] ( VertId key, VertId val )
     {
-        auto [it, inserted] = vmap.insert( std::make_pair( key, val ) );
-        if ( !inserted )
-            assert( it->second == val );
-        fromVerts.reset( key );
+        if ( fromVerts.test_set( key, false ) )
+        {
+            [[maybe_unused]] bool inserted = vmap.insert( std::make_pair( key, val ) ).second;
+            assert( inserted );
+        }
+#ifndef NDEBUG
+        else
+        {
+            auto it = vmap.find( key );
+            assert( it != vmap.end() && it->second == val );
+        }
+#endif
     };
 
     UndirectedEdgeBitSet existingEdges; //one of fromContours' edge

@@ -164,17 +164,6 @@ namespace detail
     // Default step speed for `UI::input()`.
     template <UnitEnum E, VectorOrScalar T, VectorOrScalar TargetType>
     [[nodiscard]] T getDefaultStep( bool fast );
-
-    // See `drawDragTooltip()` below.
-    template <UnitEnum E, VectorOrScalar T>
-    [[nodiscard]] std::string getDragRangeTooltip( T min, T max, const UnitToStringParams<E>& unitParams );
-
-    // `UI::drag()` uses this internally to draw tooltips.
-    // Pass `getDragRangeTooltip()` as the parameter.
-    MRVIEWER_API void drawDragTooltip( std::string rangeText );
-
-    // Wraps `ImGui::MarkItemEdited()`, to avoid including `imgui_internal.h`.
-    MRVIEWER_API void markItemEdited( ImGuiID id );
 }
 
 // Default flags for `slider()` and `drag()` below.

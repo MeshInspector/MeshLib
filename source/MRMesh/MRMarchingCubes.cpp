@@ -625,14 +625,6 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
     if ( params.cb && !params.cb( 0.5f ) )
         return unexpectedOperationCanceled();
 
-    // triangulate by table
-    struct TriangulationData
-    {
-        size_t initInd{ 0 }; // this is needed to have determined topology independent of threads number
-        Triangulation t;
-        Vector<VoxelId, FaceId> faceMap;
-    };
-    using PerThreadTriangulation = std::vector<TriangulationData>;
     auto subprogress2 = MR::subprogress( params.cb, 0.5f, 0.85f );
 
     const std::array<size_t, 8> cVoxelNeighborsIndexAdd = 
@@ -647,9 +639,9 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
         indexer.sizeXY() + size_t( indexer.dims().x ) + 1
     };
 
-    tbb::enumerable_thread_specific<PerThreadTriangulation> triangulationPerThread;
     ParallelFor( size_t( 0 ), blockCount, [&] ( size_t blockIndex )
     {
+        auto & block = sepStorage.getBlock( blockIndex );
         const auto layerBegin = blockIndex * layerPerBlockCount;
         if ( layerBegin >= layerCount )
             return;
@@ -670,14 +662,6 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
         const auto end = layerEnd * layerSize;
 
         const bool runCallback = subprogress2 && std::this_thread::get_id() == mainThreadId;
-
-        // setup local triangulation
-        auto& localTriangulatoinData = triangulationPerThread.local();
-        localTriangulatoinData.emplace_back();
-        auto& thisTriData = localTriangulatoinData.back();
-        thisTriData.initInd = begin;
-        auto& t = thisTriData.t;
-        auto& faceMap = thisTriData.faceMap;
 
         // vdb accessor
         [[maybe_unused]] auto acc = accessorCtor( volume );
@@ -844,19 +828,19 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                 assert( neis[interIndex2] && (*neis[interIndex2])[int( dir2 )] );
 
                 if ( params.lessInside )
-                    t.emplace_back( ThreeVertIds{
+                    block.tris.emplace_back( ThreeVertIds{
                         (*neis[interIndex0])[int( dir0 )],
                         (*neis[interIndex2])[int( dir2 )],
                         (*neis[interIndex1])[int( dir1 )]
                     } );
                 else
-                    t.emplace_back( ThreeVertIds{
+                    block.tris.emplace_back( ThreeVertIds{
                         (*neis[interIndex0])[int( dir0 )],
                         (*neis[interIndex1])[int( dir1 )],
                         (*neis[interIndex2])[int( dir2 )]
                     } );
                 if ( params.outVoxelPerFaceMap )
-                    faceMap.emplace_back( VoxelId{ ind } );
+                    block.faceMap.emplace_back( VoxelId{ ind } );
             }
 
             if ( runCallback && ( ind - begin ) % 16384 == 0 )
@@ -868,36 +852,8 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
     if ( params.cb && !keepGoing )
         return unexpectedOperationCanceled();
 
-    // organize per thread triangulation
-    std::vector<TriangulationData> resTriangulatoinData;
-    for ( auto& threadTriData : triangulationPerThread )
-    {
-        // remove empty
-        threadTriData.erase( std::remove_if( threadTriData.begin(), threadTriData.end(),
-            [] ( const auto& obj )
-        {
-            return obj.t.empty();
-        } ), threadTriData.end() );
-        if ( threadTriData.empty() )
-            continue;
-        // accum not empty
-        resTriangulatoinData.insert( resTriangulatoinData.end(),
-            std::make_move_iterator( threadTriData.begin() ), std::make_move_iterator( threadTriData.end() ) );
-    }
-    // sort by voxel index
-    tbb::parallel_sort( resTriangulatoinData.begin(), resTriangulatoinData.end(), [] ( const auto& l, const auto& r ) { return l.initInd < r.initInd; } );
-
     // create result triangulation
-    if ( params.outVoxelPerFaceMap )
-        params.outVoxelPerFaceMap->clear();
-    for ( auto& [ind, t, faceMap] : resTriangulatoinData )
-    {
-        result.tris.vec_.insert( result.tris.vec_.end(),
-            std::make_move_iterator( t.vec_.begin() ), std::make_move_iterator( t.vec_.end() ) );
-        if ( params.outVoxelPerFaceMap )
-            params.outVoxelPerFaceMap->vec_.insert( params.outVoxelPerFaceMap->vec_.end(),
-                std::make_move_iterator( faceMap.vec_.begin() ), std::make_move_iterator( faceMap.vec_.end() ) );
-    }
+    result.tris = sepStorage.getTriangulation( params.outVoxelPerFaceMap );
 
     if ( params.cb && !params.cb( 0.95f ) )
         return unexpectedOperationCanceled();

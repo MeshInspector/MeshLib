@@ -2,6 +2,7 @@
 
 #include "MRId.h"
 #include "MRVector3.h"
+#include "MRVector.h"
 #include "MRphmap.h"
 #include <array>
 
@@ -20,7 +21,7 @@ using SeparationPointMap = HashMap<size_t, SeparationPointSet>;
 class SeparationPointStorage
 {
 public:
-    struct Block
+    struct alignas(64) Block
     {
         SeparationPointMap smap;
         std::vector<Vector3f> coords;
@@ -29,6 +30,9 @@ public:
 
         /// during filling, it is the id of next valid point;
         VertId nextVid() const { return VertId( coords.size() ); }
+
+        Triangulation tris;
+        Vector<VoxelId, FaceId> faceMap;
     };
 
     /// prepares storage for given number of blocks, each containing given size of voxels
@@ -48,6 +52,9 @@ public:
         auto it = map.find( voxelId );
         return ( it != map.end() ) ? &it->second : nullptr;
     }
+
+    /// combines triangulations from every block into one and returns it
+    Triangulation getTriangulation( Vector<VoxelId, FaceId>* outVoxelPerFaceMap = nullptr ) const;
 
     /// obtains coordinates of all stored points
     void getPoints( VertCoords & points ) const;

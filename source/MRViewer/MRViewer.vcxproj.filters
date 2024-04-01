@@ -358,6 +358,9 @@
     <ClCompile Include="MRUnits.cpp">
       <Filter>UIStyle</Filter>
     </ClCompile>
+    <ClCompile Include="MRVisualSubfeatures.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -706,6 +709,9 @@
     </ClInclude>
     <ClInclude Include="MRUnits.tpp">
       <Filter>UIStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVisualSubfeatures.h">
+      <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

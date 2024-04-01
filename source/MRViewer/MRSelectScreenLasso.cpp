@@ -235,8 +235,14 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, con
         }
 
         tbb::enumerable_thread_specific<std::vector<Line3fMesh>> tlsLineMeshes( std::cref( lineMeshes ) );
-        auto isPointHidden = [&]( const Vector3f& point )
+        const auto clippingPlane = viewport.getParameters().clippingPlane;
+        const bool useClipping = obj.getVisualizeProperty( VisualizeMaskType::ClippedByPlane, viewport.id );
+
+        auto isPointHidden = [&]( const Vector3f& point ) -> bool
         {
+            if ( useClipping && clippingPlane.distance( point ) > 0 )
+                return true;
+
             auto & myLineMeshes = tlsLineMeshes.local();
             assert( myLineMeshes.size() == cameraEyes.size() );
             for ( int i = 0; i < myLineMeshes.size(); ++i )
@@ -244,7 +250,7 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, con
                 auto pointInOcc = xfMeshToOccMesh[i]( point );
                 myLineMeshes[i].line = Line3f{ pointInOcc, cameraEyes[i] - pointInOcc };
             }
-            return rayMultiMeshAnyIntersect( myLineMeshes, 0.0f, FLT_MAX );
+            return rayMultiMeshAnyIntersect( myLineMeshes, 0.0f, FLT_MAX ).has_value();
         };
 
         BitSetParallelFor( verts, [&] ( VertId vid )
@@ -284,25 +290,7 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, con
         if ( frag.f )
             res.set( frag.f );
 
-    if ( !obj.getVisualizeProperty( VisualizeMaskType::ClippedByPlane, viewport.id ) )
-        return res;
-
-    const auto& edgePerFaces = mesh->topology.edgePerFace();
-    auto clippingPlane = viewport.getParameters().clippingPlane;
-    auto resCopy = res;
-    BitSetParallelFor( res, [&] ( FaceId f )
-    {
-        auto edge = edgePerFaces[f];
-        if ( !edge.valid() )
-            return;
-
-        VertId v0, v1, v2;
-        mesh->topology.getLeftTriVerts( edge, v0, v1, v2 );
-        if ( clippingPlane.distance( mesh->points[v0] ) > 0 && clippingPlane.distance( mesh->points[v1] ) > 0 && clippingPlane.distance( mesh->points[v2] ) > 0 )
-            resCopy.set( f, false );
-    } );
-
-    return resCopy;
+    return res;
 }
 
 void appendGPUVisibleFaces( const Viewport& viewport, const BitSet& pixBs, 
@@ -337,7 +325,7 @@ void appendGPUVisibleFaces( const Viewport& viewport, const BitSet& pixBs,
 }
 
 VertBitSet findVertsInViewportArea( const Viewport& viewport, const BitSet& pixBs, const ObjectPoints& obj,
-                                    bool includeBackfaces /*= true */ )
+                                    bool includeBackfaces /*= true */, bool onlyVisible /*= false */ )
 {
     if ( pixBs.none() )
         return {};
@@ -384,7 +372,7 @@ VertBitSet findVertsInViewportArea( const Viewport& viewport, const BitSet& pixB
             if ( dot( xf.A * normals[i], cameraDir ) < 0 )
                 verts.set( i, false );
         }
-        else if ( obj.getVisualizeProperty( VisualizeMaskType::ClippedByPlane, viewport.id ) &&
+        else if ( onlyVisible && obj.getVisualizeProperty( VisualizeMaskType::ClippedByPlane, viewport.id ) &&
             clippingPlane.distance( pointCloud->points[i] ) > 0 )
         {
             verts.set( i, false );

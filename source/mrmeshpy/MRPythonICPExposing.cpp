@@ -2,7 +2,7 @@
 #include "MRMesh/MRICP.h"
 #include "MRMesh/MRMesh.h"
 
-MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertPair, MR::VertPair )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, PointPair, MR::PointPair )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
 {
@@ -22,17 +22,16 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         value( "FixedAxis", MR::ICPMode::FixedAxis, "rigid body transformation with rotation around given axis only (4 degrees of freedom)" ).
         value( "TranslationOnly", MR::ICPMode::TranslationOnly, "only translation (3 degrees of freedom)" );
 
-    MR_PYTHON_CUSTOM_CLASS( VertPair ).
+    MR_PYTHON_CUSTOM_CLASS( PointPair ).doc() = "Stores a pair of points: one samples on the source and the closest to it on the target";
+    MR_PYTHON_CUSTOM_CLASS( PointPair ).
         def( pybind11::init<>() ).
-        def_readwrite( "refPoint", &MR::VertPair::refPoint, "coordinates of the closest point on reference mesh (after applying refXf)" ).
-        def_readwrite( "norm", &MR::VertPair::norm, "surface normal in a vertex on the floating mesh (after applying Xf)" ).
-        def_readwrite( "normRef", &MR::VertPair::normRef, "surface normal in a vertex on the reference mesh (after applying Xf)" ).
-        def_readwrite( "vertId", &MR::VertPair::vertId, "ID of the floating mesh vertex (usually applying Xf required)" ).
-        def_readwrite( "normalsAngleCos", &MR::VertPair::normalsAngleCos,
-            "This is cosine between normals in first(floating mesh) and second(reference mesh) points\n"
-            "It evaluates how good is this pair" ).
-        def_readwrite( "vertDist2", &MR::VertPair::vertDist2, "Storing squared distance between vertices" ).
-        def_readwrite( "weight", &MR::VertPair::weight, "weight of the pair with respect to the sum of adjoining triangles square" );
+        def_readwrite( "srcVertId", &MR::PointPair::srcVertId, "id of the source point" ).
+        def_readwrite( "srcNorm", &MR::PointPair::srcNorm, "normal in source point after transforming in world space" ).
+        def_readwrite( "tgtPoint", &MR::PointPair::tgtPoint, "coordinates of the closest point on target after transforming in world space" ).
+        def_readwrite( "tgtNorm", &MR::PointPair::tgtNorm, "normal in the target point after transforming in world space" ).
+        def_readwrite( "normalsAngleCos", &MR::PointPair::normalsAngleCos, "cosine between normals in source and target points" ).
+        def_readwrite( "distSq", &MR::PointPair::distSq, "squared distance between source and target points" ).
+        def_readwrite( "weight", &MR::PointPair::weight, "weight of the pair (to prioritize over other pairs)" );
 
     pybind11::class_<MR::ICPProperties>( m, "ICPProperties" ).
         def( pybind11::init<>() ).
@@ -76,11 +75,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def( "getLastICPInfo", &MR::ICP::getLastICPInfo, "returns status info string" ).
         def( "getMeanSqDistToPoint", &MR::ICP::getMeanSqDistToPoint, "computes root-mean-square deviation between points" ).
         def( "getMeanSqDistToPlane", &MR::ICP::getMeanSqDistToPlane, "computes root-mean-square deviation from points to target planes" ).
-        def( "getVertPairs", &MR::ICP::getVertPairs, pybind11::return_value_policy::copy, "used to visualize generated points pairs" ).
+        def( "getFlt2RefPairs", &MR::ICP::getFlt2RefPairs, pybind11::return_value_policy::copy, "returns current pairs formed from samples on floating and projections on reference" ).
         def( "getDistLimitsSq", &MR::ICP::getDistLimitsSq, "finds squared minimum and maximum pairs distances" ).
         def( "calculateTransformation", &MR::ICP::calculateTransformation, "returns new xf transformation for the floating mesh, which allows to match reference mesh" ).
         def( "autoSelectFloatXf", &MR::ICP::autoSelectFloatXf, "automatically selects initial transformation for the floating object based on covariance matrices of both floating and reference objects; applies the transformation to the floating object and returns it" ).
-        def( "updateVertPairs", &MR::ICP::updateVertPairs, "recompute point pairs after manual change of transformations or parameters" );
+        def( "updatePointPairs", &MR::ICP::updatePointPairs, "recompute point pairs after manual change of transformations or parameters" );
 } )
 
-MR_ADD_PYTHON_VEC( mrmeshpy, vectorICPVertPair, MR::VertPair )
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorICPPointPair, MR::PointPair )

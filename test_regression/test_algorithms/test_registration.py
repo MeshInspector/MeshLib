@@ -37,7 +37,7 @@ def test_ICP(tmp_path, input_case):
                        mlib.AffineXf3f(), mlib.AffineXf3f(),
                        icp_sampling_voxel_size)
     icp.setParams(icp_params)
-    icp.updateVertPairs()
+    icp.updatePointPairs()
     xf = icp.calculateTransformation()
 
     # Transform floating mesh

@@ -52,9 +52,9 @@ IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION
   IF(NOT MR_EMSCRIPTEN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
   ENDIF()
-  set(MR_PCH true CACHE BOOL "")
+  set(MR_PCH true CACHE BOOL "Enable precompiled headers.")
 ElSE()
-  set(MR_PCH false CACHE BOOL "")
+  set(MR_PCH false CACHE BOOL "Enable precompiled headers.")
 ENDIF()
 message("MR_PCH=${MR_PCH}")
 

@@ -2197,7 +2197,7 @@ void RibbonMenu::setupShortcuts_()
 void RibbonMenu::drawLastOperationTimeWindow_()
 {
     auto bgDrawList = ImGui::GetBackgroundDrawList();
-    if ( !bgDrawList )
+    if ( !bgDrawList || ProgressBar::isOrdered() )
         return;
     
     float lastTimeSec = ProgressBar::getLastOperationTime();

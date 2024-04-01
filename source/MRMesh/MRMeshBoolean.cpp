@@ -165,6 +165,8 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     std::vector<int> prevLoneContoursIds;
     int iters = 0;
     const int cMaxFixLoneIterations = 100;
+    bool aSubdivided = false;
+    bool bSubdivided = false;
     for ( ;; iters++ )
     {
         // find intersections
@@ -205,6 +207,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         // subdivide owners of lone
         if ( !loneA.empty() && needCutMeshA )
         {
+            aSubdivided = true;
             auto loneIntsA = getOneMeshIntersectionContours( meshA, meshB, loneA, true, converters, params.rigidB2A );
             auto loneIntsAonB = getOneMeshIntersectionContours( meshA, meshB, loneA, false, converters, params.rigidB2A );
             removeLoneDegeneratedContours( meshB.topology, loneIntsA, loneIntsAonB );
@@ -225,6 +228,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         }
         if ( !loneB.empty() && needCutMeshB )
         {
+            bSubdivided = true;
             auto loneIntsB = getOneMeshIntersectionContours( meshA, meshB, loneB, false, converters, params.rigidB2A );
             auto loneIntsBonA = getOneMeshIntersectionContours( meshA, meshB, loneB, true, converters, params.rigidB2A );
             removeLoneDegeneratedContours( meshA.topology, loneIntsB, loneIntsBonA );
@@ -275,12 +279,15 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         {
             if ( needCutMeshB )
             {
-                if ( !intParams.originalMeshB )
+                if ( bSubdivided || !intParams.originalMeshB )
                 {
                     meshBCopyBuffer = meshB;
-                    intParams.originalMeshB = &meshBCopyBuffer;
+                    if ( !intParams.originalMeshB )
+                        intParams.originalMeshB = &meshBCopyBuffer;
                 }
-                dataForA = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ *intParams.originalMeshB, contours, converters.toInt, params.rigidB2A, meshA.topology.vertSize(), false } );
+                assert( intParams.originalMeshB );
+                const Mesh* sortMeshPtr = bSubdivided ? &meshBCopyBuffer : intParams.originalMeshB;
+                dataForA = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ *sortMeshPtr, contours, converters.toInt, params.rigidB2A, meshA.topology.vertSize(), false } );
             }
             else
                 // B is stable so no need copy
@@ -292,13 +299,15 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     {
         if ( needCutMeshA )
         {
-            // cutMesh A will break mesh so make copy
-            if ( !intParams.originalMeshA )
+            if ( aSubdivided || !intParams.originalMeshA )
             {
                 meshACopyBuffer = meshA;
-                intParams.originalMeshA = &meshACopyBuffer;
+                if ( !intParams.originalMeshA )
+                    intParams.originalMeshA = &meshACopyBuffer;
             }
-            dataForB = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ *intParams.originalMeshA, contours, converters.toInt, params.rigidB2A, meshA.topology.vertSize(), true } );
+            assert( intParams.originalMeshA );
+            const Mesh* sortMeshPtr = aSubdivided ? &meshACopyBuffer : intParams.originalMeshA;
+            dataForB = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ *sortMeshPtr, contours, converters.toInt, params.rigidB2A, meshA.topology.vertSize(), true } );
         }
         else
             // A is stable so no need to copy

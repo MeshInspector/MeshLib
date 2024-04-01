@@ -91,30 +91,4 @@ void forEachSubfeature( const Features::Primitives::Variant& feature, const Subf
     }, feature );
 }
 
-void forEachVisualSubfeature( const Primitives::Variant& feature, const VisualSubfeatureFunc& func )
-{
-    forEachSubfeature( feature, [&] ( const SubfeatureInfo& params )
-    {
-        if ( params.isInfinite )
-            return; // skip infinite features
-
-        func( params.create() );
-    } );
-
-    // cap centers
-    if ( const auto* cone = std::get_if<Features::Primitives::ConeSegment>( &feature ) )
-    {
-        if ( !cone->isCircle() )
-        {
-            for ( bool negativeCap : { false, true } )
-            {
-                const auto length = negativeCap ? cone->negativeLength : cone->positiveLength;
-                const auto sideRadius = negativeCap ? cone->negativeSideRadius : cone->positiveSideRadius;
-                if ( std::isfinite( length ) && sideRadius > 0 )
-                    func( cone->basePoint( negativeCap ) );
-            }
-        }
-    }
-}
-
 }

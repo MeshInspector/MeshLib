@@ -28,10 +28,4 @@ using SubfeatureFunc = std::function<void( const SubfeatureInfo& info )>;
 //   but beware of duplicates (there's no easy way to filter them).
 MRMESH_API void forEachSubfeature( const Features::Primitives::Variant& feature, const SubfeatureFunc& func );
 
-// A user callback for `forEachVisualSubfeature()`.
-using VisualSubfeatureFunc = std::function<void( const Features::Primitives::Variant& info )>;
-
-// This is similar to `Features::forEachSubfeature`, but slightly adjusted to be suitable for visualization.
-MRMESH_API void forEachVisualSubfeature( const Features::Primitives::Variant& params, const VisualSubfeatureFunc& func );
-
 }

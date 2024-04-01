@@ -37,7 +37,7 @@ static void addSubfeatures( const VisualObject& sourceObject, ObjectLines* outpu
     if ( !parentFeature )
         return;
 
-    Features::forEachVisualSubfeature( *parentFeature, [&]( const Features::Primitives::Variant& subFeature ) -> void
+    forEachVisualSubfeature( *parentFeature, [&]( const Features::Primitives::Variant& subFeature ) -> void
     {
         // It's a bit jank to utilize `primitiveToObject()` just to switch over the subfeature types, but it's very convenient.
 
@@ -389,6 +389,32 @@ void RenderConeFeatureObject::renderUi( const UiRenderParams& params )
     {
         lengthTask_ = RenderDimensions::LengthTask( params, object_->worldXf(), object_->getFrontColor( object_->isSelected() ), { .points = { Vector3f{}, Vector3f( 0, 0, 1 ) } } );
         params.tasks->push_back( { std::shared_ptr<void>{}, &lengthTask_ } ); // A non-owning `shared_ptr`.
+    }
+}
+
+void forEachVisualSubfeature( const Features::Primitives::Variant& feature, const VisualSubfeatureFunc& func )
+{
+    Features::forEachSubfeature( feature, [&] ( const Features::SubfeatureInfo& params )
+    {
+        if ( params.isInfinite )
+            return; // skip infinite features
+
+        func( params.create() );
+    } );
+
+    // cap centers
+    if ( const auto* cone = std::get_if<Features::Primitives::ConeSegment>( &feature ) )
+    {
+        if ( !cone->isCircle() )
+        {
+            for ( bool negativeCap : { false, true } )
+            {
+                const auto length = negativeCap ? cone->negativeLength : cone->positiveLength;
+                const auto sideRadius = negativeCap ? cone->negativeSideRadius : cone->positiveSideRadius;
+                if ( std::isfinite( length ) && sideRadius > 0 )
+                    func( cone->basePoint( negativeCap ) );
+            }
+        }
     }
 }
 

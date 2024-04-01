@@ -37,9 +37,14 @@ static void addSubfeatures( const VisualObject& sourceObject, ObjectLines* outpu
     if ( !parentFeature )
         return;
 
-    forEachVisualSubfeature( *parentFeature, [&]( const Features::Primitives::Variant& subFeature ) -> void
+    forEachVisualSubfeature( *parentFeature, [&]( const Features::SubfeatureInfo& params ) -> void
     {
         // It's a bit jank to utilize `primitiveToObject()` just to switch over the subfeature types, but it's very convenient.
+
+        if ( params.isInfinite )
+            return;
+
+        const auto subFeature = params.create();
 
         constexpr float infiniteExtent = 10; // Whatever, we shouldn't receive any infinite features anyway.
         auto subObject = Features::primitiveToObject( subFeature, infiniteExtent );
@@ -392,15 +397,9 @@ void RenderConeFeatureObject::renderUi( const UiRenderParams& params )
     }
 }
 
-void forEachVisualSubfeature( const Features::Primitives::Variant& feature, const VisualSubfeatureFunc& func )
+void forEachVisualSubfeature( const Features::Primitives::Variant& feature, const Features::SubfeatureFunc& func )
 {
-    Features::forEachSubfeature( feature, [&] ( const Features::SubfeatureInfo& params )
-    {
-        if ( params.isInfinite )
-            return; // skip infinite features
-
-        func( params.create() );
-    } );
+    Features::forEachSubfeature( feature, func );
 
     // cap centers
     if ( const auto* cone = std::get_if<Features::Primitives::ConeSegment>( &feature ) )
@@ -412,7 +411,13 @@ void forEachVisualSubfeature( const Features::Primitives::Variant& feature, cons
                 const auto length = negativeCap ? cone->negativeLength : cone->positiveLength;
                 const auto sideRadius = negativeCap ? cone->negativeSideRadius : cone->positiveSideRadius;
                 if ( std::isfinite( length ) && sideRadius > 0 )
-                    func( cone->basePoint( negativeCap ) );
+                {
+                    func( {
+                        .name = negativeCap ? "Base circle center (negative side)" : "Base circle center (positive side)",
+                        .isInfinite = false,
+                        .create = [&] { return cone->basePoint( negativeCap ); },
+                    } );
+                }
             }
         }
     }

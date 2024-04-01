@@ -1,11 +1,11 @@
 #pragma once
 
 #include "MRMesh/MRFeatureObject.h"
-#include "MRMesh/MRFeatures.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRSceneColors.h"
+#include "MRMesh/MRSubfeatures.h"
 #include "MRViewer/MRRenderDefaultUiObject.h"
 #include "MRViewer/MRRenderDimensions.h"
 #include "MRViewer/MRRenderLinesObject.h"
@@ -268,10 +268,7 @@ public:
     MRVIEWER_API void renderUi( const UiRenderParams& params ) override;
 };
 
-// A user callback for `forEachVisualSubfeature()`.
-using VisualSubfeatureFunc = std::function<void( const Features::Primitives::Variant& info )>;
-
 // This is similar to `Features::forEachSubfeature`, but slightly adjusted to be suitable for visualization.
-MRVIEWER_API void forEachVisualSubfeature( const Features::Primitives::Variant& params, const VisualSubfeatureFunc& func );
+MRVIEWER_API void forEachVisualSubfeature( const Features::Primitives::Variant& params, const Features::SubfeatureFunc& func );
 
 }

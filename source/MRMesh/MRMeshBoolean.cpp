@@ -284,11 +284,11 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
                     meshBCopyBuffer = meshB;
                     intParams.originalMeshB = &meshBCopyBuffer;
                 }
-                dataForA = std::make_unique<SortIntersectionsData>( *intParams.originalMeshB, contours, converters.toInt, params.rigidB2A, meshA.topology.vertSize(), false );
+                dataForA = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ *intParams.originalMeshB, contours, converters.toInt, params.rigidB2A, meshA.topology.vertSize(), false } );
             }
             else
                 // B is stable so no need copy
-                dataForA = std::make_unique<SortIntersectionsData>( meshB, contours, converters.toInt, params.rigidB2A, meshA.topology.vertSize(), false );
+                dataForA = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshB, contours, converters.toInt, params.rigidB2A, meshA.topology.vertSize(), false } );
         } );
     }
 
@@ -302,11 +302,11 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
                 meshACopyBuffer = meshA;
                 intParams.originalMeshA = &meshACopyBuffer;
             }
-            dataForB = std::make_unique<SortIntersectionsData>( *intParams.originalMeshA, contours, converters.toInt, params.rigidB2A, meshA.topology.vertSize(), true );
+            dataForB = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ *intParams.originalMeshA, contours, converters.toInt, params.rigidB2A, meshA.topology.vertSize(), true } );
         }
         else
             // A is stable so no need to copy
-            dataForB = std::make_unique<SortIntersectionsData>( meshA, contours, converters.toInt, params.rigidB2A, meshA.topology.vertSize(), true );
+            dataForB = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshA, contours, converters.toInt, params.rigidB2A, meshA.topology.vertSize(), true } );
     }
     taskGroup.wait();
 

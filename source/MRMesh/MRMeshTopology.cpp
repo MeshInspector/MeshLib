@@ -1629,7 +1629,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             const UndirectedEdgeId ue = e.undirected();
             if ( fromEdges.test_set( ue, false ) )
             {
-                auto [it, inserted] = emap.insert( { ue, edges_.endId() } );
+                [[maybe_unused]] bool inserted = emap.insert( { ue, edges_.endId() } ).second;
                 assert( inserted );
                 edges_.push_back( from.edges_[EdgeId{ ue }] );
                 edges_.push_back( from.edges_[EdgeId{ ue }.sym()] );
@@ -1643,7 +1643,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
                 if ( fromVerts.test_set( v, false ) )
                 {
                     auto nv = addVertId();
-                    auto [it, inserted] = vmap.insert( { v, nv } );
+                    [[maybe_unused]] bool inserted = vmap.insert( { v, nv } ).second;
                     assert( inserted );
                     if ( map.tgt2srcVerts )
                         map.tgt2srcVerts->push_back( v );

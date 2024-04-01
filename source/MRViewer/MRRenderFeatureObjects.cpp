@@ -26,44 +26,6 @@ static constexpr int sphereDetailLevel = 2048;
 // Separator between object name and extra information.
 static constexpr std::string_view nameExtrasSeparator = "   |   ";
 
-// This is similar to `Features::forEachSubfeature`, but slightly adjusted to be suitable for visualization.
-static void forEachVisualSubfeature( const Features::Primitives::Variant& feature, std::function<void( const Features::Primitives::Variant& subfeature )> func )
-{
-    Features::forEachSubfeature( feature, [&]( const Features::SubfeatureInfo& params )
-    {
-        if ( params.isInfinite )
-            return; // Skip infinite features.
-
-        func( params.create() );
-    } );
-
-    std::visit( overloaded{
-        [&]( const Features::Primitives::Sphere& sphere )
-        {
-            (void)sphere;
-        },
-        [&]( const Features::Primitives::ConeSegment& cone )
-        {
-            if ( !cone.isCircle() )
-            {
-                // Cap centers.
-                for ( bool negativeCap : { false, true } )
-                {
-                    if ( std::isfinite( negativeCap ? cone.negativeLength : cone.positiveLength ) &&
-                        ( negativeCap ? cone.negativeSideRadius : cone.positiveSideRadius ) > 0 )
-                    {
-                        func( cone.basePoint( negativeCap ) );
-                    }
-                }
-            }
-        },
-        [&]( const Features::Primitives::Plane& plane )
-        {
-            (void)plane;
-        },
-    }, feature );
-}
-
 // Extracts subfeatures from `sourceObject` and writes them out `outputPoints` and `outputLines`.
 // `sourceObject` must point to a temporary object of the desired type, with identity xf.
 static void addSubfeatures( const VisualObject& sourceObject, ObjectLines* outputLines, ObjectPoints* outputPoints )
@@ -75,7 +37,7 @@ static void addSubfeatures( const VisualObject& sourceObject, ObjectLines* outpu
     if ( !parentFeature )
         return;
 
-    forEachVisualSubfeature( *parentFeature, [&]( const Features::Primitives::Variant& subFeature ) -> void
+    Features::forEachVisualSubfeature( *parentFeature, [&]( const Features::Primitives::Variant& subFeature ) -> void
     {
         // It's a bit jank to utilize `primitiveToObject()` just to switch over the subfeature types, but it's very convenient.
 

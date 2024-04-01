@@ -235,7 +235,7 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, con
         }
 
         tbb::enumerable_thread_specific<std::vector<Line3fMesh>> tlsLineMeshes( std::cref( lineMeshes ) );
-        const auto clippingPlane = viewport.getParameters().clippingPlane;
+        const auto& clippingPlane = viewport.getParameters().clippingPlane;
         const bool useClipping = obj.getVisualizeProperty( VisualizeMaskType::ClippedByPlane, viewport.id );
 
         auto isPointHidden = [&]( const Vector3f& point ) -> bool
@@ -357,7 +357,7 @@ VertBitSet findVertsInViewportArea( const Viewport& viewport, const BitSet& pixB
     const auto orthoBackwards = viewport.getBackwardDirection();
     const auto& normals = pointCloud->normals;
     const bool excludeBackface = !includeBackfaces && normals.size() >= pointCloud->points.size();
-    const auto clippingPlane = viewport.getParameters().clippingPlane;
+    const auto& clippingPlane = viewport.getParameters().clippingPlane;
     BitSetParallelFor( verts, [&]( VertId i )
     {
         if ( !inSelectedArea( toClipSpace( pointCloud->points[i] ) ) )

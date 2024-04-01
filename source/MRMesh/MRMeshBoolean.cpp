@@ -83,19 +83,15 @@ OneMeshContours getOtherMeshContoursByHint( const OneMeshContours& aContours, co
         const auto& inCont = contours[j];
         auto& outCont = bMeshContours[j].intersections;
         assert( inCont.size() == outCont.size() );
-        tbb::parallel_for( tbb::blocked_range<int>( 0, int( inCont.size() ) ),
-                [&] ( const tbb::blocked_range<int>& range )
+        ParallelFor( inCont, [&] ( size_t i )
         {
-            for ( int i = range.begin(); i < range.end(); ++i )
-            {
-                const auto& inInter = inCont[i];
-                auto& outInter = outCont[i];
-                outInter.primitiveId = inInter.isEdgeATriB ?
-                    std::variant<FaceId, EdgeId, VertId>( inInter.tri ) : 
-                    std::variant<FaceId, EdgeId, VertId>( inInter.edge );
-                if ( rigidB2A )
-                    outInter.coordinate = inverseXf( outCont[i].coordinate );
-            }
+            const auto& inInter = inCont[i];
+            auto& outInter = outCont[i];
+            outInter.primitiveId = inInter.isEdgeATriB ?
+                std::variant<FaceId, EdgeId, VertId>( inInter.tri ) :
+                std::variant<FaceId, EdgeId, VertId>( inInter.edge );
+            if ( rigidB2A )
+                outInter.coordinate = inverseXf( outCont[i].coordinate );
         } );
     }
     return bMeshContours;
@@ -342,17 +338,14 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             meshAContours.shrink_to_fit(); // free memory
             if ( cut2oldAPtr && !new2orgSubdivideMapA.empty() )
             {
-                tbb::parallel_for( tbb::blocked_range<FaceId>( FaceId( 0 ), FaceId( int( cut2oldAPtr->size() ) ) ),
-                    [&] ( const tbb::blocked_range<FaceId>& range )
+                ParallelFor( *cut2oldAPtr, [&] ( FaceId i )
                 {
-                    for ( FaceId i = range.begin(); i < range.end(); ++i )
-                    {
-                        if ( !( *cut2oldAPtr )[i] )
-                            continue;
-                        FaceId refFace = ( *cut2oldAPtr )[i];
-                        if ( new2orgSubdivideMapA.size() > refFace && new2orgSubdivideMapA[refFace] )
-                            ( *cut2oldAPtr )[i] = new2orgSubdivideMapA[refFace];
-                    }
+                    if ( !( *cut2oldAPtr )[i] )
+                        return;
+                    FaceId refFace = ( *cut2oldAPtr )[i];
+                    if ( new2orgSubdivideMapA.size() > refFace && new2orgSubdivideMapA[refFace] )
+                        ( *cut2oldAPtr )[i] = new2orgSubdivideMapA[refFace];
+
                 } );
             }
             result.meshABadContourFaces = std::move( res.fbsWithCountourIntersections );
@@ -377,17 +370,13 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         meshBContours.shrink_to_fit(); // free memory
         if ( cut2oldBPtr && !new2orgSubdivideMapB.empty() )
         {
-            tbb::parallel_for( tbb::blocked_range<FaceId>( FaceId( 0 ), FaceId( int( cut2oldBPtr->size() ) ) ),
-                [&] ( const tbb::blocked_range<FaceId>& range )
+            ParallelFor( *cut2oldBPtr, [&] ( FaceId i )
             {
-                for ( FaceId i = range.begin(); i < range.end(); ++i )
-                {
-                    if ( !( *cut2oldBPtr )[i] )
-                        continue;
-                    FaceId refFace = ( *cut2oldBPtr )[i];
-                    if ( new2orgSubdivideMapB.size() > refFace && new2orgSubdivideMapB[refFace] )
-                        ( *cut2oldBPtr )[i] = new2orgSubdivideMapB[refFace];
-                }
+                if ( !( *cut2oldBPtr )[i] )
+                    return;
+                FaceId refFace = ( *cut2oldBPtr )[i];
+                if ( new2orgSubdivideMapB.size() > refFace && new2orgSubdivideMapB[refFace] )
+                    ( *cut2oldBPtr )[i] = new2orgSubdivideMapB[refFace];
             } );
         }
         result.meshBBadContourFaces = std::move( res.fbsWithCountourIntersections );

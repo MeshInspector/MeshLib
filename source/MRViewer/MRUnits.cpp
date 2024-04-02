@@ -202,7 +202,7 @@ const UnitInfo& getUnitInfo( RatioUnit ratio )
 {
     static const UnitInfo ret[] = {
         { .conversionFactor = 1, .prettyName = "Factor", .unitSuffix = " x" },
-        { .conversionFactor = 100, .prettyName = "Percents", .unitSuffix = " %" },
+        { .conversionFactor = 0.01f, .prettyName = "Percents", .unitSuffix = " %" },
     };
     static_assert( std::extent_v<decltype( ret )> == int( RatioUnit::_count ) );
     return ret[int( ratio )];

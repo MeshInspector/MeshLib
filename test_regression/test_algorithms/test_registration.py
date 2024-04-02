@@ -28,7 +28,7 @@ def test_ICP(tmp_path, input_case):
     diagonal = mesh_fixed.getBoundingBox().diagonal()
     icp_sampling_voxel_size = diagonal * 0.01  # To sample points from object
     icp_params = mlib.ICPProperties()
-    icp_params.distTresholdSq = (diagonal * 0.1) ** 2  # Select points pairs that's not too far
+    icp_params.distThresholdSq = (diagonal * 0.1) ** 2  # Select points pairs that's not too far
     icp_params.exitVal = diagonal * 0.003  # Stop when this distance reached
     icp_params.icpMode = mlib.ICPMode.__members__[input_case["method"]]  # Select ICP method
 

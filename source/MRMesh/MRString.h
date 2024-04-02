@@ -46,4 +46,9 @@ bool split( std::string_view str, std::string_view sep, F&& func )
     return false;
 }
 
+// Replaces `from` with `to` in `target`, zero or more times.
+[[nodiscard]] MRMESH_API std::string replace( std::string target, std::string_view from, std::string_view to );
+// Same, but modifies the target string directly.
+MRMESH_API void replaceInplace( std::string& target, std::string_view from, std::string_view to );
+
 }

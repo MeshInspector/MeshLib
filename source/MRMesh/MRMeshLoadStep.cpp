@@ -227,32 +227,35 @@ public:
         if ( !reportProgress( callback, 0.80f ) )
             return;
 
-        std::deque<TopoDS_Shape> solids;
+        std::deque<TopoDS_Shape> shapes;
         for ( auto shi = 1; shi <= reader.NbShapes(); ++shi )
         {
             const auto shape = reader.Shape( shi );
 
+            // search for closed shapes
             size_t solidCount = 0;
             for ( auto explorer = TopExp_Explorer( shape, TopAbs_SOLID ); explorer.More(); explorer.Next() )
             {
-                solids.emplace_back( explorer.Current() );
+                shapes.emplace_back( explorer.Current() );
                 ++solidCount;
             }
+            // search for non-closed shapes
+            size_t shellCount = 0;
             for ( auto explorer = TopExp_Explorer( shape, TopAbs_SHELL, TopAbs_SOLID ); explorer.More(); explorer.Next() )
             {
-                solids.emplace_back( explorer.Current() );
-                ++solidCount;
+                shapes.emplace_back( explorer.Current() );
+                ++shellCount;
             }
 
-            // import the whole shape if it doesn't consist of solids
-            if ( solidCount == 0 )
-                solids.emplace_back( shape );
+            // import the whole shape if it doesn't consist of solids or shells
+            if ( solidCount + shellCount == 0 )
+                shapes.emplace_back( shape );
         }
 
         rootObj_ = std::make_shared<Object>();
         rootObj_->select( true );
 
-        for ( const auto& shape : solids )
+        for ( const auto& shape : shapes )
         {
             const auto& location = shape.Location();
             const auto xf = AffineXf3f( toXf( location.Transformation() ) );

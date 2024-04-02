@@ -240,7 +240,7 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, con
 
         auto isPointHidden = [&]( const Vector3f& point ) -> bool
         {
-            if ( useClipping && clippingPlane.distance( point ) > 0 )
+            if ( useClipping && clippingPlane.distance( obj.worldXf()( point ) ) > 0 )
                 return true;
 
             auto & myLineMeshes = tlsLineMeshes.local();
@@ -373,7 +373,7 @@ VertBitSet findVertsInViewportArea( const Viewport& viewport, const BitSet& pixB
                 verts.set( i, false );
         }
         else if ( onlyVisible && obj.getVisualizeProperty( VisualizeMaskType::ClippedByPlane, viewport.id ) &&
-            clippingPlane.distance( pointCloud->points[i] ) > 0 )
+            clippingPlane.distance( obj.worldXf() ( pointCloud->points[i] ) ) > 0 )
         {
             verts.set( i, false );
         }

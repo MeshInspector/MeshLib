@@ -65,36 +65,47 @@ using PointPairs = std::vector<PointPair>;
 /// computes root-mean-square deviation from points to target planes
 [[nodiscard]] MRMESH_API float getMeanSqDistToPlane( const PointPairs & pairs, const MeshOrPoints & floating, const AffineXf3f & floatXf );
 
-/// remove from the pairs invalid ones
-MRMESH_API void removeInvalidPointPairs( PointPairs & pairs );
+/// remove from the pairs invalid ones;
+/// returns the number of pairs removed
+MRMESH_API size_t removeInvalidPointPairs( PointPairs & pairs );
 
 struct ICPProperties
 {
-    // The method how to update transformation from point pairs
+    /// The method how to update transformation from point pairs
     ICPMethod method = ICPMethod::PointToPlane;
-    // Rotation angle during one iteration of PointToPlane will be limited by this value
+
+    /// Rotation angle during one iteration of PointToPlane will be limited by this value
     float p2plAngleLimit = PI_F / 6.0f; // [radians]
-    // Scaling during one iteration of PointToPlane will be limited by this value
+
+    /// Scaling during one iteration of PointToPlane will be limited by this value
     float p2plScaleLimit = 2;
-    // Points pair will be counted only if cosine between surface normals in points is higher
+
+    /// Points pair will be counted only if cosine between surface normals in points is higher
     float cosTreshold = 0.7f; // in [-1,1]
-    // Points pair will be counted only if squared distance between points is lower than
-    float distTresholdSq = 1.f; // [distance^2]
-    // Sigma multiplier for statistic throw of paints pair based on the distance
-    // Default: all pairs in the interval the (distance = mean +- 3*sigma) are passed
-    float distStatisticSigmaFactor = 3.f; // dimensionless
-    // Finds only translation. Rotation part is identity matrix
+
+    /// Points pair will be counted only if squared distance between points is lower than
+    float distThresholdSq = 1.f; // [distance^2]
+
+    /// Points pair will be counted only if distance between points is lower than
+    /// root-mean-square distance times this factor
+    float farDistFactor = 3.f; // dimensionless
+
+    /// Finds only translation. Rotation part is identity matrix
     ICPMode icpMode = ICPMode::AnyRigidXf;
-    // If this vector is not zero then rotation is allowed relative to this axis only
+
+    /// If this vector is not zero then rotation is allowed relative to this axis only
     Vector3f fixedRotationAxis;
-    // keep point pairs from first iteration
+
+    /// keep point pairs from first iteration
     bool freezePairs = false;
 
-    // parameters of iterative call
-    int iterLimit = 10; // maximum iterations
-    int badIterStopCount = 3; // maximum iterations without improvements
+    /// maximum iterations
+    int iterLimit = 10;
 
-    // Algorithm target root-mean-square distance. As soon as it is reached, the algorithm stops.
+    /// maximum iterations without improvements
+    int badIterStopCount = 3;
+
+    /// Algorithm target root-mean-square distance. As soon as it is reached, the algorithm stops.
     float exitVal = 0; // [distance]
 };
 
@@ -119,7 +130,7 @@ public:
     MRMESH_API void setDistanceLimit( const float dist );
     MRMESH_API void setBadIterCount( const int iter );
     MRMESH_API void setPairsWeight(const std::vector<float> & w);
-    MRMESH_API void setDistanceFilterSigmaFactor(const float factor);
+    MRMESH_API void setFarDistFactor(const float factor);
     MRMESH_API void recomputeBitSet(const float floatSamplingVoxelSize);
 
     /// sets to-world transformations both for floating and reference objects
@@ -179,7 +190,7 @@ private:
     };
     ExitType resultType_{ ExitType::NotStarted };
 
-    void updateVertFilters_();
+    void filterPairs_();
 
     int iter_ = 0;
     bool p2ptIter_();

@@ -133,52 +133,43 @@ void ICP::updatePointPairs()
     } );
 
     if ( !freezePairs )
-    {
-        removeInvalidPointPairs( flt2refPairs_ );
-        updateVertFilters_();
-    }
+        filterPairs_();
 }
 
-void removeInvalidPointPairs( PointPairs & pairs )
+size_t removeInvalidPointPairs( PointPairs & pairs )
 {
-    std::erase_if( pairs, []( const PointPair & vp )
+    return std::erase_if( pairs, []( const PointPair & vp )
     {
         return !vp.srcVertId.valid();
     } );
 }
 
-void ICP::updateVertFilters_()
+void ICP::filterPairs_()
 {
-    // finding mean value
-    float meanVal = 0.f;
-    for (const auto& vp : flt2refPairs_)
-    {
-        meanVal += std::sqrt(vp.distSq);
-    }
-    meanVal /= float(flt2refPairs_.size());
-
-    //finding standard deviation
-    float stDev = 0.f;
-    for (const auto& vp : flt2refPairs_)
-    {
-        float dif = (meanVal - std::sqrt(vp.distSq));
-        stDev += dif * dif;
-    }
-    stDev /= float(flt2refPairs_.size());
-    stDev = std::sqrt(stDev);
-
-    ParallelFor( flt2refPairs_, [&]( size_t idx )
-    {
-        PointPair& vp = flt2refPairs_[idx];
-        if ((vp.normalsAngleCos < prop_.cosTreshold) || //cos filter
-            (vp.distSq > prop_.distTresholdSq) || //dist filter
-            (std::abs(std::sqrt(vp.distSq) - meanVal) > prop_.distStatisticSigmaFactor * stDev)) //sigma filter
-        {
-            vp.srcVertId = VertId(); //invalidate
-        }
-    } );
-
+    MR_TIMER
     removeInvalidPointPairs( flt2refPairs_ );
+
+    for ( int i = 0; i < 3; ++i )
+    {
+        const auto avgDist = getMeanSqDistToPoint();
+        const auto distThresholdSq = std::min( prop_.distThresholdSq,
+            sqr( prop_.farDistFactor * avgDist ) );
+
+        ParallelFor( flt2refPairs_, [&]( size_t idx )
+        {
+            PointPair& vp = flt2refPairs_[idx];
+            if ( !vp.srcVertId )
+                return;
+            if ( vp.normalsAngleCos < prop_.cosTreshold || //cos filter
+                 vp.distSq > distThresholdSq ) //dist filter
+            {
+                vp.srcVertId = VertId(); //invalidate
+            }
+        } );
+
+        if ( removeInvalidPointPairs( flt2refPairs_ ) == 0 )
+            break; //nothing was filter on this iteration
+    }
 }
 
 std::pair<float,float> ICP::getDistLimitsSq() const
@@ -412,28 +403,36 @@ AffineXf3f ICP::calculateTransformation()
 
 float getMeanSqDistToPoint( const PointPairs & pairs )
 {
-    if ( pairs.empty() )
-        return FLT_MAX;
+    int num = 0;
     double sum = 0;
     for ( const auto& vp : pairs )
     {
+        if ( !vp.srcVertId )
+            continue;
         sum += vp.distSq;
+        ++num;
     }
-    return (float)std::sqrt( sum / pairs.size() );
+    if ( num <= 0 )
+        return FLT_MAX;
+    return (float)std::sqrt( sum / num );
 }
 
 float getMeanSqDistToPlane( const PointPairs & pairs, const MeshOrPoints & floating, const AffineXf3f & floatXf )
 {
-    if ( pairs.empty() )
-        return FLT_MAX;
     const VertCoords& points = floating.points();
+    int num = 0;
     double sum = 0;
     for ( const auto& vp : pairs )
     {
+        if ( !vp.srcVertId )
+            continue;
         auto v = dot( vp.tgtNorm, vp.tgtPoint - floatXf(points[vp.srcVertId]) );
         sum += sqr( v );
+        ++num;
     }
-    return (float)std::sqrt( sum / pairs.size() );
+    if ( num <= 0 )
+        return FLT_MAX;
+    return (float)std::sqrt( sum / num );
 }
 
 Vector3f ICP::getShiftVector() const
@@ -455,7 +454,7 @@ void ICP::setCosineLimit(const float cos)
 
 void ICP::setDistanceLimit(const float dist)
 {
-    prop_.distTresholdSq = dist * dist;
+    prop_.distThresholdSq = dist * dist;
 }
 
 void ICP::setBadIterCount( const int iter )
@@ -463,9 +462,9 @@ void ICP::setBadIterCount( const int iter )
     prop_.badIterStopCount = iter;
 }
 
-void ICP::setDistanceFilterSigmaFactor(const float factor)
+void ICP::setFarDistFactor(const float factor)
 {
-    prop_.distStatisticSigmaFactor = factor;
+    prop_.farDistFactor = factor;
 }
 
 void ICP::setPairsWeight(const std::vector<float> & w)

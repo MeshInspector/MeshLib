@@ -39,10 +39,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def_readwrite( "p2plAngleLimit", &MR::ICPProperties::p2plAngleLimit, "Rotation angle during one iteration of PointToPlane will be limited by this value").
         def_readwrite( "p2plScaleLimit", &MR::ICPProperties::p2plScaleLimit, "Scaling during one iteration of PointToPlane will be limited by this value").
         def_readwrite( "cosTreshold", &MR::ICPProperties::cosTreshold, "Points pair will be counted only if cosine between surface normals in points is higher" ).
-        def_readwrite( "distTresholdSq", &MR::ICPProperties::distTresholdSq, "Points pair will be counted only if squared distance between points is lower than" ).
-        def_readwrite( "distStatisticSigmaFactor", &MR::ICPProperties::distStatisticSigmaFactor,
-            "Sigma multiplier for statistic throw of paints pair based on the distance\n"
-            "Default: all pairs in the interval the (distance = mean +- 3*sigma) are passed" ).
+        def_readwrite( "distThresholdSq", &MR::ICPProperties::distThresholdSq, "Points pair will be counted only if squared distance between points is lower than" ).
+        def_readwrite( "farDistFactor", &MR::ICPProperties::farDistFactor,
+            "Points pair will be counted only if distance between points is lower than root-mean-square distance times this factor" ).
         def_readwrite( "icpMode", &MR::ICPProperties::icpMode, "Finds only translation. Rotation part is identity matrix" ).
         def_readwrite( "fixedRotationAxis", &MR::ICPProperties::fixedRotationAxis, "If this vector is not zero then rotation is allowed relative to this axis only" ).
         def_readwrite( "freezePairs", &MR::ICPProperties::freezePairs, "keep point pairs from first iteration" ).
@@ -68,7 +67,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def( "setDistanceLimit", &MR::ICP::setDistanceLimit, pybind11::arg( "dist" ) ).
         def( "setBadIterCount", &MR::ICP::setBadIterCount, pybind11::arg( "iter" ) ).
         def( "setPairsWeight", &MR::ICP::setPairsWeight, pybind11::arg( "v" ) ).
-        def( "setDistanceFilterSigmaFactor", &MR::ICP::setDistanceFilterSigmaFactor, pybind11::arg( "factor" ) ).
+        def( "setFarDistFactor", &MR::ICP::setFarDistFactor, pybind11::arg( "factor" ) ).
         def( "recomputeBitSet", &MR::ICP::recomputeBitSet, pybind11::arg( "floatSamplingVoxelSize" ) ).
         def( "getParams", &MR::ICP::getParams, pybind11::return_value_policy::copy ).
         def( "getShiftVector", &MR::ICP::getShiftVector, "shows mean pair vector" ).

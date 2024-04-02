@@ -238,6 +238,11 @@ public:
                 solids.emplace_back( explorer.Current() );
                 ++solidCount;
             }
+            for ( auto explorer = TopExp_Explorer( shape, TopAbs_SHELL, TopAbs_SOLID ); explorer.More(); explorer.Next() )
+            {
+                solids.emplace_back( explorer.Current() );
+                ++solidCount;
+            }
 
             // import the whole shape if it doesn't consist of solids
             if ( solidCount == 0 )

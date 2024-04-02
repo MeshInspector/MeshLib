@@ -46,15 +46,9 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     /// sets size of label font in pixels
-    virtual void setFontHeight( float size )
-    {
-        fontHeight_ = size;
-    }
+    MRMESH_API virtual void setFontHeight( float size );
     /// returns size of label font on screen in pixels
-    float getFontHeight() const
-    {
-        return fontHeight_;
-    }
+    float getFontHeight() const { return fontHeight_; }
 
     /// sets text and position of label
     MRMESH_API void setLabel( const PositionedText& label );

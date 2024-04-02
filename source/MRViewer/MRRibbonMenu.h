@@ -269,6 +269,7 @@ private:
     // seconds to stay opened if not pinned
     float openedMaxSecs_{ 2.0f };
     float openedTimer_{ openedMaxSecs_ };
+    float openedLastOperationTimeTimer_{ openedMaxSecs_ };
 
     int activeTabIndex_{ 0 };
     RibbonFontManager fontManager_;

@@ -1491,7 +1491,7 @@ float ImGuiMenu::drawSelectionInformation_()
             {
                 UI::inputTextCenteredReadOnly( "Volume", "Mesh is not closed", itemWidth );
             }
-        }        
+        }
     }
 
     bool firstField = true;
@@ -1579,16 +1579,16 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
 
             if ( prop.kind == FeaturePropertyKind::position || prop.kind == FeaturePropertyKind::linearDimension )
             {
-                UI::drag<LengthUnit>( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), arg, speed, min, max );
+                ret = UI::drag<LengthUnit>( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), arg, speed, min, max );
             }
             else if ( prop.kind == FeaturePropertyKind::angle )
             {
-                UI::drag<AngleUnit>( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), arg, speed, min, max );
+                ret = UI::drag<AngleUnit>( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), arg, speed, min, max );
             }
             else
             {
                 // `FeaturePropertyKind::direction` intentionally goes here.
-                UI::drag<NoUnit>( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), arg, speed, min, max );
+                ret = UI::drag<NoUnit>( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), arg, speed, min, max );
             }
 
             if ( ret )

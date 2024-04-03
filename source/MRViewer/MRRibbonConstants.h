@@ -23,7 +23,7 @@ constexpr float cTopPanelScrollBtnSize = 20.0f;
 constexpr float cTopPanelAditionalButtonSize = cTabHeight - cTabYOffset;
 constexpr float cSeparateBlocksSpacing = 12.0f;
 
-constexpr float cRibbonItemInterval = 4.0f; 
+constexpr float cRibbonItemInterval = 4.0f;
 constexpr float cRibbonItemMinWidth = 86.0f;
 constexpr float cRibbonButtonWindowPaddingX = 6.0f;
 constexpr float cRibbonButtonWindowPaddingY = 4.0f;
@@ -54,8 +54,6 @@ constexpr int cSmallFontSize = 11;
 constexpr int cDefaultFontSize = 13;
 constexpr int cBigFontSize = 15;
 constexpr int cHeadlineFontSize = 20;
-
-constexpr float cPaletteDiscretizationScaling = 5.0f / 18.0f;
 
 constexpr float cRadioButtonSize = 20.0f;
 

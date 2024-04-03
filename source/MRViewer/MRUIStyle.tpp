@@ -174,6 +174,9 @@ namespace detail
     template <UnitEnum E, VectorOrScalar T>
     [[nodiscard]] std::string getDragRangeTooltip( T min, T max, const UnitToStringParams<E>& unitParams )
     {
+        if ( !( min < max ) )
+            return "";
+
         bool haveMin = min > std::numeric_limits<T>::lowest();
         bool haveMax = max < std::numeric_limits<T>::max();
 
@@ -307,6 +310,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
             if ( forceShowZeroes )
                 unitParams.stripTrailingZeroes = false;
 
+            float dragY = ImGui::GetCursorPosY();
             ret = ImGui::DragScalar(
                 elemLabelFixed.c_str(), detail::imGuiTypeEnum<ElemType>(), &elemVal,
                 float( VectorTraits<SpeedType>::getElem( i, fixedSpeed ) ), elemMin, elemMax, replace( valueToString<E>( elemVal, unitParams ), "%", "%%" ).c_str(), flags
@@ -332,8 +336,10 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 // U+2212 MINUS SIGN
                 Vector2f buttonSize( ImGui::GetFrameHeight() - ImGui::GetStyle().ItemInnerSpacing.x, ImGui::GetFrameHeight() );
                 ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+                ImGui::SetCursorPosY( dragY ); // Usually redundant, but when the user does something weird, this is sometimes required.
                 action -= UI::button( "\xe2\x88\x92", buttonSize );
                 ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+                ImGui::SetCursorPosY( dragY );
                 action += UI::button( "+", buttonSize );
 
                 if ( action )

@@ -3,6 +3,9 @@
 
 #include "exports.h"
 #include "MRMesh/MRMeshFwd.h"
+#include "MRMesh/MRPositionedText.h"
+#include "MRViewerEventsListener.h"
+#include <boost/signals2/signal.hpp>
 #include <memory>
 
 namespace MR
@@ -51,6 +54,28 @@ struct MRVIEWER_CLASS AncillaryLabel
     /// Set text position
     MRVIEWER_API void setPosition( const Vector3f& pos );
 };
+
+/// Helper class that draws ImGui label
+class MRVIEWER_CLASS AncillaryImGuiLabel : public PreDrawListener
+{
+public:
+    AncillaryImGuiLabel() = default;
+
+    /// Make label in parent space coordinates, follows parent worldXf
+    MRVIEWER_API void make( Object& parent, const PositionedText& text );
+
+    /// Make label in world space coordinates, follows parent worldXf
+    MRVIEWER_API void make( const PositionedText& text );
+
+    /// clears this instance
+    MRVIEWER_API void reset();
+private:
+    MRVIEWER_API virtual void preDraw_() override;
+
+    PositionedText labelData_;
+    boost::signals2::connection parentXfConnection_;
+};
+
 
 } //namespace MR
 

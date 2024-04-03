@@ -227,4 +227,4 @@ MRVIEWER_API void endTabItem();
 
 }
 
-#include "MRUIStyle.tpp"
+#include "MRUIStyle.ipp"

@@ -224,7 +224,7 @@
     <ClInclude Include="MRRenderMeasurementObjects.h" />
     <ClInclude Include="MRVectorTraits.h" />
     <ClInclude Include="MRUnits.h" />
-    <ClInclude Include="MRUnits.tpp" />
+    <ClInclude Include="MRUIStyle.ipp" />
     <ClInclude Include="MRVisualSubfeatures.h" />
   </ItemGroup>
   <ItemGroup>

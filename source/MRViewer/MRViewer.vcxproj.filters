@@ -710,7 +710,7 @@
     <ClInclude Include="MRUnits.h">
       <Filter>UIStyle</Filter>
     </ClInclude>
-    <ClInclude Include="MRUnits.tpp">
+    <ClInclude Include="MRUIStyle.ipp">
       <Filter>UIStyle</Filter>
     </ClInclude>
     <ClInclude Include="MRVisualSubfeatures.h">

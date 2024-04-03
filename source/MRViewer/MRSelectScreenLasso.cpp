@@ -372,7 +372,7 @@ VertBitSet findVertsInViewportArea( const Viewport& viewport, const BitSet& pixB
             if ( dot( xf.A * normals[i], cameraDir ) < 0 )
                 verts.set( i, false );
         }
-        else if ( onlyVisible && obj.getVisualizeProperty( VisualizeMaskType::ClippedByPlane, viewport.id ) &&
+        if ( onlyVisible && obj.getVisualizeProperty( VisualizeMaskType::ClippedByPlane, viewport.id ) &&
             clippingPlane.distance( xf( pointCloud->points[i] ) ) > 0 )
         {
             verts.set( i, false );

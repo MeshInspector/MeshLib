@@ -74,7 +74,6 @@ private:
 
     PositionedText labelData_;
     boost::signals2::connection parentXfConnection_;
-    std::shared_ptr<Object> obj_;
 };
 
 

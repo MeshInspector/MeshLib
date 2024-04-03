@@ -155,7 +155,7 @@ public:
     float getMeanSqDistToPoint() const { return MR::getMeanSqDistToPoint( flt2refPairs_ ); }
 
     /// computes root-mean-square deviation from points to target planes
-    float getMeanSqDistToPlane() const { return MR::getMeanSqDistToPlane( flt2refPairs_, floating_, floatXf_ ); }
+    float getMeanSqDistToPlane() const { return MR::getMeanSqDistToPlane( flt2refPairs_, flt_, fltXf_ ); }
 
     /// returns current pairs formed from samples on floating and projections on reference
     const PointPairs & getFlt2RefPairs() const { return flt2refPairs_; }
@@ -167,14 +167,12 @@ public:
     MRMESH_API AffineXf3f calculateTransformation();
 
 private:
-    MeshOrPoints floating_;
-    AffineXf3f floatXf_;
-    VertBitSet floatVerts_; ///< vertices of floating object to find their pairs on reference mesh
+    MeshOrPoints flt_;
+    AffineXf3f fltXf_;
+    VertBitSet fltSamples_; ///< vertices of floating object to find their pairs on reference mesh
     
     MeshOrPoints ref_;
     AffineXf3f refXf_;
-
-    AffineXf3f float2refXf_; ///< transformation from floating object space to reference object space
 
     ICPProperties prop_;
 
@@ -190,13 +188,16 @@ private:
     };
     ExitType resultType_{ ExitType::NotStarted };
 
-    void filterPairs_();
+    void updatePointPairs_( PointPairs & pairs, const VertBitSet & srcSamples,
+        const MeshOrPoints & src, const AffineXf3f & srcXf,
+        const MeshOrPoints & tgt, const AffineXf3f & tgtXf );
+
+    /// remove pairs that does not meet criteria from parameters
+    void filterPairs_( PointPairs & pairs );
 
     int iter_ = 0;
     bool p2ptIter_();
     bool p2plIter_();
 };
-
-using MeshICP [[deprecated]] = ICP;
 
 } //namespace MR

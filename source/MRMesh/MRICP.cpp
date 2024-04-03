@@ -16,17 +16,17 @@ namespace MR
 
 ICP::ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
     const VertBitSet& floatBitSet)
-    : floating_( floating )
+    : flt_( floating )
     , ref_( reference )
 {
     setXfs( fltXf, refXf );
-    floatVerts_ = floatBitSet;
+    fltSamples_ = floatBitSet;
     updatePointPairs();
 }
 
 ICP::ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
     float floatSamplingVoxelSize )
-    : floating_( floating )
+    : flt_( floating )
     , ref_( reference )
 {
     setXfs( fltXf, refXf );
@@ -41,15 +41,14 @@ void ICP::setXfs( const AffineXf3f& fltXf, const AffineXf3f& refXf )
 
 void ICP::setFloatXf( const AffineXf3f& fltXf )
 {
-    floatXf_ = fltXf;
-    float2refXf_ = refXf_.inverse() * floatXf_;
+    fltXf_ = fltXf;
 }
 
 AffineXf3f ICP::autoSelectFloatXf()
 {
     MR_TIMER
 
-    auto bestFltXf = floatXf_;
+    auto bestFltXf = fltXf_;
     float bestDist = getMeanSqDistToPoint();
 
     PointAccumulator refAcc;
@@ -57,7 +56,7 @@ AffineXf3f ICP::autoSelectFloatXf()
     const auto refBasisXfs = refAcc.get4BasicXfs3f();
 
     PointAccumulator floatAcc;
-    floating_.accumulate( floatAcc );
+    flt_.accumulate( floatAcc );
     const auto floatBasisXf = floatAcc.getBasicXf3f();
 
     // TODO: perform computations in parallel by calling free functions to measure the distance
@@ -79,12 +78,12 @@ AffineXf3f ICP::autoSelectFloatXf()
 
 void ICP::recomputeBitSet(const float floatSamplingVoxelSize)
 {
-    auto bboxDiag = floating_.computeBoundingBox().size() / floatSamplingVoxelSize;
+    auto bboxDiag = flt_.computeBoundingBox().size() / floatSamplingVoxelSize;
     auto nSamples = bboxDiag[0] * bboxDiag[1] * bboxDiag[2];
     if (nSamples > MAX_RESAMPLING_VOXEL_NUMBER)
-        floatVerts_ = *floating_.pointsGridSampling( floatSamplingVoxelSize * std::cbrt(float(nSamples) / float(MAX_RESAMPLING_VOXEL_NUMBER)) );
+        fltSamples_ = *flt_.pointsGridSampling( floatSamplingVoxelSize * std::cbrt(float(nSamples) / float(MAX_RESAMPLING_VOXEL_NUMBER)) );
     else
-        floatVerts_ = *floating_.pointsGridSampling( floatSamplingVoxelSize );
+        fltSamples_ = *flt_.pointsGridSampling( floatSamplingVoxelSize );
 
     updatePointPairs();
 }
@@ -92,39 +91,49 @@ void ICP::recomputeBitSet(const float floatSamplingVoxelSize)
 void ICP::updatePointPairs()
 {
     MR_TIMER
-    const VertCoords& points = floating_.points();
+    updatePointPairs_( flt2refPairs_, fltSamples_, flt_, fltXf_, ref_, refXf_ );
+}
+
+void ICP::updatePointPairs_( PointPairs & pairs, const VertBitSet & srcSamples,
+    const MeshOrPoints & src, const AffineXf3f & srcXf,
+    const MeshOrPoints & tgt, const AffineXf3f & tgtXf )
+{
+    MR_TIMER
+    const auto src2tgtXf = tgtXf.inverse() * srcXf;
+
+    const VertCoords& srcPoints = src.points();
     /// freeze pairs if there is at least one pair
-    const bool freezePairs = prop_.freezePairs && !flt2refPairs_.empty();
+    const bool freezePairs = prop_.freezePairs && !pairs.empty();
     if ( !freezePairs )
     {
-        flt2refPairs_.clear();
-        flt2refPairs_.reserve( floatVerts_.count() );
-        for ( auto id : floatVerts_ )
-            flt2refPairs_.emplace_back().srcVertId = id;
+        pairs.clear();
+        pairs.reserve( srcSamples.count() );
+        for ( auto id : srcSamples )
+            pairs.emplace_back().srcVertId = id;
     }
 
-    const auto floatNormals = floating_.normals();
-    const auto floatWeights = floating_.weights();
-    const auto refProjector = ref_.projector();
+    const auto srcNormals = src.normals();
+    const auto srcWeights = src.weights();
+    const auto tgtProjector = tgt.projector();
 
     // calculate pairs
-    ParallelFor( flt2refPairs_, [&] ( size_t idx )
+    ParallelFor( pairs, [&] ( size_t idx )
     {
-        PointPair& vp = flt2refPairs_[idx];
+        PointPair& vp = pairs[idx];
         auto& id = vp.srcVertId;
-        const auto& p = points[id];
-        const auto prj = refProjector( float2refXf_( p ) );
+        const auto& p = srcPoints[id];
+        const auto prj = tgtProjector( src2tgtXf( p ) );
 
         // projection should be found and if point projects on the border it will be ignored
         // unless we are in freezePairs mode
         if ( freezePairs || !prj.isBd )
         {
             vp.distSq = prj.distSq;
-            vp.weight = floatWeights ? floatWeights( id ) : 1.0f;
-            vp.tgtPoint = refXf_( prj.point );
-            vp.tgtNorm = prj.normal ? ( refXf_.A * prj.normal.value() ).normalized() : Vector3f();
-            vp.srcNorm = floatNormals ? ( floatXf_.A * floatNormals( id ) ).normalized() : Vector3f();
-            vp.normalsAngleCos = ( prj.normal && floatNormals ) ? dot( vp.tgtNorm, vp.srcNorm ) : 1.0f;
+            vp.weight = srcWeights ? srcWeights( id ) : 1.0f;
+            vp.tgtPoint = tgtXf( prj.point );
+            vp.tgtNorm = prj.normal ? ( tgtXf.A * prj.normal.value() ).normalized() : Vector3f();
+            vp.srcNorm = srcNormals ? ( srcXf.A * srcNormals( id ) ).normalized() : Vector3f();
+            vp.normalsAngleCos = ( prj.normal && srcNormals ) ? dot( vp.tgtNorm, vp.srcNorm ) : 1.0f;
         }
         else
         {
@@ -133,7 +142,7 @@ void ICP::updatePointPairs()
     } );
 
     if ( !freezePairs )
-        filterPairs_();
+        filterPairs_( pairs );
 }
 
 size_t removeInvalidPointPairs( PointPairs & pairs )
@@ -144,10 +153,10 @@ size_t removeInvalidPointPairs( PointPairs & pairs )
     } );
 }
 
-void ICP::filterPairs_()
+void ICP::filterPairs_( PointPairs & pairs )
 {
     MR_TIMER
-    removeInvalidPointPairs( flt2refPairs_ );
+    removeInvalidPointPairs( pairs );
 
     for ( int i = 0; i < 3; ++i )
     {
@@ -155,9 +164,9 @@ void ICP::filterPairs_()
         const auto distThresholdSq = std::min( prop_.distThresholdSq,
             sqr( prop_.farDistFactor * avgDist ) );
 
-        ParallelFor( flt2refPairs_, [&]( size_t idx )
+        ParallelFor( pairs, [&]( size_t idx )
         {
-            PointPair& vp = flt2refPairs_[idx];
+            PointPair& vp = pairs[idx];
             if ( !vp.srcVertId )
                 return;
             if ( vp.normalsAngleCos < prop_.cosTreshold || //cos filter
@@ -167,7 +176,7 @@ void ICP::filterPairs_()
             }
         } );
 
-        if ( removeInvalidPointPairs( flt2refPairs_ ) == 0 )
+        if ( removeInvalidPointPairs( pairs ) == 0 )
             break; //nothing was filter on this iteration
     }
 }
@@ -187,12 +196,12 @@ std::pair<float,float> ICP::getDistLimitsSq() const
 bool ICP::p2ptIter_()
 {
     MR_TIMER;
-    const VertCoords& points = floating_.points();
+    const VertCoords& points = flt_.points();
     PointToPointAligningTransform p2pt;
     for (const auto& vp : flt2refPairs_)
     {
         const auto& id = vp.srcVertId;
-        const auto v1 = floatXf_(points[id]);
+        const auto v1 = fltXf_(points[id]);
         const auto& v2 = vp.tgtPoint;
         p2pt.add(Vector3d(v1), Vector3d(v2), vp.weight);
     }
@@ -222,7 +231,7 @@ bool ICP::p2ptIter_()
 
     if (std::isnan(res.b.x)) //nan check
         return false;
-    setFloatXf( res * floatXf_ );
+    setFloatXf( res * fltXf_ );
     return true;
 }
 
@@ -231,12 +240,12 @@ bool ICP::p2plIter_()
     MR_TIMER;
     if ( flt2refPairs_.empty() )
         return false;
-    const VertCoords& points = floating_.points();
+    const VertCoords& points = flt_.points();
     Vector3f centroidRef;
     for (auto& vp : flt2refPairs_)
     {
         centroidRef += vp.tgtPoint;
-        centroidRef += floatXf_(points[vp.srcVertId]);
+        centroidRef += fltXf_(points[vp.srcVertId]);
     }
     centroidRef /= float(flt2refPairs_.size() * 2);
     AffineXf3f centroidRefXf = AffineXf3f(Matrix3f(), centroidRef);
@@ -244,7 +253,7 @@ bool ICP::p2plIter_()
     PointToPlaneAligningTransform p2pl;
     for (const auto& vp : flt2refPairs_)
     {
-        const auto v1 = floatXf_(points[vp.srcVertId]);
+        const auto v1 = fltXf_(points[vp.srcVertId]);
         const auto& v2 = vp.tgtPoint;
         p2pl.add(Vector3d(v1 - centroidRef), Vector3d(v2 - centroidRef), Vector3d(vp.tgtNorm), vp.weight);
     }
@@ -289,7 +298,7 @@ bool ICP::p2plIter_()
             PointToPlaneAligningTransform p2plTrans;
             for (const auto& vp : flt2refPairs_)
             {
-                const auto v1 = floatXf_(points[vp.srcVertId]);
+                const auto v1 = fltXf_(points[vp.srcVertId]);
                 const auto& v2 = vp.tgtPoint;
                 p2plTrans.add(mLimited * Vector3d(v1 - centroidRef), mLimited * Vector3d(v2 - centroidRef),
                     mLimited * Vector3d(vp.tgtNorm), vp.weight);
@@ -305,7 +314,7 @@ bool ICP::p2plIter_()
 
     if (std::isnan(res.b.x)) //nan check
         return false;
-    setFloatXf( centroidRefXf * res * centroidRefXf.inverse() * floatXf_ );
+    setFloatXf( centroidRefXf * res * centroidRefXf.inverse() * fltXf_ );
     return true;
 }
 
@@ -398,7 +407,7 @@ AffineXf3f ICP::calculateTransformation()
         resultType_ = ExitType::MaxIterations;
     else
         iter_++;
-    return floatXf_;
+    return fltXf_;
 }
 
 float getMeanSqDistToPoint( const PointPairs & pairs )
@@ -437,11 +446,11 @@ float getMeanSqDistToPlane( const PointPairs & pairs, const MeshOrPoints & float
 
 Vector3f ICP::getShiftVector() const
 {
-    const VertCoords& points = floating_.points();
+    const VertCoords& points = flt_.points();
     Vector3f vecAcc{ 0.f,0.f,0.f };
     for (const auto& vp : flt2refPairs_)
     {
-        auto vec = (vp.tgtPoint) - floatXf_(points[vp.srcVertId]);
+        auto vec = (vp.tgtPoint) - fltXf_(points[vp.srcVertId]);
         vecAcc += vec;
     }
     return flt2refPairs_.size() == 0 ? vecAcc : vecAcc / float(flt2refPairs_.size());

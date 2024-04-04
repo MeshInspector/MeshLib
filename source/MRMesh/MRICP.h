@@ -54,6 +54,9 @@ struct PointPair
     /// weight of the pair (to prioritize over other pairs)
     float weight = 1.f;
 
+    /// whether this pair must be considered during minimization
+    bool active = true;
+
     friend bool operator == ( const PointPair&, const PointPair& ) = default;
 };
 
@@ -64,10 +67,6 @@ using PointPairs = std::vector<PointPair>;
 
 /// computes root-mean-square deviation from points to target planes
 [[nodiscard]] MRMESH_API float getMeanSqDistToPlane( const PointPairs & pairs, const MeshOrPoints & floating, const AffineXf3f & floatXf );
-
-/// remove from the pairs invalid ones;
-/// returns the number of pairs removed
-MRMESH_API size_t removeInvalidPointPairs( PointPairs & pairs );
 
 struct ICPProperties
 {
@@ -96,9 +95,6 @@ struct ICPProperties
     /// If this vector is not zero then rotation is allowed relative to this axis only
     Vector3f fixedRotationAxis;
 
-    /// keep point pairs from first iteration
-    bool freezePairs = false;
-
     /// maximum iterations
     int iterLimit = 10;
 
@@ -117,9 +113,9 @@ public:
     /// xf parameters should represent current transformations of meshes
     /// fltXf transform from the local floating basis to the global
     /// refXf transform from the local reference basis to the global
-    /// floatBitSet allows to take exact set of vertices from the floating object
+    /// fltSamples allows to take exact set of vertices from the floating object
     MRMESH_API ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
-        const VertBitSet& floatBitSet);
+        const VertBitSet& fltSamples);
     MRMESH_API ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
         float floatSamplingVoxelSize ); // positive value here defines voxel size, and only one vertex per voxel will be selected
     // TODO: add single transform constructor
@@ -169,7 +165,6 @@ public:
 private:
     MeshOrPoints flt_;
     AffineXf3f fltXf_;
-    VertBitSet fltSamples_; ///< vertices of floating object to find their pairs on reference mesh
     
     MeshOrPoints ref_;
     AffineXf3f refXf_;
@@ -188,12 +183,13 @@ private:
     };
     ExitType resultType_{ ExitType::NotStarted };
 
-    void updatePointPairs_( PointPairs & pairs, const VertBitSet & srcSamples,
+    /// in each pair updates the target data and performs basic filtering (activation)
+    void updatePointPairs_( PointPairs & pairs,
         const MeshOrPoints & src, const AffineXf3f & srcXf,
         const MeshOrPoints & tgt, const AffineXf3f & tgtXf );
 
-    /// remove pairs that does not meet criteria from parameters
-    void filterPairs_( PointPairs & pairs );
+    /// deactivate pairs that does not meet farDistFactor criterion
+    void deactivatefarDistPairs_();
 
     int iter_ = 0;
     bool p2ptIter_();

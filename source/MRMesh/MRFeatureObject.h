@@ -109,6 +109,9 @@ public:
     MRMESH_API void setXf( const AffineXf3f& xf, ViewportId id = {} ) override;
     MRMESH_API void resetXf( ViewportId id = {} ) override;
 
+    // Returns point considered as base for the feature
+    [[nodiscard]] MRMESH_API virtual Vector3f getBasePoint( ViewportId id = {} ) const;
+
     // The cached orthonormalized rotation matrix.
     // `isDef` receives false if matrix is overridden for this specific viewport.
     [[nodiscard]] Matrix3f getRotationMatrix( ViewportId id = {}, bool* isDef = nullptr ) const { return r_.get( id, isDef ); }

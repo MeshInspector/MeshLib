@@ -71,6 +71,12 @@ void PlaneObject::setSizeY( float size, ViewportId id /*= {}*/ )
     setXf( currentXf, id );
 }
 
+Vector3f PlaneObject::getBasePoint( ViewportId id /*= {} */ ) const
+{
+    auto basis = calcLocalBasis( id );
+    return getCenter( id ) - basis.x * getSizeX( id ) * 0.5f - basis.y * getSizeY( id ) * 0.5f;
+}
+
 FeatureObjectProjectPointResult PlaneObject::projectPoint( const Vector3f& point, ViewportId id /*= {}*/ ) const
 {
     const Vector3f& center = getCenter( id );

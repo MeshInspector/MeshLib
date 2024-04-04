@@ -63,6 +63,9 @@ public:
     /// updates xf to fit cylinder length
     MRMESH_API void setLength( float length, ViewportId id = {} );
 
+    // Returns point considered as base for the feature
+    [[nodiscard]] MRMESH_API virtual Vector3f getBasePoint( ViewportId id = {} ) const override;
+
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 
     [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point, ViewportId id = {} ) const override;

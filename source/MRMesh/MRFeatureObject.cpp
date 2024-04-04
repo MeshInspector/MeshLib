@@ -306,4 +306,9 @@ void FeatureObject::setAllVisualizeProperties_( const AllVisualizeProperties& pr
     setAllVisualizePropertiesForEnum<FeatureVisualizePropertyType>( properties, pos );
 }
 
+Vector3f FeatureObject::getBasePoint( ViewportId id /*= {} */ ) const
+{
+    return xf( id ).b;
+}
+
 }

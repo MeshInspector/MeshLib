@@ -51,6 +51,11 @@ float LineObject::getLength( ViewportId id /*= {}*/ ) const
     return s_.get( id ).x.x * baseLineObjectLength_;
 }
 
+Vector3f LineObject::getBasePoint( ViewportId id /*= {} */ ) const
+{
+    return getPointA( id );
+}
+
 Vector3f LineObject::getPointA( ViewportId id /*= {}*/ ) const
 {
     return getCenter( id ) - getDirection( id ) * ( getLength( id ) / 2 );

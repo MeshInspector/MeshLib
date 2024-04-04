@@ -105,6 +105,11 @@ void ConeObject::setBaseRadius( float radius, ViewportId id /*= {}*/ )
     setXf( currentXf, id );
 }
 
+Vector3f ConeObject::getBasePoint( ViewportId id /*= {} */ ) const
+{
+    return getCenter( id ) + getDirection( id ) * getHeight( id );
+}
+
 ConeObject::ConeObject()
     : AddVisualProperties( 2 )
 {}

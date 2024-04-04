@@ -61,6 +61,9 @@ public:
     MRMESH_API void setSizeX( float size, ViewportId id = {} );
     MRMESH_API void setSizeY( float size, ViewportId id = {} );
 
+    // Returns point considered as base for the feature
+    [[nodiscard]] MRMESH_API virtual Vector3f getBasePoint( ViewportId id = {} ) const override;
+
     [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point, ViewportId id = {} ) const override;
 
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;

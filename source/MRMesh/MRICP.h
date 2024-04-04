@@ -54,20 +54,22 @@ struct PointPair
     /// weight of the pair (to prioritize over other pairs)
     float weight = 1.f;
 
+    /// whether this pair must be considered during minimization
+    bool active = true;
+
     friend bool operator == ( const PointPair&, const PointPair& ) = default;
 };
 
 using PointPairs = std::vector<PointPair>;
+
+/// computes the number of active pairs
+[[nodiscard]] MRMESH_API size_t getNumActivePairs( const PointPairs & pairs );
 
 /// computes root-mean-square deviation between points
 [[nodiscard]] MRMESH_API float getMeanSqDistToPoint( const PointPairs & pairs );
 
 /// computes root-mean-square deviation from points to target planes
 [[nodiscard]] MRMESH_API float getMeanSqDistToPlane( const PointPairs & pairs, const MeshOrPoints & floating, const AffineXf3f & floatXf );
-
-/// remove from the pairs invalid ones;
-/// returns the number of pairs removed
-MRMESH_API size_t removeInvalidPointPairs( PointPairs & pairs );
 
 struct ICPProperties
 {
@@ -96,9 +98,6 @@ struct ICPProperties
     /// If this vector is not zero then rotation is allowed relative to this axis only
     Vector3f fixedRotationAxis;
 
-    /// keep point pairs from first iteration
-    bool freezePairs = false;
-
     /// maximum iterations
     int iterLimit = 10;
 
@@ -111,15 +110,16 @@ struct ICPProperties
 
 /// This class allows you to register two object with similar shape using
 /// Iterative Closest Points (ICP) point-to-point or point-to-plane algorithms
-class ICP
+class [[nodiscard]] ICP
 {
 public:
     /// xf parameters should represent current transformations of meshes
     /// fltXf transform from the local floating basis to the global
     /// refXf transform from the local reference basis to the global
-    /// floatBitSet allows to take exact set of vertices from the floating object
+    /// fltSamples allows to take exact set of vertices from the floating object
     MRMESH_API ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
-        const VertBitSet& floatBitSet);
+        const VertBitSet& fltSamples);
+
     MRMESH_API ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
         float floatSamplingVoxelSize ); // positive value here defines voxel size, and only one vertex per voxel will be selected
     // TODO: add single transform constructor
@@ -129,7 +129,6 @@ public:
     MRMESH_API void setCosineLimit(const float cos);
     MRMESH_API void setDistanceLimit( const float dist );
     MRMESH_API void setBadIterCount( const int iter );
-    MRMESH_API void setPairsWeight(const std::vector<float> & w);
     MRMESH_API void setFarDistFactor(const float factor);
     MRMESH_API void recomputeBitSet(const float floatSamplingVoxelSize);
 
@@ -147,29 +146,28 @@ public:
     /// recompute point pairs after manual change of transformations or parameters
     MRMESH_API void updatePointPairs();
 
-    const ICPProperties& getParams() const { return prop_; }
-    MRMESH_API Vector3f getShiftVector() const; // shows mean pair vector
-    MRMESH_API std::string getLastICPInfo() const; // returns status info string
+    [[nodiscard]] const ICPProperties& getParams() const { return prop_; }
+
+    [[nodiscard]] MRMESH_API std::string getLastICPInfo() const; // returns status info string
+
+    /// computes the number of active point pairs
+    [[nodiscard]] size_t getNumActivePairs() const { return MR::getNumActivePairs( flt2refPairs_ ); }
 
     /// computes root-mean-square deviation between points
-    float getMeanSqDistToPoint() const { return MR::getMeanSqDistToPoint( flt2refPairs_ ); }
+    [[nodiscard]] float getMeanSqDistToPoint() const { return MR::getMeanSqDistToPoint( flt2refPairs_ ); }
 
     /// computes root-mean-square deviation from points to target planes
-    float getMeanSqDistToPlane() const { return MR::getMeanSqDistToPlane( flt2refPairs_, flt_, fltXf_ ); }
+    [[nodiscard]] float getMeanSqDistToPlane() const { return MR::getMeanSqDistToPlane( flt2refPairs_, flt_, fltXf_ ); }
 
     /// returns current pairs formed from samples on floating and projections on reference
-    const PointPairs & getFlt2RefPairs() const { return flt2refPairs_; }
-
-    /// finds squared minimum and maximum pairs distances
-    MRMESH_API std::pair<float, float> getDistLimitsSq() const;
+    [[nodiscard]] const PointPairs & getFlt2RefPairs() const { return flt2refPairs_; }
 
     /// returns new xf transformation for the floating mesh, which allows to match reference mesh
-    MRMESH_API AffineXf3f calculateTransformation();
+    [[nodiscard]] MRMESH_API AffineXf3f calculateTransformation();
 
 private:
     MeshOrPoints flt_;
     AffineXf3f fltXf_;
-    VertBitSet fltSamples_; ///< vertices of floating object to find their pairs on reference mesh
     
     MeshOrPoints ref_;
     AffineXf3f refXf_;
@@ -188,12 +186,13 @@ private:
     };
     ExitType resultType_{ ExitType::NotStarted };
 
-    void updatePointPairs_( PointPairs & pairs, const VertBitSet & srcSamples,
+    /// in each pair updates the target data and performs basic filtering (activation)
+    void updatePointPairs_( PointPairs & pairs,
         const MeshOrPoints & src, const AffineXf3f & srcXf,
         const MeshOrPoints & tgt, const AffineXf3f & tgtXf );
 
-    /// remove pairs that does not meet criteria from parameters
-    void filterPairs_( PointPairs & pairs );
+    /// deactivate pairs that does not meet farDistFactor criterion
+    void deactivatefarDistPairs_();
 
     int iter_ = 0;
     bool p2ptIter_();

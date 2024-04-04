@@ -31,7 +31,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def_readwrite( "tgtNorm", &MR::PointPair::tgtNorm, "normal in the target point after transforming in world space" ).
         def_readwrite( "normalsAngleCos", &MR::PointPair::normalsAngleCos, "cosine between normals in source and target points" ).
         def_readwrite( "distSq", &MR::PointPair::distSq, "squared distance between source and target points" ).
-        def_readwrite( "weight", &MR::PointPair::weight, "weight of the pair (to prioritize over other pairs)" );
+        def_readwrite( "weight", &MR::PointPair::weight, "weight of the pair (to prioritize over other pairs)" ).
+        def_readwrite( "active", &MR::PointPair::active, "whether this pair must be considered during minimization" );
 
     pybind11::class_<MR::ICPProperties>( m, "ICPProperties" ).
         def( pybind11::init<>() ).
@@ -44,7 +45,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
             "Points pair will be counted only if distance between points is lower than root-mean-square distance times this factor" ).
         def_readwrite( "icpMode", &MR::ICPProperties::icpMode, "Finds only translation. Rotation part is identity matrix" ).
         def_readwrite( "fixedRotationAxis", &MR::ICPProperties::fixedRotationAxis, "If this vector is not zero then rotation is allowed relative to this axis only" ).
-        def_readwrite( "freezePairs", &MR::ICPProperties::freezePairs, "keep point pairs from first iteration" ).
         def_readwrite( "iterLimit", &MR::ICPProperties::iterLimit, "maximum iterations" ).
         def_readwrite( "badIterStopCount", &MR::ICPProperties::badIterStopCount, "maximum iterations without improvements" ).
         def_readwrite( "exitVal", &MR::ICPProperties::exitVal, "Algorithm target root-mean-square distance. As soon as it is reached, the algorithm stops." );
@@ -66,16 +66,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def( "setCosineLimit", &MR::ICP::setCosineLimit, pybind11::arg( "cos" ) ).
         def( "setDistanceLimit", &MR::ICP::setDistanceLimit, pybind11::arg( "dist" ) ).
         def( "setBadIterCount", &MR::ICP::setBadIterCount, pybind11::arg( "iter" ) ).
-        def( "setPairsWeight", &MR::ICP::setPairsWeight, pybind11::arg( "v" ) ).
         def( "setFarDistFactor", &MR::ICP::setFarDistFactor, pybind11::arg( "factor" ) ).
         def( "recomputeBitSet", &MR::ICP::recomputeBitSet, pybind11::arg( "floatSamplingVoxelSize" ) ).
         def( "getParams", &MR::ICP::getParams, pybind11::return_value_policy::copy ).
-        def( "getShiftVector", &MR::ICP::getShiftVector, "shows mean pair vector" ).
         def( "getLastICPInfo", &MR::ICP::getLastICPInfo, "returns status info string" ).
+        def( "getNumActivePairs", &MR::ICP::getNumActivePairs, "computes the number of active point pairs" ).
         def( "getMeanSqDistToPoint", &MR::ICP::getMeanSqDistToPoint, "computes root-mean-square deviation between points" ).
         def( "getMeanSqDistToPlane", &MR::ICP::getMeanSqDistToPlane, "computes root-mean-square deviation from points to target planes" ).
         def( "getFlt2RefPairs", &MR::ICP::getFlt2RefPairs, pybind11::return_value_policy::copy, "returns current pairs formed from samples on floating and projections on reference" ).
-        def( "getDistLimitsSq", &MR::ICP::getDistLimitsSq, "finds squared minimum and maximum pairs distances" ).
         def( "calculateTransformation", &MR::ICP::calculateTransformation, "returns new xf transformation for the floating mesh, which allows to match reference mesh" ).
         def( "autoSelectFloatXf", &MR::ICP::autoSelectFloatXf, "automatically selects initial transformation for the floating object based on covariance matrices of both floating and reference objects; applies the transformation to the floating object and returns it" ).
         def( "updatePointPairs", &MR::ICP::updatePointPairs, "recompute point pairs after manual change of transformations or parameters" );

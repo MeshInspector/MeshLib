@@ -66,16 +66,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def( "setCosineLimit", &MR::ICP::setCosineLimit, pybind11::arg( "cos" ) ).
         def( "setDistanceLimit", &MR::ICP::setDistanceLimit, pybind11::arg( "dist" ) ).
         def( "setBadIterCount", &MR::ICP::setBadIterCount, pybind11::arg( "iter" ) ).
-        def( "setPairsWeight", &MR::ICP::setPairsWeight, pybind11::arg( "v" ) ).
         def( "setFarDistFactor", &MR::ICP::setFarDistFactor, pybind11::arg( "factor" ) ).
         def( "recomputeBitSet", &MR::ICP::recomputeBitSet, pybind11::arg( "floatSamplingVoxelSize" ) ).
         def( "getParams", &MR::ICP::getParams, pybind11::return_value_policy::copy ).
-        def( "getShiftVector", &MR::ICP::getShiftVector, "shows mean pair vector" ).
         def( "getLastICPInfo", &MR::ICP::getLastICPInfo, "returns status info string" ).
         def( "getMeanSqDistToPoint", &MR::ICP::getMeanSqDistToPoint, "computes root-mean-square deviation between points" ).
         def( "getMeanSqDistToPlane", &MR::ICP::getMeanSqDistToPlane, "computes root-mean-square deviation from points to target planes" ).
         def( "getFlt2RefPairs", &MR::ICP::getFlt2RefPairs, pybind11::return_value_policy::copy, "returns current pairs formed from samples on floating and projections on reference" ).
-        def( "getDistLimitsSq", &MR::ICP::getDistLimitsSq, "finds squared minimum and maximum pairs distances" ).
         def( "calculateTransformation", &MR::ICP::calculateTransformation, "returns new xf transformation for the floating mesh, which allows to match reference mesh" ).
         def( "autoSelectFloatXf", &MR::ICP::autoSelectFloatXf, "automatically selects initial transformation for the floating object based on covariance matrices of both floating and reference objects; applies the transformation to the floating object and returns it" ).
         def( "updatePointPairs", &MR::ICP::updatePointPairs, "recompute point pairs after manual change of transformations or parameters" );

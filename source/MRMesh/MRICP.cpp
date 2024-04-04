@@ -183,18 +183,6 @@ void ICP::deactivatefarDistPairs_()
     }
 }
 
-std::pair<float,float> ICP::getDistLimitsSq() const
-{
-    float minPairsDist2_ = std::numeric_limits < float>::max();
-    float maxPairsDist2_ = 0.f;
-    for (const auto& vp : flt2refPairs_)
-    {
-        maxPairsDist2_ = std::max(vp.distSq, maxPairsDist2_);
-        minPairsDist2_ = std::min(vp.distSq, minPairsDist2_);
-    }
-    return std::make_pair(minPairsDist2_, maxPairsDist2_);
-}
-
 bool ICP::p2ptIter_()
 {
     MR_TIMER;
@@ -202,6 +190,8 @@ bool ICP::p2ptIter_()
     PointToPointAligningTransform p2pt;
     for (const auto& vp : flt2refPairs_)
     {
+        if ( !vp.active )
+            continue;
         const auto v1 = fltXf_(points[vp.srcVertId]);
         const auto& v2 = vp.tgtPoint;
         p2pt.add(Vector3d(v1), Vector3d(v2), vp.weight);
@@ -239,21 +229,27 @@ bool ICP::p2ptIter_()
 bool ICP::p2plIter_()
 {
     MR_TIMER;
-    if ( flt2refPairs_.empty() )
-        return false;
     const VertCoords& points = flt_.points();
     Vector3f centroidRef;
+    int activeCount = 0;
     for (auto& vp : flt2refPairs_)
     {
+        if ( !vp.active )
+            continue;
         centroidRef += vp.tgtPoint;
         centroidRef += fltXf_(points[vp.srcVertId]);
+        ++activeCount;
     }
-    centroidRef /= float(flt2refPairs_.size() * 2);
+    if ( activeCount <= 0 )
+        return false;
+    centroidRef /= float(activeCount * 2);
     AffineXf3f centroidRefXf = AffineXf3f(Matrix3f(), centroidRef);
 
     PointToPlaneAligningTransform p2pl;
     for (const auto& vp : flt2refPairs_)
     {
+        if ( !vp.active )
+            continue;
         const auto v1 = fltXf_(points[vp.srcVertId]);
         const auto& v2 = vp.tgtPoint;
         p2pl.add(Vector3d(v1 - centroidRef), Vector3d(v2 - centroidRef), Vector3d(vp.tgtNorm), vp.weight);
@@ -299,6 +295,8 @@ bool ICP::p2plIter_()
             PointToPlaneAligningTransform p2plTrans;
             for (const auto& vp : flt2refPairs_)
             {
+                if ( !vp.active )
+                    continue;
                 const auto v1 = fltXf_(points[vp.srcVertId]);
                 const auto& v2 = vp.tgtPoint;
                 p2plTrans.add(mLimited * Vector3d(v1 - centroidRef), mLimited * Vector3d(v2 - centroidRef),
@@ -445,18 +443,6 @@ float getMeanSqDistToPlane( const PointPairs & pairs, const MeshOrPoints & float
     return (float)std::sqrt( sum / num );
 }
 
-Vector3f ICP::getShiftVector() const
-{
-    const VertCoords& points = flt_.points();
-    Vector3f vecAcc{ 0.f,0.f,0.f };
-    for (const auto& vp : flt2refPairs_)
-    {
-        auto vec = (vp.tgtPoint) - fltXf_(points[vp.srcVertId]);
-        vecAcc += vec;
-    }
-    return flt2refPairs_.size() == 0 ? vecAcc : vecAcc / float(flt2refPairs_.size());
-}
-
 void ICP::setCosineLimit(const float cos)
 {
     prop_.cosTreshold = cos;
@@ -475,15 +461,6 @@ void ICP::setBadIterCount( const int iter )
 void ICP::setFarDistFactor(const float factor)
 {
     prop_.farDistFactor = factor;
-}
-
-void ICP::setPairsWeight(const std::vector<float> & w)
-{
-    assert(flt2refPairs_.size() == w.size());
-    for (int i = 0; i < w.size(); i++)
-    {
-        flt2refPairs_[i].weight = w[i];
-    }
 }
 
 std::string ICP::getLastICPInfo() const

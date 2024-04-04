@@ -125,7 +125,6 @@ public:
     MRMESH_API void setCosineLimit(const float cos);
     MRMESH_API void setDistanceLimit( const float dist );
     MRMESH_API void setBadIterCount( const int iter );
-    MRMESH_API void setPairsWeight(const std::vector<float> & w);
     MRMESH_API void setFarDistFactor(const float factor);
     MRMESH_API void recomputeBitSet(const float floatSamplingVoxelSize);
 
@@ -144,7 +143,6 @@ public:
     MRMESH_API void updatePointPairs();
 
     const ICPProperties& getParams() const { return prop_; }
-    MRMESH_API Vector3f getShiftVector() const; // shows mean pair vector
     MRMESH_API std::string getLastICPInfo() const; // returns status info string
 
     /// computes root-mean-square deviation between points
@@ -155,9 +153,6 @@ public:
 
     /// returns current pairs formed from samples on floating and projections on reference
     const PointPairs & getFlt2RefPairs() const { return flt2refPairs_; }
-
-    /// finds squared minimum and maximum pairs distances
-    MRMESH_API std::pair<float, float> getDistLimitsSq() const;
 
     /// returns new xf transformation for the floating mesh, which allows to match reference mesh
     MRMESH_API AffineXf3f calculateTransformation();

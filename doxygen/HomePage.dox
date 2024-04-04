@@ -91,7 +91,7 @@ Moreover, MeshLib can be easily installed as a Python 3.8 - 3.12 package using `
  - On Windows via
 \code
 py -3 -m pip install --upgrade pip
-py -3 -m pip install meshlib
+py -3 -m pip install --upgrade meshlib
 \endcode
  - On Linuxes supporting [manylinux_2_31+](https://github.com/mayeut/pep600_compliance#distro-compatibility), including Ubuntu 20+ and Fedora 32+ via
 \code
@@ -102,7 +102,7 @@ python3 -m pip install --upgrade meshlib
  - On macOS 12.0+ via
 \code
 pip install --upgrade pip
-pip install meshlib
+pip install --upgrade meshlib
 \endcode
 
 Find more:

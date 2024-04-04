@@ -38,6 +38,8 @@ struct FeatureObjectSharedProperty
     FeaturePropertyKind kind;
     // due to getAllSharedProperties in FeatureObject returns static vector, we need externaly setup object to invoke setter ad getter.
     std::function<FeaturesPropertyTypesVariant( const FeatureObject* objectToInvoke, ViewportId id )> getter;
+    // NOTE: `id` should usually be `{}`, not the current viewport ID, to set the property for all viewports.
+    // Passing a non-zero ID would only modify the active viewport, and per-viewport properties aren't usually used.
     std::function<void( const FeaturesPropertyTypesVariant&, FeatureObject* objectToInvoke, ViewportId id )> setter;
 
     template <typename T, typename C, typename SetterFunc>

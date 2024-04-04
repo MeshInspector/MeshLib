@@ -1599,7 +1599,7 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
                     editedFeatureObjectOldXf_ = object->xf();
                 }
 
-                prop.setter( arg, &featureObject, viewer->viewport().id );
+                prop.setter( arg, &featureObject, {} ); // Intentionally not using `viewer->viewport().id` here, setting globally is more intuitive.
             }
 
             if ( ImGui::IsItemDeactivatedAfterEdit() && editedFeatureObject_.lock() == object )

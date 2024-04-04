@@ -62,6 +62,9 @@ struct PointPair
 
 using PointPairs = std::vector<PointPair>;
 
+/// computes the number of active pairs
+[[nodiscard]] MRMESH_API size_t getNumActivePairs( const PointPairs & pairs );
+
 /// computes root-mean-square deviation between points
 [[nodiscard]] MRMESH_API float getMeanSqDistToPoint( const PointPairs & pairs );
 
@@ -107,7 +110,7 @@ struct ICPProperties
 
 /// This class allows you to register two object with similar shape using
 /// Iterative Closest Points (ICP) point-to-point or point-to-plane algorithms
-class ICP
+class [[nodiscard]] ICP
 {
 public:
     /// xf parameters should represent current transformations of meshes
@@ -116,6 +119,7 @@ public:
     /// fltSamples allows to take exact set of vertices from the floating object
     MRMESH_API ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
         const VertBitSet& fltSamples);
+
     MRMESH_API ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
         float floatSamplingVoxelSize ); // positive value here defines voxel size, and only one vertex per voxel will be selected
     // TODO: add single transform constructor
@@ -142,20 +146,24 @@ public:
     /// recompute point pairs after manual change of transformations or parameters
     MRMESH_API void updatePointPairs();
 
-    const ICPProperties& getParams() const { return prop_; }
-    MRMESH_API std::string getLastICPInfo() const; // returns status info string
+    [[nodiscard]] const ICPProperties& getParams() const { return prop_; }
+
+    [[nodiscard]] MRMESH_API std::string getLastICPInfo() const; // returns status info string
+
+    /// computes the number of active point pairs
+    [[nodiscard]] size_t getNumActivePairs() const { return MR::getNumActivePairs( flt2refPairs_ ); }
 
     /// computes root-mean-square deviation between points
-    float getMeanSqDistToPoint() const { return MR::getMeanSqDistToPoint( flt2refPairs_ ); }
+    [[nodiscard]] float getMeanSqDistToPoint() const { return MR::getMeanSqDistToPoint( flt2refPairs_ ); }
 
     /// computes root-mean-square deviation from points to target planes
-    float getMeanSqDistToPlane() const { return MR::getMeanSqDistToPlane( flt2refPairs_, flt_, fltXf_ ); }
+    [[nodiscard]] float getMeanSqDistToPlane() const { return MR::getMeanSqDistToPlane( flt2refPairs_, flt_, fltXf_ ); }
 
     /// returns current pairs formed from samples on floating and projections on reference
-    const PointPairs & getFlt2RefPairs() const { return flt2refPairs_; }
+    [[nodiscard]] const PointPairs & getFlt2RefPairs() const { return flt2refPairs_; }
 
     /// returns new xf transformation for the floating mesh, which allows to match reference mesh
-    MRMESH_API AffineXf3f calculateTransformation();
+    [[nodiscard]] MRMESH_API AffineXf3f calculateTransformation();
 
 private:
     MeshOrPoints flt_;

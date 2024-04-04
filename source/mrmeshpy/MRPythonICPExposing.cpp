@@ -70,6 +70,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def( "recomputeBitSet", &MR::ICP::recomputeBitSet, pybind11::arg( "floatSamplingVoxelSize" ) ).
         def( "getParams", &MR::ICP::getParams, pybind11::return_value_policy::copy ).
         def( "getLastICPInfo", &MR::ICP::getLastICPInfo, "returns status info string" ).
+        def( "getNumActivePairs", &MR::ICP::getNumActivePairs, "computes the number of active point pairs" ).
         def( "getMeanSqDistToPoint", &MR::ICP::getMeanSqDistToPoint, "computes root-mean-square deviation between points" ).
         def( "getMeanSqDistToPlane", &MR::ICP::getMeanSqDistToPlane, "computes root-mean-square deviation from points to target planes" ).
         def( "getFlt2RefPairs", &MR::ICP::getFlt2RefPairs, pybind11::return_value_policy::copy, "returns current pairs formed from samples on floating and projections on reference" ).

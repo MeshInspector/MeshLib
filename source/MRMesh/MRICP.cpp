@@ -409,6 +409,18 @@ AffineXf3f ICP::calculateTransformation()
     return fltXf_;
 }
 
+size_t getNumActivePairs( const PointPairs & pairs )
+{
+    int num = 0;
+    for ( const auto& vp : pairs )
+    {
+        if ( !vp.active )
+            continue;
+        ++num;
+    }
+    return num;
+}
+
 float getMeanSqDistToPoint( const PointPairs & pairs )
 {
     int num = 0;

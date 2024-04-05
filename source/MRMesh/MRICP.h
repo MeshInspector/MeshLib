@@ -54,13 +54,14 @@ struct PointPair
     /// weight of the pair (to prioritize over other pairs)
     float weight = 1.f;
 
-    /// whether this pair must be considered during minimization
-    bool active = true;
-
     friend bool operator == ( const PointPair&, const PointPair& ) = default;
 };
 
-using PointPairs = std::vector<PointPair>;
+struct PointPairs
+{
+    std::vector<PointPair> vec;
+    BitSet active; ///< whether corresponding pair from vec must be considered during minimization
+};
 
 /// computes the number of active pairs
 [[nodiscard]] MRMESH_API size_t getNumActivePairs( const PointPairs & pairs );

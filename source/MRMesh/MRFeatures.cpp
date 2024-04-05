@@ -140,6 +140,9 @@ Primitives::ConeSegment primitiveCone( const Vector3f& a, const Vector3f& b, flo
 
 std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
 {
+    // FIXME: We use `getUniformScale` in a few place before, but the scale isn't always uniform!
+    // E.g. when we're a child of a different feature.
+
     // Extracts a uniform scale factor from a matrix.
     // If the scaling isn't actually uniform, returns some unspecified average scaling, which is hopefully better than just taking an arbitrary axis.
     static constexpr auto getUniformScale = [&]( const Matrix3f& m ) -> float
@@ -197,13 +200,15 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
     }
     else if ( auto cone = dynamic_cast<const ConeObject*>( &object ) )
     {
+        // I want the "positive" direction to point towards the tip (so "axis -> positive/negative end").
+        // It's moot where the center should be, but currently having it at the tip is ok.
         Primitives::ConeSegment ret{
             .center = parentXf( cone->getCenter() ),
-            .dir = parentXf.A * cone->getDirection(),
-            .positiveSideRadius = cone->getBaseRadius() * getUniformScale( parentXf.A ),
-            .negativeSideRadius = 0,
-            .positiveLength = cone->getHeight(),
-            .negativeLength = 0,
+            .dir = parentXf.A * -cone->getDirection(),
+            .positiveSideRadius = 0,
+            .negativeSideRadius = cone->getBaseRadius() * getUniformScale( parentXf.A ),
+            .positiveLength = 0,
+            .negativeLength = cone->getHeight(),
             .hollow = true, // I guess?
         };
         return ret;
@@ -212,10 +217,10 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
     return {};
 }
 
-std::shared_ptr<VisualObject> primitiveToObject( const Primitives::Variant& primitive, float infiniteExtent )
+std::shared_ptr<FeatureObject> primitiveToObject( const Primitives::Variant& primitive, float infiniteExtent )
 {
     return std::visit( overloaded{
-        []( const Primitives::Sphere& sphere ) -> std::shared_ptr<VisualObject>
+        []( const Primitives::Sphere& sphere ) -> std::shared_ptr<FeatureObject>
         {
             if ( sphere.radius == 0 )
             {
@@ -231,7 +236,7 @@ std::shared_ptr<VisualObject> primitiveToObject( const Primitives::Variant& prim
                 return newSphere;
             }
         },
-        [infiniteExtent]( const Primitives::Plane& plane ) -> std::shared_ptr<VisualObject>
+        [infiniteExtent]( const Primitives::Plane& plane ) -> std::shared_ptr<FeatureObject>
         {
             auto newPlane = std::make_shared<PlaneObject>();
             newPlane->setCenter( plane.center );
@@ -239,7 +244,7 @@ std::shared_ptr<VisualObject> primitiveToObject( const Primitives::Variant& prim
             newPlane->setSize( infiniteExtent );
             return newPlane;
         },
-        [infiniteExtent]( const Primitives::ConeSegment& cone ) -> std::shared_ptr<VisualObject>
+        [infiniteExtent]( const Primitives::ConeSegment& cone ) -> std::shared_ptr<FeatureObject>
         {
             if ( cone.isCircle() )
             {
@@ -341,6 +346,30 @@ void MeasureResult::swapObjects()
     std::swap( angle.pointA, angle.pointB );
     std::swap( angle.dirA, angle.dirB );
     std::swap( angle.isSurfaceNormalA, angle.isSurfaceNormalB );
+}
+
+std::string_view toString( MeasureResult::Status status )
+{
+    switch ( status )
+    {
+    case Features::MeasureResult::Status::ok:
+        return "Ok";
+        break;
+    case Features::MeasureResult::Status::notImplemented:
+        return "Sorry, not implemented yet for those features";
+        break;
+    case Features::MeasureResult::Status::badFeaturePair:
+        return "Doesn't make sense for those features";
+        break;
+    case Features::MeasureResult::Status::badRelativeLocation:
+        return "N/A because of how the features are located";
+        break;
+    case Features::MeasureResult::Status::notFinite:
+        return "Infinite";
+        break;
+    }
+    assert( false && "Invalid enum." );
+    return "??";
 }
 
 namespace Traits
@@ -899,6 +928,16 @@ MeasureResult Binary<Primitives::Plane, Primitives::Plane>::measure( const Primi
 }
 
 } // namespace Traits
+
+std::string name( const Primitives::Variant& var )
+{
+    return std::visit( []( const auto& elem ){ return (name)( elem ); }, var );
+}
+MeasureResult measure( const Primitives::Variant& a, const Primitives::Variant& b )
+{
+    return std::visit( []( const auto& elemA, const auto& elemB ){ return (measure)( elemA, elemB ); }, a, b );
+}
+
 
 static constexpr float testEps = 0.0001f;
 

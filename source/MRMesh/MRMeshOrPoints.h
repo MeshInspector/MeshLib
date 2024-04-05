@@ -3,6 +3,7 @@
 #include "MRMeshPart.h"
 #include "MRVector3.h"
 #include "MRId.h"
+#include <cfloat>
 #include <functional>
 #include <optional>
 #include <variant>
@@ -53,7 +54,7 @@ public:
         bool isBd = false;
 
         /// squared distance from query point to the closest point
-        float distSq = 0;
+        float distSq = FLT_MAX;
 
         /// for point clouds it is the closest vertex,
         /// for meshes it is the closest vertex of the triangle with the closest point
@@ -63,9 +64,9 @@ public:
     /// returns a function that finds projection (closest) points on this: Vector3f->ProjectionResult
     [[nodiscard]] MRMESH_API std::function<ProjectionResult( const Vector3f & )> projector() const;
 
-    /// returns a function that finds projection (closest) points on this,
-    /// \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exits returning upDistLimitSq and no valid point
-    [[nodiscard]] MRMESH_API std::function<ProjectionResult( const Vector3f & p, float upDistLimitSq )> limitedProjector() const;
+    /// returns a function that updates projection (closest) points on this,
+    /// the update takes place only if res.distSq on input is more than squared distance to the closest point
+    [[nodiscard]] MRMESH_API std::function<void( const Vector3f & p, ProjectionResult & res )> limitedProjector() const;
 
 private:
     std::variant<MeshPart, const PointCloud*> var_;

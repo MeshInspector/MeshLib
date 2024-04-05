@@ -27,7 +27,7 @@ PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCl
     float upDistLimitSq /*= FLT_MAX*/, 
     const AffineXf3f* xf /*= nullptr*/, 
     float loDistLimitSq /*= 0*/,
-    SkipPointProjection skipCb /*= {}*/ )
+    VertPredicate skipCb /*= {}*/ )
 {
     const auto& tree = pc.getAABBTree();
     const auto& orderedPoints = tree.orderedPoints();

@@ -3,7 +3,6 @@
 #include "MRId.h"
 #include "MRProgressCallback.h"
 #include <cfloat>
-#include <functional>
 
 namespace MR
 {
@@ -20,8 +19,6 @@ struct PointsProjectionResult
     auto operator <=>(const PointsProjectionResult &) const = default;
 };
 
-/// If specified: true discards given VertId and continue search, false - process this VertId
-using SkipPointProjection = std::function<bool( VertId )>;
 
 /**
  * \brief computes the closest point on point cloud to given point
@@ -34,7 +31,7 @@ using SkipPointProjection = std::function<bool( VertId )>;
     float upDistLimitSq = FLT_MAX,
     const AffineXf3f* xf = nullptr,
     float loDistLimitSq = 0,
-    SkipPointProjection skipCb = {} );
+    VertPredicate skipCb = {} );
 
 /**
  * \brief finds a number of the closest points in the cloud (as configured in \param res) to given point

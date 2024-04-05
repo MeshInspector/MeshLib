@@ -3,6 +3,7 @@
 #include "MRId.h"
 #include "MRProgressCallback.h"
 #include <cfloat>
+#include <functional>
 
 namespace MR
 {
@@ -19,16 +20,21 @@ struct PointsProjectionResult
     auto operator <=>(const PointsProjectionResult &) const = default;
 };
 
+/// If specified: true discards given VertId and continue search, false - process this VertId
+using SkipPointProjection = std::function<bool( VertId )>;
+
 /**
  * \brief computes the closest point on point cloud to given point
  * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exits returning upDistLimitSq and no valid point
  * \param xf pointcloud-to-point transformation, if not specified then identity transformation is assumed
  * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
+ * \param skipCb callback to discard VertId projection candidate
  */
 [[nodiscard]] MRMESH_API PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCloud& pc,
     float upDistLimitSq = FLT_MAX,
     const AffineXf3f* xf = nullptr,
-    float loDistLimitSq = 0 );
+    float loDistLimitSq = 0,
+    SkipPointProjection skipCb = {} );
 
 /**
  * \brief finds a number of the closest points in the cloud (as configured in \param res) to given point

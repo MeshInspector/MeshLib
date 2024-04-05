@@ -26,7 +26,8 @@ struct SubTask
 PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCloud& pc,
     float upDistLimitSq /*= FLT_MAX*/, 
     const AffineXf3f* xf /*= nullptr*/, 
-    float loDistLimitSq /*= 0 */ )
+    float loDistLimitSq /*= 0*/,
+    SkipPointProjection skipCb /*= {}*/ )
 {
     const auto& tree = pc.getAABBTree();
     const auto& orderedPoints = tree.orderedPoints();
@@ -70,6 +71,8 @@ PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCl
             bool lowBreak = false;
             for ( int i = first; i < last && !lowBreak; ++i )
             {
+                if ( skipCb && skipCb( orderedPoints[i].id ) )
+                    continue;
                 auto proj = xf ? ( *xf )( orderedPoints[i].coord ) : orderedPoints[i].coord;
                 float distSq = ( proj - pt ).lengthSq();
                 if ( distSq < res.distSq )

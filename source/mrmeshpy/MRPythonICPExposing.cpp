@@ -31,8 +31,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def_readwrite( "tgtNorm", &MR::PointPair::tgtNorm, "normal in the target point after transforming in world space" ).
         def_readwrite( "normalsAngleCos", &MR::PointPair::normalsAngleCos, "cosine between normals in source and target points" ).
         def_readwrite( "distSq", &MR::PointPair::distSq, "squared distance between source and target points" ).
-        def_readwrite( "weight", &MR::PointPair::weight, "weight of the pair (to prioritize over other pairs)" ).
-        def_readwrite( "active", &MR::PointPair::active, "whether this pair must be considered during minimization" );
+        def_readwrite( "weight", &MR::PointPair::weight, "weight of the pair (to prioritize over other pairs)" );
 
     pybind11::class_<MR::ICPProperties>( m, "ICPProperties" ).
         def( pybind11::init<>() ).

@@ -6,7 +6,7 @@
 #include "MRBox.h"
 #include "MRQuaternion.h"
 #include "MRBestFit.h"
-#include "MRParallelFor.h"
+#include "MRBitSetParallelFor.h"
 #include <numeric>
 
 const int MAX_RESAMPLING_VOXEL_NUMBER = 500000;
@@ -19,29 +19,23 @@ namespace
 
 void setupPairs( PointPairs & pairs, const VertBitSet& srcSamples )
 {
-    pairs.clear();
-    pairs.reserve( srcSamples.count() );
+    pairs.vec.clear();
+    pairs.vec.reserve( srcSamples.count() );
     for ( auto id : srcSamples )
-        pairs.emplace_back().srcVertId = id;
+        pairs.vec.emplace_back().srcVertId = id;
+    pairs.active.clear();
+    pairs.active.resize( srcSamples.count(), true );
 }
 
 size_t deactivateFarPairs( PointPairs & pairs, float maxDistSq )
 {
-    return parallel_reduce( tbb::blocked_range( size_t(0), pairs.size() ), size_t(0),
-    [&] ( const auto & range, size_t curr )
+    size_t cnt0 = pairs.active.count();
+    BitSetParallelFor( pairs.active, [&]( size_t i )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            auto & p = pairs[i];
-            if ( p.active && p.distSq > maxDistSq )
-            {
-                p.active = false;
-                ++curr;
-            }
-        }
-        return curr;
-    },
-    [] ( auto a, auto b ) { return a + b; } );
+        if ( pairs.vec[i].distSq > maxDistSq )
+            pairs.active.reset( i );
+    } );
+    return cnt0 - pairs.active.count();
 }
 
 } // anonymous namespace
@@ -141,28 +135,32 @@ void ICP::updatePointPairs_( PointPairs & pairs,
     const auto srcWeights = src.weights();
     const auto tgtProjector = tgt.projector();
 
+    pairs.active.clear();
+    pairs.active.resize( pairs.vec.size(), true );
+
     // calculate pairs
-    ParallelFor( pairs, [&] ( size_t idx )
+    BitSetParallelForAll( pairs.active, [&] ( size_t idx )
     {
-        const auto& p = srcPoints[pairs[idx].srcVertId];
+        const auto& p = srcPoints[pairs.vec[idx].srcVertId];
         const auto prj = tgtProjector( src2tgtXf( p ) );
 
         // projection should be found and if point projects on the border it will be ignored
         if ( !prj.isBd )
         {
-            PointPair vp = pairs[idx];
+            PointPair vp = pairs.vec[idx];
             vp.distSq = prj.distSq;
             vp.weight = srcWeights ? srcWeights( vp.srcVertId ) : 1.0f;
             vp.tgtPoint = tgtXf( prj.point );
             vp.tgtNorm = prj.normal ? ( tgtXf.A * prj.normal.value() ).normalized() : Vector3f();
             vp.srcNorm = srcNormals ? ( srcXf.A * srcNormals( vp.srcVertId ) ).normalized() : Vector3f();
             vp.normalsAngleCos = ( prj.normal && srcNormals ) ? dot( vp.tgtNorm, vp.srcNorm ) : 1.0f;
-            vp.active = vp.normalsAngleCos >= prop_.cosTreshold && vp.distSq <= prop_.distThresholdSq;
-            pairs[idx] = vp;
+            pairs.vec[idx] = vp;
+            if ( vp.normalsAngleCos < prop_.cosTreshold || vp.distSq > prop_.distThresholdSq )
+                pairs.active.reset( idx );
         }
         else
         {
-            pairs[idx].active = false;
+            pairs.active.reset( idx );
         }
     } );
 }
@@ -188,10 +186,9 @@ bool ICP::p2ptIter_()
     MR_TIMER;
     const VertCoords& points = flt_.points();
     PointToPointAligningTransform p2pt;
-    for (const auto& vp : flt2refPairs_)
+    for ( size_t idx : flt2refPairs_.active )
     {
-        if ( !vp.active )
-            continue;
+        const auto& vp = flt2refPairs_.vec[idx];
         const auto v1 = fltXf_(points[vp.srcVertId]);
         const auto& v2 = vp.tgtPoint;
         p2pt.add(Vector3d(v1), Vector3d(v2), vp.weight);
@@ -232,10 +229,9 @@ bool ICP::p2plIter_()
     const VertCoords& points = flt_.points();
     Vector3f centroidRef;
     int activeCount = 0;
-    for (auto& vp : flt2refPairs_)
+    for ( size_t idx : flt2refPairs_.active )
     {
-        if ( !vp.active )
-            continue;
+        const auto& vp = flt2refPairs_.vec[idx];
         centroidRef += vp.tgtPoint;
         centroidRef += fltXf_(points[vp.srcVertId]);
         ++activeCount;
@@ -246,10 +242,9 @@ bool ICP::p2plIter_()
     AffineXf3f centroidRefXf = AffineXf3f(Matrix3f(), centroidRef);
 
     PointToPlaneAligningTransform p2pl;
-    for (const auto& vp : flt2refPairs_)
+    for ( size_t idx : flt2refPairs_.active )
     {
-        if ( !vp.active )
-            continue;
+        const auto& vp = flt2refPairs_.vec[idx];
         const auto v1 = fltXf_(points[vp.srcVertId]);
         const auto& v2 = vp.tgtPoint;
         p2pl.add(Vector3d(v1 - centroidRef), Vector3d(v2 - centroidRef), Vector3d(vp.tgtNorm), vp.weight);
@@ -293,10 +288,9 @@ bool ICP::p2plIter_()
 
             // recompute translation part
             PointToPlaneAligningTransform p2plTrans;
-            for (const auto& vp : flt2refPairs_)
+            for ( size_t idx : flt2refPairs_.active )
             {
-                if ( !vp.active )
-                    continue;
+                const auto& vp = flt2refPairs_.vec[idx];
                 const auto v1 = fltXf_(points[vp.srcVertId]);
                 const auto& v2 = vp.tgtPoint;
                 p2plTrans.add(mLimited * Vector3d(v1 - centroidRef), mLimited * Vector3d(v2 - centroidRef),
@@ -411,24 +405,16 @@ AffineXf3f ICP::calculateTransformation()
 
 size_t getNumActivePairs( const PointPairs & pairs )
 {
-    int num = 0;
-    for ( const auto& vp : pairs )
-    {
-        if ( !vp.active )
-            continue;
-        ++num;
-    }
-    return num;
+    return pairs.active.count();
 }
 
 float getMeanSqDistToPoint( const PointPairs & pairs )
 {
     int num = 0;
     double sum = 0;
-    for ( const auto& vp : pairs )
+    for ( size_t idx : pairs.active )
     {
-        if ( !vp.active )
-            continue;
+        const auto& vp = pairs.vec[idx];
         sum += vp.distSq;
         ++num;
     }
@@ -442,10 +428,9 @@ float getMeanSqDistToPlane( const PointPairs & pairs, const MeshOrPoints & float
     const VertCoords& points = floating.points();
     int num = 0;
     double sum = 0;
-    for ( const auto& vp : pairs )
+    for ( size_t idx : pairs.active )
     {
-        if ( !vp.active )
-            continue;
+        const auto& vp = pairs.vec[idx];
         auto v = dot( vp.tgtNorm, vp.tgtPoint - floatXf(points[vp.srcVertId]) );
         sum += sqr( v );
         ++num;

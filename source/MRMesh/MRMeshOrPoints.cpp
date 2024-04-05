@@ -71,31 +71,41 @@ std::function<float(VertId)> MeshOrPoints::weights() const
 
 auto MeshOrPoints::projector() const -> std::function<ProjectionResult( const Vector3f & )>
 {
+    return [lp = limitedProjector()]( const Vector3f & p )
+    {
+        return lp( p, FLT_MAX );
+    };
+}
+
+auto MeshOrPoints::limitedProjector() const -> std::function<ProjectionResult( const Vector3f &, float )>
+{
     return std::visit( overloaded{
-        []( const MeshPart & mp ) -> std::function<ProjectionResult( const Vector3f & )>
+        []( const MeshPart & mp ) -> std::function<ProjectionResult( const Vector3f &, float )>
         {
-            return [&mp]( const Vector3f & p )
+            return [&mp]( const Vector3f & p, float upDistLimitSq )
             {
-                MeshProjectionResult mpr = findProjection( p, mp );
+                MeshProjectionResult mpr = findProjection( p, mp, upDistLimitSq );
                 return ProjectionResult
                 {
                     .point = mpr.proj.point,
                     .normal = mp.mesh.normal( mpr.proj.face ), //mp.mesh.normal( mpr.mtp ) looks more correct here, but it breaks our script test
                     .isBd = mpr.mtp.isBd( mp.mesh.topology ),
-                    .distSq = mpr.distSq
+                    .distSq = mpr.distSq,
+                    .closestVert = mp.mesh.getClosestVertex( mpr.proj )
                 };
             };
         },
-        []( const PointCloud * pc ) -> std::function<ProjectionResult( const Vector3f & )>
+        []( const PointCloud * pc ) -> std::function<ProjectionResult( const Vector3f &, float )>
         {
-            return [pc]( const Vector3f & p )
+            return [pc]( const Vector3f & p, float upDistLimitSq )
             {
-                PointsProjectionResult ppr = findProjectionOnPoints( p, *pc );
+                PointsProjectionResult ppr = findProjectionOnPoints( p, *pc, upDistLimitSq );
                 return ProjectionResult
                 {
                     .point = pc->points[ppr.vId],
                     .normal = ppr.vId < pc->normals.size() ? pc->normals[ppr.vId] : std::optional<Vector3f>{},
-                    .distSq = ppr.distSq
+                    .distSq = ppr.distSq,
+                    .closestVert = ppr.vId
                 };
             };
         }

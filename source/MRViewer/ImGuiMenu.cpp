@@ -2473,18 +2473,15 @@ void ImGuiMenu::make_points_discretization( std::vector<std::shared_ptr<VisualOb
             break;
         }
 
-    auto backUpTextColor = ImGui::GetStyle().Colors[ImGuiCol_Text];
     if ( !isAllTheSame )
     {
         value = 1;
     }
     const auto valueConstForComparation = value;
 
-    ImGui::PushItemWidth( 40 * menu_scaling() );
-    UI::drag<NoUnit>( label, value, 0.1f, 1, 256 );
+    ImGui::SetNextItemWidth( 50 * menu_scaling() );
+    UI::drag<NoUnit>( label, value, 0.1f, 1, 256, {}, UI::defaultSliderFlags, 0, 0 );
 
-    ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
-    ImGui::PopItemWidth();
     if ( value != valueConstForComparation )
         for ( const auto& data : selectedVisualObjs )
             setter( data->asType<ObjectPointsHolder>(), value);

@@ -293,7 +293,10 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
             if ( plusMinusButtons )
             {
                 ImGui::BeginGroup();
-                ImGui::PushItemWidth( ImGui::CalcItemWidth() - ImGui::GetFrameHeight() * 2 - plusMinusButtonsLeftOffset );
+                // Here we make sure that the new width is not negative, because otherwise things break.
+                // The min limit is arbitrary.
+                float w = std::max( ImGui::CalcItemWidth() - ImGui::GetFrameHeight() * 2 - plusMinusButtonsLeftOffset, ImGui::GetStyle().ItemSpacing.x );
+                ImGui::PushItemWidth( w );
             }
             MR_FINALLY{
                 if ( plusMinusButtons )
@@ -303,7 +306,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 }
             };
 
-            std::string elemLabelFixed = plusMinusButtons ? std::string( "###{}" ) + elemLabel : elemLabel;
+            std::string elemLabelFixed = plusMinusButtons ? std::string( "###" ) + elemLabel : elemLabel;
 
             // Don't strip trailing zeroes when active, otherwise the numbers jump too much.
             bool forceShowZeroes = unitParams.stripTrailingZeroes && detail::isItemActive( elemLabelFixed.c_str() );

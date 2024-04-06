@@ -480,10 +480,16 @@ Vector3f Mesh::pseudonormal( UndirectedEdgeId ue, const FaceBitSet * region ) co
 {
     EdgeId e{ ue };
     auto l = topology.left( e );
+    if ( l && region && !region->test( l ) )
+        l = {};
     auto r = topology.right( e );
-    if ( !l || ( region && !region->test( l ) ) )
+    if ( r && region && !region->test( r ) )
+        r = {};
+    if ( !l && !r )
+        return {};
+    if ( !l )
         return normal( r );
-    if ( !r || ( region && !region->test( r ) ) )
+    if ( !r )
         return normal( l );
     auto nl = normal( l );
     auto nr = normal( r );

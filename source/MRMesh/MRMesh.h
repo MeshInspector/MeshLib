@@ -201,19 +201,19 @@ struct [[nodiscard]] Mesh
     /// computes normal in a vertex using sum of directed areas of neighboring triangles
     [[nodiscard]] Vector3f normal( VertId v ) const { return dirDblArea( v ).normalized(); }
 
-    /// computes normal in three vertices of p's triangle, then interpolates them using barycentric coordinates
+    /// computes normal in three vertices of p's triangle, then interpolates them using barycentric coordinates and normalizes again;
+    /// this is the same normal as in rendering with smooth shading
     [[nodiscard]] MRMESH_API Vector3f normal( const MeshTriPoint & p ) const;
 
-    /// computes pseudo-normals for signed distance calculation
-    /// http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.107.9173&rep=rep1&type=pdf
-    /// at vertex, only region faces will be considered
+    /// computes angle-weighted sum of normals of incident faces of given vertex (only (region) faces will be considered);
+    /// the sum is normalized before returning
     [[nodiscard]] MRMESH_API Vector3f pseudonormal( VertId v, const FaceBitSet * region = nullptr ) const;
 
-    /// computes pseudo-normals for signed distance calculation
-    /// at edge (middle of two face normals)
+    /// computes normalized half sum of face normals sharing given edge (only (region) faces will be considered);
     [[nodiscard]] MRMESH_API Vector3f pseudonormal( UndirectedEdgeId e, const FaceBitSet * region = nullptr ) const;
 
-    /// returns pseudonormal in corresponding face/edge/vertex;
+    /// returns pseudonormal in corresponding face/edge/vertex for signed distance calculation;
+    /// http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.107.9173&rep=rep1&type=pdf
     /// unlike normal( const MeshTriPoint & p ), this is not a smooth function
     [[nodiscard]] MRMESH_API Vector3f pseudonormal( const MeshTriPoint & p, const FaceBitSet * region = nullptr ) const;
 

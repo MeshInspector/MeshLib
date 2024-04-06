@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
+message("CMAKE_VERSION=${CMAKE_VERSION}")
+message("CMAKE_CUDA_STANDARD=${CMAKE_CUDA_STANDARD}")
 # nvcc supports only c++20 and Cmake 3.16 from Ubuntu 20 does not support set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

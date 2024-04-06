@@ -91,7 +91,7 @@ auto MeshOrPoints::limitedProjector() const -> std::function<void( const Vector3
                     res = ProjectionResult
                     {
                         .point = mpr.proj.point,
-                        .normal = mp.mesh.normal( mpr.mtp ),
+                        .normal = mp.mesh.pseudonormal( mpr.mtp ),
                         .isBd = mpr.mtp.isBd( mp.mesh.topology ),
                         .distSq = mpr.distSq,
                         .closestVert = mp.mesh.getClosestVertex( mpr.proj )

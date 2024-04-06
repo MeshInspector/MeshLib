@@ -2,6 +2,8 @@
 
 #include "MRMeshPart.h"
 #include "MRVector3.h"
+#include "MRId.h"
+#include <cfloat>
 #include <functional>
 #include <optional>
 #include <variant>
@@ -42,18 +44,29 @@ public:
 
     struct ProjectionResult
     {
-        /// found projection point
+        /// found closest point
         Vector3f point;
-        /// normal at projection point
+
+        /// normal at the closest point
         std::optional<Vector3f> normal;
-        /// can be true only for meshes, if projection point is located on the boundary
+
+        /// can be true only for meshes, if the closest point is located on the boundary
         bool isBd = false;
-        /// squared distance from query point to projection point
-        float distSq = 0;
+
+        /// squared distance from query point to the closest point
+        float distSq = FLT_MAX;
+
+        /// for point clouds it is the closest vertex,
+        /// for meshes it is the closest vertex of the triangle with the closest point
+        VertId closestVert;
     };
 
     /// returns a function that finds projection (closest) points on this: Vector3f->ProjectionResult
     [[nodiscard]] MRMESH_API std::function<ProjectionResult( const Vector3f & )> projector() const;
+
+    /// returns a function that updates projection (closest) points on this,
+    /// the update takes place only if res.distSq on input is more than squared distance to the closest point
+    [[nodiscard]] MRMESH_API std::function<void( const Vector3f & p, ProjectionResult & res )> limitedProjector() const;
 
 private:
     std::variant<MeshPart, const PointCloud*> var_;

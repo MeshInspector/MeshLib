@@ -454,7 +454,7 @@ Vector3f Mesh::normal( const MeshTriPoint & p ) const
     auto n0 = normal( a );
     auto n1 = normal( b );
     auto n2 = normal( c );
-    return p.bary.interpolate( n0, n1, n2 );
+    return p.bary.interpolate( n0, n1, n2 ).normalized();
 }
 
 Vector3f Mesh::pseudonormal( VertId v, const FaceBitSet * region ) const

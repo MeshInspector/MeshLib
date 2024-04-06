@@ -61,7 +61,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
             "fltMeshXf - transform from the local floatingMesh basis to the global\n"
             "refMeshXf - transform from the local referenceMesh basis to the global\n"
             "floatSamplingVoxelSize = positive value here defines voxel size, and only one vertex per voxel will be selected" ).
-        def( "setParams", &MR::ICP::setParams, pybind11::arg( "prop" ), "tune algirithm params before run calculateTransformation()" ).
+        def( "setParams", &MR::ICP::setParams, pybind11::arg( "prop" ), "tune algorithm params before run calculateTransformation()" ).
         def( "setCosineLimit", &MR::ICP::setCosineLimit, pybind11::arg( "cos" ) ).
         def( "setDistanceLimit", &MR::ICP::setDistanceLimit, pybind11::arg( "dist" ) ).
         def( "setBadIterCount", &MR::ICP::setBadIterCount, pybind11::arg( "iter" ) ).
@@ -73,7 +73,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def( "getMeanSqDistToPoint", &MR::ICP::getMeanSqDistToPoint, "computes root-mean-square deviation between points" ).
         def( "getMeanSqDistToPlane", &MR::ICP::getMeanSqDistToPlane, "computes root-mean-square deviation from points to target planes" ).
         def( "getFlt2RefPairs", &MR::ICP::getFlt2RefPairs, pybind11::return_value_policy::copy, "returns current pairs formed from samples on floating and projections on reference" ).
-        def( "calculateTransformation", &MR::ICP::calculateTransformation, "returns new xf transformation for the floating mesh, which allows to match reference mesh" ).
+        def( "calculateTransformation", &MR::ICP::calculateTransformation, "runs ICP algorithm given input objects, transformations, and parameters; "
+            "returns adjusted transformation of the floating object to match reference object" ).
         def( "autoSelectFloatXf", &MR::ICP::autoSelectFloatXf, "automatically selects initial transformation for the floating object based on covariance matrices of both floating and reference objects; applies the transformation to the floating object and returns it" ).
         def( "updatePointPairs", &MR::ICP::updatePointPairs, "recompute point pairs after manual change of transformations or parameters" );
 } )

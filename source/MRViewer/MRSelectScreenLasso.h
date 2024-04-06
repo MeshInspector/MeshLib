@@ -63,8 +63,9 @@ MRVIEWER_API void appendGPUVisibleFaces( const Viewport& viewport, const BitSet&
  * get vertex ids of object located in selected area on viewport
  * @param bsVec the matrix of pixels (in local space of viewport) belonging to selected area
  * @param includeBackfaces get also vertices with normals not toward the camera
+ * @param onlyVisible get only visible vertices (that no covered with clipping plane)
  */
 MRVIEWER_API VertBitSet findVertsInViewportArea( const Viewport& viewport, const BitSet& bsVec, const ObjectPoints& obj,
-                         bool includeBackfaces = true );
+                         bool includeBackfaces = true, bool onlyVisible = false );
 
 }

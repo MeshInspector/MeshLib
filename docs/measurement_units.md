@@ -61,9 +61,8 @@ See the definition of `UnitToStringParams<E>` in `<MRViewer/MRUnits.h>` for the 
 `<MRViewer/MRUIStyle.h>` defines a few measurement-unit-aware widgets:
 
 * `UI::slider<E>( "Label", value )`
-* `UI::drag<E>( "Label", value, min, max )`
-* `UI::input<E>( "Label", value )`
-* `UI::readOnlyValue<E>( "Label", value )` (wraps `UI::inputTextCenteredReadOnly()`)
+* `UI::drag<E>( "Label", value, min, max )` - also includes `+`/`-` buttons for integers like `ImGui::Input()`.
+* `UI::readOnlyValue<E>( "Label", value )` - wraps `UI::inputTextCenteredReadOnly()`
 
 Where:
 

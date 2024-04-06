@@ -235,8 +235,14 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, con
         }
 
         tbb::enumerable_thread_specific<std::vector<Line3fMesh>> tlsLineMeshes( std::cref( lineMeshes ) );
-        auto isPointHidden = [&]( const Vector3f& point )
+        const auto& clippingPlane = viewport.getParameters().clippingPlane;
+        const bool useClipping = obj.getVisualizeProperty( VisualizeMaskType::ClippedByPlane, viewport.id );
+
+        auto isPointHidden = [&]( const Vector3f& point ) -> bool
         {
+            if ( useClipping && clippingPlane.distance( xf( point ) ) > 0 )
+                return true;
+
             auto & myLineMeshes = tlsLineMeshes.local();
             assert( myLineMeshes.size() == cameraEyes.size() );
             for ( int i = 0; i < myLineMeshes.size(); ++i )
@@ -244,7 +250,7 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, con
                 auto pointInOcc = xfMeshToOccMesh[i]( point );
                 myLineMeshes[i].line = Line3f{ pointInOcc, cameraEyes[i] - pointInOcc };
             }
-            return rayMultiMeshAnyIntersect( myLineMeshes, 0.0f, FLT_MAX );
+            return rayMultiMeshAnyIntersect( myLineMeshes, 0.0f, FLT_MAX ).has_value();
         };
 
         BitSetParallelFor( verts, [&] ( VertId vid )
@@ -283,6 +289,7 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, con
     for ( auto & frag : largeTriFragments )
         if ( frag.f )
             res.set( frag.f );
+
     return res;
 }
 
@@ -318,7 +325,7 @@ void appendGPUVisibleFaces( const Viewport& viewport, const BitSet& pixBs,
 }
 
 VertBitSet findVertsInViewportArea( const Viewport& viewport, const BitSet& pixBs, const ObjectPoints& obj,
-                                    bool includeBackfaces /*= true */ )
+                                    bool includeBackfaces /*= true */, bool onlyVisible /*= false */ )
 {
     if ( pixBs.none() )
         return {};
@@ -350,6 +357,7 @@ VertBitSet findVertsInViewportArea( const Viewport& viewport, const BitSet& pixB
     const auto orthoBackwards = viewport.getBackwardDirection();
     const auto& normals = pointCloud->normals;
     const bool excludeBackface = !includeBackfaces && normals.size() >= pointCloud->points.size();
+    const auto& clippingPlane = viewport.getParameters().clippingPlane;
     BitSetParallelFor( verts, [&]( VertId i )
     {
         if ( !inSelectedArea( toClipSpace( pointCloud->points[i] ) ) )
@@ -363,6 +371,11 @@ VertBitSet findVertsInViewportArea( const Viewport& viewport, const BitSet& pixB
                 cameraDir = -viewport.unprojectPixelRay( to2dim( viewport.projectToViewportSpace( pointCloud->points[i] ) ) ).d;
             if ( dot( xf.A * normals[i], cameraDir ) < 0 )
                 verts.set( i, false );
+        }
+        if ( onlyVisible && obj.getVisualizeProperty( VisualizeMaskType::ClippedByPlane, viewport.id ) &&
+            clippingPlane.distance( xf( pointCloud->points[i] ) ) > 0 )
+        {
+            verts.set( i, false );
         }
     } );
 

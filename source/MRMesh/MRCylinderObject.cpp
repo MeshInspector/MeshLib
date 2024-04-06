@@ -46,6 +46,11 @@ void CylinderObject::setLength( float length, ViewportId id /*= {}*/ )
     setXf( currentXf, id );
 }
 
+Vector3f CylinderObject::getBasePoint( ViewportId id /*= {} */ ) const
+{
+    return getCenter( id ) - getDirection( id ) * getLength( id ) * 0.5f;
+}
+
 float CylinderObject::getRadius( ViewportId id /*= {}*/ ) const
 {
     // it is bad idea to use statement like this ( x + y ) / 2.0f; it increases instability. radius is changing during length update.

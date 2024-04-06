@@ -70,7 +70,7 @@ jobs:
         id: select-tag
         run: |
           if [[ ${{ steps.linux-changes.outputs.src }} == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
-            IMAGE_TAG=$(echo  "${{ steps.branch-name.outputs.current_branch }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
+            IMAGE_TAG=$(echo "${{ steps.branch-name.outputs.current_branch }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
           else
             IMAGE_TAG="latest"
           fi

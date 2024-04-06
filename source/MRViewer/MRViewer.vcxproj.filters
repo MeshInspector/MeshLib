@@ -358,6 +358,12 @@
     <ClCompile Include="MRUnits.cpp">
       <Filter>UIStyle</Filter>
     </ClCompile>
+    <ClCompile Include="MRVisualSubfeatures.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRenderDefaultObjects.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -653,7 +659,7 @@
     <ClInclude Include="MRImGuiVectorOperators.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="MRRenderDefaultUiObject.h">
+    <ClInclude Include="MRRenderDefaultObjects.h">
       <Filter>Render\Implementations</Filter>
     </ClInclude>
     <ClInclude Include="MRRenderFeatureObjects.h">
@@ -704,8 +710,11 @@
     <ClInclude Include="MRUnits.h">
       <Filter>UIStyle</Filter>
     </ClInclude>
-    <ClInclude Include="MRUnits.tpp">
+    <ClInclude Include="MRUIStyle.ipp">
       <Filter>UIStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVisualSubfeatures.h">
+      <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

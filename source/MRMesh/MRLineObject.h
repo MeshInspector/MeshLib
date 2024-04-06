@@ -43,6 +43,8 @@ public:
     MRMESH_API void setLength( float size, ViewportId id = {} );
     /// calculates line size from xf
     [[nodiscard]] MRMESH_API float getLength( ViewportId id = {} ) const;
+    // Returns point considered as base for the feature
+    [[nodiscard]] MRMESH_API virtual Vector3f getBasePoint( ViewportId id = {} ) const override;
 
     /// Returns the starting point, aka `center - dir * len/2`.
     [[nodiscard]] MRMESH_API Vector3f getPointA( ViewportId id = {} ) const;

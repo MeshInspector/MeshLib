@@ -164,17 +164,6 @@ namespace detail
     // Default step speed for `UI::input()`.
     template <UnitEnum E, VectorOrScalar T, VectorOrScalar TargetType>
     [[nodiscard]] T getDefaultStep( bool fast );
-
-    // See `drawDragTooltip()` below.
-    template <UnitEnum E, VectorOrScalar T>
-    [[nodiscard]] std::string getDragRangeTooltip( T min, T max, const UnitToStringParams<E>& unitParams );
-
-    // `UI::drag()` uses this internally to draw tooltips.
-    // Pass `getDragRangeTooltip()` as the parameter.
-    MRVIEWER_API void drawDragTooltip( std::string rangeText );
-
-    // Wraps `ImGui::MarkItemEdited()`, to avoid including `imgui_internal.h`.
-    MRVIEWER_API void markItemEdited( ImGuiID id );
 }
 
 // Default flags for `slider()` and `drag()` below.
@@ -191,8 +180,9 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
 // `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`, ...
 // By default, for angles `v` will be converted to degrees for display (but `vSpeed` is still in radians, same as `v`),
 //   while length and unit-less values will be left as is. This can be customized in `unitParams` or globally (see `MRUnits.h`).
+// If only the min limit is specified, then the max limit is assumed to be the largest number.
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidDragSpeedForTargetType<T> SpeedType = float, detail::ValidBoundForTargetType<T> U = typename VectorTraits<T>::BaseType>
-bool drag( const char* label, T& v, SpeedType vSpeed = detail::getDefaultDragSpeed<E, SpeedType>(), const U& vMin = 0, const U& vMax = 0, UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags, const U& step = detail::getDefaultStep<E, U, T>( false ), const U& stepFast = detail::getDefaultStep<E, U, T>( true ) );
+bool drag( const char* label, T& v, SpeedType vSpeed = detail::getDefaultDragSpeed<E, SpeedType>(), const U& vMin = std::numeric_limits<U>::max(), const U& vMax = std::numeric_limits<U>::max(), UnitToStringParams<E> unitParams = {}, ImGuiSliderFlags flags = defaultSliderFlags, const U& step = detail::getDefaultStep<E, U, T>( false ), const U& stepFast = detail::getDefaultStep<E, U, T>( true ) );
 
 // Draw a read-only copyable value.
 // `E` must be specified explicitly, to one of: `NoUnit` `LengthUnit`, `AngleUnit`, ...
@@ -237,4 +227,4 @@ MRVIEWER_API void endTabItem();
 
 }
 
-#include "MRUIStyle.tpp"
+#include "MRUIStyle.ipp"

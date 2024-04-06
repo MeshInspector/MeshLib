@@ -663,5 +663,14 @@
     <Image Include="resource\icons\X3\BestFit Sphere.png">
       <Filter>resource\icons\X3</Filter>
     </Image>
+    <Image Include="resource\icons\X0_5\Active Plugins List.png">
+      <Filter>resource\icons\X0_5</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_75\Active Plugins List.png">
+      <Filter>resource\icons\X0_75</Filter>
+    </Image>
+    <Image Include="resource\icons\X1\Active Plugins List.png">
+      <Filter>resource\icons\X1</Filter>
+    </Image>
   </ItemGroup>
 </Project>

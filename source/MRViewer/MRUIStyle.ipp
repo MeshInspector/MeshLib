@@ -4,11 +4,24 @@
 
 #include "MRUIStyle.h" // To help intellisense.
 
+#include "MRMesh/MRString.h"
+
 namespace MR::UI
 {
 
 namespace detail
 {
+    // `UI::drag()` uses this internally to draw tooltips.
+    // Pass `getDragRangeTooltip()` as the parameter.
+    MRVIEWER_API void drawDragTooltip( std::string rangeText );
+
+    // Wraps `ImGui::MarkItemEdited()`, to avoid including `imgui_internal.h`.
+    MRVIEWER_API void markItemEdited( ImGuiID id );
+
+    // Checks if the active item ID matches the string. Wrapping it to avoid including `imgui_internal.h`.
+    [[nodiscard]] MRVIEWER_API bool isItemActive( const char* name );
+
+
     // The `ImGuiDataType_??` constant for the given type.
     template <Scalar T>
     [[nodiscard]] constexpr int imGuiTypeEnum()
@@ -157,9 +170,13 @@ namespace detail
             return 0;
     }
 
+    // See `drawDragTooltip()`.
     template <UnitEnum E, VectorOrScalar T>
     [[nodiscard]] std::string getDragRangeTooltip( T min, T max, const UnitToStringParams<E>& unitParams )
     {
+        if ( !( min < max ) )
+            return "";
+
         bool haveMin = min > std::numeric_limits<T>::lowest();
         bool haveMax = max < std::numeric_limits<T>::max();
 
@@ -181,9 +198,6 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
 {
     auto fixedMin = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMin );
     auto fixedMax = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMax );
-
-    // Don't strip trailing zeroes, otherwise the numbers jump too much.
-    unitParams.stripTrailingZeroes = false;
 
     if ( !unitsAreEquivalent( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit ) )
     {
@@ -212,8 +226,17 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
                 elemMax = &VectorTraits<decltype(fixedMax)>::getElem( i, fixedMax );
             }
 
+            // Don't strip trailing zeroes when active, otherwise the numbers jump too much.
+            bool forceShowZeroes = unitParams.stripTrailingZeroes && detail::isItemActive( elemLabel );
+            if ( forceShowZeroes )
+                unitParams.stripTrailingZeroes = false;
+            MR_FINALLY{
+                if ( forceShowZeroes )
+                    unitParams.stripTrailingZeroes = true;
+            };
+
             return detail::genericSlider(
-                elemLabel, detail::imGuiTypeEnum<ElemType>(), &elemVal, elemMin, elemMax, valueToString<E>( elemVal, unitParams ).c_str(), flags
+                elemLabel, detail::imGuiTypeEnum<ElemType>(), &elemVal, elemMin, elemMax, replace( valueToString<E>( elemVal, unitParams ), "%", "%%" ).c_str(), flags
             );
         } );
 }
@@ -226,9 +249,6 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
     auto fixedMax = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMax );
     auto fixedStep = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, step );
     auto fixedStepFast = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, stepFast );
-
-    // Don't strip trailing zeroes, otherwise the numbers jump too much.
-    unitParams.stripTrailingZeroes = false;
 
     if ( !unitsAreEquivalent( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit ) )
     {
@@ -273,7 +293,10 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
             if ( plusMinusButtons )
             {
                 ImGui::BeginGroup();
-                ImGui::PushItemWidth( ImGui::CalcItemWidth() - ImGui::GetFrameHeight() * 2 - plusMinusButtonsLeftOffset );
+                // Here we make sure that the new width is not negative, because otherwise things break.
+                // The min limit is arbitrary.
+                float w = std::max( ImGui::CalcItemWidth() - ImGui::GetFrameHeight() * 2 - plusMinusButtonsLeftOffset, ImGui::GetStyle().ItemSpacing.x );
+                ImGui::PushItemWidth( w );
             }
             MR_FINALLY{
                 if ( plusMinusButtons )
@@ -283,11 +306,23 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 }
             };
 
+            std::string elemLabelFixed = plusMinusButtons ? std::string( "###" ) + elemLabel : elemLabel;
+
+            // Don't strip trailing zeroes when active, otherwise the numbers jump too much.
+            bool forceShowZeroes = unitParams.stripTrailingZeroes && detail::isItemActive( elemLabelFixed.c_str() );
+            if ( forceShowZeroes )
+                unitParams.stripTrailingZeroes = false;
+
+            float dragY = ImGui::GetCursorPosY();
             ret = ImGui::DragScalar(
-                plusMinusButtons ? ( std::string( "###{}" ) + elemLabel ).c_str() : elemLabel, detail::imGuiTypeEnum<ElemType>(), &elemVal,
-                float( VectorTraits<SpeedType>::getElem( i, fixedSpeed ) ), elemMin, elemMax, valueToString<E>( elemVal, unitParams ).c_str(), flags
+                elemLabelFixed.c_str(), detail::imGuiTypeEnum<ElemType>(), &elemVal,
+                float( VectorTraits<SpeedType>::getElem( i, fixedSpeed ) ), elemMin, elemMax, replace( valueToString<E>( elemVal, unitParams ), "%", "%%" ).c_str(), flags
             );
             auto dragId = ImGui::GetItemID();
+
+            if ( forceShowZeroes )
+                unitParams.stripTrailingZeroes = true;
+
             detail::drawDragTooltip( detail::getDragRangeTooltip( VectorTraits<U>::getElem( i, fixedMin ), VectorTraits<U>::getElem( i, fixedMax ), unitParams ) );
 
             if ( plusMinusButtons )
@@ -304,8 +339,10 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 // U+2212 MINUS SIGN
                 Vector2f buttonSize( ImGui::GetFrameHeight() - ImGui::GetStyle().ItemInnerSpacing.x, ImGui::GetFrameHeight() );
                 ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+                ImGui::SetCursorPosY( dragY ); // Usually redundant, but when the user does something weird, this is sometimes required.
                 action -= UI::button( "\xe2\x88\x92", buttonSize );
                 ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+                ImGui::SetCursorPosY( dragY );
                 action += UI::button( "+", buttonSize );
 
                 if ( action )

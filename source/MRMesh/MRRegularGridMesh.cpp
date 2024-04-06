@@ -141,47 +141,54 @@ Mesh makeRegularGridMesh( size_t width, size_t height,
         gs.faceIds.b[p] = nextFaceId++;
     gs.faceIds.tsize = size_t( nextFaceId );
 
+    // return true if this edge has either left or right face
     auto hasEdge = [&]( Vector2i v, GridSettings::EdgeType et )
     {
-        VertId v0;
-        if ( et != GridSettings::EdgeType::DiagonalB )
-            v0 = getVertId( v );
-        else 
-            v0 = getVertId( Vector2i{ v.x + 1, v.y } );
-        if ( !v0 )
-            return false;
-
-        VertId v1;
-        switch ( et )
-        {
-        case GridSettings::EdgeType::Horizontal:
-            v1 = getVertId( Vector2i{ v.x + 1, v.y } );
-            break;
-        case GridSettings::EdgeType::DiagonalA:
-            v1 = getVertId( Vector2i{ v.x + 1, v.y + 1 } );
-            break;
-        default:
-            v1 = getVertId( Vector2i{ v.x, v.y + 1 } );
-        }
-        if ( !v1 )
-            return false;
-
-        if ( v.y + 1 == height )
-        {
-            assert ( et == GridSettings::EdgeType::Horizontal );
-            assert ( v.x + 1 < width );
-            return true;
-        }
-        if ( v.x + 1 == width && et != GridSettings::EdgeType::DiagonalB )
-        {
-            assert ( et == GridSettings::EdgeType::Vertical );
-            return true;
-        }
+        const auto hfidx = ( width - 1 ) * v.y + v.x;
         if ( et == GridSettings::EdgeType::Horizontal )
-            return true;
+        {
+            if ( v.x + 1 >= width )
+                return false;
+            return 
+                ( v.y + 1 < height && validLoUpTris.test( 2 * hfidx ) ) ||
+                ( v.y > 0 && validLoUpTris.test( 2 * ( hfidx - width + 1 ) + 1 ) );
+        }
+
         if ( et == GridSettings::EdgeType::Vertical )
-            return true;
-        auto hfidx = ( width - 1 ) * v.y + v.x;
+        {
+            if ( v.y + 1 >= height )
+                return false;
+            if ( v.x + 1 < width )
+            {
+                if ( diagonalA.test( hfidx ) )
+                {
+                    if ( validLoUpTris.test( 2 * hfidx + 1 ) )
+                        return true;
+                }
+                else
+                {
+                    if ( validLoUpTris.test( 2 * hfidx ) )
+                        return true;
+                }
+            }
+            if ( v.x > 0 )
+            {
+                if ( diagonalA.test( hfidx - 1 ) )
+                {
+                    if ( validLoUpTris.test( 2 * hfidx - 2 ) )
+                        return true;
+                }
+                else
+                {
+                    if ( validLoUpTris.test( 2 * hfidx - 1 ) )
+                        return true;
+                }
+            }
+            return false;
+        }
+        assert( et == GridSettings::EdgeType::DiagonalA || et == GridSettings::EdgeType::DiagonalB );
+        if ( v.x + 1 >= width || v.y + 1 >= height )
+            return false;
         if ( !validLoUpTris.test( 2 * hfidx ) && !validLoUpTris.test( 2 * hfidx + 1 ) )
             return false;
         return diagonalA.test( hfidx ) == ( et == GridSettings::EdgeType::DiagonalA );

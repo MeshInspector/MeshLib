@@ -28,6 +28,7 @@
     <ClCompile Include="MRHistoryStore.cpp" />
     <ClCompile Include="MRMeshBoundarySelectionWidget.cpp" />
     <ClCompile Include="MRFrameCounter.cpp" />
+    <ClCompile Include="MRRenderDefaultObjects.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
     <ClCompile Include="MRSelectCurvaturePreference.cpp" />
     <ClCompile Include="MRFrameRedrawRequest.cpp" />
@@ -105,6 +106,7 @@
     <ClCompile Include="MRRenderDimensions.cpp" />
     <ClCompile Include="MRRenderMeasurementObjects.cpp" />
     <ClCompile Include="MRUnits.cpp" />
+    <ClCompile Include="MRVisualSubfeatures.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -214,7 +216,7 @@
     <ClInclude Include="MRPointInAllSpaces.h" />
     <ClInclude Include="MRImGuiVectorOperators.h" />
     <ClInclude Include="MRImGuiMeasurementIndicators.h" />
-    <ClInclude Include="MRRenderDefaultUiObject.h" />
+    <ClInclude Include="MRRenderDefaultObjects.h" />
     <ClInclude Include="MRRenderFeatureObjects.h" />
     <ClInclude Include="MRRenderNameObject.h" />
     <ClInclude Include="MRRenderWrapObject.h" />
@@ -222,7 +224,8 @@
     <ClInclude Include="MRRenderMeasurementObjects.h" />
     <ClInclude Include="MRVectorTraits.h" />
     <ClInclude Include="MRUnits.h" />
-    <ClInclude Include="MRUnits.tpp" />
+    <ClInclude Include="MRUIStyle.ipp" />
+    <ClInclude Include="MRVisualSubfeatures.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

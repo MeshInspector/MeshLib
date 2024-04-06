@@ -382,9 +382,6 @@ void RibbonMenu::drawCollapseButton_()
             ImGuiHoveredFlags_AllowWhenBlockedByActiveItem );
         if ( hovered && openedTimer_ <= openedMaxSecs_ )
         {
-#ifndef __EMSCRIPTEN__
-            asyncRequest_.reset();
-#endif
             openedTimer_ = openedMaxSecs_;
             collapseState_ = CollapseState::Opened;
         }
@@ -2197,15 +2194,33 @@ void RibbonMenu::setupShortcuts_()
 void RibbonMenu::drawLastOperationTimeWindow_()
 {
     auto bgDrawList = ImGui::GetBackgroundDrawList();
-    if ( !bgDrawList )
+    if ( !bgDrawList || ProgressBar::isOrdered() )
+    {
+        openedLastOperationTimeTimer_ = 10.0f; // 10 seconds should be enough
         return;
+    }
     
+    if ( openedLastOperationTimeTimer_ < 0.0f )
+        return;
+
     float lastTimeSec = ProgressBar::getLastOperationTime();
     if ( lastTimeSec < 0.0f )
         return;
 
     if ( lastTimeSec < 1e-3f )
         lastTimeSec = 0.0f;
+
+    openedLastOperationTimeTimer_ -= ImGui::GetIO().DeltaTime;
+#ifdef __EMSCRIPTEN__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
+    EM_ASM( postEmptyEvent( $0, 2 ), int( openedLastOperationTimeTimer_ * 1000 ) );
+#pragma clang diagnostic pop
+#else
+    asyncRequest_.requestIfNotSet(
+        std::chrono::system_clock::now() + std::chrono::milliseconds( std::llround( openedLastOperationTimeTimer_ * 1000 ) ),
+        [] () { CommandLoop::appendCommand( [] () { getViewerInstance().incrementForceRedrawFrames(); } ); } );
+#endif
 
     const auto& title = ProgressBar::getLastOperationTitle();
     auto timeText = fmt::format( "{:.1f} sec", lastTimeSec );

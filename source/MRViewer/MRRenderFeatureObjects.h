@@ -5,7 +5,7 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRSceneColors.h"
-#include "MRViewer/MRRenderDefaultUiObject.h"
+#include "MRViewer/MRRenderDefaultObjects.h"
 #include "MRViewer/MRRenderDimensions.h"
 #include "MRViewer/MRRenderLinesObject.h"
 #include "MRViewer/MRRenderLinesObject.h"
@@ -194,8 +194,7 @@ public:
     MRVIEWER_API void renderPicker( const ModelBaseRenderParams& params, unsigned geomId ) override;
 };
 
-
-class RenderPointFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeaturePointsComponent<true>>
+class RenderPointFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeaturePointsComponent<true>, RenderResetDirtyComponent>
 {
 public:
     MRVIEWER_API RenderPointFeatureObject( const VisualObject& object );
@@ -203,7 +202,7 @@ public:
     MRVIEWER_API std::string getObjectNameString( const VisualObject& object, ViewportId viewportId ) const override;
 };
 
-class RenderLineFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureLinesComponent<true>>
+class RenderLineFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureLinesComponent<true>, RenderResetDirtyComponent>
 {
 public:
     MRVIEWER_API RenderLineFeatureObject( const VisualObject& object );
@@ -211,7 +210,7 @@ public:
     MRVIEWER_API std::string getObjectNameString( const VisualObject& object, ViewportId viewportId ) const override;
 };
 
-class RenderCircleFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureLinesComponent<true>, RenderFeaturePointsComponent<false>>
+class RenderCircleFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureLinesComponent<true>, RenderFeaturePointsComponent<false>, RenderResetDirtyComponent>
 {
     const VisualObject* object_ = nullptr;
     RenderDimensions::RadiusTask radiusTask_;
@@ -228,7 +227,8 @@ class RenderPlaneFeatureObject
         // Subfeatures.
         RenderFeatureLinesComponent<false>, RenderFeaturePointsComponent<false>,
         // Normal mesh.
-        RenderPlaneNormalComponent
+        RenderPlaneNormalComponent,
+        RenderResetDirtyComponent
     >
 {
 public:
@@ -237,7 +237,7 @@ public:
     MRVIEWER_API std::string getObjectNameString( const VisualObject& object, ViewportId viewportId ) const override;
 };
 
-class RenderSphereFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>, RenderFeaturePointsComponent<false>>
+class RenderSphereFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>, RenderFeaturePointsComponent<false>, RenderResetDirtyComponent>
 {
     const VisualObject* object_ = nullptr;
     RenderDimensions::RadiusTask radiusTask_;
@@ -246,7 +246,7 @@ public:
     MRVIEWER_API void renderUi( const UiRenderParams& params ) override;
 };
 
-class RenderCylinderFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>, RenderFeatureLinesComponent<false>, RenderFeaturePointsComponent<false>>
+class RenderCylinderFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>, RenderFeatureLinesComponent<false>, RenderFeaturePointsComponent<false>, RenderResetDirtyComponent>
 {
     const VisualObject* object_ = nullptr;
     RenderDimensions::RadiusTask radiusTask_;
@@ -256,7 +256,7 @@ public:
     MRVIEWER_API void renderUi( const UiRenderParams& params ) override;
 };
 
-class RenderConeFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>, RenderFeatureLinesComponent<false>, RenderFeaturePointsComponent<false>>
+class RenderConeFeatureObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderFeatureMeshComponent<true>, RenderFeatureLinesComponent<false>, RenderFeaturePointsComponent<false>, RenderResetDirtyComponent>
 {
     const VisualObject* object_ = nullptr;
     RenderDimensions::RadiusTask radiusTask_;

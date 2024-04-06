@@ -214,6 +214,7 @@ void ObjectLabel::updatePivotShift_() const
     Vector3f  diagonal = meshBox_.max + meshBox_.min; // (box.max - box.min) + box.min * 2 - because box.min != 0
     pivotShift_.x = pivotPoint_.x * diagonal.x;
     pivotShift_.y = pivotPoint_.y * diagonal.y;
+    needRedraw_ = true;
 }
 
 Box3f ObjectLabel::getWorldBox( ViewportId id ) const
@@ -250,6 +251,15 @@ std::shared_ptr<MR::Object> ObjectLabel::shallowClone() const
     if ( mesh_ )
         res->mesh_ = mesh_;
     return res;
+}
+
+
+void ObjectLabel::setFontHeight( float size )
+{
+    if ( fontHeight_ == size )
+        return;
+    fontHeight_ = size;
+    needRedraw_ = true;
 }
 
 AllVisualizeProperties ObjectLabel::getAllVisualizeProperties() const

@@ -7,7 +7,7 @@ namespace MR
 
 MR_REGISTER_RENDER_OBJECT_IMPL( DistanceMeasurementObject, RenderDistanceObject )
 RenderDistanceObject::RenderDistanceObject( const VisualObject& object )
-    : RenderDefaultUiObject( object ), object_( &dynamic_cast<const DistanceMeasurementObject&>( object ) )
+    : RenderDimensionObject( object ), object_( &dynamic_cast<const DistanceMeasurementObject&>( object ) )
 {}
 
 void RenderDistanceObject::renderUi( const UiRenderParams& params )
@@ -23,7 +23,7 @@ void RenderDistanceObject::renderUi( const UiRenderParams& params )
 
 MR_REGISTER_RENDER_OBJECT_IMPL( RadiusMeasurementObject, RenderRadiusObject )
 RenderRadiusObject::RenderRadiusObject( const VisualObject& object )
-    : RenderDefaultUiObject( object ), object_( &dynamic_cast<const RadiusMeasurementObject&>( object ) )
+    : RenderDimensionObject( object ), object_( &dynamic_cast<const RadiusMeasurementObject&>( object ) )
 {}
 
 void RenderRadiusObject::renderUi( const UiRenderParams& params )
@@ -41,7 +41,7 @@ void RenderRadiusObject::renderUi( const UiRenderParams& params )
 
 MR_REGISTER_RENDER_OBJECT_IMPL( AngleMeasurementObject, RenderAngleObject )
 RenderAngleObject::RenderAngleObject( const VisualObject& object )
-    : RenderDefaultUiObject( object ), object_( &dynamic_cast<const AngleMeasurementObject&>( object ) )
+    : RenderDimensionObject( object ), object_( &dynamic_cast<const AngleMeasurementObject&>( object ) )
 {}
 
 void RenderAngleObject::renderUi( const UiRenderParams& params )

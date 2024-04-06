@@ -12,7 +12,7 @@
 #include "MRRenderHelpers.h"
 #include "MRViewer.h"
 #include "MRGladGlfw.h"
-#include "MRViewer/MRRenderDefaultUiObject.h"
+#include "MRViewer/MRRenderDefaultObjects.h"
 
 namespace MR
 {

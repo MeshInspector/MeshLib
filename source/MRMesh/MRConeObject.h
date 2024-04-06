@@ -68,6 +68,9 @@ public:
     /// Updates the xf for the new base radius.
     MRMESH_API void setBaseRadius( float radius, ViewportId id = {} );
 
+    // Returns point considered as base for the feature
+    [[nodiscard]] MRMESH_API virtual Vector3f getBasePoint( ViewportId id = {} ) const override;
+
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 
     [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point, ViewportId id = {} ) const override;

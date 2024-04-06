@@ -1,8 +1,9 @@
 #include "MRFeatureObject.h"
 #include "MRMatrix3Decompose.h"
-#include "MRMesh/MRSceneColors.h"
-#include "MRMesh/MRSceneSettings.h"
-#include "MRMesh/MRSerializer.h"
+#include "MRObjectDimensionsEnum.h"
+#include "MRSceneColors.h"
+#include "MRSceneSettings.h"
+#include "MRSerializer.h"
 
 #include "json/value.h"
 
@@ -64,6 +65,13 @@ void FeatureObject::serializeFields_( Json::Value& root ) const
     root["SubAlphaPoints"] = subAlphaPoints_;
     root["SubAlphaLines"] = subAlphaLines_;
     root["SubAlphaMesh"] = subAlphaMesh_;
+
+    for ( std::size_t i = 0; i < std::size_t( DimensionsVisualizePropertyType::_count ); i++ )
+    {
+        const auto enumValue = DimensionsVisualizePropertyType( i );
+        if ( supportsVisualizeProperty( enumValue ) )
+            root["DimensionVisibility"][toString( enumValue ).data()] = getVisualizePropertyMask( enumValue ).value();
+    }
 }
 
 void FeatureObject::deserializeFields_( const Json::Value& root )
@@ -98,7 +106,15 @@ void FeatureObject::deserializeFields_( const Json::Value& root )
     if ( const auto& json = root["SubAlphaMesh"]; json.isDouble() )
         subAlphaMesh_ = json.asFloat();
 
-    // only default xf value serialyze now.
+    for ( std::size_t i = 0; i < std::size_t( DimensionsVisualizePropertyType::_count ); i++ )
+    {
+        const auto enumValue = DimensionsVisualizePropertyType( i );
+        if ( supportsVisualizeProperty( enumValue ) )
+            if ( const auto& json = root["DimensionVisibility"][toString( enumValue ).data()]; json.isUInt() )
+                setVisualizePropertyMask( enumValue, ViewportMask( json.asUInt() ) );
+    }
+
+    // only default xf value serialize now.
     decomposeMatrix3( xf().A, r_.get(), s_.get() );
 }
 
@@ -288,6 +304,11 @@ void FeatureObject::setAllVisualizeProperties_( const AllVisualizeProperties& pr
 {
     VisualObject::setAllVisualizeProperties_( properties, pos );
     setAllVisualizePropertiesForEnum<FeatureVisualizePropertyType>( properties, pos );
+}
+
+Vector3f FeatureObject::getBasePoint( ViewportId id /*= {} */ ) const
+{
+    return xf( id ).b;
 }
 
 }

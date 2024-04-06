@@ -1023,7 +1023,7 @@ PaletteChanges Palette(
     {
         ImGui::SameLine();
         int discretization = params.discretization;
-        ImGui::SetNextItemWidth( scaledWidth * cPaletteDiscretizationScaling );
+        ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x );
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cInputPadding * menuScaling * 0.5f - menuScaling );
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
         if ( UI::drag<NoUnit>( "Discretization", discretization, 1.f, 2, 100 ) )
@@ -1353,7 +1353,7 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     ImGui::PopButtonRepeat();
 
     ImGui::SetNextItemWidth( 80.0f * menuScaling );
-    UI::drag<NoUnit>( "Shift", shift, dragspeed );
+    UI::drag<LengthUnit>( "Shift", shift, dragspeed );
 
     ImGui::SameLine();
     if ( MR::UI::button( "Flip", { 60.0f * menuScaling, 0 } ) )

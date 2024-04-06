@@ -49,6 +49,7 @@ const PickedPoint& SurfacePointWidget::create( const std::shared_ptr<VisualObjec
     pickSphere_->setFrontColor( params_.baseColor, false );
     pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
     pickSphere_->setGlobalAlpha( 255 );
+    pickSphere_->setMainFeatureAlpha( 1.f );
     pickSphere_->setVisualizeProperty( false, DimensionsVisualizePropertyType::diameter, ViewportMask::all() );
     pickSphere_->setDecorationsColor( Color::transparent(), false );
 

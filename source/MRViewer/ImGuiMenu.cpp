@@ -1153,25 +1153,12 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
 
         ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
 
-        if ( !showInfoInObjectTree_ && !hasRealChildren )
-        {
-            ImGui::TreeNodeEx( ( object.name() + " ##" + uniqueStr ).c_str(),
-                ImGuiTreeNodeFlags_Leaf |
-                ImGuiTreeNodeFlags_Bullet |
-                ImGuiTreeNodeFlags_SpanAvailWidth |
-                ImGuiTreeNodeFlags_Framed |
-                ImGuiTreeNodeFlags_NoTreePushOnOpen |
-                ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
-        }
-        else
-        {
-            isOpen = drawCollapsingHeader_( ( object.name() + " ##" + uniqueStr ).c_str(),
-                                        ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) |
-                                        ImGuiTreeNodeFlags_SpanAvailWidth |
-                                        ImGuiTreeNodeFlags_Framed |
-                                        ImGuiTreeNodeFlags_OpenOnArrow |
-                                        ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
-        }
+        isOpen = drawCollapsingHeader_( ( object.name() + " ##" + uniqueStr ).c_str(),
+                                    ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) |
+                                    ImGuiTreeNodeFlags_SpanAvailWidth |
+                                    ImGuiTreeNodeFlags_Framed |
+                                    ImGuiTreeNodeFlags_OpenOnArrow |
+                                    ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
 
         if ( ImGui::IsMouseDoubleClicked( 0 ) && ImGui::IsItemHovered() )
         {
@@ -1236,38 +1223,35 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
         draw_custom_tree_object_properties( object );
         bool infoOpen = false;
         auto lines = object.getInfoLines();
-        if ( showInfoInObjectTree_ )
+        if ( showInfoInObjectTree_ && hasRealChildren && !lines.empty() )
         {
-            if ( hasRealChildren && !lines.empty() )
+            auto infoId = std::string( "Info: ##" ) + uniqueStr;
+            infoOpen = drawCollapsingHeader_( infoId.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed );
+        }
+
+        if ( infoOpen || !hasRealChildren )
+        {
+            auto itemSpacing = ImGui::GetStyle().ItemSpacing;
+            auto framePadding = ImGui::GetStyle().FramePadding;
+            auto scaling = menu_scaling();
+            framePadding.y = 2.0f * scaling;
+            itemSpacing.y = 2.0f * scaling;
+            ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( 0, 0, 0, 0 ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
+            ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, cItemInfoIndent * scaling );
+            ImGui::Indent();
+
+            for ( const auto& str : lines )
             {
-                auto infoId = std::string( "Info: ##" ) + uniqueStr;
-                infoOpen = drawCollapsingHeader_( infoId.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed );
+                ImGui::TreeNodeEx( str.c_str(), ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_Framed );
+                ImGui::TreePop();
             }
 
-            if ( infoOpen || !hasRealChildren )
-            {
-                auto itemSpacing = ImGui::GetStyle().ItemSpacing;
-                auto framePadding = ImGui::GetStyle().FramePadding;
-                auto scaling = menu_scaling();
-                framePadding.y = 2.0f * scaling;
-                itemSpacing.y = 2.0f * scaling;
-                ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( 0, 0, 0, 0 ) );
-                ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
-                ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-                ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
-                ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, cItemInfoIndent * scaling );
-                ImGui::Indent();
-
-                for ( const auto& str : lines )
-                {
-                    ImGui::TreeNodeEx( str.c_str(), ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_Framed );
-                    ImGui::TreePop();
-                }
-
-                ImGui::Unindent();
-                ImGui::PopStyleVar( 4 );
-                ImGui::PopStyleColor();
-            }
+            ImGui::Unindent();
+            ImGui::PopStyleVar( 4 );
+            ImGui::PopStyleColor();
         }
 
         if ( hasRealChildren )
@@ -1507,7 +1491,7 @@ float ImGuiMenu::drawSelectionInformation_()
             {
                 UI::inputTextCenteredReadOnly( "Volume", "Mesh is not closed", itemWidth );
             }
-        }        
+        }
     }
 
     bool firstField = true;
@@ -1595,16 +1579,16 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
 
             if ( prop.kind == FeaturePropertyKind::position || prop.kind == FeaturePropertyKind::linearDimension )
             {
-                UI::drag<LengthUnit>( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), arg, speed, min, max );
+                ret = UI::drag<LengthUnit>( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), arg, speed, min, max );
             }
             else if ( prop.kind == FeaturePropertyKind::angle )
             {
-                UI::drag<AngleUnit>( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), arg, speed, min, max );
+                ret = UI::drag<AngleUnit>( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), arg, speed, min, max );
             }
             else
             {
                 // `FeaturePropertyKind::direction` intentionally goes here.
-                UI::drag<NoUnit>( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), arg, speed, min, max );
+                ret = UI::drag<NoUnit>( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), arg, speed, min, max );
             }
 
             if ( ret )
@@ -1615,7 +1599,7 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
                     editedFeatureObjectOldXf_ = object->xf();
                 }
 
-                prop.setter( arg, &featureObject, viewer->viewport().id );
+                prop.setter( arg, &featureObject, {} ); // Intentionally not using `viewer->viewport().id` here, setting globally is more intuitive.
             }
 
             if ( ImGui::IsItemDeactivatedAfterEdit() && editedFeatureObject_.lock() == object )
@@ -2489,18 +2473,15 @@ void ImGuiMenu::make_points_discretization( std::vector<std::shared_ptr<VisualOb
             break;
         }
 
-    auto backUpTextColor = ImGui::GetStyle().Colors[ImGuiCol_Text];
     if ( !isAllTheSame )
     {
         value = 1;
     }
     const auto valueConstForComparation = value;
 
-    ImGui::PushItemWidth( 40 * menu_scaling() );
-    UI::drag<NoUnit>( label, value, 0.1f, 1, 256 );
+    ImGui::SetNextItemWidth( 50 * menu_scaling() );
+    UI::drag<NoUnit>( label, value, 0.1f, 1, 256, {}, UI::defaultSliderFlags, 0, 0 );
 
-    ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
-    ImGui::PopItemWidth();
     if ( value != valueConstForComparation )
         for ( const auto& data : selectedVisualObjs )
             setter( data->asType<ObjectPointsHolder>(), value);

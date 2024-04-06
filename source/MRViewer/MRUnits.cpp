@@ -18,6 +18,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .unitSuffix = false,
             .style = NumberStyle::normal,
             .precision = 3,
+            .allowNegativeZero = false,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
             .thousandsSeparatorFrac = commonThouSepFrac,
@@ -34,6 +35,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
+            .allowNegativeZero = false,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
             .thousandsSeparatorFrac = commonThouSepFrac,
@@ -50,6 +52,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .unitSuffix = true,
             .style = NumberStyle::fixed,
             .precision = 1,
+            .allowNegativeZero = false,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
             .thousandsSeparatorFrac = commonThouSepFrac,
@@ -66,6 +69,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 2,
+            .allowNegativeZero = false,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
             .thousandsSeparatorFrac = commonThouSepFrac,
@@ -82,6 +86,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .unitSuffix = true,
             .style = NumberStyle::fixed,
             .precision = 1,
+            .allowNegativeZero = false,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
             .thousandsSeparatorFrac = commonThouSepFrac,
@@ -98,6 +103,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .unitSuffix = true,
             .style = NumberStyle::fixed,
             .precision = 1,
+            .allowNegativeZero = false,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
             .thousandsSeparatorFrac = commonThouSepFrac,
@@ -114,6 +120,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
+            .allowNegativeZero = false,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
             .thousandsSeparatorFrac = commonThouSepFrac,
@@ -130,6 +137,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
+            .allowNegativeZero = false,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
             .thousandsSeparatorFrac = commonThouSepFrac,
@@ -146,6 +154,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .unitSuffix = true,
             .style = NumberStyle::normal,
             .precision = 3,
+            .allowNegativeZero = false,
             .unicodeMinusSign = true,
             .thousandsSeparator = commonThouSep,
             .thousandsSeparatorFrac = commonThouSepFrac,
@@ -273,8 +282,18 @@ template <UnitEnum E, typename T>
 static std::string valueToStringImpl( T value, const UnitToStringParams<E>& params )
 {
     // If `str` starts with ASCII minus minus, and `params.unicodeMinusSign` is set, replace it with a Unicode minus sign.
+    // Also strips the minus from negative zeroes if `params.allowNegativeZero` is false.
     auto adjustMinusSign = [&]( std::string& str )
     {
+        // If the only digits in `str` are zeroes and we don't allow negative zeroes, remove the minus sign.
+        if ( !params.allowNegativeZero && str.starts_with( '-' ) &&
+            std::all_of( str.begin(), str.end(), []( char ch ){ return bool( std::isdigit( (unsigned char)ch ) ) <=/*implies*/ ( ch == '0' ); } )
+        )
+        {
+            str.erase( str.begin() );
+        }
+
+        // Replace the plain `-` sign with the fancy Unicode one.
         if ( params.unicodeMinusSign && str.starts_with( '-' ) )
         {
             // U+2212 MINUS SIGN.

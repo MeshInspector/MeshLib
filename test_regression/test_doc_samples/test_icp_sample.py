@@ -27,7 +27,6 @@ def test_icp_sample(tmp_path):
                        mrmeshpy.AffineXf3f(), mrmeshpy.AffineXf3f(),
                        icpSamplingVoxelSize)
     icp.setParams(icpParams)
-    icp.updatePointPairs()
     xf = icp.calculateTransformation()
 
     # Transform floating mesh

@@ -47,7 +47,6 @@ ICP::ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const Affi
 {
     setXfs( fltXf, refXf );
     setupPairs( flt2refPairs_, fltSamples );
-    updatePointPairs();
 }
 
 ICP::ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
@@ -112,7 +111,6 @@ void ICP::recomputeBitSet(const float floatSamplingVoxelSize)
     else
         fltSamples = *flt_.pointsGridSampling( floatSamplingVoxelSize );
     setupPairs( flt2refPairs_, fltSamples );
-    updatePointPairs();
 }
 
 void ICP::updatePointPairs()
@@ -313,71 +311,25 @@ bool ICP::p2plIter_()
 
 AffineXf3f ICP::calculateTransformation()
 {
-    float curDist = 0;
     float minDist = std::numeric_limits<float>::max();
     int badIterCount = 0;
-    resultType_ = ExitType::NotStarted;
-    for (iter_ = 0; iter_ < prop_.iterLimit; iter_++)
+    resultType_ = ExitType::MaxIterations;
+    for ( iter_ = 1; iter_ <= prop_.iterLimit; ++iter_ )
     {
-        if (prop_.method == ICPMethod::Combined)
+        updatePointPairs();
+        const bool pt2pt = ( prop_.method == ICPMethod::Combined && iter_ < 3 )
+            || prop_.method == ICPMethod::PointToPoint;
+        if ( !( pt2pt ? p2ptIter_() : p2plIter_() ) )
         {
-            if (iter_ < 2)
-            {
-                if ( !p2ptIter_() )
-                {
-                    resultType_ = ExitType::NotFoundSolution;
-                    break;
-                }
-                updatePointPairs();
-                curDist = getMeanSqDistToPoint();
-            }
-            else
-            {
-                if ( !p2plIter_() )
-                {
-                    resultType_ = ExitType::NotFoundSolution;
-                    break;
-                }
-                updatePointPairs();
-                curDist = getMeanSqDistToPlane();
-                if ( prop_.exitVal > curDist )
-                {
-                    resultType_ = ExitType::StopMsdReached;
-                    break;
-                }
-            }
+            resultType_ = ExitType::NotFoundSolution;
+            break;
         }
 
-        if (prop_.method == ICPMethod::PointToPoint)
+        const float curDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();
+        if ( prop_.exitVal > curDist )
         {
-            if ( !p2ptIter_() )
-            {
-                resultType_ = ExitType::NotFoundSolution;
-                break;
-            }
-            updatePointPairs();
-            curDist = getMeanSqDistToPoint();
-            if ( prop_.exitVal > curDist )
-            {
-                resultType_ = ExitType::StopMsdReached;
-                break;
-            }
-        }
-
-        if (prop_.method == ICPMethod::PointToPlane)
-        {
-            if ( !p2plIter_() )
-            {
-                resultType_ = ExitType::NotFoundSolution;
-                break;
-            }
-            updatePointPairs();
-            curDist = getMeanSqDistToPlane();
-            if ( prop_.exitVal > curDist )
-            {
-                resultType_ = ExitType::StopMsdReached;
-                break;
-            }
+            resultType_ = ExitType::StopMsdReached;
+            break;
         }
 
         // exit if several(3) iterations didn't decrease minimization parameter
@@ -396,10 +348,6 @@ AffineXf3f ICP::calculateTransformation()
             badIterCount++;
         }
     }
-    if ( iter_ == prop_.iterLimit )
-        resultType_ = ExitType::MaxIterations;
-    else
-        iter_++;
     return fltXf_;
 }
 

@@ -125,7 +125,7 @@ public:
         float floatSamplingVoxelSize ); // positive value here defines voxel size, and only one vertex per voxel will be selected
     // TODO: add single transform constructor
 
-    /// tune algirithm params before run calculateTransformation()
+    /// tune algorithm params before run calculateTransformation()
     void setParams(const ICPProperties& prop) { prop_ = prop; }
     MRMESH_API void setCosineLimit(const float cos);
     MRMESH_API void setDistanceLimit( const float dist );
@@ -163,7 +163,8 @@ public:
     /// returns current pairs formed from samples on floating and projections on reference
     [[nodiscard]] const PointPairs & getFlt2RefPairs() const { return flt2refPairs_; }
 
-    /// returns new xf transformation for the floating mesh, which allows to match reference mesh
+    /// runs ICP algorithm given input objects, transformations, and parameters;
+    /// \return adjusted transformation of the floating object to match reference object
     [[nodiscard]] MRMESH_API AffineXf3f calculateTransformation();
 
 private:

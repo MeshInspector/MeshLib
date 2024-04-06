@@ -71,7 +71,7 @@ if [ -d /usr/lib/python3.12 ]; then
   printf "Root access required!\n"
   RUN_AS_ROOT="NO"
  fi
- sudo mkdir -p /usr/lib/python3.11/site-packages/meshlib/
+ sudo mkdir -p /usr/lib/python3.12/site-packages/meshlib/
  sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrmeshpy.so /usr/lib/python3.12/site-packages/meshlib/mrmeshpy.so
  sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrmeshnumpy.so /usr/lib/python3.12/site-packages/meshlib/mrmeshnumpy.so
  sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrviewerpy.so /usr/lib/python3.12/site-packages/meshlib/mrviewerpy.so

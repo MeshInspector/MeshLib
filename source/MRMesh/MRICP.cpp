@@ -154,6 +154,7 @@ void ICP::updatePointPairs_( PointPairs & pairs,
                 prj.normal = tgtNormals( res.tgtCloseVert );
             prj.isBd = res.tgtOnBd;
             prj.distSq = ( pt - prj.point ).lengthSq();
+            prj.closestVert = res.tgtCloseVert;
         }
         // ... and try to find only closer one
         tgtLimProjector( pt, prj );

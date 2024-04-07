@@ -128,10 +128,13 @@ void ICP::updatePointPairs_( PointPairs & pairs,
     const auto src2tgtXf = tgtXf.inverse() * srcXf;
 
     const VertCoords& srcPoints = src.points();
+    const VertCoords& tgtPoints = tgt.points();
 
     const auto srcNormals = src.normals();
+    const auto tgtNormals = tgt.normals();
+
     const auto srcWeights = src.weights();
-    const auto tgtProjector = tgt.projector();
+    const auto tgtLimProjector = tgt.limitedProjector();
 
     pairs.active.clear();
     pairs.active.resize( pairs.vec.size(), true );
@@ -139,27 +142,36 @@ void ICP::updatePointPairs_( PointPairs & pairs,
     // calculate pairs
     BitSetParallelForAll( pairs.active, [&] ( size_t idx )
     {
-        const auto& p = srcPoints[pairs.vec[idx].srcVertId];
-        const auto prj = tgtProjector( src2tgtXf( p ) );
+        auto & res = pairs.vec[idx];
+        const auto pt = src2tgtXf( srcPoints[res.srcVertId] );
 
-        // projection should be found and if point projects on the border it will be ignored
-        if ( !prj.isBd )
+        MeshOrPoints::ProjectionResult prj;
+        if ( res.tgtCloseVert )
         {
-            PointPair vp = pairs.vec[idx];
-            vp.distSq = prj.distSq;
-            vp.weight = srcWeights ? srcWeights( vp.srcVertId ) : 1.0f;
-            vp.tgtPoint = tgtXf( prj.point );
-            vp.tgtNorm = prj.normal ? ( tgtXf.A * prj.normal.value() ).normalized() : Vector3f();
-            vp.srcNorm = srcNormals ? ( srcXf.A * srcNormals( vp.srcVertId ) ).normalized() : Vector3f();
-            vp.normalsAngleCos = ( prj.normal && srcNormals ) ? dot( vp.tgtNorm, vp.srcNorm ) : 1.0f;
-            pairs.vec[idx] = vp;
-            if ( vp.normalsAngleCos < prop_.cosTreshold || vp.distSq > prop_.distThresholdSq )
-                pairs.active.reset( idx );
+            // start with old closest point ...
+            prj.point = tgtPoints[res.tgtCloseVert];
+            if ( tgtNormals )
+                prj.normal = tgtNormals( res.tgtCloseVert );
+            prj.isBd = res.tgtOnBd;
+            prj.distSq = ( pt - prj.point ).lengthSq();
+            prj.closestVert = res.tgtCloseVert;
         }
-        else
-        {
+        // ... and try to find only closer one
+        tgtLimProjector( pt, prj );
+
+        // save the result
+        PointPair vp = res;
+        vp.distSq = prj.distSq;
+        vp.weight = srcWeights ? srcWeights( vp.srcVertId ) : 1.0f;
+        vp.tgtCloseVert = prj.closestVert;
+        vp.tgtPoint = tgtXf( prj.point );
+        vp.tgtNorm = prj.normal ? ( tgtXf.A * prj.normal.value() ).normalized() : Vector3f();
+        vp.srcNorm = srcNormals ? ( srcXf.A * srcNormals( vp.srcVertId ) ).normalized() : Vector3f();
+        vp.normalsAngleCos = ( prj.normal && srcNormals ) ? dot( vp.tgtNorm, vp.srcNorm ) : 1.0f;
+        vp.tgtOnBd = prj.isBd;
+        res = vp;
+        if ( prj.isBd || vp.normalsAngleCos < prop_.cosTreshold || vp.distSq > prop_.distThresholdSq )
             pairs.active.reset( idx );
-        }
     } );
 }
 

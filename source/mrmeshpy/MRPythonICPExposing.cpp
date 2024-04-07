@@ -27,11 +27,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def_readwrite( "srcVertId", &MR::PointPair::srcVertId, "id of the source point" ).
         def_readwrite( "srcNorm", &MR::PointPair::srcNorm, "normal in source point after transforming in world space" ).
+        def_readwrite( "tgtCloseVert", &MR::PointPair::tgtCloseVert, "for point clouds it is the closest vertex on target, for meshes it is the closest vertex of the triangle with the closest point on target" ).
         def_readwrite( "tgtPoint", &MR::PointPair::tgtPoint, "coordinates of the closest point on target after transforming in world space" ).
         def_readwrite( "tgtNorm", &MR::PointPair::tgtNorm, "normal in the target point after transforming in world space" ).
         def_readwrite( "normalsAngleCos", &MR::PointPair::normalsAngleCos, "cosine between normals in source and target points" ).
         def_readwrite( "distSq", &MR::PointPair::distSq, "squared distance between source and target points" ).
-        def_readwrite( "weight", &MR::PointPair::weight, "weight of the pair (to prioritize over other pairs)" );
+        def_readwrite( "weight", &MR::PointPair::weight, "weight of the pair (to prioritize over other pairs)" ).
+        def_readwrite( "tgtOnBd", &MR::PointPair::tgtOnBd, "true if if the closest point on target is located on the boundary (only for meshes)" );
 
     pybind11::class_<MR::ICPProperties>( m, "ICPProperties" ).
         def( pybind11::init<>() ).

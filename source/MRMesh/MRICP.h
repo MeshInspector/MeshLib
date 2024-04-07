@@ -39,6 +39,10 @@ struct PointPair
     /// normal in source point after transforming in world space
     Vector3f srcNorm;
 
+    /// for point clouds it is the closest vertex on target,
+    /// for meshes it is the closest vertex of the triangle with the closest point on target
+    VertId tgtCloseVert;
+
     /// coordinates of the closest point on target after transforming in world space
     Vector3f tgtPoint;
 
@@ -53,6 +57,9 @@ struct PointPair
 
     /// weight of the pair (to prioritize over other pairs)
     float weight = 1.f;
+
+    /// true if if the closest point on target is located on the boundary (only for meshes)
+    bool tgtOnBd = false;
 
     friend bool operator == ( const PointPair&, const PointPair& ) = default;
 };

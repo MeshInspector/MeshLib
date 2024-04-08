@@ -9,6 +9,13 @@ def test_bit_settest():
 
     assert len(components) == 5
     assert components[0].count() != 0
+
+    counter = 0
+    for v in components[0]:
+        assert components[0].test( v )
+        counter = counter + 1
+    assert counter == components[0].count()
+
     comp0Flip = mrmesh.VertBitSet()
     comp0Flip |= components[0]
     comp0Flip.flip()

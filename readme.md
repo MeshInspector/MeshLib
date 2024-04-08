@@ -25,7 +25,7 @@ The goal which we set when designing MeshLib was to value simplicity and perform
 
 * [MeshInspector YouTube channel](https://www.youtube.com/channel/UCv9bNhwoVDPaLPPyWJeVPNg)
 
-* [MeshLib Documentation](https://meshinspector.github.io/MeshLib/html/index.html)
+* [MeshLib Documentation](https://meshlib.meshinspector.com/documentation/)
 
 * [Email us](mailto:support@meshinspector.com)
 
@@ -115,25 +115,25 @@ We plan to add computed-tomography reconstruction in MeshLib (already present in
 
 Although MeshLib is written in C++, all functions are exposed to Python as well. Python code can be executed both from within a MeshLib-based C++ application (embedded mode) and from python interpreter directly, which imports MeshLib modules.
 
-Moreover, MeshLib can be easily installed as a Python 3.8 - 3.12 package using `pip install`:
+Moreover, the latest MeshLib released version can be easily installed as a Python 3.8 - 3.12 package using `pip install`:
 * On Windows via
 ```
 py -3 -m pip install --upgrade pip
-py -3 -m pip install meshlib
+py -3 -m pip install --upgrade meshlib
 ```
 * On Linuxes supporting [manylinux_2_31+](https://github.com/mayeut/pep600_compliance#distro-compatibility), including Ubuntu 20+ and Fedora 32+ via
 ```
 sudo apt install python3-pip
 python3 -m pip install --upgrade pip
-python3 -m pip install meshlib
+python3 -m pip install --upgrade meshlib
 ```
 * On macOS 12.0+ via
 ```
 pip install --upgrade pip
-pip install meshlib
+pip install --upgrade meshlib
 ```
 
-See Python Basic Examples [here](https://meshinspector.github.io/MeshLib/html/HowToBasic.html) or search for more complex ones on [stackoverflow.com](https://stackoverflow.com/).
+See Python Basic Examples [here](https://meshlib.meshinspector.com/documentation/HowToBasic.html) or search for more complex ones on [stackoverflow.com](https://stackoverflow.com/).
 
 # Build
 ## Windows
@@ -162,7 +162,7 @@ If you would like to use another version of CUDA, please modify `MRCudaVersion` 
     ```sh
     git clone https://github.com/Microsoft/vcpkg.git
     cd vcpkg
-    git checkout 2024.02.14
+    git checkout 2024.03.25
     .\bootstrap-vcpkg.bat
     .\vcpkg integrate install (with admin rights)
     ```
@@ -175,13 +175,12 @@ If you would like to use another version of CUDA, please modify `MRCudaVersion` 
 4. Open solution file `MeshLib/source/MeshLib.sln` in Visual Studio. Build it and run.
 
 ## Linux
-This installation was checked on Ubuntu 22.04.3 (WSL) with CMake 3.28.3
+
+We regularly check that MeshLib can be built successfully on Ubuntu 20.04 LTS, Ubuntu 22.04 LTS (both x64 and ARM), and Fedora 37.
 
 **Install/Build dependencies. Build project. Run Test Application**
 
 Install CUDA v12.0 from [official site](https://developer.nvidia.com/cuda-toolkit-archive)
-
-Make sure CMake version at least 3.25.2 is installed
 
 Use automated installation process. It takes ~40 minutes if no required packages are already installed.
 This approach is useful for new MR developers
@@ -193,13 +192,17 @@ git clone --recurse-submodules https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
 ./scripts/build_thirdparty.sh  # do not select emscripten in the corresponding question
 ./scripts/build_source.sh  # do not select emscripten in the corresponding question
+# create and install package for Ubuntu
 ./scripts/distribution.sh
 sudo apt install ./distr/meshlib-dev.deb
+# create and install package for Fedora
+./scripts/distribution_rpm.sh
+sudo apt install ./distr/meshlib-dev.rpm
 ```
 
 > **_NOTE:_** `./scripts/install*.sh` scripts could be used as well, but apt install is preferable.
 
-> **_NOTE:_** `./scripts/install*.sh` scripts copy MR files directly to `/usr/local/lib`. Remove this directory manually if exists before apt install deb package.
+> **_NOTE:_** `./scripts/install_thirdparty.sh` script copies MR files directly to `/usr/local/lib`. Remove this directory manually if exists before apt install deb package.
 
 > **_NOTE:_** You could specify build type to Debug by `export MESHLIB_BUILD_TYPE=Debug`. Release is default. Set `MESHLIB_KEEP_BUILD=ON` to suppress full rebuild
 
@@ -221,7 +224,7 @@ Build
 ```
 cd ~/MeshLib
 ./scripts/build_thirdparty.sh # select Emscripten in the corresponding question
-./scripts/build_sorces.sh # select Emscripten in the corresponding question
+./scripts/build_source.sh # select Emscripten in the corresponding question
 ```
 > **_NOTE:_** Set `MESHLIB_KEEP_BUILD=ON` to suppress full rebuild
 

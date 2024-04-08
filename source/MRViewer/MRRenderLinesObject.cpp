@@ -10,8 +10,9 @@
 #include "MRMesh/MRVector2.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
-#include "MRMeshViewer.h"
+#include "MRViewer.h"
 #include "MRGladGlfw.h"
+#include "MRViewer/MRRenderDefaultObjects.h"
 
 namespace MR
 {
@@ -29,12 +30,19 @@ RenderLinesObject::~RenderLinesObject()
     freeBuffers_();
 }
 
-void RenderLinesObject::render( const ModelRenderParams& renderParams )
+bool RenderLinesObject::render( const ModelRenderParams& renderParams )
 {
+    RenderModelPassMask desiredPass =
+        !objLines_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
+        ( objLines_->getGlobalAlpha( renderParams.viewportId ) < 255 || objLines_->getFrontColor( objLines_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
+        RenderModelPassMask::Opaque;
+    if ( !bool( renderParams.passMask & desiredPass ) )
+        return false; // Nothing to draw in this pass.
+
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objLines_->resetDirty();
-        return;
+        return false;
     }
 
     update_();
@@ -59,9 +67,11 @@ void RenderLinesObject::render( const ModelRenderParams& renderParams )
     if ( objLines_->getVisualizeProperty( LinesVisualizePropertyType::Points, renderParams.viewportId ) ||
         objLines_->getVisualizeProperty( LinesVisualizePropertyType::Smooth, renderParams.viewportId ) )
         render_( renderParams, true );
+
+    return true;
 }
 
-void RenderLinesObject::renderPicker( const ModelRenderParams& parameters, unsigned geomId )
+void RenderLinesObject::renderPicker( const ModelBaseRenderParams& parameters, unsigned geomId )
 {
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
@@ -157,7 +167,7 @@ void RenderLinesObject::render_( const ModelRenderParams& renderParams, bool poi
     }
 }
 
-void RenderLinesObject::renderPicker_( const ModelRenderParams& parameters, unsigned geomId, bool points )
+void RenderLinesObject::renderPicker_( const ModelBaseRenderParams& parameters, unsigned geomId, bool points )
 {
     auto shaderType = points ? GLStaticHolder::LinesJointPicker : GLStaticHolder::LinesPicker;
     bindLinesPicker_( shaderType );
@@ -388,6 +398,6 @@ const Vector2f& GetAvailableLineWidthRange()
     return availableWidth;
 }
 
-MR_REGISTER_RENDER_OBJECT_IMPL( ObjectLinesHolder, RenderLinesObject )
+MR_REGISTER_RENDER_OBJECT_IMPL( ObjectLinesHolder, RenderObjectCombinator<RenderDefaultUiObject, RenderLinesObject> )
 
 }

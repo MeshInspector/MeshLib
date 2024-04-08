@@ -6,14 +6,14 @@
 
 namespace MR
 {
-class RenderPointsObject : public IRenderObject
+class RenderPointsObject : public virtual IRenderObject
 {
 public:
     RenderPointsObject( const VisualObject& visObj );
     ~RenderPointsObject();
 
-    virtual void render( const ModelRenderParams& params ) override;
-    virtual void renderPicker( const ModelRenderParams& params, unsigned geomId ) override;
+    virtual bool render( const ModelRenderParams& params ) override;
+    virtual void renderPicker( const ModelBaseRenderParams& params, unsigned geomId ) override;
     virtual size_t heapBytes() const override;
     virtual size_t glBytes() const override;
     virtual void forceBindAll() override;

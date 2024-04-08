@@ -1,14 +1,17 @@
 #pragma once
-#include "MRMeshFwd.h"
-#include "MRObjectMeshHolder.h"
+
 #include "MRFeatureObject.h"
+#include "MRMesh/MRAddVisualPropertiesMixin.h"
+#include "MRMesh/MRObjectDimensionsEnum.h"
+#include "MRMeshFwd.h"
+#include "MRVisualObject.h"
 
 namespace MR
 {
 
 /// Object to show sphere feature, position and radius are controlled by xf
 /// \ingroup FeaturesGroup
-class MRMESH_CLASS SphereObject : public ObjectMeshHolder, public FeatureObject
+class MRMESH_CLASS SphereObject : public AddVisualProperties<FeatureObject, DimensionsVisualizePropertyType::diameter>
 {
 public:
     /// Creates simple sphere object with center in zero and radius - 1
@@ -31,15 +34,18 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     /// calculates radius from xf
-    MRMESH_API float getRadius() const;
+    MRMESH_API float getRadius( ViewportId id = {} ) const;
     /// calculates center from xf
-    MRMESH_API Vector3f getCenter() const;
+    MRMESH_API Vector3f getCenter( ViewportId id = {} ) const;
     /// updates xf to fit given radius
-    MRMESH_API void setRadius( float radius );
+    MRMESH_API void setRadius( float radius, ViewportId id = {} );
     /// updates xf to fit given center
-    MRMESH_API void setCenter( const Vector3f& center );
+    MRMESH_API void setCenter( const Vector3f& center, ViewportId id = {} );
 
     MRMESH_API virtual const std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
+
+    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& point, ViewportId id = {} ) const override;
+
 protected:
     SphereObject( const SphereObject& other ) = default;
 
@@ -48,14 +54,13 @@ protected:
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 
-    virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& ) const override 
+    virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& ) const override
         { return {}; }
 
     virtual VoidOrErrStr deserializeModel_( const std::filesystem::path&, ProgressCallback ) override
         { return {}; }
 
-private:
-    void constructMesh_();
+    MRMESH_API void setupRenderObject_() const override;
 };
 
 }

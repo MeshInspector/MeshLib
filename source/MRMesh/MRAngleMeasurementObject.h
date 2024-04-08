@@ -47,6 +47,10 @@ public:
     [[nodiscard]] MRMESH_API bool getIsConical() const;
     MRMESH_API void setIsConical( bool value );
 
+    // Whether we should draw a ray from the center point to better visualize the angle. Enable this if there isn't already a line object there.
+    [[nodiscard]] MRMESH_API bool getShouldVisualizeRay( bool second ) const;
+    MRMESH_API void setShouldVisualizeRay( bool second, bool enable );
+
 protected:
     AngleMeasurementObject( const AngleMeasurementObject& other ) = default;
 
@@ -55,11 +59,16 @@ protected:
     MRMESH_API void serializeFields_( Json::Value& root ) const override;
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
+    MRMESH_API void setupRenderObject_() const override;
+
 private:
     // Don't forget to add all the new fields to serialization.
 
     // Whether this is a conical angle. The middle line between the rays is preserved, but the rays themselves can be rotated.
     bool isConical_ = false;
+
+    // Whether we should draw a ray from the center point to better visualize the angle. Enable this if there isn't already a line object there.
+    bool shouldVisualizeRay_[2]{};
 };
 
 } // namespace MR

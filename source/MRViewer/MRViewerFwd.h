@@ -23,6 +23,7 @@ class ColorTheme;
 class ImGuiImage;
 class ImGuiMenu;
 class IViewerSettingsManager;
+class FrameCounter;
 class MarkedVoxelSlice;
 class Palette;
 class RecentFilesStore;
@@ -36,6 +37,7 @@ class ViewerPlugin;
 class ViewerSettingsManager;
 class ViewerSetup;
 class Viewer;
+struct LaunchParams;
 class ViewerEventQueue;
 class Viewport;
 class RibbonMenu;
@@ -52,6 +54,8 @@ struct PointInAllSpaces;
 template<typename ...Connectables>
 class StateListenerPlugin;
 using StatePlugin = StateListenerPlugin<>;
+
+class MRVIEWER_CLASS HistoryStore;
 
 using ViewerEventCallback = std::function<void()>;
 

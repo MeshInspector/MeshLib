@@ -17,10 +17,13 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRConfig.h"
+#include "MRMesh/MRObjectMesh.h"
 #include "MRUIStyle.h"
 
 namespace ImGui
 {
+
+using namespace MR;
 
 const std::string dragTooltipStr = "Drag with Shift - faster, Alt - slower";
 
@@ -54,7 +57,6 @@ void drawCursorArrow()
     drawList->AddTriangleFilled( ImVec2( mousePos.x + spaceX, mousePos.y ),
                                  ImVec2( mousePos.x + spaceX + sizeX, mousePos.y + sizeY_2 ),
                                  ImVec2( mousePos.x + spaceX, mousePos.y + sizeY_2 * 2.f ), 0xFFFFFFFF );
-
 }
 
 template<typename T>
@@ -120,7 +122,7 @@ void PlotCustomHistogram( const char* str_id,
     if ( frame_size.x == 0.0f )
         frame_size.x = CalcItemWidth();
     if ( frame_size.y == 0.0f )
-        frame_size.y = ( style.FramePadding.y * 2 );
+        frame_size.y = frame_size.x / 2.f + ( style.FramePadding.y * 2 );
 
     ImRect rect;
     rect.Min = GetCursorScreenPos();
@@ -134,6 +136,7 @@ void PlotCustomHistogram( const char* str_id,
     // ImGui::Dummy did not handle click properly (it somehow breaks modal openenig) so we changed it to ButtonBehavior
     //Dummy( frame_size );
 
+    ItemSize( rect.GetSize() );
     ItemAdd( rect, id );
     bool hovered, held;
     ButtonBehavior( rect, id, &hovered, &held );
@@ -953,7 +956,7 @@ PaletteChanges Palette(
     float speed,
     float min,
     float max,
-    const char* format )
+    const MR::UnitToStringParams<MR::NoUnit>& unitParams )
 {
     using namespace MR;
     PaletteChanges changes = PaletteChanges::None;
@@ -1020,10 +1023,10 @@ PaletteChanges Palette(
     {
         ImGui::SameLine();
         int discretization = params.discretization;
-        ImGui::SetNextItemWidth( scaledWidth * cPaletteDiscretizationScaling );
+        ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x );
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cInputPadding * menuScaling * 0.5f - menuScaling );
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
-        if ( ImGui::DragIntValid( "Discretization", &discretization, 1, 2, 100 ) )
+        if ( UI::drag<NoUnit>( "Discretization", discretization, 1.f, 2, 100 ) )
         {
             palette.setDiscretizationNumber( discretization );
             palette.resetLabels();
@@ -1068,7 +1071,7 @@ PaletteChanges Palette(
             if ( ranges[3] < 0.0f )
                 ranges[3] = 0.0f;
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
-            rangesChanged |= ImGui::DragFloatValid( "Min/Max", &ranges[3], speed, 0.0f, max, format );
+            rangesChanged |= UI::drag<NoUnit>( "Min/Max", ranges[3], speed, 0.0f, max, unitParams );
             ImGui::PopStyleVar();
 
             if ( rangesChanged || fixZeroChanged )
@@ -1076,9 +1079,9 @@ PaletteChanges Palette(
         }
         else
         {
-            rangesChanged |= ImGui::DragFloatValid( "Max (red)", &ranges[3], speed, min, max, format );
+            rangesChanged |= UI::drag<NoUnit>( "Max (red)", ranges[3], speed, min, max, unitParams );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
-            rangesChanged |= ImGui::DragFloatValid( "Min (blue)", &ranges[0], speed, min, max, format );
+            rangesChanged |= UI::drag<NoUnit>( "Min (blue)", ranges[0], speed, min, max, unitParams );
             ImGui::PopStyleVar();
         }
     }
@@ -1089,7 +1092,7 @@ PaletteChanges Palette(
             if ( ranges[3] < 0.0f )
                 ranges[3] = 0.0f;
 
-            rangesChanged |= ImGui::DragFloatValid( "Max positive / Min negative", &ranges[3], speed, min, max, format );
+            rangesChanged |= UI::drag<NoUnit>( "Max positive / Min negative", ranges[3], speed, min, max, unitParams );
             if ( rangesChanged || fixZeroChanged )
                 ranges[0] = -ranges[3];
 
@@ -1097,18 +1100,18 @@ PaletteChanges Palette(
                 ranges[2] = 0.0f;
 
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
-            rangesChanged |= ImGui::DragFloatValid( "Min positive / Max negative", &ranges[2], speed, min, max, format );
+            rangesChanged |= UI::drag<NoUnit>( "Min positive / Max negative", ranges[2], speed, min, max, unitParams );
             ImGui::PopStyleVar();
             if ( rangesChanged || fixZeroChanged )
                 ranges[1] = -ranges[2];
         }
         else
         {
-            rangesChanged |= ImGui::DragFloatValid( "Max positive (red)", &ranges[3], speed, min, max, format );
-            rangesChanged |= ImGui::DragFloatValid( "Min positive (green)", &ranges[2], speed, min, max, format );
-            rangesChanged |= ImGui::DragFloatValid( "Max negative (green)", &ranges[1], speed, min, max, format );
+            rangesChanged |= UI::drag<NoUnit>( "Max positive (red)", ranges[3], speed, min, max, unitParams );
+            rangesChanged |= UI::drag<NoUnit>( "Min positive (green)", ranges[2], speed, min, max, unitParams );
+            rangesChanged |= UI::drag<NoUnit>( "Max negative (green)", ranges[1], speed, min, max, unitParams );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
-            rangesChanged |= ImGui::DragFloatValid( "Min negative (blue)", &ranges[0], speed, min, max, format );
+            rangesChanged |= UI::drag<NoUnit>( "Min negative (blue)", ranges[0], speed, min, max, unitParams );
             ImGui::PopStyleVar();
         }
     }
@@ -1318,7 +1321,7 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     auto plane = planeWidget.getPlane();
 
     ImGui::SetNextItemWidth( 200.0f * menuScaling );
-    ImGui::DragFloatValid3( "Normal", &plane.n.x, 0.001f );
+    UI::drag<NoUnit>( "Normal", plane.n, 0.001f );
     ImGui::PushButtonRepeat( true );
 
     const float arrowButtonSize = 2.0f * MR::cGradientButtonFramePadding * menuScaling + ImGui::GetTextLineHeight();
@@ -1350,7 +1353,7 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     ImGui::PopButtonRepeat();
 
     ImGui::SetNextItemWidth( 80.0f * menuScaling );
-    ImGui::DragFloatValid( "Shift", &shift, dragspeed );
+    UI::drag<LengthUnit>( "Shift", shift, dragspeed );
 
     ImGui::SameLine();
     if ( MR::UI::button( "Flip", { 60.0f * menuScaling, 0 } ) )

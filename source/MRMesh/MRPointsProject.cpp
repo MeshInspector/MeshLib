@@ -26,7 +26,8 @@ struct SubTask
 PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCloud& pc,
     float upDistLimitSq /*= FLT_MAX*/, 
     const AffineXf3f* xf /*= nullptr*/, 
-    float loDistLimitSq /*= 0 */ )
+    float loDistLimitSq /*= 0*/,
+    VertPredicate skipCb /*= {}*/ )
 {
     const auto& tree = pc.getAABBTree();
     const auto& orderedPoints = tree.orderedPoints();
@@ -34,10 +35,7 @@ PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCl
     PointsProjectionResult res;
     res.distSq = upDistLimitSq;
     if ( tree.nodes().empty() )
-    {
-        assert( false );
         return res;
-    }
 
     constexpr int MaxStackSize = 32; // to avoid allocations
     SubTask subtasks[MaxStackSize];
@@ -73,6 +71,8 @@ PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCl
             bool lowBreak = false;
             for ( int i = first; i < last && !lowBreak; ++i )
             {
+                if ( skipCb && skipCb( orderedPoints[i].id ) )
+                    continue;
                 auto proj = xf ? ( *xf )( orderedPoints[i].coord ) : orderedPoints[i].coord;
                 float distSq = ( proj - pt ).lengthSq();
                 if ( distSq < res.distSq )
@@ -105,13 +105,14 @@ void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest
     float upDistLimitSq, const AffineXf3f* xf, float loDistLimitSq )
 {
     const auto& tree = pc.getAABBTree();
+    // must come after getAABBTree() to avoid situations when the same thread executing getAABBTree enters recursively
+    // in this function and appends to not-empty res
+    res.clear();
+
     const auto& orderedPoints = tree.orderedPoints();
 
     if ( tree.nodes().empty() )
-    {
-        assert( false );
         return;
-    }
 
     constexpr int MaxStackSize = 32; // to avoid allocations
     SubTask subtasks[MaxStackSize];

@@ -1,6 +1,6 @@
 #include "MRRecentFilesStore.h"
 #include "MRMesh/MRConfig.h"
-#include "MRMeshViewer.h"
+#include "MRViewer.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace

@@ -1,4 +1,5 @@
 #include "MRViewer.h"
+#include "MRMesh/MRFinally.h"
 #include "MRViewerEventQueue.h"
 #include "MRSceneTextureGL.h"
 #include "MRAlphaSortGL.h"
@@ -23,12 +24,14 @@
 #include "MRRecentFilesStore.h"
 #include "MRPointInAllSpaces.h"
 #include "MRViewport.h"
+#include "MRFrameCounter.h"
+#include "MRColorTheme.h"
+#include "MRHistoryStore.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
 #include <MRMesh/MRConstants.h>
 #include <MRMesh/MRArrow.h>
-#include <MRMesh/MRHistoryStore.h>
 #include <MRMesh/MRMakePlane.h>
 #include <MRMesh/MRToFromEigen.h>
 #include <MRMesh/MRTimer.h>
@@ -53,6 +56,8 @@
 #include "MRMesh/MRObjectLabel.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRSceneColors.h"
+#include "MRMesh/MRObjectVoxels.h"
 #include "MRPch/MRWasm.h"
 
 #ifndef __EMSCRIPTEN__
@@ -359,6 +364,60 @@ void loadMRViewerDll()
 {
 }
 
+void filterReservedCmdArgs( std::vector<std::string>& args )
+{
+    bool nextW{ false };
+    bool nextH{ false };
+    std::vector<int> indicesToRemove;
+    indicesToRemove.push_back( 0 );
+    for ( int i = 1; i < args.size(); ++i )
+    {
+        bool reserved = false;
+        const auto& flag = args[i];
+        if ( nextW )
+        {
+            nextW = false;
+            reserved = true;
+        }
+        else if ( nextH )
+        {
+            nextH = false;
+            reserved = true;
+        }
+        else if (
+            flag == "-noWindow" ||
+            flag == "-fullscreen" ||
+            flag == "-noClose" ||
+            flag == "-noEventLoop" ||
+            flag == "-hidden" ||
+            flag == "-tryHidden" ||
+            flag == "-transparentBgOn" ||
+            flag == "-transparentBgOff" ||
+            flag == "-noSplash" ||
+            flag == "-console" ||
+            flag == "-openGL3" ||
+            flag == "-noRenderInTexture" ||
+            flag == "-develop"
+            )
+            reserved = true;
+        else if ( flag == "-width" )
+        {
+            nextW = true;
+            reserved = true;
+        }
+        else if ( flag == "-height" )
+        {
+            nextH = true;
+            reserved = true;
+        }
+
+        if ( reserved )
+            indicesToRemove.push_back( i );
+    }
+    for ( int i = int( indicesToRemove.size() ) - 1; i >= 0; --i )
+        args.erase( args.begin() + indicesToRemove[i] );
+}
+
 void Viewer::parseLaunchParams( LaunchParams& params )
 {
     bool nextW{ false };
@@ -467,9 +526,15 @@ int Viewer::launch( const LaunchParams& params )
     }
 
     // log start line
+    commandArgs.resize( params.argc );
     for ( int i = 0; i < params.argc; ++i )
-        spdlog::info( "argv[{}]: {}", i, params.argv[i] );
+    {
+        commandArgs[i] = std::string( params.argv[i] );
+        spdlog::info( "argv[{}]: {}", i, commandArgs[i] );
+    }
+    filterReservedCmdArgs( commandArgs );
 
+    launchParams_ = params;
     isAnimating = params.isAnimating;
     animationMaxFps = params.animationMaxFps;
     enableDeveloperFeatures_ = params.developerFeatures;
@@ -483,8 +548,6 @@ int Viewer::launch( const LaunchParams& params )
 
     if ( params.windowMode == LaunchParams::HideInit && window )
         glfwShowWindow( window );
-
-    parseCommandLine_( params.argc, params.argv );
 
     CommandLoop::setState( CommandLoop::StartPosition::AfterWindowAppear );
 
@@ -553,6 +616,13 @@ int Viewer::launchInit_( const LaunchParams& params )
     CommandLoop::setMainThreadId( std::this_thread::get_id() );
     spdlog::info( "Log file: {}", utf8string( Logger::instance().getLogFileName() ) );
     glfwSetErrorCallback( glfw_error_callback );
+    // TODO: Wayland support
+#ifdef __linux__
+#if GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
+    if ( glfwPlatformSupported( GLFW_PLATFORM_X11 ) )
+        glfwInitHint( GLFW_PLATFORM, GLFW_PLATFORM_X11 );
+#endif
+#endif
     if ( !glfwInit() )
     {
         spdlog::error( "glfwInit failed" );
@@ -857,37 +927,6 @@ void Viewer::shutdownPlugins_()
         menuPlugin_->shutdown();
 }
 
-void Viewer::parseCommandLine_( [[maybe_unused]] int argc, [[maybe_unused]] char** argv )
-{
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_PYTHON)
-    std::vector<std::filesystem::path> supportedFiles;
-    for ( int i = 1; i < argc; ++i )
-    {
-        const auto argAsPath = pathFromUtf8( argv[i] );
-        if( EmbeddedPython::isPythonScript( argAsPath ) )
-        {
-            EmbeddedPython::init();
-            // Draw twice to show all menus on screen
-            {
-                draw( true );
-                draw( true );
-            }
-            EmbeddedPython::setupArgv( argc - i, &argv[i] );
-            EmbeddedPython::runScript( argAsPath );
-            // Draw to update after executing script
-            {
-                draw( true );
-            }
-            EmbeddedPython::finalize();
-            break;
-        }
-        if ( isSupportedFormat( argAsPath ) )
-            supportedFiles.push_back( argAsPath );
-    }
-    loadFiles( supportedFiles );
-#endif
-}
-
 void Viewer::postEmptyEvent()
 {
     if ( !isGLInitialized() )
@@ -933,7 +972,8 @@ Viewer::Viewer() :
     selected_viewport_index( 0 ),
     eventQueue_( std::make_unique<ViewerEventQueue>() ),
     mouseController_( std::make_unique<MouseController>() ),
-    recentFilesStore_( std::make_unique<RecentFilesStore>() )
+    recentFilesStore_( std::make_unique<RecentFilesStore>() ),
+    frameCounter_( std::make_unique<FrameCounter>() )
 {
     window = nullptr;
 
@@ -941,6 +981,38 @@ Viewer::Viewer() :
     viewport_list.emplace_back();
     viewport_list.front().id = ViewportId{ 1 };
     presentViewportsMask_ |= viewport_list.front().id;
+
+    resetSettingsFunction = [] ( Viewer* viewer )
+    {
+        viewer->glPickRadius = 0;
+        viewer->scrollForce = 1.0f;
+        viewer->setSpaceMouseParameters( SpaceMouseParameters{} );
+        viewer->setTouchpadParameters( TouchpadParameters{} );
+        viewer->enableAlphaSort( true );
+
+        for ( ViewportId id : viewer->getPresentViewports() )
+        {
+            Viewport& viewport = viewer->viewport( id );
+            // Reset selected parameters
+            Viewport::Parameters defaultParams;
+            Viewport::Parameters params = viewport.getParameters();
+            params.cameraZoom = defaultParams.cameraZoom;
+            params.cameraViewAngle = defaultParams.cameraViewAngle;
+            params.cameraDnear = defaultParams.cameraDnear;
+            params.cameraDfar = defaultParams.cameraDfar;
+            params.depthTest = defaultParams.depthTest;
+            params.orthographic = defaultParams.orthographic;
+            params.borderColor = defaultParams.borderColor;
+            params.clippingPlane = defaultParams.clippingPlane;
+            params.rotationMode = defaultParams.rotationMode;
+            viewport.setParameters( params );
+            // Reset other properties
+            viewer->viewport().showAxes( true );
+            viewer->viewport().showGlobalBasis( false );
+            viewer->viewport().showRotationCenter( true );
+            viewer->viewport().showClippingPlane( false );
+        }
+    };
 }
 
 Viewer::~Viewer()
@@ -1362,40 +1434,19 @@ void Viewer::resetRedraw_()
     resetRedrawFlagRecursive( SceneRoot::get() );
 }
 
-MR::Viewer::VisualObjectRenderType Viewer::getObjRenderType_( const VisualObject* obj, ViewportId viewportId ) const
-{
-    if ( !obj )
-        return VisualObjectRenderType::Opaque;
-
-    if ( !obj->getVisualizeProperty( VisualizeMaskType::DepthTest, viewportId ) )
-        return VisualObjectRenderType::NoDepthTest;
-#ifndef __EMSCRIPTEN__
-    if ( auto voxObj = obj->asType<ObjectVoxels>() )
-    {
-        if ( voxObj->isVolumeRenderingEnabled() )
-            return  VisualObjectRenderType::VolumeRendering;
-    }
-#endif
-    if ( obj->getGlobalAlpha( viewportId ) < 255 ||
-        obj->getFrontColor( obj->isSelected(), viewportId ).a < 255 ||
-        obj->getBackColor( viewportId ).a < 255 )
-        return VisualObjectRenderType::Transparent;
-
-    return VisualObjectRenderType::Opaque;
-}
-
-void Viewer::recursiveDraw_( const Viewport& vp, const Object& obj, const AffineXf3f& parentXf, VisualObjectRenderType renderType, int* numDraws ) const
+void Viewer::recursiveDraw_( const Viewport& vp, const Object& obj, const AffineXf3f& parentXf, RenderModelPassMask renderType, int* numDraws ) const
 {
     if ( !obj.isVisible( vp.id ) )
         return;
     auto xfCopy = parentXf * obj.xf( vp.id );
     auto visObj = obj.asType<VisualObject>();
-    if ( visObj && ( renderType == getObjRenderType_( visObj, vp.id ) ) )
+    if ( visObj )
     {
-        bool alphaNeed = renderType == VisualObjectRenderType::Transparent && alphaSortEnabled_;
-        vp.draw( *visObj, xfCopy, DepthFunction::Default, alphaNeed );
-        if ( numDraws )
-            ++( *numDraws );
+        if ( vp.draw( *visObj, xfCopy, DepthFunction::Default, renderType, alphaSortEnabled_ ) )
+        {
+            if ( numDraws )
+                ++( *numDraws );
+        }
     }
     for ( const auto& child : obj.children() )
         recursiveDraw_( vp, *child, xfCopy, renderType, numDraws );
@@ -1435,7 +1486,7 @@ bool Viewer::draw_( bool force )
         return false;
     }
 
-    frameCounter_.startDraw();
+    frameCounter_->startDraw();
 
     glPrimitivesCounter_.reset();
 
@@ -1454,9 +1505,57 @@ bool Viewer::draw_( bool force )
     }
     if ( window && swapped )
         glfwSwapBuffers( window );
-    frameCounter_.endDraw( swapped );
+    frameCounter_->endDraw( swapped );
     isInDraw_ = false;
     return ( window && swapped );
+}
+
+void Viewer::drawUiRenderObjects_()
+{
+    // Currently, a part of the contract of `IRenderObject::renderUi()` is that at most rendering task is in flight at any given time.
+    // That's why each viewport is being drawn separately.
+    if ( !window )
+        return;
+    UiRenderManager& uiRenderManager = getMenuPlugin()->getUiRenderManager();
+
+    for ( Viewport& viewport : getViewerInstance().viewport_list )
+    {
+        UiRenderParams renderParams{ viewport.getBaseRenderParams() };
+        renderParams.scale = menuPlugin_->menu_scaling();
+
+        uiRenderManager.preRenderViewport( viewport.id );
+        MR_FINALLY{ uiRenderManager.postRenderViewport( viewport.id ); };
+
+        UiRenderParams::UiTaskList tasks;
+        tasks.reserve( 50 );
+        renderParams.tasks = &tasks;
+
+        auto lambda = [&]( auto& lambda, Object& object ) -> void
+        {
+            if ( !object.isVisible( viewport.id ) )
+                return;
+
+            if ( auto visual = dynamic_cast<VisualObject*>( &object ) )
+                visual->renderUi( renderParams );
+
+            for ( const auto& child : object.children() )
+                lambda( lambda, *child );
+        };
+        lambda( lambda, SceneRoot::get() );
+
+        std::sort( tasks.begin(), tasks.end(), []( const auto& a, const auto& b ){ return a->renderTaskDepth > b->renderTaskDepth; } );
+
+        auto backwardPassParams = uiRenderManager.beginBackwardPass();
+        for ( auto it = tasks.end(); it != tasks.begin(); )
+        {
+            --it;
+            ( *it )->earlyBackwardPass( backwardPassParams );
+        }
+        uiRenderManager.finishBackwardPass( backwardPassParams );
+
+        for ( const auto& task : tasks )
+            task->renderPass();
+    }
 }
 
 void Viewer::drawFull( bool dirtyScene )
@@ -1494,7 +1593,10 @@ void Viewer::drawFull( bool dirtyScene )
         sceneTexture_->draw(); // always draw scene texture
     }
     if ( menuPlugin_ )
+    {
+        drawUiRenderObjects_();
         menuPlugin_->finishFrame();
+    }
 }
 
 void Viewer::drawScene()
@@ -1510,11 +1612,11 @@ void Viewer::drawScene()
 
     for ( const auto& viewport : viewport_list )
     {
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), VisualObjectRenderType::Opaque );
+        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::Opaque );
 #ifndef __EMSCRIPTEN__
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), VisualObjectRenderType::VolumeRendering );
+        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::VolumeRendering );
 #endif
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), VisualObjectRenderType::Transparent, &numTransparent );
+        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::Transparent, &numTransparent );
     }
 
     drawSignal();
@@ -1526,7 +1628,7 @@ void Viewer::drawScene()
     }
     // draw after alpha texture
     for ( const auto& viewport : viewport_list )
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), VisualObjectRenderType::NoDepthTest );
+        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::NoDepthTest );
 
     postDrawPreViewportSignal();
 
@@ -1669,9 +1771,11 @@ void Viewer::initGlobalBasisAxesObject_()
     globalBasisAxes = std::make_unique<ObjectMesh>();
     globalBasisAxes->setName( "World Global Basis" );
     std::vector<Color> vertsColors;
+    auto translate = AffineXf3f::translation(Vector3f( 0.0f, 0.0f, 0.9f ));
     for ( int i = 0; i < 3; ++i )
     {
-        auto basis = makeCylinder( 0.01f );
+        auto basis = makeCylinder( 0.01f, 0.9f );
+        auto cone = makeCone( 0.04f, 0.1f );
         AffineXf3f rotTramsform;
         if ( i != 2 )
         {
@@ -1680,19 +1784,39 @@ void Viewer::initGlobalBasisAxesObject_()
             );
         }
         basis.transform( rotTramsform );
+        cone.transform( rotTramsform * translate );
         mesh.addPart( basis );
+        mesh.addPart( cone );
         std::vector<Color> colors( basis.points.size(), Color( PlusAxis[i] ) );
+        std::vector<Color> colorsCone( cone.points.size(), Color( PlusAxis[i] ) );
         vertsColors.insert( vertsColors.end(), colors.begin(), colors.end() );
+        vertsColors.insert( vertsColors.end(), colorsCone.begin(), colorsCone.end() );
     }
     addLabel( *globalBasisAxes, "X", 1.1f * Vector3f::plusX() );
     addLabel( *globalBasisAxes, "Y", 1.1f * Vector3f::plusY() );
     addLabel( *globalBasisAxes, "Z", 1.1f * Vector3f::plusZ() );
-    globalBasisAxes->setVisualizeProperty( defaultLabelsGlobalBasisAxes, VisualizeMaskType::Labels, ViewportMask::all() );
+
     globalBasisAxes->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
     globalBasisAxes->setAncillary( true );
     globalBasisAxes->setVisible( false );
     globalBasisAxes->setVertsColorMap( std::move( vertsColors ) );
     globalBasisAxes->setColoringType( ColoringType::VertsColorMap );
+    globalBasisAxes->setFlatShading( true );
+
+    ColorTheme::instance().colorThemeChangedSignal.connect( [this] ()
+    {
+        if ( !globalBasisAxes )
+            return;
+
+        const Color& color = SceneColors::get( SceneColors::Type::Labels );
+
+        auto labels = getAllObjectsInTree<ObjectLabel>( globalBasisAxes.get(), ObjectSelectivityType::Any );
+        for ( const auto& label : labels )
+        {
+            label->setFrontColor( color, true );
+            label->setFrontColor( color, false );
+        }
+    } );
 }
 
 void Viewer::initBasisAxesObject_()
@@ -1724,9 +1848,23 @@ void Viewer::initBasisAxesObject_()
     addLabel( *basisAxes, "Y", labelPos * Vector3f::plusY() );
     addLabel( *basisAxes, "Z", labelPos * Vector3f::plusZ() );
 
-    basisAxes->setVisualizeProperty( defaultLabelsBasisAxes, VisualizeMaskType::Labels, ViewportMask::all() );
     basisAxes->setFacesColorMap( colorMap );
     basisAxes->setColoringType( ColoringType::FacesColorMap );
+
+    ColorTheme::instance().colorThemeChangedSignal.connect( [this] ()
+    {
+        if ( !basisAxes )
+            return;
+
+        const Color& color = SceneColors::get( SceneColors::Type::Labels );
+
+        auto labels = getAllObjectsInTree<ObjectLabel>( basisAxes.get(), ObjectSelectivityType::Any );
+        for ( const auto& label : labels )
+        {
+            label->setFrontColor( color, true );
+            label->setFrontColor( color, false );
+        }
+    } );
 }
 
 void Viewer::initClippingPlaneObject_()
@@ -1752,8 +1890,6 @@ void Viewer::initRotationCenterObject_()
 
 void Viewer::initSpaceMouseHandler_()
 {
-
-
     #if defined(__EMSCRIPTEN__)
         spaceMouseHandler_ = std::make_unique<SpaceMouseHandler>();
     #else
@@ -1782,6 +1918,9 @@ void Viewer::makeTitleFromSceneRootPath()
     auto sceneFileName = utf8string( SceneRoot::getScenePath().filename() );
     if ( globalHistoryStore_ && globalHistoryStore_->isSceneModified() )
         sceneFileName += "*";
+
+    if ( !window )
+        return;
 
     if ( sceneFileName.empty() )
         glfwSetWindowTitle( window, defaultWindowTitle.c_str() );
@@ -1965,6 +2104,26 @@ void Viewer::preciseFitDataViewport( MR::ViewportMask vpList )
     return preciseFitDataViewport( vpList, {} );
 }
 
+size_t Viewer::getTotalFrames() const
+{
+    return frameCounter_->totalFrameCounter;
+}
+
+size_t Viewer::getSwappedFrames() const
+{
+    return frameCounter_->swappedFrameCounter;
+}
+
+size_t Viewer::getFPS() const
+{
+    return frameCounter_->fps;
+}
+
+double Viewer::getPrevFrameDrawTimeMillisec() const
+{
+    return frameCounter_->drawTimeMilliSec.count();
+}
+
 void Viewer::incrementForceRedrawFrames( int i /*= 1 */, bool swapOnLastOnly /*= false */)
 {
     if ( isInDraw_ )
@@ -1997,7 +2156,7 @@ void Viewer::incrementThisFrameGLPrimitivesCount( GLPrimitivesType type, size_t 
 void Viewer::resetAllCounters()
 {
     eventsCounter_.reset();
-    frameCounter_.reset();
+    frameCounter_->reset();
 }
 
 Image Viewer::captureSceneScreenShot( const Vector2i& resolution )
@@ -2213,7 +2372,16 @@ void Viewer::enableGlobalHistory( bool on )
     if ( on == bool( globalHistoryStore_ ) )
         return;
     if ( on )
+    {
         globalHistoryStore_ = std::make_shared<HistoryStore>();
+        globalHistoryStore_->changedSignal.connect( [this]( const HistoryStore&, HistoryStore::ChangeType type )
+        {
+            if ( type == HistoryStore::ChangeType::Undo ||
+                 type == HistoryStore::ChangeType::Redo ||
+                 type == HistoryStore::ChangeType::AppendAction )
+                makeTitleFromSceneRootPath();
+        } );
+    }
     else
         globalHistoryStore_.reset();
 }
@@ -2221,30 +2389,17 @@ void Viewer::enableGlobalHistory( bool on )
 void Viewer::appendHistoryAction( const std::shared_ptr<HistoryAction>& action )
 {
     if ( globalHistoryStore_ )
-    {
         globalHistoryStore_->appendAction( action );
-        makeTitleFromSceneRootPath();
-    }
 }
 
 bool Viewer::globalHistoryUndo()
 {
-    if ( globalHistoryStore_ && globalHistoryStore_->undo() )
-    {
-        makeTitleFromSceneRootPath();
-        return true;
-    }
-    return false;
+    return globalHistoryStore_ && globalHistoryStore_->undo();
 }
 
 bool Viewer::globalHistoryRedo()
 {
-    if ( globalHistoryStore_ && globalHistoryStore_->redo() )
-    {
-        makeTitleFromSceneRootPath();
-        return true;
-    }
-    return false;
+    return globalHistoryStore_ && globalHistoryStore_->redo();
 }
 
 void Viewer::onSceneSaved( const std::filesystem::path& savePath, bool storeInRecent )
@@ -2278,38 +2433,6 @@ void Viewer::setMenuPlugin( std::shared_ptr<ImGuiMenu> menu )
 size_t Viewer::getStaticGLBufferSize() const
 {
     return GLStaticHolder::getStaticGLBuffer().heapBytes();
-}
-
-void Viewer::FrameCounter::startDraw()
-{
-    startDrawTime_ = std::chrono::high_resolution_clock::now();
-}
-
-void Viewer::FrameCounter::endDraw( bool swapped )
-{
-    ++totalFrameCounter;
-    if ( swapped )
-    {
-        ++swappedFrameCounter;
-        const auto nowTP = std::chrono::high_resolution_clock::now();
-        const auto nowSec = std::chrono::time_point_cast<std::chrono::seconds>( nowTP ).time_since_epoch().count();
-        drawTimeMilliSec =  ( nowTP - startDrawTime_ ) * 1000;
-        if ( nowSec > startFPSTime_ )
-        {
-            startFPSTime_ = nowSec;
-            fps = swappedFrameCounter - startFrameNum;
-            startFrameNum = swappedFrameCounter;
-        }
-    }
-}
-
-void Viewer::FrameCounter::reset()
-{
-    totalFrameCounter = 0;
-    swappedFrameCounter = 0;
-    startFPSTime_ = 0;
-    fps = 0;
-    startFrameNum = 0;
 }
 
 void Viewer::EventsCounter::reset()

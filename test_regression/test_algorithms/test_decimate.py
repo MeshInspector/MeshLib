@@ -3,7 +3,7 @@ from pathlib import Path
 from pytest_check import check
 from constants import test_files_path
 from helpers.meshlib_helpers import compare_meshes_similarity, compare_mesh
-import meshlib.mrmeshpy as mlpy
+import meshlib.mrmeshpy as mlib
 
 import pytest
 
@@ -86,26 +86,29 @@ def test_decimate(tmp_path, dec_params):
     #  Load input meshes
     input_folder = Path(test_files_path) / "algorithms" / "decimate" / "R0003C_V4-16aug19"
     case_name = dec_params["name"]
-    mesh = mlpy.loadMesh(input_folder / "input.mrmesh")
+    mesh = mlib.loadMesh(input_folder / "input.mrmesh")
 
     # Setup decimate parameters
-    settings = mlpy.DecimateSettings()
+    settings = mlib.DecimateSettings()
     for key in dec_params["params"].keys():
         if key == "strategy":
-            settings.strategy = mlpy.DecimateStrategy.__members__[dec_params["params"]["strategy"]]
+            settings.strategy = mlib.DecimateStrategy.__members__[dec_params["params"]["strategy"]]
         else:
             settings.__setattr__(key, dec_params["params"][key])
     settings.packMesh = True
-    mlpy.decimateMesh(mesh, settings)
+    mlib.decimateMesh(mesh, settings)
 
     # === Verification
-    mlpy.saveMesh(mesh, tmp_path / f"{case_name}.mrmesh")
-    ref_mesh_path = input_folder / f"{case_name}.mrmesh"
-    ref_mesh = mlpy.loadMesh(ref_mesh_path)
+    mlib.saveMesh(mesh, tmp_path / f"{case_name}.ctm")
+    ref_mesh_path = input_folder / f"{case_name}.ctm"
+    ref_mesh = mlib.loadMesh(ref_mesh_path)
     #  check meshes similarity (for extra details on fail)
     with check:
         compare_meshes_similarity(mesh, ref_mesh,
                                   verts_thresh=0.01)  # diff vs reference usually about 5 verts on 800 overall
     with check:
-        self_col_tri = mlpy.findSelfCollidingTriangles(mesh).size()
+        self_col_tri = mlib.findSelfCollidingTriangles(mesh).size()
         assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"
+    with check:
+        degen_faces = mlib.findDegenerateFaces(mesh).count()
+        assert degen_faces == 0, f"Mesh should have no degenerate faces, actual value is {degen_faces}"

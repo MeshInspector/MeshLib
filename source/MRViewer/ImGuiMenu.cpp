@@ -7,7 +7,8 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 ////////////////////////////////////////////////////////////////////////////////
 #include "ImGuiMenu.h"
-#include "MRMeshViewer.h"
+#include "MRMesh/MRObjectDimensionsEnum.h"
+#include "MRViewer.h"
 #include "MRRecentFilesStore.h"
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
@@ -64,7 +65,7 @@
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRMesh/MRChangeNameAction.h"
-#include "MRMesh/MRHistoryStore.h"
+#include "MRHistoryStore.h"
 #include "ImGuiHelpers.h"
 #include "MRAppendHistory.h"
 #include "MRMesh/MRCombinedHistoryAction.h"
@@ -75,7 +76,7 @@
 #include "MRMesh/MRMatrix3Decompose.h"
 #include "MRMesh/MRFeatureObject.h"
 #include "MRMesh/MRFinally.h"
-
+#include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRSceneSettings.h"
 #include "imgui_internal.h"
@@ -93,6 +94,11 @@
 
 namespace MR
 {
+
+const std::shared_ptr<ImGuiMenu>& ImGuiMenu::instance()
+{
+    return getViewerInstance().getMenuPlugin();
+}
 
 namespace
 {
@@ -270,8 +276,8 @@ const ImVec4 undefined = ImVec4( 0.5f, 0.5f, 0.5f, 0.5f );
 
 // at least one of selected is true - first,
 // all selected are true - second
-std::pair<bool, bool> getRealValue( const std::vector<std::shared_ptr<MR::VisualObject>>& selected,
-                                    unsigned type, MR::ViewportMask viewportId, bool inverseInput = false )
+static std::pair<bool, bool> getRealValue( const std::vector<std::shared_ptr<MR::VisualObject>>& selected,
+                                    AnyVisualizeMaskEnum type, MR::ViewportMask viewportId, bool inverseInput = false )
 {
     bool atLeastOneTrue = false;
     bool allTrue = true;
@@ -291,6 +297,7 @@ void ImGuiMenu::addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const
 {
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesCyrillic() );
     builder.AddChar( 0x2116 ); // NUMERO SIGN (shift+3 on cyrillic keyboards)
+    builder.AddChar( 0x2212 ); // MINUS SIGN
 #ifndef __EMSCRIPTEN__
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesChineseSimplifiedCommon() );
 #endif
@@ -455,7 +462,7 @@ bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
 {
     ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
     capturedMouse_ = ImGui::GetIO().WantCaptureMouse;
-    return ImGui::GetIO().WantCaptureMouse;
+    return ImGui::GetIO().WantCaptureMouse || uiRenderManager_->ownsMouseHover();
 }
 
 bool ImGuiMenu::onMouseUp_( Viewer::MouseButton button, int modifier )
@@ -524,9 +531,6 @@ bool ImGuiMenu::onKeyDown_( int key, int modifiers )
     ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_PRESS, modifiers );
     if ( ImGui::GetIO().WantCaptureKeyboard )
         return true;
-
-    if ( shortcutManager_ )
-        return shortcutManager_->processShortcut( { key,modifiers } );
 
     return false;
 }
@@ -616,7 +620,8 @@ void ImGuiMenu::draw_labels_window()
 
 void ImGuiMenu::draw_labels( const VisualObject& obj )
 {
-MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
+MR_SUPPRESS_WARNING_PUSH
+MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
     const auto& labels = obj.getLabels();
 
     for ( const auto& viewport : viewer->viewport_list )
@@ -634,14 +639,6 @@ MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
                     labels[i].text,
                     obj.getLabelsColor(),
                     clip );
-        if ( obj.getVisualizeProperty( VisualizeMaskType::Name, viewport.id ) )
-            draw_text(
-                viewport,
-                xf( obj.getBoundingBox().center() ),
-                Vector3f( 0.0f, 0.0f, 0.0f ),
-                obj.name(),
-                 obj.getLabelsColor(),
-                clip );
     }
 MR_SUPPRESS_WARNING_POP
 }
@@ -838,6 +835,13 @@ void ImGuiMenu::draw_helpers()
     drawModalMessage_();
 }
 
+UiRenderManager& ImGuiMenu::getUiRenderManager()
+{
+    if ( !uiRenderManager_ )
+        uiRenderManager_ = std::make_unique<UiRenderManagerImpl>();
+    return *uiRenderManager_;
+}
+
 void ImGuiMenu::drawModalMessage_()
 {
     ImGui::PushStyleColor( ImGuiCol_ModalWindowDimBg, ImVec4( 1, 0.125f, 0.125f, ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg].w ) );
@@ -934,6 +938,11 @@ void ImGuiMenu::showModalMessage( const std::string& msg, NotificationType msgTy
 
 void ImGuiMenu::setupShortcuts_()
 {
+    if ( !shortcutManager_ )
+        shortcutManager_ = std::make_shared<ShortcutManager>();
+
+    // connecting signals to events (KeyDown, KeyRepeat) with lowest priority
+    shortcutManager_->connect( &getViewerInstance(), INT_MAX );
 }
 
 void ImGuiMenu::draw_scene_list()
@@ -1146,10 +1155,11 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
 
         isOpen = drawCollapsingHeader_( ( object.name() + " ##" + uniqueStr ).c_str(),
                                     ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) |
-                                    ImGuiTreeNodeFlags_OpenOnArrow |
                                     ImGuiTreeNodeFlags_SpanAvailWidth |
                                     ImGuiTreeNodeFlags_Framed |
+                                    ImGuiTreeNodeFlags_OpenOnArrow |
                                     ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
+
         if ( ImGui::IsMouseDoubleClicked( 0 ) && ImGui::IsItemHovered() )
         {
             if ( auto m = getViewerInstance().getMenuPluginAs<RibbonMenu>() )
@@ -1213,7 +1223,7 @@ void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::sha
         draw_custom_tree_object_properties( object );
         bool infoOpen = false;
         auto lines = object.getInfoLines();
-        if ( hasRealChildren && !lines.empty() )
+        if ( showInfoInObjectTree_ && hasRealChildren && !lines.empty() )
         {
             auto infoId = std::string( "Info: ##" ) + uniqueStr;
             infoOpen = drawCollapsingHeader_( infoId.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed );
@@ -1280,6 +1290,7 @@ float ImGuiMenu::drawSelectionInformation_()
     size_t totalFaces = 0;
     size_t totalSelectedFaces = 0;
     size_t totalVerts = 0;
+    std::optional<float> totalVolume = 0.0f;
 #ifndef __EMSCRIPTEN__
     // Voxels info
     Vector3i dimensions;
@@ -1297,8 +1308,10 @@ float ImGuiMenu::drawSelectionInformation_()
         // Scene info update
         if ( auto vObj = obj->asType<VisualObject>() )
         {
-            selectionBbox_.include( vObj->getBoundingBox() );
-            selectionWorldBox_.include( vObj->getWorldBox() );
+            if ( auto box = vObj->getBoundingBox(); box.valid() )
+                selectionBbox_.include( box );
+            if ( auto box = vObj->getWorldBox(); box.valid() )
+                selectionWorldBox_.include( box );
         }
 
         // Typed info
@@ -1314,6 +1327,14 @@ float ImGuiMenu::drawSelectionInformation_()
                 totalFaces += mesh->topology.numValidFaces();
                 totalSelectedFaces += mObj->numSelectedFaces();
                 totalVerts += mesh->topology.numValidVerts();
+                if ( totalVolume && mObj->isMeshClosed() )
+                {
+                    *totalVolume += float( mObj->volume() );
+                }
+                else
+                {
+                    totalVolume = std::nullopt;
+                }
             }
         }
         else if ( auto lObj = obj->asType<ObjectLines>() )
@@ -1339,7 +1360,7 @@ float ImGuiMenu::drawSelectionInformation_()
 #endif
     }
 
-    if ( selectionWorldBox_.valid() )
+    if ( selectionBbox_.valid() && selectionWorldBox_.valid() )
     {
         bsize = selectionBbox_.size();
         bsizeStr = fmt::format( "{:.3e} {:.3e} {:.3e}", bsize.x, bsize.y, bsize.z );
@@ -1354,7 +1375,7 @@ float ImGuiMenu::drawSelectionInformation_()
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, smallItemSpacingY } );
     MR_FINALLY{ ImGui::PopStyleVar(); };
 
-    auto drawPrimitivesInfo = [this] ( std::string title, size_t value, size_t selected = 0 )
+    auto drawPrimitivesInfo = [this]( std::string title, size_t value, size_t selected = 0, std::optional<ImVec4> textColorForSelected = {} )
     {
         if ( value )
         {
@@ -1362,13 +1383,13 @@ float ImGuiMenu::drawSelectionInformation_()
             std::string labelStr;
             if ( selected )
             {
-                valueStr = std::to_string( selected ) + " / ";
+                valueStr = valueToString<NoUnit>( selected ) + " / ";
                 labelStr = "Selected / ";
             }
-            valueStr += std::to_string( value );
+            valueStr += valueToString<NoUnit>( value );
             labelStr += title;
 
-            UI::inputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x * menu_scaling() );
+            UI::inputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x, selected ? textColorForSelected : std::optional<ImVec4>{} );
         }
     };
 
@@ -1442,13 +1463,39 @@ float ImGuiMenu::drawSelectionInformation_()
         ImGui::Spacing();
         ImGui::Spacing();
 
-        drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces );
+        const ImVec4 textColorForSelected = { 0.886f, 0.267f, 0.267f, 1.0f };
+        drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces, textColorForSelected );
         drawPrimitivesInfo( "Vertices", totalVerts );
-        drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints );
+        drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints, textColorForSelected );
+
+        if ( totalFaces )
+        {
+            const float itemWidth = getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x;
+            if ( totalVolume )
+            {
+                ImGui::PushItemWidth( itemWidth );
+
+#if __GNUC__ == 12 || __GNUC__ == 13 // `totalVolume` may be used uninitialized. False positive in GCC
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
+                UI::readOnlyValue<VolumeUnit>( "Volume", *totalVolume );
+                MR_FINALLY{ ImGui::PopItemWidth(); };
+
+#if __GNUC__ == 12 || __GNUC__ == 13
+#pragma GCC diagnostic pop
+#endif
+            }
+            else
+            {
+                UI::inputTextCenteredReadOnly( "Volume", "Mesh is not closed", itemWidth );
+            }
+        }
     }
 
     bool firstField = true;
-    auto drawVec3 = [&style, &firstField] ( std::string title, auto& value, float width, const char* formatStr )
+    auto drawDimensionsVec3 = [this, &firstField]( const char* label, const auto& value )
     {
         if ( firstField )
         {
@@ -1457,21 +1504,16 @@ float ImGuiMenu::drawSelectionInformation_()
             ImGui::Spacing();
         }
 
-        UI::inputTextCenteredReadOnly( ( "##" + title + "_x" ).c_str(), fmt::format( runtimeFmt( formatStr ), value.x ), width );
-        ImGui::SameLine(0.f, style.ItemInnerSpacing.x);
-        UI::inputTextCenteredReadOnly( ( "##" + title + "_y" ).c_str(), fmt::format( runtimeFmt( formatStr ), value.y ), width );
-        ImGui::SameLine( 0.f, style.ItemInnerSpacing.x );
-        UI::inputTextCenteredReadOnly( ( "##" + title + "_z" ).c_str(), fmt::format( runtimeFmt( formatStr ), value.z ), width );
+        ImGui::PushItemWidth( getSceneInfoItemWidth_() );
+        MR_FINALLY{ ImGui::PopItemWidth(); };
 
-        ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-        ImGui::Text( "%s", title.c_str() );
+        UI::readOnlyValue<LengthUnit>( label, value );
     };
 
-    const float fieldWidth = getSceneInfoItemWidth_( 3 );
 #ifndef __EMSCRIPTEN__
     if ( dimensions.x > 0 && dimensions.y > 0 && dimensions.z > 0 )
     {
-        drawVec3( "Dimensions", dimensions, fieldWidth,"{}" );
+        drawDimensionsVec3( "Dimensions", dimensions );
     }
 #endif
     // Feature object properties.
@@ -1496,12 +1538,12 @@ float ImGuiMenu::drawSelectionInformation_()
         && !haveFeatureProperties
     )
     {
-        drawVec3( "Box min", selectionBbox_.min, fieldWidth, "{:.3f}" );
-        drawVec3( "Box max", selectionBbox_.max, fieldWidth, "{:.3f}" );
-        drawVec3( "Box size", bsize, fieldWidth, "{:.3f}" );
+        drawDimensionsVec3( "Box min", selectionBbox_.min );
+        drawDimensionsVec3( "Box max", selectionBbox_.max );
+        drawDimensionsVec3( "Box size", bsize );
 
         if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
-            drawVec3( "World box size", wbsize, fieldWidth, "{:.3f}" );
+            drawDimensionsVec3( "World box size", wbsize );
     }
 
     // This looks a bit better.
@@ -1527,26 +1569,27 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
     {
         std::visit( [&]( auto arg )
         {
-            using ArgType = std::remove_cvref_t<decltype(arg)>;
-            constexpr bool isVec3 = std::is_same_v<ArgType, Vector3f>;
-
             float speed = 0.01f;
             float min = std::numeric_limits<float>::lowest();
             float max = std::numeric_limits<float>::max();
 
             bool alreadyWasEditing = editedFeatureObject_.lock() == object;
 
-            float* argPtr = nullptr;
-            if constexpr ( isVec3 )
-                argPtr = &arg.x;
-            else
-                argPtr = &arg;
-
             bool ret = false;
-            if constexpr ( isVec3 )
-                ret = bool( ImGui::DragFloatValid3( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), argPtr, speed, min, max ) );
+
+            if ( prop.kind == FeaturePropertyKind::position || prop.kind == FeaturePropertyKind::linearDimension )
+            {
+                ret = UI::drag<LengthUnit>( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), arg, speed, min, max );
+            }
+            else if ( prop.kind == FeaturePropertyKind::angle )
+            {
+                ret = UI::drag<AngleUnit>( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), arg, speed, min, max );
+            }
             else
-                ret = bool( ImGui::DragFloatValid( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), argPtr, speed, min, max ) );
+            {
+                // `FeaturePropertyKind::direction` intentionally goes here.
+                ret = UI::drag<NoUnit>( fmt::format( "{}##feature_property:{}", prop.propertyName, index ).c_str(), arg, speed, min, max );
+            }
 
             if ( ret )
             {
@@ -1556,7 +1599,7 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
                     editedFeatureObjectOldXf_ = object->xf();
                 }
 
-                prop.setter( arg, &featureObject );
+                prop.setter( arg, &featureObject, {} ); // Intentionally not using `viewer->viewport().id` here, setting globally is more intuitive.
             }
 
             if ( ImGui::IsItemDeactivatedAfterEdit() && editedFeatureObject_.lock() == object )
@@ -1570,7 +1613,7 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
 
             if ( ImGui::IsItemActive() )
                 anyActive = true;
-        }, prop.getter( &featureObject ) );
+        }, prop.getter( &featureObject, viewer->viewport().id ) );
 
         index++;
     }
@@ -1672,13 +1715,51 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
 
     if ( allIsObjPoints )
     {
-        make_points_discretization( selectedObjs, "Point Sampling", [&] ( const ObjectPointsHolder* data )
+        make_points_discretization( selectedObjs, "Visual Sampling", [&] ( const ObjectPointsHolder* data )
         {
             return data->getRenderDiscretization();
         }, [&] ( ObjectPointsHolder* data, const int val )
         {
             data->setRenderDiscretization( val );
         } );
+    }
+
+    bool allIsFeatureObj = selectedMask == SelectedTypesMask::ObjectFeaturesBit;
+    if ( allIsFeatureObj )
+    {
+        const auto selectedFeatureObjs = getAllObjectsInTree<FeatureObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+
+        float minPointSize = 1, maxPointSize = 20;
+        float minLineWidth = 1, maxLineWidth = 20;
+
+
+
+        make_slider<float, FeatureObject>( selectedFeatureObjs, "Point size",
+            [&] ( const FeatureObject* data ){ return data->getPointSize(); },
+            [&]( FeatureObject* data, float value ){ data->setPointSize( value ); }, minPointSize, maxPointSize );
+        make_slider<float, FeatureObject>( selectedFeatureObjs, "Line width",
+            [&] ( const FeatureObject* data ){ return data->getLineWidth(); },
+            [&]( FeatureObject* data, float value ){ data->setLineWidth( value ); }, minLineWidth, maxLineWidth );
+
+        make_slider<float, FeatureObject>( selectedFeatureObjs, "Point subfeatures size",
+            [&] ( const FeatureObject* data ){ return data->getSubfeaturePointSize(); },
+            [&]( FeatureObject* data, float value ){ data->setSubfeaturePointSize( value ); }, minPointSize, maxPointSize );
+        make_slider<float, FeatureObject>( selectedFeatureObjs, "Line subfeatures width",
+            [&] ( const FeatureObject* data ){ return data->getSubfeatureLineWidth(); },
+            [&]( FeatureObject* data, float value ){ data->setSubfeatureLineWidth( value ); }, minLineWidth, maxLineWidth );
+
+        make_slider<float, FeatureObject>( selectedFeatureObjs, "Main component alpha",
+            [&] ( const FeatureObject* data ){ return data->getMainFeatureAlpha(); },
+            [&]( FeatureObject* data, float value ){ data->setMainFeatureAlpha( value ); }, 0, 1 );
+        make_slider<float, FeatureObject>( selectedFeatureObjs, "Point subfeatures alpha",
+            [&] ( const FeatureObject* data ){ return data->getSubfeatureAlphaPoints(); },
+            [&]( FeatureObject* data, float value ){ data->setSubfeatureAlphaPoints( value ); }, 0, 1 );
+        make_slider<float, FeatureObject>( selectedFeatureObjs, "Line subfeatures alpha",
+            [&] ( const FeatureObject* data ){ return data->getSubfeatureAlphaLines(); },
+            [&]( FeatureObject* data, float value ){ data->setSubfeatureAlphaLines( value ); }, 0, 1 );
+        make_slider<float, FeatureObject>( selectedFeatureObjs, "Mesh subfeatures alpha",
+            [&] ( const FeatureObject* data ){ return data->getSubfeatureAlphaMesh(); },
+            [&]( FeatureObject* data, float value ){ data->setSubfeatureAlphaMesh( value ); }, 0, 1 );
     }
 
     return closePopup;
@@ -1739,6 +1820,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
     bool allIsObjLines = selectedMask == SelectedTypesMask::ObjectLinesHolderBit;
     bool allIsObjPoints = selectedMask == SelectedTypesMask::ObjectPointsHolderBit;
     bool allIsObjLabels = selectedMask == SelectedTypesMask::ObjectLabelBit;
+    bool allIsFeatureObj = selectedMask == SelectedTypesMask::ObjectFeaturesBit;
 
     const auto& viewportid = viewer->viewport().id;
 
@@ -1803,11 +1885,55 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Contour", LabelVisualizePropertyType::Contour, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Leader line", LabelVisualizePropertyType::LeaderLine, viewportid );
     }
+    if ( allIsFeatureObj )
+    {
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Subfeatures", FeatureVisualizePropertyType::Subfeatures, viewportid );
+    }
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Invert Normals", VisualizeMaskType::InvertedNormals, viewportid );
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Name", VisualizeMaskType::Name, viewportid );
+    if ( allIsFeatureObj )
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Extra information next to name", FeatureVisualizePropertyType::DetailsOnNameTag, viewportid );
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Labels", VisualizeMaskType::Labels, viewportid );
     if ( viewer->isDeveloperFeaturesEnabled() )
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Clipping", VisualizeMaskType::ClippedByPlane, viewportid );
+
+    { // Dimensions checkboxes.
+        bool fail = false;
+
+        // Which dimensions our objects have.
+        // All objects must have the same values here, otherwise we don't draw anything.
+        bool supportedDimensions[std::size_t( DimensionsVisualizePropertyType::_count )]{};
+        bool firstObject = true;
+
+        for ( const auto& object : selectedVisualObjs )
+        {
+            for ( std::size_t i = 0; i < std::size_t( DimensionsVisualizePropertyType::_count ); i++ )
+            {
+                bool value = object->supportsVisualizeProperty( DimensionsVisualizePropertyType( i ) );
+                if ( firstObject )
+                    supportedDimensions[i] = value;
+                else if ( supportedDimensions[i] != value )
+                {
+                    fail = true;
+                    break;
+                }
+            }
+            firstObject = false;
+        }
+
+        if ( !fail && !firstObject )
+        {
+            for ( std::size_t i = 0; i < std::size_t( DimensionsVisualizePropertyType::_count ); i++ )
+            {
+                if ( !supportedDimensions[i] )
+                    continue;
+
+                auto enumValue = DimensionsVisualizePropertyType( i );
+
+                someChanges |= make_visualize_checkbox( selectedVisualObjs, toString( enumValue ).data(), enumValue, viewportid );
+            }
+        }
+    }
 
     return someChanges;
 }
@@ -1818,6 +1944,7 @@ bool ImGuiMenu::drawDrawOptionsColors_( const std::vector<std::shared_ptr<Visual
     const auto selectedMeshObjs = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     const auto selectedPointsObjs = getAllObjectsInTree<ObjectPointsHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     const auto selectedLabelObjs = getAllObjectsInTree<ObjectLabel>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+    const auto selectedFeatureObjs = getAllObjectsInTree<FeatureObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     if ( selectedVisualObjs.empty() )
         return someChanges;
 
@@ -1865,12 +1992,14 @@ bool ImGuiMenu::drawDrawOptionsColors_( const std::vector<std::shared_ptr<Visual
     } );
     make_color_selector<VisualObject>( selectedVisualObjs, "Labels color", [&] ( const VisualObject* data )
     {
-MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
+MR_SUPPRESS_WARNING_PUSH
+MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
         return Vector4f( data->getLabelsColor( selectedViewport_ ) );
 MR_SUPPRESS_WARNING_POP
     }, [&] ( VisualObject* data, const Vector4f& color )
     {
-MR_SUPPRESS_WARNING_PUSH( "-Wdeprecated-declarations", 4996 )
+MR_SUPPRESS_WARNING_PUSH
+MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
         data->setLabelsColor( Color( color ), selectedViewport_ );
 MR_SUPPRESS_WARNING_POP
     } );
@@ -1941,15 +2070,34 @@ MR_SUPPRESS_WARNING_POP
         } );
     }
 
+    if ( !selectedFeatureObjs.empty() )
+    {
+        make_color_selector<FeatureObject>( selectedFeatureObjs, "Decorations color (selected)", [&] ( const FeatureObject* data )
+        {
+            return Vector4f( data->getDecorationsColor( true, selectedViewport_ ) );
+        }, [&] ( FeatureObject* data, const Vector4f& color )
+        {
+            data->setDecorationsColor( Color( color ), true, selectedViewport_ );
+        } );
+
+        make_color_selector<FeatureObject>( selectedFeatureObjs, "Decorations color (unselected)", [&] ( const FeatureObject* data )
+        {
+            return Vector4f( data->getDecorationsColor( false, selectedViewport_ ) );
+        }, [&] ( FeatureObject* data, const Vector4f& color )
+        {
+            data->setDecorationsColor( Color( color ), false, selectedViewport_ );
+        } );
+    }
+
     if ( !selectedVisualObjs.empty() )
     {
-        make_uint8_slider( selectedVisualObjs, "Alpha", [&] ( const VisualObject* data )
+        make_slider<std::uint8_t, VisualObject>( selectedVisualObjs, "Opacity", [&] ( const VisualObject* data )
         {
             return data->getGlobalAlpha( selectedViewport_ );
         }, [&] ( VisualObject* data, uint8_t alpha )
         {
             data->setGlobalAlpha( alpha, selectedViewport_ );
-        } );
+        }, 0, 255 );
     }
 
     return someChanges;
@@ -1975,7 +2123,7 @@ float ImGuiMenu::drawTransform_()
         }
         resultHeight_ = ImGui::GetTextLineHeight() + style.FramePadding.y * 2 + style.ItemSpacing.y;
         bool openedContext = false;
-        if ( drawCollapsingHeader_( "Transform", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( drawCollapsingHeaderTransform_() )
         {
             openedContext = drawTransformContextMenu_( selected[0] );
             const float transformHeight = ( ImGui::GetTextLineHeight() + style.FramePadding.y * 2 ) * 3 + style.ItemSpacing.y * 2;
@@ -1998,7 +2146,7 @@ float ImGuiMenu::drawTransform_()
             {
                 float midScale = ( scale.x + scale.y + scale.z ) / 3.0f;
                 ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
-                inputChanged = ImGui::DragFloatValid( "##scaleX", &midScale, midScale * 0.01f, 1e-3f, 1e+6f, "%.3f" );
+                inputChanged = UI::drag<NoUnit>( "##scaleX", midScale, midScale * 0.01f, 1e-3f, 1e+6f );
                 if ( inputChanged )
                     scale.x = scale.y = scale.z = midScale;
                 inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
@@ -2006,13 +2154,13 @@ float ImGuiMenu::drawTransform_()
             }
             else
             {
-                inputChanged = ImGui::DragFloatValid( "##scaleX", &scale.x, scale.x * 0.01f, 1e-3f, 1e+6f, "%.3f" );
+                inputChanged = UI::drag<NoUnit>( "##scaleX", scale.x, scale.x * 0.01f, 1e-3f, 1e+6f );
                 inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
                 ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
-                inputChanged = ImGui::DragFloatValid( "##scaleY", &scale.y, scale.y * 0.01f, 1e-3f, 1e+6f, "%.3f" ) || inputChanged;
+                inputChanged = UI::drag<NoUnit>( "##scaleY", scale.y, scale.y * 0.01f, 1e-3f, 1e+6f ) || inputChanged;
                 inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
                 ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
-                inputChanged = ImGui::DragFloatValid( "##scaleZ", &scale.z, scale.z * 0.01f, 1e-3f, 1e+6f, "%.3f" ) || inputChanged;
+                inputChanged = UI::drag<NoUnit>( "##scaleZ", scale.z, scale.z * 0.01f, 1e-3f, 1e+6f ) || inputChanged;
                 inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
                 ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
             }
@@ -2028,15 +2176,12 @@ float ImGuiMenu::drawTransform_()
             UI::setTooltipIfHovered( "Selects between uniform scaling or separate scaling along each axis", scaling );
             ImGui::PopItemWidth();
 
-            const char* tooltipsRotation[3] = {
-                "Rotation around Ox-axis, degrees",
-                "Rotation around Oy-axis, degrees",
-                "Rotation around Oz-axis, degrees"
-            };
             ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
-            auto resultRotation = ImGui::DragFloatValid3( "Rotation XYZ", &euler.x, invertedRotation_ ? -0.1f : 0.1f, -360.f, 360.f, "%.1f", 0, &tooltipsRotation );
-            inputChanged = inputChanged || resultRotation.valueChanged;
-            inputDeactivated = inputDeactivated || resultRotation.itemDeactivatedAfterEdit;
+            bool rotationChanged = UI::drag<AngleUnit>( "Rotation XYZ", euler, invertedRotation_ ? -0.1f : 0.1f, -360.f, 360.f, { .sourceUnit = AngleUnit::degrees } );
+            bool rotationDeactivatedAfterEdit = ImGui::IsItemDeactivatedAfterEdit();
+            ImGui::SetItemTooltip( "%s", "Rotation round [X, Y, Z] axes respectively." );
+            inputChanged = inputChanged || rotationChanged;
+            inputDeactivated = inputDeactivated || rotationDeactivatedAfterEdit;
             if ( ImGui::IsItemHovered() )
             {
                 ImGui::BeginTooltip();
@@ -2045,7 +2190,7 @@ float ImGuiMenu::drawTransform_()
             }
 
             constexpr float cZenithEps = 0.01f;
-            if ( resultRotation.valueChanged && ImGui::IsMouseDragging( ImGuiMouseButton_Left ) )
+            if ( rotationChanged && ImGui::IsMouseDragging( ImGuiMouseButton_Left ) )
             {
                 // resolve singularity
                 if ( std::fabs( euler.y ) > 90.f - cZenithEps )
@@ -2056,7 +2201,7 @@ float ImGuiMenu::drawTransform_()
                     euler.y = euler.y > 0.f ? 90.f - cZenithEps : -90.f + cZenithEps;
                 }
             }
-            if ( resultRotation.itemDeactivatedAfterEdit )
+            if ( rotationDeactivatedAfterEdit )
             {
                 invertedRotation_ = false;
             }
@@ -2064,11 +2209,6 @@ float ImGuiMenu::drawTransform_()
             if ( inputChanged )
                 xf.A = Matrix3f::rotationFromEuler( ( PI_F / 180 ) * euler ) * Matrix3f::scale( scale );
 
-            const char* tooltipsTranslation[3] = {
-                "Translation along Ox-axis",
-                "Translation along Oy-axis",
-                "Translation along Oz-axis"
-            };
             const auto trSpeed = ( selectionBbox_.valid() && selectionBbox_.diagonal() > std::numeric_limits<float>::epsilon() ) ? 0.003f * selectionBbox_.diagonal() : 0.003f;
 
             ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
@@ -2077,10 +2217,10 @@ float ImGuiMenu::drawTransform_()
             if ( minSizeDim == 0 )
                 minSizeDim = 1.f;
             auto translation = xf.b;
-            auto resultTranslation = ImGui::DragFloatValid3( "Translation", &translation.x, trSpeed, -cMaxTranslationMultiplier * minSizeDim, +cMaxTranslationMultiplier * minSizeDim, "%.3f", 0, &tooltipsTranslation );
-            inputDeactivated = inputDeactivated || resultTranslation.itemDeactivatedAfterEdit;
+            auto translationChanged = UI::drag<LengthUnit>( "Translation", translation, trSpeed, -cMaxTranslationMultiplier * minSizeDim, +cMaxTranslationMultiplier * minSizeDim );
+            inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
 
-            if ( resultTranslation.valueChanged )
+            if ( translationChanged )
                 xf.b = translation;
 
             if ( xfHistUpdated_ )
@@ -2151,10 +2291,15 @@ bool ImGuiMenu::drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags fla
     return ImGui::CollapsingHeader( label, flags );
 }
 
+bool ImGuiMenu::drawCollapsingHeaderTransform_()
+{
+    return drawCollapsingHeader_( "Transform", ImGuiTreeNodeFlags_DefaultOpen );
+}
+
 void ImGuiMenu::draw_custom_tree_object_properties( Object& )
 {}
 
-bool ImGuiMenu::make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, unsigned type, MR::ViewportMask viewportid, bool invert /*= false*/ )
+bool ImGuiMenu::make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, AnyVisualizeMaskEnum type, MR::ViewportMask viewportid, bool invert /*= false*/ )
 {
     auto realRes = getRealValue( selectedVisualObjs, type, viewportid, invert );
     bool checked = realRes.first;
@@ -2235,7 +2380,7 @@ void ImGuiMenu::make_light_strength( std::vector<std::shared_ptr<VisualObject>> 
     const auto valueConstForComparation = value;
 
     ImGui::PushItemWidth( 50 * menu_scaling() );
-    ImGui::DragFloatValid( label, &value, 0.01f, -99.0f, 99.0f, "%.3f" );
+    UI::drag<NoUnit>( label, value, 0.01f, -99.0f, 99.0f );
 
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
     ImGui::PopItemWidth();
@@ -2244,15 +2389,15 @@ void ImGuiMenu::make_light_strength( std::vector<std::shared_ptr<VisualObject>> 
             setter( data.get(), value );
 }
 
-
-void ImGuiMenu::make_uint8_slider( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
-    std::function<uint8_t( const VisualObject* )> getter, std::function<void( VisualObject*, uint8_t )> setter )
+template <typename T, typename ObjectType>
+void ImGuiMenu::make_slider( std::vector<std::shared_ptr<ObjectType>> selectedVisualObjs, const char* label,
+    std::function<T( const ObjectType* )> getter, std::function<void( ObjectType*, T )> setter, T min, T max )
 {
     if ( selectedVisualObjs.empty() )
         return;
 
     auto obj = selectedVisualObjs[0];
-    auto value = int( getter( obj.get() ) );
+    auto value = getter( obj.get() );
     bool isAllTheSame = true;
     for ( int i = 1; i < selectedVisualObjs.size(); ++i )
         if ( getter( selectedVisualObjs[i].get() ) != value )
@@ -2264,19 +2409,19 @@ void ImGuiMenu::make_uint8_slider( std::vector<std::shared_ptr<VisualObject>> se
     auto backUpTextColor = ImGui::GetStyle().Colors[ImGuiCol_Text];
     if ( !isAllTheSame )
     {
-        value = 255;
+        value = max;
         ImGui::GetStyle().Colors[ImGuiCol_Text] = undefined;
     }
     const auto valueConstForComparation = value;
 
     ImGui::PushItemWidth( 100 * menu_scaling() );
-    UI::sliderInt( label, &value, 0, 255, "%d", ImGuiSliderFlags_AlwaysClamp );
+    UI::slider<NoUnit>( label, value, min, max );
 
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
     ImGui::PopItemWidth();
     if ( value != valueConstForComparation )
         for ( const auto& data : selectedVisualObjs )
-            setter( data.get(), uint8_t( value ) );
+            setter( data.get(), T( value ) );
 }
 
 template<typename ObjType>
@@ -2304,9 +2449,9 @@ void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedV
 
     ImGui::PushItemWidth( 40 * menu_scaling() );
     if ( lineWidth )
-        ImGui::DragFloatValidLineWidth( label, &value );
+        UI::drag<PixelSizeUnit>( label, value );
     else
-        ImGui::DragFloatValid( label, &value, 0.02f, 1.0f, 10.0f, "%.1f");
+        UI::drag<PixelSizeUnit>( label, value, 0.02f, 1.0f, 10.0f );
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
     ImGui::PopItemWidth();
     if ( value != valueConstForComparation )
@@ -2328,18 +2473,15 @@ void ImGuiMenu::make_points_discretization( std::vector<std::shared_ptr<VisualOb
             break;
         }
 
-    auto backUpTextColor = ImGui::GetStyle().Colors[ImGuiCol_Text];
     if ( !isAllTheSame )
     {
         value = 1;
     }
     const auto valueConstForComparation = value;
 
-    ImGui::PushItemWidth( 40 * menu_scaling() );
-    ImGui::DragInt( label, &value, 0.1f, 1, 256 );
+    ImGui::SetNextItemWidth( 50 * menu_scaling() );
+    UI::drag<NoUnit>( label, value, 0.1f, 1, 256, {}, UI::defaultSliderFlags, 0, 0 );
 
-    ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
-    ImGui::PopItemWidth();
     if ( value != valueConstForComparation )
         for ( const auto& data : selectedVisualObjs )
             setter( data->asType<ObjectPointsHolder>(), value);
@@ -2747,7 +2889,7 @@ void ImGuiMenu::draw_mr_menu()
     {
         ImGui::PushItemWidth( 80 * menu_scaling() );
         auto fov = viewportParameters.cameraViewAngle;
-        ImGui::DragFloatValid( "Camera FOV", &fov, 0.001f, 0.01f, 179.99f );
+        UI::drag<AngleUnit>( "Camera FOV", fov, 0.001f, 0.01f, 179.99f, { .sourceUnit = AngleUnit::degrees } );
         viewer->viewport().setCameraViewAngle( fov );
 
         bool showGlobalBasis = viewer->globalBasisAxes->isVisible( viewer->viewport().id );
@@ -2898,9 +3040,9 @@ void ImGuiMenu::draw_mr_menu()
         plane.n = plane.n.normalized();
         auto w = ImGui::GetContentRegionAvail().x;
         ImGui::SetNextItemWidth( w );
-        ImGui::DragFloatValid3( "##ClippingPlaneNormal", &plane.n.x, 1e-3f );
+        UI::drag<NoUnit>( "##ClippingPlaneNormal", plane.n, 1e-3f );
         ImGui::SetNextItemWidth( w / 2.0f );
-        ImGui::DragFloatValid( "##ClippingPlaneD", &plane.d, 1e-3f );
+        UI::drag<NoUnit>( "##ClippingPlaneD", plane.d, 1e-3f );
         ImGui::SameLine();
         ImGui::Checkbox( "Show##ClippingPlane", &showPlane );
         viewer->viewport().setClippingPlane( plane );
@@ -3086,6 +3228,10 @@ SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::share
         {
             res |= SelectedTypesMask::ObjectLabelBit;
         }
+        else if ( obj->asType<FeatureObject>() )
+        {
+            res |= SelectedTypesMask::ObjectFeaturesBit;
+        }
         else
         {
             res |= SelectedTypesMask::ObjectBit;
@@ -3185,6 +3331,40 @@ StateBasePlugin* ImGuiMenu::PluginsCache::findEnabled() const
 const std::vector<StateBasePlugin*>& ImGuiMenu::PluginsCache::getTabPlugins( StatePluginTabs tab ) const
 {
     return sortedCustomPlufins_[int( tab )];
+}
+
+void ImGuiMenu::UiRenderManagerImpl::preRenderViewport( ViewportId viewport )
+{
+    const auto& v = getViewerInstance().viewport( viewport );
+    auto rect = v.getViewportRect();
+
+    ImVec2 cornerA( rect.min.x, ImGui::GetIO().DisplaySize.y - rect.max.y );
+    ImVec2 cornerB( rect.max.x, ImGui::GetIO().DisplaySize.y - rect.min.y );
+
+    ImGui::GetBackgroundDrawList()->PushClipRect( cornerA, cornerB );
+    ImGui::GetForegroundDrawList()->PushClipRect( cornerA, cornerB );
+}
+
+void ImGuiMenu::UiRenderManagerImpl::postRenderViewport( ViewportId viewport )
+{
+    (void)viewport;
+    ImGui::GetBackgroundDrawList()->PopClipRect();
+    ImGui::GetForegroundDrawList()->PopClipRect();
+}
+
+BasicUiRenderTask::BackwardPassParams ImGuiMenu::UiRenderManagerImpl::beginBackwardPass()
+{
+    return { .mouseHoverConsumed = ImGui::GetIO().WantCaptureMouse };
+}
+
+void ImGuiMenu::UiRenderManagerImpl::finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params )
+{
+    mouseIsBlocked_ = params.mouseHoverConsumed;
+}
+
+bool ImGuiMenu::UiRenderManagerImpl::ownsMouseHover() const
+{
+    return mouseIsBlocked_;
 }
 
 void showModal( const std::string& msg, NotificationType type )

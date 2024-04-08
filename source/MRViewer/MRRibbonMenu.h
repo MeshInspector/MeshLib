@@ -1,5 +1,5 @@
 #pragma once
-#include "MRMenu.h"
+#include "ImGuiMenu.h"
 #include "MRRibbonMenuItem.h"
 #include "MRRibbonMenuSearch.h"
 #include "MRRibbonFontManager.h"
@@ -68,6 +68,8 @@ public:
     void setCloseContextOnChange( bool deselect ) { closeContextOnChange_ = deselect; }
     bool getCloseContextOnChange() { return closeContextOnChange_; }
 
+    /// set quick access menu item list version
+    MRVIEWER_API virtual void setQuickAccessListVersion( int version );
     /// read quick access menu items list from json
     MRVIEWER_API virtual void readQuickAccessList( const Json::Value& root );
 
@@ -172,6 +174,7 @@ protected:
     MRVIEWER_API virtual void drawRibbonSceneInformation_( std::vector<std::shared_ptr<Object>>& selected );
 
     MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected ) override;
+    MRVIEWER_API virtual bool drawCollapsingHeaderTransform_() override;
     MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& selected ) override;
 
     // return icon (now it is symbol in icons font) based on typename
@@ -185,6 +188,8 @@ protected:
 
     // override this function to draw your custom version window somewhere
     virtual void drawVersionWindow_() {};
+    // draws window that shows time of last operation performed with progress bar
+    MRVIEWER_API virtual void drawLastOperationTimeWindow_();
 
     MRVIEWER_API virtual void drawShortcutsWindow_() override;
     // reads files with panel description
@@ -264,6 +269,7 @@ private:
     // seconds to stay opened if not pinned
     float openedMaxSecs_{ 2.0f };
     float openedTimer_{ openedMaxSecs_ };
+    float openedLastOperationTimeTimer_{ openedMaxSecs_ };
 
     int activeTabIndex_{ 0 };
     RibbonFontManager fontManager_;

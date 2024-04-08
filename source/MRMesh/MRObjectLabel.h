@@ -8,18 +8,15 @@
 namespace MR
 {
 
-struct LabelVisualizePropertyType : VisualizeMaskType
+enum class MRMESH_CLASS LabelVisualizePropertyType
 {
-    enum : unsigned
-    {
-        SourcePoint = VisualizeMaskType::VisualizePropsCount,
-        LeaderLine,
-        Background,
-        Contour,
-
-        LabelVisualizePropsCount
-    };
+    SourcePoint,
+    LeaderLine,
+    Background,
+    Contour,
+    _count [[maybe_unused]],
 };
+template <> struct IsVisualizeMaskEnum<LabelVisualizePropertyType> : std::true_type {};
 
 /// This object type renders label in scene
 /// \details default pivot point = (0, 0)
@@ -49,15 +46,9 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
     /// sets size of label font in pixels
-    virtual void setFontHeight( float size )
-    {
-        fontHeight_ = size;
-    }
+    MRMESH_API virtual void setFontHeight( float size );
     /// returns size of label font on screen in pixels
-    float getFontHeight() const
-    {
-        return fontHeight_;
-    }
+    float getFontHeight() const { return fontHeight_; }
 
     /// sets text and position of label
     MRMESH_API void setLabel( const PositionedText& label );
@@ -139,10 +130,10 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
-    /// get all visualize properties masks as array
-    MRMESH_API virtual AllVisualizeProperties getAllVisualizeProperties() const override;
+    /// get all visualize properties masks
+    MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
     /// returns mask of viewports where given property is set
-    MRMESH_API virtual const ViewportMask& getVisualizePropertyMask( unsigned type ) const override;
+    MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
 
     /// Loads font, and converts the symbols of text into mesh;
     /// since this operation is time consuming, one can call this method in parallel for several ObjectLabels before rendering
@@ -183,8 +174,11 @@ protected:
     MRMESH_API virtual void deserializeFields_( const Json::Value& root ) override;
 
     MRMESH_API virtual void setupRenderObject_() const override;
-private:
 
+    /// set all visualize properties masks
+    MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;
+
+private:
     /// this is private function to set default colors of this type (ObjectLabel) in constructor only
     void setDefaultColors_();
 

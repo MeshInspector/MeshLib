@@ -122,6 +122,8 @@ void SurfaceContoursWidget::enable( bool isEnaled )
         pickedPoints_.clear();
 }
 
+
+
 std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& pt )
 {
     auto newPoint = std::make_shared<SurfacePointWidget>();
@@ -207,30 +209,9 @@ void SurfaceContoursWidget::highlightLastPoint( const std::shared_ptr<VisualObje
             updateBaseColor( contour[0], params.lastPoitColor ); // only one point in contour
 }
 
-void SurfaceContoursWidget::updateAllPointsWidgetParams( const SurfaceContoursWidgetParams& p )
+std::pair<std::shared_ptr<MR::VisualObject>, int> SurfaceContoursWidget::getActivePoint() const
 {
-    const auto& oldParams = params;
-
-    for ( auto& [parentObj, contour] : pickedPoints_ )
-        for ( auto& point : contour )
-        {
-            auto pointParams = point->getParameters();
-            point->setParameters( p.surfacePointParams );
-
-            if ( pointParams.baseColor == oldParams.ordinaryPointColor )
-                updateBaseColor( point, p.ordinaryPointColor );
-            else if ( pointParams.baseColor == oldParams.lastPoitColor )
-                updateBaseColor( point, p.lastPoitColor );
-            else if ( pointParams.baseColor == oldParams.closeContourPointColor )
-                updateBaseColor( point, p.closeContourPointColor );
-        }
-
-    params = p;
-}
-
-std::pair<std::shared_ptr<MR::VisualObject>, int> SurfaceContoursWidget::getActivePoint()
-{
-    return std::pair<std::shared_ptr<MR::VisualObject>, int>( activeObject_, activeIndex_ );
+    return { activeObject_, activeIndex_ };
 }
 
 void SurfaceContoursWidget::setActivePoint( std::shared_ptr<MR::VisualObject> obj, int index )
@@ -247,25 +228,33 @@ void SurfaceContoursWidget::setActivePoint( std::shared_ptr<MR::VisualObject> ob
     activeObject_ = obj;
 }
 
-bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
+std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::getActiveSurfacePoint() const
 {
-    if ( !isPickerActive_ )
+    if ( !activeObject_ )
+        return {};
+    assert( 0 <= activeIndex_ );
+
+    const auto it = pickedPoints_.find( activeObject_ );
+    assert( it != pickedPoints_.end() );
+    const auto& contour = it->second;
+    assert( activeIndex_ < contour.size() );
+    return contour[activeIndex_];
+}
+
+bool SurfaceContoursWidget::appendPoint( const std::shared_ptr<VisualObject>& obj, const PickedPoint& triPoint )
+{
+
+    if ( !isObjectValidToPick_( obj ) )
         return false;
 
-    if ( button != Viewer::MouseButton::Left )
-        return false;
-
-    auto [obj, pick] = getViewerInstance().viewport().pick_render_object();
-
-    auto addPoint = [this] ( const std::shared_ptr<VisualObject> obj, const PickedPoint& triPoint )
+    auto onAddPointAction = [this, &obj, &triPoint] ()
     {
-        if ( !isObjectValidToPick_( obj ) )
-            return;
-
         auto& contour = pickedPoints_[obj];
 
         if ( params.writeHistory )
+        {
             AppendHistory<AddPointActionPickerPoint>( *this, obj, triPoint );
+        }
 
         contour.push_back( createPickWidget_( obj, triPoint ) );
         highlightLastPoint( obj );
@@ -274,19 +263,80 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
         onPointAdd_( obj );
     };
-    auto removePoint = [this] ( const std::shared_ptr<VisualObject> obj, int pickedIndex )
+
+    auto scopedBlock = getViewerInstance().getGlobalHistoryStore()->getScopeBlockPtr();
+    if ( ( scopedBlock == nullptr ) && ( params.writeHistory ) )
+    {
+        SCOPED_HISTORY( "Add Point" + params.historySpecification );
+        onAddPointAction();
+    }
+    else
+        onAddPointAction();
+
+    return true;
+}
+
+bool SurfaceContoursWidget::removePoint( const std::shared_ptr<VisualObject>& obj, int pickedIndex )
+{
+
+    auto onRemovePointAction = [this, &obj, pickedIndex] ()
     {
         auto& contour = pickedPoints_[obj];
 
         if ( params.writeHistory )
+        {
             AppendHistory<RemovePointActionPickerPoint>( *this, obj, contour[pickedIndex]->getCurrentPosition(), pickedIndex );
-
+        }
         contour.erase( contour.begin() + pickedIndex );
         activeIndex_ = pickedIndex;
         activeObject_ = obj;
         highlightLastPoint( obj );
         onPointRemove_( obj );
     };
+
+    // for use add points and remove points in callback groups history actions
+    auto scopedBlock = getViewerInstance().getGlobalHistoryStore()->getScopeBlockPtr();
+    if ( ( scopedBlock == nullptr ) && ( params.writeHistory ) )
+    {
+        SCOPED_HISTORY( "Remove Point" + params.historySpecification );
+        onRemovePointAction();
+    }
+    else
+        onRemovePointAction();
+
+    return true;
+}
+
+bool SurfaceContoursWidget::closeContour( const std::shared_ptr<VisualObject>& objectToCloseCoutour )
+{
+    if ( isClosedCountour( objectToCloseCoutour ) )
+        return false;
+
+    assert( objectToCloseCoutour != nullptr );
+    auto triPoint = pickedPoints_[objectToCloseCoutour][0]->getCurrentPosition();
+    appendPoint( objectToCloseCoutour, triPoint );
+    activeIndex_ = 0;
+    return true;
+}
+
+
+
+bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
+{
+    if ( !isPickerActive_ )
+        return false;
+
+    if ( button != Viewer::MouseButton::Left )
+        return false;
+
+    auto allowExactPickFirst = params.surfacePointParams.pickInBackFaceObject;
+    auto [obj, pick] = getViewerInstance().viewport().pick_render_object( allowExactPickFirst );
+
+    if ( !obj )
+        return false;
+
+    if ( ( params.surfacePointParams.pickInBackFaceObject == false ) && ( SurfacePointWidget::isPickIntoBackFace( obj, pick, getViewerInstance().viewport().getCameraPoint() ) ) )
+        return false;
 
     if ( !mod ) // just add new point 
     {
@@ -300,7 +350,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
         assert( objVisual != nullptr ); // contoursWidget_ can join for mesh objects only
 
-        addPoint( objVisual, pointOnObjectToPickedPoint( objVisual.get(), pick ) );
+        appendPoint( objVisual, pointOnObjectToPickedPoint( objVisual.get(), pick ) );
         return true;
     }
     else if ( mod == params.widgetContourCloseMod ) // close contour case 
@@ -319,15 +369,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         }
         if ( !isFirstPointOnCountourClicked )
             return false;
-
-        if ( isClosedCountour( objectToCloseCoutour ) )
-            return false;
-
-        assert( objectToCloseCoutour != nullptr );
-        auto triPoint = pickedPoints_[objectToCloseCoutour][0]->getCurrentPosition();
-        addPoint( objectToCloseCoutour, triPoint );
-        activeIndex_ = 0;
-        return true;
+        return closeContour( objectToCloseCoutour );
     }
     else if ( mod == params.widgetDeletePointMod )  // remove point case 
     {
@@ -378,7 +420,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
             // Restore close countour. 
             if ( contour.size() > 2 && pickedIndex == 0 )
-                addPoint( pickedObj, contour[0]->getCurrentPosition() );
+                appendPoint( pickedObj, contour[0]->getCurrentPosition() );
         }
         else
             removePoint( pickedObj, pickedIndex );
@@ -394,8 +436,12 @@ bool SurfaceContoursWidget::onMouseMove_( int, int )
     if ( pickedPoints_.empty() || activeChange_ )
         return false;
 
-    auto [obj, pick] = getViewerInstance().viewport().pick_render_object();
+    auto allowExactPickFirst = params.surfacePointParams.pickInBackFaceObject;
+    auto [obj, pick] = getViewerInstance().viewport().pick_render_object( allowExactPickFirst );
     if ( !obj )
+        return false;
+
+    if ( ( params.surfacePointParams.pickInBackFaceObject == false ) && ( SurfacePointWidget::isPickIntoBackFace( obj, pick, getViewerInstance().viewport().getCameraPoint() ) ) )
         return false;
 
     for ( auto contour : pickedPoints_ )

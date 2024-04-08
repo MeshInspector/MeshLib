@@ -33,7 +33,7 @@ on:
 jobs:
   versioning-and-release-url:
     timeout-minutes: 10
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       tag: ${{ steps.version-tag.outputs.tag }}
       app_version: ${{ steps.version-tag.outputs.app_version }}

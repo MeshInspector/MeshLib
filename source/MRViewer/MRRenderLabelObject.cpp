@@ -4,6 +4,7 @@
 #include "MRMesh/MRTimer.h"
 #include "MRCreateShader.h"
 #include "MRMesh/MRMesh.h"
+#include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRMatrix4.h"
 #include "MRGLMacro.h"
 #include "MRMesh/MRBitSetParallelFor.h"
@@ -42,15 +43,29 @@ RenderLabelObject::~RenderLabelObject()
     freeBuffers_();
 }
 
-void RenderLabelObject::render( const ModelRenderParams& renderParams )
+bool RenderLabelObject::render( const ModelRenderParams& renderParams )
 {
+    RenderModelPassMask desiredPass =
+        !objLabel_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
+        ( objLabel_->getGlobalAlpha( renderParams.viewportId ) < 255 || objLabel_->getFrontColor( objLabel_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
+        RenderModelPassMask::Opaque;
+    if ( !bool( renderParams.passMask & desiredPass ) )
+        return false; // Nothing to draw in this pass.
+
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objLabel_->resetDirty();
-        return;
+        return false;
     }
 
     update_();
+
+    if ( objLabel_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) )
+    {
+        Vector3f pos = renderParams.modelMatrix( objLabel_->getLabel().position );
+        if ( dot( pos, renderParams.clipPlane.n ) > renderParams.clipPlane.d )
+            return false;
+    }
 
     GL_EXEC( glDepthMask( GL_TRUE ) );
     GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
@@ -140,6 +155,8 @@ void RenderLabelObject::render( const ModelRenderParams& renderParams )
     GL_EXEC( glDepthFunc( getDepthFunctionLEqual( DepthFunction::Default ) ) );
 
     GL_EXEC( glDepthFunc( GL_LESS ) );
+
+    return true;
 }
 
 void RenderLabelObject::renderSourcePoint_( const ModelRenderParams& renderParams )
@@ -335,7 +352,7 @@ void RenderLabelObject::renderLeaderLine_( const ModelRenderParams& renderParams
     dirtyLLine_ = false;
 }
 
-void RenderLabelObject::renderPicker( const ModelRenderParams&, unsigned )
+void RenderLabelObject::renderPicker( const ModelBaseRenderParams&, unsigned )
 {
     // no picker for labels
 }

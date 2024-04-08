@@ -322,6 +322,48 @@
     <ClCompile Include="MRSurfaceContoursWidget.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRRenderFeatureObjects.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRenderNameObject.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshBoundarySelectionWidget.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFrameCounter.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAncillaryLabels.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAncillaryLines.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAncillaryMesh.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAncillaryPoints.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRHistoryStore.cpp">
+      <Filter>History</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRenderDimensions.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRenderMeasurementObjects.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
+    <ClCompile Include="MRUnits.cpp">
+      <Filter>UIStyle</Filter>
+    </ClCompile>
+    <ClCompile Include="MRVisualSubfeatures.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRenderDefaultObjects.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -331,9 +373,6 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="ImGuiMenu.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ImGuiTraits.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="MRMenu.h">
@@ -405,15 +444,6 @@
     </ClInclude>
     <ClInclude Include="MRViewportGL.h">
       <Filter>Render</Filter>
-    </ClInclude>
-    <ClInclude Include="MRMeshViewer.h">
-      <Filter>Viewer</Filter>
-    </ClInclude>
-    <ClInclude Include="MRMeshViewerPlugin.h">
-      <Filter>Viewer</Filter>
-    </ClInclude>
-    <ClInclude Include="MRMeshViewport.h">
-      <Filter>Viewer</Filter>
     </ClInclude>
     <ClInclude Include="MRPythonAppendCommand.h">
       <Filter>Python</Filter>
@@ -629,6 +659,63 @@
     <ClInclude Include="MRImGuiVectorOperators.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="MRRenderDefaultObjects.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderFeatureObjects.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderNameObject.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshBoundarySelectionWidget.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderWrapObject.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFrameCounter.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAncillaryLabels.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAncillaryLines.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAncillaryMesh.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAncillaryPoints.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRISceneStateCheck.h">
+      <Filter>StatePlugins</Filter>
+    </ClInclude>
+    <ClInclude Include="MRHistoryStore.h">
+      <Filter>History</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderDimensions.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderMeasurementObjects.h">
+      <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRLambdaRibbonItem.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVectorTraits.h">
+      <Filter>UIStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="MRUnits.h">
+      <Filter>UIStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="MRUIStyle.ipp">
+      <Filter>UIStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVisualSubfeatures.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />
@@ -717,6 +804,48 @@
       <Filter>resource\object_icons\X1</Filter>
     </Image>
     <Image Include="resource\object_icons\X3\ObjectLabel.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\CircleObject.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\ConeObject.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\CylinderObject.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\LineObject.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\PlaneObject.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\PointObject.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\SphereObject.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\CircleObject.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\ConeObject.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\CylinderObject.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\LineObject.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\PlaneObject.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\PointObject.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\SphereObject.png">
       <Filter>resource\object_icons\X3</Filter>
     </Image>
   </ItemGroup>

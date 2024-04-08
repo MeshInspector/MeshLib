@@ -72,6 +72,16 @@ void AngleMeasurementObject::setIsConical( bool value )
     isConical_ = value;
 }
 
+bool AngleMeasurementObject::getShouldVisualizeRay( bool second ) const
+{
+    return shouldVisualizeRay_[second];
+}
+
+void AngleMeasurementObject::setShouldVisualizeRay( bool second, bool enable )
+{
+    shouldVisualizeRay_[second] = enable;
+}
+
 void AngleMeasurementObject::swapBase_( Object& other )
 {
     if ( auto ptr = other.asType<AngleMeasurementObject>() )
@@ -86,6 +96,9 @@ void AngleMeasurementObject::serializeFields_( Json::Value& root ) const
     root["Type"].append( TypeName() );
 
     root["IsConical"] = isConical_;
+
+    root["ShouldVisualizeRayA"] = shouldVisualizeRay_[0];
+    root["ShouldVisualizeRayB"] = shouldVisualizeRay_[1];
 }
 
 void AngleMeasurementObject::deserializeFields_( const Json::Value& root )
@@ -94,6 +107,17 @@ void AngleMeasurementObject::deserializeFields_( const Json::Value& root )
 
     if ( const auto& json = root["IsConical"]; json.isBool() )
         isConical_ = json.asBool();
+
+    if ( const auto& json = root["ShouldVisualizeRayA"]; json.isBool() )
+        shouldVisualizeRay_[0] = json.asBool();
+    if ( const auto& json = root["ShouldVisualizeRayB"]; json.isBool() )
+        shouldVisualizeRay_[1] = json.asBool();
+}
+
+void AngleMeasurementObject::setupRenderObject_() const
+{
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype( *this )>( *this );
 }
 
 } // namespace MR

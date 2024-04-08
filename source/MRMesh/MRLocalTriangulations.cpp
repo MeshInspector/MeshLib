@@ -278,7 +278,8 @@ bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTrian
         return false;
 
     const auto center = bbox.center();
-    const auto maxDistSqToCenter = bbox.size().lengthSq() / 4;
+    const auto maxDistSqToCenter = bbox.size().lengthSq() / 4
+        * 1.1f; // make it slightly larger to overcome rounding errors
 
     constexpr auto InvalidWeight = -FLT_MAX;
     using HeapT = Heap<float, VertId>;

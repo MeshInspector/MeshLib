@@ -426,9 +426,6 @@
     <ClInclude Include="MRHash.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRHistoryStore.h">
-      <Filter>Source Files\History</Filter>
-    </ClInclude>
     <ClInclude Include="MRHistoryAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
@@ -1167,6 +1164,9 @@
     <ClInclude Include="MRFeatures.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRSubfeatures.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
     <ClInclude Include="MRPointsLoadE57.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
@@ -1188,9 +1188,6 @@
     <ClInclude Include="MRAngleMeasurementObject.h">
       <Filter>Source Files\DataModel\Measurements</Filter>
     </ClInclude>
-    <ClInclude Include="MRDefaultMeasurementObjects.h">
-      <Filter>Source Files\DataModel\Measurements</Filter>
-    </ClInclude>
     <ClInclude Include="MRUnorientedTriangle.h">
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
@@ -1199,6 +1196,45 @@
     </ClInclude>
     <ClInclude Include="MRPointCloudDivideWithPlane.h">
       <Filter>Source Files\PointCloud</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPolylineTrimWithPlane.h">
+      <Filter>Source Files\Polyline</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDistanceVolumeParams.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPointsToDistanceVolume.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPointsToMeshFusion.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMisonLoad.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAddVisualPropertiesMixin.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
+    <ClInclude Include="MRObjectDimensionsEnum.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderModelParameters.h">
+      <Filter>Source Files\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFaceDistance.h">
+      <Filter>Source Files\SurfacePath</Filter>
+    </ClInclude>
+    <ClInclude Include="MRTriMesh.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAddNoise.h">
+      <Filter>Source Files\Relax</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVectorTraits.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSeparationPoint.h">
+      <Filter>Source Files\Voxels</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1414,9 +1450,6 @@
     </ClCompile>
     <ClCompile Include="MRPointCloudRadius.cpp">
       <Filter>Source Files\PointCloud</Filter>
-    </ClCompile>
-    <ClCompile Include="MRHistoryStore.cpp">
-      <Filter>Source Files\History</Filter>
     </ClCompile>
     <ClCompile Include="MRChangeSceneAction.cpp">
       <Filter>Source Files\History</Filter>
@@ -1968,6 +2001,9 @@
     <ClCompile Include="MRFeatures.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
+    <ClCompile Include="MRSubfeatures.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
     <ClCompile Include="MRLocalTriangulations.cpp">
       <Filter>Source Files\Triangulation</Filter>
     </ClCompile>
@@ -1983,9 +2019,6 @@
     <ClCompile Include="MRAngleMeasurementObject.cpp">
       <Filter>Source Files\DataModel\Measurements</Filter>
     </ClCompile>
-    <ClCompile Include="MRDefaultMeasurementObjects.cpp">
-      <Filter>Source Files\DataModel\Measurements</Filter>
-    </ClCompile>
     <ClCompile Include="MRPointsComponents.cpp">
       <Filter>Source Files\Components</Filter>
     </ClCompile>
@@ -1994,6 +2027,42 @@
     </ClCompile>
     <ClCompile Include="MRPointCloudDivideWithPlane.cpp">
       <Filter>Source Files\PointCloud</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPolylineTrimWithPlane.cpp">
+      <Filter>Source Files\Polyline</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointsToDistanceVolume.cpp">
+      <Filter>Source Files\Voxels</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointsToMeshFusion.cpp">
+      <Filter>Source Files\Voxels</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFeatureObject.cpp">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClCompile>
+    <ClCompile Include="MRHistoryAction.cpp">
+      <Filter>Source Files\History</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMisonLoad.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeasurementObject.cpp">
+      <Filter>Source Files\DataModel\Measurements</Filter>
+    </ClCompile>
+    <ClCompile Include="MRObjectDimensionsEnum.cpp">
+      <Filter>Source Files\DataModel</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFaceDistance.cpp">
+      <Filter>Source Files\SurfacePath</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAddNoise.cpp">
+      <Filter>Source Files\Relax</Filter>
+    </ClCompile>
+    <ClCompile Include="MRLogWindowsExceptions.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSeparationPoint.cpp">
+      <Filter>Source Files\Voxels</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

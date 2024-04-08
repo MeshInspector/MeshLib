@@ -8,6 +8,7 @@
 #include "MRNoDefInit.h"
 #include "MRTimer.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRProgressReadWrite.h"
 #include "MRGridSettings.h"
 #include "MRPch/MRTBB.h"
@@ -1037,18 +1038,22 @@ VertId MeshTopology::splitFace( FaceId f, FaceBitSet * region, FaceHashMap * new
     return newv;
 }
 
-void MeshTopology::flipOrientation()
+void MeshTopology::flipOrientation( const UndirectedEdgeBitSet * fullComponents )
 {
     MR_TIMER
 
-    for ( auto & e : edgePerFace_ )
+    ParallelFor( edgePerFace_, [&]( FaceId f )
     {
-        if ( e.valid() )
-            e = e.sym();
-    }
+        auto e = edgePerFace_[f];
+        if ( e && contains( fullComponents, e.undirected() ) )
+            edgePerFace_[f] = e.sym();
+    } );
 
-    for ( EdgeId i{0}; i + 1 < edges_.size(); ++++i )
+    ParallelFor( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ), [&]( UndirectedEdgeId ue )
     {
+        if ( fullComponents && !fullComponents->test( ue ) )
+            return;
+        EdgeId i = ue;
         auto & r0 = edges_[i];
         std::swap( r0.next, r0.prev );
 
@@ -1056,7 +1061,7 @@ void MeshTopology::flipOrientation()
         std::swap( r1.next, r1.prev );
 
         std::swap( r0.left, r1.left );
-    }
+    } );
 }
 
 void MeshTopology::addPart( const MeshTopology & from,
@@ -1550,13 +1555,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
     MR_TIMER
     const auto szContours = thisContours.size();
     assert( szContours == fromContours.size() );
-    
-    auto set = []( auto & map, auto key, auto val )
-    {
-        auto [it, inserted] = map.insert( std::make_pair( key, val ) );
-        if ( !inserted )
-            assert( it->second == val );
-    };
+
 
     // in all maps: from index -> to index
     FaceHashMap fmap;
@@ -1571,6 +1570,23 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
         map.tgt2srcVerts->resize( vertSize() );
     if ( map.tgt2srcFaces )
         map.tgt2srcFaces->resize( faceSize() );
+
+    VertBitSet fromVerts = from.getValidVerts();
+    auto setVmap = [&] ( VertId key, VertId val )
+    {
+        if ( fromVerts.test_set( key, false ) )
+        {
+            [[maybe_unused]] bool inserted = vmap.insert( std::make_pair( key, val ) ).second;
+            assert( inserted );
+        }
+#ifndef NDEBUG
+        else
+        {
+            auto it = vmap.find( key );
+            assert( it != vmap.end() && it->second == val );
+        }
+#endif
+    };
 
     UndirectedEdgeBitSet existingEdges; //one of fromContours' edge
     for ( int i = 0; i < szContours; ++i )
@@ -1593,14 +1609,15 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
             auto e1 = thisContour[j];
             assert( !left( e1 ) );
             assert( ( flipOrientation && !from.left( e ) ) || ( !flipOrientation && !from.right( e ) ) );
-            set( vmap, from.org( e ), org( e1 ) );
-            set( vmap, from.dest( e ), dest( e1 ) );
+            setVmap( from.org( e ), org( e1 ) );
+            setVmap( from.dest( e ), dest( e1 ) );
             [[maybe_unused]] bool eInserted = emap.insert( { e.undirected(), e.even() ? e1 : e1.sym() } ).second;
             assert( eInserted ); // all contour edges must be unique
             existingEdges.autoResizeSet( e.undirected() );
         }
     }
 
+    UndirectedEdgeBitSet fromEdges = from.findNotLoneUndirectedEdges() - existingEdges;
     // first pass: fill maps
     EdgeId firstNewEdge = edges_.endId();
     for ( ; fbegin != fend; ++fbegin )
@@ -1610,24 +1627,26 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
         for ( auto e : leftRing( from, efrom ) )
         {
             const UndirectedEdgeId ue = e.undirected();
-            if ( auto [it, inserted] = emap.insert( { ue, {} } ); inserted )
+            if ( fromEdges.test_set( ue, false ) )
             {
-                it->second = edges_.endId();
-                edges_.push_back( from.edges_[EdgeId{ue}] );
-                edges_.push_back( from.edges_[EdgeId{ue}.sym()] );
+                [[maybe_unused]] bool inserted = emap.insert( { ue, edges_.endId() } ).second;
+                assert( inserted );
+                edges_.push_back( from.edges_[EdgeId{ ue }] );
+                edges_.push_back( from.edges_[EdgeId{ ue }.sym()] );
                 if ( map.tgt2srcEdges )
                 {
-                    map.tgt2srcEdges ->push_back( EdgeId{ue} );
+                    map.tgt2srcEdges->push_back( EdgeId{ ue } );
                 }
             }
             if ( auto v = from.org( e ); v.valid() )
             {
-                if ( auto [it, inserted] = vmap.insert( { v, {} } ); inserted )
+                if ( fromVerts.test_set( v, false ) )
                 {
                     auto nv = addVertId();
+                    [[maybe_unused]] bool inserted = vmap.insert( { v, nv } ).second;
+                    assert( inserted );
                     if ( map.tgt2srcVerts )
-                        map.tgt2srcVerts ->push_back( v );
-                    it->second = nv;
+                        map.tgt2srcVerts->push_back( v );
                     edgePerVertex_[nv] = mapEdge( emap, e );
                     if ( updateValids_ )
                     {

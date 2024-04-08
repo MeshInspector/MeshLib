@@ -5,7 +5,6 @@
 #include "MRMesh.h"
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
-#include "MRMatrix3Decompose.h"
 #include "MRCylinderApproximator.h"
 #include "MRMeshFwd.h"
 #include "MRLine.h"
@@ -19,121 +18,88 @@ namespace MR
 
 namespace
 {
-constexpr int cDetailLevel = 2048;
-constexpr float cBaseRadius = 1.0f;
-constexpr float cBaseLength = 1.0f;
 
-constexpr float epsilonForCylinderTopBottomDetection = 0.01f;
 constexpr int phiResolution = 180;
-constexpr int thetaiResolution = 180;
+constexpr int thetaResolution = 180;
 
 
-Matrix3f getRotationMatrix( const Vector3f& normal )
+Matrix3f getCylRotationMatrix( const Vector3f& normal )
 {
     return Matrix3f::rotation( Vector3f::plusZ(), normal );
 }
 
-
-std::shared_ptr<Mesh> makeFeatureCylinder( int resolution = cDetailLevel, float  startAngle = 0.0f, float  archSize = 2.0f * PI_F )
-{
-    auto mesh = std::make_shared<Mesh>( makeCylinderAdvanced( cBaseRadius, cBaseRadius, startAngle, archSize, cBaseLength, resolution ) );
-    AffineXf3f shift;
-    shift.b = Vector3f( 0.0f, 0.0f, -cBaseLength / 2.0f );
-    mesh->transform( shift );
-
-    // remove cylinder top and bottom;
-    Vector3f zDirection = Vector3f::plusZ();
-    FaceBitSet facesForDelete;
-    auto normals = computePerFaceNormals( *mesh );
-
-    for ( auto f : mesh->topology.getValidFaces() )
-    {
-        if ( cross( normals[f], zDirection ).lengthSq() < epsilonForCylinderTopBottomDetection )
-            facesForDelete.autoResizeSet( f, true );
-    }
-    mesh->topology.deleteFaces( facesForDelete );
-
-    return mesh;
-}
-
-} // namespace 
+} // namespace
 
 MR_ADD_CLASS_FACTORY( CylinderObject )
 
-float CylinderObject::getLength() const
+float CylinderObject::getLength( ViewportId id /*= {}*/ ) const
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    return s.z.z;
+    return s_.get( id ).z.z;
 }
 
-void CylinderObject::setLength( float length )
+void CylinderObject::setLength( float length, ViewportId id /*= {}*/ )
 {
-    auto direction = getDirection();
-    auto currentXf = xf();
-    auto radius = getRadius();
-    currentXf.A = ( getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, length ) );
-    setXf( currentXf );
+    auto direction = getDirection( id );
+    auto currentXf = xf( id );
+    auto radius = getRadius( id );
+    currentXf.A = ( getCylRotationMatrix( direction ) * Matrix3f::scale( radius, radius, length ) );
+    setXf( currentXf, id );
 }
 
-float CylinderObject::getRadius() const
+Vector3f CylinderObject::getBasePoint( ViewportId id /*= {} */ ) const
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
+    return getCenter( id ) - getDirection( id ) * getLength( id ) * 0.5f;
+}
+
+float CylinderObject::getRadius( ViewportId id /*= {}*/ ) const
+{
     // it is bad idea to use statement like this ( x + y ) / 2.0f; it increases instability. radius is changing during length update.
-    return  s.x.x;
+    return  s_.get( id ).x.x;
 }
 
-void CylinderObject::setRadius( float radius )
+void CylinderObject::setRadius( float radius, ViewportId id /*= {}*/ )
 {
-    auto direction = getDirection();
-    auto currentXf = xf();
-    currentXf.A = getRotationMatrix( direction ) * Matrix3f::scale( radius, radius, getLength() );
-    setXf( currentXf );
+    auto direction = getDirection( id );
+    auto currentXf = xf( id );
+    currentXf.A = getCylRotationMatrix( direction ) * Matrix3f::scale( radius, radius, getLength( id ) );
+    setXf( currentXf, id );
 }
 
-Vector3f CylinderObject::getDirection() const
+Vector3f CylinderObject::getDirection( ViewportId id /*= {}*/ ) const
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    return ( r * Vector3f::plusZ() ).normalized();
+    return ( r_.get( id ) * Vector3f::plusZ() ).normalized();
 }
 
-Vector3f CylinderObject::getCenter() const
+Vector3f CylinderObject::getCenter( ViewportId id /*= {}*/ ) const
 {
-    return xf().b;
+    return xf( id ).b;
 }
 
-void CylinderObject::setDirection( const Vector3f& normal )
+void CylinderObject::setDirection( const Vector3f& normal, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
-    Matrix3f r, s;
-    decomposeMatrix3( currentXf.A, r, s );
-    currentXf.A = getRotationMatrix( normal ) * s;
-    setXf( currentXf );
+    auto currentXf = xf( id );
+    currentXf.A = getCylRotationMatrix( normal ) * s_.get( id );
+    setXf( currentXf, id );
 }
 
-void CylinderObject::setCenter( const Vector3f& center )
+void CylinderObject::setCenter( const Vector3f& center, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
+    auto currentXf = xf( id );
     currentXf.b = center;
-    setXf( currentXf );
+    setXf( currentXf, id );
 }
 
 CylinderObject::CylinderObject()
-{
-    constructMesh_();
-}
+    : AddVisualProperties( 2 )
+{}
 
 CylinderObject::CylinderObject( const std::vector<Vector3f>& pointsToApprox )
+    : CylinderObject()
 {
-    // create mesh
-    constructMesh_();
-
     // calculate cylinder parameters.
     Cylinder3<float> result;
     auto fit = Cylinder3Approximation<float>();
-    auto approxResult = fit.solveGeneral( pointsToApprox, result, phiResolution, thetaiResolution );
+    auto approxResult = fit.solveGeneral( pointsToApprox, result, phiResolution, thetaResolution );
     if ( approxResult < 0 )
     {
         spdlog::warn( "CylinderObject :: unable to creater feature object cylinder." );
@@ -149,18 +115,12 @@ CylinderObject::CylinderObject( const std::vector<Vector3f>& pointsToApprox )
 
 std::shared_ptr<Object> CylinderObject::shallowClone() const
 {
-    auto res = std::make_shared<CylinderObject>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = mesh_;
-    return res;
+    return std::make_shared<CylinderObject>( ProtectedStruct{}, *this );
 }
 
 std::shared_ptr<Object> CylinderObject::clone() const
 {
-    auto res = std::make_shared<CylinderObject>( ProtectedStruct{}, *this );
-    if ( mesh_ )
-        res->mesh_ = std::make_shared<Mesh>( *mesh_ );
-    return res;
+    return std::make_shared<CylinderObject>( ProtectedStruct{}, *this );
 }
 
 void CylinderObject::swapBase_( Object& other )
@@ -173,30 +133,43 @@ void CylinderObject::swapBase_( Object& other )
 
 void CylinderObject::serializeFields_( Json::Value& root ) const
 {
-    ObjectMeshHolder::serializeFields_( root );
+    FeatureObject::serializeFields_( root );
     root["Type"].append( CylinderObject::TypeName() );
 }
 
-void CylinderObject::constructMesh_()
+void CylinderObject::setupRenderObject_() const
 {
-    mesh_ = makeFeatureCylinder();
-    setFlatShading( false );
-    selectFaces( {} );
-    selectEdges( {} );
-    setDirtyFlags( DIRTY_ALL );
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype( *this )>( *this );
 }
 
 const std::vector<FeatureObjectSharedProperty>& CylinderObject::getAllSharedProperties() const
 {
     static std::vector<FeatureObjectSharedProperty> ret = {
-       {"Radius", &CylinderObject::getRadius, &CylinderObject::setRadius},
-       {"Length", &CylinderObject::getLength, &CylinderObject::setLength},
-       {"Center", &CylinderObject::getCenter, &CylinderObject::setCenter},
-       {"Main axis", &CylinderObject::getDirection, &CylinderObject::setDirection},
+       {"Radius",    FeaturePropertyKind::linearDimension, &CylinderObject::getRadius, &CylinderObject::setRadius},
+       {"Length",    FeaturePropertyKind::linearDimension, &CylinderObject::getLength, &CylinderObject::setLength},
+       {"Center",    FeaturePropertyKind::position,        &CylinderObject::getCenter, &CylinderObject::setCenter},
+       {"Main axis", FeaturePropertyKind::direction,       &CylinderObject::getDirection, &CylinderObject::setDirection},
     };
     return ret;
 }
 
+FeatureObjectProjectPointResult CylinderObject::projectPoint( const Vector3f& point, ViewportId id /*= {}*/ ) const
+{
+    // first, calculate the vector from the center of the cylinder to the projected point
+    const auto& center = getCenter( id );
+    const auto& direction = getDirection( id );
+    auto radius = getRadius( id );
+
+    auto X = point - center;
+
+    float projectionLength = dot( X, direction );
+    Vector3f K = direction * projectionLength;
+    Vector3f normal = ( X - K ).normalized();
+    Vector3f projection = K + normal * radius;
+
+    return FeatureObjectProjectPointResult{ projection + center, normal };
+}
 
 TEST( MRMesh, CylinderApproximation )
 {
@@ -226,12 +199,12 @@ TEST( MRMesh, CylinderApproximation )
     }
 
     /////////////////////////////
-    // General multithread test 
+    // General multithread test
     /////////////////////////////
 
     Cylinder3<float> result;
     auto fit = Cylinder3Approximation<float>();
-    auto approximationRMS = fit.solveGeneral( points, result, phiResolution, thetaiResolution, true );
+    auto approximationRMS = fit.solveGeneral( points, result, phiResolution, thetaResolution, true );
     std::cout << "multi thread center: " << result.center() << " direction:" << result.direction() << " length:" << result.length << " radius:" << result.radius << " error:" << approximationRMS << std::endl;
 
     EXPECT_LE( approximationRMS, 0.1f );
@@ -241,11 +214,11 @@ TEST( MRMesh, CylinderApproximation )
     EXPECT_GT( dot( direction, result.direction() ), 0.9f );
 
     ///////////////////////////////////////
-    // Compare single thread vs multithread 
+    // Compare single thread vs multithread
     ///////////////////////////////////////
 
     Cylinder3<float> resultST;
-    auto approximationRMS_ST = fit.solveGeneral( points, resultST, phiResolution, thetaiResolution, false );
+    auto approximationRMS_ST = fit.solveGeneral( points, resultST, phiResolution, thetaResolution, false );
     std::cout << "single thread center: " << result.center() << " direction:" << result.direction() << " length:" << result.length << " radius:" << result.radius << " error:" << approximationRMS << std::endl;
 
     EXPECT_NEAR( approximationRMS, approximationRMS_ST, 0.01f );
@@ -271,4 +244,4 @@ TEST( MRMesh, CylinderApproximation )
     EXPECT_GT( dot( direction, resultSAF.direction() ), 0.9f );
 }
 
-} // namespace MR 
+} // namespace MR

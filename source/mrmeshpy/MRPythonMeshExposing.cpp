@@ -23,6 +23,7 @@
 #include "MRMesh/MRPartMapping.h"
 #include "MRMesh/MRBuffer.h"
 #include "MRMesh/MRMeshExtrude.h"
+#include "MRMesh/MRMeshBoundary.h"
 #include <pybind11/functional.h>
 
 using namespace MR;
@@ -263,6 +264,18 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
              "applies given transformation to specified vertices\n"
              "if region is nullptr, all valid mesh vertices are used" ).
 
+        def( "leftNormal", &Mesh::leftNormal, pybind11::arg( "e" ), "computes triangular face normal from its vertices" ).
+        def( "normal", ( Vector3f( Mesh::* )( FaceId )const )&Mesh::normal, pybind11::arg( "f" ), "computes triangular face normal from its vertices" ).
+        def( "normal", ( Vector3f( Mesh::* )( VertId )const )&Mesh::normal, pybind11::arg( "v" ), "computes normal in a vertex using sum of directed areas of neighboring triangles" ).
+        def( "normal", ( Vector3f( Mesh::* )( const MeshTriPoint & )const )&Mesh::normal, pybind11::arg( "p" ), "computes normal in three vertices of p's triangle, then interpolates them using barycentric coordinates" ).
+
+        def( "pseudonormal", ( Vector3f( Mesh::* )( VertId, const FaceBitSet* )const )&Mesh::pseudonormal,
+            pybind11::arg( "v" ), pybind11::arg( "region" ) = nullptr, "computes pseudo-normals for signed distance calculation at vertex, only region faces will be considered" ).
+        def( "pseudonormal", ( Vector3f( Mesh::* )( UndirectedEdgeId, const FaceBitSet* )const )&Mesh::pseudonormal,
+            pybind11::arg( "e" ), pybind11::arg( "region" ) = nullptr, "computes pseudo-normals for signed distance calculation at edge (middle of two face normals), only region faces will be considered" ).
+        def( "pseudonormal", ( Vector3f( Mesh::* )( const MeshTriPoint &, const FaceBitSet* )const )&Mesh::pseudonormal,
+            pybind11::arg( "p" ), pybind11::arg( "region" ) = nullptr, "computes pseudo-normals for signed distance calculation in corresponding face/edge/vertex, only region faces will be considered; unlike normal( MeshTriPoint ), this is not a smooth function" ).
+
         def( "splitEdge", ( EdgeId( Mesh::* )( EdgeId, const Vector3f&, FaceBitSet*, FaceHashMap* ) )& Mesh::splitEdge, 
             pybind11::arg( "e" ), pybind11::arg( "newVertPos" ), pybind11::arg( "region" ) = nullptr, pybind11::arg( "new2Old" ) = nullptr,
             "split given edge on two parts:\n"
@@ -469,6 +482,24 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
     m.def( "buildCylinderBetweenTwoHoles", ( bool ( * )( Mesh&, const StitchHolesParams& ) )& buildCylinderBetweenTwoHoles,
        pybind11::arg( "mesh" ), pybind11::arg_v( "params", StitchHolesParams(), "StitchHolesParams()" ),
        "this version finds holes in the mesh by itself and returns false if they are not found" );
+
+    m.def( "makeBridgeEdge", & makeBridgeEdge,
+        pybind11::arg( "topology" ), pybind11::arg( "a" ), pybind11::arg( "b" ),
+        "creates a new bridge edge between origins of two boundary edges a and b (both having no valid left face);\n"
+        "Returns invalid id if bridge cannot be created because otherwise multiple edges appear \n"
+        "\ttopology - mesh topology\n"
+        "\ta - first EdgeId\n"
+        "\tb - second EdgeId\n" );
+
+    m.def( "makeBridge", & makeBridge,
+        pybind11::arg( "topology" ), pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg_v( "outNewFaces", nullptr, "nullptr"),
+        "creates a bridge between two boundary edges a and b (both having no valid left face);\n"
+        "bridge consists of two triangles in general or of one triangle if a and b are neighboring edges on the boundary;\n"
+        "return false if bridge cannot be created because otherwise multiple edges appear\n"
+        "\ttopology - mesh topology\n"
+        "\ta - first EdgeId\n"
+        "\tb - second EdgeId\n"
+        "\toutNewFaces - FaceBitSet to store new triangles\n");
 } )
 
 Mesh pythonMergeMeshes( const pybind11::list& meshes )
@@ -504,6 +535,7 @@ MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, FaceFace, MR::FaceFace )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
 {
     m.def( "computePerVertNormals", &computePerVertNormals, pybind11::arg( "mesh" ), "returns a vector with vertex normals in every element for valid mesh vertices" );
+    m.def( "computePerVertPseudoNormals", &computePerVertPseudoNormals, pybind11::arg( "mesh" ), "returns a vector with vertex pseudonormals in every element for valid mesh vertices" );
     m.def( "computePerFaceNormals", &computePerFaceNormals, pybind11::arg( "mesh" ), "returns a vector with face-normal in every element for valid mesh faces" );
     m.def( "mergeMeshes", &pythonMergeMeshes, pybind11::arg( "meshes" ), "merge python list of meshes to one mesh" );
     m.def( "getFacesByMinEdgeLength", &getFacesByMinEdgeLength, pybind11::arg( "mesh" ), pybind11::arg( "minLength" ), "return faces with at least one edge longer than min edge length" );
@@ -614,3 +646,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
 } )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaceFace, FaceFace )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBoundary, [] ( pybind11::module_& m )
+{
+    m.def( "straightenBoundary", &straightenBoundary,
+    pybind11::arg( "mesh" ), pybind11::arg( "bdEdge" ), pybind11::arg("minNeiNormalsDot"), pybind11::arg("maxTriAspectRatio"), pybind11::arg("newFaces") = nullptr,
+    "Adds triangles along the boundary to straighten it.\n"
+    "New triangle is added only if:\n"
+        "1) aspect ratio of the new triangle is at most maxTriAspectRatio\n"
+        "2) dot product of its normal with neighbor triangles is at least minNeiNormalsDot." );
+} )

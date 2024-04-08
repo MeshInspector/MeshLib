@@ -19,7 +19,7 @@ def test_icp_sample(tmp_path):
     diagonal = meshFixed.getBoundingBox().diagonal()
     icpSamplingVoxelSize = diagonal * 0.01  # To sample points from object
     icpParams = mrmeshpy.ICPProperties()
-    icpParams.distTresholdSq = (diagonal * 0.1) ** 2  # Select points pairs that's not too far
+    icpParams.distThresholdSq = (diagonal * 0.1) ** 2  # Select points pairs that's not too far
     icpParams.exitVal = diagonal * 0.003  # Stop when this distance reached
 
     # Calculate transformation
@@ -27,7 +27,6 @@ def test_icp_sample(tmp_path):
                        mrmeshpy.AffineXf3f(), mrmeshpy.AffineXf3f(),
                        icpSamplingVoxelSize)
     icp.setParams(icpParams)
-    icp.updateVertPairs()
     xf = icp.calculateTransformation()
 
     # Transform floating mesh

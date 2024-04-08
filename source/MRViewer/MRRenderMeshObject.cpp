@@ -8,12 +8,13 @@
 #include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
-#include "MRMeshViewer.h"
+#include "MRViewer.h"
 #include "MRGladGlfw.h"
 #include "MRPch/MRTBB.h"
 #include "MRMesh/MRRegionBoundary.h"
 #include "MRMesh/MRMatrix4.h"
 #include "MRMesh/MRPlane3.h"
+#include "MRViewer/MRRenderDefaultObjects.h"
 
 namespace MR
 {
@@ -31,16 +32,23 @@ RenderMeshObject::~RenderMeshObject()
     freeBuffers_();
 }
 
-void RenderMeshObject::render( const ModelRenderParams& renderParams )
+bool RenderMeshObject::render( const ModelRenderParams& renderParams )
 {
+    RenderModelPassMask desiredPass =
+        !objMesh_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
+        ( objMesh_->getGlobalAlpha( renderParams.viewportId ) < 255 || objMesh_->getFrontColor( objMesh_->isSelected(), renderParams.viewportId ).a < 255 || objMesh_->getBackColor( renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
+        RenderModelPassMask::Opaque;
+    if ( !bool( renderParams.passMask & desiredPass ) )
+        return false; // Nothing to draw in this pass.
+
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
         objMesh_->resetDirty();
-        return;
+        return false;
     }
     update_( renderParams.viewportId );
 
-    if ( renderParams.alphaSort )
+    if ( renderParams.allowAlphaSort && desiredPass == RenderModelPassMask::Transparent )
     {
         GL_EXEC( glDepthMask( GL_FALSE ) );
         GL_EXEC( glColorMask( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE ) );
@@ -72,9 +80,11 @@ void RenderMeshObject::render( const ModelRenderParams& renderParams )
 
     GL_EXEC( glEnable( GL_BLEND ) );
     GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
-    bindMesh_( renderParams.alphaSort );
 
-    auto shader = renderParams.alphaSort ? GLStaticHolder::getShaderId( GLStaticHolder::TransparentMesh ) : GLStaticHolder::getShaderId( GLStaticHolder::Mesh );
+    const bool useAlphaSort = renderParams.allowAlphaSort && desiredPass == RenderModelPassMask::Transparent;
+    bindMesh_( useAlphaSort );
+
+    auto shader = useAlphaSort ? GLStaticHolder::getShaderId( GLStaticHolder::TransparentMesh ) : GLStaticHolder::getShaderId( GLStaticHolder::Mesh );
     // Send transformations to the GPU
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrix.data() ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrix.data() ) );
@@ -130,13 +140,13 @@ void RenderMeshObject::render( const ModelRenderParams& renderParams )
     }
     // Render wireframe
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Edges, renderParams.viewportId ) )
-        renderMeshEdges_( renderParams );
+        renderMeshEdges_( renderParams, useAlphaSort );
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::BordersHighlight, renderParams.viewportId ) )
-        renderEdges_( renderParams, borderArrayObjId_, objMesh_->getBordersColor( renderParams.viewportId ), DIRTY_BORDER_LINES );
+        renderEdges_( renderParams, useAlphaSort, borderArrayObjId_, objMesh_->getBordersColor( renderParams.viewportId ), DIRTY_BORDER_LINES );
     if ( objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedEdges, renderParams.viewportId ) )
-        renderEdges_( renderParams, selectedEdgesArrayObjId_, objMesh_->getSelectedEdgesColor( renderParams.viewportId ), DIRTY_EDGES_SELECTION );
+        renderEdges_( renderParams, useAlphaSort, selectedEdgesArrayObjId_, objMesh_->getSelectedEdgesColor( renderParams.viewportId ), DIRTY_EDGES_SELECTION );
 
-    if ( renderParams.alphaSort )
+    if ( renderParams.allowAlphaSort && desiredPass == RenderModelPassMask::Transparent )
     {
         // enable back masks, disabled for alpha sort
         GL_EXEC( glDepthMask( GL_TRUE ) );
@@ -145,9 +155,11 @@ void RenderMeshObject::render( const ModelRenderParams& renderParams )
         GL_EXEC( glEnable( GL_MULTISAMPLE ) );
 #endif
     }
+
+    return true;
 }
 
-void RenderMeshObject::renderPicker( const ModelRenderParams& parameters, unsigned geomId )
+void RenderMeshObject::renderPicker( const ModelBaseRenderParams& parameters, unsigned geomId )
 {
     if ( !Viewer::constInstance()->isGLInitialized() )
     {
@@ -210,12 +222,12 @@ void RenderMeshObject::forceBindAll()
     bindBorders_();
 }
 
-void RenderMeshObject::renderEdges_( const ModelRenderParams& renderParams, GLuint vao, const Color& colorChar, uint32_t dirtyFlag )
+void RenderMeshObject::renderEdges_( const ModelRenderParams& renderParams, bool alphaSort, GLuint vao, const Color& colorChar, uint32_t dirtyFlag )
 {
     // Send lines data to GL, install lines properties
     GL_EXEC( glBindVertexArray( vao ) );
 
-    auto shader = renderParams.alphaSort ?
+    auto shader = alphaSort ?
         GLStaticHolder::getShaderId( GLStaticHolder::TransparentLines ) :
         GLStaticHolder::getShaderId( GLStaticHolder::Lines );
 
@@ -270,12 +282,12 @@ void RenderMeshObject::renderEdges_( const ModelRenderParams& renderParams, GLui
     dirty_ &= ~dirtyFlag;
 }
 
-void RenderMeshObject::renderMeshEdges_( const ModelRenderParams& renderParams )
+void RenderMeshObject::renderMeshEdges_( const ModelRenderParams& renderParams, bool alphaSort )
 {
     // Send lines data to GL, install lines properties
     GL_EXEC( glBindVertexArray( edgesArrayObjId_ ) );
 
-    auto shader = renderParams.alphaSort ?
+    auto shader = alphaSort ?
         GLStaticHolder::getShaderId( GLStaticHolder::TransparentLines ) :
         GLStaticHolder::getShaderId( GLStaticHolder::Lines );
 
@@ -853,6 +865,6 @@ RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
     return buffer;
 }
 
-MR_REGISTER_RENDER_OBJECT_IMPL( ObjectMeshHolder, RenderMeshObject )
+MR_REGISTER_RENDER_OBJECT_IMPL( ObjectMeshHolder, RenderObjectCombinator<RenderDefaultUiObject, RenderMeshObject> )
 
 }

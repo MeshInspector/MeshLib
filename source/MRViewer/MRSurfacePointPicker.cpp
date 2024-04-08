@@ -11,6 +11,7 @@
 #include "MRMesh/MRMeshTriPoint.h"
 #include "MRMesh/MREdgePoint.h"
 #include "MRMesh/MRPointOnObject.h"
+#include "MRMesh/MRPointCloud.h"
 
 #include <variant>
 
@@ -46,7 +47,12 @@ const PickedPoint& SurfacePointWidget::create( const std::shared_ptr<VisualObjec
     pickSphere_->setName( "Pick Sphere" );
     pickSphere_->setAncillary( true );
     pickSphere_->setFrontColor( params_.baseColor, false );
-    pickSphere_->setBackColor( Color::transparent() );
+    pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
+    pickSphere_->setGlobalAlpha( 255 );
+    pickSphere_->setMainFeatureAlpha( 1.f );
+    pickSphere_->setVisualizeProperty( false, DimensionsVisualizePropertyType::diameter, ViewportMask::all() );
+    pickSphere_->setDecorationsColor( Color::transparent(), false );
+
     baseObject_->addChild( pickSphere_ );
     currentPos_ = startPos;
     updatePositionAndRadius_();
@@ -88,6 +94,8 @@ void SurfacePointWidget::setParameters( const Parameters& params )
         else
             pickSphere_->setFrontColor( params.baseColor, false );
 
+        pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
+
         if ( params.positionType != params_.positionType ||
              params.radius != params_.radius )
         {
@@ -97,12 +105,20 @@ void SurfacePointWidget::setParameters( const Parameters& params )
     params_ = params;
 }
 
+void SurfacePointWidget::updateParameters( const std::function<void( Parameters& )>& visitor )
+{
+    auto params = params_;
+    visitor( params );
+    setParameters( params );
+}
+
 void SurfacePointWidget::setHovered( bool on )
 {
     if ( !isOnMove_ && isHovered_ != on )
     {
         isHovered_ = on;
         pickSphere_->setFrontColor( isHovered_ ? params_.hoveredColor : params_.baseColor, false );
+        pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
     }
 }
 
@@ -118,6 +134,7 @@ bool SurfacePointWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     pickSphere_->setPickable( false );
     isOnMove_ = true;
     pickSphere_->setFrontColor( params_.activeColor, false );
+    pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
     if ( startMove_ )
         startMove_( currentPos_ );
     return true;
@@ -130,6 +147,7 @@ bool SurfacePointWidget::onMouseUp_( Viewer::MouseButton button, int )
     isOnMove_ = false;
     pickSphere_->setPickable( true );
     pickSphere_->setFrontColor( params_.baseColor, false );
+    pickSphere_->setBackColor( pickSphere_->getFrontColor( false ) );
     if ( endMove_ )
         endMove_( currentPos_ );
     return true;
@@ -139,8 +157,11 @@ bool SurfacePointWidget::onMouseMove_( int, int )
 {
     if ( isOnMove_ )
     {
-        auto [obj, pick] = getViewerInstance().viewport().pick_render_object();
+        auto [obj, pick] = getViewerInstance().viewport().pick_render_object( params_.pickInBackFaceObject );
         if ( obj != baseObject_ )
+            return false;
+
+        if ( ( params_.pickInBackFaceObject == false ) && ( isPickIntoBackFace( obj, pick, getViewerInstance().viewport().getCameraPoint() ) ) )
             return false;
 
         currentPos_ = pointOnObjectToPickedPoint( obj.get(), pick );
@@ -182,75 +203,59 @@ void SurfacePointWidget::updatePositionAndRadiusLines_( const EdgePoint& /* ep *
 void SurfacePointWidget::updatePositionAndRadiusMesh_( MeshTriPoint mtp )
 {
     assert( pickSphere_ );
-    auto baseSurface = std::dynamic_pointer_cast< ObjectMeshHolder >( baseObject_ );
+    auto baseSurface = std::dynamic_pointer_cast<ObjectMeshHolder>( baseObject_ );
     assert( baseSurface );
     assert( baseSurface->mesh() );
     const auto& mesh = *baseSurface->mesh();
-    FaceId fId = mesh.topology.left( mtp.e );
+
+    const auto f = mesh.topology.left( mtp.e );
     switch ( params_.positionType )
     {
-    case PositionType::FaceCenters:
-    {
-        currentPos_ = mesh.toTriPoint( fId, mesh.triCenter( fId ) );
-        break;
-    }
-    case PositionType::Edges:
-    {
-        if ( !mtp.onEdge( mesh.topology ) )
+        case PositionType::Faces:
+            // nothing to change
+            break;
+        case PositionType::FaceCenters:
+            currentPos_ = mesh.toTriPoint( f, mesh.triCenter( f ) );
+            break;
+        case PositionType::Edges:
+            if ( !mtp.onEdge( mesh.topology ) )
+            {
+                const auto p = mesh.triPoint( mtp );
+                EdgeId e = mesh.getClosestEdge( PointOnFace{ f, p } );
+                if ( mesh.topology.left( e ) != f )
+                    e = e.sym();
+                const auto ep = mesh.edgePoint( mesh.toEdgePoint( e, p ) );
+                currentPos_ = mesh.toTriPoint( f, ep );
+            }
+            break;
+        case PositionType::EdgeCeneters:
         {
-            auto closestEdge = EdgeId( mesh.getClosestEdge( PointOnFace{ fId,mesh.triPoint( mtp ) } ) );
-            if ( mesh.topology.left( closestEdge ) != fId )
+            auto closestEdge = EdgeId( mesh.getClosestEdge( PointOnFace{ f, mesh.triPoint( mtp ) } ) );
+            if ( mesh.topology.left( closestEdge ) != f )
                 closestEdge = closestEdge.sym();
-            if ( mtp.e == closestEdge )
-                mtp.bary.b = 0.0f;
-            else if ( mtp.e == mesh.topology.next( closestEdge ).sym() )
-            {
-                mtp.e = closestEdge;
-                mtp.bary.a = mtp.bary.b;
-                mtp.bary.b = 0.0f;
-            }
-            else
-            {
-                mtp.e = closestEdge;
-                mtp.bary.a = 1.0f - mtp.bary.b;
-                mtp.bary.b = 0.0f;
-            }
+            mtp.e = closestEdge;
+            mtp.bary.a = 0.5f;
+            mtp.bary.b = 0.0f;
             currentPos_ = mtp;
+            break;
         }
-        break;
-    }
-    case PositionType::EdgeCeneters:
-    {
-        auto closestEdge = EdgeId( mesh.getClosestEdge( PointOnFace{ fId,mesh.triPoint( mtp ) } ) );
-        if ( mesh.topology.left( closestEdge ) != fId )
-            closestEdge = closestEdge.sym();
-        mtp.e = closestEdge;
-        mtp.bary.a = 0.5f;
-        mtp.bary.b = 0.0f;
-        currentPos_ = mtp;
-        break;
-    }
-    case PositionType::Verts:
-    {
-        if ( !mtp.inVertex() )
-        {
-            auto closestVert = mesh.getClosestVertex( PointOnFace{ fId,mesh.triPoint( mtp ) } );
-            for ( auto e : orgRing( mesh.topology, closestVert ) )
+        case PositionType::Verts:
+            if ( !mtp.inVertex() )
             {
-                if ( mesh.topology.left( e ) == fId )
+                auto closestVert = mesh.getClosestVertex( PointOnFace{ f, mesh.triPoint( mtp ) } );
+                for ( auto e : orgRing( mesh.topology, closestVert ) )
                 {
-                    mtp.e = e;
-                    mtp.bary.a = 0.0f;
-                    mtp.bary.b = 0.0f;
-                    currentPos_ = mtp;
-                    break;
+                    if ( mesh.topology.left( e ) == f )
+                    {
+                        mtp.e = e;
+                        mtp.bary.a = 0.0f;
+                        mtp.bary.b = 0.0f;
+                        currentPos_ = mtp;
+                        break;
+                    }
                 }
             }
-        }
-        break;
-    }
-    default:
-        break;
+            break;
     }
 
     pickSphere_->setCenter( toVector3f() );
@@ -310,6 +315,36 @@ void SurfacePointWidget::updateCurrentPosition( const PickedPoint& pos )
 {
     currentPos_ = pos;
     updatePositionAndRadius_();
+}
+
+bool SurfacePointWidget::isPickIntoBackFace( const std::shared_ptr<MR::VisualObject>& obj, const MR::PointOnObject& pick, const Vector3f& cameraEye )
+{
+    const auto& xf = obj->worldXf();
+
+    if ( auto objMesh = std::dynamic_pointer_cast< const ObjectMeshHolder >( obj ) )
+    {
+        const auto& n = objMesh->mesh()->dirDblArea( pick.face );
+        if ( dot( xf.A * n, cameraEye ) < 0 )
+            return true;
+        else
+            return false;
+    }
+
+
+    if ( auto objPoints = std::dynamic_pointer_cast< const ObjectPointsHolder >( obj ) )
+    {
+        if ( objPoints->pointCloud()->normals.size() > static_cast< int > ( pick.vert ) )
+        {
+            const auto& n = objPoints->pointCloud()->normals[pick.vert];
+            auto dt = dot( xf.A * n, cameraEye );
+            if ( dt < 0 )
+                return true;
+            else
+                return false;
+        }
+    }
+
+    return false;
 }
 
 }

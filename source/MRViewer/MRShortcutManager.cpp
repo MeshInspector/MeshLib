@@ -63,6 +63,17 @@ bool ShortcutManager::processShortcut( const ShortcutKey& key, Reason reason ) c
     return false;
 }
 
+bool ShortcutManager::onKeyDown_( int key, int modifier )
+{
+    return processShortcut( {key, modifier }, Reason::KeyDown );
+}
+
+
+bool ShortcutManager::onKeyRepeat_( int key, int modifier )
+{
+    return processShortcut( { key, modifier }, Reason::KeyRepeat );
+}
+
 std::string ShortcutManager::getModifierString( int mod )
 {
     switch ( mod )
@@ -73,6 +84,8 @@ std::string ShortcutManager::getModifierString( int mod )
         return "Alt";
     case GLFW_MOD_SHIFT:
         return "Shift";
+    case GLFW_MOD_SUPER:
+        return "Command";
     default:
         return "";
     }
@@ -124,6 +137,8 @@ std::string ShortcutManager::getKeyFullString( const ShortcutKey& key, bool resp
         res += getModifierString( GLFW_MOD_CONTROL ) + "+";
     if ( key.mod & GLFW_MOD_SHIFT )
         res += getModifierString( GLFW_MOD_SHIFT ) + "+";
+    if ( key.mod & GLFW_MOD_SUPER )
+        res += getModifierString( GLFW_MOD_SUPER ) + "+";
     if ( respectKey )
         res += getKeyString( key.key );
     return res;

@@ -42,15 +42,15 @@ int calcDamerauLevenshteinDistance( const std::string& stringA, const std::strin
                 at( i, j ) = std::max( i, j );
             else if ( i > 1 && j > 1 && copm( i, j - 1 ) && copm( i - 1, j ) )
             {
-                at( i, j ) = std::min( { 
+                at( i, j ) = std::min( {
                     at( i - 1,j ) + 1,
-                    at( i ,j - 1 ) + 1, 
+                    at( i ,j - 1 ) + 1,
                     at( i - 1,j - 1 ) + ( copm( i, j ) ? 0 : 1 ),
                     at( i - 2,j - 2 ) + 1 } );
             }
             else
             {
-                at( i, j ) = std::min( { 
+                at( i, j ) = std::min( {
                     at( i - 1,j ) + 1,
                     at( i ,j - 1 ) + 1,
                     at( i - 1,j - 1 ) + ( copm( i, j ) ? 0 : 1 ) } );
@@ -74,6 +74,27 @@ std::vector<std::string> split( const std::string& string, const std::string& de
     }
 
     return res;
+}
+
+std::string replace( std::string target, std::string_view from, std::string_view to )
+{
+    std::string ret;
+    bool first = true;
+    split( target, from, [&]( std::string_view segment )
+    {
+        if ( first )
+            first = false;
+        else
+            ret += to;
+        ret += segment;
+        return false;
+    } );
+    return ret;
+}
+
+void replaceInplace( std::string& target, std::string_view from, std::string_view to )
+{
+    target = replace( std::move( target ), from, to );
 }
 
 }

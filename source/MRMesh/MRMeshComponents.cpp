@@ -10,6 +10,7 @@
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
 #include <parallel_hashmap/phmap.h>
+#include <climits>
 
 namespace MR
 {
@@ -130,7 +131,7 @@ FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, Fa
     MR_TIMER
 
     FaceBitSet res;
-    if ( seeds.empty() )
+    if ( seeds.none() )
         return res;
 
     auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
@@ -145,12 +146,15 @@ FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, Fa
             faceRoot = unionFindStruct.unite( faceRoot, s ).first;
     }
 
-    const auto& allRoots = unionFindStruct.roots();
-    res.resize( allRoots.size() );
-    for ( auto f : region )
+    if ( faceRoot )
     {
-        if ( allRoots[f] == faceRoot )
-            res.set( f );
+        const auto& allRoots = unionFindStruct.roots();
+        res.resize( allRoots.size() );
+        BitSetParallelFor( region, [&]( FaceId f )
+        {
+            if ( allRoots[f] == faceRoot )
+                res.set( f );
+        } );
     }
     return res;
 }
@@ -222,7 +226,7 @@ VertBitSet getComponentsVerts( const Mesh& mesh, const VertBitSet& seeds, const 
     MR_TIMER
 
     VertBitSet res;
-    if ( seeds.empty() )
+    if ( seeds.none() )
         return res;
 
     auto unionFindStruct = getUnionFindStructureVerts( mesh, region );
@@ -237,15 +241,17 @@ VertBitSet getComponentsVerts( const Mesh& mesh, const VertBitSet& seeds, const 
             vertRoot = unionFindStruct.unite( vertRoot, s ).first;
     }
 
-    const auto& allRoots = unionFindStruct.roots();
-    res.resize( allRoots.size() );
-    for ( auto v : vertRegion )
+    if ( vertRoot )
     {
-        if ( allRoots[v] == vertRoot )
-            res.set( v );
+        const auto& allRoots = unionFindStruct.roots();
+        res.resize( allRoots.size() );
+        BitSetParallelFor( vertRegion, [&]( VertId v )
+        {
+            if ( allRoots[v] == vertRoot )
+                res.set( v );
+        } );
     }
     return res;
-
 }
 
 size_t getNumComponents( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
@@ -271,32 +277,40 @@ size_t getNumComponents( const MeshPart& meshPart, FaceIncidence incidence, cons
     return res;
 }
 
-std::vector<FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
+std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPart, int maxComponentCount,
+    FaceIncidence incidence /*= FaceIncidence::PerEdge*/, const UndirectedEdgePredicate& isCompBd /*= {}*/ )
 {
     MR_TIMER
-    auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
-    const auto& mesh = meshPart.mesh;
-    const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
-
-    const auto& allRoots = unionFindStruct.roots();
-    auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, region );
-    std::vector<FaceBitSet> res( k );
+    const FaceBitSet& region = meshPart.mesh.topology.getFaceIds( meshPart.region );
+    auto [uniqueRootsMap, componentsCount] = getAllComponentsMap( meshPart, incidence, isCompBd );
+    if ( !componentsCount )
+        return { {}, 0 };
+    const int componentsInGroup = maxComponentCount == INT_MAX ? 1 : ( componentsCount + maxComponentCount - 1 ) / maxComponentCount;
+    if ( componentsInGroup != 1 )
+        for ( RegionId& id : uniqueRootsMap )
+            id = RegionId( id / componentsInGroup );
+    componentsCount = ( componentsCount + componentsInGroup - 1 ) / componentsInGroup;
+    std::vector<FaceBitSet> res( componentsCount );
     // this block is needed to limit allocations for not packed meshes
-    std::vector<int> resSizes( k, 0 );
+    std::vector<int> resSizes( componentsCount, 0 );
     for ( auto f : region )
     {
         int index = uniqueRootsMap[f];
         if ( f > resSizes[index] )
             resSizes[index] = f;
     }
-    for ( int i = 0; i < k; ++i )
+    for ( int i = 0; i < componentsCount; ++i )
         res[i].resize( resSizes[i] + 1 );
     // end of allocation block
     for ( auto f : region )
-    {
         res[uniqueRootsMap[f]].set( f );
-    }
-    return res;
+    return { std::move( res ), componentsInGroup };
+}
+
+std::vector<MR::FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidence incidence /*= FaceIncidence::PerEdge*/,
+    const UndirectedEdgePredicate& isCompBd /*= {} */ )
+{
+    return getAllComponents( meshPart, INT_MAX, incidence, isCompBd ).first;
 }
 
 static void getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgePredicate& isCompBd, UnionFind<FaceId>& res )
@@ -315,31 +329,23 @@ static void getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const U
     {
         bdFaces.resize( numFaces );
         lastPassFaces = &bdFaces;
-        const int endBlock = int( bdFaces.size() + bdFaces.bits_per_block - 1 ) / bdFaces.bits_per_block;
-        const auto bitsPerThread = ( endBlock + numThreads - 1 ) / numThreads * BitSet::bits_per_block;
 
-        tbb::parallel_for( tbb::blocked_range<int>( 0, numThreads ),
-            [&] ( const tbb::blocked_range<int>& range )
+        BitSetParallelForAllRanged( region, [&] ( FaceId f0, FaceId, FaceId fEnd )
         {
-            const FaceId fBeg{ range.begin() * bitsPerThread };
-            const FaceId fEnd{ range.end() < numThreads ? range.end() * bitsPerThread : bdFaces.size() };
-            for ( auto f0 = fBeg; f0 < fEnd; ++f0 )
+            if ( !contains( region, f0 ) )
+                return;
+            EdgeId e[3];
+            mesh.topology.getTriEdges( f0, e );
+            for ( int i = 0; i < 3; ++i )
             {
-                if ( !contains( region, f0 ) )
-                    continue;
-                EdgeId e[3];
-                mesh.topology.getTriEdges( f0, e );
-                for ( int i = 0; i < 3; ++i )
+                assert( mesh.topology.left( e[i] ) == f0 );
+                FaceId f1 = mesh.topology.right( e[i] );
+                if ( f0 < f1 && contains( meshPart.region, f1 ) )
                 {
-                    assert( mesh.topology.left( e[i] ) == f0 );
-                    FaceId f1 = mesh.topology.right( e[i] );
-                    if ( f0 < f1 && contains( meshPart.region, f1 ) )
-                    {
-                        if ( f1 >= fEnd )
-                            bdFaces.set( f0 ); // remember the face to unite later in a sequential region
-                        else if ( !isCompBd || !isCompBd( e[i].undirected() ) )
-                            res.unite( f0, f1 ); // our region
-                    }
+                    if ( f1 >= fEnd )
+                        bdFaces.set( f0 ); // remember the face to unite later in a sequential region
+                    else if ( !isCompBd || !isCompBd( e[i].undirected() ) )
+                        res.unite( f0, f1 ); // our region
                 }
             }
         } );
@@ -799,6 +805,99 @@ TEST(MRMesh, getAllComponentsEdges)
     comp = getAllComponentsEdges( mesh, ebs );
     ASSERT_EQ( comp.size(), 1 );
     ASSERT_EQ( comp[0].count(), 5 );
+}
+
+UnionFind<UndirectedEdgeId> getUnionFindStructureUndirectedEdges( const Mesh& mesh, bool allPointToRoots )
+{
+    MR_TIMER
+
+    UnionFind<UndirectedEdgeId> res( mesh.topology.undirectedEdgeSize() );
+    const auto numThreads = int( tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) );
+
+    UndirectedEdgeBitSet lastPass( mesh.topology.undirectedEdgeSize(), numThreads <= 1 );
+    if ( numThreads > 1 )
+    {
+        BitSetParallelForAllRanged( lastPass, [&] ( UndirectedEdgeId ue, UndirectedEdgeId, UndirectedEdgeId ueEnd )
+        {
+            const EdgeId e = ue;
+            const UndirectedEdgeId ues[4] = 
+            {
+                mesh.topology.prev( e ),
+                mesh.topology.next( e ),
+                mesh.topology.prev( e.sym() ),
+                mesh.topology.next( e.sym() )
+            };
+            for ( int i = 0; i < 4; ++i )
+            {
+                const auto uei = ues[i];
+                if ( ue < uei )
+                {
+                    if ( uei >= ueEnd )
+                        lastPass.set( ue ); // remember the edge to unite later in a sequential region
+                    else
+                        res.unite( ue, uei ); // our region
+                }
+            }
+        } );
+    }
+
+    for ( auto ue : lastPass )
+    {
+        const EdgeId e = ue;
+        const UndirectedEdgeId ues[4] = 
+        {
+            mesh.topology.prev( e ),
+            mesh.topology.next( e ),
+            mesh.topology.prev( e.sym() ),
+            mesh.topology.next( e.sym() )
+        };
+        for ( int i = 0; i < 4; ++i )
+        {
+            const auto uei = ues[i];
+            if ( ue < uei )
+                res.unite( ue, uei );
+        }
+    }
+
+    if ( allPointToRoots )
+    {
+        tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( res.size() ) ),
+            [&] ( const tbb::blocked_range<UndirectedEdgeId>& range )
+        {
+            for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
+                res.findUpdateRange( ue, range.begin(), range.end() );
+        } );
+    }
+
+    return res;
+}
+
+UndirectedEdgeBitSet getComponentsUndirectedEdges( const Mesh& mesh, const UndirectedEdgeBitSet& seeds )
+{
+    MR_TIMER
+    auto unionFindStruct = getUnionFindStructureUndirectedEdges( mesh, true );
+
+    UndirectedEdgeId commonRoot;
+    for ( auto s : seeds )
+    {
+        if ( commonRoot )
+            commonRoot = unionFindStruct.unite( commonRoot, s ).first;
+        else
+            commonRoot = unionFindStruct.find( s );
+    }
+
+    UndirectedEdgeBitSet res;
+    if ( commonRoot )
+    {
+        const auto& allRoots = unionFindStruct.roots();
+        res.resize( allRoots.size() );
+        BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
+        {
+            if ( allRoots[ue] == commonRoot )
+                res.set( ue );
+        } );
+    }
+    return res;
 }
 
 } // namespace MeshComponents

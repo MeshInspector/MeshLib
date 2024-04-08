@@ -109,7 +109,7 @@ struct GeneralOffsetParameters : SharpOffsetParameters
 /// Offsets polyline by converting it to voxels and building iso-surface
 /// do offset in all directions
 /// so result mesh is always closed
-/// params.type is ignored (always assumed Shell)
+/// params.signDetectionMode is ignored (always assumed SignDetectionMode::Unsigned)
 [[nodiscard]] MRMESH_API Expected<Mesh> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params = {} );
 #endif
 

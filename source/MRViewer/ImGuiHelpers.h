@@ -9,9 +9,10 @@
 
 #include "MRMesh/MRFlagOperators.h"
 #include "exports.h"
-#include "ImGuiTraits.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRColor.h"
+#include "MRViewer/MRUnits.h"
+#include <imgui.h>
 #include <algorithm>
 #include <functional>
 #include <cstddef>
@@ -254,7 +255,8 @@ MRVIEWER_API PaletteChanges Palette(
     float speed = 1.0f,
     float min = std::numeric_limits<float>::lowest(),
     float max = std::numeric_limits<float>::max(),
-    const char* format = "%.3f" );
+    const MR::UnitToStringParams<MR::NoUnit>& unitParams = MR::getDefaultUnitParams<MR::NoUnit>()
+);
 
 /// Helper plane widget, allows to draw specified plain in the scene \n
 /// can import plane from the scene, draw it with mouse or adjust with controls

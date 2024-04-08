@@ -54,8 +54,8 @@ def test_subdivide(tmp_path, subdivide_params):
     mlpy.subdivideMesh(mesh, settings)
 
     # === Verification
-    mlpy.saveMesh(mesh, tmp_path / f"{case_name}.mrmesh")  # used to store
-    ref_mesh_path = input_folder / f"{case_name}.mrmesh"
+    mlpy.saveMesh(mesh, tmp_path / f"{case_name}.ctm")  # used to store
+    ref_mesh_path = input_folder / f"{case_name}.ctm"
     ref_mesh = mlpy.loadMesh(ref_mesh_path)
     #  check meshes similarity (for extra details on fail)
     with check:
@@ -63,3 +63,6 @@ def test_subdivide(tmp_path, subdivide_params):
     with check:
         self_col_tri = mlpy.findSelfCollidingTriangles(mesh).size()
         assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"
+    with check:
+        degen_faces = mlpy.findDegenerateFaces(mesh).count()
+        assert degen_faces == 0, f"Mesh should have no degenerate faces, actual value is {degen_faces}"

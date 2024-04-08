@@ -1,6 +1,7 @@
 #pragma once
 #include "exports.h"
 #include "MRMesh/MRColor.h"
+#include "MRMesh/MRSignal.h"
 #include "MRPch/MRJson.h"
 #include <filesystem>
 #include <vector>
@@ -15,6 +16,8 @@ namespace MR
 class ColorTheme
 {
 public:
+    MRVIEWER_API static ColorTheme& instance();
+
     enum class Preset
     {
         Dark,
@@ -92,7 +95,7 @@ public:
         ToolbarHovered,
         ToolbarClicked,
 
-        ToolbarCustomizeBg,
+        ModalBackground,
 
         Text,
         TextEnabled,
@@ -150,13 +153,22 @@ public:
     // Returns directory where user's custom themes are stored
     MRVIEWER_API static std::filesystem::path getUserThemesDirectory();
 
+    // Find available custom themes
+    MRVIEWER_API static void updateUserThemesList();
+    // Return list of found custom themes
+    MRVIEWER_API static std::vector<std::string> foundUserThemes();
+
     // Reset ImGui style sizes and colors, and apply menu scaling to it
     MRVIEWER_API static void resetImGuiStyle();
+
+    /// signal about Color Theme changing, triggered in apply
+    using ColorThemeChangedSignal = Signal<void()>;
+    ColorThemeChangedSignal colorThemeChangedSignal;
+
 private:
     ColorTheme() = default;
     ~ColorTheme() = default;
 
-    static ColorTheme& instance_();
 
     std::vector<Color> sceneColors_;
     Preset themePreset_ = Preset::Dark;
@@ -165,6 +177,8 @@ private:
 
     Type type_{ Type::Default };
     std::string themeName_;
+
+    std::vector<std::string> foundUserThemes_;
 };
 
 }

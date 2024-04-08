@@ -17,14 +17,18 @@ public:
 
     enum class TabType
     {
-        Settings,
-        Viewport,
-        View,
+        Quick,
+        Application,
         Control,
+        Viewport,
+        MeasurementUnits,
+        Features,
         Count
     };
 
     ViewerSettingsPlugin();
+
+    virtual const std::string& uiName() const override;
 
     virtual void drawDialog( float menuScaling, ImGuiContext* ctx ) override;
 
@@ -42,8 +46,10 @@ public:
         virtual const std::string& getName() = 0;
         // the function of drawing the configuration UI
         virtual void draw( float menuScaling ) = 0;
+        // restore the settings to their default values
+        virtual void reset() {}
     };
-    // add external settings with UI combo box 
+    // add external settings with UI combo box
     MRCOMMONPLUGINS_API void addComboSettings( const TabType tab, std::shared_ptr<ExternalSettings> settings);
 
 private:
@@ -51,16 +57,30 @@ private:
     virtual bool onDisable_() override;
 
     void drawTab_( TabType tab, float menuWidth, float menuScaling );
-    void drawSettingsTab_( float menuWidth, float menuScaling );
-    void drawViewportTab_( float menuWidth, float menuScaling );
-    void drawViewTab_( float menuWidth, float menuScaling );
-    void drawControlTab_( float menuWidth, float menuScaling );
 
+    void drawQuickTab_( float menuWidth, float menuScaling );
+    void drawApplicationTab_( float menuWidth, float menuScaling );
+    void drawControlTab_( float menuWidth, float menuScaling );
+    void drawViewportTab_( float menuWidth, float menuScaling );
+    void drawMeasurementUnitsTab_( float menuScaling );
+    void drawFeaturesTab_( float menuScaling );
+
+    void drawThemeSelector_( float menuWidth, float menuScaling );
+    void drawResetDialog_( bool activated, float menuScaling );
+    void drawShadingModeCombo_( bool inGroup, float menuScaling );
+    void drawProjectionModeSelector_( float menuScaling );
+    void drawUpDirectionSelector_();
+    void drawBackgroundButton_( bool allViewports );
+    void drawRenderOptions_( float menuScaling );
+    void drawShadowsOptions_( float menuWidth, float menuScaling );
     void drawMouseSceneControlsSettings_( float menuWidth, float menuScaling );
     void drawSpaceMouseSettings_( float menuWidth, float menuScaling );
-    void drawTouchpadSettings_();
+    void drawTouchpadSettings_( float menuScaling );
 
-    void drawCustomSettinds_( TabType tabType, float scaling );
+    void drawCustomSettings_( TabType tabType, float menuScaling );
+
+    void updateDialog_();
+    void resetSettings_();
 
     int curSamples_{ 0 };
     int storedSamples_{ 0 };
@@ -75,7 +95,6 @@ private:
 
     RibbonMenu* ribbonMenu_ = nullptr;
 
-    Vector4f shadowColor4f_;
     std::unique_ptr<ShadowsGL> shadowGl_;
 
     SpaceMouseParameters spaceMouseParams_;
@@ -85,7 +104,7 @@ private:
 
     TouchpadParameters touchpadParameters_;
 
-    TabType activeTab_ = TabType::Settings;
+    TabType activeTab_ = TabType::Quick;
 
     std::array<std::vector<std::shared_ptr<ExternalSettings>>, size_t(TabType::Count)> comboSettings_;
 };

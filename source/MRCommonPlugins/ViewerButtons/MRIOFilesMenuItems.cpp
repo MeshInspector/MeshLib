@@ -22,6 +22,11 @@
 #include "MRMesh/MRDistanceMapSave.h"
 #include "MRMesh/MRDistanceMapLoad.h"
 #include "MRMesh/MRGcodeLoad.h"
+#include "MRMesh/MRObjectVoxels.h"
+#include "MRMesh/MRObjectMesh.h"
+#include "MRMesh/MRObjectLines.h"
+#include "MRMesh/MRObjectPoints.h"
+#include "MRMesh/MRObjectDistanceMap.h"
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRViewer.h"
 #include "MRMesh/MRImageSave.h"
@@ -30,15 +35,16 @@
 #include "MRViewer/MRViewerSettingsManager.h"
 #include "MRMesh/MRMeshSaveObj.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRViewer/MRMenu.h"
+#include "MRViewer/ImGuiMenu.h"
 #include "MRViewer/MRViewerIO.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewerInstance.h"
 #include "MRViewer/MRSwapRootAction.h"
 #include "MRViewer/MRViewerEventsListener.h"
-#include "MRPch/MRWasm.h"
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRUIStyle.h"
+#include "MRViewer/MRLambdaRibbonItem.h"
+#include "MRPch/MRWasm.h"
 
 #ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
@@ -90,7 +96,7 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
 #endif
         setupListUpdate_();
         connect( &getViewerInstance() );
-        // required to be deferred, for valid emscripten static constructors oreder 
+        // required to be deferred, for valid emscripten static constructors order
         filters_ = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | SceneFileFilters | DistanceMapLoad::Filters | GcodeLoad::Filters;
 #ifdef __EMSCRIPTEN__
         std::erase_if( filters_, [] ( const auto& filter )
@@ -107,7 +113,8 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
         filters_ = filters_ | VoxelsLoad::Filters;
 #endif
 #endif
-    } );
+        parseLaunchParams_();
+    }, CommandLoop::StartPosition::AfterPluginInit );
 }
 
 OpenFilesMenuItem::~OpenFilesMenuItem()
@@ -180,6 +187,28 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
     return true;
 }
 
+void OpenFilesMenuItem::parseLaunchParams_()
+{
+    std::vector<std::filesystem::path> supportedFiles;
+    std::vector<int> processedArgs;
+    auto& viewer = getViewerInstance();
+    for ( int i = 0; i < viewer.commandArgs.size(); ++i )
+    {
+        const auto argAsPath = pathFromUtf8( viewer.commandArgs[i] );
+        if ( viewer.isSupportedFormat( argAsPath ) )
+        {
+            supportedFiles.push_back( argAsPath );
+            processedArgs.push_back( i );
+        }
+    }
+    if ( !supportedFiles.empty() )
+    {
+        for ( int i = int( processedArgs.size() ) - 1; i >= 0; --i )
+            viewer.commandArgs.erase( viewer.commandArgs.begin() + processedArgs[i] );
+        viewer.loadFiles( supportedFiles );
+    }
+}
+
 void OpenFilesMenuItem::setupListUpdate_()
 {
     if ( recentStoreConnection_.connected() )
@@ -197,7 +226,7 @@ void OpenFilesMenuItem::setupListUpdate_()
                 pathStr = pathStr.substr( 0, fileNameLimit / 2 ) + " ... " + pathStr.substr( size - fileNameLimit / 2 );
 
             auto filesystemPath = recentPathsCache_[i];
-            dropList_[i] = std::make_shared<LambdaRibbonItem>( pathStr + "##" + std::to_string( i ), 
+            dropList_[i] = std::make_shared<LambdaRibbonItem>( pathStr + "##" + std::to_string( i ),
 #ifndef __EMSCRIPTEN__
                 [this, filesystemPath] ()
 #else
@@ -228,7 +257,7 @@ void OpenFilesMenuItem::setupListUpdate_()
     } );
     recentPathsCache_ = getViewerInstance().recentFilesStore().getStoredFiles();
     dropList_.resize( recentPathsCache_.size() );
-    cutLongFileNames();    
+    cutLongFileNames();
 }
 
 bool OpenFilesMenuItem::checkPaths_( const std::vector<std::filesystem::path>& paths )
@@ -294,7 +323,7 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
                         errors += ( !errors.empty() ? "\n" : "" ) + std::string( isoRes.error() );
                         break;
                     }
-                    
+
                     obj->select( true );
                     obj->setXf( res->xf );
                     voxelObjects.push_back( obj );
@@ -568,12 +597,12 @@ bool SaveSelectedMenuItem::action()
 {
     auto selectedMeshes = getAllObjectsInTree<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     auto selectedObjs = getAllObjectsInTree<Object>( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    
+
     IOFilters filters = SceneFileWriteFilters;
     // allow obj format only if all selected objects are meshes
     if ( selectedMeshes.size() == selectedObjs.size() )
         filters = SceneFileWriteFilters | IOFilters{ IOFilter{"OBJ meshes (.obj)","*.obj"} };
-    
+
     auto savePath = saveFileDialog( { {},{},filters } );
     if ( savePath.empty() )
         return false;
@@ -661,7 +690,7 @@ SaveSceneMenuItem::SaveSceneMenuItem() :
 }
 
 bool SaveSceneMenuItem::action()
-{   
+{
     auto savePath = SceneRoot::getScenePath();
     if ( savePath.empty() )
         savePath = saveFileDialog( { {}, {}, SceneFileWriteFilters } );
@@ -685,8 +714,9 @@ void CaptureScreenshotMenuItem::drawDialog( float menuScaling, ImGuiContext* )
     if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
         return;
 
-    ImGui::DragIntValid( "Width", &resolution_.x, 1, 256 );
-    ImGui::DragIntValid( "Height", &resolution_.y, 1, 256 );
+    UI::drag<PixelSizeUnit>( "Width", resolution_.x, 1, 256 );
+    UI::drag<PixelSizeUnit>( "Height", resolution_.y, 1, 256 );
+    UI::checkbox( "Transparent Background", &transparentBg_ );
     if ( UI::button( "Capture", ImVec2( -1, 0 ) ) )
     {
         auto now = std::chrono::system_clock::now();
@@ -696,7 +726,29 @@ void CaptureScreenshotMenuItem::drawDialog( float menuScaling, ImGuiContext* )
         auto savePath = saveFileDialog( { name, {},ImageSave::Filters } );
         if ( !savePath.empty() )
         {
-            auto image = Viewer::instanceRef().captureSceneScreenShot( resolution_ );
+            std::vector<Color> backgroundBackup;
+            if ( transparentBg_ )
+            {
+                for ( auto& vp : getViewerInstance().viewport_list )
+                {
+                    auto params = vp.getParameters();
+                    backgroundBackup.push_back( params.backgroundColor );
+                    params.backgroundColor = Color( 0, 0, 0, 0 );
+                    vp.setParameters( params );
+                }
+            }
+            auto image = getViewerInstance().captureSceneScreenShot( resolution_ );
+            if ( transparentBg_ )
+            {
+                int i = 0;
+                for ( auto& vp : getViewerInstance().viewport_list )
+                {
+                    auto params = vp.getParameters();
+                    params.backgroundColor = backgroundBackup[i];
+                    i++;
+                    vp.setParameters( params );
+                }
+            }
             auto res = ImageSave::toAnySupportedFormat( image, savePath );
             if ( !res.has_value() )
                 showError( "Error saving screenshot: " + res.error() );
@@ -813,7 +865,7 @@ bool CaptureScreenshotToClipBoardMenuItem::action()
     }
     else
         spdlog::error( "Make image for clipboard failed" );
-    
+
     res = DeleteObject( memBM );
     if ( !res )
         spdlog::error( "Cannot clear image for clipboard" );

@@ -305,8 +305,11 @@ public:
     /// \param new2Old receive mapping from newly appeared triangle to its original triangle (part to full)
     MRMESH_API VertId splitFace( FaceId f, FaceBitSet * region = nullptr, FaceHashMap * new2Old = nullptr );
 
-    /// flip orientation (normals) of all faces
-    MRMESH_API void flipOrientation();
+    /// flip orientation (normals) of
+    /// * all mesh elements if \param fullComponents is nullptr, or
+    /// * given mesh components in \param fullComponents.
+    /// The behavior is undefined if fullComponents is given but there are connected components with some edges included and not-included there.
+    MRMESH_API void flipOrientation( const UndirectedEdgeBitSet * fullComponents = nullptr );
 
     /// for each triangle selects edgeWithLeft with minimal origin vertex
     MRMESH_API void rotateTriangles();

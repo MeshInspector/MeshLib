@@ -83,7 +83,7 @@ void ObjectLabel::serializeFields_( Json::Value& root ) const
     root["Text"] = label_.text;
     serializeToJson( label_.position, root["Position"] );
     root["FontHeight"] = fontHeight_;
-    
+
     root["PathToFontFile"] = utf8string( pathToFont_ );
 
     root["SourcePoint"] = sourcePoint_.value();
@@ -93,7 +93,7 @@ void ObjectLabel::serializeFields_( Json::Value& root ) const
 
     // append base type
     root["Type"].append( ObjectLabel::TypeName() );
-    
+
     root["SourcePointSize"] = sourcePointSize_;
     root["LeaderLineWidth"] = leaderLineWidth_;
     root["BackgroundPadding"] = backgroundPadding_;
@@ -194,7 +194,7 @@ void ObjectLabel::buildMeshFromText() const
 
         auto mesh = PlanarTriangulation::triangulateContours( contours.value() );
         // 1.3f - line spacing
-        mesh.transform( AffineXf3f::translation( 
+        mesh.transform( AffineXf3f::translation(
             Vector3f::minusY() * SymbolMeshParams::MaxGeneratedFontHeight * 1.3f * float( i ) ) );
 
         mesh_->addPart( mesh );
@@ -214,6 +214,7 @@ void ObjectLabel::updatePivotShift_() const
     Vector3f  diagonal = meshBox_.max + meshBox_.min; // (box.max - box.min) + box.min * 2 - because box.min != 0
     pivotShift_.x = pivotPoint_.x * diagonal.x;
     pivotShift_.y = pivotPoint_.y * diagonal.y;
+    needRedraw_ = true;
 }
 
 Box3f ObjectLabel::getWorldBox( ViewportId id ) const
@@ -252,28 +253,49 @@ std::shared_ptr<MR::Object> ObjectLabel::shallowClone() const
     return res;
 }
 
-AllVisualizeProperties ObjectLabel::getAllVisualizeProperties() const
+
+void ObjectLabel::setFontHeight( float size )
 {
-    AllVisualizeProperties res;
-    res.resize( LabelVisualizePropertyType::LabelVisualizePropsCount );
-    for ( int i = 0; i < res.size(); ++i )
-        res[i] = getVisualizePropertyMask( unsigned( i ) );
-    return res;
+    if ( fontHeight_ == size )
+        return;
+    fontHeight_ = size;
+    needRedraw_ = true;
 }
 
-const ViewportMask &ObjectLabel::getVisualizePropertyMask( unsigned int type ) const
+AllVisualizeProperties ObjectLabel::getAllVisualizeProperties() const
 {
-    switch ( type )
+    AllVisualizeProperties ret = VisualObject::getAllVisualizeProperties();
+    getAllVisualizePropertiesForEnum<LabelVisualizePropertyType>( ret );
+    return ret;
+}
+
+void ObjectLabel::setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos )
+{
+    VisualObject::setAllVisualizeProperties_( properties, pos );
+    setAllVisualizePropertiesForEnum<LabelVisualizePropertyType>( properties, pos );
+}
+
+const ViewportMask &ObjectLabel::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
+{
+    if ( auto value = type.tryGet<LabelVisualizePropertyType>() )
     {
-    case LabelVisualizePropertyType::SourcePoint:
-        return sourcePoint_;
-    case LabelVisualizePropertyType::Background:
-        return background_;
-    case LabelVisualizePropertyType::Contour:
-        return contour_;
-    case LabelVisualizePropertyType::LeaderLine:
-        return leaderLine_;
-    default:
+        switch ( *value )
+        {
+        case LabelVisualizePropertyType::SourcePoint:
+            return sourcePoint_;
+        case LabelVisualizePropertyType::Background:
+            return background_;
+        case LabelVisualizePropertyType::Contour:
+            return contour_;
+        case LabelVisualizePropertyType::LeaderLine:
+            return leaderLine_;
+        case LabelVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
+        }
+        assert( false && "Invalid enum." );
+        return visibilityMask_;
+    }
+    else
+    {
         return VisualObject::getVisualizePropertyMask( type );
     }
 }

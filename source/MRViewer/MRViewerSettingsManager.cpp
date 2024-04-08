@@ -1,6 +1,6 @@
 #include "MRViewerSettingsManager.h"
-#include "MRMeshViewport.h"
-#include "MRMeshViewer.h"
+#include "MRViewport.h"
+#include "MRViewer.h"
 #include "MRColorTheme.h"
 #include "MRRibbonMenu.h"
 #include "MRSpaceMouseHandlerHidapi.h"
@@ -27,6 +27,7 @@ const std::string cColorThemeParamKey = "colorTheme";
 const std::string cSceneControlParamKey = "sceneControls";
 const std::string cTopPanelPinnedKey = "topPanelPinned";
 const std::string cQuickAccesListKey = "quickAccesList";
+const std::string cQuickAccessListVersionKey = "quickAccessListVersion";
 const std::string cMainWindowSize = "mainWindowSize";
 const std::string cMainWindowPos = "mainWindowPos";
 const std::string cMainWindowMaximized = "mainWindowMaximized";
@@ -40,8 +41,22 @@ const std::string cMSAA = "multisampleAntiAliasing";
 const std::string cncMachineSettingsKey = "CNCMachineSettings";
 const std::string cTouchpadSettings = "touchpadSettings";
 const std::string cEnableSavedDialogPositions = "enableSavedDialogPositions";
+const std::string cShowInfoInObjectTree = "showInfoInObjectTree";
 const std::string cAutoClosePlugins = "autoClosePlugins";
 const std::string cShowExperimentalFeatures = "showExperimentalFeatures";
+}
+
+namespace Defaults
+{
+const bool orthographic = true;
+const bool saveDialogPositions = false;
+const bool topPanelPinned = true;
+const bool autoClosePlugins = true;
+const bool showInfoInObjectTree = false;
+const bool showSelectedObjects = false;
+const bool deselectNewHiddenObjects = false;
+const bool closeContextOnChange = false;
+const bool showExperimentalFeatures = false;
 }
 
 namespace MR
@@ -69,6 +84,47 @@ void ViewerSettingsManager::saveInt( const std::string& name, int value )
     Config::instance().setJsonValue( name, val );
 }
 
+void ViewerSettingsManager::resetSettings( Viewer& viewer )
+{
+    auto& cfg = Config::instance();
+
+    viewer.resetSettingsFunction( &viewer );
+
+    for ( ViewportId id : viewer.getPresentViewports() )
+    {
+        auto& viewport = viewer.viewport( id );
+        auto params = viewport.getParameters();
+        params.orthographic = Defaults::orthographic;
+        viewport.setParameters( params );
+    }
+
+    if ( auto menu = viewer.getMenuPlugin() )
+        menu->enableSavedDialogPositions( Defaults::saveDialogPositions );
+
+    if ( auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>() )
+    {
+        ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, Defaults::topPanelPinned ) );
+        ribbonMenu->setShowInfoInObjectTree( cfg.getBool( cShowInfoInObjectTree, Defaults::showInfoInObjectTree ) );
+        ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
+        ribbonMenu->resetQuickAccessList();
+        ribbonMenu->setShowNewSelectedObjects( Defaults::showSelectedObjects );
+        ribbonMenu->setDeselectNewHiddenObjects( Defaults::deselectNewHiddenObjects );
+        ribbonMenu->setCloseContextOnChange( Defaults::closeContextOnChange );
+        RibbonSchemaHolder::schema().experimentalFeatures = Defaults::showExperimentalFeatures;
+    }
+
+#if !defined(__EMSCRIPTEN__)
+    ColorTheme::setupByTypeName( ColorTheme::Type::Default, ColorTheme::getPresetName( ColorTheme::Preset::Default ) );
+#else
+    ColorTheme::setupByTypeName( ColorTheme::Type::Default, ColorTheme::getPresetName( ColorTheme::getPreset() ) );
+#endif
+    ColorTheme::apply();
+
+    // lastExtentions_.clear();
+
+    SceneSettings::reset();
+}
+
 void ViewerSettingsManager::loadSettings( Viewer& viewer )
 {
     auto& viewport = viewer.viewport();
@@ -80,13 +136,14 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     viewer.glPickRadius = uint16_t( loadInt( cGLPickRadiusParamKey, viewer.glPickRadius ) );
 
     if ( auto menu = viewer.getMenuPlugin() )
-        menu->enableSavedDialogPositions( bool( loadInt( cEnableSavedDialogPositions, 0 ) ) );
+        menu->enableSavedDialogPositions( bool( loadInt( cEnableSavedDialogPositions, Defaults::saveDialogPositions ) ) );
 
     auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>();
     if ( ribbonMenu )
     {
-        ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, true ) );
-        ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, true ) );
+        ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, Defaults::topPanelPinned ) );
+        ribbonMenu->setShowInfoInObjectTree( cfg.getBool( cShowInfoInObjectTree, Defaults::showInfoInObjectTree ) );
+        ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
     }
 
     if ( cfg.hasJsonValue( cSceneControlParamKey ) )
@@ -113,7 +170,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     else
         SceneSettings::setDefaultShadingMode( cfg.getBool( cFlatShadingParamKey ) ?
             SceneSettings::ShadingMode::Flat : SceneSettings::ShadingMode::AutoDetect );
-    SceneSettings::set( SceneSettings::Type::UseDefaultScenePropertiesOnDeserialization, false );
+    SceneSettings::set( SceneSettings::BoolType::UseDefaultScenePropertiesOnDeserialization, false );
     if ( cfg.hasJsonValue( cncMachineSettingsKey ) )
     {
         CNCMachineSettings cncSettings;
@@ -183,7 +240,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         const bool maximized = cfg.getBool( cMainWindowMaximized );
         CommandLoop::appendCommand( [&viewer, maximized]
         {
-            if ( !viewer.window )
+            if ( !viewer.window || viewer.getLaunchParams().windowMode == LaunchParams::WindowMode::Hide )
                 return;
             if ( maximized )
             {
@@ -200,10 +257,13 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
 #endif
     if ( ribbonMenu )
     {
+        if ( cfg.hasJsonValue( cQuickAccessListVersionKey ) )
+            ribbonMenu->setQuickAccessListVersion( cfg.getJsonValue( cQuickAccessListVersionKey ).asInt() );
+
         if ( cfg.hasJsonValue( cQuickAccesListKey ) )
             ribbonMenu->readQuickAccessList( cfg.getJsonValue( cQuickAccesListKey ) );
 
-        auto sceneSize = cfg.getVector2i( cRibbonLeftWindowSize, Vector2i{ 310, 0 } );
+        auto sceneSize = cfg.getVector2i( cRibbonLeftWindowSize, Vector2i{ int( 310 * ribbonMenu->menu_scaling() ), 0 } );
         // it is important to be called after `cMainWindowMaximized` block
         // as far as scene size is clamped by window size in each frame
         CommandLoop::appendCommand( [ribbonMenu, sceneSize]
@@ -213,13 +273,13 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         } );
 
         if ( cfg.hasBool( cShowSelectedObjects ) )
-            ribbonMenu->setShowNewSelectedObjects( cfg.getBool( cShowSelectedObjects ) );
+            ribbonMenu->setShowNewSelectedObjects( cfg.getBool( cShowSelectedObjects, Defaults::showSelectedObjects ) );
         if ( cfg.hasBool( cDeselectNewHiddenObjects ) )
-            ribbonMenu->setDeselectNewHiddenObjects( cfg.getBool( cDeselectNewHiddenObjects ) );
+            ribbonMenu->setDeselectNewHiddenObjects( cfg.getBool( cDeselectNewHiddenObjects, Defaults::deselectNewHiddenObjects ) );
         if ( cfg.hasBool( cCloseContextOnChange ) )
-            ribbonMenu->setCloseContextOnChange( cfg.getBool( cCloseContextOnChange ) );
+            ribbonMenu->setCloseContextOnChange( cfg.getBool( cCloseContextOnChange, Defaults::closeContextOnChange ) );
 
-        RibbonSchemaHolder::schema().experimentalFeatures = cfg.getBool( cShowExperimentalFeatures, false );
+        RibbonSchemaHolder::schema().experimentalFeatures = cfg.getBool( cShowExperimentalFeatures, Defaults::showExperimentalFeatures );
     }
 
     ColorTheme::setupByTypeName( colorThemeType, colorThemeName );
@@ -307,6 +367,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     {
         cfg.setBool( cTopPanelPinnedKey, ribbonMenu->isTopPannelPinned() );
         cfg.setBool( cAutoClosePlugins, ribbonMenu->getAutoCloseBlockingPlugins() );
+        cfg.setBool( cShowInfoInObjectTree, ribbonMenu->getShowInfoInObjectTree() );
     }
 
     Json::Value sceneControls;
@@ -335,11 +396,13 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
 
     if ( ribbonMenu )
     {
-        auto& quickAccessList = ribbonMenu->getToolbar().getItemsList();
+        const auto& toolbar = ribbonMenu->getToolbar();
+        const auto& quickAccessList = toolbar.getItemsList();
         Json::Value qaList = Json::arrayValue;
         qaList.resize( int( quickAccessList.size() ) );
         for ( int i = 0; i < quickAccessList.size(); ++i )
             qaList[i]["Name"] = quickAccessList[i];
+        cfg.setJsonValue( cQuickAccessListVersionKey, toolbar.getItemsListVersion() );
         cfg.setJsonValue( cQuickAccesListKey, qaList );
 
         cfg.setVector2i( cRibbonLeftWindowSize, ribbonMenu->getSceneSize() );

@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  VCPKG-VERSION: '2024.02.14'
+  VCPKG-VERSION: '2024.03.25'
   CUDA-VERSION: '11.4.2.47141'
   CUDA-MAJOR: '11'
   CUDA-MINOR: '4'
@@ -244,7 +244,7 @@ jobs:
           (gi 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
 
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.3
+        uses: microsoft/setup-msbuild@v2
 
       - name: Build
         run: msbuild -m  source\MeshLib.sln -p:Configuration=Release -p:PythonVersion=${{matrix.py-short-version}} -p:PythonLibPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\libs\${{matrix.py-file}}.lib -p:PythonDllPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\${{matrix.py-file}}.dll -p:PythonIncludePath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\include\
@@ -549,7 +549,7 @@ jobs:
       - name: Download Meshlib wheel from Artifact
         uses: actions/download-artifact@v4
         with:
-          name: Macos-${{ matrix.py-cmd }}
+          name: Macos-${{matrix.py-cmd}}-${{matrix.platform}}
           merge-multiple: true
 
       - name: Meshlib wheel install
@@ -567,19 +567,19 @@ jobs:
       - name: Download Wheels Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: ManyLinux-*
+          pattern: ManyLinux-*
           merge-multiple: true
 
       - name: Download Wheels Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: Windows-*
+          pattern: Windows-*
           merge-multiple: true
 
       - name: Download Wheels Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: Macos-*
+          pattern: Macos-*
           merge-multiple: true
 
       - name: Install twine
@@ -599,19 +599,19 @@ jobs:
     if: always()
     steps:
       - name: Delete all ManyLinux
-        uses: geekyeggo/delete-artifact@v2
+        uses: geekyeggo/delete-artifact@v5
         with:
           name: ManyLinux-*
           failOnError: false
 
       - name: Delete all Windows
-        uses: geekyeggo/delete-artifact@v2
+        uses: geekyeggo/delete-artifact@v5
         with:
           name: Windows-*
           failOnError: false
 
       - name: Delete all Macos
-        uses: geekyeggo/delete-artifact@v2
+        uses: geekyeggo/delete-artifact@v5
         with:
           name: Macos-*
           failOnError: false

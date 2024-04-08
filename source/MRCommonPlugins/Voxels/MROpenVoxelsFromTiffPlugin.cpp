@@ -13,6 +13,7 @@
 #include "MRMesh/MRChangeSceneAction.h"
 #include <MRMesh/MRSceneRoot.h>
 #include "MRViewer/MRUIStyle.h"
+#include "MRViewer/MRViewer.h"
 
 namespace MR
 {
@@ -47,10 +48,10 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * menuScaling, cDefaultItemSpacing * menuScaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { cDefaultItemSpacing * menuScaling, cDefaultItemSpacing * menuScaling } );
 
-    ImGui::DragFloatValid3( "Voxel Size", &voxelSize_.x, 1e-3f, 1e-3f, 1000 );
+    UI::drag<LengthUnit>( "Voxel Size", voxelSize_, 1e-3f, 1e-3f, 1000.f );
 
     UI::checkbox( "Invert Surface Orientation", &invertSurfaceOrientation_ );
-    UI::setTooltipIfHovered( "By default result voxels has iso-surfaces oriented from bigger value to smaller which represents dense volume," 
+    UI::setTooltipIfHovered( "By default result voxels has iso-surfaces oriented from bigger value to smaller which represents dense volume,"
                                 "invert to have iso-surface oriented from smaller value to bigger to represent distances volume", menuScaling );
     if ( UI::button( "Open Directory", { -1, 0 } ) )
     {
@@ -65,7 +66,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
         ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [this, directory, viewer = Viewer::instance()]()->std::function<void()>
         {
             ProgressBar::nextTask( "Load TIFF Folder" );
-            
+
             auto loadRes = VoxelsLoad::loadTiffDir
             ( {
                 directory,
@@ -77,7 +78,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
             const auto returnError = [directory, loadRes]() -> void
             {
                 showError( ProgressBar::isCanceled() ? getCancelMessage( directory ) : loadRes.error() );
-            };            
+            };
 
             if ( ProgressBar::isCanceled() || !loadRes.has_value() )
                 return returnError;
@@ -96,7 +97,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
             ProgressBar::nextTask( "Create ISO surface" );
             if ( ProgressBar::isCanceled() || !voxelsObject->setIsoValue( minMax.first, ProgressBar::callBackSetProgress ).has_value() )
                 return returnError;
-                
+
             voxelsObject->select( true );
             return [viewer, voxelsObject, directory] ()
             {

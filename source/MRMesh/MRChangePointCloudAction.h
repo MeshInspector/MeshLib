@@ -54,4 +54,58 @@ private:
     std::string name_;
 };
 
+/// Undo action for ObjectPoints points pointCloude change
+/// \ingroup HistoryGroup
+class ChangePointCloudPointsAction : public HistoryAction
+{
+public:
+    using Obj = ObjectPoints;
+
+    /// use this constructor to remember object's point cloud before making any changes in it
+    ChangePointCloudPointsAction( std::string name, const std::shared_ptr<ObjectPoints>& obj ) :
+        objPoints_{ obj },
+        name_{ std::move( name ) }
+    {
+        if ( obj )
+        {
+            if ( auto m = obj->pointCloud() )
+                clonePoints_ = m->points;
+        }
+    }
+
+    virtual std::string name() const override
+    {
+        return name_;
+    }
+
+    virtual void action( HistoryAction::Type ) override
+    {
+        if ( !objPoints_ )
+            return;
+
+        if ( auto m = objPoints_->varPointCloud() )
+        {
+            std::swap( m->points, clonePoints_ );
+            objPoints_->setDirtyFlags( DIRTY_POSITION );
+        }
+    }
+
+    static void setObjectDirty( const std::shared_ptr<ObjectPoints>& obj )
+    {
+        if ( obj )
+            obj->setDirtyFlags( DIRTY_POSITION );
+    }
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity() + clonePoints_.heapBytes();
+    }
+
+private:
+    std::shared_ptr<ObjectPoints> objPoints_;
+    VertCoords clonePoints_;
+
+    std::string name_;
+};
+
 }

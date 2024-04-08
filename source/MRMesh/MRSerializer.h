@@ -5,12 +5,12 @@
 #include "MRVector3.h"
 #include "MRVector4.h"
 #include "MRMatrix2.h"
-#include "MRObject.h"
 #include "MRColor.h"
 #include "MRPlane3.h"
 #include "MRIOFilters.h"
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
+#include <filesystem>
 
 namespace Json
 {
@@ -56,6 +56,7 @@ private:
 MRMESH_API extern const IOFilters SceneFileFilters;
 MRMESH_API extern const IOFilters SceneFileWriteFilters;
 
+MRMESH_API Expected<Json::Value, std::string> deserializeJsonValue( std::istream& in );
 MRMESH_API Expected<Json::Value, std::string> deserializeJsonValue( const std::string& str );
 MRMESH_API Expected<Json::Value, std::string> deserializeJsonValue( const std::filesystem::path& path );
 

@@ -19,6 +19,8 @@
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRSceneRoot.h"
+#include "MRMesh/MRPointCloud.h"
+#include "MRMesh/MRPolyline.h"
 #include "MRPch/MRSuppressWarning.h"
 #include "MRPch/MRTBB.h"
 
@@ -99,7 +101,14 @@ ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& rende
     return pick_render_object( renderVector, getViewerInstance().glPickRadius );
 }
 
-ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector, uint16_t pickRadius ) const
+ObjAndPick Viewport::pick_render_object( bool exactPickFirst ) const
+{
+    VisualObjectTreeDataVector renderVector;
+    getPickerDataVector( SceneRoot::get(), id, renderVector );
+    return pick_render_object( renderVector, getViewerInstance().glPickRadius, exactPickFirst );
+}
+
+ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector, uint16_t pickRadius, bool exactPickFirst /* = true */ ) const
 {
     auto& viewer = getViewerInstance();
     const auto& mousePos = viewer.mouseController().getMousePos();
@@ -123,7 +132,7 @@ ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& rende
         auto res = multiPickObjects( renderVector, pixels );
         if ( res.empty() )
             return {};
-        if ( bool( res.front().first ) )
+        if ( ( exactPickFirst ) && ( bool( res.front().first ) ) )
             return res.front();
         int minIndex = int( res.size() );
         float minZ = FLT_MAX;
@@ -229,6 +238,10 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObje
                     res.point = closestPointInTriangle( res.point, a, b, c ).first;
                 }
             }
+        }
+        else
+        {
+            res.point = renderVector[pickRes.geomId]->worldXf( id ).inverse()( unprojectFromViewportSpace( Vector3f( viewportPoints[i].x, viewportPoints[i].y, pickRes.zBuffer ) ) );
         }
         result[i] = { std::dynamic_pointer_cast<VisualObject>( renderVector[pickRes.geomId]->getSharedPtr() ),res };
     }
@@ -428,6 +441,8 @@ void Viewport::setLabel( std::string s )
 
 void Viewport::showAxes( bool on )
 {
+    if ( !Viewer::constInstance()->basisAxes )
+        return;
     Viewer::constInstance()->basisAxes->setVisible( on, id );
     needRedraw_ |= Viewer::constInstance()->basisAxes->getRedrawFlag( id );
     Viewer::constInstance()->basisAxes->resetRedrawFlag();
@@ -435,6 +450,8 @@ void Viewport::showAxes( bool on )
 
 void Viewport::showClippingPlane( bool on )
 {
+    if ( !Viewer::constInstance()->clippingPlaneObject )
+        return;
     Viewer::constInstance()->clippingPlaneObject->setVisible( on, id );
     needRedraw_ |= Viewer::constInstance()->clippingPlaneObject->getRedrawFlag( id );
     Viewer::constInstance()->clippingPlaneObject->resetRedrawFlag();
@@ -442,6 +459,8 @@ void Viewport::showClippingPlane( bool on )
 
 void Viewport::showRotationCenter( bool on )
 {
+    if ( !Viewer::constInstance()->rotationSphere )
+        return;
     Viewer::constInstance()->rotationSphere->setVisible( on, id );
 }
 
@@ -455,6 +474,8 @@ void Viewport::rotationCenterMode( Parameters::RotationCenterMode mode )
 
 void Viewport::showGlobalBasis( bool on )
 {
+    if ( !Viewer::constInstance()->globalBasisAxes )
+        return;
     Viewer::constInstance()->globalBasisAxes->setVisible( on, id );
     needRedraw_ |= Viewer::constInstance()->globalBasisAxes->getRedrawFlag( id );
     Viewer::constInstance()->globalBasisAxes->resetRedrawFlag();
@@ -558,6 +579,11 @@ void Viewport::draw_global_basis() const
         return;
 
     draw( *Viewer::constInstance()->globalBasisAxes, params_.globalBasisAxesXf() );
+    for ( const auto& child : getViewerInstance().globalBasisAxes->children() )
+    {
+        if ( auto visualChild = child->asType<VisualObject>() )
+            draw( *visualChild, params_.globalBasisAxesXf() );
+    }
 }
 
 bool Viewport::Parameters::operator==( const Viewport::Parameters& other ) const

@@ -83,20 +83,6 @@ VoidOrErrStr toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::p
         return unexpected( "VdbVolume is empty" );
     }
 
-    auto parentPath = file.parent_path();
-    std::error_code ec;
-    if ( !std::filesystem::is_directory( parentPath, ec ) )
-    {
-        ec.clear();
-        if ( !std::filesystem::create_directories( parentPath, ec ) )
-        {
-            std::stringstream ss;
-            ss << "Cannot create directories: " << utf8string( parentPath ) << std::endl;
-            ss << "Error: " << ec.value() << " Message: " << systemToUtf8( ec.message() ) << std::endl;
-            return unexpected( ss.str() );
-        }
-    }
-
     std::stringstream prefix;
     prefix.precision( 3 );
     prefix << "W" << dims.x << "_H" << dims.y << "_S" << dims.z;    // dims
@@ -105,7 +91,8 @@ VoidOrErrStr toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::p
     prefix << "_G" << ( vdbVolume.data->getGridClass() == openvdb::GRID_LEVEL_SET ? "1" : "0" ) << "_F ";
     prefix << utf8string( file.filename() );                        // name
 
-    std::filesystem::path outPath = parentPath / prefix.str();
+    std::filesystem::path outPath = file;
+    outPath.replace_filename( prefix.str() );
     std::ofstream out( outPath, std::ios::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( outPath ) );

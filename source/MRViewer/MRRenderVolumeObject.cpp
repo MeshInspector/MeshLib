@@ -9,6 +9,7 @@
 #include "MRMesh/MRMatrix4.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRPch/MRTBB.h"
+#include "MRViewer/MRRenderDefaultObjects.h"
 
 namespace MR
 {
@@ -26,14 +27,23 @@ RenderVolumeObject::~RenderVolumeObject()
     freeBuffers_();
 }
 
-void RenderVolumeObject::render( const ModelRenderParams& renderParams )
+bool RenderVolumeObject::render( const ModelRenderParams& renderParams )
 {
-    render_( renderParams, unsigned( ~0 ) );
+    RenderModelPassMask desiredPass =
+        !objVoxels_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
+        ( objVoxels_->getGlobalAlpha( renderParams.viewportId ) < 255 || objVoxels_->getFrontColor( objVoxels_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
+        RenderModelPassMask::Opaque;
+    if ( !bool( renderParams.passMask & desiredPass ) )
+        return false; // Nothing to draw in this pass.
+
+    render_( renderParams, &renderParams, unsigned( ~0 ) );
+
+    return true;
 }
 
-void RenderVolumeObject::renderPicker( const ModelRenderParams& renderParams, unsigned geomId )
+void RenderVolumeObject::renderPicker( const ModelBaseRenderParams& renderParams, unsigned geomId )
 {
-    render_( renderParams, geomId );
+    render_( renderParams, nullptr, geomId );
 }
 
 size_t RenderVolumeObject::heapBytes() const
@@ -88,7 +98,7 @@ RenderBufferRef<unsigned> RenderVolumeObject::loadActiveVoxelsTextureBuffer_()
     return buffer;
 }
 
-void RenderVolumeObject::render_( const ModelRenderParams& renderParams, unsigned geomId )
+void RenderVolumeObject::render_( const ModelBaseRenderParams& renderParams, const ModelRenderParams* nonPickerParams, unsigned geomId )
 {
     if ( !getViewerInstance().isGLInitialized() )
     {
@@ -131,11 +141,11 @@ void RenderVolumeObject::render_( const ModelRenderParams& renderParams, unsigne
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "proj" ), 1, GL_TRUE, renderParams.projMatrix.data() ) );
     if ( !picker )
     {
-        if ( renderParams.normMatrixPtr )
+        if ( nonPickerParams->normMatrixPtr )
         {
-            GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "normal_matrix" ), 1, GL_TRUE, renderParams.normMatrixPtr->data() ) );
+            GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "normal_matrix" ), 1, GL_TRUE, nonPickerParams->normMatrixPtr->data() ) );
         }
-        GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &renderParams.lightPos.x ) );
+        GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &nonPickerParams->lightPos.x ) );
         GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specExp" ), objVoxels_->getShininess() ) );
         GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specularStrength" ), objVoxels_->getSpecularStrength() ) );
         GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), objVoxels_->getAmbientStrength() ) );
@@ -363,7 +373,7 @@ void RenderVolumeObject::update_()
     objVoxels_->resetDirty();
 }
 
-MR_REGISTER_RENDER_OBJECT_IMPL( ObjectVoxels, RenderVolumeObject )
+MR_REGISTER_RENDER_OBJECT_IMPL( ObjectVoxels, RenderObjectCombinator<RenderDefaultUiObject, RenderVolumeObject> )
 
 }
 #endif

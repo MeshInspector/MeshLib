@@ -16,8 +16,8 @@ def test_boolean(tmp_path, operation_type, input_case):
     """
     #  Load input meshes
     input_folder = Path(test_files_path) / "algorithms" / "boolean" / input_case
-    mesh1 = mrmeshpy.loadMesh(input_folder / "meshA.mrmesh")
-    mesh2 = mrmeshpy.loadMesh(input_folder / "meshB.mrmesh")
+    mesh1 = mrmeshpy.loadMesh(input_folder / "meshA.ctm")
+    mesh2 = mrmeshpy.loadMesh(input_folder / "meshB.ctm")
 
     # perform boolean operation
     result = mrmeshpy.boolean(mesh1, mesh2, mrmeshpy.BooleanOperation.__members__[operation_type])
@@ -25,8 +25,8 @@ def test_boolean(tmp_path, operation_type, input_case):
     result_mesh = result.mesh
 
     # === Verification
-    mrmeshpy.saveMesh(result_mesh, tmp_path / f"{operation_type}.mrmesh")
-    ref_mesh_path = input_folder / f"bool_{operation_type}.mrmesh"
+    mrmeshpy.saveMesh(result_mesh, tmp_path / f"{operation_type}.ctm")
+    ref_mesh_path = input_folder / f"bool_{operation_type}.ctm"
     ref_mesh = mrmeshpy.loadMesh(ref_mesh_path)
     # no self colliding triangles
     with check:

@@ -1,39 +1,57 @@
 #include "MRPointCloudRadius.h"
 #include "MRPointCloud.h"
-#include "MRAABBTreePoints.h"
 #include "MRBox.h"
 #include "MRBitSetParallelFor.h"
 #include "MRPointsInBall.h"
+#include "MRParallelFor.h"
+#include "MRPointsProject.h"
+#include "MRFewSmallest.h"
+#include "MRTimer.h"
+#include <numeric>
 
 namespace MR
 {
-// TODO: this function can be more precise if remake it with reduction of all aabb nodes
-float findAvgPointsRadius( const PointCloud& pointCloud, int avgPoints )
+
+float findAvgPointsRadius( const PointCloud& pointCloud, int avgPoints, int samples )
 {
-    const auto& pointsAABBTree = pointCloud.getAABBTree();
-    const auto& nodes = pointsAABBTree.nodes();
-    int N = AABBTreePoints::MaxNumPointsInLeaf;
-    float radiusNSq = 0.0f;
-    int counter = 0;
-    for ( const auto& node : nodes )
+    MR_TIMER
+
+    assert( avgPoints > 0 );
+    assert( samples > 0 );
+    const auto totalPoints = (int)pointCloud.validPoints.count();
+    std::vector<VertId> sampleIds;
+    sampleIds.reserve( samples );
+    int s = totalPoints;
+    for ( auto v : pointCloud.validPoints )
     {
-        if ( !node.leaf() )
-            continue;
-        auto [first, last] = node.getLeafPointRange();
-        if ( last - first != N )
-            continue;
-        radiusNSq += sqr( node.box.diagonal() * 0.5f );
-        ++counter;
+        if ( s >= totalPoints )
+        {
+            sampleIds.push_back( v );
+            s -= totalPoints;
+        }
+        s += samples;
     }
-    if ( counter == 0 )
+    if ( sampleIds.empty() )
+        return 0;
+
+    tbb::enumerable_thread_specific<FewSmallest<PointsProjectionResult>> perThreadNeis( avgPoints + 1 );
+
+    pointCloud.getAABBTree(); // to avoid multiple calls to tree construction from parallel region,
+                      // which can result that two different vertices will start being processed by one thread
+
+    std::vector<float> radia( sampleIds.size() );
+
+    ParallelFor( sampleIds, [&]( size_t i )
     {
-        N = int( pointsAABBTree.orderedPoints().size() );
-        counter = 1;
-        radiusNSq = sqr( pointsAABBTree.getBoundingBox().diagonal() * 0.5f );
-        assert( N > 0 );
-    }
-    radiusNSq = radiusNSq / float( counter );
-    return sqrt( radiusNSq / N * avgPoints * 0.5f );
+        const VertId v = sampleIds[i];
+        auto & neis = perThreadNeis.local();
+        neis.clear();
+        assert( neis.maxElms() == avgPoints + 1 );
+        findFewClosestPoints( pointCloud.points[v], pointCloud, neis );
+        radia[i] = neis.empty() ? 0.0f : std::sqrt( neis.top().distSq );
+    } );
+
+    return std::accumulate( radia.begin(), radia.end(), 0.0f ) / radia.size();
 }
 
 bool dilateRegion( const PointCloud& pointCloud, VertBitSet& region, float dilation, ProgressCallback cb, const AffineXf3f* xf )

@@ -1,4 +1,5 @@
 #include "MRMarchingCubes.h"
+#include "MRSeparationPoint.h"
 #include "MRIsNaN.h"
 #include "MRMesh.h"
 #include "MRVolumeIndexer.h"
@@ -7,7 +8,8 @@
 #include "MRMeshBuilder.h"
 #include "MRVDBFloatGrid.h"
 #include "MRTimer.h"
-#include "MRPch/MRTBB.h"
+#include "MRParallelFor.h"
+#include "MRTriMesh.h"
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRPch/MROpenvdb.h"
 #endif
@@ -16,30 +18,8 @@
 namespace MR
 {
 
-namespace MarchingCubesHelper
+namespace
 {
-
-enum class NeighborDir
-{
-    X, Y, Z, Count
-};
-
-// point between two neighbor voxels
-struct SeparationPoint
-{
-    Vector3f position; // coordinate
-    VertId vid; // any valid VertId is ok
-    // each SeparationPointMap element has three SeparationPoint, it is not guaranteed that all three are valid (at least one is)
-    // so there are some points present in map that are not valid
-    explicit operator bool() const
-    {
-        return vid.valid();
-    }
-};
-
-using SeparationPointSet = std::array<SeparationPoint, size_t( NeighborDir::Count )>;
-using SeparationPointMap = ParallelHashMap<size_t, SeparationPointSet>;
-template <size_t N> using ItersArray = std::array<SeparationPointMap::const_iterator, N>;
 
 // lookup table from
 // http://paulbourke.net/geometry/polygonise/
@@ -347,137 +327,18 @@ TriangulationPlan{}
 
 const std::array<OutEdge, size_t( NeighborDir::Count )> cOutEdgeMap { OutEdge::PlusX, OutEdge::PlusY, OutEdge::PlusZ };
 
-// each iterator has info about separation point on plus directions of it base
-// mode: 0 - (0,0,0) voxel, +x, +y, +z possible separation points
-// mode: 1 - (1,0,0) voxel,     +y, +z possible separation points
-// mode: 2 - (0,1,0) voxel, +x,     +z possible separation points
-// mode: 3 - (1,1,0) voxel,         +z possible separation points
-// mode: 4 - (0,0,1) voxel, +x, +y     possible separation points
-// mode: 5 - (1,0,1) voxel,     +y     possible separation points
-// mode: 6 - (0,1,1) voxel, +x         possible separation points
-// 
-// function returns true if given voxelsConfig requires separation points in given mode
-bool cNeedIteratorMode( int mode, uint8_t voxelsConfig )
-{
-    if ( mode == 0 )
-    {
-        auto base = ( voxelsConfig & cMapNeighbors[0] );
-        if ( base != ( voxelsConfig & cMapNeighbors[1] ) )
-            return true;
-        else if ( base != ( voxelsConfig & cMapNeighbors[2] ) )
-            return true;
-        else if ( base != ( voxelsConfig & cMapNeighbors[4] ) )
-            return true;
-        else
-            return false;
-    }
-    else if ( mode == 1 )
-    {
-        auto base = ( voxelsConfig & cMapNeighbors[1] );
-        if ( base != ( voxelsConfig & cMapNeighbors[3] ) )
-            return true;
-        else if ( base != ( voxelsConfig & cMapNeighbors[5] ) )
-            return true;
-        else
-            return false;
-    }
-    else if ( mode == 2 )
-    {
-        auto base = ( voxelsConfig & cMapNeighbors[2] );
-        if ( base != ( voxelsConfig & cMapNeighbors[3] ) )
-            return true;
-        else if ( base != ( voxelsConfig & cMapNeighbors[6] ) )
-            return true;
-        else
-            return false;
-    }
-    else if ( mode == 3 )
-    {
-        if ( ( voxelsConfig & cMapNeighbors[3] ) != ( voxelsConfig & cMapNeighbors[7] ) )
-            return true;
-        return false;
-    }
-    else if ( mode == 4 )
-    {
-        auto base = ( voxelsConfig & cMapNeighbors[4] );
-        if ( base != ( voxelsConfig & cMapNeighbors[5] ) )
-            return true;
-        else if ( base != ( voxelsConfig & cMapNeighbors[6] ) )
-            return true;
-        else
-            return false;
-    }
-    else if ( mode == 5 )
-    {
-        if ( ( voxelsConfig & cMapNeighbors[5] ) != ( voxelsConfig & cMapNeighbors[7] ) )
-            return true;
-        return false;
-    }
-    else if ( mode == 6 )
-    {
-        if ( ( voxelsConfig & cMapNeighbors[6] ) != ( voxelsConfig & cMapNeighbors[7] ) )
-            return true;
-        return false;
-    }
-    return false;
 }
 
-// mode: 0 - (0,0,0) voxel, +x, +y, +z possible separation points
-// mode: 1 - (1,0,0) voxel,     +y, +z possible separation points
-// mode: 2 - (0,1,0) voxel, +x,     +z possible separation points
-// mode: 3 - (1,1,0) voxel,         +z possible separation points
-// mode: 4 - (0,0,1) voxel, +x, +y     possible separation points
-// mode: 5 - (1,0,1) voxel,     +y     possible separation points
-// mode: 6 - (0,1,1) voxel, +x         possible separation points
-// 
-// function returns true if given set has at least one valid SeparationPoint
-bool checkSetValid( const SeparationPointSet& set, int mode )
-{
-    switch ( mode )
-    {
-    case 0: // base voxel
-        return true;
-    case 1: // x + 1 voxel
-        return set[int( NeighborDir::Y )] || set[int( NeighborDir::Z )];
-    case 2: // y + 1 voxel
-        return set[int( NeighborDir::X )] || set[int( NeighborDir::Z )];
-    case 3: // x + 1, y + 1 voxel
-        return bool( set[int( NeighborDir::Z )] );
-    case 4: // z + 1 voxel
-        return set[int( NeighborDir::X )] || set[int( NeighborDir::Y )];
-    case 5: // x + 1, z + 1 voxel
-        return bool( set[int( NeighborDir::Y )] );
-    case 6: // y + 1, z + 1 voxel
-        return bool( set[int( NeighborDir::X )] );
-    default:
-        return false;
-    }
-}
-
-}
-
-using namespace MarchingCubesHelper;
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 using ConstAccessor = openvdb::FloatGrid::ConstAccessor;
 using VdbCoord = openvdb::Coord;
 #endif
 
-inline Vector3f voxelPositionerLinearInline( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
-{
-    const auto ratio = std::clamp( ( iso - v0 ) / ( v1 - v0 ), 0.0f, 1.0f );
-    return ( 1.0f - ratio ) * pos0 + ratio * pos1;
-}
-
-Vector3f voxelPositionerLinear( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
-{
-    return voxelPositionerLinearInline( pos0, pos1, v0, v1, iso );
-}
-
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-template <bool UseDefaultVoxelPointPositioner>
-bool findSeparationPoint( SeparationPoint& sp, const VdbVolume& volume, const ConstAccessor& acc,
+template <class Positioner>
+bool findSeparationPoint( Vector3f & pos, const VdbVolume& volume, const ConstAccessor& acc,
                           const openvdb::Coord& coord, const Vector3i& basePos, float valueB, NeighborDir dir,
-                          const MarchingCubesParams& params )
+                          const MarchingCubesParams& params, Positioner&& positioner )
 {
     if ( basePos[int( dir )] + 1 >= volume.dims[int( dir )] )
         return false;
@@ -494,17 +355,14 @@ bool findSeparationPoint( SeparationPoint& sp, const VdbVolume& volume, const Co
     Vector3f nextCoordF = Vector3f( float( nextCoord.x() ), float( nextCoord.y() ), float( nextCoord.z() ) );
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    if constexpr ( UseDefaultVoxelPointPositioner )
-        sp.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
-    else
-        sp.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
+    pos = positioner( bPos, dPos, valueB, valueD, params.iso );
     return true;
 }
 #endif
 
-template <typename NaNChecker, bool UseDefaultVoxelPointPositioner>
-bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const VolumeIndexer& indexer, VoxelId base,
-                          const Vector3i& basePos, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker )
+template <typename NaNChecker, typename Positioner>
+bool findSeparationPoint( Vector3f & pos, const SimpleVolume& volume, const VolumeIndexer& indexer, VoxelId base,
+                          const Vector3i& basePos, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 {
     auto nextPos = basePos;
     nextPos[int( dir )] += 1;
@@ -525,16 +383,13 @@ bool findSeparationPoint( SeparationPoint& sp, const SimpleVolume& volume, const
     Vector3f nextCoordF = Vector3f( nextPos ) + Vector3f::diagonal( 0.5f );
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    if constexpr ( UseDefaultVoxelPointPositioner )
-        sp.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
-    else
-        sp.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
+    pos = positioner( bPos, dPos, valueB, valueD, params.iso );
     return true;
 }
 
-template <typename NaNChecker, bool UseDefaultVoxelPointPositioner>
-bool findSeparationPoint( SeparationPoint& sp, const FunctionVolume& volume, const Vector3i& basePos, NeighborDir dir,
-                          const MarchingCubesParams& params, NaNChecker&& nanChecker )
+template <typename NaNChecker, typename Positioner>
+bool findSeparationPoint( Vector3f & pos, const FunctionVolume& volume, const Vector3i& basePos, NeighborDir dir,
+                          const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 {
     auto nextPos = basePos;
     nextPos[int( dir )] += 1;
@@ -555,16 +410,12 @@ bool findSeparationPoint( SeparationPoint& sp, const FunctionVolume& volume, con
     Vector3f nextCoordF = Vector3f( nextPos ) + Vector3f::diagonal( 0.5f );
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    if constexpr ( UseDefaultVoxelPointPositioner )
-        sp.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
-    else
-        sp.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
+    pos = positioner( bPos, dPos, valueB, valueD, params.iso );
     return true;
 }
 
-template <bool UseDefaultVoxelPointPositioner, typename V, typename NaNChecker, typename Accessor>
-bool findSeparationPoint( SeparationPoint& sp, const V& volume, const Accessor& accessor, const Vector3i& basePos, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker )
-
+template <typename Positioner, typename V, typename NaNChecker, typename Accessor>
+bool findSeparationPoint( Vector3f & pos, const V& volume, const Accessor& accessor, const Vector3i& basePos, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 {
     auto nextPos = basePos;
     nextPos[int( dir )] += 1;
@@ -595,10 +446,7 @@ bool findSeparationPoint( SeparationPoint& sp, const V& volume, const Accessor& 
     }
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    if constexpr ( UseDefaultVoxelPointPositioner )
-        sp.position = voxelPositionerLinearInline( bPos, dPos, valueB, valueD, params.iso );
-    else
-        sp.position = params.positioner( bPos, dPos, valueB, valueD, params.iso );
+    pos = positioner( bPos, dPos, valueB, valueD, params.iso );
     return true;
 }
 
@@ -612,8 +460,8 @@ template<> auto accessorCtor<VdbVolume>( const VdbVolume& v ) { return v.data->g
 
 template<> auto accessorCtor<FunctionVolume>( const FunctionVolume& ) { return (void*)nullptr; }
 
-template<typename V, typename NaNChecker, bool UseDefaultVoxelPointPositioner>
-Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker )
+template<typename V, typename NaNChecker, typename Positioner>
+Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 {
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
     if constexpr ( std::is_same_v<V, VdbVolume> )
@@ -628,7 +476,7 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
             return unexpected( "Getter function is not specified." );
     }
 
-    Mesh result;
+    TriMesh result;
     if ( params.iso <= volume.min || params.iso >= volume.max ||
         volume.dims.x <= 0 || volume.dims.y <= 0 || volume.dims.z <= 0 )
         return result;
@@ -666,33 +514,18 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
     const auto layerSize = indexer.sizeXY();
     assert( indexer.size() == layerCount * layerSize );
 
-    const auto blockCount = threadCount;
+    // more blocks than threads is recommended for better work distribution among threads since
+    // every block demands unique amount of processing
+    const auto blockCount = std::min( layerCount, threadCount > 1 ? 4 * threadCount : 1 );
     const auto layerPerBlockCount = (size_t)std::ceil( (float)layerCount / (float)blockCount );
     const auto blockSize = layerPerBlockCount * layerSize;
     assert( indexer.size() <= blockSize * blockCount );
 
-    std::vector<SeparationPointMap> hmaps( blockCount );
-    auto hmap = [&] ( size_t index ) -> SeparationPointMap&
-    {
-        return hmaps[index / blockSize];
-    };
+    SeparationPointStorage sepStorage( blockCount, blockSize );
 
-    // find all separate points
-    // fill map in parallel
-    struct VertsNumeration
+    ParallelFor( size_t( 0 ), blockCount, [&] ( size_t blockIndex )
     {
-        // explicit ctor to fix clang build with `vec.emplace_back( ind, 0 )`
-        VertsNumeration( size_t ind, size_t num ) :initIndex{ ind }, numVerts{ num }{}
-        size_t initIndex{ 0 };
-        size_t numVerts{ 0 };
-    };
-    using PerThreadVertNumeration = std::vector<VertsNumeration>;
-    tbb::enumerable_thread_specific<PerThreadVertNumeration> perThreadVertNumeration;
-    tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), blockCount, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
-    {
-        assert( range.begin() + 1 == range.end() );
-        const auto blockIndex = range.begin();
-
+        auto & block = sepStorage.getBlock( blockIndex );
         // vdb version cache
         [[maybe_unused]] auto acc = accessorCtor( volume );
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
@@ -723,10 +556,6 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
         const auto begin = layerBegin * layerSize;
         const auto end = layerEnd * layerSize;
 
-        auto& localNumeration = perThreadVertNumeration.local();
-        localNumeration.emplace_back( begin, 0 );
-        auto& thisRangeNumeration = localNumeration.back().numVerts;
-
         for ( size_t i = begin; i < end; ++i )
         {
             if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
@@ -751,101 +580,51 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
             for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
             {
                 bool ok = false;
+                Vector3f pos;
                 if ( cache )
-                    ok = findSeparationPoint<UseDefaultVoxelPointPositioner>( set[n], volume, *cache, basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ) );
+                    ok = findSeparationPoint( pos, volume, *cache, basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
                 else
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
                 if constexpr ( std::is_same_v<V, VdbVolume> )
-                    ok = findSeparationPoint<UseDefaultVoxelPointPositioner>( set[n], volume, acc, baseCoord, basePos, baseValue, NeighborDir( n ), params );
+                    ok = findSeparationPoint( pos, volume, acc, baseCoord, basePos, baseValue, NeighborDir( n ), params, std::forward<Positioner>( positioner ) );
                 else
 #endif
                 if constexpr ( std::is_same_v<V, SimpleVolume> )
-                    ok = findSeparationPoint<NaNChecker, UseDefaultVoxelPointPositioner>( set[n], volume, indexer, VoxelId( i ), basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ) );
+                    ok = findSeparationPoint( pos, volume, indexer, VoxelId( i ), basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
                 else if constexpr ( std::is_same_v<V, FunctionVolume> )
-                    ok = findSeparationPoint<NaNChecker, UseDefaultVoxelPointPositioner>( set[n], volume, basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ) );
+                    ok = findSeparationPoint( pos, volume, basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
                 else
                     static_assert( !sizeof( V ), "Unsupported voxel volume type." );
 
                 if ( ok )
                 {
-                    set[n].vid = VertId( thisRangeNumeration++ );
+                    set[n] = block.nextVid();
+                    block.coords.push_back( pos );
                     atLeastOneOk = true;
                 }
             }
 
-            if ( runCallback && ( i - begin ) % 1024 == 0 )
+            if ( runCallback && ( i - begin ) % 16384 == 0 )
                 if ( !params.cb( 0.3f * float( i - begin ) / float( end - begin ) ) )
                     keepGoing.store( false, std::memory_order_relaxed );
 
             if ( !atLeastOneOk )
                 continue;
 
-            hmap( i ).insert( { i, set } );
+            block.smap.insert( { i, set } );
         }
     } );
 
     if ( params.cb && !keepGoing )
         return unexpectedOperationCanceled();
 
-    // organize vert numeration
-    std::vector<VertsNumeration> resultVertNumeration;
-    size_t totalVertices = 0;
-    for ( auto& perThreadNum : perThreadVertNumeration )
-    {
-        for ( auto & obj : perThreadNum )
-        {
-            totalVertices += obj.numVerts;
-            if ( obj.numVerts > 0 )
-                resultVertNumeration.push_back( std::move( obj ) );
-        }
-        perThreadNum.clear();
-    }
+    const auto totalVertices = sepStorage.makeUniqueVids();
     if ( totalVertices > params.maxVertices )
         return unexpected( "Vertices number limit exceeded." );
-
-    // sort by voxel index
-    std::sort( resultVertNumeration.begin(), resultVertNumeration.end(), [] ( const auto& l, const auto& r )
-    {
-        return l.initIndex < r.initIndex;
-    } );
-
-    auto getVertIndexShiftForVoxelId = [&] ( size_t ind )
-    {
-        size_t shift = 0;
-        for ( int i = 1; i < resultVertNumeration.size(); ++i )
-        {
-            if ( ind >= resultVertNumeration[i].initIndex )
-                shift += resultVertNumeration[i - 1].numVerts;
-        }
-        return VertId( shift );
-    };
-
-    // update map with determined vert indices
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, hmaps.size(), 1 ),
-    [&] ( const tbb::blocked_range<size_t>& range )
-    {
-        assert( range.begin() + 1 == range.end() );
-        for ( auto& [ind, set] : hmaps[range.begin()] )
-        {
-            auto vertShift = getVertIndexShiftForVoxelId( ind );
-            for ( auto& sepPoint : set )
-                if ( sepPoint )
-                    sepPoint.vid += vertShift;
-        }
-    } );
-
 
     if ( params.cb && !params.cb( 0.5f ) )
         return unexpectedOperationCanceled();
 
-    // triangulate by table
-    struct TriangulationData
-    {
-        size_t initInd{ 0 }; // this is needed to have determined topology independent of threads number
-        Triangulation t;
-        Vector<VoxelId, FaceId> faceMap;
-    };
-    using PerThreadTriangulation = std::vector<TriangulationData>;
     auto subprogress2 = MR::subprogress( params.cb, 0.5f, 0.85f );
 
     const std::array<size_t, 8> cVoxelNeighborsIndexAdd = 
@@ -860,12 +639,9 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
         indexer.sizeXY() + size_t( indexer.dims().x ) + 1
     };
 
-    tbb::enumerable_thread_specific<PerThreadTriangulation> triangulationPerThread;
-    tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), blockCount, 1 ), [&] ( const tbb::blocked_range<size_t>& range )
+    ParallelFor( size_t( 0 ), blockCount, [&] ( size_t blockIndex )
     {
-        assert( range.begin() + 1 == range.end() );
-        const auto blockIndex = range.begin();
-
+        auto & block = sepStorage.getBlock( blockIndex );
         const auto layerBegin = blockIndex * layerPerBlockCount;
         if ( layerBegin >= layerCount )
             return;
@@ -887,20 +663,11 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
 
         const bool runCallback = subprogress2 && std::this_thread::get_id() == mainThreadId;
 
-        // setup local triangulation
-        auto& localTriangulatoinData = triangulationPerThread.local();
-        localTriangulatoinData.emplace_back();
-        auto& thisTriData = localTriangulatoinData.back();
-        thisTriData.initInd = begin;
-        auto& t = thisTriData.t;
-        auto& faceMap = thisTriData.faceMap;
-
         // vdb accessor
         [[maybe_unused]] auto acc = accessorCtor( volume );
 
         // cell data
-        ItersArray<7> iters;
-        std::array<bool, 7> iterStatus;
+        std::array<const SeparationPointSet*, 7> neis;
         unsigned char voxelConfiguration;
         for ( size_t ind = begin; ind < end; ++ind )
         {
@@ -921,6 +688,7 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
 
             bool voxelValid = true;
             voxelConfiguration = 0;
+            std::array<bool, 8> vx{};
             [[maybe_unused]] bool atLeastOneNan = false;
             for ( int i = 0; i < cVoxelNeighbors.size(); ++i )
             {
@@ -990,25 +758,43 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
                 if ( value >= params.iso )
                     continue;
                 voxelConfiguration |= cMapNeighbors[i];
+                vx[i] = true;
             }
             if ( !voxelValid || voxelConfiguration == 0x00 || voxelConfiguration == 0xff )
                 continue;
 
+            // find only necessary neighbor separation points by comparing
+            // voxel values in both ends of each edge relative params.iso (stored in vx array);
+            // separation points will not be used (and can be not searched for better performance)
+            // if both ends of the edge are higher or both are lower than params.iso
             voxelValid = false;
-            for ( int i = 0; i < iters.size(); ++i )
+            auto findNei = [&]( int i, auto check )
             {
-                if ( !cNeedIteratorMode( i, voxelConfiguration ) )
-                {
-                    iters[i] = {};
-                    iterStatus[i] = false;
-                    continue;
-                }
                 const auto index = ind + cVoxelNeighborsIndexAdd[i];
-                iters[i] = hmap( index ).find( index );
-                iterStatus[i] = ( iters[i] != hmap( index ).cend() ) && checkSetValid( iters[i]->second, i );
-                if ( !voxelValid && iterStatus[i] )
+                auto * pSet = sepStorage.findSeparationPointSet( index );
+                if ( pSet && check( *pSet ) )
+                {
+                    neis[i] = pSet;
                     voxelValid = true;
-            }
+                }
+            };
+
+            neis = {};
+            if ( vx[0] != vx[1] || vx[0] != vx[2] || vx[0] != vx[4] )
+                findNei( 0, []( auto && ) { return true; } );
+            if ( vx[1] != vx[3] || vx[1] != vx[5] )
+                findNei( 1, []( auto && s ) { return s[(int)NeighborDir::Y] || s[(int)NeighborDir::Z]; } );
+            if ( vx[2] != vx[3] || vx[2] != vx[6] )
+                findNei( 2, []( auto && s ) { return s[(int)NeighborDir::X] || s[(int)NeighborDir::Z]; } );
+            if ( vx[3] != vx[7] )
+                findNei( 3, []( auto && s ) { return (bool)s[(int)NeighborDir::Z]; } );
+            if ( vx[4] != vx[5] || vx[4] != vx[6] )
+                findNei( 4, []( auto && s ) { return s[(int)NeighborDir::X] || s[(int)NeighborDir::Y]; } );
+            if ( vx[5] != vx[7] )
+                findNei( 5, []( auto && s ) { return (bool)s[(int)NeighborDir::Y]; } );
+            if ( vx[6] != vx[7] )
+                findNei( 6, []( auto && s ) { return (bool)s[(int)NeighborDir::X]; } );
+
             if constexpr ( std::is_same_v<V, SimpleVolume> || std::is_same_v<V, FunctionVolume> )
             {
                 // ensure consistent nan voxel
@@ -1020,11 +806,11 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
                         const auto& [interIndex0, dir0] = cEdgeIndicesMap[plan[i]];
                         const auto& [interIndex1, dir1] = cEdgeIndicesMap[plan[i + 1]];
                         const auto& [interIndex2, dir2] = cEdgeIndicesMap[plan[i + 2]];
-                        // `iterStatus` indicates that current voxel has valid point for desired triangulation
-                        // as far as iter has 3 directions we use `dir` to validate (make sure that there is point in needed edge) desired direction
-                        voxelValid = voxelValid && ( iterStatus[interIndex0] && iters[interIndex0]->second[int( dir0 )].vid );
-                        voxelValid = voxelValid && ( iterStatus[interIndex1] && iters[interIndex1]->second[int( dir1 )].vid );
-                        voxelValid = voxelValid && ( iterStatus[interIndex2] && iters[interIndex2]->second[int( dir2 )].vid );
+                        // `neis` indicates that current voxel has valid point for desired triangulation
+                        // as far as nei has 3 directions we use `dir` to validate (make sure that there is point in needed edge) desired direction
+                        voxelValid = voxelValid && neis[interIndex0] && (*neis[interIndex0])[int( dir0 )];
+                        voxelValid = voxelValid && neis[interIndex1] && (*neis[interIndex1])[int( dir1 )];
+                        voxelValid = voxelValid && neis[interIndex2] && (*neis[interIndex2])[int( dir2 )];
                     }
                 }
                 if ( !voxelValid )
@@ -1037,27 +823,27 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
                 const auto& [interIndex0, dir0] = cEdgeIndicesMap[plan[i]];
                 const auto& [interIndex1, dir1] = cEdgeIndicesMap[plan[i + 1]];
                 const auto& [interIndex2, dir2] = cEdgeIndicesMap[plan[i + 2]];
-                assert( iterStatus[interIndex0] && iters[interIndex0]->second[int( dir0 )].vid );
-                assert( iterStatus[interIndex1] && iters[interIndex1]->second[int( dir1 )].vid );
-                assert( iterStatus[interIndex2] && iters[interIndex2]->second[int( dir2 )].vid );
+                assert( neis[interIndex0] && (*neis[interIndex0])[int( dir0 )] );
+                assert( neis[interIndex1] && (*neis[interIndex1])[int( dir1 )] );
+                assert( neis[interIndex2] && (*neis[interIndex2])[int( dir2 )] );
 
                 if ( params.lessInside )
-                    t.emplace_back( ThreeVertIds{
-                    iters[interIndex0]->second[int( dir0 )].vid,
-                    iters[interIndex2]->second[int( dir2 )].vid,
-                    iters[interIndex1]->second[int( dir1 )].vid
+                    block.tris.emplace_back( ThreeVertIds{
+                        (*neis[interIndex0])[int( dir0 )],
+                        (*neis[interIndex2])[int( dir2 )],
+                        (*neis[interIndex1])[int( dir1 )]
                     } );
                 else
-                    t.emplace_back( ThreeVertIds{
-                    iters[interIndex0]->second[int( dir0 )].vid,
-                    iters[interIndex1]->second[int( dir1 )].vid,
-                    iters[interIndex2]->second[int( dir2 )].vid
+                    block.tris.emplace_back( ThreeVertIds{
+                        (*neis[interIndex0])[int( dir0 )],
+                        (*neis[interIndex1])[int( dir1 )],
+                        (*neis[interIndex2])[int( dir2 )]
                     } );
                 if ( params.outVoxelPerFaceMap )
-                    faceMap.emplace_back( VoxelId{ ind } );
+                    block.faceMap.emplace_back( VoxelId{ ind } );
             }
 
-            if ( runCallback && ( ind - begin ) % 1024 == 0 )
+            if ( runCallback && ( ind - begin ) % 16384 == 0 )
                 if ( !subprogress2( float( ind - begin ) / float( end - begin ) ) )
                     keepGoing.store( false, std::memory_order_relaxed );
         }
@@ -1066,55 +852,15 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
     if ( params.cb && !keepGoing )
         return unexpectedOperationCanceled();
 
-    // organize per thread triangulation
-    std::vector<TriangulationData> resTriangulatoinData;
-    for ( auto& threadTriData : triangulationPerThread )
-    {
-        // remove empty
-        threadTriData.erase( std::remove_if( threadTriData.begin(), threadTriData.end(),
-            [] ( const auto& obj )
-        {
-            return obj.t.empty();
-        } ), threadTriData.end() );
-        if ( threadTriData.empty() )
-            continue;
-        // accum not empty
-        resTriangulatoinData.insert( resTriangulatoinData.end(),
-            std::make_move_iterator( threadTriData.begin() ), std::make_move_iterator( threadTriData.end() ) );
-    }
-    // sort by voxel index
-    tbb::parallel_sort( resTriangulatoinData.begin(), resTriangulatoinData.end(), [] ( const auto& l, const auto& r ) { return l.initInd < r.initInd; } );
-
     // create result triangulation
-    Triangulation resTriangulation;
-    if ( params.outVoxelPerFaceMap )
-        params.outVoxelPerFaceMap->clear();
-    for ( auto& [ind, t, faceMap] : resTriangulatoinData )
-    {
-        resTriangulation.vec_.insert( resTriangulation.vec_.end(),
-            std::make_move_iterator( t.vec_.begin() ), std::make_move_iterator( t.vec_.end() ) );
-        if ( params.outVoxelPerFaceMap )
-            params.outVoxelPerFaceMap->vec_.insert( params.outVoxelPerFaceMap->vec_.end(),
-                std::make_move_iterator( faceMap.vec_.begin() ), std::make_move_iterator( faceMap.vec_.end() ) );
-    }
-    result.topology = MeshBuilder::fromTriangles( std::move( resTriangulation ) );
-    result.points.resize( result.topology.lastValidVert() + 1 );
-    assert( result.points.size() == totalVertices );
+    result.tris = sepStorage.getTriangulation( params.outVoxelPerFaceMap );
 
     if ( params.cb && !params.cb( 0.95f ) )
         return unexpectedOperationCanceled();
 
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, hmaps.size(), 1 ),
-        [&] ( const tbb::blocked_range<size_t>& range )
-    {
-        assert( range.begin() + 1 == range.end() );
-        for ( auto& [_, set] : hmaps[range.begin()] )
-        {
-            for ( int i = int( NeighborDir::X ); i < int( NeighborDir::Count ); ++i )
-                if ( set[i].vid.valid() )
-                    result.points[set[i].vid] = set[i].position;
-        }
-    } );
+    // some points may be not referenced by any triangle due to NaNs
+    result.points.resize( totalVertices );
+    sepStorage.getPoints( result.points );
 
     if ( params.cb && !params.cb( 1.0f ) )
         return unexpectedOperationCanceled();
@@ -1123,16 +869,23 @@ Expected<Mesh, std::string> volumeToMesh( const V& volume, const MarchingCubesPa
 }
 
 template <typename V, typename NaNChecker>
-Expected<Mesh, std::string> volumeToMeshHelper1( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker )
+Expected<TriMesh> volumeToMeshHelper1( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker )
 {
-    if ( !params.positioner )
-        return volumeToMesh<V, NaNChecker, true>( volume, params, std::forward<NaNChecker>( nanChecker ) );
-    else
-        return volumeToMesh<V, NaNChecker, false>( volume, params, std::forward<NaNChecker>( nanChecker ) );
+    if ( params.positioner )
+        return volumeToMesh( volume, params, std::forward<NaNChecker>( nanChecker ), params.positioner );
+
+    return volumeToMesh( volume, params, std::forward<NaNChecker>( nanChecker ),
+        []( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
+        {
+            assert( v0 != v1 );
+            const auto ratio = ( iso - v0 ) / ( v1 - v0 );
+            assert( ratio >= 0 && ratio <= 1 );
+            return ( 1.0f - ratio ) * pos0 + ratio * pos1;
+        } );
 }
 
 template <typename V>
-Expected<Mesh, std::string> volumeToMeshHelper2( const V& volume, const MarchingCubesParams& params )
+Expected<TriMesh> volumeToMeshHelper2( const V& volume, const MarchingCubesParams& params )
 {
     if ( params.omitNaNCheck )
         return volumeToMeshHelper1( volume, params, [] ( float ) { return false; } );
@@ -1140,38 +893,54 @@ Expected<Mesh, std::string> volumeToMeshHelper2( const V& volume, const Marching
         return volumeToMeshHelper1( volume, params, isNanFast );
 }
 
-Expected<Mesh, std::string> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params /*= {} */ )
+Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {
     return volumeToMeshHelper2( volume, params );
+}
+
+Expected<Mesh> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params )
+{
+    MR_TIMER
+    auto p = params;
+    p.cb = subprogress( params.cb, 0.0f, 0.9f );
+    return marchingCubesAsTriMesh( volume, p ).and_then( [&params]( TriMesh && tm ) -> Expected<Mesh>
+    {
+        return Mesh::fromTriMesh( std::move( tm ), {}, subprogress( params.cb, 0.9f, 1.0f ) );
+    } );
 }
 
 #if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-Expected<Mesh, std::string> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params /*= {} */ )
-{
-    return volumeToMeshHelper2( volume, params );
-}
-#endif
-
-Expected<Mesh, std::string> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params )
+Expected<TriMesh> marchingCubesAsTriMesh( const VdbVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {
     return volumeToMeshHelper2( volume, params );
 }
 
-Expected<Mesh, std::string> simpleVolumeToMesh( const SimpleVolume& volume, const MarchingCubesParams& params )
+Expected<Mesh> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {
-    return marchingCubes( volume, params );
-}
-
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-Expected<Mesh, std::string> vdbVolumeToMesh( const VdbVolume& volume, const MarchingCubesParams& params )
-{
-    return marchingCubes( volume, params );
+    MR_TIMER
+    auto p = params;
+    p.cb = subprogress( params.cb, 0.0f, 0.9f );
+    return marchingCubesAsTriMesh( volume, p ).and_then( [&params]( TriMesh && tm ) -> Expected<Mesh>
+    {
+        return Mesh::fromTriMesh( std::move( tm ), {}, subprogress( params.cb, 0.9f, 1.0f ) );
+    } );
 }
 #endif
 
-Expected<Mesh, std::string> functionVolumeToMesh( const FunctionVolume& volume, const MarchingCubesParams& params )
+Expected<TriMesh> marchingCubesAsTriMesh( const FunctionVolume& volume, const MarchingCubesParams& params )
 {
-    return marchingCubes( volume, params );
+    return volumeToMeshHelper2( volume, params );
+}
+
+Expected<Mesh> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params )
+{
+    MR_TIMER
+    auto p = params;
+    p.cb = subprogress( params.cb, 0.0f, 0.9f );
+    return marchingCubesAsTriMesh( volume, p ).and_then( [&params]( TriMesh && tm ) -> Expected<Mesh>
+    {
+        return Mesh::fromTriMesh( std::move( tm ), {}, subprogress( params.cb, 0.9f, 1.0f ) );
+    } );
 }
 
 } //namespace MR

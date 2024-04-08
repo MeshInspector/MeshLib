@@ -1,6 +1,5 @@
 #pragma once
 
-#include "MRVector4.h"
 #include "MRAffineXf3.h"
 #include "MRBox.h"
 #include "MRBitSet.h"
@@ -170,7 +169,7 @@ public:
 
     /// selects the object, returns true if value changed, otherwise returns false
     MRMESH_API virtual bool select( bool on );
-    bool isSelected() const { return selected_; }
+    virtual bool isSelected() const { return selected_; }
 
     /// ancillary object is an object hidden (in scene menu) from a regular user
     /// such objects cannot be selected, and if it has been selected, it is unselected when turn ancillary
@@ -180,11 +179,11 @@ public:
     /// sets the object visible in the viewports specified by the mask (by default in all viewports)
     MRMESH_API void setVisible( bool on, ViewportMask viewportMask = ViewportMask::all() );
     /// checks whether the object is visible in any of the viewports specified by the mask (by default in any viewport)
-    bool isVisible( ViewportMask viewportMask = ViewportMask::any() ) const { return !( visibilityMask_ & viewportMask ).empty(); }
+    bool isVisible( ViewportMask viewportMask = ViewportMask::any() ) const { return !( visibilityMask() & viewportMask ).empty(); }
     /// specifies object visibility as bitmask of viewports
     MRMESH_API virtual void setVisibilityMask( ViewportMask viewportMask );
     /// gets object visibility as bitmask of viewports
-    ViewportMask visibilityMask() const { return visibilityMask_; }
+    virtual ViewportMask visibilityMask() const { return visibilityMask_; }
 
     /// this method virtual because others data model types could have dirty flags or something
     virtual bool getRedrawFlag( ViewportMask ) const { return needRedraw_; }
@@ -228,10 +227,19 @@ public:
     /// returns bounding box of this object and all children visible in given (or default) viewport in world coordinates
     MRMESH_API Box3f getWorldTreeBox( ViewportId = {} ) const;
 
+    /// does the object have any visual representation (visible points, triangles, edges, etc.), no considering child objects
+    [[nodiscard]] virtual bool hasVisualRepresentation() const { return false; }
+
+    /// does the object have any model available (but possibly empty), 
+    /// e.g. ObjectMesh has valid mesh() or ObjectPoints has valid pointCloud()
+    [[nodiscard]] virtual bool hasModel() const { return false; }
+
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const;
 
-    /// signal about xf changing, triggered in setXf and setWorldXf,  it is called for children too
+    /// signal about xf changing
+    /// triggered in setXf and setWorldXf, it is called for children too
+    /// triggered in addChild and addChildBefore, it is called only for children object
     using XfChangedSignal = Signal<void() >;
     XfChangedSignal worldXfChangedSignal;
 protected:
@@ -267,7 +275,7 @@ protected:
 
     std::string name_;
     ViewportProperty<AffineXf3f> xf_;
-    ViewportMask visibilityMask_ = ViewportMask::all();
+    ViewportMask visibilityMask_ = ViewportMask::all(); // Prefer to not read directly. Use the getter, as it can be overridden.
     bool locked_ = false;
     bool parentLocked_ = false;
     bool selected_{ false };

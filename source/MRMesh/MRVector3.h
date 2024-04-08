@@ -143,7 +143,8 @@ inline Vector3<T> mult( const Vector3<T>& a, const Vector3<T>& b )
 }
 
 
-/// angle in radians between two vectors
+/// computes minimal angle in [0,pi] between two vectors;
+/// the function is symmetric: angle( a, b ) == angle( b, a )
 template <typename T> 
 inline T angle( const Vector3<T> & a, const Vector3<T> & b )
 {

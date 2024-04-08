@@ -11,6 +11,7 @@
 #include "MRViewerSettingsManager.h"
 #include "MRUIStyle.h"
 #include "MRViewport.h"
+#include "MRViewer.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include <MRMesh/MRString.h>
 #include <MRMesh/MRSystem.h>
@@ -30,6 +31,13 @@
 #include <MRMesh/MRChangeSceneAction.h>
 #include <MRMesh/MRChangeObjectFields.h>
 #include <MRMesh/MRSceneRoot.h>
+#include <MRMesh/MRObjectVoxels.h>
+#include <MRMesh/MRObjectPoints.h>
+#include <MRMesh/MRObjectMesh.h>
+#include <MRMesh/MRObjectLines.h>
+#include <MRMesh/MRObjectDistanceMap.h>
+#include <MRMesh/MRPointCloud.h>
+#include <MRMesh/MRMesh.h>
 #include <MRPch/MRJson.h>
 #include <MRPch/MRSpdlog.h>
 #include <MRPch/MRWasm.h>
@@ -47,6 +55,19 @@
 #if defined(__APPLE__) && defined(__clang__)
 #pragma clang diagnostic pop
 #endif
+
+// Modifier for shortcuts
+// Some shortcuts still use GLFW_MOD_CONTROL on Mac to avoid conflict with system shortcuts
+#if !defined( __APPLE__ )
+#define CONTROL_OR_SUPER GLFW_MOD_CONTROL
+#else
+#define CONTROL_OR_SUPER GLFW_MOD_SUPER
+#endif
+
+namespace
+{
+constexpr auto cTransformContextName = "TransformContextWindow";
+}
 
 namespace MR
 {
@@ -136,6 +157,7 @@ void RibbonMenu::init( MR::Viewer* _viewer )
         drawActiveBlockingDialog_();
         drawActiveNonBlockingDialogs_();
 
+        drawLastOperationTimeWindow_();
         toolbar_.drawToolbar();
         toolbar_.drawCustomize();
         drawRibbonSceneList_();
@@ -206,6 +228,11 @@ void RibbonMenu::pinTopPanel( bool on )
 bool RibbonMenu::isTopPannelPinned() const
 {
     return collapseState_ == CollapseState::Pinned;
+}
+
+void RibbonMenu::setQuickAccessListVersion( int version )
+{
+    toolbar_.setItemsListVersion( version );
 }
 
 void RibbonMenu::readQuickAccessList( const Json::Value& root )
@@ -355,9 +382,6 @@ void RibbonMenu::drawCollapseButton_()
             ImGuiHoveredFlags_AllowWhenBlockedByActiveItem );
         if ( hovered && openedTimer_ <= openedMaxSecs_ )
         {
-#ifndef __EMSCRIPTEN__
-            asyncRequest_.reset();
-#endif
             openedTimer_ = openedMaxSecs_;
             collapseState_ = CollapseState::Opened;
         }
@@ -1389,8 +1413,8 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
                     if ( viewerSettingsIt->second.item && !viewerSettingsIt->second.item->isActive() )
                         viewerSettingsIt->second.item->action();
                 },
-                .buttonName = "Open Viewer Settings",
-                .text = "Unable to activate this tool because another blocking tool is already active.\nIt can be changed in Viewer Settings.",
+                .buttonName = "Open Settings",
+                .text = "Unable to activate this tool because another blocking tool is already active.\nIt can be changed in the Settings.",
                 .type = NotificationType::Info } );
         }
         else
@@ -1410,8 +1434,8 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
                     if ( viewerSettingsIt->second.item && !viewerSettingsIt->second.item->isActive() )
                         viewerSettingsIt->second.item->action();
                 },
-                .buttonName = "Open Viewer Settings",
-                .text = "That tool was closed due to other tool start.\nIt can be changed in Viewer Settings.",
+                .buttonName = "Open Settings",
+                .text = "That tool was closed due to other tool start.\nIt can be changed in the Settings.",
                 .type = NotificationType::Info } );
             }
         }
@@ -1449,11 +1473,13 @@ std::string RibbonMenu::getRequirements_( const std::shared_ptr<RibbonMenuItem>&
 void RibbonMenu::drawSceneListButtons_()
 {
     auto menuScaling = menu_scaling();
-    const float size = ( cMiddleIconSize + 8.f ) * menuScaling;
+    const float size = ( cMiddleIconSize + 9.f ) * menuScaling;
     const ImVec2 smallItemSize = { size, size };
 
     const DrawButtonParams params{ DrawButtonParams::SizeType::Small, smallItemSize, cMiddleIconSize,DrawButtonParams::RootType::Toolbar };
 
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() - 2 * menuScaling );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 6 * menuScaling, 5 * menuScaling ) );
     auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Small );
     //font->Scale = 0.75f;
     ImGui::PushFont( font );
@@ -1474,9 +1500,11 @@ void RibbonMenu::drawSceneListButtons_()
     ImGui::NewLine();
     ImGui::PopFont();
     const float separateLinePos = ImGui::GetCursorScreenPos().y;
+
+    ImGui::PopStyleVar();
     ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddLine( ImVec2( 0, separateLinePos ), ImVec2( float( sceneSize_.x ), separateLinePos ),
                                                                   ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ).getUInt32() );
-    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ImGui::GetStyle().ItemSpacing.y + 1.0f );
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ImGui::GetStyle().ItemSpacing.y + 1.0f * menuScaling );
 }
 
 void RibbonMenu::drawWelcomeWindow_()
@@ -1546,10 +1574,12 @@ void RibbonMenu::drawRibbonSceneList_()
     // Define next window position + size
     auto& viewerRef = Viewer::instanceRef();
     ImGui::SetWindowPos( "RibbonScene", ImVec2( 0.f, float( currentTopPanelHeight_ ) * scaling - 1 ), ImGuiCond_Always );
-    sceneSize_.x = std::round( std::min( sceneSize_.x, viewerRef.framebufferSize.x - 100 * scaling ) );
+    const float cMinSceneWidth = 100 * scaling;
+    const float cMaxSceneWidth = std::max( cMinSceneWidth, std::round( viewerRef.framebufferSize.x * 0.5f ) );
+    sceneSize_.x = std::max( sceneSize_.x, cMinSceneWidth );
     sceneSize_.y = std::round( viewerRef.framebufferSize.y - float( currentTopPanelHeight_ - 2.0f ) * scaling );
     ImGui::SetWindowSize( "RibbonScene", sceneSize_, ImGuiCond_Always );
-    ImGui::SetNextWindowSizeConstraints( ImVec2( 100 * scaling, -1.f ), ImVec2( viewerRef.framebufferSize.x / 2.f, -1.f ) ); // TODO take out limits to special place
+    ImGui::SetNextWindowSizeConstraints( ImVec2( cMinSceneWidth, -1.f ), ImVec2( cMaxSceneWidth, -1.f ) ); // TODO take out limits to special place
     ImGui::PushStyleVar( ImGuiStyleVar_Alpha, 1.f );
     auto colorBg = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
     colorBg.w = 1.f;
@@ -1752,12 +1782,97 @@ void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object
     }
 }
 
+bool RibbonMenu::drawCollapsingHeaderTransform_()
+{
+    auto res = drawCollapsingHeader_( "Transform", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowOverlap );
+
+    const float scaling = menu_scaling();
+    ImVec2 smallBtnSize = ImVec2( 22 * scaling, 22 * scaling );
+    float numButtons = ( sceneSize_.x - 100 * scaling - ImGui::GetStyle().WindowPadding.x * 0.5f ) / smallBtnSize.x;
+    if ( numButtons < 1.0f )
+        return res;
+
+    auto startPos = ImGui::GetCursorPos();
+    auto contextBtnPos = startPos;
+    contextBtnPos.x += ( ImGui::GetContentRegionAvail().x + ImGui::GetStyle().WindowPadding.x * 0.5f - smallBtnSize.x );
+    contextBtnPos.y += ( -ImGui::GetFrameHeightWithSpacing() + ( ImGui::GetFrameHeight() - smallBtnSize.y ) * 0.5f );
+
+    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabHovered ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4( ImGuiCol_ScrollbarGrabActive ) );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
+
+    auto iconsFont = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
+    if ( iconsFont )
+    {
+        iconsFont->Scale = 12.f / fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons );
+        ImGui::PushFont( iconsFont );
+    }
+
+    ImGui::SetCursorPos( contextBtnPos );
+
+    if ( ImGui::Button( "\xef\x85\x82", smallBtnSize ) ) // three dots icon to open context dialog
+        ImGui::OpenPopup( cTransformContextName );
+    if ( iconsFont )
+        ImGui::PopFont();
+    UI::setTooltipIfHovered( "Open Transform Data context menu.", scaling );
+    if ( iconsFont )
+        ImGui::PushFont( iconsFont );
+
+    if ( numButtons >= 2.0f && selectedObjectsCache_.size() == 1 && selectedObjectsCache_.front()->xf() != AffineXf3f() )
+    {
+        auto obj = std::const_pointer_cast< Object >( selectedObjectsCache_.front() );
+        assert( obj );
+        contextBtnPos.x -= smallBtnSize.x;
+        ImGui::SetCursorPos( contextBtnPos );
+
+        if ( ImGui::Button( "\xef\x80\x8d", smallBtnSize ) ) // X(cross) icon for reset
+        {
+            AppendHistory<ChangeXfAction>( "Reset XF", obj );
+            obj->setXf( AffineXf3f() );
+        }
+        if ( iconsFont )
+            ImGui::PopFont();
+        UI::setTooltipIfHovered( "Resets transform value to identity.", scaling );
+        if ( iconsFont )
+            ImGui::PushFont( iconsFont );
+
+        auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
+        bool drawApplyBtn = numButtons >=3.0f && 
+            item != RibbonSchemaHolder::schema().items.end() &&
+            item->second.item->isAvailable( selectedObjectsCache_ ).empty();
+
+        if ( drawApplyBtn )
+        {
+            contextBtnPos.x -= smallBtnSize.x;
+            ImGui::SetCursorPos( contextBtnPos );
+
+            if ( ImGui::Button( "\xef\x80\x8c", smallBtnSize ) ) // V(apply) icon for apply
+                item->second.item->action();
+            if ( iconsFont )
+                ImGui::PopFont();
+            UI::setTooltipIfHovered( "Transforms object and resets transform value to identity.", scaling );
+            if ( iconsFont )
+                ImGui::PushFont( iconsFont );
+        }
+    }
+    if ( iconsFont )
+    {
+        ImGui::PopFont();
+        iconsFont->Scale = 1.0f;
+    }
+    ImGui::PopStyleColor( 3 );
+    ImGui::PopStyleVar();
+    return res;
+}
+
 bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selected )
 {
-    if ( !ImGui::BeginPopupContextItem( "TransformContextWindow" ) )
+    if ( !ImGui::BeginPopupContextItem( cTransformContextName ) )
         return false;
 
-    auto buttonSize = 100.0f * menu_scaling();
+    const float scaling = menu_scaling();
+    auto buttonSize = 100.0f * scaling;
 
     struct Transform
     {
@@ -1780,6 +1895,13 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         auto uniformScale = root["UniformScale"].asBool();
         return Transform{ xf, uniformScale };
     };
+
+    auto semiBoldFont = fontManager_.getFontByType( RibbonFontManager::FontType::SemiBold );
+    if ( semiBoldFont )
+        ImGui::PushFont( semiBoldFont );
+    ImGui::Text( "Transform Data" );
+    if ( semiBoldFont )
+        ImGui::PopFont();
 
     const auto& startXf = selected->xf();
 #if !defined( __EMSCRIPTEN__ )
@@ -1883,7 +2005,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
             item->second.item->action();
             ImGui::CloseCurrentPopup();
         }
-        UI::setTooltipIfHovered( "Transforms object and resets transform value to identity.", menu_scaling() );
+        UI::setTooltipIfHovered( "Transforms object and resets transform value to identity.", scaling );
 
         if ( UI::button( "Reset", Vector2f( buttonSize, 0 ) ) )
         {
@@ -1891,7 +2013,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
             selected->setXf( AffineXf3f() );
             ImGui::CloseCurrentPopup();
         }
-        UI::setTooltipIfHovered( "Resets transform value to identity.", menu_scaling() );
+        UI::setTooltipIfHovered( "Resets transform value to identity.", scaling );
     }
     ImGui::EndPopup();
     return true;
@@ -1970,8 +2092,7 @@ void RibbonMenu::addRibbonItemShortcut_( const std::string& itemName, const Shor
 
 void RibbonMenu::setupShortcuts_()
 {
-    if ( !shortcutManager_ )
-        shortcutManager_ = std::make_shared<ShortcutManager>();
+    ImGuiMenu::setupShortcuts_();
 
     shortcutManager_->setShortcut( { GLFW_KEY_H,0 }, { ShortcutManager::Category::View, "Toggle selected objects visibility", [] ()
     {
@@ -2006,7 +2127,7 @@ void RibbonMenu::setupShortcuts_()
         for ( const auto& sel : selected )
             sel->toggleVisualizeProperty( MeshVisualizePropertyType::FlatShading, viewportid );
     } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_F, GLFW_MOD_CONTROL }, { ShortcutManager::Category::Info, "Search plugin by name or description",[this] ()
+    shortcutManager_->setShortcut( { GLFW_KEY_F, CONTROL_OR_SUPER }, { ShortcutManager::Category::Info, "Search plugin by name or description",[this] ()
     {
         searcher_.activate();
     } } );
@@ -2056,24 +2177,92 @@ void RibbonMenu::setupShortcuts_()
         changeSelection( false,GLFW_MOD_SHIFT );
     } }  );
 
-    addRibbonItemShortcut_( "Ribbon Scene Select all", { GLFW_KEY_A, GLFW_MOD_CONTROL }, ShortcutManager::Category::Objects );
+    addRibbonItemShortcut_( "Ribbon Scene Select all", { GLFW_KEY_A, CONTROL_OR_SUPER }, ShortcutManager::Category::Objects );
     addRibbonItemShortcut_( "Fit data", { GLFW_KEY_F, GLFW_MOD_CONTROL | GLFW_MOD_ALT }, ShortcutManager::Category::View );
     addRibbonItemShortcut_( "Select objects", { GLFW_KEY_Q, GLFW_MOD_CONTROL }, ShortcutManager::Category::Objects );
-    addRibbonItemShortcut_( "Open files", { GLFW_KEY_O, GLFW_MOD_CONTROL }, ShortcutManager::Category::Scene );
-    addRibbonItemShortcut_( "Save Scene", { GLFW_KEY_S, GLFW_MOD_CONTROL }, ShortcutManager::Category::Scene );
-    addRibbonItemShortcut_( "Save Scene As", { GLFW_KEY_S, GLFW_MOD_CONTROL | GLFW_MOD_SHIFT }, ShortcutManager::Category::Scene );
-    addRibbonItemShortcut_( "New", { GLFW_KEY_N, GLFW_MOD_CONTROL }, ShortcutManager::Category::Scene );
+    addRibbonItemShortcut_( "Open files", { GLFW_KEY_O, CONTROL_OR_SUPER }, ShortcutManager::Category::Scene );
+    addRibbonItemShortcut_( "Save Scene", { GLFW_KEY_S, CONTROL_OR_SUPER }, ShortcutManager::Category::Scene );
+    addRibbonItemShortcut_( "Save Scene As", { GLFW_KEY_S, CONTROL_OR_SUPER | GLFW_MOD_SHIFT }, ShortcutManager::Category::Scene );
+    addRibbonItemShortcut_( "New", { GLFW_KEY_N, CONTROL_OR_SUPER }, ShortcutManager::Category::Scene );
     addRibbonItemShortcut_( "Ribbon Scene Show only previous", { GLFW_KEY_F3, 0 }, ShortcutManager::Category::View );
     addRibbonItemShortcut_( "Ribbon Scene Show only next", { GLFW_KEY_F4, 0 }, ShortcutManager::Category::View );
     addRibbonItemShortcut_( "Ribbon Scene Rename", { GLFW_KEY_F2, 0 }, ShortcutManager::Category::Objects );
     addRibbonItemShortcut_( "Ribbon Scene Remove selected objects", { GLFW_KEY_R, GLFW_MOD_SHIFT }, ShortcutManager::Category::Objects );
+    addRibbonItemShortcut_( "Viewer settings", { GLFW_KEY_COMMA, CONTROL_OR_SUPER }, ShortcutManager::Category::Info );
+}
+
+void RibbonMenu::drawLastOperationTimeWindow_()
+{
+    auto bgDrawList = ImGui::GetBackgroundDrawList();
+    if ( !bgDrawList || ProgressBar::isOrdered() )
+    {
+        openedLastOperationTimeTimer_ = 10.0f; // 10 seconds should be enough
+        return;
+    }
+    
+    if ( openedLastOperationTimeTimer_ < 0.0f )
+        return;
+
+    float lastTimeSec = ProgressBar::getLastOperationTime();
+    if ( lastTimeSec < 0.0f )
+        return;
+
+    if ( lastTimeSec < 1e-3f )
+        lastTimeSec = 0.0f;
+
+    openedLastOperationTimeTimer_ -= ImGui::GetIO().DeltaTime;
+#ifdef __EMSCRIPTEN__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
+    EM_ASM( postEmptyEvent( $0, 2 ), int( openedLastOperationTimeTimer_ * 1000 ) );
+#pragma clang diagnostic pop
+#else
+    asyncRequest_.requestIfNotSet(
+        std::chrono::system_clock::now() + std::chrono::milliseconds( std::llround( openedLastOperationTimeTimer_ * 1000 ) ),
+        [] () { CommandLoop::appendCommand( [] () { getViewerInstance().incrementForceRedrawFrames(); } ); } );
+#endif
+
+    const auto& title = ProgressBar::getLastOperationTitle();
+    auto timeText = fmt::format( "{:.1f} sec", lastTimeSec );
+
+    const auto scaling = menu_scaling();
+
+    auto titleTextSize = ImGui::CalcTextSize( title.c_str() );
+    auto timeTextSize = ImGui::CalcTextSize( timeText.c_str() );
+    const float padding = 8 * scaling;
+    const float stopwatchIconSize = scaling * fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons );
+    Vector2f windowSize;
+    windowSize.y = 32.0f * scaling;
+    windowSize.x = 4 * padding + stopwatchIconSize + titleTextSize.x + timeTextSize.x;
+
+    Vector2f minCorner;
+    minCorner.x = sceneSize_.x;
+    minCorner.y = getViewerInstance().framebufferSize.y - 80.0f * scaling;
+    float rounding = 4 * scaling;
+    auto maxCorner = minCorner + windowSize;
+
+    auto bgCol = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::Borders ).scaledAlpha( 0.75f ).getUInt32();
+    bgDrawList->AddRectFilled( minCorner, maxCorner - Vector2f( rounding, 0.0f ), bgCol );
+    bgDrawList->AddRectFilled( ImVec2( maxCorner.x - rounding, minCorner.y ), maxCorner, bgCol, rounding );
+    // \xef\x8b\xb2
+    auto iconFont = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
+    if ( iconFont )
+        ImGui::PushFont( iconFont );
+
+    bgDrawList->AddText( ImVec2( minCorner.x + padding, ( minCorner.y + maxCorner.y - stopwatchIconSize ) * 0.5f ), 0xff0092ff, "\xef\x8b\xb2" );
+
+    if ( iconFont )
+        ImGui::PopFont();
+
+    bgDrawList->AddText( ImVec2( minCorner.x + padding * 2 + stopwatchIconSize, ( minCorner.y + maxCorner.y - timeTextSize.y ) * 0.5f ), ImGui::GetColorU32( ImGuiCol_Text ), timeText.c_str() );
+    bgDrawList->AddText( ImVec2( minCorner.x + padding * 3 + stopwatchIconSize + timeTextSize.x, ( minCorner.y + maxCorner.y - timeTextSize.y ) * 0.5f ), ImGui::GetColorU32( ImGuiCol_Text, 0.7f ), title.c_str() );
 }
 
 void RibbonMenu::drawShortcutsWindow_()
 {
     const auto& style = ImGui::GetStyle();
     const auto scaling = menu_scaling();
-    float windowWidth = 920.0f * scaling;
+    float windowWidth = 1000.0f * scaling;
 
     const auto& shortcutList = shortcutManager_->getShortcutList();
     // header size
@@ -2103,6 +2292,7 @@ void RibbonMenu::drawShortcutsWindow_()
         rightNumKeys * ( fontManager_.getFontSizeByType( RibbonFontManager::FontType::Default ) + cButtonPadding + 2 * cDefaultItemSpacing ) ) * scaling;
     // calc window size for better positioning
     windowHeight += std::max( leftSize, rightSize );
+    windowHeight += 40.0f * scaling; // Reserve a bit more space
 
     const float minHeight = 200.0f * scaling;
     windowHeight = std::clamp( windowHeight, minHeight, float( getViewerInstance().framebufferSize.y ) - 100.0f * scaling );
@@ -2214,6 +2404,16 @@ void RibbonMenu::drawShortcutsWindow_()
             {
                 ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
                 addReadOnlyLine( ShortcutManager::getModifierString( GLFW_MOD_SHIFT ) );
+                ImGui::SameLine( 0, style.ItemInnerSpacing.x );
+                ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
+                ImGui::Text( "+" );
+                ImGui::SameLine( 0, style.ItemInnerSpacing.x );
+            }
+
+            if ( key.mod & GLFW_MOD_SUPER )
+            {
+                ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
+                addReadOnlyLine( ShortcutManager::getModifierString( GLFW_MOD_SUPER ) );
                 ImGui::SameLine( 0, style.ItemInnerSpacing.x );
                 ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * scaling );
                 ImGui::Text( "+" );
@@ -2365,6 +2565,8 @@ void RibbonMenu::drawTopPanelOpened_()
 
 void RibbonMenu::fixViewportsSize_( int width, int height )
 {
+    if ( width == 0 || height == 0 )
+        return;
     auto viewportsBounds = viewer->getViewportsBounds();
     auto minMaxDiff = viewportsBounds.max - viewportsBounds.min;
 

@@ -5,6 +5,7 @@
 #include "MRProgressReadWrite.h"
 #include "MRTiffIO.h"
 #include <filesystem>
+#include <fstream>
 
 namespace MR
 {

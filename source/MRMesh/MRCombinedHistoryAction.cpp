@@ -1,5 +1,4 @@
 #include "MRCombinedHistoryAction.h"
-#include "MRHistoryStore.h"
 #include "MRHeapBytes.h"
 
 namespace MR

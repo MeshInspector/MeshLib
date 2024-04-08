@@ -1,6 +1,6 @@
 #include "MRSceneControlMenuItems.h"
 #include "MRViewer/MRViewer.h"
-#include "MRMesh/MRHistoryStore.h"
+#include "MRViewer/MRHistoryStore.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRViewer/MRSwapRootAction.h"
 #include "MRViewer/MRRibbonMenu.h"
@@ -92,7 +92,7 @@ void ResetSceneMenuItem::preDraw_()
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     popupId_ = ImGui::GetID( "New scene##new scene" );
 
-    
+
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * scaling, 3.0f * cDefaultItemSpacing * scaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * scaling, cModalWindowPaddingY * scaling } );
     if ( ImGui::BeginModalNoAnimation( "New scene##new scene", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
@@ -312,7 +312,7 @@ bool SetViewportConfigPresetMenuItem::action()
         for ( auto& obj : allObjs )
         {
             auto masks = obj->getAllVisualizeProperties();
-            for (auto& mask: masks )
+            for ( auto& mask : masks )
                 mask.set( newVpId, mask.contains( activeViewportId ) );
 
             obj->setAllVisualizeProperties( masks );

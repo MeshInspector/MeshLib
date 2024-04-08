@@ -32,6 +32,8 @@
 #include "MRMesh/MRConvexHull.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPlane3.h"
+#include "MRMesh/MRMovementBuildBody.h"
+#include "MRMesh/MRVector2.h"
 #include <pybind11/functional.h>
 #pragma warning(push)
 #pragma warning(disable: 4464) // relative include path contains '..'
@@ -142,6 +144,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FixUndercuts, [] ( pybind11::module_& m )
         "bottomExtension - this parameter specifies how long should bottom prolongation be, if (bottomExtension <= 0) bottomExtension = 2*voxelSize\n"
         "\tif mesh is not closed this is used to prolong hole and make bottom\n"
         "\nif voxelSize == 0.0f it will be counted automaticly" );
+
+    m.def( "findUndercuts", ( void( * )( const Mesh&, const Vector3f&, FaceBitSet& ) )& MR::FixUndercuts::findUndercuts,
+        pybind11::arg( "mesh" ), pybind11::arg( "upDirection" ), pybind11::arg( "outUndercuts" ),
+        "Adds to outUndercuts undercut faces" );
+    m.def( "findUndercuts", ( void( * )( const Mesh&, const Vector3f&, VertBitSet& ) )& MR::FixUndercuts::findUndercuts,
+        pybind11::arg( "mesh" ), pybind11::arg( "upDirection" ), pybind11::arg( "outUndercuts" ),
+        "Adds to outUndercuts undercut vertices" );
 } )
 #endif
 
@@ -229,6 +238,28 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PlaneSections, [] ( pybind11::module_& m )
         "in ccw order from the vector tip" );
 } )
 
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MovementBody, [] ( pybind11::module_& m )
+{
+    pybind11::class_<MovementBuildBodyParams>( m, "MovementBuildBodyParams" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "allowRotation", &MovementBuildBodyParams::allowRotation,
+            "if this flag is set, rotate body in trajectory vertices\n"
+            "according to its rotation\n"
+            "otherwise body movement will be done without any rotation" ).
+        def_readwrite( "center", &MovementBuildBodyParams::center,
+            "point in body space that follows trajectory\n"
+            "if not set body bounding box center is used" ).
+        def_readwrite( "bodyNormal", &MovementBuildBodyParams::bodyNormal,
+            "facing direction of body, used for initial rotation (if allowRotation)\n"
+            "if not set body accumulative normal is used" ).
+        def_readwrite( "b2tXf", &MovementBuildBodyParams::b2tXf, "optional transform body space to trajectory space" );
+
+    m.def( "makeMovementBuildBody", &makeMovementBuildBody,
+        pybind11::arg( "body" ), pybind11::arg( "trajectory" ), pybind11::arg_v( "params", MovementBuildBodyParams(), "MovementBuildBodyParams()" ),
+        "makes mesh by moving `body` along `trajectory`\n"
+        "if allowRotation rotate it in corners" );
+} )
+
 
 // Relax Mesh
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Relax, [] ( pybind11::module_& m )
@@ -301,7 +332,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
             "Puts new vertices so that they form a smooth surface together with existing vertices.\n"
             "This option works best for natural surfaces without sharp edges in between triangles" ).
         def_readwrite( "minSharpDihedralAngle", &SubdivideSettings::minSharpDihedralAngle,
-            "In case of activated smoothMode, the smoothness is locally deactivated at the edges having dihedral angle at least this value" );
+            "In case of activated smoothMode, the smoothness is locally deactivated at the edges having dihedral angle at least this value" ).
+        def_readwrite( "projectOnOriginalMesh", &SubdivideSettings::projectOnOriginalMesh,
+            "If true, then every new vertex will be projected on the original mesh (before smoothing)" );
 
     m.def( "subdivideMesh", &MR::subdivideMesh,
         pybind11::arg( "mesh" ), pybind11::arg_v( "settings", MR::SubdivideSettings(), "SubdivideSettings()" ),

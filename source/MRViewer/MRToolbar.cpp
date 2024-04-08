@@ -10,6 +10,7 @@
 #include "MRMesh/MRVector2.h"
 #include "imgui/imgui_internal.h"
 #include "MRUIStyle.h"
+#include "MRViewer.h"
 
 namespace MR
 {
@@ -199,6 +200,12 @@ void Toolbar::drawCustomize()
 void Toolbar::readItemsList( const Json::Value& root )
 {
     RibbonSchemaLoader::readMenuItemsList( root, itemsList_ );
+    for ( auto it = itemsListMigrations_.upper_bound( itemsListVersion_ ); it != itemsListMigrations_.end(); ++it )
+    {
+        const auto& [migrationVersion, migrationRule] = *it;
+        migrationRule( itemsList_ );
+        itemsListVersion_ = migrationVersion;
+    }
 }
 
 void Toolbar::resetItemsList()
@@ -256,7 +263,7 @@ void Toolbar::drawCustomizeModal_()
 
     DrawButtonParams params{ DrawButtonParams::SizeType::Small, smallItemSize, cMiddleIconSize, DrawButtonParams::RootType::Toolbar };
 
-    ImGui::PushStyleColor( ImGuiCol_ChildBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarCustomizeBg ).getUInt32() );
+    ImGui::PushStyleColor( ImGuiCol_ChildBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::QuickAccessBackground ).getUInt32() );
     ImGui::BeginChild( "##QuickAccessCustomizeItems", ImVec2( itemsWindowWidth, smallItemSize.y + childWindowPadding.y * 2 ), true );
     ImGui::PopStyleColor();
 
@@ -275,10 +282,10 @@ void Toolbar::drawCustomizeModal_()
         }
 
         ImVec2 cursorPos = ImGui::GetCursorPos();
-        ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
+        ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::QuickAccessBackground ).getUInt32() );
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarHovered ).getUInt32() );
-        ImGui::PushStyleColor( ImGuiCol_ButtonActive, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
-        ImGui::PushStyleColor( ImGuiCol_Border, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
+        ImGui::PushStyleColor( ImGuiCol_ButtonActive, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::QuickAccessBackground ).getUInt32() );
+        ImGui::PushStyleColor( ImGuiCol_Border, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::QuickAccessBackground ).getUInt32() );
         ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 0.f );
         ImGui::Button( ( "##ItemBtn" + std::to_string( i ) ).c_str(), params.itemSize );
         ImGui::PopStyleVar();
@@ -350,10 +357,10 @@ void Toolbar::drawCustomizeModal_()
     for ( int i = int( itemsListCustomize_.size() ); i < cToolbarMaxItemCount; ++i )
     {
         auto screenPos = Vector2f( ImGui::GetCursorScreenPos() );
-        ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
+        ImGui::PushStyleColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::QuickAccessBackground ).getUInt32() );
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
-        ImGui::PushStyleColor( ImGuiCol_ButtonActive, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
-        ImGui::PushStyleColor( ImGuiCol_Border, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
+        ImGui::PushStyleColor( ImGuiCol_ButtonActive, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::QuickAccessBackground ).getUInt32() );
+        ImGui::PushStyleColor( ImGuiCol_Border, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::QuickAccessBackground ).getUInt32() );
         ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 0.f );
         ImGui::Button( ( "##ItemBtn" + std::to_string( i ) ).c_str(), params.itemSize );
         ImGui::PopStyleVar();
@@ -405,7 +412,7 @@ void Toolbar::drawCustomizeModal_()
     }
     ImGui::PopStyleVar();
 
-    ImGui::PushStyleColor( ImGuiCol_ChildBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarCustomizeBg ).getUInt32() );
+    ImGui::PushStyleColor( ImGuiCol_ChildBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
     ImGui::BeginChild( "##QuickAccessCustomizeItemsList", ImVec2( -1, -1 ), true );
     ImGui::PopStyleColor();
 

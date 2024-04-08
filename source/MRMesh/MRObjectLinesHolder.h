@@ -1,22 +1,17 @@
 #pragma once
 #include "MRVisualObject.h"
-#include "MRPolyline.h"
 #include "MRXfBasedCache.h"
 
 namespace MR
 {
 
-
-struct LinesVisualizePropertyType : VisualizeMaskType
+enum class MRMESH_CLASS LinesVisualizePropertyType
 {
-    enum : unsigned
-    {
-        Points = VisualizeMaskType::VisualizePropsCount,
-        Smooth,
-
-        LinesVisualizePropsCount
-    };
+    Points,
+    Smooth,
+    _count [[maybe_unused]],
 };
+template <> struct IsVisualizeMaskEnum<LinesVisualizePropertyType> : std::true_type {};
 
 /// an object that stores a lines
 /// \ingroup DataModelGroup
@@ -34,6 +29,8 @@ public:
 
     MRMESH_API virtual bool hasVisualRepresentation() const override;
 
+    [[nodiscard]] virtual bool hasModel() const override { return bool( polyline_ ); }
+
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
@@ -43,9 +40,9 @@ public:
     MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
 
     MRMESH_API virtual void setLineWidth( float width );
-    float getLineWidth() const { return lineWidth_; }
+    virtual float getLineWidth() const { return lineWidth_; }
     MRMESH_API virtual void setPointSize( float size );
-    float getPointSize() const { return pointSize_; }
+    virtual float getPointSize() const { return pointSize_; }
 
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectLinesHolder( ProtectedStruct, const ObjectLinesHolder& obj ) : ObjectLinesHolder( obj ) {}
@@ -56,10 +53,11 @@ public:
     virtual void updateLinesColorMap( UndirectedEdgeColors& updated )
     { std::swap( linesColorMap_, updated ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
 
-    /// get all visualize properties masks as array
-    MRMESH_API virtual AllVisualizeProperties getAllVisualizeProperties() const override;
+    [[nodiscard]] MRMESH_API bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const override;
+    /// get all visualize properties masks
+    MRMESH_API AllVisualizeProperties getAllVisualizeProperties() const override;
     /// returns mask of viewports where given property is set
-    MRMESH_API virtual const ViewportMask& getVisualizePropertyMask( unsigned type ) const override;
+    MRMESH_API const ViewportMask& getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const override;
 
     /// returns cached bounding box of this point object in world coordinates;
     /// if you need bounding box in local coordinates please call getBoundingBox()
@@ -67,7 +65,7 @@ public:
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
-    
+
     /// returns cached information about the number of components in the polyline
     MRMESH_API size_t numComponents() const;
 
@@ -92,6 +90,9 @@ protected:
     MRMESH_API virtual Box3f computeBoundingBox_() const override;
 
     MRMESH_API virtual void setupRenderObject_() const override;
+
+    /// set all visualize properties masks
+    MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;
 
     mutable std::optional<size_t> numComponents_;
     mutable std::optional<float> totalLength_;

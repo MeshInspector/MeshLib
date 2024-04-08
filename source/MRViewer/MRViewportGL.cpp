@@ -4,7 +4,7 @@
 #include "MRMesh/MRMatrix4.h"
 #include "MRGLMacro.h"
 #include "MRGLStaticHolder.h"
-#include "MRMeshViewer.h"
+#include "MRViewer.h"
 #include "MRGladGlfw.h"
 
 namespace MR
@@ -64,17 +64,17 @@ void ViewportGL::init()
     if ( !Viewer::constInstance()->isGLInitialized() )
         return;
 
-    // lines 
+    // lines
     GL_EXEC( glGenVertexArrays( 1, &add_line_vao ) );
     GL_EXEC( glGenBuffers( 1, &add_line_vbo ) );
     GL_EXEC( glGenBuffers( 1, &add_line_colors_vbo ) );
 
-    // points 
+    // points
     GL_EXEC( glGenVertexArrays( 1, &add_point_vao ) );
     GL_EXEC( glGenBuffers( 1, &add_point_vbo ) );
     GL_EXEC( glGenBuffers( 1, &add_point_colors_vbo ) );
 
-    // border 
+    // border
     GL_EXEC( glGenVertexArrays( 1, &border_line_vao ) );
     GL_EXEC( glGenBuffers( 1, &border_line_vbo ) );
 
@@ -124,7 +124,7 @@ void ViewportGL::drawBorder( const Box2f& rectf, const Color& color ) const
     GL_EXEC( glViewport( (GLsizei) rect.min.x, (GLsizei) rect.min.y,
                          (GLsizei) width( rect ), (GLsizei) height( rect ) ) );
 
-    // Send lines data to GL, install lines properties 
+    // Send lines data to GL, install lines properties
     GL_EXEC( glBindVertexArray( border_line_vao ) );
 
     auto shader = GLStaticHolder::getShaderId( GLStaticHolder::ViewportBorder );
@@ -171,7 +171,7 @@ void ViewportGL::fillViewport( const Box2f& rectf, const Color& color ) const
 
 }
 
-bool ViewportGL::checkInit() const 
+bool ViewportGL::checkInit() const
 {
     return inited_;
 }
@@ -249,7 +249,7 @@ std::vector<unsigned> ViewportGL::findUniqueObjectsInRect( const PickParameters&
 
         updatedRect.min = Vector2i( Vector2d( updatedRect.min ) * downScaleRatio );
         updatedRect.max = Vector2i( Vector2d( updatedRect.max ) * downScaleRatio );
-        updatedParams.baseRenderParams.viewport = 
+        updatedParams.baseRenderParams.viewport =
             Vector4i( Vector4d( updatedParams.baseRenderParams.viewport ) * downScaleRatio );
     }
 
@@ -364,7 +364,7 @@ std::vector<ViewportGL::PickColor> ViewportGL::pickObjectsInRect_( const PickPar
         auto modelTemp = Matrix4f( obj.worldXf( params.baseRenderParams.viewportId ) );
         obj.renderForPicker( {
             params.baseRenderParams,
-            modelTemp, nullptr,
+            modelTemp,
             params.clippingPlane }, i );
     }
     pickFBO_.bind( true );

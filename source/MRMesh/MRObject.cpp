@@ -130,11 +130,11 @@ void Object::applyScale( float )
 
 ViewportMask Object::globalVisibilityMask() const
 {
-    auto res = visibilityMask_;
+    auto res = visibilityMask();
     auto parent = this->parent();
     while ( !res.empty() && parent )
     {
-        res &= parent->visibilityMask_;
+        res &= parent->visibilityMask();
         parent = parent->parent();
     }
     return res;
@@ -251,14 +251,15 @@ bool Object::addChild( std::shared_ptr<Object> child, bool recognizedChild )
     child->parent_ = this;
     if ( recognizedChild )
     {
-        children_.push_back( std::move( child ) );
+        children_.push_back( child );
     }
     else
     {
         // remove invalid children before adding new one
         std::erase_if( bastards_, [](const auto & b) { return !b.lock(); } );
-        bastards_.push_back( std::move( child ) );
+        bastards_.push_back( child );
     }
+    child->propagateWorldXfChangedSignal_();
     needRedraw_ = true;
     return true;
 }
@@ -298,7 +299,8 @@ bool Object::addChildBefore( std::shared_ptr<Object> newChild, const std::shared
         oldParent->removeChild( newChild );
 
     newChild->parent_ = this;
-    children_.insert( it1, std::move( newChild ) );
+    children_.insert( it1, newChild );
+    newChild->propagateWorldXfChangedSignal_();
     needRedraw_ = true;
     return true;
 }
@@ -422,7 +424,7 @@ Expected<std::future<VoidOrErrStr>> Object::serializeModel_( const std::filesyst
 void Object::serializeFields_( Json::Value& root ) const
 {
     root["Name"] = name_;
-    root["Visibility"] = visibilityMask_.value();
+    root["Visibility"] = visibilityMask().value();
     root["Selected"] = selected_;
     root["Locked"] = locked_;
     root["ParentLocked"] = parentLocked_;

@@ -6,76 +6,74 @@
 #include "MRPch/MRJson.h"
 #include "MRMatrix3.h"
 #include "MRVector3.h"
-#include "MRMatrix3Decompose.h"
 
 namespace MR
 {
 
 // default length of line. Historically it eq. 2 (but 1 looks better). Left as is for compatibility.
-size_t baseLineOblectLength_ = 2;
+size_t baseLineObjectLength_ = 2;
 
 MR_ADD_CLASS_FACTORY( LineObject )
 
-Vector3f LineObject::getDirection() const
+Vector3f LineObject::getDirection( ViewportId id /*= {}*/ ) const
 {
-    return ( xf().A * Vector3f::plusX() ).normalized();
+    return ( xf( id ).A * Vector3f::plusX() ).normalized();
 }
 
-Vector3f LineObject::getCenter() const
+Vector3f LineObject::getCenter( ViewportId id /*= {}*/ ) const
 {
-    return xf().b;
+    return xf( id ).b;
 }
 
-void LineObject::setDirection( const Vector3f& normal )
+void LineObject::setDirection( const Vector3f& normal, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    currentXf.A = Matrix3f::rotation( Vector3f::plusX(), normal ) * s;
+    auto currentXf = xf( id );
+    currentXf.A = Matrix3f::rotation( Vector3f::plusX(), normal ) * s_.get( id );
     setXf( currentXf );
 }
 
-void LineObject::setCenter( const Vector3f& center )
+void LineObject::setCenter( const Vector3f& center, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
+    auto currentXf = xf( id );
     currentXf.b = center;
-    setXf( currentXf );
+    setXf( currentXf, id );
 }
 
-void LineObject::setLength( float size )
+void LineObject::setLength( float size, ViewportId id /*= {}*/ )
 {
-    auto currentXf = xf();
-    currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( Vector3f::diagonal( size / baseLineOblectLength_ ) );
-    setXf( currentXf );
+    auto currentXf = xf( id );
+    currentXf.A = Matrix3f::rotationFromEuler( currentXf.A.toEulerAngles() ) * Matrix3f::scale( Vector3f::diagonal( size / baseLineObjectLength_ ) );
+    setXf( currentXf, id );
 }
 
-float LineObject::getLength() const
+float LineObject::getLength( ViewportId id /*= {}*/ ) const
 {
-    Matrix3f r, s;
-    decomposeMatrix3( xf().A, r, s );
-    return  s.x.x * baseLineOblectLength_;
+    return s_.get( id ).x.x * baseLineObjectLength_;
 }
 
-Vector3f LineObject::getPointA() const
+Vector3f LineObject::getBasePoint( ViewportId id /*= {} */ ) const
 {
-    return getCenter() - getDirection() * ( getLength() / 2 );
+    return getPointA( id );
 }
 
-Vector3f LineObject::getPointB() const
+Vector3f LineObject::getPointA( ViewportId id /*= {}*/ ) const
 {
-    return getCenter() + getDirection() * ( getLength() / 2 );
+    return getCenter( id ) - getDirection( id ) * ( getLength( id ) / 2 );
+}
+
+Vector3f LineObject::getPointB( ViewportId id /*= {}*/ ) const
+{
+    return getCenter( id ) + getDirection( id ) * ( getLength( id ) / 2 );
 }
 
 
 LineObject::LineObject()
-{
-    constructPolyline_();
-}
+    : FeatureObject( 1 )
+{}
 
 LineObject::LineObject( const std::vector<Vector3f>& pointsToApprox )
+    : LineObject()
 {
-    constructPolyline_();
-
     PointAccumulator pa;
     Box3f box;
     for ( const auto& p : pointsToApprox )
@@ -93,57 +91,56 @@ LineObject::LineObject( const std::vector<Vector3f>& pointsToApprox )
 
     setDirection( dir );
     setCenter( box.center() );
-    setLength( box.diagonal() * 4 );
+    setLength( box.diagonal() );
 }
 
 std::shared_ptr<Object> LineObject::shallowClone() const
 {
-    auto res = std::make_shared<LineObject>( ProtectedStruct{}, *this );
-    if ( polyline_ )
-        res->polyline_ = polyline_;
-    return res;
+    return std::make_shared<LineObject>( ProtectedStruct{}, *this );
 }
 
 std::shared_ptr<Object> LineObject::clone() const
 {
-    auto res = std::make_shared<LineObject>( ProtectedStruct{}, *this );
-    if ( polyline_ )
-        res->polyline_ = std::make_shared<Polyline3>( *polyline_ );
-    return res;
+    return std::make_shared<LineObject>( ProtectedStruct{}, *this );
 }
 
 void LineObject::swapBase_( Object& other )
 {
-    if ( auto planeObject = other.asType<LineObject>() )
-        std::swap( *this, *planeObject );
+    if ( auto lineObject = other.asType<LineObject>() )
+        std::swap( *this, *lineObject );
     else
         assert( false );
 }
 
 void LineObject::serializeFields_( Json::Value& root ) const
 {
-    ObjectLinesHolder::serializeFields_( root );
+    FeatureObject::serializeFields_( root );
     root["Type"].append( LineObject::TypeName() );
 }
 
-void LineObject::constructPolyline_()
+void LineObject::setupRenderObject_() const
 {
-    // create object Polyline
-    Polyline3 lineObj;
-    const std::vector<Vector3f> points = { Vector3f::minusX(), Vector3f::plusX() };
-    lineObj.addFromPoints( points.data(), baseLineOblectLength_ );
+    if ( !renderObj_ )
+        renderObj_ = createRenderObject<decltype( *this )>( *this );
+}
 
-    polyline_ = std::make_shared<Polyline3>( lineObj );
+FeatureObjectProjectPointResult LineObject::projectPoint( const Vector3f& point, ViewportId id /*= {}*/ ) const
+{
+    const Vector3f& center = getCenter( id );
+    const Vector3f& direction = getDirection( id );
 
-    setDirtyFlags( DIRTY_ALL );
+    auto X = point - center;
+    auto K = direction * dot( X, direction );
+
+    return { K + center , std::nullopt };
 }
 
 const std::vector<FeatureObjectSharedProperty>& LineObject::getAllSharedProperties() const
 {
     static std::vector<FeatureObjectSharedProperty> ret = {
-       {"Center"   , &LineObject::getCenter   , &LineObject::setCenter},
-       {"Direction", &LineObject::getDirection, &LineObject::setDirection},
-       {"Length"   , &LineObject::getLength   , &LineObject::setLength} 
+       {"Center"   , FeaturePropertyKind::position,        &LineObject::getCenter   , &LineObject::setCenter},
+       {"Direction", FeaturePropertyKind::direction,       &LineObject::getDirection, &LineObject::setDirection},
+       {"Length"   , FeaturePropertyKind::linearDimension, &LineObject::getLength   , &LineObject::setLength}
     };
     return ret;
 }

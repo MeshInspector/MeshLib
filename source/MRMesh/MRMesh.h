@@ -24,11 +24,15 @@ struct [[nodiscard]] Mesh
     MeshTopology topology;
     VertCoords points;
 
-    /// construct mesh from vertex coordinates and a set of triangles with given ids;
-    /// if skippedTris is given then it receives all input triangles not added in the resulting topology due to conflicts
+    /// construct mesh from vertex coordinates and a set of triangles with given ids
     [[nodiscard]] MRMESH_API static Mesh fromTriangles(
         VertCoords vertexCoordinates,
         const Triangulation& t, const MeshBuilder::BuildSettings& settings = {}, ProgressCallback cb = {} );
+
+    /// construct mesh from TriMesh representation
+    [[nodiscard]] MRMESH_API static Mesh fromTriMesh(
+        TriMesh && triMesh, ///< points of triMesh will be moves in the result
+        const MeshBuilder::BuildSettings& settings = {}, ProgressCallback cb = {} );
 
     /// construct mesh from vertex coordinates and a set of triangles with given ids;
     /// unlike simple fromTriangles() it tries to resolve non-manifold vertices by creating duplicate vertices
@@ -37,6 +41,14 @@ struct [[nodiscard]] Mesh
         Triangulation & t,
         std::vector<MeshBuilder::VertDuplication> * dups = nullptr,
         const MeshBuilder::BuildSettings & settings = {} );
+
+    /// construct mesh from vertex coordinates and construct mesh topology from face soup,
+    /// where each face can have arbitrary degree (not only triangles);
+    /// all non-triangular faces will be automatically subdivided on triangles
+    [[nodiscard]] MRMESH_API static Mesh fromFaceSoup(
+        VertCoords vertexCoordinates,
+        const std::vector<VertId> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,
+        const MeshBuilder::BuildSettings& settings = {}, ProgressCallback cb = {} );
 
     /// construct mesh from point triples;
     /// \param duplicateNonManifoldVertices = false, all coinciding points are given the same VertId in the result;
@@ -189,19 +201,19 @@ struct [[nodiscard]] Mesh
     /// computes normal in a vertex using sum of directed areas of neighboring triangles
     [[nodiscard]] Vector3f normal( VertId v ) const { return dirDblArea( v ).normalized(); }
 
-    /// computes normal in three vertices of p's triangle, then interpolates them using barycentric coordinates
+    /// computes normal in three vertices of p's triangle, then interpolates them using barycentric coordinates and normalizes again;
+    /// this is the same normal as in rendering with smooth shading
     [[nodiscard]] MRMESH_API Vector3f normal( const MeshTriPoint & p ) const;
 
-    /// computes pseudo-normals for signed distance calculation
-    /// http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.107.9173&rep=rep1&type=pdf
-    /// at vertex, only region faces will be considered
+    /// computes angle-weighted sum of normals of incident faces of given vertex (only (region) faces will be considered);
+    /// the sum is normalized before returning
     [[nodiscard]] MRMESH_API Vector3f pseudonormal( VertId v, const FaceBitSet * region = nullptr ) const;
 
-    /// computes pseudo-normals for signed distance calculation
-    /// at edge (middle of two face normals)
+    /// computes normalized half sum of face normals sharing given edge (only (region) faces will be considered);
     [[nodiscard]] MRMESH_API Vector3f pseudonormal( UndirectedEdgeId e, const FaceBitSet * region = nullptr ) const;
 
-    /// returns pseudonormal in corresponding face/edge/vertex;
+    /// returns pseudonormal in corresponding face/edge/vertex for signed distance calculation;
+    /// http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.107.9173&rep=rep1&type=pdf
     /// unlike normal( const MeshTriPoint & p ), this is not a smooth function
     [[nodiscard]] MRMESH_API Vector3f pseudonormal( const MeshTriPoint & p, const FaceBitSet * region = nullptr ) const;
 

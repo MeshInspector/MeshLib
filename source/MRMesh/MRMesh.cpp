@@ -4,6 +4,7 @@
 #include "MRAffineXf3.h"
 #include "MRBitSet.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRBox.h"
 #include "MRComputeBoundingBox.h"
 #include "MRConstants.h"
@@ -23,6 +24,8 @@
 #include "MRTriangleIntersection.h"
 #include "MRTriMath.h"
 #include "MRIdentifyVertices.h"
+#include "MRMeshFillHole.h"
+#include "MRTriMesh.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -60,6 +63,13 @@ Mesh Mesh::fromTriangles(
     return res;
 }
 
+Mesh Mesh::fromTriMesh(
+    TriMesh && triMesh,
+    const MeshBuilder::BuildSettings& settings, ProgressCallback cb  )
+{
+    return fromTriangles( std::move( triMesh.points ), triMesh.tris, settings, cb );
+}
+
 Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices( 
     VertCoords vertexCoordinates,
     Triangulation & t,
@@ -76,6 +86,42 @@ Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices(
         res.points[d.dupVert] = res.points[d.srcVert];
     if ( dups )
         *dups = std::move( localDups );
+    return res;
+}
+
+Mesh Mesh::fromFaceSoup(
+    VertCoords vertexCoordinates,
+    const std::vector<VertId> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,
+    const MeshBuilder::BuildSettings& settings, ProgressCallback cb /*= {}*/ )
+{
+    MR_TIMER
+    Mesh res;
+    res.points = std::move( vertexCoordinates );
+    res.topology = MeshBuilder::fromFaceSoup( verts, faces, settings, subprogress( cb, 0.0f, 0.8f ) );
+
+    struct FaceFill
+    {
+        HoleFillPlan plan;
+        EdgeId e; // fill left of it
+    };
+    std::vector<FaceFill> faceFills;
+    for ( auto f : res.topology.getValidFaces() )
+    {
+        auto e = res.topology.edgeWithLeft( f );
+        if ( !res.topology.isLeftTri( e ) )
+            faceFills.push_back( { {}, e } );
+    }
+
+    ParallelFor( faceFills, [&]( size_t i )
+    {
+        faceFills[i].plan = getPlanarHoleFillPlan( res, faceFills[i].e );
+    }, subprogress( cb, 0.8f, 0.9f ) );
+
+    for ( auto & x : faceFills )
+        executeHoleFillPlan( res, x.e, x.plan );
+
+    reportProgress( cb, 1.0f );
+
     return res;
 }
 
@@ -408,7 +454,7 @@ Vector3f Mesh::normal( const MeshTriPoint & p ) const
     auto n0 = normal( a );
     auto n1 = normal( b );
     auto n2 = normal( c );
-    return p.bary.interpolate( n0, n1, n2 );
+    return p.bary.interpolate( n0, n1, n2 ).normalized();
 }
 
 Vector3f Mesh::pseudonormal( VertId v, const FaceBitSet * region ) const
@@ -434,10 +480,16 @@ Vector3f Mesh::pseudonormal( UndirectedEdgeId ue, const FaceBitSet * region ) co
 {
     EdgeId e{ ue };
     auto l = topology.left( e );
+    if ( l && region && !region->test( l ) )
+        l = {};
     auto r = topology.right( e );
-    if ( !l || ( region && !region->test( l ) ) )
+    if ( r && region && !region->test( r ) )
+        r = {};
+    if ( !l && !r )
+        return {};
+    if ( !l )
         return normal( r );
-    if ( !r || ( region && !region->test( r ) ) )
+    if ( !r )
         return normal( l );
     auto nl = normal( l );
     auto nr = normal( r );

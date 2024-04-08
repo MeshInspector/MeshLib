@@ -36,6 +36,13 @@ struct BuildSettings
     bool allowNonManifoldEdge = true;
 };
 
+// each face is surrounded by a closed contour of vertices [fistVertex, lastVertex)
+struct VertSpan
+{
+    int firstVertex = 0;
+    int lastVertex = 0;
+};
+
 } //namespace MeshBuilder
 
 } //namespace MR

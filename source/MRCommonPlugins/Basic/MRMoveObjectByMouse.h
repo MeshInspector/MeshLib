@@ -1,6 +1,7 @@
 #pragma once
 #include "MRViewer/MRStatePlugin.h"
 #include "MRMesh/MRPlane3.h"
+#include "MRMesh/MRAffineXf3.h"
 #include "imgui.h"
 
 namespace MR
@@ -29,7 +30,7 @@ private:
     Vector3f worldStartPoint_;
     Vector3f worldBboxCenter_;
     Vector3f bboxCenter_;
-    AffineXf3f objXf_;
+    AffineXf3f objWorldXf_;
     float viewportStartPointZ_;
     Plane3f rotationPlane_;
 

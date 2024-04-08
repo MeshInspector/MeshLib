@@ -54,28 +54,10 @@ void removeOldLogs( const std::filesystem::path& dir, int hours = 24 )
 }
 
 #ifndef __EMSCRIPTEN__
-#ifdef _WIN32
-class SignalObserver : public tbb::task_scheduler_observer {
-public:
-    SignalObserver( std::function<void()> func )
-        : task_scheduler_observer(),
-        func_{ func }
-    {
-        observe( true ); // activate the observer
-    }
-    void on_scheduler_entry( bool ) override
-    {
-        func_();
-    }
-private:
-    std::function<void()> func_;
-};
-#endif
-
 void crashSignalHandler( int signal )
 {
     spdlog::critical( "Crash signal: {}", signal );
-    spdlog::critical( "Crash stacktrace:\n{}", to_string( boost::stacktrace::stacktrace() ) );
+    spdlog::info( "Crash stacktrace:\n{}", to_string( boost::stacktrace::stacktrace() ) );
     MR::printCurrentTimerBranch();
     std::exit( signal );
 }
@@ -134,28 +116,6 @@ std::filesystem::path Logger::getLogFileName() const
             return r->filename();
     }
 
-#ifdef __APPLE__
-    /*
-     * FIXME: dynamic_cast may not work with shared libraries on macOS
-     */
-    for ( const auto& ptr : logger_->sinks() )
-    {
-        assert( ptr );
-        auto& sink = *ptr;
-        const std::string typeName = typeid( sink ).name();
-#define RTTI_CAST( TYPE ) \
-        if ( typeName == typeid( TYPE ).name() ) \
-            return reinterpret_cast<TYPE*>( &sink )->filename();
-        RTTI_CAST( spdlog::sinks::rotating_file_sink_mt )
-        RTTI_CAST( spdlog::sinks::rotating_file_sink_st )
-        RTTI_CAST( spdlog::sinks::daily_file_sink_mt )
-        RTTI_CAST( spdlog::sinks::daily_file_sink_st )
-        RTTI_CAST( spdlog::sinks::basic_file_sink_mt )
-        RTTI_CAST( spdlog::sinks::basic_file_sink_st )
-#undef RTTI_CAST
-    }
-#endif
-
     return {};
 }
 
@@ -176,15 +136,11 @@ Logger::Logger()
 
 void setupLoggerByDefault()
 {
-#ifdef NDEBUG
 #ifndef __EMSCRIPTEN__
+#ifndef _WIN32 //on Windows we use WindowsExceptionsLogger instead
     printStacktraceOnCrash();
-#ifdef _WIN32
-    // observe tbb threads creation and add signals handlers for them
-    static SignalObserver tbbObserver( [] () { printStacktraceOnCrash(); } );
 #endif
-#endif
-#endif
+#endif //__EMSCRIPTEN__
     redirectSTDStreamsToLogger();
     // write log to console
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();

@@ -9,8 +9,8 @@ Python is one of the most popular and widely used programming language in scient
 |     Windows x64     |      3.10      |
 |    Ubuntu 20 x64    |       3.8      |
 |    Ubuntu 22 x64    |      3.10      |
-|    Fedora 35 x64    |       3.11      |
-| pip install meshlib |    3.8 - 3.11  |
+|    Fedora 35 x64    |       3.11     |
+| pip install meshlib |    3.8 - 3.12  |
 
 MeshLib library allows you to call python scripts directly from the command line or use particular functions by `from meshlib import mrmeshpy`.
 
@@ -36,12 +36,7 @@ except ValueError as e:
 # ...
 mrmeshpy.saveMesh(mesh, "mesh.ply")
 \endcode
-2. Run scritp with MeshInspector executable file (MeshInspector.exe on windows or ./MRApp on linux)
-\code
-$ ./MRApp script_path.py
-\endcode
-\note Script should still import mrmeshpy module
-3. Run script from c++ code
+2. Run script from c++ code
 \code
 MR::runScript("script.py"); // or MR::runString( stringWithScript )
 \endcode

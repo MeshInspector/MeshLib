@@ -42,6 +42,11 @@ struct DeloneSettings
 [[nodiscard]] MRMESH_API bool checkDeloneQuadrangleInMesh( const Mesh & mesh, EdgeId edge, const DeloneSettings& settings = {},
     float * deviationSqAfterFlip = nullptr ); ///< squared surface deviation after flip is written here (at least when the function returns false)
 
+/// given quadrangle ABCD, selects how to best triangulate it:
+///   false = by introducing BD diagonal and splitting ABCD on triangles ABD and DBC,
+///   true  = by introducing AC diagonal and splitting ABCD on triangles ABC and ACD
+[[nodiscard]] MRMESH_API bool bestQuadrangleDiagonal( const Vector3f& a, const Vector3f& b, const Vector3f& c, const Vector3f& d );
+
 /// improves mesh triangulation by performing flipping of edges to satisfy Delone local property,
 /// consider every edge at most numIters times, and allow surface deviation at most on given value during every individual flip,
 /// \return the number of flips done

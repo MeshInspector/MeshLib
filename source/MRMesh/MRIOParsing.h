@@ -15,11 +15,14 @@ MRMESH_API Expected<Buffer<char>, std::string> readCharBuffer( std::istream& in 
 
 // read coordinates to `v` separated by space
 template<typename T>
-VoidOrErrStr parseTextCoordinate( const std::string_view& str, Vector3<T>& v );
+VoidOrErrStr parseTextCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* n = nullptr, Color* c = nullptr );
 template<typename T>
 VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* c = nullptr );
 template<typename T>
 VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Color& c );
+template<typename T>
+[[deprecated( "use parseTextCoordinate() instead")]]
+VoidOrErrStr parseAscCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* n = nullptr, Color* c = nullptr );
 
 template<typename T>
 VoidOrErrStr parseSingleNumber( const std::string_view& str, T& num );

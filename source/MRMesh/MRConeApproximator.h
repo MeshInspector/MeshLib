@@ -2,6 +2,7 @@
 #include "MRCone3.h"
 #include "MRToFromEigen.h"
 #include "MRConstants.h"
+#include "MRPch/MRTBB.h"
 #include <algorithm>
 
 #ifdef _MSC_VER
@@ -131,6 +132,20 @@ struct ConeFittingFunctor
 };
 
 
+enum class ConeFitterType
+{
+    ApproximationPCM, // approximation of cone axis by principal component method
+    HemisphereSearchFit,
+    SpecificAxisFit
+};
+
+struct Cone3ApproximationParams {
+    int levenbergMarquardtMaxIteration = 40;
+    ConeFitterType coneFitterType = ConeFitterType::HemisphereSearchFit;
+    int hemisphereSearchPhiResolution = 30;
+    int hemisphereSearchThetaResolution = 30;
+};
+
 // Class for approximation cloud point by cone. 
 // We will calculate the initial approximation of the cone and then use a minimizer to refine the parameters. 
 // minimizer is LevenbergMarquardt now. 
@@ -139,16 +154,51 @@ template <typename T>
 class Cone3Approximation
 {
 public:
+
     Cone3Approximation() = default;
 
-    void solve( const std::vector<MR::Vector3<T>>& points,
-            Cone3<T>& cone, bool useConeInputAsInitialGuess = false )
+    // returns RMS for original points
+    T solve( const std::vector<MR::Vector3<T>>& points,
+        Cone3<T>& cone, const Cone3ApproximationParams& params = {} )
+
+    {
+        params_ = params;
+
+        switch ( params_.coneFitterType )
+        {
+        case ConeFitterType::SpecificAxisFit:
+            return solveSpecificAxisFit_( points, cone );
+            break;
+        case ConeFitterType::HemisphereSearchFit:
+            return solveHemisphereSearchFit_( points, cone );
+            break;
+        case ConeFitterType::ApproximationPCM:
+            return solveApproximationPCM_( points, cone );
+            break;
+        default:
+            return std::numeric_limits<T>::max();
+            break;
+        };
+    }
+
+
+private:
+
+    // cone fitter main params
+    Cone3ApproximationParams params_;
+
+    // solver for single axis case. 
+    T solveFixedAxis_( const std::vector<MR::Vector3<T>>& points,
+        Cone3<T>& cone, bool useConeInputAsInitialGuess = false )
 
     {
         ConeFittingFunctor<T> coneFittingFunctor;
         coneFittingFunctor.setPoints( points );
         Eigen::LevenbergMarquardt<ConeFittingFunctor<T>, T> lm( coneFittingFunctor );
+        lm.parameters.maxfev = params_.levenbergMarquardtMaxIteration;
 
+        MR::Vector3<T> center, U;
+        computeCenterAndNormal_( points, center, U );
 
         MR::Vector3<T>& coneAxis = cone.direction();
         if ( useConeInputAsInitialGuess )
@@ -157,7 +207,7 @@ public:
         }
         else
         {
-            cone = computeInitialCone_( points );
+            cone = computeInitialCone_( points, center, U );
         }
 
         Eigen::VectorX<T> fittedParams( 6 );
@@ -175,11 +225,98 @@ public:
         cone.direction() = cone.direction().normalized();
         cone.height = calculateConeHeight_( points, cone );
 
-        return;
+        return getApproximationRMS_( points, cone );
     }
 
+    T solveApproximationPCM_( const std::vector<MR::Vector3<T>>& points, Cone3<T>& cone )
+    {
+        return solveFixedAxis_( points, cone, false );
+    }
 
-private:
+    T solveSpecificAxisFit_( const std::vector<MR::Vector3<T>>& points, Cone3<T>& cone )
+    {
+        return solveFixedAxis_( points, cone, true );
+    }
+
+    // brute force solver across hole hemisphere for cone axis original extimation. 
+    T solveHemisphereSearchFit_( const std::vector<MR::Vector3<T>>& points, Cone3<T>& cone )
+    {
+        Vector3<T> center = computeCenter_( points );
+        ConeFittingFunctor<T> coneFittingFunctor;
+        coneFittingFunctor.setPoints( points );
+
+        constexpr T pi2 = static_cast< T >( PI2 );
+        T const theraStep = static_cast< T >( 2 * PI ) / params_.hemisphereSearchPhiResolution;
+        T const phiStep = pi2 / params_.hemisphereSearchPhiResolution;
+
+        struct BestCone {
+            Cone3<T> bestCone;
+            T minError = std::numeric_limits<T> ::max();
+        };
+        std::vector<BestCone> bestCones;
+        bestCones.resize( params_.hemisphereSearchPhiResolution + 1 );
+
+        tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), params_.hemisphereSearchPhiResolution + 1 ),
+               [&] ( const tbb::blocked_range<size_t>& range )
+        {
+            for ( size_t j = range.begin(); j < range.end(); ++j )
+            {
+                T phi = phiStep * j; //  [0 .. pi/2]
+                T cosPhi = std::cos( phi );
+                T sinPhi = std::sin( phi );
+                for ( size_t i = 0; i < params_.hemisphereSearchThetaResolution; ++i )
+                {
+                    T theta = theraStep * i; //  [0 .. 2*pi)
+                    T cosTheta = std::cos( theta );
+                    T sinTheta = std::sin( theta );
+
+                    // cone main axis original extimation
+                    Vector3<T> U( cosTheta * sinPhi, sinTheta * sinPhi, cosPhi );
+
+                    auto tmpCone = computeInitialCone_( points, center, U );
+
+                    Eigen::VectorX<T> fittedParams( 6 );
+                    coneToFitParams_( tmpCone, fittedParams );
+
+                    // create approximator and minimize functor
+                    Eigen::LevenbergMarquardt<ConeFittingFunctor<T>, T> lm( coneFittingFunctor );
+                    lm.parameters.maxfev = params_.levenbergMarquardtMaxIteration;
+                    [[maybe_unused]] Eigen::LevenbergMarquardtSpace::Status result = lm.minimize( fittedParams );
+
+                    // Looks like a bug in Eigen. Eigen::LevenbergMarquardtSpace::Status have error codes only. 
+                    // Not return value for Success minimization. 
+
+                    fitParamsToCone_( fittedParams, tmpCone );
+
+                    T const one_v = static_cast< T >( 1 );
+                    auto cosAngle = std::clamp( one_v / tmpCone.direction().length(), static_cast< T >( 0 ), one_v );
+                    tmpCone.angle = std::acos( cosAngle );
+                    tmpCone.direction() = tmpCone.direction().normalized();
+
+                    // calculate approximation error and store best result.
+                    T error = getApproximationRMS_( points, tmpCone );
+                    if ( error < bestCones[j].minError )
+                    {
+                        bestCones[j].minError = error;
+                        bestCones[j].bestCone = tmpCone;
+                    }
+                }
+            }
+        } );
+
+        // find best result
+        auto bestAppox = std::min_element( bestCones.begin(), bestCones.end(), [] ( const BestCone& a, const BestCone& b )
+        {
+            return a.minError < b.minError;
+        } );
+
+        cone = bestAppox->bestCone;
+
+        // calculate cone height
+        cone.height = calculateConeHeight_( points, cone );
+
+        return bestAppox->minError;
+    }
 
     // Calculate and return a length of cone based on set of initil points and inifinite cone surface given by cone param. 
     T calculateConeHeight_( const std::vector<MR::Vector3<T>>& points, Cone3<T>& cone )
@@ -191,30 +328,55 @@ private:
         }
         return length;
     }
-    // Calculates the initial parameters of the cone, which will later be used for minimization.
-    Cone3<T> computeInitialCone_( const std::vector<MR::Vector3<T>>& points )
-    {
-        Cone3<T> result;
-        MR::Vector3<T>& coneApex = result.apex();
-        MR::Vector3<T>& U = result.direction();  // coneAxis
-        T& coneAngle = result.angle;
 
+    T getApproximationRMS_( const std::vector<MR::Vector3<T>>& points, const Cone3<T>& cone )
+    {
+        if ( points.size() == 0 )
+            return std::numeric_limits<T>::max();
+
+        T error = 0;
+        for ( auto p : points )
+            error = error + ( cone.projectPoint( p ) - p ).lengthSq();
+
+        return error / points.size();
+    }
+
+    MR::Vector3<T> computeCenter_( const std::vector<MR::Vector3<T>>& points )
+    {
         // Compute the average of the sample points.
-        MR::Vector3<T> center{ 0, 0, 0 };  // C in pdf 
+        MR::Vector3<T> center;  // C in pdf  
         for ( auto i = 0; i < points.size(); ++i )
         {
             center += points[i];
         }
         center = center / static_cast< T >( points.size() );
+        return center;
+    }
+
+
+    void computeCenterAndNormal_( const std::vector<MR::Vector3<T>>& points, MR::Vector3<T>& center, MR::Vector3<T>& U )
+    {
+        center = computeCenter_( points );
 
         // The cone axis is estimated from ZZTZ (see the https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf, formula 120).
-        U = { 0, 0, 0 };  // U in pdf 
+        U = Vector3f();  // U in pdf 
         for ( auto i = 0; i < points.size(); ++i )
         {
             Vector3<T> Z = points[i] - center;
             U += Z * MR::dot( Z, Z );
         }
         U = U.normalized();
+    }
+
+
+    // Calculates the initial parameters of the cone, which will later be used for minimization.
+    Cone3<T> computeInitialCone_( const std::vector<MR::Vector3<T>>& points, const MR::Vector3<T>& center, const MR::Vector3<T>& axis )
+    {
+        Cone3<T> result;
+        MR::Vector3<T>& coneApex = result.apex();
+        result.direction() = axis;
+        MR::Vector3<T>& U = result.direction();  // coneAxis
+        T& coneAngle = result.angle;
 
         // C is center, U is coneAxis, X is points
         // Compute the signed heights of the points along the cone axis relative to C.
@@ -271,6 +433,7 @@ private:
         coneApex = center - offset * U;
         return result;
     }
+
     // Function for finding the best approximation of a straight line in general form y = a*x + b
     void findBestFitLine_( const std::vector<MR::Vector2<T>>& xyPairs, T& lineA, T& lineB, MR::Vector2<T>* avg = nullptr )
     {
@@ -302,6 +465,7 @@ private:
             avg->y = lineA * avg->x + lineB;
         }
     }
+
     // Convert data from Eigen minimizator representation to cone params. 
     void fitParamsToCone_( Eigen::Vector<T, Eigen::Dynamic>& fittedParams, Cone3<T>& cone )
     {
@@ -313,6 +477,7 @@ private:
         cone.direction().y = fittedParams[4];
         cone.direction().z = fittedParams[5];
     }
+
     // Convert data from cone params to Eigen minimizator representation. 
     void coneToFitParams_( Cone3<T>& cone, Eigen::Vector<T, Eigen::Dynamic>& fittedParams )
     {

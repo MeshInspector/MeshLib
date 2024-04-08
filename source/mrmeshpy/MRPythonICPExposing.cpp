@@ -69,7 +69,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def( "setDistanceLimit", &MR::ICP::setDistanceLimit, pybind11::arg( "dist" ) ).
         def( "setBadIterCount", &MR::ICP::setBadIterCount, pybind11::arg( "iter" ) ).
         def( "setFarDistFactor", &MR::ICP::setFarDistFactor, pybind11::arg( "factor" ) ).
-        def( "recomputeBitSet", &MR::ICP::recomputeBitSet, pybind11::arg( "floatSamplingVoxelSize" ) ).
+        def( "sampleFltPoints", &MR::ICP::sampleFltPoints, pybind11::arg( "samplingVoxelSize" ) ).
+        def( "sampleRefPoints", &MR::ICP::sampleRefPoints, pybind11::arg( "samplingVoxelSize" ) ).
+        def( "samplePoints", &MR::ICP::samplePoints, pybind11::arg( "samplingVoxelSize" ) ).
+        def( "recomputeBitSet", &MR::ICP::sampleFltPoints, pybind11::arg( "floatSamplingVoxelSize" ) ).
         def( "getParams", &MR::ICP::getParams, pybind11::return_value_policy::copy ).
         def( "getLastICPInfo", &MR::ICP::getLastICPInfo, "returns status info string" ).
         def( "getNumActivePairs", &MR::ICP::getNumActivePairs, "computes the number of active point pairs" ).

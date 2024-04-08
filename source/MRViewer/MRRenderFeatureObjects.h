@@ -138,15 +138,29 @@ class RenderFeatureComponent : public RenderWrapObject::Wrapper<WrappedModelSubo
 public:
     using Base::Base;
 
-    bool render( const ModelRenderParams& params )
+    bool shouldRender( ViewportId viewportId ) const
     {
         // Skip rendering the secondary components (aka subfeatures) if they are disabled.
         if constexpr ( !IsPrimary )
         {
-            if ( !this->subobject.target_->getVisualizeProperty( FeatureVisualizePropertyType::Subfeatures, params.viewportId ) )
+            if ( !this->subobject.target_->getVisualizeProperty( FeatureVisualizePropertyType::Subfeatures, viewportId ) )
                 return false;
         }
+        return true;
+    }
+
+    bool render( const ModelRenderParams& params ) override
+    {
+        if ( !shouldRender( params.viewportId ) )
+            return false;
         return Base::render( params );
+    }
+
+    void renderPicker( const ModelBaseRenderParams& params, unsigned geomId ) override
+    {
+        if ( !shouldRender( params.viewportId ) )
+            return;
+        return Base::renderPicker( params, geomId );
     }
 };
 

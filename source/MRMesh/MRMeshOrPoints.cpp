@@ -79,10 +79,14 @@ auto MeshOrPoints::projector() const -> std::function<ProjectionResult( const Ve
     };
 }
 
-auto MeshOrPoints::limitedProjector() const -> std::function<void( const Vector3f & p, ProjectionResult & res )>
+auto MeshOrPoints::limitedProjector() const -> LimitedProjectorFunc
 {
+    if ( customProjector_ )
+    {
+        return customProjector_;
+    }
     return std::visit( overloaded{
-        []( const MeshPart & mp ) -> std::function<void( const Vector3f & p, ProjectionResult & res )>
+        []( const MeshPart & mp ) -> LimitedProjectorFunc
         {
             return [&mp]( const Vector3f & p, ProjectionResult & res )
             {
@@ -98,7 +102,7 @@ auto MeshOrPoints::limitedProjector() const -> std::function<void( const Vector3
                     };
             };
         },
-        []( const PointCloud * pc ) -> std::function<void( const Vector3f & p, ProjectionResult & res )>
+        []( const PointCloud * pc ) -> LimitedProjectorFunc
         {
             return [pc]( const Vector3f & p, ProjectionResult & res )
             {

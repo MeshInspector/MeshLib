@@ -54,7 +54,9 @@ jobs:
         run: python3 -m pip install -r ./requirements/python.txt
 
       - name: Build
-        run: ./scripts/build_source.sh
+        run: |
+          alias nproc="sysctl -n hw.physicalcpu"
+          ./scripts/build_source.sh
         env:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}

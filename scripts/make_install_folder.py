@@ -20,6 +20,22 @@ lib_extentions = ['.lib','.pdb']
 includes_src_dst = list()
 includes_src_dst_thirdparty = list()
 
+def vcpkg_dir():
+	vcpkg_exe_dir = ""
+	if len(sys.argv) > 2:
+		vcpkg_exe_dir = sys.argv[2]
+	else:
+		vcpkg_exe_dir = os.system("where vcpkg")
+		if "vcpkg.exe" not in vcpkg_exe_dir:
+			vcpkg_exe_dir = "C:\\vcpkg"
+		else:
+			vcpkg_exe_dir = dirname( vcpkg_exe_dir )
+	return os.path.join(os.path.join(vcpkg_exe_dir, "installed"),"x64-windows-meshlib")
+
+
+vcpkg_dirercotry = vcpkg_dir()
+print (vcpkg_dirercotry)
+
 def check_python_version():
 	if (sys.version_info[0] < 3 or (sys.version_info[0] ==3 and sys.version_info[1] < 8)):
 		print('Need python 3.8 or newer')
@@ -51,7 +67,7 @@ def append_incudes_list(path,thirdparty = False, subfolder = '' ):
 			if (extention_is_one_of(file,include_extentions)):
 				src = os.path.join(address,file)
 				dst = os.path.join(path_to_includes + address[len(path):],file)
-				if (thirdparty):
+				if not thirdparty:
 					includes_src_dst.append((src,dst))
 				else:
 					includes_src_dst_thirdparty.append((src,dst))
@@ -59,6 +75,7 @@ def append_incudes_list(path,thirdparty = False, subfolder = '' ):
 def prepare_includes_list():
 	includes_src_dst.clear()
 	includes_src_dst_thirdparty.clear()
+	append_incudes_list(os.path.join(vcpkg_dirercotry,"include"), True)
 	append_incudes_list(path_to_sources)
 	append_incudes_list(path_to_phmap, True,'parallel_hashmap')
 	append_incudes_list(path_to_pybind11, True)
@@ -99,7 +116,9 @@ def add_version_file(version):
 
 
 def copy_lib():
-	shutil.copytree(os.path.join(path_to_sources,'x64'),path_to_libs,dirs_exist_ok=True)	
+	shutil.copytree(os.path.join(path_to_sources,'x64'),path_to_libs,dirs_exist_ok=True)
+	shutil.copytree(os.path.join(vcpkg_dirercotry,'lib'),os.path.join(path_to_libs,"Debug"),dirs_exist_ok=True)
+	shutil.copytree(os.path.join(vcpkg_dirercotry,'lib'),os.path.join(path_to_libs,"Release"),dirs_exist_ok=True)
 	folder = os.walk(path_to_libs)
 	for address, dirs, files in folder:
 		for file in files:

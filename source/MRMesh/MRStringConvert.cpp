@@ -25,9 +25,9 @@ std::wstring utf8ToWide( const char* utf8 )
 #ifdef _WIN32
 std::string Utf16ToUtf8( const std::wstring_view & utf16 )
 {
-    std::string u8msg;
-    u8msg.resize( 2 * utf16.size() + 1 );
-    auto res = WideCharToMultiByte( CP_UTF8, 0, utf16.data(), (int)utf16.size(), u8msg.data(), int( u8msg.size() ), NULL, NULL );
+    auto res = WideCharToMultiByte( CP_UTF8, 0, utf16.data(), ( int )utf16.size(), 0, 0, NULL, NULL );
+    std::string u8msg( res, '\0' );
+    res = WideCharToMultiByte( CP_UTF8, 0, utf16.data(), (int)utf16.size(), u8msg.data(), int( u8msg.size() ), NULL, NULL );
     if ( res == 0 )
     {
         spdlog::error( GetLastError() );
@@ -54,6 +54,26 @@ std::string systemToUtf8( const std::string & msg )
     return Utf16ToUtf8( wmsg );
 #else
     return msg;
+#endif
+}
+
+std::string utf8ToSystem( const std::string & utf8 )
+{
+#ifdef _WIN32
+    auto utf16 = utf8ToWide( utf8.c_str() );
+    auto rsize = WideCharToMultiByte( CP_ACP, 0, utf16.data(), ( int )utf16.size(), NULL, 0, NULL, NULL );
+    std::string res( size_t ( rsize ), '\0' );
+    BOOL usedDefaultChar = FALSE;
+    rsize = WideCharToMultiByte( CP_ACP, 0, utf16.data(), (int)utf16.size(), res.data(), int( res.size() ), NULL, &usedDefaultChar );
+    if ( usedDefaultChar || rsize == 0 )
+    {
+        spdlog::error( GetLastError() );
+        return {};
+    }
+    res.resize( rsize );
+    return res;
+#else
+    return utf8;
 #endif
 }
 

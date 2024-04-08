@@ -1,4 +1,4 @@
-name: Build and test Fedora
+name: Build and test Fedora 39
 
 on:
   workflow_call:
@@ -26,19 +26,26 @@ jobs:
     timeout-minutes: 40
     runs-on: ubuntu-latest
     container:
-      image: meshlib/meshlib-${{matrix.os}}:${{inputs.docker_image_tag}}
+      image: meshlib/meshlib-fedora39:${{inputs.docker_image_tag}}
       options: --user root
     strategy:
       fail-fast: false
       matrix:
-        os: ['fedora37', 'fedora39']
-        config: ['Debug', 'Release']
-        compiler: ['Clang']
+        config: [Debug, Release]
+        compiler: [Clang 17, GCC 13]
         full_config_build:
           - ${{fromJSON(inputs.full_config_build)}}
         exclude:
           - full_config_build: false
-            os: fedora39
+            compiler: Clang 17
+            config: Debug
+        include:
+          - compiler: Clang 17
+            cxx-compiler: /usr/bin/clang++-17
+            c-compiler: /usr/bin/clang-17
+          - compiler: GCC 13
+            cxx-compiler: /usr/bin/g++
+            c-compiler: /usr/bin/gcc
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -70,13 +77,13 @@ jobs:
         env:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
-          CMAKE_CXX_COMPILER: "/usr/bin/clang++"
+          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
           MR_USE_CPP_23: "ON"
-          MR_CMAKE_OPTIONS: ${{ (matrix.os == 'fedora39') && '-DMESHLIB_BUILD_MRCUDA=OFF' || '' }}
+          MR_CMAKE_OPTIONS: ${{ matrix.MR_CMAKE_OPTIONS }}
 
       - name: Collect Timings
-        run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.compiler}}"
+        run: ./scripts/devops/collect_timing_logs.sh fedora39 ${{matrix.config}} "${{matrix.compiler}}"
 
       #Save timing in artifact
       - name: Upload Timings
@@ -89,8 +96,7 @@ jobs:
         run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
 
       - name: Unit Tests
-        # don't run unit tests for GCC Release configuration as unit tests are not built for it
-        if: ${{ matrix.compiler == 'Clang' || matrix.config == 'Debug' }}
+        if: ${{ matrix.config == 'Debug' }}
         run: ./build/${{ matrix.config }}/bin/MRTest
 
       - name: Python Sanity Tests
@@ -112,7 +118,7 @@ jobs:
         with:
           path: ./test_data
           key: ${{inputs.autotest_data_s3_url}}
-          
+
       - name: Copy autotest data from S3 Tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
         run: aws s3 sync ${{inputs.autotest_data_s3_url}} ./test_data --delete --no-sign-request --size-only
@@ -127,16 +133,16 @@ jobs:
         run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/fedora/${{matrix.os}}/${{matrix.config}}' --recursive
 
       - name: Create RPM
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.os == 'fedora37' && matrix.config == 'Release' && matrix.compiler == 'Clang'}}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 17'}}
         run: ./scripts/distribution_rpm.sh ${{inputs.app_version}}
         env:
           MESHLIB_BUILD_RELEASE: ON
           MESHLIB_BUILD_DEBUG: OFF
 
       - name: Upload Fedora Developer Distribution
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.os == 'fedora37' && matrix.config == 'Release' && matrix.compiler == 'Clang'}}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 17'}}
         uses: actions/upload-artifact@v4
         with:
-          name: DistributivesFedora37
+          name: Distributives_fedora39-x86
           path: meshlib-dev.rpm
           retention-days: 1

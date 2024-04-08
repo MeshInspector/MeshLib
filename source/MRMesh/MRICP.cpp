@@ -9,8 +9,6 @@
 #include "MRBitSetParallelFor.h"
 #include <numeric>
 
-const int MAX_RESAMPLING_VOXEL_NUMBER = 500000;
-
 namespace MR
 {
 
@@ -47,7 +45,6 @@ ICP::ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const Affi
 {
     setXfs( fltXf, refXf );
     setupPairs( flt2refPairs_, fltSamples );
-    updatePointPairs();
 }
 
 ICP::ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
@@ -104,15 +101,7 @@ AffineXf3f ICP::autoSelectFloatXf()
 
 void ICP::recomputeBitSet(const float floatSamplingVoxelSize)
 {
-    auto bboxDiag = flt_.computeBoundingBox().size() / floatSamplingVoxelSize;
-    auto nSamples = bboxDiag[0] * bboxDiag[1] * bboxDiag[2];
-    VertBitSet fltSamples;
-    if (nSamples > MAX_RESAMPLING_VOXEL_NUMBER)
-        fltSamples = *flt_.pointsGridSampling( floatSamplingVoxelSize * std::cbrt(float(nSamples) / float(MAX_RESAMPLING_VOXEL_NUMBER)) );
-    else
-        fltSamples = *flt_.pointsGridSampling( floatSamplingVoxelSize );
-    setupPairs( flt2refPairs_, fltSamples );
-    updatePointPairs();
+    setupPairs( flt2refPairs_, *flt_.pointsGridSampling( floatSamplingVoxelSize ) );
 }
 
 void ICP::updatePointPairs()
@@ -130,10 +119,13 @@ void ICP::updatePointPairs_( PointPairs & pairs,
     const auto src2tgtXf = tgtXf.inverse() * srcXf;
 
     const VertCoords& srcPoints = src.points();
+    const VertCoords& tgtPoints = tgt.points();
 
     const auto srcNormals = src.normals();
+    const auto tgtNormals = tgt.normals();
+
     const auto srcWeights = src.weights();
-    const auto tgtProjector = tgt.projector();
+    const auto tgtLimProjector = tgt.limitedProjector();
 
     pairs.active.clear();
     pairs.active.resize( pairs.vec.size(), true );
@@ -141,27 +133,38 @@ void ICP::updatePointPairs_( PointPairs & pairs,
     // calculate pairs
     BitSetParallelForAll( pairs.active, [&] ( size_t idx )
     {
-        const auto& p = srcPoints[pairs.vec[idx].srcVertId];
-        const auto prj = tgtProjector( src2tgtXf( p ) );
+        auto & res = pairs.vec[idx];
+        const auto p0 = srcPoints[res.srcVertId];
+        const auto pt = src2tgtXf( p0 );
 
-        // projection should be found and if point projects on the border it will be ignored
-        if ( !prj.isBd )
+        MeshOrPoints::ProjectionResult prj;
+        if ( res.tgtCloseVert )
         {
-            PointPair vp = pairs.vec[idx];
-            vp.distSq = prj.distSq;
-            vp.weight = srcWeights ? srcWeights( vp.srcVertId ) : 1.0f;
-            vp.tgtPoint = tgtXf( prj.point );
-            vp.tgtNorm = prj.normal ? ( tgtXf.A * prj.normal.value() ).normalized() : Vector3f();
-            vp.srcNorm = srcNormals ? ( srcXf.A * srcNormals( vp.srcVertId ) ).normalized() : Vector3f();
-            vp.normalsAngleCos = ( prj.normal && srcNormals ) ? dot( vp.tgtNorm, vp.srcNorm ) : 1.0f;
-            pairs.vec[idx] = vp;
-            if ( vp.normalsAngleCos < prop_.cosTreshold || vp.distSq > prop_.distThresholdSq )
-                pairs.active.reset( idx );
+            // start with old closest point ...
+            prj.point = tgtPoints[res.tgtCloseVert];
+            if ( tgtNormals )
+                prj.normal = tgtNormals( res.tgtCloseVert );
+            prj.isBd = res.tgtOnBd;
+            prj.distSq = ( pt - prj.point ).lengthSq();
+            prj.closestVert = res.tgtCloseVert;
         }
-        else
-        {
+        // ... and try to find only closer one
+        tgtLimProjector( pt, prj );
+
+        // save the result
+        PointPair vp = res;
+        vp.distSq = prj.distSq;
+        vp.weight = srcWeights ? srcWeights( vp.srcVertId ) : 1.0f;
+        vp.tgtCloseVert = prj.closestVert;
+        vp.srcPoint = srcXf( p0 );
+        vp.tgtPoint = tgtXf( prj.point );
+        vp.tgtNorm = prj.normal ? ( tgtXf.A * prj.normal.value() ).normalized() : Vector3f();
+        vp.srcNorm = srcNormals ? ( srcXf.A * srcNormals( vp.srcVertId ) ).normalized() : Vector3f();
+        vp.normalsAngleCos = ( prj.normal && srcNormals ) ? dot( vp.tgtNorm, vp.srcNorm ) : 1.0f;
+        vp.tgtOnBd = prj.isBd;
+        res = vp;
+        if ( prj.isBd || vp.normalsAngleCos < prop_.cosTreshold || vp.distSq > prop_.distThresholdSq )
             pairs.active.reset( idx );
-        }
     } );
 }
 
@@ -183,15 +186,12 @@ void ICP::deactivatefarDistPairs_()
 
 bool ICP::p2ptIter_()
 {
-    MR_TIMER;
-    const VertCoords& points = flt_.points();
+    MR_TIMER
     PointToPointAligningTransform p2pt;
     for ( size_t idx : flt2refPairs_.active )
     {
         const auto& vp = flt2refPairs_.vec[idx];
-        const auto v1 = fltXf_(points[vp.srcVertId]);
-        const auto& v2 = vp.tgtPoint;
-        p2pt.add(Vector3d(v1), Vector3d(v2), vp.weight);
+        p2pt.add( vp.srcPoint, vp.tgtPoint, vp.weight );
     }
 
     AffineXf3f res;
@@ -225,15 +225,14 @@ bool ICP::p2ptIter_()
 
 bool ICP::p2plIter_()
 {
-    MR_TIMER;
-    const VertCoords& points = flt_.points();
+    MR_TIMER
     Vector3f centroidRef;
     int activeCount = 0;
     for ( size_t idx : flt2refPairs_.active )
     {
         const auto& vp = flt2refPairs_.vec[idx];
         centroidRef += vp.tgtPoint;
-        centroidRef += fltXf_(points[vp.srcVertId]);
+        centroidRef += vp.srcPoint;
         ++activeCount;
     }
     if ( activeCount <= 0 )
@@ -245,9 +244,7 @@ bool ICP::p2plIter_()
     for ( size_t idx : flt2refPairs_.active )
     {
         const auto& vp = flt2refPairs_.vec[idx];
-        const auto v1 = fltXf_(points[vp.srcVertId]);
-        const auto& v2 = vp.tgtPoint;
-        p2pl.add(Vector3d(v1 - centroidRef), Vector3d(v2 - centroidRef), Vector3d(vp.tgtNorm), vp.weight);
+        p2pl.add( vp.srcPoint - centroidRef, vp.tgtPoint - centroidRef, vp.tgtNorm, vp.weight);
     }
 
     AffineXf3f res;
@@ -291,9 +288,10 @@ bool ICP::p2plIter_()
             for ( size_t idx : flt2refPairs_.active )
             {
                 const auto& vp = flt2refPairs_.vec[idx];
-                const auto v1 = fltXf_(points[vp.srcVertId]);
-                const auto& v2 = vp.tgtPoint;
-                p2plTrans.add(mLimited * Vector3d(v1 - centroidRef), mLimited * Vector3d(v2 - centroidRef),
+                // below is incorrect, but some tests break when correcting it:
+                // p2plTrans.add( mLimited * Vector3d( vp.srcPoint - centroidRef ), Vector3d( vp.tgtPoint - centroidRef ),
+                //  Vector3d(vp.tgtNorm), vp.weight );
+                p2plTrans.add( mLimited * Vector3d( vp.srcPoint - centroidRef ), mLimited * Vector3d( vp.tgtPoint - centroidRef ),
                     mLimited * Vector3d(vp.tgtNorm), vp.weight);
             }
             auto transOnly = p2plTrans.findBestTranslation();
@@ -313,71 +311,25 @@ bool ICP::p2plIter_()
 
 AffineXf3f ICP::calculateTransformation()
 {
-    float curDist = 0;
     float minDist = std::numeric_limits<float>::max();
     int badIterCount = 0;
-    resultType_ = ExitType::NotStarted;
-    for (iter_ = 0; iter_ < prop_.iterLimit; iter_++)
+    resultType_ = ExitType::MaxIterations;
+    for ( iter_ = 1; iter_ <= prop_.iterLimit; ++iter_ )
     {
-        if (prop_.method == ICPMethod::Combined)
+        updatePointPairs();
+        const bool pt2pt = ( prop_.method == ICPMethod::Combined && iter_ < 3 )
+            || prop_.method == ICPMethod::PointToPoint;
+        if ( !( pt2pt ? p2ptIter_() : p2plIter_() ) )
         {
-            if (iter_ < 2)
-            {
-                if ( !p2ptIter_() )
-                {
-                    resultType_ = ExitType::NotFoundSolution;
-                    break;
-                }
-                updatePointPairs();
-                curDist = getMeanSqDistToPoint();
-            }
-            else
-            {
-                if ( !p2plIter_() )
-                {
-                    resultType_ = ExitType::NotFoundSolution;
-                    break;
-                }
-                updatePointPairs();
-                curDist = getMeanSqDistToPlane();
-                if ( prop_.exitVal > curDist )
-                {
-                    resultType_ = ExitType::StopMsdReached;
-                    break;
-                }
-            }
+            resultType_ = ExitType::NotFoundSolution;
+            break;
         }
 
-        if (prop_.method == ICPMethod::PointToPoint)
+        const float curDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();
+        if ( prop_.exitVal > curDist )
         {
-            if ( !p2ptIter_() )
-            {
-                resultType_ = ExitType::NotFoundSolution;
-                break;
-            }
-            updatePointPairs();
-            curDist = getMeanSqDistToPoint();
-            if ( prop_.exitVal > curDist )
-            {
-                resultType_ = ExitType::StopMsdReached;
-                break;
-            }
-        }
-
-        if (prop_.method == ICPMethod::PointToPlane)
-        {
-            if ( !p2plIter_() )
-            {
-                resultType_ = ExitType::NotFoundSolution;
-                break;
-            }
-            updatePointPairs();
-            curDist = getMeanSqDistToPlane();
-            if ( prop_.exitVal > curDist )
-            {
-                resultType_ = ExitType::StopMsdReached;
-                break;
-            }
+            resultType_ = ExitType::StopMsdReached;
+            break;
         }
 
         // exit if several(3) iterations didn't decrease minimization parameter
@@ -396,10 +348,6 @@ AffineXf3f ICP::calculateTransformation()
             badIterCount++;
         }
     }
-    if ( iter_ == prop_.iterLimit )
-        resultType_ = ExitType::MaxIterations;
-    else
-        iter_++;
     return fltXf_;
 }
 
@@ -423,15 +371,14 @@ float getMeanSqDistToPoint( const PointPairs & pairs )
     return (float)std::sqrt( sum / num );
 }
 
-float getMeanSqDistToPlane( const PointPairs & pairs, const MeshOrPoints & floating, const AffineXf3f & floatXf )
+float getMeanSqDistToPlane( const PointPairs & pairs )
 {
-    const VertCoords& points = floating.points();
     int num = 0;
     double sum = 0;
     for ( size_t idx : pairs.active )
     {
         const auto& vp = pairs.vec[idx];
-        auto v = dot( vp.tgtNorm, vp.tgtPoint - floatXf(points[vp.srcVertId]) );
+        auto v = dot( vp.tgtNorm, vp.tgtPoint - vp.srcPoint );
         sum += sqr( v );
         ++num;
     }

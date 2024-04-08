@@ -36,8 +36,15 @@ struct PointPair
     /// id of the source point
     VertId srcVertId;
 
+    /// coordinates of the source point after transforming in world space
+    Vector3f srcPoint;
+
     /// normal in source point after transforming in world space
     Vector3f srcNorm;
+
+    /// for point clouds it is the closest vertex on target,
+    /// for meshes it is the closest vertex of the triangle with the closest point on target
+    VertId tgtCloseVert;
 
     /// coordinates of the closest point on target after transforming in world space
     Vector3f tgtPoint;
@@ -53,6 +60,9 @@ struct PointPair
 
     /// weight of the pair (to prioritize over other pairs)
     float weight = 1.f;
+
+    /// true if if the closest point on target is located on the boundary (only for meshes)
+    bool tgtOnBd = false;
 
     friend bool operator == ( const PointPair&, const PointPair& ) = default;
 };
@@ -70,7 +80,7 @@ struct PointPairs
 [[nodiscard]] MRMESH_API float getMeanSqDistToPoint( const PointPairs & pairs );
 
 /// computes root-mean-square deviation from points to target planes
-[[nodiscard]] MRMESH_API float getMeanSqDistToPlane( const PointPairs & pairs, const MeshOrPoints & floating, const AffineXf3f & floatXf );
+[[nodiscard]] MRMESH_API float getMeanSqDistToPlane( const PointPairs & pairs );
 
 struct ICPProperties
 {
@@ -125,7 +135,7 @@ public:
         float floatSamplingVoxelSize ); // positive value here defines voxel size, and only one vertex per voxel will be selected
     // TODO: add single transform constructor
 
-    /// tune algirithm params before run calculateTransformation()
+    /// tune algorithm params before run calculateTransformation()
     void setParams(const ICPProperties& prop) { prop_ = prop; }
     MRMESH_API void setCosineLimit(const float cos);
     MRMESH_API void setDistanceLimit( const float dist );
@@ -158,12 +168,13 @@ public:
     [[nodiscard]] float getMeanSqDistToPoint() const { return MR::getMeanSqDistToPoint( flt2refPairs_ ); }
 
     /// computes root-mean-square deviation from points to target planes
-    [[nodiscard]] float getMeanSqDistToPlane() const { return MR::getMeanSqDistToPlane( flt2refPairs_, flt_, fltXf_ ); }
+    [[nodiscard]] float getMeanSqDistToPlane() const { return MR::getMeanSqDistToPlane( flt2refPairs_ ); }
 
     /// returns current pairs formed from samples on floating and projections on reference
     [[nodiscard]] const PointPairs & getFlt2RefPairs() const { return flt2refPairs_; }
 
-    /// returns new xf transformation for the floating mesh, which allows to match reference mesh
+    /// runs ICP algorithm given input objects, transformations, and parameters;
+    /// \return adjusted transformation of the floating object to match reference object
     [[nodiscard]] MRMESH_API AffineXf3f calculateTransformation();
 
 private:

@@ -26,12 +26,15 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
     MR_PYTHON_CUSTOM_CLASS( PointPair ).
         def( pybind11::init<>() ).
         def_readwrite( "srcVertId", &MR::PointPair::srcVertId, "id of the source point" ).
+        def_readwrite( "srcPoint", &MR::PointPair::srcPoint, "coordinates of the source point after transforming in world space" ).
         def_readwrite( "srcNorm", &MR::PointPair::srcNorm, "normal in source point after transforming in world space" ).
+        def_readwrite( "tgtCloseVert", &MR::PointPair::tgtCloseVert, "for point clouds it is the closest vertex on target, for meshes it is the closest vertex of the triangle with the closest point on target" ).
         def_readwrite( "tgtPoint", &MR::PointPair::tgtPoint, "coordinates of the closest point on target after transforming in world space" ).
         def_readwrite( "tgtNorm", &MR::PointPair::tgtNorm, "normal in the target point after transforming in world space" ).
         def_readwrite( "normalsAngleCos", &MR::PointPair::normalsAngleCos, "cosine between normals in source and target points" ).
         def_readwrite( "distSq", &MR::PointPair::distSq, "squared distance between source and target points" ).
-        def_readwrite( "weight", &MR::PointPair::weight, "weight of the pair (to prioritize over other pairs)" );
+        def_readwrite( "weight", &MR::PointPair::weight, "weight of the pair (to prioritize over other pairs)" ).
+        def_readwrite( "tgtOnBd", &MR::PointPair::tgtOnBd, "true if if the closest point on target is located on the boundary (only for meshes)" );
 
     pybind11::class_<MR::ICPProperties>( m, "ICPProperties" ).
         def( pybind11::init<>() ).
@@ -61,7 +64,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
             "fltMeshXf - transform from the local floatingMesh basis to the global\n"
             "refMeshXf - transform from the local referenceMesh basis to the global\n"
             "floatSamplingVoxelSize = positive value here defines voxel size, and only one vertex per voxel will be selected" ).
-        def( "setParams", &MR::ICP::setParams, pybind11::arg( "prop" ), "tune algirithm params before run calculateTransformation()" ).
+        def( "setParams", &MR::ICP::setParams, pybind11::arg( "prop" ), "tune algorithm params before run calculateTransformation()" ).
         def( "setCosineLimit", &MR::ICP::setCosineLimit, pybind11::arg( "cos" ) ).
         def( "setDistanceLimit", &MR::ICP::setDistanceLimit, pybind11::arg( "dist" ) ).
         def( "setBadIterCount", &MR::ICP::setBadIterCount, pybind11::arg( "iter" ) ).
@@ -73,7 +76,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def( "getMeanSqDistToPoint", &MR::ICP::getMeanSqDistToPoint, "computes root-mean-square deviation between points" ).
         def( "getMeanSqDistToPlane", &MR::ICP::getMeanSqDistToPlane, "computes root-mean-square deviation from points to target planes" ).
         def( "getFlt2RefPairs", &MR::ICP::getFlt2RefPairs, pybind11::return_value_policy::copy, "returns current pairs formed from samples on floating and projections on reference" ).
-        def( "calculateTransformation", &MR::ICP::calculateTransformation, "returns new xf transformation for the floating mesh, which allows to match reference mesh" ).
+        def( "calculateTransformation", &MR::ICP::calculateTransformation, "runs ICP algorithm given input objects, transformations, and parameters; "
+            "returns adjusted transformation of the floating object to match reference object" ).
         def( "autoSelectFloatXf", &MR::ICP::autoSelectFloatXf, "automatically selects initial transformation for the floating object based on covariance matrices of both floating and reference objects; applies the transformation to the floating object and returns it" ).
         def( "updatePointPairs", &MR::ICP::updatePointPairs, "recompute point pairs after manual change of transformations or parameters" );
 } )

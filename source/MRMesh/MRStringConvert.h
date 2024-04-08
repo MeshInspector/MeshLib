@@ -13,8 +13,13 @@ namespace MR
 
 /// converts UTF8-encoded string into UTF16-encoded string
 MRMESH_API std::wstring utf8ToWide( const char* utf8 );
+
 /// converts system encoded string to UTF8-encoded string
 MRMESH_API std::string systemToUtf8( const std::string & system );
+
+/// converts UTF8-encoded string to system encoded string,
+/// returns empty string if such conversion cannot be made
+MRMESH_API std::string utf8ToSystem( const std::string & utf8 );
 
 #ifdef _WIN32
 /// converts UTF16-encoded string string to UTF8-encoded string

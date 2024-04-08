@@ -57,6 +57,25 @@ std::string systemToUtf8( const std::string & msg )
 #endif
 }
 
+std::string utf8ToSystem( const std::string & utf8 )
+{
+#ifdef _WIN32
+    auto utf16 = utf8ToWide( utf8.c_str() );
+    std::string res;
+    res.resize( 2 * utf16.size() + 1 );
+    auto rsize = WideCharToMultiByte( CP_ACP, 0, utf16.data(), (int)utf16.size(), res.data(), int( res.size() ), NULL, NULL );
+    if ( rsize == 0 )
+    {
+        spdlog::error( GetLastError() );
+        return {};
+    }
+    res.resize( rsize );
+    return res;
+#else
+    return utf8;
+#endif
+}
+
 std::string bytesString( size_t size )
 {
     if ( size < 1024 )

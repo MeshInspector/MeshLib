@@ -42,8 +42,8 @@ public:
     /// this version searches for best transformation where rotation is allowed only around axes orthogonal to given one
     [[nodiscard]] MRMESH_API AffineXf3d findBestRigidXfOrthogonalRotationAxis( const Vector3d& ort ) const;
 
-    /// Returns only shift part relative to given approximation
-    [[nodiscard]] MRMESH_API Vector3d findBestTranslation() const;
+    /// this version searches for best translational part of affine transformation with given linear part
+    [[nodiscard]] MRMESH_API Vector3d findBestTranslation( Vector3d rotAngles = {}, double scale = 1 ) const;
 
     struct Amendment
     {

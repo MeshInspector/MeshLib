@@ -55,7 +55,9 @@ jobs:
 
       - name: Build
         run: |
-          alias nproc="sysctl -n hw.physicalcpu"
+          shopt -s expand_aliases
+          alias nproc="sysctl -n hw.logicalcpu"
+          echo `nproc`
           ./scripts/build_source.sh
         env:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}

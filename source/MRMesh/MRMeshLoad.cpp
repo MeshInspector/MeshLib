@@ -125,7 +125,7 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
         [&] ( const tbb::blocked_range<size_t>& range )
     {
         std::string res;
-        for ( size_t block = range.begin(); block < range.end(); ++block )
+        for ( size_t block = range.begin(); block < range.end(); block++ )
         {
             size_t startBlock = step * block;
             if ( block == 0 )
@@ -189,9 +189,6 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
                     const std::string_view line( &buf[startLine], &buf[endLine] );
                     startLine = i + 1;
 
-                    MeshBuilder::VertSpan vspan;
-                    vspan.firstVertex = VertId( vertidBlocks[block].size() );
-
                     auto n = [&] ( auto& ctx ) { facesBlocks[block].push_back( _attr( ctx ) ); };
                     auto v = [&] ( auto& ctx ) { vertidBlocks[block].emplace_back( _attr( ctx ) ); };
                     bool r = phrase_parse(
@@ -206,7 +203,10 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
                         return;// unexpected( res );
                     }
 
-                    vspan.lastVertex = VertId( vertidBlocks[block].size() );
+                    if ( i >= posNextBlock )
+                    {
+                        break;
+                    }
 
                     numSpase = 0;
                 }

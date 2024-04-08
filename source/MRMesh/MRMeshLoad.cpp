@@ -129,7 +129,7 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
         {
             size_t startBlock = strHeader + step * block;
 
-            size_t numPoint = 0;
+            size_t numPoint = step * block;
             size_t end = std::min( strHeader + step * ( block + 1 ), numPoints + strHeader );
             for ( size_t i = startBlock; i < end; i++ )
             {
@@ -153,7 +153,7 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
     size_t delta = numPoints + strHeader + strBorder;
 
     std::vector<int> facesBlocks( numPolygons );
-    std::vector<std::vector<VertId>> vertidBlocks( numBlock, std::vector<VertId>( numPolygons * 3 ) );
+    std::vector<std::vector<VertId>> vertidBlocks( numBlock );
 
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, numBlock ),
         [&] ( const tbb::blocked_range<size_t>& range )
@@ -161,8 +161,7 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
         std::string res;
         for ( size_t block = range.begin(); block < range.end(); block++ )
         {
-            size_t numIndex = 0;
-            size_t numFace = 0;
+            size_t numFace = step * block;
             size_t startBlock = delta + step * block;
 
             size_t end = std::min( delta + step * ( block + 1 ), splitLines.size() - 1);
@@ -171,13 +170,7 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
                 const std::string_view line( &buf[splitLines[i]], &buf[splitLines[i + 1]] );
 
                 auto n = [&] ( auto& ctx ) { facesBlocks[numFace++] = _attr( ctx ); };
-                auto v = [&] ( auto& ctx ) 
-                { 
-                    if( vertidBlocks[block].size() <= numIndex )
-                        vertidBlocks[block].emplace_back( _attr( ctx ) );
-                    else
-                        vertidBlocks[block][numIndex++] = VertId( _attr( ctx ) );
-                };
+                auto v = [&] ( auto& ctx ) { vertidBlocks[block].emplace_back( _attr( ctx ) ); };
                 bool r = phrase_parse(
                     line.begin(),
                     line.end(),
@@ -199,7 +192,7 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
     int start = 0;
     for ( size_t i = 0; i < facesBlocks.size(); i++ )
     {
-        newFaces.vec_[i] = MeshBuilder::VertSpan(start, start + facesBlocks[i]);
+        newFaces.vec_[i] = MeshBuilder::VertSpan{ start, start + facesBlocks[i] };
         start += facesBlocks[i];
     }
 

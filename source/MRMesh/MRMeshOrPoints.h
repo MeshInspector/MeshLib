@@ -70,7 +70,7 @@ public:
     [[nodiscard]] MRMESH_API LimitedProjectorFunc limitedProjector() const;
 
     /// override projector for this object
-    void setCustomProjector( LimitedProjectorFunc func ) { customProjector_ = func; }
+    void setCustomProjector( LimitedProjectorFunc func ) { customProjector_ = std::move( func ); }
 
 private:
     std::variant<MeshPart, const PointCloud*> var_;

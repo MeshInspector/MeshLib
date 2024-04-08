@@ -20,9 +20,14 @@ template<typename T>
 VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* c = nullptr );
 template<typename T>
 VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Color& c );
+
+VoidOrErrStr parseTopology( const std::string_view& str, std::vector<VertId>& vertId, int* numPoints );
+
 template<typename T>
 [[deprecated( "use parseTextCoordinate() instead")]]
 VoidOrErrStr parseAscCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* n = nullptr, Color* c = nullptr );
+
+
 
 template<typename T>
 VoidOrErrStr parseSingleNumber( const std::string_view& str, T& num );

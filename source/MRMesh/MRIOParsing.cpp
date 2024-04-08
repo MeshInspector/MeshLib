@@ -238,6 +238,26 @@ VoidOrErrStr parseSingleNumber( const std::string_view& str, T& num )
     return {};
 }
 
+VoidOrErrStr parseTopology( const std::string_view& str, std::vector<VertId>& vertId, int* numPoints)
+{
+    using namespace boost::spirit::x3;
+
+    auto n = [&] ( auto& ctx ) { *numPoints = _attr( ctx ); };
+    auto v = [&] ( auto& ctx ) { vertId.emplace_back( _attr( ctx ) ); };
+    bool r = phrase_parse(
+        str.begin(),
+        str.end(),
+        int_[n] >> *int_[v],
+        ascii::space );
+
+    if ( !r )
+    {
+        return unexpected( "Failed to parse face in OFF-file" );
+    }
+
+    return {};
+}
+
 template <typename T>
 VoidOrErrStr parseAscCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* n, Color* c )
 {

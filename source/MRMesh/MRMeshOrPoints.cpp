@@ -28,8 +28,14 @@ void MeshOrPoints::accumulate( PointAccumulator& accum, const AffineXf3f* xf ) c
     }, var_ );
 }
 
-std::optional<VertBitSet> MeshOrPoints::pointsGridSampling( float voxelSize, const ProgressCallback & cb )
+std::optional<VertBitSet> MeshOrPoints::pointsGridSampling( float voxelSize, size_t maxVoxels, const ProgressCallback & cb )
 {
+    assert( voxelSize > 0 );
+    assert( maxVoxels > 0 );
+    auto bboxDiag = computeBoundingBox().size() / voxelSize;
+    auto nSamples = bboxDiag[0] * bboxDiag[1] * bboxDiag[2];
+    if ( nSamples > maxVoxels )
+        voxelSize *= std::cbrt( float(nSamples) / float(voxelSize) );
     return std::visit( overloaded{
         [voxelSize, cb]( const MeshPart & mp ) { return verticesGridSampling( mp, voxelSize, cb ); },
         [voxelSize, cb]( const PointCloud * pc ) { return pointGridSampling( *pc, voxelSize, cb ); }

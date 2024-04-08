@@ -9,8 +9,6 @@
 #include "MRBitSetParallelFor.h"
 #include <numeric>
 
-const int MAX_RESAMPLING_VOXEL_NUMBER = 500000;
-
 namespace MR
 {
 
@@ -103,14 +101,7 @@ AffineXf3f ICP::autoSelectFloatXf()
 
 void ICP::recomputeBitSet(const float floatSamplingVoxelSize)
 {
-    auto bboxDiag = flt_.computeBoundingBox().size() / floatSamplingVoxelSize;
-    auto nSamples = bboxDiag[0] * bboxDiag[1] * bboxDiag[2];
-    VertBitSet fltSamples;
-    if (nSamples > MAX_RESAMPLING_VOXEL_NUMBER)
-        fltSamples = *flt_.pointsGridSampling( floatSamplingVoxelSize * std::cbrt(float(nSamples) / float(MAX_RESAMPLING_VOXEL_NUMBER)) );
-    else
-        fltSamples = *flt_.pointsGridSampling( floatSamplingVoxelSize );
-    setupPairs( flt2refPairs_, fltSamples );
+    setupPairs( flt2refPairs_, *flt_.pointsGridSampling( floatSamplingVoxelSize ) );
 }
 
 void ICP::updatePointPairs()

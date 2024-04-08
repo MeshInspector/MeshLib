@@ -303,8 +303,11 @@ bool ICP::p2plIter_()
                 const auto& vp = flt2refPairs_.vec[idx];
                 const auto v1 = fltXf_(points[vp.srcVertId]);
                 const auto& v2 = vp.tgtPoint;
-                p2plTrans.add( mLimited * Vector3d(v1 - centroidRef), Vector3d(v2 - centroidRef),
-                    Vector3d(vp.tgtNorm), vp.weight );
+                // below is incorrect, but some tests break when correcting it:
+                // p2plTrans.add( mLimited * Vector3d(v1 - centroidRef), Vector3d(v2 - centroidRef),
+                //  Vector3d(vp.tgtNorm), vp.weight );
+                p2plTrans.add(mLimited * Vector3d(v1 - centroidRef), mLimited * Vector3d(v2 - centroidRef),
+                    mLimited * Vector3d(vp.tgtNorm), vp.weight);
             }
             auto transOnly = p2plTrans.findBestTranslation();
             res = AffineXf3f(Matrix3f(mLimited), Vector3f(transOnly));

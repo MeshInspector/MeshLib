@@ -1,7 +1,7 @@
 #pragma once
 
+#include "exports.h"
 #include "MRMesh/MRMeshFwd.h"
-#include "MRMesh/MRSceneRoot.h"
 
 namespace MR
 {

@@ -1,5 +1,7 @@
 #include "MRFindMeasurementsHolder.h"
 
+#include "MRMesh/MRObject.h"
+
 namespace MR
 {
 

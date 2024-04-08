@@ -14,7 +14,7 @@
 
 namespace MR
 {
-class MRMESH_CLASS FeatureObject;
+class FeatureObject;
 }
 
 namespace MR::Features

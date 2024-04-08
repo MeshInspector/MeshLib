@@ -77,11 +77,10 @@ std::pair  <std::shared_ptr<MR::ObjectMeshHolder>, HoleEdgePoint> BoundarySelect
 
 bool BoundarySelectionWidget::updateHole_( std::shared_ptr<MR::ObjectMeshHolder> object, int index, MR::Color color, float lineWidth )
 {
-    if ( ( object != nullptr ) || ( index < 0 ) )
+    if ( ( object != nullptr ) && ( index >= 0 ) )
     {
         auto& objectPolylines = holeLines_[object];
         if ( objectPolylines.size() > index )
-
         {
             auto& polyline = objectPolylines[index].obj;
             polyline->setFrontColor( color, false );
@@ -149,8 +148,14 @@ bool BoundarySelectionWidget::hoverHole_( std::shared_ptr<MR::ObjectMeshHolder> 
 
 std::pair< std::shared_ptr<MR::ObjectMeshHolder>, EdgeId > BoundarySelectionWidget::getSelectHole() const
 {
-    EdgeId hole = holes_.at( selectedHoleObject_ )[selectedHoleIndex_];
-    return std::make_pair( selectedHoleObject_, hole );
+    if ( holes_.count( selectedHoleObject_ ) == 0 )
+        return { {}, {} };
+
+    const auto& holes = holes_.at( selectedHoleObject_ );
+    if ( selectedHoleIndex_ < 0 || holes.size() <= selectedHoleIndex_ )
+        return { {}, {} };
+
+    return { selectedHoleObject_, holes[selectedHoleIndex_] };
 }
 
 std::vector<MR::Vector3f> BoundarySelectionWidget::getPointsForSelectedHole() const
@@ -158,8 +163,12 @@ std::vector<MR::Vector3f> BoundarySelectionWidget::getPointsForSelectedHole() co
     if ( holes_.count( selectedHoleObject_ ) == 0 )
         return {};
 
+    const auto& holes = holes_.at( selectedHoleObject_ );
+    if ( selectedHoleIndex_ < 0 || holes.size() <= selectedHoleIndex_ )
+        return {};
+
     std::vector<MR::Vector3f> result;
-    EdgeId hole = holes_.at( selectedHoleObject_ )[selectedHoleIndex_];
+    const auto hole = holes[selectedHoleIndex_];
     auto& mesh = *selectedHoleObject_->mesh();
     for ( auto e : leftRing( mesh.topology, hole ) )
     {

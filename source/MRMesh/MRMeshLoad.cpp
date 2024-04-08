@@ -15,6 +15,7 @@
 #include "MRProgressReadWrite.h"
 #include "MRIOParsing.h"
 #include "MRMeshDelone.h"
+#include "MRParallelFor.h"
 #include "MRPch/MRFmt.h"
 #include "MRPch/MRTBB.h"
 
@@ -120,32 +121,30 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
 
     std::vector<Vector3f> pointsBlocks( numPoints );
 
-
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, numBlock ),
-        [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::blocked_range<size_t> rangeCoords( 0, numBlock );
+    auto resCoords = ParallelFor( rangeCoords.begin(), rangeCoords.end(), [&] (size_t block)
     {
-        std::string res;
-        for ( size_t block = range.begin(); block < range.end(); block++ )
+        size_t startBlock = strHeader + step * block;
+
+        size_t numPoint = step * block;
+        size_t end = std::min( strHeader + step * ( block + 1 ), numPoints + strHeader );
+        for ( size_t i = startBlock; i < end; i++ )
         {
-            size_t startBlock = strHeader + step * block;
+            const std::string_view line( &buf[splitLines[i]], &buf[splitLines[i + 1]] );
+            auto result = parseTextCoordinate( line, pointsBlocks[numPoint++] );
 
-            size_t numPoint = step * block;
-            size_t end = std::min( strHeader + step * ( block + 1 ), numPoints + strHeader );
-            for ( size_t i = startBlock; i < end; i++ )
+            if ( !result )
             {
-                const std::string_view line( &buf[splitLines[i]], &buf[splitLines[i + 1]] );
-                auto result = parseTextCoordinate( line, pointsBlocks[numPoint++] );
-
-                if ( !result )
-                {
-                    return;// unexpected( std::move( result.error() ) );
-                }
+                return false;
             }
         }
+        return true;
+    }, settings.callback );
 
-        return;// unexpected( res );
-    } );
-
+    if ( !resCoords )
+    {
+        return unexpected( std::string( "couldn't load the coords" ) );
+    }
 
     num = numPolygons / 100;
     numBlock = std::min( std::max( num, size_t( 1 ) ), size_t( 128 ) );
@@ -155,38 +154,32 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
     std::vector<int> facesBlocks( numPolygons );
     std::vector<std::vector<VertId>> vertidBlocks( numBlock );
 
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, numBlock ),
-        [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::blocked_range<size_t> rangeTopology( 0, numBlock );
+    auto resTopology = ParallelFor( rangeTopology.begin(), rangeTopology.end(),
+        [&] ( size_t block )
     {
-        std::string res;
-        for ( size_t block = range.begin(); block < range.end(); block++ )
+        size_t numFace = step * block;
+        size_t startBlock = delta + step * block;
+
+        size_t end = std::min( delta + step * ( block + 1 ), splitLines.size() - 1);
+        for ( size_t i = startBlock; i < end; i++ )
         {
-            size_t numFace = step * block;
-            size_t startBlock = delta + step * block;
+            const std::string_view line( &buf[splitLines[i]], &buf[splitLines[i + 1]] );
 
-            size_t end = std::min( delta + step * ( block + 1 ), splitLines.size() - 1);
-            for ( size_t i = startBlock; i < end; i++ )
+            auto result = parseTopology( line, vertidBlocks[block], &facesBlocks[numFace++] );
+
+            if ( !result.has_value() )
             {
-                const std::string_view line( &buf[splitLines[i]], &buf[splitLines[i + 1]] );
-
-                auto n = [&] ( auto& ctx ) { facesBlocks[numFace++] = _attr( ctx ); };
-                auto v = [&] ( auto& ctx ) { vertidBlocks[block].emplace_back( _attr( ctx ) ); };
-                bool r = phrase_parse(
-                    line.begin(),
-                    line.end(),
-                    int_[n] >> *int_[v],
-                    ascii::space );
-
-                if ( !r )
-                {
-                    //res = "Failed to parse face in OFF-file";
-                    return;// unexpected( res );
-                }
+                return false;
             }
         }
+        return true;
+    }, settings.callback );
 
-        return;// unexpected( res );
-    } );
+    if ( !resTopology )
+    {
+        return unexpected( std::string( "couldn't load the topology" ) );
+    }
 
     Vector<MeshBuilder::VertSpan, FaceId> newFaces( numPolygons );
     int start = 0;

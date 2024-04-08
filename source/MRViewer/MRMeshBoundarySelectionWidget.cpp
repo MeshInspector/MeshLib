@@ -148,10 +148,11 @@ bool BoundarySelectionWidget::hoverHole_( std::shared_ptr<MR::ObjectMeshHolder> 
 
 std::pair< std::shared_ptr<MR::ObjectMeshHolder>, EdgeId > BoundarySelectionWidget::getSelectHole() const
 {
-    if ( holes_.count( selectedHoleObject_ ) == 0 )
+    const auto it = holes_.find( selectedHoleObject_ );
+    if ( it == holes_.end() )
         return { {}, {} };
 
-    const auto& holes = holes_.at( selectedHoleObject_ );
+    const auto& [_, holes] = *it;
     if ( selectedHoleIndex_ < 0 || holes.size() <= selectedHoleIndex_ )
         return { {}, {} };
 
@@ -160,10 +161,11 @@ std::pair< std::shared_ptr<MR::ObjectMeshHolder>, EdgeId > BoundarySelectionWidg
 
 std::vector<MR::Vector3f> BoundarySelectionWidget::getPointsForSelectedHole() const
 {
-    if ( holes_.count( selectedHoleObject_ ) == 0 )
-        return {};
+    const auto it = holes_.find( selectedHoleObject_ );
+    if ( it == holes_.end() )
+        return { {}, {} };
 
-    const auto& holes = holes_.at( selectedHoleObject_ );
+    const auto& [_, holes] = *it;
     if ( selectedHoleIndex_ < 0 || holes.size() <= selectedHoleIndex_ )
         return {};
 

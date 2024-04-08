@@ -143,7 +143,8 @@ void ICP::updatePointPairs_( PointPairs & pairs,
     BitSetParallelForAll( pairs.active, [&] ( size_t idx )
     {
         auto & res = pairs.vec[idx];
-        const auto pt = src2tgtXf( srcPoints[res.srcVertId] );
+        const auto p0 = srcPoints[res.srcVertId];
+        const auto pt = src2tgtXf( p0 );
 
         MeshOrPoints::ProjectionResult prj;
         if ( res.tgtCloseVert )
@@ -164,6 +165,7 @@ void ICP::updatePointPairs_( PointPairs & pairs,
         vp.distSq = prj.distSq;
         vp.weight = srcWeights ? srcWeights( vp.srcVertId ) : 1.0f;
         vp.tgtCloseVert = prj.closestVert;
+        vp.srcPoint = srcXf( p0 );
         vp.tgtPoint = tgtXf( prj.point );
         vp.tgtNorm = prj.normal ? ( tgtXf.A * prj.normal.value() ).normalized() : Vector3f();
         vp.srcNorm = srcNormals ? ( srcXf.A * srcNormals( vp.srcVertId ) ).normalized() : Vector3f();
@@ -193,15 +195,12 @@ void ICP::deactivatefarDistPairs_()
 
 bool ICP::p2ptIter_()
 {
-    MR_TIMER;
-    const VertCoords& points = flt_.points();
+    MR_TIMER
     PointToPointAligningTransform p2pt;
     for ( size_t idx : flt2refPairs_.active )
     {
         const auto& vp = flt2refPairs_.vec[idx];
-        const auto v1 = fltXf_(points[vp.srcVertId]);
-        const auto& v2 = vp.tgtPoint;
-        p2pt.add(Vector3d(v1), Vector3d(v2), vp.weight);
+        p2pt.add( vp.srcPoint, vp.tgtPoint, vp.weight );
     }
 
     AffineXf3f res;
@@ -235,15 +234,14 @@ bool ICP::p2ptIter_()
 
 bool ICP::p2plIter_()
 {
-    MR_TIMER;
-    const VertCoords& points = flt_.points();
+    MR_TIMER
     Vector3f centroidRef;
     int activeCount = 0;
     for ( size_t idx : flt2refPairs_.active )
     {
         const auto& vp = flt2refPairs_.vec[idx];
         centroidRef += vp.tgtPoint;
-        centroidRef += fltXf_(points[vp.srcVertId]);
+        centroidRef += vp.srcPoint;
         ++activeCount;
     }
     if ( activeCount <= 0 )
@@ -255,9 +253,7 @@ bool ICP::p2plIter_()
     for ( size_t idx : flt2refPairs_.active )
     {
         const auto& vp = flt2refPairs_.vec[idx];
-        const auto v1 = fltXf_(points[vp.srcVertId]);
-        const auto& v2 = vp.tgtPoint;
-        p2pl.add(Vector3d(v1 - centroidRef), Vector3d(v2 - centroidRef), Vector3d(vp.tgtNorm), vp.weight);
+        p2pl.add( vp.srcPoint - centroidRef, vp.tgtPoint - centroidRef, vp.tgtNorm, vp.weight);
     }
 
     AffineXf3f res;
@@ -301,12 +297,10 @@ bool ICP::p2plIter_()
             for ( size_t idx : flt2refPairs_.active )
             {
                 const auto& vp = flt2refPairs_.vec[idx];
-                const auto v1 = fltXf_(points[vp.srcVertId]);
-                const auto& v2 = vp.tgtPoint;
                 // below is incorrect, but some tests break when correcting it:
-                // p2plTrans.add( mLimited * Vector3d(v1 - centroidRef), Vector3d(v2 - centroidRef),
+                // p2plTrans.add( mLimited * Vector3d( vp.srcPoint - centroidRef ), Vector3d( vp.tgtPoint - centroidRef ),
                 //  Vector3d(vp.tgtNorm), vp.weight );
-                p2plTrans.add(mLimited * Vector3d(v1 - centroidRef), mLimited * Vector3d(v2 - centroidRef),
+                p2plTrans.add( mLimited * Vector3d( vp.srcPoint - centroidRef ), mLimited * Vector3d( vp.tgtPoint - centroidRef ),
                     mLimited * Vector3d(vp.tgtNorm), vp.weight);
             }
             auto transOnly = p2plTrans.findBestTranslation();
@@ -386,15 +380,14 @@ float getMeanSqDistToPoint( const PointPairs & pairs )
     return (float)std::sqrt( sum / num );
 }
 
-float getMeanSqDistToPlane( const PointPairs & pairs, const MeshOrPoints & floating, const AffineXf3f & floatXf )
+float getMeanSqDistToPlane( const PointPairs & pairs )
 {
-    const VertCoords& points = floating.points();
     int num = 0;
     double sum = 0;
     for ( size_t idx : pairs.active )
     {
         const auto& vp = pairs.vec[idx];
-        auto v = dot( vp.tgtNorm, vp.tgtPoint - floatXf(points[vp.srcVertId]) );
+        auto v = dot( vp.tgtNorm, vp.tgtPoint - vp.srcPoint );
         sum += sqr( v );
         ++num;
     }

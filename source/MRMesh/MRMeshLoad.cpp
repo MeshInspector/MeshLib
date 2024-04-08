@@ -21,6 +21,9 @@
 #include <array>
 #include <future>
 
+#include <boost/algorithm/string/trim.hpp>
+#include <boost/spirit/home/x3.hpp>
+
 #ifndef MRMESH_NO_OPENCTM
 #include "OpenCTM/openctm.h"
 #endif
@@ -75,7 +78,7 @@ Expected<Mesh, std::string> fromMrmesh( std::istream& in, const MeshLoadSettings
 
 Expected<Mesh, std::string> fromOff( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
-    std::ifstream in( file );
+    std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
@@ -85,6 +88,17 @@ Expected<Mesh, std::string> fromOff( const std::filesystem::path& file, const Me
 Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
+
+    using namespace boost::spirit::x3;
+
+    auto bufOrExpect = readCharBuffer( in );
+
+    if ( !bufOrExpect )
+        return unexpected( std::move( bufOrExpect.error() ) );
+
+    auto& buf = bufOrExpect.value();
+
+    in.seekg( 0);
     std::string header;
     in >> header;
     if ( !in || header != "OFF" )
@@ -95,57 +109,142 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
     if ( !in || numPoints <= 0 || numPolygons <= 0 || numUnused != 0 )
         return unexpected( std::string( "Unsupported OFF-format" ) );
 
-    std::vector<Vector3f> points;
-    points.reserve( numPoints );
+    auto deltaStart = in.tellg();
 
-    for ( int i = 0; i < numPoints; ++i )
+    auto fileSize = buf.size();
+    size_t num = fileSize / 10000;
+    size_t numBlock = std::min(std::max( num, size_t(1) ), size_t(128) );
+
+    std::vector<std::vector<Vector3f>> pointsBlocks( numBlock, std::vector<Vector3f>() );
+    std::vector<std::vector<VertId>> vertidBlocks( numBlock, std::vector<VertId>() );
+    std::vector<std::vector<int>> facesBlocks( numBlock, std::vector<int>() );
+
+    const size_t step = fileSize / numBlock;
+
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, numBlock ),
+        [&] ( const tbb::blocked_range<size_t>& range )
     {
-        float x, y, z;
-        in >> x >> y >> z;
-        if ( !in )
-            return unexpected( std::string( "Points read error" ) );
-        points.emplace_back( x, y, z );
-        if ( settings.callback && !( i & 0x3FF ) && !subprogress( settings.callback, 0.f, 0.5f )( float( i ) / numPoints ) )
-            return unexpected( std::string( "Loading canceled" ) );
-    }
-
-    std::vector<VertId> verts;
-    Vector<MeshBuilder::VertSpan, FaceId> faces;
-    faces.reserve( numPolygons + 1 );
-
-    for ( int i = 0; i < numPolygons; ++i )
-    {
-        int k;
-        in >> k;
-        if ( !in )
-            return unexpected( std::string( "Polygons read error" ) );
-        if ( k < 3 || k > 1024 )
-            return unexpected( fmt::format( "Bad number of face vertices: {}", k ) );
-
-        MeshBuilder::VertSpan vspan;
-        vspan.firstVertex = VertId( verts.size() );
-        for ( int j = 0; j < k; ++j )
+        std::string res;
+        for ( size_t block = range.begin(); block < range.end(); ++block )
         {
-            int v;
-            in >> v;
-            if ( !in )
-                return unexpected( std::string( "Polygons read error" ) );
-            if ( v < 0 || v >= numPoints )
-            return unexpected( fmt::format( "Bad vertex id: {}", v ) );
-            verts.push_back( VertId( v ) );
+            size_t startBlock = step * block;
+            if ( block == 0 )
+            {
+                startBlock = deltaStart;
+            }
+            if ( buf[size_t( startBlock )] != '\n' )
+            {
+                for ( size_t i = startBlock; i < step * ( block + 1 ); i++ )
+                {
+                    if ( buf[i] == '\n' )
+                    {
+                        startBlock = i + 1;
+                        break;
+                    }
+                }
+            }
+
+            size_t startLine = startBlock;
+            size_t endLine = 0;
+            size_t numSpase = 0;
+            size_t posNextBlock = step * ( block + 1 );
+            for ( size_t i = startBlock; i < fileSize; i++ )
+            {
+                if ( buf[i] == ' ' )
+                {
+                    numSpase++;
+                }
+                else if ( buf[i] == '\n' && numSpase == 2)
+                {
+                    endLine = i;
+                    const std::string_view line( &buf[startLine], &buf[endLine] );
+                    if ( line.size() <= 1 )
+                    {
+                        startLine = i + 1;
+                        if ( i >= posNextBlock )
+                        {
+                            break;
+                        }
+                        continue;
+                    }
+
+                    pointsBlocks[block].emplace_back();
+                    auto result = parseTextCoordinate( line, pointsBlocks[block].back() );
+
+                    if ( !result )
+                    {
+                        return;// unexpected( std::move( result.error() ) );
+                    }
+
+                    startLine = i + 1;
+                    numSpase = 0;
+                    if ( i >= posNextBlock )
+                    {
+                        break;
+                    }
+                }
+                else if ( buf[i] == '\n' && numSpase >= 3)
+                {
+                    endLine = i;
+                    const std::string_view line( &buf[startLine], &buf[endLine] );
+                    startLine = i + 1;
+
+                    MeshBuilder::VertSpan vspan;
+                    vspan.firstVertex = VertId( vertidBlocks[block].size() );
+
+                    auto n = [&] ( auto& ctx ) { facesBlocks[block].push_back( _attr( ctx ) ); };
+                    auto v = [&] ( auto& ctx ) { vertidBlocks[block].emplace_back( _attr( ctx ) ); };
+                    bool r = phrase_parse(
+                        line.begin(),
+                        line.end(),
+                        int_[n] >> *int_[v],
+                        ascii::space);
+
+                    if ( !r )
+                    {
+                        //res = "Failed to parse face in OFF-file";
+                        return;// unexpected( res );
+                    }
+
+                    vspan.lastVertex = VertId( vertidBlocks[block].size() );
+
+                    numSpase = 0;
+                }
+            }
         }
-        vspan.lastVertex = VertId( verts.size() );
-        faces.push_back( vspan );
+
+        return;// unexpected( res );
+    } );
+
+    std::vector<Vector3f> newPoints;
+    std::vector<VertId> newVerts;
+    Vector<MeshBuilder::VertSpan, FaceId> newFaces;
+    int first = 0;
+    for ( size_t i = 0; i < numBlock; i++)
+    {
+        if ( !pointsBlocks[i].empty() )
+            newPoints.insert( newPoints.end(), pointsBlocks[i].begin(), pointsBlocks[i].end() );
+        if ( !vertidBlocks[i].empty() )
+            newVerts.insert( newVerts.end(), vertidBlocks[i].begin(), vertidBlocks[i].end() );
+
+        if ( !facesBlocks[i].empty() )
+        {
+            for ( size_t j = 0; j < facesBlocks[i].size(); j++ )
+            {
+                newFaces.emplace_back( MeshBuilder::VertSpan{ first, first + facesBlocks[i][j] } );
+                first += facesBlocks[i][j];
+            }
+        }
     }
 
     FaceBitSet skippedFaces;
     MeshBuilder::BuildSettings buildSettings;
     if ( settings.skippedFaceCount )
     {
-        skippedFaces.resize( faces.size(), true );
+        skippedFaces.resize( newFaces.size(), true );
         buildSettings.region = &skippedFaces;
     }
-    auto res = Mesh::fromFaceSoup( std::move( points ), verts, faces, buildSettings );
+    auto res = Mesh::fromFaceSoup( std::move( newPoints ), newVerts, newFaces, buildSettings );
     if ( settings.skippedFaceCount )
         *settings.skippedFaceCount = int( skippedFaces.count() );
     return res;

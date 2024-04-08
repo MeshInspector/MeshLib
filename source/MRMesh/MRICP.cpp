@@ -105,9 +105,10 @@ void ICP::sampleFltPoints( float samplingVoxelSize )
     setupPairs( flt2refPairs_, *flt_.pointsGridSampling( samplingVoxelSize ) );
 }
 
-void ICP::sampleRefPoints( float samplingVoxelSize )
+void ICP::sampleRefPoints( float )
 {
-    setupPairs( ref2fltPairs_, *ref_.pointsGridSampling( samplingVoxelSize ) );
+    // uncomment when ref2fltPairs_ are supported!!!
+    //setupPairs( ref2fltPairs_, *ref_.pointsGridSampling( samplingVoxelSize ) );
 }
 
 void ICP::updatePointPairs()

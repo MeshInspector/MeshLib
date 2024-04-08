@@ -36,6 +36,9 @@ struct PointPair
     /// id of the source point
     VertId srcVertId;
 
+    /// coordinates of the source point after transforming in world space
+    Vector3f srcPoint;
+
     /// normal in source point after transforming in world space
     Vector3f srcNorm;
 
@@ -77,7 +80,7 @@ struct PointPairs
 [[nodiscard]] MRMESH_API float getMeanSqDistToPoint( const PointPairs & pairs );
 
 /// computes root-mean-square deviation from points to target planes
-[[nodiscard]] MRMESH_API float getMeanSqDistToPlane( const PointPairs & pairs, const MeshOrPoints & floating, const AffineXf3f & floatXf );
+[[nodiscard]] MRMESH_API float getMeanSqDistToPlane( const PointPairs & pairs );
 
 struct ICPProperties
 {
@@ -165,7 +168,7 @@ public:
     [[nodiscard]] float getMeanSqDistToPoint() const { return MR::getMeanSqDistToPoint( flt2refPairs_ ); }
 
     /// computes root-mean-square deviation from points to target planes
-    [[nodiscard]] float getMeanSqDistToPlane() const { return MR::getMeanSqDistToPlane( flt2refPairs_, flt_, fltXf_ ); }
+    [[nodiscard]] float getMeanSqDistToPlane() const { return MR::getMeanSqDistToPlane( flt2refPairs_ ); }
 
     /// returns current pairs formed from samples on floating and projections on reference
     [[nodiscard]] const PointPairs & getFlt2RefPairs() const { return flt2refPairs_; }

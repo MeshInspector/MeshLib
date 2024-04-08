@@ -102,6 +102,7 @@ if [ "${MESHLIB_BUILD_RELEASE}" = "ON" ]; then
   fi
   cd Release
   if [[ $OSTYPE == 'darwin'* ]]; then
+    alias nproc="sysctl -n hw.physicalcpu"
     cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPYTHON_LIBRARY="${PYTHON_LIBRARY}" -DPYTHON_INCLUDE_DIR="${PYTHON_INCLUDE_DIR}" -DPYTHON_EXECUTABLE:FILEPATH="${PYTHON_EXECUTABLE}" ${MR_CMAKE_OPTIONS} | tee ${logfile}
   else
     if [ "${MR_EMSCRIPTEN}" != "ON" ]; then

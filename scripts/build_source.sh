@@ -98,6 +98,7 @@ nproc_fn () {
     sysctl -n hw.logicalcpu
   else
     nproc
+  fi
 }
 
 # exit if any command failed

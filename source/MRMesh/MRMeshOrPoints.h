@@ -66,12 +66,17 @@ public:
     /// returns a function that finds projection (closest) points on this: Vector3f->ProjectionResult
     [[nodiscard]] MRMESH_API std::function<ProjectionResult( const Vector3f & )> projector() const;
 
+    using LimitedProjectorFunc = std::function<void( const Vector3f& p, ProjectionResult& res )>;
     /// returns a function that updates projection (closest) points on this,
     /// the update takes place only if res.distSq on input is more than squared distance to the closest point
-    [[nodiscard]] MRMESH_API std::function<void( const Vector3f & p, ProjectionResult & res )> limitedProjector() const;
+    [[nodiscard]] MRMESH_API LimitedProjectorFunc limitedProjector() const;
+
+    /// override projector for this object
+    void setCustomProjector( LimitedProjectorFunc func ) { customProjector_ = std::move( func ); }
 
 private:
     std::variant<MeshPart, const PointCloud*> var_;
+    LimitedProjectorFunc customProjector_;
 };
 
 /// constructs MeshOrPoints from ObjectMesh or ObjectPoints, otherwise returns nullopt

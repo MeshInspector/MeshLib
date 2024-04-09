@@ -127,10 +127,6 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
         }
     }
 
-    size_t num = numPoints / 100;
-    size_t numBlock = std::min(std::max( num, size_t(1) ), size_t(128) );
-    size_t step = numPoints / numBlock + 1;
-
     std::vector<Vector3f> pointsBlocks( numPoints );
 
     tbb::blocked_range<size_t> rangeCoords( 0, numPoints );
@@ -138,7 +134,7 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
     {
         size_t numLine = strHeader + numPoint;
 
-        const std::string_view line( &buf[splitLines[numLine]], &buf[splitLines[numLine + 1] - 1] );
+        const std::string_view line( &buf[splitLines[numLine]], splitLines[numLine + 1] - splitLines[numLine] );
         auto result = parseTextCoordinate( line, pointsBlocks[numPoint] );
 
         if ( !result )
@@ -152,21 +148,20 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
         return unexpectedOperationCanceled();
     }
 
-    num = numPolygons / 100;
-    numBlock = std::min( std::max( num, size_t( 1 ) ), size_t( 128 ) );
-    step = numPolygons / numBlock + 1;
     size_t delta = numPoints + strHeader + strBorder;
 
     std::vector<int> facesBlocks( numPolygons );
-    int numPolygonPoint = 0;
     Vector<MeshBuilder::VertSpan, FaceId> newFaces( numPolygons );
-    int st = 0;
+    int numPolygonPoint = 0;
+    int start = 0;
     for ( size_t i = 0; i < numPolygons; i++ )
     {
-        const std::string_view line( &buf[splitLines[delta + i]], &buf[splitLines[delta + i + 1] - 1] );
+        size_t numLine = delta + i;
+        
+        const std::string_view line( &buf[splitLines[numLine]], splitLines[numLine + 1] - splitLines[numLine] );
         parseNumPoint( line, &numPolygonPoint );
-        newFaces.vec_[i] = MeshBuilder::VertSpan{ st, st + numPolygonPoint };
-        st += numPolygonPoint;
+        newFaces.vec_[i] = MeshBuilder::VertSpan{ start, start + numPolygonPoint };
+        start += numPolygonPoint;
     }
 
     std::vector<VertId> newVerts( newFaces.back().lastVertex );
@@ -176,7 +171,8 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
         [&] ( size_t numPolygon )
     {
         size_t numLine = delta + numPolygon;
-        const std::string_view line( &buf[splitLines[numLine]], &buf[splitLines[numLine + 1] - 1] );
+
+        const std::string_view line( &buf[splitLines[numLine]], splitLines[numLine + 1] - splitLines[numLine] );
         auto result = parsePolygon( line, &newVerts[newFaces.vec_[numPolygon].firstVertex], nullptr );
 
         if ( !result.has_value() )

@@ -78,7 +78,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def( "getNumActivePairs", &MR::ICP::getNumActivePairs, "computes the number of active point pairs" ).
         def( "getMeanSqDistToPoint", &MR::ICP::getMeanSqDistToPoint, "computes root-mean-square deviation between points" ).
         def( "getMeanSqDistToPlane", &MR::ICP::getMeanSqDistToPlane, "computes root-mean-square deviation from points to target planes" ).
-        def( "getFlt2RefPairs", &MR::ICP::getFlt2RefPairs, pybind11::return_value_policy::copy, "returns current pairs formed from samples on floating and projections on reference" ).
+        def( "getFlt2RefPairs", &MR::ICP::getFlt2RefPairs, pybind11::return_value_policy::copy, "returns current pairs formed from samples on floating object and projections on reference object" ).
+        def( "getRef2FltPairs", &MR::ICP::getRef2FltPairs, pybind11::return_value_policy::copy, "returns current pairs formed from samples on reference object and projections on floating object" ).
         def( "calculateTransformation", &MR::ICP::calculateTransformation, "runs ICP algorithm given input objects, transformations, and parameters; "
             "returns adjusted transformation of the floating object to match reference object" ).
         def( "autoSelectFloatXf", &MR::ICP::autoSelectFloatXf, "automatically selects initial transformation for the floating object based on covariance matrices of both floating and reference objects; applies the transformation to the floating object and returns it" ).

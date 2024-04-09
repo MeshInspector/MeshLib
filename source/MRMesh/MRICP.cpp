@@ -113,6 +113,7 @@ void ICP::updatePointPairs()
 {
     MR_TIMER
     updatePointPairs_( flt2refPairs_, flt_, fltXf_, ref_, refXf_ );
+    updatePointPairs_( ref2fltPairs_, ref_, refXf_, flt_, fltXf_ );
     deactivatefarDistPairs_();
 }
 
@@ -184,7 +185,8 @@ void ICP::deactivatefarDistPairs_()
         if ( maxDistSq >= prop_.distThresholdSq )
             break;
 
-        if ( deactivateFarPairs( flt2refPairs_, maxDistSq ) <= 0 )
+        if ( deactivateFarPairs( flt2refPairs_, maxDistSq ) +
+             deactivateFarPairs( ref2fltPairs_, maxDistSq ) <= 0 )
             break; // nothing was deactivated
     }
 }
@@ -197,6 +199,11 @@ bool ICP::p2ptIter_()
     {
         const auto& vp = flt2refPairs_.vec[idx];
         p2pt.add( vp.srcPoint, vp.tgtPoint, vp.weight );
+    }
+    for ( size_t idx : ref2fltPairs_.active )
+    {
+        const auto& vp = ref2fltPairs_.vec[idx];
+        p2pt.add( vp.tgtPoint, vp.srcPoint, vp.weight );
     }
 
     AffineXf3f res;
@@ -240,6 +247,13 @@ bool ICP::p2plIter_()
         centroidRef += vp.srcPoint;
         ++activeCount;
     }
+    for ( size_t idx : ref2fltPairs_.active )
+    {
+        const auto& vp = ref2fltPairs_.vec[idx];
+        centroidRef += vp.tgtPoint;
+        centroidRef += vp.srcPoint;
+        ++activeCount;
+    }
     if ( activeCount <= 0 )
         return false;
     centroidRef /= float(activeCount * 2);
@@ -249,7 +263,12 @@ bool ICP::p2plIter_()
     for ( size_t idx : flt2refPairs_.active )
     {
         const auto& vp = flt2refPairs_.vec[idx];
-        p2pl.add( vp.srcPoint - centroidRef, vp.tgtPoint - centroidRef, vp.tgtNorm, vp.weight);
+        p2pl.add( vp.srcPoint - centroidRef, vp.tgtPoint - centroidRef, vp.tgtNorm, vp.weight );
+    }
+    for ( size_t idx : ref2fltPairs_.active )
+    {
+        const auto& vp = ref2fltPairs_.vec[idx];
+        p2pl.add( vp.tgtPoint - centroidRef, vp.srcPoint - centroidRef, vp.srcNorm, vp.weight );
     }
 
     AffineXf3f res;
@@ -298,6 +317,13 @@ bool ICP::p2plIter_()
                 //  Vector3d(vp.tgtNorm), vp.weight );
                 p2plTrans.add( mLimited * Vector3d( vp.srcPoint - centroidRef ), mLimited * Vector3d( vp.tgtPoint - centroidRef ),
                     mLimited * Vector3d(vp.tgtNorm), vp.weight);
+            }
+            for ( size_t idx : ref2fltPairs_.active )
+            {
+                const auto& vp = ref2fltPairs_.vec[idx];
+                // same bad as above
+                p2plTrans.add( mLimited * Vector3d( vp.tgtPoint - centroidRef ), mLimited * Vector3d( vp.srcPoint - centroidRef ),
+                    mLimited * Vector3d(vp.srcNorm), vp.weight);
             }
             auto transOnly = p2plTrans.findBestTranslation();
             res = AffineXf3f(Matrix3f(mLimited), Vector3f(transOnly));

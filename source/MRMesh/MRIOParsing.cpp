@@ -238,17 +238,53 @@ VoidOrErrStr parseSingleNumber( const std::string_view& str, T& num )
     return {};
 }
 
-VoidOrErrStr parsePolygon( const std::string_view& str, std::vector<VertId>& vertId, int* numPoints)
+VoidOrErrStr parseNumPoint( const std::string_view& str, int* numPoints )
 {
     using namespace boost::spirit::x3;
 
-    auto n = [&] ( auto& ctx ) { *numPoints = _attr( ctx ); };
-    auto v = [&] ( auto& ctx ) { vertId.emplace_back( _attr( ctx ) ); };
+    auto n = [&] ( auto& ctx )
+    {
+        *numPoints = _attr( ctx );
+    };
     bool r = phrase_parse(
         str.begin(),
         str.end(),
-        int_[n] >> *int_[v],
+        int_[n],
         ascii::space );
+
+    if ( !r )
+    {
+        return unexpected( "Failed to parse face in OFF-file" );
+    }
+
+    return {};
+}
+
+VoidOrErrStr parsePolygon( const std::string_view& str, VertId* vertId, int* numPoints)
+{
+    using namespace boost::spirit::x3;
+
+    bool r = false;
+    size_t vi = 0;
+    auto v = [&] ( auto& ctx ) { vertId[vi++] = VertId( _attr( ctx ) ); };
+    if ( numPoints )
+    {
+        auto n = [&] ( auto& ctx ) { *numPoints = _attr( ctx ); };
+        r = phrase_parse(
+            str.begin(),
+            str.end(),
+            int_[n] >> *int_[v],
+            ascii::space );
+    }
+    else
+    {
+        auto n = [&] ( auto& ) { };
+        r = phrase_parse(
+            str.begin(),
+            str.end(),
+            int_[n] >> *int_[v],
+            ascii::space );
+    }
 
     if ( !r )
     {

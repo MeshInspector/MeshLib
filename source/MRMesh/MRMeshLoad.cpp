@@ -95,7 +95,6 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
     auto& buf = bufOrExpect.value();
 
     auto splitLines = splitByLines( buf.data(), buf.size() );
-    splitLines.back() -= 1;
     in.seekg( 0);
     std::string header;
     in >> header;
@@ -110,8 +109,7 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
     size_t strHeader = 2;
     for ( size_t i = 2; i < splitLines.size(); i++ )
     {
-        std::string_view lenHeader( &buf[splitLines[i]], &buf[splitLines[i + 1]] );
-        if ( lenHeader.size() > 2 )
+        if ( splitLines[i + 1] - splitLines[i] > 2 )
         {
             strHeader = i;
             break;
@@ -122,8 +120,7 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
 
     for ( size_t i = numPoints + strHeader; i < splitLines.size(); i++ )
     {
-        std::string_view lenHeader( &buf[splitLines[i]], &buf[splitLines[i + 1]] );
-        if ( lenHeader.size() > 2 )
+        if ( splitLines[i + 1] - splitLines[i] > 2 )
         {
             strBorder = i - (numPoints + strHeader);
             break;
@@ -136,22 +133,17 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
 
     std::vector<Vector3f> pointsBlocks( numPoints );
 
-    tbb::blocked_range<size_t> rangeCoords( 0, numBlock );
-    bool keepGoing = ParallelFor( rangeCoords.begin(), rangeCoords.end(), [&] (size_t block)
+    tbb::blocked_range<size_t> rangeCoords( 0, numPoints );
+    bool keepGoing = ParallelFor( rangeCoords.begin(), rangeCoords.end(), [&] (size_t numPoint )
     {
-        size_t numPoint = step * block;
-        size_t startBlock = strHeader + step * block;
+        size_t numLine = strHeader + numPoint;
 
-        size_t end = std::min( strHeader + step * ( block + 1 ), numPoints + strHeader );
-        for ( size_t i = startBlock; i < end; i++ )
+        const std::string_view line( &buf[splitLines[numLine]], &buf[splitLines[numLine + 1] - 1] );
+        auto result = parseTextCoordinate( line, pointsBlocks[numPoint] );
+
+        if ( !result )
         {
-            const std::string_view line( &buf[splitLines[i]], &buf[splitLines[i + 1]] );
-            auto result = parseTextCoordinate( line, pointsBlocks[numPoint++] );
-
-            if ( !result )
-            {
-                return;
-            }
+            return;
         }
     }, settings.callback );
 
@@ -166,53 +158,36 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
     size_t delta = numPoints + strHeader + strBorder;
 
     std::vector<int> facesBlocks( numPolygons );
-    std::vector<std::vector<VertId>> vertidBlocks( numBlock );
-
-    tbb::blocked_range<size_t> rangeTopology( 0, numBlock );
-    keepGoing = ParallelFor( rangeTopology.begin(), rangeTopology.end(),
-        [&] ( size_t block )
+    int numPolygonPoint = 0;
+    Vector<MeshBuilder::VertSpan, FaceId> newFaces( numPolygons );
+    int st = 0;
+    for ( size_t i = 0; i < numPolygons; i++ )
     {
-        size_t numFace = step * block;
-        size_t startBlock = delta + step * block;
+        const std::string_view line( &buf[splitLines[delta + i]], &buf[splitLines[delta + i + 1] - 1] );
+        parseNumPoint( line, &numPolygonPoint );
+        newFaces.vec_[i] = MeshBuilder::VertSpan{ st, st + numPolygonPoint };
+        st += numPolygonPoint;
+    }
 
-        size_t end = std::min( delta + step * ( block + 1 ), splitLines.size() - 1);
-        for ( size_t i = startBlock; i < end; i++ )
+    std::vector<VertId> newVerts( newFaces.back().lastVertex );
+
+    tbb::blocked_range<size_t> rangeTopology( 0, numPolygons );
+    keepGoing = ParallelFor( rangeTopology.begin(), rangeTopology.end(),
+        [&] ( size_t numPolygon )
+    {
+        size_t numLine = delta + numPolygon;
+        const std::string_view line( &buf[splitLines[numLine]], &buf[splitLines[numLine + 1] - 1] );
+        auto result = parsePolygon( line, &newVerts[newFaces.vec_[numPolygon].firstVertex], nullptr );
+
+        if ( !result.has_value() )
         {
-            const std::string_view line( &buf[splitLines[i]], &buf[splitLines[i + 1]] );
-            auto result = parsePolygon( line, vertidBlocks[block], &facesBlocks[numFace++] );
-
-            if ( !result.has_value() )
-            {
-                return;
-            }
+            return;
         }
     }, settings.callback );
 
     if ( !keepGoing )
     {
-        return unexpected( std::string( "couldn't load the topology" ) );
-    }
-
-    Vector<MeshBuilder::VertSpan, FaceId> newFaces( numPolygons );
-    int start = 0;
-    for ( size_t i = 0; i < facesBlocks.size(); i++ )
-    {
-        newFaces.vec_[i] = MeshBuilder::VertSpan{ start, start + facesBlocks[i] };
-        start += facesBlocks[i];
-    }
-
-    size_t numIndex = 0;
-    for ( const auto& block : vertidBlocks )
-    {
-        numIndex += block.size();
-    }
-
-    std::vector<VertId> newVerts( numIndex );
-    size_t pos = 0;
-    for ( const auto& block : vertidBlocks )
-    {
-        memmove( &newVerts[pos], block.data(), sizeof( VertId ) * block.size());
-        pos += block.size();
+        return unexpectedOperationCanceled();
     }
 
     FaceBitSet skippedFaces;

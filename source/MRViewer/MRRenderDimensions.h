@@ -62,7 +62,7 @@ struct AngleParams
     bool isConical = false;
 
     // Whether we should draw a ray from the center point to better visualize the angle. Enable this if there isn't already a line object there.
-    std::array<bool, 2> shouldVisualizeRay{};
+    std::array<bool, 2> shouldVisualizeRay{ true, true };
 };
 
 class AngleTask : public BasicUiRenderTask

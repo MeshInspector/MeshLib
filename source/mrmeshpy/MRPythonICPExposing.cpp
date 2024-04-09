@@ -52,18 +52,28 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def_readwrite( "exitVal", &MR::ICPProperties::exitVal, "Algorithm target root-mean-square distance. As soon as it is reached, the algorithm stops." );
         
     pybind11::class_<MR::ICP>( m, "ICP", "This class allows to match two meshes with almost same geometry throw ICP point-to-point or point-to-plane algorithms" ).
-        def( pybind11::init<const MR::Mesh&, const MR::Mesh&, const MR::AffineXf3f&, const MR::AffineXf3f&, const MR::VertBitSet&>(),
-            pybind11::arg("floatingMesh"), pybind11::arg( "referenceMesh" ), pybind11::arg( "fltMeshXf" ), pybind11::arg( "refMeshXf" ), pybind11::arg( "floatingMeshBitSet" ),
-            "xf parameters should represent current transformations of meshes\n"
-            "fltMeshXf - transform from the local floatingMesh basis to the global\n"
-            "refMeshXf - transform from the local referenceMesh basis to the global\n"
-            "floatingMeshBitSet - allows to take exact set of vertices from the mesh" ).
+        def( pybind11::init<const MR::Mesh&, const MR::Mesh&, const MR::AffineXf3f&, const MR::AffineXf3f&, const MR::VertBitSet&, const MR::VertBitSet&>(),
+            pybind11::arg( "flt" ), pybind11::arg( "ref" ),
+            pybind11::arg( "fltXf" ), pybind11::arg( "refXf" ),
+            pybind11::arg( "fltSamples" ) = MR::VertBitSet{},
+            pybind11::arg( "refSamples" ) = MR::VertBitSet{},
+            "Constructs ICP framework with given sample points on both objects\n"
+            "flt - floating object\n"
+            "ref - reference object\n"
+            "fltXf - transformation from floating object space to global space\n"
+            "refXf - transformation from reference object space to global space\n"
+            "fltSamples - samples on floating object to find projections on the reference object during the algorithm\n"
+            "refSamples - samples on reference object to find projections on the floating object during the algorithm" ).
         def( pybind11::init<const MR::Mesh&, const MR::Mesh&, const MR::AffineXf3f&, const MR::AffineXf3f&, float>(), 
-            pybind11::arg( "floatingMesh" ), pybind11::arg( "referenceMesh" ), pybind11::arg( "fltMeshXf" ), pybind11::arg( "refMeshXf" ), pybind11::arg( "floatSamplingVoxelSize" ),
-            "xf parameters should represent current transformations of meshes\n"
-            "fltMeshXf - transform from the local floatingMesh basis to the global\n"
-            "refMeshXf - transform from the local referenceMesh basis to the global\n"
-            "floatSamplingVoxelSize = positive value here defines voxel size, and only one vertex per voxel will be selected" ).
+            pybind11::arg( "flt" ), pybind11::arg( "ref" ),
+            pybind11::arg( "fltXf" ), pybind11::arg( "refXf" ),
+            pybind11::arg( "samplingVoxelSize" ),
+            "Constructs ICP framework with automatic points sampling on both objects\n"
+            "flt - floating object\n"
+            "ref - reference object\n"
+            "fltXf - transformation from floating object space to global space\n"
+            "refXf - transformation from reference object space to global space\n"
+            "samplingVoxelSize - approximate distance between samples on each of two objects" ).
         def( "setParams", &MR::ICP::setParams, pybind11::arg( "prop" ), "tune algorithm params before run calculateTransformation()" ).
         def( "setCosineLimit", &MR::ICP::setCosineLimit, pybind11::arg( "cos" ) ).
         def( "setDistanceLimit", &MR::ICP::setDistanceLimit, pybind11::arg( "dist" ) ).

@@ -141,14 +141,22 @@ struct ICPProperties
 class [[nodiscard]] ICP
 {
 public:
-    /// xf parameters should represent current transformations of meshes
-    /// fltXf transform from the local floating basis to the global
-    /// refXf transform from the local reference basis to the global
-    /// fltSamples allows to take exact set of vertices from the floating object
-    /// fltSamples allows to take exact set of vertices from the reference object
+    /// Constructs ICP framework with given sample points on both objects
+    /// \param flt floating object
+    /// \param ref reference object
+    /// \param fltXf transformation from floating object space to global space
+    /// \param refXf transformation from reference object space to global space
+    /// \param fltSamples samples on floating object to find projections on the reference object during the algorithm
+    /// \param refSamples samples on reference object to find projections on the floating object during the algorithm
     MRMESH_API ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fltXf, const AffineXf3f& refXf,
         const VertBitSet& fltSamples = {}, const VertBitSet& refSamples = {} );
 
+    /// Constructs ICP framework with automatic points sampling on both objects
+    /// \param flt floating object
+    /// \param ref reference object
+    /// \param fltXf transformation from floating object space to global space
+    /// \param refXf transformation from reference object space to global space
+    /// \param samplingVoxelSize approximate distance between samples on each of two objects
     MRMESH_API ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fltXf, const AffineXf3f& refXf,
         float samplingVoxelSize );
 

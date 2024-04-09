@@ -141,7 +141,7 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
         const std::string_view line( &buf[splitLines[numLine]], splitLines[numLine + 1] - splitLines[numLine] );
         Vector3d temp;
         auto result = parseTextCoordinate( line, temp );
-        pointsBlocks[numPoint] = Vector3f(float( temp.x), float( temp.y ), float( temp.z ) );
+        pointsBlocks[numPoint] = Vector3f( temp );
 
         if ( !result.has_value() )
         {

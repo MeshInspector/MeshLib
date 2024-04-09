@@ -55,7 +55,7 @@ std::function<Vector3f(VertId)> MeshOrPoints::normals() const
     return std::visit( overloaded{
         []( const MeshPart & mp ) -> std::function<Vector3f(VertId)>
         {
-            return [&mesh = mp.mesh]( VertId v ) { return mesh.normal( v ); };
+            return [&mesh = mp.mesh]( VertId v ) { return mesh.pseudonormal( v ); };
         },
         []( const PointCloud * pc ) -> std::function<Vector3f(VertId)>
         { 

@@ -129,19 +129,29 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
 
     std::vector<Vector3f> pointsBlocks( numPoints );
 
+    std::atomic<bool> forseStop = false;
     bool keepGoing = ParallelFor( pointsBlocks, [&] ( size_t numPoint )
     {
+        if ( forseStop )
+        {
+            return;
+        }
         size_t numLine = strHeader + numPoint;
 
         const std::string_view line( &buf[splitLines[numLine]], splitLines[numLine + 1] - splitLines[numLine] );
         auto result = parseTextCoordinate( line, pointsBlocks[numPoint] );
 
-        if ( !result )
+        if ( !result.has_value() )
         {
+            forseStop = true;
             return;
         }
     }, settings.callback );
 
+    if ( forseStop )
+    {
+        return unexpected( std::string( "Error when reading coordinates" ) );
+    }
     if ( !keepGoing )
     {
         return unexpectedOperationCanceled();
@@ -167,6 +177,10 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
 
     keepGoing = ParallelFor( faces, [&] ( size_t numPolygon )
     {
+        if ( forseStop )
+        {
+            return;
+        }
         size_t numLine = delta + numPolygon;
 
         const std::string_view line( &buf[splitLines[numLine]], splitLines[numLine + 1] - splitLines[numLine] );
@@ -174,10 +188,15 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
 
         if ( !result.has_value() )
         {
+            forseStop = true;
             return;
         }
     }, settings.callback );
 
+    if ( forseStop )
+    {
+        return unexpected( std::string( "Error when reading polygon topology" ) );
+    }
     if ( !keepGoing )
     {
         return unexpectedOperationCanceled();

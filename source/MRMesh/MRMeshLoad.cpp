@@ -22,9 +22,6 @@
 #include <array>
 #include <future>
 
-#include <boost/algorithm/string/trim.hpp>
-#include <boost/spirit/home/x3.hpp>
-
 #ifndef MRMESH_NO_OPENCTM
 #include "OpenCTM/openctm.h"
 #endif
@@ -90,8 +87,6 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
 {
     MR_TIMER
 
-    using namespace boost::spirit::x3;
-
     auto bufOrExpect = readCharBuffer( in );
 
     if ( !bufOrExpect )
@@ -112,8 +107,28 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
     if ( !in || numPoints <= 0 || numPolygons <= 0 || numUnused != 0 )
         return unexpected( std::string( "Unsupported OFF-format" ) );
 
-    size_t strHeader = 3;
-    size_t strBorder = 1;
+    size_t strHeader = 2;
+    for ( size_t i = 2; i < splitLines.size(); i++ )
+    {
+        std::string_view lenHeader( &buf[splitLines[i]], &buf[splitLines[i + 1]] );
+        if ( lenHeader.size() > 2 )
+        {
+            strHeader = i;
+            break;
+        }
+    }
+    
+    size_t strBorder = 0;
+
+    for ( size_t i = numPoints + strHeader; i < splitLines.size(); i++ )
+    {
+        std::string_view lenHeader( &buf[splitLines[i]], &buf[splitLines[i + 1]] );
+        if ( lenHeader.size() > 2 )
+        {
+            strBorder = i - (numPoints + strHeader);
+            break;
+        }
+    }
 
     size_t num = numPoints / 100;
     size_t numBlock = std::min(std::max( num, size_t(1) ), size_t(128) );
@@ -122,11 +137,11 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
     std::vector<Vector3f> pointsBlocks( numPoints );
 
     tbb::blocked_range<size_t> rangeCoords( 0, numBlock );
-    auto resCoords = ParallelFor( rangeCoords.begin(), rangeCoords.end(), [&] (size_t block)
+    bool keepGoing = ParallelFor( rangeCoords.begin(), rangeCoords.end(), [&] (size_t block)
     {
+        size_t numPoint = step * block;
         size_t startBlock = strHeader + step * block;
 
-        size_t numPoint = step * block;
         size_t end = std::min( strHeader + step * ( block + 1 ), numPoints + strHeader );
         for ( size_t i = startBlock; i < end; i++ )
         {
@@ -135,15 +150,14 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
 
             if ( !result )
             {
-                return false;
+                return;
             }
         }
-        return true;
     }, settings.callback );
 
-    if ( !resCoords )
+    if ( !keepGoing )
     {
-        return unexpected( std::string( "couldn't load the coords" ) );
+        return unexpectedOperationCanceled();
     }
 
     num = numPolygons / 100;
@@ -155,7 +169,7 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
     std::vector<std::vector<VertId>> vertidBlocks( numBlock );
 
     tbb::blocked_range<size_t> rangeTopology( 0, numBlock );
-    auto resTopology = ParallelFor( rangeTopology.begin(), rangeTopology.end(),
+    keepGoing = ParallelFor( rangeTopology.begin(), rangeTopology.end(),
         [&] ( size_t block )
     {
         size_t numFace = step * block;
@@ -165,18 +179,16 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
         for ( size_t i = startBlock; i < end; i++ )
         {
             const std::string_view line( &buf[splitLines[i]], &buf[splitLines[i + 1]] );
-
-            auto result = parseTopology( line, vertidBlocks[block], &facesBlocks[numFace++] );
+            auto result = parsePolygon( line, vertidBlocks[block], &facesBlocks[numFace++] );
 
             if ( !result.has_value() )
             {
-                return false;
+                return;
             }
         }
-        return true;
     }, settings.callback );
 
-    if ( !resTopology )
+    if ( !keepGoing )
     {
         return unexpected( std::string( "couldn't load the topology" ) );
     }

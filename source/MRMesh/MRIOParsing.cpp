@@ -238,7 +238,7 @@ VoidOrErrStr parseSingleNumber( const std::string_view& str, T& num )
     return {};
 }
 
-VoidOrErrStr parseTopology( const std::string_view& str, std::vector<VertId>& vertId, int* numPoints)
+VoidOrErrStr parsePolygon( const std::string_view& str, std::vector<VertId>& vertId, int* numPoints)
 {
     using namespace boost::spirit::x3;
 

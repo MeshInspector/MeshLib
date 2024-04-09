@@ -21,7 +21,7 @@ VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3<T>& v, Vec
 template<typename T>
 VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Color& c );
 
-VoidOrErrStr parseTopology( const std::string_view& str, std::vector<VertId>& vertId, int* numPoints );
+VoidOrErrStr parsePolygon( const std::string_view& str, std::vector<VertId>& vertId, int* numPoints );
 
 template<typename T>
 [[deprecated( "use parseTextCoordinate() instead")]]

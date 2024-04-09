@@ -55,7 +55,7 @@ std::function<Vector3f(VertId)> MeshOrPoints::normals() const
     return std::visit( overloaded{
         []( const MeshPart & mp ) -> std::function<Vector3f(VertId)>
         {
-            return [&mesh = mp.mesh]( VertId v ) { return mesh.normal( v ); };
+            return [&mesh = mp.mesh]( VertId v ) { return mesh.pseudonormal( v ); };
         },
         []( const PointCloud * pc ) -> std::function<Vector3f(VertId)>
         { 
@@ -101,7 +101,7 @@ auto MeshOrPoints::limitedProjector() const -> LimitedProjectorFunc
                     res = ProjectionResult
                     {
                         .point = mpr.proj.point,
-                        .normal = mp.mesh.normal( mpr.proj.face ), //mp.mesh.normal( mpr.mtp ) looks more correct here, but it breaks our script test
+                        .normal = mp.mesh.pseudonormal( mpr.mtp ),
                         .isBd = mpr.mtp.isBd( mp.mesh.topology ),
                         .distSq = mpr.distSq,
                         .closestVert = mp.mesh.getClosestVertex( mpr.proj )

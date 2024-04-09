@@ -49,7 +49,8 @@ public:
         /// found closest point
         Vector3f point;
 
-        /// normal at the closest point
+        /// normal at the closest point;
+        /// for meshes it will be pseudonormal with the differentiation depending on closest point location (face/edge/vertex)
         std::optional<Vector3f> normal;
 
         /// can be true only for meshes, if the closest point is located on the boundary

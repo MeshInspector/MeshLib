@@ -299,39 +299,19 @@ bool ICP::p2plIter_()
         }
 
         const auto angle = am.rotAngles.length();
+        assert( prop_.p2plAngleLimit > 0 );
         assert( prop_.p2plScaleLimit >= 1 );
         if ( angle > prop_.p2plAngleLimit || am.scale > prop_.p2plScaleLimit || prop_.p2plScaleLimit * am.scale < 1 )
         {
             // limit rotation angle and scale
-            Matrix3d mLimited = 
-                std::clamp( am.scale, 1 / (double)prop_.p2plScaleLimit, (double)prop_.p2plScaleLimit ) *
-                Matrix3d( Quaternion<double>(am.rotAngles, std::min( angle, (double)prop_.p2plAngleLimit ) ) );
+            am.scale = std::clamp( am.scale, 1 / (double)prop_.p2plScaleLimit, (double)prop_.p2plScaleLimit );
+            if ( angle > prop_.p2plAngleLimit )
+                am.rotAngles *= prop_.p2plAngleLimit / angle;
 
             // recompute translation part
-            PointToPlaneAligningTransform p2plTrans;
-            for ( size_t idx : flt2refPairs_.active )
-            {
-                const auto& vp = flt2refPairs_.vec[idx];
-                // below is incorrect, but some tests break when correcting it:
-                // p2plTrans.add( mLimited * Vector3d( vp.srcPoint - centroidRef ), Vector3d( vp.tgtPoint - centroidRef ),
-                //  Vector3d(vp.tgtNorm), vp.weight );
-                p2plTrans.add( mLimited * Vector3d( vp.srcPoint - centroidRef ), mLimited * Vector3d( vp.tgtPoint - centroidRef ),
-                    mLimited * Vector3d(vp.tgtNorm), vp.weight);
-            }
-            for ( size_t idx : ref2fltPairs_.active )
-            {
-                const auto& vp = ref2fltPairs_.vec[idx];
-                // same bad as above
-                p2plTrans.add( mLimited * Vector3d( vp.tgtPoint - centroidRef ), mLimited * Vector3d( vp.srcPoint - centroidRef ),
-                    mLimited * Vector3d(vp.srcNorm), vp.weight);
-            }
-            auto transOnly = p2plTrans.findBestTranslation();
-            res = AffineXf3f(Matrix3f(mLimited), Vector3f(transOnly));
+            am.shift = p2pl.findBestTranslation( am.rotAngles, am.scale );
         }
-        else
-        {
-            res = AffineXf3f( am.rigidScaleXf() );
-        }
+        res = AffineXf3f( am.rigidScaleXf() );
     }
 
     if (std::isnan(res.b.x)) //nan check

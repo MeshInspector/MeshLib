@@ -380,7 +380,7 @@ pybind11::array_t<int> getNumpyFaces( const MR::MeshTopology& topology )
 }
 
 // returns numpy array shapes [num verts,3] which represents coordinates from given vector
-pybind11::array_t<double> toNumpyArray( const MR::VertCoords& coords )
+pybind11::array_t<double> toNumpyArray( const std::vector<MR::Vector3f>& coords )
 {
     using namespace MR;
     int numVerts = (int)coords.size();
@@ -394,7 +394,7 @@ pybind11::array_t<double> toNumpyArray( const MR::VertCoords& coords )
         {
             int ind = 3 * i;
             for ( int vi = 0; vi < 3; ++vi )
-                data[ind + vi] = coords.vec_[i][vi];
+                data[ind + vi] = coords[i][vi];
         }
     } );
 
@@ -411,6 +411,16 @@ pybind11::array_t<double> toNumpyArray( const MR::VertCoords& coords )
         { 3 * sizeof( double ), sizeof( double ) }, // C-style contiguous strides for double
         data, // the data pointer
         freeWhenDone ); // numpy array references this parent
+}
+
+pybind11::array_t<double> toNumpyArray( const MR::VertCoords& coords )
+{
+    return toNumpyArray( coords.vec_ );
+}
+
+pybind11::array_t<double> toNumpyArray( const MR::FaceNormals& norms )
+{
+    return toNumpyArray( norms.vec_ );
 }
 
 // returns numpy array shapes [num verts,3] which represents coordinates of all mesh points (including invalid ones)
@@ -530,7 +540,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyMeshData, [] ( pybind11::module_& m 
     m.def( "getNumpyFaces", &getNumpyFaces, pybind11::arg( "topology" ), "returns numpy array shapes [num faces,3] which represents vertices of mesh valid faces " );
     m.def( "getNumpyVerts", &getNumpyVerts, pybind11::arg( "mesh" ), "returns numpy array shapes [num verts,3] which represents coordinates of all mesh points (including invalid ones)" );
     m.def( "getNumpyBitSet", &getNumpyBitSet, pybind11::arg( "bitset" ), "returns numpy array with bools for each bit of given bitset" );
-    m.def( "toNumpyArray", &toNumpyArray, pybind11::arg( "coords" ), "// returns numpy array shapes [num verts,3] which represents coordinates from given vector" );
+    m.def( "toNumpyArray", ( pybind11::array_t<double>( * )( const MR::VertCoords& ) )& toNumpyArray, pybind11::arg( "coords" ), "// returns numpy array shapes [num coords,3] which represents coordinates from given vector" );
+    m.def( "toNumpyArray", ( pybind11::array_t<double>( * )( const MR::FaceNormals& ) )& toNumpyArray, pybind11::arg( "coords" ), "// returns numpy array shapes [num coords,3] which represents coordinates from given vector" );
+    m.def( "toNumpyArray", ( pybind11::array_t<double>( * )( const std::vector<MR::Vector3f>& ) )& toNumpyArray, pybind11::arg( "coords" ), "// returns numpy array shapes [num coords,3] which represents coordinates from given vector" );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, PointCloudFromPoints, [] ( pybind11::module_& m )

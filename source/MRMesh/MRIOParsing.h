@@ -21,9 +21,11 @@ VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3<T>& v, Vec
 template<typename T>
 VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Color& c );
 
-// reads the number of polygon points
-VoidOrErrStr parseNumPoint( const std::string_view& str, int* numPoints );
+// reads the first integer number in the line
+VoidOrErrStr parseFirstNum( const std::string_view& str, int& num );
 // reads the polygon points and optional number of polygon points
+// example
+// N vertex0 vertex1 ... vertexN
 VoidOrErrStr parsePolygon( const std::string_view& str, VertId* vertId, int* numPoints );
 
 template<typename T>

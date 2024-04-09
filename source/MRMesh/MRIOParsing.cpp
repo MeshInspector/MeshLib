@@ -238,13 +238,13 @@ VoidOrErrStr parseSingleNumber( const std::string_view& str, T& num )
     return {};
 }
 
-VoidOrErrStr parseNumPoint( const std::string_view& str, int* numPoints )
+VoidOrErrStr parseFirstNum( const std::string_view& str, int& num )
 {
     using namespace boost::spirit::x3;
 
     auto n = [&] ( auto& ctx )
     {
-        *numPoints = _attr( ctx );
+        num = _attr( ctx );
     };
     bool r = phrase_parse(
         str.begin(),

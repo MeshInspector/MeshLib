@@ -144,7 +144,6 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
         if ( !result.has_value() )
         {
             forseStop = true;
-            return;
         }
     }, settings.callback );
 
@@ -167,7 +166,7 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
         size_t numLine = delta + i;
         
         const std::string_view line( &buf[splitLines[numLine]], splitLines[numLine + 1] - splitLines[numLine] );
-        parseNumPoint( line, &numPolygonPoint );
+        parseFirstNum( line, numPolygonPoint );
 
         faces.vec_[i] = MeshBuilder::VertSpan{ start, start + numPolygonPoint };
         start += numPolygonPoint;
@@ -189,7 +188,6 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
         if ( !result.has_value() )
         {
             forseStop = true;
-            return;
         }
     }, settings.callback );
 

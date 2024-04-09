@@ -35,7 +35,7 @@ std::optional<VertBitSet> MeshOrPoints::pointsGridSampling( float voxelSize, siz
     auto bboxDiag = computeBoundingBox().size() / voxelSize;
     auto nSamples = bboxDiag[0] * bboxDiag[1] * bboxDiag[2];
     if ( nSamples > maxVoxels )
-        voxelSize *= std::cbrt( float(nSamples) / float(voxelSize) );
+        voxelSize *= std::cbrt( float(nSamples) / float(maxVoxels) );
     return std::visit( overloaded{
         [voxelSize, cb]( const MeshPart & mp ) { return verticesGridSampling( mp, voxelSize, cb ); },
         [voxelSize, cb]( const PointCloud * pc ) { return pointGridSampling( *pc, voxelSize, cb ); }

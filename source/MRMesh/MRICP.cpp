@@ -22,7 +22,6 @@ void setupPairs( PointPairs & pairs, const VertBitSet& srcSamples )
     for ( auto id : srcSamples )
         pairs.vec.emplace_back().srcVertId = id;
     pairs.active.clear();
-    pairs.active.resize( srcSamples.count(), true );
 }
 
 size_t deactivateFarPairs( PointPairs & pairs, float maxDistSq )
@@ -105,10 +104,9 @@ void ICP::sampleFltPoints( float samplingVoxelSize )
     setupPairs( flt2refPairs_, *flt_.pointsGridSampling( samplingVoxelSize ) );
 }
 
-void ICP::sampleRefPoints( float )
+void ICP::sampleRefPoints( float samplingVoxelSize )
 {
-    // uncomment when ref2fltPairs_ are supported!!!
-    //setupPairs( ref2fltPairs_, *ref_.pointsGridSampling( samplingVoxelSize ) );
+    setupPairs( ref2fltPairs_, *ref_.pointsGridSampling( samplingVoxelSize ) );
 }
 
 void ICP::updatePointPairs()

@@ -240,6 +240,10 @@ struct UnitToStringParams
 
     // --- Other:
 
+    // If false, silently remove the minus sign before negative zeroes
+    // (including numbers that get rounded into negative zeroes with the current `precision` setting).
+    bool allowNegativeZero = getDefaultUnitParams<E>().allowNegativeZero;
+
     // Use a pretty Unicode minus sign instead of the ASCII `-`.
     bool unicodeMinusSign = getDefaultUnitParams<E>().unicodeMinusSign;
 

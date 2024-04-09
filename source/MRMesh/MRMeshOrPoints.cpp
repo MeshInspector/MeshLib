@@ -28,8 +28,14 @@ void MeshOrPoints::accumulate( PointAccumulator& accum, const AffineXf3f* xf ) c
     }, var_ );
 }
 
-std::optional<VertBitSet> MeshOrPoints::pointsGridSampling( float voxelSize, const ProgressCallback & cb )
+std::optional<VertBitSet> MeshOrPoints::pointsGridSampling( float voxelSize, size_t maxVoxels, const ProgressCallback & cb )
 {
+    assert( voxelSize > 0 );
+    assert( maxVoxels > 0 );
+    auto bboxDiag = computeBoundingBox().size() / voxelSize;
+    auto nSamples = bboxDiag[0] * bboxDiag[1] * bboxDiag[2];
+    if ( nSamples > maxVoxels )
+        voxelSize *= std::cbrt( float(nSamples) / float(voxelSize) );
     return std::visit( overloaded{
         [voxelSize, cb]( const MeshPart & mp ) { return verticesGridSampling( mp, voxelSize, cb ); },
         [voxelSize, cb]( const PointCloud * pc ) { return pointGridSampling( *pc, voxelSize, cb ); }
@@ -79,10 +85,14 @@ auto MeshOrPoints::projector() const -> std::function<ProjectionResult( const Ve
     };
 }
 
-auto MeshOrPoints::limitedProjector() const -> std::function<void( const Vector3f & p, ProjectionResult & res )>
+auto MeshOrPoints::limitedProjector() const -> LimitedProjectorFunc
 {
+    if ( customProjector_ )
+    {
+        return customProjector_;
+    }
     return std::visit( overloaded{
-        []( const MeshPart & mp ) -> std::function<void( const Vector3f & p, ProjectionResult & res )>
+        []( const MeshPart & mp ) -> LimitedProjectorFunc
         {
             return [&mp]( const Vector3f & p, ProjectionResult & res )
             {
@@ -98,7 +108,7 @@ auto MeshOrPoints::limitedProjector() const -> std::function<void( const Vector3
                     };
             };
         },
-        []( const PointCloud * pc ) -> std::function<void( const Vector3f & p, ProjectionResult & res )>
+        []( const PointCloud * pc ) -> LimitedProjectorFunc
         {
             return [pc]( const Vector3f & p, ProjectionResult & res )
             {

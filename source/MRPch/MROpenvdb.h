@@ -39,7 +39,7 @@
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#if __GNUC__ == 12
+#if __GNUC__ == 12 || __GNUC__ == 13
 #pragma GCC diagnostic ignored "-Wmissing-template-keyword"
 #endif
 #endif

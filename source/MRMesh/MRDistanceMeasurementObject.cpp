@@ -69,6 +69,16 @@ void DistanceMeasurementObject::setDrawAsNegative( bool value )
     drawAsNegative_ = value;
 }
 
+DistanceMeasurementObject::PerCoordDeltas DistanceMeasurementObject::getPerCoordDeltasMode() const
+{
+    return perCoordDeltas_;
+}
+
+void DistanceMeasurementObject::setPerCoordDeltasMode( PerCoordDeltas mode )
+{
+    perCoordDeltas_ = mode;
+}
+
 void DistanceMeasurementObject::swapBase_( Object& other )
 {
     if ( auto ptr = other.asType<DistanceMeasurementObject>() )
@@ -91,6 +101,9 @@ void DistanceMeasurementObject::deserializeFields_( const Json::Value& root )
 
     if ( const auto& json = root["DrawAsNegative"]; json.isBool() )
         drawAsNegative_ = json.asBool();
+
+    if ( const auto& json = root["PerCoordDeltas"]; json.isInt() )
+        perCoordDeltas_ = PerCoordDeltas( json.asInt() );
 }
 
 void DistanceMeasurementObject::setupRenderObject_() const

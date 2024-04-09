@@ -92,6 +92,15 @@ if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
   fi
 fi
 
+# macos sometimes does not have nproc
+nproc_fn () {
+  if [[ $OSTYPE == 'darwin'* ]]; then
+    sysctl -n hw.logicalcpu
+  else
+    nproc
+  fi
+}
+
 # exit if any command failed
 set -eo pipefail
 
@@ -111,9 +120,9 @@ if [ "${MESHLIB_BUILD_RELEASE}" = "ON" ]; then
     fi
   fi 
   if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
-    cmake --build . -j `nproc` | tee ${logfile}
+    cmake --build . -j `nproc_fn` | tee ${logfile}
   else
-    emmake make -j `nproc` | tee ${logfile}
+    emmake make -j `nproc_fn` | tee ${logfile}
   fi
   cd ..
 fi
@@ -134,9 +143,9 @@ if [ "${MESHLIB_BUILD_DEBUG}" = "ON" ]; then
     fi
   fi
   if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
-    cmake --build . -j `nproc` | tee ${logfile}
+    cmake --build . -j `nproc_fn` | tee ${logfile}
   else
-    emmake make -j `nproc` | tee ${logfile}
+    emmake make -j `nproc_fn` | tee ${logfile}
   fi
   cd ..
 fi

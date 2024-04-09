@@ -12,6 +12,11 @@
 #include <optional>
 #include <variant>
 
+namespace MR
+{
+class FeatureObject;
+}
+
 namespace MR::Features
 {
 
@@ -144,8 +149,8 @@ namespace Primitives
 // Returns null if the object type is unknown.
 [[nodiscard]] MRMESH_API std::optional<Primitives::Variant> primitiveFromObject( const Object& object );
 // Can return null on some primitive configurations.
-// `infiniteExtend` is how large we make "infinite" objects. Half-infinite objects divide this by 2.
-[[nodiscard]] MRMESH_API std::shared_ptr<VisualObject> primitiveToObject( const Primitives::Variant& primitive, float infiniteExtent );
+// `infiniteExtent` is how large we make "infinite" objects. Half-infinite objects divide this by 2.
+[[nodiscard]] MRMESH_API std::shared_ptr<FeatureObject> primitiveToObject( const Primitives::Variant& primitive, float infiniteExtent );
 
 //! Stores the results of measuring two objects relative to one another.
 struct MeasureResult
@@ -208,6 +213,8 @@ struct MeasureResult
     // Modifies the object to swap A and B;
     MRMESH_API void swapObjects();
 };
+// `MeasureResult::Status` enum to string.
+[[nodiscard]] MRMESH_API std::string_view toString( MeasureResult::Status status );
 
 //! Traits that determine how the primitives are related.
 namespace Traits
@@ -280,17 +287,20 @@ struct Binary<Primitives::Plane, Primitives::Plane>
 
 }
 
+// Get name of a `Primitives::...` class (can depend on its parameters).
 template <typename T>
 [[nodiscard]] std::string name( const T& primitive )
 {
     return Traits::Unary<T>{}.name( primitive );
 }
+// Same but for a variant.
+[[nodiscard]] MRMESH_API std::string name( const Primitives::Variant& var );
 
 // Whether you can measure two primitives relative to one another.
 template <typename A, typename B>
 concept MeasureSupported = Traits::MeasureSupportedOneWay<A, B> || Traits::MeasureSupportedOneWay<B, A>;
 
-// Measures stuff between two primitives.
+// Measures stuff between two primitives. (Two types from `Primitives::...`.)
 template <typename A, typename B>
 requires MeasureSupported<A, B>
 [[nodiscard]] MeasureResult measure( const A& a, const B& b )
@@ -325,5 +335,19 @@ requires MeasureSupported<A, B>
         return ret;
     }
 }
+// Same, but with a variant as the first argument.
+template <typename B>
+[[nodiscard]] MeasureResult measure( const Primitives::Variant& a, const B& b )
+{
+    return std::visit( [&]( const auto& elem ){ return (measure)( elem, b ); }, a );
+}
+// Same, but with a variant as the second argument.
+template <typename A>
+[[nodiscard]] MeasureResult measure( const A& a, const Primitives::Variant& b )
+{
+    return std::visit( [&]( const auto& elem ){ return (measure)( a, elem ); }, b );
+}
+// Same, but with variants as both argument.
+[[nodiscard]] MRMESH_API MeasureResult measure( const Primitives::Variant& a, const Primitives::Variant& b );
 
 }

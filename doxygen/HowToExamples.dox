@@ -250,7 +250,6 @@ int main()
         MR::AffineXf3f(), MR::AffineXf3f(),
         icpSamplingVoxelSize );
     icp.setParams( icpParams );
-    icp.updatePointPairs();
     MR::AffineXf3f xf = icp.calculateTransformation();
 
     // Transform floating mesh

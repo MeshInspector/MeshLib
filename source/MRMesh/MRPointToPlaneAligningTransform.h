@@ -19,11 +19,14 @@ namespace MR
 class PointToPlaneAligningTransform
 {
 public:
-    /// Constructor with the known approximation of the aligning transformation.
+    /// Constructor with the known approximation of the aligning transformation
     explicit PointToPlaneAligningTransform( const AffineXf3d& aTransform = {} ) : approxTransform_( aTransform ) {}
 
-    /// Add a pair of corresponding points and the normal of the tangent plane at the second point.
-    MRMESH_API void add(const Vector3d& p1, const Vector3d& p2, const Vector3d& normal2, const double w = 1. );
+    /// Add a pair of corresponding points and the normal of the tangent plane at the second point
+    MRMESH_API void add( const Vector3d& p1, const Vector3d& p2, const Vector3d& normal2, double w = 1 );
+
+    /// Add a pair of corresponding points and the normal of the tangent plane at the second point
+    void add( const Vector3f& p1, const Vector3f& p2, const Vector3f& normal2, float w = 1 ) { add( Vector3d( p1 ), Vector3d( p2 ), Vector3d( normal2 ), w ); }
 
     /// Clear points and normals data
     MRMESH_API void clear();
@@ -42,8 +45,8 @@ public:
     /// this version searches for best transformation where rotation is allowed only around axes orthogonal to given one
     [[nodiscard]] MRMESH_API AffineXf3d findBestRigidXfOrthogonalRotationAxis( const Vector3d& ort ) const;
 
-    /// Returns only shift part relative to given approximation
-    [[nodiscard]] MRMESH_API Vector3d findBestTranslation() const;
+    /// this version searches for best translational part of affine transformation with given linear part
+    [[nodiscard]] MRMESH_API Vector3d findBestTranslation( Vector3d rotAngles = {}, double scale = 1 ) const;
 
     struct Amendment
     {

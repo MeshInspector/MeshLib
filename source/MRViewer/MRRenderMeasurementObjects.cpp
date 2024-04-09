@@ -16,7 +16,9 @@ void RenderDistanceObject::renderUi( const UiRenderParams& params )
     Vector3f pointB = pointA + object_->getWorldDelta();
     task_ = RenderDimensions::LengthTask( params, {}, object_->getFrontColor( object_->isSelected(), params.viewportId ), {
         .points = { pointA, pointB },
-        .drawAsNegative = object_->getDrawAsNegative()
+        .drawAsNegative = object_->getDrawAsNegative(),
+        .showPerCoordDeltas = object_->getPerCoordDeltasMode() != DistanceMeasurementObject::PerCoordDeltas::none,
+        .perCoordDeltasAreAbsolute = object_->getPerCoordDeltasMode() == DistanceMeasurementObject::PerCoordDeltas::absolute,
     } );
     params.tasks->push_back( { std::shared_ptr<void>{}, &task_ } ); // A non-owning shared pointer.
 }

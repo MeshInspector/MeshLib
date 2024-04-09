@@ -44,6 +44,16 @@ public:
     [[nodiscard]] MRMESH_API bool getDrawAsNegative() const;
     MRMESH_API virtual void setDrawAsNegative( bool value );
 
+    enum class PerCoordDeltas
+    {
+        none, // Hide.
+        withSign, // Display as is.
+        absolute, // Display absolute values.
+    };
+    // Whether we should draw the individual X/Y/Z deltas in addition to the distance itself.
+    [[nodiscard]] MRMESH_API PerCoordDeltas getPerCoordDeltasMode() const;
+    MRMESH_API virtual void setPerCoordDeltasMode( PerCoordDeltas mode );
+
 protected:
     DistanceMeasurementObject( const DistanceMeasurementObject& other ) = default;
 
@@ -59,6 +69,9 @@ private:
 
     // Whether the distance should be displayed as a negative one.
     bool drawAsNegative_ = false;
+
+    // Whether we should draw the individual X/Y/Z deltas in addition to the distance itself.
+    PerCoordDeltas perCoordDeltas_ = PerCoordDeltas::none;
 };
 
 } // namespace MR

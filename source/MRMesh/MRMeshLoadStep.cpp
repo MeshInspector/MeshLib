@@ -762,6 +762,7 @@ Expected<Mesh> fromStepImpl( const std::function<VoidOrErrStr ( STEPControl_Read
     return result;
 }
 
+#if !STEPCAFCONTROL_SUPPORT
 Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<VoidOrErrStr ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
 {
     MR_TIMER
@@ -784,6 +785,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Voi
 
     return loader.rootObject();
 }
+#endif
 
 #if STEPCAFCONTROL_SUPPORT
 Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<VoidOrErrStr ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )

@@ -129,8 +129,7 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
 
     std::vector<Vector3f> pointsBlocks( numPoints );
 
-    tbb::blocked_range<size_t> rangeCoords( 0, numPoints );
-    bool keepGoing = ParallelFor( rangeCoords.begin(), rangeCoords.end(), [&] (size_t numPoint )
+    bool keepGoing = ParallelFor( pointsBlocks, [&] ( size_t numPoint )
     {
         size_t numLine = strHeader + numPoint;
 
@@ -150,8 +149,7 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
 
     size_t delta = numPoints + strHeader + strBorder;
 
-    std::vector<int> facesBlocks( numPolygons );
-    Vector<MeshBuilder::VertSpan, FaceId> newFaces( numPolygons );
+    Vector<MeshBuilder::VertSpan, FaceId> faces( numPolygons );
     int numPolygonPoint = 0;
     int start = 0;
     for ( size_t i = 0; i < numPolygons; i++ )
@@ -160,20 +158,19 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
         
         const std::string_view line( &buf[splitLines[numLine]], splitLines[numLine + 1] - splitLines[numLine] );
         parseNumPoint( line, &numPolygonPoint );
-        newFaces.vec_[i] = MeshBuilder::VertSpan{ start, start + numPolygonPoint };
+
+        faces.vec_[i] = MeshBuilder::VertSpan{ start, start + numPolygonPoint };
         start += numPolygonPoint;
     }
 
-    std::vector<VertId> newVerts( newFaces.back().lastVertex );
+    std::vector<VertId> flatPolygonIndices( faces.back().lastVertex );
 
-    tbb::blocked_range<size_t> rangeTopology( 0, numPolygons );
-    keepGoing = ParallelFor( rangeTopology.begin(), rangeTopology.end(),
-        [&] ( size_t numPolygon )
+    keepGoing = ParallelFor( faces, [&] ( size_t numPolygon )
     {
         size_t numLine = delta + numPolygon;
 
         const std::string_view line( &buf[splitLines[numLine]], splitLines[numLine + 1] - splitLines[numLine] );
-        auto result = parsePolygon( line, &newVerts[newFaces.vec_[numPolygon].firstVertex], nullptr );
+        auto result = parsePolygon( line, &flatPolygonIndices[faces.vec_[numPolygon].firstVertex], nullptr );
 
         if ( !result.has_value() )
         {
@@ -190,10 +187,10 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
     MeshBuilder::BuildSettings buildSettings;
     if ( settings.skippedFaceCount )
     {
-        skippedFaces.resize( newFaces.size(), true );
+        skippedFaces.resize( faces.size(), true );
         buildSettings.region = &skippedFaces;
     }
-    auto res = Mesh::fromFaceSoup( std::move( pointsBlocks ), newVerts, newFaces, buildSettings );
+    auto res = Mesh::fromFaceSoup( std::move( pointsBlocks ), flatPolygonIndices, faces, buildSettings );
     if ( settings.skippedFaceCount )
         *settings.skippedFaceCount = int( skippedFaces.count() );
     return res;

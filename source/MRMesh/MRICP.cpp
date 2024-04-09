@@ -22,7 +22,6 @@ void setupPairs( PointPairs & pairs, const VertBitSet& srcSamples )
     for ( auto id : srcSamples )
         pairs.vec.emplace_back().srcVertId = id;
     pairs.active.clear();
-    pairs.active.resize( srcSamples.count(), true );
 }
 
 size_t deactivateFarPairs( PointPairs & pairs, float maxDistSq )
@@ -38,22 +37,23 @@ size_t deactivateFarPairs( PointPairs & pairs, float maxDistSq )
 
 } // anonymous namespace
 
-ICP::ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
-    const VertBitSet& fltSamples)
-    : flt_( floating )
-    , ref_( reference )
+ICP::ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fltXf, const AffineXf3f& refXf,
+    const VertBitSet& fltSamples, const VertBitSet& refSamples )
+    : flt_( flt )
+    , ref_( ref )
 {
     setXfs( fltXf, refXf );
     setupPairs( flt2refPairs_, fltSamples );
+    setupPairs( ref2fltPairs_, refSamples );
 }
 
-ICP::ICP(const MeshOrPoints& floating, const MeshOrPoints& reference, const AffineXf3f& fltXf, const AffineXf3f& refXf,
-    float floatSamplingVoxelSize )
-    : flt_( floating )
-    , ref_( reference )
+ICP::ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fltXf, const AffineXf3f& refXf,
+    float samplingVoxelSize )
+    : flt_( flt )
+    , ref_( ref )
 {
     setXfs( fltXf, refXf );
-    recomputeBitSet( floatSamplingVoxelSize );
+    samplePoints( samplingVoxelSize );
 }
 
 void ICP::setXfs( const AffineXf3f& fltXf, const AffineXf3f& refXf )
@@ -99,15 +99,21 @@ AffineXf3f ICP::autoSelectFloatXf()
     return bestFltXf;
 }
 
-void ICP::recomputeBitSet(const float floatSamplingVoxelSize)
+void ICP::sampleFltPoints( float samplingVoxelSize )
 {
-    setupPairs( flt2refPairs_, *flt_.pointsGridSampling( floatSamplingVoxelSize ) );
+    setupPairs( flt2refPairs_, *flt_.pointsGridSampling( samplingVoxelSize ) );
+}
+
+void ICP::sampleRefPoints( float samplingVoxelSize )
+{
+    setupPairs( ref2fltPairs_, *ref_.pointsGridSampling( samplingVoxelSize ) );
 }
 
 void ICP::updatePointPairs()
 {
     MR_TIMER
     updatePointPairs_( flt2refPairs_, flt_, fltXf_, ref_, refXf_ );
+    updatePointPairs_( ref2fltPairs_, ref_, refXf_, flt_, fltXf_ );
     deactivatefarDistPairs_();
 }
 
@@ -179,7 +185,8 @@ void ICP::deactivatefarDistPairs_()
         if ( maxDistSq >= prop_.distThresholdSq )
             break;
 
-        if ( deactivateFarPairs( flt2refPairs_, maxDistSq ) <= 0 )
+        if ( deactivateFarPairs( flt2refPairs_, maxDistSq ) +
+             deactivateFarPairs( ref2fltPairs_, maxDistSq ) <= 0 )
             break; // nothing was deactivated
     }
 }
@@ -192,6 +199,11 @@ bool ICP::p2ptIter_()
     {
         const auto& vp = flt2refPairs_.vec[idx];
         p2pt.add( vp.srcPoint, vp.tgtPoint, vp.weight );
+    }
+    for ( size_t idx : ref2fltPairs_.active )
+    {
+        const auto& vp = ref2fltPairs_.vec[idx];
+        p2pt.add( vp.tgtPoint, vp.srcPoint, vp.weight );
     }
 
     AffineXf3f res;
@@ -235,6 +247,13 @@ bool ICP::p2plIter_()
         centroidRef += vp.srcPoint;
         ++activeCount;
     }
+    for ( size_t idx : ref2fltPairs_.active )
+    {
+        const auto& vp = ref2fltPairs_.vec[idx];
+        centroidRef += vp.tgtPoint;
+        centroidRef += vp.srcPoint;
+        ++activeCount;
+    }
     if ( activeCount <= 0 )
         return false;
     centroidRef /= float(activeCount * 2);
@@ -244,7 +263,12 @@ bool ICP::p2plIter_()
     for ( size_t idx : flt2refPairs_.active )
     {
         const auto& vp = flt2refPairs_.vec[idx];
-        p2pl.add( vp.srcPoint - centroidRef, vp.tgtPoint - centroidRef, vp.tgtNorm, vp.weight);
+        p2pl.add( vp.srcPoint - centroidRef, vp.tgtPoint - centroidRef, vp.tgtNorm, vp.weight );
+    }
+    for ( size_t idx : ref2fltPairs_.active )
+    {
+        const auto& vp = ref2fltPairs_.vec[idx];
+        p2pl.add( vp.tgtPoint - centroidRef, vp.srcPoint - centroidRef, vp.srcNorm, vp.weight );
     }
 
     AffineXf3f res;
@@ -293,6 +317,13 @@ bool ICP::p2plIter_()
                 //  Vector3d(vp.tgtNorm), vp.weight );
                 p2plTrans.add( mLimited * Vector3d( vp.srcPoint - centroidRef ), mLimited * Vector3d( vp.tgtPoint - centroidRef ),
                     mLimited * Vector3d(vp.tgtNorm), vp.weight);
+            }
+            for ( size_t idx : ref2fltPairs_.active )
+            {
+                const auto& vp = ref2fltPairs_.vec[idx];
+                // same bad as above
+                p2plTrans.add( mLimited * Vector3d( vp.tgtPoint - centroidRef ), mLimited * Vector3d( vp.srcPoint - centroidRef ),
+                    mLimited * Vector3d(vp.srcNorm), vp.weight);
             }
             auto transOnly = p2plTrans.findBestTranslation();
             res = AffineXf3f(Matrix3f(mLimited), Vector3f(transOnly));
@@ -356,35 +387,29 @@ size_t getNumActivePairs( const PointPairs & pairs )
     return pairs.active.count();
 }
 
-float getMeanSqDistToPoint( const PointPairs & pairs )
+NumSum getSumSqDistToPoint( const PointPairs & pairs )
 {
-    int num = 0;
-    double sum = 0;
+    NumSum res;
     for ( size_t idx : pairs.active )
     {
         const auto& vp = pairs.vec[idx];
-        sum += vp.distSq;
-        ++num;
+        res.sum += vp.distSq;
+        ++res.num;
     }
-    if ( num <= 0 )
-        return FLT_MAX;
-    return (float)std::sqrt( sum / num );
+    return res;
 }
 
-float getMeanSqDistToPlane( const PointPairs & pairs )
+NumSum getSumSqDistToPlane( const PointPairs & pairs )
 {
-    int num = 0;
-    double sum = 0;
+    NumSum res;
     for ( size_t idx : pairs.active )
     {
         const auto& vp = pairs.vec[idx];
         auto v = dot( vp.tgtNorm, vp.tgtPoint - vp.srcPoint );
-        sum += sqr( v );
-        ++num;
+        res.sum += sqr( v );
+        ++res.num;
     }
-    if ( num <= 0 )
-        return FLT_MAX;
-    return (float)std::sqrt( sum / num );
+    return res;
 }
 
 void ICP::setCosineLimit(const float cos)
@@ -430,6 +455,16 @@ std::string ICP::getLastICPInfo() const
         break;
     }
     return result;
+}
+
+float ICP::getMeanSqDistToPoint() const
+{
+    return ( getSumSqDistToPoint( flt2refPairs_ ) + getSumSqDistToPoint( ref2fltPairs_ ) ).rootMeanSqF();
+}
+
+float ICP::getMeanSqDistToPlane() const
+{
+    return ( getSumSqDistToPlane( flt2refPairs_ ) + getSumSqDistToPlane( ref2fltPairs_ ) ).rootMeanSqF();
 }
 
 } //namespace MR

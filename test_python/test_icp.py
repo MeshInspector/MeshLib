@@ -21,6 +21,7 @@ def test_icp():
         torusMove, torusRef, xf, mrmesh.AffineXf3f(), torusMove.topology.getValidVerts()
     )
     newXf = icp.calculateTransformation()
+    print(icp.getLastICPInfo())
 
     diffXf = mrmesh.AffineXf3f()
     diffXf.A -= newXf.A

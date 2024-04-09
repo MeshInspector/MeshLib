@@ -16,6 +16,10 @@ on:
 
 #UPLOAD_ARTIFACTS condition: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
+
+env:
+  VCPKG-VERSION: '2024.03.25'
+
 jobs:
   prepare-image:
     uses: ./.github/workflows/prepare-images.yml

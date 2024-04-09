@@ -86,6 +86,11 @@ struct LengthParams
 
     // Whether the distance should be displayed as a negative one.
     bool drawAsNegative = false;
+
+    // If true, will also show deltas per coordinate axis.
+    bool showPerCoordDeltas = false;
+    // If true, will remove the sign from the per-coord deltas. Only makes sense when `showPerCoordDeltas == true`.
+    bool perCoordDeltasAreAbsolute = false;
 };
 
 class LengthTask : public BasicUiRenderTask

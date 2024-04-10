@@ -44,7 +44,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   spdlog
   fmt
   tbb
-  ${MR_PYTHON_LIB}
+  ${MR_PCH_PYTHON_LIB}
 )
 
 set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")

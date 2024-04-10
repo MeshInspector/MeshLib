@@ -58,6 +58,11 @@ ElSE()
 ENDIF()
 message("MR_PCH=${MR_PCH}")
 
+IF(MR_PCH)
+  # this linking dependency is necessary only when we use precompiled header
+  set(MR_PCH_PYTHON_LIB Python::Python)
+ENDIF()
+
 # all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

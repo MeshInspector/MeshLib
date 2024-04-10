@@ -183,6 +183,7 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
     if ( surfaceConnectionHolders_.find( obj ) == surfaceConnectionHolders_.end() )
     {
         SurfaceConnectionHolder holder;
+        // re-validate the picked points on object's change
         auto updatePoints = [this, objPtr = std::weak_ptr( obj )] ( std::uint32_t )
         {
             if ( auto obj = objPtr.lock() )

@@ -50,7 +50,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .sourceUnit = AngleUnit::radians,
             .targetUnit = AngleUnit::degrees,
             .unitSuffix = true,
-            .style = NumberStyle::fixed,
+            .style = NumberStyle::normal,
             .precision = 1,
             .allowNegativeZero = false,
             .unicodeMinusSign = true,
@@ -84,7 +84,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .sourceUnit = RatioUnit::factor,
             .targetUnit = RatioUnit::percents,
             .unitSuffix = true,
-            .style = NumberStyle::fixed,
+            .style = NumberStyle::normal,
             .precision = 1,
             .allowNegativeZero = false,
             .unicodeMinusSign = true,
@@ -101,7 +101,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .sourceUnit = TimeUnit::seconds,
             .targetUnit = TimeUnit::seconds,
             .unitSuffix = true,
-            .style = NumberStyle::fixed,
+            .style = NumberStyle::normal,
             .precision = 1,
             .allowNegativeZero = false,
             .unicodeMinusSign = true,
@@ -399,7 +399,7 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
 
     // Calculate precision after the decimal point.
     int fracPrecision = std::is_floating_point_v<T> ? params.precision : 0;
-    if ( params.style == NumberStyle::normal && fracPrecision > 0 )
+    if ( params.style == NumberStyle::distributePrecision && fracPrecision > 0 )
     {
         int intDigits = 0;
 

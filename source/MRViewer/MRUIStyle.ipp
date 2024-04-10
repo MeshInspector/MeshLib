@@ -206,8 +206,8 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
     }
 
     // Guess the precision.
-    if ( unitParams.style == NumberStyle::normal || unitParams.style == NumberStyle::fixed )
-        unitParams.precision = std::max( unitParams.precision, guessPrecision( fixedMin, fixedMax ) + int( unitParams.style == NumberStyle::normal ) );
+    if ( unitParams.style == NumberStyle::distributePrecision || unitParams.style == NumberStyle::normal )
+        unitParams.precision = std::max( unitParams.precision, guessPrecision( fixedMin, fixedMax ) + int( unitParams.style == NumberStyle::distributePrecision ) );
 
     return detail::unitWidget( label, v, unitParams,
         [&]<typename ElemType>( const char* elemLabel, ElemType& elemVal, int i )
@@ -257,8 +257,8 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
     }
 
     // Guess the precision.
-    if ( unitParams.style == NumberStyle::normal || unitParams.style == NumberStyle::fixed )
-        unitParams.precision = std::max( unitParams.precision, guessPrecision( fixedMin, fixedMax ) + int( unitParams.style == NumberStyle::normal ) );
+    if ( unitParams.style == NumberStyle::distributePrecision || unitParams.style == NumberStyle::normal )
+        unitParams.precision = std::max( unitParams.precision, guessPrecision( fixedMin, fixedMax ) + int( unitParams.style == NumberStyle::distributePrecision ) );
 
     return detail::unitWidget( label, v, unitParams,
         [&]<typename ElemType>( const char* elemLabel, ElemType& elemVal, int i )

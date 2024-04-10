@@ -194,8 +194,8 @@ DETAIL_MR_UNIT_ENUMS(MR_X)
 
 enum class NumberStyle
 {
-    normal, // Like %f. The precision digits are spread across both decimal and integral parts
-    fixed, // Like %f, but the precision digits only affect the decimal part.
+    normal, // Like %f.
+    distributePrecision, // Like %f, but the precision digits are spread across both decimal and integral parts.
     exponential, // Like %e.
     maybeExponential, // Like %g.
 };

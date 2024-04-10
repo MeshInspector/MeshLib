@@ -88,6 +88,7 @@ void Object::setXf( const AffineXf3f& xf, ViewportId id )
         return;
     if ( xf.A.det() == 0 )
     {
+        assert( false && "Object transform is degenerate" );
         spdlog::warn( "Object transform is degenerate" );
         return;
     }

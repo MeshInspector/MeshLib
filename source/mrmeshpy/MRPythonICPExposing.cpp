@@ -49,7 +49,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def_readwrite( "fixedRotationAxis", &MR::ICPProperties::fixedRotationAxis, "If this vector is not zero then rotation is allowed relative to this axis only" ).
         def_readwrite( "iterLimit", &MR::ICPProperties::iterLimit, "maximum iterations" ).
         def_readwrite( "badIterStopCount", &MR::ICPProperties::badIterStopCount, "maximum iterations without improvements" ).
-        def_readwrite( "exitVal", &MR::ICPProperties::exitVal, "Algorithm target root-mean-square distance. As soon as it is reached, the algorithm stops." );
+        def_readwrite( "exitVal", &MR::ICPProperties::exitVal, "Algorithm target root-mean-square distance. As soon as it is reached, the algorithm stops." ).
+        def_readwrite( "mutualClosest", &MR::ICPProperties::mutualClosest, "A pair of points is formed only if both points in the pair are mutually closest (reciprocity test passed)." );
         
     pybind11::class_<MR::ICP>( m, "ICP", "This class allows to match two meshes with almost same geometry throw ICP point-to-point or point-to-plane algorithms" ).
         def( pybind11::init<const MR::Mesh&, const MR::Mesh&, const MR::AffineXf3f&, const MR::AffineXf3f&, const MR::VertBitSet&, const MR::VertBitSet&>(),

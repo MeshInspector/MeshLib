@@ -99,7 +99,7 @@ bool isPickedPointValid( const VisualObject* object, const PickedPoint& point )
                 return objPoints->pointCloud()->validPoints.test( v );
             return false;
         },
-        [object] ( int )
+        [] ( int )
         {
             return false;
         }

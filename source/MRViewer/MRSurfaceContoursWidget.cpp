@@ -5,6 +5,7 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRSphereObject.h"
 #include "MRMesh/MRObjectMesh.h"
+#include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRPointOnObject.h"
 
 namespace MR
@@ -119,7 +120,10 @@ void SurfaceContoursWidget::enable( bool isEnaled )
 {
     isPickerActive_ = isEnaled;
     if ( !isPickerActive_ )
+    {
         pickedPoints_.clear();
+        surfaceConnectionHolders_.clear();
+    }
 }
 
 
@@ -178,6 +182,34 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
         activeChange_ = false;
         onPointMoveFinish_( obj );
     } );
+
+    if ( surfaceConnectionHolders_.find( obj ) == surfaceConnectionHolders_.end() )
+    {
+        SurfaceConnectionHolder holder;
+        // re-validate the picked points on object's change
+        auto updatePoints = [this, objPtr = std::weak_ptr( obj )] ( std::uint32_t )
+        {
+            if ( auto obj = objPtr.lock() )
+            {
+                auto& points = pickedPoints_[obj];
+                const auto pointCount = points.size();
+                for ( auto i = (int)pointCount - 1; i >= 0; --i )
+                {
+                    auto& point = points[i];
+                    const auto& pos = point->getCurrentPosition();
+                    if ( isPickedPointValid( obj.get(), pos ) )
+                        point->updateCurrentPosition( pos );
+                    else
+                        removePoint( obj, i );
+                }
+            }
+        };
+        if ( const auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( obj ) )
+            holder.onMeshChanged = objMesh->meshChangedSignal.connect( updatePoints );
+        else if ( const auto objPoints = std::dynamic_pointer_cast<ObjectPoints>( obj ) )
+            holder.onPointsChanged = objPoints->pointsChangedSignal.connect( updatePoints );
+        surfaceConnectionHolders_.emplace( obj, std::move( holder ) );
+    }
 
     return newPoint;
 }
@@ -489,6 +521,7 @@ void SurfaceContoursWidget::clear()
                 AppendHistory<RemovePointActionPickerPoint>( *this, obj, contour[i]->getCurrentPosition(), i );
     }
     pickedPoints_.clear();
+    surfaceConnectionHolders_.clear();
     activeIndex_ = 0;
     activeObject_ = nullptr;
 }

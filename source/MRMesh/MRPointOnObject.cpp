@@ -72,4 +72,38 @@ MR::Vector3f pickedPointToVector3( const VisualObject* object, const PickedPoint
     return {};
 }
 
+bool isPickedPointValid( const VisualObject* object, const PickedPoint& point )
+{
+    return std::visit( overloaded {
+        [object] ( const MeshTriPoint& mtp )
+        {
+            if ( const auto* objMesh = dynamic_cast<const ObjectMeshHolder*>( object ) )
+            {
+                const auto& topology = objMesh->mesh()->topology;
+                return topology.hasEdge( mtp.e ) && topology.hasFace( topology.left( mtp.e ) );
+            }
+            return false;
+        },
+        [object] ( const EdgePoint& ep )
+        {
+            if ( const auto* objLines = dynamic_cast<const ObjectLinesHolder*>( object ) )
+            {
+                const auto& topology = objLines->polyline()->topology;
+                return topology.hasEdge( ep.e );
+            }
+            return false;
+        },
+        [object] ( const VertId& v )
+        {
+            if ( const auto* objPoints = dynamic_cast<const ObjectPointsHolder*>( object ) )
+                return objPoints->pointCloud()->validPoints.test( v );
+            return false;
+        },
+        [] ( int )
+        {
+            return false;
+        }
+    }, point );
+}
+
 } //namespace MR

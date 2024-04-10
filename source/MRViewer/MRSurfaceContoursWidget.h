@@ -144,6 +144,14 @@ private:
     // data storage
     SurfaceContours pickedPoints_;
 
+    // connection storage
+    struct SurfaceConnectionHolder
+    {
+        boost::signals2::scoped_connection onMeshChanged;
+        boost::signals2::scoped_connection onPointsChanged;
+    };
+    std::unordered_map<std::shared_ptr<VisualObject>, SurfaceConnectionHolder> surfaceConnectionHolders_;
+
     // CallBack functions
     PickerPointCallBack onPointAdd_;
     PickerPointCallBack onPointMove_;

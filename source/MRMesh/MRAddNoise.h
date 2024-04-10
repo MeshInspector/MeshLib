@@ -3,15 +3,20 @@
 
 #include "MRMeshFwd.h"
 
+#include "MRExpected.h"
+
 namespace MR
 {
+
+struct NoiseSettings
+{
+    float sigma = 0.01f;
+    // start state of the generator engine
+    unsigned int seed = 0;
+    ProgressCallback callback = {};
+};
+
 // Adds noise to the points, using a normal distribution
-// seed - start state of the generator engine
-MRMESH_API void addNoise( 
-    VertCoords& points, 
-    const VertBitSet& validVerts, 
-    float sigma, 
-    unsigned int seed, 
-    ProgressCallback callback );
+MRMESH_API VoidOrErrStr addNoise( VertCoords& points, const VertBitSet& validVerts, NoiseSettings settings );
 
 }

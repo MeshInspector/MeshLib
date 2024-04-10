@@ -8,17 +8,17 @@
 namespace MR
 {
 
-void addNoise( VertCoords& points, const VertBitSet& validVerts, float sigma, unsigned int seed, ProgressCallback callback )
+VoidOrErrStr addNoise( VertCoords& points, const VertBitSet& validVerts, NoiseSettings settings )
 {
     if ( validVerts.count() > 1000 )
     {
         const size_t numBlock = 128;
         const size_t step = validVerts.size() / numBlock;
-        ParallelFor( size_t( 0 ), numBlock,
+        auto res = ParallelFor( size_t( 0 ), numBlock,
         [&] ( size_t block )
         {
-            std::mt19937 gen_{ seed + ( unsigned int )block };
-            std::normal_distribution d{ 0.0f, sigma };
+            std::mt19937 gen_{ settings.seed + ( unsigned int )block };
+            std::normal_distribution d{ 0.0f, settings.sigma };
             auto end = step * ( block + 1 );
             if ( end > validVerts.size() )
                 end = validVerts.size();
@@ -28,17 +28,24 @@ void addNoise( VertCoords& points, const VertBitSet& validVerts, float sigma, un
                     continue;
                 points[VertId( i )] += Vector3f( d( gen_ ), d( gen_ ), d( gen_ ) );
             }
-        }, callback );
+        }, settings.callback );
+
+        if ( !res )
+        {
+            return unexpectedOperationCanceled();
+        }
     }
     else
     {
-        std::mt19937 gen_{ seed };
-        std::normal_distribution d{ 0.0f, sigma };
+        std::mt19937 gen_{ settings.seed };
+        std::normal_distribution d{ 0.0f, settings.sigma };
         for ( const auto& v : validVerts )
         {
             points[v] += Vector3f( d( gen_ ), d( gen_ ), d( gen_ ) );
         }
     }
+
+    return {};
 }
 
 }

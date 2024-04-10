@@ -123,6 +123,7 @@ void ICP::updatePointPairs_( PointPairs & pairs,
 {
     MR_TIMER
     const auto src2tgtXf = tgtXf.inverse() * srcXf;
+    const auto tgt2srcXf = srcXf.inverse() * tgtXf;
 
     const VertCoords& srcPoints = src.points();
     const VertCoords& tgtPoints = tgt.points();
@@ -131,6 +132,7 @@ void ICP::updatePointPairs_( PointPairs & pairs,
     const auto tgtNormals = tgt.normals();
 
     const auto srcWeights = src.weights();
+    const auto srcLimProjector = src.limitedProjector();
     const auto tgtLimProjector = tgt.limitedProjector();
 
     pairs.active.clear();
@@ -156,6 +158,7 @@ void ICP::updatePointPairs_( PointPairs & pairs,
         }
         // ... and try to find only closer one
         tgtLimProjector( pt, prj );
+        const auto p1 = prj.point;
 
         // save the result
         PointPair vp = res;
@@ -163,14 +166,25 @@ void ICP::updatePointPairs_( PointPairs & pairs,
         vp.weight = srcWeights ? srcWeights( vp.srcVertId ) : 1.0f;
         vp.tgtCloseVert = prj.closestVert;
         vp.srcPoint = srcXf( p0 );
-        vp.tgtPoint = tgtXf( prj.point );
+        vp.tgtPoint = tgtXf( p1 );
         vp.tgtNorm = prj.normal ? ( tgtXf.A * prj.normal.value() ).normalized() : Vector3f();
         vp.srcNorm = srcNormals ? ( srcXf.A * srcNormals( vp.srcVertId ) ).normalized() : Vector3f();
         vp.normalsAngleCos = ( prj.normal && srcNormals ) ? dot( vp.tgtNorm, vp.srcNorm ) : 1.0f;
         vp.tgtOnBd = prj.isBd;
         res = vp;
         if ( prj.isBd || vp.normalsAngleCos < prop_.cosTreshold || vp.distSq > prop_.distThresholdSq )
+        {
             pairs.active.reset( idx );
+            return;
+        }
+        if ( prop_.mutualClosest )
+        {
+            // keep prj.distSq
+            prj.closestVert = res.srcVertId;
+            srcLimProjector( tgt2srcXf( p1 ), prj );
+            if ( prj.closestVert != res.srcVertId )
+                pairs.active.reset( idx );
+        }
     } );
 }
 

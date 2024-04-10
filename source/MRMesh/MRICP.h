@@ -134,6 +134,9 @@ struct ICPProperties
 
     /// Algorithm target root-mean-square distance. As soon as it is reached, the algorithm stops.
     float exitVal = 0; // [distance]
+
+    /// a pair of points is formed only if both points in the pair are mutually closest (reciprocity test passed)
+    bool mutualClosest = false;
 };
 
 /// This class allows you to register two object with similar shape using

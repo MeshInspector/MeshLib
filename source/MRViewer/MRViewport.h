@@ -145,6 +145,25 @@ public:
          bool allowAlphaSort = false ///< If not null and the object is semitransparent, enable alpha-sorting.
     ) const;
 
+    // ...
+    using PickRenderObjectPredicate = std::function<bool ( const VisualObject*, ViewportMask )>;
+    // ...
+    struct PickRenderObjectParams
+    {
+        // ...
+        PickRenderObjectPredicate predicate;
+        // ...
+        uint16_t pickRadius = 0;
+        // ...
+        bool exactPickFirst = true;
+
+        static PickRenderObjectParams defaults()
+        {
+            return {};
+        }
+    };
+    // ...
+    MRVIEWER_API ObjAndPick pickRenderObject( const PickRenderObjectParams& params = PickRenderObjectParams::defaults() );
     // This function allows to pick point in scene by GL
     // use default pick radius
     // comfortable usage:

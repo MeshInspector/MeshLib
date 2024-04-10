@@ -17,7 +17,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   spdlog
   Boost::boost
   tbb
-  ${MR_PYTHON_LIB}
+  ${MR_PCH_PYTHON_LIB}
 )
 
 install(TARGETS ${PROJECT_NAME} DESTINATION "${MR_BIN_DIR}")

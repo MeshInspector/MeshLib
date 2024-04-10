@@ -2,6 +2,7 @@
 
 #include "MRViewer.h"
 #include "MRViewerEventsListener.h"
+#include "MRViewport.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRSurfacePointPicker.h"
 #include "MRMesh/MRObjectMeshHolder.h"
@@ -49,6 +50,9 @@ public:
         // Color for the special point used to close a contour. Better do not change it. 
         // Parameters affect to future points only
         MR::Color closeContourPointColor = Color::transparent();
+
+        // ...
+        Viewport::PickRenderObjectPredicate pickRenderObjectPredicate;
     };
 
     using PickerPointCallBack = std::function<void( std::shared_ptr<MR::VisualObject> )>;

@@ -361,13 +361,9 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     if ( button != Viewer::MouseButton::Left )
         return false;
 
-    auto allowExactPickFirst = params.surfacePointParams.pickInBackFaceObject;
     auto [obj, pick] = getViewerInstance().viewport().pickRenderObject( {
-        .predicate = [] ( const VisualObject* visObj, ViewportMask )
-        {
-            return visObj->asType<ObjectMesh>() || visObj->asType<ObjectPoints>();
-        },
-        .exactPickFirst = allowExactPickFirst,
+        .predicate = params.pickRenderObjectPredicate,
+        .exactPickFirst = params.surfacePointParams.pickInBackFaceObject,
     } );
     if ( !obj )
         return false;
@@ -473,13 +469,9 @@ bool SurfaceContoursWidget::onMouseMove_( int, int )
     if ( pickedPoints_.empty() || activeChange_ )
         return false;
 
-    auto allowExactPickFirst = params.surfacePointParams.pickInBackFaceObject;
     auto [obj, pick] = getViewerInstance().viewport().pickRenderObject( {
-        .predicate = [] ( const VisualObject* visObj, ViewportMask )
-        {
-            return visObj->asType<ObjectMesh>() || visObj->asType<ObjectPoints>();
-        },
-        .exactPickFirst = allowExactPickFirst,
+        .predicate = params.pickRenderObjectPredicate,
+        .exactPickFirst = params.surfacePointParams.pickInBackFaceObject,
     } );
     if ( !obj )
         return false;

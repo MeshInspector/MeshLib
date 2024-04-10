@@ -365,7 +365,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     auto [obj, pick] = getViewerInstance().viewport().pickRenderObject( {
         .predicate = [] ( const VisualObject* visObj, ViewportMask )
         {
-            return visObj->asType<ObjectMesh>();
+            return visObj->asType<ObjectMesh>() || visObj->asType<ObjectPoints>();
         },
         .exactPickFirst = allowExactPickFirst,
     } );
@@ -477,7 +477,7 @@ bool SurfaceContoursWidget::onMouseMove_( int, int )
     auto [obj, pick] = getViewerInstance().viewport().pickRenderObject( {
         .predicate = [] ( const VisualObject* visObj, ViewportMask )
         {
-            return visObj->asType<ObjectMesh>();
+            return visObj->asType<ObjectMesh>() || visObj->asType<ObjectPoints>();
         },
         .exactPickFirst = allowExactPickFirst,
     } );

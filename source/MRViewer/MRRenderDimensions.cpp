@@ -14,11 +14,11 @@ constexpr int cCurveMaxSubdivisionDepth = 10;
 
 static std::string lengthToString( float value )
 {
-    return valueToString<LengthUnit>( value, { .unitSuffix = false, .style = NumberStyle::fixed, .stripTrailingZeroes = false } );
+    return valueToString<LengthUnit>( value, { .unitSuffix = false, .style = NumberStyle::normal, .stripTrailingZeroes = false } );
 }
 static std::string angleToString( float value )
 {
-    return valueToString<AngleUnit>( value, { .style = NumberStyle::fixed, .stripTrailingZeroes = false } );
+    return valueToString<AngleUnit>( value, { .style = NumberStyle::normal, .stripTrailingZeroes = false } );
 }
 
 [[nodiscard]] static ImVec2 toScreenCoords( const Viewport& viewport, const Vector3f& point )

@@ -81,7 +81,6 @@ ELSE() # NOT MR_EMSCRIPTEN
       fmt
       openvdb
       tbb
-      ${MR_PCH_PYTHON_LIB}
     )
     target_include_directories(${PROJECT_NAME} PRIVATE
       ${GTKMM_INCLUDE_DIRS}

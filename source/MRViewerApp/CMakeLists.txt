@@ -25,7 +25,6 @@ ELSE() # NOT MR_EMSCRIPTEN
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRViewer
     MRMesh
-    ${MR_PCH_PYTHON_LIB}
   )
 ENDIF() # MR_EMSCRIPTEN
 

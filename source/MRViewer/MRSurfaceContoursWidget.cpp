@@ -120,7 +120,10 @@ void SurfaceContoursWidget::enable( bool isEnaled )
 {
     isPickerActive_ = isEnaled;
     if ( !isPickerActive_ )
+    {
         pickedPoints_.clear();
+        surfaceConnectionHolders_.clear();
+    }
 }
 
 
@@ -518,6 +521,7 @@ void SurfaceContoursWidget::clear()
                 AppendHistory<RemovePointActionPickerPoint>( *this, obj, contour[i]->getCurrentPosition(), i );
     }
     pickedPoints_.clear();
+    surfaceConnectionHolders_.clear();
     activeIndex_ = 0;
     activeObject_ = nullptr;
 }

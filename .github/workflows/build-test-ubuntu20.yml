@@ -35,9 +35,14 @@ jobs:
         full_config_build:
           - ${{fromJSON(inputs.full_config_build)}}
         exclude:
+          # Do not run Release Clang 11 build on every commit (but only once a day)
+          - full_config_build: false
+            config: Release
+            compiler: Clang 11
+          # Do not run Debug GCC 10 build on every commit (but only once a day)
           - full_config_build: false
             config: Debug
-            compiler: Clang 11
+            compiler: GCC 10
         include:
           - compiler: Clang 11
             cxx-compiler: /usr/bin/clang++-11

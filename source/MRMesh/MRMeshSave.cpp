@@ -350,7 +350,7 @@ VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & 
             out.write( ( const char* )&pc, 3 );
         }
         ++numSaved;
-        if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / numPoints ) )
+        if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / numPoints * 0.5f ) )
             return unexpectedOperationCanceled();
     }
 

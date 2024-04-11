@@ -12,10 +12,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}")
 set(MESHLIB_THIRDPARTY_INCLUDE_DIR "include")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
-  -Wall -Wno-sign-compare -Wno-unknown-pragmas -Wno-unused-variable \
-  -Wno-unused-function -Wno-unused-variable -Wno-comment -Wno-parentheses -Wno-int-in-bool-context -Wno-strict-aliasing \
-  -Wno-macro-redefined -Wno-return-type -Wno-unused-variable -Wno-deprecated-declarations -Wno-unused-command-line-argument -Wno-deprecated-pragma")
+# Inhibit all warning messages
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w")
 
 IF(MR_EMSCRIPTEN AND NOT MR_EMSCRIPTEN_SINGLETHREAD)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
@@ -135,6 +134,7 @@ ELSE() # not MR_EMSCRIPTEN
 ENDIF()
 
 set(GLAD_INSTALL ON)
+set(GLAD_REPRODUCIBLE ON)
 add_subdirectory(./glad)
 set(PYBIND11_INSTALL ON)
 add_subdirectory(./pybind11)

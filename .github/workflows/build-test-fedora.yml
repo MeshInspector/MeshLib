@@ -138,14 +138,14 @@ jobs:
         run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/fedora/${{matrix.os}}/${{matrix.config}}' --recursive
 
       - name: Create RPM
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 17'}}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'GCC 13'}}
         run: ./scripts/distribution_rpm.sh ${{inputs.app_version}}
         env:
           MESHLIB_BUILD_RELEASE: ON
           MESHLIB_BUILD_DEBUG: OFF
 
       - name: Upload Fedora Developer Distribution
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 17'}}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'GCC 13'}}
         uses: actions/upload-artifact@v4
         with:
           name: Distributives_fedora39-x86

@@ -278,6 +278,55 @@ void setDefaultUnitParams( const UnitToStringParams<E>& newParams )
 DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
 
+template <typename T>
+static std::string formatValueUsingStyle( T value, int precision, NumberStyle style )
+{
+    if constexpr ( std::is_floating_point_v<T> )
+    {
+        if ( style == NumberStyle::maybeExponential )
+            return fmt::format( "{:.{}g}", value, precision );
+        else if ( style == NumberStyle::exponential )
+            return fmt::format( "{:.{}e}", value, precision );
+        else
+            return fmt::format( "{:.{}f}", value, precision );
+    }
+    else
+    {
+        (void)precision;
+        (void)style;
+        return fmt::format( "{}", value );
+    }
+}
+
+// If `style == distributePrecision`, decreases `precision` by the length of the integral part.
+// Also makes sure it's not negative.
+// `valueStr` is the number converted to a string, probably using `precision`.
+template <typename T>
+static int adjustPrecisionForNumber( std::string_view valueStr, int precision, NumberStyle style )
+{
+    if constexpr ( std::is_floating_point_v<T> )
+    {
+        if ( style == NumberStyle::distributePrecision && precision > 0 )
+        {
+            int intDigits = 0;
+
+            std::size_t dot = valueStr.find( '.' );
+            if ( dot != std::string::npos )
+                intDigits = int( dot ) - ( valueStr.front() == '-' );
+
+            precision -= intDigits;
+        }
+
+        if ( precision < 0 )
+            precision = 0;
+        return precision;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
 template <UnitEnum E, typename T>
 static std::string valueToStringImpl( T value, const UnitToStringParams<E>& params )
 {
@@ -371,47 +420,21 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
 
     auto formatValue = [&]( T value, int precision ) -> std::string
     {
-        if constexpr ( std::is_floating_point_v<T> )
+        if constexpr ( std::is_floating_point_v<T> && std::is_same_v<E, AngleUnit> )
         {
-            if constexpr ( std::is_same_v<E, AngleUnit> )
+            if ( params.degreesMode == DegreesMode::degreesMinutes || params.degreesMode == DegreesMode::degreesMinutesSeconds )
             {
-                if ( params.degreesMode == DegreesMode::degreesMinutes || params.degreesMode == DegreesMode::degreesMinutesSeconds )
-                {
-                    std::string part = fmt::format( "{:.{}f}", value, precision );
-                    adjustArcMinutesOrSeconds( part );
-                    return part;
-                }
+                std::string part = fmt::format( "{:.{}f}", value, precision );
+                adjustArcMinutesOrSeconds( part );
+                return part;
             }
+        }
 
-            if ( params.style == NumberStyle::maybeExponential )
-                return fmt::format( "{:.{}g}", value, precision );
-            else if ( params.style == NumberStyle::exponential )
-                return fmt::format( "{:.{}e}", value, precision );
-            else
-                return fmt::format( "{:.{}f}", value, precision );
-        }
-        else
-        {
-            (void)precision;
-            return fmt::format( "{}", value );
-        }
+        return formatValueUsingStyle( value, precision, params.style );
     };
 
     // Calculate precision after the decimal point.
-    int fracPrecision = std::is_floating_point_v<T> ? params.precision : 0;
-    if ( params.style == NumberStyle::distributePrecision && fracPrecision > 0 )
-    {
-        int intDigits = 0;
-
-        std::string tmp = formatValue( value, params.precision );
-        std::size_t dot = tmp.find( '.' );
-        if ( dot != std::string::npos )
-            intDigits = int( dot ) - ( tmp.front() == '-' );
-
-        fracPrecision -= intDigits;
-    }
-    if ( fracPrecision < 0 )
-        fracPrecision = 0;
+    int fracPrecision = adjustPrecisionForNumber<T>( formatValue( value, params.precision ), params.precision, params.style );
 
     { // Format the value.
         std::string formattedValue = formatValue( value, fracPrecision );
@@ -492,8 +515,7 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
     return ret;
 }
 
-template <UnitEnum E, typename T>
-requires (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>)
+template <UnitEnum E, detail::Units::Scalar T>
 std::string valueToString( T value, const UnitToStringParams<E>& params )
 {
     // Convert to the target unit.
@@ -504,7 +526,7 @@ std::string valueToString( T value, const UnitToStringParams<E>& params )
     }
     else
     {
-        // This is always integral.
+        // This is always floating-point.
         return valueToStringImpl( convertUnits( *params.sourceUnit, params.targetUnit, value ), params );
     }
 }
@@ -515,8 +537,7 @@ DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
 #undef MR_Y
 
-template <typename T>
-requires (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>)
+template <detail::Units::Scalar T>
 int guessPrecision( T value )
 {
     if constexpr ( std::is_integral_v<T> )
@@ -546,8 +567,7 @@ int guessPrecision( T value )
     }
 }
 
-template <typename T>
-requires (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>)
+template <detail::Units::Scalar T>
 int guessPrecision( T min, T max )
 {
     if constexpr ( std::is_integral_v<T> )

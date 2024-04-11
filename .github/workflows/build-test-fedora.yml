@@ -36,9 +36,10 @@ jobs:
         full_config_build:
           - ${{fromJSON(inputs.full_config_build)}}
         exclude:
+          # Do not run Release Clang 17 build on every commit (but only once a day)
           - full_config_build: false
             compiler: Clang 17
-            config: Debug
+            config: Release
         include:
           - compiler: Clang 17
             cxx-compiler: /usr/bin/clang++-17

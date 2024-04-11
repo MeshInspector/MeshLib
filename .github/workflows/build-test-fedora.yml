@@ -40,7 +40,6 @@ jobs:
           - full_config_build: false
             compiler: Clang 17
             config: Release
-        exclude:
           # Do not run Debug GCC 13 build on every commit (but only once a day)
           - full_config_build: false
             compiler: GCC 13

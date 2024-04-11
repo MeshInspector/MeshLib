@@ -9,7 +9,6 @@
 namespace MR
 {
 
-class IPointsToMeshProjector;
 struct PointsToDistanceVolumeParams;
 /// The purpose of this class is to access CUDA algorithms without explicit dependency on MRCuda
 class MRVIEWER_CLASS CudaAccessor

@@ -4,8 +4,6 @@
 
 #include "MRUIStyle.h" // To help intellisense.
 
-#include "MRMesh/MRString.h"
-
 namespace MR::UI
 {
 
@@ -236,7 +234,7 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
             };
 
             return detail::genericSlider(
-                elemLabel, detail::imGuiTypeEnum<ElemType>(), &elemVal, elemMin, elemMax, replace( valueToString<E>( elemVal, unitParams ), "%", "%%" ).c_str(), flags
+                elemLabel, detail::imGuiTypeEnum<ElemType>(), &elemVal, elemMin, elemMax, valueToImGuiFormatString( elemVal, unitParams ).c_str(), flags
             );
         } );
 }
@@ -316,7 +314,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
             float dragY = ImGui::GetCursorPosY();
             ret = ImGui::DragScalar(
                 elemLabelFixed.c_str(), detail::imGuiTypeEnum<ElemType>(), &elemVal,
-                float( VectorTraits<SpeedType>::getElem( i, fixedSpeed ) ), elemMin, elemMax, replace( valueToString<E>( elemVal, unitParams ), "%", "%%" ).c_str(), flags
+                float( VectorTraits<SpeedType>::getElem( i, fixedSpeed ) ), elemMin, elemMax, valueToImGuiFormatString( elemVal, unitParams ).c_str(), flags
             );
             auto dragId = ImGui::GetItemID();
 

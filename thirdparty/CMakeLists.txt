@@ -134,6 +134,7 @@ ELSE() # not MR_EMSCRIPTEN
 ENDIF()
 
 set(GLAD_INSTALL ON)
+set(GLAD_REPRODUCIBLE ON)
 add_subdirectory(./glad)
 set(PYBIND11_INSTALL ON)
 add_subdirectory(./pybind11)

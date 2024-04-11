@@ -130,12 +130,25 @@ template <UnitEnum E>
     return a == b || getUnitInfo( a ).conversionFactor == getUnitInfo( b ).conversionFactor;
 }
 
+namespace detail::Units
+{
+    struct Empty {};
+
+    template <typename T>
+    concept Scalar = std::is_arithmetic_v<T> && !std::is_same_v<T, bool>;
+
+    template <typename T>
+    using MakeFloatingPoint = std::conditional_t<std::is_integral_v<typename VectorTraits<T>::BaseType>, typename VectorTraits<T>::template ChangeBaseType<float>, T>;
+}
+
 // Converts `value` from unit `from` to unit `to`. `value` is a scalar of a Vector2/3/4 or ImVec2/4 of them.
 // The return type matches `T` if it's not integral. If it's integral, its element type type is changed to `float`.
 // Returns min/max floating-point values unchanged.
-template <UnitEnum E, typename T, typename ReturnType = std::conditional_t<std::is_integral_v<typename VectorTraits<T>::BaseType>, typename VectorTraits<T>::template ChangeBaseType<float>, T>>
-[[nodiscard]] ReturnType convertUnits( E from, E to, const T& value )
+template <UnitEnum E, typename T>
+[[nodiscard]] detail::Units::MakeFloatingPoint<T> convertUnits( E from, E to, const T& value )
 {
+    using ReturnType = detail::Units::MakeFloatingPoint<T>;
+
     bool needConversion = !unitsAreEquivalent( from, to );
 
     if constexpr ( std::is_same_v<T, ReturnType> )
@@ -208,11 +221,6 @@ enum class DegreesMode
     degreesMinutesSeconds, // Integral degrees and minutes, fractional arcseconds.
 };
 
-namespace detail::Units
-{
-    struct Empty {};
-}
-
 // Controls how a value with a unit is converted to a string.
 template <UnitEnum E>
 struct UnitToStringParams
@@ -268,9 +276,8 @@ struct UnitToStringParams
 
 // Converts value to a string, possibly converting it to a different unit.
 // By default, length is kept as is, while angles are converted from radians to the current UI unit.
-template <UnitEnum E, typename T>
-requires (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>)
-std::string valueToString( T value, const UnitToStringParams<E>& params = getDefaultUnitParams<E>() );
+template <UnitEnum E, detail::Units::Scalar T>
+[[nodiscard]] MRVIEWER_API std::string valueToString( T value, const UnitToStringParams<E>& params = getDefaultUnitParams<E>() );
 
 #define MR_Y(T, E) extern template MRVIEWER_API std::string valueToString<E, T>( T value, const UnitToStringParams<E>& params );
 #define MR_X(E) DETAIL_MR_UNIT_VALUE_TYPES(MR_Y, E)
@@ -280,21 +287,51 @@ DETAIL_MR_UNIT_ENUMS(MR_X)
 
 // Guesses the number of digits of precision for fixed-point formatting of `value`.
 // Mostly for internal use.
-template <typename T>
-requires (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>)
-MRVIEWER_API int guessPrecision( T value );
+template <detail::Units::Scalar T>
+[[nodiscard]] MRVIEWER_API int guessPrecision( T value );
 
 // Guesses the number of digits of precision for fixed-point formatting of the min-max range.
 // If `min >= max`, always returns zero. Ignores min and/or max if they are the smallest of the largest representable value respectively.
 // Mostly for internal use.
+template <detail::Units::Scalar T>
+[[nodiscard]] MRVIEWER_API int guessPrecision( T min, T max );
+
+// Same but for vectors.
 template <typename T>
-requires (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>)
-MRVIEWER_API int guessPrecision( T min, T max );
+requires (VectorTraits<T>::size > 1 && detail::Units::Scalar<typename VectorTraits<T>::BaseType>)
+[[nodiscard]] int guessPrecision( T value )
+{
+    int ret = 0;
+    for ( int i = 0; i < VectorTraits<T>::size; i++ )
+        ret = std::max( ret, guessPrecision( VectorTraits<T>::getElem( i, value ) ) );
+    return ret;
+}
+template <typename T>
+requires (VectorTraits<T>::size > 1 && detail::Units::Scalar<typename VectorTraits<T>::BaseType>)
+[[nodiscard]] int guessPrecision( T min, T max )
+{
+    int ret = 0;
+    for ( int i = 0; i < VectorTraits<T>::size; i++ )
+        ret = std::max( ret, guessPrecision( VectorTraits<T>::getElem( i, min ), VectorTraits<T>::getElem( i, max ) ) );
+    return ret;
+}
 
 #define MR_X(T) \
     extern template MRVIEWER_API int guessPrecision( T value ); \
     extern template MRVIEWER_API int guessPrecision( T min, T max );
 DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
 #undef MR_X
+
+// Generates a printf-style format string for `value`, for use with ImGui widgets.
+// It has form "123.45 mm##%.6f" (the baked number, then `##` and some format string).
+// The `##...` part isn't printed, but we need it when ctrl+clicking the number, to show the correct number of digits.
+template <UnitEnum E, detail::Units::Scalar T>
+[[nodiscard]] MRVIEWER_API std::string valueToImGuiFormatString( T value, const UnitToStringParams<E>& params = getDefaultUnitParams<E>() );
+
+#define MR_Y(T, E) extern template MRVIEWER_API std::string valueToImGuiFormatString( T value, const UnitToStringParams<E>& params );
+#define MR_X(E) DETAIL_MR_UNIT_VALUE_TYPES(MR_Y, E)
+DETAIL_MR_UNIT_ENUMS(MR_X)
+#undef MR_X
+#undef MR_Y
 
 }

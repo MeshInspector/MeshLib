@@ -24,9 +24,9 @@ jobs:
       matrix:
         os: [ x64, arm ]
         config: [Release]
-        compiler: [Сlang]
+        compiler: [Clang]
         include:
-          - compiler: Сlang
+          - compiler: Clang
             cxx-compiler: /usr/bin/clang++
             c-compiler: /usr/bin/clang
           - os: x64

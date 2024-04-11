@@ -145,16 +145,18 @@ public:
          bool allowAlphaSort = false ///< If not null and the object is semitransparent, enable alpha-sorting.
     ) const;
 
-    // ...
+    // Predicate to additionally filter objects that should be treated as pickable.
     using PickRenderObjectPredicate = std::function<bool ( const VisualObject*, ViewportMask )>;
-    // ...
+    // Point picking parameters.
     struct PickRenderObjectParams
     {
-        // ...
+        // Predicate to additionally filter objects that should be treated as pickable.
         PickRenderObjectPredicate predicate;
-        // ...
+        // Radius (in pixels) of a picking area.
         uint16_t pickRadius = 0;
-        // ...
+        // Usually, from several objects that fall into the peak, the closest one along the ray is selected. However,
+        // if exactPickFirst = true, then the object in which the pick exactly fell (for example, a point in point cloud)
+        // will be returned as the result, even if there are others within the radius, including closer objects.
         bool exactPickFirst = true;
 
         static PickRenderObjectParams defaults()
@@ -162,7 +164,7 @@ public:
             return {};
         }
     };
-    // ...
+    // This function allows to pick point in scene by GL with given parameters.
     MRVIEWER_API ObjAndPick pickRenderObject( const PickRenderObjectParams& params = PickRenderObjectParams::defaults() );
     // This function allows to pick point in scene by GL
     // use default pick radius

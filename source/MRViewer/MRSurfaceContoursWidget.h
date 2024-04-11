@@ -51,8 +51,8 @@ public:
         // Parameters affect to future points only
         MR::Color closeContourPointColor = Color::transparent();
 
-        // ...
-        Viewport::PickRenderObjectPredicate pickRenderObjectPredicate;
+        // Predicate to additionally filter objects that should be treated as pickable.
+        Viewport::PickRenderObjectPredicate pickPredicate;
     };
 
     using PickerPointCallBack = std::function<void( std::shared_ptr<MR::VisualObject> )>;

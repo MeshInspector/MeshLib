@@ -362,7 +362,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         return false;
 
     auto [obj, pick] = getViewerInstance().viewport().pickRenderObject( {
-        .predicate = params.pickRenderObjectPredicate,
+        .predicate = params.pickPredicate,
         .exactPickFirst = params.surfacePointParams.pickInBackFaceObject,
     } );
     if ( !obj )
@@ -470,7 +470,7 @@ bool SurfaceContoursWidget::onMouseMove_( int, int )
         return false;
 
     auto [obj, pick] = getViewerInstance().viewport().pickRenderObject( {
-        .predicate = params.pickRenderObjectPredicate,
+        .predicate = params.pickPredicate,
         .exactPickFirst = params.surfacePointParams.pickInBackFaceObject,
     } );
     if ( !obj )

@@ -32,7 +32,7 @@ public:
     /// voxelSize is automatically increased to avoid more voxels than \param maxVoxels;
     /// returns std::nullopt if it was terminated by the callback
     [[nodiscard]] MRMESH_API std::optional<VertBitSet> pointsGridSampling( float voxelSize, size_t maxVoxels = 500000,
-        const ProgressCallback & cb = {} );
+        const ProgressCallback & cb = {} ) const;
 
     /// gives access to points-vector (which can include invalid points as well)
     [[nodiscard]] MRMESH_API const VertCoords & points() const;
@@ -72,12 +72,8 @@ public:
     /// the update takes place only if res.distSq on input is more than squared distance to the closest point
     [[nodiscard]] MRMESH_API LimitedProjectorFunc limitedProjector() const;
 
-    /// override projector for this object
-    void setCustomProjector( LimitedProjectorFunc func ) { customProjector_ = std::move( func ); }
-
 private:
     std::variant<MeshPart, const PointCloud*> var_;
-    LimitedProjectorFunc customProjector_;
 };
 
 /// constructs MeshOrPoints from ObjectMesh or ObjectPoints, otherwise returns nullopt

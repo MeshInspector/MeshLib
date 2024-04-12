@@ -124,7 +124,7 @@ void ProgressBar::setup( float scaling )
             if ( instance.isOrdered_ )
             {
                 instance.lastOperationTimeSec_ = float( ( std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::system_clock::now() - instance.operationStartTime_ ) ).count() ) * 1e-3f;
-                spdlog::info( instance.lastOperationTimeSec_ );
+                spdlog::info( "Operation \"{}\" time  - {} sec", instance.title_, instance.lastOperationTimeSec_);
             }
             if ( instance.onFinish_ )
             {

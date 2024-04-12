@@ -33,6 +33,7 @@ void AddPointActionPickerPoint::action( Type actionType )
     auto& contour = widget_.pickedPoints_[obj_];
     if ( actionType == Type::Undo )
     {
+        widget_.surfacePointWidgetCache_.erase( contour.back()->getPickSphere().get() );
         contour.pop_back();
 
         widget_.highlightLastPoint( obj_ );
@@ -82,7 +83,9 @@ void RemovePointActionPickerPoint::action( Type actionType )
     }
     else
     {
-        contour.erase( contour.begin() + index_ );
+        auto it = contour.begin() + index_;
+        widget_.surfacePointWidgetCache_.erase( (*it)->getPickSphere().get() );
+        contour.erase( it );
 
         widget_.activeIndex_ = index_;
         widget_.activeObject_ = obj_;
@@ -211,6 +214,8 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
         surfaceConnectionHolders_.emplace( obj, std::move( holder ) );
     }
 
+    surfacePointWidgetCache_.emplace( newPoint->getPickSphere().get() );
+
     return newPoint;
 }
 
@@ -319,6 +324,7 @@ bool SurfaceContoursWidget::removePoint( const std::shared_ptr<VisualObject>& ob
         {
             AppendHistory<RemovePointActionPickerPoint>( *this, obj, contour[pickedIndex]->getCurrentPosition(), pickedIndex );
         }
+        surfacePointWidgetCache_.erase( contour[pickedIndex]->getPickSphere().get() );
         contour.erase( contour.begin() + pickedIndex );
         activeIndex_ = pickedIndex;
         activeObject_ = obj;
@@ -362,7 +368,13 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
         return false;
 
     auto [obj, pick] = getViewerInstance().viewport().pickRenderObject( {
-        .predicate = params.pickPredicate,
+        .predicate = [&] ( const VisualObject* visObj, ViewportMask mask )
+        {
+            // always keep the picked points pickable
+            if ( surfacePointWidgetCache_.find( visObj ) != surfacePointWidgetCache_.end() )
+                return true;
+            return params.pickPredicate( visObj, mask );
+        },
         .exactPickFirst = params.surfacePointParams.pickInBackFaceObject,
     } );
     if ( !obj )
@@ -470,7 +482,13 @@ bool SurfaceContoursWidget::onMouseMove_( int, int )
         return false;
 
     auto [obj, pick] = getViewerInstance().viewport().pickRenderObject( {
-        .predicate = params.pickPredicate,
+        .predicate = [&] ( const VisualObject* visObj, ViewportMask mask )
+        {
+            // always keep the picked points pickable
+            if ( surfacePointWidgetCache_.find( visObj ) != surfacePointWidgetCache_.end() )
+                return true;
+            return params.pickPredicate( visObj, mask );
+        },
         .exactPickFirst = params.surfacePointParams.pickInBackFaceObject,
     } );
     if ( !obj )
@@ -524,6 +542,7 @@ void SurfaceContoursWidget::clear()
                 AppendHistory<RemovePointActionPickerPoint>( *this, obj, contour[i]->getCurrentPosition(), i );
     }
     pickedPoints_.clear();
+    surfacePointWidgetCache_.clear();
     surfaceConnectionHolders_.clear();
     activeIndex_ = 0;
     activeObject_ = nullptr;

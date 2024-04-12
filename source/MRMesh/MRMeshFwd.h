@@ -526,6 +526,7 @@ template<class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
 class IFastWindingNumber;
+class IPointsToMeshProjector;
 
 namespace MeshBuilder
 {

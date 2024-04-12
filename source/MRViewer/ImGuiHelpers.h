@@ -232,9 +232,9 @@ MRVIEWER_API bool Link( const char* label, uint32_t color = MR::Color( 60, 120, 
 /// values are bits
 enum class PaletteChanges
 {
-    None,                  // 0b00
-    Texture,               // 0b01
-    Ranges,                // 0b10
+    None    = 0,
+    Texture = 1, // texture and legend must be updated
+    Ranges  = 2, // uv-coordinates must be recomputed for the same values
     All = Texture | Ranges // 0b11
 };
 MR_MAKE_FLAG_OPERATORS( PaletteChanges )

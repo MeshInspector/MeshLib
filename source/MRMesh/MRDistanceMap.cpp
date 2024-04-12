@@ -206,7 +206,7 @@ Expected<Mesh, std::string> distanceMapToMesh( const DistanceMap& distMap, const
 
     if (resX < 2 || resY < 2)
     {
-        return {};
+        return unexpected( "Cannot create mesh from degenerated 1x1 distance map." );
     }
 
     return makeRegularGridMesh( resX, resY, [&]( size_t x, size_t y )

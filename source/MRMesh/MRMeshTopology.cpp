@@ -2186,8 +2186,8 @@ bool MeshTopology::checkValidity( ProgressCallback cb ) const
         if ( !b )
             failed.store( true, std::memory_order_relaxed );
     };
-    tbb::blocked_range edgeRange( 0_e, edges_.endId() );
-    auto result = ParallelFor( edgeRange.begin(), edgeRange.end(), [&] (const EdgeId& e)
+
+    auto result = ParallelFor( edges_, [&] (const EdgeId& e)
     {
         if ( failed.load( std::memory_order_relaxed ) )
             return;
@@ -2204,8 +2204,8 @@ bool MeshTopology::checkValidity( ProgressCallback cb ) const
     CHECK( !failed );
 
     std::atomic<int> realValidVerts{ 0 };
-    tbb::blocked_range edgePerVertRange( 0_v, edgePerVertex_.endId() );
-    result = ParallelFor( edgePerVertRange.begin(), edgePerVertRange.end(), [&] (const VertId& v)
+
+    result = ParallelFor( edgePerVertex_, [&] (const VertId& v)
     {
         int myValidVerts = 0;
 
@@ -2234,8 +2234,8 @@ bool MeshTopology::checkValidity( ProgressCallback cb ) const
     CHECK( numValidVerts_ == realValidVerts );
 
     std::atomic<int> realValidFaces{ 0 };
-    tbb::blocked_range edgePerFaceRange( 0_f, edgePerFace_.endId() );
-    result = ParallelFor( edgePerFaceRange.begin(), edgePerFaceRange.end(), [&] (const FaceId& f)
+
+    result = ParallelFor( edgePerFace_, [&] (const FaceId& f)
     {
         int myValidFaces = 0;
 

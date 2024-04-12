@@ -1354,11 +1354,11 @@ bool MeshTopology::buildGridMesh( const GridSettings & settings, ProgressCallbac
         FaceId f; //to the left of e
     };
     tbb::enumerable_thread_specific<std::vector<EdgeFace>> edgeRingPerThread;
-    auto result = ParallelFor( 0, settings.dim.y + 1, [&]( int range )
+    auto result = ParallelFor( 0, settings.dim.y + 1, [&]( int y )
     {
         auto & edgeRing = edgeRingPerThread.local();
         Vector2i pos;
-        pos.y = range;
+        pos.y = y;
         for ( pos.x = 0; pos.x <= settings.dim.x; ++pos.x )
         {
             if ( auto da = getEdgeId( pos, GridSettings::EdgeType::DiagonalA ) )

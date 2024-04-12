@@ -106,13 +106,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SelfIntersections, [] ( pybind11::module_& m
         def_readwrite( "method", &MR::SelfIntersections::Settings::method ).
         def_readwrite( "relaxIterations", &MR::SelfIntersections::Settings::relaxIterations, "Maximum relax iterations" ).
         def_readwrite( "maxExpand", &MR::SelfIntersections::Settings::maxExpand, "Maximum expand count (edge steps from self-intersecting faces), should be > 0" ).
-        def_readwrite( "subdivideEdgeLen", &MR::SelfIntersections::Settings::subdivideEdgeLen, "Edge length for subdivision of holes covers (0.0f means auto)" );
+        def_readwrite( "subdivideEdgeLen", &MR::SelfIntersections::Settings::subdivideEdgeLen,
+            "Edge length for subdivision of holes covers (0.0f means auto)\n"
+            "FLT_MAX to disable subdivision" );
 
-    m.def( "localFixSelfIntersections", MR::decorateExpected( &MR::SelfIntersections::fixSimple ),
+    m.def( "localFixSelfIntersections", MR::decorateExpected( &MR::SelfIntersections::fix ),
         pybind11::arg( "mesh" ), pybind11::arg( "settings" ),
-        "Finds and fixes self-intersections per component:\n"
-        "\tRelax method - simply relax area with self-intersection\n"
-        "\tCutAndFill method - remove area with self-intersection and fills it with new triangles" );
+        "Finds and fixes self-intersections per component" );
 
     m.def( "localFindSelfIntersections", MR::decorateExpected( &MR::SelfIntersections::getFaces ),
         pybind11::arg( "mesh" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},

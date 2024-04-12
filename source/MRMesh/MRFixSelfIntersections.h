@@ -26,6 +26,7 @@ struct Settings
     /// Maximum expand count (edge steps from self-intersecting faces), should be > 0
     int maxExpand = 3;
     /// Edge length for subdivision of holes covers (0.0f means auto)
+    /// FLT_MAX to disable subdivision
     float subdivideEdgeLen = 0.0f;
     /// Callback function
     ProgressCallback callback = {};
@@ -35,9 +36,7 @@ struct Settings
 MRMESH_API Expected<FaceBitSet> getFaces( const Mesh& mesh, ProgressCallback cb = {} );
 
 /// Finds and fixes self-intersections per component:
-///   Relax method - simply relax area with self-intersection
-///   CutAndFill method - remove area with self-intersection and fills it with new triangles
-MRMESH_API VoidOrErrStr fixSimple( Mesh& mesh, const Settings& settings );
+MRMESH_API VoidOrErrStr fix( Mesh& mesh, const Settings& settings );
 }
 
 }

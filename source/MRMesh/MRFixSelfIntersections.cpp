@@ -32,7 +32,7 @@ static VoidOrErrStr doFix( Mesh& mesh, FaceBitSet& part, const Settings& setting
     ProgressCallback cb );
 
 // TODO: finish implementation
-VoidOrErrStr fix( Mesh& mesh, const Settings& settings )
+VoidOrErrStr fixOld( Mesh& mesh, const Settings& settings )
 {
     Settings currentSettings = settings;
     if ( currentSettings.subdivideEdgeLen <= 0.0f )
@@ -104,7 +104,7 @@ VoidOrErrStr fix( Mesh& mesh, const Settings& settings )
     return {};
 }
 
-VoidOrErrStr fixSimple( Mesh& mesh, const Settings& settings )
+VoidOrErrStr fix( Mesh& mesh, const Settings& settings )
 {
     MR_TIMER;
 
@@ -127,19 +127,23 @@ VoidOrErrStr fixSimple( Mesh& mesh, const Settings& settings )
 
     expand( mesh.topology, *res, settings.maxExpand );
 
-    auto box = mesh.computeBoundingBox( &res.value() );
     Settings currentSettings = settings;
-    if ( currentSettings.subdivideEdgeLen <= 0.0f )
-        currentSettings.subdivideEdgeLen = box.valid() ? box.diagonal() * 1e-2f : mesh.getBoundingBox().diagonal() * 1e-4f;
+    if ( currentSettings.subdivideEdgeLen < FLT_MAX )
+    {
+        auto box = mesh.computeBoundingBox( &res.value() );
+        if ( currentSettings.subdivideEdgeLen <= 0.0f )
+            currentSettings.subdivideEdgeLen = box.valid() ? box.diagonal() * 1e-2f : mesh.getBoundingBox().diagonal() * 1e-4f;
 
-    SubdivideSettings ssettings;
-    ssettings.region = &res.value();
-    ssettings.maxEdgeLen = currentSettings.subdivideEdgeLen;
-    ssettings.maxEdgeSplits = 1000;
-    ssettings.maxDeviationAfterFlip = ssettings.maxEdgeLen;
-    ssettings.criticalAspectRatioFlip = FLT_MAX;
-    ssettings.progressCallback = subprogress( settings.callback, 0.3f, 0.5f );
-    subdivideMesh( mesh, ssettings );
+
+        SubdivideSettings ssettings;
+        ssettings.region = &res.value();
+        ssettings.maxEdgeLen = currentSettings.subdivideEdgeLen;
+        ssettings.maxEdgeSplits = 1000;
+        ssettings.maxDeviationAfterFlip = ssettings.maxEdgeLen;
+        ssettings.criticalAspectRatioFlip = FLT_MAX;
+        ssettings.progressCallback = subprogress( settings.callback, 0.3f, 0.5f );
+        subdivideMesh( mesh, ssettings );
+    }
 
     if ( !reportProgress( settings.callback, 0.5f ) )
         return unexpectedOperationCanceled();

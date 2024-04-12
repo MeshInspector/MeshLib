@@ -7,6 +7,8 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRPointOnObject.h"
+#include "MRMesh/MRHeapBytes.h"
+#include "MRMesh/MRFinally.h"
 
 namespace MR
 {
@@ -103,6 +105,7 @@ std::string ChangePointActionPickerPoint::name() const
 {
     return "Move Point " + widget_.params.historySpecification;
 }
+
 void ChangePointActionPickerPoint::action( Type )
 {
     if ( !widget_.isPickerActive_ )
@@ -119,17 +122,12 @@ size_t ChangePointActionPickerPoint::heapBytes() const
     return 0; //this undo action will be deleted in widget disable
 }
 
-void SurfaceContoursWidget::enable( bool isEnaled )
+void SurfaceContoursWidget::enable( bool isEnabled )
 {
-    isPickerActive_ = isEnaled;
+    isPickerActive_ = isEnabled;
     if ( !isPickerActive_ )
-    {
-        pickedPoints_.clear();
-        surfaceConnectionHolders_.clear();
-    }
+        clear();
 }
-
-
 
 std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& pt )
 {
@@ -535,12 +533,8 @@ void SurfaceContoursWidget::create(
 void SurfaceContoursWidget::clear()
 {
     if ( params.writeHistory )
-    {
-        SCOPED_HISTORY( "Remove All Point" + params.historySpecification );
-        for ( auto& [obj, contour] : pickedPoints_ )
-            for ( int i = static_cast< int >( contour.size() - 1 ); i >= 0; --i )
-                AppendHistory<RemovePointActionPickerPoint>( *this, obj, contour[i]->getCurrentPosition(), i );
-    }
+        AppendHistory<SurfaceContoursWidgetClearAction>( "Clear " + params.historySpecification, *this );
+
     pickedPoints_.clear();
     surfacePointWidgetCache_.clear();
     surfaceConnectionHolders_.clear();
@@ -558,13 +552,75 @@ void SurfaceContoursWidget::reset()
         FilterHistoryByCondition( [&] ( const std::shared_ptr<HistoryAction>& action )
         {
             bool res =
-                bool( std::dynamic_pointer_cast< AddPointActionPickerPoint >( action ) ) ||
-                bool( std::dynamic_pointer_cast< RemovePointActionPickerPoint >( action ) ) ||
-                bool( std::dynamic_pointer_cast< ChangePointActionPickerPoint >( action ) );
+                bool( std::dynamic_pointer_cast<AddPointActionPickerPoint>( action ) ) ||
+                bool( std::dynamic_pointer_cast<RemovePointActionPickerPoint>( action ) ) ||
+                bool( std::dynamic_pointer_cast<ChangePointActionPickerPoint>( action ) ) ||
+                bool( std::dynamic_pointer_cast<SurfaceContoursWidgetClearAction>( action ) );
             return res;
         } );
     }
 
     disconnect();
 }
-} // namespace MR 
+
+SurfaceContoursWidgetClearAction::SurfaceContoursWidgetClearAction( std::string name, SurfaceContoursWidget& widget )
+    : name_( std::move( name ) )
+    , widget_( widget )
+{
+    for ( const auto& [obj, contour] : widget_.pickedPoints_ )
+    {
+        ObjectState state;
+        state.objPtr = obj;
+        state.pickedPoints.reserve( contour.size() );
+        for ( const auto& p : contour )
+            state.pickedPoints.emplace_back( p->getCurrentPosition() );
+        states_.emplace_back( std::move( state ) );
+    }
+
+    activeObject_ = widget_.activeObject_;
+    activeIndex_ = widget_.activeIndex_;
+}
+
+void SurfaceContoursWidgetClearAction::action( Type type )
+{
+    if ( !widget_.isPickerActive_ )
+        return;
+
+    const auto prevWriteHistory = widget_.params.writeHistory;
+    widget_.params.writeHistory = false;
+    MR_FINALLY {
+        widget_.params.writeHistory = prevWriteHistory;
+    };
+
+    switch ( type )
+    {
+        case Type::Undo:
+            for ( const auto& state : states_ )
+            {
+                if ( const auto obj = state.objPtr.lock() )
+                {
+                    for ( const auto& p : state.pickedPoints )
+                        widget_.appendPoint( obj, p );
+                }
+            }
+            if ( const auto activeObject = activeObject_.lock() )
+            {
+                widget_.setActivePoint( activeObject, activeIndex_ );
+            }
+            break;
+
+        case Type::Redo:
+            widget_.clear();
+            break;
+    }
+}
+
+size_t SurfaceContoursWidgetClearAction::heapBytes() const
+{
+    return
+        name_.capacity()
+        + MR::heapBytes( states_ )
+    ;
+}
+
+} // namespace MR

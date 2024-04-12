@@ -160,10 +160,12 @@ TEST( MRMesh, DistanceMapWatertight )
     MeshToDistanceMapParams params( xf, Vector2f{ pixelSize,pixelSize }, Vector2i{ 10,10 } );
 
     auto dm1 = computeDistanceMapD( sphere, params );
-    auto meshFromDm1 = distanceMapToMesh( dm1, params );
+    // without a progress bar, distanceMapToMesh cannot return an error
+    auto meshFromDm1 = distanceMapToMesh( dm1, params ).value();
 
     auto dm2 = computeDistanceMapD( meshFromDm1, params );
-    auto meshFromDm2 = distanceMapToMesh( dm2, params );
+    // without a progress bar, distanceMapToMesh cannot return an error
+    auto meshFromDm2 = distanceMapToMesh( dm2, params ).value();
     int count = 0;
 
     EXPECT_EQ( dm1.resX(), dm2.resX() );
@@ -235,8 +237,9 @@ TEST( MRMesh, DistanceMapCompare )
     const bool saveMesh = false;
     if ( saveMesh )
     {
-        MeshSave::toMrmesh( distanceMapToMesh( resD, params ), std::filesystem::path( "c:/temp/Double.mrmesh" ) );
-        MeshSave::toMrmesh( distanceMapToMesh( resF, params ), std::filesystem::path( "c:/temp/Float.mrmesh" ) );
+        // without a progress bar, distanceMapToMesh cannot return an error
+        MeshSave::toMrmesh( distanceMapToMesh( resD, params ).value(), std::filesystem::path("c:/temp/Double.mrmesh"));
+        MeshSave::toMrmesh( distanceMapToMesh( resF, params ).value(), std::filesystem::path("c:/temp/Float.mrmesh"));
     }
 }
 
@@ -289,8 +292,9 @@ TEST( MRMesh, DistanceMapNegativeValue )
     const bool saveMesh = true;
     if ( saveMesh )
     {
-        MeshSave::toMrmesh( distanceMapToMesh( dm, params ), std::filesystem::path( "c:/temp/dm.mrmesh" ) );
-        MeshSave::toMrmesh( distanceMapToMesh( dm2, params2 ), std::filesystem::path( "c:/temp/dm2.mrmesh" ) );
+        // without a progress bar, distanceMapToMesh cannot return an error
+        MeshSave::toMrmesh( distanceMapToMesh( dm, params ).value(), std::filesystem::path("c:/temp/dm.mrmesh"));
+        MeshSave::toMrmesh( distanceMapToMesh( dm2, params2 ).value(), std::filesystem::path("c:/temp/dm2.mrmesh"));
     }
 }
 

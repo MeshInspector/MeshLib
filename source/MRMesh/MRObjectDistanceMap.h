@@ -31,7 +31,7 @@ public:
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
     virtual std::string getClassName() const override { return "Distance Map"; }
 
-    MRMESH_API void setDistanceMap( const std::shared_ptr<DistanceMap>& dmap, const DistanceMapToWorld& toWorldParams );
+    MRMESH_API bool setDistanceMap( const std::shared_ptr<DistanceMap>& dmap, const DistanceMapToWorld& toWorldParams, ProgressCallback cb = {} );
     
     [[nodiscard]] const std::shared_ptr<DistanceMap>& getDistanceMap() const { return dmap_; }
 
@@ -61,7 +61,7 @@ private:
     DistanceMapToWorld toWorldParams_;
 
     /// rebuild mesh according sets DistanceMap & DistanceMapToWorld
-    void construct_();
+    bool construct_( const std::shared_ptr<DistanceMap>& dmap, const DistanceMapToWorld& params, ProgressCallback cb = {} );
 
     /// this is private function to set default colors of this type (ObjectDistanceMap) in constructor only
     void setDefaultColors_();

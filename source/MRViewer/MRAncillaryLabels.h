@@ -73,7 +73,7 @@ private:
     MRVIEWER_API virtual void preDraw_() override;
 
     PositionedText labelData_;
-    boost::signals2::connection parentXfConnection_;
+    boost::signals2::scoped_connection parentXfConnection_;
 };
 
 

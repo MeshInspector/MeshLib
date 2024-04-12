@@ -119,7 +119,7 @@
     <ClInclude Include="MRMeshToDistanceVolume.h" />
     <ClInclude Include="MRMisonLoad.h" />
     <ClInclude Include="MRMovementBuildBody.h" />
-    <ClInclude Include="MRMultyICP.h" />
+    <ClInclude Include="MRMultiwayICP.h" />
     <ClInclude Include="MRMutexOwner.h" />
     <ClInclude Include="MRNormalDenoising.h" />
     <ClInclude Include="MRNormalsToPoints.h" />
@@ -495,7 +495,7 @@
     <ClCompile Include="MRMeshToDistanceVolume.cpp" />
     <ClCompile Include="MRMisonLoad.cpp" />
     <ClCompile Include="MRMovementBuildBody.cpp" />
-    <ClCompile Include="MRMultyICP.cpp" />
+    <ClCompile Include="MRMultiwayICP.cpp" />
     <ClCompile Include="MRNormalDenoising.cpp" />
     <ClCompile Include="MRNormalsToPoints.cpp" />
     <ClCompile Include="MROffsetContours.cpp" />

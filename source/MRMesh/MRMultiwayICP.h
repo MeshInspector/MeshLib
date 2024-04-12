@@ -8,7 +8,7 @@ namespace MR
 class MRMESH_CLASS MeshOrPointsTag;
 using MeshOrPointsId = Id<MeshOrPointsTag>;
 
-struct MultyICPObject
+struct MultiICPObject
 {
     MeshOrPoints meshOrPoints;
     AffineXf3f xf;
@@ -16,10 +16,10 @@ struct MultyICPObject
 
 using IndexedPairs = Vector<PointPairs, MeshOrPointsId>;
 
-class MRMESH_CLASS MultyICP
+class MRMESH_CLASS MultiwayICP
 {
 public:
-    MRMESH_API MultyICP( const Vector<MultyICPObject, MeshOrPointsId>& objects, float samplingVoxelSize );
+    MRMESH_API MultiwayICP( const Vector<MultiICPObject, MeshOrPointsId>& objects, float samplingVoxelSize );
     
     [[nodiscard]] MRMESH_API Vector<AffineXf3f, MeshOrPointsId> calculateTransformations();
     
@@ -40,7 +40,7 @@ public:
     [[nodiscard]] MRMESH_API size_t getNumActivePairs() const;
 private:
     
-    Vector<MultyICPObject, MeshOrPointsId> objs_;
+    Vector<MultiICPObject, MeshOrPointsId> objs_;
     Vector<IndexedPairs, MeshOrPointsId> pairsPerObj_;
     ICPProperties prop_;
 

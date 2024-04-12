@@ -1,4 +1,4 @@
-#include "MRMultyICP.h"
+#include "MRMultiwayICP.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
 #include "MRPointToPointAligningTransform.h"
@@ -7,13 +7,13 @@
 namespace MR
 {
 
-MultyICP::MultyICP( const Vector<MultyICPObject, MeshOrPointsId>& objects, float samplingVoxelSize ) :
+MultiwayICP::MultiwayICP( const Vector<MultiICPObject, MeshOrPointsId>& objects, float samplingVoxelSize ) :
     objs_{ objects }
 {
     resamplePoints( samplingVoxelSize );
 }
 
-Vector<AffineXf3f, MeshOrPointsId> MultyICP::calculateTransformations()
+Vector<AffineXf3f, MeshOrPointsId> MultiwayICP::calculateTransformations()
 {
     float minDist = std::numeric_limits<float>::max();
     int badIterCount = 0;
@@ -61,7 +61,7 @@ Vector<AffineXf3f, MeshOrPointsId> MultyICP::calculateTransformations()
     return res;
 }
 
-void MultyICP::resamplePoints( float samplingVoxelSize )
+void MultiwayICP::resamplePoints( float samplingVoxelSize )
 {
     MR_TIMER;
     pairsPerObj_.clear();
@@ -93,7 +93,7 @@ void MultyICP::resamplePoints( float samplingVoxelSize )
     }
 }
 
-float MultyICP::getMeanSqDistToPoint() const
+float MultiwayICP::getMeanSqDistToPoint() const
 {
     MR_TIMER;
     NumSum sum;
@@ -104,7 +104,7 @@ float MultyICP::getMeanSqDistToPoint() const
     return sum.rootMeanSqF();
 }
 
-float MultyICP::getMeanSqDistToPlane() const
+float MultiwayICP::getMeanSqDistToPlane() const
 {
     MR_TIMER;
     NumSum sum;
@@ -115,7 +115,7 @@ float MultyICP::getMeanSqDistToPlane() const
     return sum.rootMeanSqF();
 }
 
-size_t MultyICP::getNumActivePairs() const
+size_t MultiwayICP::getNumActivePairs() const
 {
     size_t num = 0;
     for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )
@@ -125,7 +125,7 @@ size_t MultyICP::getNumActivePairs() const
     return num;
 }
 
-void MultyICP::updatePointPairs_()
+void MultiwayICP::updatePointPairs_()
 {
     MR_TIMER;
     for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )
@@ -135,7 +135,7 @@ void MultyICP::updatePointPairs_()
     deactivatefarDistPairs_();
 }
 
-void MultyICP::deactivatefarDistPairs_()
+void MultiwayICP::deactivatefarDistPairs_()
 {
     MR_TIMER;
 
@@ -155,7 +155,7 @@ void MultyICP::deactivatefarDistPairs_()
     }
 }
 
-bool MultyICP::p2ptIter_()
+bool MultiwayICP::p2ptIter_()
 {
     MR_TIMER;
     Vector<bool, MeshOrPointsId> valid( objs_.size() );
@@ -207,7 +207,7 @@ bool MultyICP::p2ptIter_()
     return std::all_of( valid.vec_.begin(), valid.vec_.end(), [] ( auto v ) { return v; } );
 }
 
-bool MultyICP::p2plIter_()
+bool MultiwayICP::p2plIter_()
 {
     MR_TIMER;
     Vector<bool, MeshOrPointsId> valid( objs_.size() );

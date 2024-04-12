@@ -121,7 +121,8 @@ void AncillaryImGuiLabel::preDraw_()
         auto viewerCoord = getViewerInstance().viewportToScreen( coord, vp.id );
 
         params.list->PushClipRect( minRect, maxRect );
-        ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, scaling, params, ImVec2( viewerCoord.x, viewerCoord.y ), sWithI );
+        ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, scaling, params,
+            ImVec2( viewerCoord.x, viewerCoord.y ), sWithI, {}, pivot_ );
         params.list->PopClipRect();
     }
 }

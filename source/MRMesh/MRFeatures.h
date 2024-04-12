@@ -59,8 +59,8 @@ namespace Primitives
         // * If they are equal (both zero) or at least one of them is infinite, `positiveSideRadius` must be equal to `negativeSideRadius`.
         // * Both `positiveSideRadius` and `negativeSideRadius` must be non-negative.
 
-        // This isn't necessarily the true center point. Use `centerPoint()` instead.
-        Vector3f center;
+        // Some point on the axis, but not necessarily the true center point. Use `centerPoint()` for that.
+        Vector3f referencePoint;
         Vector3f dir; //< Must be normalized.
 
         //! Cap radius in the `dir` direction.
@@ -116,14 +116,14 @@ namespace Primitives
 [[nodiscard]] inline Primitives::Sphere toPrimitive( const Vector3f& point ) { return { point, 0 }; }
 [[nodiscard]] inline Primitives::Sphere toPrimitive( const Sphere3f& sphere ) { return sphere; }
 
-[[nodiscard]] inline Primitives::ConeSegment toPrimitive( const Line3f& line ) { return { .center = line.p, .dir = line.d.normalized(), .positiveLength = INFINITY, .negativeLength = INFINITY }; }
-[[nodiscard]] inline Primitives::ConeSegment toPrimitive( const LineSegm3f& segm ) { return { .center = segm.a, .dir = segm.dir().normalized(), .positiveLength = segm.length() }; }
+[[nodiscard]] inline Primitives::ConeSegment toPrimitive( const Line3f& line ) { return { .referencePoint = line.p, .dir = line.d.normalized(), .positiveLength = INFINITY, .negativeLength = INFINITY }; }
+[[nodiscard]] inline Primitives::ConeSegment toPrimitive( const LineSegm3f& segm ) { return { .referencePoint = segm.a, .dir = segm.dir().normalized(), .positiveLength = segm.length() }; }
 
 [[nodiscard]] inline Primitives::ConeSegment toPrimitive( const Cylinder3f& cyl )
 {
     float halfLen = cyl.length / 2;
     return{
-        .center = cyl.center(),
+        .referencePoint = cyl.center(),
         .dir = cyl.direction().normalized(),
         .positiveSideRadius = cyl.radius, .negativeSideRadius = cyl.radius,
         .positiveLength = halfLen, .negativeLength = halfLen,
@@ -132,7 +132,7 @@ namespace Primitives
 [[nodiscard]] inline Primitives::ConeSegment toPrimitive( const Cone3f& cone )
 {
     return{
-        .center = cone.center(),
+        .referencePoint = cone.center(),
         .dir = cone.direction().normalized(),
         .positiveSideRadius = std::tan( cone.angle ) * cone.height, .negativeSideRadius = 0,
         .positiveLength = cone.height, .negativeLength = 0,
@@ -185,7 +185,12 @@ struct MeasureResult
 
         [[nodiscard]] Vector3f closestPointFor( bool b ) const { return b ? closestPointB : closestPointA; }
     };
+    // Exact distance.
     Distance distance;
+
+    // Some approximation of the distance.
+    // For planes and lines, this expects them to be mostly parallel. For everything else, it just takes the feature center.
+    Distance centerDistance;
 
     struct Angle : BasicPart
     {
@@ -309,13 +314,16 @@ requires MeasureSupported<A, B>
     {
         MeasureResult ret = Traits::Binary<A, B>{}.measure( a, b );
 
-        // Catch non-finite distance.
-        if ( ret.distance && ( !std::isfinite( ret.distance.distance ) || !ret.distance.closestPointA.isFinite() || !ret.distance.closestPointB.isFinite() ) )
-            ret.distance.status = MeasureResult::Status::badRelativeLocation;
+        for ( auto* dist : { &ret.distance, &ret.centerDistance } )
+        {
+            // Catch non-finite distance.
+            if ( *dist && ( !std::isfinite( dist->distance ) || !dist->closestPointA.isFinite() || !dist->closestPointB.isFinite() ) )
+                dist->status = MeasureResult::Status::badRelativeLocation;
 
-        // Check that we got the correct distance here.
-        // Note that the distance is signed, so we apply `abs` to it to compare it properly.
-        assert( ret.distance <= ( std::abs( ( ret.distance.closestPointB - ret.distance.closestPointA ).length() - std::abs( ret.distance.distance ) ) < 0.0001f ) );
+            // Check that we got the correct distance here.
+            // Note that the distance is signed, so we apply `abs` to it to compare it properly.
+            assert( *dist <= ( std::abs( ( dist->closestPointB - dist->closestPointA ).length() - std::abs( dist->distance ) ) < 0.0001f ) );
+        }
 
         // Catch non-finite angle.
         if ( ret.angle && ( !ret.angle.pointA.isFinite() || !ret.angle.pointB.isFinite() || !ret.angle.dirA.isFinite() || !ret.angle.dirB.isFinite() ) )

@@ -18,13 +18,13 @@ namespace MR::Features
 
 Primitives::ConeSegment Primitives::Plane::intersectWithPlane( const Plane& other ) const
 {
-    Vector3f point = intersectWithLine( { .center = other.center, .dir = cross( other.normal, cross( other.normal, normal ) ).normalized() } ).center;
+    Vector3f point = intersectWithLine( { .referencePoint = other.center, .dir = cross( other.normal, cross( other.normal, normal ) ).normalized() } ).center;
     return toPrimitive( Line( point, cross( normal, other.normal ) ) );
 }
 
 Primitives::Sphere Primitives::Plane::intersectWithLine( const ConeSegment& line ) const
 {
-    return toPrimitive( line.center - dot( line.center - center, normal ) / dot( line.dir, normal ) * line.dir );
+    return toPrimitive( line.referencePoint - dot( line.referencePoint - center, normal ) / dot( line.dir, normal ) * line.dir );
 }
 
 Primitives::Sphere Primitives::ConeSegment::centerPoint() const
@@ -33,7 +33,7 @@ Primitives::Sphere Primitives::ConeSegment::centerPoint() const
     bool negInf = std::isfinite( negativeLength );
     assert( posInf == negInf );
 
-    return toPrimitive( posInf || negInf ? center + dir * ( ( positiveLength - negativeLength ) / 2 ) : center );
+    return toPrimitive( posInf || negInf ? referencePoint + dir * ( ( positiveLength - negativeLength ) / 2 ) : referencePoint );
 }
 
 Primitives::ConeSegment Primitives::ConeSegment::extendToInfinity( bool negative ) const
@@ -84,7 +84,7 @@ Primitives::ConeSegment Primitives::ConeSegment::axis() const
 
 Primitives::Sphere Primitives::ConeSegment::basePoint( bool negative ) const
 {
-    return toPrimitive( center + dir * ( negative ? -negativeLength : positiveLength ) );
+    return toPrimitive( referencePoint + dir * ( negative ? -negativeLength : positiveLength ) );
 }
 
 Primitives::Plane Primitives::ConeSegment::basePlane( bool negative ) const
@@ -98,7 +98,7 @@ Primitives::ConeSegment Primitives::ConeSegment::baseCircle( bool negative ) con
     assert( std::isfinite( negative ? negativeLength : positiveLength ) );
 
     ConeSegment ret = *this;
-    ret.center = basePoint( negative ).center;
+    ret.referencePoint = basePoint( negative ).center;
     ret.positiveLength = ret.negativeLength = 0;
     if ( negative )
         ret.positiveSideRadius = ret.negativeSideRadius;
@@ -112,7 +112,7 @@ Primitives::ConeSegment Primitives::ConeSegment::baseCircle( bool negative ) con
 Primitives::ConeSegment primitiveCircle( const Vector3f& point, const Vector3f& normal, float rad )
 {
     return {
-        .center = point,
+        .referencePoint = point,
         .dir = normal.normalized(),
         .positiveSideRadius = rad,
         .negativeSideRadius = rad,
@@ -131,7 +131,7 @@ Primitives::ConeSegment primitiveCone( const Vector3f& a, const Vector3f& b, flo
     Vector3f delta = b - a;
     float deltaLen = delta.length();
     return {
-        .center = a,
+        .referencePoint = a,
         .dir = delta / ( deltaLen > 0 ? deltaLen : 1 ),
         .negativeSideRadius = rad,
         .positiveLength = deltaLen,
@@ -176,7 +176,7 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
     {
         float radius = circle->getRadius() * getUniformScale( parentXf.A );
         return Primitives::ConeSegment{
-            .center = parentXf( circle->getCenter() ),
+            .referencePoint = parentXf( circle->getCenter() ),
             .dir = parentXf.A * circle->getNormal(),
             .positiveSideRadius = radius,
             .negativeSideRadius = radius,
@@ -189,7 +189,7 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
         float radius = cyl->getRadius() * scale;
         float halfLen = cyl->getLength() / 2 * scale;
         return Primitives::ConeSegment{
-            .center = parentXf( cyl->getCenter() ),
+            .referencePoint = parentXf( cyl->getCenter() ),
             .dir = parentXf.A * cyl->getDirection(),
             .positiveSideRadius = radius,
             .negativeSideRadius = radius,
@@ -203,7 +203,7 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
         // I want the "positive" direction to point towards the tip (so "axis -> positive/negative end").
         // It's moot where the center should be, but currently having it at the tip is ok.
         Primitives::ConeSegment ret{
-            .center = parentXf( cone->getCenter() ),
+            .referencePoint = parentXf( cone->getCenter() ),
             .dir = parentXf.A * -cone->getDirection(),
             .positiveSideRadius = 0,
             .negativeSideRadius = cone->getBaseRadius() * getUniformScale( parentXf.A ),
@@ -458,12 +458,18 @@ MeasureResult Binary<Primitives::Sphere, Primitives::Sphere>::measure( const Pri
         }
     }
 
+    // Center distance.
+    ret.centerDistance.status = MeasureResult::Status::ok;
+    ret.centerDistance.distance = dirLen;
+    ret.centerDistance.closestPointA = a.center;
+    ret.centerDistance.closestPointB = b.center;
+
     return ret;
 }
 
 MeasureResult Binary<Primitives::ConeSegment, Primitives::Sphere>::measure( const Primitives::ConeSegment& a, const Primitives::Sphere& b ) const
 {
-    Vector3f centerDelta = b.center - a.center;
+    Vector3f centerDelta = b.center - a.referencePoint;
 
     float coneLength = a.negativeLength + a.positiveLength;
     bool coneLengthIsFinite = std::isfinite( coneLength );
@@ -557,7 +563,7 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::Sphere>::measure( cons
         {
             // Near the conical surface.
             ret.distance.distance = ( a.hollow ? std::abs( signedDistToSurface ) : signedDistToSurface ) - b.radius;
-            ret.distance.closestPointA = a.center + a.dir * projectedSpherePos + normalToConicalSurface * axisToSurfaceSlopedDist;
+            ret.distance.closestPointA = a.referencePoint + a.dir * projectedSpherePos + normalToConicalSurface * axisToSurfaceSlopedDist;
             ret.distance.closestPointB = b.center - normalToConicalSurface * b.radius * ( a.hollow && signedDistToSurface < 0 ? -1.f : 1.f );
             haveDistance = true;
         }
@@ -568,7 +574,7 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::Sphere>::measure( cons
         {
             // Near the cap.
             ret.distance.distance = signedDistToClosestCap - b.radius;
-            ret.distance.closestPointA = a.center + a.dir * ( positiveCapIsCloser ? a.positiveLength : -a.negativeLength ) + axisToSphereCenterDelta;
+            ret.distance.closestPointA = a.referencePoint + a.dir * ( positiveCapIsCloser ? a.positiveLength : -a.negativeLength ) + axisToSphereCenterDelta;
             ret.distance.closestPointB = b.center - a.dir * ( ( positiveCapIsCloser ? 1 : -1 ) * b.radius );
             haveDistance = true;
         }
@@ -583,7 +589,7 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::Sphere>::measure( cons
         float distanceAlongAxis = signedDistAlongAxis - ( positiveCapIsSlopedCloser ? a.positiveLength : -a.negativeLength );
 
         ret.distance.distance = std::sqrt( distanceAlongAxis * distanceAlongAxis + distanceTowardsAxis * distanceTowardsAxis ) - b.radius;
-        ret.distance.closestPointA = a.center + a.dir * ( positiveCapIsSlopedCloser ? a.positiveLength : -a.negativeLength )
+        ret.distance.closestPointA = a.referencePoint + a.dir * ( positiveCapIsSlopedCloser ? a.positiveLength : -a.negativeLength )
             + axisToSphereCenterDir * ( positiveCapIsSlopedCloser ? a.positiveSideRadius : a.negativeSideRadius );
         ret.distance.closestPointB = b.center - ( a.dir * distanceAlongAxis + axisToSphereCenterDir * distanceTowardsAxis ).normalized() * b.radius;
 
@@ -640,6 +646,24 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::Sphere>::measure( cons
         }
     }
 
+    { // Center distance.
+        if ( a.isZeroRadius() )
+        {
+            // If `a` is a line, just use the normal distance, but to the sphere center instead of the surface.
+            ret.centerDistance = ret.distance;
+            ret.centerDistance.distance -= b.radius;
+            ret.centerDistance.closestPointB = b.center;
+        }
+        else
+        {
+            // Otherwise just do the distance between centers.
+            ret.centerDistance.status = MeasureResult::Status::ok;
+            ret.centerDistance.closestPointA = a.centerPoint().center;
+            ret.centerDistance.closestPointB = b.center;
+            ret.centerDistance.distance = ( ret.centerDistance.closestPointB - ret.centerDistance.closestPointA ).length();
+        }
+    }
+
     return ret;
 }
 
@@ -647,11 +671,15 @@ MeasureResult Binary<Primitives::Plane, Primitives::Sphere>::measure( const Prim
 {
     float signedCenterDist = dot( a.normal, b.center - a.center );
 
+    // Distance.
+
     MeasureResult ret;
     ret.distance.status = MeasureResult::Status::ok;
     ret.distance.distance = std::abs( signedCenterDist ) - b.radius;
     ret.distance.closestPointA = b.center - a.normal * signedCenterDist;
     ret.distance.closestPointB = b.center - a.normal * ( b.radius * ( signedCenterDist >= 0 ? 1 : -1 ) );
+
+    // Angle.
 
     if ( b.radius == 0 )
     {
@@ -677,6 +705,12 @@ MeasureResult Binary<Primitives::Plane, Primitives::Sphere>::measure( const Prim
         ret.intersections.push_back( primitiveCircle( intersectionCircleCenter, ret.angle.dirA, sideOffset ) );
     }
 
+    // Center distance.
+    ret.centerDistance.status = MeasureResult::Status::ok;
+    ret.centerDistance.distance = std::abs( signedCenterDist );
+    ret.centerDistance.closestPointA = ret.distance.closestPointA;
+    ret.centerDistance.closestPointB = b.center;
+
     return ret;
 }
 
@@ -684,29 +718,31 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::ConeSegment>::measure(
 {
     MeasureResult ret;
 
+    // Distance.
+
     if ( a.isZeroRadius() && b.isZeroRadius() )
     {
         // https://math.stackexchange.com/a/4764188
 
         Vector3f nDenorm = cross( a.dir, b.dir );
         Vector3f n = nDenorm.normalized();
-        Vector3f centerDelta = b.center - a.center;
+        Vector3f centerDelta = b.referencePoint - a.referencePoint;
 
         float signedDist = dot( n, centerDelta );
 
-        Vector3f bCenterFixed = b.center - n * signedDist;
+        Vector3f bCenterFixed = b.referencePoint - n * signedDist;
 
         float tFac = 1.f / nDenorm.lengthSq();
 
-        float ta = dot( cross( bCenterFixed - a.center, b.dir ), nDenorm ) * tFac;
-        float tb = dot( cross( bCenterFixed - a.center, a.dir ), nDenorm ) * tFac;
+        float ta = dot( cross( bCenterFixed - a.referencePoint, b.dir ), nDenorm ) * tFac;
+        float tb = dot( cross( bCenterFixed - a.referencePoint, a.dir ), nDenorm ) * tFac;
 
         ta = std::clamp( ta, -a.negativeLength, a.positiveLength );
         tb = std::clamp( tb, -b.negativeLength, b.positiveLength );
 
         ret.distance.status = MeasureResult::Status::ok;
-        ret.distance.closestPointA = a.center + a.dir * ta;
-        ret.distance.closestPointB = b.center + b.dir * tb;
+        ret.distance.closestPointA = a.referencePoint + a.dir * ta;
+        ret.distance.closestPointB = b.referencePoint + b.dir * tb;
         ret.distance.distance = ( ret.distance.closestPointB - ret.distance.closestPointA ).length();
     }
     else
@@ -714,8 +750,7 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::ConeSegment>::measure(
         // TODO: Support more cone types.
     }
 
-
-    // Now compute the angle.
+    // Angle.
 
     auto isConeSuitableForAngle = [&] ( const Primitives::ConeSegment& cone )
     {
@@ -743,6 +778,65 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::ConeSegment>::measure(
         ret.angle.isSurfaceNormalA = ret.angle.isSurfaceNormalB = false;
     }
 
+    // Center distance.
+
+    // If at least one argument is a circle, replace it with the center point.
+    if ( a.isCircle() && b.isCircle() )
+    {
+        ret.centerDistance = Features::measure( a.centerPoint(), b.centerPoint() ).centerDistance;
+    }
+    else if ( a.isCircle() )
+    {
+        ret.centerDistance = Features::measure( a.centerPoint(), b ).centerDistance;
+    }
+    else if ( b.isCircle() )
+    {
+        ret.centerDistance = Features::measure( a, b.centerPoint() ).centerDistance;
+    }
+    // Otherwise, if at least one argument has non-zero radius, set it to zero.
+    else if ( !a.isZeroRadius() || !b.isZeroRadius() )
+    {
+        auto aLine = a;
+        auto bLine = b;
+        aLine.positiveSideRadius = aLine.negativeSideRadius = bLine.positiveSideRadius = bLine.negativeSideRadius = 0;
+        ret.centerDistance = measure( aLine, bLine ).centerDistance;
+    }
+    else
+    {
+        // Otherwise, if the angle between lines is >45 degrees, calculate the distance as usual.
+        float dirDot = dot( a.dir, b.dir );
+        if ( std::abs( dirDot ) < 0.707106781186547524401f ) // sqrt(2)/2, aka M_SQRT1_2
+        {
+            ret.centerDistance = ret.distance;
+        }
+        // If one of the lines is finite and the other isn't, calculate distance from the center of the finite line to the entire other line.
+        else if ( std::isfinite( a.length() ) != std::isfinite( b.length() ) )
+        {
+            if ( std::isfinite( a.length() ) )
+                ret.centerDistance = Features::measure( a.centerPoint(), b ).distance;
+            else
+                ret.centerDistance = Features::measure( a, b.centerPoint() ).distance;
+        }
+        // Otherwise use a weird approximation that assumes that the lines are mostly parallel.
+        else
+        {
+            Vector3f bDirFixed = b.dir;
+            if ( dirDot < 0 )
+                bDirFixed = -bDirFixed;
+            Vector3f averageDir = ( a.dir + bDirFixed ).normalized();
+
+            Vector3f aCenter = a.centerPoint().center;
+            Vector3f bCenter = b.centerPoint().center;
+
+            float offset = dot( bCenter - aCenter, averageDir ) / dot( averageDir, a.dir );
+
+            ret.centerDistance.status = MeasureResult::Status::ok;
+            ret.centerDistance.closestPointA = aCenter + a.dir * offset;
+            ret.centerDistance.closestPointB = bCenter + bDirFixed * offset;
+            ret.centerDistance.distance = ( ret.centerDistance.closestPointB - ret.centerDistance.closestPointA ).length();
+        }
+    }
+
     return ret;
 }
 
@@ -763,8 +857,8 @@ MeasureResult Binary<Primitives::Plane, Primitives::ConeSegment>::measure( const
         if ( sideDir == Vector3f() || !sideDir.isFinite() )
             sideDir = cross( b.dir, b.dir.furthestBasisVector() ).normalized(); // An arbitrary direction.
 
-        Vector3f positiveCapCenter = b.center + b.dir * b.positiveLength;
-        Vector3f negativeCapCenter = b.center - b.dir * b.negativeLength;
+        Vector3f positiveCapCenter = b.referencePoint + b.dir * b.positiveLength;
+        Vector3f negativeCapCenter = b.referencePoint - b.dir * b.negativeLength;
 
         bool first = true;
 
@@ -889,7 +983,7 @@ MeasureResult Binary<Primitives::Plane, Primitives::ConeSegment>::measure( const
         else if ( b.isCircle() )
         {
             auto intersectionLine = b.basePlane( false ).intersectWithPlane( a );
-            ret.angle.pointA = ret.angle.pointB = intersectionLine.center;
+            ret.angle.pointA = ret.angle.pointB = intersectionLine.referencePoint;
             ret.intersections.push_back( std::move( intersectionLine ) );
         }
         else
@@ -900,6 +994,19 @@ MeasureResult Binary<Primitives::Plane, Primitives::ConeSegment>::measure( const
         }
     }
 
+    { // Center distance.
+        // Just the distance to B's center, nothing fancy.
+
+        Vector3f bCenter = b.centerPoint().center;
+
+        float signedCenterDist = dot( a.normal, bCenter - a.center );
+
+        ret.centerDistance.status = MeasureResult::Status::ok;
+        ret.centerDistance.distance = std::abs( signedCenterDist );
+        ret.centerDistance.closestPointA = bCenter - a.normal * signedCenterDist;
+        ret.centerDistance.closestPointB = bCenter;
+    }
+
     return ret;
 }
 
@@ -907,22 +1014,40 @@ MeasureResult Binary<Primitives::Plane, Primitives::Plane>::measure( const Primi
 {
     MeasureResult ret;
 
-    // We're not going to check for parallel-ness with some epsilon. You can just pick a point on one of the planes instead.
+    // We're not going to check for parallel-ness with some epsilon.
+    // You can just pick a point on one of the planes instead, or use center-distance.
     ret.distance.status = MeasureResult::Status::badFeaturePair;
-
 
     // Angle.
 
     auto intersectionLine = a.intersectWithPlane( b );
 
     ret.angle.status = MeasureResult::Status::ok;
-    ret.angle.pointA = ret.angle.pointB = intersectionLine.center;
+    ret.angle.pointA = ret.angle.pointB = intersectionLine.referencePoint;
     ret.angle.dirA = a.normal;
     ret.angle.dirB = b.normal;
     ret.angle.isSurfaceNormalA = ret.angle.isSurfaceNormalB = true;
 
     if ( std::abs( dot( a.normal, b.normal ) ) < 0.99995f ) // ~0.5 degrees
         ret.intersections.push_back( std::move( intersectionLine ) );
+
+    { // Center distance.
+        Vector3f bNormalFixed = b.normal;
+        if ( dot( a.normal, b.normal ) < 0 )
+            bNormalFixed = -bNormalFixed;
+        Vector3f averageNormal = ( a.normal + bNormalFixed ).normalized();
+
+        Vector3f bCenterProjected = b.center - averageNormal * dot( averageNormal, b.center - a.center );
+
+        Vector3f averageCenter = ( bCenterProjected - a.center ) * 0.5f + a.center;
+
+        auto connectingLine = toPrimitive( Line3f( averageCenter, averageNormal ) );
+
+        ret.centerDistance.status = MeasureResult::Status::ok;
+        ret.centerDistance.closestPointA = a.intersectWithLine( connectingLine ).center;
+        ret.centerDistance.closestPointB = b.intersectWithLine( connectingLine ).center;
+        ret.centerDistance.distance = ( ret.centerDistance.closestPointB - ret.centerDistance.closestPointA ).length();
+    }
 
     return ret;
 }
@@ -950,7 +1075,7 @@ TEST( Features, PrimitiveConstruction )
 
         ASSERT_EQ( cone.positiveSideRadius, 0 );
         ASSERT_EQ( cone.negativeSideRadius, 0 );
-        ASSERT_LE( ( cone.center - pos ).length(), testEps );
+        ASSERT_LE( ( cone.referencePoint - pos ).length(), testEps );
         ASSERT_LE( ( cone.dir - Vector3f( 0, -1, 0 ) ).length(), testEps );
         ASSERT_EQ( cone.positiveLength, INFINITY );
         ASSERT_EQ( cone.negativeLength, INFINITY );
@@ -963,7 +1088,7 @@ TEST( Features, PrimitiveConstruction )
 
         ASSERT_EQ( cone.positiveSideRadius, 0 );
         ASSERT_EQ( cone.negativeSideRadius, 0 );
-        ASSERT_LE( ( cone.center - pos ).length(), testEps );
+        ASSERT_LE( ( cone.referencePoint - pos ).length(), testEps );
         ASSERT_LE( ( cone.dir - Vector3f( 0, -1, 0 ) ).length(), testEps );
         ASSERT_NEAR( cone.positiveLength, 3, testEps );
         ASSERT_NEAR( cone.negativeLength, 0, testEps );
@@ -976,7 +1101,7 @@ TEST( Features, PrimitiveConstruction )
         auto cone = primitiveCylinder( pos, pos + dir, rad );
         ASSERT_EQ( cone.positiveSideRadius, rad );
         ASSERT_EQ( cone.negativeSideRadius, rad );
-        ASSERT_LE( ( cone.center - pos ).length(), testEps );
+        ASSERT_LE( ( cone.referencePoint - pos ).length(), testEps );
         ASSERT_LE( ( cone.dir - Vector3f( 0, -1, 0 ) ).length(), testEps );
         ASSERT_NEAR( cone.positiveLength, 3, testEps );
         ASSERT_NEAR( cone.negativeLength, 0, testEps );
@@ -989,7 +1114,7 @@ TEST( Features, PrimitiveConstruction )
         auto cone = primitiveCylinder( pos, pos + dir, rad );
         ASSERT_EQ( cone.positiveSideRadius, rad );
         ASSERT_EQ( cone.negativeSideRadius, rad );
-        ASSERT_LE( ( cone.center - pos ).length(), testEps );
+        ASSERT_LE( ( cone.referencePoint - pos ).length(), testEps );
         ASSERT_LE( ( cone.dir - Vector3f( 0, -1, 0 ) ).length(), testEps );
         ASSERT_NEAR( cone.positiveLength, 3, testEps );
         ASSERT_NEAR( cone.negativeLength, 0, testEps );
@@ -1000,7 +1125,7 @@ TEST( Features, PrimitiveOps_ConeSegment )
 {
     { // Untruncate.
         Primitives::ConeSegment cone{
-            .center = Vector3f( 100, 50, 10 ),
+            .referencePoint = Vector3f( 100, 50, 10 ),
             .dir = Vector3f( 1, 0, 0 ),
             .positiveSideRadius = 10,
             .negativeSideRadius = 15,
@@ -1093,7 +1218,7 @@ TEST( Features, Distance_ConeSegment_Sphere )
             else
             {
                 // Not using `LineSegm3f` to have non-trivial positive and negative lengths.
-                line = Primitives::ConeSegment{ .center = linePos, .dir = lineDir, .positiveLength = lineStep * 2, .negativeLength = lineStep };
+                line = Primitives::ConeSegment{ .referencePoint = linePos, .dir = lineDir, .positiveLength = lineStep * 2, .negativeLength = lineStep };
             }
 
             for ( float sphereRad : { 0.f, 2.f, 10.f } )
@@ -1135,7 +1260,7 @@ TEST( Features, Distance_ConeSegment_Sphere )
         for ( bool hollowCone : { false, true } )
         {
             Primitives::ConeSegment cone{
-                .center = Vector3f( 100, 200, 50 ),
+                .referencePoint = Vector3f( 100, 200, 50 ),
                 .dir = Vector3f( 1, 0, 0 ),
                 .positiveSideRadius = 8,
                 .negativeSideRadius = 14,
@@ -1155,8 +1280,8 @@ TEST( Features, Distance_ConeSegment_Sphere )
 
                 auto testPoint = [&]( Vector3f pos, float expectedDist, Vector3f expectedPointOnCone )
                 {
-                    pos += cone.center;
-                    expectedPointOnCone += cone.center;
+                    pos += cone.referencePoint;
+                    expectedPointOnCone += cone.referencePoint;
                     Primitives::Sphere sphere( pos, 3 );
                     auto r = measure( cone, sphere ).distance;
                     ASSERT_NEAR( r.distance, expectedDist, testEps );
@@ -1227,12 +1352,12 @@ TEST( Features, Distance_ConeSegment_Sphere )
                         Vector3f cutoffPoint( point.x - point.y * averageNormal.x / averageNormal.y, 0.00001f, 0 );
 
                         // Closer to the cap.
-                        auto a = measure( cone, Primitives::Sphere( cone.center + cutoffPoint + capNormal * cutoffOffset, 1 ) ).distance;
-                        ASSERT_LE( ( a.closestPointA - ( cone.center + Vector3f( point.x, 0, 0 ) ) ).length(), testEps );
+                        auto a = measure( cone, Primitives::Sphere( cone.referencePoint + cutoffPoint + capNormal * cutoffOffset, 1 ) ).distance;
+                        ASSERT_LE( ( a.closestPointA - ( cone.referencePoint + Vector3f( point.x, 0, 0 ) ) ).length(), testEps );
 
                         // Closer to the surface.
-                        auto b = measure( cone, Primitives::Sphere( cone.center + cutoffPoint - capNormal * cutoffOffset, 1 ) ).distance;
-                        Vector3f expectedPoint = cone.center + point - dirToTip * point.y;
+                        auto b = measure( cone, Primitives::Sphere( cone.referencePoint + cutoffPoint - capNormal * cutoffOffset, 1 ) ).distance;
+                        Vector3f expectedPoint = cone.referencePoint + point - dirToTip * point.y;
                         ASSERT_LE( ( b.closestPointA - expectedPoint ).length(), 0.001f );
                     }
                 }
@@ -1249,7 +1374,7 @@ TEST( Features, Distance_ConeSegment_Sphere )
 
                         for ( float t : { 0.f, 1.f, 0.5f, 0.2f, 0.8f } )
                         {
-                            Primitives::Sphere sphere( cone.center + a * ( 1 - t ) + b * t, 1 );
+                            Primitives::Sphere sphere( cone.referencePoint + a * ( 1 - t ) + b * t, 1 );
                             auto r = measure( cone, sphere ).distance;
                             ASSERT_NEAR( r.distance, std::abs( dist ) - sphere.radius, testEps );
                             ASSERT_LE( ( r.closestPointA - ( sphere.center - offset * dist ) ).length(), testEps );
@@ -1396,7 +1521,7 @@ TEST( Features, Distance_Plane_ConeSegment )
 
     { // Finite cone.
         Primitives::ConeSegment cone{
-            .center = Vector3f( 100, 50, 10 ),
+            .referencePoint = Vector3f( 100, 50, 10 ),
             .dir = Vector3f( 1, 0, 0 ),
             .positiveSideRadius = 8,
             .negativeSideRadius = 14,
@@ -1404,22 +1529,22 @@ TEST( Features, Distance_Plane_ConeSegment )
             .negativeLength = 10,
         };
 
-        testPlane( cone, cone.center + Vector3f( 20, 0, 0 ), Vector3f( -1, 0, 0 ), Vector3f( 0, 8, 0 ), Vector3f( 0, -8, 0 ) );
+        testPlane( cone, cone.referencePoint + Vector3f( 20, 0, 0 ), Vector3f( -1, 0, 0 ), Vector3f( 0, 8, 0 ), Vector3f( 0, -8, 0 ) );
 
-        testPlane( cone, cone.center + Vector3f( 20, 8, 0 ), Vector3f( -1, 0, 0 ), Vector3f( 0, -16, 0 ) );
-        testPlane( cone, cone.center + Vector3f( 20, 8, 0 ), Vector3f( -1, -1, 0 ) );
-        testPlane( cone, cone.center + Vector3f( 20, 8, 0 ), Vector3f( -1, -2, 0 ) );
+        testPlane( cone, cone.referencePoint + Vector3f( 20, 8, 0 ), Vector3f( -1, 0, 0 ), Vector3f( 0, -16, 0 ) );
+        testPlane( cone, cone.referencePoint + Vector3f( 20, 8, 0 ), Vector3f( -1, -1, 0 ) );
+        testPlane( cone, cone.referencePoint + Vector3f( 20, 8, 0 ), Vector3f( -1, -2, 0 ) );
 
-        testPlane( cone, cone.center + Vector3f( -10, 14, 0 ), Vector3f( 1, -2, 0 ) );
-        testPlane( cone, cone.center + Vector3f( -10, 14, 0 ), Vector3f( 1, -1, 0 ) );
-        testPlane( cone, cone.center + Vector3f( -10, 14, 0 ), Vector3f( 1, 0, 0 ), Vector3f( 0, -28, 0 ) );
+        testPlane( cone, cone.referencePoint + Vector3f( -10, 14, 0 ), Vector3f( 1, -2, 0 ) );
+        testPlane( cone, cone.referencePoint + Vector3f( -10, 14, 0 ), Vector3f( 1, -1, 0 ) );
+        testPlane( cone, cone.referencePoint + Vector3f( -10, 14, 0 ), Vector3f( 1, 0, 0 ), Vector3f( 0, -28, 0 ) );
 
-        testPlane( cone, cone.center + Vector3f( -10, 0, 0 ), Vector3f( 1, 0, 0 ), Vector3f( 0, 14, 0 ), Vector3f( 0, -14, 0 ) );
+        testPlane( cone, cone.referencePoint + Vector3f( -10, 0, 0 ), Vector3f( 1, 0, 0 ), Vector3f( 0, 14, 0 ), Vector3f( 0, -14, 0 ) );
     }
 
     { // Half-infinite cone.
         Primitives::ConeSegment cone{
-            .center = Vector3f( 100, 50, 10 ),
+            .referencePoint = Vector3f( 100, 50, 10 ),
             .dir = Vector3f( 1, 0, 0 ),
             .positiveSideRadius = 8,
             .negativeSideRadius = 8,
@@ -1427,19 +1552,19 @@ TEST( Features, Distance_Plane_ConeSegment )
             .negativeLength = INFINITY,
         };
 
-        testPlane( cone, cone.center + Vector3f( 20, 0, 0 ), Vector3f( -1, 0, 0 ), Vector3f( 0, 8, 0 ), Vector3f( 0, -8, 0 ) );
+        testPlane( cone, cone.referencePoint + Vector3f( 20, 0, 0 ), Vector3f( -1, 0, 0 ), Vector3f( 0, 8, 0 ), Vector3f( 0, -8, 0 ) );
 
-        testPlane( cone, cone.center + Vector3f( 20, 8, 0 ), Vector3f( -1, -1, 0 ) );
-        testPlane( cone, cone.center + Vector3f( 20, 8, 0 ), Vector3f( -100, -200, 0 ) );
+        testPlane( cone, cone.referencePoint + Vector3f( 20, 8, 0 ), Vector3f( -1, -1, 0 ) );
+        testPlane( cone, cone.referencePoint + Vector3f( 20, 8, 0 ), Vector3f( -100, -200, 0 ) );
 
-        testPlane( cone, cone.center + Vector3f( 20, 8, 0 ), Vector3f( 0, -1, 0 ) );
-        testPlane( cone, cone.center + Vector3f( -40, 8, 0 ), Vector3f( 0, -1, 0 ), Vector3f( 60, 0, 0 ) );
+        testPlane( cone, cone.referencePoint + Vector3f( 20, 8, 0 ), Vector3f( 0, -1, 0 ) );
+        testPlane( cone, cone.referencePoint + Vector3f( -40, 8, 0 ), Vector3f( 0, -1, 0 ), Vector3f( 60, 0, 0 ) );
     }
 
     { // A line.
         { // Infinite.
             Primitives::ConeSegment line{
-                .center = Vector3f( 100, 50, 10 ),
+                .referencePoint = Vector3f( 100, 50, 10 ),
                 .dir = Vector3f( 1, 0, 0 ),
                 .positiveSideRadius = 0,
                 .negativeSideRadius = 0,
@@ -1455,7 +1580,7 @@ TEST( Features, Distance_Plane_ConeSegment )
 
         { // Finite.
             Primitives::ConeSegment line{
-                .center = Vector3f( 100, 50, 10 ),
+                .referencePoint = Vector3f( 100, 50, 10 ),
                 .dir = Vector3f( 1, 0, 0 ),
                 .positiveSideRadius = 0,
                 .negativeSideRadius = 0,
@@ -1478,7 +1603,7 @@ TEST( Features, Distance_Plane_ConeSegment )
 
         { // Half-finite.
             Primitives::ConeSegment line{
-                .center = Vector3f( 100, 50, 10 ),
+                .referencePoint = Vector3f( 100, 50, 10 ),
                 .dir = Vector3f( 1, 0, 0 ),
                 .positiveSideRadius = 0,
                 .negativeSideRadius = 0,

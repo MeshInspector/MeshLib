@@ -34,6 +34,7 @@
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRMovementBuildBody.h"
 #include "MRMesh/MRVector2.h"
+#include "MRMesh/MRFixSelfIntersections.h"
 #include <pybind11/functional.h>
 #pragma warning(push)
 #pragma warning(disable: 4464) // relative include path contains '..'
@@ -92,6 +93,31 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, VoxelBooleanBlock, [] ( pybind11::module_& m
 
 } )
 #endif
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SelfIntersections, [] ( pybind11::module_& m )
+{
+    pybind11::enum_<MR::SelfIntersections::Settings::Method>( m, "FixSelfIntersectionMethod" ).
+        value( "Relax", MR::SelfIntersections::Settings::Method::Relax, "Relax mesh around self-intersections" ).
+        value( "CutAndFill", MR::SelfIntersections::Settings::Method::CutAndFill, "Cut and re-fill regions around self-intersections (may fall back to `Relax`)" );
+
+
+    pybind11::class_<MR::SelfIntersections::Settings>( m, "FixSelfIntersectionSettings", "Setting set for mesh self-intersections fix" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "method", &MR::SelfIntersections::Settings::method ).
+        def_readwrite( "relaxIterations", &MR::SelfIntersections::Settings::relaxIterations, "Maximum relax iterations" ).
+        def_readwrite( "maxExpand", &MR::SelfIntersections::Settings::maxExpand, "Maximum expand count (edge steps from self-intersecting faces), should be > 0" ).
+        def_readwrite( "subdivideEdgeLen", &MR::SelfIntersections::Settings::subdivideEdgeLen, "Edge length for subdivision of holes covers (0.0f means auto)" );
+
+    m.def( "localFixSelfIntersections", MR::decorateExpected( &MR::SelfIntersections::fixSimple ),
+        pybind11::arg( "mesh" ), pybind11::arg( "settings" ),
+        "Finds and fixes self-intersections per component:\n"
+        "\tRelax method - simply relax area with self-intersection\n"
+        "\tCutAndFill method - remove area with self-intersection and fills it with new triangles" );
+
+    m.def( "localFindSelfIntersections", MR::decorateExpected( &MR::SelfIntersections::getFaces ),
+        pybind11::arg( "mesh" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
+        "Find all self-intersections faces component-wise" );
+} )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::module_& m )
 {

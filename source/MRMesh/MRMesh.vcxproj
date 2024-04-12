@@ -26,6 +26,7 @@
     <ClInclude Include="MRFeatureObject.h" />
     <ClInclude Include="MRFeatures.h" />
     <ClInclude Include="MRFinally.h" />
+    <ClInclude Include="MRFixSelfIntersections.h" />
     <ClInclude Include="MRInTreePathBuilder.h" />
     <ClInclude Include="MRChangeColoringType.h" />
     <ClInclude Include="MRChangeColoringActions.h" />
@@ -454,6 +455,7 @@
     <ClCompile Include="MRFillContours2D.cpp" />
     <ClCompile Include="MRFilterCreaseEdges.cpp" />
     <ClCompile Include="MRFinally.cpp" />
+    <ClCompile Include="MRFixSelfIntersections.cpp" />
     <ClCompile Include="MRFixUndercuts.cpp" />
     <ClCompile Include="MRFloatGrid.cpp" />
     <ClCompile Include="MRFloatGridComponents.cpp" />

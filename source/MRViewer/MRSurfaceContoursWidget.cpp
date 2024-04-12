@@ -617,10 +617,7 @@ void SurfaceContoursWidgetClearAction::action( Type type )
 
 size_t SurfaceContoursWidgetClearAction::heapBytes() const
 {
-    return
-        name_.capacity()
-        + MR::heapBytes( states_ )
-    ;
+    return 0; // this undo action will be deleted in widget disable
 }
 
 } // namespace MR

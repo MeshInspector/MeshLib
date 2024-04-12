@@ -62,9 +62,10 @@ public:
     AncillaryImGuiLabel() = default;
 
     /// Make label in parent space coordinates, follows parent worldXf
-    MRVIEWER_API void make( Object& parent, const PositionedText& text );
+    /// Note: label should be deleted or reset if parent is deleted or removed from scene
+    MRVIEWER_API void make( std::shared_ptr<Object> parent, const PositionedText& text );
 
-    /// Make label in world space coordinates, follows parent worldXf
+    /// Make label in world space coordinates
     MRVIEWER_API void make( const PositionedText& text );
 
     /// clears this instance
@@ -72,6 +73,8 @@ public:
 private:
     MRVIEWER_API virtual void preDraw_() override;
 
+    std::weak_ptr<Object> parent_;
+    Vector3f localPos_;
     PositionedText labelData_;
     boost::signals2::scoped_connection parentXfConnection_;
 };

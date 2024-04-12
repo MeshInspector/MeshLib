@@ -84,8 +84,8 @@ namespace Primitives
         // Returns the length. Can be infinite.
         [[nodiscard]] float length() const { return positiveLength + negativeLength; }
 
-        // Returns the center point (unlike `center`, which can actually be off-center).
-        // This doesn't work for half-infinite objects.
+        // Returns the center point (unlike `referencePoint`, which can actually be off-center).
+        // For half-infinite objects, returns the finite end.
         [[nodiscard]] MRMESH_API Sphere centerPoint() const;
 
         // Extends the object to infinity in one direction. The radius in the extended direction becomes equal to the radius in the opposite direction.

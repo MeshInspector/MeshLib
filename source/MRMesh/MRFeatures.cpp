@@ -29,11 +29,13 @@ Primitives::Sphere Primitives::Plane::intersectWithLine( const ConeSegment& line
 
 Primitives::Sphere Primitives::ConeSegment::centerPoint() const
 {
-    bool posInf = std::isfinite( positiveLength );
-    bool negInf = std::isfinite( negativeLength );
-    assert( posInf == negInf );
+    bool posFinite = std::isfinite( positiveLength );
+    bool negFinite = std::isfinite( negativeLength );
 
-    return toPrimitive( posInf || negInf ? referencePoint + dir * ( ( positiveLength - negativeLength ) / 2 ) : referencePoint );
+    if ( posFinite != negFinite )
+        return basePoint( negFinite );
+
+    return toPrimitive( posFinite && negFinite ? referencePoint + dir * ( ( positiveLength - negativeLength ) / 2 ) : referencePoint );
 }
 
 Primitives::ConeSegment Primitives::ConeSegment::extendToInfinity( bool negative ) const
@@ -651,7 +653,7 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::Sphere>::measure( cons
         {
             // If `a` is a line, just use the normal distance, but to the sphere center instead of the surface.
             ret.centerDistance = ret.distance;
-            ret.centerDistance.distance -= b.radius;
+            ret.centerDistance.distance += b.radius;
             ret.centerDistance.closestPointB = b.center;
         }
         else

@@ -74,6 +74,15 @@ struct PointPairs
     BitSet active; ///< whether corresponding pair from vec must be considered during minimization
 };
 
+// types of exit conditions in calculation
+enum class ICPExitType {
+    NotStarted, // calculation is not started yet
+    NotFoundSolution, // solution not found in some iteration
+    MaxIterations, // iteration limit reached
+    MaxBadIterations, // limit of non-improvement iterations in a row reached
+    StopMsdReached // stop mean square deviation reached
+};
+
 /// computes the number of active pairs
 [[nodiscard]] MRMESH_API size_t getNumActivePairs( const PointPairs & pairs );
 
@@ -138,6 +147,15 @@ struct ICPProperties
     /// a pair of points is formed only if both points in the pair are mutually closest (reciprocity test passed)
     bool mutualClosest = false;
 };
+
+/// in each pair updates the target data and performs basic filtering (activation)
+void updatePointPairs( PointPairs& pairs,
+    const MeshOrPoints& src, const AffineXf3f& srcXf,
+    const MeshOrPoints& tgt, const AffineXf3f& tgtXf,
+    float cosTreshold, float distThresholdSq, bool mutualClosest );
+
+/// reset active bit if pair distance is further than maxDistSq
+size_t deactivateFarPairs( PointPairs& pairs, float maxDistSq );
 
 /// This class allows you to register two object with similar shape using
 /// Iterative Closest Points (ICP) point-to-point or point-to-plane algorithms
@@ -230,20 +248,7 @@ private:
     PointPairs flt2refPairs_;
     PointPairs ref2fltPairs_;
 
-    // types of exit conditions in calculation
-    enum class ExitType {
-        NotStarted, // calculation is not started yet
-        NotFoundSolution, // solution not found in some iteration
-        MaxIterations, // iteration limit reached
-        MaxBadIterations, // limit of non-improvement iterations in a row reached
-        StopMsdReached // stop mean square deviation reached
-    };
-    ExitType resultType_{ ExitType::NotStarted };
-
-    /// in each pair updates the target data and performs basic filtering (activation)
-    void updatePointPairs_( PointPairs & pairs,
-        const MeshOrPoints & src, const AffineXf3f & srcXf,
-        const MeshOrPoints & tgt, const AffineXf3f & tgtXf );
+    ICPExitType resultType_{ ICPExitType::NotStarted };
 
     /// deactivate pairs that does not meet farDistFactor criterion
     void deactivatefarDistPairs_();

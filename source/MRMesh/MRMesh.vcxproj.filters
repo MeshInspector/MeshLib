@@ -1239,6 +1239,9 @@
     <ClInclude Include="MRSeparationPoint.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
+    <ClInclude Include="MRMultiwayICP.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
     <ClInclude Include="MRFixSelfIntersections.h">
       <Filter>Source Files\SelfIntersectoins</Filter>
     </ClInclude>
@@ -2072,6 +2075,9 @@
     </ClCompile>
     <ClCompile Include="MRFixSelfIntersections.cpp">
       <Filter>Source Files\SelfIntersectoins</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMultiwayICP.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -75,19 +75,17 @@ void MultyICP::resamplePoints( float samplingVoxelSize )
         samplesPerObj[ind] = *obj.meshOrPoints.pointsGridSampling( samplingVoxelSize );
     } );
 
-    for ( int i = 0; i < objs_.size(); ++i )
+    for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )
     {
-        auto ind = MeshOrPointsId( i );
-        auto& pairs = pairsPerObj_[ind];
+        auto& pairs = pairsPerObj_[i];
         pairs.resize( objs_.size() );
-        for ( int j = 0; j < objs_.size(); ++j )
+        for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
         {
-            auto jnd = MeshOrPointsId( j );
-            if ( ind == jnd )
+            if ( i == j )
                 continue;
-            auto& thisPairs = pairs[jnd];
-            thisPairs.vec.reserve( samplesPerObj[ind].count());
-            for ( auto v : samplesPerObj[ind] )
+            auto& thisPairs = pairs[j];
+            thisPairs.vec.reserve( samplesPerObj[i].count());
+            for ( auto v : samplesPerObj[i] )
                 thisPairs.vec.emplace_back().srcVertId = v;
             thisPairs.active.reserve( thisPairs.vec.size() );
             thisPairs.active.clear();
@@ -115,6 +113,16 @@ float MultyICP::getMeanSqDistToPlane() const
             if ( i != j )
                 sum = sum + MR::getSumSqDistToPlane( pairsPerObj_[i][j] );
     return sum.rootMeanSqF();
+}
+
+size_t MultyICP::getNumActivePairs() const
+{
+    size_t num = 0;
+    for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )
+        for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
+            if ( i != j )
+                num = num + MR::getNumActivePairs( pairsPerObj_[i][j] );
+    return num;
 }
 
 void MultyICP::updatePointPairs_()
@@ -193,6 +201,7 @@ bool MultyICP::p2ptIter_()
             return;
         }
         objs_[id].xf = res * objs_[id].xf;
+        valid[id] = true;
     } );
 
     return std::all_of( valid.vec_.begin(), valid.vec_.end(), [] ( auto v ) { return v; } );
@@ -286,7 +295,8 @@ bool MultyICP::p2plIter_()
             valid[id] = false;
             return;
         }
-        objs_[id].xf = res * objs_[id].xf;
+        objs_[id].xf = centroidRefXf * res * centroidRefXf.inverse() * objs_[id].xf;
+        valid[id] = true;
     } );
     return std::all_of( valid.vec_.begin(), valid.vec_.end(), [] ( auto v ) { return v; } );
 }

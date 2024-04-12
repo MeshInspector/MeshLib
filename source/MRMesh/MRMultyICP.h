@@ -35,6 +35,9 @@ public:
 
     /// computes root-mean-square deviation from points to target planes
     [[nodiscard]] MRMESH_API float getMeanSqDistToPlane() const;
+
+    /// computes the number of active point pairs
+    [[nodiscard]] MRMESH_API size_t getNumActivePairs() const;
 private:
     
     Vector<MultyICPObject, MeshOrPointsId> objs_;

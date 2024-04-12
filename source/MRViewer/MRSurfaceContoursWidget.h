@@ -8,7 +8,9 @@
 #include "MRMesh/MRObjectMeshHolder.h"
 #include "MRHistoryStore.h"
 #include "MRViewer/MRGladGlfw.h"
+
 #include <unordered_map>
+#include <unordered_set>
 
 namespace MR
 {
@@ -147,6 +149,9 @@ private:
 
     // data storage
     SurfaceContours pickedPoints_;
+
+    // picked points' cache
+    std::unordered_set<const VisualObject*> surfacePointWidgetCache_;
 
     // connection storage
     struct SurfaceConnectionHolder

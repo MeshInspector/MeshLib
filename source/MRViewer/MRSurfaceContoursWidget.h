@@ -64,7 +64,7 @@ public:
     using SurfaceContours = std::unordered_map <std::shared_ptr<MR::VisualObject>, SurfaceContour>;
 
     // enable or disable widget
-    MRVIEWER_API void enable( bool isEnaled );
+    MRVIEWER_API void enable( bool isEnabled );
 
     // create a widget and connect it. 
     // To create a widget, you need to provide 4 callbacks and one function that determines whether this object can be used to place points.
@@ -171,6 +171,7 @@ private:
     friend class AddPointActionPickerPoint;
     friend class RemovePointActionPickerPoint;
     friend class ChangePointActionPickerPoint;
+    friend class SurfaceContoursWidgetClearAction;
 };
 
 
@@ -233,6 +234,31 @@ private:
     int index_;
 };
 
+class SurfaceContoursWidgetClearAction : public HistoryAction
+{
+public:
+    SurfaceContoursWidgetClearAction( std::string name, SurfaceContoursWidget& widget );
 
+public:
+    // HistoryAction
+    [[nodiscard]] std::string name() const override { return name_; }
+
+    void action( Type type ) override;
+
+    [[nodiscard]] size_t heapBytes() const override;
+
+private:
+    std::string name_;
+    SurfaceContoursWidget& widget_;
+
+    struct ObjectState
+    {
+        std::weak_ptr<VisualObject> objPtr;
+        std::vector<PickedPoint> pickedPoints;
+    };
+    std::vector<ObjectState> states_;
+    std::weak_ptr<VisualObject> activeObject_;
+    int activeIndex_;
+};
 
 }

@@ -91,6 +91,11 @@ TEST(MRMesh, AffineXf3)
     m.y = Vector3d{  0.230237812, -0.0759973153, 0.970162332 };
     m.z = Vector3d{  0.241739616,  0.970162332,  0.0186279733 };
     ASSERT_NEAR( ( orthonormalized( m ) - m ).norm(), 0, 1e-6 );
+
+    Matrix3d rr( { 1., 2., 3. }, { 0., 4., 5. }, { 0., 0., 6. } );
+    const auto [q, r] = rr.qr();
+    ASSERT_NEAR( ( q - Matrix3d::identity() ).norm(), 0, 1e-12 );
+    ASSERT_NEAR( ( r - rr ).norm(), 0, 1e-12 );
 }
 
 } //namespace MR

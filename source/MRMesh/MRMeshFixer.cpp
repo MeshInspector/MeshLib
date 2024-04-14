@@ -383,7 +383,7 @@ VertBitSet findRepeatedVertsOnHoleBd( const MeshTopology& topology )
         }
     } );
 
-    for ( const auto threadData : tls )
+    for ( const auto & threadData : tls )
         res |= threadData.repeatedVerts;
     return res;
 }

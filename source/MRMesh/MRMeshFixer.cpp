@@ -4,6 +4,7 @@
 #include "MRRingIterator.h"
 #include "MRBitSetParallelFor.h"
 #include "MRTriMath.h"
+#include "MRParallelFor.h"
 
 namespace MR
 {
@@ -346,6 +347,47 @@ EdgeId isVertexRepeatedOnHoleBd( const MeshTopology& topology, VertId v )
     return {};
 }
 
+VertBitSet findRepeatedVertsOnHoleBd( const MeshTopology& topology )
+{
+    MR_TIMER
+    const auto holeRepresEdges = topology.findHoleRepresentiveEdges();
+
+    VertBitSet res;
+    if ( holeRepresEdges.empty() )
+        return res;
+
+    struct ThreadData
+    {
+        explicit ThreadData( size_t vertSize ) : repeatedVerts( vertSize ), currHole( vertSize ) {}
+
+        VertBitSet repeatedVerts;
+        VertBitSet currHole;
+    };
+
+    tbb::enumerable_thread_specific<ThreadData> tls( topology.vertSize() );
+
+    ParallelFor( holeRepresEdges, [&]( size_t i )
+    {
+        auto & threadData = tls.local();
+        const auto e0 = holeRepresEdges[i];
+        for ( auto e : leftRing( topology, e0 ) )
+        {
+            auto v = topology.org( e );
+            if ( threadData.currHole.test_set( v ) )
+                threadData.repeatedVerts.set( v );
+        }
+        for ( auto e : leftRing( topology, e0 ) )
+        {
+            auto v = topology.org( e );
+            threadData.currHole.reset( v );
+        }
+    } );
+
+    for ( const auto & threadData : tls )
+        res |= threadData.repeatedVerts;
+    return res;
+}
+
 /// adds in complicatingFaces the faces not from the wedge with largest angle of faces connected by edges incident to given vertex
 static void findHoleComplicatingFaces( const Mesh & mesh, VertId v, std::vector<FaceId> & complicatingFaces )
 {
@@ -395,11 +437,10 @@ static void findHoleComplicatingFaces( const Mesh & mesh, VertId v, std::vector<
 FaceBitSet findHoleComplicatingFaces( const Mesh & mesh )
 {
     MR_TIMER
+
     tbb::enumerable_thread_specific<std::vector<FaceId>> threadData;
-    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    BitSetParallelFor( findRepeatedVertsOnHoleBd( mesh.topology ), [&]( VertId v )
     {
-        if ( !isVertexRepeatedOnHoleBd( mesh.topology, v ) )
-            return;
         findHoleComplicatingFaces( mesh, v, threadData.local() );
     } );
 

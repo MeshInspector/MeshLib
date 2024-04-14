@@ -520,20 +520,31 @@ std::vector<EdgeLoop> MeshTopology::findBoundary( const FaceBitSet * region ) co
 
 std::vector<EdgeId> MeshTopology::findHoleRepresentiveEdges() const
 {
-    auto bds = findRightBoundary( *this );
+    MR_TIMER
+
+    EdgeBitSet representativeEdges;
+    const auto num = findNumHoles( &representativeEdges );
 
     std::vector<EdgeId> res;
-    res.reserve( bds.size() );
+    if ( num <= 0 )
+        return res;
 
-    for ( const auto & bd : bds )
-        res.push_back( bd.front() );
-
+    res.reserve( num );
+    for ( EdgeId e : representativeEdges )
+        res.push_back( e );
+    assert( res.size() == num );
     return res;
 }
 
-int MeshTopology::findNumHoles() const
+int MeshTopology::findNumHoles( EdgeBitSet * holeRepresentativeEdges ) const
 {
     MR_TIMER
+
+    if ( holeRepresentativeEdges )
+    {
+        holeRepresentativeEdges->clear();
+        holeRepresentativeEdges->resize( edgeSize(), false );
+    }
 
     auto bdEdges = findBoundaryEdges();
     std::atomic<int> res;
@@ -569,7 +580,11 @@ int MeshTopology::findNumHoles() const
                 }
                 assert( smallestHoleEdge < eEnd );
                 if ( smallestHoleEdge >= eBeg )
+                {
                     ++myHoles;
+                    if ( holeRepresentativeEdges )
+                        holeRepresentativeEdges->set( smallestHoleEdge );
+                }
             }
             res.fetch_add( myHoles, std::memory_order_relaxed );
         } );

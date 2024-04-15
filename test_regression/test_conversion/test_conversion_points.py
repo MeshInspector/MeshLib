@@ -5,6 +5,7 @@ from constants import test_files_path
 from helpers.file_helpers import compare_file_with_multiple_references, get_reference_files_list
 
 
+@pytest.mark.smoke
 @pytest.mark.parametrize("test_points_name", ["bicao"])
 @pytest.mark.parametrize("ext", ["asc", "ctm"])
 @pytest.mark.parametrize("use_fileHandler", [True, False])
@@ -40,6 +41,7 @@ def test_conversion_from_ply(test_points_name, ext, use_fileHandler, tmp_path):
     assert is_same_found, f"Converted file doesn't match to any reference"
 
 
+@pytest.mark.smoke
 @pytest.mark.parametrize("test_points_name", ["bicao"])
 @pytest.mark.parametrize("ext", ["asc", "ctm", "xyz"])
 @pytest.mark.parametrize("use_fileHandler", [True, False])

@@ -8,6 +8,7 @@ import meshlib.mrmeshpy as mlib
 import pytest
 
 
+@pytest.mark.smoke
 @pytest.mark.parametrize("dec_params", [
     {"name": "maxError_0.05",
         "params": {

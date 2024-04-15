@@ -199,26 +199,6 @@ std::filesystem::path GetLibsDirectory()
 #endif
 }
 
-std::filesystem::path GetEmbeddedPythonDirectory()
-{
-    auto exePath = GetExeDirectory();
-#if defined(_WIN32) || defined(__EMSCRIPTEN__)
-    return exePath;
-#else
-    if ( resourcesAreNearExe() )
-        return exePath;
-#ifdef __APPLE__
-#ifdef MR_FRAMEWORK
-    return "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/Frameworks/";
-#else
-    return "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/Frameworks/";
-#endif
-#else
-    return "/usr/local/lib/" + std::string( MR_PROJECT_NAME ) + "/";
-#endif
-#endif
-}
-
 std::filesystem::path getUserConfigDir()
 {
 #if defined( _WIN32 )

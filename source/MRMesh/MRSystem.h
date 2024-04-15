@@ -25,10 +25,6 @@ MRMESH_API std::filesystem::path GetFontsDirectory();
 // .dll .so files
 MRMESH_API std::filesystem::path GetLibsDirectory();
 
-// returns path of embedded python modules files directory
-// .dll .so files
-MRMESH_API std::filesystem::path GetEmbeddedPythonDirectory();
-
 // return path to the folder with user config file(s)
 MRMESH_API std::filesystem::path getUserConfigDir();
 

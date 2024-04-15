@@ -41,6 +41,10 @@ public:
 
     const VertBitSet& getSelectedPoints() const { return selectedPoints_; }
     MRMESH_API virtual void selectPoints( VertBitSet newSelection );
+
+    /// returns selected points if any, otherwise returns all valid points
+    MRMESH_API const VertBitSet& getSelectedPointsOrAll() const;
+
     /// returns colors of selected vertices
     const Color& getSelectedVerticesColor( ViewportId id = {} ) const
     {

@@ -224,7 +224,7 @@ std::optional<VertNormals> makeOrientedNormals( const PointCloud& pointCloud,
 {
     MR_TIMER
 
-    if ( !autoOrientLocalTriangulations( pointCloud, triangs, subprogress( progress, 0.0f, 0.9f ) ) )
+    if ( !autoOrientLocalTriangulations( pointCloud, triangs, pointCloud.validPoints, subprogress( progress, 0.0f, 0.9f ) ) )
         return {};
 
     // since triangulations are oriented then normals will be oriented as well

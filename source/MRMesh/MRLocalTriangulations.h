@@ -57,12 +57,12 @@ struct AllLocalTriangulations
 /// compute normal at point by averaging neighbor triangle normals weighted by triangle's angle at the point
 [[nodiscard]] MRMESH_API Vector3f computeNormal( const AllLocalTriangulations & triangs, const VertCoords & points, VertId v );
 
-/// orient neighbors around each point so they will be in clockwise order if look from the tip of target direction
-MRMESH_API void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertNormals & targetDir );
-MRMESH_API void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const std::function<Vector3f(VertId)> & targetDir );
+/// orient neighbors around each point in \param region so they will be in clockwise order if look from the tip of target direction
+MRMESH_API void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertBitSet & region, const VertNormals & targetDir );
+MRMESH_API void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertBitSet & region, const std::function<Vector3f(VertId)> & targetDir );
 
-/// orient neighbors around each point so there will be as many triangles with same (and not opposite) orientation as possible
-MRMESH_API bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTriangulations & triangs, ProgressCallback progress = {},
+/// orient neighbors around each point in \param region so there will be as many triangles with same (and not opposite) orientation as possible
+MRMESH_API bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTriangulations & triangs, const VertBitSet & region, ProgressCallback progress = {},
     Triangulation * outRep3 = nullptr,    ///< optional output with all oriented triangles that appear in three local triangulations
     Triangulation * outRep2 = nullptr );  ///< optional output with all oriented triangles that appear in exactly two local triangulations
 

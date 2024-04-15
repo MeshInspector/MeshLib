@@ -131,13 +131,8 @@ jobs:
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
 
-      - name: Python Regression Tests Release
-        if: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == 'false' && matrix.config == 'Release'}}
-        working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
-
       - name: Python Regression Tests Debug
-        if: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == 'false' && matrix.config == 'Debug'}}
+        if: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == 'false'}}
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -m "smoke"
 

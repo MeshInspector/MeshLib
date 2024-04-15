@@ -100,6 +100,11 @@ void ObjectPointsHolder::selectPoints( VertBitSet newSelection )
     dirty_ |= DIRTY_SELECTION;
 }
 
+const VertBitSet& ObjectPointsHolder::getSelectedPointsOrAll() const
+{
+    return ( !points_ || numSelectedPoints() ) ? selectedPoints_ : points_->validPoints;
+}
+
 void ObjectPointsHolder::setSelectedVerticesColor( const Color& color, ViewportId id )
 {
     if ( color == selectedVerticesColor_.get( id ) )

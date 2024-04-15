@@ -537,8 +537,8 @@ int guessPrecision( T value )
         std::string str = fmt::format( "{:.{}f}", value, std::numeric_limits<T>::max_digits10 );
 
         auto pos = str.find_first_not_of( "0." );
-        if ( pos == std::string::npos )
-            return 0; // Should be impossible?
+        if ( pos == std::string::npos ) // If too close to zero...
+            return std::numeric_limits<T>::max_digits10;
 
         // pos - 2 == the number of leading zeroes in the fractional part, then +1 to show the first digit.
         return std::max( 0, int( pos ) - 1 );

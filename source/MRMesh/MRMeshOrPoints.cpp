@@ -28,7 +28,7 @@ void MeshOrPoints::accumulate( PointAccumulator& accum, const AffineXf3f* xf ) c
     }, var_ );
 }
 
-std::optional<VertBitSet> MeshOrPoints::pointsGridSampling( float voxelSize, size_t maxVoxels, const ProgressCallback & cb )
+std::optional<VertBitSet> MeshOrPoints::pointsGridSampling( float voxelSize, size_t maxVoxels, const ProgressCallback & cb ) const
 {
     assert( voxelSize > 0 );
     assert( maxVoxels > 0 );
@@ -87,10 +87,6 @@ auto MeshOrPoints::projector() const -> std::function<ProjectionResult( const Ve
 
 auto MeshOrPoints::limitedProjector() const -> LimitedProjectorFunc
 {
-    if ( customProjector_ )
-    {
-        return customProjector_;
-    }
     return std::visit( overloaded{
         []( const MeshPart & mp ) -> LimitedProjectorFunc
         {

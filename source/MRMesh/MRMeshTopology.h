@@ -250,8 +250,9 @@ public:
     [[nodiscard]] MRMESH_API std::vector<EdgeLoop> findBoundary( const FaceBitSet * region = nullptr ) const;
     /// returns one edge with no valid left face for every boundary in the mesh
     [[nodiscard]] MRMESH_API std::vector<EdgeId> findHoleRepresentiveEdges() const;
-    /// returns the number of hole loops in the mesh
-    [[nodiscard]] MRMESH_API int findNumHoles() const;
+    /// returns the number of hole loops in the mesh;
+    /// \param holeRepresentativeEdges optional output of the smallest edge id with no valid left face in every hole
+    [[nodiscard]] MRMESH_API int findNumHoles( EdgeBitSet * holeRepresentativeEdges = nullptr ) const;
     /// returns full edge-loop of left face from (e) starting from (e) itself
     [[nodiscard]] MRMESH_API EdgeLoop getLeftRing( EdgeId e ) const;
     /// returns full edge-loops of left faces from every edge in (es);

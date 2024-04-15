@@ -104,7 +104,7 @@ bool ObjectDistanceMap::setDistanceMap( const std::shared_ptr<DistanceMap>& dmap
     return construct_( dmap, params, updateMesh, cb );
 }
 
-std::shared_ptr<Mesh> ObjectDistanceMap::calculateMesh( ProgressCallback cb )
+std::shared_ptr<Mesh> ObjectDistanceMap::calculateMesh( ProgressCallback cb ) const
 {
     auto res = distanceMapToMesh( *dmap_, toWorldParams_, cb );
     if ( !res.has_value() )
@@ -190,25 +190,24 @@ void ObjectDistanceMap::setDefaultColors_()
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectDistanceMap ), false );
 }
 
-bool ObjectDistanceMap::construct_( const std::shared_ptr<DistanceMap>& dmap, const DistanceMapToWorld& params, bool updateMesh, ProgressCallback cb )
+bool ObjectDistanceMap::construct_( const std::shared_ptr<DistanceMap>& dmap, const DistanceMapToWorld& params, bool needUpdateMesh, ProgressCallback cb )
 {
     if ( !dmap )
         return false;
 
-    if ( updateMesh )
+    if ( needUpdateMesh )
     {
         auto res = distanceMapToMesh( *dmap, params, cb );
         if ( !res.has_value() )
         {
             return false;
         }
-        mesh_ = std::make_shared<Mesh>( res.value() );
+
+        updateMesh( std::make_shared<Mesh>( res.value() ) );
     }
 
     dmap_ = dmap;
     toWorldParams_ = params;
-
-    setDirtyFlags( DIRTY_ALL );
 
     return true;
 }

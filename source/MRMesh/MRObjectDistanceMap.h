@@ -31,13 +31,20 @@ public:
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
     virtual std::string getClassName() const override { return "Distance Map"; }
 
+    /// rebuild mesh according sets DistanceMap& DistanceMapToWorld
+    /// if it is executed in the rendering stream
+    /// then you can set the true flag
+    /// otherwise you should set the false flag and call the function calculateMesh
+    /// and after finishing in the rendering stream, call the function updateMesh
     MRMESH_API bool setDistanceMap( 
         const std::shared_ptr<DistanceMap>& dmap, 
         const DistanceMapToWorld& toWorldParams, 
         bool updateMesh = true, 
         ProgressCallback cb = {} );
 
-    MRMESH_API std::shared_ptr<Mesh> calculateMesh( ProgressCallback cb = {} );
+    /// creates a grid for this object
+    MRMESH_API std::shared_ptr<Mesh> calculateMesh( ProgressCallback cb = {} ) const;
+    /// updates the grid to the current one
     MRMESH_API void updateMesh( const std::shared_ptr<Mesh>& mesh );
     
     [[nodiscard]] const std::shared_ptr<DistanceMap>& getDistanceMap() const { return dmap_; }
@@ -68,10 +75,14 @@ private:
     DistanceMapToWorld toWorldParams_;
 
     /// rebuild mesh according sets DistanceMap & DistanceMapToWorld
+    /// if it is executed in the rendering stream
+    /// then you can set the true flag
+    /// otherwise you should set the false flag and call the function calculateMesh
+    /// and after finishing in the rendering stream, call the function updateMesh
     bool construct_( 
         const std::shared_ptr<DistanceMap>& dmap, 
         const DistanceMapToWorld& params, 
-        bool updateMesh = true, 
+        bool needUpdateMesh = true,
         ProgressCallback cb = {} );
 
     /// this is private function to set default colors of this type (ObjectDistanceMap) in constructor only

@@ -365,14 +365,19 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     if ( button != Viewer::MouseButton::Left )
         return false;
 
-    auto [obj, pick] = getViewerInstance().viewport().pickRenderObject( {
-        .predicate = [&] ( const VisualObject* visObj, ViewportMask mask )
+    Viewport::PickRenderObjectPredicate predicate;
+    if ( params.pickPredicate )
+    {
+        predicate = [&] ( const VisualObject* visObj, ViewportMask mask )
         {
             // always keep the picked points pickable
             if ( surfacePointWidgetCache_.find( visObj ) != surfacePointWidgetCache_.end() )
                 return true;
             return params.pickPredicate( visObj, mask );
-        },
+        };
+    }
+    auto [obj, pick] = getViewerInstance().viewport().pickRenderObject( {
+        .predicate = predicate,
         .exactPickFirst = params.surfacePointParams.pickInBackFaceObject,
     } );
     if ( !obj )
@@ -479,14 +484,19 @@ bool SurfaceContoursWidget::onMouseMove_( int, int )
     if ( pickedPoints_.empty() || activeChange_ )
         return false;
 
-    auto [obj, pick] = getViewerInstance().viewport().pickRenderObject( {
-        .predicate = [&] ( const VisualObject* visObj, ViewportMask mask )
+    Viewport::PickRenderObjectPredicate predicate;
+    if ( params.pickPredicate )
+    {
+        predicate = [&] ( const VisualObject* visObj, ViewportMask mask )
         {
             // always keep the picked points pickable
             if ( surfacePointWidgetCache_.find( visObj ) != surfacePointWidgetCache_.end() )
                 return true;
             return params.pickPredicate( visObj, mask );
-        },
+        };
+    }
+    auto [obj, pick] = getViewerInstance().viewport().pickRenderObject( {
+        .predicate = predicate,
         .exactPickFirst = params.surfacePointParams.pickInBackFaceObject,
     } );
     if ( !obj )

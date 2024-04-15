@@ -69,7 +69,7 @@ bool EmbeddedPython::runString( const std::string& pythonString )
     bool success = true;
     try
     {
-        auto libDir = GetLibsDirectory();
+        auto libDir = GetEmbeddedPythonDirectory();
         auto libDirStr = libDir.string();
         for ( int i = 0; ; )
         {

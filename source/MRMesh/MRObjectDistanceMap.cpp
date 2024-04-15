@@ -197,13 +197,13 @@ bool ObjectDistanceMap::construct_( const std::shared_ptr<DistanceMap>& dmap, co
 
     if ( needUpdateMesh )
     {
-        auto res = distanceMapToMesh( *dmap, params, cb );
-        if ( !res.has_value() )
+        auto mesh = calculateMesh( cb );
+        if ( mesh )
         {
             return false;
         }
 
-        updateMesh( std::make_shared<Mesh>( res.value() ) );
+        updateMesh( mesh );
     }
 
     dmap_ = dmap;

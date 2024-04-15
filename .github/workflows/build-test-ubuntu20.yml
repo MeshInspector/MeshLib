@@ -60,7 +60,6 @@ jobs:
       # Workaround for aws cli s3 copy - it doesn't work anonymously without this. Specific for Ubuntu 20 and Fedora.
       # https://github.com/aws/aws-cli/issues/5623#issuecomment-801240811
       AWS_EC2_METADATA_DISABLED: true
-      SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
 
     steps:
       - name: Checkout
@@ -128,6 +127,8 @@ jobs:
         run: aws s3 sync ${{inputs.autotest_data_s3_url}} ./test_data --delete --no-sign-request --size-only
 
       - name: Python Regression Tests Full
+        env:
+          SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
         if: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == true}}
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}}

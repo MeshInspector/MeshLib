@@ -127,12 +127,12 @@ jobs:
         run: aws s3 sync ${{inputs.autotest_data_s3_url}} ./test_data --delete --no-sign-request --size-only
 
       - name: Python Regression Tests Full
-        if: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == 'true'}}
+        if: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == true}}
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
 
       - name: Python Regression Tests Debug
-        if: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == 'false'}}
+        if: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false}}
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -m "smoke"
 

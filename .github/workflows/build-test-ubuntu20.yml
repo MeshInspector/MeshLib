@@ -126,13 +126,18 @@ jobs:
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
         run: aws s3 sync ${{inputs.autotest_data_s3_url}} ./test_data --delete --no-sign-request --size-only
 
-      - name: Python Regression Tests
+      - name: Python Regression Tests Full
         if: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == 'true'}}
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
 
-      - name: Python Regression Tests
-        if: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == 'true'}}
+      - name: Python Regression Tests Release
+        if: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == 'false' && matrix.config == 'Release'}}
+        working-directory: ./build/${{ matrix.config }}/bin
+        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
+
+      - name: Python Regression Tests Debug
+        if: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == 'false' &&  && matrix.config == 'Debug'}}
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -m "smoke"
 

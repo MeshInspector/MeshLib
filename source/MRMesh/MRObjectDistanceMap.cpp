@@ -198,7 +198,7 @@ bool ObjectDistanceMap::construct_( const std::shared_ptr<DistanceMap>& dmap, co
     if ( needUpdateMesh )
     {
         auto mesh = calculateMesh( cb );
-        if ( mesh )
+        if ( !mesh )
         {
             return false;
         }

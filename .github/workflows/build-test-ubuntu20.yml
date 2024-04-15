@@ -60,6 +60,7 @@ jobs:
       # Workaround for aws cli s3 copy - it doesn't work anonymously without this. Specific for Ubuntu 20 and Fedora.
       # https://github.com/aws/aws-cli/issues/5623#issuecomment-801240811
       AWS_EC2_METADATA_DISABLED: true
+      SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
 
     steps:
       - name: Checkout
@@ -129,17 +130,7 @@ jobs:
       - name: Python Regression Tests Full
         if: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == true}}
         working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
-
-      - name: Python Regression Tests Release
-        if: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Release' }}
-        working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
-
-      - name: Python Regression Tests Debug
-        if: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false  && matrix.config == 'Debug' }}
-        working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -m "smoke"
+        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}}
 
       - name: Copy test artifacts to S3
         if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}

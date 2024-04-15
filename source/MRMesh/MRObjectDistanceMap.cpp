@@ -99,9 +99,25 @@ std::vector<std::string> ObjectDistanceMap::getInfoLines() const
     return res;
 }
 
-bool ObjectDistanceMap::setDistanceMap( const std::shared_ptr<DistanceMap>& dmap, const DistanceMapToWorld& params, ProgressCallback cb )
+bool ObjectDistanceMap::setDistanceMap( const std::shared_ptr<DistanceMap>& dmap, const DistanceMapToWorld& params, bool updateMesh, ProgressCallback cb )
 {
-    return construct_( dmap, params, cb );
+    return construct_( dmap, params, updateMesh, cb );
+}
+
+std::shared_ptr<Mesh> ObjectDistanceMap::calculateMesh( ProgressCallback cb )
+{
+    auto res = distanceMapToMesh( *dmap_, toWorldParams_, cb );
+    if ( !res.has_value() )
+    {
+        return nullptr;
+    }
+    return std::make_shared<Mesh>( res.value() );
+}
+
+void ObjectDistanceMap::updateMesh( const std::shared_ptr<Mesh>& mesh )
+{
+    mesh_ = mesh;
+    setDirtyFlags( DIRTY_ALL );
 }
 
 const DistanceMapToWorld& ObjectDistanceMap::getToWorldParameters() const
@@ -174,19 +190,20 @@ void ObjectDistanceMap::setDefaultColors_()
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectDistanceMap ), false );
 }
 
-bool ObjectDistanceMap::construct_( const std::shared_ptr<DistanceMap>& dmap, const DistanceMapToWorld& params, ProgressCallback cb )
+bool ObjectDistanceMap::construct_( const std::shared_ptr<DistanceMap>& dmap, const DistanceMapToWorld& params, bool updateMesh, ProgressCallback cb )
 {
     if ( !dmap )
         return false;
 
-    auto res = distanceMapToMesh( *dmap, params, cb );
-
-    if ( !res.has_value() )
+    if ( updateMesh )
     {
-        return false;
+        auto res = distanceMapToMesh( *dmap, params, cb );
+        if ( !res.has_value() )
+        {
+            return false;
+        }
+        mesh_ = std::make_shared<Mesh>( res.value() );
     }
-
-    mesh_ = std::make_shared<Mesh>( res.value() );
 
     dmap_ = dmap;
     toWorldParams_ = params;

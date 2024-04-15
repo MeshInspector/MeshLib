@@ -32,14 +32,13 @@ public:
     virtual std::string getClassName() const override { return "Distance Map"; }
 
     /// rebuild mesh according sets DistanceMap& DistanceMapToWorld
-    /// if it is executed in the rendering stream
-    /// then you can set the true flag
-    /// otherwise you should set the false flag and call the function calculateMesh
+    /// if it is executed in the rendering stream then you can set the needUpdateMesh = true
+    /// otherwise you should set the needUpdateMesh = false and call the function calculateMesh
     /// and after finishing in the rendering stream, call the function updateMesh
     MRMESH_API bool setDistanceMap( 
         const std::shared_ptr<DistanceMap>& dmap, 
         const DistanceMapToWorld& toWorldParams, 
-        bool updateMesh = true, 
+        bool needUpdateMesh = true, 
         ProgressCallback cb = {} );
 
     /// creates a grid for this object
@@ -75,9 +74,8 @@ private:
     DistanceMapToWorld toWorldParams_;
 
     /// rebuild mesh according sets DistanceMap & DistanceMapToWorld
-    /// if it is executed in the rendering stream
-    /// then you can set the true flag
-    /// otherwise you should set the false flag and call the function calculateMesh
+    /// if it is executed in the rendering stream then you can set the needUpdateMesh = true
+    /// otherwise you should set the needUpdateMesh = false and call the function calculateMesh
     /// and after finishing in the rendering stream, call the function updateMesh
     bool construct_( 
         const std::shared_ptr<DistanceMap>& dmap, 

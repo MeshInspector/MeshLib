@@ -542,8 +542,9 @@ void SurfaceContoursWidget::create(
 
 void SurfaceContoursWidget::clear()
 {
-    if ( params.writeHistory )
-        AppendHistory<SurfaceContoursWidgetClearAction>( "Clear " + params.historySpecification, *this );
+    // FIXME: don't record on every call
+    //if ( params.writeHistory )
+    //    AppendHistory<SurfaceContoursWidgetClearAction>( "Clear " + params.historySpecification, *this );
 
     pickedPoints_.clear();
     surfacePointWidgetCache_.clear();

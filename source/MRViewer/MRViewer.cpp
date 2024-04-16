@@ -634,10 +634,16 @@ int Viewer::launchInit_( const LaunchParams& params )
     glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint( GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE );
 #endif
+
+#ifdef __APPLE__
+    constexpr int cDefaultMSAA = 2;
+#else
+    constexpr int cDefaultMSAA = 8;
+#endif
     if ( !settingsMng_ )
-        glfwWindowHint( GLFW_SAMPLES, 8 );
+        glfwWindowHint( GLFW_SAMPLES, cDefaultMSAA );
     else
-        glfwWindowHint( GLFW_SAMPLES, settingsMng_->loadInt( "multisampleAntiAliasing", 8 ) );
+        glfwWindowHint( GLFW_SAMPLES, settingsMng_->loadInt( "multisampleAntiAliasing", cDefaultMSAA ) );
 #ifndef __EMSCRIPTEN__
     glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
     glfwWindowHint( GLFW_FOCUS_ON_SHOW, GLFW_TRUE );

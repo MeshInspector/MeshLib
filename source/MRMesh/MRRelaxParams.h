@@ -21,7 +21,7 @@ struct RelaxParams
     bool limitNearInitial = false;
 
     /// maximum distance between a point and its position before relaxation, ignored if limitNearInitial = false
-    float maxInitialDist = 1;
+    float maxInitialDist = 0;
 };
 
 enum class RelaxApproxType

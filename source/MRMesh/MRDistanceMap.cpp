@@ -195,17 +195,18 @@ Mesh distanceMapToMesh( const DistanceMap& distMap, const AffineXf3f& xf )
     toWorldParams.pixelXVec = xf.A.x;
     toWorldParams.pixelYVec = xf.A.y;
 
-    return distanceMapToMesh( distMap, toWorldParams );
+    // without a progress bar, distanceMapToMesh cannot return an error
+    return distanceMapToMesh( distMap, toWorldParams ).value();
 }
 
-Mesh distanceMapToMesh( const DistanceMap& distMap, const DistanceMapToWorld& toWorldStruct )
+Expected<Mesh, std::string> distanceMapToMesh( const DistanceMap& distMap, const DistanceMapToWorld& toWorldStruct, ProgressCallback cb )
 {
     auto resX = distMap.resX();
     auto resY = distMap.resY();
 
     if (resX < 2 || resY < 2)
     {
-        return Mesh();
+        return unexpected( "Cannot create mesh from degenerated 1x1 distance map." );
     }
 
     return makeRegularGridMesh( resX, resY, [&]( size_t x, size_t y )
@@ -215,7 +216,7 @@ Mesh distanceMapToMesh( const DistanceMap& distMap, const DistanceMapToWorld& to
                                             [&]( size_t x, size_t y )
     {
         return distMap.unproject( x, y, toWorldStruct ).value_or( Vector3f{} );
-    } );
+    }, {}, cb );
 }
 
 VoidOrErrStr saveDistanceMapToImage( const DistanceMap& dm, const std::filesystem::path& filename, float threshold /*= 1.f / 255*/ )

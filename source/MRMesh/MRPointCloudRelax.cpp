@@ -17,6 +17,9 @@ bool relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} *
         return true;
 
     MR_TIMER
+    VertCoords guidePos;
+    if ( params.limitNearGuide() )
+        guidePos = pointCloud.points;
 
     VertCoords newPoints;
     const VertBitSet& zone = params.region ? *params.region : pointCloud.validPoints;
@@ -55,8 +58,8 @@ bool relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} *
             auto np = newPoints[v];
             auto pushForce = params.force * ( Vector3f{ sumPos / double( count ) } - np );
             np += pushForce;
-            if ( params.guidePos )
-                np = getLimitedPos( np, (*params.guidePos)[v], params.maxGuideDistSq );
+            if ( params.limitNearGuide() )
+                np = getLimitedPos( np, guidePos[v], params.maxGuideDistSq );
             newPoints[v] = np;
         }, internalCb );
         pointCloud.points.swap( newPoints );
@@ -73,6 +76,9 @@ bool relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
         return true;
 
     MR_TIMER
+    VertCoords guidePos;
+    if ( params.limitNearGuide() )
+        guidePos = pointCloud.points;
 
     VertCoords newPoints;
     const VertBitSet& zone = params.region ? *params.region : pointCloud.validPoints;
@@ -135,8 +141,8 @@ bool relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
                 return;
 
             auto np = newPoints[v] + vertPushForces[v] - Vector3f{ sumForces / double( count ) };
-            if ( params.guidePos )
-                np = getLimitedPos( np, (*params.guidePos)[v], params.maxGuideDistSq );
+            if ( params.limitNearGuide() )
+                np = getLimitedPos( np, guidePos[v], params.maxGuideDistSq );
             newPoints[v] = np;
         }, internalCb2 );
         pointCloud.points.swap( newPoints );
@@ -152,7 +158,10 @@ bool relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
     if ( params.iterations <= 0 )
         return true;
 
-    MR_TIMER;
+    MR_TIMER
+    VertCoords guidePos;
+    if ( params.limitNearGuide() )
+        guidePos = pointCloud.points;
 
     VertCoords newPoints;
     const VertBitSet& zone = params.region ? *params.region : pointCloud.validPoints;
@@ -223,8 +232,8 @@ bool relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
                 target = Vector3f( basis( centerPoint ) );
             }
             np += ( params.force * ( target - np ) );
-            if ( params.guidePos )
-                np = getLimitedPos( np, (*params.guidePos)[v], params.maxGuideDistSq );
+            if ( params.limitNearGuide() )
+                np = getLimitedPos( np, guidePos[v], params.maxGuideDistSq );
             newPoints[v] = np;
         }, internalCb );
         pointCloud.points.swap( newPoints );

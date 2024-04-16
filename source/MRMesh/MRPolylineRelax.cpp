@@ -15,6 +15,9 @@ bool relax( Polyline<V> &polyline, const RelaxParams &params, ProgressCallback c
         return true;
 
     MR_TIMER
+    Vector<V, VertId> guidePos;
+    if ( params.limitNearGuide() )
+        guidePos = polyline.points;
     MR_WRITER(polyline)
 
     Vector<V, VertId> newPoints;
@@ -43,9 +46,12 @@ bool relax( Polyline<V> &polyline, const RelaxParams &params, ProgressCallback c
 
             auto mp = ( polyline.destPnt( e0 ) + polyline.destPnt( e1 ) ) / 2.f;
 
-            auto& np = newPoints[v];
+            auto np = newPoints[v];
             auto pushForce = params.force * ( mp - np );
             np += pushForce;
+            if ( params.limitNearGuide() )
+                np = getLimitedPos( np, guidePos[v], params.maxGuideDistSq );
+            newPoints[v] = np;
         }, internalCb );
         polyline.points.swap( newPoints );
         if ( !keepGoing )
@@ -61,6 +67,9 @@ bool relaxKeepArea( Polyline<V> &polyline, const RelaxParams &params, ProgressCa
         return true;
 
     MR_TIMER
+    Vector<V, VertId> guidePos;
+    if ( params.limitNearGuide() )
+        guidePos = polyline.points;
     MR_WRITER(polyline)
 
     Vector<V, VertId> newPoints;
@@ -107,11 +116,14 @@ bool relaxKeepArea( Polyline<V> &polyline, const RelaxParams &params, ProgressCa
             if ( e0 == e1 )
                 return;
 
-            auto& np = newPoints[v];
+            auto np = newPoints[v];
             np += vertPushForces[v];
             auto modifier = 1.0f / 2.0f;
             np -= ( vertPushForces[polyline.topology.dest( e0 )] * modifier );
             np -= ( vertPushForces[polyline.topology.dest( e1 )] * modifier );
+            if ( params.limitNearGuide() )
+                np = getLimitedPos( np, guidePos[v], params.maxGuideDistSq );
+            newPoints[v] = np;
         }, internalCb2 );
         polyline.points.swap( newPoints );
         if ( !keepGoing )

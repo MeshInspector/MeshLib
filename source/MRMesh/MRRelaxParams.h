@@ -2,6 +2,7 @@
 
 #include "MRVector3.h"
 #include <cassert>
+#include <cfloat>
 
 namespace MR
 {
@@ -17,11 +18,10 @@ struct RelaxParams
     /// speed of relaxing, typical values (0.0, 0.5]
     float force = 0.5f;
 
-    /// guide positions of all points
-    const VertCoords *guidePos = nullptr;
+    /// maximum squared distance between a point and its position before relaxation, ignored if FLT_MAX
+    float maxGuideDistSq = FLT_MAX;
 
-    /// maximum squared distance between a point and its guide position, ignored if guidePos=nullptr
-    float maxGuideDistSq = 1;
+    [[nodiscard]] bool limitNearGuide() const { return maxGuideDistSq < FLT_MAX; }
 };
 
 enum class RelaxApproxType
@@ -30,9 +30,10 @@ enum class RelaxApproxType
     Quadric,
 };
 
-/// of pos is within the ball with the center at guidePos and squared radius maxGuideDistSq, then returns pos;
-/// otherwise returns the point on the ball border closest to pos
-[[nodiscard]] inline Vector3f getLimitedPos( const Vector3f & pos, const Vector3f & guidePos, float maxGuideDistSq )
+/// if (pos) is within the ball with the center at (guidePos) and squared radius (maxGuideDistSq), then returns (pos);
+/// otherwise returns the point on the ball's border closest to (pos)
+template <typename V>
+[[nodiscard]] inline V getLimitedPos( const V & pos, const V & guidePos, typename V::ValueType maxGuideDistSq )
 {
     assert( maxGuideDistSq > 0 );
     const auto d = pos - guidePos;

@@ -164,7 +164,7 @@ TEST( MRMesh, DistanceMapWatertight )
     auto res = distanceMapToMesh( dm1, params );
     Mesh meshFromDm1;
     if ( res )
-        meshFromDm1 = res.value();
+        meshFromDm1 = std::move( res.value() );
 
     auto dm2 = computeDistanceMapD( meshFromDm1, params );
 
@@ -172,7 +172,7 @@ TEST( MRMesh, DistanceMapWatertight )
     res = distanceMapToMesh( dm2, params );
 
     if ( res )
-        meshFromDm2 = res.value();
+        meshFromDm2 = std::move( res.value() );
 
     int count = 0;
 
@@ -245,19 +245,12 @@ TEST( MRMesh, DistanceMapCompare )
     const bool saveMesh = false;
     if ( saveMesh )
     {
-        auto res = distanceMapToMesh( resD, params );
-        Mesh meshD;
-        if ( res )
-            meshD = res.value();
+        ;       
+        if ( auto res = distanceMapToMesh( resD, params ) )
+            MeshSave::toMrmesh( res.value(), std::filesystem::path( "c:/temp/Double.mrmesh" ) );
 
-        MeshSave::toMrmesh( meshD, std::filesystem::path("c:/temp/Double.mrmesh"));
-
-        res = distanceMapToMesh( resD, params );
-        Mesh meshF;
-        if ( res )
-            meshF = res.value();
-
-        MeshSave::toMrmesh( meshF, std::filesystem::path("c:/temp/Float.mrmesh"));
+        if ( auto res = distanceMapToMesh( resD, params ) )
+            MeshSave::toMrmesh( res.value, std::filesystem::path( "c:/temp/Float.mrmesh" ) );
     }
 }
 
@@ -310,19 +303,11 @@ TEST( MRMesh, DistanceMapNegativeValue )
     const bool saveMesh = true;
     if ( saveMesh )
     {
-        auto res = distanceMapToMesh( dm, params );
-        Mesh resMesh;
-        if ( res )
-            resMesh = res.value();
+        if ( auto res = distanceMapToMesh( dm, params ) )
+            MeshSave::toMrmesh( res.value(), std::filesystem::path("c:/temp/dm.mrmesh"));
 
-        MeshSave::toMrmesh( resMesh, std::filesystem::path("c:/temp/dm.mrmesh"));
-
-        res = distanceMapToMesh( dm2, params );
-        Mesh resMesh2;
-        if ( res )
-            resMesh2 = res.value();
-
-        MeshSave::toMrmesh( resMesh2, std::filesystem::path("c:/temp/dm2.mrmesh"));
+        if ( auto res = distanceMapToMesh( dm2, params ) )
+            MeshSave::toMrmesh( res.value(), std::filesystem::path("c:/temp/dm2.mrmesh"));
     }
 }
 

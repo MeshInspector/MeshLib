@@ -58,8 +58,17 @@ jobs:
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh
 
+      - name: Create virtualenv
+        run: |
+          ${{ matrix.py-cmd }} -m venv .venv
+          . .venv/bin/activate
+          echo PATH=$PATH >> $GITHUB_ENV
+          
       - name: Setup python requirements
-        run: python3 -m pip install -r ./requirements/python.txt
+        run: |
+          curl -sS https://bootstrap.pypa.io/get-pip.py | python3
+          python3 -m pip install -r ./requirements/python.txt
+          python3 -m pip install pytest
 
       - name: Build
         run: ./scripts/build_source.sh

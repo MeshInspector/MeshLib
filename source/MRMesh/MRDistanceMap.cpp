@@ -195,8 +195,11 @@ Mesh distanceMapToMesh( const DistanceMap& distMap, const AffineXf3f& xf )
     toWorldParams.pixelXVec = xf.A.x;
     toWorldParams.pixelYVec = xf.A.y;
 
-    // without a progress bar, distanceMapToMesh cannot return an error
-    return distanceMapToMesh( distMap, toWorldParams ).value();
+    auto res = distanceMapToMesh( distMap, toWorldParams );
+    if ( res )
+        return res.value();
+
+    return Mesh();
 }
 
 Expected<Mesh, std::string> distanceMapToMesh( const DistanceMap& distMap, const DistanceMapToWorld& toWorldStruct, ProgressCallback cb )

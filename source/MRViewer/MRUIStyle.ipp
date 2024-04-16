@@ -293,7 +293,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 ImGui::BeginGroup();
                 // Here we make sure that the new width is not negative, because otherwise things break.
                 // The min limit is arbitrary.
-                float w = std::max( ImGui::CalcItemWidth() - ImGui::GetFrameHeight() * 2 - plusMinusButtonsLeftOffset, ImGui::GetStyle().ItemSpacing.x );
+                float w = std::max( ImGui::CalcItemWidth() - ( ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x ) * 2 - plusMinusButtonsLeftOffset, ImGui::GetStyle().ItemSpacing.x );
                 ImGui::PushItemWidth( w );
             }
             MR_FINALLY{
@@ -335,7 +335,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 int action = 0;
 
                 // U+2212 MINUS SIGN
-                Vector2f buttonSize( ImGui::GetFrameHeight() - ImGui::GetStyle().ItemInnerSpacing.x, ImGui::GetFrameHeight() );
+                Vector2f buttonSize( ImGui::GetFrameHeight(), ImGui::GetFrameHeight() );
                 ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
                 ImGui::SetCursorPosY( dragY ); // Usually redundant, but when the user does something weird, this is sometimes required.
                 action -= UI::button( "\xe2\x88\x92", buttonSize );

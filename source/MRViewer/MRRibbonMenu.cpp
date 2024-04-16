@@ -1054,32 +1054,6 @@ void RibbonMenu::cloneSelectedPart( const std::shared_ptr<Object>& object )
     object->parent()->addChild( newObj );
 }
 
-bool RibbonMenu::simulateNameTagClick( Object& object, NameTagSelectionMode mode )
-{
-    if ( nameTagClickSignal( object, mode ) )
-        return false;
-
-    switch ( mode )
-    {
-    case NameTagSelectionMode::selectOne:
-        {
-            auto handleObject = [&]( auto& handleObject, Object& cur ) -> void
-            {
-                cur.select( &cur == &object );
-                for ( const auto& child : cur.children() )
-                    handleObject( handleObject, *child );
-            };
-            handleObject( handleObject, MR::SceneRoot::get() );
-        }
-        break;
-    case NameTagSelectionMode::toggle:
-        object.select( !object.isSelected() );
-        break;
-    }
-
-    return true;
-}
-
 bool RibbonMenu::drawCloneButton_( const std::vector<std::shared_ptr<Object>>& selected )
 {
     bool someChanges = false;

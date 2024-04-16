@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include "MRMesh/MRIRenderObject.h" //only for BasicUiRenderTask::BackwardPassParams
 #include "MRMesh/MRBox.h"
+#include "MRViewer/MRSignalCombiners.h"
 
 // Forward declarations
 struct ImGuiContext;
@@ -324,12 +325,25 @@ public:
   bool isSavedDialogPositionsEnabled() const { return savedDialogPositionEnabled_; }
 
   // This class helps the viewer to `renderUi()` from `IRenderObject`s.
-  MRVIEWER_API virtual UiRenderManager& getUiRenderManager();  
+  MRVIEWER_API virtual UiRenderManager& getUiRenderManager();
 
   /// returns flag show detailed information in the object tree
   bool getShowInfoInObjectTree() const { return showInfoInObjectTree_; }
   /// set flag show detailed information in the object tree
   void setShowInfoInObjectTree( bool value ) { showInfoInObjectTree_ = value; }
+
+  enum class NameTagSelectionMode
+  {
+      // Click without modifiers, selects one object and unselects all others.
+      selectOne,
+      // Ctrl+Click, toggles the selection of one object.
+      toggle,
+  };
+  using NameTagClickSignal = boost::signals2::signal<bool( Object& object, NameTagSelectionMode mode ), StopOnTrueCombiner>;
+  // This is triggered whenever a name tag of an object is clicked.
+  NameTagClickSignal nameTagClickSignal;
+  // Behaves as if the user clicked the object name tag, by invoking `nameTagClickSignal`.
+  MRVIEWER_API bool simulateNameTagClick( Object& object, NameTagSelectionMode mode );
 
 protected:
     MRVIEWER_API virtual void drawModalMessage_();

@@ -12,7 +12,6 @@
 #include <type_traits>
 #include <array>
 #include "MRRibbonNotification.h"
-#include "MRViewer/MRSignalCombiners.h"
 
 namespace MR
 {
@@ -120,20 +119,6 @@ public:
     bool getAutoCloseBlockingPlugins() const { return autoCloseBlockingPlugins_; }
     /// sets flag defining if closing plugin on opening another one is enabled or not
     void setAutoCloseBlockingPlugins( bool value ) { autoCloseBlockingPlugins_ = value; }
-
-    enum class NameTagSelectionMode
-    {
-        // Click without modifiers, selects one object and unselects all others.
-        selectOne,
-        // Ctrl+Click, toggles the selection of one object.
-        toggle,
-    };
-    using NameTagClickSignal = boost::signals2::signal<bool( Object& object, NameTagSelectionMode mode ), StopOnTrueCombiner>;
-    // This is triggered whenever a name tag of an object is clicked.
-    NameTagClickSignal nameTagClickSignal;
-
-    // Behaves as if the user clicked the object name tag, by invoking `nameTagClickSignal`.
-    MRVIEWER_API bool simulateNameTagClick( Object& object, NameTagSelectionMode mode );
 
 protected:
     // draw single item

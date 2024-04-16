@@ -9,7 +9,10 @@ void NameTagClickListener::connect( Viewer* viewer, int group, boost::signals2::
 {
     if ( !viewer )
         return;
-    connection_ = viewer->getMenuPluginAs<RibbonMenu>()->nameTagClickSignal.connect( group, MAKE_SLOT( &NameTagClickListener::onNameTagClicked_ ), pos );
+    auto menu = viewer->getMenuPlugin();
+    assert( menu );
+    if ( menu )
+        connection_ = menu->nameTagClickSignal.connect( group, MAKE_SLOT( &NameTagClickListener::onNameTagClicked_ ), pos );
 }
 
 }

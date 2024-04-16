@@ -842,6 +842,32 @@ UiRenderManager& ImGuiMenu::getUiRenderManager()
     return *uiRenderManager_;
 }
 
+bool ImGuiMenu::simulateNameTagClick( Object& object, NameTagSelectionMode mode )
+{
+    if ( nameTagClickSignal( object, mode ) )
+        return false;
+
+    switch ( mode )
+    {
+    case NameTagSelectionMode::selectOne:
+        {
+            auto handleObject = [&]( auto& handleObject, Object& cur ) -> void
+            {
+                cur.select( &cur == &object );
+                for ( const auto& child : cur.children() )
+                    handleObject( handleObject, *child );
+            };
+            handleObject( handleObject, MR::SceneRoot::get() );
+        }
+        break;
+    case NameTagSelectionMode::toggle:
+        object.select( !object.isSelected() );
+        break;
+    }
+
+    return true;
+}
+
 void ImGuiMenu::drawModalMessage_()
 {
     ImGui::PushStyleColor( ImGuiCol_ModalWindowDimBg, ImVec4( 1, 0.125f, 0.125f, ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg].w ) );

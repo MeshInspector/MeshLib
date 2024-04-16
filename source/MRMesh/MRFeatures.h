@@ -12,6 +12,11 @@
 #include <optional>
 #include <variant>
 
+namespace MR
+{
+class FeatureObject;
+}
+
 namespace MR::Features
 {
 
@@ -54,8 +59,8 @@ namespace Primitives
         // * If they are equal (both zero) or at least one of them is infinite, `positiveSideRadius` must be equal to `negativeSideRadius`.
         // * Both `positiveSideRadius` and `negativeSideRadius` must be non-negative.
 
-        // This isn't necessarily the true center point. Use `centerPoint()` instead.
-        Vector3f center;
+        // Some point on the axis, but not necessarily the true center point. Use `centerPoint()` for that.
+        Vector3f referencePoint;
         Vector3f dir; //< Must be normalized.
 
         //! Cap radius in the `dir` direction.
@@ -79,8 +84,8 @@ namespace Primitives
         // Returns the length. Can be infinite.
         [[nodiscard]] float length() const { return positiveLength + negativeLength; }
 
-        // Returns the center point (unlike `center`, which can actually be off-center).
-        // This doesn't work for half-infinite objects.
+        // Returns the center point (unlike `referencePoint`, which can actually be off-center).
+        // For half-infinite objects, returns the finite end.
         [[nodiscard]] MRMESH_API Sphere centerPoint() const;
 
         // Extends the object to infinity in one direction. The radius in the extended direction becomes equal to the radius in the opposite direction.
@@ -111,14 +116,14 @@ namespace Primitives
 [[nodiscard]] inline Primitives::Sphere toPrimitive( const Vector3f& point ) { return { point, 0 }; }
 [[nodiscard]] inline Primitives::Sphere toPrimitive( const Sphere3f& sphere ) { return sphere; }
 
-[[nodiscard]] inline Primitives::ConeSegment toPrimitive( const Line3f& line ) { return { .center = line.p, .dir = line.d.normalized(), .positiveLength = INFINITY, .negativeLength = INFINITY }; }
-[[nodiscard]] inline Primitives::ConeSegment toPrimitive( const LineSegm3f& segm ) { return { .center = segm.a, .dir = segm.dir().normalized(), .positiveLength = segm.length() }; }
+[[nodiscard]] inline Primitives::ConeSegment toPrimitive( const Line3f& line ) { return { .referencePoint = line.p, .dir = line.d.normalized(), .positiveLength = INFINITY, .negativeLength = INFINITY }; }
+[[nodiscard]] inline Primitives::ConeSegment toPrimitive( const LineSegm3f& segm ) { return { .referencePoint = segm.a, .dir = segm.dir().normalized(), .positiveLength = segm.length() }; }
 
 [[nodiscard]] inline Primitives::ConeSegment toPrimitive( const Cylinder3f& cyl )
 {
     float halfLen = cyl.length / 2;
     return{
-        .center = cyl.center(),
+        .referencePoint = cyl.center(),
         .dir = cyl.direction().normalized(),
         .positiveSideRadius = cyl.radius, .negativeSideRadius = cyl.radius,
         .positiveLength = halfLen, .negativeLength = halfLen,
@@ -127,7 +132,7 @@ namespace Primitives
 [[nodiscard]] inline Primitives::ConeSegment toPrimitive( const Cone3f& cone )
 {
     return{
-        .center = cone.center(),
+        .referencePoint = cone.center(),
         .dir = cone.direction().normalized(),
         .positiveSideRadius = std::tan( cone.angle ) * cone.height, .negativeSideRadius = 0,
         .positiveLength = cone.height, .negativeLength = 0,
@@ -144,8 +149,8 @@ namespace Primitives
 // Returns null if the object type is unknown.
 [[nodiscard]] MRMESH_API std::optional<Primitives::Variant> primitiveFromObject( const Object& object );
 // Can return null on some primitive configurations.
-// `infiniteExtend` is how large we make "infinite" objects. Half-infinite objects divide this by 2.
-[[nodiscard]] MRMESH_API std::shared_ptr<VisualObject> primitiveToObject( const Primitives::Variant& primitive, float infiniteExtent );
+// `infiniteExtent` is how large we make "infinite" objects. Half-infinite objects divide this by 2.
+[[nodiscard]] MRMESH_API std::shared_ptr<FeatureObject> primitiveToObject( const Primitives::Variant& primitive, float infiniteExtent );
 
 //! Stores the results of measuring two objects relative to one another.
 struct MeasureResult
@@ -180,7 +185,12 @@ struct MeasureResult
 
         [[nodiscard]] Vector3f closestPointFor( bool b ) const { return b ? closestPointB : closestPointA; }
     };
+    // Exact distance.
     Distance distance;
+
+    // Some approximation of the distance.
+    // For planes and lines, this expects them to be mostly parallel. For everything else, it just takes the feature center.
+    Distance centerDistance;
 
     struct Angle : BasicPart
     {
@@ -208,6 +218,8 @@ struct MeasureResult
     // Modifies the object to swap A and B;
     MRMESH_API void swapObjects();
 };
+// `MeasureResult::Status` enum to string.
+[[nodiscard]] MRMESH_API std::string_view toString( MeasureResult::Status status );
 
 //! Traits that determine how the primitives are related.
 namespace Traits
@@ -280,17 +292,20 @@ struct Binary<Primitives::Plane, Primitives::Plane>
 
 }
 
+// Get name of a `Primitives::...` class (can depend on its parameters).
 template <typename T>
 [[nodiscard]] std::string name( const T& primitive )
 {
     return Traits::Unary<T>{}.name( primitive );
 }
+// Same but for a variant.
+[[nodiscard]] MRMESH_API std::string name( const Primitives::Variant& var );
 
 // Whether you can measure two primitives relative to one another.
 template <typename A, typename B>
 concept MeasureSupported = Traits::MeasureSupportedOneWay<A, B> || Traits::MeasureSupportedOneWay<B, A>;
 
-// Measures stuff between two primitives.
+// Measures stuff between two primitives. (Two types from `Primitives::...`.)
 template <typename A, typename B>
 requires MeasureSupported<A, B>
 [[nodiscard]] MeasureResult measure( const A& a, const B& b )
@@ -299,13 +314,16 @@ requires MeasureSupported<A, B>
     {
         MeasureResult ret = Traits::Binary<A, B>{}.measure( a, b );
 
-        // Catch non-finite distance.
-        if ( ret.distance && ( !std::isfinite( ret.distance.distance ) || !ret.distance.closestPointA.isFinite() || !ret.distance.closestPointB.isFinite() ) )
-            ret.distance.status = MeasureResult::Status::badRelativeLocation;
+        for ( auto* dist : { &ret.distance, &ret.centerDistance } )
+        {
+            // Catch non-finite distance.
+            if ( *dist && ( !std::isfinite( dist->distance ) || !dist->closestPointA.isFinite() || !dist->closestPointB.isFinite() ) )
+                dist->status = MeasureResult::Status::badRelativeLocation;
 
-        // Check that we got the correct distance here.
-        // Note that the distance is signed, so we apply `abs` to it to compare it properly.
-        assert( ret.distance <= ( std::abs( ( ret.distance.closestPointB - ret.distance.closestPointA ).length() - std::abs( ret.distance.distance ) ) < 0.0001f ) );
+            // Check that we got the correct distance here.
+            // Note that the distance is signed, so we apply `abs` to it to compare it properly.
+            assert( *dist <= ( std::abs( ( dist->closestPointB - dist->closestPointA ).length() - std::abs( dist->distance ) ) < 0.0001f ) );
+        }
 
         // Catch non-finite angle.
         if ( ret.angle && ( !ret.angle.pointA.isFinite() || !ret.angle.pointB.isFinite() || !ret.angle.dirA.isFinite() || !ret.angle.dirB.isFinite() ) )
@@ -325,5 +343,19 @@ requires MeasureSupported<A, B>
         return ret;
     }
 }
+// Same, but with a variant as the first argument.
+template <typename B>
+[[nodiscard]] MeasureResult measure( const Primitives::Variant& a, const B& b )
+{
+    return std::visit( [&]( const auto& elem ){ return (measure)( elem, b ); }, a );
+}
+// Same, but with a variant as the second argument.
+template <typename A>
+[[nodiscard]] MeasureResult measure( const A& a, const Primitives::Variant& b )
+{
+    return std::visit( [&]( const auto& elem ){ return (measure)( a, elem ); }, b );
+}
+// Same, but with variants as both argument.
+[[nodiscard]] MRMESH_API MeasureResult measure( const Primitives::Variant& a, const Primitives::Variant& b );
 
 }

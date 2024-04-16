@@ -436,141 +436,6 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         forAllParams( []( const auto& params ){ setDefaultUnitParams( params ); } );
     };
 
-    auto numberStyleCombo = [&]( NumberStyle& style ) -> bool
-    {
-        static const std::vector<std::string> styleOptions = { "Normal", "Fixed", "Exponential", "Auto" };
-        static_assert( int( NumberStyle::normal ) == 0 );
-        static_assert( int( NumberStyle::fixed ) == 1 );
-        static_assert( int( NumberStyle::exponential ) == 2 );
-        static_assert( int( NumberStyle::maybeExponential ) == 3 );
-
-        int styleOption = int( style );
-        bool ret = UI::combo( "Style", &styleOption, styleOptions );
-        if ( ret )
-            style = NumberStyle( styleOption );
-        ImGui::SetItemTooltip( "%s",
-            // U+2014 EM DASH
-            "Normal \xe2\x80\x94 Without exponent, at most 'Precision' digits in total (unless the number of digits before the decimal point is larger)\n"
-            "Fixed \xe2\x80\x94 Without exponent, 'Precision' digits after the decimal point\n"
-            "Exponential \xe2\x80\x94 With exponent\n"
-            "Auto \xe2\x80\x94 With or without exponent, depending on the magnitude\n"
-        );
-        return ret;
-    };
-
-
-    { // Length.
-        UI::separator( menuScaling, "Length" );
-
-        ImGui::PushID( "length" );
-        MR_FINALLY{ ImGui::PopID(); };
-
-        // --- Units
-
-        static const std::vector<std::string> optionNames = []{
-            std::vector<std::string> ret;
-            ret.reserve( std::size_t( LengthUnit::_count ) );
-            for ( std::size_t i = 0; i < std::size_t( LengthUnit::_count ); i++ )
-                ret.push_back( std::string( getUnitInfo( LengthUnit( i ) ).prettyName ) );
-            return ret;
-        }();
-
-        int option = int( paramsLen.targetUnit );
-        if ( UI::combo( "Unit", &option, optionNames ) )
-        {
-            paramsLen.targetUnit = LengthUnit( option );
-
-            switch ( paramsLen.targetUnit )
-            {
-            case LengthUnit::mm:
-                forAllParams( [&]( auto&& params ){ params.leadingZero = true; } );
-                paramsArea.targetUnit = AreaUnit::mm2;
-                paramsVol.targetUnit = VolumeUnit::mm3;
-                paramsMoveSpeed.targetUnit = MovementSpeedUnit::mmPerSecond;
-                break;
-            case LengthUnit::inches:
-                forAllParams( [&]( auto&& params ){ params.leadingZero = false; } );
-                paramsArea.targetUnit = AreaUnit::inches2;
-                paramsVol.targetUnit = VolumeUnit::inches3;
-                paramsMoveSpeed.targetUnit = MovementSpeedUnit::inchesPerSecond;
-                break;
-            case LengthUnit::_count:; // MSVC warns otherwise.
-                break;
-            }
-
-            applyParams();
-        }
-
-        // --- Style
-
-        if ( numberStyleCombo( paramsLen.style ) )
-        {
-            forAllLengthParams( [&]( auto& params ){ params.style = paramsLen.style; } );
-            applyParams();
-        }
-
-        // --- Precision
-
-        if ( UI::drag<NoUnit>( "Precision", paramsLen.precision, 1, 0, 12 ) )
-        {
-            forAllLengthParams( [&]( auto& params ){ params.precision = paramsLen.precision; } );
-            applyParams();
-        }
-    }
-
-    { // Angle.
-        UI::separator( menuScaling, "Angle" );
-
-        ImGui::PushID( "angle" );
-        MR_FINALLY{ ImGui::PopID(); };
-
-        static const std::vector<std::string> flavorOptions = { "Degrees", "Degrees, minutes", "Degrees, minutes, seconds" };
-        static_assert( int( DegreesMode::degrees ) == 0 );
-        static_assert( int( DegreesMode::degreesMinutes ) == 1 );
-        static_assert( int( DegreesMode::degreesMinutesSeconds ) == 2 );
-
-        int flavorOption = int( paramsAngle.degreesMode );
-
-        // Degree mode.
-
-        if ( UI::combo( "Unit", &flavorOption, flavorOptions ) )
-        {
-            DegreesMode newMode = DegreesMode( flavorOption );
-
-            if ( ( paramsAngle.degreesMode == DegreesMode::degrees ) != ( newMode == DegreesMode::degrees ) )
-            {
-                if ( newMode == DegreesMode::degrees )
-                {
-                    paramsAngle.style = NumberStyle::fixed;
-                    paramsAngle.precision = 1;
-                }
-                else
-                {
-                    paramsAngle.style = NumberStyle::fixed;
-                    paramsAngle.precision = 0;
-                }
-            }
-
-            paramsAngle.degreesMode = newMode;
-
-            applyParams();
-        }
-
-        // Degree-mode-specific options.
-
-        if ( paramsAngle.degreesMode == DegreesMode::degrees )
-        {
-            // --- Style
-
-            if ( numberStyleCombo( paramsAngle.style ) )
-                applyParams();
-
-            // --- Precision
-
-            if ( UI::drag<NoUnit>( "Precision", paramsAngle.precision, 1, 0, 12 ) )
-                applyParams();
-        }
-    }
 
     { // Common.
         UI::separator( menuScaling, "Common" );
@@ -624,8 +489,109 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
                 }
             }
         };
-        thousandsSeparator( false );
-        thousandsSeparator( true );
+        thousandsSeparator( false ); // Integral part.
+        // thousandsSeparator( true ); // Fractional part.
+    }
+
+
+    { // Length.
+        UI::separator( menuScaling, "Linear" );
+
+        ImGui::PushID( "length" );
+        MR_FINALLY{ ImGui::PopID(); };
+
+        // --- Units
+
+        static const std::vector<std::string> optionNames = []{
+            std::vector<std::string> ret;
+            ret.reserve( std::size_t( LengthUnit::_count ) );
+            for ( std::size_t i = 0; i < std::size_t( LengthUnit::_count ); i++ )
+                ret.push_back( std::string( getUnitInfo( LengthUnit( i ) ).prettyName ) );
+            return ret;
+        }();
+
+        int option = int( paramsLen.targetUnit );
+        if ( UI::combo( "Unit", &option, optionNames ) )
+        {
+            paramsLen.targetUnit = LengthUnit( option );
+
+            switch ( paramsLen.targetUnit )
+            {
+            case LengthUnit::mm:
+                forAllParams( [&]( auto&& params ){ params.leadingZero = true; } );
+                paramsArea.targetUnit = AreaUnit::mm2;
+                paramsVol.targetUnit = VolumeUnit::mm3;
+                paramsMoveSpeed.targetUnit = MovementSpeedUnit::mmPerSecond;
+                break;
+            case LengthUnit::inches:
+                forAllParams( [&]( auto&& params ){ params.leadingZero = false; } );
+                paramsArea.targetUnit = AreaUnit::inches2;
+                paramsVol.targetUnit = VolumeUnit::inches3;
+                paramsMoveSpeed.targetUnit = MovementSpeedUnit::inchesPerSecond;
+                break;
+            case LengthUnit::_count:; // MSVC warns otherwise.
+                break;
+            }
+
+            applyParams();
+        }
+
+        // --- Precision
+
+        if ( UI::drag<NoUnit>( "Precision", paramsLen.precision, 1, 0, 12 ) )
+        {
+            forAllLengthParams( [&]( auto& params ){ params.precision = paramsLen.precision; } );
+            applyParams();
+        }
+    }
+
+    { // Angle.
+        UI::separator( menuScaling, "Angular" );
+
+        ImGui::PushID( "angle" );
+        MR_FINALLY{ ImGui::PopID(); };
+
+        static const std::vector<std::string> flavorOptions = { "Degrees", "Degrees, minutes", "Degrees, minutes, seconds" };
+        static_assert( int( DegreesMode::degrees ) == 0 );
+        static_assert( int( DegreesMode::degreesMinutes ) == 1 );
+        static_assert( int( DegreesMode::degreesMinutesSeconds ) == 2 );
+
+        int flavorOption = int( paramsAngle.degreesMode );
+
+        // Degree mode.
+
+        if ( UI::combo( "Unit", &flavorOption, flavorOptions ) )
+        {
+            DegreesMode newMode = DegreesMode( flavorOption );
+
+            if ( ( paramsAngle.degreesMode == DegreesMode::degrees ) != ( newMode == DegreesMode::degrees ) )
+            {
+                if ( newMode == DegreesMode::degrees )
+                {
+                    paramsAngle.style = NumberStyle::normal;
+                    paramsAngle.precision = 1;
+                }
+                else
+                {
+                    paramsAngle.style = NumberStyle::normal;
+                    paramsAngle.precision = 0;
+                }
+            }
+
+            paramsAngle.degreesMode = newMode;
+
+            applyParams();
+        }
+
+        // Degree-mode-specific options.
+
+        if ( paramsAngle.degreesMode == DegreesMode::degrees )
+        {
+            // --- Precision
+
+            if ( UI::drag<NoUnit>( "Precision", paramsAngle.precision, 1, 0, 12 ) )
+                applyParams();
+        }
     }
 }
 
@@ -659,7 +625,6 @@ void ViewerSettingsPlugin::drawFeaturesTab_( float menuScaling )
 
 void ViewerSettingsPlugin::drawRenderOptions_( float menuScaling )
 {
-    auto& style = ImGui::GetStyle();
 
     if ( viewer->isAlphaSortAvailable() )
     {
@@ -674,6 +639,11 @@ void ViewerSettingsPlugin::drawRenderOptions_( float menuScaling )
     {
         if ( maxSamples_ > 1 )
         {
+#ifdef __EMSCRIPTEN__
+            (void)menuScaling;
+            ImGui::Text( "Multisample anti-aliasing (MSAA): x%d", curSamples_ );
+#else
+            auto& style = ImGui::GetStyle();
             auto backUpSamples = storedSamples_;
             ImGui::Text( "Multisample anti-aliasing (MSAA):" );
             UI::setTooltipIfHovered( "The number of samples per pixel: more samples - better render quality but worse performance.", menuScaling );
@@ -704,6 +674,7 @@ void ViewerSettingsPlugin::drawRenderOptions_( float menuScaling )
                 UI::transparentTextWrapped( "GPU multisampling settings override application value." );
             if ( needReset_ )
                 UI::transparentTextWrapped( "Application requires restart to apply this change" );
+#endif
         }
     }
 }

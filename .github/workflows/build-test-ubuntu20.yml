@@ -35,9 +35,14 @@ jobs:
         full_config_build:
           - ${{fromJSON(inputs.full_config_build)}}
         exclude:
+          # Do not run Release Clang 11 build on every commit (but only once a day)
+          - full_config_build: false
+            config: Release
+            compiler: Clang 11
+          # Do not run Debug GCC 10 build on every commit (but only once a day)
           - full_config_build: false
             config: Debug
-            compiler: Clang 11
+            compiler: GCC 10
         include:
           - compiler: Clang 11
             cxx-compiler: /usr/bin/clang++-11
@@ -91,7 +96,7 @@ jobs:
           name: Timing_Logs_ubuntu20_${{matrix.config}}-x86_${{matrix.compiler}}
           path: time_log/
 
-      - name: Run Tests
+      - name: Run Start-and-Exit Tests
         run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
 
       - name: Unit Tests
@@ -122,9 +127,11 @@ jobs:
         run: aws s3 sync ${{inputs.autotest_data_s3_url}} ./test_data --delete --no-sign-request --size-only
 
       - name: Python Regression Tests
-        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
+        env:
+          SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
+        if: ${{ env.INTERNAL_BUILD == 'true' }}
         working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
+        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}}
 
       - name: Copy test artifacts to S3
         if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}

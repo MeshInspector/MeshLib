@@ -1,6 +1,7 @@
 #include "MRUnits.h"
 
 #include "MRMesh/MRConstants.h"
+#include "MRMesh/MRString.h"
 #include "MRPch/MRFmt.h"
 
 namespace MR
@@ -50,7 +51,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .sourceUnit = AngleUnit::radians,
             .targetUnit = AngleUnit::degrees,
             .unitSuffix = true,
-            .style = NumberStyle::fixed,
+            .style = NumberStyle::normal,
             .precision = 1,
             .allowNegativeZero = false,
             .unicodeMinusSign = true,
@@ -84,7 +85,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .sourceUnit = RatioUnit::factor,
             .targetUnit = RatioUnit::percents,
             .unitSuffix = true,
-            .style = NumberStyle::fixed,
+            .style = NumberStyle::normal,
             .precision = 1,
             .allowNegativeZero = false,
             .unicodeMinusSign = true,
@@ -101,7 +102,7 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .sourceUnit = TimeUnit::seconds,
             .targetUnit = TimeUnit::seconds,
             .unitSuffix = true,
-            .style = NumberStyle::fixed,
+            .style = NumberStyle::normal,
             .precision = 1,
             .allowNegativeZero = false,
             .unicodeMinusSign = true,
@@ -399,7 +400,7 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
 
     // Calculate precision after the decimal point.
     int fracPrecision = std::is_floating_point_v<T> ? params.precision : 0;
-    if ( params.style == NumberStyle::normal && fracPrecision > 0 )
+    if ( params.style == NumberStyle::distributePrecision && fracPrecision > 0 )
     {
         int intDigits = 0;
 
@@ -492,8 +493,7 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
     return ret;
 }
 
-template <UnitEnum E, typename T>
-requires (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>)
+template <UnitEnum E, detail::Units::Scalar T>
 std::string valueToString( T value, const UnitToStringParams<E>& params )
 {
     // Convert to the target unit.
@@ -504,7 +504,7 @@ std::string valueToString( T value, const UnitToStringParams<E>& params )
     }
     else
     {
-        // This is always integral.
+        // This is always floating-point.
         return valueToStringImpl( convertUnits( *params.sourceUnit, params.targetUnit, value ), params );
     }
 }
@@ -515,8 +515,7 @@ DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
 #undef MR_Y
 
-template <typename T>
-requires (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>)
+template <detail::Units::Scalar T>
 int guessPrecision( T value )
 {
     if constexpr ( std::is_integral_v<T> )
@@ -538,16 +537,15 @@ int guessPrecision( T value )
         std::string str = fmt::format( "{:.{}f}", value, std::numeric_limits<T>::max_digits10 );
 
         auto pos = str.find_first_not_of( "0." );
-        if ( pos == std::string::npos )
-            return 0; // Should be impossible?
+        if ( pos == std::string::npos ) // If too close to zero...
+            return std::numeric_limits<T>::max_digits10;
 
         // pos - 2 == the number of leading zeroes in the fractional part, then +1 to show the first digit.
         return std::max( 0, int( pos ) - 1 );
     }
 }
 
-template <typename T>
-requires (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>)
+template <detail::Units::Scalar T>
 int guessPrecision( T min, T max )
 {
     if constexpr ( std::is_integral_v<T> )
@@ -587,5 +585,71 @@ int guessPrecision( T min, T max )
     template int guessPrecision( T min, T max );
 DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
 #undef MR_X
+
+template <UnitEnum E, detail::Units::Scalar T>
+std::string valueToImGuiFormatString( T value, const UnitToStringParams<E>& params )
+{
+    std::string ret = replace( valueToString( value, params ), "%", "%%" );
+    ret += "##%";
+
+    if constexpr ( std::is_integral_v<T> )
+    {
+        using SignedT = std::make_signed_t<T>;
+        if constexpr ( std::is_same_v<SignedT, signed char> )
+            ret += "hh";
+        else if constexpr ( std::is_same_v<SignedT, short> )
+            ret += "h";
+        else if constexpr ( std::is_same_v<SignedT, int> )
+            ret += "";
+        else if constexpr ( std::is_same_v<SignedT, long> )
+            ret += "l";
+        else if constexpr ( std::is_same_v<SignedT, long long> )
+            ret += "ll";
+        else
+            static_assert( dependent_false<SignedT>, "Unknown integral type." );
+
+        ret += std::is_signed_v<T> ? "d" : "u";
+    }
+    else
+    {
+        int precision = 0;
+        std::size_t pos = ret.find( '.' );
+        if ( pos != std::string::npos )
+        {
+            pos++;
+            while (
+                std::isdigit( (unsigned char)ret[pos + precision] ) ||
+                ( params.thousandsSeparatorFrac && ret[pos + precision] == params.thousandsSeparatorFrac )
+            )
+                precision++;
+        }
+
+        fmt::format_to( std::back_inserter( ret ), ".{}", precision );
+
+        if constexpr ( std::is_same_v<T, float> )
+            ; // Nothing.
+        else if constexpr ( std::is_same_v<T, double> )
+            ; // Nothing. Same as for `float`, yes.
+        else if constexpr ( std::is_same_v<T, long double> )
+            ret += 'L';
+        else
+            static_assert( dependent_false<T>, "Unknown floating-point type." );
+
+        if ( params.style == NumberStyle::exponential )
+            ret += 'e';
+        else if ( params.style == NumberStyle::maybeExponential )
+            ret += 'g';
+        else
+            ret += 'f';
+    }
+
+    return ret;
+}
+
+#define MR_Y(T, E) template std::string valueToImGuiFormatString( T value, const UnitToStringParams<E>& params );
+#define MR_X(E) DETAIL_MR_UNIT_VALUE_TYPES(MR_Y, E)
+DETAIL_MR_UNIT_ENUMS(MR_X)
+#undef MR_X
+#undef MR_Y
 
 }

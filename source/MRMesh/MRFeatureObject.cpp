@@ -276,6 +276,8 @@ void FeatureObject::setSubfeatureAlphaMesh( float alpha )
 
 FeatureObject::FeatureObject( int numDimensions )
 {
+    setLocked( true );
+
     setFrontColor( SceneColors::get( SceneColors::SelectedFeatures ), true );
     setFrontColor( SceneColors::get( SceneColors::UnselectedFeatures ), false );
     setBackColor( SceneColors::get( SceneColors::FeatureBackFaces ) );

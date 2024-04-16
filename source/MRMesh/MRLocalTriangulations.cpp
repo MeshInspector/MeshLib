@@ -96,17 +96,17 @@ Vector3f computeNormal( const AllLocalTriangulations & triangs, const VertCoords
     return sum.normalized();
 }
 
-void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertNormals & targetDir )
+void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertBitSet & region, const VertNormals & targetDir )
 {
-    return orientLocalTriangulations( triangs, coords, [&targetDir]( VertId v ) { return targetDir[v]; } );
+    return orientLocalTriangulations( triangs, coords, region, [&targetDir]( VertId v ) { return targetDir[v]; } );
 }
 
-void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const std::function<Vector3f(VertId)> & targetDir )
+void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertBitSet & region, const std::function<Vector3f(VertId)> & targetDir )
 {
     MR_TIMER
     if ( triangs.fanRecords.size() <= 1 )
         return;
-    ParallelFor( 0_v, triangs.fanRecords.backId(), [&]( VertId c )
+    BitSetParallelFor( region, [&]( VertId c )
     {
         const auto nbeg = triangs.fanRecords[c].firstNei;
         const auto nend = triangs.fanRecords[c + 1].firstNei;
@@ -268,7 +268,8 @@ void findRepeatedOrientedTriangles( const AllLocalTriangulations & triangs, Tria
     }
 }
 
-bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTriangulations & triangs, ProgressCallback progress,
+bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTriangulations & triangs,
+    const VertBitSet & region, ProgressCallback progress,
     Triangulation * outRep3, Triangulation * outRep2 )
 {
     MR_TIMER
@@ -292,7 +293,9 @@ bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTrian
     if ( !reportProgress( progress, 0.025f ) )
         return false;
 
-    orientLocalTriangulations( triangs, pointCloud.points, [&]( VertId v )
+    // initially orient local triangulations of region points to have normal looking away from the center;
+    // this orientation will remain only for most distant points in each connected component not having fixed (out-of-region) points
+    orientLocalTriangulations( triangs, pointCloud.points, region, [&]( VertId v )
     {
         return pointCloud.points[v] - center;
     } );
@@ -303,6 +306,11 @@ bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTrian
     // fill elements with negative weights: larger weight (smaller by magnitude) for points further from the center
     if ( !BitSetParallelFor( pointCloud.validPoints, [&]( VertId v )
     {
+        if ( !region.test( v ) )
+        {
+            elements[(int)v].val = InvalidWeight;
+            return;
+        }
         const auto dcenter = pointCloud.points[v] - center;
         const auto w = dcenter.lengthSq() - maxDistSqToCenter;
         assert( w <= 0 );
@@ -356,15 +364,11 @@ bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTrian
         return std::abs( sameOriented - oppositeOriented );
     };
 
-    VertBitSet notVisited = pointCloud.validPoints;
-    const auto totalCount = notVisited.count();
-    size_t visitedCount = 0;
-
+    // notVisited are points that can change orientation of their local triangulation
+    VertBitSet notVisited = region;
+    
     auto enqueueNeighbors = [&]( VertId base )
     {
-        assert( notVisited.test( base ) );
-        notVisited.reset( base );
-        ++visitedCount;
         const auto nbeg = triangs.fanRecords[base].firstNei;
         const auto nend = triangs.fanRecords[base+1].firstNei;
         const auto border = triangs.fanRecords[base].border;
@@ -426,16 +430,36 @@ bool autoOrientLocalTriangulations( const PointCloud & pointCloud, AllLocalTrian
         }
     };
 
+    // both in- and out-of- region
+    const auto totalCount = pointCloud.validPoints.count();
+    size_t visitedCount = 0;
+
+    // process out-of-region points with fixed orientation of local triangulations
+    for ( auto v : pointCloud.validPoints - region )
+    {
+        assert( heap.value( v ) == InvalidWeight );
+        assert( !notVisited.test( v ) );
+        ++visitedCount;
+        enqueueNeighbors( v );
+        if ( !reportProgress( progress, [&] { return (float)visitedCount / totalCount; }, visitedCount, 0x10000 ) )
+            return false;
+    }
+
+    // orient local triangulations of region points
     for (;;)
     {
         auto [v, weight] = heap.top();
         if ( weight == InvalidWeight )
             break;
         heap.setSmallerValue( v, InvalidWeight );
+        assert( notVisited.test( v ) );
+        notVisited.reset( v );
+        ++visitedCount;
         enqueueNeighbors( v );
         if ( !reportProgress( progress, [&] { return (float)visitedCount / totalCount; }, visitedCount, 0x10000 ) )
             return false;
     }
+    assert( visitedCount == totalCount );
 
     if ( outRep2 )
     {

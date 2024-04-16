@@ -1015,7 +1015,7 @@ PaletteChanges Palette(
     if ( UI::checkbox( "Discrete Palette", &isDiscrete ) )
     {
         palette.setFilterType( isDiscrete ? FilterType::Discrete : FilterType::Linear );
-        changes |= PaletteChanges::Texture;
+        changes |= PaletteChanges::Texture | PaletteChanges::Ranges; // both the texture and uv-coordinates must be recomputed
         presetName.clear();
     }
     UI::setTooltipIfHovered( "If checked, palette will have several disrete levels. Otherwise it will be smooth.", menuScaling );
@@ -1044,8 +1044,11 @@ PaletteChanges Palette(
     int paletteRangeModeBackUp = paletteRangeMode;
     ImGui::PushItemWidth( scaledWidth );
 
+    const auto oldPaletteRangeMode = paletteRangeMode;
     UI::combo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
     UI::setTooltipIfHovered( "If \"Central zone\" selected you can separately fit values which are higher or lower then central one. Otherwise only the whole scale can be fit", menuScaling );
+    if ( oldPaletteRangeMode != paletteRangeMode )
+        changes |= PaletteChanges::Texture;
     ImGui::PopItemWidth();
 
     ImGui::PushItemWidth( 0.5f * scaledWidth );
@@ -1161,108 +1164,109 @@ PaletteChanges Palette(
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { 2.0f * cDefaultInnerSpacing * menuScaling, cDefaultInnerSpacing * menuScaling } );
-    if ( !ImGui::BeginModalNoAnimation( popupName.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+    if ( ImGui::BeginModalNoAnimation( popupName.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
     {
-        PopStyleVar( 3 );
-        return PaletteChanges( changes );
-    }
+        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
+        if ( headerFont )
+            PushFont( headerFont );
 
-    auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
-    if ( headerFont )
-        PushFont( headerFont );
+        const auto headerWidth = CalcTextSize( "Save Palette" ).x;
 
-    const auto headerWidth = CalcTextSize( "Save Palette" ).x;
+        ImGui::SetCursorPosX( ( windowSize.x - headerWidth ) * 0.5f );
+        Text( "Save Palette" );
 
-    ImGui::SetCursorPosX( ( windowSize.x - headerWidth ) * 0.5f );
-    Text( "Save Palette" );
+        if ( headerFont )
+            PopFont();
 
-    if ( headerFont )
-        PopFont();
+        const auto& style = ImGui::GetStyle();
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * menuScaling } );
+        static std::string currentPaletteName;
 
-    const auto& style = ImGui::GetStyle();
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * menuScaling } );
-    static std::string currentPaletteName;
+        ImGui::SetNextItemWidth( windowSize.x - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - CalcTextSize( "Palette Name" ).x );
+        ImGui::InputText( "Palette Name", currentPaletteName );
+        ImGui::PopStyleVar();
 
-    ImGui::SetNextItemWidth( windowSize.x - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - CalcTextSize( "Palette Name" ).x );
-    ImGui::InputText( "Palette Name", currentPaletteName );
-    ImGui::PopStyleVar();
+        const float btnWidth = cModalButtonWidth * menuScaling;
 
-    const float btnWidth = cModalButtonWidth * menuScaling;
-
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
-    bool valid = !currentPaletteName.empty() && !hasProhibitedChars( currentPaletteName );
-    if ( UI::button( "Save", valid, Vector2f( btnWidth, 0 ) ) )
-    {
-        std::error_code ec;
-        if ( std::filesystem::is_regular_file( PalettePresets::getPalettePresetsFolder() / ( currentPaletteName + ".json" ), ec ) )
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
+        bool valid = !currentPaletteName.empty() && !hasProhibitedChars( currentPaletteName );
+        if ( UI::button( "Save", valid, Vector2f( btnWidth, 0 ) ) )
         {
-            OpenPopup( "Palette already exists##PaletteHelper" );
-        }
-        else
-        {
-            auto res = PalettePresets::savePreset( currentPaletteName, palette );
-            if ( res.has_value() )
+            std::error_code ec;
+            if ( std::filesystem::is_regular_file( PalettePresets::getPalettePresetsFolder() / ( currentPaletteName + ".json" ), ec ) )
             {
-                presetName = currentPaletteName;
-                ImGui::CloseCurrentPopup();
+                OpenPopup( "Palette already exists##PaletteHelper" );
             }
             else
             {
-                showError( res.error() );
+                auto res = PalettePresets::savePreset( currentPaletteName, palette );
+                if ( res.has_value() )
+                {
+                    presetName = currentPaletteName;
+                    ImGui::CloseCurrentPopup();
+                }
+                else
+                {
+                    showError( res.error() );
+                }
             }
         }
-    }
-    ImGui::PopStyleVar();
-    if ( !valid )
-    {
-        UI::setTooltipIfHovered( currentPaletteName.empty() ?
-            "Cannot save palette with empty name" :
-            "Please do not any of these symbols: \? * / \\ \" < >", menuScaling );
-    }
-
-    bool closeTopPopup = false;
-    if ( ImGui::BeginModalNoAnimation( "Palette already exists##PaletteHelper", nullptr,
-        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
-    {
-        ImGui::Text( "Palette preset with this name already exists, override?" );
-        auto w = GetContentRegionAvail().x;
-        auto p = GetStyle().FramePadding.x;
-        if ( UI::buttonCommonSize( "Yes", Vector2f( ( w - p ) * 0.5f, 0 ), ImGuiKey_Enter ) )
+        ImGui::PopStyleVar();
+        if ( !valid )
         {
-            auto res = PalettePresets::savePreset( currentPaletteName, palette );
-            if ( res.has_value() )
+            UI::setTooltipIfHovered( currentPaletteName.empty() ?
+                "Cannot save palette with empty name" :
+                "Please do not any of these symbols: \? * / \\ \" < >", menuScaling );
+        }
+
+        bool closeTopPopup = false;
+        if ( ImGui::BeginModalNoAnimation( "Palette already exists##PaletteHelper", nullptr,
+            ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+        {
+            ImGui::Text( "Palette preset with this name already exists, override?" );
+            auto w = GetContentRegionAvail().x;
+            auto p = GetStyle().FramePadding.x;
+            if ( UI::buttonCommonSize( "Yes", Vector2f( ( w - p ) * 0.5f, 0 ), ImGuiKey_Enter ) )
             {
-                presetName = currentPaletteName;
-                closeTopPopup = true;
+                auto res = PalettePresets::savePreset( currentPaletteName, palette );
+                if ( res.has_value() )
+                {
+                    presetName = currentPaletteName;
+                    closeTopPopup = true;
+                    ImGui::CloseCurrentPopup();
+                }
+                else
+                {
+                    showError( res.error() );
+                }
+            }
+            ImGui::SameLine( 0, p );
+            if ( UI::buttonCommonSize( "No", Vector2f( ( w - p ) * 0.5f, 0 ),ImGuiKey_Escape ) )
+            {
                 ImGui::CloseCurrentPopup();
             }
-            else
-            {
-                showError( res.error() );
-            }
+            ImGui::EndPopup();
         }
-        ImGui::SameLine( 0, p );
-        if ( UI::buttonCommonSize( "No", Vector2f( ( w - p ) * 0.5f, 0 ),ImGuiKey_Escape ) )
-        {
+        if ( closeTopPopup )
             ImGui::CloseCurrentPopup();
-        }
+
+        ImGui::SameLine();
+
+        ImGui::SetCursorPosX( windowSize.x - btnWidth - style.WindowPadding.x );
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
+        if ( UI::buttonCommonSize( "Cancel", Vector2f( btnWidth, 0 ), ImGuiKey_Escape ) )
+            ImGui::CloseCurrentPopup();
+        ImGui::PopStyleVar();
+
         ImGui::EndPopup();
     }
-    if ( closeTopPopup )
-        ImGui::CloseCurrentPopup();
-
-    ImGui::SameLine();
-
-    ImGui::SetCursorPosX( windowSize.x - btnWidth - style.WindowPadding.x );
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
-    if ( UI::buttonCommonSize( "Cancel", Vector2f( btnWidth, 0 ), ImGuiKey_Escape ) )
-        ImGui::CloseCurrentPopup();
-    ImGui::PopStyleVar();
-
-    ImGui::EndPopup();
     PopStyleVar( 3 );
 
-    return PaletteChanges( changes );
+    // for linear texture filter, uv-coordinates depend on texture size
+    if ( bool( changes & ImGui::PaletteChanges::Texture ) && palette.getTexture().filter == FilterType::Linear )
+        changes |= ImGui::PaletteChanges::Ranges;
+
+    return changes;
 }
 
 void Plane( MR::PlaneWidget& planeWidget, float menuScaling )

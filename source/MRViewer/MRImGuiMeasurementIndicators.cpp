@@ -107,7 +107,7 @@ void StringWithIcon::draw( ImDrawList& list, float menuScaling, ImVec2 pos, ImU3
     }
 }
 
-void text( Element elem, float menuScaling, const Params& params, ImVec2 center, StringWithIcon string, ImVec2 push )
+void text( Element elem, float menuScaling, const Params& params, ImVec2 pos, StringWithIcon string, ImVec2 push, ImVec2 pivot )
 {
     if ( ( elem & Element::both ) == Element{} )
         return; // Nothing to draw.
@@ -122,13 +122,13 @@ void text( Element elem, float menuScaling, const Params& params, ImVec2 center,
     ImVec2 textToLineSpacingB = params.textToLineSpacingB * menuScaling;
 
     ImVec2 textSize = string.calcTextSize();
-    ImVec2 textPos = center - textSize / 2;
+    ImVec2 textPos = pos - ( textSize * pivot );
 
     if ( push != ImVec2{} )
     {
         push = normalize( push );
         ImVec2 point = ImVec2( push.x > 0 ? textPos.x - textToLineSpacingA.x : textPos.x + textSize.x + textToLineSpacingB.x, push.y > 0 ? textPos.y - textToLineSpacingA.y : textPos.y + textSize.y + textToLineSpacingB.y );
-        textPos += push * ( -dot( push, point - center ) + textToLineSpacingRadius );
+        textPos += push * (-dot( push, point - pos ) + textToLineSpacingRadius );
     }
 
     if ( bool( elem & Element::outline ) )

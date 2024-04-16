@@ -8,6 +8,7 @@ import meshlib.mrmeshpy as mrmeshpy
 import pytest
 
 
+@pytest.mark.smoke
 @pytest.mark.parametrize("input_case", ["sphere", "fox"])
 @pytest.mark.parametrize("operation_type", mrmeshpy.BooleanOperation.__members__.keys())
 def test_boolean(tmp_path, operation_type, input_case):

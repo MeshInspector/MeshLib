@@ -9,6 +9,7 @@ from constants import test_files_path
 import pytest
 
 
+@pytest.mark.smoke
 @pytest.mark.parametrize("input_case", [
     {"case_name": "RigidScale", "input_mesh": "fox_geometrik_moved_rotated_scaled.ctm", "method": "RigidScale"},
     {"case_name": "AnyRigidXf", "input_mesh": "fox_geometrik_moved_rotated.ctm", "method": "AnyRigidXf"},

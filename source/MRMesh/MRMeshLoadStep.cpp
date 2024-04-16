@@ -94,8 +94,6 @@ using namespace MR;
 #define STEP_READER_FIXED ( ( ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 7 ) ) )
 // TODO: full color support
 #define STEP_LOAD_COLORS 0
-// TODO: STEPCAFControl support
-#define STEPCAFCONTROL_SUPPORT 0
 
 #if MODERN_MESSAGE_SUPPORTED
 /// spdlog adaptor for OpenCASCADE logging system
@@ -270,7 +268,7 @@ public:
         }
     }
 
-#if STEPCAFCONTROL_SUPPORT
+#ifdef MRMESH_OPENCASCADE_USE_XDE
     /// load object structure without actual geometry data
     void loadModelStructure( const Handle( TDocStd_Document )& document )
     {
@@ -372,7 +370,7 @@ public:
     }
 
 private:
-#if STEPCAFCONTROL_SUPPORT
+#ifdef MRMESH_OPENCASCADE_USE_XDE
     void readLabel_( const TDF_Label& label )
     {
         using ShapeTool = XCAFDoc_ShapeTool;
@@ -762,6 +760,7 @@ Expected<Mesh> fromStepImpl( const std::function<VoidOrErrStr ( STEPControl_Read
     return result;
 }
 
+#ifndef MRMESH_OPENCASCADE_USE_XDE
 Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<VoidOrErrStr ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
 {
     MR_TIMER
@@ -784,8 +783,9 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Voi
 
     return loader.rootObject();
 }
+#endif
 
-#if STEPCAFCONTROL_SUPPORT
+#ifdef MRMESH_OPENCASCADE_USE_XDE
 Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<VoidOrErrStr ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
 {
     MR_TIMER
@@ -872,7 +872,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( const std::filesystem::path
 #endif
         ;
     }, settings )
-#if !STEPCAFCONTROL_SUPPORT
+#ifndef MRMESH_OPENCASCADE_USE_XDE
     .and_then( [&] ( std::shared_ptr<Object> result ) -> Expected<std::shared_ptr<Object>>
     {
         result->setName( utf8string( path.stem() ) );
@@ -902,7 +902,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( std::istream& in, const Mes
 #endif
         ;
     }, settings )
-#if !STEPCAFCONTROL_SUPPORT
+#ifndef MRMESH_OPENCASCADE_USE_XDE
     .and_then( [&] ( std::shared_ptr<Object> result ) -> Expected<std::shared_ptr<Object>>
     {
         auto counter = 0;

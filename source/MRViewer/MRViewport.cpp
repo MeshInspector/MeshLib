@@ -25,18 +25,36 @@
 #include "MRPch/MRTBB.h"
 
 using VisualObjectTreeDataVector = std::vector<MR::VisualObject*>;
+
 namespace
 {
-void getPickerDataVector( MR::Object& obj, MR::ViewportMask id, VisualObjectTreeDataVector& outVector )
+
+using namespace MR;
+
+void getPickerDataVector( Object& obj, ViewportMask id, VisualObjectTreeDataVector& outVector )
 {
     if ( !obj.isVisible( id ) )
         return;
-    if ( auto visobj = obj.asType<MR::VisualObject>() )
+    if ( auto visobj = obj.asType<VisualObject>() )
         if ( visobj->isPickable( id ) )
             outVector.push_back( {visobj} );
     for ( const auto& child : obj.children() )
         getPickerDataVector( *child, id, outVector );
 }
+
+void getPickerDataVector( Object& obj, ViewportMask id, const Viewport::PickRenderObjectPredicate& predicate, VisualObjectTreeDataVector& outVector )
+{
+    if ( !obj.isVisible( id ) )
+        return;
+
+    if ( auto visObj = obj.asType<VisualObject>() )
+        if ( visObj->isPickable( id ) && predicate( visObj, id ) )
+            outVector.emplace_back( visObj );
+
+    for ( const auto& child : obj.children() )
+        getPickerDataVector( *child, id, predicate, outVector );
+}
+
 }
 
 namespace MR
@@ -71,6 +89,21 @@ void Viewport::clearFramebuffers()
     if ( !viewportGL_.checkInit() )
         viewportGL_.init();
     viewportGL_.fillViewport( viewportRect_, params_.backgroundColor );
+}
+
+ObjAndPick Viewport::pickRenderObject( const PickRenderObjectParams& params )
+{
+    VisualObjectTreeDataVector renderVector;
+    if ( params.predicate )
+        getPickerDataVector( SceneRoot::get(), id, params.predicate, renderVector );
+    else
+        getPickerDataVector( SceneRoot::get(), id, renderVector );
+
+    return pick_render_object(
+        renderVector,
+        params.pickRadius != 0 ? params.pickRadius : getViewerInstance().glPickRadius,
+        params.exactPickFirst
+    );
 }
 
 ObjAndPick Viewport::pick_render_object( uint16_t pickRadius ) const

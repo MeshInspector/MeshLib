@@ -5,7 +5,10 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRSphereObject.h"
 #include "MRMesh/MRObjectMesh.h"
+#include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRPointOnObject.h"
+#include "MRMesh/MRHeapBytes.h"
+#include "MRMesh/MRFinally.h"
 
 namespace MR
 {
@@ -32,6 +35,7 @@ void AddPointActionPickerPoint::action( Type actionType )
     auto& contour = widget_.pickedPoints_[obj_];
     if ( actionType == Type::Undo )
     {
+        widget_.surfacePointWidgetCache_.erase( contour.back()->getPickSphere().get() );
         contour.pop_back();
 
         widget_.highlightLastPoint( obj_ );
@@ -81,7 +85,9 @@ void RemovePointActionPickerPoint::action( Type actionType )
     }
     else
     {
-        contour.erase( contour.begin() + index_ );
+        auto it = contour.begin() + index_;
+        widget_.surfacePointWidgetCache_.erase( (*it)->getPickSphere().get() );
+        contour.erase( it );
 
         widget_.activeIndex_ = index_;
         widget_.activeObject_ = obj_;
@@ -99,6 +105,7 @@ std::string ChangePointActionPickerPoint::name() const
 {
     return "Move Point " + widget_.params.historySpecification;
 }
+
 void ChangePointActionPickerPoint::action( Type )
 {
     if ( !widget_.isPickerActive_ )
@@ -115,14 +122,12 @@ size_t ChangePointActionPickerPoint::heapBytes() const
     return 0; //this undo action will be deleted in widget disable
 }
 
-void SurfaceContoursWidget::enable( bool isEnaled )
+void SurfaceContoursWidget::enable( bool isEnabled )
 {
-    isPickerActive_ = isEnaled;
+    isPickerActive_ = isEnabled;
     if ( !isPickerActive_ )
-        pickedPoints_.clear();
+        clear();
 }
-
-
 
 std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& pt )
 {
@@ -178,6 +183,36 @@ std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( co
         activeChange_ = false;
         onPointMoveFinish_( obj );
     } );
+
+    if ( surfaceConnectionHolders_.find( obj ) == surfaceConnectionHolders_.end() )
+    {
+        SurfaceConnectionHolder holder;
+        // re-validate the picked points on object's change
+        auto updatePoints = [this, objPtr = std::weak_ptr( obj )] ( std::uint32_t )
+        {
+            if ( auto obj = objPtr.lock() )
+            {
+                auto& points = pickedPoints_[obj];
+                const auto pointCount = points.size();
+                for ( auto i = (int)pointCount - 1; i >= 0; --i )
+                {
+                    auto& point = points[i];
+                    const auto& pos = point->getCurrentPosition();
+                    if ( isPickedPointValid( obj.get(), pos ) )
+                        point->updateCurrentPosition( pos );
+                    else
+                        removePoint( obj, i );
+                }
+            }
+        };
+        if ( const auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( obj ) )
+            holder.onMeshChanged = objMesh->meshChangedSignal.connect( updatePoints );
+        else if ( const auto objPoints = std::dynamic_pointer_cast<ObjectPoints>( obj ) )
+            holder.onPointsChanged = objPoints->pointsChangedSignal.connect( updatePoints );
+        surfaceConnectionHolders_.emplace( obj, std::move( holder ) );
+    }
+
+    surfacePointWidgetCache_.emplace( newPoint->getPickSphere().get() );
 
     return newPoint;
 }
@@ -287,6 +322,7 @@ bool SurfaceContoursWidget::removePoint( const std::shared_ptr<VisualObject>& ob
         {
             AppendHistory<RemovePointActionPickerPoint>( *this, obj, contour[pickedIndex]->getCurrentPosition(), pickedIndex );
         }
+        surfacePointWidgetCache_.erase( contour[pickedIndex]->getPickSphere().get() );
         contour.erase( contour.begin() + pickedIndex );
         activeIndex_ = pickedIndex;
         activeObject_ = obj;
@@ -329,9 +365,21 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
     if ( button != Viewer::MouseButton::Left )
         return false;
 
-    auto allowExactPickFirst = params.surfacePointParams.pickInBackFaceObject;
-    auto [obj, pick] = getViewerInstance().viewport().pick_render_object( allowExactPickFirst );
-
+    Viewport::PickRenderObjectPredicate predicate;
+    if ( params.pickPredicate )
+    {
+        predicate = [&] ( const VisualObject* visObj, ViewportMask mask )
+        {
+            // always keep the picked points pickable
+            if ( surfacePointWidgetCache_.find( visObj ) != surfacePointWidgetCache_.end() )
+                return true;
+            return params.pickPredicate( visObj, mask );
+        };
+    }
+    auto [obj, pick] = getViewerInstance().viewport().pickRenderObject( {
+        .predicate = predicate,
+        .exactPickFirst = params.surfacePointParams.pickInBackFaceObject,
+    } );
     if ( !obj )
         return false;
 
@@ -436,8 +484,21 @@ bool SurfaceContoursWidget::onMouseMove_( int, int )
     if ( pickedPoints_.empty() || activeChange_ )
         return false;
 
-    auto allowExactPickFirst = params.surfacePointParams.pickInBackFaceObject;
-    auto [obj, pick] = getViewerInstance().viewport().pick_render_object( allowExactPickFirst );
+    Viewport::PickRenderObjectPredicate predicate;
+    if ( params.pickPredicate )
+    {
+        predicate = [&] ( const VisualObject* visObj, ViewportMask mask )
+        {
+            // always keep the picked points pickable
+            if ( surfacePointWidgetCache_.find( visObj ) != surfacePointWidgetCache_.end() )
+                return true;
+            return params.pickPredicate( visObj, mask );
+        };
+    }
+    auto [obj, pick] = getViewerInstance().viewport().pickRenderObject( {
+        .predicate = predicate,
+        .exactPickFirst = params.surfacePointParams.pickInBackFaceObject,
+    } );
     if ( !obj )
         return false;
 
@@ -481,14 +542,13 @@ void SurfaceContoursWidget::create(
 
 void SurfaceContoursWidget::clear()
 {
-    if ( params.writeHistory )
-    {
-        SCOPED_HISTORY( "Remove All Point" + params.historySpecification );
-        for ( auto& [obj, contour] : pickedPoints_ )
-            for ( int i = static_cast< int >( contour.size() - 1 ); i >= 0; --i )
-                AppendHistory<RemovePointActionPickerPoint>( *this, obj, contour[i]->getCurrentPosition(), i );
-    }
+    // FIXME: don't record on every call
+    //if ( params.writeHistory )
+    //    AppendHistory<SurfaceContoursWidgetClearAction>( "Clear " + params.historySpecification, *this );
+
     pickedPoints_.clear();
+    surfacePointWidgetCache_.clear();
+    surfaceConnectionHolders_.clear();
     activeIndex_ = 0;
     activeObject_ = nullptr;
 }
@@ -503,13 +563,72 @@ void SurfaceContoursWidget::reset()
         FilterHistoryByCondition( [&] ( const std::shared_ptr<HistoryAction>& action )
         {
             bool res =
-                bool( std::dynamic_pointer_cast< AddPointActionPickerPoint >( action ) ) ||
-                bool( std::dynamic_pointer_cast< RemovePointActionPickerPoint >( action ) ) ||
-                bool( std::dynamic_pointer_cast< ChangePointActionPickerPoint >( action ) );
+                bool( std::dynamic_pointer_cast<AddPointActionPickerPoint>( action ) ) ||
+                bool( std::dynamic_pointer_cast<RemovePointActionPickerPoint>( action ) ) ||
+                bool( std::dynamic_pointer_cast<ChangePointActionPickerPoint>( action ) ) ||
+                bool( std::dynamic_pointer_cast<SurfaceContoursWidgetClearAction>( action ) );
             return res;
         } );
     }
 
     disconnect();
 }
-} // namespace MR 
+
+SurfaceContoursWidgetClearAction::SurfaceContoursWidgetClearAction( std::string name, SurfaceContoursWidget& widget )
+    : name_( std::move( name ) )
+    , widget_( widget )
+{
+    for ( const auto& [obj, contour] : widget_.pickedPoints_ )
+    {
+        ObjectState state;
+        state.objPtr = obj;
+        state.pickedPoints.reserve( contour.size() );
+        for ( const auto& p : contour )
+            state.pickedPoints.emplace_back( p->getCurrentPosition() );
+        states_.emplace_back( std::move( state ) );
+    }
+
+    activeObject_ = widget_.activeObject_;
+    activeIndex_ = widget_.activeIndex_;
+}
+
+void SurfaceContoursWidgetClearAction::action( Type type )
+{
+    if ( !widget_.isPickerActive_ )
+        return;
+
+    const auto prevWriteHistory = widget_.params.writeHistory;
+    widget_.params.writeHistory = false;
+    MR_FINALLY {
+        widget_.params.writeHistory = prevWriteHistory;
+    };
+
+    switch ( type )
+    {
+        case Type::Undo:
+            for ( const auto& state : states_ )
+            {
+                if ( const auto obj = state.objPtr.lock() )
+                {
+                    for ( const auto& p : state.pickedPoints )
+                        widget_.appendPoint( obj, p );
+                }
+            }
+            if ( const auto activeObject = activeObject_.lock() )
+            {
+                widget_.setActivePoint( activeObject, activeIndex_ );
+            }
+            break;
+
+        case Type::Redo:
+            widget_.clear();
+            break;
+    }
+}
+
+size_t SurfaceContoursWidgetClearAction::heapBytes() const
+{
+    return 0; // this undo action will be deleted in widget disable
+}
+
+} // namespace MR

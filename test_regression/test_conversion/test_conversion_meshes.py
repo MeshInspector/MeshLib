@@ -5,6 +5,7 @@ from pathlib import Path
 from helpers.file_helpers import compare_file_with_multiple_references, get_reference_files_list
 
 
+@pytest.mark.smoke
 @pytest.mark.parametrize("test_mesh_name", ["fox_geometrik"])
 @pytest.mark.parametrize("ext", ["stl", "obj", "off", "ply", "ctm"])
 @pytest.mark.parametrize("use_fileHandler", [True, False])
@@ -39,6 +40,7 @@ def test_conversion_from_mrmesh(test_mesh_name, ext, use_fileHandler, tmp_path):
     assert is_same_found, f"Converted file doesn't match to any reference"
 
 
+@pytest.mark.smoke
 @pytest.mark.parametrize("test_mesh_name", ["fox_geometrik"])
 @pytest.mark.parametrize("ext", ["stl", "obj", "off", "ply", "ctm"])
 @pytest.mark.parametrize("use_fileHandler", [True, False])

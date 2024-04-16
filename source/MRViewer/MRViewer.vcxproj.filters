@@ -364,6 +364,9 @@
     <ClCompile Include="MRRenderDefaultObjects.cpp">
       <Filter>Render\Implementations</Filter>
     </ClCompile>
+    <ClCompile Include="MRNameTagClickListener.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -716,6 +719,12 @@
     <ClInclude Include="MRVisualSubfeatures.h">
       <Filter>Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="MRSignalCombiners.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRNameTagClickListener.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />
@@ -846,6 +855,24 @@
       <Filter>resource\object_icons\X3</Filter>
     </Image>
     <Image Include="resource\object_icons\X3\SphereObject.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\AngleMeasurementObject.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\DistanceMeasurementObject.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\RadiusMeasurementObject.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\AngleMeasurementObject.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\DistanceMeasurementObject.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\RadiusMeasurementObject.png">
       <Filter>resource\object_icons\X3</Filter>
     </Image>
   </ItemGroup>

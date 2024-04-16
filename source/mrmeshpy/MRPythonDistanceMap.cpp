@@ -70,7 +70,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
            "MeshPart - input 3d model\n"
            "general call. You could customize params manually" );
 
-    m.def( "distanceMapToMesh", &MR::distanceMapToMesh, pybind11::arg( "mp" ), pybind11::arg( "params" ),
+    m.def( "distanceMapToMesh", 
+        MR::decorateExpected( &MR::distanceMapToMesh ),
+        pybind11::arg( "mp" ), 
+        pybind11::arg( "toWorldStruct" ),
+        pybind11::arg( "cb" ) = MR::ProgressCallback{},
            "converts distance map back to the mesh fragment with presented params" );
 
     m.def( "saveDistanceMapToImage",

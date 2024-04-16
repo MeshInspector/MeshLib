@@ -283,7 +283,7 @@ MRMESH_API void distanceMapFromContours( DistanceMap & distMap, const Polyline2&
     const ContourToDistanceMapParams& params, float offsetInside = 0.f );
 
 /// converts distance map back to the mesh fragment with presented params
-[[nodiscard]] MRMESH_API Mesh distanceMapToMesh( const DistanceMap& distMap, const DistanceMapToWorld& toWorldStruct );
+[[nodiscard]] MRMESH_API Expected<Mesh, std::string> distanceMapToMesh( const DistanceMap& distMap, const DistanceMapToWorld& toWorldStruct, ProgressCallback cb = {} );
 
 /// saves distance map to monochrome image in scales of gray:
 /// \param threshold - threshold of maximum values [0.; 1.]. invalid pixel set as 0. (black)

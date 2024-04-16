@@ -56,21 +56,24 @@ void AncillaryLabel::setPosition( const Vector3f& pos )
     obj->setLabel( PositionedText{ obj->getLabel().text, pos } );
 }
 
-void AncillaryImGuiLabel::make( Object& parent, const PositionedText& text )
+void AncillaryImGuiLabel::make( std::shared_ptr<Object> parent, const PositionedText& text )
 {
-    reset();
     make( text );
-    parentXfConnection_ = parent.worldXfChangedSignal.connect( [&] ()
+    parent_ = parent;
+    if ( !parent )
+        return;
+    parentXfConnection_ = parent->worldXfChangedSignal.connect( [&, p = parent.get()] ()
     {
-        labelData_.position = parent.worldXf()( labelData_.position );
+        labelData_.position = p->worldXf()( localPos_ );
     } );
-    labelData_.position = parent.worldXf()( labelData_.position );
+    labelData_.position = parent->worldXf()( localPos_ );
 }
 
 void AncillaryImGuiLabel::make( const PositionedText& text )
 {
     reset();
     labelData_ = text;
+    localPos_ = text.position;
     // these parameters emulate plugins
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
 }
@@ -78,6 +81,7 @@ void AncillaryImGuiLabel::make( const PositionedText& text )
 void AncillaryImGuiLabel::reset()
 {
     disconnect();
+    parent_.reset();
     if ( parentXfConnection_.connected() )
         parentXfConnection_.disconnect();
     labelData_ = {};
@@ -87,10 +91,14 @@ void AncillaryImGuiLabel::preDraw_()
 {
     if ( labelData_.text.empty() )
         return;
+    std::shared_ptr<Object> parent = parent_.lock();
+    ViewportMask viewports = parent ? parent->globalVisibilityMask() : ViewportMask::all();
+    if ( viewports == ViewportMask() )
+        return;
     auto menu = getViewerInstance().getMenuPlugin();
     if ( !menu )
         return;
-    
+
     ImGuiMeasurementIndicators::Params params;
     if ( !params.list )
         return;
@@ -100,18 +108,21 @@ void AncillaryImGuiLabel::preDraw_()
 
     for ( const auto& vp : getViewerInstance().viewport_list )
     {
+        if ( !viewports.contains( vp.id ) )
+            continue;
+
         auto rect = vp.getViewportRect();
         ImVec2 minRect( rect.min.x,
                  getViewerInstance().framebufferSize.y - ( rect.min.y + height( rect ) ) );
         ImVec2 maxRect( rect.min.x + width( rect ),
                  getViewerInstance().framebufferSize.y - rect.min.y );
 
-
         Vector3f coord = vp.projectToViewportSpace( labelData_.position );
         auto viewerCoord = getViewerInstance().viewportToScreen( coord, vp.id );
 
         params.list->PushClipRect( minRect, maxRect );
-        ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, scaling, params, ImVec2( viewerCoord.x, viewerCoord.y ), sWithI );
+        ImGuiMeasurementIndicators::text( ImGuiMeasurementIndicators::Element::both, scaling, params,
+            ImVec2( viewerCoord.x, viewerCoord.y ), sWithI, {}, pivot_ );
         params.list->PopClipRect();
     }
 }

@@ -99,12 +99,25 @@ std::vector<std::string> ObjectDistanceMap::getInfoLines() const
     return res;
 }
 
-void ObjectDistanceMap::setDistanceMap( const std::shared_ptr<DistanceMap>& dmap, const DistanceMapToWorld& params )
+bool ObjectDistanceMap::setDistanceMap( const std::shared_ptr<DistanceMap>& dmap, const DistanceMapToWorld& params, bool updateMesh, ProgressCallback cb )
 {
-    dmap_ = dmap;
-    toWorldParams_ = params;
+    return construct_( dmap, params, updateMesh, cb );
+}
 
-    construct_();
+std::shared_ptr<Mesh> ObjectDistanceMap::calculateMesh( ProgressCallback cb ) const
+{
+    auto res = distanceMapToMesh( *dmap_, toWorldParams_, cb );
+    if ( !res.has_value() )
+    {
+        return nullptr;
+    }
+    return std::make_shared<Mesh>( res.value() );
+}
+
+void ObjectDistanceMap::updateMesh( const std::shared_ptr<Mesh>& mesh )
+{
+    mesh_ = mesh;
+    setDirtyFlags( DIRTY_ALL );
 }
 
 const DistanceMapToWorld& ObjectDistanceMap::getToWorldParameters() const
@@ -146,7 +159,7 @@ void ObjectDistanceMap::deserializeFields_( const Json::Value& root )
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
         setDefaultSceneProperties_();
 
-    construct_();
+    construct_( dmap_, toWorldParams_ );
 }
 
 VoidOrErrStr ObjectDistanceMap::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
@@ -177,13 +190,26 @@ void ObjectDistanceMap::setDefaultColors_()
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectDistanceMap ), false );
 }
 
-void ObjectDistanceMap::construct_()
+bool ObjectDistanceMap::construct_( const std::shared_ptr<DistanceMap>& dmap, const DistanceMapToWorld& params, bool needUpdateMesh, ProgressCallback cb )
 {
-    if ( !dmap_ )
-        return;
+    if ( !dmap )
+        return false;
 
-    mesh_ = std::make_shared<Mesh>( distanceMapToMesh( *dmap_, toWorldParams_ ) );
-    setDirtyFlags( DIRTY_ALL );
+    if ( needUpdateMesh )
+    {
+        auto mesh = calculateMesh( cb );
+        if ( !mesh )
+        {
+            return false;
+        }
+
+        updateMesh( mesh );
+    }
+
+    dmap_ = dmap;
+    toWorldParams_ = params;
+
+    return true;
 }
 
 void ObjectDistanceMap::setDefaultSceneProperties_()

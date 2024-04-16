@@ -1838,7 +1838,7 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
             ImGui::PushFont( iconsFont );
 
         auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
-        bool drawApplyBtn = numButtons >=3.0f && 
+        bool drawApplyBtn = numButtons >=3.0f &&
             item != RibbonSchemaHolder::schema().items.end() &&
             item->second.item->isAvailable( selectedObjectsCache_ ).empty();
 
@@ -2199,7 +2199,7 @@ void RibbonMenu::drawLastOperationTimeWindow_()
         openedLastOperationTimeTimer_ = 10.0f; // 10 seconds should be enough
         return;
     }
-    
+
     if ( openedLastOperationTimeTimer_ < 0.0f )
         return;
 

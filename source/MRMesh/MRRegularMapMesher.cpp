@@ -76,19 +76,21 @@ Expected<Mesh, std::string> RegularMapMesher::createMesh() const
     if ( distances_.size() != refSize )
         return unexpected( "Distances size is not equal width*height" );
 
-
-    auto mesh = makeRegularGridMesh( width_, height_, [&]( size_t x, size_t y )
+    auto mesh = makeRegularGridMesh( width_, height_, [&] ( size_t x, size_t y )
     {
         return distances_[x + y * width_] != 0.0;
     },
-                                [&]( size_t x, size_t y )
+                                [&] ( size_t x, size_t y )
     {
         VertId idx = VertId( x + y * width_ );
         Vector3f org = surfacePC_->points[idx];
-        Vector3f dest = directionsPC_->points[VertId(x)];
+        Vector3f dest = directionsPC_->points[VertId( x )];
         return org + ( dest - org ).normalized() * ( 1.0f / distances_[idx] );
     } );
-    mesh.topology.flipOrientation();
+
+    if( mesh )
+        mesh.value().topology.flipOrientation();
+
     return mesh;
 }
 

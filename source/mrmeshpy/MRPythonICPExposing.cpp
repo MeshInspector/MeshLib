@@ -49,33 +49,48 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def_readwrite( "fixedRotationAxis", &MR::ICPProperties::fixedRotationAxis, "If this vector is not zero then rotation is allowed relative to this axis only" ).
         def_readwrite( "iterLimit", &MR::ICPProperties::iterLimit, "maximum iterations" ).
         def_readwrite( "badIterStopCount", &MR::ICPProperties::badIterStopCount, "maximum iterations without improvements" ).
-        def_readwrite( "exitVal", &MR::ICPProperties::exitVal, "Algorithm target root-mean-square distance. As soon as it is reached, the algorithm stops." );
+        def_readwrite( "exitVal", &MR::ICPProperties::exitVal, "Algorithm target root-mean-square distance. As soon as it is reached, the algorithm stops." ).
+        def_readwrite( "mutualClosest", &MR::ICPProperties::mutualClosest, "A pair of points is formed only if both points in the pair are mutually closest (reciprocity test passed)." );
         
     pybind11::class_<MR::ICP>( m, "ICP", "This class allows to match two meshes with almost same geometry throw ICP point-to-point or point-to-plane algorithms" ).
-        def( pybind11::init<const MR::Mesh&, const MR::Mesh&, const MR::AffineXf3f&, const MR::AffineXf3f&, const MR::VertBitSet&>(),
-            pybind11::arg("floatingMesh"), pybind11::arg( "referenceMesh" ), pybind11::arg( "fltMeshXf" ), pybind11::arg( "refMeshXf" ), pybind11::arg( "floatingMeshBitSet" ),
-            "xf parameters should represent current transformations of meshes\n"
-            "fltMeshXf - transform from the local floatingMesh basis to the global\n"
-            "refMeshXf - transform from the local referenceMesh basis to the global\n"
-            "floatingMeshBitSet - allows to take exact set of vertices from the mesh" ).
+        def( pybind11::init<const MR::Mesh&, const MR::Mesh&, const MR::AffineXf3f&, const MR::AffineXf3f&, const MR::VertBitSet&, const MR::VertBitSet&>(),
+            pybind11::arg( "flt" ), pybind11::arg( "ref" ),
+            pybind11::arg( "fltXf" ), pybind11::arg( "refXf" ),
+            pybind11::arg( "fltSamples" ) = MR::VertBitSet{},
+            pybind11::arg( "refSamples" ) = MR::VertBitSet{},
+            "Constructs ICP framework with given sample points on both objects\n"
+            "flt - floating object\n"
+            "ref - reference object\n"
+            "fltXf - transformation from floating object space to global space\n"
+            "refXf - transformation from reference object space to global space\n"
+            "fltSamples - samples on floating object to find projections on the reference object during the algorithm\n"
+            "refSamples - samples on reference object to find projections on the floating object during the algorithm" ).
         def( pybind11::init<const MR::Mesh&, const MR::Mesh&, const MR::AffineXf3f&, const MR::AffineXf3f&, float>(), 
-            pybind11::arg( "floatingMesh" ), pybind11::arg( "referenceMesh" ), pybind11::arg( "fltMeshXf" ), pybind11::arg( "refMeshXf" ), pybind11::arg( "floatSamplingVoxelSize" ),
-            "xf parameters should represent current transformations of meshes\n"
-            "fltMeshXf - transform from the local floatingMesh basis to the global\n"
-            "refMeshXf - transform from the local referenceMesh basis to the global\n"
-            "floatSamplingVoxelSize = positive value here defines voxel size, and only one vertex per voxel will be selected" ).
+            pybind11::arg( "flt" ), pybind11::arg( "ref" ),
+            pybind11::arg( "fltXf" ), pybind11::arg( "refXf" ),
+            pybind11::arg( "samplingVoxelSize" ),
+            "Constructs ICP framework with automatic points sampling on both objects\n"
+            "flt - floating object\n"
+            "ref - reference object\n"
+            "fltXf - transformation from floating object space to global space\n"
+            "refXf - transformation from reference object space to global space\n"
+            "samplingVoxelSize - approximate distance between samples on each of two objects" ).
         def( "setParams", &MR::ICP::setParams, pybind11::arg( "prop" ), "tune algorithm params before run calculateTransformation()" ).
         def( "setCosineLimit", &MR::ICP::setCosineLimit, pybind11::arg( "cos" ) ).
         def( "setDistanceLimit", &MR::ICP::setDistanceLimit, pybind11::arg( "dist" ) ).
         def( "setBadIterCount", &MR::ICP::setBadIterCount, pybind11::arg( "iter" ) ).
         def( "setFarDistFactor", &MR::ICP::setFarDistFactor, pybind11::arg( "factor" ) ).
-        def( "recomputeBitSet", &MR::ICP::recomputeBitSet, pybind11::arg( "floatSamplingVoxelSize" ) ).
+        def( "sampleFltPoints", &MR::ICP::sampleFltPoints, pybind11::arg( "samplingVoxelSize" ) ).
+        def( "sampleRefPoints", &MR::ICP::sampleRefPoints, pybind11::arg( "samplingVoxelSize" ) ).
+        def( "samplePoints", &MR::ICP::samplePoints, pybind11::arg( "samplingVoxelSize" ) ).
+        def( "recomputeBitSet", &MR::ICP::sampleFltPoints, pybind11::arg( "floatSamplingVoxelSize" ) ).
         def( "getParams", &MR::ICP::getParams, pybind11::return_value_policy::copy ).
         def( "getLastICPInfo", &MR::ICP::getLastICPInfo, "returns status info string" ).
         def( "getNumActivePairs", &MR::ICP::getNumActivePairs, "computes the number of active point pairs" ).
         def( "getMeanSqDistToPoint", &MR::ICP::getMeanSqDistToPoint, "computes root-mean-square deviation between points" ).
         def( "getMeanSqDistToPlane", &MR::ICP::getMeanSqDistToPlane, "computes root-mean-square deviation from points to target planes" ).
-        def( "getFlt2RefPairs", &MR::ICP::getFlt2RefPairs, pybind11::return_value_policy::copy, "returns current pairs formed from samples on floating and projections on reference" ).
+        def( "getFlt2RefPairs", &MR::ICP::getFlt2RefPairs, pybind11::return_value_policy::copy, "returns current pairs formed from samples on floating object and projections on reference object" ).
+        def( "getRef2FltPairs", &MR::ICP::getRef2FltPairs, pybind11::return_value_policy::copy, "returns current pairs formed from samples on reference object and projections on floating object" ).
         def( "calculateTransformation", &MR::ICP::calculateTransformation, "runs ICP algorithm given input objects, transformations, and parameters; "
             "returns adjusted transformation of the floating object to match reference object" ).
         def( "autoSelectFloatXf", &MR::ICP::autoSelectFloatXf, "automatically selects initial transformation for the floating object based on covariance matrices of both floating and reference objects; applies the transformation to the floating object and returns it" ).

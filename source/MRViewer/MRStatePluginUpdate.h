@@ -71,6 +71,21 @@ private:
     std::vector<boost::signals2::scoped_connection> connections_;
 };
 
+// Helper class to close plugin if any of active object points was changed
+// inherit your plugin from it
+class MRVIEWER_CLASS PluginCloseOnChangePointCloud : public virtual IPluginUpdate
+{
+protected:
+    MRVIEWER_API virtual void onPluginEnable_() override;
+    MRVIEWER_API virtual void onPluginDisable_() override;
+    MRVIEWER_API virtual bool shouldClose_() const override;
+    // plugin can return the value to false after points change if it changed the mesh by itself and does not want to close
+    bool pointCloudChanged_{ false };
+
+private:
+    std::vector<boost::signals2::scoped_connection> pointCloudChangedConnections_;
+};
+
 // Runs all preDrawUpdate and all shouldClose_ checks
 // shouldClose_ returns true if at least on of checks was ture 
 template<typename ...Updates>

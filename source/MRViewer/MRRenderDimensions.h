@@ -62,7 +62,7 @@ struct AngleParams
     bool isConical = false;
 
     // Whether we should draw a ray from the center point to better visualize the angle. Enable this if there isn't already a line object there.
-    std::array<bool, 2> shouldVisualizeRay{};
+    std::array<bool, 2> shouldVisualizeRay{ true, true };
 };
 
 class AngleTask : public BasicUiRenderTask
@@ -86,6 +86,11 @@ struct LengthParams
 
     // Whether the distance should be displayed as a negative one.
     bool drawAsNegative = false;
+
+    // If true, will also show deltas per coordinate axis.
+    bool showPerCoordDeltas = false;
+    // If true, will remove the sign from the per-coord deltas. Only makes sense when `showPerCoordDeltas == true`.
+    bool perCoordDeltasAreAbsolute = false;
 };
 
 class LengthTask : public BasicUiRenderTask

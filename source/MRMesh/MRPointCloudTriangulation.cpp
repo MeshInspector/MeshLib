@@ -66,7 +66,7 @@ std::optional<Mesh> PointCloudTriangulator::triangulate( ProgressCallback progre
     if ( pointCloud_.hasNormals() )
         findRepeatedOrientedTriangles( localTriangulations, &t3, &t2 );
     else
-        autoOrientLocalTriangulations( pointCloud_, localTriangulations, subprogress( progressCb, 0.3f, 0.5f ), &t3, &t2 );
+        autoOrientLocalTriangulations( pointCloud_, localTriangulations, pointCloud_.validPoints, subprogress( progressCb, 0.3f, 0.5f ), &t3, &t2 );
 
     return makeMesh_( std::move( t3 ), std::move( t2 ), subprogress( progressCb, 0.5f, 1.0f ) );
 }

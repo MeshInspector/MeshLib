@@ -1,9 +1,12 @@
+import pytest
+
 from module_helper import *
 from pathlib import Path
 from constants import test_files_path, DEFAULT_RHAUSDORF_THRESHOLD
 from helpers.meshlib_helpers import relative_hausdorff
 
 
+@pytest.mark.smoke
 def test_boolean_sample(tmp_path):
     input_folder = Path(test_files_path) / "doc_samples" / "boolean"
 

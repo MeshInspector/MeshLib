@@ -12,9 +12,6 @@
 namespace MR
 {
 
-namespace
-{
-
 void setupPairs( PointPairs & pairs, const VertBitSet& srcSamples )
 {
     pairs.vec.clear();
@@ -35,7 +32,6 @@ size_t deactivateFarPairs( PointPairs & pairs, float maxDistSq )
     return cnt0 - pairs.active.count();
 }
 
-} // anonymous namespace
 
 ICP::ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fltXf, const AffineXf3f& refXf,
     const VertBitSet& fltSamples, const VertBitSet& refSamples )
@@ -43,8 +39,8 @@ ICP::ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fl
     , ref_( ref )
 {
     setXfs( fltXf, refXf );
-    setupPairs( flt2refPairs_, fltSamples );
-    setupPairs( ref2fltPairs_, refSamples );
+    MR::setupPairs( flt2refPairs_, fltSamples );
+    MR::setupPairs( ref2fltPairs_, refSamples );
 }
 
 ICP::ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fltXf, const AffineXf3f& refXf,
@@ -112,14 +108,15 @@ void ICP::sampleRefPoints( float samplingVoxelSize )
 void ICP::updatePointPairs()
 {
     MR_TIMER
-    updatePointPairs_( flt2refPairs_, flt_, fltXf_, ref_, refXf_ );
-    updatePointPairs_( ref2fltPairs_, ref_, refXf_, flt_, fltXf_ );
+    MR::updatePointPairs( flt2refPairs_, flt_, fltXf_, ref_, refXf_, prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
+    MR::updatePointPairs( ref2fltPairs_, ref_, refXf_, flt_, fltXf_, prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
     deactivatefarDistPairs_();
 }
 
-void ICP::updatePointPairs_( PointPairs & pairs,
+void updatePointPairs( PointPairs & pairs,
     const MeshOrPoints & src, const AffineXf3f & srcXf,
-    const MeshOrPoints & tgt, const AffineXf3f & tgtXf )
+    const MeshOrPoints& tgt, const AffineXf3f& tgtXf,
+    float cosTreshold, float distThresholdSq, bool mutualClosest )
 {
     MR_TIMER
     const auto src2tgtXf = tgtXf.inverse() * srcXf;
@@ -172,12 +169,12 @@ void ICP::updatePointPairs_( PointPairs & pairs,
         vp.normalsAngleCos = ( prj.normal && srcNormals ) ? dot( vp.tgtNorm, vp.srcNorm ) : 1.0f;
         vp.tgtOnBd = prj.isBd;
         res = vp;
-        if ( prj.isBd || vp.normalsAngleCos < prop_.cosTreshold || vp.distSq > prop_.distThresholdSq )
+        if ( prj.isBd || vp.normalsAngleCos < cosTreshold || vp.distSq > distThresholdSq )
         {
             pairs.active.reset( idx );
             return;
         }
-        if ( prop_.mutualClosest )
+        if ( mutualClosest )
         {
             // keep prj.distSq
             prj.closestVert = res.srcVertId;
@@ -199,8 +196,8 @@ void ICP::deactivatefarDistPairs_()
         if ( maxDistSq >= prop_.distThresholdSq )
             break;
 
-        if ( deactivateFarPairs( flt2refPairs_, maxDistSq ) +
-             deactivateFarPairs( ref2fltPairs_, maxDistSq ) <= 0 )
+        if ( MR::deactivateFarPairs( flt2refPairs_, maxDistSq ) +
+             MR::deactivateFarPairs( ref2fltPairs_, maxDistSq ) <= 0 )
             break; // nothing was deactivated
     }
 }
@@ -338,7 +335,7 @@ AffineXf3f ICP::calculateTransformation()
 {
     float minDist = std::numeric_limits<float>::max();
     int badIterCount = 0;
-    resultType_ = ExitType::MaxIterations;
+    resultType_ = ICPExitType::MaxIterations;
     for ( iter_ = 1; iter_ <= prop_.iterLimit; ++iter_ )
     {
         updatePointPairs();
@@ -346,14 +343,14 @@ AffineXf3f ICP::calculateTransformation()
             || prop_.method == ICPMethod::PointToPoint;
         if ( !( pt2pt ? p2ptIter_() : p2plIter_() ) )
         {
-            resultType_ = ExitType::NotFoundSolution;
+            resultType_ = ICPExitType::NotFoundSolution;
             break;
         }
 
         const float curDist = pt2pt ? getMeanSqDistToPoint() : getMeanSqDistToPlane();
         if ( prop_.exitVal > curDist )
         {
-            resultType_ = ExitType::StopMsdReached;
+            resultType_ = ICPExitType::StopMsdReached;
             break;
         }
 
@@ -367,7 +364,7 @@ AffineXf3f ICP::calculateTransformation()
         {
             if ( badIterCount >= prop_.badIterStopCount )
             {
-                resultType_ = ExitType::MaxBadIterations;
+                resultType_ = ICPExitType::MaxBadIterations;
                 break;
             }
             badIterCount++;
@@ -431,19 +428,19 @@ std::string ICP::getLastICPInfo() const
     std::string result = "Performed " + std::to_string( iter_ ) + " iterations.\n";
     switch ( resultType_ )
     {
-    case MR::ICP::ExitType::NotFoundSolution:
+    case MR::ICPExitType::NotFoundSolution:
         result += "No solution found.";
         break;
-    case MR::ICP::ExitType::MaxIterations:
+    case MR::ICPExitType::MaxIterations:
         result += "Limit of iterations reached.";
         break;
-    case MR::ICP::ExitType::MaxBadIterations:
+    case MR::ICPExitType::MaxBadIterations:
         result += "No improvement iterations limit reached.";
         break;
-    case MR::ICP::ExitType::StopMsdReached:
+    case MR::ICPExitType::StopMsdReached:
         result += "Required mean square deviation reached.";
         break;
-    case MR::ICP::ExitType::NotStarted:
+    case MR::ICPExitType::NotStarted:
     default:
         result = "Not started yet.";
         break;

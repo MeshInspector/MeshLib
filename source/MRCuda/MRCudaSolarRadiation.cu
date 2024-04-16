@@ -32,7 +32,7 @@ __global__ void rayKernel( const Node3* nodes, const float3* meshPoints, const F
         if ( testBit( validSamples, sample ) )
         {
             const size_t patch = index % precCount;
-            const auto intersectRes = rayMeshIntersect( nodes, meshPoints, faces, samples[sample], 0, FLT_MAX, precs[patch] );
+            const auto intersectRes = rayMeshIntersect( nodes, meshPoints, faces, samples[sample], 0, FLT_MAX, precs[patch], bool( outIntersections ) );
             if ( intersectRes.distanceAlongLine > 0 )
             {
                 block |= currentBit;         
@@ -65,7 +65,7 @@ __global__ void radiationKernel( const Node3* nodes, const float3* meshPoints, c
     float totalRadiation = 0;
     for ( int i = 0; i < precCount; ++i )
     {
-        const auto intersectRes = rayMeshIntersect( nodes, meshPoints, faces, samplePt, 0, FLT_MAX, precs[i] );
+        const auto intersectRes = rayMeshIntersect( nodes, meshPoints, faces, samplePt, 0, FLT_MAX, precs[i], bool( outIntersections ) );
         if ( intersectRes.distanceAlongLine < 0 )
             totalRadiation += skyPatches[i].radiation;
         else if ( outIntersections )

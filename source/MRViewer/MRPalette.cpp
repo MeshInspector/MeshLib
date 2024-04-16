@@ -8,6 +8,8 @@
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRDirectory.h"
+#include "MRMesh/MRTimer.h"
+#include "MRMesh/MRBitSetParallelFor.h"
 #include "MRPch/MRSpdlog.h"
 #include <string>
 #include <fstream>
@@ -231,7 +233,7 @@ void Palette::setZeroCentredLabels_()
         // push intermediate values
         while ( value < max )
         {
-            const float pos = 1.f - getUVcoord( value ).y;
+            const float pos = 1.f - getRelativePos( value );
             if ( pos >= posMin && pos <= posMax )
                 labels_.push_back( Label( pos, getStringValue( value ) ) );
             value += step;
@@ -475,27 +477,51 @@ Color Palette::getColor( float val )
     return Color();
 }
 
-UVCoord Palette::getUVcoord( float val )
+float Palette::getRelativePos( float val ) const
 {
     if ( val <= parameters_.ranges[0] )
-        return UVCoord{ 0.5f, 0.f };
+        return 0.f;
     if ( val >= parameters_.ranges.back() )
-        return UVCoord{ 0.5f, 1.f };
+        return 1.f;
 
     if ( parameters_.ranges.size() == 2 )
-        return UVCoord{ 0.5f, ( val - parameters_.ranges[0] ) / ( parameters_.ranges[1] - parameters_.ranges[0] ) };
+        return ( val - parameters_.ranges[0] ) / ( parameters_.ranges[1] - parameters_.ranges[0] );
     else if ( parameters_.ranges.size() == 4 )
     {
         if ( val >= parameters_.ranges[1] && val <= parameters_.ranges[2] )
-            return UVCoord{ 0.5f, 0.5f };
+            return 0.5f;
 
         if ( val < parameters_.ranges[1] )
-            return UVCoord{ 0.5f, ( val - parameters_.ranges[0] ) / ( parameters_.ranges[1] - parameters_.ranges[0] ) * 0.5f };
+            return ( val - parameters_.ranges[0] ) / ( parameters_.ranges[1] - parameters_.ranges[0] ) * 0.5f;
         else
-            return UVCoord{ 0.5f, ( val - parameters_.ranges[2] ) / ( parameters_.ranges[3] - parameters_.ranges[2] ) * 0.5f + 0.5f };
+            return ( val - parameters_.ranges[2] ) / ( parameters_.ranges[3] - parameters_.ranges[2] ) * 0.5f + 0.5f;
     }
-    return UVCoord{ 0.5f, 0.5f };
+    return 0.5f;
+}
 
+VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region ) const
+{
+    MR_TIMER
+
+    // for FilterType::Discrete, start and end are at the boundary of texels to have equal distance between all colors
+    float texStart = 0, texEnd = 1;
+    if ( texture_.filter == FilterType::Linear )
+    {
+        // start and end are in the middle of texels with pure colors
+        const auto sz = float( texture_.pixels.size() );
+        texStart = 0.5f / sz;
+        texEnd = 1.0f - 0.5f / sz;
+    }
+    float texLen = texEnd - texStart;
+
+    VertUVCoords res;
+    res.resizeNoInit( region.size() );
+    BitSetParallelFor( region, [&] ( VertId v )
+    {
+        res[v] = UVCoord{ 0.5f, texLen * getRelativePos( values[v] ) + texStart };
+    } );
+
+    return res;
 }
 
 const Palette::Parameters& Palette::getParameters() const
@@ -549,7 +575,7 @@ void Palette::updateCustomLabels_()
     labels_ = customLabels_;
     for ( auto& label : labels_ )
     {
-        label.value = 1.f - getUVcoord( label.value ).y;
+        label.value = 1.f - getRelativePos( label.value );
     }
     sortLabels_();
 }

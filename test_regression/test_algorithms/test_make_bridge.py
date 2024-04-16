@@ -8,6 +8,7 @@ import meshlib.mrmeshpy as mlib
 import pytest
 
 
+@pytest.mark.smoke
 @pytest.mark.parametrize("input_case", ["torus", "crocodile"])
 def test_make_bridge_edge(input_case, tmp_path):
     """
@@ -39,6 +40,7 @@ def test_make_bridge_edge(input_case, tmp_path):
         compare_meshes_similarity(mesh, ref_mesh)
 
 
+@pytest.mark.smoke
 @pytest.mark.parametrize("input_case", ["torus", "crocodile"])
 def test_make_bridge(input_case, tmp_path):
     """

@@ -180,7 +180,7 @@ def test_offset_shell(tmp_path, test_params):
          "mode": "Sharpening"
      }
      },
-    {"name": "general_smooth_OpenVdb",
+    pytest.param({"name": "general_smooth_OpenVdb",
      "mesh": "morphed.ctm",
      "params": {
          "signDetectionMode": "OpenVDB",
@@ -188,7 +188,7 @@ def test_offset_shell(tmp_path, test_params):
          "voxelSize": 0.2,
          "mode": "Smooth"
      }
-     },
+     }, marks=pytest.mark.smoke),
     {"name": "general_Standard_ProjectionNormal",
      "mesh": "morphed.ctm",
      "params": {

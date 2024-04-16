@@ -64,6 +64,10 @@ jobs:
           MR_VERSION: ${{ inputs.app_version }}
           MR_USE_CPP_23: "ON"
 
+      - name: Run Start-and-Exit Tests
+        if: ${{ matrix.os == 'arm' }}
+        run: MR_LOCAL_RESOURCES=1 ./build/Release/bin/MeshViewer -hidden -noEventLoop
+
       - name: Unit Tests
         run: ./build/Release/bin/MRTest
 
@@ -92,9 +96,11 @@ jobs:
         run: aws s3 sync ${{inputs.autotest_data_s3_url}} ./test_data --delete --no-sign-request --size-only
 
       - name: Python Regression Tests
-        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
+        env:
+          SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
+        if: ${{ env.INTERNAL_BUILD == 'true' }}
         working-directory: ./build/Release/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
+        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}}
 
       - name: Copy test artifacts to S3
         if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}

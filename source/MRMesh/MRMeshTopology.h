@@ -250,8 +250,9 @@ public:
     [[nodiscard]] MRMESH_API std::vector<EdgeLoop> findBoundary( const FaceBitSet * region = nullptr ) const;
     /// returns one edge with no valid left face for every boundary in the mesh
     [[nodiscard]] MRMESH_API std::vector<EdgeId> findHoleRepresentiveEdges() const;
-    /// returns the number of hole loops in the mesh
-    [[nodiscard]] MRMESH_API int findNumHoles() const;
+    /// returns the number of hole loops in the mesh;
+    /// \param holeRepresentativeEdges optional output of the smallest edge id with no valid left face in every hole
+    [[nodiscard]] MRMESH_API int findNumHoles( EdgeBitSet * holeRepresentativeEdges = nullptr ) const;
     /// returns full edge-loop of left face from (e) starting from (e) itself
     [[nodiscard]] MRMESH_API EdgeLoop getLeftRing( EdgeId e ) const;
     /// returns full edge-loops of left faces from every edge in (es);
@@ -375,7 +376,7 @@ public:
     /// 1) numValidVerts_ and validVerts_ from edgePerVertex_
     /// 2) numValidFaces_ and validFaces_ from edgePerFace_
     /// and activates their auto-update
-    MRMESH_API void computeValidsFromEdges();
+    MRMESH_API bool computeValidsFromEdges( ProgressCallback cb = {} );
     /// stops updating validVerts(), validFaces(), numValidVerts(), numValidFaces() for parallel processing of mesh parts
     MRMESH_API void stopUpdatingValids();
     /// returns whether the methods validVerts(), validFaces(), numValidVerts(), numValidFaces() can be called
@@ -385,10 +386,10 @@ public:
     MRMESH_API void preferEdges( const UndirectedEdgeBitSet & stableEdges );
 
     // constructs triangular grid mesh topology in parallel
-    MRMESH_API void buildGridMesh( const GridSettings & settings );
+    MRMESH_API bool buildGridMesh( const GridSettings& settings, ProgressCallback cb = {} );
 
     /// verifies that all internal data structures are valid
-    MRMESH_API bool checkValidity() const;
+    MRMESH_API bool checkValidity( ProgressCallback cb = {} ) const;
 
 private:
     friend class MeshDiff;

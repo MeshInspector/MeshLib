@@ -1,8 +1,11 @@
+import pytest
+
 from module_helper import *
 from pathlib import Path
 from constants import test_files_path
 
 
+@pytest.mark.smoke
 def test_using_plotly_sample(tmp_path):
     input_folder = Path(test_files_path) / "doc_samples" / "plotly"
 

@@ -88,8 +88,11 @@ public:
         return texture_;
     };
 
-    // get UV coordinate in palette for given value
-    MRVIEWER_API UVCoord getUVcoord( float val );
+    // get relative position in [0,1], where 0 is for minimum and 1 is for maximum
+    MRVIEWER_API float getRelativePos( float val ) const;
+
+    // get UV coordinates in palette for given values
+    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region ) const;
 
     // base parameters of palette
     struct Parameters

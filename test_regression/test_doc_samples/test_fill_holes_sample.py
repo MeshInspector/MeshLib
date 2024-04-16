@@ -1,9 +1,12 @@
+import pytest
+
 from constants import test_files_path, DEFAULT_RHAUSDORF_THRESHOLD
 from helpers.meshlib_helpers import relative_hausdorff
 from module_helper import *
 from pathlib import Path
 
 
+@pytest.mark.smoke
 def test_fill_holes_sample(tmp_path):
     input_folder = Path(test_files_path) / "doc_samples" / "fill_holes"
 

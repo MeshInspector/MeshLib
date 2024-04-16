@@ -8,6 +8,7 @@ import meshlib.mrmeshpy as mlib
 import pytest
 
 
+@pytest.mark.smoke
 @pytest.mark.parametrize("metric", ["getMinAreaMetric", "getUniversalMetric",
                                     "getEdgeLengthStitchMetric", "getCircumscribedMetric"])
 @pytest.mark.parametrize("input", ["torus", "crocodile"])

@@ -8,6 +8,7 @@ import meshlib.mrmeshpy as mlpy
 import pytest
 
 
+@pytest.mark.smoke
 @pytest.mark.parametrize("subdivide_params", [
     {"name": "max_new_verticles",
      "params": {

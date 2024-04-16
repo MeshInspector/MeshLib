@@ -87,7 +87,7 @@ jobs:
           name: Timing_Logs_${{matrix.os}}-arm64_${{matrix.config}}_${{matrix.compiler}}
           path: time_log/
 
-      - name: Run Tests
+      - name: Run Start-and-Exit Tests
         run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
 
       - name: Unit Tests

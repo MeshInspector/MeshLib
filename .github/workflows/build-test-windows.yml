@@ -127,7 +127,7 @@ jobs:
       - name: Build
         run: msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}
 
-      - name: Run Test
+      - name: Run Start-and-Exit Tests
         working-directory: source\x64\${{ matrix.config }}
         run: .\MeshViewer.exe -tryHidden -noEventLoop
 

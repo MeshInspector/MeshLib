@@ -96,7 +96,7 @@ jobs:
           name: Timing_Logs_ubuntu20_${{matrix.config}}-x86_${{matrix.compiler}}
           path: time_log/
 
-      - name: Run Tests
+      - name: Run Start-and-Exit Tests
         run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
 
       - name: Unit Tests

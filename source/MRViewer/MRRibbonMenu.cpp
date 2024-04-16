@@ -1054,6 +1054,32 @@ void RibbonMenu::cloneSelectedPart( const std::shared_ptr<Object>& object )
     object->parent()->addChild( newObj );
 }
 
+bool RibbonMenu::manuallySelectObject( Object* object, ManualSelectionMode mode )
+{
+    if ( manuallySelectObjectSignal( object, mode ) )
+        return false;
+
+    switch ( mode )
+    {
+    case ManualSelectionMode::selectOne:
+        {
+            auto handleObject = [&]( auto& handleObject, Object& cur ) -> void
+            {
+                cur.select( &cur == object );
+                for ( const auto& child : cur.children() )
+                    handleObject( handleObject, *child );
+            };
+            handleObject( handleObject, MR::SceneRoot::get() );
+        }
+        break;
+    case ManualSelectionMode::toggle:
+        object->select( !object->isSelected() );
+        break;
+    }
+
+    return true;
+}
+
 bool RibbonMenu::drawCloneButton_( const std::vector<std::shared_ptr<Object>>& selected )
 {
     bool someChanges = false;
@@ -1838,7 +1864,7 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
             ImGui::PushFont( iconsFont );
 
         auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
-        bool drawApplyBtn = numButtons >=3.0f && 
+        bool drawApplyBtn = numButtons >=3.0f &&
             item != RibbonSchemaHolder::schema().items.end() &&
             item->second.item->isAvailable( selectedObjectsCache_ ).empty();
 
@@ -2199,7 +2225,7 @@ void RibbonMenu::drawLastOperationTimeWindow_()
         openedLastOperationTimeTimer_ = 10.0f; // 10 seconds should be enough
         return;
     }
-    
+
     if ( openedLastOperationTimeTimer_ < 0.0f )
         return;
 

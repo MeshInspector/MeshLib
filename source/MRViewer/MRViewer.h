@@ -5,6 +5,7 @@
 #include "MRMouse.h"
 #include <MRMesh/MRVector2.h>
 #include <MRMesh/MRViewportId.h>
+#include "MRViewer/MRSignalCombiners.h"
 
 #include <boost/signals2/signal.hpp>
 #include <cstdint>
@@ -467,22 +468,7 @@ public:
     //*********
     // SIGNALS
     //*********
-    struct SignalStopHandler
-    {
-        using result_type = bool;
-
-        template<typename Iter>
-        bool operator()( Iter first, Iter last ) const
-        {
-            while ( first != last )
-            {
-                if ( *first )
-                    return true; // slots execution stops if one returns true
-                ++first;
-            }
-            return false;
-        }
-    };
+    using SignalStopHandler = StopOnTrueCombiner;
     // Mouse events
     using MouseUpDownSignal = boost::signals2::signal<bool( MouseButton btn, int modifier ), SignalStopHandler>;
     using MouseMoveSignal = boost::signals2::signal<bool( int x, int y ), SignalStopHandler>;

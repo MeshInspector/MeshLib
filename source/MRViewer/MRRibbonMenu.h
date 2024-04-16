@@ -12,6 +12,7 @@
 #include <type_traits>
 #include <array>
 #include "MRRibbonNotification.h"
+#include "MRViewer/MRSignalCombiners.h"
 
 namespace MR
 {
@@ -63,7 +64,7 @@ public:
     // set maximum wait time (in seconds) before top panel is closed after mouse leaves it (only when not pinned)
     // minimum value is 0 seconds, panel will close immediately after mouse leaves it
     void setTopPanelMaxOpenedTimer( float sec ) { openedMaxSecs_ = std::max( 0.0f, sec ); }
-    
+
     // for enable / disable close scene context menu on any change
     void setCloseContextOnChange( bool deselect ) { closeContextOnChange_ = deselect; }
     bool getCloseContextOnChange() { return closeContextOnChange_; }
@@ -89,7 +90,7 @@ public:
     bool hasActiveBlockingItem() const { return bool( activeBlockingItem_.item ); }
     /// returns true if any plugin is now active
     bool hasAnyActiveItem() const { return bool (activeBlockingItem_.item) || !activeNonBlockingItems_.empty(); }
-    
+
     /// updates status of item if it was changed outside of menu
     MRVIEWER_API void updateItemStatus( const std::string& itemName );
 
@@ -120,11 +121,29 @@ public:
     /// sets flag defining if closing plugin on opening another one is enabled or not
     void setAutoCloseBlockingPlugins( bool value ) { autoCloseBlockingPlugins_ = value; }
 
+    enum class ManualSelectionMode
+    {
+        // Usually triggered by a click without modifiers, selects one object and unselects all others.
+        // The object can be null, then we just unselect all objects.
+        selectOne,
+        // Usually triggered by Ctrl+Click, toggles the selection on one object.
+        toggle,
+    };
+    using ManuallySelectObjectSignal = boost::signals2::signal<bool( Object* object, ManualSelectionMode mode ), StopOnTrueCombiner>;
+    // This is triggered whenever an object is manually selected from the GUI.
+    // Return true to prevent the selection.
+    ManuallySelectObjectSignal manuallySelectObjectSignal;
+
+    // Selects or unselects certain objects in the scene, in a way that can be intercepted (via `manuallySelectObjectSignal`).
+    // This is intended for manual selection by user, not for programmatic selection.
+    // Returns true on success, false if interrupted by the signal.
+    MRVIEWER_API bool manuallySelectObject( Object* object, ManualSelectionMode mode );
+
 protected:
     // draw single item
     MRVIEWER_API virtual void drawBigButtonItem_( const MenuItemInfo& item );
     // draw set of small text buttons
-    MRVIEWER_API virtual void drawSmallButtonsSet_( const std::vector<std::string>& group, int setFrontIndex, int setLength, 
+    MRVIEWER_API virtual void drawSmallButtonsSet_( const std::vector<std::string>& group, int setFrontIndex, int setLength,
                                                     bool withText );
 
     // Configuration of ribbon group
@@ -138,7 +157,7 @@ protected:
     // draw group of items
     MRVIEWER_API virtual DrawTabConfig setupItemsGroupConfig_( const std::vector<std::string>& groupsInTab, const std::string& tabName );
     MRVIEWER_API virtual void setupItemsGroup_( const std::vector<std::string>& groupsInTab, const std::string& tabName );
-    MRVIEWER_API virtual void drawItemsGroup_( const std::string& tabName, const std::string& groupName, 
+    MRVIEWER_API virtual void drawItemsGroup_( const std::string& tabName, const std::string& groupName,
                                                DrawGroupConfig config );
     // ribbon menu item pressed
     MRVIEWER_API virtual void itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool available );
@@ -180,7 +199,7 @@ protected:
     // return icon (now it is symbol in icons font) based on typename
     MRVIEWER_API virtual const char* getSceneItemIconByTypeName_( const std::string& typeName ) const;
 
-    MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& obj ) override;   
+    MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& obj ) override;
 
     MRVIEWER_API virtual void addRibbonItemShortcut_( const std::string& itemName, const ShortcutManager::ShortcutKey& key, ShortcutManager::Category category );
 
@@ -201,7 +220,7 @@ protected:
     MRVIEWER_API virtual bool drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags flags = 0 ) override;
 
     MRVIEWER_API virtual void highlightBlocking_();
-    
+
     // draw scene list buttons
     MRVIEWER_API virtual void drawSceneListButtons_();
 
@@ -211,7 +230,7 @@ private:
     void changeTab_( int newTab );
 
     std::string getRequirements_( const std::shared_ptr<RibbonMenuItem>& item ) const;
-    
+
     RibbonMenuSearch searcher_;
     void drawSearchButton_();
     void drawCollapseButton_();
@@ -224,7 +243,7 @@ private:
     void drawHeaderQuickAccess_();
     void drawHeaderPannel_();
     void drawActiveListButton_( float btnSize );
-    
+
     ImVec2 activeListPos_{ 0,0 };
     bool activeListPressed_{ false };
     void drawActiveList_();
@@ -324,4 +343,3 @@ struct RibbonMenuItemCall
     static MR::RibbonMenuItemCall<pluginType> ribbonMenuItemCall##func##pluginType##_( func );
 
 }
-

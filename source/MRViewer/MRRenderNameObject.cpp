@@ -6,6 +6,7 @@
 #include "MRMesh/MRVisualObject.h"
 #include "MRViewer/MRColorTheme.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
 
@@ -33,22 +34,12 @@ void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backPa
 
             if ( ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
             {
-                if ( ImGui::GetIO().KeyCtrl )
-                {
+                getViewerInstance().getMenuPluginAs<RibbonMenu>()->manuallySelectObject(
                     // Yes, a dumb cast. We could find the same object in the scene, but it's a waste of time.
                     // Changing the `RenderObject` constructor parameter to accept a non-const reference requires changing a lot of stuff.
-                    const_cast<VisualObject*>( object )->select( !object->isSelected() );
-                }
-                else
-                {
-                    auto selectOne = [&]( auto selectOne, Object& target ) -> void
-                    {
-                        target.select( &target == object );
-                        for ( const auto& child : target.children() )
-                            selectOne( selectOne, *child );
-                    };
-                    selectOne( selectOne, SceneRoot::get() );
-                }
+                    const_cast<VisualObject*>( object ),
+                    ImGui::GetIO().KeyCtrl ? RibbonMenu::ManualSelectionMode::toggle : RibbonMenu::ManualSelectionMode::selectOne
+                );
             }
         }
     }

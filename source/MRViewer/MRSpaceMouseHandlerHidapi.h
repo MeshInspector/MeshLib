@@ -56,7 +56,7 @@ private:
     // update (rewrite its data) SpaceMouseAction if DataPacketRaw is not empty
     void updateActionWithInput_( const DataPacketRaw& packet, int packet_length, SpaceMouseAction& action );
 
-    bool findAndAttachDevice_();
+    bool findAndAttachDevice_( bool verbose );
     void printDevices_( struct hid_device_info* cur_dev );
 
 private:

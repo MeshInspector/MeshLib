@@ -65,7 +65,7 @@ jobs:
           MR_USE_CPP_23: "ON"
 
       - name: Run Tests
-        run: MR_LOCAL_RESOURCES=1 ./build/Release/bin/MeshViewer -hidden -noEventLoop
+        run: Xvfb :1337 & export DISPLAY=:1337 & MR_LOCAL_RESOURCES=1 ./build/Release/bin/MeshViewer -hidden -noEventLoop
 
       - name: Unit Tests
         run: ./build/Release/bin/MRTest

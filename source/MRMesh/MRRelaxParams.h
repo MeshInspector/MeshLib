@@ -40,7 +40,7 @@ template <typename V>
     float distSq = d.lengthSq();
     if ( distSq <= maxGuideDistSq )
         return pos;
-    return guidePos + std::sqrt( distSq / maxGuideDistSq ) * d;
+    return guidePos + std::sqrt( maxGuideDistSq / distSq ) * d;
 }
 
 } // namespace MR

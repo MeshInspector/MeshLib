@@ -625,7 +625,6 @@ void ViewerSettingsPlugin::drawFeaturesTab_( float menuScaling )
 
 void ViewerSettingsPlugin::drawRenderOptions_( float menuScaling )
 {
-    auto& style = ImGui::GetStyle();
 
     if ( viewer->isAlphaSortAvailable() )
     {
@@ -640,6 +639,11 @@ void ViewerSettingsPlugin::drawRenderOptions_( float menuScaling )
     {
         if ( maxSamples_ > 1 )
         {
+#ifdef __EMSCRIPTEN__
+            (void)menuScaling;
+            ImGui::Text( "Multisample anti-aliasing (MSAA): x%d", curSamples_ );
+#else
+            auto& style = ImGui::GetStyle();
             auto backUpSamples = storedSamples_;
             ImGui::Text( "Multisample anti-aliasing (MSAA):" );
             UI::setTooltipIfHovered( "The number of samples per pixel: more samples - better render quality but worse performance.", menuScaling );
@@ -670,6 +674,7 @@ void ViewerSettingsPlugin::drawRenderOptions_( float menuScaling )
                 UI::transparentTextWrapped( "GPU multisampling settings override application value." );
             if ( needReset_ )
                 UI::transparentTextWrapped( "Application requires restart to apply this change" );
+#endif
         }
     }
 }

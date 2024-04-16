@@ -162,6 +162,7 @@ TEST( MRMesh, DistanceMapWatertight )
     auto dm1 = computeDistanceMapD( sphere, params );
     
     auto res = distanceMapToMesh( dm1, params );
+    EXPECT_TRUE( res.has_value() );
     Mesh meshFromDm1;
     if ( res )
         meshFromDm1 = std::move( res.value() );
@@ -170,6 +171,7 @@ TEST( MRMesh, DistanceMapWatertight )
 
     Mesh meshFromDm2;
     res = distanceMapToMesh( dm2, params );
+    EXPECT_TRUE( res.has_value() );
 
     if ( res )
         meshFromDm2 = std::move( res.value() );
@@ -245,12 +247,17 @@ TEST( MRMesh, DistanceMapCompare )
     const bool saveMesh = false;
     if ( saveMesh )
     {
-        ;       
         if ( auto res = distanceMapToMesh( resD, params ) )
+        {
+            EXPECT_TRUE( res.has_value() );
             MeshSave::toMrmesh( res.value(), std::filesystem::path( "c:/temp/Double.mrmesh" ) );
+        }
 
         if ( auto res = distanceMapToMesh( resD, params ) )
-            MeshSave::toMrmesh( res.value, std::filesystem::path( "c:/temp/Float.mrmesh" ) );
+        {
+            EXPECT_TRUE( res.has_value() );
+            MeshSave::toMrmesh( res.value(), std::filesystem::path( "c:/temp/Float.mrmesh" ) );
+        }
     }
 }
 
@@ -304,10 +311,16 @@ TEST( MRMesh, DistanceMapNegativeValue )
     if ( saveMesh )
     {
         if ( auto res = distanceMapToMesh( dm, params ) )
-            MeshSave::toMrmesh( res.value(), std::filesystem::path("c:/temp/dm.mrmesh"));
+        {
+            EXPECT_TRUE( res.has_value() );
+            MeshSave::toMrmesh( res.value(), std::filesystem::path( "c:/temp/dm.mrmesh" ) );
+        }
 
         if ( auto res = distanceMapToMesh( dm2, params ) )
-            MeshSave::toMrmesh( res.value(), std::filesystem::path("c:/temp/dm2.mrmesh"));
+        {
+            EXPECT_TRUE( res.has_value() );
+            MeshSave::toMrmesh( res.value(), std::filesystem::path( "c:/temp/dm2.mrmesh" ) );
+        }
     }
 }
 

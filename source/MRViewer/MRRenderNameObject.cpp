@@ -34,11 +34,11 @@ void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backPa
 
             if ( ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
             {
-                getViewerInstance().getMenuPluginAs<RibbonMenu>()->manuallySelectObject(
+                getViewerInstance().getMenuPluginAs<RibbonMenu>()->simulateNameTagClick(
                     // Yes, a dumb cast. We could find the same object in the scene, but it's a waste of time.
                     // Changing the `RenderObject` constructor parameter to accept a non-const reference requires changing a lot of stuff.
-                    const_cast<VisualObject*>( object ),
-                    ImGui::GetIO().KeyCtrl ? RibbonMenu::ManualSelectionMode::toggle : RibbonMenu::ManualSelectionMode::selectOne
+                    *const_cast<VisualObject*>( object ),
+                    ImGui::GetIO().KeyCtrl ? RibbonMenu::NameTagSelectionMode::toggle : RibbonMenu::NameTagSelectionMode::selectOne
                 );
             }
         }

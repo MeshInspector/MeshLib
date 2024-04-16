@@ -1054,26 +1054,26 @@ void RibbonMenu::cloneSelectedPart( const std::shared_ptr<Object>& object )
     object->parent()->addChild( newObj );
 }
 
-bool RibbonMenu::manuallySelectObject( Object* object, ManualSelectionMode mode )
+bool RibbonMenu::simulateNameTagClick( Object& object, NameTagSelectionMode mode )
 {
-    if ( manuallySelectObjectSignal( object, mode ) )
+    if ( nameTagClickSignal( object, mode ) )
         return false;
 
     switch ( mode )
     {
-    case ManualSelectionMode::selectOne:
+    case NameTagSelectionMode::selectOne:
         {
             auto handleObject = [&]( auto& handleObject, Object& cur ) -> void
             {
-                cur.select( &cur == object );
+                cur.select( &cur == &object );
                 for ( const auto& child : cur.children() )
                     handleObject( handleObject, *child );
             };
             handleObject( handleObject, MR::SceneRoot::get() );
         }
         break;
-    case ManualSelectionMode::toggle:
-        object->select( !object->isSelected() );
+    case NameTagSelectionMode::toggle:
+        object.select( !object.isSelected() );
         break;
     }
 

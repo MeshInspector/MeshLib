@@ -121,23 +121,19 @@ public:
     /// sets flag defining if closing plugin on opening another one is enabled or not
     void setAutoCloseBlockingPlugins( bool value ) { autoCloseBlockingPlugins_ = value; }
 
-    enum class ManualSelectionMode
+    enum class NameTagSelectionMode
     {
-        // Usually triggered by a click without modifiers, selects one object and unselects all others.
-        // The object can be null, then we just unselect all objects.
+        // Click without modifiers, selects one object and unselects all others.
         selectOne,
-        // Usually triggered by Ctrl+Click, toggles the selection on one object.
+        // Ctrl+Click, toggles the selection of one object.
         toggle,
     };
-    using ManuallySelectObjectSignal = boost::signals2::signal<bool( Object* object, ManualSelectionMode mode ), StopOnTrueCombiner>;
-    // This is triggered whenever an object is manually selected from the GUI.
-    // Return true to prevent the selection.
-    ManuallySelectObjectSignal manuallySelectObjectSignal;
+    using NameTagClickSignal = boost::signals2::signal<bool( Object& object, NameTagSelectionMode mode ), StopOnTrueCombiner>;
+    // This is triggered whenever a name tag of an object is clicked.
+    NameTagClickSignal nameTagClickSignal;
 
-    // Selects or unselects certain objects in the scene, in a way that can be intercepted (via `manuallySelectObjectSignal`).
-    // This is intended for manual selection by user, not for programmatic selection.
-    // Returns true on success, false if interrupted by the signal.
-    MRVIEWER_API bool manuallySelectObject( Object* object, ManualSelectionMode mode );
+    // Behaves as if the user clicked the object name tag, by invoking `nameTagClickSignal`.
+    MRVIEWER_API bool simulateNameTagClick( Object& object, NameTagSelectionMode mode );
 
 protected:
     // draw single item

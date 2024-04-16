@@ -364,6 +364,9 @@
     <ClCompile Include="MRRenderDefaultObjects.cpp">
       <Filter>Render\Implementations</Filter>
     </ClCompile>
+    <ClCompile Include="MRNameTagClickListener.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -714,6 +717,12 @@
       <Filter>UIStyle</Filter>
     </ClInclude>
     <ClInclude Include="MRVisualSubfeatures.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSignalCombiners.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRNameTagClickListener.h">
       <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>

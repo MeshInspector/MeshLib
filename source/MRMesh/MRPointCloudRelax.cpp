@@ -52,9 +52,12 @@ bool relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} *
             } );
             if ( count == 0 )
                 return;
-            auto& np = newPoints[v];
+            auto np = newPoints[v];
             auto pushForce = params.force * ( Vector3f{ sumPos / double( count ) } - np );
             np += pushForce;
+            if ( params.guidePos )
+                np = getLimitedPos( np, (*params.guidePos)[v], params.maxGuideDistSq );
+            newPoints[v] = np;
         }, internalCb );
         pointCloud.points.swap( newPoints );
         pointCloud.invalidateCaches();
@@ -131,7 +134,10 @@ bool relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
             if ( count <= 0 )
                 return;
 
-            newPoints[v] += vertPushForces[v] - Vector3f{ sumForces / double( count ) };
+            auto np = newPoints[v] + vertPushForces[v] - Vector3f{ sumForces / double( count ) };
+            if ( params.guidePos )
+                np = getLimitedPos( np, (*params.guidePos)[v], params.maxGuideDistSq );
+            newPoints[v] = np;
         }, internalCb2 );
         pointCloud.points.swap( newPoints );
         pointCloud.invalidateCaches();
@@ -188,7 +194,7 @@ bool relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
             if ( weightedNeighbors.size() < 6 )
                 return;
 
-            auto& np = newPoints[v];
+            auto np = newPoints[v];
             Vector3f target;
             if ( params.type == RelaxApproxType::Planar )
                 target = accum.getBestPlanef().project( np );
@@ -217,6 +223,9 @@ bool relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
                 target = Vector3f( basis( centerPoint ) );
             }
             np += ( params.force * ( target - np ) );
+            if ( params.guidePos )
+                np = getLimitedPos( np, (*params.guidePos)[v], params.maxGuideDistSq );
+            newPoints[v] = np;
         }, internalCb );
         pointCloud.points.swap( newPoints );
         pointCloud.invalidateCaches();
@@ -226,4 +235,4 @@ bool relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
     return keepGoing;
 }
 
-}
+} //namespace MR

@@ -65,7 +65,7 @@ jobs:
           MR_USE_CPP_23: "ON"
 
       - name: Run Start-and-Exit Tests
-        if: ${{ matrix.os = 'arm' }}
+        if: ${{ matrix.os == 'arm' }}
         run: MR_LOCAL_RESOURCES=1 ./build/Release/bin/MeshViewer -hidden -noEventLoop
 
       - name: Unit Tests

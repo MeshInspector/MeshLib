@@ -3,6 +3,7 @@
 #include "MRPython.h"
 #include "MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRString.h"
 #include "MRSystem.h"
 #include <pybind11/embed.h>
 #include <fstream>
@@ -70,20 +71,8 @@ bool EmbeddedPython::runString( const std::string& pythonString )
     try
     {
         auto libDir = GetEmbeddedPythonDirectory();
-        auto libDirStr = libDir.string();
-        for ( int i = 0; ; )
-        {
-            auto& c = libDirStr[i];
-            if ( c == '\\' )
-            {
-                libDirStr.insert( libDirStr.begin() + i, '\\' ); // double protect first for c++ second for python
-                i += 2;
-            }
-            else
-                ++i;
-            if ( i >= libDirStr.size() )
-                break;
-        }
+        auto libDirStr = utf8string( libDir );
+        MR::replaceInplace( libDirStr, "\\", "\\\\" );
         // Create an empty dictionary that will function as a namespace.
         std::string redirectScript =
             "import sys\n"

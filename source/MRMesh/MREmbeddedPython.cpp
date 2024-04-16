@@ -72,7 +72,7 @@ bool EmbeddedPython::runString( const std::string& pythonString )
     {
         auto libDir = GetEmbeddedPythonDirectory();
         auto libDirStr = utf8string( libDir );
-        MR::replaceInplace( libDirStr, "\\", "\\\\" );
+        MR::replaceInplace( libDirStr, "\\", "\\\\" ); // double protect first for C++ second for Python
         // Create an empty dictionary that will function as a namespace.
         std::string redirectScript =
             "import sys\n"

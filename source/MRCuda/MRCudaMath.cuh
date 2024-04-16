@@ -251,7 +251,8 @@ __device__ inline TriIntersectResult rayTriangleIntersect(const float* oriA, con
     return res;
 }
 
-__device__ inline MeshIntersectionResult rayMeshIntersect( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, const float3& rayOrigin, float rayStart, float rayEnd, const IntersectionPrecomputes& prec )
+__device__ inline MeshIntersectionResult rayMeshIntersect( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, 
+                                                           const float3& rayOrigin, float rayStart, float rayEnd, const IntersectionPrecomputes& prec, bool closestIntersect = true )
 {
     const Box3& box = nodes[0].box;
     MeshIntersectionResult res;
@@ -286,7 +287,7 @@ __device__ inline MeshIntersectionResult rayMeshIntersect( const Node3* nodes, c
     float baryA = 0;
     float baryB = 0;
 
-    while ( stackSize > 0 && faceId < 0 )
+    while ( stackSize > 0 && ( closestIntersect || faceId < 0 ) )
     {
         if ( stackSize >= MaxStackSize ) // max depth exceeded
         {

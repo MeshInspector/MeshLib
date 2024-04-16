@@ -2,7 +2,6 @@
 
 #include "MRVector3.h"
 #include <cassert>
-#include <cfloat>
 
 namespace MR
 {
@@ -18,10 +17,11 @@ struct RelaxParams
     /// speed of relaxing, typical values (0.0, 0.5]
     float force = 0.5f;
 
-    /// maximum squared distance between a point and its position before relaxation, ignored if FLT_MAX
-    float maxGuideDistSq = FLT_MAX;
+    /// if true then maximal displacement of each point during denoising will be limited
+    bool limitNearInitial = false;
 
-    [[nodiscard]] bool limitNearGuide() const { return maxGuideDistSq < FLT_MAX; }
+    /// maximum distance between a point and its position before relaxation, ignored if limitNearInitial = false
+    float maxInitialDist = 1;
 };
 
 enum class RelaxApproxType

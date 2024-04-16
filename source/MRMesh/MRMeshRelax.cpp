@@ -25,9 +25,10 @@ bool relax( Mesh& mesh, const MeshRelaxParams& params, ProgressCallback cb )
         return true;
 
     MR_TIMER
-    VertCoords guidePos;
-    if ( params.limitNearGuide() )
-        guidePos = mesh.points;
+    VertCoords initialPos;
+    const auto maxInitialDistSq = sqr( params.maxInitialDist );
+    if ( params.limitNearInitial )
+        initialPos = mesh.points;
     MR_WRITER( mesh );
 
     VertCoords newPoints;
@@ -51,8 +52,8 @@ bool relax( Mesh& mesh, const MeshRelaxParams& params, ProgressCallback cb )
             auto np = newPoints[v];
             auto pushForce = params.force * ( Vector3f{sum / double( count )} - np );
             np += pushForce;
-            if ( params.limitNearGuide() )
-                np = getLimitedPos( np, guidePos[v], params.maxGuideDistSq );
+            if ( params.limitNearInitial )
+                np = getLimitedPos( np, initialPos[v], maxInitialDistSq );
             newPoints[v] = np;
         }, internalCb ) )
             return false;
@@ -128,9 +129,10 @@ bool equalizeTriAreas( Mesh& mesh, const MeshEqualizeTriAreasParams& params, Pro
         return true;
 
     MR_TIMER
-    VertCoords guidePos;
-    if ( params.limitNearGuide() )
-        guidePos = mesh.points;
+    VertCoords initialPos;
+    const auto maxInitialDistSq = sqr( params.maxInitialDist );
+    if ( params.limitNearInitial )
+        initialPos = mesh.points;
     MR_WRITER( mesh );
 
     VertCoords newPoints;
@@ -147,8 +149,8 @@ bool equalizeTriAreas( Mesh& mesh, const MeshEqualizeTriAreasParams& params, Pro
             auto np = newPoints[v];
             auto pushForce = params.force * ( vertexPosEqualNeiAreas( mesh, v, params.noShrinkage ) - np );
             np += pushForce;
-            if ( params.limitNearGuide() )
-                np = getLimitedPos( np, guidePos[v], params.maxGuideDistSq );
+            if ( params.limitNearInitial )
+                np = getLimitedPos( np, initialPos[v], maxInitialDistSq );
             newPoints[v] = np;
         }, internalCb ) )
             return false;
@@ -165,9 +167,10 @@ bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params, ProgressCallbac
         return true;
 
     MR_TIMER
-    VertCoords guidePos;
-    if ( params.limitNearGuide() )
-        guidePos = mesh.points;
+    VertCoords initialPos;
+    const auto maxInitialDistSq = sqr( params.maxInitialDist );
+    if ( params.limitNearInitial )
+        initialPos = mesh.points;
     MR_WRITER( mesh );
 
     VertCoords newPoints;
@@ -204,8 +207,8 @@ bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params, ProgressCallbac
                 ++count;
             }
             auto np = newPoints[v] + vertPushForces[v] - Vector3f{ sum / double( count ) };
-            if ( params.limitNearGuide() )
-                np = getLimitedPos( np, guidePos[v], params.maxGuideDistSq );
+            if ( params.limitNearInitial )
+                np = getLimitedPos( np, initialPos[v], maxInitialDistSq );
             newPoints[v] = np;
         }, internalCb2 ) )
             return false;
@@ -223,9 +226,10 @@ bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params, ProgressCallb
         return true;
 
     MR_TIMER
-    VertCoords guidePos;
-    if ( params.limitNearGuide() )
-        guidePos = mesh.points;
+    VertCoords initialPos;
+    const auto maxInitialDistSq = sqr( params.maxInitialDist );
+    if ( params.limitNearInitial )
+        initialPos = mesh.points;
     MR_WRITER( mesh );
 
     float surfaceRadius = ( params.surfaceDilateRadius <= 0.0f ) ?
@@ -288,8 +292,8 @@ bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params, ProgressCallb
                 target = Vector3f( basis( centerPoint ) );
             }
             np += ( params.force * ( target - np ) );
-            if ( params.limitNearGuide() )
-                np = getLimitedPos( np, guidePos[v], params.maxGuideDistSq );
+            if ( params.limitNearInitial )
+                np = getLimitedPos( np, initialPos[v], maxInitialDistSq );
             newPoints[v] = np;
         }, internalCb ) )
             return false;

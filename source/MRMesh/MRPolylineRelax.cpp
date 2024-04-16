@@ -15,9 +15,10 @@ bool relax( Polyline<V> &polyline, const RelaxParams &params, ProgressCallback c
         return true;
 
     MR_TIMER
-    Vector<V, VertId> guidePos;
-    if ( params.limitNearGuide() )
-        guidePos = polyline.points;
+    Vector<V, VertId> initialPos;
+    const auto maxInitialDistSq = sqr( params.maxInitialDist );
+    if ( params.limitNearInitial )
+        initialPos = polyline.points;
     MR_WRITER(polyline)
 
     Vector<V, VertId> newPoints;
@@ -49,8 +50,8 @@ bool relax( Polyline<V> &polyline, const RelaxParams &params, ProgressCallback c
             auto np = newPoints[v];
             auto pushForce = params.force * ( mp - np );
             np += pushForce;
-            if ( params.limitNearGuide() )
-                np = getLimitedPos( np, guidePos[v], params.maxGuideDistSq );
+            if ( params.limitNearInitial )
+                np = getLimitedPos( np, initialPos[v], maxInitialDistSq );
             newPoints[v] = np;
         }, internalCb );
         polyline.points.swap( newPoints );
@@ -67,9 +68,10 @@ bool relaxKeepArea( Polyline<V> &polyline, const RelaxParams &params, ProgressCa
         return true;
 
     MR_TIMER
-    Vector<V, VertId> guidePos;
-    if ( params.limitNearGuide() )
-        guidePos = polyline.points;
+    Vector<V, VertId> initialPos;
+    const auto maxInitialDistSq = sqr( params.maxInitialDist );
+    if ( params.limitNearInitial )
+        initialPos = polyline.points;
     MR_WRITER(polyline)
 
     Vector<V, VertId> newPoints;
@@ -121,8 +123,8 @@ bool relaxKeepArea( Polyline<V> &polyline, const RelaxParams &params, ProgressCa
             auto modifier = 1.0f / 2.0f;
             np -= ( vertPushForces[polyline.topology.dest( e0 )] * modifier );
             np -= ( vertPushForces[polyline.topology.dest( e1 )] * modifier );
-            if ( params.limitNearGuide() )
-                np = getLimitedPos( np, guidePos[v], params.maxGuideDistSq );
+            if ( params.limitNearInitial )
+                np = getLimitedPos( np, initialPos[v], maxInitialDistSq );
             newPoints[v] = np;
         }, internalCb2 );
         polyline.points.swap( newPoints );

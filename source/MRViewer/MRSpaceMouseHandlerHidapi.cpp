@@ -52,7 +52,7 @@ void SpaceMouseHandlerHidapi::initialize()
     initListenerThread_();
 }
 
-bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool logAllDevices )
+bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
 {
     bool isDeviceFound = false;
     for ( const auto& [vendorId, supportedDevicesId] : vendor2device_ )
@@ -61,7 +61,7 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool logAllDevices )
         hid_device_info* localDevicesIt = hid_enumerate( vendorId, 0x0 );
         while ( localDevicesIt && !isDeviceFound )
         {
-            if ( logAllDevices )
+            if ( verbose )
             {
                 spdlog::info( "HID API device found: vendorId={}, deviceId={}, path={}, usage={}, usage_page={}",
                     vendorId, localDevicesIt->product_id, localDevicesIt->path, localDevicesIt->usage, localDevicesIt->usage_page );

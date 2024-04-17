@@ -119,6 +119,21 @@ Line3d PointAccumulator::getBestLine() const
     return { centroid, eigenvectors.z };
 }
 
+void accumulatePoints( PointAccumulator& accum, const std::vector<Vector3f>& points, const AffineXf3f* xf )
+{
+    MR_TIMER
+    for ( const auto& p : points )
+        accum.addPoint( p.transformed( xf ) );
+}
+
+void accumulateWeighedPoints( PointAccumulator& accum, const std::vector<Vector3f>& points, const std::vector<float>& weights, const AffineXf3f* xf )
+{
+    MR_TIMER
+    assert( points.size() == weights.size() );
+    for ( auto i = 0; i < points.size(); ++i )
+        accum.addPoint( points[i].transformed( xf ), weights[i] );
+}
+
 void accumulateFaceCenters( PointAccumulator& accum, const MeshPart& mp, const AffineXf3f* xf /*= nullptr */ )
 {
     MR_TIMER

@@ -91,6 +91,7 @@ inline Expected<T, std::string> addFileNameInError( Expected<T, std::string> v, 
 /// \param v         value to print
 /// \param digitsAfterPoint  maximal number of digits after decimal point
 /// \param precision         maximal number of not-zero decimal digits
+[[deprecated("Use `valueToString()` from `MRViewer/MRUnits.h` instead!")]]
 MRMESH_API char * formatNoTrailingZeros( char * fmt, double v, int digitsAfterPoint, int precision = 6 );
 
 /// returns given value rounded to given number of decimal digits

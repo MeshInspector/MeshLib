@@ -955,8 +955,7 @@ PaletteChanges Palette(
     bool* fixZero,
     float speed,
     float min,
-    float max,
-    const MR::UnitToStringParams<MR::NoUnit>& unitParams )
+    float max )
 {
     using namespace MR;
     PaletteChanges changes = PaletteChanges::None;
@@ -1074,7 +1073,7 @@ PaletteChanges Palette(
             if ( ranges[3] < 0.0f )
                 ranges[3] = 0.0f;
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
-            rangesChanged |= UI::drag<NoUnit>( "Min/Max", ranges[3], speed, 0.0f, max, unitParams );
+            rangesChanged |= UI::drag<NoUnit>( "Min/Max", ranges[3], speed, 0.0f, max );
             ImGui::PopStyleVar();
 
             if ( rangesChanged || fixZeroChanged )
@@ -1082,9 +1081,9 @@ PaletteChanges Palette(
         }
         else
         {
-            rangesChanged |= UI::drag<NoUnit>( "Max (red)", ranges[3], speed, min, max, unitParams );
+            rangesChanged |= UI::drag<LengthUnit>( "Max (red)", ranges[3], speed, min, max );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
-            rangesChanged |= UI::drag<NoUnit>( "Min (blue)", ranges[0], speed, min, max, unitParams );
+            rangesChanged |= UI::drag<LengthUnit>( "Min (blue)", ranges[0], speed, min, max );
             ImGui::PopStyleVar();
         }
     }
@@ -1095,7 +1094,7 @@ PaletteChanges Palette(
             if ( ranges[3] < 0.0f )
                 ranges[3] = 0.0f;
 
-            rangesChanged |= UI::drag<NoUnit>( "Max positive / Min negative", ranges[3], speed, min, max, unitParams );
+            rangesChanged |= UI::drag<NoUnit>( "Max positive / Min negative", ranges[3], speed, min, max );
             if ( rangesChanged || fixZeroChanged )
                 ranges[0] = -ranges[3];
 
@@ -1103,18 +1102,18 @@ PaletteChanges Palette(
                 ranges[2] = 0.0f;
 
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
-            rangesChanged |= UI::drag<NoUnit>( "Min positive / Max negative", ranges[2], speed, min, max, unitParams );
+            rangesChanged |= UI::drag<NoUnit>( "Min positive / Max negative", ranges[2], speed, min, max );
             ImGui::PopStyleVar();
             if ( rangesChanged || fixZeroChanged )
                 ranges[1] = -ranges[2];
         }
         else
         {
-            rangesChanged |= UI::drag<NoUnit>( "Max positive (red)", ranges[3], speed, min, max, unitParams );
-            rangesChanged |= UI::drag<NoUnit>( "Min positive (green)", ranges[2], speed, min, max, unitParams );
-            rangesChanged |= UI::drag<NoUnit>( "Max negative (green)", ranges[1], speed, min, max, unitParams );
+            rangesChanged |= UI::drag<NoUnit>( "Max positive (red)", ranges[3], speed, min, max );
+            rangesChanged |= UI::drag<NoUnit>( "Min positive (green)", ranges[2], speed, min, max );
+            rangesChanged |= UI::drag<NoUnit>( "Max negative (green)", ranges[1], speed, min, max );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
-            rangesChanged |= UI::drag<NoUnit>( "Min negative (blue)", ranges[0], speed, min, max, unitParams );
+            rangesChanged |= UI::drag<NoUnit>( "Min negative (blue)", ranges[0], speed, min, max );
             ImGui::PopStyleVar();
         }
     }

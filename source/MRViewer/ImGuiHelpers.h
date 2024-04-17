@@ -254,8 +254,7 @@ MRVIEWER_API PaletteChanges Palette(
     bool* fixZero = nullptr,
     float speed = 1.0f,
     float min = std::numeric_limits<float>::lowest(),
-    float max = std::numeric_limits<float>::max(),
-    const MR::UnitToStringParams<MR::NoUnit>& unitParams = MR::getDefaultUnitParams<MR::NoUnit>()
+    float max = std::numeric_limits<float>::max()
 );
 
 /// Helper plane widget, allows to draw specified plain in the scene \n

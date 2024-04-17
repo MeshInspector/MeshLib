@@ -114,7 +114,7 @@ size_t computeDistanceMapHeapBytes( const MR::Mesh& mesh, const MR::MeshToDistan
         meshPoints.size() * sizeof( float3 ) +
         mesh.topology.numValidFaces() * sizeof( FaceToThreeVerts ) +
         size * sizeof( float ) +
-        needOutSamples ? size * sizeof( Cuda::MeshTriPoint ) : 0;
+        ( needOutSamples ? ( size * sizeof( Cuda::MeshTriPoint ) ) : 0 );
 }
 
 }

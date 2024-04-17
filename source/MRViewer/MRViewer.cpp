@@ -1086,7 +1086,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
     {
         assert( result.scene );
         const auto childCount = result.scene->children().size();
-        bool simplifiedÌisualization = false;
+        bool simplifiedVisualization = false;
         if ( childCount > 0 )
         {
             const auto isSceneEmpty = SceneRoot::get().children().empty();
@@ -1110,7 +1110,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
                     }
                     return false;
                 };
-                simplifiedÌisualization = recursiveCheck( SceneRoot::getSharedPtr() );
+                simplifiedVisualization = recursiveCheck( SceneRoot::getSharedPtr() );
 
                 assert( result.loadedFiles.size() == 1 );
                 auto filePath = result.loadedFiles.front();
@@ -1139,7 +1139,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
                     SceneRoot::get().addChild( obj );
                     if ( auto objPoint = std::dynamic_pointer_cast<ObjectPoints>( obj ) )
                         if ( objPoint->getRenderDiscretization() > 1 )
-                            simplifiedÌisualization = true;
+                            simplifiedVisualization = true;
                 }
 
                 auto& viewerInst = getViewerInstance();
@@ -1154,7 +1154,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
             showModal( result.errorSummary, NotificationType::Error );
         else if ( !result.warningSummary.empty() )
             pushNotification( { .text = result.warningSummary, .type = NotificationType::Warning } );
-        if ( simplifiedÌisualization )
+        if ( simplifiedVisualization )
             pushNotification( { .text = "Too many points in PointCloud:\nVisualization is simplified (only a part of the points is drawing)",
                 .type = NotificationType::Info } );
     };

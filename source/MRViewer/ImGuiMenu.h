@@ -345,6 +345,9 @@ public:
   // Behaves as if the user clicked the object name tag, by invoking `nameTagClickSignal`.
   MRVIEWER_API bool simulateNameTagClick( Object& object, NameTagSelectionMode mode );
 
+  using DrawUiSignal = boost::signals2::signal<void( float menuScaling )>;
+  DrawUiSignal drawUiSignal_; // This is called when the UI is drawn, just like `drawDialog_()` of plugins.
+
 protected:
     MRVIEWER_API virtual void drawModalMessage_();
 

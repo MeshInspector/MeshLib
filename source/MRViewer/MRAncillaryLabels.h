@@ -63,6 +63,9 @@ public:
     AncillaryImGuiLabel() = default;
 
     /// Make label in parent space coordinates, follows parent worldXf
+    MRVIEWER_API void make( Object &parent, const PositionedText& text );
+
+    /// Make label in parent space coordinates, follows parent worldXf
     /// Note: label should be deleted or reset if parent is deleted or removed from scene
     MRVIEWER_API void make( std::shared_ptr<Object> parent, const PositionedText& text );
 

@@ -40,6 +40,7 @@
 #include "MRMesh/MRMeshLoad.h"
 #include "MRMesh/MRLinesLoad.h"
 #include "MRMesh/MRPointsLoad.h"
+#include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRVoxelsLoad.h"
 #include "MRMesh/MRDistanceMapLoad.h"
 #include "MRMesh/MRVector2.h"
@@ -1085,6 +1086,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
     {
         assert( result.scene );
         const auto childCount = result.scene->children().size();
+        bool simplifiedÌisualization = false;
         if ( childCount > 0 )
         {
             const auto isSceneEmpty = SceneRoot::get().children().empty();
@@ -1094,6 +1096,21 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
                 auto newRoot = result.scene;
                 std::swap( newRoot, SceneRoot::getSharedPtr() );
                 getViewerInstance().setSceneDirty();
+
+                std::function<bool( const std::shared_ptr<Object> )> recursiveCheck;
+                recursiveCheck = [&] ( const std::shared_ptr<Object> obj )
+                {
+                    if ( auto objPoint = std::dynamic_pointer_cast< ObjectPoints >( obj ) )
+                        if ( objPoint->getRenderDiscretization() > 1 )
+                            return true;
+                    for ( const auto& child : obj->children() )
+                    {
+                        if ( recursiveCheck( child ) )
+                            return true;
+                    }
+                    return false;
+                };
+                simplifiedÌisualization = recursiveCheck( SceneRoot::getSharedPtr() );
 
                 assert( result.loadedFiles.size() == 1 );
                 auto filePath = result.loadedFiles.front();
@@ -1120,6 +1137,9 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
                 {
                     AppendHistory<ChangeSceneAction>( "Load File", obj, ChangeSceneAction::Type::AddObject );
                     SceneRoot::get().addChild( obj );
+                    if ( auto objPoint = std::dynamic_pointer_cast<ObjectPoints>( obj ) )
+                        if ( objPoint->getRenderDiscretization() > 1 )
+                            simplifiedÌisualization = true;
                 }
 
                 auto& viewerInst = getViewerInstance();
@@ -1134,6 +1154,9 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
             showModal( result.errorSummary, NotificationType::Error );
         else if ( !result.warningSummary.empty() )
             pushNotification( { .text = result.warningSummary, .type = NotificationType::Warning } );
+        if ( simplifiedÌisualization )
+            pushNotification( { .text = "Too many points in PointCloud:\nVisualization is simplified (only a part of the points is drawing)",
+                .type = NotificationType::Info } );
     };
 
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )

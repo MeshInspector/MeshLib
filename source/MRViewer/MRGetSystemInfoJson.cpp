@@ -40,8 +40,8 @@ Json::Value GetSystemInfoJson()
         glInfo["OpenGL Version"] = std::string( ( const char* )glGetString( GL_VERSION ) );
         GL_EXEC();
         int curSamples = 0;
-        glGetIntegerv( GL_SAMPLES, &curSamples );
-        GL_EXEC();
+        GL_EXEC( glGetIntegerv( GL_SAMPLES, &curSamples ) );
+        
         glInfo["MSAA"] = std::to_string( curSamples );
 
         glInfo["CUDA memory"] = CudaAccessor::isCudaAvailable() ?

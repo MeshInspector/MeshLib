@@ -17,6 +17,13 @@ ENDIF() # MR_EMSCRIPTEN
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
+IF(NOT MR_EMSCRIPTEN)
+  pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
+  if(GTKMM_FOUND)
+    target_include_directories( ${PROJECT_NAME} PRIVATE ${GTKMM_INCLUDE_DIRS})
+  endif()
+ENDIF() # NOT MR_EMSCRIPTEN
+
 file(GLOB JSONS "*.json")
 IF(MR_EMSCRIPTEN)
   file(COPY ${JSONS} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
@@ -34,11 +41,8 @@ IF(MR_EMSCRIPTEN)
   )
 ELSE() # NOT MR_EMSCRIPTEN
   IF(APPLE)
-    # TODO: CMAKE_PREFIX_PATH for thirdparty
-    #find_package(nfd REQUIRED)
-    find_library(APPKIT_LIBRARY AppKit REQUIRED)
-
     add_definitions("-x objective-c++")
+    find_library(APPKIT_LIBRARY AppKit REQUIRED)
     target_compile_definitions(${PROJECT_NAME} PRIVATE
       _GNU_SOURCE
     )
@@ -51,17 +55,18 @@ ELSE() # NOT MR_EMSCRIPTEN
       spdlog
       jsoncpp
       cpr
+      sigc-3.0
+      glib-2.0
+      glibmm-2.4
       imgui
       glad
       glfw
-      #nfd::nfd
-      nfd
+      gtkmm-3.0
       hidapi
       ${APPKIT_LIBRARY}
     )
   ELSE() # NOT APPLE and NOT EMPSCRIPTEN
     find_package(GDCM CONFIG REQUIRED)
-    pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
 
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRMesh
@@ -81,9 +86,6 @@ ELSE() # NOT MR_EMSCRIPTEN
       fmt
       openvdb
       tbb
-    )
-    target_include_directories(${PROJECT_NAME} PRIVATE
-      ${GTKMM_INCLUDE_DIRS}
     )
   ENDIF() # APPLE
 ENDIF() # MR_EMSCRIPTEN

@@ -63,7 +63,7 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
         {
             if ( verbose )
             {
-                spdlog::info( "HID API device found: vendorId={}, deviceId={}, path={}, usage={}, usage_page={}",
+                spdlog::info( "HID API device found: vendorId={:#06x}, deviceId={:#06x}, path={}, usage={}, usage_page={}",
                     vendorId, localDevicesIt->product_id, localDevicesIt->path, localDevicesIt->usage, localDevicesIt->usage_page );
             }
             for ( ProductId deviceId : supportedDevicesId )
@@ -74,7 +74,7 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
                     if ( device_ )
                     {
                         isDeviceFound = true;
-                        spdlog::info( "SpaceMouse connected: vendorId={}, deviceId={}, path={} ", vendorId, deviceId, localDevicesIt->path );
+                        spdlog::info( "SpaceMouse connected: vendorId={:#06x}, deviceId={:#06x}, path={}", vendorId, deviceId, localDevicesIt->path );
                         // setup buttons logger
                         buttonsState_ = 0;
                         setButtonsMap_( vendorId, deviceId );
@@ -83,7 +83,7 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
                     }
                     else
                     {
-                        spdlog::error( "HID API device open error: vendorId={}, deviceId={}, path={} ", vendorId, deviceId, localDevicesIt->path );
+                        spdlog::error( "HID API device open error: vendorId={:#06x}, deviceId={:#06x}, path={}", vendorId, deviceId, localDevicesIt->path );
                     }
                 }
             }
@@ -101,7 +101,7 @@ void SpaceMouseHandlerHidapi::setButtonsMap_( VendorId vendorId, ProductId produ
     {
         if ( productId == 0xc635 || productId == 0xc652 ) // spacemouse compact
             buttonsMapPtr_ = &buttonMapCompact;
-        else if ( productId == 0xc631 || productId == 0xc632 ) //  spacemouse pro
+        else if ( productId == 0xc631 || productId == 0xc632 || productId == 0xc638 ) //  spacemouse pro
             buttonsMapPtr_ = &buttonMapPro;
         else if ( productId == 0xc633 ) // spacemouse enterprise
             buttonsMapPtr_ = &buttonMapEnterprise;

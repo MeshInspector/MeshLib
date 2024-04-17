@@ -46,6 +46,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh

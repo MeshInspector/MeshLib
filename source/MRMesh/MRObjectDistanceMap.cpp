@@ -195,6 +195,9 @@ bool ObjectDistanceMap::construct_( const std::shared_ptr<DistanceMap>& dmap, co
     if ( !dmap )
         return false;
 
+    dmap_ = dmap;
+    toWorldParams_ = params;
+
     if ( needUpdateMesh )
     {
         auto mesh = calculateMesh( cb );
@@ -206,8 +209,6 @@ bool ObjectDistanceMap::construct_( const std::shared_ptr<DistanceMap>& dmap, co
         updateMesh( mesh );
     }
 
-    dmap_ = dmap;
-    toWorldParams_ = params;
 
     return true;
 }

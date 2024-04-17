@@ -70,7 +70,7 @@ __device__ inline float3 operator*( const float3& a, const float k )
     return { k * a.x , k * a.y, k * a.z };
 }
 
-__device__ inline float3 operator/( const float3& a, const float k )
+__device__ __host__ inline float3 operator/( const float3& a, const float k )
 {
     return { a.x / k , a.y / k, a.z / k };
 }

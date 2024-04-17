@@ -4,6 +4,7 @@
 #include "MRGladGlfw.h"
 #include "MRMouseController.h"
 #include "MRMesh/MRSystem.h"
+#include "MRMesh/MRStringConvert.h"
 
 namespace MR
 {
@@ -83,7 +84,9 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
                     }
                     else
                     {
-                        spdlog::error( "HID API device open error: vendorId={:#06x}, deviceId={:#06x}, path={}", vendorId, deviceId, localDevicesIt->path );
+                        const auto * werr = hid_error( nullptr );
+                        spdlog::error( "HID API device (vendorId={:#06x}, deviceId={:#06x}, path={}) open error: {}",
+                            vendorId, deviceId, localDevicesIt->path, werr ? Utf16ToUtf8( werr ) : std::string{} );
                     }
                 }
             }

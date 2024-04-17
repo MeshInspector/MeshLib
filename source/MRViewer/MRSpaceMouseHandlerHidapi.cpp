@@ -84,9 +84,8 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
                     }
                     else
                     {
-                        const auto * werr = hid_error( nullptr );
                         spdlog::error( "HID API device (vendorId={:#06x}, deviceId={:#06x}, path={}) open error: {}",
-                            vendorId, deviceId, localDevicesIt->path, werr ? Utf16ToUtf8( werr ) : std::string{} );
+                            vendorId, deviceId, localDevicesIt->path, wideToUtf8( hid_error( nullptr ) ) );
                     }
                 }
             }

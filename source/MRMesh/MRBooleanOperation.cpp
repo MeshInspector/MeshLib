@@ -342,4 +342,21 @@ FaceBitSet BooleanResultMapper::newFaces() const
     return res;
 }
 
+FaceBitSet BooleanResultMapper::filteredOldFaceBitSet( const FaceBitSet& oldBS, MapObject obj )
+{
+    const auto& map = maps[int( obj )];
+    if ( map.identity )
+        return oldBS;
+    FaceBitSet outBs( oldBS.size() );
+    for ( FaceId i = 0_f; i < map.cut2origin.size(); ++i )
+    {
+        auto orgF = map.cut2origin[i];
+        if ( !orgF || !oldBS.test( orgF ) )
+            continue;
+        if ( map.cut2newFaces[i] )
+            outBs.set( orgF );
+    }
+    return outBs;
+}
+
 } //namespace MR

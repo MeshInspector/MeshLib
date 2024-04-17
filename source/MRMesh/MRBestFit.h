@@ -52,6 +52,12 @@ private:
     SymMatrix3d momentum2_;
 };
 
+/// Adds in existing PointAccumulator all given points
+MRMESH_API void accumulatePoints( PointAccumulator& accum, const std::vector<Vector3f>& points, const AffineXf3f* xf = nullptr );
+
+/// Adds in existing PointAccumulator all given weighed points
+MRMESH_API void accumulateWeighedPoints( PointAccumulator& accum, const std::vector<Vector3f>& points, const std::vector<float>& weights, const AffineXf3f* xf = nullptr );
+
 /// Adds in existing PointAccumulator all mesh face centers with the weight equal to face area
 MRMESH_API void accumulateFaceCenters( PointAccumulator& accum, const MeshPart& mp, const AffineXf3f* xf = nullptr );
 

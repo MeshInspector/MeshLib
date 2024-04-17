@@ -1,11 +1,24 @@
 #include "MRPlaneObject.h"
-#include "MRMesh.h"
-#include "MRMeshBuilder.h"
+
 #include "MRBestFit.h"
-#include "MRObjectFactory.h"
-#include "MRPch/MRJson.h"
 #include "MRMatrix3.h"
+#include "MRObjectFactory.h"
 #include "MRVector3.h"
+
+#include "MRPch/MRJson.h"
+
+namespace
+{
+
+using namespace MR;
+
+// return transformation matrix rotating initialBasis to finalBasis
+Matrix3f rotateBasis( const Matrix3f& initialBasis, const Matrix3f& finalBasis )
+{
+    return finalBasis * initialBasis.inverse();
+}
+
+} // namespace
 
 namespace MR
 {
@@ -129,12 +142,6 @@ PlaneObject::PlaneObject()
     : FeatureObject( 2 )
 {}
 
-// returns transformation matris which rotate initialBasis to finalBasis
-Matrix3f rotateBasis( Matrix3f initialBasis, Matrix3f finalBasis )
-{
-    return finalBasis * initialBasis.inverse();
-}
-
 void PlaneObject::orientateFollowMainAxis_( ViewportId id /*= {}*/ )
 {
 
@@ -167,62 +174,28 @@ void PlaneObject::orientateFollowMainAxis_( ViewportId id /*= {}*/ )
     setXf( currXf, id );
 }
 
-void PlaneObject::setupPlaneSize2DByOriginalPoints_( const std::vector<Vector3f>& pointsToApprox )
-{
-    Matrix3f r = r_.get();
-
-    MR::Vector3f min( std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), 1.0f );
-    MR::Vector3f max( -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -1.0f );
-
-    // calculate feature oX and oY direction in world (parent) coordinate system.
-    auto oX = ( r * Vector3f::plusX() ).normalized();
-    auto oY = ( r * Vector3f::plusY() ).normalized();
-
-    // calculate 2D bounding box in oX, oY coordinate.
-    for ( const auto& p : pointsToApprox )
-    {
-        auto dX = MR::dot( oX, p );
-        if ( dX < min.x )
-            min.x = dX;
-        if ( dX > max.x )
-            max.x = dX;
-
-        auto dY = MR::dot( oY, p );
-        if ( dY < min.y )
-            min.y = dY;
-        if ( dY > max.y )
-            max.y = dY;
-    }
-
-    // setup sizes
-    auto sX = std::abs( max.x - min.x );
-    auto sY = std::abs( max.y - min.y );
-
-    setSizeX( sX );
-    setSizeY( sY );
-}
-
 PlaneObject::PlaneObject( const std::vector<Vector3f>& pointsToApprox )
     : PlaneObject()
 {
     PointAccumulator pa;
-    Box3f box;
     for ( const auto& p : pointsToApprox )
-    {
         pa.addPoint( p );
-        box.include( p );
-    }
 
-    // make a normal planeVectorInXY from center directed against a point (0, 0, 0)
-    Plane3f plane = pa.getBestPlanef();
-    Vector3f normal = plane.n.normalized();
-    if ( plane.d < 0 )
-        normal *= -1.f;
+    auto xf = pa.getBasicXf3f();
+    // swap X and Z axes
+    xf.A = xf.A * Matrix3f::rotation( Vector3f::plusY(), M_PI_2f );
 
-    setNormal( normal );
+    Box3f box;
+    const auto xfInv = xf.inverse();
+    for ( const auto& p : pointsToApprox )
+        box.include( xfInv( p ) );
 
-    setCenter( plane.project( box.center() ) );
-    setupPlaneSize2DByOriginalPoints_( pointsToApprox );
+    xf.b = xf( box.center() );
+    setXf( xf );
+
+    const auto size = box.size();
+    setSizeX( size.x );
+    setSizeY( size.y );
 }
 
 std::shared_ptr<Object> PlaneObject::shallowClone() const

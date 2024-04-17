@@ -21,8 +21,11 @@ MRMESH_API std::string systemToUtf8( const std::string & system );
 /// returns empty string if such conversion cannot be made
 MRMESH_API std::string utf8ToSystem( const std::string & utf8 );
 
+/// converts wide null terminating string to UTF8-encoded string
+MRMESH_API std::string wideToUtf8( const wchar_t * wide );
+
 #ifdef _WIN32
-/// converts UTF16-encoded string string to UTF8-encoded string
+/// converts UTF16-encoded string to UTF8-encoded string
 MRMESH_API std::string Utf16ToUtf8( const std::wstring_view & utf16 );
 #endif
 

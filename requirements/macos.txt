@@ -10,6 +10,7 @@ jpeg-turbo
 jsoncpp
 libharu
 libpng
+libsigc++
 libtiff
 libzip
 llvm@13

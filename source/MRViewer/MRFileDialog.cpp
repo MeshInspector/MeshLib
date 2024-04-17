@@ -256,12 +256,18 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
         action = params.saveDialog ? Gtk::FILE_CHOOSER_ACTION_CREATE_FOLDER : Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER;
     else
         action = params.saveDialog ? Gtk::FILE_CHOOSER_ACTION_SAVE : Gtk::FILE_CHOOSER_ACTION_OPEN;
+#if defined( __APPLE__ )
+    const auto dialogPtr = Gtk::FileChooserNative::create(gtkDialogTitle( action, params.multiselect ), action );
+    auto& dialog = *dialogPtr.get();
+#else
     Gtk::FileChooserDialog dialog( gtkDialogTitle( action, params.multiselect ), action );
-
+#endif
     dialog.set_select_multiple( params.multiselect );
 
+#if !defined( __APPLE__ )
     dialog.add_button( Gtk::Stock::CANCEL, Gtk::RESPONSE_CANCEL );
     dialog.add_button( params.saveDialog ? Gtk::Stock::SAVE : Gtk::Stock::OPEN, Gtk::RESPONSE_ACCEPT );
+#endif
 
     for ( const auto& filter: params.filters )
     {
@@ -272,6 +278,10 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
         {
             auto nextSeparatorPos = filter.extensions.find( ";", separatorPos );
             auto ext = filter.extensions.substr( separatorPos, nextSeparatorPos - separatorPos );
+#if defined( __APPLE__ )
+            if ( ext == "*.*" )
+                ext = "*";
+#endif
             filterText->add_pattern( ext );
             if ( nextSeparatorPos == std::string::npos )
                 break;

@@ -23,7 +23,7 @@
 
 #ifdef __EMSCRIPTEN__
 
-extern "C" 
+extern "C"
 {
 // 0 - dark
 // 1 - light
@@ -434,10 +434,9 @@ void ColorTheme::resetImGuiStyle()
     style.ItemSpacing.y = 6.0f;
 
     style.FrameBorderSize = 1.0f;
-    style.AntiAliasedLines = false;
 
     style.WindowBorderSize = 1.0f;
-    
+
     if ( auto menu = getViewerInstance().getMenuPlugin() )
     {
         auto scaling = menu->menu_scaling();

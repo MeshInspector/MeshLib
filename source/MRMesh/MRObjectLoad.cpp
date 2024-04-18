@@ -558,6 +558,9 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
             {
                 objectPoints->setRenderDiscretization( chooseRenderDiscretization( objectPoints->pointCloud()->points.size() ) );
                 *loadWarn += "Point cloud " + o->name() + " has no normals.\n";
+                if ( objectPoints->getRenderDiscretization() > 1 )
+                    *loadWarn += "Point cloud " + o->name() + " has too many points in PointCloud:\n"
+                    "Visualization is simplified (only a part of the points is drawing)\n";
             }
         }
 

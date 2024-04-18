@@ -1,8 +1,8 @@
 #include "MRMesh/MRPython.h"
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRMeshBoolean.h"
-#include <pybind11/functional.h>
 #include "MRMesh/MRUniteManyMeshes.h"
+#include <pybind11/functional.h>
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, BooleanExposing, [] ( pybind11::module_& m )
 {
@@ -29,6 +29,16 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, BooleanExposing, [] ( pybind11::module_& m )
         value( "A", MR::BooleanResultMapper::MapObject::A ).
         value( "B", MR::BooleanResultMapper::MapObject::B );
     
+    pybind11::class_<MR::BooleanResultMapper::Maps>( m, "BooleanResMaps" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "cut2origin", &MR::BooleanResultMapper::Maps::cut2origin,
+            "\"after cut\" faces to \"origin\" faces\n"
+            "this map is not 1-1, but N-1" ).
+        def_readwrite( "cut2newFaces", &MR::BooleanResultMapper::Maps::cut2newFaces, "\"after cut\" faces to \"after stitch\" faces( 1 - 1 )" ).
+        def_readwrite( "old2newEdges", &MR::BooleanResultMapper::Maps::old2newEdges, "\"origin\" edges to \"after stitch\" edges (1-1)" ).
+        def_readwrite( "old2newVerts", &MR::BooleanResultMapper::Maps::old2newVerts, "\"origin\" vertices to \"after stitch\" vertices (1-1)" ).
+        def_readwrite( "identity", &MR::BooleanResultMapper::Maps::identity, "old topology indexes are valid if true" );
+
     pybind11::class_<MR::BooleanResultMapper>( m, "BooleanResultMapper", "This structure allows to map faces, vertices and edges of mesh `A` and mesh `B` input of MR::boolean to result mesh topology primitives" ).
         def( pybind11::init<>() ).
         def( "map", ( MR::VertBitSet( MR::BooleanResultMapper::* )( const MR::VertBitSet&, MR::BooleanResultMapper::MapObject )const )& MR::BooleanResultMapper::map,
@@ -36,7 +46,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, BooleanExposing, [] ( pybind11::module_& m )
         def( "map", ( MR::EdgeBitSet( MR::BooleanResultMapper::* )( const MR::EdgeBitSet&, MR::BooleanResultMapper::MapObject )const )& MR::BooleanResultMapper::map,
             pybind11::arg( "oldBS" ), pybind11::arg( "obj" ), "Returns edges bitset of result mesh corresponding input one" ).
         def( "map", ( MR::FaceBitSet( MR::BooleanResultMapper::* )( const MR::FaceBitSet&, MR::BooleanResultMapper::MapObject )const )& MR::BooleanResultMapper::map,
-            pybind11::arg( "oldBS" ), pybind11::arg( "obj" ), "Returns faces bitset of result mesh corresponding input one" );
+            pybind11::arg( "oldBS" ), pybind11::arg( "obj" ), "Returns faces bitset of result mesh corresponding input one" ).
+        def( "filteredOldFaceBitSet", &MR::BooleanResultMapper::filteredOldFaceBitSet, pybind11::arg( "oldBS" ), pybind11::arg( "obj" ), "returns updated oldBS leaving only faces that has corresponding ones in result mesh" ).
+        def( "getMaps", [] ( MR::BooleanResultMapper& mapper, MR::BooleanResultMapper::MapObject obj )->MR::BooleanResultMapper::Maps& { return mapper.maps[int( obj )]; } );
 
     m.def( "boolean", ( MR::BooleanResult( * )( const MR::Mesh&, const MR::Mesh&, MR::BooleanOperation, const MR::AffineXf3f*, MR::BooleanResultMapper*, MR::ProgressCallback ) )MR::boolean,
         pybind11::arg("meshA"), pybind11::arg( "meshB" ), pybind11::arg( "operation" ),

@@ -5,7 +5,7 @@
       <Filter>CudaTest</Filter>
     </CudaCompile>
     <CudaCompile Include="MRCudaContoursDistanceMap.cu">
-      <Filter>PolylineProject</Filter>
+      <Filter>DistanceMaps</Filter>
     </CudaCompile>
     <CudaCompile Include="MRCudaPointsToMeshProjector.cu">
       <Filter>MeshProject</Filter>
@@ -19,6 +19,9 @@
     <CudaCompile Include="MRCudaPointsToDistanceVolume.cu">
       <Filter>PointsToDistanceVolume</Filter>
     </CudaCompile>
+    <CudaCompile Include="MRCudaMeshDistanceMap.cu">
+      <Filter>DistanceMaps</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRCudaTest.cpp">
@@ -28,7 +31,7 @@
       <Filter>Basic</Filter>
     </ClCompile>
     <ClCompile Include="MRCudaContoursDisntaceMap.cpp">
-      <Filter>PolylineProject</Filter>
+      <Filter>DistanceMaps</Filter>
     </ClCompile>
     <ClCompile Include="MRCudaPointsToMeshProjector.cpp">
       <Filter>MeshProject</Filter>
@@ -42,6 +45,9 @@
     <ClCompile Include="MRCudaPointsToDistanceVolume.cpp">
       <Filter>PointsToDistanceVolume</Filter>
     </ClCompile>
+    <ClCompile Include="MRCudaMeshDistanceMap.cpp">
+      <Filter>DistanceMaps</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
@@ -52,7 +58,7 @@
       <Filter>CudaTest</Filter>
     </ClInclude>
     <ClInclude Include="MRCudaContoursDistanceMap.h">
-      <Filter>PolylineProject</Filter>
+      <Filter>DistanceMaps</Filter>
     </ClInclude>
     <ClInclude Include="MRCudaBasic.h">
       <Filter>Basic</Filter>
@@ -67,7 +73,7 @@
       <Filter>MeshProject</Filter>
     </ClInclude>
     <ClInclude Include="MRCudaContoursDistanceMap.cuh">
-      <Filter>PolylineProject</Filter>
+      <Filter>DistanceMaps</Filter>
     </ClInclude>
     <ClInclude Include="MRCudaPointsToMeshProjector.cuh">
       <Filter>MeshProject</Filter>
@@ -96,13 +102,16 @@
     <ClInclude Include="MRCudaPointsToDistanceVolume.cuh">
       <Filter>PointsToDistanceVolume</Filter>
     </ClInclude>
+    <ClInclude Include="MRCudaMeshDistanceMap.h">
+      <Filter>DistanceMaps</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCudaMeshDistanceMap.cuh">
+      <Filter>DistanceMaps</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="CudaTest">
       <UniqueIdentifier>{94e64b1d-68d9-4840-a9a6-604cf08763a2}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="PolylineProject">
-      <UniqueIdentifier>{74b4c63d-a992-4970-ae29-086c0bcb732c}</UniqueIdentifier>
     </Filter>
     <Filter Include="Basic">
       <UniqueIdentifier>{1c50f71d-47b8-4731-af22-fd25ee5c40a8}</UniqueIdentifier>
@@ -118,6 +127,9 @@
     </Filter>
     <Filter Include="PointsToDistanceVolume">
       <UniqueIdentifier>{206d9aab-c103-4918-87fd-5ff271af314d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DistanceMaps">
+      <UniqueIdentifier>{74b4c63d-a992-4970-ae29-086c0bcb732c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

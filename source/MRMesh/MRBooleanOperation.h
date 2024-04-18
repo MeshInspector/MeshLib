@@ -68,6 +68,9 @@ struct BooleanResultMapper
     /// Returns only new faces that are created during boolean operation
     MRMESH_API FaceBitSet newFaces() const;
 
+    /// returns updated oldBS leaving only faces that has corresponding ones in result mesh
+    MRMESH_API FaceBitSet filteredOldFaceBitSet( const FaceBitSet& oldBS, MapObject obj );
+
     struct Maps
     {
         /// "after cut" faces to "origin" faces

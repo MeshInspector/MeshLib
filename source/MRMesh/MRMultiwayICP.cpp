@@ -21,7 +21,7 @@ Vector<AffineXf3f, MeshOrPointsId> MultiwayICP::calculateTransformations()
 
     for ( iter_ = 1; iter_ <= prop_.iterLimit; ++iter_ )
     {
-        updatePointPairs_();
+        updatePointPairs();
         const bool pt2pt = ( prop_.method == ICPMethod::Combined && iter_ < 3 )
             || prop_.method == ICPMethod::PointToPoint;
         if ( !( pt2pt ? p2ptIter_() : p2plIter_() ) )
@@ -125,7 +125,12 @@ size_t MultiwayICP::getNumActivePairs() const
     return num;
 }
 
-void MultiwayICP::updatePointPairs_()
+std::string MultiwayICP::getStatusInfo() const
+{
+    return getICPStatusInfo( iter_, resultType_ );
+}
+
+void MultiwayICP::updatePointPairs()
 {
     MR_TIMER;
     for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )

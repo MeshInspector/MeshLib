@@ -93,9 +93,7 @@ std::vector<std::string> ObjectLines::getInfoLines() const
         if( polyline_->topology.vertSize() < polyline_->topology.vertCapacity() )
             res.back() += " / " + std::to_string( polyline_->topology.vertCapacity() ) + " capacity";
 
-        if ( !totalLength_ )
-            totalLength_ = polyline_->totalLength();
-        res.push_back( "total length : " + std::to_string( *totalLength_ ) );
+        res.push_back( "total length : " + std::to_string( totalLength() ) );
 
         boundingBoxToInfoLines_( res );
     }

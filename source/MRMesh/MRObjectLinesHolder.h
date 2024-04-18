@@ -69,6 +69,8 @@ public:
     /// returns cached information about the number of components in the polyline
     MRMESH_API size_t numComponents() const;
 
+    /// return cached total length
+    MRMESH_API float totalLength() const;
 protected:
     ObjectLinesHolder( const ObjectLinesHolder& other ) = default;
 

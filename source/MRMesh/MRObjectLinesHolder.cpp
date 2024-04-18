@@ -127,7 +127,7 @@ size_t ObjectLinesHolder::numComponents() const
     return *numComponents_;
 }
 
-float ObjectLinesHolder::totalLength()
+float ObjectLinesHolder::totalLength() const
 {
     if ( !totalLength_ )
         totalLength_ = polyline_ ? polyline_->totalLength() : 0.f;

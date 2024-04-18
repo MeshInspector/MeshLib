@@ -82,7 +82,7 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
                         activeMouseScrollZoom_ = false;
                         break;
                     }
-                    else
+                    else if ( verbose )
                     {
                         spdlog::error( "HID API device (vendorId={:#06x}, deviceId={:#06x}, path={}) open error: {}",
                             vendorId, deviceId, localDevicesIt->path, wideToUtf8( hid_error( nullptr ) ) );

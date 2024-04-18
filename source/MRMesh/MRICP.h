@@ -108,6 +108,9 @@ struct NumSum
 /// computes root-mean-square deviation from points to target planes
 [[nodiscard]] inline float getMeanSqDistToPlane( const PointPairs & pairs ) { return getSumSqDistToPlane( pairs ).rootMeanSqF(); }
 
+/// returns status info string
+[[nodiscard]] MRMESH_API std::string getICPInfoLine( int iterations, ICPExitType exitType );
+
 struct ICPProperties
 {
     /// The method how to update transformation from point pairs

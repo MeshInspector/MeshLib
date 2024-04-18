@@ -26,6 +26,9 @@ public:
     /// select pairs with origin samples on all objects
     MRMESH_API void resamplePoints( float samplingVoxelSize );
 
+    /// in each pair updates the target data and performs basic filtering (activation)
+    MRMESH_API void updatePointPairs();
+
     /// tune algorithm params before run calculateTransformations()
     void setParams( const ICPProperties& prop ) { prop_ = prop; }
     [[nodiscard]] const ICPProperties& getParams() const { return prop_; }
@@ -38,6 +41,9 @@ public:
 
     /// computes the number of active point pairs
     [[nodiscard]] MRMESH_API size_t getNumActivePairs() const;
+
+    /// returns status info string
+    [[nodiscard]] MRMESH_API std::string getLastICPInfo() const; 
 private:
     
     Vector<MultiICPObject, MeshOrPointsId> objs_;
@@ -46,15 +52,14 @@ private:
 
     ICPExitType resultType_{ ICPExitType::NotStarted };
 
-    /// in each pair updates the target data and performs basic filtering (activation)
-    void updatePointPairs_();
-
     /// deactivate pairs that does not meet farDistFactor criterion
     void deactivatefarDistPairs_();
 
     int iter_ = 0;
     bool p2ptIter_();
     bool p2plIter_();
+
+
 };
 
 }

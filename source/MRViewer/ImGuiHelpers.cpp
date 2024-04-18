@@ -1023,9 +1023,8 @@ PaletteChanges Palette(
         ImGui::SameLine();
         int discretization = params.discretization;
         ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x );
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cInputPadding * menuScaling * 0.5f - menuScaling );
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
-        if ( UI::drag<NoUnit>( "Discretization", discretization, 1.f, 2, 100 ) )
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cCheckboxPadding - ImGui::GetStyle().FramePadding.y );
+        if ( UI::drag<NoUnit>( "###Discretization", discretization, 1.f, 2, 100 ) )
         {
             palette.setDiscretizationNumber( discretization );
             palette.resetLabels();
@@ -1033,7 +1032,6 @@ PaletteChanges Palette(
             presetName.clear();
         }
         UI::setTooltipIfHovered( "Number of discrete levels", menuScaling );
-        ImGui::PopStyleVar();
     }
 
     ImGui::PopStyleVar();

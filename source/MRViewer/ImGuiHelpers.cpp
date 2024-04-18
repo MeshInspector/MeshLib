@@ -1023,6 +1023,7 @@ PaletteChanges Palette(
         ImGui::SameLine();
         int discretization = params.discretization;
         ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x );
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cCheckboxPadding - ImGui::GetStyle().FramePadding.y );
         if ( UI::drag<NoUnit>( "###Discretization", discretization, 1.f, 2, 100 ) )
         {
             palette.setDiscretizationNumber( discretization );

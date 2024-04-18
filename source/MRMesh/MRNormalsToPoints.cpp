@@ -4,6 +4,8 @@
 #include "MRParallelFor.h"
 #include "MRTriMath.h"
 #include "MRTimer.h"
+#include "MRRelaxParams.h" //getLimitedPos
+#include <limits>
 
 #pragma warning(push)
 #pragma warning(disable: 4068) // unknown pragmas
@@ -27,7 +29,7 @@ class Solver : public NormalsToPoints::ISolver
 {
 public:
     virtual void prepare( const MeshTopology & topology, float guideWeight ) override;
-    virtual void run( const VertCoords & guide, const FaceNormals & normals, VertCoords & points ) override;
+    virtual void run( const VertCoords & guide, const FaceNormals & normals, VertCoords & points, float maxInitialDistSq ) override;
 
 private:
     const MeshTopology * topology_ = nullptr;
@@ -86,7 +88,7 @@ void Solver::prepare( const MeshTopology & topology, float guideWeight )
         rhs_[i].resize( nRows );
 }
 
-void Solver::run( const VertCoords & guide, const FaceNormals & normals, VertCoords & points )
+void Solver::run( const VertCoords & guide, const FaceNormals & normals, VertCoords & points, float maxInitialDistSq )
 {
     MR_TIMER
     assert( topology_ );
@@ -124,10 +126,15 @@ void Solver::run( const VertCoords & guide, const FaceNormals & normals, VertCoo
     } );
 
     // copy back the solution into points
+    const bool limitNearInitial = std::isfinite( maxInitialDistSq );
     ParallelFor( 0_v, guide.endId(), [&]( VertId v )
     {
+        Vector3f np;
         for ( int i = 0; i < 3; ++i )
-            points[v][i] = (float)sol[i][v];
+            np[i] = (float)sol[i][v];
+        if ( limitNearInitial )
+            np = getLimitedPos( np, guide[v], maxInitialDistSq );
+        points[v] = np;
     } );
 }
 
@@ -141,10 +148,15 @@ void NormalsToPoints::prepare( const MeshTopology & topology, float guideWeight 
 
 void NormalsToPoints::run( const VertCoords & guide, const FaceNormals & normals, VertCoords & points )
 {
+    run( guide, normals, points, std::numeric_limits<float>::infinity() );
+}
+
+void NormalsToPoints::run( const VertCoords & guide, const FaceNormals & normals, VertCoords & points, float maxInitialDistSq )
+{
     assert( solver_ );
     if ( !solver_ )
         return;
-    solver_->run( guide, normals, points );
+    solver_->run( guide, normals, points, maxInitialDistSq );
 }
 
 } //namespace MR

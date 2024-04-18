@@ -34,18 +34,31 @@ struct DenoiseViaNormalsSettings
 {
     /// use approximated computation, which is much faster than precise solution
     bool fastIndicatorComputation = true;
+
     /// 0.001 - sharp edges, 0.01 - moderate edges, 0.1 - smooth edges
     float beta = 0.01f;
+
     /// the amount of smoothing: 0 - no smoothing, 1 - average smoothing, ...
     float gamma = 5.f;
+
     /// the number of iterations to smooth normals and find creases; the more the better quality, but longer computation
     int normalIters = 10;
+
     /// the number of iterations to update vertex coordinates from found normals; the more the better quality, but longer computation
     int pointIters = 20;
+
     /// how much resulting points must be attracted to initial points (e.g. to avoid general shrinkage), must be > 0
     float guideWeight = 1;
+
+    /// if true then maximal displacement of each point during denoising will be limited
+    bool limitNearInitial = false;
+
+    /// maximum distance between a point and its position before relaxation, ignored if limitNearInitial = false
+    float maxInitialDist = 0;
+
     /// optionally returns creases found during smoothing
     UndirectedEdgeBitSet * outCreases = nullptr;
+
     /// to get the progress and optionally cancel
     ProgressCallback cb = {};
 };

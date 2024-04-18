@@ -38,7 +38,7 @@ void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backPa
                     // Yes, a dumb cast. We could find the same object in the scene, but it's a waste of time.
                     // Changing the `RenderObject` constructor parameter to accept a non-const reference requires changing a lot of stuff.
                     *const_cast<VisualObject*>( object ),
-                    ImGui::GetIO().KeyCtrl ? RibbonMenu::NameTagSelectionMode::toggle : RibbonMenu::NameTagSelectionMode::selectOne
+                    ImGui::GetIO().KeyCtrl ? ImGuiMenu::NameTagSelectionMode::toggle : ImGuiMenu::NameTagSelectionMode::selectOne
                 );
             }
         }

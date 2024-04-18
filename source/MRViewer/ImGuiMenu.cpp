@@ -566,9 +566,6 @@ void ImGuiMenu::draw_menu()
   // Other windows
   if (callback_draw_custom_window) { callback_draw_custom_window(); }
   else { draw_custom_window(); }
-
-  // Emit signal.
-  drawUiSignal_( menu_scaling() );
 }
 
 void ImGuiMenu::draw_viewer_window()

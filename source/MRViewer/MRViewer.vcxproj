@@ -107,7 +107,7 @@
     <ClCompile Include="MRRenderMeasurementObjects.cpp" />
     <ClCompile Include="MRUnits.cpp" />
     <ClCompile Include="MRVisualSubfeatures.cpp" />
-    <ClCompile Include="MRImGuiMenuEventsListener.cpp" />
+    <ClCompile Include="MRNameTagClickListener.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -228,7 +228,7 @@
     <ClInclude Include="MRUIStyle.ipp" />
     <ClInclude Include="MRVisualSubfeatures.h" />
     <ClInclude Include="MRSignalCombiners.h" />
-    <ClInclude Include="MRImGuiMenuEventsListener.h" />
+    <ClInclude Include="MRNameTagClickListener.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

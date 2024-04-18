@@ -125,9 +125,9 @@ size_t MultiwayICP::getNumActivePairs() const
     return num;
 }
 
-std::string MultiwayICP::getLastICPInfo() const
+std::string MultiwayICP::getStatusInfo() const
 {
-    return getICPInfoLine( iter_, resultType_ );
+    return getICPStatusInfo( iter_, resultType_ );
 }
 
 void MultiwayICP::updatePointPairs()

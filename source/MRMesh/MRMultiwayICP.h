@@ -43,7 +43,7 @@ public:
     [[nodiscard]] MRMESH_API size_t getNumActivePairs() const;
 
     /// returns status info string
-    [[nodiscard]] MRMESH_API std::string getLastICPInfo() const; 
+    [[nodiscard]] MRMESH_API std::string getStatusInfo() const; 
 private:
     
     Vector<MultiICPObject, MeshOrPointsId> objs_;
@@ -58,8 +58,6 @@ private:
     int iter_ = 0;
     bool p2ptIter_();
     bool p2plIter_();
-
-
 };
 
 }

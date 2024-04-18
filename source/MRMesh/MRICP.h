@@ -109,7 +109,7 @@ struct NumSum
 [[nodiscard]] inline float getMeanSqDistToPlane( const PointPairs & pairs ) { return getSumSqDistToPlane( pairs ).rootMeanSqF(); }
 
 /// returns status info string
-[[nodiscard]] MRMESH_API std::string getICPInfoLine( int iterations, ICPExitType exitType );
+[[nodiscard]] MRMESH_API std::string getICPStatusInfo( int iterations, ICPExitType exitType );
 
 struct ICPProperties
 {
@@ -218,7 +218,7 @@ public:
 
     [[nodiscard]] const ICPProperties& getParams() const { return prop_; }
 
-    [[nodiscard]] MRMESH_API std::string getLastICPInfo() const; // returns status info string
+    [[nodiscard]] MRMESH_API std::string getStatusInfo() const; // returns status info string
 
     /// computes the number of active point pairs
     [[nodiscard]] size_t getNumActivePairs() const { return MR::getNumActivePairs( flt2refPairs_ ) + MR::getNumActivePairs( ref2fltPairs_ ); }

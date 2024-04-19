@@ -72,7 +72,6 @@ struct BasicUiRenderTask
     struct BackwardPassParams
     {
         /// If this is false, you can claim mouse hover for your object. Then set it to true.
-        /// But when you handle clicks, you are advised to also check
         mutable bool mouseHoverConsumed = false;
     };
 

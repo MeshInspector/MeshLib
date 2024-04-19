@@ -74,9 +74,20 @@ void RadiusMeasurementObject::setLocalRadiusAsVector( const MR::Vector3f& vec, c
     setXf( curXf );
 }
 
+void RadiusMeasurementObject::setDrawAsDiameter( bool value )
+{
+    if ( drawAsDiameter_ != value )
+    {
+        drawAsDiameter_ = value;
+        cachedValue_ = {};
+    }
+}
+
 float RadiusMeasurementObject::computeRadiusOrDiameter() const
 {
-    return getWorldRadiusAsVector().length() * ( getDrawAsDiameter() ? 2.f : 1.f );
+    if ( !cachedValue_ )
+        cachedValue_ = getWorldRadiusAsVector().length() * ( getDrawAsDiameter() ? 2.f : 1.f );
+    return *cachedValue_;
 }
 
 std::vector<std::string> RadiusMeasurementObject::getInfoLines() const
@@ -120,6 +131,11 @@ void RadiusMeasurementObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
         renderObj_ = createRenderObject<decltype( *this )>( *this );
+}
+
+void RadiusMeasurementObject::propagateWorldXfChangedSignal_()
+{
+    cachedValue_ = {};
 }
 
 } // namespace MR

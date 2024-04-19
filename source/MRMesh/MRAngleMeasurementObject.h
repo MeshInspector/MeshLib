@@ -66,6 +66,8 @@ protected:
 
     MRMESH_API void setupRenderObject_() const override;
 
+    MRMESH_API void propagateWorldXfChangedSignal_() override;
+
 private:
     // Don't forget to add all the new fields to serialization.
 
@@ -74,6 +76,9 @@ private:
 
     // Whether we should draw a ray from the center point to better visualize the angle. Enable this if there isn't already a line object there.
     bool shouldVisualizeRay_[2]{};
+
+    // The cached value for `computeAngle()`.
+    mutable std::optional<float> cachedValue_;
 };
 
 } // namespace MR

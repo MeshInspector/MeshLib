@@ -69,6 +69,8 @@ protected:
 
     MRMESH_API void setupRenderObject_() const override;
 
+    MRMESH_API void propagateWorldXfChangedSignal_() override;
+
 private:
     // Don't forget to add all the new fields to serialization.
 
@@ -77,6 +79,9 @@ private:
 
     // Whether we should draw the individual X/Y/Z deltas in addition to the distance itself.
     PerCoordDeltas perCoordDeltas_ = PerCoordDeltas::none;
+
+    // The cached value for `computeDistance()`.
+    mutable std::optional<float> cachedValue_;
 };
 
 } // namespace MR

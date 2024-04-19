@@ -46,11 +46,11 @@ public:
     // The normal is automatically normalized and made perpendicular to the `radiusVec`.
     MRMESH_API virtual void setLocalRadiusAsVector( const MR::Vector3f& radiusVec, const Vector3f& normal );
     // Same, but without a preferred normal.
-    MRMESH_API void setLocalRadiusAsVector( const MR::Vector3f& radiusVec ) { setLocalRadiusAsVector( radiusVec, radiusVec.furthestBasisVector() ); }
+    void setLocalRadiusAsVector( const MR::Vector3f& radiusVec ) { setLocalRadiusAsVector( radiusVec, radiusVec.furthestBasisVector() ); }
 
     // Whether we should draw this as a diameter instead of a radius.
     [[nodiscard]] bool getDrawAsDiameter() const { return drawAsDiameter_; }
-    virtual void setDrawAsDiameter( bool value ) { drawAsDiameter_ = value; }
+    MRMESH_API virtual void setDrawAsDiameter( bool value );
 
     // Whether this is a sphere radius, as opposed to circle/cylinder radius.
     [[nodiscard]] bool getIsSpherical() const { return isSpherical_; }
@@ -76,6 +76,8 @@ protected:
 
     MRMESH_API void setupRenderObject_() const override;
 
+    MRMESH_API void propagateWorldXfChangedSignal_() override;
+
 private:
     // Don't forget to add all the new fields to serialization.
 
@@ -87,6 +89,9 @@ private:
     // The visual leader line length multiplier, relative to the radius.
     // You're recommended to set a min absolute value for the resulting length when rendering.
     float visualLengthMultiplier_ = 2 / 3.f;
+
+    // The cached value for `computeRadiusOrDiameter()`.
+    mutable std::optional<float> cachedValue_;
 };
 
 } // namespace MR

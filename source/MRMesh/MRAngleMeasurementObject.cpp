@@ -85,7 +85,9 @@ void AngleMeasurementObject::setShouldVisualizeRay( bool second, bool enable )
 
 float AngleMeasurementObject::computeAngle() const
 {
-    return std::acos( std::clamp( dot( getWorldRay( false ).normalized(), getWorldRay( true ).normalized() ), -1.f, 1.f ) );
+    if ( !cachedValue_ )
+        cachedValue_ = angle( getWorldRay( false ), getWorldRay( true ) );
+    return *cachedValue_;
 }
 
 std::vector<std::string> AngleMeasurementObject::getInfoLines() const
@@ -131,6 +133,11 @@ void AngleMeasurementObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
         renderObj_ = createRenderObject<decltype( *this )>( *this );
+}
+
+void AngleMeasurementObject::propagateWorldXfChangedSignal_()
+{
+    cachedValue_ = {};
 }
 
 } // namespace MR

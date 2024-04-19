@@ -67,7 +67,11 @@ bool DistanceMeasurementObject::getDrawAsNegative() const
 
 void DistanceMeasurementObject::setDrawAsNegative( bool value )
 {
-    drawAsNegative_ = value;
+    if ( drawAsNegative_ != value )
+    {
+        drawAsNegative_ = value;
+        cachedValue_ = {};
+    }
 }
 
 DistanceMeasurementObject::PerCoordDeltas DistanceMeasurementObject::getPerCoordDeltasMode() const
@@ -82,7 +86,9 @@ void DistanceMeasurementObject::setPerCoordDeltasMode( PerCoordDeltas mode )
 
 float DistanceMeasurementObject::computeDistance() const
 {
-    return getWorldDelta().length() * ( getDrawAsNegative() ? -1.f : 1.f );
+    if ( !cachedValue_ )
+        cachedValue_ = getWorldDelta().length() * ( getDrawAsNegative() ? -1.f : 1.f );
+    return *cachedValue_;
 }
 
 std::vector<std::string> DistanceMeasurementObject::getInfoLines() const
@@ -123,6 +129,12 @@ void DistanceMeasurementObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
         renderObj_ = createRenderObject<decltype( *this )>( *this );
+}
+
+void DistanceMeasurementObject::propagateWorldXfChangedSignal_()
+{
+    MeasurementObject::propagateWorldXfChangedSignal_();
+    cachedValue_ = {};
 }
 
 } // namespace MR

@@ -20,7 +20,6 @@ void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backPa
     if ( backParams.mouseHoverConsumed )
         return;
 
-    spdlog::info( "Prev frame hovered {}", prevFrameHovered );
     // If it wasn't clipped to nothing...
     if ( ImGuiMath::CompareAll( windowCornerA ) < windowCornerB )
     {

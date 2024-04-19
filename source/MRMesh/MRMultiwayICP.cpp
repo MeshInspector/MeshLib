@@ -95,7 +95,6 @@ void MultiwayICP::resamplePoints( float samplingVoxelSize )
 
 float MultiwayICP::getMeanSqDistToPoint() const
 {
-    MR_TIMER;
     NumSum sum;
     for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )
         for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
@@ -104,13 +103,32 @@ float MultiwayICP::getMeanSqDistToPoint() const
     return sum.rootMeanSqF();
 }
 
+float MultiwayICP::getMeanSqDistToPoint( MeshOrPointsId id ) const
+{
+    NumSum sum;
+    for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )
+        for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
+            if ( ( i == id || j == id ) && i != j )
+                sum = sum + MR::getSumSqDistToPoint( pairsPerObj_[i][j] );
+    return sum.rootMeanSqF();
+}
+
 float MultiwayICP::getMeanSqDistToPlane() const
 {
-    MR_TIMER;
     NumSum sum;
     for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )
         for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
             if ( i != j )
+                sum = sum + MR::getSumSqDistToPlane( pairsPerObj_[i][j] );
+    return sum.rootMeanSqF();
+}
+
+float MultiwayICP::getMeanSqDistToPlane( MeshOrPointsId id ) const
+{
+    NumSum sum;
+    for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )
+        for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
+            if ( ( i == id || j == id ) && i != j )
                 sum = sum + MR::getSumSqDistToPlane( pairsPerObj_[i][j] );
     return sum.rootMeanSqF();
 }
@@ -121,6 +139,16 @@ size_t MultiwayICP::getNumActivePairs() const
     for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )
         for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
             if ( i != j )
+                num = num + MR::getNumActivePairs( pairsPerObj_[i][j] );
+    return num;
+}
+
+size_t MultiwayICP::getNumActivePairs( MeshOrPointsId id ) const
+{
+    size_t num = 0;
+    for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )
+        for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
+            if ( ( i == id || j == id ) && i != j )
                 num = num + MR::getNumActivePairs( pairsPerObj_[i][j] );
     return num;
 }

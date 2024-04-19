@@ -36,11 +36,20 @@ public:
     /// computes root-mean-square deviation between points
     [[nodiscard]] MRMESH_API float getMeanSqDistToPoint() const;
 
+    /// computes root-mean-square deviation between points of given object
+    [[nodiscard]] MRMESH_API float getMeanSqDistToPoint( MeshOrPointsId id ) const;
+
     /// computes root-mean-square deviation from points to target planes
     [[nodiscard]] MRMESH_API float getMeanSqDistToPlane() const;
 
+    /// computes root-mean-square deviation from points to target planes  of given object
+    [[nodiscard]] MRMESH_API float getMeanSqDistToPlane( MeshOrPointsId id ) const;
+
     /// computes the number of active point pairs
     [[nodiscard]] MRMESH_API size_t getNumActivePairs() const;
+
+    /// computes the number of active point pairs of given object
+    [[nodiscard]] MRMESH_API size_t getNumActivePairs( MeshOrPointsId id ) const;
 
     /// returns status info string
     [[nodiscard]] MRMESH_API std::string getStatusInfo() const; 

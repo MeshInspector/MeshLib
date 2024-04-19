@@ -75,11 +75,11 @@ void MultiwayICP::resamplePoints( float samplingVoxelSize )
         samplesPerObj[ind] = *obj.meshOrPoints.pointsGridSampling( samplingVoxelSize );
     } );
 
-    for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )
+    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
     {
         auto& pairs = pairsPerObj_[i];
         pairs.resize( objs_.size() );
-        for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
+        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
         {
             if ( i == j )
                 continue;
@@ -96,8 +96,8 @@ void MultiwayICP::resamplePoints( float samplingVoxelSize )
 float MultiwayICP::getMeanSqDistToPoint() const
 {
     NumSum sum;
-    for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )
-        for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
+    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
             if ( i != j )
                 sum = sum + MR::getSumSqDistToPoint( pairsPerObj_[i][j] );
     return sum.rootMeanSqF();
@@ -106,8 +106,8 @@ float MultiwayICP::getMeanSqDistToPoint() const
 float MultiwayICP::getMeanSqDistToPoint( MeshOrPointsId id ) const
 {
     NumSum sum;
-    for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )
-        for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
+    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
             if ( ( i == id || j == id ) && i != j )
                 sum = sum + MR::getSumSqDistToPoint( pairsPerObj_[i][j] );
     return sum.rootMeanSqF();
@@ -116,8 +116,8 @@ float MultiwayICP::getMeanSqDistToPoint( MeshOrPointsId id ) const
 float MultiwayICP::getMeanSqDistToPlane() const
 {
     NumSum sum;
-    for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )
-        for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
+    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
             if ( i != j )
                 sum = sum + MR::getSumSqDistToPlane( pairsPerObj_[i][j] );
     return sum.rootMeanSqF();
@@ -126,8 +126,8 @@ float MultiwayICP::getMeanSqDistToPlane() const
 float MultiwayICP::getMeanSqDistToPlane( MeshOrPointsId id ) const
 {
     NumSum sum;
-    for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )
-        for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
+    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
             if ( ( i == id || j == id ) && i != j )
                 sum = sum + MR::getSumSqDistToPlane( pairsPerObj_[i][j] );
     return sum.rootMeanSqF();
@@ -136,8 +136,8 @@ float MultiwayICP::getMeanSqDistToPlane( MeshOrPointsId id ) const
 size_t MultiwayICP::getNumActivePairs() const
 {
     size_t num = 0;
-    for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )
-        for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
+    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
             if ( i != j )
                 num = num + MR::getNumActivePairs( pairsPerObj_[i][j] );
     return num;
@@ -146,8 +146,8 @@ size_t MultiwayICP::getNumActivePairs() const
 size_t MultiwayICP::getNumActivePairs( MeshOrPointsId id ) const
 {
     size_t num = 0;
-    for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )
-        for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
+    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
             if ( ( i == id || j == id ) && i != j )
                 num = num + MR::getNumActivePairs( pairsPerObj_[i][j] );
     return num;
@@ -161,8 +161,8 @@ std::string MultiwayICP::getStatusInfo() const
 void MultiwayICP::updatePointPairs()
 {
     MR_TIMER;
-    for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )
-        for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
+    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
             if ( i != j )
                 MR::updatePointPairs( pairsPerObj_[i][j], objs_[i].meshOrPoints, objs_[i].xf, objs_[j].meshOrPoints, objs_[j].xf, prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
     deactivatefarDistPairs_();
@@ -179,8 +179,8 @@ void MultiwayICP::deactivatefarDistPairs_()
         if ( maxDistSq >= prop_.distThresholdSq )
             break;
         size_t deactivatedNum = 0;
-        for ( MeshOrPointsId i = MeshOrPointsId( 0 ); i < objs_.size(); ++i )
-            for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
+        for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+            for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
                 if ( i != j )
                     deactivatedNum += MR::deactivateFarPairs( pairsPerObj_[i][j], maxDistSq );
         if ( deactivatedNum == 0 )
@@ -195,7 +195,7 @@ bool MultiwayICP::p2ptIter_()
     ParallelFor( objs_, [&] ( MeshOrPointsId id )
     {
         PointToPointAligningTransform p2pt;
-        for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
+        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
         {
             if ( j == id )
                 continue;
@@ -248,7 +248,7 @@ bool MultiwayICP::p2plIter_()
     {
         Vector3f centroidRef;
         int activeCount = 0;
-        for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
+        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
         {
             if ( j == id )
                 continue;
@@ -269,7 +269,7 @@ bool MultiwayICP::p2plIter_()
         AffineXf3f centroidRefXf = AffineXf3f( Matrix3f(), centroidRef );
 
         PointToPlaneAligningTransform p2pl;
-        for ( MeshOrPointsId j = MeshOrPointsId( 0 ); j < objs_.size(); ++j )
+        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
         {
             if ( j == id )
                 continue;

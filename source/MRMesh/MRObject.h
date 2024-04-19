@@ -282,7 +282,7 @@ protected:
     bool ancillary_{ false };
     mutable bool needRedraw_{false};
 
-    virtual void propagateWorldXfChangedSignal_();
+    MRMESH_API virtual void propagateWorldXfChangedSignal_();
 };
 
 template <typename T>

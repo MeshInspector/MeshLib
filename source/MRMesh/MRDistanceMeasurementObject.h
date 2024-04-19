@@ -54,6 +54,11 @@ public:
     [[nodiscard]] MRMESH_API PerCoordDeltas getPerCoordDeltasMode() const;
     MRMESH_API virtual void setPerCoordDeltasMode( PerCoordDeltas mode );
 
+    // Computes the distance value: `getWorldDelta().length() * (getDrawAsNegative() ? -1 : 1)`.
+    [[nodiscard]] MRMESH_API float computeDistance() const;
+
+    [[nodiscard]] MRMESH_API std::vector<std::string> getInfoLines() const override;
+
 protected:
     DistanceMeasurementObject( const DistanceMeasurementObject& other ) = default;
 

@@ -82,6 +82,18 @@ void AngleMeasurementObject::setShouldVisualizeRay( bool second, bool enable )
     shouldVisualizeRay_[second] = enable;
 }
 
+float AngleMeasurementObject::computeAngle() const
+{
+    return std::acos( std::clamp( dot( getWorldRay( false ).normalized(), getWorldRay( true ).normalized() ), -1.f, 1.f ) );
+}
+
+std::vector<std::string> AngleMeasurementObject::getInfoLines() const
+{
+    auto ret = MeasurementObject::getInfoLines();
+    ret.push_back( fmt::format( "angle value: {:.1f}\xC2\xB0", computeAngle() ) ); // U+00B0 DEGREE SIGN
+    return ret;
+}
+
 void AngleMeasurementObject::swapBase_( Object& other )
 {
     if ( auto ptr = other.asType<AngleMeasurementObject>() )

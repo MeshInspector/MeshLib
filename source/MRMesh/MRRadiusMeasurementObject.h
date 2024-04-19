@@ -27,10 +27,6 @@ public:
     MRMESH_API std::shared_ptr<Object> clone() const override;
     MRMESH_API std::shared_ptr<Object> shallowClone() const override;
 
-    // Get the radius in world coordinates.
-    // There's intentionally no `getLocalRadius()` counterpart, use `getLocalRadiusAsVector()` if you need it.
-    [[nodiscard]] MRMESH_API float getWorldRadius() const;
-
     // Get the center in world coordinates.
     [[nodiscard]] MRMESH_API Vector3f getWorldCenter() const;
     // Get the center in local coordinates.
@@ -64,6 +60,11 @@ public:
     // You're recommended to set a min absolute value for the resulting length when rendering.
     [[nodiscard]] float getVisualLengthMultiplier() const { return visualLengthMultiplier_; }
     virtual void setVisualLengthMultiplier( float value ) { visualLengthMultiplier_ = value; }
+
+    // Computes the radius/diameter value, as if by `getLocalRadiusAsVector()`, possibly multiplied by two if `getDrawAsDiameter()`.
+    [[nodiscard]] MRMESH_API float computeRadiusOrDiameter() const;
+
+    [[nodiscard]] MRMESH_API std::vector<std::string> getInfoLines() const override;
 
 protected:
     RadiusMeasurementObject( const RadiusMeasurementObject& other ) = default;

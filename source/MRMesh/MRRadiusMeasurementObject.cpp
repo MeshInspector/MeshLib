@@ -18,11 +18,6 @@ std::shared_ptr<Object> RadiusMeasurementObject::shallowClone() const
     return RadiusMeasurementObject::clone();
 }
 
-float RadiusMeasurementObject::getWorldRadius() const
-{
-    return getWorldRadiusAsVector().length();
-}
-
 Vector3f RadiusMeasurementObject::getWorldCenter() const
 {
     Vector3f ret = getLocalCenter();
@@ -76,6 +71,18 @@ void RadiusMeasurementObject::setLocalRadiusAsVector( const MR::Vector3f& vec, c
     Vector3f y = cross( normal, vec ).normalized();
     curXf.A = Matrix3f( vec, y, cross( vec, y ).normalized() ).transposed();
     setXf( curXf );
+}
+
+float RadiusMeasurementObject::computeRadiusOrDiameter() const
+{
+    return getWorldRadiusAsVector().length() * ( getDrawAsDiameter() ? 2.f : 1.f );
+}
+
+std::vector<std::string> RadiusMeasurementObject::getInfoLines() const
+{
+    auto ret = MeasurementObject::getInfoLines();
+    ret.push_back( fmt::format( "{} value: {:.3f}", getDrawAsDiameter() ? "diameter" : "radius", computeRadiusOrDiameter() ) );
+    return ret;
 }
 
 void RadiusMeasurementObject::swapBase_( Object& other )

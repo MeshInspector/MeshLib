@@ -79,6 +79,18 @@ void DistanceMeasurementObject::setPerCoordDeltasMode( PerCoordDeltas mode )
     perCoordDeltas_ = mode;
 }
 
+float DistanceMeasurementObject::computeDistance() const
+{
+    return getWorldDelta().length() * ( getDrawAsNegative() ? -1.f : 1.f );
+}
+
+std::vector<std::string> DistanceMeasurementObject::getInfoLines() const
+{
+    auto ret = MeasurementObject::getInfoLines();
+    ret.push_back( fmt::format( "distance value: {:.3f}", computeDistance() ) );
+    return ret;
+}
+
 void DistanceMeasurementObject::swapBase_( Object& other )
 {
     if ( auto ptr = other.asType<DistanceMeasurementObject>() )

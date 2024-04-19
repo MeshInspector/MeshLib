@@ -51,6 +51,11 @@ public:
     [[nodiscard]] MRMESH_API bool getShouldVisualizeRay( bool second ) const;
     MRMESH_API void setShouldVisualizeRay( bool second, bool enable );
 
+    // Computes the angle value, as if by `acos(dot(...))` from the two normalized `getWorldRay()`s.
+    [[nodiscard]] MRMESH_API float computeAngle() const;
+
+    [[nodiscard]] MRMESH_API std::vector<std::string> getInfoLines() const override;
+
 protected:
     AngleMeasurementObject( const AngleMeasurementObject& other ) = default;
 

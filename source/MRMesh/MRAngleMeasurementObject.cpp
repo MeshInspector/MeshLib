@@ -137,6 +137,7 @@ void AngleMeasurementObject::setupRenderObject_() const
 
 void AngleMeasurementObject::propagateWorldXfChangedSignal_()
 {
+    MeasurementObject::propagateWorldXfChangedSignal_();
     cachedValue_ = {};
 }
 

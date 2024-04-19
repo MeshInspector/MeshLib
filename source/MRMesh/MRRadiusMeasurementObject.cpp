@@ -135,6 +135,7 @@ void RadiusMeasurementObject::setupRenderObject_() const
 
 void RadiusMeasurementObject::propagateWorldXfChangedSignal_()
 {
+    MeasurementObject::propagateWorldXfChangedSignal_();
     cachedValue_ = {};
 }
 

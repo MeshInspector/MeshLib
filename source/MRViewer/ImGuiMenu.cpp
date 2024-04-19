@@ -79,6 +79,9 @@
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRSceneSettings.h"
+#include "MRMesh/MRAngleMeasurementObject.h"
+#include "MRMesh/MRDistanceMeasurementObject.h"
+#include "MRMesh/MRRadiusMeasurementObject.h"
 #include "imgui_internal.h"
 #include "MRRibbonConstants.h"
 #include "MRRibbonFontManager.h"
@@ -1557,6 +1560,31 @@ float ImGuiMenu::drawSelectionInformation_()
     }
     if ( !haveFeatureProperties )
         editedFeatureObject_.reset();
+
+    // Value for a dimension object.
+    if ( selectedObjs.size() == 1 )
+    {
+        auto setWidgetWidth = [&]
+        {
+            ImGui::SetNextItemWidth( getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x );
+        };
+
+        if ( auto distance = dynamic_cast<DistanceMeasurementObject *>( selectedObjs.front().get() ) )
+        {
+            setWidgetWidth();
+            UI::readOnlyValue<LengthUnit>( "Distance", distance->computeDistance() );
+        }
+        else if ( auto angle = dynamic_cast<AngleMeasurementObject *>( selectedObjs.front().get() ) )
+        {
+            setWidgetWidth();
+            UI::readOnlyValue<AngleUnit>( "Angle", angle->computeAngle() );
+        }
+        else if ( auto radius = dynamic_cast<RadiusMeasurementObject *>( selectedObjs.front().get() ) )
+        {
+            setWidgetWidth();
+            UI::readOnlyValue<LengthUnit>( radius->getDrawAsDiameter() ? "Diameter" : "Radius", radius->computeRadiusOrDiameter() );
+        }
+    }
 
     // Bounding box.
     if ( selectionBbox_.valid()

@@ -27,10 +27,6 @@ public:
     MRMESH_API std::shared_ptr<Object> clone() const override;
     MRMESH_API std::shared_ptr<Object> shallowClone() const override;
 
-    // Get the radius in world coordinates.
-    // There's intentionally no `getLocalRadius()` counterpart, use `getLocalRadiusAsVector()` if you need it.
-    [[nodiscard]] MRMESH_API float getWorldRadius() const;
-
     // Get the center in world coordinates.
     [[nodiscard]] MRMESH_API Vector3f getWorldCenter() const;
     // Get the center in local coordinates.
@@ -50,11 +46,11 @@ public:
     // The normal is automatically normalized and made perpendicular to the `radiusVec`.
     MRMESH_API virtual void setLocalRadiusAsVector( const MR::Vector3f& radiusVec, const Vector3f& normal );
     // Same, but without a preferred normal.
-    MRMESH_API void setLocalRadiusAsVector( const MR::Vector3f& radiusVec ) { setLocalRadiusAsVector( radiusVec, radiusVec.furthestBasisVector() ); }
+    void setLocalRadiusAsVector( const MR::Vector3f& radiusVec ) { setLocalRadiusAsVector( radiusVec, radiusVec.furthestBasisVector() ); }
 
     // Whether we should draw this as a diameter instead of a radius.
     [[nodiscard]] bool getDrawAsDiameter() const { return drawAsDiameter_; }
-    virtual void setDrawAsDiameter( bool value ) { drawAsDiameter_ = value; }
+    MRMESH_API virtual void setDrawAsDiameter( bool value );
 
     // Whether this is a sphere radius, as opposed to circle/cylinder radius.
     [[nodiscard]] bool getIsSpherical() const { return isSpherical_; }
@@ -65,6 +61,11 @@ public:
     [[nodiscard]] float getVisualLengthMultiplier() const { return visualLengthMultiplier_; }
     virtual void setVisualLengthMultiplier( float value ) { visualLengthMultiplier_ = value; }
 
+    // Computes the radius/diameter value, as if by `getLocalRadiusAsVector()`, possibly multiplied by two if `getDrawAsDiameter()`.
+    [[nodiscard]] MRMESH_API float computeRadiusOrDiameter() const;
+
+    [[nodiscard]] MRMESH_API std::vector<std::string> getInfoLines() const override;
+
 protected:
     RadiusMeasurementObject( const RadiusMeasurementObject& other ) = default;
 
@@ -74,6 +75,8 @@ protected:
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
     MRMESH_API void setupRenderObject_() const override;
+
+    MRMESH_API void propagateWorldXfChangedSignal_() override;
 
 private:
     // Don't forget to add all the new fields to serialization.
@@ -86,6 +89,9 @@ private:
     // The visual leader line length multiplier, relative to the radius.
     // You're recommended to set a min absolute value for the resulting length when rendering.
     float visualLengthMultiplier_ = 2 / 3.f;
+
+    // The cached value for `computeRadiusOrDiameter()`.
+    mutable std::optional<float> cachedValue_;
 };
 
 } // namespace MR

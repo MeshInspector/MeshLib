@@ -348,7 +348,7 @@ public:
   // True if the mouse currently hovers a `renderUi()` GUI in the scene.
   // In your `renderUi()`, you should only handle clicks if this returns true, to prevent
   // receiving a click on the same frame as a `mouseDown()` that created your object (if that's possible in your case at all).
-  [[nodiscard]] bool uiManagerOwnsMouseHover() const { return uiRenderManager_->ownsMouseHover_; }
+  [[nodiscard]] bool uiManagerOwnsMouseHover() const { return uiRenderManager_->ownsMouseHover; }
 
 protected:
     MRVIEWER_API virtual void drawModalMessage_();
@@ -448,8 +448,9 @@ protected:
         // We intentionally don't block other events with this, especially not scrolling events, as it's
         //   very annoying when the zoom breaks because you randomly hovered something.
         // It also would be unwise to block `onMouseUp_()`, as you could make some plugin stuck assuming that the mouse is held.
-        bool ownsMouseHover_ = false;
+        bool ownsMouseHover = false;
 
+        // Returns true if mouse down/hover/... events can currently be initiated (i.e. no ImGui panels are hovered).
         bool allowMouseInteraction() const;
     };
     // This class helps the viewer to `renderUi()` from `IRenderObject`s.

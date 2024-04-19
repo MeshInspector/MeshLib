@@ -3413,17 +3413,17 @@ BasicUiRenderTask::BackwardPassParams ImGuiMenu::UiRenderManagerImpl::beginBackw
 
 void ImGuiMenu::UiRenderManagerImpl::finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params )
 {
-    ownsMouseHover_ = params.mouseHoverConsumed && allowMouseInteraction();
+    ownsMouseHover = params.mouseHoverConsumed && allowMouseInteraction();
 }
 
 bool ImGuiMenu::UiRenderManagerImpl::shouldBlockMouseDown( int buttonIndex ) const
 {
-    return buttonIndex == int( Viewer::MouseButton::Left ) && ownsMouseHover_;
+    return buttonIndex == int( Viewer::MouseButton::Left ) && ownsMouseHover;
 }
 
 bool ImGuiMenu::UiRenderManagerImpl::allowMouseInteraction() const
 {
-    return !ImGui::GetIO().WantCaptureMouse || ownsMouseHover_;
+    return !ImGui::GetIO().WantCaptureMouse;
 }
 
 void showModal( const std::string& msg, NotificationType type )

@@ -29,6 +29,12 @@ void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backPa
             backParams.mouseHoverConsumed = true;
             isHovered = true;
 
+            if ( !prevFrameHovered  )
+            {
+                prevFrameHovered = true;
+                return;
+            }
+
             if ( ImGui::IsMouseDown( ImGuiMouseButton_Left ) )
                 isActive = true;
 
@@ -43,6 +49,7 @@ void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backPa
             }
         }
     }
+    prevFrameHovered = isHovered;
 }
 
 void RenderNameObject::Task::renderPass()

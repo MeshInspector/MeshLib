@@ -30,7 +30,7 @@ void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backPa
             backParams.mouseHoverConsumed = true;
             isHovered = true;
 
-            if ( !prevFrameHovered && isHovered )
+            if ( !prevFrameHovered  )
             {
                 prevFrameHovered = true;
                 return;

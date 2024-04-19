@@ -20,6 +20,7 @@ void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backPa
     if ( backParams.mouseHoverConsumed )
         return;
 
+    spdlog::info( "Prev frame hovered {}", prevFrameHovered );
     // If it wasn't clipped to nothing...
     if ( ImGuiMath::CompareAll( windowCornerA ) < windowCornerB )
     {
@@ -28,6 +29,12 @@ void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backPa
         {
             backParams.mouseHoverConsumed = true;
             isHovered = true;
+
+            if ( !prevFrameHovered && isHovered )
+            {
+                prevFrameHovered = true;
+                return;
+            }
 
             if ( ImGui::IsMouseDown( ImGuiMouseButton_Left ) )
                 isActive = true;
@@ -43,6 +50,7 @@ void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backPa
             }
         }
     }
+    prevFrameHovered = isHovered;
 }
 
 void RenderNameObject::Task::renderPass()

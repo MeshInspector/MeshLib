@@ -419,28 +419,29 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     if ( actualSize.x < maxTextSize + 2 * style.WindowPadding.x + style.FramePadding.x )
         return ImGui::End();
 
-    std::vector<Color>& colors = texture_.pixels;
+    const std::vector<Color>& colors = texture_.pixels;
+    const auto sz = colors.size() >> 1; // only half because remaining colors are all gray
     if ( texture_.filter == FilterType::Discrete )
     {
-        auto yStep = actualSize.y / colors.size();
-        for ( int i = 0; i < colors.size(); i++ )
+        auto yStep = actualSize.y / sz;
+        for ( int i = 0; i < sz; i++ )
         {
             drawList->AddRectFilled(
                 { actualPose.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
                 actualPose.y + i * yStep },
                 { actualPose.x - style.WindowPadding.x + actualSize.x ,
                 actualPose.y + ( i + 1 ) * yStep },
-                colors[colors.size() - 1 - i].getUInt32() );
+                colors[sz - 1 - i].getUInt32() );
         }
     }
 
     if ( texture_.filter == FilterType::Linear )
     {
-        auto yStep = actualSize.y / ( colors.size() - 1 );
-        for ( int i = 0; i + 1 < colors.size(); i++ )
+        auto yStep = actualSize.y / ( sz - 1 );
+        for ( int i = 0; i + 1 < sz; i++ )
         {
-            const auto color1 = colors[colors.size() - 1 - i].getUInt32();
-            const auto color2 = colors[colors.size() - 2 - i].getUInt32();
+            const auto color1 = colors[sz - 1 - i].getUInt32();
+            const auto color2 = colors[sz - 2 - i].getUInt32();
             drawList->AddRectFilledMultiColor(
                 { actualPose.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
                 actualPose.y + i * yStep },
@@ -499,7 +500,7 @@ float Palette::getRelativePos( float val ) const
     return 0.5f;
 }
 
-VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region ) const
+VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids ) const
 {
     MR_TIMER
 
@@ -518,7 +519,9 @@ VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet 
     res.resizeNoInit( region.size() );
     BitSetParallelFor( region, [&] ( VertId v )
     {
-        res[v] = UVCoord{ 0.5f, texLen * getRelativePos( values[v] ) + texStart };
+        res[v] = UVCoord{ 
+            texLen * getRelativePos( values[v] ) + texStart,
+            contains( valids, v ) ? 0.25f : 0.75f };
     } );
 
     return res;
@@ -535,25 +538,25 @@ void Palette::updateDiscretizatedColors_()
     if (texture_.filter == FilterType::Linear)
     {
         colors = parameters_.baseColors;
-        texture_.resolution = { 1, int( colors.size() ) };
-        return;
     }
-
-    if ( parameters_.ranges.size() == 4 )
+    else if ( parameters_.ranges.size() == 4 )
     {
         const auto realDiscretization = parameters_.discretization * 2 + 1;
         colors.resize( realDiscretization );
-        texture_.resolution = { 1, realDiscretization };
         for ( int i = 0; i < realDiscretization; ++i )
             colors[i] = getBaseColor_( float( i ) / ( realDiscretization - 1 ) );
     }
     else
     {
         colors.resize( parameters_.discretization );
-        texture_.resolution = { 1, int( colors.size() ) };
         for ( int i = 0; i < parameters_.discretization; ++i )
             colors[i] = getBaseColor_( float( i ) / ( parameters_.discretization - 1 ) );
     }
+
+    // add second layer with gray color for invalid values
+    const auto sz = colors.size();
+    colors.resize( 2 * sz, Color::gray() );
+    texture_.resolution = { int( sz ), 2 };
 }
 
 Color Palette::getBaseColor_( float val )

@@ -72,6 +72,7 @@ struct BasicUiRenderTask
     struct BackwardPassParams
     {
         /// If this is false, you can claim mouse hover for your object. Then set it to true.
+        /// But when you handle clicks, you are advised to also check
         mutable bool mouseHoverConsumed = false;
     };
 
@@ -108,11 +109,6 @@ struct UiRenderManager
     virtual BasicUiRenderTask::BackwardPassParams beginBackwardPass() { return {}; }
     // After the backward pass is performed, the parameters should be passed back into this function.
     virtual void finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params ) { (void)params; }
-
-    // This should return true when the mouse hover is owned by one of the rendered objects.
-    // It's expected that this will be equal to `params.mouseHoverConsumed` from the last `finishBackwardPass()`,
-    // but you can also add your own arbitrary conditions.
-    virtual bool ownsMouseHover() const { return false; }
 };
 
 class IRenderObject

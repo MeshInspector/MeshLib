@@ -465,7 +465,7 @@ bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
 {
     ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
     capturedMouse_ = ImGui::GetIO().WantCaptureMouse;
-    return ImGui::GetIO().WantCaptureMouse || uiRenderManager_->ownsMouseHover();
+    return ImGui::GetIO().WantCaptureMouse || uiRenderManager_->shouldBlockMouseDown( int( button ) );
 }
 
 bool ImGuiMenu::onMouseUp_( Viewer::MouseButton button, int modifier )
@@ -3408,17 +3408,22 @@ void ImGuiMenu::UiRenderManagerImpl::postRenderViewport( ViewportId viewport )
 
 BasicUiRenderTask::BackwardPassParams ImGuiMenu::UiRenderManagerImpl::beginBackwardPass()
 {
-    return { .mouseHoverConsumed = ImGui::GetIO().WantCaptureMouse };
+    return { .mouseHoverConsumed = !allowMouseInteraction() };
 }
 
 void ImGuiMenu::UiRenderManagerImpl::finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params )
 {
-    mouseIsBlocked_ = params.mouseHoverConsumed;
+    ownsMouseHover_ = params.mouseHoverConsumed && allowMouseInteraction();
 }
 
-bool ImGuiMenu::UiRenderManagerImpl::ownsMouseHover() const
+bool ImGuiMenu::UiRenderManagerImpl::shouldBlockMouseDown( int buttonIndex ) const
 {
-    return mouseIsBlocked_;
+    return buttonIndex == int( Viewer::MouseButton::Left ) && ownsMouseHover_;
+}
+
+bool ImGuiMenu::UiRenderManagerImpl::allowMouseInteraction() const
+{
+    return !ImGui::GetIO().WantCaptureMouse || ownsMouseHover_;
 }
 
 void showModal( const std::string& msg, NotificationType type )

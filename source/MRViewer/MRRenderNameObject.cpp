@@ -32,7 +32,7 @@ void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backPa
             if ( ImGui::IsMouseDown( ImGuiMouseButton_Left ) )
                 isActive = true;
 
-            if ( ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
+            if ( getViewerInstance().getMenuPlugin()->uiManagerOwnsMouseHover() && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
             {
                 getViewerInstance().getMenuPluginAs<RibbonMenu>()->simulateNameTagClick(
                     // Yes, a dumb cast. We could find the same object in the scene, but it's a waste of time.

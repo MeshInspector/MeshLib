@@ -345,6 +345,11 @@ public:
   // Behaves as if the user clicked the object name tag, by invoking `nameTagClickSignal`.
   MRVIEWER_API bool simulateNameTagClick( Object& object, NameTagSelectionMode mode );
 
+  // True if the mouse currently hovers a `renderUi()` GUI in the scene.
+  // In your `renderUi()`, you should only handle clicks if this returns true, to prevent
+  // receiving a click on the same frame as a `mouseDown()` that created your object (if that's possible in your case at all).
+  [[nodiscard]] bool uiManagerOwnsMouseHover() const { return uiRenderManager_->ownsMouseHover_; }
+
 protected:
     MRVIEWER_API virtual void drawModalMessage_();
 
@@ -434,18 +439,21 @@ protected:
         MRVIEWER_API void postRenderViewport( ViewportId viewport ) override;
         MRVIEWER_API BasicUiRenderTask::BackwardPassParams beginBackwardPass() override;
         MRVIEWER_API void finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params ) override;
-        MRVIEWER_API bool ownsMouseHover() const override;
 
-    private:
+        // The argument should've been `Viewer::MouseButton`, but I don't want to include the Viewer header.
+        MRVIEWER_API bool shouldBlockMouseDown( int buttonIndex ) const;
+
         // `finishBackwardPass()` sets this to true when some object's UI is hovered.
         // We then read it in `onMouseDown_()` and return true to eat that event.
         // We intentionally don't block other events with this, especially not scrolling events, as it's
         //   very annoying when the zoom breaks because you randomly hovered something.
         // It also would be unwise to block `onMouseUp_()`, as you could make some plugin stuck assuming that the mouse is held.
-        bool mouseIsBlocked_ = false;
+        bool ownsMouseHover_ = false;
+
+        bool allowMouseInteraction() const;
     };
     // This class helps the viewer to `renderUi()` from `IRenderObject`s.
-    std::unique_ptr<UiRenderManager> uiRenderManager_;
+    std::unique_ptr<UiRenderManagerImpl> uiRenderManager_;
 };
 
 

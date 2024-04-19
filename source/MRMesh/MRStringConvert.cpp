@@ -55,17 +55,19 @@ std::string Utf16ToUtf8( const std::wstring_view & utf16 )
 
 std::string systemToUtf8( const std::string & msg )
 {
+#ifdef _WIN32
     if ( msg.empty() )
         return msg;
-#ifdef _WIN32
+    auto rsize = MultiByteToWideChar( CP_ACP, MB_PRECOMPOSED, msg.data(), int( msg.size() ), nullptr, 0 );
     std::wstring wmsg;
-    wmsg.resize( msg.size() + 1 );
-    auto res = MultiByteToWideChar( CP_ACP, MB_PRECOMPOSED, msg.c_str(), -1, wmsg.data(), int( wmsg.size() ) );
-    if ( res == 0 )
+    wmsg.resize( size_t( rsize ) );
+    rsize = MultiByteToWideChar( CP_ACP, MB_PRECOMPOSED, msg.data(), int( msg.size() ), wmsg.data(), int( wmsg.size() ) );
+    if ( rsize == 0 )
     {
         spdlog::error( GetLastError() );
         return {};
     }
+    wmsg.resize( rsize );
     return Utf16ToUtf8( wmsg );
 #else
     return msg;

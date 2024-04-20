@@ -527,11 +527,6 @@ VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet 
     return res;
 }
 
-const Palette::Parameters& Palette::getParameters() const
-{
-    return parameters_;
-}
-
 void Palette::updateDiscretizatedColors_()
 {
     std::vector<Color>& colors = texture_.pixels;

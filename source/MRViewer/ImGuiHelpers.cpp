@@ -1117,7 +1117,7 @@ PaletteChanges Palette(
     }
     ImGui::PopItemWidth();
 
-    bool correctOreder = true;
+    bool correctOrder = true;
     int orderStep = ( 1 - paletteRangeMode ) * 2 + 1;
     for ( int i = 0; i < 4; )
     {
@@ -1126,19 +1126,19 @@ PaletteChanges Palette(
             break;
         if ( ranges[i] > ranges[next] )
         {
-            correctOreder = false;
+            correctOrder = false;
             break;
         }
         i = next;
     }
 
-    if ( !correctOreder )
+    if ( !correctOrder )
     {
         ImGui::PushStyleColor( ImGuiCol_Text, Color::red().getUInt32() );
         ImGui::TextWrapped( "Invalid values order" );
         ImGui::PopStyleColor();
     }
-    if ( correctOreder && ( fixZeroChanged || ( paletteRangeMode != paletteRangeModeBackUp ) || rangesChanged ) )
+    if ( correctOrder && ( fixZeroChanged || ( paletteRangeMode != paletteRangeModeBackUp ) || rangesChanged ) )
     {
         changes |= PaletteChanges::Ranges;
         presetName.clear();

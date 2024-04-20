@@ -11,6 +11,7 @@
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRPch/MRJson.h"
 #include <string>
 #include <fstream>
 

@@ -1017,7 +1017,7 @@ PaletteChanges Palette(
         changes |= PaletteChanges::Texture | PaletteChanges::Ranges; // both the texture and uv-coordinates must be recomputed
         presetName.clear();
     }
-    UI::setTooltipIfHovered( "If checked, palette will have several disrete levels. Otherwise it will be smooth.", menuScaling );
+    UI::setTooltipIfHovered( "If checked, palette will have several discrete levels. Otherwise it will be smooth.", menuScaling );
     if ( isDiscrete )
     {
         ImGui::SameLine();
@@ -1073,9 +1073,7 @@ PaletteChanges Palette(
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
             rangesChanged |= UI::drag<NoUnit>( "Min/Max", ranges[3], speed, 0.0f, max );
             ImGui::PopStyleVar();
-
-            if ( rangesChanged || fixZeroChanged )
-                ranges[0] = -ranges[3];
+            ranges[0] = -ranges[3];
         }
         else
         {
@@ -1093,8 +1091,7 @@ PaletteChanges Palette(
                 ranges[3] = 0.0f;
 
             rangesChanged |= UI::drag<NoUnit>( "Max positive / Min negative", ranges[3], speed, min, max );
-            if ( rangesChanged || fixZeroChanged )
-                ranges[0] = -ranges[3];
+            ranges[0] = -ranges[3];
 
             if ( ranges[2] < 0.0f )
                 ranges[2] = 0.0f;
@@ -1102,8 +1099,7 @@ PaletteChanges Palette(
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
             rangesChanged |= UI::drag<NoUnit>( "Min positive / Max negative", ranges[2], speed, min, max );
             ImGui::PopStyleVar();
-            if ( rangesChanged || fixZeroChanged )
-                ranges[1] = -ranges[2];
+            ranges[1] = -ranges[2];
         }
         else
         {

@@ -337,7 +337,7 @@ void Palette::setFilterType( FilterType type )
     resetLabels();
 }
 
-void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size )
+void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size, bool onlyTopHalf )
 {
     float maxTextSize = 0.0f;
     for ( const auto& label : labels_ )
@@ -405,11 +405,14 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
             resetLabels();
         }
         
-        const auto pixRange = actualSize.y - fontSize;
+        auto pixRange = actualSize.y - fontSize;
+        if ( onlyTopHalf )
+            pixRange *= 2;
 
         for ( int i = 0; i < labels_.size(); ++i )
         {
-            drawList->AddText( ImGui::GetFont(), fontSize,
+            if ( !onlyTopHalf || labels_[i].value <= 0.5f )
+                drawList->AddText( ImGui::GetFont(), fontSize,
                                 { actualPose.x + style.WindowPadding.x,
                                 actualPose.y + labels_[i].value * pixRange },
                                 ImGui::GetColorU32( SceneColors::get( SceneColors::Labels ).getUInt32() ),
@@ -425,6 +428,8 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     if ( texture_.filter == FilterType::Discrete )
     {
         auto yStep = actualSize.y / sz;
+        if ( onlyTopHalf )
+            yStep *= 2;
         for ( int i = 0; i < sz; i++ )
         {
             drawList->AddRectFilled(
@@ -439,6 +444,8 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     if ( texture_.filter == FilterType::Linear )
     {
         auto yStep = actualSize.y / ( sz - 1 );
+        if ( onlyTopHalf )
+            yStep *= 2;
         for ( int i = 0; i + 1 < sz; i++ )
         {
             const auto color1 = colors[sz - 1 - i].getUInt32();

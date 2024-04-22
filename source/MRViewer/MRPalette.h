@@ -52,9 +52,11 @@ public:
     // set palette type (linear / discrete)
     MRVIEWER_API void setFilterType( FilterType type );
 
-    // Discrete: bar consists of single colored rectangles for each initial color
-    // Linear (default): color is changing from one to another during initial color list
-    MRVIEWER_API void draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size );
+    /// Draws vertical legend with labels in ImGui window with given name
+    /// Discrete: bar consists of single colored rectangles for each initial color
+    /// Linear (default): color is changing from one to another during initial color list
+    /// \param onlyTopHalf if true, draws only top half of the palette and labels stretched to whole window
+    MRVIEWER_API void draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size, bool onlyTopHalf = false );
 
     // structure for label
     struct MRVIEWER_CLASS Label

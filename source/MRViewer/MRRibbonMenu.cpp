@@ -1959,6 +1959,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
     if ( UI::button( "Load from file", Vector2f( buttonSize, 0 ) ) )
     {
         auto filename = openFileDialog( { "", {}, { {"JSON (.json)", "*.json"} } } );
+        std::string errorString;
         if ( !filename.empty() )
         {
             std::ifstream ifs( filename );
@@ -1979,18 +1980,20 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
                         uniformScale_ = tr->uniformScale;
                     } else
                     {
-                        spdlog::error( "Cannot parse transform" );
+                        errorString = "Cannot parse transform";
                     }
                 }
                 else
                 {
-                    spdlog::error( "Cannot parse transform" );
+                    errorString = "Cannot parse transform";
                 }
             }
             else
             {
-                spdlog::error( "Cannot open file for reading" );
+                errorString = "Cannot open file for reading";
             }
+            if ( !errorString.empty() )
+                showModal( errorString, NotificationType::Error );
         }
         ImGui::CloseCurrentPopup();
     }

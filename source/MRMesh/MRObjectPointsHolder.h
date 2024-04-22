@@ -84,14 +84,10 @@ public:
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
     /// sets rendering discretization, each \param val -th point will be displayed on screen
-    void setRenderDiscretization( int val )
-    {
-        if ( renderDiscretization_ == val)
-            return;
-        renderDiscretization_ = val;
-        needRedraw_ = true;
-        renderDiscretizationChangedSignal();
-    }
+    MRMESH_API void setRenderDiscretization( int val );
+    /// sets rendering discretization according MaxAutoRenderingPoints
+    /// it will displayed no more points than setted in setMaxAutoRenderingPoints()
+    MRMESH_API void setRenderDiscretizationAuto();
 
     /// returns rendering discretization, each N-th point will be displayed on screen
     int getRenderDiscretization() const
@@ -163,6 +159,7 @@ protected:
 
     int renderDiscretization_ = 1;
     int maxRenderingPoints_ = 1'000'000;
+    bool autoUpdateDiscretization_ = true;
     int chooseRenderDiscretization_();
 
 private:

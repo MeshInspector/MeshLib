@@ -67,8 +67,18 @@ void ObjectPointsHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 
     if ( mask & DIRTY_FACE )
     {
-        numValidPoints_.reset();
-        setRenderDiscretization( chooseRenderDiscretization_() );
+        if ( autoUpdateDiscretization_ )
+        {
+            const size_t oldNum = numValidPoints_ ? *numValidPoints_ : 0;
+            numValidPoints_.reset();
+            if ( numValidPoints() > oldNum )
+                setRenderDiscretizationAuto();
+        }
+        else
+        {
+            numValidPoints_.reset();
+            setRenderDiscretizationAuto();
+        }
     }
 
     if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
@@ -198,6 +208,22 @@ size_t ObjectPointsHolder::heapBytes() const
         + MR::heapBytes( points_ );
 }
 
+void ObjectPointsHolder::setRenderDiscretization( int val )
+{
+    if ( renderDiscretization_ == val )
+        return;
+    renderDiscretization_ = val;
+    autoUpdateDiscretization_ = false;
+    needRedraw_ = true;
+    renderDiscretizationChangedSignal();
+}
+
+void ObjectPointsHolder::setRenderDiscretizationAuto()
+{
+    setRenderDiscretization( chooseRenderDiscretization_() );
+    autoUpdateDiscretization_ = true;
+}
+
 void ObjectPointsHolder::setSavePointsFormat( const char * newFormat )
 {
     if ( !newFormat || *newFormat != '.' )
@@ -271,7 +297,7 @@ VoidOrErrStr ObjectPointsHolder::deserializeModel_( const std::filesystem::path&
         setColoringType( ColoringType::VertsColorMap );
 
     points_ = std::make_shared<PointCloud>( std::move( res.value() ) );
-    setRenderDiscretization( chooseRenderDiscretization_() );
+    setRenderDiscretizationAuto();
     return {};
 }
 
@@ -349,7 +375,7 @@ void ObjectPointsHolder::setMaxAutoRenderingPoints( int val )
     if ( maxRenderingPoints_ == val )
         return;
     maxRenderingPoints_ = val;
-    setRenderDiscretization( chooseRenderDiscretization_() );
+    setRenderDiscretizationAuto();
 }
 
 }

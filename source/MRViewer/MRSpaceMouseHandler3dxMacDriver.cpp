@@ -169,7 +169,7 @@ void SpaceMouseHandler3dxMacDriver::setClientName( const char* name, size_t len 
         len = std::strlen( name );
     assert( len <= 254 );
     // the name must be converted to the Pascal string format
-    clientName_ = std::make_unique_for_overwrite<uint8_t[]>( len + 1 );
+    clientName_ = std::make_unique<uint8_t[]>( len + 1 );
     clientName_[0] = (uint8_t)len;
     std::memcpy( clientName_.get() + 1, (const uint8_t *)name, len );
 }

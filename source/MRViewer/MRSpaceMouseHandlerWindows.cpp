@@ -131,21 +131,25 @@ SpaceMouseHandlerWindows::~SpaceMouseHandlerWindows()
         updateThread_.join();
 }
 
-void SpaceMouseHandlerWindows::initialize()
+bool SpaceMouseHandlerWindows::initialize()
 {
     bool spaceMouseAttached = isSpaceMouseAttached();
     if ( spaceMouseAttached )
+    {
         spdlog::info( "Found attached SpaceMouse" );
+    }
     else
     {
         spdlog::info( "Not found any attached SpaceMouse" );
-        return;
+        return false;
     }
 
     initialized_ = InitializeRawInput();
     spdlog::info( "Initialize SpaceMouse {}", initialized_ ? "success" : "failed" );
 
     updateConnected_();
+
+    return true;
 }
 
 void SpaceMouseHandlerWindows::handle()

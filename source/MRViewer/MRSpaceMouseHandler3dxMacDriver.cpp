@@ -55,13 +55,14 @@ uint32_t gButtonState{ 0 };
 
 void onSpaceMouseMessage( uint32_t, uint32_t type, void* arg )
 {
-    const auto* state = (ConnexionDeviceState*)arg;
-    if ( gKnownClientIds.find( state->client ) == gKnownClientIds.end() )
-        return;
-
     auto& viewer = getViewerInstance();
     if ( type == kConnexionMsgDeviceState )
     {
+        assert( arg );
+        const auto* state = (ConnexionDeviceState*)arg;
+        if ( gKnownClientIds.find( state->client ) == gKnownClientIds.end() )
+            return;
+
         switch ( state->command )
         {
             case kConnexionCmdHandleButtons:

@@ -173,18 +173,32 @@ void MultiwayICP::deactivatefarDistPairs_()
     MR_TIMER;
 
     for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
-        for ( MeshOrPointsId j( i + 1 ); j < objs_.size(); ++j )
-            for ( int it = 0; it < 3; ++it )
+    {
+        for ( int it = 0; it < 3; ++it )
+        {
+            size_t numDeactivated = 0;
+            NumSum sum;
+            for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
             {
-                const auto avgDist = ( MR::getSumSqDistToPoint( pairsPerObj_[i][j] ) + MR::getSumSqDistToPoint( pairsPerObj_[j][i] ) ).rootMeanSqF();
-                const auto maxDistSq = sqr( prop_.farDistFactor * avgDist );
-                if ( maxDistSq >= prop_.distThresholdSq )
-                    break;
-
-                if ( MR::deactivateFarPairs( pairsPerObj_[i][j], maxDistSq ) +
-                     MR::deactivateFarPairs( pairsPerObj_[j][i], maxDistSq ) <= 0 )
-                    break; // nothing was deactivated
+                if ( i == j )
+                    continue;
+                sum = sum + MR::getSumSqDistToPoint( pairsPerObj_[i][j] );
             }
+            const auto avgDist = sum.rootMeanSqF();
+            const auto maxDistSq = sqr( prop_.farDistFactor * avgDist );
+            if ( maxDistSq >= prop_.distThresholdSq )
+                break;
+            for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
+            {
+                if ( i == j )
+                    continue;
+                numDeactivated += MR::deactivateFarPairs( pairsPerObj_[i][j], maxDistSq );
+            }
+
+            if ( numDeactivated == 0 )
+                break; // nothing was deactivated
+        }
+    }
 }
 
 bool MultiwayICP::p2ptIter_()
@@ -201,7 +215,12 @@ bool MultiwayICP::p2ptIter_()
             for ( size_t idx : pairsPerObj_[id][j].active )
             {
                 const auto& vp = pairsPerObj_[id][j].vec[idx];
-                p2pt.add( vp.srcPoint, vp.tgtPoint, vp.weight );
+                p2pt.add( vp.srcPoint, 0.5f * ( vp.srcPoint + vp.tgtPoint ), vp.weight );
+            }
+            for ( size_t idx : pairsPerObj_[j][id].active )
+            {
+                const auto& vp = pairsPerObj_[j][id].vec[idx];
+                p2pt.add( vp.tgtPoint, 0.5f * ( vp.srcPoint + vp.tgtPoint ), vp.weight );
             }
         }
 
@@ -254,8 +273,15 @@ bool MultiwayICP::p2plIter_()
             for ( size_t idx : pairsPerObj_[id][j].active )
             {
                 const auto& vp = pairsPerObj_[id][j].vec[idx];
-                centroidRef += vp.tgtPoint;
+                centroidRef += ( vp.tgtPoint + vp.srcPoint ) * 0.5f;
                 centroidRef += vp.srcPoint;
+                ++activeCount;
+            }
+            for ( size_t idx : pairsPerObj_[j][id].active )
+            {
+                const auto& vp = pairsPerObj_[j][id].vec[idx];
+                centroidRef += ( vp.tgtPoint + vp.srcPoint ) * 0.5f;
+                centroidRef += vp.tgtPoint;
                 ++activeCount;
             }
         }
@@ -275,7 +301,12 @@ bool MultiwayICP::p2plIter_()
             for ( size_t idx : pairsPerObj_[id][j].active )
             {
                 const auto& vp = pairsPerObj_[id][j].vec[idx];
-                p2pl.add( vp.srcPoint - centroidRef, vp.tgtPoint - centroidRef, vp.tgtNorm, vp.weight );
+                p2pl.add( vp.srcPoint - centroidRef, ( vp.tgtPoint + vp.srcPoint ) * 0.5f - centroidRef, vp.tgtNorm, vp.weight );
+            }
+            for ( size_t idx : pairsPerObj_[j][id].active )
+            {
+                const auto& vp = pairsPerObj_[j][id].vec[idx];
+                p2pl.add( vp.tgtPoint - centroidRef, ( vp.tgtPoint + vp.srcPoint ) * 0.5f - centroidRef, vp.srcNorm, vp.weight );
             }
         }
 

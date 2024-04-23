@@ -333,7 +333,7 @@ void ObjectMeshHolder::copyColors( const VisualObject& src, const VertMap& thisT
     } );
     setVertsColorMap( std::move( colorMap ) );
 
-    if ( !facesColorMap_.empty() )
+    if ( !facesColorMap_.empty() && mesh_ )
     {
         auto& validFace = mesh_->topology.getValidFaces();
         FaceColors faceColors;

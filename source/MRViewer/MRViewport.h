@@ -156,7 +156,7 @@ public:
         std::optional<Vector2f> point;
 
         // If specified, only pick in those objects.
-        // To hardcode the list in the initializer, use `{ .objects = {{{ a, b, c }}} }`.
+        // To hardcode the list in the initializer, use `{ .objects = std::array{ a, b, c } }`.
         std::optional<std::span<VisualObject* const>> objects;
 
         // Predicate to additionally filter objects that should be treated as pickable.
@@ -196,7 +196,7 @@ public:
     // comfortable usage:
     //     auto [obj,pick] = pick_render_object( objects );
     // pick objects from input
-    [[deprecated("Use `pickRenderObject( { .objects = ... } )`")]] // NOTE! If your list is hardcoded, use `.objects = {{{ a, b, c }}}`.
+    [[deprecated("Use `pickRenderObject( { .objects = ... } )`")]] // NOTE! If your list is hardcoded, use `.objects = std::array{ a, b, c }`.
     MRVIEWER_API ObjAndPick pick_render_object( const std::vector<VisualObject*>& objects ) const;
     // This function allows to pick point in scene by GL with a given peak radius.
     // usually, from several objects that fall into the peak, the closest one along the ray is selected.However
@@ -245,17 +245,14 @@ public:
     //     const auto [obj,pick] = pick_render_object();
     // pick all visible and pickable objects
     // picks objects from current mouse pose by default
-    [[deprecated("Use `pickRenderObject()`")]]
     MRVIEWER_API ConstObjAndPick const_pick_render_object() const;
     // This function allows to pick point in scene by GL
     // comfortable usage:
     //      const auto [obj,pick] = pick_render_object( objects );
     // pick objects from input
-    [[deprecated("Use `pickRenderObject()`")]]
     MRVIEWER_API ConstObjAndPick const_pick_render_object( const std::vector<const VisualObject*>& objects ) const;
     // This function allows to pick several custom viewport space points by GL
     // returns vector of pairs [obj,pick]
-    [[deprecated("Use `multiPickObjects()`")]]
     MRVIEWER_API std::vector<ConstObjAndPick> constMultiPickObjects( const std::vector<const VisualObject*>& objects, const std::vector<Vector2f>& viewportPoints ) const;
 
     // multiplies view-matrix on given transformation from the _right_;

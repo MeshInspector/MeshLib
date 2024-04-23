@@ -422,7 +422,7 @@ ConstObjAndPick Viewport::const_pick_render_object() const
 ConstObjAndPick Viewport::const_pick_render_object( const std::vector<const VisualObject*>& objects ) const
 {
     // not to duplicate code
-    return pick_render_object( reinterpret_cast<const std::vector<VisualObject*>&> ( objects ) );
+    return pickRenderObject( { .objects = std::span( const_cast<VisualObject**>( objects.data() ), objects.size() ) } );
 }
 
 std::vector<ConstObjAndPick> Viewport::constMultiPickObjects( const std::vector<const VisualObject*>& objects, const std::vector<Vector2f>& viewportPoints ) const

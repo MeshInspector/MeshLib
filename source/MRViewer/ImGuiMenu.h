@@ -445,7 +445,7 @@ protected:
 
         // If this returns false, the event should be allowed to pass through to other plugins, even if ImGui wants to consume it.
         // Pass at most one bit at a time.
-        MRVIEWER_API bool allowBlockingEvent( BasicUiRenderTask::InteractionMask event ) const;
+        MRVIEWER_API bool canConsumeEvent( BasicUiRenderTask::InteractionMask event ) const;
     };
     // This class helps the viewer to `renderUi()` from `IRenderObject`s.
     std::unique_ptr<UiRenderManagerImpl> uiRenderManager_;

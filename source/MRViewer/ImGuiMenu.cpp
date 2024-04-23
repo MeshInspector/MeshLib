@@ -494,7 +494,7 @@ bool ImGuiMenu::onMouseScroll_( float delta_y )
         ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, delta_y );
         // do extra frames to prevent imgui calculations ping
         viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
-        return uiRenderManager_->allowBlockingEvent( BasicUiRenderTask::InteractionMask::mouseScroll );
+        return uiRenderManager_->canConsumeEvent( BasicUiRenderTask::InteractionMask::mouseScroll );
     }
 
     return false;
@@ -3441,7 +3441,7 @@ void ImGuiMenu::UiRenderManagerImpl::finishBackwardPass( const BasicUiRenderTask
     }
 }
 
-bool ImGuiMenu::UiRenderManagerImpl::allowBlockingEvent( BasicUiRenderTask::InteractionMask event ) const
+bool ImGuiMenu::UiRenderManagerImpl::canConsumeEvent( BasicUiRenderTask::InteractionMask event ) const
 {
     // Here we only force-unblock events if one of our widgets is hovered.
     return

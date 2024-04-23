@@ -26,8 +26,6 @@ void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backPa
         // React to hover and possibly click.
         if ( ImGuiMath::CompareAll( ImGui::GetMousePos() ) >= windowCornerA && ImGuiMath::CompareAll( ImGui::GetMousePos() ) < windowCornerB )
         {
-            backParams.consumedInteractions |= InteractionMask::picker | InteractionMask::mouseClickLeft;
-
             if ( backParams.tryConsumeMouseHover() )
             {
                 isHovered = true;

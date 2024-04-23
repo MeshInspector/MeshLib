@@ -91,22 +91,15 @@ void Viewport::clearFramebuffers()
     viewportGL_.fillViewport( viewportRect_, params_.backgroundColor );
 }
 
-// This ignores `params.predicate`. Use `Viewport::pickRenderObject()` if you want to respect it.
-static ObjAndPick pickerImplementation( const Viewport& v, const std::vector<VisualObject*>& objects, const Viewport::PickRenderObjectParams& params )
+ObjAndPick Viewport::pickRenderObject( const PickRenderObjectParams& params ) const
 {
     auto& viewer = getViewerInstance();
 
     // Maybe block pick by the ImGuiMenu.
-    if ( !params.clickThroughImGuiWindows )
-    {
-        if ( auto menu = viewer.getMenuPlugin(); menu && menu->pickBlockedByImGuiWindow() )
-            return {};
-    }
-    if ( !params.clickThroughUiObjects )
-    {
-        if ( auto menu = viewer.getMenuPlugin(); menu && menu->pickBlockedByUiObject() )
-            return {};
-    }
+    if ( auto menu = viewer.getMenuPlugin(); menu && menu->pickBlockedByImGuiWindow() )
+        return {};
+    if ( auto menu = viewer.getMenuPlugin(); menu && menu->pickBlockedByUiObject() )
+        return {};
 
     const auto& mousePos = viewer.mouseController().getMousePos();
     Vector2f vp;
@@ -117,15 +110,40 @@ static ObjAndPick pickerImplementation( const Viewport& v, const std::vector<Vis
     }
     else
     {
-        auto vec3 = viewer.screenToViewport( Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), v.id );
+        auto vec3 = viewer.screenToViewport( Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), id );
         vp.x = vec3.x;
         vp.y = vec3.y;
     }
 
     int radius = params.pickRadius >= 0 ? params.pickRadius : viewer.glPickRadius;
 
+    // Get a list of target objects.
+    VisualObjectTreeDataVector renderVectorStorage;
+    std::span<VisualObject* const> renderVector;
+    if ( params.objects )
+    {
+        if ( !params.predicate )
+        {
+            renderVector = *params.objects;
+        }
+        else
+        {
+            renderVectorStorage.assign( params.objects->begin(), params.objects->end() );
+            std::erase_if( renderVectorStorage, [&]( const VisualObject* v ){ return params.predicate( v, id ); } );
+            renderVector = renderVectorStorage;
+        }
+    }
+    else
+    {
+        if ( params.predicate )
+            getPickerDataVector( SceneRoot::get(), id, params.predicate, renderVectorStorage );
+        else
+            getPickerDataVector( SceneRoot::get(), id, renderVectorStorage );
+        renderVector = renderVectorStorage;
+    }
+
     if ( radius == 0 )
-        return v.multiPickObjects( objects, { vp } ).front();
+        return multiPickObjects( renderVector, { vp } ).front();
     else
     {
         std::vector<Vector2f> pixels;
@@ -139,7 +157,7 @@ static ObjAndPick pickerImplementation( const Viewport& v, const std::vector<Vis
             if ( i * i + j * j <= radius * radius + 1 )
                 pixels.push_back( Vector2f( vp.x + i, vp.y + j ) );
         }
-        auto res = v.multiPickObjects( objects, pixels );
+        auto res = multiPickObjects( renderVector, pixels );
         if ( res.empty() )
             return {};
         if ( params.exactPickFirst && bool( res.front().first ) )
@@ -163,32 +181,12 @@ static ObjAndPick pickerImplementation( const Viewport& v, const std::vector<Vis
     }
 }
 
-ObjAndPick Viewport::pickRenderObject( const PickRenderObjectParams& params ) const
-{
-    VisualObjectTreeDataVector renderVector;
-    if ( params.predicate )
-        getPickerDataVector( SceneRoot::get(), id, params.predicate, renderVector );
-    else
-        getPickerDataVector( SceneRoot::get(), id, renderVector );
-
-    return pickerImplementation( *this, renderVector, params );
-}
-
-ObjAndPick Viewport::pickRenderObject( std::vector<VisualObject*> objects, const PickRenderObjectParams& params ) const
-{
-    // Filter the vector using the predicate.
-    if ( params.predicate )
-        std::erase_if( objects, [&]( const VisualObject* v ){ return params.predicate( v, id ); } );
-
-    return pickerImplementation( *this, objects, params );
-}
-
 ObjAndPick Viewport::pick_render_object( uint16_t pickRadius ) const
 {
     VisualObjectTreeDataVector renderVector;
     getPickerDataVector( SceneRoot::get(), id, renderVector );
 
-    return pickRenderObject( renderVector, { .pickRadius = pickRadius } );
+    return pickRenderObject( { .objects = renderVector, .pickRadius = pickRadius } );
 }
 
 ObjAndPick Viewport::pick_render_object() const
@@ -196,31 +194,31 @@ ObjAndPick Viewport::pick_render_object() const
     VisualObjectTreeDataVector renderVector;
     getPickerDataVector( SceneRoot::get(), id, renderVector );
 
-    return pickRenderObject( renderVector );
+    return pickRenderObject( { .objects = renderVector } );
 }
 
 ObjAndPick Viewport::pick_render_object( const Vector2f& viewportPoint ) const
 {
     VisualObjectTreeDataVector renderVector;
     getPickerDataVector( SceneRoot::get(), id, renderVector );
-    return pickRenderObject( renderVector, { .point = viewportPoint } );
+    return pickRenderObject( { .point = viewportPoint, .objects = renderVector } );
 }
 
 ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector ) const
 {
-    return pickRenderObject( renderVector );
+    return pickRenderObject( { .objects = renderVector } );
 }
 
 ObjAndPick Viewport::pick_render_object( bool exactPickFirst ) const
 {
     VisualObjectTreeDataVector renderVector;
     getPickerDataVector( SceneRoot::get(), id, renderVector );
-    return pickRenderObject( renderVector, { .exactPickFirst = exactPickFirst } );
+    return pickRenderObject( { .objects = renderVector, .exactPickFirst = exactPickFirst } );
 }
 
 ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector, uint16_t pickRadius, bool exactPickFirst /* = true */ ) const
 {
-    return pickRenderObject( renderVector, { .pickRadius = pickRadius, .exactPickFirst = exactPickFirst } );
+    return pickRenderObject( { .objects = renderVector, .pickRadius = pickRadius, .exactPickFirst = exactPickFirst } );
 }
 
 ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& renderVector, const Vector2f& viewportPoint ) const
@@ -228,7 +226,7 @@ ObjAndPick Viewport::pick_render_object( const std::vector<VisualObject*>& rende
     return multiPickObjects( renderVector, {viewportPoint} ).front();
 }
 
-std::vector<ObjAndPick> Viewport::multiPickObjects( const std::vector<VisualObject*>& renderVector, const std::vector<Vector2f>& viewportPoints ) const
+std::vector<ObjAndPick> Viewport::multiPickObjects( std::span<VisualObject* const> renderVector, const std::vector<Vector2f>& viewportPoints ) const
 {
     MR_TIMER;
     if ( viewportPoints.empty() )

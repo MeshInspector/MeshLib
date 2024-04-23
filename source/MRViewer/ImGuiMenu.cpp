@@ -464,12 +464,7 @@ void ImGuiMenu::rescaleStyle_()
 bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
 {
     capturedMouse_ = ImGui::GetIO().WantCaptureMouse
-        || bool( uiRenderManager_->consumedInteractions & (
-            button == Viewer::MouseButton::Left ? BasicUiRenderTask::InteractionMask::mouseClickLeft :
-            button == Viewer::MouseButton::Right ? BasicUiRenderTask::InteractionMask::mouseClickRight :
-            button == Viewer::MouseButton::Middle ? BasicUiRenderTask::InteractionMask::mouseClickMiddle :
-            BasicUiRenderTask::InteractionMask{}
-    ) );
+        || bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseHover );
 
     // If a plugin opens some UI in its `onMouseDown_()`,
     // this condition prevents that UI from immediately getting clicked in the same frame.
@@ -493,13 +488,13 @@ bool ImGuiMenu::onMouseMove_( int mouse_x, int mouse_y )
 
 bool ImGuiMenu::onMouseScroll_( float delta_y )
 {
-    if ( ImGui::GetIO().WantCaptureMouse || bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseWheel ) )
+    if ( ImGui::GetIO().WantCaptureMouse || bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseScroll ) )
     {
         // allow ImGui to process the scroll exclusively
         ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, delta_y );
         // do extra frames to prevent imgui calculations ping
         viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
-        return uiRenderManager_->allowBlockingEvent( BasicUiRenderTask::InteractionMask::mouseWheel );
+        return uiRenderManager_->allowBlockingEvent( BasicUiRenderTask::InteractionMask::mouseScroll );
     }
 
     return false;
@@ -889,7 +884,7 @@ bool ImGuiMenu::pickBlockedByImGuiWindow() const
 
 bool ImGuiMenu::pickBlockedByUiObject() const
 {
-    return bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::picker );
+    return bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseHover );
 }
 
 void ImGuiMenu::drawModalMessage_()

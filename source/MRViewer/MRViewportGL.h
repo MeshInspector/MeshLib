@@ -9,6 +9,8 @@
 #include "MRMesh/MRViewportId.h"
 #include "MRMesh/MRIRenderObject.h"
 
+#include <span>
+
 namespace MR
 {
 // colors of segment ends
@@ -75,12 +77,12 @@ public:
 
     // Check that members have been initialized
     bool checkInit() const;
-    
+
     // Parameters of objects picking
     struct PickParameters
     {
-        const std::vector<VisualObject*>& renderVector;       // objects to pick
-        BaseRenderParams baseRenderParams;                    // parameters for rendering pick object 
+        std::span<VisualObject* const> renderVector;       // objects to pick
+        BaseRenderParams baseRenderParams;                    // parameters for rendering pick object
         Plane3f clippingPlane;                                // viewport clip plane (it is not applied while object does not have clipping flag set)
     };
     struct BasePickResult

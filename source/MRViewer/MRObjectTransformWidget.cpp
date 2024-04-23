@@ -696,7 +696,7 @@ ControlBit TransformControls::hover_( bool pickThrough )
 
     const auto& vp = getViewerInstance().viewport( hoveredViewportId );
 
-    auto [obj, pick] = pickThrough ? vp.pick_render_object( objsToPick_ ) : vp.pick_render_object();
+    auto [obj, pick] = pickThrough ? vp.pickRenderObject( { .objects = objsToPick_ } ) : vp.pick_render_object();
     if ( !obj )
     {
         dropCurrentObj();

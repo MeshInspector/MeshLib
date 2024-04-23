@@ -19,7 +19,7 @@ bool isOnTheScreen( const std::shared_ptr<Object>& obj, const Vector3f& projPoin
     Viewport& viewport = Viewer::instanceRef().viewport();
 
     Vector2f projPoint2f = Vector2f( projPoint.x, projPoint.y );
-    auto pick = viewport.pick_render_object( projPoint2f );
+    auto pick = viewport.pickRenderObject( { .point = projPoint2f } );
     if ( pick.first && pick.first != obj )
         return false;
     auto clipPick = viewport.projectToViewportSpace( pick.second.point );

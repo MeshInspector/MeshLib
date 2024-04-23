@@ -72,11 +72,7 @@ struct BasicUiRenderTask
     enum class InteractionMask
     {
         mouseHover = 1 << 0,
-        mouseClickLeft = 1 << 1,
-        mouseClickMiddle = 1 << 2,
-        mouseClickRight = 1 << 3,
-        mouseWheel = 1 << 4,
-        picker = 1 << 5,
+        mouseScroll = 1 << 1,
     };
     MR_MAKE_FLAG_OPERATORS_IN_CLASS( InteractionMask )
 

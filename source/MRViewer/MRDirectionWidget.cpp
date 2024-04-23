@@ -101,7 +101,7 @@ namespace MR
     {
         if ( !mousePressed_ )
             return false;
-        
+
         auto viewer = Viewer::instance();
         const auto viewportEnd = viewer->screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewer->viewport().id );
         const auto worldEndPoint = viewer->viewport().unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
@@ -109,7 +109,7 @@ namespace MR
         updateDirection( newDir );
         if ( onDirectionChanged_ )
             onDirectionChanged_( newDir, needToSaveHistory_ );
-        
+
         needToSaveHistory_ = false;
         return true;
     }

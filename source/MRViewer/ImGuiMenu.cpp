@@ -463,9 +463,20 @@ void ImGuiMenu::rescaleStyle_()
 // Mouse IO
 bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
 {
-    ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
-    capturedMouse_ = ImGui::GetIO().WantCaptureMouse;
-    return ImGui::GetIO().WantCaptureMouse || uiRenderManager_->ownsMouseHover();
+    capturedMouse_ = ImGui::GetIO().WantCaptureMouse
+        || bool( uiRenderManager_->consumedInteractions & (
+            button == Viewer::MouseButton::Left ? BasicUiRenderTask::InteractionMask::mouseClickLeft :
+            button == Viewer::MouseButton::Right ? BasicUiRenderTask::InteractionMask::mouseClickRight :
+            button == Viewer::MouseButton::Middle ? BasicUiRenderTask::InteractionMask::mouseClickMiddle :
+            BasicUiRenderTask::InteractionMask{}
+    ) );
+
+    // If a plugin opens some UI in its `onMouseDown_()`,
+    // this condition prevents that UI from immediately getting clicked in the same frame.
+    if ( capturedMouse_ )
+        ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
+
+    return capturedMouse_;
 }
 
 bool ImGuiMenu::onMouseUp_( Viewer::MouseButton button, int modifier )
@@ -474,21 +485,21 @@ bool ImGuiMenu::onMouseUp_( Viewer::MouseButton button, int modifier )
     return capturedMouse_;
 }
 
-bool ImGuiMenu::onMouseMove_(int mouse_x, int mouse_y )
+bool ImGuiMenu::onMouseMove_( int mouse_x, int mouse_y )
 {
     ImGui_ImplGlfw_CursorPosCallback( viewer->window, double( mouse_x ), double( mouse_y ) );
-    return ImGui::GetIO().WantCaptureMouse;
+    return false;
 }
 
-bool ImGuiMenu::onMouseScroll_(float delta_y)
+bool ImGuiMenu::onMouseScroll_( float delta_y )
 {
-    if ( ImGui::GetIO().WantCaptureMouse )
+    if ( ImGui::GetIO().WantCaptureMouse || bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseWheel ) )
     {
         // allow ImGui to process the scroll exclusively
         ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, delta_y );
         // do extra frames to prevent imgui calculations ping
         viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
-        return true;
+        return uiRenderManager_->allowBlockingEvent( BasicUiRenderTask::InteractionMask::mouseWheel );
     }
 
     return false;
@@ -869,6 +880,16 @@ bool ImGuiMenu::simulateNameTagClick( Object& object, NameTagSelectionMode mode 
     }
 
     return true;
+}
+
+bool ImGuiMenu::pickBlockedByImGuiWindow() const
+{
+    return ImGui::GetIO().WantCaptureMouse;
+}
+
+bool ImGuiMenu::pickBlockedByUiObject() const
+{
+    return bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::picker );
 }
 
 void ImGuiMenu::drawModalMessage_()
@@ -3408,17 +3429,29 @@ void ImGuiMenu::UiRenderManagerImpl::postRenderViewport( ViewportId viewport )
 
 BasicUiRenderTask::BackwardPassParams ImGuiMenu::UiRenderManagerImpl::beginBackwardPass()
 {
-    return { .mouseHoverConsumed = ImGui::GetIO().WantCaptureMouse };
+    return { .consumedInteractions = ImGui::GetIO().WantCaptureMouse * BasicUiRenderTask::InteractionMask::mouseHover };
 }
 
 void ImGuiMenu::UiRenderManagerImpl::finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params )
 {
-    mouseIsBlocked_ = params.mouseHoverConsumed;
+    if ( ImGui::GetIO().WantCaptureMouse )
+    {
+        // Some other UI is hovered, but not ours.
+        consumedInteractions = {};
+    }
+    else
+    {
+        // Our UI is hovered.
+        consumedInteractions = params.consumedInteractions;
+    }
 }
 
-bool ImGuiMenu::UiRenderManagerImpl::ownsMouseHover() const
+bool ImGuiMenu::UiRenderManagerImpl::allowBlockingEvent( BasicUiRenderTask::InteractionMask event ) const
 {
-    return mouseIsBlocked_;
+    // Here we only force-unblock events if one of our widgets is hovered.
+    return
+        !bool( consumedInteractions & BasicUiRenderTask::InteractionMask::mouseHover ) ||
+        bool( consumedInteractions & event );
 }
 
 void showModal( const std::string& msg, NotificationType type )

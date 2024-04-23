@@ -15,6 +15,7 @@
 #include <memory>
 #include <functional>
 #include <unordered_map>
+#include <optional>
 
 using ObjAndPick = std::pair<std::shared_ptr<MR::VisualObject>, MR::PointOnObject>;
 using ConstObjAndPick = std::pair<std::shared_ptr<const MR::VisualObject>, MR::PointOnObject>;
@@ -150,54 +151,77 @@ public:
     // Point picking parameters.
     struct PickRenderObjectParams
     {
+        // If specified, this is the target screen point. Otherwise use the mouse pos in viewport coordinates.
+        std::optional<Vector2f> point;
+
         // Predicate to additionally filter objects that should be treated as pickable.
         PickRenderObjectPredicate predicate;
         // Radius (in pixels) of a picking area.
-        uint16_t pickRadius = 0;
+        // <0 defaults to `getViewerInstance().glPickRadius`.
+        int pickRadius = -1;
         // Usually, from several objects that fall into the peak, the closest one along the ray is selected. However,
         // if exactPickFirst = true, then the object in which the pick exactly fell (for example, a point in point cloud)
         // will be returned as the result, even if there are others within the radius, including closer objects.
         bool exactPickFirst = true;
 
+        // If true, will pick even through ImGui windows.
+        bool clickThroughImGuiWindows = false;
+
+        // If true, will pick even through UI objects in the tree.
+        bool clickThroughUiObjects = false;
+
+        // This will always return `{}`. We need the functions because `= {}`
+        //   can't be used directly inside default arguments in the same class.
+        // You don't have to use this function.
         static PickRenderObjectParams defaults()
         {
             return {};
         }
     };
     // This function allows to pick point in scene by GL with given parameters.
-    MRVIEWER_API ObjAndPick pickRenderObject( const PickRenderObjectParams& params = PickRenderObjectParams::defaults() );
+    MRVIEWER_API ObjAndPick pickRenderObject( const PickRenderObjectParams& params = PickRenderObjectParams::defaults() ) const;
+    MRVIEWER_API ObjAndPick pickRenderObject( std::vector<VisualObject*> objects, const PickRenderObjectParams& params = PickRenderObjectParams::defaults() ) const;
+
     // This function allows to pick point in scene by GL
     // use default pick radius
     // comfortable usage:
     //     auto [obj,pick] = pick_render_object();
     // pick all visible and pickable objects
     // picks objects from current mouse pose by default
+    // [[deprecated("Use `pickRenderObject()`")]] // Should eventually deprecate this?
     MRVIEWER_API ObjAndPick pick_render_object() const;
+    [[deprecated("Use `pickRenderObject()`")]]
     MRVIEWER_API ObjAndPick pick_render_object( uint16_t pickRadius ) const;
     // This function allows to pick point in scene by GL
     // use default pick radius
     // comfortable usage:
     //     auto [obj,pick] = pick_render_object( objects );
     // pick objects from input
+    // [[deprecated("Use `pickRenderObject()`")]] // Should eventually deprecate this?
     MRVIEWER_API ObjAndPick pick_render_object( const std::vector<VisualObject*>& objects ) const;
     // This function allows to pick point in scene by GL with a given peak radius.
     // usually, from several objects that fall into the peak, the closest one along the ray is selected.However
     // if exactPickFirst = true, then the object in which the pick exactly fell( for example, a point in point cloud )
     // will be returned as the result, even if there are others within the radius, including closer objects.
+    [[deprecated("Use `pickRenderObject()`")]]
     MRVIEWER_API ObjAndPick pick_render_object( const std::vector<VisualObject*>& objects, uint16_t pickRadius, bool exactPickFirst = true ) const;
     // This function allows to pick point in scene by GL with default pick radius, but with specified exactPickFirst parameter (see description upper).
+    [[deprecated("Use `pickRenderObject()`")]]
     MRVIEWER_API ObjAndPick pick_render_object( bool exactPickFirst ) const;
     // This function allows to pick point in scene by GL
     // comfortable usage:
     //     auto [obj,pick] = pick_render_object( objects );
     // pick all visible and pickable objects
     // picks objects from custom viewport point
+    // [[deprecated("Use `pickRenderObject()`")]] // Should eventually deprecate this?
     MRVIEWER_API ObjAndPick pick_render_object( const Vector2f& viewportPoint ) const;
     // This function allows to pick point in scene by GL
     // comfortable usage:
     //     auto [obj,pick] = pick_render_object( objects );
     // picks objects from custom viewport point
+    [[deprecated("Use `multiPickObjects()`")]]
     MRVIEWER_API ObjAndPick pick_render_object( const std::vector<VisualObject*>& objects, const Vector2f& viewportPoint ) const;
+
     // This function allows to pick several custom viewport space points by GL
     // returns vector of pairs [obj,pick]
     MRVIEWER_API std::vector<ObjAndPick> multiPickObjects( const std::vector<VisualObject*>& objects, const std::vector<Vector2f>& viewportPoints ) const;
@@ -221,14 +245,17 @@ public:
     //     const auto [obj,pick] = pick_render_object();
     // pick all visible and pickable objects
     // picks objects from current mouse pose by default
+    [[deprecated("Use `pickRenderObject()`")]]
     MRVIEWER_API ConstObjAndPick const_pick_render_object() const;
     // This function allows to pick point in scene by GL
     // comfortable usage:
     //      const auto [obj,pick] = pick_render_object( objects );
     // pick objects from input
+    [[deprecated("Use `pickRenderObject()`")]]
     MRVIEWER_API ConstObjAndPick const_pick_render_object( const std::vector<const VisualObject*>& objects ) const;
     // This function allows to pick several custom viewport space points by GL
     // returns vector of pairs [obj,pick]
+    [[deprecated("Use `multiPickObjects()`")]]
     MRVIEWER_API std::vector<ConstObjAndPick> constMultiPickObjects( const std::vector<const VisualObject*>& objects, const std::vector<Vector2f>& viewportPoints ) const;
 
     // multiplies view-matrix on given transformation from the _right_;

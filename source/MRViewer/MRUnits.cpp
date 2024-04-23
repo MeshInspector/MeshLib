@@ -494,8 +494,6 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
         return fmt::format( fmt::runtime( params.decorationFormatString ), ret );
     else
         return ret;
-
-    return ret;
 }
 
 template <UnitEnum E, detail::Units::Scalar T>

@@ -15,6 +15,9 @@
 namespace MR
 {
 
+const int cMaxRenderingPointsStep = 100'000;
+
+
 MR_ADD_CLASS_FACTORY( ObjectPointsHolder )
 
 ObjectPointsHolder::ObjectPointsHolder()
@@ -67,18 +70,8 @@ void ObjectPointsHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 
     if ( mask & DIRTY_FACE )
     {
-        if ( autoUpdateDiscretization_ )
-        {
-            const size_t oldNum = numValidPoints_ ? *numValidPoints_ : 0;
-            numValidPoints_.reset();
-            if ( numValidPoints() > oldNum )
-                setRenderDiscretizationAuto();
-        }
-        else
-        {
-            numValidPoints_.reset();
-            setRenderDiscretizationAuto();
-        }
+        numValidPoints_.reset();
+        updateRenderDiscretization_();
     }
 
     if ( mask & DIRTY_POSITION || mask & DIRTY_FACE )
@@ -210,18 +203,22 @@ size_t ObjectPointsHolder::heapBytes() const
 
 void ObjectPointsHolder::setRenderDiscretization( int val )
 {
-    if ( renderDiscretization_ == val )
+    if ( val == renderDiscretization_ )
         return;
-    renderDiscretization_ = val;
-    autoUpdateDiscretization_ = false;
-    needRedraw_ = true;
-    renderDiscretizationChangedSignal();
+
+    assert( val > 0 );
+    val = val < 1 ? 1 : val;
+    int newMax = int( numValidPoints() ) / val;
+    setMaxRenderingPoints( newMax );
 }
 
-void ObjectPointsHolder::setRenderDiscretizationAuto()
+void ObjectPointsHolder::setMaxRenderingPoints( int val )
 {
-    setRenderDiscretization( chooseRenderDiscretization_() );
-    autoUpdateDiscretization_ = true;
+    val = std::max( ( ( val + cMaxRenderingPointsStep - 1 ) / cMaxRenderingPointsStep ) * cMaxRenderingPointsStep, cMaxRenderingPointsStep );
+    if ( maxRenderingPoints_ == val )
+        return;
+    maxRenderingPoints_ = val;
+    updateRenderDiscretization_();
 }
 
 void ObjectPointsHolder::setSavePointsFormat( const char * newFormat )
@@ -297,7 +294,7 @@ VoidOrErrStr ObjectPointsHolder::deserializeModel_( const std::filesystem::path&
         setColoringType( ColoringType::VertsColorMap );
 
     points_ = std::make_shared<PointCloud>( std::move( res.value() ) );
-    setRenderDiscretizationAuto();
+    updateRenderDiscretization_();
     return {};
 }
 
@@ -311,6 +308,7 @@ void ObjectPointsHolder::serializeFields_( Json::Value& root ) const
         serializeToJson( points_->validPoints, root["ValidVertBitSet"] );
 
     root["PointSize"] = pointSize_;
+    root["MaxRenderingPoints"] = maxRenderingPoints_;
 }
 
 void ObjectPointsHolder::deserializeFields_( const Json::Value& root )
@@ -330,6 +328,12 @@ void ObjectPointsHolder::deserializeFields_( const Json::Value& root )
 
     if ( const auto& pointSizeJson = root["PointSize"]; pointSizeJson.isDouble() )
         pointSize_ = float( pointSizeJson.asDouble() );
+
+    if ( root["MaxRenderingPoints"].isInt() )
+    {
+        maxRenderingPoints_ = root["MaxRenderingPoints"].asInt();
+        updateRenderDiscretization_();
+    }
 }
 
 void ObjectPointsHolder::setupRenderObject_() const
@@ -360,22 +364,14 @@ void ObjectPointsHolder::setDefaultSceneProperties_()
     setDefaultColors_();
 }
 
-int ObjectPointsHolder::chooseRenderDiscretization_()
+void ObjectPointsHolder::updateRenderDiscretization_()
 {
-    return std::max( 1, int( numValidPoints() ) / maxRenderingPoints_ );
-}
-
-int ObjectPointsHolder::getMaxAutoRenderingPoints() const
-{
-    return maxRenderingPoints_;
-}
-
-void ObjectPointsHolder::setMaxAutoRenderingPoints( int val )
-{
-    if ( maxRenderingPoints_ == val )
+    int newRenderDiscretization = std::max( 1, int( numValidPoints() + maxRenderingPoints_ - 1 ) / maxRenderingPoints_ );
+    if ( newRenderDiscretization == renderDiscretization_ )
         return;
-    maxRenderingPoints_ = val;
-    setRenderDiscretizationAuto();
+    renderDiscretization_ = newRenderDiscretization;
+    needRedraw_ = true;
+    renderDiscretizationChangedSignal();
 }
 
 }

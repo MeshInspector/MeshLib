@@ -83,29 +83,24 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
-    /// sets rendering discretization, each \param val -th point will be displayed on screen
+    /// sets maxRenderingPoints from rendering discretization, each \param val -th point will be displayed on screen
+    /// \detail convenient way to set maxRenderingPoints
+    /// maxRenderingPoints is set so: ( val - 1 ) * maxRenderingPoints < validPointsCount <= val * maxRenderingPoints
+    /// is a multiple of cMaxRenderingPointsStep ( 100'000 )
     MRMESH_API void setRenderDiscretization( int val );
-    /// sets rendering discretization according MaxAutoRenderingPoints
-    /// it will displayed no more points than setted in setMaxAutoRenderingPoints()
-    MRMESH_API void setRenderDiscretizationAuto();
 
     /// returns rendering discretization, each N-th point will be displayed on screen
-    int getRenderDiscretization() const
-    {
-        return renderDiscretization_;
-    }
+    /// \detail used for rendering
+    int getRenderDiscretization() const { return renderDiscretization_; }
 
     /// returns maximal number of points that will be rendered
     /// if actual count of valid points is greater then the points will be sampled
-    /// This value is used only for automatic discretization
-    /// It can be changed manually by calling setRenderDiscretization
-    MRMESH_API int getMaxAutoRenderingPoints() const;
+    MRMESH_API int getMaxRenderingPoints() const { return maxRenderingPoints_; }
 
     /// sets maximal number of points that will be rendered
+    /// \detail maxRenderingPoints is set as a multiple of cMaxRenderingPointsStep ( 100'000 ) and no less then val
     /// INT_MAX means lack of limit
-    /// This value is used only for automatic discretization
-    /// It can be changed manually by calling setRenderDiscretization
-    MRMESH_API void setMaxAutoRenderingPoints( int val );
+    MRMESH_API void setMaxRenderingPoints( int val );
 
     /// returns file extension used to serialize the points
     [[nodiscard]] const char * savePointsFormat() const { return savePointsFormat_; }
@@ -157,10 +152,7 @@ protected:
     /// set all visualize properties masks
     MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;
 
-    int renderDiscretization_ = 1;
     int maxRenderingPoints_ = 1'000'000;
-    bool autoUpdateDiscretization_ = true;
-    int chooseRenderDiscretization_();
 
 private:
 
@@ -170,6 +162,10 @@ private:
     /// set default scene-related properties
     void setDefaultSceneProperties_();
 
+    // update renderDiscretization_ as numValidPoints_ / maxRenderingPoints_
+    void updateRenderDiscretization_();
+
+    int renderDiscretization_ = 1; // auxiliary parameter to avoid recalculation in every frame
 #ifndef MRMESH_NO_OPENCTM
     const char * savePointsFormat_ = ".ctm";
 #else

@@ -172,20 +172,19 @@ void MultiwayICP::deactivatefarDistPairs_()
 {
     MR_TIMER;
 
-    for ( int it = 0; it < 3; ++it )
-    {
-        const auto avgDist = getMeanSqDistToPoint();
-        const auto maxDistSq = sqr( prop_.farDistFactor * avgDist );
-        if ( maxDistSq >= prop_.distThresholdSq )
-            break;
-        size_t deactivatedNum = 0;
-        for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
-            for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
-                if ( i != j )
-                    deactivatedNum += MR::deactivateFarPairs( pairsPerObj_[i][j], maxDistSq );
-        if ( deactivatedNum == 0 )
-            break; // nothing was deactivated
-    }
+    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+        for ( MeshOrPointsId j( i + 1 ); j < objs_.size(); ++j )
+            for ( int it = 0; it < 3; ++it )
+            {
+                const auto avgDist = ( MR::getSumSqDistToPoint( pairsPerObj_[i][j] ) + MR::getSumSqDistToPoint( pairsPerObj_[j][i] ) ).rootMeanSqF();
+                const auto maxDistSq = sqr( prop_.farDistFactor * avgDist );
+                if ( maxDistSq >= prop_.distThresholdSq )
+                    break;
+
+                if ( MR::deactivateFarPairs( pairsPerObj_[i][j], maxDistSq ) +
+                     MR::deactivateFarPairs( pairsPerObj_[j][i], maxDistSq ) <= 0 )
+                    break; // nothing was deactivated
+            }
 }
 
 bool MultiwayICP::p2ptIter_()

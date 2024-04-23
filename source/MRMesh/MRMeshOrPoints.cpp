@@ -50,6 +50,14 @@ const VertCoords & MeshOrPoints::points() const
     }, var_ );
 }
 
+const VertBitSet & MeshOrPoints::validPoints() const
+{
+    return std::visit( overloaded{
+        []( const MeshPart & mp ) -> const VertBitSet& { return mp.mesh.topology.getValidVerts(); },
+        []( const PointCloud * pc ) -> const VertBitSet& { return pc->validPoints; }
+    }, var_ );
+}
+
 std::function<Vector3f(VertId)> MeshOrPoints::normals() const
 {
     return std::visit( overloaded{

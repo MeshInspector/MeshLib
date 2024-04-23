@@ -37,6 +37,9 @@ public:
     /// gives access to points-vector (which can include invalid points as well)
     [[nodiscard]] MRMESH_API const VertCoords & points() const;
 
+    /// gives access to bit set of valid points
+    [[nodiscard]] MRMESH_API const VertBitSet& validPoints() const;
+
     /// returns normals generating function: VertId->normal (or empty for point cloud without normals)
     [[nodiscard]] MRMESH_API std::function<Vector3f(VertId)> normals() const;
 

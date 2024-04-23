@@ -155,10 +155,6 @@ public:
         // If specified, this is the target screen point. Otherwise use the mouse pos in viewport coordinates.
         std::optional<Vector2f> point;
 
-        // If specified, only pick in those objects.
-        // To hardcode the list in the initializer, use `{ .objects = std::array{ a, b, c } }`.
-        std::optional<std::span<VisualObject* const>> objects;
-
         // Predicate to additionally filter objects that should be treated as pickable.
         PickRenderObjectPredicate predicate;
 
@@ -179,7 +175,12 @@ public:
         }
     };
     // This function allows to pick point in scene by GL with given parameters.
+    // This overload uses all objects in the scene (possibly filtered by a predicate).
     MRVIEWER_API ObjAndPick pickRenderObject( const PickRenderObjectParams& params = PickRenderObjectParams::defaults() ) const;
+    // This overload uses objects from the list (possibly filtered by a predicate).
+    MRVIEWER_API ObjAndPick pickRenderObject( std::span<VisualObject* const> objects, const PickRenderObjectParams& params = PickRenderObjectParams::defaults() ) const;
+    // This overload uses const objects from the list (possibly filtered by a predicate). Sadly need a different name to avoid over resolution issues.
+    MRVIEWER_API ConstObjAndPick pickRenderObjectConst( std::span<const VisualObject* const> objects, const PickRenderObjectParams& params = PickRenderObjectParams::defaults() ) const;
 
     // This function allows to pick point in scene by GL
     // use default pick radius
@@ -245,11 +246,13 @@ public:
     //     const auto [obj,pick] = pick_render_object();
     // pick all visible and pickable objects
     // picks objects from current mouse pose by default
+    [[deprecated("Use `pickRenderObject()`.")]]
     MRVIEWER_API ConstObjAndPick const_pick_render_object() const;
     // This function allows to pick point in scene by GL
     // comfortable usage:
     //      const auto [obj,pick] = pick_render_object( objects );
     // pick objects from input
+    [[deprecated("Use `pickRenderObject( objects )`.")]]
     MRVIEWER_API ConstObjAndPick const_pick_render_object( const std::vector<const VisualObject*>& objects ) const;
     // This function allows to pick several custom viewport space points by GL
     // returns vector of pairs [obj,pick]

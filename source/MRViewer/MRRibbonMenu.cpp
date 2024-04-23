@@ -1993,7 +1993,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
                 errorString = "Cannot open file for reading";
             }
             if ( !errorString.empty() )
-                showModal( errorString, NotificationType::Error );
+                pushNotification( { .text = errorString, .type = NotificationType::Error } );
         }
         ImGui::CloseCurrentPopup();
     }

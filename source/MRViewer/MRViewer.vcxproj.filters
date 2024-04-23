@@ -367,6 +367,9 @@
     <ClCompile Include="MRNameTagClickListener.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRMoveObjectByMouseImpl.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -723,6 +726,9 @@
       <Filter>Helpers</Filter>
     </ClInclude>
     <ClInclude Include="MRNameTagClickListener.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMoveObjectByMouseImpl.h">
       <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>

@@ -292,10 +292,10 @@ ObjectMeshHolder::ObjectMeshHolder()
     setDefaultSceneProperties_();
 }
 
-void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc )
+void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc, const FaceMap & thisToSrcFaces )
 {
     MR_TIMER
-    copyColors( src, thisToSrc );
+    copyColors( src, thisToSrc, thisToSrcFaces );
     setTexture( src.getTexture() );
 
     const auto& srcUVCoords = src.getUVCoords();
@@ -313,6 +313,51 @@ void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const
     } );
 
     setUVCoords( std::move( uvCoords ) );
+}
+
+void ObjectMeshHolder::copyColors( const VisualObject& src, const VertMap& thisToSrc, const FaceMap& thisToSrcFaces )
+{
+    MR_TIMER
+
+    setColoringType( src.getColoringType() );
+
+    const auto& srcColorMap = src.getVertsColorMap();
+    if ( srcColorMap.empty() )
+        return;
+
+    VertColors colorMap;
+    colorMap.resizeNoInit( thisToSrc.size() );
+    ParallelFor( colorMap, [&] ( VertId id )
+    {
+        colorMap[id] = srcColorMap[thisToSrc[id]];
+    } );
+    setVertsColorMap( std::move( colorMap ) );
+
+    if ( !facesColorMap_.empty() )
+    {
+        auto& validFace = mesh_->topology.getValidFaces();
+        FaceColors faceColors;
+        faceColors.resize( validFace.size() );
+
+        Color color = facesColorMap_[thisToSrcFaces[validFace.backId()]];
+        bool differentColor = false;
+
+        for ( const auto& faceId : validFace )
+        {
+            auto& newColor = facesColorMap_[thisToSrcFaces[faceId]];
+            faceColors[faceId] = newColor;
+            if ( color != newColor )
+                differentColor = true;
+        }
+
+        if ( differentColor )
+            setFacesColorMap( faceColors );
+        else if ( src.getColoringType() == ColoringType::FacesColorMap )
+        {
+            setFrontColor( color, true );
+            setColoringType( ColoringType::SolidColor );
+        }
+    }
 }
 
 void ObjectMeshHolder::clearAncillaryTexture()

@@ -253,7 +253,7 @@ public:
     MRMESH_API virtual void setColoringType( ColoringType coloringType );
 
     /// copies point colors from given source object \param src using given map \param thisToSrc
-    MRMESH_API virtual void copyColors( const VisualObject & src, const VertMap & thisToSrc );
+    MRMESH_API virtual void copyColors( const VisualObject & src, const VertMap & thisToSrc, const FaceMap& thisToSrcFaces = {} );
 
     /// returns the current shininess visual value
     float getShininess() const { return shininess_; }

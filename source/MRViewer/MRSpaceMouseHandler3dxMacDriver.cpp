@@ -21,6 +21,7 @@ constexpr auto kConnexionCmdHandleButtons = 2;
 constexpr auto kConnexionCmdHandleAxis = 3;
 constexpr auto kConnexionMsgDeviceState = 0x33645352; // '3dSR'
 
+#pragma pack( push, 1 )
 struct ConnexionDeviceState
 {
     uint16_t version;
@@ -35,6 +36,7 @@ struct ConnexionDeviceState
     uint16_t address;
     uint32_t buttons;
 };
+#pragma pack( pop )
 
 typedef void (*ConnexionAddedHandlerProc)( unsigned int productID );
 typedef void (*ConnexionRemovedHandlerProc)( unsigned int productID );

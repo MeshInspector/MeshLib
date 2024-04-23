@@ -2327,7 +2327,7 @@ PointInAllSpaces Viewer::getPixelPointInfo( const Vector3f& screenPoint ) const
                 Vector3f( static_cast<float>(res.viewportSpace.x), static_cast<float>(res.viewportSpace.y), 0.f )
             );
             // looking for all visible objects
-            auto [obj, pick] = viewport.pick_render_object( Vector2f( res.viewportSpace.x, res.viewportSpace.y ) );
+            auto [obj, pick] = viewport.pickRenderObject( { .point = Vector2f( res.viewportSpace.x, res.viewportSpace.y ) } );
             if(obj)
             {
                 res.obj = obj;

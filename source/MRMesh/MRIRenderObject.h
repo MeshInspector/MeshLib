@@ -69,10 +69,29 @@ struct BasicUiRenderTask
     /// The tasks are sorted by this depth, descending (larger depth = further away).
     float renderTaskDepth = 0;
 
+    enum class InteractionMask
+    {
+        mouseHover = 1 << 0,
+        mouseScroll = 1 << 1,
+    };
+    MR_MAKE_FLAG_OPERATORS_IN_CLASS( InteractionMask )
+
     struct BackwardPassParams
     {
-        /// If this is false, you can claim mouse hover for your object. Then set it to true.
-        mutable bool mouseHoverConsumed = false;
+        // Which interactions should be blocked by this object.
+        // This is passed along between all `renderUi()` calls in a single frame, and then the end result is used.
+        mutable InteractionMask consumedInteractions{};
+
+        // If nothing else is hovered, this returns true and writes `mouseHover` to `consumedInteractions`.
+        [[nodiscard]] bool tryConsumeMouseHover() const
+        {
+            if ( !bool( consumedInteractions & InteractionMask::mouseHover ) )
+            {
+                consumedInteractions |= InteractionMask::mouseHover;
+                return true;
+            }
+            return false;
+        }
     };
 
     /// This is an optional early pass, where you can claim exclusive control over the mouse.
@@ -108,11 +127,6 @@ struct UiRenderManager
     virtual BasicUiRenderTask::BackwardPassParams beginBackwardPass() { return {}; }
     // After the backward pass is performed, the parameters should be passed back into this function.
     virtual void finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params ) { (void)params; }
-
-    // This should return true when the mouse hover is owned by one of the rendered objects.
-    // It's expected that this will be equal to `params.mouseHoverConsumed` from the last `finishBackwardPass()`,
-    // but you can also add your own arbitrary conditions.
-    virtual bool ownsMouseHover() const { return false; }
 };
 
 class IRenderObject

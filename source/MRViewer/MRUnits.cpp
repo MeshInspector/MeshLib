@@ -490,6 +490,11 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
 
     ret += unitSuffix;
 
+    if ( params.decorationFormatString != "{}" )
+        return fmt::format( fmt::runtime( params.decorationFormatString ), ret );
+    else
+        return ret;
+
     return ret;
 }
 

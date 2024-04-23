@@ -85,8 +85,7 @@ public:
 
     /// sets maxRenderingPoints from rendering discretization, each \param val -th point will be displayed on screen
     /// \detail convenient way to set maxRenderingPoints
-    /// maxRenderingPoints is set so: ( val - 1 ) * maxRenderingPoints < validPointsCount <= val * maxRenderingPoints
-    /// is a multiple of cMaxRenderingPointsStep ( 100'000 )
+    /// maxRenderingPoints is set so: validPointsCount / val
     MRMESH_API void setRenderDiscretization( int val );
 
     /// returns rendering discretization, each N-th point will be displayed on screen
@@ -98,7 +97,6 @@ public:
     MRMESH_API int getMaxRenderingPoints() const { return maxRenderingPoints_; }
 
     /// sets maximal number of points that will be rendered
-    /// \detail maxRenderingPoints is set as a multiple of cMaxRenderingPointsStep ( 100'000 ) and no less then val
     /// INT_MAX means lack of limit
     MRMESH_API void setMaxRenderingPoints( int val );
 

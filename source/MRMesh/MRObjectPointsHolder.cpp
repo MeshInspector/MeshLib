@@ -15,9 +15,6 @@
 namespace MR
 {
 
-const int cMaxRenderingPointsStep = 100'000;
-
-
 MR_ADD_CLASS_FACTORY( ObjectPointsHolder )
 
 ObjectPointsHolder::ObjectPointsHolder()
@@ -214,7 +211,6 @@ void ObjectPointsHolder::setRenderDiscretization( int val )
 
 void ObjectPointsHolder::setMaxRenderingPoints( int val )
 {
-    val = std::max( ( ( val + cMaxRenderingPointsStep - 1 ) / cMaxRenderingPointsStep ) * cMaxRenderingPointsStep, cMaxRenderingPointsStep );
     if ( maxRenderingPoints_ == val )
         return;
     maxRenderingPoints_ = val;

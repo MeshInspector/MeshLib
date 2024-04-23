@@ -10,12 +10,12 @@
 namespace MR
 {
 #if FMT_VERSION < 80000
-inline const std::string& runtimeFmt( const std::string& str )
+inline std::string_view runtimeFmt( std::string_view str )
 {
     return str;
 }
 #else
-inline auto runtimeFmt( const std::string& str )
+inline auto runtimeFmt( std::string_view str )
 {
     return fmt::runtime( str );
 }

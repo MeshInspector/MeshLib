@@ -96,9 +96,9 @@ ObjAndPick Viewport::pickRenderObject( const PickRenderObjectParams& params ) co
     auto& viewer = getViewerInstance();
 
     // Maybe block pick by the ImGuiMenu.
-    if ( auto menu = viewer.getMenuPlugin(); menu && menu->pickBlockedByImGuiWindow() )
+    if ( auto menu = viewer.getMenuPlugin(); menu && menu->anyImGuiWindowIsHovered() )
         return {};
-    if ( auto menu = viewer.getMenuPlugin(); menu && menu->pickBlockedByUiObject() )
+    if ( auto menu = viewer.getMenuPlugin(); menu && menu->anyUiObjectIsHovered() )
         return {};
 
     const auto& mousePos = viewer.mouseController().getMousePos();

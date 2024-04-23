@@ -346,9 +346,9 @@ public:
   MRVIEWER_API bool simulateNameTagClick( Object& object, NameTagSelectionMode mode );
 
   // Scene pick should be disabled because an ImGui window is in the way.
-  MRVIEWER_API bool pickBlockedByImGuiWindow() const;
+  MRVIEWER_API bool anyImGuiWindowIsHovered() const;
   // Scene pick should be disabled because a `renderUi()` UI of some object is in the way.
-  MRVIEWER_API bool pickBlockedByUiObject() const;
+  MRVIEWER_API bool anyUiObjectIsHovered() const;
 
 protected:
     MRVIEWER_API virtual void drawModalMessage_();
@@ -443,7 +443,7 @@ protected:
         // Which things are blocked by our `renderUi()` calls.
         BasicUiRenderTask::InteractionMask consumedInteractions{};
 
-        // If this returns false, the event shouldn't be prevented from reaching other plugins even if `ImGui::GetIO().WantCaptureMouse == true`.
+        // If this returns false, the event should be allowed to pass through to other plugins, even if ImGui wants to consume it.
         // Pass at most one bit at a time.
         MRVIEWER_API bool allowBlockingEvent( BasicUiRenderTask::InteractionMask event ) const;
     };

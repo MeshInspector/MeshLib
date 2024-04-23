@@ -877,12 +877,12 @@ bool ImGuiMenu::simulateNameTagClick( Object& object, NameTagSelectionMode mode 
     return true;
 }
 
-bool ImGuiMenu::pickBlockedByImGuiWindow() const
+bool ImGuiMenu::anyImGuiWindowIsHovered() const
 {
     return ImGui::GetIO().WantCaptureMouse;
 }
 
-bool ImGuiMenu::pickBlockedByUiObject() const
+bool ImGuiMenu::anyUiObjectIsHovered() const
 {
     return bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseHover );
 }

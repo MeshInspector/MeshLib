@@ -52,9 +52,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointCloud, [] ( pybind11::module_& m )
             "meaning that there shall be at least this number of points in close proximity" ).
         def_readwrite( "voxelSize", &MR::PointsToMeshParameters::voxelSize,
             "Size of voxel in grid conversions;\n"
-            "The user is responsible for setting some positive value here" );
-        //def( "ptColors", &MR::PointsToMeshParameters::ptColors,
-            //"optional input: colors of input points" );
+            "The user is responsible for setting some positive value here" ).
+        def_readwrite( "ptColors", &MR::PointsToMeshParameters::ptColors,
+            "optional input: colors of input points" ).
+        def_readwrite( "vColors", &MR::PointsToMeshParameters::vColors,
+            "optional output: averaged colors of mesh vertices" );
 
     m.def( "pointsToMeshFusion", MR::decorateExpected( &MR::pointsToMeshFusion ),
         pybind11::arg( "pointCloud" ), pybind11::arg_v( "params", MR::PointsToMeshParameters(), "PointsToMeshParameters()" ),

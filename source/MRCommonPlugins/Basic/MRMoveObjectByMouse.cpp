@@ -3,16 +3,18 @@
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRViewport.h"
-#include "MRMesh/MRSceneColors.h"
 #include "MRViewer/MRGladGlfw.h"
 #include "MRViewer/MRAppendHistory.h"
+#include "MRViewer/ImGuiHelpers.h"
+#include "MRMesh/MRSceneRoot.h"
+#include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRLine3.h"
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRIntersection.h"
 #include "MRMesh/MRVisualObject.h"
+#include "MRMesh/MRSceneColors.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRViewer/ImGuiHelpers.h"
 
 namespace MR
 {
@@ -20,6 +22,12 @@ namespace MR
 MoveObjectByMouse::MoveObjectByMouse() :
     PluginParent( "Move object", StatePluginTabs::Basic )
 {
+}
+
+bool MoveObjectByMouse::onDisable_()
+{
+    moveByMouse_.cancel();
+    return true;
 }
 
 void MoveObjectByMouse::drawDialog( float menuScaling, ImGuiContext*)
@@ -30,6 +38,7 @@ void MoveObjectByMouse::drawDialog( float menuScaling, ImGuiContext*)
 
     ImGui::Text( "%s", "Click and hold LMB on object to move" );
     ImGui::Text( "%s", "Click CTRL + LMB and hold LMB on object to rotate" );
+    ImGui::Text( "%s", "Press Shift to move selected objects together" );
 
     moveByMouse_.onDrawDialog( menuScaling );
 
@@ -49,6 +58,14 @@ bool MoveObjectByMouse::onMouseMove_( int x, int y )
 bool MoveObjectByMouse::onMouseUp_( MouseButton btn, int modifiers )
 {
     return moveByMouse_.onMouseUp( btn, modifiers );
+}
+
+std::vector<std::shared_ptr<Object>> MoveObjectByMouse::MoveObjectByMouseWithSelected::getObjects(
+    const std::shared_ptr<VisualObject>& obj, const PointOnObject&, int modifiers )
+{
+    if ( ( modifiers & GLFW_MOD_SHIFT ) != 0 && obj->isSelected() )
+        return getAllObjectsInTree<Object>( SceneRoot::get(), ObjectSelectivityType::Selected );
+    return { obj };
 }
 
 MR_REGISTER_RIBBON_ITEM( MoveObjectByMouse )

@@ -15,6 +15,7 @@ class MoveObjectByMouse : public StateListenerPlugin<MouseDownListener, MouseMov
 public:
     MoveObjectByMouse();
 
+    virtual bool onDisable_() override;
     virtual void drawDialog( float menuScaling, ImGuiContext* ) override;
 
     virtual bool blocking() const override { return false; };
@@ -24,7 +25,12 @@ private:
     virtual bool onMouseMove_( int x, int y ) override;
     virtual bool onMouseUp_( MouseButton btn, int modifiers ) override;
 
-    MoveObjectByMouseImpl moveByMouse_;
+    class MoveObjectByMouseWithSelected : public MoveObjectByMouseImpl
+    {
+    protected:
+        std::vector<std::shared_ptr<Object>> getObjects( 
+            const std::shared_ptr<VisualObject>& obj, const PointOnObject& point, int modifiers ) override;
+    } moveByMouse_;
 };
 
 }

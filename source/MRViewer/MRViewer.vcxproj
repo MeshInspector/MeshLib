@@ -108,6 +108,7 @@
     <ClCompile Include="MRUnits.cpp" />
     <ClCompile Include="MRVisualSubfeatures.cpp" />
     <ClCompile Include="MRNameTagClickListener.cpp" />
+    <ClCompile Include="MRUITestEngine.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -229,6 +230,7 @@
     <ClInclude Include="MRVisualSubfeatures.h" />
     <ClInclude Include="MRSignalCombiners.h" />
     <ClInclude Include="MRNameTagClickListener.h" />
+    <ClInclude Include="MRUITestEngine.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

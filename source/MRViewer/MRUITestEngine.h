@@ -40,8 +40,8 @@ struct Entry
     std::variant<ButtonEntry, GroupEntry> value;
 
     // Mostly for internal use.
-    // If this is false, the entry will be removed on the next call.
-    bool alive = false;
+    // If this is false, the entry will be removed on the next frame.
+    bool visitedOnThisFrame = false;
 };
 
 // Returns the current entry tree.

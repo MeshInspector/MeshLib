@@ -15,11 +15,16 @@ namespace
 
 struct State
 {
+    // The root element group.
     GroupEntry root;
+
+    // The frame counter, as per `ImGui::GetFrameCount()`. When this changes, we prune dead elements.
     int curFrame = -1;
 
+    // The stack for `pushTree()`, `popTree()`. Always has at least one element.
     std::vector<GroupEntry*> stack = { &root };
 };
+// Our global state. Stores the current tree of buttons and button groups.
 State state;
 
 void checkForNewFrame()
@@ -37,13 +42,13 @@ void checkForNewFrame()
         {
             for ( auto it = group.elems.begin(); it != group.elems.end(); )
             {
-                if ( !it->second.alive )
+                if ( !it->second.visitedOnThisFrame )
                 {
                     it = group.elems.erase( it );
                 }
                 else
                 {
-                    it->second.alive = false;
+                    it->second.visitedOnThisFrame = false;
 
                     if ( auto subgroup = std::get_if<GroupEntry>( &it->second.value ) )
                         pruneDeadEntries( pruneDeadEntries, *subgroup );
@@ -69,13 +74,13 @@ bool createButton( std::string_view name )
     if ( iter == map.end() )
         iter = map.try_emplace( std::string( name ) ).first;
     else
-        assert( !iter->second.alive && "Registering the same entry more than once in a single frame!" );
+        assert( !iter->second.visitedOnThisFrame && "Registering the same entry more than once in a single frame!" );
 
     ButtonEntry* button = std::get_if<ButtonEntry>( &iter->second.value );
     if ( !button )
         button = &iter->second.value.emplace<ButtonEntry>();
 
-    iter->second.alive = true;
+    iter->second.visitedOnThisFrame = true;
 
     return std::exchange( button->simulateClick, false );
     #endif
@@ -91,13 +96,13 @@ void pushTree( std::string_view name )
     if ( iter == map.end() )
         iter = map.try_emplace( std::string( name ) ).first;
     else
-        assert( !iter->second.alive && "Registering the same entry more than once in a single frame!" );
+        assert( !iter->second.visitedOnThisFrame && "Registering the same entry more than once in a single frame!" );
 
     GroupEntry* subgroup = std::get_if<GroupEntry>( &iter->second.value );
     if ( !subgroup )
         subgroup = &iter->second.value.emplace<GroupEntry>();
 
-    iter->second.alive = true;
+    iter->second.visitedOnThisFrame = true;
 
     state.stack.push_back( subgroup );
     #endif

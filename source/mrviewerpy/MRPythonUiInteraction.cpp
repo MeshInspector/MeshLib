@@ -17,6 +17,7 @@ namespace
         button,
         group,
         other,
+        // Don't forget to add new values to `pybind11::enum_` below!
     };
 
     struct TypedEntry
@@ -70,7 +71,11 @@ namespace
 MR_ADD_PYTHON_CUSTOM_CLASS( mrviewerpy, UiEntry, TypedEntry );
 MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, UiEntry, [] ( pybind11::module_& m )
 {
-    pybind11::enum_<EntryType>( m, "UiEntryType", "UI entry type enum." );
+    pybind11::enum_<EntryType>( m, "UiEntryType", "UI entry type enum." )
+        .value( "button", EntryType::button )
+        .value( "group", EntryType::group )
+        .value( "other", EntryType::other )
+    ;
 
     MR_PYTHON_CUSTOM_CLASS( UiEntry )
         .def_readonly( "name", &TypedEntry::name )

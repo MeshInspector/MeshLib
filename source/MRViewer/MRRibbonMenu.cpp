@@ -656,7 +656,8 @@ void RibbonMenu::drawHeaderPannel_()
         auto tabId = window->GetID( strId.c_str() );
         ImGui::ItemAdd( tabRect, tabId );
         bool hovered, held;
-        bool pressed = ImGui::ButtonBehavior( tabRect, tabId, &hovered, &held ) + UI::TestEngine::createButton( tabStr ); // Using `+` to avoid short-circuiting.
+        bool pressed = ImGui::ButtonBehavior( tabRect, tabId, &hovered, &held );
+        pressed = UI::TestEngine::createButton( tabStr ) || pressed; // Must not short-circuit.
         if ( pressed )
             changeTab_( i );
 

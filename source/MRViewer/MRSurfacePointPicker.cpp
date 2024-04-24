@@ -166,7 +166,7 @@ bool SurfacePointWidget::onMouseMove_( int, int )
 {
     if ( isOnMove_ )
     {
-        auto [obj, pick] = getViewerInstance().viewport().pick_render_object( params_.pickInBackFaceObject );
+        auto [obj, pick] = getViewerInstance().viewport().pickRenderObject( { .exactPickFirst = params_.pickInBackFaceObject } );
         if ( obj != baseObject_ )
             return false;
 

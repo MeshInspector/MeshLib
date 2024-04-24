@@ -323,7 +323,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
         parent = std::make_shared<Object>();
         parent->addChild( oldMesh_ );
     }
-    std::vector<ObjAndPick> movedPosPick = getViewerInstance().viewport().multiPickObjects( { objMeshPtr.get() }, viewportPoints );
+    std::vector<ObjAndPick> movedPosPick = getViewerInstance().viewport().multiPickObjects( std::array{ static_cast<VisualObject*>( objMeshPtr.get() ) }, viewportPoints );
     if ( oldMesh_ )
     {
         oldMesh_->detachFromParent();

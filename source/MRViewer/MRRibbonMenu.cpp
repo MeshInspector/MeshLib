@@ -8,6 +8,7 @@
 #include "ImGuiHelpers.h"
 #include "MRImGuiImage.h"
 #include "MRFileDialog.h"
+#include "MRViewer/MRUITestEngine.h"
 #include "MRViewerSettingsManager.h"
 #include "MRUIStyle.h"
 #include "MRViewport.h"
@@ -522,6 +523,7 @@ void RibbonMenu::drawHeaderQuickAccess_()
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * menuScaling );
     ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Small ) );
+    UI::TestEngine::pushTree( "QuickAccess" );
     for ( const auto& item : RibbonSchemaHolder::schema().headerQuickAccessList )
     {
         auto it = RibbonSchemaHolder::schema().items.find( item );
@@ -536,6 +538,7 @@ void RibbonMenu::drawHeaderQuickAccess_()
         buttonDrawer_.drawButtonItem( it->second, params );
         ImGui::SameLine();
     }
+    UI::TestEngine::popTree(); // "QuickAccess"
     ImGui::PopFont();
     ImGui::PopStyleVar( 2 );
 
@@ -624,6 +627,7 @@ void RibbonMenu::drawHeaderPannel_()
     ImGui::SetCursorPosX( tabsWindowPosX );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 0, 0 ) );
     ImGui::BeginChild( "##TabsHeaderWindow", ImVec2( tabsWindowWidth, ( cTabYOffset + cTabHeight ) * menuScaling ) );
+    UI::TestEngine::pushTree( "RibbonTabs" );
     ImGui::PopStyleVar();
     auto window = ImGui::GetCurrentContext()->CurrentWindow;
 
@@ -652,7 +656,7 @@ void RibbonMenu::drawHeaderPannel_()
         auto tabId = window->GetID( strId.c_str() );
         ImGui::ItemAdd( tabRect, tabId );
         bool hovered, held;
-        bool pressed = ImGui::ButtonBehavior( tabRect, tabId, &hovered, &held );
+        bool pressed = ImGui::ButtonBehavior( tabRect, tabId, &hovered, &held ) + UI::TestEngine::createButton( tabStr ); // Using `+` to avoid short-circuiting.
         if ( pressed )
             changeTab_( i );
 
@@ -692,6 +696,7 @@ void RibbonMenu::drawHeaderPannel_()
     }
     ImGui::Dummy( ImVec2( 0, 0 ) );
     ImGui::EndChild();
+    UI::TestEngine::popTree(); // "RibbonTabs"
     if ( needFwdBtn )
     {
         ImGui::SameLine();
@@ -1483,6 +1488,7 @@ void RibbonMenu::drawSceneListButtons_()
     auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Small );
     //font->Scale = 0.75f;
     ImGui::PushFont( font );
+    UI::TestEngine::pushTree( "RibbonSceneButtons" );
     for ( const auto& item : RibbonSchemaHolder::schema().sceneButtonsList )
     {
         auto it = RibbonSchemaHolder::schema().items.find( item );
@@ -1497,6 +1503,7 @@ void RibbonMenu::drawSceneListButtons_()
         buttonDrawer_.drawButtonItem( it->second, params );
         ImGui::SameLine();
     }
+    UI::TestEngine::popTree(); // "RibbonSceneButtons"
     ImGui::NewLine();
     ImGui::PopFont();
     const float separateLinePos = ImGui::GetCursorScreenPos().y;
@@ -2549,12 +2556,14 @@ void RibbonMenu::drawTopPanelOpened_()
                 setupItemsGroup_( tabIt->second, tab );
                 auto config = setupItemsGroupConfig_( tabIt->second, tab );
                 ImGui::TableNextRow();
+                UI::TestEngine::pushTree( "Ribbon" );
                 for ( int i = 0; i < tabIt->second.size(); ++i )
                 {
                     const auto& group = tabIt->second[i];
                     ImGui::TableNextColumn();
                     drawItemsGroup_( tab, group, config[i] );
                 }
+                UI::TestEngine::popTree(); // "Ribbon"
                 ImGui::TableNextColumn(); // fictive
                 ImGui::EndTable();
             }

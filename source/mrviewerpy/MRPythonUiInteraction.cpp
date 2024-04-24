@@ -1,6 +1,8 @@
 #include "MRMesh/MRPython.h"
 #include "MRPch/MRFmt.h"
+#include "MRViewer/MRPythonAppendCommand.h"
 #include "MRViewer/MRUITestEngine.h"
+#include "MRViewer/MRViewer.h"
 
 #include <pybind11/stl.h>
 
@@ -34,20 +36,23 @@ namespace
     // Not using `MR_ADD_PYTHON_VEC` here, I don't seem to need any of custom functions it provides.
     std::vector<TypedEntry> listEntries( const std::vector<std::string>& path )
     {
-        const auto& group = findGroup( path );
         std::vector<TypedEntry> ret;
-        ret.reserve( group.elems.size() );
-        for ( const auto& elem : group.elems )
+        MR::pythonRunFromGUIThread( [&]
         {
-            ret.push_back( {
-                .name = elem.first,
-                .type = std::visit( MR::overloaded{
-                    []( const TestEngine::ButtonEntry& ) { return EntryType::button; },
-                    []( const TestEngine::GroupEntry& ) { return EntryType::group; },
-                    []( const auto& ) { return EntryType::other; },
-                }, elem.second.value ),
-            } );
-        }
+            const auto& group = findGroup( path );
+            ret.reserve( group.elems.size() );
+            for ( const auto& elem : group.elems )
+            {
+                ret.push_back( {
+                    .name = elem.first,
+                    .type = std::visit( MR::overloaded{
+                        []( const TestEngine::ButtonEntry& ) { return EntryType::button; },
+                        []( const TestEngine::GroupEntry& ) { return EntryType::group; },
+                        []( const auto& ) { return EntryType::other; },
+                    }, elem.second.value ),
+                } );
+            }
+        } )();
         return ret;
     }
 
@@ -55,7 +60,10 @@ namespace
     {
         if ( path.empty() )
             throw std::runtime_error( "Empty path not allowed here." );
-        std::get<TestEngine::ButtonEntry>( findGroup( { path.begin(), path.end() - 1 } ).elems.at( path.back() ).value ).simulateClick = true;
+        MR::pythonRunFromGUIThread( [&]
+        {
+            std::get<TestEngine::ButtonEntry>( findGroup( { path.begin(), path.end() - 1 } ).elems.at( path.back() ).value ).simulateClick = true;
+        } )();
     }
 }
 

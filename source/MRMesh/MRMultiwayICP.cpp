@@ -3,6 +3,7 @@
 #include "MRTimer.h"
 #include "MRPointToPointAligningTransform.h"
 #include "MRPointToPlaneAligningTransform.h"
+#include <algorithm>
 
 namespace MR
 {

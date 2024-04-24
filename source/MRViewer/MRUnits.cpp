@@ -3,6 +3,7 @@
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRString.h"
 #include "MRPch/MRFmt.h"
+#include <algorithm>
 
 namespace MR
 {

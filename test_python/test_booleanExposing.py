@@ -42,8 +42,12 @@ def test_boolean_exposing():
     brmmAA = bResMapper.map(meshA.topology.getValidVerts(), mrmesh.BooleanResMapObj.A)
     brmmBB = bResMapper.map(meshB.topology.getValidVerts(), mrmesh.BooleanResMapObj.B)
 
+    filteredOldFacesA = bResMapper.filteredOldFaceBitSet( meshA.topology.getValidFaces(), mrmesh.BooleanResMapObj.A )
+    mapsA = bResMapper.getMaps(mrmesh.BooleanResMapObj.A)
+    assert mapsA.cut2newFaces.vec.size() == 42
     assert brmmAA.count() == 1
     assert brmmBB.count() == 1
+    assert filteredOldFacesA.count() == 6
 
 
 def test_unite_may_meshes():

@@ -1137,7 +1137,7 @@ void RibbonMenu::drawBigButtonItem_( const MenuItemInfo& item )
     const auto& style = ImGui::GetStyle();
     ImVec2 itemSize = ImVec2( width.baseWidth, availReg.y - 2 * style.WindowPadding.y );
 
-    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + availReg.y * 0.5f - itemSize.y * 0.5f - ImGui::GetStyle().CellPadding.y * 0.5f );
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + availReg.y * 0.5f - itemSize.y * 0.5f );
 
     buttonDrawer_.drawButtonItem( item, { DrawButtonParams::SizeType::Big,itemSize,cBigIconSize } );
 }
@@ -1327,7 +1327,7 @@ void RibbonMenu::drawItemsGroup_( const std::string& tabName, const std::string&
                                   DrawGroupConfig config ) // copy here for easier usage
 {
     auto itemSpacing = ImGui::GetStyle().ItemSpacing;
-    itemSpacing.y = menu_scaling();
+    itemSpacing.y = 3.0f * menu_scaling();
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding,
                          ImVec2( cRibbonButtonWindowPaddingX * menu_scaling(), cRibbonButtonWindowPaddingY * menu_scaling() ) );
@@ -1959,6 +1959,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
     if ( UI::button( "Load from file", Vector2f( buttonSize, 0 ) ) )
     {
         auto filename = openFileDialog( { "", {}, { {"JSON (.json)", "*.json"} } } );
+        std::string errorString;
         if ( !filename.empty() )
         {
             std::ifstream ifs( filename );
@@ -1979,18 +1980,20 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
                         uniformScale_ = tr->uniformScale;
                     } else
                     {
-                        spdlog::error( "Cannot parse transform" );
+                        errorString = "Cannot parse transform";
                     }
                 }
                 else
                 {
-                    spdlog::error( "Cannot parse transform" );
+                    errorString = "Cannot parse transform";
                 }
             }
             else
             {
-                spdlog::error( "Cannot open file for reading" );
+                errorString = "Cannot open file for reading";
             }
+            if ( !errorString.empty() )
+                pushNotification( { .text = errorString, .type = NotificationType::Error } );
         }
         ImGui::CloseCurrentPopup();
     }

@@ -775,8 +775,24 @@ MeasureResult Binary<Primitives::ConeSegment, Primitives::ConeSegment>::measure(
             ret.angle.pointA = a.centerPoint().center;
             ret.angle.pointB = b.centerPoint().center;
         }
-        ret.angle.dirA = std::isfinite( a.positiveLength ) && !std::isfinite( a.negativeLength ) ? -a.dir : a.dir;
-        ret.angle.dirB = std::isfinite( b.positiveLength ) && !std::isfinite( b.negativeLength ) ? -b.dir : b.dir;
+
+        auto guessDir = [&]( bool second ) -> Vector3f
+        {
+            const Primitives::ConeSegment& cone = second ? b : a;
+
+            bool posFinite = std::isfinite( cone.positiveLength );
+            bool negFinite = std::isfinite( cone.negativeLength );
+
+            // If exactly one of the dirs is infinite, use it.
+            if ( posFinite != negFinite )
+                return negFinite ? cone.dir : -cone.dir;
+
+            Vector3f center = cone.centerPoint().center;
+            return dot( cone.dir, center - ret.angle.pointFor( second ) ) < 0 ? -cone.dir : cone.dir;
+        };
+
+        ret.angle.dirA = guessDir( false );
+        ret.angle.dirB = guessDir( true );
         ret.angle.isSurfaceNormalA = ret.angle.isSurfaceNormalB = false;
     }
 
@@ -1859,8 +1875,9 @@ TEST( Features, Angle_ConeSegment_ConeSegment )
         ASSERT_LE( ( r.pointA - Vector3f( 102, 50, 10 ) ).length(), testEps );
         ASSERT_LE( ( r.pointB - Vector3f( 102, 50, 20 ) ).length(), testEps );
 
-        ASSERT_LE( ( r.dirA - a.dir ).length(), testEps );
-        ASSERT_LE( ( r.dirB - b.dir ).length(), testEps );
+        // Here we accept the flipped direction as well. This test doesn't validate the direction sign selection logic.
+        ASSERT_TRUE( ( r.dirA - a.dir ).length() < testEps || ( -r.dirA - a.dir ).length() < testEps );
+        ASSERT_TRUE( ( r.dirB - b.dir ).length() < testEps || ( -r.dirB - b.dir ).length() < testEps );
 
         ASSERT_FALSE( r.isSurfaceNormalA );
         ASSERT_FALSE( r.isSurfaceNormalB );

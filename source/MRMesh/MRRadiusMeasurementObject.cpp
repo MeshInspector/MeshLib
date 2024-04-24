@@ -2,6 +2,7 @@
 
 #include "MRMesh/MRObjectFactory.h"
 #include "MRPch/MRJson.h"
+#include "MRPch/MRFmt.h"
 
 namespace MR
 {
@@ -16,11 +17,6 @@ std::shared_ptr<Object> RadiusMeasurementObject::clone() const
 std::shared_ptr<Object> RadiusMeasurementObject::shallowClone() const
 {
     return RadiusMeasurementObject::clone();
-}
-
-float RadiusMeasurementObject::getWorldRadius() const
-{
-    return getWorldRadiusAsVector().length();
 }
 
 Vector3f RadiusMeasurementObject::getWorldCenter() const
@@ -78,6 +74,29 @@ void RadiusMeasurementObject::setLocalRadiusAsVector( const MR::Vector3f& vec, c
     setXf( curXf );
 }
 
+void RadiusMeasurementObject::setDrawAsDiameter( bool value )
+{
+    if ( drawAsDiameter_ != value )
+    {
+        drawAsDiameter_ = value;
+        cachedValue_ = {};
+    }
+}
+
+float RadiusMeasurementObject::computeRadiusOrDiameter() const
+{
+    if ( !cachedValue_ )
+        cachedValue_ = getWorldRadiusAsVector().length() * ( getDrawAsDiameter() ? 2.f : 1.f );
+    return *cachedValue_;
+}
+
+std::vector<std::string> RadiusMeasurementObject::getInfoLines() const
+{
+    auto ret = MeasurementObject::getInfoLines();
+    ret.push_back( fmt::format( "{} value: {:.3f}", getDrawAsDiameter() ? "diameter" : "radius", computeRadiusOrDiameter() ) );
+    return ret;
+}
+
 void RadiusMeasurementObject::swapBase_( Object& other )
 {
     if ( auto ptr = other.asType<RadiusMeasurementObject>() )
@@ -112,6 +131,12 @@ void RadiusMeasurementObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
         renderObj_ = createRenderObject<decltype( *this )>( *this );
+}
+
+void RadiusMeasurementObject::propagateWorldXfChangedSignal_()
+{
+    MeasurementObject::propagateWorldXfChangedSignal_();
+    cachedValue_ = {};
 }
 
 } // namespace MR

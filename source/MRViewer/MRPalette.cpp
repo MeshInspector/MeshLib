@@ -11,6 +11,7 @@
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRPch/MRJson.h"
 #include <string>
 #include <fstream>
 
@@ -254,7 +255,7 @@ void Palette::setZeroCentredLabels_()
         labels_.push_back( Label( 0.52f, getStringValue( parameters_.ranges[1] ) ) );
         labels_.push_back( Label( 0.48f, getStringValue( parameters_.ranges[2] ) ) );
         labels_.push_back( Label( 0.f, getStringValue( parameters_.ranges[3] ) ) );
-        
+
         //positions are shifted for avoiding overlapping
         fillLabels( parameters_.ranges[2], parameters_.ranges[3], 0.02f, 0.46f );
         fillLabels( parameters_.ranges[0], parameters_.ranges[1], 0.54f, 0.98f );
@@ -270,7 +271,7 @@ void Palette::setUniformLabels_()
     labels_.clear();
 
     if ( parameters_.ranges.size() == 2 )
-    { 
+    {
         int num = texture_.filter == FilterType::Linear ? 5 : parameters_.discretization + 1;
         if ( maxLabelCount_ && maxLabelCount_ < num )
             num = maxLabelCount_;
@@ -307,9 +308,9 @@ void Palette::setUniformLabels_()
         {
             for ( int i = 0; i < num; ++i )
             {
-                labels_[i].text = std::to_string( float( i ) / ( num - 1 ) * ( parameters_.ranges[1] - parameters_.ranges[0] ) + parameters_.ranges[0] );
+                labels_[i].text = getStringValue( float( i ) / ( num - 1 ) * ( parameters_.ranges[1] - parameters_.ranges[0] ) + parameters_.ranges[0] );
                 labels_[i].value = 1.f - float( i ) / ( num * 2 - 1 );
-                labels_[num + i].text = std::to_string( float( i ) / ( num - 1 ) * ( parameters_.ranges[3] - parameters_.ranges[2] ) + parameters_.ranges[2] );
+                labels_[num + i].text = getStringValue( float( i ) / ( num - 1 ) * ( parameters_.ranges[3] - parameters_.ranges[2] ) + parameters_.ranges[2] );
                 labels_[num + i].value = 1.f - float( i + num ) / ( num * 2 - 1 );
             }
         }
@@ -336,7 +337,7 @@ void Palette::setFilterType( FilterType type )
     resetLabels();
 }
 
-void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size )
+void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size, bool onlyTopHalf )
 {
     float maxTextSize = 0.0f;
     for ( const auto& label : labels_ )
@@ -345,18 +346,17 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
         if ( textSize > maxTextSize )
             maxTextSize = textSize;
     }
-    
+
     const auto& style = ImGui::GetStyle();
     const auto& viewer = getViewerInstance();
     const auto menu = viewer.getMenuPlugin();
     const auto& windowSize = viewer.viewport().getViewportRect();
-    const auto fontSize = ImGui::GetFontSize();
-    
+
     ImGui::SetNextWindowPos( pose, ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( size, ImGuiCond_Appearing );
 
-    ImGui::SetNextWindowSizeConstraints( { maxTextSize + style.WindowPadding.x + style.FramePadding.x + 20.0f * menu->menu_scaling(), 2 * fontSize }, { width( windowSize ), height( windowSize ) }, &resizeCallback_, ( void* )this );
-    
+    ImGui::SetNextWindowSizeConstraints( { maxTextSize + style.WindowPadding.x + style.FramePadding.x + 20.0f * menu->menu_scaling(), 2 * ImGui::GetFontSize() }, { width( windowSize ), height( windowSize ) }, &resizeCallback_, ( void* )this );
+
     auto paletteWindow = ImGui::FindWindowByName( windowName.c_str() );
 
     if ( paletteWindow )
@@ -403,44 +403,55 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
             setMaxLabelCount( int( ImGui::GetWindowSize().y / ImGui::GetFontSize() ) );
             resetLabels();
         }
-        
-        const auto pixRange = actualSize.y - fontSize;
+
+        auto pixRange = actualSize.y - ImGui::GetFontSize();
+        if ( onlyTopHalf )
+            pixRange *= 2;
 
         for ( int i = 0; i < labels_.size(); ++i )
         {
-            drawList->AddText( ImGui::GetFont(), fontSize,
-                                { actualPose.x + style.WindowPadding.x,
-                                actualPose.y + labels_[i].value * pixRange },
-                                ImGui::GetColorU32( SceneColors::get( SceneColors::Labels ).getUInt32() ),
-                                labels_[i].text.c_str() );
-        }       
+            if ( !onlyTopHalf || labels_[i].value <= 0.5f )
+            {
+                float textW = ImGui::CalcTextSize( labels_[i].text.c_str() ).x;
+                drawList->AddText(
+                    ImVec2( actualPose.x + style.WindowPadding.x + maxTextSize - textW, actualPose.y + labels_[i].value * pixRange ),
+                    ImGui::GetColorU32( SceneColors::get( SceneColors::Labels ).getUInt32() ),
+                    labels_[i].text.c_str()
+                );
+            }
+        }
     }
 
     if ( actualSize.x < maxTextSize + 2 * style.WindowPadding.x + style.FramePadding.x )
         return ImGui::End();
 
-    std::vector<Color>& colors = texture_.pixels;
+    const std::vector<Color>& colors = texture_.pixels;
+    const auto sz = colors.size() >> 1; // only half because remaining colors are all gray
     if ( texture_.filter == FilterType::Discrete )
     {
-        auto yStep = actualSize.y / colors.size();
-        for ( int i = 0; i < colors.size(); i++ )
+        auto yStep = actualSize.y / sz;
+        if ( onlyTopHalf )
+            yStep *= 2;
+        for ( int i = 0; i < sz; i++ )
         {
             drawList->AddRectFilled(
                 { actualPose.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
                 actualPose.y + i * yStep },
                 { actualPose.x - style.WindowPadding.x + actualSize.x ,
                 actualPose.y + ( i + 1 ) * yStep },
-                colors[colors.size() - 1 - i].getUInt32() );
+                colors[sz - 1 - i].getUInt32() );
         }
     }
 
     if ( texture_.filter == FilterType::Linear )
     {
-        auto yStep = actualSize.y / ( colors.size() - 1 );
-        for ( int i = 0; i + 1 < colors.size(); i++ )
+        auto yStep = actualSize.y / ( sz - 1 );
+        if ( onlyTopHalf )
+            yStep *= 2;
+        for ( int i = 0; i + 1 < sz; i++ )
         {
-            const auto color1 = colors[colors.size() - 1 - i].getUInt32();
-            const auto color2 = colors[colors.size() - 2 - i].getUInt32();
+            const auto color1 = colors[sz - 1 - i].getUInt32();
+            const auto color2 = colors[sz - 2 - i].getUInt32();
             drawList->AddRectFilledMultiColor(
                 { actualPose.x + style.WindowPadding.x + maxTextSize + style.FramePadding.x,
                 actualPose.y + i * yStep },
@@ -499,7 +510,7 @@ float Palette::getRelativePos( float val ) const
     return 0.5f;
 }
 
-VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region ) const
+VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids ) const
 {
     MR_TIMER
 
@@ -518,15 +529,12 @@ VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet 
     res.resizeNoInit( region.size() );
     BitSetParallelFor( region, [&] ( VertId v )
     {
-        res[v] = UVCoord{ 0.5f, texLen * getRelativePos( values[v] ) + texStart };
+        res[v] = UVCoord{
+            texLen * getRelativePos( values[v] ) + texStart,
+            contains( valids, v ) ? 0.25f : 0.75f };
     } );
 
     return res;
-}
-
-const Palette::Parameters& Palette::getParameters() const
-{
-    return parameters_;
 }
 
 void Palette::updateDiscretizatedColors_()
@@ -535,25 +543,25 @@ void Palette::updateDiscretizatedColors_()
     if (texture_.filter == FilterType::Linear)
     {
         colors = parameters_.baseColors;
-        texture_.resolution = { 1, int( colors.size() ) };
-        return;
     }
-
-    if ( parameters_.ranges.size() == 4 )
+    else if ( parameters_.ranges.size() == 4 )
     {
         const auto realDiscretization = parameters_.discretization * 2 + 1;
         colors.resize( realDiscretization );
-        texture_.resolution = { 1, realDiscretization };
         for ( int i = 0; i < realDiscretization; ++i )
             colors[i] = getBaseColor_( float( i ) / ( realDiscretization - 1 ) );
     }
     else
     {
         colors.resize( parameters_.discretization );
-        texture_.resolution = { 1, int( colors.size() ) };
         for ( int i = 0; i < parameters_.discretization; ++i )
             colors[i] = getBaseColor_( float( i ) / ( parameters_.discretization - 1 ) );
     }
+
+    // add second layer with gray color for invalid values
+    const auto sz = colors.size();
+    colors.resize( 2 * sz, Color::gray() );
+    texture_.resolution = { int( sz ), 2 };
 }
 
 Color Palette::getBaseColor_( float val )
@@ -607,10 +615,12 @@ std::string Palette::getStringValue( float value )
         auto rangeDiff = std::abs( parameters_.ranges.back() - parameters_.ranges.front() );
         needExp = rangeDiff != 0.0f && ( rangeDiff > 1e4f || rangeDiff < 1e-2f );
     }
-    if ( needExp )
-        return fmt::format( "{0: .2e}", value );
-    else
-        return fmt::format( "{0: .4f}", value );
+
+    return valueToString<LengthUnit>( value, {
+        .unitSuffix = false,
+        .style = needExp ? NumberStyle::exponential : getDefaultUnitParams<LengthUnit>().style,
+        .stripTrailingZeroes = false,
+    } );
 }
 
 int Palette::getMaxLabelCount()

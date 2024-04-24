@@ -85,7 +85,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def( "samplePoints", &MR::ICP::samplePoints, pybind11::arg( "samplingVoxelSize" ) ).
         def( "recomputeBitSet", &MR::ICP::sampleFltPoints, pybind11::arg( "floatSamplingVoxelSize" ) ).
         def( "getParams", &MR::ICP::getParams, pybind11::return_value_policy::copy ).
-        def( "getLastICPInfo", &MR::ICP::getLastICPInfo, "returns status info string" ).
+        def( "getLastICPInfo", &MR::ICP::getStatusInfo, "returns status info string (old function, please use .getStatusInfo())" ).
+        def( "getStatusInfo", &MR::ICP::getStatusInfo, "returns status info string" ).
         def( "getNumActivePairs", &MR::ICP::getNumActivePairs, "computes the number of active point pairs" ).
         def( "getMeanSqDistToPoint", &MR::ICP::getMeanSqDistToPoint, "computes root-mean-square deviation between points" ).
         def( "getMeanSqDistToPlane", &MR::ICP::getMeanSqDistToPlane, "computes root-mean-square deviation from points to target planes" ).

@@ -30,9 +30,9 @@ jobs:
             cxx-compiler: /usr/bin/clang++
             c-compiler: /usr/bin/clang
           - os: x64
-            runner: macos-14
+            runner: macos-12
           - os: arm
-            runner: macos-arm-build
+            runner: macos-latest # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout

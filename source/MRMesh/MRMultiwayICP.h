@@ -26,6 +26,9 @@ public:
     /// select pairs with origin samples on all objects
     MRMESH_API void resamplePoints( float samplingVoxelSize );
 
+    /// in each pair updates the target data and performs basic filtering (activation)
+    MRMESH_API void updatePointPairs();
+
     /// tune algorithm params before run calculateTransformations()
     void setParams( const ICPProperties& prop ) { prop_ = prop; }
     [[nodiscard]] const ICPProperties& getParams() const { return prop_; }
@@ -33,11 +36,23 @@ public:
     /// computes root-mean-square deviation between points
     [[nodiscard]] MRMESH_API float getMeanSqDistToPoint() const;
 
+    /// computes root-mean-square deviation between points of given object
+    [[nodiscard]] MRMESH_API float getMeanSqDistToPoint( MeshOrPointsId id ) const;
+
     /// computes root-mean-square deviation from points to target planes
     [[nodiscard]] MRMESH_API float getMeanSqDistToPlane() const;
 
+    /// computes root-mean-square deviation from points to target planes  of given object
+    [[nodiscard]] MRMESH_API float getMeanSqDistToPlane( MeshOrPointsId id ) const;
+
     /// computes the number of active point pairs
     [[nodiscard]] MRMESH_API size_t getNumActivePairs() const;
+
+    /// computes the number of active point pairs of given object
+    [[nodiscard]] MRMESH_API size_t getNumActivePairs( MeshOrPointsId id ) const;
+
+    /// returns status info string
+    [[nodiscard]] MRMESH_API std::string getStatusInfo() const; 
 private:
     
     Vector<MultiICPObject, MeshOrPointsId> objs_;
@@ -45,9 +60,6 @@ private:
     ICPProperties prop_;
 
     ICPExitType resultType_{ ICPExitType::NotStarted };
-
-    /// in each pair updates the target data and performs basic filtering (activation)
-    void updatePointPairs_();
 
     /// deactivate pairs that does not meet farDistFactor criterion
     void deactivatefarDistPairs_();

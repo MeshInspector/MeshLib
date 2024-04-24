@@ -31,6 +31,7 @@ class RenderNameObject : public virtual IRenderObject
         ImVec2 paddingA;
         ImVec2 paddingB;
 
+        bool prevFrameHovered = false;
         bool isHovered = false;
         bool isActive = false;
 

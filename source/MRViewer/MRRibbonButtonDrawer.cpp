@@ -297,9 +297,9 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
     else
     {
         if ( !imageIcon )
-            ImGui::SetCursorPosY( 2.0f * ImGui::GetStyle().WindowPadding.y );
+            ImGui::SetCursorPosY( 3 * scaling_ + 2.0f * ImGui::GetStyle().WindowPadding.y );
         else
-            ImGui::SetCursorPosY( ImGui::GetStyle().WindowPadding.y );
+            ImGui::SetCursorPosY( 3 * scaling_ + ImGui::GetStyle().WindowPadding.y );
     }
 
     if ( !imageIcon )
@@ -325,9 +325,9 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
         const float textHeight = numLines * ImGui::GetTextLineHeight() + ( numLines - 1 ) * ImGui::GetStyle().ItemSpacing.y;
 
         if ( !imageIcon )
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( availableHeight - textHeight ) * 0.5f );
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( availableHeight - textHeight ) * 0.5f + 3 * scaling_ );
         else
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( availableHeight - textHeight ) * 0.5f - ImGui::GetStyle().WindowPadding.y );
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( availableHeight - textHeight ) * 0.5f - ImGui::GetStyle().WindowPadding.y + 3 * scaling_ );
 
         for ( const auto& i : item.captionSize.splitInfo )
         {
@@ -455,7 +455,8 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
             font->Scale = iconSize * 1.5f / fontSize;
         ImGui::PushFont( font );
     }
-    ImVec2 itemSize = ImVec2( ImGui::GetFrameHeight(), ImGui::GetFrameHeight() );
+    auto frameHeight = ImGui::GetFrameHeight();
+    ImVec2 itemSize = ImVec2( frameHeight, frameHeight );
     ImVec2 dropBtnPos;
     if ( params.sizeType == DrawButtonParams::SizeType::Small )
     {
@@ -474,8 +475,9 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
     else
     {
         assert( params.sizeType == DrawButtonParams::SizeType::Big );
+        itemSize.y = params.itemSize.y;
         dropBtnPos.x = params.itemSize.x - itemSize.x;
-        dropBtnPos.y = params.itemSize.y - itemSize.y;
+        dropBtnPos.y = 0.0f;
     }
     ImGui::SetCursorPos( dropBtnPos );
     auto absMinPos = ImGui::GetCurrentContext()->CurrentWindow->DC.CursorPos;
@@ -492,7 +494,11 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
 
     auto iconRealSize = ImGui::CalcTextSize( "\xef\x81\xb8" ); //down icon
     ImGui::SetCursorPosX( dropBtnPos.x + ( itemSize.x - iconRealSize.x + 1 ) * 0.5f );
-    ImGui::SetCursorPosY( dropBtnPos.y + ( itemSize.y - iconRealSize.y - 1 ) * 0.5f );
+    if ( params.sizeType == DrawButtonParams::SizeType::Big )
+        ImGui::SetCursorPosY( params.itemSize.y - frameHeight + ( frameHeight - iconRealSize.y - 1 ) * 0.5f );
+    else
+        ImGui::SetCursorPosY( dropBtnPos.y + ( itemSize.y - iconRealSize.y - 1 ) * 0.5f );
+
     ImGui::Text( "%s", "\xef\x81\xb8" );
     
     ImGui::PopStyleVar();

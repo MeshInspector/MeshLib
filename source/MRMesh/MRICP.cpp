@@ -113,6 +113,31 @@ void ICP::updatePointPairs()
     deactivatefarDistPairs_();
 }
 
+std::string getICPStatusInfo( int iterations, ICPExitType exitType )
+{
+    std::string result = "Performed " + std::to_string( iterations ) + " iterations.\n";
+    switch ( exitType )
+    {
+    case MR::ICPExitType::NotFoundSolution:
+        result += "No solution found.";
+        break;
+    case MR::ICPExitType::MaxIterations:
+        result += "Limit of iterations reached.";
+        break;
+    case MR::ICPExitType::MaxBadIterations:
+        result += "No improvement iterations limit reached.";
+        break;
+    case MR::ICPExitType::StopMsdReached:
+        result += "Required mean square deviation reached.";
+        break;
+    case MR::ICPExitType::NotStarted:
+    default:
+        result = "Not started yet.";
+        break;
+    }
+    return result;
+}
+
 void updatePointPairs( PointPairs & pairs,
     const MeshOrPoints & src, const AffineXf3f & srcXf,
     const MeshOrPoints& tgt, const AffineXf3f& tgtXf,
@@ -423,29 +448,9 @@ void ICP::setFarDistFactor(const float factor)
     prop_.farDistFactor = factor;
 }
 
-std::string ICP::getLastICPInfo() const
+std::string ICP::getStatusInfo() const
 {
-    std::string result = "Performed " + std::to_string( iter_ ) + " iterations.\n";
-    switch ( resultType_ )
-    {
-    case MR::ICPExitType::NotFoundSolution:
-        result += "No solution found.";
-        break;
-    case MR::ICPExitType::MaxIterations:
-        result += "Limit of iterations reached.";
-        break;
-    case MR::ICPExitType::MaxBadIterations:
-        result += "No improvement iterations limit reached.";
-        break;
-    case MR::ICPExitType::StopMsdReached:
-        result += "Required mean square deviation reached.";
-        break;
-    case MR::ICPExitType::NotStarted:
-    default:
-        result = "Not started yet.";
-        break;
-    }
-    return result;
+    return getICPStatusInfo( iter_, resultType_ );
 }
 
 float ICP::getMeanSqDistToPoint() const

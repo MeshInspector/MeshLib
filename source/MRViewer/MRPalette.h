@@ -4,10 +4,12 @@
 #include "MRMesh/MRVector4.h"
 #include "MRMesh/MRMeshTexture.h"
 #include "MRMesh/MRColor.h"
-#include "MRPch/MRJson.h"
 #include "MRMesh/MRExpected.h"
 #include <imgui.h>
+#include <algorithm>
 #include <filesystem>
+
+namespace Json{ class Value; }
 
 namespace MR
 {
@@ -50,9 +52,11 @@ public:
     // set palette type (linear / discrete)
     MRVIEWER_API void setFilterType( FilterType type );
 
-    // Discrete: bar consists of single colored rectangles for each initial color
-    // Linear (default): color is changing from one to another during initial color list
-    MRVIEWER_API void draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size );
+    /// Draws vertical legend with labels in ImGui window with given name
+    /// Discrete: bar consists of single colored rectangles for each initial color
+    /// Linear (default): color is changing from one to another during initial color list
+    /// \param onlyTopHalf if true, draws only top half of the palette and labels stretched to whole window
+    MRVIEWER_API void draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size, bool onlyTopHalf = false );
 
     // structure for label
     struct MRVIEWER_CLASS Label
@@ -91,8 +95,10 @@ public:
     // get relative position in [0,1], where 0 is for minimum and 1 is for maximum
     MRVIEWER_API float getRelativePos( float val ) const;
 
-    // get UV coordinates in palette for given values
-    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region ) const;
+    /// get UV coordinates in palette for given values
+    /// \param region only these vertices will be processed
+    /// \param valids if given then defines subregion with valid values, and invalid values will get gray color
+    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids = nullptr ) const;
 
     // base parameters of palette
     struct Parameters
@@ -102,7 +108,16 @@ public:
         int discretization = 7; // number of different colors for discrete palette
     };
 
-    MRVIEWER_API const Parameters& getParameters() const;
+    [[nodiscard]] const Parameters& getParameters() const { return parameters_; }
+
+    /// returns minimum value in the palette's range
+    [[nodiscard]] float getRangeMin() const { return parameters_.ranges.front(); }
+
+    /// returns maximum value in the palette's range
+    [[nodiscard]] float getRangeMax() const { return parameters_.ranges.back(); }
+
+    /// returns minimum squared value, not smaller than all squared values of palette's range
+    [[nodiscard]] float getRangeSq() const { return std::max( sqr( getRangeMin() ), sqr( getRangeMax() ) ); }
 
     // returns formated string for this value of palette
     MRVIEWER_API std::string getStringValue( float value );
@@ -110,6 +125,7 @@ public:
     MRVIEWER_API int getMaxLabelCount();
     // sets maximal label count
     MRVIEWER_API void setMaxLabelCount( int val );
+
 private:
     void setRangeLimits_( const std::vector<float>& ranges );
 

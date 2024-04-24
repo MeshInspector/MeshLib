@@ -2,6 +2,7 @@
 
 #include "MRMesh/MRObjectFactory.h"
 #include "MRPch/MRJson.h"
+#include "MRPch/MRFmt.h"
 
 namespace MR
 {
@@ -66,7 +67,11 @@ bool DistanceMeasurementObject::getDrawAsNegative() const
 
 void DistanceMeasurementObject::setDrawAsNegative( bool value )
 {
-    drawAsNegative_ = value;
+    if ( drawAsNegative_ != value )
+    {
+        drawAsNegative_ = value;
+        cachedValue_ = {};
+    }
 }
 
 DistanceMeasurementObject::PerCoordDeltas DistanceMeasurementObject::getPerCoordDeltasMode() const
@@ -77,6 +82,20 @@ DistanceMeasurementObject::PerCoordDeltas DistanceMeasurementObject::getPerCoord
 void DistanceMeasurementObject::setPerCoordDeltasMode( PerCoordDeltas mode )
 {
     perCoordDeltas_ = mode;
+}
+
+float DistanceMeasurementObject::computeDistance() const
+{
+    if ( !cachedValue_ )
+        cachedValue_ = getWorldDelta().length() * ( getDrawAsNegative() ? -1.f : 1.f );
+    return *cachedValue_;
+}
+
+std::vector<std::string> DistanceMeasurementObject::getInfoLines() const
+{
+    auto ret = MeasurementObject::getInfoLines();
+    ret.push_back( fmt::format( "distance value: {:.3f}", computeDistance() ) );
+    return ret;
 }
 
 void DistanceMeasurementObject::swapBase_( Object& other )
@@ -110,6 +129,12 @@ void DistanceMeasurementObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
         renderObj_ = createRenderObject<decltype( *this )>( *this );
+}
+
+void DistanceMeasurementObject::propagateWorldXfChangedSignal_()
+{
+    MeasurementObject::propagateWorldXfChangedSignal_();
+    cachedValue_ = {};
 }
 
 } // namespace MR

@@ -56,6 +56,16 @@ void AncillaryLabel::setPosition( const Vector3f& pos )
     obj->setLabel( PositionedText{ obj->getLabel().text, pos } );
 }
 
+void AncillaryImGuiLabel::make( Object &parent, const PositionedText& text )
+{
+    make( text );
+    parentXfConnection_ = parent.worldXfChangedSignal.connect( [&] ()
+    {
+        labelData_.position = parent.worldXf()( localPos_ );
+    } );
+    labelData_.position = parent.worldXf()( localPos_ );
+}
+
 void AncillaryImGuiLabel::make( std::shared_ptr<Object> parent, const PositionedText& text )
 {
     make( text );

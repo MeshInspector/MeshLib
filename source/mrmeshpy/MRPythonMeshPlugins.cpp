@@ -294,7 +294,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Relax, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def_readwrite( "force", &RelaxParams::force, "speed of relaxing, typical values (0.0, 0.5]" ).
         def_readwrite( "iterations", &RelaxParams::iterations, "number of iterations" ).
-        def_readwrite( "region", &RelaxParams::region, "region to relax" );
+        def_readwrite( "region", &RelaxParams::region, "region to relax" ).
+        def_readwrite( "limitNearInitial", &RelaxParams::limitNearInitial, "if true then maximal displacement of each point during denoising will be limited" ).
+        def_readwrite( "maxInitialDist", &RelaxParams::maxInitialDist, "maximum distance between a point and its position before relaxation, ignored if limitNearInitial = false" );
 
     pybind11::class_<MeshRelaxParams, RelaxParams>( m, "MeshRelaxParams" ).
         def( pybind11::init<>() ).

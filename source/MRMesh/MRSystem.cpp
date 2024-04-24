@@ -247,7 +247,7 @@ std::filesystem::path getUserConfigDir()
     if ( !std::filesystem::is_directory( filepath, ec ) || ec )
     {
         if ( ec )
-            spdlog::warn( "is {} a directory failed: {}", utf8string( filepath ), systemToUtf8( ec.message() ) );
+            spdlog::info( "{} is not a valid directory yet: {}", utf8string( filepath ), systemToUtf8( ec.message() ) );
         std::filesystem::create_directories( filepath, ec );
         if ( ec )
             spdlog::error( "create directories {} failed: {}", utf8string( filepath ), systemToUtf8( ec.message() ) );

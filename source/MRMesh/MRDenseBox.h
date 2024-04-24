@@ -13,6 +13,10 @@ namespace MR
 /// \ingroup MathGroup
 struct DenseBox
 {
+    /// Include given points into this dense box
+    MRMESH_API DenseBox( const std::vector<Vector3f>& points, const AffineXf3f* xf = nullptr );
+    /// Include given weighed points into this dense box
+    MRMESH_API DenseBox( const std::vector<Vector3f>& points, const std::vector<float>& weights, const AffineXf3f* xf = nullptr );
     /// Include mesh part into this dense box
     MRMESH_API DenseBox( const MeshPart& meshPart, const AffineXf3f* xf = nullptr );
     /// Include point into this dense box
@@ -36,8 +40,10 @@ struct DenseBox
     const AffineXf3f& basisXf() const { return basisXf_; }
     /// transform world space to box space
     const AffineXf3f& basisXfInv() const { return basisXfInv_; }
-private:
 
+private:
+    /// Include given points into this dense box
+    void include_( const std::vector<Vector3f>& points, const std::vector<float>* weights = nullptr, const AffineXf3f* xf = nullptr );
     /// Include mesh part into this dense box
     void include_( const MeshPart& meshPart, const AffineXf3f* xf = nullptr );
     /// Include point into this dense box

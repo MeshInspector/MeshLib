@@ -272,6 +272,7 @@ IF(MESHLIB_BUILD_MRVIEWER)
 
   IF(NOT MR_EMSCRIPTEN)
     find_package(glfw3 CONFIG REQUIRED)
+    pkg_check_modules(GTKMM gtkmm-3.0)
   ENDIF()
 
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)

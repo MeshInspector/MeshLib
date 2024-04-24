@@ -35,18 +35,12 @@ ModelRenderParams Viewport::getModelRenderParams( const Matrix4f & modelM, const
         auto normTemp = viewM_ * modelM;
         if ( normTemp.det() == 0 )
         {
-            auto norm = normTemp.norm();
-            if ( std::isnormal( norm ) )
-            {
-                normTemp /= norm;
-                normTemp.w = { 0, 0, 0, 1 };
-            }
-            else
-            {
-                spdlog::warn( "Object transform is degenerate" );
-            }
+            spdlog::warn( "Object transform is degenerate" );
+            assert( false );
+            *normM = normTemp;
         }
-        *normM = normTemp.inverse().transposed();
+        else
+            *normM = normTemp.inverse().transposed();
     }
 
     return ModelRenderParams

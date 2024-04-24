@@ -39,6 +39,10 @@ Json::Value GetSystemInfoJson()
         GL_EXEC();
         glInfo["OpenGL Version"] = std::string( ( const char* )glGetString( GL_VERSION ) );
         GL_EXEC();
+        int curSamples = 0;
+        GL_EXEC( glGetIntegerv( GL_SAMPLES, &curSamples ) );
+        
+        glInfo["MSAA"] = std::to_string( curSamples );
 
         glInfo["CUDA memory"] = CudaAccessor::isCudaAvailable() ?
             fmt::format( "{:.1f} GB", CudaAccessor::getCudaFreeMemory() / 1024 / 1024 / 1024.0f ) :

@@ -329,21 +329,26 @@ void ObjectMeshHolder::copyColors( const VisualObject& src, const VertMap& thisT
     colorMap.resizeNoInit( thisToSrc.size() );
     ParallelFor( colorMap, [&] ( VertId id )
     {
-        colorMap[id] = srcColorMap[thisToSrc[id]];
+        const auto& curId = thisToSrc[id];
+        if( curId .valid() )
+            colorMap[id] = srcColorMap[thisToSrc[id]];
     } );
     setVertsColorMap( std::move( colorMap ) );
 
     if ( !facesColorMap_.empty() && mesh_ )
     {
-        auto& validFace = mesh_->topology.getValidFaces();
+        const auto& validFace = mesh_->topology.getValidFaces();
         FaceColors faceColors;
-        faceColors.resize( validFace.size() );
+        faceColors.resizeNoInit( validFace.size() );
 
         Color color = facesColorMap_[thisToSrcFaces[validFace.backId()]];
         bool differentColor = false;
 
         for ( const auto& faceId : validFace )
         {
+            if ( !thisToSrcFaces[faceId].valid() )
+                continue;
+
             auto& newColor = facesColorMap_[thisToSrcFaces[faceId]];
             faceColors[faceId] = newColor;
             if ( color != newColor )
@@ -351,7 +356,7 @@ void ObjectMeshHolder::copyColors( const VisualObject& src, const VertMap& thisT
         }
 
         if ( differentColor )
-            setFacesColorMap( faceColors );
+            setFacesColorMap( std::move( faceColors ) );
         else if ( src.getColoringType() == ColoringType::FacesColorMap )
         {
             setFrontColor( color, true );

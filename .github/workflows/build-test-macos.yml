@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ x64, arm, our-arm ]
+        os: [ x64, github-arm, arm ]
         config: [Release]
         compiler: [Clang]
         include:
@@ -30,11 +30,12 @@ jobs:
             cxx-compiler: /usr/bin/clang++
             c-compiler: /usr/bin/clang
           - os: x64
-            runner: macos-12
+            # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
+            runner: macos-12 # github hosted
+          - os: github-arm
+            runner: macos-latest  # github hosted
           - os: arm
-            runner: macos-latest # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
-          - os: our-arm
-            runner: macos-arm-build
+            runner: macos-arm-build # self-hosted
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -52,11 +53,6 @@ jobs:
       - name: Install thirdparty libs
         run: brew install tmux htop
         
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        with:
-          detached: true
-      
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh
 
@@ -84,7 +80,7 @@ jobs:
           MR_USE_CPP_23: "ON"
 
       - name: Run Start-and-Exit Tests
-        if: ${{ matrix.os == 'our-arm' }}
+        if: ${{ matrix.os == 'arm' }}
         run: MR_LOCAL_RESOURCES=1 ./build/Release/bin/MeshViewer -hidden -noEventLoop
 
       - name: Unit Tests

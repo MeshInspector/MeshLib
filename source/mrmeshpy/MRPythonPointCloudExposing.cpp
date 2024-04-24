@@ -3,6 +3,9 @@
 #include "MRMesh/MRPointCloudTriangulation.h"
 #include "MRMesh/MRMeshToPointCloud.h"
 #include "MRMesh/MRBox.h"
+#include "MRMesh/MRColor.h"
+#include "MRMesh/MRPointsToMeshFusion.h"
+#include "MRMesh/MRExpected.h"
 #include <pybind11/stl.h>
 #include <pybind11/functional.h>
 
@@ -34,7 +37,27 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointCloud, [] ( pybind11::module_& m )
         "Creates mesh from given point cloud according params\n"
         "Returns empty optional if was interrupted by progress bar" );
 
+
     m.def( "meshToPointCloud", &MR::meshToPointCloud,
         pybind11::arg( "mesh" ), pybind11::arg( "saveNormals" ) = true, pybind11::arg( "verts" ) = nullptr,
         "Mesh to PointCloud" );
+
+    pybind11::class_<MR::PointsToMeshParameters>( m, "PointsToMeshParameters", "Parameters of point cloud triangulation" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "sigma", &MR::PointsToMeshParameters::sigma,
+            "The distance of highest influence of a point;\n"
+            "the maximal influence distance is 3*sigma; beyond that distance the influence is strictly zero" ).
+        def_readwrite( "minWeight", &MR::PointsToMeshParameters::minWeight,
+            "minimum sum of influence weights from surrounding points for a triangle to appear,\n"
+            "meaning that there shall be at least this number of points in close proximity" ).
+        def_readwrite( "voxelSize", &MR::PointsToMeshParameters::voxelSize,
+            "Size of voxel in grid conversions;\n"
+            "The user is responsible for setting some positive value here" );
+        //def( "ptColors", &MR::PointsToMeshParameters::ptColors,
+            //"optional input: colors of input points" );
+
+    m.def( "pointsToMeshFusion", MR::decorateExpected( &MR::pointsToMeshFusion ),
+        pybind11::arg( "pointCloud" ), pybind11::arg_v( "params", MR::PointsToMeshParameters(), "PointsToMeshParameters()" ),
+        "Creates mesh from given point cloud according params\n"
+        "Returns empty optional if was interrupted by progress bar" );
 } )

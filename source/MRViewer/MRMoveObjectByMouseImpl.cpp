@@ -5,11 +5,13 @@
 #include "MRViewer/MRViewport.h"
 #include "MRViewer/MRGladGlfw.h"
 #include "MRViewer/MRAppendHistory.h"
+#include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRIntersection.h"
 #include "MRMesh/MRVisualObject.h"
+#include "MRMesh/MRObjectsAccess.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace
@@ -36,7 +38,7 @@ void MoveObjectByMouseImpl::onDrawDialog( float /* menuScaling */ )
         ImGui::SetTooltip( "Angle : %.3f", angle_ );
 }
 
-bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifier )
+bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
 {
     if ( button != Viewer::MouseButton::Left )
         return false;
@@ -45,8 +47,10 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifier )
 
     auto [obj, pick] = viewer->viewport().pick_render_object();
 
-    if ( !obj || !onPick( obj, pick ) || !obj )
+    if ( !obj || !onPick( obj, pick, modifiers ) || !obj )
         return false;
+
+    objects_ = getObjects( obj, pick, modifiers );
 
     visualizeVectors_.clear();
     angle_ = 0.f;
@@ -56,8 +60,11 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifier )
     objWorldXf_ = obj_->worldXf();
     worldStartPoint_ = objWorldXf_( pick.point );
     viewportStartPointZ_ = viewer->viewport().projectToViewportSpace( worldStartPoint_ ).z;
+    objectsXfs_.clear();
+    for ( std::shared_ptr<Object>& f : objects_ )
+        objectsXfs_.push_back( f->worldXf() );
 
-    transformMode_ = ( modifier == GLFW_MOD_CONTROL ) ? TransformMode::Rotation : TransformMode::Translation;
+    transformMode_ = ( modifiers & GLFW_MOD_CONTROL ) != 0 ? TransformMode::Rotation : TransformMode::Translation;
 
     if ( transformMode_ == TransformMode::Rotation )
     {
@@ -91,6 +98,7 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
 
     auto viewportEnd = viewer->screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewer->viewport().id );
     auto worldEndPoint = viewer->viewport().unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
+    AffineXf3f worldXf;
 
     if ( transformMode_ == TransformMode::Rotation )
     {
@@ -118,14 +126,14 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
         AffineXf3f rotation = AffineXf3f::linear( Matrix3f::rotation( vectorStart, worldEndPoint - worldBboxCenter_ ) );
         AffineXf3f worldXfA = AffineXf3f::linear( objWorldXf_.A );
         AffineXf3f toBboxCenter = AffineXf3f::translation( worldXfA( bboxCenter_ ) );
-        obj_->setWorldXf( AffineXf3f::translation( objWorldXf_.b ) * toBboxCenter * rotation * toBboxCenter.inverse() * worldXfA );
+        worldXf = AffineXf3f::translation( objWorldXf_.b ) * toBboxCenter * rotation * toBboxCenter.inverse() * worldXfA;
     }
     else
     {
         shift_ = ( worldEndPoint - worldStartPoint_ ).length();
         setVisualizeVectors_( { worldStartPoint_, worldEndPoint } );
 
-        auto worldXf = AffineXf3f::translation( worldEndPoint - worldStartPoint_ ) * objWorldXf_;
+        worldXf = AffineXf3f::translation( worldEndPoint - worldStartPoint_ ) * objWorldXf_;
 
         // Clamp movement.
         float minSizeDim = 0;
@@ -140,25 +148,23 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
 
         for ( auto i = 0; i < 3; i++ )
             worldXf.b[i] = std::clamp( worldXf.b[i], -cMaxTranslationMultiplier * minSizeDim, +cMaxTranslationMultiplier * minSizeDim );
-
-        obj_->setWorldXf( worldXf );
     }
+
+    newWorldXf_ = worldXf;
+    setWorldXf_( worldXf, false );
 
     return true;
 }
 
-bool MoveObjectByMouseImpl::onMouseUp( MouseButton btn, int /*modifiers*/ )
+bool MoveObjectByMouseImpl::onMouseUp( MouseButton button, int /*modifiers*/ )
 {
-    if ( !obj_ || btn != Viewer::MouseButton::Left )
+    if ( !obj_ || button != Viewer::MouseButton::Left )
         return false;
 
-    auto newWorldXf = obj_->worldXf();
-    obj_->setWorldXf( objWorldXf_ );
-    AppendHistory<ChangeXfAction>( "Change Xf", obj_ );
-    obj_->setWorldXf( newWorldXf );
+    resetWorldXf_();
+    setWorldXf_( newWorldXf_, true );
 
-    obj_ = nullptr;
-    transformMode_ = TransformMode::None;
+    clear_();
 
     return true;
 }
@@ -167,14 +173,50 @@ void MoveObjectByMouseImpl::cancel()
 {
     if ( !obj_ )
         return;
-    obj_->setWorldXf( objWorldXf_ );
-    obj_ = nullptr;
-    transformMode_ = TransformMode::None;
+    resetWorldXf_();
+    clear_();
 }
 
-bool MoveObjectByMouseImpl::onPick( std::shared_ptr<VisualObject>& obj, PointOnObject& )
+bool MoveObjectByMouseImpl::onPick( std::shared_ptr<VisualObject>& obj, PointOnObject&, int )
 {
     return !obj->isAncillary();
+}
+
+std::vector<std::shared_ptr<Object>> MoveObjectByMouseImpl::getObjects( 
+    const std::shared_ptr<VisualObject>& obj, const PointOnObject &, int )
+{
+    return { obj };
+}
+
+void MoveObjectByMouseImpl::clear_()
+{
+    obj_ = nullptr;
+    transformMode_ = TransformMode::None;
+    objects_.clear();
+    objectsXfs_.clear();
+}
+
+void MoveObjectByMouseImpl::setWorldXf_( AffineXf3f worldXf, bool history )
+{
+    std::unique_ptr<ScopeHistory> scope = history ? std::make_unique<ScopeHistory>( "Change Xf" ) : nullptr;
+    auto itXf = objectsXfs_.begin();
+    for ( std::shared_ptr<Object>& obj : objects_ )
+    {
+        if ( history )
+            AppendHistory<ChangeXfAction>( "Change Xf", obj );
+        if ( obj == obj_ )
+            obj->setWorldXf( worldXf );
+        else
+            obj->setWorldXf( worldXf * objWorldXf_.inverse() * *itXf );
+        itXf++;
+    }
+}
+
+void MoveObjectByMouseImpl::resetWorldXf_()
+{
+    auto itXf = objectsXfs_.begin();
+    for ( std::shared_ptr<Object>& f : objects_ )
+        f->setWorldXf( *itXf++ );
 }
 
 void MoveObjectByMouseImpl::setVisualizeVectors_( std::vector<Vector3f> worldPoints )

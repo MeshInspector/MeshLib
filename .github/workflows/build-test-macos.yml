@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ x64, arm ]
+        os: [ x64, arm, our-arm ]
         config: [Release]
         compiler: [Clang]
         include:
@@ -33,6 +33,8 @@ jobs:
             runner: macos-12
           - os: arm
             runner: macos-latest # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
+          - os: our-arm
+            runner: macos-arm-build
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -82,7 +84,7 @@ jobs:
           MR_USE_CPP_23: "ON"
 
       - name: Run Start-and-Exit Tests
-        if: ${{ matrix.os == 'arm' }}
+        if: ${{ matrix.os == 'our-arm' }}
         run: MR_LOCAL_RESOURCES=1 ./build/Release/bin/MeshViewer -hidden -noEventLoop
 
       - name: Unit Tests

@@ -17,7 +17,6 @@ on:
 jobs:
   macos-build-test:
     timeout-minutes: 60
-    # runs-on: macos-latest
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -52,7 +51,7 @@ jobs:
 
       - name: Install thirdparty libs
         run: brew install tmux htop
-        
+
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh
 

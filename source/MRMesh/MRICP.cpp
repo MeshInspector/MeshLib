@@ -33,55 +33,51 @@ size_t deactivateFarPairs( PointPairs & pairs, float maxDistSq )
 }
 
 
-ICP::ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fltXf, const AffineXf3f& refXf,
-    const VertBitSet& fltSamples, const VertBitSet& refSamples )
+ICP::ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, const VertBitSet& fltSamples, const VertBitSet& refSamples )
     : flt_( flt )
     , ref_( ref )
 {
-    setXfs( fltXf, refXf );
     MR::setupPairs( flt2refPairs_, fltSamples );
     MR::setupPairs( ref2fltPairs_, refSamples );
 }
 
-ICP::ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fltXf, const AffineXf3f& refXf,
-    float samplingVoxelSize )
+ICP::ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, float samplingVoxelSize )
     : flt_( flt )
     , ref_( ref )
 {
-    setXfs( fltXf, refXf );
     samplePoints( samplingVoxelSize );
 }
 
 void ICP::setXfs( const AffineXf3f& fltXf, const AffineXf3f& refXf )
 {
-    refXf_ = refXf;
+    ref_.xf = refXf;
     setFloatXf( fltXf );
 }
 
 void ICP::setFloatXf( const AffineXf3f& fltXf )
 {
-    fltXf_ = fltXf;
+    flt_.xf = fltXf;
 }
 
 AffineXf3f ICP::autoSelectFloatXf()
 {
     MR_TIMER
 
-    auto bestFltXf = fltXf_;
+    auto bestFltXf = flt_.xf;
     float bestDist = getMeanSqDistToPoint();
 
     PointAccumulator refAcc;
-    ref_.accumulate( refAcc );
+    ref_.obj.accumulate( refAcc );
     const auto refBasisXfs = refAcc.get4BasicXfs3f();
 
     PointAccumulator floatAcc;
-    flt_.accumulate( floatAcc );
+    flt_.obj.accumulate( floatAcc );
     const auto floatBasisXf = floatAcc.getBasicXf3f();
 
     // TODO: perform computations in parallel by calling free functions to measure the distance
     for ( const auto & refBasisXf : refBasisXfs )
     {
-        auto fltXf = refXf_ * refBasisXf * floatBasisXf.inverse();
+        auto fltXf = ref_.xf * refBasisXf * floatBasisXf.inverse();
         setFloatXf( fltXf );
         updatePointPairs();
         const float dist = getMeanSqDistToPoint();
@@ -97,19 +93,19 @@ AffineXf3f ICP::autoSelectFloatXf()
 
 void ICP::sampleFltPoints( float samplingVoxelSize )
 {
-    setupPairs( flt2refPairs_, *flt_.pointsGridSampling( samplingVoxelSize ) );
+    setupPairs( flt2refPairs_, *flt_.obj.pointsGridSampling( samplingVoxelSize ) );
 }
 
 void ICP::sampleRefPoints( float samplingVoxelSize )
 {
-    setupPairs( ref2fltPairs_, *ref_.pointsGridSampling( samplingVoxelSize ) );
+    setupPairs( ref2fltPairs_, *ref_.obj.pointsGridSampling( samplingVoxelSize ) );
 }
 
 void ICP::updatePointPairs()
 {
     MR_TIMER
-    MR::updatePointPairs( flt2refPairs_, flt_, fltXf_, ref_, refXf_, prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
-    MR::updatePointPairs( ref2fltPairs_, ref_, refXf_, flt_, fltXf_, prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
+    MR::updatePointPairs( flt2refPairs_, flt_, ref_, prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
+    MR::updatePointPairs( ref2fltPairs_, ref_, flt_, prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
     deactivatefarDistPairs_();
 }
 
@@ -139,23 +135,22 @@ std::string getICPStatusInfo( int iterations, ICPExitType exitType )
 }
 
 void updatePointPairs( PointPairs & pairs,
-    const MeshOrPoints & src, const AffineXf3f & srcXf,
-    const MeshOrPoints& tgt, const AffineXf3f& tgtXf,
+    const MeshOrPointsXf& src, const MeshOrPointsXf& tgt,
     float cosTreshold, float distThresholdSq, bool mutualClosest )
 {
     MR_TIMER
-    const auto src2tgtXf = tgtXf.inverse() * srcXf;
-    const auto tgt2srcXf = srcXf.inverse() * tgtXf;
+    const auto src2tgtXf = tgt.xf.inverse() * src.xf;
+    const auto tgt2srcXf = src.xf.inverse() * tgt.xf;
 
-    const VertCoords& srcPoints = src.points();
-    const VertCoords& tgtPoints = tgt.points();
+    const VertCoords& srcPoints = src.obj.points();
+    const VertCoords& tgtPoints = tgt.obj.points();
 
-    const auto srcNormals = src.normals();
-    const auto tgtNormals = tgt.normals();
+    const auto srcNormals = src.obj.normals();
+    const auto tgtNormals = tgt.obj.normals();
 
-    const auto srcWeights = src.weights();
-    const auto srcLimProjector = src.limitedProjector();
-    const auto tgtLimProjector = tgt.limitedProjector();
+    const auto srcWeights = src.obj.weights();
+    const auto srcLimProjector = src.obj.limitedProjector();
+    const auto tgtLimProjector = tgt.obj.limitedProjector();
 
     pairs.active.clear();
     pairs.active.resize( pairs.vec.size(), true );
@@ -187,10 +182,10 @@ void updatePointPairs( PointPairs & pairs,
         vp.distSq = prj.distSq;
         vp.weight = srcWeights ? srcWeights( vp.srcVertId ) : 1.0f;
         vp.tgtCloseVert = prj.closestVert;
-        vp.srcPoint = srcXf( p0 );
-        vp.tgtPoint = tgtXf( p1 );
-        vp.tgtNorm = prj.normal ? ( tgtXf.A * prj.normal.value() ).normalized() : Vector3f();
-        vp.srcNorm = srcNormals ? ( srcXf.A * srcNormals( vp.srcVertId ) ).normalized() : Vector3f();
+        vp.srcPoint = src.xf( p0 );
+        vp.tgtPoint = tgt.xf( p1 );
+        vp.tgtNorm = prj.normal ? ( tgt.xf.A * prj.normal.value() ).normalized() : Vector3f();
+        vp.srcNorm = srcNormals ? ( src.xf.A * srcNormals( vp.srcVertId ) ).normalized() : Vector3f();
         vp.normalsAngleCos = ( prj.normal && srcNormals ) ? dot( vp.tgtNorm, vp.srcNorm ) : 1.0f;
         vp.tgtOnBd = prj.isBd;
         res = vp;
@@ -267,7 +262,7 @@ bool ICP::p2ptIter_()
 
     if (std::isnan(res.b.x)) //nan check
         return false;
-    setFloatXf( res * fltXf_ );
+    setFloatXf( res * flt_.xf );
     return true;
 }
 
@@ -352,7 +347,7 @@ bool ICP::p2plIter_()
 
     if (std::isnan(res.b.x)) //nan check
         return false;
-    setFloatXf( centroidRefXf * res * centroidRefXf.inverse() * fltXf_ );
+    setFloatXf( centroidRefXf * res * centroidRefXf.inverse() * flt_.xf );
     return true;
 }
 
@@ -395,7 +390,7 @@ AffineXf3f ICP::calculateTransformation()
             badIterCount++;
         }
     }
-    return fltXf_;
+    return flt_.xf;
 }
 
 size_t getNumActivePairs( const PointPairs & pairs )

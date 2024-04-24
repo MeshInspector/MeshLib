@@ -8,7 +8,7 @@
 namespace MR
 {
 
-MultiwayICP::MultiwayICP( const Vector<MultiICPObject, MeshOrPointsId>& objects, float samplingVoxelSize ) :
+MultiwayICP::MultiwayICP( const Vector<MeshOrPointsXf, MeshOrPointsId>& objects, float samplingVoxelSize ) :
     objs_{ objects }
 {
     resamplePoints( samplingVoxelSize );
@@ -73,7 +73,7 @@ void MultiwayICP::resamplePoints( float samplingVoxelSize )
     ParallelFor( objs_, [&] ( MeshOrPointsId ind )
     {
         const auto& obj = objs_[ind];
-        samplesPerObj[ind] = *obj.meshOrPoints.pointsGridSampling( samplingVoxelSize );
+        samplesPerObj[ind] = *obj.obj.pointsGridSampling( samplingVoxelSize );
     } );
 
     for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
@@ -165,7 +165,7 @@ void MultiwayICP::updatePointPairs()
     for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
         for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
             if ( i != j )
-                MR::updatePointPairs( pairsPerObj_[i][j], objs_[i].meshOrPoints, objs_[i].xf, objs_[j].meshOrPoints, objs_[j].xf, prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
+                MR::updatePointPairs( pairsPerObj_[i][j], objs_[i], objs_[j], prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
     deactivatefarDistPairs_();
 }
 

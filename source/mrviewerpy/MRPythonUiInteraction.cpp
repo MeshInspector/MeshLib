@@ -37,7 +37,7 @@ namespace
     std::vector<TypedEntry> listEntries( const std::vector<std::string>& path )
     {
         std::vector<TypedEntry> ret;
-        MR::pythonRunFromGUIThread( [&]
+        MR::pythonAppendOrRun( [&]
         {
             const auto& group = findGroup( path );
             ret.reserve( group.elems.size() );
@@ -52,7 +52,7 @@ namespace
                     }, elem.second.value ),
                 } );
             }
-        } )();
+        } );
         return ret;
     }
 
@@ -60,10 +60,10 @@ namespace
     {
         if ( path.empty() )
             throw std::runtime_error( "Empty path not allowed here." );
-        MR::pythonRunFromGUIThread( [&]
+        MR::pythonAppendOrRun( [&]
         {
             std::get<TestEngine::ButtonEntry>( findGroup( { path.begin(), path.end() - 1 } ).elems.at( path.back() ).value ).simulateClick = true;
-        } )();
+        } );
     }
 }
 

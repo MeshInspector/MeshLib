@@ -329,9 +329,9 @@ void ObjectMeshHolder::copyColors( const VisualObject& src, const VertMap& thisT
     colorMap.resizeNoInit( thisToSrc.size() );
     ParallelFor( colorMap, [&] ( VertId id )
     {
-        const auto& curId = thisToSrc[id];
-        if( curId .valid() )
-            colorMap[id] = srcColorMap[thisToSrc[id]];
+        auto curId = thisToSrc[id];
+        if( curId.valid() )
+            colorMap[id] = srcColorMap[curId];
     } );
     setVertsColorMap( std::move( colorMap ) );
 

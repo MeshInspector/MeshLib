@@ -242,8 +242,8 @@ private:
 
     std::string transformClipboardText_;
 
-    int currentTopPanelHeight_ = 111;
-    int topPanelOpenedHeight_ = 111;
+    int currentTopPanelHeight_ = 113;
+    int topPanelOpenedHeight_ = 113;
     int topPanelHiddenHeight_ = 33;
 
     bool closeContextOnChange_{ true };

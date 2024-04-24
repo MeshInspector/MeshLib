@@ -345,6 +345,11 @@ public:
   // Behaves as if the user clicked the object name tag, by invoking `nameTagClickSignal`.
   MRVIEWER_API bool simulateNameTagClick( Object& object, NameTagSelectionMode mode );
 
+  // Scene pick should be disabled because an ImGui window is in the way.
+  MRVIEWER_API bool anyImGuiWindowIsHovered() const;
+  // Scene pick should be disabled because a `renderUi()` UI of some object is in the way.
+  MRVIEWER_API bool anyUiObjectIsHovered() const;
+
 protected:
     MRVIEWER_API virtual void drawModalMessage_();
 
@@ -434,18 +439,16 @@ protected:
         MRVIEWER_API void postRenderViewport( ViewportId viewport ) override;
         MRVIEWER_API BasicUiRenderTask::BackwardPassParams beginBackwardPass() override;
         MRVIEWER_API void finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params ) override;
-        MRVIEWER_API bool ownsMouseHover() const override;
 
-    private:
-        // `finishBackwardPass()` sets this to true when some object's UI is hovered.
-        // We then read it in `onMouseDown_()` and return true to eat that event.
-        // We intentionally don't block other events with this, especially not scrolling events, as it's
-        //   very annoying when the zoom breaks because you randomly hovered something.
-        // It also would be unwise to block `onMouseUp_()`, as you could make some plugin stuck assuming that the mouse is held.
-        bool mouseIsBlocked_ = false;
+        // Which things are blocked by our `renderUi()` calls.
+        BasicUiRenderTask::InteractionMask consumedInteractions{};
+
+        // If this returns false, the event should be allowed to pass through to other plugins, even if ImGui wants to consume it.
+        // Pass at most one bit at a time.
+        MRVIEWER_API bool canConsumeEvent( BasicUiRenderTask::InteractionMask event ) const;
     };
     // This class helps the viewer to `renderUi()` from `IRenderObject`s.
-    std::unique_ptr<UiRenderManager> uiRenderManager_;
+    std::unique_ptr<UiRenderManagerImpl> uiRenderManager_;
 };
 
 

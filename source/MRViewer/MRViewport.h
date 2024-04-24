@@ -197,7 +197,7 @@ public:
     // comfortable usage:
     //     auto [obj,pick] = pick_render_object( objects );
     // pick objects from input
-    [[deprecated("Use `pickRenderObject( { .objects = ... } )`")]] // NOTE! If your list is hardcoded, use `.objects = std::array{ a, b, c }`.
+    [[deprecated("Use `pickRenderObject( objects } )`")]] // NOTE! If your list is hardcoded, use `.objects = std::array{ a, b, c }`.
     MRVIEWER_API ObjAndPick pick_render_object( const std::vector<VisualObject*>& objects ) const;
     // This function allows to pick point in scene by GL with a given peak radius.
     // usually, from several objects that fall into the peak, the closest one along the ray is selected.However
@@ -219,7 +219,7 @@ public:
     // comfortable usage:
     //     auto [obj,pick] = pick_render_object( objects );
     // picks objects from custom viewport point
-    [[deprecated("Use `multiPickObjects( ... )`")]]
+    [[deprecated("Use `multiPickObjects( objects, { .point = ... } )`")]]
     MRVIEWER_API ObjAndPick pick_render_object( const std::vector<VisualObject*>& objects, const Vector2f& viewportPoint ) const;
 
     // This function allows to pick several custom viewport space points by GL

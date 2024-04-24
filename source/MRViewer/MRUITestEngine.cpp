@@ -2,6 +2,11 @@
 
 #include <imgui.h>
 
+#ifndef MR_ENABLE_UI_TEST_ENGINE
+// Set to 0 to disable the UI test engine. All functions will act as if no UI elements are registered.
+#define MR_ENABLE_UI_TEST_ENGINE 1
+#endif
+
 namespace MR::UI::TestEngine
 {
 
@@ -56,6 +61,7 @@ void checkForNewFrame()
 
 bool createButton( std::string_view name )
 {
+    #if MR_ENABLE_UI_TEST_ENGINE
     checkForNewFrame();
 
     auto& map = state.stack.back()->elems;
@@ -72,10 +78,12 @@ bool createButton( std::string_view name )
     iter->second.alive = true;
 
     return std::exchange( button->simulateClick, false );
+    #endif
 }
 
 void pushTree( std::string_view name )
 {
+    #if MR_ENABLE_UI_TEST_ENGINE
     checkForNewFrame();
 
     auto& map = state.stack.back()->elems;
@@ -92,10 +100,12 @@ void pushTree( std::string_view name )
     iter->second.alive = true;
 
     state.stack.push_back( subgroup );
+    #endif
 }
 
 void popTree()
 {
+    #if MR_ENABLE_UI_TEST_ENGINE
     checkForNewFrame();
 
     assert( state.stack.size() > 1 && "Excessive `UI::TestEngine::popTree()`." );
@@ -103,6 +113,7 @@ void popTree()
         return;
 
     state.stack.pop_back();
+    #endif
 }
 
 const GroupEntry& getRootEntry()

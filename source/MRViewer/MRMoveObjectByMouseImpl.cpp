@@ -140,8 +140,6 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
         if ( dot( rotationPlane_.n, cross( vectorStart, vectorEnd ) ) > 0.f )
             angle_ = 2.f * PI_F - angle_;
 
-        angle_ = angle_ / PI_F * 180.f;
-
         setVisualizeVectors_( { worldBboxCenter_, worldStartPoint_, worldBboxCenter_, worldEndPoint } );
 
         AffineXf3f rotation = AffineXf3f::linear( Matrix3f::rotation( vectorStart, worldEndPoint - worldBboxCenter_ ) );

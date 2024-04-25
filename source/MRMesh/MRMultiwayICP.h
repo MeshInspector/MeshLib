@@ -1,25 +1,18 @@
 #pragma once
-#include "MRICP.h"
 
+#include "MRICP.h"
 
 namespace MR
 {
 
 class MRMESH_CLASS MeshOrPointsTag;
 using MeshOrPointsId = Id<MeshOrPointsTag>;
-
-struct MultiICPObject
-{
-    MeshOrPoints meshOrPoints;
-    AffineXf3f xf;
-};
-
 using IndexedPairs = Vector<PointPairs, MeshOrPointsId>;
 
 class MRMESH_CLASS MultiwayICP
 {
 public:
-    MRMESH_API MultiwayICP( const Vector<MultiICPObject, MeshOrPointsId>& objects, float samplingVoxelSize );
+    MRMESH_API MultiwayICP( const Vector<MeshOrPointsXf, MeshOrPointsId>& objects, float samplingVoxelSize );
     
     [[nodiscard]] MRMESH_API Vector<AffineXf3f, MeshOrPointsId> calculateTransformations();
     
@@ -55,7 +48,7 @@ public:
     [[nodiscard]] MRMESH_API std::string getStatusInfo() const; 
 private:
     
-    Vector<MultiICPObject, MeshOrPointsId> objs_;
+    Vector<MeshOrPointsXf, MeshOrPointsId> objs_;
     Vector<IndexedPairs, MeshOrPointsId> pairsPerObj_;
     ICPProperties prop_;
 

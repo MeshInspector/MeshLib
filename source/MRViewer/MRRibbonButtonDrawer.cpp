@@ -522,7 +522,7 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
         {
             ImRect frame;
             frame.Min = absMinPos;
-            frame.Max = ImVec2( frame.Min.x + ImGui::GetFrameHeight(), frame.Min.y + ImGui::GetFrameHeight() );
+            frame.Max = ImVec2( frame.Min.x + ImGui::GetFrameHeight(), frame.Min.y + itemSize.y );
             ImVec2 expectedSize = ImGui::CalcWindowNextAutoFitSize( menuWindow );
             menuWindow->AutoPosLastDirection = ImGuiDir_Down;
             ImRect rectOuter = ImGui::GetPopupAllowedExtentRect( menuWindow );

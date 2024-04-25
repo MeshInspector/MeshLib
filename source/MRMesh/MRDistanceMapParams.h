@@ -127,6 +127,15 @@ struct DistanceMapToWorld
 
     /// Init fields by `ContourToDistanceMapParams` struct
     MRMESH_API DistanceMapToWorld( const ContourToDistanceMapParams& params );
+
+    /// Converts from AffineXf3f
+    DistanceMapToWorld( const AffineXf3f & xf )
+        : orgPoint( xf.b )
+        , pixelXVec( xf.A.col( 0 ) )
+        , pixelYVec( xf.A.col( 1 ) )
+        , direction( xf.A.col( 2 ) )
+    {
+    }
     
 
     /// get world coordinate by depth map info
@@ -138,6 +147,11 @@ struct DistanceMapToWorld
         return orgPoint + x * pixelXVec + y * pixelYVec + depth * direction;
     }
 
+    /// converts in transformation X: X(p) == toWorld( p.x, p.y, p.z )
+    operator AffineXf3f() const
+    {
+        return { Matrix3f::fromColumns( pixelXVec, pixelYVec, direction ), orgPoint };
+    }
 
     /// world coordinates of distance map origin corner
     Vector3f orgPoint;

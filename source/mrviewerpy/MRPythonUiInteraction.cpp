@@ -63,7 +63,7 @@ namespace
             throw std::runtime_error( "Empty path not allowed here." );
         MR::pythonAppendOrRun( [&]
         {
-            std::get<TestEngine::ButtonEntry>( findGroup( { path.begin(), path.end() - 1 } ).elems.at( path.back() ).value ).simulateClick = true;
+            std::get<TestEngine::ButtonEntry>( findGroup( { path.data(), path.size() - 1 } ).elems.at( path.back() ).value ).simulateClick = true;
         } );
     }
 }

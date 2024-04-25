@@ -60,6 +60,7 @@ bool MoveObjectByMouse::onMouseDown_( MouseButton btn, int modifiers )
 
 bool MoveObjectByMouse::onMouseMove_( int x, int y )
 {
+    viewer->select_hovered_viewport();
     return moveByMouse_.onMouseMove( x, y );
 }
 

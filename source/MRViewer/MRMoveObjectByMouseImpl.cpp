@@ -5,6 +5,7 @@
 #include "MRViewer/MRViewport.h"
 #include "MRViewer/MRGladGlfw.h"
 #include "MRViewer/MRAppendHistory.h"
+#include "MRViewer/MRMouseController.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRChangeXfAction.h"
@@ -12,6 +13,7 @@
 #include "MRMesh/MRIntersection.h"
 #include "MRMesh/MRVisualObject.h"
 #include "MRMesh/MRObjectsAccess.h"
+#include "MRMesh/MR2to3.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace
@@ -19,6 +21,10 @@ namespace
 // translation multiplier that limits its maximum value depending on object size
 // the constant duplicates value defined in ImGuiMenu implementation
 constexpr float cMaxTranslationMultiplier = 0xC00;
+
+// special value for screenStartPoint_
+constexpr MR::Vector2i cNoPoint{ std::numeric_limits<int>::max(), 0 };
+
 }
 
 namespace MR
@@ -26,6 +32,8 @@ namespace MR
 
 void MoveObjectByMouseImpl::onDrawDialog( float /* menuScaling */ )
 {
+    if ( !isMoving() )
+        return;
     if ( transformMode_ != TransformMode::None )
     {
         auto drawList = ImGui::GetBackgroundDrawList();
@@ -43,7 +51,7 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
     if ( button != Viewer::MouseButton::Left )
         return false;
 
-    viewer->select_hovered_viewport();
+    screenStartPoint_ = minDistance() > 0 ? viewer->mouseController().getMousePos() : cNoPoint;
 
     auto [obj, pick] = viewer->viewport().pick_render_object();
 
@@ -57,7 +65,7 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
     shift_ = 0.f;
 
     obj_ = obj;
-    objWorldXf_ = obj_->worldXf();
+    newWorldXf_ = objWorldXf_ = obj_->worldXf();
     worldStartPoint_ = objWorldXf_( pick.point );
     viewportStartPointZ_ = viewer->viewport().projectToViewportSpace( worldStartPoint_ ).z;
     objectsXfs_.clear();
@@ -95,6 +103,11 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
 {
     if ( !obj_ )
         return false;
+    if ( screenStartPoint_ != cNoPoint &&
+         ( screenStartPoint_ - viewer->mouseController().getMousePos() ).lengthSq() <
+             minDistance() * minDistance() )
+        return true;
+    screenStartPoint_ = cNoPoint;
 
     auto viewportEnd = viewer->screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewer->viewport().id );
     auto worldEndPoint = viewer->viewport().unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
@@ -161,12 +174,23 @@ bool MoveObjectByMouseImpl::onMouseUp( MouseButton button, int /*modifiers*/ )
     if ( !obj_ || button != Viewer::MouseButton::Left )
         return false;
 
+    if ( screenStartPoint_ != cNoPoint )
+    {
+        clear_();
+        return false;
+    }
+
     resetWorldXf_();
     setWorldXf_( newWorldXf_, true );
 
     clear_();
 
     return true;
+}
+
+bool MoveObjectByMouseImpl::isMoving()
+{
+    return screenStartPoint_ == cNoPoint;
 }
 
 void MoveObjectByMouseImpl::cancel()
@@ -194,6 +218,7 @@ void MoveObjectByMouseImpl::clear_()
     transformMode_ = TransformMode::None;
     objects_.clear();
     objectsXfs_.clear();
+    screenStartPoint_ = {};
 }
 
 void MoveObjectByMouseImpl::setWorldXf_( AffineXf3f worldXf, bool history )

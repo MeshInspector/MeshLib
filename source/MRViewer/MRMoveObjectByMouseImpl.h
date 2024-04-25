@@ -16,20 +16,30 @@ public:
     MoveObjectByMouseImpl() = default;
     virtual ~MoveObjectByMouseImpl() = default;
 
+    // Minimum drag distance in screen pixels
+    // If cursor moved less than this value, no transform is done
+    // Default value 0 (set transformation even if mouse did not move)
+    int minDistance() { return minDistance_; }
+    void setMinDistance( int minDistance ) { minDistance_ = minDistance; }
+
     // Drawing callback to draw lines and tooltips
     // Should be called from drawDialog
     MRVIEWER_API void onDrawDialog( float menuScaling );
 
     // These functions should be called from corresponding mouse handlers
     // Return true if handled (picked/moved/released)
+    // It is recommended to call viewer->select_hovered_viewport() before onMouseDown
     MRVIEWER_API bool onMouseDown( MouseButton button, int modifiers );
     MRVIEWER_API bool onMouseMove( int x, int y );
     MRVIEWER_API bool onMouseUp( MouseButton button, int modifiers );
 
-    // Current object being moved; null if no object is being moved right now
+    // Object currently picked for moving; null if not currently moving
     std::shared_ptr<VisualObject> currentObject() { return obj_; }
 
-    // Reset transformation and stop moving the object. Does nothing if not moving anything
+    // Currently moving objects, and actually started transforming (considering minDistance)
+    MRVIEWER_API bool isMoving();
+
+    // Reset transformation and stop moving the object(s). Does nothing if not moving anything
     // Calling onMouseUp is not necessary after this
     // Should be called when closing plugin etc.
     MRVIEWER_API void cancel();
@@ -39,7 +49,7 @@ protected:
     // Return true to start transformation, false to skip
     // `obj` and `point` can be modified if necessary (in `point`, only `point` member is used)
     // Default implementation returns true for all non-ancillary objects;
-    MRVIEWER_API virtual bool onPick( 
+    MRVIEWER_API virtual bool onPick(
         std::shared_ptr<VisualObject>& obj, PointOnObject& point, int modifiers );
 
     // Returns a list of objects that will be moved
@@ -50,6 +60,8 @@ protected:
 
 private:
     Viewer* viewer = &getViewerInstance();
+
+    int minDistance_ = 0;
 
     void clear_();
 
@@ -63,6 +75,7 @@ private:
     std::vector<std::shared_ptr<Object>> objects_;
     std::vector<AffineXf3f> objectsXfs_;
 
+    Vector2i screenStartPoint_; // cNoPoint when moving actually started, {} when inactive
     Vector3f worldStartPoint_;
     Vector3f worldBboxCenter_;
     Vector3f bboxCenter_;

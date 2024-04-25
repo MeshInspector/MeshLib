@@ -253,8 +253,9 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
 
     sh.addColor( ImGuiCol_Button, *value == ownValue ? clearBlue : bgColor );
 
-    // Using `+` here to avoid short-circuiting.
-    return ( ImGui::Button( label, ImVec2( size.x, size.y ) ) || checkKey( key ) ) + TestEngine::createButton( label );
+    bool ret = ImGui::Button( label, ImVec2( size.x, size.y ) ) || checkKey( key );
+    ret = TestEngine::createButton( label ) || ret; // Don't want short-circuiting.
+    return ret;
 }
 
 bool checkbox( const char* label, bool* value )

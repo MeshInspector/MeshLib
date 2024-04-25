@@ -327,6 +327,8 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         firstLaunch = false;
     }
 
+    CommandLoop::setMainThreadId( std::this_thread::get_id() );
+
     auto& viewer = MR::Viewer::instanceRef();
 
     MR::setupLoggerByDefault();
@@ -366,6 +368,8 @@ void loadMRViewerDll()
 
 void filterReservedCmdArgs( std::vector<std::string>& args )
 {
+    if ( args.empty() )
+        return;
     bool nextW{ false };
     bool nextH{ false };
     std::vector<int> indicesToRemove;

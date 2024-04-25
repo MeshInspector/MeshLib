@@ -588,7 +588,7 @@ icp = mrmeshpy.ICP(meshFloating, meshFixed,
                    mrmeshpy.AffineXf3f(), mrmeshpy.AffineXf3f(),
                    icp_sampling_voxel_size)
 icp.setParams(icp_params)
-icp.updateVertPairs()
+icp.updatePointPairs()
 xf = icp.calculateTransformation()
 
 # Transform floating mesh

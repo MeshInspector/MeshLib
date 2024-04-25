@@ -55,6 +55,12 @@ struct MeshToDistanceMapParams
     MRMESH_API MeshToDistanceMapParams( const AffineXf3f& xf, const Vector2i& resolution, const Vector2f& size );
     MRMESH_API MeshToDistanceMapParams( const AffineXf3f& xf, const Vector2f& pixelSize, const Vector2i& resolution );
 
+    /// converts in transformation
+    operator AffineXf3f() const
+    {
+        return { Matrix3f::fromColumns( xRange / float( resolution.x ), yRange / float( resolution.y ), direction ), orgPoint };
+    }
+
     Vector3f xRange = Vector3f( 1.f, 0.f, 0.f ); ///< Cartesian range vector between distance map borders in X direction
     Vector3f yRange = Vector3f( 0.f, 1.f, 0.f ); ///< Cartesian range vector between distance map borders in Y direction
     Vector3f direction = Vector3f( 0.f, 0.f, 1.f ); ///< direction of intersection ray

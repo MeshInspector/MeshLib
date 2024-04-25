@@ -1,4 +1,5 @@
 #include "ImGuiHelpers.h"
+#include "MRViewer/MRUITestEngine.h"
 #include "imgui_internal.h"
 #include "MRMesh/MRBitSet.h"
 #include "MRPch/MRSpdlog.h"
@@ -717,6 +718,16 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     window->ClipRect = window->InnerRect;
     window->DrawList->PushClipRect( window->InnerRect.Min, window->InnerRect.Max );
 
+    { // Create a group for the UI testing engine.
+        // Strip `##...` from the label.
+        std::string_view strippedLabel = label;
+        auto sep = strippedLabel.find( "##" );
+        if ( sep != std::string_view::npos )
+            strippedLabel = strippedLabel.substr( 0, sep );
+
+        UI::TestEngine::pushTree( strippedLabel );
+    }
+
     return true;
 }
 
@@ -728,6 +739,8 @@ void EndCustomStatePlugin()
     window->DrawList->PopClipRect();
     ImGui::PopStyleVar();
     End();
+
+    UI::TestEngine::popTree();
 }
 
 bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWindowFlags flags /*= 0 */ )

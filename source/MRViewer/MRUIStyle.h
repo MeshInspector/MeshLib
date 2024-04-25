@@ -31,6 +31,9 @@ struct ButtonCustomizationParams
     bool forceImguiTextColor = false;
     /// show border or not
     bool border = false;
+
+    /// Allow interacting with this button from `UI::TestEngine`.
+    bool enableTestEngine = true;
 };
 
 /// draw gradient button, which can be disabled (active = false)

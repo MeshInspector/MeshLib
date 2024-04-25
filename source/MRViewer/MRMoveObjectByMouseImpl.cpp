@@ -6,6 +6,7 @@
 #include "MRViewer/MRGladGlfw.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRViewer/MRMouseController.h"
+#include "MRViewer/MRViewerInstance.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRChangeXfAction.h"
@@ -30,7 +31,7 @@ constexpr MR::Vector2i cNoPoint{ std::numeric_limits<int>::max(), 0 };
 namespace MR
 {
 
-void MoveObjectByMouseImpl::onDrawDialog( float /* menuScaling */ )
+void MoveObjectByMouseImpl::onDrawDialog( float /* menuScaling */ ) const
 {
     if ( !isMoving() )
         return;
@@ -41,9 +42,9 @@ void MoveObjectByMouseImpl::onDrawDialog( float /* menuScaling */ )
                                SceneColors::get( SceneColors::Labels ).getUInt32(), ImDrawFlags_None, 1.f );
     }
     if ( transformMode_ == TransformMode::Translation )
-        ImGui::SetTooltip( "Distance : %.3f", shift_ );
+        ImGui::SetTooltip( "Distance : %s", valueToString<LengthUnit>( shift_ ).c_str() );
     if ( transformMode_ == TransformMode::Rotation )
-        ImGui::SetTooltip( "Angle : %.3f", angle_ );
+        ImGui::SetTooltip( "Angle : %s", valueToString<AngleUnit>( angle_ ).c_str() );
 }
 
 bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
@@ -51,14 +52,17 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
     if ( button != Viewer::MouseButton::Left )
         return false;
 
-    screenStartPoint_ = minDistance() > 0 ? viewer->mouseController().getMousePos() : cNoPoint;
+    Viewer& viewer = getViewerInstance();
+    Viewport& viewport = viewer.viewport();
+    
+    screenStartPoint_ = minDistance() > 0 ? viewer.mouseController().getMousePos() : cNoPoint;
 
-    auto [obj, pick] = viewer->viewport().pick_render_object();
+    auto [obj, pick] = viewport.pick_render_object();
 
-    if ( !obj || !onPick( obj, pick, modifiers ) || !obj )
+    if ( !obj || !onPick_( obj, pick, modifiers ) || !obj )
         return false;
 
-    objects_ = getObjects( obj, pick, modifiers );
+    objects_ = getObjects_( obj, pick, modifiers );
 
     visualizeVectors_.clear();
     angle_ = 0.f;
@@ -67,7 +71,7 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
     obj_ = obj;
     newWorldXf_ = objWorldXf_ = obj_->worldXf();
     worldStartPoint_ = objWorldXf_( pick.point );
-    viewportStartPointZ_ = viewer->viewport().projectToViewportSpace( worldStartPoint_ ).z;
+    viewportStartPointZ_ = viewport.projectToViewportSpace( worldStartPoint_ ).z;
     objectsXfs_.clear();
     for ( std::shared_ptr<Object>& f : objects_ )
         objectsXfs_.push_back( f->worldXf() );
@@ -78,13 +82,13 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
     {
         bboxCenter_ = obj_->getBoundingBox().center();
         worldBboxCenter_ = obj_->worldXf()( bboxCenter_ );
-        auto viewportBboxCenter = viewer->viewport().projectToViewportSpace( worldBboxCenter_ );
+        auto viewportBboxCenter = viewport.projectToViewportSpace( worldBboxCenter_ );
 
-        auto bboxCenterAxis = viewer->viewport().unprojectPixelRay( Vector2f( viewportBboxCenter.x, viewportBboxCenter.y ) );
+        auto bboxCenterAxis = viewport.unprojectPixelRay( Vector2f( viewportBboxCenter.x, viewportBboxCenter.y ) );
         rotationPlane_ = Plane3f::fromDirAndPt( bboxCenterAxis.d.normalized(), worldBboxCenter_ );
 
-        auto viewportStartPoint = viewer->viewport().projectToViewportSpace( worldStartPoint_ );
-        auto startAxis = viewer->viewport().unprojectPixelRay( Vector2f( viewportStartPoint.x, viewportStartPoint.y ) );
+        auto viewportStartPoint = viewport.projectToViewportSpace( worldStartPoint_ );
+        auto startAxis = viewport.unprojectPixelRay( Vector2f( viewportStartPoint.x, viewportStartPoint.y ) );
 
         if ( auto crossPL = intersection( rotationPlane_, startAxis ) )
             worldStartPoint_ = *crossPL;
@@ -103,19 +107,23 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
 {
     if ( !obj_ )
         return false;
+
+    Viewer& viewer = getViewerInstance();
+    Viewport& viewport = viewer.viewport();
+
     if ( screenStartPoint_ != cNoPoint &&
-         ( screenStartPoint_ - viewer->mouseController().getMousePos() ).lengthSq() <
+         ( screenStartPoint_ - viewer.mouseController().getMousePos() ).lengthSq() <
              minDistance() * minDistance() )
         return true;
     screenStartPoint_ = cNoPoint;
 
-    auto viewportEnd = viewer->screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewer->viewport().id );
-    auto worldEndPoint = viewer->viewport().unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
+    auto viewportEnd = viewer.screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewport.id );
+    auto worldEndPoint = viewport.unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
     AffineXf3f worldXf;
 
     if ( transformMode_ == TransformMode::Rotation )
     {
-        auto endAxis = viewer->viewport().unprojectPixelRay( Vector2f( viewportEnd.x, viewportEnd.y ) );
+        auto endAxis = viewport.unprojectPixelRay( Vector2f( viewportEnd.x, viewportEnd.y ) );
         if ( auto crossPL = intersection( rotationPlane_, endAxis ) )
             worldEndPoint = *crossPL;
         else
@@ -188,7 +196,7 @@ bool MoveObjectByMouseImpl::onMouseUp( MouseButton button, int /*modifiers*/ )
     return true;
 }
 
-bool MoveObjectByMouseImpl::isMoving()
+bool MoveObjectByMouseImpl::isMoving() const
 {
     return screenStartPoint_ == cNoPoint;
 }
@@ -201,12 +209,12 @@ void MoveObjectByMouseImpl::cancel()
     clear_();
 }
 
-bool MoveObjectByMouseImpl::onPick( std::shared_ptr<VisualObject>& obj, PointOnObject&, int )
+bool MoveObjectByMouseImpl::onPick_( std::shared_ptr<VisualObject>& obj, PointOnObject&, int )
 {
     return !obj->isAncillary();
 }
 
-std::vector<std::shared_ptr<Object>> MoveObjectByMouseImpl::getObjects( 
+std::vector<std::shared_ptr<Object>> MoveObjectByMouseImpl::getObjects_( 
     const std::shared_ptr<VisualObject>& obj, const PointOnObject &, int )
 {
     return { obj };
@@ -246,10 +254,13 @@ void MoveObjectByMouseImpl::resetWorldXf_()
 
 void MoveObjectByMouseImpl::setVisualizeVectors_( std::vector<Vector3f> worldPoints )
 {
+    Viewer& viewer = getViewerInstance();
+    Viewport& viewport = viewer.viewport();
     visualizeVectors_.clear();
     for ( const auto& p : worldPoints )
     {
-        const Vector3f screenPoint = viewer->viewportToScreen( viewer->viewport().projectToViewportSpace( p ), viewer->viewport().id );
+        const Vector3f screenPoint = viewer.viewportToScreen(
+            viewport.projectToViewportSpace( p ), viewport.id );
         visualizeVectors_.push_back( ImVec2( screenPoint.x, screenPoint.y ) );
     }
 }

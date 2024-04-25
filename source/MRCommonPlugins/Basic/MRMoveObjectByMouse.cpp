@@ -69,7 +69,7 @@ bool MoveObjectByMouse::onMouseUp_( MouseButton btn, int modifiers )
     return moveByMouse_.onMouseUp( btn, modifiers );
 }
 
-std::vector<std::shared_ptr<Object>> MoveObjectByMouse::MoveObjectByMouseWithSelected::getObjects(
+std::vector<std::shared_ptr<Object>> MoveObjectByMouse::MoveObjectByMouseWithSelected::getObjects_(
     const std::shared_ptr<VisualObject>& obj, const PointOnObject&, int modifiers )
 {
     if ( ( modifiers & GLFW_MOD_SHIFT ) != 0 && obj->isSelected() )

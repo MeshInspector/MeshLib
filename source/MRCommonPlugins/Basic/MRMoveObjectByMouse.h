@@ -34,7 +34,7 @@ private:
     class MoveObjectByMouseWithSelected : public MoveObjectByMouseImpl
     {
     protected:
-        std::vector<std::shared_ptr<Object>> getObjects( 
+        std::vector<std::shared_ptr<Object>> getObjects_( 
             const std::shared_ptr<VisualObject>& obj, const PointOnObject& point, int modifiers ) override;
     } moveByMouse_;
 };

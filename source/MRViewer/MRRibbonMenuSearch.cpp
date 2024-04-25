@@ -5,6 +5,7 @@
 #include "MRRibbonConstants.h"
 #include "MRRibbonButtonDrawer.h"
 #include <imgui_internal.h>
+#include "MRViewer/MRUITestEngine.h"
 #include "MRViewerInstance.h"
 #include "MRViewer/MRViewer.h"
 #include "MRRibbonMenu.h"
@@ -52,6 +53,9 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
     const auto& resultsList = searchLine_.empty() ? recentItems_ : searchResult_;
     if ( !isSmallUI_ && resultsList.empty() )
         return;
+
+    UI::TestEngine::pushTree( "RibbonMenuSearch" );
+    MR_FINALLY{ UI::TestEngine::popTree(); };
 
     const float screenWidth = float( getViewerInstance().framebufferSize.x );
     const float windowPaddingX = ImGui::GetStyle().WindowPadding.x;
@@ -224,7 +228,7 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
             if ( ( !searchLine_.empty() && searchResult_.empty() ) || ( searchLine_.empty() && recentItems_.empty() ) )
                 deactivateSearch_();
         }
-        mainInputFocused_ = ImGui::IsItemFocused(); 
+        mainInputFocused_ = ImGui::IsItemFocused();
         if ( ImGui::IsItemActivated() )
             active_ = true;
         if ( ImGui::IsItemDeactivated() )
@@ -235,7 +239,7 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
                 setInputFocus_ = true;
         }
     }
-    
+
     if ( active_ )
         drawWindow_( params );
 
@@ -336,7 +340,7 @@ bool RibbonMenuSearch::searchInputText_( const char* label, std::string& str, co
     ImGui::PushStyleColor( ImGuiCol_Border, Color::transparent().getUInt32() );
     const bool res = ImGui::InputText( label, str );
     ImGui::PopStyleColor( 2 );
-    
+
     ImGui::PopID();
 
     return res;

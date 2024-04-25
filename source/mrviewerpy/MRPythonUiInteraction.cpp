@@ -68,7 +68,7 @@ namespace
     }
 }
 
-MR_ADD_PYTHON_CUSTOM_CLASS( mrviewerpy, UiEntry, TypedEntry );
+MR_ADD_PYTHON_CUSTOM_CLASS( mrviewerpy, UiEntry, TypedEntry )
 MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, UiEntry, [] ( pybind11::module_& m )
 {
     pybind11::enum_<EntryType>( m, "UiEntryType", "UI entry type enum." )
@@ -103,7 +103,7 @@ MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiListEntries, listEntries,
     "Pass an empty list to see top-level groups.\n"
     "Add group name to the end of the vector to see its contents.\n"
     "When you find the button you need, pass it to `uiPressButton()`."
-);
+)
 MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiPressButton, pressButton,
     "Simulate a button click. Use `uiListEntries()` to find button names."
-);
+)

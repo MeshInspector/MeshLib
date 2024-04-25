@@ -6,6 +6,7 @@
 #include "MRShortcutManager.h"
 #include "ImGuiHelpers.h"
 #include "MRRibbonIcons.h"
+#include "MRViewer/MRUITestEngine.h"
 #include "MRViewerInstance.h"
 #include "MRUIStyle.h"
 #include "imgui_internal.h"
@@ -150,7 +151,7 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
         windowBgColor.z + ( headerColor.z - windowBgColor.z ) * alpha,
         1.0f
     };
-    
+
 
     drawList->AddRectFilled( pos, { pos.x + width, pos.y + height }, ImGui::GetColorU32( blendedHeaderColor ) );
 
@@ -234,7 +235,7 @@ void RibbonButtonDrawer::drawButtonItem( const MenuItemInfo& item, const DrawBut
     drawCustomButtonItem( item, cParams, params );
 }
 
-void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const CustomButtonParameters& customParam, 
+void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const CustomButtonParameters& customParam,
     const DrawButtonParams& params ) const
 {
     std::string requirements = getRequirements_( item.item );
@@ -252,11 +253,12 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
 
     ImGui::BeginGroup();
 
-    int colorChanged = customParam.pushColorsCb ? 
+    int colorChanged = customParam.pushColorsCb ?
         customParam.pushColorsCb( requirements.empty(), item.item->isActive() ) :
         pushRibbonButtonColors_( requirements.empty(), item.item->isActive(), params.forceHovered, params.rootType );
     ImGui::SetNextItemAllowOverlap();
     bool pressed = ImGui::ButtonEx( ( "##wholeChildBtn" + item.item->name() ).c_str(), itemSize, ImGuiButtonFlags_AllowOverlap );
+    pressed = UI::TestEngine::createButton( item.item->name() ) || pressed; // Must not short-circuit.
     pressed = pressed || params.forcePressed;
 
     ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
@@ -500,7 +502,7 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
         ImGui::SetCursorPosY( dropBtnPos.y + ( itemSize.y - iconRealSize.y - 1 ) * 0.5f );
 
     ImGui::Text( "%s", "\xef\x81\xb8" );
-    
+
     ImGui::PopStyleVar();
     ImGui::PopStyleColor( pushedColors );
 
@@ -562,7 +564,7 @@ void RibbonButtonDrawer::drawDropList_( const std::shared_ptr<RibbonMenuItem>& b
         {
             auto pressed = ImGui::MenuItem( ( caption + "##dropItem" ).c_str(), nullptr, dropItem->isActive(), requirements.empty() );
             if ( pressed )
-                onPressAction_( dropItem, requirements.empty() );            
+                onPressAction_( dropItem, requirements.empty() );
         }
         else
         {
@@ -704,7 +706,7 @@ int RibbonButtonDrawer::pushRibbonButtonColors_( bool enabled, bool active, bool
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarHovered ).getUInt32() );
         ImGui::PushStyleColor( ImGuiCol_ButtonActive, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarClicked ).getUInt32() );
     }
-    else 
+    else
     {
         assert( rootType == DrawButtonParams::RootType::Header );
         if ( forceHovered )

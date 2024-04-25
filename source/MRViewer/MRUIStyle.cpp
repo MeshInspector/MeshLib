@@ -3,6 +3,7 @@
 #include "MRRibbonButtonDrawer.h"
 #include "MRColorTheme.h"
 #include "MRRibbonConstants.h"
+#include "MRViewer/MRUITestEngine.h"
 #include "MRViewerInstance.h"
 #include "MRRibbonFontManager.h"
 #include "MRViewer.h"
@@ -155,10 +156,15 @@ void init()
 bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/,
     ImGuiButtonFlags flags /*= ImGuiButtonFlags_None*/, const ButtonCustomizationParams& custmParams )
 {
+    bool simulateClick = custmParams.enableTestEngine && TestEngine::createButton( label );
+    assert( ( simulateClick <= active ) && "Trying to programmatically press a button, but it's inactive!" );
+    if ( !active )
+        simulateClick = false;
+
     // copy from ImGui::ButtonEx and replaced visualize part
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     if ( window->SkipItems )
-        return false;
+        return simulateClick;
 
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = ImGui::GetStyle();
@@ -173,7 +179,7 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
     const ImRect bb( pos, pos + size );
     ImGui::ItemSize( size, style.FramePadding.y );
     if ( !ImGui::ItemAdd( bb, id ) )
-        return false;
+        return simulateClick;
 
     if ( g.LastItemData.InFlags & ImGuiItemFlags_ButtonRepeat )
         flags |= ImGuiButtonFlags_Repeat;
@@ -213,7 +219,8 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
     ImGui::RenderTextClipped( bb.Min, bb.Max, label, NULL, &label_size, style.ButtonTextAlign, &bb );
 
     IMGUI_TEST_ENGINE_ITEM_INFO( id, label, g.LastItemData.StatusFlags );
-    return pressed && active;
+
+    return ( pressed || simulateClick ) && active;
 }
 
 bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None */ )
@@ -245,7 +252,10 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
     sh.addVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x * 0.7f,  cDefaultItemSpacing * 2 * scaling } );
 
     sh.addColor( ImGuiCol_Button, *value == ownValue ? clearBlue : bgColor );
-    return ImGui::Button( label, ImVec2( size.x, size.y ) ) || checkKey( key );
+
+    bool ret = ImGui::Button( label, ImVec2( size.x, size.y ) ) || checkKey( key );
+    ret = TestEngine::createButton( label ) || ret; // Don't want short-circuiting.
+    return ret;
 }
 
 bool checkbox( const char* label, bool* value )

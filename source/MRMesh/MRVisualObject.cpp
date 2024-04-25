@@ -231,7 +231,7 @@ void VisualObject::setColoringType( ColoringType coloringType )
     }
 }
 
-void VisualObject::copyColors( const VisualObject & src, const VertMap & thisToSrc )
+void VisualObject::copyColors( const VisualObject & src, const VertMap & thisToSrc, const FaceMap& )
 {
     MR_TIMER
 

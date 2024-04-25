@@ -1,4 +1,5 @@
 #include "MRToolbar.h"
+#include "MRViewer/MRUITestEngine.h"
 #include "imgui.h"
 #include "MRRibbonConstants.h"
 #include "ImGuiHelpers.h"
@@ -102,6 +103,7 @@ void Toolbar::drawToolbar()
     DrawButtonParams params{ DrawButtonParams::SizeType::Small, itemSize, cMiddleIconSize,DrawButtonParams::RootType::Toolbar };
 
     ImGui::PushFont( fontManager.getFontByType( RibbonFontManager::FontType::Small ) );
+    UI::TestEngine::pushTree( "Toolbar" );
     for ( const auto& item : itemsList_ )
     {
         auto it = RibbonSchemaHolder::schema().items.find( item );
@@ -144,6 +146,7 @@ void Toolbar::drawToolbar()
         buttonDrawer.drawCustomButtonItem( activeListIt->second, cParams, params );
         ImGui::SameLine();
     }
+    UI::TestEngine::popTree(); // "Toolbar"
 
     ImGui::SetCursorPosX( ImGui::GetCursorPosX() - ImGui::GetStyle().ItemSpacing.x / 2.f );
 
@@ -387,7 +390,7 @@ void Toolbar::drawCustomizeModal_()
     ImGui::PopStyleVar();
     const float buttonWidth = cGradientButtonFramePadding * 2 * scaling_ + ImGui::CalcTextSize( "Reset to default" ).x;
     const float searchWidth = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x - buttonWidth;
-    
+
     ImGui::SetNextItemWidth( searchWidth );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, 8 * scaling_ ) );
     if ( ImGui::InputText( "##QuickAccessSearch", searchString_ ) )

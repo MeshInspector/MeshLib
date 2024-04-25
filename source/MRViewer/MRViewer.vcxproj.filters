@@ -370,6 +370,9 @@
     <ClCompile Include="MRMoveObjectByMouseImpl.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRUITestEngine.cpp">
+      <Filter>UIStyle</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -730,6 +733,9 @@
     </ClInclude>
     <ClInclude Include="MRMoveObjectByMouseImpl.h">
       <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRUITestEngine.h">
+      <Filter>UIStyle</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

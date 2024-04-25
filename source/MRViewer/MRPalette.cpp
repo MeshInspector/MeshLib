@@ -510,7 +510,7 @@ float Palette::getRelativePos( float val ) const
     return 0.5f;
 }
 
-VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids ) const
+VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region, const VertPredicate & valids ) const
 {
     MR_TIMER
 
@@ -521,6 +521,11 @@ VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet 
         res[v] = getUVcoord( values[v], contains( valids, v ) );
     } );
     return res;
+}
+
+VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids ) const
+{
+    return getUVcoords( values, region, valids ? [valids]( VertId v ) { return valids->test( v ); } : VertPredicate{} );
 }
 
 void Palette::updateDiscretizatedColors_()

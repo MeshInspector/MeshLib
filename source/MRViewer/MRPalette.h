@@ -96,6 +96,7 @@ public:
     MRVIEWER_API float getRelativePos( float val ) const;
 
     /// get UV coordinate in palette for given value
+    /// \param valid true - return coordinate of palette's color, false - return coordinate of gray
     UVCoord getUVcoord( float val, bool valid = true ) const
     {
         return {
@@ -107,7 +108,8 @@ public:
     /// get UV coordinates in palette for given values
     /// \param region only these vertices will be processed
     /// \param valids if given then defines subregion with valid values, and invalid values will get gray color
-    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids = nullptr ) const;
+    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertPredicate & valids = {} ) const;
+    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids ) const;
 
     // base parameters of palette
     struct Parameters

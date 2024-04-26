@@ -370,6 +370,9 @@
     <ClCompile Include="MRUITestEngine.cpp">
       <Filter>UIStyle</Filter>
     </ClCompile>
+    <ClCompile Include="MRSceneCache.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -731,6 +734,7 @@
     <ClInclude Include="MRUITestEngine.h">
       <Filter>UIStyle</Filter>
     </ClInclude>
+    <ClInclude Include="MRSceneCache.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

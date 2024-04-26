@@ -164,7 +164,7 @@ protected:
     // Draw scene list window with content
     MRVIEWER_API virtual void drawRibbonSceneList_();
     // Draw scene list content only
-    MRVIEWER_API virtual void drawRibbonSceneListContent_( std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all );
+    MRVIEWER_API virtual void drawRibbonSceneListContent_();
     // Draw vertical line at the right border of scene to enable resize of scene list
     // returns size of scene window
     MRVIEWER_API virtual Vector2f drawRibbonSceneResizeLine_();

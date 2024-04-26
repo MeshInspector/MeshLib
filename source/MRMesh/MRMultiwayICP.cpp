@@ -23,9 +23,18 @@ Vector<AffineXf3f, MeshOrPointsId> MultiwayICP::calculateTransformations()
     for ( iter_ = 1; iter_ <= prop_.iterLimit; ++iter_ )
     {
         updatePointPairs();
+        if ( iter_ == 1 && perIterationCb_ )
+            perIterationCb_( 0 );
+
         const bool pt2pt = ( prop_.method == ICPMethod::Combined && iter_ < 3 )
             || prop_.method == ICPMethod::PointToPoint;
-        if ( !( pt2pt ? p2ptIter_() : p2plIter_() ) )
+        
+        bool res = !( pt2pt ? p2ptIter_() : p2plIter_() );
+
+        if ( perIterationCb_ )
+            perIterationCb_( iter_ );
+
+        if ( res )
         {
             resultType_ = ICPExitType::NotFoundSolution;
             break;
@@ -205,7 +214,8 @@ void MultiwayICP::deactivatefarDistPairs_()
 bool MultiwayICP::p2ptIter_()
 {
     MR_TIMER;
-    Vector<bool, MeshOrPointsId> valid( objs_.size() );
+    using FullSizeBool = uint8_t;
+    Vector<FullSizeBool, MeshOrPointsId> valid( objs_.size() );
     ParallelFor( objs_, [&] ( MeshOrPointsId id )
     {
         PointToPointAligningTransform p2pt;
@@ -249,20 +259,21 @@ bool MultiwayICP::p2ptIter_()
         }
         if ( std::isnan( res.b.x ) ) //nan check
         {
-            valid[id] = false;
+            valid[id] = FullSizeBool( false );
             return;
         }
         objs_[id].xf = res * objs_[id].xf;
-        valid[id] = true;
+        valid[id] = FullSizeBool( true );
     } );
 
-    return std::all_of( valid.vec_.begin(), valid.vec_.end(), [] ( auto v ) { return v; } );
+    return std::all_of( valid.vec_.begin(), valid.vec_.end(), [] ( auto v ) { return bool( v ); } );
 }
 
 bool MultiwayICP::p2plIter_()
 {
     MR_TIMER;
-    Vector<bool, MeshOrPointsId> valid( objs_.size() );
+    using FullSizeBool = uint8_t;
+    Vector<FullSizeBool, MeshOrPointsId> valid( objs_.size() );
     ParallelFor( objs_, [&] ( MeshOrPointsId id )
     {
         Vector3f centroidRef;
@@ -288,7 +299,7 @@ bool MultiwayICP::p2plIter_()
         }
         if ( activeCount <= 0 )
         {
-            valid[id] = false;
+            valid[id] = FullSizeBool( false );
             return;
         }
         centroidRef /= float( activeCount * 2 );
@@ -356,13 +367,13 @@ bool MultiwayICP::p2plIter_()
 
         if ( std::isnan( res.b.x ) ) //nan check
         {
-            valid[id] = false;
+            valid[id] = FullSizeBool( false );
             return;
         }
         objs_[id].xf = centroidRefXf * res * centroidRefXf.inverse() * objs_[id].xf;
-        valid[id] = true;
+        valid[id] = FullSizeBool( true );
     } );
-    return std::all_of( valid.vec_.begin(), valid.vec_.end(), [] ( auto v ) { return v; } );
+    return std::all_of( valid.vec_.begin(), valid.vec_.end(), [] ( auto v ) { return bool( v ); } );
 }
 
 }

@@ -1,5 +1,5 @@
 #pragma once
-#include "MRMesh/MRMeshFwd.h"
+#include "MRViewerFwd.h"
 #include "exports.h"
 #include <boost/signals2/signal.hpp>
 #include <memory>
@@ -92,6 +92,7 @@ template<typename ...Updates>
 class PluginUpdateOr : virtual public Updates...
 {
 public:
+    MR_ADD_CTOR_DELETE_MOVE( PluginUpdateOr );
     virtual void preDrawUpdate() override
     {
         ( Updates::preDrawUpdate(), ... );

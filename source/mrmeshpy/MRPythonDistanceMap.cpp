@@ -32,6 +32,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         def( "setDistanceLimits", &MR::MeshToDistanceMapParams::setDistanceLimits, pybind11::arg( "min" ), pybind11::arg( "max" ),
              "if distance is not in set range, pixel became invalid\n"
              "default value: false. Any distance will be applied (include negative)" ).
+        def( "xf", &MR::MeshToDistanceMapParams::xf, "converts in AffineXf3f" ).
         def_readwrite( "xRange", &MR::MeshToDistanceMapParams::xRange, "Cartesian range vector between distance map borders in X direction" ).
         def_readwrite( "yRange", &MR::MeshToDistanceMapParams::yRange, "Cartesian range vector between distance map borders in Y direction" ).
         def_readwrite( "direction", &MR::MeshToDistanceMapParams::direction, "direction of intersection ray" ).
@@ -43,7 +44,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         def_readwrite( "resolution", &MR::MeshToDistanceMapParams::resolution, "resolution of distance map" );
 
     pybind11::class_<MR::ContourToDistanceMapParams>( m, "ContourToDistanceMapParams" ).
-        def( pybind11::init<>() );
+        def( pybind11::init<>() ).
+        def( "xf", &MR::ContourToDistanceMapParams::xf, "converts in AffineXf3f" );
 
     pybind11::class_<MR::DistanceMapToWorld>( m, "DistanceMapToWorld", "This structure store data to transform distance map to world coordinates" ).
         def( pybind11::init<>(), "Default ctor init all fields with zeros, make sure to fill them manually" ).
@@ -55,6 +57,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
              "x - float X coordinate of depth map: (0.0f - left corner of pixel 0, 1.0 - right corner of pixel 0 and left corner of pixel 1)\n"
              "y - float Y coordinate of depth map: (0.0f - left corner of pixel 0, 1.0 - right corner of pixel 0 and left corner of pixel 1)\n"
              "depth - value in distance map, represent depth in world" ).
+        def( "xf", &MR::DistanceMapToWorld::xf, "converts in AffineXf3f" ).
         def_readwrite( "orgPoint", &MR::DistanceMapToWorld::orgPoint, "World coordinates of distance map origin corner" ).
         def_readwrite( "pixelXVec", &MR::DistanceMapToWorld::pixelXVec, "Vector in world space of pixel x positive direction.\n"
                                                                         "Note! Length is equal to pixel size. Typically it should be orthogonal to `pixelYVec`." ).

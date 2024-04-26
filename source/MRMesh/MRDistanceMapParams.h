@@ -60,6 +60,7 @@ struct MeshToDistanceMapParams
     {
         return { Matrix3f::fromColumns( xRange / float( resolution.x ), yRange / float( resolution.y ), direction ), orgPoint };
     }
+    AffineXf3f xf() const { return operator AffineXf3f(); }
 
     Vector3f xRange = Vector3f( 1.f, 0.f, 0.f ); ///< Cartesian range vector between distance map borders in X direction
     Vector3f yRange = Vector3f( 0.f, 1.f, 0.f ); ///< Cartesian range vector between distance map borders in Y direction
@@ -89,7 +90,8 @@ private:
 struct DistanceMapToWorld;
 
 /// Structure with parameters to generate DistanceMap by Contours
-struct ContourToDistanceMapParams {
+struct ContourToDistanceMapParams
+{
     /// Default ctor, make sure to fill all fields manually
     ContourToDistanceMapParams() = default;
 
@@ -121,6 +123,7 @@ struct ContourToDistanceMapParams {
     {
         return { Matrix3f::fromColumns( pixelSize.x * Vector3f::plusX(), pixelSize.y * Vector3f::plusY(), Vector3f::plusZ() ), { orgPoint.x, orgPoint.y, 0.F } };
     }
+    AffineXf3f xf() const { return operator AffineXf3f(); }
 
     Vector2f pixelSize{ 1.F, 1.F }; ///< pixel size
     Vector2i resolution{ 1, 1 }; ///< distance map size
@@ -164,6 +167,7 @@ struct DistanceMapToWorld
     {
         return { Matrix3f::fromColumns( pixelXVec, pixelYVec, direction ), orgPoint };
     }
+    AffineXf3f xf() const { return operator AffineXf3f(); }
 
     /// world coordinates of distance map origin corner
     Vector3f orgPoint;

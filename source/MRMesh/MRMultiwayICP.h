@@ -44,15 +44,19 @@ public:
     /// computes the number of active point pairs of given object
     [[nodiscard]] MRMESH_API size_t getNumActivePairs( MeshOrPointsId id ) const;
 
+    /// sets callback that will be called for each iteration
+    void setPerIterationCallback( std::function<void( int inter )> callback ) { perIterationCb_ = std::move( callback ); }
+
     /// returns status info string
     [[nodiscard]] MRMESH_API std::string getStatusInfo() const; 
 private:
-    
     Vector<MeshOrPointsXf, MeshOrPointsId> objs_;
     Vector<IndexedPairs, MeshOrPointsId> pairsPerObj_;
     ICPProperties prop_;
 
     ICPExitType resultType_{ ICPExitType::NotStarted };
+
+    std::function<void( int )> perIterationCb_;
 
     /// deactivate pairs that does not meet farDistFactor criterion
     void deactivatefarDistPairs_();

@@ -18,6 +18,8 @@ MRMESH_API void positionVertsSmoothly( Mesh& mesh, const VertBitSet& verts,
 MRMESH_API void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts,
     const Vector<Vector3f, VertId>* vertShifts = nullptr );
 
+MRMESH_API void positionVertsAtGivenDistance( Mesh& mesh, const VertBitSet& verts, float dist );
+
 struct InflateSettings
 {
     /// the amount of pressure applied to mesh region:

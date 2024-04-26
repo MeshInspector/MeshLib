@@ -18,7 +18,7 @@ def test_mesh_distance_map_to_mesh(tmp_path):
     input_folder = Path(test_files_path) / "algorithms" / "distance_map"
     mesh = mlib.loadMesh(input_folder / "input.ctm")
 
-    # Traingulate points
+    # Create distance map
     params = mlib.MeshToDistanceMapParams()
     params.direction = mlib.Vector3f(x=0, y=1, z=0)
     params.resolution = mlib.Vector2i(x=1000, y=1000)
@@ -49,6 +49,8 @@ def test_mesh_distance_map_to_mesh(tmp_path):
     #  Load input point
     case_name = f"dm-to-mesh"
     input_folder = Path(test_files_path) / "algorithms" / "distance_map"
+
+    # load distance map
 
     map = mlib.loadDistanceMapFromImage(input_folder / "input_map.png")
     tw = mlib.DistanceMapToWorld()

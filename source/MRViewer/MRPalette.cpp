@@ -510,31 +510,22 @@ float Palette::getRelativePos( float val ) const
     return 0.5f;
 }
 
-VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids ) const
+VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region, const VertPredicate & valids ) const
 {
     MR_TIMER
-
-    // for FilterType::Discrete, start and end are at the boundary of texels to have equal distance between all colors
-    float texStart = 0, texEnd = 1;
-    if ( texture_.filter == FilterType::Linear )
-    {
-        // start and end are in the middle of texels with pure colors
-        const auto sz = float( texture_.pixels.size() );
-        texStart = 0.5f / sz;
-        texEnd = 1.0f - 0.5f / sz;
-    }
-    float texLen = texEnd - texStart;
 
     VertUVCoords res;
     res.resizeNoInit( region.size() );
     BitSetParallelFor( region, [&] ( VertId v )
     {
-        res[v] = UVCoord{
-            texLen * getRelativePos( values[v] ) + texStart,
-            contains( valids, v ) ? 0.25f : 0.75f };
+        res[v] = getUVcoord( values[v], contains( valids, v ) );
     } );
-
     return res;
+}
+
+VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids ) const
+{
+    return getUVcoords( values, region, valids ? [valids]( VertId v ) { return valids->test( v ); } : VertPredicate{} );
 }
 
 void Palette::updateDiscretizatedColors_()
@@ -562,6 +553,19 @@ void Palette::updateDiscretizatedColors_()
     const auto sz = colors.size();
     colors.resize( 2 * sz, Color::gray() );
     texture_.resolution = { int( sz ), 2 };
+
+    // for FilterType::Discrete, start and end are at the boundary of texels to have equal distance between all colors
+    if ( texture_.filter == FilterType::Linear )
+    {
+        // start and end are in the middle of texels with pure colors
+        texStart_ = 0.5f / sz;
+        texEnd_ = 1.0f - 0.5f / sz;
+    }
+    else
+    {
+        texStart_ = 0;
+        texEnd_ = 1;
+    }
 }
 
 Color Palette::getBaseColor_( float val )

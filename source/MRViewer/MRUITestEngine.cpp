@@ -72,9 +72,17 @@ bool createButton( std::string_view name )
     auto& map = state.stack.back()->elems;
     auto iter = map.find( name ); // I wish I could use `std::try_emplace` here directly...
     if ( iter == map.end() )
+    {
         iter = map.try_emplace( std::string( name ) ).first;
+    }
     else
+    {
+        // If you see this assert, you likely have duplicate button names.
+        // If you truly have several buttons with the same name in one place, add unique `##...` suffixes to them.
+        // If the buttons are in different parts of the application and shouldn't collide,
+        // use `UI::TestEngine::pushTree("...")` and `popTree()` to group them into named groups, with unique names in each group.
         assert( !iter->second.visitedOnThisFrame && "Registering the same entry more than once in a single frame!" );
+    }
 
     ButtonEntry* button = std::get_if<ButtonEntry>( &iter->second.value );
     if ( !button )

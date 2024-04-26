@@ -31,13 +31,13 @@ public:
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
     virtual std::string getClassName() const override { return "Distance Map"; }
 
-    /// rebuild mesh according sets DistanceMap& DistanceMapToWorld
+    /// rebuilds the mesh;
     /// if it is executed in the rendering stream then you can set the needUpdateMesh = true
     /// otherwise you should set the needUpdateMesh = false and call the function calculateMesh
     /// and after finishing in the rendering stream, call the function updateMesh
-    MRMESH_API bool setDistanceMap( 
-        const std::shared_ptr<DistanceMap>& dmap, 
-        const DistanceMapToWorld& toWorldParams, 
+    MRMESH_API bool setDistanceMap(
+        const std::shared_ptr<DistanceMap>& dmap,
+        const AffineXf3f& dmap2local,
         bool needUpdateMesh = true, 
         ProgressCallback cb = {} );
 
@@ -50,7 +50,8 @@ public:
 
     [[nodiscard]] virtual bool hasModel() const override { return bool( dmap_ ); }
 
-    MRMESH_API const DistanceMapToWorld& getToWorldParameters() const;
+    /// unlike the name, actually it is the transformation from distance map in local space
+    MRMESH_API const AffineXf3f& getToWorldParameters() const { return dmap2local_; }
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
@@ -71,15 +72,15 @@ protected:
 
 private:
     std::shared_ptr<DistanceMap> dmap_;
-    DistanceMapToWorld toWorldParams_;
+    AffineXf3f dmap2local_;
 
-    /// rebuild mesh according sets DistanceMap & DistanceMapToWorld
+    /// rebuilds the mesh;
     /// if it is executed in the rendering stream then you can set the needUpdateMesh = true
     /// otherwise you should set the needUpdateMesh = false and call the function calculateMesh
     /// and after finishing in the rendering stream, call the function updateMesh
-    bool construct_( 
-        const std::shared_ptr<DistanceMap>& dmap, 
-        const DistanceMapToWorld& params, 
+    bool construct_(
+        const std::shared_ptr<DistanceMap>& dmap,
+        const AffineXf3f& dmap2local,
         bool needUpdateMesh = true,
         ProgressCallback cb = {} );
 

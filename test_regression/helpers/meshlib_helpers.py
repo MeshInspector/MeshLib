@@ -32,7 +32,8 @@ def compare_meshes_similarity(mesh1: mrmesh.Mesh, mesh2: mrmesh.Mesh,
                               rhsdr_thresh=DEFAULT_RHAUSDORF_THRESHOLD,
                               vol_thresh=0.005,
                               area_thresh=0.005,
-                              verts_thresh=0.005):
+                              verts_thresh=0.005,
+                              skip_volume=False):
     """
     Compare two meshes and assert them to similarity by different params.
     Similarity calcs as (mesh1.param - mesh2.param) / min(mesh1.param, mesh2.param) < param_threshold
@@ -43,16 +44,18 @@ def compare_meshes_similarity(mesh1: mrmesh.Mesh, mesh2: mrmesh.Mesh,
     :param vol_thresh: volume difference threshold
     :param area_thresh: area difference threshold
     :param verts_thresh: vertices difference threshold
+    :param skip_volume: skip volume check - for open meshes
     """
     with check:
         #  check on meshes relative Hausdorff distance
         rhsdr = relative_hausdorff(mesh1, mesh2)
         assert rhsdr > rhsdr_thresh, f"Relative hausdorff is lower than threshold: {rhsdr}, threshold is {rhsdr_thresh}"
-    with check:
-        #  check on meshes volume
-        assert abs(mesh1.volume() - mesh2.volume()) / min(mesh1.volume(), mesh2.volume()) < vol_thresh, (
-            f"Volumes of result and reference differ too much, \nvol1={mesh1.volume()}\nvol2={mesh2.volume()}\n"
-            f"relative threshold is {vol_thresh}")
+    if not skip_volume:
+        with check:
+            #  check on meshes volume
+            assert abs(mesh1.volume() - mesh2.volume()) / min(mesh1.volume(), mesh2.volume()) < vol_thresh, (
+                f"Volumes of result and reference differ too much, \nvol1={mesh1.volume()}\nvol2={mesh2.volume()}\n"
+                f"relative threshold is {vol_thresh}")
     with check:
         #  check on meshes area
         assert abs(mesh1.area() - mesh2.area()) / min(mesh1.area(), mesh2.area()) < area_thresh, (

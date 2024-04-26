@@ -28,6 +28,7 @@
     <ClCompile Include="MRHistoryStore.cpp" />
     <ClCompile Include="MRMeshBoundarySelectionWidget.cpp" />
     <ClCompile Include="MRFrameCounter.cpp" />
+    <ClCompile Include="MRMoveObjectByMouseImpl.cpp" />
     <ClCompile Include="MRRenderDefaultObjects.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
     <ClCompile Include="MRSelectCurvaturePreference.cpp" />
@@ -133,6 +134,7 @@
     <ClInclude Include="MRLambdaRibbonItem.h" />
     <ClInclude Include="MRMeshBoundarySelectionWidget.h" />
     <ClInclude Include="MRFrameCounter.h" />
+    <ClInclude Include="MRMoveObjectByMouseImpl.h" />
     <ClInclude Include="MRNotificationType.h" />
     <ClInclude Include="MRRibbonNotification.h" />
     <ClInclude Include="MRSelectCurvaturePreference.h" />

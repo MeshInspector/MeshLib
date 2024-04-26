@@ -62,6 +62,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         def_readwrite( "direction", &MR::DistanceMapToWorld::direction, "Vector of depth direction."
                                                                         "Note! Typically it should be normalized and orthogonal to `pixelXVec` `pixelYVec` plane." );
 
+    pybind11::implicitly_convertible<const MR::DistanceMapToWorld&, MR::AffineXf3f>();
+    pybind11::implicitly_convertible<const MR::AffineXf3f&, MR::DistanceMapToWorld>();
+
     m.def( "computeDistanceMapD", []( const MR::MeshPart& mp, const MR::MeshToDistanceMapParams& params, MR::ProgressCallback cb )
            { return MR::computeDistanceMapD( mp, params, cb ); },
            pybind11::arg( "mp" ), pybind11::arg( "params" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
@@ -73,7 +76,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
     m.def( "distanceMapToMesh", 
         MR::decorateExpected( &MR::distanceMapToMesh ),
         pybind11::arg( "mp" ), 
-        pybind11::arg( "toWorldStruct" ),
+        pybind11::arg( "toWorld" ),
         pybind11::arg( "cb" ) = MR::ProgressCallback{},
            "converts distance map back to the mesh fragment with presented params" );
 

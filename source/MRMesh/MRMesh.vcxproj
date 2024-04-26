@@ -36,6 +36,7 @@
     <ClInclude Include="MRFilterCreaseEdges.h" />
     <ClInclude Include="MRImproveSampling.h" />
     <ClInclude Include="MRLocalTriangulations.h" />
+    <ClInclude Include="MRMapping.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
     <ClInclude Include="MRAggregateFlow.h" />

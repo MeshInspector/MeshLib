@@ -1245,6 +1245,9 @@
     <ClInclude Include="MRFixSelfIntersections.h">
       <Filter>Source Files\SelfIntersectoins</Filter>
     </ClInclude>
+    <ClInclude Include="MRMapping.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

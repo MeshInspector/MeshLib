@@ -16,6 +16,7 @@
 #include "MRMeshComponents.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
+#include "MRObjectMesh.h"
 #include <parallel_hashmap/phmap.h>
 #include <numeric>
 

@@ -29,8 +29,6 @@ private:
     virtual bool onMouseMove_( int x, int y ) override;
     virtual bool onMouseUp_( MouseButton btn, int modifiers ) override;
 
-    static MoveObjectByMouse* instance_;
-
     class MoveObjectByMouseWithSelected : public MoveObjectByMouseImpl
     {
     protected:

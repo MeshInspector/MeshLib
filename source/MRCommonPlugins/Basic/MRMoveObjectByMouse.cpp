@@ -16,25 +16,28 @@
 #include "MRMesh/MRSceneColors.h"
 #include "MRPch/MRSpdlog.h"
 
+namespace
+{
+MR::MoveObjectByMouse* sInstance{ nullptr };
+}
+
 namespace MR
 {
-
-MoveObjectByMouse* MoveObjectByMouse::instance_ = nullptr;
 
 MoveObjectByMouse::MoveObjectByMouse() :
     PluginParent( "Move object", StatePluginTabs::Basic )
 {
-    instance_ = this;
+    sInstance = this;
 }
 
 MoveObjectByMouse::~MoveObjectByMouse()
 {
-    instance_ = nullptr;
+    sInstance = nullptr;
 }
 
 MoveObjectByMouse* MoveObjectByMouse::instance()
 {
-    return instance_;
+    return sInstance;
 }
 
 bool MoveObjectByMouse::onDisable_()

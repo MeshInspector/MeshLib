@@ -4,9 +4,9 @@
 namespace MR
 {
 
-// theseData - the data that needs to be compared
-// theseToThose - how to compare indexes
-// validIndex - which indexes should be compared
+// oldData - the data that needs to be compared
+// newToOld - how to compare indexes
+// newIndex - indexes of the new object to be mapped
 template<typename ValueT, typename IndexT, typename IndexF>
 Vector<ValueT, IndexT> mapNewToOldVector(
     const Vector<ValueT, IndexT>& oldData,
@@ -24,6 +24,9 @@ Vector<ValueT, IndexT> mapNewToOldVector(
     return newMap;
 }
 
+// oldData - the data that needs to be compared
+// oldToNew - how to compare indexes
+// newIndex - indexes of the new object to be mapped
 template<typename ValueT, typename IndexT, typename IndexF>
 Vector<ValueT, IndexT> mapOldToNewVector(
     const Vector<ValueT, IndexT>& oldData,

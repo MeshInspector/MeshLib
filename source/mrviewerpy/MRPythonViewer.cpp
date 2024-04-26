@@ -25,7 +25,7 @@ MR_INIT_PYTHON_MODULE_PRECALL( mrviewerpy, [] ()
     }
 } )
 
-void pythonCaptureScreenShot( MR::Viewer* viewer, const char* path )
+static void pythonCaptureScreenShot( MR::Viewer* viewer, const char* path )
 {
     MR::CommandLoop::runCommandFromGUIThread( [&] ()
     {
@@ -34,7 +34,7 @@ void pythonCaptureScreenShot( MR::Viewer* viewer, const char* path )
     } );
 }
 
-void pythonLaunch( const MR::Viewer::LaunchParams& params, const MR::ViewerSetup& setup )
+static void pythonLaunch( const MR::Viewer::LaunchParams& params, const MR::ViewerSetup& setup )
 {
     std::thread lauchThread = std::thread( [=] ()
     {
@@ -42,6 +42,16 @@ void pythonLaunch( const MR::Viewer::LaunchParams& params, const MR::ViewerSetup
         MR::launchDefaultViewer( params, setup );
     } );
     lauchThread.detach();
+}
+
+static void pythonSkipFrames( MR::Viewer* viewer, int frames )
+{
+    (void)viewer;
+    while ( frames > 0 )
+    {
+        frames--;
+        MR::CommandLoop::runCommandFromGUIThread( []{} );
+    }
 }
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
@@ -70,7 +80,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
         "Viewport is a rectangular area, in which the objects of interest are going to be rendered.\n"
         "An application can have a number of viewports each with its own ID." ).
         def( "cameraLookAlong", MR::pythonRunFromGUIThread( &MR::Viewport::cameraLookAlong ),
-            pybind11::arg( "dir" ), pybind11::arg( "up" ), 
+            pybind11::arg( "dir" ), pybind11::arg( "up" ),
             "Set camera look direction and up direction (they should be perpendicular)\n"
             "this function changes camera position and do not change camera spot (0,0,0) by default\n"
             "to change camera position use setCameraTranslation after this function" ).
@@ -78,7 +88,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
             pybind11::arg( "axis" ), pybind11::arg( "angle" ),
             "Rotates camera around axis +direction applied to axis point\n"
             "note: this can make camera clip objects (as far as distance to scene center is not fixed)" );
-    
+
     pybind11::enum_<MR::FitMode>( m, "ViewportFitMode", "Fit mode ( types of objects for which the fit is applied )" ).
         value( "Visible", MR::FitMode::Visible, "fit all visible objects" ).
         value( "SelectedObjects", MR::FitMode::SelectedObjects, "fit only selected objects" ).
@@ -104,6 +114,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
             pybind11::arg( "swapOnLastOnly" ) = false,
             "Increment number of forced frames to redraw in event loop\n"
             "if `swapOnLastOnly` only last forced frame will be present on screen and all previous will not" ).
+        def( "skipFrames", pythonSkipFrames, pybind11::arg("frames") ).
         def( "preciseFitDataViewport", MR::pythonRunFromGUIThread( (void(MR::Viewer::*)( MR::ViewportMask, const MR::FitDataParams& )) &MR::Viewer::preciseFitDataViewport ),
             pybind11::arg_v( "vpList", MR::ViewportMask::all(), "meshlib.mrmeshpy.ViewportMask.all()" ),
             pybind11::arg_v( "params", MR::FitDataParams(), "ViewportFitDataParams()" ),
@@ -113,7 +124,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
             "Captures part of window (redraw 3d scene over UI (without redrawing UI))" ).
         def( "shutdown", MR::pythonRunFromGUIThread( &MR::Viewer::stopEventLoop ), "sets stop event loop flag (this flag is glfwShouldWindowClose equivalent)" );
 
-    m.def( "launch", &pythonLaunch, 
+    m.def( "launch", &pythonLaunch,
         pybind11::arg_v( "params", MR::Viewer::LaunchParams(), "ViewerLaunchParams()" ),
         pybind11::arg_v( "setup", MR::ViewerSetup(), "ViewerSetup()" ),
         "starts default viewer with given params and setup" );

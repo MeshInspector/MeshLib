@@ -19,7 +19,7 @@
 namespace MR
 {
 
-MoveObjectByMouse* MoveObjectByMouse::instance_;
+MoveObjectByMouse* MoveObjectByMouse::instance_ = nullptr;
 
 MoveObjectByMouse::MoveObjectByMouse() :
     PluginParent( "Move object", StatePluginTabs::Basic )
@@ -30,6 +30,11 @@ MoveObjectByMouse::MoveObjectByMouse() :
 MoveObjectByMouse::~MoveObjectByMouse()
 {
     instance_ = nullptr;
+}
+
+MoveObjectByMouse* MoveObjectByMouse::instance()
+{
+    return instance_;
 }
 
 bool MoveObjectByMouse::onDisable_()

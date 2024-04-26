@@ -17,7 +17,7 @@ public:
     MoveObjectByMouse();
     ~MoveObjectByMouse();
 
-    static MoveObjectByMouse* instance() { return instance_; }
+    MRCOMMONPLUGINS_API static MoveObjectByMouse* instance();
 
     virtual bool onDisable_() override;
     virtual void drawDialog( float menuScaling, ImGuiContext* ) override;
@@ -29,7 +29,7 @@ private:
     virtual bool onMouseMove_( int x, int y ) override;
     virtual bool onMouseUp_( MouseButton btn, int modifiers ) override;
 
-    MRCOMMONPLUGINS_API static MoveObjectByMouse* instance_;
+    static MoveObjectByMouse* instance_;
 
     class MoveObjectByMouseWithSelected : public MoveObjectByMouseImpl
     {

@@ -116,6 +116,12 @@ struct ContourToDistanceMapParams {
         return orgPoint + Vector2f{ pixelSize.x * point.x, pixelSize.y * point.y };
     }
 
+    /// converts in transformation
+    operator AffineXf3f() const
+    {
+        return { Matrix3f::fromColumns( pixelSize.x * Vector3f::plusX(), pixelSize.y * Vector3f::plusY(), Vector3f::plusZ() ), { orgPoint.x, orgPoint.y, 0.F } };
+    }
+
     Vector2f pixelSize{ 1.F, 1.F }; ///< pixel size
     Vector2i resolution{ 1, 1 }; ///< distance map size
     Vector2f orgPoint{ 0.F, 0.F }; ///< coordinates of origin area corner

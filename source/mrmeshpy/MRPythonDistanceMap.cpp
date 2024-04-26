@@ -97,10 +97,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
     "Converts distance map to 2d iso-lines:\n"
     "Iso-lines are created in space DistanceMap ( plane OXY with pixelSize = (1, 1) )" );
 
-    m.def( "distanceMapTo2DIsoPolyline", ( std::pair<MR::Polyline2, MR::AffineXf3f>( * )( const MR::DistanceMap&, const MR::DistanceMapToWorld&, float, bool ) )& MR::distanceMapTo2DIsoPolyline,
-           pybind11::arg( "dm" ), pybind11::arg( "params" ), pybind11::arg( "isoValue" ), pybind11::arg( "useDepth" ),
-           "Iso-lines are created in real space.\n"
-           "( contours plane with parameters according DistanceMapToWorld )\n"
-           "Return: pair contours in OXY & transformation from plane OXY to real contours plane" );
+    m.def( "distanceMapTo2DIsoPolyline", ( std::pair<MR::Polyline2, MR::AffineXf3f>( * )( const MR::DistanceMap&, const MR::AffineXf3f&, float, bool ) )& MR::distanceMapTo2DIsoPolyline,
+           pybind11::arg( "dm" ), pybind11::arg( "xf" ), pybind11::arg( "isoValue" ), pybind11::arg( "useDepth" ),
+           "computes iso-lines of distance map corresponding to given iso-value; "
+           "in second returns the transformation from 0XY plane to world; "
+           "param useDepth true - the isolines will be located on distance map surface, false - isolines for any iso-value will be located on the common plane xf(0XY)" );
 
 } )

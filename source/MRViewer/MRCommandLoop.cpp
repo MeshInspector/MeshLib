@@ -110,10 +110,12 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition
 
     getViewerInstance().postEmptyEvent();
     if ( blockThread )
+    {
         cmd->callerThreadCV.wait( lock );
 
-    if ( blockThread && exception )
-        std::rethrow_exception( exception );
+        if ( exception )
+            std::rethrow_exception( exception );
+    }
 }
 
 }

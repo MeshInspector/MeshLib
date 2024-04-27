@@ -2,7 +2,7 @@
 
 #include "MRViewerFwd.h"
 #include "MRMesh/MRHistoryAction.h"
-#include <boost/signals2/signal.hpp>
+#include "MRMesh/MRSignal.h"
 #include <memory>
 
 namespace MR

@@ -1,7 +1,7 @@
 #pragma once
 #include "MRViewerFwd.h"
 #include "exports.h"
-#include <boost/signals2/signal.hpp>
+#include "MRMesh/MRSignal.h"
 #include <memory>
 
 namespace MR

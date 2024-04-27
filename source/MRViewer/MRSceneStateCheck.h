@@ -134,7 +134,7 @@ public:
 
 // checks that at least one of argument checks is true
 template<typename ...Checks>
-class SceneStateOrCheck : virtual public Checks...
+class SceneStateOrCheck : public Checks...
 {
 public:
     virtual ~SceneStateOrCheck() = default;
@@ -160,7 +160,7 @@ public:
 
 // checks that all of argument checks are true
 template<typename ...Checks>
-class SceneStateAndCheck : virtual public Checks...
+class SceneStateAndCheck : public Checks...
 {
 public:
     virtual ~SceneStateAndCheck() = default;

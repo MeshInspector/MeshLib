@@ -89,10 +89,9 @@ private:
 // Runs all preDrawUpdate and all shouldClose_ checks
 // shouldClose_ returns true if at least on of checks was ture 
 template<typename ...Updates>
-class PluginUpdateOr : virtual public Updates...
+class PluginUpdateOr : public Updates...
 {
 public:
-    MR_ADD_CTOR_DELETE_MOVE( PluginUpdateOr );
     virtual void preDrawUpdate() override
     {
         ( Updates::preDrawUpdate(), ... );
@@ -104,7 +103,9 @@ protected:
     }
     virtual void onPluginDisable_() override
     {
-        ( ..., Updates::onPluginDisable_() );
+        // disconnect in reversed order
+        [[maybe_unused]] int dummy;
+        ( void )( dummy = ... = ( Updates::onPluginDisable_(), 0 ) );
     }
     virtual bool shouldClose_() const override
     {

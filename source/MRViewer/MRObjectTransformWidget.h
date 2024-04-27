@@ -10,7 +10,7 @@
 #include "MRMesh/MRAxis.h"
 #include <MRMesh/MRObject.h>
 #include <MRMesh/MRColor.h>
-#include <boost/signals2/signal.hpp>
+#include "MRMesh/MRSignal.h"
 #include <array>
 #include <functional>
 #include <string>

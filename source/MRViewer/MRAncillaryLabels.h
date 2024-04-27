@@ -6,7 +6,6 @@
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRPositionedText.h"
 #include "MRViewerEventsListener.h"
-#include <boost/signals2/signal.hpp>
 #include <memory>
 
 namespace MR

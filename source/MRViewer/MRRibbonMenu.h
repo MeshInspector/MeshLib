@@ -8,10 +8,10 @@
 #include "MRRibbonSchema.h"
 #include "MRShortcutManager.h"
 #include "MRToolbar.h"
-#include <boost/signals2/signal.hpp>
+#include "MRMesh/MRSignal.h"
+#include "MRRibbonNotification.h"
 #include <type_traits>
 #include <array>
-#include "MRRibbonNotification.h"
 
 namespace MR
 {

@@ -1028,7 +1028,7 @@ bool detail::genericSlider( const char* label, ImGuiDataType data_type, void* p_
     // EDITED: added small rectangle under text
     char value_buf[64];
     const char* value_buf_end = value_buf + DataTypeFormatString( value_buf, IM_ARRAYSIZE( value_buf ), data_type, p_data, format );
-    const ImVec2 text_size = CalcTextSize( value_buf, value_buf_end, false );
+    const ImVec2 text_size = CalcTextSize( value_buf, value_buf_end, true );
     const ImVec2 text_rect_half_size{ text_size.x * 0.5f + 4.0f, frame_bb.GetHeight() * 0.5f - 4.0f };
     window->DrawList->AddRectFilled( frame_bb.GetCenter() - text_rect_half_size, frame_bb.GetCenter() + text_rect_half_size,
         ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TextContrastBackground ).getUInt32(),

@@ -9,7 +9,7 @@ import pytest
 
 
 @pytest.mark.smoke
-def test_mesh_distance_map_to_mesh(tmp_path):
+def test_mesh_to_distance_map_to_mesh(tmp_path):
     """
     Load mesh, convert to distance map, save to image, load from image, convert to mesh, compare with reference
     """
@@ -31,8 +31,8 @@ def test_mesh_distance_map_to_mesh(tmp_path):
 
     # === Verification
     map = mlib.loadDistanceMapFromImage(tmp_path / "a.png")
-    tw = mlib.DistanceMapToWorld()
-    mesh = mlib.distanceMapToMesh(mp=map, toWorldStruct=tw)
+    aff = mlib.AffineXf3f()
+    mesh = mlib.distanceMapToMesh(mp=map, toWorld=aff)
     mlib.saveMesh(mesh, tmp_path / f"{case_name}.ctm")
     ref_mesh_path = input_folder / f"{case_name}.ctm"
     ref_mesh = mlib.loadMesh(ref_mesh_path)
@@ -42,7 +42,7 @@ def test_mesh_distance_map_to_mesh(tmp_path):
 
 
 @pytest.mark.smoke
-def test_mesh_distance_map_to_mesh(tmp_path):
+def test_distance_map_to_mesh(tmp_path):
     """
     Load distance from image, convert to mesh, compare with reference
     """
@@ -52,9 +52,9 @@ def test_mesh_distance_map_to_mesh(tmp_path):
 
     # load distance map
 
-    map = mlib.loadDistanceMapFromImage(input_folder / "input_map.png")
-    tw = mlib.DistanceMapToWorld()
-    mesh = mlib.distanceMapToMesh(mp=map, toWorldStruct=tw)
+    dmap = mlib.loadDistanceMapFromImage(input_folder / "input_map.png")
+    aff = mlib.AffineXf3f()
+    mesh = mlib.distanceMapToMesh(mp=dmap, toWorld=aff)
 
     # === Verification
     mlib.saveMesh(mesh, tmp_path / f"{case_name}.ctm")

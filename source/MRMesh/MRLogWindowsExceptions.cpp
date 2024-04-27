@@ -1,9 +1,9 @@
 #if defined _WIN32 && defined NDEBUG
 
-#include "MRMesh/MRStringConvert.h"
+#include "MRStringConvert.h"
+#include "MRSystem.h"
 #include "MRPch/MRSpdlog.h"
 #include <windows.h>
-#include <boost/stacktrace.hpp>
 
 namespace MR
 {
@@ -67,7 +67,7 @@ LONG WINAPI logWindowsException( LPEXCEPTION_POINTERS pExInfo )
     else
         spdlog::critical( "Windows exception {:#010x}", pExceptionRecord->ExceptionCode );
 
-    spdlog::info( "Windows exception stacktrace:\n{}", to_string( boost::stacktrace::stacktrace() ) );
+    spdlog::info( "Windows exception stacktrace:\n{}", getCurrentStacktrace() );
     logging = false;
     return EXCEPTION_CONTINUE_SEARCH;
 }
@@ -89,7 +89,7 @@ WindowsExceptionsLogger::WindowsExceptionsLogger()
     oldPurecallHandler_ = _set_purecall_handler( []()
     {
         spdlog::critical( "Pure virtual function call" );
-        spdlog::info( "Pure virtual function call stacktrace:\n{}", to_string( boost::stacktrace::stacktrace() ) );
+        spdlog::info( "Pure virtual function call stacktrace:\n{}", getCurrentStacktrace() );
         std::exit( 0 );
     } );
     // The system does not display the critical-error-handler message box

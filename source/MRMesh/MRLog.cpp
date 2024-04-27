@@ -8,7 +8,6 @@
 #include "MRPch/MRTBB.h"
 
 #ifndef __EMSCRIPTEN__
-#include <boost/stacktrace.hpp>
 #include <csignal>
 #endif
 
@@ -57,7 +56,7 @@ void removeOldLogs( const std::filesystem::path& dir, int hours = 24 )
 void crashSignalHandler( int signal )
 {
     spdlog::critical( "Crash signal: {}", signal );
-    spdlog::info( "Crash stacktrace:\n{}", to_string( boost::stacktrace::stacktrace() ) );
+    spdlog::info( "Crash stacktrace:\n{}", MR::getCurrentStacktrace() );
     MR::printCurrentTimerBranch();
     std::exit( signal );
 }

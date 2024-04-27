@@ -669,6 +669,11 @@
     <ClCompile Include="MRObjectDimensionsEnum.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <CopyFileToFolders Include="$(ProjectDir)..\..\thirdparty\python\python$(PythonVersion).zip">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\laz-perf\laz-perf.vcxproj">
       <Project>{daa055af-38ed-4836-a553-7539216bb64f}</Project>
     </ProjectReference>
@@ -746,8 +751,7 @@ copy $(SolutionDir)$(Platform)\Release\laz-perf.exp $(TargetDir)laz-perf.exp
 copy $(SolutionDir)$(Platform)\Release\laz-perf.lib $(TargetDir)laz-perf.lib
 copy $(SolutionDir)$(Platform)\Release\laz-perf.pdb $(TargetDir)laz-perf.pdb
 copy $(PythonDllPath) $(TargetDir)python$(PythonVersion).dll
-copy $(VcpkgCurrentInstalledDir)\bin\zlib1.dll $(TargetDir)zlib1.dll
-copy $(ProjectDir)..\..\thirdparty\python\python310.zip $(TargetDir)python310.zip</Command>
+copy $(VcpkgCurrentInstalledDir)\bin\zlib1.dll $(TargetDir)zlib1.dll</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -776,9 +780,6 @@ copy $(ProjectDir)..\..\thirdparty\python\python310.zip $(TargetDir)python310.zi
       <DelayLoadDLLs>
       </DelayLoadDLLs>
     </Link>
-    <PostBuildEvent>
-      <Command>copy $(ProjectDir)..\..\thirdparty\python\python$(PythonVersion).zip $(TargetDir)python$(PythonVersion).zip</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -2003,7 +2003,6 @@
     <ClCompile Include="MRZlib.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
-    <ClCompile Include="MRFinally.cpp" />
     <ClCompile Include="MRConeObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
@@ -2082,8 +2081,16 @@
     <ClCompile Include="MRMultiwayICP.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
+    <ClCompile Include="MRFinally.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="$(ProjectDir)..\..\thirdparty\python\python$(PythonVersion).zip">
+      <Filter>Source Files\Python</Filter>
+    </CopyFileToFolders>
   </ItemGroup>
 </Project>

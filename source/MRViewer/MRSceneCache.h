@@ -1,26 +1,28 @@
 #pragma once
 #include "MRMesh/MRMeshFwd.h"
+#include "exports.h"
 #include <optional>
 
 namespace MR
 {
 
 // class to cached scene objects data
-class SceneCache
+class MRVIEWER_CLASS SceneCache
 {
 public:
     // invalidate all cached data
-    static void invalidateAll();
+    // call it in the beginning each frame
+    MRVIEWER_API static void invalidateAll();
 
     // get all selectable object in tree
     // same as getAllObjectsInTree<Object>( &SceneRoot::get(), ObjectSelectivityType::Selectable )
-    static const std::vector<std::shared_ptr<Object>>& getAllObjects();
+    MRVIEWER_API static const std::vector<std::shared_ptr<Object>>& getAllObjects();
     // get all selectable object depth
     // metadata for drawing scene objects list
-    static const std::vector<int>& getAllObjectsDepth();
+    MRVIEWER_API static const std::vector<int>& getAllObjectsDepth();
     // get all selected object in tree
     // same as getAllObjectsInTree<Object>( &SceneRoot::get(), ObjectSelectivityType::Selected )
-    static const std::vector<std::shared_ptr<Object>>& getSelectedObjects();
+    MRVIEWER_API static const std::vector<std::shared_ptr<Object>>& getSelectedObjects();
 private:
     static SceneCache& instance_();
     SceneCache() {};

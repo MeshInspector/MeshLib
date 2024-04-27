@@ -49,7 +49,7 @@ void SceneCache::updateAllObjectsWithDepth_()
     std::function<void( std::shared_ptr<Object>, int )> checkFn;
     checkFn = [&] ( std::shared_ptr<Object> obj, int depth )
     {
-        if ( !obj )
+        if ( !obj || obj->isAncillary() )
             return;
         vecDepth.push_back( depth );
         vecObjs.push_back( obj );

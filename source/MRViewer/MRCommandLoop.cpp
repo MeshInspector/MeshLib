@@ -83,6 +83,23 @@ CommandLoop& CommandLoop::instance_()
 
 void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition state )
 {
+    std::exception_ptr exception;
+    if ( blockThread )
+    {
+        // Adjust the `func` to store thrown exceptions.
+        func = [next = std::move( func ), &exception]
+        {
+            try
+            {
+                next();
+            }
+            catch ( ... )
+            {
+                exception = std::current_exception();
+            }
+        };
+    }
+
     auto& inst = instance_();
     std::shared_ptr<Command> cmd = std::make_shared<Command>();
     cmd->state = state;
@@ -94,6 +111,9 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition
     getViewerInstance().postEmptyEvent();
     if ( blockThread )
         cmd->callerThreadCV.wait( lock );
+
+    if ( blockThread && exception )
+        std::rethrow_exception( exception );
 }
 
 }

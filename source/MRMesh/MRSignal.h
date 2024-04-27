@@ -1,9 +1,18 @@
 #pragma once
 
+#if (defined(__APPLE__) && defined(__clang__))
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#endif
+
 #pragma warning(push)
 #pragma warning(disable: 4619) //#pragma warning: there is no warning number
 #include <boost/signals2/signal.hpp>
 #pragma warning(pop)
+
+#if (defined(__APPLE__) && defined(__clang__))
+#pragma clang diagnostic pop
+#endif
 
 namespace MR
 {

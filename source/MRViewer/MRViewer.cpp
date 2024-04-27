@@ -62,7 +62,6 @@
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
-#include <boost/stacktrace.hpp>
 #endif
 #include "MRViewerIO.h"
 #include "MRProgressBar.h"
@@ -353,7 +352,7 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     catch ( ... )
     {
         spdlog::critical( boost::current_exception_diagnostic_information() );
-        spdlog::critical( "Exception stacktrace:\n{}", to_string( boost::stacktrace::stacktrace() ) );
+        spdlog::info( "Exception stacktrace:\n{}", getCurrentStacktrace() );
         printCurrentTimerBranch();
         res = 1;
     }

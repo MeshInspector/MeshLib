@@ -75,4 +75,9 @@ MRMESH_API void setNewHandlerIfNeeded();
 
 using FileNamesStack = std::vector<std::filesystem::path>;
 
+#ifndef __EMSCRIPTEN__
+/// returns string representation of the current stacktrace
+MRMESH_API std::string getCurrentStacktrace();
+#endif
+
 } // namespace MR

@@ -6,6 +6,17 @@
 #include <filesystem>
 #include <fstream>
 
+#ifndef __EMSCRIPTEN__
+#include <version>
+#if __cpp_lib_stacktrace >= 202011
+#pragma message("std::stacktrace is available")
+#include <stacktrace>
+#else
+#pragma message("std::stacktrace is NOT available, using boost::stacktrace instead")
+#include <boost/stacktrace.hpp>
+#endif
+#endif
+
 #ifdef _WIN32
 
 #ifndef _MSC_VER
@@ -629,5 +640,16 @@ void setNewHandlerIfNeeded()
     } );
 #endif
 }
+
+#ifndef __EMSCRIPTEN__
+std::string getCurrentStacktrace()
+{
+#if __cpp_lib_stacktrace >= 202011
+    return to_string( std::stacktrace::current() );
+#else
+    return to_string( boost::stacktrace::stacktrace() );
+#endif
+}
+#endif
 
 } //namespace MR

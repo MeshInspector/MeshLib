@@ -95,14 +95,13 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts, const Ve
     }
 }
 
-void positionVertsAtGivenDistance( Mesh& mesh, const VertBitSet& verts, float dist )
+void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
 {
     MR_TIMER
-    const float distSq = sqr( dist );
-    const float stabilizer = 0.1f;
 
+    const auto & verts = mesh.topology.getVertIds( settings.region );
     const auto sz = verts.count();
-    if ( sz <= 0 )
+    if ( sz <= 0 || settings.numIters <= 0 )
         return;
 
     // vertex id -> position in the matrix
@@ -112,57 +111,62 @@ void positionVertsAtGivenDistance( Mesh& mesh, const VertBitSet& verts, float di
     Eigen::VectorXd rhs[3];
     for ( int i = 0; i < 3; ++i )
         rhs[i].resize( sz );
-    int n = 0;
-    for ( auto v : verts )
+
+    for ( int iter = 0; iter < settings.numIters; ++iter )
     {
-        double sumW = 0;
-        Vector3d sumFixed;
-        for ( auto e : orgRing( mesh.topology, v ) )
+        mTriplets.clear();
+        int n = 0;
+        for ( auto v : verts )
         {
-            auto d = mesh.topology.dest( e );
-            auto w = ( mesh.points[v] - mesh.points[d] ).lengthSq() / distSq;
-            sumW += w;
-            if ( auto it = vertToMatPos.find( d ); it != vertToMatPos.end() )
+            double sumW = 0;
+            Vector3d sumFixed;
+            for ( auto e : orgRing( mesh.topology, v ) )
             {
-                // free neighbor
-                int di = it->second;
-                mTriplets.emplace_back( n, di, -w );
+                const auto d = mesh.topology.dest( e );
+                const auto w = ( mesh.points[v] - mesh.points[d] ).lengthSq() / settings.distSq( e ) - 1;
+                sumW += w;
+                if ( auto it = vertToMatPos.find( d ); it != vertToMatPos.end() )
+                {
+                    // free neighbor
+                    int di = it->second;
+                    mTriplets.emplace_back( n, di, -w );
+                }
+                else
+                {
+                    // fixed neighbor
+                    sumFixed += Vector3d( w * mesh.points[d] );
+                }
             }
-            else
-            {
-                // fixed neighbor
-                sumFixed += Vector3d( w * mesh.points[d] );
-            }
+            sumFixed += Vector3d( settings.stabilizer * mesh.points[v] );
+            mTriplets.emplace_back( n, n, sumW + settings.stabilizer );
+            for ( int i = 0; i < 3; ++i )
+                rhs[i][n] = sumFixed[i];
+            ++n;
         }
-        sumFixed += ( stabilizer + sumW ) * Vector3d( mesh.points[v] );
-        mTriplets.emplace_back( n, n, stabilizer + 2 * sumW );
-        for ( int i = 0; i < 3; ++i )
-            rhs[i][n] = sumFixed[i];
-        ++n;
-    }
 
-    using SparseMatrix = Eigen::SparseMatrix<double,Eigen::RowMajor>;
-    SparseMatrix A;
-    A.resize( sz, sz );
-    A.setFromTriplets( mTriplets.begin(), mTriplets.end() );
-    Eigen::SimplicialLDLT<SparseMatrix> solver;
-    solver.compute( A );
+        using SparseMatrix = Eigen::SparseMatrix<double,Eigen::RowMajor>;
+        SparseMatrix A;
+        A.resize( sz, sz );
+        A.setFromTriplets( mTriplets.begin(), mTriplets.end() );
+        Eigen::SimplicialLDLT<SparseMatrix> solver;
+        solver.compute( A );
 
-    Eigen::VectorXd sol[3];
-    ParallelFor( 0, 3, [&]( int i )
-    {
-        sol[i] = solver.solve( rhs[i] );
-    } );
+        Eigen::VectorXd sol[3];
+        ParallelFor( 0, 3, [&]( int i )
+        {
+            sol[i] = solver.solve( rhs[i] );
+        } );
 
-    // copy solution back into mesh points
-    n = 0;
-    for ( auto v : verts )
-    {
-        auto & pt = mesh.points[v];
-        pt.x = (float) sol[0][n];
-        pt.y = (float) sol[1][n];
-        pt.z = (float) sol[2][n];
-        ++n;
+        // copy solution back into mesh points
+        n = 0;
+        for ( auto v : verts )
+        {
+            auto & pt = mesh.points[v];
+            pt.x = (float) sol[0][n];
+            pt.y = (float) sol[1][n];
+            pt.z = (float) sol[2][n];
+            ++n;
+        }
     }
 }
 

@@ -7,6 +7,8 @@
 #include <fstream>
 
 #ifndef __EMSCRIPTEN__
+#ifdef _WIN32
+// it is tricky to use std::stacktrace on other systems: https://stackoverflow.com/q/78395268/7325599
 #include <version>
 #if __cpp_lib_stacktrace >= 202011
 #pragma message("std::stacktrace is available")
@@ -15,7 +17,10 @@
 #pragma message("std::stacktrace is NOT available, using boost::stacktrace instead")
 #include <boost/stacktrace.hpp>
 #endif
-#endif
+#else //not _WIN32
+#include <boost/stacktrace.hpp>
+#endif //_WIN32
+#endif //__EMSCRIPTEN__
 
 #ifdef _WIN32
 
@@ -644,7 +649,7 @@ void setNewHandlerIfNeeded()
 #ifndef __EMSCRIPTEN__
 std::string getCurrentStacktrace()
 {
-#if __cpp_lib_stacktrace >= 202011
+#if defined _WIN32 && __cpp_lib_stacktrace >= 202011
     return to_string( std::stacktrace::current() );
 #else
     return to_string( boost::stacktrace::stacktrace() );

@@ -20,6 +20,8 @@ struct Params
     Color colorText;
     Color colorTextOutline;
 
+    float pointDiameter = 6;
+
     float width = 1.5f;
     float smallWidth = 0.75f;
     float outlineWidth = 1.5f;
@@ -63,6 +65,9 @@ enum class Element
     both = main | outline, // Use this by default.
 };
 MR_MAKE_FLAG_OPERATORS( Element )
+
+// Draws a point.
+MRVIEWER_API void point( Element elem, float menuScaling, const Params& params, ImVec2 point );
 
 enum class StringIcon
 {

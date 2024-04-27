@@ -779,10 +779,6 @@ copy $(VcpkgCurrentInstalledDir)\bin\zlib1.dll $(TargetDir)zlib1.dll</Command>
       <DelayLoadDLLs>
       </DelayLoadDLLs>
     </Link>
-    <PostBuildEvent>
-      <Command>
-      </Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

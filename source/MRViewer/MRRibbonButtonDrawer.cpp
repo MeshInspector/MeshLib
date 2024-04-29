@@ -6,6 +6,7 @@
 #include "MRShortcutManager.h"
 #include "ImGuiHelpers.h"
 #include "MRRibbonIcons.h"
+#include "MRViewer/MRUITestEngine.h"
 #include "MRViewerInstance.h"
 #include "MRUIStyle.h"
 #include "imgui_internal.h"
@@ -150,7 +151,7 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
         windowBgColor.z + ( headerColor.z - windowBgColor.z ) * alpha,
         1.0f
     };
-    
+
 
     drawList->AddRectFilled( pos, { pos.x + width, pos.y + height }, ImGui::GetColorU32( blendedHeaderColor ) );
 
@@ -234,7 +235,7 @@ void RibbonButtonDrawer::drawButtonItem( const MenuItemInfo& item, const DrawBut
     drawCustomButtonItem( item, cParams, params );
 }
 
-void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const CustomButtonParameters& customParam, 
+void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const CustomButtonParameters& customParam,
     const DrawButtonParams& params ) const
 {
     std::string requirements = getRequirements_( item.item );
@@ -252,11 +253,12 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
 
     ImGui::BeginGroup();
 
-    int colorChanged = customParam.pushColorsCb ? 
+    int colorChanged = customParam.pushColorsCb ?
         customParam.pushColorsCb( requirements.empty(), item.item->isActive() ) :
         pushRibbonButtonColors_( requirements.empty(), item.item->isActive(), params.forceHovered, params.rootType );
     ImGui::SetNextItemAllowOverlap();
     bool pressed = ImGui::ButtonEx( ( "##wholeChildBtn" + item.item->name() ).c_str(), itemSize, ImGuiButtonFlags_AllowOverlap );
+    pressed = UI::TestEngine::createButton( item.item->name() ) || pressed; // Must not short-circuit.
     pressed = pressed || params.forcePressed;
 
     ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
@@ -297,9 +299,9 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
     else
     {
         if ( !imageIcon )
-            ImGui::SetCursorPosY( 2.0f * ImGui::GetStyle().WindowPadding.y );
+            ImGui::SetCursorPosY( 3 * scaling_ + 2.0f * ImGui::GetStyle().WindowPadding.y );
         else
-            ImGui::SetCursorPosY( ImGui::GetStyle().WindowPadding.y );
+            ImGui::SetCursorPosY( 3 * scaling_ + ImGui::GetStyle().WindowPadding.y );
     }
 
     if ( !imageIcon )
@@ -325,9 +327,9 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
         const float textHeight = numLines * ImGui::GetTextLineHeight() + ( numLines - 1 ) * ImGui::GetStyle().ItemSpacing.y;
 
         if ( !imageIcon )
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( availableHeight - textHeight ) * 0.5f );
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( availableHeight - textHeight ) * 0.5f + 3 * scaling_ );
         else
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( availableHeight - textHeight ) * 0.5f - ImGui::GetStyle().WindowPadding.y );
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( availableHeight - textHeight ) * 0.5f - ImGui::GetStyle().WindowPadding.y + 3 * scaling_ );
 
         for ( const auto& i : item.captionSize.splitInfo )
         {
@@ -455,7 +457,8 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
             font->Scale = iconSize * 1.5f / fontSize;
         ImGui::PushFont( font );
     }
-    ImVec2 itemSize = ImVec2( ImGui::GetFrameHeight(), ImGui::GetFrameHeight() );
+    auto frameHeight = ImGui::GetFrameHeight();
+    ImVec2 itemSize = ImVec2( frameHeight, frameHeight );
     ImVec2 dropBtnPos;
     if ( params.sizeType == DrawButtonParams::SizeType::Small )
     {
@@ -474,8 +477,9 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
     else
     {
         assert( params.sizeType == DrawButtonParams::SizeType::Big );
+        itemSize.y = params.itemSize.y;
         dropBtnPos.x = params.itemSize.x - itemSize.x;
-        dropBtnPos.y = params.itemSize.y - itemSize.y;
+        dropBtnPos.y = 0.0f;
     }
     ImGui::SetCursorPos( dropBtnPos );
     auto absMinPos = ImGui::GetCurrentContext()->CurrentWindow->DC.CursorPos;
@@ -492,9 +496,13 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
 
     auto iconRealSize = ImGui::CalcTextSize( "\xef\x81\xb8" ); //down icon
     ImGui::SetCursorPosX( dropBtnPos.x + ( itemSize.x - iconRealSize.x + 1 ) * 0.5f );
-    ImGui::SetCursorPosY( dropBtnPos.y + ( itemSize.y - iconRealSize.y - 1 ) * 0.5f );
+    if ( params.sizeType == DrawButtonParams::SizeType::Big )
+        ImGui::SetCursorPosY( params.itemSize.y - frameHeight + ( frameHeight - iconRealSize.y - 1 ) * 0.5f );
+    else
+        ImGui::SetCursorPosY( dropBtnPos.y + ( itemSize.y - iconRealSize.y - 1 ) * 0.5f );
+
     ImGui::Text( "%s", "\xef\x81\xb8" );
-    
+
     ImGui::PopStyleVar();
     ImGui::PopStyleColor( pushedColors );
 
@@ -516,7 +524,7 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
         {
             ImRect frame;
             frame.Min = absMinPos;
-            frame.Max = ImVec2( frame.Min.x + ImGui::GetFrameHeight(), frame.Min.y + ImGui::GetFrameHeight() );
+            frame.Max = ImVec2( frame.Min.x + ImGui::GetFrameHeight(), frame.Min.y + itemSize.y );
             ImVec2 expectedSize = ImGui::CalcWindowNextAutoFitSize( menuWindow );
             menuWindow->AutoPosLastDirection = ImGuiDir_Down;
             ImRect rectOuter = ImGui::GetPopupAllowedExtentRect( menuWindow );
@@ -556,7 +564,7 @@ void RibbonButtonDrawer::drawDropList_( const std::shared_ptr<RibbonMenuItem>& b
         {
             auto pressed = ImGui::MenuItem( ( caption + "##dropItem" ).c_str(), nullptr, dropItem->isActive(), requirements.empty() );
             if ( pressed )
-                onPressAction_( dropItem, requirements.empty() );            
+                onPressAction_( dropItem, requirements.empty() );
         }
         else
         {
@@ -698,7 +706,7 @@ int RibbonButtonDrawer::pushRibbonButtonColors_( bool enabled, bool active, bool
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarHovered ).getUInt32() );
         ImGui::PushStyleColor( ImGuiCol_ButtonActive, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarClicked ).getUInt32() );
     }
-    else 
+    else
     {
         assert( rootType == DrawButtonParams::RootType::Header );
         if ( forceHovered )

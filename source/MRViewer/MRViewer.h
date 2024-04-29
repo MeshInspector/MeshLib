@@ -5,9 +5,8 @@
 #include "MRMouse.h"
 #include <MRMesh/MRVector2.h>
 #include <MRMesh/MRViewportId.h>
+#include "MRMesh/MRSignal.h"
 #include "MRViewer/MRSignalCombiners.h"
-
-#include <boost/signals2/signal.hpp>
 #include <cstdint>
 #include <filesystem>
 

@@ -1,25 +1,18 @@
 #pragma once
-#include "MRICP.h"
 
+#include "MRICP.h"
 
 namespace MR
 {
 
 class MRMESH_CLASS MeshOrPointsTag;
 using MeshOrPointsId = Id<MeshOrPointsTag>;
-
-struct MultiICPObject
-{
-    MeshOrPoints meshOrPoints;
-    AffineXf3f xf;
-};
-
 using IndexedPairs = Vector<PointPairs, MeshOrPointsId>;
 
 class MRMESH_CLASS MultiwayICP
 {
 public:
-    MRMESH_API MultiwayICP( const Vector<MultiICPObject, MeshOrPointsId>& objects, float samplingVoxelSize );
+    MRMESH_API MultiwayICP( const Vector<MeshOrPointsXf, MeshOrPointsId>& objects, float samplingVoxelSize );
     
     [[nodiscard]] MRMESH_API Vector<AffineXf3f, MeshOrPointsId> calculateTransformations();
     
@@ -51,15 +44,19 @@ public:
     /// computes the number of active point pairs of given object
     [[nodiscard]] MRMESH_API size_t getNumActivePairs( MeshOrPointsId id ) const;
 
+    /// sets callback that will be called for each iteration
+    void setPerIterationCallback( std::function<void( int inter )> callback ) { perIterationCb_ = std::move( callback ); }
+
     /// returns status info string
     [[nodiscard]] MRMESH_API std::string getStatusInfo() const; 
 private:
-    
-    Vector<MultiICPObject, MeshOrPointsId> objs_;
+    Vector<MeshOrPointsXf, MeshOrPointsId> objs_;
     Vector<IndexedPairs, MeshOrPointsId> pairsPerObj_;
     ICPProperties prop_;
 
     ICPExitType resultType_{ ICPExitType::NotStarted };
+
+    std::function<void( int )> perIterationCb_;
 
     /// deactivate pairs that does not meet farDistFactor criterion
     void deactivatefarDistPairs_();

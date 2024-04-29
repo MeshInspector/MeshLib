@@ -8,6 +8,7 @@
 #include "ImGuiHelpers.h"
 #include "MRImGuiImage.h"
 #include "MRFileDialog.h"
+#include "MRViewer/MRUITestEngine.h"
 #include "MRViewerSettingsManager.h"
 #include "MRUIStyle.h"
 #include "MRViewport.h"
@@ -522,6 +523,7 @@ void RibbonMenu::drawHeaderQuickAccess_()
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding * menuScaling );
     ImGui::PushFont( fontManager_.getFontByType( RibbonFontManager::FontType::Small ) );
+    UI::TestEngine::pushTree( "QuickAccess" );
     for ( const auto& item : RibbonSchemaHolder::schema().headerQuickAccessList )
     {
         auto it = RibbonSchemaHolder::schema().items.find( item );
@@ -536,6 +538,7 @@ void RibbonMenu::drawHeaderQuickAccess_()
         buttonDrawer_.drawButtonItem( it->second, params );
         ImGui::SameLine();
     }
+    UI::TestEngine::popTree(); // "QuickAccess"
     ImGui::PopFont();
     ImGui::PopStyleVar( 2 );
 
@@ -624,6 +627,7 @@ void RibbonMenu::drawHeaderPannel_()
     ImGui::SetCursorPosX( tabsWindowPosX );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 0, 0 ) );
     ImGui::BeginChild( "##TabsHeaderWindow", ImVec2( tabsWindowWidth, ( cTabYOffset + cTabHeight ) * menuScaling ) );
+    UI::TestEngine::pushTree( "RibbonTabs" );
     ImGui::PopStyleVar();
     auto window = ImGui::GetCurrentContext()->CurrentWindow;
 
@@ -653,6 +657,7 @@ void RibbonMenu::drawHeaderPannel_()
         ImGui::ItemAdd( tabRect, tabId );
         bool hovered, held;
         bool pressed = ImGui::ButtonBehavior( tabRect, tabId, &hovered, &held );
+        pressed = UI::TestEngine::createButton( tabStr ) || pressed; // Must not short-circuit.
         if ( pressed )
             changeTab_( i );
 
@@ -692,6 +697,7 @@ void RibbonMenu::drawHeaderPannel_()
     }
     ImGui::Dummy( ImVec2( 0, 0 ) );
     ImGui::EndChild();
+    UI::TestEngine::popTree(); // "RibbonTabs"
     if ( needFwdBtn )
     {
         ImGui::SameLine();
@@ -1137,7 +1143,7 @@ void RibbonMenu::drawBigButtonItem_( const MenuItemInfo& item )
     const auto& style = ImGui::GetStyle();
     ImVec2 itemSize = ImVec2( width.baseWidth, availReg.y - 2 * style.WindowPadding.y );
 
-    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + availReg.y * 0.5f - itemSize.y * 0.5f - ImGui::GetStyle().CellPadding.y * 0.5f );
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + availReg.y * 0.5f - itemSize.y * 0.5f );
 
     buttonDrawer_.drawButtonItem( item, { DrawButtonParams::SizeType::Big,itemSize,cBigIconSize } );
 }
@@ -1327,7 +1333,7 @@ void RibbonMenu::drawItemsGroup_( const std::string& tabName, const std::string&
                                   DrawGroupConfig config ) // copy here for easier usage
 {
     auto itemSpacing = ImGui::GetStyle().ItemSpacing;
-    itemSpacing.y = menu_scaling();
+    itemSpacing.y = 3.0f * menu_scaling();
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding,
                          ImVec2( cRibbonButtonWindowPaddingX * menu_scaling(), cRibbonButtonWindowPaddingY * menu_scaling() ) );
@@ -1483,6 +1489,7 @@ void RibbonMenu::drawSceneListButtons_()
     auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Small );
     //font->Scale = 0.75f;
     ImGui::PushFont( font );
+    UI::TestEngine::pushTree( "RibbonSceneButtons" );
     for ( const auto& item : RibbonSchemaHolder::schema().sceneButtonsList )
     {
         auto it = RibbonSchemaHolder::schema().items.find( item );
@@ -1497,6 +1504,7 @@ void RibbonMenu::drawSceneListButtons_()
         buttonDrawer_.drawButtonItem( it->second, params );
         ImGui::SameLine();
     }
+    UI::TestEngine::popTree(); // "RibbonSceneButtons"
     ImGui::NewLine();
     ImGui::PopFont();
     const float separateLinePos = ImGui::GetCursorScreenPos().y;
@@ -1959,6 +1967,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
     if ( UI::button( "Load from file", Vector2f( buttonSize, 0 ) ) )
     {
         auto filename = openFileDialog( { "", {}, { {"JSON (.json)", "*.json"} } } );
+        std::string errorString;
         if ( !filename.empty() )
         {
             std::ifstream ifs( filename );
@@ -1979,18 +1988,20 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
                         uniformScale_ = tr->uniformScale;
                     } else
                     {
-                        spdlog::error( "Cannot parse transform" );
+                        errorString = "Cannot parse transform";
                     }
                 }
                 else
                 {
-                    spdlog::error( "Cannot parse transform" );
+                    errorString = "Cannot parse transform";
                 }
             }
             else
             {
-                spdlog::error( "Cannot open file for reading" );
+                errorString = "Cannot open file for reading";
             }
+            if ( !errorString.empty() )
+                pushNotification( { .text = errorString, .type = NotificationType::Error } );
         }
         ImGui::CloseCurrentPopup();
     }
@@ -2546,12 +2557,14 @@ void RibbonMenu::drawTopPanelOpened_()
                 setupItemsGroup_( tabIt->second, tab );
                 auto config = setupItemsGroupConfig_( tabIt->second, tab );
                 ImGui::TableNextRow();
+                UI::TestEngine::pushTree( "Ribbon" );
                 for ( int i = 0; i < tabIt->second.size(); ++i )
                 {
                     const auto& group = tabIt->second[i];
                     ImGui::TableNextColumn();
                     drawItemsGroup_( tab, group, config[i] );
                 }
+                UI::TestEngine::popTree(); // "Ribbon"
                 ImGui::TableNextColumn(); // fictive
                 ImGui::EndTable();
             }

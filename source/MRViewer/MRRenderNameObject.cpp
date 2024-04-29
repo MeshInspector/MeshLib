@@ -17,7 +17,7 @@ namespace MR
 
 void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backParams )
 {
-    if ( backParams.mouseHoverConsumed )
+    if ( bool( backParams.consumedInteractions & InteractionMask::mouseHover ) )
         return;
 
     // If it wasn't clipped to nothing...
@@ -26,30 +26,25 @@ void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backPa
         // React to hover and possibly click.
         if ( ImGuiMath::CompareAll( ImGui::GetMousePos() ) >= windowCornerA && ImGuiMath::CompareAll( ImGui::GetMousePos() ) < windowCornerB )
         {
-            backParams.mouseHoverConsumed = true;
-            isHovered = true;
-
-            if ( !prevFrameHovered  )
+            if ( backParams.tryConsumeMouseHover() )
             {
-                prevFrameHovered = true;
-                return;
-            }
+                isHovered = true;
 
-            if ( ImGui::IsMouseDown( ImGuiMouseButton_Left ) )
-                isActive = true;
+                if ( ImGui::IsMouseDown( ImGuiMouseButton_Left ) )
+                    isActive = true;
 
-            if ( ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
-            {
-                getViewerInstance().getMenuPluginAs<RibbonMenu>()->simulateNameTagClick(
-                    // Yes, a dumb cast. We could find the same object in the scene, but it's a waste of time.
-                    // Changing the `RenderObject` constructor parameter to accept a non-const reference requires changing a lot of stuff.
-                    *const_cast<VisualObject*>( object ),
-                    ImGui::GetIO().KeyCtrl ? ImGuiMenu::NameTagSelectionMode::toggle : ImGuiMenu::NameTagSelectionMode::selectOne
-                );
+                if ( ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
+                {
+                    getViewerInstance().getMenuPluginAs<RibbonMenu>()->simulateNameTagClick(
+                        // Yes, a dumb cast. We could find the same object in the scene, but it's a waste of time.
+                        // Changing the `RenderObject` constructor parameter to accept a non-const reference requires changing a lot of stuff.
+                        *const_cast<VisualObject*>( object ),
+                        ImGui::GetIO().KeyCtrl ? ImGuiMenu::NameTagSelectionMode::toggle : ImGuiMenu::NameTagSelectionMode::selectOne
+                    );
+                }
             }
         }
     }
-    prevFrameHovered = isHovered;
 }
 
 void RenderNameObject::Task::renderPass()

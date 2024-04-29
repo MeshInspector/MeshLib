@@ -2,7 +2,7 @@
 
 #include "MRViewerFwd.h"
 #include "MRMesh/MRVector3.h"
-#include <boost/signals2/signal.hpp>
+#include "MRMesh/MRSignal.h"
 #include <filesystem>
 #include <vector>
 

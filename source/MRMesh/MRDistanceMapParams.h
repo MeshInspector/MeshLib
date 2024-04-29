@@ -55,6 +55,13 @@ struct MeshToDistanceMapParams
     MRMESH_API MeshToDistanceMapParams( const AffineXf3f& xf, const Vector2i& resolution, const Vector2f& size );
     MRMESH_API MeshToDistanceMapParams( const AffineXf3f& xf, const Vector2f& pixelSize, const Vector2i& resolution );
 
+    /// converts in transformation
+    operator AffineXf3f() const
+    {
+        return { Matrix3f::fromColumns( xRange / float( resolution.x ), yRange / float( resolution.y ), direction ), orgPoint };
+    }
+    AffineXf3f xf() const { return operator AffineXf3f(); }
+
     Vector3f xRange = Vector3f( 1.f, 0.f, 0.f ); ///< Cartesian range vector between distance map borders in X direction
     Vector3f yRange = Vector3f( 0.f, 1.f, 0.f ); ///< Cartesian range vector between distance map borders in Y direction
     Vector3f direction = Vector3f( 0.f, 0.f, 1.f ); ///< direction of intersection ray
@@ -83,7 +90,8 @@ private:
 struct DistanceMapToWorld;
 
 /// Structure with parameters to generate DistanceMap by Contours
-struct ContourToDistanceMapParams {
+struct ContourToDistanceMapParams
+{
     /// Default ctor, make sure to fill all fields manually
     ContourToDistanceMapParams() = default;
 
@@ -110,6 +118,13 @@ struct ContourToDistanceMapParams {
         return orgPoint + Vector2f{ pixelSize.x * point.x, pixelSize.y * point.y };
     }
 
+    /// converts in transformation
+    operator AffineXf3f() const
+    {
+        return { Matrix3f::fromColumns( pixelSize.x * Vector3f::plusX(), pixelSize.y * Vector3f::plusY(), Vector3f::plusZ() ), { orgPoint.x, orgPoint.y, 0.F } };
+    }
+    AffineXf3f xf() const { return operator AffineXf3f(); }
+
     Vector2f pixelSize{ 1.F, 1.F }; ///< pixel size
     Vector2i resolution{ 1, 1 }; ///< distance map size
     Vector2f orgPoint{ 0.F, 0.F }; ///< coordinates of origin area corner
@@ -127,6 +142,15 @@ struct DistanceMapToWorld
 
     /// Init fields by `ContourToDistanceMapParams` struct
     MRMESH_API DistanceMapToWorld( const ContourToDistanceMapParams& params );
+
+    /// Converts from AffineXf3f
+    DistanceMapToWorld( const AffineXf3f & xf )
+        : orgPoint( xf.b )
+        , pixelXVec( xf.A.col( 0 ) )
+        , pixelYVec( xf.A.col( 1 ) )
+        , direction( xf.A.col( 2 ) )
+    {
+    }
     
 
     /// get world coordinate by depth map info
@@ -138,6 +162,12 @@ struct DistanceMapToWorld
         return orgPoint + x * pixelXVec + y * pixelYVec + depth * direction;
     }
 
+    /// converts in transformation X: X(p) == toWorld( p.x, p.y, p.z )
+    operator AffineXf3f() const
+    {
+        return { Matrix3f::fromColumns( pixelXVec, pixelYVec, direction ), orgPoint };
+    }
+    AffineXf3f xf() const { return operator AffineXf3f(); }
 
     /// world coordinates of distance map origin corner
     Vector3f orgPoint;

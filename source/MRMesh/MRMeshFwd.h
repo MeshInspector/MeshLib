@@ -333,6 +333,12 @@ using FacePredicate = std::function<bool( FaceId )>;
 using EdgePredicate = std::function<bool( EdgeId )>;
 using UndirectedEdgePredicate = std::function<bool( UndirectedEdgeId )>;
 
+template <typename T>
+[[nodiscard]] inline bool contains( const std::function<bool( Id<T> )> & pred, Id<T> id )
+{
+    return id.valid() && ( !pred || pred( id ) );
+}
+
 using VertMetric = std::function<float( VertId )>;
 using FaceMetric = std::function<float( FaceId )>;
 using EdgeMetric = std::function<float( EdgeId )>;

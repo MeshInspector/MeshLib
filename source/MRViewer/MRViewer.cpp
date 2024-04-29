@@ -63,7 +63,6 @@
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
-#include <boost/stacktrace.hpp>
 #endif
 #include "MRViewerIO.h"
 #include "MRProgressBar.h"
@@ -328,6 +327,8 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         firstLaunch = false;
     }
 
+    CommandLoop::setMainThreadId( std::this_thread::get_id() );
+
     auto& viewer = MR::Viewer::instanceRef();
 
     MR::setupLoggerByDefault();
@@ -352,7 +353,7 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     catch ( ... )
     {
         spdlog::critical( boost::current_exception_diagnostic_information() );
-        spdlog::critical( "Exception stacktrace:\n{}", to_string( boost::stacktrace::stacktrace() ) );
+        spdlog::info( "Exception stacktrace:\n{}", getCurrentStacktrace() );
         printCurrentTimerBranch();
         res = 1;
     }
@@ -367,6 +368,8 @@ void loadMRViewerDll()
 
 void filterReservedCmdArgs( std::vector<std::string>& args )
 {
+    if ( args.empty() )
+        return;
     bool nextW{ false };
     bool nextH{ false };
     std::vector<int> indicesToRemove;
@@ -2340,7 +2343,7 @@ PointInAllSpaces Viewer::getPixelPointInfo( const Vector3f& screenPoint ) const
                 Vector3f( static_cast<float>(res.viewportSpace.x), static_cast<float>(res.viewportSpace.y), 0.f )
             );
             // looking for all visible objects
-            auto [obj, pick] = viewport.pick_render_object( Vector2f( res.viewportSpace.x, res.viewportSpace.y ) );
+            auto [obj, pick] = viewport.pickRenderObject( { .point = Vector2f( res.viewportSpace.x, res.viewportSpace.y ) } );
             if(obj)
             {
                 res.obj = obj;

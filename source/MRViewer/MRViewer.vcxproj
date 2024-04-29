@@ -28,6 +28,7 @@
     <ClCompile Include="MRHistoryStore.cpp" />
     <ClCompile Include="MRMeshBoundarySelectionWidget.cpp" />
     <ClCompile Include="MRFrameCounter.cpp" />
+    <ClCompile Include="MRMoveObjectByMouseImpl.cpp" />
     <ClCompile Include="MRRenderDefaultObjects.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
     <ClCompile Include="MRSelectCurvaturePreference.cpp" />
@@ -108,6 +109,7 @@
     <ClCompile Include="MRUnits.cpp" />
     <ClCompile Include="MRVisualSubfeatures.cpp" />
     <ClCompile Include="MRNameTagClickListener.cpp" />
+    <ClCompile Include="MRUITestEngine.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -132,6 +134,7 @@
     <ClInclude Include="MRLambdaRibbonItem.h" />
     <ClInclude Include="MRMeshBoundarySelectionWidget.h" />
     <ClInclude Include="MRFrameCounter.h" />
+    <ClInclude Include="MRMoveObjectByMouseImpl.h" />
     <ClInclude Include="MRNotificationType.h" />
     <ClInclude Include="MRRibbonNotification.h" />
     <ClInclude Include="MRSelectCurvaturePreference.h" />
@@ -229,6 +232,7 @@
     <ClInclude Include="MRVisualSubfeatures.h" />
     <ClInclude Include="MRSignalCombiners.h" />
     <ClInclude Include="MRNameTagClickListener.h" />
+    <ClInclude Include="MRUITestEngine.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

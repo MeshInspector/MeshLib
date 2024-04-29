@@ -3,11 +3,12 @@
 #include "MRTimer.h"
 #include "MRPointToPointAligningTransform.h"
 #include "MRPointToPlaneAligningTransform.h"
+#include <algorithm>
 
 namespace MR
 {
 
-MultiwayICP::MultiwayICP( const Vector<MultiICPObject, MeshOrPointsId>& objects, float samplingVoxelSize ) :
+MultiwayICP::MultiwayICP( const Vector<MeshOrPointsXf, MeshOrPointsId>& objects, float samplingVoxelSize ) :
     objs_{ objects }
 {
     resamplePoints( samplingVoxelSize );
@@ -22,9 +23,18 @@ Vector<AffineXf3f, MeshOrPointsId> MultiwayICP::calculateTransformations()
     for ( iter_ = 1; iter_ <= prop_.iterLimit; ++iter_ )
     {
         updatePointPairs();
+        if ( iter_ == 1 && perIterationCb_ )
+            perIterationCb_( 0 );
+
         const bool pt2pt = ( prop_.method == ICPMethod::Combined && iter_ < 3 )
             || prop_.method == ICPMethod::PointToPoint;
-        if ( !( pt2pt ? p2ptIter_() : p2plIter_() ) )
+        
+        bool res = !( pt2pt ? p2ptIter_() : p2plIter_() );
+
+        if ( perIterationCb_ )
+            perIterationCb_( iter_ );
+
+        if ( res )
         {
             resultType_ = ICPExitType::NotFoundSolution;
             break;
@@ -72,7 +82,7 @@ void MultiwayICP::resamplePoints( float samplingVoxelSize )
     ParallelFor( objs_, [&] ( MeshOrPointsId ind )
     {
         const auto& obj = objs_[ind];
-        samplesPerObj[ind] = *obj.meshOrPoints.pointsGridSampling( samplingVoxelSize );
+        samplesPerObj[ind] = *obj.obj.pointsGridSampling( samplingVoxelSize );
     } );
 
     for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
@@ -164,7 +174,7 @@ void MultiwayICP::updatePointPairs()
     for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
         for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
             if ( i != j )
-                MR::updatePointPairs( pairsPerObj_[i][j], objs_[i].meshOrPoints, objs_[i].xf, objs_[j].meshOrPoints, objs_[j].xf, prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
+                MR::updatePointPairs( pairsPerObj_[i][j], objs_[i], objs_[j], prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
     deactivatefarDistPairs_();
 }
 
@@ -172,26 +182,40 @@ void MultiwayICP::deactivatefarDistPairs_()
 {
     MR_TIMER;
 
-    for ( int it = 0; it < 3; ++it )
+    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
     {
-        const auto avgDist = getMeanSqDistToPoint();
-        const auto maxDistSq = sqr( prop_.farDistFactor * avgDist );
-        if ( maxDistSq >= prop_.distThresholdSq )
-            break;
-        size_t deactivatedNum = 0;
-        for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+        for ( int it = 0; it < 3; ++it )
+        {
+            size_t numDeactivated = 0;
+            NumSum sum;
             for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
-                if ( i != j )
-                    deactivatedNum += MR::deactivateFarPairs( pairsPerObj_[i][j], maxDistSq );
-        if ( deactivatedNum == 0 )
-            break; // nothing was deactivated
+            {
+                if ( i == j )
+                    continue;
+                sum = sum + MR::getSumSqDistToPoint( pairsPerObj_[i][j] );
+            }
+            const auto avgDist = sum.rootMeanSqF();
+            const auto maxDistSq = sqr( prop_.farDistFactor * avgDist );
+            if ( maxDistSq >= prop_.distThresholdSq )
+                break;
+            for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
+            {
+                if ( i == j )
+                    continue;
+                numDeactivated += MR::deactivateFarPairs( pairsPerObj_[i][j], maxDistSq );
+            }
+
+            if ( numDeactivated == 0 )
+                break; // nothing was deactivated
+        }
     }
 }
 
 bool MultiwayICP::p2ptIter_()
 {
     MR_TIMER;
-    Vector<bool, MeshOrPointsId> valid( objs_.size() );
+    using FullSizeBool = uint8_t;
+    Vector<FullSizeBool, MeshOrPointsId> valid( objs_.size() );
     ParallelFor( objs_, [&] ( MeshOrPointsId id )
     {
         PointToPointAligningTransform p2pt;
@@ -202,7 +226,12 @@ bool MultiwayICP::p2ptIter_()
             for ( size_t idx : pairsPerObj_[id][j].active )
             {
                 const auto& vp = pairsPerObj_[id][j].vec[idx];
-                p2pt.add( vp.srcPoint, vp.tgtPoint, vp.weight );
+                p2pt.add( vp.srcPoint, 0.5f * ( vp.srcPoint + vp.tgtPoint ), vp.weight );
+            }
+            for ( size_t idx : pairsPerObj_[j][id].active )
+            {
+                const auto& vp = pairsPerObj_[j][id].vec[idx];
+                p2pt.add( vp.tgtPoint, 0.5f * ( vp.srcPoint + vp.tgtPoint ), vp.weight );
             }
         }
 
@@ -230,20 +259,21 @@ bool MultiwayICP::p2ptIter_()
         }
         if ( std::isnan( res.b.x ) ) //nan check
         {
-            valid[id] = false;
+            valid[id] = FullSizeBool( false );
             return;
         }
         objs_[id].xf = res * objs_[id].xf;
-        valid[id] = true;
+        valid[id] = FullSizeBool( true );
     } );
 
-    return std::all_of( valid.vec_.begin(), valid.vec_.end(), [] ( auto v ) { return v; } );
+    return std::all_of( valid.vec_.begin(), valid.vec_.end(), [] ( auto v ) { return bool( v ); } );
 }
 
 bool MultiwayICP::p2plIter_()
 {
     MR_TIMER;
-    Vector<bool, MeshOrPointsId> valid( objs_.size() );
+    using FullSizeBool = uint8_t;
+    Vector<FullSizeBool, MeshOrPointsId> valid( objs_.size() );
     ParallelFor( objs_, [&] ( MeshOrPointsId id )
     {
         Vector3f centroidRef;
@@ -255,14 +285,21 @@ bool MultiwayICP::p2plIter_()
             for ( size_t idx : pairsPerObj_[id][j].active )
             {
                 const auto& vp = pairsPerObj_[id][j].vec[idx];
-                centroidRef += vp.tgtPoint;
+                centroidRef += ( vp.tgtPoint + vp.srcPoint ) * 0.5f;
                 centroidRef += vp.srcPoint;
+                ++activeCount;
+            }
+            for ( size_t idx : pairsPerObj_[j][id].active )
+            {
+                const auto& vp = pairsPerObj_[j][id].vec[idx];
+                centroidRef += ( vp.tgtPoint + vp.srcPoint ) * 0.5f;
+                centroidRef += vp.tgtPoint;
                 ++activeCount;
             }
         }
         if ( activeCount <= 0 )
         {
-            valid[id] = false;
+            valid[id] = FullSizeBool( false );
             return;
         }
         centroidRef /= float( activeCount * 2 );
@@ -276,7 +313,12 @@ bool MultiwayICP::p2plIter_()
             for ( size_t idx : pairsPerObj_[id][j].active )
             {
                 const auto& vp = pairsPerObj_[id][j].vec[idx];
-                p2pl.add( vp.srcPoint - centroidRef, vp.tgtPoint - centroidRef, vp.tgtNorm, vp.weight );
+                p2pl.add( vp.srcPoint - centroidRef, ( vp.tgtPoint + vp.srcPoint ) * 0.5f - centroidRef, vp.tgtNorm, vp.weight );
+            }
+            for ( size_t idx : pairsPerObj_[j][id].active )
+            {
+                const auto& vp = pairsPerObj_[j][id].vec[idx];
+                p2pl.add( vp.tgtPoint - centroidRef, ( vp.tgtPoint + vp.srcPoint ) * 0.5f - centroidRef, vp.srcNorm, vp.weight );
             }
         }
 
@@ -325,13 +367,13 @@ bool MultiwayICP::p2plIter_()
 
         if ( std::isnan( res.b.x ) ) //nan check
         {
-            valid[id] = false;
+            valid[id] = FullSizeBool( false );
             return;
         }
         objs_[id].xf = centroidRefXf * res * centroidRefXf.inverse() * objs_[id].xf;
-        valid[id] = true;
+        valid[id] = FullSizeBool( true );
     } );
-    return std::all_of( valid.vec_.begin(), valid.vec_.end(), [] ( auto v ) { return v; } );
+    return std::all_of( valid.vec_.begin(), valid.vec_.end(), [] ( auto v ) { return bool( v ); } );
 }
 
 }

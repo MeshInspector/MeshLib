@@ -25,7 +25,7 @@ MRMESH_API extern const IOFilters Filters;
  */
 MRMESH_API VoidOrErrStr toRAW( const std::filesystem::path& path, const DistanceMap& dmap );
 MRMESH_API VoidOrErrStr toMrDistanceMap( const std::filesystem::path& path, const DistanceMap& dmapObject, const DistanceMapToWorld& params );
-MRMESH_API VoidOrErrStr toAnySupportedFormat( const std::filesystem::path& path, const DistanceMap& dmapObject, const DistanceMapToWorld* params = nullptr );
+MRMESH_API VoidOrErrStr toAnySupportedFormat( const std::filesystem::path& path, const DistanceMap& dmapObject, const AffineXf3f * xf = nullptr );
 
 /// \}
 

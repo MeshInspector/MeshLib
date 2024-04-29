@@ -75,7 +75,7 @@ public:
 
     /// finds 3d coordinates of the Point on the model surface for the (x,y) pixel
     /// Use the same params with distance map creation
-    [[nodiscard]] MRMESH_API std::optional<Vector3f> unproject( size_t x, size_t y, const DistanceMapToWorld& toWorldStruct ) const;
+    [[nodiscard]] MRMESH_API std::optional<Vector3f> unproject( size_t x, size_t y, const AffineXf3f& toWorld ) const;
 
     /**
      * \brief finds 3d coordinates of the Point on the model surface for the (x,y) interpolated value
@@ -84,7 +84,7 @@ public:
      * see https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-coordinates for details
      * all 4 elements around this point should be valid, returns nullopt if at least one is not valid
      */
-    [[nodiscard]] MRMESH_API std::optional<Vector3f> unprojectInterpolated( float x, float y, const DistanceMapToWorld& toWorldStruct ) const;
+    [[nodiscard]] MRMESH_API std::optional<Vector3f> unprojectInterpolated( float x, float y, const AffineXf3f& toWorld ) const;
 
     /// replaces every valid element in the map with its negative value
     MRMESH_API void negate();
@@ -242,11 +242,11 @@ MRMESH_API void distanceMapFromContours( DistanceMap & distMap, const Polyline2&
 [[nodiscard]] MRMESH_API Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap,
     const ContourToDistanceMapParams& params, float isoValue );
 
-/// iso-lines are created in real space
-/// ( contours plane with parameters according DistanceMapToWorld )
-/// \return pair contours in OXY & transformation from plane OXY to real contours plane
+/// computes iso-lines of distance map corresponding to given iso-value;
+/// in second returns the transformation from 0XY plane to world;
+/// \param useDepth true - the isolines will be located on distance map surface, false - isolines for any iso-value will be located on the common plane xf(0XY)
 [[nodiscard]] MRMESH_API std::pair<Polyline2, AffineXf3f> distanceMapTo2DIsoPolyline( const DistanceMap& distMap,
-    const DistanceMapToWorld& params, float isoValue, bool useDepth = false );
+    const AffineXf3f& xf, float isoValue, bool useDepth = false );
 [[nodiscard]] MRMESH_API Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float pixelSize, float isoValue );
 
 /// constructs an offset contour for given polyline
@@ -282,8 +282,8 @@ MRMESH_API void distanceMapFromContours( DistanceMap & distMap, const Polyline2&
 [[nodiscard]] MRMESH_API Polyline2 contourSubtract( const Polyline2& contoursA, const Polyline2& contoursB,
     const ContourToDistanceMapParams& params, float offsetInside = 0.f );
 
-/// converts distance map back to the mesh fragment with presented params
-[[nodiscard]] MRMESH_API Expected<Mesh, std::string> distanceMapToMesh( const DistanceMap& distMap, const DistanceMapToWorld& toWorldStruct, ProgressCallback cb = {} );
+/// converts distance map into mesh and applies a transformation to all points
+[[nodiscard]] MRMESH_API Expected<Mesh> distanceMapToMesh( const DistanceMap& distMap, const AffineXf3f& toWorld, ProgressCallback cb = {} );
 
 /// saves distance map to monochrome image in scales of gray:
 /// \param threshold - threshold of maximum values [0.; 1.]. invalid pixel set as 0. (black)
@@ -294,11 +294,11 @@ MRMESH_API VoidOrErrStr saveDistanceMapToImage( const DistanceMap& distMap, cons
 
 /// load distance map from monochrome image in scales of gray:
 /// \param threshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid
-[[nodiscard]] MRMESH_API Expected<DistanceMap, std::string> convertImageToDistanceMap( const Image& image, float threshold = 1.f / 255 );
+[[nodiscard]] MRMESH_API Expected<DistanceMap> convertImageToDistanceMap( const Image& image, float threshold = 1.f / 255 );
 
 /// load distance map from monochrome image file
 /// \param threshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid
-[[nodiscard]] MRMESH_API Expected<DistanceMap, std::string> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold = 1.f / 255 );
+[[nodiscard]] MRMESH_API Expected<DistanceMap> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold = 1.f / 255 );
 
 /// \}
 

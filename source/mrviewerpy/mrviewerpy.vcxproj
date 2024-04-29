@@ -16,6 +16,7 @@
   <ItemGroup>
     <ClCompile Include="MRPythonScene.cpp" />
     <ClCompile Include="MRPythonViewer.cpp" />
+    <ClCompile Include="MRPythonUiInteraction.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\mrmeshpy\mrmeshpy.vcxproj">

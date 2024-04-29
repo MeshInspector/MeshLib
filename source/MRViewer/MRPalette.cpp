@@ -255,7 +255,7 @@ void Palette::setZeroCentredLabels_()
         labels_.push_back( Label( 0.52f, getStringValue( parameters_.ranges[1] ) ) );
         labels_.push_back( Label( 0.48f, getStringValue( parameters_.ranges[2] ) ) );
         labels_.push_back( Label( 0.f, getStringValue( parameters_.ranges[3] ) ) );
-        
+
         //positions are shifted for avoiding overlapping
         fillLabels( parameters_.ranges[2], parameters_.ranges[3], 0.02f, 0.46f );
         fillLabels( parameters_.ranges[0], parameters_.ranges[1], 0.54f, 0.98f );
@@ -271,7 +271,7 @@ void Palette::setUniformLabels_()
     labels_.clear();
 
     if ( parameters_.ranges.size() == 2 )
-    { 
+    {
         int num = texture_.filter == FilterType::Linear ? 5 : parameters_.discretization + 1;
         if ( maxLabelCount_ && maxLabelCount_ < num )
             num = maxLabelCount_;
@@ -308,9 +308,9 @@ void Palette::setUniformLabels_()
         {
             for ( int i = 0; i < num; ++i )
             {
-                labels_[i].text = std::to_string( float( i ) / ( num - 1 ) * ( parameters_.ranges[1] - parameters_.ranges[0] ) + parameters_.ranges[0] );
+                labels_[i].text = getStringValue( float( i ) / ( num - 1 ) * ( parameters_.ranges[1] - parameters_.ranges[0] ) + parameters_.ranges[0] );
                 labels_[i].value = 1.f - float( i ) / ( num * 2 - 1 );
-                labels_[num + i].text = std::to_string( float( i ) / ( num - 1 ) * ( parameters_.ranges[3] - parameters_.ranges[2] ) + parameters_.ranges[2] );
+                labels_[num + i].text = getStringValue( float( i ) / ( num - 1 ) * ( parameters_.ranges[3] - parameters_.ranges[2] ) + parameters_.ranges[2] );
                 labels_[num + i].value = 1.f - float( i + num ) / ( num * 2 - 1 );
             }
         }
@@ -337,7 +337,7 @@ void Palette::setFilterType( FilterType type )
     resetLabels();
 }
 
-void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size )
+void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size, bool onlyTopHalf )
 {
     float maxTextSize = 0.0f;
     for ( const auto& label : labels_ )
@@ -346,18 +346,17 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
         if ( textSize > maxTextSize )
             maxTextSize = textSize;
     }
-    
+
     const auto& style = ImGui::GetStyle();
     const auto& viewer = getViewerInstance();
     const auto menu = viewer.getMenuPlugin();
     const auto& windowSize = viewer.viewport().getViewportRect();
-    const auto fontSize = ImGui::GetFontSize();
-    
+
     ImGui::SetNextWindowPos( pose, ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( size, ImGuiCond_Appearing );
 
-    ImGui::SetNextWindowSizeConstraints( { maxTextSize + style.WindowPadding.x + style.FramePadding.x + 20.0f * menu->menu_scaling(), 2 * fontSize }, { width( windowSize ), height( windowSize ) }, &resizeCallback_, ( void* )this );
-    
+    ImGui::SetNextWindowSizeConstraints( { maxTextSize + style.WindowPadding.x + style.FramePadding.x + 20.0f * menu->menu_scaling(), 2 * ImGui::GetFontSize() }, { width( windowSize ), height( windowSize ) }, &resizeCallback_, ( void* )this );
+
     auto paletteWindow = ImGui::FindWindowByName( windowName.c_str() );
 
     if ( paletteWindow )
@@ -404,17 +403,23 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
             setMaxLabelCount( int( ImGui::GetWindowSize().y / ImGui::GetFontSize() ) );
             resetLabels();
         }
-        
-        const auto pixRange = actualSize.y - fontSize;
+
+        auto pixRange = actualSize.y - ImGui::GetFontSize();
+        if ( onlyTopHalf )
+            pixRange *= 2;
 
         for ( int i = 0; i < labels_.size(); ++i )
         {
-            drawList->AddText( ImGui::GetFont(), fontSize,
-                                { actualPose.x + style.WindowPadding.x,
-                                actualPose.y + labels_[i].value * pixRange },
-                                ImGui::GetColorU32( SceneColors::get( SceneColors::Labels ).getUInt32() ),
-                                labels_[i].text.c_str() );
-        }       
+            if ( !onlyTopHalf || labels_[i].value <= 0.5f )
+            {
+                float textW = ImGui::CalcTextSize( labels_[i].text.c_str() ).x;
+                drawList->AddText(
+                    ImVec2( actualPose.x + style.WindowPadding.x + maxTextSize - textW, actualPose.y + labels_[i].value * pixRange ),
+                    ImGui::GetColorU32( SceneColors::get( SceneColors::Labels ).getUInt32() ),
+                    labels_[i].text.c_str()
+                );
+            }
+        }
     }
 
     if ( actualSize.x < maxTextSize + 2 * style.WindowPadding.x + style.FramePadding.x )
@@ -425,6 +430,8 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     if ( texture_.filter == FilterType::Discrete )
     {
         auto yStep = actualSize.y / sz;
+        if ( onlyTopHalf )
+            yStep *= 2;
         for ( int i = 0; i < sz; i++ )
         {
             drawList->AddRectFilled(
@@ -439,6 +446,8 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     if ( texture_.filter == FilterType::Linear )
     {
         auto yStep = actualSize.y / ( sz - 1 );
+        if ( onlyTopHalf )
+            yStep *= 2;
         for ( int i = 0; i + 1 < sz; i++ )
         {
             const auto color1 = colors[sz - 1 - i].getUInt32();
@@ -501,31 +510,22 @@ float Palette::getRelativePos( float val ) const
     return 0.5f;
 }
 
-VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids ) const
+VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region, const VertPredicate & valids ) const
 {
     MR_TIMER
-
-    // for FilterType::Discrete, start and end are at the boundary of texels to have equal distance between all colors
-    float texStart = 0, texEnd = 1;
-    if ( texture_.filter == FilterType::Linear )
-    {
-        // start and end are in the middle of texels with pure colors
-        const auto sz = float( texture_.pixels.size() );
-        texStart = 0.5f / sz;
-        texEnd = 1.0f - 0.5f / sz;
-    }
-    float texLen = texEnd - texStart;
 
     VertUVCoords res;
     res.resizeNoInit( region.size() );
     BitSetParallelFor( region, [&] ( VertId v )
     {
-        res[v] = UVCoord{ 
-            texLen * getRelativePos( values[v] ) + texStart,
-            contains( valids, v ) ? 0.25f : 0.75f };
+        res[v] = getUVcoord( values[v], contains( valids, v ) );
     } );
-
     return res;
+}
+
+VertUVCoords Palette::getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids ) const
+{
+    return getUVcoords( values, region, valids ? [valids]( VertId v ) { return valids->test( v ); } : VertPredicate{} );
 }
 
 void Palette::updateDiscretizatedColors_()
@@ -553,6 +553,19 @@ void Palette::updateDiscretizatedColors_()
     const auto sz = colors.size();
     colors.resize( 2 * sz, Color::gray() );
     texture_.resolution = { int( sz ), 2 };
+
+    // for FilterType::Discrete, start and end are at the boundary of texels to have equal distance between all colors
+    if ( texture_.filter == FilterType::Linear )
+    {
+        // start and end are in the middle of texels with pure colors
+        texStart_ = 0.5f / sz;
+        texEnd_ = 1.0f - 0.5f / sz;
+    }
+    else
+    {
+        texStart_ = 0;
+        texEnd_ = 1;
+    }
 }
 
 Color Palette::getBaseColor_( float val )
@@ -606,10 +619,12 @@ std::string Palette::getStringValue( float value )
         auto rangeDiff = std::abs( parameters_.ranges.back() - parameters_.ranges.front() );
         needExp = rangeDiff != 0.0f && ( rangeDiff > 1e4f || rangeDiff < 1e-2f );
     }
-    if ( needExp )
-        return fmt::format( "{0: .2e}", value );
-    else
-        return fmt::format( "{0: .4f}", value );
+
+    return valueToString<LengthUnit>( value, {
+        .unitSuffix = false,
+        .style = needExp ? NumberStyle::exponential : getDefaultUnitParams<LengthUnit>().style,
+        .stripTrailingZeroes = false,
+    } );
 }
 
 int Palette::getMaxLabelCount()

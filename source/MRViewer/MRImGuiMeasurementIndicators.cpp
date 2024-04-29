@@ -53,7 +53,21 @@ Params::Params()
         std::swap( colorText.g, colorTextOutline.g );
         std::swap( colorText.b, colorTextOutline.b );
     }
+}
 
+void point( Element elem, float menuScaling, const Params& params, ImVec2 point )
+{
+    forEachElement( elem, [&]( Element thisElem )
+    {
+        float radius = params.pointDiameter / 2;
+
+        if ( thisElem == Element::outline )
+            radius += params.outlineWidth;
+
+        radius *= menuScaling;
+
+        params.list->AddCircleFilled( point, radius, ( thisElem == Element::main ? params.colorMain : params.colorOutline ).getUInt32() );
+    } );
 }
 
 float StringWithIcon::getIconWidth() const

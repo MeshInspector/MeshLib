@@ -151,10 +151,16 @@ struct ICPProperties
     bool mutualClosest = false;
 };
 
+/// an object and its transformation to global space with other objects
+struct MeshOrPointsXf
+{
+    MeshOrPoints obj;
+    AffineXf3f xf;
+};
+
 /// in each pair updates the target data and performs basic filtering (activation)
 void updatePointPairs( PointPairs& pairs,
-    const MeshOrPoints& src, const AffineXf3f& srcXf,
-    const MeshOrPoints& tgt, const AffineXf3f& tgtXf,
+    const MeshOrPointsXf& src, const MeshOrPointsXf& tgt,
     float cosTreshold, float distThresholdSq, bool mutualClosest );
 
 /// reset active bit if pair distance is further than maxDistSq
@@ -172,8 +178,9 @@ public:
     /// \param refXf transformation from reference object space to global space
     /// \param fltSamples samples on floating object to find projections on the reference object during the algorithm
     /// \param refSamples samples on reference object to find projections on the floating object during the algorithm
-    MRMESH_API ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fltXf, const AffineXf3f& refXf,
-        const VertBitSet& fltSamples = {}, const VertBitSet& refSamples = {} );
+    ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fltXf, const AffineXf3f& refXf,
+        const VertBitSet& fltSamples = {}, const VertBitSet& refSamples = {} ) : ICP( { flt, fltXf }, { ref, refXf }, fltSamples, refSamples ) {}
+    MRMESH_API ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, const VertBitSet& fltSamples = {}, const VertBitSet& refSamples = {} );
 
     /// Constructs ICP framework with automatic points sampling on both objects
     /// \param flt floating object
@@ -182,7 +189,8 @@ public:
     /// \param refXf transformation from reference object space to global space
     /// \param samplingVoxelSize approximate distance between samples on each of two objects
     MRMESH_API ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fltXf, const AffineXf3f& refXf,
-        float samplingVoxelSize );
+        float samplingVoxelSize ) : ICP( { flt, fltXf }, { ref, refXf }, samplingVoxelSize ) {}
+    MRMESH_API ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, float samplingVoxelSize );
 
     /// tune algorithm params before run calculateTransformation()
     void setParams(const ICPProperties& prop) { prop_ = prop; }
@@ -240,11 +248,8 @@ public:
     [[nodiscard]] MRMESH_API AffineXf3f calculateTransformation();
 
 private:
-    MeshOrPoints flt_;
-    AffineXf3f fltXf_;
-    
-    MeshOrPoints ref_;
-    AffineXf3f refXf_;
+    MeshOrPointsXf flt_;
+    MeshOrPointsXf ref_;
 
     ICPProperties prop_;
 

@@ -8,10 +8,10 @@
 #include "MRRibbonSchema.h"
 #include "MRShortcutManager.h"
 #include "MRToolbar.h"
-#include <boost/signals2/signal.hpp>
+#include "MRMesh/MRSignal.h"
+#include "MRRibbonNotification.h"
 #include <type_traits>
 #include <array>
-#include "MRRibbonNotification.h"
 
 namespace MR
 {
@@ -242,8 +242,8 @@ private:
 
     std::string transformClipboardText_;
 
-    int currentTopPanelHeight_ = 111;
-    int topPanelOpenedHeight_ = 111;
+    int currentTopPanelHeight_ = 113;
+    int topPanelOpenedHeight_ = 113;
     int topPanelHiddenHeight_ = 33;
 
     bool closeContextOnChange_{ true };

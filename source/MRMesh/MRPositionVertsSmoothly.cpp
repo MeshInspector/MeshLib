@@ -3,8 +3,8 @@
 #include "MRMesh.h"
 #include "MRMeshComponents.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRTimer.h"
-#include "MRPch/MRTBB.h"
 #include <Eigen/SparseCholesky>
 
 namespace MR
@@ -78,10 +78,9 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts, const Ve
     solver.compute( A );
 
     Eigen::VectorXd sol[3];
-    tbb::parallel_for( tbb::blocked_range<int>( 0, 3, 1 ), [&]( const tbb::blocked_range<int> & range )
+    ParallelFor( 0, 3, [&]( int i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-            sol[i] = solver.solve( rhs[i] );
+        sol[i] = solver.solve( rhs[i] );
     } );
 
     // copy solution back into mesh points
@@ -93,6 +92,81 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts, const Ve
         pt.y = (float) sol[1][n];
         pt.z = (float) sol[2][n];
         ++n;
+    }
+}
+
+void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
+{
+    MR_TIMER
+
+    const auto & verts = mesh.topology.getVertIds( settings.region );
+    const auto sz = verts.count();
+    if ( sz <= 0 || settings.numIters <= 0 )
+        return;
+
+    // vertex id -> position in the matrix
+    HashMap<VertId, int> vertToMatPos = makeHashMapWithSeqNums( verts );
+
+    std::vector< Eigen::Triplet<double> > mTriplets;
+    Eigen::VectorXd rhs[3];
+    for ( int i = 0; i < 3; ++i )
+        rhs[i].resize( sz );
+
+    for ( int iter = 0; iter < settings.numIters; ++iter )
+    {
+        mTriplets.clear();
+        int n = 0;
+        for ( auto v : verts )
+        {
+            double sumW = 0;
+            Vector3d sumFixed;
+            for ( auto e : orgRing( mesh.topology, v ) )
+            {
+                const auto d = mesh.topology.dest( e );
+                const auto w = ( mesh.points[v] - mesh.points[d] ).lengthSq() / settings.distSq( e ) - 1;
+                sumW += w;
+                if ( auto it = vertToMatPos.find( d ); it != vertToMatPos.end() )
+                {
+                    // free neighbor
+                    int di = it->second;
+                    mTriplets.emplace_back( n, di, -w );
+                }
+                else
+                {
+                    // fixed neighbor
+                    sumFixed += Vector3d( w * mesh.points[d] );
+                }
+            }
+            sumFixed += Vector3d( settings.stabilizer * mesh.points[v] );
+            mTriplets.emplace_back( n, n, sumW + settings.stabilizer );
+            for ( int i = 0; i < 3; ++i )
+                rhs[i][n] = sumFixed[i];
+            ++n;
+        }
+
+        using SparseMatrix = Eigen::SparseMatrix<double,Eigen::RowMajor>;
+        SparseMatrix A;
+        A.resize( sz, sz );
+        A.setFromTriplets( mTriplets.begin(), mTriplets.end() );
+        Eigen::SimplicialLDLT<SparseMatrix> solver;
+        solver.compute( A );
+
+        Eigen::VectorXd sol[3];
+        ParallelFor( 0, 3, [&]( int i )
+        {
+            sol[i] = solver.solve( rhs[i] );
+        } );
+
+        // copy solution back into mesh points
+        n = 0;
+        for ( auto v : verts )
+        {
+            auto & pt = mesh.points[v];
+            pt.x = (float) sol[0][n];
+            pt.y = (float) sol[1][n];
+            pt.z = (float) sol[2][n];
+            ++n;
+        }
     }
 }
 

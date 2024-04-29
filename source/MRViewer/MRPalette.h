@@ -52,9 +52,11 @@ public:
     // set palette type (linear / discrete)
     MRVIEWER_API void setFilterType( FilterType type );
 
-    // Discrete: bar consists of single colored rectangles for each initial color
-    // Linear (default): color is changing from one to another during initial color list
-    MRVIEWER_API void draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size );
+    /// Draws vertical legend with labels in ImGui window with given name
+    /// Discrete: bar consists of single colored rectangles for each initial color
+    /// Linear (default): color is changing from one to another during initial color list
+    /// \param onlyTopHalf if true, draws only top half of the palette and labels stretched to whole window
+    MRVIEWER_API void draw( const std::string& windowName, const ImVec2& pose, const ImVec2& size, bool onlyTopHalf = false );
 
     // structure for label
     struct MRVIEWER_CLASS Label
@@ -93,10 +95,21 @@ public:
     // get relative position in [0,1], where 0 is for minimum and 1 is for maximum
     MRVIEWER_API float getRelativePos( float val ) const;
 
+    /// get UV coordinate in palette for given value
+    /// \param valid true - return coordinate of palette's color, false - return coordinate of gray
+    UVCoord getUVcoord( float val, bool valid = true ) const
+    {
+        return {
+            ( texEnd_ - texStart_ ) * getRelativePos( val ) + texStart_,
+            valid ? 0.25f : 0.75f
+        };
+    }
+
     /// get UV coordinates in palette for given values
     /// \param region only these vertices will be processed
     /// \param valids if given then defines subregion with valid values, and invalid values will get gray color
-    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids = nullptr ) const;
+    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertPredicate & valids = {} ) const;
+    MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids ) const;
 
     // base parameters of palette
     struct Parameters
@@ -147,6 +160,9 @@ private:
 
     // stores OpenGL textures. Change useDiscrete_ to switch between them
     MeshTexture texture_;
+
+    // texture positions of min and max values
+    float texStart_ = 0, texEnd_ = 1;
 
     Parameters parameters_;
 

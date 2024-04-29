@@ -231,15 +231,6 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
 
     drawThemeSelector_( menuWidth, menuScaling );
 
-    // TODO
-    static int decimalPlaces = 2;
-    if ( !viewer->isDeveloperFeaturesEnabled() || !RibbonSchemaHolder::schema().experimentalFeatures )
-        goto skip;
-    ImGui::SetNextItemWidth( 100.0f * menuScaling );
-    UI::drag<NoUnit>( "Decimal places", decimalPlaces, 1, 0, 10 );
-    UI::setTooltipIfHovered( "Show this number of digits after decimal dot", menuScaling );
-skip:
-
     bool savedDialogsBackUp = viewer->getMenuPlugin()->isSavedDialogPositionsEnabled();
     bool savedDialogsVal = savedDialogsBackUp;
     UI::checkbox( "Save Tool Window Positions", &savedDialogsVal );
@@ -875,7 +866,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
         ImGui::SetCursorPosX( menuWidth - 150.0f * menuScaling );
 
 		ImGui::SetCursorPosY( posY );
-        UI::button( "Set other", Vector2f( -1, buttonHeight ) );
+        UI::button( fmt::format( "Set other##{}", i ).c_str(), Vector2f( -1, buttonHeight ) );
         if ( ImGui::IsItemHovered() )
         {
             ImGui::BeginTooltip();

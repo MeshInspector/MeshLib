@@ -225,6 +225,10 @@ enum class DegreesMode
 template <UnitEnum E>
 struct UnitToStringParams
 {
+    // The resulting string is wrapped in this.
+    // Do NOT use this for custom unit suffixes! Add them as actual units instead.
+    std::string_view decorationFormatString = "{}";
+
     // --- Units:
 
     // The measurement unit of the input.

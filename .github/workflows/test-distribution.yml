@@ -99,10 +99,6 @@ jobs:
         run: |
           apt-get -y install clang-14
 
-      - name: Debug output
-        if: always()
-        run: sudo cat /etc/ld.so.conf.d/meshlib_libs.conf
-
       - name: Run MeshViewer
         if: always()
         run: xvfb-run -a MeshViewer -hidden -noEventLoop
@@ -133,7 +129,7 @@ jobs:
 
 
   macos-test:
-    runs-on: macos-latest
+    runs-on: macos-12
     timeout-minutes: 30
     steps:
       - name: Checkout

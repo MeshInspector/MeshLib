@@ -4,6 +4,8 @@
 
 #include <MRPch/MRSpdlog.h>
 
+#include <GLFW/glfw3.h>
+
 #include <dlfcn.h>
 
 #include <unordered_set>
@@ -93,6 +95,7 @@ void onSpaceMouseMessage( uint32_t, uint32_t type, void* arg )
                     }
                 }
                 gButtonState = state->buttons;
+                glfwPostEmptyEvent();
                 break;
 
             case kConnexionCmdHandleAxis:
@@ -108,6 +111,7 @@ void onSpaceMouseMessage( uint32_t, uint32_t type, void* arg )
                     -normalize( state->axis[5] ),
                 };
                 viewer.spaceMouseMove( translate, rotate );
+                glfwPostEmptyEvent();
             }
                 break;
         }

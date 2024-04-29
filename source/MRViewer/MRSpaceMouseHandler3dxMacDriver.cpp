@@ -55,6 +55,18 @@ typedef int16_t (*ConnexionClientControlFunc)( uint16_t clientID, uint32_t messa
 std::unordered_set<uint16_t> gKnownClientIds;
 uint32_t gButtonState{ 0 };
 
+float normalize( int16_t value )
+{
+    constexpr auto cFactor = 350.f;
+    constexpr auto cThreshold = 0.01f;
+
+    auto result = (float)value / cFactor;
+    if ( std::abs( result ) < cThreshold )
+        result = 0.f;
+
+    return result;
+}
+
 void onSpaceMouseMessage( uint32_t, uint32_t type, void* arg )
 {
     auto& viewer = getViewerInstance();
@@ -85,16 +97,15 @@ void onSpaceMouseMessage( uint32_t, uint32_t type, void* arg )
 
             case kConnexionCmdHandleAxis:
             {
-                // TODO: correct mapping
                 const Vector3f translate {
-                    (float)state->axis[0],
-                    (float)state->axis[1],
-                    (float)state->axis[2],
+                    +normalize( state->axis[0] ),
+                    -normalize( state->axis[1] ),
+                    +normalize( state->axis[2] ),
                 };
                 const Vector3f rotate {
-                    (float)state->axis[3],
-                    (float)state->axis[4],
-                    (float)state->axis[5],
+                    +normalize( state->axis[3] ),
+                    +normalize( state->axis[4] ),
+                    -normalize( state->axis[5] ),
                 };
                 viewer.spaceMouseMove( translate, rotate );
             }

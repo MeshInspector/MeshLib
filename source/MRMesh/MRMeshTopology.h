@@ -123,9 +123,9 @@ public:
     /// gets 3 vertices of given triangular face;
     /// the vertices are returned in counter-clockwise order if look from mesh outside
     void getTriVerts( FaceId f, VertId & v0, VertId & v1, VertId & v2 ) const { getLeftTriVerts( edgeWithLeft( f ), v0, v1, v2 ); }
-    void getTriVerts( FaceId f, VertId (&v)[3] ) const { getTriVerts( f, v[0], v[1], v[2] ); }
-    void getTriVerts( FaceId f, ThreeVertIds & v ) const { getTriVerts( f, v[0], v[1], v[2] ); }
-    [[nodiscard]] ThreeVertIds getTriVerts( FaceId f ) const { ThreeVertIds v; getTriVerts( f, v[0], v[1], v[2] ); return v; }
+    void getTriVerts( FaceId f, VertId (&v)[3] ) const { getLeftTriVerts( edgeWithLeft( f ), v ); }
+    void getTriVerts( FaceId f, ThreeVertIds & v ) const { getLeftTriVerts( edgeWithLeft( f ), v ); }
+    [[nodiscard]] ThreeVertIds getTriVerts( FaceId f ) const { return getLeftTriVerts( edgeWithLeft( f ) ); }
 
     /// returns three vertex ids for valid triangles, invalid triangles are skipped
     [[nodiscard]] MRMESH_API std::vector<ThreeVertIds> getAllTriVerts() const;
@@ -138,6 +138,8 @@ public:
     /// the vertices are returned in counter-clockwise order if look from mesh outside
     MRMESH_API void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
                void getLeftTriVerts( EdgeId a, VertId (&v)[3] ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
+               void getLeftTriVerts( EdgeId a, ThreeVertIds & v ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
+    [[nodiscard]] ThreeVertIds getLeftTriVerts( EdgeId a ) const { ThreeVertIds v; getLeftTriVerts( a, v[0], v[1], v[2] ); return v; }
 
     /// if given point is
     /// 1) in vertex, then invokes callback once with it;

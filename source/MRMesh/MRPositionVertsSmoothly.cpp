@@ -4,6 +4,7 @@
 #include "MRMeshComponents.h"
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
+#include "MRTriMath.h"
 #include "MRTimer.h"
 #include <Eigen/SparseCholesky>
 
@@ -166,6 +167,19 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
             pt.y = (float) sol[1][n];
             pt.z = (float) sol[2][n];
             ++n;
+        }
+
+        for ( auto f : mesh.topology.getValidFaces() )
+        {
+            if ( mesh.normal( f ).z >= 0 )
+                continue;
+            auto vs = mesh.topology.getTriVerts( f );
+            Triangle3f t;
+            for ( int i = 0; i < 3; ++i )
+                t[i] = mesh.points[ vs[i] ];
+            t = makeDegenerate( t );
+            for ( int i = 0; i < 3; ++i )
+                mesh.points[ vs[i] ] = t[i];
         }
     }
 }

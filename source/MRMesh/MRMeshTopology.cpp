@@ -509,16 +509,6 @@ bool MeshTopology::isClosed( const FaceBitSet * region ) const
     return true;
 }
 
-EdgeLoop MeshTopology::trackBoundaryLoop( EdgeId e0, const FaceBitSet * region ) const
-{
-    return trackRightBoundaryLoop( *this, e0, region );
-}
-
-std::vector<EdgeLoop> MeshTopology::findBoundary( const FaceBitSet * region ) const
-{
-    return findRightBoundary( *this, region );
-}
-
 std::vector<EdgeId> MeshTopology::findHoleRepresentiveEdges() const
 {
     MR_TIMER

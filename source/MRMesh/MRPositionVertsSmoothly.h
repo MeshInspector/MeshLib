@@ -31,6 +31,9 @@ struct SpacingSettings
 
     /// too small number here can lead to instability, too large - to slow convergence
     float stabilizer = 10;
+
+    /// if this predicated is given, then all inverted faces will be converted in degenerate faces at the end of each iteration
+    FacePredicate isInverted;
 };
 
 /// Moves given vertices to make the distances between them as specified

@@ -169,17 +169,20 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
             ++n;
         }
 
-        for ( auto f : mesh.topology.getValidFaces() )
+        if ( settings.isInverted )
         {
-            if ( mesh.normal( f ).z >= 0 )
-                continue;
-            auto vs = mesh.topology.getTriVerts( f );
-            Triangle3f t;
-            for ( int i = 0; i < 3; ++i )
-                t[i] = mesh.points[ vs[i] ];
-            t = makeDegenerate( t );
-            for ( int i = 0; i < 3; ++i )
-                mesh.points[ vs[i] ] = t[i];
+            for ( auto f : mesh.topology.getValidFaces() )
+            {
+                if ( !settings.isInverted( f ) )
+                    continue;
+                auto vs = mesh.topology.getTriVerts( f );
+                Triangle3f t;
+                for ( int i = 0; i < 3; ++i )
+                    t[i] = mesh.points[ vs[i] ];
+                t = makeDegenerate( t );
+                for ( int i = 0; i < 3; ++i )
+                    mesh.points[ vs[i] ] = t[i];
+            }
         }
     }
 }

@@ -109,7 +109,7 @@ jobs:
 
       - name: Create and fix Wheel
         run: |
-          ${{ matrix.py-cmd }} -m pip install --upgrade auditwheel wheel setuptools pybind11-stubgen
+          ${{ matrix.py-cmd }} -m pip install --upgrade auditwheel wheel setuptools pybind11-stubgen typing-extensions
           ${{ matrix.py-cmd }} ./scripts/wheel/setup_workspace.py
           cd ./scripts/wheel/meshlib
           PYTHONPATH=. ${{ matrix.py-cmd }} $(which pybind11-stubgen) --exit-code --output-dir . meshlib.mrmeshpy

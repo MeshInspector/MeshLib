@@ -264,7 +264,7 @@ jobs:
       - name: Create and fix Wheel
         run: |
           py -${{matrix.py-version}} -m pip install --upgrade pip
-          py -${{matrix.py-version}} -m pip install --upgrade wheel setuptools delvewheel pybind11-stubgen
+          py -${{matrix.py-version}} -m pip install --upgrade wheel setuptools delvewheel pybind11-stubgen typing-extensions
           py -${{matrix.py-version}} .\scripts\wheel\setup_workspace.py
           $env:PYBIND11_STUBGEN_PATH = $PWD.Path + "\source\x64\Release"
           cd scripts\wheel\meshlib
@@ -372,7 +372,7 @@ jobs:
       - name: Create and fix Wheel
         run: |
           ${{ matrix.py-cmd }} -m pip install --upgrade pip
-          ${{ matrix.py-cmd }} -m pip install --upgrade wheel setuptools delocate==0.10.7 pybind11-stubgen
+          ${{ matrix.py-cmd }} -m pip install --upgrade wheel setuptools delocate==0.10.7 pybind11-stubgen typing-extensions
           ${{ matrix.py-cmd }} ./scripts/wheel/setup_workspace.py
           cd ./scripts/wheel/meshlib
           PYTHONPATH=. pybind11-stubgen --exit-code --output-dir . meshlib.mrmeshpy

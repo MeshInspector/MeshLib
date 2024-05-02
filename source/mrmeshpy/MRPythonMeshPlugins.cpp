@@ -36,7 +36,7 @@
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRFixSelfIntersections.h"
 #include <pybind11/functional.h>
-#include <pybind11/stl.h> // for std::optional
+#include <pybind11/stl.h> // for automatic conversion of std::optional and std::vector into python types
 #pragma warning(push)
 #pragma warning(disable: 4464) // relative include path contains '..'
 #include <pybind11/stl/filesystem.h>

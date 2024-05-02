@@ -571,42 +571,42 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
     m.def( "makeTorus", &makeTorus,
         pybind11::arg( "primaryRadius" ) = 1.0f, pybind11::arg( "secondaryRadius" ) = 0.1f,
         pybind11::arg( "primaryResolution" ) = 16, pybind11::arg( "secondaryResolution" ) = 16,
-        pybind11::arg( "points" ) = nullptr,
+        pybind11::arg( "points" ) = pybind11::list{},
         "Z is symmetry axis of this torus\n"
         "points - optional out points of main circle" );
 
     m.def( "makeOuterHalfTorus", &makeOuterHalfTorus,
         pybind11::arg( "primaryRadius" ) = 1.0f, pybind11::arg( "secondaryRadius" ) = 0.1f,
         pybind11::arg( "primaryResolution" ) = 16, pybind11::arg( "secondaryResolution" ) = 16,
-        pybind11::arg( "points" ) = nullptr,
+        pybind11::arg( "points" ) = pybind11::list{},
         "creates torus without inner half faces\n"
         "main application - testing fillHole and Stitch" );
 
     m.def( "makeTorusWithUndercut", &makeTorusWithUndercut,
         pybind11::arg( "primaryRadius" ) = 1.0f, pybind11::arg( "secondaryRadiusInner" ) = 0.1f, pybind11::arg( "secondaryRadiusOuter" ) = 0.2f,
         pybind11::arg( "primaryResolution" ) = 16, pybind11::arg( "secondaryResolution" ) = 16,
-        pybind11::arg( "points" ) = nullptr,
+        pybind11::arg( "points" ) = pybind11::list{},
         "creates torus with inner protruding half as undercut\n"
         "main application - testing fixUndercuts" );
 
     m.def( "makeTorusWithSpikes", &makeTorusWithSpikes,
         pybind11::arg( "primaryRadius" ) = 1.0f, pybind11::arg( "secondaryRadiusInner" ) = 0.1f, pybind11::arg( "secondaryRadiusOuter" ) = 0.2f,
         pybind11::arg( "primaryResolution" ) = 16, pybind11::arg( "secondaryResolution" ) = 16,
-        pybind11::arg( "points" ) = nullptr,
+        pybind11::arg( "points" ) = pybind11::list{},
         "creates torus with some handed-up points\n"
         "main application - testing fixSpikes and Relax" );
 
     m.def( "makeTorusWithComponents", &makeTorusWithComponents,
         pybind11::arg( "primaryRadius" ) = 1.0f, pybind11::arg( "secondaryRadius" ) = 0.1f,
         pybind11::arg( "primaryResolution" ) = 16, pybind11::arg( "secondaryResolution" ) = 16,
-        pybind11::arg( "points" ) = nullptr,
+        pybind11::arg( "points" ) = pybind11::list{},
         "creates torus with empty sectors\n"
         "main application - testing Components" );
 
     m.def( "makeTorusWithSelfIntersections", &makeTorusWithSelfIntersections,
         pybind11::arg( "primaryRadius" ) = 1.0f, pybind11::arg( "secondaryRadius" ) = 0.1f,
         pybind11::arg( "primaryResolution" ) = 16, pybind11::arg( "secondaryResolution" ) = 16,
-        pybind11::arg( "points" ) = nullptr,
+        pybind11::arg( "points" ) = pybind11::list{},
         "creates torus with empty sectors\n"
         "main application - testing Components" );
 

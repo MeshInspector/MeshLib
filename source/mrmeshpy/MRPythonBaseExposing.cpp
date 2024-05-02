@@ -33,8 +33,6 @@
 
 MR_INIT_PYTHON_MODULE( mrmeshpy )
 
-MR_ADD_PYTHON_VEC( mrmeshpy, vectorFloat, float )
-
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, ExpectedVoid, MR::VoidOrErrStr )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ExpectedVoid, [] ( pybind11::module_& )
 {
@@ -156,11 +154,6 @@ MR_ADD_PYTHON_VECTOR2( Vector2i, int )
 MR_ADD_PYTHON_VECTOR2( Vector2f, float )
 MR_ADD_PYTHON_VECTOR2( Vector2d, double )
 
-MR_ADD_PYTHON_VEC( mrmeshpy, Contour2f, MR::Vector2f )
-MR_ADD_PYTHON_VEC( mrmeshpy, Contours2f, MR::Contour2f )
-MR_ADD_PYTHON_VEC( mrmeshpy, Contour2d, MR::Vector2d )
-MR_ADD_PYTHON_VEC( mrmeshpy, Contours2d, MR::Contour2d )
-
 #define MR_ADD_PYTHON_VECTOR3(name, type)\
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, name, MR::Vector3<type> )\
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
@@ -220,11 +213,6 @@ MR_ADD_PYTHON_VECTOR3( Vector3i, int )
 MR_ADD_PYTHON_VECTOR3( Vector3f, float )
 MR_ADD_PYTHON_VECTOR3( Vector3d, double )
 
-MR_ADD_PYTHON_VEC( mrmeshpy, Contour3f, MR::Vector3f )
-MR_ADD_PYTHON_VEC( mrmeshpy, Contours3f, MR::Contour3f )
-MR_ADD_PYTHON_VEC( mrmeshpy, Contour3d, MR::Vector3d )
-MR_ADD_PYTHON_VEC( mrmeshpy, Contours3d, MR::Contour3d )
-
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, Color, MR::Color )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Color, [] ( pybind11::module_& )
 {
@@ -245,7 +233,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Color, [] ( pybind11::module_& )
             return ss.str();
         } );
 } )
-MR_ADD_PYTHON_VEC( mrmeshpy, vectorColor, MR::Color )
 
 #define MR_ADD_PYTHON_MATRIX3( name, type ) \
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, name, type ) \
@@ -533,12 +520,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPoint, [] ( pybind11::module_& )
         def( pybind11::init<>() ).
         def( pybind11::init<float, float>(), pybind11::arg( "a" ), pybind11::arg( "b" ) ).
         def( pybind11::init<const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&>(),
-            pybind11::arg( "p" ), pybind11::arg( "v0" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ), 
+            pybind11::arg( "p" ), pybind11::arg( "v0" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ),
             "given a point coordinates and triangle (v0,v1,v2) computes barycentric coordinates of the point" ).
         def( pybind11::init<const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&>(),
             pybind11::arg( "p" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ),
             "given a point coordinates and triangle (0,v1,v2) computes barycentric coordinates of the point" ).
-        def_readwrite( "a", &MR::TriPointf::a, 
+        def_readwrite( "a", &MR::TriPointf::a,
             "barycentric coordinates:\n"
             "\ta+b in [0,1], a+b=0 => point is in v0, a+b=1 => point is on [v1,v2] edge\n"
             "a in [0,1], a=0 => point is on [v2,v0] edge, a=1 => point is in v1" ).
@@ -546,7 +533,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPoint, [] ( pybind11::module_& )
 
     MR_PYTHON_CUSTOM_CLASS( MeshTriPoint ).doc() =
         "encodes a point inside a triangular mesh face using barycentric coordinates\n"
-        "\tNotations used below:\n" 
+        "\tNotations used below:\n"
         "\t v0 - the value in org( e )\n"
         "\t v1 - the value in dest( e )\n"
         "\t v2 - the value in dest( next( e ) )" ;
@@ -582,18 +569,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, EdgeId, [] ( pybind11::module_& )
         def( "undirected", &MR::EdgeId::undirected, "returns unique identifier of the edge ignoring its direction" ).
         def( "get", &MR::EdgeId::operator int );
 } )
-
-MR_ADD_PYTHON_VEC( mrmeshpy, vectorUndirectedEdges, MR::UndirectedEdgeId )
-
-MR_ADD_PYTHON_VEC( mrmeshpy, vectorEdges, MR::EdgeId )
-
-MR_ADD_PYTHON_VEC( mrmeshpy, vectorVerts, MR::VertId )
-
-MR_ADD_PYTHON_VEC( mrmeshpy, HolesVertIds, MR::PlanarTriangulation::HoleVertIds )
-
-MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaces, MR::FaceId )
-
-MR_ADD_PYTHON_VEC( mrmeshpy, vectorEdgePath, MR::EdgePath )
 
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, BoostBitSet, boost::dynamic_bitset<uint64_t> )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, BoostBitSet, [] ( pybind11::module_& )
@@ -632,6 +607,3 @@ ADD_PYTHON_BITSET( VertBitSet, MR::VertBitSet )
 ADD_PYTHON_BITSET( UndirectedEdgeBitSet, MR::UndirectedEdgeBitSet )
 ADD_PYTHON_BITSET( EdgeBitSet, MR::EdgeBitSet )
 ADD_PYTHON_BITSET( FaceBitSet, MR::FaceBitSet )
-
-MR_ADD_PYTHON_VEC( mrmeshpy, vectorVertBitSet, MR::VertBitSet )
-MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaceBitSet, MR::FaceBitSet )

@@ -14,7 +14,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         value( "PointToPlane", MR::ICPMethod::PointToPlane,
             "select transformation that minimizes mean squared distance between a point and a plane via the other point in each pair, "
             "converge much faster than PointToPoint in case of many good (with not all points/normals in one plane) pairs" );
-    
+
     pybind11::enum_<MR::ICPMode>( m, "ICPMode", "The group of transformations, each with its own degrees of freedom" ).
         value( "RigidScale", MR::ICPMode::RigidScale, "rigid body transformation with uniform scaling (7 degrees of freedom)" ).
         value( "AnyRigidXf", MR::ICPMode::AnyRigidXf, "rigid body transformation (6 degrees of freedom)" ).
@@ -51,7 +51,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def_readwrite( "badIterStopCount", &MR::ICPProperties::badIterStopCount, "maximum iterations without improvements" ).
         def_readwrite( "exitVal", &MR::ICPProperties::exitVal, "Algorithm target root-mean-square distance. As soon as it is reached, the algorithm stops." ).
         def_readwrite( "mutualClosest", &MR::ICPProperties::mutualClosest, "A pair of points is formed only if both points in the pair are mutually closest (reciprocity test passed)." );
-        
+
     pybind11::class_<MR::ICP>( m, "ICP", "This class allows to match two meshes with almost same geometry throw ICP point-to-point or point-to-plane algorithms" ).
         def( pybind11::init<const MR::Mesh&, const MR::Mesh&, const MR::AffineXf3f&, const MR::AffineXf3f&, const MR::VertBitSet&, const MR::VertBitSet&>(),
             pybind11::arg( "flt" ), pybind11::arg( "ref" ),
@@ -65,7 +65,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
             "refXf - transformation from reference object space to global space\n"
             "fltSamples - samples on floating object to find projections on the reference object during the algorithm\n"
             "refSamples - samples on reference object to find projections on the floating object during the algorithm" ).
-        def( pybind11::init<const MR::Mesh&, const MR::Mesh&, const MR::AffineXf3f&, const MR::AffineXf3f&, float>(), 
+        def( pybind11::init<const MR::Mesh&, const MR::Mesh&, const MR::AffineXf3f&, const MR::AffineXf3f&, float>(),
             pybind11::arg( "flt" ), pybind11::arg( "ref" ),
             pybind11::arg( "fltXf" ), pybind11::arg( "refXf" ),
             pybind11::arg( "samplingVoxelSize" ),
@@ -97,5 +97,3 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def( "autoSelectFloatXf", &MR::ICP::autoSelectFloatXf, "automatically selects initial transformation for the floating object based on covariance matrices of both floating and reference objects; applies the transformation to the floating object and returns it" ).
         def( "updatePointPairs", &MR::ICP::updatePointPairs, "recompute point pairs after manual change of transformations or parameters" );
 } )
-
-MR_ADD_PYTHON_VEC( mrmeshpy, vectorICPPointPair, MR::PointPair )

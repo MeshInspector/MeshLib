@@ -5,6 +5,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include <pybind11/stl_bind.h>
+#include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 #include "MRExpected.h"
 #include <functional>
@@ -56,7 +57,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_inst_, [] ( pybind11::module_& modu
 /// Explicitly instantiate the Python class wrapper with a custom function
 /// (pybind11::bind_vector, pybind11::bind_map, etc.)
 /// \sa MR_ADD_PYTHON_CUSTOM_CLASS
-/// \sa MR_ADD_PYTHON_VEC
 /// \sa MR_ADD_PYTHON_MAP
 #define MR_ADD_PYTHON_CUSTOM_CLASS_INST_FUNC( moduleName, name, ... ) \
 MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_inst_, [] ( pybind11::module_& module ) \
@@ -82,27 +82,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_inst_, [] ( pybind11::module_& modu
  *         .def( pybind11::init<>() );
  * }
  * @endcode
- * See also \ref MR_ADD_PYTHON_VEC and \ref MR_ADD_PYTHON_MAP macros for customized class definition examples.
+ * See also \ref MR_ADD_PYTHON_MAP macro for a customized class definition example.
  */
 #define MR_ADD_PYTHON_CUSTOM_CLASS( moduleName, name, type ) \
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, type ) \
 MR_ADD_PYTHON_CUSTOM_CLASS_INST( moduleName, name )
-
-#define MR_ADD_PYTHON_VEC( moduleName, name, type) \
-PYBIND11_MAKE_OPAQUE( std::vector<type> )          \
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, std::vector<type>, std::unique_ptr<std::vector<type>> ) \
-MR_ADD_PYTHON_CUSTOM_CLASS_INST_FUNC( moduleName, name, [] ( pybind11::module_& module ) { return pybind11::bind_vector<std::vector<type>>( module, #name, pybind11::module_local(false) ); } ) \
-MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] ( pybind11::module_& )                                           \
-{\
-    using vecType = std::vector<type>;\
-    MR_PYTHON_CUSTOM_CLASS( name ).\
-        def( pybind11::init<>() ).\
-        def( pybind11::init<size_t>(), pybind11::arg( "size" ) ).\
-        def( "empty", &vecType::empty ).\
-        def( "size", &vecType::size ).\
-        def( "resize", ( void ( vecType::* )( const vecType::size_type ) )& vecType::resize ).\
-        def( "clear", &vecType::clear ); \
-} )
 
 #define MR_ADD_PYTHON_MAP( moduleName, name, mapType ) \
 PYBIND11_MAKE_OPAQUE( mapType )                        \

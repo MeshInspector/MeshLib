@@ -34,7 +34,6 @@ namespace
         return *cur;
     }
 
-    // Not using `MR_ADD_PYTHON_VEC` here, I don't seem to need any of custom functions it provides.
     std::vector<TypedEntry> listEntries( const std::vector<std::string>& path )
     {
         std::vector<TypedEntry> ret;

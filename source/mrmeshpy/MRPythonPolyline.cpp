@@ -134,8 +134,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, UndirectedEdgeUndirectedEdge, [] ( pybind11:
         def_readwrite( "bUndirEdge", &MR::UndirectedEdgeUndirectedEdge::bUndirEdge );
 } )
 
-MR_ADD_PYTHON_VEC( mrmeshpy, vectorUndirectedEdgeUndirectedEdge, MR::UndirectedEdgeUndirectedEdge )
-
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, findSelfCollidingEdges, [] ( pybind11::module_& m )
 {
     m.def( "findSelfCollidingEdges", &MR::findSelfCollidingEdges, pybind11::arg( "polyline" ), "finds all pairs of colliding edges from 2d polyline" );

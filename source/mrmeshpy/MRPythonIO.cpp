@@ -220,7 +220,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveMesh, [] ( pybind11::module_& m )
     m.def( "saveMesh",
         MR::decorateExpected( []( const MR::Mesh& m, const std::filesystem::path& p, const VertColors* cs, ProgressCallback cb )
             { return MR::MeshSave::toAnySupportedFormat( m, p, { .colors = cs, .progress = cb } ); } ),
-        pybind11::arg( "mesh" ), pybind11::arg( "path" ), pybind11::arg( "colors" ) = nullptr, pybind11::arg( "callback" ) = ProgressCallback{}, 
+        pybind11::arg( "mesh" ), pybind11::arg( "path" ), pybind11::arg( "colors" ) = nullptr, pybind11::arg( "callback" ) = ProgressCallback{},
         "detects the format from file extension and save mesh to it" );
     m.def( "saveMesh",
         MR::decorateExpected( ( VoidOrErrStr( * )( const MR::Mesh&, const std::string&, pybind11::object ) )& pythonSaveMeshToAnyFormat ),
@@ -259,7 +259,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadLines, [] ( pybind11::module_& m )
 {
     m.def( "loadLines",
         MR::decorateExpected( ( Expected<Polyline3, std::string>( * )( const std::filesystem::path&, ProgressCallback ) )& MR::LinesLoad::fromAnySupportedFormat ),
-        pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{}, 
+        pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "detects the format from file extension and loads polyline from it" );
     m.def( "loadLines",
         MR::decorateExpected( ( Expected<Polyline3, std::string>( * )( pybind11::object, const std::string& ) )& pythonLoadLinesFromAnyFormat) ,
@@ -306,8 +306,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadDCMResult, [] ( pybind11::module_& )
         def_readwrite( "xf", &MR::VoxelsLoad::LoadDCMResult::xf );
 } )
 
-MR_ADD_PYTHON_VEC( mrmeshpy, LoadDCMResults, MR::VoxelsLoad::LoadDCMResult )
-
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
 {
     m.def( "loadVoxels",
@@ -319,7 +317,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
         pybind11::arg( "path" ), pybind11::arg( "maxNumThreads" ) = 4, pybind11::arg( "callback" ) = ProgressCallback{},
         "Loads first volumetric data from DICOM file(s)" );
 
-    m.def( "loadDCMsFolder", 
+    m.def( "loadDCMsFolder",
         [] ( const std::filesystem::path& p, unsigned maxNumThreads, const ProgressCallback& cb)
     {
         auto res = MR::VoxelsLoad::loadDCMsFolder( p, maxNumThreads, cb );

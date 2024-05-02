@@ -64,6 +64,8 @@ def test_unite_may_meshes():
     for i in range(len(poses)):
         meshes.append(mrmesh.makeCube(size, poses[i]))
         vecMeshes[i] = meshes[i]
+    params = mrmesh.UniteManyMeshesParams()
+    params.nestedComponentsMode = mrmesh.NestedComponenetsMode.Remove
     resMesh = mrmesh.uniteManyMeshes(vecMeshes)
     assert resMesh.topology.numValidFaces() > 0
     assert resMesh.topology.findHoleRepresentiveEdges().size() == 0

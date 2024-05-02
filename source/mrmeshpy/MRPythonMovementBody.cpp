@@ -21,10 +21,4 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MovementBody, [] ( pybind11::module_& m )
             "facing direction of body, used for initial rotation (if allowRotation)\n"
             "if not set body accumulative normal is used" ).
         def_readwrite( "b2tXf", &MovementBuildBodyParams::b2tXf, "optional transform body space to trajectory space" );
-
-    m.def( "makeMovementBuildBody", &makeMovementBuildBody,
-        pybind11::arg( "body" ), pybind11::arg( "trajectory" ), pybind11::arg_v( "params", MovementBuildBodyParams(), "MovementBuildBodyParams()" ),
-        "makes mesh by moving `body` along `trajectory`\n"
-        "if allowRotation rotate it in corners" );
 } )
-

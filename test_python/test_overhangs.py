@@ -17,5 +17,5 @@ def test_overhangs():
     # however the base layer is not considered as an overhang,
     # thus the overhang is split into outer and inner parts
     assert (
-        overhangs.size() == 3
+        len(overhangs) == 3
     )

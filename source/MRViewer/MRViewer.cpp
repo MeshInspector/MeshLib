@@ -125,6 +125,7 @@ EMSCRIPTEN_KEEPALIVE void emsForceSettingsSave()
 
 }
 #endif
+#include "MRSceneCache.h"
 
 static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, int modifier )
 {
@@ -1481,6 +1482,7 @@ void Viewer::draw( bool force )
 
 bool Viewer::draw_( bool force )
 {
+    SceneCache::invalidateAll();
     bool needSceneRedraw = needRedraw_();
     if ( !force && !needSceneRedraw )
         return false;

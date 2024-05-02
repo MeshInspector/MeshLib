@@ -373,6 +373,9 @@
     <ClCompile Include="MRUITestEngine.cpp">
       <Filter>UIStyle</Filter>
     </ClCompile>
+    <ClCompile Include="MRSceneCache.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -736,6 +739,9 @@
     </ClInclude>
     <ClInclude Include="MRUITestEngine.h">
       <Filter>UIStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSceneCache.h">
+      <Filter>Viewer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

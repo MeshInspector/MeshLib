@@ -13,7 +13,7 @@ def test_plane_sections():
 
     assert len(sections) == 1
     assert len(contours) == 1
-    assert contours[0].size() == 9
+    assert len(contours[0]) == 9
     assert contours[0][0] == contours[0][8]
 
     area = mrmesh.calcOrientedArea(contours[0])

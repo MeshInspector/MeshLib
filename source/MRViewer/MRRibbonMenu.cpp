@@ -13,6 +13,7 @@
 #include "MRUIStyle.h"
 #include "MRViewport.h"
 #include "MRViewer.h"
+#include "MRSceneCache.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include <MRMesh/MRString.h>
 #include <MRMesh/MRSystem.h>
@@ -1598,7 +1599,7 @@ void RibbonMenu::drawRibbonSceneList_()
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoResize
     );
-    drawRibbonSceneListContent_( selectedObjs, allObj );
+    drawRibbonSceneListContent_();
     drawRibbonSceneInformation_( selectedObjs );
 
     const auto newSize = drawRibbonSceneResizeLine_();// ImGui::GetWindowSize();
@@ -1628,17 +1629,15 @@ void RibbonMenu::drawRibbonSceneList_()
         firstTime = false;
 }
 
-void RibbonMenu::drawRibbonSceneListContent_( std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all )
+void RibbonMenu::drawRibbonSceneListContent_()
 {
     drawSceneListButtons_();
     ImGui::BeginChild( "Meshes", ImVec2( -1, -( informationHeight_ + transformHeight_ ) ), false );
     updateSceneWindowScrollIfNeeded_();
-    auto children = SceneRoot::get().children();
-    for ( const auto& child : children )
-        draw_object_recurse_( *child, selected, all );
-    makeDragDropTarget_( SceneRoot::get(), false, true, "" );
+    drawObjectsList_();
 
     // any click on empty space below Scene Tree removes object selection
+    const auto& selected = SceneCache::getSelectedObjects();
     ImGui::BeginChild( "EmptySpace" );
     if ( ImGui::IsWindowHovered() && ImGui::IsMouseClicked( 0 ) )
     {

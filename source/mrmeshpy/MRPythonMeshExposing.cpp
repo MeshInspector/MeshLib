@@ -92,8 +92,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& )
         def( pybind11::self == pybind11::self, "compare that two topologies are exactly the same" );
 } )
 
+// these declarations fix "Invalid expression" errors in pybind11_stubgen
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VectorFloatByVert, MR::VertScalars )
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertColorMap, MR::VertColors )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, FaceMap, MR::FaceMap )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
 {

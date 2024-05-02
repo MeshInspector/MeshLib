@@ -32,7 +32,6 @@
 #include "MRMesh/MRConvexHull.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPlane3.h"
-#include "MRMesh/MRMovementBuildBody.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRFixSelfIntersections.h"
 #include <pybind11/functional.h>
@@ -263,15 +262,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PlaneSections, [] ( pybind11::module_& m )
         "returns the vector with the magnitude equal to contour area, and directed to see the contour\n"
         "in ccw order from the vector tip" );
 } )
-
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MovementBody, [] ( pybind11::module_& m )
-{
-    m.def( "makeMovementBuildBody", &makeMovementBuildBody,
-        pybind11::arg( "body" ), pybind11::arg( "trajectory" ), pybind11::arg_v( "params", MovementBuildBodyParams(), "MovementBuildBodyParams()" ),
-        "makes mesh by moving `body` along `trajectory`\n"
-        "if allowRotation rotate it in corners" );
-} )
-
 
 // Relax Mesh
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Relax, [] ( pybind11::module_& m )

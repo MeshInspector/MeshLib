@@ -2,11 +2,22 @@
 #include "MRMesh/MRMovementBuildBody.h"
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRMesh.h"
-#include <pybind11/stl.h> // for automatic conversion of std::optional into python type
 
 using namespace MR;
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MovementBody, [] ( pybind11::module_& m )
+{
+    m.def( "makeMovementBuildBody", &makeMovementBuildBody,
+        pybind11::arg( "body" ), pybind11::arg( "trajectory" ), pybind11::arg_v( "params", MovementBuildBodyParams(), "MovementBuildBodyParams()" ),
+        "makes mesh by moving `body` along `trajectory`\n"
+        "if allowRotation rotate it in corners" );
+} )
+
+// for automatic conversion of std::optional into python type,
+// but it also affects all std::vector's making them another python type not like in other translation units
+#include <pybind11/stl.h>
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MovementBuildBodyParams, [] ( pybind11::module_& m )
 {
     pybind11::class_<MovementBuildBodyParams>( m, "MovementBuildBodyParams" ).
         def( pybind11::init<>() ).

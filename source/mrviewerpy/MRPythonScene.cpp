@@ -7,6 +7,7 @@
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRViewer/MRCommandLoop.h"
+#include "MRPch/MRFmt.h"
 
 namespace MR
 {
@@ -141,13 +142,30 @@ auto pythonGetSelectedModels()
 
     ReturnedVecType ret;
 
-    auto objects = getAllObjectsInTree<ObjectType>( MR::SceneRoot::get(), MR::ObjectSelectivityType::Selected );
-    ret.reserve( objects.size() );
+    MR::CommandLoop::runCommandFromGUIThread( [&]
+    {
+        auto objects = getAllObjectsInTree<ObjectType>( MR::SceneRoot::get(), MR::ObjectSelectivityType::Selected );
+        ret.reserve( objects.size() );
 
-    for ( const auto& object : objects )
-        ret.push_back( *( ( *object ).*MemberPtr)() );
+        for ( const auto& object : objects )
+            ret.push_back( *( ( *object ).*MemberPtr)() );
+    } );
 
     return ret;
+}
+
+void pythonModifySelectedMesh( MR::Mesh mesh )
+{
+    MR::CommandLoop::runCommandFromGUIThread( [&]
+    {
+        auto selected = getAllObjectsInTree<MR::ObjectMesh>( &MR::SceneRoot::get(), MR::ObjectSelectivityType::Selected );
+        if ( selected.size() != 1 )
+            throw std::runtime_error( fmt::format( "Exactly one mesh must be selected, but have {}.", selected.size() ) );
+        if ( !selected[0] )
+            throw std::runtime_error( "Internal error (the object is null?)." );
+        selected[0]->setMesh( std::make_shared<MR::Mesh>( std::move( mesh ) ) );
+        selected[0]->setDirtyFlags( MR::DIRTY_ALL );
+    } );
 }
 
 } // namespace
@@ -155,6 +173,9 @@ auto pythonGetSelectedModels()
 MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Scene, [] ( pybind11::module_& m )
 {
     m.def( "addMeshToScene", &pythonAddMeshToScene, pybind11::arg( "mesh" ), pybind11::arg( "name" ), "add given mesh to scene tree" );
+
+    m.def( "modifySelectedMesh", &pythonModifySelectedMesh, pybind11::arg( "mesh" ), "Assign a new mesh to the selected mesh object. Exactly one object must be selected." );
+
     m.def( "addPointCloudToScene", &pythonAddPointCloudToScene, pybind11::arg( "points" ), pybind11::arg( "name" ), "add given point cloud to scene tree" );
     m.def( "clearScene", &pythonClearScene, "remove all objects from scene tree" );
     m.def( "selectByName", &pythonSelectName, pybind11::arg( "objectName" ), "select objects in scene tree with given name, unselect others" );

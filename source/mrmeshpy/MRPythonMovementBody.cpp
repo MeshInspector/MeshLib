@@ -5,13 +5,14 @@
 
 using namespace MR;
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MovementBody, [] ( pybind11::module_& m )
+// must be before #include <pybind11/stl.h>
+auto defMovementBody = [] ( pybind11::module_& m )
 {
     m.def( "makeMovementBuildBody", &makeMovementBuildBody,
         pybind11::arg( "body" ), pybind11::arg( "trajectory" ), pybind11::arg_v( "params", MovementBuildBodyParams(), "MovementBuildBodyParams()" ),
         "makes mesh by moving `body` along `trajectory`\n"
         "if allowRotation rotate it in corners" );
-} )
+};
 
 // for automatic conversion of std::optional into python type,
 // but it also affects all std::vector's making them another python type not like in other translation units
@@ -33,3 +34,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MovementBuildBodyParams, [] ( pybind11::modu
             "if not set body accumulative normal is used" ).
         def_readwrite( "b2tXf", &MovementBuildBodyParams::b2tXf, "optional transform body space to trajectory space" );
 } )
+
+// must be after MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MovementBuildBodyParams ... )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MovementBody, defMovementBody )

@@ -144,7 +144,7 @@ auto pythonGetSelectedModels()
 
     MR::CommandLoop::runCommandFromGUIThread( [&]
     {
-        auto objects = getAllObjectsInTree<ObjectType>( MR::SceneRoot::get(), MR::ObjectSelectivityType::Selected );
+        auto objects = MR::getAllObjectsInTree<ObjectType>( MR::SceneRoot::get(), MR::ObjectSelectivityType::Selected );
         ret.reserve( objects.size() );
 
         for ( const auto& object : objects )
@@ -158,7 +158,7 @@ void pythonModifySelectedMesh( MR::Mesh mesh )
 {
     MR::CommandLoop::runCommandFromGUIThread( [&]
     {
-        auto selected = getAllObjectsInTree<MR::ObjectMesh>( &MR::SceneRoot::get(), MR::ObjectSelectivityType::Selected );
+        auto selected = MR::getAllObjectsInTree<MR::ObjectMesh>( &MR::SceneRoot::get(), MR::ObjectSelectivityType::Selected );
         if ( selected.size() != 1 )
             throw std::runtime_error( fmt::format( "Exactly one mesh must be selected, but have {}.", selected.size() ) );
         if ( !selected[0] )

@@ -3,6 +3,7 @@
 #include "MRMesh/MRMesh.h"
 
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, PointPair, MR::PointPair )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, PointPairs, MR::PointPairs )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
 {
@@ -36,6 +37,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def_readwrite( "weight", &MR::PointPair::weight, "weight of the pair (to prioritize over other pairs)" ).
         def_readwrite( "tgtOnBd", &MR::PointPair::tgtOnBd, "true if if the closest point on target is located on the boundary (only for meshes)" );
 
+    MR_PYTHON_CUSTOM_CLASS( PointPairs ).
+        def( pybind11::init<>() ).
+        def_readwrite( "vec", &MR::PointPairs::vec, "vector of all point pairs both active and not" ).
+        def_readwrite( "active", &MR::PointPairs::active, "whether corresponding pair from vec must be considered during minimization" );
+
     pybind11::class_<MR::ICPProperties>( m, "ICPProperties" ).
         def( pybind11::init<>() ).
         def_readwrite( "method", &MR::ICPProperties::method, "The method how to update transformation from point pairs" ).
@@ -56,8 +62,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def( pybind11::init<const MR::Mesh&, const MR::Mesh&, const MR::AffineXf3f&, const MR::AffineXf3f&, const MR::VertBitSet&, const MR::VertBitSet&>(),
             pybind11::arg( "flt" ), pybind11::arg( "ref" ),
             pybind11::arg( "fltXf" ), pybind11::arg( "refXf" ),
-            pybind11::arg( "fltSamples" ) = MR::VertBitSet{},
-            pybind11::arg( "refSamples" ) = MR::VertBitSet{},
+            // pybind11::arg( "fltSamples" ) = MR::VertBitSet{}, does not work for pybind11-stubgen "Invalid expression"
+            pybind11::arg_v( "fltSamples", MR::VertBitSet(), "VertBitSet()" ),
+            pybind11::arg_v( "refSamples", MR::VertBitSet(), "VertBitSet()" ),
             "Constructs ICP framework with given sample points on both objects\n"
             "flt - floating object\n"
             "ref - reference object\n"

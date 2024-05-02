@@ -269,9 +269,9 @@ jobs:
           $env:PYBIND11_STUBGEN_PATH = $PWD.Path + "\source\x64\Release"
           cd scripts\wheel\meshlib
           $env:PYTHONPATH = $PWD.Path
-          py -${{matrix.py-version}} ..\pybind11-stubgen.py --output-dir . meshlib.mrmeshpy
-          py -${{matrix.py-version}} ..\pybind11-stubgen.py --output-dir . meshlib.mrmeshnumpy
-          py -${{matrix.py-version}} ..\pybind11-stubgen.py --output-dir . meshlib.mrviewerpy
+          py -${{matrix.py-version}} ..\pybind11-stubgen.py --exit-code --output-dir . meshlib.mrmeshpy
+          py -${{matrix.py-version}} ..\pybind11-stubgen.py --exit-code --output-dir . meshlib.mrmeshnumpy
+          py -${{matrix.py-version}} ..\pybind11-stubgen.py --exit-code --output-dir . meshlib.mrviewerpy
           py -${{matrix.py-version}} setup.py bdist_wheel --plat-name=win-amd64 --python-tag=${{matrix.py-tag}} --version ${{needs.setup.outputs.version_tag}}
           cd ..\..\..
           $WheelFile = (powershell -Command Get-ChildItem -Path scripts\wheel\meshlib\dist\*.whl -Name)
@@ -375,9 +375,9 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install --upgrade wheel setuptools delocate==0.10.7 pybind11-stubgen
           ${{ matrix.py-cmd }} ./scripts/wheel/setup_workspace.py
           cd ./scripts/wheel/meshlib
-          PYTHONPATH=. pybind11-stubgen --output-dir . meshlib.mrmeshpy
-          PYTHONPATH=. pybind11-stubgen --output-dir . meshlib.mrmeshnumpy
-          PYTHONPATH=. pybind11-stubgen --output-dir . meshlib.mrviewerpy
+          PYTHONPATH=. pybind11-stubgen --exit-code --output-dir . meshlib.mrmeshpy
+          PYTHONPATH=. pybind11-stubgen --exit-code --output-dir . meshlib.mrmeshnumpy
+          PYTHONPATH=. pybind11-stubgen --exit-code --output-dir . meshlib.mrviewerpy
           ${{ matrix.py-cmd }} setup.py bdist_wheel --plat-name=${{matrix.plat-name}} --python-tag=${{matrix.py-tag}} --version ${{needs.setup.outputs.version_tag}}
           delocate-path meshlib
           cd ../../..

@@ -6,7 +6,7 @@ def test_relax():
     R1 = 2
     R2_1 = 1
     R2_2 = 2.5
-    torus = mrmesh.makeTorusWithSpikes(R1, R2_1, R2_2, 10, 12, None)
+    torus = mrmesh.makeTorusWithSpikes(R1, R2_1, R2_2, 10, 12)
 
     params = mrmesh.MeshRelaxParams()
     params.iterations = 5
@@ -19,7 +19,7 @@ def test_relax_keep_volume():
     R1 = 2
     R2_1 = 1
     R2_2 = 2.5
-    keep_volume_torus = mrmesh.makeTorusWithSpikes(R1, R2_1, R2_2, 10, 12, None)
+    keep_volume_torus = mrmesh.makeTorusWithSpikes(R1, R2_1, R2_2, 10, 12)
 
     params = mrmesh.MeshRelaxParams()
     params.iterations = 5
@@ -31,7 +31,7 @@ def test_relax_approx():
     R1 = 2
     R2_1 = 1
     R2_2 = 2.5
-    torus = mrmesh.makeTorusWithSpikes(R1, R2_1, R2_2, 10, 12, None)
+    torus = mrmesh.makeTorusWithSpikes(R1, R2_1, R2_2, 10, 12)
 
     params = mrmesh.MeshApproxRelaxParams()
     params.iterations = 5
@@ -43,7 +43,7 @@ def test_smooth_region_boundary():
     R1 = 2
     R2_1 = 1
     R2_2 = 2.5
-    keep_volume_torus = mrmesh.makeTorusWithSpikes(R1, R2_1, R2_2, 10, 12, None)
+    keep_volume_torus = mrmesh.makeTorusWithSpikes(R1, R2_1, R2_2, 10, 12)
 
     smooth_region = mrmesh.FaceBitSet()
     smooth_region.resize( 6, True )
@@ -52,7 +52,7 @@ def test_smooth_region_boundary():
     mrmesh.smoothRegionBoundary(keep_volume_torus, smooth_region)
 
 def test_straighten_boundary():
-    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
+    torus = mrmesh.makeTorus(2, 1, 10, 10)
     faceBitSetToDelete = mrmesh.FaceBitSet()
     faceBitSetToDelete.resize(5, False)
     faceBitSetToDelete.set(mrmesh.FaceId(1), True)

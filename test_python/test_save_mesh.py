@@ -3,7 +3,7 @@ from helper import *
 
 
 def test_save_load_mesh():
-    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
+    torus = mrmesh.makeTorus(2, 1, 10, 10)
     fs = open("test_save_load_mesh.mrmesh", "wb")
     try:
         mrmesh.saveMesh(torus, "*.mrmesh", fs)

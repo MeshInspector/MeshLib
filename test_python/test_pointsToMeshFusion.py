@@ -3,7 +3,7 @@ from helper import *
 
 
 def test_point_cloud_triangulation():
-    torus_mesh = mrmesh.makeTorus(2, 1, 32, 32, None)
+    torus_mesh = mrmesh.makeTorus(2, 1, 32, 32)
     torus_point_cloud = mrmesh.meshToPointCloud(torus_mesh, True, None)
 
     params = mrmesh.PointsToMeshParameters()

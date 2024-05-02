@@ -3,7 +3,7 @@ from helper import *
 
 
 def test_ray_mesh_intersect():
-    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
+    torus = mrmesh.makeTorus(2, 1, 10, 10)
     interRes1 = mrmesh.rayMeshIntersect(
         torus, mrmesh.Line3f(mrmesh.Vector3f(), mrmesh.Vector3f(0, 0, 1))
     )

@@ -3,8 +3,8 @@ from helper import *
 
 
 def test_find_max_distance_sq_oneway():
-    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
-    torus2 = mrmesh.makeTorus(2, 1, 10, 10, None)
+    torus = mrmesh.makeTorus(2, 1, 10, 10)
+    torus2 = mrmesh.makeTorus(2, 1, 10, 10)
 
     transVector = mrmesh.Vector3f()
     transVector.x = 40

@@ -3,8 +3,8 @@ from helper import *
 
 
 def test_overhangs():
-    torusbase = mrmesh.makeTorus(2, 1, 32, 32, None)
-    torustop = mrmesh.makeTorus(2, 1, 32, 32, None)
+    torusbase = mrmesh.makeTorus(2, 1, 32, 32)
+    torustop = mrmesh.makeTorus(2, 1, 32, 32)
     torustop.transform(mrmesh.AffineXf3f.translation(mrmesh.Vector3f(0, 0, 3.0)))
 
     mergedMesh = mrmesh.mergeMeshes([torusbase, torustop])

@@ -2,7 +2,7 @@ from helper import *
 
 
 def test_makeBridgeEdge():
-    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
+    torus = mrmesh.makeTorus(2, 1, 10, 10)
 
     face_bit_set_to_delete = mrmesh.FaceBitSet()
     face_bit_set_to_delete.resize(12, False)
@@ -21,7 +21,7 @@ def test_makeBridgeEdge():
     assert t.numValidFaces() - faces_num_before == 2, "Function should add some faces"
 
 def test_makeBridgeEdge():
-    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
+    torus = mrmesh.makeTorus(2, 1, 10, 10)
 
     face_bit_set_to_delete = mrmesh.FaceBitSet()
     face_bit_set_to_delete.resize(12, False)

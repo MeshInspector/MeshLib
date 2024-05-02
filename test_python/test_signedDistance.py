@@ -4,8 +4,8 @@ from helper import *
 
 def test_signed_distance():
     # make torus inside torus
-    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
-    torus2 = mrmesh.makeTorus(2, 1.2, 10, 10, None)
+    torus = mrmesh.makeTorus(2, 1, 10, 10)
+    torus2 = mrmesh.makeTorus(2, 1.2, 10, 10)
 
     xf = mrmesh.AffineXf3f()
 

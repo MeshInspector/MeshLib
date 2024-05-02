@@ -3,7 +3,7 @@ from helper import *
 
 
 def test_fix_tunnels():
-    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
+    torus = mrmesh.makeTorus(2, 1, 10, 10)
 
     tunnelFaces = mrmesh.detectTunnelFaces(mrmesh.MeshPart(torus), 100500)
 

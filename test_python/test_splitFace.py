@@ -5,7 +5,7 @@ from helper import *
 def test_splitFace():
     R1 = 2
     R2 = 1
-    torus = mrmesh.makeTorus(R1, R2, 10, 10, None)
+    torus = mrmesh.makeTorus(R1, R2, 10, 10)
 
     numFaces = torus.topology.numValidFaces()
     faceMap = mrmesh.FaceHashMap()

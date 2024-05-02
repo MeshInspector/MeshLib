@@ -3,7 +3,7 @@ from helper import *
 
 
 def test_convexHull():
-    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
+    torus = mrmesh.makeTorus(2, 1, 10, 10)
 
     # Create the convex hull
     hull = mrmesh.makeConvexHull(torus)

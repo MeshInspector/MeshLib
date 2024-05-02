@@ -3,7 +3,7 @@ from helper import *
 
 
 def test_computeGeodesicPath():
-    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
+    torus = mrmesh.makeTorus(2, 1, 10, 10)
     mtp1 = mrmesh.MeshTriPoint(mrmesh.EdgeId(0), mrmesh.TriPointf(0.2, 0.2))
     mtp2 = mrmesh.MeshTriPoint(mrmesh.EdgeId(10), mrmesh.TriPointf(0.2, 0.2))
     try:

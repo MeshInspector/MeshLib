@@ -3,7 +3,7 @@ from helper import *
 
 
 def test_subdivider():
-    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
+    torus = mrmesh.makeTorus(2, 1, 10, 10)
     countInit = torus.topology.getValidFaces().count()
 
     settings = mrmesh.SubdivideSettings()

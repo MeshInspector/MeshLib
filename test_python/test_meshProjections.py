@@ -3,8 +3,8 @@ from helper import *
 
 
 def test_mesh_projections():
-    torusRef = mrmesh.makeTorus(2, 1, 10, 10, None)
-    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
+    torusRef = mrmesh.makeTorus(2, 1, 10, 10)
+    torus = mrmesh.makeTorus(2, 1, 10, 10)
     torus.transform(mrmesh.AffineXf3f.translation(mrmesh.Vector3f(0.5, 1, 1)))
 
     unsignedDist = mrmesh.findProjection(mrmesh.Vector3f(0, 0, 0), torusRef)

@@ -3,7 +3,7 @@ from helper import *
 
 
 def test_shrink_expand():
-    torus = mrmesh.makeTorusWithComponents(2, 1, 10, 10, None)
+    torus = mrmesh.makeTorusWithComponents(2, 1, 10, 10)
 
     components = mrmesh.getAllComponentsVerts(torus, None)
 

@@ -3,7 +3,7 @@ from helper import *
 
 
 def test_fill_hole():
-    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
+    torus = mrmesh.makeTorus(2, 1, 10, 10)
 
     faceBitSetToDelete = mrmesh.FaceBitSet()
     faceBitSetToDelete.resize(5, False)

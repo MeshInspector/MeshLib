@@ -103,7 +103,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def_readwrite( "vec", &VertCoords::vec_ );
 
-    pybind11::class_<FaceMap>( m, "FaceMap" ).
+    MR_PYTHON_CUSTOM_CLASS( FaceMap ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &FaceMap::vec_ );
 

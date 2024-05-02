@@ -112,9 +112,9 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install auditwheel wheel setuptools pybind11-stubgen
           ${{ matrix.py-cmd }} ./scripts/wheel/setup_workspace.py
           cd ./scripts/wheel/meshlib
-          PYTHONPATH=. ${{ matrix.py-cmd }} $(which pybind11-stubgen) --output-dir . meshlib.mrmeshpy
-          PYTHONPATH=. ${{ matrix.py-cmd }} $(which pybind11-stubgen) --output-dir . meshlib.mrmeshnumpy
-          PYTHONPATH=. ${{ matrix.py-cmd }} $(which pybind11-stubgen) --output-dir . meshlib.mrviewerpy
+          PYTHONPATH=. ${{ matrix.py-cmd }} $(which pybind11-stubgen) --exit-code --output-dir . meshlib.mrmeshpy
+          PYTHONPATH=. ${{ matrix.py-cmd }} $(which pybind11-stubgen) --exit-code --output-dir . meshlib.mrmeshnumpy
+          PYTHONPATH=. ${{ matrix.py-cmd }} $(which pybind11-stubgen) --exit-code --output-dir . meshlib.mrviewerpy
           ${{ matrix.py-cmd }} setup.py bdist_wheel --python-tag=${{matrix.py-tag}} --version ${{needs.setup.outputs.version_tag}}
           ${{ matrix.py-cmd }} -m auditwheel repair --plat manylinux_2_31_${{matrix.platform}} ./dist/*.whl
 

@@ -401,7 +401,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["x86_64", "aarch64"]
-        os: ["ubuntu:20.04", "ubuntu:22.04", "debian:11-slim", "fedora:37"]
+        os: ["ubuntu:20.04", "ubuntu:22.04", "debian:11-slim", "fedora:37", "fedora:39"]
         include:
           - platform: "x86_64"
             runner: ubuntu-latest
@@ -423,6 +423,9 @@ jobs:
           - os: "fedora:37"
             py-version: "3.11"
             py-cmd: "python3.11"
+          - os: "fedora:39"
+            py-version: "3.12"
+            py-cmd: "python3.12"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -432,7 +435,7 @@ jobs:
         run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
 
       - name: Fedora 37 system setup
-        if: ${{matrix.os == 'fedora:37'}}
+        if: ${{matrix.os == 'fedora:37' || matrix.os == 'fedora:39'}}
         run: dnf -y install python3 pip
 
       - name: Pip setup
@@ -579,8 +582,8 @@ jobs:
       - name: Install twine
         run: python3 -m pip install --upgrade pip twine
 
-      - name: Upload to Production PyPi
-        run: twine upload ./meshlib-*.whl -u __token__ -p ${{ secrets.PYPI_MESHINSPECTOR_TOKEN }} --skip-existing
+      #- name: Upload to Production PyPi
+        #run: twine upload ./meshlib-*.whl -u __token__ -p ${{ secrets.PYPI_MESHINSPECTOR_TOKEN }} --skip-existing
 
   post-release-test:
     needs: upload-to-release

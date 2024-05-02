@@ -93,13 +93,21 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& )
 } )
 
 // these declarations fix "Invalid expression" errors in pybind11_stubgen
-MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VectorFloatByVert, MR::VertScalars )
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertColorMap, MR::VertColors )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertCoords, MR::VertCoords )
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, FaceMap, MR::FaceMap )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertMap, MR::VertMap )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, WholeEdgeMap, MR::WholeEdgeMap )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, UndirectedEdgeMap, MR::UndirectedEdgeMap )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, EdgeMap, MR::EdgeMap )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VectorFloatByVert, MR::VertScalars )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, FaceNormals, MR::FaceNormals )
+using VertCoords2 = Vector<Vector2f, VertId>;
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertCoords2, VertCoords2 )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& )
 {
-    pybind11::class_<VertCoords>( m, "VertCoords" ).
+    MR_PYTHON_CUSTOM_CLASS( VertCoords ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &VertCoords::vec_ );
 
@@ -107,19 +115,19 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def_readwrite( "vec", &FaceMap::vec_ );
 
-    pybind11::class_<VertMap>( m, "VertMap" ).
+    MR_PYTHON_CUSTOM_CLASS( VertMap ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &VertMap::vec_ );
 
-    pybind11::class_<WholeEdgeMap>( m, "WholeEdgeMap" ).
+    MR_PYTHON_CUSTOM_CLASS( WholeEdgeMap ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &WholeEdgeMap::vec_ );
 
-    pybind11::class_<UndirectedEdgeMap>( m, "UndirectedEdgeMap" ).
+    MR_PYTHON_CUSTOM_CLASS( UndirectedEdgeMap ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &UndirectedEdgeMap::vec_ );
 
-    pybind11::class_<EdgeMap>( m, "EdgeMap" ).
+    MR_PYTHON_CUSTOM_CLASS( EdgeMap ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &EdgeMap::vec_ );
 
@@ -127,13 +135,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def_readwrite( "vec", &VertScalars::vec_ );
 
-    pybind11::class_<FaceNormals>( m, "FaceNormals" ).
+    MR_PYTHON_CUSTOM_CLASS( FaceNormals ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &FaceNormals::vec_ );
 
-    pybind11::class_<Vector<Vector2f, VertId>>( m, "VertCoords2" ).
+    MR_PYTHON_CUSTOM_CLASS( VertCoords2 ).
         def( pybind11::init<>() ).
-        def_readwrite( "vec", &Vector<Vector2f, VertId>::vec_ );
+        def_readwrite( "vec", &VertCoords2::vec_ );
 
     MR_PYTHON_CUSTOM_CLASS( VertColorMap ).
         def( pybind11::init<>() ).

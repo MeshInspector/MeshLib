@@ -36,7 +36,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["x86_64", "aarch64"]
-        py-version: ["3.8", "3.9", "3.10", "3.11"]
+        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         include:
           - platform: "x86_64"
             docker-image: "meshlib/meshlib-ubuntu:latest"
@@ -58,6 +58,9 @@ jobs:
           - py-version: "3.11"
             py-tag: "cp311"
             py-cmd: "python3.11"
+          - py-version: "3.12"
+            py-tag: "cp312"
+            py-cmd: "python3.12"
     steps:
       - name: Git - add safe directory
         run: git config --global --add safe.directory ${{github.workspace}}/*

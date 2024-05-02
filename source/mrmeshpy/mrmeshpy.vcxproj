@@ -31,6 +31,7 @@
     <ClCompile Include="MRPythonICPExposing.cpp" />
     <ClCompile Include="MRPythonMeshAABBOps.cpp" />
     <ClCompile Include="MRPythonMeshPlugins.cpp" />
+    <ClCompile Include="MRPythonMovementBody.cpp" />
     <ClCompile Include="MRPythonPointCloudExposing.cpp" />
     <ClCompile Include="MRPythonPolyline.cpp" />
     <ClCompile Include="MRPythonRegularMapMesh.cpp" />

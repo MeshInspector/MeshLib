@@ -2,6 +2,7 @@
 #include "MRViewerFwd.h"
 #include "MRMesh/MRphmap.h"
 #include <array>
+#include <filesystem>
 
 namespace MR
 {
@@ -17,8 +18,10 @@ public:
     };
     enum class IconType
     {
-        RibbonItemIcon, // have four sizes
-        ObjectTypeIcon  // have two sizes
+        RibbonItemIcon,   // have four sizes
+        ObjectTypeIcon,   // have two sizes
+        IndependentIcons, // have two sizes
+        Count
     };
     // this should be called once on start of programm (called in RibbonMenu::init)
     MRVIEWER_API static void load();
@@ -28,7 +31,7 @@ public:
     MRVIEWER_API static const ImGuiImage* findByName( const std::string& name, float width, 
                                                       ColorType colorType, IconType iconType );
 private:
-    RibbonIcons() = default;
+    RibbonIcons();
     ~RibbonIcons() = default;
 
     static RibbonIcons& instance_();
@@ -38,6 +41,7 @@ private:
         std::unique_ptr<ImGuiImage> colored;
         std::unique_ptr<ImGuiImage> white;
     };
+
     enum class Sizes
     {
         X0_5,
@@ -45,15 +49,7 @@ private:
         X1,
         X3,
         Count,
-
-        MinRibbonItemIconSize = X0_5,
-        MinObjectTypeIconSize = X1,
-
-        MaxRibbonItemIconSize = X3,
-        MaxObjectTypeIconSize = X3
     };
-    std::array<int, size_t( Sizes::Count )> loadedRibbonItemIconSizes_ = {};
-    std::array<int, size_t( Sizes::Count )> loadedObjectTypeIconSizes_ = {};
 
     using SizedIcons = std::array<Icons, size_t( Sizes::Count )>;
 
@@ -63,8 +59,16 @@ private:
 
     void load_( IconType type );
 
-    HashMap<std::string, SizedIcons> ribbonItemIconsMap_;
-    HashMap<std::string, SizedIcons> objectTypeIconsMap_;
+    struct IconTypeData
+    {
+        std::filesystem::path pathDirectory;
+        std::pair<Sizes, Sizes> size;
+        ColorType colorType;
+        HashMap<std::string, SizedIcons> map;
+        std::array<int, size_t( Sizes::Count )> loadSize;
+    };
+
+    std::array<IconTypeData, size_t( IconType::Count )> data_;
 };
 
 }

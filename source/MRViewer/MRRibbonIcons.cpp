@@ -7,7 +7,6 @@
 #include "MRMesh/MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
-#include <filesystem>
 
 namespace MR
 {
@@ -21,15 +20,14 @@ void RibbonIcons::load()
 
 void RibbonIcons::free()
 {
-    instance_().ribbonItemIconsMap_.clear();
+    instance_().data_[size_t( IconType::RibbonItemIcon )].map.clear();
 }
 
 const ImGuiImage* RibbonIcons::findByName( const std::string& name, float width, 
                                            ColorType colorType, IconType iconType )
 {
     const auto& instance = instance_();
-    const auto& map = iconType == IconType::RibbonItemIcon ?
-        instance.ribbonItemIconsMap_ : instance.objectTypeIconsMap_;
+    const auto& map = instance.data_[size_t(iconType)].map;
     auto iconsIt = map.find( name );
     if ( iconsIt == map.end() )
         return nullptr;
@@ -40,9 +38,31 @@ const ImGuiImage* RibbonIcons::findByName( const std::string& name, float width,
         return iconsIt->second[reqSize].white.get();
 }
 
+RibbonIcons::RibbonIcons()
+{
+    data_[size_t( IconType::RibbonItemIcon )] = {
+        GetResourcesDirectory() / "resource" / "icons",
+        std::make_pair( Sizes::X0_5, Sizes::X3 ),
+        ColorType::Colored,
+    };
+
+    data_[size_t( IconType::ObjectTypeIcon )] = {
+        GetResourcesDirectory() / "resource" / "object_icons",
+        std::make_pair( Sizes::X1, Sizes::X3 ),
+        ColorType::White,
+    };
+
+    data_[size_t( IconType::IndependentIcons )] = {
+        GetResourcesDirectory() / "resource" / "independent_icons",
+        std::make_pair( Sizes::X1, Sizes::X3 ),
+        ColorType::White,
+    };
+}
+
 RibbonIcons& RibbonIcons::instance_()
 {
     static RibbonIcons instance;
+
     return instance;
 }
 
@@ -60,43 +80,30 @@ const char* RibbonIcons::sizeSubFolder_( Sizes sz )
 
 RibbonIcons::Sizes RibbonIcons::findRequiredSize_( float width, IconType iconType ) const
 {
-    if ( iconType == IconType::RibbonItemIcon )
+    const auto& curData = data_[size_t( iconType )];
+
+    for ( int i = int( curData.size.first ); i <= int( curData.size.second ); ++i )
     {
-        for ( int i = int( Sizes::MinRibbonItemIconSize ); i <= int( Sizes::MaxRibbonItemIconSize ); ++i )
-        {
-            float rate = float( loadedRibbonItemIconSizes_[i] ) / width;
-            if ( rate > 0.95f ) // 5% upscaling is OK
-                return Sizes( i );
-        }
-        return Sizes::MaxRibbonItemIconSize;
+        float rate = float( curData.loadSize[i] ) / width;
+        if ( rate > 0.95f ) // 5% upscaling is OK
+            return Sizes( i );
     }
-    else
-    {
-        for ( int i = int( Sizes::MinObjectTypeIconSize ); i <= int( Sizes::MaxObjectTypeIconSize ); ++i )
-        {
-            float rate = float( loadedObjectTypeIconSizes_[i] ) / width;
-            if ( rate > 0.95f ) // 5% upscaling is OK
-                return Sizes( i );
-        }
-        return Sizes::MaxObjectTypeIconSize;
-    }
+    return curData.size.second;
 }
 
 void RibbonIcons::load_( IconType type )
 {
-    bool ribbonIconType = type == IconType::RibbonItemIcon;
-    std::filesystem::path path = ribbonIconType ?
-        GetResourcesDirectory() / "resource" / "icons" :
-        GetResourcesDirectory() / "resource" / "object_icons";
-    int minSize = ribbonIconType ? 
-        int( Sizes::MinRibbonItemIconSize ) : int( Sizes::MinObjectTypeIconSize );
-    int maxSize = ribbonIconType ?
-        int( Sizes::MaxRibbonItemIconSize ) : int( Sizes::MaxObjectTypeIconSize );
+    size_t num = static_cast<size_t>( type );
+    auto& currentData = data_[num];
 
-    auto& map = ribbonIconType ? 
-        ribbonItemIconsMap_ : objectTypeIconsMap_;
-    auto& loadedSizes = ribbonIconType ? 
-        loadedRibbonItemIconSizes_ : loadedObjectTypeIconSizes_;
+    bool coloredIcons = currentData.colorType == ColorType::Colored;
+
+    std::filesystem::path path = currentData.pathDirectory;
+    int minSize = static_cast< int >( currentData.size.first );
+    int maxSize = static_cast< int >( currentData.size.second );
+
+    //auto& map = currentData.map;
+    auto& loadedSizes = currentData.loadSize;
 
     for ( int sz = minSize; sz <= maxSize; ++sz )
     {
@@ -115,7 +122,7 @@ void RibbonIcons::load_( IconType type )
                 continue;
             auto ext = entry.path().extension().u8string();
             for ( auto& c : ext )
-                c = ( char ) tolower( c );
+                c = ( char )tolower( c );
             if ( ext != u8".png" )
                 continue;
             auto image = ImageLoad::fromPng( entry.path() );
@@ -123,7 +130,7 @@ void RibbonIcons::load_( IconType type )
                 continue;
             Icons icons;
 
-            if ( ribbonIconType )
+            if ( coloredIcons )
                 icons.colored = std::make_unique<ImGuiImage>();
 
             icons.white = std::make_unique<ImGuiImage>();
@@ -131,7 +138,7 @@ void RibbonIcons::load_( IconType type )
             if ( sz != int( Sizes::X0_5 ) )
                 whiteTexture.filter = FilterType::Linear;
 
-            if ( ribbonIconType )
+            if ( coloredIcons )
                 icons.colored->update( whiteTexture );
 
             tbb::parallel_for( tbb::blocked_range<int>( 0, int( whiteTexture.pixels.size() ) ),
@@ -149,7 +156,7 @@ void RibbonIcons::load_( IconType type )
                 loadedSizes[sz] = whiteTexture.resolution.x;
 
             icons.white->update( std::move( whiteTexture ) );
-            map[utf8string( entry.path().stem() )][sz] = std::move( icons );
+            currentData.map[utf8string( entry.path().stem() )][sz] = std::move( icons );
         }
     }
 }

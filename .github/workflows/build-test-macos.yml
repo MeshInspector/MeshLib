@@ -22,7 +22,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ x64, github-arm, arm ]
-        config: [Release]
         compiler: [Clang]
         include:
           - compiler: Clang
@@ -31,10 +30,13 @@ jobs:
           - os: x64
             # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
             runner: macos-12 # github hosted
+            config: Release
           - os: github-arm
             runner: macos-latest  # github hosted
+            config: Debug
           - os: arm
             runner: macos-arm-build # self-hosted
+            config: Release
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout

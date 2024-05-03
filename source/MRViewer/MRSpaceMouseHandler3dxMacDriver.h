@@ -7,6 +7,11 @@
 namespace MR
 {
 
+/**
+ * SpaceMouse handler using the official 3DxWare driver for macOS.
+ * As the driver takes the exclusive control of the SpaceMouse devices, there is no way to connect to the devices
+ * other than using the driver.
+ */
 class SpaceMouseHandler3dxMacDriver : public SpaceMouseHandler
 {
 public:

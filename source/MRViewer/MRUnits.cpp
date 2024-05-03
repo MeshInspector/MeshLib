@@ -223,6 +223,7 @@ const UnitInfo& getUnitInfo( TimeUnit time )
 {
     static const UnitInfo ret[] = {
         { .conversionFactor = 1, .prettyName = "Seconds", .unitSuffix = " s" },
+        { .conversionFactor = 1000, .prettyName = "Milliseconds", .unitSuffix = " ms" },
     };
     static_assert( std::extent_v<decltype( ret )> == int( TimeUnit::_count ) );
     return ret[int( time )];

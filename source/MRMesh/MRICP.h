@@ -70,7 +70,7 @@ struct PointPair
 
 struct PointPairs
 {
-    std::vector<PointPair> vec;
+    std::vector<PointPair> vec; ///< vector of all point pairs both active and not
     BitSet active; ///< whether corresponding pair from vec must be considered during minimization
 };
 

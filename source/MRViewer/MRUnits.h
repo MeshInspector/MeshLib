@@ -53,6 +53,7 @@ enum class RatioUnit
 enum class TimeUnit
 {
     seconds,
+    milliseconds,
     _count [[maybe_unused]],
 };
 

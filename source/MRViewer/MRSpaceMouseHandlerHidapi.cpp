@@ -3,6 +3,7 @@
 #include "MRViewer.h"
 #include "MRGladGlfw.h"
 #include "MRMouseController.h"
+#include "MRMesh/MRFinally.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRStringConvert.h"
 
@@ -34,13 +35,14 @@ SpaceMouseHandlerHidapi::~SpaceMouseHandlerHidapi()
     hid_exit();
 }
 
-void SpaceMouseHandlerHidapi::initialize()
+bool SpaceMouseHandlerHidapi::initialize()
 {
-    if ( hid_init() )
+    if ( hid_init() != 0 )
     {
         spdlog::error( "HID API: init error" );
-        return;
+        return false;
     }
+
 #ifdef __APPLE__
     hid_darwin_set_open_exclusive( 0 );
 #endif
@@ -49,8 +51,11 @@ void SpaceMouseHandlerHidapi::initialize()
     hid_device_info* devs_ = hid_enumerate( 0x0, 0x0 );
     printDevices_( devs_ );
 #endif
+
     terminateListenerThread_ = false;
     initListenerThread_();
+
+    return true;
 }
 
 bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
@@ -158,10 +163,9 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
     {
         spdlog::info( "SpaceMouse Listener thread started" );
         SetCurrentThreadName( "SpaceMouse listener" );
-        struct S
-        {
-            ~S() { spdlog::info( "SpaceMouse listener thread finished" ); }
-        } s;
+        MR_FINALLY {
+            spdlog::info( "SpaceMouse listener thread finished" );
+        };
 
         do
         {

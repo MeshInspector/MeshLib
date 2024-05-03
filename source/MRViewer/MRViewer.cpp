@@ -16,6 +16,7 @@
 #include "MRGetSystemInfoJson.h"
 #include "MRSpaceMouseHandler.h"
 #include "MRSpaceMouseHandlerHidapi.h"
+#include "MRSpaceMouseHandler3dxMacDriver.h"
 #include "MRRenderGLHelpers.h"
 #include "MRTouchpadController.h"
 #include "MRSpaceMouseController.h"
@@ -125,6 +126,7 @@ EMSCRIPTEN_KEEPALIVE void emsForceSettingsSave()
 
 }
 #endif
+#include "MRSceneCache.h"
 
 static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, int modifier )
 {
@@ -1481,6 +1483,7 @@ void Viewer::draw( bool force )
 
 bool Viewer::draw_( bool force )
 {
+    SceneCache::invalidateAll();
     bool needSceneRedraw = needRedraw_();
     if ( !force && !needSceneRedraw )
         return false;
@@ -1899,13 +1902,26 @@ void Viewer::initRotationCenterObject_()
 
 void Viewer::initSpaceMouseHandler_()
 {
-    #if defined(__EMSCRIPTEN__)
-        spaceMouseHandler_ = std::make_unique<SpaceMouseHandler>();
-    #else
-        spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerHidapi>();
-    #endif
+#ifndef __EMSCRIPTEN__
+#ifdef __APPLE__
+    // try to use the official driver first
+    auto driverHandler = std::make_unique<SpaceMouseHandler3dxMacDriver>();
+    driverHandler->setClientName( MR_PROJECT_NAME );
+    if ( driverHandler->initialize() )
+    {
+        spaceMouseHandler_ = std::move( driverHandler );
+        return;
+    }
 
-    spaceMouseHandler_->initialize();
+    // fallback to the HIDAPI implementation
+    spdlog::warn( "Failed to find or use the 3DxWare driver; falling back to the HIDAPI implementation" );
+#endif
+    spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerHidapi>();
+    if ( !spaceMouseHandler_->initialize() )
+    {
+        spdlog::warn( "Failed to initialize SpaceMouse handler" );
+    }
+#endif
 }
 
 bool Viewer::windowShouldClose()

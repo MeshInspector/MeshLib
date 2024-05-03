@@ -28,31 +28,6 @@
 
 using namespace MR;
 
-Mesh pythonGetSelectedMesh()
-{
-    auto selected = getAllObjectsInTree<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    if ( selected.size() != 1 )
-        return {};
-    if ( !selected[0] || !selected[0]->mesh() )
-        return {};
-    return *selected[0]->mesh();
-}
-
-void pythonSetMeshToSelected( Mesh mesh )
-{
-    auto selected = getAllObjectsInTree<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    if ( selected.size() != 1 )
-        return;
-    if ( !selected[0] )
-        return;
-    selected[0]->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
-    selected[0]->setDirtyFlags( DIRTY_ALL );
-}
-
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, getSelectedMesh, pythonGetSelectedMesh, "copy selected mesh from scene tree" )
-
-MR_ADD_PYTHON_FUNCTION( mrmeshpy, setMeshToSelected, pythonSetMeshToSelected, "add mesh to scene tree and select it" )
-
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, MeshTopology, MR::MeshTopology )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& )
 {
@@ -83,7 +58,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& )
         def( "deleteFaces", &MeshTopology::deleteFaces, pybind11::arg( "fs" ), "deletes multiple given faces" ).
         def( "findHoleRepresentiveEdges", &MeshTopology::findHoleRepresentiveEdges, "returns one edge with no valid left face for every boundary in the mesh" ).
         def( "getTriVerts", ( void( MeshTopology::* )( FaceId, VertId&, VertId&, VertId& )const )& MeshTopology::getTriVerts,
-            pybind11::arg("f"), pybind11::arg( "v0" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ), 
+            pybind11::arg("f"), pybind11::arg( "v0" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ),
             "gets 3 vertices of given triangular face;\n"
             "the vertices are returned in counter-clockwise order if look from mesh outside" ).
         def( "edgeSize", &MeshTopology::edgeSize, "returns the number of half-edge records including lone ones" ).
@@ -92,32 +67,42 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& )
         def( pybind11::self == pybind11::self, "compare that two topologies are exactly the same" );
 } )
 
-MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VectorFloatByVert, MR::VertScalars )
+// these declarations fix "Invalid expression" errors in pybind11_stubgen
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertColorMap, MR::VertColors )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertCoords, MR::VertCoords )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, FaceMap, MR::FaceMap )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertMap, MR::VertMap )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, WholeEdgeMap, MR::WholeEdgeMap )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, UndirectedEdgeMap, MR::UndirectedEdgeMap )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, EdgeMap, MR::EdgeMap )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VectorFloatByVert, MR::VertScalars )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, FaceNormals, MR::FaceNormals )
+using VertCoords2 = Vector<Vector2f, VertId>;
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertCoords2, VertCoords2 )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& )
 {
-    pybind11::class_<VertCoords>( m, "VertCoords" ).
+    MR_PYTHON_CUSTOM_CLASS( VertCoords ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &VertCoords::vec_ );
 
-    pybind11::class_<FaceMap>( m, "FaceMap" ).
+    MR_PYTHON_CUSTOM_CLASS( FaceMap ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &FaceMap::vec_ );
 
-    pybind11::class_<VertMap>( m, "VertMap" ).
+    MR_PYTHON_CUSTOM_CLASS( VertMap ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &VertMap::vec_ );
 
-    pybind11::class_<WholeEdgeMap>( m, "WholeEdgeMap" ).
+    MR_PYTHON_CUSTOM_CLASS( WholeEdgeMap ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &WholeEdgeMap::vec_ );
 
-    pybind11::class_<UndirectedEdgeMap>( m, "UndirectedEdgeMap" ).
+    MR_PYTHON_CUSTOM_CLASS( UndirectedEdgeMap ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &UndirectedEdgeMap::vec_ );
 
-    pybind11::class_<EdgeMap>( m, "EdgeMap" ).
+    MR_PYTHON_CUSTOM_CLASS( EdgeMap ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &EdgeMap::vec_ );
 
@@ -125,13 +110,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def_readwrite( "vec", &VertScalars::vec_ );
 
-    pybind11::class_<FaceNormals>( m, "FaceNormals" ).
+    MR_PYTHON_CUSTOM_CLASS( FaceNormals ).
         def( pybind11::init<>() ).
         def_readwrite( "vec", &FaceNormals::vec_ );
 
-    pybind11::class_<Vector<Vector2f, VertId>>( m, "VertCoords2" ).
+    MR_PYTHON_CUSTOM_CLASS( VertCoords2 ).
         def( pybind11::init<>() ).
-        def_readwrite( "vec", &Vector<Vector2f, VertId>::vec_ );
+        def_readwrite( "vec", &VertCoords2::vec_ );
 
     MR_PYTHON_CUSTOM_CLASS( VertColorMap ).
         def( pybind11::init<>() ).
@@ -247,7 +232,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
         def( "pack", &Mesh::pack, pybind11::arg( "outFmap" ) = nullptr, pybind11::arg( "outVmap" ) = nullptr, pybind11::arg( "outEmap" ) = nullptr, pybind11::arg( "rearrangeTriangles" ) = false,
             "tightly packs all arrays eliminating lone edges and invalid face, verts and points,\n"
             "optionally returns mappings: old.id -> new.id" ).
-        def( "packOptimally", &Mesh::packOptimally, pybind11::arg( "preserveAABBTree" ) = true, 
+        def( "packOptimally", &Mesh::packOptimally, pybind11::arg( "preserveAABBTree" ) = true,
             "packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices\n"
             "\tpreserveAABBTree whether to keep valid mesh's AABB tree after return (it will take longer to compute and it will occupy more memory)" ).
         def( "deleteFaces", &Mesh::deleteFaces, pybind11::arg( "fs" ), "deletes multiple given faces" ).
@@ -276,7 +261,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
         def( "pseudonormal", ( Vector3f( Mesh::* )( const MeshTriPoint &, const FaceBitSet* )const )&Mesh::pseudonormal,
             pybind11::arg( "p" ), pybind11::arg( "region" ) = nullptr, "computes pseudo-normals for signed distance calculation in corresponding face/edge/vertex, only region faces will be considered; unlike normal( MeshTriPoint ), this is not a smooth function" ).
 
-        def( "splitEdge", ( EdgeId( Mesh::* )( EdgeId, const Vector3f&, FaceBitSet*, FaceHashMap* ) )& Mesh::splitEdge, 
+        def( "splitEdge", ( EdgeId( Mesh::* )( EdgeId, const Vector3f&, FaceBitSet*, FaceHashMap* ) )& Mesh::splitEdge,
             pybind11::arg( "e" ), pybind11::arg( "newVertPos" ), pybind11::arg( "region" ) = nullptr, pybind11::arg( "new2Old" ) = nullptr,
             "split given edge on two parts:\n"
             "dest(returned-edge) = org(e) - newly created vertex,\n"
@@ -416,10 +401,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FillHole, [] ( pybind11::module_& m )
     m.def( "getPlaneFillMetric", &getPlaneFillMetric, pybind11::arg( "mesh" ), pybind11::arg( "e" ),
         "Same as getCircumscribedFillMetric, but with extra penalty for the triangles having\n"
         "normals looking in the opposite side of plane containing left of (e)." );
-    
+
     m.def( "getEdgeLengthFillMetric", &getEdgeLengthFillMetric, pybind11::arg( "mesh" ),
         "Simple metric minimizing the sum of all edge lengths" );
-    
+
     m.def( "getEdgeLengthStitchMetric", &getEdgeLengthStitchMetric, pybind11::arg( "mesh" ),
         "Forbids connecting vertices from the same hole\n"
         "Simple metric minimizing edge length" );
@@ -546,7 +531,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
 
     m.def( "makeCube", &makeCube, pybind11::arg( "size" ) = Vector3f::diagonal( 1 ), pybind11::arg( "base" ) = Vector3f::diagonal( -0.5f ),
         "Base is \"lower\" corner of the cube coordinates" );
-    
+
     pybind11::class_<SphereParams>( m, "SphereParams" ).
         def( pybind11::init<>() ).
         def_readwrite( "radius", &SphereParams::radius ).
@@ -554,8 +539,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
 
     m.def( "makeSphere", &makeSphere, pybind11::arg( "params" ),
         "creates a mesh of sphere with irregular triangulation" );
-    m.def( "makeUVSphere", &makeUVSphere, 
-        pybind11::arg( "radius" ) = 1.0f, 
+    m.def( "makeUVSphere", &makeUVSphere,
+        pybind11::arg( "radius" ) = 1.0f,
         pybind11::arg( "horisontalResolution" ) = 16, pybind11::arg( "verticalResolution" ) = 16,
         "Z is polar axis of this UVSphere" );
 
@@ -629,8 +614,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SimpleFunctions, [] ( pybind11::module_& m )
         decorateExpected( []( const MeshPart& mp, ProgressCallback cb ) { return findSelfCollidingTrianglesBS( mp, cb ); } ),
         pybind11::arg( "mp" ), pybind11::arg( "cb" ) = ProgressCallback{}, "finds union of all self-intersecting faces" );
 
-    m.def( "findCollidingTriangles", &findCollidingTriangles, 
-        pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg( "rigidB2A" ) = nullptr, pybind11::arg( "firstIntersectionOnly" ) = false, 
+    m.def( "findCollidingTriangles", &findCollidingTriangles,
+        pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg( "rigidB2A" ) = nullptr, pybind11::arg( "firstIntersectionOnly" ) = false,
         "finds all pairs of colliding triangles from two meshes or two mesh regions\n"
         "\trigidB2A - rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation\n"
         "\tfirstIntersectionOnly - if true then the function returns at most one pair of intersecting triangles and returns faster" );

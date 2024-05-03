@@ -62,6 +62,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, BooleanExposing, [] ( pybind11::module_& m )
         "note: Input meshes should have no self-intersections in intersecting zone\n"
         "note: If meshes are not closed in intersecting zone some boolean operations are not allowed (as far as input meshes interior and exterior cannot be determined)" );
 
+    pybind11::enum_<MR::NestedComponenetsMode>( m, "NestedComponenetsMode", "Mode of processing components" ).
+        value( "Remove", MR::NestedComponenetsMode::Remove, "Default: separate nested meshes and remove them, just like union operation should do, use this if input meshes are single component" ).
+        value( "Merge", MR::NestedComponenetsMode::Merge, "merge nested meshes, useful if input meshes are components of single object" ).
+        value( "Union", MR::NestedComponenetsMode::Union, "does not separate components and call union for all input meshes, works slower than Remove and Merge method but returns valid result if input meshes has multiple components" );
+
     pybind11::class_<MR::UniteManyMeshesParams>( m, "UniteManyMeshesParams", "Parameters structure for uniteManyMeshes function" ).
         def( pybind11::init<>() ).
         def_readwrite( "useRandomShifts", &MR::UniteManyMeshesParams::useRandomShifts, "Apply random shift to each mesh, to prevent degenerations on coincident surfaces" ).
@@ -73,6 +78,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, BooleanExposing, [] ( pybind11::module_& m )
             "Max allowed random shifts in each direction, and max allowed deviation after degeneration fixing\n"
             "not used if both flags (useRandomShifts,fixDegenerations) are false" ).
         def_readwrite( "randomShiftsSeed", &MR::UniteManyMeshesParams::randomShiftsSeed, "Seed that is used for random shifts" ).
+        def_readwrite( "nestedComponentsMode", &MR::UniteManyMeshesParams::nestedComponentsMode,
+            "By default function separate nested meshes and remove them, just like union operation should do\n"
+            "read comment of NestedComponenetsMode enum for more information" ).
         def_readwrite( "newFaces", &MR::UniteManyMeshesParams::newFaces, "If set, the bitset will store new faces created by boolean operations" );
 
     m.def( "uniteManyMeshes", MR::decorateExpected( &MR::uniteManyMeshes ), pybind11::arg( "meshes" ), pybind11::arg_v( "params", MR::UniteManyMeshesParams(), "UniteManyMeshesParams()" ),

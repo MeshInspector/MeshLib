@@ -11,7 +11,7 @@ enum class NestedComponenetsMode
 {
     Remove, // Default: separate nested meshes and remove them, just like union operation should do, use this if input meshes are single component
     Merge, // merge nested meshes, useful if input meshes are components of single object
-    Union // does not separate components and call union for all input meshes, works slower than Remove and Merge method but returns valid result if input meshes has mulitple components
+    Union // does not separate components and call union for all input meshes, works slower than Remove and Merge method but returns valid result if input meshes has multiple components
 };
 
 // Parameters structure for uniteManyMeshes function

@@ -31,6 +31,7 @@
     <ClCompile Include="MRMoveObjectByMouseImpl.cpp" />
     <ClCompile Include="MRRenderDefaultObjects.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
+    <ClCompile Include="MRSceneCache.cpp" />
     <ClCompile Include="MRSelectCurvaturePreference.cpp" />
     <ClCompile Include="MRFrameRedrawRequest.cpp" />
     <ClCompile Include="MRGetSystemInfoJson.cpp" />
@@ -110,6 +111,7 @@
     <ClCompile Include="MRVisualSubfeatures.cpp" />
     <ClCompile Include="MRNameTagClickListener.cpp" />
     <ClCompile Include="MRUITestEngine.cpp" />
+    <ClCompile Include="MRSpaceMouseHandler3dxMacDriver.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -137,6 +139,7 @@
     <ClInclude Include="MRMoveObjectByMouseImpl.h" />
     <ClInclude Include="MRNotificationType.h" />
     <ClInclude Include="MRRibbonNotification.h" />
+    <ClInclude Include="MRSceneCache.h" />
     <ClInclude Include="MRSelectCurvaturePreference.h" />
     <ClInclude Include="MRFrameRedrawRequest.h" />
     <ClInclude Include="MRGetSystemInfoJson.h" />
@@ -233,6 +236,7 @@
     <ClInclude Include="MRSignalCombiners.h" />
     <ClInclude Include="MRNameTagClickListener.h" />
     <ClInclude Include="MRUITestEngine.h" />
+    <ClInclude Include="MRSpaceMouseHandler3dxMacDriver.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

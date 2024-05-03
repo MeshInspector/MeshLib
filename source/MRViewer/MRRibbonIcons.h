@@ -66,7 +66,7 @@ private:
         std::pair<Sizes, Sizes> minMaxSizes;
         // true - Colored and White
         // false - only White
-        bool needLoadColored;
+        bool needLoadColored = false;
         HashMap<std::string, SizedIcons> map;
         std::array<int, size_t( Sizes::Count )> loadSize;
     };

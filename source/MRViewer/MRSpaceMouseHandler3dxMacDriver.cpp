@@ -237,12 +237,7 @@ bool SpaceMouseHandler3dxMacDriver::initialize()
 
 void SpaceMouseHandler3dxMacDriver::handle()
 {
-    // nothing to do here
-}
-
-void SpaceMouseHandler3dxMacDriver::postFocus_( bool )
-{
-    // ...
+    // all events are processed by the 3DxWare driver; nothing to do here
 }
 
 } // namespace MR

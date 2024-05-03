@@ -7,7 +7,7 @@
 namespace MR
 {
 
-class SpaceMouseHandler3dxMacDriver : public SpaceMouseHandler, public PostFocusListener
+class SpaceMouseHandler3dxMacDriver : public SpaceMouseHandler
 {
 public:
     SpaceMouseHandler3dxMacDriver();
@@ -19,10 +19,6 @@ public:
     // SpaceMouseHandler
     bool initialize() override;
     void handle() override;
-
-private:
-    // PostFocusListener
-    void postFocus_( bool focused ) override;
 
 private:
     struct LibHandle;

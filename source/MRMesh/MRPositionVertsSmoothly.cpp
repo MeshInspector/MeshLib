@@ -4,6 +4,8 @@
 #include "MRMeshComponents.h"
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
+#include "MRRegionBoundary.h"
+#include "MRTriMath.h"
 #include "MRTimer.h"
 #include <Eigen/SparseCholesky>
 
@@ -104,6 +106,14 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
     if ( sz <= 0 || settings.numIters <= 0 )
         return;
 
+    FaceBitSet myFaces;
+    const FaceBitSet * incidentFaces = nullptr;
+    if ( settings.isInverted && settings.region )
+    {
+        myFaces = getIncidentFaces( mesh.topology, *settings.region );
+        incidentFaces = &myFaces;
+    }
+
     // vertex id -> position in the matrix
     HashMap<VertId, int> vertToMatPos = makeHashMapWithSeqNums( verts );
 
@@ -166,6 +176,64 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
             pt.y = (float) sol[1][n];
             pt.z = (float) sol[2][n];
             ++n;
+        }
+
+        if ( settings.isInverted )
+        {
+            for ( auto f : mesh.topology.getFaceIds( incidentFaces ) )
+            {
+                if ( !settings.isInverted( f ) )
+                    continue;
+                auto vs = mesh.topology.getTriVerts( f );
+                Triangle3f t0;
+                for ( int i = 0; i < 3; ++i )
+                    t0[i] = mesh.points[ vs[i] ];
+                auto t = makeDegenerate( t0 );
+
+                if ( settings.region )
+                {
+                    // some triangle's vertices can be fixed
+                    int numFree = 0;
+                    for ( int i = 0; i < 3; ++i )
+                        numFree += settings.region->test( vs[i] );
+                    assert( numFree >= 1 && numFree <= 3 );
+                    if ( numFree == 1 )
+                    {
+                        // 2 out of 3 vertices are fixed
+                        int freeI = -1;
+                        for ( int i = 0; i < 3; ++i )
+                            if ( settings.region->test( vs[i] ) )
+                            {
+                                freeI = i;
+                                break;
+                            }
+                        int fixedI0 = ( freeI + 1 ) % 3;
+                        int fixedI1 = ( fixedI0 + 1 ) % 3;
+                        t = t0;
+                        const auto d = ( t[fixedI1] - t[fixedI0] ).normalized();
+                        const auto c = 0.5f * ( t[fixedI1] + t[fixedI0] );
+                        t[freeI] = c + d * dot( d, t0[freeI] - c );
+                    }
+                    else if ( numFree == 2 )
+                    {
+                        // only one vertex is fixed
+                        int fixedI = -1;
+                        for ( int i = 0; i < 3; ++i )
+                            if ( !settings.region->test( vs[i] ) )
+                            {
+                                fixedI = i;
+                                break;
+                            }
+                        const auto d = t0[fixedI] - t[fixedI];
+                        for ( int i = 0; i < 3; ++i )
+                            t[i] += d;
+                        t[fixedI] = t0[fixedI]; // keep coordinates exactly
+                    }
+                }
+
+                for ( int i = 0; i < 3; ++i )
+                    mesh.points[ vs[i] ] = t[i];
+            }
         }
     }
 }

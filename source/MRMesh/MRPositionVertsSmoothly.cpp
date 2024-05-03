@@ -185,10 +185,35 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
                 if ( !settings.isInverted( f ) )
                     continue;
                 auto vs = mesh.topology.getTriVerts( f );
-                Triangle3f t;
+                Triangle3f t0;
                 for ( int i = 0; i < 3; ++i )
-                    t[i] = mesh.points[ vs[i] ];
-                t = makeDegenerate( t );
+                    t0[i] = mesh.points[ vs[i] ];
+                auto t = makeDegenerate( t0 );
+
+                if ( settings.region )
+                {
+                    // some triangle's vertices can be fixed
+                    int numFree = 0;
+                    for ( int i = 0; i < 3; ++i )
+                        numFree += settings.region->test( vs[i] );
+                    assert( numFree >= 1 && numFree <= 3 );
+                    if ( numFree == 2 )
+                    {
+                        // only one vertex is fixed
+                        int fixedI = -1;
+                        for ( int i = 0; i < 3; ++i )
+                            if ( !settings.region->test( vs[i] ) )
+                            {
+                                fixedI = i;
+                                break;
+                            }
+                        const auto d = t0[fixedI] - t[fixedI];
+                        for ( int i = 0; i < 3; ++i )
+                            t[i] += d;
+                        t[fixedI] = t0[fixedI]; // keep coordinates exactly
+                    }
+                }
+
                 for ( int i = 0; i < 3; ++i )
                     mesh.points[ vs[i] ] = t[i];
             }

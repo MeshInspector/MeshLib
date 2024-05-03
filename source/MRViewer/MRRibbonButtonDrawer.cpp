@@ -276,7 +276,7 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
     ImVec2 iconRealSize = ImVec2( imageRequiredSize, imageRequiredSize );
     bool needWhiteIcon = !requirements.empty() || item.item->isActive() || params.rootType != DrawButtonParams::Ribbon;
     auto* imageIcon = RibbonIcons::findByName( item.item->name(), iconRealSize.x, needWhiteIcon ?
-                                               RibbonIcons::ColorType::White : RibbonIcons::ColorType::Colored,
+                                               RibbonIcons::ColorType::OnlyWhite : RibbonIcons::ColorType::ColoredAndWhite,
                                                customParam.iconType );
 
     if ( !imageIcon )
@@ -384,7 +384,7 @@ void RibbonButtonDrawer::drawButtonIcon( const MenuItemInfo& item, const DrawBut
     ImVec2 iconRealSize = ImVec2( imageRequiredSize, imageRequiredSize );
     bool needWhiteIcon = params.rootType != DrawButtonParams::Ribbon;
     auto* imageIcon = RibbonIcons::findByName( item.item->name(), iconRealSize.x, needWhiteIcon ?
-                                               RibbonIcons::ColorType::White : RibbonIcons::ColorType::Colored,
+                                               RibbonIcons::ColorType::OnlyWhite : RibbonIcons::ColorType::ColoredAndWhite,
                                                RibbonIcons::IconType::RibbonItemIcon );
 
     if ( !imageIcon )

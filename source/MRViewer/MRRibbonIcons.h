@@ -13,8 +13,8 @@ class MRVIEWER_CLASS RibbonIcons
 public:
     enum class ColorType
     {
-        Colored,
-        White
+        ColoredAndWhite,
+        OnlyWhite
     };
     enum class IconType
     {

@@ -2061,7 +2061,7 @@ void RibbonMenu::drawCustomObjectPrefixInScene_( const Object& obj )
 {
     auto imageSize = ImGui::GetFrameHeight();
     auto* imageIcon = RibbonIcons::findByName( obj.typeName(), imageSize,
-                                               RibbonIcons::ColorType::White,
+                                               RibbonIcons::ColorType::OnlyWhite,
                                                RibbonIcons::IconType::ObjectTypeIcon );
 
     if ( !imageIcon )

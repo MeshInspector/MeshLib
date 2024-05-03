@@ -207,7 +207,7 @@ bool SpaceMouseHandler3dxMacDriver::initialize()
     lib_->handle = dlopen( c3DconnexionClientPath, RTLD_LAZY );
     if ( lib_->handle == nullptr )
     {
-        spdlog::warn( "Failed to load client library" );
+        spdlog::warn( "Failed to load the 3DxWare client library" );
         return false;
     }
 
@@ -223,7 +223,7 @@ bool SpaceMouseHandler3dxMacDriver::initialize()
     clientId_ = lib_->RegisterConnexionClient( kConnexionClientWildcard, clientName_.get(), kConnexionClientModeTakeOver, kConnexionMaskAll );
     if ( clientId_ == 0 )
     {
-        spdlog::warn( "Failed to connect to the driver" );
+        spdlog::warn( "Failed to connect to the 3DxWare driver" );
         return false;
     }
     // TODO: thread safety?

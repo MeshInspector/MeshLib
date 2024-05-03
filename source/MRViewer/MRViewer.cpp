@@ -1914,6 +1914,7 @@ void Viewer::initSpaceMouseHandler_()
     }
 
     // fallback to the HIDAPI implementation
+    spdlog::warn( "Failed to find or use the 3DxWare driver; falling back to the HIDAPI implementation" );
 #endif
     spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerHidapi>();
     if ( !spaceMouseHandler_->initialize() )

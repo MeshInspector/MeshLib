@@ -13,8 +13,8 @@ class MRVIEWER_CLASS RibbonIcons
 public:
     enum class ColorType
     {
-        ColoredAndWhite,
-        OnlyWhite
+        Colored,
+        White
     };
     enum class IconType
     {
@@ -64,7 +64,9 @@ private:
         std::filesystem::path pathDirectory;
         // first - min size, secon - max size
         std::pair<Sizes, Sizes> minMaxSizes;
-        ColorType colorType;
+        // true - Colored and White
+        // false - only White
+        bool needLoadColored;
         HashMap<std::string, SizedIcons> map;
         std::array<int, size_t( Sizes::Count )> loadSize;
     };

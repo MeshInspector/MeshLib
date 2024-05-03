@@ -36,7 +36,7 @@ const ImGuiImage* RibbonIcons::findByName( const std::string& name, float width,
     if ( iconsIt == map.end() )
         return nullptr;
     auto reqSize = int( instance.findRequiredSize_( width, iconType ) );
-    if ( colorType == ColorType::ColoredAndWhite )
+    if ( colorType == ColorType::Colored )
         return iconsIt->second[reqSize].colored.get();
     else
         return iconsIt->second[reqSize].white.get();
@@ -47,19 +47,19 @@ RibbonIcons::RibbonIcons()
     data_[size_t( IconType::RibbonItemIcon )] = {
         GetResourcesDirectory() / "resource" / "icons",
         std::make_pair( Sizes::X0_5, Sizes::X3 ),
-        ColorType::ColoredAndWhite,
+        true,
     };
 
     data_[size_t( IconType::ObjectTypeIcon )] = {
         GetResourcesDirectory() / "resource" / "object_icons",
         std::make_pair( Sizes::X1, Sizes::X3 ),
-        ColorType::OnlyWhite,
+        false,
     };
 
     data_[size_t( IconType::IndependentIcons )] = {
         GetResourcesDirectory() / "resource" / "independent_icons",
         std::make_pair( Sizes::X1, Sizes::X3 ),
-        ColorType::OnlyWhite,
+        false,
     };
 }
 
@@ -100,7 +100,7 @@ void RibbonIcons::load_( IconType type )
     size_t num = static_cast<size_t>( type );
     auto& currentData = data_[num];
 
-    bool coloredIcons = currentData.colorType == ColorType::ColoredAndWhite;
+    bool coloredIcons = currentData.needLoadColored;
 
     std::filesystem::path path = currentData.pathDirectory;
     int minSize = static_cast< int >( currentData.minMaxSizes.first );

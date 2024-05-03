@@ -184,7 +184,7 @@ const UnitInfo& getUnitInfo( LengthUnit length )
 {
     static const UnitInfo ret[] = {
         { .conversionFactor = 1, .prettyName = "Millimeters", .unitSuffix = " mm" },
-        { .conversionFactor = 1/25.4f, .prettyName = "Inches", .unitSuffix = " in"/* or "\"" */ },
+        { .conversionFactor = 25.4f, .prettyName = "Inches", .unitSuffix = " in"/* or "\"" */ },
     };
     static_assert( std::extent_v<decltype( ret )> == int( LengthUnit::_count ) );
     return ret[int( length )];
@@ -223,7 +223,7 @@ const UnitInfo& getUnitInfo( TimeUnit time )
 {
     static const UnitInfo ret[] = {
         { .conversionFactor = 1, .prettyName = "Seconds", .unitSuffix = " s" },
-        { .conversionFactor = 1000, .prettyName = "Milliseconds", .unitSuffix = " ms" },
+        { .conversionFactor = 0.001f, .prettyName = "Milliseconds", .unitSuffix = " ms" },
     };
     static_assert( std::extent_v<decltype( ret )> == int( TimeUnit::_count ) );
     return ret[int( time )];
@@ -233,7 +233,7 @@ const UnitInfo& getUnitInfo( MovementSpeedUnit speed )
 {
     static const UnitInfo ret[] = {
         { .conversionFactor = 1, .prettyName = "Mm per second", .unitSuffix = " mm/s" },
-        { .conversionFactor = 1/25.4f, .prettyName = "Inches per second", .unitSuffix = " in/s" },
+        { .conversionFactor = 25.4f, .prettyName = "Inches per second", .unitSuffix = " in/s" },
     };
     static_assert( std::extent_v<decltype( ret )> == int( MovementSpeedUnit::_count ) );
     return ret[int( speed )];
@@ -244,7 +244,7 @@ const UnitInfo& getUnitInfo( AreaUnit area )
     static const UnitInfo ret[] = {
         // U+00B2 SUPERSCRIPT TWO
         { .conversionFactor = 1, .prettyName = "Mm\xc2\xb2", .unitSuffix = " mm\xc2\xb2" },
-        { .conversionFactor = 1/25.4f/25.4f, .prettyName = "Inches\xc2\xb2", .unitSuffix = " in\xc2\xb2" },
+        { .conversionFactor = 25.4f*25.4f, .prettyName = "Inches\xc2\xb2", .unitSuffix = " in\xc2\xb2" },
     };
     static_assert( std::extent_v<decltype( ret )> == int( AreaUnit::_count ) );
     return ret[int( area )];
@@ -255,7 +255,7 @@ const UnitInfo& getUnitInfo( VolumeUnit volume )
     static const UnitInfo ret[] = {
         // U+00B3 SUPERSCRIPT THREE
         { .conversionFactor = 1, .prettyName = "Mm\xc2\xb3", .unitSuffix = " mm\xc2\xb3" },
-        { .conversionFactor = 1/25.4f/25.4f/25.4f, .prettyName = "Inches\xc2\xb3", .unitSuffix = " in\xc2\xb3" },
+        { .conversionFactor = 25.4f*25.4f*25.4f, .prettyName = "Inches\xc2\xb3", .unitSuffix = " in\xc2\xb3" },
     };
     static_assert( std::extent_v<decltype( ret )> == int( VolumeUnit::_count ) );
     return ret[int( volume )];

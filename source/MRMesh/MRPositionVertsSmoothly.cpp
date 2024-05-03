@@ -4,6 +4,7 @@
 #include "MRMeshComponents.h"
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
+#include "MRRegionBoundary.h"
 #include "MRTriMath.h"
 #include "MRTimer.h"
 #include <Eigen/SparseCholesky>
@@ -105,6 +106,14 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
     if ( sz <= 0 || settings.numIters <= 0 )
         return;
 
+    FaceBitSet myFaces;
+    const FaceBitSet * incidentFaces = nullptr;
+    if ( settings.isInverted && settings.region )
+    {
+        myFaces = getIncidentFaces( mesh.topology, *settings.region );
+        incidentFaces = &myFaces;
+    }
+
     // vertex id -> position in the matrix
     HashMap<VertId, int> vertToMatPos = makeHashMapWithSeqNums( verts );
 
@@ -171,7 +180,7 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
 
         if ( settings.isInverted )
         {
-            for ( auto f : mesh.topology.getValidFaces() )
+            for ( auto f : mesh.topology.getFaceIds( incidentFaces ) )
             {
                 if ( !settings.isInverted( f ) )
                     continue;

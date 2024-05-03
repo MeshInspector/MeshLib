@@ -32,10 +32,10 @@ class MRVIEWER_CLASS SpaceMouseHandlerHidapi : public SpaceMouseHandler, public 
     };
 public:
     SpaceMouseHandlerHidapi();
-    ~SpaceMouseHandlerHidapi();
+    ~SpaceMouseHandlerHidapi() override;
 
-    virtual void initialize() override;
-    virtual void handle() override;
+    bool initialize() override;
+    void handle() override;
 
     // set state of zoom by mouse scroll (to fix scroll signal from SpaceMouse driver)
     MRVIEWER_API void activateMouseScrollZoom( bool activeMouseScrollZoom );

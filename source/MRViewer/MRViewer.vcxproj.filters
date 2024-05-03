@@ -376,6 +376,9 @@
     <ClCompile Include="MRSceneCache.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
+    <ClCompile Include="MRSpaceMouseHandler3dxMacDriver.cpp">
+      <Filter>SpaceMouse</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -742,6 +745,9 @@
     </ClInclude>
     <ClInclude Include="MRSceneCache.h">
       <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSpaceMouseHandler3dxMacDriver.h">
+      <Filter>SpaceMouse</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

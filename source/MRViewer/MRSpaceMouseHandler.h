@@ -57,10 +57,10 @@ public:
     virtual ~SpaceMouseHandler() = default;
 
     /// initialize device
-    virtual void initialize() {};
+    [[nodiscard]] virtual bool initialize() = 0;
 
     /// handle device state and call Viewer signals
-    virtual void handle() {};
+    virtual void handle() = 0;
 
     /// update after connect / disconnect devices
     virtual void updateConnected( int /*jid*/, int /*event*/ ) {};

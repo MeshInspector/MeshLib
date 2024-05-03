@@ -1,6 +1,7 @@
 #include "MRSceneCache.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSceneRoot.h"
+#include "MRMesh/MRTimer.h"
 
 namespace MR
 {
@@ -44,6 +45,8 @@ MR::SceneCache& SceneCache::instance_()
 
 void SceneCache::updateAllObjectsWithDepth_()
 {
+    MR_TIMER
+
     std::vector<int> vecDepth;
     std::vector<std::shared_ptr<Object>> vecObjs;
     std::function<void( std::shared_ptr<Object>, int )> checkFn;

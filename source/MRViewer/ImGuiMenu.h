@@ -449,6 +449,13 @@ protected:
     };
     // This class helps the viewer to `renderUi()` from `IRenderObject`s.
     std::unique_ptr<UiRenderManagerImpl> uiRenderManager_;
+
+    enum class SceneListVisible
+    {
+        All,
+        NotHidden,
+        None
+    } sceneListVisible_;
 };
 
 

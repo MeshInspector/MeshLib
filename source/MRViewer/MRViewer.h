@@ -68,8 +68,8 @@ struct LaunchParams
     char** argv{ nullptr }; // Pass argv
 
     bool showMRVersionInTitle{ false }; // if true - print version info in window title
-    bool isAnimating{ false }; // if true - calls render without system events
-    int animationMaxFps{ 30 }; // max fps if animating
+    bool isAnimating{ true }; // if true - calls render without system events
+    int animationMaxFps{ 300 }; // max fps if animating
 
     std::shared_ptr<SplashWindow> splashWindow; // if present will show this window while initializing plugins (after menu initialization)
 };

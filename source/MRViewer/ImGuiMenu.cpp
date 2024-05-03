@@ -541,6 +541,22 @@ bool ImGuiMenu::onKeyDown_( int key, int modifiers )
     ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_PRESS, modifiers );
     if ( ImGui::GetIO().WantCaptureKeyboard )
         return true;
+    
+    if ( key == GLFW_KEY_8 )
+    {
+        sceneListVisible_ = SceneListVisible::All;
+        return true;
+    }
+    else if ( key == GLFW_KEY_9 )
+    {
+        sceneListVisible_ = SceneListVisible::NotHidden;
+        return true;
+    }
+    else if ( key == GLFW_KEY_0 )
+    {
+        sceneListVisible_ = SceneListVisible::None;
+        return true;
+    }
 
     return false;
 }
@@ -1154,6 +1170,10 @@ void ImGuiMenu::drawObjectsList_()
 
     int curentDepth = 0;
     std::stack<std::shared_ptr<Object>> objDepthStack;
+
+    const float drawBoxYmin = ImGui::GetScrollY();
+    const float drawBoxYmax = drawBoxYmin + ImGui::GetWindowHeight();
+
     for ( int i = 0; i < all.size(); ++i )
     {
         auto& object = *all[i];
@@ -1175,109 +1195,119 @@ void ImGuiMenu::drawObjectsList_()
         if ( ( hasRealChildren || isObjSelectable ) )
         {
             makeDragDropTarget_( object, true, true, uniqueStr );
+            if ( sceneListVisible_ == SceneListVisible::None ||
+                ( sceneListVisible_ == SceneListVisible::NotHidden &&
+                    ( ImGui::GetCursorPosY() + ImGui::GetFrameHeight() < drawBoxYmin || ImGui::GetCursorPosY() > drawBoxYmax ) ) )
             {
-                // Visibility checkbox
-                bool isVisible = object.isVisible( viewer->viewport().id );
-                auto ctx = ImGui::GetCurrentContext();
-                assert( ctx );
-                auto window = ctx->CurrentWindow;
-                assert( window );
-                auto diff = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * menu_scaling();
-                ImGui::SetCursorPosY( ImGui::GetCursorPosY() + diff );
-                if ( UI::checkbox( ( "##VisibilityCheckbox" + uniqueStr ).c_str(), &isVisible ) )
-                {
-                    object.setVisible( isVisible, viewer->viewport().id );
-                    if ( deselectNewHiddenObjects_ && !object.isVisible( viewer->getPresentViewports() ) )
-                        object.select( false );
-                }
-                window->DC.CursorPosPrevLine.y -= diff;
-                ImGui::SameLine();
+                ImGui::Dummy( ImVec2(0, ImGui::GetFrameHeight() ) );
+                isOpen = ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( ( object.name() + " ##" + uniqueStr ).c_str() ),
+                    ImGuiTreeNodeFlags_None );
             }
-            {
-                // custom prefix
-                drawCustomObjectPrefixInScene_( object );
-            }
-
-            const bool isSelected = object.isSelected();
-
-            auto openCommandIt = sceneOpenCommands_.find( &object );
-            if ( openCommandIt != sceneOpenCommands_.end() )
-                ImGui::SetNextItemOpen( openCommandIt->second );
-
-            if ( !isSelected )
-                ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( 0, 0, 0, 0 ) );
             else
             {
-                ImGui::PushStyleColor( ImGuiCol_Header, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame ).getUInt32() );
-                ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectText ).getUInt32() );
-            }
-
-            ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-
-            isOpen = drawCollapsingHeader_( ( object.name() + " ##" + uniqueStr ).c_str(),
-                                        ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) |
-                                        ImGuiTreeNodeFlags_SpanAvailWidth |
-                                        ImGuiTreeNodeFlags_Framed |
-                                        ImGuiTreeNodeFlags_OpenOnArrow |
-                                        ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
-
-            if ( ImGui::IsMouseDoubleClicked( 0 ) && ImGui::IsItemHovered() )
-            {
-                if ( auto m = getViewerInstance().getMenuPluginAs<RibbonMenu>() )
-                    m->tryRenameSelectedObject();
-            }
-
-            ImGui::PopStyleColor( isSelected ? 2 : 1 );
-            ImGui::PopStyleVar();
-
-            makeDragDropSource_( selected );
-            makeDragDropTarget_( object, false, false, "0" );
-
-            if ( isObjSelectable && ImGui::IsItemHovered() )
-            {
-                bool pressed = !isSelected && ( ImGui::IsMouseClicked( 0 ) || ImGui::IsMouseClicked( 1 ) );
-                bool released = isSelected && !dragTrigger_ && !clickTrigger_ && ImGui::IsMouseReleased( 0 );
-
-                if ( pressed )
-                    clickTrigger_ = true;
-                if ( isSelected && clickTrigger_ && ImGui::IsMouseReleased( 0 ) )
-                    clickTrigger_ = false;
-
-                if ( pressed || released )
                 {
-
-                    auto newSelection = getPreSelection_( &object, ImGui::GetIO().KeyShift, ImGui::GetIO().KeyCtrl, selected, all );
-                    if ( ImGui::GetIO().KeyCtrl )
+                    // Visibility checkbox
+                    bool isVisible = object.isVisible( viewer->viewport().id );
+                    auto ctx = ImGui::GetCurrentContext();
+                    assert( ctx );
+                    auto window = ctx->CurrentWindow;
+                    assert( window );
+                    auto diff = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * menu_scaling();
+                    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + diff );
+                    if ( UI::checkbox( ( "##VisibilityCheckbox" + uniqueStr ).c_str(), &isVisible ) )
                     {
-                        for ( auto& sel : newSelection )
-                        {
-                            const bool select = ImGui::GetIO().KeyShift || !sel->isSelected();
-                            sel->select( select );
-                            if ( showNewSelectedObjects_ && select )
-                                sel->setGlobalVisibility( true );
-                        }
+                        object.setVisible( isVisible, viewer->viewport().id );
+                        if ( deselectNewHiddenObjects_ && !object.isVisible( viewer->getPresentViewports() ) )
+                            object.select( false );
                     }
-                    else
+                    window->DC.CursorPosPrevLine.y -= diff;
+                    ImGui::SameLine();
+                }
+                {
+                    // custom prefix
+                    drawCustomObjectPrefixInScene_( object );
+                }
+
+                const bool isSelected = object.isSelected();
+
+                auto openCommandIt = sceneOpenCommands_.find( &object );
+                if ( openCommandIt != sceneOpenCommands_.end() )
+                    ImGui::SetNextItemOpen( openCommandIt->second );
+
+                if ( !isSelected )
+                    ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( 0, 0, 0, 0 ) );
+                else
+                {
+                    ImGui::PushStyleColor( ImGuiCol_Header, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame ).getUInt32() );
+                    ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectText ).getUInt32() );
+                }
+
+                ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+
+                isOpen = drawCollapsingHeader_( ( object.name() + " ##" + uniqueStr ).c_str(),
+                                            ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) |
+                                            ImGuiTreeNodeFlags_SpanAvailWidth |
+                                            ImGuiTreeNodeFlags_Framed |
+                                            ImGuiTreeNodeFlags_OpenOnArrow |
+                                            ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
+                
+                if ( ImGui::IsMouseDoubleClicked( 0 ) && ImGui::IsItemHovered() )
+                {
+                    if ( auto m = getViewerInstance().getMenuPluginAs<RibbonMenu>() )
+                        m->tryRenameSelectedObject();
+                }
+
+                ImGui::PopStyleColor( isSelected ? 2 : 1 );
+                ImGui::PopStyleVar();
+
+                makeDragDropSource_( selected );
+                makeDragDropTarget_( object, false, false, "0" );
+
+                if ( isObjSelectable && ImGui::IsItemHovered() )
+                {
+                    bool pressed = !isSelected && ( ImGui::IsMouseClicked( 0 ) || ImGui::IsMouseClicked( 1 ) );
+                    bool released = isSelected && !dragTrigger_ && !clickTrigger_ && ImGui::IsMouseReleased( 0 );
+
+                    if ( pressed )
+                        clickTrigger_ = true;
+                    if ( isSelected && clickTrigger_ && ImGui::IsMouseReleased( 0 ) )
+                        clickTrigger_ = false;
+
+                    if ( pressed || released )
                     {
-                        for ( const auto& data : selected )
+
+                        auto newSelection = getPreSelection_( &object, ImGui::GetIO().KeyShift, ImGui::GetIO().KeyCtrl, selected, all );
+                        if ( ImGui::GetIO().KeyCtrl )
                         {
-                            auto inNewSelList = std::find( newSelection.begin(), newSelection.end(), data.get() );
-                            if ( inNewSelList == newSelection.end() )
-                                data->select( false );
+                            for ( auto& sel : newSelection )
+                            {
+                                const bool select = ImGui::GetIO().KeyShift || !sel->isSelected();
+                                sel->select( select );
+                                if ( showNewSelectedObjects_ && select )
+                                    sel->setGlobalVisibility( true );
+                            }
                         }
-                        for ( auto& sel : newSelection )
+                        else
                         {
-                            sel->select( true );
-                            if ( showNewSelectedObjects_ )
-                                sel->setGlobalVisibility( true );
+                            for ( const auto& data : selected )
+                            {
+                                auto inNewSelList = std::find( newSelection.begin(), newSelection.end(), data.get() );
+                                if ( inNewSelList == newSelection.end() )
+                                    data->select( false );
+                            }
+                            for ( auto& sel : newSelection )
+                            {
+                                sel->select( true );
+                                if ( showNewSelectedObjects_ )
+                                    sel->setGlobalVisibility( true );
+                            }
                         }
                     }
                 }
 
+                if ( isSelected )
+                    drawSceneContextMenu_( selected );
             }
-
-            if ( isSelected )
-                drawSceneContextMenu_( selected );
         }
         if ( isOpen )
         {
@@ -1287,7 +1317,16 @@ void ImGuiMenu::drawObjectsList_()
             if ( showInfoInObjectTree_ && hasRealChildren && !lines.empty() )
             {
                 auto infoId = std::string( "Info: ##" ) + uniqueStr;
-                infoOpen = drawCollapsingHeader_( infoId.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed );
+                if ( sceneListVisible_ == SceneListVisible::None ||
+                    ( sceneListVisible_ == SceneListVisible::NotHidden &&
+                        ( ImGui::GetCursorPosY() + ImGui::GetFrameHeight() < drawBoxYmin || ImGui::GetCursorPosY() > drawBoxYmax ) ) )
+                {
+                    ImGui::Dummy( ImVec2( 0, ImGui::GetFrameHeight() ) );
+                    infoOpen = ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( infoId.c_str() ),
+                        ImGuiTreeNodeFlags_None );
+                }
+                else
+                    infoOpen = drawCollapsingHeader_( infoId.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed );
             }
 
             if ( infoOpen || !hasRealChildren )
@@ -1297,22 +1336,34 @@ void ImGuiMenu::drawObjectsList_()
                 auto scaling = menu_scaling();
                 framePadding.y = 2.0f * scaling;
                 itemSpacing.y = 2.0f * scaling;
-                ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( 0, 0, 0, 0 ) );
-                ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
-                ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-                ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
-                ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, cItemInfoIndent * scaling );
-                ImGui::Indent();
 
-                for ( const auto& str : lines )
+                const float infoLinesHeight = lines.size() * ( ImGui::GetTextLineHeight() + framePadding.y * 2.f ) +
+                    ( lines.size() - 1 ) * itemSpacing.y;
+                if ( sceneListVisible_ == SceneListVisible::None ||
+                    ( sceneListVisible_ == SceneListVisible::NotHidden &&
+                    ( ImGui::GetCursorPosY() + infoLinesHeight < drawBoxYmin || ImGui::GetCursorPosY() > drawBoxYmax ) ) )
                 {
-                    ImGui::TreeNodeEx( str.c_str(), ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_Framed );
-                    ImGui::TreePop();
+                    ImGui::Dummy( ImVec2( 0, infoLinesHeight ) );
                 }
+                else
+                {
+                    ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( 0, 0, 0, 0 ) );
+                    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
+                    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+                    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
+                    ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, cItemInfoIndent * scaling );
+                    ImGui::Indent();
 
-                ImGui::Unindent();
-                ImGui::PopStyleVar( 4 );
-                ImGui::PopStyleColor();
+                    for ( const auto& str : lines )
+                    {
+                        ImGui::TreeNodeEx( str.c_str(), ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_Framed );
+                        ImGui::TreePop();
+                    }
+
+                    ImGui::Unindent();
+                    ImGui::PopStyleVar( 4 );
+                    ImGui::PopStyleColor();
+                }
             }
         }
 

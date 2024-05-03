@@ -197,7 +197,24 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
                     for ( int i = 0; i < 3; ++i )
                         numFree += settings.region->test( vs[i] );
                     assert( numFree >= 1 && numFree <= 3 );
-                    if ( numFree == 2 )
+                    if ( numFree == 1 )
+                    {
+                        // 2 out of 3 vertices are fixed
+                        int freeI = -1;
+                        for ( int i = 0; i < 3; ++i )
+                            if ( settings.region->test( vs[i] ) )
+                            {
+                                freeI = i;
+                                break;
+                            }
+                        int fixedI0 = ( freeI + 1 ) % 3;
+                        int fixedI1 = ( fixedI0 + 1 ) % 3;
+                        t = t0;
+                        const auto d = ( t[fixedI1] - t[fixedI0] ).normalized();
+                        const auto c = 0.5f * ( t[fixedI1] + t[fixedI0] );
+                        t[freeI] = c + d * dot( d, t0[freeI] - c );
+                    }
+                    else if ( numFree == 2 )
                     {
                         // only one vertex is fixed
                         int fixedI = -1;

@@ -62,7 +62,8 @@ private:
     struct IconTypeData
     {
         std::filesystem::path pathDirectory;
-        std::pair<Sizes, Sizes> size;
+        // first - min size, secon - max size
+        std::pair<Sizes, Sizes> minMaxSizes;
         ColorType colorType;
         HashMap<std::string, SizedIcons> map;
         std::array<int, size_t( Sizes::Count )> loadSize;

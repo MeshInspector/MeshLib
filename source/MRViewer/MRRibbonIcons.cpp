@@ -20,7 +20,11 @@ void RibbonIcons::load()
 
 void RibbonIcons::free()
 {
-    instance_().data_[size_t( IconType::RibbonItemIcon )].map.clear();
+    for ( auto& curData : instance_().data_ )
+    {
+        curData.map.clear();
+        curData.loadSize = std::array<int, size_t( Sizes::Count )>();
+    }
 }
 
 const ImGuiImage* RibbonIcons::findByName( const std::string& name, float width, 
@@ -82,13 +86,13 @@ RibbonIcons::Sizes RibbonIcons::findRequiredSize_( float width, IconType iconTyp
 {
     const auto& curData = data_[size_t( iconType )];
 
-    for ( int i = int( curData.size.first ); i <= int( curData.size.second ); ++i )
+    for ( int i = int( curData.minMaxSizes.first ); i <= int( curData.minMaxSizes.second ); ++i )
     {
         float rate = float( curData.loadSize[i] ) / width;
         if ( rate > 0.95f ) // 5% upscaling is OK
             return Sizes( i );
     }
-    return curData.size.second;
+    return curData.minMaxSizes.second;
 }
 
 void RibbonIcons::load_( IconType type )
@@ -99,8 +103,8 @@ void RibbonIcons::load_( IconType type )
     bool coloredIcons = currentData.colorType == ColorType::Colored;
 
     std::filesystem::path path = currentData.pathDirectory;
-    int minSize = static_cast< int >( currentData.size.first );
-    int maxSize = static_cast< int >( currentData.size.second );
+    int minSize = static_cast< int >( currentData.minMaxSizes.first );
+    int maxSize = static_cast< int >( currentData.minMaxSizes.second );
 
     //auto& map = currentData.map;
     auto& loadedSizes = currentData.loadSize;

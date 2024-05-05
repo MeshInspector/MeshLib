@@ -40,7 +40,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& )
         def( "getValidVerts", &MeshTopology::getValidVerts, pybind11::return_value_policy::copy, "returns cached set of all valid vertices" ).
         def( "flip", (void (MeshTopology::*)(FaceBitSet&)const)&MeshTopology::flip, pybind11::arg( "fs" ), "sets in (fs) all valid faces that were not selected before the call, and resets other bits" ).
         def( "flip", (void (MeshTopology::*)(VertBitSet&)const)&MeshTopology::flip, pybind11::arg( "vs" ), "sets in (vs) all valid vertices that were not selected before the call, and resets other bits" ).
-        def( "flipOrientation", &MeshTopology::flipOrientation, "flip orientation (normals) of all faces" ).
+        def( "flipOrientation", &MeshTopology::flipOrientation, pybind11::arg( "fullComponents" ) = nullptr, "flip orientation (normals) of all faces" ).
         def( "hasEdge", &MeshTopology::hasEdge, pybind11::arg( "he" ), "Returns true if given edge is within valid range and not-lone" ).
         def( "next", &MeshTopology::next, pybind11::arg( "he" ), "Next (counter clock wise) half-edge in the origin ring" ).
         def( "prev", &MeshTopology::prev, pybind11::arg( "he" ), "Previous (clock wise) half-edge in the origin ring" ).

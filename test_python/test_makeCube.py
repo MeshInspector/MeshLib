@@ -26,5 +26,7 @@ def test_make_cube():
         mrmesh.MeshPart(cube1), mrmesh.MeshPart(cube2), None, False
     )
 
-    # at least 100 triangles should collide for that transforms
+    assert len(pairs) > 10
     assert len(pairs) < 23
+
+    cube.topology.flipOrientation()

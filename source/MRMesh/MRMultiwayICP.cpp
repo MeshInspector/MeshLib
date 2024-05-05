@@ -321,6 +321,7 @@ bool MultiwayICP::p2plIter_()
                 p2pl.add( vp.tgtPoint - centroidRef, ( vp.tgtPoint + vp.srcPoint ) * 0.5f - centroidRef, vp.srcNorm, vp.weight );
             }
         }
+        p2pl.prepare();
 
         AffineXf3f res;
         if ( prop_.icpMode == ICPMode::TranslationOnly )

@@ -85,7 +85,7 @@ private:
 
 WindowsExceptionsLogger::WindowsExceptionsLogger()
 {
-    spdlog::info( "Start logging Windows exceptions" );
+    spdlog::debug( "Start logging Windows exceptions" );
     oldPurecallHandler_ = _set_purecall_handler( []()
     {
         spdlog::critical( "Pure virtual function call" );
@@ -100,7 +100,7 @@ WindowsExceptionsLogger::WindowsExceptionsLogger()
 
 WindowsExceptionsLogger::~WindowsExceptionsLogger()
 {
-    spdlog::info( "Stop logging Windows exceptions" );
+    spdlog::debug( "Stop logging Windows exceptions" );
     _set_purecall_handler( oldPurecallHandler_ );
     RemoveVectoredExceptionHandler( oldVectoredExceptionHandler_ );
 }

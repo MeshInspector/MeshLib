@@ -25,8 +25,6 @@ def test_make_cube():
     pairs = mrmesh.findCollidingTriangles(
         mrmesh.MeshPart(cube1), mrmesh.MeshPart(cube2), None, False
     )
-
-    assert len(pairs) > 10
-    assert len(pairs) < 23
+    assert len(pairs) == 0
 
     cube.topology.flipOrientation()

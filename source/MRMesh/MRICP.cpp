@@ -301,6 +301,7 @@ bool ICP::p2plIter_()
         const auto& vp = ref2fltPairs_.vec[idx];
         p2pl.add( vp.tgtPoint - centroidRef, vp.srcPoint - centroidRef, vp.srcNorm, vp.weight );
     }
+    p2pl.prepare();
 
     AffineXf3f res;
     if( prop_.icpMode == ICPMode::TranslationOnly )

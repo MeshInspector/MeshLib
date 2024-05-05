@@ -31,17 +31,25 @@ void PointToPlaneAligningTransform::add( const Vector3d& s0, const Vector3d& d, 
 
         sumB_(i) += w * c[i] * k_B;
     }
+    sumAIsSym_ = false;
+}
 
+void PointToPlaneAligningTransform::prepare()
+{
+    if ( sumAIsSym_ )
+        return;
     // copy values in lower-left part
     for (size_t i = 1; i < 7; i++)
         for (size_t j = 0; j < i; j++)
             sumA_(i, j) = sumA_(j, i);
+    sumAIsSym_ = true;
 }
 
 void PointToPlaneAligningTransform::clear()
 {
     sumA_ = Eigen::Matrix<double, 7, 7>::Zero();
     sumB_ = Eigen::Vector<double, 7>::Zero();
+    sumAIsSym_ = true;
 }
 
 AffineXf3d PointToPlaneAligningTransform::Amendment::rigidScaleXf() const
@@ -56,6 +64,7 @@ AffineXf3d PointToPlaneAligningTransform::Amendment::linearXf() const
 
 auto PointToPlaneAligningTransform::calculateAmendment() const -> Amendment
 {
+    assert( sumAIsSym_ );
     Eigen::LLT<Eigen::MatrixXd> chol( sumA_.topLeftCorner<6,6>() );
     Eigen::VectorXd solution = chol.solve( sumB_.topRows<6>() - sumA_.block<6,1>( 0, 6 ) );
 
@@ -67,6 +76,7 @@ auto PointToPlaneAligningTransform::calculateAmendment() const -> Amendment
 
 auto PointToPlaneAligningTransform::calculateAmendmentWithScale() const -> Amendment
 {
+    assert( sumAIsSym_ );
     Eigen::LLT<Eigen::MatrixXd> chol( sumA_ );
     Eigen::VectorXd solution = chol.solve( sumB_ );
 
@@ -82,6 +92,7 @@ auto PointToPlaneAligningTransform::calculateFixedAxisAmendment( const Vector3d 
     if ( axis.lengthSq() <= 0 )
         return calculateAmendment();
 
+    assert( sumAIsSym_ );
     Eigen::Matrix<double, 4, 4> A;
     Eigen::Matrix<double, 4, 1> b;
 
@@ -112,6 +123,7 @@ auto PointToPlaneAligningTransform::calculateOrthogonalAxisAmendment( const Vect
     if ( ort.lengthSq() <= 0 )
         return calculateAmendment();
 
+    assert( sumAIsSym_ );
     Eigen::Matrix<double, 5, 5> A;
     Eigen::Matrix<double, 5, 1> b;
     Eigen::Matrix<double, 3, 2> k;
@@ -167,6 +179,7 @@ AffineXf3d PointToPlaneAligningTransform::findBestRigidXfOrthogonalRotationAxis(
 
 Vector3d PointToPlaneAligningTransform::findBestTranslation( Vector3d rotAngles, double scale ) const
 {
+    assert( sumAIsSym_ );
     Eigen::LLT<Eigen::MatrixXd> chol( sumA_.block<3,3>(3, 3) );
     Eigen::VectorXd solution = chol.solve( sumB_.middleRows<3>( 3 )
         - ( sumA_.block<3,3>( 3, 0 ) * toEigen( rotAngles ) + sumA_.block<3,1>( 3, 6 ) ) * scale );
@@ -200,10 +213,11 @@ TEST( MRMesh, PointToPlaneAligningTransform1 )
         for( int i = 0; i < 3; i++ )
             pTransformed[i] += n2[i];
 
-        PointToPlaneAligningTransform ptp;
+        PointToPlaneAligningTransform p2pl;
         for( int i = 0; i < 10; i++ )
-            ptp.add( pInit[i], pTransformed[i], n[i] );
-        return ptp;
+            p2pl.add( pInit[i], pTransformed[i], n[i] );
+        p2pl.prepare();
+        return p2pl;
     };
 
     double alpha = 0.15, beta = 0.23, gamma = -0.17;
@@ -296,8 +310,8 @@ TEST( MRMesh, PointToPlaneAligningTransform1 )
 
     {
         AffineXf3d xf( {}, b );
-        const auto ptp = preparePt2Pl( xf );
-        const auto shift = ptp.findBestTranslation();
+        const auto p2pl = preparePt2Pl( xf );
+        const auto shift = p2pl.findBestTranslation();
         EXPECT_NEAR( ( b - shift ).length(), 0., eps );
     }
 }
@@ -389,6 +403,7 @@ TEST( MRMesh, PointToPlaneAligningTransform2 )
                     xf( points[i] ), // +Vector3d(dis(gen), dis(gen), dis(gen))
                     xf.A * pointsNorm[i] );
             }
+            p2pl.prepare();
             auto am = p2pl.calculateAmendment();
             AffineXf3d xfResP2pl = am.linearXf();
 
@@ -408,6 +423,7 @@ TEST( MRMesh, PointToPlaneAligningTransform2 )
                     scaleXf( points[i] ), // +Vector3d(dis(gen), dis(gen), dis(gen))
                     xf.A * pointsNorm[i] );
             }
+            p2pl.prepare();
             auto am = p2pl.calculateAmendmentWithScale();
             AffineXf3d xfResP2pl = am.linearXf();
 

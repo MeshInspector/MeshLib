@@ -28,6 +28,9 @@ public:
     /// Add a pair of corresponding points and the normal of the tangent plane at the second point
     void add( const Vector3f& p1, const Vector3f& p2, const Vector3f& normal2, float w = 1 ) { add( Vector3d( p1 ), Vector3d( p2 ), Vector3d( normal2 ), w ); }
 
+    /// this method must be called after add() and before constant find...()/calculate...() to make the matrix symmetric
+    MRMESH_API void prepare();
+
     /// Clear points and normals data
     MRMESH_API void clear();
 
@@ -77,6 +80,7 @@ private:
     AffineXf3d approxTransform_;
     Eigen::Matrix<double, 7, 7> sumA_ = Eigen::Matrix<double, 7, 7>::Zero();
     Eigen::Vector<double, 7> sumB_ = Eigen::Vector<double, 7>::Zero();
+    bool sumAIsSym_ = true;
 };
 
 /// \}

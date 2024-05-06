@@ -19,9 +19,6 @@ namespace MR
 class PointToPlaneAligningTransform
 {
 public:
-    /// Constructor with the known approximation of the aligning transformation
-    explicit PointToPlaneAligningTransform( const AffineXf3d& aTransform = {} ) : approxTransform_( aTransform ) {}
-
     /// Add a pair of corresponding points and the normal of the tangent plane at the second point
     MRMESH_API void add( const Vector3d& p1, const Vector3d& p2, const Vector3d& normal2, double w = 1 );
 
@@ -32,21 +29,21 @@ public:
     MRMESH_API void prepare();
 
     /// Clear points and normals data
-    MRMESH_API void clear();
+    void clear() { *this = {}; }
 
     /// Compute transformation as the solution to a least squares optimization problem:
     /// xf( p1_i ) = p2_i
     /// this version searches for best rigid body transformation
-    [[nodiscard]] MRMESH_API AffineXf3d findBestRigidXf() const;
+    [[nodiscard]] AffineXf3d findBestRigidXf() const { return calculateAmendment().rigidScaleXf(); }
 
     /// this version searches for best rigid body transformation with uniform scaling
-    [[nodiscard]] MRMESH_API AffineXf3d findBestRigidScaleXf() const;
+    [[nodiscard]] AffineXf3d findBestRigidScaleXf() const { return calculateAmendmentWithScale().rigidScaleXf(); }
 
     /// this version searches for best transformation where rotation is allowed only around given axis and with arbitrary translation
-    [[nodiscard]] MRMESH_API AffineXf3d findBestRigidXfFixedRotationAxis( const Vector3d & axis ) const;
+    [[nodiscard]] AffineXf3d findBestRigidXfFixedRotationAxis( const Vector3d & axis ) const { return calculateFixedAxisAmendment( axis ).rigidScaleXf(); }
 
     /// this version searches for best transformation where rotation is allowed only around axes orthogonal to given one
-    [[nodiscard]] MRMESH_API AffineXf3d findBestRigidXfOrthogonalRotationAxis( const Vector3d& ort ) const;
+    [[nodiscard]] AffineXf3d findBestRigidXfOrthogonalRotationAxis( const Vector3d& ort ) const { return calculateOrthogonalAxisAmendment( ort ).rigidScaleXf(); }
 
     /// this version searches for best translational part of affine transformation with given linear part
     [[nodiscard]] MRMESH_API Vector3d findBestTranslation( Vector3d rotAngles = {}, double scale = 1 ) const;
@@ -77,7 +74,6 @@ public:
     [[nodiscard]] MRMESH_API Amendment calculateOrthogonalAxisAmendment( const Vector3d& ort ) const;
 
 private:
-    AffineXf3d approxTransform_;
     Eigen::Matrix<double, 7, 7> sumA_ = Eigen::Matrix<double, 7, 7>::Zero();
     Eigen::Vector<double, 7> sumB_ = Eigen::Vector<double, 7>::Zero();
     bool sumAIsSym_ = true;

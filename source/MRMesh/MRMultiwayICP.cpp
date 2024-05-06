@@ -323,49 +323,7 @@ bool MultiwayICP::p2plIter_()
         }
         p2pl.prepare();
 
-        AffineXf3f res;
-        if ( prop_.icpMode == ICPMode::TranslationOnly )
-        {
-            res = AffineXf3f( Matrix3f(), Vector3f( p2pl.findBestTranslation() ) );
-        }
-        else
-        {
-            RigidScaleXf3d am;
-            switch ( prop_.icpMode )
-            {
-            default:
-                assert( false );
-                [[fallthrough]];
-            case ICPMode::RigidScale:
-                am = p2pl.calculateAmendmentWithScale();
-                break;
-            case ICPMode::AnyRigidXf:
-                am = p2pl.calculateAmendment();
-                break;
-            case ICPMode::OrthogonalAxis:
-                am = p2pl.calculateOrthogonalAxisAmendment( Vector3d{ prop_.fixedRotationAxis } );
-                break;
-            case ICPMode::FixedAxis:
-                am = p2pl.calculateFixedAxisAmendment( Vector3d{ prop_.fixedRotationAxis } );
-                break;
-            }
-
-            const auto angle = am.a.length();
-            assert( prop_.p2plAngleLimit > 0 );
-            assert( prop_.p2plScaleLimit >= 1 );
-            if ( angle > prop_.p2plAngleLimit || am.s > prop_.p2plScaleLimit || prop_.p2plScaleLimit * am.s < 1 )
-            {
-                // limit rotation angle and scale
-                am.s = std::clamp( am.s, 1 / ( double )prop_.p2plScaleLimit, ( double )prop_.p2plScaleLimit );
-                if ( angle > prop_.p2plAngleLimit )
-                    am.a *= prop_.p2plAngleLimit / angle;
-
-                // recompute translation part
-                am.b = p2pl.findBestTranslation( am.a, am.s );
-            }
-            res = AffineXf3f( am.rigidScaleXf() );
-        }
-
+        AffineXf3f res = getAligningXf( p2pl, prop_.icpMode, prop_.p2plAngleLimit, prop_.p2plScaleLimit, prop_.fixedRotationAxis );
         if ( std::isnan( res.b.x ) ) //nan check
         {
             valid[id] = FullSizeBool( false );

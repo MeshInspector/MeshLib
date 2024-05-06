@@ -186,6 +186,9 @@ template <typename T> struct RigidScaleXf3;
 using RigidScaleXf3f = RigidScaleXf3<float>;
 using RigidScaleXf3d = RigidScaleXf3<double>;
 
+class PointToPointAligningTransform;
+class PointToPlaneAligningTransform;
+
 template <typename T> struct Sphere;
 template <typename T> using Sphere2 = Sphere<Vector2<T>>;
 using Sphere2f = Sphere2<float>;

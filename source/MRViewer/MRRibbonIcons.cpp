@@ -16,6 +16,7 @@ void RibbonIcons::load()
     auto& instance = instance_();
     instance.load_( IconType::RibbonItemIcon );
     instance.load_( IconType::ObjectTypeIcon );
+    instance.load_( IconType::IndependentIcons );
 }
 
 void RibbonIcons::free()

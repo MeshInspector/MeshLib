@@ -22,9 +22,7 @@ def test_make_cube():
 
     xf = mrmesh.AffineXf3f()
     cube1 = cube
-    pairs = mrmesh.findCollidingTriangles(
-        mrmesh.MeshPart(cube1), mrmesh.MeshPart(cube2), None, False
-    )
+    pairs = mrmesh.findCollidingTriangles(cube1, cube2, None, False)
     assert len(pairs) == 0
 
     cube.topology.flipOrientation()

@@ -117,9 +117,8 @@ float MultiwayICP::getMeanSqDistToPoint( MeshOrPointsId id ) const
 {
     NumSum sum;
     for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
-        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
-            if ( ( i == id || j == id ) && i != j )
-                sum = sum + MR::getSumSqDistToPoint( pairsPerObj_[i][j] );
+        if ( i != id )
+            sum = sum + MR::getSumSqDistToPoint( pairsPerObj_[id][i] ) + MR::getSumSqDistToPoint( pairsPerObj_[i][id] );
     return sum.rootMeanSqF();
 }
 
@@ -137,9 +136,8 @@ float MultiwayICP::getMeanSqDistToPlane( MeshOrPointsId id ) const
 {
     NumSum sum;
     for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
-        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
-            if ( ( i == id || j == id ) && i != j )
-                sum = sum + MR::getSumSqDistToPlane( pairsPerObj_[i][j] );
+        if ( i != id )
+            sum = sum + MR::getSumSqDistToPlane( pairsPerObj_[id][i] ) + MR::getSumSqDistToPlane( pairsPerObj_[i][id] );
     return sum.rootMeanSqF();
 }
 
@@ -182,32 +180,27 @@ void MultiwayICP::deactivatefarDistPairs_()
 {
     MR_TIMER;
 
-    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+    Vector<float, MeshOrPointsId> maxDistSq( objs_.size() );
+    for ( int it = 0; it < 3; ++it )
     {
-        for ( int it = 0; it < 3; ++it )
+        ParallelFor( maxDistSq, [&] ( MeshOrPointsId id )
         {
-            size_t numDeactivated = 0;
-            NumSum sum;
-            for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
-            {
-                if ( i == j )
-                    continue;
-                sum = sum + MR::getSumSqDistToPoint( pairsPerObj_[i][j] );
-            }
-            const auto avgDist = sum.rootMeanSqF();
-            const auto maxDistSq = sqr( prop_.farDistFactor * avgDist );
-            if ( maxDistSq >= prop_.distThresholdSq )
-                break;
-            for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
-            {
-                if ( i == j )
-                    continue;
-                numDeactivated += MR::deactivateFarPairs( pairsPerObj_[i][j], maxDistSq );
-            }
+            maxDistSq[id] = sqr( prop_.farDistFactor * getMeanSqDistToPoint( id ) );
+        } );
 
-            if ( numDeactivated == 0 )
-                break; // nothing was deactivated
+        size_t numDeactivated = 0;
+        for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+        {
+            if ( maxDistSq[i] >= prop_.distThresholdSq )
+                continue;
+
+            for ( MeshOrPointsId j( i + 1 ); j < objs_.size(); ++j )
+                numDeactivated += (
+                    MR::deactivateFarPairs( pairsPerObj_[i][j], maxDistSq[i] ) +
+                    MR::deactivateFarPairs( pairsPerObj_[j][i], maxDistSq[i] ) );
         }
+        if ( numDeactivated == 0 )
+            break;
     }
 }
 

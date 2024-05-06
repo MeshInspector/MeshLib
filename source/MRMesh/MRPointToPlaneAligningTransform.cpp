@@ -44,42 +44,32 @@ void PointToPlaneAligningTransform::prepare()
     sumAIsSym_ = true;
 }
 
-AffineXf3d PointToPlaneAligningTransform::Amendment::rigidScaleXf() const
-{
-    return { scale * Matrix3d( Quaterniond( rotAngles,  rotAngles.length() ) ), shift };
-}
-
-AffineXf3d PointToPlaneAligningTransform::Amendment::linearXf() const
-{
-    return { scale * Matrix3d::approximateLinearRotationMatrixFromEuler( rotAngles ), shift };
-}
-
-auto PointToPlaneAligningTransform::calculateAmendment() const -> Amendment
+auto PointToPlaneAligningTransform::calculateAmendment() const -> RigidScaleXf3d
 {
     assert( sumAIsSym_ );
     Eigen::LLT<Eigen::MatrixXd> chol( sumA_.topLeftCorner<6,6>() );
     Eigen::VectorXd solution = chol.solve( sumB_.topRows<6>() - sumA_.block<6,1>( 0, 6 ) );
 
-    Amendment res;
-    res.rotAngles = Vector3d{ solution.coeff( 0 ), solution.coeff( 1 ), solution.coeff( 2 ) };
-    res.shift =     Vector3d{ solution.coeff( 3 ), solution.coeff( 4 ), solution.coeff( 5 ) };
+    RigidScaleXf3d res;
+    res.a = Vector3d{ solution.coeff( 0 ), solution.coeff( 1 ), solution.coeff( 2 ) };
+    res.b = Vector3d{ solution.coeff( 3 ), solution.coeff( 4 ), solution.coeff( 5 ) };
     return res;
 }
 
-auto PointToPlaneAligningTransform::calculateAmendmentWithScale() const -> Amendment
+auto PointToPlaneAligningTransform::calculateAmendmentWithScale() const -> RigidScaleXf3d
 {
     assert( sumAIsSym_ );
     Eigen::LLT<Eigen::MatrixXd> chol( sumA_ );
     Eigen::VectorXd solution = chol.solve( sumB_ );
 
-    Amendment res;
-    res.scale = solution.coeff( 6 );
-    res.rotAngles = Vector3d{ solution.coeff( 0 ), solution.coeff( 1 ), solution.coeff( 2 ) } / res.scale;
-    res.shift =     Vector3d{ solution.coeff( 3 ), solution.coeff( 4 ), solution.coeff( 5 ) };
+    RigidScaleXf3d res;
+    res.s = solution.coeff( 6 );
+    res.a = Vector3d{ solution.coeff( 0 ), solution.coeff( 1 ), solution.coeff( 2 ) } / res.s;
+    res.b = Vector3d{ solution.coeff( 3 ), solution.coeff( 4 ), solution.coeff( 5 ) };
     return res;
 }
 
-auto PointToPlaneAligningTransform::calculateFixedAxisAmendment( const Vector3d & axis ) const -> Amendment
+auto PointToPlaneAligningTransform::calculateFixedAxisAmendment( const Vector3d & axis ) const -> RigidScaleXf3d
 {
     if ( axis.lengthSq() <= 0 )
         return calculateAmendment();
@@ -104,13 +94,13 @@ auto PointToPlaneAligningTransform::calculateFixedAxisAmendment( const Vector3d 
     Eigen::LLT<Eigen::MatrixXd> chol(A);
     Eigen::VectorXd solution = chol.solve(b);
 
-    Amendment res;
-    res.rotAngles = solution.coeff( 0 ) * fromEigen( k );
-    res.shift =     Vector3d{ solution.coeff( 1 ), solution.coeff( 2 ), solution.coeff( 3 ) };
+    RigidScaleXf3d res;
+    res.a = solution.coeff( 0 ) * fromEigen( k );
+    res.b = Vector3d{ solution.coeff( 1 ), solution.coeff( 2 ), solution.coeff( 3 ) };
     return res;
 }
 
-auto PointToPlaneAligningTransform::calculateOrthogonalAxisAmendment( const Vector3d& ort ) const -> Amendment
+auto PointToPlaneAligningTransform::calculateOrthogonalAxisAmendment( const Vector3d& ort ) const -> RigidScaleXf3d
 {
     if ( ort.lengthSq() <= 0 )
         return calculateAmendment();
@@ -138,10 +128,10 @@ auto PointToPlaneAligningTransform::calculateOrthogonalAxisAmendment( const Vect
     Eigen::LLT<Eigen::MatrixXd> chol(A);
     Eigen::VectorXd solution = chol.solve(b);
 
-    Amendment res;
-    res.rotAngles = solution.coeff( 0 ) * fromEigen( Eigen::Vector3d{ k.leftCols<1>() } ) 
+    RigidScaleXf3d res;
+    res.a = solution.coeff( 0 ) * fromEigen( Eigen::Vector3d{ k.leftCols<1>() } ) 
                   + solution.coeff( 1 ) * fromEigen( Eigen::Vector3d{ k.rightCols<1>() } );
-    res.shift =     Vector3d{ solution.coeff( 2 ), solution.coeff( 3 ), solution.coeff( 4 ) };
+    res.b = Vector3d{ solution.coeff( 2 ), solution.coeff( 3 ), solution.coeff( 4 ) };
     return res;
 }
 
@@ -200,67 +190,67 @@ TEST( MRMesh, PointToPlaneAligningTransform1 )
 
     {
         const auto ammendment = ptp1.calculateAmendment();
-        EXPECT_EQ( ammendment.scale, 1 );
+        EXPECT_EQ( ammendment.s, 1 );
         auto xf2 = ammendment.linearXf();
         EXPECT_NEAR( ( xf1.A - xf2.A ).norm(), 0., eps );
         EXPECT_NEAR( ( xf1.b - xf2.b ).length(), 0., eps );
-        auto shift = ptp1.findBestTranslation( ammendment.rotAngles, ammendment.scale );
+        auto shift = ptp1.findBestTranslation( ammendment.a, ammendment.s );
         EXPECT_NEAR( ( xf1.b - shift ).length(), 0., eps );
     }
 
     {
         const auto ammendment = ptp1.calculateAmendmentWithScale();
-        EXPECT_NEAR( ammendment.scale, 1., 1e-13 );
+        EXPECT_NEAR( ammendment.s, 1., 1e-13 );
         auto xf2 = ammendment.linearXf();
         EXPECT_NEAR( ( xf1.A - xf2.A ).norm(), 0., eps );
         EXPECT_NEAR( ( xf1.b - xf2.b ).length(), 0., eps );
-        auto shift = ptp1.findBestTranslation( ammendment.rotAngles, ammendment.scale );
+        auto shift = ptp1.findBestTranslation( ammendment.a, ammendment.s );
         EXPECT_NEAR( ( xf1.b - shift ).length(), 0., eps );
     }
 
     {
         const auto ammendment = ptp1.calculateFixedAxisAmendment( 10.0 * eulerAngles );
-        EXPECT_EQ( ammendment.scale, 1 );
-        EXPECT_NEAR( cross( ammendment.rotAngles, eulerAngles.normalized() ).length(), 0., eps );
+        EXPECT_EQ( ammendment.s, 1 );
+        EXPECT_NEAR( cross( ammendment.a, eulerAngles.normalized() ).length(), 0., eps );
         auto xf2 = ammendment.linearXf();
         EXPECT_NEAR( ( xf1.A - xf2.A ).norm(), 0., eps );
         EXPECT_NEAR( ( xf1.b - xf2.b ).length(), 0., eps );
-        auto shift = ptp1.findBestTranslation( ammendment.rotAngles, ammendment.scale );
+        auto shift = ptp1.findBestTranslation( ammendment.a, ammendment.s );
         EXPECT_NEAR( ( xf1.b - shift ).length(), 0., eps );
     }
 
     {
         const auto ammendment = ptp1.calculateFixedAxisAmendment( e1 );
-        EXPECT_EQ( ammendment.scale, 1 );
-        EXPECT_NEAR( cross( ammendment.rotAngles, e1 ).length(), 0., eps );
+        EXPECT_EQ( ammendment.s, 1 );
+        EXPECT_NEAR( cross( ammendment.a, e1 ).length(), 0., eps );
     }
 
     {
         const auto ammendment = ptp1.calculateOrthogonalAxisAmendment( -12.0 * e1 );
-        EXPECT_EQ( ammendment.scale, 1 );
-        EXPECT_NEAR( dot( ammendment.rotAngles, e1 ), 0., eps );
+        EXPECT_EQ( ammendment.s, 1 );
+        EXPECT_NEAR( dot( ammendment.a, e1 ), 0., eps );
         auto xf2 = ammendment.linearXf();
         EXPECT_NEAR( ( xf1.A - xf2.A ).norm(), 0., eps );
         EXPECT_NEAR( ( xf1.b - xf2.b ).length(), 0., eps );
-        auto shift = ptp1.findBestTranslation( ammendment.rotAngles, ammendment.scale );
+        auto shift = ptp1.findBestTranslation( ammendment.a, ammendment.s );
         EXPECT_NEAR( ( xf1.b - shift ).length(), 0., eps );
     }
 
     {
         const auto ammendment = ptp1.calculateOrthogonalAxisAmendment( 12.0 * e2 );
-        EXPECT_EQ( ammendment.scale, 1 );
-        EXPECT_NEAR( dot( ammendment.rotAngles, e2 ), 0., eps );
+        EXPECT_EQ( ammendment.s, 1 );
+        EXPECT_NEAR( dot( ammendment.a, e2 ), 0., eps );
         auto xf2 = ammendment.linearXf();
         EXPECT_NEAR( ( xf1.A - xf2.A ).norm(), 0., eps );
         EXPECT_NEAR( ( xf1.b - xf2.b ).length(), 0., eps );
-        auto shift = ptp1.findBestTranslation( ammendment.rotAngles, ammendment.scale );
+        auto shift = ptp1.findBestTranslation( ammendment.a, ammendment.s );
         EXPECT_NEAR( ( xf1.b - shift ).length(), 0., eps );
     }
 
     {
         const auto ammendment = ptp1.calculateOrthogonalAxisAmendment( eulerAngles );
-        EXPECT_EQ( ammendment.scale, 1 );
-        EXPECT_NEAR( dot( ammendment.rotAngles, eulerAngles.normalized() ), 0., eps );
+        EXPECT_EQ( ammendment.s, 1 );
+        EXPECT_NEAR( dot( ammendment.a, eulerAngles.normalized() ), 0., eps );
     }
 
     {
@@ -268,11 +258,11 @@ TEST( MRMesh, PointToPlaneAligningTransform1 )
         AffineXf3d xf2( scale * rotationMatrix, b );
         const auto ptp2 = preparePt2Pl( xf2 );
         const auto ammendment = ptp2.calculateAmendmentWithScale();
-        EXPECT_NEAR( ammendment.scale, scale, 1e-13 );
+        EXPECT_NEAR( ammendment.s, scale, 1e-13 );
         auto xf3 = ammendment.linearXf();
         EXPECT_NEAR( ( xf3.A - xf2.A ).norm(), 0., eps );
         EXPECT_NEAR( ( xf3.b - xf2.b ).length(), 0., eps );
-        auto shift = ptp2.findBestTranslation( ammendment.rotAngles, ammendment.scale );
+        auto shift = ptp2.findBestTranslation( ammendment.a, ammendment.s );
         EXPECT_NEAR( ( xf2.b - shift ).length(), 0., eps );
     }
 
@@ -378,7 +368,7 @@ TEST( MRMesh, PointToPlaneAligningTransform2 )
             EXPECT_NEAR((xfResP2pl.A - xf.A).norm(), 0., eps);
             EXPECT_NEAR((xfResP2pl.b - xf.b).length(), 0., eps);
 
-            auto shift = p2pl.findBestTranslation( am.rotAngles, am.scale );
+            auto shift = p2pl.findBestTranslation( am.a, am.s );
             EXPECT_NEAR( ( xf.b - shift ).length(), 0., eps );
         }
         {
@@ -398,7 +388,7 @@ TEST( MRMesh, PointToPlaneAligningTransform2 )
             EXPECT_NEAR((xfResP2pl.A - scaleXf.A).norm(), 0., eps);
             EXPECT_NEAR((xfResP2pl.b - scaleXf.b).length(), 0., eps);
 
-            auto shift = p2pl.findBestTranslation( am.rotAngles, am.scale );
+            auto shift = p2pl.findBestTranslation( am.a, am.s );
             EXPECT_NEAR( ( xf.b - shift ).length(), 0., eps );
         }
     }

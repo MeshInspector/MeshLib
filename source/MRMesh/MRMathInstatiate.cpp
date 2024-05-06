@@ -13,6 +13,7 @@
 #include "MRVector2.h"
 #include "MRVector3.h"
 #include "MRVector4.h"
+#include "MRRigidScaleXf3.h"
 #include <cmath>
 #include <cassert>
 
@@ -74,6 +75,12 @@ template struct Vector3<double>;
 
 template struct Vector4<float>;
 template struct Vector4<double>;
+
+template struct RigidXf3<float>;
+template struct RigidXf3<double>;
+
+template struct RigidScaleXf3<float>;
+template struct RigidScaleXf3<double>;
 
 template Matrix3<float>  slerp<float>(  const Matrix3<float> & m0,  const Matrix3<float> & m1,  float t );
 template Matrix3<double> slerp<double>( const Matrix3<double> & m0, const Matrix3<double> & m1, double t );

@@ -178,6 +178,14 @@ template <typename T> using AffineXf3 = AffineXf<Vector3<T>>;
 using AffineXf3f = AffineXf3<float>;
 using AffineXf3d = AffineXf3<double>;
 
+template <typename T> struct RigidXf3;
+using RigidXf3f = RigidXf3<float>;
+using RigidXf3d = RigidXf3<double>;
+
+template <typename T> struct RigidScaleXf3;
+using RigidScaleXf3f = RigidScaleXf3<float>;
+using RigidScaleXf3d = RigidScaleXf3<double>;
+
 template <typename T> struct Sphere;
 template <typename T> using Sphere2 = Sphere<Vector2<T>>;
 using Sphere2f = Sphere2<float>;

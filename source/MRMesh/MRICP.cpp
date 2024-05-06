@@ -310,7 +310,7 @@ bool ICP::p2plIter_()
     }
     else
     {
-        PointToPlaneAligningTransform::Amendment am;
+        RigidScaleXf3d am;
         switch ( prop_.icpMode )
         {
         default:
@@ -330,18 +330,18 @@ bool ICP::p2plIter_()
             break;
         }
 
-        const auto angle = am.rotAngles.length();
+        const auto angle = am.a.length();
         assert( prop_.p2plAngleLimit > 0 );
         assert( prop_.p2plScaleLimit >= 1 );
-        if ( angle > prop_.p2plAngleLimit || am.scale > prop_.p2plScaleLimit || prop_.p2plScaleLimit * am.scale < 1 )
+        if ( angle > prop_.p2plAngleLimit || am.s > prop_.p2plScaleLimit || prop_.p2plScaleLimit * am.s < 1 )
         {
             // limit rotation angle and scale
-            am.scale = std::clamp( am.scale, 1 / (double)prop_.p2plScaleLimit, (double)prop_.p2plScaleLimit );
+            am.s = std::clamp( am.s, 1 / (double)prop_.p2plScaleLimit, (double)prop_.p2plScaleLimit );
             if ( angle > prop_.p2plAngleLimit )
-                am.rotAngles *= prop_.p2plAngleLimit / angle;
+                am.a *= prop_.p2plAngleLimit / angle;
 
             // recompute translation part
-            am.shift = p2pl.findBestTranslation( am.rotAngles, am.scale );
+            am.b = p2pl.findBestTranslation( am.a, am.s );
         }
         res = AffineXf3f( am.rigidScaleXf() );
     }

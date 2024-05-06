@@ -2033,7 +2033,7 @@ const char* RibbonMenu::getSceneItemIconByTypeName_( const std::string& typeName
 {
     if ( typeName == ObjectMesh::TypeName() )
         return "\xef\x82\xac";
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+#ifndef MRMESH_NO_OPENVDB
     if ( typeName == ObjectVoxels::TypeName() )
         return "\xef\x86\xb3";
 #endif

@@ -1,5 +1,5 @@
 #include "MRObjectVoxels.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
 #include "MRObjectFactory.h"
 #include "MRMesh.h"
 #include "MRVDBConversions.h"

@@ -1,5 +1,5 @@
-#ifndef __EMSCRIPTEN__
 #include "MRRenderVolumeObject.h"
+#ifndef MRMESH_NO_OPENVDB
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRViewer.h"
 #include "MRGLMacro.h"

@@ -1,5 +1,5 @@
 #include "MRVoxelsLoad.h"
-#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+#ifndef MRMESH_NO_OPENVDB
 #include "MRTimer.h"
 #include "MRSimpleVolume.h"
 #include "MRObjectVoxels.h"
@@ -60,19 +60,23 @@ namespace
     }
 #endif // MRMESH_NO_DICOM
 }
+#endif // MRMESH_NO_OPENVDB
 
-namespace MR
-{
-
-namespace VoxelsLoad
+namespace MR::VoxelsLoad
 {
 
 const IOFilters Filters =
 {
+#ifndef MRMESH_NO_OPENVDB
     {"Raw (.raw)","*.raw"},
     {"OpenVDB (.vdb)","*.vdb"},
+#ifndef MRMESH_NO_DICOM
     {"Micro CT (.gav)","*.gav"},
+#endif
+#endif
 };
+
+#ifndef MRMESH_NO_OPENVDB
 
 struct SliceInfoBase
 {
@@ -1258,6 +1262,6 @@ Expected<VdbVolume, std::string> fromRaw( std::istream& in, const RawParameters&
     return res;
 }
 
-}
-}
-#endif // !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXELS )
+#endif // MRMESH_NO_OPENVDB
+
+} // namespace MR::VoxelsLoad

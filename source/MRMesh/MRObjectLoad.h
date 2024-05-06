@@ -30,7 +30,7 @@ MRMESH_API Expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFil
 /// loads gcode from given file in new object
 MRMESH_API Expected<ObjectGcode, std::string> makeObjectGcodeFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
 
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+#ifndef MRMESH_NO_OPENVDB
 /// loads voxels from given file in new object
 MRMESH_API Expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
 #endif

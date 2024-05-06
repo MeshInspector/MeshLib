@@ -313,7 +313,7 @@ MR_SUPPRESS_WARNING_PUSH
 MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
             obj->setLabelsColor( SceneColors::get( SceneColors::Labels ) );
 MR_SUPPRESS_WARNING_POP
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+#ifndef MRMESH_NO_OPENVDB
             if ( auto objVoxels = std::dynamic_pointer_cast< ObjectVoxels >( obj ) )
             {
                 objVoxels->setFrontColor( SceneColors::get( SceneColors::SelectedObjectVoxels ), true );

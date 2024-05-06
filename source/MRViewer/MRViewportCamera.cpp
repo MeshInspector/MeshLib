@@ -548,7 +548,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
             const VertCoords* coords = nullptr;
             const VertBitSet* selectedVerts = nullptr;
             auto objMesh = obj->asType<ObjectMeshHolder>();
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_OPENVDB
             VertCoords tempVertCoords;
             VertBitSet tempSelected;
             auto objVox = obj->asType<ObjectVoxels>();

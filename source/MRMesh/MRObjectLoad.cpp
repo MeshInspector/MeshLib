@@ -125,9 +125,7 @@ void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::
 const IOFilters allFilters = SceneFileFilters
                              | ObjectLoad::getFilters()
                              | MeshLoad::getFilters()
-#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
                              | VoxelsLoad::Filters
-#endif
                              | LinesLoad::Filters
                              | PointsLoad::Filters;
 
@@ -287,7 +285,7 @@ Expected<ObjectGcode, std::string> makeObjectGcodeFromFile( const std::filesyste
     return objectGcode;
 }
 
-#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+#ifndef MRMESH_NO_OPENVDB
 Expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
 {
     MR_TIMER;
@@ -527,7 +525,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                         {
                             result = unexpected( objectDistanceMap.error() );
 
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+#ifndef MRMESH_NO_OPENVDB
                             auto objsVoxels = makeObjectVoxelsFromFile( filename, callback );
                             std::vector<std::shared_ptr<Object>> resObjs;
                             if ( objsVoxels.has_value() )
@@ -626,11 +624,7 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
 
 
     // Global variable is not correctly initialized in emscripten build
-    const IOFilters filters = SceneFileFilters | MeshLoad::getFilters() |
-#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-        VoxelsLoad::Filters |
-#endif
-        LinesLoad::Filters | PointsLoad::Filters;
+    const IOFilters filters = SceneFileFilters | MeshLoad::getFilters() | VoxelsLoad::Filters | LinesLoad::Filters | PointsLoad::Filters;
 
     std::function<void( FilePathNode& )> fillFilesTree = {};
     fillFilesTree = [&fillFilesTree, &filters] ( FilePathNode& node )

@@ -1,5 +1,5 @@
 #include "MRFixUndercuts.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
 #include "MRMesh.h"
 #include "MRMatrix3.h"
 #include "MRVector3.h"

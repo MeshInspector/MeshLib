@@ -1,4 +1,5 @@
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_TIFF) && !defined(MRMESH_NO_VOXEL)
+#include "MRMesh/MRMeshFwd.h"
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF ) && !defined( MRMESH_NO_OPENVDB )
 
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRRibbonConstants.h"

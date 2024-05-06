@@ -448,7 +448,7 @@ using VoxelValueGetter = std::function<T ( const Vector3i& )>;
 using FunctionVolume = VoxelsVolume<VoxelValueGetter<float>>;
 using FunctionVolumeU8 = VoxelsVolume<VoxelValueGetter<uint8_t>>;
 
-#ifndef MRMESH_NO_VOXEL
+#ifndef MRMESH_NO_OPENVDB
 class ObjectVoxels;
 
 struct OpenVdbFloatGrid;

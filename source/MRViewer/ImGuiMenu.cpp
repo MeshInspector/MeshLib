@@ -91,8 +91,11 @@
 #include "MRMouseController.h"
 #include "MRSceneCache.h"
 
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_OPENVDB
 #include "MRMesh/MRObjectVoxels.h"
+#endif
+
+#ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
 #endif
 
@@ -1405,7 +1408,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 totalVerts += polyline->topology.numValidVerts();
             }
         }
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_OPENVDB
         else if ( auto vObj = obj->asType<ObjectVoxels>() )
         {
             auto newDims = vObj->dimensions();
@@ -2919,10 +2922,7 @@ void ImGuiMenu::draw_mr_menu()
 
         if ( ImGui::Button( "Save##Main", ImVec2( ( w - p ) / 2.f, 0 ) ) )
         {
-            auto filters = MeshSave::Filters | LinesSave::Filters | PointsSave::Filters;
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-            filters = filters | VoxelsSave::Filters;
-#endif
+            auto filters = MeshSave::Filters | LinesSave::Filters | PointsSave::Filters | VoxelsLoad::Filters;
             auto savePath = saveFileDialog( { {}, {}, filters } );
             if ( !savePath.empty() )
                 viewer->saveToFile( savePath );

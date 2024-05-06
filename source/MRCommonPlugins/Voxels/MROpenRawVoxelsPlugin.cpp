@@ -1,5 +1,5 @@
 #include "MROpenRawVoxelsPlugin.h"
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+#ifndef MRMESH_NO_OPENVDB
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRViewer/ImGuiHelpers.h"

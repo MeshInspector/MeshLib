@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
 #include "MRMeshPart.h"
 #include "MRProgressCallback.h"
 #include "MRAffineXf3.h"

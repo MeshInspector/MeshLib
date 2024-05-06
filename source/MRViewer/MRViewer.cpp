@@ -1060,13 +1060,11 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
         if ( filter.extensions.find( ext ) != std::string::npos )
             return true;
     }
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM ) && !defined(MRMESH_NO_VOXEL)
     for ( auto& filter : VoxelsLoad::Filters )
     {
         if ( filter.extensions.find( ext ) != std::string::npos )
             return true;
     }
-#endif
     for ( auto& filter : DistanceMapLoad::Filters )
     {
         if ( filter.extensions.find( ext ) != std::string::npos )

@@ -22,7 +22,7 @@ struct VoxelTraits<VoxelValueGetter<T>>
     using ValueType = T;
 };
 
-#ifndef MRMESH_NO_VOXEL
+#ifndef MRMESH_NO_OPENVDB
 template <>
 struct VoxelTraits<FloatGrid>
 {

@@ -38,7 +38,7 @@ void ImGuiImage::bind_()
         texture_.pixels );
 }
 
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+#ifndef MRMESH_NO_OPENVDB
 MarkedVoxelSlice::MarkedVoxelSlice( const ObjectVoxels& voxels )
 {
     grid_ = voxels.grid();

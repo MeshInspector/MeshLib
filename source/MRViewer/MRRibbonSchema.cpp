@@ -480,7 +480,7 @@ void RibbonSchemaLoader::readItemsJson_( const std::filesystem::path& path ) con
         {
 #ifndef __EMSCRIPTEN__
             spdlog::warn( "Ribbon item \"{}\" is not registered", itemName.asString() );
-            assert( false );
+            //assert( false );
 #endif
             continue;
         }
@@ -606,7 +606,7 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
             {
 #ifndef __EMSCRIPTEN__
                 spdlog::warn( "\"List\" array has no valid items in group: \"{}\", in tab: \"{}\"", groupName.asString(), tabName.asString() );
-                assert( false );
+                //assert( false );
 #endif
                 continue;
             }

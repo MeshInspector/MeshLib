@@ -1,5 +1,5 @@
 #include "MRVoxelsSave.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
 #include "MRMeshFwd.h"
 #include "MRImageSave.h"
 #include "MRVDBFloatGrid.h"
@@ -15,19 +15,21 @@
 #include <fstream>
 #include <filesystem>
 #include <sstream>
+#endif
 
-namespace MR
+namespace MR::VoxelsSave
 {
 
-namespace VoxelsSave
-{
 const IOFilters Filters = 
 {
+#ifndef MRMESH_NO_OPENVDB
     {"Raw (.raw)","*.raw"},
     {"OpenVDB (.vdb)","*.vdb"},
     {"Micro CT (.gav)","*.gav"}
+#endif
 };
 
+#ifndef MRMESH_NO_OPENVDB
 VoidOrErrStr toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback )
 {
     MR_TIMER
@@ -292,7 +294,6 @@ VoidOrErrStr saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSetti
     return {};
 }
 
-} // namespace VoxelsSave
-
-} // namespace MR
 #endif
+
+} // namespace MR::VoxelsSave

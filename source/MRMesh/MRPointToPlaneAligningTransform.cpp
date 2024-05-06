@@ -9,9 +9,8 @@
 namespace MR
 {
 
-void PointToPlaneAligningTransform::add( const Vector3d& s0, const Vector3d& d, const Vector3d& normal2, const double w )
+void PointToPlaneAligningTransform::add( const Vector3d& s, const Vector3d& d, const Vector3d& normal2, const double w )
 {
-    Vector3d s = approxTransform_( s0 );
     Vector3d n = normal2.normalized();
     double k_B = dot( d, n );
     double c[7];
@@ -42,13 +41,6 @@ void PointToPlaneAligningTransform::prepare()
     for (size_t i = 1; i < 7; i++)
         for (size_t j = 0; j < i; j++)
             sumA_(i, j) = sumA_(j, i);
-    sumAIsSym_ = true;
-}
-
-void PointToPlaneAligningTransform::clear()
-{
-    sumA_ = Eigen::Matrix<double, 7, 7>::Zero();
-    sumB_ = Eigen::Vector<double, 7>::Zero();
     sumAIsSym_ = true;
 }
 
@@ -151,30 +143,6 @@ auto PointToPlaneAligningTransform::calculateOrthogonalAxisAmendment( const Vect
                   + solution.coeff( 1 ) * fromEigen( Eigen::Vector3d{ k.rightCols<1>() } );
     res.shift =     Vector3d{ solution.coeff( 2 ), solution.coeff( 3 ), solution.coeff( 4 ) };
     return res;
-}
-
-AffineXf3d PointToPlaneAligningTransform::findBestRigidXf() const
-{
-    const auto ammendment = calculateAmendment();
-    return ammendment.rigidScaleXf() * approxTransform_;
-}
-
-AffineXf3d PointToPlaneAligningTransform::findBestRigidScaleXf() const
-{
-    const auto ammendment = calculateAmendmentWithScale();
-    return ammendment.rigidScaleXf() * approxTransform_;
-}
-
-AffineXf3d PointToPlaneAligningTransform::findBestRigidXfFixedRotationAxis( const Vector3d & axis ) const
-{
-    const auto ammendment = calculateFixedAxisAmendment( axis );
-    return ammendment.rigidScaleXf() * approxTransform_;
-}
-
-AffineXf3d PointToPlaneAligningTransform::findBestRigidXfOrthogonalRotationAxis( const Vector3d & ort ) const
-{
-    const auto ammendment = calculateOrthogonalAxisAmendment( ort );
-    return ammendment.rigidScaleXf() * approxTransform_;
 }
 
 Vector3d PointToPlaneAligningTransform::findBestTranslation( Vector3d rotAngles, double scale ) const

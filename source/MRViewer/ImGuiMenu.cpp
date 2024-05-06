@@ -1810,7 +1810,7 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
         } );
     }
 
-    bool allIsFeatureObj = selectedMask == SelectedTypesMask::ObjectFeaturesBit;
+    bool allIsFeatureObj = selectedMask == SelectedTypesMask::ObjectFeatureBit;
     if ( allIsFeatureObj )
     {
         const auto selectedFeatureObjs = getAllObjectsInTree<FeatureObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
@@ -1906,7 +1906,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
     bool allIsObjLines = selectedMask == SelectedTypesMask::ObjectLinesHolderBit;
     bool allIsObjPoints = selectedMask == SelectedTypesMask::ObjectPointsHolderBit;
     bool allIsObjLabels = selectedMask == SelectedTypesMask::ObjectLabelBit;
-    bool allIsFeatureObj = selectedMask == SelectedTypesMask::ObjectFeaturesBit;
+    bool allIsFeatureObj = selectedMask == SelectedTypesMask::ObjectFeatureBit;
 
     const auto& viewportid = viewer->viewport().id;
 
@@ -3316,7 +3316,11 @@ SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::share
         }
         else if ( obj->asType<FeatureObject>() )
         {
-            res |= SelectedTypesMask::ObjectFeaturesBit;
+            res |= SelectedTypesMask::ObjectFeatureBit;
+        }
+        else if ( obj->asType<MeasurementObject>() )
+        {
+            res |= SelectedTypesMask::ObjectMeasurementBit;
         }
         else
         {

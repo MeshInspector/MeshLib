@@ -18,6 +18,7 @@
 #include "MRMeshIntersect.h"
 #include "MRLine3.h"
 #include "MRPch/MRTBB.h"
+#include "MRMeshDirMax.h"
 #include <filesystem>
 
 namespace MR
@@ -27,13 +28,16 @@ namespace FixUndercuts
 {
 constexpr float numVoxels = 1e7f;
 
-FloatGrid setupGridFromMesh( Mesh& mesh, const AffineXf3f& rot, float voxelSize, float holeExtension, Vector3f dir )
+FloatGrid setupGridFromMesh( Mesh& mesh, const AffineXf3f& rot, float voxelSize, float bottomExtension, Vector3f dir )
 {
     MR_TIMER;
     auto borders = mesh.topology.findHoleRepresentiveEdges();
     
+    auto minV = findDirMax( -dir, mesh, UseAABBTree::YesIfAlreadyConstructed );
+
     for ( auto& border : borders )
-        border = buildBottom( mesh, border, dir, holeExtension );
+        border = extendHole( mesh, border, Plane3f::fromDirAndPt( dir, mesh.points[minV] - bottomExtension * dir ) );
+
     FillHoleParams params;
     for ( const auto& border : borders )
         fillHole( mesh, border, params );

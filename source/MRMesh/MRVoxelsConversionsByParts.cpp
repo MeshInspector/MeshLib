@@ -14,7 +14,7 @@
 #include "MRGTest.h"
 #include "MRVDBFloatGrid.h"
 
-#include <fmt/format.h>
+#include "MRPch/MRFmt.h"
 
 namespace
 {

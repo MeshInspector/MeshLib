@@ -1355,7 +1355,7 @@ float ImGuiMenu::drawSelectionInformation_()
     size_t totalSelectedFaces = 0;
     size_t totalVerts = 0;
     std::optional<float> totalVolume = 0.0f;
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_OPENVDB
     // Voxels info
     Vector3i dimensions;
 #endif

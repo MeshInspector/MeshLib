@@ -299,16 +299,15 @@ std::filesystem::path GetTempDirectory()
 std::filesystem::path GetHomeDirectory()
 {
 #if defined( _WIN32 )
-    return _wgetenv( L"USERPROFILE" );
+    if ( auto* home = _wgetenv( L"USERPROFILE" ) )
+        return home;
 #elif !defined( __EMSCRIPTEN__ )
-    if ( auto home = std::getenv( "HOME" ) )
+    if ( auto* home = std::getenv( "HOME" ) )
         return home;
     if ( auto* pw = getpwuid( getuid() ) )
         return pw->pw_dir;
-    return {};
-#else
-    return {};
 #endif
+    return {};
 }
 
 std::string GetClipboardText()

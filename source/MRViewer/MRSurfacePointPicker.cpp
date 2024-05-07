@@ -303,10 +303,7 @@ void SurfacePointWidget::setPointRadius_()
 
         case Parameters::PointSizeType::Pixel:
         {
-            const auto& viewport = Viewer::instanceRef().viewport();
-            const auto& vParams = viewport.getParameters();
-            const auto w = height( viewport.getViewportRect() );
-            const auto cameraScale = std::tan( vParams.cameraViewAngle / 360.0f * PI_F ) / vParams.cameraZoom / w;
+            float cameraScale = getViewerInstance().viewport().getPixelSizeAtPoint( pickSphere_->getCenter( getViewerInstance().viewport().id ) );
 
             const auto baseObjectWorldXf = baseObject_->worldXf();
             Matrix3f r, s;

@@ -318,8 +318,11 @@ public:
     // Note, Y is up for this box.
     MRVIEWER_API const ViewportRectangle& getViewportRect() const;
 
-    // finds length between near pixels on zNear plane
+    // Finds length between near pixels on zNear plane. Only good in the orthographic projection.
     MRVIEWER_API float getPixelSize() const;
+
+    // Finds the pixel scale at a specific world point. This works in both perspective and orthographic projection.
+    MRVIEWER_API float getPixelSizeAtPoint( const Vector3f& worldPoint ) const;
 
     // Sets position and size of viewport:
     // rect is given as OpenGL coordinates: (0,0) is lower left corner
@@ -352,7 +355,7 @@ public:
     MRVIEWER_API Vector3f worldToCameraSpace( const Vector3f& p ) const;
     MRVIEWER_API std::vector<Vector3f> worldToCameraSpace( const std::vector<Vector3f>& p ) const;
 
-    // projects point(s) to clip space.
+    // projects point(s) to clip space. (rather, to normalized device coordinates, as it includes perspective division)
     // clip space: XYZ [-1.f, 1.f], X axis from left(-1.f) to right(1.f), Y axis from bottom(-1.f) to top(1.f),
     // Z axis from Dnear(-1.f) to Dfar(1.f)
     MRVIEWER_API Vector3f projectToClipSpace( const Vector3f& worldPoint ) const;

@@ -259,6 +259,8 @@ public:
   // override this to have custom UI in "Selection Properties" window (under "Draw Options")
 
   // override this to customize prefix for objects in scene
+  // \detail height should be less or equal ImGui::GetFrameHeight()
+  // method should save ImGui::CursorPosY
   MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& )
   {}
   // override this to customize appearance of collapsing headers
@@ -266,7 +268,9 @@ public:
   // override this to customize appearance of collapsing headers for transform block
   MRVIEWER_API virtual bool drawCollapsingHeaderTransform_();
   // override this to have custom UI in "Scene" window (under opened(expanded) object line)
-  MRVIEWER_API virtual void draw_custom_tree_object_properties( Object& obj );
+  // \detail if onlyHeight is true, should return drawing height without rendering
+  // return 0.f if nothing drawing
+  MRVIEWER_API virtual float draw_custom_tree_object_properties( Object& obj, bool onlyCalcHeight );
 
   bool make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, AnyVisualizeMaskEnum type, MR::ViewportMask viewportid, bool invert = false );
   template<typename ObjectT>
@@ -390,6 +394,8 @@ protected:
 
     // payload object will be moved
     MRVIEWER_API void makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload );
+    // checking the need to draw a target
+    MRVIEWER_API bool needDragDropTarget_();
     // "target" and "before" are "to" and "before" of SceneReorder struct
     // betweenLine - if true requires to draw line (between two objects in tree, for ImGui to have target)
     // counter - unique number of object in tree (needed for ImGui to differ new lines)
@@ -449,13 +455,6 @@ protected:
     };
     // This class helps the viewer to `renderUi()` from `IRenderObject`s.
     std::unique_ptr<UiRenderManagerImpl> uiRenderManager_;
-
-    enum class SceneListVisible
-    {
-        All,
-        NotHidden,
-        None
-    } sceneListVisible_;
 };
 
 

@@ -1574,7 +1574,7 @@ float ImGuiMenu::drawSelectionInformation_()
         UI::readOnlyValue<LengthUnit>( label, value );
     };
 
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_OPENVDB
     if ( dimensions.x > 0 && dimensions.y > 0 && dimensions.z > 0 )
     {
         drawDimensionsVec3( "Dimensions", dimensions );

@@ -943,7 +943,7 @@ MR_REGISTER_RIBBON_ITEM( CaptureScreenshotToClipBoardMenuItem )
 #endif
 
 }
-#ifdef __EMSCRIPTEN__
+#if defined( __EMSCRIPTEN__ ) && defined( MRMESH_NO_DICOM )
 #include "MRCommonPlugins/Basic/MRWasmUnavailablePlugin.h"
 MR_REGISTER_WASM_UNAVAILABLE_ITEM( OpenDICOMsMenuItem, "Open DICOMs" )
 #endif

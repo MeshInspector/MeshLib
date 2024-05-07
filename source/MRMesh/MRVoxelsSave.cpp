@@ -23,9 +23,11 @@ namespace MR::VoxelsSave
 const IOFilters Filters = 
 {
 #ifndef MRMESH_NO_OPENVDB
-    {"Raw (.raw)","*.raw"},
-    {"OpenVDB (.vdb)","*.vdb"},
-    {"Micro CT (.gav)","*.gav"}
+    { "Raw (.raw)", "*.raw" },
+    { "Micro CT (.gav)", "*.gav" }
+#ifdef MRMESH_OPENVDB_USE_IO
+    { "OpenVDB (.vdb)", "*.vdb" },
+#endif
 #endif
 };
 
@@ -151,6 +153,7 @@ VoidOrErrStr toGav( const VdbVolume& vdbVolume, std::ostream & out, ProgressCall
     return toRawFloat( vdbVolume, out, callback );
 }
 
+#ifdef MRMESH_OPENVDB_USE_IO
 VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& filename, ProgressCallback /*callback*/ )
 {
     MR_TIMER
@@ -179,6 +182,7 @@ VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& fil
 
     return {};
 }
+#endif
 
 VoidOrErrStr toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesystem::path& file,
                                    ProgressCallback callback /*= {} */ )
@@ -191,8 +195,10 @@ VoidOrErrStr toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesy
         return toRawAutoname( vdbVolume, file, callback );
     else if ( ext == ".gav" )
         return toGav( vdbVolume, file, callback );
+#ifdef MRMESH_OPENVDB_USE_IO
     else if ( ext == ".vdb" )
         return toVdb( vdbVolume, file, callback );
+#endif
     else
         return unexpected( std::string( "unsupported file extension" ) );
 }

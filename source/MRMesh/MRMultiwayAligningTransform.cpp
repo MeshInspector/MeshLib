@@ -1,4 +1,5 @@
 #include "MRMultiwayAligningTransform.h"
+#include "MRGTest.h"
 #include <Eigen/Cholesky> //LLT
 #include <cassert>
 
@@ -80,6 +81,13 @@ void MultiwayAligningTransform::add( int objA, const Vector3d& pA, int objB, con
 
 std::vector<RigidXf3d> MultiwayAligningTransform::solve()
 {
+    // copy values in lower-left part
+    const auto sz = (size_t)a_.rows();
+    assert( sz == (size_t)a_.cols() );
+    for (size_t i = 1; i < sz; i++)
+        for (size_t j = 0; j < i; j++)
+            a_(i, j) = a_(j, i);
+
     Eigen::LLT<Eigen::MatrixXd> chol( a_ );
     Eigen::VectorXd solution = chol.solve( b_ );
 
@@ -97,6 +105,58 @@ std::vector<RigidXf3d> MultiwayAligningTransform::solve()
     assert( res.size() == numObjs_ );
 
     return res;
+}
+
+TEST( MRMesh, MultiwayAligningTransform )
+{
+    std::vector<Vector3d> pInit, n, n2;
+    pInit.resize( 10 );
+    n.resize( 10 );
+    n2.resize( 3 );
+
+    pInit[0]  = {   1.0,   1.0, -5.0 }; n[0] = {  0.0,  0.0, -1.0 }; n2[0] = { 0.1, -0.1,  0.0 };
+    pInit[1]  = {  14.0,   1.0,  1.0 }; n[1] = {  1.0,  0.1,  1.0 }; n2[1] = { 0.3,  0.0, -0.3 };
+    pInit[2]  = {   1.0,  14.0,  2.0 }; n[2] = {  0.1,  1.0,  1.2 }; n2[2] = { 0.0, -0.6,  0.5 };
+    pInit[3]  = { -11.0,   2.0,  3.0 }; n[3] = { -1.0,  0.1,  1.0 };
+    pInit[4]  = {   1.0, -11.0,  4.0 }; n[4] = {  0.1, -1.1,  1.1 };
+    pInit[5]  = {   1.0,   2.0,  8.0 }; n[5] = {  0.1,  0.1,  1.0 };
+    pInit[6]  = {   2.0,   1.0, -5.0 }; n[6] = {  0.1,  0.0, -1.0 };
+    pInit[7]  = {  15.0,   1.5,  1.0 }; n[7] = {  1.1,  0.1,  1.0 };
+    pInit[8]  = {   1.5,  15.0,  2.0 }; n[8] = {  0.1,  1.0,  1.2 };
+    pInit[9]  = { -11.0,   2.5,  3.1 }; n[9] = { -1.1,  0.1,  1.1 };
+
+    auto prepare = [&]( const AffineXf3d & xf )
+    {
+        std::vector<Vector3d> pTransformed( 10 );
+
+        for( int i = 0; i < 10; i++ )
+            pTransformed[i] = xf( pInit[i] );
+        for( int i = 0; i < 3; i++ )
+            pTransformed[i] += n2[i];
+
+        MultiwayAligningTransform mw;
+        mw.reset( 2 );
+        for( int i = 0; i < 10; i++ )
+            mw.add( 0, pInit[i], 1, pTransformed[i], n[i] );
+        return mw;
+    };
+
+    double alpha = 0.15, beta = 0.23, gamma = -0.17;
+    const Vector3d eulerAngles{ alpha, beta, gamma };
+    const auto [e1, e2] = eulerAngles.perpendicular();
+    Matrix3d rotationMatrix = Matrix3d::approximateLinearRotationMatrixFromEuler( eulerAngles );
+    const Vector3d b( 2., 3., -1. );
+    AffineXf3d xf1( rotationMatrix, b );
+
+    auto mw = prepare( xf1 );
+    constexpr double eps = 3e-13;
+
+    {
+        const auto ammendment = mw.solve()[0];
+        auto xf2 = ammendment.linearXf();
+        EXPECT_NEAR( ( xf1.A - xf2.A ).norm(), 0., eps );
+        EXPECT_NEAR( ( xf1.b - xf2.b ).length(), 0., eps );
+    }
 }
 
 } //namespace MR

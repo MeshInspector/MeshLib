@@ -2,6 +2,7 @@
 
 #include "MRViewer/exports.h"
 
+#include <cstdint>
 #include <limits>
 #include <map>
 #include <optional>

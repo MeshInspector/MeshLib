@@ -79,6 +79,13 @@ void MultiwayAligningTransform::add( int objA, const Vector3d& pA, int objB, con
     }
 }
 
+void MultiwayAligningTransform::add( const MultiwayAligningTransform & r )
+{
+    assert( numObjs_ == r.numObjs_ );
+    a_ += r.a_;
+    b_ += r.b_;
+}
+
 std::vector<RigidXf3d> MultiwayAligningTransform::solve()
 {
     // copy values in lower-left part

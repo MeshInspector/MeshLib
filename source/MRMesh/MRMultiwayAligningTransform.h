@@ -34,6 +34,9 @@ public:
     /// one point (pA) from (objA), and the other plane specified by point (pB) and normal (nB) from (objB)
     void add( int objA, const Vector3f& pA, int objB, const Vector3f& pB, const Vector3f& nB, float w = 1 ) { add( objA, Vector3d( pA ), objB, Vector3d( pB ), Vector3d( nB ), w ); }
 
+    /// appends links accumulated in (r) into this
+    MRMESH_API void add( const MultiwayAligningTransform & r );
+
     /// finds the solution consisting of all objects transformations (numObj),
     /// that minimizes the summed weighted squared distance among accumulated links (point-point or point-plane);
     /// the transform of the last object is always identity (it is fixed)

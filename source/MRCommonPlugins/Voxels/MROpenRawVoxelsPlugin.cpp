@@ -69,9 +69,16 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     }
     if ( UI::button( "Open file", Vector2f( -1, 0 ) ) )
     {
-        auto path = openFileDialog( { {},{},{{"RAW File","*.raw;*.bin"}} } );
-        if ( !path.empty() )
+        const FileParameters params {
+            .filters = {
+                { "RAW File", "*.raw;*.bin" },
+            },
+        };
+        const auto cb = [this] ( const std::filesystem::path& path )
         {
+            if ( path.empty() )
+                return;
+
             ProgressBar::orderWithMainThreadPostProcessing( "Load voxels", [params = parameters_, path, autoMode = autoMode_] ()->std::function<void()>
             {
                 ProgressBar::nextTask( "Load file" );
@@ -138,7 +145,8 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 }
             }, 3 );
             dialogIsOpen_ = false;
-        }
+        };
+        openFileDialogAsync( cb, params );
     }
     ImGui::PopStyleVar( 2 );
     ImGui::EndCustomStatePlugin();

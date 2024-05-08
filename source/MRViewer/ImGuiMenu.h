@@ -270,7 +270,7 @@ public:
   // override this to have custom UI in "Scene" window (under opened(expanded) object line)
   // \detail if onlyHeight is true, should return drawing height without rendering
   // return 0.f if nothing drawing
-  MRVIEWER_API virtual float draw_custom_tree_object_properties( Object& obj, bool onlyCalcHeight );
+  MRVIEWER_API virtual float drawCustomTreeObjectProperties( Object& obj, bool onlyCalcHeight );
 
   bool make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, AnyVisualizeMaskEnum type, MR::ViewportMask viewportid, bool invert = false );
   template<typename ObjectT>

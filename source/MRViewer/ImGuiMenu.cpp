@@ -1338,7 +1338,7 @@ void ImGuiMenu::drawObjectsList_()
         }
         if ( isOpen )
         {
-            const float drawPropertiesHeight = draw_custom_tree_object_properties( object, true );
+            const float drawPropertiesHeight = drawCustomTreeObjectProperties( object, true );
             if ( drawPropertiesHeight > 0.f )
             {
                 if ( skipedCursorPosY + drawPropertiesHeight <= drawBoxYmin || skipedCursorPosY > drawBoxYmax )
@@ -1350,7 +1350,7 @@ void ImGuiMenu::drawObjectsList_()
                 {
                     if ( skipedCursorPosY > ImGui::GetCursorPosY() )
                         ImGui::Dummy( ImVec2( 0, skipedCursorPosY - ImGui::GetCursorPosY() - lastSpacingY ) );
-                    draw_custom_tree_object_properties( object, false );
+                    drawCustomTreeObjectProperties( object, false );
                     skipedCursorPosY = ImGui::GetCursorPosY();
                 }
             }
@@ -2511,7 +2511,7 @@ bool ImGuiMenu::drawCollapsingHeaderTransform_()
     return drawCollapsingHeader_( "Transform", ImGuiTreeNodeFlags_DefaultOpen );
 }
 
-float ImGuiMenu::draw_custom_tree_object_properties( Object&, bool )
+float ImGuiMenu::drawCustomTreeObjectProperties( Object&, bool )
 {
     return 0.f;
 }

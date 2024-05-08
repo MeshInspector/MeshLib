@@ -63,7 +63,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
             return;
         }
 
-        ProgressBar::orderWithMainThreadPostProcessing( "Open directory", [this, directory, viewer = Viewer::instance()]()->std::function<void()>
+        ProgressBar::orderWithMainThreadPostProcessing( "Open Voxels From TIFF", [this, directory, viewer = Viewer::instance()]()->std::function<void()>
         {
             ProgressBar::nextTask( "Load TIFF Folder" );
 
@@ -84,7 +84,10 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 return returnError;
 
             std::shared_ptr<ObjectVoxels> voxelsObject = std::make_shared<ObjectVoxels>();
-            voxelsObject->setName( "Loaded Voxels" );
+            auto name = utf8string( directory.filename() );
+            if ( name.empty() )
+                name = "Tiff Voxels";
+            voxelsObject->setName( std::move( name ) );
             ProgressBar::setTaskCount( 2 );
             ProgressBar::nextTask( "Construct ObjectVoxels" );
             voxelsObject->construct( *loadRes, ProgressBar::callBackSetProgress );
@@ -99,14 +102,15 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 return returnError;
 
             voxelsObject->select( true );
-            return [viewer, voxelsObject, directory] ()
+            return [this, viewer, voxelsObject, directory] ()
             {
-                AppendHistory<ChangeSceneAction>( "Open Voxels", voxelsObject, ChangeSceneAction::Type::AddObject );
+                AppendHistory<ChangeSceneAction>( "Open Voxels From TIFF", voxelsObject, ChangeSceneAction::Type::AddObject );
                 SceneRoot::get().addChild( voxelsObject );
                 viewer->viewport().preciseFitDataToScreenBorder( { 0.9f } );
                 std::filesystem::path scenePath = directory;
                 scenePath += ".mru";
                 getViewerInstance().onSceneSaved( scenePath, false );
+                dialogIsOpen_ = false;
             };
         }, 2 );
     }

@@ -3,6 +3,7 @@
 // A template implementation file for `MRUIStyle.h`. Include that file.
 
 #include "MRUIStyle.h" // To help intellisense.
+#include "MRViewer/MRUITestEngine.h"
 
 namespace MR::UI
 {
@@ -189,11 +190,23 @@ namespace detail
             return fmt::format( "Range: at most {}", maxString );
         return "";
     }
+
+    [[nodiscard]] inline const char* getTestEngineLabelForVecElem( int i )
+    {
+        return std::array{ "x", "y", "z", "w" }[i];
+    }
 }
 
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U>
 bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToStringParams<E> unitParams, ImGuiSliderFlags flags )
 {
+    if constexpr ( !detail::Scalar<T> )
+        UI::TestEngine::pushTree( label );
+    MR_FINALLY{
+        if constexpr ( !detail::Scalar<T> )
+            UI::TestEngine::popTree();
+    };
+
     auto fixedMin = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMin );
     auto fixedMax = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMax );
 
@@ -233,15 +246,31 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
                     unitParams.stripTrailingZeroes = true;
             };
 
-            return detail::genericSlider(
+            bool ret = detail::genericSlider(
                 elemLabel, detail::imGuiTypeEnum<ElemType>(), &elemVal, elemMin, elemMax, valueToImGuiFormatString( elemVal, unitParams ).c_str(), flags
             );
+
+            // Test engine stuff:
+            if ( auto opt = TestEngine::createValue( detail::Scalar<T> ? label : detail::getTestEngineLabelForVecElem( i ), elemVal, *elemMin, *elemMax ) )
+            {
+                elemVal = *opt;
+                ret = true;
+                detail::markItemEdited( ImGui::GetItemID() );
+            }
+            return ret;
         } );
 }
 
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidDragSpeedForTargetType<T> SpeedType, detail::ValidBoundForTargetType<T> U>
 bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vMax, UnitToStringParams<E> unitParams, ImGuiSliderFlags flags, const U& step, const U& stepFast )
 {
+    if constexpr ( !detail::Scalar<T> )
+        UI::TestEngine::pushTree( label );
+    MR_FINALLY{
+        if constexpr ( !detail::Scalar<T> )
+            UI::TestEngine::popTree();
+    };
+
     auto fixedSpeed = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vSpeed );
     auto fixedMin = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMin );
     auto fixedMax = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMax );
@@ -364,6 +393,13 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 }
             }
 
+            // Test engine stuff:
+            if ( auto opt = TestEngine::createValue( detail::Scalar<T> ? label : detail::getTestEngineLabelForVecElem( i ), elemVal, *elemMin, *elemMax ) )
+            {
+                elemVal = *opt;
+                ret = true;
+                detail::markItemEdited( ImGui::GetItemID() );
+            }
             return ret;
         } );
 }

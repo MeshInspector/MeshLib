@@ -64,6 +64,57 @@ void checkForNewFrame()
 
 } // namespace
 
+template <typename T>
+std::optional<T> detail::createValueLow( std::string_view name, T value, T min, T max )
+{
+    #if MR_ENABLE_UI_TEST_ENGINE
+
+    checkForNewFrame();
+
+    auto& map = state.stack.back()->elems;
+    auto iter = map.find( name ); // I wish I could use `std::try_emplace` here directly...
+    if ( iter == map.end() )
+    {
+        iter = map.try_emplace( std::string( name ) ).first;
+    }
+    else
+    {
+        // If you see this assert, you likely have duplicate drag/slider names.
+        assert( !iter->second.visitedOnThisFrame && "Registering the same entry more than once in a single frame!" );
+    }
+
+    ValueEntry* entry = std::get_if<ValueEntry>( &iter->second.value );
+    if ( !entry )
+        entry = &iter->second.value.emplace<ValueEntry>();
+
+    std::optional<T> ret;
+
+    ValueEntry::Value<T>* val = std::get_if<ValueEntry::Value<T>>( &entry->value );
+    if ( val )
+    {
+        ret = val->simulatedValue;
+        val->simulatedValue = {};
+    }
+    else
+    {
+        val = &entry->value.emplace<ValueEntry::Value<T>>();
+    }
+
+    iter->second.visitedOnThisFrame = true;
+    val->value = value; // Could also read `ret` here, but that would be a bit weird, I guess?
+    val->min = min;
+    val->max = max;
+
+    return ret;
+
+    #else
+    return {};
+    #endif
+}
+
+template std::optional<std::int64_t> detail::createValueLow( std::string_view name, std::int64_t value, std::int64_t min, std::int64_t max );
+template std::optional<double> detail::createValueLow( std::string_view name, double value, double min, double max );
+
 bool createButton( std::string_view name )
 {
     #if MR_ENABLE_UI_TEST_ENGINE
@@ -91,6 +142,8 @@ bool createButton( std::string_view name )
     iter->second.visitedOnThisFrame = true;
 
     return std::exchange( button->simulateClick, false );
+    #else
+    return false;
     #endif
 }
 

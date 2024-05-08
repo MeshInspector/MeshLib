@@ -69,11 +69,6 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     }
     if ( UI::button( "Open file", Vector2f( -1, 0 ) ) )
     {
-        const FileParameters params {
-            .filters = {
-                { "RAW File", "*.raw;*.bin" },
-            },
-        };
         const auto cb = [this] ( const std::filesystem::path& path )
         {
             if ( path.empty() )
@@ -146,7 +141,11 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             }, 3 );
             dialogIsOpen_ = false;
         };
-        openFileDialogAsync( cb, params );
+        openFileDialogAsync( cb, {
+            .filters = {
+                { "RAW File", "*.raw;*.bin" },
+            },
+        } );
     }
     ImGui::PopStyleVar( 2 );
     ImGui::EndCustomStatePlugin();

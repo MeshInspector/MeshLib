@@ -88,7 +88,7 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   # fix TBB lookup
   OPENVDB_CMAKE_OPTIONS="${OPENVDB_CMAKE_OPTIONS} -DCMAKE_FIND_ROOT_PATH=$(pwd)/../ -DTbb_VERSION=2021.12"
   # fix linkage
-  if ${MR_EMSCRIPTEN_SINGLETHREAD} ; then
+  if [[ ${MR_EMSCRIPTEN_SINGLETHREAD} == 0 ]] ; then
     OPENVDB_CMAKE_OPTIONS="${OPENVDB_CMAKE_OPTIONS} -DCMAKE_CXX_FLAGS=-pthread"
   fi
   # mock the missing dependencies that are not actually used

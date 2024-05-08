@@ -143,7 +143,6 @@ TEST( MRMesh, MultiwayAligningTransform )
 
     double alpha = 0.15, beta = 0.23, gamma = -0.17;
     const Vector3d eulerAngles{ alpha, beta, gamma };
-    const auto [e1, e2] = eulerAngles.perpendicular();
     Matrix3d rotationMatrix = Matrix3d::approximateLinearRotationMatrixFromEuler( eulerAngles );
     const Vector3d b( 2., 3., -1. );
     AffineXf3d xf1( rotationMatrix, b );

@@ -117,9 +117,8 @@ float MultiwayICP::getMeanSqDistToPoint( MeshOrPointsId id ) const
 {
     NumSum sum;
     for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
-        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
-            if ( ( i == id || j == id ) && i != j )
-                sum = sum + MR::getSumSqDistToPoint( pairsPerObj_[i][j] );
+        if ( i != id )
+            sum = sum + MR::getSumSqDistToPoint( pairsPerObj_[id][i] ) + MR::getSumSqDistToPoint( pairsPerObj_[i][id] );
     return sum.rootMeanSqF();
 }
 
@@ -137,9 +136,8 @@ float MultiwayICP::getMeanSqDistToPlane( MeshOrPointsId id ) const
 {
     NumSum sum;
     for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
-        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
-            if ( ( i == id || j == id ) && i != j )
-                sum = sum + MR::getSumSqDistToPlane( pairsPerObj_[i][j] );
+        if ( i != id )
+            sum = sum + MR::getSumSqDistToPlane( pairsPerObj_[id][i] ) + MR::getSumSqDistToPlane( pairsPerObj_[i][id] );
     return sum.rootMeanSqF();
 }
 
@@ -182,32 +180,27 @@ void MultiwayICP::deactivatefarDistPairs_()
 {
     MR_TIMER;
 
-    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+    Vector<float, MeshOrPointsId> maxDistSq( objs_.size() );
+    for ( int it = 0; it < 3; ++it )
     {
-        for ( int it = 0; it < 3; ++it )
+        ParallelFor( maxDistSq, [&] ( MeshOrPointsId id )
         {
-            size_t numDeactivated = 0;
-            NumSum sum;
-            for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
-            {
-                if ( i == j )
-                    continue;
-                sum = sum + MR::getSumSqDistToPoint( pairsPerObj_[i][j] );
-            }
-            const auto avgDist = sum.rootMeanSqF();
-            const auto maxDistSq = sqr( prop_.farDistFactor * avgDist );
-            if ( maxDistSq >= prop_.distThresholdSq )
-                break;
-            for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
-            {
-                if ( i == j )
-                    continue;
-                numDeactivated += MR::deactivateFarPairs( pairsPerObj_[i][j], maxDistSq );
-            }
+            maxDistSq[id] = sqr( prop_.farDistFactor * getMeanSqDistToPoint( id ) );
+        } );
 
-            if ( numDeactivated == 0 )
-                break; // nothing was deactivated
+        size_t numDeactivated = 0;
+        for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+        {
+            if ( maxDistSq[i] >= prop_.distThresholdSq )
+                continue;
+
+            for ( MeshOrPointsId j( i + 1 ); j < objs_.size(); ++j )
+                numDeactivated += (
+                    MR::deactivateFarPairs( pairsPerObj_[i][j], maxDistSq[i] ) +
+                    MR::deactivateFarPairs( pairsPerObj_[j][i], maxDistSq[i] ) );
         }
+        if ( numDeactivated == 0 )
+            break;
     }
 }
 
@@ -323,49 +316,7 @@ bool MultiwayICP::p2plIter_()
         }
         p2pl.prepare();
 
-        AffineXf3f res;
-        if ( prop_.icpMode == ICPMode::TranslationOnly )
-        {
-            res = AffineXf3f( Matrix3f(), Vector3f( p2pl.findBestTranslation() ) );
-        }
-        else
-        {
-            PointToPlaneAligningTransform::Amendment am;
-            switch ( prop_.icpMode )
-            {
-            default:
-                assert( false );
-                [[fallthrough]];
-            case ICPMode::RigidScale:
-                am = p2pl.calculateAmendmentWithScale();
-                break;
-            case ICPMode::AnyRigidXf:
-                am = p2pl.calculateAmendment();
-                break;
-            case ICPMode::OrthogonalAxis:
-                am = p2pl.calculateOrthogonalAxisAmendment( Vector3d{ prop_.fixedRotationAxis } );
-                break;
-            case ICPMode::FixedAxis:
-                am = p2pl.calculateFixedAxisAmendment( Vector3d{ prop_.fixedRotationAxis } );
-                break;
-            }
-
-            const auto angle = am.rotAngles.length();
-            assert( prop_.p2plAngleLimit > 0 );
-            assert( prop_.p2plScaleLimit >= 1 );
-            if ( angle > prop_.p2plAngleLimit || am.scale > prop_.p2plScaleLimit || prop_.p2plScaleLimit * am.scale < 1 )
-            {
-                // limit rotation angle and scale
-                am.scale = std::clamp( am.scale, 1 / ( double )prop_.p2plScaleLimit, ( double )prop_.p2plScaleLimit );
-                if ( angle > prop_.p2plAngleLimit )
-                    am.rotAngles *= prop_.p2plAngleLimit / angle;
-
-                // recompute translation part
-                am.shift = p2pl.findBestTranslation( am.rotAngles, am.scale );
-            }
-            res = AffineXf3f( am.rigidScaleXf() );
-        }
-
+        AffineXf3f res = getAligningXf( p2pl, prop_.icpMode, prop_.p2plAngleLimit, prop_.p2plScaleLimit, prop_.fixedRotationAxis );
         if ( std::isnan( res.b.x ) ) //nan check
         {
             valid[id] = FullSizeBool( false );

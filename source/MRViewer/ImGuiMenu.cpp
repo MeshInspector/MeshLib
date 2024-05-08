@@ -305,6 +305,10 @@ void ImGuiMenu::addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesCyrillic() );
     builder.AddChar( 0x2116 ); // NUMERO SIGN (shift+3 on cyrillic keyboards)
     builder.AddChar( 0x2212 ); // MINUS SIGN
+    builder.AddChar( 0x222A ); // UNION
+    builder.AddChar( 0x2229 ); // INTERSECTION
+    builder.AddChar( 0x2208 ); // INSIDE
+    builder.AddChar( 0x2209 ); // OUTSIDE
 #ifndef __EMSCRIPTEN__
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesChineseSimplifiedCommon() );
 #endif
@@ -1813,7 +1817,7 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
         } );
     }
 
-    bool allIsFeatureObj = selectedMask == SelectedTypesMask::ObjectFeaturesBit;
+    bool allIsFeatureObj = selectedMask == SelectedTypesMask::ObjectFeatureBit;
     if ( allIsFeatureObj )
     {
         const auto selectedFeatureObjs = getAllObjectsInTree<FeatureObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
@@ -1909,7 +1913,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
     bool allIsObjLines = selectedMask == SelectedTypesMask::ObjectLinesHolderBit;
     bool allIsObjPoints = selectedMask == SelectedTypesMask::ObjectPointsHolderBit;
     bool allIsObjLabels = selectedMask == SelectedTypesMask::ObjectLabelBit;
-    bool allIsFeatureObj = selectedMask == SelectedTypesMask::ObjectFeaturesBit;
+    bool allIsFeatureObj = selectedMask == SelectedTypesMask::ObjectFeatureBit;
 
     const auto& viewportid = viewer->viewport().id;
 
@@ -3316,7 +3320,11 @@ SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::share
         }
         else if ( obj->asType<FeatureObject>() )
         {
-            res |= SelectedTypesMask::ObjectFeaturesBit;
+            res |= SelectedTypesMask::ObjectFeatureBit;
+        }
+        else if ( obj->asType<MeasurementObject>() )
+        {
+            res |= SelectedTypesMask::ObjectMeasurementBit;
         }
         else
         {

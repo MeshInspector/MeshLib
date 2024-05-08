@@ -196,6 +196,8 @@
     <ClInclude Include="MRPrism.h" />
     <ClInclude Include="MRProgressReadWrite.h" />
     <ClInclude Include="MRRayBoxIntersection2.h" />
+    <ClInclude Include="MRRigidScaleXf3.h" />
+    <ClInclude Include="MRRigidXf3.h" />
     <ClInclude Include="MRSaveSettings.h" />
     <ClInclude Include="MRSceneLoad.h" />
     <ClInclude Include="MRSeparationPoint.h" />

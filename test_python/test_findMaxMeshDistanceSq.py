@@ -13,8 +13,6 @@ def test_find_max_mesh_distance_sq():
     diffXf = mrmesh.AffineXf3f.translation(transVector)
     torus2.transform(diffXf)
 
-    distSq = mrmesh.findMaxDistanceSq(
-        mrmesh.MeshPart(torus), mrmesh.MeshPart(torus2), diffXf.inverse(), 1e35
-    )
+    distSq = mrmesh.findMaxDistanceSq(torus, torus2, diffXf.inverse(), 1e35)
 
     assert distSq < 69.28205**2

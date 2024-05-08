@@ -145,23 +145,22 @@ TEST( MRMesh, MultiwayAligningTransform )
         EXPECT_NEAR( ( xf.b - xfT.b ).length(), 0., eps );
     }
 
-    // 2 objects, 1-0 links, identity transform
+    // 2 objects, 1-0 links
     {
         MultiwayAligningTransform mw;
         mw.reset( 2 );
         for( int i = 0; i < 10; i++ )
-            mw.add( 1, pInit[i], 0, pInit[i] + n2[i], n[i] );
+            mw.add( 1, xf( pInit[i] ) - n2[i], 0, pInit[i], n[i] );
 
         const auto ammendment = mw.solve()[0];
         auto xfT = ammendment.linearXf();
-        AffineXf3d id;
-        EXPECT_NEAR( ( id.A - xfT.A ).norm(), 0., eps );
-        EXPECT_NEAR( ( id.b - xfT.b ).length(), 0., eps );
+        EXPECT_NEAR( ( xf.A - xfT.A ).norm(), 0., eps );
+        EXPECT_NEAR( ( xf.b - xfT.b ).length(), 0., eps );
     }
 
     const double alpha1 = -0.05, beta1 = -0.13, gamma1 = 0.07;
     const Vector3d eulerAngles1{ alpha1, beta1, gamma1 };
-    const Matrix3d rotationMatrix1 = Matrix3d::approximateLinearRotationMatrixFromEuler( eulerAngles );
+    const Matrix3d rotationMatrix1 = Matrix3d::approximateLinearRotationMatrixFromEuler( eulerAngles1 );
     const Vector3d b1( 1., -2., 3. );
     const AffineXf3d xf1( rotationMatrix1, b1 );
 
@@ -186,13 +185,13 @@ TEST( MRMesh, MultiwayAligningTransform )
     }
 
     // 3 objects: 0-1, 1-2 links
-/*    {
+    {
         MultiwayAligningTransform mw;
         mw.reset( 3 );
         for( int i = 0; i < 10; i++ )
         {
-            mw.add( 0, pInit[i], 1, pInit[i] + n2[i], n[i] );
-            mw.add( 1, pInit[i], 2, xf1( pInit[i] ) - n2[i], n[i] );
+            mw.add( 0, pInit[i], 1, pInit[i], n[i] );
+            mw.add( 1, pInit[i], 2, xf( pInit[i] ) - n2[i], n[i] );
         }
         const auto sol = mw.solve();
 
@@ -203,7 +202,7 @@ TEST( MRMesh, MultiwayAligningTransform )
         auto xfT1 = sol[1].linearXf();
         EXPECT_NEAR( ( xf.A - xfT1.A ).norm(), 0., eps );
         EXPECT_NEAR( ( xf.b - xfT1.b ).length(), 0., eps );
-    }*/
+    }
 }
 
 } //namespace MR

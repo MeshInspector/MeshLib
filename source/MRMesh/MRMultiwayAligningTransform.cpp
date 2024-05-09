@@ -15,6 +15,74 @@ void MultiwayAligningTransform::reset( int numObjs )
     numObjs_ = numObjs;
 }
 
+void MultiwayAligningTransform::add( int objA, const Vector3d& pA, int objB, const Vector3d& pB, double w )
+{
+    assert( objA >= 0 && objA < numObjs_ );
+    assert( objB >= 0 && objB < numObjs_ );
+    assert( objA != objB );
+
+    const Vector3d cA[6] =
+    {
+        {   0.0, -pA.z,  pA.y },
+        {  pA.z,   0.0, -pA.x },
+        { -pA.y,  pA.x,   0.0 },
+        {   1.0,   0.0,   0.0 },
+        {   0.0,   1.0,   0.0 },
+        {   0.0,   0.0,   1.0 }
+    };
+
+    const Vector3d cB[6] =
+    {
+        {   0.0,  pB.z, -pB.y },
+        { -pB.z,   0.0,  pB.x },
+        {  pB.y, -pB.x,   0.0 },
+        {  -1.0,   0.0,   0.0 },
+        {   0.0,  -1.0,   0.0 },
+        {   0.0,   0.0,  -1.0 }
+    };
+
+    // update upper-right part of sumA_
+    const Vector3d k_B = pB - pA;
+    const int sA = objA * 6;
+    const int sB = objB * 6;
+
+    if ( objA + 1 < numObjs_ )
+    {
+        for ( size_t i = 0; i < 6; i++ )
+        {
+            for ( size_t j = i; j < 6; j++ )
+                a_(sA+i, sA+j) += w * dot( cA[i], cA[j] );
+            b_(sA+i) += w * dot( cA[i], k_B );
+        }
+    }
+
+    if ( objB + 1 < numObjs_ )
+    {
+        for ( size_t i = 0; i < 6; i++ )
+        {
+            for ( size_t j = i; j < 6; j++ )
+                a_(sB+i, sB+j) += w * dot( cB[i], cB[j] );
+            b_(sB+i) += w * dot( cB[i], k_B );
+        }
+    }
+
+    if ( objA + 1 < numObjs_ && objB + 1 < numObjs_ )
+    {
+        if ( objA < objB )
+        {
+            for ( size_t i = 0; i < 6; i++ )
+                for ( size_t j = 0; j < 6; j++ )
+                    a_(sA+i, sB+j) += w * dot( cA[i], cB[j] );
+        }
+        else
+        {
+            for ( size_t i = 0; i < 6; i++ )
+                for ( size_t j = 0; j < 6; j++ )
+                    a_(sB+i, sA+j) += w * dot( cB[i], cA[j] );
+        }
+    }
+}
+
 void MultiwayAligningTransform::add( int objA, const Vector3d& pA, int objB, const Vector3d& pB, const Vector3d& n, double w )
 {
     assert( objA >= 0 && objA < numObjs_ );
@@ -138,31 +206,44 @@ TEST( MRMesh, MultiwayAligningTransform )
     const Vector3d b( 2., 3., -1. );
     const AffineXf3d xf( rotationMatrix, b );
     constexpr double eps = 3e-13;
+    MultiwayAligningTransform mw1d, mw3d;
 
     // 2 objects, 0-1 links
     {
-        MultiwayAligningTransform mw;
-        mw.reset( 2 );
+        mw1d.reset( 2 );
+        mw3d.reset( 2 );
         for( int i = 0; i < 10; i++ )
-            mw.add( 0, pInit[i], 1, xf( pInit[i] ) + n2[i], n[i] );
+        {
+            mw1d.add( 0, pInit[i], 1, xf( pInit[i] ) + n2[i], n[i] );
+            mw3d.add( 0, pInit[i], 1, xf( pInit[i] ) );
+        }
 
-        const auto ammendment = mw.solve()[0];
-        auto xfT = ammendment.linearXf();
-        EXPECT_NEAR( ( xf.A - xfT.A ).norm(), 0., eps );
-        EXPECT_NEAR( ( xf.b - xfT.b ).length(), 0., eps );
+        const auto xf1d = mw1d.solve()[0].linearXf();
+        EXPECT_NEAR( ( xf.A - xf1d.A ).norm(), 0., eps );
+        EXPECT_NEAR( ( xf.b - xf1d.b ).length(), 0., eps );
+
+        const auto xf3d = mw3d.solve()[0].linearXf();
+        EXPECT_NEAR( ( xf.A - xf3d.A ).norm(), 0., eps );
+        EXPECT_NEAR( ( xf.b - xf3d.b ).length(), 0., eps );
     }
 
     // 2 objects, 1-0 links
     {
-        MultiwayAligningTransform mw;
-        mw.reset( 2 );
+        mw1d.reset( 2 );
+        mw3d.reset( 2 );
         for( int i = 0; i < 10; i++ )
-            mw.add( 1, xf( pInit[i] ) - n2[i], 0, pInit[i], n[i] );
+        {
+            mw1d.add( 1, xf( pInit[i] ) - n2[i], 0, pInit[i], n[i] );
+            mw3d.add( 1, xf( pInit[i] ), 0, pInit[i] );
+        }
 
-        const auto ammendment = mw.solve()[0];
-        auto xfT = ammendment.linearXf();
-        EXPECT_NEAR( ( xf.A - xfT.A ).norm(), 0., eps );
-        EXPECT_NEAR( ( xf.b - xfT.b ).length(), 0., eps );
+        const auto xf1d = mw1d.solve()[0].linearXf();
+        EXPECT_NEAR( ( xf.A - xf1d.A ).norm(), 0., eps );
+        EXPECT_NEAR( ( xf.b - xf1d.b ).length(), 0., eps );
+
+        const auto xf3d = mw3d.solve()[0].linearXf();
+        EXPECT_NEAR( ( xf.A - xf3d.A ).norm(), 0., eps );
+        EXPECT_NEAR( ( xf.b - xf3d.b ).length(), 0., eps );
     }
 
     const double alpha1 = -0.05, beta1 = -0.13, gamma1 = 0.07;
@@ -173,44 +254,62 @@ TEST( MRMesh, MultiwayAligningTransform )
 
     // 3 objects: 0-2, 1-2 links
     {
-        MultiwayAligningTransform mw;
-        mw.reset( 3 );
+        mw1d.reset( 3 );
+        mw3d.reset( 3 );
         for( int i = 0; i < 10; i++ )
         {
-            mw.add( 0, pInit[i], 2, xf( pInit[i] ) + n2[i], n[i] );
-            mw.add( 1, pInit[i], 2, xf1( pInit[i] ) - n2[i], n[i] );
+            mw1d.add( 0, pInit[i], 2, xf( pInit[i] ) + n2[i], n[i] );
+            mw3d.add( 0, pInit[i], 2, xf( pInit[i] ) );
+            mw1d.add( 1, pInit[i], 2, xf1( pInit[i] ) - n2[i], n[i] );
+            mw3d.add( 1, pInit[i], 2, xf1( pInit[i] ) );
         }
-        const auto sol = mw.solve();
 
-        auto xfT0 = sol[0].linearXf();
-        EXPECT_NEAR( ( xf.A - xfT0.A ).norm(), 0., eps );
-        EXPECT_NEAR( ( xf.b - xfT0.b ).length(), 0., eps );
+        const auto sol1d = mw1d.solve();
+        const auto xf01d = sol1d[0].linearXf();
+        EXPECT_NEAR( ( xf.A - xf01d.A ).norm(), 0., eps );
+        EXPECT_NEAR( ( xf.b - xf01d.b ).length(), 0., eps );
+        auto xf11d = sol1d[1].linearXf();
+        EXPECT_NEAR( ( xf1.A - xf11d.A ).norm(), 0., eps );
+        EXPECT_NEAR( ( xf1.b - xf11d.b ).length(), 0., eps );
 
-        auto xfT1 = sol[1].linearXf();
-        EXPECT_NEAR( ( xf1.A - xfT1.A ).norm(), 0., eps );
-        EXPECT_NEAR( ( xf1.b - xfT1.b ).length(), 0., eps );
+        const auto sol3d = mw3d.solve();
+        const auto xf03d = sol3d[0].linearXf();
+        EXPECT_NEAR( ( xf.A - xf03d.A ).norm(), 0., eps );
+        EXPECT_NEAR( ( xf.b - xf03d.b ).length(), 0., eps );
+        auto xf13d = sol3d[1].linearXf();
+        EXPECT_NEAR( ( xf1.A - xf13d.A ).norm(), 0., eps );
+        EXPECT_NEAR( ( xf1.b - xf13d.b ).length(), 0., eps );
     }
 
     // 3 objects: 0-1, 1-2 links
     {
-        MultiwayAligningTransform mw;
-        mw.reset( 3 );
+        mw1d.reset( 3 );
+        mw3d.reset( 3 );
         for( int i = 0; i < 10; i++ )
         {
             // composition of xf01 and xf12 must be approximateLinearRotationMatrix, so xf01 is shift-only
-            mw.add( 0, pInit[i], 1, pInit[i] + b1, n[i] );
-            mw.add( 1, pInit[i], 2, xf( pInit[i] ) - n2[i], n[i] );
+            mw1d.add( 0, pInit[i], 1, pInit[i] + b1, n[i] );
+            mw3d.add( 0, pInit[i], 1, pInit[i] + b1 );
+            mw1d.add( 1, pInit[i], 2, xf( pInit[i] ) - n2[i], n[i] );
+            mw3d.add( 1, pInit[i], 2, xf( pInit[i] ) );
         }
-        const auto sol = mw.solve();
+        const auto b0 = xf( b1 );
 
-        auto xfT0 = sol[0].linearXf();
-        EXPECT_NEAR( ( xf.A - xfT0.A ).norm(), 0., eps );
-        auto b0 = xf( b1 );
-        EXPECT_NEAR( ( b0 - xfT0.b ).length(), 0., 3 * eps );
+        const auto sol1d = mw1d.solve();
+        auto xf01d = sol1d[0].linearXf();
+        EXPECT_NEAR( ( xf.A - xf01d.A ).norm(), 0., eps );
+        EXPECT_NEAR( ( b0 - xf01d.b ).length(), 0., 3 * eps );
+        auto xf11d = sol1d[1].linearXf();
+        EXPECT_NEAR( ( xf.A - xf11d.A ).norm(), 0., eps );
+        EXPECT_NEAR( ( xf.b - xf11d.b ).length(), 0., 2 * eps );
 
-        auto xfT1 = sol[1].linearXf();
-        EXPECT_NEAR( ( xf.A - xfT1.A ).norm(), 0., eps );
-        EXPECT_NEAR( ( xf.b - xfT1.b ).length(), 0., 2 * eps );
+        const auto sol3d = mw3d.solve();
+        auto xf03d = sol3d[0].linearXf();
+        EXPECT_NEAR( ( xf.A - xf03d.A ).norm(), 0., eps );
+        EXPECT_NEAR( ( b0 - xf03d.b ).length(), 0., 3 * eps );
+        auto xf13d = sol3d[1].linearXf();
+        EXPECT_NEAR( ( xf.A - xf13d.A ).norm(), 0., eps );
+        EXPECT_NEAR( ( xf.b - xf13d.b ).length(), 0., 2 * eps );
     }
 }
 

@@ -22,18 +22,20 @@ public:
 
     /// appends a 3D link into consideration: one point (pA) from (objA), and the other point (pB) from (objB)
     /// with link penalty equal to weight (w) times squared distance between two points
-    //MRMESH_API void add( int objA, const Vector3d& pA, int objB, const Vector3d& pB, double w = 1 );
+    MRMESH_API void add( int objA, const Vector3d& pA, int objB, const Vector3d& pB, double w = 1 );
 
     /// appends a 3D link into consideration: one point (pA) from (objA), and the other point (pB) from (objB)
     /// with link penalty equal to weight (w) times squared distance between two points
-    //void add( int objA, const Vector3f& pA, int objB, const Vector3f& pB, float w = 1 ) { add( objA, Vector3d( pA ), objB, Vector3d( pB ), w ); }
+    void add( int objA, const Vector3f& pA, int objB, const Vector3f& pB, float w = 1 ) { add( objA, Vector3d( pA ), objB, Vector3d( pB ), w ); }
 
     /// appends a 1D link into consideration: one point (pA) from (objA), and the other point (pB) from (objB)
-    /// with link penalty equal to weight (w) times squared distance between their projections on given direction (n)
+    /// with link penalty equal to weight (w) times squared distance between their projections on given direction (n);
+    /// for a point on last fixed object, it is equivalent to point-to-plane link with the plane through that fixed point with normal (n)
     MRMESH_API void add( int objA, const Vector3d& pA, int objB, const Vector3d& pB, const Vector3d& n, double w = 1 );
 
     /// appends a 1D link into consideration: one point (pA) from (objA), and the other point (pB) from (objB)
-    /// with link penalty equal to weight (w) times squared distance between their projections on given direction (n)
+    /// with link penalty equal to weight (w) times squared distance between their projections on given direction (n);
+    /// for a point on last fixed object, it is equivalent to point-to-plane link with the plane through that fixed point with normal (n)
     void add( int objA, const Vector3f& pA, int objB, const Vector3f& pB, const Vector3f& n, float w = 1 ) { add( objA, Vector3d( pA ), objB, Vector3d( pB ), Vector3d( n ), w ); }
 
     /// appends links accumulated in (r) into this

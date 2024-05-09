@@ -11,34 +11,36 @@ namespace MR
 /// \ingroup MathGroup
 /// \{
 
-/// This class can be used to solve the problem of multiple 3D objects alignment.
+/// This class can be used to solve the problem of multiple 3D objects alignment,
+/// by first collecting weighted links between pairs of points from different objects,
+/// and then solving for transformations minimizing weighted average of link penalties
 class MultiwayAligningTransform
 {
 public:
     /// initializes internal data to start registering given number of objects
     void reset( int numObjs );
 
-    /// appends a point-to-point link into consideration with given weight (w):
-    /// one point (pA) from (objA), and the other point (pB) from (objB)
+    /// appends a 3D link into consideration: one point (pA) from (objA), and the other point (pB) from (objB)
+    /// with link penalty equal to weight (w) times squared distance between two points
     //MRMESH_API void add( int objA, const Vector3d& pA, int objB, const Vector3d& pB, double w = 1 );
 
-    /// appends a point-to-point link into consideration with given weight (w):
-    /// one point (pA) from (objA), and the other point (pB) from (objB)
+    /// appends a 3D link into consideration: one point (pA) from (objA), and the other point (pB) from (objB)
+    /// with link penalty equal to weight (w) times squared distance between two points
     //void add( int objA, const Vector3f& pA, int objB, const Vector3f& pB, float w = 1 ) { add( objA, Vector3d( pA ), objB, Vector3d( pB ), w ); }
 
-    /// appends a point-to-line link into consideration with given weight (w):
-    /// one point (pA) from (objA), and the other plane specified by point (pB) and normal (nB) from (objB)
-    MRMESH_API void add( int objA, const Vector3d& pA, int objB, const Vector3d& pB, const Vector3d& nB, double w = 1 );
+    /// appends a 1D link into consideration: one point (pA) from (objA), and the other point (pB) from (objB)
+    /// with link penalty equal to weight (w) times squared distance between their projections on given direction (n)
+    MRMESH_API void add( int objA, const Vector3d& pA, int objB, const Vector3d& pB, const Vector3d& n, double w = 1 );
 
-    /// appends a point-to-line link into consideration with given weight (w):
-    /// one point (pA) from (objA), and the other plane specified by point (pB) and normal (nB) from (objB)
-    void add( int objA, const Vector3f& pA, int objB, const Vector3f& pB, const Vector3f& nB, float w = 1 ) { add( objA, Vector3d( pA ), objB, Vector3d( pB ), Vector3d( nB ), w ); }
+    /// appends a 1D link into consideration: one point (pA) from (objA), and the other point (pB) from (objB)
+    /// with link penalty equal to weight (w) times squared distance between their projections on given direction (n)
+    void add( int objA, const Vector3f& pA, int objB, const Vector3f& pB, const Vector3f& n, float w = 1 ) { add( objA, Vector3d( pA ), objB, Vector3d( pB ), Vector3d( n ), w ); }
 
     /// appends links accumulated in (r) into this
     MRMESH_API void add( const MultiwayAligningTransform & r );
 
     /// finds the solution consisting of all objects transformations (numObj),
-    /// that minimizes the summed weighted squared distance among accumulated links (point-point or point-plane);
+    /// that minimizes the summed weighted squared distance among accumulated links;
     /// the transform of the last object is always identity (it is fixed)
     [[nodiscard]] MRMESH_API std::vector<RigidXf3d> solve();
 

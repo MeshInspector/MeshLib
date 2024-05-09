@@ -15,30 +15,30 @@ void MultiwayAligningTransform::reset( int numObjs )
     numObjs_ = numObjs;
 }
 
-void MultiwayAligningTransform::add( int objA, const Vector3d& pA, int objB, const Vector3d& pB, const Vector3d& nB, double w )
+void MultiwayAligningTransform::add( int objA, const Vector3d& pA, int objB, const Vector3d& pB, const Vector3d& n, double w )
 {
     assert( objA >= 0 && objA < numObjs_ );
     assert( objB >= 0 && objB < numObjs_ );
     assert( objA != objB );
 
     double cA[6];
-    cA[0] = nB.z * pA.y - nB.y * pA.z;
-    cA[1] = nB.x * pA.z - nB.z * pA.x;
-    cA[2] = nB.y * pA.x - nB.x * pA.y;
-    cA[3] = nB.x;
-    cA[4] = nB.y;
-    cA[5] = nB.z;
+    cA[0] = n.z * pA.y - n.y * pA.z;
+    cA[1] = n.x * pA.z - n.z * pA.x;
+    cA[2] = n.y * pA.x - n.x * pA.y;
+    cA[3] = n.x;
+    cA[4] = n.y;
+    cA[5] = n.z;
 
     double cB[6];
-    cB[0] = nB.y * pB.z - nB.z * pB.y;
-    cB[1] = nB.z * pB.x - nB.x * pB.z;
-    cB[2] = nB.x * pB.y - nB.y * pB.x;
-    cB[3] = -nB.x;
-    cB[4] = -nB.y;
-    cB[5] = -nB.z;
+    cB[0] = n.y * pB.z - n.z * pB.y;
+    cB[1] = n.z * pB.x - n.x * pB.z;
+    cB[2] = n.x * pB.y - n.y * pB.x;
+    cB[3] = -n.x;
+    cB[4] = -n.y;
+    cB[5] = -n.z;
 
     // update upper-right part of sumA_
-    const double k_B = dot( pB - pA, nB );
+    const double k_B = dot( pB - pA, n );
     const int sA = objA * 6;
     const int sB = objB * 6;
 

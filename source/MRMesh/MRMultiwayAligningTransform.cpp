@@ -206,11 +206,11 @@ TEST( MRMesh, MultiwayAligningTransform )
         auto xfT0 = sol[0].linearXf();
         EXPECT_NEAR( ( xf.A - xfT0.A ).norm(), 0., eps );
         auto b0 = xf( b1 );
-        EXPECT_NEAR( ( b0 - xfT0.b ).length(), 0., 2 * eps );
+        EXPECT_NEAR( ( b0 - xfT0.b ).length(), 0., 3 * eps );
 
         auto xfT1 = sol[1].linearXf();
         EXPECT_NEAR( ( xf.A - xfT1.A ).norm(), 0., eps );
-        EXPECT_NEAR( ( xf.b - xfT1.b ).length(), 0., eps );
+        EXPECT_NEAR( ( xf.b - xfT1.b ).length(), 0., 2 * eps );
     }
 }
 

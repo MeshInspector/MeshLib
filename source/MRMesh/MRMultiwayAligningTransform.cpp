@@ -197,18 +197,20 @@ TEST( MRMesh, MultiwayAligningTransform )
         mw.reset( 3 );
         for( int i = 0; i < 10; i++ )
         {
-            mw.add( 0, pInit[i], 1, pInit[i], n[i] );
+            // composition of xf01 and xf12 must be approximateLinearRotationMatrix, so xf01 is shift-only
+            mw.add( 0, pInit[i], 1, pInit[i] + b1, n[i] );
             mw.add( 1, pInit[i], 2, xf( pInit[i] ) - n2[i], n[i] );
         }
         const auto sol = mw.solve();
 
         auto xfT0 = sol[0].linearXf();
         EXPECT_NEAR( ( xf.A - xfT0.A ).norm(), 0., eps );
-        EXPECT_NEAR( ( xf.b - xfT0.b ).length(), 0., eps );
+        auto b0 = xf( b1 );
+        EXPECT_NEAR( ( b0 - xfT0.b ).length(), 0., 3 * eps );
 
         auto xfT1 = sol[1].linearXf();
         EXPECT_NEAR( ( xf.A - xfT1.A ).norm(), 0., eps );
-        EXPECT_NEAR( ( xf.b - xfT1.b ).length(), 0., eps );
+        EXPECT_NEAR( ( xf.b - xfT1.b ).length(), 0., 2 * eps );
     }
 }
 

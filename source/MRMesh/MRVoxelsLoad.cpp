@@ -106,12 +106,18 @@ void putFileNameInZ( const std::vector<std::filesystem::path>& scans, std::vecto
         for ( int i = range.begin(); i < range.end(); ++i )
         {
             std::string name = utf8string( scans[i].stem() );
-            auto pos = name.find_first_of( "-0123456789" );
+            auto pos = name.find_last_of( "-0123456789" );
             double res = 0.0;
             if ( pos != std::string::npos )
             {
-                auto subName = name.substr( pos );
-                res = std::atof( subName.c_str() );
+                // find the start of last number in file name
+                for ( ; pos > 0; --pos )
+                {
+                    auto c = name[pos-1];
+                    if ( c != '-' && c != '.' && ( c < '0' || c > '9' ) )
+                        break;
+                }
+                res = std::atof( name.c_str() + pos );
             }
             assert( zOrder[i].fileNum == i );
             zOrder[i].z = res;

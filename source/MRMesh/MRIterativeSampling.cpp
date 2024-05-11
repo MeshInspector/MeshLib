@@ -58,13 +58,12 @@ std::optional<VertBitSet> pointIterativeSampling( const PointCloud& cloud, int n
         return {};
 
     Vector<VertId, VertId> first( sz ); ///< first[v] contains a pointId having closest point v
-    Vector<VertId, VertId> next( sz );  ///< next[v] contains pointId having the same closest point as v's closest point
+    Buffer<VertId, VertId> next( sz );  ///< next[v] contains pointId having the same closest point as v's closest point
     for ( auto v : cloud.validPoints )
     {
         const auto cv = closestNei[v];
         ++info[cv].numRecipClosest;
-        if ( auto f = first[cv] )
-            next[v] = f;
+        next[v] = first[cv];
         first[cv] = v;
     }
 
@@ -119,8 +118,7 @@ std::optional<VertBitSet> pointIterativeSampling( const PointCloud& cloud, int n
             auto crinfo = heap.value( cr );
             ++crinfo.numRecipClosest;
             heap.setLargerValue( cr, crinfo );
-            if ( auto f = first[cr] )
-                next[r] = f;
+            next[r] = first[cr];
             first[cr] = r;
         }
         if ( !reportProgress( cb, [&] { return 0.3f + 0.7f * ( 1 - k * toRemove ); }, toRemove, 0x10000 ) )

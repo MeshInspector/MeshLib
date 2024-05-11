@@ -7,6 +7,11 @@
 #include "MRTimer.h"
 #include <cfloat>
 
+#include "MRGTest.h"
+#include "MRTorus.h"
+#include "MRMesh.h"
+#include "MRMeshToPointCloud.h"
+
 namespace MR
 {
 
@@ -46,6 +51,7 @@ std::optional<VertBitSet> pointIterativeSampling( const PointCloud& cloud, int n
         const auto prj = findProjectionOnPoints( cloud.points[v], cloud, FLT_MAX, nullptr, 0, [v]( VertId x ) { return v == x; } );
         closestNei[v] = prj.vId;
         info[v].negDistSq = -prj.distSq;
+        info[v].numRecipClosest = 0;
     } );
 
     if ( !reportProgress( cb, 0.1f ) )
@@ -93,9 +99,12 @@ std::optional<VertBitSet> pointIterativeSampling( const PointCloud& cloud, int n
         heap.setSmallerValue( cv, cvinfo );
 
         auto nr = first[v];
-        for ( auto r = nr; nr = next[r], r; r = nr )
+        for ( auto r = nr; nr = (r ? next[r] : r), r; r = nr )
         {
-            const auto prj = findProjectionOnPoints( cloud.points[r], cloud, FLT_MAX, nullptr, 0, [&res]( VertId x ) { return !res.test( x ); } );
+            if ( !res.test( r ) )
+                continue;
+            const auto prj = findProjectionOnPoints( cloud.points[r], cloud, FLT_MAX, nullptr, 0,
+                [&res, r]( VertId x ) { return x == r || !res.test( x ); } );
             assert( closestNei[r] == v );
             const auto cr = closestNei[r] = prj.vId;
             auto rinfo = heap.value( r );
@@ -121,6 +130,14 @@ std::optional<VertBitSet> pointIterativeSampling( const PointCloud& cloud, int n
     if ( !reportProgress( cb, 1.0f ) )
         return {};
     return res;
+}
+
+TEST( MRMesh, IterativeSampling )
+{
+    auto cloud = meshToPointCloud( makeTorus() );
+    auto numSamples = (int)cloud.validPoints.count() / 2;
+    auto optSamples = pointIterativeSampling( cloud, numSamples );
+    EXPECT_EQ( numSamples, optSamples->count() );
 }
 
 } //namespace MR

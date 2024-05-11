@@ -2,10 +2,12 @@
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRGridSampling.h"
 #include "MRMesh/MRUniformSampling.h"
+#include "MRMesh/MRIterativeSampling.h"
 #include "MRMesh/MRPointCloud.h"
 #include <pybind11/functional.h>
 
-using namespace MR;
+namespace MR
+{
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointsSampling, [] ( pybind11::module_& m )
 {
@@ -28,4 +30,16 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointsSampling, [] ( pybind11::module_& m )
             return res;
         }, pybind11::arg( "pointCloud" ), pybind11::arg( "distance" ), pybind11::arg( "cb" ) = ProgressCallback{},
         "Sample vertices, removing ones that are too close" );
+
+    m.def( "pointIterativeSampling", []( const PointCloud & pc, int n, ProgressCallback cb )
+        {
+            VertBitSet res;
+            if ( auto x = pointIterativeSampling( pc, n, cb ) )
+                res = std::move( *x );
+            return res;
+        }, pybind11::arg( "cloud" ), pybind11::arg( "numSamples" ), pybind11::arg( "cb" ) = ProgressCallback{},
+        "performs sampling of cloud points by iteratively removing the point having the closest neighbor in the whole cloud, "
+        "thus allowing stopping at any given number of samples" );
 } )
+
+} //namespace MR

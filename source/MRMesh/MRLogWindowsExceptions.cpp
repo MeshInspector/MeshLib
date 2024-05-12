@@ -33,6 +33,7 @@ LONG WINAPI logWindowsException( LPEXCEPTION_POINTERS pExInfo )
         return EXCEPTION_CONTINUE_SEARCH; //normal situation, handled otherwise
 
     logging = true;
+    bool logStacktrace = true;
     if ( pExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && pExceptionRecord->NumberParameters >= 2 )
     {
         // https://stackoverflow.com/a/22850748/7325599
@@ -53,21 +54,28 @@ LONG WINAPI logWindowsException( LPEXCEPTION_POINTERS pExInfo )
     else if ( pExceptionRecord->ExceptionCode == DBG_PRINTEXCEPTION_C && pExceptionRecord->NumberParameters >= 2 )
     {
         // https://stackoverflow.com/a/41480827/7325599
-        const auto len = pExceptionRecord->ExceptionInformation[0];
+        auto len = pExceptionRecord->ExceptionInformation[0];
+        if ( len )
+            --len;
         const auto * p = (PCSTR)pExceptionRecord->ExceptionInformation[1];
         spdlog::info( "Narrow debug information: {}", std::string_view( p, len ) );
+        logStacktrace = false;
     }
     else if ( pExceptionRecord->ExceptionCode == DBG_PRINTEXCEPTION_WIDE_C && pExceptionRecord->NumberParameters >= 2 )
     {
         // https://stackoverflow.com/a/41480827/7325599
-        const auto len = pExceptionRecord->ExceptionInformation[0];
+        auto len = pExceptionRecord->ExceptionInformation[0];
+        if ( len )
+            --len;
         const auto * p = (PCWSTR)pExceptionRecord->ExceptionInformation[1];
         spdlog::info( "Wide debug information: {}", Utf16ToUtf8( std::wstring_view( p, len ) ) );
+        logStacktrace = false;
     }
     else
         spdlog::critical( "Windows exception {:#010x}", pExceptionRecord->ExceptionCode );
 
-    spdlog::info( "Windows exception stacktrace:\n{}", getCurrentStacktrace() );
+    if ( logStacktrace )
+        spdlog::info( "Windows exception stacktrace:\n{}", getCurrentStacktrace() );
     logging = false;
     return EXCEPTION_CONTINUE_SEARCH;
 }

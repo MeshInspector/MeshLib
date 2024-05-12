@@ -21,14 +21,19 @@ namespace
 // an element of heap
 struct PointInfo
 {
-    int negSurvivals;
-    /// negative squared distance to the closest neighbor, points with minimum distance (maximal negative distance) are merged first
-    float negDistSq;
+    /// squared distance to the closest neighbor
+    float closeDistSq;
+    /// sum of squared distances to nearby removed (not-sampled) points
+    float sumDelDistSq;
+
+    // points with minimal sum of distances are first removed from samples
+    float sumDistSq() const { return closeDistSq + sumDelDistSq; }
+    bool operator <( const PointInfo & b ) const { return sumDistSq() > b.sumDistSq(); }
 
     explicit PointInfo( NoInit ) noexcept {}
-    PointInfo() : negSurvivals( INT_MIN ), negDistSq( -FLT_MAX ) {}
 
-    auto operator <=>( const PointInfo & ) const = default;
+    // invalid info, last in heap
+    PointInfo() : closeDistSq( FLT_MAX ), sumDelDistSq( FLT_MAX ) {}
 };
 
 } //anonymous namespace
@@ -49,8 +54,8 @@ std::optional<VertBitSet> pointIterativeSampling( const PointCloud& cloud, int n
     {
         const auto prj = findProjectionOnPoints( cloud.points[v], cloud, FLT_MAX, nullptr, 0, [v]( VertId x ) { return v == x; } );
         closestNei[v] = prj.vId;
-        info[v].negDistSq = -prj.distSq;
-        info[v].negSurvivals = 0;
+        info[v].closeDistSq = prj.distSq;
+        info[v].sumDelDistSq = 0;
     } );
 
     if ( !reportProgress( cb, 0.1f ) )
@@ -83,7 +88,7 @@ std::optional<VertBitSet> pointIterativeSampling( const PointCloud& cloud, int n
     while ( toRemove > 0 )
     {
         auto [v, vinfo] = heap.top();
-        assert( vinfo.negDistSq > -FLT_MAX );
+        assert( vinfo.closeDistSq < FLT_MAX );
         --toRemove;
         assert( res.test( v ) );
         res.reset( v );
@@ -91,7 +96,7 @@ std::optional<VertBitSet> pointIterativeSampling( const PointCloud& cloud, int n
 
         auto cv = closestNei[v];
         auto cvinfo = heap.value( cv );
-        --cvinfo.negSurvivals;
+        cvinfo.sumDelDistSq += vinfo.sumDistSq();
         heap.setSmallerValue( cv, cvinfo );
 
         auto nr = first[v];
@@ -104,11 +109,11 @@ std::optional<VertBitSet> pointIterativeSampling( const PointCloud& cloud, int n
             assert( closestNei[r] == v );
             const auto cr = closestNei[r] = prj.vId;
             auto rinfo = heap.value( r );
-            assert( rinfo.negDistSq > -FLT_MAX );
-            assert( rinfo.negDistSq >= -prj.distSq );
-            if ( rinfo.negDistSq > prj.distSq )
+            assert( rinfo.closeDistSq < FLT_MAX );
+            assert( rinfo.closeDistSq <= prj.distSq );
+            if ( rinfo.closeDistSq < prj.distSq )
             {
-                rinfo.negDistSq = -prj.distSq;
+                rinfo.closeDistSq = prj.distSq;
                 heap.setSmallerValue( r, rinfo );
             }
             next[r] = first[cr];

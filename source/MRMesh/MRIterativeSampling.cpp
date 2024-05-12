@@ -21,13 +21,12 @@ namespace
 // an element of heap
 struct PointInfo
 {
+    int negSurvivals;
     /// negative squared distance to the closest neighbor, points with minimum distance (maximal negative distance) are merged first
     float negDistSq;
-    /// the number of points having this as the closest neighbor, points with maximal number are merged first
-    int numRecipClosest;
 
     explicit PointInfo( NoInit ) noexcept {}
-    PointInfo() : negDistSq( -FLT_MAX ), numRecipClosest( 0 ) {}
+    PointInfo() : negSurvivals( INT_MIN ), negDistSq( -FLT_MAX ) {}
 
     auto operator <=>( const PointInfo & ) const = default;
 };
@@ -51,7 +50,7 @@ std::optional<VertBitSet> pointIterativeSampling( const PointCloud& cloud, int n
         const auto prj = findProjectionOnPoints( cloud.points[v], cloud, FLT_MAX, nullptr, 0, [v]( VertId x ) { return v == x; } );
         closestNei[v] = prj.vId;
         info[v].negDistSq = -prj.distSq;
-        info[v].numRecipClosest = 0;
+        info[v].negSurvivals = 0;
     } );
 
     if ( !reportProgress( cb, 0.1f ) )
@@ -62,7 +61,6 @@ std::optional<VertBitSet> pointIterativeSampling( const PointCloud& cloud, int n
     for ( auto v : cloud.validPoints )
     {
         const auto cv = closestNei[v];
-        ++info[cv].numRecipClosest;
         next[v] = first[cv];
         first[cv] = v;
     }
@@ -93,8 +91,7 @@ std::optional<VertBitSet> pointIterativeSampling( const PointCloud& cloud, int n
 
         auto cv = closestNei[v];
         auto cvinfo = heap.value( cv );
-        assert( cvinfo.numRecipClosest > 0 );
-        --cvinfo.numRecipClosest;
+        --cvinfo.negSurvivals;
         heap.setSmallerValue( cv, cvinfo );
 
         auto nr = first[v];
@@ -114,10 +111,6 @@ std::optional<VertBitSet> pointIterativeSampling( const PointCloud& cloud, int n
                 rinfo.negDistSq = -prj.distSq;
                 heap.setSmallerValue( r, rinfo );
             }
-
-            auto crinfo = heap.value( cr );
-            ++crinfo.numRecipClosest;
-            heap.setLargerValue( cr, crinfo );
             next[r] = first[cr];
             first[cr] = r;
         }

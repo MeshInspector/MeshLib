@@ -93,6 +93,12 @@ option(PHMAP_INSTALL "" ON)
 add_subdirectory(./parallel-hashmap)
 
 IF(MR_EMSCRIPTEN)
+  set(GDCM_BUILD_APPLICATIONS OFF)
+  set(GDCM_BUILD_SHARED_LIBS OFF)
+  set(GDCM_BUILD_TESTING OFF)
+  set(GDCM_BUILD_DOCBOOK_MANPAGES OFF)
+  add_subdirectory(./GDCM)
+
   add_compile_definitions(GTEST_HAS_CXXABI_H_=0)
   set(INSTALL_GTEST ON)
   add_subdirectory(./googletest)

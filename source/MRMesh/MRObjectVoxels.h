@@ -124,7 +124,7 @@ public:
     // by calling `prepareDataForVolumeRendering(cb)` function before calling this one
     MRMESH_API void enableVolumeRendering( bool on );
     // move volume rendering data to caller: basically used in RenderVolumeObject 
-    [[nodiscard]] std::unique_ptr<SimpleVolumeU16> getVolumeRenderingData() const { return std::move( volumeRenderingData_ ); }
+    [[nodiscard]] std::unique_ptr<SimpleVolume> getVolumeRenderingData() const { return std::move( volumeRenderingData_ ); }
 
     // struct to control volume rendering texture
     struct VolumeRenderingParams
@@ -188,7 +188,7 @@ public:
 
 private:
     VolumeRenderingParams volumeRenderingParams_;
-    mutable UniquePtr<SimpleVolumeU16> volumeRenderingData_;
+    mutable UniquePtr<SimpleVolume> volumeRenderingData_;
 
     int maxSurfaceVertices_{ 5'000'000 };
     VdbVolume vdbVolume_;

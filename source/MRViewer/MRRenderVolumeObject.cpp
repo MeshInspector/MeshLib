@@ -253,14 +253,9 @@ void RenderVolumeObject::bindVolume_( bool picker )
         volume_.loadData(
             {
                 .resolution = volume->dims,
-#ifdef __EMSCRIPTEN__
-                .internalFormat = GL_R16UI,
-                .format = GL_RED_INTEGER,
-#else
-                .internalFormat = GL_R16,
+                .internalFormat = GL_R16F,
                 .format = GL_RED,
-#endif
-                .type = GL_UNSIGNED_SHORT,
+                .type = GL_FLOAT,
                 .filter = params.volumeFilterType
             },
             volume->data );

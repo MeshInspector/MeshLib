@@ -57,6 +57,18 @@ EMSCRIPTEN_KEEPALIVE int emsSaveFile( const char* filename )
     return 0;
 }
 
+EMSCRIPTEN_KEEPALIVE int emsOpenDirectory( const char* dirname )
+{
+    if ( !sDialogFilesCallback )
+        return 1;
+
+    const std::filesystem::path path( std::string( dirname ) );
+    sDialogFilesCallback( { path } );
+    sDialogFilesCallback = {};
+
+    return 0;
+}
+
 }
 
 #endif
@@ -465,6 +477,25 @@ std::filesystem::path openFolderDialog( std::filesystem::path baseFolder )
     if ( results.size() == 1 )
         return results[0];
     return {};
+}
+    
+void openFolderDialogAsync( std::function<void ( const std::filesystem::path& )> callback, std::filesystem::path baseFolder )
+{
+    assert( callback );
+#ifndef __EMSCRIPTEN__
+    callback( openFolderDialog( std::move( baseFolder ) ) );
+#else
+    sDialogFilesCallback = [callback] ( const std::vector<std::filesystem::path>& paths )
+    {
+        if ( !paths.empty() )
+            callback( paths[0] );
+    };
+    (void)baseFolder;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
+    EM_ASM( open_directory_dialog_popup() );
+#pragma clang diagnostic pop
+#endif
 }
 
 std::vector<std::filesystem::path> openFoldersDialog( std::filesystem::path baseFolder )

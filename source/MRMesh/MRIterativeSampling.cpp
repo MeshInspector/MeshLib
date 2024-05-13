@@ -21,19 +21,16 @@ namespace
 // an element of heap
 struct PointInfo
 {
-    /// squared distance to the closest neighbor
-    float closeDistSq;
-    /// sum of squared distances to nearby removed (not-sampled) points
-    float sumDelDistSq;
+    /// sum of squared distances to the closest neighbors and to nearby removed (not-sampled) points
+    float sumDistSq;
 
     // points with minimal sum of distances are first removed from samples
-    float sumDistSq() const { return closeDistSq + sumDelDistSq; }
-    bool operator <( const PointInfo & b ) const { return sumDistSq() > b.sumDistSq(); }
+    bool operator <( const PointInfo & b ) const { return sumDistSq > b.sumDistSq; }
 
     explicit PointInfo( NoInit ) noexcept {}
 
     // invalid info, last in heap
-    PointInfo() : closeDistSq( FLT_MAX ), sumDelDistSq( FLT_MAX ) {}
+    PointInfo() : sumDistSq( FLT_MAX ) {}
 };
 
 } //anonymous namespace
@@ -54,8 +51,7 @@ std::optional<VertBitSet> pointIterativeSampling( const PointCloud& cloud, int n
     {
         const auto prj = findProjectionOnPoints( cloud.points[v], cloud, FLT_MAX, nullptr, 0, [v]( VertId x ) { return v == x; } );
         closestNei[v] = prj.vId;
-        info[v].closeDistSq = prj.distSq;
-        info[v].sumDelDistSq = 0;
+        info[v].sumDistSq = prj.distSq;
     } );
 
     if ( !reportProgress( cb, 0.1f ) )
@@ -88,32 +84,34 @@ std::optional<VertBitSet> pointIterativeSampling( const PointCloud& cloud, int n
     while ( toRemove > 0 )
     {
         auto [v, vinfo] = heap.top();
-        assert( vinfo.closeDistSq < FLT_MAX );
+        assert( vinfo.sumDistSq < FLT_MAX );
         --toRemove;
         assert( res.test( v ) );
         res.reset( v );
         heap.setSmallerValue( v, PointInfo() );
 
-        auto cv = closestNei[v];
+        auto cv = closestNei[v]; // TODO: remove cv as well, and select a sample in between v and cv
         auto cvinfo = heap.value( cv );
-        cvinfo.sumDelDistSq += vinfo.sumDistSq();
+        cvinfo.sumDistSq += vinfo.sumDistSq;
         heap.setSmallerValue( cv, cvinfo );
 
         auto nr = first[v];
         for ( auto r = nr; nr = (r ? next[r] : r), r; r = nr )
         {
+            assert( closestNei[r] == v );
             if ( !res.test( r ) )
                 continue;
             const auto prj = findProjectionOnPoints( cloud.points[r], cloud, FLT_MAX, nullptr, 0,
                 [&res, r]( VertId x ) { return x == r || !res.test( x ); } );
-            assert( closestNei[r] == v );
+            assert( prj.vId != v && prj.vId != r );
             const auto cr = closestNei[r] = prj.vId;
-            auto rinfo = heap.value( r );
-            assert( rinfo.closeDistSq < FLT_MAX );
-            assert( rinfo.closeDistSq <= prj.distSq );
-            if ( rinfo.closeDistSq < prj.distSq )
+            const float oldDistSq = ( cloud.points[r] - cloud.points[v] ).lengthSq();
+            assert( oldDistSq <= prj.distSq );
+            if ( oldDistSq < prj.distSq )
             {
-                rinfo.closeDistSq = prj.distSq;
+                auto rinfo = heap.value( r );
+                assert( rinfo.sumDistSq < FLT_MAX );
+                rinfo.sumDistSq += prj.distSq - oldDistSq;
                 heap.setSmallerValue( r, rinfo );
             }
             next[r] = first[cr];

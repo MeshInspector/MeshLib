@@ -38,7 +38,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointsSampling, [] ( pybind11::module_& m )
                 res = std::move( *x );
             return res;
         }, pybind11::arg( "cloud" ), pybind11::arg( "numSamples" ), pybind11::arg( "cb" ) = ProgressCallback{},
-        "performs sampling of cloud points by iteratively removing the point having the closest neighbor in the whole cloud, "
+        "performs sampling of cloud points by iteratively removing one point with minimal metric (describing distance to the closest point and previous nearby removals), "
         "thus allowing stopping at any given number of samples" );
 } )
 

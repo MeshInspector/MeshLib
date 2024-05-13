@@ -83,6 +83,39 @@ var download_file_dialog_popup = function (defaultName, extensions) {
   document.body.appendChild(overlay);
 }
 
+var open_directory_dialog_popup = function () {
+  var { overlay, popup } = createOverlayPopup('show_browse_dialog', "Select Directory", 400, 150);
+
+  var file_selector_label = document.createElement('label');
+  file_selector_label.setAttribute('for', 'FileSelectorTag');
+  file_selector_label.setAttribute('style', 'position:absolute;top:50%;left:50%;transform:translate(-50%,50%);width: 120px;  height: 28px; border-radius: 4px;');
+  file_selector_label.setAttribute('class', 'button');
+
+  var file_selector_label_text = document.createElement('div');
+  file_selector_label_text.innerHTML = "Browse...";
+  file_selector_label_text.setAttribute('class', 'unselectable');
+  file_selector_label_text.setAttribute('style', 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size: 14px;  font-weight: 600;  font-stretch: normal;  font-style: normal;  line-height: normal;  letter-spacing: normal;  text-align: center;  color: #fff;');
+
+  var file_selector = document.createElement('input');
+  file_selector.setAttribute('type', 'file');
+  file_selector.setAttribute('id', 'FileSelectorTag');
+  file_selector.setAttribute('directory', null);
+  file_selector.setAttribute('mozdirectory', null);
+  file_selector.setAttribute('webkitdirectory', null);
+  file_selector.setAttribute('onchange', 'open_dir(event)');
+  file_selector.setAttribute('style', 'display: none;');
+  file_selector.setAttribute('align', 'center');
+
+  file_selector_label.appendChild(file_selector_label_text);
+  file_selector_label.appendChild(file_selector);
+
+  popup.appendChild(file_selector_label);
+  overlay.appendChild(popup);
+
+  removeKeyboardEvents();
+  document.body.appendChild(overlay);
+}
+
 var open_files = function (e) {
   if (!GLFW.active) {
     addKeyboardEvents();
@@ -173,4 +206,61 @@ var save_file = function (filename) {
   };
   prevSize = 0;
   checkPath(filename);
+};
+
+var open_dir = function (e) {
+  if (!GLFW.active) {
+    addKeyboardEvents();
+    document.getElementById('show_browse_dialog').remove();
+    return;
+  }
+  if (!e.target || !e.target.files || e.target.files.length == 0) {
+    addKeyboardEvents();
+    document.getElementById('show_browse_dialog').remove();
+    return;
+  }
+  e.preventDefault();
+
+  var drop_dir = ".use_open_files";
+  FS.createPath("/", drop_dir);
+
+  var root_dir_name = "";
+  var written = 0;
+  const files = e.target.files;
+  function save(file) {
+    const file_path = file.webkitRelativePath;
+    const dir_path = file_path.substring(0, file_path.lastIndexOf('/'));
+    if (root_dir_name === "") {
+      root_dir_name = file_path.substring(0, file_path.indexOf('/'));
+    }
+
+    var reader = new FileReader();
+    reader.onloadend = e => {
+      if (reader.readyState != 2) {
+        ++written;
+        out("failed to read opened file: " + file.name + ": " + reader.error);
+        return;
+      }
+
+      var data = e.target.result;
+      FS.createPath("/" + drop_dir, dir_path);
+      FS.writeFile(`/${drop_dir}/${file_path}`, new Uint8Array(data));
+
+      if (++written === files.length) {
+        Module.ccall('emsOpenDirectory', 'number', ['string'], [`/${drop_dir}/${root_dir_name}`]);
+      }
+
+      // enforce several frames to toggle animation when popup closed
+      for (var i = 0; i < 500; i += 100)
+        setTimeout(function () { Module.ccall('emsPostEmptyEvent', 'void', ['number'], [1]); }, i);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+  for (const file of files) {
+    save(file);
+  }
+
+  addKeyboardEvents();
+  document.getElementById('show_browse_dialog').remove();
+  return false;
 };

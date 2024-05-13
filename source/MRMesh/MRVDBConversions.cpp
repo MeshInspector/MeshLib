@@ -320,7 +320,7 @@ Expected<VoxelsVolume<std::vector<T>>, std::string> vdbVolumeToSimpleVolumeImpl(
     [[maybe_unused]] const float oMin = float( res.min );
     [[maybe_unused]] const float oMax = float( res.max );
     [[maybe_unused]] const float k =
-        vdbVolume.max > vdbVolume.min ? oMax / ( vdbVolume.max - vdbVolume.min ) : 0.0f;
+        vdbVolume.max > vdbVolume.min ? ( oMax - oMin ) / ( vdbVolume.max - vdbVolume.min ) : 0.0f;
 
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size() );

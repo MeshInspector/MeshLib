@@ -97,7 +97,7 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
         setupListUpdate_();
         connect( &getViewerInstance() );
         // required to be deferred, for valid emscripten static constructors order
-        filters_ = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | SceneFileFilters | DistanceMapLoad::Filters | GcodeLoad::Filters;
+        filters_ = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | SceneFileFilters | DistanceMapLoad::Filters | GcodeLoad::Filters | VoxelsLoad::Filters;
 #ifdef __EMSCRIPTEN__
         std::erase_if( filters_, [] ( const auto& filter )
         {
@@ -107,10 +107,6 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
         filters_ = filters_ | ObjectLoad::getFilters();
 #else
         filters_ = filters_ | AsyncObjectLoad::getFilters();
-#endif
-#else
-#ifndef MRMESH_NO_VOXEL
-        filters_ = filters_ | VoxelsLoad::Filters;
 #endif
 #endif
         parseLaunchParams_();
@@ -282,7 +278,7 @@ OpenDirectoryMenuItem::OpenDirectoryMenuItem() :
 {
 }
 
-#if !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
+#if !defined( MRMESH_NO_DICOM ) && !defined( MRMESH_NO_OPENVDB )
 void sOpenDICOMs( const std::filesystem::path & directory, const std::string & simpleError )
 {
     ProgressBar::orderWithMainThreadPostProcessing( "Open DICOMs", [directory, simpleError, viewer = Viewer::instance()] () -> std::function<void()>
@@ -408,7 +404,7 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
                 };
             } );
         }
-#if !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
+#if !defined( MRMESH_NO_DICOM ) && !defined( MRMESH_NO_OPENVDB )
         else
         {
             sOpenDICOMs( directory, "No supported files can be open from the directory:\n" + utf8string( directory ) );
@@ -417,7 +413,7 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
     }
 }
 
-#if !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
+#if !defined( MRMESH_NO_DICOM ) && !defined( MRMESH_NO_OPENVDB )
 OpenDICOMsMenuItem::OpenDICOMsMenuItem() :
     RibbonMenuItem( "Open DICOMs" )
 {
@@ -462,9 +458,7 @@ std::optional<SaveInfo> getSaveInfo( const std::vector<std::shared_ptr<T>> & obj
     || checkObjects.template operator()<ObjectLines>( { ViewerSettingsManager::ObjType::Lines, LinesSave::Filters } )
     || checkObjects.template operator()<ObjectPoints>( { ViewerSettingsManager::ObjType::Points, PointsSave::Filters } )
     || checkObjects.template operator()<ObjectDistanceMap>( { ViewerSettingsManager::ObjType::DistanceMap, DistanceMapSave::Filters } )
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
     || checkObjects.template operator()<ObjectVoxels>( { ViewerSettingsManager::ObjType::Voxels, VoxelsSave::Filters } )
-#endif
     ;
 
     return res;
@@ -930,7 +924,7 @@ MR_REGISTER_RIBBON_ITEM( SaveSceneAsMenuItem )
 
 MR_REGISTER_RIBBON_ITEM( OpenDirectoryMenuItem )
 
-#if !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
+#if !defined( MRMESH_NO_DICOM ) && !defined( MRMESH_NO_OPENVDB )
 MR_REGISTER_RIBBON_ITEM( OpenDICOMsMenuItem )
 #endif
 
@@ -947,7 +941,7 @@ MR_REGISTER_RIBBON_ITEM( CaptureScreenshotToClipBoardMenuItem )
 #endif
 
 }
-#ifdef __EMSCRIPTEN__
+#if defined( __EMSCRIPTEN__ ) && defined( MRMESH_NO_DICOM )
 #include "MRCommonPlugins/Basic/MRWasmUnavailablePlugin.h"
 MR_REGISTER_WASM_UNAVAILABLE_ITEM( OpenDICOMsMenuItem, "Open DICOMs" )
 #endif

@@ -44,6 +44,11 @@
 #endif
 #endif
 
+#ifdef __EMSCRIPTEN__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wabsolute-value"
+#endif
+
 #define IMATH_HALF_NO_LOOKUP_TABLE // fix for unresolved external symbol "imath_half_to_float_table"
 #include <openvdb/openvdb.h>
 #include <openvdb/tools/Composite.h>
@@ -51,6 +56,10 @@
 #include <openvdb/tools/MeshToVolume.h>
 #include <openvdb/tools/VolumeToMesh.h>
 #include <openvdb/tools/Dense.h>
+
+#ifdef __EMSCRIPTEN__
+#pragma clang diagnostic pop
+#endif
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop

@@ -1,6 +1,6 @@
 #pragma once
 #include "MRMeshFwd.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
 #include "MRObjectMeshHolder.h"
 #include "MRProgressCallback.h"
 #include "MRHistogram.h"
@@ -228,9 +228,7 @@ protected:
 
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
-#ifndef MRMESH_NO_DICOM
     MRMESH_API VoidOrErrStr deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
-#endif
 
     MRMESH_API virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& path ) const override;
 };

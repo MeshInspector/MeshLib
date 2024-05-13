@@ -1,5 +1,5 @@
 #include "MRObjectVoxels.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
 #include "MRObjectFactory.h"
 #include "MRMesh.h"
 #include "MRVDBConversions.h"
@@ -558,7 +558,6 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
         setDefaultSceneProperties_();
 }
 
-#ifndef MRMESH_NO_DICOM
 VoidOrErrStr ObjectVoxels::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     auto res = VoxelsLoad::fromRaw( pathFromUtf8( utf8string( path ) + ".raw" ), progressCb );
@@ -571,7 +570,6 @@ VoidOrErrStr ObjectVoxels::deserializeModel_( const std::filesystem::path& path,
 
     return {};
 }
-#endif
 
 std::vector<std::string> ObjectVoxels::getInfoLines() const
 {

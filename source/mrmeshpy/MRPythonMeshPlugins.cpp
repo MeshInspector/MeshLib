@@ -43,7 +43,7 @@
 
 using namespace MR;
 
-#ifndef MRMESH_NO_VOXEL
+#ifndef MRMESH_NO_OPENVDB
 // Fix self-intersections
 void fixSelfIntersections( Mesh& mesh1, float voxelSize )
 {
@@ -144,7 +144,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::modul
         "applies at most given number of relaxation iterations the spikes detected by given threshold" );
 } )
 
-#ifndef MRMESH_NO_VOXEL
+#ifndef MRMESH_NO_OPENVDB
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FixUndercuts, [] ( pybind11::module_& m )
 {
     m.def( "fixUndercuts", ( void ( * )( Mesh&, const FaceBitSet&, const Vector3f&, float, float ) )& MR::FixUndercuts::fixUndercuts,
@@ -390,7 +390,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
         "Puts given vertices in such positions to make smooth surface both inside verts-region and on its boundary" );
 } )
 
-#ifndef MRMESH_NO_VOXEL
+#ifndef MRMESH_NO_OPENVDB
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
 {
     pybind11::enum_<MR::SignDetectionMode>( m, "SignDetectionMode", "How to determine the sign of distances from a mesh" ).

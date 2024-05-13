@@ -1,6 +1,6 @@
 #include "MRMesh/MRPython.h"
 #include "MRMesh/MRMeshFwd.h"
-#ifndef MRMESH_NO_VOXEL
+#ifndef MRMESH_NO_OPENVDB
 #include "MRMesh/MRSimpleVolume.h"
 #include "MRMesh/MRVoxelsSave.h"
 #include "MRMesh/MRVoxelsLoad.h"

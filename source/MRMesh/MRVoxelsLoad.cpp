@@ -1,5 +1,5 @@
 #include "MRVoxelsLoad.h"
-#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+#ifndef MRMESH_NO_OPENVDB
 #include "MRTimer.h"
 #include "MRSimpleVolume.h"
 #include "MRObjectVoxels.h"
@@ -60,19 +60,23 @@ namespace
     }
 #endif // MRMESH_NO_DICOM
 }
+#endif // MRMESH_NO_OPENVDB
 
-namespace MR
-{
-
-namespace VoxelsLoad
+namespace MR::VoxelsLoad
 {
 
 const IOFilters Filters =
 {
-    {"Raw (.raw)","*.raw"},
-    {"OpenVDB (.vdb)","*.vdb"},
-    {"Micro CT (.gav)","*.gav"},
+#ifndef MRMESH_NO_OPENVDB
+    { "Raw (.raw)", "*.raw" },
+    { "Micro CT (.gav)", "*.gav" },
+#ifdef MRMESH_OPENVDB_USE_IO
+    { "OpenVDB (.vdb)", "*.vdb" },
+#endif
+#endif
 };
+
+#ifndef MRMESH_NO_OPENVDB
 
 struct SliceInfoBase
 {
@@ -914,6 +918,7 @@ Expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& path,
     return fromRaw( filepathToOpen, outParams, cb );
 }
 
+#ifdef MRMESH_OPENVDB_USE_IO
 Expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
 {
     if ( cb && !cb( 0.f ) )
@@ -983,6 +988,7 @@ Expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem::pa
 
     return res;
 }
+#endif
 
 inline Expected<std::vector<VdbVolume>, std::string> toSingleElementVector( Expected<VdbVolume, std::string> v )
 {
@@ -999,10 +1005,12 @@ Expected<std::vector<VdbVolume>, std::string> fromAnySupportedFormat( const std:
 
     if ( ext == ".raw" )
         return toSingleElementVector( fromRaw( path, cb ) );
-    if ( ext == ".vdb" )
-        return fromVdb( path, cb );
     if ( ext == ".gav" )
         return toSingleElementVector( fromGav( path, cb ) );
+#ifdef MRMESH_OPENVDB_USE_IO
+    if ( ext == ".vdb" )
+        return fromVdb( path, cb );
+#endif
 
     return unexpected( std::string( "Unsupported file extension" ) );
 }
@@ -1264,6 +1272,6 @@ Expected<VdbVolume, std::string> fromRaw( std::istream& in, const RawParameters&
     return res;
 }
 
-}
-}
-#endif // !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXELS )
+#endif // MRMESH_NO_OPENVDB
+
+} // namespace MR::VoxelsLoad

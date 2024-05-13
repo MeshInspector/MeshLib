@@ -97,7 +97,7 @@ VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& f
             result = unexpected( std::string( "ObjectDistanceMap has no DistanceMap in it" ) );
         }
     }
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+#ifndef MRMESH_NO_OPENVDB
     else if ( auto objVoxels = obj.asType<ObjectVoxels>() )
     {
         auto ext = filename.extension().u8string();

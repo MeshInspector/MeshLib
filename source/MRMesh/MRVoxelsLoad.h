@@ -1,6 +1,5 @@
 #pragma once
 #include "MRMeshFwd.h"
-#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
 #include "MRProgressCallback.h"
 #include "MRObject.h"
 #include "MRSimpleVolume.h"
@@ -20,6 +19,7 @@ namespace VoxelsLoad
 
 MRMESH_API extern const IOFilters Filters;
 
+#ifndef MRMESH_NO_OPENVDB
 /// Sort files in given vector by names (respect numbers in it)
 /// usually needed for scans
 MRMESH_API void sortFilesByName( std::vector<std::filesystem::path>& scans );
@@ -95,9 +95,11 @@ MRMESH_API Expected<VdbVolume, std::string> fromRaw( std::istream& in, const Raw
 MRMESH_API Expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& file,
                                                          const ProgressCallback& cb = {} );
 
+#ifdef MRMESH_OPENVDB_USE_IO
 /// Load raw voxels OpenVDB file
 MRMESH_API Expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem::path& file,
                                                          const ProgressCallback& cb = {} );
+#endif
 
 /// Load voxel from Gav-file with micro CT reconstruction
 MRMESH_API Expected<VdbVolume, std::string> fromGav( const std::filesystem::path& file, const ProgressCallback& cb = {} );
@@ -131,7 +133,8 @@ struct LoadingTiffSettings
 /// Load voxels from a set of TIFF files
 MRMESH_API Expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& settings );
 #endif // MRMESH_NO_TIFF
+
+#endif // MRMESH_NO_OPENVDB
 }
 
 }
-#endif // !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXELS )

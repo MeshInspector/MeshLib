@@ -62,7 +62,7 @@ EMSCRIPTEN_KEEPALIVE int emsOpenDirectory( const char* dirname )
     if ( !sDialogFilesCallback )
         return 1;
 
-    const std::filesystem::path path( std::string( dirname ) );
+    const std::filesystem::path path = std::string( dirname );
     sDialogFilesCallback( { path } );
     sDialogFilesCallback = {};
 

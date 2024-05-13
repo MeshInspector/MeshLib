@@ -62,6 +62,10 @@ MRMESH_API VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, 
 // make copy of data
 MRMESH_API Expected<SimpleVolume, std::string> vdbVolumeToSimpleVolume(
     const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} );
+// make normalized SimpleVolume from VdbVolume
+// make copy of data
+MRMESH_API Expected<SimpleVolume, std::string> vdbVolumeToSimpleVolumeNorm(
+    const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} );
 // make SimpleVolumeU16 from VdbVolume
 // performs mapping from [vdbVolume.min, vdbVolume.max] to nonnegative range of uint16_t
 MRMESH_API Expected<SimpleVolumeU16, std::string> vdbVolumeToSimpleVolumeU16(

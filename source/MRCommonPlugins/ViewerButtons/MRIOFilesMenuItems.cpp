@@ -365,7 +365,7 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
 
 bool OpenDirectoryMenuItem::action()
 {
-    openFileDialogAsync( [this] ( auto&& path ) { openDirectory( path ); } );
+    openFolderDialogAsync( [this] ( auto&& path ) { openDirectory( path ); } );
     return false;
 }
 

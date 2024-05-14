@@ -1,7 +1,8 @@
 #include "MRRibbonSceneButtons.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSceneRoot.h"
-#include "MRViewer/MRRibbonMenu.h"
+#include "MRViewer/MRRibbonSchema.h"
+#include "MRViewer/ImGuiMenu.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRViewer/MRViewer.h"
 #include "MRMesh/MRChangeSceneObjectsOrder.h"
@@ -187,7 +188,7 @@ RibbonSceneRename::RibbonSceneRename() :
 
 bool RibbonSceneRename::action()
 {
-    getViewerInstance().getMenuPluginAs<RibbonMenu>()->tryRenameSelectedObject();
+    getViewerInstance().getMenuPlugin()->tryRenameSelectedObject();
     return false;
 }
 
@@ -199,7 +200,7 @@ RibbonSceneRemoveSelected::RibbonSceneRemoveSelected() :
 std::string RibbonSceneRemoveSelected::isAvailable( const std::vector<std::shared_ptr<const Object>>& objs ) const
 {
     auto res = SceneStateAtLeastCheck<1, Object, NoModelCheck>::isAvailable( objs );
-    auto allowRemoval = getViewerInstance().getMenuPluginAs<RibbonMenu>()->checkPossibilityObjectRemoval();
+    auto allowRemoval = getViewerInstance().getMenuPlugin()->checkPossibilityObjectRemoval();
     if ( !allowRemoval )
     {
         if ( !res.empty() )

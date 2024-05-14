@@ -114,4 +114,40 @@ protected:
     MRVIEWER_API void readUIJson_( const std::filesystem::path& path ) const;
 };
 
+
+template<typename T>
+struct RibbonMenuItemAdder
+{
+    template<typename... Args>
+    RibbonMenuItemAdder( Args&&... args )
+    {
+        static_assert( std::is_base_of_v<RibbonMenuItem, T> );
+        RibbonSchemaHolder::addItem( std::make_shared<T>( std::forward<Args>( args )... ) );
+    }
+};
+
+template<typename T>
+struct RibbonMenuItemCall
+{
+    template<typename Func>
+    RibbonMenuItemCall( Func f )
+    {
+        static_assert( std::is_base_of_v<RibbonMenuItem, T> );
+        const auto& items = RibbonSchemaHolder::schema().items;
+        for ( const auto& item : items )
+        {
+            auto plugin = std::dynamic_pointer_cast< T >( item.second.item );
+            if ( !plugin )
+                continue;
+            f( plugin );
+        }
+    }
+};
+
+#define MR_REGISTER_RIBBON_ITEM(pluginType) \
+    static MR::RibbonMenuItemAdder<pluginType> ribbonMenuItemAdder##pluginType##_;
+
+#define MR_RIBBON_ITEM_CALL(pluginType,func) \
+    static MR::RibbonMenuItemCall<pluginType> ribbonMenuItemCall##func##pluginType##_( func );
+
 }

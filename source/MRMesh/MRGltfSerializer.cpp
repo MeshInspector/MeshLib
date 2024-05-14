@@ -155,7 +155,7 @@ constexpr float channelMax()
         return 1.0f;
     else
         return float( std::numeric_limits<ChannelType>::max() );
-};
+}
 
 VoidOrErrStr fillVertsColorMap( VertColors& vertsColorMap, int vertexCount, const std::vector<Material>& materials, int materialIndex, const tinygltf::Model& model, const tinygltf::Primitive& primitive )
 {

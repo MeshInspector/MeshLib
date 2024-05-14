@@ -15,6 +15,7 @@
 #include "MRMesh/MRSceneSettings.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRRibbonSceneObjectsListDrawer.h"
 
 namespace
 {
@@ -104,12 +105,20 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
     if ( auto ribbonMenu = viewer.getMenuPluginAs<RibbonMenu>() )
     {
         ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, Defaults::topPanelPinned ) );
-        ribbonMenu->setShowInfoInObjectTree( cfg.getBool( cShowInfoInObjectTree, Defaults::showInfoInObjectTree ) );
+        auto sceneObjectsList = ribbonMenu->getSceneObjectsList();
+        if ( sceneObjectsList )
+        {
+            sceneObjectsList->setShowInfoInObjectTree( cfg.getBool( cShowInfoInObjectTree, Defaults::showInfoInObjectTree ) );
+            sceneObjectsList->setShowNewSelectedObjects( Defaults::showSelectedObjects );
+            sceneObjectsList->setDeselectNewHiddenObjects( Defaults::deselectNewHiddenObjects );
+
+            auto ribbonSceneObjectsList = std::dynamic_pointer_cast< RibbonSceneObjectsListDrawer >( sceneObjectsList );
+            if ( ribbonSceneObjectsList )
+                ribbonSceneObjectsList->setCloseContextOnChange( Defaults::closeContextOnChange );
+
+        }
         ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
         ribbonMenu->resetQuickAccessList();
-        ribbonMenu->setShowNewSelectedObjects( Defaults::showSelectedObjects );
-        ribbonMenu->setDeselectNewHiddenObjects( Defaults::deselectNewHiddenObjects );
-        ribbonMenu->setCloseContextOnChange( Defaults::closeContextOnChange );
         RibbonSchemaHolder::schema().experimentalFeatures = Defaults::showExperimentalFeatures;
     }
 
@@ -142,7 +151,22 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     if ( ribbonMenu )
     {
         ribbonMenu->pinTopPanel( cfg.getBool( cTopPanelPinnedKey, Defaults::topPanelPinned ) );
-        ribbonMenu->setShowInfoInObjectTree( cfg.getBool( cShowInfoInObjectTree, Defaults::showInfoInObjectTree ) );
+        auto sceneObjectsList = ribbonMenu->getSceneObjectsList();
+        if ( sceneObjectsList )
+        {
+            sceneObjectsList->setShowInfoInObjectTree( cfg.getBool( cShowInfoInObjectTree, Defaults::showInfoInObjectTree ) );
+            if ( cfg.hasBool( cShowSelectedObjects ) )
+                sceneObjectsList->setShowNewSelectedObjects( cfg.getBool( cShowSelectedObjects, Defaults::showSelectedObjects ) );
+            if ( cfg.hasBool( cDeselectNewHiddenObjects ) )
+                sceneObjectsList->setDeselectNewHiddenObjects( cfg.getBool( cDeselectNewHiddenObjects, Defaults::deselectNewHiddenObjects ) );
+
+            auto ribbonSceneObjectsList = std::dynamic_pointer_cast< RibbonSceneObjectsListDrawer >( sceneObjectsList );
+            if ( ribbonSceneObjectsList )
+            {
+                if ( cfg.hasBool( cCloseContextOnChange ) )
+                    ribbonSceneObjectsList->setCloseContextOnChange( cfg.getBool( cCloseContextOnChange, Defaults::closeContextOnChange ) );
+            }
+        }
         ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
     }
 
@@ -272,13 +296,6 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             ribbonMenu->setSceneSize( sceneSize );
         } );
 
-        if ( cfg.hasBool( cShowSelectedObjects ) )
-            ribbonMenu->setShowNewSelectedObjects( cfg.getBool( cShowSelectedObjects, Defaults::showSelectedObjects ) );
-        if ( cfg.hasBool( cDeselectNewHiddenObjects ) )
-            ribbonMenu->setDeselectNewHiddenObjects( cfg.getBool( cDeselectNewHiddenObjects, Defaults::deselectNewHiddenObjects ) );
-        if ( cfg.hasBool( cCloseContextOnChange ) )
-            ribbonMenu->setCloseContextOnChange( cfg.getBool( cCloseContextOnChange, Defaults::closeContextOnChange ) );
-
         RibbonSchemaHolder::schema().experimentalFeatures = cfg.getBool( cShowExperimentalFeatures, Defaults::showExperimentalFeatures );
     }
 
@@ -367,7 +384,17 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     {
         cfg.setBool( cTopPanelPinnedKey, ribbonMenu->isTopPannelPinned() );
         cfg.setBool( cAutoClosePlugins, ribbonMenu->getAutoCloseBlockingPlugins() );
-        cfg.setBool( cShowInfoInObjectTree, ribbonMenu->getShowInfoInObjectTree() );
+        auto sceneObjectsList = ribbonMenu->getSceneObjectsList();
+        if ( sceneObjectsList )
+        {
+            cfg.setBool( cShowInfoInObjectTree, sceneObjectsList->getShowInfoInObjectTree() );
+            cfg.setBool( cShowSelectedObjects, sceneObjectsList->getShowNewSelectedObjects() );
+            cfg.setBool( cDeselectNewHiddenObjects, sceneObjectsList->getDeselectNewHiddenObjects() );
+
+            auto ribbonSceneObjectsList = std::dynamic_pointer_cast< RibbonSceneObjectsListDrawer >( sceneObjectsList );
+            if ( ribbonSceneObjectsList )
+                cfg.setBool( cCloseContextOnChange, ribbonSceneObjectsList->getCloseContextOnChange() );
+        }
     }
 
     Json::Value sceneControls;
@@ -426,9 +453,6 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
 
     if ( ribbonMenu )
     {
-        cfg.setBool( cShowSelectedObjects, ribbonMenu->getShowNewSelectedObjects() );
-        cfg.setBool( cDeselectNewHiddenObjects, ribbonMenu->getDeselectNewHiddenObjects() );
-        cfg.setBool( cCloseContextOnChange, ribbonMenu->getCloseContextOnChange() );
         cfg.setBool( cShowExperimentalFeatures, RibbonSchemaHolder::schema().experimentalFeatures );
     }
 

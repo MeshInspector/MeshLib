@@ -24,6 +24,7 @@
 #include <MRMesh/MRSceneRoot.h>
 #include <MRViewer/MRFileDialog.h>
 #include "MRMesh/MRObjectMesh.h"
+#include "MRViewer/MRRibbonSceneObjectsListDrawer.h"
 
 namespace
 {
@@ -246,26 +247,34 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
     ImGui::SetNextItemWidth( menuWidth * 0.5f );
     if ( ribbonMenu_ )
     {
-        UI::checkbox( "Make Visible on Select",
-                                                std::bind( &RibbonMenu::getShowNewSelectedObjects, ribbonMenu_ ),
-                                                std::bind( &RibbonMenu::setShowNewSelectedObjects, ribbonMenu_, std::placeholders::_1 ) );
-        UI::checkbox( "Deselect on Hide",
-                                                std::bind( &RibbonMenu::getDeselectNewHiddenObjects, ribbonMenu_ ),
-                                                std::bind( &RibbonMenu::setDeselectNewHiddenObjects, ribbonMenu_, std::placeholders::_1 ) );
-        UI::checkbox( "Close Context Menu on Click",
-                                                std::bind( &RibbonMenu::getCloseContextOnChange, ribbonMenu_ ),
-                                                std::bind( &RibbonMenu::setCloseContextOnChange, ribbonMenu_, std::placeholders::_1 ) );
-        UI::setTooltipIfHovered( "Close scene context menu on any change or click outside", menuScaling );
+        auto sceneObjectsListDrawer = ribbonMenu_->getSceneObjectsList();
+        if ( sceneObjectsListDrawer )
+        {
+            UI::checkbox( "Make Visible on Select",
+                                                    std::bind( &SceneObjectsListDrawer::getShowNewSelectedObjects, sceneObjectsListDrawer ),
+                                                    std::bind( &SceneObjectsListDrawer::setShowNewSelectedObjects, sceneObjectsListDrawer, std::placeholders::_1 ) );
+            UI::checkbox( "Deselect on Hide",
+                                                    std::bind( &SceneObjectsListDrawer::getDeselectNewHiddenObjects, sceneObjectsListDrawer ),
+                                                    std::bind( &SceneObjectsListDrawer::setDeselectNewHiddenObjects, sceneObjectsListDrawer, std::placeholders::_1 ) );
+            UI::checkbox( "Show Info in Object Tree",
+                                                    std::bind( &SceneObjectsListDrawer::getShowInfoInObjectTree, sceneObjectsListDrawer ),
+                                                    std::bind( &SceneObjectsListDrawer::setShowInfoInObjectTree, sceneObjectsListDrawer, std::placeholders::_1 ) );
+            UI::setTooltipIfHovered( "Show detailed information in the object tree", menuScaling );
+
+            std::shared_ptr<RibbonSceneObjectsListDrawer> ribbonSceneObjectsListDrawer = std::dynamic_pointer_cast< RibbonSceneObjectsListDrawer >( sceneObjectsListDrawer );
+            if ( ribbonSceneObjectsListDrawer )
+            {
+                UI::checkbox( "Close Context Menu on Click",
+                                                        std::bind( &RibbonSceneObjectsListDrawer::getCloseContextOnChange, ribbonSceneObjectsListDrawer ),
+                                                        std::bind( &RibbonSceneObjectsListDrawer::setCloseContextOnChange, ribbonSceneObjectsListDrawer, std::placeholders::_1 ) );
+                UI::setTooltipIfHovered( "Close scene context menu on any change or click outside", menuScaling );
+            }
+        }
 
         UI::checkbox( "Auto Close Previous Tool",
                                                 std::bind( &RibbonMenu::getAutoCloseBlockingPlugins, ribbonMenu_ ),
                                                 std::bind( &RibbonMenu::setAutoCloseBlockingPlugins, ribbonMenu_, std::placeholders::_1 ) );
         UI::setTooltipIfHovered( "Automatically close blocking tool when another blocking tool is activated", menuScaling );
-
-        UI::checkbox( "Show Info in Object Tree",
-                                                std::bind( &RibbonMenu::getShowInfoInObjectTree, ribbonMenu_ ),
-                                                std::bind( &RibbonMenu::setShowInfoInObjectTree, ribbonMenu_, std::placeholders::_1 ) );
-        UI::setTooltipIfHovered( "Show detailed information in the object tree", menuScaling );
 
         UI::checkbox( "Show Experimental Features", &RibbonSchemaHolder::schema().experimentalFeatures );
         UI::setTooltipIfHovered( "Show experimental ribbon tabs", menuScaling );

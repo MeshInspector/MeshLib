@@ -13,7 +13,8 @@ class OpenDirectoryMenuItem : public RibbonMenuItem
 {
 public:
     OpenDirectoryMenuItem();
-    virtual bool action() override;
+    std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const override;
+    bool action() override;
     void openDirectory( const std::filesystem::path& directory ) const;
 };
 

@@ -73,6 +73,16 @@ void sSelectRecursive( Object& obj )
             sSelectRecursive( *child );
 }
 
+bool isMobileBrowser()
+{
+#ifndef __EMSCRIPTEN__
+    return false;
+#else
+    static const auto isMobile = EM_ASM_INT( return /Android|webOS|iPhone|iPad/i.test( navigator.userAgent ); );
+    return bool( isMobile );
+#endif
+}
+
 }
 
 namespace MR
@@ -362,6 +372,12 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
     }, 3 );
 }
 #endif
+
+std::string OpenDirectoryMenuItem::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
+{
+    static const std::string reason = isMobileBrowser() ? "This web browser doesn't support directory selection" : "";
+    return reason;
+}
 
 bool OpenDirectoryMenuItem::action()
 {

@@ -25,10 +25,6 @@
 namespace MR
 {
 
-SceneObjectsListDrawer::SceneObjectsListDrawer() 
-{
-}
-
 void SceneObjectsListDrawer::draw( float height, float scaling )
 {
     menuScaling_ = scaling;

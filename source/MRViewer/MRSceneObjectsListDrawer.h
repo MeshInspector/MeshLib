@@ -10,7 +10,6 @@ class Object;
 class MRVIEWER_CLASS SceneObjectsListDrawer
 {
 public:
-    SceneObjectsListDrawer();
     virtual ~SceneObjectsListDrawer() = default;
 
     /// Main method for drawing all

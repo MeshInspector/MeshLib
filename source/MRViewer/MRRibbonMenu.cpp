@@ -43,6 +43,7 @@
 #include <MRPch/MRJson.h>
 #include <MRPch/MRSpdlog.h>
 #include <MRPch/MRWasm.h>
+#include "MRRibbonSceneObjectsListDrawer.h"
 #include <imgui_internal.h> // needed here to fix items dialogs windows positions
 #include <misc/freetype/imgui_freetype.h> // for proper font loading
 #include <regex>
@@ -187,6 +188,9 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     } );
 
     toolbar_.setRibbonMenu( this );
+    std::shared_ptr<RibbonSceneObjectsListDrawer> ribbonObjectsSceneListDrawer = std::make_shared<RibbonSceneObjectsListDrawer>();
+    ribbonObjectsSceneListDrawer->initRibbonMenu( this );
+    sceneObjectsList_ = std::dynamic_pointer_cast< SceneObjectsListDrawer >( ribbonObjectsSceneListDrawer );
 }
 
 void RibbonMenu::shutdown()
@@ -439,7 +443,7 @@ void RibbonMenu::drawHelpButton_()
     ImGui::PopStyleVar( 2 );
 }
 
-bool RibbonMenu::drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected, SelectedTypesMask selectedMask )
+bool RibbonMenu::drawCustomCheckBox( const std::vector<std::shared_ptr<Object>>& selected, SelectedTypesMask selectedMask )
 {
     bool res = false;
     for ( auto& [name, custom] : customCheckBox_ )
@@ -906,7 +910,7 @@ void RibbonMenu::drawActiveList_()
     ImGui::PopStyleVar();
 }
 
-bool RibbonMenu::drawGroupUngroupButton_( const std::vector<std::shared_ptr<Object>>& selected )
+bool RibbonMenu::drawGroupUngroupButton( const std::vector<std::shared_ptr<Object>>& selected )
 {
     bool someChanges = false;
     if ( selected.empty() )
@@ -1061,7 +1065,7 @@ void RibbonMenu::cloneSelectedPart( const std::shared_ptr<Object>& object )
     object->parent()->addChild( newObj );
 }
 
-bool RibbonMenu::drawCloneButton_( const std::vector<std::shared_ptr<Object>>& selected )
+bool RibbonMenu::drawCloneButton( const std::vector<std::shared_ptr<Object>>& selected )
 {
     bool someChanges = false;
     if ( selected.empty() )
@@ -1076,7 +1080,7 @@ bool RibbonMenu::drawCloneButton_( const std::vector<std::shared_ptr<Object>>& s
     return someChanges;
 }
 
-bool RibbonMenu::drawSelectSubtreeButton_( const std::vector<std::shared_ptr<Object>>& selected )
+bool RibbonMenu::drawSelectSubtreeButton( const std::vector<std::shared_ptr<Object>>& selected )
 {
     bool someChanges = false;
     const bool subtreeExists = std::any_of( selected.begin(), selected.end(), [] ( std::shared_ptr<Object> obj )
@@ -1102,7 +1106,7 @@ bool RibbonMenu::drawSelectSubtreeButton_( const std::vector<std::shared_ptr<Obj
                     continue;
 
                 object->select( true );
-                if ( showNewSelectedObjects_ )
+                if ( sceneObjectsList_->getShowNewSelectedObjects() )
                     object->setGlobalVisibility( true );
 
                 for ( auto child : object->children() )
@@ -1115,7 +1119,7 @@ bool RibbonMenu::drawSelectSubtreeButton_( const std::vector<std::shared_ptr<Obj
     return someChanges;
 }
 
-bool RibbonMenu::drawCloneSelectionButton_( const std::vector<std::shared_ptr<Object>>& selected )
+bool RibbonMenu::drawCloneSelectionButton( const std::vector<std::shared_ptr<Object>>& selected )
 {
     bool someChanges = false;
     if ( selected.size() != 1 )
@@ -1576,7 +1580,6 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
 
 void RibbonMenu::drawRibbonSceneList_()
 {
-    const auto allObj = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selectable );
     auto selectedObjs = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
 
     const auto scaling = menu_scaling();
@@ -1599,7 +1602,8 @@ void RibbonMenu::drawRibbonSceneList_()
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoResize
     );
-    drawRibbonSceneListContent_();
+    drawSceneListButtons_();
+    sceneObjectsList_->draw( -( informationHeight_ + transformHeight_ ), menu_scaling() );
     drawRibbonSceneInformation_( selectedObjs );
 
     const auto newSize = drawRibbonSceneResizeLine_();// ImGui::GetWindowSize();
@@ -1627,30 +1631,6 @@ void RibbonMenu::drawRibbonSceneList_()
     }
     if ( firstTime )
         firstTime = false;
-}
-
-void RibbonMenu::drawRibbonSceneListContent_()
-{
-    drawSceneListButtons_();
-    ImGui::BeginChild( "Meshes", ImVec2( -1, -( informationHeight_ + transformHeight_ ) ), false );
-    updateSceneWindowScrollIfNeeded_();
-    drawObjectsList_();
-
-    // any click on empty space below Scene Tree removes object selection
-    const auto& selected = SceneCache::getSelectedObjects();
-    ImGui::BeginChild( "EmptySpace" );
-    if ( ImGui::IsWindowHovered() && ImGui::IsMouseClicked( 0 ) )
-    {
-        for ( const auto& s : selected )
-            if ( s )
-                s->select( false );
-    }
-    ImGui::EndChild();
-
-    ImGui::EndChild();
-    sceneOpenCommands_.clear();
-
-    reorderSceneIfNeeded_();
 }
 
 Vector2f RibbonMenu::drawRibbonSceneResizeLine_()
@@ -1741,51 +1721,6 @@ void RibbonMenu::drawRibbonSceneInformation_( std::vector<std::shared_ptr<Object
         informationHeight_ = newInfoHeight;
         transformHeight_ = newXfHeight;
         getViewerInstance().incrementForceRedrawFrames(1, true);
-    }
-}
-
-void RibbonMenu::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected )
-{
-    const auto selectedVisualObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    if ( ImGui::BeginPopupContextItem() )
-    {
-        auto selectedMask = calcSelectedTypesMask( selected );
-        ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, ImGui::GetStyle().WindowPadding );
-        [[maybe_unused]] bool wasChanged = false, wasAction = false;
-        if ( selectedVisualObjs.empty() )
-        {
-            wasChanged |= drawGeneralOptions_( selected );
-            wasAction |= drawRemoveButton_( selected );
-            wasAction |= drawGroupUngroupButton_( selected );
-            wasAction |= drawSelectSubtreeButton_( selected );
-            wasAction |= drawCloneButton_( selected );
-        }
-        else if ( ImGui::BeginTable( "##DrawOptions", 2, ImGuiTableFlags_BordersInnerV ) )
-        {
-            ImGui::TableNextColumn();
-            wasChanged |= drawGeneralOptions_( selected );
-            wasChanged |= drawDrawOptionsCheckboxes_( selectedVisualObjs, selectedMask );
-            wasChanged |= drawCustomCheckBox_( selected, selectedMask );
-            wasChanged |= drawAdvancedOptions_( selectedVisualObjs, selectedMask );
-            ImGui::TableNextColumn();
-            wasChanged |= drawDrawOptionsColors_( selectedVisualObjs );
-            wasAction |= drawRemoveButton_( selected );
-            wasAction |= drawGroupUngroupButton_( selected );
-            wasAction |= drawSelectSubtreeButton_( selected );
-            wasAction |= drawCloneButton_( selected );
-            wasAction |= drawCloneSelectionButton_( selected );
-            ImGui::EndTable();
-        }
-        ImGui::PopStyleVar();
-
-        const bool needCloseCurrentPopup =
-            (ImGui::IsMouseDown( 2 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) ) ||
-            ( wasAction || ( wasChanged && closeContextOnChange_ ) );
-        if ( needCloseCurrentPopup )
-        {
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::EndPopup();
     }
 }
 
@@ -2027,60 +1962,6 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
     }
     ImGui::EndPopup();
     return true;
-}
-
-const char* RibbonMenu::getSceneItemIconByTypeName_( const std::string& typeName ) const
-{
-    if ( typeName == ObjectMesh::TypeName() )
-        return "\xef\x82\xac";
-#ifndef MRMESH_NO_OPENVDB
-    if ( typeName == ObjectVoxels::TypeName() )
-        return "\xef\x86\xb3";
-#endif
-    if ( typeName == ObjectPoints::TypeName() )
-        return "\xef\x84\x90";
-    if ( typeName == ObjectLines::TypeName() )
-        return "\xef\x87\xa0";
-    if ( typeName == ObjectDistanceMap::TypeName() )
-        return "\xef\xa1\x8c";
-    if ( typeName == ObjectLabel::TypeName() )
-        return "\xef\x81\xb5";
-    if ( ( typeName == SphereObject::TypeName() ) ||
-        ( typeName == PointObject::TypeName() ) ||
-        ( typeName == PlaneObject::TypeName() ) ||
-        ( typeName == LineObject::TypeName() ) ||
-        ( typeName == CylinderObject::TypeName() ) ||
-        ( typeName == ConeObject::TypeName() )
-        )
-        return "\xef\x98\x9f";
-    return "\xef\x88\xad";
-}
-
-void RibbonMenu::drawCustomObjectPrefixInScene_( const Object& obj )
-{
-    auto imageSize = ImGui::GetFrameHeight();
-    auto* imageIcon = RibbonIcons::findByName( obj.typeName(), imageSize,
-                                               RibbonIcons::ColorType::White,
-                                               RibbonIcons::IconType::ObjectTypeIcon );
-
-    if ( !imageIcon )
-    {
-        auto font = fontManager_.getFontByType( RibbonFontManager::FontType::Icons );
-        font->Scale = fontManager_.getFontSizeByType( RibbonFontManager::FontType::Default ) /
-            fontManager_.getFontSizeByType( RibbonFontManager::FontType::Icons );
-        ImGui::PushFont( font );
-
-        ImGui::Text( "%s", getSceneItemIconByTypeName_( obj.typeName() ) );
-
-        ImGui::PopFont();
-        font->Scale = 1.0f;
-    }
-    else
-    {
-        auto multColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
-        ImGui::Image( *imageIcon, ImVec2( imageSize, imageSize ), multColor );
-    }
-    ImGui::SameLine();
 }
 
 void RibbonMenu::addRibbonItemShortcut_( const std::string& itemName, const ShortcutManager::ShortcutKey& key, ShortcutManager::Category category )

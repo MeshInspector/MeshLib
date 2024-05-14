@@ -64,10 +64,6 @@ public:
     // minimum value is 0 seconds, panel will close immediately after mouse leaves it
     void setTopPanelMaxOpenedTimer( float sec ) { openedMaxSecs_ = std::max( 0.0f, sec ); }
 
-    // for enable / disable close scene context menu on any change
-    void setCloseContextOnChange( bool deselect ) { closeContextOnChange_ = deselect; }
-    bool getCloseContextOnChange() { return closeContextOnChange_; }
-
     /// set quick access menu item list version
     MRVIEWER_API virtual void setQuickAccessListVersion( int version );
     /// read quick access menu items list from json
@@ -88,7 +84,7 @@ public:
     /// returns true if any blocking plugin is now active
     bool hasActiveBlockingItem() const { return bool( activeBlockingItem_.item ); }
     /// returns true if any plugin is now active
-    bool hasAnyActiveItem() const { return bool (activeBlockingItem_.item) || !activeNonBlockingItems_.empty(); }
+    bool hasAnyActiveItem() const { return bool( activeBlockingItem_.item ) || !activeNonBlockingItems_.empty(); }
 
     /// updates status of item if it was changed outside of menu
     MRVIEWER_API void updateItemStatus( const std::string& itemName );
@@ -120,6 +116,12 @@ public:
     /// sets flag defining if closing plugin on opening another one is enabled or not
     void setAutoCloseBlockingPlugins( bool value ) { autoCloseBlockingPlugins_ = value; }
 
+    // ======== selected objects options drawing
+    bool drawGroupUngroupButton( const std::vector<std::shared_ptr<Object>>& selected );
+    bool drawSelectSubtreeButton( const std::vector<std::shared_ptr<Object>>& selected );
+    bool drawCloneButton( const std::vector<std::shared_ptr<Object>>& selected );
+    bool drawCustomCheckBox( const std::vector<std::shared_ptr<Object>>& selected, SelectedTypesMask selectedMask );
+    bool drawCloneSelectionButton( const std::vector<std::shared_ptr<Object>>& selected );
 protected:
     // draw single item
     MRVIEWER_API virtual void drawBigButtonItem_( const MenuItemInfo& item );
@@ -163,8 +165,6 @@ protected:
     MRVIEWER_API virtual void drawTopPanel_();
     // Draw scene list window with content
     MRVIEWER_API virtual void drawRibbonSceneList_();
-    // Draw scene list content only
-    MRVIEWER_API virtual void drawRibbonSceneListContent_();
     // Draw vertical line at the right border of scene to enable resize of scene list
     // returns size of scene window
     MRVIEWER_API virtual Vector2f drawRibbonSceneResizeLine_();
@@ -173,21 +173,16 @@ protected:
 
     MRVIEWER_API virtual void drawRibbonSceneInformation_( std::vector<std::shared_ptr<Object>>& selected );
 
-    MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected ) override;
     MRVIEWER_API virtual bool drawCollapsingHeaderTransform_() override;
     MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& selected ) override;
-
-    // return icon (now it is symbol in icons font) based on typename
-    MRVIEWER_API virtual const char* getSceneItemIconByTypeName_( const std::string& typeName ) const;
-
-    MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& obj ) override;
 
     MRVIEWER_API virtual void addRibbonItemShortcut_( const std::string& itemName, const ShortcutManager::ShortcutKey& key, ShortcutManager::Category category );
 
     MRVIEWER_API virtual void setupShortcuts_() override;
 
     // override this function to draw your custom version window somewhere
-    virtual void drawVersionWindow_() {};
+    virtual void drawVersionWindow_()
+    {};
     // draws window that shows time of last operation performed with progress bar
     MRVIEWER_API virtual void drawLastOperationTimeWindow_();
 
@@ -216,7 +211,6 @@ private:
     void drawSearchButton_();
     void drawCollapseButton_();
     void drawHelpButton_();
-    bool drawCustomCheckBox_( const std::vector<std::shared_ptr<Object>>& selected, SelectedTypesMask selectedMask );
 
     void sortObjectsRecursive_( std::shared_ptr<Object> object );
 
@@ -229,11 +223,6 @@ private:
     bool activeListPressed_{ false };
     void drawActiveList_();
 
-    bool drawGroupUngroupButton_( const std::vector<std::shared_ptr<Object>>& selected );
-    bool drawCloneButton_( const std::vector<std::shared_ptr<Object>>& selected );
-    bool drawCloneSelectionButton_( const std::vector<std::shared_ptr<Object>>& selected );
-    bool drawSelectSubtreeButton_( const std::vector<std::shared_ptr<Object>>& selected );
-
     void beginTopPanel_();
     void endTopPanel_();
     void drawTopPanelOpened_();
@@ -245,8 +234,6 @@ private:
     int currentTopPanelHeight_ = 113;
     int topPanelOpenedHeight_ = 113;
     int topPanelHiddenHeight_ = 33;
-
-    bool closeContextOnChange_{ true };
 
     ImVec2 sceneSize_{ 310, 0 };
     float informationHeight_{ 0.f };
@@ -285,17 +272,17 @@ private:
 };
 
 // Checks if RibbonMenu is available, if it is - forwards notification to RibbonNotifier. Otherwise - calls showModal() function
-MRVIEWER_API void pushNotification( const RibbonNotification& notification);
+MRVIEWER_API void pushNotification( const RibbonNotification& notification );
 
 
 template<typename T>
 struct RibbonMenuItemAdder
 {
     template<typename... Args>
-    RibbonMenuItemAdder(Args&&... args)
+    RibbonMenuItemAdder( Args&&... args )
     {
         static_assert( std::is_base_of_v<RibbonMenuItem, T> );
-        RibbonSchemaHolder::addItem( std::make_shared<T>( std::forward<Args>(args)... ) );
+        RibbonSchemaHolder::addItem( std::make_shared<T>( std::forward<Args>( args )... ) );
     }
 };
 
@@ -309,7 +296,7 @@ struct RibbonMenuItemCall
         const auto& items = RibbonSchemaHolder::schema().items;
         for ( const auto& item : items )
         {
-            auto plugin = std::dynamic_pointer_cast<T>( item.second.item );
+            auto plugin = std::dynamic_pointer_cast< T >( item.second.item );
             if ( !plugin )
                 continue;
             f( plugin );

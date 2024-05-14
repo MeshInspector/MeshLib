@@ -379,6 +379,12 @@
     <ClCompile Include="MRSpaceMouseHandler3dxMacDriver.cpp">
       <Filter>SpaceMouse</Filter>
     </ClCompile>
+    <ClCompile Include="MRSceneObjectsListDrawer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRibbonSceneObjectsListDrawer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -748,6 +754,12 @@
     </ClInclude>
     <ClInclude Include="MRSpaceMouseHandler3dxMacDriver.h">
       <Filter>SpaceMouse</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSceneObjectsListDrawer.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRibbonSceneObjectsListDrawer.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

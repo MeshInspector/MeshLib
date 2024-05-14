@@ -2,7 +2,7 @@
 #ifdef __EMSCRIPTEN__
 #include "MRCommonPlugins/exports.h"
 #include "MRViewer/MRStatePlugin.h"
-#include "MRViewer/MRRibbonMenu.h"
+#include "MRViewer/MRRibbonSchema.h"
 
 namespace MR
 {

@@ -119,7 +119,6 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
         }
         ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
         ribbonMenu->resetQuickAccessList();
-        RibbonSchemaHolder::schema().experimentalFeatures = Defaults::showExperimentalFeatures;
     }
 
 #if !defined(__EMSCRIPTEN__)
@@ -296,7 +295,8 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             ribbonMenu->setSceneSize( sceneSize );
         } );
 
-        RibbonSchemaHolder::schema().experimentalFeatures = cfg.getBool( cShowExperimentalFeatures, Defaults::showExperimentalFeatures );
+        if ( cfg.getBool( cShowExperimentalFeatures, Defaults::showExperimentalFeatures ) )
+            viewer.experimentalFeatures = true;
     }
 
     ColorTheme::setupByTypeName( colorThemeType, colorThemeName );
@@ -451,10 +451,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         cfg.setVector2i( cMainWindowPos, viewer.windowSavePos );
     cfg.setBool( cMainWindowMaximized, viewer.windowMaximized );
 
-    if ( ribbonMenu )
-    {
-        cfg.setBool( cShowExperimentalFeatures, RibbonSchemaHolder::schema().experimentalFeatures );
-    }
+    cfg.setBool( cShowExperimentalFeatures, viewer.experimentalFeatures );
 
     Json::Value spaceMouseParamsJson;
     SpaceMouseParameters spaceMouseParams = viewer.getSpaceMouseParameters();

@@ -413,9 +413,6 @@ public:
     // glInitialized_ can be already reset and it requires `loadGL()` check too
     bool isGLInitialized() const { return glInitialized_; }
 
-    // returns true if developer features are enabled, false otherwise
-    bool isDeveloperFeaturesEnabled() const { return enableDeveloperFeatures_; }
-
     // update the title of the main window and, if any scene was opened, show its filename
     MRVIEWER_API void makeTitleFromSceneRootPath();
 
@@ -452,6 +449,8 @@ public:
     float scrollForce{ }; // init in resetSettingsFunction()
     // opengl-based pick window radius in pixels
     uint16_t glPickRadius{ }; // init in resetSettingsFunction()
+    // Experimental/developer features enabled
+    bool experimentalFeatures{ };
     // command arguments, each parsed arg should be erased from here not to affect other parsers
     std::vector<std::string> commandArgs;
 

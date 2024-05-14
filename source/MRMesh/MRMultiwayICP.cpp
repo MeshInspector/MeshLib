@@ -4,6 +4,7 @@
 #include "MRPointToPointAligningTransform.h"
 #include "MRPointToPlaneAligningTransform.h"
 #include <algorithm>
+#include "MRMultiwayAligningTransform.h"
 
 namespace MR
 {
@@ -14,7 +15,7 @@ MultiwayICP::MultiwayICP( const Vector<MeshOrPointsXf, MeshOrPointsId>& objects,
     resamplePoints( samplingVoxelSize );
 }
 
-Vector<AffineXf3f, MeshOrPointsId> MultiwayICP::calculateTransformations()
+Vector<AffineXf3f, MeshOrPointsId> MultiwayICP::calculateTransformations( ProgressCallback cb )
 {
     float minDist = std::numeric_limits<float>::max();
     int badIterCount = 0;
@@ -29,12 +30,12 @@ Vector<AffineXf3f, MeshOrPointsId> MultiwayICP::calculateTransformations()
         const bool pt2pt = ( prop_.method == ICPMethod::Combined && iter_ < 3 )
             || prop_.method == ICPMethod::PointToPoint;
         
-        bool res = !( pt2pt ? p2ptIter_() : p2plIter_() );
+        bool res = independentEquationsMode_ ? ( pt2pt ? p2ptIter_() : p2plIter_() ) : multiwayIter_( !pt2pt );
 
         if ( perIterationCb_ )
             perIterationCb_( iter_ );
 
-        if ( res )
+        if ( !res )
         {
             resultType_ = ICPExitType::NotFoundSolution;
             break;
@@ -62,6 +63,8 @@ Vector<AffineXf3f, MeshOrPointsId> MultiwayICP::calculateTransformations()
             }
             badIterCount++;
         }
+        if ( !reportProgress( cb, float( iter_ ) / float( prop_.iterLimit ) ) )
+            return {};
     }
 
     Vector<AffineXf3f, MeshOrPointsId> res;
@@ -326,6 +329,54 @@ bool MultiwayICP::p2plIter_()
         valid[id] = FullSizeBool( true );
     } );
     return std::all_of( valid.vec_.begin(), valid.vec_.end(), [] ( auto v ) { return bool( v ); } );
+}
+
+bool MultiwayICP::multiwayIter_( bool p2pl )
+{
+    MR_TIMER;
+    MultiwayAligningTransform mat;
+    mat.reset( int( objs_.size() ) );
+    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+    for ( MeshOrPointsId j( i + 1 ); j < objs_.size(); ++j )
+    {
+        for ( auto idx : pairsPerObj_[i][j].active )
+        {
+            const auto& data = pairsPerObj_[i][j].vec[idx];
+            if ( p2pl )
+            {
+                mat.add( int( i ), data.srcPoint, int( j ), data.tgtPoint, data.tgtNorm, data.weight );
+                mat.add( int( j ), data.tgtPoint, int( i ), data.srcPoint, data.srcNorm, data.weight );
+            }
+            else
+            {
+                mat.add( int( i ), data.srcPoint, int( j ), data.tgtPoint, data.weight );
+                mat.add( int( j ), data.tgtPoint, int( i ), data.srcPoint, data.weight );
+            }
+        }
+        for ( auto idx : pairsPerObj_[j][i].active )
+        {
+            const auto& data = pairsPerObj_[j][i].vec[idx];
+            if ( p2pl )
+            {
+                mat.add( int( j ), data.srcPoint, int( i ), data.tgtPoint, data.tgtNorm, data.weight );
+                mat.add( int( i ), data.tgtPoint, int( j ), data.srcPoint, data.srcNorm, data.weight );
+            }
+            else
+            {
+                mat.add( int( j ), data.srcPoint, int( i ), data.tgtPoint, data.weight );
+                mat.add( int( i ), data.tgtPoint, int( j ), data.srcPoint, data.weight );
+            }
+        }
+    }
+    auto res = mat.solve();
+    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+    {
+        auto resI = res[i.get()].rigidXf();
+        if ( std::isnan( resI.b.x ) )
+            return false;
+        objs_[i].xf = AffineXf3f( resI * AffineXf3d( objs_[i].xf ) );
+    }
+    return true;
 }
 
 }

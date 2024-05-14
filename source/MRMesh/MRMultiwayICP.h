@@ -14,7 +14,7 @@ class MRMESH_CLASS MultiwayICP
 public:
     MRMESH_API MultiwayICP( const Vector<MeshOrPointsXf, MeshOrPointsId>& objects, float samplingVoxelSize );
     
-    [[nodiscard]] MRMESH_API Vector<AffineXf3f, MeshOrPointsId> calculateTransformations();
+    [[nodiscard]] MRMESH_API Vector<AffineXf3f, MeshOrPointsId> calculateTransformations( ProgressCallback cb = {} );
     
     /// select pairs with origin samples on all objects
     MRMESH_API void resamplePoints( float samplingVoxelSize );
@@ -47,6 +47,11 @@ public:
     /// sets callback that will be called for each iteration
     void setPerIterationCallback( std::function<void( int inter )> callback ) { perIterationCb_ = std::move( callback ); }
 
+    /// if in independent equations mode - creates separate equation system for each object
+    /// otherwise creates single large equation system for all objects
+    bool independentEquationsModeEnabled() const { return independentEquationsMode_; }
+    void enableIndependentEquationsMode( bool on ) { independentEquationsMode_ = on; }
+
     /// returns status info string
     [[nodiscard]] MRMESH_API std::string getStatusInfo() const; 
 private:
@@ -61,9 +66,11 @@ private:
     /// deactivate pairs that does not meet farDistFactor criterion
     void deactivatefarDistPairs_();
 
+    bool independentEquationsMode_{ false };
     int iter_ = 0;
     bool p2ptIter_();
     bool p2plIter_();
+    bool multiwayIter_( bool p2pl = true );
 };
 
 }

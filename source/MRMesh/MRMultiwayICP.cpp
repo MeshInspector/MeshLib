@@ -4,6 +4,7 @@
 #include "MRPointToPointAligningTransform.h"
 #include "MRPointToPlaneAligningTransform.h"
 #include <algorithm>
+#include "MRMultiwayAligningTransform.h"
 
 namespace MR
 {
@@ -29,7 +30,7 @@ Vector<AffineXf3f, MeshOrPointsId> MultiwayICP::calculateTransformations()
         const bool pt2pt = ( prop_.method == ICPMethod::Combined && iter_ < 3 )
             || prop_.method == ICPMethod::PointToPoint;
         
-        bool res = !( pt2pt ? p2ptIter_() : p2plIter_() );
+        bool res = !( pt2pt ? p2ptIter_() : multiwayIter_() );
 
         if ( perIterationCb_ )
             perIterationCb_( iter_ );
@@ -326,6 +327,33 @@ bool MultiwayICP::p2plIter_()
         valid[id] = FullSizeBool( true );
     } );
     return std::all_of( valid.vec_.begin(), valid.vec_.end(), [] ( auto v ) { return bool( v ); } );
+}
+
+bool MultiwayICP::multiwayIter_()
+{
+    MR_TIMER;
+    MultiwayAligningTransform mat;
+    mat.reset( int( objs_.size() ) );
+    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+    for ( MeshOrPointsId j( i + 1 ); j < objs_.size(); ++j )
+    {
+        for ( auto idx : pairsPerObj_[i][j].active )
+        {
+            const auto& data = pairsPerObj_[i][j].vec[idx];
+            mat.add( int( i ), data.srcPoint, int( j ), data.tgtPoint, data.tgtNorm, data.weight );
+            mat.add( int( j ), data.tgtPoint, int( i ), data.srcPoint, data.srcNorm, data.weight );
+        }
+        for ( auto idx : pairsPerObj_[j][i].active )
+        {
+            const auto& data = pairsPerObj_[j][i].vec[idx];
+            mat.add( int( j ), data.srcPoint, int( i ), data.tgtPoint, data.tgtNorm, data.weight );
+            mat.add( int( i ), data.tgtPoint, int( j ), data.srcPoint, data.srcNorm, data.weight );
+        }
+    }
+    auto res = mat.solve();
+    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+        objs_[i].xf = AffineXf3f( res[i.get()].rigidXf() * AffineXf3d( objs_[i].xf ) );
+    return true;
 }
 
 }

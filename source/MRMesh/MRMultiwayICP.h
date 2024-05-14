@@ -64,6 +64,7 @@ private:
     int iter_ = 0;
     bool p2ptIter_();
     bool p2plIter_();
+    bool multiwayIter_();
 };
 
 }

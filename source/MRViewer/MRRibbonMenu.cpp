@@ -1580,7 +1580,6 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
 
 void RibbonMenu::drawRibbonSceneList_()
 {
-    const auto allObj = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selectable );
     auto selectedObjs = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
 
     const auto scaling = menu_scaling();
@@ -1605,7 +1604,6 @@ void RibbonMenu::drawRibbonSceneList_()
     );
     drawSceneListButtons_();
     sceneObjectsList_->draw( -( informationHeight_ + transformHeight_ ), menu_scaling() );
-    //drawRibbonSceneListContent_();
     drawRibbonSceneInformation_( selectedObjs );
 
     const auto newSize = drawRibbonSceneResizeLine_();// ImGui::GetWindowSize();
@@ -1633,30 +1631,6 @@ void RibbonMenu::drawRibbonSceneList_()
     }
     if ( firstTime )
         firstTime = false;
-}
-
-void RibbonMenu::drawRibbonSceneListContent_()
-{
-    //drawSceneListButtons_();
-    //ImGui::BeginChild( "Meshes", ImVec2( -1, -( informationHeight_ + transformHeight_ ) ), false );
-    //updateSceneWindowScrollIfNeeded_();
-    //drawObjectsList_();
-
-    //// any click on empty space below Scene Tree removes object selection
-    //const auto& selected = SceneCache::getSelectedObjects();
-    //ImGui::BeginChild( "EmptySpace" );
-    //if ( ImGui::IsWindowHovered() && ImGui::IsMouseClicked( 0 ) )
-    //{
-    //    for ( const auto& s : selected )
-    //        if ( s )
-    //            s->select( false );
-    //}
-    //ImGui::EndChild();
-
-    //ImGui::EndChild();
-    //sceneOpenCommands_.clear();
-
-    //reorderSceneIfNeeded_();
 }
 
 Vector2f RibbonMenu::drawRibbonSceneResizeLine_()

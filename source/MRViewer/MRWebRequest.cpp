@@ -1,5 +1,5 @@
 #include "MRWebRequest.h"
-#ifndef MRMESH_NO_CPR
+#if defined( __EMSCRIPTEN__ ) || !defined( MRMESH_NO_CPR )
 #include "MRCommandLoop.h"
 
 #include "MRMesh/MRProgressCallback.h"

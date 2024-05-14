@@ -37,6 +37,10 @@ MRVIEWER_API void openFilesDialogAsync( std::function<void( const std::vector<st
 // returns empty path on cancel
 MRVIEWER_API std::filesystem::path openFolderDialog( std::filesystem::path baseFolder = {} );
 
+// Unified function to select a folder in desktop code and in emscripten
+// callback is called inside this function in desktop build and deferred in emscripten build
+MRVIEWER_API void openFolderDialogAsync( std::function<void ( const std::filesystem::path& )> callback, std::filesystem::path baseFolder = {} );
+
 // Allow user to select several folders
 // returns empty path on cancel
 MRVIEWER_API std::vector<std::filesystem::path> openFoldersDialog( std::filesystem::path baseFolder = {} );

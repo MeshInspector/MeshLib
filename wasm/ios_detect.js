@@ -23,3 +23,11 @@ var is_mac = function () {
 var is_safari = function(){
     return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 }
+
+var is_android = function () {
+    return /Android/i.test(navigator.userAgent);
+}
+
+var is_mobile = function () {
+    return is_android() || is_ios();
+}

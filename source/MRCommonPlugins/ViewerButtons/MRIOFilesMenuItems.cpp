@@ -78,7 +78,7 @@ bool isMobileBrowser()
 #ifndef __EMSCRIPTEN__
     return false;
 #else
-    static const auto isMobile = EM_ASM_INT( return /Android|webOS|iPhone|iPad/i.test( navigator.userAgent ); );
+    static const auto isMobile = EM_ASM_INT( return is_mobile(); );
     return bool( isMobile );
 #endif
 }

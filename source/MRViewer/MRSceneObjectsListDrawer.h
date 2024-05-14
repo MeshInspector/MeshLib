@@ -6,31 +6,39 @@ namespace MR
 
 class Object;
 
+/// class for drawing a list of scene objects (and handling interaction with it)
 class MRVIEWER_CLASS SceneObjectsListDrawer
 {
 public:
-    MRVIEWER_API SceneObjectsListDrawer();
-    MRVIEWER_API virtual ~SceneObjectsListDrawer() = default;
+    SceneObjectsListDrawer();
+    virtual ~SceneObjectsListDrawer() = default;
 
+    /// Main method for drawing all
+    /// \detail Not creat window. Use in window block (between ImGui::Begin and ImGui::End)
     MRVIEWER_API void draw( float height, float scaling );
-
-    /// returns flag show detailed information in the object tree
-    bool getShowInfoInObjectTree() const { return showInfoInObjectTree_; }
+    
     /// set flag show detailed information in the object tree
     void setShowInfoInObjectTree( bool value ) { showInfoInObjectTree_ = value; }
+    /// returns flag show detailed information in the object tree
+    bool getShowInfoInObjectTree() const { return showInfoInObjectTree_; }
     
+    /// set flag of the object visibility activation after selection
     void setShowNewSelectedObjects( bool show ) { showNewSelectedObjects_ = show; };
-    // get show selected objects state (enable / disable)
+    /// get flag of the object visibility activation after selection
     bool getShowNewSelectedObjects() { return showNewSelectedObjects_; };
     
+    /// set flag of deselect object after hidden
     void setDeselectNewHiddenObjects( bool deselect ) { deselectNewHiddenObjects_ = deselect; }
-    // get deselect hidden objects state (enable / disable)
+    /// get flag of deselect object after hidden
     bool getDeselectNewHiddenObjects() { return deselectNewHiddenObjects_; }
 
+    /// set object collapse state (hiding children)
     MRVIEWER_API void setObjectTreeState( const Object* obj, bool open );
 
+    /// set possibility change object order
     MRVIEWER_API void allowSceneReorder( bool allow );
 
+    /// helper method for fix scroll position after change available height
     MRVIEWER_API void setNextFrameFixScroll() { nextFrameFixScroll_ = true; }
 protected:
     // override this to customize prefix for objects in scene

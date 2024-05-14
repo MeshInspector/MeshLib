@@ -57,24 +57,12 @@ public:
     MRVIEWER_API virtual void pinTopPanel( bool on );
     MRVIEWER_API bool isTopPannelPinned() const;
     // this functions allow you to get top panel height (before scaling)
-    int getTopPanelOpenedHeight() const
-    {
-        return topPanelOpenedHeight_;
-    }
-    int getTopPanelHiddenHeight() const
-    {
-        return topPanelHiddenHeight_;
-    }
-    int getTopPanelCurrentHeight() const
-    {
-        return currentTopPanelHeight_;
-    }
+    int getTopPanelOpenedHeight() const { return topPanelOpenedHeight_; }
+    int getTopPanelHiddenHeight() const { return topPanelHiddenHeight_; }
+    int getTopPanelCurrentHeight() const { return currentTopPanelHeight_; }
     // set maximum wait time (in seconds) before top panel is closed after mouse leaves it (only when not pinned)
     // minimum value is 0 seconds, panel will close immediately after mouse leaves it
-    void setTopPanelMaxOpenedTimer( float sec )
-    {
-        openedMaxSecs_ = std::max( 0.0f, sec );
-    }
+    void setTopPanelMaxOpenedTimer( float sec ) { openedMaxSecs_ = std::max( 0.0f, sec ); }
 
     /// set quick access menu item list version
     MRVIEWER_API virtual void setQuickAccessListVersion( int version );
@@ -85,57 +73,30 @@ public:
     MRVIEWER_API void resetQuickAccessList();
 
     /// get access to Ribbon font manager
-    const RibbonFontManager& getFontManager()
-    {
-        return fontManager_;
-    };
+    const RibbonFontManager& getFontManager() { return fontManager_; };
 
     /// get Scene List window size
-    Vector2i getSceneSize()
-    {
-        return Vector2i( int( sceneSize_.x ), int( sceneSize_.y ) );
-    };
+    Vector2i getSceneSize() { return Vector2i( int( sceneSize_.x ), int( sceneSize_.y ) ); };
 
     /// set Scene List window size
     MRVIEWER_API void setSceneSize( const Vector2i& size );
 
     /// returns true if any blocking plugin is now active
-    bool hasActiveBlockingItem() const
-    {
-        return bool( activeBlockingItem_.item );
-    }
+    bool hasActiveBlockingItem() const { return bool( activeBlockingItem_.item ); }
     /// returns true if any plugin is now active
-    bool hasAnyActiveItem() const
-    {
-        return bool( activeBlockingItem_.item ) || !activeNonBlockingItems_.empty();
-    }
+    bool hasAnyActiveItem() const { return bool( activeBlockingItem_.item ) || !activeNonBlockingItems_.empty(); }
 
     /// updates status of item if it was changed outside of menu
     MRVIEWER_API void updateItemStatus( const std::string& itemName );
 
     /// returns index of active tab in RibbonSchemaHolder::schema().tabsOrder
-    int getActiveTabIndex() const
-    {
-        return activeTabIndex_;
-    }
+    int getActiveTabIndex() const { return activeTabIndex_; }
 
-    const RibbonButtonDrawer& getRibbonButtonDrawer()
-    {
-        return buttonDrawer_;
-    }
-    Toolbar& getToolbar()
-    {
-        return toolbar_;
-    }
-    void setActiveListPos( const ImVec2& pos )
-    {
-        activeListPos_ = pos;
-    }
+    const RibbonButtonDrawer& getRibbonButtonDrawer() { return buttonDrawer_; }
+    Toolbar& getToolbar() { return toolbar_; }
+    void setActiveListPos( const ImVec2& pos ) { activeListPos_ = pos; }
     /// set active plugins list showed
-    void showActiveList()
-    {
-        activeListPressed_ = true;
-    };
+    void showActiveList() { activeListPressed_ = true; };
 
     /// adds new notification to notifier list
     /// draws it first
@@ -151,15 +112,9 @@ public:
     TabChangedSignal tabChangedSignal;
 
     /// returns flag defining if closing plugin on opening another one is enabled
-    bool getAutoCloseBlockingPlugins() const
-    {
-        return autoCloseBlockingPlugins_;
-    }
+    bool getAutoCloseBlockingPlugins() const { return autoCloseBlockingPlugins_; }
     /// sets flag defining if closing plugin on opening another one is enabled or not
-    void setAutoCloseBlockingPlugins( bool value )
-    {
-        autoCloseBlockingPlugins_ = value;
-    }
+    void setAutoCloseBlockingPlugins( bool value ) { autoCloseBlockingPlugins_ = value; }
 
     // ======== selected objects options drawing
     bool drawGroupUngroupButton( const std::vector<std::shared_ptr<Object>>& selected );

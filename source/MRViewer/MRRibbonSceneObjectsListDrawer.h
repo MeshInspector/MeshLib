@@ -6,13 +6,15 @@ namespace MR
 
 class RibbonMenu;
 
+/// class for drawing a list of scene objects in RibbonMenu style
 class MRVIEWER_CLASS RibbonSceneObjectsListDrawer : public SceneObjectsListDrawer
 {
 public:
     void initRibbonMenu( RibbonMenu* ribbonMenu ) { ribbonMenu_ = ribbonMenu; };
     
-    // for enable / disable close scene context menu on any change
+    /// set closing scene context menu on any change
     void setCloseContextOnChange( bool deselect ) { closeContextOnChange_ = deselect; }
+    /// get flag closing scene context menu on any change
     bool getCloseContextOnChange() { return closeContextOnChange_; }
 
 protected:

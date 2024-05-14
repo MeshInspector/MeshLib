@@ -2,9 +2,6 @@
 #include "MRSceneCache.h"
 #include "MRMesh/MRObject.h"
 #include "MRMesh/MRObjectsAccess.h"
-#include "imgui_internal.h"
-#include "imgui.h"
-#include <stack>
 #include "MRViewer.h"
 #include "MRViewerInstance.h"
 #include "MRViewport.h"
@@ -21,6 +18,9 @@
 #include "MRUITestEngine.h"
 #include "MRRibbonMenu.h"
 #include "MRPch/MRSpdlog.h"
+#include "imgui_internal.h"
+#include "imgui.h"
+#include <stack>
 
 namespace MR
 {
@@ -191,7 +191,6 @@ void SceneObjectsListDrawer::drawObjectsList_()
 
                 if ( ImGui::IsMouseDoubleClicked( 0 ) && ImGui::IsItemHovered() )
                 {
-                    //if ( auto menu = viewerRef.getMenuPluginAs<RibbonMenu>() )
                     if ( auto menu = viewerRef.getMenuPlugin() )
                         menu->tryRenameSelectedObject();
                 }

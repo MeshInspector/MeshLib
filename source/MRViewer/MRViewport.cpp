@@ -259,7 +259,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( std::span<VisualObject* cons
         PointOnObject res;
         res.primId = int( pickRes.primId );
         res.zBuffer = pickRes.zBuffer;
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_OPENVDB
         auto voxObj = renderVector[pickRes.geomId]->asType<ObjectVoxels>();
         if ( voxObj && voxObj->isVolumeRenderingEnabled() )
         {

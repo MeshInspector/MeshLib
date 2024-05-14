@@ -53,14 +53,18 @@ LONG WINAPI logWindowsException( LPEXCEPTION_POINTERS pExInfo )
     else if ( pExceptionRecord->ExceptionCode == DBG_PRINTEXCEPTION_C && pExceptionRecord->NumberParameters >= 2 )
     {
         // https://stackoverflow.com/a/41480827/7325599
-        const auto len = pExceptionRecord->ExceptionInformation[0];
+        auto len = pExceptionRecord->ExceptionInformation[0];
+        if ( len )
+            --len;
         const auto * p = (PCSTR)pExceptionRecord->ExceptionInformation[1];
         spdlog::info( "Narrow debug information: {}", std::string_view( p, len ) );
     }
     else if ( pExceptionRecord->ExceptionCode == DBG_PRINTEXCEPTION_WIDE_C && pExceptionRecord->NumberParameters >= 2 )
     {
         // https://stackoverflow.com/a/41480827/7325599
-        const auto len = pExceptionRecord->ExceptionInformation[0];
+        auto len = pExceptionRecord->ExceptionInformation[0];
+        if ( len )
+            --len;
         const auto * p = (PCWSTR)pExceptionRecord->ExceptionInformation[1];
         spdlog::info( "Wide debug information: {}", Utf16ToUtf8( std::wstring_view( p, len ) ) );
     }

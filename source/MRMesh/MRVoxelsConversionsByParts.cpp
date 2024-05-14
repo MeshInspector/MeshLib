@@ -1,5 +1,5 @@
 #include "MRVoxelsConversionsByParts.h"
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+#ifndef MRMESH_NO_OPENVDB
 #include "MREdgePaths.h"
 #include "MRMesh.h"
 #include "MRMeshTrimWithPlane.h"
@@ -14,7 +14,7 @@
 #include "MRGTest.h"
 #include "MRVDBFloatGrid.h"
 
-#include <fmt/format.h>
+#include "MRPch/MRFmt.h"
 
 namespace
 {

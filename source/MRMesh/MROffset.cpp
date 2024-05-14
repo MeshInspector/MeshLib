@@ -28,7 +28,7 @@ float suggestVoxelSize( const MeshPart & mp, float approxNumVoxels )
     return std::cbrt( vol / approxNumVoxels );
 }
 
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
 Expected<Mesh> offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER
@@ -112,7 +112,7 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
     auto meshToLSCb = subprogress( params.callBack, 0.0f, 0.4f );
     if ( params.signDetectionMode == SignDetectionMode::OpenVDB )
     {
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
         auto offsetInVoxels = offset / params.voxelSize;
         auto voxelRes = meshToLevelSet( mp, AffineXf3f(),
             Vector3f::diagonal( params.voxelSize ),
@@ -231,7 +231,7 @@ Expected<Mesh> generalOffsetMesh( const MeshPart& mp, float offset, const Genera
     default:
         assert( false );
         [[fallthrough]];
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
     case GeneralOffsetParameters::Mode::Smooth:
         return offsetMesh( mp, offset, params );
 #endif
@@ -292,7 +292,7 @@ Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetP
     return res;
 }
 
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
 Expected<Mesh> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER;

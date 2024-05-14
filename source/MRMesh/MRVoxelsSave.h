@@ -1,6 +1,5 @@
 #pragma once
 #include "MRMeshFwd.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
 #include "MRIOFilters.h"
 #include "MRExpected.h"
 #include "MRProgressCallback.h"
@@ -8,16 +7,15 @@
 #include "MRSimpleVolume.h"
 #include <filesystem>
 
-namespace MR
-{
-
-namespace VoxelsSave
+namespace MR::VoxelsSave
 {
 
 /// \addtogroup IOGroup
 /// \{
 
 MRMESH_API extern const IOFilters Filters;
+
+#ifndef MRMESH_NO_OPENVDB
 
 /// Save raw voxels file, writing parameters in file name
 MRMESH_API VoidOrErrStr toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::path& file,
@@ -31,9 +29,11 @@ MRMESH_API VoidOrErrStr toGav( const VdbVolume& vdbVolume, const std::filesystem
 /// Save voxels in Gav-format in given binary stream
 MRMESH_API VoidOrErrStr toGav( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback = {} );
 
+#ifdef MRMESH_OPENVDB_USE_IO
 /// Save vdb voxels file, using openVdb methods
 MRMESH_API VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& file,
                                ProgressCallback callback = {} );
+#endif
 
 MRMESH_API VoidOrErrStr toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesystem::path& file,
                                               ProgressCallback callback = {} );
@@ -57,9 +57,8 @@ struct SavingSettings
 /// save all slices by the active plane through all voxel planes along the active axis to an image file
 MRMESH_API VoidOrErrStr saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSettings& settings );
 
+#endif
+
 /// \}
 
 }
-
-}
-#endif

@@ -257,10 +257,18 @@ MRVIEWER_API PaletteChanges Palette(
     float max = std::numeric_limits<float>::max()
 );
 
+// Parameters for the `Plane( MR::PlaneWidget& ... )` function
+enum class PlaneWidgetFlags
+{
+    None = 0,   // Default setup
+    DisableVisibility = 1   // Don't show "Show Plane" checkbox (and the preceding separator)
+};
+MR_MAKE_FLAG_OPERATORS( PlaneWidgetFlags )
+
 /// Helper plane widget, allows to draw specified plain in the scene \n
 /// can import plane from the scene, draw it with mouse or adjust with controls
 /// planeWidget stores the plane widget params
-MRVIEWER_API void Plane( MR::PlaneWidget& planeWidget, float menuScaling );
+MRVIEWER_API void Plane( MR::PlaneWidget& planeWidget, float menuScaling, PlaneWidgetFlags flags = {} );
 
 
 /// draw image with Y-direction inversed up-down

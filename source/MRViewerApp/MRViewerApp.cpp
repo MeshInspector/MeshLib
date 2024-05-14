@@ -11,6 +11,10 @@ extern "C" __declspec( dllexport ) DWORD AmdPowerXpressRequestHighPerformance = 
 
 extern "C" int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, char* /*lpCmdLine*/, int /*nCmdShow*/)
 {
+    // Initialize getting stacktraces before loading DLLs
+    // https://stackoverflow.com/q/78468776/7325599
+    (void)MR::getCurrentStacktrace();
+
     int argc = 0;
     std::vector<std::string> arguments;
     std::vector<char*> argv;

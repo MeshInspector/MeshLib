@@ -184,7 +184,7 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
 
         return DistanceMapSave::toAnySupportedFormat( file, *objDmap->getDistanceMap(), &objDmap->getToWorldParameters() );
     }
-#ifndef MRMESH_NO_VOXEL
+#ifndef MRMESH_NO_OPENVDB
     else if ( hasExtension( VoxelsSave::Filters, extension ) )
     {
         const auto objVoxels = getAllObjectsInTree<ObjectVoxels>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable );

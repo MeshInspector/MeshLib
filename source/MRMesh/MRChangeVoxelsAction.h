@@ -1,5 +1,6 @@
 #pragma once
-#ifndef __EMSCRIPTEN__
+#include "MRMeshFwd.h"
+#ifndef MRMESH_NO_OPENVDB
 #include "MRHistoryAction.h"
 #include "MRObjectVoxels.h"
 #include "MRMesh.h"

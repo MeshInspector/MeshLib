@@ -43,7 +43,7 @@
 
 using namespace MR;
 
-#ifndef MRMESH_NO_VOXEL
+#ifndef MRMESH_NO_OPENVDB
 // Fix self-intersections
 void fixSelfIntersections( Mesh& mesh1, float voxelSize )
 {
@@ -144,7 +144,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::modul
         "applies at most given number of relaxation iterations the spikes detected by given threshold" );
 } )
 
-#ifndef MRMESH_NO_VOXEL
+#ifndef MRMESH_NO_OPENVDB
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FixUndercuts, [] ( pybind11::module_& m )
 {
     m.def( "fixUndercuts", ( void ( * )( Mesh&, const FaceBitSet&, const Vector3f&, float, float ) )& MR::FixUndercuts::fixUndercuts,
@@ -382,7 +382,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
     pybind11::enum_<Laplacian::EdgeWeights>( m, "LaplacianEdgeWeightsParam" ).
         value( "Unit", Laplacian::EdgeWeights::Unit, "all edges have same weight=1" ).
         value( "Cotan", Laplacian::EdgeWeights::Cotan, "edge weight depends on local geometry and uses cotangent values" ).
-        value( "CotanTimesLength", Laplacian::EdgeWeights::CotanTimesLength, "edge weight is equal to edge length times cotangent weight" );
+        value( "CotanTimesLength", Laplacian::EdgeWeights::CotanTimesLength, "[deprecated] edge weight is equal to edge length times cotangent weight" ).
+        value( "CotanWithAreaEqWeight", Laplacian::EdgeWeights::CotanWithAreaEqWeight, "cotangent edge weights and equation weights inversely proportional to square root of local area" );
 
     m.def( "positionVertsSmoothly", &MR::positionVertsSmoothly,
         pybind11::arg( "mesh" ), pybind11::arg( "verts" ), pybind11::arg_v( "edgeWeightsType", MR::Laplacian::EdgeWeights::Cotan, "LaplacianEdgeWeightsParam.Cotan" ),
@@ -390,7 +391,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
         "Puts given vertices in such positions to make smooth surface both inside verts-region and on its boundary" );
 } )
 
-#ifndef MRMESH_NO_VOXEL
+#ifndef MRMESH_NO_OPENVDB
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
 {
     pybind11::enum_<MR::SignDetectionMode>( m, "SignDetectionMode", "How to determine the sign of distances from a mesh" ).

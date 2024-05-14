@@ -4,7 +4,7 @@
 #include "MRSimpleVolume.h"
 #include "MRVolumeIndexer.h"
 
-#ifndef MRMESH_NO_VOXEL
+#ifndef MRMESH_NO_OPENVDB
 #include "MRVDBFloatGrid.h"
 #endif
 
@@ -15,7 +15,7 @@ namespace MR
 template <typename Volume>
 class VoxelsVolumeAccessor;
 
-#ifndef MRMESH_NO_VOXEL
+#ifndef MRMESH_NO_OPENVDB
 template <>
 class VoxelsVolumeAccessor<VdbVolume>
 {

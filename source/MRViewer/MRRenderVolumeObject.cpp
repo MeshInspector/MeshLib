@@ -1,5 +1,5 @@
-#ifndef __EMSCRIPTEN__
 #include "MRRenderVolumeObject.h"
+#ifndef MRMESH_NO_OPENVDB
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRViewer.h"
 #include "MRGLMacro.h"
@@ -214,7 +214,9 @@ void RenderVolumeObject::render_( const ModelBaseRenderParams& renderParams, con
         cubeTriangles.data(), cubeTriangles.size() );
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 12 );
+#ifndef __EMSCRIPTEN__
     GL_EXEC( glDisable( GL_MULTISAMPLE ) );
+#endif
     GL_EXEC( glEnable( GL_CULL_FACE ) );
     GL_EXEC( glCullFace( GL_BACK ) );
 
@@ -224,7 +226,9 @@ void RenderVolumeObject::render_( const ModelBaseRenderParams& renderParams, con
     GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
 
     GL_EXEC( glDisable( GL_CULL_FACE ) );
+#ifndef __EMSCRIPTEN__
     GL_EXEC( glEnable( GL_MULTISAMPLE ) );
+#endif
 }
 
 void RenderVolumeObject::bindVolume_( bool picker )
@@ -249,9 +253,9 @@ void RenderVolumeObject::bindVolume_( bool picker )
         volume_.loadData(
             {
                 .resolution = volume->dims,
-                .internalFormat = GL_R16, // will need GL_R16UI for wasm
-                .format = GL_RED, // will need GL_RED_INTEGER for wasm
-                .type = GL_UNSIGNED_SHORT,
+                .internalFormat = GL_R16F,
+                .format = GL_RED,
+                .type = GL_FLOAT,
                 .filter = params.volumeFilterType
             },
             volume->data );

@@ -43,7 +43,7 @@
 #include <MRPch/MRJson.h>
 #include <MRPch/MRSpdlog.h>
 #include <MRPch/MRWasm.h>
-#include "MRSceneObjectsListDrawer.h"
+#include "MRRibbonSceneObjectsListDrawer.h"
 #include <imgui_internal.h> // needed here to fix items dialogs windows positions
 #include <misc/freetype/imgui_freetype.h> // for proper font loading
 #include <regex>
@@ -54,7 +54,6 @@
 #endif
 
 #include <GLFW/glfw3.h>
-#include "MRRibbonSceneObjectsListDrawer.h"
 
 #if defined(__APPLE__) && defined(__clang__)
 #pragma clang diagnostic pop

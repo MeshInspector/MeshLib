@@ -30,7 +30,7 @@ public:
     /// constructs heap for given number of elements, assigning given default value to each element
     explicit Heap( size_t size, T def = {}, P pred = {} );
     /// constructs heap from given elements (id's shall not repeat and have spaces, but can be arbitrary shuffled)
-    Heap( std::vector<Element> elms, P pred = {} );
+    explicit Heap( std::vector<Element> elms, P pred = {} );
     /// returns the size of the heap
     size_t size() const { return heap_.size(); }
     /// increases the size of the heap by adding elements at the end

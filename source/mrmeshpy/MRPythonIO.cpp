@@ -288,7 +288,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadPoints, [] ( pybind11::module_& m )
         pybind11::arg( "fileHandle" ), pybind11::arg( "extension" ), "load point cloud from python file handler, second arg: extension (`*.ext` format)" );
 } )
 
-#ifndef MRMESH_NO_VOXEL
+#ifndef MRMESH_NO_OPENVDB
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveVoxels, [] ( pybind11::module_& m )
 {
     m.def( "saveVoxels",

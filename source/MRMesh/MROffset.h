@@ -54,7 +54,7 @@ struct SharpOffsetParameters : OffsetParameters
     float maxOldVertPosCorrection = 0.5f;
 };
 
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
 /// Offsets mesh by converting it to distance field in voxels using OpenVDB library,
 /// signDetectionMode = Unsigned(from OpenVDB) | OpenVDB | HoleWindingRule,
 /// and then converts back using OpenVDB library (dual marching cubes),
@@ -87,7 +87,7 @@ struct GeneralOffsetParameters : SharpOffsetParameters
 {
     enum class Mode : int
     {
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
         Smooth,     ///< create mesh using dual marching cubes from OpenVDB library
 #endif
         Standard,   ///< create mesh using standard marching cubes implemented in MeshLib
@@ -105,7 +105,7 @@ struct GeneralOffsetParameters : SharpOffsetParameters
 /// if your input mesh is open then please specify another sign detection mode, and you will get open mesh on output
 [[nodiscard]] MRMESH_API Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters & params = {} );
 
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
 /// Offsets polyline by converting it to voxels and building iso-surface
 /// do offset in all directions
 /// so result mesh is always closed

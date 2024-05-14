@@ -92,8 +92,11 @@
 #include "MRSceneCache.h"
 #include "MRSceneObjectsListDrawer.h"
 
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_OPENVDB
 #include "MRMesh/MRObjectVoxels.h"
+#endif
+
+#ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
 #endif
 
@@ -1095,7 +1098,7 @@ float ImGuiMenu::drawSelectionInformation_()
     size_t totalSelectedFaces = 0;
     size_t totalVerts = 0;
     std::optional<float> totalVolume = 0.0f;
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_OPENVDB
     // Voxels info
     Vector3i dimensions;
 #endif
@@ -1148,7 +1151,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 totalVerts += polyline->topology.numValidVerts();
             }
         }
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_OPENVDB
         else if ( auto vObj = obj->asType<ObjectVoxels>() )
         {
             auto newDims = vObj->dimensions();
@@ -1314,7 +1317,7 @@ float ImGuiMenu::drawSelectionInformation_()
         UI::readOnlyValue<LengthUnit>( label, value );
     };
 
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_OPENVDB
     if ( dimensions.x > 0 && dimensions.y > 0 && dimensions.z > 0 )
     {
         drawDimensionsVec3( "Dimensions", dimensions );
@@ -2472,10 +2475,7 @@ void ImGuiMenu::draw_mr_menu()
 
         if ( ImGui::Button( "Save##Main", ImVec2( ( w - p ) / 2.f, 0 ) ) )
         {
-            auto filters = MeshSave::Filters | LinesSave::Filters | PointsSave::Filters;
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-            filters = filters | VoxelsSave::Filters;
-#endif
+            auto filters = MeshSave::Filters | LinesSave::Filters | PointsSave::Filters | VoxelsLoad::Filters;
             auto savePath = saveFileDialog( { {}, {}, filters } );
             if ( !savePath.empty() )
                 viewer->saveToFile( savePath );

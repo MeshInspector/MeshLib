@@ -74,6 +74,11 @@ def test_numpy_grid_sampling():
     # Sample points
     samples = mrmesh.pointGridSampling(pc, 0.1)
     assert(samples.count() == 1524)
+
+    # Other sampling
+    samples2 = mrmesh.pointIterativeSampling(pc, 1000)
+    assert(samples2.count() == 1000)
+
     # Keep only sampled points
     pc.validPoints = samples
     pc.pack()

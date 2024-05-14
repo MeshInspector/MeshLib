@@ -12,7 +12,7 @@ std::string getTrivialVertexShader()
   uniform mat4 model;
   uniform mat4 view;
   uniform mat4 proj;
-  uniform sampler3D volume;
+  uniform highp sampler3D volume;
   uniform vec3 voxelSize;
   uniform vec3 minCorner;
   in vec3 position;
@@ -49,8 +49,8 @@ std::string getVolumeFragmentShader()
   uniform float maxValue;
   uniform float step;
 
-  uniform sampler3D volume;
-  uniform sampler2D denseMap;
+  uniform highp sampler3D volume;
+  uniform highp sampler2D denseMap;
   uniform highp usampler2D activeVoxels;      // (in from base) selection BitSet
 
   uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true
@@ -201,7 +201,7 @@ std::string getVolumeFragmentShader()
         if ( shadingMode != 0 )
         {
             vec3 normEye = normalEye(textCoord, dimStepVoxel, shadingMode == 2 );
-            if ( shadingMode == 1 && dot(normEye,normEye) == 0 )
+            if ( shadingMode == 1 && dot(normEye,normEye) == 0.0 )
                 continue;
 
             shadeColor( vec3( eyeM * vec4( rayStart, 1.0 ) ), normEye, color );
@@ -248,8 +248,8 @@ std::string getVolumePickerFragmentShader()
 
   uniform int shadingMode; // 0-none,1-dense grad,2-alpha grad
 
-  uniform sampler3D volume;
-  uniform sampler2D denseMap;
+  uniform highp sampler3D volume;
+  uniform highp sampler2D denseMap;
 
   uniform highp usampler2D activeVoxels;      // (in from base) selection BitSet
   uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true

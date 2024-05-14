@@ -1,5 +1,5 @@
 #include "MRObjectVoxels.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
 #include "MRObjectFactory.h"
 #include "MRMesh.h"
 #include "MRVDBConversions.h"
@@ -289,13 +289,13 @@ bool ObjectVoxels::prepareDataForVolumeRendering( ProgressCallback cb /*= {} */ 
 {
     if ( !vdbVolume_.data )
         return false;
-    auto res = vdbVolumeToSimpleVolumeU16( vdbVolume_, getActiveBounds(), cb );
+    auto res = vdbVolumeToSimpleVolumeNorm( vdbVolume_, getActiveBounds(), cb );
     if ( !res || res->data.empty() )
     {
         volumeRenderingData_.reset();
         return false;
     }
-    volumeRenderingData_ = std::make_unique<SimpleVolumeU16>( std::move( *res ) );
+    volumeRenderingData_ = std::make_unique<SimpleVolume>( std::move( *res ) );
     return true;
 }
 
@@ -558,7 +558,6 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
         setDefaultSceneProperties_();
 }
 
-#ifndef MRMESH_NO_DICOM
 VoidOrErrStr ObjectVoxels::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     auto res = VoxelsLoad::fromRaw( pathFromUtf8( utf8string( path ) + ".raw" ), progressCb );
@@ -571,7 +570,6 @@ VoidOrErrStr ObjectVoxels::deserializeModel_( const std::filesystem::path& path,
 
     return {};
 }
-#endif
 
 std::vector<std::string> ObjectVoxels::getInfoLines() const
 {

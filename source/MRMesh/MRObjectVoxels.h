@@ -1,6 +1,6 @@
 #pragma once
 #include "MRMeshFwd.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
 #include "MRObjectMeshHolder.h"
 #include "MRProgressCallback.h"
 #include "MRHistogram.h"
@@ -124,7 +124,7 @@ public:
     // by calling `prepareDataForVolumeRendering(cb)` function before calling this one
     MRMESH_API void enableVolumeRendering( bool on );
     // move volume rendering data to caller: basically used in RenderVolumeObject 
-    [[nodiscard]] std::unique_ptr<SimpleVolumeU16> getVolumeRenderingData() const { return std::move( volumeRenderingData_ ); }
+    [[nodiscard]] std::unique_ptr<SimpleVolume> getVolumeRenderingData() const { return std::move( volumeRenderingData_ ); }
 
     // struct to control volume rendering texture
     struct VolumeRenderingParams
@@ -188,7 +188,7 @@ public:
 
 private:
     VolumeRenderingParams volumeRenderingParams_;
-    mutable UniquePtr<SimpleVolumeU16> volumeRenderingData_;
+    mutable UniquePtr<SimpleVolume> volumeRenderingData_;
 
     int maxSurfaceVertices_{ 5'000'000 };
     VdbVolume vdbVolume_;
@@ -228,9 +228,7 @@ protected:
 
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
-#ifndef MRMESH_NO_DICOM
     MRMESH_API VoidOrErrStr deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
-#endif
 
     MRMESH_API virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& path ) const override;
 };

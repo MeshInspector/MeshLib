@@ -1,5 +1,5 @@
 #include "MRVDBConversions.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
 #include "MRVDBFloatGrid.h"
 #include "MRMesh.h"
 #include "MRMeshBuilder.h"
@@ -288,7 +288,7 @@ VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, ProgressCal
 // make VoxelsVolume (e.g. SimpleVolume or SimpleVolumeU16) from VdbVolume
 // if VoxelsVolume values type is integral, performs mapping from [vdbVolume.min, vdbVolume.max] to
 // nonnegative range of target type
-template<typename T>
+template<typename T, bool Norm>
 Expected<VoxelsVolume<std::vector<T>>, std::string> vdbVolumeToSimpleVolumeImpl(
     const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} )
 {
@@ -301,17 +301,26 @@ Expected<VoxelsVolume<std::vector<T>>, std::string> vdbVolumeToSimpleVolumeImpl(
     res.voxelSize = vdbVolume.voxelSize;
     if constexpr ( isFloat )
     {
-        res.min = vdbVolume.min;
-        res.max = vdbVolume.max;
+        if constexpr ( Norm )
+        {
+            res.min = T( 0.0 );
+            res.max = T( 1.0 );
+        }
+        else
+        {
+            res.min = vdbVolume.min;
+            res.max = vdbVolume.max;
+        }
     }
     else
     {
         res.min = 0;
         res.max = std::numeric_limits<T>::max();
     }
+    [[maybe_unused]] const float oMin = float( res.min );
     [[maybe_unused]] const float oMax = float( res.max );
     [[maybe_unused]] const float k =
-        vdbVolume.max > vdbVolume.min ? oMax / ( vdbVolume.max - vdbVolume.min ) : 0.0f;
+        vdbVolume.max > vdbVolume.min ? ( oMax - oMin ) / ( vdbVolume.max - vdbVolume.min ) : 0.0f;
 
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size() );
@@ -328,10 +337,10 @@ Expected<VoxelsVolume<std::vector<T>>, std::string> vdbVolumeToSimpleVolumeImpl(
         auto& accessor = accessorPerThread.local();
         auto coord = indexer.toPos( VoxelId( i ) );
         float value = accessor.getValue( openvdb::Coord( coord.x + org.x, coord.y + org.y, coord.z + org.z ) );
-        if constexpr ( isFloat )
+        if constexpr ( isFloat && !Norm )
             res.data[i] = T( value );
         else
-            res.data[i] = T( std::clamp( ( value - vdbVolume.min ) * k, 0.0f, oMax ) );
+            res.data[i] = T( std::clamp( ( value - vdbVolume.min ) * k + oMin, oMin, oMax ) );
     }, cb ) )
         return unexpectedOperationCanceled();
     return res;
@@ -339,11 +348,17 @@ Expected<VoxelsVolume<std::vector<T>>, std::string> vdbVolumeToSimpleVolumeImpl(
 
 Expected<SimpleVolume, std::string> vdbVolumeToSimpleVolume( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
 {
-    return vdbVolumeToSimpleVolumeImpl<float>( vdbVolume, activeBox, cb );
+    return vdbVolumeToSimpleVolumeImpl<float, false>( vdbVolume, activeBox, cb );
 }
+
+Expected<MR::SimpleVolume, std::string> vdbVolumeToSimpleVolumeNorm( const VdbVolume& vdbVolume, const Box3i& activeBox /*= Box3i()*/, ProgressCallback cb /*= {} */ )
+{
+    return vdbVolumeToSimpleVolumeImpl<float, true>( vdbVolume, activeBox, cb );
+}
+
 Expected<SimpleVolumeU16, std::string> vdbVolumeToSimpleVolumeU16( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
 {
-    return vdbVolumeToSimpleVolumeImpl<uint16_t>( vdbVolume, activeBox, cb );
+    return vdbVolumeToSimpleVolumeImpl<uint16_t, true>( vdbVolume, activeBox, cb );
 }
 
 Expected<Mesh> gridToMesh( const FloatGrid& grid, const GridToMeshSettings & settings )

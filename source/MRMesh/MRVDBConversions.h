@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
 #include "MRMeshPart.h"
 #include "MRProgressCallback.h"
 #include "MRAffineXf3.h"
@@ -61,6 +61,10 @@ MRMESH_API VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, 
 // make SimpleVolume from VdbVolume
 // make copy of data
 MRMESH_API Expected<SimpleVolume, std::string> vdbVolumeToSimpleVolume(
+    const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} );
+// make normalized SimpleVolume from VdbVolume
+// make copy of data
+MRMESH_API Expected<SimpleVolume, std::string> vdbVolumeToSimpleVolumeNorm(
     const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} );
 // make SimpleVolumeU16 from VdbVolume
 // performs mapping from [vdbVolume.min, vdbVolume.max] to nonnegative range of uint16_t

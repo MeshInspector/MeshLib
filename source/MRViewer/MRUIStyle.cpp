@@ -274,9 +274,7 @@ bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::s
     ImGui::SameLine();
 
     auto padding = ImGui::GetStyle().ItemInnerSpacing;
-    auto tempStyle = ImGui::GetStyle();
     ImVec2 endButtonPos( startButtonPos.x + buttonSize.x, startButtonPos.y);
-    //endButtonPos.x -= padding.x;
     ImVec2 posIcon( ( endButtonPos.x + startButtonPos.x - iconSize.x ) / 2.0f, startButtonPos.y + padding.y);
     ImGui::SetCursorPos( posIcon );
 

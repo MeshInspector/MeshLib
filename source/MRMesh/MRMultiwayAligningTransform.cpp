@@ -255,6 +255,7 @@ std::vector<RigidXf3d> MultiwayAligningTransform::solve()
 {
     MR_TIMER
 
+    // construct sparse upper part of the symmetrical matrix
     std::vector< Eigen::Triplet<double> > mTriplets;
     for ( int o = 0; o + 1 < impl_->numObjs(); ++o )
     {
@@ -262,15 +263,10 @@ std::vector<RigidXf3d> MultiwayAligningTransform::solve()
         auto & diag = impl_->diag( o );
         for ( int r = 0; r < 6; ++r )
         {
-            mTriplets.emplace_back( o6 + r, o6 + r, diag.v[r][r] );
-            for ( int c = r + 1; c < 6; ++c )
-            {
+            for ( int c = r; c < 6; ++c )
                 mTriplets.emplace_back( o6 + r, o6 + c, diag.v[r][c] );
-                mTriplets.emplace_back( o6 + c, o6 + r, diag.v[r][c] );
-            }
         }
     }
-
     impl_->forEachUpBlock( [&]( int objA, int objB, const Block & b )
     {
         assert( objA < objB );
@@ -278,10 +274,7 @@ std::vector<RigidXf3d> MultiwayAligningTransform::solve()
         const int ob6 = 6 * objB;
         for ( int r = 0; r < 6; ++r )
             for ( int c = 0; c < 6; ++c )
-            {
                 mTriplets.emplace_back( oa6 + r, ob6 + c, b.v[r][c] );
-                mTriplets.emplace_back( ob6 + c, oa6 + r, b.v[r][c] );
-            }
     } );
 
     using SparseMatrix = Eigen::SparseMatrix<double,Eigen::RowMajor>;
@@ -289,7 +282,7 @@ std::vector<RigidXf3d> MultiwayAligningTransform::solve()
     const auto sz = impl_->b().size();
     A.resize( sz, sz );
     A.setFromTriplets( mTriplets.begin(), mTriplets.end() );
-    Eigen::SimplicialLDLT<SparseMatrix> solver;
+    Eigen::SimplicialLDLT<SparseMatrix, Eigen::Upper> solver;
     solver.compute( A );
     Eigen::VectorXd sol = solver.solve( impl_->b() );
 

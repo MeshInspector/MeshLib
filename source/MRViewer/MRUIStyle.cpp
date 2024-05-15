@@ -12,6 +12,7 @@
 #include "imgui_internal.h"
 #include "MRMesh/MRVector4.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRMesh/MRString.h"
 
 
 namespace MR
@@ -265,8 +266,7 @@ bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::s
     auto startButtonPos = ImGui::GetCursorPos();
     auto winPos = ImGui::GetWindowPos();
     ImVec2 minClip( winPos.x + startButtonPos.x, winPos.y + startButtonPos.y );
-    ImVec2 maxClip( minClip.x + buttonSize.x + 1, minClip.y + buttonSize.y );
-    ImGui::GetWindowDrawList()->PushClipRect( minClip, maxClip );
+    ImVec2 maxClip( minClip.x + buttonSize.x, minClip.y + buttonSize.y );
 
     std::string buttonText = "##" + text;
     auto res = ImGui::Button( buttonText.c_str(), buttonSize );
@@ -281,6 +281,10 @@ bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::s
     const float maxSize = std::max( iconSize.x, iconSize.y );
     auto icon = RibbonIcons::findByName( name, maxSize, RibbonIcons::ColorType::White, RibbonIcons::IconType::IndependentIcons );
 
+    assert( icon );
+
+    ImGui::GetWindowDrawList()->PushClipRect( minClip, maxClip );
+
     ImVec4 multColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
     ImGui::Image( *icon, { iconSize.x , iconSize.y }, multColor );
     ImGui::SameLine();
@@ -288,8 +292,8 @@ bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::s
     ImVec2 startPosText( winPos.x + ( endButtonPos.x + startButtonPos.x ) / 2.0f, winPos.y + startButtonPos.y );
     startPosText.y += padding.y * 2 + iconSize.y;
 
-    size_t startWord = 0;
-    size_t endWord = 0;
+    const char* startWord = 0;
+    const char* endWord = 0;
     size_t numStr = 0;
     ImVec2 curTextSize;
     bool printText = false;
@@ -301,15 +305,63 @@ bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::s
     struct StringDetail
     {
         float lenght = 0;
-        size_t start = 0;
-        size_t end = 0;
+        const char* start = 0;
+        const char* end = 0;
     };
     StringDetail previosDetail;
     StringDetail curDetail;
-    for ( size_t i = 0; i < text.size(); i++ )
+    curDetail.start = text.data();
+    auto endText = std::string_view( text ).end();
+
+    split( text, " ", [&]( std::string_view str)
     {
-        bool forsePrint = i == text.size() - 1;
-        if ( !( text[i] == ' ' || forsePrint ) )
+        startWord = str.data();
+        endWord = &str.back() + 1;
+        bool forcePrint = endText == str.end();
+        curTextSize = ImGui::CalcTextSize( startWord, endWord );
+        if ( curDetail.lenght + curTextSize.x > buttonSize.x )
+        {
+            printText = true;
+            curDetail.end = startWord;
+            previosDetail = curDetail;
+            curDetail = { curTextSize.x, startWord, endWord };
+        }
+        else if ( forcePrint )
+        {
+            printText = true;
+            curDetail.end = endWord;
+            curDetail.lenght += curTextSize.x;
+            previosDetail = curDetail;
+        }
+        else
+        {
+            curDetail.lenght += curTextSize.x;
+        }
+        startWord = endWord;
+
+        if ( printText )
+        {
+            printText = false;
+
+            ImVec2 posText;
+            posText.x = startPosText.x - previosDetail.lenght / 2.0f;
+            posText.y = startPosText.y + ( padding.y + curTextSize.y ) * numStr;
+            ImGui::GetWindowDrawList()->AddText(
+                font,
+                fontSize,
+                posText,
+                color,
+                previosDetail.start,
+                previosDetail.end );
+            numStr++;
+        }
+        return false;
+    } );
+
+    /*for ( size_t i = 0; i < text.size(); i++ )
+    {
+        bool forcePrint = i == text.size() - 1;
+        if ( !( text[i] == ' ' || forcePrint ) )
         {
             continue;
         }
@@ -323,7 +375,7 @@ bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::s
             previosDetail = curDetail;
             curDetail = { curTextSize.x, startWord, endWord };
         }
-        else if ( forsePrint )
+        else if ( forcePrint )
         {
             printText = true;
             curDetail.end = endWord;
@@ -352,7 +404,7 @@ bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::s
                 text.data() + previosDetail.end + 1 );
             numStr++;
         }
-    }
+    }*/
 
     ImGui::GetWindowDrawList()->PopClipRect();
     ImGui::EndGroup();

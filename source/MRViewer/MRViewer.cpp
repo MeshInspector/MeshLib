@@ -542,7 +542,8 @@ int Viewer::launch( const LaunchParams& params )
     launchParams_ = params;
     isAnimating = params.isAnimating;
     animationMaxFps = params.animationMaxFps;
-    enableDeveloperFeatures_ = params.developerFeatures;
+    if ( params.developerFeatures )
+        experimentalFeatures = true;
     auto res = launchInit_( params );
     if ( res != EXIT_SUCCESS )
         return res;
@@ -997,6 +998,7 @@ Viewer::Viewer() :
     {
         viewer->glPickRadius = 0;
         viewer->scrollForce = 1.0f;
+        viewer->experimentalFeatures = false;
         viewer->setSpaceMouseParameters( SpaceMouseParameters{} );
         viewer->setTouchpadParameters( TouchpadParameters{} );
         viewer->enableAlphaSort( true );

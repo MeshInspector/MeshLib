@@ -51,8 +51,6 @@ struct RibbonSchema
     MenuItemsList defaultQuickAccessList;
     MenuItemsList headerQuickAccessList;
     MenuItemsList sceneButtonsList;
-    // if enabled, shows experimental features in ribbon menu, and in search results
-    bool experimentalFeatures{ false };
 };
 
 // This class holds static ribbon schema,

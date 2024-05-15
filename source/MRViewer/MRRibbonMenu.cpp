@@ -572,7 +572,7 @@ void RibbonMenu::drawHeaderPannel_()
     auto summaryTabPannelSize = 2 * 12.0f * menuScaling - cTabsInterval * menuScaling; // init shift (by eye, not defined in current design maket)
     for ( int i = 0; i < tabSizes.size(); ++i )
     {
-        if ( schema.tabsOrder[i].experimental && !schema.experimentalFeatures )
+        if ( schema.tabsOrder[i].experimental && !getViewerInstance().experimentalFeatures )
             continue;
         const auto& tabStr = schema.tabsOrder[i].name;
         textSizes[i] = ImGui::CalcTextSize( tabStr.c_str() ).x;
@@ -645,7 +645,7 @@ void RibbonMenu::drawHeaderPannel_()
     basePos.y = cTabYOffset * menuScaling - 1;// -1 due to ImGui::TabItemBackground internal offset
     for ( int i = 0; i < schema.tabsOrder.size(); ++i )
     {
-        if ( schema.tabsOrder[i].experimental && !schema.experimentalFeatures )
+        if ( schema.tabsOrder[i].experimental && !getViewerInstance().experimentalFeatures )
         {
             if ( activeTabIndex_ == i )
             {

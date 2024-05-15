@@ -173,6 +173,7 @@
 		{
 			"Name": "Test",
 			"Priority": 3,
+			"Experimental": true,
 			"Groups": [
 				{
 					"Name": "Old",

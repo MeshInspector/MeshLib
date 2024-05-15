@@ -1,6 +1,7 @@
 #include "MROpenRawVoxelsPlugin.h"
 #ifndef MRMESH_NO_OPENVDB
-#include "MRViewer/MRRibbonMenu.h"
+#include "MRViewer/MRRibbonSchema.h"
+#include "MRViewer/ImGuiMenu.h"
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRFileDialog.h"

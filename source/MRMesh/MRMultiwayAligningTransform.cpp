@@ -1,24 +1,114 @@
 #include "MRMultiwayAligningTransform.h"
+#include "MRTimer.h"
 #include "MRGTest.h"
-#include <Eigen/Cholesky> //LLT
+#include <Eigen/SparseCholesky>
 #include <cassert>
 
 namespace MR
 {
 
-void MultiwayAligningTransform::reset( int numObjs )
+namespace
+{
+
+struct Block
+{
+    double v[6][6]{};
+    Block & operator += ( const Block& b );
+};
+
+Block & Block::operator += ( const Block& b )
+{
+    for ( int r = 0; r < 6; ++r )
+        for ( int c = 0; c < 6; ++c )
+            v[r][c] += b.v[r][c];
+    return * this;
+}
+
+} // anonymous namespace
+
+class MultiwayAligningTransform::Impl
+{
+    /// (row,row) -> Block
+    std::vector<Block> aDiag_;
+
+    /// (row,col) -> Block, row < col
+    HashMap<std::pair<int,int>, std::unique_ptr<Block>> aUp_;
+
+    /// right hand size of the linear system to solve
+    Eigen::VectorXd b_;
+
+    int numObjs_ = 0;
+
+public:
+    Impl( int numObjs );
+    Block & diag( int o ) { return aDiag_[o]; }
+    Block & up( int r, int c );
+    double * rhs( int o ) { return b_.data() + o * 6; }
+    void add( const Impl & r );
+
+    int numObjs() const { return numObjs_; }
+    const Eigen::VectorXd & b() const { return b_; }
+    void forEachUpBlock( const std::function<void(int r, int c, const Block & b)> & callback ) const;
+};
+
+MultiwayAligningTransform::Impl::Impl( int numObjs )
 {
     assert( numObjs >= 2 );
-    int sz = ( numObjs - 1 ) * 6;
-    a_.setZero( sz, sz );
-    b_.setZero( sz );
     numObjs_ = numObjs;
+    aDiag_.resize( numObjs - 1 );
+    b_.setZero( 6 * ( numObjs - 1 ) );
+}
+
+inline Block & MultiwayAligningTransform::Impl::up( int r, int c )
+{
+    assert( r < c );
+    auto & res = aUp_[ {r,c} ];
+    if ( !res )
+        res.reset( new Block );
+    return *res;
+}
+
+void MultiwayAligningTransform::Impl::add( const Impl & r )
+{
+    assert( numObjs_ == r.numObjs_ );
+    for ( int i = 0; i + 1 < numObjs_; ++i )
+        aDiag_[i] += r.aDiag_[i];
+    for ( const auto & [ij, rb] : r.aUp_ )
+    {
+        if ( auto & b = aUp_[ij] )
+            *b += *rb;
+        else
+            b.reset( new Block( *rb ) );
+    }
+    b_ += r.b_;
+}
+
+void MultiwayAligningTransform::Impl::forEachUpBlock( const std::function<void(int r, int c, const Block & b)> & callback ) const
+{
+    for ( const auto & [ij, b] : aUp_ )
+        callback( ij.first, ij.second, *b );
+}
+
+MultiwayAligningTransform::MultiwayAligningTransform( int numObjs )
+{
+    if ( numObjs != 0 )
+        reset( numObjs );
+}
+
+MultiwayAligningTransform::~MultiwayAligningTransform()
+{
+}
+
+void MultiwayAligningTransform::reset( int numObjs )
+{
+    impl_.reset( new Impl( numObjs ) );
 }
 
 void MultiwayAligningTransform::add( int objA, const Vector3d& pA, int objB, const Vector3d& pB, double w )
 {
-    assert( objA >= 0 && objA < numObjs_ );
-    assert( objB >= 0 && objB < numObjs_ );
+    assert( impl_ );
+    assert( objA >= 0 && objA < impl_->numObjs() );
+    assert( objB >= 0 && objB < impl_->numObjs() );
     assert( objA != objB );
 
     const Vector3d cA[6] =
@@ -43,50 +133,55 @@ void MultiwayAligningTransform::add( int objA, const Vector3d& pA, int objB, con
 
     // update upper-right part of sumA_
     const Vector3d k_B = pB - pA;
-    const int sA = objA * 6;
-    const int sB = objB * 6;
 
-    if ( objA + 1 < numObjs_ )
+    if ( objA + 1 < impl_->numObjs() )
     {
+        auto & a = impl_->diag( objA );
+        auto * b = impl_->rhs( objA );
         for ( size_t i = 0; i < 6; i++ )
         {
             for ( size_t j = i; j < 6; j++ )
-                a_(sA+i, sA+j) += w * dot( cA[i], cA[j] );
-            b_(sA+i) += w * dot( cA[i], k_B );
+                a.v[i][j] += w * dot( cA[i], cA[j] );
+            b[i] += w * dot( cA[i], k_B );
         }
     }
 
-    if ( objB + 1 < numObjs_ )
+    if ( objB + 1 < impl_->numObjs() )
     {
+        auto & a = impl_->diag( objB );
+        auto * b = impl_->rhs( objB );
         for ( size_t i = 0; i < 6; i++ )
         {
             for ( size_t j = i; j < 6; j++ )
-                a_(sB+i, sB+j) += w * dot( cB[i], cB[j] );
-            b_(sB+i) += w * dot( cB[i], k_B );
+                a.v[i][j] += w * dot( cB[i], cB[j] );
+            b[i] += w * dot( cB[i], k_B );
         }
     }
 
-    if ( objA + 1 < numObjs_ && objB + 1 < numObjs_ )
+    if ( objA + 1 < impl_->numObjs() && objB + 1 < impl_->numObjs() )
     {
         if ( objA < objB )
         {
+            auto & a = impl_->up( objA, objB );
             for ( size_t i = 0; i < 6; i++ )
                 for ( size_t j = 0; j < 6; j++ )
-                    a_(sA+i, sB+j) += w * dot( cA[i], cB[j] );
+                    a.v[i][j] += w * dot( cA[i], cB[j] );
         }
         else
         {
+            auto & a = impl_->up( objB, objA );
             for ( size_t i = 0; i < 6; i++ )
                 for ( size_t j = 0; j < 6; j++ )
-                    a_(sB+i, sA+j) += w * dot( cB[i], cA[j] );
+                    a.v[i][j] += w * dot( cB[i], cA[j] );
         }
     }
 }
 
 void MultiwayAligningTransform::add( int objA, const Vector3d& pA, int objB, const Vector3d& pB, const Vector3d& n, double w )
 {
-    assert( objA >= 0 && objA < numObjs_ );
-    assert( objB >= 0 && objB < numObjs_ );
+    assert( impl_ );
+    assert( objA >= 0 && objA < impl_->numObjs() );
+    assert( objB >= 0 && objB < impl_->numObjs() );
     assert( objA != objB );
 
     double cA[6];
@@ -107,77 +202,109 @@ void MultiwayAligningTransform::add( int objA, const Vector3d& pA, int objB, con
 
     // update upper-right part of sumA_
     const double k_B = dot( pB - pA, n );
-    const int sA = objA * 6;
-    const int sB = objB * 6;
 
-    if ( objA + 1 < numObjs_ )
+    if ( objA + 1 < impl_->numObjs() )
     {
+        auto & a = impl_->diag( objA );
+        auto * b = impl_->rhs( objA );
         for ( size_t i = 0; i < 6; i++ )
         {
             for ( size_t j = i; j < 6; j++ )
-                a_(sA+i, sA+j) += w * cA[i] * cA[j];
-            b_(sA+i) += w * cA[i] * k_B;
+                a.v[i][j] += w * cA[i] * cA[j];
+            b[i] += w * cA[i] * k_B;
         }
     }
 
-    if ( objB + 1 < numObjs_ )
+    if ( objB + 1 < impl_->numObjs() )
     {
+        auto & a = impl_->diag( objB );
+        auto * b = impl_->rhs( objB );
         for ( size_t i = 0; i < 6; i++ )
         {
             for ( size_t j = i; j < 6; j++ )
-                a_(sB+i, sB+j) += w * cB[i] * cB[j];
-            b_(sB+i) += w * cB[i] * k_B;
+                a.v[i][j] += w * cB[i] * cB[j];
+            b[i] += w * cB[i] * k_B;
         }
     }
 
-    if ( objA + 1 < numObjs_ && objB + 1 < numObjs_ )
+    if ( objA + 1 < impl_->numObjs() && objB + 1 < impl_->numObjs() )
     {
         if ( objA < objB )
         {
+            auto & a = impl_->up( objA, objB );
             for ( size_t i = 0; i < 6; i++ )
                 for ( size_t j = 0; j < 6; j++ )
-                    a_(sA+i, sB+j) += w * cA[i] * cB[j];
+                    a.v[i][j] += w * cA[i] * cB[j];
         }
         else
         {
+            auto & a = impl_->up( objB, objA );
             for ( size_t i = 0; i < 6; i++ )
                 for ( size_t j = 0; j < 6; j++ )
-                    a_(sB+i, sA+j) += w * cB[i] * cA[j];
+                    a.v[i][j] += w * cB[i] * cA[j];
         }
     }
 }
 
 void MultiwayAligningTransform::add( const MultiwayAligningTransform & r )
 {
-    assert( numObjs_ == r.numObjs_ );
-    a_ += r.a_;
-    b_ += r.b_;
+    impl_->add( *r.impl_ );
 }
 
 std::vector<RigidXf3d> MultiwayAligningTransform::solve()
 {
-    // copy values in lower-left part
-    const auto sz = (size_t)a_.rows();
-    assert( sz == (size_t)a_.cols() );
-    for (size_t i = 1; i < sz; i++)
-        for (size_t j = 0; j < i; j++)
-            a_(i, j) = a_(j, i);
+    MR_TIMER
 
-    Eigen::LLT<Eigen::MatrixXd> chol( a_ );
-    Eigen::VectorXd solution = chol.solve( b_ );
+    std::vector< Eigen::Triplet<double> > mTriplets;
+    for ( int o = 0; o + 1 < impl_->numObjs(); ++o )
+    {
+        const int o6 = 6 * o;
+        auto & diag = impl_->diag( o );
+        for ( int r = 0; r < 6; ++r )
+        {
+            mTriplets.emplace_back( o6 + r, o6 + r, diag.v[r][r] );
+            for ( int c = r + 1; c < 6; ++c )
+            {
+                mTriplets.emplace_back( o6 + r, o6 + c, diag.v[r][c] );
+                mTriplets.emplace_back( o6 + c, o6 + r, diag.v[r][c] );
+            }
+        }
+    }
+
+    impl_->forEachUpBlock( [&]( int objA, int objB, const Block & b )
+    {
+        assert( objA < objB );
+        const int oa6 = 6 * objA;
+        const int ob6 = 6 * objB;
+        for ( int r = 0; r < 6; ++r )
+            for ( int c = 0; c < 6; ++c )
+            {
+                mTriplets.emplace_back( oa6 + r, ob6 + c, b.v[r][c] );
+                mTriplets.emplace_back( ob6 + c, oa6 + r, b.v[r][c] );
+            }
+    } );
+
+    using SparseMatrix = Eigen::SparseMatrix<double,Eigen::RowMajor>;
+    SparseMatrix A;
+    const auto sz = impl_->b().size();
+    A.resize( sz, sz );
+    A.setFromTriplets( mTriplets.begin(), mTriplets.end() );
+    Eigen::SimplicialLDLT<SparseMatrix> solver;
+    solver.compute( A );
+    Eigen::VectorXd sol = solver.solve( impl_->b() );
 
     std::vector<RigidXf3d> res;
-    res.reserve( numObjs_ );
-    for ( int i = 0; i + 1 < numObjs_; ++i )
+    res.reserve( impl_->numObjs() );
+    for ( int i = 0; i + 1 < impl_->numObjs(); ++i )
     {
         RigidXf3d xf;
         int n = i * 6;
-        xf.a = Vector3d{ solution.coeff( n+0 ), solution.coeff( n+1 ), solution.coeff( n+2 ) };
-        xf.b = Vector3d{ solution.coeff( n+3 ), solution.coeff( n+4 ), solution.coeff( n+5 ) };
+        xf.a = Vector3d{ sol[n+0], sol[n+1], sol[n+2] };
+        xf.b = Vector3d{ sol[n+3], sol[n+4], sol[n+5] };
         res.push_back( std::move( xf ) );
     }
     res.emplace_back();
-    assert( res.size() == numObjs_ );
+    assert( res.size() == impl_->numObjs() );
 
     return res;
 }

@@ -296,7 +296,7 @@ bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::s
 
     const auto font = ImGui::GetFont();
     const auto color = ImGui::GetColorU32( ImGui::GetStyle().Colors[ImGuiCol_Text] );
-    const auto fontSize = ImGui::GetFontSize() + 3;
+    const auto fontSize = ImGui::GetFontSize();
 
     struct StringDetail
     {

@@ -2,7 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRRigidXf3.h"
-#include <MRPch/MREigenCore.h>
+#include <memory>
 
 namespace MR
 {
@@ -18,6 +18,11 @@ class MultiwayAligningTransform
 {
 public:
     /// initializes internal data to start registering given number of objects
+    MRMESH_API explicit MultiwayAligningTransform( int numObjs = 0 );
+
+    MRMESH_API ~MultiwayAligningTransform();
+
+    /// reinitializes internal data to start registering given number of objects
     void reset( int numObjs );
 
     /// appends a 3D link into consideration: one point (pA) from (objA), and the other point (pB) from (objB)
@@ -47,9 +52,8 @@ public:
     [[nodiscard]] MRMESH_API std::vector<RigidXf3d> solve();
 
 private:
-    Eigen::MatrixXd a_; ///< matrix of linear system to solve, only upper-right part is filled
-    Eigen::VectorXd b_; ///< right hand size of the linear system to solve
-    int numObjs_ = 0;
+    class Impl;
+    std::unique_ptr<Impl> impl_;
 };
 
 /// \}

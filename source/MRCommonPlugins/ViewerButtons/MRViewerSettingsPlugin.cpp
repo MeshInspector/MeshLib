@@ -449,9 +449,6 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
     { // Common.
         UI::separator( menuScaling, "Common" );
 
-        ImGui::PushID( "common" );
-        MR_FINALLY{ ImGui::PopID(); };
-
         // --- Leading zero
 
         if ( UI::checkbox( "Leading zero", &paramsLen.leadingZero ) )
@@ -520,7 +517,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         }();
 
         int option = int( paramsLen.targetUnit );
-        if ( UI::combo( "Unit", &option, optionNames ) )
+        if ( UI::combo( "Unit##length", &option, optionNames ) )
         {
             paramsLen.targetUnit = LengthUnit( option );
 
@@ -547,7 +544,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 
         // --- Precision
 
-        if ( UI::drag<NoUnit>( "Precision", paramsLen.precision, 1, 0, 12 ) )
+        if ( UI::drag<NoUnit>( "Precision##length", paramsLen.precision, 1, 0, 12 ) )
         {
             forAllLengthParams( [&]( auto& params ){ params.precision = paramsLen.precision; } );
             applyParams();
@@ -556,9 +553,6 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 
     { // Angle.
         UI::separator( menuScaling, "Angular" );
-
-        ImGui::PushID( "angle" );
-        MR_FINALLY{ ImGui::PopID(); };
 
         static const std::vector<std::string> flavorOptions = { "Degrees", "Degrees, minutes", "Degrees, minutes, seconds" };
         static_assert( int( DegreesMode::degrees ) == 0 );
@@ -569,7 +563,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 
         // Degree mode.
 
-        if ( UI::combo( "Unit", &flavorOption, flavorOptions ) )
+        if ( UI::combo( "Unit##angle", &flavorOption, flavorOptions ) )
         {
             DegreesMode newMode = DegreesMode( flavorOption );
 
@@ -598,7 +592,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         {
             // --- Precision
 
-            if ( UI::drag<NoUnit>( "Precision", paramsAngle.precision, 1, 0, 12 ) )
+            if ( UI::drag<NoUnit>( "Precision##angle", paramsAngle.precision, 1, 0, 12 ) )
                 applyParams();
         }
     }

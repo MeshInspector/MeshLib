@@ -258,6 +258,112 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
     return ret;
 }
 
+bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize )
+{
+    ImGui::BeginGroup();
+
+    auto startButtonPos = ImGui::GetCursorPos();
+    auto winPos = ImGui::GetWindowPos();
+    ImVec2 minClip( winPos.x + startButtonPos.x, winPos.y + startButtonPos.y );
+    ImVec2 maxClip( minClip.x + buttonSize.x + 1, minClip.y + buttonSize.y );
+    ImGui::GetWindowDrawList()->PushClipRect( minClip, maxClip );
+
+    std::string buttonText = "##" + text;
+    auto res = ImGui::Button( buttonText.c_str(), buttonSize );
+
+    ImGui::SameLine();
+
+    auto padding = ImGui::GetStyle().ItemInnerSpacing;
+    auto tempStyle = ImGui::GetStyle();
+    ImVec2 endButtonPos( startButtonPos.x + buttonSize.x, startButtonPos.y);
+    //endButtonPos.x -= padding.x;
+    ImVec2 posIcon( ( endButtonPos.x + startButtonPos.x - iconSize.x ) / 2.0f, startButtonPos.y + padding.y);
+    ImGui::SetCursorPos( posIcon );
+
+    const float maxSize = std::max( iconSize.x, iconSize.y );
+    auto icon = RibbonIcons::findByName( name, maxSize, RibbonIcons::ColorType::White, RibbonIcons::IconType::IndependentIcons );
+
+    ImVec4 multColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+    ImGui::Image( *icon, { iconSize.x , iconSize.y }, multColor );
+    ImGui::SameLine();
+
+    ImVec2 startPosText( winPos.x + ( endButtonPos.x + startButtonPos.x ) / 2.0f, winPos.y + startButtonPos.y );
+    startPosText.y += padding.y * 2 + iconSize.y;
+
+    size_t startWord = 0;
+    size_t endWord = 0;
+    size_t numStr = 0;
+    ImVec2 curTextSize;
+    bool printText = false;
+
+    const auto font = ImGui::GetFont();
+    const auto color = ImGui::GetColorU32( ImGui::GetStyle().Colors[ImGuiCol_Text] );
+    const auto fontSize = ImGui::GetFontSize() + 3;
+
+    struct StringDetail
+    {
+        float lenght = 0;
+        size_t start = 0;
+        size_t end = 0;
+    };
+    StringDetail previosDetail;
+    StringDetail curDetail;
+    for ( size_t i = 0; i < text.size(); i++ )
+    {
+        bool forsePrint = i == text.size() - 1;
+        if ( !( text[i] == ' ' || forsePrint ) )
+        {
+            continue;
+        }
+
+        endWord = i;
+        curTextSize = ImGui::CalcTextSize( &text[startWord], text.data() + endWord + 1 );
+        if ( curDetail.lenght + curTextSize.x > buttonSize.x )
+        {
+            printText = true;
+            curDetail.end = startWord;
+            previosDetail = curDetail;
+            curDetail = { curTextSize.x, startWord, endWord };
+        }
+        else if ( forsePrint )
+        {
+            printText = true;
+            curDetail.end = endWord;
+            curDetail.lenght += curTextSize.x;
+            previosDetail = curDetail;
+        }
+        else
+        {
+            curDetail.lenght += curTextSize.x;
+        }
+        startWord = endWord;
+
+        if ( printText )
+        {
+            printText = false;
+
+            ImVec2 posText;
+            posText.x = startPosText.x - previosDetail.lenght / 2.0f;
+            posText.y = startPosText.y + ( padding.y + curTextSize.y ) * numStr;
+            ImGui::GetWindowDrawList()->AddText(
+                font,
+                fontSize,
+                posText,
+                color,
+                &text[previosDetail.start],
+                text.data() + previosDetail.end + 1 );
+            numStr++;
+        }
+    }
+
+    ImGui::GetWindowDrawList()->PopClipRect();
+    ImGui::EndGroup();
+
+    res = UI::TestEngine::createButton( buttonText ) || res;
+
+    return res;
+}
+
 bool checkbox( const char* label, bool* value )
 {
     const ImGuiStyle& style = ImGui::GetStyle();

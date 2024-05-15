@@ -210,6 +210,7 @@ bool isDICOMFile( const std::filesystem::path& path, std::string& seriesUid )
 {
     std::ifstream ifs( path, std::ios_base::binary );
 
+#ifdef __EMSCRIPTEN__
     // try to detect by ourselves
     // GDCM uses exceptions which causes problems on Wasm
     constexpr auto cDicomMagicNumberOffset = 0x80;
@@ -222,6 +223,7 @@ bool isDICOMFile( const std::filesystem::path& path, std::string& seriesUid )
         return false;
     ifs.seekg( 0, std::ios::beg );
     assert( ifs );
+#endif
     
     gdcm::ImageReader ir;
     ir.SetStream( ifs );

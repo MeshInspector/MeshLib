@@ -636,22 +636,29 @@ int Viewer::launchInit_( const LaunchParams& params )
         glfwInitHint( GLFW_PLATFORM, GLFW_PLATFORM_X11 );
 #endif
 #endif
+
     if ( !glfwInit() )
     {
         spdlog::error( "glfwInit failed" );
         return EXIT_FAILURE;
     }
     spdlog::info( "glfwInit succeeded" );
-#if defined(__APPLE__)
-    //Setting window properties
-    glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    glfwWindowHint( GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE );
-#endif
-    glfwWindowHint( GLFW_SCALE_FRAMEBUFFER, GLFW_TRUE );
+
+#if defined( __APPLE__ )
+    // Setting window properties
+    glfwWindowHint( GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE );
+    glfwWindowHint( GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE ); // required for GLFW 3.3
+    hasScaledFramebuffer_ = true;
+#else
+#if GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
     if ( glfwGetPlatform() == GLFW_PLATFORM_WAYLAND )
     {
-        glfwWindowHintString( GLFW_WAYLAND_APP_ID, "MeshViewer" );
+        glfwWindowHintString( GLFW_WAYLAND_APP_ID, MR_PROJECT_NAME );
+        glfwWindowHint( GLFW_SCALE_FRAMEBUFFER, GLFW_TRUE );
+        hasScaledFramebuffer_ = true;
     }
+#endif
+#endif
 
 #ifdef __APPLE__
     constexpr int cDefaultMSAA = 2;
@@ -739,12 +746,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         // Initialize IGL viewer
         glfw_framebuffer_size( window, width, height );
 
-#ifdef __APPLE__
-        int winWidth, winHeight;
-        glfwGetWindowSize( window, &winWidth, &winHeight );
-        pixelRatio = float( width ) / float( winWidth );
-#endif
-        if ( glfwGetPlatform() == GLFW_PLATFORM_WAYLAND )
+        if ( hasScaledFramebuffer_ )
         {
             int winWidth, winHeight;
             glfwGetWindowSize( window, &winWidth, &winHeight );
@@ -1743,7 +1745,7 @@ void Viewer::postResize( int w, int h )
     }
 #endif
 
-    if ( glfwGetPlatform() == GLFW_PLATFORM_WAYLAND )
+    if ( hasScaledFramebuffer_ )
     {
         int winWidth, winHeight;
         glfwGetWindowSize( window, &winWidth, &winHeight );
@@ -1755,11 +1757,13 @@ void Viewer::postSetPosition( int xPos, int yPos )
 {
     if ( !windowMaximized && !glfwGetWindowMonitor( window ) )
         windowSavePos = { xPos, yPos };
-#ifdef __APPLE__
-    int winWidth, winHeight;
-    glfwGetWindowSize( window, &winWidth, &winHeight );
-    pixelRatio = float( framebufferSize.x ) / float( winWidth );
-#endif
+
+    if ( hasScaledFramebuffer_ )
+    {
+        int winWidth, winHeight;
+        glfwGetWindowSize( window, &winWidth, &winHeight );
+        pixelRatio = float( framebufferSize.x ) / float( winWidth );
+    }
 }
 
 void Viewer::postSetMaximized( bool maximized )

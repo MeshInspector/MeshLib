@@ -55,7 +55,7 @@ MRVIEWER_API bool buttonCommonSize( const char* label, const Vector2f& size = Ve
 MRVIEWER_API bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& size = Vector2f( 0, 0 ), ImGuiKey key = ImGuiKey_None );
 
 // draw a button with an icon and text under it
-MRVIEWER_API bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize );
+MRVIEWER_API bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize, float titleBarHeight = 0.0f );
 
 /// draw gradient checkbox
 MRVIEWER_API bool checkbox( const char* label, bool* value );

@@ -198,6 +198,8 @@ struct CustomStatePluginWindowParameters
 /// for a value pivot = ( 0.0f, 1.0f )
 MRVIEWER_API ImVec2 GetDownPosition( const float width );
 
+// Calculate and return the height of the window title
+MRVIEWER_API float GetTitleBarHeght( float menuScaling );
 /// begin state plugin window with custom style.  if you use this function, you must call EndCustomStatePlugin to close the plugin correctly.
 /// the flags ImGuiWindowFlags_NoScrollbar and ImGuiWindow_NoScrollingWithMouse are forced in the function.
 MRVIEWER_API bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePluginWindowParameters& params = {} );

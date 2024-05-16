@@ -181,6 +181,7 @@ public:
     MRVIEWER_API void postSetIconified( bool iconified ); // external set iconified due to user interaction
     MRVIEWER_API void postFocus( bool focused ); // external focus handler due to user interaction
     MRVIEWER_API void postRescale( float x, float y ); // external rescale due to user interaction
+    MRVIEWER_API void postClose(); // called when close signal received
 
     ////////////////////////
     // Multi-mesh methods //
@@ -400,7 +401,7 @@ public:
     std::shared_ptr<T> getMenuPluginAs() const { return std::dynamic_pointer_cast<T>( getMenuPlugin() ); }
 
     // sets stop event loop flag (this flag is glfwShouldWindowClose equivalent)
-    void stopEventLoop() { stopEventLoop_ = true; }
+    MRVIEWER_API void stopEventLoop();
     // get stop event loop flag (this flag is glfwShouldWindowClose equivalent)
     bool getStopEventLoopFlag() const { return stopEventLoop_; }
 

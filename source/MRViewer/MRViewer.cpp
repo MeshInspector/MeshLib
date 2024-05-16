@@ -681,6 +681,11 @@ int Viewer::launchInit_( const LaunchParams& params )
     glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint( GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE );
 #endif
+    glfwWindowHint( GLFW_SCALE_FRAMEBUFFER, GLFW_TRUE );
+    if ( glfwGetPlatform() == GLFW_PLATFORM_WAYLAND )
+    {
+        glfwWindowHintString( GLFW_WAYLAND_APP_ID, "MeshViewer" );
+    }
 
 #ifdef __APPLE__
     constexpr int cDefaultMSAA = 2;
@@ -773,6 +778,12 @@ int Viewer::launchInit_( const LaunchParams& params )
         glfwGetWindowSize( window, &winWidth, &winHeight );
         pixelRatio = float( width ) / float( winWidth );
 #endif
+        if ( glfwGetPlatform() == GLFW_PLATFORM_WAYLAND )
+        {
+            int winWidth, winHeight;
+            glfwGetWindowSize( window, &winWidth, &winHeight );
+            pixelRatio = float( width ) / float( winWidth );
+        }
 
         float xscale{ 1.0f }, yscale{ 1.0f };
 #ifndef __EMSCRIPTEN__
@@ -1815,6 +1826,13 @@ void Viewer::postResize( int w, int h )
         while ( !draw_( true ) );
     }
 #endif
+
+    if ( glfwGetPlatform() == GLFW_PLATFORM_WAYLAND )
+    {
+        int winWidth, winHeight;
+        glfwGetWindowSize( window, &winWidth, &winHeight );
+        pixelRatio = float( framebufferSize.x ) / float( winWidth );
+    }
 }
 
 void Viewer::postSetPosition( int xPos, int yPos )

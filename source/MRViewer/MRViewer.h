@@ -418,6 +418,9 @@ public:
     // update the title of the main window and, if any scene was opened, show its filename
     MRVIEWER_API void makeTitleFromSceneRootPath();
 
+    // ...
+    bool hasScaledFramebuffer() const { return hasScaledFramebuffer_; }
+
 public:
     //////////////////////
     // Member variables //
@@ -641,6 +644,8 @@ private:
 
     bool isInDraw_{ false };
     bool dirtyScene_{ false };
+
+    bool hasScaledFramebuffer_{ false };
 
     LaunchParams launchParams_;
 

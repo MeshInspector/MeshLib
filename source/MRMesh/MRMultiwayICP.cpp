@@ -108,60 +108,98 @@ void MultiwayICP::resamplePoints( float samplingVoxelSize )
 
 float MultiwayICP::getMeanSqDistToPoint() const
 {
-    NumSum sum;
-    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
-        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
-            if ( i != j )
-                sum = sum + MR::getSumSqDistToPoint( pairsPerObj_[i][j] );
-    return sum.rootMeanSqF();
+    return tbb::parallel_deterministic_reduce( tbb::blocked_range( size_t( 0 ), objs_.size() * objs_.size() ), NumSum(),
+        [&] ( const auto& range, NumSum curr )
+    {
+        for ( size_t r = range.begin(); r < range.end(); ++r )
+        {
+            size_t i = r % objs_.size();
+            size_t j = r / objs_.size();
+            if ( i == j )
+                continue;
+            curr = curr + MR::getSumSqDistToPoint( pairsPerObj_[MeshOrPointsId( i )][MeshOrPointsId( j )] );
+        }
+        return curr;
+    }, [] ( auto a, auto b ) { return a + b; } ).rootMeanSqF();
 }
 
 float MultiwayICP::getMeanSqDistToPoint( MeshOrPointsId id ) const
 {
-    NumSum sum;
-    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
-        if ( i != id )
-            sum = sum + MR::getSumSqDistToPoint( pairsPerObj_[id][i] ) + MR::getSumSqDistToPoint( pairsPerObj_[i][id] );
-    return sum.rootMeanSqF();
+    return tbb::parallel_deterministic_reduce( tbb::blocked_range( MeshOrPointsId( 0 ), MeshOrPointsId( objs_.size() ) ), NumSum(),
+        [&] ( const auto& range, NumSum curr )
+    {
+        for ( MeshOrPointsId i = range.begin(); i < range.end(); ++i )
+        {
+            if ( i == id )
+                continue;
+            curr = curr + MR::getSumSqDistToPoint( pairsPerObj_[i][id] ) + MR::getSumSqDistToPoint( pairsPerObj_[id][i] );
+        }
+        return curr;
+    }, [] ( auto a, auto b ) { return a + b; } ).rootMeanSqF();
 }
 
 float MultiwayICP::getMeanSqDistToPlane() const
 {
-    NumSum sum;
-    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
-        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
-            if ( i != j )
-                sum = sum + MR::getSumSqDistToPlane( pairsPerObj_[i][j] );
-    return sum.rootMeanSqF();
+    return tbb::parallel_deterministic_reduce( tbb::blocked_range( size_t( 0 ), objs_.size() * objs_.size() ), NumSum(),
+        [&] ( const auto& range, NumSum curr )
+    {
+        for ( size_t r = range.begin(); r < range.end(); ++r )
+        {
+            size_t i = r % objs_.size();
+            size_t j = r / objs_.size();
+            if ( i == j )
+                continue;
+            curr = curr + MR::getSumSqDistToPlane( pairsPerObj_[MeshOrPointsId( i )][MeshOrPointsId( j )] );
+        }
+        return curr;
+    }, [] ( auto a, auto b ) { return a + b; } ).rootMeanSqF();
 }
 
 float MultiwayICP::getMeanSqDistToPlane( MeshOrPointsId id ) const
 {
-    NumSum sum;
-    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
-        if ( i != id )
-            sum = sum + MR::getSumSqDistToPlane( pairsPerObj_[id][i] ) + MR::getSumSqDistToPlane( pairsPerObj_[i][id] );
-    return sum.rootMeanSqF();
+    return tbb::parallel_deterministic_reduce( tbb::blocked_range( MeshOrPointsId( 0 ), MeshOrPointsId( objs_.size() ) ), NumSum(),
+        [&] ( const auto& range, NumSum curr )
+    {
+        for ( MeshOrPointsId i = range.begin(); i < range.end(); ++i )
+        {
+            if ( i == id )
+                continue;
+            curr = curr + MR::getSumSqDistToPlane( pairsPerObj_[i][id] ) + MR::getSumSqDistToPlane( pairsPerObj_[id][i] );
+        }
+        return curr;
+    }, [] ( auto a, auto b ) { return a + b; } ).rootMeanSqF();
 }
 
 size_t MultiwayICP::getNumActivePairs() const
 {
-    size_t num = 0;
-    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
-        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
-            if ( i != j )
-                num = num + MR::getNumActivePairs( pairsPerObj_[i][j] );
-    return num;
+    return tbb::parallel_deterministic_reduce( tbb::blocked_range( size_t( 0 ), objs_.size() * objs_.size() ), size_t( 0 ),
+        [&] ( const auto& range, size_t curr )
+    {
+        for ( size_t r = range.begin(); r < range.end(); ++r )
+        {
+            size_t i = r % objs_.size();
+            size_t j = r / objs_.size();
+            if ( i == j )
+                continue;
+            curr += MR::getNumActivePairs( pairsPerObj_[MeshOrPointsId( i )][MeshOrPointsId( j )] );
+        }
+        return curr;
+    }, [] ( auto a, auto b ) { return a + b; } );
 }
 
 size_t MultiwayICP::getNumActivePairs( MeshOrPointsId id ) const
 {
-    size_t num = 0;
-    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
-        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
-            if ( ( i == id || j == id ) && i != j )
-                num = num + MR::getNumActivePairs( pairsPerObj_[i][j] );
-    return num;
+    return tbb::parallel_deterministic_reduce( tbb::blocked_range( MeshOrPointsId( 0 ), MeshOrPointsId( objs_.size() ) ), size_t( 0 ),
+        [&] ( const auto& range, size_t curr )
+    {
+        for ( MeshOrPointsId i = range.begin(); i < range.end(); ++i )
+        {
+            if ( i == id )
+                continue;
+            curr = curr + MR::getNumActivePairs( pairsPerObj_[i][id] ) + MR::getNumActivePairs( pairsPerObj_[id][i] );
+        }
+        return curr;
+    }, [] ( auto a, auto b ) { return a + b; } );
 }
 
 std::string MultiwayICP::getStatusInfo() const
@@ -172,10 +210,14 @@ std::string MultiwayICP::getStatusInfo() const
 void MultiwayICP::updatePointPairs()
 {
     MR_TIMER;
-    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
-        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
-            if ( i != j )
-                MR::updatePointPairs( pairsPerObj_[i][j], objs_[i], objs_[j], prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
+    ParallelFor( size_t( 0 ), objs_.size() * objs_.size(), [&] ( size_t r )
+    {
+        auto i = MeshOrPointsId( r % objs_.size() );
+        auto j = MeshOrPointsId( r / objs_.size() );
+        if ( i == j )
+            return;
+        MR::updatePointPairs( pairsPerObj_[i][j], objs_[i], objs_[j], prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
+    } );
     deactivatefarDistPairs_();
 }
 
@@ -191,17 +233,23 @@ void MultiwayICP::deactivatefarDistPairs_()
             maxDistSq[id] = sqr( prop_.farDistFactor * getMeanSqDistToPoint( id ) );
         } );
 
-        size_t numDeactivated = 0;
-        for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+        tbb::enumerable_thread_specific<size_t> counters( 0 );
+        ParallelFor( size_t( 0 ), objs_.size() * objs_.size(), [&] ( size_t r )
         {
+            auto i = MeshOrPointsId( r % objs_.size() );
+            auto j = MeshOrPointsId( r / objs_.size() );
+            if ( i == j )
+                return;
             if ( maxDistSq[i] >= prop_.distThresholdSq )
-                continue;
+                return;
+            counters.local() += ( 
+                MR::deactivateFarPairs( pairsPerObj_[i][j], maxDistSq[i] ) + 
+                MR::deactivateFarPairs( pairsPerObj_[j][i], maxDistSq[i] ) );
+        } );
 
-            for ( MeshOrPointsId j( i + 1 ); j < objs_.size(); ++j )
-                numDeactivated += (
-                    MR::deactivateFarPairs( pairsPerObj_[i][j], maxDistSq[i] ) +
-                    MR::deactivateFarPairs( pairsPerObj_[j][i], maxDistSq[i] ) );
-        }
+        size_t numDeactivated = 0;
+        for ( auto counter : counters )
+            numDeactivated += counter;
         if ( numDeactivated == 0 )
             break;
     }
@@ -334,40 +382,39 @@ bool MultiwayICP::p2plIter_()
 bool MultiwayICP::multiwayIter_( bool p2pl )
 {
     MR_TIMER;
+    Vector<MultiwayAligningTransform,MeshOrPointsId> mats( objs_.size() );
+    ParallelFor( mats, [&] ( MeshOrPointsId i )
+    {
+        auto& mat = mats[i];
+        mat.reset( int( objs_.size() ) );
+        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
+        {
+            if ( j == i )
+                continue;
+            for ( auto idx : pairsPerObj_[i][j].active )
+            {
+                const auto& data = pairsPerObj_[i][j].vec[idx];
+                if ( p2pl )
+                {
+                    mat.add( int( i ), data.srcPoint, int( j ), data.tgtPoint, data.tgtNorm, data.weight );
+                    mat.add( int( j ), data.tgtPoint, int( i ), data.srcPoint, data.srcNorm, data.weight );
+                }
+                else
+                {
+                    mat.add( int( i ), data.srcPoint, int( j ), data.tgtPoint, data.weight );
+                    mat.add( int( j ), data.tgtPoint, int( i ), data.srcPoint, data.weight );
+                }
+            }
+        }
+    } );
+
     MultiwayAligningTransform mat;
     mat.reset( int( objs_.size() ) );
-    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
-    for ( MeshOrPointsId j( i + 1 ); j < objs_.size(); ++j )
-    {
-        for ( auto idx : pairsPerObj_[i][j].active )
-        {
-            const auto& data = pairsPerObj_[i][j].vec[idx];
-            if ( p2pl )
-            {
-                mat.add( int( i ), data.srcPoint, int( j ), data.tgtPoint, data.tgtNorm, data.weight );
-                mat.add( int( j ), data.tgtPoint, int( i ), data.srcPoint, data.srcNorm, data.weight );
-            }
-            else
-            {
-                mat.add( int( i ), data.srcPoint, int( j ), data.tgtPoint, data.weight );
-                mat.add( int( j ), data.tgtPoint, int( i ), data.srcPoint, data.weight );
-            }
-        }
-        for ( auto idx : pairsPerObj_[j][i].active )
-        {
-            const auto& data = pairsPerObj_[j][i].vec[idx];
-            if ( p2pl )
-            {
-                mat.add( int( j ), data.srcPoint, int( i ), data.tgtPoint, data.tgtNorm, data.weight );
-                mat.add( int( i ), data.tgtPoint, int( j ), data.srcPoint, data.srcNorm, data.weight );
-            }
-            else
-            {
-                mat.add( int( j ), data.srcPoint, int( i ), data.tgtPoint, data.weight );
-                mat.add( int( i ), data.tgtPoint, int( j ), data.srcPoint, data.weight );
-            }
-        }
-    }
+    for ( const auto& m : mats )
+        mat.add( m );
+
+    mats = {}; // free memory
+
     auto res = mat.solve();
     for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
     {

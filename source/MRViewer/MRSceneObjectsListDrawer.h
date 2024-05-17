@@ -60,6 +60,11 @@ protected:
 
 private:
     void drawObjectsList_();
+    bool drawObject_( Object& object, const std::string& uniqueStr );
+    void drawObjectVisibilityCheckbox_( Object& object, const std::string& uniqueStr );
+    bool drawObjectCollapsingHeader_( Object& object, const std::string& uniqueStr, bool hasRealChildren );
+    //void drawObjectProperties_( Object& object, const std::string& uniqueStr );
+        
 
     // payload object will be moved
     MRVIEWER_API void makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload );
@@ -78,7 +83,7 @@ private:
                                            bool isShift, bool isCtrl,
                                            const std::vector<std::shared_ptr<Object>>& selected,
                                            const std::vector<std::shared_ptr<Object>>& all );
-
+    void updateSelection_( Object* objPtr, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all );
 
     float menuScaling_ = 1.f;
 

@@ -1,5 +1,4 @@
 #include "MRRibbonSceneObjectsListDrawer.h"
-#include "imgui.h"
 #include "MRRibbonIcons.h"
 #include "MRMesh/MRObject.h"
 #include "ImGuiMenu.h"
@@ -24,6 +23,7 @@
 // end object types
 #include "MRViewerInstance.h"
 #include "MRViewer.h"
+#include "imgui.h"
 
 namespace MR
 {

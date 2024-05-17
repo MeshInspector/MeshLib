@@ -66,7 +66,7 @@ void RibbonSceneObjectsListDrawer::drawSceneContextMenu_( const std::vector<std:
         return;
 
     const auto selectedVisualObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    if ( ImGui::BeginPopupContextItem() )
+    if ( ImGui::BeginPopupContextItem( "SceneObjectsListSelectedContext" ) )
     {
         auto selectedMask = ribbonMenu_->calcSelectedTypesMask( selected );
         ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, ImGui::GetStyle().WindowPadding );

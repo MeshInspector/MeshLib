@@ -25,6 +25,7 @@
 namespace MR
 {
 
+// helper class to optimaze render (skip elements outside draw area)
 class SkippableRenderer
 {
 public:
@@ -35,7 +36,6 @@ public:
 
         cursorPosY = ImGui::GetCursorPosY();
         skipedCursorPosY = cursorPosY;
-
     }
 
     void draw( float height, float spacingY, std::function<void( void )> drawFunc, std::function<void( void )> hiddenFunc = []{} )
@@ -119,7 +119,6 @@ void SceneObjectsListDrawer::drawObjectsList_()
 {
     const auto& all = SceneCache::getAllObjects();
     const auto& depth = SceneCache::getAllObjectsDepth();
-    std::vector<char> collapseSate( all.size(), '*' );
 
     int curentDepth = 0;
     std::stack<std::shared_ptr<Object>> objDepthStack;
@@ -127,7 +126,6 @@ void SceneObjectsListDrawer::drawObjectsList_()
     SkippableRenderer skippableRenderer;
 
     int collapsedHeaderDepth = -1;
-    const float dragDropTargetHeight = 4.f * menuScaling_; // see makeDragDropTarget_(...)
     const float itemSpacingY = ImGui::GetStyle().ItemSpacing.y;
     const float frameHeight = ImGui::GetFrameHeight();
     for ( int i = 0; i < all.size(); ++i )
@@ -157,14 +155,15 @@ void SceneObjectsListDrawer::drawObjectsList_()
             bool isOpen{ false };
 
             if ( needDragDropTarget_() )
-                skippableRenderer.draw( dragDropTargetHeight, itemSpacingY, [&] { makeDragDropTarget_( object, true, true, uniqueStr ); } );
+                skippableRenderer.draw( getDrawDropTargetHeight_(), itemSpacingY, [&] { makeDragDropTarget_(object, true, true, uniqueStr); });
 
             skippableRenderer.draw( frameHeight, itemSpacingY,
-                [&] { isOpen = drawObject_( object, uniqueStr ); },
-                [&] { isOpen = ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( ( object.name() + "##" + uniqueStr ).c_str() ), ImGuiTreeNodeFlags_None ); } );
-
-            // debug
-            collapseSate[i] = isOpen ? '+' : '-';
+            [&] { isOpen = drawObject_( object, uniqueStr ); },
+            [&]
+            {
+                isOpen = ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( ( object.name() + "##" + uniqueStr ).c_str() ),
+                    ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) );
+            } );
 
             if ( object.isSelected() )
                 drawSceneContextMenu_( SceneCache::getSelectedObjects() );
@@ -180,7 +179,6 @@ void SceneObjectsListDrawer::drawObjectsList_()
                 if ( showInfoInObjectTree_ && hasRealChildren && !lines.empty() )
                 {
                     auto infoId = std::string( "Info: ##" ) + uniqueStr;
-
                     skippableRenderer.draw( frameHeight, itemSpacingY,
                         [&] { infoOpen = ImGui::CollapsingHeader( infoId.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed ); },
                         [&] { infoOpen = ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( infoId.c_str() ), ImGuiTreeNodeFlags_None ); } );
@@ -224,12 +222,12 @@ void SceneObjectsListDrawer::drawObjectsList_()
         for ( ; curentDepth > newDepth; --curentDepth )
         {
             if ( needDragDropTarget_() )
-                skippableRenderer.draw( dragDropTargetHeight, itemSpacingY, [&] { makeDragDropTarget_( *objDepthStack.top(), false, true, "0" ); } );
+                skippableRenderer.draw( getDrawDropTargetHeight_(), itemSpacingY, [&] { makeDragDropTarget_(*objDepthStack.top(), false, true, "0"); });
             objDepthStack.pop();
             ImGui::Unindent();
         }
         if ( isLast && needDragDropTarget_() )
-            skippableRenderer.draw( dragDropTargetHeight, itemSpacingY, [&] { makeDragDropTarget_( SceneRoot::get(), false, true, "" ); } );
+            skippableRenderer.draw( getDrawDropTargetHeight_(), itemSpacingY, [&] { makeDragDropTarget_(SceneRoot::get(), false, true, ""); });
 
     }
     skippableRenderer.endDraw();
@@ -286,10 +284,9 @@ bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const 
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
 
     const bool isOpen = ImGui::CollapsingHeader( ( object.name() + "##" + uniqueStr ).c_str(),
+                                                 ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_OpenOnArrow |
                                                  ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) |
-                                                 ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed |
-                                                ImGuiTreeNodeFlags_OpenOnArrow |
-                                                ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
+                                                 ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
 
     ImGui::PopStyleColor( isSelected ? 2 : 1 );
     ImGui::PopStyleVar();

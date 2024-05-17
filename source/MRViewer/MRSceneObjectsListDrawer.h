@@ -67,14 +67,15 @@ private:
         
 
     // payload object will be moved
-    MRVIEWER_API void makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload );
+    void makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload );
     // checking the need to draw a target
-    MRVIEWER_API bool needDragDropTarget_();
+    bool needDragDropTarget_();
     // "target" and "before" are "to" and "before" of SceneReorder struct
     // betweenLine - if true requires to draw line (between two objects in tree, for ImGui to have target)
     // counter - unique number of object in tree (needed for ImGui to differ new lines)
-    MRVIEWER_API void makeDragDropTarget_( Object& target, bool before, bool betweenLine, const std::string& uniqueStr );
-    MRVIEWER_API void reorderSceneIfNeeded_();
+    void makeDragDropTarget_( Object& target, bool before, bool betweenLine, const std::string& uniqueStr );
+    float getDrawDropTargetHeight_() const { return 4.f * menuScaling_; }
+    void reorderSceneIfNeeded_();
 
     // this function should be called after BeginChild("SceneObjectsList") (child window with scene tree)
     MRVIEWER_API virtual void updateSceneWindowScrollIfNeeded_();

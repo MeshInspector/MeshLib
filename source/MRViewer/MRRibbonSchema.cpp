@@ -165,7 +165,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     };
     for ( int t = 0; t < schema.tabsOrder.size(); ++t )
     {
-        if ( schema.tabsOrder[t].experimental && !schema.experimentalFeatures )
+        if ( schema.tabsOrder[t].experimental && !getViewerInstance().experimentalFeatures )
             continue;
         auto tabItem = schema.tabsMap.find( schema.tabsOrder[t].name );
         if ( tabItem == schema.tabsMap.end() )
@@ -277,13 +277,6 @@ void RibbonSchemaLoader::loadSchema() const
     {
         return a.priority < b.priority;
     } );
-    if ( !getViewerInstance().isDeveloperFeaturesEnabled() )
-    {
-        tabsOrder.erase( std::remove_if( tabsOrder.begin(), tabsOrder.end(), [] ( const auto& tabName )
-        {
-            return tabName.name == "Test";
-        } ), tabsOrder.end() );
-    }
 }
 
 void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsList& list )

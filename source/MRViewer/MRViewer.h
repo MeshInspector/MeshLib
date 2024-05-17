@@ -181,6 +181,7 @@ public:
     MRVIEWER_API void postSetIconified( bool iconified ); // external set iconified due to user interaction
     MRVIEWER_API void postFocus( bool focused ); // external focus handler due to user interaction
     MRVIEWER_API void postRescale( float x, float y ); // external rescale due to user interaction
+    MRVIEWER_API void postClose(); // called when close signal received
 
     ////////////////////////
     // Multi-mesh methods //
@@ -400,7 +401,7 @@ public:
     std::shared_ptr<T> getMenuPluginAs() const { return std::dynamic_pointer_cast<T>( getMenuPlugin() ); }
 
     // sets stop event loop flag (this flag is glfwShouldWindowClose equivalent)
-    void stopEventLoop() { stopEventLoop_ = true; }
+    MRVIEWER_API void stopEventLoop();
     // get stop event loop flag (this flag is glfwShouldWindowClose equivalent)
     bool getStopEventLoopFlag() const { return stopEventLoop_; }
 
@@ -412,9 +413,6 @@ public:
     // note that sometimes it is not enough, for example to free GL memory in destructor,
     // glInitialized_ can be already reset and it requires `loadGL()` check too
     bool isGLInitialized() const { return glInitialized_; }
-
-    // returns true if developer features are enabled, false otherwise
-    bool isDeveloperFeaturesEnabled() const { return enableDeveloperFeatures_; }
 
     // update the title of the main window and, if any scene was opened, show its filename
     MRVIEWER_API void makeTitleFromSceneRootPath();
@@ -452,6 +450,8 @@ public:
     float scrollForce{ }; // init in resetSettingsFunction()
     // opengl-based pick window radius in pixels
     uint16_t glPickRadius{ }; // init in resetSettingsFunction()
+    // Experimental/developer features enabled
+    bool experimentalFeatures{ };
     // command arguments, each parsed arg should be erased from here not to affect other parsers
     std::vector<std::string> commandArgs;
 

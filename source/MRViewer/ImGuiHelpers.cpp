@@ -435,12 +435,17 @@ ImVec2 GetDownPosition( const float width )
     return { GetIO().DisplaySize.x - width, GetIO().DisplaySize.y };
 }
 
+float GetTitleBarHeght( float menuScaling )
+{
+    return 2 * MR::cRibbonItemInterval * menuScaling + ImGui::GetTextLineHeight() + 2 * ImGui::GetStyle().WindowBorderSize * menuScaling;
+}
+
 bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePluginWindowParameters& params )
 {
     const auto& style = ImGui::GetStyle();
 
     const float borderSize = style.WindowBorderSize * params.menuScaling;
-    const float titleBarHeight = 2 * MR::cRibbonItemInterval * params.menuScaling + ImGui::GetTextLineHeight() + 2 * borderSize;
+    const float titleBarHeight = GetTitleBarHeght( params.menuScaling );
     auto height = params.height;
     if ( params.collapsed && *params.collapsed )
         height = titleBarHeight;

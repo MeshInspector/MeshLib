@@ -94,8 +94,15 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     {
         for ( int i = 0; i<int( TabType::Count ); ++i )
         {
-            if ( i == int( TabType::Features ) && !RibbonSchemaHolder::schema().experimentalFeatures )
-                continue;
+            if ( i == int( TabType::Features ) && !viewer->experimentalFeatures )
+            {
+                // Check if features are considered experimental
+                const auto& tabs = RibbonSchemaHolder::schema().tabsOrder;
+                auto itFeatures = std::find_if( tabs.begin(), tabs.end(),
+                    [] ( const RibbonTab& tab ) { return tab.name == "Features"; } );
+                if ( itFeatures != tabs.end() && itFeatures->experimental )
+                    continue;
+            }
             auto tab = TabType( i );
             if ( UI::beginTabItem( getViewerSettingTabName( tab ) ) )
             {
@@ -276,8 +283,8 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
                                                 std::bind( &RibbonMenu::setAutoCloseBlockingPlugins, ribbonMenu_, std::placeholders::_1 ) );
         UI::setTooltipIfHovered( "Automatically close blocking tool when another blocking tool is activated", menuScaling );
 
-        UI::checkbox( "Show Experimental Features", &RibbonSchemaHolder::schema().experimentalFeatures );
-        UI::setTooltipIfHovered( "Show experimental ribbon tabs", menuScaling );
+        UI::checkbox( "Show Experimental Features", &viewer->experimentalFeatures );
+        UI::setTooltipIfHovered( "Show experimental or diagnostic tools and controls", menuScaling );
     }
 
     UI::separator( menuScaling, "Global" );
@@ -285,7 +292,8 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
     bool resetClicked = UI::button( "Reset Settings", Vector2f( btnHalfSizeX, 0 ) );
     drawResetDialog_( resetClicked, menuScaling );
 
-    if ( !viewer->isDeveloperFeaturesEnabled() || !RibbonSchemaHolder::schema().experimentalFeatures )
+#if 0 // Hide unimplemented settings
+    if ( !viewer->experimentalFeatures )
         return; // TODO
 
     UI::separator( menuScaling, "Notifications" );
@@ -314,6 +322,7 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
         if ( !newPath.empty() )
             logFolderPath = newPath.string();
     }
+#endif
 #endif
 }
 
@@ -364,7 +373,7 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
 
     drawBackgroundButton_( false );
 
-    if ( viewer->isDeveloperFeaturesEnabled() &&
+    if ( viewer->experimentalFeatures &&
         RibbonButtonDrawer::CustomCollapsingHeader( "Clipping Plane" ) )
     {
         auto plane = viewportParameters.clippingPlane;
@@ -440,9 +449,6 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
     { // Common.
         UI::separator( menuScaling, "Common" );
 
-        ImGui::PushID( "common" );
-        MR_FINALLY{ ImGui::PopID(); };
-
         // --- Leading zero
 
         if ( UI::checkbox( "Leading zero", &paramsLen.leadingZero ) )
@@ -511,7 +517,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         }();
 
         int option = int( paramsLen.targetUnit );
-        if ( UI::combo( "Unit", &option, optionNames ) )
+        if ( UI::combo( "Unit##length", &option, optionNames ) )
         {
             paramsLen.targetUnit = LengthUnit( option );
 
@@ -538,7 +544,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 
         // --- Precision
 
-        if ( UI::drag<NoUnit>( "Precision", paramsLen.precision, 1, 0, 12 ) )
+        if ( UI::drag<NoUnit>( "Precision##length", paramsLen.precision, 1, 0, 12 ) )
         {
             forAllLengthParams( [&]( auto& params ){ params.precision = paramsLen.precision; } );
             applyParams();
@@ -547,9 +553,6 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 
     { // Angle.
         UI::separator( menuScaling, "Angular" );
-
-        ImGui::PushID( "angle" );
-        MR_FINALLY{ ImGui::PopID(); };
 
         static const std::vector<std::string> flavorOptions = { "Degrees", "Degrees, minutes", "Degrees, minutes, seconds" };
         static_assert( int( DegreesMode::degrees ) == 0 );
@@ -560,7 +563,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 
         // Degree mode.
 
-        if ( UI::combo( "Unit", &flavorOption, flavorOptions ) )
+        if ( UI::combo( "Unit##angle", &flavorOption, flavorOptions ) )
         {
             DegreesMode newMode = DegreesMode( flavorOption );
 
@@ -589,7 +592,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         {
             // --- Precision
 
-            if ( UI::drag<NoUnit>( "Precision", paramsAngle.precision, 1, 0, 12 ) )
+            if ( UI::drag<NoUnit>( "Precision##angle", paramsAngle.precision, 1, 0, 12 ) )
                 applyParams();
         }
     }
@@ -818,8 +821,9 @@ void ViewerSettingsPlugin::drawProjectionModeSelector_( float menuScaling )
 
 void ViewerSettingsPlugin::drawUpDirectionSelector_()
 {
+#if 0 // Hide unimplemented settings
     // TODO
-    if ( !viewer->isDeveloperFeaturesEnabled() || !RibbonSchemaHolder::schema().experimentalFeatures )
+    if ( !viewer->experimentalFeatures )
         return;
     ImGui::Text( "Up Direction" );
     static int axis = 2; // Z
@@ -827,6 +831,7 @@ void ViewerSettingsPlugin::drawUpDirectionSelector_()
     UI::radioButton( "Y", &axis, 1 );
     ImGui::SameLine();
     UI::radioButton( "Z", &axis, 2 );
+#endif
 }
 
 void ViewerSettingsPlugin::drawBackgroundButton_( bool allViewports )

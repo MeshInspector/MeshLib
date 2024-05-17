@@ -208,8 +208,24 @@ std::function<float( char* )> getTypeConverter( const RawParameters::ScalarType&
 #ifndef MRMESH_NO_DICOM
 bool isDICOMFile( const std::filesystem::path& path, std::string& seriesUid )
 {
-    gdcm::ImageReader ir;
     std::ifstream ifs( path, std::ios_base::binary );
+
+#ifdef __EMSCRIPTEN__
+    // try to detect by ourselves
+    // GDCM uses exceptions which causes problems on Wasm
+    constexpr auto cDicomMagicNumberOffset = 0x80;
+    constexpr std::array cDicomMagicNumber { 'D', 'I', 'C', 'M' };
+    // NOTE: std::ifstream::get appends a null character
+    std::array<char, std::size( cDicomMagicNumber ) + 1> buf;
+    if ( !ifs.seekg( cDicomMagicNumberOffset, std::ios::beg ) || !ifs.get( buf.data(), buf.size(), '\0' ) )
+        return false;
+    if ( std::strncmp( buf.data(), cDicomMagicNumber.data(), cDicomMagicNumber.size() ) != 0 )
+        return false;
+    ifs.seekg( 0, std::ios::beg );
+    assert( ifs );
+#endif
+    
+    gdcm::ImageReader ir;
     ir.SetStream( ifs );
     if ( !ir.CanRead() )
         return false;

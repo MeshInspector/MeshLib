@@ -307,6 +307,9 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
     if ( !params.fileName.empty() )
         dialog.set_current_name( params.fileName );
 
+    if ( params.saveDialog )
+        dialog.set_do_overwrite_confirmation( true );
+
     std::vector<std::filesystem::path> results;
     auto onResponse = [&] ( int responseId )
     {

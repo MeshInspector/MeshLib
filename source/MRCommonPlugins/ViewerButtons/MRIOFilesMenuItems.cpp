@@ -433,10 +433,12 @@ OpenDICOMsMenuItem::OpenDICOMsMenuItem() :
 
 bool OpenDICOMsMenuItem::action()
 {
-    auto directory = openFolderDialog();
-    if ( directory.empty() )
-        return false;
-    sOpenDICOMs( directory, "No DICOM files can be open from the directory:\n" + utf8string( directory ) );
+    openFolderDialogAsync( [] ( const std::filesystem::path& directory )
+    {
+        if ( directory.empty() )
+            return;
+        sOpenDICOMs( directory, "No DICOM files can be open from the directory:\n" + utf8string( directory ) );
+    } );
     return false;
 }
 #endif

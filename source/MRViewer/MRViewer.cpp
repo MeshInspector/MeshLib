@@ -220,6 +220,13 @@ static void glfw_window_focus( GLFWwindow* /*window*/, int focused )
 {
     MR::getViewerInstance().postFocus( bool( focused ) );
 }
+
+static void glfw_window_close( GLFWwindow* /*window*/ )
+{
+    // needed not to sleep until next event on close
+    MR::getViewerInstance().postClose();
+}
+
 #endif
 
 static void glfw_window_scale( GLFWwindow* /*window*/, float xscale, float yscale )
@@ -542,7 +549,8 @@ int Viewer::launch( const LaunchParams& params )
     launchParams_ = params;
     isAnimating = params.isAnimating;
     animationMaxFps = params.animationMaxFps;
-    enableDeveloperFeatures_ = params.developerFeatures;
+    if ( params.developerFeatures )
+        experimentalFeatures = true;
     auto res = launchInit_( params );
     if ( res != EXIT_SUCCESS )
         return res;
@@ -714,6 +722,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         glfwSetWindowIconifyCallback( window, glfw_window_iconify );
         glfwSetWindowContentScaleCallback( window, glfw_window_scale );
         glfwSetWindowFocusCallback( window, glfw_window_focus );
+        glfwSetWindowCloseCallback( window, glfw_window_close );
 #endif
         glfwSetMouseButtonCallback( window, glfw_mouse_press );
         glfwSetCharCallback( window, glfw_char_mods_callback );
@@ -997,6 +1006,7 @@ Viewer::Viewer() :
     {
         viewer->glPickRadius = 0;
         viewer->scrollForce = 1.0f;
+        viewer->experimentalFeatures = false;
         viewer->setSpaceMouseParameters( SpaceMouseParameters{} );
         viewer->setTouchpadParameters( TouchpadParameters{} );
         viewer->enableAlphaSort( true );
@@ -1765,6 +1775,16 @@ void Viewer::postRescale( float x, float y )
     postRescaleSignal( x, y );
 }
 
+void Viewer::postClose()
+{
+    incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, swapOnLastPostEventsRedraw );
+    postEmptyEvent();
+#ifndef __EMSCRIPTEN__
+    if ( window )
+        glfwRequestWindowAttention( window );
+#endif
+}
+
 void Viewer::set_root( SceneRootObject& newRoot )
 {
     std::swap( SceneRoot::get(), newRoot );
@@ -2451,6 +2471,12 @@ void Viewer::setMenuPlugin( std::shared_ptr<ImGuiMenu> menu )
     assert( !menuPlugin_ );
     assert( menu );
     menuPlugin_ = menu;
+}
+
+void Viewer::stopEventLoop()
+{
+    stopEventLoop_ = true;
+    postClose();
 }
 
 size_t Viewer::getStaticGLBufferSize() const

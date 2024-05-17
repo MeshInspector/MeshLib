@@ -1282,7 +1282,7 @@ float ImGuiMenu::drawSelectionInformation_()
             {
                 ImGui::PushItemWidth( itemWidth );
 
-#if __GNUC__ == 12 || __GNUC__ == 13 // `totalVolume` may be used uninitialized. False positive in GCC
+#if __GNUC__ >= 12 && __GNUC__ <= 14 // `totalVolume` may be used uninitialized. False positive in GCC
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
@@ -1290,7 +1290,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 UI::readOnlyValue<VolumeUnit>( "Volume", *totalVolume );
                 MR_FINALLY{ ImGui::PopItemWidth(); };
 
-#if __GNUC__ == 12 || __GNUC__ == 13
+#if __GNUC__ >= 12 && __GNUC__ <= 14
 #pragma GCC diagnostic pop
 #endif
             }
@@ -1726,7 +1726,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<Vis
     if ( allIsFeatureObj )
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Extra information next to name", FeatureVisualizePropertyType::DetailsOnNameTag, viewportid );
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Labels", VisualizeMaskType::Labels, viewportid );
-    if ( viewer->isDeveloperFeaturesEnabled() )
+    if ( viewer->experimentalFeatures )
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Clipping", VisualizeMaskType::ClippedByPlane, viewportid );
 
     { // Dimensions checkboxes.

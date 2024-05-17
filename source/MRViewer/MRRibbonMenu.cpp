@@ -22,13 +22,6 @@
 #include <MRMesh/MRObjectsAccess.h>
 #include <MRMesh/MRChangeXfAction.h>
 #include <MRMesh/MRObjectLabel.h>
-#include <MRMesh/MRPointObject.h>
-#include <MRMesh/MRLineObject.h>
-#include <MRMesh/MRPlaneObject.h>
-#include <MRMesh/MRCircleObject.h>
-#include <MRMesh/MRSphereObject.h>
-#include <MRMesh/MRConeObject.h>
-#include <MRMesh/MRCylinderObject.h>
 #include <MRMesh/MRChangeSceneObjectsOrder.h>
 #include <MRMesh/MRChangeSceneAction.h>
 #include <MRMesh/MRChangeObjectFields.h>

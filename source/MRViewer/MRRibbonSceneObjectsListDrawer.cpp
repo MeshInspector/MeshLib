@@ -1,5 +1,4 @@
 #include "MRRibbonSceneObjectsListDrawer.h"
-#include "imgui.h"
 #include "MRRibbonIcons.h"
 #include "MRMesh/MRObject.h"
 #include "ImGuiMenu.h"
@@ -24,6 +23,7 @@
 // end object types
 #include "MRViewerInstance.h"
 #include "MRViewer.h"
+#include "imgui.h"
 
 namespace MR
 {
@@ -66,7 +66,7 @@ void RibbonSceneObjectsListDrawer::drawSceneContextMenu_( const std::vector<std:
         return;
 
     const auto selectedVisualObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    if ( ImGui::BeginPopupContextItem() )
+    if ( ImGui::BeginPopupContextItem( "SceneObjectsListSelectedContext" ) )
     {
         auto selectedMask = ribbonMenu_->calcSelectedTypesMask( selected );
         ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, ImGui::GetStyle().WindowPadding );
@@ -106,6 +106,11 @@ void RibbonSceneObjectsListDrawer::drawSceneContextMenu_( const std::vector<std:
         }
         ImGui::EndPopup();
     }
+}
+
+bool RibbonSceneObjectsListDrawer::collapsingHeader_( const std::string& uniqueName, ImGuiTreeNodeFlags flags )
+{
+    return RibbonButtonDrawer::CustomCollapsingHeader( uniqueName.c_str(), flags );
 }
 
 const char* RibbonSceneObjectsListDrawer::getSceneItemIconByTypeName_( const std::string& typeName ) const

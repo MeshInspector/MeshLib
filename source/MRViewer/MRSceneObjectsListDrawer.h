@@ -58,18 +58,26 @@ protected:
     // return 0.f if nothing drawing
     MRVIEWER_API virtual float drawCustomTreeObjectProperties_( Object& obj, bool onlyCalcHeight );
 
+    typedef int ImGuiTreeNodeFlags;
+    // override this to customize CollapsingHeader draw
+    MRVIEWER_API virtual bool collapsingHeader_( const std::string& uniqueName, ImGuiTreeNodeFlags flags );
+
 private:
     void drawObjectsList_();
+    bool drawObject_( Object& object, const std::string& uniqueStr );
+    void drawObjectVisibilityCheckbox_( Object& object, const std::string& uniqueStr );
+    bool drawObjectCollapsingHeader_( Object& object, const std::string& uniqueStr, bool hasRealChildren );
 
     // payload object will be moved
-    MRVIEWER_API void makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload );
+    void makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload );
     // checking the need to draw a target
-    MRVIEWER_API bool needDragDropTarget_();
+    bool needDragDropTarget_();
     // "target" and "before" are "to" and "before" of SceneReorder struct
     // betweenLine - if true requires to draw line (between two objects in tree, for ImGui to have target)
     // counter - unique number of object in tree (needed for ImGui to differ new lines)
-    MRVIEWER_API void makeDragDropTarget_( Object& target, bool before, bool betweenLine, const std::string& uniqueStr );
-    MRVIEWER_API void reorderSceneIfNeeded_();
+    void makeDragDropTarget_( Object& target, bool before, bool betweenLine, const std::string& uniqueStr );
+    float getDrawDropTargetHeight_() const { return 4.f * menuScaling_; }
+    void reorderSceneIfNeeded_();
 
     // this function should be called after BeginChild("SceneObjectsList") (child window with scene tree)
     MRVIEWER_API virtual void updateSceneWindowScrollIfNeeded_();
@@ -78,7 +86,7 @@ private:
                                            bool isShift, bool isCtrl,
                                            const std::vector<std::shared_ptr<Object>>& selected,
                                            const std::vector<std::shared_ptr<Object>>& all );
-
+    void updateSelection_( Object* objPtr, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all );
 
     float menuScaling_ = 1.f;
 

@@ -60,7 +60,7 @@ void RibbonSceneObjectsListDrawer::drawCustomObjectPrefixInScene_( const Object&
     ImGui::SameLine();
 }
 
-void RibbonSceneObjectsListDrawer::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected, const std::string uniqueStr )
+void RibbonSceneObjectsListDrawer::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected, const std::string& uniqueStr )
 {
     if ( !ribbonMenu_ )
         return;

@@ -51,7 +51,7 @@ protected:
     {}
     /// override this add custom context menu for selected objects
     /// uniqueStr need to identify who call context menu
-    MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& /*selected*/, const std::string /*uniqueStr*/ )
+    MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& /*selected*/, const std::string& /*uniqueStr*/ )
     {}
 
     /// override this to have custom UI in "Scene" window (under opened(expanded) object line)

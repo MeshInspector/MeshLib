@@ -60,13 +60,13 @@ void RibbonSceneObjectsListDrawer::drawCustomObjectPrefixInScene_( const Object&
     ImGui::SameLine();
 }
 
-void RibbonSceneObjectsListDrawer::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected )
+void RibbonSceneObjectsListDrawer::drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected, const std::string& uniqueStr )
 {
     if ( !ribbonMenu_ )
         return;
 
     const auto selectedVisualObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    if ( ImGui::BeginPopupContextItem( "SceneObjectsListSelectedContext" ) )
+    if ( ImGui::BeginPopupContextItem( ( "##SceneContext" + uniqueStr ).c_str() ) )
     {
         auto selectedMask = ribbonMenu_->calcSelectedTypesMask( selected );
         ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, ImGui::GetStyle().WindowPadding );

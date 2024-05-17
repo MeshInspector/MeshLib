@@ -44,22 +44,23 @@ public:
     /// helper method for fix scroll position after change available height
     MRVIEWER_API void setNextFrameFixScroll() { nextFrameFixScroll_ = true; }
 protected:
-    // override this to customize prefix for objects in scene
-    // \detail height should be less or equal ImGui::GetFrameHeight()
-    // method should save ImGui::CursorPosY
+    /// override this to customize prefix for objects in scene
+    /// \detail height should be less or equal ImGui::GetFrameHeight()
+    /// method should save ImGui::CursorPosY
     MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& )
     {}
-    // override this add custom context menu for selected objects
-    MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& /*selected*/ )
+    /// override this add custom context menu for selected objects
+    /// uniqueStr need to identify who call context menu
+    MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& /*selected*/, const std::string& /*uniqueStr*/ )
     {}
 
-    // override this to have custom UI in "Scene" window (under opened(expanded) object line)
-    // \detail if onlyHeight is true, should return drawing height without rendering
-    // return 0.f if nothing drawing
+    /// override this to have custom UI in "Scene" window (under opened(expanded) object line)
+    /// \detail if onlyHeight is true, should return drawing height without rendering
+    /// return 0.f if nothing drawing
     MRVIEWER_API virtual float drawCustomTreeObjectProperties_( Object& obj, bool onlyCalcHeight );
 
     typedef int ImGuiTreeNodeFlags;
-    // override this to customize CollapsingHeader draw
+    /// override this to customize CollapsingHeader draw
     MRVIEWER_API virtual bool collapsingHeader_( const std::string& uniqueName, ImGuiTreeNodeFlags flags );
 
 private:
@@ -68,18 +69,18 @@ private:
     void drawObjectVisibilityCheckbox_( Object& object, const std::string& uniqueStr );
     bool drawObjectCollapsingHeader_( Object& object, const std::string& uniqueStr, bool hasRealChildren );
 
-    // payload object will be moved
+    /// payload object will be moved
     void makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload );
-    // checking the need to draw a target
+    /// checking the need to draw a target
     bool needDragDropTarget_();
-    // "target" and "before" are "to" and "before" of SceneReorder struct
-    // betweenLine - if true requires to draw line (between two objects in tree, for ImGui to have target)
-    // counter - unique number of object in tree (needed for ImGui to differ new lines)
+    /// "target" and "before" are "to" and "before" of SceneReorder struct
+    /// betweenLine - if true requires to draw line (between two objects in tree, for ImGui to have target)
+    /// counter - unique number of object in tree (needed for ImGui to differ new lines)
     void makeDragDropTarget_( Object& target, bool before, bool betweenLine, const std::string& uniqueStr );
     float getDrawDropTargetHeight_() const { return 4.f * menuScaling_; }
     void reorderSceneIfNeeded_();
 
-    // this function should be called after BeginChild("SceneObjectsList") (child window with scene tree)
+    /// this function should be called after BeginChild("SceneObjectsList") (child window with scene tree)
     MRVIEWER_API virtual void updateSceneWindowScrollIfNeeded_();
 
     std::vector<Object*> getPreSelection_( Object* meshclicked,

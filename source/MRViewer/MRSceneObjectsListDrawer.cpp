@@ -168,7 +168,7 @@ void SceneObjectsListDrawer::drawObjectsList_()
             } );
 
             if ( object.isSelected() )
-                drawSceneContextMenu_( SceneCache::getSelectedObjects() );
+                drawSceneContextMenu_( SceneCache::getSelectedObjects(), uniqueStr );
 
             if ( isOpen )
             {

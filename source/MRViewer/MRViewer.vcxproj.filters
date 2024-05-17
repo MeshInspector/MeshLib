@@ -71,6 +71,12 @@
     <Filter Include="UIStyle">
       <UniqueIdentifier>{0cc885c2-7327-42c4-9981-609b4faa2b91}</UniqueIdentifier>
     </Filter>
+    <Filter Include="resource\object_icons\X0_5">
+      <UniqueIdentifier>{3997304a-e8da-4831-9915-1c70861d342e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="resource\object_icons\X0_75">
+      <UniqueIdentifier>{e3c73e4b-c3dc-4dc5-9c3c-6ab458025d21}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGuiMenu.cpp">
@@ -910,6 +916,54 @@
     </Image>
     <Image Include="resource\object_icons\X3\RadiusMeasurementObject.png">
       <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\Plane Import.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\Plane XY.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\Plane XZ.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\Plane YZ.png">
+      <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X1\Plane Import.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X1\Plane XY.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X1\Plane XZ.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X1\Plane YZ.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X0_75\Plane Import.png">
+      <Filter>resource\object_icons\X0_75</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X0_75\Plane XY.png">
+      <Filter>resource\object_icons\X0_75</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X0_75\Plane XZ.png">
+      <Filter>resource\object_icons\X0_75</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X0_75\Plane YZ.png">
+      <Filter>resource\object_icons\X0_75</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X0_5\Plane Import.png">
+      <Filter>resource\object_icons\X0_5</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X0_5\Plane XY.png">
+      <Filter>resource\object_icons\X0_5</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X0_5\Plane XZ.png">
+      <Filter>resource\object_icons\X0_5</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X0_5\Plane YZ.png">
+      <Filter>resource\object_icons\X0_5</Filter>
     </Image>
   </ItemGroup>
 </Project>

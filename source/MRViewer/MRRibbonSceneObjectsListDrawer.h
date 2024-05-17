@@ -20,6 +20,7 @@ public:
 protected:
     MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& obj ) override;
     MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected ) override;
+    MRVIEWER_API virtual bool collapsingHeader_( const std::string& uniqueName, ImGuiTreeNodeFlags flags ) override;
 
 private:
     // return icon (now it is symbol in icons font) based on typename

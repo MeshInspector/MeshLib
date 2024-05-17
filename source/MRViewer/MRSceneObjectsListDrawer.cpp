@@ -12,11 +12,8 @@
 #include "ImGuiMenu.h"
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRAppendHistory.h"
-#include "MRRibbonButtonDrawer.h"
-#include "MRRibbonFontManager.h"
 #include "MRRibbonSchema.h"
 #include "MRUITestEngine.h"
-#include "MRRibbonMenu.h"
 #include "MRPch/MRSpdlog.h"
 #include "imgui_internal.h"
 #include "imgui.h"
@@ -104,6 +101,11 @@ float SceneObjectsListDrawer::drawCustomTreeObjectProperties_( Object&, bool )
     return 0.f;
 }
 
+bool SceneObjectsListDrawer::collapsingHeader_( const std::string& uniqueName, ImGuiTreeNodeFlags flags )
+{
+    return ImGui::CollapsingHeader( uniqueName.c_str(), flags );
+}
+
 void SceneObjectsListDrawer::setObjectTreeState( const Object* obj, bool open )
 {
     if ( obj )
@@ -180,7 +182,7 @@ void SceneObjectsListDrawer::drawObjectsList_()
                 {
                     auto infoId = std::string( "Info: ##" ) + uniqueStr;
                     skippableRenderer.draw( frameHeight, itemSpacingY,
-                        [&] { infoOpen = ImGui::CollapsingHeader( infoId.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed ); },
+                        [&] { infoOpen = collapsingHeader_( infoId, ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed ); },
                         [&] { infoOpen = ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( infoId.c_str() ), ImGuiTreeNodeFlags_None ); } );
                 }
 
@@ -283,10 +285,10 @@ bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const 
 
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
 
-    const bool isOpen = ImGui::CollapsingHeader( ( object.name() + "##" + uniqueStr ).c_str(),
-                                                 ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_OpenOnArrow |
-                                                 ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) |
-                                                 ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
+    const bool isOpen = collapsingHeader_( ( object.name() + "##" + uniqueStr ).c_str(),
+                                           ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_OpenOnArrow |
+                                           ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) |
+                                           ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
 
     ImGui::PopStyleColor( isSelected ? 2 : 1 );
     ImGui::PopStyleVar();

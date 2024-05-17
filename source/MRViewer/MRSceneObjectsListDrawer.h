@@ -58,13 +58,15 @@ protected:
     // return 0.f if nothing drawing
     MRVIEWER_API virtual float drawCustomTreeObjectProperties_( Object& obj, bool onlyCalcHeight );
 
+    typedef int ImGuiTreeNodeFlags;
+    // override this to customize CollapsingHeader draw
+    MRVIEWER_API virtual bool collapsingHeader_( const std::string& uniqueName, ImGuiTreeNodeFlags flags );
+
 private:
     void drawObjectsList_();
     bool drawObject_( Object& object, const std::string& uniqueStr );
     void drawObjectVisibilityCheckbox_( Object& object, const std::string& uniqueStr );
     bool drawObjectCollapsingHeader_( Object& object, const std::string& uniqueStr, bool hasRealChildren );
-    //void drawObjectProperties_( Object& object, const std::string& uniqueStr );
-        
 
     // payload object will be moved
     void makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload );

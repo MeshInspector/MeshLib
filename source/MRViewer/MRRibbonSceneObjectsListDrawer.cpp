@@ -108,6 +108,11 @@ void RibbonSceneObjectsListDrawer::drawSceneContextMenu_( const std::vector<std:
     }
 }
 
+bool RibbonSceneObjectsListDrawer::collapsingHeader_( const std::string& uniqueName, ImGuiTreeNodeFlags flags )
+{
+    return RibbonButtonDrawer::CustomCollapsingHeader( uniqueName.c_str(), flags );
+}
+
 const char* RibbonSceneObjectsListDrawer::getSceneItemIconByTypeName_( const std::string& typeName ) const
 {
     if ( typeName == ObjectMesh::TypeName() )

@@ -259,7 +259,7 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
     return ret;
 }
 
-bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize, float titleBarHeight )
+bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize )
 {
     ImGui::BeginGroup();
     const auto scrollX = ImGui::GetScrollX();
@@ -270,7 +270,7 @@ bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::s
     const auto& style = ImGui::GetStyle();
     const auto padding = ImGui::GetStyle().FramePadding;
     
-    ImVec2 minClip( winPos.x + startButtonPosWindow.x, winPos.y + std::max( startButtonPosWindow.y, titleBarHeight ));
+    ImVec2 minClip( winPos.x + startButtonPosWindow.x, winPos.y + startButtonPosWindow.y );
     ImVec2 maxClip( minClip.x + buttonSize.x, minClip.y + buttonSize.y );
 
     std::string buttonText = "##" + text;
@@ -287,7 +287,7 @@ bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::s
 
     assert( icon );
 
-    ImGui::GetWindowDrawList()->PushClipRect( minClip, maxClip );
+    ImGui::GetWindowDrawList()->PushClipRect( minClip, maxClip, true );
 
     ImVec4 multColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
     ImGui::Image( *icon, { iconSize.x , iconSize.y }, multColor );

@@ -764,6 +764,16 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
     executeHoleFillPlan( mesh, a0, plan, params.outNewFaces );
 }
 
+void fillHoles( Mesh& mesh, const std::vector<EdgeId> & as, const FillHoleParams& params )
+{
+    MR_TIMER
+
+    // TODO: parallel getHoleFillPlan
+
+    for ( auto a : as )
+        fillHole( mesh, a, params );
+}
+
 VertId fillHoleTrivially( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces /*= nullptr */ )
 {
     MR_WRITER( mesh );
@@ -870,6 +880,17 @@ EdgeId extendHole( Mesh& mesh, EdgeId a, const Plane3f & plane, FaceBitSet * out
     return extendHole( mesh, a, 
         [plane]( const Vector3f & p ) { return plane.project( p ); },
         outNewFaces );
+}
+
+std::vector<EdgeId> extendAllHoles( Mesh& mesh, const Plane3f & plane, FaceBitSet * outNewFaces )
+{
+    MR_TIMER
+    auto borders = mesh.topology.findHoleRepresentiveEdges();
+    
+    for ( auto& border : borders )
+        border = extendHole( mesh, border, plane, outNewFaces );
+
+    return borders;
 }
 
 EdgeId buildBottom( Mesh& mesh, EdgeId a, Vector3f dir, float holeExtension, FaceBitSet* outNewFaces /*= nullptr */ )

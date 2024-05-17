@@ -28,21 +28,13 @@ namespace FixUndercuts
 {
 constexpr float numVoxels = 1e7f;
 
-FloatGrid setupGridFromMesh( Mesh& mesh, const AffineXf3f& rot, float voxelSize, float bottomExtension, Vector3f dir )
+static void extendAndFillAllHoles( Mesh& mesh, float bottomExtension, const Vector3f& dir )
 {
-    MR_TIMER;
-    auto borders = mesh.topology.findHoleRepresentiveEdges();
-    
+    MR_TIMER
+
     auto minV = findDirMax( -dir, mesh, UseAABBTree::YesIfAlreadyConstructed );
-
-    for ( auto& border : borders )
-        border = extendHole( mesh, border, Plane3f::fromDirAndPt( dir, mesh.points[minV] - bottomExtension * dir ) );
-
-    FillHoleParams params;
-    for ( const auto& border : borders )
-        fillHole( mesh, border, params );
-
-    return meshToLevelSet( mesh, rot, Vector3f::diagonal( voxelSize ) );
+    auto borders = extendAllHoles( mesh, Plane3f::fromDirAndPt( dir, mesh.points[minV] - bottomExtension * dir ) );
+    fillHoles( mesh, borders );
 }
 
 void fix( FloatGrid& grid, int zOffset )
@@ -114,7 +106,8 @@ void fixUndercuts( Mesh& mesh, const Vector3f& upDirectionMeshSpace, float voxel
     if ( mesh.topology.isClosed() )
         zOffset = int( bottomExtension / voxelSize );
 
-    auto grid = setupGridFromMesh( mesh, rot, voxelSize, bottomExtension, upDirectionMeshSpace );
+    extendAndFillAllHoles( mesh, bottomExtension, upDirectionMeshSpace );
+    auto grid = meshToLevelSet( mesh, rot, Vector3f::diagonal( voxelSize ) );
     fix( grid, zOffset );
     
     mesh = gridToMesh( std::move( grid ), GridToMeshSettings{
@@ -147,7 +140,8 @@ void fixUndercuts( Mesh& mesh, const FaceBitSet& faceBitSet, const Vector3f& upD
     // add new triangles after hole filling to bitset
     FaceBitSet copyFBS = faceBitSet;
     copyFBS.resize( mesh.topology.faceSize(), false );
-    auto fullGrid = setupGridFromMesh( mesh, rot, voxelSize, bottomExtension, upDirectionMeshSpace );
+    extendAndFillAllHoles( mesh, bottomExtension, upDirectionMeshSpace );
+    auto fullGrid = meshToLevelSet( mesh, rot, Vector3f::diagonal( voxelSize ) );
     copyFBS.resize( mesh.topology.faceSize(), true );
 
     // create mesh and unclosed grid 

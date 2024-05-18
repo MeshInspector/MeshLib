@@ -21,8 +21,6 @@ namespace MR
 template<typename T>
 struct Subtree
 {
-    using NodeId = typename AABBTreeNode<T>::NodeId;
-
     Subtree( NodeId root, int f, int n ) : root( root ), firstLeaf( f ), numLeaves( n ) { }
     NodeId root; // of subtree
     int firstLeaf = 0;
@@ -36,7 +34,6 @@ class AABBTreeMaker
 {
 public:
     using Node = AABBTreeNode<T>;
-    using NodeId = typename Node::NodeId;
     using NodeVec = Vector<Node, NodeId>;
     using Subtree = MR::Subtree<T>;
     using BoxT = typename T::BoxT;

@@ -14,10 +14,10 @@ namespace {
 
 struct SubTask
 {
-    AABBTreePoints::NodeId n;
+    NodeId n;
     float distSq = 0;
     SubTask() = default;
-    SubTask( AABBTreePoints::NodeId n, float dd ) : n( n ), distSq( dd )
+    SubTask( NodeId n, float dd ) : n( n ), distSq( dd )
     {}
 };
 
@@ -50,7 +50,7 @@ PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCl
         }
     };
 
-    auto getSubTask = [&] ( AABBTreePoints::NodeId n )
+    auto getSubTask = [&] ( NodeId n )
     {
         float distSq = ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( pt ) - pt ).lengthSq();
         return SubTask( n, distSq );
@@ -132,7 +132,7 @@ void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest
         }
     };
 
-    auto getSubTask = [&] ( AABBTreePoints::NodeId n )
+    auto getSubTask = [&] ( NodeId n )
     {
         float distSq = ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( pt ) - pt ).lengthSq();
         return SubTask( n, distSq );

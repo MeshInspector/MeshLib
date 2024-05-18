@@ -36,7 +36,7 @@ std::optional<MeshIntersectionResult> meshRayIntersect_( const MeshPart& meshPar
         return std::nullopt;
     }
 
-    std::pair< AABBTree::NodeId,T> nodesStack[maxTreeDepth];
+    std::pair< NodeId,T> nodesStack[maxTreeDepth];
     int currentNode = 0;
     nodesStack[0] = { tree.rootNodeId(), rayStart };
 
@@ -211,7 +211,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
         return;
     }
 
-    AABBTree::NodeId nodesStack[maxTreeDepth];
+    NodeId nodesStack[maxTreeDepth];
     int currentNode = 0;
     nodesStack[0] = tree.rootNodeId();
     ConvertToIntVector convToInt;
@@ -345,10 +345,10 @@ void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
     assert( !ues || ues->size() >= m.topology.undirectedEdgeSize() );
     assert( !vs  || vs->size()  >= m.topology.vertSize() );
 
-    AABBTree::NodeId nodesStack[maxTreeDepth];
+    NodeId nodesStack[maxTreeDepth];
     int currentNode = -1;
 
-    auto addNode = [&]( AABBTree::NodeId nid )
+    auto addNode = [&]( NodeId nid )
     {
         const auto & box = tree[nid].box;
         if ( box.min.z <= zLevel && box.max.z >= zLevel )

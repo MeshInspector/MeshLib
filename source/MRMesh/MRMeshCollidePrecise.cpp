@@ -18,9 +18,9 @@ namespace MR
 
 struct NodeNode
 {
-    AABBTree::NodeId aNode;
-    AABBTree::NodeId bNode;
-    NodeNode( AABBTree::NodeId a, AABBTree::NodeId b ) : aNode( a ), bNode( b ) { }
+    NodeId aNode;
+    NodeId bNode;
+    NodeNode( NodeId a, NodeId b ) : aNode( a ), bNode( b ) { }
 };
 
 PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const MeshPart & b, 
@@ -37,7 +37,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     // sequentially subdivide full task on smaller subtasks;
     // they shall be not too many for this subdivision not to take too long;
     // and they shall be not too few for enough parallelism later
-    std::vector<NodeNode> subtasks{ { AABBTree::NodeId{ 0 }, AABBTree::NodeId{ 0 } } }, nextSubtasks, leafTasks;
+    std::vector<NodeNode> subtasks{ { NodeId{ 0 }, NodeId{ 0 } } }, nextSubtasks, leafTasks;
     for( int i = 0; i < 16; ++i ) // 16 -> will produce at most 2^16 subtasks
     {
         int numSplits = 0;

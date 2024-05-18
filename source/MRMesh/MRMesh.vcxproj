@@ -21,6 +21,7 @@
     <ClInclude Include="MRCylinder3.h" />
     <ClInclude Include="MRCylinderApproximator.h" />
     <ClInclude Include="MRCylinderObject.h" />
+    <ClInclude Include="MRDipole.h" />
     <ClInclude Include="MRDistanceVolumeParams.h" />
     <ClInclude Include="MRFaceDistance.h" />
     <ClInclude Include="MRFeatureObject.h" />
@@ -428,6 +429,7 @@
     <ClCompile Include="MRCPRTests.cpp" />
     <ClCompile Include="MRCylinderObject.cpp" />
     <ClCompile Include="MRDenseBox.cpp" />
+    <ClCompile Include="MRDipole.cpp" />
     <ClCompile Include="MRDirectory.cpp" />
     <ClCompile Include="MRDistanceMap.cpp" />
     <ClCompile Include="MRAffineXf3.cpp" />

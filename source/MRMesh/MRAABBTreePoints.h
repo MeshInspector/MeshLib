@@ -15,9 +15,6 @@ namespace MR
 class AABBTreePoints
 {
 public:
-    class NodeTag;
-    using NodeId = Id<NodeTag>;
-
     struct Node
     {
         Box3f box; ///< bounding box of whole subtree

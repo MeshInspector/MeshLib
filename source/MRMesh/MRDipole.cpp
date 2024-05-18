@@ -3,6 +3,7 @@
 #include "MRMesh.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
+#include "MRGTest.h"
 
 namespace MR
 {
@@ -74,6 +75,86 @@ float Dipole::w( const Vector3f & q ) const
     const auto dp = pos() - q;
     const auto d = dp.length();
     return d > 0 ? INV_4PI * dot( dp, dirArea ) / ( d * d * d ) : 0;
+}
+
+/// see (6) in https://users.cs.utah.edu/~ladislav/jacobson13robust/jacobson13robust.pdf
+static float triangleSolidAngle( const Vector3f & p, const Triangle3f & tri )
+{
+    Matrix3f m;
+    m.x = tri[0] - p;
+    m.y = tri[1] - p;
+    m.z = tri[2] - p;
+    auto x = m.x.length();
+    auto y = m.y.length();
+    auto z = m.z.length();
+    auto den = x * y * z + dot( m.x, m.y ) * z + dot( m.y, m.z ) * x + dot( m.z, m.x ) * y;
+    return 2 * std::atan2( m.det(), den );
+}
+
+float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const Mesh& mesh,
+    const Vector3f & q, float beta, FaceId skipFace )
+{
+    float res = 0;
+    if ( dipoles.empty() )
+    {
+        assert( false );
+        return res;
+    }
+
+    constexpr int MaxStackSize = 32; // to avoid allocations
+    NodeId subtasks[MaxStackSize];
+    int stackSize = 0;
+    subtasks[stackSize++] = tree.rootNodeId();
+
+    while( stackSize > 0 )
+    {
+        const auto i = subtasks[--stackSize];
+        const auto & node = tree[i];
+        const auto & d = dipoles[i];
+        if ( d.goodApprox( q, beta ) )
+        {
+            res += d.w( q );
+            continue;
+        }
+        if ( !node.leaf() )
+        {
+            // recurse deeper
+            subtasks[stackSize++] = node.r; // to look later
+            subtasks[stackSize++] = node.l; // to look first
+            continue;
+        }
+        if ( node.leafId() != skipFace )
+            res += INV_4PI * triangleSolidAngle( q, mesh.getTriPoints( node.leafId() ) );
+    }
+    return res;
+}
+
+TEST(MRMesh, TriangleSolidAngle) 
+{
+    const Triangle3f tri =
+    {
+        Vector3f{ 0.0f, 0.0f, 0.0f },
+        Vector3f{ 1.0f, 0.0f, 0.0f },
+        Vector3f{ 0.0f, 1.0f, 0.0f }
+    };
+    const auto c = ( tri[0] + tri[1] + tri[2] ) / 3.0f;
+
+    // solid angle near triangle center abruptly changes from -2pi to 2pi when the point crosses the triangle plane
+    const auto x = triangleSolidAngle( c + Vector3f( 0, 0, 1e-5f ), tri );
+    EXPECT_NEAR( x, -2 * PI_F, 1e-3f );
+    auto y = triangleSolidAngle( c - Vector3f( 0, 0, 1e-5f ), tri );
+    EXPECT_NEAR( y,  2 * PI_F, 1e-3f );
+
+    // solid angle in triangle vertices is equal to zero exactly
+    for ( int i = 0; i < 3; ++i )
+    {
+        EXPECT_EQ( triangleSolidAngle( tri[i], tri ), 0 );
+    }
+
+    // solid angle in the triangle plane outside of triangle is equal to zero exactly
+    EXPECT_EQ( triangleSolidAngle( tri[1] + tri[2], tri ), 0 );
+    EXPECT_EQ( triangleSolidAngle( -tri[1], tri ), 0 );
+    EXPECT_EQ( triangleSolidAngle( -tri[2], tri ), 0 );
 }
 
 } //namespace MR

@@ -57,6 +57,7 @@ class MRMESH_CLASS VertTag;
 class MRMESH_CLASS PixelTag;
 class MRMESH_CLASS VoxelTag;
 class MRMESH_CLASS RegionTag;
+class MRMESH_CLASS NodeTag;
 
 template <typename T> class MRMESH_CLASS Id;
 template <typename T, typename I> class MRMESH_CLASS Vector;
@@ -70,6 +71,7 @@ using VertId = Id<VertTag>;
 using PixelId = Id<PixelTag>;
 using VoxelId = Id<VoxelTag>;
 using RegionId = Id<RegionTag>;
+using NodeId = Id<NodeTag>;
 class ViewportId;
 class ViewportMask;
 
@@ -91,12 +93,16 @@ template <typename T> class MRMESH_CLASS SetBitIteratorT;
 
 struct Color;
 
+struct MRMESH_CLASS Dipole;
+using Dipoles = Vector<Dipole, NodeId>;
+
 using FaceBitSet = TaggedBitSet<FaceTag>;
 using VertBitSet = TaggedBitSet<VertTag>;
 using EdgeBitSet = TaggedBitSet<EdgeTag>;
 using UndirectedEdgeBitSet = TaggedBitSet<UndirectedEdgeTag>;
 using PixelBitSet = TaggedBitSet<PixelTag>;
 using VoxelBitSet = TaggedBitSet<VoxelTag>;
+using NodeBitSet = TaggedBitSet<NodeTag>;
 
 template <typename T> class SetBitIteratorT;
 

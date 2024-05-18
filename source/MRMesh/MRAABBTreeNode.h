@@ -28,8 +28,6 @@ using LineTreeTraits3 = LineTreeTraits<Vector3f>;
 template<typename T>
 struct AABBTreeNode
 {
-    class NodeTag;
-    using NodeId = Id<NodeTag>;
     using LeafId = typename T::LeafId;
     using BoxT = typename T::BoxT;
 
@@ -43,10 +41,7 @@ struct AABBTreeNode
 };
 
 template<typename T>
-using AABBTreeNodeId = typename AABBTreeNode<T>::NodeId;
-
-template<typename T>
-using AABBTreeNodeVec = Vector<AABBTreeNode<T>, AABBTreeNodeId<T>>;
+using AABBTreeNodeVec = Vector<AABBTreeNode<T>, NodeId>;
 
 /// \}
 

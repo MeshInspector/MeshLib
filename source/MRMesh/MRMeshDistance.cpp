@@ -29,8 +29,8 @@ MeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const Aff
         return res;
     }
 
-    AABBTree::NodeBitSet aNodes, bNodes;
-    AABBTree::NodeBitSet* aNodesPtr{nullptr}, *bNodesPtr{nullptr};
+    NodeBitSet aNodes, bNodes;
+    NodeBitSet* aNodesPtr{nullptr}, *bNodesPtr{nullptr};
     if ( a.region )
     {
         aNodes = aTree.getNodesFromFaces( *a.region );
@@ -45,10 +45,10 @@ MeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const Aff
 
     struct SubTask
     {
-        AABBTree::NodeId a, b;
+        NodeId a, b;
         float distSq = 0;
         SubTask() = default;
-        SubTask( AABBTree::NodeId a, AABBTree::NodeId b, float dd ) : a( a ), b( b ), distSq( dd )
+        SubTask( NodeId a, NodeId b, float dd ) : a( a ), b( b ), distSq( dd )
         {
         }
     };
@@ -66,7 +66,7 @@ MeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const Aff
         }
     };
 
-    auto getSubTask = [&]( AABBTree::NodeId a, AABBTree::NodeId b )
+    auto getSubTask = [&]( NodeId a, NodeId b )
     {
         float distSq = aTree.nodes()[a].box.getDistanceSq( transformed( bTree.nodes()[b].box, rigidB2A ) );
         return SubTask( a, b, distSq );
@@ -319,10 +319,10 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
 
     struct SubTask
     {
-        AABBTree::NodeId n;
+        NodeId n;
         float distSq = 0;
         SubTask() = default;
-        SubTask( AABBTree::NodeId n, float dd ) : n( n ), distSq( dd ) { }
+        SubTask( NodeId n, float dd ) : n( n ), distSq( dd ) { }
     };
 
     constexpr int MaxStackSize = 32; // to avoid allocations
@@ -338,7 +338,7 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
         }
     };
 
-    auto getSubTask = [&]( AABBTree::NodeId n )
+    auto getSubTask = [&]( NodeId n )
     {
         float distSq = tree.nodes()[n].box.getDistanceSq( tbox );
         return SubTask( n, distSq );

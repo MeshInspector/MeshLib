@@ -16,10 +16,10 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
 
     struct SubTask
     {
-        AABBTree::NodeId n;
+        NodeId n;
         float distSq = 0;
         SubTask() = default;
-        SubTask( AABBTree::NodeId n, float dd ) : n( n ), distSq( dd ) { }
+        SubTask( NodeId n, float dd ) : n( n ), distSq( dd ) { }
     };
 
     constexpr int MaxStackSize = 32; // to avoid allocations
@@ -35,7 +35,7 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
         }
     };
 
-    auto getSubTask = [&]( AABBTree::NodeId n )
+    auto getSubTask = [&]( NodeId n )
     {
         float distSq = ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( pt ) - pt ).lengthSq();
         return SubTask( n, distSq );

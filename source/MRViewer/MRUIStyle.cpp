@@ -258,7 +258,12 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
     ret = TestEngine::createButton( label ) || ret; // Don't want short-circuiting.
     return ret;
 }
-bool buttonIconEx( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize, bool active, bool radioButton )
+bool buttonIconEx( 
+    const std::string& name, 
+    const Vector2f& iconSize, 
+    const std::string& text, 
+    const ImVec2& buttonSize, 
+    const ButtonIconCustomizationParams& params )
 {
     ImGui::BeginGroup();
     const auto scrollX = ImGui::GetScrollX();
@@ -275,14 +280,14 @@ bool buttonIconEx( const std::string& name, const Vector2f& iconSize, const std:
 
     std::string buttonText = "##" + text;
     bool res = false;
-    if ( radioButton )
+    if ( params.radioButton )
     {
         res = ImGui::Button( buttonText.c_str(), buttonSize );
         res = UI::TestEngine::createButton( buttonText ) || res;
     }
     else
     {
-        res = UI::button( buttonText.c_str(), active, Vector2f( buttonSize.x, buttonSize.y ) );
+        res = UI::buttonEx( buttonText.c_str(), params.active, Vector2f( buttonSize.x, buttonSize.y ), params.flags, params );
     }
     ImGui::SameLine();
 
@@ -381,11 +386,6 @@ bool buttonIconEx( const std::string& name, const Vector2f& iconSize, const std:
     ImGui::EndGroup();
 
     return res;
-}
-
-bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize, bool active )
-{
-    return buttonIconEx(name, iconSize, text, buttonSize, active, false);
 }
 
 bool checkbox( const char* label, bool* value )

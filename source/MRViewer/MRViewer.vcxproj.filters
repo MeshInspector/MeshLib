@@ -71,11 +71,14 @@
     <Filter Include="UIStyle">
       <UniqueIdentifier>{0cc885c2-7327-42c4-9981-609b4faa2b91}</UniqueIdentifier>
     </Filter>
-    <Filter Include="resource\object_icons\X0_5">
-      <UniqueIdentifier>{3997304a-e8da-4831-9915-1c70861d342e}</UniqueIdentifier>
+    <Filter Include="resource\independent_icons">
+      <UniqueIdentifier>{8622b9c8-2434-4f92-abef-5aa69020ce74}</UniqueIdentifier>
     </Filter>
-    <Filter Include="resource\object_icons\X0_75">
-      <UniqueIdentifier>{e3c73e4b-c3dc-4dc5-9c3c-6ab458025d21}</UniqueIdentifier>
+    <Filter Include="resource\independent_icons\X1">
+      <UniqueIdentifier>{37179315-11cc-4cdc-a436-43212ae75126}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="resource\independent_icons\X3">
+      <UniqueIdentifier>{45fcdb0a-41ef-49c2-9cbf-10737e61ba27}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -917,53 +920,29 @@
     <Image Include="resource\object_icons\X3\RadiusMeasurementObject.png">
       <Filter>resource\object_icons\X3</Filter>
     </Image>
-    <Image Include="resource\independent_icons\X3\Plane Import.png">
-      <Filter>resource\object_icons\X3</Filter>
-    </Image>
-    <Image Include="resource\independent_icons\X3\Plane XY.png">
-      <Filter>resource\object_icons\X3</Filter>
-    </Image>
-    <Image Include="resource\independent_icons\X3\Plane XZ.png">
-      <Filter>resource\object_icons\X3</Filter>
-    </Image>
-    <Image Include="resource\independent_icons\X3\Plane YZ.png">
-      <Filter>resource\object_icons\X3</Filter>
-    </Image>
     <Image Include="resource\independent_icons\X1\Plane Import.png">
-      <Filter>resource\object_icons\X1</Filter>
+      <Filter>resource\independent_icons\X1</Filter>
     </Image>
     <Image Include="resource\independent_icons\X1\Plane XY.png">
-      <Filter>resource\object_icons\X1</Filter>
+      <Filter>resource\independent_icons\X1</Filter>
     </Image>
     <Image Include="resource\independent_icons\X1\Plane XZ.png">
-      <Filter>resource\object_icons\X1</Filter>
+      <Filter>resource\independent_icons\X1</Filter>
     </Image>
     <Image Include="resource\independent_icons\X1\Plane YZ.png">
-      <Filter>resource\object_icons\X1</Filter>
+      <Filter>resource\independent_icons\X1</Filter>
     </Image>
-    <Image Include="resource\independent_icons\X0_75\Plane Import.png">
-      <Filter>resource\object_icons\X0_75</Filter>
+    <Image Include="resource\independent_icons\X3\Plane Import.png">
+      <Filter>resource\independent_icons\X3</Filter>
     </Image>
-    <Image Include="resource\independent_icons\X0_75\Plane XY.png">
-      <Filter>resource\object_icons\X0_75</Filter>
+    <Image Include="resource\independent_icons\X3\Plane XY.png">
+      <Filter>resource\independent_icons\X3</Filter>
     </Image>
-    <Image Include="resource\independent_icons\X0_75\Plane XZ.png">
-      <Filter>resource\object_icons\X0_75</Filter>
+    <Image Include="resource\independent_icons\X3\Plane XZ.png">
+      <Filter>resource\independent_icons\X3</Filter>
     </Image>
-    <Image Include="resource\independent_icons\X0_75\Plane YZ.png">
-      <Filter>resource\object_icons\X0_75</Filter>
-    </Image>
-    <Image Include="resource\independent_icons\X0_5\Plane Import.png">
-      <Filter>resource\object_icons\X0_5</Filter>
-    </Image>
-    <Image Include="resource\independent_icons\X0_5\Plane XY.png">
-      <Filter>resource\object_icons\X0_5</Filter>
-    </Image>
-    <Image Include="resource\independent_icons\X0_5\Plane XZ.png">
-      <Filter>resource\object_icons\X0_5</Filter>
-    </Image>
-    <Image Include="resource\independent_icons\X0_5\Plane YZ.png">
-      <Filter>resource\object_icons\X0_5</Filter>
+    <Image Include="resource\independent_icons\X3\Plane YZ.png">
+      <Filter>resource\independent_icons\X3</Filter>
     </Image>
   </ItemGroup>
 </Project>

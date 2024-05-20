@@ -17,9 +17,9 @@
 #include "MRVDBFloatGrid.h"
 #include "MRMeshIntersect.h"
 #include "MRLine3.h"
-#include "MRPch/MRTBB.h"
 #include "MRMeshDirMax.h"
-#include <filesystem>
+#include "MRIntersectionPrecomputes.h"
+#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -35,6 +35,37 @@ static void extendAndFillAllHoles( Mesh& mesh, float bottomExtension, const Vect
     auto minV = findDirMax( -dir, mesh, UseAABBTree::YesIfAlreadyConstructed );
     auto borders = extendAllHoles( mesh, Plane3f::fromDirAndPt( dir, mesh.points[minV] - bottomExtension * dir ) );
     fillHoles( mesh, borders );
+}
+
+/// move bottom vertices of given mesh to make object thickness at least (minThickness) in (up) direction;
+/// use this function before making signed distance field from the mesh with minThickness=voxelSize
+/// to avoid unexpected hole appearance in thin areas
+static void makeZThinkAtLeast( Mesh & mesh, float minThickness, Vector3f up )
+{
+    MR_TIMER
+    up = up.normalized();
+    const IntersectionPrecomputes<float> iprec( up );
+    auto newPoints = mesh.points;
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    {
+        if ( dot( mesh.pseudonormal( v ), up ) >= 0 )
+            return; // skip top surface vertices
+        // find up-intersection within minThickness
+        auto isec = rayMeshIntersect( mesh, { mesh.points[v], up }, 0.0f, minThickness, &iprec, true,
+            [&]( FaceId f )
+            {
+                VertId a, b, c;
+                mesh.topology.getTriVerts( f, a, b, c );
+                if ( v == a || v == b || v == c )
+                    return false; // ignore intersections with incident faces of (v)
+                return dot( mesh.normal( f ), up ) >= 0;
+            } );
+        // if such intersection found then move bottom point down
+        if ( isec )
+            newPoints[v] = isec->proj.point - minThickness * up;
+    } );
+
+    mesh.points = std::move( newPoints );
 }
 
 void fix( FloatGrid& grid, int zOffset )
@@ -107,6 +138,7 @@ void fixUndercuts( Mesh& mesh, const Vector3f& upDirectionMeshSpace, float voxel
         zOffset = int( bottomExtension / voxelSize );
 
     extendAndFillAllHoles( mesh, bottomExtension, upDirectionMeshSpace );
+    makeZThinkAtLeast( mesh, voxelSize, upDirectionMeshSpace );
     auto grid = meshToLevelSet( mesh, rot, Vector3f::diagonal( voxelSize ) );
     fix( grid, zOffset );
     
@@ -141,6 +173,7 @@ void fixUndercuts( Mesh& mesh, const FaceBitSet& faceBitSet, const Vector3f& upD
     FaceBitSet copyFBS = faceBitSet;
     copyFBS.resize( mesh.topology.faceSize(), false );
     extendAndFillAllHoles( mesh, bottomExtension, upDirectionMeshSpace );
+    makeZThinkAtLeast( mesh, voxelSize, upDirectionMeshSpace );
     auto fullGrid = meshToLevelSet( mesh, rot, Vector3f::diagonal( voxelSize ) );
     copyFBS.resize( mesh.topology.faceSize(), true );
 

@@ -1295,7 +1295,7 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling, PlaneWidgetFlags fl
 
     float p = ImGui::GetStyle().FramePadding.x;
     ImVec2 iconSize = { 32 * menuScaling, 32 * menuScaling };
-    ImVec2 buttonSize = { ( GetContentRegionAvail().x - 3 * p ) / 4, 60.0f * menuScaling };
+    ImVec2 buttonSize = { ( GetContentRegionAvail().x - 3 * p ) / 4, 70.0f * menuScaling };
     if ( MR::UI::buttonIcon( "Plane YZ", iconSize, "Plane YZ", buttonSize ) )
         setDefaultPlane( MR::Vector3f::plusX() );
     ImGui::SameLine( 0, p );

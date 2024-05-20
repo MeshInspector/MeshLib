@@ -71,6 +71,15 @@
     <Filter Include="UIStyle">
       <UniqueIdentifier>{0cc885c2-7327-42c4-9981-609b4faa2b91}</UniqueIdentifier>
     </Filter>
+    <Filter Include="resource\independent_icons">
+      <UniqueIdentifier>{8622b9c8-2434-4f92-abef-5aa69020ce74}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="resource\independent_icons\X1">
+      <UniqueIdentifier>{37179315-11cc-4cdc-a436-43212ae75126}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="resource\independent_icons\X3">
+      <UniqueIdentifier>{45fcdb0a-41ef-49c2-9cbf-10737e61ba27}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGuiMenu.cpp">
@@ -910,6 +919,30 @@
     </Image>
     <Image Include="resource\object_icons\X3\RadiusMeasurementObject.png">
       <Filter>resource\object_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X1\Plane Import.png">
+      <Filter>resource\independent_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X1\Plane XY.png">
+      <Filter>resource\independent_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X1\Plane XZ.png">
+      <Filter>resource\independent_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X1\Plane YZ.png">
+      <Filter>resource\independent_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\Plane Import.png">
+      <Filter>resource\independent_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\Plane XY.png">
+      <Filter>resource\independent_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\Plane XZ.png">
+      <Filter>resource\independent_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\Plane YZ.png">
+      <Filter>resource\independent_icons\X3</Filter>
     </Image>
   </ItemGroup>
 </Project>

@@ -1294,14 +1294,15 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling, PlaneWidgetFlags fl
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { MR::cDefaultItemSpacing * menuScaling, MR::cDefaultItemSpacing * menuScaling } );
 
     float p = ImGui::GetStyle().FramePadding.x;
-    auto width = GetContentRegionAvail().x - 3 * p;
-    if ( MR::UI::button( "Plane YZ", { 85.0f / ( 85.0f * 3 + 105.0f ) * width , 0 } ) )
+    ImVec2 iconSize = { 32 * menuScaling, 32 * menuScaling };
+    ImVec2 buttonSize = { ( GetContentRegionAvail().x - 3 * p ) / 4, 60.0f * menuScaling };
+    if ( MR::UI::buttonIcon( "Plane YZ", iconSize, "Plane YZ", buttonSize ) )
         setDefaultPlane( MR::Vector3f::plusX() );
     ImGui::SameLine( 0, p );
-    if ( MR::UI::button( "Plane XZ", { 85.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
+    if ( MR::UI::buttonIcon( "Plane XZ", iconSize, "Plane XZ", buttonSize ) )
         setDefaultPlane( MR::Vector3f::plusY() );
     ImGui::SameLine( 0, p );
-    if ( MR::UI::button( "Plane XY", { 85.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
+    if ( MR::UI::buttonIcon( "Plane XY", iconSize, "Plane XY", buttonSize ) )
         setDefaultPlane( MR::Vector3f::plusZ() );
     ImGui::SameLine( 0, p );
 
@@ -1309,7 +1310,7 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling, PlaneWidgetFlags fl
     if ( importPlaneModeOld )
         ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ButtonActive ) );
 
-    if ( MR::UI::button( "Import Plane", { 105.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
+    if ( MR::UI::buttonIcon( "Plane Import", iconSize, "Import Plane", buttonSize ) )
     {
         planeWidget.setImportPlaneMode( !planeWidget.importPlaneMode() );
     }

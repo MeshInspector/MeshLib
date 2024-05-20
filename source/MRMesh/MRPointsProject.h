@@ -51,5 +51,8 @@ MRMESH_API void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, 
  */
 [[nodiscard]] MRMESH_API Buffer<VertId> findNClosestPointsPerPoint( const PointCloud& pc, int numNei, const ProgressCallback & progress = {} );
 
+/// finds two closest points in whole point cloud
+[[nodiscard]] MRMESH_API std::pair<VertId, VertId> findTwoClosestPoints( const PointCloud& pc, const ProgressCallback & progress = {} );
+
 /// \}
 }

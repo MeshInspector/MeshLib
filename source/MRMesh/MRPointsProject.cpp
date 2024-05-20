@@ -208,4 +208,37 @@ Buffer<VertId> findNClosestPointsPerPoint( const PointCloud& pc, int numNei, con
     return res;
 }
 
+std::pair<VertId, VertId> findTwoClosestPoints( const PointCloud& pc, const ProgressCallback & progress )
+{
+    MR_TIMER
+    std::atomic<float> minDistSq{ FLT_MAX };
+    tbb::enumerable_thread_specific<std::pair<VertId, VertId>> threadData;
+    BitSetParallelFor( pc.validPoints, [&]( VertId v )
+    {
+        float knownDistSq = minDistSq.load( std::memory_order_relaxed );
+        auto proj = findProjectionOnPoints( pc.points[v], pc, knownDistSq, nullptr, 0, [v]( VertId x ) { return v == x; } );
+        if ( proj.distSq >= knownDistSq )
+            return;
+        threadData.local() = { v, proj.vId };
+        while ( knownDistSq > proj.distSq && !minDistSq.compare_exchange_strong( knownDistSq, proj.distSq ) ) { }
+    }, progress );
+
+    float resMinDistSq{ FLT_MAX };
+    std::pair<VertId, VertId> res;
+    for ( const auto & p : threadData )
+    {
+        if ( !p.first || !p.second )
+            continue;
+        float distSq = ( pc.points[p.first] - pc.points[p.second] ).lengthSq();
+        if ( distSq < resMinDistSq )
+        {
+            resMinDistSq = distSq;
+            res = p;
+        }
+    }
+    if ( res.second < res.first ) // if not sort we will get dependency on work distribution among threads
+        std::swap( res.first, res.second );
+    return res;
+}
+
 } //namespace MR

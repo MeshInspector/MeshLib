@@ -499,6 +499,7 @@ Expected<Mesh, std::string> fromPly( std::istream& in, const MeshLoadSettings& s
 {
     MR_TIMER
 
+    const auto posStart = in.tellg();
     miniply::PLYReader reader( in );
     if ( !reader.valid() )
         return unexpected( std::string( "PLY file open error" ) );
@@ -508,11 +509,7 @@ Expected<Mesh, std::string> fromPly( std::istream& in, const MeshLoadSettings& s
 
     std::vector<unsigned char> colorsBuffer;
     Mesh res;
-
-    const auto posStart = in.tellg();
-    in.seekg( 0, std::ios_base::end );
-    const auto posEnd = in.tellg();
-    in.seekg( posStart );
+    const auto posEnd = reader.get_end_pos();
     const float streamSize = float( posEnd - posStart );
 
     FaceBitSet skippedFaces;

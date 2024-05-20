@@ -236,6 +236,8 @@ std::pair<VertId, VertId> findTwoClosestPoints( const PointCloud& pc, const Prog
             res = p;
         }
     }
+    if ( res.second < res.first ) // if not sort we will get dependency on work distribution among threads
+        std::swap( res.first, res.second );
     return res;
 }
 

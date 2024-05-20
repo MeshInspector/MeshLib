@@ -70,10 +70,12 @@ namespace
     {
         if ( path.empty() )
             throw std::runtime_error( "Empty path not allowed here." );
-        MR::pythonAppendOrRun( [&]
+        MR::CommandLoop::runCommandFromGUIThread( [&]
         {
             std::get<TestEngine::ButtonEntry>( findGroup( { path.data(), path.size() - 1 } ).elems.at( path.back() ).value ).simulateClick = true;
         } );
+        for ( int i = 0; i < MR::getViewerInstance().forceRedrawMinimumIncrementAfterEvents; ++i )
+            MR::CommandLoop::runCommandFromGUIThread( [] {} ); // wait frame
     }
 
     // Read/write values: (drags, sliders, etc)

@@ -38,9 +38,11 @@ struct ButtonCustomizationParams
 
 struct ButtonIconCustomizationParams : public ButtonCustomizationParams
 {
-    bool active = true;
-    bool radioButton = true;
     ImGuiButtonFlags flags = ImGuiButtonFlags_None;
+    // flag for buttonEx, which can be disabled
+    bool active = true;
+    // button without a gradient, always ative, configurable by an external style
+    bool flatBackgroundColor = false;
 };
 
 
@@ -74,19 +76,20 @@ inline bool buttonIcon( const std::string& name, const Vector2f& iconSize, const
 {
     ButtonIconCustomizationParams params;
     params.active = active;
+    params.flatBackgroundColor = true;
     return buttonIconEx(name, iconSize, text, buttonSize, params );
 }
 // button with a gradient, always ative
 inline bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize )
 {
-    ButtonIconCustomizationParams params;
-    params.radioButton = false;
-    return buttonIconEx( name, iconSize, text, buttonSize, params );
+    return buttonIconEx( name, iconSize, text, buttonSize );
 }
 // button without a gradient, always ative, configurable by an external style
 inline bool buttonIconFlatBG( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize )
 {
-    return buttonIconEx( name, iconSize, text, buttonSize );
+    ButtonIconCustomizationParams params;
+    params.flatBackgroundColor = true;
+    return buttonIconEx( name, iconSize, text, buttonSize, params );
 }
 
 /// draw gradient checkbox

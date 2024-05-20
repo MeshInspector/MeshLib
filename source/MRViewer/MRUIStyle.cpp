@@ -280,7 +280,7 @@ bool buttonIconEx(
 
     std::string buttonText = "##" + text;
     bool res = false;
-    if ( params.radioButton )
+    if ( params.flatBackgroundColor )
     {
         res = ImGui::Button( buttonText.c_str(), buttonSize );
         res = UI::TestEngine::createButton( buttonText ) || res;

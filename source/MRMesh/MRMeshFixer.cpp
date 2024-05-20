@@ -12,7 +12,7 @@ namespace MR
 // given a vertex, returns two edges with the origin in this vertex consecutive in the vertex ring without left faces both;
 // both edges may be the same if there is only one edge without left face;
 // or both edges can be invalid if all vertex edges have left face
-static std::pair<EdgeId, EdgeId> getTwoSeqNoLeftAtVertex( const MeshTopology & m, VertId a )
+static EdgePair getTwoSeqNoLeftAtVertex( const MeshTopology & m, VertId a )
 {
     EdgeId e0 = m.edgeWithOrg( a );
     if ( !e0.valid() )

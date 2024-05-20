@@ -120,31 +120,6 @@ std::optional<VertBitSet> findCloseVertices( const PointCloud & cloud, float clo
     return findCloseVertices( *x );
 }
 
-struct VertPair
-{
-    VertId a, b;
-    friend bool operator ==( const VertPair &, const VertPair & ) = default;
-};
-
-} // namespace MR
-
-namespace std
-{
-
-template<> 
-struct hash<MR::VertPair> 
-{
-    size_t operator()( MR::VertPair const& p ) const noexcept
-    {
-        return size_t( p.a ) ^ ( size_t( p.b ) << 16 );
-    }
-};
-
-} // namespace std
-
-namespace MR
-{
-
 EdgeHashMap findTwinEdgeHashMap( const Mesh & mesh, float closeDist )
 {
     MR_TIMER

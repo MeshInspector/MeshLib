@@ -152,9 +152,9 @@ std::optional<VertBitSet> pointGridSampling( const PointCloud & cloud, float vox
     constexpr float maxVoxelsInOneDim = 1 << 10;
     const Vector3i dims
     {
-        (int) std::min( std::ceil( bboxSz.x / voxelSize ), maxVoxelsInOneDim ),
-        (int) std::min( std::ceil( bboxSz.y / voxelSize ), maxVoxelsInOneDim ),
-        (int) std::min( std::ceil( bboxSz.z / voxelSize ), maxVoxelsInOneDim )
+        ( int )std::clamp( std::ceil( bboxSz.x / voxelSize ),1.0f, maxVoxelsInOneDim ),
+        ( int )std::clamp( std::ceil( bboxSz.y / voxelSize ),1.0f, maxVoxelsInOneDim ),
+        ( int )std::clamp( std::ceil( bboxSz.z / voxelSize ),1.0f, maxVoxelsInOneDim )
     };
 
     Grid grid( bbox, dims );

@@ -55,7 +55,22 @@ MRVIEWER_API bool buttonCommonSize( const char* label, const Vector2f& size = Ve
 MRVIEWER_API bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& size = Vector2f( 0, 0 ), ImGuiKey key = ImGuiKey_None );
 
 // draw a button with an icon and text under it
-MRVIEWER_API bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize );
+MRVIEWER_API bool buttonIconEx( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize, bool active, bool radioButton );
+// button with a gradient and the ability to make it inactive
+inline bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, bool active, const ImVec2& buttonSize )
+{
+    return buttonIconEx(name, iconSize, text, buttonSize, active, false );
+}
+// button with a gradient, always ative
+inline bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize )
+{
+    return buttonIconEx( name, iconSize, text, buttonSize, true, false );
+}
+// button without a gradient, always ative, configurable by an external style
+inline bool buttonIconFlatBG( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize )
+{
+    return buttonIconEx( name, iconSize, text, buttonSize, true, true );
+}
 
 /// draw gradient checkbox
 MRVIEWER_API bool checkbox( const char* label, bool* value );

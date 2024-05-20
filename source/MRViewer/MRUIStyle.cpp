@@ -258,53 +258,40 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
     ret = TestEngine::createButton( label ) || ret; // Don't want short-circuiting.
     return ret;
 }
-
-bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize )
+bool buttonIconEx( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize, bool active, bool radioButton )
 {
     ImGui::BeginGroup();
     const auto scrollX = ImGui::GetScrollX();
     const auto scrollY = ImGui::GetScrollY();
     const auto startButtonPos = ImGui::GetCursorPos();
+    ImVec2 endButtonPos( startButtonPos.x + buttonSize.x, startButtonPos.y );
     const ImVec2 startButtonPosWindow( startButtonPos.x - scrollX, startButtonPos.y - scrollY );
     const auto winPos = ImGui::GetWindowPos();
     const auto& style = ImGui::GetStyle();
     const auto padding = ImGui::GetStyle().FramePadding;
-    
+
     ImVec2 minClip( winPos.x + startButtonPosWindow.x, winPos.y + startButtonPosWindow.y );
     ImVec2 maxClip( minClip.x + buttonSize.x, minClip.y + buttonSize.y );
 
     std::string buttonText = "##" + text;
-    auto res = ImGui::Button( buttonText.c_str(), buttonSize );
-
+    bool res = false;
+    if ( radioButton )
+    {
+        res = ImGui::Button( buttonText.c_str(), buttonSize );
+        res = UI::TestEngine::createButton( buttonText ) || res;
+    }
+    else
+    {
+        res = UI::button( buttonText.c_str(), active, Vector2f( buttonSize.x, buttonSize.y ) );
+    }
     ImGui::SameLine();
-
-    ImVec2 endButtonPos( startButtonPos.x + buttonSize.x, startButtonPos.y);
-    ImVec2 posIcon( ( endButtonPos.x + startButtonPos.x - iconSize.x ) / 2.0f, startButtonPos.y + padding.y );
-    ImGui::SetCursorPos( posIcon );
-
-    const float maxSize = std::max( iconSize.x, iconSize.y );
-    auto icon = RibbonIcons::findByName( name, maxSize, RibbonIcons::ColorType::White, RibbonIcons::IconType::IndependentIcons );
-
-    assert( icon );
 
     ImGui::GetWindowDrawList()->PushClipRect( minClip, maxClip, true );
 
-    ImVec4 multColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
-    ImGui::Image( *icon, { iconSize.x , iconSize.y }, multColor );
-    ImGui::SameLine();
-
-    ImVec2 startPosText( winPos.x + ( endButtonPos.x + startButtonPosWindow.x ) / 2.0f, winPos.y + startButtonPosWindow.y );
-    startPosText.y += padding.y * 2 + iconSize.y;
-
     const char* startWord = 0;
     const char* endWord = 0;
-    size_t numStr = 0;
     ImVec2 curTextSize;
     bool printText = false;
-
-    const auto font = ImGui::GetFont();
-    const auto color = ImGui::GetColorU32( style.Colors[ImGuiCol_Text] );
-    const auto fontSize = ImGui::GetFontSize();
 
     struct StringDetail
     {
@@ -312,12 +299,14 @@ bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::s
         const char* start = 0;
         const char* end = 0;
     };
+    std::vector<StringDetail> vecDetail;
+
     StringDetail previosDetail;
     StringDetail curDetail;
     curDetail.start = text.data();
     auto endText = std::string_view( text ).end();
 
-    split( text, " ", [&]( std::string_view str)
+    split( text, " ", [&] ( std::string_view str )
     {
         startWord = str.data();
         endWord = &str.back() + 1;
@@ -346,28 +335,57 @@ bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::s
         if ( printText )
         {
             printText = false;
-
-            ImVec2 posText;
-            posText.x = startPosText.x - previosDetail.lenght / 2.0f;
-            posText.y = startPosText.y + ( padding.y + curTextSize.y ) * numStr;
-            ImGui::GetWindowDrawList()->AddText(
-                font,
-                fontSize,
-                posText,
-                color,
-                previosDetail.start,
-                previosDetail.end );
-            numStr++;
+            vecDetail.push_back( previosDetail );
         }
         return false;
     } );
 
+    float localPadding = ( buttonSize.y - vecDetail.size() * curTextSize.y - iconSize.y ) / 3.0f;
+    localPadding = std::max( localPadding, style.FramePadding.y );
+
+    ImVec2 posIcon( ( endButtonPos.x + startButtonPos.x - iconSize.x ) / 2.0f, startButtonPos.y + localPadding );
+    ImGui::SetCursorPos( posIcon );
+
+    const float maxSize = std::max( iconSize.x, iconSize.y );
+    auto icon = RibbonIcons::findByName( name, maxSize, RibbonIcons::ColorType::White, RibbonIcons::IconType::IndependentIcons );
+
+    assert( icon );
+
+    ImVec4 multColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+    ImGui::Image( *icon, { iconSize.x , iconSize.y }, multColor );
+    ImGui::SameLine();
+
+    const auto font = ImGui::GetFont();
+    const auto color = ImGui::GetColorU32( style.Colors[ImGuiCol_Text] );
+    const auto fontSize = ImGui::GetFontSize();
+
+    ImVec2 startPosText( winPos.x + ( endButtonPos.x + startButtonPosWindow.x ) / 2.0f, winPos.y + startButtonPosWindow.y );
+    startPosText.y += localPadding * 2 + iconSize.y;
+    size_t numStr = 0;
+    for ( const auto& detail : vecDetail )
+    {
+        ImVec2 pos;
+        pos.x = startPosText.x - previosDetail.lenght / 2.0f;
+        pos.y = startPosText.y + ( padding.y + curTextSize.y ) * numStr;
+        numStr++;
+        ImGui::GetWindowDrawList()->AddText(
+                font,
+                fontSize,
+                pos,
+                color,
+                detail.start,
+                detail.end );
+    }
+
     ImGui::GetWindowDrawList()->PopClipRect();
     ImGui::EndGroup();
 
-    res = UI::TestEngine::createButton( buttonText ) || res;
-
     return res;
+}
+
+bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize, bool active )
+{
+    return buttonIconEx(name, iconSize, text, buttonSize, active, false);
 }
 
 bool checkbox( const char* label, bool* value )

@@ -304,6 +304,11 @@ using PlaneSection = SurfacePath;
 using PlaneSections = SurfacePaths;
 struct EdgePointPair;
 
+using VertPair = std::pair<VertId, VertId>;
+using FacePair = std::pair<FaceId, FaceId>;
+using EdgePair = std::pair<EdgeId, EdgeId>;
+using UndirectedEdgePair = std::pair<UndirectedEdgeId, UndirectedEdgeId>;
+
 template <typename T> struct TriPoint;
 using TriPointf = TriPoint<float>;
 using TriPointd = TriPoint<double>;

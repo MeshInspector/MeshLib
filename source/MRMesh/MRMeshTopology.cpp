@@ -1691,7 +1691,7 @@ void MeshTopology::addPartBy( const MeshTopology & from, I fbegin, I fend, size_
     }
 
     // in case of open contours, some nearby edges have to be updated
-    std::vector<std::pair<EdgeId, EdgeId>> prevNextEdges;
+    std::vector<EdgePair> prevNextEdges;
     for ( int i = 0; i < szContours; ++i )
     {
         const auto & thisContour = thisContours[i];

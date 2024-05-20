@@ -17,7 +17,7 @@ namespace MR
 MRMESH_API int duplicateMultiHoleVertices( Mesh & mesh );
 
 /// finds multiple edges in the mesh
-using MultipleEdge = std::pair<VertId, VertId>;
+using MultipleEdge = VertPair;
 [[nodiscard]] MRMESH_API Expected<std::vector<MultipleEdge>, std::string> findMultipleEdges( const MeshTopology & topology, ProgressCallback cb = {} );
 [[nodiscard]] inline bool hasMultipleEdges( const MeshTopology & topology ) { return !findMultipleEdges( topology ).value().empty(); }
 

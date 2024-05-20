@@ -208,11 +208,11 @@ Buffer<VertId> findNClosestPointsPerPoint( const PointCloud& pc, int numNei, con
     return res;
 }
 
-std::pair<VertId, VertId> findTwoClosestPoints( const PointCloud& pc, const ProgressCallback & progress )
+VertPair findTwoClosestPoints( const PointCloud& pc, const ProgressCallback & progress )
 {
     MR_TIMER
     std::atomic<float> minDistSq{ FLT_MAX };
-    tbb::enumerable_thread_specific<std::pair<VertId, VertId>> threadData;
+    tbb::enumerable_thread_specific<VertPair> threadData;
     BitSetParallelFor( pc.validPoints, [&]( VertId v )
     {
         float knownDistSq = minDistSq.load( std::memory_order_relaxed );
@@ -224,7 +224,7 @@ std::pair<VertId, VertId> findTwoClosestPoints( const PointCloud& pc, const Prog
     }, progress );
 
     float resMinDistSq{ FLT_MAX };
-    std::pair<VertId, VertId> res;
+    VertPair res;
     for ( const auto & p : threadData )
     {
         if ( !p.first || !p.second )

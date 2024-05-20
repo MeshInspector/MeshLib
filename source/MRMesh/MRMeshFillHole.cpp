@@ -173,7 +173,7 @@ bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, const N
 {
     MR_TIMER;
     mapPatch.clear();
-    HashSet<std::pair<VertId, VertId>> edgesInTriangulation;
+    HashSet<VertPair> edgesInTriangulation;
     auto testExistance = [&] ( int a, int b )->bool
     {
         auto dist = ( a - b + loop.size() ) % loop.size();

@@ -9,11 +9,8 @@ MRLog*.txt
 build/*
 install.log
 installError.log
-lib/*
-include/*
-share/*
-bin/*
-thirdparty_build/*
+/thirdparty_build/
+/thirdparty_root/
 /test_data
 .vscode/*
 distr/*

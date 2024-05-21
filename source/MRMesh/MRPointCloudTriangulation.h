@@ -66,6 +66,9 @@ struct TriangulationParameters
 
     /// automatic increase of the radius if points outside can make triangles from original radius not-Delone
     bool automaticRadiusIncrease = true;
+
+    /// optional: if provided this cloud will be used for searching of neighbors (so it must have same validPoints)
+    const PointCloud * searchNeighbors = nullptr;
 };
 
 /**

@@ -477,10 +477,12 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings 
     assert( ( settings.radius > 0 && settings.numNeis == 0 )
          || ( settings.radius == 0 && settings.numNeis > 0 ) );
 
+    const auto & searchCloud = settings.searchNeighbors ? *settings.searchNeighbors : cloud;
+
     if ( settings.radius > 0 )
-        findNeighborsInBall( cloud, v, actualRadius, fanData.neighbors );
+        findNeighborsInBall( searchCloud, v, actualRadius, fanData.neighbors );
     else
-        actualRadius = std::sqrt( findNumNeighbors( cloud, v, settings.numNeis, fanData.neighbors, fanData.nearesetPoints ) );
+        actualRadius = std::sqrt( findNumNeighbors( searchCloud, v, settings.numNeis, fanData.neighbors, fanData.nearesetPoints ) );
 
     if ( settings.trustedNormals )
         filterNeighbors( *settings.trustedNormals, v, fanData.neighbors );
@@ -499,12 +501,12 @@ void buildLocalTriangulation( const PointCloud& cloud, VertId v, const Settings 
             // update triangulation if radius was increased
             actualRadius = maxRadius;
             if ( settings.radius > 0 )
-                findNeighborsInBall( cloud, v, actualRadius, fanData.neighbors );
+                findNeighborsInBall( searchCloud, v, actualRadius, fanData.neighbors );
             else
             {
                 // if the center point is an outlier then there may be too many points withing the ball of maxRadius;
                 // so limit the search both by radius and by the number of neighbours
-                actualRadius = std::sqrt( findNumNeighbors( cloud, v, std::max( 2 * settings.numNeis, 100 ),
+                actualRadius = std::sqrt( findNumNeighbors( searchCloud, v, std::max( 2 * settings.numNeis, 100 ),
                     fanData.neighbors, fanData.nearesetPoints, sqr( maxRadius ) ) );
             }
 

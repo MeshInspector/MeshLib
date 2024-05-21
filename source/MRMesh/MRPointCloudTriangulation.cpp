@@ -58,7 +58,8 @@ std::optional<Mesh> PointCloudTriangulator::triangulate( ProgressCallback progre
             .critAngle = params_.critAngle,
             .boundaryAngle = params_.boundaryAngle,
             .trustedNormals = pointCloud_.hasNormals() ? &pointCloud_.normals : nullptr,
-            .automaticRadiusIncrease = params_.automaticRadiusIncrease
+            .automaticRadiusIncrease = params_.automaticRadiusIncrease,
+            .searchNeighbors = params_.searchNeighbors
         }, subprogress( progressCb, 0.0f, pointCloud_.hasNormals() ? 0.4f : 0.3f ) );
     if ( !optLocalTriangulations )
         return {};

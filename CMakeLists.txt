@@ -89,7 +89,7 @@ include(CTest)
 
 set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
 
-set(MESHLIB_THIRDPARTY_ROOT_DIR "${PROJECT_SOURCE_DIR}/thirdparty_root" CACHE PATH "Thirdparty library location")
+set(MESHLIB_THIRDPARTY_ROOT_DIR "${PROJECT_SOURCE_DIR}" CACHE PATH "Thirdparty library location")
 IF(NOT MESHLIB_CUSTOM_INSTALL_PREFIX)
   IF(NOT EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}")
     message(FATAL_ERROR "thirdparty build directory not found! You can build thirdparty with ./scripts/build_thirdparty.sh")

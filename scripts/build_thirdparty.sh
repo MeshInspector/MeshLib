@@ -15,7 +15,7 @@ BASE_DIR=$(realpath "${SCRIPT_DIR}/..")
 
 MESHLIB_THIRDPARTY_DIR=${BASE_DIR}/thirdparty/
 MESHLIB_THIRDPARTY_BUILD_DIR="${MESHLIB_THIRDPARTY_BUILD_DIR:-${BASE_DIR}/thirdparty_build/}"
-MESHLIB_THIRDPARTY_ROOT_DIR="${MESHLIB_THIRDPARTY_ROOT_DIR:-${BASE_DIR}/thirdparty_root/}"
+MESHLIB_THIRDPARTY_ROOT_DIR="${MESHLIB_THIRDPARTY_ROOT_DIR:-${BASE_DIR}}"
 
 if [[ $OSTYPE == 'darwin'* ]]; then
   echo "Host system: MacOS"
@@ -70,8 +70,10 @@ fi
 rm -rf "${MESHLIB_THIRDPARTY_BUILD_DIR}"
 mkdir -p "${MESHLIB_THIRDPARTY_BUILD_DIR}"
 # FIXME: make it optional
-rm -rf "${MESHLIB_THIRDPARTY_ROOT_DIR}"
-mkdir -p "${MESHLIB_THIRDPARTY_ROOT_DIR}"
+for SUBDIR in lib include ; do
+  rm -rf "${MESHLIB_THIRDPARTY_ROOT_DIR}"/${SUBDIR}
+  mkdir -p "${MESHLIB_THIRDPARTY_ROOT_DIR}"/${SUBDIR}
+done
 
 # build
 echo "Starting build..."

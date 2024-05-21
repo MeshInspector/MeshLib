@@ -60,7 +60,8 @@ public:
     /// finds the solution consisting of all objects transformations (numObj),
     /// that minimizes the summed weighted squared distance among accumulated links;
     /// the transform of the last object is always identity (it is fixed)
-    [[nodiscard]] MRMESH_API std::vector<RigidXf3d> solve( const Stabilizer & stab = {} );
+    [[nodiscard]] MRMESH_API std::vector<RigidXf3d> solve( const Stabilizer & stab ) const;
+    [[nodiscard]] std::vector<RigidXf3d> solve() const { return solve( {} ); }
 
 private:
     class Impl;

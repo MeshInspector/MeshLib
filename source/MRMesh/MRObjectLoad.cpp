@@ -182,7 +182,8 @@ Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std
         auto objectPoints = std::make_unique<ObjectPoints>();
         objectPoints->setName( utf8string( file.stem() ) );
         objectPoints->setPointCloud( pointCloud );
-        objectPoints->setRenderDiscretization( chooseRenderDiscretization(pointCloud->points.size() ) );
+        objectPoints->setMaxRenderingPoints( int( objectPoints->numValidPoints() ) ); // For exact calculations
+        objectPoints->setRenderDiscretization( chooseRenderDiscretization( pointCloud->points.size() ) );
 
         if ( !colors.empty() )
         {
@@ -238,8 +239,9 @@ Expected<ObjectPoints, std::string> makeObjectPointsFromFile( const std::filesys
 
     ObjectPoints objectPoints;
     objectPoints.setName( utf8string( file.stem() ) );
-    objectPoints.setRenderDiscretization( chooseRenderDiscretization( pointsCloud->points.size() ) );
     objectPoints.setPointCloud( std::make_shared<MR::PointCloud>( std::move( pointsCloud.value() ) ) );
+    objectPoints.setMaxRenderingPoints( int( objectPoints.numValidPoints() ) ); // For exact calculations
+    objectPoints.setRenderDiscretization( chooseRenderDiscretization( objectPoints.pointCloud()->points.size() ) );
     objectPoints.setXf( xf );
     if ( !colors.empty() )
     {
@@ -554,6 +556,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
             postImportObject( o, filename );
             if ( auto objectPoints = o->asType<ObjectPoints>(); objectPoints && !objectPoints->pointCloud()->hasNormals() && loadWarn )
             {
+                objectPoints->setMaxRenderingPoints( int( objectPoints->numValidPoints() ) ); // For exact calculations
                 objectPoints->setRenderDiscretization( chooseRenderDiscretization( objectPoints->pointCloud()->points.size() ) );
                 *loadWarn += "Point cloud " + o->name() + " has no normals.\n";
                 if ( objectPoints->getRenderDiscretization() > 1 )

@@ -33,14 +33,14 @@ struct TriangulationParameters
             </tr>
         </table>
      */
-    int numNeighbours{16};
+    int numNeighbours = 16;
 
     /**
      * Radius of neighborhood around each point to consider for building local triangulation.
      * This is an alternative to numNeighbours parameter.
      * Please set to positive value only one of them.
      */
-    float radius{0};
+    float radius = 0;
 
     /**
      * \brief Critical angle of triangles in local triangulation (angle between triangles in fan should be less then this value)
@@ -53,13 +53,19 @@ struct TriangulationParameters
             </tr>
         </table>
      */
-    float critAngle{PI2_F};
+    float critAngle = PI2_F;
+
+    /// the vertex is considered as boundary if its neighbor ring has angle more than this value
+    float boundaryAngle = 0.9f * PI_F;
 
     /**
      * \brief Critical length of hole (all holes with length less then this value will be filled)
      * \details If value is subzero it is set automaticly to 0.7*bbox.diagonal()
      */
-    float critHoleLength{-FLT_MAX};
+    float critHoleLength = -FLT_MAX;
+
+    /// automatic increase of the radius if points outside can make triangles from original radius not-Delone
+    bool automaticRadiusIncrease = true;
 };
 
 /**

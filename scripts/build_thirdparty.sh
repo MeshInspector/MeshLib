@@ -10,8 +10,8 @@ dt=$(date '+%d-%m-%Y_%H:%M:%S');
 logfile="`pwd`/install_thirdparty_${dt}.log"
 printf "Thirdparty build script started.\nYou could find output in ${logfile}\n"
 
-SCRIPT_DIR=$(dirname $(realpath "$0"))
-BASE_DIR=$(realpath "${SCRIPT_DIR}/..")
+# NOTE: realpath is not supported on older macOS versions
+BASE_DIR=$( cd "$( dirname "$0" )"/.. ; pwd -P )
 
 MESHLIB_THIRDPARTY_DIR=${BASE_DIR}/thirdparty/
 MESHLIB_THIRDPARTY_BUILD_DIR="${MESHLIB_THIRDPARTY_BUILD_DIR:-${BASE_DIR}/thirdparty_build/}"

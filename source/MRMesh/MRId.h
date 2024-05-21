@@ -6,9 +6,9 @@
 
 namespace MR
 {
- 
+
 // stores index of some element, it is made as template class to avoid mixing faces, edges and vertices
-template <typename T> 
+template <typename T>
 class Id
 {
 public:
@@ -27,11 +27,11 @@ public:
     bool operator != (Id b) const { return id_ != b.id_; }
     bool operator <  (Id b) const { return id_ <  b.id_; }
 
-    template <typename U> 
+    template <typename U>
     bool operator == (Id<U> b) const = delete;
-    template <typename U> 
+    template <typename U>
     bool operator != (Id<U> b) const = delete;
-    template <typename U> 
+    template <typename U>
     bool operator < (Id<U> b) const = delete;
 
     Id & operator --() { --id_; return * this; }
@@ -47,8 +47,8 @@ private:
     int id_;
 };
 
-template <> 
-class Id<EdgeTag>
+template <>
+class Id<MR::EdgeTag> // Need `MR::` here to simplify binding generation. See libclang bug: https://github.com/llvm/llvm-project/issues/92371
 {
 public:
     Id() noexcept : id_( -1 ) { }
@@ -74,11 +74,11 @@ public:
     bool operator != (Id b) const { return id_ != b.id_; }
     bool operator <  (Id b) const { return id_ <  b.id_; }
 
-    template <typename U> 
+    template <typename U>
     bool operator == (Id<U> b) const = delete;
-    template <typename U> 
+    template <typename U>
     bool operator != (Id<U> b) const = delete;
-    template <typename U> 
+    template <typename U>
     bool operator < (Id<U> b) const = delete;
 
     Id & operator --() { --id_; return * this; }
@@ -94,7 +94,7 @@ private:
     int id_;
 };
 
-template <> 
+template <>
 class Id<VoxelTag>
 {
 public:
@@ -111,11 +111,11 @@ public:
     bool operator != (Id b) const { return id_ != b.id_; }
     bool operator <  (Id b) const { return id_ <  b.id_; }
 
-    template <typename U> 
+    template <typename U>
     bool operator == (Id<U> b) const = delete;
-    template <typename U> 
+    template <typename U>
     bool operator != (Id<U> b) const = delete;
-    template <typename U> 
+    template <typename U>
     bool operator < (Id<U> b) const = delete;
 
     Id & operator --() { --id_; return * this; }
@@ -134,11 +134,11 @@ private:
 inline Id<VoxelTag> operator + ( Id<VoxelTag> id, size_t a ) { return Id<VoxelTag>{ ( size_t )id + a }; }
 inline Id<VoxelTag> operator - ( Id<VoxelTag> id, size_t a ) { return Id<VoxelTag>{ ( size_t )id - a }; }
 
-template <typename T> 
+template <typename T>
 inline Id<T> operator + ( Id<T> id, int a ) { return Id<T>{ (int)id + a }; }
-template <typename T> 
+template <typename T>
 inline Id<T> operator + ( Id<T> id, unsigned int a ) { return Id<T>{ (int)id + (int)a }; }
-template <typename T> 
+template <typename T>
 inline Id<T> operator - ( Id<T> id, int a ) { return Id<T>{ (int)id - a }; }
 
 inline constexpr FaceId operator "" _f( unsigned long long i ) noexcept { return FaceId{ (int)i }; }

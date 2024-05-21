@@ -46,10 +46,21 @@ public:
     /// appends links accumulated in (r) into this
     MRMESH_API void add( const MultiwayAligningTransform & r );
 
+    /// small stabilizer allows one to convert the linear system from under-determined to determined (e.g. too few linearly independent pairs for some object);
+    /// large stabilizer results in suboptimal found transformations (huge stabilizier => zero transforamtions)
+    struct Stabilizer
+    {
+        /// any not-zero number stabilizes solution for rotation angles
+        double rot = 0; // length units
+
+        /// any not-zero number stabilizes solution for translation
+        double shift = 0; // dimensionless
+    };
+
     /// finds the solution consisting of all objects transformations (numObj),
     /// that minimizes the summed weighted squared distance among accumulated links;
     /// the transform of the last object is always identity (it is fixed)
-    [[nodiscard]] MRMESH_API std::vector<RigidXf3d> solve();
+    [[nodiscard]] MRMESH_API std::vector<RigidXf3d> solve( const Stabilizer & stab = {} );
 
 private:
     class Impl;

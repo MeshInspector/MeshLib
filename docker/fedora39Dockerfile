@@ -22,6 +22,7 @@ RUN ./scripts/build_thirdparty.sh
 
 FROM fedora:39 AS production
 
+RUN mkdir /usr/local/lib/
 WORKDIR "/usr/local/lib/"
 
 COPY scripts/install_dnf_requirements.sh scripts/install_dnf_requirements.sh

@@ -28,6 +28,7 @@ RUN ./scripts/build_thirdparty.sh
 
 FROM nvidia/cuda:12.1.0-devel-ubuntu22.04 AS production
 
+RUN mkdir /usr/local/lib/
 WORKDIR "/usr/local/lib/"
 
 COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh

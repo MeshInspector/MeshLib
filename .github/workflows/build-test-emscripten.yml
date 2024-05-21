@@ -37,7 +37,8 @@ jobs:
         env:
           MESHLIB_THIRDPATY_DIR: ${{ fromJSON('["emscripten", "emscripten-single"]')[matrix.config == 'Singlethreaded'] }}
         run: |
-          ln -s /usr/local/lib/${{ env.MESHLIB_THIRDPATY_DIR }} ./thirdparty_root
+          ln -s /usr/local/lib/${{ env.MESHLIB_THIRDPATY_DIR }}/lib ./lib
+          ln -s /usr/local/lib/${{ env.MESHLIB_THIRDPATY_DIR }}/include ./include
 
       - name: Build
         env:

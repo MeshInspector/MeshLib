@@ -68,7 +68,8 @@ jobs:
 
       - name: Install thirdparty libs
         run: |
-          ln -s /usr/local/lib/meshlib-thirdparty-lib ./thirdparty_root
+          ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
+          ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
 
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python.txt

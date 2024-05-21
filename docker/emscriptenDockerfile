@@ -30,16 +30,18 @@ ENV MR_STATE=DOCKER_BUILD
 ENV MR_EMSCRIPTEN=ON
 RUN ./scripts/build_thirdparty.sh
 
-RUN mkdir /usr/local/lib/ && \
-    cp -r ./thirdparty_root /usr/local/lib/emscripten
+RUN mkdir /usr/local/lib/emscripten/ && \
+    cp -r lib /usr/local/lib/emscripten/ && \
+    cp -r include /usr/local/lib/emscripten/
 
-RUN rm -rf ./thirdparty_build/ ./thirdparty_root/
+RUN rm -rf ./lib
 
 ENV MR_EMSCRIPTEN_SINGLE=ON
 RUN ./scripts/build_thirdparty.sh
 
-RUN mkdir /usr/local/lib/ && \
-    cp -r ./thirdparty_root /usr/local/lib/emscripten-single
+RUN mkdir /usr/local/lib/emscripten-single/ && \
+    cp -r lib /usr/local/lib/emscripten-single/ && \
+    cp -r include /usr/local/lib/emscripten-single/
 
 # install aws cli
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \

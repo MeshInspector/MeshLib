@@ -12,6 +12,7 @@ printf "Thirdparty build script started.\nYou could find output in ${logfile}\n"
 
 # NOTE: realpath is not supported on older macOS versions
 BASE_DIR=$( cd "$( dirname "$0" )"/.. ; pwd -P )
+SCRIPT_DIR=${BASE_DIR}/scripts/
 
 MESHLIB_THIRDPARTY_DIR=${BASE_DIR}/thirdparty/
 MESHLIB_THIRDPARTY_BUILD_DIR="${MESHLIB_THIRDPARTY_BUILD_DIR:-${BASE_DIR}/thirdparty_build/}"

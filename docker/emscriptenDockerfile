@@ -30,8 +30,7 @@ ENV MR_STATE=DOCKER_BUILD
 ENV MR_EMSCRIPTEN=ON
 RUN ./scripts/build_thirdparty.sh
 
-RUN mkdir /usr/local/lib/ && \
-    cp -r ./thirdparty_root /usr/local/lib/emscripten
+RUN cp -r ./thirdparty_root /usr/local/lib/emscripten
 
 RUN rm -rf ./thirdparty_build/ ./thirdparty_root/
 

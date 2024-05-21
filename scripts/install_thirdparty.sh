@@ -17,7 +17,7 @@ else
 fi
 
 #install MR requirements
-MR_LIB_DIR="./lib/"
+MR_LIB_DIR="./thirdparty_root/lib/"
 MR_INSTALL_THIRDPARTY_DIR="/usr/local/lib/"
 MR_INSTALL_FONTS_DIR="/usr/local/share/fonts/"
 MR_INSTALL_INCLUDE_DIR="/usr/local/include/"

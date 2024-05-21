@@ -28,16 +28,15 @@ RUN ./scripts/build_thirdparty.sh
 
 FROM nvidia/cuda:12.1.0-devel-ubuntu20.04 AS production
 
-RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
-WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
+RUN mkdir /usr/local/lib/
+WORKDIR "/usr/local/lib/"
 
 COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh
 COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
 COPY scripts/patches scripts/patches
 COPY requirements requirements
 
-COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
-COPY --from=build /home/MeshLib/include /usr/local/lib/meshlib-thirdparty-lib/include
+COPY --from=build /home/MeshLib/thirdparty_root /usr/local/lib/meshlib-thirdparty-lib
 
 ENV MR_STATE=DOCKER_BUILD
 

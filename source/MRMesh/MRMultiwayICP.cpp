@@ -79,6 +79,7 @@ void MultiwayICP::resamplePoints( float samplingVoxelSize )
     MR_TIMER;
     pairsPerObj_.clear();
     pairsPerObj_.resize( objs_.size() );
+    samplingSize_ = samplingVoxelSize;
 
     Vector<VertBitSet, MeshOrPointsId> samplesPerObj( objs_.size() );
 
@@ -409,7 +410,10 @@ bool MultiwayICP::multiwayIter_( bool p2pl )
 
     mats = {}; // free memory
 
-    auto res = mat.solve();
+    MultiwayAligningTransform::Stabilizer stabilizer;
+    stabilizer.rot = samplingSize_ * 1e-2f;
+    stabilizer.shift = 1e-5f;
+    auto res = mat.solve( stabilizer );
     for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
     {
         auto resI = res[i.get()].rigidXf();

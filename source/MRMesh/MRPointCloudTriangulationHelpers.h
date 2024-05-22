@@ -128,6 +128,9 @@ struct Settings
 
     /// optional output: actual radius of neighbor search (after increase if any)
     float * actualRadius = nullptr;
+
+    /// optional: if provided this cloud will be used for searching of neighbors (so it must have same validPoints)
+    const PointCloud * searchNeighbors = nullptr;
 };
 
 /// constructs local triangulation around given point

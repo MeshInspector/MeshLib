@@ -205,9 +205,7 @@ void ObjectPointsHolder::setRenderDiscretization( int val )
 
     assert( val > 0 );
     val = val < 1 ? 1 : val;
-    int newMax = int( numValidPoints() + val - 1 ) / val; // Avoid rounding errors
-    if ( newMax == 0 && numValidPoints() != 0 )
-        newMax = 1; // At least one point
+    int newMax = std::max(int( numValidPoints() + val - 1 ) / val, 1); // Avoid rounding errors
     setMaxRenderingPoints( newMax );
 }
 

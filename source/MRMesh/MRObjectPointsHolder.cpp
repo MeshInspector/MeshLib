@@ -205,7 +205,7 @@ void ObjectPointsHolder::setRenderDiscretization( int val )
 
     assert( val > 0 );
     val = val < 1 ? 1 : val;
-    int newMax = int( numValidPoints() ) / val;
+    int newMax = std::max(int( numValidPoints() + val - 1 ) / val, 1); // Avoid rounding errors
     setMaxRenderingPoints( newMax );
 }
 
@@ -362,7 +362,9 @@ void ObjectPointsHolder::setDefaultSceneProperties_()
 
 void ObjectPointsHolder::updateRenderDiscretization_()
 {
-    int newRenderDiscretization = std::max( 1, int( numValidPoints() ) / maxRenderingPoints_ );
+    int newRenderDiscretization = maxRenderingPoints_ <= 0 ? 1 :
+        int( numValidPoints() + maxRenderingPoints_ - 1 ) / maxRenderingPoints_;
+    newRenderDiscretization = std::max( 1, newRenderDiscretization );
     if ( newRenderDiscretization == renderDiscretization_ )
         return;
     renderDiscretization_ = newRenderDiscretization;

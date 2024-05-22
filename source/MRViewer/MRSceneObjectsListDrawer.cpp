@@ -132,11 +132,25 @@ void SceneObjectsListDrawer::drawObjectsList_()
     const float frameHeight = ImGui::GetFrameHeight();
     for ( int i = 0; i < all.size(); ++i )
     {
+        const bool isLast = i == int( all.size() ) - 1;
+        const int nextDepth = isLast ? 0 : depth[i + 1];
         // skip child elements after collapsed header
         if ( collapsedHeaderDepth >= 0 )
         {
             if ( depth[i] > collapsedHeaderDepth )
+            {
+                if ( curentDepth > nextDepth )
+                {
+                    for ( ; curentDepth > nextDepth; --curentDepth )
+                    {
+                        if ( needDragDropTarget_() )
+                            skippableRenderer.draw( getDrawDropTargetHeight_(), itemSpacingY, [&] { makeDragDropTarget_( *objDepthStack.top(), false, true, "0" ); } );
+                        objDepthStack.pop();
+                        ImGui::Unindent();
+                    }
+                }
                 continue;
+            }
             else
                 collapsedHeaderDepth = -1;
         }
@@ -219,19 +233,16 @@ void SceneObjectsListDrawer::drawObjectsList_()
                 collapsedHeaderDepth = curentDepth;
         }
 
-        const bool isLast = i == int( all.size() ) - 1;
-        int newDepth = isLast ? 0 : depth[i + 1];
-        for ( ; curentDepth > newDepth; --curentDepth )
+        for ( ; curentDepth > nextDepth; --curentDepth )
         {
             if ( needDragDropTarget_() )
                 skippableRenderer.draw( getDrawDropTargetHeight_(), itemSpacingY, [&] { makeDragDropTarget_(*objDepthStack.top(), false, true, "0"); });
             objDepthStack.pop();
             ImGui::Unindent();
         }
-        if ( isLast && needDragDropTarget_() )
-            skippableRenderer.draw( getDrawDropTargetHeight_(), itemSpacingY, [&] { makeDragDropTarget_(SceneRoot::get(), false, true, ""); });
-
     }
+    if ( needDragDropTarget_() )
+        skippableRenderer.draw( getDrawDropTargetHeight_(), itemSpacingY, [&] { makeDragDropTarget_( SceneRoot::get(), false, true, "" ); } );
     skippableRenderer.endDraw();
 }
 

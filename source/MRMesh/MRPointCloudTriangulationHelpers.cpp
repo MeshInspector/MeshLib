@@ -136,11 +136,13 @@ void filterNeighbors( const VertNormals& normals, VertId v, std::vector<VertId>&
 class FanOptimizer
 {
 public:
-    FanOptimizer( const VertCoords& points, const VertCoords* trustedNormals, TriangulatedFanData& fanData, VertId centerVert ):
+    FanOptimizer( const VertCoords& points, const VertCoords* trustedNormals, TriangulatedFanData& fanData, VertId centerVert, const PointCloud * searchCloud, float maxEdgeLen ):
         centerVert_{ centerVert },
         fanData_{ fanData },
         points_{ points },
-        trustedNormals_{ trustedNormals }
+        trustedNormals_{ trustedNormals },
+        searchCloud_{ searchCloud },
+        maxEdgeLenSq_{ sqr( maxEdgeLen ) }
     {
         init_();
     }
@@ -154,6 +156,9 @@ private:
     TriangulatedFanData& fanData_;
     const VertCoords& points_;
     const VertCoords* trustedNormals_ = nullptr;
+
+    const PointCloud * searchCloud_ = nullptr;
+    float maxEdgeLenSq_ = 0;
 
     void init_();
 
@@ -197,6 +202,13 @@ FanOptimizerQueueElement FanOptimizer::calcQueueElement_( int i, float critAngle
     const auto bv = fanData_.neighbors[res.nextId];
     const auto cv = fanData_.neighbors[res.id];
     const auto dv = fanData_.neighbors[res.prevId];
+
+    if ( searchCloud_  && ( searchCloud_->points[bv] - searchCloud_->points[dv] ).lengthSq() > maxEdgeLenSq_ )
+    {
+        // prohibit removal of this edge since newly appeared edge will be too long
+        res.stable = true;
+        return res;
+    }
 
     const auto& a = points_[av];
     const auto& b = points_[bv];
@@ -465,7 +477,9 @@ static void trianglulateFan( const VertCoords& points, VertId centerVert, Triang
 {
     if ( triangulationData.neighbors.empty() )
         return;
-    FanOptimizer optimizer( points, settings.trustedNormals, triangulationData, centerVert );
+    FanOptimizer optimizer( points, settings.trustedNormals, triangulationData, centerVert,
+        settings.radius > 0 && !settings.automaticRadiusIncrease ? settings.searchNeighbors : nullptr,
+        settings.radius );
     optimizer.optimize( settings.maxRemoves, settings.critAngle, settings.boundaryAngle );
     assert( triangulationData.neighbors.empty() || triangulationData.neighbors.size() > 1 );
 }
@@ -525,6 +539,12 @@ std::optional<std::vector<SomeLocalTriangulations>> buildLocalTriangulations(
     const PointCloud& cloud, const Settings & settings, const ProgressCallback & progress )
 {
     MR_TIMER
+
+    // construct tree before parallel region
+    if ( settings.searchNeighbors )
+        settings.searchNeighbors->getAABBTree();
+    else
+        cloud.getAABBTree();
 
     struct PerThreadData : SomeLocalTriangulations
     {

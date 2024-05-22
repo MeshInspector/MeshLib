@@ -351,6 +351,7 @@ Expected<MR::PointCloud, std::string> fromPly( std::istream& in, VertColors* col
 {
     MR_TIMER;
 
+    const auto posStart = in.tellg();
     miniply::PLYReader reader( in );
     if ( !reader.valid() )
         return unexpected( std::string( "PLY file open error" ) );
@@ -360,11 +361,7 @@ Expected<MR::PointCloud, std::string> fromPly( std::istream& in, VertColors* col
 
     std::vector<unsigned char> colorsBuffer;
     PointCloud res;
-
-    const auto posStart = in.tellg();
-    in.seekg( 0, std::ios_base::end );
-    const auto posEnd = in.tellg();
-    in.seekg( posStart );
+    const auto posEnd = reader.get_end_pos();
     const float streamSize = float( posEnd - posStart );
 
     for ( int i = 0; reader.has_element() && !gotVerts; reader.next_element(), ++i )

@@ -283,7 +283,8 @@ bool buttonIconEx(
     if ( params.flatBackgroundColor )
     {
         res = ImGui::Button( buttonText.c_str(), buttonSize );
-        res = UI::TestEngine::createButton( buttonText ) || res;
+        if( params.enableTestEngine )
+            res = UI::TestEngine::createButton( buttonText ) || res;
     }
     else
     {

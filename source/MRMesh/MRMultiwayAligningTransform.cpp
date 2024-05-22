@@ -251,9 +251,11 @@ void MultiwayAligningTransform::add( const MultiwayAligningTransform & r )
     impl_->add( *r.impl_ );
 }
 
-std::vector<RigidXf3d> MultiwayAligningTransform::solve()
+std::vector<RigidXf3d> MultiwayAligningTransform::solve( const Stabilizer & stab ) const
 {
     MR_TIMER
+    const double rotStabSq = sqr( stab.rot );
+    const double shiftStabSq = sqr( stab.shift );
 
     // construct sparse upper part of the symmetrical matrix
     std::vector< Eigen::Triplet<double> > mTriplets;
@@ -261,9 +263,13 @@ std::vector<RigidXf3d> MultiwayAligningTransform::solve()
     {
         const int o6 = 6 * o;
         auto & diag = impl_->diag( o );
+        for ( int r = 0; r < 3; ++r )
+            mTriplets.emplace_back( o6 + r, o6 + r, diag.v[r][r] + rotStabSq );
+        for ( int r = 3; r < 6; ++r )
+            mTriplets.emplace_back( o6 + r, o6 + r, diag.v[r][r] + shiftStabSq );
         for ( int r = 0; r < 6; ++r )
         {
-            for ( int c = r; c < 6; ++c )
+            for ( int c = r + 1; c < 6; ++c )
                 mTriplets.emplace_back( o6 + r, o6 + c, diag.v[r][c] );
         }
     }

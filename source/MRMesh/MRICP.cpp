@@ -111,7 +111,7 @@ void ICP::updatePointPairs()
 
 std::string getICPStatusInfo( int iterations, ICPExitType exitType )
 {
-    std::string result = "Performed " + std::to_string( iterations ) + " iterations.\n";
+    std::string result = "Performed " + std::to_string( iterations - 1 ) + " iterations.\n";
     switch ( exitType )
     {
     case MR::ICPExitType::NotFoundSolution:

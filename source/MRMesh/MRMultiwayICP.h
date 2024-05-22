@@ -66,6 +66,7 @@ private:
     /// deactivate pairs that does not meet farDistFactor criterion
     void deactivatefarDistPairs_();
 
+    float samplingSize_{ 0.0f };
     bool independentEquationsMode_{ false };
     int iter_ = 0;
     bool p2ptIter_();

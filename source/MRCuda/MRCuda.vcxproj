@@ -60,7 +60,7 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <Defines>
       </Defines>
-      <AdditionalOptions>-std=c++17 -Xcompiler "/std:c++17" -Xcudafe "--diag_suppress=field_without_dll_interface" -Xcudafe "--diag_suppress=base_class_has_different_dll_interface" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-std=c++17 -Xcompiler "/std:c++17" -Xcudafe "--diag_suppress=field_without_dll_interface" -Xcudafe "--diag_suppress=base_class_has_different_dll_interface" -allow-unsupported-compiler %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -83,7 +83,7 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <Defines>
       </Defines>
-      <AdditionalOptions>-std=c++17 -Xcompiler "/std:c++17" -Xcudafe "--diag_suppress=field_without_dll_interface" -Xcudafe "--diag_suppress=base_class_has_different_dll_interface" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-std=c++17 -Xcompiler "/std:c++17" -Xcudafe "--diag_suppress=field_without_dll_interface" -Xcudafe "--diag_suppress=base_class_has_different_dll_interface" -allow-unsupported-compiler %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

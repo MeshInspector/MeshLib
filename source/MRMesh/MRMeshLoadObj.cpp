@@ -469,6 +469,10 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
                 VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), t, &dups, buildSettings );
             if ( hasColors )
             {
+                colors.resize( result.mesh.points.size() );
+                for ( const auto& [src, dup] : dups )
+                    colors[dup] = colors[src];
+
                 result.colors = std::move( colors );
                 colors = {};
                 hasColors = false;

@@ -141,7 +141,7 @@ void RibbonIcons::load_( IconType type )
             if ( !image.has_value() )
                 continue;
 
-            MeshTexture texture( std::move( *image ) );
+            MeshTexture texture{ std::move( *image ) };
             if ( loadedSizes[sz] == 0 )
                 loadedSizes[sz] = texture.resolution.x;
             if ( sz != int( Sizes::X0_5 ) )

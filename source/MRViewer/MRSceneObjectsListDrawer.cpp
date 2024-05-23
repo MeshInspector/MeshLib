@@ -165,7 +165,6 @@ void SceneObjectsListDrawer::drawObjectsList_()
 
     bool firstSelectedIsFound = false;
     bool previousWasSelected = false;
-    int lastRendered = -1;
 
     const float borderShift = ImGui::GetFrameHeight();
     const float scrollPosY = ImGui::GetScrollY();
@@ -223,7 +222,6 @@ void SceneObjectsListDrawer::drawObjectsList_()
                     ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) );
             } );
 
-            lastRendered = i;
             if ( object.isSelected() )
                 previousWasSelected = true;
             else
@@ -302,15 +300,6 @@ void SceneObjectsListDrawer::drawObjectsList_()
 
     }
     skippableRenderer.endDraw();
-
-    //if ( !all.empty() )
-    //{
-    //    if ( upFirstSelectedIndex_ == -1 )
-    //    {
-    //        upFirstSelectedIndex_ = lastRendered;
-    //        upFirstSelectedPosY_
-    //    }
-    //}
 }
 
 bool SceneObjectsListDrawer::drawObject_( Object& object, const std::string& uniqueStr )

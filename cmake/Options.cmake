@@ -32,9 +32,6 @@ IF(NOT MR_EMSCRIPTEN)
     set(CMAKE_FIND_LIBRARY_SUFFIXES ".dylib")
 
     include_directories(${HOMEBREW_PREFIX}/include)
-    # need to hardcode some path to fix wheel (no option to pass path)
-    set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/..;@loader_path/../lib;@loader_path/../lib/lib;@loader_path/meshlib;${MESHLIB_THIRDPARTY_ROOT_DIR}/lib;${CMAKE_BINARY_DIR}/bin")
-    set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
   ELSE()
     # such print format is selected to simplify load in Excel with fields (user time, system time, command) subdivision by commas
     IF(EXISTS /usr/bin/time)

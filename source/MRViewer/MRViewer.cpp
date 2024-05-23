@@ -380,6 +380,7 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
         return;
     bool nextW{ false };
     bool nextH{ false };
+    bool nextFPS{ false };
     std::vector<int> indicesToRemove;
     indicesToRemove.push_back( 0 );
     for ( int i = 1; i < args.size(); ++i )
@@ -394,6 +395,11 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
         else if ( nextH )
         {
             nextH = false;
+            reserved = true;
+        }
+        else if ( nextFPS )
+        {
+            nextFPS = false;
             reserved = true;
         }
         else if (
@@ -422,6 +428,11 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
             nextH = true;
             reserved = true;
         }
+        else if ( flag == "-animateFPS" )
+        {
+            nextFPS = true;
+            reserved = true;
+        }
 
         if ( reserved )
             indicesToRemove.push_back( i );
@@ -434,6 +445,7 @@ void Viewer::parseLaunchParams( LaunchParams& params )
 {
     bool nextW{ false };
     bool nextH{ false };
+    bool nextFPS{ false };
     for ( int i = 1; i < params.argc; ++i )
     {
         std::string flag( params.argv[i] );
@@ -446,6 +458,16 @@ void Viewer::parseLaunchParams( LaunchParams& params )
         {
             nextH = false;
             params.height = std::atoi( flag.c_str() );
+        }
+        else if ( nextFPS )
+        {
+            nextFPS = false;
+            auto fps = std::atoi( flag.c_str() );
+            if ( fps > 0 )
+            {
+                params.isAnimating = true;
+                params.animationMaxFps = fps;
+            }
         }
         else if ( flag == "-noWindow" )
         {
@@ -480,6 +502,8 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             nextW = true;
         else if ( flag == "-height" )
             nextH = true;
+        else if ( flag == "-animateFPS" )
+            nextFPS = true;
     }
 }
 

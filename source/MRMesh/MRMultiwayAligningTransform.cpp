@@ -1,7 +1,14 @@
 #include "MRMultiwayAligningTransform.h"
-#include "MRTimer.h"
 #include "MRGTest.h"
+#include "MRTimer.h"
+
+#include "MRPch/MRSuppressWarning.h"
+
+MR_SUPPRESS_WARNING_PUSH
+MR_SUPPRESS_WARNING( "-Wunused-but-set-variable", 4189 )
 #include <Eigen/SparseCholesky>
+MR_SUPPRESS_WARNING_POP
+
 #include <cassert>
 
 namespace MR

@@ -35,6 +35,12 @@ public:
     /// get flag of deselect object after hidden
     bool getDeselectNewHiddenObjects() { return deselectNewHiddenObjects_; }
 
+    /// change selection after pressed arrow up / down
+    /// isUp - true if pressed arrow down, false - arrow up
+    /// isShift - shift button holded
+    void changeSelection( bool isDown, bool isShift );
+    void changeVisible( bool isDown );
+
     /// set object collapse state (hiding children)
     MRVIEWER_API void setObjectTreeState( const Object* obj, bool open );
 
@@ -98,6 +104,15 @@ private:
     bool dragTrigger_ = false;
     bool clickTrigger_ = false;
     bool allowSceneReorder_ = true;
+
+    struct MoveAndScrollData
+    {
+        int index = -1;
+        float posY = -1.f;
+        bool needScroll = false;
+    };
+    MoveAndScrollData upFirstSelected;
+    MoveAndScrollData downLastSelected;
 
     struct SceneReorder
     {

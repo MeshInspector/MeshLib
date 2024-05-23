@@ -367,7 +367,6 @@ bool isInside( const MeshPart & a, const MeshPart & b, const AffineXf3f * rigidB
 
 bool isNonIntersectingInside( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A )
 {
-    assert( b.mesh.topology.isClosed( b.region ) );
 
     auto aFace = a.mesh.topology.getFaceIds( a.region ).find_first();
     if ( !aFace )

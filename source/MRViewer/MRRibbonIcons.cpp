@@ -17,6 +17,7 @@ void RibbonIcons::load()
     instance.load_( IconType::RibbonItemIcon );
     instance.load_( IconType::ObjectTypeIcon );
     instance.load_( IconType::IndependentIcons );
+    instance.load_( IconType::Logos );
 }
 
 void RibbonIcons::free()
@@ -48,19 +49,25 @@ RibbonIcons::RibbonIcons()
     data_[size_t( IconType::RibbonItemIcon )] = {
         GetResourcesDirectory() / "resource" / "icons",
         std::make_pair( Sizes::X0_5, Sizes::X3 ),
-        true,
+        IconTypeData::AvailableColor::White | IconTypeData::AvailableColor::Colored,
     };
 
     data_[size_t( IconType::ObjectTypeIcon )] = {
         GetResourcesDirectory() / "resource" / "object_icons",
         std::make_pair( Sizes::X1, Sizes::X3 ),
-        false,
+        IconTypeData::AvailableColor::White,
     };
 
     data_[size_t( IconType::IndependentIcons )] = {
         GetResourcesDirectory() / "resource" / "independent_icons",
         std::make_pair( Sizes::X1, Sizes::X3 ),
-        false,
+        IconTypeData::AvailableColor::White,
+    };
+
+    data_[size_t( IconType::Logos )] = {
+        GetResourcesDirectory() / "resource" / "logos",
+        std::make_pair( Sizes::X1, Sizes::X3 ),
+        IconTypeData::AvailableColor::Colored,
     };
 }
 
@@ -98,16 +105,16 @@ RibbonIcons::Sizes RibbonIcons::findRequiredSize_( float width, IconType iconTyp
 
 void RibbonIcons::load_( IconType type )
 {
-    size_t num = static_cast<size_t>( type );
+    size_t num = static_cast< size_t >( type );
     auto& currentData = data_[num];
 
-    bool coloredIcons = currentData.needLoadColored;
+    bool coloredIcons = bool( currentData.availableColor & IconTypeData::AvailableColor::Colored );
+    bool whiteIcons = bool( currentData.availableColor & IconTypeData::AvailableColor::White );
 
     std::filesystem::path path = currentData.pathDirectory;
     int minSize = static_cast< int >( currentData.minMaxSizes.first );
     int maxSize = static_cast< int >( currentData.minMaxSizes.second );
 
-    //auto& map = currentData.map;
     auto& loadedSizes = currentData.loadSize;
 
     for ( int sz = minSize; sz <= maxSize; ++sz )
@@ -133,34 +140,34 @@ void RibbonIcons::load_( IconType type )
             auto image = ImageLoad::fromPng( entry.path() );
             if ( !image.has_value() )
                 continue;
-            Icons icons;
 
-            if ( coloredIcons )
-                icons.colored = std::make_unique<ImGuiImage>();
-
-            icons.white = std::make_unique<ImGuiImage>();
-            MeshTexture whiteTexture = { std::move( *image ) };
-            if ( sz != int( Sizes::X0_5 ) )
-                whiteTexture.filter = FilterType::Linear;
-
-            if ( coloredIcons )
-                icons.colored->update( whiteTexture );
-
-            tbb::parallel_for( tbb::blocked_range<int>( 0, int( whiteTexture.pixels.size() ) ),
-                               [&] ( const  tbb::blocked_range<int>& range )
-            {
-                for ( int i = range.begin(); i < range.end(); ++i )
-                {
-                    auto alpha = whiteTexture.pixels[i].a;
-                    whiteTexture.pixels[i] = Color::white();
-                    whiteTexture.pixels[i].a = alpha;
-                }
-            } );
-
+            MeshTexture texture{ std::move( *image ) };
             if ( loadedSizes[sz] == 0 )
-                loadedSizes[sz] = whiteTexture.resolution.x;
+                loadedSizes[sz] = texture.resolution.x;
+            if ( sz != int( Sizes::X0_5 ) )
+                texture.filter = FilterType::Linear;
 
-            icons.white->update( std::move( whiteTexture ) );
+            Icons icons;
+            if ( coloredIcons )
+            {
+                icons.colored = std::make_unique<ImGuiImage>();
+                icons.colored->update( texture );
+            }
+            if ( whiteIcons )
+            {
+                icons.white = std::make_unique<ImGuiImage>();
+                tbb::parallel_for( tbb::blocked_range<int>( 0, int( texture.pixels.size() ) ),
+                                   [&] ( const  tbb::blocked_range<int>& range )
+                {
+                    for ( int i = range.begin(); i < range.end(); ++i )
+                    {
+                        auto alpha = texture.pixels[i].a;
+                        texture.pixels[i] = Color::white();
+                        texture.pixels[i].a = alpha;
+                    }
+                } );
+                icons.white->update( std::move( texture ) );
+            }
             currentData.map[utf8string( entry.path().stem() )][sz] = std::move( icons );
         }
     }

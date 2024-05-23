@@ -1,6 +1,7 @@
 #pragma once
-#include "MRViewerFwd.h"
+#include "MRMesh/MRFlagOperators.h"
 #include "MRMesh/MRphmap.h"
+#include "MRViewerFwd.h"
 #include <array>
 #include <filesystem>
 
@@ -14,18 +15,19 @@ public:
     enum class ColorType
     {
         Colored,
-        White
+        White,
     };
     enum class IconType
     {
         RibbonItemIcon,   // have four sizes
         ObjectTypeIcon,   // have two sizes
         IndependentIcons, // have two sizes
-        Count
+        Logos,            // have two sizes
+        Count,
     };
-    // this should be called once on start of programm (called in RibbonMenu::init)
+    // this should be called once on start of program (called in RibbonMenu::init)
     MRVIEWER_API static void load();
-    // this should be called once before programm stops (called in RibbonMenu::shutdown)
+    // this should be called once before program stops (called in RibbonMenu::shutdown)
     MRVIEWER_API static void free();
     // finds icon with best fitting size, if there is no returns nullptr
     MRVIEWER_API static const ImGuiImage* findByName( const std::string& name, float width, 
@@ -61,12 +63,17 @@ private:
 
     struct IconTypeData
     {
+        enum class AvailableColor
+        {
+            White = 1 << 0,
+            Colored = 1 << 1,
+        };
+        MR_MAKE_FLAG_OPERATORS_IN_CLASS( AvailableColor )
+
         std::filesystem::path pathDirectory;
-        // first - min size, secon - max size
+        // first - min size, second - max size
         std::pair<Sizes, Sizes> minMaxSizes;
-        // true - Colored and White
-        // false - only White
-        bool needLoadColored = false;
+        AvailableColor availableColor = AvailableColor::White;
         HashMap<std::string, SizedIcons> map;
         std::array<int, size_t( Sizes::Count )> loadSize;
     };

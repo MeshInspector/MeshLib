@@ -4,21 +4,25 @@ include(cmake/HelperFunctions.cmake)
 include(cmake/Options.cmake)
 
 project(MeshLib CXX)
-add_compile_definitions(MR_PROJECT_NAME=\"MeshLib\")
-add_compile_definitions(MR_FRAMEWORK)
-add_compile_definitions(IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
 
 # all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+option(MESHLIB_STANDALONE "Build MeshLib as a standalone library; disable it to use as a part of your project" ON)
 option(MESHLIB_CUSTOM_INSTALL_PREFIX "Install into directory defined by CMAKE_INSTALL_PREFIX" OFF)
 option(MESHLIB_PYTHON_SUPPORT "Python support" ON)
 option(MESHLIB_BUILD_MRVIEWER "Build MRViewer library and application" ON)
 option(MESHLIB_BUILD_PYTHON_MODULES "Build Python modules" ON)
 option(MESHLIB_BUILD_MESHCONV "Build meshconv utility" ON)
 option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
+
+IF(MESHLIB_STANDALONE)
+  add_compile_definitions(MR_PROJECT_NAME=\"MeshLib\")
+  add_compile_definitions(MR_FRAMEWORK)
+  add_compile_definitions(IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
+ENDIF()
 
 include(CTest)
 

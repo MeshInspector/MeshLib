@@ -85,12 +85,17 @@ public:
 
     /// sets maxRenderingPoints from rendering discretization, each \param val -th point will be displayed on screen
     /// \detail convenient way to set maxRenderingPoints
-    /// maxRenderingPoints is set so: validPointsCount / val
+    /// maxRenderingPoints is set so: validPointsCount / val (rounded up)
+    /// (for small meshes and discretization of 1, to \ref MaxRenderingPointsDefault)
+    /// note: changing the cloud (setting DIRTY_FACE) recalculates the sampling to match maxRenderingPoints
     MRMESH_API void setRenderDiscretization( int val );
 
     /// returns rendering discretization, each N-th point will be displayed on screen
     /// \detail used for rendering
     int getRenderDiscretization() const { return renderDiscretization_; }
+
+    /// default value for maximum rendered points number
+    static constexpr int MaxRenderingPointsDefault = 1'000'000;
 
     /// returns maximal number of points that will be rendered
     /// if actual count of valid points is greater then the points will be sampled
@@ -150,7 +155,7 @@ protected:
     /// set all visualize properties masks
     MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;
 
-    int maxRenderingPoints_ = 1'000'000;
+    int maxRenderingPoints_ = MaxRenderingPointsDefault;
 
 private:
 
@@ -160,7 +165,7 @@ private:
     /// set default scene-related properties
     void setDefaultSceneProperties_();
 
-    // update renderDiscretization_ as numValidPoints_ / maxRenderingPoints_
+    // update renderDiscretization_ as numValidPoints_ / maxRenderingPoints_ (rounded up)
     void updateRenderDiscretization_();
 
     int renderDiscretization_ = 1; // auxiliary parameter to avoid recalculation in every frame

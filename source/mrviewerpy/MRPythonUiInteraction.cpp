@@ -73,13 +73,7 @@ namespace
             throw std::runtime_error( "Empty path not allowed here." );
         MR::CommandLoop::runCommandFromGUIThread( [&]
         {
-            // debug log:
-            auto list = listEntries( std::vector<std::string>( path.begin(), path.end() - 1 ) );
-            std::string res;
-            for ( const auto& el : list )
-                res += ( " " + el.name );
-
-            spdlog::info( "\n  Click: {}\n  Num Frame {}\n  Current List: {}", path.back(), MR::getViewerInstance().getTotalFrames(), res );
+            spdlog::info( "\n  Click: {}\n  Num Frame {}", path.back(), MR::getViewerInstance().getTotalFrames() );
 
             std::get<TestEngine::ButtonEntry>( findGroup( { path.data(), path.size() - 1 } ).elems.at( path.back() ).value ).simulateClick = true;
         } );

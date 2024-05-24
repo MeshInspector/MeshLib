@@ -48,7 +48,9 @@ void CommandLoop::runCommandFromGUIThread( CommandFunc func )
 void CommandLoop::processCommands()
 {
     auto& inst = instance_();
-    std::shared_ptr<Command> refCommand;
+    using CmdPtr = std::shared_ptr<Command>;
+    CmdPtr refCommand;
+    std::vector<CmdPtr> commandsToNotifyAtTheEnd; // notify out of loop to be sure that next blocking cmd will be executed in the next frame
     for ( ; ;)
     {
         std::unique_lock<std::mutex> lock( inst.mutex_ );
@@ -71,8 +73,10 @@ void CommandLoop::processCommands()
         cmd->func();
         assert( inst.mainThreadId_ == std::this_thread::get_id() );
         if ( cmd->threadId != inst.mainThreadId_ )
-            cmd->callerThreadCV.notify_one();
+            commandsToNotifyAtTheEnd.emplace_back( std::move( cmd ) );
     }
+    for ( auto& cmdToNotify : commandsToNotifyAtTheEnd )
+        cmdToNotify->callerThreadCV.notify_one();
 }
 
 CommandLoop& CommandLoop::instance_()

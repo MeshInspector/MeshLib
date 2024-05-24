@@ -116,24 +116,46 @@ void SceneObjectsListDrawer::changeSelection( bool isDown, bool isShift )
     const auto selected = SceneCache::getSelectedObjects();
     if ( isDown )
     {
-        if ( downLastSelected.index != -1 )
+        if ( downLastSelected_.index != -1 )
         {
             if ( !isShift )
                 for ( const auto& data : selected )
                     data->select( false );
-            all[downLastSelected.index]->select( true );
-            downLastSelected.needScroll = true;
+            all[downLastSelected_.index]->select( true );
+            downLastSelected_.needScroll = true;
         }
     }
     else
     {
-        if ( upFirstSelected.index != -1 )
+        if ( upFirstSelected_.index != -1 )
         {
             if ( !isShift )
                 for ( const auto& data : selected )
                     data->select( false );
-            all[upFirstSelected.index]->select( true );
-            upFirstSelected.needScroll = true;
+            all[upFirstSelected_.index]->select( true );
+            upFirstSelected_.needScroll = true;
+        }
+    }
+}
+
+void SceneObjectsListDrawer::changeVisible( bool isDown )
+{
+    const auto all = SceneCache::getAllObjects();
+    const auto selected = SceneCache::getSelectedObjects();
+    if ( isDown )
+    {
+        if ( downLastSelected_.index != -1 )
+        {
+            all[downLastSelected_.index]->select( true );
+            downLastSelected_.needScroll = true;
+        }
+    }
+    else
+    {
+        if ( upFirstSelected_.index != -1 )
+        {
+            all[upFirstSelected_.index]->select( true );
+            upFirstSelected_.needScroll = true;
         }
     }
 }
@@ -169,13 +191,13 @@ void SceneObjectsListDrawer::drawObjectsList_()
     const float borderShift = ImGui::GetFrameHeight();
     const float scrollPosY = ImGui::GetScrollY();
     const float windowHeight = ImGui::GetWindowHeight();
-    if ( upFirstSelected.needScroll && upFirstSelected.posY < ( scrollPosY + ImGui::GetStyle().WindowPadding.y + borderShift ) )
-        ImGui::SetScrollY( upFirstSelected.posY - ImGui::GetStyle().WindowPadding.y - borderShift );
-    if ( downLastSelected.needScroll && downLastSelected.posY > ( scrollPosY + windowHeight - borderShift ) )
-        ImGui::SetScrollY( downLastSelected.posY - windowHeight + ImGui::GetStyle().WindowPadding.y + borderShift );
+    if ( upFirstSelected_.needScroll && upFirstSelected_.posY < ( scrollPosY + ImGui::GetStyle().WindowPadding.y + borderShift ) )
+        ImGui::SetScrollY( upFirstSelected_.posY - ImGui::GetStyle().WindowPadding.y - borderShift );
+    if ( downLastSelected_.needScroll && downLastSelected_.posY > ( scrollPosY + windowHeight - borderShift ) )
+        ImGui::SetScrollY( downLastSelected_.posY - windowHeight + ImGui::GetStyle().WindowPadding.y + borderShift );
 
-    upFirstSelected = MoveAndScrollData();
-    downLastSelected = MoveAndScrollData();
+    upFirstSelected_ = MoveAndScrollData();
+    downLastSelected_ = MoveAndScrollData();
 
     for ( int i = 0; i < all.size(); ++i )
     {
@@ -210,8 +232,8 @@ void SceneObjectsListDrawer::drawObjectsList_()
                 firstSelectedIsFound = true;
             else if ( !firstSelectedIsFound )
             {
-                upFirstSelected.index = i;
-                upFirstSelected.posY = skippableRenderer.getCursorPosY();
+                upFirstSelected_.index = i;
+                upFirstSelected_.posY = skippableRenderer.getCursorPosY();
             }
 
             skippableRenderer.draw( frameHeight, itemSpacingY,
@@ -228,8 +250,8 @@ void SceneObjectsListDrawer::drawObjectsList_()
             {
                 if ( previousWasSelected )
                 {
-                    downLastSelected.index = i;
-                    downLastSelected.posY = skippableRenderer.getCursorPosY();
+                    downLastSelected_.index = i;
+                    downLastSelected_.posY = skippableRenderer.getCursorPosY();
                 }
                 previousWasSelected = false;
             }

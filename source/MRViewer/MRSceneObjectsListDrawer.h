@@ -105,14 +105,15 @@ private:
     bool clickTrigger_ = false;
     bool allowSceneReorder_ = true;
 
+    // struct to auto-scroll after move (arrow up / down)
     struct MoveAndScrollData
     {
-        int index = -1;
-        float posY = -1.f;
-        bool needScroll = false;
+        int index = -1; // index of new selected object in list of all
+        float posY = -1.f; // scroll position of new selected object in list of all
+        bool needScroll = false; // flag to using auto-scroll
     };
-    MoveAndScrollData upFirstSelected;
-    MoveAndScrollData downLastSelected;
+    MoveAndScrollData upFirstSelected_;
+    MoveAndScrollData downLastSelected_;
 
     struct SceneReorder
     {

@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
+include(cmake/HelperFunctions.cmake)
 include(cmake/Options.cmake)
 
 project(MeshLib CXX)

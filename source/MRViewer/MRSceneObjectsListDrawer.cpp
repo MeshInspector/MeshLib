@@ -59,7 +59,11 @@ public:
     {
         if ( skipedCursorPosY > cursorPosY )
             ImGui::Dummy( ImVec2( 0, skipedCursorPosY - cursorPosY - lastSpacingY ) );
+        cursorPosY = ImGui::GetCursorPosY();
+        skipedCursorPosY = cursorPosY;
     }
+
+    float getCursorPosY() { return skipedCursorPosY; }
 
 private:
     float drawBoxMinY = 0.f;
@@ -106,6 +110,56 @@ bool SceneObjectsListDrawer::collapsingHeader_( const std::string& uniqueName, I
     return ImGui::CollapsingHeader( uniqueName.c_str(), flags );
 }
 
+void SceneObjectsListDrawer::changeSelection( bool isDown, bool isShift )
+{
+    const auto all = SceneCache::getAllObjects();
+    const auto selected = SceneCache::getSelectedObjects();
+    if ( isDown )
+    {
+        if ( downLastSelected_.index != -1 )
+        {
+            if ( !isShift )
+                for ( const auto& data : selected )
+                    data->select( false );
+            all[downLastSelected_.index]->select( true );
+            downLastSelected_.needScroll = true;
+        }
+    }
+    else
+    {
+        if ( upFirstSelected_.index != -1 )
+        {
+            if ( !isShift )
+                for ( const auto& data : selected )
+                    data->select( false );
+            all[upFirstSelected_.index]->select( true );
+            upFirstSelected_.needScroll = true;
+        }
+    }
+}
+
+void SceneObjectsListDrawer::changeVisible( bool isDown )
+{
+    const auto all = SceneCache::getAllObjects();
+    const auto selected = SceneCache::getSelectedObjects();
+    if ( isDown )
+    {
+        if ( downLastSelected_.index != -1 )
+        {
+            all[downLastSelected_.index]->select( true );
+            downLastSelected_.needScroll = true;
+        }
+    }
+    else
+    {
+        if ( upFirstSelected_.index != -1 )
+        {
+            all[upFirstSelected_.index]->select( true );
+            upFirstSelected_.needScroll = true;
+        }
+    }
+}
+
 void SceneObjectsListDrawer::setObjectTreeState( const Object* obj, bool open )
 {
     if ( obj )
@@ -130,6 +184,21 @@ void SceneObjectsListDrawer::drawObjectsList_()
     int collapsedHeaderDepth = -1;
     const float itemSpacingY = ImGui::GetStyle().ItemSpacing.y;
     const float frameHeight = ImGui::GetFrameHeight();
+
+    bool firstSelectedIsFound = false;
+    bool previousWasSelected = false;
+
+    const float borderShift = ImGui::GetFrameHeight();
+    const float scrollPosY = ImGui::GetScrollY();
+    const float windowHeight = ImGui::GetWindowHeight();
+    if ( upFirstSelected_.needScroll && upFirstSelected_.posY < ( scrollPosY + ImGui::GetStyle().WindowPadding.y + borderShift ) )
+        ImGui::SetScrollY( upFirstSelected_.posY - ImGui::GetStyle().WindowPadding.y - borderShift );
+    if ( downLastSelected_.needScroll && downLastSelected_.posY > ( scrollPosY + windowHeight - borderShift ) )
+        ImGui::SetScrollY( downLastSelected_.posY - windowHeight + ImGui::GetStyle().WindowPadding.y + borderShift );
+
+    upFirstSelected_ = MoveAndScrollData();
+    downLastSelected_ = MoveAndScrollData();
+
     for ( int i = 0; i < all.size(); ++i )
     {
         const bool isLast = i == int( all.size() ) - 1;
@@ -173,6 +242,14 @@ void SceneObjectsListDrawer::drawObjectsList_()
             if ( needDragDropTarget_() )
                 skippableRenderer.draw( getDrawDropTargetHeight_(), itemSpacingY, [&] { makeDragDropTarget_(object, true, true, uniqueStr); });
 
+            if ( object.isSelected() )
+                firstSelectedIsFound = true;
+            else if ( !firstSelectedIsFound )
+            {
+                upFirstSelected_.index = i;
+                upFirstSelected_.posY = skippableRenderer.getCursorPosY();
+            }
+
             skippableRenderer.draw( frameHeight, itemSpacingY,
             [&] { isOpen = drawObject_( object, uniqueStr ); },
             [&]
@@ -180,6 +257,18 @@ void SceneObjectsListDrawer::drawObjectsList_()
                 isOpen = ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( ( object.name() + "##" + uniqueStr ).c_str() ),
                     ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) );
             } );
+
+            if ( object.isSelected() )
+                previousWasSelected = true;
+            else
+            {
+                if ( previousWasSelected )
+                {
+                    downLastSelected_.index = i;
+                    downLastSelected_.posY = skippableRenderer.getCursorPosY();
+                }
+                previousWasSelected = false;
+            }
 
             if ( object.isSelected() )
                 drawSceneContextMenu_( SceneCache::getSelectedObjects(), uniqueStr );

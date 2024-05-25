@@ -1263,6 +1263,9 @@
     <ClInclude Include="MRDipole.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRSpringSystem.h">
+      <Filter>Source Files\Relax</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2107,6 +2110,9 @@
     </ClCompile>
     <ClCompile Include="MRDipole.cpp">
       <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSpringSystem.cpp">
+      <Filter>Source Files\Relax</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

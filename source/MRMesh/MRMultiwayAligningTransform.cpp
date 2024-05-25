@@ -5,8 +5,9 @@
 #include "MRPch/MRSuppressWarning.h"
 
 MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wunknown-warning-option", 4615 )
+#if __clang_major__ >= 13
 MR_SUPPRESS_WARNING( "-Wunused-but-set-variable", 4189 )
+#endif
 #include <Eigen/SparseCholesky>
 MR_SUPPRESS_WARNING_POP
 

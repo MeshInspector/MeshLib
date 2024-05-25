@@ -227,23 +227,25 @@ IF(BUILD_TESTING)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)
 ENDIF()
 
-include(CMakePackageConfigHelpers)
-configure_package_config_file(meshlib-config.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config.cmake
-  INSTALL_DESTINATION ${MR_CONFIG_DIR}
-  PATH_VARS MR_INCLUDE_DIR MR_MAIN_LIB_DIR
-)
+IF(MESHLIB_STANDALONE)
+  include(CMakePackageConfigHelpers)
+  configure_package_config_file(meshlib-config.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config.cmake
+    INSTALL_DESTINATION ${MR_CONFIG_DIR}
+    PATH_VARS MR_INCLUDE_DIR MR_MAIN_LIB_DIR
+  )
 
-write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/meshlib-config-version.cmake
-  VERSION ${MESHLIB_VERSION}
-  COMPATIBILITY ExactVersion
-)
+  write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/meshlib-config-version.cmake
+    VERSION ${MESHLIB_VERSION}
+    COMPATIBILITY ExactVersion
+  )
 
-install(
-  FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config-version.cmake
-  DESTINATION ${MR_CONFIG_DIR}
-)
+  install(
+    FILES
+      ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config.cmake
+      ${CMAKE_CURRENT_BINARY_DIR}/meshlib-config-version.cmake
+    DESTINATION ${MR_CONFIG_DIR}
+  )
 
-set(CPACK_GENERATOR "DRAGNDROP")
-include(CPack)
+  set(CPACK_GENERATOR "DRAGNDROP")
+  include(CPack)
+ENDIF()

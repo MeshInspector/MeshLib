@@ -133,7 +133,7 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
             for ( auto e : orgRing( mesh.topology, v ) )
             {
                 const auto d = mesh.topology.dest( e );
-                const auto w = ( mesh.points[v] - mesh.points[d] ).lengthSq() / settings.distSq( e ) - 1;
+                const auto w = ( mesh.points[v] - mesh.points[d] ).length() / settings.dist( e ) - 1;
                 sumW += w;
                 if ( auto it = vertToMatPos.find( d ); it != vertToMatPos.end() )
                 {

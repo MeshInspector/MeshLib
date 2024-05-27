@@ -6,6 +6,7 @@
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
 #include "MRTriMath.h"
+#include "MRMeshRelax.h"
 #include "MRTimer.h"
 #include <Eigen/SparseCholesky>
 
@@ -100,6 +101,7 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts, const Ve
 void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
 {
     MR_TIMER
+    assert( settings.maxSumNegW > 0 );
 
     const auto & verts = mesh.topology.getVertIds( settings.region );
     const auto sz = verts.count();
@@ -122,6 +124,7 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
     for ( int i = 0; i < 3; ++i )
         rhs[i].resize( sz );
 
+    VertBitSet shiftedVerts;
     for ( int iter = 0; iter < settings.numIters; ++iter )
     {
         mTriplets.clear();
@@ -129,12 +132,21 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
         for ( auto v : verts )
         {
             double sumW = 0;
+            float sumNegW = 0;
             Vector3d sumFixed;
             for ( auto e : orgRing( mesh.topology, v ) )
             {
                 const auto d = mesh.topology.dest( e );
-                const auto w = ( mesh.points[v] - mesh.points[d] ).lengthSq() / settings.distSq( e ) - 1;
+                const auto l = ( mesh.points[v] - mesh.points[d] ).length();
+                const auto t = settings.dist( e );
+                float w = 0;
+                if ( t > l )
+                    w = l > 0 ? 1 - t / l : -1;
+                else if ( l > t )
+                    w = t > 0 ? l / t - 1 : 1;
                 sumW += w;
+                if ( w < 0 )
+                     sumNegW -= w;
                 if ( auto it = vertToMatPos.find( d ); it != vertToMatPos.end() )
                 {
                     // free neighbor
@@ -147,8 +159,11 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
                     sumFixed += Vector3d( w * mesh.points[d] );
                 }
             }
-            sumFixed += Vector3d( settings.stabilizer * mesh.points[v] );
-            mTriplets.emplace_back( n, n, sumW + settings.stabilizer );
+            auto s = settings.stabilizer;
+            if ( sumNegW > settings.maxSumNegW )
+                s += sumNegW / settings.maxSumNegW;
+            sumFixed += Vector3d( s * mesh.points[v] );
+            mTriplets.emplace_back( n, n, sumW + s );
             for ( int i = 0; i < 3; ++i )
                 rhs[i][n] = sumFixed[i];
             ++n;
@@ -180,10 +195,14 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
 
         if ( settings.isInverted )
         {
+            shiftedVerts.clear();
+            shiftedVerts.resize( mesh.topology.vertSize(), false );
+            bool anyInverted = false;
             for ( auto f : mesh.topology.getFaceIds( incidentFaces ) )
             {
                 if ( !settings.isInverted( f ) )
                     continue;
+                anyInverted = true;
                 auto vs = mesh.topology.getTriVerts( f );
                 Triangle3f t0;
                 for ( int i = 0; i < 3; ++i )
@@ -232,7 +251,22 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
                 }
 
                 for ( int i = 0; i < 3; ++i )
-                    mesh.points[ vs[i] ] = t[i];
+                {
+                    if ( mesh.points[ vs[i] ] != t[i] )
+                    {
+                        shiftedVerts.set( vs[i] );
+                        mesh.points[ vs[i] ] = t[i];
+                    }
+                }
+            }
+            if ( anyInverted )
+            {
+                // move each point from degenerated triangle a little toward the center of its neighbor,
+                // otherwise they will not be pushed away and the degeneracy remains forever
+                MeshRelaxParams relaxParams;
+                relaxParams.region = &shiftedVerts;
+                relaxParams.force = 0.1f;
+                relax( mesh, relaxParams );
             }
         }
     }

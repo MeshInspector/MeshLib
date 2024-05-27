@@ -100,6 +100,7 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts, const Ve
 void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
 {
     MR_TIMER
+    assert( settings.maxSumNegW > 0 );
 
     const auto & verts = mesh.topology.getVertIds( settings.region );
     const auto sz = verts.count();
@@ -129,12 +130,15 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
         for ( auto v : verts )
         {
             double sumW = 0;
+            float sumNegW = 0;
             Vector3d sumFixed;
             for ( auto e : orgRing( mesh.topology, v ) )
             {
                 const auto d = mesh.topology.dest( e );
                 const auto w = ( mesh.points[v] - mesh.points[d] ).length() / settings.dist( e ) - 1;
                 sumW += w;
+                if ( w < 0 )
+                     sumNegW -= w;
                 if ( auto it = vertToMatPos.find( d ); it != vertToMatPos.end() )
                 {
                     // free neighbor
@@ -147,8 +151,11 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
                     sumFixed += Vector3d( w * mesh.points[d] );
                 }
             }
-            sumFixed += Vector3d( settings.stabilizer * mesh.points[v] );
-            mTriplets.emplace_back( n, n, sumW + settings.stabilizer );
+            auto s = settings.stabilizer;
+            if ( sumNegW > settings.maxSumNegW )
+                s += sumNegW / settings.maxSumNegW;
+            sumFixed += Vector3d( s * mesh.points[v] );
+            mTriplets.emplace_back( n, n, sumW + s );
             for ( int i = 0; i < 3; ++i )
                 rhs[i][n] = sumFixed[i];
             ++n;

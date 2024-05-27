@@ -302,7 +302,7 @@ bool SurfaceContoursWidget::appendPoint( const std::shared_ptr<VisualObject>& ob
     auto scopedBlock = getViewerInstance().getGlobalHistoryStore()->getScopeBlockPtr();
     if ( ( scopedBlock == nullptr ) && ( params.writeHistory ) )
     {
-        SCOPED_HISTORY( "Add Point" + params.historySpecification );
+        SCOPED_HISTORY( "Add Point " + params.historySpecification );
         onAddPointAction();
     }
     else
@@ -334,7 +334,7 @@ bool SurfaceContoursWidget::removePoint( const std::shared_ptr<VisualObject>& ob
     auto scopedBlock = getViewerInstance().getGlobalHistoryStore()->getScopeBlockPtr();
     if ( ( scopedBlock == nullptr ) && ( params.writeHistory ) )
     {
-        SCOPED_HISTORY( "Remove Point" + params.historySpecification );
+        SCOPED_HISTORY( "Remove Point " + params.historySpecification );
         onRemovePointAction();
     }
     else
@@ -450,10 +450,11 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
             assert( pickedObj != nullptr );
 
             auto& contour = pickedPoints_[pickedObj];
-            assert( pickedIndex != contour.size() - 1 ); // unable to pick point which is close countour
+            assert( pickedIndex != contour.size() - 1 ); // unable to pick point which is close contour
 
+            std::unique_ptr<ScopeHistory> historyGuiard;
             if ( params.writeHistory )
-                SCOPED_HISTORY( "Remove Point" + params.historySpecification );
+                historyGuiard = std::make_unique<ScopeHistory>( "Remove Point" + params.historySpecification );
 
             // 4 points - minimal non-trivial closed path
             // last on is a "pseudo" point to close contour
@@ -466,7 +467,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
             // Remove point marked to be removed. 
             removePoint( pickedObj, pickedIndex );
 
-            // Restore close countour. 
+            // Restore close contour. 
             if ( contour.size() > 2 && pickedIndex == 0 )
                 appendPoint( pickedObj, contour[0]->getCurrentPosition() );
         }

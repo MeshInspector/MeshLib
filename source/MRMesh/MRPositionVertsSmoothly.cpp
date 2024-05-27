@@ -6,6 +6,7 @@
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
 #include "MRTriMath.h"
+#include "MRMeshRelax.h"
 #include "MRTimer.h"
 #include <Eigen/SparseCholesky>
 
@@ -123,6 +124,7 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
     for ( int i = 0; i < 3; ++i )
         rhs[i].resize( sz );
 
+    VertBitSet shiftedVerts;
     for ( int iter = 0; iter < settings.numIters; ++iter )
     {
         mTriplets.clear();
@@ -193,10 +195,14 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
 
         if ( settings.isInverted )
         {
+            shiftedVerts.clear();
+            shiftedVerts.resize( mesh.topology.vertSize(), false );
+            bool anyInverted = false;
             for ( auto f : mesh.topology.getFaceIds( incidentFaces ) )
             {
                 if ( !settings.isInverted( f ) )
                     continue;
+                anyInverted = true;
                 auto vs = mesh.topology.getTriVerts( f );
                 Triangle3f t0;
                 for ( int i = 0; i < 3; ++i )
@@ -245,7 +251,22 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
                 }
 
                 for ( int i = 0; i < 3; ++i )
-                    mesh.points[ vs[i] ] = t[i];
+                {
+                    if ( mesh.points[ vs[i] ] != t[i] )
+                    {
+                        shiftedVerts.set( vs[i] );
+                        mesh.points[ vs[i] ] = t[i];
+                    }
+                }
+            }
+            if ( anyInverted )
+            {
+                // move each point from degenerated triangle a little toward the center of its neighbor,
+                // otherwise they will not be pushed away and the degeneracy remains forever
+                MeshRelaxParams relaxParams;
+                relaxParams.region = &shiftedVerts;
+                relaxParams.force = 0.1f;
+                relax( mesh, relaxParams );
             }
         }
     }

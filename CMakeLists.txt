@@ -37,87 +37,41 @@ ENDIF()
 
 find_package(PkgConfig REQUIRED)
 
-set(MR_UBUNTU FALSE) # any Ubuntu version
-set(MR_UBUNTU22 FALSE) # Ubuntu 22.*
-set(MR_FEDORA FALSE)
-set(MR_FEDORA39 FALSE)
-set(MR_PLATFORM "UNKNOWN")
-
-IF(NOT APPLE AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
-  add_compile_definitions(__ARM_CPU__)
-  message("ARM cpu detected")
-ENDIF()
-
-IF(MR_EMSCRIPTEN)
-  SET(MR_PLATFORM "WASM")
-ELSE()
-  IF(APPLE)
-    set(MR_PLATFORM "APPLE_${CMAKE_HOST_SYSTEM_PROCESSOR}")
-  ELSE()
-    # set platform dependent flags
-    file(STRINGS /etc/os-release distro REGEX "^NAME=")
-    string(REGEX REPLACE "NAME=\"(.*)\"" "\\1" distro "${distro}")
-
-    # check version (major)
-    file(STRINGS /etc/os-release version_id REGEX "^VERSION_ID=")
-    string(REGEX REPLACE "VERSION_ID=(.*)" "\\1" version_id "${version_id}")
-    string(REGEX REPLACE "\"(.*)\"" "\\1" version_id "${version_id}")
-
-    IF(${distro} STREQUAL "Ubuntu")
-      string(FIND ${version_id} "." dot-pos)
-      string(SUBSTRING ${version_id} 0 ${dot-pos} version_id)
-
-      SET(MR_UBUNTU TRUE)
-      IF(${version_id} STREQUAL "22")
-        SET(MR_UBUNTU22 TRUE)
-      ENDIF() # Ubuntu 22
-    ENDIF() # Ubuntu
-
-    IF(${distro} STREQUAL "Fedora Linux")
-      SET(MR_FEDORA TRUE)
-      IF(${version_id} STREQUAL "39")
-        SET(MR_FEDORA39 TRUE)
-      ENDIF() # Fedora 39
-    ENDIF() # Fedora
-
-    message("using ${distro} ${version_id}")
-    set(MR_PLATFORM "${distro}_${version_id}")
-  ENDIF() # APPLE
-  add_definitions(-DMR_PLATFORM="${MR_PLATFORM}")
-  message("platform: ${MR_PLATFORM}")
-ENDIF() # NOT MR_EMSCRIPTEN
-
 IF(NOT MR_EMSCRIPTEN)
   IF(MESHLIB_PYTHON_SUPPORT)
-    IF(${MR_UBUNTU22} OR APPLE)
-      set(MR_PYTHON_VERSION 3.10)
-    ELSEIF(${MR_UBUNTU})
-      set(MR_PYTHON_VERSION 3.8)
-    ELSEIF(${MR_FEDORA39})
-      set(MR_PYTHON_VERSION 3.12)
-    ELSEIF(${MR_FEDORA})
-      set(MR_PYTHON_VERSION 3.11)
-    ELSE()
-      set(MR_PYTHON_VERSION "")
+    # TODO: drop Python version hard-coding; explicitly set -DMESHLIB_PYTHON_VERSION in the CI config if needed
+    IF(APPLE)
+      set(MESHLIB_PYTHON_VERSION "3.10")
+    ELSEIF(DEFINED MR_LINUX_DISTRO)
+      IF(${MR_LINUX_DISTRO} STREQUAL "Ubuntu")
+        set(MESHLIB_PYTHON_VERSION "3.8")
+        IF(${MR_PLATFORM} STREQUAL "Ubuntu_22")
+          set(MESHLIB_PYTHON_VERSION "3.10")
+        ENDIF()
+      ELSEIF(${MR_LINUX_DISTRO} STREQUAL "Fedora")
+        set(MESHLIB_PYTHON_VERSION "3.11")
+        IF(${MR_PLATFORM} STREQUAL "Fedora_39")
+          set(MESHLIB_PYTHON_VERSION "3.12")
+        ENDIF()
+      ENDIF()
     ENDIF()
 
     IF($ENV{MESHLIB_PYTHON_VERSION})
-      set(MR_PYTHON_VERSION $ENV{MESHLIB_PYTHON_VERSION})
+      set(MESHLIB_PYTHON_VERSION $ENV{MESHLIB_PYTHON_VERSION})
+    ENDIF()
+
+    IF(DEFINED MESHLIB_PYTHON_VERSION)
+      find_package(Python ${MESHLIB_PYTHON_VERSION} EXACT REQUIRED COMPONENTS Interpreter Development)
+    ELSE()
+      find_package(Python REQUIRED COMPONENTS Interpreter Development)
     ENDIF()
 
     IF(APPLE)
-      link_directories(${HOMEBREW_PREFIX}/opt/python@${MR_PYTHON_VERSION}/Frameworks/Python.framework/Versions/${MR_PYTHON_VERSION}/lib/)
-      include_directories(${HOMEBREW_PREFIX}/include)
+      # TODO: not required anymore?
+      #link_directories(${HOMEBREW_PREFIX}/opt/python@${MR_PYTHON_VERSION}/Frameworks/Python.framework/Versions/${MR_PYTHON_VERSION}/lib/)
+      #include_directories(${HOMEBREW_PREFIX}/include)
       find_package(pybind11 REQUIRED)
     ENDIF()
-
-    IF(NOT MR_PYTHON_VERSION STREQUAL "")
-      set(MR_PYTHON_VERSION ${MR_PYTHON_VERSION} EXACT)
-    ENDIF()
-
-    find_package(Python ${MR_PYTHON_VERSION} REQUIRED COMPONENTS Interpreter Development)
-    # legacy option, remove in the future
-    set(MR_PYTHON_LIB Python::Python)
   ENDIF()
 ENDIF()
 

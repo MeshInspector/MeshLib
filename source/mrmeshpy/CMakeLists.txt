@@ -29,7 +29,7 @@ ELSE()
     fmt
     tbb
     openvdb
-    ${MR_PYTHON_LIB}
+    Python::Python
   )
 ENDIF()
 

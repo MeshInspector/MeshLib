@@ -50,8 +50,8 @@ public:
         float radius{ 0.0f };
         // Typically, the widget does not respond to actions with a modifier. 
         // If the parameter is set, then custom modifiers located in this GLFW bitmask will be ignored and the widget will work with them as usual.
-        int customModifiers; // GLFW modifier bitmask
-        // pick_render_object parameters. Allow to use object in whick pick exactly fell, inshead of closer object in pick radius.
+        int customModifiers = 0; // GLFW modifier bitmask
+        // pick_render_object parameters. Allow to use object in which pick exactly fell, instead of closer object in pick radius.
         bool pickInBackFaceObject = true;
     };
 

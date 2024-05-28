@@ -371,7 +371,7 @@ RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
     if ( step != 1 )
     {
         firstValid = {};
-        for ( VertId v = VertId( 0 ); v < step * validIndicesSize_; v += step )
+        for ( VertId v = VertId( (firstValid / step)*step  ); v < step * validIndicesSize_; v += step )
         {
             if ( validPoints.test( v ) )
             {

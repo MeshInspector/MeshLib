@@ -18,7 +18,7 @@ on:
 
 
 env:
-  VCPKG-VERSION: '2024.03.25'
+  VCPKG-VERSION: '2024.04.26'
 
 jobs:
   prepare-image:

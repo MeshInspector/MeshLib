@@ -22,8 +22,8 @@ const std::vector<int>& SceneCache::getAllObjectsDepth()
     if ( !instance_().cachedData_[templateParamsUniqueId] )
     {
         auto data = updateAllObjectsWithDepth_();
-        instance_().cachedData_[templateParamsUniqueId] = std::make_shared<StoredType>( std::move( data.first ) );
-        instance_().allObjectDepths_ = std::make_shared<std::vector<int>>( std::move( data.second ) );
+        instance_().cachedData_[templateParamsUniqueId] = std::move( data.first );
+        instance_().allObjectDepths_ = std::move( data.second );
     }
     return *instance_().allObjectDepths_;
 }

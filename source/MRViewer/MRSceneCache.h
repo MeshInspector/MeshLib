@@ -28,11 +28,11 @@ private:
     SceneCache() {};
 
     using StoredType = std::vector<std::shared_ptr<Object>>;
-    using CachedStoredType = std::shared_ptr<StoredType>;
+    using CachedStoredType = std::optional<StoredType>;
     MRVIEWER_API static std::pair<StoredType, std::vector<int>> updateAllObjectsWithDepth_();
 
     std::vector<CachedStoredType> cachedData_;
-    std::shared_ptr<std::vector<int>> allObjectDepths_;
+    std::optional<std::vector<int>> allObjectDepths_;
 
     // Helper class to convert template params to unique numbers
     class MRVIEWER_CLASS TypeMap
@@ -65,11 +65,11 @@ const std::vector<std::shared_ptr<ObjectType>>& SceneCache::getAllObjects()
         instance_().cachedData_.push_back( CachedStoredType() );
     if ( !instance_().cachedData_[templateParamsUniqueId] )
     {
-        std::shared_ptr<SpecificDataType> specificData = std::make_shared<SpecificDataType>( getAllObjectsInTree<ObjectType>( &SceneRoot::get(), SelectivityType ) );
-        std::shared_ptr<StoredType> storedData = *reinterpret_cast< std::shared_ptr<StoredType>* >( &specificData );
+        std::optional<SpecificDataType> specificData = getAllObjectsInTree<ObjectType>( &SceneRoot::get(), SelectivityType );
+        std::optional<StoredType> storedData = *reinterpret_cast< std::optional<StoredType>* >( &specificData );
         instance_().cachedData_[templateParamsUniqueId] = storedData;
     }
-    const SpecificDataType& resData = **reinterpret_cast< std::shared_ptr<SpecificDataType>* >( &instance_().cachedData_[templateParamsUniqueId] );
+    const SpecificDataType& resData = **reinterpret_cast< std::optional<SpecificDataType>* >( &instance_().cachedData_[templateParamsUniqueId] );
     return resData;
 }
 #ifdef __GNUC__
@@ -87,8 +87,8 @@ inline const std::vector<std::shared_ptr<Object>>& SceneCache::getAllObjects<Obj
     if ( !instance_().cachedData_[templateParamsUniqueId] )
     {
         auto data = updateAllObjectsWithDepth_();
-        instance_().cachedData_[templateParamsUniqueId] = std::make_shared<StoredType>( std::move( data.first ) );
-        instance_().allObjectDepths_ = std::make_shared<std::vector<int>>( std::move( data.second ) );
+        instance_().cachedData_[templateParamsUniqueId] = std::move( data.first );
+        instance_().allObjectDepths_ = std::move( data.second );
     }
     return *instance_().cachedData_[templateParamsUniqueId];
 }

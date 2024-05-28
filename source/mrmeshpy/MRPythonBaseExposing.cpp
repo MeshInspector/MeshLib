@@ -632,6 +632,7 @@ ADD_PYTHON_BITSET( VertBitSet, MR::VertBitSet )
 ADD_PYTHON_BITSET( UndirectedEdgeBitSet, MR::UndirectedEdgeBitSet )
 ADD_PYTHON_BITSET( EdgeBitSet, MR::EdgeBitSet )
 ADD_PYTHON_BITSET( FaceBitSet, MR::FaceBitSet )
+ADD_PYTHON_BITSET( BitSet, MR::BitSet )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorVertBitSet, MR::VertBitSet )
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaceBitSet, MR::FaceBitSet )

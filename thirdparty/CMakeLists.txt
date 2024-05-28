@@ -12,14 +12,16 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}")
 set(MESHLIB_THIRDPARTY_INCLUDE_DIR "include")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
-  -Wall -Wno-sign-compare -Wno-unknown-pragmas -Wno-unused-variable \
-  -Wno-unused-function -Wno-unused-variable -Wno-comment -Wno-parentheses -Wno-int-in-bool-context -Wno-strict-aliasing \
-  -Wno-macro-redefined -Wno-return-type -Wno-unused-variable -Wno-deprecated-declarations -Wno-unused-command-line-argument -Wno-deprecated-pragma")
+# Inhibit all warning messages
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w")
 
-IF(MR_EMSCRIPTEN AND NOT MR_EMSCRIPTEN_SINGLETHREAD)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
+IF(MR_EMSCRIPTEN)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
+  IF(NOT MR_EMSCRIPTEN_SINGLETHREAD)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
+  ENDIF()
 ENDIF()
 
 #imgui build
@@ -91,6 +93,12 @@ option(PHMAP_INSTALL "" ON)
 add_subdirectory(./parallel-hashmap)
 
 IF(MR_EMSCRIPTEN)
+  set(GDCM_BUILD_APPLICATIONS OFF)
+  set(GDCM_BUILD_SHARED_LIBS OFF)
+  set(GDCM_BUILD_TESTING OFF)
+  set(GDCM_BUILD_DOCBOOK_MANPAGES OFF)
+  add_subdirectory(./GDCM)
+
   add_compile_definitions(GTEST_HAS_CXXABI_H_=0)
   set(INSTALL_GTEST ON)
   add_subdirectory(./googletest)
@@ -111,6 +119,8 @@ IF(MR_EMSCRIPTEN)
 
   set(CMAKE_CXX_FLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s NO_DISABLE_EXCEPTION_CATCHING=1")
+  set(JSONCPP_WITH_TESTS OFF)
+  set(JSONCPP_WITH_POST_BUILD_UNITTEST OFF)
   add_subdirectory(./jsoncpp)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BACKUP}")
 
@@ -135,6 +145,7 @@ ELSE() # not MR_EMSCRIPTEN
 ENDIF()
 
 set(GLAD_INSTALL ON)
+set(GLAD_REPRODUCIBLE ON)
 add_subdirectory(./glad)
 set(PYBIND11_INSTALL ON)
 add_subdirectory(./pybind11)
@@ -151,11 +162,3 @@ install(DIRECTORY imgui/misc DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/imgui
 install(DIRECTORY eigen/Eigen DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 install(DIRECTORY eigen/unsupported DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 
-if(APPLE)
-  set(BUILD_SHARED_LIBS ON)
-  set(NFD_BUILD_TESTS OFF)
-  set(NFD_INSTALL ON)
-  # TODO: build with both GTK and portal support
-  set(NFD_PORTAL OFF)
-  add_subdirectory(nativefiledialog-extended)
-endif()

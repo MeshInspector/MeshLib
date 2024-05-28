@@ -24,13 +24,13 @@ inline int getNumNodesPoints( int numPoints )
 
 struct SubtreePoints
 {
-    SubtreePoints( AABBTreePoints::NodeId root, int f, int n ) : root( root ), firstPoint( f ), numPoints( n )
+    SubtreePoints( NodeId root, int f, int n ) : root( root ), firstPoint( f ), numPoints( n )
     {
     }
-    AABBTreePoints::NodeId root; // of subtree
+    NodeId root; // of subtree
     int firstPoint = 0;
     int numPoints = 0;
-    AABBTreePoints::NodeId lastNode() const
+    NodeId lastNode() const
     {
         return root + getNumNodesPoints( numPoints );
     }

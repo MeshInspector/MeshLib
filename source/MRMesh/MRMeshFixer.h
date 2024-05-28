@@ -17,7 +17,7 @@ namespace MR
 MRMESH_API int duplicateMultiHoleVertices( Mesh & mesh );
 
 /// finds multiple edges in the mesh
-using MultipleEdge = std::pair<VertId, VertId>;
+using MultipleEdge = VertPair;
 [[nodiscard]] MRMESH_API Expected<std::vector<MultipleEdge>, std::string> findMultipleEdges( const MeshTopology & topology, ProgressCallback cb = {} );
 [[nodiscard]] inline bool hasMultipleEdges( const MeshTopology & topology ) { return !findMultipleEdges( topology ).value().empty(); }
 
@@ -65,6 +65,9 @@ MRMESH_API int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & re
 /// if given vertex is present on the boundary of some hole several times then returns an edge of this hole (without left);
 /// returns invalid edge otherwise (not a boundary vertex, or it is present only once on the boundary of each hole it pertains to)
 [[nodiscard]] MRMESH_API EdgeId isVertexRepeatedOnHoleBd( const MeshTopology& topology, VertId v );
+
+/// returns set bits for all vertices present on the boundary of a hole several times;
+[[nodiscard]] MRMESH_API VertBitSet findRepeatedVertsOnHoleBd( const MeshTopology& topology );
 
 /// returns all faces that complicate one of mesh holes;
 /// hole is complicated if it passes via one vertex more than once;

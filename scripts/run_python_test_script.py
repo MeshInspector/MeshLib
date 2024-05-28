@@ -7,6 +7,7 @@ parser = argparse.ArgumentParser(description="Python Test Script")
 
 parser.add_argument("-cmd", dest="cmd", type=str, help='Overwrite python run cmd')
 parser.add_argument("-d", dest="dir", type=str, help='Path to tests')
+parser.add_argument("-s", dest="smoke", type=str, help='Run reduced smoke set')
 
 args = parser.parse_args()
 print(args)
@@ -65,7 +66,10 @@ os.environ["MeshLibPyModulesPath"] = os.getcwd()
 os.chdir(directory)
 
 os.system(python_cmd + "-m pip uninstall -y meshlib")
-res = os.system(python_cmd + "-m pytest -s -v --basetemp=../pytest_temp")
+pytest_cmd = "-m pytest -s -v --basetemp=../pytest_temp --durations 30"
+if args.smoke == "true":
+    pytest_cmd += f' -m "smoke"'
+res = os.system(python_cmd + pytest_cmd)
 
 if res != 0:
     sys.exit(1)

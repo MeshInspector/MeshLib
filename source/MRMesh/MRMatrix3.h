@@ -66,9 +66,13 @@ struct Matrix3
     constexpr Matrix3<T> transposed() const noexcept;
     /// returns 3 Euler angles, assuming this is a rotation matrix composed as follows: R=R(z)*R(y)*R(x)
     constexpr Vector3<T> toEulerAngles() const noexcept;
-    /// returns scaling factors by axes (Ox, Oy, Oz)
-    [[deprecated("Prefer `decomposeMatrix3()`.")]]
-    constexpr Vector3<T> toScale() const noexcept;
+
+    struct QR
+    {
+        Matrix3 q, r;
+    };
+    /// decompose this matrix on the product Q*R, where Q is orthogonal and R is upper triangular
+    QR qr() const noexcept;
 
     Matrix3 & operator +=( const Matrix3<T> & b ) { x += b.x; y += b.y; z += b.z; return * this; }
     Matrix3 & operator -=( const Matrix3<T> & b ) { x -= b.x; y -= b.y; z -= b.z; return * this; }
@@ -247,12 +251,28 @@ constexpr Vector3<T> Matrix3<T>::toEulerAngles() const noexcept
 }
 
 template <typename T>
-constexpr Vector3<T> Matrix3<T>::toScale() const noexcept
+auto Matrix3<T>::qr() const noexcept -> QR
 {
-    T scaleX = x.length();
-    T scaleY = y.length();
-    T scaleZ = z.length();
-    return { scaleX, scaleY, scaleZ };
+    // https://en.wikipedia.org/wiki/QR_decomposition#Computing_the_QR_decomposition
+    const auto a0 = col( 0 );
+    auto a1 = col( 1 );
+    auto a2 = col( 2 );
+    const auto r00 = a0.length();
+    const auto e0 = r00 > 0 ? a0 / r00 : Vector3<T>{};
+    const auto r01 = dot( e0, a1 );
+    const auto r02 = dot( e0, a2 );
+    a1 -= r01 * e0;
+    const auto r11 = a1.length();
+    const auto e1 = r11 > 0 ? a1 / r11 : Vector3<T>{};
+    const auto r12 = dot( e1, a2 );
+    a2 -= r02 * e0 + r12 * e1;
+    const auto r22 = a2.length();
+    const auto e2 = r22 > 0 ? a2 / r22 : Vector3<T>{};
+    return QR
+    {
+        Matrix3::fromColumns( e0, e1, e2 ),
+        Matrix3::fromRows( { r00, r01, r02 }, { T(0), r11, r12 }, { T(0), T(0), r22 } )
+    };
 }
 
 /// \}

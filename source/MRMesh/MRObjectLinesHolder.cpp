@@ -127,6 +127,13 @@ size_t ObjectLinesHolder::numComponents() const
     return *numComponents_;
 }
 
+float ObjectLinesHolder::totalLength() const
+{
+    if ( !totalLength_ )
+        totalLength_ = polyline_ ? polyline_->totalLength() : 0.f;
+    return *totalLength_;
+}
+
 bool ObjectLinesHolder::supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const
 {
     return VisualObject::supportsVisualizeProperty( type ) || type.tryGet<LinesVisualizePropertyType>().has_value();

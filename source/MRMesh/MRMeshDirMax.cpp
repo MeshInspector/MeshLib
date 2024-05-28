@@ -58,10 +58,10 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
 
     struct SubTask
     {
-        AABBTree::NodeId n;
+        NodeId n;
         float furthestBoxProj = 0;
         SubTask() = default;
-        SubTask( AABBTree::NodeId n, float bp ) : n( n ), furthestBoxProj( bp ) { }
+        SubTask( NodeId n, float bp ) : n( n ), furthestBoxProj( bp ) { }
     };
 
     const Vector3f minFactor{ dir.x <= 0 ? dir.x : 0.0f, dir.y <= 0 ? dir.y : 0.0f, dir.z <= 0 ? dir.z : 0.0f };
@@ -85,7 +85,7 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
         }
     };
 
-    auto getSubTask = [&]( AABBTree::NodeId n )
+    auto getSubTask = [&]( NodeId n )
     {
         return SubTask( n, getFurthestBoxProj( tree.nodes()[n].box ) );
     };

@@ -128,7 +128,9 @@ public:
     virtual void updateUVCoords( VertUVCoords& updated ) { std::swap( uvCoordinates_, updated ); dirty_ |= DIRTY_UV; }
 
     /// copies texture, UV-coordinates and vertex colors from given source object \param src using given map \param thisToSrc
-    MRMESH_API virtual void copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc );
+    MRMESH_API virtual void copyTextureAndColors( const ObjectMeshHolder& src, const VertMap& thisToSrc, const FaceMap& thisToSrcFaces = {} );
+
+    MRMESH_API void copyColors( const VisualObject& src, const VertMap& thisToSrc, const FaceMap& thisToSrcFaces = {} ) override;
 
     // ancillary texture can be used to have custom features visualization without affecting real one
     const MeshTexture& getAncillaryTexture() const { return ancillaryTexture_; }

@@ -21,8 +21,11 @@ MRMESH_API std::string systemToUtf8( const std::string & system );
 /// returns empty string if such conversion cannot be made
 MRMESH_API std::string utf8ToSystem( const std::string & utf8 );
 
+/// converts wide null terminating string to UTF8-encoded string
+MRMESH_API std::string wideToUtf8( const wchar_t * wide );
+
 #ifdef _WIN32
-/// converts UTF16-encoded string string to UTF8-encoded string
+/// converts UTF16-encoded string to UTF8-encoded string
 MRMESH_API std::string Utf16ToUtf8( const std::wstring_view & utf16 );
 #endif
 
@@ -91,6 +94,7 @@ inline Expected<T, std::string> addFileNameInError( Expected<T, std::string> v, 
 /// \param v         value to print
 /// \param digitsAfterPoint  maximal number of digits after decimal point
 /// \param precision         maximal number of not-zero decimal digits
+[[deprecated("Use `valueToString()` from `MRViewer/MRUnits.h` instead!")]]
 MRMESH_API char * formatNoTrailingZeros( char * fmt, double v, int digitsAfterPoint, int precision = 6 );
 
 /// returns given value rounded to given number of decimal digits

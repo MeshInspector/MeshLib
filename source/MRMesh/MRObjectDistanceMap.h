@@ -31,13 +31,27 @@ public:
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
     virtual std::string getClassName() const override { return "Distance Map"; }
 
-    MRMESH_API void setDistanceMap( const std::shared_ptr<DistanceMap>& dmap, const DistanceMapToWorld& toWorldParams );
+    /// rebuilds the mesh;
+    /// if it is executed in the rendering stream then you can set the needUpdateMesh = true
+    /// otherwise you should set the needUpdateMesh = false and call the function calculateMesh
+    /// and after finishing in the rendering stream, call the function updateMesh
+    MRMESH_API bool setDistanceMap(
+        const std::shared_ptr<DistanceMap>& dmap,
+        const AffineXf3f& dmap2local,
+        bool needUpdateMesh = true, 
+        ProgressCallback cb = {} );
+
+    /// creates a grid for this object
+    MRMESH_API std::shared_ptr<Mesh> calculateMesh( ProgressCallback cb = {} ) const;
+    /// updates the grid to the current one
+    MRMESH_API void updateMesh( const std::shared_ptr<Mesh>& mesh );
     
     [[nodiscard]] const std::shared_ptr<DistanceMap>& getDistanceMap() const { return dmap_; }
 
     [[nodiscard]] virtual bool hasModel() const override { return bool( dmap_ ); }
 
-    MRMESH_API const DistanceMapToWorld& getToWorldParameters() const;
+    /// unlike the name, actually it is the transformation from distance map in local space
+    MRMESH_API const AffineXf3f& getToWorldParameters() const { return dmap2local_; }
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
@@ -58,10 +72,17 @@ protected:
 
 private:
     std::shared_ptr<DistanceMap> dmap_;
-    DistanceMapToWorld toWorldParams_;
+    AffineXf3f dmap2local_;
 
-    /// rebuild mesh according sets DistanceMap & DistanceMapToWorld
-    void construct_();
+    /// rebuilds the mesh;
+    /// if it is executed in the rendering stream then you can set the needUpdateMesh = true
+    /// otherwise you should set the needUpdateMesh = false and call the function calculateMesh
+    /// and after finishing in the rendering stream, call the function updateMesh
+    bool construct_(
+        const std::shared_ptr<DistanceMap>& dmap,
+        const AffineXf3f& dmap2local,
+        bool needUpdateMesh = true,
+        ProgressCallback cb = {} );
 
     /// this is private function to set default colors of this type (ObjectDistanceMap) in constructor only
     void setDefaultColors_();

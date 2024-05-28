@@ -14,9 +14,9 @@ namespace MR
 
 struct NodeNodePoly
 {
-    AABBTreePolyline2::NodeId aNode;
-    AABBTreePolyline2::NodeId bNode;
-    NodeNodePoly( AABBTreePolyline2::NodeId a, AABBTreePolyline2::NodeId b ) : aNode( a ), bNode( b )
+    NodeId aNode;
+    NodeId bNode;
+    NodeNodePoly( NodeId a, NodeId b ) : aNode( a ), bNode( b )
     {}
 };
 
@@ -30,7 +30,7 @@ std::vector<EdgePointPair> findCollidingEdgePairs( const Polyline2& a, const Pol
     if ( aTree.nodes().empty() || bTree.nodes().empty() )
         return res;
 
-    std::vector<NodeNodePoly> subtasks{ { AABBTreePolyline2::NodeId{ 0 }, AABBTreePolyline2::NodeId{ 0 } } };
+    std::vector<NodeNodePoly> subtasks{ { NodeId{ 0 }, NodeId{ 0 } } };
 
     while ( !subtasks.empty() )
     {
@@ -182,7 +182,7 @@ std::vector<EdgePointPair> findSelfCollidingEdgePairs( const Polyline2& polyline
     if ( tree.nodes().empty() )
         return res;
 
-    std::vector<NodeNodePoly> subtasks{ { AABBTreePolyline2::NodeId{ 0 }, AABBTreePolyline2::NodeId{ 0 } } };
+    std::vector<NodeNodePoly> subtasks{ { NodeId{ 0 }, NodeId{ 0 } } };
 
     while ( !subtasks.empty() )
     {

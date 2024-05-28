@@ -1,5 +1,5 @@
 #include "MRFixUndercuts.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
 #include "MRMesh.h"
 #include "MRMatrix3.h"
 #include "MRVector3.h"
@@ -17,8 +17,9 @@
 #include "MRVDBFloatGrid.h"
 #include "MRMeshIntersect.h"
 #include "MRLine3.h"
+#include "MRMeshDirMax.h"
+#include "MRIntersectionPrecomputes.h"
 #include "MRPch/MRTBB.h"
-#include <filesystem>
 
 namespace MR
 {
@@ -27,18 +28,44 @@ namespace FixUndercuts
 {
 constexpr float numVoxels = 1e7f;
 
-FloatGrid setupGridFromMesh( Mesh& mesh, const AffineXf3f& rot, float voxelSize, float holeExtension, Vector3f dir )
+static void extendAndFillAllHoles( Mesh& mesh, float bottomExtension, const Vector3f& dir )
 {
-    MR_TIMER;
-    auto borders = mesh.topology.findHoleRepresentiveEdges();
-    
-    for ( auto& border : borders )
-        border = buildBottom( mesh, border, dir, holeExtension );
-    FillHoleParams params;
-    for ( const auto& border : borders )
-        fillHole( mesh, border, params );
+    MR_TIMER
 
-    return meshToLevelSet( mesh, rot, Vector3f::diagonal( voxelSize ) );
+    auto minV = findDirMax( -dir, mesh, UseAABBTree::YesIfAlreadyConstructed );
+    auto borders = extendAllHoles( mesh, Plane3f::fromDirAndPt( dir, mesh.points[minV] - bottomExtension * dir ) );
+    fillHoles( mesh, borders );
+}
+
+/// move bottom vertices of given mesh to make object thickness at least (minThickness) in (up) direction;
+/// use this function before making signed distance field from the mesh with minThickness=voxelSize
+/// to avoid unexpected hole appearance in thin areas
+static void makeZThinkAtLeast( Mesh & mesh, float minThickness, Vector3f up )
+{
+    MR_TIMER
+    up = up.normalized();
+    const IntersectionPrecomputes<float> iprec( up );
+    auto newPoints = mesh.points;
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    {
+        if ( dot( mesh.pseudonormal( v ), up ) >= 0 )
+            return; // skip top surface vertices
+        // find up-intersection within minThickness
+        auto isec = rayMeshIntersect( mesh, { mesh.points[v], up }, 0.0f, minThickness, &iprec, true,
+            [&]( FaceId f )
+            {
+                VertId a, b, c;
+                mesh.topology.getTriVerts( f, a, b, c );
+                if ( v == a || v == b || v == c )
+                    return false; // ignore intersections with incident faces of (v)
+                return dot( mesh.normal( f ), up ) >= 0;
+            } );
+        // if such intersection found then move bottom point down
+        if ( isec )
+            newPoints[v] = isec->proj.point - minThickness * up;
+    } );
+
+    mesh.points = std::move( newPoints );
 }
 
 void fix( FloatGrid& grid, int zOffset )
@@ -110,7 +137,9 @@ void fixUndercuts( Mesh& mesh, const Vector3f& upDirectionMeshSpace, float voxel
     if ( mesh.topology.isClosed() )
         zOffset = int( bottomExtension / voxelSize );
 
-    auto grid = setupGridFromMesh( mesh, rot, voxelSize, bottomExtension, upDirectionMeshSpace );
+    extendAndFillAllHoles( mesh, bottomExtension, upDirectionMeshSpace );
+    makeZThinkAtLeast( mesh, voxelSize, upDirectionMeshSpace );
+    auto grid = meshToLevelSet( mesh, rot, Vector3f::diagonal( voxelSize ) );
     fix( grid, zOffset );
     
     mesh = gridToMesh( std::move( grid ), GridToMeshSettings{
@@ -143,7 +172,9 @@ void fixUndercuts( Mesh& mesh, const FaceBitSet& faceBitSet, const Vector3f& upD
     // add new triangles after hole filling to bitset
     FaceBitSet copyFBS = faceBitSet;
     copyFBS.resize( mesh.topology.faceSize(), false );
-    auto fullGrid = setupGridFromMesh( mesh, rot, voxelSize, bottomExtension, upDirectionMeshSpace );
+    extendAndFillAllHoles( mesh, bottomExtension, upDirectionMeshSpace );
+    makeZThinkAtLeast( mesh, voxelSize, upDirectionMeshSpace );
+    auto fullGrid = meshToLevelSet( mesh, rot, Vector3f::diagonal( voxelSize ) );
     copyFBS.resize( mesh.topology.faceSize(), true );
 
     // create mesh and unclosed grid 

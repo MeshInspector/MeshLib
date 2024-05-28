@@ -8,6 +8,7 @@
 #include "MRLine3.h"
 #include "MRMeshIntersect.h"
 #include "MRParallelFor.h"
+#include "MRAABBTree.h"
 #include <tuple>
 
 namespace

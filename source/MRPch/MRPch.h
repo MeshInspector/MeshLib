@@ -92,6 +92,8 @@
 #include "OpenCTM/openctm.h"
 
 #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
+// in Debug Clang builds with PCH including pybind, all libraries and executable depend on python
+#if !defined(__clang__) || defined(NDEBUG)
 #pragma warning(push)
 #pragma warning(disable:4100) //'_unused_op': unreferenced formal parameter
 #pragma warning(disable:4189) //'has_args': local variable is initialized but not referenced
@@ -103,6 +105,7 @@
 #include <pybind11/stl_bind.h>
 #include <pybind11/numpy.h>
 #pragma warning(pop)
+#endif
 #endif
 
 #include "MRTBB.h"

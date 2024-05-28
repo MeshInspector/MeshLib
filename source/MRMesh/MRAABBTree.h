@@ -17,9 +17,6 @@ class AABBTree
 {
 public:
     using Node = AABBTreeNode<FaceTreeTraits3>;
-    using NodeId = AABBTreeNode<FaceTreeTraits3>::NodeId;
-    using NodeBitSet = TaggedBitSet<AABBTreeNode<FaceTreeTraits3>::NodeTag>;
-
     using NodeVec = Vector<Node, NodeId>;
     [[nodiscard]] const NodeVec & nodes() const { return nodes_; }
     [[nodiscard]] const Node & operator[]( NodeId nid ) const { return nodes_[nid]; }

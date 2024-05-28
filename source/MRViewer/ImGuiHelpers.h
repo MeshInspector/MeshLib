@@ -198,6 +198,8 @@ struct CustomStatePluginWindowParameters
 /// for a value pivot = ( 0.0f, 1.0f )
 MRVIEWER_API ImVec2 GetDownPosition( const float width );
 
+// Calculate and return the height of the window title
+MRVIEWER_API float GetTitleBarHeght( float menuScaling );
 /// begin state plugin window with custom style.  if you use this function, you must call EndCustomStatePlugin to close the plugin correctly.
 /// the flags ImGuiWindowFlags_NoScrollbar and ImGuiWindow_NoScrollingWithMouse are forced in the function.
 MRVIEWER_API bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePluginWindowParameters& params = {} );
@@ -232,9 +234,9 @@ MRVIEWER_API bool Link( const char* label, uint32_t color = MR::Color( 60, 120, 
 /// values are bits
 enum class PaletteChanges
 {
-    None,                  // 0b00
-    Texture,               // 0b01
-    Ranges,                // 0b10
+    None    = 0,
+    Texture = 1, // texture and legend must be updated
+    Ranges  = 2, // uv-coordinates must be recomputed for the same values
     All = Texture | Ranges // 0b11
 };
 MR_MAKE_FLAG_OPERATORS( PaletteChanges )
@@ -254,14 +256,21 @@ MRVIEWER_API PaletteChanges Palette(
     bool* fixZero = nullptr,
     float speed = 1.0f,
     float min = std::numeric_limits<float>::lowest(),
-    float max = std::numeric_limits<float>::max(),
-    const MR::UnitToStringParams<MR::NoUnit>& unitParams = MR::getDefaultUnitParams<MR::NoUnit>()
+    float max = std::numeric_limits<float>::max()
 );
+
+// Parameters for the `Plane( MR::PlaneWidget& ... )` function
+enum class PlaneWidgetFlags
+{
+    None = 0,   // Default setup
+    DisableVisibility = 1   // Don't show "Show Plane" checkbox (and the preceding separator)
+};
+MR_MAKE_FLAG_OPERATORS( PlaneWidgetFlags )
 
 /// Helper plane widget, allows to draw specified plain in the scene \n
 /// can import plane from the scene, draw it with mouse or adjust with controls
 /// planeWidget stores the plane widget params
-MRVIEWER_API void Plane( MR::PlaneWidget& planeWidget, float menuScaling );
+MRVIEWER_API void Plane( MR::PlaneWidget& planeWidget, float menuScaling, PlaneWidgetFlags flags = {} );
 
 
 /// draw image with Y-direction inversed up-down

@@ -45,13 +45,13 @@ public:
         // color of control sphere when it is in move
         Color activeColor{ { Color::red() } };
         // how to set the size of the dots in mm or in pixels.
-        PointSizeType radiusSizeType;
+        PointSizeType radiusSizeType{ PointSizeType::Metrical };
         // radius of control sphere, if <= 0.0f it is equal to 5e-3*box.diagonal()
         float radius{ 0.0f };
         // Typically, the widget does not respond to actions with a modifier. 
         // If the parameter is set, then custom modifiers located in this GLFW bitmask will be ignored and the widget will work with them as usual.
-        int customModifiers; // GLFW modifier bitmask
-        // pick_render_object parameters. Allow to use object in whick pick exactly fell, inshead of closer object in pick radius.
+        int customModifiers = 0; // GLFW modifier bitmask
+        // pick_render_object parameters. Allow to use object in which pick exactly fell, instead of closer object in pick radius.
         bool pickInBackFaceObject = true;
     };
 
@@ -161,6 +161,8 @@ private:
 
     std::shared_ptr<SphereObject> pickSphere_;
     std::shared_ptr<VisualObject> baseObject_;
+
+    boost::signals2::scoped_connection onBaseObjectWorldXfChanged_;
 
     std::function<void( const PickedPoint& )> startMove_;
     std::function<void( const PickedPoint& )> onMove_;

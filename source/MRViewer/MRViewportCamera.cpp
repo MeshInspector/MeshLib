@@ -193,6 +193,12 @@ float Viewport::getPixelSize() const
     return ( tan( params_.cameraViewAngle * MR::PI_F / 360.0f ) * params_.cameraDnear * 2.0f ) / ( height( viewportRect_ ) * params_.cameraZoom );
 }
 
+float Viewport::getPixelSizeAtPoint( const Vector3f& worldPoint ) const
+{
+    Vector4f clipVec = getFullViewportMatrix() * Vector4f( worldPoint.x, worldPoint.y, worldPoint.z, 1 );
+    return clipVec.w / projM_.y.y / params_.cameraZoom / ( viewportRect_.max.y - viewportRect_.min.y );
+}
+
 
 Vector3f Viewport::getRotationPivot() const
 {
@@ -548,7 +554,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
             const VertCoords* coords = nullptr;
             const VertBitSet* selectedVerts = nullptr;
             auto objMesh = obj->asType<ObjectMeshHolder>();
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_OPENVDB
             VertCoords tempVertCoords;
             VertBitSet tempSelected;
             auto objVox = obj->asType<ObjectVoxels>();

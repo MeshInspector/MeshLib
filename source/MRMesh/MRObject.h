@@ -230,7 +230,7 @@ public:
     /// does the object have any visual representation (visible points, triangles, edges, etc.), no considering child objects
     [[nodiscard]] virtual bool hasVisualRepresentation() const { return false; }
 
-    /// does the object have any model available (but possibly empty), 
+    /// does the object have any model available (but possibly empty),
     /// e.g. ObjectMesh has valid mesh() or ObjectPoints has valid pointCloud()
     [[nodiscard]] virtual bool hasModel() const { return false; }
 
@@ -282,7 +282,7 @@ protected:
     bool ancillary_{ false };
     mutable bool needRedraw_{false};
 
-    void propagateWorldXfChangedSignal_();
+    MRMESH_API virtual void propagateWorldXfChangedSignal_();
 };
 
 template <typename T>

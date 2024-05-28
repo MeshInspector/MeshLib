@@ -31,9 +31,8 @@ class AABBTreePolyline
 public:
     using Traits = LineTreeTraits<V>;
     using Node = AABBTreeNode<Traits>;
-    using NodeId = typename Node::NodeId;
-
     using NodeVec = Vector<Node, NodeId>;
+
     [[nodiscard]] const NodeVec& nodes() const
     {
         return nodes_;

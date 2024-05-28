@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include "MRMesh/MRIRenderObject.h" //only for BasicUiRenderTask::BackwardPassParams
 #include "MRMesh/MRBox.h"
+#include "MRViewer/MRSignalCombiners.h"
 
 // Forward declarations
 struct ImGuiContext;
@@ -26,6 +27,7 @@ namespace MR
 class ShortcutManager;
 class MeshModifier;
 struct UiRenderManager;
+class SceneObjectsListDrawer;
 
 enum class SelectedTypesMask
 {
@@ -35,7 +37,8 @@ enum class SelectedTypesMask
     ObjectMeshHolderBit = 1 << 3,
     ObjectLabelBit = 1 << 4,
     ObjectMeshBit = 1 << 5,
-    ObjectFeaturesBit = 1 << 6,
+    ObjectFeatureBit = 1 << 6,
+    ObjectMeasurementBit = 1 << 7,
 };
 MR_MAKE_FLAG_OPERATORS( SelectedTypesMask )
 
@@ -90,23 +93,9 @@ protected:
   ImVec2 mainWindowPos_;
   ImVec2 mainWindowSize_;
 
-  std::unordered_map<const Object*, bool> sceneOpenCommands_;
-
   MRVIEWER_API virtual void setupShortcuts_();
 
-  bool allowSceneReorder_{ true };
-  bool dragTrigger_ = false;
-  bool clickTrigger_ = false;
-  bool showNewSelectedObjects_{ true };
-  bool deselectNewHiddenObjects_{ false };
   bool savedDialogPositionEnabled_{ false };
-
-  struct SceneReorder
-  {
-      std::vector<Object*> who; // object that will be moved
-      Object* to{ nullptr }; // address object
-      bool before{ false }; // if false "who" will be attached to "to" as last child, otherwise "who" will be attached to "to"'s parent as child before "to"
-  } sceneReorderCommand_;
 
   std::weak_ptr<Object> lastRenameObj_;
   Box3f selectionBbox_; // updated in drawSelectionInformation_
@@ -123,7 +112,6 @@ protected:
   bool uniformScale_{ true };
   bool xfHistUpdated_{ false };
   bool invertedRotation_{ false };
-  bool showInfoInObjectTree_{ false };
 
   std::optional<std::pair<std::string, Vector4f>> storedColor_;
   Vector4f getStoredColor_( const std::string& str, const Color& defaultColor ) const;
@@ -152,21 +140,8 @@ protected:
       Quad // left lower vp, left upper vp, right lower vp, right upper vp
   } viewportConfig_{ Single };
 
-  // Drag objects servant data
-  // struct to handle changed scene window size scroll
-  struct ScrollPositionPreservation
-  {
-      float relativeMousePos{ 0.0f };
-      float absLinePosRatio{ 0.0f };
-  } prevScrollInfo_;
-  // true to fix scroll position in next frame
-  bool nextFrameFixScroll_{ false };
-  // flag to know if we are dragging objects now or not
-  bool dragObjectsMode_{ false };
   // flag to correctly update scroll on transform window appearing
   bool selectionChangedToSingleObj_{ false };
-  // this function should be called after BeginChild("Meshes") (child window with scene tree)
-  MRVIEWER_API virtual void updateSceneWindowScrollIfNeeded_();
   // menu will change objects' colors in this viewport
   ViewportId selectedViewport_ = {};
 
@@ -257,15 +232,10 @@ public:
   MRVIEWER_API virtual void draw_selection_properties_content( std::vector<std::shared_ptr<Object>>& selected );
   // override this to have custom UI in "Selection Properties" window (under "Draw Options")
 
-  // override this to customize prefix for objects in scene
-  MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& )
-  {}
   // override this to customize appearance of collapsing headers
   MRVIEWER_API virtual bool drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags flags = 0);
   // override this to customize appearance of collapsing headers for transform block
   MRVIEWER_API virtual bool drawCollapsingHeaderTransform_();
-  // override this to have custom UI in "Scene" window (under opened(expanded) object line)
-  MRVIEWER_API virtual void draw_custom_tree_object_properties( Object& obj );
 
   bool make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, AnyVisualizeMaskEnum type, MR::ViewportMask viewportid, bool invert = false );
   template<typename ObjectT>
@@ -293,13 +263,6 @@ public:
 
   MRVIEWER_API void draw_custom_plugins();
 
-  void setShowNewSelectedObjects( bool show ) { showNewSelectedObjects_ = show; };
-  // get show selected objects state (enable / disable)
-  bool getShowNewSelectedObjects() { return showNewSelectedObjects_; };
-  void setDeselectNewHiddenObjects( bool deselect ) { deselectNewHiddenObjects_ = deselect; }
-  // get deselect hidden objects state (enable / disable)
-  bool getDeselectNewHiddenObjects() { return deselectNewHiddenObjects_; }
-
   std::shared_ptr<ShortcutManager> getShortcutManager() { return shortcutManager_; };
 
   MRVIEWER_API void add_modifier( std::shared_ptr<MR::MeshModifier> modifier );
@@ -324,13 +287,36 @@ public:
   bool isSavedDialogPositionsEnabled() const { return savedDialogPositionEnabled_; }
 
   // This class helps the viewer to `renderUi()` from `IRenderObject`s.
-  MRVIEWER_API virtual UiRenderManager& getUiRenderManager();  
+  MRVIEWER_API virtual UiRenderManager& getUiRenderManager();
 
-  /// returns flag show detailed information in the object tree
-  bool getShowInfoInObjectTree() const { return showInfoInObjectTree_; }
-  /// set flag show detailed information in the object tree
-  void setShowInfoInObjectTree( bool value ) { showInfoInObjectTree_ = value; }
+  MRVIEWER_API const std::shared_ptr<SceneObjectsListDrawer>& getSceneObjectsList() { return sceneObjectsList_; };
 
+  enum class NameTagSelectionMode
+  {
+      // Click without modifiers, selects one object and unselects all others.
+      selectOne,
+      // Ctrl+Click, toggles the selection of one object.
+      toggle,
+  };
+  using NameTagClickSignal = boost::signals2::signal<bool( Object& object, NameTagSelectionMode mode ), StopOnTrueCombiner>;
+  // This is triggered whenever a name tag of an object is clicked.
+  NameTagClickSignal nameTagClickSignal;
+  // Behaves as if the user clicked the object name tag, by invoking `nameTagClickSignal`.
+  MRVIEWER_API bool simulateNameTagClick( Object& object, NameTagSelectionMode mode );
+
+  // Scene pick should be disabled because an ImGui window is in the way.
+  MRVIEWER_API bool anyImGuiWindowIsHovered() const;
+  // Scene pick should be disabled because a `renderUi()` UI of some object is in the way.
+  MRVIEWER_API bool anyUiObjectIsHovered() const;
+
+    // ======== selected objects options drawing
+    // getting the mask of the list of selected objects
+    MRVIEWER_API SelectedTypesMask calcSelectedTypesMask( const std::vector<std::shared_ptr<Object>>& selectedObjs );
+    MRVIEWER_API bool drawGeneralOptions( const std::vector<std::shared_ptr<Object>>& selectedObjs );
+    MRVIEWER_API bool drawAdvancedOptions( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedTypesMask selectedMask );
+    MRVIEWER_API bool drawRemoveButton( const std::vector<std::shared_ptr<Object>>& selectedObjs );
+    MRVIEWER_API bool drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedTypesMask selectedMask );
+    MRVIEWER_API bool drawDrawOptionsColors( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );
 protected:
     MRVIEWER_API virtual void drawModalMessage_();
 
@@ -369,36 +355,13 @@ protected:
 
     MRVIEWER_API virtual void addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const;
 
-    // payload object will be moved
-    MRVIEWER_API void makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload );
-    // "target" and "before" are "to" and "before" of SceneReorder struct
-    // betweenLine - if true requires to draw line (between two objects in tree, for ImGui to have target)
-    // counter - unique number of object in tree (needed for ImGui to differ new lines)
-    MRVIEWER_API void makeDragDropTarget_( Object& target, bool before, bool betweenLine, const std::string& uniqueStr );
-    MRVIEWER_API void reorderSceneIfNeeded_();
-
-    MRVIEWER_API void draw_object_recurse_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all );
-
     MRVIEWER_API float drawSelectionInformation_();
     MRVIEWER_API void drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& object );
-    MRVIEWER_API bool drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>& selectedObjs );
-    MRVIEWER_API bool drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedTypesMask selectedMask );
 
-    MRVIEWER_API bool drawRemoveButton_( const std::vector<std::shared_ptr<Object>>& selectedObjs );
-    MRVIEWER_API bool drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedTypesMask selectedMask );
-    MRVIEWER_API bool drawDrawOptionsColors_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs );
 
     MRVIEWER_API virtual void draw_custom_selection_properties( const std::vector<std::shared_ptr<Object>>& selected );
 
     MRVIEWER_API float drawTransform_();
-
-    std::vector<Object*> getPreSelection_( Object* meshclicked,
-                                           bool isShift, bool isCtrl,
-                                           const std::vector<std::shared_ptr<Object>>& selected,
-                                           const std::vector<std::shared_ptr<Object>>& all );
-
-    MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& /*selected*/ )
-    {}
 
     MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& /*selected*/ ) { return false; }
 
@@ -410,8 +373,6 @@ protected:
     MRVIEWER_API virtual void drawShortcutsWindow_();
     // returns width of items in Scene Info window
     MRVIEWER_API float getSceneInfoItemWidth_( int itemCount  = 1 );
-    // getting the mask of the list of selected objects
-    MRVIEWER_API SelectedTypesMask calcSelectedTypesMask( const std::vector<std::shared_ptr<Object>>& selectedObjs );
 
     class UiRenderManagerImpl : public UiRenderManager
     {
@@ -420,18 +381,17 @@ protected:
         MRVIEWER_API void postRenderViewport( ViewportId viewport ) override;
         MRVIEWER_API BasicUiRenderTask::BackwardPassParams beginBackwardPass() override;
         MRVIEWER_API void finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params ) override;
-        MRVIEWER_API bool ownsMouseHover() const override;
 
-    private:
-        // `finishBackwardPass()` sets this to true when some object's UI is hovered.
-        // We then read it in `onMouseDown_()` and return true to eat that event.
-        // We intentionally don't block other events with this, especially not scrolling events, as it's
-        //   very annoying when the zoom breaks because you randomly hovered something.
-        // It also would be unwise to block `onMouseUp_()`, as you could make some plugin stuck assuming that the mouse is held.
-        bool mouseIsBlocked_ = false;
+        // Which things are blocked by our `renderUi()` calls.
+        BasicUiRenderTask::InteractionMask consumedInteractions{};
+
+        // If this returns false, the event should be allowed to pass through to other plugins, even if ImGui wants to consume it.
+        // Pass at most one bit at a time.
+        MRVIEWER_API bool canConsumeEvent( BasicUiRenderTask::InteractionMask event ) const;
     };
     // This class helps the viewer to `renderUi()` from `IRenderObject`s.
-    std::unique_ptr<UiRenderManager> uiRenderManager_;
+    std::unique_ptr<UiRenderManagerImpl> uiRenderManager_;
+    std::shared_ptr<SceneObjectsListDrawer> sceneObjectsList_;
 };
 
 

@@ -2,12 +2,15 @@
 
 #include "MRViewer.h"
 #include "MRViewerEventsListener.h"
+#include "MRViewport.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRSurfacePointPicker.h"
 #include "MRMesh/MRObjectMeshHolder.h"
 #include "MRHistoryStore.h"
 #include "MRViewer/MRGladGlfw.h"
+
 #include <unordered_map>
+#include <unordered_set>
 
 namespace MR
 {
@@ -49,6 +52,9 @@ public:
         // Color for the special point used to close a contour. Better do not change it. 
         // Parameters affect to future points only
         MR::Color closeContourPointColor = Color::transparent();
+
+        // Predicate to additionally filter objects that should be treated as pickable.
+        Viewport::PickRenderObjectPredicate pickPredicate;
     };
 
     using PickerPointCallBack = std::function<void( std::shared_ptr<MR::VisualObject> )>;
@@ -58,7 +64,7 @@ public:
     using SurfaceContours = std::unordered_map <std::shared_ptr<MR::VisualObject>, SurfaceContour>;
 
     // enable or disable widget
-    MRVIEWER_API void enable( bool isEnaled );
+    MRVIEWER_API void enable( bool isEnabled );
 
     // create a widget and connect it. 
     // To create a widget, you need to provide 4 callbacks and one function that determines whether this object can be used to place points.
@@ -144,6 +150,17 @@ private:
     // data storage
     SurfaceContours pickedPoints_;
 
+    // picked points' cache
+    std::unordered_set<const VisualObject*> surfacePointWidgetCache_;
+
+    // connection storage
+    struct SurfaceConnectionHolder
+    {
+        boost::signals2::scoped_connection onMeshChanged;
+        boost::signals2::scoped_connection onPointsChanged;
+    };
+    std::unordered_map<std::shared_ptr<VisualObject>, SurfaceConnectionHolder> surfaceConnectionHolders_;
+
     // CallBack functions
     PickerPointCallBack onPointAdd_;
     PickerPointCallBack onPointMove_;
@@ -154,6 +171,7 @@ private:
     friend class AddPointActionPickerPoint;
     friend class RemovePointActionPickerPoint;
     friend class ChangePointActionPickerPoint;
+    friend class SurfaceContoursWidgetClearAction;
 };
 
 
@@ -216,6 +234,31 @@ private:
     int index_;
 };
 
+class SurfaceContoursWidgetClearAction : public HistoryAction
+{
+public:
+    SurfaceContoursWidgetClearAction( std::string name, SurfaceContoursWidget& widget );
 
+public:
+    // HistoryAction
+    [[nodiscard]] std::string name() const override { return name_; }
+
+    void action( Type type ) override;
+
+    [[nodiscard]] size_t heapBytes() const override;
+
+private:
+    std::string name_;
+    SurfaceContoursWidget& widget_;
+
+    struct ObjectState
+    {
+        std::weak_ptr<VisualObject> objPtr;
+        std::vector<PickedPoint> pickedPoints;
+    };
+    std::vector<ObjectState> states_;
+    std::weak_ptr<VisualObject> activeObject_;
+    int activeIndex_;
+};
 
 }

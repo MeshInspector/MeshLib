@@ -1,5 +1,6 @@
 #pragma once
-#ifndef __EMSCRIPTEN__
+#include "MRMesh/MRMeshFwd.h"
+#ifndef MRMESH_NO_OPENVDB
 #include "MRMesh/MRIRenderObject.h"
 #include "MRMesh/MRMeshTexture.h"
 #include "MRMesh/MRBuffer.h"

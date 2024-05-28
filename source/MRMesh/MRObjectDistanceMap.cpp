@@ -8,7 +8,6 @@
 #include "MRMesh.h"
 #include "MRHeapBytes.h"
 #include "MRPch/MRJson.h"
-#include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
 #include "MRStringConvert.h"
 
@@ -19,22 +18,8 @@ MR_ADD_CLASS_FACTORY( ObjectDistanceMap )
 
 void ObjectDistanceMap::applyScale( float scaleFactor )
 {
-    toWorldParams_.orgPoint *= scaleFactor;
-    toWorldParams_.pixelXVec *= scaleFactor;
-    toWorldParams_.pixelYVec *= scaleFactor;
-    
-    if ( dmap_ )
-    {
-        tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )(dmap_->resX() * dmap_->resY() ) ),
-            [&] ( const tbb::blocked_range<int>& range )
-        {
-            for ( int i = range.begin(); i < range.end(); ++i )
-            {
-                if ( dmap_->isValid( i ) )
-                    dmap_->getValue( i ) *= scaleFactor;
-            }
-        } );
-    }
+    dmap2local_.A *= scaleFactor;
+    dmap2local_.b *= scaleFactor;
 
     ObjectMeshHolder::applyScale( scaleFactor );
 }
@@ -90,26 +75,34 @@ std::vector<std::string> ObjectDistanceMap::getInfoLines() const
             << "\n  z = " << v.z;
     };
     ss << "Params:";
-    printVector3( "pixelXVec", toWorldParams_.pixelXVec );
-    printVector3( "pixelYVec", toWorldParams_.pixelYVec );
-    printVector3( "depthVec", toWorldParams_.direction );
-    printVector3( "origin", toWorldParams_.orgPoint );
+    printVector3( "pixelXVec", dmap2local_.A.col( 0 ) );
+    printVector3( "pixelYVec", dmap2local_.A.col( 1 ) );
+    printVector3( "depthVec", dmap2local_.A.col( 2 ) );
+    printVector3( "origin", dmap2local_.b );
     res.push_back( ss.str() );
 
     return res;
 }
 
-void ObjectDistanceMap::setDistanceMap( const std::shared_ptr<DistanceMap>& dmap, const DistanceMapToWorld& params )
+bool ObjectDistanceMap::setDistanceMap( const std::shared_ptr<DistanceMap>& dmap, const AffineXf3f& map2local, bool updateMesh, ProgressCallback cb )
 {
-    dmap_ = dmap;
-    toWorldParams_ = params;
-
-    construct_();
+    return construct_( dmap, map2local, updateMesh, cb );
 }
 
-const DistanceMapToWorld& ObjectDistanceMap::getToWorldParameters() const
+std::shared_ptr<Mesh> ObjectDistanceMap::calculateMesh( ProgressCallback cb ) const
 {
-    return toWorldParams_;
+    auto res = distanceMapToMesh( *dmap_, dmap2local_, cb );
+    if ( !res.has_value() )
+    {
+        return nullptr;
+    }
+    return std::make_shared<Mesh>( res.value() );
+}
+
+void ObjectDistanceMap::updateMesh( const std::shared_ptr<Mesh>& mesh )
+{
+    mesh_ = mesh;
+    setDirtyFlags( DIRTY_ALL );
 }
 
 size_t ObjectDistanceMap::heapBytes() const
@@ -126,10 +119,10 @@ void ObjectDistanceMap::serializeFields_( Json::Value& root ) const
 {
     VisualObject::serializeFields_( root );
 
-    serializeToJson( toWorldParams_.pixelXVec, root["PixelXVec"] );
-    serializeToJson( toWorldParams_.pixelYVec, root["PixelYVec"] );
-    serializeToJson( toWorldParams_.direction, root["DepthVec"] );
-    serializeToJson( toWorldParams_.orgPoint, root["OriginWorld"] );
+    serializeToJson( dmap2local_.A.col( 0 ), root["PixelXVec"] );
+    serializeToJson( dmap2local_.A.col( 1 ), root["PixelYVec"] );
+    serializeToJson( dmap2local_.A.col( 2 ), root["DepthVec"] );
+    serializeToJson( dmap2local_.b, root["OriginWorld"] );
 
     root["Type"].append( ObjectDistanceMap::TypeName() );
 }
@@ -138,15 +131,20 @@ void ObjectDistanceMap::deserializeFields_( const Json::Value& root )
 {
     VisualObject::deserializeFields_( root );
 
-    deserializeFromJson( root["PixelXVec"], toWorldParams_.pixelXVec );
-    deserializeFromJson( root["PixelYVec"], toWorldParams_.pixelYVec );
-    deserializeFromJson( root["DepthVec"], toWorldParams_.direction );
-    deserializeFromJson( root["OriginWorld"], toWorldParams_.orgPoint );
+    Vector3f orgPoint;
+    Vector3f pixelXVec{ Vector3f::plusX() };
+    Vector3f pixelYVec{ Vector3f::plusY() };
+    Vector3f direction{ Vector3f::plusZ() };
+    deserializeFromJson( root["PixelXVec"], pixelXVec );
+    deserializeFromJson( root["PixelYVec"], pixelYVec );
+    deserializeFromJson( root["DepthVec"], direction );
+    deserializeFromJson( root["OriginWorld"], orgPoint );
+    dmap2local_ = { Matrix3f::fromColumns( pixelXVec, pixelYVec, direction ), orgPoint };
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
         setDefaultSceneProperties_();
 
-    construct_();
+    construct_( dmap_, dmap2local_ );
 }
 
 VoidOrErrStr ObjectDistanceMap::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
@@ -177,13 +175,27 @@ void ObjectDistanceMap::setDefaultColors_()
     setFrontColor( SceneColors::get( SceneColors::UnselectedObjectDistanceMap ), false );
 }
 
-void ObjectDistanceMap::construct_()
+bool ObjectDistanceMap::construct_( const std::shared_ptr<DistanceMap>& dmap, const AffineXf3f& dmap2local, bool needUpdateMesh, ProgressCallback cb )
 {
-    if ( !dmap_ )
-        return;
+    if ( !dmap )
+        return false;
 
-    mesh_ = std::make_shared<Mesh>( distanceMapToMesh( *dmap_, toWorldParams_ ) );
-    setDirtyFlags( DIRTY_ALL );
+    dmap_ = dmap;
+    dmap2local_ = dmap2local;
+
+    if ( needUpdateMesh )
+    {
+        auto mesh = calculateMesh( cb );
+        if ( !mesh )
+        {
+            return false;
+        }
+
+        updateMesh( mesh );
+    }
+
+
+    return true;
 }
 
 void ObjectDistanceMap::setDefaultSceneProperties_()

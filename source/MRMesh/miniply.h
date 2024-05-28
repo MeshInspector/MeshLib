@@ -177,6 +177,9 @@ namespace miniply {
     /// Equivalent to calling `find_properties` on the current element.
     bool find_properties(uint32_t propIdxs[], uint32_t numIdxs, ...) const;
 
+    /// Returns end position of input stream
+    std::streamsize get_end_pos() const;
+
     /// Copy the data for the specified properties into `dest`, which must be
     /// an array with at least enough space to hold all of the extracted column
     /// data. `propIdxs` is an array containing the indexes of the properties

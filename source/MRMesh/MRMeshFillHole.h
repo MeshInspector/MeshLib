@@ -132,6 +132,9 @@ MRMESH_API bool buildCylinderBetweenTwoHoles( Mesh & mesh, const StitchHolesPara
   */
 MRMESH_API void fillHole( Mesh& mesh, EdgeId a, const FillHoleParams& params = {} );
 
+/// fill all holes given by their representative edges in \param as
+MRMESH_API void fillHoles( Mesh& mesh, const std::vector<EdgeId> & as, const FillHoleParams& params = {} );
+
 struct FillHoleItem
 {
     // if not-negative number then it is edgeid;
@@ -184,6 +187,10 @@ MRMESH_API VertId fillHoleTrivially( Mesh& mesh, EdgeId a, FaceBitSet * outNewFa
 /// by adding new vertices located in given plane and 2 * number_of_hole_edge triangles;
 /// \return the edge of new hole opposite to input edge (a)
 MRMESH_API EdgeId extendHole( Mesh& mesh, EdgeId a, const Plane3f & plane, FaceBitSet * outNewFaces = nullptr );
+
+/// adds cylindrical extension of too all holes of the mesh by calling extendHole(...);
+/// \return representative edges of one per every hole after extension
+MRMESH_API std::vector<EdgeId> extendAllHoles( Mesh& mesh, const Plane3f & plane, FaceBitSet * outNewFaces = nullptr );
 
 /// adds extension of given hole represented by one of its edges (having no valid left face)
 /// by adding new vertices located at getVertPos( existing vertex position );

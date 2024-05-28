@@ -24,7 +24,14 @@
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#if __GNUC__ == 14
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
 #include <tiny_gltf.h>
+#if __GNUC__ == 14
+#pragma GCC diagnostic pop
+#endif
 
 #pragma warning( pop)
 
@@ -131,7 +138,7 @@ Expected<int, std::string> readVertCoords( VertCoords& vertexCoordinates, const 
 
     if ( bufferView.byteStride == 0 )
     {
-        std::copy( &buffer.data[accessor.byteOffset + bufferView.byteOffset], 
+        std::copy( &buffer.data[accessor.byteOffset + bufferView.byteOffset],
             &buffer.data[accessor.byteOffset + bufferView.byteOffset + accessor.count * sizeof( Vector3f )],
             ( uint8_t* )&vertexCoordinates[VertId( start )] );
     }
@@ -141,11 +148,20 @@ Expected<int, std::string> readVertCoords( VertCoords& vertexCoordinates, const 
         ParallelFor( startSpan, vertexCoordinates.vec_.end(), [&] ( auto it )
         {
             const size_t i = std::distance( startSpan, it );
-            *it = *( Vector3f* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + i * bufferView.byteStride ] );
+            *it = *( Vector3f* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + i * bufferView.byteStride] );
         } );
     }
 
     return int( accessor.count );
+}
+
+template<typename ChannelType>
+constexpr float channelMax()
+{
+    if constexpr ( std::is_same_v<ChannelType, float> || std::is_same_v<ChannelType, double> )
+        return 1.0f;
+    else
+        return float( std::numeric_limits<ChannelType>::max() );
 }
 
 VoidOrErrStr fillVertsColorMap( VertColors& vertsColorMap, int vertexCount, const std::vector<Material>& materials, int materialIndex, const tinygltf::Model& model, const tinygltf::Primitive& primitive )
@@ -167,14 +183,57 @@ VoidOrErrStr fillVertsColorMap( VertColors& vertsColorMap, int vertexCount, cons
     const auto& bufferView = model.bufferViews[accessor.bufferView];
     const auto& buffer = model.buffers[bufferView.buffer];
 
-    if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT || accessor.type != TINYGLTF_TYPE_VEC3 )
+    const auto fillColorMap = [&]<typename ChannelType, int channelCount>( VertColors & vertsColorMap )
+    {
+        const float cMax = channelMax<ChannelType>();
+
+        ParallelFor( vertsColorMap, [&] ( VertId v )
+        {
+            if constexpr ( channelCount == 3 )
+            {
+                const Vector3<ChannelType> col = *( Vector3<ChannelType>* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + v * bufferView.byteStride] );
+                vertsColorMap[startPos + v] = Color( float( col[0] / cMax ), float( col[1] / cMax ), float( col[2] / cMax ) );
+            }
+            else if constexpr ( channelCount == 4 )
+            {
+                const Vector4<ChannelType> col = *( Vector4<ChannelType>* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + v * bufferView.byteStride] );
+                vertsColorMap[startPos + v] = Color( float( col[0] / cMax ), float( col[1] / cMax ), float( col[2] / cMax ), float( col[3] / cMax ) );
+            }
+        } );
+    };
+
+    if ( accessor.type != TINYGLTF_TYPE_VEC3 && accessor.type != TINYGLTF_TYPE_VEC4 )
         return unexpected( "This vertex color type is not supported" );
 
-    ParallelFor( vertsColorMap, [&] ( VertId v )
+    switch ( accessor.componentType )
     {
-        const Vector3f col = *( Vector3f* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + v * bufferView.byteStride] );
-        vertsColorMap[startPos + v] = Color( col[0], col[1], col[2] );
-    } );
+    case TINYGLTF_COMPONENT_TYPE_FLOAT:
+        ( accessor.type == TINYGLTF_TYPE_VEC3 ) ? fillColorMap.operator() < float, 3 > ( vertsColorMap ) : fillColorMap.operator() < float, 4 > ( vertsColorMap );
+        break;
+    case TINYGLTF_COMPONENT_TYPE_DOUBLE:
+        ( accessor.type == TINYGLTF_TYPE_VEC3 ) ? fillColorMap.operator() < double, 3 > ( vertsColorMap ) : fillColorMap.operator() < double, 4 > ( vertsColorMap );
+        break;
+    case TINYGLTF_COMPONENT_TYPE_BYTE:
+        ( accessor.type == TINYGLTF_TYPE_VEC3 ) ? fillColorMap.operator() < int8_t, 3 > ( vertsColorMap ) : fillColorMap.operator() < int8_t, 4 > ( vertsColorMap );
+        break;
+    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+        ( accessor.type == TINYGLTF_TYPE_VEC3 ) ? fillColorMap.operator() < uint8_t, 3 > ( vertsColorMap ) : fillColorMap.operator() < uint8_t, 4 > ( vertsColorMap );
+        break;
+    case TINYGLTF_COMPONENT_TYPE_SHORT:
+        ( accessor.type == TINYGLTF_TYPE_VEC3 ) ? fillColorMap.operator() < int16_t, 3 > ( vertsColorMap ) : fillColorMap.operator() < int16_t, 4 > ( vertsColorMap );
+        break;
+    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+        ( accessor.type == TINYGLTF_TYPE_VEC3 ) ? fillColorMap.operator() < uint16_t, 3 > ( vertsColorMap ) : fillColorMap.operator() < uint16_t, 4 > ( vertsColorMap );
+        break;
+    case TINYGLTF_COMPONENT_TYPE_INT:
+        ( accessor.type == TINYGLTF_TYPE_VEC3 ) ? fillColorMap.operator() < int32_t, 3 > ( vertsColorMap ) : fillColorMap.operator() < int32_t, 4 > ( vertsColorMap );
+        break;
+    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+        ( accessor.type == TINYGLTF_TYPE_VEC3 ) ? fillColorMap.operator() < uint32_t, 3 > ( vertsColorMap ) : fillColorMap.operator() < uint32_t, 4 > ( vertsColorMap );
+        break;
+    default:
+        return unexpected( "This vertex color type is not supported" );
+    }
 
     return{};
 }
@@ -435,7 +494,7 @@ Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromGltf( co
                 if ( meshData.materialIndex >= 0 )
                 {
                     const auto textureIndex = materials[meshData.materialIndex].textureIndex;
-                    if ( textureIndex >=0 && model.textures[textureIndex].source >=0 )
+                    if ( textureIndex >= 0 && model.textures[textureIndex].source >= 0 )
                     {
                         objectMesh->setUVCoords( meshData.uvCoords );
                         objectMesh->setTexture( textures[model.textures[textureIndex].source] );
@@ -497,7 +556,7 @@ VoidOrErrStr serializeObjectTreeToGltf( const Object& root, const std::filesyste
     model.buffers.emplace_back();
     auto& buffer = model.buffers[0].data;
 
-    model.scenes.emplace_back();   
+    model.scenes.emplace_back();
 
     const auto materialHash = [] ( const Material& material )
     {
@@ -520,7 +579,7 @@ VoidOrErrStr serializeObjectTreeToGltf( const Object& root, const std::filesyste
         return a.pixels == b.pixels && a.resolution == b.resolution;
     };
 
-    std::unordered_map<MeshTexture, int, decltype(textureHash), decltype(textureCompare)> textures( {}, textureHash, textureCompare);
+    std::unordered_map<MeshTexture, int, decltype( textureHash ), decltype( textureCompare )> textures( {}, textureHash, textureCompare );
 
 
     std::stack<std::shared_ptr<const Object>> objectStack;
@@ -529,7 +588,7 @@ VoidOrErrStr serializeObjectTreeToGltf( const Object& root, const std::filesyste
     if ( callback && !callback( 0.1f ) )
         return unexpected( "Operation was cancelled" );
 
-    for ( size_t childIndex = 0; childIndex < root.children().size(); ++ childIndex )
+    for ( size_t childIndex = 0; childIndex < root.children().size(); ++childIndex )
     {
         if ( root.children()[childIndex]->isAncillary() )
             continue;
@@ -675,7 +734,7 @@ VoidOrErrStr serializeObjectTreeToGltf( const Object& root, const std::filesyste
         textureInfo.texCoord = 0;
         auto& pbr = model.materials[materialIt.second].pbrMetallicRoughness;
         pbr.baseColorTexture = textureInfo;
-        
+
         const auto& color = materialIt.first.baseColor;
         pbr.baseColorFactor = { color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f };
     }

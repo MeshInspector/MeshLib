@@ -3,9 +3,9 @@
 
 #include "exports.h"
 #include "MRMesh/MRMeshFwd.h"
+#include "MRMesh/MRVector2.h"
 #include "MRMesh/MRPositionedText.h"
 #include "MRViewerEventsListener.h"
-#include <boost/signals2/signal.hpp>
 #include <memory>
 
 namespace MR
@@ -62,18 +62,32 @@ public:
     AncillaryImGuiLabel() = default;
 
     /// Make label in parent space coordinates, follows parent worldXf
-    MRVIEWER_API void make( Object& parent, const PositionedText& text );
+    MRVIEWER_API void make( Object &parent, const PositionedText& text );
 
-    /// Make label in world space coordinates, follows parent worldXf
+    /// Make label in parent space coordinates, follows parent worldXf
+    /// Note: label should be deleted or reset if parent is deleted or removed from scene
+    MRVIEWER_API void make( std::shared_ptr<Object> parent, const PositionedText& text );
+
+    /// Make label in world space coordinates
     MRVIEWER_API void make( const PositionedText& text );
 
     /// clears this instance
     MRVIEWER_API void reset();
+
+    /// Pivot point
+    /// { 0, 0 } for top left corner, { 0.5f, 0.5f } for center (default), { 1, 1 } for bottom right corner.
+    /// { -0.7f, 1.7f } looks ok next to a point (label to up and right from the point)
+    Vector2f getPivot() const { return pivot_; }
+    void setPivot( Vector2f pivot ) { pivot_ = pivot; }
+
 private:
     MRVIEWER_API virtual void preDraw_() override;
 
+    std::weak_ptr<Object> parent_;
+    Vector2f pivot_ = { 0.5f, 0.5f };
+    Vector3f localPos_;
     PositionedText labelData_;
-    boost::signals2::connection parentXfConnection_;
+    boost::signals2::scoped_connection parentXfConnection_;
 };
 
 

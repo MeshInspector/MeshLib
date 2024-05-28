@@ -32,10 +32,13 @@ public:
     /// voxelSize is automatically increased to avoid more voxels than \param maxVoxels;
     /// returns std::nullopt if it was terminated by the callback
     [[nodiscard]] MRMESH_API std::optional<VertBitSet> pointsGridSampling( float voxelSize, size_t maxVoxels = 500000,
-        const ProgressCallback & cb = {} );
+        const ProgressCallback & cb = {} ) const;
 
     /// gives access to points-vector (which can include invalid points as well)
     [[nodiscard]] MRMESH_API const VertCoords & points() const;
+
+    /// gives access to bit set of valid points
+    [[nodiscard]] MRMESH_API const VertBitSet& validPoints() const;
 
     /// returns normals generating function: VertId->normal (or empty for point cloud without normals)
     [[nodiscard]] MRMESH_API std::function<Vector3f(VertId)> normals() const;
@@ -49,7 +52,8 @@ public:
         /// found closest point
         Vector3f point;
 
-        /// normal at the closest point
+        /// normal at the closest point;
+        /// for meshes it will be pseudonormal with the differentiation depending on closest point location (face/edge/vertex)
         std::optional<Vector3f> normal;
 
         /// can be true only for meshes, if the closest point is located on the boundary
@@ -71,12 +75,8 @@ public:
     /// the update takes place only if res.distSq on input is more than squared distance to the closest point
     [[nodiscard]] MRMESH_API LimitedProjectorFunc limitedProjector() const;
 
-    /// override projector for this object
-    void setCustomProjector( LimitedProjectorFunc func ) { customProjector_ = std::move( func ); }
-
 private:
     std::variant<MeshPart, const PointCloud*> var_;
-    LimitedProjectorFunc customProjector_;
 };
 
 /// constructs MeshOrPoints from ObjectMesh or ObjectPoints, otherwise returns nullopt

@@ -28,14 +28,14 @@ void MeshOrPoints::accumulate( PointAccumulator& accum, const AffineXf3f* xf ) c
     }, var_ );
 }
 
-std::optional<VertBitSet> MeshOrPoints::pointsGridSampling( float voxelSize, size_t maxVoxels, const ProgressCallback & cb )
+std::optional<VertBitSet> MeshOrPoints::pointsGridSampling( float voxelSize, size_t maxVoxels, const ProgressCallback & cb ) const
 {
     assert( voxelSize > 0 );
     assert( maxVoxels > 0 );
     auto bboxDiag = computeBoundingBox().size() / voxelSize;
     auto nSamples = bboxDiag[0] * bboxDiag[1] * bboxDiag[2];
     if ( nSamples > maxVoxels )
-        voxelSize *= std::cbrt( float(nSamples) / float(voxelSize) );
+        voxelSize *= std::cbrt( float(nSamples) / float(maxVoxels) );
     return std::visit( overloaded{
         [voxelSize, cb]( const MeshPart & mp ) { return verticesGridSampling( mp, voxelSize, cb ); },
         [voxelSize, cb]( const PointCloud * pc ) { return pointGridSampling( *pc, voxelSize, cb ); }
@@ -50,12 +50,20 @@ const VertCoords & MeshOrPoints::points() const
     }, var_ );
 }
 
+const VertBitSet & MeshOrPoints::validPoints() const
+{
+    return std::visit( overloaded{
+        []( const MeshPart & mp ) -> const VertBitSet& { return mp.mesh.topology.getValidVerts(); },
+        []( const PointCloud * pc ) -> const VertBitSet& { return pc->validPoints; }
+    }, var_ );
+}
+
 std::function<Vector3f(VertId)> MeshOrPoints::normals() const
 {
     return std::visit( overloaded{
         []( const MeshPart & mp ) -> std::function<Vector3f(VertId)>
         {
-            return [&mesh = mp.mesh]( VertId v ) { return mesh.normal( v ); };
+            return [&mesh = mp.mesh]( VertId v ) { return mesh.pseudonormal( v ); };
         },
         []( const PointCloud * pc ) -> std::function<Vector3f(VertId)>
         { 
@@ -87,10 +95,6 @@ auto MeshOrPoints::projector() const -> std::function<ProjectionResult( const Ve
 
 auto MeshOrPoints::limitedProjector() const -> LimitedProjectorFunc
 {
-    if ( customProjector_ )
-    {
-        return customProjector_;
-    }
     return std::visit( overloaded{
         []( const MeshPart & mp ) -> LimitedProjectorFunc
         {
@@ -101,7 +105,7 @@ auto MeshOrPoints::limitedProjector() const -> LimitedProjectorFunc
                     res = ProjectionResult
                     {
                         .point = mpr.proj.point,
-                        .normal = mp.mesh.normal( mpr.proj.face ), //mp.mesh.normal( mpr.mtp ) looks more correct here, but it breaks our script test
+                        .normal = mp.mesh.pseudonormal( mpr.mtp ),
                         .isBd = mpr.mtp.isBd( mp.mesh.topology ),
                         .distSq = mpr.distSq,
                         .closestVert = mp.mesh.getClosestVertex( mpr.proj )

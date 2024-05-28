@@ -32,6 +32,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         def( "setDistanceLimits", &MR::MeshToDistanceMapParams::setDistanceLimits, pybind11::arg( "min" ), pybind11::arg( "max" ),
              "if distance is not in set range, pixel became invalid\n"
              "default value: false. Any distance will be applied (include negative)" ).
+        def( "xf", &MR::MeshToDistanceMapParams::xf, "converts in AffineXf3f" ).
         def_readwrite( "xRange", &MR::MeshToDistanceMapParams::xRange, "Cartesian range vector between distance map borders in X direction" ).
         def_readwrite( "yRange", &MR::MeshToDistanceMapParams::yRange, "Cartesian range vector between distance map borders in Y direction" ).
         def_readwrite( "direction", &MR::MeshToDistanceMapParams::direction, "direction of intersection ray" ).
@@ -43,17 +44,20 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
         def_readwrite( "resolution", &MR::MeshToDistanceMapParams::resolution, "resolution of distance map" );
 
     pybind11::class_<MR::ContourToDistanceMapParams>( m, "ContourToDistanceMapParams" ).
-        def( pybind11::init<>() );
+        def( pybind11::init<>() ).
+        def( "xf", &MR::ContourToDistanceMapParams::xf, "converts in AffineXf3f" );
 
     pybind11::class_<MR::DistanceMapToWorld>( m, "DistanceMapToWorld", "This structure store data to transform distance map to world coordinates" ).
         def( pybind11::init<>(), "Default ctor init all fields with zeros, make sure to fill them manually" ).
         def( pybind11::init<const MR::MeshToDistanceMapParams&>(), "Init fields by `MeshToDistanceMapParams` struct" ).
         def( pybind11::init<const MR::ContourToDistanceMapParams&>(), "Init fields by `ContourToDistanceMapParams` struct" ).
+        def( pybind11::init<const MR::AffineXf3f&>(), "Converts from AffineXf3f" ).
         def( "toWorld", &MR::DistanceMapToWorld::toWorld, pybind11::arg( "x" ), pybind11::arg( "y" ), pybind11::arg( "depth" ),
              "Get world coordinate by depth map info.\n"
              "x - float X coordinate of depth map: (0.0f - left corner of pixel 0, 1.0 - right corner of pixel 0 and left corner of pixel 1)\n"
              "y - float Y coordinate of depth map: (0.0f - left corner of pixel 0, 1.0 - right corner of pixel 0 and left corner of pixel 1)\n"
              "depth - value in distance map, represent depth in world" ).
+        def( "xf", &MR::DistanceMapToWorld::xf, "converts in AffineXf3f" ).
         def_readwrite( "orgPoint", &MR::DistanceMapToWorld::orgPoint, "World coordinates of distance map origin corner" ).
         def_readwrite( "pixelXVec", &MR::DistanceMapToWorld::pixelXVec, "Vector in world space of pixel x positive direction.\n"
                                                                         "Note! Length is equal to pixel size. Typically it should be orthogonal to `pixelYVec`." ).
@@ -61,6 +65,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
                                                                         "Note! Length is equal to pixel size. Typically it should be orthogonal to `pixelXVec`." ).
         def_readwrite( "direction", &MR::DistanceMapToWorld::direction, "Vector of depth direction."
                                                                         "Note! Typically it should be normalized and orthogonal to `pixelXVec` `pixelYVec` plane." );
+
+    pybind11::implicitly_convertible<const MR::AffineXf3f&, MR::DistanceMapToWorld>();
 
     m.def( "computeDistanceMapD", []( const MR::MeshPart& mp, const MR::MeshToDistanceMapParams& params, MR::ProgressCallback cb )
            { return MR::computeDistanceMapD( mp, params, cb ); },
@@ -70,7 +76,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
            "MeshPart - input 3d model\n"
            "general call. You could customize params manually" );
 
-    m.def( "distanceMapToMesh", &MR::distanceMapToMesh, pybind11::arg( "mp" ), pybind11::arg( "params" ),
+    m.def( "distanceMapToMesh", 
+        MR::decorateExpected( &MR::distanceMapToMesh ),
+        pybind11::arg( "mp" ), 
+        pybind11::arg( "toWorld" ),
+        pybind11::arg( "cb" ) = MR::ProgressCallback{},
            "converts distance map back to the mesh fragment with presented params" );
 
     m.def( "saveDistanceMapToImage",
@@ -93,10 +103,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
     "Converts distance map to 2d iso-lines:\n"
     "Iso-lines are created in space DistanceMap ( plane OXY with pixelSize = (1, 1) )" );
 
-    m.def( "distanceMapTo2DIsoPolyline", ( std::pair<MR::Polyline2, MR::AffineXf3f>( * )( const MR::DistanceMap&, const MR::DistanceMapToWorld&, float, bool ) )& MR::distanceMapTo2DIsoPolyline,
-           pybind11::arg( "dm" ), pybind11::arg( "params" ), pybind11::arg( "isoValue" ), pybind11::arg( "useDepth" ),
-           "Iso-lines are created in real space.\n"
-           "( contours plane with parameters according DistanceMapToWorld )\n"
-           "Return: pair contours in OXY & transformation from plane OXY to real contours plane" );
+    m.def( "distanceMapTo2DIsoPolyline", ( std::pair<MR::Polyline2, MR::AffineXf3f>( * )( const MR::DistanceMap&, const MR::AffineXf3f&, float, bool ) )& MR::distanceMapTo2DIsoPolyline,
+           pybind11::arg( "dm" ), pybind11::arg( "xf" ), pybind11::arg( "isoValue" ), pybind11::arg( "useDepth" ),
+           "computes iso-lines of distance map corresponding to given iso-value; "
+           "in second returns the transformation from 0XY plane to world; "
+           "param useDepth true - the isolines will be located on distance map surface, false - isolines for any iso-value will be located on the common plane xf(0XY)" );
 
 } )

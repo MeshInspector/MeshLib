@@ -45,4 +45,7 @@ MRMESH_API MR::Vector3f pickedPointToVector3( const VisualObject* object, const 
 // Converts PointOnObject coordinates depending on the object type to the PickedPoint variant
 MRMESH_API PickedPoint pointOnObjectToPickedPoint( const VisualObject* object, const PointOnObject& pos );
 
+// Checks that the picked point presents in the object's topology
+MRMESH_API bool isPickedPointValid( const VisualObject* object, const PickedPoint& point );
+
 } //namespace MR

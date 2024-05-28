@@ -14,9 +14,9 @@ namespace MR
 
 struct NodeNode
 {
-    AABBTree::NodeId aNode;
-    AABBTree::NodeId bNode;
-    NodeNode( AABBTree::NodeId a, AABBTree::NodeId b ) : aNode( a ), bNode( b ) { }
+    NodeId aNode;
+    NodeId bNode;
+    NodeNode( NodeId a, NodeId b ) : aNode( a ), bNode( b ) { }
 };
 
 std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart & b, const AffineXf3f * rigidB2A, bool firstIntersectionOnly )
@@ -29,8 +29,8 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
     if ( aTree.nodes().empty() || bTree.nodes().empty() )
         return res;
 
-    AABBTree::NodeBitSet aNodes, bNodes;
-    AABBTree::NodeBitSet* aNodesPtr{nullptr}, * bNodesPtr{nullptr};
+    NodeBitSet aNodes, bNodes;
+    NodeBitSet* aNodesPtr{nullptr}, * bNodesPtr{nullptr};
     if ( a.region )
     {
         aNodes = aTree.getNodesFromFaces( *a.region );
@@ -42,7 +42,7 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
         bNodesPtr = &bNodes;
     }
 
-    std::vector<NodeNode> subtasks{ { AABBTree::NodeId{ 0 }, AABBTree::NodeId{ 0 } } };
+    std::vector<NodeNode> subtasks{ { NodeId{ 0 }, NodeId{ 0 } } };
 
     while( !subtasks.empty() )
     {
@@ -233,7 +233,7 @@ Expected< std::vector<FaceFace>> findSelfCollidingTriangles( const MeshPart & mp
     // sequentially subdivide full task on smaller subtasks;
     // they shall be not too many for this subdivision not to take too long;
     // and they shall be not too few for enough parallelism later
-    std::vector<NodeNode> subtasks{ { AABBTree::NodeId{ 0 }, AABBTree::NodeId{ 0 } } }, nextSubtasks, leafTasks;
+    std::vector<NodeNode> subtasks{ { NodeId{ 0 }, NodeId{ 0 } } }, nextSubtasks, leafTasks;
     for( int i = 0; i < 16 && !subtasks.empty(); ++i ) // 16 -> will produce at most 2^16 subtasks
     {
         processSelfSubtasks( tree, subtasks, nextSubtasks,
@@ -367,7 +367,6 @@ bool isInside( const MeshPart & a, const MeshPart & b, const AffineXf3f * rigidB
 
 bool isNonIntersectingInside( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A )
 {
-    assert( b.mesh.topology.isClosed( b.region ) );
 
     auto aFace = a.mesh.topology.getFaceIds( a.region ).find_first();
     if ( !aFace )

@@ -57,6 +57,7 @@ class MRMESH_CLASS VertTag;
 class MRMESH_CLASS PixelTag;
 class MRMESH_CLASS VoxelTag;
 class MRMESH_CLASS RegionTag;
+class MRMESH_CLASS NodeTag;
 
 template <typename T> class MRMESH_CLASS Id;
 template <typename T, typename I> class MRMESH_CLASS Vector;
@@ -70,6 +71,7 @@ using VertId = Id<VertTag>;
 using PixelId = Id<PixelTag>;
 using VoxelId = Id<VoxelTag>;
 using RegionId = Id<RegionTag>;
+using NodeId = Id<NodeTag>;
 class ViewportId;
 class ViewportMask;
 
@@ -91,12 +93,16 @@ template <typename T> class MRMESH_CLASS SetBitIteratorT;
 
 struct Color;
 
+struct MRMESH_CLASS Dipole;
+using Dipoles = Vector<Dipole, NodeId>;
+
 using FaceBitSet = TaggedBitSet<FaceTag>;
 using VertBitSet = TaggedBitSet<VertTag>;
 using EdgeBitSet = TaggedBitSet<EdgeTag>;
 using UndirectedEdgeBitSet = TaggedBitSet<UndirectedEdgeTag>;
 using PixelBitSet = TaggedBitSet<PixelTag>;
 using VoxelBitSet = TaggedBitSet<VoxelTag>;
+using NodeBitSet = TaggedBitSet<NodeTag>;
 
 template <typename T> class SetBitIteratorT;
 
@@ -177,6 +183,17 @@ using AffineXf2d = AffineXf2<double>;
 template <typename T> using AffineXf3 = AffineXf<Vector3<T>>;
 using AffineXf3f = AffineXf3<float>;
 using AffineXf3d = AffineXf3<double>;
+
+template <typename T> struct RigidXf3;
+using RigidXf3f = RigidXf3<float>;
+using RigidXf3d = RigidXf3<double>;
+
+template <typename T> struct RigidScaleXf3;
+using RigidScaleXf3f = RigidScaleXf3<float>;
+using RigidScaleXf3d = RigidScaleXf3<double>;
+
+class PointToPointAligningTransform;
+class PointToPlaneAligningTransform;
 
 template <typename T> struct Sphere;
 template <typename T> using Sphere2 = Sphere<Vector2<T>>;
@@ -287,6 +304,11 @@ using PlaneSection = SurfacePath;
 using PlaneSections = SurfacePaths;
 struct EdgePointPair;
 
+using VertPair = std::pair<VertId, VertId>;
+using FacePair = std::pair<FaceId, FaceId>;
+using EdgePair = std::pair<EdgeId, EdgeId>;
+using UndirectedEdgePair = std::pair<UndirectedEdgeId, UndirectedEdgeId>;
+
 template <typename T> struct TriPoint;
 using TriPointf = TriPoint<float>;
 using TriPointd = TriPoint<double>;
@@ -332,6 +354,12 @@ using VertPredicate = std::function<bool( VertId )>;
 using FacePredicate = std::function<bool( FaceId )>;
 using EdgePredicate = std::function<bool( EdgeId )>;
 using UndirectedEdgePredicate = std::function<bool( UndirectedEdgeId )>;
+
+template <typename T>
+[[nodiscard]] inline bool contains( const std::function<bool( Id<T> )> & pred, Id<T> id )
+{
+    return id.valid() && ( !pred || pred( id ) );
+}
 
 using VertMetric = std::function<float( VertId )>;
 using FaceMetric = std::function<float( FaceId )>;
@@ -442,7 +470,7 @@ using VoxelValueGetter = std::function<T ( const Vector3i& )>;
 using FunctionVolume = VoxelsVolume<VoxelValueGetter<float>>;
 using FunctionVolumeU8 = VoxelsVolume<VoxelValueGetter<uint8_t>>;
 
-#ifndef MRMESH_NO_VOXEL
+#ifndef MRMESH_NO_OPENVDB
 class ObjectVoxels;
 
 struct OpenVdbFloatGrid;
@@ -526,6 +554,7 @@ template<class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
 class IFastWindingNumber;
+class IPointsToMeshProjector;
 
 namespace MeshBuilder
 {

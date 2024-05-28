@@ -1,5 +1,5 @@
 #include "MRVoxelPath.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
 #include "MRVDBFloatGrid.h"
 #include "MRSimpleVolume.h"
 #include "MRVector3.h"

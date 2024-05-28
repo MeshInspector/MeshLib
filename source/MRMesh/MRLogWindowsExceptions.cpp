@@ -1,9 +1,9 @@
 #if defined _WIN32 && defined NDEBUG
 
-#include "MRMesh/MRStringConvert.h"
+#include "MRStringConvert.h"
+#include "MRSystem.h"
 #include "MRPch/MRSpdlog.h"
 #include <windows.h>
-#include <boost/stacktrace.hpp>
 
 namespace MR
 {
@@ -53,21 +53,25 @@ LONG WINAPI logWindowsException( LPEXCEPTION_POINTERS pExInfo )
     else if ( pExceptionRecord->ExceptionCode == DBG_PRINTEXCEPTION_C && pExceptionRecord->NumberParameters >= 2 )
     {
         // https://stackoverflow.com/a/41480827/7325599
-        const auto len = pExceptionRecord->ExceptionInformation[0];
+        auto len = pExceptionRecord->ExceptionInformation[0];
+        if ( len )
+            --len;
         const auto * p = (PCSTR)pExceptionRecord->ExceptionInformation[1];
         spdlog::info( "Narrow debug information: {}", std::string_view( p, len ) );
     }
     else if ( pExceptionRecord->ExceptionCode == DBG_PRINTEXCEPTION_WIDE_C && pExceptionRecord->NumberParameters >= 2 )
     {
         // https://stackoverflow.com/a/41480827/7325599
-        const auto len = pExceptionRecord->ExceptionInformation[0];
+        auto len = pExceptionRecord->ExceptionInformation[0];
+        if ( len )
+            --len;
         const auto * p = (PCWSTR)pExceptionRecord->ExceptionInformation[1];
         spdlog::info( "Wide debug information: {}", Utf16ToUtf8( std::wstring_view( p, len ) ) );
     }
     else
         spdlog::critical( "Windows exception {:#010x}", pExceptionRecord->ExceptionCode );
 
-    spdlog::info( "Windows exception stacktrace:\n{}", to_string( boost::stacktrace::stacktrace() ) );
+    spdlog::info( "Windows exception stacktrace:\n{}", getCurrentStacktrace() );
     logging = false;
     return EXCEPTION_CONTINUE_SEARCH;
 }
@@ -85,11 +89,11 @@ private:
 
 WindowsExceptionsLogger::WindowsExceptionsLogger()
 {
-    spdlog::info( "Start logging Windows exceptions" );
+    spdlog::debug( "Start logging Windows exceptions" );
     oldPurecallHandler_ = _set_purecall_handler( []()
     {
         spdlog::critical( "Pure virtual function call" );
-        spdlog::info( "Pure virtual function call stacktrace:\n{}", to_string( boost::stacktrace::stacktrace() ) );
+        spdlog::info( "Pure virtual function call stacktrace:\n{}", getCurrentStacktrace() );
         std::exit( 0 );
     } );
     // The system does not display the critical-error-handler message box
@@ -100,7 +104,7 @@ WindowsExceptionsLogger::WindowsExceptionsLogger()
 
 WindowsExceptionsLogger::~WindowsExceptionsLogger()
 {
-    spdlog::info( "Stop logging Windows exceptions" );
+    spdlog::debug( "Stop logging Windows exceptions" );
     _set_purecall_handler( oldPurecallHandler_ );
     RemoveVectoredExceptionHandler( oldVectoredExceptionHandler_ );
 }

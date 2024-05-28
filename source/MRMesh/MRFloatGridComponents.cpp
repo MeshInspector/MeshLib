@@ -1,5 +1,5 @@
 #include "MRFloatGridComponents.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXEL )
+#ifndef MRMESH_NO_OPENVDB
 #include "MRUnionFind.h"
 #include "MRVDBFloatGrid.h"
 #include "MRVolumeIndexer.h"

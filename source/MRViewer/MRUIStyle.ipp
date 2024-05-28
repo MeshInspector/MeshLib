@@ -3,8 +3,7 @@
 // A template implementation file for `MRUIStyle.h`. Include that file.
 
 #include "MRUIStyle.h" // To help intellisense.
-
-#include "MRMesh/MRString.h"
+#include "MRViewer/MRUITestEngine.h"
 
 namespace MR::UI
 {
@@ -191,11 +190,23 @@ namespace detail
             return fmt::format( "Range: at most {}", maxString );
         return "";
     }
+
+    [[nodiscard]] inline const char* getTestEngineLabelForVecElem( int i )
+    {
+        return std::array{ "x", "y", "z", "w" }[i];
+    }
 }
 
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidBoundForTargetType<T> U>
 bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToStringParams<E> unitParams, ImGuiSliderFlags flags )
 {
+    if constexpr ( !detail::Scalar<T> )
+        UI::TestEngine::pushTree( label );
+    MR_FINALLY{
+        if constexpr ( !detail::Scalar<T> )
+            UI::TestEngine::popTree();
+    };
+
     auto fixedMin = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMin );
     auto fixedMax = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMax );
 
@@ -206,8 +217,8 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
     }
 
     // Guess the precision.
-    if ( unitParams.style == NumberStyle::normal || unitParams.style == NumberStyle::fixed )
-        unitParams.precision = std::max( unitParams.precision, guessPrecision( fixedMin, fixedMax ) + int( unitParams.style == NumberStyle::normal ) );
+    if ( unitParams.style == NumberStyle::distributePrecision || unitParams.style == NumberStyle::normal )
+        unitParams.precision = std::max( unitParams.precision, guessPrecision( fixedMin, fixedMax ) + int( unitParams.style == NumberStyle::distributePrecision ) );
 
     return detail::unitWidget( label, v, unitParams,
         [&]<typename ElemType>( const char* elemLabel, ElemType& elemVal, int i )
@@ -235,15 +246,31 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
                     unitParams.stripTrailingZeroes = true;
             };
 
-            return detail::genericSlider(
-                elemLabel, detail::imGuiTypeEnum<ElemType>(), &elemVal, elemMin, elemMax, replace( valueToString<E>( elemVal, unitParams ), "%", "%%" ).c_str(), flags
+            bool ret = detail::genericSlider(
+                elemLabel, detail::imGuiTypeEnum<ElemType>(), &elemVal, elemMin, elemMax, valueToImGuiFormatString( elemVal, unitParams ).c_str(), flags
             );
+
+            // Test engine stuff:
+            if ( auto opt = TestEngine::createValue( detail::Scalar<T> ? label : detail::getTestEngineLabelForVecElem( i ), elemVal, *elemMin, *elemMax ) )
+            {
+                elemVal = *opt;
+                ret = true;
+                detail::markItemEdited( ImGui::GetItemID() );
+            }
+            return ret;
         } );
 }
 
 template <UnitEnum E, detail::VectorOrScalar T, detail::ValidDragSpeedForTargetType<T> SpeedType, detail::ValidBoundForTargetType<T> U>
 bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vMax, UnitToStringParams<E> unitParams, ImGuiSliderFlags flags, const U& step, const U& stepFast )
 {
+    if constexpr ( !detail::Scalar<T> )
+        UI::TestEngine::pushTree( label );
+    MR_FINALLY{
+        if constexpr ( !detail::Scalar<T> )
+            UI::TestEngine::popTree();
+    };
+
     auto fixedSpeed = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vSpeed );
     auto fixedMin = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMin );
     auto fixedMax = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMax );
@@ -257,8 +284,8 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
     }
 
     // Guess the precision.
-    if ( unitParams.style == NumberStyle::normal || unitParams.style == NumberStyle::fixed )
-        unitParams.precision = std::max( unitParams.precision, guessPrecision( fixedMin, fixedMax ) + int( unitParams.style == NumberStyle::normal ) );
+    if ( unitParams.style == NumberStyle::distributePrecision || unitParams.style == NumberStyle::normal )
+        unitParams.precision = std::max( unitParams.precision, guessPrecision( fixedSpeed ) + int( unitParams.style == NumberStyle::distributePrecision ) );
 
     return detail::unitWidget( label, v, unitParams,
         [&]<typename ElemType>( const char* elemLabel, ElemType& elemVal, int i )
@@ -295,7 +322,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 ImGui::BeginGroup();
                 // Here we make sure that the new width is not negative, because otherwise things break.
                 // The min limit is arbitrary.
-                float w = std::max( ImGui::CalcItemWidth() - ImGui::GetFrameHeight() * 2 - plusMinusButtonsLeftOffset, ImGui::GetStyle().ItemSpacing.x );
+                float w = std::max( ImGui::CalcItemWidth() - ( ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x ) * 2 - plusMinusButtonsLeftOffset, ImGui::GetStyle().ItemSpacing.x );
                 ImGui::PushItemWidth( w );
             }
             MR_FINALLY{
@@ -316,7 +343,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
             float dragY = ImGui::GetCursorPosY();
             ret = ImGui::DragScalar(
                 elemLabelFixed.c_str(), detail::imGuiTypeEnum<ElemType>(), &elemVal,
-                float( VectorTraits<SpeedType>::getElem( i, fixedSpeed ) ), elemMin, elemMax, replace( valueToString<E>( elemVal, unitParams ), "%", "%%" ).c_str(), flags
+                float( VectorTraits<SpeedType>::getElem( i, fixedSpeed ) ), elemMin, elemMax, valueToImGuiFormatString( elemVal, unitParams ).c_str(), flags
             );
             auto dragId = ImGui::GetItemID();
 
@@ -337,13 +364,13 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 int action = 0;
 
                 // U+2212 MINUS SIGN
-                Vector2f buttonSize( ImGui::GetFrameHeight() - ImGui::GetStyle().ItemInnerSpacing.x, ImGui::GetFrameHeight() );
+                Vector2f buttonSize( ImGui::GetFrameHeight(), ImGui::GetFrameHeight() );
                 ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
                 ImGui::SetCursorPosY( dragY ); // Usually redundant, but when the user does something weird, this is sometimes required.
-                action -= UI::button( "\xe2\x88\x92", buttonSize );
+                action -= UI::buttonEx( "\xe2\x88\x92", true, buttonSize, 0, { .enableTestEngine = false } );
                 ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
                 ImGui::SetCursorPosY( dragY );
-                action += UI::button( "+", buttonSize );
+                action += UI::buttonEx( "+", true, buttonSize, 0, { .enableTestEngine = false } );
 
                 if ( action )
                 {
@@ -366,6 +393,13 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 }
             }
 
+            // Test engine stuff:
+            if ( auto opt = TestEngine::createValue( detail::Scalar<T> ? label : detail::getTestEngineLabelForVecElem( i ), elemVal, *elemMin, *elemMax ) )
+            {
+                elemVal = *opt;
+                ret = true;
+                detail::markItemEdited( ImGui::GetItemID() );
+            }
             return ret;
         } );
 }

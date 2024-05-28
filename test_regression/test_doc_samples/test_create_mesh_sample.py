@@ -1,7 +1,10 @@
+import pytest
+
 from helpers.common_helpers import list_compare_2d
 from module_helper import *
 
 
+@pytest.mark.smoke
 def test_create_mesh_get_primitives_sample():
     # === Code sample
 

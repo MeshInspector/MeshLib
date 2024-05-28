@@ -1,5 +1,5 @@
 #include "MRMeshFwd.h"
-#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+#ifndef MRMESH_NO_OPENVDB
 #include "MRVoxelsLoad.h"
 #include "MRStringConvert.h"
 #include "MRPch/MRJson.h"

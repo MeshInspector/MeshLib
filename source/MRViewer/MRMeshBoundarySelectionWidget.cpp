@@ -1,5 +1,6 @@
 #include "MRMeshBoundarySelectionWidget.h"
 
+#include "MRAppendHistory.h"
 #include "MRViewport.h"
 #include "MRViewerInstance.h"
 #include "MRPickHoleBorderElement.h"
@@ -21,9 +22,9 @@
 namespace MR
 {
 
-void BoundarySelectionWidget::enable( bool isEnaled )
+void BoundarySelectionWidget::enable( bool isEnabled )
 {
-    isSelectorActive_ = isEnaled;
+    isSelectorActive_ = isEnabled;
     if ( !isSelectorActive_ )
     {
         onMeshChangedSignals_.clear();
@@ -75,6 +76,30 @@ std::pair  <std::shared_ptr<MR::ObjectMeshHolder>, HoleEdgePoint> BoundarySelect
     return std::make_pair( nullptr, HoleEdgePoint() );
 }
 
+bool BoundarySelectionWidget::selectHole_( std::shared_ptr<ObjectMeshHolder> object, int index, bool writeHistory )
+{
+    if ( writeHistory )
+        AppendHistory<ChangeBoundarySelectionHistoryAction>( "Change Boundary Selection", *this, object, index );
+
+    bool result;
+    {
+        updateHole_( selectedHoleObject_, selectedHoleIndex_, params.ordinaryColor, params.ordinaryLineWidth );
+
+        selectedHoleObject_ = object;
+        selectedHoleIndex_ = index;
+
+        const auto lineWidth =
+            isSelectedAndHoveredTheSame_()
+            ? std::max( params.hoveredLineWidth, params.selectedLineWidth )
+            : params.selectedLineWidth
+        ;
+        result = updateHole_( selectedHoleObject_, selectedHoleIndex_, params.selectedColor, lineWidth );
+    }
+    if ( index >= 0 )
+        onBoundarySelected_( object );
+    return result;
+}
+
 bool BoundarySelectionWidget::updateHole_( std::shared_ptr<MR::ObjectMeshHolder> object, int index, MR::Color color, float lineWidth )
 {
     if ( ( object != nullptr ) && ( index >= 0 ) )
@@ -98,16 +123,13 @@ bool  BoundarySelectionWidget::isSelectedAndHoveredTheSame_()
 
 bool BoundarySelectionWidget::selectHole( std::shared_ptr<MR::ObjectMeshHolder> object, int index )
 {
-    updateHole_( selectedHoleObject_, selectedHoleIndex_, params.ordinaryColor, params.ordinaryLineWidth );
+    SCOPED_HISTORY( "Select Mesh Boundary" );
+    return selectHole_( object, index );
+}
 
-    selectedHoleObject_ = object;
-    selectedHoleIndex_ = index;
-
-    auto lineWidth = isSelectedAndHoveredTheSame_() ? std::max( params.hoveredLineWidth, params.selectedLineWidth ) : params.selectedLineWidth;
-    auto result = updateHole_( selectedHoleObject_, selectedHoleIndex_, params.selectedColor, lineWidth );
-    if ( index >= 0 )
-        onBoundarySelected_( object );
-    return result;
+void BoundarySelectionWidget::clear()
+{
+    selectHole( nullptr, -1 );
 }
 
 bool BoundarySelectionWidget::hoverHole_( std::shared_ptr<MR::ObjectMeshHolder> object, int index )
@@ -290,4 +312,33 @@ void BoundarySelectionWidget::reset()
     enable( false );
     disconnect();
 }
-} // namespace MR 
+
+ChangeBoundarySelectionHistoryAction::ChangeBoundarySelectionHistoryAction( std::string name, BoundarySelectionWidget& widget, std::shared_ptr<ObjectMeshHolder> object, int index )
+    : name_( std::move( name ) )
+    , widget_( widget )
+    , prevSelectedHoleObject_( widget.selectedHoleObject_ )
+    , nextSelectedHoleObject_( std::move( object ) )
+    , prevSelectedHoleIndex_( widget.selectedHoleIndex_ )
+    , nextSelectedHoleIndex_( index )
+{
+}
+
+void ChangeBoundarySelectionHistoryAction::action( Type type )
+{
+    switch ( type )
+    {
+        case Type::Undo:
+            widget_.selectHole_( prevSelectedHoleObject_, prevSelectedHoleIndex_, false );
+            break;
+        case Type::Redo:
+            widget_.selectHole_( nextSelectedHoleObject_, nextSelectedHoleIndex_, false );
+            break;
+    }
+}
+
+size_t ChangeBoundarySelectionHistoryAction::heapBytes() const
+{
+    return name_.capacity();
+}
+
+} // namespace MR

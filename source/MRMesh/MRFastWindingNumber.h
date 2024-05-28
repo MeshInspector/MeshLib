@@ -1,40 +1,15 @@
 #pragma once
 
-#include "MRAABBTree.h"
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
+#include "MRDipole.h"
+#include "MRVector.h"
+#include "MRId.h"
 #include <array>
 #include <string>
 
 namespace MR
 {
-
-struct Dipole
-{
-    Vector3f areaPos;
-    float area = 0;
-    Vector3f dirArea;
-    float rr = 0; // maximum squared distance from pos to any corner of the bounding box
-    [[nodiscard]] Vector3f pos() const
-    {
-        return area > 0 ? areaPos / area : areaPos;
-    }
-    /// returns true if this dipole is good approximation for a point \param q
-    [[nodiscard]] bool goodApprox( const Vector3f& q, float beta ) const
-    {
-        return ( q - pos() ).lengthSq() > sqr( beta ) * rr;
-    }
-    /// contribution of this dipole to the winding number at point \param q
-    [[nodiscard]] float w( const Vector3f& q ) const;
-};
-
-static_assert( sizeof( Dipole ) == 8 * sizeof( float ) );
-using Dipoles = Vector<Dipole, AABBTree::NodeId>;
-
-/// <summary>
-/// calculates dipoles for given mesh and AABB-tree
-/// </summary>
-MRMESH_API void calcDipoles( Dipoles& dipoles, const AABBTree& tree, const Mesh& mesh );
 
 /// Abstract class for fast approximate computation of winding number for a mesh (using its AABB tree)
 class IFastWindingNumber
@@ -108,11 +83,7 @@ public:
     /// constructs this from AABB tree of given mesh;
     /// this remains valid only if tree is valid
     [[nodiscard]] MRMESH_API FastWindingNumber( const Mesh & mesh );
-    /// compute approximate winding number at \param q;
-    /// \param beta determines the precision of the approximation: the more the better, recommended value 2 or more;
-    /// if distance from q to the center of some triangle group is more than beta times the distance from the center to most distance triangle in the group then we use approximate formula
-    /// \param skipFace this triangle (if it is close to \param q) will be skipped from summation
-    [[nodiscard]] MRMESH_API float calc( const Vector3f & q, float beta, FaceId skipFace = {} ) const;
+
     /// <summary>
     /// calculates winding numbers for a vector of points
     /// </summary>
@@ -121,12 +92,14 @@ public:
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
     /// <param name="skipFace">this triangle (if it is close to `q`) will be skipped from summation</param>
     MRMESH_API void calcFromVector( std::vector<float>& res, const std::vector<Vector3f>& points, float beta, FaceId skipFace = {} ) override;
+
     /// <summary>
     /// calculates winding numbers for all centers of mesh's triangles. if winding number is less than 0 or greater then 1, that face is marked as self-intersected
     /// </summary>
     /// <param name="res">resulting bit set</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
     MRMESH_API bool calcSelfIntersections( FaceBitSet& res, float beta, ProgressCallback cb ) override;
+
     /// <summary>
     /// calculates winding numbers for each point in a three-dimensional grid
     /// </summary>
@@ -144,6 +117,7 @@ public:
     /// \param maxDistSq - maximum possible distance
     /// \param minDistSq - minimum possible distance
     MRMESH_API float calcWithDistances( const Vector3f& p, float beta, float maxDistSq, float minDistSq );
+
     /// <summary>
     /// calculates distances and winding numbers for each point in a three-dimensional grid
     /// </summary>
@@ -177,6 +151,8 @@ public:
     MRMESH_API virtual size_t fromGridHeapBytes( const Vector3i& dims ) const override;
 
 private:
+    [[nodiscard]] float calc_( const Vector3f & q, float beta, FaceId skipFace = {} ) const;
+
     const Mesh & mesh_;
     const AABBTree & tree_;
     Dipoles dipoles_;

@@ -15,6 +15,7 @@
 #include "MRProgressReadWrite.h"
 #include "MRIOParsing.h"
 #include "MRMeshDelone.h"
+#include "MRParallelFor.h"
 #include "MRPch/MRFmt.h"
 #include "MRPch/MRTBB.h"
 
@@ -75,7 +76,7 @@ Expected<Mesh, std::string> fromMrmesh( std::istream& in, const MeshLoadSettings
 
 Expected<Mesh, std::string> fromOff( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
-    std::ifstream in( file );
+    std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
@@ -85,6 +86,16 @@ Expected<Mesh, std::string> fromOff( const std::filesystem::path& file, const Me
 Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
+
+    auto bufOrExpect = readCharBuffer( in );
+
+    if ( !bufOrExpect )
+        return unexpected( std::move( bufOrExpect.error() ) );
+
+    auto& buf = bufOrExpect.value();
+
+    auto splitLines = splitByLines( buf.data(), buf.size() );
+    in.seekg( 0);
     std::string header;
     in >> header;
     if ( !in || header != "OFF" )
@@ -95,47 +106,100 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
     if ( !in || numPoints <= 0 || numPolygons <= 0 || numUnused != 0 )
         return unexpected( std::string( "Unsupported OFF-format" ) );
 
-    std::vector<Vector3f> points;
-    points.reserve( numPoints );
-
-    for ( int i = 0; i < numPoints; ++i )
+    size_t strHeader = 2;
+    for ( size_t i = 2; i < splitLines.size(); i++ )
     {
-        float x, y, z;
-        in >> x >> y >> z;
-        if ( !in )
-            return unexpected( std::string( "Points read error" ) );
-        points.emplace_back( x, y, z );
-        if ( settings.callback && !( i & 0x3FF ) && !subprogress( settings.callback, 0.f, 0.5f )( float( i ) / numPoints ) )
-            return unexpected( std::string( "Loading canceled" ) );
+        if ( splitLines[i + 1] - splitLines[i] > 2 )
+        {
+            strHeader = i;
+            break;
+        }
+    }
+    
+    size_t strBorder = 0;
+
+    for ( size_t i = numPoints + strHeader; i < splitLines.size(); i++ )
+    {
+        if ( splitLines[i + 1] - splitLines[i] > 2 )
+        {
+            strBorder = i - (numPoints + strHeader);
+            break;
+        }
     }
 
-    std::vector<VertId> verts;
-    Vector<MeshBuilder::VertSpan, FaceId> faces;
-    faces.reserve( numPolygons + 1 );
-
-    for ( int i = 0; i < numPolygons; ++i )
+    std::vector<Vector3f> pointsBlocks( numPoints );
+    
+    std::atomic<bool> forseStop = false;
+    bool keepGoing = ParallelFor( pointsBlocks, [&] ( size_t numPoint )
     {
-        int k;
-        in >> k;
-        if ( !in )
-            return unexpected( std::string( "Polygons read error" ) );
-        if ( k < 3 || k > 1024 )
-            return unexpected( fmt::format( "Bad number of face vertices: {}", k ) );
-
-        MeshBuilder::VertSpan vspan;
-        vspan.firstVertex = VertId( verts.size() );
-        for ( int j = 0; j < k; ++j )
+        if ( forseStop )
         {
-            int v;
-            in >> v;
-            if ( !in )
-                return unexpected( std::string( "Polygons read error" ) );
-            if ( v < 0 || v >= numPoints )
-            return unexpected( fmt::format( "Bad vertex id: {}", v ) );
-            verts.push_back( VertId( v ) );
+            return;
         }
-        vspan.lastVertex = VertId( verts.size() );
-        faces.push_back( vspan );
+        size_t numLine = strHeader + numPoint;
+
+        const std::string_view line( &buf[splitLines[numLine]], splitLines[numLine + 1] - splitLines[numLine] );
+        Vector3d temp;
+        auto result = parseTextCoordinate( line, temp );
+        pointsBlocks[numPoint] = Vector3f( temp );
+
+        if ( !result.has_value() )
+        {
+            forseStop = true;
+        }
+    }, settings.callback );
+
+    if ( forseStop )
+    {
+        return unexpected( std::string( "Error when reading coordinates" ) );
+    }
+    if ( !keepGoing )
+    {
+        return unexpectedOperationCanceled();
+    }
+
+    size_t delta = numPoints + strHeader + strBorder;
+
+    Vector<MeshBuilder::VertSpan, FaceId> faces( numPolygons );
+    int numPolygonPoint = 0;
+    int start = 0;
+    for ( size_t i = 0; i < numPolygons; i++ )
+    {
+        size_t numLine = delta + i;
+        
+        const std::string_view line( &buf[splitLines[numLine]], splitLines[numLine + 1] - splitLines[numLine] );
+        parseFirstNum( line, numPolygonPoint );
+
+        faces.vec_[i] = MeshBuilder::VertSpan{ start, start + numPolygonPoint };
+        start += numPolygonPoint;
+    }
+
+    std::vector<VertId> flatPolygonIndices( faces.back().lastVertex );
+
+    keepGoing = ParallelFor( faces, [&] ( size_t numPolygon )
+    {
+        if ( forseStop )
+        {
+            return;
+        }
+        size_t numLine = delta + numPolygon;
+
+        const std::string_view line( &buf[splitLines[numLine]], splitLines[numLine + 1] - splitLines[numLine] );
+        auto result = parsePolygon( line, &flatPolygonIndices[faces.vec_[numPolygon].firstVertex], nullptr );
+
+        if ( !result.has_value() )
+        {
+            forseStop = true;
+        }
+    }, settings.callback );
+
+    if ( forseStop )
+    {
+        return unexpected( std::string( "Error when reading polygon topology" ) );
+    }
+    if ( !keepGoing )
+    {
+        return unexpectedOperationCanceled();
     }
 
     FaceBitSet skippedFaces;
@@ -145,7 +209,7 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
         skippedFaces.resize( faces.size(), true );
         buildSettings.region = &skippedFaces;
     }
-    auto res = Mesh::fromFaceSoup( std::move( points ), verts, faces, buildSettings );
+    auto res = Mesh::fromFaceSoup( std::move( pointsBlocks ), flatPolygonIndices, faces, buildSettings );
     if ( settings.skippedFaceCount )
         *settings.skippedFaceCount = int( skippedFaces.count() );
     return res;
@@ -435,6 +499,7 @@ Expected<Mesh, std::string> fromPly( std::istream& in, const MeshLoadSettings& s
 {
     MR_TIMER
 
+    const auto posStart = in.tellg();
     miniply::PLYReader reader( in );
     if ( !reader.valid() )
         return unexpected( std::string( "PLY file open error" ) );
@@ -444,11 +509,7 @@ Expected<Mesh, std::string> fromPly( std::istream& in, const MeshLoadSettings& s
 
     std::vector<unsigned char> colorsBuffer;
     Mesh res;
-
-    const auto posStart = in.tellg();
-    in.seekg( 0, std::ios_base::end );
-    const auto posEnd = in.tellg();
-    in.seekg( posStart );
+    const auto posEnd = reader.get_end_pos();
     const float streamSize = float( posEnd - posStart );
 
     FaceBitSet skippedFaces;

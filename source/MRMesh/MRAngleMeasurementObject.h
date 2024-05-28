@@ -51,6 +51,11 @@ public:
     [[nodiscard]] MRMESH_API bool getShouldVisualizeRay( bool second ) const;
     MRMESH_API void setShouldVisualizeRay( bool second, bool enable );
 
+    // Computes the angle value, as if by `acos(dot(...))` from the two normalized `getWorldRay()`s.
+    [[nodiscard]] MRMESH_API float computeAngle() const;
+
+    [[nodiscard]] MRMESH_API std::vector<std::string> getInfoLines() const override;
+
 protected:
     AngleMeasurementObject( const AngleMeasurementObject& other ) = default;
 
@@ -61,6 +66,8 @@ protected:
 
     MRMESH_API void setupRenderObject_() const override;
 
+    MRMESH_API void propagateWorldXfChangedSignal_() override;
+
 private:
     // Don't forget to add all the new fields to serialization.
 
@@ -69,6 +76,9 @@ private:
 
     // Whether we should draw a ray from the center point to better visualize the angle. Enable this if there isn't already a line object there.
     bool shouldVisualizeRay_[2]{};
+
+    // The cached value for `computeAngle()`.
+    mutable std::optional<float> cachedValue_;
 };
 
 } // namespace MR

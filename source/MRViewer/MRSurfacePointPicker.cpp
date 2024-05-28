@@ -12,6 +12,7 @@
 #include "MRMesh/MREdgePoint.h"
 #include "MRMesh/MRPointOnObject.h"
 #include "MRMesh/MRPointCloud.h"
+#include "MRMesh/MRMatrix3Decompose.h"
 
 #include <variant>
 
@@ -57,6 +58,12 @@ const PickedPoint& SurfacePointWidget::create( const std::shared_ptr<VisualObjec
     currentPos_ = startPos;
     updatePositionAndRadius_();
 
+    // update the point radius on every base object's re-scale
+    onBaseObjectWorldXfChanged_ = baseObject_->worldXfChangedSignal.connect( [this]
+    {
+        setPointRadius_();
+    } );
+
     // 10 group to imitate plugins behavior
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
     return currentPos_;
@@ -67,6 +74,8 @@ void SurfacePointWidget::reset()
 {
     if ( !pickSphere_ )
         return;
+
+    onBaseObjectWorldXfChanged_.disconnect();
 
     disconnect();
     pickSphere_->detachFromParent();
@@ -157,7 +166,7 @@ bool SurfacePointWidget::onMouseMove_( int, int )
 {
     if ( isOnMove_ )
     {
-        auto [obj, pick] = getViewerInstance().viewport().pick_render_object( params_.pickInBackFaceObject );
+        auto [obj, pick] = getViewerInstance().viewport().pickRenderObject( { .exactPickFirst = params_.pickInBackFaceObject } );
         if ( obj != baseObject_ )
             return false;
 
@@ -285,17 +294,25 @@ void SurfacePointWidget::updatePositionAndRadius_()
 
 void SurfacePointWidget::setPointRadius_()
 {
-    float radius = 0;
-    if ( params_.radiusSizeType == SurfacePointWidget::Parameters::PointSizeType::Pixel )
+    auto radius = 0.f;
+    switch ( params_.radiusSizeType )
     {
-        const auto& vParams = Viewer::instanceRef().viewport().getParameters();
-        auto w = MR::height( Viewer::instanceRef().viewport().getViewportRect() );
-        auto scale = tan( vParams.cameraViewAngle / 360.0f * PI_F ) / vParams.cameraZoom / w;
-        radius = params_.radius * scale;
-    }
-    else
-    {
-        radius = params_.radius <= 0.0f ? baseObject_->getBoundingBox().diagonal() * 5e-3f : params_.radius;
+        case Parameters::PointSizeType::Metrical:
+            radius = params_.radius <= 0.0f ? baseObject_->getBoundingBox().diagonal() * 5e-3f : params_.radius;
+            break;
+
+        case Parameters::PointSizeType::Pixel:
+        {
+            float cameraScale = getViewerInstance().viewport().getPixelSizeAtPoint( pickSphere_->getCenter( getViewerInstance().viewport().id ) );
+
+            const auto baseObjectWorldXf = baseObject_->worldXf();
+            Matrix3f r, s;
+            decomposeMatrix3( baseObjectWorldXf.A, r, s );
+            const auto baseObjectScale = ( s.x.x + s.y.y + s.z.z ) / 3.f;
+
+            radius = params_.radius * cameraScale / baseObjectScale;
+        }
+            break;
     }
     pickSphere_->setRadius( radius );
 }

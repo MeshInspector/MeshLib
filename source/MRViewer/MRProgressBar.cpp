@@ -14,6 +14,7 @@
 #include "MRRibbonFontManager.h"
 #include <thread>
 #include <GLFW/glfw3.h>
+#include "MRViewer/MRUITestEngine.h"
 #include "imgui_internal.h"
 
 #ifdef _WIN32
@@ -56,6 +57,9 @@ void ProgressBar::setup( float scaling )
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     if ( ImGui::BeginModalNoAnimation( buf, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
+        UI::TestEngine::pushTree( "ProgressBar" );
+        MR_FINALLY{ UI::TestEngine::popTree(); };
+
         instance.frameRequest_.reset();
 
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
@@ -124,7 +128,7 @@ void ProgressBar::setup( float scaling )
             if ( instance.isOrdered_ )
             {
                 instance.lastOperationTimeSec_ = float( ( std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::system_clock::now() - instance.operationStartTime_ ) ).count() ) * 1e-3f;
-                spdlog::info( instance.lastOperationTimeSec_ );
+                spdlog::info( "Operation \"{}\" time  - {} sec", instance.title_, instance.lastOperationTimeSec_);
             }
             if ( instance.onFinish_ )
             {
@@ -144,7 +148,7 @@ void ProgressBar::onFrameEnd()
 {
     // this is needed to prevent unexpected closing on progress bar window in:
     // ImGui::NewFrame() / ImGui::UpdateMouseMovingWindowNewFrame() / ImGui::FocusWindow()
-    // that can happen if progress bar is ordered on clicking to the window 
+    // that can happen if progress bar is ordered on clicking to the window
     // (for example on finish editing some InputFloat, clicking on window makes ImGui think this window is moving
     //  and close progress bar modal before it starts, task of progress bar is going but post-processing is not)
     auto& inst = instance_();

@@ -2,6 +2,7 @@
 
 #include "MRMesh/MRObjectFactory.h"
 #include "MRPch/MRJson.h"
+#include "MRPch/MRFmt.h"
 
 namespace MR
 {
@@ -82,6 +83,20 @@ void AngleMeasurementObject::setShouldVisualizeRay( bool second, bool enable )
     shouldVisualizeRay_[second] = enable;
 }
 
+float AngleMeasurementObject::computeAngle() const
+{
+    if ( !cachedValue_ )
+        cachedValue_ = angle( getWorldRay( false ), getWorldRay( true ) );
+    return *cachedValue_;
+}
+
+std::vector<std::string> AngleMeasurementObject::getInfoLines() const
+{
+    auto ret = MeasurementObject::getInfoLines();
+    ret.push_back( fmt::format( "angle value: {:.1f}\xC2\xB0", computeAngle() ) ); // U+00B0 DEGREE SIGN
+    return ret;
+}
+
 void AngleMeasurementObject::swapBase_( Object& other )
 {
     if ( auto ptr = other.asType<AngleMeasurementObject>() )
@@ -118,6 +133,12 @@ void AngleMeasurementObject::setupRenderObject_() const
 {
     if ( !renderObj_ )
         renderObj_ = createRenderObject<decltype( *this )>( *this );
+}
+
+void AngleMeasurementObject::propagateWorldXfChangedSignal_()
+{
+    MeasurementObject::propagateWorldXfChangedSignal_();
+    cachedValue_ = {};
 }
 
 } // namespace MR

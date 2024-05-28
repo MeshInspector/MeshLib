@@ -171,41 +171,30 @@ void DistanceMap::clear()
     data_.clear();
 }
 
-std::optional<Vector3f> DistanceMap::unproject( size_t x, size_t y, const DistanceMapToWorld& toWorldStruct ) const
+std::optional<Vector3f> DistanceMap::unproject( size_t x, size_t y, const AffineXf3f& toWorld ) const
 {
     auto val = get( x, y );
     if ( !val )
         return {};
-    return toWorldStruct.toWorld( x + 0.5f, y + 0.5f, *val );
+    return toWorld( { x + 0.5f, y + 0.5f, *val } );
 }
 
-std::optional<Vector3f> DistanceMap::unprojectInterpolated( float x, float y, const DistanceMapToWorld& toWorldStruct ) const
+std::optional<Vector3f> DistanceMap::unprojectInterpolated( float x, float y, const AffineXf3f& toWorld ) const
 {
     auto val = getInterpolated( x, y );
     if ( !val )
         return {};
-    return toWorldStruct.toWorld( x, y, *val );
+    return toWorld( { x, y, *val } );
 }
 
-Mesh distanceMapToMesh( const DistanceMap& distMap, const AffineXf3f& xf )
-{
-    DistanceMapToWorld toWorldParams;
-    toWorldParams.direction = xf.A.z;
-    toWorldParams.orgPoint = xf.b;
-    toWorldParams.pixelXVec = xf.A.x;
-    toWorldParams.pixelYVec = xf.A.y;
-
-    return distanceMapToMesh( distMap, toWorldParams );
-}
-
-Mesh distanceMapToMesh( const DistanceMap& distMap, const DistanceMapToWorld& toWorldStruct )
+Expected<Mesh> distanceMapToMesh( const DistanceMap& distMap, const AffineXf3f& toWorld, ProgressCallback cb )
 {
     auto resX = distMap.resX();
     auto resY = distMap.resY();
 
     if (resX < 2 || resY < 2)
     {
-        return Mesh();
+        return unexpected( "Cannot create mesh from degenerated 1x1 distance map." );
     }
 
     return makeRegularGridMesh( resX, resY, [&]( size_t x, size_t y )
@@ -214,8 +203,8 @@ Mesh distanceMapToMesh( const DistanceMap& distMap, const DistanceMapToWorld& to
     },
                                             [&]( size_t x, size_t y )
     {
-        return distMap.unproject( x, y, toWorldStruct ).value_or( Vector3f{} );
-    } );
+        return distMap.unproject( x, y, toWorld ).value_or( Vector3f{} );
+    }, {}, cb );
 }
 
 VoidOrErrStr saveDistanceMapToImage( const DistanceMap& dm, const std::filesystem::path& filename, float threshold /*= 1.f / 255*/ )
@@ -251,7 +240,7 @@ VoidOrErrStr saveDistanceMapToImage( const DistanceMap& dm, const std::filesyste
 }
 
 
-Expected<MR::DistanceMap, std::string> convertImageToDistanceMap( const Image& image, float threshold /*= 1.f / 255*/ )
+Expected<MR::DistanceMap> convertImageToDistanceMap( const Image& image, float threshold /*= 1.f / 255*/ )
 {
     threshold = std::clamp( threshold * 255, 0.f, 255.f );
     DistanceMap dm( image.resolution.x, image.resolution.y );
@@ -273,7 +262,7 @@ Expected<MR::DistanceMap, std::string> convertImageToDistanceMap( const Image& i
     return dm;
 }
 
-Expected<MR::DistanceMap, std::string> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold /*= 1.f / 255*/ )
+Expected<MR::DistanceMap> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold /*= 1.f / 255*/ )
 {
     auto resLoad = ImageLoad::fromAnySupportedFormat( filename );
     if ( !resLoad.has_value() )
@@ -383,8 +372,8 @@ void distanceMapFromContours( DistanceMap & distMap, const Polyline2& polyline, 
         }
     }
 
-    const Vector3f originPoint = Vector3f{ params.orgPoint.x, params.orgPoint.y, 0.F } +
-        Vector3f{ params.pixelSize.x / 2.F, params.pixelSize.y / 2.F, 0.F };
+    const Vector3f originPoint = Vector3f{ params.orgPoint.x, params.orgPoint.y, 0.f } +
+        Vector3f{ params.pixelSize.x / 2.f, params.pixelSize.y / 2.f, 0.f };
 
     size_t size = size_t( params.resolution.x ) * params.resolution.y;
     if ( options.outClosestEdges )
@@ -924,23 +913,12 @@ Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, const ContourT
 }
 
 std::pair<MR::Polyline2, MR::AffineXf3f> distanceMapTo2DIsoPolyline( const DistanceMap& distMap,
-    const DistanceMapToWorld& params, float isoValue, bool useDepth /* = false */)
+    const AffineXf3f& xf, float isoValue, bool useDepth /* = false */)
 {
-    Polyline2 resContours = distanceMapTo2DIsoPolyline( distMap, isoValue );
+    const float depth = useDepth ? isoValue : 0.f;
+    const AffineXf3f resXf{ xf.A, xf( { 0.f, 0.f, depth } ) };
 
-    const float depth = useDepth ? isoValue : 0.F;
-    const Matrix3f m = Matrix3f::fromColumns( params.pixelXVec, params.pixelYVec, params.direction );
-    const AffineXf3f resXf{ m, params.toWorld( 0.F, 0.F, depth ) };
-    const AffineXf3f resInv = resXf.inverse();
-
-    BitSetParallelFor( resContours.topology.getValidVerts(), [&] ( VertId v )
-    {
-        const Vector3f p = params.toWorld( resContours.points[v].x, resContours.points[v].y, 0.F );
-        const Vector3f pInv = resInv( p );
-        resContours.points[v] = Vector2f{ pInv.x, pInv.y };
-    } );
-
-    return { resContours, resXf };
+    return { distanceMapTo2DIsoPolyline( distMap, isoValue ), resXf };
 }
 
 Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float pixelSize, float isoValue )
@@ -1443,9 +1421,9 @@ Polyline2 polylineOffset( const Polyline2& polyline, float pixelSize, float offs
 
     auto isoline = distanceMapTo2DIsoPolyline( distanceMap, offset );
 
-    DistanceMapToWorld distanceMapToWorld( params );
+    AffineXf3f xf( params );
     for ( auto& p : isoline.points )
-        p = Vector2f( distanceMapToWorld.toWorld( p.x, p.y, 0 ) );
+        p = Vector2f( xf( { p.x, p.y, 0 } ) );
 
     return isoline;
 }

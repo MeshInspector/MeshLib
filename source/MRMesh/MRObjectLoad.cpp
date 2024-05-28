@@ -95,13 +95,6 @@ bool detectFlatShading( const Mesh& mesh )
     return total.sumSharpDblArea > 0.05 * total.sumDblArea;
 }
 
-int chooseRenderDiscretization( size_t pointCount )
-{
-    if ( int( pointCount ) > 2'000'000 )
-        return int( pointCount )/ 1'000'000;
-    return 1;
-}
-
 // Prepare object after it has been imported from external format (not .mru)
 void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::path &filename )
 {
@@ -125,9 +118,7 @@ void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::
 const IOFilters allFilters = SceneFileFilters
                              | ObjectLoad::getFilters()
                              | MeshLoad::getFilters()
-#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
                              | VoxelsLoad::Filters
-#endif
                              | LinesLoad::Filters
                              | PointsLoad::Filters;
 
@@ -184,7 +175,6 @@ Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std
         auto objectPoints = std::make_unique<ObjectPoints>();
         objectPoints->setName( utf8string( file.stem() ) );
         objectPoints->setPointCloud( pointCloud );
-        objectPoints->setRenderDiscretization( chooseRenderDiscretization(pointCloud->points.size() ) );
 
         if ( !colors.empty() )
         {
@@ -240,7 +230,6 @@ Expected<ObjectPoints, std::string> makeObjectPointsFromFile( const std::filesys
 
     ObjectPoints objectPoints;
     objectPoints.setName( utf8string( file.stem() ) );
-    objectPoints.setRenderDiscretization( chooseRenderDiscretization( pointsCloud->points.size() ) );
     objectPoints.setPointCloud( std::make_shared<MR::PointCloud>( std::move( pointsCloud.value() ) ) );
     objectPoints.setXf( xf );
     if ( !colors.empty() )
@@ -287,7 +276,7 @@ Expected<ObjectGcode, std::string> makeObjectGcodeFromFile( const std::filesyste
     return objectGcode;
 }
 
-#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+#ifndef MRMESH_NO_OPENVDB
 Expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
 {
     MR_TIMER;
@@ -527,7 +516,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                         {
                             result = unexpected( objectDistanceMap.error() );
 
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+#ifndef MRMESH_NO_OPENVDB
                             auto objsVoxels = makeObjectVoxelsFromFile( filename, callback );
                             std::vector<std::shared_ptr<Object>> resObjs;
                             if ( objsVoxels.has_value() )
@@ -554,10 +543,13 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
         for ( const std::shared_ptr<Object>& o : result.value() )
         {
             postImportObject( o, filename );
-            if ( auto objectPoints = o->asType<ObjectPoints>(); objectPoints && !objectPoints->pointCloud()->hasNormals() && loadWarn )
+            if ( auto objectPoints = o->asType<ObjectPoints>(); objectPoints && loadWarn )
             {
-                objectPoints->setRenderDiscretization( chooseRenderDiscretization( objectPoints->pointCloud()->points.size() ) );
-                *loadWarn += "Point cloud " + o->name() + " has no normals.\n";
+                if ( !objectPoints->pointCloud()->hasNormals() )
+                    *loadWarn += "Point cloud " + o->name() + " has no normals.\n";
+                if ( objectPoints->getRenderDiscretization() > 1 )
+                    *loadWarn += "Point cloud " + o->name() + " has too many points in PointCloud:\n"
+                    "Visualization is simplified (only part of the points is drawn)\n";
             }
         }
 
@@ -623,11 +615,7 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
 
 
     // Global variable is not correctly initialized in emscripten build
-    const IOFilters filters = SceneFileFilters | MeshLoad::getFilters() |
-#if !defined( __EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-        VoxelsLoad::Filters |
-#endif
-        LinesLoad::Filters | PointsLoad::Filters;
+    const IOFilters filters = SceneFileFilters | MeshLoad::getFilters() | VoxelsLoad::Filters | LinesLoad::Filters | PointsLoad::Filters;
 
     std::function<void( FilePathNode& )> fillFilesTree = {};
     fillFilesTree = [&fillFilesTree, &filters] ( FilePathNode& node )

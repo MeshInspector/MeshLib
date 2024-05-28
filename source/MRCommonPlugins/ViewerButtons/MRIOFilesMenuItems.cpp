@@ -62,8 +62,9 @@
 
 namespace
 {
-#ifndef __EMSCRIPTEN__
+
 using namespace MR;
+
 void sSelectRecursive( Object& obj )
 {
     obj.select( true );
@@ -71,7 +72,17 @@ void sSelectRecursive( Object& obj )
         if ( child )
             sSelectRecursive( *child );
 }
+
+bool isMobileBrowser()
+{
+#ifndef __EMSCRIPTEN__
+    return false;
+#else
+    static const auto isMobile = EM_ASM_INT( return is_mobile(); );
+    return bool( isMobile );
 #endif
+}
+
 }
 
 namespace MR
@@ -84,20 +95,21 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
     // required to be deferred, resent items store to be initialized
     CommandLoop::appendCommand( [&] ()
     {
-#ifndef __EMSCRIPTEN__
         auto openDirIt = RibbonSchemaHolder::schema().items.find( "Open directory" );
         if ( openDirIt != RibbonSchemaHolder::schema().items.end() )
+        {
             openDirectoryItem_ = std::dynamic_pointer_cast<OpenDirectoryMenuItem>( openDirIt->second.item );
+        }
         else
         {
             spdlog::warn( "Cannot find \"Open directory\" menu item for recent files." );
             assert( false );
         }
-#endif
+
         setupListUpdate_();
         connect( &getViewerInstance() );
         // required to be deferred, for valid emscripten static constructors order
-        filters_ = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | SceneFileFilters | DistanceMapLoad::Filters | GcodeLoad::Filters;
+        filters_ = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | SceneFileFilters | DistanceMapLoad::Filters | GcodeLoad::Filters | VoxelsLoad::Filters;
 #ifdef __EMSCRIPTEN__
         std::erase_if( filters_, [] ( const auto& filter )
         {
@@ -107,10 +119,6 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
         filters_ = filters_ | ObjectLoad::getFilters();
 #else
         filters_ = filters_ | AsyncObjectLoad::getFilters();
-#endif
-#else
-#ifndef MRMESH_NO_VOXEL
-        filters_ = filters_ | VoxelsLoad::Filters;
 #endif
 #endif
         parseLaunchParams_();
@@ -226,14 +234,8 @@ void OpenFilesMenuItem::setupListUpdate_()
                 pathStr = pathStr.substr( 0, fileNameLimit / 2 ) + " ... " + pathStr.substr( size - fileNameLimit / 2 );
 
             auto filesystemPath = recentPathsCache_[i];
-            dropList_[i] = std::make_shared<LambdaRibbonItem>( pathStr + "##" + std::to_string( i ),
-#ifndef __EMSCRIPTEN__
-                [this, filesystemPath] ()
-#else
-                [filesystemPath] ()
-#endif
+            dropList_[i] = std::make_shared<LambdaRibbonItem>( pathStr + "##" + std::to_string( i ), [this, filesystemPath]
             {
-#ifndef __EMSCRIPTEN__
                 std::error_code ec;
                 if ( std::filesystem::is_directory( filesystemPath, ec ) )
                 {
@@ -241,7 +243,6 @@ void OpenFilesMenuItem::setupListUpdate_()
                         openDirectoryItem_->openDirectory( filesystemPath );
                 }
                 else
-#endif
                 {
                     getViewerInstance().loadFiles( { filesystemPath } );
                 }
@@ -276,13 +277,12 @@ bool OpenFilesMenuItem::checkPaths_( const std::vector<std::filesystem::path>& p
     return false;
 }
 
-#ifndef __EMSCRIPTEN__
 OpenDirectoryMenuItem::OpenDirectoryMenuItem() :
     RibbonMenuItem( "Open directory" )
 {
 }
 
-#if !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
+#if !defined( MRMESH_NO_DICOM ) && !defined( MRMESH_NO_OPENVDB )
 void sOpenDICOMs( const std::filesystem::path & directory, const std::string & simpleError )
 {
     ProgressBar::orderWithMainThreadPostProcessing( "Open DICOMs", [directory, simpleError, viewer = Viewer::instance()] () -> std::function<void()>
@@ -373,51 +373,59 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
 }
 #endif
 
+std::string OpenDirectoryMenuItem::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
+{
+    static const std::string reason = isMobileBrowser() ? "This web browser doesn't support directory selection" : "";
+    return reason;
+}
+
 bool OpenDirectoryMenuItem::action()
 {
-    openDirectory( openFolderDialog() );
+    openFolderDialogAsync( [this] ( auto&& path ) { openDirectory( path ); } );
     return false;
 }
 
 void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& directory ) const
 {
-    if ( !directory.empty() )
+    if ( directory.empty() )
+        return;
+
+    bool isAnySupportedFiles = isSupportedFileInSubfolders( directory );
+    if ( isAnySupportedFiles )
     {
-        bool isAnySupportedFiles = isSupportedFileInSubfolders( directory );
-        if ( isAnySupportedFiles )
+        ProgressBar::orderWithMainThreadPostProcessing( "Open Directory", [directory] ()->std::function<void()>
         {
-            ProgressBar::orderWithMainThreadPostProcessing( "Open Directory", [directory] ()->std::function<void()>
+            auto loadRes = makeObjectTreeFromFolder( directory, ProgressBar::callBackSetProgress );
+            if ( loadRes.has_value() )
             {
-                auto loadRes = makeObjectTreeFromFolder( directory, ProgressBar::callBackSetProgress );
-                if ( loadRes.has_value() )
+                auto obj = std::make_shared<Object>( std::move( *loadRes ) );
+                return [obj, directory]
                 {
-                    auto obj = std::make_shared<Object>( std::move( *loadRes ) );
-                    return[obj, directory]
-                    {
-                        sSelectRecursive( *obj );
-                        AppendHistory<ChangeSceneAction>( "Open Directory", obj, ChangeSceneAction::Type::AddObject );
-                        SceneRoot::get().addChild( obj );
-                        getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
-                        getViewerInstance().recentFilesStore().storeFile( directory );
-                    };
-                }
-                else
-                    return[error = loadRes.error()]
+                    sSelectRecursive( *obj );
+                    AppendHistory<ChangeSceneAction>( "Open Directory", obj, ChangeSceneAction::Type::AddObject );
+                    SceneRoot::get().addChild( obj );
+                    getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
+                    getViewerInstance().recentFilesStore().storeFile( directory );
+                };
+            }
+            else
+            {
+                return [error = loadRes.error()]
                 {
                     showError( error );
                 };
-            } );
-        }
-#if !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
-        else
-        {
-            sOpenDICOMs( directory, "No supported files can be open from the directory:\n" + utf8string( directory ) );
-        }
-#endif
+            }
+        } );
     }
+#if !defined( MRMESH_NO_DICOM ) && !defined( MRMESH_NO_OPENVDB )
+    else
+    {
+        sOpenDICOMs( directory, "No supported files can be open from the directory:\n" + utf8string( directory ) );
+    }
+#endif
 }
 
-#if !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
+#if !defined( MRMESH_NO_DICOM ) && !defined( MRMESH_NO_OPENVDB )
 OpenDICOMsMenuItem::OpenDICOMsMenuItem() :
     RibbonMenuItem( "Open DICOMs" )
 {
@@ -425,13 +433,14 @@ OpenDICOMsMenuItem::OpenDICOMsMenuItem() :
 
 bool OpenDICOMsMenuItem::action()
 {
-    auto directory = openFolderDialog();
-    if ( directory.empty() )
-        return false;
-    sOpenDICOMs( directory, "No DICOM files can be open from the directory:\n" + utf8string( directory ) );
+    openFolderDialogAsync( [] ( const std::filesystem::path& directory )
+    {
+        if ( directory.empty() )
+            return;
+        sOpenDICOMs( directory, "No DICOM files can be open from the directory:\n" + utf8string( directory ) );
+    } );
     return false;
 }
-#endif
 #endif
 
 namespace {
@@ -462,7 +471,7 @@ std::optional<SaveInfo> getSaveInfo( const std::vector<std::shared_ptr<T>> & obj
     || checkObjects.template operator()<ObjectLines>( { ViewerSettingsManager::ObjType::Lines, LinesSave::Filters } )
     || checkObjects.template operator()<ObjectPoints>( { ViewerSettingsManager::ObjType::Points, PointsSave::Filters } )
     || checkObjects.template operator()<ObjectDistanceMap>( { ViewerSettingsManager::ObjType::DistanceMap, DistanceMapSave::Filters } )
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+#ifndef MRMESH_NO_OPENVDB
     || checkObjects.template operator()<ObjectVoxels>( { ViewerSettingsManager::ObjType::Voxels, VoxelsSave::Filters } )
 #endif
     ;
@@ -926,13 +935,13 @@ MR_REGISTER_RIBBON_ITEM( SaveObjectMenuItem )
 
 MR_REGISTER_RIBBON_ITEM( SaveSceneAsMenuItem )
 
-#ifndef __EMSCRIPTEN__
-
 MR_REGISTER_RIBBON_ITEM( OpenDirectoryMenuItem )
 
-#if !defined(MRMESH_NO_DICOM) && !defined(MRMESH_NO_VOXEL)
+#if !defined( MRMESH_NO_DICOM ) && !defined( MRMESH_NO_OPENVDB )
 MR_REGISTER_RIBBON_ITEM( OpenDICOMsMenuItem )
 #endif
+
+#ifndef __EMSCRIPTEN__
 
 MR_REGISTER_RIBBON_ITEM( SaveSelectedMenuItem )
 
@@ -947,7 +956,7 @@ MR_REGISTER_RIBBON_ITEM( CaptureScreenshotToClipBoardMenuItem )
 #endif
 
 }
-#ifdef __EMSCRIPTEN__
+#if defined( __EMSCRIPTEN__ ) && defined( MRMESH_NO_DICOM )
 #include "MRCommonPlugins/Basic/MRWasmUnavailablePlugin.h"
 MR_REGISTER_WASM_UNAVAILABLE_ITEM( OpenDICOMsMenuItem, "Open DICOMs" )
 #endif

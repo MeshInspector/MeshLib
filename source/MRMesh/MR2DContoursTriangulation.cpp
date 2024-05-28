@@ -267,7 +267,7 @@ private:
         bool processed{ false };
         operator bool() const { return vId.valid(); }
     };
-    using IntersectionMap = HashMap<std::pair<EdgeId, EdgeId>, IntersectionInfo>;
+    using IntersectionMap = HashMap<EdgePair, IntersectionInfo>;
     IntersectionMap intersectionsMap_; // needed to prevent recreation of same vertices multiple times
     void checkIntersection_( int index, bool lower );
     void checkIntersection_( int indexLower );

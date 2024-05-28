@@ -3,6 +3,7 @@
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRObject.h"
 #include "MRMesh/MRObjectMesh.h"
+#include "MRMesh/MRObjectPoints.h"
 
 namespace MR
 {
@@ -75,5 +76,28 @@ void PluginUpdateOnChangeMeshPart::onPluginDisable_()
     func_ = {};
     connections_.clear();
 }
+
+void PluginCloseOnChangePointCloud::onPluginEnable_()
+{
+    auto objs = getAllObjectsInTree<ObjectPoints>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+    pointCloudChangedConnections_.reserve( objs.size() );
+    pointCloudChanged_ = false;
+    for ( auto& obj : objs )
+        pointCloudChangedConnections_.emplace_back( obj->pointsChangedSignal.connect( [&] ( uint32_t )
+    {
+        pointCloudChanged_ = true;
+    } ) );
+}
+
+void PluginCloseOnChangePointCloud::onPluginDisable_()
+{
+    pointCloudChangedConnections_.clear();
+}
+
+bool PluginCloseOnChangePointCloud::shouldClose_() const
+{
+    return pointCloudChanged_;
+}
+
 
 }

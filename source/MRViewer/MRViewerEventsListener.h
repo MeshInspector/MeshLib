@@ -2,7 +2,7 @@
 
 #include "MRViewerFwd.h"
 #include "MRMesh/MRVector3.h"
-#include <boost/signals2/signal.hpp>
+#include "MRMesh/MRSignal.h"
 #include <filesystem>
 #include <vector>
 
@@ -21,7 +21,7 @@ struct ConnectionHolder : virtual IConnectable
     virtual ~ConnectionHolder() = default;
     virtual void disconnect() { connection_.disconnect(); }
 protected:
-    boost::signals2::connection connection_;
+    boost::signals2::scoped_connection connection_;
 };
 
 template<typename ...Connectables>

@@ -53,7 +53,7 @@ struct MarchingCubesParams
 MRMESH_API Expected<Mesh> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params = {} );
 MRMESH_API Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolume& volume, const MarchingCubesParams& params = {} );
 
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
+#ifndef MRMESH_NO_OPENVDB
 // makes Mesh from VdbVolume with given settings using Marching Cubes algorithm
 MRMESH_API Expected<Mesh> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params = {} );
 MRMESH_API Expected<TriMesh> marchingCubesAsTriMesh( const VdbVolume& volume, const MarchingCubesParams& params = {} );

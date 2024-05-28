@@ -3,7 +3,9 @@
 #include "MRViewer.h"
 #include "MRGladGlfw.h"
 #include "MRMouseController.h"
+#include "MRMesh/MRFinally.h"
 #include "MRMesh/MRSystem.h"
+#include "MRMesh/MRStringConvert.h"
 
 namespace MR
 {
@@ -33,13 +35,14 @@ SpaceMouseHandlerHidapi::~SpaceMouseHandlerHidapi()
     hid_exit();
 }
 
-void SpaceMouseHandlerHidapi::initialize()
+bool SpaceMouseHandlerHidapi::initialize()
 {
-    if ( hid_init() )
+    if ( hid_init() != 0 )
     {
         spdlog::error( "HID API: init error" );
-        return;
+        return false;
     }
+
 #ifdef __APPLE__
     hid_darwin_set_open_exclusive( 0 );
 #endif
@@ -48,11 +51,14 @@ void SpaceMouseHandlerHidapi::initialize()
     hid_device_info* devs_ = hid_enumerate( 0x0, 0x0 );
     printDevices_( devs_ );
 #endif
+
     terminateListenerThread_ = false;
     initListenerThread_();
+
+    return true;
 }
 
-bool SpaceMouseHandlerHidapi::findAndAttachDevice_()
+bool SpaceMouseHandlerHidapi::findAndAttachDevice_( bool verbose )
 {
     bool isDeviceFound = false;
     for ( const auto& [vendorId, supportedDevicesId] : vendor2device_ )
@@ -61,6 +67,11 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_()
         hid_device_info* localDevicesIt = hid_enumerate( vendorId, 0x0 );
         while ( localDevicesIt && !isDeviceFound )
         {
+            if ( verbose )
+            {
+                spdlog::info( "HID API device found: vendorId={:#06x}, deviceId={:#06x}, path={}, usage={}, usage_page={}",
+                    vendorId, localDevicesIt->product_id, localDevicesIt->path, localDevicesIt->usage, localDevicesIt->usage_page );
+            }
             for ( ProductId deviceId : supportedDevicesId )
             {
                 if ( deviceId == localDevicesIt->product_id && localDevicesIt->usage == 8 && localDevicesIt->usage_page == 1 )
@@ -69,16 +80,17 @@ bool SpaceMouseHandlerHidapi::findAndAttachDevice_()
                     if ( device_ )
                     {
                         isDeviceFound = true;
-                        spdlog::info( "SpaceMouse Found: type: {} {} path: {} ", vendorId, deviceId, localDevicesIt->path );
+                        spdlog::info( "SpaceMouse connected: vendorId={:#06x}, deviceId={:#06x}, path={}", vendorId, deviceId, localDevicesIt->path );
                         // setup buttons logger
                         buttonsState_ = 0;
                         setButtonsMap_( vendorId, deviceId );
                         activeMouseScrollZoom_ = false;
                         break;
                     }
-                    else
+                    else if ( verbose )
                     {
-                        spdlog::error( "HID API: device open error" );
+                        spdlog::error( "HID API device (vendorId={:#06x}, deviceId={:#06x}, path={}) open error: {}",
+                            vendorId, deviceId, localDevicesIt->path, wideToUtf8( hid_error( nullptr ) ) );
                     }
                 }
             }
@@ -96,7 +108,7 @@ void SpaceMouseHandlerHidapi::setButtonsMap_( VendorId vendorId, ProductId produ
     {
         if ( productId == 0xc635 || productId == 0xc652 ) // spacemouse compact
             buttonsMapPtr_ = &buttonMapCompact;
-        else if ( productId == 0xc631 || productId == 0xc632 ) //  spacemouse pro
+        else if ( productId == 0xc631 || productId == 0xc632 || productId == 0xc638 ) //  spacemouse pro
             buttonsMapPtr_ = &buttonMapPro;
         else if ( productId == 0xc633 ) // spacemouse enterprise
             buttonsMapPtr_ = &buttonMapEnterprise;
@@ -151,21 +163,22 @@ void SpaceMouseHandlerHidapi::initListenerThread_()
     {
         spdlog::info( "SpaceMouse Listener thread started" );
         SetCurrentThreadName( "SpaceMouse listener" );
-        struct S
-        {
-            ~S() { spdlog::info( "SpaceMouse listener thread finished" ); }
-        } s;
+        MR_FINALLY {
+            spdlog::info( "SpaceMouse listener thread finished" );
+        };
 
         do
         {
             std::unique_lock<std::mutex> syncThreadLock( syncThreadMutex_ );
             // stay in loop until SpaceMouse is found
+            bool firstSearch = true;
             while ( !device_ )
             {
                 if ( terminateListenerThread_ )
                     return;
-                if ( findAndAttachDevice_() )
+                if ( findAndAttachDevice_( firstSearch ) )
                     break;
+                firstSearch = false; // avoid spam in log
                 syncThreadLock.unlock();
                 std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
                 syncThreadLock.lock();

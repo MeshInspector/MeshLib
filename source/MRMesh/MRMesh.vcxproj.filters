@@ -112,6 +112,9 @@
     <Filter Include="Source Files\WaterFlow">
       <UniqueIdentifier>{3bf8efb6-7251-4ef8-890d-0e5c5940c8b8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\SelfIntersectoins">
+      <UniqueIdentifier>{7a9f7691-d5a0-49ca-936f-cc25cfe18f8d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRMeshFwd.h">
@@ -1236,6 +1239,30 @@
     <ClInclude Include="MRSeparationPoint.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
+    <ClInclude Include="MRMultiwayICP.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFixSelfIntersections.h">
+      <Filter>Source Files\SelfIntersectoins</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMapping.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRigidXf3.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRigidScaleXf3.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMultiwayAligningTransform.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRIterativeSampling.h">
+      <Filter>Source Files\PointCloud</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDipole.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1991,7 +2018,6 @@
     <ClCompile Include="MRZlib.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
-    <ClCompile Include="MRFinally.cpp" />
     <ClCompile Include="MRConeObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
@@ -2064,8 +2090,31 @@
     <ClCompile Include="MRSeparationPoint.cpp">
       <Filter>Source Files\Voxels</Filter>
     </ClCompile>
+    <ClCompile Include="MRFixSelfIntersections.cpp">
+      <Filter>Source Files\SelfIntersectoins</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMultiwayICP.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFinally.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMultiwayAligningTransform.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRIterativeSampling.cpp">
+      <Filter>Source Files\PointCloud</Filter>
+    </ClCompile>
+    <ClCompile Include="MRDipole.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="$(ProjectDir)..\..\thirdparty\python\python$(PythonVersion).zip">
+      <Filter>Source Files\Python</Filter>
+    </CopyFileToFolders>
   </ItemGroup>
 </Project>

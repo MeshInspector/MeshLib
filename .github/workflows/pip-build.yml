@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  VCPKG-VERSION: '2024.03.25'
+  VCPKG-VERSION: '2024.04.26'
   CUDA-VERSION: '11.4.2.47141'
   CUDA-MAJOR: '11'
   CUDA-MINOR: '4'
@@ -36,7 +36,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["x86_64", "aarch64"]
-        py-version: ["3.8", "3.9", "3.10", "3.11"]
+        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         include:
           - platform: "x86_64"
             docker-image: "meshlib/meshlib-ubuntu:latest"
@@ -58,6 +58,9 @@ jobs:
           - py-version: "3.11"
             py-tag: "cp311"
             py-cmd: "python3.11"
+          - py-version: "3.12"
+            py-tag: "cp312"
+            py-cmd: "python3.12"
     steps:
       - name: Git - add safe directory
         run: git config --global --add safe.directory ${{github.workspace}}/*
@@ -107,12 +110,12 @@ jobs:
 
       - name: Create and fix Wheel
         run: |
-          ${{ matrix.py-cmd }} -m pip install auditwheel wheel setuptools pybind11-stubgen
+          ${{ matrix.py-cmd }} -m pip install --upgrade auditwheel wheel setuptools pybind11-stubgen typing-extensions
           ${{ matrix.py-cmd }} ./scripts/wheel/setup_workspace.py
           cd ./scripts/wheel/meshlib
-          PYTHONPATH=. ${{ matrix.py-cmd }} $(which pybind11-stubgen) --output-dir . meshlib.mrmeshpy
-          PYTHONPATH=. ${{ matrix.py-cmd }} $(which pybind11-stubgen) --output-dir . meshlib.mrmeshnumpy
-          PYTHONPATH=. ${{ matrix.py-cmd }} $(which pybind11-stubgen) --output-dir . meshlib.mrviewerpy
+          PYTHONPATH=. ${{ matrix.py-cmd }} $(which pybind11-stubgen) --exit-code --output-dir . meshlib.mrmeshpy
+          PYTHONPATH=. ${{ matrix.py-cmd }} $(which pybind11-stubgen) --exit-code --output-dir . meshlib.mrmeshnumpy
+          PYTHONPATH=. ${{ matrix.py-cmd }} $(which pybind11-stubgen) --exit-code --output-dir . meshlib.mrviewerpy
           ${{ matrix.py-cmd }} setup.py bdist_wheel --python-tag=${{matrix.py-tag}} --version ${{needs.setup.outputs.version_tag}}
           ${{ matrix.py-cmd }} -m auditwheel repair --plat manylinux_2_31_${{matrix.platform}} ./dist/*.whl
 
@@ -263,14 +266,14 @@ jobs:
       - name: Create and fix Wheel
         run: |
           py -${{matrix.py-version}} -m pip install --upgrade pip
-          py -${{matrix.py-version}} -m pip install wheel setuptools delvewheel pybind11-stubgen
+          py -${{matrix.py-version}} -m pip install --upgrade wheel setuptools delvewheel pybind11-stubgen typing-extensions
           py -${{matrix.py-version}} .\scripts\wheel\setup_workspace.py
           $env:PYBIND11_STUBGEN_PATH = $PWD.Path + "\source\x64\Release"
           cd scripts\wheel\meshlib
           $env:PYTHONPATH = $PWD.Path
-          py -${{matrix.py-version}} ..\pybind11-stubgen.py --output-dir . meshlib.mrmeshpy
-          py -${{matrix.py-version}} ..\pybind11-stubgen.py --output-dir . meshlib.mrmeshnumpy
-          py -${{matrix.py-version}} ..\pybind11-stubgen.py --output-dir . meshlib.mrviewerpy
+          py -${{matrix.py-version}} ..\pybind11-stubgen.py --exit-code --output-dir . meshlib.mrmeshpy
+          py -${{matrix.py-version}} ..\pybind11-stubgen.py --exit-code --output-dir . meshlib.mrmeshnumpy
+          py -${{matrix.py-version}} ..\pybind11-stubgen.py --exit-code --output-dir . meshlib.mrviewerpy
           py -${{matrix.py-version}} setup.py bdist_wheel --plat-name=win-amd64 --python-tag=${{matrix.py-tag}} --version ${{needs.setup.outputs.version_tag}}
           cd ..\..\..
           $WheelFile = (powershell -Command Get-ChildItem -Path scripts\wheel\meshlib\dist\*.whl -Name)
@@ -372,12 +375,12 @@ jobs:
       - name: Create and fix Wheel
         run: |
           ${{ matrix.py-cmd }} -m pip install --upgrade pip
-          ${{ matrix.py-cmd }} -m pip install --upgrade wheel setuptools delocate pybind11-stubgen
+          ${{ matrix.py-cmd }} -m pip install --upgrade wheel setuptools delocate==0.10.7 pybind11-stubgen typing-extensions
           ${{ matrix.py-cmd }} ./scripts/wheel/setup_workspace.py
           cd ./scripts/wheel/meshlib
-          PYTHONPATH=. pybind11-stubgen --output-dir . meshlib.mrmeshpy
-          PYTHONPATH=. pybind11-stubgen --output-dir . meshlib.mrmeshnumpy
-          PYTHONPATH=. pybind11-stubgen --output-dir . meshlib.mrviewerpy
+          PYTHONPATH=. pybind11-stubgen --exit-code --output-dir . meshlib.mrmeshpy
+          PYTHONPATH=. pybind11-stubgen --exit-code --output-dir . meshlib.mrmeshnumpy
+          PYTHONPATH=. pybind11-stubgen --exit-code --output-dir . meshlib.mrviewerpy
           ${{ matrix.py-cmd }} setup.py bdist_wheel --plat-name=${{matrix.plat-name}} --python-tag=${{matrix.py-tag}} --version ${{needs.setup.outputs.version_tag}}
           delocate-path meshlib
           cd ../../..
@@ -401,7 +404,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ["x86_64", "aarch64"]
-        os: ["ubuntu:20.04", "ubuntu:22.04", "debian:11-slim", "fedora:37"]
+        os: ["ubuntu:20.04", "ubuntu:22.04", "debian:11-slim", "fedora:37", "fedora:39"]
         include:
           - platform: "x86_64"
             runner: ubuntu-latest
@@ -423,6 +426,9 @@ jobs:
           - os: "fedora:37"
             py-version: "3.11"
             py-cmd: "python3.11"
+          - os: "fedora:39"
+            py-version: "3.12"
+            py-cmd: "python3.12"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -434,7 +440,7 @@ jobs:
         run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
 
       - name: Fedora 37 system setup
-        if: ${{matrix.os == 'fedora:37'}}
+        if: ${{matrix.os == 'fedora:37' || matrix.os == 'fedora:39'}}
         run: dnf -y install python3 pip
 
       - name: Pip setup

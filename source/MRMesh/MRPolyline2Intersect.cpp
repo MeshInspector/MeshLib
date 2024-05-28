@@ -32,7 +32,7 @@ bool isPointInsidePolyline( const Polyline2& polyline, const Vector2f& point )
     if ( !rayBoxIntersect( tree[tree.rootNodeId()].box, point ) )
         return false;
 
-    AABBTreePolyline2::NodeId nodesStack[maxTreeDepth];
+    NodeId nodesStack[maxTreeDepth];
     int currentNode = 0;
     nodesStack[0] = tree.rootNodeId();
 
@@ -92,7 +92,7 @@ std::optional<PolylineIntersectionResult2> rayPolylineIntersect_( const Polyline
     if( !rayBoxIntersect( Box2<T>{ tree[tree.rootNodeId()].box }, line.p, s, e, prec ) )
         return res;
 
-    std::pair< AABBTreePolyline2::NodeId,T> nodesStack[maxTreeDepth];
+    std::pair< NodeId,T> nodesStack[maxTreeDepth];
     int currentNode = 0;
     nodesStack[0] = { tree.rootNodeId(), rayStart };
 

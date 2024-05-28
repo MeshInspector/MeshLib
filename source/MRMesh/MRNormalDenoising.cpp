@@ -6,6 +6,7 @@
 #include "MRNormalsToPoints.h"
 #include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
+#include <limits>
 
 #pragma warning(push)
 #pragma warning(disable: 4068) // unknown pragmas
@@ -258,8 +259,10 @@ VoidOrErrStr meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings
     const auto guide = mesh.points;
     NormalsToPoints n2p;
     n2p.prepare( mesh.topology, settings.guideWeight );
+    auto maxInitialDistSq = settings.limitNearInitial ? sqr( settings.maxInitialDist )
+        : std::numeric_limits<float>::infinity();
     for ( int i = 0; i < settings.pointIters; ++i )
-        n2p.run( guide, fnormals, mesh.points );
+        n2p.run( guide, fnormals, mesh.points, maxInitialDistSq );
 
     reportProgress( settings.cb, 1.0f );
     return {};

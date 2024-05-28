@@ -9,14 +9,13 @@
 #include <GLFW/glfw3.h>
 #include <clocale>
 
-#if defined( _WIN32 )
-    #define GLFW_EXPOSE_NATIVE_WIN32
-#elif defined( __APPLE__ )
-    #include <nfd.hpp>
-#elif !defined( __EMSCRIPTEN__)
+#ifndef _WIN32
+  #ifndef __EMSCRIPTEN__
     #include <gtkmm.h>
+  #endif
+#else
+#define GLFW_EXPOSE_NATIVE_WIN32
 #endif
-
 #ifndef __EMSCRIPTEN__
 #include <GLFW/glfw3native.h>
 #endif
@@ -58,7 +57,20 @@ EMSCRIPTEN_KEEPALIVE int emsSaveFile( const char* filename )
     return 0;
 }
 
+EMSCRIPTEN_KEEPALIVE int emsOpenDirectory( const char* dirname )
+{
+    if ( !sDialogFilesCallback )
+        return 1;
+
+    const std::filesystem::path path = std::string( dirname );
+    sDialogFilesCallback( { path } );
+    sDialogFilesCallback = {};
+
+    return 0;
 }
+
+}
+
 #endif
 
 namespace
@@ -91,7 +103,7 @@ std::string getCurrentFolder( const FileDialogParameters& params )
 }
 #endif
 
-#if defined( _WIN32 )
+#ifdef  _WIN32
 std::vector<std::filesystem::path> windowsDialog( const FileDialogParameters& params = {} )
 {
     std::vector<std::filesystem::path> res;
@@ -225,115 +237,8 @@ std::vector<std::filesystem::path> windowsDialog( const FileDialogParameters& pa
 
     return res;
 }
-#elif defined( __APPLE__ )
-std::vector<std::filesystem::path> nfdDialog( const FileDialogParameters& params = {} )
-{
-    NFD::Guard guard;
-
-    const auto currentDir = getCurrentFolder( params );
-
-    std::vector<std::filesystem::path> results;
-    nfdresult_t rc;
-    if ( params.folderDialog )
-    {
-        NFD::UniquePath path;
-        // NOTE: only single dir open dialog is supported
-        assert( !params.multiselect );
-        assert( !params.saveDialog );
-        rc = NFD::PickFolder( path, currentDir.c_str() );
-        if ( rc == NFD_OKAY )
-            results.emplace_back( path.get() );
-    }
-    else
-    {
-        std::vector<nfdfilteritem_t> filters;
-        std::vector<std::string> filterSpecs;
-        filters.reserve( params.filters.size() );
-        filterSpecs.reserve( params.filters.size() );
-        std::string defaultExtension;
-        for ( const auto& filter : params.filters )
-        {
-            std::ostringstream oss;
-            size_t separatorPos = 0;
-            for (;;)
-            {
-                auto nextSeparatorPos = filter.extensions.find( ";", separatorPos );
-                auto ext = filter.extensions.substr( separatorPos, nextSeparatorPos - separatorPos );
-                if ( separatorPos != 0 )
-                    oss << ",";
-                assert( ext.size() >= 3 );
-                assert( ext[0] == '*' );
-                assert( ext[1] == '.' );
-                oss << ext.substr( 2 );
-                if ( defaultExtension.empty() )
-                    defaultExtension = ext.substr( 1 );
-                if ( nextSeparatorPos == std::string::npos )
-                    break;
-                separatorPos = nextSeparatorPos + 1;
-            }
-            const auto& spec = filterSpecs.emplace_back( oss.str() );
-
-            filters.emplace_back( nfdfilteritem_t { filter.name.c_str(), spec.c_str() } );
-        }
-
-        if ( params.multiselect )
-        {
-            NFD::UniquePathSet pathSet;
-            assert( !params.saveDialog );
-            rc = NFD::OpenDialogMultiple( pathSet, filters.data(), filters.size(), currentDir.c_str() );
-            if ( rc == NFD_OKAY )
-            {
-                nfdpathsetsize_t pathCount;
-                NFD::PathSet::Count( pathSet, pathCount );
-                results.reserve( pathCount );
-
-                NFD::UniquePathSetPath path;
-                for ( auto i = 0; i < pathCount; ++i )
-                {
-                    NFD::PathSet::GetPath( pathSet, i, path );
-                    results.emplace_back( path.get() );
-                }
-            }
-        }
-        else
-        {
-            NFD::UniquePath path;
-            if ( params.saveDialog )
-                rc = NFD::SaveDialog( path, filters.data(), filters.size(), currentDir.c_str(), params.fileName.c_str() );
-            else
-                rc = NFD::OpenDialog( path, filters.data(), filters.size(), currentDir.c_str() );
-            if ( rc == NFD_OKAY )
-            {
-                std::filesystem::path result = path.get();
-                if ( params.saveDialog && !result.has_extension() )
-                {
-                    // FIXME: cannot choose file type on macOS
-                    // using the first suggested extension by default
-                    result.replace_extension( defaultExtension );
-                }
-                results.emplace_back( std::move( result ) );
-            }
-        }
-    }
-
-    switch ( rc )
-    {
-        case NFD_OKAY:
-        {
-            assert( !results.empty() );
-            auto& cfg = MR::Config::instance();
-            cfg.setJsonValue( cLastUsedDirKey, results.front().parent_path().string() );
-        }
-            return results;
-        case NFD_CANCEL:
-            return {};
-        case NFD_ERROR:
-            spdlog::warn( "File dialog failed" );
-            return {};
-    }
-    MR_UNREACHABLE
-}
-#elif !defined( __EMSCRIPTEN__ )
+#else
+#ifndef __EMSCRIPTEN__
 std::string gtkDialogTitle( Gtk::FileChooserAction action, bool multiple = false )
 {
     switch ( action )
@@ -363,12 +268,18 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
         action = params.saveDialog ? Gtk::FILE_CHOOSER_ACTION_CREATE_FOLDER : Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER;
     else
         action = params.saveDialog ? Gtk::FILE_CHOOSER_ACTION_SAVE : Gtk::FILE_CHOOSER_ACTION_OPEN;
+#if defined( __APPLE__ )
+    const auto dialogPtr = Gtk::FileChooserNative::create(gtkDialogTitle( action, params.multiselect ), action );
+    auto& dialog = *dialogPtr.get();
+#else
     Gtk::FileChooserDialog dialog( gtkDialogTitle( action, params.multiselect ), action );
-
+#endif
     dialog.set_select_multiple( params.multiselect );
 
+#if !defined( __APPLE__ )
     dialog.add_button( Gtk::Stock::CANCEL, Gtk::RESPONSE_CANCEL );
     dialog.add_button( params.saveDialog ? Gtk::Stock::SAVE : Gtk::Stock::OPEN, Gtk::RESPONSE_ACCEPT );
+#endif
 
     for ( const auto& filter: params.filters )
     {
@@ -379,6 +290,10 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
         {
             auto nextSeparatorPos = filter.extensions.find( ";", separatorPos );
             auto ext = filter.extensions.substr( separatorPos, nextSeparatorPos - separatorPos );
+#if defined( __APPLE__ )
+            if ( ext == "*.*" )
+                ext = "*";
+#endif
             filterText->add_pattern( ext );
             if ( nextSeparatorPos == std::string::npos )
                 break;
@@ -391,6 +306,9 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
 
     if ( !params.fileName.empty() )
         dialog.set_current_name( params.fileName );
+
+    if ( params.saveDialog )
+        dialog.set_do_overwrite_confirmation( true );
 
     std::vector<std::filesystem::path> results;
     auto onResponse = [&] ( int responseId )
@@ -422,13 +340,24 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
         {
             spdlog::warn( "GTK dialog failed" );
         }
+#if defined( __APPLE__ )
+        // on macOS the main window remains unfocused after the file dialog is closed
+        MR::CommandLoop::appendCommand( []
+        {
+            glfwFocusWindow( MR::Viewer::instance()->window );
+        } );
+#endif
     };
-    dialog.signal_response().connect( [&] ( int responseId )
+#if defined( __APPLE__ )
+    onResponse( dialog.run() );
+#else // __APPLE__
+    dialog.signal_response().connect([&] ( int responseId )
     {
         onResponse( responseId );
         dialog.hide();
-    } );
+    });
     kit->run( dialog );
+#endif // __APPLE__
 
     return results;
 }
@@ -453,6 +382,7 @@ std::string webAccumFilter( const MR::IOFilters& filters )
     return accumFilter;
 }
 #endif
+#endif
 }
 
 namespace MR
@@ -470,8 +400,6 @@ std::filesystem::path openFileDialog( const FileParameters& params )
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
-#elif defined( __APPLE__ )
-    results = nfdDialog( parameters );
 #elif !defined( __EMSCRIPTEN__ )
     results = gtkDialog( parameters );
 #endif
@@ -511,8 +439,6 @@ std::vector<std::filesystem::path> openFilesDialog( const FileParameters& params
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
-#elif defined( __APPLE__ )
-    results = nfdDialog( parameters );
 #elif !defined( __EMSCRIPTEN__ )
     results = gtkDialog( parameters );
 #endif
@@ -548,14 +474,31 @@ std::filesystem::path openFolderDialog( std::filesystem::path baseFolder )
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
-#elif defined( __APPLE__ )
-    results = nfdDialog( parameters );
 #elif !defined( __EMSCRIPTEN__ )
     results = gtkDialog( parameters );
 #endif
     if ( results.size() == 1 )
         return results[0];
     return {};
+}
+    
+void openFolderDialogAsync( std::function<void ( const std::filesystem::path& )> callback, std::filesystem::path baseFolder )
+{
+    assert( callback );
+#ifndef __EMSCRIPTEN__
+    callback( openFolderDialog( std::move( baseFolder ) ) );
+#else
+    sDialogFilesCallback = [callback] ( const std::vector<std::filesystem::path>& paths )
+    {
+        if ( !paths.empty() )
+            callback( paths[0] );
+    };
+    (void)baseFolder;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
+    EM_ASM( open_directory_dialog_popup() );
+#pragma clang diagnostic pop
+#endif
 }
 
 std::vector<std::filesystem::path> openFoldersDialog( std::filesystem::path baseFolder )
@@ -572,8 +515,6 @@ std::vector<std::filesystem::path> openFoldersDialog( std::filesystem::path base
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
-#elif defined( __APPLE__ )
-    results = nfdDialog( parameters );
 #elif !defined( __EMSCRIPTEN__ )
     results = gtkDialog( parameters );
 #endif
@@ -592,8 +533,6 @@ std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
-#elif defined( __APPLE__ )
-    results = nfdDialog( parameters );
 #elif !defined( __EMSCRIPTEN__ )
     results = gtkDialog( parameters );
 #endif

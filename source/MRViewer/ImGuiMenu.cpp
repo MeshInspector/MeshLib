@@ -79,6 +79,9 @@
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRSceneSettings.h"
+#include "MRMesh/MRAngleMeasurementObject.h"
+#include "MRMesh/MRDistanceMeasurementObject.h"
+#include "MRMesh/MRRadiusMeasurementObject.h"
 #include "imgui_internal.h"
 #include "MRRibbonConstants.h"
 #include "MRRibbonFontManager.h"
@@ -86,9 +89,14 @@
 #include "MRRibbonSchema.h"
 #include "MRRibbonMenu.h"
 #include "MRMouseController.h"
+#include "MRSceneCache.h"
+#include "MRSceneObjectsListDrawer.h"
+
+#ifndef MRMESH_NO_OPENVDB
+#include "MRMesh/MRObjectVoxels.h"
+#endif
 
 #ifndef __EMSCRIPTEN__
-#include "MRMesh/MRObjectVoxels.h"
 #include <fmt/chrono.h>
 #endif
 
@@ -158,6 +166,7 @@ void ImGuiMenu::init( MR::Viewer* _viewer )
         connect( _viewer, 0, boost::signals2::connect_position::at_front );
     }
 
+    sceneObjectsList_ = std::make_shared<SceneObjectsListDrawer>();
     setupShortcuts_();
 }
 
@@ -298,6 +307,10 @@ void ImGuiMenu::addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesCyrillic() );
     builder.AddChar( 0x2116 ); // NUMERO SIGN (shift+3 on cyrillic keyboards)
     builder.AddChar( 0x2212 ); // MINUS SIGN
+    builder.AddChar( 0x222A ); // UNION
+    builder.AddChar( 0x2229 ); // INTERSECTION
+    builder.AddChar( 0x2208 ); // INSIDE
+    builder.AddChar( 0x2209 ); // OUTSIDE
 #ifndef __EMSCRIPTEN__
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesChineseSimplifiedCommon() );
 #endif
@@ -460,9 +473,15 @@ void ImGuiMenu::rescaleStyle_()
 // Mouse IO
 bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
 {
-    ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
-    capturedMouse_ = ImGui::GetIO().WantCaptureMouse;
-    return ImGui::GetIO().WantCaptureMouse || uiRenderManager_->ownsMouseHover();
+    capturedMouse_ = ImGui::GetIO().WantCaptureMouse
+        || bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseHover );
+
+    // If a plugin opens some UI in its `onMouseDown_()`,
+    // this condition prevents that UI from immediately getting clicked in the same frame.
+    if ( capturedMouse_ )
+        ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
+
+    return capturedMouse_;
 }
 
 bool ImGuiMenu::onMouseUp_( Viewer::MouseButton button, int modifier )
@@ -471,21 +490,21 @@ bool ImGuiMenu::onMouseUp_( Viewer::MouseButton button, int modifier )
     return capturedMouse_;
 }
 
-bool ImGuiMenu::onMouseMove_(int mouse_x, int mouse_y )
+bool ImGuiMenu::onMouseMove_( int mouse_x, int mouse_y )
 {
     ImGui_ImplGlfw_CursorPosCallback( viewer->window, double( mouse_x ), double( mouse_y ) );
-    return ImGui::GetIO().WantCaptureMouse;
+    return false;
 }
 
-bool ImGuiMenu::onMouseScroll_(float delta_y)
+bool ImGuiMenu::onMouseScroll_( float delta_y )
 {
-    if ( ImGui::GetIO().WantCaptureMouse )
+    if ( ImGui::GetIO().WantCaptureMouse || bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseScroll ) )
     {
         // allow ImGui to process the scroll exclusively
         ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, delta_y );
         // do extra frames to prevent imgui calculations ping
         viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
-        return true;
+        return uiRenderManager_->canConsumeEvent( BasicUiRenderTask::InteractionMask::mouseScroll );
     }
 
     return false;
@@ -842,6 +861,42 @@ UiRenderManager& ImGuiMenu::getUiRenderManager()
     return *uiRenderManager_;
 }
 
+bool ImGuiMenu::simulateNameTagClick( Object& object, NameTagSelectionMode mode )
+{
+    if ( nameTagClickSignal( object, mode ) )
+        return false;
+
+    switch ( mode )
+    {
+    case NameTagSelectionMode::selectOne:
+        {
+            auto handleObject = [&]( auto& handleObject, Object& cur ) -> void
+            {
+                cur.select( &cur == &object );
+                for ( const auto& child : cur.children() )
+                    handleObject( handleObject, *child );
+            };
+            handleObject( handleObject, MR::SceneRoot::get() );
+        }
+        break;
+    case NameTagSelectionMode::toggle:
+        object.select( !object.isSelected() );
+        break;
+    }
+
+    return true;
+}
+
+bool ImGuiMenu::anyImGuiWindowIsHovered() const
+{
+    return ImGui::GetIO().WantCaptureMouse;
+}
+
+bool ImGuiMenu::anyUiObjectIsHovered() const
+{
+    return bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseHover );
+}
+
 void ImGuiMenu::drawModalMessage_()
 {
     ImGui::PushStyleColor( ImGuiCol_ModalWindowDimBg, ImVec4( 1, 0.125f, 0.125f, ImGui::GetStyle().Colors[ImGuiCol_ModalWindowDimBg].w ) );
@@ -955,29 +1010,13 @@ void ImGuiMenu::draw_scene_list()
     ImGui::Begin(
         "Scene", nullptr
     );
-    draw_scene_list_content( selectedObjs, allObj );
+    sceneObjectsList_->draw( -1, menu_scaling() );
 
     sceneWindowPos_ = ImGui::GetWindowPos();
     sceneWindowSize_ = ImGui::GetWindowSize();
     ImGui::End();
 
     draw_selection_properties( selectedObjs );
-}
-
-void ImGuiMenu::draw_scene_list_content( const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all )
-{
-    // mesh with index 0 is Ancillary, and cannot be removed
-    // it can be cleaned but it is inconsistent, so this mesh is untouchable
-    ImGui::BeginChild( "Meshes", ImVec2( -1, -1 ), true );
-    updateSceneWindowScrollIfNeeded_();
-    auto children = SceneRoot::get().children();
-    for ( const auto& child : children )
-        draw_object_recurse_( *child, selected, all );
-    makeDragDropTarget_( SceneRoot::get(), false, true, "" );
-    ImGui::EndChild();
-    sceneOpenCommands_.clear();
-
-    reorderSceneIfNeeded_();
 }
 
 void ImGuiMenu::draw_selection_properties( std::vector<std::shared_ptr<Object>>& selectedObjs )
@@ -1018,254 +1057,22 @@ void ImGuiMenu::draw_selection_properties_content( std::vector<std::shared_ptr<O
         return false;
     } );
 
-    drawGeneralOptions_( selectedObjs );
+    drawGeneralOptions( selectedObjs );
 
     if ( allHaveVisualisation && drawCollapsingHeader_( "Draw Options" ) )
     {
         auto selectedMask = calcSelectedTypesMask( selectedObjs );
-        drawDrawOptionsCheckboxes_( selectedVisualObjs, selectedMask );
-        drawDrawOptionsColors_( selectedVisualObjs );
-        drawAdvancedOptions_( selectedVisualObjs, selectedMask );
+        drawDrawOptionsCheckboxes( selectedVisualObjs, selectedMask );
+        drawDrawOptionsColors( selectedVisualObjs );
+        drawAdvancedOptions( selectedVisualObjs, selectedMask );
     }
 
     draw_custom_selection_properties( selectedObjs );
 
-    drawRemoveButton_( selectedObjs );
+    drawRemoveButton( selectedObjs );
 
 
     drawTransform_();
-}
-
-void ImGuiMenu::makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload )
-{
-    if ( !allowSceneReorder_ || payload.empty() )
-        return;
-
-    if ( std::any_of( payload.begin(), payload.end(), std::mem_fn( &Object::isParentLocked ) ) )
-        return; // Those objects don't want their parents to be changed.
-
-    if ( ImGui::BeginDragDropSource( ImGuiDragDropFlags_AcceptNoDrawDefaultRect ) )
-    {
-        dragTrigger_ = true;
-
-        std::vector<Object*> vectorObjPtr;
-        for ( auto& ptr : payload )
-            vectorObjPtr.push_back( ptr.get() );
-
-        ImGui::SetDragDropPayload( "_TREENODE", vectorObjPtr.data(), sizeof( Object* ) * vectorObjPtr.size() );
-        std::string allNames;
-        allNames = payload[0]->name();
-        for ( int i = 1; i < payload.size(); ++i )
-            allNames += "\n" + payload[i]->name();
-        ImGui::Text( "%s", allNames.c_str() );
-        ImGui::EndDragDropSource();
-    }
-
-}
-
-void ImGuiMenu::makeDragDropTarget_( Object& target, bool before, bool betweenLine, const std::string& uniqueStr )
-{
-    if ( !allowSceneReorder_ )
-        return;
-    const ImGuiPayload* payloadCheck = ImGui::GetDragDropPayload();
-    ImVec2 curPos{};
-    bool lineDrawed = false;
-    if ( payloadCheck && std::string_view( payloadCheck->DataType ) == "_TREENODE" && betweenLine )
-    {
-        lineDrawed = true;
-        curPos = ImGui::GetCursorPos();
-        auto width = ImGui::GetContentRegionAvail().x;
-        ImGui::ColorButton( ( "##InternalDragDropArea" + uniqueStr ).c_str(),
-            ImVec4( 0, 0, 0, 0 ),
-            0, ImVec2( width, 4 * menu_scaling() ) );
-    }
-    if ( ImGui::BeginDragDropTarget() )
-    {
-        if ( lineDrawed )
-        {
-            ImGui::SetCursorPos( curPos );
-            auto width = ImGui::GetContentRegionAvail().x;
-            ImGui::ColorButton( ( "##ColoredInternalDragDropArea" + uniqueStr ).c_str(),
-                ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered],
-                0, ImVec2( width, 4 * menu_scaling() ) );
-        }
-        if ( const ImGuiPayload* payload = ImGui::AcceptDragDropPayload( "_TREENODE" ) )
-        {
-            assert( payload->DataSize % sizeof( Object* ) == 0 );
-            Object** objArray = ( Object** )payload->Data;
-            const int size = payload->DataSize / sizeof( Object* );
-            std::vector<Object*> vectorObj( size );
-            for ( int i = 0; i < size; ++i )
-                vectorObj[i] = objArray[i];
-            sceneReorderCommand_ = { vectorObj, &target, before };
-        }
-        ImGui::EndDragDropTarget();
-    }
-}
-
-void ImGuiMenu::draw_object_recurse_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all )
-{
-    std::string uniqueStr = std::to_string( intptr_t( &object ) );
-    const bool isObjSelectable = !object.isAncillary();
-
-    // has selectable children
-    bool hasRealChildren = objectHasSelectableChildren( object );
-    bool isOpen{ false };
-    if ( ( hasRealChildren || isObjSelectable ) )
-    {
-        makeDragDropTarget_( object, true, true, uniqueStr );
-        {
-            // Visibility checkbox
-            bool isVisible = object.isVisible( viewer->viewport().id );
-            auto ctx = ImGui::GetCurrentContext();
-            assert( ctx );
-            auto window = ctx->CurrentWindow;
-            assert( window );
-            auto diff = ImGui::GetStyle().FramePadding.y - cCheckboxPadding * menu_scaling();
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + diff );
-            if ( UI::checkbox( ( "##VisibilityCheckbox" + uniqueStr ).c_str(), &isVisible ) )
-            {
-                object.setVisible( isVisible, viewer->viewport().id );
-                if ( deselectNewHiddenObjects_ && !object.isVisible( viewer->getPresentViewports() ) )
-                    object.select( false );
-            }
-            window->DC.CursorPosPrevLine.y -= diff;
-            ImGui::SameLine();
-        }
-        {
-            // custom prefix
-            drawCustomObjectPrefixInScene_( object );
-        }
-
-        const bool isSelected = object.isSelected();
-
-        auto openCommandIt = sceneOpenCommands_.find( &object );
-        if ( openCommandIt != sceneOpenCommands_.end() )
-            ImGui::SetNextItemOpen( openCommandIt->second );
-
-        if ( !isSelected )
-            ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( 0, 0, 0, 0 ) );
-        else
-        {
-            ImGui::PushStyleColor( ImGuiCol_Header, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame ).getUInt32() );
-            ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectText ).getUInt32() );
-        }
-
-        ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-
-        isOpen = drawCollapsingHeader_( ( object.name() + " ##" + uniqueStr ).c_str(),
-                                    ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) |
-                                    ImGuiTreeNodeFlags_SpanAvailWidth |
-                                    ImGuiTreeNodeFlags_Framed |
-                                    ImGuiTreeNodeFlags_OpenOnArrow |
-                                    ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
-
-        if ( ImGui::IsMouseDoubleClicked( 0 ) && ImGui::IsItemHovered() )
-        {
-            if ( auto m = getViewerInstance().getMenuPluginAs<RibbonMenu>() )
-                m->tryRenameSelectedObject();
-        }
-
-        ImGui::PopStyleColor( isSelected ? 2 : 1 );
-        ImGui::PopStyleVar();
-
-        makeDragDropSource_( selected );
-        makeDragDropTarget_( object, false, false, "0" );
-
-        if ( isObjSelectable && ImGui::IsItemHovered() )
-        {
-            bool pressed = !isSelected && ( ImGui::IsMouseClicked( 0 ) || ImGui::IsMouseClicked( 1 ) );
-            bool released = isSelected && !dragTrigger_ && !clickTrigger_ && ImGui::IsMouseReleased( 0 );
-
-            if ( pressed )
-                clickTrigger_ = true;
-            if ( isSelected && clickTrigger_ && ImGui::IsMouseReleased( 0 ) )
-                clickTrigger_ = false;
-
-            if ( pressed || released )
-            {
-
-                auto newSelection = getPreSelection_( &object, ImGui::GetIO().KeyShift, ImGui::GetIO().KeyCtrl, selected, all );
-                if ( ImGui::GetIO().KeyCtrl )
-                {
-                    for ( auto& sel : newSelection )
-                    {
-                        const bool select = ImGui::GetIO().KeyShift || !sel->isSelected();
-                        sel->select( select );
-                        if ( showNewSelectedObjects_ && select )
-                            sel->setGlobalVisibility( true );
-                    }
-                }
-                else
-                {
-                    for ( const auto& data : selected )
-                    {
-                        auto inNewSelList = std::find( newSelection.begin(), newSelection.end(), data.get() );
-                        if ( inNewSelList == newSelection.end() )
-                            data->select( false );
-                    }
-                    for ( auto& sel : newSelection )
-                    {
-                        sel->select( true );
-                        if ( showNewSelectedObjects_ )
-                            sel->setGlobalVisibility( true );
-                    }
-                }
-            }
-
-        }
-
-        if ( isSelected )
-            drawSceneContextMenu_( selected );
-    }
-    if ( isOpen )
-    {
-        draw_custom_tree_object_properties( object );
-        bool infoOpen = false;
-        auto lines = object.getInfoLines();
-        if ( showInfoInObjectTree_ && hasRealChildren && !lines.empty() )
-        {
-            auto infoId = std::string( "Info: ##" ) + uniqueStr;
-            infoOpen = drawCollapsingHeader_( infoId.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed );
-        }
-
-        if ( infoOpen || !hasRealChildren )
-        {
-            auto itemSpacing = ImGui::GetStyle().ItemSpacing;
-            auto framePadding = ImGui::GetStyle().FramePadding;
-            auto scaling = menu_scaling();
-            framePadding.y = 2.0f * scaling;
-            itemSpacing.y = 2.0f * scaling;
-            ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( 0, 0, 0, 0 ) );
-            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
-            ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
-            ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, cItemInfoIndent * scaling );
-            ImGui::Indent();
-
-            for ( const auto& str : lines )
-            {
-                ImGui::TreeNodeEx( str.c_str(), ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_Framed );
-                ImGui::TreePop();
-            }
-
-            ImGui::Unindent();
-            ImGui::PopStyleVar( 4 );
-            ImGui::PopStyleColor();
-        }
-
-        if ( hasRealChildren )
-        {
-            auto children = object.children();
-            ImGui::Indent();
-            for ( const auto& child : children )
-            {
-                draw_object_recurse_( *child, selected, all );
-            }
-            makeDragDropTarget_( object, false, true, "0" );
-            ImGui::Unindent();
-        }
-    }
 }
 
 float ImGuiMenu::drawSelectionInformation_()
@@ -1291,7 +1098,7 @@ float ImGuiMenu::drawSelectionInformation_()
     size_t totalSelectedFaces = 0;
     size_t totalVerts = 0;
     std::optional<float> totalVolume = 0.0f;
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_OPENVDB
     // Voxels info
     Vector3i dimensions;
 #endif
@@ -1344,7 +1151,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 totalVerts += polyline->topology.numValidVerts();
             }
         }
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_OPENVDB
         else if ( auto vObj = obj->asType<ObjectVoxels>() )
         {
             auto newDims = vObj->dimensions();
@@ -1475,7 +1282,7 @@ float ImGuiMenu::drawSelectionInformation_()
             {
                 ImGui::PushItemWidth( itemWidth );
 
-#if __GNUC__ == 12 || __GNUC__ == 13 // `totalVolume` may be used uninitialized. False positive in GCC
+#if __GNUC__ >= 12 && __GNUC__ <= 14 // `totalVolume` may be used uninitialized. False positive in GCC
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
@@ -1483,7 +1290,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 UI::readOnlyValue<VolumeUnit>( "Volume", *totalVolume );
                 MR_FINALLY{ ImGui::PopItemWidth(); };
 
-#if __GNUC__ == 12 || __GNUC__ == 13
+#if __GNUC__ >= 12 && __GNUC__ <= 14
 #pragma GCC diagnostic pop
 #endif
             }
@@ -1510,7 +1317,7 @@ float ImGuiMenu::drawSelectionInformation_()
         UI::readOnlyValue<LengthUnit>( label, value );
     };
 
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_OPENVDB
     if ( dimensions.x > 0 && dimensions.y > 0 && dimensions.z > 0 )
     {
         drawDimensionsVec3( "Dimensions", dimensions );
@@ -1531,6 +1338,31 @@ float ImGuiMenu::drawSelectionInformation_()
     }
     if ( !haveFeatureProperties )
         editedFeatureObject_.reset();
+
+    // Value for a dimension object.
+    if ( selectedObjs.size() == 1 )
+    {
+        auto setWidgetWidth = [&]
+        {
+            ImGui::SetNextItemWidth( getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x );
+        };
+
+        if ( auto distance = dynamic_cast<DistanceMeasurementObject *>( selectedObjs.front().get() ) )
+        {
+            setWidgetWidth();
+            UI::readOnlyValue<LengthUnit>( "Distance", distance->computeDistance() );
+        }
+        else if ( auto angle = dynamic_cast<AngleMeasurementObject *>( selectedObjs.front().get() ) )
+        {
+            setWidgetWidth();
+            UI::readOnlyValue<AngleUnit>( "Angle", angle->computeAngle() );
+        }
+        else if ( auto radius = dynamic_cast<RadiusMeasurementObject *>( selectedObjs.front().get() ) )
+        {
+            setWidgetWidth();
+            UI::readOnlyValue<LengthUnit>( radius->getDrawAsDiameter() ? "Diameter" : "Radius", radius->computeRadiusOrDiameter() );
+        }
+    }
 
     // Bounding box.
     if ( selectionBbox_.valid()
@@ -1622,7 +1454,7 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
         editedFeatureObject_.reset();
 }
 
-bool ImGuiMenu::drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>& selectedObjs )
+bool ImGuiMenu::drawGeneralOptions( const std::vector<std::shared_ptr<Object>>& selectedObjs )
 {
     bool someChanges = false;
     const auto selectedVisualObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
@@ -1632,7 +1464,7 @@ bool ImGuiMenu::drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>&
         if ( make_visualize_checkbox( selectedVisualObjs, "Visibility", VisualizeMaskType::Visibility, viewportid ) )
         {
             someChanges = true;
-            if ( deselectNewHiddenObjects_ )
+            if ( sceneObjectsList_->getDeselectNewHiddenObjects() )
                 for ( const auto& visObj : selectedVisualObjs )
                     if ( !visObj->isVisible( viewer->getPresentViewports() ) )
                         visObj->select( false );
@@ -1657,7 +1489,7 @@ bool ImGuiMenu::drawGeneralOptions_( const std::vector<std::shared_ptr<Object>>&
     return someChanges;
 }
 
-bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedTypesMask selectedMask )
+bool ImGuiMenu::drawAdvancedOptions( const std::vector<std::shared_ptr<VisualObject>>& selectedObjs, SelectedTypesMask selectedMask )
 {
     if ( selectedObjs.empty() )
         return false;
@@ -1724,7 +1556,7 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
         } );
     }
 
-    bool allIsFeatureObj = selectedMask == SelectedTypesMask::ObjectFeaturesBit;
+    bool allIsFeatureObj = selectedMask == SelectedTypesMask::ObjectFeatureBit;
     if ( allIsFeatureObj )
     {
         const auto selectedFeatureObjs = getAllObjectsInTree<FeatureObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
@@ -1765,7 +1597,7 @@ bool ImGuiMenu::drawAdvancedOptions_( const std::vector<std::shared_ptr<VisualOb
     return closePopup;
 }
 
-bool ImGuiMenu::drawRemoveButton_( const std::vector<std::shared_ptr<Object>>& selectedObjs )
+bool ImGuiMenu::drawRemoveButton( const std::vector<std::shared_ptr<Object>>& selectedObjs )
 {
     bool someChanges = false;
     auto backUpColorBtn = ImGui::GetStyle().Colors[ImGuiCol_Button];
@@ -1807,7 +1639,7 @@ bool ImGuiMenu::drawRemoveButton_( const std::vector<std::shared_ptr<Object>>& s
     return someChanges;
 }
 
-bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<VisualObject>>& selectedVisualObjs, SelectedTypesMask selectedMask )
+bool ImGuiMenu::drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<VisualObject>>& selectedVisualObjs, SelectedTypesMask selectedMask )
 {
     bool someChanges = false;
     if ( selectedVisualObjs.empty() )
@@ -1820,7 +1652,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
     bool allIsObjLines = selectedMask == SelectedTypesMask::ObjectLinesHolderBit;
     bool allIsObjPoints = selectedMask == SelectedTypesMask::ObjectPointsHolderBit;
     bool allIsObjLabels = selectedMask == SelectedTypesMask::ObjectLabelBit;
-    bool allIsFeatureObj = selectedMask == SelectedTypesMask::ObjectFeaturesBit;
+    bool allIsFeatureObj = selectedMask == SelectedTypesMask::ObjectFeatureBit;
 
     const auto& viewportid = viewer->viewport().id;
 
@@ -1894,7 +1726,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
     if ( allIsFeatureObj )
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Extra information next to name", FeatureVisualizePropertyType::DetailsOnNameTag, viewportid );
     someChanges |= make_visualize_checkbox( selectedVisualObjs, "Labels", VisualizeMaskType::Labels, viewportid );
-    if ( viewer->isDeveloperFeaturesEnabled() )
+    if ( viewer->experimentalFeatures )
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Clipping", VisualizeMaskType::ClippedByPlane, viewportid );
 
     { // Dimensions checkboxes.
@@ -1938,7 +1770,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes_( const std::vector<std::shared_ptr<Vi
     return someChanges;
 }
 
-bool ImGuiMenu::drawDrawOptionsColors_( const std::vector<std::shared_ptr<VisualObject>>& selectedVisualObjs )
+bool ImGuiMenu::drawDrawOptionsColors( const std::vector<std::shared_ptr<VisualObject>>& selectedVisualObjs )
 {
     bool someChanges = false;
     const auto selectedMeshObjs = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
@@ -2119,7 +1951,7 @@ float ImGuiMenu::drawTransform_()
         if ( !selectionChangedToSingleObj_ )
         {
             selectionChangedToSingleObj_ = true;
-            nextFrameFixScroll_ = true;
+            sceneObjectsList_->setNextFrameFixScroll();
         }
         resultHeight_ = ImGui::GetTextLineHeight() + style.FramePadding.y * 2 + style.ItemSpacing.y;
         bool openedContext = false;
@@ -2248,44 +2080,6 @@ float ImGuiMenu::drawTransform_()
     return resultHeight_;
 }
 
-std::vector<Object*> ImGuiMenu::getPreSelection_( Object* meshclicked,
-                                             bool isShift, bool isCtrl,
-                                             const std::vector<std::shared_ptr<Object>>& selected,
-                                             const std::vector<std::shared_ptr<Object>>& all_objects )
-{
-    if ( selected.empty() || !isShift )
-        return { meshclicked };
-
-    const auto& first = isCtrl ? selected.back().get() : selected.front().get();
-
-    auto firstIt = std::find_if( all_objects.begin(), all_objects.end(), [first] ( const std::shared_ptr<Object>& obj )
-    {
-        return obj.get() == first;
-    } );
-    auto clickedIt = std::find_if( all_objects.begin(), all_objects.end(), [meshclicked] ( const std::shared_ptr<Object>& obj )
-    {
-        return obj.get() == meshclicked;
-    } );
-
-    size_t start{ 0 };
-    std::vector<Object*> res;
-    if ( firstIt < clickedIt )
-    {
-        start = std::distance( all_objects.begin(), firstIt );
-        res.resize( std::distance( firstIt, clickedIt + 1 ) );
-    }
-    else
-    {
-        start = std::distance( all_objects.begin(), clickedIt );
-        res.resize( std::distance( clickedIt, firstIt + 1 ) );
-    }
-    for ( int i = 0; i < res.size(); ++i )
-    {
-        res[i] = all_objects[start + i].get();
-    }
-    return res;
-}
-
 bool ImGuiMenu::drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags flags )
 {
     return ImGui::CollapsingHeader( label, flags );
@@ -2295,9 +2089,6 @@ bool ImGuiMenu::drawCollapsingHeaderTransform_()
 {
     return drawCollapsingHeader_( "Transform", ImGuiTreeNodeFlags_DefaultOpen );
 }
-
-void ImGuiMenu::draw_custom_tree_object_properties( Object& )
-{}
 
 bool ImGuiMenu::make_visualize_checkbox( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label, AnyVisualizeMaskEnum type, MR::ViewportMask viewportid, bool invert /*= false*/ )
 {
@@ -2487,160 +2278,11 @@ void ImGuiMenu::make_points_discretization( std::vector<std::shared_ptr<VisualOb
             setter( data->asType<ObjectPointsHolder>(), value);
 }
 
-void ImGuiMenu::reorderSceneIfNeeded_()
-{
-    if ( !allowSceneReorder_ )
-        return;
-
-    const bool filledReorderCommand = !sceneReorderCommand_.who.empty() && sceneReorderCommand_.to;
-    const bool sourceNotTarget = std::all_of( sceneReorderCommand_.who.begin(), sceneReorderCommand_.who.end(), [target = sceneReorderCommand_.to]( auto it )
-    {
-        return it != target;
-    } );
-    const bool trueTarget = !sceneReorderCommand_.before || sceneReorderCommand_.to->parent();
-    const bool trueSource = std::all_of( sceneReorderCommand_.who.begin(), sceneReorderCommand_.who.end(), [] ( auto it )
-    {
-        return bool( it->parent() );
-    } );
-    if ( !( filledReorderCommand && sourceNotTarget && trueSource && trueTarget ) )
-    {
-        sceneReorderCommand_ = {};
-        return;
-    }
-
-    bool dragOrDropFailed = false;
-    std::shared_ptr<Object> childTo = nullptr;
-    if ( sceneReorderCommand_.before )
-    {
-        for ( auto childToItem : sceneReorderCommand_.to->parent()->children() )
-            if ( childToItem.get() == sceneReorderCommand_.to )
-            {
-                childTo = childToItem;
-                break;
-            }
-        assert( childTo );
-    }
-
-    struct MoveAction
-    {
-        std::shared_ptr<ChangeSceneAction> detachAction;
-        std::shared_ptr<ChangeSceneAction> attachAction;
-    };
-    std::vector<MoveAction> actionList;
-    for ( const auto& source : sceneReorderCommand_.who )
-    {
-        std::shared_ptr<Object> sourcePtr = nullptr;
-        for ( auto child : source->parent()->children() )
-            if ( child.get() == source )
-            {
-                sourcePtr = child;
-                break;
-            }
-        assert( sourcePtr );
-
-        auto detachAction = std::make_shared<ChangeSceneAction>( "Detach object", sourcePtr, ChangeSceneAction::Type::RemoveObject );
-        bool detachSuccess = sourcePtr->detachFromParent();
-        if ( !detachSuccess )
-        {
-            showModalMessage( "Cannot perform such reorder", NotificationType::Error );
-            dragOrDropFailed = true;
-            break;
-        }
-
-        auto attachAction = std::make_shared<ChangeSceneAction>( "Attach object", sourcePtr, ChangeSceneAction::Type::AddObject );
-        bool attachSucess{ false };
-        if ( !sceneReorderCommand_.before )
-            attachSucess = sceneReorderCommand_.to->addChild( sourcePtr );
-        else
-            attachSucess = sceneReorderCommand_.to->parent()->addChildBefore( sourcePtr, childTo );
-        if ( !attachSucess )
-        {
-            detachAction->action( HistoryAction::Type::Undo );
-            showModalMessage( "Cannot perform such reorder", NotificationType::Error );
-            dragOrDropFailed = true;
-            break;
-        }
-
-        actionList.push_back( { detachAction, attachAction } );
-    }
-
-    if ( dragOrDropFailed )
-    {
-        for ( int i = int( actionList.size() ) - 1; i >= 0; --i )
-        {
-            actionList[i].attachAction->action( HistoryAction::Type::Undo );
-            actionList[i].detachAction->action( HistoryAction::Type::Undo );
-        }
-    }
-    else
-    {
-        SCOPED_HISTORY( "Reorder scene" );
-        for ( const auto& moveAction : actionList )
-        {
-            AppendHistory( moveAction.detachAction );
-            AppendHistory( moveAction.attachAction );
-        }
-    }
-    sceneReorderCommand_ = {};
-    dragTrigger_ = false;
-}
-
 Vector4f ImGuiMenu::getStoredColor_( const std::string& str, const Color& defaultColor ) const
 {
     if ( !storedColor_ || storedColor_->first != str )
         return Vector4f( defaultColor );
     return storedColor_->second;
-}
-
-void ImGuiMenu::updateSceneWindowScrollIfNeeded_()
-{
-    auto window = ImGui::GetCurrentContext()->CurrentWindow;
-    if ( !window )
-        return;
-
-    ScrollPositionPreservation scrollInfo;
-    scrollInfo.relativeMousePos = ImGui::GetMousePos().y - window->Pos.y;
-    scrollInfo.absLinePosRatio = window->ContentSize.y == 0.0f ? 0.0f : ( scrollInfo.relativeMousePos + window->Scroll.y ) / window->ContentSize.y;
-
-    if ( nextFrameFixScroll_ )
-    {
-        nextFrameFixScroll_ = false;
-        window->Scroll.y = std::clamp( prevScrollInfo_.absLinePosRatio * window->ContentSize.y - prevScrollInfo_.relativeMousePos, 0.0f, window->ScrollMax.y );
-    }
-    else if ( dragObjectsMode_ )
-    {
-        float relativeMousePosRatio = window->Size.y == 0.0f ? 0.0f : scrollInfo.relativeMousePos / window->Size.y;
-        float shift = 0.0f;
-        if ( relativeMousePosRatio < 0.05f )
-            shift = ( relativeMousePosRatio - 0.05f ) * 25.0f - 1.0f;
-        else if ( relativeMousePosRatio > 0.95f )
-            shift = ( relativeMousePosRatio - 0.95f ) * 25.0f + 1.0f;
-
-        auto newScroll = std::clamp( window->Scroll.y + shift, 0.0f, window->ScrollMax.y );
-        if ( newScroll != window->Scroll.y )
-        {
-            window->Scroll.y = newScroll;
-            getViewerInstance().incrementForceRedrawFrames();
-        }
-    }
-
-    const ImGuiPayload* payloadCheck = ImGui::GetDragDropPayload();
-    bool dragModeNow = payloadCheck && std::string_view( payloadCheck->DataType ) == "_TREENODE";
-    if ( dragModeNow && !dragObjectsMode_ )
-    {
-        dragObjectsMode_ = true;
-        nextFrameFixScroll_ = true;
-        getViewerInstance().incrementForceRedrawFrames( 2, true );
-    }
-    else if ( !dragModeNow && dragObjectsMode_ )
-    {
-        dragObjectsMode_ = false;
-        nextFrameFixScroll_ = true;
-        getViewerInstance().incrementForceRedrawFrames( 2, true );
-    }
-
-    if ( !nextFrameFixScroll_ )
-        prevScrollInfo_ = scrollInfo;
 }
 
 void ImGuiMenu::draw_custom_plugins()
@@ -2833,10 +2475,7 @@ void ImGuiMenu::draw_mr_menu()
 
         if ( ImGui::Button( "Save##Main", ImVec2( ( w - p ) / 2.f, 0 ) ) )
         {
-            auto filters = MeshSave::Filters | LinesSave::Filters | PointsSave::Filters;
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-            filters = filters | VoxelsSave::Filters;
-#endif
+            auto filters = MeshSave::Filters | LinesSave::Filters | PointsSave::Filters | VoxelsLoad::Filters;
             auto savePath = saveFileDialog( { {}, {}, filters } );
             if ( !savePath.empty() )
                 viewer->saveToFile( savePath );
@@ -3230,7 +2869,11 @@ SelectedTypesMask ImGuiMenu::calcSelectedTypesMask( const std::vector<std::share
         }
         else if ( obj->asType<FeatureObject>() )
         {
-            res |= SelectedTypesMask::ObjectFeaturesBit;
+            res |= SelectedTypesMask::ObjectFeatureBit;
+        }
+        else if ( obj->asType<MeasurementObject>() )
+        {
+            res |= SelectedTypesMask::ObjectMeasurementBit;
         }
         else
         {
@@ -3257,7 +2900,7 @@ void ImGuiMenu::add_modifier( std::shared_ptr<MeshModifier> modifier )
 
 void ImGuiMenu::allowSceneReorder( bool allow )
 {
-    allowSceneReorder_ = allow;
+    sceneObjectsList_->allowSceneReorder( allow );
 }
 
 void ImGuiMenu::allowObjectsRemoval( bool allow )
@@ -3276,8 +2919,7 @@ void ImGuiMenu::tryRenameSelectedObject()
 
 void ImGuiMenu::setObjectTreeState( const Object* obj, bool open )
 {
-    if ( obj )
-        sceneOpenCommands_[obj] = open;
+    sceneObjectsList_->setObjectTreeState( obj, open );
 }
 
 void ImGuiMenu::setShowShortcuts( bool val )
@@ -3354,17 +2996,29 @@ void ImGuiMenu::UiRenderManagerImpl::postRenderViewport( ViewportId viewport )
 
 BasicUiRenderTask::BackwardPassParams ImGuiMenu::UiRenderManagerImpl::beginBackwardPass()
 {
-    return { .mouseHoverConsumed = ImGui::GetIO().WantCaptureMouse };
+    return { .consumedInteractions = ImGui::GetIO().WantCaptureMouse * BasicUiRenderTask::InteractionMask::mouseHover };
 }
 
 void ImGuiMenu::UiRenderManagerImpl::finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params )
 {
-    mouseIsBlocked_ = params.mouseHoverConsumed;
+    if ( ImGui::GetIO().WantCaptureMouse )
+    {
+        // Some other UI is hovered, but not ours.
+        consumedInteractions = {};
+    }
+    else
+    {
+        // Our UI is hovered.
+        consumedInteractions = params.consumedInteractions;
+    }
 }
 
-bool ImGuiMenu::UiRenderManagerImpl::ownsMouseHover() const
+bool ImGuiMenu::UiRenderManagerImpl::canConsumeEvent( BasicUiRenderTask::InteractionMask event ) const
 {
-    return mouseIsBlocked_;
+    // Here we only force-unblock events if one of our widgets is hovered.
+    return
+        !bool( consumedInteractions & BasicUiRenderTask::InteractionMask::mouseHover ) ||
+        bool( consumedInteractions & event );
 }
 
 void showModal( const std::string& msg, NotificationType type )

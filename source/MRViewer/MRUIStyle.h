@@ -31,7 +31,20 @@ struct ButtonCustomizationParams
     bool forceImguiTextColor = false;
     /// show border or not
     bool border = false;
+
+    /// Allow interacting with this button from `UI::TestEngine`.
+    bool enableTestEngine = true;
 };
+
+struct ButtonIconCustomizationParams : public ButtonCustomizationParams
+{
+    ImGuiButtonFlags flags = ImGuiButtonFlags_None;
+    // flag for buttonEx, which can be disabled
+    bool active = true;
+    // button without a gradient, always ative, configurable by an external style
+    bool flatBackgroundColor = false;
+};
+
 
 /// draw gradient button, which can be disabled (active = false)
 MRVIEWER_API bool buttonEx( const char* label, bool active, const Vector2f& size = Vector2f( 0, 0 ),
@@ -51,6 +64,33 @@ MRVIEWER_API bool buttonCommonSize( const char* label, const Vector2f& size = Ve
 /// draw button with same logic as radioButton
 MRVIEWER_API bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& size = Vector2f( 0, 0 ), ImGuiKey key = ImGuiKey_None );
 
+// draw a button with an icon and text under it
+MRVIEWER_API bool buttonIconEx( 
+    const std::string& name, 
+    const Vector2f& iconSize, 
+    const std::string& text, 
+    const ImVec2& buttonSize, 
+    const ButtonIconCustomizationParams& params = {} );
+// button with a gradient and the ability to make it inactive
+inline bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, bool active, const ImVec2& buttonSize )
+{
+    ButtonIconCustomizationParams params;
+    params.active = active;
+    params.flatBackgroundColor = true;
+    return buttonIconEx(name, iconSize, text, buttonSize, params );
+}
+// button with a gradient, always ative
+inline bool buttonIcon( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize )
+{
+    return buttonIconEx( name, iconSize, text, buttonSize );
+}
+// button without a gradient, always ative, configurable by an external style
+inline bool buttonIconFlatBG( const std::string& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize )
+{
+    ButtonIconCustomizationParams params;
+    params.flatBackgroundColor = true;
+    return buttonIconEx( name, iconSize, text, buttonSize, params );
+}
 
 /// draw gradient checkbox
 MRVIEWER_API bool checkbox( const char* label, bool* value );

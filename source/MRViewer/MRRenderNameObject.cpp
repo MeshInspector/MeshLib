@@ -6,6 +6,7 @@
 #include "MRMesh/MRVisualObject.h"
 #include "MRViewer/MRColorTheme.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
 
@@ -16,7 +17,7 @@ namespace MR
 
 void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backParams )
 {
-    if ( backParams.mouseHoverConsumed )
+    if ( bool( backParams.consumedInteractions & InteractionMask::mouseHover ) )
         return;
 
     // If it wasn't clipped to nothing...
@@ -25,29 +26,21 @@ void RenderNameObject::Task::earlyBackwardPass( const BackwardPassParams& backPa
         // React to hover and possibly click.
         if ( ImGuiMath::CompareAll( ImGui::GetMousePos() ) >= windowCornerA && ImGuiMath::CompareAll( ImGui::GetMousePos() ) < windowCornerB )
         {
-            backParams.mouseHoverConsumed = true;
-            isHovered = true;
-
-            if ( ImGui::IsMouseDown( ImGuiMouseButton_Left ) )
-                isActive = true;
-
-            if ( ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
+            if ( backParams.tryConsumeMouseHover() )
             {
-                if ( ImGui::GetIO().KeyCtrl )
+                isHovered = true;
+
+                if ( ImGui::IsMouseDown( ImGuiMouseButton_Left ) )
+                    isActive = true;
+
+                if ( ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
                 {
-                    // Yes, a dumb cast. We could find the same object in the scene, but it's a waste of time.
-                    // Changing the `RenderObject` constructor parameter to accept a non-const reference requires changing a lot of stuff.
-                    const_cast<VisualObject*>( object )->select( !object->isSelected() );
-                }
-                else
-                {
-                    auto selectOne = [&]( auto selectOne, Object& target ) -> void
-                    {
-                        target.select( &target == object );
-                        for ( const auto& child : target.children() )
-                            selectOne( selectOne, *child );
-                    };
-                    selectOne( selectOne, SceneRoot::get() );
+                    getViewerInstance().getMenuPluginAs<RibbonMenu>()->simulateNameTagClick(
+                        // Yes, a dumb cast. We could find the same object in the scene, but it's a waste of time.
+                        // Changing the `RenderObject` constructor parameter to accept a non-const reference requires changing a lot of stuff.
+                        *const_cast<VisualObject*>( object ),
+                        ImGui::GetIO().KeyCtrl ? ImGuiMenu::NameTagSelectionMode::toggle : ImGuiMenu::NameTagSelectionMode::selectOne
+                    );
                 }
             }
         }

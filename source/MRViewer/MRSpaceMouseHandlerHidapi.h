@@ -32,12 +32,12 @@ class MRVIEWER_CLASS SpaceMouseHandlerHidapi : public SpaceMouseHandler, public 
     };
 public:
     SpaceMouseHandlerHidapi();
-    ~SpaceMouseHandlerHidapi();
+    ~SpaceMouseHandlerHidapi() override;
 
-    virtual void initialize() override;
-    virtual void handle() override;
+    bool initialize() override;
+    void handle() override;
 
-    // set state of zoom by mouse scroll (to fix scroll signal from spacemouse driver)
+    // set state of zoom by mouse scroll (to fix scroll signal from SpaceMouse driver)
     MRVIEWER_API void activateMouseScrollZoom( bool activeMouseScrollZoom );
     // get state of zoom by mouse scroll
     MRVIEWER_API bool isMouseScrollZoomActive()
@@ -56,44 +56,48 @@ private:
     // update (rewrite its data) SpaceMouseAction if DataPacketRaw is not empty
     void updateActionWithInput_( const DataPacketRaw& packet, int packet_length, SpaceMouseAction& action );
 
-    bool findAndAttachDevice_();
+    bool findAndAttachDevice_( bool verbose );
     void printDevices_( struct hid_device_info* cur_dev );
 
 private:
-    hid_device* device_;
-    const std::vector<std::vector<SpaceMouseButtons>>* buttonsMapPtr_;
+    hid_device* device_ = nullptr;
+    const std::vector<std::vector<SpaceMouseButtons>>* buttonsMapPtr_ = nullptr;
     std::bitset<SMB_BUTTON_COUNT> buttonsState_;
     std::thread listenerThread_;
-    std::atomic_bool terminateListenerThread_;
+    std::atomic_bool terminateListenerThread_{ false };
     std::mutex syncThreadMutex_; // which thread reads and handles SpaceMouse data
     std::condition_variable cv_; // notify on thread change
     DataPacketRaw dataPacket_;    // packet from listener thread
-    int packetLength_;
-    std::atomic_bool active_;
-    bool activeMouseScrollZoom_;
+    int packetLength_ = 0;
+    std::atomic_bool active_{ false };
+    bool activeMouseScrollZoom_ = false;
 
     // if you change this value, do not forget to update MeshLib/scripts/70-space-mouse-meshlib.rules
     const std::unordered_map<VendorId, std::vector<ProductId>> vendor2device_ = {
-            { VendorId(0x046d), { 0xc603,    // spacemouse plus XT
+            { VendorId(0x046d), {  // Logitech (3Dconnexion was a subsidiary)
+                        0xc603,    // SpaceMouse plus XT
                         0xc605,    // cadman
-                        0xc606,    // spacemouse classic
+                        0xc606,    // SpaceMouse classic
                         0xc621,    // spaceball 5000
                         0xc623,    // space traveller
                         0xc625,    // space pilot
-                        0xc626,    // space navigator
+                        0xc626,    // Full-size SpaceNavigator
                         0xc627,    // space explorer
-                        0xc628,    // space navigator for notebooks
+                        0xc628,    // SpaceNavigator for notebooks
                         0xc629,    // space pilot pro
                         0xc62b,    // space mouse pro
                         0xc640     // nulooq
             }},
-            { VendorId(0x256f), { 0xc62e,    // spacemouse wireless (USB cable)
-                        0xc62f,    // spacemouse wireless receiver
-                        0xc631,    // spacemouse pro wireless
-                        0xc632,    // spacemouse pro wireless receiver
-                        0xc633,    // spacemouse enterprise
-                        0xc635,    // spacemouse compact
-                        0xc652     // 3Dconnexion universal receiver
+            { VendorId(0x256f), {  // 3Dconnexion
+                        0xc62e,    // SpaceMouse wireless (USB cable)
+                        0xc62f,    // SpaceMouse wireless receiver
+                        0xc631,    // SpaceMouse pro wireless (USB cable)
+                        0xc632,    // SpaceMouse pro wireless receiver
+                        0xc633,    // SpaceMouse enterprise
+                        0xc635,    // SpaceMouse compact
+                        0xc638,    // SpaceMouse Pro Wireless Bluetooth Edition (USB cable)
+                        0xc652,    // Universal receiver
+                        0xc658     // Wireless (3DConnexion Universal Wireless Receiver in WIN32)
             }}
     };
 

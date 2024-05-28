@@ -1,9 +1,10 @@
 #include "MRCameraOrientationPlugin.h"
-#include "MRViewer/MRRibbonMenu.h"
+#include "MRViewer/MRRibbonSchema.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRUIStyle.h"
+#include "MRViewer/MRRibbonButtonDrawer.h"
 
 namespace MR
 {

@@ -32,9 +32,15 @@ public:
     // all bits after size() we silently consider as not-set
     [[nodiscard]] bool test( IndexType n ) const { return n < size() && base::test( n ); }
     [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return ( val || n < size() ) ? base::test_set( n, val ) : false; }
+    BitSet & set( IndexType n, size_type len, bool val ) { base::set( n, len, val ); return * this; }
+    BitSet & set( IndexType n, bool val = true ) { base::set( n, val ); return * this; }
+    BitSet & set() { base::set(); return * this; }
     BitSet & reset( IndexType n, size_type len ) { if ( n < size() ) base::reset( n, len ); return * this; }
     BitSet & reset( IndexType n ) { if ( n < size() ) base::reset( n ); return * this; }
     BitSet & reset() { base::reset(); return * this; }
+    BitSet & flip( IndexType n, size_type len ) { base::flip( n, len ); return * this; }
+    BitSet & flip( IndexType n ) { base::flip( n ); return * this; }
+    BitSet & flip() { base::flip(); return * this; }
 
     MRMESH_API BitSet & operator &= ( const BitSet & b );
     MRMESH_API BitSet & operator |= ( const BitSet & b );

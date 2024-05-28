@@ -6,6 +6,22 @@
 #include <filesystem>
 #include <fstream>
 
+#ifndef __EMSCRIPTEN__
+#ifdef _WIN32
+// it is tricky to use std::stacktrace on other systems: https://stackoverflow.com/q/78395268/7325599
+#include <version>
+#if __cpp_lib_stacktrace >= 202011
+#pragma message("std::stacktrace is available")
+#include <stacktrace>
+#else
+#pragma message("std::stacktrace is NOT available, using boost::stacktrace instead")
+#include <boost/stacktrace.hpp>
+#endif
+#else //not _WIN32
+#include <boost/stacktrace.hpp>
+#endif //_WIN32
+#endif //__EMSCRIPTEN__
+
 #ifdef _WIN32
 
 #ifndef _MSC_VER
@@ -199,6 +215,26 @@ std::filesystem::path GetLibsDirectory()
 #endif
 }
 
+std::filesystem::path GetEmbeddedPythonDirectory()
+{
+    auto exePath = GetExeDirectory();
+#if defined(_WIN32) || defined(__EMSCRIPTEN__)
+    return exePath;
+#else
+    if ( resourcesAreNearExe() )
+        return exePath;
+#ifdef __APPLE__
+#ifdef MR_FRAMEWORK
+    return "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/Frameworks/";
+#else
+    return "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/Frameworks/";
+#endif
+#else
+    return "/usr/local/lib/" + std::string( MR_PROJECT_NAME ) + "/";
+#endif
+#endif
+}
+
 std::filesystem::path getUserConfigDir()
 {
 #if defined( _WIN32 )
@@ -227,7 +263,7 @@ std::filesystem::path getUserConfigDir()
     if ( !std::filesystem::is_directory( filepath, ec ) || ec )
     {
         if ( ec )
-            spdlog::warn( "is {} a directory failed: {}", utf8string( filepath ), systemToUtf8( ec.message() ) );
+            spdlog::info( "{} is not a valid directory yet: {}", utf8string( filepath ), systemToUtf8( ec.message() ) );
         std::filesystem::create_directories( filepath, ec );
         if ( ec )
             spdlog::error( "create directories {} failed: {}", utf8string( filepath ), systemToUtf8( ec.message() ) );
@@ -263,16 +299,15 @@ std::filesystem::path GetTempDirectory()
 std::filesystem::path GetHomeDirectory()
 {
 #if defined( _WIN32 )
-    return _wgetenv( L"USERPROFILE" );
+    if ( auto* home = _wgetenv( L"USERPROFILE" ) )
+        return home;
 #elif !defined( __EMSCRIPTEN__ )
-    if ( auto home = std::getenv( "HOME" ) )
+    if ( auto* home = std::getenv( "HOME" ) )
         return home;
     if ( auto* pw = getpwuid( getuid() ) )
         return pw->pw_dir;
-    return {};
-#else
-    return {};
 #endif
+    return {};
 }
 
 std::string GetClipboardText()
@@ -609,5 +644,16 @@ void setNewHandlerIfNeeded()
     } );
 #endif
 }
+
+#ifndef __EMSCRIPTEN__
+std::string getCurrentStacktrace()
+{
+#if defined _WIN32 && __cpp_lib_stacktrace >= 202011
+    return to_string( std::stacktrace::current() );
+#else
+    return to_string( boost::stacktrace::stacktrace() );
+#endif
+}
+#endif
 
 } //namespace MR

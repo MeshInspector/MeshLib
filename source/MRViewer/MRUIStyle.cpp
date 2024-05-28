@@ -3,6 +3,7 @@
 #include "MRRibbonButtonDrawer.h"
 #include "MRColorTheme.h"
 #include "MRRibbonConstants.h"
+#include "MRViewer/MRUITestEngine.h"
 #include "MRViewerInstance.h"
 #include "MRRibbonFontManager.h"
 #include "MRViewer.h"
@@ -11,6 +12,7 @@
 #include "imgui_internal.h"
 #include "MRMesh/MRVector4.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRMesh/MRString.h"
 
 
 namespace MR
@@ -155,10 +157,15 @@ void init()
 bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vector2f( 0, 0 )*/,
     ImGuiButtonFlags flags /*= ImGuiButtonFlags_None*/, const ButtonCustomizationParams& custmParams )
 {
+    bool simulateClick = custmParams.enableTestEngine && TestEngine::createButton( label );
+    assert( ( simulateClick <= active ) && "Trying to programmatically press a button, but it's inactive!" );
+    if ( !active )
+        simulateClick = false;
+
     // copy from ImGui::ButtonEx and replaced visualize part
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     if ( window->SkipItems )
-        return false;
+        return simulateClick;
 
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = ImGui::GetStyle();
@@ -173,7 +180,7 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
     const ImRect bb( pos, pos + size );
     ImGui::ItemSize( size, style.FramePadding.y );
     if ( !ImGui::ItemAdd( bb, id ) )
-        return false;
+        return simulateClick;
 
     if ( g.LastItemData.InFlags & ImGuiItemFlags_ButtonRepeat )
         flags |= ImGuiButtonFlags_Repeat;
@@ -213,7 +220,8 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
     ImGui::RenderTextClipped( bb.Min, bb.Max, label, NULL, &label_size, style.ButtonTextAlign, &bb );
 
     IMGUI_TEST_ENGINE_ITEM_INFO( id, label, g.LastItemData.StatusFlags );
-    return pressed && active;
+
+    return ( pressed || simulateClick ) && active;
 }
 
 bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None */ )
@@ -245,7 +253,140 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
     sh.addVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x * 0.7f,  cDefaultItemSpacing * 2 * scaling } );
 
     sh.addColor( ImGuiCol_Button, *value == ownValue ? clearBlue : bgColor );
-    return ImGui::Button( label, ImVec2( size.x, size.y ) ) || checkKey( key );
+
+    bool ret = ImGui::Button( label, ImVec2( size.x, size.y ) ) || checkKey( key );
+    ret = TestEngine::createButton( label ) || ret; // Don't want short-circuiting.
+    return ret;
+}
+bool buttonIconEx( 
+    const std::string& name, 
+    const Vector2f& iconSize, 
+    const std::string& text, 
+    const ImVec2& buttonSize, 
+    const ButtonIconCustomizationParams& params )
+{
+    ImGui::BeginGroup();
+    const auto scrollX = ImGui::GetScrollX();
+    const auto scrollY = ImGui::GetScrollY();
+    const auto startButtonPos = ImGui::GetCursorPos();
+    ImVec2 endButtonPos( startButtonPos.x + buttonSize.x, startButtonPos.y );
+    const ImVec2 startButtonPosWindow( startButtonPos.x - scrollX, startButtonPos.y - scrollY );
+    const auto winPos = ImGui::GetWindowPos();
+    const auto& style = ImGui::GetStyle();
+    const auto padding = ImGui::GetStyle().FramePadding;
+
+    ImVec2 minClip( winPos.x + startButtonPosWindow.x, winPos.y + startButtonPosWindow.y );
+    ImVec2 maxClip( minClip.x + buttonSize.x, minClip.y + buttonSize.y );
+
+    std::string buttonText = "##" + text;
+    bool res = false;
+    if ( params.flatBackgroundColor )
+    {
+        res = ImGui::Button( buttonText.c_str(), buttonSize );
+        if( params.enableTestEngine )
+            res = UI::TestEngine::createButton( buttonText ) || res;
+    }
+    else
+    {
+        res = UI::buttonEx( buttonText.c_str(), params.active, Vector2f( buttonSize.x, buttonSize.y ), params.flags, params );
+    }
+    ImGui::SameLine();
+
+    ImGui::GetWindowDrawList()->PushClipRect( minClip, maxClip, true );
+
+    const char* startWord = 0;
+    const char* endWord = 0;
+    ImVec2 curTextSize;
+    bool printText = false;
+
+    struct StringDetail
+    {
+        float lenght = 0;
+        const char* start = 0;
+        const char* end = 0;
+    };
+    std::vector<StringDetail> vecDetail;
+
+    StringDetail previosDetail;
+    StringDetail curDetail;
+    curDetail.start = text.data();
+    auto endText = std::string_view( text ).end();
+
+    split( text, " ", [&] ( std::string_view str )
+    {
+        startWord = str.data();
+        endWord = &str.back() + 1;
+        bool forcePrint = endText == str.end();
+        curTextSize = ImGui::CalcTextSize( startWord, endWord );
+        if ( curDetail.lenght + curTextSize.x > buttonSize.x )
+        {
+            printText = true;
+            curDetail.end = startWord;
+            previosDetail = curDetail;
+            curDetail = { curTextSize.x, startWord, endWord };
+        }
+        else if ( forcePrint )
+        {
+            printText = true;
+            curDetail.end = endWord;
+            curDetail.lenght += curTextSize.x;
+            previosDetail = curDetail;
+        }
+        else
+        {
+            curDetail.lenght += curTextSize.x;
+        }
+        startWord = endWord;
+
+        if ( printText )
+        {
+            printText = false;
+            vecDetail.push_back( previosDetail );
+        }
+        return false;
+    } );
+
+    float localPadding = ( buttonSize.y - vecDetail.size() * curTextSize.y - iconSize.y ) / 3.0f;
+    localPadding = std::max( localPadding, style.FramePadding.y );
+
+    ImVec2 posIcon( ( endButtonPos.x + startButtonPos.x - iconSize.x ) / 2.0f, startButtonPos.y + localPadding );
+    ImGui::SetCursorPos( posIcon );
+
+    const float maxSize = std::max( iconSize.x, iconSize.y );
+    auto icon = RibbonIcons::findByName( name, maxSize, RibbonIcons::ColorType::White, RibbonIcons::IconType::IndependentIcons );
+
+    assert( icon );
+
+    ImVec4 multColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+    ImGui::Image( *icon, { iconSize.x , iconSize.y }, multColor );
+    ImGui::SameLine();
+
+    const auto font = ImGui::GetFont();
+    const auto color = ImGui::GetColorU32( style.Colors[ImGuiCol_Text] );
+    const auto fontSize = ImGui::GetFontSize();
+
+    ImVec2 startPosText( winPos.x + ( endButtonPos.x + startButtonPosWindow.x ) / 2.0f, winPos.y + startButtonPosWindow.y );
+    startPosText.y += localPadding * 2 + iconSize.y;
+    size_t numStr = 0;
+    for ( const auto& detail : vecDetail )
+    {
+        ImVec2 pos;
+        pos.x = startPosText.x - previosDetail.lenght / 2.0f;
+        pos.y = startPosText.y + ( padding.y + curTextSize.y ) * numStr;
+        numStr++;
+        ImGui::GetWindowDrawList()->AddText(
+                font,
+                fontSize,
+                pos,
+                color,
+                detail.start,
+                detail.end );
+    }
+
+    ImGui::GetWindowDrawList()->PopClipRect();
+    ImGui::EndGroup();
+
+    return res;
 }
 
 bool checkbox( const char* label, bool* value )
@@ -1018,7 +1159,7 @@ bool detail::genericSlider( const char* label, ImGuiDataType data_type, void* p_
     // EDITED: added small rectangle under text
     char value_buf[64];
     const char* value_buf_end = value_buf + DataTypeFormatString( value_buf, IM_ARRAYSIZE( value_buf ), data_type, p_data, format );
-    const ImVec2 text_size = CalcTextSize( value_buf, value_buf_end, false );
+    const ImVec2 text_size = CalcTextSize( value_buf, value_buf_end, true );
     const ImVec2 text_rect_half_size{ text_size.x * 0.5f + 4.0f, frame_bb.GetHeight() * 0.5f - 4.0f };
     window->DrawList->AddRectFilled( frame_bb.GetCenter() - text_rect_half_size, frame_bb.GetCenter() + text_rect_half_size,
         ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TextContrastBackground ).getUInt32(),

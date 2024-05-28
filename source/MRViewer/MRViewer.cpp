@@ -16,6 +16,7 @@
 #include "MRGetSystemInfoJson.h"
 #include "MRSpaceMouseHandler.h"
 #include "MRSpaceMouseHandlerHidapi.h"
+#include "MRSpaceMouseHandler3dxMacDriver.h"
 #include "MRRenderGLHelpers.h"
 #include "MRTouchpadController.h"
 #include "MRSpaceMouseController.h"
@@ -62,7 +63,6 @@
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
-#include <boost/stacktrace.hpp>
 #endif
 #include "MRViewerIO.h"
 #include "MRProgressBar.h"
@@ -126,6 +126,7 @@ EMSCRIPTEN_KEEPALIVE void emsForceSettingsSave()
 
 }
 #endif
+#include "MRSceneCache.h"
 
 static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, int modifier )
 {
@@ -219,6 +220,13 @@ static void glfw_window_focus( GLFWwindow* /*window*/, int focused )
 {
     MR::getViewerInstance().postFocus( bool( focused ) );
 }
+
+static void glfw_window_close( GLFWwindow* /*window*/ )
+{
+    // needed not to sleep until next event on close
+    MR::getViewerInstance().postClose();
+}
+
 #endif
 
 static void glfw_window_scale( GLFWwindow* /*window*/, float xscale, float yscale )
@@ -327,6 +335,8 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         firstLaunch = false;
     }
 
+    CommandLoop::setMainThreadId( std::this_thread::get_id() );
+
     auto& viewer = MR::Viewer::instanceRef();
 
     MR::setupLoggerByDefault();
@@ -351,7 +361,7 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     catch ( ... )
     {
         spdlog::critical( boost::current_exception_diagnostic_information() );
-        spdlog::critical( "Exception stacktrace:\n{}", to_string( boost::stacktrace::stacktrace() ) );
+        spdlog::info( "Exception stacktrace:\n{}", getCurrentStacktrace() );
         printCurrentTimerBranch();
         res = 1;
     }
@@ -366,8 +376,11 @@ void loadMRViewerDll()
 
 void filterReservedCmdArgs( std::vector<std::string>& args )
 {
+    if ( args.empty() )
+        return;
     bool nextW{ false };
     bool nextH{ false };
+    bool nextFPS{ false };
     std::vector<int> indicesToRemove;
     indicesToRemove.push_back( 0 );
     for ( int i = 1; i < args.size(); ++i )
@@ -382,6 +395,11 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
         else if ( nextH )
         {
             nextH = false;
+            reserved = true;
+        }
+        else if ( nextFPS )
+        {
+            nextFPS = false;
             reserved = true;
         }
         else if (
@@ -410,6 +428,11 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
             nextH = true;
             reserved = true;
         }
+        else if ( flag == "-animateFPS" )
+        {
+            nextFPS = true;
+            reserved = true;
+        }
 
         if ( reserved )
             indicesToRemove.push_back( i );
@@ -422,6 +445,7 @@ void Viewer::parseLaunchParams( LaunchParams& params )
 {
     bool nextW{ false };
     bool nextH{ false };
+    bool nextFPS{ false };
     for ( int i = 1; i < params.argc; ++i )
     {
         std::string flag( params.argv[i] );
@@ -434,6 +458,16 @@ void Viewer::parseLaunchParams( LaunchParams& params )
         {
             nextH = false;
             params.height = std::atoi( flag.c_str() );
+        }
+        else if ( nextFPS )
+        {
+            nextFPS = false;
+            auto fps = std::atoi( flag.c_str() );
+            if ( fps > 0 )
+            {
+                params.isAnimating = true;
+                params.animationMaxFps = fps;
+            }
         }
         else if ( flag == "-noWindow" )
         {
@@ -468,6 +502,8 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             nextW = true;
         else if ( flag == "-height" )
             nextH = true;
+        else if ( flag == "-animateFPS" )
+            nextFPS = true;
     }
 }
 
@@ -537,7 +573,8 @@ int Viewer::launch( const LaunchParams& params )
     launchParams_ = params;
     isAnimating = params.isAnimating;
     animationMaxFps = params.animationMaxFps;
-    enableDeveloperFeatures_ = params.developerFeatures;
+    if ( params.developerFeatures )
+        experimentalFeatures = true;
     auto res = launchInit_( params );
     if ( res != EXIT_SUCCESS )
         return res;
@@ -634,10 +671,16 @@ int Viewer::launchInit_( const LaunchParams& params )
     glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint( GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE );
 #endif
+
+#ifdef __APPLE__
+    constexpr int cDefaultMSAA = 2;
+#else
+    constexpr int cDefaultMSAA = 8;
+#endif
     if ( !settingsMng_ )
-        glfwWindowHint( GLFW_SAMPLES, 8 );
+        glfwWindowHint( GLFW_SAMPLES, cDefaultMSAA );
     else
-        glfwWindowHint( GLFW_SAMPLES, settingsMng_->loadInt( "multisampleAntiAliasing", 8 ) );
+        glfwWindowHint( GLFW_SAMPLES, settingsMng_->loadInt( "multisampleAntiAliasing", cDefaultMSAA ) );
 #ifndef __EMSCRIPTEN__
     glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
     glfwWindowHint( GLFW_FOCUS_ON_SHOW, GLFW_TRUE );
@@ -703,6 +746,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         glfwSetWindowIconifyCallback( window, glfw_window_iconify );
         glfwSetWindowContentScaleCallback( window, glfw_window_scale );
         glfwSetWindowFocusCallback( window, glfw_window_focus );
+        glfwSetWindowCloseCallback( window, glfw_window_close );
 #endif
         glfwSetMouseButtonCallback( window, glfw_mouse_press );
         glfwSetCharCallback( window, glfw_char_mods_callback );
@@ -986,6 +1030,7 @@ Viewer::Viewer() :
     {
         viewer->glPickRadius = 0;
         viewer->scrollForce = 1.0f;
+        viewer->experimentalFeatures = false;
         viewer->setSpaceMouseParameters( SpaceMouseParameters{} );
         viewer->setTouchpadParameters( TouchpadParameters{} );
         viewer->enableAlphaSort( true );
@@ -1049,13 +1094,11 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
         if ( filter.extensions.find( ext ) != std::string::npos )
             return true;
     }
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_DICOM ) && !defined(MRMESH_NO_VOXEL)
     for ( auto& filter : VoxelsLoad::Filters )
     {
         if ( filter.extensions.find( ext ) != std::string::npos )
             return true;
     }
-#endif
     for ( auto& filter : DistanceMapLoad::Filters )
     {
         if ( filter.extensions.find( ext ) != std::string::npos )
@@ -1472,6 +1515,7 @@ void Viewer::draw( bool force )
 
 bool Viewer::draw_( bool force )
 {
+    SceneCache::invalidateAll();
     bool needSceneRedraw = needRedraw_();
     if ( !force && !needSceneRedraw )
         return false;
@@ -1755,6 +1799,16 @@ void Viewer::postRescale( float x, float y )
     postRescaleSignal( x, y );
 }
 
+void Viewer::postClose()
+{
+    incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, swapOnLastPostEventsRedraw );
+    postEmptyEvent();
+#ifndef __EMSCRIPTEN__
+    if ( window )
+        glfwRequestWindowAttention( window );
+#endif
+}
+
 void Viewer::set_root( SceneRootObject& newRoot )
 {
     std::swap( SceneRoot::get(), newRoot );
@@ -1890,13 +1944,26 @@ void Viewer::initRotationCenterObject_()
 
 void Viewer::initSpaceMouseHandler_()
 {
-    #if defined(__EMSCRIPTEN__)
-        spaceMouseHandler_ = std::make_unique<SpaceMouseHandler>();
-    #else
-        spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerHidapi>();
-    #endif
+#ifndef __EMSCRIPTEN__
+#ifdef __APPLE__
+    // try to use the official driver first
+    auto driverHandler = std::make_unique<SpaceMouseHandler3dxMacDriver>();
+    driverHandler->setClientName( MR_PROJECT_NAME );
+    if ( driverHandler->initialize() )
+    {
+        spaceMouseHandler_ = std::move( driverHandler );
+        return;
+    }
 
-    spaceMouseHandler_->initialize();
+    // fallback to the HIDAPI implementation
+    spdlog::warn( "Failed to find or use the 3DxWare driver; falling back to the HIDAPI implementation" );
+#endif
+    spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerHidapi>();
+    if ( !spaceMouseHandler_->initialize() )
+    {
+        spdlog::warn( "Failed to initialize SpaceMouse handler" );
+    }
+#endif
 }
 
 bool Viewer::windowShouldClose()
@@ -2321,7 +2388,7 @@ PointInAllSpaces Viewer::getPixelPointInfo( const Vector3f& screenPoint ) const
                 Vector3f( static_cast<float>(res.viewportSpace.x), static_cast<float>(res.viewportSpace.y), 0.f )
             );
             // looking for all visible objects
-            auto [obj, pick] = viewport.pick_render_object( Vector2f( res.viewportSpace.x, res.viewportSpace.y ) );
+            auto [obj, pick] = viewport.pickRenderObject( { .point = Vector2f( res.viewportSpace.x, res.viewportSpace.y ) } );
             if(obj)
             {
                 res.obj = obj;
@@ -2428,6 +2495,12 @@ void Viewer::setMenuPlugin( std::shared_ptr<ImGuiMenu> menu )
     assert( !menuPlugin_ );
     assert( menu );
     menuPlugin_ = menu;
+}
+
+void Viewer::stopEventLoop()
+{
+    stopEventLoop_ = true;
+    postClose();
 }
 
 size_t Viewer::getStaticGLBufferSize() const

@@ -873,6 +873,10 @@ namespace miniply {
     return foundAll;
   }
 
+  std::streamsize PLYReader::get_end_pos() const
+  {
+    return inEnd_;
+  }
 
   bool PLYReader::extract_properties(const uint32_t propIdxs[], uint32_t numProps, PLYPropertyType destType, void *dest) const
   {

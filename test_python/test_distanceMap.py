@@ -21,9 +21,9 @@ def test_distance_map():
     params.orgPoint.y = -(R1 + R2)
     params.orgPoint.z = -R2
 
-    map = mrmesh.computeDistanceMapD(mrmesh.MeshPart(torus), params)
+    map = mrmesh.computeDistanceMapD(torus, params)
 
-    tomesh = mrmesh.distanceMapToMesh(map, mrmesh.DistanceMapToWorld(params))
+    tomesh = mrmesh.distanceMapToMesh(map, params.xf())
 
     assert map.isValid(0, 0) == False
     assert map.isValid(7, 7) == True

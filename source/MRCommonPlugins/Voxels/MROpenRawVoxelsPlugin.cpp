@@ -1,6 +1,7 @@
 #include "MROpenRawVoxelsPlugin.h"
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_VOXEL)
-#include "MRViewer/MRRibbonMenu.h"
+#ifndef MRMESH_NO_OPENVDB
+#include "MRViewer/MRRibbonSchema.h"
+#include "MRViewer/ImGuiMenu.h"
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRFileDialog.h"
@@ -69,9 +70,11 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
     }
     if ( UI::button( "Open file", Vector2f( -1, 0 ) ) )
     {
-        auto path = openFileDialog( { {},{},{{"RAW File","*.raw;*.bin"}} } );
-        if ( !path.empty() )
+        const auto cb = [this] ( const std::filesystem::path& path )
         {
+            if ( path.empty() )
+                return;
+
             ProgressBar::orderWithMainThreadPostProcessing( "Load voxels", [params = parameters_, path, autoMode = autoMode_] ()->std::function<void()>
             {
                 ProgressBar::nextTask( "Load file" );
@@ -138,7 +141,12 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                 }
             }, 3 );
             dialogIsOpen_ = false;
-        }
+        };
+        openFileDialogAsync( cb, {
+            .filters = {
+                { "RAW File", "*.raw;*.bin" },
+            },
+        } );
     }
     ImGui::PopStyleVar( 2 );
     ImGui::EndCustomStatePlugin();
@@ -158,7 +166,7 @@ MR_REGISTER_RIBBON_ITEM( OpenRawVoxelsPlugin )
 
 }
 #endif
-#ifdef __EMSCRIPTEN__
+#if defined( MRMESH_NO_OPENVDB ) && defined( __EMSCRIPTEN__ )
 #include "MRCommonPlugins/Basic/MRWasmUnavailablePlugin.h"
 MR_REGISTER_WASM_UNAVAILABLE_ITEM( OpenRawVoxelsPlugin, "Open RAW Voxels" )
 #endif

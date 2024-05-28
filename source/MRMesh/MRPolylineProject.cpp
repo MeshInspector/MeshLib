@@ -26,7 +26,7 @@ PolylineProjectionResult<V> findProjectionCore( const AABBTreePolyline<V> & tree
 
     struct SubTask
     {
-        typename AABBTreePolyline<V>::NodeId n;
+        NodeId n;
         float distSq = 0;
     };
 
@@ -43,7 +43,7 @@ PolylineProjectionResult<V> findProjectionCore( const AABBTreePolyline<V> & tree
         }
     };
 
-    auto getSubTask = [&] ( typename AABBTreePolyline<V>::NodeId n )
+    auto getSubTask = [&] ( NodeId n )
     {
         return SubTask{ n, distSqToBox( transformed( tree.nodes()[n].box, xf ) ) };
     };
@@ -173,10 +173,10 @@ PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
 
     struct SubTask
     {
-        typename AABBTreePolyline<V>::NodeId n;
+        NodeId n;
         float dist = 0;
         SubTask() = default;
-        SubTask( typename AABBTreePolyline<V>::NodeId n, float d ) : n( n ), dist( d )
+        SubTask( NodeId n, float d ) : n( n ), dist( d )
         {}
     };
 
@@ -193,7 +193,7 @@ PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
         }
     };
 
-    auto getSubTask = [&] ( typename AABBTreePolyline<V>::NodeId n )
+    auto getSubTask = [&] ( NodeId n )
     {
         float dist = ( ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( pt ) - pt ).length() - maxOffset );
         return SubTask( n, dist );
@@ -301,10 +301,10 @@ void findEdgesInBallCore( const AABBTreePolyline<V>& tree, const V& center,
 
     const auto radiusSq = sqr( radius );
     constexpr int MaxStackSize = 32; // to avoid allocations
-    typename AABBTreePolyline<V>::NodeId subtasks[MaxStackSize];
+    NodeId subtasks[MaxStackSize];
     int stackSize = 0;
 
-    auto addSubTask = [&] ( typename AABBTreePolyline<V>::NodeId n )
+    auto addSubTask = [&] ( NodeId n )
     {
         float distSq = ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( center ) - center ).lengthSq();
         if ( distSq <= radiusSq )

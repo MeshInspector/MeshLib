@@ -100,7 +100,7 @@ VoidOrErrStr toMrDistanceMap( const std::filesystem::path& path, const DistanceM
     return {};
 }
 
-VoidOrErrStr toAnySupportedFormat( const std::filesystem::path& path, const DistanceMap& dmap, const DistanceMapToWorld* params)
+VoidOrErrStr toAnySupportedFormat( const std::filesystem::path& path, const DistanceMap& dmap, const AffineXf3f * xf )
 {
     auto ext = utf8string( path.extension() );
     for ( auto& c : ext )
@@ -117,7 +117,7 @@ VoidOrErrStr toAnySupportedFormat( const std::filesystem::path& path, const Dist
     if ( ext == "*.raw" )
         return toRAW( path, dmap );
 
-    return toMrDistanceMap( path, dmap, params ? *params : DistanceMapToWorld {} );
+    return toMrDistanceMap( path, dmap, xf ? *xf : AffineXf3f{} );
 }
 
 } // namespace DistanceMapSave

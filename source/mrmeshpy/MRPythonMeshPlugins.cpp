@@ -34,6 +34,7 @@
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRMovementBuildBody.h"
 #include "MRMesh/MRVector2.h"
+#include "MRMesh/MRFixSelfIntersections.h"
 #include <pybind11/functional.h>
 #pragma warning(push)
 #pragma warning(disable: 4464) // relative include path contains '..'
@@ -42,7 +43,7 @@
 
 using namespace MR;
 
-#ifndef MRMESH_NO_VOXEL
+#ifndef MRMESH_NO_OPENVDB
 // Fix self-intersections
 void fixSelfIntersections( Mesh& mesh1, float voxelSize )
 {
@@ -93,6 +94,31 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, VoxelBooleanBlock, [] ( pybind11::module_& m
 } )
 #endif
 
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SelfIntersections, [] ( pybind11::module_& m )
+{
+    pybind11::enum_<MR::SelfIntersections::Settings::Method>( m, "FixSelfIntersectionMethod" ).
+        value( "Relax", MR::SelfIntersections::Settings::Method::Relax, "Relax mesh around self-intersections" ).
+        value( "CutAndFill", MR::SelfIntersections::Settings::Method::CutAndFill, "Cut and re-fill regions around self-intersections (may fall back to `Relax`)" );
+
+
+    pybind11::class_<MR::SelfIntersections::Settings>( m, "FixSelfIntersectionSettings", "Setting set for mesh self-intersections fix" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "method", &MR::SelfIntersections::Settings::method ).
+        def_readwrite( "relaxIterations", &MR::SelfIntersections::Settings::relaxIterations, "Maximum relax iterations" ).
+        def_readwrite( "maxExpand", &MR::SelfIntersections::Settings::maxExpand, "Maximum expand count (edge steps from self-intersecting faces), should be > 0" ).
+        def_readwrite( "subdivideEdgeLen", &MR::SelfIntersections::Settings::subdivideEdgeLen,
+            "Edge length for subdivision of holes covers (0.0f means auto)\n"
+            "FLT_MAX to disable subdivision" );
+
+    m.def( "localFixSelfIntersections", MR::decorateExpected( &MR::SelfIntersections::fix ),
+        pybind11::arg( "mesh" ), pybind11::arg( "settings" ),
+        "Finds and fixes self-intersections per component" );
+
+    m.def( "localFindSelfIntersections", MR::decorateExpected( &MR::SelfIntersections::getFaces ),
+        pybind11::arg( "mesh" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
+        "Find all self-intersections faces component-wise" );
+} )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::module_& m )
 {
     m.def( "detectTunnelFaces", []( const MeshPart & mp, float maxTunnelLength ) { return MR::detectTunnelFaces( mp, { .maxTunnelLength = maxTunnelLength } ).value(); },
@@ -118,7 +144,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::modul
         "applies at most given number of relaxation iterations the spikes detected by given threshold" );
 } )
 
-#ifndef MRMESH_NO_VOXEL
+#ifndef MRMESH_NO_OPENVDB
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FixUndercuts, [] ( pybind11::module_& m )
 {
     m.def( "fixUndercuts", ( void ( * )( Mesh&, const FaceBitSet&, const Vector3f&, float, float ) )& MR::FixUndercuts::fixUndercuts,
@@ -240,20 +266,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PlaneSections, [] ( pybind11::module_& m )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MovementBody, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MovementBuildBodyParams>( m, "MovementBuildBodyParams" ).
-        def( pybind11::init<>() ).
-        def_readwrite( "allowRotation", &MovementBuildBodyParams::allowRotation,
-            "if this flag is set, rotate body in trajectory vertices\n"
-            "according to its rotation\n"
-            "otherwise body movement will be done without any rotation" ).
-        def_readwrite( "center", &MovementBuildBodyParams::center,
-            "point in body space that follows trajectory\n"
-            "if not set body bounding box center is used" ).
-        def_readwrite( "bodyNormal", &MovementBuildBodyParams::bodyNormal,
-            "facing direction of body, used for initial rotation (if allowRotation)\n"
-            "if not set body accumulative normal is used" ).
-        def_readwrite( "b2tXf", &MovementBuildBodyParams::b2tXf, "optional transform body space to trajectory space" );
-
     m.def( "makeMovementBuildBody", &makeMovementBuildBody,
         pybind11::arg( "body" ), pybind11::arg( "trajectory" ), pybind11::arg_v( "params", MovementBuildBodyParams(), "MovementBuildBodyParams()" ),
         "makes mesh by moving `body` along `trajectory`\n"
@@ -268,7 +280,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Relax, [] ( pybind11::module_& m )
         def( pybind11::init<>() ).
         def_readwrite( "force", &RelaxParams::force, "speed of relaxing, typical values (0.0, 0.5]" ).
         def_readwrite( "iterations", &RelaxParams::iterations, "number of iterations" ).
-        def_readwrite( "region", &RelaxParams::region, "region to relax" );
+        def_readwrite( "region", &RelaxParams::region, "region to relax" ).
+        def_readwrite( "limitNearInitial", &RelaxParams::limitNearInitial, "if true then maximal displacement of each point during denoising will be limited" ).
+        def_readwrite( "maxInitialDist", &RelaxParams::maxInitialDist, "maximum distance between a point and its position before relaxation, ignored if limitNearInitial = false" );
 
     pybind11::class_<MeshRelaxParams, RelaxParams>( m, "MeshRelaxParams" ).
         def( pybind11::init<>() ).
@@ -368,7 +382,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
     pybind11::enum_<Laplacian::EdgeWeights>( m, "LaplacianEdgeWeightsParam" ).
         value( "Unit", Laplacian::EdgeWeights::Unit, "all edges have same weight=1" ).
         value( "Cotan", Laplacian::EdgeWeights::Cotan, "edge weight depends on local geometry and uses cotangent values" ).
-        value( "CotanTimesLength", Laplacian::EdgeWeights::CotanTimesLength, "edge weight is equal to edge length times cotangent weight" );
+        value( "CotanTimesLength", Laplacian::EdgeWeights::CotanTimesLength, "[deprecated] edge weight is equal to edge length times cotangent weight" ).
+        value( "CotanWithAreaEqWeight", Laplacian::EdgeWeights::CotanWithAreaEqWeight, "cotangent edge weights and equation weights inversely proportional to square root of local area" );
 
     m.def( "positionVertsSmoothly", &MR::positionVertsSmoothly,
         pybind11::arg( "mesh" ), pybind11::arg( "verts" ), pybind11::arg_v( "edgeWeightsType", MR::Laplacian::EdgeWeights::Cotan, "LaplacianEdgeWeightsParam.Cotan" ),
@@ -376,7 +391,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
         "Puts given vertices in such positions to make smooth surface both inside verts-region and on its boundary" );
 } )
 
-#ifndef MRMESH_NO_VOXEL
+#ifndef MRMESH_NO_OPENVDB
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
 {
     pybind11::enum_<MR::SignDetectionMode>( m, "SignDetectionMode", "How to determine the sign of distances from a mesh" ).

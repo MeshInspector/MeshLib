@@ -10,14 +10,14 @@ enum class RenderModelPassMask
 {
     Opaque = 1 << 0,
     Transparent = 1 << 1,
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_OPENVDB
     VolumeRendering = 1 << 2,
 #endif
     NoDepthTest = 1 << 3,
 
     All =
         Opaque | Transparent | NoDepthTest
-#ifndef __EMSCRIPTEN__
+#ifndef MRMESH_NO_OPENVDB
         | VolumeRendering
 #endif
 };

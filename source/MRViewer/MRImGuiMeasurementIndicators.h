@@ -20,6 +20,8 @@ struct Params
     Color colorText;
     Color colorTextOutline;
 
+    float pointDiameter = 6;
+
     float width = 1.5f;
     float smallWidth = 0.75f;
     float outlineWidth = 1.5f;
@@ -64,6 +66,9 @@ enum class Element
 };
 MR_MAKE_FLAG_OPERATORS( Element )
 
+// Draws a point.
+MRVIEWER_API void point( Element elem, float menuScaling, const Params& params, ImVec2 point );
+
 enum class StringIcon
 {
     none,
@@ -101,7 +106,10 @@ struct StringWithIcon
 // Draws a floating text bubble.
 // If `push` is specified, it's normalized and the text is pushed in that direction,
 // by the amount necessarily to clear a perpendicular going through the center point.
-MRVIEWER_API void text( Element elem, float menuScaling, const Params& params, ImVec2 center, StringWithIcon string, ImVec2 push = ImVec2() );
+// If `pivot` is specified, the bubble is positioned according to its size (like in ImGui::SetNextWindowPos):
+// { 0, 0 } for top left corner, { 0.5f, 0.5f } for center (default), { 1, 1 } for bottom right corner.
+MRVIEWER_API void text( Element elem, float menuScaling, const Params& params, ImVec2 pos, StringWithIcon string,
+                        ImVec2 push = {}, ImVec2 pivot = { 0.5f, 0.5f } );
 
 // Draws a triangle from an arrow.
 MRVIEWER_API void arrowTriangle( Element elem, float menuScaling, const Params& params, ImVec2 point, ImVec2 dir );

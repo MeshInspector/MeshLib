@@ -4,6 +4,16 @@
 namespace MR
 {
 
+DenseBox::DenseBox( const std::vector<Vector3f>& points, const AffineXf3f* xf )
+{
+    include_( points, nullptr, xf );
+}
+
+DenseBox::DenseBox( const std::vector<Vector3f>& points, const std::vector<float>& weights, const AffineXf3f* xf )
+{
+    include_( points, &weights, xf );
+}
+
 DenseBox::DenseBox( const MeshPart& meshPart, const AffineXf3f* xf /*= nullptr*/ )
 {
     include_( meshPart, xf );
@@ -35,6 +45,26 @@ Vector3f DenseBox::corner( const Vector3b& index ) const
 bool DenseBox::contains( const Vector3f& pt ) const
 {
     return box_.contains( basisXfInv_( pt ) );
+}
+
+void DenseBox::include_( const std::vector<Vector3f>& points, const std::vector<float>* weights, const AffineXf3f* xf )
+{
+    assert( !weights || points.size() == weights->size() );
+    PointAccumulator accum;
+    if ( weights )
+        accumulateWeighedPoints( accum, points, *weights, xf );
+    else
+        accumulatePoints( accum, points, xf );
+    if ( !accum.valid() )
+        return;
+    basisXf_ = AffineXf3f( accum.getBasicXf() );
+    basisXfInv_ = basisXf_.inverse();
+    auto tempXf = basisXfInv_;
+    if ( xf )
+        tempXf = basisXfInv_ * ( *xf );
+
+    for ( const auto& p : points )
+        box_.include( tempXf( p ) );
 }
 
 void DenseBox::include_( const MeshPart& meshPart, const AffineXf3f* xf /*= nullptr */ )

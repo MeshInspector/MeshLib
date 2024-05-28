@@ -46,13 +46,13 @@ public:
 
 
     // enable or disable widget
-    MRVIEWER_API void enable( bool isEnaled );
+    MRVIEWER_API void enable( bool isEnabled );
 
     // create a widget and connect it. 
     // To create a widget, you need to provide 1 callbacks and one function that determines whether this object can be used to detect and select boundaries ( holes ).
     // All callback takes a shared pointer to an MR::ObjectMeshHolder as an argument.
     // onBoundarySelected: This callback is invoked when a boundary is selected.
-    // isObjectValidToPick : Must returh true or false. This callback is used to determine whether an object is valid for picking.
+    // isObjectValidToPick : Must return true or false. This callback is used to determine whether an object is valid for picking.
     MRVIEWER_API void create(
             BoundarySelectionWidgetCallBack onBoundarySelected,
             BoundarySelectionWidgetChecker isObjectValidToPick
@@ -64,8 +64,11 @@ public:
     // reset widget, clear internal variables and detach from signals.
     MRVIEWER_API void reset();
 
-    // select one of the holes. Return succsess.
+    // select one of the holes. Return true on success.
     MRVIEWER_API bool selectHole( std::shared_ptr<MR::ObjectMeshHolder> object, int index );
+
+    // clear selection
+    MRVIEWER_API void clear();
 
     // returns pair of selected hole ( in Edge representations) and objects on which particular hole is present
     MRVIEWER_API std::pair< std::shared_ptr<MR::ObjectMeshHolder>, EdgeId > getSelectHole() const;
@@ -98,6 +101,9 @@ private:
     // Those. if the condition is met for several holes( including holes on different objects ), then the first one available will be selected.
     std::pair<std::shared_ptr<MR::ObjectMeshHolder>, HoleEdgePoint> getHoverdHole_();
 
+    // select hole
+    bool selectHole_( std::shared_ptr<ObjectMeshHolder> object, int index, bool writeHistory = true );
+
     // update color for one of the polylines
     bool updateHole_( std::shared_ptr<MR::ObjectMeshHolder> object, int index, MR::Color color, float lineWidth );
 
@@ -128,8 +134,32 @@ private:
     // hover particular hole/
     bool hoverHole_( std::shared_ptr<MR::ObjectMeshHolder> object, int index );
 
-    // calculate and store all holes on meshes whick allowed by isObjectValidToPick_ callback
+    // calculate and store all holes on meshes which allowed by isObjectValidToPick_ callback
     void calculateHoles_();
+
+    friend class ChangeBoundarySelectionHistoryAction;
 };
 
-}
+class ChangeBoundarySelectionHistoryAction : public HistoryAction
+{
+public:
+    ChangeBoundarySelectionHistoryAction( std::string name, BoundarySelectionWidget& widget, std::shared_ptr<ObjectMeshHolder> object, int index );
+
+public:
+    // HistoryAction
+    [[nodiscard]] std::string name() const override { return name_; }
+
+    void action( Type type ) override;
+
+    [[nodiscard]] size_t heapBytes() const override;
+
+private:
+    std::string name_;
+    BoundarySelectionWidget& widget_;
+    std::shared_ptr<ObjectMeshHolder> prevSelectedHoleObject_;
+    std::shared_ptr<ObjectMeshHolder> nextSelectedHoleObject_;
+    int prevSelectedHoleIndex_;
+    int nextSelectedHoleIndex_;
+};
+
+} // namespace MR

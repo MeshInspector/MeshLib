@@ -3,6 +3,7 @@
 #include "MRPch/MRFmt.h"
 #include "MRViewer/MRImGuiMeasurementIndicators.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRViewer/MRUnits.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
 
@@ -11,11 +12,14 @@ namespace MR::RenderDimensions
 
 constexpr int cCurveMaxSubdivisionDepth = 10;
 
-// How many digits (after the decimal point) to print for distances.
-static int cDistanceDigits = 3;
-
-// How many digits (after the decimal point) to print for angles (in degrees).
-static int cAngleDegreeDigits = 1;
+static std::string lengthToString( float value )
+{
+    return valueToString<LengthUnit>( value, { .unitSuffix = false, .style = NumberStyle::normal, .stripTrailingZeroes = false } );
+}
+static std::string angleToString( float value )
+{
+    return valueToString<AngleUnit>( value, { .style = NumberStyle::normal, .stripTrailingZeroes = false } );
+}
 
 [[nodiscard]] static ImVec2 toScreenCoords( const Viewport& viewport, const Vector3f& point )
 {
@@ -90,10 +94,10 @@ void RadiusTask::renderPass()
         farPoint = point + ImGuiMath::normalize( point - center ) * minRadiusLen;
 
     ImGuiMeasurementIndicators::StringWithIcon string = fmt::format(
-        "{}{}  {:.{}f}",
+        "{}{}  {}",
         params_.isSpherical ? "S" : "",
         params_.drawAsDiameter ? "" : "R",
-        radiusValue * ( params_.drawAsDiameter ? 2 : 1 ), cDistanceDigits
+        lengthToString( radiusValue * ( params_.drawAsDiameter ? 2 : 1 ) )
     );
     if ( params_.drawAsDiameter )
     {
@@ -225,14 +229,14 @@ void AngleTask::renderPass()
             (void)b;
             if ( numGeneratedDepthSteps <=/*sic*/ depth )
             {
-                #if __GNUC__ == 11 || __GNUC__ == 12 || __GNUC__ == 13
+                #if __GNUC__ >= 11 && __GNUC__ <= 14
                 #pragma GCC diagnostic push
                 // A false positive, it seems? `bisectState()` ensures `depths < curveMaxSubdivisionDepth`.
                 // And `numGEneratedDepthSteps` starts from 1, it can't be zero either.
                 #pragma GCC diagnostic ignored "-Warray-bounds"
                 #endif
                 depthStepData[numGeneratedDepthSteps].angleStep = depthStepData[numGeneratedDepthSteps - 1].angleStep / 2;
-                #if __GNUC__ == 11 || __GNUC__ == 12 || __GNUC__ == 13
+                #if __GNUC__ >= 11 && __GNUC__ <= 14
                 #pragma GCC diagnostic pop
                 #endif
                 depthStepData[numGeneratedDepthSteps].matrix = Matrix3f::rotation( rotationAxis, depthStepData[numGeneratedDepthSteps].angleStep );
@@ -371,11 +375,7 @@ void AngleTask::renderPass()
             }
 
             // The text.
-            ImGuiMeasurementIndicators::text( elem, menuScaling_, indicatorParams,
-                // This is `U+00B0 DEGREE SIGN`.
-                textPos, fmt::format( "{:.{}f}\xC2\xB0", angleValue * 180 / MR::PI_F, cAngleDegreeDigits ),
-                normal
-            );
+            ImGuiMeasurementIndicators::text( elem, menuScaling_, indicatorParams, textPos, angleToString( angleValue ), normal );
         };
 
         drawElem( ImGuiMeasurementIndicators::Element::outline );
@@ -401,9 +401,19 @@ void LengthTask::renderPass()
 
     ImGuiMeasurementIndicators::Params indicatorParams;
     indicatorParams.colorMain = color_;
-    ImGuiMeasurementIndicators::distance( ImGuiMeasurementIndicators::Element::both, menuScaling_, indicatorParams,
-        a, b, fmt::format( "{:.{}f}", distanceValue, cDistanceDigits )
-    );
+    std::string str = lengthToString( distanceValue );
+    if ( params_.showPerCoordDeltas )
+    {
+        Vector3f delta = params_.points[1] - params_.points[0];
+        if ( params_.perCoordDeltasAreAbsolute )
+        {
+            delta.x = std::abs( delta.x );
+            delta.y = std::abs( delta.y );
+            delta.z = std::abs( delta.z );
+        }
+        str += fmt::format( "\nX: {}\nY: {}\nZ: {}", lengthToString( delta.x ), lengthToString( delta.y ), lengthToString( delta.z ) );
+    }
+    ImGuiMeasurementIndicators::distance( ImGuiMeasurementIndicators::Element::both, menuScaling_, indicatorParams, a, b, str );
 }
 
 }

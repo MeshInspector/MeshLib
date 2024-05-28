@@ -34,10 +34,10 @@ void findPointsInBall( const AABBTreePoints& tree, const Vector3f& center, float
     const float radiusSq = sqr( radius );
 
     constexpr int MaxStackSize = 32; // to avoid allocations
-    AABBTreePoints::NodeId subtasks[MaxStackSize];
+    NodeId subtasks[MaxStackSize];
     int stackSize = 0;
 
-    auto addSubTask = [&]( AABBTreePoints::NodeId n )
+    auto addSubTask = [&]( NodeId n )
     {
         float distSq = ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( center ) - center ).lengthSq();
         if ( distSq <= radiusSq )

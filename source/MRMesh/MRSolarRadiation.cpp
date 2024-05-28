@@ -93,7 +93,7 @@ VertScalars computeSkyViewFactor( const Mesh & terrain, const VertCoords & sampl
         float totalRadiation = 0;
         for ( int i = 0; i < skyPatches.size(); ++i )
         {
-            const auto intersectionRes = rayMeshIntersect( terrain, Line3f( samplePt, skyPatches[i].dir ), 0, FLT_MAX, &precs[i], false );
+            const auto intersectionRes = rayMeshIntersect( terrain, Line3f( samplePt, skyPatches[i].dir ), 0, FLT_MAX, &precs[i], bool( outIntersections ));
             if ( !intersectionRes )
                 totalRadiation += skyPatches[i].radiation;
             else if ( outIntersections )

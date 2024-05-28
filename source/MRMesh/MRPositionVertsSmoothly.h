@@ -18,6 +18,30 @@ MRMESH_API void positionVertsSmoothly( Mesh& mesh, const VertBitSet& verts,
 MRMESH_API void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts,
     const Vector<Vector3f, VertId>* vertShifts = nullptr );
 
+struct SpacingSettings
+{
+    /// vertices to be moved by the algorithm, nullptr means all valid vertices
+    const VertBitSet* region = nullptr;
+
+    /// target distance of each edge in the mesh (for at least one edge's vertex in the region)
+    UndirectedEdgeMetric dist; // must be defined by the caller
+
+    /// the algorithm is iterative, the more iterations the closer result to exact solution
+    int numIters = 10;
+
+    /// too small number here can lead to instability, too large - to slow convergence
+    float stabilizer = 3;
+
+    /// maximum sum of minus negative weights, if it is exceeded then stabilizer is increased automatically
+    float maxSumNegW = 0.1f;
+
+    /// if this predicated is given, then all inverted faces will be converted in degenerate faces at the end of each iteration
+    FacePredicate isInverted;
+};
+
+/// Moves given vertices to make the distances between them as specified
+MRMESH_API void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings );
+
 struct InflateSettings
 {
     /// the amount of pressure applied to mesh region:

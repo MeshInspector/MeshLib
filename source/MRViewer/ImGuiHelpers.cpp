@@ -1,4 +1,5 @@
 #include "ImGuiHelpers.h"
+#include "MRViewer/MRUITestEngine.h"
 #include "imgui_internal.h"
 #include "MRMesh/MRBitSet.h"
 #include "MRPch/MRSpdlog.h"
@@ -434,12 +435,17 @@ ImVec2 GetDownPosition( const float width )
     return { GetIO().DisplaySize.x - width, GetIO().DisplaySize.y };
 }
 
+float GetTitleBarHeght( float menuScaling )
+{
+    return 2 * MR::cRibbonItemInterval * menuScaling + ImGui::GetTextLineHeight() + 2 * ImGui::GetStyle().WindowBorderSize * menuScaling;
+}
+
 bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePluginWindowParameters& params )
 {
     const auto& style = ImGui::GetStyle();
 
     const float borderSize = style.WindowBorderSize * params.menuScaling;
-    const float titleBarHeight = 2 * MR::cRibbonItemInterval * params.menuScaling + ImGui::GetTextLineHeight() + 2 * borderSize;
+    const float titleBarHeight = GetTitleBarHeght( params.menuScaling );
     auto height = params.height;
     if ( params.collapsed && *params.collapsed )
         height = titleBarHeight;
@@ -717,6 +723,16 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     window->ClipRect = window->InnerRect;
     window->DrawList->PushClipRect( window->InnerRect.Min, window->InnerRect.Max );
 
+    { // Create a group for the UI testing engine.
+        // Strip `##...` from the label.
+        std::string_view strippedLabel = label;
+        auto sep = strippedLabel.find( "##" );
+        if ( sep != std::string_view::npos )
+            strippedLabel = strippedLabel.substr( 0, sep );
+
+        UI::TestEngine::pushTree( strippedLabel );
+    }
+
     return true;
 }
 
@@ -728,6 +744,8 @@ void EndCustomStatePlugin()
     window->DrawList->PopClipRect();
     ImGui::PopStyleVar();
     End();
+
+    UI::TestEngine::popTree();
 }
 
 bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWindowFlags flags /*= 0 */ )
@@ -955,8 +973,7 @@ PaletteChanges Palette(
     bool* fixZero,
     float speed,
     float min,
-    float max,
-    const MR::UnitToStringParams<MR::NoUnit>& unitParams )
+    float max )
 {
     using namespace MR;
     PaletteChanges changes = PaletteChanges::None;
@@ -1015,18 +1032,17 @@ PaletteChanges Palette(
     if ( UI::checkbox( "Discrete Palette", &isDiscrete ) )
     {
         palette.setFilterType( isDiscrete ? FilterType::Discrete : FilterType::Linear );
-        changes |= PaletteChanges::Texture;
+        changes |= PaletteChanges::Texture | PaletteChanges::Ranges; // both the texture and uv-coordinates must be recomputed
         presetName.clear();
     }
-    UI::setTooltipIfHovered( "If checked, palette will have several disrete levels. Otherwise it will be smooth.", menuScaling );
+    UI::setTooltipIfHovered( "If checked, palette will have several discrete levels. Otherwise it will be smooth.", menuScaling );
     if ( isDiscrete )
     {
         ImGui::SameLine();
         int discretization = params.discretization;
         ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x );
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cInputPadding * menuScaling * 0.5f - menuScaling );
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
-        if ( UI::drag<NoUnit>( "Discretization", discretization, 1.f, 2, 100 ) )
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cCheckboxPadding - ImGui::GetStyle().FramePadding.y );
+        if ( UI::drag<NoUnit>( "###Discretization", discretization, 1.f, 2, 100 ) )
         {
             palette.setDiscretizationNumber( discretization );
             palette.resetLabels();
@@ -1034,7 +1050,6 @@ PaletteChanges Palette(
             presetName.clear();
         }
         UI::setTooltipIfHovered( "Number of discrete levels", menuScaling );
-        ImGui::PopStyleVar();
     }
 
     ImGui::PopStyleVar();
@@ -1044,8 +1059,11 @@ PaletteChanges Palette(
     int paletteRangeModeBackUp = paletteRangeMode;
     ImGui::PushItemWidth( scaledWidth );
 
+    const auto oldPaletteRangeMode = paletteRangeMode;
     UI::combo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
     UI::setTooltipIfHovered( "If \"Central zone\" selected you can separately fit values which are higher or lower then central one. Otherwise only the whole scale can be fit", menuScaling );
+    if ( oldPaletteRangeMode != paletteRangeMode )
+        changes |= PaletteChanges::Texture;
     ImGui::PopItemWidth();
 
     ImGui::PushItemWidth( 0.5f * scaledWidth );
@@ -1071,17 +1089,15 @@ PaletteChanges Palette(
             if ( ranges[3] < 0.0f )
                 ranges[3] = 0.0f;
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
-            rangesChanged |= UI::drag<NoUnit>( "Min/Max", ranges[3], speed, 0.0f, max, unitParams );
+            rangesChanged |= UI::drag<NoUnit>( "Min/Max", ranges[3], speed, 0.0f, max );
             ImGui::PopStyleVar();
-
-            if ( rangesChanged || fixZeroChanged )
-                ranges[0] = -ranges[3];
+            ranges[0] = -ranges[3];
         }
         else
         {
-            rangesChanged |= UI::drag<NoUnit>( "Max (red)", ranges[3], speed, min, max, unitParams );
+            rangesChanged |= UI::drag<LengthUnit>( "Max (red)", ranges[3], speed, min, max );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
-            rangesChanged |= UI::drag<NoUnit>( "Min (blue)", ranges[0], speed, min, max, unitParams );
+            rangesChanged |= UI::drag<LengthUnit>( "Min (blue)", ranges[0], speed, min, max );
             ImGui::PopStyleVar();
         }
     }
@@ -1092,32 +1108,30 @@ PaletteChanges Palette(
             if ( ranges[3] < 0.0f )
                 ranges[3] = 0.0f;
 
-            rangesChanged |= UI::drag<NoUnit>( "Max positive / Min negative", ranges[3], speed, min, max, unitParams );
-            if ( rangesChanged || fixZeroChanged )
-                ranges[0] = -ranges[3];
+            rangesChanged |= UI::drag<NoUnit>( "Max positive / Min negative", ranges[3], speed, min, max );
+            ranges[0] = -ranges[3];
 
             if ( ranges[2] < 0.0f )
                 ranges[2] = 0.0f;
 
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
-            rangesChanged |= UI::drag<NoUnit>( "Min positive / Max negative", ranges[2], speed, min, max, unitParams );
+            rangesChanged |= UI::drag<NoUnit>( "Min positive / Max negative", ranges[2], speed, min, max );
             ImGui::PopStyleVar();
-            if ( rangesChanged || fixZeroChanged )
-                ranges[1] = -ranges[2];
+            ranges[1] = -ranges[2];
         }
         else
         {
-            rangesChanged |= UI::drag<NoUnit>( "Max positive (red)", ranges[3], speed, min, max, unitParams );
-            rangesChanged |= UI::drag<NoUnit>( "Min positive (green)", ranges[2], speed, min, max, unitParams );
-            rangesChanged |= UI::drag<NoUnit>( "Max negative (green)", ranges[1], speed, min, max, unitParams );
+            rangesChanged |= UI::drag<NoUnit>( "Max positive (red)", ranges[3], speed, min, max );
+            rangesChanged |= UI::drag<NoUnit>( "Min positive (green)", ranges[2], speed, min, max );
+            rangesChanged |= UI::drag<NoUnit>( "Max negative (green)", ranges[1], speed, min, max );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
-            rangesChanged |= UI::drag<NoUnit>( "Min negative (blue)", ranges[0], speed, min, max, unitParams );
+            rangesChanged |= UI::drag<NoUnit>( "Min negative (blue)", ranges[0], speed, min, max );
             ImGui::PopStyleVar();
         }
     }
     ImGui::PopItemWidth();
 
-    bool correctOreder = true;
+    bool correctOrder = true;
     int orderStep = ( 1 - paletteRangeMode ) * 2 + 1;
     for ( int i = 0; i < 4; )
     {
@@ -1126,19 +1140,19 @@ PaletteChanges Palette(
             break;
         if ( ranges[i] > ranges[next] )
         {
-            correctOreder = false;
+            correctOrder = false;
             break;
         }
         i = next;
     }
 
-    if ( !correctOreder )
+    if ( !correctOrder )
     {
         ImGui::PushStyleColor( ImGuiCol_Text, Color::red().getUInt32() );
         ImGui::TextWrapped( "Invalid values order" );
         ImGui::PopStyleColor();
     }
-    if ( correctOreder && ( fixZeroChanged || ( paletteRangeMode != paletteRangeModeBackUp ) || rangesChanged ) )
+    if ( correctOrder && ( fixZeroChanged || ( paletteRangeMode != paletteRangeModeBackUp ) || rangesChanged ) )
     {
         changes |= PaletteChanges::Ranges;
         presetName.clear();
@@ -1161,111 +1175,112 @@ PaletteChanges Palette(
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * menuScaling, cModalWindowPaddingY * menuScaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { cDefaultItemSpacing * menuScaling, 3.0f * cDefaultItemSpacing * menuScaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { 2.0f * cDefaultInnerSpacing * menuScaling, cDefaultInnerSpacing * menuScaling } );
-    if ( !ImGui::BeginModalNoAnimation( popupName.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+    if ( ImGui::BeginModalNoAnimation( popupName.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
     {
-        PopStyleVar( 3 );
-        return PaletteChanges( changes );
-    }
+        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
+        if ( headerFont )
+            PushFont( headerFont );
 
-    auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
-    if ( headerFont )
-        PushFont( headerFont );
+        const auto headerWidth = CalcTextSize( "Save Palette" ).x;
 
-    const auto headerWidth = CalcTextSize( "Save Palette" ).x;
+        ImGui::SetCursorPosX( ( windowSize.x - headerWidth ) * 0.5f );
+        Text( "Save Palette" );
 
-    ImGui::SetCursorPosX( ( windowSize.x - headerWidth ) * 0.5f );
-    Text( "Save Palette" );
+        if ( headerFont )
+            PopFont();
 
-    if ( headerFont )
-        PopFont();
+        const auto& style = ImGui::GetStyle();
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * menuScaling } );
+        static std::string currentPaletteName;
 
-    const auto& style = ImGui::GetStyle();
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * menuScaling } );
-    static std::string currentPaletteName;
+        ImGui::SetNextItemWidth( windowSize.x - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - CalcTextSize( "Palette Name" ).x );
+        ImGui::InputText( "Palette Name", currentPaletteName );
+        ImGui::PopStyleVar();
 
-    ImGui::SetNextItemWidth( windowSize.x - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - CalcTextSize( "Palette Name" ).x );
-    ImGui::InputText( "Palette Name", currentPaletteName );
-    ImGui::PopStyleVar();
+        const float btnWidth = cModalButtonWidth * menuScaling;
 
-    const float btnWidth = cModalButtonWidth * menuScaling;
-
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
-    bool valid = !currentPaletteName.empty() && !hasProhibitedChars( currentPaletteName );
-    if ( UI::button( "Save", valid, Vector2f( btnWidth, 0 ) ) )
-    {
-        std::error_code ec;
-        if ( std::filesystem::is_regular_file( PalettePresets::getPalettePresetsFolder() / ( currentPaletteName + ".json" ), ec ) )
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
+        bool valid = !currentPaletteName.empty() && !hasProhibitedChars( currentPaletteName );
+        if ( UI::button( "Save", valid, Vector2f( btnWidth, 0 ) ) )
         {
-            OpenPopup( "Palette already exists##PaletteHelper" );
-        }
-        else
-        {
-            auto res = PalettePresets::savePreset( currentPaletteName, palette );
-            if ( res.has_value() )
+            std::error_code ec;
+            if ( std::filesystem::is_regular_file( PalettePresets::getPalettePresetsFolder() / ( currentPaletteName + ".json" ), ec ) )
             {
-                presetName = currentPaletteName;
-                ImGui::CloseCurrentPopup();
+                OpenPopup( "Palette already exists##PaletteHelper" );
             }
             else
             {
-                showError( res.error() );
+                auto res = PalettePresets::savePreset( currentPaletteName, palette );
+                if ( res.has_value() )
+                {
+                    presetName = currentPaletteName;
+                    ImGui::CloseCurrentPopup();
+                }
+                else
+                {
+                    showError( res.error() );
+                }
             }
         }
-    }
-    ImGui::PopStyleVar();
-    if ( !valid )
-    {
-        UI::setTooltipIfHovered( currentPaletteName.empty() ?
-            "Cannot save palette with empty name" :
-            "Please do not any of these symbols: \? * / \\ \" < >", menuScaling );
-    }
-
-    bool closeTopPopup = false;
-    if ( ImGui::BeginModalNoAnimation( "Palette already exists##PaletteHelper", nullptr,
-        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
-    {
-        ImGui::Text( "Palette preset with this name already exists, override?" );
-        auto w = GetContentRegionAvail().x;
-        auto p = GetStyle().FramePadding.x;
-        if ( UI::buttonCommonSize( "Yes", Vector2f( ( w - p ) * 0.5f, 0 ), ImGuiKey_Enter ) )
+        ImGui::PopStyleVar();
+        if ( !valid )
         {
-            auto res = PalettePresets::savePreset( currentPaletteName, palette );
-            if ( res.has_value() )
+            UI::setTooltipIfHovered( currentPaletteName.empty() ?
+                "Cannot save palette with empty name" :
+                "Please do not any of these symbols: \? * / \\ \" < >", menuScaling );
+        }
+
+        bool closeTopPopup = false;
+        if ( ImGui::BeginModalNoAnimation( "Palette already exists##PaletteHelper", nullptr,
+            ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar ) )
+        {
+            ImGui::Text( "Palette preset with this name already exists, override?" );
+            auto w = GetContentRegionAvail().x;
+            auto p = GetStyle().FramePadding.x;
+            if ( UI::buttonCommonSize( "Yes", Vector2f( ( w - p ) * 0.5f, 0 ), ImGuiKey_Enter ) )
             {
-                presetName = currentPaletteName;
-                closeTopPopup = true;
+                auto res = PalettePresets::savePreset( currentPaletteName, palette );
+                if ( res.has_value() )
+                {
+                    presetName = currentPaletteName;
+                    closeTopPopup = true;
+                    ImGui::CloseCurrentPopup();
+                }
+                else
+                {
+                    showError( res.error() );
+                }
+            }
+            ImGui::SameLine( 0, p );
+            if ( UI::buttonCommonSize( "No", Vector2f( ( w - p ) * 0.5f, 0 ),ImGuiKey_Escape ) )
+            {
                 ImGui::CloseCurrentPopup();
             }
-            else
-            {
-                showError( res.error() );
-            }
+            ImGui::EndPopup();
         }
-        ImGui::SameLine( 0, p );
-        if ( UI::buttonCommonSize( "No", Vector2f( ( w - p ) * 0.5f, 0 ),ImGuiKey_Escape ) )
-        {
+        if ( closeTopPopup )
             ImGui::CloseCurrentPopup();
-        }
+
+        ImGui::SameLine();
+
+        ImGui::SetCursorPosX( windowSize.x - btnWidth - style.WindowPadding.x );
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
+        if ( UI::buttonCommonSize( "Cancel", Vector2f( btnWidth, 0 ), ImGuiKey_Escape ) )
+            ImGui::CloseCurrentPopup();
+        ImGui::PopStyleVar();
+
         ImGui::EndPopup();
     }
-    if ( closeTopPopup )
-        ImGui::CloseCurrentPopup();
-
-    ImGui::SameLine();
-
-    ImGui::SetCursorPosX( windowSize.x - btnWidth - style.WindowPadding.x );
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
-    if ( UI::buttonCommonSize( "Cancel", Vector2f( btnWidth, 0 ), ImGuiKey_Escape ) )
-        ImGui::CloseCurrentPopup();
-    ImGui::PopStyleVar();
-
-    ImGui::EndPopup();
     PopStyleVar( 3 );
 
-    return PaletteChanges( changes );
+    // for linear texture filter, uv-coordinates depend on texture size
+    if ( bool( changes & ImGui::PaletteChanges::Texture ) && palette.getTexture().filter == FilterType::Linear )
+        changes |= ImGui::PaletteChanges::Ranges;
+
+    return changes;
 }
 
-void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
+void Plane( MR::PlaneWidget& planeWidget, float menuScaling, PlaneWidgetFlags flags )
 {
     float dragspeed = planeWidget.box().diagonal() * 1e-3f;
     auto setDefaultPlane = [&] ( const MR::Vector3f& normal )
@@ -1279,14 +1294,15 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, { MR::cDefaultItemSpacing * menuScaling, MR::cDefaultItemSpacing * menuScaling } );
 
     float p = ImGui::GetStyle().FramePadding.x;
-    auto width = GetContentRegionAvail().x - 3 * p;
-    if ( MR::UI::button( "Plane YZ", { 85.0f / ( 85.0f * 3 + 105.0f ) * width , 0 } ) )
+    ImVec2 iconSize = { 32 * menuScaling, 32 * menuScaling };
+    ImVec2 buttonSize = { ( GetContentRegionAvail().x - 3 * p ) / 4, 70.0f * menuScaling };
+    if ( MR::UI::buttonIcon( "Plane YZ", iconSize, "Plane YZ", buttonSize ) )
         setDefaultPlane( MR::Vector3f::plusX() );
     ImGui::SameLine( 0, p );
-    if ( MR::UI::button( "Plane XZ", { 85.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
+    if ( MR::UI::buttonIcon( "Plane XZ", iconSize, "Plane XZ", buttonSize ) )
         setDefaultPlane( MR::Vector3f::plusY() );
     ImGui::SameLine( 0, p );
-    if ( MR::UI::button( "Plane XY", { 85.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
+    if ( MR::UI::buttonIcon( "Plane XY", iconSize, "Plane XY", buttonSize ) )
         setDefaultPlane( MR::Vector3f::plusZ() );
     ImGui::SameLine( 0, p );
 
@@ -1294,7 +1310,7 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
     if ( importPlaneModeOld )
         ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetStyleColorVec4( ImGuiCol_ButtonActive ) );
 
-    if ( MR::UI::button( "Import Plane", { 105.0f / ( 85.0f * 3 + 105.0f ) * width, 0 } ) )
+    if ( MR::UI::buttonIcon( "Plane Import", iconSize, "Import Plane", buttonSize ) )
     {
         planeWidget.setImportPlaneMode( !planeWidget.importPlaneMode() );
     }
@@ -1360,10 +1376,11 @@ void Plane( MR::PlaneWidget& planeWidget, float menuScaling )
         plane = -plane;
 
     ImGui::PopStyleVar();
-    ImGui::Separator();
+    if ( !bool( flags & PlaneWidgetFlags::DisableVisibility ) )
+        ImGui::Separator();
 
     auto planeObj = planeWidget.getPlaneObject();
-    if ( planeObj )
+    if ( planeObj && !bool( flags & PlaneWidgetFlags::DisableVisibility ) )
     {
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, MR::cCheckboxPadding * menuScaling } );
         bool showPlane = planeWidget.getPlaneObject()->isVisible();

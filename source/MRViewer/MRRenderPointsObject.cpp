@@ -369,28 +369,38 @@ RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
     
     if ( step != 1 )
     {
-        auto validPointCopy = validPoints;
-        BitSetParallelForAll( validPointCopy, [&] ( VertId v )
+        for ( VertId v = VertId( 0 ); v < num; v += step )
         {
-            if ( v % step != 0 )
-                validPointCopy.set( v, false );
-        } );
-
-        firstValid = validPointCopy.find_first();
-        assert( firstValid );
+            if ( validPoints.test( v ) )
+            {
+                firstValid = v;
+                break;
+            }
+        }
+        
+        if ( !firstValid.valid() )
+        {
+            validIndicesSize_ = 0;
+            return glBuffer.prepareBuffer<VertId>( 0 );
+        }
     }
 
     validIndicesSize_ = int( num / step );
     auto buffer = glBuffer.prepareBuffer<VertId>( validIndicesSize_ );
+
     BitSetParallelForAll( validPoints, [&] ( VertId v )
     {
-        if ( v % step != 0 )
+        if ( v % step != 0 || v >= step * num )
             return;
 
         if ( validPoints.test( v ) )
+        {
             buffer[v / step] = VertId( v / step );
+        }
         else
+        {
             buffer[v / step] = VertId( firstValid / step );
+        }
     });    
 
     return buffer;

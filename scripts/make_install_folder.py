@@ -25,11 +25,11 @@ def vcpkg_dir():
 	if len(sys.argv) > 2:
 		vcpkg_exe_dir = sys.argv[2]
 	else:
-		vcpkg_exe_dir = os.system("where vcpkg")
+		vcpkg_exe_dir = os.popen("where vcpkg").read().strip()
 		if "vcpkg.exe" not in vcpkg_exe_dir:
 			vcpkg_exe_dir = "C:\\vcpkg"
 		else:
-			vcpkg_exe_dir = dirname( vcpkg_exe_dir )
+			vcpkg_exe_dir = os.path.dirname( vcpkg_exe_dir )
 	return os.path.join(os.path.join(vcpkg_exe_dir, "installed"),"x64-windows-meshlib")
 
 

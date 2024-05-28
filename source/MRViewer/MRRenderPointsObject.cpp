@@ -361,24 +361,48 @@ RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
 
     const auto& points = objPoints_->pointCloud();
     const auto step = objPoints_->getRenderDiscretization();
-    validIndicesSize_ = int( points->points.size() / step );
-    auto buffer = glBuffer.prepareBuffer<VertId>( validIndicesSize_ );
+    const auto num = objPoints_->pointCloud()->validPoints.find_last() + 1;    
 
     const auto& validPoints = points->validPoints;
     auto firstValid = validPoints.find_first();
-    if ( firstValid.valid() )
+    assert( firstValid );
+    
+    validIndicesSize_ = ( num / step );
+    if ( step != 1 )
     {
-        BitSetParallelForAll( validPoints, [&] ( VertId v )
+        firstValid = {};
+        for ( VertId v = VertId( (firstValid / step)*step  ); v < step * validIndicesSize_; v += step )
         {
-            if ( v % step != 0 )
-                return;
-
             if ( validPoints.test( v ) )
-                buffer[v / step] = VertId( v / step );
-            else
-                buffer[v / step] = firstValid;
-        });
+            {
+                firstValid = v;
+                break;
+            }
+        }
+        
+        if ( !firstValid.valid() )
+        {
+            validIndicesSize_ = 0;
+            return glBuffer.prepareBuffer<VertId>( 0 );
+        }
     }
+
+    auto buffer = glBuffer.prepareBuffer<VertId>( validIndicesSize_ );
+
+    BitSetParallelForAll( validPoints, [&] ( VertId v )
+    {
+        if ( v % step != 0 || v >= step * validIndicesSize_ )
+            return;
+
+        if ( validPoints.test( v ) )
+        {
+            buffer[v / step] = VertId( v / step );
+        }
+        else
+        {
+            buffer[v / step] = VertId( firstValid / step );
+        }
+    });    
 
     return buffer;
 }

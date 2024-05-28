@@ -56,6 +56,8 @@ private:
     };
 };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Werror=strict-aliasing"
 template <typename ObjectType, ObjectSelectivityType SelectivityType>
 const std::vector<std::shared_ptr<ObjectType>>& SceneCache::getAllObjects()
 {
@@ -72,7 +74,10 @@ const std::vector<std::shared_ptr<ObjectType>>& SceneCache::getAllObjects()
     const SpecificDataType& resData = **reinterpret_cast< std::shared_ptr<SpecificDataType>* >( &instance_().cachedData_[templateParamsUniqueId] );
     return resData;
 }
+#pragma GCC diagnostic pop
 
+// specialization getAllObjects to getAllObjects<Object, ObjectSelectivityType::Selectable>
+// also calc allObjectDepths_
 template <>
 inline const std::vector<std::shared_ptr<Object>>& SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>()
 {

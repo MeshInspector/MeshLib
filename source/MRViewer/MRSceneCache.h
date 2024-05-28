@@ -54,7 +54,7 @@ private:
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Werror=strict-aliasing"
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif
 template <typename ObjectType, ObjectSelectivityType SelectivityType>
 const std::vector<std::shared_ptr<ObjectType>>& SceneCache::getAllObjects()

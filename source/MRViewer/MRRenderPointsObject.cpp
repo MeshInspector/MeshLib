@@ -361,7 +361,8 @@ RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
 
     const auto& points = objPoints_->pointCloud();
     const auto step = objPoints_->getRenderDiscretization();
-    validIndicesSize_ = int( points->points.size() / step );
+    const auto num = objPoints_->pointCloud()->validPoints.find_last() + 1;
+    validIndicesSize_ = int( num / step );
     auto buffer = glBuffer.prepareBuffer<VertId>( validIndicesSize_ );
 
     const auto& validPoints = points->validPoints;
@@ -376,7 +377,7 @@ RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
             if ( validPoints.test( v ) )
                 buffer[v / step] = VertId( v / step );
             else
-                buffer[v / step] = firstValid;
+                buffer[v / step] = VertId( firstValid / step );
         });
     }
 

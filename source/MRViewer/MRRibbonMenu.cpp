@@ -68,61 +68,6 @@ constexpr auto cTransformContextName = "TransformContextWindow";
 namespace MR
 {
 
-void changeSelection( bool selectNext, int mod )
-{
-    using namespace MR;
-    const auto selectable = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selectable );
-    const auto selected = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    if ( selectNext )
-    {
-        auto nextIt = std::find_if( selectable.rbegin(), selectable.rend(), [] ( const std::shared_ptr<Object>& obj )
-        {
-            return obj->isSelected();
-        } );
-
-        Object* next{ nullptr };
-        if ( nextIt != selectable.rend() )
-        {
-            auto dist = int( std::distance( nextIt, selectable.rend() ) );
-            if ( dist >= 0 && dist < selectable.size() )
-                next = selectable[dist].get();
-            if ( dist == selectable.size() )
-                next = selectable.back().get();
-        }
-
-        if ( mod == 0 ) // uncomment if want multy select holding shift
-            for ( const auto& data : selected )
-                if ( data && data.get() != next )
-                    data->select( false );
-        if ( next )
-            next->select( true );
-    }
-    else
-    {
-        auto prevIt = std::find_if( selectable.begin(), selectable.end(), [] ( const std::shared_ptr<Object>& obj )
-        {
-            return obj->isSelected();
-        } );
-
-        Object* prev{ nullptr };
-        if ( prevIt != selectable.end() )
-        {
-            auto dist = int( std::distance( selectable.begin(), prevIt ) ) - 1;
-            if ( dist >= 0 && dist < selectable.size() )
-                prev = selectable[dist].get();
-            if ( dist == -1 )
-                prev = selectable.front().get();
-        }
-
-        if ( mod == 0 ) // uncomment if want multy select holding shift
-            for ( const auto& data : selected )
-                if ( data && data.get() != prev )
-                    data->select( false );
-        if ( prev )
-            prev->select( true );
-    }
-}
-
 void RibbonMenu::setCustomContextCheckbox(
     const std::string& name,
     CustomContextMenuCheckbox customContextMenuCheckbox )
@@ -2044,21 +1989,21 @@ void RibbonMenu::setupShortcuts_()
         for ( const auto& sel : selected )
             sel->toggleVisualizeProperty( MeshVisualizePropertyType::Faces, viewportid );
     } }  );
-    shortcutManager_->setShortcut( { GLFW_KEY_DOWN,0 }, { ShortcutManager::Category::Objects, "Select next object",[] ()
+    shortcutManager_->setShortcut( { GLFW_KEY_DOWN,0 }, { ShortcutManager::Category::Objects, "Select next object",[&] ()
     {
-        changeSelection( true,0 );
+        sceneObjectsList_->changeSelection( true, false );
     } }  );
-    shortcutManager_->setShortcut( { GLFW_KEY_DOWN,GLFW_MOD_SHIFT }, { ShortcutManager::Category::Objects, "Add next object to selection",[] ()
+    shortcutManager_->setShortcut( { GLFW_KEY_DOWN,GLFW_MOD_SHIFT }, { ShortcutManager::Category::Objects, "Add next object to selection",[&] ()
     {
-        changeSelection( true,GLFW_MOD_SHIFT );
+        sceneObjectsList_->changeSelection( true, true );
     } }  );
-    shortcutManager_->setShortcut( { GLFW_KEY_UP,0 }, { ShortcutManager::Category::Objects, "Select previous object",[] ()
+    shortcutManager_->setShortcut( { GLFW_KEY_UP,0 }, { ShortcutManager::Category::Objects, "Select previous object",[&] ()
     {
-        changeSelection( false,0 );
+        sceneObjectsList_->changeSelection( false, false );
     } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_UP,GLFW_MOD_SHIFT }, { ShortcutManager::Category::Objects, "Add previous object to selection",[] ()
+    shortcutManager_->setShortcut( { GLFW_KEY_UP,GLFW_MOD_SHIFT }, { ShortcutManager::Category::Objects, "Add previous object to selection",[&] ()
     {
-        changeSelection( false,GLFW_MOD_SHIFT );
+        sceneObjectsList_->changeSelection( false, true );
     } }  );
 
     addRibbonItemShortcut_( "Ribbon Scene Select all", { GLFW_KEY_A, CONTROL_OR_SUPER }, ShortcutManager::Category::Objects );

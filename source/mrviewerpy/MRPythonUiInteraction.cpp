@@ -3,6 +3,7 @@
 #include "MRViewer/MRPythonAppendCommand.h"
 #include "MRViewer/MRUITestEngine.h"
 #include "MRViewer/MRViewer.h"
+#include "MRPch/MRSpdlog.h"
 
 #include <pybind11/stl.h>
 
@@ -40,7 +41,7 @@ namespace
     std::vector<TypedEntry> listEntries( const std::vector<std::string>& path )
     {
         std::vector<TypedEntry> ret;
-        MR::pythonAppendOrRun( [&]
+        MR::CommandLoop::runCommandFromGUIThread( [&]
         {
             const auto& group = findGroup( path );
             ret.reserve( group.elems.size() );
@@ -72,6 +73,8 @@ namespace
             throw std::runtime_error( "Empty path not allowed here." );
         MR::CommandLoop::runCommandFromGUIThread( [&]
         {
+            spdlog::info( "\n  Click: {}\n  Num Frame {}", path.back(), MR::getViewerInstance().getTotalFrames() );
+
             std::get<TestEngine::ButtonEntry>( findGroup( { path.data(), path.size() - 1 } ).elems.at( path.back() ).value ).simulateClick = true;
         } );
         for ( int i = 0; i < MR::getViewerInstance().forceRedrawMinimumIncrementAfterEvents; ++i )

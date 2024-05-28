@@ -1,4 +1,5 @@
 #include "MRUITestEngine.h"
+#include "MRPch/MRSpdlog.h"
 
 #include <imgui.h>
 
@@ -140,6 +141,9 @@ bool createButton( std::string_view name )
         button = &iter->second.value.emplace<ButtonEntry>();
 
     iter->second.visitedOnThisFrame = true;
+
+    if ( button->simulateClick )
+        spdlog::info( "Button {} click simulation", name );
 
     return std::exchange( button->simulateClick, false );
     #else

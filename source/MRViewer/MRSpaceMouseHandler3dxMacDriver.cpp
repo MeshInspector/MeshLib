@@ -144,7 +144,7 @@ struct SpaceMouseHandler3dxMacDriver::LibHandle
             ( name ) = (name##Func)dlsym( handle, #name ); \
             if ( ( name ) == nullptr )                     \
             {            \
-                spdlog::warn( "Failed to load symbol \"{}\": {}", #name, dlerror() ); \
+                spdlog::error( "Failed to load symbol \"{}\": {}", #name, dlerror() ); \
                 return false;                              \
             }            \
         }
@@ -200,14 +200,14 @@ bool SpaceMouseHandler3dxMacDriver::initialize()
     std::error_code ec;
     if ( !std::filesystem::exists( c3DconnexionClientPath, ec ) )
     {
-        spdlog::warn( "3DxWare driver is not installed" );
+        spdlog::info( "3DxWare driver is not installed" );
         return false;
     }
 
     lib_->handle = dlopen( c3DconnexionClientPath, RTLD_LAZY );
     if ( lib_->handle == nullptr )
     {
-        spdlog::warn( "Failed to load the 3DxWare client library" );
+        spdlog::error( "Failed to load the 3DxWare client library: {}", dlerror() );
         return false;
     }
 

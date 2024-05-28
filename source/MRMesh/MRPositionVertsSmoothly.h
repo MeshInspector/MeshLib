@@ -23,14 +23,17 @@ struct SpacingSettings
     /// vertices to be moved by the algorithm, nullptr means all valid vertices
     const VertBitSet* region = nullptr;
 
-    /// target squared distance of each edge in the mesh (for at least one edge's vertex in the region)
-    UndirectedEdgeMetric distSq; // must be defined by the caller
+    /// target distance of each edge in the mesh (for at least one edge's vertex in the region)
+    UndirectedEdgeMetric dist; // must be defined by the caller
 
     /// the algorithm is iterative, the more iterations the closer result to exact solution
-    int numIters = 5;
+    int numIters = 10;
 
     /// too small number here can lead to instability, too large - to slow convergence
-    float stabilizer = 10;
+    float stabilizer = 3;
+
+    /// maximum sum of minus negative weights, if it is exceeded then stabilizer is increased automatically
+    float maxSumNegW = 0.1f;
 
     /// if this predicated is given, then all inverted faces will be converted in degenerate faces at the end of each iteration
     FacePredicate isInverted;

@@ -91,7 +91,7 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     callback_draw_custom_window = [&] ()
     {
         prevFrameObjectsCache_ = selectedObjectsCache_;
-        selectedObjectsCache_ = getAllObjectsInTree<const Object>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+        selectedObjectsCache_ = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
 
         drawTopPanel_();
 
@@ -1518,7 +1518,7 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
 
 void RibbonMenu::drawRibbonSceneList_()
 {
-    auto selectedObjs = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
+    const auto& selectedObjs = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
 
     const auto scaling = menu_scaling();
     // Define next window position + size
@@ -1649,7 +1649,7 @@ void RibbonMenu::drawRibbonViewportsLabels_()
     ImGui::PopStyleVar();
 }
 
-void RibbonMenu::drawRibbonSceneInformation_( std::vector<std::shared_ptr<Object>>& /*selected*/ )
+void RibbonMenu::drawRibbonSceneInformation_( const std::vector<std::shared_ptr<Object>>& /*selected*/ )
 {
     const float newInfoHeight = std::ceil( drawSelectionInformation_() );
 
@@ -1927,7 +1927,7 @@ void RibbonMenu::setupShortcuts_()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
-        const auto selected = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
+        const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
         bool atLeastOne = false;
         for ( const auto& data : selected )
             if ( data )
@@ -1952,7 +1952,7 @@ void RibbonMenu::setupShortcuts_()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
-        const auto selected = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+        const auto& selected = SceneCache::getAllObjects<ObjectMeshHolder, ObjectSelectivityType::Selected>();
         for ( const auto& sel : selected )
             sel->toggleVisualizeProperty( MeshVisualizePropertyType::FlatShading, viewportid );
     } } );
@@ -1964,7 +1964,7 @@ void RibbonMenu::setupShortcuts_()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
-        const auto selected = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+        const auto& selected = SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selected>();
         for ( const auto& sel : selected )
             sel->toggleVisualizeProperty( VisualizeMaskType::InvertedNormals, viewportid );
     } }  );
@@ -1972,7 +1972,7 @@ void RibbonMenu::setupShortcuts_()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
-        const auto selected = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+        const auto& selected = SceneCache::getAllObjects<ObjectMeshHolder, ObjectSelectivityType::Selected>();
         for ( const auto& sel : selected )
                 sel->toggleVisualizeProperty( MeshVisualizePropertyType::Edges, viewportid );
     } } );
@@ -1985,7 +1985,7 @@ void RibbonMenu::setupShortcuts_()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
-        const auto selected = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+        const auto& selected = SceneCache::getAllObjects<ObjectMeshHolder, ObjectSelectivityType::Selected>();
         for ( const auto& sel : selected )
             sel->toggleVisualizeProperty( MeshVisualizePropertyType::Faces, viewportid );
     } }  );

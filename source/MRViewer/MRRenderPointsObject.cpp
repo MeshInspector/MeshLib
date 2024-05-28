@@ -390,7 +390,7 @@ RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
 
     BitSetParallelForAll( validPoints, [&] ( VertId v )
     {
-        if ( v % step != 0 || v >= step * num )
+        if ( v % step != 0 || v >= step * validIndicesSize_ )
             return;
 
         if ( validPoints.test( v ) )

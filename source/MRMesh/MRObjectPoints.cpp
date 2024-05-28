@@ -57,7 +57,9 @@ std::vector<std::string> ObjectPoints::getInfoLines() const
                 res.back() += " / " + std::to_string( vertsColorMap_.capacity() ) + " capacity";
         }
 
-        res.push_back( "max rendered points: " + std::to_string( getMaxRenderingPoints() ) );
+        res.push_back( "max rendered points: " +
+            ( getMaxRenderingPoints() == ObjectPoints::MaxRenderingPointsUnlimited ?
+              "unlimited" : std::to_string( getMaxRenderingPoints() ) ) );
 
         boundingBoxToInfoLines_( res );
     }

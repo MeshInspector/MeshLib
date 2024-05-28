@@ -16,6 +16,10 @@ on:
 
 #UPLOAD_ARTIFACTS condition: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
 
+
+env:
+  VCPKG-VERSION: '2024.04.26'
+
 jobs:
   prepare-image:
     uses: ./.github/workflows/prepare-images.yml
@@ -95,7 +99,7 @@ jobs:
   update-win-version:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     needs: [ windows-build-test ]
-    timeout-minutes: 15
+    timeout-minutes: 60
     runs-on: windows-2019
     steps:
       - name: Checkout
@@ -103,6 +107,31 @@ jobs:
         with: 
           submodules: recursive
 
+      - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
+        working-directory: C:\vcpkg
+        run: |
+          git fetch
+          git checkout ${{env.VCPKG-VERSION}}
+
+      - name: Restore Vcpkg Cache
+        uses: actions/cache@v4
+        id: vcpkg-cache
+        with:
+          key: vcpkg-cache-${{env.VCPKG-VERSION}}
+          path: |
+            C:\vcpkg\*
+
+      - name: Configure AWS Credentials
+        if: ${{ env.INTERNAL_BUILD }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+          aws-region: us-east-1
+
+      - name: Update vcpkg packages
+        run: |
+          .\thirdparty\install.bat --write-s3
+          
       - name: Download Windows Binaries Archive
         uses: actions/download-artifact@v4
         with:

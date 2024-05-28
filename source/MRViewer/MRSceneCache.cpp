@@ -54,4 +54,12 @@ std::pair<SceneCache::StoredType, std::vector<int>> SceneCache::updateAllObjects
     return { std::move( vecObjs ), std::move( vecDepth ) };
 }
 
+//////////////////////////////////////////////////////////////////////////
+
+MR::SceneCache::TypeMap& SceneCache::TypeMap::instance_()
+{
+    static TypeMap instance;
+    return instance;
+}
+
 }

@@ -35,7 +35,7 @@ private:
     std::shared_ptr<std::vector<int>> allObjectDepths_;
 
     // Helper class to convert template params to unique numbers
-    class TypeMap
+    class MRVIEWER_CLASS TypeMap
     {
     public:
         template <typename ObjectType, ObjectSelectivityType SelectivityType>
@@ -46,18 +46,16 @@ private:
         }
 
     private:
-        static TypeMap& instance_()
-        {
-            static TypeMap instance;
-            return instance;
-        }
+        MRVIEWER_API static TypeMap& instance_();
 
         int idCounter_ = 0;
     };
 };
 
+#ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Werror=strict-aliasing"
+#endif
 template <typename ObjectType, ObjectSelectivityType SelectivityType>
 const std::vector<std::shared_ptr<ObjectType>>& SceneCache::getAllObjects()
 {
@@ -74,7 +72,9 @@ const std::vector<std::shared_ptr<ObjectType>>& SceneCache::getAllObjects()
     const SpecificDataType& resData = **reinterpret_cast< std::shared_ptr<SpecificDataType>* >( &instance_().cachedData_[templateParamsUniqueId] );
     return resData;
 }
+#ifdef __GNUC__
 #pragma GCC diagnostic pop
+#endif
 
 // specialization getAllObjects to getAllObjects<Object, ObjectSelectivityType::Selectable>
 // also calc allObjectDepths_

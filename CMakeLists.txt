@@ -23,6 +23,10 @@ IF(MESHLIB_STANDALONE)
   add_compile_definitions(MR_PROJECT_NAME=\"MeshLib\")
   add_compile_definitions(MR_FRAMEWORK)
   add_compile_definitions(IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
+
+  IF(APPLE)
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
+  ENDIF()
 ENDIF()
 
 set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}/thirdparty")

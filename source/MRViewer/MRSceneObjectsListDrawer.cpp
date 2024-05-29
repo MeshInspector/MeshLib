@@ -85,7 +85,7 @@ void SceneObjectsListDrawer::draw( float height, float scaling )
     updateSceneWindowScrollIfNeeded_();
     drawObjectsList_();
     // any click on empty space below Scene Tree removes object selection
-    const auto& selected = SceneCache::getSelectedObjects();
+    const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
     ImGui::BeginChild( "EmptySpace" );
     if ( ImGui::IsWindowHovered() && ImGui::IsMouseClicked( 0 ) )
     {
@@ -112,8 +112,8 @@ bool SceneObjectsListDrawer::collapsingHeader_( const std::string& uniqueName, I
 
 void SceneObjectsListDrawer::changeSelection( bool isDown, bool isShift )
 {
-    const auto all = SceneCache::getAllObjects();
-    const auto selected = SceneCache::getSelectedObjects();
+    const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
     if ( isDown )
     {
         if ( downLastSelected_.index != -1 )
@@ -140,8 +140,7 @@ void SceneObjectsListDrawer::changeSelection( bool isDown, bool isShift )
 
 void SceneObjectsListDrawer::changeVisible( bool isDown )
 {
-    const auto all = SceneCache::getAllObjects();
-    const auto selected = SceneCache::getSelectedObjects();
+    const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
     if ( isDown )
     {
         if ( downLastSelected_.index != -1 )
@@ -173,7 +172,7 @@ void SceneObjectsListDrawer::allowSceneReorder( bool allow )
 
 void SceneObjectsListDrawer::drawObjectsList_()
 {
-    const auto& all = SceneCache::getAllObjects();
+    const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
     const auto& depth = SceneCache::getAllObjectsDepth();
 
     int curentDepth = 0;
@@ -271,7 +270,7 @@ void SceneObjectsListDrawer::drawObjectsList_()
             }
 
             if ( object.isSelected() )
-                drawSceneContextMenu_( SceneCache::getSelectedObjects(), uniqueStr );
+                drawSceneContextMenu_( SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>(), uniqueStr );
 
             if ( isOpen )
             {
@@ -367,8 +366,8 @@ void SceneObjectsListDrawer::drawObjectVisibilityCheckbox_( Object& object, cons
 
 bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const std::string& uniqueStr, bool hasRealChildren )
 {
-    const auto& all = SceneCache::getAllObjects();
-    const auto& selected = SceneCache::getSelectedObjects();
+    const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
     const bool isSelected = object.isSelected();
 
     auto openCommandIt = sceneOpenCommands_.find( &object );

@@ -3,8 +3,8 @@
 #include "MRTimer.h"
 #include "MRPointToPointAligningTransform.h"
 #include "MRPointToPlaneAligningTransform.h"
-#include <algorithm>
 #include "MRMultiwayAligningTransform.h"
+#include <algorithm>
 
 namespace MR
 {
@@ -30,7 +30,7 @@ Vector<AffineXf3f, MeshOrPointsId> MultiwayICP::calculateTransformations( Progre
         const bool pt2pt = ( prop_.method == ICPMethod::Combined && iter_ < 3 )
             || prop_.method == ICPMethod::PointToPoint;
         
-        bool res = independentEquationsMode_ ? ( pt2pt ? p2ptIter_() : p2plIter_() ) : multiwayIter_( !pt2pt );
+        bool res = doIteration_( !pt2pt );
 
         if ( perIterationCb_ )
             perIterationCb_( iter_ );
@@ -256,6 +256,15 @@ void MultiwayICP::deactivatefarDistPairs_()
     }
 }
 
+bool MultiwayICP::doIteration_( bool p2pl )
+{
+    if ( maxGroupSize_ == 1 )
+        return p2pl ? p2plIter_() : p2ptIter_();
+    if ( maxGroupSize_ < 1 || maxGroupSize_ >= objs_.size() )
+        return multiwayIter_( p2pl );
+    return multiwayIter_( maxGroupSize_, p2pl );
+}
+
 bool MultiwayICP::p2ptIter_()
 {
     MR_TIMER;
@@ -412,7 +421,7 @@ bool MultiwayICP::multiwayIter_( bool p2pl )
 
     MultiwayAligningTransform::Stabilizer stabilizer;
     stabilizer.rot = samplingSize_ * 1e-2f;
-    stabilizer.shift = 1e-5f;
+    stabilizer.shift = 1e-4f;
     auto res = mat.solve( stabilizer );
     for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
     {
@@ -420,6 +429,76 @@ bool MultiwayICP::multiwayIter_( bool p2pl )
         if ( std::isnan( resI.b.x ) )
             return false;
         objs_[i].xf = AffineXf3f( resI * AffineXf3d( objs_[i].xf ) );
+    }
+    return true;
+}
+
+bool MultiwayICP::multiwayIter_( int groupSize, bool p2pl /*= true */ )
+{
+    int subGroupSize = 1;
+    for ( ;;)
+    {
+        int grainSize = subGroupSize * groupSize;
+        int numGroups = ( int( objs_.size() ) + grainSize - 1 ) / grainSize;
+
+        if ( subGroupSize > 1 )
+            updatePointPairs();
+
+        for ( int gId = 0; gId < numGroups; ++gId )
+        {
+            int groupFirst = gId * grainSize;
+            int groupsLastEx = std::min( groupFirst + grainSize, int( objs_.size() ) );
+            assert( groupsLastEx > groupFirst );
+            if ( groupsLastEx == groupFirst + 1 )
+                continue;
+
+            int numSubGroups = ( ( groupsLastEx - groupFirst ) + subGroupSize - 1 ) / subGroupSize;
+            if ( numSubGroups == 1 )
+                continue;
+
+            MultiwayAligningTransform mat;
+            mat.reset( numSubGroups );
+            for ( int sbI = 0; sbI < numSubGroups; ++sbI )
+            for ( int sbJ = 0; sbJ < numSubGroups; ++sbJ )
+            {
+                if ( sbI == sbJ )
+                    continue;
+                MeshOrPointsId iBegin = MeshOrPointsId( groupFirst + sbI * subGroupSize );
+                MeshOrPointsId iEnd = MeshOrPointsId( std::min( groupFirst + ( sbI + 1 ) * subGroupSize, groupsLastEx ) );
+                MeshOrPointsId jBegin = MeshOrPointsId( groupFirst + sbJ * subGroupSize );
+                MeshOrPointsId jEnd = MeshOrPointsId( std::min( groupFirst + ( sbJ + 1 ) * subGroupSize, groupsLastEx ) );
+                for ( MeshOrPointsId i( iBegin ); i < iEnd; ++i )
+                for ( MeshOrPointsId j( jBegin ); j < jEnd; ++j )
+                {
+                    for ( auto idx : pairsPerObj_[i][j].active )
+                    {
+                        const auto& data = pairsPerObj_[i][j].vec[idx];
+                        if ( p2pl )
+                            mat.add( sbI, data.srcPoint, sbJ, data.tgtPoint, ( data.tgtNorm + data.srcNorm ).normalized(), data.weight );
+                        else
+                            mat.add( sbI, data.srcPoint, sbJ, data.tgtPoint, data.weight );
+                    }
+                }
+            }
+
+            MultiwayAligningTransform::Stabilizer stabilizer;
+            stabilizer.rot = samplingSize_ * 1e-2f;
+            stabilizer.shift = 1e-4f;
+            auto res = mat.solve( stabilizer );
+            for ( int sbI = 0; sbI < numSubGroups; ++sbI )
+            {
+                auto resI = res[sbI].rigidXf();
+                if ( std::isnan( resI.b.x ) )
+                    return false;
+                MeshOrPointsId iBegin = MeshOrPointsId( groupFirst + sbI * subGroupSize );
+                MeshOrPointsId iEnd = MeshOrPointsId( std::min( groupFirst + ( sbI + 1 ) * subGroupSize, groupsLastEx ) );
+                for ( MeshOrPointsId i( iBegin ); i < iEnd; ++i )
+                    objs_[i].xf = AffineXf3f( resI * AffineXf3d( objs_[i].xf ) );
+            }
+        }
+        if ( numGroups == 1 )
+            break;
+        subGroupSize *= groupSize;
     }
     return true;
 }

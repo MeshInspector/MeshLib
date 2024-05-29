@@ -1551,7 +1551,9 @@ bool ImGuiMenu::drawAdvancedOptions( const std::vector<std::shared_ptr<VisualObj
             return data->getRenderDiscretization();
         }, [&] ( ObjectPointsHolder* data, const int val )
         {
-            data->setRenderDiscretization( val );
+            data->setMaxRenderingPoints( val == 1 ?
+                std::max( ObjectPointsHolder::MaxRenderingPointsDefault, int( data->numValidPoints() ) ) :
+                int( data->numValidPoints() + val - 1 ) / val );
         } );
     }
 

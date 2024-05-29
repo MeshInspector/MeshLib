@@ -23,10 +23,6 @@ IF(MESHLIB_STANDALONE)
   add_compile_definitions(MR_PROJECT_NAME=\"MeshLib\")
   add_compile_definitions(MR_FRAMEWORK)
   add_compile_definitions(IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
-
-  IF(APPLE)
-    set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
-  ENDIF()
 ENDIF()
 
 set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
@@ -39,6 +35,11 @@ IF(NOT MESHLIB_CUSTOM_INSTALL_PREFIX)
   include_directories(${MESHLIB_THIRDPARTY_ROOT_DIR}/include)
   link_directories(${MESHLIB_THIRDPARTY_ROOT_DIR}/lib)
 ENDIF()
+
+  IF(MESHLIB_STANDALONE AND APPLE)
+    set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/..;@loader_path/../lib;@loader_path/../lib/lib;@loader_path/meshlib;${MESHLIB_THIRDPARTY_ROOT_DIR}/lib;${CMAKE_BINARY_DIR}/bin")
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
+  ENDIF()
 
 find_package(PkgConfig REQUIRED)
 

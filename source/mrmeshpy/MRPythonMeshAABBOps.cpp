@@ -47,6 +47,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshIntersect, [] ( pybind11::module_& m )
         "rayStart and rayEnd define the interval on the ray to detect an intersection.\n"
         "prec can be specified to reuse some precomputations (e.g. for checking many parallel rays).\n"
         "Finds the closest to ray origin intersection (or any intersection for better performance if !closestIntersect)." );
+    
+    m.def( "computeThicknessAtVertices", &MR::computeThicknessAtVertices,
+        pybind11::arg( "mesh" ),
+        "Returns the distance from each vertex along minus normal to the nearest mesh intersection.\n"
+        "Returns FLT_MAX if no intersection found)\n" );
 } )
 
 namespace

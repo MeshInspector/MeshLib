@@ -12,3 +12,14 @@ def test_ray_mesh_intersect():
     )
     assert not interRes1
     assert interRes2 and interRes2.proj.point == mrmesh.Vector3f(1, 0, 0)
+
+
+def test_mesh_thickness():
+    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
+    
+    dists = mrmesh.computeThicknessAtVertices(torus)
+    
+    python_dists = list(dists.vec)
+
+    # Thickness for every valid vertex is found
+    assert len(python_dists) == torus.topology.getValidVerts().size()

@@ -15,24 +15,36 @@ public:
     // call it in the beginning each frame
     MRVIEWER_API static void invalidateAll();
 
+    template <typename ObjectType>
+    using TemplateDataType = std::vector<std::shared_ptr<ObjectType>>;
     // analog getAllObjectsInTree<ObjectType>( &SceneRoot::get(), SelectivityType ) but use cached data
-    // return shared_pointr to data
+    // reference is valid until invalidateAll() is called
     template <typename ObjectType, ObjectSelectivityType SelectivityType>
-    static std::shared_ptr<std::vector<std::shared_ptr<ObjectType>>> getAllObjects();
+    static const TemplateDataType<ObjectType>& getAllObjects();
 
+    template <typename ObjectType>
+    using CachedTemplateDataType = std::shared_ptr<TemplateDataType<ObjectType>>;
+    // analog getAllObjectsInTree<ObjectType>( &SceneRoot::get(), SelectivityType ) but use cached data
+    // shared ownership of cached data for current frame( not updated for new frame )
+    template <typename ObjectType, ObjectSelectivityType SelectivityType>
+    static CachedTemplateDataType<ObjectType> getAllObjectsCached();
+
+    using DepthDataType = std::vector<int>;
     // get all selectable object depths
     // metadata for drawing scene objects list
-    MRVIEWER_API static std::shared_ptr<std::vector<int>> getAllObjectsDepth();
+    // reference is valid until invalidateAll() is called
+    MRVIEWER_API static const DepthDataType& getAllObjectsDepth();
 private:
     MRVIEWER_API static SceneCache& instance_();
     SceneCache() {};
 
-    using StoredType = std::vector<std::shared_ptr<Object>>;
-    using CachedStoredType = std::shared_ptr<StoredType>; // store data as smart pointer to avoid data corruption
-    MRVIEWER_API static std::pair<StoredType, std::vector<int>> updateAllObjectsWithDepth_();
+    using StoredDataType = std::vector<std::shared_ptr<Object>>;
+    using CachedStoredDataType = std::shared_ptr<StoredDataType>; // store data as smart pointer to avoid data corruption
+    MRVIEWER_API static std::pair<StoredDataType, std::vector<int>> updateAllObjectsWithDepth_();
 
-    std::vector<CachedStoredType> cachedData_;
-    std::shared_ptr<std::vector<int>> allObjectDepths_;
+    std::vector<CachedStoredDataType> cachedData_;
+    using CachedDepthDataType = std::shared_ptr<DepthDataType>;
+    CachedDepthDataType allObjectDepths_;
 
     // Helper class to convert template params to unique numbers
     class MRVIEWER_CLASS TypeMap
@@ -57,18 +69,18 @@ private:
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif
 template <typename ObjectType, ObjectSelectivityType SelectivityType>
-std::shared_ptr<std::vector<std::shared_ptr<ObjectType>>> SceneCache::getAllObjects()
+SceneCache::CachedTemplateDataType<ObjectType> SceneCache::getAllObjectsCached()
 {
-    using SpecificType = std::vector<std::shared_ptr<ObjectType>>;
-    using CachedSpecificType = std::shared_ptr<SpecificType>;
+    using SpecificType = TemplateDataType<ObjectType>;
+    using CachedSpecificType = CachedTemplateDataType<ObjectType>;
     const int templateParamsUniqueId = TypeMap::getId<ObjectType, SelectivityType>();
     if ( templateParamsUniqueId + 1 > instance_().cachedData_.size() )
-        instance_().cachedData_.push_back( std::make_shared<StoredType>() );
+        instance_().cachedData_.push_back( std::make_shared<StoredDataType>() );
     if ( !instance_().cachedData_[templateParamsUniqueId] )
     {
-        CachedSpecificType specificData = std::make_shared<SpecificType>( getAllObjectsInTree<ObjectType>( &SceneRoot::get(), SelectivityType ) );
-        CachedStoredType storedData = std::reinterpret_pointer_cast<StoredType>( specificData );
-        instance_().cachedData_[templateParamsUniqueId] = storedData;
+        CachedSpecificType cachedSpecificData = std::make_shared<SpecificType>( getAllObjectsInTree<ObjectType>( &SceneRoot::get(), SelectivityType ) );
+        CachedStoredDataType cachedStoredData = std::reinterpret_pointer_cast<StoredDataType>( cachedSpecificData );
+        instance_().cachedData_[templateParamsUniqueId] = cachedStoredData;
     }
     return std::reinterpret_pointer_cast<SpecificType>( instance_().cachedData_[templateParamsUniqueId] );
 }
@@ -76,22 +88,33 @@ std::shared_ptr<std::vector<std::shared_ptr<ObjectType>>> SceneCache::getAllObje
 #pragma GCC diagnostic pop
 #endif
 
-// specialization getAllObjects to getAllObjects<Object, ObjectSelectivityType::Selectable>
+template <typename ObjectType, ObjectSelectivityType SelectivityType>
+const SceneCache::TemplateDataType<ObjectType>& SceneCache::getAllObjects()
+{
+    return *instance_().getAllObjectsCached<ObjectType, SelectivityType>();
+}
+
+// specialization getAllObjectsCached to getAllObjects<Object, ObjectSelectivityType::Selectable>
 // also calc allObjectDepths_
 template <>
-inline std::shared_ptr<std::vector<std::shared_ptr<Object>>> SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>()
+inline SceneCache::CachedTemplateDataType<Object> SceneCache::getAllObjectsCached<Object, ObjectSelectivityType::Selectable>()
 {
     const int templateParamsUniqueId = TypeMap::getId<Object, ObjectSelectivityType::Selectable>();
     if ( templateParamsUniqueId + 1 > instance_().cachedData_.size() )
-        instance_().cachedData_.push_back( std::make_shared<StoredType>() );
+        instance_().cachedData_.push_back( std::make_shared<StoredDataType>() );
     if ( !instance_().cachedData_[templateParamsUniqueId] )
     {
         auto combinedData = updateAllObjectsWithDepth_();
-        instance_().cachedData_[templateParamsUniqueId] = std::make_shared<StoredType>( std::move( combinedData.first ) );
-        instance_().allObjectDepths_ = std::make_shared<std::vector<int>>( std::move( combinedData.second ) );
+        instance_().cachedData_[templateParamsUniqueId] = std::make_shared<StoredDataType>( std::move( combinedData.first ) );
+        instance_().allObjectDepths_ = std::make_shared<DepthDataType>( std::move( combinedData.second ) );
     }
     return instance_().cachedData_[templateParamsUniqueId];
 }
 
+template <>
+inline const SceneCache::TemplateDataType<Object>& SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>()
+{
+    return *instance_().getAllObjectsCached<Object, ObjectSelectivityType::Selectable>();
+}
 
 }

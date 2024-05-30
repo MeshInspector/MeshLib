@@ -14,18 +14,18 @@ void SceneCache::invalidateAll()
         data.reset();
 }
 
-std::shared_ptr<std::vector<int>> SceneCache::getAllObjectsDepth()
+const SceneCache::DepthDataType& SceneCache::getAllObjectsDepth()
 {
     const int templateParamsUniqueId = TypeMap::getId<Object, ObjectSelectivityType::Selectable>();
     if ( templateParamsUniqueId + 1 > instance_().cachedData_.size() )
-        instance_().cachedData_.push_back( std::make_shared<StoredType>() );
+        instance_().cachedData_.push_back( std::make_shared<StoredDataType>() );
     if ( !instance_().cachedData_[templateParamsUniqueId] )
     {
         auto combinedData = updateAllObjectsWithDepth_();
-        instance_().cachedData_[templateParamsUniqueId] = std::make_shared<StoredType>( std::move( combinedData.first ) );
+        instance_().cachedData_[templateParamsUniqueId] = std::make_shared<StoredDataType>( std::move( combinedData.first ) );
         instance_().allObjectDepths_ = std::make_shared<std::vector<int>>( std::move( combinedData.second ) );
     }
-    return instance_().allObjectDepths_;
+    return *instance_().allObjectDepths_;
 }
 
 MR::SceneCache& SceneCache::instance_()
@@ -34,7 +34,7 @@ MR::SceneCache& SceneCache::instance_()
     return sceneCahce;
 }
 
-std::pair<SceneCache::StoredType, std::vector<int>> SceneCache::updateAllObjectsWithDepth_()
+std::pair<SceneCache::StoredDataType, std::vector<int>> SceneCache::updateAllObjectsWithDepth_()
 {
     std::vector<int> vecDepth;
     std::vector<std::shared_ptr<Object>> vecObjs;

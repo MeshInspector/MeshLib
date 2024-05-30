@@ -621,7 +621,7 @@ void ImGuiMenu::draw_labels_window()
       | ImGuiWindowFlags_NoCollapse
       | ImGuiWindowFlags_NoSavedSettings
       | ImGuiWindowFlags_NoInputs);
-  for ( const auto& data : SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Any>() )
+  for ( const auto& data : *SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Any>() )
   {
       draw_labels( *data );
   }
@@ -813,7 +813,7 @@ void ImGuiMenu::draw_helpers()
         if ( headerFont )
             ImGui::PopFont();
 
-        const auto& obj = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>().front();
+        const auto& obj = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>()->front();
         if ( !obj )
         {
             ImGui::CloseCurrentPopup();
@@ -1002,7 +1002,7 @@ void ImGuiMenu::setupShortcuts_()
 
 void ImGuiMenu::draw_scene_list()
 {
-    const auto& selectedObjs = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
+    const auto& selectedObjs = *SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
     // Define next window position + size
     ImGui::SetNextWindowPos( ImVec2( 180 * menu_scaling(), 0 ), ImGuiCond_FirstUseEver );
     ImGui::SetNextWindowSize( ImVec2( 230 * menu_scaling(), 300 * menu_scaling() ), ImGuiCond_FirstUseEver );
@@ -1038,7 +1038,7 @@ void ImGuiMenu::draw_selection_properties_content( const std::vector<std::shared
 {
     drawSelectionInformation_();
 
-    const auto& selectedVisualObjs = SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selected>();
+    const auto& selectedVisualObjs = *SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selected>();
     bool allHaveVisualisation = !selectedVisualObjs.empty() &&
         std::all_of( selectedVisualObjs.cbegin(), selectedVisualObjs.cend(), [] ( const std::shared_ptr<VisualObject>& obj )
     {
@@ -1076,7 +1076,7 @@ void ImGuiMenu::draw_selection_properties_content( const std::vector<std::shared
 
 float ImGuiMenu::drawSelectionInformation_()
 {
-    const auto& selectedObjs = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
+    const auto& selectedObjs = *SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
 
     auto& style = ImGui::GetStyle();
 
@@ -1456,7 +1456,7 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
 bool ImGuiMenu::drawGeneralOptions( const std::vector<std::shared_ptr<Object>>& selectedObjs )
 {
     bool someChanges = false;
-    const auto& selectedVisualObjs = SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selected>();
+    const auto& selectedVisualObjs = *SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selected>();
     if ( !selectedVisualObjs.empty() )
     {
         const auto& viewportid = viewer->viewport().id;
@@ -1560,7 +1560,7 @@ bool ImGuiMenu::drawAdvancedOptions( const std::vector<std::shared_ptr<VisualObj
     bool allIsFeatureObj = selectedMask == SelectedTypesMask::ObjectFeatureBit;
     if ( allIsFeatureObj )
     {
-        const auto& selectedFeatureObjs = SceneCache::getAllObjects<FeatureObject, ObjectSelectivityType::Selected>();
+        const auto& selectedFeatureObjs = *SceneCache::getAllObjects<FeatureObject, ObjectSelectivityType::Selected>();
 
         float minPointSize = 1, maxPointSize = 20;
         float minLineWidth = 1, maxLineWidth = 20;
@@ -1774,10 +1774,10 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<Vis
 bool ImGuiMenu::drawDrawOptionsColors( const std::vector<std::shared_ptr<VisualObject>>& selectedVisualObjs )
 {
     bool someChanges = false;
-    const auto& selectedMeshObjs = SceneCache::getAllObjects<ObjectMeshHolder, ObjectSelectivityType::Selected>();
-    const auto& selectedPointsObjs = SceneCache::getAllObjects<ObjectPointsHolder, ObjectSelectivityType::Selected>();
-    const auto& selectedLabelObjs = SceneCache::getAllObjects<ObjectLabel, ObjectSelectivityType::Selected>();
-    const auto& selectedFeatureObjs = SceneCache::getAllObjects<FeatureObject, ObjectSelectivityType::Selected>();
+    const auto& selectedMeshObjs = *SceneCache::getAllObjects<ObjectMeshHolder, ObjectSelectivityType::Selected>();
+    const auto& selectedPointsObjs = *SceneCache::getAllObjects<ObjectPointsHolder, ObjectSelectivityType::Selected>();
+    const auto& selectedLabelObjs = *SceneCache::getAllObjects<ObjectLabel, ObjectSelectivityType::Selected>();
+    const auto& selectedFeatureObjs = *SceneCache::getAllObjects<FeatureObject, ObjectSelectivityType::Selected>();
     if ( selectedVisualObjs.empty() )
         return someChanges;
 
@@ -1941,7 +1941,7 @@ void ImGuiMenu::draw_custom_selection_properties( const std::vector<std::shared_
 
 float ImGuiMenu::drawTransform_()
 {
-    const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
+    const auto& selected = *SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
 
     const auto scaling = menu_scaling();
     auto& style = ImGui::GetStyle();
@@ -2293,8 +2293,8 @@ void ImGuiMenu::draw_custom_plugins()
 
     float availibleWidth = 200.0f * menu_scaling();
 
-    const auto& selectedObjects = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
-    const auto& selectedVisObjects = SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selected>();
+    const auto& selectedObjects = *SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
+    const auto& selectedVisObjects = *SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selected>();
 
     ImGui::SetNextWindowPos( ImVec2( 410.0f * menu_scaling(), 0 ), ImGuiCond_FirstUseEver );
     ImGui::SetNextWindowSize( ImVec2( 0.0f, 0.0f ), ImGuiCond_FirstUseEver );
@@ -2911,7 +2911,7 @@ void ImGuiMenu::allowObjectsRemoval( bool allow )
 
 void ImGuiMenu::tryRenameSelectedObject()
 {
-    const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
+    const auto& selected = *SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
     if ( selected.size() != 1 )
         return;
     renameBuffer_ = selected[0]->name();

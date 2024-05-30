@@ -1414,7 +1414,7 @@ void RibbonMenu::changeTab_( int newTab )
 
 std::string RibbonMenu::getRequirements_( const std::shared_ptr<RibbonMenuItem>& item ) const
 {
-    return item->isAvailable( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() );
+    return item->isAvailable( *SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() );
 }
 
 void RibbonMenu::drawSceneListButtons_()
@@ -1508,15 +1508,15 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
 
             if ( !statePlugin->dialogIsOpen() )
                 itemPressed_( itemPtr.item, true );
-            else if ( prevFrameSelectedObjectsCache_ != SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() )
-                statePlugin->updateSelection( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() );
+            else if ( *prevFrameSelectedObjectsCache_ != *SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() )
+                statePlugin->updateSelection( *SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() );
         }
     }
 }
 
 void RibbonMenu::drawRibbonSceneList_()
 {
-    const auto& selectedObjs = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
+    const auto& selectedObjs = *SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
 
     const auto scaling = menu_scaling();
     // Define next window position + size
@@ -1697,7 +1697,7 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
     if ( iconsFont )
         ImGui::PushFont( iconsFont );
 
-    const auto& selectedObjectsCache = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
+    const auto& selectedObjectsCache = *SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
     if ( numButtons >= 2.0f && selectedObjectsCache.size() == 1 && selectedObjectsCache.front()->xf() != AffineXf3f() )
     {
         auto obj = std::const_pointer_cast< Object >( selectedObjectsCache.front() );
@@ -1881,7 +1881,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
     {
         auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
         if ( item != RibbonSchemaHolder::schema().items.end() &&
-            item->second.item->isAvailable( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() ).empty() &&
+            item->second.item->isAvailable( *SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() ).empty() &&
             UI::button( "Apply", Vector2f( buttonSize, 0 ) ) )
         {
             item->second.item->action();
@@ -1926,7 +1926,7 @@ void RibbonMenu::setupShortcuts_()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
-        const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
+        const auto& selected = *SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
         bool atLeastOne = false;
         for ( const auto& data : selected )
             if ( data )
@@ -1951,7 +1951,7 @@ void RibbonMenu::setupShortcuts_()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
-        const auto& selected = SceneCache::getAllObjects<ObjectMeshHolder, ObjectSelectivityType::Selected>();
+        const auto& selected = *SceneCache::getAllObjects<ObjectMeshHolder, ObjectSelectivityType::Selected>();
         for ( const auto& sel : selected )
             sel->toggleVisualizeProperty( MeshVisualizePropertyType::FlatShading, viewportid );
     } } );
@@ -1963,7 +1963,7 @@ void RibbonMenu::setupShortcuts_()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
-        const auto& selected = SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selected>();
+        const auto& selected = *SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selected>();
         for ( const auto& sel : selected )
             sel->toggleVisualizeProperty( VisualizeMaskType::InvertedNormals, viewportid );
     } }  );
@@ -1971,7 +1971,7 @@ void RibbonMenu::setupShortcuts_()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
-        const auto& selected = SceneCache::getAllObjects<ObjectMeshHolder, ObjectSelectivityType::Selected>();
+        const auto& selected = *SceneCache::getAllObjects<ObjectMeshHolder, ObjectSelectivityType::Selected>();
         for ( const auto& sel : selected )
                 sel->toggleVisualizeProperty( MeshVisualizePropertyType::Edges, viewportid );
     } } );
@@ -1984,7 +1984,7 @@ void RibbonMenu::setupShortcuts_()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
-        const auto& selected = SceneCache::getAllObjects<ObjectMeshHolder, ObjectSelectivityType::Selected>();
+        const auto& selected = *SceneCache::getAllObjects<ObjectMeshHolder, ObjectSelectivityType::Selected>();
         for ( const auto& sel : selected )
             sel->toggleVisualizeProperty( MeshVisualizePropertyType::Faces, viewportid );
     } }  );

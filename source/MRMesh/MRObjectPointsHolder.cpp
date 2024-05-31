@@ -198,17 +198,6 @@ size_t ObjectPointsHolder::heapBytes() const
         + MR::heapBytes( points_ );
 }
 
-void ObjectPointsHolder::setRenderDiscretization( int val )
-{
-    if ( val == renderDiscretization_ )
-        return;
-
-    assert( val > 0 );
-    val = val < 1 ? 1 : val;
-    int newMax = std::max(int( numValidPoints() + val - 1 ) / val, 1); // Avoid rounding errors
-    setMaxRenderingPoints( newMax );
-}
-
 void ObjectPointsHolder::setMaxRenderingPoints( int val )
 {
     if ( maxRenderingPoints_ == val )

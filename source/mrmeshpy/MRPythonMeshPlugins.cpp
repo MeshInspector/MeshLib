@@ -391,6 +391,34 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
         "Puts given vertices in such positions to make smooth surface both inside verts-region and on its boundary" );
 } )
 
+// Position Verts Smooth (Inflation)
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, InflateSettings, [] ( pybind11::module_& m )
+{
+    pybind11::class_<InflateSettings>( m, "InflateSettings", "Controllable options for the inflation of a mesh region." ).
+        def( pybind11::init<>() ).
+        def_readwrite( "pressure", &InflateSettings::pressure,
+            "The amount of pressure applied to mesh region: \n"
+            "Positive pressure moves the vertices outward, negative moves them inward. \n"
+            "Provided value should be in range of the [-region_diagonal, +region_diagonal]."
+        ).
+        def_readwrite( "iterations", &InflateSettings::iterations, 
+            "The number of internal iterations (>=1) \n"
+            "A larger number of iterations makes the performance slower, but the quality better"
+        ).
+        def_readwrite( "preSmooth", &InflateSettings::preSmooth, 
+            "Smooths the area before starting inflation. \n"
+            "Set to false only if the region is known to be already smooth"
+        ).
+        def_readwrite( "gradualPressureGrowth", &InflateSettings::gradualPressureGrowth, "whether to increase the pressure gradually during the iterations (recommended for best quality)" );
+    
+    m.def( "inflate", &MR::inflate,
+        pybind11::arg( "mesh" ), pybind11::arg( "verts" ), pybind11::arg_v( "settings", InflateSettings(), "InflateSettings()" ),
+        "Inflates (in one of two sides) given mesh region by"
+        "putting given vertices in such positions to make smooth surface inside verts-region, but sharp on its boundary. \n"
+        "\t verts must not include all vertices of a mesh connected component"
+    );
+} )
+
 #ifndef MRMESH_NO_OPENVDB
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
 {

@@ -271,12 +271,14 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( std::span<VisualObject* cons
 #endif
         if ( auto pointObj = renderVector[pickRes.geomId]->asType<ObjectPointsHolder>() )
         {
+            res.primId = int( pickRes.primId ) * pointObj->getRenderDiscretization();
             if ( auto pc = pointObj->pointCloud() )
             {
-                auto vid = VertId( int( pickRes.primId ) * pointObj->getRenderDiscretization() );
-                if ( !pc->validPoints.test( vid ) )
-                    continue;
-                res.point = pc->points[vid];
+                VertId vid( res.primId );
+                if ( pc->validPoints.test( vid ) )
+                    res.point = pc->points[vid];
+                else
+                    res.primId = -1;
             }
             else
             {

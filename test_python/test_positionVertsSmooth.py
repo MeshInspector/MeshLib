@@ -18,3 +18,17 @@ def test_position_vers_smooth():
     p = torus.points.vec[0]
     for i in torus.points.vec:
         assert i.x * i.x + i.y * i.y + i.z * i.z == p.x * p.x + p.y * p.y + p.z * p.z
+
+def test_inflate_verts_smooth():
+    """
+    Succession test that the function is exposed correctly
+    """
+    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
+    
+    smooth_region = mrmesh.VertBitSet()
+    smooth_region.resize( 6, True )
+    
+    inlate_settings = mrmesh.InflateSettings()
+    inlate_settings.pressure = -0.1
+    
+    mrmesh.inflate(torus, smooth_region, inlate_settings)

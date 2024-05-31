@@ -226,10 +226,10 @@ public:
 
   // override this to have custom "Selection Properties" window
   // draw window with content
-  MRVIEWER_API virtual void draw_selection_properties( std::vector<std::shared_ptr<Object>>& selected );
+  MRVIEWER_API virtual void draw_selection_properties( const std::vector<std::shared_ptr<Object>>& selected );
   // override this to have custom "Selection Properties" content
   // draw content only
-  MRVIEWER_API virtual void draw_selection_properties_content( std::vector<std::shared_ptr<Object>>& selected );
+  MRVIEWER_API virtual void draw_selection_properties_content( const std::vector<std::shared_ptr<Object>>& selected );
   // override this to have custom UI in "Selection Properties" window (under "Draw Options")
 
   // override this to customize appearance of collapsing headers

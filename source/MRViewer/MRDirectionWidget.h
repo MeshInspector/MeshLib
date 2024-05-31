@@ -76,6 +76,8 @@ public:
     MRVIEWER_API void updateBase( const Vector3f& base );
     /// Updates the length of the arrow
     MRVIEWER_API void updateLength( float length );
+    /// Updates the base and the length of the arrow
+    MRVIEWER_API void updateArrow( const Vector3f& base, float length );
     
     /// Sets the visibility of the widget
     MRVIEWER_API void setVisible( bool visible );

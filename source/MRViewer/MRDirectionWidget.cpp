@@ -74,6 +74,12 @@ namespace MR
         directionObj_->setMesh( mesh );
     }
 
+    void DirectionWidget::updateArrow( const Vector3f& base, float length )
+    {
+        updateBase( base );
+        updateLength( length );
+    }
+
     void DirectionWidget::setVisible( bool visible )
     {
         directionObj_->setVisible( visible );

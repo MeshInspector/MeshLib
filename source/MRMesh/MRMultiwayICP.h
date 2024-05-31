@@ -7,7 +7,6 @@ namespace MR
 
 class MRMESH_CLASS MeshOrPointsTag;
 using MeshOrPointsId = Id<MeshOrPointsTag>;
-using MeshOrPointsBitSet = TaggedBitSet<MeshOrPointsTag>;
 using IndexedPairs = Vector<PointPairs, MeshOrPointsId>;
 
 class MRMESH_CLASS MultiwayICP
@@ -21,7 +20,7 @@ public:
     MRMESH_API void resamplePoints( float samplingVoxelSize );
 
     /// in each pair updates the target data and performs basic filtering (activation)
-    MRMESH_API void updatePointPairs();
+    MRMESH_API void updateAllPointPairs();
 
     /// tune algorithm params before run calculateTransformations()
     void setParams( const ICPProperties& prop ) { prop_ = prop; }
@@ -50,8 +49,8 @@ public:
 
     /// if in independent equations mode - creates separate equation system for each object
     /// otherwise creates single large equation system for all objects
-    bool independentEquationsModeEnabled() const { return maxGroupSize_ == 1; }
-    void enableIndependentEquationsMode( bool on ) { maxGroupSize_ = on ? 1 : 0; }
+    bool devIndependentEquationsModeEnabled() const { return maxGroupSize_ == 1; }
+    void devEnableIndependentEquationsMode( bool on ) { maxGroupSize_ = on ? 1 : 0; }
 
     /// returns status info string
     [[nodiscard]] MRMESH_API std::string getStatusInfo() const; 
@@ -64,8 +63,24 @@ private:
 
     std::function<void( int )> perIterationCb_;
 
+    /// reserves memory for all pairs
+    /// if currently in cascade mode (objs.size() > maxGroupSize_) reserves only for pairs inside groups
+    void reservePairs_( const Vector<VertBitSet, MeshOrPointsId>& samples );
+    /// updates pairs among same groups only
+    void updatePointsPairsGroupWise_();
     /// deactivate pairs that does not meet farDistFactor criterion
     void deactivatefarDistPairs_();
+
+    /// returns unified samples for all objects in group
+    std::vector<Vector3f> resampleGroup_( MeshOrPointsId groupFirst, MeshOrPointsId groupLastEx );
+
+    using Level = int;
+    class GroupTag;
+    using GroupId = Id<GroupTag>;
+    struct GroupPair
+    {
+
+    };
 
     float samplingSize_{ 0.0f };
     // this parameter indicates maximum number of objects that might be aligned simultaneously in multi-way mode

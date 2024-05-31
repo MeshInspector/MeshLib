@@ -23,14 +23,13 @@ Vector<AffineXf3f, MeshOrPointsId> MultiwayICP::calculateTransformations( Progre
 
     for ( iter_ = 1; iter_ <= prop_.iterLimit; ++iter_ )
     {
-        updatePointPairs();
-        if ( iter_ == 1 && perIterationCb_ )
-            perIterationCb_( 0 );
-
         const bool pt2pt = ( prop_.method == ICPMethod::Combined && iter_ < 3 )
             || prop_.method == ICPMethod::PointToPoint;
         
         bool res = doIteration_( !pt2pt );
+
+        if ( iter_ == 1 && perIterationCb_ )
+            perIterationCb_( 0 );
 
         if ( perIterationCb_ )
             perIterationCb_( iter_ );
@@ -77,8 +76,6 @@ Vector<AffineXf3f, MeshOrPointsId> MultiwayICP::calculateTransformations( Progre
 void MultiwayICP::resamplePoints( float samplingVoxelSize )
 {
     MR_TIMER;
-    pairsPerObj_.clear();
-    pairsPerObj_.resize( objs_.size() );
     samplingSize_ = samplingVoxelSize;
 
     Vector<VertBitSet, MeshOrPointsId> samplesPerObj( objs_.size() );
@@ -89,22 +86,7 @@ void MultiwayICP::resamplePoints( float samplingVoxelSize )
         samplesPerObj[ind] = *obj.obj.pointsGridSampling( samplingVoxelSize );
     } );
 
-    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
-    {
-        auto& pairs = pairsPerObj_[i];
-        pairs.resize( objs_.size() );
-        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
-        {
-            if ( i == j )
-                continue;
-            auto& thisPairs = pairs[j];
-            thisPairs.vec.reserve( samplesPerObj[i].count());
-            for ( auto v : samplesPerObj[i] )
-                thisPairs.vec.emplace_back().srcVertId = v;
-            thisPairs.active.reserve( thisPairs.vec.size() );
-            thisPairs.active.clear();
-        }
-    }
+    reservePairs_( samplesPerObj );
 }
 
 float MultiwayICP::getMeanSqDistToPoint() const
@@ -208,7 +190,7 @@ std::string MultiwayICP::getStatusInfo() const
     return getICPStatusInfo( iter_, resultType_ );
 }
 
-void MultiwayICP::updatePointPairs()
+void MultiwayICP::updateAllPointPairs()
 {
     MR_TIMER;
     ParallelFor( size_t( 0 ), objs_.size() * objs_.size(), [&] ( size_t r )
@@ -216,6 +198,56 @@ void MultiwayICP::updatePointPairs()
         auto i = MeshOrPointsId( r % objs_.size() );
         auto j = MeshOrPointsId( r / objs_.size() );
         if ( i == j )
+            return;
+        MR::updatePointPairs( pairsPerObj_[i][j], objs_[i], objs_[j], prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
+    } );
+    deactivatefarDistPairs_();
+}
+
+void MultiwayICP::reservePairs_( const Vector<VertBitSet, MeshOrPointsId>& samplesPerObj )
+{
+    pairsPerObj_.clear();
+    pairsPerObj_.resize( objs_.size() );
+    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+    {
+        auto& pairs = pairsPerObj_[i];
+        pairs.resize( objs_.size() );
+        bool groupWise = maxGroupSize_ > 1 && objs_.size() > maxGroupSize_;
+        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
+        {
+            if ( i == j )
+                continue;
+
+            if ( groupWise )
+            {
+                auto groupI = i / maxGroupSize_;
+                auto groupJ = j / maxGroupSize_;
+                if ( groupI != groupJ )
+                    continue;
+            }
+
+            auto& thisPairs = pairs[j];
+            thisPairs.vec.reserve( samplesPerObj[i].count() );
+            for ( auto v : samplesPerObj[i] )
+                thisPairs.vec.emplace_back().srcVertId = v;
+            thisPairs.active.reserve( thisPairs.vec.size() );
+            thisPairs.active.clear();
+        }
+    }
+}
+
+void MultiwayICP::updatePointsPairsGroupWise_()
+{
+    MR_TIMER;
+    ParallelFor( size_t( 0 ), objs_.size() * objs_.size(), [&] ( size_t r )
+    {
+        auto i = MeshOrPointsId( r % objs_.size() );
+        auto j = MeshOrPointsId( r / objs_.size() );
+        if ( i == j )
+            return;
+        auto groupI = i / maxGroupSize_;
+        auto groupJ = j / maxGroupSize_;
+        if ( groupI != groupJ )
             return;
         MR::updatePointPairs( pairsPerObj_[i][j], objs_[i], objs_[j], prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
     } );
@@ -256,12 +288,24 @@ void MultiwayICP::deactivatefarDistPairs_()
     }
 }
 
+std::vector<MR::Vector3f> MultiwayICP::resampleGroup_( MeshOrPointsId groupFirst, MeshOrPointsId groupLastEx )
+{
+
+}
+
 bool MultiwayICP::doIteration_( bool p2pl )
 {
     if ( maxGroupSize_ == 1 )
+    {
+        updateAllPointPairs();
         return p2pl ? p2plIter_() : p2ptIter_();
+    }
     if ( maxGroupSize_ < 1 || maxGroupSize_ >= objs_.size() )
+    {
+        updateAllPointPairs();
         return multiwayIter_( p2pl );
+    }
+    // pair updated inside
     return multiwayIter_( maxGroupSize_, p2pl );
 }
 
@@ -420,8 +464,8 @@ bool MultiwayICP::multiwayIter_( bool p2pl )
     mats = {}; // free memory
 
     MultiwayAligningTransform::Stabilizer stabilizer;
-    stabilizer.rot = samplingSize_ * 1e-2f;
-    stabilizer.shift = 1e-4f;
+    stabilizer.rot = samplingSize_ * 1e-1f;
+    stabilizer.shift = 1e-3f;
     auto res = mat.solve( stabilizer );
     for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
     {
@@ -441,8 +485,11 @@ bool MultiwayICP::multiwayIter_( int groupSize, bool p2pl /*= true */ )
         int grainSize = subGroupSize * groupSize;
         int numGroups = ( int( objs_.size() ) + grainSize - 1 ) / grainSize;
 
-        if ( subGroupSize > 1 )
-            updatePointPairs();
+        if ( subGroupSize == 1 )
+            updatePointsPairsGroupWise_();
+        else
+            break;
+        //updateAllPointPairs(); // need to update pairs smarter
 
         for ( int gId = 0; gId < numGroups; ++gId )
         {
@@ -482,8 +529,8 @@ bool MultiwayICP::multiwayIter_( int groupSize, bool p2pl /*= true */ )
             }
 
             MultiwayAligningTransform::Stabilizer stabilizer;
-            stabilizer.rot = samplingSize_ * 1e-2f;
-            stabilizer.shift = 1e-4f;
+            stabilizer.rot = samplingSize_ * 1e-1f;
+            stabilizer.shift = 1e-3f;
             auto res = mat.solve( stabilizer );
             for ( int sbI = 0; sbI < numSubGroups; ++sbI )
             {

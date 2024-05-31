@@ -145,13 +145,29 @@ struct BMap
     size_t tsize = 0; ///< target size, all values inside b must be less than this value
 };
 
-// mapping of mesh elements: old -> new,
-// the mapping is tight (or packing) in the sense that there are no unused new elements within [0, (e/f/v).tsize)
+/// mapping of mesh elements: old -> new,
+/// the mapping is tight (or packing) in the sense that there are no unused new elements within [0, (e/f/v).tsize)
 struct PackMapping
 {
     UndirectedEdgeBMap e;
     FaceBMap f;
     VertBMap v;
 };
+
+/// computes the composition of two mappings x -> a(b(x))
+template <typename T>
+BMap<T, T> compose( const BMap<T, T> & a, const BMap<T, T> & b )
+{
+    BMap<T, T> res;
+    res.b.resize( b.b.size() );
+    res.tsize = a.tsize;
+    for ( T x( 0 ); x < b.b.size(); ++x )
+    {
+        auto bx = b.b[x];
+        if ( bx < a.b.size() ) //invalid bx (=-1) will be casted to size_t(-1)
+            res.b[x] = a.b[bx];
+    }
+    return res;
+}
 
 } // namespace MR

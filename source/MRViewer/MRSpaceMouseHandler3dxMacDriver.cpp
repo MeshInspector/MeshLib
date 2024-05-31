@@ -97,10 +97,10 @@ uint32_t gButtonState{ 0 };
 
 float normalize( int16_t value )
 {
-    constexpr auto cFactor = 350.f;
+    constexpr auto cAxisRange = 350.f;
     constexpr auto cThreshold = 0.01f;
 
-    auto result = (float)value / cFactor;
+    auto result = (float)value / cAxisRange;
     if ( std::abs( result ) < cThreshold )
         result = 0.f;
 

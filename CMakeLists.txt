@@ -41,8 +41,6 @@ ENDIF()
     set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
   ENDIF()
 
-find_package(PkgConfig REQUIRED)
-
 IF(NOT MR_EMSCRIPTEN)
   IF(MESHLIB_PYTHON_SUPPORT)
     # TODO: drop Python version hard-coding; explicitly set -DMESHLIB_PYTHON_VERSION in the CI config if needed
@@ -85,6 +83,8 @@ set(PROJECT_SOURCE_DIR ./source)
 include_directories(${PROJECT_SOURCE_DIR})
 
 IF(NOT MR_EMSCRIPTEN)
+  find_package(PkgConfig REQUIRED)
+
   pkg_check_modules(JSONCPP jsoncpp)
   include_directories(${JSONCPP_INCLUDE_DIRS})
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRAABBTreeNode.h"
+#include "MRAABBTreeBase.h"
 #include "MRVector.h"
 
 namespace MR
@@ -13,16 +13,9 @@ namespace MR
 
 /// bounding volume hierarchy
 /// \ingroup AABBTreeGroup
-class AABBTree
+class AABBTree : public AABBTreeBase<FaceTreeTraits3>
 {
 public:
-    using Node = AABBTreeNode<FaceTreeTraits3>;
-    using NodeVec = Vector<Node, NodeId>;
-    [[nodiscard]] const NodeVec & nodes() const { return nodes_; }
-    [[nodiscard]] const Node & operator[]( NodeId nid ) const { return nodes_[nid]; }
-    [[nodiscard]] static NodeId rootNodeId() { return NodeId{ 0 }; }
-    /// returns the root node bounding box
-    [[nodiscard]] Box3f getBoundingBox() const { return nodes_.empty() ? Box3f{} : nodes_[rootNodeId()].box; }
     /// returns true if the tree contains exactly the same number of triangles as in given mesh;
     /// this is fast validity check, but it is not comprehensive (tree can be outdated even if true is returned)
     [[nodiscard]] MRMESH_API bool containsSameNumberOfTris( const Mesh & mesh ) const;
@@ -47,9 +40,6 @@ public:
     AABBTree( AABBTree && ) noexcept = default;
     AABBTree & operator =( AABBTree && ) noexcept = default;
 
-    /// returns the amount of memory this object occupies on heap
-    [[nodiscard]] MRMESH_API size_t heapBytes() const { return nodes_.heapBytes(); }
-
     /// updates bounding boxes of the nodes containing changed vertices;
     /// this is a faster alternative to full tree rebuild (but the tree after refit might be less efficient)
     /// \param mesh same mesh for which this tree was constructed but with updated coordinates;
@@ -57,8 +47,6 @@ public:
     MRMESH_API void refit( const Mesh & mesh, const VertBitSet & changedVerts );
 
 private:
-    NodeVec nodes_;
-
     AABBTree( const AABBTree & ) = default;
     AABBTree & operator =( const AABBTree & ) = default;
     friend class UniqueThreadSafeOwner<AABBTree>;

@@ -53,7 +53,45 @@ typedef void (*UnregisterConnexionClientFunc)( uint16_t clientID );
 
 typedef int16_t (*ConnexionClientControlFunc)( uint16_t clientID, uint32_t message, int32_t param, int32_t* result );
 
+struct LibHandle
+{
+    void* handle{ nullptr };
+
+#define DEFINE_SYM( name ) name##Func name{ nullptr };
+    DEFINE_SYM( SetConnexionHandlers )
+    DEFINE_SYM( CleanupConnexionHandlers )
+    DEFINE_SYM( RegisterConnexionClient )
+    DEFINE_SYM( SetConnexionClientMask )
+    DEFINE_SYM( SetConnexionClientButtonMask )
+    DEFINE_SYM( UnregisterConnexionClient )
+    DEFINE_SYM( ConnexionClientControl )
+#undef DEFINE_SYM
+
+    bool loadSymbols()
+    {
+#define LOAD_SYM( name ) \
+        {                \
+            ( name ) = (name##Func)dlsym( handle, #name ); \
+            if ( ( name ) == nullptr )                     \
+            {            \
+                spdlog::error( "Failed to load symbol \"{}\": {}", #name, dlerror() ); \
+                return false;                              \
+            }            \
+        }
+        LOAD_SYM( SetConnexionHandlers )
+        LOAD_SYM( CleanupConnexionHandlers )
+        LOAD_SYM( RegisterConnexionClient )
+        LOAD_SYM( SetConnexionClientMask )
+        LOAD_SYM( SetConnexionClientButtonMask )
+        LOAD_SYM( UnregisterConnexionClient )
+        LOAD_SYM( ConnexionClientControl )
+#undef LOAD_SYM
+        return true;
+    }
+};
+
 std::mutex gStateMutex;
+LibHandle lib;
 std::unordered_set<uint16_t> gKnownClientIds;
 uint32_t gButtonState{ 0 };
 
@@ -124,63 +162,24 @@ void onSpaceMouseMessage( uint32_t, uint32_t type, void* arg )
 namespace MR
 {
 
-struct SpaceMouseHandler3dxMacDriver::LibHandle
-{
-    void* handle;
-
-#define DEFINE_SYM( name ) name##Func name;
-    DEFINE_SYM( SetConnexionHandlers )
-    DEFINE_SYM( CleanupConnexionHandlers )
-    DEFINE_SYM( RegisterConnexionClient )
-    DEFINE_SYM( SetConnexionClientMask )
-    DEFINE_SYM( SetConnexionClientButtonMask )
-    DEFINE_SYM( UnregisterConnexionClient )
-    DEFINE_SYM( ConnexionClientControl )
-#undef DEFINE_SYM
-
-    bool loadSymbols()
-    {
-#define LOAD_SYM( name ) \
-        {                \
-            ( name ) = (name##Func)dlsym( handle, #name ); \
-            if ( ( name ) == nullptr )                     \
-            {            \
-                spdlog::error( "Failed to load symbol \"{}\": {}", #name, dlerror() ); \
-                return false;                              \
-            }            \
-        }
-        LOAD_SYM( SetConnexionHandlers )
-        LOAD_SYM( CleanupConnexionHandlers )
-        LOAD_SYM( RegisterConnexionClient )
-        LOAD_SYM( SetConnexionClientMask )
-        LOAD_SYM( SetConnexionClientButtonMask )
-        LOAD_SYM( UnregisterConnexionClient )
-        LOAD_SYM( ConnexionClientControl )
-#undef LOAD_SYM
-        return true;
-    }
-};
-
 SpaceMouseHandler3dxMacDriver::SpaceMouseHandler3dxMacDriver()
-    : lib_( std::make_unique<LibHandle>() )
 {
     setClientName( "MeshLib" );
 }
 
 SpaceMouseHandler3dxMacDriver::~SpaceMouseHandler3dxMacDriver()
 {
-    if ( lib_->handle != nullptr )
+    std::unique_lock lock( gStateMutex );
+    if ( lib.handle != nullptr )
     {
         if ( clientId_ )
         {
-            lib_->UnregisterConnexionClient( clientId_ );
-            {
-                std::unique_lock lock( gStateMutex );
-                gKnownClientIds.erase( clientId_ );
-            }
+            lib.UnregisterConnexionClient( clientId_ );
+            gKnownClientIds.erase( clientId_ );
         }
-        lib_->CleanupConnexionHandlers();
-        dlclose( lib_->handle );
+        lib.CleanupConnexionHandlers();
+        dlclose( lib.handle );
+        lib.handle = nullptr;
     }
 }
 
@@ -198,6 +197,7 @@ void SpaceMouseHandler3dxMacDriver::setClientName( const char* name, size_t len 
 bool SpaceMouseHandler3dxMacDriver::initialize()
 {
     // TODO: better design (e.g. `auto lib = Handle::tryLoad()`)
+    std::unique_lock lock( gStateMutex );
 
     static constexpr const auto* c3DconnexionClientPath = "/Library/Frameworks/3DconnexionClient.framework/3DconnexionClient";
     std::error_code ec;
@@ -207,43 +207,40 @@ bool SpaceMouseHandler3dxMacDriver::initialize()
         return false;
     }
 
-    lib_->handle = dlopen( c3DconnexionClientPath, RTLD_LAZY );
-    if ( lib_->handle == nullptr )
+    lib.handle = dlopen( c3DconnexionClientPath, RTLD_LAZY );
+    if ( lib.handle == nullptr )
     {
         spdlog::error( "Failed to load the 3DxWare client library: {}", dlerror() );
         return false;
     }
 
-    if ( !lib_->loadSymbols() )
+    if ( !lib.loadSymbols() )
     {
-        dlclose( lib_->handle );
-        lib_->handle = nullptr;
+        dlclose( lib.handle );
+        lib.handle = nullptr;
         return false;
     }
 
-    if ( lib_->SetConnexionHandlers == nullptr )
+    if ( lib.SetConnexionHandlers == nullptr )
     {
         spdlog::warn( "Incompatible 3DxWare driver version; consider upgrading to version 10.2.2 or later" );
-        dlclose( lib_->handle );
-        lib_->handle = nullptr;
+        dlclose( lib.handle );
+        lib.handle = nullptr;
         return false;
     }
 
-    lib_->SetConnexionHandlers( onSpaceMouseMessage, nullptr, nullptr, false );
+    lib.SetConnexionHandlers( onSpaceMouseMessage, nullptr, nullptr, false );
 
-    clientId_ = lib_->RegisterConnexionClient( kConnexionClientWildcard, clientName_.get(), kConnexionClientModeTakeOver, kConnexionMaskAll );
+    clientId_ = lib.RegisterConnexionClient( kConnexionClientWildcard, clientName_.get(), kConnexionClientModeTakeOver, kConnexionMaskAll );
     if ( clientId_ == 0 )
     {
         spdlog::warn( "Failed to connect to the 3DxWare driver" );
         return false;
     }
-    {
-        std::unique_lock lock( gStateMutex );
-        gKnownClientIds.emplace( clientId_ );
-    }
+    gKnownClientIds.emplace( clientId_ );
 
-    lib_->SetConnexionClientMask( clientId_, kConnexionMaskAll );
-    lib_->SetConnexionClientButtonMask( clientId_, kConnexionMaskAllButtons );
+    lib.SetConnexionClientMask( clientId_, kConnexionMaskAll );
+    lib.SetConnexionClientButtonMask( clientId_, kConnexionMaskAllButtons );
 
     spdlog::info( "Successfully connected to the 3DxWare driver" );
     return true;

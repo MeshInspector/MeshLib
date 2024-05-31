@@ -22,8 +22,9 @@ constexpr auto kConnexionMaskAllButtons = 0xFFFFFFFF;
 constexpr auto kConnexionCmdHandleButtons = 2;
 constexpr auto kConnexionCmdHandleAxis = 3;
 constexpr auto kConnexionMsgDeviceState = 0x33645352; // '3dSR'
+constexpr auto kConnexionMsgPrefsChanged = 0x33645043; // '3dPC'
 
-#pragma pack( push, 1 )
+#pragma pack( push, 2 )
 struct ConnexionDeviceState
 {
     uint16_t version;
@@ -37,6 +38,30 @@ struct ConnexionDeviceState
     int16_t axis[6];
     uint16_t address;
     uint32_t buttons;
+};
+
+struct ConnexionDevicePrefs
+{
+    uint16_t type;
+    uint16_t version;
+    uint16_t deviceID;
+    uint16_t reserved1;
+    uint32_t appSignature;
+    uint32_t reserved2;
+    uint8_t appName[64];
+    uint8_t mainSpeed;
+    uint8_t zoomOnY;
+    uint8_t dominant;
+    uint8_t reserved3;
+    int8_t mapV[6];
+    int8_t mapH[6];
+    uint8_t enabled[6];
+    uint8_t reversed[6];
+    uint8_t speed[6];
+    uint8_t sensitivity[6];
+    int32_t scale[6];
+    uint32_t gamma;
+    uint32_t intersect;
 };
 #pragma pack( pop )
 
@@ -53,36 +78,131 @@ typedef void (*UnregisterConnexionClientFunc)( uint16_t clientID );
 
 typedef int16_t (*ConnexionClientControlFunc)( uint16_t clientID, uint32_t message, int32_t param, int32_t* result );
 
-// TODO: thread safety?
+typedef int16_t (*ConnexionGetCurrentDevicePrefsFunc)( uint32_t deviceID, ConnexionDevicePrefs* prefs );
+
+struct LibHandle
+{
+    void* handle{ nullptr };
+
+#define DEFINE_SYM( name ) name##Func name{ nullptr };
+    DEFINE_SYM( SetConnexionHandlers )
+    DEFINE_SYM( CleanupConnexionHandlers )
+    DEFINE_SYM( RegisterConnexionClient )
+    DEFINE_SYM( SetConnexionClientMask )
+    DEFINE_SYM( SetConnexionClientButtonMask )
+    DEFINE_SYM( UnregisterConnexionClient )
+    DEFINE_SYM( ConnexionClientControl )
+    DEFINE_SYM( ConnexionGetCurrentDevicePrefs )
+#undef DEFINE_SYM
+
+    bool loadSymbols()
+    {
+#define LOAD_SYM( name ) \
+        {                \
+            ( name ) = (name##Func)dlsym( handle, #name ); \
+            if ( ( name ) == nullptr )                     \
+            {            \
+                spdlog::error( "Failed to load symbol \"{}\": {}", #name, dlerror() ); \
+                return false;                              \
+            }            \
+        }
+        LOAD_SYM( SetConnexionHandlers )
+        LOAD_SYM( CleanupConnexionHandlers )
+        LOAD_SYM( RegisterConnexionClient )
+        LOAD_SYM( SetConnexionClientMask )
+        LOAD_SYM( SetConnexionClientButtonMask )
+        LOAD_SYM( UnregisterConnexionClient )
+        LOAD_SYM( ConnexionClientControl )
+        LOAD_SYM( ConnexionGetCurrentDevicePrefs )
+#undef LOAD_SYM
+        return true;
+    }
+};
+
+std::mutex gStateMutex;
+LibHandle lib;
 std::unordered_set<uint16_t> gKnownClientIds;
+std::unordered_map<uint32_t, ConnexionDevicePrefs> gKnownDevices;
 uint32_t gButtonState{ 0 };
 
 float normalize( int16_t value )
 {
-    constexpr auto cFactor = 350.f;
+    constexpr auto cAxisRange = 350.f;
     constexpr auto cThreshold = 0.01f;
 
-    auto result = (float)value / cFactor;
+    auto result = (float)value / cAxisRange;
     if ( std::abs( result ) < cThreshold )
         result = 0.f;
 
     return result;
 }
 
-void onSpaceMouseMessage( uint32_t, uint32_t type, void* arg )
+void updateDevicePrefs( uint32_t deviceId, ConnexionDevicePrefs& prefs )
+{
+    lib.ConnexionGetCurrentDevicePrefs( deviceId, &prefs );
+
+    // TODO: remove debug logging
+#define PRINT_FIELD( NAME ) \
+    spdlog::debug( "3DxWare driver: {} = {}", #NAME, prefs. NAME );
+#define PRINT_FIELD_ARRAY( NAME ) \
+    {                             \
+        auto& a = prefs. NAME;    \
+        spdlog::debug( "3DxWare driver: {} = [ {}, {}, {}, {}, {}, {} ]", #NAME, a[0], a[1], a[2], a[3], a[4], a[5] ); \
+    }
+    PRINT_FIELD( type )
+    PRINT_FIELD( version )
+    PRINT_FIELD( deviceID )
+    PRINT_FIELD( mainSpeed )
+    PRINT_FIELD( zoomOnY )
+    PRINT_FIELD( dominant )
+    PRINT_FIELD_ARRAY( mapV )
+    PRINT_FIELD_ARRAY( mapH )
+    PRINT_FIELD_ARRAY( enabled )
+    PRINT_FIELD_ARRAY( reversed )
+    PRINT_FIELD_ARRAY( speed )
+    PRINT_FIELD_ARRAY( sensitivity )
+    PRINT_FIELD_ARRAY( scale )
+    PRINT_FIELD( gamma )
+    PRINT_FIELD( intersect )
+#undef PRINT_FIELD_ARRAY
+#undef PRINT_FIELD
+}
+
+void onSpaceMouseDeviceAdded( uint32_t deviceId )
+{
+    std::unique_lock lock( gStateMutex );
+    updateDevicePrefs( deviceId, gKnownDevices[deviceId] );
+}
+
+void onSpaceMouseDeviceRemoved( uint32_t deviceId )
+{
+    std::unique_lock lock( gStateMutex );
+    gKnownDevices.erase( deviceId );
+}
+
+void onSpaceMouseMessage( uint32_t deviceId, uint32_t type, void* arg )
 {
     auto& viewer = getViewerInstance();
     if ( type == kConnexionMsgDeviceState )
     {
+        std::unique_lock lock( gStateMutex );
+
         assert( arg );
         const auto* state = (ConnexionDeviceState*)arg;
         if ( gKnownClientIds.find( state->client ) == gKnownClientIds.end() )
             return;
 
+        auto it = gKnownDevices.find( deviceId );
+        if ( it == gKnownDevices.end() )
+            return;
+        const auto& [_, prefs] = *it;
+
+        // TODO: use the device preferences
+        (void)prefs;
+
         switch ( state->command )
         {
             case kConnexionCmdHandleButtons:
-                // TODO: thread safety?
                 for ( auto btn = 0; btn < 32; ++btn )
                 {
                     const auto mask = 1 << btn;
@@ -116,6 +236,12 @@ void onSpaceMouseMessage( uint32_t, uint32_t type, void* arg )
                 break;
         }
     }
+
+    else if ( type == kConnexionMsgPrefsChanged )
+    {
+        std::unique_lock lock( gStateMutex );
+        updateDevicePrefs( deviceId, gKnownDevices[deviceId] );
+    }
 }
 
 } // namespace
@@ -123,61 +249,24 @@ void onSpaceMouseMessage( uint32_t, uint32_t type, void* arg )
 namespace MR
 {
 
-struct SpaceMouseHandler3dxMacDriver::LibHandle
-{
-    void* handle;
-
-#define DEFINE_SYM( name ) name##Func name;
-    DEFINE_SYM( SetConnexionHandlers )
-    DEFINE_SYM( CleanupConnexionHandlers )
-    DEFINE_SYM( RegisterConnexionClient )
-    DEFINE_SYM( SetConnexionClientMask )
-    DEFINE_SYM( SetConnexionClientButtonMask )
-    DEFINE_SYM( UnregisterConnexionClient )
-    DEFINE_SYM( ConnexionClientControl )
-#undef DEFINE_SYM
-
-    bool loadSymbols()
-    {
-#define LOAD_SYM( name ) \
-        {                \
-            ( name ) = (name##Func)dlsym( handle, #name ); \
-            if ( ( name ) == nullptr )                     \
-            {            \
-                spdlog::error( "Failed to load symbol \"{}\": {}", #name, dlerror() ); \
-                return false;                              \
-            }            \
-        }
-        LOAD_SYM( SetConnexionHandlers )
-        LOAD_SYM( CleanupConnexionHandlers )
-        LOAD_SYM( RegisterConnexionClient )
-        LOAD_SYM( SetConnexionClientMask )
-        LOAD_SYM( SetConnexionClientButtonMask )
-        LOAD_SYM( UnregisterConnexionClient )
-        LOAD_SYM( ConnexionClientControl )
-#undef LOAD_SYM
-        return true;
-    }
-};
-
 SpaceMouseHandler3dxMacDriver::SpaceMouseHandler3dxMacDriver()
-    : lib_( std::make_unique<LibHandle>() )
 {
     setClientName( "MeshLib" );
 }
 
 SpaceMouseHandler3dxMacDriver::~SpaceMouseHandler3dxMacDriver()
 {
-    if ( lib_->handle != nullptr )
+    std::unique_lock lock( gStateMutex );
+    if ( lib.handle != nullptr )
     {
         if ( clientId_ )
         {
-            lib_->UnregisterConnexionClient( clientId_ );
-            // TODO: thread safety?
+            lib.UnregisterConnexionClient( clientId_ );
             gKnownClientIds.erase( clientId_ );
         }
-        lib_->CleanupConnexionHandlers();
-        dlclose( lib_->handle );
+        lib.CleanupConnexionHandlers();
+        dlclose( lib.handle );
+        lib.handle = nullptr;
     }
 }
 
@@ -195,6 +284,7 @@ void SpaceMouseHandler3dxMacDriver::setClientName( const char* name, size_t len 
 bool SpaceMouseHandler3dxMacDriver::initialize()
 {
     // TODO: better design (e.g. `auto lib = Handle::tryLoad()`)
+    std::unique_lock lock( gStateMutex );
 
     static constexpr const auto* c3DconnexionClientPath = "/Library/Frameworks/3DconnexionClient.framework/3DconnexionClient";
     std::error_code ec;
@@ -204,34 +294,42 @@ bool SpaceMouseHandler3dxMacDriver::initialize()
         return false;
     }
 
-    lib_->handle = dlopen( c3DconnexionClientPath, RTLD_LAZY );
-    if ( lib_->handle == nullptr )
+    lib.handle = dlopen( c3DconnexionClientPath, RTLD_LAZY );
+    if ( lib.handle == nullptr )
     {
         spdlog::error( "Failed to load the 3DxWare client library: {}", dlerror() );
         return false;
     }
 
-    if ( !lib_->loadSymbols() )
+    if ( !lib.loadSymbols() )
     {
-        dlclose( lib_->handle );
-        lib_->handle = nullptr;
+        dlclose( lib.handle );
+        lib.handle = nullptr;
         return false;
     }
 
-    lib_->SetConnexionHandlers( onSpaceMouseMessage, nullptr, nullptr, false );
+    if ( lib.SetConnexionHandlers == nullptr )
+    {
+        spdlog::warn( "Incompatible 3DxWare driver version; consider upgrading to version 10.2.2 or later" );
+        dlclose( lib.handle );
+        lib.handle = nullptr;
+        return false;
+    }
 
-    clientId_ = lib_->RegisterConnexionClient( kConnexionClientWildcard, clientName_.get(), kConnexionClientModeTakeOver, kConnexionMaskAll );
+    lib.SetConnexionHandlers( onSpaceMouseMessage, onSpaceMouseDeviceAdded, onSpaceMouseDeviceRemoved, false );
+
+    clientId_ = lib.RegisterConnexionClient( kConnexionClientWildcard, clientName_.get(), kConnexionClientModeTakeOver, kConnexionMaskAll );
     if ( clientId_ == 0 )
     {
         spdlog::warn( "Failed to connect to the 3DxWare driver" );
         return false;
     }
-    // TODO: thread safety?
     gKnownClientIds.emplace( clientId_ );
 
-    lib_->SetConnexionClientMask( clientId_, kConnexionMaskAll );
-    lib_->SetConnexionClientButtonMask( clientId_, kConnexionMaskAllButtons );
+    lib.SetConnexionClientMask( clientId_, kConnexionMaskAll );
+    lib.SetConnexionClientButtonMask( clientId_, kConnexionMaskAllButtons );
 
+    spdlog::info( "Successfully connected to the 3DxWare driver" );
     return true;
 }
 

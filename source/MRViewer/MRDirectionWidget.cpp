@@ -53,19 +53,25 @@ namespace MR
         directionObj_->setXf( AffineXf3f::translation( base_ ) * AffineXf3f::linear( rot.inverse() * Matrix3f::rotation( Vector3f::plusZ(), dir ) ) );
     }
 
-    void DirectionWidget::updateArrow( const Vector3f& base, std::optional<float> length )
+    void DirectionWidget::updateBase( const Vector3f& base )
     {
         if ( !directionObj_ )
             return;
 
         base_ = base;
-        if ( length )
-            length_ = *length;
-
-        std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>( makeArrow( {}, dir_ * length_, length_ * 0.02f, length_ * 0.04f, length_ * 0.08f));
         auto xf = directionObj_->xf();
         xf.b = base_;
         directionObj_->setXf( xf );
+    }
+
+    void DirectionWidget::updateLength( float length )
+    {
+        if ( !directionObj_ )
+            return;
+
+        length_ = length;
+        std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>( makeArrow( {}, dir_ * length_, length_ * 0.02f, length_ * 0.04f, length_ * 0.08f ) );
+        directionObj_->setMesh( mesh );
     }
 
     void DirectionWidget::setVisible( bool visible )

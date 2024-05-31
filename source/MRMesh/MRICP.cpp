@@ -163,6 +163,8 @@ void updatePointPairs( PointPairs & pairs,
         const auto pt = src2tgtXf( p0 );
 
         MeshOrPoints::ProjectionResult prj;
+        // do not search for target point further than distance threshold
+        prj.distSq = distThresholdSq;
         if ( res.tgtCloseVert )
         {
             // start with old closest point ...
@@ -175,6 +177,12 @@ void updatePointPairs( PointPairs & pairs,
         }
         // ... and try to find only closer one
         tgtLimProjector( pt, prj );
+        if ( !prj.closestVert )
+        {
+            // no target point found within distance threshold
+            pairs.active.reset( idx );
+            return;
+        }
         const auto p1 = prj.point;
 
         // save the result

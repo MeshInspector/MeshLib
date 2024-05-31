@@ -1,14 +1,6 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
-include(cmake/HelperFunctions.cmake)
-include(cmake/Options.cmake)
-
 project(MeshLib CXX)
-
-# all binaries will be located in ./build/Release/bin
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 option(MESHLIB_STANDALONE "Build MeshLib as a standalone library; disable it to use as a part of your project" ON)
 option(MESHLIB_CUSTOM_INSTALL_PREFIX "Install into directory defined by CMAKE_INSTALL_PREFIX" OFF)
@@ -20,10 +12,18 @@ option(MESHLIB_BUILD_MESHCONV "Build meshconv utility" ON)
 option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ${MESHLIB_CUDA_SUPPORT})
 
 IF(MESHLIB_STANDALONE)
+  include(cmake/HelperFunctions.cmake)
+  include(cmake/Options.cmake)
+
   add_compile_definitions(MR_PROJECT_NAME=\"MeshLib\")
   add_compile_definitions(MR_FRAMEWORK)
   add_compile_definitions(IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\")
 ENDIF()
+
+# all binaries will be located in ./build/Release/bin
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
 
@@ -36,10 +36,10 @@ IF(NOT MESHLIB_CUSTOM_INSTALL_PREFIX)
   link_directories(${MESHLIB_THIRDPARTY_ROOT_DIR}/lib)
 ENDIF()
 
-  IF(MESHLIB_STANDALONE AND APPLE)
-    set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/..;@loader_path/../lib;@loader_path/../lib/lib;@loader_path/meshlib;${MESHLIB_THIRDPARTY_ROOT_DIR}/lib;${CMAKE_BINARY_DIR}/bin")
-    set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
-  ENDIF()
+IF(MESHLIB_STANDALONE AND APPLE)
+  set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/..;@loader_path/../lib;@loader_path/../lib/lib;@loader_path/meshlib;${MESHLIB_THIRDPARTY_ROOT_DIR}/lib;${CMAKE_BINARY_DIR}/bin")
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
+ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
   IF(MESHLIB_PYTHON_SUPPORT)

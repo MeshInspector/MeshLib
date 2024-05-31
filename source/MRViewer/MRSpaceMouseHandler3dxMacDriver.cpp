@@ -218,6 +218,14 @@ bool SpaceMouseHandler3dxMacDriver::initialize()
         return false;
     }
 
+    if ( lib_->SetConnexionHandlers == nullptr )
+    {
+        spdlog::warn( "Incompatible 3DxWare driver version; consider upgrading to version 10.2.2 or later" );
+        dlclose( lib_->handle );
+        lib_->handle = nullptr;
+        return false;
+    }
+
     lib_->SetConnexionHandlers( onSpaceMouseMessage, nullptr, nullptr, false );
 
     clientId_ = lib_->RegisterConnexionClient( kConnexionClientWildcard, clientName_.get(), kConnexionClientModeTakeOver, kConnexionMaskAll );
@@ -232,6 +240,7 @@ bool SpaceMouseHandler3dxMacDriver::initialize()
     lib_->SetConnexionClientMask( clientId_, kConnexionMaskAll );
     lib_->SetConnexionClientButtonMask( clientId_, kConnexionMaskAllButtons );
 
+    spdlog::info( "Successfully connected to the 3DxWare driver" );
     return true;
 }
 

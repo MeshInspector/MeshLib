@@ -22,8 +22,9 @@ constexpr auto kConnexionMaskAllButtons = 0xFFFFFFFF;
 constexpr auto kConnexionCmdHandleButtons = 2;
 constexpr auto kConnexionCmdHandleAxis = 3;
 constexpr auto kConnexionMsgDeviceState = 0x33645352; // '3dSR'
+constexpr auto kConnexionMsgPrefsChanged = 0x33645043; // '3dPC'
 
-#pragma pack( push, 1 )
+#pragma pack( push, 2 )
 struct ConnexionDeviceState
 {
     uint16_t version;
@@ -37,6 +38,30 @@ struct ConnexionDeviceState
     int16_t axis[6];
     uint16_t address;
     uint32_t buttons;
+};
+
+struct ConnexionDevicePrefs
+{
+    uint16_t type;
+    uint16_t version;
+    uint16_t deviceID;
+    uint16_t reserved1;
+    uint32_t appSignature;
+    uint32_t reserved2;
+    uint8_t appName[64];
+    uint8_t mainSpeed;
+    uint8_t zoomOnY;
+    uint8_t dominant;
+    uint8_t reserved3;
+    int8_t mapV[6];
+    int8_t mapH[6];
+    uint8_t enabled[6];
+    uint8_t reversed[6];
+    uint8_t speed[6];
+    uint8_t sensitivity[6];
+    int32_t scale[6];
+    uint32_t gamma;
+    uint32_t intersect;
 };
 #pragma pack( pop )
 
@@ -53,6 +78,8 @@ typedef void (*UnregisterConnexionClientFunc)( uint16_t clientID );
 
 typedef int16_t (*ConnexionClientControlFunc)( uint16_t clientID, uint32_t message, int32_t param, int32_t* result );
 
+typedef int16_t (*ConnexionGetCurrentDevicePrefsFunc)( uint32_t deviceID, ConnexionDevicePrefs* prefs );
+
 struct LibHandle
 {
     void* handle{ nullptr };
@@ -65,6 +92,7 @@ struct LibHandle
     DEFINE_SYM( SetConnexionClientButtonMask )
     DEFINE_SYM( UnregisterConnexionClient )
     DEFINE_SYM( ConnexionClientControl )
+    DEFINE_SYM( ConnexionGetCurrentDevicePrefs )
 #undef DEFINE_SYM
 
     bool loadSymbols()
@@ -85,6 +113,7 @@ struct LibHandle
         LOAD_SYM( SetConnexionClientButtonMask )
         LOAD_SYM( UnregisterConnexionClient )
         LOAD_SYM( ConnexionClientControl )
+        LOAD_SYM( ConnexionGetCurrentDevicePrefs )
 #undef LOAD_SYM
         return true;
     }
@@ -93,6 +122,7 @@ struct LibHandle
 std::mutex gStateMutex;
 LibHandle lib;
 std::unordered_set<uint16_t> gKnownClientIds;
+std::unordered_map<uint32_t, ConnexionDevicePrefs> gKnownDevices;
 uint32_t gButtonState{ 0 };
 
 float normalize( int16_t value )
@@ -107,7 +137,50 @@ float normalize( int16_t value )
     return result;
 }
 
-void onSpaceMouseMessage( uint32_t, uint32_t type, void* arg )
+void updateDevicePrefs( uint32_t deviceId, ConnexionDevicePrefs& prefs )
+{
+    lib.ConnexionGetCurrentDevicePrefs( deviceId, &prefs );
+
+    // TODO: remove debug logging
+#define PRINT_FIELD( NAME ) \
+    spdlog::debug( "3DxWare driver: {} = {}", #NAME, prefs. NAME );
+#define PRINT_FIELD_ARRAY( NAME ) \
+    {                             \
+        auto& a = prefs. NAME;    \
+        spdlog::debug( "3DxWare driver: {} = [ {}, {}, {}, {}, {}, {} ]", #NAME, a[0], a[1], a[2], a[3], a[4], a[5] ); \
+    }
+    PRINT_FIELD( type )
+    PRINT_FIELD( version )
+    PRINT_FIELD( deviceID )
+    PRINT_FIELD( mainSpeed )
+    PRINT_FIELD( zoomOnY )
+    PRINT_FIELD( dominant )
+    PRINT_FIELD_ARRAY( mapV )
+    PRINT_FIELD_ARRAY( mapH )
+    PRINT_FIELD_ARRAY( enabled )
+    PRINT_FIELD_ARRAY( reversed )
+    PRINT_FIELD_ARRAY( speed )
+    PRINT_FIELD_ARRAY( sensitivity )
+    PRINT_FIELD_ARRAY( scale )
+    PRINT_FIELD( gamma )
+    PRINT_FIELD( intersect )
+#undef PRINT_FIELD_ARRAY
+#undef PRINT_FIELD
+}
+
+void onSpaceMouseDeviceAdded( uint32_t deviceId )
+{
+    std::unique_lock lock( gStateMutex );
+    updateDevicePrefs( deviceId, gKnownDevices[deviceId] );
+}
+
+void onSpaceMouseDeviceRemoved( uint32_t deviceId )
+{
+    std::unique_lock lock( gStateMutex );
+    gKnownDevices.erase( deviceId );
+}
+
+void onSpaceMouseMessage( uint32_t deviceId, uint32_t type, void* arg )
 {
     auto& viewer = getViewerInstance();
     if ( type == kConnexionMsgDeviceState )
@@ -118,6 +191,14 @@ void onSpaceMouseMessage( uint32_t, uint32_t type, void* arg )
         const auto* state = (ConnexionDeviceState*)arg;
         if ( gKnownClientIds.find( state->client ) == gKnownClientIds.end() )
             return;
+
+        auto it = gKnownDevices.find( deviceId );
+        if ( it == gKnownDevices.end() )
+            return;
+        const auto& [_, prefs] = *it;
+
+        // TODO: use the device preferences
+        (void)prefs;
 
         switch ( state->command )
         {
@@ -154,6 +235,12 @@ void onSpaceMouseMessage( uint32_t, uint32_t type, void* arg )
             }
                 break;
         }
+    }
+
+    else if ( type == kConnexionMsgPrefsChanged )
+    {
+        std::unique_lock lock( gStateMutex );
+        updateDevicePrefs( deviceId, gKnownDevices[deviceId] );
     }
 }
 
@@ -229,7 +316,7 @@ bool SpaceMouseHandler3dxMacDriver::initialize()
         return false;
     }
 
-    lib.SetConnexionHandlers( onSpaceMouseMessage, nullptr, nullptr, false );
+    lib.SetConnexionHandlers( onSpaceMouseMessage, onSpaceMouseDeviceAdded, onSpaceMouseDeviceRemoved, false );
 
     clientId_ = lib.RegisterConnexionClient( kConnexionClientWildcard, clientName_.get(), kConnexionClientModeTakeOver, kConnexionMaskAll );
     if ( clientId_ == 0 )

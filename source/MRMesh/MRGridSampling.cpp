@@ -235,7 +235,13 @@ std::optional<std::vector<ModelVertId>> multiModelGridSampling( const Vector<Mod
         if ( !model.points || !model.validPoints )
             continue;
         for ( auto v : *model.validPoints )
-            grid.addVertex( ( *model.points )[v], v, oId );
+        {
+            if ( model.xf )
+                grid.addVertex( ( *model.xf )( ( *model.points )[v] ), v, oId );
+            else
+                grid.addVertex( ( *model.points )[v], v, oId );
+        }
+       
 
         if ( !reportProgress( sb, float( oId + 1 ) / models.size() ) )
             return {};

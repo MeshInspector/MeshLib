@@ -12,16 +12,16 @@ namespace MR
 /// \{
 
 template<typename L, typename B>
-struct ABBTreeTraits
+struct AABBTreeTraits
 {
     using LeafId = L;
     using BoxT = B;
 };
 
-using FaceTreeTraits3 = ABBTreeTraits<FaceId, Box3f>;
+using FaceTreeTraits3 = AABBTreeTraits<FaceId, Box3f>;
 
 template<typename V>
-using LineTreeTraits = ABBTreeTraits<UndirectedEdgeId, Box<V>>;
+using LineTreeTraits = AABBTreeTraits<UndirectedEdgeId, Box<V>>;
 using LineTreeTraits2 = LineTreeTraits<Vector2f>;
 using LineTreeTraits3 = LineTreeTraits<Vector3f>;
 

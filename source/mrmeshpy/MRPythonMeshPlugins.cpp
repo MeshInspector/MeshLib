@@ -28,6 +28,7 @@
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRExtractIsolines.h"
 #include "MRMesh/MRContour.h"
+#include "MRMesh/MRContoursStitch.h"
 #include "MRMesh/MRMeshOverhangs.h"
 #include "MRMesh/MRConvexHull.h"
 #include "MRMesh/MRPointCloud.h"
@@ -389,6 +390,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
         pybind11::arg( "mesh" ), pybind11::arg( "verts" ), pybind11::arg_v( "edgeWeightsType", MR::Laplacian::EdgeWeights::Cotan, "LaplacianEdgeWeightsParam.Cotan" ),
         pybind11::arg( "fixedSharpVertices" ) = nullptr,
         "Puts given vertices in such positions to make smooth surface both inside verts-region and on its boundary" );
+
+    m.def ( "positionVertsSmoothlySharpBd", &MR::positionVertsSmoothlySharpBd,
+        pybind11::arg( "mesh" ), pybind11::arg( "verts" ), pybind11::arg( "vertShifts" ) = nullptr,
+        "Puts given vertices in such positions to make smooth surface inside verts-region, but sharp on its boundary\n"
+        "\tmesh - source mesh\n"
+        "\tverts - vertices to reposition. Cannot be all vertices of a connected component of the source mesh\n"
+        "\tvertShifts (optional) = additional shifts of each vertex relative to smooth position\n"
+    );
 } )
 
 // Position Verts Smooth (Inflation)
@@ -553,4 +562,33 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ConvexHull, [] ( pybind11::module_& m )
     m.def( "makeConvexHull",  ( Mesh ( * ) ( const PointCloud& ) )&  makeConvexHull, 
         pybind11::arg( "pointCloud" ),
         "Computes the Mesh of convex hull from given input `PointCloud`" );
+} )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ContourStitch, [] ( pybind11::module_& m )
+{
+    m.def( "stitchContours", &MR::stitchContours,
+        pybind11::arg( "topology" ), pybind11::arg( "c0" ), pybind11::arg( "c1" ),
+        "Merges the surface along corresponding edges of two contours, and deletes all vertices and edges from c1"
+        "Requires both contours to:\n"
+        "\t1) have equal size\n"
+        "\t2) All edges of c0 with no left faces\n"
+        "\t3) All edges of c1 have no right faces"
+    );
+
+    m.def( "cutAlongEdgeLoop", ( MR::EdgeLoop ( * ) ( MR::MeshTopology&, const MR::EdgeLoop& ) ) & MR::cutAlongEdgeLoop,
+        pybind11::arg( "topology" ), pybind11::arg( "c0" ),
+        "Given a closed loop of edges, splits the surface along that loop such that after return:\n"
+        "\t1) Returned loop has the same size as input, with corresponding edges in same indexed elements of both\n"
+        "\t2) All edges of `edgeLoop` have no left faces\n"
+        "\t3) All returned edges have no right faces"
+    );
+
+    m.def( "cutAlongEdgeLoop", ( MR::EdgeLoop ( * ) ( MR::Mesh&, const MR::EdgeLoop& ) ) & MR::cutAlongEdgeLoop,
+        pybind11::arg( "mesh" ), pybind11::arg( "c0" ),
+        "Given a closed loop of edges, splits the surface along that loop such that after return:\n"
+        "\t1) Returned loop has the same size as input, with corresponding edges in same indexed elements of both\n"
+        "\t2) All edges of `edgeLoop` have no left faces\n"
+        "\t3) All returned edges have no right faces"
+        "\t4) Vertices of the given mesh are updated"
+    );
 } )

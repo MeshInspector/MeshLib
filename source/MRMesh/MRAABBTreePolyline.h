@@ -31,13 +31,14 @@ class AABBTreePolyline : public AABBTreeBase<LineTreeTraits<V>>
     using Base = AABBTreeBase<LineTreeTraits<V>>;
 
 public:
-    using Base::Traits;
-    using Base::Node;
-    using Base::NodeVec;
+    using typename Base::Traits;
+    using typename Base::Node;
+    using typename Base::NodeVec;
 
 public:
     /// creates tree for given polyline
     MRMESH_API AABBTreePolyline( const typename PolylineTraits<V>::Polyline & polyline );
+
     /// creates tree for selected edges on the mesh (only for 3d tree)
     MRMESH_API AABBTreePolyline( const Mesh& mesh, const UndirectedEdgeBitSet & edgeSet );
 
@@ -48,8 +49,10 @@ public:
 private:
     /// make copy constructor unavailable for the public to avoid unnecessary copies
     AABBTreePolyline( const AABBTreePolyline & ) = default;
+
     /// make assign operator unavailable for the public to avoid unnecessary copies
     AABBTreePolyline & operator =( const AABBTreePolyline & ) = default;
+
     friend class UniqueThreadSafeOwner<AABBTreePolyline>;
 
     using Base::nodes_;

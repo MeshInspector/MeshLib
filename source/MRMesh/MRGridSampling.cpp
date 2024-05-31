@@ -116,7 +116,7 @@ std::vector<MR::ModelVertId> Grid::setSamplesPerModel() const
     {
         if ( !ge.vid )
             continue;
-        res[0] = { ge.oid,ge.vid };
+        res[counter] = { ge.oid,ge.vid };
         ++counter;
     }
     return res;

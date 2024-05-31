@@ -116,7 +116,7 @@ if [ "${MESHLIB_BUILD_RELEASE}" = "ON" ]; then
     if [ "${MR_EMSCRIPTEN}" != "ON" ]; then
       cmake ../.. -DCMAKE_BUILD_TYPE=Release ${MR_CMAKE_OPTIONS} | tee ${logfile}
     else
-      emcmake cmake ../.. -DCMAKE_FIND_ROOT_PATH=${PWD}/../.. -DMR_EMSCRIPTEN=1 -DMR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} -DCMAKE_BUILD_TYPE=Release ${MR_CMAKE_OPTIONS} | tee ${logfile}
+      emcmake cmake ../.. --debug-find -DCMAKE_FIND_ROOT_PATH=${PWD}/../.. -DMR_EMSCRIPTEN=1 -DMR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} -DCMAKE_BUILD_TYPE=Release ${MR_CMAKE_OPTIONS} | tee ${logfile}
     fi
   fi 
   if [ "${MR_EMSCRIPTEN}" != "ON" ]; then

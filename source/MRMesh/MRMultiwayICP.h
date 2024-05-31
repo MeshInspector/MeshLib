@@ -5,16 +5,19 @@
 namespace MR
 {
 
-class MRMESH_CLASS MeshOrPointsTag;
-using MeshOrPointsId = Id<MeshOrPointsTag>;
-using IndexedPairs = Vector<PointPairs, MeshOrPointsId>;
+using IndexedPairs = Vector<PointPairs, ObjId>;
 
+/// This class allows you to register many objects having similar parts
+/// and known initial approximations of orientations/locations using
+/// Iterative Closest Points (ICP) point-to-point or point-to-plane algorithms
 class MRMESH_CLASS MultiwayICP
 {
 public:
-    MRMESH_API MultiwayICP( const Vector<MeshOrPointsXf, MeshOrPointsId>& objects, float samplingVoxelSize );
+    MRMESH_API MultiwayICP( const Vector<MeshOrPointsXf, ObjId>& objects, float samplingVoxelSize );
     
-    [[nodiscard]] MRMESH_API Vector<AffineXf3f, MeshOrPointsId> calculateTransformations( ProgressCallback cb = {} );
+    /// runs ICP algorithm given input objects, transformations, and parameters;
+    /// \return adjusted transformations of all objects to reach registered state
+    [[nodiscard]] MRMESH_API Vector<AffineXf3f, ObjId> calculateTransformations( ProgressCallback cb = {} );
     
     /// select pairs with origin samples on all objects
     MRMESH_API void resamplePoints( float samplingVoxelSize );
@@ -30,19 +33,19 @@ public:
     [[nodiscard]] MRMESH_API float getMeanSqDistToPoint() const;
 
     /// computes root-mean-square deviation between points of given object
-    [[nodiscard]] MRMESH_API float getMeanSqDistToPoint( MeshOrPointsId id ) const;
+    [[nodiscard]] MRMESH_API float getMeanSqDistToPoint( ObjId id ) const;
 
     /// computes root-mean-square deviation from points to target planes
     [[nodiscard]] MRMESH_API float getMeanSqDistToPlane() const;
 
     /// computes root-mean-square deviation from points to target planes  of given object
-    [[nodiscard]] MRMESH_API float getMeanSqDistToPlane( MeshOrPointsId id ) const;
+    [[nodiscard]] MRMESH_API float getMeanSqDistToPlane( ObjId id ) const;
 
     /// computes the number of active point pairs
     [[nodiscard]] MRMESH_API size_t getNumActivePairs() const;
 
     /// computes the number of active point pairs of given object
-    [[nodiscard]] MRMESH_API size_t getNumActivePairs( MeshOrPointsId id ) const;
+    [[nodiscard]] MRMESH_API size_t getNumActivePairs( ObjId id ) const;
 
     /// sets callback that will be called for each iteration
     void setPerIterationCallback( std::function<void( int inter )> callback ) { perIterationCb_ = std::move( callback ); }
@@ -53,10 +56,11 @@ public:
     void devEnableIndependentEquationsMode( bool on ) { maxGroupSize_ = on ? 1 : 0; }
 
     /// returns status info string
-    [[nodiscard]] MRMESH_API std::string getStatusInfo() const; 
+    [[nodiscard]] MRMESH_API std::string getStatusInfo() const;
+
 private:
-    Vector<MeshOrPointsXf, MeshOrPointsId> objs_;
-    Vector<IndexedPairs, MeshOrPointsId> pairsPerObj_;
+    Vector<MeshOrPointsXf, ObjId> objs_;
+    Vector<IndexedPairs, ObjId> pairsPerObj_;
     ICPProperties prop_;
 
     ICPExitType resultType_{ ICPExitType::NotStarted };

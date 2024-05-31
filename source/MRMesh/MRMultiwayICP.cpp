@@ -9,13 +9,13 @@
 namespace MR
 {
 
-MultiwayICP::MultiwayICP( const Vector<MeshOrPointsXf, MeshOrPointsId>& objects, float samplingVoxelSize ) :
+MultiwayICP::MultiwayICP( const Vector<MeshOrPointsXf, ObjId>& objects, float samplingVoxelSize ) :
     objs_{ objects }
 {
     resamplePoints( samplingVoxelSize );
 }
 
-Vector<AffineXf3f, MeshOrPointsId> MultiwayICP::calculateTransformations( ProgressCallback cb )
+Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformations( ProgressCallback cb )
 {
     float minDist = std::numeric_limits<float>::max();
     int badIterCount = 0;
@@ -66,10 +66,10 @@ Vector<AffineXf3f, MeshOrPointsId> MultiwayICP::calculateTransformations( Progre
             return {};
     }
 
-    Vector<AffineXf3f, MeshOrPointsId> res;
+    Vector<AffineXf3f, ObjId> res;
     res.resize( objs_.size() );
     for ( int i = 0; i < objs_.size(); ++i )
-        res[MeshOrPointsId( i )] = objs_[MeshOrPointsId( i )].xf;
+        res[ObjId( i )] = objs_[ObjId( i )].xf;
     return res;
 }
 
@@ -78,9 +78,9 @@ void MultiwayICP::resamplePoints( float samplingVoxelSize )
     MR_TIMER;
     samplingSize_ = samplingVoxelSize;
 
-    Vector<VertBitSet, MeshOrPointsId> samplesPerObj( objs_.size() );
+    Vector<VertBitSet, ObjId> samplesPerObj( objs_.size() );
 
-    ParallelFor( objs_, [&] ( MeshOrPointsId ind )
+    ParallelFor( objs_, [&] ( ObjId ind )
     {
         const auto& obj = objs_[ind];
         samplesPerObj[ind] = *obj.obj.pointsGridSampling( samplingVoxelSize );
@@ -100,18 +100,18 @@ float MultiwayICP::getMeanSqDistToPoint() const
             size_t j = r / objs_.size();
             if ( i == j )
                 continue;
-            curr = curr + MR::getSumSqDistToPoint( pairsPerObj_[MeshOrPointsId( i )][MeshOrPointsId( j )] );
+            curr = curr + MR::getSumSqDistToPoint( pairsPerObj_[ObjId( i )][ObjId( j )] );
         }
         return curr;
     }, [] ( auto a, auto b ) { return a + b; } ).rootMeanSqF();
 }
 
-float MultiwayICP::getMeanSqDistToPoint( MeshOrPointsId id ) const
+float MultiwayICP::getMeanSqDistToPoint( ObjId id ) const
 {
-    return tbb::parallel_deterministic_reduce( tbb::blocked_range( MeshOrPointsId( 0 ), MeshOrPointsId( objs_.size() ) ), NumSum(),
+    return tbb::parallel_deterministic_reduce( tbb::blocked_range( ObjId( 0 ), ObjId( objs_.size() ) ), NumSum(),
         [&] ( const auto& range, NumSum curr )
     {
-        for ( MeshOrPointsId i = range.begin(); i < range.end(); ++i )
+        for ( ObjId i = range.begin(); i < range.end(); ++i )
         {
             if ( i == id )
                 continue;
@@ -132,18 +132,18 @@ float MultiwayICP::getMeanSqDistToPlane() const
             size_t j = r / objs_.size();
             if ( i == j )
                 continue;
-            curr = curr + MR::getSumSqDistToPlane( pairsPerObj_[MeshOrPointsId( i )][MeshOrPointsId( j )] );
+            curr = curr + MR::getSumSqDistToPlane( pairsPerObj_[ObjId( i )][ObjId( j )] );
         }
         return curr;
     }, [] ( auto a, auto b ) { return a + b; } ).rootMeanSqF();
 }
 
-float MultiwayICP::getMeanSqDistToPlane( MeshOrPointsId id ) const
+float MultiwayICP::getMeanSqDistToPlane( ObjId id ) const
 {
-    return tbb::parallel_deterministic_reduce( tbb::blocked_range( MeshOrPointsId( 0 ), MeshOrPointsId( objs_.size() ) ), NumSum(),
+    return tbb::parallel_deterministic_reduce( tbb::blocked_range( ObjId( 0 ), ObjId( objs_.size() ) ), NumSum(),
         [&] ( const auto& range, NumSum curr )
     {
-        for ( MeshOrPointsId i = range.begin(); i < range.end(); ++i )
+        for ( ObjId i = range.begin(); i < range.end(); ++i )
         {
             if ( i == id )
                 continue;
@@ -164,18 +164,18 @@ size_t MultiwayICP::getNumActivePairs() const
             size_t j = r / objs_.size();
             if ( i == j )
                 continue;
-            curr += MR::getNumActivePairs( pairsPerObj_[MeshOrPointsId( i )][MeshOrPointsId( j )] );
+            curr += MR::getNumActivePairs( pairsPerObj_[ObjId( i )][ObjId( j )] );
         }
         return curr;
     }, [] ( auto a, auto b ) { return a + b; } );
 }
 
-size_t MultiwayICP::getNumActivePairs( MeshOrPointsId id ) const
+size_t MultiwayICP::getNumActivePairs( ObjId id ) const
 {
-    return tbb::parallel_deterministic_reduce( tbb::blocked_range( MeshOrPointsId( 0 ), MeshOrPointsId( objs_.size() ) ), size_t( 0 ),
+    return tbb::parallel_deterministic_reduce( tbb::blocked_range( ObjId( 0 ), ObjId( objs_.size() ) ), size_t( 0 ),
         [&] ( const auto& range, size_t curr )
     {
-        for ( MeshOrPointsId i = range.begin(); i < range.end(); ++i )
+        for ( ObjId i = range.begin(); i < range.end(); ++i )
         {
             if ( i == id )
                 continue;
@@ -241,8 +241,8 @@ void MultiwayICP::updatePointsPairsGroupWise_()
     MR_TIMER;
     ParallelFor( size_t( 0 ), objs_.size() * objs_.size(), [&] ( size_t r )
     {
-        auto i = MeshOrPointsId( r % objs_.size() );
-        auto j = MeshOrPointsId( r / objs_.size() );
+        auto i = ObjId( r % objs_.size() );
+        auto j = ObjId( r / objs_.size() );
         if ( i == j )
             return;
         auto groupI = i / maxGroupSize_;
@@ -258,10 +258,10 @@ void MultiwayICP::deactivatefarDistPairs_()
 {
     MR_TIMER;
 
-    Vector<float, MeshOrPointsId> maxDistSq( objs_.size() );
+    Vector<float, ObjId> maxDistSq( objs_.size() );
     for ( int it = 0; it < 3; ++it )
     {
-        ParallelFor( maxDistSq, [&] ( MeshOrPointsId id )
+        ParallelFor( maxDistSq, [&] ( ObjId id )
         {
             maxDistSq[id] = sqr( prop_.farDistFactor * getMeanSqDistToPoint( id ) );
         } );
@@ -269,8 +269,8 @@ void MultiwayICP::deactivatefarDistPairs_()
         tbb::enumerable_thread_specific<size_t> counters( 0 );
         ParallelFor( size_t( 0 ), objs_.size() * objs_.size(), [&] ( size_t r )
         {
-            auto i = MeshOrPointsId( r % objs_.size() );
-            auto j = MeshOrPointsId( r / objs_.size() );
+            auto i = ObjId( r % objs_.size() );
+            auto j = ObjId( r / objs_.size() );
             if ( i == j )
                 return;
             if ( maxDistSq[i] >= prop_.distThresholdSq )
@@ -313,11 +313,11 @@ bool MultiwayICP::p2ptIter_()
 {
     MR_TIMER;
     using FullSizeBool = uint8_t;
-    Vector<FullSizeBool, MeshOrPointsId> valid( objs_.size() );
-    ParallelFor( objs_, [&] ( MeshOrPointsId id )
+    Vector<FullSizeBool, ObjId> valid( objs_.size() );
+    ParallelFor( objs_, [&] ( ObjId id )
     {
         PointToPointAligningTransform p2pt;
-        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
+        for ( ObjId j( 0 ); j < objs_.size(); ++j )
         {
             if ( j == id )
                 continue;
@@ -371,12 +371,12 @@ bool MultiwayICP::p2plIter_()
 {
     MR_TIMER;
     using FullSizeBool = uint8_t;
-    Vector<FullSizeBool, MeshOrPointsId> valid( objs_.size() );
-    ParallelFor( objs_, [&] ( MeshOrPointsId id )
+    Vector<FullSizeBool, ObjId> valid( objs_.size() );
+    ParallelFor( objs_, [&] ( ObjId id )
     {
         Vector3f centroidRef;
         int activeCount = 0;
-        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
+        for ( ObjId j( 0 ); j < objs_.size(); ++j )
         {
             if ( j == id )
                 continue;
@@ -404,7 +404,7 @@ bool MultiwayICP::p2plIter_()
         AffineXf3f centroidRefXf = AffineXf3f( Matrix3f(), centroidRef );
 
         PointToPlaneAligningTransform p2pl;
-        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
+        for ( ObjId j( 0 ); j < objs_.size(); ++j )
         {
             if ( j == id )
                 continue;
@@ -436,12 +436,12 @@ bool MultiwayICP::p2plIter_()
 bool MultiwayICP::multiwayIter_( bool p2pl )
 {
     MR_TIMER;
-    Vector<MultiwayAligningTransform,MeshOrPointsId> mats( objs_.size() );
-    ParallelFor( mats, [&] ( MeshOrPointsId i )
+    Vector<MultiwayAligningTransform,ObjId> mats( objs_.size() );
+    ParallelFor( mats, [&] ( ObjId i )
     {
         auto& mat = mats[i];
         mat.reset( int( objs_.size() ) );
-        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
+        for ( ObjId j( 0 ); j < objs_.size(); ++j )
         {
             if ( j == i )
                 continue;
@@ -467,7 +467,7 @@ bool MultiwayICP::multiwayIter_( bool p2pl )
     stabilizer.rot = samplingSize_ * 1e-1f;
     stabilizer.shift = 1e-3f;
     auto res = mat.solve( stabilizer );
-    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+    for ( ObjId i( 0 ); i < objs_.size(); ++i )
     {
         auto resI = res[i.get()].rigidXf();
         if ( std::isnan( resI.b.x ) )

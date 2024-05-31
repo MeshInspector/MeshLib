@@ -53,7 +53,7 @@ typedef void (*UnregisterConnexionClientFunc)( uint16_t clientID );
 
 typedef int16_t (*ConnexionClientControlFunc)( uint16_t clientID, uint32_t message, int32_t param, int32_t* result );
 
-// TODO: thread safety?
+std::mutex gStateMutex;
 std::unordered_set<uint16_t> gKnownClientIds;
 uint32_t gButtonState{ 0 };
 
@@ -74,6 +74,8 @@ void onSpaceMouseMessage( uint32_t, uint32_t type, void* arg )
     auto& viewer = getViewerInstance();
     if ( type == kConnexionMsgDeviceState )
     {
+        std::unique_lock lock( gStateMutex );
+
         assert( arg );
         const auto* state = (ConnexionDeviceState*)arg;
         if ( gKnownClientIds.find( state->client ) == gKnownClientIds.end() )
@@ -82,7 +84,6 @@ void onSpaceMouseMessage( uint32_t, uint32_t type, void* arg )
         switch ( state->command )
         {
             case kConnexionCmdHandleButtons:
-                // TODO: thread safety?
                 for ( auto btn = 0; btn < 32; ++btn )
                 {
                     const auto mask = 1 << btn;
@@ -173,8 +174,10 @@ SpaceMouseHandler3dxMacDriver::~SpaceMouseHandler3dxMacDriver()
         if ( clientId_ )
         {
             lib_->UnregisterConnexionClient( clientId_ );
-            // TODO: thread safety?
-            gKnownClientIds.erase( clientId_ );
+            {
+                std::unique_lock lock( gStateMutex );
+                gKnownClientIds.erase( clientId_ );
+            }
         }
         lib_->CleanupConnexionHandlers();
         dlclose( lib_->handle );
@@ -234,8 +237,10 @@ bool SpaceMouseHandler3dxMacDriver::initialize()
         spdlog::warn( "Failed to connect to the 3DxWare driver" );
         return false;
     }
-    // TODO: thread safety?
-    gKnownClientIds.emplace( clientId_ );
+    {
+        std::unique_lock lock( gStateMutex );
+        gKnownClientIds.emplace( clientId_ );
+    }
 
     lib_->SetConnexionClientMask( clientId_, kConnexionMaskAll );
     lib_->SetConnexionClientButtonMask( clientId_, kConnexionMaskAllButtons );

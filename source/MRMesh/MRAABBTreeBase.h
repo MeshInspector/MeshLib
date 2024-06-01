@@ -16,6 +16,7 @@ public:
     using LeafTag = typename T::LeafTag;
     using LeafId = typename T::LeafId;
     using LeafBitSet = TaggedBitSet<LeafTag>;
+    using LeafBMap = BMap<LeafId, LeafId>;
     using BoxT = typename T::BoxT;
 
 public:
@@ -45,6 +46,14 @@ public:
 
     /// returns set of nodes containing among direct or indirect children given leaves
     [[nodiscard]] MRMESH_API NodeBitSet getNodesFromLeaves( const LeafBitSet & leaves ) const;
+
+    /// fills map: LeafId -> leaf#;
+    /// buffer in leafMap must be resized before the call, and caller is responsible for filling missing leaf elements
+    MRMESH_API void getLeafOrder( LeafBMap & leafMap ) const;
+
+    /// fills map: LeafId -> leaf#, then resets leaf order to 0,1,2,...;
+    /// buffer in leafMap must be resized before the call, and caller is responsible for filling missing leaf elements
+    MRMESH_API void getLeafOrderAndReset( LeafBMap & leafMap );
 
 protected:
     NodeVec nodes_;

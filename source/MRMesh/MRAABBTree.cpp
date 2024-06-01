@@ -62,33 +62,6 @@ AABBTree::AABBTree( const MeshPart & mp )
     nodes_ = makeAABBTreeNodeVec( std::move( boxedFaces ) );
 }
 
-void AABBTree::getLeafOrder( FaceBMap & faceMap ) const
-{
-    MR_TIMER;
-    FaceId f = 0_f;
-    for ( auto & n : nodes_ )
-    {
-        if ( !n.leaf() )
-            continue;
-        faceMap.b[n.leafId()] = f++;
-    }
-    faceMap.tsize = int( f );
-}
-
-void AABBTree::getLeafOrderAndReset( FaceBMap & faceMap )
-{
-    MR_TIMER;
-    FaceId f = 0_f;
-    for ( auto & n : nodes_ )
-    {
-        if ( !n.leaf() )
-            continue;
-        faceMap.b[n.leafId()] = f;
-        n.setLeafId( f++ );
-    }
-    faceMap.tsize = int( f );
-}
-
 void AABBTree::refit( const Mesh & mesh, const VertBitSet & changedVerts )
 {
     MR_TIMER
@@ -126,6 +99,8 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet & changedVerts )
 template auto AABBTreeBase<FaceTreeTraits3>::getSubtrees( int minNum ) const -> std::vector<NodeId>;
 template auto AABBTreeBase<FaceTreeTraits3>::getSubtreeLeaves( NodeId subtreeRoot ) const -> LeafBitSet;
 template NodeBitSet AABBTreeBase<FaceTreeTraits3>::getNodesFromLeaves( const LeafBitSet & leaves ) const;
+template void AABBTreeBase<FaceTreeTraits3>::getLeafOrder( LeafBMap & leafMap ) const;
+template void AABBTreeBase<FaceTreeTraits3>::getLeafOrderAndReset( LeafBMap & leafMap );
 
 TEST(MRMesh, AABBTree)
 {

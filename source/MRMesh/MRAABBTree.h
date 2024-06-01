@@ -17,15 +17,9 @@ class AABBTree : public AABBTreeBase<FaceTreeTraits3>
 {
 public:
     /// creates tree for given mesh or its part
-    [[nodiscard]] MRMESH_API AABBTree( const MeshPart & mp );
+    [[nodiscard]] MRMESH_API explicit AABBTree( const MeshPart & mp );
 
-    /// returns FaceId -> leaf#;
-    /// buffer in faceMap must be resized before the call, and caller is responsible for filling missing face elements
-    MRMESH_API void getLeafOrder( FaceBMap & faceMap ) const;
-    /// returns FaceId -> leaf#, then resets leaf order to 0,1,2,...;
-    /// buffer in faceMap must be resized before the call, and caller is responsible for filling missing face elements
-    MRMESH_API void getLeafOrderAndReset( FaceBMap & faceMap );
-
+    AABBTree() = default;
     AABBTree( AABBTree && ) noexcept = default;
     AABBTree & operator =( AABBTree && ) noexcept = default;
 

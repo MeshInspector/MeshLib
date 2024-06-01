@@ -93,4 +93,10 @@ template auto AABBTreeBase<LineTreeTraits<Vector3f>>::getSubtreeLeaves( NodeId s
 template NodeBitSet AABBTreeBase<LineTreeTraits<Vector2f>>::getNodesFromLeaves( const LeafBitSet & leaves ) const;
 template NodeBitSet AABBTreeBase<LineTreeTraits<Vector3f>>::getNodesFromLeaves( const LeafBitSet & leaves ) const;
 
+template void AABBTreeBase<LineTreeTraits<Vector2f>>::getLeafOrder( LeafBMap & leafMap ) const;
+template void AABBTreeBase<LineTreeTraits<Vector3f>>::getLeafOrder( LeafBMap & leafMap ) const;
+
+template void AABBTreeBase<LineTreeTraits<Vector2f>>::getLeafOrderAndReset( LeafBMap & leafMap );
+template void AABBTreeBase<LineTreeTraits<Vector3f>>::getLeafOrderAndReset( LeafBMap & leafMap );
+
 } //namespace MR

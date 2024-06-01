@@ -91,4 +91,33 @@ NodeBitSet AABBTreeBase<T>::getNodesFromLeaves( const LeafBitSet & leaves ) cons
     return res;
 }
 
+template <typename T>
+void AABBTreeBase<T>::getLeafOrder( LeafBMap & leafMap ) const
+{
+    MR_TIMER
+    LeafId l( 0 );
+    for ( auto & n : nodes_ )
+    {
+        if ( !n.leaf() )
+            continue;
+        leafMap.b[n.leafId()] = l++;
+    }
+    leafMap.tsize = int( l );
+}
+
+template <typename T>
+void AABBTreeBase<T>::getLeafOrderAndReset( LeafBMap & leafMap )
+{
+    MR_TIMER
+    LeafId l( 0 );
+    for ( auto & n : nodes_ )
+    {
+        if ( !n.leaf() )
+            continue;
+        leafMap.b[n.leafId()] = l;
+        n.setLeafId( l++ );
+    }
+    leafMap.tsize = int( l );
+}
+
 } //namespace MR

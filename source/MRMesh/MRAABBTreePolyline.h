@@ -37,7 +37,7 @@ public:
 
 public:
     /// creates tree for given polyline
-    MRMESH_API AABBTreePolyline( const typename PolylineTraits<V>::Polyline & polyline );
+    MRMESH_API explicit AABBTreePolyline( const typename PolylineTraits<V>::Polyline & polyline );
 
     /// creates tree for selected edges on the mesh (only for 3d tree)
     MRMESH_API AABBTreePolyline( const Mesh& mesh, const UndirectedEdgeBitSet & edgeSet );

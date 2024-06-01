@@ -13,13 +13,6 @@ namespace MR
 
 using BoxedFace = BoxedLeaf<FaceTreeTraits3>;
 
-bool AABBTree::containsSameNumberOfTris( const Mesh & mesh ) const
-{
-    if ( mesh.topology.numValidFaces() <= 0 )
-        return nodes_.size() == 0;
-    return int(nodes_.size()) == getNumNodes( mesh.topology.numValidFaces() );
-}
-
 inline Box3f computeFaceBox( const Mesh & mesh, FaceId f )
 {
     Box3f box;

@@ -34,6 +34,9 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const { return nodes_.heapBytes(); }
 
+    /// returns the number of leaves in whole tree
+    [[nodiscard]] size_t numLeaves() const { return nodes_.empty() ? 0 : ( nodes_.size() + 1 / 2 ); }
+
     /// returns at least given number of top-level not-intersecting subtrees, union of which contain all tree leaves
     [[nodiscard]] MRMESH_API std::vector<NodeId> getSubtrees( int minNum ) const;
 

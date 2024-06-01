@@ -13,6 +13,10 @@ public:
     using Traits = T;
     using Node = AABBTreeNode<Traits>;
     using NodeVec = Vector<Node, NodeId>;
+    using LeafTag = typename T::LeafTag;
+    using LeafId = typename T::LeafId;
+    using LeafBitSet = TaggedBitSet<LeafTag>;
+    using BoxT = typename T::BoxT;
 
 public:
     /// const-access to all nodes
@@ -25,13 +29,16 @@ public:
     [[nodiscard]] static NodeId rootNodeId() { return NodeId{ 0 }; }
 
     /// returns the root node bounding box
-    [[nodiscard]] auto getBoundingBox() const { return nodes_.empty() ? typename Node::BoxT{} : nodes_[rootNodeId()].box; }
+    [[nodiscard]] BoxT getBoundingBox() const { return nodes_.empty() ? BoxT{} : nodes_[rootNodeId()].box; }
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const { return nodes_.heapBytes(); }
 
     /// returns at least given number of top-level not-intersecting subtrees, union of which contain all tree leaves
     [[nodiscard]] MRMESH_API std::vector<NodeId> getSubtrees( int minNum ) const;
+
+    /// returns all leaves in the subtree with given root
+    [[nodiscard]] MRMESH_API LeafBitSet getSubtreeLeaves( NodeId subtreeRoot ) const;
 
 protected:
     NodeVec nodes_;

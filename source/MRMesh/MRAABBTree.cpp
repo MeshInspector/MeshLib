@@ -71,36 +71,6 @@ AABBTree::AABBTree( const MeshPart & mp )
     nodes_ = makeAABBTreeNodeVec( std::move( boxedFaces ) );
 }
 
-FaceBitSet AABBTree::getSubtreeFaces( NodeId subtreeRoot ) const
-{
-    MR_TIMER;
-    FaceBitSet res;
-
-    constexpr int MaxStackSize = 32; // to avoid allocations
-    NodeId subtasks[MaxStackSize];
-    int stackSize = 0;
-    auto addSubTask = [&]( NodeId n )
-    {
-        if ( nodes_[n].leaf() )
-            res.autoResizeSet( nodes_[n].leafId() );
-        else
-        {
-            assert( stackSize < MaxStackSize );
-            subtasks[stackSize++] = n;
-        }
-    };
-    addSubTask( subtreeRoot );
-
-    while( stackSize > 0 )
-    {
-        NodeId n = subtasks[--stackSize];
-        addSubTask( nodes_[n].r );
-        addSubTask( nodes_[n].l );
-    }
-
-    return res;
-}
-
 void AABBTree::getLeafOrder( FaceBMap & faceMap ) const
 {
     MR_TIMER;
@@ -187,6 +157,7 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet & changedVerts )
 }
 
 template auto AABBTreeBase<FaceTreeTraits3>::getSubtrees( int minNum ) const -> std::vector<NodeId>;
+template auto AABBTreeBase<FaceTreeTraits3>::getSubtreeLeaves( NodeId subtreeRoot ) const -> LeafBitSet;
 
 TEST(MRMesh, AABBTree)
 {

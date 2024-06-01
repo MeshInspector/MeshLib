@@ -90,7 +90,7 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
             };
             if ( !reportThreadProgress( 0 ) )
                 break;
-            auto faces = tree.getSubtreeFaces( subroots[i] );
+            auto faces = tree.getSubtreeLeaves( subroots[i] );
             auto & submesh = submeshes[i];
             VertMap vertSubToFull;
             FaceHashMap faceFullToSub;

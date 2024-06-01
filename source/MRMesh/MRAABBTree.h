@@ -23,9 +23,6 @@ public:
     /// creates tree for given mesh or its part
     [[nodiscard]] MRMESH_API AABBTree( const MeshPart & mp );
 
-    /// returns all faces in the subtree with given root
-    [[nodiscard]] MRMESH_API FaceBitSet getSubtreeFaces( NodeId subtreeRoot ) const;
-
     /// returns FaceId -> leaf#;
     /// buffer in faceMap must be resized before the call, and caller is responsible for filling missing face elements
     MRMESH_API void getLeafOrder( FaceBMap & faceMap ) const;

@@ -87,4 +87,7 @@ template AABBTreePolyline<Vector3f>::AABBTreePolyline( const Mesh &, const Undir
 template auto AABBTreeBase<LineTreeTraits<Vector2f>>::getSubtrees( int minNum ) const -> std::vector<NodeId>;
 template auto AABBTreeBase<LineTreeTraits<Vector3f>>::getSubtrees( int minNum ) const -> std::vector<NodeId>;
 
+template auto AABBTreeBase<LineTreeTraits<Vector2f>>::getSubtreeLeaves( NodeId subtreeRoot ) const -> LeafBitSet;
+template auto AABBTreeBase<LineTreeTraits<Vector3f>>::getSubtreeLeaves( NodeId subtreeRoot ) const -> LeafBitSet;
+
 } //namespace MR

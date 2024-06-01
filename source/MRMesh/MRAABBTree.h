@@ -25,8 +25,7 @@ public:
 
     /// returns all faces in the subtree with given root
     [[nodiscard]] MRMESH_API FaceBitSet getSubtreeFaces( NodeId subtreeRoot ) const;
-    /// returns at least given number of top-level not-intersecting subtrees, union of which contain all tree leaves
-    [[nodiscard]] MRMESH_API std::vector<NodeId> getSubtrees( int minNum ) const;
+
     /// returns FaceId -> leaf#;
     /// buffer in faceMap must be resized before the call, and caller is responsible for filling missing face elements
     MRMESH_API void getLeafOrder( FaceBMap & faceMap ) const;

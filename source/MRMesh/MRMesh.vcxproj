@@ -396,6 +396,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
+    <ClCompile Include="MRAABBTreeBase.hpp" />
     <ClCompile Include="MRAABBTreeMaker.cpp" />
     <ClCompile Include="miniply.cpp" />
     <ClCompile Include="MRAABBTree.cpp" />

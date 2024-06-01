@@ -2111,6 +2111,9 @@
     <ClCompile Include="MRDipole.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
+    <ClCompile Include="MRAABBTreeBase.hpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

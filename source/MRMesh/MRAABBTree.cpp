@@ -1,4 +1,5 @@
 #include "MRAABBTree.h"
+#include "MRAABBTreeBase.hpp"
 #include "MRAABBTreeMaker.h"
 #include "MRMesh.h"
 #include "MRTimer.h"
@@ -100,35 +101,6 @@ FaceBitSet AABBTree::getSubtreeFaces( NodeId subtreeRoot ) const
     return res;
 }
 
-auto AABBTree::getSubtrees( int minNum ) const -> std::vector<NodeId>
-{
-    MR_TIMER;
-    assert( minNum > 0 );
-    std::vector<NodeId> res;
-    if ( nodes_.empty() )
-        return res;
-    res.push_back( rootNodeId() );
-    std::vector<NodeId> tmp;
-    while ( res.size() < minNum )
-    {
-        for ( NodeId n : res )
-        {
-            if ( nodes_[n].leaf() )
-                tmp.push_back( n );
-            else
-            {
-                tmp.push_back( nodes_[n].l );
-                tmp.push_back( nodes_[n].r );
-            }
-        }
-        res.swap( tmp );
-        if ( res.size() == tmp.size() )
-            break;
-        tmp.clear();
-    }
-    return res;
-}
-
 void AABBTree::getLeafOrder( FaceBMap & faceMap ) const
 {
     MR_TIMER;
@@ -213,6 +185,8 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet & changedVerts )
         node.box.include( nodes_[node.r].box );
     }
 }
+
+template auto AABBTreeBase<FaceTreeTraits3>::getSubtrees( int minNum ) const -> std::vector<NodeId>;
 
 TEST(MRMesh, AABBTree)
 {

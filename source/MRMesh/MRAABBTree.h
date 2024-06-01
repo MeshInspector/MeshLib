@@ -30,9 +30,6 @@ public:
     /// buffer in faceMap must be resized before the call, and caller is responsible for filling missing face elements
     MRMESH_API void getLeafOrderAndReset( FaceBMap & faceMap );
 
-    /// returns set of nodes containing among direct or indirect children given faces
-    [[nodiscard]] MRMESH_API NodeBitSet getNodesFromFaces( const FaceBitSet & faces ) const;
-
     AABBTree( AABBTree && ) noexcept = default;
     AABBTree & operator =( AABBTree && ) noexcept = default;
 

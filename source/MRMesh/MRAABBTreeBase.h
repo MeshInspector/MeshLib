@@ -40,6 +40,9 @@ public:
     /// returns all leaves in the subtree with given root
     [[nodiscard]] MRMESH_API LeafBitSet getSubtreeLeaves( NodeId subtreeRoot ) const;
 
+    /// returns set of nodes containing among direct or indirect children given leaves
+    [[nodiscard]] MRMESH_API NodeBitSet getNodesFromLeaves( const LeafBitSet & leaves ) const;
+
 protected:
     NodeVec nodes_;
 };

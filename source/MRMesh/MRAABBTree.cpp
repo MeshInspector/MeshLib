@@ -4,10 +4,8 @@
 #include "MRMesh.h"
 #include "MRTimer.h"
 #include "MRMakeSphereMesh.h"
-#include "MRBitSetParallelFor.h"
 #include "MRBuffer.h"
 #include "MRGTest.h"
-#include "MRPch/MRTBB.h"
 #include "MRRegionBoundary.h"
 
 namespace MR
@@ -98,30 +96,6 @@ void AABBTree::getLeafOrderAndReset( FaceBMap & faceMap )
     faceMap.tsize = int( f );
 }
 
-auto AABBTree::getNodesFromFaces( const FaceBitSet & faces ) const -> NodeBitSet
-{
-    MR_TIMER;
-    NodeBitSet res( nodes_.size() );
-
-    // mark leaves
-    BitSetParallelForAll( res, [&]( NodeId nid )
-    {
-        auto & node = nodes_[nid];
-        res[nid] = node.leaf() && faces.test( node.leafId() );
-    } );
-
-    // mark inner nodes marching from leaves to root
-    for ( NodeId nid{ nodes_.size() - 1 }; nid; --nid )
-    {
-        auto & node = nodes_[nid];
-        if ( node.leaf() )
-            continue;
-        res[nid] = res.test( node.l ) || res.test( node.r );
-    }
-
-    return res;
-}
-
 void AABBTree::refit( const Mesh & mesh, const VertBitSet & changedVerts )
 {
     MR_TIMER
@@ -158,6 +132,7 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet & changedVerts )
 
 template auto AABBTreeBase<FaceTreeTraits3>::getSubtrees( int minNum ) const -> std::vector<NodeId>;
 template auto AABBTreeBase<FaceTreeTraits3>::getSubtreeLeaves( NodeId subtreeRoot ) const -> LeafBitSet;
+template NodeBitSet AABBTreeBase<FaceTreeTraits3>::getNodesFromLeaves( const LeafBitSet & leaves ) const;
 
 TEST(MRMesh, AABBTree)
 {

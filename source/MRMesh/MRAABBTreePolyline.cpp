@@ -90,4 +90,7 @@ template auto AABBTreeBase<LineTreeTraits<Vector3f>>::getSubtrees( int minNum ) 
 template auto AABBTreeBase<LineTreeTraits<Vector2f>>::getSubtreeLeaves( NodeId subtreeRoot ) const -> LeafBitSet;
 template auto AABBTreeBase<LineTreeTraits<Vector3f>>::getSubtreeLeaves( NodeId subtreeRoot ) const -> LeafBitSet;
 
+template NodeBitSet AABBTreeBase<LineTreeTraits<Vector2f>>::getNodesFromLeaves( const LeafBitSet & leaves ) const;
+template NodeBitSet AABBTreeBase<LineTreeTraits<Vector3f>>::getNodesFromLeaves( const LeafBitSet & leaves ) const;
+
 } //namespace MR

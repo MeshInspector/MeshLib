@@ -1,4 +1,5 @@
 #include "MRAABBTreeBase.h"
+#include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -60,6 +61,31 @@ auto AABBTreeBase<T>::getSubtreeLeaves( NodeId subtreeRoot ) const -> LeafBitSet
         NodeId n = subtasks[--stackSize];
         addSubTask( nodes_[n].r );
         addSubTask( nodes_[n].l );
+    }
+
+    return res;
+}
+
+template <typename T>
+NodeBitSet AABBTreeBase<T>::getNodesFromLeaves( const LeafBitSet & leaves ) const
+{
+    MR_TIMER
+    NodeBitSet res( nodes_.size() );
+
+    // mark leaves
+    BitSetParallelForAll( res, [&]( NodeId nid )
+    {
+        auto & node = nodes_[nid];
+        res[nid] = node.leaf() && leaves.test( node.leafId() );
+    } );
+
+    // mark inner nodes marching from leaves to root
+    for ( NodeId nid{ nodes_.size() - 1 }; nid; --nid )
+    {
+        auto & node = nodes_[nid];
+        if ( node.leaf() )
+            continue;
+        res[nid] = res.test( node.l ) || res.test( node.r );
     }
 
     return res;

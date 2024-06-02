@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRAABBTreeNode.h"
+#include "MRAABBTreeBase.h"
 #include "MRVector.h"
 
 namespace MR
@@ -26,33 +26,19 @@ struct PolylineTraits<Vector3f>
 
 /// bounding volume hierarchy for line segments
 template<typename V>
-class AABBTreePolyline
+class AABBTreePolyline : public AABBTreeBase<LineTreeTraits<V>>
 {
+    using Base = AABBTreeBase<LineTreeTraits<V>>;
+
 public:
-    using Traits = LineTreeTraits<V>;
-    using Node = AABBTreeNode<Traits>;
-    using NodeVec = Vector<Node, NodeId>;
+    using typename Base::Traits;
+    using typename Base::Node;
+    using typename Base::NodeVec;
 
-    [[nodiscard]] const NodeVec& nodes() const
-    {
-        return nodes_;
-    }
-    [[nodiscard]] const Node& operator[]( NodeId nid ) const
-    {
-        return nodes_[nid];
-    }
-    [[nodiscard]] static NodeId rootNodeId()
-    {
-        return NodeId{ 0 };
-    }
-    /// returns the root node bounding box
-    [[nodiscard]] Box<V> getBoundingBox() const
-    {
-        return nodes_.empty() ? Box<V>{} : nodes_[rootNodeId()].box;
-    }
-
+public:
     /// creates tree for given polyline
-    MRMESH_API AABBTreePolyline( const typename PolylineTraits<V>::Polyline & polyline );
+    MRMESH_API explicit AABBTreePolyline( const typename PolylineTraits<V>::Polyline & polyline );
+
     /// creates tree for selected edges on the mesh (only for 3d tree)
     MRMESH_API AABBTreePolyline( const Mesh& mesh, const UndirectedEdgeBitSet & edgeSet );
 
@@ -60,17 +46,16 @@ public:
     AABBTreePolyline( AABBTreePolyline && ) noexcept = default;
     AABBTreePolyline & operator =( AABBTreePolyline && ) noexcept = default;
 
-    /// returns the amount of memory this object occupies on heap
-    [[nodiscard]] size_t heapBytes() const { return nodes_.heapBytes(); }
-
 private:
     /// make copy constructor unavailable for the public to avoid unnecessary copies
     AABBTreePolyline( const AABBTreePolyline & ) = default;
+
     /// make assign operator unavailable for the public to avoid unnecessary copies
     AABBTreePolyline & operator =( const AABBTreePolyline & ) = default;
+
     friend class UniqueThreadSafeOwner<AABBTreePolyline>;
 
-    NodeVec nodes_;
+    using Base::nodes_;
 };
 
 /// \}

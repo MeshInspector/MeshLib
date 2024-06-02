@@ -1,4 +1,5 @@
 #include "MRAABBTreePolyline.h"
+#include "MRAABBTreeBase.hpp"
 #include "MRAABBTreeMaker.h"
 #include "MRPolyline.h"
 #include "MRMesh.h"
@@ -82,5 +83,20 @@ AABBTreePolyline<V>::AABBTreePolyline( const Mesh& mesh, const UndirectedEdgeBit
 template AABBTreePolyline<Vector2f>::AABBTreePolyline( const Polyline2 & );
 template AABBTreePolyline<Vector3f>::AABBTreePolyline( const Polyline3 & );
 template AABBTreePolyline<Vector3f>::AABBTreePolyline( const Mesh &, const UndirectedEdgeBitSet & );
+
+template auto AABBTreeBase<LineTreeTraits<Vector2f>>::getSubtrees( int minNum ) const -> std::vector<NodeId>;
+template auto AABBTreeBase<LineTreeTraits<Vector3f>>::getSubtrees( int minNum ) const -> std::vector<NodeId>;
+
+template auto AABBTreeBase<LineTreeTraits<Vector2f>>::getSubtreeLeaves( NodeId subtreeRoot ) const -> LeafBitSet;
+template auto AABBTreeBase<LineTreeTraits<Vector3f>>::getSubtreeLeaves( NodeId subtreeRoot ) const -> LeafBitSet;
+
+template NodeBitSet AABBTreeBase<LineTreeTraits<Vector2f>>::getNodesFromLeaves( const LeafBitSet & leaves ) const;
+template NodeBitSet AABBTreeBase<LineTreeTraits<Vector3f>>::getNodesFromLeaves( const LeafBitSet & leaves ) const;
+
+template void AABBTreeBase<LineTreeTraits<Vector2f>>::getLeafOrder( LeafBMap & leafMap ) const;
+template void AABBTreeBase<LineTreeTraits<Vector3f>>::getLeafOrder( LeafBMap & leafMap ) const;
+
+template void AABBTreeBase<LineTreeTraits<Vector2f>>::getLeafOrderAndReset( LeafBMap & leafMap );
+template void AABBTreeBase<LineTreeTraits<Vector3f>>::getLeafOrderAndReset( LeafBMap & leafMap );
 
 } //namespace MR

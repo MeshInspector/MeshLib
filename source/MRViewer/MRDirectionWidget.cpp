@@ -35,7 +35,7 @@ namespace MR
         dir_ = dir.normalized();
         if ( !directionObj_ )
         {
-            std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>( makeArrow( {}, dir_ * length_, length_ * 0.02f, length_ * 0.04f, length_ * 0.08f ) );
+            std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>( makeArrow( {}, length_ * Vector3f::plusZ(), length_ * 0.02f, length_ * 0.04f, length_ * 0.08f));
             directionObj_ = std::make_shared<ObjectMesh>();
             directionObj_->setMesh( mesh );
             directionObj_->setAncillary( true );
@@ -53,15 +53,31 @@ namespace MR
         directionObj_->setXf( AffineXf3f::translation( base_ ) * AffineXf3f::linear( rot.inverse() * Matrix3f::rotation( Vector3f::plusZ(), dir ) ) );
     }
 
-    void DirectionWidget::updateArrow( const Vector3f& base, float length )
+    void DirectionWidget::updateBase( const Vector3f& base )
     {
         if ( !directionObj_ )
             return;
 
         base_ = base;
+        auto xf = directionObj_->xf();
+        xf.b = base_;
+        directionObj_->setXf( xf );
+    }
+
+    void DirectionWidget::updateLength( float length )
+    {
+        if ( !directionObj_ )
+            return;
+
         length_ = length;
-        std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>( makeArrow( {}, dir_ * length_, length_ * 0.02f, length_ * 0.04f, length_ * 0.08f));
-        directionObj_->setXf( AffineXf3f::translation( base_ ) * directionObj_->xf() );
+        std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>( makeArrow( {}, dir_ * length_, length_ * 0.02f, length_ * 0.04f, length_ * 0.08f ) );
+        directionObj_->setMesh( mesh );
+    }
+
+    void DirectionWidget::updateArrow( const Vector3f& base, float length )
+    {
+        updateBase( base );
+        updateLength( length );
     }
 
     void DirectionWidget::setVisible( bool visible )

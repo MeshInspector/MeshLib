@@ -1102,7 +1102,7 @@ std::optional<MeshProjectionResult> Mesh::projectPoint( const Vector3f& point, f
 const AABBTree & Mesh::getAABBTree() const 
 { 
     const auto & res = AABBTreeOwner_.getOrCreate( [this]{ return AABBTree( *this ); } );
-    assert( res.containsSameNumberOfTris( *this ) );
+    assert( res.numLeaves() == topology.numValidFaces() );
     return res;
 }
 
@@ -1124,7 +1124,7 @@ void Mesh::updateCaches( const VertBitSet & changedVerts )
 {
     AABBTreeOwner_.update( [&]( AABBTree & tree )
     {
-        assert( tree.containsSameNumberOfTris( *this ) );
+        assert( tree.numLeaves() == topology.numValidFaces() );
         tree.refit( *this, changedVerts ); 
     } );
     AABBTreePointsOwner_.update( [&]( AABBTreePoints & tree )

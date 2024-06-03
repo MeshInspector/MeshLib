@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRAABBTreeNode.h"
+#include "MRVector.h"
 
 namespace MR
 {

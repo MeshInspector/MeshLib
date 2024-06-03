@@ -1269,6 +1269,12 @@
     <ClInclude Include="MRAABBTreeBase.hpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRAABBTreeObjects.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAABBTreeMaker.hpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2113,6 +2119,9 @@
     </ClCompile>
     <ClCompile Include="MRDipole.cpp">
       <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAABBTreeObjects.cpp">
+      <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

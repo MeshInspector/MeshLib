@@ -13,6 +13,8 @@
   <ItemGroup>
     <ClInclude Include="MRAABBTreeBase.h" />
     <ClInclude Include="MRAABBTreeBase.hpp" />
+    <ClInclude Include="MRAABBTreeMaker.hpp" />
+    <ClInclude Include="MRAABBTreeObjects.h" />
     <ClInclude Include="MRAddNoise.h" />
     <ClInclude Include="MRAligningTransform.h" />
     <ClInclude Include="MRAlphaShape.h" />
@@ -400,6 +402,7 @@
     <ClCompile Include="MRAABBTreeMaker.cpp" />
     <ClCompile Include="miniply.cpp" />
     <ClCompile Include="MRAABBTree.cpp" />
+    <ClCompile Include="MRAABBTreeObjects.cpp" />
     <ClCompile Include="MRAABBTreePoints.cpp" />
     <ClCompile Include="MRAABBTreePolyline.cpp" />
     <ClCompile Include="MRAABBTreePolyline3.cpp" />

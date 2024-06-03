@@ -12,6 +12,14 @@
 namespace MR
 {
 
+Box3f MeshOrPoints::getObjBoundingBox() const
+{
+    return std::visit( overloaded{
+        []( const MeshPart & mp ) { return mp.mesh.getBoundingBox(); },
+        []( const PointCloud * pc ) { return pc->getBoundingBox(); }
+    }, var_ );
+}
+
 Box3f MeshOrPoints::computeBoundingBox( const AffineXf3f * toWorld ) const
 {
     return std::visit( overloaded{

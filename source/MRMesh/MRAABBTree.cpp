@@ -1,6 +1,6 @@
 #include "MRAABBTree.h"
 #include "MRAABBTreeBase.hpp"
-#include "MRAABBTreeMaker.h"
+#include "MRAABBTreeMaker.hpp"
 #include "MRMesh.h"
 #include "MRTimer.h"
 #include "MRMakeSphereMesh.h"

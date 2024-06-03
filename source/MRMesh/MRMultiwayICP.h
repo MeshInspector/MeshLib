@@ -69,14 +69,14 @@ private:
 
     /// reserves memory for all pairs
     /// if currently in cascade mode (objs.size() > maxGroupSize_) reserves only for pairs inside groups
-    void reservePairs_( const Vector<VertBitSet, MeshOrPointsId>& samples );
+    void reservePairs_( const Vector<VertBitSet, ObjId>& samples );
     /// updates pairs among same groups only
     void updatePointsPairsGroupWise_();
     /// deactivate pairs that does not meet farDistFactor criterion
     void deactivatefarDistPairs_();
 
     /// returns unified samples for all objects in group
-    std::vector<Vector3f> resampleGroup_( MeshOrPointsId groupFirst, MeshOrPointsId groupLastEx );
+    std::vector<Vector3f> resampleGroup_( ObjId groupFirst, ObjId groupLastEx );
 
     using Level = int;
     class GroupTag;

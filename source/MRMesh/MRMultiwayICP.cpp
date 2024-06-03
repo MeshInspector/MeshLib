@@ -195,8 +195,8 @@ void MultiwayICP::updateAllPointPairs()
     MR_TIMER;
     ParallelFor( size_t( 0 ), objs_.size() * objs_.size(), [&] ( size_t r )
     {
-        auto i = MeshOrPointsId( r % objs_.size() );
-        auto j = MeshOrPointsId( r / objs_.size() );
+        auto i = ObjId( r % objs_.size() );
+        auto j = ObjId( r / objs_.size() );
         if ( i == j )
             return;
         MR::updatePointPairs( pairsPerObj_[i][j], objs_[i], objs_[j], prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
@@ -204,16 +204,16 @@ void MultiwayICP::updateAllPointPairs()
     deactivatefarDistPairs_();
 }
 
-void MultiwayICP::reservePairs_( const Vector<VertBitSet, MeshOrPointsId>& samplesPerObj )
+void MultiwayICP::reservePairs_( const Vector<VertBitSet, ObjId>& samplesPerObj )
 {
     pairsPerObj_.clear();
     pairsPerObj_.resize( objs_.size() );
-    for ( MeshOrPointsId i( 0 ); i < objs_.size(); ++i )
+    for ( ObjId i( 0 ); i < objs_.size(); ++i )
     {
         auto& pairs = pairsPerObj_[i];
         pairs.resize( objs_.size() );
         bool groupWise = maxGroupSize_ > 1 && objs_.size() > maxGroupSize_;
-        for ( MeshOrPointsId j( 0 ); j < objs_.size(); ++j )
+        for ( ObjId j( 0 ); j < objs_.size(); ++j )
         {
             if ( i == j )
                 continue;
@@ -288,9 +288,9 @@ void MultiwayICP::deactivatefarDistPairs_()
     }
 }
 
-std::vector<MR::Vector3f> MultiwayICP::resampleGroup_( MeshOrPointsId groupFirst, MeshOrPointsId groupLastEx )
+std::vector<MR::Vector3f> MultiwayICP::resampleGroup_( ObjId /*groupFirst*/, ObjId /*groupLastEx*/ )
 {
-
+    return {};
 }
 
 bool MultiwayICP::doIteration_( bool p2pl )
@@ -510,12 +510,12 @@ bool MultiwayICP::multiwayIter_( int groupSize, bool p2pl /*= true */ )
             {
                 if ( sbI == sbJ )
                     continue;
-                MeshOrPointsId iBegin = MeshOrPointsId( groupFirst + sbI * subGroupSize );
-                MeshOrPointsId iEnd = MeshOrPointsId( std::min( groupFirst + ( sbI + 1 ) * subGroupSize, groupsLastEx ) );
-                MeshOrPointsId jBegin = MeshOrPointsId( groupFirst + sbJ * subGroupSize );
-                MeshOrPointsId jEnd = MeshOrPointsId( std::min( groupFirst + ( sbJ + 1 ) * subGroupSize, groupsLastEx ) );
-                for ( MeshOrPointsId i( iBegin ); i < iEnd; ++i )
-                for ( MeshOrPointsId j( jBegin ); j < jEnd; ++j )
+                ObjId iBegin = ObjId( groupFirst + sbI * subGroupSize );
+                ObjId iEnd = ObjId( std::min( groupFirst + ( sbI + 1 ) * subGroupSize, groupsLastEx ) );
+                ObjId jBegin = ObjId( groupFirst + sbJ * subGroupSize );
+                ObjId jEnd = ObjId( std::min( groupFirst + ( sbJ + 1 ) * subGroupSize, groupsLastEx ) );
+                for ( ObjId i( iBegin ); i < iEnd; ++i )
+                for ( ObjId j( jBegin ); j < jEnd; ++j )
                 {
                     for ( auto idx : pairsPerObj_[i][j].active )
                     {
@@ -537,9 +537,9 @@ bool MultiwayICP::multiwayIter_( int groupSize, bool p2pl /*= true */ )
                 auto resI = res[sbI].rigidXf();
                 if ( std::isnan( resI.b.x ) )
                     return false;
-                MeshOrPointsId iBegin = MeshOrPointsId( groupFirst + sbI * subGroupSize );
-                MeshOrPointsId iEnd = MeshOrPointsId( std::min( groupFirst + ( sbI + 1 ) * subGroupSize, groupsLastEx ) );
-                for ( MeshOrPointsId i( iBegin ); i < iEnd; ++i )
+                ObjId iBegin = ObjId( groupFirst + sbI * subGroupSize );
+                ObjId iEnd = ObjId( std::min( groupFirst + ( sbI + 1 ) * subGroupSize, groupsLastEx ) );
+                for ( ObjId i( iBegin ); i < iEnd; ++i )
                     objs_[i].xf = AffineXf3f( resI * AffineXf3d( objs_[i].xf ) );
             }
         }

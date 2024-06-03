@@ -1,6 +1,6 @@
 #pragma once
-
 #include "MRICP.h"
+#include "MRGridSampling.h"
 
 namespace MR
 {
@@ -75,16 +75,37 @@ private:
     /// deactivate pairs that does not meet farDistFactor criterion
     void deactivatefarDistPairs_();
 
-    /// returns unified samples for all objects in group
-    std::vector<Vector3f> resampleGroup_( ObjId groupFirst, ObjId groupLastEx );
-
-    using Level = int;
+    using Layer = int;
     class GroupTag;
     using GroupId = Id<GroupTag>;
+    struct GroupPoint
+    {
+        ObjVertId id;
+        Vector3f point;
+        Vector3f norm;
+    };
     struct GroupPair
     {
-
+        GroupPoint src;
+        GroupPoint tgt;
+        float weight{ 1.0f };
     };
+    struct GroupPairs
+    {
+        std::vector<GroupPair> vec;
+        BitSet active;
+    };
+    using IndexedGroupPairs = Vector<GroupPairs, GroupId>;
+    using LayerPairs = Vector<Vector<IndexedGroupPairs, GroupId>, Layer>;
+    
+
+    // prepares data for cascade mode
+    LayerPairs pairsPerLayer_;
+    void resampleLayers_();
+    void reserveLayerPairs_( const Vector<Vector<MultiObjsSamples, GroupId>, Layer>& samples );
+    // calculates and updates pairs 2nd and next steps of cascade mode
+    void updateLayerPairs_( Layer l );
+    bool projectGroupPair( GroupPair& pair, ObjId srcFirst, ObjId srcLast, ObjId tgtFirst, ObjId tgtLast );
 
     float samplingSize_{ 0.0f };
     // this parameter indicates maximum number of objects that might be aligned simultaneously in multi-way mode

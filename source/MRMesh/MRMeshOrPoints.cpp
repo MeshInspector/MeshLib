@@ -32,7 +32,11 @@ std::optional<VertBitSet> MeshOrPoints::pointsGridSampling( float voxelSize, siz
 {
     assert( voxelSize > 0 );
     assert( maxVoxels > 0 );
-    auto bboxDiag = computeBoundingBox().size() / voxelSize;
+    auto box = computeBoundingBox();
+    if ( !box.valid() )
+        return VertBitSet();
+
+    auto bboxDiag = box.size() / voxelSize;
     auto nSamples = bboxDiag[0] * bboxDiag[1] * bboxDiag[2];
     if ( nSamples > maxVoxels )
         voxelSize *= std::cbrt( float(nSamples) / float(maxVoxels) );

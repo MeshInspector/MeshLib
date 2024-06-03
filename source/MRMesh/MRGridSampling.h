@@ -30,15 +30,17 @@ struct ModelPointsData
     const AffineXf3f* xf{ nullptr };
 };
 
-struct ModelVertId
+struct ObjVertId
 {
     ObjId objId;
     VertId vId;
 };
 
+using MultiObjsSamples = std::vector<ObjVertId>;
+
 /// performs sampling of several models respecting their world transformations
 /// subdivides models bounding box on voxels of approximately given size and returns at most one point per voxel;
 /// returns std::nullopt if it was terminated by the callback
-MRMESH_API std::optional<std::vector<ModelVertId>> multiModelGridSampling( const Vector<ModelPointsData, ObjId>& models, float voxelSize, const ProgressCallback& cb = {} );
+MRMESH_API std::optional<MultiObjsSamples> multiModelGridSampling( const Vector<ModelPointsData, ObjId>& models, float voxelSize, const ProgressCallback& cb = {} );
 
 } //namespace MR

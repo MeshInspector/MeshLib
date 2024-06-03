@@ -394,7 +394,7 @@ void MultiwayICP::updateLayerPairs_( Layer l )
 bool MultiwayICP::projectGroupPair_( GroupPair& pair, ObjId srcFirst, ObjId srcLast, ObjId tgtFirst, ObjId tgtLast )
 {
     ObjId minObjId;
-    MeshOrPoints::ProjectionResult prj, minPrj;
+    MeshOrPoints::ProjectionResult prj{}, minPrj{};
     // do not search for target point further than distance threshold
     minPrj.distSq = prj.distSq = prop_.distThresholdSq;
     for ( ObjId tgtObj( tgtFirst ); tgtObj < tgtLast; ++tgtObj )
@@ -430,7 +430,7 @@ bool MultiwayICP::projectGroupPair_( GroupPair& pair, ObjId srcFirst, ObjId srcL
     if ( prop_.mutualClosest )
     {
         ObjId mutalMinObjId;
-        MeshOrPoints::ProjectionResult mutalMinPrj;
+        MeshOrPoints::ProjectionResult mutalMinPrj{};
         for ( ObjId srcObj( srcFirst ); srcObj < srcLast; ++srcObj )
         {
             auto tgt2srcXf = objs_[srcObj].xf.inverse() * objs_[minObjId].xf;

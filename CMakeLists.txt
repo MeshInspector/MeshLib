@@ -135,7 +135,7 @@ IF(BUILD_TESTING)
   ENDIF()
 ENDIF()
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/source)
 
 # MRMesh library is always built
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/source/MRPch ./MRPch)

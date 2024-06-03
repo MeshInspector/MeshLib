@@ -23,6 +23,9 @@ public:
     /// creates tree for given set of objects each with its own transformation
     [[nodiscard]] MRMESH_API explicit AABBTreeObjects( Vector<MeshOrPointsXf, ObjId> objs );
 
+    /// gets object by its id
+    [[nodiscard]] const MeshOrPoints & obj( ObjId oi ) const { return objs_[oi].obj; }
+
     /// gets transformation from local space of given object to world space
     [[nodiscard]] const AffineXf3f & toWorld( ObjId oi ) const { return objs_[oi].xf; }
 

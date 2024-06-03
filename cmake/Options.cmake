@@ -29,7 +29,7 @@ IF(NOT MR_EMSCRIPTEN)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -undefined dynamic_lookup -framework Cocoa -framework OpenGL -framework IOKit") # https://github.com/pybind/pybind11/issues/382
 
     set(BUILD_SHARED_LIBS ON)
-    #set(CMAKE_FIND_LIBRARY_SUFFIXES ".dylib")
+    set(CMAKE_FIND_LIBRARY_SUFFIXES ".dylib")
 
     include_directories(${HOMEBREW_PREFIX}/include)
   ELSE()

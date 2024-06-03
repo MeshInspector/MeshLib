@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRAABBTreeBase.h"
-#include "MRAffineXf3.h"
+#include "MRMeshOrPoints.h"
 
 namespace MR
 {
@@ -21,16 +21,20 @@ public:
     AABBTreeObjects() = default;
 
     /// creates tree for given set of objects each with its own transformation
-    [[nodiscard]] MRMESH_API explicit AABBTreeObjects( const Vector<MeshOrPointsXf, ObjId> & objs );
+    [[nodiscard]] MRMESH_API explicit AABBTreeObjects( Vector<MeshOrPointsXf, ObjId> objs );
 
-    /// get mapping: objId -> its tranfomation from local space to world space
-    [[nodiscard]] const Vector<AffineXf3f, ObjId> & toWorld() const { return toWorld_; }
+    /// gets transformation from local space of given object to world space
+    [[nodiscard]] const AffineXf3f & toWorld( ObjId oi ) const { return objs_[oi].xf; }
 
-    /// get mapping: objId -> its tranfomation from world space to local space
+    /// gets transformation from world space to local space of given object
+    [[nodiscard]] const AffineXf3f & toLocal( ObjId oi ) const { return toLocal_[oi]; }
+
+    /// gets mapping: objId -> its transformation from world space to local space
     [[nodiscard]] const Vector<AffineXf3f, ObjId> & toLocal() const { return toLocal_; }
 
 private:
-    Vector<AffineXf3f, ObjId> toWorld_, toLocal_;
+    Vector<MeshOrPointsXf, ObjId> objs_;
+    Vector<AffineXf3f, ObjId> toLocal_;
 };
 
 } // namespace MR

@@ -93,4 +93,14 @@ struct MeshOrPointsXf
 /// constructs MeshOrPoints from ObjectMesh or ObjectPoints, otherwise returns nullopt
 [[nodiscard]] MRMESH_API std::optional<MeshOrPoints> getMeshOrPoints( const VisualObject * obj );
 
+using ProjectOnAllCallback = std::function<void( ObjId, MeshOrPoints::ProjectionResult )>;
+
+/// finds closest point on every object within given distance
+MRMESH_API void projectOnAll(
+    const Vector3f& pt, ///< target point in world coordinates
+    const AABBTreeObjects & tree, ///< contains a set of objects to search closest points on each of them
+    float upDistLimitSq, ///< upper limit on the distance in question
+    const ProjectOnAllCallback & callback, ///< each found closest point within given distance will be returned via this callback
+    ObjId skipObjId = {} ); ///< projection on given object will be skipped
+
 } // namespace MR

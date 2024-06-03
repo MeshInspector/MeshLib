@@ -408,6 +408,7 @@ class MRMESH_CLASS MeshOrPoints;
 struct MRMESH_CLASS PointCloud;
 class MRMESH_CLASS AABBTree;
 class MRMESH_CLASS AABBTreePoints;
+class MRMESH_CLASS AABBTreeObjects;
 struct MRMESH_CLASS CloudPartMapping;
 struct MRMESH_CLASS PartMapping;
 struct MeshOrPointsXf;

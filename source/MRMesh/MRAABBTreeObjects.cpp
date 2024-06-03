@@ -18,11 +18,15 @@ AABBTreeObjects::AABBTreeObjects( const Vector<MeshOrPointsXf, ObjId> & objs )
     MR_TIMER
     using BoxedObj = BoxedLeaf<Traits>;
     Buffer<BoxedObj> boxedObjs( objs.size() );
+    toWorld_.resize( objs.size() );
+    toLocal_.resize( objs.size() );
 
     for ( ObjId oi(0); oi < objs.size(); ++oi )
     {
         boxedObjs[oi].leafId = oi;
         boxedObjs[oi].box = transformed( objs[oi].obj.getObjBoundingBox(), objs[oi].xf );
+        toWorld_[oi] = objs[oi].xf;
+        toLocal_[oi] = objs[oi].xf.inverse();
     }
     nodes_ = makeAABBTreeNodeVec( std::move( boxedObjs ) );
 }

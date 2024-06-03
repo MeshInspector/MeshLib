@@ -161,13 +161,81 @@ namespace
         MR::pythonAppendOrRun( [&]
         {
             const auto& entry = std::get<TestEngine::ValueEntry>( findGroup( { path.data(), path.size() - 1 } ).elems.at( path.back() ).value );
-            const auto& val = std::get<TestEngine::ValueEntry::Value<T>>( entry.value );
 
-            if ( value < val.min )
+            bool usedDifferentSignedness = false;
+            T simulatedValue{};
+            T min{};
+            T max{};
+
+            // Try using the wrong signedness first.
+            if constexpr ( std::is_same_v<T, std::int64_t> )
+            {
+                if ( auto val = std::get_if<TestEngine::ValueEntry::Value<std::uint64_t>>( &entry.value ) )
+                {
+                    // Allow if at least the min bound fits inside the input range.
+                    if ( val->min > std::uint64_t( std::numeric_limits<std::int64_t>::max() ) )
+                        throw std::runtime_error( "Attempt to write an int64_t into an uint64_t, but the min allowed value is larger than the max representable int64_t. Write as uint64_t instead." );
+
+                    usedDifferentSignedness = true;
+                    min = std::int64_t( val->min );
+                    max = std::int64_t( std::min( val->max, std::uint64_t( std::numeric_limits<std::int64_t>::max() ) ) );
+                }
+            }
+            else if constexpr ( std::is_same_v<T, std::uint64_t> )
+            {
+                if ( auto val = std::get_if<TestEngine::ValueEntry::Value<std::int64_t>>( &entry.value ) )
+                {
+                    // Allow if at least the max bound is nonnegative.
+                    if ( val->max >= 0 )
+                        throw std::runtime_error( "Attempt to write an uint64_t into an int64_t, but the max allowed value is negative. Write as uint64_t instead." );
+
+                    usedDifferentSignedness = true;
+                    min = std::uint64_t( std::max( val->min, std::int64_t( 0 ) ) );
+                    max = std::uint64_t( val->max );
+                }
+            }
+
+            // Use the exact type.
+            if ( !usedDifferentSignedness )
+            {
+                auto opt = std::get_if<TestEngine::ValueEntry::Value<T>>( &entry.value );
+                if ( !opt )
+                {
+                    throw std::runtime_error( std::is_floating_point_v<T>
+                        ? "Attempt to write a floating-point value into an integer."
+                        : "Attempt to write an integer into a floating-point value."
+                    );
+                }
+
+                min = opt->min;
+                max = opt->max;
+            }
+
+            if ( value < min )
                 throw std::runtime_error( "The specified value is less than the min bound." );
-            if ( value > val.max )
+            if ( value > max )
                 throw std::runtime_error( "The specified value is less than the max bound." );
-            val.simulatedValue = value;
+            simulatedValue = value;
+
+            // Write the value back.
+            if constexpr ( std::is_same_v<T, std::int64_t> )
+            {
+                if ( auto val = std::get_if<TestEngine::ValueEntry::Value<std::uint64_t>>( &entry.value ) )
+                {
+                    val->simulatedValue = std::uint64_t( simulatedValue );
+                    return;
+                }
+            }
+            else if constexpr ( std::is_same_v<T, std::uint64_t> )
+            {
+                if ( auto val = std::get_if<TestEngine::ValueEntry::Value<std::int64_t>>( &entry.value ) )
+                {
+                    val->simulatedValue = std::int64_t( simulatedValue );
+                    return;
+                }
+            }
+
+            std::get<TestEngine::ValueEntry::Value<T>>( entry.value ).simulatedValue = simulatedValue;
         } );
     }
 }

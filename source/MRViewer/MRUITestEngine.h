@@ -19,11 +19,22 @@ namespace MR::UI::TestEngine
 namespace detail
 {
     template <typename T>
-    [[nodiscard]] MRVIEWER_API std::optional<T> createValueLow( std::string_view name, T value, T min, T max );
+    struct BoundedValue
+    {
+        T value{};
+        T min{};
+        T max{};
+    };
 
-    extern template MRVIEWER_API std::optional<std::int64_t> createValueLow( std::string_view name, std::int64_t value, std::int64_t min, std::int64_t max );
-    extern template MRVIEWER_API std::optional<std::uint64_t> createValueLow( std::string_view name, std::uint64_t value, std::uint64_t min, std::uint64_t max );
-    extern template MRVIEWER_API std::optional<double> createValueLow( std::string_view name, double value, double min, double max );
+    template <typename T>
+    [[nodiscard]] MRVIEWER_API std::optional<T> createValueLow( std::string_view name, std::optional<BoundedValue<T>> value );
+
+    extern template MRVIEWER_API std::optional<std::int64_t> createValueLow( std::string_view name, std::optional<BoundedValue<std::int64_t>> value );
+    extern template MRVIEWER_API std::optional<std::uint64_t> createValueLow( std::string_view name, std::optional<BoundedValue<std::uint64_t>> value );
+    extern template MRVIEWER_API std::optional<double> createValueLow( std::string_view name, std::optional<BoundedValue<double>> value );
+
+    template <typename T>
+    using UnderlyingValueType = std::conditional_t<std::is_floating_point_v<T>, double, std::conditional_t<std::is_signed_v<T>, std::int64_t, std::uint64_t>>;
 }
 
 // Call this every frame when drawing a button you want to track (regardless of whether it returns true of false).
@@ -43,11 +54,23 @@ requires std::is_arithmetic_v<T>
         min = std::numeric_limits<T>::lowest();
         max = std::numeric_limits<T>::max();
     }
-    using U = std::conditional_t<std::is_floating_point_v<T>, double, std::conditional_t<std::is_signed_v<T>, std::int64_t, std::uint64_t>>;
 
+    using U = detail::UnderlyingValueType<T>;
     static_assert(sizeof(T) <= sizeof(U), "The used type is too large.");
 
-    auto ret = detail::createValueLow( name, U( value ), U( min ), U( max ) );
+    auto ret = detail::createValueLow<U>( name, detail::BoundedValue<U>{ .value = U( value ), .min = U( min ), .max = U( max ) } );
+    return ret ? std::optional<T>( T( *ret ) ) : std::nullopt;
+}
+
+// Usually you don't need this function.
+// This is for widgets that require you to specify the value override before drawing it, such as `ImGui::CollapsingHeader()`.
+// For those, call this version first to read the value override, then draw the widget, then call the normal `CreateValue()` with the same name
+//   and with the new value, and discard its return value.
+template <typename T>
+requires std::is_arithmetic_v<T>
+[[nodiscard]] std::optional<T> createValueTentative( std::string_view name )
+{
+    auto ret = detail::createValueLow<detail::UnderlyingValueType<T>>( name, std::nullopt );
     return ret ? std::optional<T>( T( *ret ) ) : std::nullopt;
 }
 

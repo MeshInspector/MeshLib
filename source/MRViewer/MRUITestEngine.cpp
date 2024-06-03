@@ -66,7 +66,7 @@ void checkForNewFrame()
 } // namespace
 
 template <typename T>
-std::optional<T> detail::createValueLow( std::string_view name, T value, T min, T max )
+std::optional<T> detail::createValueLow( std::string_view name, std::optional<BoundedValue<T>> value )
 {
     #if MR_ENABLE_UI_TEST_ENGINE
 
@@ -101,10 +101,13 @@ std::optional<T> detail::createValueLow( std::string_view name, T value, T min, 
         val = &entry->value.emplace<ValueEntry::Value<T>>();
     }
 
-    iter->second.visitedOnThisFrame = true;
-    val->value = value; // Could also read `ret` here, but that would be a bit weird, I guess?
-    val->min = min;
-    val->max = max;
+    if ( value )
+    {
+        iter->second.visitedOnThisFrame = true;
+        val->value = value->value; // Could also read `ret` here, but that would be a bit weird, I guess?
+        val->min = value->min;
+        val->max = value->max;
+    }
 
     return ret;
 
@@ -113,9 +116,9 @@ std::optional<T> detail::createValueLow( std::string_view name, T value, T min, 
     #endif
 }
 
-template std::optional<std::int64_t> detail::createValueLow( std::string_view name, std::int64_t value, std::int64_t min, std::int64_t max );
-template std::optional<std::uint64_t> detail::createValueLow( std::string_view name, std::uint64_t value, std::uint64_t min, std::uint64_t max );
-template std::optional<double> detail::createValueLow( std::string_view name, double value, double min, double max );
+template std::optional<std::int64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::int64_t>> value );
+template std::optional<std::uint64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::uint64_t>> value );
+template std::optional<double> detail::createValueLow( std::string_view name, std::optional<BoundedValue<double>> value );
 
 bool createButton( std::string_view name )
 {

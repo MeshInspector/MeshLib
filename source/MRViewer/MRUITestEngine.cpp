@@ -114,6 +114,7 @@ std::optional<T> detail::createValueLow( std::string_view name, T value, T min, 
 }
 
 template std::optional<std::int64_t> detail::createValueLow( std::string_view name, std::int64_t value, std::int64_t min, std::int64_t max );
+template std::optional<std::uint64_t> detail::createValueLow( std::string_view name, std::uint64_t value, std::uint64_t min, std::uint64_t max );
 template std::optional<double> detail::createValueLow( std::string_view name, double value, double min, double max );
 
 bool createButton( std::string_view name )

@@ -22,6 +22,7 @@ namespace detail
     [[nodiscard]] MRVIEWER_API std::optional<T> createValueLow( std::string_view name, T value, T min, T max );
 
     extern template MRVIEWER_API std::optional<std::int64_t> createValueLow( std::string_view name, std::int64_t value, std::int64_t min, std::int64_t max );
+    extern template MRVIEWER_API std::optional<std::uint64_t> createValueLow( std::string_view name, std::uint64_t value, std::uint64_t min, std::uint64_t max );
     extern template MRVIEWER_API std::optional<double> createValueLow( std::string_view name, double value, double min, double max );
 }
 
@@ -42,19 +43,9 @@ requires std::is_arithmetic_v<T>
         min = std::numeric_limits<T>::lowest();
         max = std::numeric_limits<T>::max();
     }
-    using U = std::conditional_t<std::is_floating_point_v<T>, double, std::int64_t>;
+    using U = std::conditional_t<std::is_floating_point_v<T>, double, std::conditional_t<std::is_signed_v<T>, std::int64_t, std::uint64_t>>;
 
-    // Range check for large unsigned numbers.
-    if constexpr ( sizeof( T ) == sizeof( std::int64_t ) && std::is_unsigned_v<T> )
-    {
-        T limit = T( std::numeric_limits<std::int64_t>::max() );
-        for ( T* x : { &value, &min, &max } )
-        {
-            assert( *x <= limit );
-            if ( *x > limit )
-                *x = limit;
-        }
-    }
+    static_assert(sizeof(T) <= sizeof(U), "The used type is too large.");
 
     auto ret = detail::createValueLow( name, U( value ), U( min ), U( max ) );
     return ret ? std::optional<T>( T( *ret ) ) : std::nullopt;
@@ -90,7 +81,7 @@ struct ValueEntry
 
         Value() {} // Make `std::variant` below happy.
     };
-    using ValueVar = std::variant<Value<std::int64_t>, Value<double>>;
+    using ValueVar = std::variant<Value<std::int64_t>, Value<std::uint64_t>, Value<double>>;
     ValueVar value;
 };
 

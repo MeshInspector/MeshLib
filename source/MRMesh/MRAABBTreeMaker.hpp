@@ -4,6 +4,8 @@
 #include "MRTimer.h"
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
+#include <stack>
+#include <thread>
 
 namespace MR
 {

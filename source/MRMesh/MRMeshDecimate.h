@@ -191,6 +191,8 @@ struct RemeshSettings
     /// the algorithm will try to keep the length of all edges close to this value,
     /// splitting the edges longer than targetEdgeLen, and then eliminating the edges shorter than targetEdgeLen
     float targetEdgeLen = 0.001f;
+    /// Maximum number of edge splits allowed during subdivision
+    int maxEdgeSplits = 10'000'000;
     /// Improves local mesh triangulation by doing edge flips if it does change dihedral angle more than on this value
     float maxAngleChangeAfterFlip = 30 * PI_F / 180.0f;
     /// Maximal shift of a boundary during one edge collapse

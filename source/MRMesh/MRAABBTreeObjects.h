@@ -12,7 +12,7 @@ struct ObjTreeTraits
     using BoxT = Box3f;
 };
 
-/// tree containing bounding boxes of individual objects
+/// tree containing world bounding boxes of individual objects having individual local-to-world transformations
 /// \ingroup AABBTreeGroup
 class AABBTreeObjects : public AABBTreeBase<ObjTreeTraits>
 {

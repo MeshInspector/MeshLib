@@ -1,6 +1,6 @@
 #include "MRAABBTreePolyline.h"
 #include "MRAABBTreeBase.hpp"
-#include "MRAABBTreeMaker.h"
+#include "MRAABBTreeMaker.hpp"
 #include "MRPolyline.h"
 #include "MRMesh.h"
 #include "MRBuffer.h"

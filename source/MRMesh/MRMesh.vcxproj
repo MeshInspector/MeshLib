@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClInclude Include="MRAABBTreeBase.h" />
     <ClInclude Include="MRAABBTreeBase.hpp" />
+    <ClInclude Include="MRAABBTreeMaker.hpp" />
     <ClInclude Include="MRAABBTreeObjects.h" />
     <ClInclude Include="MRAddNoise.h" />
     <ClInclude Include="MRAligningTransform.h" />

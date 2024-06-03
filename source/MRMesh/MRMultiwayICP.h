@@ -105,7 +105,7 @@ private:
     void reserveLayerPairs_( const Vector<Vector<MultiObjsSamples, GroupId>, Layer>& samples );
     // calculates and updates pairs 2nd and next steps of cascade mode
     void updateLayerPairs_( Layer l );
-    bool projectGroupPair( GroupPair& pair, ObjId srcFirst, ObjId srcLast, ObjId tgtFirst, ObjId tgtLast );
+    bool projectGroupPair_( GroupPair& pair, ObjId srcFirst, ObjId srcLast, ObjId tgtFirst, ObjId tgtLast );
 
     float samplingSize_{ 0.0f };
     // this parameter indicates maximum number of objects that might be aligned simultaneously in multi-way mode

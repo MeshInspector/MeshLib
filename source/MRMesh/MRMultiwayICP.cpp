@@ -386,12 +386,12 @@ void MultiwayICP::updateLayerPairs_( Layer l )
         auto tgtLast = ObjId( std::min( ( gJ + 1 ) * groupSize, int( objs_.size() ) ) );
         BitSetParallelForAll( pairs.active, [&] ( size_t i )
         {
-            pairs.active.set( i, projectGroupPair( pairs.vec[i], srcFirst, srcLast, tgtFirst, tgtLast ) );
+            pairs.active.set( i, projectGroupPair_( pairs.vec[i], srcFirst, srcLast, tgtFirst, tgtLast ) );
         } );
     } );
 }
 
-bool MultiwayICP::projectGroupPair( GroupPair& pair, ObjId srcFirst, ObjId srcLast, ObjId tgtFirst, ObjId tgtLast )
+bool MultiwayICP::projectGroupPair_( GroupPair& pair, ObjId srcFirst, ObjId srcLast, ObjId tgtFirst, ObjId tgtLast )
 {
     ObjId minObjId;
     MeshOrPoints::ProjectionResult prj, minPrj;

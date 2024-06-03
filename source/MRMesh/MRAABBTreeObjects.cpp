@@ -13,16 +13,18 @@ template NodeBitSet AABBTreeBase<ObjTreeTraits>::getNodesFromLeaves( const LeafB
 template void AABBTreeBase<ObjTreeTraits>::getLeafOrder( LeafBMap & leafMap ) const;
 template void AABBTreeBase<ObjTreeTraits>::getLeafOrderAndReset( LeafBMap & leafMap );
 
-AABBTreeObjects::AABBTreeObjects( const Vector<MeshOrPointsXf, ObjId> & objs )
+AABBTreeObjects::AABBTreeObjects( Vector<MeshOrPointsXf, ObjId> objs ) : objs_( std::move( objs ) )
 {
     MR_TIMER
     using BoxedObj = BoxedLeaf<Traits>;
-    Buffer<BoxedObj> boxedObjs( objs.size() );
+    Buffer<BoxedObj> boxedObjs( objs_.size() );
+    toLocal_.resize( objs_.size() );
 
-    for ( ObjId oi(0); oi < objs.size(); ++oi )
+    for ( ObjId oi(0); oi < objs_.size(); ++oi )
     {
         boxedObjs[oi].leafId = oi;
-        boxedObjs[oi].box = transformed( objs[oi].obj.getObjBoundingBox(), objs[oi].xf );
+        boxedObjs[oi].box = transformed( objs_[oi].obj.getObjBoundingBox(), objs_[oi].xf );
+        toLocal_[oi] = objs_[oi].xf.inverse();
     }
     nodes_ = makeAABBTreeNodeVec( std::move( boxedObjs ) );
 }

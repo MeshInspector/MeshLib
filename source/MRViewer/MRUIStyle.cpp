@@ -258,11 +258,11 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
     ret = TestEngine::createButton( label ) || ret; // Don't want short-circuiting.
     return ret;
 }
-bool buttonIconEx( 
-    const std::string& name, 
-    const Vector2f& iconSize, 
-    const std::string& text, 
-    const ImVec2& buttonSize, 
+bool buttonIconEx(
+    const std::string& name,
+    const Vector2f& iconSize,
+    const std::string& text,
+    const ImVec2& buttonSize,
     const ButtonIconCustomizationParams& params )
 {
     ImGui::BeginGroup();
@@ -389,7 +389,7 @@ bool buttonIconEx(
     return res;
 }
 
-bool checkbox( const char* label, bool* value )
+static bool checkboxWithoutTestEngine( const char* label, bool* value )
 {
     const ImGuiStyle& style = ImGui::GetStyle();
 
@@ -506,9 +506,23 @@ bool checkbox( const char* label, bool* value )
         return pressed;
     };
 
-    auto res = drawCustomCheckbox( label, value );
+    bool res = drawCustomCheckbox( label, value );
 
     return res;
+}
+
+bool checkbox( const char* label, bool* value )
+{
+    bool ret = checkboxWithoutTestEngine( label, value );
+
+    if ( auto opt = TestEngine::createValue( label, *value, false, true ) )
+    {
+        *value = *opt;
+        ret = true;
+        ImGui::MarkItemEdited( ImGui::GetID( label ) );
+    }
+
+    return ret;
 }
 
 bool checkboxValid( const char* label, bool* value, bool valid )
@@ -520,7 +534,7 @@ bool checkboxValid( const char* label, bool* value, bool valid )
     const auto disColor = ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled );
     sh.addColor( ImGuiCol_Text, Color( disColor.x, disColor.y, disColor.z, disColor.w ) );
     bool falseVal = false;
-    checkbox( label, &falseVal );
+    checkboxWithoutTestEngine( label, &falseVal );
     return false;
 }
 
@@ -528,16 +542,26 @@ bool checkboxMixed( const char* label, bool* value, bool mixed )
 {
     if ( mixed )
     {
-        ImGuiContext& g = *ImGui::GetCurrentContext();
-        ImGuiItemFlags backup_item_flags = g.CurrentItemFlags;
-        g.CurrentItemFlags |= ImGuiItemFlags_MixedValue;
-        const bool changed = UI::checkbox( label, value );
-        g.CurrentItemFlags = backup_item_flags;
-        return changed;
+        ImGui::PushItemFlag( ImGuiItemFlags_MixedValue, true );
+        bool ret = checkboxWithoutTestEngine( label, value );
+        ImGui::PopItemFlag();
+
+        // Allow resetting from -1 to either 0 or 1.
+        if ( int fakeValue = -1; auto opt = TestEngine::createValue( label, fakeValue, -1, 1 ) )
+        {
+            if ( *opt != -1 )
+            {
+                *value = bool( *opt );
+                ret = true;
+                ImGui::MarkItemEdited( ImGui::GetID( label ) );
+            }
+        }
+
+        return ret;
     }
     else
     {
-        return UI::checkbox( label, value );
+        return checkbox( label, value );
     }
 }
 

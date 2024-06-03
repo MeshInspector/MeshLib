@@ -106,6 +106,7 @@ using UndirectedEdgeBitSet = TaggedBitSet<UndirectedEdgeTag>;
 using PixelBitSet = TaggedBitSet<PixelTag>;
 using VoxelBitSet = TaggedBitSet<VoxelTag>;
 using NodeBitSet = TaggedBitSet<NodeTag>;
+using ObjBitSet = TaggedBitSet<ObjTag>;
 
 template <typename T> class SetBitIteratorT;
 
@@ -409,6 +410,7 @@ class MRMESH_CLASS AABBTree;
 class MRMESH_CLASS AABBTreePoints;
 struct MRMESH_CLASS CloudPartMapping;
 struct MRMESH_CLASS PartMapping;
+struct MeshOrPointsXf;
 struct MeshTexture;
 struct GridSettings;
 struct TriMesh;

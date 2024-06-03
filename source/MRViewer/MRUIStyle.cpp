@@ -1483,10 +1483,14 @@ bool beginTabBar( const char* str_id, ImGuiTabBarFlags flags )
     // Adjust tabs size
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x + 2, style.FramePadding.y + 4 ) );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, MR::StyleConsts::pluginItemSpacing );
+    
+    ImGui::PushStyleColor( ImGuiCol_Tab, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::HeaderBackground ) );
 
     bool result = ImGui::BeginTabBar( str_id, flags );
 
     ImGui::PopStyleVar( 2 );
+    ImGui::PopStyleColor( 1 );
+
     return result;
 }
 
@@ -1502,12 +1506,14 @@ bool beginTabItem( const char* label, bool* p_open, ImGuiTabItemFlags flags )
     assert( tab_bar );
     ImGuiID itemId = ImGui::GetCurrentWindowRead()->GetID( label );
     bool active = tab_bar->VisibleTabId == itemId;
-    ImGui::PushStyleColor( ImGuiCol_Text,
-        ColorTheme::getRibbonColor( active ? ColorTheme::RibbonColorsType::DialogTabActiveText :
-                                             ColorTheme::RibbonColorsType::DialogTabText ) );
-    ImGui::PushStyleColor( ImGuiCol_TabHovered,
-        ColorTheme::getRibbonColor( active ? ColorTheme::RibbonColorsType::DialogTabActiveHovered :
-                                             ColorTheme::RibbonColorsType::DialogTabHovered ) );
+    ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text ) );
+
+    ImGui::PushStyleColor( ImGuiCol_Tab, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::DialogTabActive ) );
+    ImGui::PushStyleColor( ImGuiCol_TabActive, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarHovered ) );
+    ImGui::PushStyleColor( ImGuiCol_TabHovered, 
+        ColorTheme::getRibbonColor( active ? ColorTheme::RibbonColorsType::ToolbarHovered :
+                                             ColorTheme::RibbonColorsType::DialogTabActiveHovered ) );
+
     const auto& style = ImGui::GetStyle();
     // Adjust tab size
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x + 2, style.FramePadding.y + 4 ) );
@@ -1517,7 +1523,7 @@ bool beginTabItem( const char* label, bool* p_open, ImGuiTabItemFlags flags )
     bool result = ImGui::BeginTabItem( label, p_open, flags );
 
     ImGui::PopStyleVar( 2 );
-    ImGui::PopStyleColor( 2 );
+    ImGui::PopStyleColor( 4 );
     return result;
 }
 

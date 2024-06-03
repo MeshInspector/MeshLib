@@ -33,7 +33,7 @@ public:
     // returns all sampled points after addition
     VertBitSet getSamples() const;
     // returns all sampled points after addition
-    std::vector<ModelVertId> setSamplesPerModel() const;
+    std::vector<ObjVertId> setSamplesPerModel() const;
 
 private:
     Box3f box_; 
@@ -103,15 +103,15 @@ VertBitSet Grid::getSamples() const
     return res;
 }
 
-std::vector<MR::ModelVertId> Grid::setSamplesPerModel() const
+std::vector<MR::ObjVertId> Grid::setSamplesPerModel() const
 {
     size_t counter = 0;
     for ( const auto& ge : voxels_ )
         if ( ge.vid )
             ++counter;
 
+    std::vector<MR::ObjVertId> res( counter );
     counter = 0;
-    std::vector<MR::ModelVertId> res( counter );
     for ( const auto& ge : voxels_ )
     {
         if ( !ge.vid )
@@ -201,7 +201,7 @@ std::optional<VertBitSet> pointGridSampling( const PointCloud & cloud, float vox
     return res;
 }
 
-std::optional<std::vector<ModelVertId>> multiModelGridSampling( const Vector<ModelPointsData, ObjId>& models, float voxelSize, const ProgressCallback& cb )
+std::optional<std::vector<ObjVertId>> multiModelGridSampling( const Vector<ModelPointsData, ObjId>& models, float voxelSize, const ProgressCallback& cb )
 {
     if ( voxelSize <= 0.f )
         return {};
@@ -247,7 +247,7 @@ std::optional<std::vector<ModelVertId>> multiModelGridSampling( const Vector<Mod
             return {};
     }
 
-    std::vector<ModelVertId> res = grid.setSamplesPerModel();
+    std::vector<ObjVertId> res = grid.setSamplesPerModel();
 
     if ( cb && !cb( 1.0f ) )
         return {};

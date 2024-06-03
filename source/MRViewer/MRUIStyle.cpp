@@ -258,11 +258,11 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
     ret = TestEngine::createButton( label ) || ret; // Don't want short-circuiting.
     return ret;
 }
-bool buttonIconEx(
-    const std::string& name,
-    const Vector2f& iconSize,
-    const std::string& text,
-    const ImVec2& buttonSize,
+bool buttonIconEx( 
+    const std::string& name, 
+    const Vector2f& iconSize, 
+    const std::string& text, 
+    const ImVec2& buttonSize, 
     const ButtonIconCustomizationParams& params )
 {
     ImGui::BeginGroup();
@@ -389,7 +389,7 @@ bool buttonIconEx(
     return res;
 }
 
-static bool checkboxWithoutTestEngine( const char* label, bool* value )
+bool checkbox( const char* label, bool* value )
 {
     const ImGuiStyle& style = ImGui::GetStyle();
 
@@ -506,23 +506,9 @@ static bool checkboxWithoutTestEngine( const char* label, bool* value )
         return pressed;
     };
 
-    bool res = drawCustomCheckbox( label, value );
+    auto res = drawCustomCheckbox( label, value );
 
     return res;
-}
-
-bool checkbox( const char* label, bool* value )
-{
-    bool ret = checkboxWithoutTestEngine( label, value );
-
-    if ( auto opt = TestEngine::createValue( label, *value, false, true ) )
-    {
-        *value = *opt;
-        ret = true;
-        ImGui::MarkItemEdited( ImGui::GetID( label ) );
-    }
-
-    return ret;
 }
 
 bool checkboxValid( const char* label, bool* value, bool valid )
@@ -534,7 +520,7 @@ bool checkboxValid( const char* label, bool* value, bool valid )
     const auto disColor = ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled );
     sh.addColor( ImGuiCol_Text, Color( disColor.x, disColor.y, disColor.z, disColor.w ) );
     bool falseVal = false;
-    checkboxWithoutTestEngine( label, &falseVal );
+    checkbox( label, &falseVal );
     return false;
 }
 
@@ -542,26 +528,16 @@ bool checkboxMixed( const char* label, bool* value, bool mixed )
 {
     if ( mixed )
     {
-        ImGui::PushItemFlag( ImGuiItemFlags_MixedValue, true );
-        bool ret = checkboxWithoutTestEngine( label, value );
-        ImGui::PopItemFlag();
-
-        // Allow resetting from -1 to either 0 or 1.
-        if ( int fakeValue = -1; auto opt = TestEngine::createValue( label, fakeValue, -1, 1 ) )
-        {
-            if ( *opt != -1 )
-            {
-                *value = bool( *opt );
-                ret = true;
-                ImGui::MarkItemEdited( ImGui::GetID( label ) );
-            }
-        }
-
-        return ret;
+        ImGuiContext& g = *ImGui::GetCurrentContext();
+        ImGuiItemFlags backup_item_flags = g.CurrentItemFlags;
+        g.CurrentItemFlags |= ImGuiItemFlags_MixedValue;
+        const bool changed = UI::checkbox( label, value );
+        g.CurrentItemFlags = backup_item_flags;
+        return changed;
     }
     else
     {
-        return checkbox( label, value );
+        return UI::checkbox( label, value );
     }
 }
 
@@ -1507,12 +1483,11 @@ bool beginTabItem( const char* label, bool* p_open, ImGuiTabItemFlags flags )
     ImGuiID itemId = ImGui::GetCurrentWindowRead()->GetID( label );
     bool active = tab_bar->VisibleTabId == itemId;
     ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text ) );
-
+    const auto bgColor = ImGui::ColorConvertFloat4ToU32( ImGui::GetStyleColorVec4( ImGuiCol_FrameBg ) );
+    const auto bgColorHovered = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::DialogTabActiveHovered );
     ImGui::PushStyleColor( ImGuiCol_Tab, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::DialogTabActive ) );
-    ImGui::PushStyleColor( ImGuiCol_TabActive, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::ToolbarHovered ) );
-    ImGui::PushStyleColor( ImGuiCol_TabHovered, 
-        ColorTheme::getRibbonColor( active ? ColorTheme::RibbonColorsType::ToolbarHovered :
-                                             ColorTheme::RibbonColorsType::DialogTabActiveHovered ) );
+    ImGui::PushStyleColor( ImGuiCol_TabActive, bgColor );
+    ImGui::PushStyleColor( ImGuiCol_TabHovered, active ? bgColor : bgColorHovered.getUInt32() );
 
     const auto& style = ImGui::GetStyle();
     // Adjust tab size

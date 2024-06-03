@@ -981,7 +981,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
 
     SubdivideSettings subs;
     subs.maxEdgeLen = settings.targetEdgeLen;
-    subs.maxEdgeSplits = 10'000'000;
+    subs.maxEdgeSplits = settings.maxEdgeSplits;
     subs.maxAngleChangeAfterFlip = settings.maxAngleChangeAfterFlip;
     subs.smoothMode = settings.useCurvature;
     subs.region = settings.region;

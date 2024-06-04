@@ -12,13 +12,6 @@ file(COPY ${PNGS} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 IF(MR_EMSCRIPTEN)
   file(GLOB LOCAL_WASM_FILES "../../wasm/*.*")
   file(COPY ${LOCAL_WASM_FILES} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-
-  include(EmscriptenHelpers)
-  mr_emscripten_pack_directory("${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets" "/")
-  IF(NOT MR_DISABLE_EMSCRIPTEN_ASYNCIFY)
-    mr_emscripten_set_async_func_list("${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/wasm_async_func_list.txt")
-  ENDIF()
-
   target_link_libraries(${PROJECT_NAME} PRIVATE
     zip
     gtest

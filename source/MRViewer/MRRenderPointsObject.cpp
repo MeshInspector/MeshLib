@@ -423,21 +423,15 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
     assert( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y >= size );
     auto buffer = glBuffer.prepareBuffer<unsigned>( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y );
 
-    std::vector<unsigned> selection;
     const auto& selectedPoints = objPoints_->getSelectedPoints();
-    unsigned* selectionData = ( unsigned* )selectedPoints.m_bits.data();
+    const size_t selectionSize = selectedPoints.m_bits.size();
     
-    if ( num > selectedPoints.m_bits.size() * 64 )
-    {
-        selection.resize( ( num + 63 ) / 64 * 2 );
-        memcpy( selection.data(), selectedPoints.m_bits.data(), selectedPoints.m_bits.size() * 8 );
-        selectionData = selection.data();
-    }
+    const unsigned* selectionData = ( unsigned* )selectedPoints.m_bits.data();    
 
     ParallelFor( 0, ( int )buffer.size(), [&]( int r )
     {
         auto& block = buffer[r];
-        if ( r * step / 2 >= selection.size() )
+        if ( r * step / 2 >= selectionSize )
         {
             block = 0;
             return;
@@ -451,7 +445,14 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
 
         for ( int bit = 0; bit < 32; ++bit )
         {
-            const auto selectionBit = std::div( ( r * 32 + bit ) * int( step ), 32 );
+            const int bitIndex = ( r * 32 + bit ) * int( step );
+            if ( bitIndex >= selectionSize * 64 )
+            {
+                block &= ~( 1 << bit );
+                continue;
+            }
+
+            const auto selectionBit = std::div( bitIndex, 32 );
             if ( selectionData[selectionBit.quot] & ( 1 << ( selectionBit.rem ) ) )
                 block |= 1 << bit;
             else

@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 include(CompilerOptions)
-include(DetectPlatform)
 include(HelperFunctions)
 
 IF(NOT MR_EMSCRIPTEN AND NOT APPLE AND EXISTS /usr/bin/time)
@@ -54,6 +53,7 @@ IF(APPLE)
   ENDIF()
 ENDIF()
 
+include(DetectPlatform)
 IF(MESHLIB_PYTHON_SUPPORT AND NOT MR_EMSCRIPTEN)
   # TODO: drop Python version hard-coding; set -DMESHLIB_PYTHON_VERSION explicitly in the CI config if needed
   IF(APPLE)

@@ -190,7 +190,7 @@ protected:
     // reads files with panel description
     MRVIEWER_API virtual void readMenuItemsStructure_();
 
-    std::shared_ptr<std::vector<std::shared_ptr<const Object>>> prevFrameSelectedObjectsCache_;
+    std::vector<std::shared_ptr<const Object>> prevFrameSelectedObjectsCache_;
 
     MRVIEWER_API virtual bool drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags flags = 0 ) override;
 

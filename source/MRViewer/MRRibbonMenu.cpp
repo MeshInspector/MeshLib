@@ -108,7 +108,7 @@ void RibbonMenu::init( MR::Viewer* _viewer )
         draw_helpers();
         drawVersionWindow_();
         notifier_.drawNotifications( menu_scaling() );
-        prevFrameSelectedObjectsCache_ = SceneCache::getAllObjectsCached<const Object, ObjectSelectivityType::Selected>();
+        prevFrameSelectedObjectsCache_ = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
     };
 
     buttonDrawer_.setMenu( this );
@@ -1508,7 +1508,7 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
 
             if ( !statePlugin->dialogIsOpen() )
                 itemPressed_( itemPtr.item, true );
-            else if ( *prevFrameSelectedObjectsCache_ != SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() )
+            else if ( prevFrameSelectedObjectsCache_ != SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() )
                 statePlugin->updateSelection( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() );
         }
     }

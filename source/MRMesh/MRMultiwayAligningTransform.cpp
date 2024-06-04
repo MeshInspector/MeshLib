@@ -1,7 +1,16 @@
 #include "MRMultiwayAligningTransform.h"
-#include "MRTimer.h"
 #include "MRGTest.h"
+#include "MRTimer.h"
+
+#if __clang_major__ >= 13
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-but-set-variable"
+#endif
 #include <Eigen/SparseCholesky>
+#if __clang_major__ >= 13
+#pragma clang diagnostic pop
+#endif
+
 #include <cassert>
 
 namespace MR

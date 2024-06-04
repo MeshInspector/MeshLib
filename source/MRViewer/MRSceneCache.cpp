@@ -9,8 +9,7 @@ namespace MR
 
 void SceneCache::invalidateAll()
 {
-    for ( auto& data : instance_().cachedData_ )
-        data.second.reset();
+    instance_().cachedData_.clear();
 }
 
 MR::SceneCache& SceneCache::instance_()

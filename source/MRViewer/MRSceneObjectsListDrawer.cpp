@@ -173,15 +173,21 @@ void SceneObjectsListDrawer::allowSceneReorder( bool allow )
 void SceneObjectsListDrawer::drawObjectsList_()
 {
     const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
-    auto getDepth = [] ( const Object* obj )
+    std::vector<int> depths( all.size(), -1 );
+    auto getDepth = [&] ( int i )
     {
-        int depth = 0;
-        while ( obj->parent() && obj->parent() != SceneRoot::getSharedPtr().get() )
+        if ( depths[i] == -1 )
         {
-            obj = obj->parent();
-            ++depth;
+            const Object* obj = all[i].get();
+            int depth = 0;
+            while ( obj->parent() && obj->parent() != SceneRoot::getSharedPtr().get() )
+            {
+                obj = obj->parent();
+                ++depth;
+            }
+            depths[i] = depth;
         }
-        return depth;
+        return depths[i];
     };
 
     int curentDepth = 0;
@@ -210,11 +216,11 @@ void SceneObjectsListDrawer::drawObjectsList_()
     for ( int i = 0; i < all.size(); ++i )
     {
         const bool isLast = i == int( all.size() ) - 1;
-        const int nextDepth = isLast ? 0 : getDepth( all[i + 1].get() );
+        const int nextDepth = isLast ? 0 : getDepth( i + 1 );
         // skip child elements after collapsed header
         if ( collapsedHeaderDepth >= 0 )
         {
-            if ( getDepth( all[i].get() ) > collapsedHeaderDepth)
+            if ( getDepth( i ) > collapsedHeaderDepth)
             {
                 if ( curentDepth > nextDepth )
                 {
@@ -233,13 +239,13 @@ void SceneObjectsListDrawer::drawObjectsList_()
         }
 
         auto& object = *all[i];
-        if ( curentDepth < getDepth( all[i].get() ) )
+        if ( curentDepth < getDepth( i ) )
         {
             ImGui::Indent();
             if ( i > 0 )
                 objDepthStack.push( all[i - 1] );
             ++curentDepth;
-            assert( curentDepth == getDepth( all[i].get() ) );
+            assert( curentDepth == getDepth( i ) );
         }
 
         {

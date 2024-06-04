@@ -3,6 +3,7 @@
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "exports.h"
+#include <unordered_map>
 
 namespace MR
 {
@@ -29,8 +30,9 @@ private:
     struct BasicVectorHolder
     {
         BasicVectorHolder() = default;
-        virtual ~BasicVectorHolder() = default;
         BasicVectorHolder( const BasicVectorHolder& ) = default;
+        BasicVectorHolder( BasicVectorHolder&& ) = default;
+        virtual ~BasicVectorHolder() = default;
     };
     template <typename ObjectType, ObjectSelectivityType SelectivityType>
     struct VectorHolder : BasicVectorHolder

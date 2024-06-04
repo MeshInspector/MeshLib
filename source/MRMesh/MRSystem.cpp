@@ -165,17 +165,25 @@ std::filesystem::path GetResourcesDirectory()
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
-    if ( resourcesAreNearExe() )
-        return exePath;
+
     #ifdef __APPLE__
+    auto localResources = exePath;
+    // Remove the trailing slash if present
+    if (localResources.string().back() == '/')
+        localResources = localResources.parent_path();
+
+    localResources = localResources.parent_path() / "Resources";
         #ifdef MR_FRAMEWORK
-    return "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/Resources/";
+    auto systemResources =  "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/Resources/";
         #else
-    return "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/Resources/";
+    auto systemResources = "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/Resources/";
         #endif
     #else
-    return "/usr/local/etc/" + std::string( MR_PROJECT_NAME ) + "/";
+    auto localResources = exePath;
+    auto systemResources = "/usr/local/etc/" + std::string( MR_PROJECT_NAME ) + "/";
     #endif
+
+    return resourcesAreNearExe() ? localResources : std::filesystem::path{systemResources};
 #endif
 }
 
@@ -185,12 +193,10 @@ std::filesystem::path GetFontsDirectory()
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
-    if ( resourcesAreNearExe() )
-        return exePath;
     #ifdef __APPLE__
     return GetResourcesDirectory() / "fonts/";
     #else
-    return "/usr/local/share/fonts/";
+    return resourcesAreNearExe() ? exePath : "/usr/local/share/fonts/";
     #endif
 #endif
 }
@@ -201,17 +207,24 @@ std::filesystem::path GetLibsDirectory()
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
-    if ( resourcesAreNearExe() )
-        return exePath;
     #ifdef __APPLE__
+    auto localLibs = exePath;
+    // Remove the trailing slash if present
+    if (localLibs.string().back() == '/')
+        localLibs = localLibs.parent_path();
+
+    localLibs = localLibs.parent_path() /"libs";
         #ifdef MR_FRAMEWORK
-    return "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/lib/";
+    auto systemLibs = "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/lib/";
         #else
-    return "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/libs/";
+    auto systemLibs = "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/libs/";
         #endif
     #else
-    return "/usr/local/lib/" + std::string( MR_PROJECT_NAME ) + "/";
+    auto localLibs = exePath;
+    auto systemLibs = "/usr/local/lib/" + std::string( MR_PROJECT_NAME ) + "/";
     #endif
+
+    return resourcesAreNearExe() ? localLibs : std::filesystem::path{systemLibs};
 #endif
 }
 
@@ -221,17 +234,24 @@ std::filesystem::path GetEmbeddedPythonDirectory()
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
-    if ( resourcesAreNearExe() )
-        return exePath;
-#ifdef __APPLE__
-#ifdef MR_FRAMEWORK
-    return "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/Frameworks/";
-#else
-    return "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/Frameworks/";
-#endif
-#else
-    return "/usr/local/lib/" + std::string( MR_PROJECT_NAME ) + "/";
-#endif
+    #ifdef __APPLE__
+    auto localPyDir = exePath;
+    // Remove the trailing slash if present
+    if (localPyDir.string().back() == '/')
+        localPyDir = localPyDir.parent_path();
+
+    localPyDir = localPyDir.parent_path() / "Frameworks";
+        #ifdef MR_FRAMEWORK
+    auto systemPyDir = "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/Frameworks/";
+        #else
+    auto systemPyDir = "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/Frameworks/";
+        #endif
+    #else
+    auto localPyDir = exePath;
+    auto systemPyDir = "/usr/local/lib/" + std::string( MR_PROJECT_NAME ) + "/";
+    #endif
+
+    return resourcesAreNearExe() ? localPyDir : std::filesystem::path{systemPyDir};
 #endif
 }
 

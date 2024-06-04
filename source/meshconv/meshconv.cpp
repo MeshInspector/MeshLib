@@ -156,7 +156,7 @@ static int mainInternal( int argc, char **argv )
         return 1;
     }
     auto mesh = std::move( loadRes.value() );
-    std::cout << "loaded successfully in " << t.secondsPassed().count() << "s\n";
+    std::cout << "loaded successfully in " << t.secondsPassed().count() << "s" << std::endl;
     t.finish();
 
     t.restart( "MeshInfo" );
@@ -186,7 +186,7 @@ static int mainInternal( int argc, char **argv )
             std::cerr << "Mesh save error: " << saveRes.error() << "\n";
             return 1;
         }
-        std::cout << "saved successfully in " << t.secondsPassed().count() << "s\n";
+        std::cout << "saved successfully in " << t.secondsPassed().count() << "s" << std::endl;
         t.finish();
     }
 
@@ -197,8 +197,8 @@ static int mainInternal( int argc, char **argv )
     {
         static constexpr size_t MB = 1024 * 1024;
         const float bytesInMB = 1.0f / MB;
-        spdlog::info( "Peak working set    {} MB", pmc.PeakWorkingSetSize * bytesInMB );
-        spdlog::info( "Peak pagefile usage {} MB", pmc.PeakPagefileUsage * bytesInMB );
+        std::cout << "Peak working set:    " << pmc.PeakWorkingSetSize * bytesInMB << " MB\n";
+        std::cout << "Peak pagefile usage: " << pmc.PeakPagefileUsage * bytesInMB << " MB" << std::endl;
     }
 #endif
 

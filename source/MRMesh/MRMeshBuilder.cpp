@@ -417,23 +417,20 @@ MeshTopology fromDisjointMeshPieces( const Triangulation & t, VertId maxVertId,
     return res;
 }
 
-MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & settings, ProgressCallback progressCb )
+constexpr size_t minTrisInPart = 32768;
+
+static MeshTopology fromTrianglesPar( const Triangulation & t, const BuildSettings & settings, ProgressCallback progressCb )
 {
-    if ( t.empty() )
-        return {};
     MR_TIMER
     
     // reserve enough elements for faces and vertices
     //auto [maxFaceId, maxVertId] = computeMaxIds( tris );
     const auto maxVertId = findMaxVertId( t, settings.region );
 
-    constexpr size_t minTrisInPart = 32768;
     // numParts shall not depend on hardware (e.g. on std::thread::hardware_concurrency()) to be repeatable on all hardware
     const size_t numParts = std::min( ( t.size() + minTrisInPart - 1 ) / minTrisInPart, (size_t)64 );
-    assert( numParts >= 1 );
+    assert( numParts > 1 );
     MeshTopology res;
-    if ( numParts <= 1 )
-        return fromTrianglesSeq( t, settings );
 
     const size_t vertsInPart = ( (int)maxVertId + numParts ) / numParts;
     std::vector<MeshPiece> parts( numParts );
@@ -504,6 +501,31 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
     if ( settings.region )
         *settings.region = std::move( borderTris );
     return res;
+}
+
+MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & settings, ProgressCallback progressCb )
+{
+    if ( t.empty() )
+        return {};
+    MR_TIMER
+    
+    // numParts shall not depend on hardware (e.g. on std::thread::hardware_concurrency()) to be repeatable on all hardware
+    const size_t numParts = std::min( ( t.size() + minTrisInPart - 1 ) / minTrisInPart, (size_t)64 );
+    assert( numParts >= 1 );
+
+    if ( numParts > 1 )
+    {
+        try
+        {
+            return fromTrianglesPar( t, settings, progressCb );
+        }
+        catch ( const std::bad_alloc & )
+        {
+            // pass through to sequential version that consumes twice less memory
+        }
+    }
+    
+    return fromTrianglesSeq( t, settings );
 }
 
 // two incident vertices can be found using this struct

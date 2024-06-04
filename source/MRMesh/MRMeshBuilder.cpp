@@ -441,7 +441,6 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
     Timer timer("partition triangles");
     if ( progressCb && !progressCb( 0.33f ) )
         return {};
-    Buffer<signed char> tri2part( t.size() ); // part number for each triangle, or -1 for border triangles
     FaceBitSet borderTris( t.size() ); // triangles having vertices in distinct parts
     BitSetParallelForAll( borderTris, [&]( FaceId f )
     {
@@ -452,11 +451,7 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
         auto v1p = int( vs[1] / vertsInPart );
         auto v2p = int( vs[2] / vertsInPart );
         if ( v0p == v1p && v0p == v2p )
-        {
-            tri2part[f] = (signed char)v0p;
             return;
-        }
-        tri2part[f] = -1;
         borderTris.set( f );
     } );
 
@@ -472,13 +467,17 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
             Triangulation partTriangulation;
             BuildSettings partSettings{ .region = &part.rem, .allowNonManifoldEdge = settings.allowNonManifoldEdge };
             part.vmap.resize( vertsInPart );
+            const VertId myBeginVert( myPartId * vertsInPart );
+            const VertId myEndVert( ( myPartId + 1 ) * vertsInPart );
             for ( FaceId f{0}; f < t.size(); ++f )
             {
                 if ( settings.region && !settings.region->test( f ) )
                     continue;
-                if ( (int)myPartId != tri2part[f] )
+                if ( borderTris.test( f ) )
                     continue;
                 const auto & vs = t[f];
+                if ( vs[0] < myBeginVert || vs[0] >= myEndVert )
+                    continue;
                 VertId v[3] = {
                     VertId( vs[0] % vertsInPart ),
                     VertId( vs[1] % vertsInPart ),
@@ -496,7 +495,6 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
             parts[myPartId] = std::move( part );
         }
     } );
-    tri2part.clear(); // also frees the memory
 
     auto joinSettings = settings;
     joinSettings.region = &borderTris;

@@ -431,11 +431,9 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
     ParallelFor( 0, ( int )buffer.size(), [&]( int r )
     {
         auto& block = buffer[r];
+        block = 0;
         if ( r * step / 2 >= selectionSize )
-        {
-            block = 0;
             return;
-        }
 
         if ( step == 1 )
         {
@@ -447,16 +445,11 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
         {
             const int bitIndex = ( r * 32 + bit ) * int( step );
             if ( bitIndex >= selectionSize * 64 )
-            {
-                block &= ~( 1 << bit );
                 continue;
-            }
 
             const auto selectionBit = std::div( bitIndex, 32 );
             if ( selectionData[selectionBit.quot] & ( 1 << ( selectionBit.rem ) ) )
                 block |= 1 << bit;
-            else
-                block &= ~( 1 << bit );
         }
     } );
 

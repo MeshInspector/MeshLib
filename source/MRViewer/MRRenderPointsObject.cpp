@@ -423,10 +423,16 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
     assert( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y >= size );
     auto buffer = glBuffer.prepareBuffer<unsigned>( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y );
 
+    std::vector<unsigned> selection;
     const auto& selectedPoints = objPoints_->getSelectedPoints();
-    std::vector<unsigned> selection( ( num + 63 ) / 64 * 2 );
-    memcpy( selection.data(), selectedPoints.m_bits.data(), selectedPoints.m_bits.size() * 8 );
-    const unsigned* selectionData = selection.data();
+    unsigned* selectionData = ( unsigned* )selectedPoints.m_bits.data();
+    
+    if ( num > selectedPoints.m_bits.size() * 64 )
+    {
+        selection.resize( ( num + 63 ) / 64 * 2 );
+        memcpy( selection.data(), selectedPoints.m_bits.data(), selectedPoints.m_bits.size() * 8 );
+        selectionData = selection.data();
+    }
 
     ParallelFor( 0, ( int )buffer.size(), [&]( int r )
     {

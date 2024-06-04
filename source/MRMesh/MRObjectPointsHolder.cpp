@@ -198,17 +198,6 @@ size_t ObjectPointsHolder::heapBytes() const
         + MR::heapBytes( points_ );
 }
 
-void ObjectPointsHolder::setRenderDiscretization( int val )
-{
-    if ( val == renderDiscretization_ )
-        return;
-
-    assert( val > 0 );
-    val = val < 1 ? 1 : val;
-    int newMax = int( numValidPoints() ) / val;
-    setMaxRenderingPoints( newMax );
-}
-
 void ObjectPointsHolder::setMaxRenderingPoints( int val )
 {
     if ( maxRenderingPoints_ == val )
@@ -362,7 +351,9 @@ void ObjectPointsHolder::setDefaultSceneProperties_()
 
 void ObjectPointsHolder::updateRenderDiscretization_()
 {
-    int newRenderDiscretization = std::max( 1, int( numValidPoints() ) / maxRenderingPoints_ );
+    int newRenderDiscretization = maxRenderingPoints_ <= 0 ? 1 :
+        int( numValidPoints() + maxRenderingPoints_ - 1 ) / maxRenderingPoints_;
+    newRenderDiscretization = std::max( 1, newRenderDiscretization );
     if ( newRenderDiscretization == renderDiscretization_ )
         return;
     renderDiscretization_ = newRenderDiscretization;

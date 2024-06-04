@@ -26,9 +26,6 @@ public:
     void handle() override;
 
 private:
-    struct LibHandle;
-    std::unique_ptr<LibHandle> lib_;
-
     std::unique_ptr<uint8_t[]> clientName_;
     uint16_t clientId_{ 0 };
 };

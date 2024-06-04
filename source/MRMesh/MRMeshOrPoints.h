@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRMeshPart.h"
-#include "MRVector3.h"
+#include "MRAffineXf3.h"
 #include "MRId.h"
 #include <cfloat>
 #include <functional>
@@ -19,6 +19,10 @@ public:
     MeshOrPoints( const Mesh & mesh ) : var_( MeshPart( mesh ) ) { }
     MeshOrPoints( const MeshPart & mp ) : var_( mp ) { }
     MeshOrPoints( const PointCloud & pc ) : var_( &pc ) { }
+
+    /// returns the minimal bounding box containing all valid vertices of the object (and not only part of mesh);
+    /// implemented via obj.getAABBTree()
+    [[nodiscard]] MRMESH_API Box3f getObjBoundingBox() const;
 
     /// passes through all valid vertices and finds the minimal bounding box containing all of them;
     /// if toWorld transformation is given then returns minimal bounding box in world space
@@ -79,7 +83,25 @@ private:
     std::variant<MeshPart, const PointCloud*> var_;
 };
 
+/// an object and its transformation to global space with other objects
+struct MeshOrPointsXf
+{
+    MeshOrPoints obj;
+    AffineXf3f xf;
+};
+
 /// constructs MeshOrPoints from ObjectMesh or ObjectPoints, otherwise returns nullopt
 [[nodiscard]] MRMESH_API std::optional<MeshOrPoints> getMeshOrPoints( const VisualObject * obj );
+
+/// to receive object id + projection result on it
+using ProjectOnAllCallback = std::function<void( ObjId, MeshOrPoints::ProjectionResult )>;
+
+/// finds closest point on every object within given distance
+MRMESH_API void projectOnAll(
+    const Vector3f& pt, ///< target point in world coordinates
+    const AABBTreeObjects & tree, ///< contains a set of objects to search closest points on each of them
+    float upDistLimitSq, ///< upper limit on the distance in question
+    const ProjectOnAllCallback & callback, ///< each found closest point within given distance will be returned via this callback
+    ObjId skipObjId = {} ); ///< projection on given object will be skipped
 
 } // namespace MR

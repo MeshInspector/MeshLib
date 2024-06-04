@@ -89,6 +89,7 @@ public:
     {
         unsigned geomId{ unsigned( -1 ) };  // id of picked object in PickParameters::renderVector (-1 means invalid)
         unsigned primId{ unsigned( -1 ) };  // id of picked primitive (-1 means invalid)
+        // Note: for point clouds, primId is a point index after discretization
     };
     // Result of object picking
     struct PickResult : BasePickResult

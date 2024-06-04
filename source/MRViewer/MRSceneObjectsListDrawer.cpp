@@ -59,7 +59,11 @@ public:
     {
         if ( skipedCursorPosY > cursorPosY )
             ImGui::Dummy( ImVec2( 0, skipedCursorPosY - cursorPosY - lastSpacingY ) );
+        cursorPosY = ImGui::GetCursorPosY();
+        skipedCursorPosY = cursorPosY;
     }
+
+    float getCursorPosY() { return skipedCursorPosY; }
 
 private:
     float drawBoxMinY = 0.f;
@@ -81,7 +85,7 @@ void SceneObjectsListDrawer::draw( float height, float scaling )
     updateSceneWindowScrollIfNeeded_();
     drawObjectsList_();
     // any click on empty space below Scene Tree removes object selection
-    const auto& selected = SceneCache::getSelectedObjects();
+    const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
     ImGui::BeginChild( "EmptySpace" );
     if ( ImGui::IsWindowHovered() && ImGui::IsMouseClicked( 0 ) )
     {
@@ -106,6 +110,55 @@ bool SceneObjectsListDrawer::collapsingHeader_( const std::string& uniqueName, I
     return ImGui::CollapsingHeader( uniqueName.c_str(), flags );
 }
 
+void SceneObjectsListDrawer::changeSelection( bool isDown, bool isShift )
+{
+    const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
+    if ( isDown )
+    {
+        if ( downLastSelected_.index != -1 )
+        {
+            if ( !isShift )
+                for ( const auto& data : selected )
+                    data->select( false );
+            all[downLastSelected_.index]->select( true );
+            downLastSelected_.needScroll = true;
+        }
+    }
+    else
+    {
+        if ( upFirstSelected_.index != -1 )
+        {
+            if ( !isShift )
+                for ( const auto& data : selected )
+                    data->select( false );
+            all[upFirstSelected_.index]->select( true );
+            upFirstSelected_.needScroll = true;
+        }
+    }
+}
+
+void SceneObjectsListDrawer::changeVisible( bool isDown )
+{
+    const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    if ( isDown )
+    {
+        if ( downLastSelected_.index != -1 )
+        {
+            all[downLastSelected_.index]->select( true );
+            downLastSelected_.needScroll = true;
+        }
+    }
+    else
+    {
+        if ( upFirstSelected_.index != -1 )
+        {
+            all[upFirstSelected_.index]->select( true );
+            upFirstSelected_.needScroll = true;
+        }
+    }
+}
+
 void SceneObjectsListDrawer::setObjectTreeState( const Object* obj, bool open )
 {
     if ( obj )
@@ -119,8 +172,23 @@ void SceneObjectsListDrawer::allowSceneReorder( bool allow )
 
 void SceneObjectsListDrawer::drawObjectsList_()
 {
-    const auto& all = SceneCache::getAllObjects();
-    const auto& depth = SceneCache::getAllObjectsDepth();
+    const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    std::vector<int> depths( all.size(), -1 );
+    auto getDepth = [&] ( int i )
+    {
+        if ( depths[i] == -1 )
+        {
+            const Object* obj = all[i].get();
+            int depth = 0;
+            while ( obj->parent() && obj->parent() != SceneRoot::getSharedPtr().get() )
+            {
+                obj = obj->parent();
+                ++depth;
+            }
+            depths[i] = depth;
+        }
+        return depths[i];
+    };
 
     int curentDepth = 0;
     std::stack<std::shared_ptr<Object>> objDepthStack;
@@ -130,25 +198,54 @@ void SceneObjectsListDrawer::drawObjectsList_()
     int collapsedHeaderDepth = -1;
     const float itemSpacingY = ImGui::GetStyle().ItemSpacing.y;
     const float frameHeight = ImGui::GetFrameHeight();
+
+    bool firstSelectedIsFound = false;
+    bool previousWasSelected = false;
+
+    const float borderShift = ImGui::GetFrameHeight();
+    const float scrollPosY = ImGui::GetScrollY();
+    const float windowHeight = ImGui::GetWindowHeight();
+    if ( upFirstSelected_.needScroll && upFirstSelected_.posY < ( scrollPosY + ImGui::GetStyle().WindowPadding.y + borderShift ) )
+        ImGui::SetScrollY( upFirstSelected_.posY - ImGui::GetStyle().WindowPadding.y - borderShift );
+    if ( downLastSelected_.needScroll && downLastSelected_.posY > ( scrollPosY + windowHeight - borderShift ) )
+        ImGui::SetScrollY( downLastSelected_.posY - windowHeight + ImGui::GetStyle().WindowPadding.y + borderShift );
+
+    upFirstSelected_ = MoveAndScrollData();
+    downLastSelected_ = MoveAndScrollData();
+
     for ( int i = 0; i < all.size(); ++i )
     {
+        const bool isLast = i == int( all.size() ) - 1;
+        const int nextDepth = isLast ? 0 : getDepth( i + 1 );
         // skip child elements after collapsed header
         if ( collapsedHeaderDepth >= 0 )
         {
-            if ( depth[i] > collapsedHeaderDepth )
+            if ( getDepth( i ) > collapsedHeaderDepth)
+            {
+                if ( curentDepth > nextDepth )
+                {
+                    for ( ; curentDepth > nextDepth; --curentDepth )
+                    {
+                        if ( needDragDropTarget_() )
+                            skippableRenderer.draw( getDrawDropTargetHeight_(), itemSpacingY, [&] { makeDragDropTarget_( *objDepthStack.top(), false, true, "0" ); } );
+                        objDepthStack.pop();
+                        ImGui::Unindent();
+                    }
+                }
                 continue;
+            }
             else
                 collapsedHeaderDepth = -1;
         }
 
         auto& object = *all[i];
-        if ( curentDepth < depth[i] )
+        if ( curentDepth < getDepth( i ) )
         {
             ImGui::Indent();
             if ( i > 0 )
                 objDepthStack.push( all[i - 1] );
             ++curentDepth;
-            assert( curentDepth == depth[i] );
+            assert( curentDepth == getDepth( i ) );
         }
 
         {
@@ -159,6 +256,14 @@ void SceneObjectsListDrawer::drawObjectsList_()
             if ( needDragDropTarget_() )
                 skippableRenderer.draw( getDrawDropTargetHeight_(), itemSpacingY, [&] { makeDragDropTarget_(object, true, true, uniqueStr); });
 
+            if ( object.isSelected() )
+                firstSelectedIsFound = true;
+            else if ( !firstSelectedIsFound )
+            {
+                upFirstSelected_.index = i;
+                upFirstSelected_.posY = skippableRenderer.getCursorPosY();
+            }
+
             skippableRenderer.draw( frameHeight, itemSpacingY,
             [&] { isOpen = drawObject_( object, uniqueStr ); },
             [&]
@@ -168,7 +273,19 @@ void SceneObjectsListDrawer::drawObjectsList_()
             } );
 
             if ( object.isSelected() )
-                drawSceneContextMenu_( SceneCache::getSelectedObjects(), uniqueStr );
+                previousWasSelected = true;
+            else
+            {
+                if ( previousWasSelected )
+                {
+                    downLastSelected_.index = i;
+                    downLastSelected_.posY = skippableRenderer.getCursorPosY();
+                }
+                previousWasSelected = false;
+            }
+
+            if ( object.isSelected() )
+                drawSceneContextMenu_( SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>(), uniqueStr );
 
             if ( isOpen )
             {
@@ -219,19 +336,16 @@ void SceneObjectsListDrawer::drawObjectsList_()
                 collapsedHeaderDepth = curentDepth;
         }
 
-        const bool isLast = i == int( all.size() ) - 1;
-        int newDepth = isLast ? 0 : depth[i + 1];
-        for ( ; curentDepth > newDepth; --curentDepth )
+        for ( ; curentDepth > nextDepth; --curentDepth )
         {
             if ( needDragDropTarget_() )
                 skippableRenderer.draw( getDrawDropTargetHeight_(), itemSpacingY, [&] { makeDragDropTarget_(*objDepthStack.top(), false, true, "0"); });
             objDepthStack.pop();
             ImGui::Unindent();
         }
-        if ( isLast && needDragDropTarget_() )
-            skippableRenderer.draw( getDrawDropTargetHeight_(), itemSpacingY, [&] { makeDragDropTarget_(SceneRoot::get(), false, true, ""); });
-
     }
+    if ( needDragDropTarget_() )
+        skippableRenderer.draw( getDrawDropTargetHeight_(), itemSpacingY, [&] { makeDragDropTarget_( SceneRoot::get(), false, true, "" ); } );
     skippableRenderer.endDraw();
 }
 
@@ -267,8 +381,8 @@ void SceneObjectsListDrawer::drawObjectVisibilityCheckbox_( Object& object, cons
 
 bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const std::string& uniqueStr, bool hasRealChildren )
 {
-    const auto& all = SceneCache::getAllObjects();
-    const auto& selected = SceneCache::getSelectedObjects();
+    const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
     const bool isSelected = object.isSelected();
 
     auto openCommandIt = sceneOpenCommands_.find( &object );

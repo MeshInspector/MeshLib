@@ -156,13 +156,6 @@ struct ICPProperties
     bool mutualClosest = false;
 };
 
-/// an object and its transformation to global space with other objects
-struct MeshOrPointsXf
-{
-    MeshOrPoints obj;
-    AffineXf3f xf;
-};
-
 /// in each pair updates the target data and performs basic filtering (activation)
 void updatePointPairs( PointPairs& pairs,
     const MeshOrPointsXf& src, const MeshOrPointsXf& tgt,

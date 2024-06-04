@@ -58,6 +58,7 @@ class MRMESH_CLASS PixelTag;
 class MRMESH_CLASS VoxelTag;
 class MRMESH_CLASS RegionTag;
 class MRMESH_CLASS NodeTag;
+class MRMESH_CLASS ObjTag;
 
 template <typename T> class MRMESH_CLASS Id;
 template <typename T, typename I> class MRMESH_CLASS Vector;
@@ -72,6 +73,8 @@ using PixelId = Id<PixelTag>;
 using VoxelId = Id<VoxelTag>;
 using RegionId = Id<RegionTag>;
 using NodeId = Id<NodeTag>;
+using ObjId = Id<ObjTag>;
+
 class ViewportId;
 class ViewportMask;
 
@@ -103,6 +106,7 @@ using UndirectedEdgeBitSet = TaggedBitSet<UndirectedEdgeTag>;
 using PixelBitSet = TaggedBitSet<PixelTag>;
 using VoxelBitSet = TaggedBitSet<VoxelTag>;
 using NodeBitSet = TaggedBitSet<NodeTag>;
+using ObjBitSet = TaggedBitSet<ObjTag>;
 
 template <typename T> class SetBitIteratorT;
 
@@ -404,8 +408,10 @@ class MRMESH_CLASS MeshOrPoints;
 struct MRMESH_CLASS PointCloud;
 class MRMESH_CLASS AABBTree;
 class MRMESH_CLASS AABBTreePoints;
+class MRMESH_CLASS AABBTreeObjects;
 struct MRMESH_CLASS CloudPartMapping;
 struct MRMESH_CLASS PartMapping;
+struct MeshOrPointsXf;
 struct MeshTexture;
 struct GridSettings;
 struct TriMesh;

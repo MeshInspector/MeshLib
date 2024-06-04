@@ -915,7 +915,8 @@ static inline void setNewToOld( FaceHashMap * new2Old, std::initializer_list<Fac
     {
         // fromFace is already new, find its origin
         fromFace = it->second;
-        assert( new2Old->find( fromFace ) != new2Old->end() );
+        // now fromFace is original face that must not be found among new ones (not a key in new2Old)
+        assert( new2Old->find( fromFace ) == new2Old->end() );
     }
     for ( auto newFace: newFaces )
         (*new2Old)[newFace] = fromFace;

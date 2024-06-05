@@ -1275,6 +1275,9 @@
     <ClInclude Include="MRAABBTreeMaker.hpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRLevelOfDetails.h">
+      <Filter>Source Files\Decimation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2122,6 +2125,9 @@
     </ClCompile>
     <ClCompile Include="MRAABBTreeObjects.cpp">
       <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRLevelOfDetails.cpp">
+      <Filter>Source Files\Decimation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

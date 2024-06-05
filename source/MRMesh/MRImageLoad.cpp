@@ -18,11 +18,15 @@
 #endif
 #endif
 
+#ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_JPEG
 #include <turbojpeg.h>
 #endif
+#endif
 
-namespace MR::ImageLoad
+namespace MR
+{
+namespace ImageLoad
 {
 
 const IOFilters Filters =
@@ -30,8 +34,10 @@ const IOFilters Filters =
 #ifndef MRMESH_NO_PNG
     {"Portable Network Graphics (.png)",  "*.png"},
 #endif
+#ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_JPEG
     {"JPEG (.jpg,.jpeg)",  "*.jpg;*.jpeg"}
+#endif
 #endif
 };
 
@@ -160,6 +166,8 @@ Expected<MR::Image, std::string> fromPng( std::istream& in )
 
 #endif
 
+#ifndef __EMSCRIPTEN__
+
 #ifndef MRMESH_NO_JPEG
 struct JpegReader
 {
@@ -217,6 +225,8 @@ Expected<MR::Image, std::string> fromJpeg( std::istream& in )
 
 #endif
 
+#endif
+
 Expected<Image, std::string> fromAnySupportedFormat( const std::filesystem::path& file )
 {
     auto ext = utf8string( file.extension() );
@@ -228,11 +238,15 @@ Expected<Image, std::string> fromAnySupportedFormat( const std::filesystem::path
     if ( ext == ".png" )
         return MR::ImageLoad::fromPng( file );
 #endif
+#ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_JPEG
     if ( ext == ".jpg" || ext == ".jpeg" )
         return MR::ImageLoad::fromJpeg( file );
 #endif
+#endif
     return res;
 }
 
-} // namespace MR::ImageLoad
+}
+
+}

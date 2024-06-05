@@ -5,26 +5,27 @@
 #include <fstream>
 #include <filesystem>
 
-#ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_PNG
+#ifdef __EMSCRIPTEN__
+#include <png.h>
+#else
 #include <libpng16/png.h>
-#endif
-#ifndef MRMESH_NO_JPEG
-#include <turbojpeg.h>
-#endif
-#ifndef MRMESH_NO_TIFF
-#include "MRTiffIO.h"
 #endif
 #endif
 
-namespace MR
-{
-namespace ImageSave
+#ifndef MRMESH_NO_JPEG
+#include <turbojpeg.h>
+#endif
+
+#ifndef MRMESH_NO_TIFF
+#include "MRTiffIO.h"
+#endif
+
+namespace MR::ImageSave
 {
 
 const IOFilters Filters =
 {
-#ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_PNG
     {"Portable Network Graphics (.png)",  "*.png"},
 #endif
@@ -33,10 +34,7 @@ const IOFilters Filters =
 #endif
 #ifndef MRMESH_NO_TIFF
     {"TIFF (.tif)",  "*.tif"},
-#endif
-#ifndef MRMESH_NO_TIFF
     {"TIFF (.tiff)",  "*.tiff"},
-#endif
 #endif
     {"BitMap Picture (.bmp)",  "*.bmp"},
 };
@@ -88,8 +86,6 @@ VoidOrErrStr toBmp( const Image& image, const std::filesystem::path& file )
 
     return {};
 }
-
-#ifndef __EMSCRIPTEN__
 
 #ifndef MRMESH_NO_PNG
 VoidOrErrStr toPng( const Image& image, const std::filesystem::path& file )
@@ -218,9 +214,6 @@ VoidOrErrStr toTiff( const Image& image, const std::filesystem::path& path )
     return writeRawTiff( ( const uint8_t* )image.pixels.data(), path, btParams );
 }
 #endif
-#endif
-
-
 
 VoidOrErrStr toAnySupportedFormat( const Image& image, const std::filesystem::path& file )
 {
@@ -231,7 +224,6 @@ VoidOrErrStr toAnySupportedFormat( const Image& image, const std::filesystem::pa
     VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".bmp" )
         res = MR::ImageSave::toBmp( image, file );
-#ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_PNG
     else if ( ext == ".png" )
         res = MR::ImageSave::toPng( image, file );
@@ -244,9 +236,7 @@ VoidOrErrStr toAnySupportedFormat( const Image& image, const std::filesystem::pa
     else if ( ext == ".tif" || ext == ".tiff" )
         res = MR::ImageSave::toTiff( image, file );
 #endif
-#endif
     return res;
 }
 
-}
-}
+} // namespace MR::ImageSave

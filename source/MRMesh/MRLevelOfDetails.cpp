@@ -17,9 +17,9 @@ std::shared_ptr<ObjectMesh> makeLevelOfDetails( Mesh && mesh, int maxDepth )
     mesh.packOptimally( false );
 
     const int totalFaces = mesh.topology.numValidFaces();
-    int numFacesPerObj = totalFaces;
-    for ( int d = 0; d < maxDepth; ++d )
-        numFacesPerObj /= 2;
+    //int numFacesPerObj = totalFaces;
+    //for ( int d = 0; d < maxDepth; ++d )
+    //    numFacesPerObj /= 2;
 
     struct FaceSpan
     {

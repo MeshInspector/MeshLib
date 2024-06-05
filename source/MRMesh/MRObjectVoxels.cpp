@@ -129,6 +129,9 @@ VdbVolume ObjectVoxels::updateVdbVolume( VdbVolume vdbVolume )
 {
     auto oldVdbVolume = std::move( vdbVolume_ );
     vdbVolume_ = std::move( vdbVolume );
+    indexer_ = VolumeIndexer( vdbVolume_.dims );
+    reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x, 1 / vdbVolume_.voxelSize.y, 1 / vdbVolume_.voxelSize.z };
+    volumeRenderActiveVoxels_.clear();
     setDirtyFlags( DIRTY_ALL );
     return oldVdbVolume;
 }
@@ -493,6 +496,7 @@ ObjectVoxels::ObjectVoxels()
 void ObjectVoxels::applyScale( float scaleFactor )
 {
     vdbVolume_.voxelSize *= scaleFactor;
+    reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
 
     ObjectMeshHolder::applyScale( scaleFactor );
 }

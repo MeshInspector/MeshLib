@@ -143,6 +143,13 @@ Histogram ObjectVoxels::updateHistogram( Histogram histogram )
     return oldHistogram;
 }
 
+Box3i ObjectVoxels::updateActiveBounds( const Box3i& box )
+{
+    Box3i oldBox = activeBox_;
+    activeBox_ = box;
+    return oldBox;
+}
+
 Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( float iso, ProgressCallback cb /*= {} */ ) const
 {
     MR_TIMER

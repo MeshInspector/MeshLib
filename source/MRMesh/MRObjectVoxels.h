@@ -73,10 +73,13 @@ public:
     /// Sets external vdb volume for this object
     /// and returns back previous vdb volume of this
     MRMESH_API VdbVolume updateVdbVolume( VdbVolume vdbVolume );
-
     /// Sets external histogram for this object
-   /// and returns back previous histogram of this
+    /// and returns back previous histogram of this
     MRMESH_API Histogram updateHistogram( Histogram histogram );
+    /// Sets active bounds for this object
+    /// and returns back previous active bounds of this
+    MRMESH_API Box3i updateActiveBounds( const Box3i &box );
+
     /// Calculates and return new mesh or error message
     MRMESH_API Expected<std::shared_ptr<Mesh>, std::string> recalculateIsoSurface( float iso, ProgressCallback cb = {} ) const;
     /// returns true if the iso-surface is built using Dual Marching Cubes algorithm or false if using Standard Marching Cubes

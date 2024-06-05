@@ -221,13 +221,13 @@ public:
     objVoxels_{ obj },    
     changeIsoAction_( name, obj ),
     changeSurfaceAction_(name, obj),
-    changeActiveBoxAction_(name, obj),
     name_{ std::move( name ) }
     {
         if ( obj )
         {
             vdbVolume_ = obj->vdbVolume();
             histogram_ = obj->histogram();
+            activeBox_ = obj->getActiveBounds();
         }
     }
 
@@ -245,7 +245,7 @@ public:
         histogram_ = objVoxels_->updateHistogram( std::move( histogram_ ) );
         changeIsoAction_.action( obj );
         changeSurfaceAction_.action( obj );
-        changeActiveBoxAction_.action( obj );
+        activeBox_ = objVoxels_->updateActiveBounds( activeBox_ );
     }
 
     static void setObjectDirty( const std::shared_ptr<Obj>& obj )
@@ -256,9 +256,7 @@ public:
 
     [[nodiscard]] virtual size_t heapBytes() const override
     {
-        return name_.capacity() + histogram_.heapBytes() +
-            changeIsoAction_.heapBytes() + changeSurfaceAction_.heapBytes() + changeActiveBoxAction_.heapBytes() +
-            MR::heapBytes( vdbVolume_.data );
+        return name_.capacity() + histogram_.heapBytes() + changeIsoAction_.heapBytes() + changeSurfaceAction_.heapBytes() + MR::heapBytes( vdbVolume_.data );
     }
 
 private:
@@ -267,7 +265,7 @@ private:
     Histogram histogram_;
     ChangeIsoAction changeIsoAction_;
     ChangeSurfaceAction changeSurfaceAction_;
-    ChangeActiveBoxAction changeActiveBoxAction_;
+    Box3i activeBox_;
 
     std::string name_;
 };

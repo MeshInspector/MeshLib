@@ -90,6 +90,9 @@ public:
     /// updated when setting `maxRenderingPoints` or changing the cloud (setting `DIRTY_FACE` flag)
     int getRenderDiscretization() const { return renderDiscretization_; }
 
+    /// returns count of valid points that will be rendered
+    size_t numRenderingValidPoints() const;
+
     /// default value for maximum rendered points number
     static constexpr int MaxRenderingPointsDefault = 1'000'000;
     /// recommended value for maximum rendered points number to disable discretization

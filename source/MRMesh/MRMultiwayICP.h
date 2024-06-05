@@ -73,27 +73,21 @@ private:
     /// updates pairs among same groups only
     void updatePointsPairsGroupWise_();
     /// deactivate pairs that does not meet farDistFactor criterion
-    void deactivatefarDistPairs_();
+    void deactivateFarDistPairs_();
 
     using Layer = int;
     class GroupTag;
     using GroupId = Id<GroupTag>;
-    struct GroupPoint
+    struct GroupPair : public ICPPairData
     {
-        ObjVertId id;
-        Vector3f point;
-        Vector3f norm;
+        ObjVertId srcId;
+        ObjVertId tgtClosestId;
     };
-    struct GroupPair
-    {
-        GroupPoint src;
-        GroupPoint tgt;
-        float weight{ 1.0f };
-    };
-    struct GroupPairs
-    {
+    struct GroupPairs : public IPointPairs
+{
+        virtual const ICPPairData& operator[]( size_t idx ) const override { return vec[idx]; }
+        virtual ICPPairData& operator[]( size_t idx ) override { return vec[idx]; }
         std::vector<GroupPair> vec;
-        BitSet active;
     };
     using IndexedGroupPairs = Vector<GroupPairs, GroupId>;
     using LayerPairs = Vector<Vector<IndexedGroupPairs, GroupId>, Layer>;
@@ -105,7 +99,12 @@ private:
     void reserveLayerPairs_( const Vector<Vector<MultiObjsSamples, GroupId>, Layer>& samples );
     // calculates and updates pairs 2nd and next steps of cascade mode
     void updateLayerPairs_( Layer l );
-    bool projectGroupPair_( GroupPair& pair, ObjId srcFirst, ObjId srcLast, ObjId tgtFirst, ObjId tgtLast );
+    bool projectGroupPair_( GroupPair& pair, const AABBTreeObjects& srcTree, ObjId srcFirst, const AABBTreeObjects& tgtTree, ObjId tgtFirst );
+    /// deactivate pairs that does not meet farDistFactor criterion, for given layer
+    void deactivateFarDistLayerPairs_( Layer l );
+    /// computes root-mean-square deviation between points of given object
+    [[nodiscard]] float getLayerMeanSqDistToPoint_( Layer l, GroupId id ) const;
+
 
     float samplingSize_{ 0.0f };
     // this parameter indicates maximum number of objects that might be aligned simultaneously in multi-way mode
@@ -117,7 +116,7 @@ private:
     //       3) join groups and create groups of these joined objects (2nd layer groups)
     //       4) align this groups
     // N>number of objects - same as 0
-    int maxGroupSize_{ 64 };
+    int maxGroupSize_{ 3 };
     int iter_ = 0;
     bool doIteration_( bool p2pl );
     bool p2ptIter_();

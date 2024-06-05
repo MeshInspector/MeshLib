@@ -5,6 +5,8 @@
 #include "MRPointToPlaneAligningTransform.h"
 #include "MRMultiwayAligningTransform.h"
 #include "MRBitSetParallelFor.h"
+#include "MRAABBTreeObjects.h"
+#include "MRAABBTreeObjects.h"
 #include <algorithm>
 
 namespace MR
@@ -110,19 +112,30 @@ float MultiwayICP::getMeanSqDistToPoint() const
     }, [] ( auto a, auto b ) { return a + b; } ).rootMeanSqF();
 }
 
-float MultiwayICP::getMeanSqDistToPoint( ObjId id ) const
+// unified function for mean sq dist to point calculation
+float calcMeanSqDistToPointEx( const auto& pairs, auto id )
 {
-    return tbb::parallel_deterministic_reduce( tbb::blocked_range( ObjId( 0 ), ObjId( objs_.size() ) ), NumSum(),
+    return tbb::parallel_deterministic_reduce( tbb::blocked_range( decltype( id )( 0 ), decltype( id )( pairs.size() ) ), NumSum(),
         [&] ( const auto& range, NumSum curr )
     {
-        for ( ObjId i = range.begin(); i < range.end(); ++i )
+        for ( auto i = range.begin(); i < range.end(); ++i )
         {
             if ( i == id )
                 continue;
-            curr = curr + MR::getSumSqDistToPoint( pairsPerObj_[i][id] ) + MR::getSumSqDistToPoint( pairsPerObj_[id][i] );
+            curr = curr + MR::getSumSqDistToPoint( pairs[i][id] ) + MR::getSumSqDistToPoint( pairs[id][i] );
         }
         return curr;
     }, [] ( auto a, auto b ) { return a + b; } ).rootMeanSqF();
+}
+
+float MultiwayICP::getMeanSqDistToPoint( ObjId id ) const
+{
+    return calcMeanSqDistToPointEx( pairsPerObj_, id );
+}
+
+float MultiwayICP::getLayerMeanSqDistToPoint_( Layer l, GroupId id ) const
+{
+    return calcMeanSqDistToPointEx( pairsPerLayer_[l], id );
 }
 
 float MultiwayICP::getMeanSqDistToPlane() const
@@ -205,7 +218,7 @@ void MultiwayICP::updateAllPointPairs()
             return;
         MR::updatePointPairs( pairsPerObj_[i][j], objs_[i], objs_[j], prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
     } );
-    deactivatefarDistPairs_();
+    deactivateFarDistPairs_();
 }
 
 void MultiwayICP::reservePairs_( const Vector<VertBitSet, ObjId>& samplesPerObj )
@@ -255,41 +268,7 @@ void MultiwayICP::updatePointsPairsGroupWise_()
             return;
         MR::updatePointPairs( pairsPerObj_[i][j], objs_[i], objs_[j], prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
     } );
-    deactivatefarDistPairs_();
-}
-
-void MultiwayICP::deactivatefarDistPairs_()
-{
-    MR_TIMER;
-
-    Vector<float, ObjId> maxDistSq( objs_.size() );
-    for ( int it = 0; it < 3; ++it )
-    {
-        ParallelFor( maxDistSq, [&] ( ObjId id )
-        {
-            maxDistSq[id] = sqr( prop_.farDistFactor * getMeanSqDistToPoint( id ) );
-        } );
-
-        tbb::enumerable_thread_specific<size_t> counters( 0 );
-        ParallelFor( size_t( 0 ), objs_.size() * objs_.size(), [&] ( size_t r )
-        {
-            auto i = ObjId( r % objs_.size() );
-            auto j = ObjId( r / objs_.size() );
-            if ( i == j )
-                return;
-            if ( maxDistSq[i] >= prop_.distThresholdSq )
-                return;
-            counters.local() += ( 
-                MR::deactivateFarPairs( pairsPerObj_[i][j], maxDistSq[i] ) + 
-                MR::deactivateFarPairs( pairsPerObj_[j][i], maxDistSq[i] ) );
-        } );
-
-        size_t numDeactivated = 0;
-        for ( auto counter : counters )
-            numDeactivated += counter;
-        if ( numDeactivated == 0 )
-            break;
-    }
+    deactivateFarDistPairs_();
 }
 
 void MultiwayICP::resampleLayers_()
@@ -351,11 +330,17 @@ void MultiwayICP::reserveLayerPairs_( const Vector<Vector<MultiObjsSamples, Grou
             {
                 if ( gI == gJ )
                     continue;
+
+                auto hyperGroupI = gI / maxGroupSize_;
+                auto hyperGroupJ = gJ / maxGroupSize_;
+                if ( hyperGroupI != hyperGroupJ )
+                    continue;
+
                 auto& thisPairs = pairsOnGroup[gJ];
 
                 thisPairs.vec.resize( thisSamples.size() );
                 for ( int i = 0; i < thisPairs.vec.size(); ++i )
-                    thisPairs.vec[i].src.id = thisSamples[i];
+                    thisPairs.vec[i].srcId = thisSamples[i];
                 thisPairs.active.reserve( thisPairs.vec.size() );
                 thisPairs.active.clear();
             }
@@ -370,6 +355,21 @@ void MultiwayICP::updateLayerPairs_( Layer l )
     for ( int i = 0; i <= l; ++i )
         groupSize *= maxGroupSize_;
     auto numGroups = pairsPerLayer_[l].size();
+
+    // build trees
+    using GroupModels = Vector<MeshOrPointsXf, ObjId>;
+    using LayerTrees = Vector<AABBTreeObjects, GroupId>;
+    LayerTrees trees( numGroups );
+    ParallelFor( trees, [&] ( GroupId gI )
+    {
+        auto gFirst = ObjId( gI * groupSize );
+        auto gLast = ObjId( std::min( ( gI + 1 ) * groupSize, int( objs_.size() ) ) );
+        
+        GroupModels gObjs( begin( objs_ ) + gFirst, begin( objs_ ) + gLast );
+        trees[gI] = AABBTreeObjects( std::move( gObjs ) );
+    } );
+
+    // update pairs
     auto gridSize = numGroups * numGroups;
     ParallelFor( 0, int( gridSize ), [&] ( int gridId )
     {
@@ -378,42 +378,41 @@ void MultiwayICP::updateLayerPairs_( Layer l )
         if ( gI == gJ )
             return;
 
+        auto hyperGroupI = gI / maxGroupSize_;
+        auto hyperGroupJ = gJ / maxGroupSize_;
+        if ( hyperGroupI != hyperGroupJ )
+            return;
+
         auto srcFirst = ObjId( gI * groupSize );
-        auto srcLast = ObjId( std::min( ( gI + 1 ) * groupSize, int( objs_.size() ) ) );
         auto& pairs = pairsPerLayer_[l][gI][gJ];
         pairs.active.resize( pairs.vec.size() );
         auto tgtFirst = ObjId( gJ * groupSize );
-        auto tgtLast = ObjId( std::min( ( gJ + 1 ) * groupSize, int( objs_.size() ) ) );
         BitSetParallelForAll( pairs.active, [&] ( size_t i )
         {
-            pairs.active.set( i, projectGroupPair_( pairs.vec[i], srcFirst, srcLast, tgtFirst, tgtLast ) );
+            pairs.active.set( i, projectGroupPair_( pairs.vec[i], trees[gI], srcFirst, trees[gJ], tgtFirst ) );
         } );
     } );
+    deactivateFarDistLayerPairs_( l );
 }
 
-bool MultiwayICP::projectGroupPair_( GroupPair& pair, ObjId srcFirst, ObjId srcLast, ObjId tgtFirst, ObjId tgtLast )
+bool MultiwayICP::projectGroupPair_( GroupPair& pair, const AABBTreeObjects& srcTree, ObjId srcFirst, const AABBTreeObjects& tgtTree, ObjId tgtFirst )
 {
-    ObjId minObjId;
-    MeshOrPoints::ProjectionResult prj{}, minPrj{};
-    // do not search for target point further than distance threshold
-    minPrj.distSq = prj.distSq = prop_.distThresholdSq;
-    for ( ObjId tgtObj( tgtFirst ); tgtObj < tgtLast; ++tgtObj )
-    {
-        auto src2tgtXf = objs_[tgtObj].xf.inverse() * objs_[pair.src.id.objId].xf;
-        const auto tgtLimProjector = objs_[tgtObj].obj.limitedProjector();
+    const auto& srcObjXf = objs_[pair.srcId.objId];
+    const auto& srcPoint = srcObjXf.obj.points()[pair.srcId.vId];
+    pair.srcPoint = srcObjXf.xf( srcPoint );
 
-        tgtLimProjector( src2tgtXf( objs_[pair.src.id.objId].obj.points()[pair.src.id.vId] ), prj );
-        if ( !prj.closestVert )
-        {
-            // no target point found within distance threshold
-            continue;
-        }
+    ObjId minObjId{};
+    MeshOrPoints::ProjectionResult minPrj{};
+    minPrj.distSq = prop_.distThresholdSq;
+    projectOnAll( pair.srcPoint, tgtTree, minPrj.distSq,
+        [&] ( ObjId objId, MeshOrPoints::ProjectionResult prj )
+    {
         if ( prj.distSq < minPrj.distSq )
         {
-            minObjId = tgtObj;
             minPrj = prj;
+            minObjId = tgtFirst + objId;
         }
-    }
+    } );
 
     if ( !minPrj.closestVert )
         return false;
@@ -421,61 +420,94 @@ bool MultiwayICP::projectGroupPair_( GroupPair& pair, ObjId srcFirst, ObjId srcL
     if ( minPrj.isBd )
         return false;
 
-    if ( minPrj.distSq > prop_.distThresholdSq )
-    {
-        assert( false );
-        return false; // we should really not ever be here
-    }
+    const auto& tgtObjXf = objs_[minObjId];
+    const auto srcNormals = srcObjXf.obj.normals();
+    const auto tgtNormals = tgtObjXf.obj.normals();
 
-    if ( prop_.mutualClosest )
-    {
-        ObjId mutalMinObjId;
-        MeshOrPoints::ProjectionResult mutalMinPrj{};
-        for ( ObjId srcObj( srcFirst ); srcObj < srcLast; ++srcObj )
-        {
-            auto tgt2srcXf = objs_[srcObj].xf.inverse() * objs_[minObjId].xf;
-            const auto srcLimProjector = objs_[srcObj].obj.limitedProjector();
-
-            srcLimProjector( tgt2srcXf( minPrj.point ), prj );
-            if ( !prj.closestVert )
-            {
-                // no target point found within distance threshold
-                continue;
-            }
-            if ( prj.distSq < mutalMinPrj.distSq )
-            {
-                mutalMinObjId = srcObj;
-                mutalMinPrj = prj;
-            }
-        }
-        if ( !mutalMinPrj.closestVert )
-            return false;
-        if ( mutalMinObjId != pair.src.id.objId )
-            return false;
-        if ( mutalMinPrj.closestVert != pair.src.id.vId )
-            return false;
-    }
-
-    const auto srcNormals = objs_[pair.src.id.objId].obj.normals();
-    const auto tgtNormals = objs_[minObjId].obj.normals();
-    const auto srcWeights = objs_[pair.src.id.objId].obj.weights();
-
-    pair.src.point = objs_[pair.src.id.objId].xf( objs_[pair.src.id.objId].obj.points()[pair.src.id.vId] );
-    pair.src.norm = srcNormals ? ( objs_[pair.src.id.objId].xf.A * srcNormals( pair.src.id.vId ) ).normalized() : Vector3f();
+    pair.srcNorm = srcNormals ? ( srcObjXf.xf.A * srcNormals( pair.srcId.vId ) ).normalized() : Vector3f();
     
-    pair.tgt.id.objId = minObjId;
-    pair.tgt.id.vId = minPrj.closestVert;
-    pair.tgt.point = objs_[pair.tgt.id.objId].xf( minPrj.point );
-    pair.tgt.norm = minPrj.normal ? ( objs_[pair.tgt.id.objId].xf.A * minPrj.normal.value() ).normalized() : Vector3f();
+    pair.tgtClosestId.objId = minObjId;
+    pair.tgtClosestId.vId = minPrj.closestVert;
+    pair.tgtPoint = tgtObjXf.xf( minPrj.point );
+    pair.tgtNorm = minPrj.normal ? ( tgtObjXf.xf.A * minPrj.normal.value() ).normalized() : Vector3f();
 
-    pair.weight = srcWeights ? srcWeights( pair.tgt.id.vId ) : 1.0f;
-
-    auto normalsAngleCos = ( minPrj.normal && srcNormals ) ? dot( pair.tgt.norm, pair.src.norm ) : 1.0f;
+    auto normalsAngleCos = ( minPrj.normal && srcNormals ) ? dot( pair.tgtNorm, pair.srcNorm ) : 1.0f;
 
     if ( normalsAngleCos < prop_.cosTreshold )
         return false;
 
+    if ( prop_.mutualClosest )
+    {
+        ObjId mutalMinObjId{};
+        MeshOrPoints::ProjectionResult mutalMinPrj{};
+        mutalMinPrj.distSq = prop_.distThresholdSq;
+        projectOnAll( pair.tgtPoint, srcTree, mutalMinPrj.distSq,
+            [&] ( ObjId objId, MeshOrPoints::ProjectionResult prj )
+        {
+            if ( prj.distSq < mutalMinPrj.distSq )
+            {
+                mutalMinPrj = prj;
+                mutalMinObjId = srcFirst + objId;
+            }
+        } );
+        if ( !mutalMinPrj.closestVert )
+            return false;
+        if ( mutalMinObjId != pair.srcId.objId )
+            return false;
+        if ( mutalMinPrj.closestVert != pair.srcId.vId )
+            return false;
+    }
+
+    const auto srcWeights = srcObjXf.obj.weights();
+    pair.weight = srcWeights ? srcWeights( pair.srcId.vId ) : 1.0f;
+    pair.distSq = minPrj.distSq;
+
     return true;
+}
+
+// unified function do disable far pairs
+template<typename T, typename IndexT>
+void deactivateFarDistPairsEx( Vector<T, IndexT>& pairs, float distThresholdSq, float farDistFactor )
+{
+    MR_TIMER;
+    Vector<float, IndexT> maxDistSq( pairs.size() );
+    for ( int it = 0; it < 3; ++it )
+    {
+        ParallelFor( maxDistSq, [&] ( auto id )
+        {
+            maxDistSq[id] = sqr( farDistFactor * MR::calcMeanSqDistToPointEx( pairs, id ) );
+        } );
+
+        tbb::enumerable_thread_specific<size_t> counters( 0 );
+        ParallelFor( size_t( 0 ), pairs.size() * pairs.size(), [&] ( size_t r )
+        {
+            auto i = IndexT( r % pairs.size() );
+            auto j = IndexT( r / pairs.size() );
+            if ( i == j )
+                return;
+            if ( maxDistSq[i] >= distThresholdSq )
+                return;
+            counters.local() += (
+                MR::deactivateFarPairs( pairs[i][j], maxDistSq[i] ) +
+                MR::deactivateFarPairs( pairs[j][i], maxDistSq[i] ) );
+        } );
+
+        size_t numDeactivated = 0;
+        for ( auto counter : counters )
+            numDeactivated += counter;
+        if ( numDeactivated == 0 )
+            break;
+    }
+}
+
+void MultiwayICP::deactivateFarDistPairs_()
+{
+    MR::deactivateFarDistPairsEx( pairsPerObj_, prop_.distThresholdSq, prop_.farDistFactor );
+}
+
+void MultiwayICP::deactivateFarDistLayerPairs_( Layer l )
+{
+    MR::deactivateFarDistPairsEx( pairsPerLayer_[l], prop_.distThresholdSq, prop_.farDistFactor );
 }
 
 bool MultiwayICP::doIteration_( bool p2pl )
@@ -669,14 +701,14 @@ bool MultiwayICP::multiwayIter_( int groupSize, bool p2pl /*= true */ )
     for ( ;;)
     {
         int grainSize = subGroupSize * groupSize;
-        int numGroups = ( int( objs_.size() ) + grainSize - 1 ) / grainSize;
+        int numGrains = ( int( objs_.size() ) + grainSize - 1 ) / grainSize;
 
         if ( subGroupSize == 1 )
             updatePointsPairsGroupWise_();
         else
             updateLayerPairs_( numLayer );
 
-        for ( int gId = 0; gId < numGroups; ++gId )
+        for ( int gId = 0; gId < numGrains; ++gId )
         {
             int groupFirst = gId * grainSize;
             int groupsLastEx = std::min( groupFirst + grainSize, int( objs_.size() ) );
@@ -716,13 +748,16 @@ bool MultiwayICP::multiwayIter_( int groupSize, bool p2pl /*= true */ )
                 }
                 else
                 {
-                    for ( auto idx : pairsPerLayer_[numLayer][sbI][sbJ].active )
+                    auto globalGroupI = GroupId( gId * groupSize + sbI );
+                    auto globalGroupJ = GroupId( gId * groupSize + sbJ );
+                    const auto& pairs = pairsPerLayer_[numLayer][globalGroupI][globalGroupJ];
+                    for ( auto idx : pairs.active )
                     {
-                        const auto& data = pairsPerLayer_[numLayer][sbI][sbJ].vec[idx];
+                        const auto& data = pairs.vec[idx];
                         if ( p2pl )
-                            mat.add( sbI, data.src.point, sbJ, data.tgt.point, ( data.tgt.norm + data.src.norm ).normalized(), data.weight );
+                            mat.add( sbI, data.srcPoint, sbJ, data.tgtPoint, ( data.tgtNorm + data.srcNorm ).normalized(), data.weight );
                         else
-                            mat.add( sbI, data.src.point, sbJ, data.tgt.point, data.weight );
+                            mat.add( sbI, data.srcPoint, sbJ, data.tgtPoint, data.weight );
                     }
                 }
             }
@@ -742,7 +777,7 @@ bool MultiwayICP::multiwayIter_( int groupSize, bool p2pl /*= true */ )
                     objs_[i].xf = AffineXf3f( resI * AffineXf3d( objs_[i].xf ) );
             }
         }
-        if ( numGroups == 1 )
+        if ( numGrains == 1 )
             break;
         subGroupSize *= groupSize;
         ++numLayer;

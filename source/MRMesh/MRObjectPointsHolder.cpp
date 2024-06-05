@@ -197,7 +197,7 @@ size_t ObjectPointsHolder::numRenderingValidPoints() const
         return 0;
 
     return ( points_->validPoints.find_last() + 1 ) / renderDiscretization_;
-};
+}
 
 size_t ObjectPointsHolder::heapBytes() const
 {

@@ -191,6 +191,14 @@ size_t ObjectPointsHolder::numSelectedPoints() const
     return *numSelectedPoints_;
 }
 
+size_t ObjectPointsHolder::numRenderingValidPoints() const
+{
+    if ( !points_ )
+        return 0;
+
+    return ( points_->validPoints.find_last() + 1 ) / renderDiscretization_;
+};
+
 size_t ObjectPointsHolder::heapBytes() const
 {
     return VisualObject::heapBytes()

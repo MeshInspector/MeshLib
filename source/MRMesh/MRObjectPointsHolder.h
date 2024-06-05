@@ -84,11 +84,15 @@ public:
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
     /// returns rendering discretization
-    /// display each `renderDiscretization`-th point only (TODO: elaborate)
+    /// display each `renderDiscretization`-th point only,
+    /// starting from 0 index, total number is \ref numRenderingValidPoints()
     /// \detail defined by maximum rendered points number as:
     /// \ref numValidPoints() / \ref getMaxRenderingPoints() (rounded up)
     /// updated when setting `maxRenderingPoints` or changing the cloud (setting `DIRTY_FACE` flag)
     int getRenderDiscretization() const { return renderDiscretization_; }
+
+    /// returns count of valid points that will be rendered
+    size_t numRenderingValidPoints() const;
 
     /// default value for maximum rendered points number
     static constexpr int MaxRenderingPointsDefault = 1'000'000;

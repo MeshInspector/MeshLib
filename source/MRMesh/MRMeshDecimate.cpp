@@ -3,6 +3,7 @@
 #include "MRQuadraticForm.h"
 #include "MRRegionBoundary.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRRingIterator.h"
 #include "MRTriMath.h"
 #include "MRTimer.h"
@@ -12,7 +13,6 @@
 #include "MRMeshSubdivide.h"
 #include "MRMeshRelax.h"
 #include "MRLineSegm.h"
-#include "MRPch/MRTBB.h"
 #include <queue>
 
 namespace MR
@@ -827,18 +827,15 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     const auto facesPerPart = ( mesh.topology.faceSize() / ( sz * FaceBitSet::bits_per_block ) ) * FaceBitSet::bits_per_block;
 
     // determine faces for each part
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, sz ), [&]( const tbb::blocked_range<size_t>& range )
+    ParallelFor( parts, [&]( size_t i )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            const auto fromFace = i * facesPerPart;
-            const auto toFace = ( i + 1 ) < sz ? ( i + 1 ) * facesPerPart : mesh.topology.faceSize();
-            FaceBitSet fs( toFace );
-            fs.set( FaceId{ fromFace }, toFace - fromFace, true );
-            fs &= mesh.topology.getValidFaces();
-            parts[i].faces = std::move( fs );
-            parts[i].bdVerts = getBoundaryVerts( mesh.topology, &parts[i].faces );
-        }
+        const auto fromFace = i * facesPerPart;
+        const auto toFace = ( i + 1 ) < sz ? ( i + 1 ) * facesPerPart : mesh.topology.faceSize();
+        FaceBitSet fs( toFace );
+        fs.set( FaceId{ fromFace }, toFace - fromFace, true );
+        fs &= mesh.topology.getValidFaces();
+        parts[i].faces = std::move( fs );
+        parts[i].bdVerts = getBoundaryVerts( mesh.topology, &parts[i].faces );
     } );
     if ( settings.progressCallback && !settings.progressCallback( 0.1f ) )
         return res;

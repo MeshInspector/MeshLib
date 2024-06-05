@@ -73,6 +73,9 @@
 						},
 						{
 							"Name": "Add custom theme"
+						},
+						{
+							"Name": "Show/Hide Global Basis"
 						}
 					]
 				},

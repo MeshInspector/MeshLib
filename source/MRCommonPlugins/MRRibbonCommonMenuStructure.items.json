@@ -177,6 +177,11 @@
       "Icon": "\uF0D0"
     },
     {
+      "Name": "Show/Hide Global Basis",
+      "Tooltip": "Show or hide global 0 and X,Y,Z axes.",
+      "Icon": "\uF546"
+    },
+    {
       "Name": "Viewer settings",
       "Caption": "Settings",
       "Tooltip": "Show application settings window.",

@@ -173,7 +173,22 @@ void SceneObjectsListDrawer::allowSceneReorder( bool allow )
 void SceneObjectsListDrawer::drawObjectsList_()
 {
     const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
-    const auto& depth = SceneCache::getAllObjectsDepth();
+    std::vector<int> depths( all.size(), -1 );
+    auto getDepth = [&] ( int i )
+    {
+        if ( depths[i] == -1 )
+        {
+            const Object* obj = all[i].get();
+            int depth = 0;
+            while ( obj->parent() && obj->parent() != SceneRoot::getSharedPtr().get() )
+            {
+                obj = obj->parent();
+                ++depth;
+            }
+            depths[i] = depth;
+        }
+        return depths[i];
+    };
 
     int curentDepth = 0;
     std::stack<std::shared_ptr<Object>> objDepthStack;
@@ -201,11 +216,11 @@ void SceneObjectsListDrawer::drawObjectsList_()
     for ( int i = 0; i < all.size(); ++i )
     {
         const bool isLast = i == int( all.size() ) - 1;
-        const int nextDepth = isLast ? 0 : depth[i + 1];
+        const int nextDepth = isLast ? 0 : getDepth( i + 1 );
         // skip child elements after collapsed header
         if ( collapsedHeaderDepth >= 0 )
         {
-            if ( depth[i] > collapsedHeaderDepth )
+            if ( getDepth( i ) > collapsedHeaderDepth)
             {
                 if ( curentDepth > nextDepth )
                 {
@@ -224,13 +239,13 @@ void SceneObjectsListDrawer::drawObjectsList_()
         }
 
         auto& object = *all[i];
-        if ( curentDepth < depth[i] )
+        if ( curentDepth < getDepth( i ) )
         {
             ImGui::Indent();
             if ( i > 0 )
                 objDepthStack.push( all[i - 1] );
             ++curentDepth;
-            assert( curentDepth == depth[i] );
+            assert( curentDepth == getDepth( i ) );
         }
 
         {

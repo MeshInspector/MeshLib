@@ -416,22 +416,24 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
 
     const auto& points = objPoints_->pointCloud();
     const auto step = objPoints_->getRenderDiscretization();
-    const auto numV = ( points->validPoints.find_last() + 1 ) / int( step );
+    const int num = points->validPoints.find_last() + 1;
+    const auto numV = num / int( step );
     auto size = numV / 32 + 1;
     vertSelectionTextureSize_ = calcTextureRes( size, maxTexSize_ );
     assert( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y >= size );
     auto buffer = glBuffer.prepareBuffer<unsigned>( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y );
 
-    const auto& selection = objPoints_->getSelectedPoints().m_bits;
-    const unsigned* selectionData = (unsigned*) selection.data();
+    const auto& selectedPoints = objPoints_->getSelectedPoints();
+    const size_t selectionSize = selectedPoints.m_bits.size();
+    
+    const unsigned* selectionData = ( unsigned* )selectedPoints.m_bits.data();    
+
     ParallelFor( 0, ( int )buffer.size(), [&]( int r )
     {
         auto& block = buffer[r];
-        if ( r * step / 2 >= selection.size() )
-        {
-            block = 0;
+        block = 0;
+        if ( r * step / 2 >= selectionSize )
             return;
-        }
 
         if ( step == 1 )
         {
@@ -441,11 +443,13 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
 
         for ( int bit = 0; bit < 32; ++bit )
         {
-            const auto selectionBit = std::div( ( r * 32 + bit ) * int( step ), 32 );
+            const int bitIndex = ( r * 32 + bit ) * int( step );
+            if ( bitIndex >= selectionSize * 64 )
+                continue;
+
+            const auto selectionBit = std::div( bitIndex, 32 );
             if ( selectionData[selectionBit.quot] & ( 1 << ( selectionBit.rem ) ) )
                 block |= 1 << bit;
-            else
-                block &= ~( 1 << bit );
         }
     } );
 

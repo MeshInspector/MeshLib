@@ -3,7 +3,7 @@
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "exports.h"
-#include <optional>
+#include <unordered_map>
 
 namespace MR
 {
@@ -16,82 +16,46 @@ public:
     // call it in the beginning each frame
     MRVIEWER_API static void invalidateAll();
 
-    // same as getAllObjectsInTree<ObjectType>( &SceneRoot::get(), SelectivityType ) but use cached data
+    template <typename ObjectType>
+    using ObjectList = std::vector<std::shared_ptr<ObjectType>>;
+    // analog getAllObjectsInTree<ObjectType>( &SceneRoot::get(), SelectivityType ) but use cached data
+    // reference copy is valid until invalidateAll() is called
     template <typename ObjectType, ObjectSelectivityType SelectivityType>
-    static const std::vector<std::shared_ptr<ObjectType>>& getAllObjects();
+    static const ObjectList<ObjectType>& getAllObjects();
 
-    // get all selectable object depths
-    // metadata for drawing scene objects list
-    MRVIEWER_API static const std::vector<int>& getAllObjectsDepth();
 private:
     MRVIEWER_API static SceneCache& instance_();
-    SceneCache() {};
+    SceneCache() = default;
 
-    using StoredType = std::vector<std::shared_ptr<Object>>;
-    using CachedStoredType = std::optional<StoredType>;
-    MRVIEWER_API static std::pair<StoredType, std::vector<int>> updateAllObjectsWithDepth_();
-
-    std::vector<CachedStoredType> cachedData_;
-    std::optional<std::vector<int>> allObjectDepths_;
-
-    // Helper class to convert template params to unique numbers
-    class MRVIEWER_CLASS TypeMap
+    struct BasicVectorHolder
     {
-    public:
-        template <typename ObjectType, ObjectSelectivityType SelectivityType>
-        static int getId()
-        {
-            static int myId = instance_().idCounter_++;
-            return myId;
-        }
-
-    private:
-        MRVIEWER_API static TypeMap& instance_();
-
-        int idCounter_ = 0;
+        BasicVectorHolder() = default;
+        BasicVectorHolder( const BasicVectorHolder& ) = default;
+        BasicVectorHolder( BasicVectorHolder&& ) = default;
+        virtual ~BasicVectorHolder() = default;
     };
+    template <typename ObjectType, ObjectSelectivityType SelectivityType>
+    struct VectorHolder : BasicVectorHolder
+    {
+        ObjectList<ObjectType> value;
+    };
+    std::unordered_map<std::type_index, std::shared_ptr<BasicVectorHolder>> cachedData_;
 };
 
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#endif
 template <typename ObjectType, ObjectSelectivityType SelectivityType>
-const std::vector<std::shared_ptr<ObjectType>>& SceneCache::getAllObjects()
+const SceneCache::ObjectList<ObjectType>& SceneCache::getAllObjects()
 {
-    using SpecificDataType = std::vector<std::shared_ptr<ObjectType>>;
-    const int templateParamsUniqueId = TypeMap::getId<ObjectType, SelectivityType>();
-    if ( templateParamsUniqueId + 1 > instance_().cachedData_.size() )
-        instance_().cachedData_.push_back( CachedStoredType() );
-    if ( !instance_().cachedData_[templateParamsUniqueId] )
+    using ResultType = VectorHolder<ObjectType, SelectivityType>;
+    const auto typeIndex = std::type_index( typeid( ResultType ) );
+    auto& cachedData = instance_().cachedData_;
+    if ( !cachedData.contains( typeIndex ) || !cachedData[typeIndex] )
     {
-        std::optional<SpecificDataType> specificData = getAllObjectsInTree<ObjectType>( &SceneRoot::get(), SelectivityType );
-        std::optional<StoredType> storedData = *reinterpret_cast< std::optional<StoredType>* >( &specificData );
-        instance_().cachedData_[templateParamsUniqueId] = storedData;
+        ResultType newData;
+        newData.value = getAllObjectsInTree<ObjectType>( &SceneRoot::get(), SelectivityType );
+        std::shared_ptr<ResultType> newDataPtr = std::make_shared<ResultType>( std::move( newData ) );
+        cachedData[typeIndex] = std::dynamic_pointer_cast<BasicVectorHolder>( newDataPtr );
     }
-    const SpecificDataType& resData = **reinterpret_cast< std::optional<SpecificDataType>* >( &instance_().cachedData_[templateParamsUniqueId] );
-    return resData;
+    return std::dynamic_pointer_cast< ResultType >( cachedData[typeIndex] )->value;
 }
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
-
-// specialization getAllObjects to getAllObjects<Object, ObjectSelectivityType::Selectable>
-// also calc allObjectDepths_
-template <>
-inline const std::vector<std::shared_ptr<Object>>& SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>()
-{
-    const int templateParamsUniqueId = TypeMap::getId<Object, ObjectSelectivityType::Selectable>();
-    if ( templateParamsUniqueId + 1 > instance_().cachedData_.size() )
-        instance_().cachedData_.push_back( CachedStoredType() );
-    if ( !instance_().cachedData_[templateParamsUniqueId] )
-    {
-        auto data = updateAllObjectsWithDepth_();
-        instance_().cachedData_[templateParamsUniqueId] = std::move( data.first );
-        instance_().allObjectDepths_ = std::move( data.second );
-    }
-    return *instance_().cachedData_[templateParamsUniqueId];
-}
-
 
 }

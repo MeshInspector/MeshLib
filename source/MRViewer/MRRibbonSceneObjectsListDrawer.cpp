@@ -71,7 +71,7 @@ void RibbonSceneObjectsListDrawer::drawSceneContextMenu_( const std::vector<std:
         auto selectedMask = ribbonMenu_->calcSelectedTypesMask( selected );
         ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, ImGui::GetStyle().WindowPadding );
         [[maybe_unused]] bool wasChanged = false, wasAction = false;
-        const auto selectedVisualObjs = SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selected>();
+        const auto& selectedVisualObjs = SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selected>();
         if ( selectedVisualObjs.empty() )
         {
             wasChanged |= ribbonMenu_->drawGeneralOptions( selected );

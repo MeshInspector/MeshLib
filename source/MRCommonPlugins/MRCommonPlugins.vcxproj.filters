@@ -69,7 +69,7 @@
     <ClCompile Include="ViewerButtons\MRActiveListPlugin.cpp">
       <Filter>ViewerButtons</Filter>
     </ClCompile>
-    <ClCompile Include="MRShowGlobalBasis.cpp">
+    <ClCompile Include="Basic\MRShowGlobalBasis.cpp">
       <Filter>Basic</Filter>
     </ClCompile>
   </ItemGroup>

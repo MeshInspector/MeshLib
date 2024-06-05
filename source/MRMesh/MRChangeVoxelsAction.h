@@ -243,9 +243,9 @@ public:
 
         vdbVolume_ = objVoxels_->updateVdbVolume( std::move( vdbVolume_ ) );
         histogram_ = objVoxels_->updateHistogram( std::move( histogram_ ) );
+        activeBox_ = objVoxels_->updateActiveBounds( activeBox_ );
         changeIsoAction_.action( obj );
         changeSurfaceAction_.action( obj );
-        activeBox_ = objVoxels_->updateActiveBounds( activeBox_ );
     }
 
     static void setObjectDirty( const std::shared_ptr<Obj>& obj )

@@ -175,6 +175,13 @@ MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & se
  */
 [[nodiscard]] MRMESH_API Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer );
 
+/**
+ * \brief returns given subdivision part of all valid faces;
+ * parallel threads shall be able to safely modify these bits because they do not share any block with other parts
+ * \ingroup DecimateGroup
+ */
+[[nodiscard]] MRMESH_API FaceBitSet getSubdividePart( const FaceBitSet & valids, size_t subdivideParts, size_t myPart );
+
 struct ResolveMeshDegenSettings
 {
     [[deprecated]]

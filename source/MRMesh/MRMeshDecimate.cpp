@@ -804,11 +804,26 @@ static DecimateResult decimateMeshSerial( Mesh & mesh, const DecimateSettings & 
     return md.run();
 }
 
+FaceBitSet getSubdividePart( const FaceBitSet & valids, size_t subdivideParts, size_t myPart )
+{
+    assert( subdivideParts > 1 );
+    const auto sz = subdivideParts;
+    assert( myPart < sz );
+    const auto facesPerPart = ( valids.size() / ( sz * FaceBitSet::bits_per_block ) ) * FaceBitSet::bits_per_block;
+
+    const auto fromFace = myPart * facesPerPart;
+    const auto toFace = ( myPart + 1 ) < sz ? ( myPart + 1 ) * facesPerPart : valids.size();
+    FaceBitSet res( toFace );
+    res.set( FaceId{ fromFace }, toFace - fromFace, true );
+    res &= valids;
+    return res;
+}
+
 static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const DecimateSettings & settings )
 {
     MR_TIMER
     assert( settings.subdivideParts > 1 );
-    const auto sz = std::max( 2, settings.subdivideParts );
+    const auto sz = settings.subdivideParts;
 
     DecimateResult res;
 
@@ -823,18 +838,11 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         DecimateResult decimRes;
     };
     std::vector<Parts> parts( sz );
-    // parallel threads shall be able to safely modify settings.region faces
-    const auto facesPerPart = ( mesh.topology.faceSize() / ( sz * FaceBitSet::bits_per_block ) ) * FaceBitSet::bits_per_block;
 
     // determine faces for each part
     ParallelFor( parts, [&]( size_t i )
     {
-        const auto fromFace = i * facesPerPart;
-        const auto toFace = ( i + 1 ) < sz ? ( i + 1 ) * facesPerPart : mesh.topology.faceSize();
-        FaceBitSet fs( toFace );
-        fs.set( FaceId{ fromFace }, toFace - fromFace, true );
-        fs &= mesh.topology.getValidFaces();
-        parts[i].faces = std::move( fs );
+        parts[i].faces = getSubdividePart( mesh.topology.getValidFaces(), settings.subdivideParts, i );
         parts[i].bdVerts = getBoundaryVerts( mesh.topology, &parts[i].faces );
     } );
     if ( settings.progressCallback && !settings.progressCallback( 0.1f ) )

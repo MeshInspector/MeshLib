@@ -2004,8 +2004,11 @@ void RibbonMenu::setupShortcuts_()
     {
         sceneObjectsList_->changeSelection( false, true );
     } }  );
+    shortcutManager_->setShortcut( { GLFW_KEY_A, CONTROL_OR_SUPER }, { ShortcutManager::Category::Objects, "Ribbon Scene Select all",[&] ()
+    {
+        sceneObjectsList_->selectAllObjects();
+    } } );
 
-    addRibbonItemShortcut_( "Ribbon Scene Select all", { GLFW_KEY_A, CONTROL_OR_SUPER }, ShortcutManager::Category::Objects );
     addRibbonItemShortcut_( "Fit data", { GLFW_KEY_F, GLFW_MOD_CONTROL | GLFW_MOD_ALT }, ShortcutManager::Category::View );
     addRibbonItemShortcut_( "Select objects", { GLFW_KEY_Q, GLFW_MOD_CONTROL }, ShortcutManager::Category::Objects );
     addRibbonItemShortcut_( "Open files", { GLFW_KEY_O, CONTROL_OR_SUPER }, ShortcutManager::Category::Scene );

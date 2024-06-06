@@ -123,6 +123,8 @@ void SceneObjectsListDrawer::changeSelection( bool isDown, bool isShift )
                     data->select( false );
             all[downLastSelected_.index]->select( true );
             downLastSelected_.needScroll = true;
+            if ( showNewSelectedObjects_ )
+                all[downLastSelected_.index]->setGlobalVisibility( true );
         }
     }
     else
@@ -134,6 +136,8 @@ void SceneObjectsListDrawer::changeSelection( bool isDown, bool isShift )
                     data->select( false );
             all[upFirstSelected_.index]->select( true );
             upFirstSelected_.needScroll = true;
+            if ( showNewSelectedObjects_ )
+                all[upFirstSelected_.index]->setGlobalVisibility( true );
         }
     }
 }
@@ -156,6 +160,18 @@ void SceneObjectsListDrawer::changeVisible( bool isDown )
             all[upFirstSelected_.index]->select( true );
             upFirstSelected_.needScroll = true;
         }
+    }
+}
+
+void SceneObjectsListDrawer::selectAll()
+{
+    const auto& selectable = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    for ( auto obj : selectable )
+    {
+        obj->select( true );
+        obj->setVisible( true );
+        if ( showNewSelectedObjects_ )
+            obj->setGlobalVisibility( true );
     }
 }
 

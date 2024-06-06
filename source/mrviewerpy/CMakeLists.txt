@@ -30,7 +30,7 @@ ELSE()
     fmt
     spdlog
     tbb
-    ${MR_PYTHON_LIB}
+    Python::Python
   )
 ENDIF()
 

@@ -473,18 +473,22 @@ Expected<BooleanResultPoints, std::string> getBooleanPoints( const Mesh& meshA, 
         if ( !boolRes.valid() )
             return unexpected( boolRes.errorString );
 
-        for ( auto v : meshA.topology.getValidVerts() )
-        {
-            auto vn = mapper.maps[int( BooleanResultMapper::MapObject::A )].old2newVerts[v];
-            if ( vn.valid() )
-                result.meshAVerts.set( v );
-        }
-        for ( auto v : meshB.topology.getValidVerts() )
-        {
-            auto vn = mapper.maps[int( BooleanResultMapper::MapObject::B )].old2newVerts[v];
-            if ( vn.valid() )
-                result.meshBVerts.set( v );
-        }
+        if ( !mapper.maps[int( BooleanResultMapper::MapObject::A )].old2newVerts.empty() )
+            for ( auto v : meshA.topology.getValidVerts() )
+            {
+                auto vn = mapper.maps[int( BooleanResultMapper::MapObject::A )].old2newVerts[v];
+                if ( vn.valid() )
+                    result.meshAVerts.set( v );
+            }
+
+        if ( !mapper.maps[int( BooleanResultMapper::MapObject::B )].old2newVerts.empty() )
+            for ( auto v : meshB.topology.getValidVerts() )
+            {
+                auto vn = mapper.maps[int( BooleanResultMapper::MapObject::B )].old2newVerts[v];
+                if ( vn.valid() )
+                    result.meshBVerts.set( v );
+            }
+
         return result;
     }
 

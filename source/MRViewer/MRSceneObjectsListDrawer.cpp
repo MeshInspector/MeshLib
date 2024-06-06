@@ -553,6 +553,7 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
         assert( fromParent );
         std::shared_ptr<Object> sourcePtr = source->getSharedPtr();
         assert( sourcePtr );
+        const auto worldXf = source->worldXf();
 
         auto detachAction = std::make_shared<ChangeSceneAction>( "Detach object", sourcePtr, ChangeSceneAction::Type::RemoveObject );
         bool detachSuccess = sourcePtr->detachFromParent();
@@ -593,7 +594,7 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
         if ( fromParentXf != toParentXf )
         {
             xfAction = std::make_shared<ChangeXfAction>( "Xf", sourcePtr );
-            source->setXf( toParentXf.inverse() * fromParentXf * source->xf() );
+            source->setWorldXf( worldXf );
         }
 
         actionList.push_back( { detachAction, attachAction, xfAction } );

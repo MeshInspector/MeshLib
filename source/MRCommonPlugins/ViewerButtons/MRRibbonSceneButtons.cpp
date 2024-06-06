@@ -125,7 +125,10 @@ std::string RibbonSceneSelectAll::isAvailable( const std::vector<std::shared_ptr
 bool RibbonSceneSelectAll::action()
 {
     if ( auto menu = getViewerInstance().getMenuPlugin() )
-        menu->getSceneObjectsList()->selectAllObjects();
+    {
+        if ( auto sceneList = menu->getSceneObjectsList() )
+            sceneList->selectAllObjects();
+    }
     return false;
 }
 

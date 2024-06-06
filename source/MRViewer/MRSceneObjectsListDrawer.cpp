@@ -163,15 +163,14 @@ void SceneObjectsListDrawer::changeVisible( bool isDown )
     }
 }
 
-void SceneObjectsListDrawer::selectAll()
+void SceneObjectsListDrawer::selectAllObjects()
 {
     const auto& selectable = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
     for ( auto obj : selectable )
     {
         obj->select( true );
-        obj->setVisible( true );
         if ( showNewSelectedObjects_ )
-            obj->setGlobalVisibility( true );
+            obj->setVisible( true );
     }
 }
 

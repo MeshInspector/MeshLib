@@ -5,7 +5,30 @@
 namespace MR
 {
 
-using IndexedPairs = Vector<PointPairs, ObjId>;
+using ICPObjects = Vector<MeshOrPointsXf, ObjId>;
+
+using ICPLayer = int;
+class ICPElemtTag;
+using ICPElementId = Id<ICPElemtTag>;
+struct ICPGroupPair : public ICPPairData
+{
+    ObjVertId srcId;
+    ObjVertId tgtClosestId;
+};
+struct ICPGroupPairs : public IPointPairs
+{
+    virtual const ICPPairData& operator[]( size_t idx ) const override { return vec[idx]; }
+    virtual ICPPairData& operator[]( size_t idx ) override { return vec[idx]; }
+    std::vector<ICPGroupPair> vec;
+};
+
+using ICPGroupProjector = std::function<void( const Vector3f& p, MeshOrPoints::ProjectionResult& res, ObjId& resId )>;
+/// in each pair updates the target data and performs basic filtering (activation)
+void updateGroupPairs( ICPGroupPairs& pairs, const ICPObjects& objs,
+    ICPGroupProjector srcProjector, ICPGroupProjector tgtProjector,
+    float cosTreshold, float distThresholdSq, bool mutualClosest );
+
+using ICPPairsGrid = Vector<Vector<ICPGroupPairs, ICPElementId>, ICPElementId>;
 
 /// This class allows you to register many objects having similar parts
 /// and known initial approximations of orientations/locations using
@@ -13,7 +36,7 @@ using IndexedPairs = Vector<PointPairs, ObjId>;
 class MRMESH_CLASS MultiwayICP
 {
 public:
-    MRMESH_API MultiwayICP( const Vector<MeshOrPointsXf, ObjId>& objects, float samplingVoxelSize );
+    MRMESH_API MultiwayICP( const ICPObjects& objects, float samplingVoxelSize );
     
     /// runs ICP algorithm given input objects, transformations, and parameters;
     /// \return adjusted transformations of all objects to reach registered state
@@ -23,6 +46,7 @@ public:
     MRMESH_API void resamplePoints( float samplingVoxelSize );
 
     /// in each pair updates the target data and performs basic filtering (activation)
+    /// in cascade mode only useful for stats update 
     MRMESH_API void updateAllPointPairs();
 
     /// tune algorithm params before run calculateTransformations()
@@ -32,20 +56,11 @@ public:
     /// computes root-mean-square deviation between points
     [[nodiscard]] MRMESH_API float getMeanSqDistToPoint() const;
 
-    /// computes root-mean-square deviation between points of given object
-    [[nodiscard]] MRMESH_API float getMeanSqDistToPoint( ObjId id ) const;
-
     /// computes root-mean-square deviation from points to target planes
     [[nodiscard]] MRMESH_API float getMeanSqDistToPlane() const;
 
-    /// computes root-mean-square deviation from points to target planes  of given object
-    [[nodiscard]] MRMESH_API float getMeanSqDistToPlane( ObjId id ) const;
-
     /// computes the number of active point pairs
     [[nodiscard]] MRMESH_API size_t getNumActivePairs() const;
-
-    /// computes the number of active point pairs of given object
-    [[nodiscard]] MRMESH_API size_t getNumActivePairs( ObjId id ) const;
 
     /// sets callback that will be called for each iteration
     void setPerIterationCallback( std::function<void( int inter )> callback ) { perIterationCb_ = std::move( callback ); }
@@ -59,52 +74,29 @@ public:
     [[nodiscard]] MRMESH_API std::string getStatusInfo() const;
 
 private:
-    Vector<MeshOrPointsXf, ObjId> objs_;
-    Vector<IndexedPairs, ObjId> pairsPerObj_;
+    ICPObjects objs_;
+    Vector<ICPPairsGrid, ICPLayer> pairsGridPerLayer_;
     ICPProperties prop_;
 
     ICPExitType resultType_{ ICPExitType::NotStarted };
 
     std::function<void( int )> perIterationCb_;
 
+    /// reserves space in pairsGridPerLayer_ according to mode and GroupIndexer
+    void setupLayers_();
+
     /// reserves memory for all pairs
     /// if currently in cascade mode (objs.size() > maxGroupSize_) reserves only for pairs inside groups
-    void reservePairs_( const Vector<VertBitSet, ObjId>& samples );
-    /// updates pairs among same groups only
-    void updatePointsPairsGroupWise_();
-    /// deactivate pairs that does not meet farDistFactor criterion
-    void deactivateFarDistPairs_();
+    void reservePairsLayer0_( Vector<VertBitSet, ObjId>&& samples );
 
-    using Layer = int;
-    class GroupTag;
-    using GroupId = Id<GroupTag>;
-    struct GroupPair : public ICPPairData
-    {
-        ObjVertId srcId;
-        ObjVertId tgtClosestId;
-    };
-    struct GroupPairs : public IPointPairs
-{
-        virtual const ICPPairData& operator[]( size_t idx ) const override { return vec[idx]; }
-        virtual ICPPairData& operator[]( size_t idx ) override { return vec[idx]; }
-        std::vector<GroupPair> vec;
-    };
-    using IndexedGroupPairs = Vector<GroupPairs, GroupId>;
-    using LayerPairs = Vector<Vector<IndexedGroupPairs, GroupId>, Layer>;
-    
+    using LayerSamples = Vector<Vector<MultiObjsSamples, ICPElementId>, ICPLayer>;
+    LayerSamples resampleUpperLayers_();
+    void reserveUpperLayerPairs_( LayerSamples&& samples );
 
-    // prepares data for cascade mode
-    LayerPairs pairsPerLayer_;
-    void resampleLayers_();
-    void reserveLayerPairs_( const Vector<Vector<MultiObjsSamples, GroupId>, Layer>& samples );
-    // calculates and updates pairs 2nd and next steps of cascade mode
-    void updateLayerPairs_( Layer l );
-    bool projectGroupPair_( GroupPair& pair, const AABBTreeObjects& srcTree, ObjId srcFirst, const AABBTreeObjects& tgtTree, ObjId tgtFirst );
+    /// calculates and updates pairs 2nd and next steps of cascade mode
+    void updateLayerPairs_( ICPLayer l );
     /// deactivate pairs that does not meet farDistFactor criterion, for given layer
-    void deactivateFarDistLayerPairs_( Layer l );
-    /// computes root-mean-square deviation between points of given object
-    [[nodiscard]] float getLayerMeanSqDistToPoint_( Layer l, GroupId id ) const;
-
+    void deactivateFarDistPairs_( ICPLayer l );
 
     float samplingSize_{ 0.0f };
     // this parameter indicates maximum number of objects that might be aligned simultaneously in multi-way mode
@@ -116,13 +108,13 @@ private:
     //       3) join groups and create groups of these joined objects (2nd layer groups)
     //       4) align this groups
     // N>number of objects - same as 0
-    int maxGroupSize_{ 3 };
+    int maxGroupSize_{ 64 };
     int iter_ = 0;
     bool doIteration_( bool p2pl );
     bool p2ptIter_();
     bool p2plIter_();
     bool multiwayIter_( bool p2pl = true );
-    bool multiwayIter_( int groupSize, bool p2pl = true );
+    bool cascadeIter_( bool p2pl = true );
 };
 
 }

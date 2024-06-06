@@ -41,6 +41,9 @@ public:
     void changeSelection( bool isDown, bool isShift );
     void changeVisible( bool isDown );
 
+    // select all selectable objects
+    MRVIEWER_API void selectAllObjects();
+
     /// set object collapse state (hiding children)
     MRVIEWER_API void setObjectTreeState( const Object* obj, bool open );
 

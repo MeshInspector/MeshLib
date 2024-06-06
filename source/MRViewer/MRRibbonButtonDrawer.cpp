@@ -452,7 +452,7 @@ bool RibbonButtonDrawer::drawTabArrawButton( const char* icon, const ImVec2& siz
 
 void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const DrawButtonParams& params ) const
 {
-    UI::TestEngine::pushTree( item.item->name() + "ButtonDropList" );
+    UI::TestEngine::pushTree( item.item->name() + "##ButtonDropList" );
     MR_FINALLY{ UI::TestEngine::popTree(); };
 
     float iconSize = params.iconSize * 0.5f;

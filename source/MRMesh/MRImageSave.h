@@ -22,7 +22,6 @@ MRMESH_API extern const IOFilters Filters;
 /// saves in .bmp format
 MRMESH_API VoidOrErrStr toBmp( const Image& image, const std::filesystem::path& path );
 
-#ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_PNG
 /// saves in .png format
 MRMESH_API VoidOrErrStr toPng( const Image& image, const std::filesystem::path& path );
@@ -30,6 +29,8 @@ MRMESH_API VoidOrErrStr toPng( const Image& image, const std::filesystem::path& 
 /// saves in .png format
 MRMESH_API VoidOrErrStr toPng( const Image& image, std::ostream& os );
 #endif
+
+#ifndef __EMSCRIPTEN__
 
 #ifndef MRMESH_NO_JPEG
 /// saves in .jpg format

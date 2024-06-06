@@ -7,6 +7,7 @@
 #include "MRViewer/MRViewer.h"
 #include "MRMesh/MRChangeSceneObjectsOrder.h"
 #include "MRMesh/MRChangeSceneAction.h"
+#include "MRViewer/MRSceneObjectsListDrawer.h"
 
 namespace MR
 {
@@ -123,11 +124,10 @@ std::string RibbonSceneSelectAll::isAvailable( const std::vector<std::shared_ptr
 
 bool RibbonSceneSelectAll::action()
 {
-    const auto selectable = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selectable );
-    for ( auto obj : selectable )
+    if ( auto menu = getViewerInstance().getMenuPlugin() )
     {
-        obj->select( true );
-        obj->setVisible( true );
+        if ( auto sceneList = menu->getSceneObjectsList() )
+            sceneList->selectAllObjects();
     }
     return false;
 }

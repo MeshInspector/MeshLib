@@ -81,7 +81,7 @@ struct DecimateSettings
     bool touchBdVertices = true;
 
     /// if touchBdVertices=false then the algorithm needs to know about all boundary vertices;
-    /// if the pointer is not null then boundary vertices detection is skipped in favor of values from there
+    /// if the pointer is not null then boundary vertices detection is replaced with testing values in this bit-set
     const VertBitSet * bdVerts = nullptr;
 
     /// Permit edge flips (in addition to collapsing) to improve Delone quality of the mesh

@@ -833,8 +833,12 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
 
     struct alignas(64) Parts
     {
-        FaceBitSet faces;
+        /// region faces of the subdivision part
+        FaceBitSet region;
+
+        /// vertices to be fixed during subdivision of individual parts
         VertBitSet bdVerts;
+
         DecimateResult decimRes;
     };
     std::vector<Parts> parts( sz );
@@ -842,10 +846,9 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     // determine faces for each part
     ParallelFor( parts, [&]( size_t i )
     {
-        parts[i].faces = getSubdividePart( mesh.topology.getValidFaces(), settings.subdivideParts, i );
-        parts[i].bdVerts = getBoundaryVerts( mesh.topology, &parts[i].faces );
+        parts[i].region = getSubdividePart( mesh.topology.getValidFaces(), settings.subdivideParts, i );
     } );
-    if ( settings.progressCallback && !settings.progressCallback( 0.1f ) )
+    if ( settings.progressCallback && !settings.progressCallback( 0.03f ) )
         return res;
 
     // determine edges in between the parts
@@ -858,11 +861,34 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
             return;
         for ( size_t i = 0; i < sz; ++i )
         {
-            if ( parts[i].faces.test( l ) != parts[i].faces.test( r ) )
+            if ( parts[i].region.test( l ) != parts[i].region.test( r ) )
             {
                 stableEdges.set( ue );
                 break;
             }
+        }
+    } );
+    if ( settings.progressCallback && !settings.progressCallback( 0.07f ) )
+        return res;
+
+    // limit each part to region, find boundary vertices
+    ParallelFor( parts, [&]( size_t i )
+    {
+        auto & faces = parts[i].region;
+        if ( settings.touchBdVertices )
+        {
+            /// vertices on the boundary of subdivision,
+            /// if a vertex is only on hole's boundary or region's boundary but not on subdivision boundary, it is not here
+            parts[i].bdVerts = getRegionBoundaryVerts( mesh.topology, faces );
+            if ( settings.region )
+                faces &= *settings.region;
+        }
+        else
+        {
+            if ( settings.region )
+                faces &= *settings.region;
+            /// all boundary vertices of subdivision faces, including hole boundaries
+            parts[i].bdVerts = getBoundaryVerts( mesh.topology, &faces );
         }
     } );
     if ( settings.progressCallback && !settings.progressCallback( 0.14f ) )
@@ -910,31 +936,37 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
             subSeqSettings.packMesh = false;
             subSeqSettings.vertForms = &mVertForms;
             subSeqSettings.touchBdVertices = false;
+            // after mesh.topology.stopUpdatingValids(), seq-subdivider cannot find bdVerts by itself
             subSeqSettings.bdVerts = &parts[i].bdVerts;
-            FaceBitSet myRegion = parts[i].faces;
-            if ( settings.region )
-            {
-                myRegion &= *settings.region;
-                for ( auto f : myRegion )
-                    settings.region->reset( f );
-            }
-            subSeqSettings.region = &myRegion;
+            subSeqSettings.region = &parts[i].region;
             if ( reportProgressFromThisThread )
                 subSeqSettings.progressCallback = [reportThreadProgress]( float p ) { return reportThreadProgress( p ); };
             else if ( settings.progressCallback )
                 subSeqSettings.progressCallback = [&cancelled]( float ) { return !cancelled.load( std::memory_order_relaxed ); };
             parts[i].decimRes = decimateMeshSerial( mesh, subSeqSettings );
-            if ( settings.region )
-            {
-                for ( auto f : myRegion )
-                    settings.region->set( f );
-            }
 
             if ( parts[i].decimRes.cancelled || !reportThreadProgress( 1 ) )
                 break;
             finishedParts.fetch_add( 1, std::memory_order_relaxed );
         }
     } );
+
+    if ( settings.region )
+    {
+        // not ParallelFor to allow for subdivisions not aligned to BitSet's block boundaries
+        *settings.region = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, sz ), FaceBitSet{},
+            [&] ( const tbb::blocked_range<size_t> range, FaceBitSet cur )
+            {
+                for ( size_t i = range.begin(); i < range.end(); i++ )
+                    cur |= parts[i].region;
+                return cur;
+            },
+            [&] ( FaceBitSet a, const FaceBitSet& b )
+            {
+                a |= b;
+                return a;
+            } );
+    }
 
     // restore valids computation before return even if the operation was canceled
     mesh.topology.computeValidsFromEdges();

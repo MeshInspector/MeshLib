@@ -11,6 +11,7 @@
 #include "MRColorTheme.h"
 #include "ImGuiMenu.h"
 #include "MRMesh/MRChangeSceneAction.h"
+#include "MRMesh/MRChangeXfAction.h"
 #include "MRAppendHistory.h"
 #include "MRRibbonSchema.h"
 #include "MRUITestEngine.h"
@@ -543,17 +544,14 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
     {
         std::shared_ptr<ChangeSceneAction> detachAction;
         std::shared_ptr<ChangeSceneAction> attachAction;
+        std::shared_ptr<ChangeXfAction> xfAction;
     };
     std::vector<MoveAction> actionList;
     for ( const auto& source : sceneReorderCommand_.who )
     {
-        std::shared_ptr<Object> sourcePtr = nullptr;
-        for ( auto child : source->parent()->children() )
-            if ( child.get() == source )
-            {
-                sourcePtr = child;
-                break;
-            }
+        Object * fromParent = source->parent();
+        assert( fromParent );
+        std::shared_ptr<Object> sourcePtr = source->getSharedPtr();
         assert( sourcePtr );
 
         auto detachAction = std::make_shared<ChangeSceneAction>( "Detach object", sourcePtr, ChangeSceneAction::Type::RemoveObject );
@@ -568,10 +566,17 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
 
         auto attachAction = std::make_shared<ChangeSceneAction>( "Attach object", sourcePtr, ChangeSceneAction::Type::AddObject );
         bool attachSucess{ false };
+        Object * toParent;
         if ( !sceneReorderCommand_.before )
-            attachSucess = sceneReorderCommand_.to->addChild( sourcePtr );
+        {
+            toParent = sceneReorderCommand_.to;
+            attachSucess = toParent->addChild( sourcePtr );
+        }
         else
-            attachSucess = sceneReorderCommand_.to->parent()->addChildBefore( sourcePtr, childTo );
+        {
+            toParent = sceneReorderCommand_.to->parent();
+            attachSucess = toParent->addChildBefore( sourcePtr, childTo );
+        }
         if ( !attachSucess )
         {
             detachAction->action( HistoryAction::Type::Undo );
@@ -581,7 +586,17 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
             break;
         }
 
-        actionList.push_back( { detachAction, attachAction } );
+        // change xf to preserve world location of the object
+        std::shared_ptr<ChangeXfAction> xfAction;
+        const auto fromParentXf = fromParent->worldXf();
+        const auto toParentXf = toParent->worldXf();
+        if ( fromParentXf != toParentXf )
+        {
+            xfAction = std::make_shared<ChangeXfAction>( "Xf", sourcePtr );
+            source->setXf( toParentXf.inverse() * fromParentXf * source->xf() );
+        }
+
+        actionList.push_back( { detachAction, attachAction, xfAction } );
     }
 
     if ( dragOrDropFailed )
@@ -590,6 +605,8 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
         {
             actionList[i].attachAction->action( HistoryAction::Type::Undo );
             actionList[i].detachAction->action( HistoryAction::Type::Undo );
+            if ( actionList[i].xfAction )
+                actionList[i].xfAction->action( HistoryAction::Type::Undo );
         }
     }
     else
@@ -599,6 +616,8 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
         {
             AppendHistory( moveAction.detachAction );
             AppendHistory( moveAction.attachAction );
+            if ( moveAction.xfAction )
+                AppendHistory( moveAction.xfAction );
         }
     }
     sceneReorderCommand_ = {};

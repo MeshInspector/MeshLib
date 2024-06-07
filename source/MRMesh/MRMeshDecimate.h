@@ -63,9 +63,11 @@ struct DecimateSettings
     bool optimizeVertexPos = true;
 
     /// Limit on the number of deleted vertices
+    /// in whole mesh (if decimateBetweenParts == true) or in each subdivision part (if decimateBetweenParts == false)
     int maxDeletedVertices = INT_MAX;
 
     /// Limit on the number of deleted faces
+    /// in whole mesh (if decimateBetweenParts == true) or in each subdivision part (if decimateBetweenParts == false)
     int maxDeletedFaces = INT_MAX;
 
     /// Region on mesh to be decimated, it is updated during the operation
@@ -109,6 +111,7 @@ struct DecimateSettings
     /// this function is called each time edge (e) is deleted;
     /// if valid (e1) is given then dest(e) = dest(e1) and their origins are in different ends of collapsing edge, e1 shall take the place of e
     std::function<void(EdgeId e, EdgeId e1)> onEdgeDel;
+
     /**
      * \brief  If not null, then vertex quadratic forms are stored there;
      * if on input the vector is not empty then initialization is skipped in favor of values from there;
@@ -126,6 +129,10 @@ struct DecimateSettings
     /// unlike \ref decimateParallelMesh it does not create copies of mesh regions, so may take less memory to operate;
     /// IMPORTANT: please call mesh.packOptimally() before calling decimating with subdivideParts > 1, otherwise performance will be bad
     int subdivideParts = 1;
+
+    /// After parallel decimation of all mesh parts is done, whether to perform final decimation of whole mesh region
+    /// to eliminate small edges near the border of individual parts
+    bool decimateBetweenParts = true;
 };
 
 /**

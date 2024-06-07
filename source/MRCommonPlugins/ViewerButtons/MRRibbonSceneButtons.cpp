@@ -94,7 +94,10 @@ bool RibbonSceneShowOnlyPrev::action()
 {
     auto menu = getViewerInstance().getMenuPlugin();
     if ( menu )
-        menu->getSceneObjectsList()->changeVisible( false );
+    {
+        if ( auto sceneList = menu->getSceneObjectsList() )
+            sceneList->changeVisible( false );
+    }
     return false;
 }
 
@@ -114,7 +117,10 @@ bool RibbonSceneShowOnlyNext::action()
 {
     auto menu = getViewerInstance().getMenuPlugin();
     if ( menu )
-        menu->getSceneObjectsList()->changeVisible( true );
+    {
+        if ( auto sceneList = menu->getSceneObjectsList() )
+            sceneList->changeVisible( true );
+    }
     return false;
 }
 

@@ -1,23 +1,3 @@
-# def test_remesh():
-#     mesh = mrmesh.makeTorus(2, 1, 10, 10, None)
-#
-#     settings = mrmesh.RemeshSettings()
-#     settings.maxEdgeSplits = 1000
-#
-#     nb_verts_before = mesh.topology.getValidVerts().size()
-#
-#     result = mrmesh.remesh(mesh, settings)
-#
-#     # Remeshing is successful
-#     assert result == True
-#
-#     # Assume edge splits are executed
-#     assert mesh.points.vec.size() > nb_verts_before
-#     assert mesh.topology.getValidVerts().size() > nb_verts_before
-#
-#     # No holes are introduced
-#     assert mesh.topology.findHoleRepresentiveEdges().size() == 0
-
 from pathlib import Path
 from pytest_check import check
 from constants import test_files_path
@@ -35,7 +15,7 @@ import pytest
 ])
 def test_remesh(tmp_path, case):
     """
-    Test triangulation algorithm
+    Test remesh algorithm
     """
     #  Load input mesh
     case_name = case["name"]

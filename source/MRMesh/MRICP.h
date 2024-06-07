@@ -50,6 +50,8 @@ struct ICPPairData
 
     /// weight of the pair (to prioritize over other pairs)
     float weight = 1.f;
+
+    friend bool operator == ( const ICPPairData&, const ICPPairData& ) = default;
 };
 
 /// Stores a pair of points: one samples on the source and the closest to it on the target

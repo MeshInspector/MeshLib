@@ -19,6 +19,7 @@
 #include "imgui_internal.h"
 #include "imgui.h"
 #include <stack>
+#include <iterator>
 
 namespace MR
 {
@@ -146,22 +147,62 @@ void SceneObjectsListDrawer::changeSelection( bool isDown, bool isShift )
 void SceneObjectsListDrawer::changeVisible( bool isDown )
 {
     const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
-    if ( isDown )
+    if ( all.empty() )
+        return;
+
+    const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
+    std::shared_ptr<Object> nextObj;
+    if ( selected.empty() )
     {
-        if ( downLastSelected_.index != -1 )
+        if ( isDown )
         {
-            all[downLastSelected_.index]->select( true );
-            downLastSelected_.needScroll = true;
+            nextObj = all[0];
+        }
+        else
+        {
+            const auto& rootChildren = SceneRoot::get().children();
+            const auto it = std::find_if( rootChildren.rbegin(), rootChildren.rend(), [] ( auto& obj )
+            {
+                return !obj->isAncillary();
+            } );
+            nextObj = *it;
         }
     }
     else
     {
-        if ( upFirstSelected_.index != -1 )
+        const auto& children = selected[0]->parent()->children();
+        auto itFirst = std::find( children.begin(), children.end(), selected[0] );
+        const int itFirstIndex = int( std::distance( children.begin(), itFirst ) );
+        int nextIndex = itFirstIndex;
+        if ( isDown )
         {
-            all[upFirstSelected_.index]->select( true );
-            upFirstSelected_.needScroll = true;
+            for ( int i = 1; i < children.size(); ++i )
+            {
+                nextIndex = int( ( itFirstIndex + i ) % children.size() );
+                if ( !children[nextIndex]->isAncillary() )
+                    break;
+            }
         }
+        else
+        {
+            for ( int i = 1; i < children.size(); ++i )
+            {
+                nextIndex = int( ( itFirstIndex - i + children.size() ) % children.size() );
+                if ( !children[nextIndex]->isAncillary() )
+                    break;
+            }
+        }
+        nextObj = children[nextIndex];
     }
+    const auto itAll = std::find( all.begin(), all.end(), nextObj );
+    nextVisible_.index = int( std::distance( all.begin(), itAll ) );
+
+    for ( const auto& obj : nextObj->parent()->children() )
+        obj->setVisible( false );
+    for ( const auto& obj : selected )
+        obj->select( false );
+    nextObj->setVisible( true );
+    nextObj->select( true );
 }
 
 void SceneObjectsListDrawer::selectAllObjects()
@@ -225,6 +266,14 @@ void SceneObjectsListDrawer::drawObjectsList_()
         ImGui::SetScrollY( upFirstSelected_.posY - ImGui::GetStyle().WindowPadding.y - borderShift );
     if ( downLastSelected_.needScroll && downLastSelected_.posY > ( scrollPosY + windowHeight - borderShift ) )
         ImGui::SetScrollY( downLastSelected_.posY - windowHeight + ImGui::GetStyle().WindowPadding.y + borderShift );
+    if ( nextVisible_.needScroll )
+    {
+        if ( nextVisible_.posY < ( scrollPosY + ImGui::GetStyle().WindowPadding.y + borderShift ) )
+            ImGui::SetScrollY( nextVisible_.posY - ImGui::GetStyle().WindowPadding.y - borderShift );
+        else if ( ( nextVisible_.posY + frameHeight ) > ( scrollPosY + windowHeight - borderShift ) )
+            ImGui::SetScrollY( nextVisible_.posY + frameHeight - windowHeight + ImGui::GetStyle().WindowPadding.y + borderShift );
+        nextVisible_ = MoveAndScrollData();
+    }
 
     upFirstSelected_ = MoveAndScrollData();
     downLastSelected_ = MoveAndScrollData();
@@ -278,6 +327,12 @@ void SceneObjectsListDrawer::drawObjectsList_()
             {
                 upFirstSelected_.index = i;
                 upFirstSelected_.posY = skippableRenderer.getCursorPosY();
+            }
+
+            if ( nextVisible_.index == i )
+            {
+                nextVisible_.posY = skippableRenderer.getCursorPosY();
+                nextVisible_.needScroll = true;
             }
 
             skippableRenderer.draw( frameHeight, itemSpacingY,

@@ -2,6 +2,8 @@
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRViewer/MRRibbonSchema.h"
+#include "MRViewer/MRRibbonMenu.h"
+#include "MRViewer/MRSceneObjectsListDrawer.h"
 #include "MRViewer/ImGuiMenu.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRViewer/MRViewer.h"
@@ -11,75 +13,6 @@
 
 namespace MR
 {
-
-namespace
-{
-
-// select and show only neighborhood. If `selectNext` true - select next, otherwise select prev
-void selectAndShowOnlyNeighborhood( bool selectNext = true )
-{
-    const auto selected = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    auto currentObjs = getTopmostVisibleObjects( &SceneRoot::get(), ObjectSelectivityType::Selectable );
-    currentObjs.insert( currentObjs.begin(), selected.begin(), selected.end() );
-    std::shared_ptr<Object> first = !currentObjs.empty() ? currentObjs.front() : std::shared_ptr<Object>{};
-    if ( !first )
-    {
-        // nothing is selected or visible, just select and show the first object
-        first = getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable );
-    }
-    if ( !first )
-        return;
-    Object* newSelection = first.get();
-    // chose a sibling object of first
-    if ( const auto firstParent = first->parent() )
-    {
-        const auto& firstParentChildren = firstParent->children();
-        if ( firstParentChildren.size() > 1 )
-        {
-            // include all siblings in currentObjs to hide and de-select them
-            currentObjs.insert( currentObjs.end(), firstParentChildren.begin(), firstParentChildren.end() );
-            bool found = false;
-            if ( !selectNext )
-            {
-                for ( const auto& child : firstParentChildren )
-                {
-                    if ( found && child == first )
-                        break;
-                    if ( !child || child->isAncillary() )
-                        continue;
-                    newSelection = child.get();
-                    found = true;
-                }
-            }
-            else
-            {
-                // select previous
-                for ( auto it = firstParentChildren.rbegin(); it != firstParentChildren.rend(); ++it )
-                {
-                    if ( found && *it == first )
-                        break;
-                    auto * child = it->get();
-                    if ( !child || child->isAncillary() )
-                        continue;
-                    newSelection = child;
-                    found = true;
-                }
-            }
-        }
-    }
-    if ( newSelection )
-    {
-        for ( const auto& obj : currentObjs )
-        {
-            obj->setVisible( false );
-            obj->select( false );
-        }
-        newSelection->select( true );
-        newSelection->setGlobalVisibility( true );
-    }
-}
-
-} // anonymous namespace
 
 RibbonSceneSortByName::RibbonSceneSortByName() :
     RibbonMenuItem( "Ribbon Scene Sort by name" )
@@ -159,7 +92,12 @@ std::string RibbonSceneShowOnlyPrev::isAvailable( const std::vector<std::shared_
 
 bool RibbonSceneShowOnlyPrev::action()
 {
-    selectAndShowOnlyNeighborhood( false );
+    auto menu = getViewerInstance().getMenuPlugin();
+    if ( menu )
+    {
+        if ( auto sceneList = menu->getSceneObjectsList() )
+            sceneList->changeVisible( false );
+    }
     return false;
 }
 
@@ -177,7 +115,12 @@ std::string RibbonSceneShowOnlyNext::isAvailable( const std::vector<std::shared_
 
 bool RibbonSceneShowOnlyNext::action()
 {
-    selectAndShowOnlyNeighborhood();
+    auto menu = getViewerInstance().getMenuPlugin();
+    if ( menu )
+    {
+        if ( auto sceneList = menu->getSceneObjectsList() )
+            sceneList->changeVisible( true );
+    }
     return false;
 }
 

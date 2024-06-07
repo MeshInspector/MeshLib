@@ -50,7 +50,6 @@ void updateGroupPairs( ICPGroupPairs& pairs, const ICPObjects& objs,
             return;
         }
         assert( prjObj );
-        const auto p1 = prj.point;
 
         res.distSq = prj.distSq;
         res.weight = 1.0;

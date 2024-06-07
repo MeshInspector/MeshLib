@@ -830,6 +830,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     MR_TIMER
     assert( settings.subdivideParts > 1 );
     const auto sz = settings.subdivideParts;
+    assert( !settings.partFaces || settings.partFaces->size() == sz );
 
     DecimateResult res;
 
@@ -852,7 +853,10 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     // determine faces for each part
     ParallelFor( parts, [&]( size_t i )
     {
-        parts[i].region = getSubdividePart( mesh.topology.getValidFaces(), settings.subdivideParts, i );
+        if ( settings.partFaces )
+            parts[i].region = std::move( (*settings.partFaces)[i] );
+        else
+            parts[i].region = getSubdividePart( mesh.topology.getValidFaces(), settings.subdivideParts, i );
     } );
     if ( settings.progressCallback && !settings.progressCallback( 0.03f ) )
         return res;
@@ -983,21 +987,29 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     if ( cancelled.load( std::memory_order_relaxed ) || ( settings.progressCallback && !settings.progressCallback( 0.9f ) ) )
         return res;
 
+    if ( settings.partFaces )
+    {
+        assert( !settings.packMesh ); // otherwise, returned partFaces will contain wrong distribution of faces
+        assert( !settings.decimateBetweenParts ); // otherwise, returned partFaces will contain some deleted faces, and some faces can actually be in-between original parts
+        for ( int i = 0; i < sz; ++i )
+            (*settings.partFaces)[i] = std::move( parts[i].region );
+    }
+
+    DecimateSettings seqSettings = settings;
+    for ( const auto & submesh : parts )
+    {
+        seqSettings.maxDeletedFaces -= submesh.decimRes.facesDeleted;
+        seqSettings.maxDeletedVertices -= submesh.decimRes.vertsDeleted;
+    }
+    seqSettings.vertForms = &mVertForms;
+    seqSettings.progressCallback = subprogress( settings.progressCallback, 0.9f, 1.0f );
     if ( settings.decimateBetweenParts )
     {
-        DecimateSettings seqSettings = settings;
-        for ( const auto & submesh : parts )
-        {
-            seqSettings.maxDeletedFaces -= submesh.decimRes.facesDeleted;
-            seqSettings.maxDeletedVertices -= submesh.decimRes.vertsDeleted;
-        }
-        seqSettings.vertForms = &mVertForms;
-        seqSettings.progressCallback = subprogress( settings.progressCallback, 0.9f, 1.0f );
         res = decimateMeshSerial( mesh, seqSettings );
     }
     else
     {
-        optionalPackMesh( mesh, settings );
+        optionalPackMesh( mesh, seqSettings );
         res.cancelled = false;
     }
 

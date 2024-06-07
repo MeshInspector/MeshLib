@@ -123,7 +123,7 @@ struct DecimateSettings
     bool packMesh = false;
 
     /// callback to report algorithm progress and cancel it by user request
-    ProgressCallback progressCallback = {};
+    ProgressCallback progressCallback;
 
     /// If this value is more than 1, then virtually subdivides the mesh on given number of parts to process them in parallel (using many threads);
     /// unlike \ref decimateParallelMesh it does not create copies of mesh regions, so may take less memory to operate;
@@ -133,6 +133,11 @@ struct DecimateSettings
     /// After parallel decimation of all mesh parts is done, whether to perform final decimation of whole mesh region
     /// to eliminate small edges near the border of individual parts
     bool decimateBetweenParts = true;
+
+    /// if not null, then it contains the faces of each subdivision part on input, which must not overlap,
+    /// and after decimation of all parts, the region inside each part is put here;
+    /// decimateBetweenParts=true or packMesh=true are not compatible with this option
+    std::vector<FaceBitSet> * partFaces = nullptr;
 };
 
 /**

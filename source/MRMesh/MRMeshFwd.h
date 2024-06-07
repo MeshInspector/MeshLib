@@ -2,14 +2,19 @@
 
 #include "config.h"
 
-// Not zero _ITERATOR_DEBUG_LEVEL in Microsoft STL greatly reduce the performance of STL containers.
-// So we change its value to zero by default. A huge restriction with this is that
-// all other linked DLL's and LIBS' also need to define this symbol to remove STL debugging, see
+// Not-zero _ITERATOR_DEBUG_LEVEL in Microsoft STL greatly reduces the performance of STL containers.
+//
+// Pre-build binaries from MeshLib distribution are prepared with _ITERATOR_DEBUG_LEVEL=0,
+// and if you build MeshLib by yourself then _ITERATOR_DEBUG_LEVEL=0 is also selected see
 // 1) vcpkg/triplets/x64-windows-meshlib.cmake and
 // 2) MeshLib/source/common.props
-// If you would like not-zero _ITERATOR_DEBUG_LEVEL and
-// you know what you are doing (up to 100x slowdown),
-// please define MR_ITERATOR_DEBUG_LEVEL as well
+// Please note that all other modules (.exe, .dll, .lib) with MS STL calls in your application also need
+// to define exactly the same value of _ITERATOR_DEBUG_LEVEL to be operational after linking.
+//
+// If you deliberately would like to work with not zero _ITERATOR_DEBUG_LEVEL, then please define
+// additionally MR_ITERATOR_DEBUG_LEVEL with the same value to indicate that it is done intentionally
+// (and you are ok with up to 100x slowdown).
+//
 #if defined _MSC_VER
     #if !defined _ITERATOR_DEBUG_LEVEL
         #define _ITERATOR_DEBUG_LEVEL 0

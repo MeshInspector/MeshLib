@@ -1460,7 +1460,7 @@ bool beginTabBar( const char* str_id, ImGuiTabBarFlags flags )
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x + 2, style.FramePadding.y + 4 ) );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, MR::StyleConsts::pluginItemSpacing );
     
-    ImGui::PushStyleColor( ImGuiCol_Tab, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::HeaderBackground ) );
+    ImGui::PushStyleColor( ImGuiCol_Tab, Color::black() );
 
     bool result = ImGui::BeginTabBar( str_id, flags );
 
@@ -1482,12 +1482,12 @@ bool beginTabItem( const char* label, bool* p_open, ImGuiTabItemFlags flags )
     assert( tab_bar );
     ImGuiID itemId = ImGui::GetCurrentWindowRead()->GetID( label );
     bool active = tab_bar->VisibleTabId == itemId;
-    ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text ) );
-    const auto bgColor = ImGui::ColorConvertFloat4ToU32( ImGui::GetStyleColorVec4( ImGuiCol_FrameBg ) );
+    ImGui::PushStyleColor( ImGuiCol_Text, Color::white() );
+    const auto bgColor = Color::black();
     const auto bgColorHovered = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::DialogTabActiveHovered );
     ImGui::PushStyleColor( ImGuiCol_Tab, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::DialogTabActive ) );
     ImGui::PushStyleColor( ImGuiCol_TabActive, bgColor );
-    ImGui::PushStyleColor( ImGuiCol_TabHovered, active ? bgColor : bgColorHovered.getUInt32() );
+    ImGui::PushStyleColor( ImGuiCol_TabHovered, active ? bgColor : bgColorHovered );
 
     const auto& style = ImGui::GetStyle();
     // Adjust tab size

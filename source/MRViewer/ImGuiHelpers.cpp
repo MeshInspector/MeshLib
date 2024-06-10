@@ -578,7 +578,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     const auto bgColor = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4( ImGuiCol_FrameBg ));
 
     ImGui::PushStyleColor( ImGuiCol_Button, bgColor );
-    ImGui::PushStyleColor( ImGuiCol_Border, bgColor );
+    ImGui::PushStyleColor( ImGuiCol_Border, Color::black() );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 0.0f,  0.0f } );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 2 * params.menuScaling );

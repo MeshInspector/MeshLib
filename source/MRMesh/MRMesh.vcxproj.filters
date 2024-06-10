@@ -1275,6 +1275,15 @@
     <ClInclude Include="MRAABBTreeMaker.hpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRFeatureObjectImpls.h">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFeatureRefine.h">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFeaturesHelpers.h">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2122,6 +2131,12 @@
     </ClCompile>
     <ClCompile Include="MRAABBTreeObjects.cpp">
       <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFeatureRefine.cpp">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFeaturesHelpers.cpp">
+      <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

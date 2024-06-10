@@ -2,7 +2,7 @@
 
 #include "MRBitSetParallelFor.h"
 #include "MRFeatureObjectImpls.h"
-#include "MRFeaturesHelpers.h"
+#include "MRFeatureHelpers.h"
 #include "MRMesh.h"
 #include "MRMeshComponents.h"
 #include "MRPointCloud.h"

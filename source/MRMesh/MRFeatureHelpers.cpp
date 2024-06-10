@@ -1,4 +1,4 @@
-#include "MRFeaturesHelpers.h"
+#include "MRFeatureHelpers.h"
 #include "MRFeatureObjectImpls.h"
 
 namespace MR

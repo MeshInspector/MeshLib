@@ -398,7 +398,7 @@
     <ClInclude Include="MRVectorTraits.h" />
     <ClInclude Include="MRFeatureObjectImpls.h" />
     <ClInclude Include="MRFeatureRefine.h" />
-    <ClInclude Include="MRFeaturesHelpers.h" />
+    <ClInclude Include="MRFeatureHelpers.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -684,7 +684,7 @@
     <ClCompile Include="MRMeasurementObject.cpp" />
     <ClCompile Include="MRObjectDimensionsEnum.cpp" />
     <ClCompile Include="MRFeatureRefine.cpp" />
-    <ClCompile Include="MRFeaturesHelpers.cpp" />
+    <ClCompile Include="MRFeatureHelpers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="$(ProjectDir)..\..\thirdparty\python\python$(PythonVersion).zip">

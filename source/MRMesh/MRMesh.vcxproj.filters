@@ -1281,7 +1281,7 @@
     <ClInclude Include="MRFeatureRefine.h">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
-    <ClInclude Include="MRFeaturesHelpers.h">
+    <ClInclude Include="MRFeatureHelpers.h">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
   </ItemGroup>
@@ -2135,7 +2135,7 @@
     <ClCompile Include="MRFeatureRefine.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
-    <ClCompile Include="MRFeaturesHelpers.cpp">
+    <ClCompile Include="MRFeatureHelpers.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
   </ItemGroup>

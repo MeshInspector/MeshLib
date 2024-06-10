@@ -1278,6 +1278,15 @@
     <ClInclude Include="MRLevelOfDetails.h">
       <Filter>Source Files\Decimation</Filter>
     </ClInclude>
+    <ClInclude Include="MRFeatureObjectImpls.h">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFeatureRefine.h">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFeatureHelpers.h">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2125,9 +2134,6 @@
     </ClCompile>
     <ClCompile Include="MRAABBTreeObjects.cpp">
       <Filter>Source Files\AABBTree</Filter>
-    </ClCompile>
-    <ClCompile Include="MRLevelOfDetails.cpp">
-      <Filter>Source Files\Decimation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

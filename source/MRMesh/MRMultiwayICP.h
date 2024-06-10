@@ -10,6 +10,7 @@ using ICPObjects = Vector<MeshOrPointsXf, ObjId>;
 using ICPLayer = int;
 class ICPElemtTag;
 using ICPElementId = Id<ICPElemtTag>;
+using ICPElementBitSet = TaggedBitSet<ICPElemtTag>;
 struct ICPGroupPair : public ICPPairData
 {
     ObjVertId srcId;
@@ -29,6 +30,29 @@ void updateGroupPairs( ICPGroupPairs& pairs, const ICPObjects& objs,
     float cosTreshold, float distThresholdSq, bool mutualClosest );
 
 using ICPPairsGrid = Vector<Vector<ICPGroupPairs, ICPElementId>, ICPElementId>;
+
+
+/// structure to find leafs and groups of each in cascade mode
+struct IICPTreeIndexer
+{
+    virtual ~IICPTreeIndexer() = default;
+    /// returns parent node id
+    virtual ICPElementId getParentNodeId( ICPLayer l, ICPElementId eId ) const = 0;
+
+    /// returns bitset of leaves of given node
+    virtual ObjBitSet getElementLeaves( ICPLayer l, ICPElementId eId ) const = 0;
+    /// valid for l > 0, returns bitset of subnodes that is associated with eId
+    /// should be valid for l == `getNumLayers`
+    virtual ICPElementBitSet getElementNodes( ICPLayer l, ICPElementId eId ) const = 0;
+
+    /// l == 0 - objs_.size()
+    /// l == 1 - number of nodes one layer above objects
+    /// l == 2 - number of nodes one layer above nodes lvl1
+    /// ...
+    /// l == `getNumLayers` - 1
+    virtual size_t getNumElements( ICPLayer l ) const = 0;
+    virtual size_t getNumLayers() const = 0;
+};
 
 /// This class allows you to register many objects having similar parts
 /// and known initial approximations of orientations/locations using
@@ -81,6 +105,8 @@ private:
     ICPExitType resultType_{ ICPExitType::NotStarted };
 
     std::function<void( int )> perIterationCb_;
+
+    std::unique_ptr<IICPTreeIndexer> cascadeIndexer_;
 
     /// reserves space in pairsGridPerLayer_ according to mode and GroupIndexer
     void setupLayers_();

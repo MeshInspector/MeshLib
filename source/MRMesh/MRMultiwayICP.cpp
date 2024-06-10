@@ -752,7 +752,6 @@ bool MultiwayICP::multiwayIter_( bool p2pl )
 
 bool MultiwayICP::cascadeIter_( bool p2pl /*= true */ )
 {
-    int elemetSize = 1;
     for ( ICPLayer l = 0; l < pairsGridPerLayer_.size(); ++l )
     {
         updateLayerPairs_( l );
@@ -812,7 +811,6 @@ bool MultiwayICP::cascadeIter_( bool p2pl /*= true */ )
                 ++indI;
             }
         }
-        elemetSize *= maxGroupSize_;
     }
     return true;
 }

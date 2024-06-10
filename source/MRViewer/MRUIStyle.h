@@ -43,6 +43,8 @@ struct ButtonIconCustomizationParams : public ButtonCustomizationParams
     bool active = true;
     // button without a gradient, always ative, configurable by an external style
     bool flatBackgroundColor = false;
+    // color mask for icon
+    std::optional<ImVec4> multColor;
 };
 
 

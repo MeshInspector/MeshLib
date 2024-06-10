@@ -358,11 +358,16 @@ bool buttonIconEx(
     assert( icon );
 
     ImVec4 multColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+    ImU32 color = ImGui::GetColorU32( style.Colors[ImGuiCol_Text] );
+    if ( params.multColor.has_value() )
+    {
+        multColor = params.multColor.value();
+        color = Color( params.multColor.value() ).getUInt32();
+    }
     ImGui::Image( *icon, { iconSize.x , iconSize.y }, multColor );
     ImGui::SameLine();
 
     const auto font = ImGui::GetFont();
-    const auto color = ImGui::GetColorU32( style.Colors[ImGuiCol_Text] );
     const auto fontSize = ImGui::GetFontSize();
 
     ImVec2 startPosText( winPos.x + ( endButtonPos.x + startButtonPosWindow.x ) / 2.0f, winPos.y + startButtonPosWindow.y );

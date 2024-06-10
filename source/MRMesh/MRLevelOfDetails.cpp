@@ -51,7 +51,8 @@ std::shared_ptr<Object> makeLevelOfDetails( Mesh && mesh, int maxDepth )
         region.set( spans[i].beg, spans[i].end - spans[i].beg, true );
         objMesh->setMesh( std::make_shared<Mesh>( mesh.cloneRegion( region ) ) );
 
-        objMesh->setName( std::to_string( maxDepth ) + "_" + std::to_string( i ) );
+        objMesh->setName( "mesh" + std::to_string( maxDepth ) + "_" + std::to_string( i ) );
+        objMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Edges, ViewportMask::all() );
         objMesh->setVisible( false );
         levelObjs[i] = std::move( objMesh );
     } );
@@ -74,10 +75,16 @@ std::shared_ptr<Object> makeLevelOfDetails( Mesh && mesh, int maxDepth )
 
             const FaceBitSet & region = meshParts[i];
             objMesh->setMesh( std::make_shared<Mesh>( mesh.cloneRegion( region ) ) );
+            objMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Edges, ViewportMask::all() );
 
-            objMesh->setName( std::to_string( currDepth ) + "_" + std::to_string( i ) );
-            objMesh->addChild( levelObjs[i] );
-            levelObjs[i] = std::move( objMesh );
+            auto obj = std::make_shared<Object>();
+            obj->setName( "lvl" + std::to_string( currDepth ) + "_" + std::to_string( i ) );
+
+            objMesh->setName( "mesh" + std::to_string( currDepth ) + "_" + std::to_string( i ) );
+            obj->addChild( objMesh );
+            obj->addChild( levelObjs[i] );
+            levelObjs[i]->setVisible( false );
+            levelObjs[i] = std::move( obj );
         } );
 
         std::vector<FaceBitSet> nextMeshParts( meshParts.size() / 2 );
@@ -88,7 +95,7 @@ std::shared_ptr<Object> makeLevelOfDetails( Mesh && mesh, int maxDepth )
             auto r = 2 * i + 1;
             nextMeshParts[i] = meshParts[l] | meshParts[r];
             auto obj = std::make_shared<Object>();
-            obj->setName( std::to_string( currDepth - 1 ) );
+            obj->setName( "lvl" + std::to_string( currDepth ) );
             obj->addChild( levelObjs[l] );
             obj->addChild( levelObjs[r] );
             nextLevelObjs[i] = std::move( obj );
@@ -105,11 +112,15 @@ std::shared_ptr<Object> makeLevelOfDetails( Mesh && mesh, int maxDepth )
     auto res = std::make_shared<Object>();
     res->setName( "Levels of Details" );
     auto objMesh = std::make_shared<ObjectMesh>();
-    objMesh->setName( "0" );
+    objMesh->setName( "mesh0" );
+    objMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Edges, ViewportMask::all() );
     objMesh->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
     res->addChild( objMesh );
     for ( auto & obj : levelObjs )
+    {
+        obj->setVisible( false );
         res->addChild( obj );
+    }
 
     return res;
 }

@@ -1,4 +1,4 @@
-#include "MRPch\MRPch.h"
+#include "MRPch/MRPch.h"
 
 #include "MRVolumeInterpolation.h"
 

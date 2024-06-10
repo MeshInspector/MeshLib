@@ -168,7 +168,10 @@ void projectOnAll(
 
     auto addSubTask = [&] ( NodeId n )
     {
-        float distSq = ( tree.nodes()[n].box.getBoxClosestPointTo( pt ) - pt ).lengthSq();
+        const auto& box = tree.nodes()[n].box;
+        if ( !box.valid() )
+            return;
+        float distSq = ( box.getBoxClosestPointTo( pt ) - pt ).lengthSq();
         if ( distSq < upDistLimitSq )
         {
             assert( stackSize < MaxStackSize );

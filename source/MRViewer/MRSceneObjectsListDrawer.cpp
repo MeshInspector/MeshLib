@@ -11,6 +11,7 @@
 #include "MRColorTheme.h"
 #include "ImGuiMenu.h"
 #include "MRMesh/MRChangeSceneAction.h"
+#include "MRMesh/MRChangeXfAction.h"
 #include "MRAppendHistory.h"
 #include "MRRibbonSchema.h"
 #include "MRUITestEngine.h"
@@ -18,6 +19,7 @@
 #include "imgui_internal.h"
 #include "imgui.h"
 #include <stack>
+#include <iterator>
 
 namespace MR
 {
@@ -123,6 +125,8 @@ void SceneObjectsListDrawer::changeSelection( bool isDown, bool isShift )
                     data->select( false );
             all[downLastSelected_.index]->select( true );
             downLastSelected_.needScroll = true;
+            if ( showNewSelectedObjects_ )
+                all[downLastSelected_.index]->setGlobalVisibility( true );
         }
     }
     else
@@ -134,6 +138,8 @@ void SceneObjectsListDrawer::changeSelection( bool isDown, bool isShift )
                     data->select( false );
             all[upFirstSelected_.index]->select( true );
             upFirstSelected_.needScroll = true;
+            if ( showNewSelectedObjects_ )
+                all[upFirstSelected_.index]->setGlobalVisibility( true );
         }
     }
 }
@@ -141,21 +147,72 @@ void SceneObjectsListDrawer::changeSelection( bool isDown, bool isShift )
 void SceneObjectsListDrawer::changeVisible( bool isDown )
 {
     const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
-    if ( isDown )
+    if ( all.empty() )
+        return;
+
+    const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
+    std::shared_ptr<Object> nextObj;
+    if ( selected.empty() )
     {
-        if ( downLastSelected_.index != -1 )
+        if ( isDown )
         {
-            all[downLastSelected_.index]->select( true );
-            downLastSelected_.needScroll = true;
+            nextObj = all[0];
+        }
+        else
+        {
+            const auto& rootChildren = SceneRoot::get().children();
+            const auto it = std::find_if( rootChildren.rbegin(), rootChildren.rend(), [] ( auto& obj )
+            {
+                return !obj->isAncillary();
+            } );
+            nextObj = *it;
         }
     }
     else
     {
-        if ( upFirstSelected_.index != -1 )
+        const auto& children = selected[0]->parent()->children();
+        auto itFirst = std::find( children.begin(), children.end(), selected[0] );
+        const int itFirstIndex = int( std::distance( children.begin(), itFirst ) );
+        int nextIndex = itFirstIndex;
+        if ( isDown )
         {
-            all[upFirstSelected_.index]->select( true );
-            upFirstSelected_.needScroll = true;
+            for ( int i = 1; i < children.size(); ++i )
+            {
+                nextIndex = int( ( itFirstIndex + i ) % children.size() );
+                if ( !children[nextIndex]->isAncillary() )
+                    break;
+            }
         }
+        else
+        {
+            for ( int i = 1; i < children.size(); ++i )
+            {
+                nextIndex = int( ( itFirstIndex - i + children.size() ) % children.size() );
+                if ( !children[nextIndex]->isAncillary() )
+                    break;
+            }
+        }
+        nextObj = children[nextIndex];
+    }
+    const auto itAll = std::find( all.begin(), all.end(), nextObj );
+    nextVisible_.index = int( std::distance( all.begin(), itAll ) );
+
+    for ( const auto& obj : nextObj->parent()->children() )
+        obj->setVisible( false );
+    for ( const auto& obj : selected )
+        obj->select( false );
+    nextObj->setVisible( true );
+    nextObj->select( true );
+}
+
+void SceneObjectsListDrawer::selectAllObjects()
+{
+    const auto& selectable = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    for ( auto obj : selectable )
+    {
+        obj->select( true );
+        if ( showNewSelectedObjects_ )
+            obj->setVisible( true );
     }
 }
 
@@ -209,6 +266,14 @@ void SceneObjectsListDrawer::drawObjectsList_()
         ImGui::SetScrollY( upFirstSelected_.posY - ImGui::GetStyle().WindowPadding.y - borderShift );
     if ( downLastSelected_.needScroll && downLastSelected_.posY > ( scrollPosY + windowHeight - borderShift ) )
         ImGui::SetScrollY( downLastSelected_.posY - windowHeight + ImGui::GetStyle().WindowPadding.y + borderShift );
+    if ( nextVisible_.needScroll )
+    {
+        if ( nextVisible_.posY < ( scrollPosY + ImGui::GetStyle().WindowPadding.y + borderShift ) )
+            ImGui::SetScrollY( nextVisible_.posY - ImGui::GetStyle().WindowPadding.y - borderShift );
+        else if ( ( nextVisible_.posY + frameHeight ) > ( scrollPosY + windowHeight - borderShift ) )
+            ImGui::SetScrollY( nextVisible_.posY + frameHeight - windowHeight + ImGui::GetStyle().WindowPadding.y + borderShift );
+        nextVisible_ = MoveAndScrollData();
+    }
 
     upFirstSelected_ = MoveAndScrollData();
     downLastSelected_ = MoveAndScrollData();
@@ -262,6 +327,12 @@ void SceneObjectsListDrawer::drawObjectsList_()
             {
                 upFirstSelected_.index = i;
                 upFirstSelected_.posY = skippableRenderer.getCursorPosY();
+            }
+
+            if ( nextVisible_.index == i )
+            {
+                nextVisible_.posY = skippableRenderer.getCursorPosY();
+                nextVisible_.needScroll = true;
             }
 
             skippableRenderer.draw( frameHeight, itemSpacingY,
@@ -543,18 +614,16 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
     {
         std::shared_ptr<ChangeSceneAction> detachAction;
         std::shared_ptr<ChangeSceneAction> attachAction;
+        std::shared_ptr<ChangeXfAction> xfAction;
     };
     std::vector<MoveAction> actionList;
     for ( const auto& source : sceneReorderCommand_.who )
     {
-        std::shared_ptr<Object> sourcePtr = nullptr;
-        for ( auto child : source->parent()->children() )
-            if ( child.get() == source )
-            {
-                sourcePtr = child;
-                break;
-            }
+        Object * fromParent = source->parent();
+        assert( fromParent );
+        std::shared_ptr<Object> sourcePtr = source->getSharedPtr();
         assert( sourcePtr );
+        const auto worldXf = source->worldXf();
 
         auto detachAction = std::make_shared<ChangeSceneAction>( "Detach object", sourcePtr, ChangeSceneAction::Type::RemoveObject );
         bool detachSuccess = sourcePtr->detachFromParent();
@@ -568,10 +637,17 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
 
         auto attachAction = std::make_shared<ChangeSceneAction>( "Attach object", sourcePtr, ChangeSceneAction::Type::AddObject );
         bool attachSucess{ false };
+        Object * toParent;
         if ( !sceneReorderCommand_.before )
-            attachSucess = sceneReorderCommand_.to->addChild( sourcePtr );
+        {
+            toParent = sceneReorderCommand_.to;
+            attachSucess = toParent->addChild( sourcePtr );
+        }
         else
-            attachSucess = sceneReorderCommand_.to->parent()->addChildBefore( sourcePtr, childTo );
+        {
+            toParent = sceneReorderCommand_.to->parent();
+            attachSucess = toParent->addChildBefore( sourcePtr, childTo );
+        }
         if ( !attachSucess )
         {
             detachAction->action( HistoryAction::Type::Undo );
@@ -581,7 +657,17 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
             break;
         }
 
-        actionList.push_back( { detachAction, attachAction } );
+        // change xf to preserve world location of the object
+        std::shared_ptr<ChangeXfAction> xfAction;
+        const auto fromParentXf = fromParent->worldXf();
+        const auto toParentXf = toParent->worldXf();
+        if ( fromParentXf != toParentXf )
+        {
+            xfAction = std::make_shared<ChangeXfAction>( "Xf", sourcePtr );
+            source->setWorldXf( worldXf );
+        }
+
+        actionList.push_back( { detachAction, attachAction, xfAction } );
     }
 
     if ( dragOrDropFailed )
@@ -590,6 +676,8 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
         {
             actionList[i].attachAction->action( HistoryAction::Type::Undo );
             actionList[i].detachAction->action( HistoryAction::Type::Undo );
+            if ( actionList[i].xfAction )
+                actionList[i].xfAction->action( HistoryAction::Type::Undo );
         }
     }
     else
@@ -599,6 +687,8 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
         {
             AppendHistory( moveAction.detachAction );
             AppendHistory( moveAction.attachAction );
+            if ( moveAction.xfAction )
+                AppendHistory( moveAction.xfAction );
         }
     }
     sceneReorderCommand_ = {};

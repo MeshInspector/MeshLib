@@ -36,10 +36,15 @@ public:
     bool getDeselectNewHiddenObjects() { return deselectNewHiddenObjects_; }
 
     /// change selection after pressed arrow up / down
-    /// isUp - true if pressed arrow down, false - arrow up
+    /// isDown - true if pressed arrow down, false - arrow up
     /// isShift - shift button holded
-    void changeSelection( bool isDown, bool isShift );
-    void changeVisible( bool isDown );
+    MRVIEWER_API void changeSelection( bool isDown, bool isShift );
+    /// change visible (and selection) after pressed arrow up / down
+    /// isDown - true if pressed F4, false - F3
+    MRVIEWER_API void changeVisible( bool isDown );
+
+    // select all selectable objects
+    MRVIEWER_API void selectAllObjects();
 
     /// set object collapse state (hiding children)
     MRVIEWER_API void setObjectTreeState( const Object* obj, bool open );
@@ -114,6 +119,7 @@ private:
     };
     MoveAndScrollData upFirstSelected_;
     MoveAndScrollData downLastSelected_;
+    MoveAndScrollData nextVisible_;
 
     struct SceneReorder
     {

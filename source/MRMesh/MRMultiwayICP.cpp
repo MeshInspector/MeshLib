@@ -5,12 +5,88 @@
 #include "MRPointToPlaneAligningTransform.h"
 #include "MRMultiwayAligningTransform.h"
 #include "MRBitSetParallelFor.h"
+#include "MRAABBTreeObjects.h"
+#include "MRAABBTreeObjects.h"
 #include <algorithm>
 
 namespace MR
 {
 
-MultiwayICP::MultiwayICP( const Vector<MeshOrPointsXf, ObjId>& objects, float samplingVoxelSize ) :
+void updateGroupPairs( ICPGroupPairs& pairs, const ICPObjects& objs,
+    ICPGroupProjector srcProjector, ICPGroupProjector tgtProjector, 
+    float cosTreshold, float distThresholdSq, bool mutualClosest )
+{
+    MR_TIMER;
+    pairs.active.clear();
+    pairs.active.resize( pairs.vec.size(), true );
+
+    // calculate pairs
+    BitSetParallelForAll( pairs.active, [&] ( size_t idx )
+    {
+        auto & res = pairs.vec[idx];
+        const auto p0 = objs[res.srcId.objId].obj.points()[res.srcId.vId];
+        const auto pt = objs[res.srcId.objId].xf( p0 );
+
+        ObjId prjObj;
+        MeshOrPoints::ProjectionResult prj;
+        // do not search for target point further than distance threshold
+        prj.distSq = distThresholdSq;
+        if ( res.tgtClosestId.objId && res.tgtClosestId.vId )
+        {
+            // start with old closest point ...
+            prj.point = objs[res.tgtClosestId.objId].obj.points()[res.tgtClosestId.vId];
+            if ( auto tgtNormals = objs[res.tgtClosestId.objId].obj.normals() )
+                prj.normal = tgtNormals( res.tgtClosestId.vId );
+            prj.distSq = ( pt - objs[res.tgtClosestId.objId].xf( prj.point ) ).lengthSq();
+            prj.closestVert = res.tgtClosestId.vId;
+            prjObj = res.tgtClosestId.objId;
+        }
+        // ... and try to find only closer one
+        tgtProjector( pt, prj, prjObj );
+        if ( !prj.closestVert || prj.distSq > distThresholdSq || prj.isBd )
+        {
+            // no target point found within distance threshold
+            pairs.active.reset( idx );
+            return;
+        }
+        assert( prjObj );
+
+        res.distSq = prj.distSq;
+        res.weight = 1.0;
+        if ( auto srcWeights = objs[res.srcId.objId].obj.weights() )
+            res.weight = srcWeights( res.srcId.vId );
+
+        res.tgtClosestId.objId = prjObj;
+        res.tgtClosestId.vId = prj.closestVert;
+
+        res.srcPoint = pt;
+        res.tgtPoint = objs[res.tgtClosestId.objId].xf( prj.point );
+
+        auto srcNormals = objs[res.srcId.objId].obj.normals();
+        res.srcNorm = srcNormals ? ( objs[res.srcId.objId].xf.A * srcNormals( res.srcId.vId ) ).normalized() : Vector3f();
+        res.tgtNorm = prj.normal ? ( objs[res.tgtClosestId.objId].xf.A * prj.normal.value() ).normalized() : Vector3f();
+
+        auto normalsAngleCos = ( prj.normal && srcNormals ) ? dot( res.tgtNorm, res.srcNorm ) : 1.0f;
+
+        if ( normalsAngleCos < cosTreshold )
+        {
+            pairs.active.reset( idx );
+            return;
+        }
+        if ( mutualClosest )
+        {
+            assert( srcProjector );
+            prjObj = res.srcId.objId;
+            prj.closestVert = res.srcId.vId;
+            // keep prj.distSq
+            srcProjector( res.tgtPoint, prj, prjObj );
+            if ( prj.closestVert != res.srcId.vId )
+                pairs.active.reset( idx );
+        }
+    } );
+}
+
+MultiwayICP::MultiwayICP( const ICPObjects& objects, float samplingVoxelSize ) :
     objs_{ objects }
 {
     resamplePoints( samplingVoxelSize );
@@ -77,6 +153,8 @@ Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformations( ProgressCallbac
 void MultiwayICP::resamplePoints( float samplingVoxelSize )
 {
     MR_TIMER;
+    setupLayers_();
+
     samplingSize_ = samplingVoxelSize;
 
     Vector<VertBitSet, ObjId> samplesPerObj( objs_.size() );
@@ -87,106 +165,79 @@ void MultiwayICP::resamplePoints( float samplingVoxelSize )
         samplesPerObj[ind] = *obj.obj.pointsGridSampling( samplingVoxelSize );
     } );
 
-    reservePairs_( samplesPerObj );
+    reservePairsLayer0_( std::move( samplesPerObj ) );
 
-    // only do something if cascade mode is required
-    resampleLayers_();
+    // only do something if cascade mode is required, really should be called on each iteration
+    reserveUpperLayerPairs_( resampleUpperLayers_() );
 }
 
 float MultiwayICP::getMeanSqDistToPoint() const
 {
-    return tbb::parallel_deterministic_reduce( tbb::blocked_range( size_t( 0 ), objs_.size() * objs_.size() ), NumSum(),
-        [&] ( const auto& range, NumSum curr )
+    NumSum numSum;
+    for ( ICPLayer l( 0 ); l < pairsGridPerLayer_.size(); ++l )
     {
-        for ( size_t r = range.begin(); r < range.end(); ++r )
-        {
-            size_t i = r % objs_.size();
-            size_t j = r / objs_.size();
-            if ( i == j )
-                continue;
-            curr = curr + MR::getSumSqDistToPoint( pairsPerObj_[ObjId( i )][ObjId( j )] );
-        }
-        return curr;
-    }, [] ( auto a, auto b ) { return a + b; } ).rootMeanSqF();
-}
-
-float MultiwayICP::getMeanSqDistToPoint( ObjId id ) const
-{
-    return tbb::parallel_deterministic_reduce( tbb::blocked_range( ObjId( 0 ), ObjId( objs_.size() ) ), NumSum(),
+        const auto& pairs = pairsGridPerLayer_[l];
+        numSum = numSum + tbb::parallel_deterministic_reduce( tbb::blocked_range( size_t( 0 ), pairs.size() * pairs.size() ), NumSum(),
         [&] ( const auto& range, NumSum curr )
-    {
-        for ( ObjId i = range.begin(); i < range.end(); ++i )
         {
-            if ( i == id )
-                continue;
-            curr = curr + MR::getSumSqDistToPoint( pairsPerObj_[i][id] ) + MR::getSumSqDistToPoint( pairsPerObj_[id][i] );
-        }
-        return curr;
-    }, [] ( auto a, auto b ) { return a + b; } ).rootMeanSqF();
+            for ( size_t r = range.begin(); r < range.end(); ++r )
+            {
+                size_t i = r % pairs.size();
+                size_t j = r / pairs.size();
+                if ( i == j )
+                    continue;
+                curr = curr + MR::getSumSqDistToPoint( pairs[ICPElementId( i )][ICPElementId( j )] );
+            }
+            return curr;
+        }, [] ( auto a, auto b ) { return a + b; } );
+    }
+    return numSum.rootMeanSqF();
 }
 
 float MultiwayICP::getMeanSqDistToPlane() const
 {
-    return tbb::parallel_deterministic_reduce( tbb::blocked_range( size_t( 0 ), objs_.size() * objs_.size() ), NumSum(),
-        [&] ( const auto& range, NumSum curr )
+    NumSum numSum;
+    for ( ICPLayer l( 0 ); l < pairsGridPerLayer_.size(); ++l )
     {
-        for ( size_t r = range.begin(); r < range.end(); ++r )
-        {
-            size_t i = r % objs_.size();
-            size_t j = r / objs_.size();
-            if ( i == j )
-                continue;
-            curr = curr + MR::getSumSqDistToPlane( pairsPerObj_[ObjId( i )][ObjId( j )] );
-        }
-        return curr;
-    }, [] ( auto a, auto b ) { return a + b; } ).rootMeanSqF();
-}
-
-float MultiwayICP::getMeanSqDistToPlane( ObjId id ) const
-{
-    return tbb::parallel_deterministic_reduce( tbb::blocked_range( ObjId( 0 ), ObjId( objs_.size() ) ), NumSum(),
+        const auto& pairs = pairsGridPerLayer_[l];
+        numSum = numSum + tbb::parallel_deterministic_reduce( tbb::blocked_range( size_t( 0 ), pairs.size() * pairs.size() ), NumSum(),
         [&] ( const auto& range, NumSum curr )
-    {
-        for ( ObjId i = range.begin(); i < range.end(); ++i )
         {
-            if ( i == id )
-                continue;
-            curr = curr + MR::getSumSqDistToPlane( pairsPerObj_[i][id] ) + MR::getSumSqDistToPlane( pairsPerObj_[id][i] );
-        }
-        return curr;
-    }, [] ( auto a, auto b ) { return a + b; } ).rootMeanSqF();
+            for ( size_t r = range.begin(); r < range.end(); ++r )
+            {
+                size_t i = r % pairs.size();
+                size_t j = r / pairs.size();
+                if ( i == j )
+                    continue;
+                curr = curr + MR::getSumSqDistToPlane( pairs[ICPElementId( i )][ICPElementId( j )] );
+            }
+            return curr;
+        }, [] ( auto a, auto b ) { return a + b; } );
+    }
+    return numSum.rootMeanSqF();
 }
 
 size_t MultiwayICP::getNumActivePairs() const
 {
-    return tbb::parallel_deterministic_reduce( tbb::blocked_range( size_t( 0 ), objs_.size() * objs_.size() ), size_t( 0 ),
-        [&] ( const auto& range, size_t curr )
+    size_t num = 0;
+    for ( ICPLayer l( 0 ); l < pairsGridPerLayer_.size(); ++l )
     {
-        for ( size_t r = range.begin(); r < range.end(); ++r )
-        {
-            size_t i = r % objs_.size();
-            size_t j = r / objs_.size();
-            if ( i == j )
-                continue;
-            curr += MR::getNumActivePairs( pairsPerObj_[ObjId( i )][ObjId( j )] );
-        }
-        return curr;
-    }, [] ( auto a, auto b ) { return a + b; } );
-}
-
-size_t MultiwayICP::getNumActivePairs( ObjId id ) const
-{
-    return tbb::parallel_deterministic_reduce( tbb::blocked_range( ObjId( 0 ), ObjId( objs_.size() ) ), size_t( 0 ),
+        const auto& pairs = pairsGridPerLayer_[l];
+        num += tbb::parallel_deterministic_reduce( tbb::blocked_range( size_t( 0 ), pairs.size() * pairs.size() ), size_t( 0 ),
         [&] ( const auto& range, size_t curr )
-    {
-        for ( ObjId i = range.begin(); i < range.end(); ++i )
         {
-            if ( i == id )
-                continue;
-            curr = curr + MR::getNumActivePairs( pairsPerObj_[i][id] ) + MR::getNumActivePairs( pairsPerObj_[id][i] );
-        }
-        return curr;
-    }, [] ( auto a, auto b ) { return a + b; } );
+            for ( size_t r = range.begin(); r < range.end(); ++r )
+            {
+                size_t i = r % pairs.size();
+                size_t j = r / pairs.size();
+                if ( i == j )
+                    continue;
+                curr += MR::getNumActivePairs( pairs[ICPElementId( i )][ICPElementId( j )] );
+            }
+            return curr;
+        }, [] ( auto a, auto b ) { return a + b; } );
+    }
+    return num;
 }
 
 std::string MultiwayICP::getStatusInfo() const
@@ -197,32 +248,45 @@ std::string MultiwayICP::getStatusInfo() const
 void MultiwayICP::updateAllPointPairs()
 {
     MR_TIMER;
-    ParallelFor( size_t( 0 ), objs_.size() * objs_.size(), [&] ( size_t r )
-    {
-        auto i = ObjId( r % objs_.size() );
-        auto j = ObjId( r / objs_.size() );
-        if ( i == j )
-            return;
-        MR::updatePointPairs( pairsPerObj_[i][j], objs_[i], objs_[j], prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
-    } );
-    deactivatefarDistPairs_();
+    for ( ICPLayer l( 0 ); l < pairsGridPerLayer_.size(); ++l )
+        updateLayerPairs_( l );
 }
 
-void MultiwayICP::reservePairs_( const Vector<VertBitSet, ObjId>& samplesPerObj )
+void MultiwayICP::setupLayers_()
 {
-    pairsPerObj_.clear();
-    pairsPerObj_.resize( objs_.size() );
-    for ( ObjId i( 0 ); i < objs_.size(); ++i )
+    if ( maxGroupSize_ <= 1 || objs_.size() <= maxGroupSize_ )
     {
-        auto& pairs = pairsPerObj_[i];
+        pairsGridPerLayer_.resize( 1 );
+        return;
+    }
+    int numLayers = 1;
+    int numElements = int( objs_.size() );
+    while ( numElements > 1 )
+    {
+        numElements = ( numElements + maxGroupSize_ - 1 ) / maxGroupSize_;
+        numLayers++;
+    }
+    pairsGridPerLayer_.resize( numLayers );
+}
+
+void MultiwayICP::reservePairsLayer0_( Vector<VertBitSet, ObjId>&& samplesPerObj )
+{
+    bool cascadeMode = pairsGridPerLayer_.size() > 1;
+
+    assert( !pairsGridPerLayer_.empty() );
+    auto& pairsGrid = pairsGridPerLayer_[0];
+    pairsGrid.clear();
+    pairsGrid.resize( objs_.size() );
+    for ( ICPElementId i( 0 ); i < objs_.size(); ++i )
+    {
+        auto& pairs = pairsGrid[i];
         pairs.resize( objs_.size() );
-        bool groupWise = maxGroupSize_ > 1 && objs_.size() > maxGroupSize_;
-        for ( ObjId j( 0 ); j < objs_.size(); ++j )
+        for ( ICPElementId j( 0 ); j < objs_.size(); ++j )
         {
             if ( i == j )
                 continue;
 
-            if ( groupWise )
+            if ( cascadeMode )
             {
                 auto groupI = i / maxGroupSize_;
                 auto groupJ = j / maxGroupSize_;
@@ -231,74 +295,27 @@ void MultiwayICP::reservePairs_( const Vector<VertBitSet, ObjId>& samplesPerObj 
             }
 
             auto& thisPairs = pairs[j];
-            thisPairs.vec.reserve( samplesPerObj[i].count() );
-            for ( auto v : samplesPerObj[i] )
-                thisPairs.vec.emplace_back().srcVertId = v;
+            ObjId srcObj = ObjId( i.get() );
+            thisPairs.vec.reserve( samplesPerObj[srcObj].count() );
+            for ( auto v : samplesPerObj[srcObj] )
+            {
+                auto& back = thisPairs.vec.emplace_back();
+                back.srcId.objId = srcObj;
+                back.srcId.vId = v;
+            }
             thisPairs.active.reserve( thisPairs.vec.size() );
             thisPairs.active.clear();
         }
     }
 }
 
-void MultiwayICP::updatePointsPairsGroupWise_()
+MultiwayICP::LayerSamples MultiwayICP::resampleUpperLayers_()
 {
     MR_TIMER;
-    ParallelFor( size_t( 0 ), objs_.size() * objs_.size(), [&] ( size_t r )
-    {
-        auto i = ObjId( r % objs_.size() );
-        auto j = ObjId( r / objs_.size() );
-        if ( i == j )
-            return;
-        auto groupI = i / maxGroupSize_;
-        auto groupJ = j / maxGroupSize_;
-        if ( groupI != groupJ )
-            return;
-        MR::updatePointPairs( pairsPerObj_[i][j], objs_[i], objs_[j], prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
-    } );
-    deactivatefarDistPairs_();
-}
+    if ( pairsGridPerLayer_.size() < 2 )
+        return {};
 
-void MultiwayICP::deactivatefarDistPairs_()
-{
-    MR_TIMER;
-
-    Vector<float, ObjId> maxDistSq( objs_.size() );
-    for ( int it = 0; it < 3; ++it )
-    {
-        ParallelFor( maxDistSq, [&] ( ObjId id )
-        {
-            maxDistSq[id] = sqr( prop_.farDistFactor * getMeanSqDistToPoint( id ) );
-        } );
-
-        tbb::enumerable_thread_specific<size_t> counters( 0 );
-        ParallelFor( size_t( 0 ), objs_.size() * objs_.size(), [&] ( size_t r )
-        {
-            auto i = ObjId( r % objs_.size() );
-            auto j = ObjId( r / objs_.size() );
-            if ( i == j )
-                return;
-            if ( maxDistSq[i] >= prop_.distThresholdSq )
-                return;
-            counters.local() += ( 
-                MR::deactivateFarPairs( pairsPerObj_[i][j], maxDistSq[i] ) + 
-                MR::deactivateFarPairs( pairsPerObj_[j][i], maxDistSq[i] ) );
-        } );
-
-        size_t numDeactivated = 0;
-        for ( auto counter : counters )
-            numDeactivated += counter;
-        if ( numDeactivated == 0 )
-            break;
-    }
-}
-
-void MultiwayICP::resampleLayers_()
-{
-    MR_TIMER;
-    if ( maxGroupSize_ <= 1 || maxGroupSize_ >= objs_.size() )
-        return;
-
-    int numLayers = 0;
+    int numLayers = 1;
     int numGroups = ( int( objs_.size() ) + maxGroupSize_ - 1 ) / maxGroupSize_;
     while ( numGroups > 1 )
     {
@@ -306,16 +323,17 @@ void MultiwayICP::resampleLayers_()
         numGroups = ( numGroups + maxGroupSize_ - 1 ) / maxGroupSize_;
     }
 
-    Vector<Vector<MultiObjsSamples, GroupId>, Layer> samples( numLayers );
+    LayerSamples samples( numLayers );
     int groupSize = 1;
-    for ( Layer l = 0; l < numLayers; ++l )
+    for ( ICPLayer l = 1; l < numLayers; ++l )
     {
         groupSize *= maxGroupSize_;
         int layerSize = ( int( objs_.size() ) + groupSize - 1 ) / groupSize;
         auto& layerSamples = samples[l];
         layerSamples.resize( layerSize );
-        ParallelFor( GroupId( 0 ), GroupId( layerSize ), [&] ( GroupId gId )
+        ParallelFor( ICPElementId( 0 ), ICPElementId( layerSize ), [&] ( ICPElementId gId )
         {
+            // TODO: use GroupIndexer
             ObjId first = ObjId( groupSize * gId );
             ObjId last = ObjId( std::min( int( objs_.size() ), groupSize * ( gId + 1 ) ) );
             Vector<ModelPointsData, ObjId> groupData( last - first );
@@ -326,36 +344,45 @@ void MultiwayICP::resampleLayers_()
             }
             layerSamples[gId] = *multiModelGridSampling( groupData, samplingSize_ );
             for ( auto& smp : layerSamples[gId] )
-                smp.objId += first;
+                smp.objId += first; // works only if Objects in group are continuously stored
         } );
     }
-    reserveLayerPairs_( samples );
+    return samples;
 }
 
-void MultiwayICP::reserveLayerPairs_( const Vector<Vector<MultiObjsSamples, GroupId>, Layer>& samples )
+void MultiwayICP::reserveUpperLayerPairs_( LayerSamples&& samples )
 {
     MR_TIMER;
-    pairsPerLayer_.resize( samples.size() );
-    for ( Layer l( 0 ); l < pairsPerLayer_.size(); ++l )
+    if ( samples.empty() )
+        return;
+    assert( pairsGridPerLayer_.size() > 0 );
+    pairsGridPerLayer_.resize( samples.size() );
+    for ( ICPLayer l( 1 ); l < pairsGridPerLayer_.size(); ++l )
     {
         const auto& samplesOnLayer = samples[l];
-        auto& pairsOnLayer = pairsPerLayer_[l];
+        auto& pairsOnLayer = pairsGridPerLayer_[l];
         int numGroups = int( samplesOnLayer.size() );
         pairsOnLayer.resize( numGroups );
-        for ( GroupId gI( 0 ); gI < numGroups; ++gI )
+        for ( ICPElementId gI( 0 ); gI < numGroups; ++gI )
         {
             auto& pairsOnGroup = pairsOnLayer[gI];
             pairsOnGroup.resize( numGroups );
             const auto& thisSamples = samplesOnLayer[gI];
-            for ( GroupId gJ( 0 ); gJ < numGroups; ++gJ )
+            for ( ICPElementId gJ( 0 ); gJ < numGroups; ++gJ )
             {
                 if ( gI == gJ )
                     continue;
+
+                auto hyperGroupI = gI / maxGroupSize_;
+                auto hyperGroupJ = gJ / maxGroupSize_;
+                if ( hyperGroupI != hyperGroupJ )
+                    continue;
+
                 auto& thisPairs = pairsOnGroup[gJ];
 
                 thisPairs.vec.resize( thisSamples.size() );
                 for ( int i = 0; i < thisPairs.vec.size(); ++i )
-                    thisPairs.vec[i].src.id = thisSamples[i];
+                    thisPairs.vec[i].srcId = thisSamples[i];
                 thisPairs.active.reserve( thisPairs.vec.size() );
                 thisPairs.active.clear();
             }
@@ -363,135 +390,146 @@ void MultiwayICP::reserveLayerPairs_( const Vector<Vector<MultiObjsSamples, Grou
     }
 }
 
-void MultiwayICP::updateLayerPairs_( Layer l )
+void MultiwayICP::updateLayerPairs_( ICPLayer l )
 {
     MR_TIMER;
     int groupSize = 1;
-    for ( int i = 0; i <= l; ++i )
+    for ( int i = 1; i <= l; ++i )
         groupSize *= maxGroupSize_;
-    auto numGroups = pairsPerLayer_[l].size();
+    auto numGroups = pairsGridPerLayer_[l].size();
+    bool cascadeMode = pairsGridPerLayer_.size() > 1;
+
+    assert( l == 0 || cascadeMode );
+    assert( l < pairsGridPerLayer_.size() );
+
+    // build trees
+    using LayerTrees = Vector<AABBTreeObjects, ICPElementId>;
+    LayerTrees trees;
+    if ( l > 0 )
+    {
+        // only for upper layers
+        trees.resize( numGroups );
+        ParallelFor( trees, [&] ( ICPElementId gI )
+        {
+            // TODO: use GroupIndexer
+            auto gFirst = ObjId( gI * groupSize );
+            auto gLast = ObjId( std::min( ( gI + 1 ) * groupSize, int( objs_.size() ) ) );
+
+            ICPObjects gObjs( begin( objs_ ) + gFirst, begin( objs_ ) + gLast );
+            trees[gI] = AABBTreeObjects( std::move( gObjs ) );
+        } );
+    }
+
+    auto createProjector = [&] ( ICPElementId elId, ObjId first )->ICPGroupProjector
+    {
+        if ( l == 0 )
+            return [this, elId] ( const Vector3f& p, MeshOrPoints::ProjectionResult& res, ObjId& resId ) mutable
+        {
+            auto proj = objs_[ObjId( elId.get() )].obj.limitedProjector();
+            proj( objs_[ObjId( elId.get() )].xf.inverse()( p ), res );
+            if ( res.closestVert )
+                resId = ObjId( elId.get() );
+        };
+        return [&trees, elId, first] ( const Vector3f& p, MeshOrPoints::ProjectionResult& res, ObjId& resId )
+        {
+            projectOnAll( p, trees[elId], res.distSq, [&] ( ObjId oId, MeshOrPoints::ProjectionResult prj )
+            {
+                if ( prj.distSq >= res.distSq )
+                    return;
+                res = prj;
+                resId = oId + first;
+            } );
+        };
+    };
+
+
+    // update pairs
     auto gridSize = numGroups * numGroups;
     ParallelFor( 0, int( gridSize ), [&] ( int gridId )
     {
-        GroupId gI = GroupId( gridId / numGroups );
-        GroupId gJ = GroupId( gridId % numGroups );
+        ICPElementId gI = ICPElementId( gridId / numGroups );
+        ICPElementId gJ = ICPElementId( gridId % numGroups );
         if ( gI == gJ )
             return;
 
-        auto srcFirst = ObjId( gI * groupSize );
-        auto srcLast = ObjId( std::min( ( gI + 1 ) * groupSize, int( objs_.size() ) ) );
-        auto& pairs = pairsPerLayer_[l][gI][gJ];
-        pairs.active.resize( pairs.vec.size() );
-        auto tgtFirst = ObjId( gJ * groupSize );
-        auto tgtLast = ObjId( std::min( ( gJ + 1 ) * groupSize, int( objs_.size() ) ) );
-        BitSetParallelForAll( pairs.active, [&] ( size_t i )
+        if ( cascadeMode )
         {
-            pairs.active.set( i, projectGroupPair_( pairs.vec[i], srcFirst, srcLast, tgtFirst, tgtLast ) );
-        } );
+            auto hyperGroupI = gI / maxGroupSize_;
+            auto hyperGroupJ = gJ / maxGroupSize_;
+            if ( hyperGroupI != hyperGroupJ )
+                return;
+        }
+
+        // TODO: use GroupIndexer
+        auto srcFirst = ObjId( gI * groupSize );
+        auto tgtFirst = ObjId( gJ * groupSize );
+
+        MR::updateGroupPairs( pairsGridPerLayer_[l][gI][gJ], objs_, createProjector( gI, srcFirst ), createProjector( gJ, tgtFirst ), prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
     } );
+    deactivateFarDistPairs_( l );
 }
 
-bool MultiwayICP::projectGroupPair_( GroupPair& pair, ObjId srcFirst, ObjId srcLast, ObjId tgtFirst, ObjId tgtLast )
+// unified function for mean sq dist to point calculation
+float calcMeanSqDistToPointEx( const auto& pairs, auto id )
 {
-    ObjId minObjId;
-    MeshOrPoints::ProjectionResult prj{}, minPrj{};
-    // do not search for target point further than distance threshold
-    minPrj.distSq = prj.distSq = prop_.distThresholdSq;
-    for ( ObjId tgtObj( tgtFirst ); tgtObj < tgtLast; ++tgtObj )
+    return tbb::parallel_deterministic_reduce( tbb::blocked_range( decltype( id )( 0 ), decltype( id )( pairs.size() ) ), NumSum(),
+        [&] ( const auto& range, NumSum curr )
     {
-        auto src2tgtXf = objs_[tgtObj].xf.inverse() * objs_[pair.src.id.objId].xf;
-        const auto tgtLimProjector = objs_[tgtObj].obj.limitedProjector();
-
-        tgtLimProjector( src2tgtXf( objs_[pair.src.id.objId].obj.points()[pair.src.id.vId] ), prj );
-        if ( !prj.closestVert )
+        for ( auto i = range.begin(); i < range.end(); ++i )
         {
-            // no target point found within distance threshold
-            continue;
-        }
-        if ( prj.distSq < minPrj.distSq )
-        {
-            minObjId = tgtObj;
-            minPrj = prj;
-        }
-    }
-
-    if ( !minPrj.closestVert )
-        return false;
-
-    if ( minPrj.isBd )
-        return false;
-
-    if ( minPrj.distSq > prop_.distThresholdSq )
-    {
-        assert( false );
-        return false; // we should really not ever be here
-    }
-
-    if ( prop_.mutualClosest )
-    {
-        ObjId mutalMinObjId;
-        MeshOrPoints::ProjectionResult mutalMinPrj{};
-        for ( ObjId srcObj( srcFirst ); srcObj < srcLast; ++srcObj )
-        {
-            auto tgt2srcXf = objs_[srcObj].xf.inverse() * objs_[minObjId].xf;
-            const auto srcLimProjector = objs_[srcObj].obj.limitedProjector();
-
-            srcLimProjector( tgt2srcXf( minPrj.point ), prj );
-            if ( !prj.closestVert )
-            {
-                // no target point found within distance threshold
+            if ( i == id )
                 continue;
-            }
-            if ( prj.distSq < mutalMinPrj.distSq )
-            {
-                mutalMinObjId = srcObj;
-                mutalMinPrj = prj;
-            }
+            curr = curr + MR::getSumSqDistToPoint( pairs[i][id] ) + MR::getSumSqDistToPoint( pairs[id][i] );
         }
-        if ( !mutalMinPrj.closestVert )
-            return false;
-        if ( mutalMinObjId != pair.src.id.objId )
-            return false;
-        if ( mutalMinPrj.closestVert != pair.src.id.vId )
-            return false;
+        return curr;
+    }, [] ( auto a, auto b ) { return a + b; } ).rootMeanSqF();
+}
+
+void MultiwayICP::deactivateFarDistPairs_( ICPLayer l )
+{
+    MR_TIMER;
+    auto& pairs = pairsGridPerLayer_[l];
+    Vector<float, ICPElementId> maxDistSq( pairs.size() );
+    for ( int it = 0; it < 3; ++it )
+    {
+        ParallelFor( maxDistSq, [&] ( auto id )
+        {
+            maxDistSq[id] = sqr( prop_.farDistFactor * MR::calcMeanSqDistToPointEx( pairs, id ) );
+        } );
+
+        tbb::enumerable_thread_specific<size_t> counters( 0 );
+        ParallelFor( size_t( 0 ), pairs.size() * pairs.size(), [&] ( size_t r )
+        {
+            auto i = ICPElementId( r % pairs.size() );
+            auto j = ICPElementId( r / pairs.size() );
+            if ( i == j )
+                return;
+            if ( maxDistSq[i] >= prop_.distThresholdSq )
+                return;
+            counters.local() += (
+                MR::deactivateFarPairs( pairs[i][j], maxDistSq[i] ) +
+                MR::deactivateFarPairs( pairs[j][i], maxDistSq[i] ) );
+        } );
+
+        size_t numDeactivated = 0;
+        for ( auto counter : counters )
+            numDeactivated += counter;
+        if ( numDeactivated == 0 )
+            break;
     }
-
-    const auto srcNormals = objs_[pair.src.id.objId].obj.normals();
-    const auto tgtNormals = objs_[minObjId].obj.normals();
-    const auto srcWeights = objs_[pair.src.id.objId].obj.weights();
-
-    pair.src.point = objs_[pair.src.id.objId].xf( objs_[pair.src.id.objId].obj.points()[pair.src.id.vId] );
-    pair.src.norm = srcNormals ? ( objs_[pair.src.id.objId].xf.A * srcNormals( pair.src.id.vId ) ).normalized() : Vector3f();
-    
-    pair.tgt.id.objId = minObjId;
-    pair.tgt.id.vId = minPrj.closestVert;
-    pair.tgt.point = objs_[pair.tgt.id.objId].xf( minPrj.point );
-    pair.tgt.norm = minPrj.normal ? ( objs_[pair.tgt.id.objId].xf.A * minPrj.normal.value() ).normalized() : Vector3f();
-
-    pair.weight = srcWeights ? srcWeights( pair.tgt.id.vId ) : 1.0f;
-
-    auto normalsAngleCos = ( minPrj.normal && srcNormals ) ? dot( pair.tgt.norm, pair.src.norm ) : 1.0f;
-
-    if ( normalsAngleCos < prop_.cosTreshold )
-        return false;
-
-    return true;
 }
 
 bool MultiwayICP::doIteration_( bool p2pl )
 {
+    if ( pairsGridPerLayer_.size() > 1 )
+        return cascadeIter_( p2pl );
+
+    updateAllPointPairs();
+
     if ( maxGroupSize_ == 1 )
-    {
-        updateAllPointPairs();
         return p2pl ? p2plIter_() : p2ptIter_();
-    }
-    if ( maxGroupSize_ < 1 || maxGroupSize_ >= objs_.size() )
-    {
-        updateAllPointPairs();
-        return multiwayIter_( p2pl );
-    }
-    // pair updated inside
-    return multiwayIter_( maxGroupSize_, p2pl );
+
+    return multiwayIter_( p2pl );
 }
 
 bool MultiwayICP::p2ptIter_()
@@ -499,21 +537,23 @@ bool MultiwayICP::p2ptIter_()
     MR_TIMER;
     using FullSizeBool = uint8_t;
     Vector<FullSizeBool, ObjId> valid( objs_.size() );
-    ParallelFor( objs_, [&] ( ObjId id )
+    ParallelFor( objs_, [&] ( ObjId objId )
     {
+        ICPElementId id( objId.get() );
+        const auto& pairs = pairsGridPerLayer_[0];
         PointToPointAligningTransform p2pt;
-        for ( ObjId j( 0 ); j < objs_.size(); ++j )
+        for ( ICPElementId j( 0 ); j < objs_.size(); ++j )
         {
             if ( j == id )
                 continue;
-            for ( size_t idx : pairsPerObj_[id][j].active )
+            for ( size_t idx : pairs[id][j].active )
             {
-                const auto& vp = pairsPerObj_[id][j].vec[idx];
+                const auto& vp = pairs[id][j].vec[idx];
                 p2pt.add( vp.srcPoint, 0.5f * ( vp.srcPoint + vp.tgtPoint ), vp.weight );
             }
-            for ( size_t idx : pairsPerObj_[j][id].active )
+            for ( size_t idx : pairs[j][id].active )
             {
-                const auto& vp = pairsPerObj_[j][id].vec[idx];
+                const auto& vp = pairs[j][id].vec[idx];
                 p2pt.add( vp.tgtPoint, 0.5f * ( vp.srcPoint + vp.tgtPoint ), vp.weight );
             }
         }
@@ -542,11 +582,11 @@ bool MultiwayICP::p2ptIter_()
         }
         if ( std::isnan( res.b.x ) ) //nan check
         {
-            valid[id] = FullSizeBool( false );
+            valid[objId] = FullSizeBool( false );
             return;
         }
-        objs_[id].xf = res * objs_[id].xf;
-        valid[id] = FullSizeBool( true );
+        objs_[objId].xf = res * objs_[objId].xf;
+        valid[objId] = FullSizeBool( true );
     } );
 
     return std::all_of( valid.vec_.begin(), valid.vec_.end(), [] ( auto v ) { return bool( v ); } );
@@ -557,24 +597,26 @@ bool MultiwayICP::p2plIter_()
     MR_TIMER;
     using FullSizeBool = uint8_t;
     Vector<FullSizeBool, ObjId> valid( objs_.size() );
-    ParallelFor( objs_, [&] ( ObjId id )
+    ParallelFor( objs_, [&] ( ObjId objId )
     {
+        ICPElementId id( objId.get() );
+        const auto& pairs = pairsGridPerLayer_[0];
         Vector3f centroidRef;
         int activeCount = 0;
-        for ( ObjId j( 0 ); j < objs_.size(); ++j )
+        for ( ICPElementId j( 0 ); j < objs_.size(); ++j )
         {
             if ( j == id )
                 continue;
-            for ( size_t idx : pairsPerObj_[id][j].active )
+            for ( size_t idx : pairs[id][j].active )
             {
-                const auto& vp = pairsPerObj_[id][j].vec[idx];
+                const auto& vp = pairs[id][j].vec[idx];
                 centroidRef += ( vp.tgtPoint + vp.srcPoint ) * 0.5f;
                 centroidRef += vp.srcPoint;
                 ++activeCount;
             }
-            for ( size_t idx : pairsPerObj_[j][id].active )
+            for ( size_t idx : pairs[j][id].active )
             {
-                const auto& vp = pairsPerObj_[j][id].vec[idx];
+                const auto& vp = pairs[j][id].vec[idx];
                 centroidRef += ( vp.tgtPoint + vp.srcPoint ) * 0.5f;
                 centroidRef += vp.tgtPoint;
                 ++activeCount;
@@ -582,25 +624,25 @@ bool MultiwayICP::p2plIter_()
         }
         if ( activeCount <= 0 )
         {
-            valid[id] = FullSizeBool( false );
+            valid[objId] = FullSizeBool( false );
             return;
         }
         centroidRef /= float( activeCount * 2 );
         AffineXf3f centroidRefXf = AffineXf3f( Matrix3f(), centroidRef );
 
         PointToPlaneAligningTransform p2pl;
-        for ( ObjId j( 0 ); j < objs_.size(); ++j )
+        for ( ICPElementId j( 0 ); j < objs_.size(); ++j )
         {
             if ( j == id )
                 continue;
-            for ( size_t idx : pairsPerObj_[id][j].active )
+            for ( size_t idx : pairs[id][j].active )
             {
-                const auto& vp = pairsPerObj_[id][j].vec[idx];
+                const auto& vp = pairs[id][j].vec[idx];
                 p2pl.add( vp.srcPoint - centroidRef, ( vp.tgtPoint + vp.srcPoint ) * 0.5f - centroidRef, vp.tgtNorm, vp.weight );
             }
-            for ( size_t idx : pairsPerObj_[j][id].active )
+            for ( size_t idx : pairs[j][id].active )
             {
-                const auto& vp = pairsPerObj_[j][id].vec[idx];
+                const auto& vp = pairs[j][id].vec[idx];
                 p2pl.add( vp.tgtPoint - centroidRef, ( vp.tgtPoint + vp.srcPoint ) * 0.5f - centroidRef, vp.srcNorm, vp.weight );
             }
         }
@@ -609,11 +651,11 @@ bool MultiwayICP::p2plIter_()
         AffineXf3f res = getAligningXf( p2pl, prop_.icpMode, prop_.p2plAngleLimit, prop_.p2plScaleLimit, prop_.fixedRotationAxis );
         if ( std::isnan( res.b.x ) ) //nan check
         {
-            valid[id] = FullSizeBool( false );
+            valid[objId] = FullSizeBool( false );
             return;
         }
-        objs_[id].xf = centroidRefXf * res * centroidRefXf.inverse() * objs_[id].xf;
-        valid[id] = FullSizeBool( true );
+        objs_[objId].xf = centroidRefXf * res * centroidRefXf.inverse() * objs_[objId].xf;
+        valid[objId] = FullSizeBool( true );
     } );
     return std::all_of( valid.vec_.begin(), valid.vec_.end(), [] ( auto v ) { return bool( v ); } );
 }
@@ -622,17 +664,19 @@ bool MultiwayICP::multiwayIter_( bool p2pl )
 {
     MR_TIMER;
     Vector<MultiwayAligningTransform,ObjId> mats( objs_.size() );
-    ParallelFor( mats, [&] ( ObjId i )
+    ParallelFor( mats, [&] ( ObjId objId )
     {
-        auto& mat = mats[i];
+        ICPElementId i( objId.get() );
+        const auto& pairs = pairsGridPerLayer_[0];
+        auto& mat = mats[objId];
         mat.reset( int( objs_.size() ) );
-        for ( ObjId j( 0 ); j < objs_.size(); ++j )
+        for ( ICPElementId j( 0 ); j < objs_.size(); ++j )
         {
             if ( j == i )
                 continue;
-            for ( auto idx : pairsPerObj_[i][j].active )
+            for ( auto idx : pairs[i][j].active )
             {
-                const auto& data = pairsPerObj_[i][j].vec[idx];
+                const auto& data = pairs[i][j].vec[idx];
                 if ( p2pl )
                     mat.add( int( i ), data.srcPoint, int( j ), data.tgtPoint, ( data.tgtNorm + data.srcNorm ).normalized(), data.weight );
                 else
@@ -662,68 +706,40 @@ bool MultiwayICP::multiwayIter_( bool p2pl )
     return true;
 }
 
-bool MultiwayICP::multiwayIter_( int groupSize, bool p2pl /*= true */ )
+bool MultiwayICP::cascadeIter_( bool p2pl /*= true */ )
 {
-    int numLayer = -1; // trivial layer
-    int subGroupSize = 1;
-    for ( ;;)
+    int elemetSize = 1;
+    for ( ICPLayer l = 0; l < pairsGridPerLayer_.size(); ++l )
     {
-        int grainSize = subGroupSize * groupSize;
-        int numGroups = ( int( objs_.size() ) + grainSize - 1 ) / grainSize;
+        updateLayerPairs_( l );
 
-        if ( subGroupSize == 1 )
-            updatePointsPairsGroupWise_();
-        else
-            updateLayerPairs_( numLayer );
+        const auto& pairsOnLayer = pairsGridPerLayer_[l];
+        int numHyperGroups = ( int( pairsOnLayer.size() ) + maxGroupSize_ - 1 ) / maxGroupSize_;
 
-        for ( int gId = 0; gId < numGroups; ++gId )
+        for ( int hgI = 0; hgI < numHyperGroups; ++hgI )
         {
-            int groupFirst = gId * grainSize;
-            int groupsLastEx = std::min( groupFirst + grainSize, int( objs_.size() ) );
-            assert( groupsLastEx > groupFirst );
-            if ( groupsLastEx == groupFirst + 1 )
-                continue;
-
-            int numSubGroups = ( ( groupsLastEx - groupFirst ) + subGroupSize - 1 ) / subGroupSize;
-            if ( numSubGroups == 1 )
+            int numElements = hgI + 1 == numHyperGroups ? int( pairsOnLayer.size() ) - hgI * maxGroupSize_ : maxGroupSize_;
+            assert( numElements > 0 );
+            if ( numElements == 1 )
                 continue;
 
             MultiwayAligningTransform mat;
-            mat.reset( numSubGroups );
-            for ( GroupId sbI( 0 ); sbI < numSubGroups; ++sbI )
-            for ( GroupId sbJ( 0 ); sbJ < numSubGroups; ++sbJ )
+            mat.reset( numElements );
+            for ( int localElI( 0 ); localElI < numElements; ++localElI )
+            for ( int localElJ( 0 ); localElJ < numElements; ++localElJ )
             {
-                if ( sbI == sbJ )
+                if ( localElI == localElJ )
                     continue;
-                if ( numLayer < 0 )
+                auto elI = ICPElementId( hgI * maxGroupSize_ + localElI );
+                auto elJ = ICPElementId( hgI * maxGroupSize_ + localElJ );
+                const auto& pairs = pairsGridPerLayer_[l][elI][elJ];
+                for ( auto idx : pairs.active )
                 {
-                    ObjId iBegin = ObjId( groupFirst + sbI * subGroupSize );
-                    ObjId iEnd = ObjId( std::min( groupFirst + ( sbI + 1 ) * subGroupSize, groupsLastEx ) );
-                    ObjId jBegin = ObjId( groupFirst + sbJ * subGroupSize );
-                    ObjId jEnd = ObjId( std::min( groupFirst + ( sbJ + 1 ) * subGroupSize, groupsLastEx ) );
-                    for ( ObjId i( iBegin ); i < iEnd; ++i )
-                    for ( ObjId j( jBegin ); j < jEnd; ++j )
-                    {
-                        for ( auto idx : pairsPerObj_[i][j].active )
-                        {
-                            const auto& data = pairsPerObj_[i][j].vec[idx];
-                            if ( p2pl )
-                                mat.add( sbI, data.srcPoint, sbJ, data.tgtPoint, ( data.tgtNorm + data.srcNorm ).normalized(), data.weight );
-                            else
-                                mat.add( sbI, data.srcPoint, sbJ, data.tgtPoint, data.weight );
-                        }
-                    }
-                }
-                else
-                {
-                    for ( auto idx : pairsPerLayer_[numLayer][sbI][sbJ].active )
-                    {
-                        const auto& data = pairsPerLayer_[numLayer][sbI][sbJ].vec[idx];
-                        if ( p2pl )
-                            mat.add( sbI, data.src.point, sbJ, data.tgt.point, ( data.tgt.norm + data.src.norm ).normalized(), data.weight );
-                        else
-                            mat.add( sbI, data.src.point, sbJ, data.tgt.point, data.weight );
-                    }
+                    const auto& data = pairs.vec[idx];
+                    if ( p2pl )
+                        mat.add( localElI, data.srcPoint, localElJ, data.tgtPoint, ( data.tgtNorm + data.srcNorm ).normalized(), data.weight );
+                    else
+                        mat.add( localElI, data.srcPoint, localElJ, data.tgtPoint, data.weight );
                 }
             }
 
@@ -731,21 +747,19 @@ bool MultiwayICP::multiwayIter_( int groupSize, bool p2pl /*= true */ )
             stabilizer.rot = samplingSize_ * 1e-1f;
             stabilizer.shift = 1e-3f;
             auto res = mat.solve( stabilizer );
-            for ( int sbI = 0; sbI < numSubGroups; ++sbI )
+            for ( int localElI( 0 ); localElI < numElements; ++localElI )
             {
-                auto resI = res[sbI].rigidXf();
+                auto resI = res[localElI].rigidXf();
                 if ( std::isnan( resI.b.x ) )
                     return false;
-                ObjId iBegin = ObjId( groupFirst + sbI * subGroupSize );
-                ObjId iEnd = ObjId( std::min( groupFirst + ( sbI + 1 ) * subGroupSize, groupsLastEx ) );
+                // TODO: use GroupIndexer
+                ObjId iBegin = ObjId( hgI * maxGroupSize_ * elemetSize + localElI * elemetSize );
+                ObjId iEnd = std::min( iBegin + elemetSize, ObjId( objs_.size() ) );
                 for ( ObjId i( iBegin ); i < iEnd; ++i )
                     objs_[i].xf = AffineXf3f( resI * AffineXf3d( objs_[i].xf ) );
             }
         }
-        if ( numGroups == 1 )
-            break;
-        subGroupSize *= groupSize;
-        ++numLayer;
+        elemetSize *= maxGroupSize_;
     }
     return true;
 }

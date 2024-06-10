@@ -5,10 +5,15 @@
 #include <fstream>
 #include <filesystem>
 
-#ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_PNG
+#ifdef __EMSCRIPTEN__
+#include <png.h>
+#else
 #include <libpng16/png.h>
 #endif
+#endif
+
+#ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_JPEG
 #include <turbojpeg.h>
 #endif
@@ -24,17 +29,15 @@ namespace ImageSave
 
 const IOFilters Filters =
 {
-#ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_PNG
     {"Portable Network Graphics (.png)",  "*.png"},
 #endif
+#ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_JPEG
     {"JPEG (.jpg)",  "*.jpg"},
 #endif
 #ifndef MRMESH_NO_TIFF
     {"TIFF (.tif)",  "*.tif"},
-#endif
-#ifndef MRMESH_NO_TIFF
     {"TIFF (.tiff)",  "*.tiff"},
 #endif
 #endif
@@ -88,8 +91,6 @@ VoidOrErrStr toBmp( const Image& image, const std::filesystem::path& file )
 
     return {};
 }
-
-#ifndef __EMSCRIPTEN__
 
 #ifndef MRMESH_NO_PNG
 VoidOrErrStr toPng( const Image& image, const std::filesystem::path& file )
@@ -166,6 +167,8 @@ VoidOrErrStr toPng( const Image& image, std::ostream& os )
 }
 #endif
 
+#ifndef __EMSCRIPTEN__
+
 #ifndef MRMESH_NO_JPEG
 struct JpegWriter
 {
@@ -218,9 +221,8 @@ VoidOrErrStr toTiff( const Image& image, const std::filesystem::path& path )
     return writeRawTiff( ( const uint8_t* )image.pixels.data(), path, btParams );
 }
 #endif
+
 #endif
-
-
 
 VoidOrErrStr toAnySupportedFormat( const Image& image, const std::filesystem::path& file )
 {
@@ -231,11 +233,11 @@ VoidOrErrStr toAnySupportedFormat( const Image& image, const std::filesystem::pa
     VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".bmp" )
         res = MR::ImageSave::toBmp( image, file );
-#ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_PNG
     else if ( ext == ".png" )
         res = MR::ImageSave::toPng( image, file );
 #endif
+#ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_JPEG
     else if ( ext == ".jpg" )
         res = MR::ImageSave::toJpeg( image, file );

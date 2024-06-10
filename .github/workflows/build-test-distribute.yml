@@ -98,7 +98,9 @@ jobs:
 
   update-win-version:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-    needs: [ windows-build-test ]
+    needs:
+      - windows-build-test
+      - versioning-and-release-url
     timeout-minutes: 60
     runs-on: windows-2019
     steps:

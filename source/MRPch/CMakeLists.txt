@@ -43,7 +43,7 @@ IF(MR_PCH)
       tbb
       gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF
       cpr
-      ${MR_PYTHON_LIB}
+      Python::Python
     )
   ENDIF()
 

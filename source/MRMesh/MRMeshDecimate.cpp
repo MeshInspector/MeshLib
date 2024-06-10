@@ -804,7 +804,13 @@ DecimateResult MeshDecimator::run()
 
 static DecimateResult decimateMeshSerial( Mesh & mesh, const DecimateSettings & settings )
 {
-    MR_TIMER;
+    MR_TIMER
+    if ( settings.maxDeletedFaces <= 0 || settings.maxDeletedVertices <= 0 )
+    {
+        DecimateResult res;
+        res.cancelled = false;
+        return res;
+    }
     MR_WRITER( mesh );
     MeshDecimator md( mesh, settings );
     return md.run();
@@ -941,10 +947,15 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
                 break;
 
             DecimateSettings subSeqSettings = settings;
-            if ( settings.decimateBetweenParts )
+            subSeqSettings.maxDeletedVertices = settings.maxDeletedVertices / ( sz + 1 );
+            subSeqSettings.maxDeletedFaces = settings.maxDeletedFaces / ( sz + 1 );
+            if ( settings.minFacesInPart > 0 )
             {
-                subSeqSettings.maxDeletedVertices = settings.maxDeletedVertices / ( sz + 1 );
-                subSeqSettings.maxDeletedFaces = settings.maxDeletedFaces / ( sz + 1 );
+                int startFaces = (int)parts[i].region.count();
+                if ( startFaces > settings.minFacesInPart )
+                    subSeqSettings.maxDeletedFaces = std::min( subSeqSettings.maxDeletedFaces, startFaces - settings.minFacesInPart );
+                else
+                    subSeqSettings.maxDeletedFaces = 0;
             }
             subSeqSettings.packMesh = false;
             subSeqSettings.vertForms = &mVertForms;

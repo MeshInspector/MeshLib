@@ -10,7 +10,7 @@ namespace MR
 {
 
 //! Which object type we're adding.
-//! Update `ObjKindTraits` in the .cpp file if you change this enum.
+//! Update `ObjKindTraits` if you change this enum.
 enum class FeaturesObjectKind
 {
     Point,

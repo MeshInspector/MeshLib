@@ -357,12 +357,17 @@ bool buttonIconEx(
 
     assert( icon );
 
+    StyleParamHolder sh;
+    if ( !params.forceImguiTextColor )
+        sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnText ) );
+
     ImVec4 multColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+
     ImGui::Image( *icon, { iconSize.x , iconSize.y }, multColor );
     ImGui::SameLine();
 
     const auto font = ImGui::GetFont();
-    const auto color = ImGui::GetColorU32( style.Colors[ImGuiCol_Text] );
+    const ImU32 color = ImGui::GetColorU32( style.Colors[ImGuiCol_Text] );
     const auto fontSize = ImGui::GetFontSize();
 
     ImVec2 startPosText( winPos.x + ( endButtonPos.x + startButtonPosWindow.x ) / 2.0f, winPos.y + startButtonPosWindow.y );

@@ -63,11 +63,9 @@ struct DecimateSettings
     bool optimizeVertexPos = true;
 
     /// Limit on the number of deleted vertices
-    /// in whole mesh (if decimateBetweenParts == true) or in each subdivision part (if decimateBetweenParts == false)
     int maxDeletedVertices = INT_MAX;
 
     /// Limit on the number of deleted faces
-    /// in whole mesh (if decimateBetweenParts == true) or in each subdivision part (if decimateBetweenParts == false)
     int maxDeletedFaces = INT_MAX;
 
     /// Region on mesh to be decimated, it is updated during the operation
@@ -138,6 +136,9 @@ struct DecimateSettings
     /// and after decimation of all parts, the region inside each part is put here;
     /// decimateBetweenParts=true or packMesh=true are not compatible with this option
     std::vector<FaceBitSet> * partFaces = nullptr;
+
+    /// minimum number of faces in one subdivision part for ( subdivideParts > 1 ) mode
+    int minFacesInPart = 0;
 };
 
 /**

@@ -15,7 +15,7 @@ template <typename Accessor>
 class VoxelsVolumeInterpolatedAccessor
 {
 public:
-    using VolumeType = Accessor::VolumeType;
+    using VolumeType = typename Accessor::VolumeType;
     using ValueType = typename Accessor::ValueType;
 
     explicit VoxelsVolumeInterpolatedAccessor( const VolumeType& volume, const Accessor &accessor )
@@ -86,7 +86,7 @@ private:
 template <typename Accessor>
 SimpleVolume resampleVolumeByInterpolation(
     const typename Accessor::VolumeType &volume,
-    const typename Accessor &accessor,
+    const Accessor &accessor,
     const Vector3f &newVoxelSize )
 {
     SimpleVolume res{

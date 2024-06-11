@@ -338,6 +338,7 @@ using FaceMap = Vector<FaceId, FaceId>;
 using VertMap = Vector<VertId, VertId>;
 using EdgeMap = Vector<EdgeId, EdgeId>;
 using UndirectedEdgeMap = Vector<UndirectedEdgeId, UndirectedEdgeId>;
+using ObjMap = Vector<ObjId, ObjId>;
 ///  mapping of whole edges: map[e]->f, map[e.sym()]->f.sym(), where only map[e] for even edges is stored
 using WholeEdgeMap = Vector<EdgeId, UndirectedEdgeId>;
 using UndirectedEdge2RegionMap = Vector<RegionId, UndirectedEdgeId>;

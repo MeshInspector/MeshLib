@@ -1014,6 +1014,10 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, b
     if ( rearrangeTriangles )
         topology.rotateTriangles();
     Mesh packed;
+    packed.points.reserve( topology.numValidVerts() );
+    packed.topology.vertReserve( topology.numValidVerts() );
+    packed.topology.faceReserve( topology.numValidFaces() );
+    packed.topology.edgeReserve( 2 * topology.computeNotLoneUndirectedEdges() );
     packed.addPart( *this, outFmap, outVmap, outEmap, rearrangeTriangles );
     *this = std::move( packed );
 }

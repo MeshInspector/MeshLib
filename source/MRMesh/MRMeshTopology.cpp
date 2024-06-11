@@ -1845,6 +1845,9 @@ void MeshTopology::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * ou
     if ( rearrangeTriangles )
         rotateTriangles();
     MeshTopology packed;
+    packed.vertReserve( numValidVerts() );
+    packed.faceReserve( numValidFaces() );
+    packed.edgeReserve( 2 * computeNotLoneUndirectedEdges() );
     packed.addPart( *this, outFmap, outVmap, outEmap, rearrangeTriangles );
     *this = std::move( packed );
 }

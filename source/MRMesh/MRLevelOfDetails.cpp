@@ -104,9 +104,11 @@ std::shared_ptr<Object> makeLevelOfDetails( Mesh && mesh, int maxDepth )
         levelObjs = std::move( nextLevelObjs );
     }
 
+    // final decimation of least precise mesh of whole object
     DecimateSettings dsettings;
     dsettings.maxError = FLT_MAX;
     dsettings.maxDeletedFaces = mesh.topology.numValidFaces() - numFacesPerObj;
+    dsettings.packMesh = true;
     decimateMesh( mesh, dsettings );
 
     auto res = std::make_shared<Object>();

@@ -8,11 +8,10 @@ namespace MR
 /// helper class for generalized access to voxel volume data with trilinear interpolation
 /// coordinate: 0       voxelSize
 ///             |       |
-///             I---*---I---*---I--
-///             |   |   |   |
-/// value:     [0]  |  [1]  |  ...      (!centerAligned)
-/// value:         [0]     [1] ...      (centerAligned)
-template <typename Accessor, bool centerAligned>
+///             I---*---I---*---I---
+///             |       |       |
+/// value:     [0]     [1]     [2] ...
+template <typename Accessor>
 class VoxelsVolumeInterpolatedAccessor
 {
 public:
@@ -63,10 +62,9 @@ private:
     IndexAndPos getIndexAndPos( Vector3f pos ) const
     {
         IndexAndPos res;
-        constexpr float shift = centerAligned ? 0.5f : 0.0f;
-        res.pos.x = pos.x / volume_.voxelSize.x - shift;
-        res.pos.y = pos.y / volume_.voxelSize.y - shift;
-        res.pos.z = pos.z / volume_.voxelSize.z - shift;
+        res.pos.x = pos.x / volume_.voxelSize.x;
+        res.pos.y = pos.y / volume_.voxelSize.y;
+        res.pos.z = pos.z / volume_.voxelSize.z;
         pos.x = floor( res.pos.x );
         pos.y = floor( res.pos.y );
         pos.z = floor( res.pos.z );
@@ -85,9 +83,9 @@ private:
 };
 
 /// sample function that resamples the voxel volume using interpolating accessor
-template <typename Accessor, bool centerAligned>
-SimpleVolume resampleVolumeByInterpolation( 
-    const typename Accessor::VolumeType &volume, 
+template <typename Accessor>
+SimpleVolume resampleVolumeByInterpolation(
+    const typename Accessor::VolumeType &volume,
     const typename Accessor &accessor,
     const Vector3f &newVoxelSize )
 {
@@ -102,7 +100,7 @@ SimpleVolume resampleVolumeByInterpolation(
     res.data.resize( res.dims.x * res.dims.y * res.dims.z );
     VolumeIndexer indexer( res.dims );
 
-    VoxelsVolumeInterpolatedAccessor<Accessor, centerAligned> interpolator( volume, accessor );
+    VoxelsVolumeInterpolatedAccessor<Accessor> interpolator( volume, accessor );
     for ( int k = 0; k < res.dims.z; k++ )
     for ( int j = 0; j < res.dims.y; j++ )
     for ( int i = 0; i < res.dims.x; i++ )

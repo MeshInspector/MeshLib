@@ -628,7 +628,6 @@
     <ClCompile Include="MRVertexAttributeGradient.cpp" />
     <ClCompile Include="MRViewportId.cpp" />
     <ClCompile Include="MRVolumeIndexer.cpp" />
-    <ClCompile Include="MRVolumeInterpolation.cpp" />
     <ClCompile Include="MRVoxelGraphCut.cpp" />
     <ClCompile Include="MRObjectLines.cpp" />
     <ClCompile Include="MRVoxelPath.cpp" />

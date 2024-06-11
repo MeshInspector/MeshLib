@@ -2144,9 +2144,6 @@
     <ClCompile Include="MRFeatureHelpers.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
-    <ClCompile Include="MRVolumeInterpolation.cpp">
-      <Filter>Source Files\Voxels</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

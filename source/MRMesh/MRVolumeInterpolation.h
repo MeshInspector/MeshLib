@@ -55,8 +55,8 @@ private:
 
     struct IndexAndPos
     {
-        Vector3i index;
-        Vector3f pos;
+        Vector3i index; // Zero-based voxel index in the volume
+        Vector3f pos;   // [0;1) position of a point in the voxel: 0 corresponds to index and 1 to next voxel
     };
 
     IndexAndPos getIndexAndPos( Vector3f pos ) const
@@ -94,9 +94,9 @@ SimpleVolume resampleVolumeByInterpolation(
         .min{ volume.min },
         .max{ volume.max }
     };
-    res.dims.x = int( volume.dims.x * volume.voxelSize.x / res.voxelSize.x + 1e-6f );
-    res.dims.y = int( volume.dims.y * volume.voxelSize.y / res.voxelSize.y + 1e-6f );
-    res.dims.z = int( volume.dims.z * volume.voxelSize.z / res.voxelSize.z + 1e-6f );
+    res.dims.x = int( volume.dims.x * volume.voxelSize.x / res.voxelSize.x );
+    res.dims.y = int( volume.dims.y * volume.voxelSize.y / res.voxelSize.y );
+    res.dims.z = int( volume.dims.z * volume.voxelSize.z / res.voxelSize.z );
     res.data.resize( res.dims.x * res.dims.y * res.dims.z );
     VolumeIndexer indexer( res.dims );
 

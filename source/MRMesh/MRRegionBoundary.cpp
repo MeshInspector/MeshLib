@@ -93,6 +93,19 @@ std::vector<EdgeLoop> findLeftBoundary( const MeshTopology& topology, const Face
     return findRegionBoundary( topology, region, true );
 }
 
+std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const FaceBitSet * region /*= nullptr */ )
+{
+    MR_TIMER
+
+    auto bds = findLeftBoundary( mesh.topology, region );
+    UndirectedEdgeBitSet uset( mesh.topology.undirectedEdgeSize() );
+    for ( const auto & bd : bds )
+        for ( auto e : bd )
+            uset.set( e );
+    mesh.deleteFaces( mesh.topology.getFaceIds( region ), &uset );
+    return bds;
+}
+
 std::vector<EdgeLoop> findRightBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */ )
 {
     return findRegionBoundary( topology, region, false );

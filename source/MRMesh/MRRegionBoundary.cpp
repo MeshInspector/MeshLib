@@ -14,11 +14,6 @@
 namespace MR
 {
 
-EdgeLoop trackRegionBoundaryLoop( const MeshTopology & topology, EdgeId e0, const FaceBitSet * region )
-{
-    return trackLeftBoundaryLoop( topology, e0, region );
-}
-
 EdgeLoop trackBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */, bool left )
 {
     std::function<EdgeId( EdgeId )> next;
@@ -46,11 +41,6 @@ EdgeLoop trackLeftBoundaryLoop( const MeshTopology& topology, EdgeId e0, const F
 EdgeLoop trackRightBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */ )
 {
     return trackBoundaryLoop( topology, e0, region, false );
-}
-
-std::vector<EdgeLoop> findRegionBoundary( const MeshTopology & topology, const FaceBitSet * region )
-{
-    return findLeftBoundary( topology, region );
 }
 
 std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */, bool left )

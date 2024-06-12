@@ -80,22 +80,4 @@ namespace MR
 // composes the set of all vertices with all their edges in given set
 [[nodiscard]] MRMESH_API VertBitSet getInnerVerts( const MeshTopology & topology, const UndirectedEdgeBitSet & edges );
 
-
-
-// returns closed loop of region boundary starting from given region boundary edge;
-// if more than two boundary edges connect in one vertex, then the function makes the most abrupt turn to right
-[[deprecated( "use trackLeftRegionBoundaryLoop(...) instead" )]]
-[[nodiscard]] MRMESH_API EdgeLoop trackRegionBoundaryLoop( const MeshTopology & topology, EdgeId e0, const FaceBitSet * region = nullptr );
-[[deprecated( "use trackLeftRegionBoundaryLoop(...) instead" )]]
-[[nodiscard]] inline EdgeLoop trackRegionBoundaryLoop( const MeshTopology & topology, const FaceBitSet & region, EdgeId e0 )
-    { return trackLeftBoundaryLoop( topology, e0, &region ); }
-
-// returns all region boundary loops;
-// every loop has region faces on the left, and not-region faces or holes on the right
-[[deprecated( "use findLeftBoundary(...) instead" )]]
-[[nodiscard]] MRMESH_API std::vector<EdgeLoop> findRegionBoundary( const MeshTopology & topology, const FaceBitSet * region = nullptr );
-[[deprecated( "use findLeftBoundary(...) instead" )]]
-[[nodiscard]] inline std::vector<EdgeLoop> findRegionBoundary( const MeshTopology & topology, const FaceBitSet & region )
-    { return findLeftBoundary( topology, &region ); }
-
 } //namespace MR

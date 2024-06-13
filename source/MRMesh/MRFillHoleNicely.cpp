@@ -1,6 +1,10 @@
 #include "MRFillHoleNicely.h"
 #include "MRMesh.h"
 #include "MRMeshFillHole.h"
+#include "MRMeshSubdivide.h"
+#include "MRVector2.h"
+#include "MRColor.h"
+#include "MRPositionVertsSmoothly.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -13,60 +17,56 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
     MR_TIMER
     assert( !mesh.topology.left( holeEdge ) );
 
-    FaceBitSet res;
+    FaceBitSet newFaces;
     if ( mesh.topology.left( holeEdge ) )
-        return res;
+        return newFaces;
 
     const auto fsz0 = mesh.topology.faceSize();
-    fillHole( mesh, holeEdge, {
-            .metric = getMetrics_()[int( settings_.currMetric ) ]( mesh,initEdge ),
+    fillHole( mesh, holeEdge,
+        {
+            .metric = settings.triangulateMetric,
             .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong,
-            .maxPolygonSubdivisions = settings_.maxPolygonSubdivisions } );
-    FaceBitSet newFaces;
+            .maxPolygonSubdivisions = settings.maxPolygonSubdivisions
+        } );
     const auto fsz = mesh.topology.faceSize();
     if ( fsz0 == fsz )
         return newFaces;
     newFaces.autoResizeSet( FaceId{ fsz0 }, fsz - fsz0 );
 
-    if ( !settings_.triangulateOnly )
+    if ( !settings.triangulateOnly )
     {
         VertBitSet newVerts;
-        SubdivideSettings settings;
-        settings.maxEdgeLen = settings_.maxEdgeLen;
-        settings.maxEdgeSplits = 20000;
-        settings.region = &newFaces;
-        settings.newVerts = &newVerts;
+        SubdivideSettings subset;
+        subset.maxEdgeLen = settings.maxEdgeLen;
+        subset.maxEdgeSplits = settings.maxEdgeSplits;
+        subset.region = &newFaces;
+        subset.newVerts = &newVerts;
 
         const auto lastVert = mesh.topology.lastValidVert();
-        bool updateUV = uvCoords && lastVert < uvCoords->size();
-        bool updateColorMap = colorMap && lastVert < colorMap->size();
-        VertUVCoords uv;
-        VertColors cm;
-        VertUVCoords& uvCoordsRef = uvCoords ? *uvCoords : uv;
-        VertColors& colorMapRef = colorMap ? *colorMap : cm;
-        if ( updateUV || updateColorMap )
+        VertUVCoords * uvCoords = settings.uvCoords && lastVert < settings.uvCoords->size() ? settings.uvCoords : nullptr;
+        VertColors * colorMap = settings.colorMap && lastVert < settings.colorMap->size() ? settings.colorMap : nullptr;
+        if ( uvCoords || colorMap )
         {
-            settings.onEdgeSplit = [&mesh, &uvCoordsRef, &colorMapRef, updateUV, updateColorMap] ( EdgeId e1, EdgeId e )
+            subset.onEdgeSplit = [&mesh, uvCoords, colorMap] ( EdgeId e1, EdgeId e )
             {
                 const auto org = mesh.topology.org( e1 );
                 const auto dest = mesh.topology.dest( e );
 
-                if ( updateUV )
-                    uvCoordsRef.push_back( ( uvCoordsRef[org] + uvCoordsRef[dest] ) * 0.5f );
+                if ( uvCoords )
+                    uvCoords->push_back( ( (*uvCoords)[org] + (*uvCoords)[dest] ) * 0.5f );
 
-                if ( updateColorMap )
-                    colorMapRef.push_back( colorMapRef[org] + ( colorMapRef[dest] - colorMapRef[org] ) * 0.5f );
+                if ( colorMap )
+                    colorMap->push_back( (*colorMap)[org] + ( (*colorMap)[dest] - (*colorMap)[org] ) * 0.5f );
             };
         }
 
-        subdivideMesh( mesh, settings );
+        subdivideMesh( mesh, subset );
 
-        if ( settings_.smoothCurvature )
+        if ( settings.smoothCurvature )
             positionVertsSmoothly( mesh, newVerts );
     }
 
-
-    return res;
+    return newFaces;
 }
 
 } //namespace MR

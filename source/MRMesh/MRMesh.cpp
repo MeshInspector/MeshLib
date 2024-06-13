@@ -1066,11 +1066,11 @@ PackMapping Mesh::packOptimally( bool preserveAABBTree )
     return map;
 }
 
-void Mesh::deleteFaces( const FaceBitSet& fs )
+void Mesh::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
 {
     if ( fs.none() )
         return;
-    topology.deleteFaces( fs );
+    topology.deleteFaces( fs, keepEdges );
     invalidateCaches(); // some points can be deleted as well
 }
 

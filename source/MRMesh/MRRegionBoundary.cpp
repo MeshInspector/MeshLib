@@ -14,11 +14,6 @@
 namespace MR
 {
 
-EdgeLoop trackRegionBoundaryLoop( const MeshTopology & topology, EdgeId e0, const FaceBitSet * region )
-{
-    return trackLeftBoundaryLoop( topology, e0, region );
-}
-
 EdgeLoop trackBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */, bool left )
 {
     std::function<EdgeId( EdgeId )> next;
@@ -46,11 +41,6 @@ EdgeLoop trackLeftBoundaryLoop( const MeshTopology& topology, EdgeId e0, const F
 EdgeLoop trackRightBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */ )
 {
     return trackBoundaryLoop( topology, e0, region, false );
-}
-
-std::vector<EdgeLoop> findRegionBoundary( const MeshTopology & topology, const FaceBitSet * region )
-{
-    return findLeftBoundary( topology, region );
 }
 
 std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */, bool left )
@@ -101,6 +91,19 @@ std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, const Fa
 std::vector<EdgeLoop> findLeftBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */ )
 {
     return findRegionBoundary( topology, region, true );
+}
+
+std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const FaceBitSet * region /*= nullptr */ )
+{
+    MR_TIMER
+
+    auto bds = findLeftBoundary( mesh.topology, region );
+    UndirectedEdgeBitSet uset( mesh.topology.undirectedEdgeSize() );
+    for ( const auto & bd : bds )
+        for ( auto e : bd )
+            uset.set( e );
+    mesh.deleteFaces( mesh.topology.getFaceIds( region ), &uset );
+    return bds;
 }
 
 std::vector<EdgeLoop> findRightBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */ )

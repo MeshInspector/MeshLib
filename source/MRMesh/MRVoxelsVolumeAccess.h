@@ -130,15 +130,15 @@ private:
     ValueType bgValue_;
 };
 
-/// accessor override with repeating edge values for out-of-bound indexes
+/// accessor override with clamping coordinates to volume bounds (for out-of-bounds indexes, edge values are repeated)
 template <typename Accessor>
-class VoxelsVolumeAccessorWithRepeat : public Accessor
+class VoxelsVolumeAccessorWithClamp : public Accessor
 {
 public:
     using VolumeType = typename Accessor::VolumeType;
     using ValueType = typename VolumeType::ValueType;
 
-    explicit VoxelsVolumeAccessorWithRepeat( const VolumeType& volume )
+    explicit VoxelsVolumeAccessorWithClamp( const VolumeType& volume )
         : Accessor( volume ), dims_( volume.dims )
     {}
 

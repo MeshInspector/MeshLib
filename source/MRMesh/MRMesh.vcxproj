@@ -30,6 +30,7 @@
     <ClInclude Include="MRFaceDistance.h" />
     <ClInclude Include="MRFeatureObject.h" />
     <ClInclude Include="MRFeatures.h" />
+    <ClInclude Include="MRFillHoleNicely.h" />
     <ClInclude Include="MRFinally.h" />
     <ClInclude Include="MRFixSelfIntersections.h" />
     <ClInclude Include="MRInTreePathBuilder.h" />
@@ -471,6 +472,7 @@
     <ClCompile Include="MRFillContour.cpp" />
     <ClCompile Include="MRFillContourByGraphCut.cpp" />
     <ClCompile Include="MRFillContours2D.cpp" />
+    <ClCompile Include="MRFillHoleNicely.cpp" />
     <ClCompile Include="MRFilterCreaseEdges.cpp" />
     <ClCompile Include="MRFinally.cpp" />
     <ClCompile Include="MRFixSelfIntersections.cpp" />

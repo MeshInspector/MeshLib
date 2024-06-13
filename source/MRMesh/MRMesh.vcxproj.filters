@@ -1287,6 +1287,9 @@
     <ClInclude Include="MRFeatureHelpers.h">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
+    <ClInclude Include="MRVolumeInterpolation.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
     <ClInclude Include="MRFillHoleNicely.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
@@ -2137,6 +2140,12 @@
     </ClCompile>
     <ClCompile Include="MRAABBTreeObjects.cpp">
       <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFeatureRefine.cpp">
+      <Filter>Source Files\DataModel\Features</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFeatureHelpers.cpp">
+      <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRLevelOfDetails.cpp" />
     <ClCompile Include="MRFeatureRefine.cpp" />

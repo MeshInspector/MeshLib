@@ -326,6 +326,7 @@
     <ClInclude Include="MRViewportId.h" />
     <ClInclude Include="MRViewportProperty.h" />
     <ClInclude Include="MRVolumeIndexer.h" />
+    <ClInclude Include="MRVolumeInterpolation.h" />
     <ClInclude Include="MRVoxelGraphCut.h" />
     <ClInclude Include="MRVoxelPath.h" />
     <ClInclude Include="MRVisualObject.h" />

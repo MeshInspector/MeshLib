@@ -176,7 +176,9 @@ public:
         if ( l - 2 < nodesPerLayer_.size() )
             return nodesPerLayer_[l - 2][eId];
 
-        return ICPElementBitSet( layers_.back().size(), true );
+        auto res = ICPElementBitSet( layers_.back().size() );
+        res.flip();
+        return res;
     }
 
     virtual size_t getNumElements( ICPLayer l ) const override
@@ -450,7 +452,7 @@ void MultiwayICP::setupLayers_()
         return;
     }
 
-    cascadeIndexer_ = std::make_unique<AABBTreeCascade>( objs_, maxGroupSize_ );
+    cascadeIndexer_ = std::make_unique<SeqCascade>( int( objs_.size() ), maxGroupSize_ );
     pairsGridPerLayer_.resize( cascadeIndexer_->getNumLayers() );
 }
 
@@ -876,8 +878,6 @@ bool MultiwayICP::cascadeIter_( bool p2pl /*= true */ )
 {
     for ( ICPLayer l = 0; l < pairsGridPerLayer_.size(); ++l )
     {
-        if ( l > 0 )
-            continue;
         updateLayerPairs_( l );
 
         const auto& pairsOnLayer = pairsGridPerLayer_[l];
@@ -919,8 +919,8 @@ bool MultiwayICP::cascadeIter_( bool p2pl /*= true */ )
             }
 
             MultiwayAligningTransform::Stabilizer stabilizer;
-            stabilizer.rot = samplingSize_ * 1e-1f;
-            stabilizer.shift = 1e-3f;
+            stabilizer.rot = samplingSize_;
+            stabilizer.shift = 1e-2f;
             auto res = mat.solve( stabilizer );
             indI = 0;
             for ( auto nodeI : nodes )

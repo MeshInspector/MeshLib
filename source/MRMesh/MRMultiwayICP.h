@@ -135,7 +135,7 @@ private:
     //       3) join groups and create groups of these joined objects (2nd layer groups)
     //       4) align this groups
     // N>number of objects - same as 0
-    int maxGroupSize_{ 2 };
+    int maxGroupSize_{ 64 };
     int iter_ = 0;
     bool doIteration_( bool p2pl );
     bool p2ptIter_();

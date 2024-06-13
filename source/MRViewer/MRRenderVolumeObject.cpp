@@ -175,8 +175,8 @@ void RenderVolumeObject::render_( const ModelBaseRenderParams& renderParams, con
     }
 
     const auto& voxelSize = objVoxels_->vdbVolume().voxelSize;
-    const auto& minCorner = objVoxels_->getActiveBounds();
-    GL_EXEC( glUniform3f( glGetUniformLocation( shader, "minCorner" ), float( minCorner.min.x ), float( minCorner.min.y ), float( minCorner.min.z ) ) );
+    auto minCorner = Vector3f( objVoxels_->getActiveBounds().min ) - Vector3f::diagonal( 0.5f );
+    GL_EXEC( glUniform3f( glGetUniformLocation( shader, "minCorner" ), minCorner.x, minCorner.y, minCorner.z ) );
     GL_EXEC( glUniform3f( glGetUniformLocation( shader, "voxelSize" ), voxelSize.x, voxelSize.y, voxelSize.z ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "step" ), std::min( { voxelSize.x, voxelSize.y, voxelSize.z } ) ) );
 

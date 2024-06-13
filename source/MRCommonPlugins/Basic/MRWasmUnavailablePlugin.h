@@ -30,10 +30,9 @@ public:
 
     EMSCRIPTEN_KEEPALIVE void showDownloadWindow_()
     {
-        bool isLightThemeEnabled = ( ColorTheme::getPreset() == ColorTheme::Preset::Light );
         #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
-            EM_ASM( showDownloadWindow( $0 ), isLightThemeEnabled );
+            EM_ASM( showDownloadWindow() );
 #pragma clang diagnostic pop
     }
 };

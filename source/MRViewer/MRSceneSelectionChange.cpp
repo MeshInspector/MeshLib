@@ -12,7 +12,7 @@ void SceneSelectionChangeClose::updateSelection( const std::vector<std::shared_p
 
 void SceneSelectionChangeRestart::updateSelection( const std::vector<std::shared_ptr<const Object>>& objects )
 {
-    //in the loop, the plugin is passed through and removed from the vector, and after that it should not be added again
+    // deferred call to avoid changing non-blocking plugins vector while iterating over it
     CommandLoop::appendCommand( [this, objects_ = objects] ()
     {
         auto thisPlugin = dynamic_cast< StateBasePlugin* >( this );

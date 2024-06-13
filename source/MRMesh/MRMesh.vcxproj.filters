@@ -1287,6 +1287,9 @@
     <ClInclude Include="MRFeatureHelpers.h">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
+    <ClInclude Include="MRFillHoleNicely.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2134,6 +2137,12 @@
     </ClCompile>
     <ClCompile Include="MRAABBTreeObjects.cpp">
       <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRLevelOfDetails.cpp" />
+    <ClCompile Include="MRFeatureRefine.cpp" />
+    <ClCompile Include="MRFeatureHelpers.cpp" />
+    <ClCompile Include="MRFillHoleNicely.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

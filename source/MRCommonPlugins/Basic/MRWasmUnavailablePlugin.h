@@ -42,7 +42,4 @@ public:
 #define MR_REGISTER_WASM_UNAVAILABLE_ITEM( pluginType, name )\
     static MR::RibbonMenuItemAdder<MR::WasmUnavailableItem> ribbonMenuItemAdder##pluginType##_(name);
 
-#define MR_REGISTER_WASM_UNAVAILABLE_ITEM_CHECK( pluginType, availCheckType, name )\
-    static MR::RibbonMenuItemAdder<MR::WasmUnavailablePluginWithSceneCheck<availCheckType>> ribbonMenuItemAdder##pluginType##_(name);
-
 #endif

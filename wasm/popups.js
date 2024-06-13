@@ -21,7 +21,8 @@ var addKeyboardEvents = function () {
         setTimeout(function () { Module.ccall('emsPostEmptyEvent', 'void', ['number'], [1]); }, i);
 };
 
-var createPopup = function (closeId, label, width, height, center = true, showCloseButton = true, isLightThemeEnabled = false) {
+var createPopup = function (closeId, label, width, height, center = true, showCloseButton = true) {
+    var isLightThemeEnabled = getColorTheme();
     var popup = document.createElement('div');
 
     popup.addEventListener('touchmove', function (event) {
@@ -67,7 +68,7 @@ var createPopup = function (closeId, label, width, height, center = true, showCl
     return popup;
 }
 
-var createOverlayPopup = function (id, label, width, height, center = true, showCloseButton = true, isLightThemeEnabled = false) {
+var createOverlayPopup = function (id, label, width, height, center = true, showCloseButton = true) {    
     var overlay = document.createElement('div');    
     overlay.setAttribute('style', 'position:absolute;top:0;right:0;bottom:0;left:0;background-color:rgba(0,0,0,0.8);z-index:9999;');
     overlay.setAttribute('id', id);
@@ -83,7 +84,7 @@ var createOverlayPopup = function (id, label, width, height, center = true, show
         lastTouchEnd = now;
     }, false);
 
-    var popup = createPopup(id, label, width, height, center, showCloseButton, isLightThemeEnabled);
+    var popup = createPopup(id, label, width, height, center, showCloseButton);
     overlay.appendChild(popup);
 
     return { overlay, popup };

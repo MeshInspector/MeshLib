@@ -1,6 +1,6 @@
-var open_files_dialog_popup = function (extensions, multi, isLightThemeEnabled) {
+var open_files_dialog_popup = function (extensions, multi) {
   var labelString = multi ? "Select Files" : "Select File";
-  var { overlay, popup } = createOverlayPopup('show_browse_dialog', labelString, 400, 150, true, true,  isLightThemeEnabled);
+  var { overlay, popup } = createOverlayPopup('show_browse_dialog', labelString, 400, 150, true, true);
 
   var file_selector_label = document.createElement('label');
   file_selector_label.setAttribute('for', 'FileSelectorTag');
@@ -33,9 +33,9 @@ var open_files_dialog_popup = function (extensions, multi, isLightThemeEnabled) 
   document.body.appendChild(overlay);
 }
 
-var download_file_dialog_popup = function (defaultName, extensions, isLightThemeEnabled) {
-
-  var { overlay, popup } = createOverlayPopup('show_download_dialog', "Save File", 440, 232,  true, true, isLightThemeEnabled);
+var download_file_dialog_popup = function (defaultName, extensions) {
+  var isLightThemeEnabled = getColorTheme();
+  var { overlay, popup } = createOverlayPopup('show_download_dialog', "Save File", 440, 232);
 
   var textColor = isLightThemeEnabled ? '#181a1d' : '#fff';
   var bgColor = isLightThemeEnabled ? '#f5f6f9' : '#000';
@@ -85,8 +85,8 @@ var download_file_dialog_popup = function (defaultName, extensions, isLightTheme
   document.body.appendChild(overlay);
 }
 
-var open_directory_dialog_popup = function (isLightThemeEnabled) {  
-  var { overlay, popup } = createOverlayPopup('show_browse_dialog', "Select Directory", 400, 150, true, true, isLightThemeEnabled);  
+var open_directory_dialog_popup = function () {
+  var { overlay, popup } = createOverlayPopup('show_browse_dialog', "Select Directory", 400, 150);  
   var file_selector_label = document.createElement('label');
   file_selector_label.setAttribute('for', 'FileSelectorTag');
   file_selector_label.setAttribute('style', 'position:absolute;top:50%;left:50%;transform:translate(-50%,50%);width: 120px;  height: 28px; border-radius: 4px;');

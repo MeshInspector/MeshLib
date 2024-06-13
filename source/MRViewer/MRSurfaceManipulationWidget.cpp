@@ -5,9 +5,8 @@
 #include "MRMesh/MRMesh.h"
 #include "MRViewerInstance.h"
 #include "MRAppendHistory.h"
-#include "MRViewer/MRGladGlfw.h"
-
 #include "MRMouse.h"
+#include "MRViewer/MRGladGlfw.h"
 #include "MRMesh/MREdgePaths.h"
 #include "MRMesh/MRPositionVertsSmoothly.h"
 #include "MRMesh/MRSurfaceDistance.h"
@@ -16,6 +15,8 @@
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRMeshRelax.h"
 #include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMesh/MRRegionBoundary.h"
+#include "MRMesh/MRFillHoleNicely.h"
 
 
 namespace MR
@@ -126,6 +127,8 @@ bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*
             name += "Remove";
         else if ( settings_.workMode == WorkMode::Relax )
             name += "Smooth";
+        else if ( settings_.workMode == WorkMode::Patch )
+            name += "Patch";
         historyAction_ = std::make_shared<ChangeMeshAction>( name, obj_ );
         changeSurface_();
     }
@@ -242,6 +245,41 @@ void SurfaceManipulationWidget::changeSurface_()
     MR_TIMER;
 
     ownMeshChangedSignal_ = true;
+
+    if ( settings_.workMode == WorkMode::Patch )
+    {
+        auto & mesh = *obj_->varMesh();
+        auto faces = getIncidentFaces( mesh.topology, singleEditingRegion_ );
+        if ( faces.any() )
+        {
+            auto bds = delRegionKeepBd( mesh, faces );
+            for ( const auto & bd : bds )
+            {
+                if ( bd.empty() )
+                    continue;
+                const auto len = calcPathLength( bd, mesh );
+                const auto avgLen = len / bd.size();
+                FillHoleNicelySettings settings
+                {
+                    .triangulateParams =
+                    {
+                        .metric = getUniversalMetric( mesh ),
+                        .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong
+                    },
+                    .maxEdgeLen = 2 * (float)avgLen,
+                    .uvCoords = &uvs_
+                };
+                auto patchFaces = fillHoleNicely( mesh, bd[0], settings );
+                //visualizationRegion_ = singleEditingRegion_ = getIncidentVerts( mesh.topology, patchFaces );
+            }
+            std::fill( begin( uvs_ ), end( uvs_ ), UVCoord{ 0, 1 } );
+            obj_->setAncillaryUVCoords( uvs_ );
+            //updateUVmap_( false );
+            badRegion_ = true;
+            obj_->setDirtyFlags( DIRTY_ALL );
+        }
+        return;
+    }
 
     if ( settings_.workMode == WorkMode::Relax )
     {

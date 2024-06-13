@@ -27,7 +27,8 @@ public:
         Add,
         Remove,
         Relax,
-        Laplacian
+        Laplacian,
+        Patch
     };
 
     /// Mesh change settings

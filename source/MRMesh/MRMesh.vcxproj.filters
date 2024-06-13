@@ -2147,9 +2147,9 @@
     <ClCompile Include="MRFeatureHelpers.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
-    <ClCompile Include="MRLevelOfDetails.cpp" />
-    <ClCompile Include="MRFeatureRefine.cpp" />
-    <ClCompile Include="MRFeatureHelpers.cpp" />
+    <ClCompile Include="MRLevelOfDetails.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
     <ClCompile Include="MRFillHoleNicely.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>

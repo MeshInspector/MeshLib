@@ -13,16 +13,17 @@ namespace MR
 {
 
 // sequential cascade indexer
-struct SeqCascade : public IICPTreeIndexer
+class SeqCascade : public IICPTreeIndexer
 {
+public:
     SeqCascade( int numObjects, int maxGroupSize ) :
         numObjects_{ numObjects },
         maxGroupSize_{ maxGroupSize }
     {}
 
-    virtual ICPElementId getParentNodeId( ICPLayer, ICPElementId eId ) const override
+    virtual bool fromSameNode( ICPLayer, ICPElementId eI, ICPElementId eJ ) const override
     {
-        return ICPElementId( eId.get() / maxGroupSize_ );
+        return ( eI.get() / maxGroupSize_ ) == ( eJ.get() / maxGroupSize_ );
     }
 
     virtual ObjBitSet getElementLeaves( ICPLayer l, ICPElementId eId ) const override
@@ -38,6 +39,7 @@ struct SeqCascade : public IICPTreeIndexer
     }
     virtual ICPElementBitSet getElementNodes( ICPLayer l, ICPElementId eId ) const override
     {
+        assert( l > 0 );
         size_t nodeSize = 1;
         for ( int i = 1; i < l; ++i )
             nodeSize *= maxGroupSize_;
@@ -73,6 +75,132 @@ private:
     int maxGroupSize_{ 0 };
 };
 
+class AABBTreeCascade : public IICPTreeIndexer
+{
+    using Subtrees = std::vector<NodeId>;
+    using LayerNodes = Vector<ICPElementBitSet, ICPElementId>;
+    using LayerLeaves = Vector<ObjBitSet, ICPElementId>;
+public:
+    AABBTreeCascade( const ICPObjects& objs, int maxGroupSize ) :
+        tree_( objs ),
+        maxGroupSize_{ maxGroupSize },
+        numObjs_{ objs.size() }
+    {
+        int numLeaves = int( objs.size() );
+        while ( numLeaves > maxGroupSize_ )
+        {
+            int numSubtrees = 1;
+            while ( numLeaves > maxGroupSize_ )
+            {
+                numLeaves = ( numLeaves + 1 ) / 2;
+                numSubtrees <<= 1;
+            }
+            layers_.emplace_back( tree_.getSubtrees( numSubtrees ) );
+            numLeaves = int( layers_.back().size() );
+        }
+        leavesPerLayer_.resize( layers_.size() );
+        for ( ICPLayer l( 0 ); l < layers_.size(); ++l )
+        {
+            const auto& subtrees = layers_[l];
+            auto& leavesOnLayer = leavesPerLayer_[l];
+            leavesOnLayer.resize( subtrees.size() );
+            ParallelFor( leavesOnLayer, [&] ( ICPElementId id )
+            {
+                leavesOnLayer[id] = tree_.getSubtreeLeaves( subtrees[id.get()] );
+            } );
+        }
+        if ( layers_.size() < 2 )
+            return;
+        nodesPerLayer_.resize( layers_.size() - 1 );
+        for ( int l = 0; l < nodesPerLayer_.size(); ++l )
+        {
+            auto& nodesOnLayer = nodesPerLayer_[l];
+            nodesOnLayer.resize( layers_[l + 1].size() );
+            for ( ICPElementId nId( 0 ); nId < nodesOnLayer.size(); ++nId )
+            {
+                ICPElementBitSet& elements = nodesOnLayer[nId];
+                elements.resize( layers_[l].size() );
+                BitSetParallelForAll( elements, [&] ( ICPElementId id )
+                {
+                    elements.set( id, ( leavesPerLayer_[l][id] & leavesPerLayer_[l + 1][nId] ).any() );
+                } );
+            }
+        }
+    }
+
+    virtual bool fromSameNode( ICPLayer l, ICPElementId eI, ICPElementId eJ ) const override
+    {
+        if ( l == 0 )
+        {
+            for ( const auto& leaves : leavesPerLayer_[0] )
+            {
+                if ( leaves.test( ObjId( eI.get() ) ) && leaves.test( ObjId( eJ.get() ) ) )
+                    return true;
+            }
+            return false;
+        }
+        if ( l - 1 < nodesPerLayer_.size() )
+        {
+            for ( const auto& elements : nodesPerLayer_[l - 1] )
+            {
+                if ( elements.test( eI ) && elements.test( eJ ) )
+                    return true;
+            }
+            return false;
+        }
+        return true;
+    }
+
+    virtual ObjBitSet getElementLeaves( ICPLayer l, ICPElementId eId ) const override
+    {
+        if ( l == 0 )
+        {
+            ObjBitSet obs( ObjId( eId.get() ) + 1 );
+            obs.set( ObjId( eId.get() ) );
+            return obs;
+        }
+        assert( l - 1 < leavesPerLayer_.size() );
+        return leavesPerLayer_[l - 1][eId];
+    }
+
+    virtual ICPElementBitSet getElementNodes( ICPLayer l, ICPElementId eId ) const override
+    {
+        assert( l > 0 );
+        if ( l == 1 )
+        {
+            const auto& leaves = leavesPerLayer_[l - 1][eId];
+            ICPElementBitSet els;
+            els.init_from_block_range( leaves.m_bits.begin(), leaves.m_bits.end() );
+            return els;
+        }
+        if ( l - 2 < nodesPerLayer_.size() )
+            return nodesPerLayer_[l - 2][eId];
+
+        return ICPElementBitSet( layers_.back().size(), true );
+    }
+
+    virtual size_t getNumElements( ICPLayer l ) const override
+    {
+        if ( l == 0 )
+            return numObjs_;
+        if ( l - 1 < layers_.size() )
+            return layers_[l - 1].size();
+        return 1;
+    }
+
+    virtual size_t getNumLayers() const override
+    {
+        return layers_.size() + 1;
+    }
+private:
+    AABBTreeObjects tree_;
+    int maxGroupSize_{ 0 };
+    size_t numObjs_{ 0 };
+
+    std::vector<Subtrees> layers_; // start from layer 1 (layers_[0] is l==1 from ICP)
+    std::vector<LayerNodes> nodesPerLayer_; // start from layer 1 (nodesPerLayer_[0] is l==1 from ICP)
+    std::vector<LayerLeaves> leavesPerLayer_; // start from layer 2 (leavesPerLayer_[0] is l==2 from ICP)
+};
 
 void updateGroupPairs( ICPGroupPairs& pairs, const ICPObjects& objs,
     ICPGroupProjector srcProjector, ICPGroupProjector tgtProjector, 
@@ -322,7 +450,7 @@ void MultiwayICP::setupLayers_()
         return;
     }
 
-    cascadeIndexer_ = std::make_unique<SeqCascade>( int( objs_.size() ), maxGroupSize_ );
+    cascadeIndexer_ = std::make_unique<AABBTreeCascade>( objs_, maxGroupSize_ );
     pairsGridPerLayer_.resize( cascadeIndexer_->getNumLayers() );
 }
 
@@ -345,9 +473,7 @@ void MultiwayICP::reservePairsLayer0_( Vector<VertBitSet, ObjId>&& samplesPerObj
 
             if ( cascadeMode )
             {
-                auto groupI = cascadeIndexer_->getParentNodeId( 0, i );
-                auto groupJ = cascadeIndexer_->getParentNodeId( 0, j );
-                if ( groupI != groupJ )
+                if ( !cascadeIndexer_->fromSameNode( 0, i, j ) )
                     continue;
             }
 
@@ -417,9 +543,7 @@ void MultiwayICP::reserveUpperLayerPairs_( LayerSamples&& samples )
                 if ( gI == gJ )
                     continue;
 
-                auto hyperGroupI = cascadeIndexer_->getParentNodeId( l, gI );
-                auto hyperGroupJ = cascadeIndexer_->getParentNodeId( l, gJ );
-                if ( hyperGroupI != hyperGroupJ )
+                if ( !cascadeIndexer_->fromSameNode( l, gI, gJ ) )
                     continue;
 
                 auto& thisPairs = pairsOnGroup[gJ];
@@ -502,9 +626,7 @@ void MultiwayICP::updateLayerPairs_( ICPLayer l )
 
         if ( cascadeMode )
         {
-            auto hyperGroupI = cascadeIndexer_->getParentNodeId( l, gI );
-            auto hyperGroupJ = cascadeIndexer_->getParentNodeId( l, gJ );
-            if ( hyperGroupI != hyperGroupJ )
+            if ( !cascadeIndexer_->fromSameNode( l, gI, gJ ) )
                 return;
         }
 
@@ -754,6 +876,8 @@ bool MultiwayICP::cascadeIter_( bool p2pl /*= true */ )
 {
     for ( ICPLayer l = 0; l < pairsGridPerLayer_.size(); ++l )
     {
+        if ( l > 0 )
+            continue;
         updateLayerPairs_( l );
 
         const auto& pairsOnLayer = pairsGridPerLayer_[l];

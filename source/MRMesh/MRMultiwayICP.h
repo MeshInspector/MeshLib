@@ -33,11 +33,12 @@ using ICPPairsGrid = Vector<Vector<ICPGroupPairs, ICPElementId>, ICPElementId>;
 
 
 /// structure to find leafs and groups of each in cascade mode
-struct IICPTreeIndexer
+class IICPTreeIndexer
 {
+public:
     virtual ~IICPTreeIndexer() = default;
-    /// returns parent node id
-    virtual ICPElementId getParentNodeId( ICPLayer l, ICPElementId eId ) const = 0;
+    /// returns true if eI and eJ are from same node
+    virtual bool fromSameNode( ICPLayer l, ICPElementId eI, ICPElementId eJ ) const = 0;
 
     /// returns bitset of leaves of given node
     virtual ObjBitSet getElementLeaves( ICPLayer l, ICPElementId eId ) const = 0;
@@ -134,7 +135,7 @@ private:
     //       3) join groups and create groups of these joined objects (2nd layer groups)
     //       4) align this groups
     // N>number of objects - same as 0
-    int maxGroupSize_{ 64 };
+    int maxGroupSize_{ 2 };
     int iter_ = 0;
     bool doIteration_( bool p2pl );
     bool p2ptIter_();

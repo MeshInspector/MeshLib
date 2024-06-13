@@ -1,6 +1,5 @@
 #include "MRFillHoleNicely.h"
 #include "MRMesh.h"
-#include "MRMeshFillHole.h"
 #include "MRMeshSubdivide.h"
 #include "MRVector2.h"
 #include "MRColor.h"
@@ -22,12 +21,7 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
         return newFaces;
 
     const auto fsz0 = mesh.topology.faceSize();
-    fillHole( mesh, holeEdge,
-        {
-            .metric = settings.triangulateMetric,
-            .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong,
-            .maxPolygonSubdivisions = settings.maxPolygonSubdivisions
-        } );
+    fillHole( mesh, holeEdge, settings.triangulateParams );
     const auto fsz = mesh.topology.faceSize();
     if ( fsz0 == fsz )
         return newFaces;

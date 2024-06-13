@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-#include "MRMeshMetrics.h"
+#include "MRMeshFillHole.h"
 
 namespace MR
 {
@@ -9,20 +9,16 @@ namespace MR
 struct FillHoleNicelySettings
 {
     /// how to triangulate the hole, must be specified by the user
-    FillHoleMetric triangulateMetric;
-
-    /// the maximum number of polygon subdivisions on a triangle and two smaller polygons, must be 2 or larger
-    int maxPolygonSubdivisions = 20;
+    FillHoleParams triangulateParams;
 
     /// If false then additional vertices are created inside the patch for best mesh quality
     bool triangulateOnly = false;
 
-    /// Subdivision is stopped when all edges inside or on the boundary of the region are not longer than this value;
-    /// value <= 0 means auto-detect
+    /// Subdivision is stopped when all edges inside or on the boundary of the region are not longer than this value
     float maxEdgeLen = 0;
 
     /// Maximum number of edge splits allowed
-    int maxEdgeSplits = 20'000;
+    int maxEdgeSplits = 1000;
 
     /// Whether to make patch over the hole smooth both inside and on its boundary with existed surface
     bool smoothCurvature = true;

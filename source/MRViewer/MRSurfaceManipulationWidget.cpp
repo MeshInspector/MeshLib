@@ -99,7 +99,7 @@ bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*
     auto [obj, pick] = getViewerInstance().viewport().pick_render_object();
     if ( !obj || obj != obj_ )
         return false;
-
+    lastMousePos_ = Vector2f( getViewerInstance().mouseController().getMousePos() );
 
     mousePressed_ = true;
     if ( settings_.workMode == WorkMode::Laplacian )
@@ -142,35 +142,66 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         return false;
 
     mousePressed_ = false;
-    if ( settings_.workMode != WorkMode::Laplacian )
+    if ( settings_.workMode == WorkMode::Laplacian )
+        return true;
+
+    size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
+    pointsShift_ = VertScalars( numV, 0.f );
+
+    auto & mesh = *obj_->varMesh();
+    if ( settings_.workMode == WorkMode::Patch )
     {
-        size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
-        pointsShift_ = VertScalars( numV, 0.f );
-
-        if ( ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) &&
-            settings_.relaxForceAfterEdit > 0.f && generalEditingRegion_.any() )
+        ownMeshChangedSignal_ = true;
+        auto faces = getIncidentFaces( mesh.topology, generalEditingRegion_ );
+        if ( faces.any() )
         {
-            ownMeshChangedSignal_ = true;
-
-            MeshRelaxParams params;
-            params.region = &generalEditingRegion_;
-            params.force = settings_.relaxForceAfterEdit;
-            params.iterations = 5;
-            relax( *obj_->varMesh(), params );
-            obj_->setDirtyFlags( DIRTY_PRIMITIVES );
+            auto bds = delRegionKeepBd( mesh, faces );
+            for ( const auto & bd : bds )
+            {
+                if ( bd.empty() )
+                    continue;
+                const auto len = calcPathLength( bd, mesh );
+                const auto avgLen = len / bd.size();
+                FillHoleNicelySettings settings
+                {
+                    .triangulateParams =
+                    {
+                        .metric = getUniversalMetric( mesh ),
+                        .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong
+                    },
+                    .maxEdgeLen = 2 * (float)avgLen,
+                    .uvCoords = &uvs_
+                };
+                auto patchFaces = fillHoleNicely( mesh, bd[0], settings );
+            }
+            obj_->setDirtyFlags( DIRTY_ALL );
+            updateRegion_( lastMousePos_ );
         }
-        generalEditingRegion_ = VertBitSet( numV, false );
-
-        obj_->setPickable( true );
-
-        oldMesh_.reset();
     }
+    else if ( ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) &&
+        settings_.relaxForceAfterEdit > 0.f && generalEditingRegion_.any() )
+    {
+        ownMeshChangedSignal_ = true;
+
+        MeshRelaxParams params;
+        params.region = &generalEditingRegion_;
+        params.force = settings_.relaxForceAfterEdit;
+        params.iterations = 5;
+        relax( mesh, params );
+        obj_->setDirtyFlags( DIRTY_PRIMITIVES );
+    }
+    generalEditingRegion_ = VertBitSet( numV, false );
+
+    obj_->setPickable( true );
+
+    oldMesh_.reset();
 
     return true;
 }
 
 bool SurfaceManipulationWidget::onMouseMove_( int mouse_x, int mouse_y )
 {
+    lastMousePos_ = Vector2f{ float( mouse_x ), float( mouse_y ) };
     if ( settings_.workMode == WorkMode::Laplacian )
     {
         if ( mousePressed_ )
@@ -180,14 +211,14 @@ bool SurfaceManipulationWidget::onMouseMove_( int mouse_x, int mouse_y )
                 appendHistoryAction_ = false;
                 AppendHistory( std::move( historyAction_ ) );
             }
-            laplacianMoveVert_( Vector2( float( mouse_x ), float( mouse_y ) ) );
+            laplacianMoveVert_( lastMousePos_ );
         }
         else
-            updateRegion_( Vector2f{ float( mouse_x ), float( mouse_y ) } );
+            updateRegion_( lastMousePos_ );
     }
     else
     {
-        updateRegion_( Vector2f{ float( mouse_x ), float( mouse_y ) } );
+        updateRegion_( lastMousePos_ );
         if ( mousePressed_ )
             changeSurface_();
     }
@@ -248,37 +279,8 @@ void SurfaceManipulationWidget::changeSurface_()
 
     if ( settings_.workMode == WorkMode::Patch )
     {
-        auto & mesh = *obj_->varMesh();
-        auto faces = getIncidentFaces( mesh.topology, singleEditingRegion_ );
-        if ( faces.any() )
-        {
-            auto bds = delRegionKeepBd( mesh, faces );
-            for ( const auto & bd : bds )
-            {
-                if ( bd.empty() )
-                    continue;
-                const auto len = calcPathLength( bd, mesh );
-                const auto avgLen = len / bd.size();
-                FillHoleNicelySettings settings
-                {
-                    .triangulateParams =
-                    {
-                        .metric = getUniversalMetric( mesh ),
-                        .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong
-                    },
-                    .maxEdgeLen = 2 * (float)avgLen,
-                    .uvCoords = &uvs_
-                };
-                auto patchFaces = fillHoleNicely( mesh, bd[0], settings );
-                //visualizationRegion_ = singleEditingRegion_ = getIncidentVerts( mesh.topology, patchFaces );
-            }
-            std::fill( begin( uvs_ ), end( uvs_ ), UVCoord{ 0, 1 } );
-            obj_->setAncillaryUVCoords( uvs_ );
-            //updateUVmap_( false );
-            badRegion_ = true;
-            obj_->setDirtyFlags( DIRTY_ALL );
-        }
-        return;
+        generalEditingRegion_ |= singleEditingRegion_;
+        return; // everything is done on mouse up
     }
 
     if ( settings_.workMode == WorkMode::Relax )
@@ -459,7 +461,7 @@ void SurfaceManipulationWidget::updateVizualizeSelection_( const ObjAndPick& obj
     badRegion_ = false;
     if ( objAndPick.first == objMeshPtr )
     {
-        PointOnFace pOnFace{ objAndPick.second.face, objAndPick.second.point };
+        PointOnFace pOnFace = objAndPick.second;
         if ( settings_.workMode == WorkMode::Laplacian )
         {
             const VertId vert = mesh.getClosestVertex( pOnFace );

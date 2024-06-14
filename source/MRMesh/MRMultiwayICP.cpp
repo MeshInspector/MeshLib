@@ -278,10 +278,10 @@ void updateGroupPairs( ICPGroupPairs& pairs, const ICPObjects& objs,
     } );
 }
 
-MultiwayICP::MultiwayICP( const ICPObjects& objects, float samplingVoxelSize ) :
+MultiwayICP::MultiwayICP( const ICPObjects& objects, float samplingVoxelSize, ProgressCallback cb ) :
     objs_{ objects }
 {
-    resamplePoints( samplingVoxelSize );
+    resamplePoints( samplingVoxelSize, cb );
 }
 
 Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformations( ProgressCallback cb )
@@ -342,25 +342,39 @@ Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformations( ProgressCallbac
     return res;
 }
 
-void MultiwayICP::resamplePoints( float samplingVoxelSize )
+bool MultiwayICP::resamplePoints( float samplingVoxelSize, ProgressCallback cb )
 {
     MR_TIMER;
     setupLayers_();
 
     samplingSize_ = samplingVoxelSize;
+    bool cascadeMode = pairsGridPerLayer_.size() > 1;
 
     Vector<VertBitSet, ObjId> samplesPerObj( objs_.size() );
 
-    ParallelFor( objs_, [&] ( ObjId ind )
+    float maxProgress = cascadeMode ? 0.2f : 0.5f;
+    auto keepGoing = ParallelFor( objs_, [&] ( ObjId ind )
     {
         const auto& obj = objs_[ind];
         samplesPerObj[ind] = *obj.obj.pointsGridSampling( samplingVoxelSize );
-    } );
+    }, subprogress( cb, 0.0f, maxProgress ) );
 
-    reservePairsLayer0_( std::move( samplesPerObj ) );
+    if ( !keepGoing )
+        return false;
 
+    float maxProgress2 = cascadeMode ? 0.4f : 1.0f;
+    reservePairsLayer0_( std::move( samplesPerObj ), subprogress( cb, maxProgress, maxProgress2 ) );
+
+    if ( !cascadeMode )
+        return true;
+
+    maxProgress = maxProgress2;
+    maxProgress2 = 0.7f;
+    auto samplesPerUnit = resampleUpperLayers_( subprogress( cb, maxProgress, maxProgress2 ) );
+    if ( !samplesPerUnit )
+        return false;
     // only do something if cascade mode is required, really should be called on each iteration
-    reserveUpperLayerPairs_( resampleUpperLayers_() );
+    return reserveUpperLayerPairs_( std::move( *samplesPerUnit ), subprogress( cb, maxProgress2, 1.0f ) );
 }
 
 float MultiwayICP::getMeanSqDistToPoint() const
@@ -437,11 +451,16 @@ std::string MultiwayICP::getStatusInfo() const
     return getICPStatusInfo( iter_, resultType_ );
 }
 
-void MultiwayICP::updateAllPointPairs()
+bool MultiwayICP::updateAllPointPairs( ProgressCallback cb )
 {
     MR_TIMER;
     for ( ICPLayer l( 0 ); l < pairsGridPerLayer_.size(); ++l )
-        updateLayerPairs_( l );
+    {
+        bool keepGoing = updateLayerPairs_( l, subprogress( cb, float( l ) / float( pairsGridPerLayer_.size() ), float( l + 1 ) / float( pairsGridPerLayer_.size() ) ) );
+        if ( !keepGoing )
+            return false;
+    }
+    return true;
 }
 
 void MultiwayICP::setupLayers_()
@@ -456,7 +475,7 @@ void MultiwayICP::setupLayers_()
     pairsGridPerLayer_.resize( cascadeIndexer_->getNumLayers() );
 }
 
-void MultiwayICP::reservePairsLayer0_( Vector<VertBitSet, ObjId>&& samplesPerObj )
+bool MultiwayICP::reservePairsLayer0_( Vector<VertBitSet, ObjId>&& samplesPerObj, ProgressCallback cb )
 {
     bool cascadeMode = pairsGridPerLayer_.size() > 1;
 
@@ -491,10 +510,13 @@ void MultiwayICP::reservePairsLayer0_( Vector<VertBitSet, ObjId>&& samplesPerObj
             thisPairs.active.reserve( thisPairs.vec.size() );
             thisPairs.active.clear();
         }
+        if ( !reportProgress( cb, float( i + 1 ) / float( objs_.size() ), i, 64 ) )
+            return false;
     }
+    return true;
 }
 
-MultiwayICP::LayerSamples MultiwayICP::resampleUpperLayers_()
+std::optional<MultiwayICP::LayerSamples> MultiwayICP::resampleUpperLayers_( ProgressCallback cb )
 {
     MR_TIMER;
     if ( pairsGridPerLayer_.size() < 2 )
@@ -506,7 +528,7 @@ MultiwayICP::LayerSamples MultiwayICP::resampleUpperLayers_()
     {
         auto& layerSamples = samples[l];
         layerSamples.resize( cascadeIndexer_->getNumElements( l ) );
-        ParallelFor( layerSamples, [&] ( ICPElementId gId )
+        bool keepGoing = ParallelFor( layerSamples, [&] ( ICPElementId gId )
         {
             const auto& layerLeaves = cascadeIndexer_->getElementLeaves( l, gId );
             Vector<ModelPointsData, ObjId> groupData;
@@ -517,20 +539,23 @@ MultiwayICP::LayerSamples MultiwayICP::resampleUpperLayers_()
                 groupData.emplace_back( ModelPointsData{ .points = &obj.obj.points(), .validPoints = &obj.obj.validPoints(),.xf = &obj.xf,.fakeObjId = oId } );
             }
             layerSamples[gId] = *multiModelGridSampling( groupData, samplingSize_ );
-        } );
+        }, subprogress( cb, float( l - 1 ) / float( numLayers - 1 ), float( l ) / float( numLayers - 1 ) ) );
+        if ( !keepGoing )
+            return {};
     }
     return samples;
 }
 
-void MultiwayICP::reserveUpperLayerPairs_( LayerSamples&& samples )
+bool MultiwayICP::reserveUpperLayerPairs_( LayerSamples&& samples, ProgressCallback cb )
 {
     MR_TIMER;
     if ( samples.empty() )
-        return;
+        return true;
     assert( pairsGridPerLayer_.size() > 0 );
     pairsGridPerLayer_.resize( samples.size() );
     for ( ICPLayer l( 1 ); l < pairsGridPerLayer_.size(); ++l )
     {
+        auto sb = subprogress( cb, float( l - 1 ) / float( pairsGridPerLayer_.size() - 1 ), float( l ) / float( pairsGridPerLayer_.size() - 1 ) );
         const auto& samplesOnLayer = samples[l];
         auto& pairsOnLayer = pairsGridPerLayer_[l];
         int numGroups = int( samplesOnLayer.size() );
@@ -556,11 +581,14 @@ void MultiwayICP::reserveUpperLayerPairs_( LayerSamples&& samples )
                 thisPairs.active.reserve( thisPairs.vec.size() );
                 thisPairs.active.clear();
             }
+            if ( !reportProgress( sb, float( gI + 1 ) / float( numGroups ) ) )
+                return false;
         }
     }
+    return true;
 }
 
-void MultiwayICP::updateLayerPairs_( ICPLayer l )
+bool MultiwayICP::updateLayerPairs_( ICPLayer l, ProgressCallback cb )
 {
     MR_TIMER;
     auto numGroups = pairsGridPerLayer_[l].size();
@@ -619,7 +647,7 @@ void MultiwayICP::updateLayerPairs_( ICPLayer l )
 
     // update pairs
     auto gridSize = numGroups * numGroups;
-    ParallelFor( 0, int( gridSize ), [&] ( int gridId )
+    auto keepGoung = ParallelFor( 0, int( gridSize ), [&] ( int gridId )
     {
         ICPElementId gI = ICPElementId( gridId / numGroups );
         ICPElementId gJ = ICPElementId( gridId % numGroups );
@@ -633,8 +661,11 @@ void MultiwayICP::updateLayerPairs_( ICPLayer l )
         }
 
         MR::updateGroupPairs( pairsGridPerLayer_[l][gI][gJ], objs_, createProjector( gI ), createProjector( gJ ), prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
-    } );
+    }, cb );
+    if ( !keepGoung )
+        return false;
     deactivateFarDistPairs_( l );
+    return true;
 }
 
 // unified function for mean sq dist to point calculation

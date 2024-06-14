@@ -27,7 +27,8 @@ public:
         Add,
         Remove,
         Relax,
-        Laplacian
+        Laplacian,
+        Patch
     };
 
     /// Mesh change settings
@@ -84,12 +85,13 @@ private:
     float diagonal_ = 1.f;
     float minRadius_ = 1.f;
     Vector2f mousePos_;
-    VertBitSet singleEditingRegion_; // region of editing of one action (move)
-    VertBitSet visualizationRegion_;
-    VertBitSet generalEditingRegion_; // region of editing of all actions (one LMB holding)
+    VertBitSet singleEditingRegion_;  ///< current (under the cursor) region of tool application
+    VertBitSet visualizationRegion_;  ///< vertices of triangles partially or fully highlighted with red
+    VertBitSet generalEditingRegion_; ///< united region of tool application since the last mouse down
     VertScalars pointsShift_;
     VertScalars editingDistanceMap_;
     VertScalars visualizationDistanceMap_;
+    Vector2f lastMousePos_; ///< during tool application: mouse position of last mouse down or move event
     VertUVCoords uvs_;
     std::shared_ptr<ObjectMesh> oldMesh_;
     bool firstInit_ = true; // need to save settings in re-initial

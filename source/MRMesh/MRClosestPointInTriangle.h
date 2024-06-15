@@ -77,10 +77,11 @@ static std::pair<Vector3<T>, TriPoint<T>> closestPointInTriangle( const Vector3<
         return { b + v * ( c - b ), { 1 - v, v } }; //#6
     }
 
+    assert( va > 0 && vb > 0 && vc > 0 );
     const T denom = 1 / ( va + vb + vc );
     const T v = vb * denom;
     const T w = vc * denom;
     return { a + v * ab + w * ac, { v, w } }; //#0
 }
 
-}
+} //namespace MR

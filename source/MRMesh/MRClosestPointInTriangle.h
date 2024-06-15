@@ -64,8 +64,14 @@ static std::pair<Vector3<T>, TriPoint<T>> closestPointInTriangle( const Vector3<
     const T va = d3 * d6 - d5 * d4;
     if ( va <= 0 )
     {
-        assert( d4 >= d3 ); // d4-d3 = dot(bc,bp) >= 0 in #6
-        assert( d5 >= d6 ); // d5-d6 = dot(cb,cp) >= 0 in #6
+        // d4-d3 = dot(bc,bp) >= 0 in #6
+        if ( d4 < d3 ) // floating-point rounding errors
+            return { b, { 1, 0 } }; //#2
+
+        // d5-d6 = dot(cb,cp) >= 0 in #6
+        if ( d5 < d6 ) // floating-point rounding errors
+            return { c, { 0, 1 } }; //#3
+
         // ( d4 - d3 ) + ( d5 - d6 ) = bc^2 >= 0
         const T v = ( d4 - d3 ) / ( ( d4 - d3 ) + ( d5 - d6 ) );
         return { b + v * ( c - b ), { 1 - v, v } }; //#6

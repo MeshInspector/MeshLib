@@ -33,6 +33,7 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
         SubdivideSettings subset;
         subset.maxEdgeLen = settings.maxEdgeLen;
         subset.maxEdgeSplits = settings.maxEdgeSplits;
+        subset.maxAngleChangeAfterFlip = settings.maxAngleChangeAfterFlip;
         subset.region = &newFaces;
         subset.newVerts = &newVerts;
 

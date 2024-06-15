@@ -17,8 +17,11 @@ struct FillHoleNicelySettings
     /// Subdivision is stopped when all edges inside or on the boundary of the region are not longer than this value
     float maxEdgeLen = 0;
 
-    /// Maximum number of edge splits allowed
+    /// Maximum number of edge splits allowed during subdivision
     int maxEdgeSplits = 1000;
+
+    /// Improves local mesh triangulation by doing edge flips if it does not change dihedral angle more than on this value (in radians)
+    float maxAngleChangeAfterFlip = 30 * PI_F / 180.0f;
 
     /// Whether to make patch over the hole smooth both inside and on its boundary with existed surface
     bool smoothCurvature = true;

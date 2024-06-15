@@ -330,7 +330,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SubdivideSettings, [] ( pybind11::module_& m
         def_readwrite( "maxEdgeLen", &SubdivideSettings::maxEdgeLen, "Maximal possible edge length created during decimation" ).
         def_readwrite( "maxEdgeSplits", &SubdivideSettings::maxEdgeSplits, "Maximum number of edge splits allowed" ).
         def_readwrite( "maxDeviationAfterFlip", &SubdivideSettings::maxDeviationAfterFlip, "Improves local mesh triangulation by doing edge flips if it does not make too big surface deviation" ).
-        def_readwrite( "maxAngleChangeAfterFlip", &SubdivideSettings::maxAngleChangeAfterFlip, "Improves local mesh triangulation by doing edge flips if it does change dihedral angle more than on this value. Unit: rad" ).
+        def_readwrite( "maxAngleChangeAfterFlip", &SubdivideSettings::maxAngleChangeAfterFlip, "Improves local mesh triangulation by doing edge flips if it does not change dihedral angle more than on this value. Unit: rad" ).
         def_readwrite( "criticalAspectRatioFlip", &SubdivideSettings::criticalAspectRatioFlip, "If this value is less than FLT_MAX then edge flips will ignore dihedral angle check if one of triangles has aspect ratio more than this value" ).
         def_readwrite( "region", &SubdivideSettings::region, "Region on mesh to be subdivided, it is updated during the operation" ).
         def_readwrite( "newVerts", &SubdivideSettings::newVerts, "New vertices appeared during subdivision will be added here" ).

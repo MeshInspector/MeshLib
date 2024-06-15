@@ -85,7 +85,7 @@ struct DecimateSettings
     const VertBitSet * bdVerts = nullptr;
 
     /// Permit edge flips (in addition to collapsing) to improve Delone quality of the mesh
-    /// if it does change dihedral angle more than on this value (negative value prohibits any edge flips)
+    /// if it does not change dihedral angle more than on this value (negative value prohibits any edge flips)
     float maxAngleChange = -1;
 
     /**
@@ -203,7 +203,7 @@ struct ResolveMeshDegenSettings
     float maxDeviation = 0;
     /// edges not longer than this value will be collapsed ignoring normals and aspect ratio checks
     float tinyEdgeLength = 0;
-    /// Permit edge flips if it does change dihedral angle more than on this value
+    /// Permit edge flips if it does not change dihedral angle more than on this value
     float maxAngleChange = PI_F / 3;
     /// the algorithm will ignore dihedral angle check if one of triangles had aspect ratio equal or more than this value;
     /// and the algorithm will permit temporary increase in aspect ratio after collapse, if before collapse one of the triangles had larger aspect ratio
@@ -235,7 +235,7 @@ struct RemeshSettings
     float targetEdgeLen = 0.001f;
     /// Maximum number of edge splits allowed during subdivision
     int maxEdgeSplits = 10'000'000;
-    /// Improves local mesh triangulation by doing edge flips if it does change dihedral angle more than on this value
+    /// Improves local mesh triangulation by doing edge flips if it does not change dihedral angle more than on this value
     float maxAngleChangeAfterFlip = 30 * PI_F / 180.0f;
     /// Maximal shift of a boundary during one edge collapse
     float maxBdShift = FLT_MAX;

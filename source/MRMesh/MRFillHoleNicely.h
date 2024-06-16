@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRMeshFillHole.h"
+#include "MREnums.h"
 
 namespace MR
 {
@@ -25,6 +26,9 @@ struct FillHoleNicelySettings
 
     /// Whether to make patch over the hole smooth both inside and on its boundary with existed surface
     bool smoothCurvature = true;
+
+    /// edge weighting scheme for smoothCurvature mode
+    EdgeWeights edgeWeights = EdgeWeights::Cotan;
 
     /// optional uv-coordinates of vertices; if provided then elements corresponding to new vertices will be added there
     VertUVCoords * uvCoords = {};

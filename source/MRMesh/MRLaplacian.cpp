@@ -12,7 +12,7 @@
 namespace MR
 {
 
-void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, RememberShape rem )
+void Laplacian::init( const VertBitSet & freeVerts, MR::EdgeWeights weights, RememberShape rem )
 {
     MR_TIMER;
     assert( !MeshComponents::hasFullySelectedComponent( mesh_, freeVerts ) );
@@ -57,9 +57,9 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, Remembe
         for ( auto e : orgRing( mesh_.topology, v ) )
         {
             double w = 1;
-            if ( weights == EdgeWeights::Cotan || weights == EdgeWeights::CotanWithAreaEqWeight ) 
+            if ( weights == MR::EdgeWeights::Cotan || weights == MR::EdgeWeights::CotanWithAreaEqWeight ) 
                 w = std::clamp( mesh_.cotan( e ), -1.0f, 10.0f ); // cotan() can be arbitrary high for degenerate edges
-            else if ( weights == EdgeWeights::CotanTimesLength ) 
+            else if ( weights == MR::EdgeWeights::CotanTimesLength ) 
                 w = mesh_.edgeLength( e ) * mesh_.cotan( e );
             auto d = mesh_.topology.dest( e );
             rowElements.push_back( { -w, d } );
@@ -67,7 +67,7 @@ void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, Remembe
             sumW += w;
         }
         double a = 1;
-        if ( weights == EdgeWeights::CotanWithAreaEqWeight )
+        if ( weights == MR::EdgeWeights::CotanWithAreaEqWeight )
             if ( auto d = mesh_.dblArea( v ); d > 0 )
                 a =  1 / std::sqrt( d );
         const double rSumW = a / sumW;
@@ -302,7 +302,7 @@ TEST(MRMesh, Laplacian)
         VertBitSet vs;
         vs.autoResizeSet( 0_v );
         Laplacian laplacian( sphere );
-        laplacian.init( vs, Laplacian::EdgeWeights::Cotan );
+        laplacian.init( vs, EdgeWeights::Cotan );
         laplacian.apply();
 
         // fix the only free vertex
@@ -313,7 +313,7 @@ TEST(MRMesh, Laplacian)
     {
         Laplacian laplacian( sphere );
         // no free verts
-        laplacian.init( {}, Laplacian::EdgeWeights::Cotan );
+        laplacian.init( {}, EdgeWeights::Cotan );
         laplacian.apply();
     }
 }

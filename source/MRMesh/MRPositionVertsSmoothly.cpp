@@ -7,6 +7,7 @@
 #include "MRRegionBoundary.h"
 #include "MRTriMath.h"
 #include "MRMeshRelax.h"
+#include "MRLaplacian.h"
 #include "MRTimer.h"
 #include <Eigen/SparseCholesky>
 
@@ -14,7 +15,7 @@ namespace MR
 {
 
 void positionVertsSmoothly( Mesh& mesh, const VertBitSet& verts,
-    Laplacian::EdgeWeights edgeWeightsType,
+    EdgeWeights edgeWeightsType,
     const VertBitSet * fixedSharpVertices )
 {
     MR_TIMER

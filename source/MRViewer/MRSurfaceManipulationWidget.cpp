@@ -17,11 +17,21 @@
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRRegionBoundary.h"
 #include "MRMesh/MRFillHoleNicely.h"
-
+#include "MRMesh/MRLaplacian.h"
 
 namespace MR
 {
 //const float k = r < 1-a ? std::sqrt( sqr( 1 - a ) - sqr( r ) ) + ( 1 - a ) : -std::sqrt( sqr( a ) - sqr( r - 1 ) ) + a; // alternative version F_point_shift(r,i) (i == a)
+
+// not in the header to be able to destroy Laplacian
+SurfaceManipulationWidget::SurfaceManipulationWidget()
+{
+}
+
+// not in the header to be able to destroy Laplacian
+SurfaceManipulationWidget::~SurfaceManipulationWidget()
+{
+}
 
 void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectMesh )
 {

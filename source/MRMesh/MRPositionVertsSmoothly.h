@@ -1,6 +1,7 @@
 #pragma once
+
 #include "MRMeshFwd.h"
-#include "MRLaplacian.h"
+#include "MREnums.h"
 
 namespace MR
 {
@@ -9,7 +10,7 @@ namespace MR
 /// \param verts must not include all vertices of a mesh connected component
 /// \param fixedSharpVertices in these vertices the surface can be not-smooth
 MRMESH_API void positionVertsSmoothly( Mesh& mesh, const VertBitSet& verts,
-    Laplacian::EdgeWeights edgeWeightsType = Laplacian::EdgeWeights::Cotan,
+    EdgeWeights edgeWeightsType = EdgeWeights::Cotan,
     const VertBitSet * fixedSharpVertices = nullptr );
 
 /// Puts given vertices in such positions to make smooth surface inside verts-region, but sharp on its boundary;

@@ -4,7 +4,7 @@
 #include "MRMesh/MRMeshFwd.h"
 #include "MRViewer.h"
 #include "MRMesh/MRChangeMeshAction.h"
-#include "MRMesh/MRLaplacian.h"
+#include "MRMesh/MREnums.h"
 #include "MRViewer/MRViewport.h"
 #include <chrono>
 
@@ -21,6 +21,9 @@ class MRVIEWER_CLASS SurfaceManipulationWidget :
                          PostDrawListener>
 {
 public:
+    MRVIEWER_API SurfaceManipulationWidget();
+    MRVIEWER_API ~SurfaceManipulationWidget();
+
     /// widget work modes
     enum class WorkMode
     {
@@ -40,7 +43,7 @@ public:
         float editForce = 1.f; // the force of changing mesh
         float sharpness = 50.f; // effect of force on points far from center editing area. [0 - 100]
         float relaxForceAfterEdit = 0.25f; //  force of relaxing modified area after editing (add / remove) is complete. [0 - 0.5], 0 - not relax
-        Laplacian::EdgeWeights edgeWeights = Laplacian::EdgeWeights::Cotan; // edge weights for laplacian smoothing
+        EdgeWeights edgeWeights = EdgeWeights::Cotan; // edge weights for laplacian smoothing
     };
 
     /// initialize widget according ObjectMesh

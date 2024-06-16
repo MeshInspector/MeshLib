@@ -58,7 +58,7 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
         subdivideMesh( mesh, subset );
 
         if ( settings.smoothCurvature )
-            positionVertsSmoothly( mesh, newVerts );
+            positionVertsSmoothly( mesh, newVerts, settings.edgeWeights );
     }
 
     return newFaces;

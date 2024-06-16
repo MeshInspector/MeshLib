@@ -3,6 +3,7 @@
 #include "MRBitSet.h"
 #include "MRVector.h"
 #include "MRVector3.h"
+#include "MREnums.h"
 
 #pragma warning(push)
 #pragma warning(disable: 4068) // unknown pragmas
@@ -30,14 +31,6 @@ namespace MR
 class Laplacian
 {
 public:
-    enum class EdgeWeights
-    {
-        Unit = 0,  // all edges have same weight=1
-        Cotan,     // edge weight depends on local geometry and uses cotangent values
-        CotanTimesLength, // [deprecated] edge weight is equal to edge length times cotangent weight
-        CotanWithAreaEqWeight // cotangent edge weights and equation weights inversely proportional to square root of local area
-    };
-
     enum class RememberShape
     {
         Yes,  // true Laplacian mode when initial mesh shape is remembered and copied in apply
@@ -67,6 +60,8 @@ public:
     const VertBitSet & freeVerts() const { return freeVerts_; }
     // return fixed vertices from the first layer around free vertices
     VertBitSet firstLayerFixedVerts() const { assert( solverValid_ ); return firstLayerFixedVerts_; }
+
+    using EdgeWeights [[deprecated]] = MR::EdgeWeights;
 
 private:
     // updates solver_ only

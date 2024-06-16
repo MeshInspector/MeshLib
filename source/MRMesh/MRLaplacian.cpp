@@ -12,7 +12,7 @@
 namespace MR
 {
 
-void Laplacian::init( const VertBitSet & freeVerts, EdgeWeights weights, RememberShape rem )
+void Laplacian::init( const VertBitSet & freeVerts, MR::EdgeWeights weights, RememberShape rem )
 {
     MR_TIMER;
     assert( !MeshComponents::hasFullySelectedComponent( mesh_, freeVerts ) );
@@ -302,7 +302,7 @@ TEST(MRMesh, Laplacian)
         VertBitSet vs;
         vs.autoResizeSet( 0_v );
         Laplacian laplacian( sphere );
-        laplacian.init( vs, Laplacian::EdgeWeights::Cotan );
+        laplacian.init( vs, EdgeWeights::Cotan );
         laplacian.apply();
 
         // fix the only free vertex
@@ -313,7 +313,7 @@ TEST(MRMesh, Laplacian)
     {
         Laplacian laplacian( sphere );
         // no free verts
-        laplacian.init( {}, Laplacian::EdgeWeights::Cotan );
+        laplacian.init( {}, EdgeWeights::Cotan );
         laplacian.apply();
     }
 }

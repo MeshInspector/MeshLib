@@ -373,6 +373,13 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
 
     drawBackgroundButton_( false );
 
+    auto coef = SceneSettings::get( SceneSettings::FloatType::AmbientCoefSelectedObj );
+
+    if ( UI::drag<NoUnit>( "Ambient Ratio", coef, 0.01f ) )
+    {
+        SceneSettings::set( SceneSettings::FloatType::AmbientCoefSelectedObj, coef );
+    }
+
     if ( viewer->experimentalFeatures &&
         RibbonButtonDrawer::CustomCollapsingHeader( "Clipping Plane" ) )
     {

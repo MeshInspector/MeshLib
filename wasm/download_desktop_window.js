@@ -19,15 +19,15 @@ var showDownloadWindow = function() {
     var text = document.createElement('span');
     text.setAttribute('class', 'unselectable');
     text.innerHTML = "We are sorry, this feature is not implemented in WEB version.<br/>Please install DESKTOP version (it is really fast)";
-    text.setAttribute('style', 'font-size: 14px;  text-align: center; font-stretch: normal;  font-style: normal;  line-height: normal;  letter-spacing: normal;  color:'+ textColor + ';position:absolute;top:0%;left:50%;width:444px;transform:translate( -50%, 175px);');
+    text.setAttribute('style', 'font-family: SegoeUIVariable-Display;font-size: 14px;  text-align: center; font-stretch: normal;  font-style: normal;  line-height: normal;  letter-spacing: normal;  color:'+ textColor + ';position:absolute;top:0%;left:50%;width:444px;transform:translate( -50%, 175px);');
     popup.appendChild(text);
 
     var button = document.createElement('a');
     button.setAttribute('class', "button");
     button.setAttribute('target', "_blank");
     button.setAttribute('href', 'https://meshinspector.com/download');
-    button.innerHTML = " Download";
-    button.setAttribute('style','text-decoration:none;font-family: SegoeUIVariable-Display;padding-top:4px;padding-bottom:4px;border-radius:4px;cursor:pointer;position:absolute;top:0%;left:50%;width:130px;height:20px;transform:translate( -50%, 243px); font-size: 14px;  font-stretch: normal;  font-style: normal;  line-height: normal;  letter-spacing: normal;  color:#fff; text-align: center;');
+    button.innerHTML = "Download";
+    button.setAttribute('style','text-decoration:none;font-family: SegoeUIVariable-Display;padding-top:1%;padding-bottom:1%;border-radius:4px;cursor:pointer;position:absolute;top:0%;left:50%;width:130px;height:20px;transform:translate( -50%, 243px); font-size: 14px;  font-stretch: normal;  font-style: normal;  line-height: normal;  letter-spacing: normal;  color:#fff; text-align: center;');
 
     popup.appendChild(button);
 

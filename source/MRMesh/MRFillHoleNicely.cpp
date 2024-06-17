@@ -46,12 +46,14 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
             {
                 const auto org = mesh.topology.org( e1 );
                 const auto dest = mesh.topology.dest( e );
+                const auto newV = mesh.topology.org( e );
+                assert( newV == mesh.topology.dest( e1 ) );
 
                 if ( uvCoords )
-                    uvCoords->push_back( ( (*uvCoords)[org] + (*uvCoords)[dest] ) * 0.5f );
+                    uvCoords->autoResizeSet( newV, ( (*uvCoords)[org] + (*uvCoords)[dest] ) * 0.5f );
 
                 if ( colorMap )
-                    colorMap->push_back( (*colorMap)[org] + ( (*colorMap)[dest] - (*colorMap)[org] ) * 0.5f );
+                    colorMap->autoResizeSet( newV, (*colorMap)[org] + ( (*colorMap)[dest] - (*colorMap)[org] ) * 0.5f );
             };
         }
 

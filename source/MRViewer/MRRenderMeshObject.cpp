@@ -111,7 +111,7 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
     GL_EXEC( auto fixed_colori = glGetUniformLocation( shader, "fixed_color" ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specExp" ), objMesh_->getShininess() ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specularStrength" ), objMesh_->getSpecularStrength() ) );
-    float ambient = objMesh_->getAmbientStrength() * ( objMesh_->isSelected() ? SceneSettings::get( SceneSettings::FloatType::FeatureAmbientCoef ) : 1.0f );
+    float ambient = objMesh_->getAmbientStrength() * ( objMesh_->isSelected() ? SceneSettings::get( SceneSettings::FloatType::AmbientCoefSelectedObj ) : 1.0f );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), ambient ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "globalAlpha" ), objMesh_->getGlobalAlpha( renderParams.viewportId ) / 255.0f ) );
     GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &renderParams.lightPos.x ) );

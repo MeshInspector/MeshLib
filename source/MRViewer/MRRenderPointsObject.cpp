@@ -93,7 +93,7 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
 
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specExp" ), objPoints_->getShininess() ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specularStrength" ), objPoints_->getSpecularStrength() ) );
-    float ambient = objPoints_->getAmbientStrength() * ( objPoints_->isSelected() ? SceneSettings::get( SceneSettings::FloatType::FeatureAmbientCoef ) : 1.0f );
+    float ambient = objPoints_->getAmbientStrength() * ( objPoints_->isSelected() ? SceneSettings::get( SceneSettings::FloatType::AmbientCoefSelectedObj ) : 1.0f );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), ambient ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "globalAlpha" ), objPoints_->getGlobalAlpha( renderParams.viewportId ) / 255.0f ) );
     GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &renderParams.lightPos.x ) );

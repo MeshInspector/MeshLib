@@ -38,6 +38,8 @@ public:
         FeaturePointSize,
         // Size of point subfeatures (various centers).
         FeatureSubPointSize,
+        // 
+        FeatureAmbientCoef,
 
         Count,
     };

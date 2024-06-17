@@ -374,8 +374,8 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
     drawBackgroundButton_( false );
 
     auto coef = SceneSettings::get( SceneSettings::FloatType::AmbientCoefSelectedObj );
-
-    if ( UI::drag<NoUnit>( "Ambient Ratio", coef, 0.01f ) )
+    ImGui::SetNextItemWidth( 140.0f * menuScaling );
+    if ( UI::drag<NoUnit>( "Ambient Ratio", coef, 0.01f, 1.0f, 10.0f ) )
     {
         SceneSettings::set( SceneSettings::FloatType::AmbientCoefSelectedObj, coef );
     }

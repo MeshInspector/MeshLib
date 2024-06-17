@@ -375,10 +375,12 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
 
     auto coef = SceneSettings::get( SceneSettings::FloatType::AmbientCoefSelectedObj );
     ImGui::SetNextItemWidth( 140.0f * menuScaling );
-    if ( UI::drag<NoUnit>( "Ambient Ratio", coef, 0.01f, 1.0f, 10.0f ) )
+    if ( UI::drag<NoUnit>( "Selected Highlight Modifier", coef, 0.01f, 1.0f, 10.0f ) )
     {
         SceneSettings::set( SceneSettings::FloatType::AmbientCoefSelectedObj, coef );
     }
+
+    UI::setTooltipIfHovered( "Ambient multiplication coefficient for ambientStrength for selected objects", menuScaling );
 
     if ( viewer->experimentalFeatures &&
         RibbonButtonDrawer::CustomCollapsingHeader( "Clipping Plane" ) )

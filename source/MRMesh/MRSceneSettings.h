@@ -38,7 +38,7 @@ public:
         FeaturePointSize,
         // Size of point subfeatures (various centers).
         FeatureSubPointSize,
-        // 
+        // Ambient multiplication coefficient for ambientStrength for selected objects
         FeatureAmbientCoef,
 
         Count,

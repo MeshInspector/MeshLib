@@ -109,7 +109,6 @@ bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*
     auto [obj, pick] = getViewerInstance().viewport().pick_render_object();
     if ( !obj || obj != obj_ )
         return false;
-    lastMousePos_ = Vector2f( getViewerInstance().mouseController().getMousePos() );
 
     mousePressed_ = true;
     if ( settings_.workMode == WorkMode::Laplacian )
@@ -126,9 +125,13 @@ bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*
     }
     else
     {
-        oldMesh_ = std::dynamic_pointer_cast< ObjectMesh >( obj_->clone() );
-        oldMesh_->setAncillary( true );
-        obj_->setPickable( false );
+        if ( settings_.workMode != WorkMode::Patch )
+        {
+            // in patch mode the mesh does not change till mouse up, and we always need to pick in it (before and right after patch)
+            oldMesh_ = std::dynamic_pointer_cast< ObjectMesh >( obj_->clone() );
+            oldMesh_->setAncillary( true );
+            obj_->setPickable( false );
+        }
         appendHistoryAction_ = true;
         std::string name = "Brush: ";
         if ( settings_.workMode == WorkMode::Add )
@@ -186,7 +189,9 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                 auto patchFaces = fillHoleNicely( mesh, bd[0], settings );
             }
             obj_->setDirtyFlags( DIRTY_ALL );
-            updateRegion_( lastMousePos_ );
+
+            // otherwise whole surface becomes red after patch and before mouse move
+            updateRegion_( mousePos_ );
         }
     }
     else if ( ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) &&
@@ -212,7 +217,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
 
 bool SurfaceManipulationWidget::onMouseMove_( int mouse_x, int mouse_y )
 {
-    lastMousePos_ = Vector2f{ float( mouse_x ), float( mouse_y ) };
+    auto mousePos = Vector2f{ float( mouse_x ), float( mouse_y ) };
     if ( settings_.workMode == WorkMode::Laplacian )
     {
         if ( mousePressed_ )
@@ -222,14 +227,14 @@ bool SurfaceManipulationWidget::onMouseMove_( int mouse_x, int mouse_y )
                 appendHistoryAction_ = false;
                 AppendHistory( std::move( historyAction_ ) );
             }
-            laplacianMoveVert_( lastMousePos_ );
+            laplacianMoveVert_( mousePos );
         }
         else
-            updateRegion_( lastMousePos_ );
+            updateRegion_( mousePos );
     }
     else
     {
-        updateRegion_( lastMousePos_ );
+        updateRegion_( mousePos );
         if ( mousePressed_ )
             changeSurface_();
     }

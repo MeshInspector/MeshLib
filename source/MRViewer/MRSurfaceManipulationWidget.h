@@ -87,14 +87,13 @@ private:
     std::shared_ptr<ObjectMesh> obj_;
     float diagonal_ = 1.f;
     float minRadius_ = 1.f;
-    Vector2f mousePos_;
+    Vector2f mousePos_; ///< mouse position of last updateRegion_
     VertBitSet singleEditingRegion_;  ///< current (under the cursor) region of tool application
     VertBitSet visualizationRegion_;  ///< vertices of triangles partially or fully highlighted with red
     VertBitSet generalEditingRegion_; ///< united region of tool application since the last mouse down
     VertScalars pointsShift_;
     VertScalars editingDistanceMap_;
     VertScalars visualizationDistanceMap_;
-    Vector2f lastMousePos_; ///< during tool application: mouse position of last mouse down or move event
     VertUVCoords uvs_;
     std::shared_ptr<ObjectMesh> oldMesh_;
     bool firstInit_ = true; // need to save settings in re-initial

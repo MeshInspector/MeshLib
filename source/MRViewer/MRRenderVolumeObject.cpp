@@ -149,7 +149,7 @@ void RenderVolumeObject::render_( const ModelBaseRenderParams& renderParams, con
         GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &nonPickerParams->lightPos.x ) );
         GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specExp" ), objVoxels_->getShininess() ) );
         GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specularStrength" ), objVoxels_->getSpecularStrength() ) );
-        float ambient = objVoxels_->getAmbientStrength() * objVoxels_->isSelected() ? SceneSettings::get( SceneSettings::FloatType::FeatureAmbientCoef ) : 1.0f;
+        float ambient = objVoxels_->getAmbientStrength() * ( objVoxels_->isSelected() ? SceneSettings::get( SceneSettings::FloatType::FeatureAmbientCoef ) : 1.0f );
         GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), ambient ) );
     }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ),

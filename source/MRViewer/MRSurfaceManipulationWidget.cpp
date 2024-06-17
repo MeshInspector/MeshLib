@@ -180,6 +180,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                         .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong
                     },
                     .maxEdgeLen = 2 * (float)avgLen,
+                    .edgeWeights = settings_.edgeWeights,
                     .uvCoords = &uvs_
                 };
                 auto patchFaces = fillHoleNicely( mesh, bd[0], settings );

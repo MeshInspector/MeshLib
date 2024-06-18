@@ -195,7 +195,6 @@ jobs:
           mv MeshLibDist.zip MeshLibDist_${{needs.versioning-and-release-url.outputs.app_version}}.zip
           mv meshlib-ubuntu20-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu20-dev.deb
           mv meshlib-ubuntu22-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu22-dev.deb
-        # mv meshlib-ubuntu24-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu24-dev.deb
           mv meshlib-ubuntu20-arm64-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu20-arm64-dev.deb
           mv meshlib-ubuntu22-arm64-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu22-arm64-dev.deb
           mv meshlib-dev.rpm meshlib_${{needs.versioning-and-release-url.outputs.app_version}}-dev.rpm

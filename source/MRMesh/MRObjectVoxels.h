@@ -53,7 +53,7 @@ public:
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
     virtual std::string getClassName() const override { return "Voxels"; }
 
-    /// Clears all internal data and then creates grid and calculates histogram
+    /// Clears all internal data and then creates grid and calculates histogram (surface is not built, call \ref updateHistogramAndSurface)
     MRMESH_API void construct( const SimpleVolume& simpleVolume, ProgressCallback cb = {} );
     /// Clears all internal data and calculates histogram
     MRMESH_API void construct( const FloatGrid& grid, const Vector3f& voxelSize, ProgressCallback cb = {} );
@@ -73,10 +73,13 @@ public:
     /// Sets external vdb volume for this object
     /// and returns back previous vdb volume of this
     MRMESH_API VdbVolume updateVdbVolume( VdbVolume vdbVolume );
-
     /// Sets external histogram for this object
-   /// and returns back previous histogram of this
+    /// and returns back previous histogram of this
     MRMESH_API Histogram updateHistogram( Histogram histogram );
+    /// Sets active bounds for this object
+    /// and returns back previous active bounds of this
+    MRMESH_API Box3i updateActiveBounds( const Box3i &box );
+
     /// Calculates and return new mesh or error message
     MRMESH_API Expected<std::shared_ptr<Mesh>, std::string> recalculateIsoSurface( float iso, ProgressCallback cb = {} ) const;
     /// returns true if the iso-surface is built using Dual Marching Cubes algorithm or false if using Standard Marching Cubes

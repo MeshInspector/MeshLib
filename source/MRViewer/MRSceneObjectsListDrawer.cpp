@@ -11,6 +11,7 @@
 #include "MRColorTheme.h"
 #include "ImGuiMenu.h"
 #include "MRMesh/MRChangeSceneAction.h"
+#include "MRMesh/MRChangeXfAction.h"
 #include "MRAppendHistory.h"
 #include "MRRibbonSchema.h"
 #include "MRUITestEngine.h"
@@ -18,6 +19,7 @@
 #include "imgui_internal.h"
 #include "imgui.h"
 #include <stack>
+#include <iterator>
 
 namespace MR
 {
@@ -59,7 +61,11 @@ public:
     {
         if ( skipedCursorPosY > cursorPosY )
             ImGui::Dummy( ImVec2( 0, skipedCursorPosY - cursorPosY - lastSpacingY ) );
+        cursorPosY = ImGui::GetCursorPosY();
+        skipedCursorPosY = cursorPosY;
     }
+
+    float getCursorPosY() { return skipedCursorPosY; }
 
 private:
     float drawBoxMinY = 0.f;
@@ -81,7 +87,7 @@ void SceneObjectsListDrawer::draw( float height, float scaling )
     updateSceneWindowScrollIfNeeded_();
     drawObjectsList_();
     // any click on empty space below Scene Tree removes object selection
-    const auto& selected = SceneCache::getSelectedObjects();
+    const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
     ImGui::BeginChild( "EmptySpace" );
     if ( ImGui::IsWindowHovered() && ImGui::IsMouseClicked( 0 ) )
     {
@@ -106,6 +112,110 @@ bool SceneObjectsListDrawer::collapsingHeader_( const std::string& uniqueName, I
     return ImGui::CollapsingHeader( uniqueName.c_str(), flags );
 }
 
+void SceneObjectsListDrawer::changeSelection( bool isDown, bool isShift )
+{
+    const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
+    if ( isDown )
+    {
+        if ( downLastSelected_.index != -1 )
+        {
+            if ( !isShift )
+                for ( const auto& data : selected )
+                    data->select( false );
+            all[downLastSelected_.index]->select( true );
+            downLastSelected_.needScroll = true;
+            if ( showNewSelectedObjects_ )
+                all[downLastSelected_.index]->setGlobalVisibility( true );
+        }
+    }
+    else
+    {
+        if ( upFirstSelected_.index != -1 )
+        {
+            if ( !isShift )
+                for ( const auto& data : selected )
+                    data->select( false );
+            all[upFirstSelected_.index]->select( true );
+            upFirstSelected_.needScroll = true;
+            if ( showNewSelectedObjects_ )
+                all[upFirstSelected_.index]->setGlobalVisibility( true );
+        }
+    }
+}
+
+void SceneObjectsListDrawer::changeVisible( bool isDown )
+{
+    const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    if ( all.empty() )
+        return;
+
+    const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
+    std::shared_ptr<Object> nextObj;
+    if ( selected.empty() )
+    {
+        if ( isDown )
+        {
+            nextObj = all[0];
+        }
+        else
+        {
+            const auto& rootChildren = SceneRoot::get().children();
+            const auto it = std::find_if( rootChildren.rbegin(), rootChildren.rend(), [] ( auto& obj )
+            {
+                return !obj->isAncillary();
+            } );
+            nextObj = *it;
+        }
+    }
+    else
+    {
+        const auto& children = selected[0]->parent()->children();
+        auto itFirst = std::find( children.begin(), children.end(), selected[0] );
+        const int itFirstIndex = int( std::distance( children.begin(), itFirst ) );
+        int nextIndex = itFirstIndex;
+        if ( isDown )
+        {
+            for ( int i = 1; i < children.size(); ++i )
+            {
+                nextIndex = int( ( itFirstIndex + i ) % children.size() );
+                if ( !children[nextIndex]->isAncillary() )
+                    break;
+            }
+        }
+        else
+        {
+            for ( int i = 1; i < children.size(); ++i )
+            {
+                nextIndex = int( ( itFirstIndex - i + children.size() ) % children.size() );
+                if ( !children[nextIndex]->isAncillary() )
+                    break;
+            }
+        }
+        nextObj = children[nextIndex];
+    }
+    const auto itAll = std::find( all.begin(), all.end(), nextObj );
+    nextVisible_.index = int( std::distance( all.begin(), itAll ) );
+
+    for ( const auto& obj : nextObj->parent()->children() )
+        obj->setVisible( false );
+    for ( const auto& obj : selected )
+        obj->select( false );
+    nextObj->setVisible( true );
+    nextObj->select( true );
+}
+
+void SceneObjectsListDrawer::selectAllObjects()
+{
+    const auto& selectable = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    for ( auto obj : selectable )
+    {
+        obj->select( true );
+        if ( showNewSelectedObjects_ )
+            obj->setVisible( true );
+    }
+}
+
 void SceneObjectsListDrawer::setObjectTreeState( const Object* obj, bool open )
 {
     if ( obj )
@@ -119,8 +229,23 @@ void SceneObjectsListDrawer::allowSceneReorder( bool allow )
 
 void SceneObjectsListDrawer::drawObjectsList_()
 {
-    const auto& all = SceneCache::getAllObjects();
-    const auto& depth = SceneCache::getAllObjectsDepth();
+    const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    std::vector<int> depths( all.size(), -1 );
+    auto getDepth = [&] ( int i )
+    {
+        if ( depths[i] == -1 )
+        {
+            const Object* obj = all[i].get();
+            int depth = 0;
+            while ( obj->parent() && obj->parent() != SceneRoot::getSharedPtr().get() )
+            {
+                obj = obj->parent();
+                ++depth;
+            }
+            depths[i] = depth;
+        }
+        return depths[i];
+    };
 
     int curentDepth = 0;
     std::stack<std::shared_ptr<Object>> objDepthStack;
@@ -130,14 +255,37 @@ void SceneObjectsListDrawer::drawObjectsList_()
     int collapsedHeaderDepth = -1;
     const float itemSpacingY = ImGui::GetStyle().ItemSpacing.y;
     const float frameHeight = ImGui::GetFrameHeight();
+
+    bool firstSelectedIsFound = false;
+    bool previousWasSelected = false;
+
+    const float borderShift = ImGui::GetFrameHeight();
+    const float scrollPosY = ImGui::GetScrollY();
+    const float windowHeight = ImGui::GetWindowHeight();
+    if ( upFirstSelected_.needScroll && upFirstSelected_.posY < ( scrollPosY + ImGui::GetStyle().WindowPadding.y + borderShift ) )
+        ImGui::SetScrollY( upFirstSelected_.posY - ImGui::GetStyle().WindowPadding.y - borderShift );
+    if ( downLastSelected_.needScroll && downLastSelected_.posY > ( scrollPosY + windowHeight - borderShift ) )
+        ImGui::SetScrollY( downLastSelected_.posY - windowHeight + ImGui::GetStyle().WindowPadding.y + borderShift );
+    if ( nextVisible_.needScroll )
+    {
+        if ( nextVisible_.posY < ( scrollPosY + ImGui::GetStyle().WindowPadding.y + borderShift ) )
+            ImGui::SetScrollY( nextVisible_.posY - ImGui::GetStyle().WindowPadding.y - borderShift );
+        else if ( ( nextVisible_.posY + frameHeight ) > ( scrollPosY + windowHeight - borderShift ) )
+            ImGui::SetScrollY( nextVisible_.posY + frameHeight - windowHeight + ImGui::GetStyle().WindowPadding.y + borderShift );
+        nextVisible_ = MoveAndScrollData();
+    }
+
+    upFirstSelected_ = MoveAndScrollData();
+    downLastSelected_ = MoveAndScrollData();
+
     for ( int i = 0; i < all.size(); ++i )
     {
         const bool isLast = i == int( all.size() ) - 1;
-        const int nextDepth = isLast ? 0 : depth[i + 1];
+        const int nextDepth = isLast ? 0 : getDepth( i + 1 );
         // skip child elements after collapsed header
         if ( collapsedHeaderDepth >= 0 )
         {
-            if ( depth[i] > collapsedHeaderDepth )
+            if ( getDepth( i ) > collapsedHeaderDepth)
             {
                 if ( curentDepth > nextDepth )
                 {
@@ -156,13 +304,13 @@ void SceneObjectsListDrawer::drawObjectsList_()
         }
 
         auto& object = *all[i];
-        if ( curentDepth < depth[i] )
+        if ( curentDepth < getDepth( i ) )
         {
             ImGui::Indent();
             if ( i > 0 )
                 objDepthStack.push( all[i - 1] );
             ++curentDepth;
-            assert( curentDepth == depth[i] );
+            assert( curentDepth == getDepth( i ) );
         }
 
         {
@@ -173,6 +321,20 @@ void SceneObjectsListDrawer::drawObjectsList_()
             if ( needDragDropTarget_() )
                 skippableRenderer.draw( getDrawDropTargetHeight_(), itemSpacingY, [&] { makeDragDropTarget_(object, true, true, uniqueStr); });
 
+            if ( object.isSelected() )
+                firstSelectedIsFound = true;
+            else if ( !firstSelectedIsFound )
+            {
+                upFirstSelected_.index = i;
+                upFirstSelected_.posY = skippableRenderer.getCursorPosY();
+            }
+
+            if ( nextVisible_.index == i )
+            {
+                nextVisible_.posY = skippableRenderer.getCursorPosY();
+                nextVisible_.needScroll = true;
+            }
+
             skippableRenderer.draw( frameHeight, itemSpacingY,
             [&] { isOpen = drawObject_( object, uniqueStr ); },
             [&]
@@ -182,7 +344,19 @@ void SceneObjectsListDrawer::drawObjectsList_()
             } );
 
             if ( object.isSelected() )
-                drawSceneContextMenu_( SceneCache::getSelectedObjects(), uniqueStr );
+                previousWasSelected = true;
+            else
+            {
+                if ( previousWasSelected )
+                {
+                    downLastSelected_.index = i;
+                    downLastSelected_.posY = skippableRenderer.getCursorPosY();
+                }
+                previousWasSelected = false;
+            }
+
+            if ( object.isSelected() )
+                drawSceneContextMenu_( SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>(), uniqueStr );
 
             if ( isOpen )
             {
@@ -278,8 +452,8 @@ void SceneObjectsListDrawer::drawObjectVisibilityCheckbox_( Object& object, cons
 
 bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const std::string& uniqueStr, bool hasRealChildren )
 {
-    const auto& all = SceneCache::getAllObjects();
-    const auto& selected = SceneCache::getSelectedObjects();
+    const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
     const bool isSelected = object.isSelected();
 
     auto openCommandIt = sceneOpenCommands_.find( &object );
@@ -440,18 +614,16 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
     {
         std::shared_ptr<ChangeSceneAction> detachAction;
         std::shared_ptr<ChangeSceneAction> attachAction;
+        std::shared_ptr<ChangeXfAction> xfAction;
     };
     std::vector<MoveAction> actionList;
     for ( const auto& source : sceneReorderCommand_.who )
     {
-        std::shared_ptr<Object> sourcePtr = nullptr;
-        for ( auto child : source->parent()->children() )
-            if ( child.get() == source )
-            {
-                sourcePtr = child;
-                break;
-            }
+        Object * fromParent = source->parent();
+        assert( fromParent );
+        std::shared_ptr<Object> sourcePtr = source->getSharedPtr();
         assert( sourcePtr );
+        const auto worldXf = source->worldXf();
 
         auto detachAction = std::make_shared<ChangeSceneAction>( "Detach object", sourcePtr, ChangeSceneAction::Type::RemoveObject );
         bool detachSuccess = sourcePtr->detachFromParent();
@@ -465,10 +637,17 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
 
         auto attachAction = std::make_shared<ChangeSceneAction>( "Attach object", sourcePtr, ChangeSceneAction::Type::AddObject );
         bool attachSucess{ false };
+        Object * toParent;
         if ( !sceneReorderCommand_.before )
-            attachSucess = sceneReorderCommand_.to->addChild( sourcePtr );
+        {
+            toParent = sceneReorderCommand_.to;
+            attachSucess = toParent->addChild( sourcePtr );
+        }
         else
-            attachSucess = sceneReorderCommand_.to->parent()->addChildBefore( sourcePtr, childTo );
+        {
+            toParent = sceneReorderCommand_.to->parent();
+            attachSucess = toParent->addChildBefore( sourcePtr, childTo );
+        }
         if ( !attachSucess )
         {
             detachAction->action( HistoryAction::Type::Undo );
@@ -478,7 +657,17 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
             break;
         }
 
-        actionList.push_back( { detachAction, attachAction } );
+        // change xf to preserve world location of the object
+        std::shared_ptr<ChangeXfAction> xfAction;
+        const auto fromParentXf = fromParent->worldXf();
+        const auto toParentXf = toParent->worldXf();
+        if ( fromParentXf != toParentXf )
+        {
+            xfAction = std::make_shared<ChangeXfAction>( "Xf", sourcePtr );
+            source->setWorldXf( worldXf );
+        }
+
+        actionList.push_back( { detachAction, attachAction, xfAction } );
     }
 
     if ( dragOrDropFailed )
@@ -487,6 +676,8 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
         {
             actionList[i].attachAction->action( HistoryAction::Type::Undo );
             actionList[i].detachAction->action( HistoryAction::Type::Undo );
+            if ( actionList[i].xfAction )
+                actionList[i].xfAction->action( HistoryAction::Type::Undo );
         }
     }
     else
@@ -496,6 +687,8 @@ void SceneObjectsListDrawer::reorderSceneIfNeeded_()
         {
             AppendHistory( moveAction.detachAction );
             AppendHistory( moveAction.attachAction );
+            if ( moveAction.xfAction )
+                AppendHistory( moveAction.xfAction );
         }
     }
     sceneReorderCommand_ = {};

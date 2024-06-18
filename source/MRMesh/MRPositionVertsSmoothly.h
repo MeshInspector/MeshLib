@@ -1,6 +1,7 @@
 #pragma once
+
 #include "MRMeshFwd.h"
-#include "MRLaplacian.h"
+#include "MREnums.h"
 
 namespace MR
 {
@@ -9,7 +10,7 @@ namespace MR
 /// \param verts must not include all vertices of a mesh connected component
 /// \param fixedSharpVertices in these vertices the surface can be not-smooth
 MRMESH_API void positionVertsSmoothly( Mesh& mesh, const VertBitSet& verts,
-    Laplacian::EdgeWeights edgeWeightsType = Laplacian::EdgeWeights::Cotan,
+    EdgeWeights edgeWeightsType = EdgeWeights::Cotan,
     const VertBitSet * fixedSharpVertices = nullptr );
 
 /// Puts given vertices in such positions to make smooth surface inside verts-region, but sharp on its boundary;
@@ -23,14 +24,17 @@ struct SpacingSettings
     /// vertices to be moved by the algorithm, nullptr means all valid vertices
     const VertBitSet* region = nullptr;
 
-    /// target squared distance of each edge in the mesh (for at least one edge's vertex in the region)
-    UndirectedEdgeMetric distSq; // must be defined by the caller
+    /// target distance of each edge in the mesh (for at least one edge's vertex in the region)
+    UndirectedEdgeMetric dist; // must be defined by the caller
 
     /// the algorithm is iterative, the more iterations the closer result to exact solution
-    int numIters = 5;
+    int numIters = 10;
 
     /// too small number here can lead to instability, too large - to slow convergence
-    float stabilizer = 10;
+    float stabilizer = 3;
+
+    /// maximum sum of minus negative weights, if it is exceeded then stabilizer is increased automatically
+    float maxSumNegW = 0.1f;
 
     /// if this predicated is given, then all inverted faces will be converted in degenerate faces at the end of each iteration
     FacePredicate isInverted;

@@ -8,9 +8,18 @@
 #include "MRObjectMesh.h"
 #include "MRObjectPoints.h"
 #include "MRBestFit.h"
+#include "MRAABBTreeObjects.h"
 
 namespace MR
 {
+
+Box3f MeshOrPoints::getObjBoundingBox() const
+{
+    return std::visit( overloaded{
+        []( const MeshPart & mp ) { return mp.mesh.getBoundingBox(); },
+        []( const PointCloud * pc ) { return pc->getBoundingBox(); }
+    }, var_ );
+}
 
 Box3f MeshOrPoints::computeBoundingBox( const AffineXf3f * toWorld ) const
 {
@@ -32,7 +41,11 @@ std::optional<VertBitSet> MeshOrPoints::pointsGridSampling( float voxelSize, siz
 {
     assert( voxelSize > 0 );
     assert( maxVoxels > 0 );
-    auto bboxDiag = computeBoundingBox().size() / voxelSize;
+    auto box = computeBoundingBox();
+    if ( !box.valid() )
+        return VertBitSet();
+
+    auto bboxDiag = box.size() / voxelSize;
     auto nSamples = bboxDiag[0] * bboxDiag[1] * bboxDiag[2];
     if ( nSamples > maxVoxels )
         voxelSize *= std::cbrt( float(nSamples) / float(maxVoxels) );
@@ -137,6 +150,63 @@ std::optional<MeshOrPoints> getMeshOrPoints( const VisualObject * obj )
     if ( auto objPnts = dynamic_cast<const ObjectPoints*>( obj ) )
         return MeshOrPoints( *objPnts->pointCloud() );
     return {};
+}
+
+void projectOnAll(
+    const Vector3f& pt,
+    const AABBTreeObjects & tree,
+    float upDistLimitSq,
+    const ProjectOnAllCallback & callback,
+    ObjId skipObjId )
+{
+    if ( tree.nodes().empty() )
+        return;
+
+    constexpr int MaxStackSize = 32; // to avoid allocations
+    NodeId subtasks[MaxStackSize];
+    int stackSize = 0;
+
+    auto addSubTask = [&] ( NodeId n )
+    {
+        const auto& box = tree.nodes()[n].box;
+        if ( !box.valid() )
+            return;
+        float distSq = ( box.getBoxClosestPointTo( pt ) - pt ).lengthSq();
+        if ( distSq < upDistLimitSq )
+        {
+            assert( stackSize < MaxStackSize );
+            subtasks[stackSize++] = n;
+        }
+    };
+
+    addSubTask( tree.rootNodeId() );
+
+    while ( stackSize > 0 )
+    {
+        const auto n = subtasks[--stackSize];
+        const auto node = tree[n];
+
+        if ( node.leaf() )
+        {
+            auto oid = node.leafId();
+            if ( oid == skipObjId )
+                continue;
+            const auto & obj = tree.obj( oid );
+
+            MeshOrPoints::ProjectionResult pr;
+            pr.distSq = upDistLimitSq;
+            obj.limitedProjector()( tree.toLocal( oid )( pt ), pr );
+            if ( !( pr.distSq < upDistLimitSq ) )
+                continue;
+
+            callback( oid, pr );
+            continue;
+        }
+
+        // first go in left child and then in right
+        addSubTask( node.r );
+        addSubTask( node.l );
+    }
 }
 
 } // namespace MR

@@ -121,7 +121,13 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
     const float width = ImGui::GetTextLineHeight();
     const float textWidth = ImGui::CalcTextSize( label ).x;
 
-    auto res = ImGui::CollapsingHeader( label, flags );
+    if ( auto forcedState = UI::TestEngine::createValueTentative<bool>( label ) )
+        ImGui::SetNextItemOpen( *forcedState );
+
+    bool res = ImGui::CollapsingHeader( label, flags );
+
+    (void)UI::TestEngine::createValue( label, res, false, true );
+
     for ( int i = 0; i < issueCount; ++i )
     {
         drawList->AddCircleFilled( { pos.x + textWidth + 3.0f * width + i * width, pos.y + height / 2.0f }, height / 3.0f, Color( 0.886f, 0.267f, 0.267f, 1.0f ).getUInt32() );
@@ -446,6 +452,9 @@ bool RibbonButtonDrawer::drawTabArrawButton( const char* icon, const ImVec2& siz
 
 void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const DrawButtonParams& params ) const
 {
+    UI::TestEngine::pushTree( item.item->name() + "##ButtonDropList" );
+    MR_FINALLY{ UI::TestEngine::popTree(); };
+
     float iconSize = params.iconSize * 0.5f;
     ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
     if ( font )

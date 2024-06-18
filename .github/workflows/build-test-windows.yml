@@ -8,7 +8,7 @@ on:
         required: false
         type: boolean
       autotest_data_s3_url:
-        default: "s3://data-autotest/test_data_2023-mar-07"
+        default: "s3://data-autotest/test_data_2023-jun-14"
         required: false
         type: string
       UPLOAD_ARTIFACTS:
@@ -16,7 +16,7 @@ on:
         type: boolean
 
 env:
-  VCPKG-VERSION: '2024.04.26'
+  VCPKG-VERSION: '2024.06.15'
 
 jobs:
   windows-build-test:
@@ -73,7 +73,7 @@ jobs:
             C:\vcpkg\*
 
       - name: Configure AWS Credentials
-        if: ${{ env.INTERNAL_BUILD }}
+        if: ${{ env.INTERNAL_BUILD == 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
@@ -140,7 +140,7 @@ jobs:
 
       # cache managment: https://github.com/MeshInspector/MeshLib/actions/caches
       - name: Cache autotest data from S3 Tests
-        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
+        if: ${{ env.INTERNAL_BUILD == 'true' }}
         id: cache-autotest
         uses: actions/cache@v4
         with:
@@ -148,7 +148,7 @@ jobs:
           key: ${{inputs.autotest_data_s3_url}}
 
       - name: Copy autotest data from S3 Tests
-        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
+        if: ${{ env.INTERNAL_BUILD == 'true' }}
         run: aws s3 sync ${{inputs.autotest_data_s3_url}} .\test_data --delete --no-sign-request --size-only
 
       - name: Python Regression Tests

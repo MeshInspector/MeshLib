@@ -191,22 +191,19 @@ size_t ObjectPointsHolder::numSelectedPoints() const
     return *numSelectedPoints_;
 }
 
+size_t ObjectPointsHolder::numRenderingValidPoints() const
+{
+    if ( !points_ )
+        return 0;
+
+    return ( points_->validPoints.find_last() + 1 ) / renderDiscretization_;
+}
+
 size_t ObjectPointsHolder::heapBytes() const
 {
     return VisualObject::heapBytes()
         + selectedPoints_.heapBytes()
         + MR::heapBytes( points_ );
-}
-
-void ObjectPointsHolder::setRenderDiscretization( int val )
-{
-    if ( val == renderDiscretization_ )
-        return;
-
-    assert( val > 0 );
-    val = val < 1 ? 1 : val;
-    int newMax = std::max(int( numValidPoints() + val - 1 ) / val, 1); // Avoid rounding errors
-    setMaxRenderingPoints( newMax );
 }
 
 void ObjectPointsHolder::setMaxRenderingPoints( int val )

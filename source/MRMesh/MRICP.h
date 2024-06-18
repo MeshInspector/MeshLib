@@ -31,21 +31,13 @@ enum class ICPMode
     TranslationOnly ///< only translation (3 degrees of freedom)
 };
 
-/// Stores a pair of points: one samples on the source and the closest to it on the target
-struct PointPair
+struct ICPPairData
 {
-    /// id of the source point
-    VertId srcVertId;
-
     /// coordinates of the source point after transforming in world space
     Vector3f srcPoint;
 
     /// normal in source point after transforming in world space
     Vector3f srcNorm;
-
-    /// for point clouds it is the closest vertex on target,
-    /// for meshes it is the closest vertex of the triangle with the closest point on target
-    VertId tgtCloseVert;
 
     /// coordinates of the closest point on target after transforming in world space
     Vector3f tgtPoint;
@@ -53,14 +45,27 @@ struct PointPair
     /// normal in the target point after transforming in world space
     Vector3f tgtNorm;
 
-    /// cosine between normals in source and target points
-    float normalsAngleCos = 1.f;
-
     /// squared distance between source and target points
     float distSq = 0.f;
 
     /// weight of the pair (to prioritize over other pairs)
     float weight = 1.f;
+
+    friend bool operator == ( const ICPPairData&, const ICPPairData& ) = default;
+};
+
+/// Stores a pair of points: one samples on the source and the closest to it on the target
+struct PointPair : public ICPPairData
+{
+    /// id of the source point
+    VertId srcVertId;
+
+    /// for point clouds it is the closest vertex on target,
+    /// for meshes it is the closest vertex of the triangle with the closest point on target
+    VertId tgtCloseVert;
+
+    /// cosine between normals in source and target points
+    float normalsAngleCos = 1.f;
 
     /// true if if the closest point on target is located on the boundary (only for meshes)
     bool tgtOnBd = false;
@@ -68,10 +73,27 @@ struct PointPair
     friend bool operator == ( const PointPair&, const PointPair& ) = default;
 };
 
-struct PointPairs
+/// Simple interface for pairs holder
+struct IPointPairs
 {
-    std::vector<PointPair> vec; ///< vector of all point pairs both active and not
+    // required to declare explicitly to avoid warnings
+    IPointPairs() = default;
+    IPointPairs( const IPointPairs& ) = default;
+    IPointPairs& operator=( const IPointPairs& ) = default;
+    IPointPairs( IPointPairs&& ) noexcept = default;
+    IPointPairs& operator=( IPointPairs&& ) noexcept = default;
+    virtual ~IPointPairs() = default;
+
+    virtual const ICPPairData& operator[]( size_t ) const = 0;
+    virtual ICPPairData& operator[]( size_t ) = 0;
     BitSet active; ///< whether corresponding pair from vec must be considered during minimization
+};
+
+struct PointPairs : public IPointPairs
+{
+    virtual const ICPPairData& operator[]( size_t idx ) const override { return vec[idx]; }
+    virtual ICPPairData& operator[]( size_t idx ) override { return vec[idx]; }
+    std::vector<PointPair> vec; ///< vector of all point pairs both active and not
 };
 
 // types of exit conditions in calculation
@@ -84,7 +106,7 @@ enum class ICPExitType {
 };
 
 /// computes the number of active pairs
-[[nodiscard]] MRMESH_API size_t getNumActivePairs( const PointPairs & pairs );
+[[nodiscard]] MRMESH_API size_t getNumActivePairs( const IPointPairs& pairs );
 
 struct NumSum
 {
@@ -97,16 +119,16 @@ struct NumSum
 };
 
 /// computes the number of active pairs and the sum of squared distances between points
-[[nodiscard]] MRMESH_API NumSum getSumSqDistToPoint( const PointPairs & pairs );
+[[nodiscard]] MRMESH_API NumSum getSumSqDistToPoint( const IPointPairs& pairs );
 
 /// computes the number of active pairs and the sum of squared deviation from points to target planes
-[[nodiscard]] MRMESH_API NumSum getSumSqDistToPlane( const PointPairs & pairs );
+[[nodiscard]] MRMESH_API NumSum getSumSqDistToPlane( const IPointPairs& pairs );
 
 /// computes root-mean-square deviation between points
-[[nodiscard]] inline float getMeanSqDistToPoint( const PointPairs & pairs ) { return getSumSqDistToPoint( pairs ).rootMeanSqF(); }
+[[nodiscard]] inline float getMeanSqDistToPoint( const IPointPairs& pairs ) { return getSumSqDistToPoint( pairs ).rootMeanSqF(); }
 
 /// computes root-mean-square deviation from points to target planes
-[[nodiscard]] inline float getMeanSqDistToPlane( const PointPairs & pairs ) { return getSumSqDistToPlane( pairs ).rootMeanSqF(); }
+[[nodiscard]] inline float getMeanSqDistToPlane( const IPointPairs& pairs ) { return getSumSqDistToPlane( pairs ).rootMeanSqF(); }
 
 /// returns status info string
 [[nodiscard]] MRMESH_API std::string getICPStatusInfo( int iterations, ICPExitType exitType );
@@ -156,20 +178,13 @@ struct ICPProperties
     bool mutualClosest = false;
 };
 
-/// an object and its transformation to global space with other objects
-struct MeshOrPointsXf
-{
-    MeshOrPoints obj;
-    AffineXf3f xf;
-};
+/// reset active bit if pair distance is further than maxDistSq
+size_t deactivateFarPairs( IPointPairs& pairs, float maxDistSq );
 
 /// in each pair updates the target data and performs basic filtering (activation)
 void updatePointPairs( PointPairs& pairs,
     const MeshOrPointsXf& src, const MeshOrPointsXf& tgt,
     float cosTreshold, float distThresholdSq, bool mutualClosest );
-
-/// reset active bit if pair distance is further than maxDistSq
-size_t deactivateFarPairs( PointPairs& pairs, float maxDistSq );
 
 /// This class allows you to register two object with similar shape using
 /// Iterative Closest Points (ICP) point-to-point or point-to-plane algorithms

@@ -1014,6 +1014,10 @@ void Mesh::pack( FaceMap * outFmap, VertMap * outVmap, WholeEdgeMap * outEmap, b
     if ( rearrangeTriangles )
         topology.rotateTriangles();
     Mesh packed;
+    packed.points.reserve( topology.numValidVerts() );
+    packed.topology.vertReserve( topology.numValidVerts() );
+    packed.topology.faceReserve( topology.numValidFaces() );
+    packed.topology.edgeReserve( 2 * topology.computeNotLoneUndirectedEdges() );
     packed.addPart( *this, outFmap, outVmap, outEmap, rearrangeTriangles );
     *this = std::move( packed );
 }
@@ -1062,11 +1066,11 @@ PackMapping Mesh::packOptimally( bool preserveAABBTree )
     return map;
 }
 
-void Mesh::deleteFaces( const FaceBitSet& fs )
+void Mesh::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
 {
     if ( fs.none() )
         return;
-    topology.deleteFaces( fs );
+    topology.deleteFaces( fs, keepEdges );
     invalidateCaches(); // some points can be deleted as well
 }
 
@@ -1102,7 +1106,7 @@ std::optional<MeshProjectionResult> Mesh::projectPoint( const Vector3f& point, f
 const AABBTree & Mesh::getAABBTree() const 
 { 
     const auto & res = AABBTreeOwner_.getOrCreate( [this]{ return AABBTree( *this ); } );
-    assert( res.containsSameNumberOfTris( *this ) );
+    assert( res.numLeaves() == topology.numValidFaces() );
     return res;
 }
 
@@ -1124,7 +1128,7 @@ void Mesh::updateCaches( const VertBitSet & changedVerts )
 {
     AABBTreeOwner_.update( [&]( AABBTree & tree )
     {
-        assert( tree.containsSameNumberOfTris( *this ) );
+        assert( tree.numLeaves() == topology.numValidFaces() );
         tree.refit( *this, changedVerts ); 
     } );
     AABBTreePointsOwner_.update( [&]( AABBTreePoints & tree )

@@ -171,7 +171,7 @@ protected:
     // Draw viewport id and projection type for all viewporrts
     MRVIEWER_API virtual void drawRibbonViewportsLabels_();
 
-    MRVIEWER_API virtual void drawRibbonSceneInformation_( std::vector<std::shared_ptr<Object>>& selected );
+    MRVIEWER_API virtual void drawRibbonSceneInformation_( const std::vector<std::shared_ptr<Object>>& selected );
 
     MRVIEWER_API virtual bool drawCollapsingHeaderTransform_() override;
     MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& selected ) override;
@@ -190,8 +190,7 @@ protected:
     // reads files with panel description
     MRVIEWER_API virtual void readMenuItemsStructure_();
 
-    std::vector<std::shared_ptr<const Object>> prevFrameObjectsCache_;
-    std::vector<std::shared_ptr<const Object>> selectedObjectsCache_;
+    std::vector<std::shared_ptr<const Object>> prevFrameSelectedObjectsCache_;
 
     MRVIEWER_API virtual bool drawCollapsingHeader_( const char* label, ImGuiTreeNodeFlags flags = 0 ) override;
 

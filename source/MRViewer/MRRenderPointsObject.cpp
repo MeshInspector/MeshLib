@@ -6,6 +6,7 @@
 #include "MRMesh/MRPointCloud.h"
 #include "MRGLMacro.h"
 #include "MRMesh/MRPlane3.h"
+#include "MRMesh/MRSceneSettings.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRGLStaticHolder.h"
 #include "MRRenderGLHelpers.h"
@@ -92,7 +93,8 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
 
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specExp" ), objPoints_->getShininess() ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specularStrength" ), objPoints_->getSpecularStrength() ) );
-    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), objPoints_->getAmbientStrength() ) );
+    float ambient = objPoints_->getAmbientStrength() * ( objPoints_->isSelected() ? SceneSettings::get( SceneSettings::FloatType::AmbientCoefSelectedObj ) : 1.0f );
+    GL_EXEC( glUniform1f( glGetUniformLocation( shader, "ambientStrength" ), ambient ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "globalAlpha" ), objPoints_->getGlobalAlpha( renderParams.viewportId ) / 255.0f ) );
     GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &renderParams.lightPos.x ) );
 
@@ -361,24 +363,48 @@ RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
 
     const auto& points = objPoints_->pointCloud();
     const auto step = objPoints_->getRenderDiscretization();
-    validIndicesSize_ = int( points->points.size() / step );
-    auto buffer = glBuffer.prepareBuffer<VertId>( validIndicesSize_ );
+    const auto num = objPoints_->pointCloud()->validPoints.find_last() + 1;    
 
     const auto& validPoints = points->validPoints;
     auto firstValid = validPoints.find_first();
-    if ( firstValid.valid() )
+    assert( firstValid );
+    
+    validIndicesSize_ = ( num / step );
+    if ( step != 1 )
     {
-        BitSetParallelForAll( validPoints, [&] ( VertId v )
+        firstValid = {};
+        for ( VertId v = VertId( (firstValid / step)*step  ); v < step * validIndicesSize_; v += step )
         {
-            if ( v % step != 0 )
-                return;
-
             if ( validPoints.test( v ) )
-                buffer[v / step] = VertId( v / step );
-            else
-                buffer[v / step] = firstValid;
-        });
+            {
+                firstValid = v;
+                break;
+            }
+        }
+        
+        if ( !firstValid.valid() )
+        {
+            validIndicesSize_ = 0;
+            return glBuffer.prepareBuffer<VertId>( 0 );
+        }
     }
+
+    auto buffer = glBuffer.prepareBuffer<VertId>( validIndicesSize_ );
+
+    BitSetParallelForAll( validPoints, [&] ( VertId v )
+    {
+        if ( v % step != 0 || v >= step * validIndicesSize_ )
+            return;
+
+        if ( validPoints.test( v ) )
+        {
+            buffer[v / step] = VertId( v / step );
+        }
+        else
+        {
+            buffer[v / step] = VertId( firstValid / step );
+        }
+    });    
 
     return buffer;
 }
@@ -392,22 +418,24 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
 
     const auto& points = objPoints_->pointCloud();
     const auto step = objPoints_->getRenderDiscretization();
-    const auto numV = ( points->validPoints.find_last() + 1 ) / int( step );
+    const int num = points->validPoints.find_last() + 1;
+    const auto numV = num / int( step );
     auto size = numV / 32 + 1;
     vertSelectionTextureSize_ = calcTextureRes( size, maxTexSize_ );
     assert( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y >= size );
     auto buffer = glBuffer.prepareBuffer<unsigned>( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y );
 
-    const auto& selection = objPoints_->getSelectedPoints().m_bits;
-    const unsigned* selectionData = (unsigned*) selection.data();
+    const auto& selectedPoints = objPoints_->getSelectedPoints();
+    const size_t selectionSize = selectedPoints.m_bits.size();
+    
+    const unsigned* selectionData = ( unsigned* )selectedPoints.m_bits.data();    
+
     ParallelFor( 0, ( int )buffer.size(), [&]( int r )
     {
         auto& block = buffer[r];
-        if ( r * step / 2 >= selection.size() )
-        {
-            block = 0;
+        block = 0;
+        if ( r * step / 2 >= selectionSize )
             return;
-        }
 
         if ( step == 1 )
         {
@@ -417,11 +445,13 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
 
         for ( int bit = 0; bit < 32; ++bit )
         {
-            const auto selectionBit = std::div( ( r * 32 + bit ) * int( step ), 32 );
+            const int bitIndex = ( r * 32 + bit ) * int( step );
+            if ( bitIndex >= selectionSize * 64 )
+                continue;
+
+            const auto selectionBit = std::div( bitIndex, 32 );
             if ( selectionData[selectionBit.quot] & ( 1 << ( selectionBit.rem ) ) )
                 block |= 1 << bit;
-            else
-                block &= ~( 1 << bit );
         }
     } );
 

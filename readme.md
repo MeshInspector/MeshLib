@@ -25,7 +25,7 @@ The goal which we set when designing MeshLib was to value simplicity and perform
 
 * [MeshInspector YouTube channel](https://www.youtube.com/channel/UCv9bNhwoVDPaLPPyWJeVPNg)
 
-* [MeshLib Documentation](https://meshlib.meshinspector.com/documentation/)
+* [MeshLib Documentation](https://doc.meshinspector.com/)
 
 * [Email us](mailto:support@meshinspector.com)
 
@@ -133,7 +133,7 @@ pip install --upgrade pip
 pip install --upgrade meshlib
 ```
 
-See Python Basic Examples [here](https://meshlib.meshinspector.com/documentation/HowToBasic.html) or search for more complex ones on [stackoverflow.com](https://stackoverflow.com/).
+See Python Basic Examples [here](https://doc.meshinspector.com/HowToBasic.html) or search for more complex ones on [stackoverflow.com](https://stackoverflow.com/).
 
 # Build
 ## Windows
@@ -162,7 +162,7 @@ If you would like to use another version of CUDA, please modify `MRCudaVersion` 
     ```sh
     git clone https://github.com/Microsoft/vcpkg.git
     cd vcpkg
-    git checkout 2024.04.26
+    git checkout 2024.06.15
     .\bootstrap-vcpkg.bat
     .\vcpkg integrate install (with admin rights)
     ```
@@ -253,24 +253,33 @@ There are two general options of integrating MeshLib into your project:
 1. [Submodule](#submodule)
 2. [Distribution](#distribution)
 
-**Common for both options:** [install thirdparty](#vcpkg)
 ### Submodule
+
 You can have MeshLib as submodule in your repository, and inculde all MeshLib's projects to your solution.
+
+This option requires you to [install third-party libraries](#vcpkg) via `vcpkg` package mananger.
+
 > **_NOTE:_** You should use `MeshLib/source/common.props` in other projects of your solution.
 
-> **_NOTE:_** You can customize props by defining `CustomMRProps.props` in directory above `common.props`
+> **_NOTE:_** You can customize props by defining `CustomMRProps.props` in directory above `common.props`.
+
+> **_NOTE:_** If you would like to set `_ITERATOR_DEBUG_LEVEL=1` macro, then please do it in `CustomMRProps.props` together with `MR_ITERATOR_DEBUG_LEVEL=1` macro.
 
 ### Distribution
-You can download [distribution](https://github.com/MeshInspector/MeshLib/releases) and integrate it in your projects.
+You can download [zip-archive](https://github.com/MeshInspector/MeshLib/releases) containing 
+* header files (.h),
+* library archives (.lib),
+* dynamic labraries (.dll)
 
-Project settings:
+of both MeshLib and dependant third-party libraries, and make them available during your project building and runtime execution as follows.
+
+Project settings in Visual Studio:
 1. `C/C++ -> General -> Additional Include Directories` add `distribution\install\include;`
 2. `Linker -> General -> Additional Library Directories` add `distribution\install\app\$(Configuration);`
 3. `Linker -> Input -> Additional Dependencies` add `distribution\install\lib\$(Configuration)\*.lib;`
-4. Debug: `C/C++ -> Preprocessor -> Preprocessor Defenitions` add `_ITERATOR_DEBUG_LEVEL=0;`
-5. `vcpkg -> Triplet` set `x64-windows-meshlib`
+4. Debug Configuration: `C/C++ -> Preprocessor -> Preprocessor Defenitions` add `_ITERATOR_DEBUG_LEVEL=0;`
 
 Make sure you copy all dlls from `distribution\install\app\$(Configuration);` to your `$(TargetDir)`
-> **_NOTE:_** MeshLib distribution has x64 build only
+> **_NOTE:_** MeshLib distribution has x64 build only.
 
-> **_NOTE:_** Distribution is build with ITERATOR_DEBUG_LEVEL=0 in debug so you will need to setup this for your projects
+> **_NOTE:_** Distribution is built with `_ITERATOR_DEBUG_LEVEL=0` macro defined in Debug configuration so you will need to setup this for your projects.

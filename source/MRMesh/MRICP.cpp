@@ -21,12 +21,12 @@ void setupPairs( PointPairs & pairs, const VertBitSet& srcSamples )
     pairs.active.clear();
 }
 
-size_t deactivateFarPairs( PointPairs & pairs, float maxDistSq )
+size_t deactivateFarPairs( IPointPairs& pairs, float maxDistSq )
 {
     size_t cnt0 = pairs.active.count();
     BitSetParallelFor( pairs.active, [&]( size_t i )
     {
-        if ( pairs.vec[i].distSq > maxDistSq )
+        if ( pairs[i].distSq > maxDistSq )
             pairs.active.reset( i );
     } );
     return cnt0 - pairs.active.count();
@@ -163,6 +163,8 @@ void updatePointPairs( PointPairs & pairs,
         const auto pt = src2tgtXf( p0 );
 
         MeshOrPoints::ProjectionResult prj;
+        // do not search for target point further than distance threshold
+        prj.distSq = distThresholdSq;
         if ( res.tgtCloseVert )
         {
             // start with old closest point ...
@@ -175,6 +177,12 @@ void updatePointPairs( PointPairs & pairs,
         }
         // ... and try to find only closer one
         tgtLimProjector( pt, prj );
+        if ( !prj.closestVert )
+        {
+            // no target point found within distance threshold
+            pairs.active.reset( idx );
+            return;
+        }
         const auto p1 = prj.point;
 
         // save the result
@@ -400,29 +408,29 @@ AffineXf3f ICP::calculateTransformation()
     return flt_.xf;
 }
 
-size_t getNumActivePairs( const PointPairs & pairs )
+size_t getNumActivePairs( const IPointPairs& pairs )
 {
     return pairs.active.count();
 }
 
-NumSum getSumSqDistToPoint( const PointPairs & pairs )
+NumSum getSumSqDistToPoint( const IPointPairs& pairs )
 {
     NumSum res;
     for ( size_t idx : pairs.active )
     {
-        const auto& vp = pairs.vec[idx];
+        const auto& vp = pairs[idx];
         res.sum += vp.distSq;
         ++res.num;
     }
     return res;
 }
 
-NumSum getSumSqDistToPlane( const PointPairs & pairs )
+NumSum getSumSqDistToPlane( const IPointPairs& pairs )
 {
     NumSum res;
     for ( size_t idx : pairs.active )
     {
-        const auto& vp = pairs.vec[idx];
+        const auto& vp = pairs[idx];
         auto v = dot( vp.tgtNorm, vp.tgtPoint - vp.srcPoint );
         res.sum += sqr( v );
         ++res.num;

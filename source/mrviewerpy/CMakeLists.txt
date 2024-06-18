@@ -20,6 +20,7 @@ if(APPLE)
     MRViewer
     MRMesh
     fmt
+    spdlog
     pybind11::module
   )
 ELSE()
@@ -27,8 +28,9 @@ ELSE()
     MRViewer
     MRMesh
     fmt
+    spdlog
     tbb
-    ${MR_PYTHON_LIB}
+    Python::Python
   )
 ENDIF()
 

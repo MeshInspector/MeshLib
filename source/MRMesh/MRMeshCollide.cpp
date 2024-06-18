@@ -33,12 +33,12 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
     NodeBitSet* aNodesPtr{nullptr}, * bNodesPtr{nullptr};
     if ( a.region )
     {
-        aNodes = aTree.getNodesFromFaces( *a.region );
+        aNodes = aTree.getNodesFromLeaves( *a.region );
         aNodesPtr = &aNodes;
     }
     if ( b.region )
     {
-        bNodes = bTree.getNodesFromFaces( *b.region );
+        bNodes = bTree.getNodesFromLeaves( *b.region );
         bNodesPtr = &bNodes;
     }
 

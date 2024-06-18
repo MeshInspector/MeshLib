@@ -2,14 +2,19 @@
 
 #include "config.h"
 
-// Not zero _ITERATOR_DEBUG_LEVEL in Microsoft STL greatly reduce the performance of STL containers.
-// So we change its value to zero by default. A huge restriction with this is that
-// all other linked DLL's and LIBS' also need to define this symbol to remove STL debugging, see
+// Not-zero _ITERATOR_DEBUG_LEVEL in Microsoft STL greatly reduces the performance of STL containers.
+//
+// Pre-build binaries from MeshLib distribution are prepared with _ITERATOR_DEBUG_LEVEL=0,
+// and if you build MeshLib by yourself then _ITERATOR_DEBUG_LEVEL=0 is also selected see
 // 1) vcpkg/triplets/x64-windows-meshlib.cmake and
 // 2) MeshLib/source/common.props
-// If you would like not-zero _ITERATOR_DEBUG_LEVEL and
-// you know what you are doing (up to 100x slowdown),
-// please define MR_ITERATOR_DEBUG_LEVEL as well
+// Please note that all other modules (.exe, .dll, .lib) with MS STL calls in your application also need
+// to define exactly the same value of _ITERATOR_DEBUG_LEVEL to be operational after linking.
+//
+// If you deliberately would like to work with not zero _ITERATOR_DEBUG_LEVEL, then please define
+// additionally MR_ITERATOR_DEBUG_LEVEL with the same value to indicate that it is done intentionally
+// (and you are ok with up to 100x slowdown).
+//
 #if defined _MSC_VER
     #if !defined _ITERATOR_DEBUG_LEVEL
         #define _ITERATOR_DEBUG_LEVEL 0
@@ -58,6 +63,7 @@ class MRMESH_CLASS PixelTag;
 class MRMESH_CLASS VoxelTag;
 class MRMESH_CLASS RegionTag;
 class MRMESH_CLASS NodeTag;
+class MRMESH_CLASS ObjTag;
 
 template <typename T> class MRMESH_CLASS Id;
 template <typename T, typename I> class MRMESH_CLASS Vector;
@@ -72,6 +78,8 @@ using PixelId = Id<PixelTag>;
 using VoxelId = Id<VoxelTag>;
 using RegionId = Id<RegionTag>;
 using NodeId = Id<NodeTag>;
+using ObjId = Id<ObjTag>;
+
 class ViewportId;
 class ViewportMask;
 
@@ -103,6 +111,7 @@ using UndirectedEdgeBitSet = TaggedBitSet<UndirectedEdgeTag>;
 using PixelBitSet = TaggedBitSet<PixelTag>;
 using VoxelBitSet = TaggedBitSet<VoxelTag>;
 using NodeBitSet = TaggedBitSet<NodeTag>;
+using ObjBitSet = TaggedBitSet<ObjTag>;
 
 template <typename T> class SetBitIteratorT;
 
@@ -303,6 +312,7 @@ using IsoLines = SurfacePaths;
 using PlaneSection = SurfacePath;
 using PlaneSections = SurfacePaths;
 struct EdgePointPair;
+class Laplacian;
 
 using VertPair = std::pair<VertId, VertId>;
 using FacePair = std::pair<FaceId, FaceId>;
@@ -329,6 +339,7 @@ using FaceMap = Vector<FaceId, FaceId>;
 using VertMap = Vector<VertId, VertId>;
 using EdgeMap = Vector<EdgeId, EdgeId>;
 using UndirectedEdgeMap = Vector<UndirectedEdgeId, UndirectedEdgeId>;
+using ObjMap = Vector<ObjId, ObjId>;
 ///  mapping of whole edges: map[e]->f, map[e.sym()]->f.sym(), where only map[e] for even edges is stored
 using WholeEdgeMap = Vector<EdgeId, UndirectedEdgeId>;
 using UndirectedEdge2RegionMap = Vector<RegionId, UndirectedEdgeId>;
@@ -404,8 +415,10 @@ class MRMESH_CLASS MeshOrPoints;
 struct MRMESH_CLASS PointCloud;
 class MRMESH_CLASS AABBTree;
 class MRMESH_CLASS AABBTreePoints;
+class MRMESH_CLASS AABBTreeObjects;
 struct MRMESH_CLASS CloudPartMapping;
 struct MRMESH_CLASS PartMapping;
+struct MeshOrPointsXf;
 struct MeshTexture;
 struct GridSettings;
 struct TriMesh;

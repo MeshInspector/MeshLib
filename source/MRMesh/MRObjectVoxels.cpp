@@ -129,7 +129,12 @@ VdbVolume ObjectVoxels::updateVdbVolume( VdbVolume vdbVolume )
 {
     auto oldVdbVolume = std::move( vdbVolume_ );
     vdbVolume_ = std::move( vdbVolume );
+    indexer_ = VolumeIndexer( vdbVolume_.dims );
+    reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x, 1 / vdbVolume_.voxelSize.y, 1 / vdbVolume_.voxelSize.z };
+    volumeRenderActiveVoxels_.clear();
     setDirtyFlags( DIRTY_ALL );
+    if ( volumeRendering_ )
+        dirty_ |= DIRTY_SELECTION; // This flag is not set in ObjectMeshHolder::setDirtyFlags
     return oldVdbVolume;
 }
 
@@ -138,6 +143,13 @@ Histogram ObjectVoxels::updateHistogram( Histogram histogram )
     auto oldHistogram = std::move( histogram_ );
     histogram_ = std::move( histogram );
     return oldHistogram;
+}
+
+Box3i ObjectVoxels::updateActiveBounds( const Box3i& box )
+{
+    Box3i oldBox = activeBox_;
+    activeBox_ = box;
+    return oldBox;
 }
 
 Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( float iso, ProgressCallback cb /*= {} */ ) const
@@ -493,6 +505,7 @@ ObjectVoxels::ObjectVoxels()
 void ObjectVoxels::applyScale( float scaleFactor )
 {
     vdbVolume_.voxelSize *= scaleFactor;
+    reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
 
     ObjectMeshHolder::applyScale( scaleFactor );
 }

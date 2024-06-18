@@ -17,10 +17,10 @@ if errorlevel 1 (
 
     REM Set VCPKG_BINARY_SOURCES based on the option
     if !write_s3_option! equ true (
-        set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/2024.04.26/x64-windows-meshlib/,readwrite;"
+        set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/2024.06.15/x64-windows-meshlib/,readwrite;"
         echo "using aws auth"
     ) else (
-        set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/2024.04.26/x64-windows-meshlib/,readwrite;"
+        set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/2024.06.15/x64-windows-meshlib/,readwrite;"
         echo "using no auth"
     )
 )
@@ -34,7 +34,14 @@ for /f "delims=" %%i in ('type "%~dp0..\requirements\windows.txt"') do (
   set packages=!packages! %%i
 )
 
-vcpkg install vcpkg-cmake vcpkg-cmake-config --host-triplet x64-windows-meshlib --overlay-triplets "%~dp0vcpkg\triplets"  --debug --x-abi-tools-use-exact-versions
-vcpkg install !packages! --host-triplet x64-windows-meshlib --overlay-triplets "%~dp0vcpkg\triplets" --debug --x-abi-tools-use-exact-versions
+vcpkg install vcpkg-cmake vcpkg-cmake-config --host-triplet x64-windows-meshlib --overlay-triplets "%~dp0vcpkg\triplets"  --debug --x-abi-tools-use-exact-versions || goto :error
+vcpkg install !packages! --host-triplet x64-windows-meshlib --overlay-triplets "%~dp0vcpkg\triplets" --debug --x-abi-tools-use-exact-versions || goto :error
 
 endlocal
+goto :EOF
+
+REM https://stackoverflow.com/a/8965092/7325599
+:error
+echo Failed with error #%errorlevel%.
+endlocal
+exit /b %errorlevel%

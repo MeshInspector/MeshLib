@@ -68,61 +68,6 @@ constexpr auto cTransformContextName = "TransformContextWindow";
 namespace MR
 {
 
-void changeSelection( bool selectNext, int mod )
-{
-    using namespace MR;
-    const auto selectable = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selectable );
-    const auto selected = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    if ( selectNext )
-    {
-        auto nextIt = std::find_if( selectable.rbegin(), selectable.rend(), [] ( const std::shared_ptr<Object>& obj )
-        {
-            return obj->isSelected();
-        } );
-
-        Object* next{ nullptr };
-        if ( nextIt != selectable.rend() )
-        {
-            auto dist = int( std::distance( nextIt, selectable.rend() ) );
-            if ( dist >= 0 && dist < selectable.size() )
-                next = selectable[dist].get();
-            if ( dist == selectable.size() )
-                next = selectable.back().get();
-        }
-
-        if ( mod == 0 ) // uncomment if want multy select holding shift
-            for ( const auto& data : selected )
-                if ( data && data.get() != next )
-                    data->select( false );
-        if ( next )
-            next->select( true );
-    }
-    else
-    {
-        auto prevIt = std::find_if( selectable.begin(), selectable.end(), [] ( const std::shared_ptr<Object>& obj )
-        {
-            return obj->isSelected();
-        } );
-
-        Object* prev{ nullptr };
-        if ( prevIt != selectable.end() )
-        {
-            auto dist = int( std::distance( selectable.begin(), prevIt ) ) - 1;
-            if ( dist >= 0 && dist < selectable.size() )
-                prev = selectable[dist].get();
-            if ( dist == -1 )
-                prev = selectable.front().get();
-        }
-
-        if ( mod == 0 ) // uncomment if want multy select holding shift
-            for ( const auto& data : selected )
-                if ( data && data.get() != prev )
-                    data->select( false );
-        if ( prev )
-            prev->select( true );
-    }
-}
-
 void RibbonMenu::setCustomContextCheckbox(
     const std::string& name,
     CustomContextMenuCheckbox customContextMenuCheckbox )
@@ -145,9 +90,6 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     // Draw additional windows
     callback_draw_custom_window = [&] ()
     {
-        prevFrameObjectsCache_ = selectedObjectsCache_;
-        selectedObjectsCache_ = getAllObjectsInTree<const Object>( &SceneRoot::get(), ObjectSelectivityType::Selected );
-
         drawTopPanel_();
 
         drawActiveBlockingDialog_();
@@ -166,6 +108,7 @@ void RibbonMenu::init( MR::Viewer* _viewer )
         draw_helpers();
         drawVersionWindow_();
         notifier_.drawNotifications( menu_scaling() );
+        prevFrameSelectedObjectsCache_ = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
     };
 
     buttonDrawer_.setMenu( this );
@@ -1471,7 +1414,7 @@ void RibbonMenu::changeTab_( int newTab )
 
 std::string RibbonMenu::getRequirements_( const std::shared_ptr<RibbonMenuItem>& item ) const
 {
-    return item->isAvailable( selectedObjectsCache_ );
+    return item->isAvailable( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() );
 }
 
 void RibbonMenu::drawSceneListButtons_()
@@ -1565,15 +1508,15 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
 
             if ( !statePlugin->dialogIsOpen() )
                 itemPressed_( itemPtr.item, true );
-            else if ( prevFrameObjectsCache_ != selectedObjectsCache_ )
-                statePlugin->updateSelection( selectedObjectsCache_ );
+            else if ( prevFrameSelectedObjectsCache_ != SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() )
+                statePlugin->updateSelection( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() );
         }
     }
 }
 
 void RibbonMenu::drawRibbonSceneList_()
 {
-    auto selectedObjs = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
+    const auto& selectedObjs = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
 
     const auto scaling = menu_scaling();
     // Define next window position + size
@@ -1704,7 +1647,7 @@ void RibbonMenu::drawRibbonViewportsLabels_()
     ImGui::PopStyleVar();
 }
 
-void RibbonMenu::drawRibbonSceneInformation_( std::vector<std::shared_ptr<Object>>& /*selected*/ )
+void RibbonMenu::drawRibbonSceneInformation_( const std::vector<std::shared_ptr<Object>>& /*selected*/ )
 {
     const float newInfoHeight = std::ceil( drawSelectionInformation_() );
 
@@ -1754,9 +1697,10 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
     if ( iconsFont )
         ImGui::PushFont( iconsFont );
 
-    if ( numButtons >= 2.0f && selectedObjectsCache_.size() == 1 && selectedObjectsCache_.front()->xf() != AffineXf3f() )
+    const auto& selectedObjectsCache = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
+    if ( numButtons >= 2.0f && selectedObjectsCache.size() == 1 && selectedObjectsCache.front()->xf() != AffineXf3f() )
     {
-        auto obj = std::const_pointer_cast< Object >( selectedObjectsCache_.front() );
+        auto obj = std::const_pointer_cast< Object >( selectedObjectsCache.front() );
         assert( obj );
         contextBtnPos.x -= smallBtnSize.x;
         ImGui::SetCursorPos( contextBtnPos );
@@ -1775,7 +1719,7 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
         auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
         bool drawApplyBtn = numButtons >=3.0f &&
             item != RibbonSchemaHolder::schema().items.end() &&
-            item->second.item->isAvailable( selectedObjectsCache_ ).empty();
+            item->second.item->isAvailable( selectedObjectsCache ).empty();
 
         if ( drawApplyBtn )
         {
@@ -1937,7 +1881,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
     {
         auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
         if ( item != RibbonSchemaHolder::schema().items.end() &&
-            item->second.item->isAvailable( selectedObjectsCache_ ).empty() &&
+            item->second.item->isAvailable( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() ).empty() &&
             UI::button( "Apply", Vector2f( buttonSize, 0 ) ) )
         {
             item->second.item->action();
@@ -1982,7 +1926,7 @@ void RibbonMenu::setupShortcuts_()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
-        const auto selected = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
+        const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
         bool atLeastOne = false;
         for ( const auto& data : selected )
             if ( data )
@@ -2007,7 +1951,7 @@ void RibbonMenu::setupShortcuts_()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
-        const auto selected = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+        const auto& selected = SceneCache::getAllObjects<ObjectMeshHolder, ObjectSelectivityType::Selected>();
         for ( const auto& sel : selected )
             sel->toggleVisualizeProperty( MeshVisualizePropertyType::FlatShading, viewportid );
     } } );
@@ -2019,7 +1963,7 @@ void RibbonMenu::setupShortcuts_()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
-        const auto selected = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+        const auto& selected = SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selected>();
         for ( const auto& sel : selected )
             sel->toggleVisualizeProperty( VisualizeMaskType::InvertedNormals, viewportid );
     } }  );
@@ -2027,7 +1971,7 @@ void RibbonMenu::setupShortcuts_()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
-        const auto selected = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+        const auto& selected = SceneCache::getAllObjects<ObjectMeshHolder, ObjectSelectivityType::Selected>();
         for ( const auto& sel : selected )
                 sel->toggleVisualizeProperty( MeshVisualizePropertyType::Edges, viewportid );
     } } );
@@ -2040,36 +1984,48 @@ void RibbonMenu::setupShortcuts_()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
-        const auto selected = getAllObjectsInTree<ObjectMeshHolder>( &SceneRoot::get(), ObjectSelectivityType::Selected );
+        const auto& selected = SceneCache::getAllObjects<ObjectMeshHolder, ObjectSelectivityType::Selected>();
         for ( const auto& sel : selected )
             sel->toggleVisualizeProperty( MeshVisualizePropertyType::Faces, viewportid );
     } }  );
-    shortcutManager_->setShortcut( { GLFW_KEY_DOWN,0 }, { ShortcutManager::Category::Objects, "Select next object",[] ()
+    if ( sceneObjectsList_ )
     {
-        changeSelection( true,0 );
-    } }  );
-    shortcutManager_->setShortcut( { GLFW_KEY_DOWN,GLFW_MOD_SHIFT }, { ShortcutManager::Category::Objects, "Add next object to selection",[] ()
-    {
-        changeSelection( true,GLFW_MOD_SHIFT );
-    } }  );
-    shortcutManager_->setShortcut( { GLFW_KEY_UP,0 }, { ShortcutManager::Category::Objects, "Select previous object",[] ()
-    {
-        changeSelection( false,0 );
-    } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_UP,GLFW_MOD_SHIFT }, { ShortcutManager::Category::Objects, "Add previous object to selection",[] ()
-    {
-        changeSelection( false,GLFW_MOD_SHIFT );
-    } }  );
+        shortcutManager_->setShortcut( { GLFW_KEY_DOWN,0 }, { ShortcutManager::Category::Objects, "Select next object",[&] ()
+        {
+            sceneObjectsList_->changeSelection( true, false );
+        } } );
+        shortcutManager_->setShortcut( { GLFW_KEY_DOWN,GLFW_MOD_SHIFT }, { ShortcutManager::Category::Objects, "Add next object to selection",[&] ()
+        {
+            sceneObjectsList_->changeSelection( true, true );
+        } } );
+        shortcutManager_->setShortcut( { GLFW_KEY_UP,0 }, { ShortcutManager::Category::Objects, "Select previous object",[&] ()
+        {
+            sceneObjectsList_->changeSelection( false, false );
+        } } );
+        shortcutManager_->setShortcut( { GLFW_KEY_UP,GLFW_MOD_SHIFT }, { ShortcutManager::Category::Objects, "Add previous object to selection",[&] ()
+        {
+            sceneObjectsList_->changeSelection( false, true );
+        } } );
+        shortcutManager_->setShortcut( { GLFW_KEY_A, CONTROL_OR_SUPER }, { ShortcutManager::Category::Objects, "Ribbon Scene Select all",[&] ()
+        {
+            sceneObjectsList_->selectAllObjects();
+        } } );
+        shortcutManager_->setShortcut( { GLFW_KEY_F3, 0 }, { ShortcutManager::Category::View, "Ribbon Scene Show only previous",[&] ()
+        {
+            sceneObjectsList_->changeVisible( false );
+        } } );
+        shortcutManager_->setShortcut( { GLFW_KEY_F4, 0 }, { ShortcutManager::Category::View, "Ribbon Scene Show only next",[&] ()
+        {
+            sceneObjectsList_->changeVisible( true );
+        } } );
+    }
 
-    addRibbonItemShortcut_( "Ribbon Scene Select all", { GLFW_KEY_A, CONTROL_OR_SUPER }, ShortcutManager::Category::Objects );
     addRibbonItemShortcut_( "Fit data", { GLFW_KEY_F, GLFW_MOD_CONTROL | GLFW_MOD_ALT }, ShortcutManager::Category::View );
     addRibbonItemShortcut_( "Select objects", { GLFW_KEY_Q, GLFW_MOD_CONTROL }, ShortcutManager::Category::Objects );
     addRibbonItemShortcut_( "Open files", { GLFW_KEY_O, CONTROL_OR_SUPER }, ShortcutManager::Category::Scene );
     addRibbonItemShortcut_( "Save Scene", { GLFW_KEY_S, CONTROL_OR_SUPER }, ShortcutManager::Category::Scene );
     addRibbonItemShortcut_( "Save Scene As", { GLFW_KEY_S, CONTROL_OR_SUPER | GLFW_MOD_SHIFT }, ShortcutManager::Category::Scene );
     addRibbonItemShortcut_( "New", { GLFW_KEY_N, CONTROL_OR_SUPER }, ShortcutManager::Category::Scene );
-    addRibbonItemShortcut_( "Ribbon Scene Show only previous", { GLFW_KEY_F3, 0 }, ShortcutManager::Category::View );
-    addRibbonItemShortcut_( "Ribbon Scene Show only next", { GLFW_KEY_F4, 0 }, ShortcutManager::Category::View );
     addRibbonItemShortcut_( "Ribbon Scene Rename", { GLFW_KEY_F2, 0 }, ShortcutManager::Category::Objects );
     addRibbonItemShortcut_( "Ribbon Scene Remove selected objects", { GLFW_KEY_R, GLFW_MOD_SHIFT }, ShortcutManager::Category::Objects );
     addRibbonItemShortcut_( "Viewer settings", { GLFW_KEY_COMMA, CONTROL_OR_SUPER }, ShortcutManager::Category::Info );

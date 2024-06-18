@@ -16,6 +16,10 @@
 #include <boost/exception/diagnostic_information.hpp>
 #include <iostream>
 
+#ifdef _WIN32
+#include "psapi.h"
+#endif
+
 bool doCommand( const boost::program_options::option& option, MR::Mesh& mesh )
 {
     namespace po = boost::program_options;
@@ -125,11 +129,11 @@ static int mainInternal( int argc, char **argv )
         .allow_unregistered()
         .run();
 
-    if ( vm.count("help") || !vm.count("input-file") || !vm.count("output-file") )
+    if ( vm.count("help") || !vm.count("input-file") )
     {
         std::cerr << 
             "meshconv is mesh file conversion utility based on MeshInspector/MeshLib\n"
-            "Usage: meshconv input-file output-file [options]\n"
+            "Usage: meshconv input-file [output-file] [options]\n"
             << allCommands << "\n";
         return 0;
     }
@@ -144,7 +148,7 @@ static int mainInternal( int argc, char **argv )
     }
 
     std::cout << "Loading " << inFilePath << "..." << std::endl;
-    MR::Timer t("LoadMesh");
+    MR::Timer t( "LoadMesh" );
     auto loadRes = MR::MeshLoad::fromAnySupportedFormat( inFilePath );
     if ( !loadRes.has_value() )
     {
@@ -152,7 +156,11 @@ static int mainInternal( int argc, char **argv )
         return 1;
     }
     auto mesh = std::move( loadRes.value() );
-    std::cout << "loaded successfully in " << t.secondsPassed().count() << "s\n"
+    std::cout << "loaded successfully in " << t.secondsPassed().count() << "s" << std::endl;
+    t.finish();
+
+    t.restart( "MeshInfo" );
+    std::cout
         << "num vertices: " << mesh.topology.numValidVerts() << "\n"
         << "num edges:    " << mesh.topology.computeNotLoneUndirectedEdges() << "\n"
         << "num faces:    " << mesh.topology.numValidFaces() << std::endl;
@@ -168,16 +176,31 @@ static int mainInternal( int argc, char **argv )
         }
     }
 
-    std::cout << "Saving " << outFilePath << "..." << std::endl;
-    t.restart("SaveMesh");
-    auto saveRes = MR::MeshSave::toAnySupportedFormat( mesh, outFilePath );
-    if ( !saveRes.has_value() )
+    if ( !outFilePath.empty() )
     {
-        std::cerr << "Mesh save error: " << saveRes.error() << "\n";
-        return 1;
+        std::cout << "Saving " << outFilePath << "..." << std::endl;
+        t.restart( "SaveMesh" );
+        auto saveRes = MR::MeshSave::toAnySupportedFormat( mesh, outFilePath );
+        if ( !saveRes.has_value() )
+        {
+            std::cerr << "Mesh save error: " << saveRes.error() << "\n";
+            return 1;
+        }
+        std::cout << "saved successfully in " << t.secondsPassed().count() << "s" << std::endl;
+        t.finish();
     }
-    std::cout << "saved successfully in " << t.secondsPassed().count() << "s\n";
-    t.finish();
+
+#ifdef _WIN32
+    HANDLE hProcess = GetCurrentProcess();
+    PROCESS_MEMORY_COUNTERS pmc;
+    if ( GetProcessMemoryInfo( hProcess, &pmc, sizeof(pmc)) )
+    {
+        static constexpr size_t MB = 1024 * 1024;
+        const float bytesInMB = 1.0f / MB;
+        std::cout << "Peak working set:    " << pmc.PeakWorkingSetSize * bytesInMB << " MB\n";
+        std::cout << "Peak pagefile usage: " << pmc.PeakPagefileUsage * bytesInMB << " MB" << std::endl;
+    }
+#endif
 
     return 0;
 }

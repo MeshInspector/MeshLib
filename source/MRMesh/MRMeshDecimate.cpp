@@ -3,6 +3,7 @@
 #include "MRQuadraticForm.h"
 #include "MRRegionBoundary.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRRingIterator.h"
 #include "MRTriMath.h"
 #include "MRTimer.h"
@@ -12,7 +13,6 @@
 #include "MRMeshSubdivide.h"
 #include "MRMeshRelax.h"
 #include "MRLineSegm.h"
-#include "MRPch/MRTBB.h"
 #include <queue>
 
 namespace MR
@@ -656,9 +656,40 @@ auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapseP
     return { .v = remainingVertex };
 }
 
+static void optionalPackMesh( Mesh & mesh, const DecimateSettings & settings )
+{
+    if ( !settings.packMesh )
+        return;
+
+    MR_TIMER
+    FaceMap fmap;
+    VertMap vmap;
+    WholeEdgeMap emap;
+    mesh.pack(
+        settings.region ? &fmap : nullptr,
+        settings.vertForms ? &vmap : nullptr,
+        settings.notFlippable ? &emap : nullptr );
+
+    if ( settings.region )
+        *settings.region = settings.region->getMapping( fmap, mesh.topology.faceSize() );
+
+    if ( settings.vertForms )
+    {
+        auto & vertForms = *settings.vertForms;
+        for ( VertId oldV{ 0 }; oldV < vmap.size(); ++oldV )
+            if ( auto newV = vmap[oldV] )
+                if ( newV < oldV )
+                    vertForms[newV] = vertForms[oldV];
+        vertForms.resize( mesh.topology.vertSize() );
+    }
+
+    if ( settings.notFlippable )
+        *settings.notFlippable = settings.notFlippable->getMapping( [&emap]( UndirectedEdgeId i ) { return emap[i].undirected(); }, mesh.topology.undirectedEdgeSize() );
+}
+
 DecimateResult MeshDecimator::run()
 {
-    MR_TIMER;
+    MR_TIMER
 
     if ( settings_.bdVerts )
         pBdVerts_ = settings_.bdVerts;
@@ -766,49 +797,46 @@ DecimateResult MeshDecimator::run()
     if ( settings_.progressCallback && !settings_.progressCallback( 1.0f ) )
         return res_;
 
-    if ( settings_.packMesh )
-    {
-        FaceMap fmap;
-        VertMap vmap;
-        WholeEdgeMap emap;
-        mesh_.pack( 
-            settings_.region ? &fmap : nullptr,
-            settings_.vertForms ? &vmap : nullptr,
-            settings_.notFlippable ? &emap : nullptr );
-
-        if ( settings_.region )
-            *settings_.region = settings_.region->getMapping( fmap, mesh_.topology.faceSize() );
-
-        if ( settings_.vertForms )
-        {
-            for ( VertId oldV{ 0 }; oldV < vmap.size(); ++oldV )
-                if ( auto newV = vmap[oldV] )
-                    if ( newV < oldV )
-                        (*pVertForms_)[newV] = (*pVertForms_)[oldV];
-            pVertForms_->resize( mesh_.topology.vertSize() );
-        }
-
-        if ( settings_.notFlippable )
-            *settings_.notFlippable = settings_.notFlippable->getMapping( [&emap]( UndirectedEdgeId i ) { return emap[i].undirected(); }, mesh_.topology.undirectedEdgeSize() );
-    }
-
+    optionalPackMesh( mesh_, settings_ );
     res_.cancelled = false;
     return res_;
 }
 
 static DecimateResult decimateMeshSerial( Mesh & mesh, const DecimateSettings & settings )
 {
-    MR_TIMER;
+    MR_TIMER
+    if ( settings.maxDeletedFaces <= 0 || settings.maxDeletedVertices <= 0 )
+    {
+        DecimateResult res;
+        res.cancelled = false;
+        return res;
+    }
     MR_WRITER( mesh );
     MeshDecimator md( mesh, settings );
     return md.run();
+}
+
+FaceBitSet getSubdividePart( const FaceBitSet & valids, size_t subdivideParts, size_t myPart )
+{
+    assert( subdivideParts > 1 );
+    const auto sz = subdivideParts;
+    assert( myPart < sz );
+    const auto facesPerPart = ( valids.size() / ( sz * FaceBitSet::bits_per_block ) ) * FaceBitSet::bits_per_block;
+
+    const auto fromFace = myPart * facesPerPart;
+    const auto toFace = ( myPart + 1 ) < sz ? ( myPart + 1 ) * facesPerPart : valids.size();
+    FaceBitSet res( toFace );
+    res.set( FaceId{ fromFace }, toFace - fromFace, true );
+    res &= valids;
+    return res;
 }
 
 static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const DecimateSettings & settings )
 {
     MR_TIMER
     assert( settings.subdivideParts > 1 );
-    const auto sz = std::max( 2, settings.subdivideParts );
+    const auto sz = settings.subdivideParts;
+    assert( !settings.partFaces || settings.partFaces->size() == sz );
 
     DecimateResult res;
 
@@ -818,29 +846,25 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
 
     struct alignas(64) Parts
     {
-        FaceBitSet faces;
+        /// region faces of the subdivision part
+        FaceBitSet region;
+
+        /// vertices to be fixed during subdivision of individual parts
         VertBitSet bdVerts;
+
         DecimateResult decimRes;
     };
     std::vector<Parts> parts( sz );
-    // parallel threads shall be able to safely modify settings.region faces
-    const auto facesPerPart = ( mesh.topology.faceSize() / ( sz * FaceBitSet::bits_per_block ) ) * FaceBitSet::bits_per_block;
 
     // determine faces for each part
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, sz ), [&]( const tbb::blocked_range<size_t>& range )
+    ParallelFor( parts, [&]( size_t i )
     {
-        for ( size_t i = range.begin(); i < range.end(); ++i )
-        {
-            const auto fromFace = i * facesPerPart;
-            const auto toFace = ( i + 1 ) < sz ? ( i + 1 ) * facesPerPart : mesh.topology.faceSize();
-            FaceBitSet fs( toFace );
-            fs.set( FaceId{ fromFace }, toFace - fromFace, true );
-            fs &= mesh.topology.getValidFaces();
-            parts[i].faces = std::move( fs );
-            parts[i].bdVerts = getBoundaryVerts( mesh.topology, &parts[i].faces );
-        }
+        if ( settings.partFaces )
+            parts[i].region = std::move( (*settings.partFaces)[i] );
+        else
+            parts[i].region = getSubdividePart( mesh.topology.getValidFaces(), settings.subdivideParts, i );
     } );
-    if ( settings.progressCallback && !settings.progressCallback( 0.1f ) )
+    if ( settings.progressCallback && !settings.progressCallback( 0.03f ) )
         return res;
 
     // determine edges in between the parts
@@ -853,11 +877,34 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
             return;
         for ( size_t i = 0; i < sz; ++i )
         {
-            if ( parts[i].faces.test( l ) != parts[i].faces.test( r ) )
+            if ( parts[i].region.test( l ) != parts[i].region.test( r ) )
             {
                 stableEdges.set( ue );
                 break;
             }
+        }
+    } );
+    if ( settings.progressCallback && !settings.progressCallback( 0.07f ) )
+        return res;
+
+    // limit each part to region, find boundary vertices
+    ParallelFor( parts, [&]( size_t i )
+    {
+        auto & faces = parts[i].region;
+        if ( settings.touchBdVertices )
+        {
+            /// vertices on the boundary of subdivision,
+            /// if a vertex is only on hole's boundary or region's boundary but not on subdivision boundary, it is not here
+            parts[i].bdVerts = getRegionBoundaryVerts( mesh.topology, faces );
+            if ( settings.region )
+                faces &= *settings.region;
+        }
+        else
+        {
+            if ( settings.region )
+                faces &= *settings.region;
+            /// all boundary vertices of subdivision faces, including hole boundaries
+            parts[i].bdVerts = getBoundaryVerts( mesh.topology, &faces );
         }
     } );
     if ( settings.progressCallback && !settings.progressCallback( 0.14f ) )
@@ -902,28 +949,25 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
             DecimateSettings subSeqSettings = settings;
             subSeqSettings.maxDeletedVertices = settings.maxDeletedVertices / ( sz + 1 );
             subSeqSettings.maxDeletedFaces = settings.maxDeletedFaces / ( sz + 1 );
+            if ( settings.minFacesInPart > 0 )
+            {
+                int startFaces = (int)parts[i].region.count();
+                if ( startFaces > settings.minFacesInPart )
+                    subSeqSettings.maxDeletedFaces = std::min( subSeqSettings.maxDeletedFaces, startFaces - settings.minFacesInPart );
+                else
+                    subSeqSettings.maxDeletedFaces = 0;
+            }
             subSeqSettings.packMesh = false;
             subSeqSettings.vertForms = &mVertForms;
             subSeqSettings.touchBdVertices = false;
+            // after mesh.topology.stopUpdatingValids(), seq-subdivider cannot find bdVerts by itself
             subSeqSettings.bdVerts = &parts[i].bdVerts;
-            FaceBitSet myRegion = parts[i].faces;
-            if ( settings.region )
-            {
-                myRegion &= *settings.region;
-                for ( auto f : myRegion )
-                    settings.region->reset( f );
-            }
-            subSeqSettings.region = &myRegion;
+            subSeqSettings.region = &parts[i].region;
             if ( reportProgressFromThisThread )
                 subSeqSettings.progressCallback = [reportThreadProgress]( float p ) { return reportThreadProgress( p ); };
             else if ( settings.progressCallback )
                 subSeqSettings.progressCallback = [&cancelled]( float ) { return !cancelled.load( std::memory_order_relaxed ); };
             parts[i].decimRes = decimateMeshSerial( mesh, subSeqSettings );
-            if ( settings.region )
-            {
-                for ( auto f : myRegion )
-                    settings.region->set( f );
-            }
 
             if ( parts[i].decimRes.cancelled || !reportThreadProgress( 1 ) )
                 break;
@@ -931,16 +975,55 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         }
     } );
 
+    if ( settings.region )
+    {
+        // not ParallelFor to allow for subdivisions not aligned to BitSet's block boundaries
+        *settings.region = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, sz ), FaceBitSet{},
+            [&] ( const tbb::blocked_range<size_t> range, FaceBitSet cur )
+            {
+                for ( size_t i = range.begin(); i < range.end(); i++ )
+                    cur |= parts[i].region;
+                return cur;
+            },
+            [&] ( FaceBitSet a, const FaceBitSet& b )
+            {
+                a |= b;
+                return a;
+            } );
+    }
+
     // restore valids computation before return even if the operation was canceled
     mesh.topology.computeValidsFromEdges();
 
     if ( cancelled.load( std::memory_order_relaxed ) || ( settings.progressCallback && !settings.progressCallback( 0.9f ) ) )
         return res;
 
+    if ( settings.partFaces )
+    {
+        assert( !settings.packMesh ); // otherwise, returned partFaces will contain wrong distribution of faces
+        assert( !settings.decimateBetweenParts ); // otherwise, returned partFaces will contain some deleted faces, and some faces can actually be in-between original parts
+        for ( int i = 0; i < sz; ++i )
+            (*settings.partFaces)[i] = std::move( parts[i].region );
+    }
+
     DecimateSettings seqSettings = settings;
+    for ( const auto & submesh : parts )
+    {
+        seqSettings.maxDeletedFaces -= submesh.decimRes.facesDeleted;
+        seqSettings.maxDeletedVertices -= submesh.decimRes.vertsDeleted;
+    }
     seqSettings.vertForms = &mVertForms;
     seqSettings.progressCallback = subprogress( settings.progressCallback, 0.9f, 1.0f );
-    res = decimateMeshSerial( mesh, seqSettings );
+    if ( settings.decimateBetweenParts )
+    {
+        res = decimateMeshSerial( mesh, seqSettings );
+    }
+    else
+    {
+        optionalPackMesh( mesh, seqSettings );
+        res.cancelled = false;
+    }
+
     // update res from submesh decimations
     for ( const auto & submesh : parts )
     {
@@ -981,7 +1064,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
 
     SubdivideSettings subs;
     subs.maxEdgeLen = settings.targetEdgeLen;
-    subs.maxEdgeSplits = 10'000'000;
+    subs.maxEdgeSplits = settings.maxEdgeSplits;
     subs.maxAngleChangeAfterFlip = settings.maxAngleChangeAfterFlip;
     subs.smoothMode = settings.useCurvature;
     subs.region = settings.region;

@@ -83,21 +83,28 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
-    /// sets maxRenderingPoints from rendering discretization, each \param val -th point will be displayed on screen
-    /// \detail convenient way to set maxRenderingPoints
-    /// maxRenderingPoints is set so: validPointsCount / val
-    MRMESH_API void setRenderDiscretization( int val );
-
-    /// returns rendering discretization, each N-th point will be displayed on screen
-    /// \detail used for rendering
+    /// returns rendering discretization
+    /// display each `renderDiscretization`-th point only,
+    /// starting from 0 index, total number is \ref numRenderingValidPoints()
+    /// \detail defined by maximum rendered points number as:
+    /// \ref numValidPoints() / \ref getMaxRenderingPoints() (rounded up)
+    /// updated when setting `maxRenderingPoints` or changing the cloud (setting `DIRTY_FACE` flag)
     int getRenderDiscretization() const { return renderDiscretization_; }
+
+    /// returns count of valid points that will be rendered
+    size_t numRenderingValidPoints() const;
+
+    /// default value for maximum rendered points number
+    static constexpr int MaxRenderingPointsDefault = 1'000'000;
+    /// recommended value for maximum rendered points number to disable discretization
+    static constexpr int MaxRenderingPointsUnlimited = std::numeric_limits<int>::max();
 
     /// returns maximal number of points that will be rendered
     /// if actual count of valid points is greater then the points will be sampled
     MRMESH_API int getMaxRenderingPoints() const { return maxRenderingPoints_; }
 
     /// sets maximal number of points that will be rendered
-    /// INT_MAX means lack of limit
+    /// \sa \ref getRenderDiscretization, \ref MaxRenderingPointsDefault, \ref MaxRenderingPointsUnlimited
     MRMESH_API void setMaxRenderingPoints( int val );
 
     /// returns file extension used to serialize the points
@@ -150,7 +157,7 @@ protected:
     /// set all visualize properties masks
     MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;
 
-    int maxRenderingPoints_ = 1'000'000;
+    int maxRenderingPoints_ = MaxRenderingPointsDefault;
 
 private:
 
@@ -160,7 +167,7 @@ private:
     /// set default scene-related properties
     void setDefaultSceneProperties_();
 
-    // update renderDiscretization_ as numValidPoints_ / maxRenderingPoints_
+    // update renderDiscretization_ as numValidPoints_ / maxRenderingPoints_ (rounded up)
     void updateRenderDiscretization_();
 
     int renderDiscretization_ = 1; // auxiliary parameter to avoid recalculation in every frame

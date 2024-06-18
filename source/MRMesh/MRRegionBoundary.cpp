@@ -6,6 +6,7 @@
 #include "MRphmap.h"
 #include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
+#include <algorithm>
 // test
 #include "MRMesh.h"
 #include "MRMakeSphereMesh.h"
@@ -99,11 +100,18 @@ std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const FaceBitSet * region /*
 
     auto bds = findLeftBoundary( mesh.topology, region );
     UndirectedEdgeBitSet uset( mesh.topology.undirectedEdgeSize() );
-    for ( const auto & bd : bds )
+    std::vector<EdgeLoop> filteredBds;
+    filteredBds.reserve( bds.size() );
+    for ( auto & bd : bds )
+    {
+        if ( std::all_of( bd.begin(), bd.end(), [&]( EdgeId e ) { return !mesh.topology.right( e ); } ) )
+            continue; // delete boundary loops not having any single triangle outside of region
         for ( auto e : bd )
             uset.set( e );
+        filteredBds.push_back( std::move( bd ) );
+    }
     mesh.deleteFaces( mesh.topology.getFaceIds( region ), &uset );
-    return bds;
+    return filteredBds;
 }
 
 std::vector<EdgeLoop> findRightBoundary( const MeshTopology& topology, const FaceBitSet* region /*= nullptr */ )

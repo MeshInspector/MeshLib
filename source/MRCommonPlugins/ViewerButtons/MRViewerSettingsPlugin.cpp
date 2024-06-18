@@ -380,7 +380,7 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
         SceneSettings::set( SceneSettings::FloatType::AmbientCoefSelectedObj, coef );
     }
 
-    UI::setTooltipIfHovered( "Ambient multiplication coefficient for ambientStrength for selected objects", menuScaling );
+    UI::setTooltipIfHovered( "Ambient light brightness multiplication factor for selected objects", menuScaling );
 
     if ( viewer->experimentalFeatures &&
         RibbonButtonDrawer::CustomCollapsingHeader( "Clipping Plane" ) )

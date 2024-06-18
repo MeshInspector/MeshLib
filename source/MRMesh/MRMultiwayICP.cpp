@@ -422,13 +422,38 @@ float MultiwayICP::getMeanSqDistToPlane() const
     return numSum.rootMeanSqF();
 }
 
+size_t MultiwayICP::getNumSamples() const
+{
+    size_t num = 0;
+    for ( ICPLayer l( 0 ); l < pairsGridPerLayer_.size(); ++l )
+    {
+        const auto& pairs = pairsGridPerLayer_[l];
+        // it is deterministic to reduce integers without parallel_deterministic_reduce
+        num += tbb::parallel_reduce( tbb::blocked_range( size_t( 0 ), pairs.size() * pairs.size() ), size_t( 0 ),
+        [&] ( const auto& range, size_t curr )
+        {
+            for ( size_t r = range.begin(); r < range.end(); ++r )
+            {
+                size_t i = r % pairs.size();
+                size_t j = r / pairs.size();
+                if ( i == j )
+                    continue;
+                curr += MR::getNumSamples( pairs[ICPElementId( i )][ICPElementId( j )] );
+            }
+            return curr;
+        }, [] ( auto a, auto b ) { return a + b; } );
+    }
+    return num;
+}
+
 size_t MultiwayICP::getNumActivePairs() const
 {
     size_t num = 0;
     for ( ICPLayer l( 0 ); l < pairsGridPerLayer_.size(); ++l )
     {
         const auto& pairs = pairsGridPerLayer_[l];
-        num += tbb::parallel_deterministic_reduce( tbb::blocked_range( size_t( 0 ), pairs.size() * pairs.size() ), size_t( 0 ),
+        // it is deterministic to reduce integers without parallel_deterministic_reduce
+        num += tbb::parallel_reduce( tbb::blocked_range( size_t( 0 ), pairs.size() * pairs.size() ), size_t( 0 ),
         [&] ( const auto& range, size_t curr )
         {
             for ( size_t r = range.begin(); r < range.end(); ++r )

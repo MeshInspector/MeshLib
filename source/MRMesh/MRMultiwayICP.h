@@ -104,6 +104,9 @@ public:
     /// computes root-mean-square deviation from points to target planes
     [[nodiscard]] MRMESH_API float getMeanSqDistToPlane() const;
 
+    /// computes the number of samples able to form pairs
+    [[nodiscard]] MRMESH_API size_t getNumSamples() const;
+
     /// computes the number of active point pairs
     [[nodiscard]] MRMESH_API size_t getNumActivePairs() const;
 

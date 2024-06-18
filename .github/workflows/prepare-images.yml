@@ -106,7 +106,7 @@ jobs:
           echo ${{github.repository}}
           MATRIX=" \
           {\"include\":[ \
-          {\"dockerfile\":\"ubuntu20Dockerfile\",   \"image\":\"ubuntu\",         \"os\":\"ubuntu-latest\"}, \
+          {\"dockerfile\":\"ubuntu20Dockerfile\",   \"image\":\"ubuntu20\",         \"os\":\"ubuntu-latest\"}, \
           {\"dockerfile\":\"ubuntu22Dockerfile\",   \"image\":\"ubuntu22\",       \"os\":\"ubuntu-latest\"}, \
           {\"dockerfile\":\"ubuntu24Dockerfile\",   \"image\":\"ubuntu24\",       \"os\":\"ubuntu-latest\"}, \
           {\"dockerfile\":\"ubuntu20Dockerfile\",   \"image\":\"ubuntu-arm64\",   \"os\":[\"self-hosted\", \"linux-arm64\"]}, \

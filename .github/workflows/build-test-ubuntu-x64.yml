@@ -22,7 +22,7 @@ on:
         type: boolean
 
 jobs:
-  ubuntu22-build-test:
+  ubuntu-x64-build-test:
     timeout-minutes: 40
     runs-on: ubuntu-latest
     #runs-on: [self-hosted, x64, docker-ready, build]
@@ -32,10 +32,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:    [ ubuntu22, ubuntu24 ]
+        os:    [ ubuntu20, ubuntu22, ubuntu24 ]
         config:   [ Debug, Release ]
         compiler: [ Clang, GCC ]
-        #compiler: [ Clang 14, GCC 12 ]
         full_config_build:
           - ${{fromJSON(inputs.full_config_build)}}
         exclude:
@@ -52,6 +51,18 @@ jobs:
           - os: ubuntu24
             config: Debug
         include:
+          - os: ubuntu20
+            compiler: Clang
+            cxx-compiler: /usr/bin/clang++-11
+            c-compiler: /usr/bin/clang-11
+            use-cpp-23: "OFF"
+            build_mrcuda: "ON"
+          - os: ubuntu20
+            compiler: GCC
+            cxx-compiler: /usr/bin/g++-10
+            c-compiler: /usr/bin/gcc-10
+            use-cpp-23: "OFF"
+            build_mrcuda: "ON"
           - os: ubuntu22
             compiler: Clang
             cxx-compiler: /usr/bin/clang++-14
@@ -113,6 +124,10 @@ jobs:
           MR_VERSION: ${{ inputs.app_version }}
           MR_USE_CPP_23: ${{ matrix.use-cpp-23 }}
           MESHLIB_BUILD_MRCUDA: ${{ matrix.build_mrcuda }}
+          # options to be passed to cmake
+          MR_CMAKE_OPTIONS: >
+                      -DMR_USE_CPP_23=${{ matrix.use-cpp-23 }}
+                      -DMESHLIB_BUILD_MRCUDA=${{ matrix.build_mrcuda }}
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
 
@@ -165,10 +180,10 @@ jobs:
 
       - name: Copy test artifacts to S3
         if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}
-        run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/ubuntu22/${{matrix.config}}/${{matrix.compiler}}' --recursive
+        run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/${{matrix.os}}/${{matrix.config}}/${{matrix.compiler}}' --recursive
 
       - name: Create Deb
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang' && matrix.config == 'Release' && matrix.os == 'ubuntu22'}}
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang' && matrix.config == 'Release'}}
         env:
           MESHLIB_BUILD_RELEASE: ON
           MESHLIB_BUILD_DEBUG: OFF
@@ -177,7 +192,7 @@ jobs:
           mv ./distr/meshlib-dev.deb meshlib-${{matrix.os}}-dev.deb
 
       - name: Upload Ubuntu Developer Distribution
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang' && matrix.config == 'Release' && matrix.os == 'ubuntu22'}}
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang' && matrix.config == 'Release'}}
         uses: actions/upload-artifact@v4
         with:
           name: Distributives_${{matrix.os}}-x86

@@ -46,8 +46,6 @@
 #include "MRViewer/MRLambdaRibbonItem.h"
 #include "MRPch/MRWasm.h"
 
-#include <regex>
-
 #ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
 #endif
@@ -703,32 +701,6 @@ SaveSceneMenuItem::SaveSceneMenuItem() :
 bool SaveSceneMenuItem::action()
 {
     auto savePath = SceneRoot::getScenePath();
-    if ( std::filesystem::exists( savePath ) )
-    {
-        const std::regex pattern( R"(.*(?:| \([0-9]+\))$)" );
-
-        auto name = savePath.stem().string();
-        if ( std::regex_match( name, pattern ) )
-        {
-            auto endBracPos = name.rfind( ')' );
-            if ( endBracPos != int( name.length() ) - 1 )
-            {
-                name += " (2)";
-            }
-            else
-            {
-                auto startNumPos = name.rfind( '(' ) + 1;
-                auto numStr = name.substr( startNumPos, endBracPos - startNumPos );
-                int num = std::atoi( numStr.c_str() );
-                name = name.substr( 0, startNumPos - 1 ) + "(" + std::to_string( num + 1 ) + ")";
-            }
-        }
-        else
-        {
-            name += " (1)";
-        }
-        savePath.replace_filename( name + savePath.extension().string() );
-    }
     if ( savePath.empty() )
         savePath = saveFileDialog( { {}, {}, SceneFileWriteFilters } );
     if ( !savePath.empty() )

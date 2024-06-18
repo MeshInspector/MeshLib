@@ -87,7 +87,7 @@ jobs:
     secrets: inherit
 
   update-win-version:
-    #if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     needs:
       - windows-build-test
       - versioning-and-release-url

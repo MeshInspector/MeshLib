@@ -370,7 +370,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     if ( cfg.hasJsonValue( cAmbientCoefSelectedObj ) )
     {
         const auto& ambientCoefSelectedObj = cfg.getJsonValue( cAmbientCoefSelectedObj );
-        SceneSettings::set( SceneSettings::FloatType::AmbientCoefSelectedObj, (float)ambientCoefSelectedObj.asDouble() );
+        SceneSettings::set( SceneSettings::FloatType::AmbientCoefSelectedObj, ambientCoefSelectedObj.asFloat() );
     }
 }
 

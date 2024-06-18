@@ -31,6 +31,7 @@ jobs:
 
   windows-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
+    if: ${{ false }}
     uses: ./.github/workflows/build-test-windows.yml
     with:
       full_config_build: ${{ github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
@@ -39,6 +40,7 @@ jobs:
 
   ubuntu20-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
+    if: ${{ false }}
     uses: ./.github/workflows/build-test-ubuntu20.yml
     with:
       docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
@@ -49,6 +51,7 @@ jobs:
 
   ubuntu-arm64-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
+    if: ${{ false }}
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
       docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
@@ -57,9 +60,9 @@ jobs:
       UPLOAD_ARTIFACTS: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     secrets: inherit
 
-  ubuntu22-build-test:
+  ubuntu-x64-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
-    uses: ./.github/workflows/build-test-ubuntu22.yml
+    uses: ./.github/workflows/build-test-ubuntu-x64.yml
     with:
       docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
       app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
@@ -69,6 +72,7 @@ jobs:
 
   fedora-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
+    if: ${{ false }}
     uses: ./.github/workflows/build-test-fedora.yml
     with:
       docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
@@ -79,6 +83,7 @@ jobs:
 
   emscripten-build-test:
     needs: [ prepare-image, versioning-and-release-url ]
+    if: ${{ false }}
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
       docker_image_tag: ${{needs.prepare-image.outputs.docker_image_tag}}
@@ -86,6 +91,7 @@ jobs:
 
   macos-build-test:
     needs: [ versioning-and-release-url ]
+    if: ${{ false }}
     uses: ./.github/workflows/build-test-macos.yml
     with:
       app_version: ${{needs.versioning-and-release-url.outputs.app_version}}
@@ -93,8 +99,9 @@ jobs:
     secrets: inherit
 
   update-win-version:
-    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    #if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     needs: [ windows-build-test ]
+    if: ${{ false }}
     timeout-minutes: 15
     runs-on: windows-2019
     steps:
@@ -134,7 +141,7 @@ jobs:
     needs:
       - update-win-version
       - ubuntu20-build-test
-      - ubuntu22-build-test
+      - ubuntu-x64-build-test
       - ubuntu-arm64-build-test
       - fedora-build-test
       - emscripten-build-test

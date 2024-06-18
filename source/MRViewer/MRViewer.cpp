@@ -71,6 +71,8 @@
 #include "MRSwapRootAction.h"
 #include "MRMesh/MRSceneLoad.h"
 
+#include <regex>
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten/html5.h>
 #include "MRMesh/MRConfig.h"
@@ -2469,13 +2471,46 @@ bool Viewer::globalHistoryRedo()
     return globalHistoryStore_ && globalHistoryStore_->redo();
 }
 
+std::filesystem::path createNewFilePath( const std::filesystem::path& savePath )
+{
+    const std::regex pattern( R"(.*(?:| \([0-9]+\))$)" );
+
+    auto name = savePath.stem().string();
+    if ( std::regex_match( name, pattern ) )
+    {
+        auto endBracPos = name.rfind( ')' );
+        if ( endBracPos != int( name.length() ) - 1 )
+        {
+            name += " (2)";
+        }
+        else
+        {
+            auto startNumPos = name.rfind( '(' ) + 1;
+            auto numStr = name.substr( startNumPos, endBracPos - startNumPos );
+            int num = std::atoi( numStr.c_str() );
+            name = name.substr( 0, startNumPos - 1 ) + "(" + std::to_string( num + 1 ) + ")";
+        }
+    }
+    else
+    {
+        name += " (1)";
+    }
+    std::filesystem::path newPath = savePath;
+    newPath.replace_filename( name + savePath.extension().string() );
+    return newPath;
+}
+
 void Viewer::onSceneSaved( const std::filesystem::path& savePath, bool storeInRecent )
 {
-    if ( !savePath.empty() && storeInRecent )
-        recentFilesStore().storeFile( savePath );
+    auto newPath = savePath;
+    if ( savePath.extension().string() != "mru" && std::filesystem::exists( savePath ) )
+        newPath = createNewFilePath( savePath );
 
-    if ( !SceneFileFilters.empty() && savePath.extension() == SceneFileFilters.front().extensions.substr( 1 ) )
-        SceneRoot::setScenePath(savePath);
+    if ( !newPath.empty() && storeInRecent )
+        recentFilesStore().storeFile( newPath );
+
+    if ( !SceneFileFilters.empty() && newPath.extension() == SceneFileFilters.front().extensions.substr( 1 ) )
+        SceneRoot::setScenePath( newPath );
     else
         SceneRoot::setScenePath("");
 

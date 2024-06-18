@@ -1,4 +1,4 @@
-name: Build and test Ubuntu22
+name: Build and test Ubuntu
 
 on:
   workflow_call:
@@ -26,31 +26,45 @@ jobs:
     timeout-minutes: 40
     runs-on: [self-hosted, x64, docker-ready, build]
     container:
-      image: meshlib/meshlib-ubuntu22:${{inputs.docker_image_tag}}
+      image: meshlib/meshlib-${{matrix.os}}:${{inputs.docker_image_tag}}
     strategy:
       fail-fast: false
       matrix:
-        config: [ Debug, Release ]
-        compiler: [ Clang 14, GCC 12 ]
+        os:    [ ubuntu22, ubuntu24 ]
+        config:   [ Debug, Release ]
+        compiler: [ Clang, GCC ]
+        #compiler: [ Clang 14, GCC 12 ]
         full_config_build:
           - ${{fromJSON(inputs.full_config_build)}}
         exclude:
-          # Do not run Debug Clang 14 build on every commit (but only once a day)
+          # Do not run Debug Clang build on every commit (but only once a day)
           - full_config_build: false
             config: Debug
-            compiler: Clang 14
-          # Do not run Release GCC 12 build on every commit (but only once a day)
+            compiler: Clang
+          # Do not run Release GCC build on every commit (but only once a day)
           - full_config_build: false
             config: Release
-            compiler: GCC 12
+            compiler: GCC
         include:
-          - compiler: Clang 14
+          - os: ubuntu22
+            compiler: Clang
             cxx-compiler: /usr/bin/clang++-14
             c-compiler: /usr/bin/clang-14
             use-cpp-23: "OFF"
-          - compiler: GCC 12
+          - os: ubuntu22
+            compiler: GCC
             cxx-compiler: /usr/bin/g++-12
             c-compiler: /usr/bin/gcc-12
+            use-cpp-23: "ON"
+          - os: ubuntu24
+            compiler: Clang
+            cxx-compiler: /usr/bin/clang++-18
+            c-compiler: /usr/bin/clang-18
+            use-cpp-23: "OFF"
+          - os: ubuntu24
+            compiler: GCC
+            cxx-compiler: /usr/bin/g++-13
+            c-compiler: /usr/bin/gcc-13
             use-cpp-23: "ON"
     permissions:
       id-token: write # This is required for requesting the JWT
@@ -80,13 +94,13 @@ jobs:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
-          # not realy needed
-          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
           MR_USE_CPP_23: ${{ matrix.use-cpp-23 }}
+          # not realy needed
+          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
 
       - name: Collect Timings
-        run: ./scripts/devops/collect_timing_logs.sh ubuntu22 ${{matrix.config}} "${{matrix.compiler}}"
+        run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.compiler}}"
 
       #Save timing in artifact
       - name: Upload Timings
@@ -137,18 +151,18 @@ jobs:
         run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/ubuntu22/${{matrix.config}}/${{matrix.compiler}}' --recursive
 
       - name: Create Deb
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang 14' && matrix.config == 'Release'}}
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang' && matrix.config == 'Release' && matrix.os == 'ubuntu22'}}
         env:
           MESHLIB_BUILD_RELEASE: ON
           MESHLIB_BUILD_DEBUG: OFF
         run: |
           ./scripts/distribution.sh ${{inputs.app_version}}
-          mv ./distr/meshlib-dev.deb meshlib-ubuntu22-dev.deb
+          mv ./distr/meshlib-dev.deb meshlib-${{matrix.os}}-dev.deb
 
       - name: Upload Ubuntu Developer Distribution
-        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang 14' && matrix.config == 'Release'}}
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang' && matrix.config == 'Release' && matrix.os == 'ubuntu22'}}
         uses: actions/upload-artifact@v4
         with:
-          name: Distributives_ubuntu22-x86
-          path: meshlib-ubuntu22-dev.deb
+          name: Distributives_${{matrix.os}}-x86
+          path: meshlib-${{matrix.os}}-dev.deb
           retention-days: 1

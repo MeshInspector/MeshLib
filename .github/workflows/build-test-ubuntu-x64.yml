@@ -81,7 +81,7 @@ jobs:
             use-cpp-23: "OFF"
             build_mrcuda: "OFF"
           # - os: ubuntu24
-           # compiler: GCC
+            # compiler: GCC
             # cxx-compiler: /usr/bin/g++-13
             # c-compiler: /usr/bin/gcc-13
             # use-cpp-23: "ON"

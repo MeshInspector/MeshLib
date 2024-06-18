@@ -47,27 +47,35 @@ jobs:
           - full_config_build: false
             config: Release
             compiler: GCC
+          - os: ubuntu24
+            compiler: GCC
+          - os: ubuntu24
+            config: Debug
         include:
           - os: ubuntu22
             compiler: Clang
             cxx-compiler: /usr/bin/clang++-14
             c-compiler: /usr/bin/clang-14
             use-cpp-23: "OFF"
+            build_mrcuda: "ON"
           - os: ubuntu22
             compiler: GCC
             cxx-compiler: /usr/bin/g++-12
             c-compiler: /usr/bin/gcc-12
             use-cpp-23: "ON"
+            build_mrcuda: "ON"
           - os: ubuntu24
             compiler: Clang
             cxx-compiler: /usr/bin/clang++-18
             c-compiler: /usr/bin/clang-18
             use-cpp-23: "OFF"
-          - os: ubuntu24
-            compiler: GCC
-            cxx-compiler: /usr/bin/g++-13
-            c-compiler: /usr/bin/gcc-13
-            use-cpp-23: "ON"
+            build_mrcuda: "OFF"
+          # - os: ubuntu24
+           # compiler: GCC
+            # cxx-compiler: /usr/bin/g++-13
+            # c-compiler: /usr/bin/gcc-13
+            # use-cpp-23: "ON"
+            # build_mrcuda: "OFF"
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -104,6 +112,7 @@ jobs:
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
           MR_USE_CPP_23: ${{ matrix.use-cpp-23 }}
+          MESHLIB_BUILD_MRCUDA: ${{ matrix.build_mrcuda }}
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
 

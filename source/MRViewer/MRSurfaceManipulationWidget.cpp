@@ -173,6 +173,8 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             {
                 if ( bd.empty() )
                     continue;
+                // assert( isHoleBd( mesh.topology, bd ) ) can fail due to different distribution on loops
+                // so we check every edge of every loop
                 const auto len = calcPathLength( bd, mesh );
                 const auto avgLen = len / bd.size();
                 FillHoleNicelySettings settings
@@ -186,10 +188,12 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                     .edgeWeights = settings_.edgeWeights
                     // NOT .uvCoords = &uvs_, ...
                 };
-                auto patchFaces = fillHoleNicely( mesh, bd[0], settings );
-                // ... instead fill new vertices with no-selection UV:
-                uvs_.resizeWithReserve( mesh.points.size(), UVCoord{ 0, 1 } );
+                for ( auto e : bd )
+                    if ( !mesh.topology.left( e ) )
+                        fillHoleNicely( mesh, e, settings );
             }
+            // ... instead fill new vertices with no-selection UV:
+            uvs_.resizeWithReserve( mesh.points.size(), UVCoord{ 0, 1 } );
             obj_->setDirtyFlags( DIRTY_ALL );
 
             // otherwise whole surface becomes red after patch and before mouse move

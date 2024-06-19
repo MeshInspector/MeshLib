@@ -183,10 +183,12 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                         .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong
                     },
                     .maxEdgeLen = 2 * (float)avgLen,
-                    .edgeWeights = settings_.edgeWeights,
-                    .uvCoords = &uvs_
+                    .edgeWeights = settings_.edgeWeights
+                    // NOT .uvCoords = &uvs_, ...
                 };
                 auto patchFaces = fillHoleNicely( mesh, bd[0], settings );
+                // ... instead fill new vertices with no-selection UV:
+                uvs_.resizeWithReserve( mesh.points.size(), UVCoord{ 0, 1 } );
             }
             obj_->setDirtyFlags( DIRTY_ALL );
 

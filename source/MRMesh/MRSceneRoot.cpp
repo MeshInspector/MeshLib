@@ -21,31 +21,36 @@ std::shared_ptr<SceneRootObject>& SceneRoot::getSharedPtr()
 
 std::filesystem::path createNewFilePath( const std::filesystem::path& savePath )
 {
-    const std::regex pattern( R"(.*(?:| \([0-9]+\))$)" );
+    const std::regex pattern( R"(.*( \([0-9]+\))$)" );
 
-    auto name = savePath.stem().string();
-    if ( std::regex_match( name, pattern ) )
-    {
-        auto endBracPos = name.rfind( ')' );
-        auto startNumPos = name.rfind( '(' ) + 1;
-        auto numStr = name.substr( startNumPos, endBracPos - startNumPos );
-        int num = std::atoi( numStr.c_str() );
-        name = name.substr( 0, startNumPos - 1 ) + "(" + std::to_string( num + 1 ) + ")";
-    }
-    else
-    {
-        name += " (1)";
-    }
     std::filesystem::path newPath = savePath;
-    newPath.replace_filename( name + savePath.extension().string() );
+
+    while ( std::filesystem::exists( newPath ) )
+    {
+        auto name = newPath.stem().string();
+        if ( std::regex_match( name, pattern ) )
+        {
+            auto endBracPos = name.rfind( ')' );
+            auto startNumPos = name.rfind( '(' ) + 1;
+            auto numStr = name.substr( startNumPos, endBracPos - startNumPos );
+            int num = std::atoi( numStr.c_str() );
+            name = name.substr( 0, startNumPos - 1 ) + "(" + std::to_string( num + 1 ) + ")";
+        }
+        else
+        {
+            name += " (1)";
+        }
+        newPath.replace_filename( name + savePath.extension().string() );
+    }
     return newPath;
 }
 
 void SceneRoot::setScenePath( const std::filesystem::path& scenePath )
 {
     auto newPath = scenePath;
-    if ( scenePath.extension().string() != "mru" && std::filesystem::exists( scenePath ) )
-        newPath = createNewFilePath( scenePath );
+    newPath.replace_extension("mru");
+    if ( scenePath.extension().string() != "mru" && std::filesystem::exists( newPath ) )
+        newPath = createNewFilePath( newPath );
     instace_().scenePath_ = newPath;
 }
 

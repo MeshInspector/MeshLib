@@ -98,7 +98,7 @@ std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const FaceBitSet * region /*
 {
     MR_TIMER
 
-    auto bds = findLeftBoundary( mesh.topology, region );
+    auto bds = splitOnSimpleLoops( mesh.topology, findLeftBoundary( mesh.topology, region ) );
     UndirectedEdgeBitSet uset( mesh.topology.undirectedEdgeSize() );
     std::vector<EdgeLoop> filteredBds;
     filteredBds.reserve( bds.size() );

@@ -1,4 +1,5 @@
 #include "ImGuiHelpers.h"
+#include "MRViewer/MRUIRectAllocator.h"
 #include "MRViewer/MRUITestEngine.h"
 #include "imgui_internal.h"
 #include "MRMesh/MRBitSet.h"
@@ -19,6 +20,7 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRConfig.h"
 #include "MRMesh/MRObjectMesh.h"
+#include "MRViewer/MRImGuiVectorOperators.h"
 #include "MRUIStyle.h"
 
 namespace ImGui
@@ -454,6 +456,11 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
     ImGuiWindow* window = FindWindowByName( label );
     auto menu = MR::getViewerInstance().getMenuPlugin();
+
+    // This is only set if `window` is null (when the window is first opened).
+    // Use this with `params.pivot`.
+    ImVec2 initialWindowPos;
+
     if ( !window )
     {
         auto ribMenu = std::dynamic_pointer_cast<MR::RibbonMenu>( menu );
@@ -475,35 +482,62 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
             auto json = config.getJsonValue( "DialogPositions" )[label];
             if ( json.empty() )
             {
-                SetNextWindowPos( ImVec2( xPos, yPos ), ImGuiCond_FirstUseEver, params.pivot );
+                initialWindowPos = ImVec2( xPos, yPos );
             }
             else
             {
-                SetNextWindowPos( ImVec2( json["x"].asFloat(), json["y"].asFloat() ), ImGuiCond_FirstUseEver, params.pivot );
+                initialWindowPos = ImVec2( json["x"].asFloat(), json["y"].asFloat() );
             }
         }
         else
         {
-            SetNextWindowPos( ImVec2( xPos, yPos ), ImGuiCond_FirstUseEver, params.pivot );
+            initialWindowPos = ImVec2( xPos, yPos );
         }
     }
 
+    ImVec2 windowSize;
     if ( params.changedSize )
     {
         if ( params.collapsed && *params.collapsed )
-            SetNextWindowSize( { params.changedSize->x, height }, ImGuiCond_Always );
+            windowSize = ImVec2( params.changedSize->x, height );
         else
-            SetNextWindowSize( *params.changedSize, ImGuiCond_Always );
+            windowSize = *params.changedSize;
     }
     else
     {
-        SetNextWindowSize( ImVec2( params.width, height ), ImGuiCond_Appearing );
+        windowSize = ImVec2( params.width, height );
         auto pHeight = params.height;
         if ( pHeight <= 0.0f )
             pHeight = -1.0f;
         pHeight = std::min( pHeight, GetMainViewport()->Size.y - style.DisplaySafeAreaPadding.y * 2.0f );
         SetNextWindowSizeConstraints( ImVec2( params.width, pHeight ), ImVec2( params.width, pHeight ) );
     }
+
+    // Adjust initial window location to remove overlap with existing windows.
+    // Using `if ( window )` to add a single-frame delay, to have the size already computed.
+    bool mustUpdatePos = false;
+    if ( window )
+    {
+        std::size_t frameDelay = 2;
+
+        ImVec2 fixedWindowSize = window ? window->Size : windowSize;
+        auto result = UI::getDefaultRectAllocator().makeRect(
+            label,
+            [&]
+            {
+                return Box2f::fromMinAndSize( window ? window->Pos : initialWindowPos - fixedWindowSize * params.pivot, fixedWindowSize );
+            },
+            // Don't want to think about when to update, it's easier to update every frame.
+            UI::RectAllocator::MakeRectFlags::forceUpdate,
+            // An aribtrary frame count.
+            frameDelay
+        );
+        initialWindowPos = ImVec2( result.rect.min ) + fixedWindowSize * params.pivot;
+        mustUpdatePos = result.age + 1 == frameDelay;
+    }
+
+    ImGui::SetNextWindowPos( initialWindowPos, mustUpdatePos ? ImGuiCond_Always : ImGuiCond_FirstUseEver, params.pivot );
+    ImGui::SetNextWindowSize( windowSize, params.changedSize ? ImGuiCond_Always : ImGuiCond_Appearing );
 
     auto context = ImGui::GetCurrentContext();
     auto flags = params.flags;

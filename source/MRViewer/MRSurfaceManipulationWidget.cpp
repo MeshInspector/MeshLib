@@ -173,8 +173,8 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             {
                 if ( bd.empty() )
                     continue;
-                // assert( isHoleBd( mesh.topology, bd ) ) can fail due to different distribution on loops
-                // so we check every edge of every loop
+                // assert( isHoleBd( mesh.topology, bd ) ) can probably fail due to different construction of loops,
+                // so we check every edge of every loop below
                 const auto len = calcPathLength( bd, mesh );
                 const auto avgLen = len / bd.size();
                 FillHoleNicelySettings settings

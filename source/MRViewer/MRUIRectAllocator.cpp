@@ -10,7 +10,12 @@ namespace MR::UI
 
 RectAllocator::RectAllocator() {}
 
-RectAllocator::FindFreeRectResult RectAllocator::findFreeRect( Box2f preferredRect, Box2f preferredBounds, FindPotentiallyOverlappingRects findOverlaps )
+RectAllocator::FindFreeRectResult RectAllocator::findFreeRect(
+    Box2f preferredRect,
+    Box2f preferredBounds,
+    FindPotentiallyOverlappingRects findOverlaps,
+    ImVec2 axisWeights
+)
 {
     FindFreeRectResult bestRect{ .rect = preferredRect, .ok = false };
 
@@ -69,10 +74,10 @@ RectAllocator::FindFreeRectResult RectAllocator::findFreeRect( Box2f preferredRe
                 { Vector2f( thisRect.min.x, otherRect.min.y - thisRect.size().y ), Vector2f( thisRect.max.x, otherRect.min.y ) }, // -Y
             };
             float deltaCosts[4] = {
-                otherRect.max.x - thisRect.min.x,
-                otherRect.max.y - thisRect.min.y,
-                thisRect.max.x - otherRect.min.x,
-                thisRect.max.y - otherRect.min.y,
+                ( otherRect.max.x - thisRect.min.x ) * axisWeights[0],
+                ( otherRect.max.y - thisRect.min.y ) * axisWeights[1],
+                ( thisRect.max.x - otherRect.min.x ) * axisWeights[0],
+                ( thisRect.max.y - otherRect.min.y ) * axisWeights[1],
             };
 
             for ( int i = 0; i < 4; i++ )
@@ -168,7 +173,7 @@ void WindowRectAllocator::setNextWindowPos( const char* expectedWindowName, ImVe
                     continue; // Skip the target window itself.
                 func( win->Name, Box2f::fromMinAndSize( win->Pos, win->Size ) );
             }
-        } );
+        }, ImVec2( 5, 1 ) );
 
         defaultPos = result.rect.min;
         cond = ImGuiCond_Always;

@@ -29,7 +29,15 @@ public:
 
     // Finds a free rectangle of the specified size, as close as possible to the specified position.
     // On failure, returns `.ok == false` and returns the input rect unchanged.
-    [[nodiscard]] MRVIEWER_API FindFreeRectResult findFreeRect( Box2f preferredRect, Box2f preferredBounds, FindPotentiallyOverlappingRects findOverlaps );
+    [[nodiscard]] MRVIEWER_API FindFreeRectResult findFreeRect(
+        Box2f preferredRect,
+        // The outer bounds that we try to fit the rect into.
+        Box2f preferredBounds,
+        // Given any rect, this must return all existing rects potentially overlapping with it.
+        FindPotentiallyOverlappingRects findOverlaps,
+        // This sets the preference for X and Y axes. Larger number = less likely to shift over that axis.
+        ImVec2 axisWeights = ImVec2( 1, 1 )
+    );
 
     // Checks if two rects overlap.
     // We can't use `.intersects()` here because we want `.max` to be exclusive, while `.intersects()` treats both bounds as inclusive.

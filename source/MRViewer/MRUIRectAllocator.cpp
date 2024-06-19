@@ -127,6 +127,23 @@ RectAllocator::FindFreeRectResult RectAllocator::findFreeRect(
 
 void WindowRectAllocator::findFreeNextWindowPos( const char* expectedWindowName, ImVec2 defaultPos, ImGuiCond cond, ImVec2 pivot )
 {
+    // Once per frame, update the window list.
+    if ( lastFrameCount != ImGui::GetFrameCount() )
+    {
+        lastFrameCount = ImGui::GetFrameCount();
+
+        for ( auto it = windows.begin(); it != windows.end(); )
+        {
+            if ( !std::exchange( it->second.visitedThisFrame, false ) )
+            {
+                it = windows.erase( it );
+                continue;
+            }
+
+            ++it;
+        }
+    }
+
     bool findLocation = false;
     ImGuiWindow* window = nullptr;
 
@@ -182,20 +199,6 @@ void WindowRectAllocator::findFreeNextWindowPos( const char* expectedWindowName,
     }
 
     ImGui::SetNextWindowPos( defaultPos, cond, pivot );
-}
-
-void WindowRectAllocator::preTick()
-{
-    for ( auto it = windows.begin(); it != windows.end(); )
-    {
-        if ( !std::exchange( it->second.visitedThisFrame, false ) )
-        {
-            it = windows.erase( it );
-            continue;
-        }
-
-        ++it;
-    }
 }
 
 WindowRectAllocator& getDefaultWindowRectAllocator()

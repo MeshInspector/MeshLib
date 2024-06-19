@@ -8,7 +8,6 @@
 #include "ImGuiHelpers.h"
 #include "MRImGuiImage.h"
 #include "MRFileDialog.h"
-#include "MRViewer/MRUIRectAllocator.h"
 #include "MRViewer/MRUITestEngine.h"
 #include "MRViewerSettingsManager.h"
 #include "MRUIStyle.h"
@@ -91,8 +90,6 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     // Draw additional windows
     callback_draw_custom_window = [&] ()
     {
-        UI::getDefaultWindowRectAllocator().preTick();
-
         drawTopPanel_();
 
         drawActiveBlockingDialog_();

@@ -3,10 +3,10 @@
 #include "exports.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRHash.h"
+#include "MRMesh/MRphmap.h"
 #include "MRMesh/MRVector2.h"
 
 #include <imgui.h>
-#include <parallel_hashmap/phmap.h>
 
 namespace MR::UI
 {
@@ -75,10 +75,9 @@ public:
     // `cond` must not be `ImGuiCond_Always` (aka 0), in that case we just forward the arguments and don't try to find a rect.
     MRVIEWER_API void findFreeNextWindowPos( const char* expectedWindowName, ImVec2 defaultPos, ImGuiCond cond = ImGuiCond_Appearing, ImVec2 pivot = ImVec2() );
 
-    // Must be called once every frame.
-    MRVIEWER_API void preTick();
-
 private:
+    int lastFrameCount = -1;
+
     struct WindowEntry
     {
         bool visitedThisFrame = true;

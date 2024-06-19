@@ -91,7 +91,7 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     // Draw additional windows
     callback_draw_custom_window = [&] ()
     {
-        updateRectAllocator_();
+        UI::getDefaultWindowRectAllocator().preTick();
 
         drawTopPanel_();
 
@@ -2329,18 +2329,6 @@ void RibbonMenu::endTopPanel_()
 
     ImGui::PopStyleColor();
     ImGui::PopStyleVar( 3 );
-}
-
-void RibbonMenu::updateRectAllocator_()
-{
-    { // Tick the rect allocator.
-        Box2f bounds = getViewerInstance().getViewportsBounds();
-        Box2f boundsFixed = bounds;
-        boundsFixed.min.y = ImGui::GetIO().DisplaySize.y - boundsFixed.max.y;
-        boundsFixed.max.y = boundsFixed.min.y + bounds.size().y;
-
-        UI::getDefaultRectAllocator().preTick( boundsFixed );
-    }
 }
 
 void RibbonMenu::drawTopPanel_()

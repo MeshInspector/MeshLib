@@ -1,5 +1,4 @@
 #include "MRToolbar.h"
-#include "MRViewer/MRUIRectAllocator.h"
 #include "MRViewer/MRUITestEngine.h"
 #include "imgui.h"
 #include "MRRibbonConstants.h"
@@ -86,23 +85,15 @@ void Toolbar::drawToolbar()
     const float windowPosX = std::max( getViewerInstance().framebufferSize.x / 2.f - currentWidth_ / 2.f, sceneSize.x - 1.0f );
 
     const int currentTopPanelHeight = ribbonMenu_->getTopPanelCurrentHeight();
-
-    ImVec2 windowPos( windowPosX, float( currentTopPanelHeight ) * scaling_ - 1 );
-    ImVec2 windowSize( currentWidth_, cQuickAccessBarHeight * scaling_ );
-    ImGui::SetNextWindowPos( windowPos );
-    ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
-
-    (void)UI::getDefaultRectAllocator().makeRect( "MainToolbar", [&]{ return Box2f::fromMinAndSize( windowPos, windowSize ); },
-        // Don't want to think about when to update, it's easier to update every frame (hence `forceUpdate`).
-        UI::RectAllocator::MakeRectFlags::forceUpdate | UI::RectAllocator::MakeRectFlags::forceExactLocation
-    );
+    ImGui::SetNextWindowPos( ImVec2( windowPosX, float( currentTopPanelHeight ) * scaling_ - 1 ) );
+    ImGui::SetNextWindowSize( ImVec2( currentWidth_, cQuickAccessBarHeight * scaling_ ), ImGuiCond_Always );
 
     ImGui::PushStyleColor( ImGuiCol_WindowBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::QuickAccessBackground ).getUInt32() );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, windowPadding );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 1.0f );
     ImGui::Begin(
-        "QuickAccess", nullptr,
+        "QuickAccess##[rect_allocator_ignore]", nullptr,
         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoFocusOnAppearing
     );

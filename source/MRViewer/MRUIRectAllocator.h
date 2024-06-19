@@ -2,69 +2,43 @@
 
 #include "exports.h"
 #include "MRMesh/MRBox.h"
-#include "MRMesh/MRFlagOperators.h"
 #include "MRMesh/MRHash.h"
 #include "MRMesh/MRVector2.h"
 
+#include <imgui.h>
 #include <parallel_hashmap/phmap.h>
 
 namespace MR::UI
 {
 
+// A generic rect allocator.
 class RectAllocator
 {
 public:
     MRVIEWER_API RectAllocator();
 
-    enum class MakeRectFlags
-    {
-        // Call `getPreferredLocation()` and update the rect location, even if the rect already existed on the previous frame.
-        forceUpdate = 1 << 0,
-        // Don't try to find free space, use the exact rect specified (will return the input rect unchanged).
-        forceExactLocation = 1 << 1,
-    };
-    MR_MAKE_FLAG_OPERATORS_IN_CLASS(MakeRectFlags)
-
-    struct MakeRectResult
+    struct FindFreeRectResult
     {
         Box2f rect;
         bool ok = true; // False if no free space for this rect.
-        std::size_t age = 0; // This is incremented every frame while this rect exists. Initially 0.
         [[nodiscard]] explicit operator bool() const { return ok; }
     };
 
-    // Call this every frame to maintain a rectangle.
-    // `name` is a unique name. If you reuse it in the same frame, the existing rect will be overridden.
-    // `getPreferredLocation()` will be called once when adding the rect, to get its size and preferred position.
-    // The initial position will be choosen as a free position nearest to the preferred once, and then will stay unchanged.
-    // Returns the current rect position. If there's no free rect, returns `.ok = false` and the input rectangle.
-    [[nodiscard]] MRVIEWER_API MakeRectResult makeRect(
-        std::string_view name,
-        std::function<Box2f()> getPreferredLocation,
-        MakeRectFlags flags = {},
-        // If this is not zero and the rect has existed for at least this many frames, implicitly adds flag `forceExactLocation`.
-        std::size_t forceExactLocationIfOlderThan = 0
-    );
+    // Given an input rect, this function must find all POTENTIALLY overlapping rects ("overlapping" means according to `rectRectOverlap()`).
+    using FindPotentiallyOverlappingRects = std::function<void( Box2f target, std::function<void( const char* name, Box2f box )> overlaps )>;
 
-    // Call this every frame, preferably before adding all the rects.
-    // `bounds` are the preferred bounds into which to fit the rects.
-    MRVIEWER_API void preTick( Box2f bounds );
+    // Finds a free rectangle of the specified size, as close as possible to the specified position.
+    // On failure, returns `.ok == false` and returns the input rect unchanged.
+    [[nodiscard]] MRVIEWER_API FindFreeRectResult findFreeRect( Box2f preferredRect, Box2f preferredBounds, FindPotentiallyOverlappingRects findOverlaps );
 
-    // Visualize the rects for debugging, using `ImGui`.
-    MRVIEWER_API void debugVisualize();
+    // Checks if two rects overlap.
+    // We can't use `.intersects()` here because we want `.max` to be exclusive, while `.intersects()` treats both bounds as inclusive.
+    [[nodiscard]] static bool rectRectOverlap( Box2f a, Box2f b )
+    {
+        return a.max.x > b.min.x && a.min.x < b.max.x && a.max.y > b.min.y && a.min.y < b.max.y;
+    }
 
 private:
-    Box2f preferredBounds;
-
-    struct CurRect
-    {
-        Box2f rect;
-        bool seenThisFrame = true;
-        std::size_t age = 0;
-    };
-
-    phmap::flat_hash_map<std::string, CurRect> currentRects;
-
     // Maps coords to cost.
     phmap::flat_hash_map<Vector2f, float> visitedCoords;
 
@@ -77,6 +51,26 @@ private:
     std::vector<CoordsToVisit> coordsToVisitHeap;
 };
 
-[[nodiscard]] MRVIEWER_API RectAllocator& getDefaultRectAllocator();
+// A rect allocator specifically for ImGui windows.
+class WindowRectAllocator : public RectAllocator
+{
+public:
+    // Call this before drawing a window.
+    // `expectedWindowName` must match the window name.
+    // The remaining parameters are forwarded to `ImGui::SetNextWindowPos()`, expect for one time where we find a free rect and use it instead.
+    // `cond` must not be `ImGuiCond_Always` (aka 0), in that case we just forward the arguments and don't try to find a rect.
+    MRVIEWER_API void setNextWindowPos( const char* expectedWindowName, ImVec2 defaultPos, ImGuiCond cond = ImGuiCond_Appearing, ImVec2 pivot = ImVec2() );
+
+    // Must be called once every frame.
+    MRVIEWER_API void preTick();
+
+private:
+    struct WindowEntry
+    {
+        bool visitedThisFrame = true;
+    };
+    phmap::flat_hash_map<std::string, WindowEntry> windows;
+};
+[[nodiscard]] MRVIEWER_API WindowRectAllocator& getDefaultWindowRectAllocator();
 
 }

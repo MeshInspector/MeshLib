@@ -1,77 +1,18 @@
 #include "MRUIRectAllocator.h"
 
-#include <imgui.h>
+#include "MRViewer/MRViewer.h"
+
+#include <imgui_internal.h>
+#include <spdlog/spdlog.h>
 
 namespace MR::UI
 {
 
 RectAllocator::RectAllocator() {}
 
-RectAllocator::MakeRectResult RectAllocator::makeRect(
-    std::string_view name,
-    std::function<Box2f()> getPreferredLocation,
-    MakeRectFlags flags,
-    std::size_t forceExactLocationIfOlderThan
-)
+RectAllocator::FindFreeRectResult RectAllocator::findFreeRect( Box2f preferredRect, Box2f preferredBounds, FindPotentiallyOverlappingRects findOverlaps )
 {
-    // This will be true if the `forceUpdate` flag is set, even if the rect isn't actually new.
-    bool isNew = false;
-    // And this doesn't respect the flag.
-    bool isActuallyNew = false;
-
-    std::size_t age = 0;
-
-    // Only makes sense if `isNew == false`.
-    decltype(currentRects)::iterator iter = currentRects.find( name );
-    if ( iter != currentRects.end() )
-        age = iter->second.age;
-    else
-        isActuallyNew = true;
-
-    if ( forceExactLocationIfOlderThan && age >= forceExactLocationIfOlderThan )
-        flags |= MakeRectFlags::forceExactLocation;
-
-    if ( bool( flags & MakeRectFlags::forceUpdate ) )
-    {
-        if ( bool( flags & MakeRectFlags::forceExactLocation ) )
-        {
-            if ( isActuallyNew )
-                iter = currentRects.try_emplace( name ).first;
-
-            iter->second.seenThisFrame = true;
-            iter->second.age = age;
-            return { .rect = iter->second.rect = getPreferredLocation(), .ok = true, .age = age };
-        }
-
-        if ( !isActuallyNew )
-            currentRects.erase( iter );
-        iter = {};
-        isNew = true;
-    }
-    else
-    {
-        isNew = isActuallyNew;
-    }
-
-    if ( !isNew )
-    {
-        iter->second.seenThisFrame = true;
-        return { .rect = iter->second.rect, .ok = true, .age = age };
-    }
-
-    if ( bool( flags & MakeRectFlags::forceExactLocation ) )
-    {
-        auto result = currentRects.try_emplace( name );
-        assert( result.second && "Why does the rect already exist?" );
-        result.first->second.seenThisFrame = true;
-        result.first->second.age = age;
-        return { .rect = result.first->second.rect = getPreferredLocation(), .ok = true, .age = age };
-    }
-
-    // Find a free rect.
-
-    const Box2f preferredRect = getPreferredLocation();
-    MakeRectResult bestRect{ .rect = preferredRect, .ok = false, .age = age };
+    FindFreeRectResult bestRect{ .rect = preferredRect, .ok = false };
 
     visitedCoords.clear();
     coordsToVisitHeap.clear();
@@ -112,13 +53,12 @@ RectAllocator::MakeRectResult RectAllocator::makeRect(
 
         // Intersect against existing rects.
         bool anyIntersections = false;
-        for ( const auto& [otherName, otherRectData] : currentRects )
+        findOverlaps( thisRect, [&]( const char* name, Box2f otherRect )
         {
-            const Box2f otherRect = otherRectData.rect;
+            (void)name;
 
-            // Not using `.intersects()` here because we want `.max` to be exclusive, while `.intersects()` treats both bounds as inclusive.
-            if ( thisRect.max.x <= otherRect.min.x || thisRect.min.x >= otherRect.max.x || thisRect.max.y <= otherRect.min.y || thisRect.min.y >= otherRect.max.y )
-                continue;
+            if ( !rectRectOverlap( thisRect, otherRect ) )
+                return;
 
             anyIntersections = true;
 
@@ -166,7 +106,7 @@ RectAllocator::MakeRectResult RectAllocator::makeRect(
                 coordsToVisitHeap.push_back( { .pos = neighbor.min, .cost = cost, .overlapWithBounds = neighborOverlapWithBounds } );
                 std::push_heap( coordsToVisitHeap.begin(), coordsToVisitHeap.end(), heapComparator );
             }
-        }
+        } );
 
         if ( !anyIntersections )
         {
@@ -177,43 +117,83 @@ RectAllocator::MakeRectResult RectAllocator::makeRect(
         }
     }
 
-    currentRects.try_emplace( name, CurRect{ .rect = bestRect.rect, .seenThisFrame = true, .age = age } );
-
     return bestRect;
 }
 
-void RectAllocator::preTick( Box2f bounds )
+void WindowRectAllocator::setNextWindowPos( const char* expectedWindowName, ImVec2 defaultPos, ImGuiCond cond, ImVec2 pivot )
 {
-    preferredBounds = bounds;
+    bool findLocation = false;
+    ImGuiWindow* window = nullptr;
 
-    for ( auto it = currentRects.begin(); it != currentRects.end(); )
+    if ( cond != 0 && cond != ImGuiCond_Always )
     {
-        if ( !std::exchange( it->second.seenThisFrame, false ) )
+        window = ImGui::FindWindowByName( expectedWindowName );
+        if ( window )
         {
-            it = currentRects.erase( it );
+            auto [iter, isNew] = windows.try_emplace( expectedWindowName );
+            if ( isNew )
+            {
+                findLocation = true;
+                defaultPos = window->Pos;
+            }
+            else
+            {
+                iter->second.visitedThisFrame = true;
+            }
+        }
+    }
+
+    if ( findLocation )
+    {
+        Box2f bounds = getViewerInstance().getViewportsBounds();
+        Box2f boundsFixed = bounds;
+        boundsFixed.min.y = ImGui::GetIO().DisplaySize.y - boundsFixed.max.y;
+        boundsFixed.max.y = boundsFixed.min.y + bounds.size().y;
+
+        auto result = findFreeRect( Box2f::fromMinAndSize( defaultPos, window->Size ), boundsFixed, [&]( Box2f rect, std::function<void( const char*, Box2f )> func )
+        {
+            (void)rect; // Just output all the rects for now.
+
+            for ( const ImGuiWindow* win : ImGui::GetCurrentContext()->Windows )
+            {
+                if ( std::string_view(win->Name) == "Test rect 1" )
+                    spdlog::info( "{}", win->WasActive );
+
+                if ( !win->WasActive || ( win->Flags & ImGuiWindowFlags_ChildWindow ) )
+                    continue; // Skip inactive windows and child windows.
+                std::string_view winNameView = win->Name;
+                if ( auto pos = winNameView.find( "##" ); pos != std::string_view::npos && winNameView.find( "[rect_allocator_ignore]", pos + 2 ) != std::string_view::npos )
+                    continue; // Ignore if the name contains the special tag.
+                if ( std::strcmp( win->Name, expectedWindowName ) == 0 )
+                    continue; // Skip the target window itself.
+                func( win->Name, Box2f::fromMinAndSize( win->Pos, win->Size ) );
+            }
+        } );
+
+        defaultPos = result.rect.min;
+        cond = ImGuiCond_Always;
+    }
+
+    ImGui::SetNextWindowPos( defaultPos, cond, pivot );
+}
+
+void WindowRectAllocator::preTick()
+{
+    for ( auto it = windows.begin(); it != windows.end(); )
+    {
+        if ( !std::exchange( it->second.visitedThisFrame, false ) )
+        {
+            it = windows.erase( it );
             continue;
         }
-        it->second.age++;
+
         ++it;
     }
 }
 
-void RectAllocator::debugVisualize()
+WindowRectAllocator& getDefaultWindowRectAllocator()
 {
-    ImDrawList& list = *ImGui::GetForegroundDrawList();
-
-    list.AddRect( preferredBounds.min, preferredBounds.max, ImColor( 1.f, 1.f, 0.f, 1.f ), 8 );
-
-    for ( const auto& [ name, data ] : currentRects )
-    {
-        list.AddRect( data.rect.min, data.rect.max, ImColor( 1.f, 0.f, 0.f, 1.f ), 8 );
-        list.AddText( data.rect.min + Vector2f( 5, 5 ), ImColor( 1.f, 0.f, 0.f, 1.f ), name.c_str() );
-    }
-}
-
-RectAllocator& getDefaultRectAllocator()
-{
-    static RectAllocator ret;
+    static WindowRectAllocator ret;
     return ret;
 }
 

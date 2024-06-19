@@ -161,8 +161,6 @@ protected:
     std::vector<DialogItemPtr> activeNonBlockingItems_;
     MRVIEWER_API virtual void drawItemDialog_( DialogItemPtr& itemPtr );
 
-    // Tick the rect allocator, that allocates space for windows and such.
-    MRVIEWER_API virtual void updateRectAllocator_();
     // Draw ribbon top panel
     MRVIEWER_API virtual void drawTopPanel_();
     // Draw scene list window with content

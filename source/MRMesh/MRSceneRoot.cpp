@@ -48,9 +48,11 @@ std::filesystem::path createNewFilePath( const std::filesystem::path& savePath )
 void SceneRoot::setScenePath( const std::filesystem::path& scenePath )
 {
     auto newPath = scenePath;
-    newPath.replace_extension(".mru");
-    if ( scenePath.extension().string() != ".mru" && std::filesystem::exists( newPath ) )
+    if ( scenePath.extension().string() != ".mru" )
+    {
+        newPath.replace_extension( ".mru" );
         newPath = createNewFilePath( newPath );
+    }
     instace_().scenePath_ = newPath;
 }
 

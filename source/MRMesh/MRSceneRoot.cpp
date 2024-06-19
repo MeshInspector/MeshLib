@@ -2,6 +2,8 @@
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
 
+#include <regex>
+
 namespace MR
 {
 
@@ -17,9 +19,41 @@ std::shared_ptr<SceneRootObject>& SceneRoot::getSharedPtr()
     return instace_().root_;
 }
 
+std::filesystem::path createNewFilePath( const std::filesystem::path& savePath )
+{
+    const std::regex pattern( R"(.*(?:| \([0-9]+\))$)" );
+
+    auto name = savePath.stem().string();
+    if ( std::regex_match( name, pattern ) )
+    {
+        auto endBracPos = name.rfind( ')' );
+        if ( endBracPos != int( name.length() ) - 1 )
+        {
+            name += " (2)";
+        }
+        else
+        {
+            auto startNumPos = name.rfind( '(' ) + 1;
+            auto numStr = name.substr( startNumPos, endBracPos - startNumPos );
+            int num = std::atoi( numStr.c_str() );
+            name = name.substr( 0, startNumPos - 1 ) + "(" + std::to_string( num + 1 ) + ")";
+        }
+    }
+    else
+    {
+        name += " (1)";
+    }
+    std::filesystem::path newPath = savePath;
+    newPath.replace_filename( name + savePath.extension().string() );
+    return newPath;
+}
+
 void SceneRoot::setScenePath( const std::filesystem::path& scenePath )
 {
-    instace_().scenePath_ = scenePath;
+    auto newPath = scenePath;
+    if ( scenePath.extension().string() != "mru" && std::filesystem::exists( scenePath ) )
+        newPath = createNewFilePath( scenePath );
+    instace_().scenePath_ = newPath;
 }
 
 #endif

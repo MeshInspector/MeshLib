@@ -27,17 +27,10 @@ std::filesystem::path createNewFilePath( const std::filesystem::path& savePath )
     if ( std::regex_match( name, pattern ) )
     {
         auto endBracPos = name.rfind( ')' );
-        if ( endBracPos != int( name.length() ) - 1 )
-        {
-            name += " (2)";
-        }
-        else
-        {
-            auto startNumPos = name.rfind( '(' ) + 1;
-            auto numStr = name.substr( startNumPos, endBracPos - startNumPos );
-            int num = std::atoi( numStr.c_str() );
-            name = name.substr( 0, startNumPos - 1 ) + "(" + std::to_string( num + 1 ) + ")";
-        }
+        auto startNumPos = name.rfind( '(' ) + 1;
+        auto numStr = name.substr( startNumPos, endBracPos - startNumPos );
+        int num = std::atoi( numStr.c_str() );
+        name = name.substr( 0, startNumPos - 1 ) + "(" + std::to_string( num + 1 ) + ")";
     }
     else
     {

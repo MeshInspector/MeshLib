@@ -490,7 +490,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         }
     }
 
-    UI::getDefaultWindowRectAllocator().findFreeNextWindowPos( label, initialWindowPos, ImGuiCond_FirstUseEver, params.pivot );
+    UI::getDefaultWindowRectAllocator().setFreeNextWindowPos( label, initialWindowPos, ImGuiCond_FirstUseEver, params.pivot );
 
     if ( params.changedSize )
     {

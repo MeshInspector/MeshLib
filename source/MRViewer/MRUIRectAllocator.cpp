@@ -125,7 +125,7 @@ RectAllocator::FindFreeRectResult RectAllocator::findFreeRect(
     return bestRect;
 }
 
-void WindowRectAllocator::findFreeNextWindowPos( const char* expectedWindowName, ImVec2 defaultPos, ImGuiCond cond, ImVec2 pivot )
+void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, ImVec2 defaultPos, ImGuiCond cond, ImVec2 pivot )
 {
     // Once per frame, update the window list.
     if ( lastFrameCount != ImGui::GetFrameCount() )

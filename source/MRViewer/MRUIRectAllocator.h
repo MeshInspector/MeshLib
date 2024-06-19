@@ -12,6 +12,10 @@ namespace MR::UI
 {
 
 // A generic rect allocator.
+// Given a set of rects and a target rect, finds the closest free rect next to the target (using dijkstra's algorithm).
+// The class can be reused multiple times to avoid repeated heap allocation, it doesn't store any state other than memory pools.
+// For optimal results you should bring your own AABB tree (see `FindPotentiallyOverlappingRects`) below,
+// but in simple cases you can get away with a flat list.
 class RectAllocator
 {
 public:
@@ -25,13 +29,15 @@ public:
     };
 
     // Given an input rect, this function must find all POTENTIALLY overlapping rects ("overlapping" means according to `rectRectOverlap()`).
+    // `name` is only useful for debugging.
     using FindPotentiallyOverlappingRects = std::function<void( Box2f target, std::function<void( const char* name, Box2f box )> overlaps )>;
 
     // Finds a free rectangle of the specified size, as close as possible to the specified position.
     // On failure, returns `.ok == false` and returns the input rect unchanged.
     [[nodiscard]] MRVIEWER_API FindFreeRectResult findFreeRect(
         Box2f preferredRect,
-        // The outer bounds that we try to fit the rect into.
+        // The outer bounds that we try to fit the rect into. The input rect doesn't need to be in bounds,
+        // but we will not move it more out of bounds than it already is.
         Box2f preferredBounds,
         // Given any rect, this must return all existing rects potentially overlapping with it.
         FindPotentiallyOverlappingRects findOverlaps,
@@ -67,7 +73,7 @@ public:
     // `expectedWindowName` must match the window name.
     // The remaining parameters are forwarded to `ImGui::SetNextWindowPos()`, expect for one time where we find a free rect and use it instead.
     // `cond` must not be `ImGuiCond_Always` (aka 0), in that case we just forward the arguments and don't try to find a rect.
-    MRVIEWER_API void setNextWindowPos( const char* expectedWindowName, ImVec2 defaultPos, ImGuiCond cond = ImGuiCond_Appearing, ImVec2 pivot = ImVec2() );
+    MRVIEWER_API void findFreeNextWindowPos( const char* expectedWindowName, ImVec2 defaultPos, ImGuiCond cond = ImGuiCond_Appearing, ImVec2 pivot = ImVec2() );
 
     // Must be called once every frame.
     MRVIEWER_API void preTick();

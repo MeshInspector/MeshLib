@@ -125,7 +125,7 @@ RectAllocator::FindFreeRectResult RectAllocator::findFreeRect(
     return bestRect;
 }
 
-void WindowRectAllocator::setNextWindowPos( const char* expectedWindowName, ImVec2 defaultPos, ImGuiCond cond, ImVec2 pivot )
+void WindowRectAllocator::findFreeNextWindowPos( const char* expectedWindowName, ImVec2 defaultPos, ImGuiCond cond, ImVec2 pivot )
 {
     bool findLocation = false;
     ImGuiWindow* window = nullptr;
@@ -157,7 +157,9 @@ void WindowRectAllocator::setNextWindowPos( const char* expectedWindowName, ImVe
 
         auto result = findFreeRect( Box2f::fromMinAndSize( defaultPos, window->Size ), boundsFixed, [&]( Box2f rect, std::function<void( const char*, Box2f )> func )
         {
-            (void)rect; // Just output all the rects for now.
+            // Just output all the rects for now.
+            // FIXME: An AABB tree would be nice here, for better performance.
+            (void)rect;
 
             for ( const ImGuiWindow* win : ImGui::GetCurrentContext()->Windows )
             {

@@ -135,6 +135,8 @@
     <ClInclude Include="MRNormalDenoising.h" />
     <ClInclude Include="MRNormalsToPoints.h" />
     <ClInclude Include="MROffsetContours.h" />
+    <ClInclude Include="MRParabola.h" />
+    <ClInclude Include="MRBestFitParabola.h" />
     <ClInclude Include="MRPointCloudDivideWithPlane.h" />
     <ClInclude Include="MRPointOnObject.h" />
     <ClInclude Include="MROverlappingTris.h" />
@@ -421,6 +423,7 @@
     <ClCompile Include="MRAlphaShape.cpp" />
     <ClCompile Include="MRArrow.cpp" />
     <ClCompile Include="MRBasinVolume.cpp" />
+    <ClCompile Include="MRBestFitParabola.cpp" />
     <ClCompile Include="MRBestFitQuadric.cpp" />
     <ClCompile Include="MRBestFitTests.cpp" />
     <ClCompile Include="MRBooleanOperation.cpp" />

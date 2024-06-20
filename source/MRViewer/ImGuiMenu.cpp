@@ -612,7 +612,7 @@ void ImGuiMenu::draw_labels_window()
   bool visible = true;
   ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0,0,0,0));
   ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
-  ImGui::Begin("ViewerLabels", &visible,
+  ImGui::Begin("ViewerLabels##[rect_allocator_ignore]", &visible,
       ImGuiWindowFlags_NoTitleBar
       | ImGuiWindowFlags_NoResize
       | ImGuiWindowFlags_NoMove

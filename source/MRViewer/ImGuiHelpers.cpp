@@ -1,4 +1,5 @@
 #include "ImGuiHelpers.h"
+#include "MRViewer/MRUIRectAllocator.h"
 #include "MRViewer/MRUITestEngine.h"
 #include "imgui_internal.h"
 #include "MRMesh/MRBitSet.h"
@@ -454,6 +455,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
     ImGuiWindow* window = FindWindowByName( label );
     auto menu = MR::getViewerInstance().getMenuPlugin();
+    ImVec2 initialWindowPos;
     if ( !window )
     {
         auto ribMenu = std::dynamic_pointer_cast<MR::RibbonMenu>( menu );
@@ -475,18 +477,20 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
             auto json = config.getJsonValue( "DialogPositions" )[label];
             if ( json.empty() )
             {
-                SetNextWindowPos( ImVec2( xPos, yPos ), ImGuiCond_FirstUseEver, params.pivot );
+                initialWindowPos = ImVec2( xPos, yPos );
             }
             else
             {
-                SetNextWindowPos( ImVec2( json["x"].asFloat(), json["y"].asFloat() ), ImGuiCond_FirstUseEver, params.pivot );
+                initialWindowPos = ImVec2( json["x"].asFloat(), json["y"].asFloat() );
             }
         }
         else
         {
-            SetNextWindowPos( ImVec2( xPos, yPos ), ImGuiCond_FirstUseEver, params.pivot );
+            initialWindowPos = ImVec2( xPos, yPos );
         }
     }
+
+    UI::getDefaultWindowRectAllocator().setFreeNextWindowPos( label, initialWindowPos, ImGuiCond_FirstUseEver, params.pivot );
 
     if ( params.changedSize )
     {

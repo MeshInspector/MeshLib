@@ -3,7 +3,6 @@
 #include "MRViewer/MRViewer.h"
 
 #include <imgui_internal.h>
-#include <spdlog/spdlog.h>
 
 namespace MR::UI
 {
@@ -89,9 +88,9 @@ RectAllocator::FindFreeRectResult RectAllocator::findFreeRect(
 
                 auto neighborOverlapWithBounds = getOverlapWithBounds( neighbor );
                 bool badBoundsOverlap = false;
-                for ( int i = 0; i < 4; i++ )
+                for ( int j = 0; j < 4; j++ )
                 {
-                    if ( neighborOverlapWithBounds[i] > curCoords.overlapWithBounds[i] )
+                    if ( neighborOverlapWithBounds[j] > curCoords.overlapWithBounds[j] )
                     {
                         badBoundsOverlap = true;
                         break;
@@ -180,9 +179,6 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
 
             for ( const ImGuiWindow* win : ImGui::GetCurrentContext()->Windows )
             {
-                if ( std::string_view(win->Name) == "Test rect 1" )
-                    spdlog::info( "{}", win->WasActive );
-
                 if ( !win->WasActive || ( win->Flags & ImGuiWindowFlags_ChildWindow ) )
                     continue; // Skip inactive windows and child windows.
                 std::string_view winNameView = win->Name;

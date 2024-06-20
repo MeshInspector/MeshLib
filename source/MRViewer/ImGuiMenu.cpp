@@ -102,6 +102,18 @@
 
 #include <bitset>
 
+namespace
+{
+// Reserved keys block
+using OrderedKeys = std::bitset<ImGuiKey_KeysData_SIZE>;
+
+OrderedKeys& getOrderedKeys()
+{
+    static OrderedKeys orderedKeys;
+    return orderedKeys;
+}
+}
+
 namespace MR
 {
 
@@ -185,15 +197,6 @@ void ImGuiMenu::initBackend()
     rescaleStyle_();
     ImGui_ImplGlfw_InitForOpenGL( viewer->window, false );
     ImGui_ImplOpenGL3_Init( glsl_version );
-}
-
-// Reserved keys block
-using OrderedKeys = std::bitset<ImGuiKey_KeysData_SIZE>;
-
-OrderedKeys& getOrderedKeys()
-{
-    static OrderedKeys orderedKeys;
-    return orderedKeys;
 }
 
 void reserveKeyEvent( ImGuiKey key )

@@ -1,10 +1,14 @@
 #pragma once
 
-#include <stddef.h>
 
 #ifdef __cplusplus
+#include <cstddef>
+
 extern "C"
 {
+#else
+#include <stdbool.h>
+#include <stddef.h>
 #endif
 
 typedef struct MRString MRString;
@@ -20,6 +24,8 @@ typedef struct MRVector3f MRVector3f;
 
 typedef struct MRMeshTopology MRMeshTopology;
 typedef struct MRMesh MRMesh;
+
+typedef bool (*MRProgressCallback)( float );
 
 #ifdef __cplusplus
 }

@@ -324,6 +324,11 @@ bool buttonIconEx(
         {
             printText = true;
             curDetail.end = startWord;
+            if ( curDetail.lenght == 0 )
+            {
+                curDetail.end = endWord;
+                curDetail.lenght += curTextSize.x;
+            }
             previosDetail = curDetail;
             curDetail = { curTextSize.x, startWord, endWord };
         }

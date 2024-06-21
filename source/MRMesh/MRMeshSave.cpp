@@ -125,13 +125,15 @@ VoidOrErrStr toObj( const Mesh & mesh, const std::filesystem::path & file, const
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
 #ifndef __EMSCRIPTEN__
+    // it is hard to handle several files output for browser, so for now it is under ifdef,
+    // anyway later it may be reworked to save simple zip and taken out of ifdef
     if ( settings.uvMap )
     {
         auto mtlPath = file.parent_path() / ( settings.materialName + ".mtl" );
         std::ofstream ofMtl( mtlPath, std::ofstream::binary );
         if ( ofMtl )
         {
-            ofMtl << fmt::format( "newmtl Texture\n" );
+            ofMtl << "newmtl Texture\n";
             if ( settings.texture && ImageSave::toPng( *settings.texture, file.parent_path() / ( settings.materialName + ".png" ) ).has_value() )
                 ofMtl << fmt::format( "map_Kd {}\n", settings.materialName + ".png" );
         }
@@ -186,9 +188,9 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & 
             if ( settings.progress && !( numSaved & 0x3FF ) && !sb( float( numSaved ) / numPoints ) )
                 return unexpected( std::string( "Saving canceled" ) );
         }
-    }
-    if ( settings.uvMap )
         out << "usemtl Texture\n";
+    }
+
     sb = subprogress( settings.progress, settings.uvMap ? 0.7f : 0.5f, 1.0f );
     const float facesNum = float( mesh.topology.edgePerFace().size() );
     size_t faceIndex = 0;

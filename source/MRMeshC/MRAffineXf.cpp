@@ -5,6 +5,8 @@
 #include "MRMesh/MRMatrix3.h"
 #include "MRMesh/MRVector3.h"
 
+#include <cstring>
+
 using namespace MR;
 
 static_assert( sizeof( MRAffineXf3f ) == sizeof( AffineXf3f ) );
@@ -12,5 +14,7 @@ static_assert( sizeof( MRAffineXf3f ) == sizeof( AffineXf3f ) );
 MRAffineXf3f mrAffineXf3fNew()
 {
     constexpr auto xf = AffineXf3f();
-    return *reinterpret_cast<const MRAffineXf3f*>( &xf );
+    MRAffineXf3f res;
+    std::memcpy( &res, &xf, sizeof( xf ) );
+    return res;
 }

@@ -456,7 +456,9 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     ImGuiWindow* window = FindWindowByName( label );
     auto menu = MR::getViewerInstance().getMenuPlugin();
     ImVec2 initialWindowPos;
-    if ( !window )
+    bool haveSavedWindowPos = false;
+    bool windowIsInactive = window && !window->WasActive;
+    if ( !window || windowIsInactive )
     {
         auto ribMenu = std::dynamic_pointer_cast<MR::RibbonMenu>( menu );
         float xPos = GetIO().DisplaySize.x - params.width;
@@ -481,6 +483,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
             }
             else
             {
+                haveSavedWindowPos = true;
                 initialWindowPos = ImVec2( json["x"].asFloat(), json["y"].asFloat() );
             }
         }
@@ -490,7 +493,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         }
     }
 
-    UI::getDefaultWindowRectAllocator().setFreeNextWindowPos( label, initialWindowPos, ImGuiCond_FirstUseEver, params.pivot );
+    UI::getDefaultWindowRectAllocator().setFreeNextWindowPos( label, initialWindowPos, haveSavedWindowPos ? ImGuiCond_FirstUseEver : ImGuiCond_Appearing, params.pivot );
 
     if ( params.changedSize )
     {

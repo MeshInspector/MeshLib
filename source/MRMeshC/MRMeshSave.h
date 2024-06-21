@@ -7,7 +7,7 @@ extern "C"
 {
 #endif
 
-void mrMeshSaveToAnySupportedFormat( const MRMesh* mesh, const char* file, MRString** errorStr );
+MRMESHC_API void mrMeshSaveToAnySupportedFormat( const MRMesh* mesh, const char* file, MRString** errorStr );
 
 #ifdef __cplusplus
 }

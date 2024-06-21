@@ -1,14 +1,13 @@
 #pragma once
 
-#include "MRMesh.h"
-#include "MRString.h"
+#include "MRMeshFwd.h"
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-MRMesh* mrMeshLoadFromAnySupportedFormat( const char* file, MRString** errorStr );
+MRMESHC_API MRMesh* mrMeshLoadFromAnySupportedFormat( const char* file, MRString** errorStr );
 
 #ifdef __cplusplus
 }

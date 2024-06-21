@@ -12,3 +12,7 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 target_link_libraries(${PROJECT_NAME} PRIVATE
   MRMesh
 )
+
+IF(WIN32 AND MINGW)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MRMESHC_EXPORT)
+ENDIF()

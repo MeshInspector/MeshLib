@@ -7,21 +7,21 @@ extern "C"
 {
 #endif
 
-void mrMeshTopologyPack( MRMeshTopology* top );
+MRMESHC_API void mrMeshTopologyPack( MRMeshTopology* top );
 
-const MRBitSet* mrMeshTopologyGetValidVerts( const MRMeshTopology* top );
+MRMESHC_API const MRBitSet* mrMeshTopologyGetValidVerts( const MRMeshTopology* top );
 
-const MRBitSet* mrMeshTopologyGetValidFaces( const MRMeshTopology* top );
+MRMESHC_API const MRBitSet* mrMeshTopologyGetValidFaces( const MRMeshTopology* top );
 
 typedef struct MRTriangulation MRTriangulation;
 
-MRTriangulation* mrMeshTopologyGetTriangulation( const MRMeshTopology* top );
+MRMESHC_API MRTriangulation* mrMeshTopologyGetTriangulation( const MRMeshTopology* top );
 
-const MRThreeVertIds* mrTriangulationData( const MRTriangulation* tris );
+MRMESHC_API const MRThreeVertIds* mrTriangulationData( const MRTriangulation* tris );
 
-size_t mrTriangulationSize( const MRTriangulation* tris );
+MRMESHC_API size_t mrTriangulationSize( const MRTriangulation* tris );
 
-void mrTriangulationFree( MRTriangulation* tris );
+MRMESHC_API void mrTriangulationFree( MRTriangulation* tris );
 
 #ifdef __cplusplus
 }

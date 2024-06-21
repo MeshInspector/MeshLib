@@ -1,11 +1,13 @@
 #pragma once
 
+#include "MRMeshFwd.h"
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-typedef struct MRVector3f
+typedef struct MRMESHC_CLASS MRVector3f
 {
     float x;
     float y;

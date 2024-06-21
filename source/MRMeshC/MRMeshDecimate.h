@@ -13,7 +13,7 @@ enum MRDecimateStrategy
     MRDecimateStrategyShortestEdgeFirst
 };
 
-typedef struct MRDecimateSettings
+typedef struct MRMESHC_CLASS MRDecimateSettings
 {
     MRDecimateStrategy strategy;
     float maxError;
@@ -44,9 +44,9 @@ typedef struct MRDecimateSettings
     int minFacesInPart;
 } MRDecimateSettings;
 
-MRDecimateSettings mrDecimateSettingsDefault();
+MRMESHC_API MRDecimateSettings mrDecimateSettingsDefault();
 
-typedef struct MRDecimateResult
+typedef struct MRMESHC_CLASS MRDecimateResult
 {
     int vertsDeleted;
     int facesDeleted;
@@ -54,9 +54,9 @@ typedef struct MRDecimateResult
     bool cancelled;
 } MRDecimateResult;
 
-MRDecimateResult mrDecimateMesh( MRMesh* mesh, const MRDecimateSettings* settings );
+MRMESHC_API MRDecimateResult mrDecimateMesh( MRMesh* mesh, const MRDecimateSettings* settings );
 
-typedef struct MRResolveMeshDegenSettings
+typedef struct MRMESHC_CLASS MRResolveMeshDegenSettings
 {
     float maxDeviation;
     float tinyEdgeLength;
@@ -66,11 +66,11 @@ typedef struct MRResolveMeshDegenSettings
     MRFaceBitSet* region;
 } MRResolveMeshDegenSettings;
 
-MRResolveMeshDegenSettings mrResolveMeshDegenSettingsDefault();
+MRMESHC_API MRResolveMeshDegenSettings mrResolveMeshDegenSettingsDefault();
 
-bool mrResolveMeshDegenerations( MRMesh* mesh, const MRResolveMeshDegenSettings* settings );
+MRMESHC_API bool mrResolveMeshDegenerations( MRMesh* mesh, const MRResolveMeshDegenSettings* settings );
 
-typedef struct MRRemeshSettings
+typedef struct MRMESHC_CLASS MRRemeshSettings
 {
     float targetEdgeLen;
     int maxEdgeSplits;
@@ -89,9 +89,9 @@ typedef struct MRRemeshSettings
     MRProgressCallback progressCallback;
 } MRRemeshSettings;
 
-MRRemeshSettings mrRemeshSettingsDefault();
+MRMESHC_API MRRemeshSettings mrRemeshSettingsDefault();
 
-bool mrRemesh( MRMesh* mesh, const MRRemeshSettings* settings );
+MRMESHC_API bool mrRemesh( MRMesh* mesh, const MRRemeshSettings* settings );
 
 #ifdef __cplusplus
 }

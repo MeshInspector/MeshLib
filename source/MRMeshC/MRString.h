@@ -7,11 +7,11 @@ extern "C"
 {
 #endif
 
-const char* mrStringData( const MRString* str );
+MRMESHC_API const char* mrStringData( const MRString* str );
 
-size_t mrStringSize( const MRString* str );
+MRMESHC_API size_t mrStringSize( const MRString* str );
 
-void mrStringFree( MRString* str );
+MRMESHC_API void mrStringFree( MRString* str );
 
 #ifdef __cplusplus
 }

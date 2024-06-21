@@ -61,7 +61,8 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts, const Ve
             {
                 // free neighbor
                 int di = it->second;
-                mTriplets.emplace_back( n, di, -1 );
+                if ( n > di ) // row > col: fill only lower left part of matrix
+                    mTriplets.emplace_back( n, di, -1 );
             }
             else
             {
@@ -152,7 +153,8 @@ void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
                 {
                     // free neighbor
                     int di = it->second;
-                    mTriplets.emplace_back( n, di, -w );
+                    if ( n > di ) // row > col: fill only lower left part of matrix
+                        mTriplets.emplace_back( n, di, -w );
                 }
                 else
                 {

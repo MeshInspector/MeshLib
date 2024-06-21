@@ -19,6 +19,7 @@ typedef int MRFaceId;
 typedef MRVertId MRThreeVertIds[3];
 
 typedef struct MRBitSet MRBitSet;
+typedef MRBitSet MRFaceBitSet;
 
 typedef struct MRVector3f MRVector3f;
 

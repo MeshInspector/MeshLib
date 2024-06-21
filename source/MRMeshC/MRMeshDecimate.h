@@ -2,10 +2,7 @@
 
 #include "MRMeshFwd.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+MR_EXTERN_C_BEGIN
 
 enum MRDecimateStrategy
 {
@@ -93,6 +90,4 @@ MRMESHC_API MRRemeshSettings mrRemeshSettingsDefault();
 
 MRMESHC_API bool mrRemesh( MRMesh* mesh, const MRRemeshSettings* settings );
 
-#ifdef __cplusplus
-}
-#endif
+MR_EXTERN_C_END

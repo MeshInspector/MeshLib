@@ -2,10 +2,7 @@
 
 #include "MRMeshFwd.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+MR_EXTERN_C_BEGIN
 
 MRMESHC_API MRMesh* mrMeshCopy( const MRMesh* mesh );
 
@@ -25,6 +22,4 @@ MRMESHC_API MRMeshTopology* mrMeshTopologyRef( MRMesh* mesh );
 
 MRMESHC_API void mrMeshFree( MRMesh* mesh );
 
-#ifdef __cplusplus
-}
-#endif
+MR_EXTERN_C_END

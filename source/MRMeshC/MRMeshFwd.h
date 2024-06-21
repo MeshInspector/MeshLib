@@ -2,12 +2,11 @@
 
 #ifdef __cplusplus
 #include <cstddef>
-
-extern "C"
-{
+#include <cstdint>
 #else
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #endif
 
 #ifdef _WIN32
@@ -21,6 +20,16 @@ extern "C"
 #   define MRMESHC_API __attribute__( ( visibility( "default" ) ) )
 #   define MRMESHC_CLASS __attribute__( ( visibility( "default" ) ) )
 #endif
+
+#ifdef __cplusplus
+#define MR_EXTERN_C_BEGIN extern "C" {
+#define MR_EXTERN_C_END }
+#else
+#define MR_EXTERN_C_BEGIN
+#define MR_EXTERN_C_END
+#endif
+
+MR_EXTERN_C_BEGIN
 
 typedef struct MRString MRString;
 
@@ -37,8 +46,8 @@ typedef struct MRVector3f MRVector3f;
 typedef struct MRMeshTopology MRMeshTopology;
 typedef struct MRMesh MRMesh;
 
+typedef struct MRTriangulation MRTriangulation;
+
 typedef bool (*MRProgressCallback)( float );
 
-#ifdef __cplusplus
-}
-#endif
+MR_EXTERN_C_END

@@ -3,10 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRVector3.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+MR_EXTERN_C_BEGIN
 
 typedef struct MRMESHC_CLASS MRMatrix3f
 {
@@ -17,6 +14,4 @@ typedef struct MRMESHC_CLASS MRMatrix3f
 
 MRMESHC_API MRMatrix3f mrMatrix3fIdentity();
 
-#ifdef __cplusplus
-}
-#endif
+MR_EXTERN_C_END

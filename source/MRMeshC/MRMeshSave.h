@@ -2,13 +2,8 @@
 
 #include "MRMeshFwd.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+MR_EXTERN_C_BEGIN
 
 MRMESHC_API void mrMeshSaveToAnySupportedFormat( const MRMesh* mesh, const char* file, MRString** errorStr );
 
-#ifdef __cplusplus
-}
-#endif
+MR_EXTERN_C_END

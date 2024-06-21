@@ -2,13 +2,8 @@
 
 #include "MRMeshFwd.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+MR_EXTERN_C_BEGIN
 
 MRMESHC_API MRMesh* mrMeshLoadFromAnySupportedFormat( const char* file, MRString** errorStr );
 
-#ifdef __cplusplus
-}
-#endif
+MR_EXTERN_C_END

@@ -2,10 +2,7 @@
 
 #include "MRMeshFwd.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+MR_EXTERN_C_BEGIN
 
 typedef struct MRMESHC_CLASS MRVector3f
 {
@@ -14,6 +11,4 @@ typedef struct MRMESHC_CLASS MRVector3f
     float z;
 } MRVector3f;
 
-#ifdef __cplusplus
-}
-#endif
+MR_EXTERN_C_END

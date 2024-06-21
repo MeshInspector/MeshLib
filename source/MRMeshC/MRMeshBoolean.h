@@ -4,10 +4,7 @@
 #include "MRAffineXf.h"
 #include "MRBooleanOperation.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+MR_EXTERN_C_BEGIN
 
 typedef struct MRMESHC_CLASS MRBooleanParameters
 {
@@ -24,6 +21,4 @@ typedef struct MRMESHC_CLASS MRBooleanResult
 
 MRMESHC_API MRBooleanResult mrBoolean( const MRMesh* meshA, const MRMesh* meshB, MRBooleanOperation operation, const MRBooleanParameters* params );
 
-#ifdef __cplusplus
-}
-#endif
+MR_EXTERN_C_END

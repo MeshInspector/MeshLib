@@ -1,9 +1,8 @@
 #pragma once
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+#include "MRMeshFwd.h"
+
+MR_EXTERN_C_BEGIN
 
 enum MRBooleanOperation
 {
@@ -18,6 +17,4 @@ enum MRBooleanOperation
     MRBooleanOperationCount
 };
 
-#ifdef __cplusplus
-}
-#endif
+MR_EXTERN_C_END

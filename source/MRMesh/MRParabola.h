@@ -20,6 +20,12 @@ struct Parabola
 
     /// compute value of quadratic function at any x
     constexpr T operator() ( T x ) const { return a*x*x + b*x + c; }
+
+    /// argument (x) where parabola reaches extremal value: minimum for a > 0, maximum for a < 0
+    constexpr T extremArg() const { return -b / (2 * a); }
+
+    /// value (y) where parabola reaches extremal value: minimum for a > 0, maximum for a < 0
+    constexpr T extremVal() const { return -b*b / (4 * a) + c; }
 };
 
 } //namespace MR

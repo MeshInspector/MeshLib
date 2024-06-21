@@ -21,8 +21,7 @@ MRMesh* mrMeshFromTriangles( const MRVector3f* vertexCoordinates_, size_t vertex
     VertCoords vertexCoordinatesVec( vertexCoordinates.begin(), vertexCoordinates.end() );
     Triangulation tVec( t.begin(), t.end() );
 
-    auto* mesh = new Mesh;
-    *mesh = Mesh::fromTriangles( vertexCoordinatesVec, tVec );
+    auto* mesh = new Mesh( Mesh::fromTriangles( vertexCoordinatesVec, tVec ) );
     return reinterpret_cast<MRMesh*>( mesh );
 }
 
@@ -36,8 +35,7 @@ MRMesh* mrMeshFromTrianglesDuplicatingNonManifoldVertices( const MRVector3f* ver
     VertCoords vertexCoordinatesVec( vertexCoordinates.begin(), vertexCoordinates.end() );
     Triangulation tVec( t.begin(), t.end() );
 
-    auto* mesh = new Mesh;
-    *mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices( vertexCoordinatesVec, tVec );
+    auto* mesh = new Mesh( Mesh::fromTrianglesDuplicatingNonManifoldVertices( vertexCoordinatesVec, tVec ) );
     return reinterpret_cast<MRMesh*>( mesh );
 }
 
@@ -49,8 +47,7 @@ MRMesh* mrMeshNewFromPointTriples( const MRVector3f* posTriangles_, size_t posTr
     // TODO: cast instead of copying
     std::vector<Triangle3f> posTrianglesVec( posTriangles.begin(), posTriangles.end() );
 
-    auto* mesh = new Mesh;
-    *mesh = Mesh::fromPointTriples( posTrianglesVec, duplicateNonManifoldVertices );
+    auto* mesh = new Mesh( Mesh::fromPointTriples( posTrianglesVec, duplicateNonManifoldVertices ) );
     return reinterpret_cast<MRMesh*>( mesh );
 }
 

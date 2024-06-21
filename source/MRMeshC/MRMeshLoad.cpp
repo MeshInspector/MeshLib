@@ -10,15 +10,13 @@ MRMesh* mrMeshLoadFromAnySupportedFormat( const char* file, MRString** errorStr 
     auto res = MeshLoad::fromAnySupportedFormat( file );
     if ( res )
     {
-        auto* mesh = new Mesh;
-        *mesh = std::move( *res );
+        auto* mesh = new Mesh( std::move( *res ) );
         return reinterpret_cast<MRMesh*>( mesh );
     }
-    else
+    if ( errorStr )
     {
-        auto* str = new std::string;
-        *str = std::move( res.error() );
+        auto* str = new std::string( std::move( res.error() ) );
         *errorStr = reinterpret_cast<MRString*>( str );
-        return nullptr;
     }
+    return nullptr;
 }

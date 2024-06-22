@@ -28,10 +28,11 @@ void positionVertsSmoothly( Mesh& mesh, const VertBitSet& verts,
     laplacian.apply();
 }
 
-void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts, const Vector<Vector3f, VertId>* vertShifts )
+void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts,
+    const Vector<Vector3f, VertId>* vertShifts, const VertScalars* vertStabilizers )
 {
     MR_TIMER
-    assert( !MeshComponents::hasFullySelectedComponent( mesh, verts ) );
+    assert( vertStabilizers || !MeshComponents::hasFullySelectedComponent( mesh, verts ) );
 
     const auto sz = verts.count();
     if ( sz <= 0 )
@@ -48,14 +49,10 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts, const Ve
     for ( auto v : verts )
     {
         double sumW = 0;
-        for ( [[maybe_unused]] auto e : orgRing( mesh.topology, v ) )
-            sumW += 1;
-        mTriplets.emplace_back( n, n, sumW );
         Vector3d sumFixed;
-        if ( vertShifts )
-            sumFixed = sumW * Vector3d( (*vertShifts)[v] );
         for ( auto e : orgRing( mesh.topology, v ) )
         {
+            sumW += 1;
             auto d = mesh.topology.dest( e );
             if ( auto it = vertToMatPos.find( d ); it != vertToMatPos.end() )
             {
@@ -70,6 +67,15 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts, const Ve
                 sumFixed += Vector3d( mesh.points[d] );
             }
         }
+        if ( vertShifts )
+            sumFixed += sumW * Vector3d( (*vertShifts)[v] );
+        if ( vertStabilizers )
+        {
+            const auto s = (*vertStabilizers)[v];
+            sumW += s;
+            sumFixed += Vector3d( s * mesh.points[v] );
+        }
+        mTriplets.emplace_back( n, n, sumW );
         for ( int i = 0; i < 3; ++i )
             rhs[i][n] = sumFixed[i];
         ++n;

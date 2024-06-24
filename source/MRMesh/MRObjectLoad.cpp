@@ -33,9 +33,7 @@
 #include "MRGltfSerializer.h"
 #endif
 
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
 #include "MR3MFSerializer.h"
-#endif
 
 namespace MR
 {

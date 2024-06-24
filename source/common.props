@@ -92,6 +92,8 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(PythonLibPath);%(AdditionalDependencies)</AdditionalDependencies>
+      <!-- Needed to be able to see better stacktrace in deployed build with PDB files https://github.com/boostorg/stacktrace/blob/34e56c4e90f76e933d019b3ce824913957493f93/doc/stacktrace.qbk#L353-L360 -->
+      <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
 </Project>

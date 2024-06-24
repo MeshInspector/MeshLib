@@ -55,11 +55,11 @@ MRMESH_API Expected<Mesh, std::string> fromCtm( const std::filesystem::path& fil
 MRMESH_API Expected<Mesh, std::string> fromCtm( std::istream& in, const MeshLoadSettings& settings = {} );
 #endif
 
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
+/*#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
 /// loads from .3mf file (overload that takes path also reads "*.model" files)
 MRMESH_API Expected<Mesh, std::string> from3mf( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
 MRMESH_API Expected<Mesh, std::string> from3mf( std::istream& in, const MeshLoadSettings& settings = {} );
-#endif
+#endif*/
 
 MRMESH_API Expected<Mesh, std::string> fromDxf( const std::filesystem::path& path, const MeshLoadSettings& settings = {} );
 MRMESH_API Expected<Mesh, std::string> fromDxf( std::istream& in, const MeshLoadSettings& settings = {} );

@@ -862,9 +862,9 @@ MR_ADD_MESH_LOADER( IOFilter( "Drawing Interchange Format (.dxf)", "*.dxf" ), fr
 #ifndef MRMESH_NO_OPENCTM
 MR_ADD_MESH_LOADER( IOFilter( "Compact triangle-based mesh (.ctm)", "*.ctm" ), fromCtm )
 #endif
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
+/*#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
 MR_ADD_MESH_LOADER( IOFilter( "3D Manufacturing Format (.3mf;*.model)", "*.3mf;*.model" ), from3mf )
-#endif
+#endif*/
 #ifndef MRMESH_NO_OPENCASCADE
 MR_ADD_MESH_LOADER( IOFilter( "STEP files (.step,.stp)", "*.step;*.stp" ), fromStep )
 #endif

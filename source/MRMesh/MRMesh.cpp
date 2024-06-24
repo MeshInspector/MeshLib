@@ -1126,13 +1126,14 @@ const AABBTreePoints & Mesh::getAABBTreePoints() const
 
 const Dipoles & Mesh::getDipoles() const
 {
+    const auto & tree = getAABBTree(); // must be ready before lambda body for single-threaded Emscripten
     const auto & res = dipolesOwner_.getOrCreate(
-        [this]{
+        [this, &tree]{
             Dipoles dipoles;
-            calcDipoles( dipoles, getAABBTree(), *this );
+            calcDipoles( dipoles, tree, *this );
             return dipoles;
         } );
-    assert( res.size() == getAABBTree().nodes().size() );
+    assert( res.size() == tree.nodes().size() );
     return res;
 }
 
@@ -1164,7 +1165,8 @@ size_t Mesh::heapBytes() const
     return topology.heapBytes()
         + points.heapBytes()
         + AABBTreeOwner_.heapBytes()
-        + AABBTreePointsOwner_.heapBytes();
+        + AABBTreePointsOwner_.heapBytes()
+        + dipolesOwner_.heapBytes();
 }
 
 void Mesh::shrinkToFit()

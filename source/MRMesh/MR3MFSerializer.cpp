@@ -20,7 +20,7 @@
 namespace MR
 {
 
-static Expected <AffineXf3f, std::string> parseAffineXf( std::string s )
+static Expected <AffineXf3f, std::string> parseAffineXf( const std::string& s )
 {
     std::istringstream ss( s );
     float value;
@@ -114,7 +114,7 @@ static Expected<std::vector<int>, std::string> parseInts( const std::string& str
 }
 
 class ThreeMFLoader;
-struct Node : public std::enable_shared_from_this<Node>
+struct Node
 {
 private:    
 
@@ -133,7 +133,7 @@ private:
     int pindex = -1;
     int texId = -1;
 
-    std::weak_ptr<Node> pNode;
+    Node* pNode = nullptr;
 
     NodeType nodeType = NodeType::Unknown;
     std::vector<std::shared_ptr<Node>> children;
@@ -173,12 +173,12 @@ public:
 class ThreeMFLoader
 {
     // Documents index
-    std::map<std::filesystem::path, std::unique_ptr<tinyxml2::XMLDocument>> documents_;
+    std::vector<std::unique_ptr<tinyxml2::XMLDocument>> documents_;
     std::filesystem::path rootPath_;    
     // Object tree - each node is either a mesh or compound object
 
-    std::unordered_map<int, std::shared_ptr<Node>> idToNodeMap_;
-    std::vector<std::shared_ptr<Node>> objectNodes_;
+    std::unordered_map<int, Node*> idToNodeMap_;
+    std::vector<Node*> objectNodes_;
 
     std::vector<std::shared_ptr<Node>> roots_;
 
@@ -255,7 +255,7 @@ VoidOrErrStr ThreeMFLoader::loadXmls_( const std::vector<std::filesystem::path>&
         if ( *docRes == nullptr )
             continue;
         // Store parsed XML
-        documents_.emplace( file.lexically_normal(), std::move( *docRes ) );
+        documents_.push_back( std::move( *docRes ) );
     }
     return {};
 }
@@ -289,11 +289,9 @@ VoidOrErrStr ThreeMFLoader::loadTree_( ProgressCallback callback )
     roots_.reserve( documents_.size() );
     Node::loader = this;
 
-    auto docIt = documents_.begin();
     for ( size_t i = 0; i < documents_.size(); ++i )
     {
-        loadDocument_( docIt->second, subprogress(callback, documentsLoaded_, documents_.size()));
-        ++docIt;
+        loadDocument_( documents_[i], subprogress(callback, documentsLoaded_, documents_.size()));
     }
 
     return {};
@@ -332,6 +330,7 @@ Expected<std::shared_ptr<Object>, std::string> ThreeMFLoader::load( const std::v
 
         if ( node->texId != -1 )
         {            
+            //if any vertex has NaN UV, we can't load the texture
             if ( std::find_if( node->vertUVCoords.vec_.begin(), node->vertUVCoords.vec_.end(), [] ( const auto& uv ) { return isnan( uv.x ); } ) == node->vertUVCoords.vec_.end() )
             { 
                 auto it = idToNodeMap_.find( node->texId );
@@ -379,7 +378,7 @@ Expected<std::shared_ptr<Object>, std::string> ThreeMFLoader::load( const std::v
 
 VoidOrErrStr Node::loadObject_( const tinyxml2::XMLElement* xmlNode, ProgressCallback callback )
 {
-    if ( auto refNode = pNode.lock(); refNode && ( refNode->nodeType == NodeType::ColorGroup || refNode->nodeType == NodeType::BaseMaterials ) )
+    if ( auto refNode = pNode; refNode && ( refNode->nodeType == NodeType::ColorGroup || refNode->nodeType == NodeType::BaseMaterials ) )
     {
         if ( pindex < 0 || pindex >= refNode->colors.size() )
             return unexpected( "Invalid color index" );
@@ -495,7 +494,7 @@ VoidOrErrStr Node::load()
     if ( attr )
     {
         id = std::stoi( attr );
-        loader->idToNodeMap_[id] = shared_from_this();
+        loader->idToNodeMap_[id] = this;
     }
 
     attr = node->Attribute( "pid" );
@@ -689,6 +688,7 @@ Expected<Mesh, std::string> Node::loadMesh_( const tinyxml2::XMLElement* meshNod
         {
             texId = it->second->texId;
             if ( vertUVCoords.empty() )
+                // fill vector with NaN in order to identify vertices without UV coordinates. If any vertex has no UV coordinates, texture will be ignored
                 vertUVCoords.resize( vertexCoordinates.size(), { std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN() } );
         }
         else if ( ( it->second->nodeType == NodeType::ColorGroup || it->second->nodeType == NodeType::BaseMaterials ) && vertColorMap.empty() )
@@ -736,6 +736,7 @@ Expected<Mesh, std::string> Node::loadMesh_( const tinyxml2::XMLElement* meshNod
 
                 auto& vertUV = vertUVCoords[VertId( vs[i] )];
                 const auto refUV = it->second->uvCoords[ps[i]];
+                // If vertex already has another UV coordinates, texture will be ignored
                 if ( !loader->failedToLoadColoring && !isnan( vertUV.x ) && ( vertUV.x != refUV.x || vertUV.y != refUV.y ) )
                 {
                     loader->failedToLoadColoring = true;
@@ -759,9 +760,9 @@ Expected<Mesh, std::string> Node::loadMesh_( const tinyxml2::XMLElement* meshNod
         else //it->second->nodeType == NodeType::Multiproperties
         {
             const auto& refPids = it->second->pids;
-            std::shared_ptr<Node> colorNode;
+            Node* colorNode = nullptr;
             int colorIndex = -1;
-            std::shared_ptr<Node> textureNode;
+            Node* textureNode = nullptr;
             int textureIndex = -1;
             
             auto colorIt = std::find_if( refPids.begin(), refPids.end(), [&] ( int pid )
@@ -781,10 +782,6 @@ Expected<Mesh, std::string> Node::loadMesh_( const tinyxml2::XMLElement* meshNod
                 auto it = loader->idToNodeMap_.find( pid );
                 return ( it == loader->idToNodeMap_.end() ) ? false : it->second->nodeType == NodeType::Texture2dGroup;
             } );
-
-            
-
-            
 
             if ( textureIt != refPids.end() )
             { 
@@ -826,7 +823,7 @@ Expected<Mesh, std::string> Node::loadMesh_( const tinyxml2::XMLElement* meshNod
 
                     auto& vertUV = vertUVCoords[VertId( vs[i] )];
                     const auto refUV = textureNode->uvCoords[refPindices[textureIndex]];
-
+                    // If vertex already has another UV coordinates, texture will be ignored
                     if ( !isnan( vertUV.x ) && ( vertUV.x != refUV.x || vertUV.y != refUV.y ) )
                     {
                         loader->failedToLoadColoring = true;

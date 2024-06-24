@@ -242,7 +242,7 @@ Expected<std::unique_ptr<tinyxml2::XMLDocument>, std::string> ThreeMFLoader::loa
          doc->FirstChildElement() == nullptr )
         return unexpected( std::string( "3DF model file parse error" ) + utf8string( file ) );
 
-    return std::move( doc );
+    return doc;
 }
 
 VoidOrErrStr ThreeMFLoader::loadXmls_( const std::vector<std::filesystem::path>& files )

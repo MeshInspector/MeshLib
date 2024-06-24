@@ -13,9 +13,9 @@
 #include "MRDirectory.h"
 #include "MRImageLoad.h"
 
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
 #include <tinyxml2.h>
-#endif
+#include <charconv>
+#include <unordered_map>
 
 namespace MR
 {

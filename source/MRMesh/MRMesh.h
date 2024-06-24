@@ -217,15 +217,25 @@ struct [[nodiscard]] Mesh
     /// unlike normal( const MeshTriPoint & p ), this is not a smooth function
     [[nodiscard]] MRMESH_API Vector3f pseudonormal( const MeshTriPoint & p, const FaceBitSet * region = nullptr ) const;
 
-    /// given a point (p) in 3D and the closest point to in on mesh (proj), 
-    /// computes the signed distance from pt to mesh: positive value - outside mesh, negative - inside mesh
+    /// given a point (pt) in 3D and the closest point to in on mesh (proj),
+    /// \return signed distance from pt to mesh: positive value - outside mesh, negative - inside mesh;
+    /// this method can return wrong sign if the closest point is located on self-intersecting part of the mesh
     [[nodiscard]] MRMESH_API float signedDistance( const Vector3f & pt, const MeshTriPoint & proj, const FaceBitSet * region = nullptr ) const;
 
-    /// this version finds projection by itself in order to return signed distance from given point
+    /// given a point (pt) in 3D, computes the closest point on mesh, and
+    /// \return signed distance from pt to mesh: positive value - outside mesh, negative - inside mesh;
+    /// this method can return wrong sign if the closest point is located on self-intersecting part of the mesh
     [[nodiscard]] MRMESH_API float signedDistance( const Vector3f & pt ) const;
 
-    /// this version returns optional without value if the projection point is not within maxDist
+    /// given a point (pt) in 3D, computes the closest point on mesh, and
+    /// \return signed distance from pt to mesh: positive value - outside mesh, negative - inside mesh;
+    ///   or std::nullopt if the projection point is not within maxDist;
+    /// this method can return wrong sign if the closest point is located on self-intersecting part of the mesh
     [[nodiscard]] MRMESH_API std::optional<float> signedDistance( const Vector3f & pt, float maxDistSq, const FaceBitSet * region = nullptr ) const;
+
+    /// computes whether a point (pt) is located outside the object surrounded by this mesh using generalized winding number;
+    /// \param beta determines the precision of the approximation: the more the better, recommended value 2 or more
+    [[nodiscard]] MRMESH_API bool isOutside( const Vector3f & pt, float beta = 2 ) const;
 
     /// computes the sum of triangle angles at given vertex; optionally returns whether the vertex is on boundary
     [[nodiscard]] MRMESH_API float sumAngles( VertId v, bool * outBoundaryVert = nullptr ) const;
@@ -414,6 +424,12 @@ struct [[nodiscard]] Mesh
     /// returns cached aabb-tree for points of this mesh, but does not create it if it did not exist
     [[nodiscard]] const AABBTreePoints * getAABBTreePointsNotCreate() const { return AABBTreePointsOwner_.get(); }
 
+    /// returns cached dipoles of aabb-tree nodes for this mesh, creating it if it did not exist in a thread-safe manner
+    MRMESH_API const Dipoles & getDipoles() const;
+
+    /// returns cached dipoles of aabb-tree nodes for this mesh, but does not create it if it did not exist
+    [[nodiscard]] const Dipoles * getDipolesNotCreate() const { return dipolesOwner_.get(); }
+
     /// invalidates caches (aabb-trees) after any change in mesh geometry or topology
     /// \param pointsChanged specifies whether points have changed (otherwise only topology has changed)
     MRMESH_API void invalidateCaches( bool pointsChanged = true );
@@ -435,6 +451,7 @@ struct [[nodiscard]] Mesh
 private:
     mutable UniqueThreadSafeOwner<AABBTree> AABBTreeOwner_;
     mutable UniqueThreadSafeOwner<AABBTreePoints> AABBTreePointsOwner_;
+    mutable UniqueThreadSafeOwner<Dipoles> dipolesOwner_;
 };
 
 } //namespace MR

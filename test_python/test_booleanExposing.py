@@ -69,3 +69,22 @@ def test_unite_may_meshes():
     resMesh = mrmesh.uniteManyMeshes(vecMeshes)
     assert resMesh.topology.numValidFaces() > 0
     assert resMesh.topology.findHoleRepresentiveEdges().size() == 0
+
+def test_intersection_contours():
+    size = mrmesh.Vector3f.diagonal(2)
+    pos1 = mrmesh.Vector3f.diagonal(0)
+    pos2 = mrmesh.Vector3f.diagonal(-1)
+    pos3 = mrmesh.Vector3f.diagonal(1)
+
+    meshA = mrmesh.makeCube(size, pos1)
+    meshB = mrmesh.makeCube(size, pos2)
+
+    conv = mrmesh.getVectorConverters(meshA,meshB)
+    intersections = mrmesh.findCollidingEdgeTrisPrecise(meshA,meshB,conv)
+    orderedIntersections = mrmesh.orderIntersectionContours(meshA.topology,meshA.topology,intersections)
+    aConts = mrmesh.getOneMeshIntersectionContours(meshA,meshB,orderedIntersections,True,conv)
+    bConts = mrmesh.getOneMeshIntersectionContours(meshA,meshB,orderedIntersections,False,conv)
+    assert aConts[0].intersections.size() > 0
+    assert aConts[0].closed
+    assert aConts[0].intersections.size() == bConts[0].intersections.size()
+    assert bConts[0].closed

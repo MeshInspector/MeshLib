@@ -58,8 +58,7 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
     visualizationDistanceMap_ = VertScalars( numV, 0.f );
 
     obj_->setAncillaryTexture( { { { Color { 255, 64, 64, 255 }, Color { 0, 0, 0, 0 } }, Vector2i { 1, 2 } } } );
-    uvs_ = VertUVCoords( numV, { 0, 1 } );
-    obj_->setAncillaryUVCoords( uvs_ );
+    obj_->setAncillaryUVCoords( VertUVCoords( numV, { 0, 1 } ) );
 
     initConnections_();
     mousePressed_ = false;
@@ -80,8 +79,6 @@ void SurfaceManipulationWidget::reset()
     pointsShift_.clear();
     editingDistanceMap_.clear();
     visualizationDistanceMap_.clear();
-
-    uvs_ = {};
 
     resetConnections_();
     mousePressed_ = false;
@@ -173,6 +170,8 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             {
                 if ( bd.empty() )
                     continue;
+                // assert( isHoleBd( mesh.topology, bd ) ) can probably fail due to different construction of loops,
+                // so we check every edge of every loop below
                 const auto len = calcPathLength( bd, mesh );
                 const auto avgLen = len / bd.size();
                 FillHoleNicelySettings settings
@@ -183,10 +182,11 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
                         .multipleEdgesResolveMode = FillHoleParams::MultipleEdgesResolveMode::Strong
                     },
                     .maxEdgeLen = 2 * (float)avgLen,
-                    .edgeWeights = settings_.edgeWeights,
-                    .uvCoords = &uvs_
+                    .edgeWeights = settings_.edgeWeights
                 };
-                auto patchFaces = fillHoleNicely( mesh, bd[0], settings );
+                for ( auto e : bd )
+                    if ( !mesh.topology.left( e ) )
+                        fillHoleNicely( mesh, e, settings );
             }
             obj_->setDirtyFlags( DIRTY_ALL );
 
@@ -343,11 +343,15 @@ void SurfaceManipulationWidget::changeSurface_()
 
 void SurfaceManipulationWidget::updateUVmap_( bool set )
 {
+    VertUVCoords uvs;
+    obj_->updateAncillaryUVCoords( uvs );
+    uvs.resizeWithReserve( obj_->mesh()->points.size(), UVCoord{ 0, 1 } );
     const float normalize = 0.5f / settings_.radius;
     BitSetParallelFor( visualizationRegion_, [&] ( VertId v )
     {
-        uvs_[v] = set ? UVCoord{ 0, visualizationDistanceMap_[v] * normalize } : UVCoord{ 0, 1 };
+        uvs[v] = set ? UVCoord{ 0, visualizationDistanceMap_[v] * normalize } : UVCoord{ 0, 1 };
     } );
+    obj_->setAncillaryUVCoords( std::move( uvs ) );
 }
 
 void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
@@ -500,7 +504,6 @@ void SurfaceManipulationWidget::updateVizualizeSelection_( const ObjAndPick& obj
         if ( !badRegion_ )
             updateUVmap_( true );
     }
-    obj_->setAncillaryUVCoords( uvs_ );
 }
 
 }

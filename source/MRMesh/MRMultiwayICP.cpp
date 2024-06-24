@@ -278,10 +278,10 @@ void updateGroupPairs( ICPGroupPairs& pairs, const ICPObjects& objs,
     } );
 }
 
-MultiwayICP::MultiwayICP( const ICPObjects& objects, float samplingVoxelSize, ProgressCallback cb ) :
+MultiwayICP::MultiwayICP( const ICPObjects& objects, const MultiwayICPSamplingParameters& samplingParams ) :
     objs_{ objects }
 {
-    resamplePoints( samplingVoxelSize, cb );
+    resamplePoints( samplingParams );
 }
 
 Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformations( ProgressCallback cb )
@@ -296,9 +296,6 @@ Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformations( ProgressCallbac
             || prop_.method == ICPMethod::PointToPoint;
         
         bool res = doIteration_( !pt2pt );
-
-        if ( iter_ == 1 && perIterationCb_ )
-            perIterationCb_( 0 );
 
         if ( perIterationCb_ )
             perIterationCb_( iter_ );
@@ -342,12 +339,14 @@ Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformations( ProgressCallbac
     return res;
 }
 
-bool MultiwayICP::resamplePoints( float samplingVoxelSize, ProgressCallback cb )
+bool MultiwayICP::resamplePoints( const MultiwayICPSamplingParameters& samplingParams )
 {
     MR_TIMER;
-    setupLayers_();
 
-    samplingSize_ = samplingVoxelSize;
+    maxGroupSize_ = samplingParams.maxGroupSize;
+    setupLayers_( samplingParams.cascadeMode );
+
+    samplingSize_ = samplingParams.samplingVoxelSize;
     bool cascadeMode = pairsGridPerLayer_.size() > 1;
 
     Vector<VertBitSet, ObjId> samplesPerObj( objs_.size() );
@@ -356,25 +355,25 @@ bool MultiwayICP::resamplePoints( float samplingVoxelSize, ProgressCallback cb )
     auto keepGoing = ParallelFor( objs_, [&] ( ObjId ind )
     {
         const auto& obj = objs_[ind];
-        samplesPerObj[ind] = *obj.obj.pointsGridSampling( samplingVoxelSize );
-    }, subprogress( cb, 0.0f, maxProgress ) );
+        samplesPerObj[ind] = *obj.obj.pointsGridSampling( samplingSize_ );
+    }, subprogress( samplingParams.cb, 0.0f, maxProgress ) );
 
     if ( !keepGoing )
         return false;
 
     float maxProgress2 = cascadeMode ? 0.4f : 1.0f;
-    reservePairsLayer0_( std::move( samplesPerObj ), subprogress( cb, maxProgress, maxProgress2 ) );
+    reservePairsLayer0_( std::move( samplesPerObj ), subprogress( samplingParams.cb, maxProgress, maxProgress2 ) );
 
     if ( !cascadeMode )
         return true;
 
     maxProgress = maxProgress2;
     maxProgress2 = 0.7f;
-    auto samplesPerUnit = resampleUpperLayers_( subprogress( cb, maxProgress, maxProgress2 ) );
+    auto samplesPerUnit = resampleUpperLayers_( subprogress( samplingParams.cb, maxProgress, maxProgress2 ) );
     if ( !samplesPerUnit )
         return false;
     // only do something if cascade mode is required, really should be called on each iteration
-    return reserveUpperLayerPairs_( std::move( *samplesPerUnit ), subprogress( cb, maxProgress2, 1.0f ) );
+    return reserveUpperLayerPairs_( std::move( *samplesPerUnit ), subprogress( samplingParams.cb, maxProgress2, 1.0f ) );
 }
 
 float MultiwayICP::getMeanSqDistToPoint() const
@@ -423,13 +422,38 @@ float MultiwayICP::getMeanSqDistToPlane() const
     return numSum.rootMeanSqF();
 }
 
+size_t MultiwayICP::getNumSamples() const
+{
+    size_t num = 0;
+    for ( ICPLayer l( 0 ); l < pairsGridPerLayer_.size(); ++l )
+    {
+        const auto& pairs = pairsGridPerLayer_[l];
+        // it is deterministic to reduce integers without parallel_deterministic_reduce
+        num += tbb::parallel_reduce( tbb::blocked_range( size_t( 0 ), pairs.size() * pairs.size() ), size_t( 0 ),
+        [&] ( const auto& range, size_t curr )
+        {
+            for ( size_t r = range.begin(); r < range.end(); ++r )
+            {
+                size_t i = r % pairs.size();
+                size_t j = r / pairs.size();
+                if ( i == j )
+                    continue;
+                curr += MR::getNumSamples( pairs[ICPElementId( i )][ICPElementId( j )] );
+            }
+            return curr;
+        }, [] ( auto a, auto b ) { return a + b; } );
+    }
+    return num;
+}
+
 size_t MultiwayICP::getNumActivePairs() const
 {
     size_t num = 0;
     for ( ICPLayer l( 0 ); l < pairsGridPerLayer_.size(); ++l )
     {
         const auto& pairs = pairsGridPerLayer_[l];
-        num += tbb::parallel_deterministic_reduce( tbb::blocked_range( size_t( 0 ), pairs.size() * pairs.size() ), size_t( 0 ),
+        // it is deterministic to reduce integers without parallel_deterministic_reduce
+        num += tbb::parallel_reduce( tbb::blocked_range( size_t( 0 ), pairs.size() * pairs.size() ), size_t( 0 ),
         [&] ( const auto& range, size_t curr )
         {
             for ( size_t r = range.begin(); r < range.end(); ++r )
@@ -463,15 +487,19 @@ bool MultiwayICP::updateAllPointPairs( ProgressCallback cb )
     return true;
 }
 
-void MultiwayICP::setupLayers_()
+void MultiwayICP::setupLayers_( MultiwayICPSamplingParameters::CascadeMode mode )
 {
     if ( maxGroupSize_ <= 1 || objs_.size() <= maxGroupSize_ )
     {
         pairsGridPerLayer_.resize( 1 );
         return;
     }
-
-    cascadeIndexer_ = std::make_unique<SeqCascade>( int( objs_.size() ), maxGroupSize_ );
+    if ( mode == MultiwayICPSamplingParameters::CascadeMode::Sequential )
+        cascadeIndexer_ = std::make_unique<SeqCascade>( int( objs_.size() ), maxGroupSize_ );
+    else if ( mode == MultiwayICPSamplingParameters::CascadeMode::AABBTreeBased )
+        cascadeIndexer_ = std::make_unique<AABBTreeCascade>( objs_, maxGroupSize_ );
+    
+    assert( cascadeIndexer_ );
     pairsGridPerLayer_.resize( cascadeIndexer_->getNumLayers() );
 }
 

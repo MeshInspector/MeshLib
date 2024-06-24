@@ -55,20 +55,40 @@ public:
     virtual size_t getNumLayers() const = 0;
 };
 
+/// Parameters that are used for sampling of the MultiwayICP objects
+struct MultiwayICPSamplingParameters
+{
+    /// sampling size of each object
+    float samplingVoxelSize = 0.0f;
+
+    /// size of maximum icp group to work with
+    /// if number of objects exceeds this value, icp is applied in cascade mode
+    int maxGroupSize = 64;
+
+    enum class CascadeMode
+    {
+        Sequential, /// separates objects on groups based on their index in ICPObjects (good if all objects about the size of all objects together)
+        AABBTreeBased /// builds AABB tree based on each object bounding box and separates subtrees (good if each object much smaller then all objects together)
+    } cascadeMode{ CascadeMode::AABBTreeBased };
+
+    /// callback for progress reports
+    ProgressCallback cb;
+};
+
 /// This class allows you to register many objects having similar parts
 /// and known initial approximations of orientations/locations using
 /// Iterative Closest Points (ICP) point-to-point or point-to-plane algorithms
 class MRMESH_CLASS MultiwayICP
 {
 public:
-    MRMESH_API MultiwayICP( const ICPObjects& objects, float samplingVoxelSize, ProgressCallback cb = {} );
+    MRMESH_API MultiwayICP( const ICPObjects& objects, const MultiwayICPSamplingParameters& samplingParams );
     
     /// runs ICP algorithm given input objects, transformations, and parameters;
     /// \return adjusted transformations of all objects to reach registered state
     [[nodiscard]] MRMESH_API Vector<AffineXf3f, ObjId> calculateTransformations( ProgressCallback cb = {} );
     
     /// select pairs with origin samples on all objects
-    MRMESH_API bool resamplePoints( float samplingVoxelSize, ProgressCallback cb = {} );
+    MRMESH_API bool resamplePoints( const MultiwayICPSamplingParameters& samplingParams );
 
     /// in each pair updates the target data and performs basic filtering (activation)
     /// in cascade mode only useful for stats update 
@@ -83,6 +103,9 @@ public:
 
     /// computes root-mean-square deviation from points to target planes
     [[nodiscard]] MRMESH_API float getMeanSqDistToPlane() const;
+
+    /// computes the number of samples able to form pairs
+    [[nodiscard]] MRMESH_API size_t getNumSamples() const;
 
     /// computes the number of active point pairs
     [[nodiscard]] MRMESH_API size_t getNumActivePairs() const;
@@ -110,7 +133,7 @@ private:
     std::unique_ptr<IICPTreeIndexer> cascadeIndexer_;
 
     /// reserves space in pairsGridPerLayer_ according to mode and GroupIndexer
-    void setupLayers_();
+    void setupLayers_( MultiwayICPSamplingParameters::CascadeMode mode );
 
     /// reserves memory for all pairs
     /// if currently in cascade mode (objs.size() > maxGroupSize_) reserves only for pairs inside groups

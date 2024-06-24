@@ -78,6 +78,8 @@ bool checkKey( ImGuiKey passedKey )
 {
     if ( passedKey == ImGuiKey_None )
         return false;
+
+    reserveKeyEvent( passedKey );
     bool pressed = false;
     if ( passedKey == ImGuiKey_Enter || passedKey == ImGuiKey_KeypadEnter )
         pressed =  ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter );
@@ -322,6 +324,11 @@ bool buttonIconEx(
         {
             printText = true;
             curDetail.end = startWord;
+            if ( curDetail.lenght == 0 )
+            {
+                curDetail.end = endWord;
+                curDetail.lenght += curTextSize.x;
+            }
             previosDetail = curDetail;
             curDetail = { curTextSize.x, startWord, endWord };
         }

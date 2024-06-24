@@ -145,7 +145,10 @@ bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*
             name += "Smooth";
         else if ( settings_.workMode == WorkMode::Patch )
             name += "Patch";
-        historyAction_ = std::make_shared<ChangeMeshPointsAction>( name, obj_ );
+        if ( settings_.workMode != WorkMode::Patch )
+            historyAction_ = std::make_shared<ChangeMeshPointsAction>( name, obj_ );
+        else
+            historyAction_ = std::make_shared<ChangeMeshAction>( name, obj_ );
         changeSurface_();
     }
 
@@ -211,7 +214,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         params.force = settings_.relaxForceAfterEdit;
         params.iterations = 5;
         relax( mesh, params );
-        obj_->setDirtyFlags( DIRTY_PRIMITIVES );
+        obj_->setDirtyFlags( DIRTY_POSITION );
     }
     generalEditingRegion_.clear();
     generalEditingRegion_.resize( numV, false );
@@ -294,7 +297,7 @@ void SurfaceManipulationWidget::changeSurface_()
     if ( appendHistoryAction_ )
     {
         appendHistoryAction_ = false;
-        AppendHistory( std::move( historyAction_ ) );
+        AppendHistory( std::move(  historyAction_ ) );
     }
 
     MR_TIMER;
@@ -346,7 +349,7 @@ void SurfaceManipulationWidget::changeSurface_()
         points[v] += direction * pointShift * normal;
     } );
     generalEditingRegion_ |= singleEditingRegion_;
-    obj_->setDirtyFlags( DIRTY_PRIMITIVES );
+    obj_->setDirtyFlags( DIRTY_POSITION );
 }
 
 void SurfaceManipulationWidget::updateUVmap_( bool set )

@@ -85,6 +85,10 @@ const IOFilters SceneFileFilters =
 #ifndef __EMSCRIPTEN__
     {"MeshInSpector Object Notation (.mison)","*.mison"},
 #endif
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
+    { "3D Manufacturing format (.3mf)", "*.3mf"},
+    { "3D Manufacturing model (.model)", "*.model"},
+#endif
 #ifndef MRMESH_NO_GLTF
     {"glTF JSON scene (.gltf)","*.gltf"},
     {"glTF binary scene (.glb)","*.glb"},

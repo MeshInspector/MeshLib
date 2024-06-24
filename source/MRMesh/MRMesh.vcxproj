@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MR3MFSerializer.h" />
     <ClInclude Include="MRAABBTreeBase.h" />
     <ClInclude Include="MRAABBTreeBase.hpp" />
     <ClInclude Include="MRAABBTreeMaker.hpp" />
@@ -408,6 +409,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
+    <ClCompile Include="MR3MFSerializer.cpp" />
     <ClCompile Include="MRAABBTreeMaker.cpp" />
     <ClCompile Include="miniply.cpp" />
     <ClCompile Include="MRAABBTree.cpp" />
@@ -514,7 +516,6 @@
     <ClCompile Include="MRMeshBooleanFacade.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
     <ClCompile Include="MRMeshExtrude.cpp" />
-    <ClCompile Include="MRMeshLoad3mf.cpp" />
     <ClCompile Include="MRMeshOrPoints.cpp" />
     <ClCompile Include="MRMeshReplicate.cpp" />
     <ClCompile Include="MRMeshToDistanceVolume.cpp" />

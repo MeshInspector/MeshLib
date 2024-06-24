@@ -1296,6 +1296,9 @@
     <ClInclude Include="MREnums.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MR3MFSerializer.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
     <ClInclude Include="MRParabola.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -2006,9 +2009,6 @@
     <ClCompile Include="MROffsetContours.cpp">
       <Filter>Source Files\Polyline</Filter>
     </ClCompile>
-    <ClCompile Include="MRMeshLoad3mf.cpp">
-      <Filter>Source Files\IO</Filter>
-    </ClCompile>
     <ClCompile Include="MRSolarRadiation.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
@@ -2161,6 +2161,9 @@
     </ClCompile>
     <ClCompile Include="MRFillHoleNicely.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MR3MFSerializer.cpp">
+      <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRBestFitParabola.cpp">
       <Filter>Source Files\Math</Filter>

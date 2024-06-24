@@ -21,7 +21,7 @@
 namespace MR
 {
 
-static Expected <AffineXf3f, std::string> parseAffineXf( const std::string& s )
+static Expected <AffineXf3f> parseAffineXf( const std::string& s )
 {
     std::istringstream ss( s );
     float value;
@@ -42,7 +42,7 @@ static Expected <AffineXf3f, std::string> parseAffineXf( const std::string& s )
     return xf;
 }
 
-static Expected<Color, std::string> parseColor( const std::string& s )
+static Expected<Color> parseColor( const std::string& s )
 {    
     if ( ( s.size() != 7 && s.size() != 9 ) || s[0] != '#' )
         return unexpected( "Invalid color format" );
@@ -91,7 +91,7 @@ static const std::unordered_map<std::string, NodeType> nodeTypeMap =
     { "m:multiproperties", NodeType::Multiproperties }
 };
 
-static Expected<std::vector<int>, std::string> parseInts( const std::string& str )
+static Expected<std::vector<int>> parseInts( const std::string& str )
 {
     std::vector<int> res;
     size_t l = str.find_first_not_of( ' ' );
@@ -115,7 +115,7 @@ static Expected<std::vector<int>, std::string> parseInts( const std::string& str
 }
 
 class ThreeMFLoader;
-struct Node
+class Node
 {
 private:    
 
@@ -127,7 +127,7 @@ private:
     VoidOrErrStr loadTexture2dGroup_( const tinyxml2::XMLElement* xmlNode );
     VoidOrErrStr loadMultiproperties_( const tinyxml2::XMLElement* xmlNode );
     
-    Expected<Mesh, std::string> loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCallback callback );
+    Expected<Mesh> loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCallback callback );
 
     int id = -1;
     int pid = -1;
@@ -208,10 +208,10 @@ public:
 
     Expected<std::shared_ptr<Object>, std::string> load( const std::vector<std::filesystem::path>& files, std::filesystem::path root, ProgressCallback callback );
 
-    friend struct Node;
+    friend class Node;
 };
 
-Expected<std::unique_ptr<tinyxml2::XMLDocument>, std::string> ThreeMFLoader::loadXml_( const std::filesystem::path& file )
+Expected<std::unique_ptr<tinyxml2::XMLDocument>> ThreeMFLoader::loadXml_( const std::filesystem::path& file )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -298,7 +298,7 @@ VoidOrErrStr ThreeMFLoader::loadTree_( ProgressCallback callback )
     return {};
 }
 
-Expected<std::shared_ptr<Object>, std::string> ThreeMFLoader::load( const std::vector<std::filesystem::path>& files, std::filesystem::path root, ProgressCallback callback )
+Expected<std::shared_ptr<Object>> ThreeMFLoader::load( const std::vector<std::filesystem::path>& files, std::filesystem::path root, ProgressCallback callback )
 {
     rootPath_ = root.lexically_normal();
 
@@ -624,7 +624,7 @@ VoidOrErrStr Node::loadTexture2dGroup_( const tinyxml2::XMLElement* xmlNode )
     return {};
 }
 
-Expected<Mesh, std::string> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCallback callback )
+Expected<Mesh> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCallback callback )
 {
     auto verticesNode = meshNode->FirstChildElement( "vertices" );
     if ( !verticesNode )
@@ -932,6 +932,13 @@ Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFrom3mf( con
     ThreeMFLoader loader;
     loader.loadWarn = loadWarn;
     return loader.load( files, tmpFolder, subprogress( callback, 0.1f, 0.9f ) );
+}
+
+Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromModel( const std::filesystem::path& path, std::string* loadWarn, ProgressCallback callback )
+{
+    ThreeMFLoader loader;
+    loader.loadWarn = loadWarn;
+    return loader.load( { path }, path.parent_path(), callback );
 }
 
 }

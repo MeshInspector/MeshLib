@@ -809,6 +809,10 @@ Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( 
     {
         res = deserializeObjectTreeFrom3mf( path, loadWarn, callback );
     }
+    else if ( ext == "*.model" )
+    {
+        res = deserializeObjectTreeFromModel( path, loadWarn, callback );
+    }
 #endif
 #ifndef MRMESH_NO_OPENCASCADE
     else if ( ext == "*.step" || ext == "*.stp" )

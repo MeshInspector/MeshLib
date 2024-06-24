@@ -332,7 +332,7 @@ Expected<std::shared_ptr<Object>, std::string> ThreeMFLoader::load( const std::v
         if ( node->texId != -1 )
         {            
             //if any vertex has NaN UV, we can't load the texture
-            if ( std::find_if( node->vertUVCoords.vec_.begin(), node->vertUVCoords.vec_.end(), [] ( const auto& uv ) { return isnan( uv.x ); } ) == node->vertUVCoords.vec_.end() )
+            if ( std::find_if( node->vertUVCoords.vec_.begin(), node->vertUVCoords.vec_.end(), [] ( const auto& uv ) { return std::isnan( uv.x ); } ) == node->vertUVCoords.vec_.end() )
             { 
                 auto it = idToNodeMap_.find( node->texId );
                 if ( it == idToNodeMap_.end() )
@@ -738,7 +738,7 @@ Expected<Mesh, std::string> Node::loadMesh_( const tinyxml2::XMLElement* meshNod
                 auto& vertUV = vertUVCoords[VertId( vs[i] )];
                 const auto refUV = it->second->uvCoords[ps[i]];
                 // If vertex already has another UV coordinates, texture will be ignored
-                if ( !loader->failedToLoadColoring && !isnan( vertUV.x ) && ( vertUV.x != refUV.x || vertUV.y != refUV.y ) )
+                if ( !loader->failedToLoadColoring && !std::isnan( vertUV.x ) && ( vertUV.x != refUV.x || vertUV.y != refUV.y ) )
                 {
                     loader->failedToLoadColoring = true;
                     if ( loader->loadWarn )
@@ -825,7 +825,7 @@ Expected<Mesh, std::string> Node::loadMesh_( const tinyxml2::XMLElement* meshNod
                     auto& vertUV = vertUVCoords[VertId( vs[i] )];
                     const auto refUV = textureNode->uvCoords[refPindices[textureIndex]];
                     // If vertex already has another UV coordinates, texture will be ignored
-                    if ( !isnan( vertUV.x ) && ( vertUV.x != refUV.x || vertUV.y != refUV.y ) )
+                    if ( !std::isnan( vertUV.x ) && ( vertUV.x != refUV.x || vertUV.y != refUV.y ) )
                     {
                         loader->failedToLoadColoring = true;
                         if ( loader->loadWarn )

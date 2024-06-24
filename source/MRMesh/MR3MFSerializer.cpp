@@ -16,6 +16,7 @@
 #include <tinyxml2.h>
 #include <charconv>
 #include <unordered_map>
+#include <cmath>
 
 namespace MR
 {

@@ -50,12 +50,18 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
 
 
     size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
-    singleEditingRegion_ = VertBitSet( numV, false );
-    visualizationRegion_ = VertBitSet( numV, false );
-    generalEditingRegion_ = VertBitSet( numV, false );
-    pointsShift_ = VertScalars( numV, 0.f );
-    editingDistanceMap_ = VertScalars( numV, 0.f );
-    visualizationDistanceMap_ = VertScalars( numV, 0.f );
+    singleEditingRegion_.clear();
+    singleEditingRegion_.resize( numV, false );
+    visualizationRegion_.clear();
+    visualizationRegion_.resize( numV, false );
+    generalEditingRegion_.clear();
+    generalEditingRegion_.resize( numV, false );
+    pointsShift_.clear();
+    pointsShift_.resize( numV, 0.f );
+    editingDistanceMap_.clear();
+    editingDistanceMap_.resize( numV, 0.f );
+    visualizationDistanceMap_.clear();
+    visualizationDistanceMap_.resize( numV, 0.f );
 
     obj_->setAncillaryTexture( { { { Color { 255, 64, 64, 255 }, Color { 0, 0, 0, 0 } }, Vector2i { 1, 2 } } } );
     obj_->setAncillaryUVCoords( VertUVCoords( numV, { 0, 1 } ) );
@@ -139,7 +145,7 @@ bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*
             name += "Smooth";
         else if ( settings_.workMode == WorkMode::Patch )
             name += "Patch";
-        historyAction_ = std::make_shared<ChangeMeshAction>( name, obj_ );
+        historyAction_ = std::make_shared<ChangeMeshPointsAction>( name, obj_ );
         changeSurface_();
     }
 
@@ -156,7 +162,8 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         return true;
 
     size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
-    pointsShift_ = VertScalars( numV, 0.f );
+    pointsShift_.clear();
+    pointsShift_.resize( numV, 0.f );
 
     auto & mesh = *obj_->varMesh();
     if ( settings_.workMode == WorkMode::Patch )
@@ -206,7 +213,8 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         relax( mesh, params );
         obj_->setDirtyFlags( DIRTY_PRIMITIVES );
     }
-    generalEditingRegion_ = VertBitSet( numV, false );
+    generalEditingRegion_.clear();
+    generalEditingRegion_.resize( numV, false );
 
     obj_->setPickable( true );
 
@@ -364,6 +372,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
         viewportPoints.push_back( Vector2f( viewerRef.screenToViewport( Vector3f( mousePos ), viewerRef.getHoveredViewportId() ) ) );
     else
     {
+        // if the mouse shift is large, then the brush area is defined as the common area of many small shifts (creating many intermediate points of movement)
         const Vector2f newMousePos = Vector2f( viewerRef.screenToViewport( Vector3f( mousePos ), viewerRef.getHoveredViewportId() ) );
         const Vector2f oldMousePos = Vector2f( viewerRef.screenToViewport( Vector3f( mousePos_ ), viewerRef.getHoveredViewportId() ) );
         const Vector2f vec = newMousePos - oldMousePos;
@@ -417,13 +426,15 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
 
         if ( triPoints.size() == 1 )
         {
+            // if the mouse shift is small (one point of movement), then the distance map of the points is calculated in 3d space (as visual more circular area)
             PointOnFace pOnFace{ mesh.topology.left( triPoints[0].e ), mesh.triPoint( triPoints[0] ) };
             editingDistanceMap_ = computeSpaceDistances( mesh, pOnFace, settings_.radius );
             singleEditingRegion_ = findNeighborVerts( mesh, pOnFace, settings_.radius );
         }
         else
         {
-            // bad logic. need rework to SpaceDistance
+            // if the mouse shift is large (more then one point of movement), then the distance map is calculated from the surface of the mesh
+            // TODO try to rework with SpaceDistance (for multiple point. does not exist, need to create) if it's not slower
             singleEditingRegion_ = newVerts;
             dilateRegion( mesh, singleEditingRegion_, settings_.radius * 1.5f );
             editingDistanceMap_ = computeSurfaceDistances( mesh, triPoints, settings_.radius * 1.5f, &singleEditingRegion_ );
@@ -454,7 +465,7 @@ void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
     touchVertIniPos_ = mesh.points[touchVertId_];
     laplacian_ = std::make_unique<Laplacian>( *obj_->varMesh() );
     laplacian_->init( singleEditingRegion_, settings_.edgeWeights );
-    historyAction_ = std::make_shared<ChangeMeshAction>( "Brush: Deform", obj_ );
+    historyAction_ = std::make_shared<ChangeMeshPointsAction>( "Brush: Deform", obj_ );
 }
 
 void SurfaceManipulationWidget::laplacianMoveVert_( const Vector2f& mousePos )

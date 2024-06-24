@@ -111,7 +111,7 @@ private:
     Vector3f touchVertIniPos_; // initial position of fixed vertex
     Vector2i storedDown_;
     std::unique_ptr<Laplacian> laplacian_;
-    std::shared_ptr<ChangeMeshAction> historyAction_; // this action is prepared beforehand for better responsiveness, but pushed only on mouse move
+    std::shared_ptr<ChangeMeshPointsAction> historyAction_; // this action is prepared beforehand for better responsiveness, but pushed only on mouse move
     bool appendHistoryAction_ = false;
 };
 

@@ -257,6 +257,10 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
                 ret = true;
                 detail::markItemEdited( ImGui::GetItemID() );
             }
+
+            if ( *elemMin < *elemMax ) // sometimes ImGui does not clamp it, so make sure that value is clamped
+                elemVal = std::clamp( elemVal, *elemMin, *elemMax );
+
             return ret;
         } );
 }
@@ -345,6 +349,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 elemLabelFixed.c_str(), detail::imGuiTypeEnum<ElemType>(), &elemVal,
                 float( VectorTraits<SpeedType>::getElem( i, fixedSpeed ) ), elemMin, elemMax, valueToImGuiFormatString( elemVal, unitParams ).c_str(), flags
             );
+
             auto dragId = ImGui::GetItemID();
 
             if ( forceShowZeroes )
@@ -400,6 +405,10 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 ret = true;
                 detail::markItemEdited( ImGui::GetItemID() );
             }
+
+            if ( *elemMin < *elemMax ) // sometimes ImGui does not clamp it, so make sure that value is clamped
+                elemVal = std::clamp( elemVal, *elemMin, *elemMax );
+
             return ret;
         } );
 }

@@ -391,12 +391,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LaplacianEdgeWeightsParam, [] ( pybind11::mo
         pybind11::arg( "fixedSharpVertices" ) = nullptr,
         "Puts given vertices in such positions to make smooth surface both inside verts-region and on its boundary" );
 
-    m.def ( "positionVertsSmoothlySharpBd", &MR::positionVertsSmoothlySharpBd,
-        pybind11::arg( "mesh" ), pybind11::arg( "verts" ), pybind11::arg( "vertShifts" ) = nullptr,
+    m.def( "positionVertsSmoothlySharpBd", &MR::positionVertsSmoothlySharpBd,
+        pybind11::arg( "mesh" ), pybind11::arg( "verts" ), pybind11::arg( "vertShifts" ) = nullptr, pybind11::arg( "vertStabilizers" ) = nullptr,
         "Puts given vertices in such positions to make smooth surface inside verts-region, but sharp on its boundary\n"
         "\tmesh - source mesh\n"
-        "\tverts - vertices to reposition. Cannot be all vertices of a connected component of the source mesh\n"
+        "\tverts - vertices to reposition. Cannot be all vertices of a connected component of the source mesh unless vertStabilizers are given\n"
         "\tvertShifts (optional) = additional shifts of each vertex relative to smooth position\n"
+        "\vertStabilizers (optional) = per-vertex stabilizers: the more the value, the bigger vertex attraction to its original position"
     );
 } )
 

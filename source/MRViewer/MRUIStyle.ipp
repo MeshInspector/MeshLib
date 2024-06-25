@@ -258,7 +258,7 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
                 detail::markItemEdited( ImGui::GetItemID() );
             }
 
-            if ( *elemMin < *elemMax ) // sometimes ImGui does not clamp it, so make sure that value is clamped
+            if ( *elemMin < *elemMax && bool( flags & ImGuiSliderFlags_AlwaysClamp ) ) // sometimes ImGui does not clamp it, so make sure that value is clamped
                 elemVal = std::clamp( elemVal, *elemMin, *elemMax );
 
             return ret;
@@ -406,7 +406,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 detail::markItemEdited( ImGui::GetItemID() );
             }
 
-            if ( *elemMin < *elemMax ) // sometimes ImGui does not clamp it, so make sure that value is clamped
+            if ( *elemMin < *elemMax && bool( flags & ImGuiSliderFlags_AlwaysClamp ) ) // sometimes ImGui does not clamp it, so make sure that value is clamped
                 elemVal = std::clamp( elemVal, *elemMin, *elemMax );
 
             return ret;

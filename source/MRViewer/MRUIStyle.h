@@ -47,12 +47,11 @@ struct ButtonIconCustomizationParams : public ButtonCustomizationParams
 
 struct PlotAxis
 {
-    enum class TypeAxis
+    enum class Type
     {
         horizontal,
-        vertical,
-        none
-    } axisType = TypeAxis::none;
+        vertical
+    } axisType = Type::horizontal;
     // the point from which the axes will be drawn
     ImVec2 startAxisPoint;
     // length dash without text

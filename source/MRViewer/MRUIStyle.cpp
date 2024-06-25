@@ -272,7 +272,7 @@ void drawPoltAxis( const PlotAxis& plotAxis )
     const float scrollY = ImGui::GetScrollY();
 
     float len = 0;
-    if ( plotAxis.axisType == PlotAxis::TypeAxis::horizontal )
+    if ( plotAxis.axisType == PlotAxis::Type::horizontal )
     {
         for ( size_t i = 0; i < plotAxis.numDash; i++ )
         {
@@ -299,7 +299,7 @@ void drawPoltAxis( const PlotAxis& plotAxis )
                     text.c_str() + text.size() );
         }
     }
-    else if ( plotAxis.axisType == PlotAxis::TypeAxis::vertical )
+    else if ( plotAxis.axisType == PlotAxis::Type::vertical )
     {
         for ( size_t i = 0; i < plotAxis.numDash; i++ )
         {

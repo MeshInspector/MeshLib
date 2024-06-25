@@ -274,7 +274,10 @@ Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetP
         const auto goodFaces = mesh.topology.getValidFaces() - badFaces;
 
         // for open input mesh, let us find only necessary portion on the shell
-        auto innerFaces = findInnerShellFacesWithSplits( MeshPart{ mesh, &goodFaces }, resMesh, offset > 0 ? Side::Positive : Side::Negative );
+        auto innerFaces = findInnerShellFacesWithSplits( MeshPart{ mesh, &goodFaces }, resMesh,
+            {
+                .side = offset > 0 ? Side::Positive : Side::Negative
+            } );
         resMesh.topology.deleteFaces( resMesh.topology.getValidFaces() - innerFaces );
         resMesh.pack();
     }

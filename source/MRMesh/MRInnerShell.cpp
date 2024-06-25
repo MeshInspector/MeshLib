@@ -9,38 +9,38 @@
 namespace MR
 {
 
-bool isInnerShellVert( const MeshPart & mp, const Vector3f & shellPoint, Side side, float maxAbsDistSq )
+bool isInnerShellVert( const MeshPart & mp, const Vector3f & shellPoint, const FindInnerShellSettings & settings )
 {
-    auto sd = findSignedDistance( shellPoint, mp, maxAbsDistSq );
+    auto sd = findSignedDistance( shellPoint, mp, settings.maxDistSq );
 
     if ( !sd )
         return false;
 
     if ( sd->mtp.isBd( mp.mesh.topology, mp.region ) )
         return false;
-    if ( side == Side::Positive && sd->dist <= 0 )
+    if ( settings.side == Side::Positive && sd->dist <= 0 )
         return false;
-    if ( side == Side::Negative && sd->dist >= 0 )
+    if ( settings.side == Side::Negative && sd->dist >= 0 )
         return false;
     return true;
 }
 
-VertBitSet findInnerShellVerts( const MeshPart & mp, const Mesh & shell, Side side, float maxAbsDistSq )
+VertBitSet findInnerShellVerts( const MeshPart & mp, const Mesh & shell, const FindInnerShellSettings & settings )
 {
     MR_TIMER
     VertBitSet res( shell.topology.vertSize() );
     BitSetParallelFor( shell.topology.getValidVerts(), [&]( VertId v )
     {
-        if ( isInnerShellVert( mp, shell.points[v], side, maxAbsDistSq ) )
+        if ( isInnerShellVert( mp, shell.points[v], settings ) )
             res.set( v );
     } );
     return res;
 }
 
-FaceBitSet findInnerShellFacesWithSplits( const MeshPart & mp, Mesh & shell, Side side )
+FaceBitSet findInnerShellFacesWithSplits( const MeshPart & mp, Mesh & shell, const FindInnerShellSettings & settings )
 {
     MR_TIMER
-    const auto innerVerts = findInnerShellVerts( mp, shell, side );
+    const auto innerVerts = findInnerShellVerts( mp, shell, settings );
 
     // find all edges connecting inner and not-inner vertices
     UndirectedEdgeBitSet ues( shell.topology.undirectedEdgeSize() );
@@ -71,7 +71,7 @@ FaceBitSet findInnerShellFacesWithSplits( const MeshPart & mp, Mesh & shell, Sid
         {
             const auto v = 0.5f * ( av + bv );
             const auto p = ( 1 - v ) * a + v * b;
-            if ( isInnerShellVert( mp, p, side ) )
+            if ( isInnerShellVert( mp, p, settings ) )
                 av = v;
             else
                 bv = v;

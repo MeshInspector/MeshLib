@@ -1165,7 +1165,11 @@ Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, 
         return res;
     }
 
-    const auto vertBitSet = findInnerShellVerts( mp, res.modifiedMesh, Side::Positive, 2.0f * params.millRadius * params.millRadius );
+    const auto vertBitSet = findInnerShellVerts( mp, res.modifiedMesh,
+        {
+            .side = Side::Positive,
+            .maxDistSq = 2.0f * params.millRadius * params.millRadius
+        } );
     res.modifiedRegion.resize( res.modifiedMesh.topology.lastValidFace() + 1 );
     BitSetParallelFor( vertBitSet, [&] ( VertId v )
     {

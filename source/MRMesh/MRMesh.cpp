@@ -507,6 +507,19 @@ Vector3f Mesh::pseudonormal( const MeshTriPoint & p, const FaceBitSet * region )
     return leftNormal( p.e );
 }
 
+bool Mesh::isOutsideByProjNorm( const Vector3f & pt, const MeshProjectionResult & proj, const FaceBitSet * region ) const
+{
+    return dot( proj.proj.point - pt, pseudonormal( proj.mtp, region ) ) <= 0;
+}
+
+float Mesh::signedDistance( const Vector3f & pt, const MeshProjectionResult & proj, const FaceBitSet * region ) const
+{
+    if ( isOutsideByProjNorm( pt, proj, region ) )
+        return std::sqrt( proj.distSq );
+    else
+        return -std::sqrt( proj.distSq );
+}
+
 float Mesh::signedDistance( const Vector3f & pt, const MeshTriPoint & proj, const FaceBitSet * region ) const
 {
     const auto projPt = triPoint( proj );

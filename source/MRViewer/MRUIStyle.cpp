@@ -274,7 +274,7 @@ void drawPoltAxis( const PlotAxis& plotAxis )
     float len = 0;
     for ( size_t i = 0; i < plotAxis.numHorizontalDash; i++ )
     {
-        float x = plotAxis.centerAxis.x + plotAxis.offsetX + plotAxis.stepX * i;
+        float x = plotAxis.startAxisPoint.x + plotAxis.offsetX + plotAxis.stepX * i;
         std::string text = std::to_string( plotAxis.firstHorizontalValue + plotAxis.horizontalStep * i );
         auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + text.size() );
 
@@ -284,8 +284,8 @@ void drawPoltAxis( const PlotAxis& plotAxis )
         else
             len = plotAxis.lenDash;
 
-        ImVec2 pos( x, plotAxis.centerAxis.y - len - scrollY );
-        drawList->AddLine( ImVec2( x, plotAxis.centerAxis.y - scrollY ), pos, color );
+        ImVec2 pos( x, plotAxis.startAxisPoint.y - len - scrollY );
+        drawList->AddLine( ImVec2( x, plotAxis.startAxisPoint.y - scrollY ), pos, color );
         if ( withText )
             drawList->AddText(
                 font,
@@ -298,7 +298,7 @@ void drawPoltAxis( const PlotAxis& plotAxis )
 
     for ( size_t i = 0; i < plotAxis.numVerticalDash; i++ )
     {
-        float y = plotAxis.centerAxis.y - plotAxis.offsetY - plotAxis.stepY * i;
+        float y = plotAxis.startAxisPoint.y - plotAxis.offsetY - plotAxis.stepY * i;
         std::string text = std::to_string( plotAxis.firstVerticalValue + plotAxis.verticalStep * i );
         auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + text.size() );
 
@@ -308,8 +308,8 @@ void drawPoltAxis( const PlotAxis& plotAxis )
         else
             len = plotAxis.lenDash;
 
-        ImVec2 pos( plotAxis.centerAxis.x + len, y - scrollY );
-        drawList->AddLine( ImVec2( plotAxis.centerAxis.x, y - scrollY ), pos, color );
+        ImVec2 pos( plotAxis.startAxisPoint.x + len, y - scrollY );
+        drawList->AddLine( ImVec2( plotAxis.startAxisPoint.x, y - scrollY ), pos, color );
         if ( withText )
             drawList->AddText(
                 font,

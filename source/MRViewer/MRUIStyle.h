@@ -47,7 +47,8 @@ struct ButtonIconCustomizationParams : public ButtonCustomizationParams
 
 struct PlotAxis
 {
-    ImVec2 centerAxis;
+    // the point from which the axes will be drawn
+    ImVec2 startAxisPoint;
     // length dash without text
     float lenDash = 8.0f;
     // length dash with text

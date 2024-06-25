@@ -17,10 +17,12 @@ bool isInnerShellVert( const MeshPart & mp, const Vector3f & shellPoint, const F
     if ( projRes.mtp.isBd( mp.mesh.topology, mp.region ) )
         return false;
 
-    const auto signDist = mp.mesh.signedDistance( shellPoint, projRes.mtp, mp.region );
-    if ( settings.side == Side::Positive && signDist <= 0 )
+    const bool outside = settings.meshHasSelfIntersections ?
+        mp.mesh.isOutside( shellPoint ) :
+        mp.mesh.isOutsideByProjNorm( shellPoint, projRes, mp.region );
+    if ( settings.side == Side::Positive && !outside )
         return false;
-    if ( settings.side == Side::Negative && signDist >= 0 )
+    if ( settings.side == Side::Negative && outside )
         return false;
     return true;
 }

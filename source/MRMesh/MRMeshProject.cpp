@@ -113,7 +113,7 @@ std::optional<SignedDistanceToMeshResult> findSignedDistance( const Vector3f & p
     res = SignedDistanceToMeshResult();
     res->proj = projRes.proj;
     res->mtp = projRes.mtp;
-    res->dist = mp.mesh.signedDistance( pt, projRes.mtp, mp.region );
+    res->dist = mp.mesh.signedDistance( pt, projRes, mp.region );
     return res;
 }
 

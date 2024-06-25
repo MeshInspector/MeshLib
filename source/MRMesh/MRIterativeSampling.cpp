@@ -114,8 +114,11 @@ std::optional<VertBitSet> pointIterativeSampling( const PointCloud& cloud, int n
                 rinfo.sumDistSq += prj.distSq - oldDistSq;
                 heap.setSmallerValue( r, rinfo );
             }
-            next[r] = first[cr];
-            first[cr] = r;
+            if ( cr ) // cr is invalid if (r) is the last remaining point
+            {
+                next[r] = first[cr];
+                first[cr] = r;
+            }
         }
         if ( !reportProgress( cb, [&] { return 0.3f + 0.7f * ( 1 - k * toRemove ); }, toRemove, 0x10000 ) )
             return {};

@@ -260,6 +260,67 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
     ret = TestEngine::createButton( label ) || ret; // Don't want short-circuiting.
     return ret;
 }
+
+void drawPoltAxis( const PlotAxis& plotAxis )
+{
+    auto drawList = ImGui::GetWindowDrawList();
+
+    const auto font = ImGui::GetFont();
+    const ImU32 color = ImGui::GetColorU32( ImGui::GetStyle().Colors[ImGuiCol_Text] );
+    const auto fontSize = ImGui::GetFontSize();
+
+    const float scrollY = ImGui::GetScrollY();
+
+    float len = 0;
+    for ( size_t i = 0; i < plotAxis.numHorizontalDash; i++ )
+    {
+        float x = plotAxis.centerAxis.x + plotAxis.offsetX + plotAxis.stepX * i;
+        std::string text = std::to_string( plotAxis.firstHorizontalValue + plotAxis.horizontalStep * i );
+        auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + text.size() );
+
+        auto withText = ( i + plotAxis.startTextPosX ) % plotAxis.stepForTextX == 0;
+        if ( withText )
+            len = plotAxis.lenDashWithText;
+        else
+            len = plotAxis.lenDash;
+
+        ImVec2 pos( x, plotAxis.centerAxis.y - len - scrollY );
+        drawList->AddLine( ImVec2( x, plotAxis.centerAxis.y - scrollY ), pos, color );
+        if ( withText )
+            drawList->AddText(
+                font,
+                fontSize,
+                ImVec2( pos.x - textSize.x / 2.0f, pos.y - textSize.y - plotAxis.textPadding ),
+                color,
+                text.c_str(),
+                text.c_str() + text.size() );
+    }
+
+    for ( size_t i = 0; i < plotAxis.numVerticalDash; i++ )
+    {
+        float y = plotAxis.centerAxis.y - plotAxis.offsetY - plotAxis.stepY * i;
+        std::string text = std::to_string( plotAxis.firstVerticalValue + plotAxis.verticalStep * i );
+        auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + text.size() );
+
+        auto withText = ( i + plotAxis.startTextPosY ) % plotAxis.stepForTextY == 0;
+        if ( withText )
+            len = plotAxis.lenDashWithText;
+        else
+            len = plotAxis.lenDash;
+
+        ImVec2 pos( plotAxis.centerAxis.x + len, y - scrollY );
+        drawList->AddLine( ImVec2( plotAxis.centerAxis.x, y - scrollY ), pos, color );
+        if ( withText )
+            drawList->AddText(
+                font,
+                fontSize,
+                ImVec2( pos.x + plotAxis.textPadding, pos.y - textSize.y / 2.0f ),
+                color,
+                text.c_str(),
+                text.c_str() + text.size() );
+    }
+}
+
 bool buttonIconEx(
     const std::string& name,
     const Vector2f& iconSize,

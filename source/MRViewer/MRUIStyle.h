@@ -45,6 +45,38 @@ struct ButtonIconCustomizationParams : public ButtonCustomizationParams
     bool flatBackgroundColor = false;
 };
 
+struct PlotAxis
+{
+    ImVec2 centerAxis;
+    // length dash without text
+    float lenDash = 8.0f;
+    // length dash with text
+    float lenDashWithText = 12.0f;
+    // text offset from dash
+    float textPadding = 3.0f;
+
+    // offset from the starting point along the axis
+    float offsetX = 0;
+    float offsetY = 0;
+    // the number of dash on the axis
+    size_t numHorizontalDash = 5;
+    size_t numVerticalDash = 5;
+    // the distance between the dash on the axis
+    float stepX = 0;
+    float stepY = 0;
+    // what will be the first dash with the signature
+    size_t startTextPosX = 0;
+    size_t startTextPosY = 0;
+    // sign every nth dash
+    size_t stepForTextX = 1;
+    size_t stepForTextY = 1;
+    // step for signature values
+    int horizontalStep = 1;
+    float verticalStep = 1.0f;
+    // the first value of the signature
+    int firstHorizontalValue = 0;
+    float firstVerticalValue = 0.0f;
+};
 
 /// draw gradient button, which can be disabled (active = false)
 MRVIEWER_API bool buttonEx( const char* label, bool active, const Vector2f& size = Vector2f( 0, 0 ),
@@ -64,6 +96,8 @@ MRVIEWER_API bool buttonCommonSize( const char* label, const Vector2f& size = Ve
 /// draw button with same logic as radioButton
 MRVIEWER_API bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& size = Vector2f( 0, 0 ), ImGuiKey key = ImGuiKey_None );
 
+// draw dash with text along the vertical and horizontal axis
+MRVIEWER_API void drawPoltAxis( const PlotAxis& plotAxis );
 // draw a button with an icon and text under it
 MRVIEWER_API bool buttonIconEx( 
     const std::string& name, 

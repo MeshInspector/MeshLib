@@ -272,52 +272,57 @@ void drawPoltAxis( const PlotAxis& plotAxis )
     const float scrollY = ImGui::GetScrollY();
 
     float len = 0;
-    for ( size_t i = 0; i < plotAxis.numHorizontalDash; i++ )
+    if ( plotAxis.axisType == PlotAxis::TypeAxis::horizontal )
     {
-        float x = plotAxis.startAxisPoint.x + plotAxis.offsetX + plotAxis.stepX * i;
-        std::string text = std::to_string( plotAxis.firstHorizontalValue + plotAxis.horizontalStep * i );
-        auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + text.size() );
+        for ( size_t i = 0; i < plotAxis.numDash; i++ )
+        {
+            float x = plotAxis.startAxisPoint.x + plotAxis.offset + plotAxis.step * i;
+            std::string text = std::to_string( plotAxis.firstAxisValue + plotAxis.axisStep * i );
+            auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + text.size() );
 
-        auto withText = ( i + plotAxis.startTextPosX ) % plotAxis.stepForTextX == 0;
-        if ( withText )
-            len = plotAxis.lenDashWithText;
-        else
-            len = plotAxis.lenDash;
+            auto withText = ( i + plotAxis.startTextPos ) % plotAxis.stepForText == 0;
+            if ( withText )
+                len = plotAxis.lenDashWithText;
+            else
+                len = plotAxis.lenDash;
 
-        ImVec2 pos( x, plotAxis.startAxisPoint.y - len - scrollY );
-        drawList->AddLine( ImVec2( x, plotAxis.startAxisPoint.y - scrollY ), pos, color );
-        if ( withText )
-            drawList->AddText(
-                font,
-                fontSize,
-                ImVec2( pos.x - textSize.x / 2.0f, pos.y - textSize.y - plotAxis.textPadding ),
-                color,
-                text.c_str(),
-                text.c_str() + text.size() );
+            ImVec2 pos( x, plotAxis.startAxisPoint.y - len - scrollY );
+            drawList->AddLine( ImVec2( x, plotAxis.startAxisPoint.y - scrollY ), pos, color );
+            if ( withText )
+                drawList->AddText(
+                    font,
+                    fontSize,
+                    ImVec2( pos.x - textSize.x / 2.0f, pos.y - textSize.y - plotAxis.textPadding ),
+                    color,
+                    text.c_str(),
+                    text.c_str() + text.size() );
+        }
     }
-
-    for ( size_t i = 0; i < plotAxis.numVerticalDash; i++ )
+    else if ( plotAxis.axisType == PlotAxis::TypeAxis::vertical )
     {
-        float y = plotAxis.startAxisPoint.y - plotAxis.offsetY - plotAxis.stepY * i;
-        std::string text = std::to_string( plotAxis.firstVerticalValue + plotAxis.verticalStep * i );
-        auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + text.size() );
+        for ( size_t i = 0; i < plotAxis.numDash; i++ )
+        {
+            float y = plotAxis.startAxisPoint.y - plotAxis.offset - plotAxis.step * i;
+            std::string text = std::to_string( plotAxis.firstAxisValue + plotAxis.axisStep * i );
+            auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + text.size() );
 
-        auto withText = ( i + plotAxis.startTextPosY ) % plotAxis.stepForTextY == 0;
-        if ( withText )
-            len = plotAxis.lenDashWithText;
-        else
-            len = plotAxis.lenDash;
+            auto withText = ( i + plotAxis.startTextPos ) % plotAxis.stepForText == 0;
+            if ( withText )
+                len = plotAxis.lenDashWithText;
+            else
+                len = plotAxis.lenDash;
 
-        ImVec2 pos( plotAxis.startAxisPoint.x + len, y - scrollY );
-        drawList->AddLine( ImVec2( plotAxis.startAxisPoint.x, y - scrollY ), pos, color );
-        if ( withText )
-            drawList->AddText(
-                font,
-                fontSize,
-                ImVec2( pos.x + plotAxis.textPadding, pos.y - textSize.y / 2.0f ),
-                color,
-                text.c_str(),
-                text.c_str() + text.size() );
+            ImVec2 pos( plotAxis.startAxisPoint.x + len, y - scrollY );
+            drawList->AddLine( ImVec2( plotAxis.startAxisPoint.x, y - scrollY ), pos, color );
+            if ( withText )
+                drawList->AddText(
+                    font,
+                    fontSize,
+                    ImVec2( pos.x + plotAxis.textPadding, pos.y - textSize.y / 2.0f ),
+                    color,
+                    text.c_str(),
+                    text.c_str() + text.size() );
+        }
     }
 }
 

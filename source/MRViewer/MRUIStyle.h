@@ -47,6 +47,11 @@ struct ButtonIconCustomizationParams : public ButtonCustomizationParams
 
 struct PlotAxis
 {
+    enum class TypeAxis
+    {
+        horizontal,
+        vertical
+    } axisType;
     // the point from which the axes will be drawn
     ImVec2 startAxisPoint;
     // length dash without text
@@ -57,26 +62,19 @@ struct PlotAxis
     float textPadding = 3.0f;
 
     // offset from the starting point along the axis
-    float offsetX = 0;
-    float offsetY = 0;
+    float offset = 0;
     // the number of dash on the axis
-    size_t numHorizontalDash = 5;
-    size_t numVerticalDash = 5;
+    size_t numDash = 5;
     // the distance between the dash on the axis
-    float stepX = 0;
-    float stepY = 0;
+    float step = 0;
     // what will be the first dash with the signature
-    size_t startTextPosX = 0;
-    size_t startTextPosY = 0;
+    size_t startTextPos = 0;
     // sign every nth dash
-    size_t stepForTextX = 1;
-    size_t stepForTextY = 1;
+    size_t stepForText = 1;
     // step for signature values
-    int horizontalStep = 1;
-    float verticalStep = 1.0f;
+    float axisStep = 1.0f;
     // the first value of the signature
-    int firstHorizontalValue = 0;
-    float firstVerticalValue = 0.0f;
+    float firstAxisValue = 0.0f;
 };
 
 /// draw gradient button, which can be disabled (active = false)

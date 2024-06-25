@@ -733,9 +733,7 @@ void MultiwayICP::deactivateFarDistPairs_( ICPLayer l )
                 return;
             if ( maxDistSq[i] >= prop_.distThresholdSq )
                 return;
-            counters.local() += (
-                MR::deactivateFarPairs( pairs[i][j], maxDistSq[i] ) +
-                MR::deactivateFarPairs( pairs[j][i], maxDistSq[i] ) );
+            counters.local() += MR::deactivateFarPairs( pairs[i][j], maxDistSq[i] );
         } );
 
         size_t numDeactivated = 0;

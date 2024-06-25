@@ -177,15 +177,13 @@ InternalZoneWithProjections findSignedDistanceOneWay( const MeshPart & a, const 
         BitSetParallelFor( queue, [&]( VertId id )
         {
             const auto point = rigidB2A ? ref2Test( ref.mesh.points[id] ) : ref.mesh.points[id];
-            auto projectRes = test.mesh.projectPoint( point );
-            if ( !projectRes )
+            auto projectRes = findProjection( point, test.mesh );
+            if ( !contains( test.region, projectRes.proj.face ) )
                 return;
-            if ( test.region && !test.region->test( projectRes->proj.face ) )
-                return;
-            const auto distance = test.mesh.signedDistance( point, projectRes->mtp );
+            const auto distance = test.mesh.signedDistance( point, projectRes );
             if ( distance > 0.0f )
                 return;
-            res.projectons[id] = std::make_pair( projectRes->proj, distance );
+            res.projectons[id] = std::make_pair( projectRes.proj, distance );
 
             auto& localData = threadData.local();
             for ( EdgeId e : orgRing( ref.mesh.topology, id ) )

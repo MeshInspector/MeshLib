@@ -79,7 +79,7 @@ VertScalars projectAllMeshVertices( const Mesh& refMesh, const Mesh& mesh, const
         
         resV = mpResV.distSq;
         if ( mpResV.mtp.e )
-            resV = refMesh.signedDistance( fullXf( mesh.points[v] ), mpResV.mtp );
+            resV = refMesh.signedDistance( fullXf( mesh.points[v] ), mpResV );
         else
             resV = std::sqrt( resV );
     } );

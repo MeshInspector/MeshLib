@@ -220,7 +220,8 @@ struct [[nodiscard]] Mesh
     /// given a point (pt) in 3D and the closest point to in on mesh (proj),
     /// \return signed distance from pt to mesh: positive value - outside mesh, negative - inside mesh;
     /// this method can return wrong sign if the closest point is located on self-intersecting part of the mesh
-    [[nodiscard]] MRMESH_API float signedDistance( const Vector3f & pt, const MeshTriPoint & proj, const FaceBitSet * region = nullptr ) const;
+    [[nodiscard]] MRMESH_API float signedDistance( const Vector3f & pt, const MeshProjectionResult & proj, const FaceBitSet * region = nullptr ) const;
+    [[deprecated]] MRMESH_API float signedDistance( const Vector3f & pt, const MeshTriPoint & proj, const FaceBitSet * region = nullptr ) const;
 
     /// given a point (pt) in 3D, computes the closest point on mesh, and
     /// \return signed distance from pt to mesh: positive value - outside mesh, negative - inside mesh;
@@ -236,6 +237,11 @@ struct [[nodiscard]] Mesh
     /// computes whether a point (pt) is located outside the object surrounded by this mesh using generalized winding number;
     /// \param beta determines the precision of the approximation: the more the better, recommended value 2 or more
     [[nodiscard]] MRMESH_API bool isOutside( const Vector3f & pt, float beta = 2 ) const;
+
+    /// computes whether a point (pt) is located outside the object surrounded by this mesh
+    /// using pseudonormal at the closest point to in on mesh (proj);
+    /// this method works much faster than \ref isOutside but can return wrong sign if the closest point is located on self-intersecting part of the mesh
+    [[nodiscard]] MRMESH_API bool isOutsideByProjNorm( const Vector3f & pt, const MeshProjectionResult & proj, const FaceBitSet * region = nullptr ) const;
 
     /// computes the sum of triangle angles at given vertex; optionally returns whether the vertex is on boundary
     [[nodiscard]] MRMESH_API float sumAngles( VertId v, bool * outBoundaryVert = nullptr ) const;

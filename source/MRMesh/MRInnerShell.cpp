@@ -11,16 +11,16 @@ namespace MR
 
 bool isInnerShellVert( const MeshPart & mp, const Vector3f & shellPoint, const FindInnerShellSettings & settings )
 {
-    auto sd = findSignedDistance( shellPoint, mp, settings.maxDistSq );
-
-    if ( !sd )
+    const auto projRes = findProjection( shellPoint, mp, settings.maxDistSq );
+    if ( !( projRes.distSq < settings.maxDistSq ) )
+        return false;
+    if ( projRes.mtp.isBd( mp.mesh.topology, mp.region ) )
         return false;
 
-    if ( sd->mtp.isBd( mp.mesh.topology, mp.region ) )
+    const auto signDist = mp.mesh.signedDistance( shellPoint, projRes.mtp, mp.region );
+    if ( settings.side == Side::Positive && signDist <= 0 )
         return false;
-    if ( settings.side == Side::Positive && sd->dist <= 0 )
-        return false;
-    if ( settings.side == Side::Negative && sd->dist >= 0 )
+    if ( settings.side == Side::Negative && signDist >= 0 )
         return false;
     return true;
 }

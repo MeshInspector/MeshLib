@@ -143,7 +143,7 @@ private:
 
     Mesh mesh;
     std::vector<Color> colors;
-    Color bgColor;
+    Color bgColor = Color::white();
 
     MeshTexture texture;
     std::vector<UVCoord> uvCoords;
@@ -264,8 +264,8 @@ VoidOrErrStr ThreeMFLoader::loadXmls_( const std::vector<std::filesystem::path>&
 VoidOrErrStr ThreeMFLoader::loadDocument_( std::unique_ptr<tinyxml2::XMLDocument>& doc, ProgressCallback callback )
 {
     auto xmlNode = doc->FirstChildElement();
-    if ( std::string( xmlNode->Name() ) != "model" )
-        return unexpected( std::string( "3DF model root node is not 'model' but '" ) + xmlNode->Name() + "'" );
+    if ( std::string( xmlNode->Name() ) != "model" ) //maybe another xml, just skip
+        return {};
 
     objectCount_ = 0;
     documentProgressCallback = callback;
@@ -292,7 +292,8 @@ VoidOrErrStr ThreeMFLoader::loadTree_( ProgressCallback callback )
 
     for ( size_t i = 0; i < documents_.size(); ++i )
     {
-        loadDocument_( documents_[i], subprogress(callback, documentsLoaded_, documents_.size()));
+        if ( auto resOrErr = loadDocument_( documents_[i], subprogress(callback, documentsLoaded_, documents_.size())); !resOrErr )
+            return unexpected( resOrErr.error() );
     }
 
     return {};
@@ -410,6 +411,16 @@ VoidOrErrStr Node::loadObject_( const tinyxml2::XMLElement* xmlNode, ProgressCal
             if ( tinyxml2::XML_SUCCESS != componentNode->QueryIntAttribute( "objectid", &objId ) )
                 return unexpected( "Invalid object id" );
 
+            AffineXf3f transform;
+            auto transformAttr = componentNode->Attribute( "transform" );
+            if ( transformAttr )
+            {
+                auto xfRes = parseAffineXf( transformAttr );
+                if ( !xfRes )
+                    return unexpected( xfRes.error() );
+                transform = std::move( *xfRes );
+            }
+
             auto it = loader->idToNodeMap_.find( objId );
             if ( it == loader->idToNodeMap_.end() )
             {
@@ -430,7 +441,17 @@ VoidOrErrStr Node::loadObject_( const tinyxml2::XMLElement* xmlNode, ProgressCal
                     return unexpected( "Invalid object id" );
             }
 
-            mesh.addPart( it->second->mesh );            
+            bgColor = it->second->bgColor;
+            if ( transform == AffineXf3f() )
+            {
+                mesh.addPart( it->second->mesh );
+            }
+            else
+            {
+                auto meshCopy = it->second->mesh;
+                meshCopy.transform( transform );
+                mesh.addPart( std::move( meshCopy ) );
+            }
         }
         return {};
     }
@@ -529,7 +550,7 @@ VoidOrErrStr Node::load()
             return unexpected( res.error() );
         break;
     case NodeType::Texture2d:
-        if ( auto res = loadTexture2d_( node ); !res && loader->loadWarn  && !loader->loadWarn->empty() )
+        if ( auto res = loadTexture2d_( node ); !res && loader->loadWarn  && loader->loadWarn->empty() )
             loader->loadWarn->append( res.error() );
         break;
     case NodeType::Texture2dGroup:
@@ -544,7 +565,8 @@ VoidOrErrStr Node::load()
         for ( auto childNode = node->FirstChildElement(); childNode; childNode = childNode->NextSiblingElement() )
         {
             children.push_back( std::make_shared<Node>( childNode ) );
-            children.back()->load();
+            if ( auto resOrErr = children.back()->load(); !resOrErr )
+                return unexpected( resOrErr.error() );
         }
         break;    
     }
@@ -720,10 +742,19 @@ Expected<Mesh> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
         int ps[3] = {};
         if ( tinyxml2::XML_SUCCESS != triangleNode->QueryIntAttribute( "p1", &ps[0] ) )
             return unexpected( std::string( "3DF model triangle node does not have 'p1' attribute" ) );
-        if ( tinyxml2::XML_SUCCESS != triangleNode->QueryIntAttribute( "p2", &ps[1] ) )
-            return unexpected( std::string( "3DF model triangle node does not have 'p2' attribute" ) );
-        if ( tinyxml2::XML_SUCCESS != triangleNode->QueryIntAttribute( "p3", &ps[2] ) )
-            return unexpected( std::string( "3DF model triangle node does not have 'p3' attribute" ) );
+
+        if ( triangleNode->Attribute( "p2" ) )
+        {
+            if ( tinyxml2::XML_SUCCESS != triangleNode->QueryIntAttribute( "p2", &ps[1] ) )
+                return unexpected( std::string( "3DF model triangle node does not have 'p2' attribute" ) );
+            if ( tinyxml2::XML_SUCCESS != triangleNode->QueryIntAttribute( "p3", &ps[2] ) )
+                return unexpected( std::string( "3DF model triangle node does not have 'p3' attribute" ) );
+        }
+        else
+        {
+            ps[1] = ps[0];
+            ps[2] = ps[0];
+        }
 
         if ( it->second->nodeType == NodeType::Texture2dGroup )
         {

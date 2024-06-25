@@ -50,8 +50,9 @@ struct PlotAxis
     enum class TypeAxis
     {
         horizontal,
-        vertical
-    } axisType;
+        vertical,
+        none
+    } axisType = TypeAxis::none;
     // the point from which the axes will be drawn
     ImVec2 startAxisPoint;
     // length dash without text

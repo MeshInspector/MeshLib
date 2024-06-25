@@ -277,7 +277,8 @@ void drawPoltAxis( const PlotAxis& plotAxis )
         for ( size_t i = 0; i < plotAxis.numDash; i++ )
         {
             float x = plotAxis.startAxisPoint.x + plotAxis.offset + plotAxis.step * i;
-            std::string text = std::to_string( plotAxis.firstAxisValue + plotAxis.axisStep * i );
+            const auto value = plotAxis.firstAxisValue + plotAxis.axisStep * i;
+            auto text = fmt::format("{}", value );
             auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + text.size() );
 
             auto withText = ( i + plotAxis.startTextPos ) % plotAxis.stepForText == 0;
@@ -303,7 +304,8 @@ void drawPoltAxis( const PlotAxis& plotAxis )
         for ( size_t i = 0; i < plotAxis.numDash; i++ )
         {
             float y = plotAxis.startAxisPoint.y - plotAxis.offset - plotAxis.step * i;
-            std::string text = std::to_string( plotAxis.firstAxisValue + plotAxis.axisStep * i );
+            const auto value = plotAxis.firstAxisValue + plotAxis.axisStep * i;
+            auto text = fmt::format( "{}", value );
             auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + text.size() );
 
             auto withText = ( i + plotAxis.startTextPos ) % plotAxis.stepForText == 0;

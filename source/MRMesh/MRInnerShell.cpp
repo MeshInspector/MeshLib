@@ -17,8 +17,8 @@ bool isInnerShellVert( const MeshPart & mp, const Vector3f & shellPoint, const F
     if ( projRes.mtp.isBd( mp.mesh.topology, mp.region ) )
         return false;
 
-    const bool outside = settings.meshHasSelfIntersections ?
-        mp.mesh.isOutside( shellPoint ) :
+    const bool outside = settings.useWindingNumber ?
+        mp.mesh.isOutside( shellPoint, settings.windingNumberThreshold ) :
         mp.mesh.isOutsideByProjNorm( shellPoint, projRes, mp.region );
     if ( settings.side == Side::Positive && !outside )
         return false;

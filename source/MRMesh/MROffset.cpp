@@ -278,7 +278,7 @@ Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetP
         auto innerFaces = findInnerShellFacesWithSplits( MeshPart{ mesh, &goodFaces }, resMesh,
             {
                 .side = offset > 0 ? Side::Positive : Side::Negative,
-                .meshHasSelfIntersections = findSelfCollidingTriangles( mesh, nullptr ).value()
+                .useWindingNumber = findSelfCollidingTriangles( mesh, nullptr ).value()
             } );
         resMesh.topology.deleteFaces( resMesh.topology.getValidFaces() - innerFaces );
         resMesh.pack();

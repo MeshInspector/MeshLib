@@ -234,9 +234,10 @@ struct [[nodiscard]] Mesh
     /// this method can return wrong sign if the closest point is located on self-intersecting part of the mesh
     [[nodiscard]] MRMESH_API std::optional<float> signedDistance( const Vector3f & pt, float maxDistSq, const FaceBitSet * region = nullptr ) const;
 
-    /// computes whether a point (pt) is located outside the object surrounded by this mesh using generalized winding number;
-    /// \param beta determines the precision of the approximation: the more the better, recommended value 2 or more
-    [[nodiscard]] MRMESH_API bool isOutside( const Vector3f & pt, float beta = 2 ) const;
+    /// computes whether a point (pt) is located outside the object surrounded by this mesh 
+    /// using generalized winding number (0 - outside, 1 - inside, intermediate value in case of open mesh equal to portion of solid angle where inside part of mesh is observable);
+    /// \param beta determines the precision of winding number computation: the more the better, recommended value 2 or more
+    [[nodiscard]] MRMESH_API bool isOutside( const Vector3f & pt, float windingNumberThreshold = 0.5f, float beta = 2 ) const;
 
     /// computes whether a point (pt) is located outside the object surrounded by this mesh
     /// using pseudonormal at the closest point to in on mesh (proj);

@@ -20,8 +20,12 @@ struct FindInnerShellSettings
     /// specifies maximum squared distance from shell parts of interest to source mesh
     float maxDistSq = FLT_MAX;
 
-    /// if true, a slower algorithm activates that is more robust in the presence of self-intersections on mesh
-    bool meshHasSelfIntersections = false;
+    /// if true, a slower algorithm is activated that is more robust in the presence of self-intersections on mesh
+    bool useWindingNumber = false;
+
+    /// positive side if winding number below or equal this threshold;
+    /// recommended to set it below 0.5f for better results on nearly planar meshes and Negative offset
+    float windingNumberThreshold = 0.25f;
 };
 
 /// Tests \param shellPoint from bidirectional shell constructed for an open \param mp;

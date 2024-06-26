@@ -18,12 +18,13 @@ namespace MeshComponents
 {
 
 /// returns
-/// 1. the mapping: FaceId -> Root ID in [0, 1, 2, ...)
-/// 2. the total number of roots
-static std::pair<Face2RegionMap, int> getUniqueRootIds( const FaceMap& allRoots, const FaceBitSet& region )
+/// 1. the mapping: Root Id -> Region Id in [0, 1, 2, ...)
+/// 2. the total number of roots/regions
+template<typename T>
+static std::pair<Vector<RegionId, Id<T>>, int> getUniqueRootIds( const Vector<Id<T>, Id<T>>& allRoots, const TaggedBitSet<T>& region )
 {
     MR_TIMER
-    Face2RegionMap uniqueRootsMap( allRoots.size() );
+    Vector<RegionId, Id<T>> uniqueRootsMap( allRoots.size() );
     int k = 0;
     for ( auto f : region )
     {

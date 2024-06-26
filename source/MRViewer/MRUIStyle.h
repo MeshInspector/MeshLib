@@ -27,10 +27,16 @@ struct ButtonCustomizationParams
     /// {start, hover_start, acitve_start, disabled_start,
     ///  end, hover_end, acitve_end, disabled_end  }
     ImGuiImage* customTexture = nullptr;
+    /// force use imgui background if !customTexture
+    bool forceImGuiBackground = false;
+
     /// force use if ImGuiCol_Text for text
     bool forceImguiTextColor = false;
     /// show border or not
     bool border = false;
+
+    /// draw line under first letter of label
+    bool underlineFirstLetter = false;
 
     /// Allow interacting with this button from `UI::TestEngine`.
     bool enableTestEngine = true;

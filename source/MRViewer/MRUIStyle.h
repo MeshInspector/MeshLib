@@ -67,8 +67,8 @@ struct PlotAxis
     float lenDashWithText = 12.0f;
     // text offset from dash
     float textPadding = 3.0f;
-    //
-    VarUnitToStringParams params;
+    // the format of the text for labels
+    VarUnitToStringParams labelFormatParams;
 };
 
 /// draw gradient button, which can be disabled (active = false)

@@ -288,7 +288,7 @@ void drawPoltHorizontalAxis( float menuScaling, const PlotAxis& plotAxis )
         float x = plotAxis.startAxisPoint.x + step * i;
         const auto value = plotAxis.minValue + axisStep * i;
 
-        auto text = valueToImGuiFormatString( value, plotAxis.params );
+        auto text = valueToImGuiFormatString( value, plotAxis.labelFormatParams );
         auto end = text.find("#");
         auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + end );
 
@@ -335,7 +335,7 @@ void drawPoltVerticalAxis( float menuScaling, const PlotAxis& plotAxis )
         float y = plotAxis.startAxisPoint.y - step * i;
         const auto value = plotAxis.minValue + axisStep * i;
 
-        auto text = valueToImGuiFormatString( value, plotAxis.params );
+        auto text = valueToImGuiFormatString( value, plotAxis.labelFormatParams );
         auto end = text.find( "#" );
         auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + end );
 

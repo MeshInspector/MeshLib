@@ -35,7 +35,7 @@ struct ButtonCustomizationParams
     /// show border or not
     bool border = false;
 
-    /// draw line under first latter of label
+    /// draw line under first letter of label
     bool underlineFirstLetter = false;
 
     /// Allow interacting with this button from `UI::TestEngine`.

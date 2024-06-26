@@ -237,13 +237,13 @@ bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, cGradientButtonFramePadding * scaling ) );
 
-    bool sameKey = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( &label[0], &label[0] + 1 );
+    bool sameKey = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( label, label + 1 );
     return buttonEx( label, active, size, 0, { .underlineFirstLetter = sameKey } ) || ( active && checkKey( key ) );
 }
 
 bool buttonCommonSize( const char* label, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None */ )
 {
-    bool sameKey = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( &label[0], &label[0] + 1 );
+    bool sameKey = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( label, label + 1 );
     return buttonEx( label, true, size, 0, { .underlineFirstLetter = sameKey } ) || checkKey( key );
 }
 
@@ -263,7 +263,7 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
 
     ButtonCustomizationParams params;
     params.forceImGuiBackground = true;
-    params.underlineFirstLetter = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( &label[0], &label[0] + 1 );
+    params.underlineFirstLetter = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( label, label + 1 );
 
     return buttonEx( label, true, ImVec2( size.x, size.y ), 0, params ) || checkKey( key );
 }

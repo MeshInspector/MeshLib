@@ -6,6 +6,7 @@
 #include <cassert>
 #include <optional>
 #include <string>
+#include <variant>
 
 // Read the manual at: docs/measurement_units.md
 
@@ -279,6 +280,17 @@ struct UnitToStringParams
     friend bool operator==( const UnitToStringParams&, const UnitToStringParams& ) = default;
 };
 
+// The `std::variant` of `UnitToStringParams<E>` for all known `E`s (unit kinds).
+using VarUnitToStringParams = std::variant<
+    #define MR_TRIM_LEADING_COMMA(...) MR_TRIM_LEADING_COMMA_(__VA_ARGS__)
+    #define MR_TRIM_LEADING_COMMA_(x, ...) __VA_ARGS__
+    #define MR_X(E) , UnitToStringParams<E>
+    MR_TRIM_LEADING_COMMA(DETAIL_MR_UNIT_ENUMS(MR_X))
+    #undef MR_TRIM_LEADING_COMMA
+    #undef MR_TRIM_LEADING_COMMA_
+    #undef MR_X
+>;
+
 // Converts value to a string, possibly converting it to a different unit.
 // By default, length is kept as is, while angles are converted from radians to the current UI unit.
 template <UnitEnum E, detail::Units::Scalar T>
@@ -289,6 +301,14 @@ template <UnitEnum E, detail::Units::Scalar T>
 DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
 #undef MR_Y
+
+// This overload lets you select the unit kind at runtime.
+template <detail::Units::Scalar T>
+[[nodiscard]] MRVIEWER_API std::string valueToString( T value, const VarUnitToStringParams& params );
+
+#define MR_X(T) extern template MRVIEWER_API std::string valueToString( T value, const VarUnitToStringParams& params );
+DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
+#undef MR_X
 
 // Guesses the number of digits of precision for fixed-point formatting of `value`.
 // Mostly for internal use.
@@ -338,5 +358,13 @@ template <UnitEnum E, detail::Units::Scalar T>
 DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
 #undef MR_Y
+
+// This overload lets you select the unit kind at runtime.
+template <detail::Units::Scalar T>
+[[nodiscard]] MRVIEWER_API std::string valueToImGuiFormatString( T value, const VarUnitToStringParams& params );
+
+#define MR_X(T) extern template MRVIEWER_API std::string valueToImGuiFormatString( T value, const VarUnitToStringParams& params );
+DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
+#undef MR_X
 
 }

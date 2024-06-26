@@ -545,10 +545,9 @@ std::optional<float> Mesh::signedDistance( const Vector3f & pt, float maxDistSq,
     return signRes->dist;
 }
 
-bool Mesh::isOutside( const Vector3f & pt, float windingNumberThreshold, float beta ) const
+float Mesh::calcFastWindingNumber( const Vector3f & pt, float beta ) const
 {
-    auto num = calcFastWindingNumber( getDipoles(), getAABBTree(), *this, pt, beta, {} );
-    return num <= windingNumberThreshold;
+    return MR::calcFastWindingNumber( getDipoles(), getAABBTree(), *this, pt, beta, {} );
 }
 
 float Mesh::sumAngles( VertId v, bool * outBoundaryVert ) const

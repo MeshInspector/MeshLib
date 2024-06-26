@@ -64,16 +64,16 @@ struct PlotAxis
     // offset from the starting point along the axis
     float offset = 0;
     // the number of dash on the axis
-    size_t numDash = 5;
+    size_t numDashes = 5;
     // the distance between the dash on the axis
     float step = 0;
-    // what will be the first dash with the signature
-    size_t startTextPos = 0;
+    // what will be the first dash with the label
+    size_t startTextDashIndex = 0;
     // sign every nth dash
-    size_t stepForText = 1;
-    // step for signature values
+    size_t textDashIndicesStep = 1;
+    // step for label values
     float axisStep = 1.0f;
-    // the first value of the signature
+    // the first value of the label
     float firstAxisValue = 0.0f;
 };
 

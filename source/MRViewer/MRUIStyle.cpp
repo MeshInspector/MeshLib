@@ -274,14 +274,15 @@ void drawPoltAxis( const PlotAxis& plotAxis )
     float len = 0;
     if ( plotAxis.axisType == PlotAxis::Type::horizontal )
     {
-        for ( size_t i = 0; i < plotAxis.numDash; i++ )
+        for ( size_t i = 0; i < plotAxis.numDashes; i++ )
         {
             float x = plotAxis.startAxisPoint.x + plotAxis.offset + plotAxis.step * i;
             const auto value = plotAxis.firstAxisValue + plotAxis.axisStep * i;
+            
             auto text = fmt::format("{}", value );
             auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + text.size() );
 
-            auto withText = ( i + plotAxis.startTextPos ) % plotAxis.stepForText == 0;
+            auto withText = ( i + plotAxis.startTextDashIndex ) % plotAxis.textDashIndicesStep == 0;
             if ( withText )
                 len = plotAxis.lenDashWithText;
             else
@@ -301,14 +302,14 @@ void drawPoltAxis( const PlotAxis& plotAxis )
     }
     else if ( plotAxis.axisType == PlotAxis::Type::vertical )
     {
-        for ( size_t i = 0; i < plotAxis.numDash; i++ )
+        for ( size_t i = 0; i < plotAxis.numDashes; i++ )
         {
             float y = plotAxis.startAxisPoint.y - plotAxis.offset - plotAxis.step * i;
             const auto value = plotAxis.firstAxisValue + plotAxis.axisStep * i;
             auto text = fmt::format( "{}", value );
             auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + text.size() );
 
-            auto withText = ( i + plotAxis.startTextPos ) % plotAxis.stepForText == 0;
+            auto withText = ( i + plotAxis.startTextDashIndex ) % plotAxis.textDashIndicesStep == 0;
             if ( withText )
                 len = plotAxis.lenDashWithText;
             else

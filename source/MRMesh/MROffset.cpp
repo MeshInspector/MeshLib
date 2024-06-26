@@ -255,6 +255,8 @@ Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetP
 
     if ( unsignedOffset )
     {
+        // delete shell faces from resMesh that project on wrong side of input mesh
+
         // do not trust degenerate faces with huge aspect ratios
         auto badFaces = findDegenerateFaces( mesh, 1000 ).value();
         // do not trust only boundary degenerate faces (excluding touching the boundary only by short edge)
@@ -285,11 +287,15 @@ Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetP
     }
 
     if ( offset >= 0 )
+    {
+        // add original mesh to the result with flipping
         resMesh.addPartByMask( mesh, mesh.topology.getValidFaces(), true ); // true = with flipping
+    }
     else
     {
-        if ( !unsignedOffset )
+        if ( !unsignedOffset ) // in case of unsigned offset (bidirectional shell), resMesh already has opposite normals
             resMesh.topology.flipOrientation();
+        // add original mesh to the result without flipping
         resMesh.addPart( mesh );
     }
 

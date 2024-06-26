@@ -500,8 +500,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
         pybind11::arg( "mesh" ), pybind11::arg( "offset" ), pybind11::arg_v( "params", MR::OffsetParameters(), "OffsetParameters()" ),
         "in case of positive offset, returns the mesh consisting of offset mesh merged with inversed original mesh (thickening mode);\n"
         "in case of negative offset, returns the mesh consisting of inversed offset mesh merged with original mesh (hollowing mode);\n"
-        "if your input mesh is closed then please specify params.type == Offset, and you will get closed mesh on output;\n"
-        "if your input mesh is open then please specify params.type == Shell, and you will get open mesh on output" );
+        "if your input mesh is open then please specify params.signDetectionMode = SignDetectionMode::Unsigned, and you will get open mesh (with several components) on output;\n"
+        "if your input mesh is closed then please specify another sign detection mode, and you will get closed mesh (with several components) on output" );
 
 
     m.def( "doubleOffsetMesh", 

@@ -1305,6 +1305,9 @@
     <ClInclude Include="MRBestFitParabola.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRPointCloudDistance.h">
+      <Filter>Source Files\PointCloud</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2167,6 +2170,9 @@
     </ClCompile>
     <ClCompile Include="MRBestFitParabola.cpp">
       <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointCloudDistance.cpp">
+      <Filter>Source Files\PointCloud</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

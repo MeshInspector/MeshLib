@@ -5,6 +5,7 @@
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRPointsToMeshFusion.h"
+#include "MRMesh/MRPointCloudDistance.h"
 #include "MRMesh/MRExpected.h"
 #include <pybind11/stl.h>
 #include <pybind11/functional.h>
@@ -69,6 +70,18 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointCloud, [] ( pybind11::module_& m )
         pybind11::arg( "pointCloud" ), pybind11::arg_v( "params", PointsToMeshParameters(), "PointsToMeshParameters()" ),
         "Creates mesh from given point cloud according params\n"
         "Returns empty optional if was interrupted by progress bar" );
+
+    m.def("findMaxDistanceSqOneWay",&MR::findMaxDistanceSqOneWay, 
+        pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg( "rigidB2A" ) = nullptr, pybind11::arg( "upDistLimitSq" ) = FLT_MAX,
+        "returns the maximum of the squared distances from each B-point to A-cloud\n"
+        "\trigidB2A - rigid transformation from B-cloud space to A-cloud space, nullptr considered as identity transformation\n"
+        "\tmaxDistanceSq - upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq" );
+
+    m.def( "findMaxDistanceSq", &MR::findMaxDistanceSq,
+        pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg( "rigidB2A" ) = nullptr, pybind11::arg( "upDistLimitSq" ) = FLT_MAX,
+        "returns the squared Hausdorff distance between two point clouds, that is the maximum of squared distances from each point to the other cloud (in both directions)\n"
+        "\trigidB2A - rigid transformation from B-cloud space to A-cloud space, nullptr considered as identity transformation\n"
+        "\tmaxDistanceSq - upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq" );
 } )
 
 } //namespace MR

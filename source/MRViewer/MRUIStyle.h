@@ -47,34 +47,28 @@ struct ButtonIconCustomizationParams : public ButtonCustomizationParams
 
 struct PlotAxis
 {
-    enum class Type
-    {
-        horizontal,
-        vertical
-    } axisType = Type::horizontal;
     // the point from which the axes will be drawn
     ImVec2 startAxisPoint;
+
+    // size plot by axis
+    float size;
+    // optimal length between dashes
+    float optimalLenth = 10.0f;
+    // the minimum value of the axis
+    float minValue = 0.0f;
+    // the maximal value of the axis
+    float maxValue = 1.0f;
+    // sign every nth dash
+    size_t textDashIndicesStep = 1;
+
     // length dash without text
     float lenDash = 8.0f;
     // length dash with text
     float lenDashWithText = 12.0f;
     // text offset from dash
     float textPadding = 3.0f;
-
-    // offset from the starting point along the axis
-    float offset = 0;
-    // the number of dash on the axis
-    size_t numDashes = 5;
-    // the distance between the dash on the axis
-    float step = 0;
-    // what will be the first dash with the label
-    size_t startTextDashIndex = 0;
-    // sign every nth dash
-    size_t textDashIndicesStep = 1;
-    // step for label values
-    float axisStep = 1.0f;
-    // the first value of the label
-    float firstAxisValue = 0.0f;
+    //
+    VarUnitToStringParams params;
 };
 
 /// draw gradient button, which can be disabled (active = false)
@@ -95,8 +89,11 @@ MRVIEWER_API bool buttonCommonSize( const char* label, const Vector2f& size = Ve
 /// draw button with same logic as radioButton
 MRVIEWER_API bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& size = Vector2f( 0, 0 ), ImGuiKey key = ImGuiKey_None );
 
-// draw dash with text along the vertical and horizontal axis
-MRVIEWER_API void drawPoltAxis( const PlotAxis& plotAxis );
+// draw dash with text along the horizontal axis
+MRVIEWER_API void drawPoltHorizontalAxis( float menuScaling, const PlotAxis& plotAxis );
+// draw dash with text along the vertical axis
+MRVIEWER_API void drawPoltVerticalAxis( float menuScaling, const PlotAxis& plotAxis );
+
 // draw a button with an icon and text under it
 MRVIEWER_API bool buttonIconEx( 
     const std::string& name, 

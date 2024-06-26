@@ -261,7 +261,7 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
     return ret;
 }
 
-void drawPoltAxis( const PlotAxis& plotAxis )
+void drawPoltHorizontalAxis( float menuScaling, const PlotAxis& plotAxis )
 {
     auto drawList = ImGui::GetWindowDrawList();
 
@@ -271,61 +271,90 @@ void drawPoltAxis( const PlotAxis& plotAxis )
 
     const float scrollY = ImGui::GetScrollY();
 
+    float length = plotAxis.maxValue - plotAxis.minValue;
+    int numDashes = std::max( 1, int( plotAxis.size / ( plotAxis.optimalLenth * menuScaling ) ) ) + 1;
+    float axisStep = std::max( 1.0f, float( int( length / ( numDashes - 1 ) ) ) );
+    numDashes = int( length / axisStep + 1 );
+    float step = plotAxis.size / length * axisStep;
+
     float len = 0;
-    if ( plotAxis.axisType == PlotAxis::Type::horizontal )
+
+    float padding = plotAxis.textPadding * menuScaling;
+    float lenDash = plotAxis.lenDash * menuScaling;
+    float lenDashWithText = plotAxis.lenDashWithText * menuScaling;
+
+    for ( size_t i = 0; i < numDashes; i++ )
     {
-        for ( size_t i = 0; i < plotAxis.numDashes; i++ )
-        {
-            float x = plotAxis.startAxisPoint.x + plotAxis.offset + plotAxis.step * i;
-            const auto value = plotAxis.firstAxisValue + plotAxis.axisStep * i;
-            
-            auto text = fmt::format("{}", value );
-            auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + text.size() );
+        float x = plotAxis.startAxisPoint.x + step * i;
+        const auto value = plotAxis.minValue + axisStep * i;
 
-            auto withText = ( i + plotAxis.startTextDashIndex ) % plotAxis.textDashIndicesStep == 0;
-            if ( withText )
-                len = plotAxis.lenDashWithText;
-            else
-                len = plotAxis.lenDash;
+        auto text = valueToImGuiFormatString( value, plotAxis.params );
+        auto end = text.find("#");
+        auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + end );
 
-            ImVec2 pos( x, plotAxis.startAxisPoint.y - len - scrollY );
-            drawList->AddLine( ImVec2( x, plotAxis.startAxisPoint.y - scrollY ), pos, color );
-            if ( withText )
-                drawList->AddText(
-                    font,
-                    fontSize,
-                    ImVec2( pos.x - textSize.x / 2.0f, pos.y - textSize.y - plotAxis.textPadding ),
-                    color,
-                    text.c_str(),
-                    text.c_str() + text.size() );
-        }
+        auto withText = i % plotAxis.textDashIndicesStep == 0;
+        if ( withText )
+            len = lenDashWithText;
+        else
+            len = lenDash;
+
+        ImVec2 pos( x, plotAxis.startAxisPoint.y - len - scrollY );
+        drawList->AddLine( ImVec2( x, plotAxis.startAxisPoint.y - scrollY ), pos, color );
+        if ( withText )
+            drawList->AddText(
+                font,
+                fontSize,
+                ImVec2( pos.x - textSize.x / 2.0f, pos.y - textSize.y - padding ),
+                color,
+                text.c_str(),
+                text.c_str() + end );
     }
-    else if ( plotAxis.axisType == PlotAxis::Type::vertical )
+}
+
+void drawPoltVerticalAxis( float menuScaling, const PlotAxis& plotAxis )
+{
+    auto drawList = ImGui::GetWindowDrawList();
+
+    const auto font = ImGui::GetFont();
+    const ImU32 color = ImGui::GetColorU32( ImGui::GetStyle().Colors[ImGuiCol_Text] );
+    const auto fontSize = ImGui::GetFontSize();
+
+    float length = plotAxis.maxValue - plotAxis.minValue;
+    int numDashes = std::max( 1, int( plotAxis.size / ( plotAxis.optimalLenth * menuScaling ) ) ) + 1;
+    float axisStep = float( length / ( numDashes - 1 ) );
+    float step = plotAxis.size / length * axisStep;
+
+    float len = 0;
+
+    float padding = plotAxis.textPadding * menuScaling;
+    float lenDash = plotAxis.lenDash * menuScaling;
+    float lenDashWithText = plotAxis.lenDashWithText * menuScaling;
+
+    for ( size_t i = 0; i < numDashes; i++ )
     {
-        for ( size_t i = 0; i < plotAxis.numDashes; i++ )
-        {
-            float y = plotAxis.startAxisPoint.y - plotAxis.offset - plotAxis.step * i;
-            const auto value = plotAxis.firstAxisValue + plotAxis.axisStep * i;
-            auto text = fmt::format( "{}", value );
-            auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + text.size() );
+        float y = plotAxis.startAxisPoint.y - step * i;
+        const auto value = plotAxis.minValue + axisStep * i;
 
-            auto withText = ( i + plotAxis.startTextDashIndex ) % plotAxis.textDashIndicesStep == 0;
-            if ( withText )
-                len = plotAxis.lenDashWithText;
-            else
-                len = plotAxis.lenDash;
+        auto text = valueToImGuiFormatString( value, plotAxis.params );
+        auto end = text.find( "#" );
+        auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + end );
 
-            ImVec2 pos( plotAxis.startAxisPoint.x + len, y - scrollY );
-            drawList->AddLine( ImVec2( plotAxis.startAxisPoint.x, y - scrollY ), pos, color );
-            if ( withText )
-                drawList->AddText(
-                    font,
-                    fontSize,
-                    ImVec2( pos.x + plotAxis.textPadding, pos.y - textSize.y / 2.0f ),
-                    color,
-                    text.c_str(),
-                    text.c_str() + text.size() );
-        }
+        auto withText = i % plotAxis.textDashIndicesStep == 0;
+        if ( withText )
+            len = lenDashWithText;
+        else
+            len = lenDash;
+
+        ImVec2 pos( plotAxis.startAxisPoint.x + len, y );
+        drawList->AddLine( ImVec2( plotAxis.startAxisPoint.x, y ), pos, color );
+        if ( withText )
+            drawList->AddText(
+                font,
+                fontSize,
+                ImVec2( pos.x + padding, pos.y - textSize.y / 2.0f ),
+                color,
+                text.c_str(),
+                text.c_str() + end );
     }
 }
 

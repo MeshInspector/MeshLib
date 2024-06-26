@@ -11,20 +11,25 @@ namespace MR
 
 bool isInnerShellVert( const MeshPart & mp, const Vector3f & shellPoint, const FindInnerShellSettings & settings )
 {
-    const auto projRes = findProjection( shellPoint, mp, settings.maxDistSq );
-    if ( !( projRes.distSq < settings.maxDistSq ) )
-        return false;
+    MeshProjectionResult projRes;
+    if ( !settings.useWindingNumber || settings.maxDistSq < FLT_MAX )
+    {
+        projRes = findProjection( shellPoint, mp, settings.maxDistSq );
+        if ( !( projRes.distSq < settings.maxDistSq ) )
+            return false;
+    }
+
+    if ( settings.useWindingNumber )
+    {
+        const bool outside = mp.mesh.isOutside( shellPoint, settings.windingNumberThreshold );
+        return outside == ( settings.side == Side::Positive );
+    }
+
     if ( projRes.mtp.isBd( mp.mesh.topology, mp.region ) )
         return false;
 
-    const bool outside = settings.useWindingNumber ?
-        mp.mesh.isOutside( shellPoint, settings.windingNumberThreshold ) :
-        mp.mesh.isOutsideByProjNorm( shellPoint, projRes, mp.region );
-    if ( settings.side == Side::Positive && !outside )
-        return false;
-    if ( settings.side == Side::Negative && outside )
-        return false;
-    return true;
+    const bool outside = mp.mesh.isOutsideByProjNorm( shellPoint, projRes, mp.region );
+    return outside == ( settings.side == Side::Positive );
 }
 
 VertBitSet findInnerShellVerts( const MeshPart & mp, const Mesh & shell, const FindInnerShellSettings & settings )

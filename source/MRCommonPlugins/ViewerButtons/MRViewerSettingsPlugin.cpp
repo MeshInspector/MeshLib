@@ -1080,6 +1080,8 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth, float menuS
 
 void ViewerSettingsPlugin::drawTouchpadSettings_( float menuScaling )
 {
+    const auto& style = ImGui::GetStyle();
+
     UI::separator( menuScaling, "Touchpad" );
 
     const std::vector<std::string> swipeModeList = { "Swipe Rotates Camera", "Swipe Moves Camera" };
@@ -1089,9 +1091,8 @@ void ViewerSettingsPlugin::drawTouchpadSettings_( float menuScaling )
     if ( UI::checkbox( "Ignore Kinetic Movements", &touchpadParameters_.ignoreKineticMoves ) )
         updateSettings = true;
     if ( UI::checkbox( "Allow System to Interrupt Gestures", &touchpadParameters_.cancellable ) )
-        updateSettings = true;
+        updateSettings = true;    
     
-        const auto& style = ImGui::GetStyle();
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
     if ( UI::combo( "Swipe Mode", (int*)&touchpadParameters_.swipeMode, swipeModeList ) )
         updateSettings = true;

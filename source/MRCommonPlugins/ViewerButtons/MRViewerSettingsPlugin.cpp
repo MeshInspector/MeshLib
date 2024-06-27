@@ -958,7 +958,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
         if ( plusPos == std::string::npos )
         {
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, ( cRibbonButtonWindowPaddingY + 1 ) * menuScaling } );
-            UI::inputTextCenteredReadOnly( "##hiddenLabelKey", ctrlStr, 54 * menuScaling );
+            UI::inputTextCenteredReadOnly( "##key", ctrlStr, 54 * menuScaling );
             ImGui::PopStyleVar();
             ImGui::SameLine();
         }
@@ -967,7 +967,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x * 0.25f, style.ItemSpacing.y } );
 
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, ( cRibbonButtonWindowPaddingY + 1 ) * menuScaling } );
-            UI::inputTextCenteredReadOnly( "##hiddenLabelAddKey", ctrlStr.substr( 0, plusPos ), 54 * menuScaling );
+            UI::inputTextCenteredReadOnly( "##modifierKey", ctrlStr.substr( 0, plusPos ), 54 * menuScaling );
             ImGui::PopStyleVar();
             
             ImGui::SameLine();
@@ -977,7 +977,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
             ImGui::SetCursorPosY( posY - cRibbonButtonWindowPaddingY * menuScaling / 2.f );
 
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, ( cRibbonButtonWindowPaddingY + 1 ) * menuScaling } );
-            UI::inputTextCenteredReadOnly( "##hiddenLabelKey", ctrlStr.substr( plusPos + 1 ), 54 * menuScaling );
+            UI::inputTextCenteredReadOnly( "##key", ctrlStr.substr( plusPos + 1 ), 54 * menuScaling );
             ImGui::PopStyleVar();
 
             ImGui::PopStyleVar();

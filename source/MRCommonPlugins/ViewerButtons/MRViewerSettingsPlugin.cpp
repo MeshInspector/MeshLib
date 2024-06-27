@@ -351,6 +351,7 @@ void ViewerSettingsPlugin::drawControlTab_( float menuWidth, float menuScaling )
 void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling )
 {
     const auto& viewportParameters = viewer->viewport().getParameters();
+    const auto& style = ImGui::GetStyle();
 
     UI::separator( menuScaling * 0.67f, "Viewport" );
     if ( viewer->viewport_list.size() > 1 )
@@ -358,7 +359,7 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
 
     ImGui::SetNextItemWidth( 170.0f * menuScaling );
     auto rotMode = viewportParameters.rotationMode;
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
     UI::combo( "Rotation Mode", ( int* )&rotMode, { "Scene Center", "Pick / Scene Center", "Pick" } );
     viewer->viewport().rotationCenterMode( rotMode );
     ImGui::PopStyleVar();
@@ -380,8 +381,6 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
     viewer->viewport().showRotationCenter( showRotCenter );
 
     ImGui::PopItemWidth();
-
-    const auto& style = ImGui::GetStyle();
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 2 } );
 
     drawProjectionModeSelector_( menuScaling, 170.0f * menuScaling );
@@ -391,7 +390,7 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
 
     auto coef = SceneSettings::get( SceneSettings::FloatType::AmbientCoefSelectedObj );
     ImGui::SetNextItemWidth( 170.0f * menuScaling );
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
     if ( UI::drag<NoUnit>( "Selected Highlight Modifier", coef, 0.01f, 1.0f, 10.0f ) )
     {
         SceneSettings::set( SceneSettings::FloatType::AmbientCoefSelectedObj, coef );
@@ -400,7 +399,7 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
     UI::setTooltipIfHovered( "Ambient light brightness multiplication factor for selected objects", menuScaling );
     ImGui::PopStyleVar();
 
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
     const bool showClippingPlane = viewer->experimentalFeatures && RibbonButtonDrawer::CustomCollapsingHeader( "Clipping Plane" );
     ImGui::PopStyleVar();
 
@@ -410,7 +409,7 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
         auto showPlane = viewer->clippingPlaneObject->isVisible( viewer->viewport().id );
         plane.n = plane.n.normalized();
         auto w = ImGui::GetContentRegionAvail().x;
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
         ImGui::SetNextItemWidth( w );
         UI::drag<NoUnit>( "##ClippingPlaneNormal", plane.n, 1e-3f );
         ImGui::SetNextItemWidth( w / 2.0f );
@@ -427,7 +426,7 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
 
     ImGui::SetNextItemWidth( 170.0f * menuScaling );
     int pickRadius = int( getViewerInstance().glPickRadius );
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
     UI::drag<PixelSizeUnit>( "Picker Radius", pickRadius, 1, 0, 10 );
     ImGui::PopStyleVar();
     getViewerInstance().glPickRadius = uint16_t( pickRadius );
@@ -553,7 +552,8 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         }();
 
         int option = int( paramsLen.targetUnit );
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
+        const auto& style = ImGui::GetStyle();
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
         if ( UI::combo( "Unit##length", &option, optionNames ) )
         {
             paramsLen.targetUnit = LengthUnit( option );
@@ -601,7 +601,8 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         int flavorOption = int( paramsAngle.degreesMode );
 
         // Degree mode.
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
+        const auto& style = ImGui::GetStyle();
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
         if ( UI::combo( "Unit##angle", &flavorOption, flavorOptions ) )
         {
             DegreesMode newMode = DegreesMode( flavorOption );
@@ -646,8 +647,8 @@ void ViewerSettingsPlugin::drawFeaturesTab_( float menuScaling )
 
     UI::separator( menuScaling * 0.67f, "Visuals" );
     float value = 0;
-
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
+    const auto& style = ImGui::GetStyle();
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
 
     value = SceneSettings::get( SceneSettings::FloatType::FeatureMeshAlpha );
     if ( UI::slider<NoUnit>( "Surface opacity", value, 0.f, 1.f ) )
@@ -733,7 +734,7 @@ void ViewerSettingsPlugin::drawRenderOptions_( float menuScaling )
 
 void ViewerSettingsPlugin::drawShadowsOptions_( float, float menuScaling )
 {
-    auto& style = ImGui::GetStyle();
+    const auto& style = ImGui::GetStyle();
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * 1.5f } );
     const bool showShadows = shadowGl_ && RibbonButtonDrawer::CustomCollapsingHeader( "Shadows" );
     ImGui::PopStyleVar();
@@ -775,9 +776,11 @@ void ViewerSettingsPlugin::drawShadowsOptions_( float, float menuScaling )
 
 void ViewerSettingsPlugin::drawThemeSelector_( float menuScaling )
 {
+    const auto& style = ImGui::GetStyle();
+
     ImGui::SetNextItemWidth( 200.0f * menuScaling );
     int selectedUserIdxBackup = selectedUserPreset_;
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
     UI::combo( "Color Theme", &selectedUserPreset_, userThemesPresets_ );
     ImGui::PopStyleVar();
     if ( selectedUserPreset_ != selectedUserIdxBackup )
@@ -833,10 +836,10 @@ void ViewerSettingsPlugin::drawResetDialog_( bool activated, float menuScaling )
         ImGui::SetCursorPosX( ( windowSize.x - textWidth ) * 0.5f );
         ImGui::Text( "%s", text.c_str() );
 
-        const auto style = ImGui::GetStyle();
+        const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
 
-        const float p = ImGui::GetStyle().ItemSpacing.x;
+        const float p = style.ItemSpacing.x;
         const Vector2f btnSize{ ( ImGui::GetContentRegionAvail().x - p ) / 2.f, 0 };
 
         if ( UI::buttonCommonSize( "Reset", btnSize, ImGuiKey_Enter ) )
@@ -856,10 +859,12 @@ void ViewerSettingsPlugin::drawResetDialog_( bool activated, float menuScaling )
 
 void ViewerSettingsPlugin::drawShadingModeCombo_( bool inGroup, float menuScaling, float toolWidth )
 {
+    const auto& style = ImGui::GetStyle();
+
     static std::vector<std::string> shadingModes = { "Auto Detect", "Smooth", "Flat" };
     SceneSettings::ShadingMode shadingMode = SceneSettings::getDefaultShadingMode();
     ImGui::SetNextItemWidth( toolWidth );
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
     UI::combo( inGroup ? "Shading Mode" : "Default Shading Mode", ( int* )&shadingMode, shadingModes);
     ImGui::PopStyleVar();
     UI::setTooltipIfHovered( "Shading mode for mesh objects imported from files\n"
@@ -871,10 +876,12 @@ void ViewerSettingsPlugin::drawShadingModeCombo_( bool inGroup, float menuScalin
 
 void ViewerSettingsPlugin::drawProjectionModeSelector_( float menuScaling, float toolWidth )
 {
+    const auto& style = ImGui::GetStyle();
+
     ImGui::SetNextItemWidth( toolWidth );
     static std::vector<std::string> projectionModes = { "Orthographic", "Perspective" };
     int projectionMode = viewer->viewport().getParameters().orthographic ? 0 : 1;
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
     if ( UI::combo( "Projection Mode", &projectionMode, projectionModes) )
         viewer->viewport().setOrthographic( projectionMode == 0 );
     ImGui::PopStyleVar();
@@ -917,10 +924,12 @@ void ViewerSettingsPlugin::drawBackgroundButton_( bool allViewports )
 
 void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, float menuScaling )
 {
+    const auto& style = ImGui::GetStyle();
+
     UI::separator( menuScaling * 0.67f, "Mouse" );
 
     ImGui::SetNextItemWidth( 100 * menuScaling );
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
     UI::drag<NoUnit>( "Zoom Gain", viewer->scrollForce, 0.01f, 0.2f, 3.0f );
     ImGui::PopStyleVar();
     UI::setTooltipIfHovered( "Sensitivity for mouse wheel rotation affecting the speed of zooming.", menuScaling );
@@ -944,8 +953,6 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
 
         ImGui::SetCursorPosX( 110.0f * menuScaling );
         ImGui::SetCursorPosY( posY - cRibbonButtonWindowPaddingY * menuScaling / 2.f );
-
-        const auto& style = ImGui::GetStyle();
 
         auto plusPos = ctrlStr.find( '+' );
         if ( plusPos == std::string::npos )
@@ -1083,7 +1090,9 @@ void ViewerSettingsPlugin::drawTouchpadSettings_( float menuScaling )
         updateSettings = true;
     if ( UI::checkbox( "Allow System to Interrupt Gestures", &touchpadParameters_.cancellable ) )
         updateSettings = true;
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, cButtonPadding * menuScaling } );
+    
+        const auto& style = ImGui::GetStyle();
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
     if ( UI::combo( "Swipe Mode", (int*)&touchpadParameters_.swipeMode, swipeModeList ) )
         updateSettings = true;
     ImGui::PopStyleVar();

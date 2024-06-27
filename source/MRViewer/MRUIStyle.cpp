@@ -254,15 +254,18 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
 
     Color clearBlue( 0x1b, 0x83, 0xff, 0xff );
     Color bgColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background );
+    Color textColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text );
 
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_FramePadding, { ( cButtonPadding + 1 ) * scaling, cButtonPadding * scaling } );
     sh.addVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x * 0.7f,  cDefaultItemSpacing * 2 * scaling } );
 
     sh.addColor( ImGuiCol_Button, *value == ownValue ? clearBlue : bgColor );
+    sh.addColor( ImGuiCol_Text, *value == ownValue ? Color::white() : textColor );
 
     ButtonCustomizationParams params;
     params.forceImGuiBackground = true;
+    params.forceImguiTextColor = true;
     params.underlineFirstLetter = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( label, 1 );
 
     return buttonEx( label, true, ImVec2( size.x, size.y ), 0, params ) || checkKey( key );

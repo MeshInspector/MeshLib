@@ -147,6 +147,24 @@ VertBitSet getLargestComponentVerts( const Mesh& mesh, const VertBitSet* region 
     return largestComponent;
 }
 
+VertBitSet getLargeComponentVerts( const Mesh& mesh, int minVerts, const VertBitSet* region )
+{
+    MR_TIMER
+    assert( minVerts >= 2 );
+    if ( minVerts <= 1 )
+        return mesh.topology.getVertIds( region );
+
+    auto unionFind = getUnionFindStructureVerts( mesh, region );
+
+    VertBitSet res( mesh.topology.vertSize() );
+    for ( auto f : mesh.topology.getVertIds( region ) )
+    {
+        if ( unionFind.sizeOfComp( f ) >= minVerts )
+            res.set( f );
+    }
+    return res;
+}
+
 FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
 {
     MR_TIMER

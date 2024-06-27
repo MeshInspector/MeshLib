@@ -119,9 +119,13 @@ public:
     ObjectMeshHolder( ProtectedStruct, const ObjectMeshHolder& obj ) : ObjectMeshHolder( obj )
     {}
 
-    const MeshTexture& getTexture() const { return texture_; }
-    virtual void setTexture( MeshTexture texture ) { texture_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
-    virtual void updateTexture( MeshTexture& updated ) { std::swap( texture_, updated ); dirty_ |= DIRTY_TEXTURE; }
+    const MeshTexture& getTexture() const { return emptyTexture; }
+    const Vector<MeshTexture, TextureId>& getTextures() const { return textures_; }
+    virtual void addTexture( MeshTexture texture ) { textures_.emplace_back( std::move( texture ) ); dirty_ |= DIRTY_TEXTURE; }
+    virtual void setTexture( MeshTexture texture ) { textures_ = {std::move( texture )}; dirty_ |= DIRTY_TEXTURE; }
+    virtual void updateTexture( MeshTexture& updated ) { std::swap( textures_.front(), updated); dirty_ |= DIRTY_TEXTURE; }
+    const Vector<TextureId, FaceId>& getTexturePerFace() const { return texturePerFace_; }
+    virtual void setTexturePerFace( Vector<TextureId, FaceId> texturePerFace ) { texturePerFace_ = std::move( texturePerFace ); dirty_ |= DIRTY_TEXTURE; }
 
     const VertUVCoords& getUVCoords() const { return uvCoordinates_; }
     virtual void setUVCoords( VertUVCoords uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
@@ -212,8 +216,10 @@ protected:
     UndirectedEdgeBitSet creases_;
 
     /// Texture options
-    MeshTexture texture_;
+    MeshTexture emptyTexture;
+    Vector<MeshTexture,TextureId> textures_;
     VertUVCoords uvCoordinates_; ///< vertices coordinates in texture
+    Vector<TextureId, FaceId> texturePerFace_;
 
     MeshTexture ancillaryTexture_;
     VertUVCoords ancillaryUVCoordinates_; ///< vertices coordinates in ancillary texture

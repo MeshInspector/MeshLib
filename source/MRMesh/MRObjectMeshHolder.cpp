@@ -93,7 +93,8 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     serializeToJson( facesColorMap_.vec_, root["FaceColors"] );
 
     // texture
-    serializeToJson( texture_, root["Texture"] );
+    if (!textures_.empty() )
+        serializeToJson( textures_.front(), root["Texture"] );
     serializeToJson( uvCoordinates_.vec_, root["UVCoordinates"] );
     // edges
     serializeToJson( Vector4f( edgesColor_.get() ), root["Colors"]["Edges"] );
@@ -157,7 +158,10 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     faceSelectionColor_.set( Color( resVec ) );
     // texture
     if ( root["Texture"].isObject() )
-        deserializeFromJson( root["Texture"], texture_ );
+    {
+        textures_.resize( 1 );
+        deserializeFromJson( root["Texture"], textures_.front() );
+    }
     if ( root["UVCoordinates"].isObject() )
         deserializeFromJson( root["UVCoordinates"], uvCoordinates_.vec_ );
     // edges
@@ -569,7 +573,7 @@ size_t ObjectMeshHolder::heapBytes() const
         + selectedTriangles_.heapBytes()
         + selectedEdges_.heapBytes()
         + creases_.heapBytes()
-        + texture_.heapBytes()
+        + textures_.heapBytes() // plus each texture
         + ancillaryTexture_.heapBytes()
         + uvCoordinates_.heapBytes()
         + ancillaryUVCoordinates_.heapBytes()

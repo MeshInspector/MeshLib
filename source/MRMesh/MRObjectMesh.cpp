@@ -90,8 +90,13 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
         if( mesh_->topology.undirectedEdgeSize() < mesh_->topology.undirectedEdgeCapacity() )
             res.back() += " / " + std::to_string( mesh_->topology.undirectedEdgeCapacity() ) + " capacity";
 
-        if ( !texture_.pixels.empty() )
-            res.push_back( "texture: " + std::to_string( texture_.resolution.x ) + " x " + std::to_string( texture_.resolution.y ) );
+        if ( !textures_.empty() )
+        {
+            res.push_back( "num textures: " + std::to_string( textures_.size() ) );
+            for ( const auto& texture : textures_ )
+                if ( !texture.pixels.empty() )
+                    res.push_back( "texture: " + std::to_string( texture.resolution.x ) + " x " + std::to_string( texture.resolution.y ) );
+        }
         if ( !uvCoordinates_.empty() )
         {
             res.push_back( "uv-coords: " + std::to_string( uvCoordinates_.size() ) );

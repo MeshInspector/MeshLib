@@ -209,7 +209,7 @@ size_t RenderMeshObject::glBytes() const
         + vertNormalsBuffer_.size()
         + vertColorsBuffer_.size()
         + facesIndicesBuffer_.size()
-        + texture_.size()
+        + textureArray_.size()
         + faceSelectionTex_.size()
         + faceSelectionTex_.size()
         + facesNormalsTex_.size()
@@ -355,18 +355,30 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
     auto faces = loadFaceIndicesBuffer_();
     facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, faces.dirty(), faces );
 
-    const auto& texture = objMesh_->hasAncillaryTexture() ? objMesh_->getAncillaryTexture() : objMesh_->getTexture();
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
-    texture_.loadDataOpt( dirty_ & DIRTY_TEXTURE,
-        {
-            .resolution = texture.resolution,
-            .internalFormat = GL_RGBA,
-            .format = GL_RGBA,
-            .type = GL_UNSIGNED_BYTE,
-            .wrap = texture.wrap,
-            .filter = texture.filter
-        },
-        texture.pixels );
+    if ( bool( dirty_ & DIRTY_TEXTURE ) )
+    {
+        const auto& textures = objMesh_->getTextures();
+
+        auto res = textures.empty() ? Vector2i() : textures.front().resolution;
+        auto wrap = textures.empty() ? WrapType::Clamp : textures.front().wrap;
+        auto filter = textures.empty() ? FilterType::Linear : textures.front().filter;
+        std::vector<Color> pixels;
+        pixels.reserve( size_t( res.x ) * res.y * textures.size() );
+        for ( const auto& tex : textures )
+            pixels.insert( pixels.end(), tex.pixels.begin(), tex.pixels.end() );
+        GlTexture3::Settings settings;
+        settings.resolution = Vector3i{ res.x,res.y,int( textures.size() ) };
+        settings.internalFormat = GL_RGBA;
+        settings.format = GL_RGBA;
+        settings.type = GL_UNSIGNED_BYTE;
+        settings.wrap = wrap;
+        settings.filter = filter;
+
+        textureArray_.loadData( settings, pixels );
+    }
+    else
+        textureArray_.bind();
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "tex" ), 0 ) );
 
     // Diffuse
@@ -400,6 +412,14 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
         { .resolution = faceSelectionTextureSize_, .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type = GL_UNSIGNED_INT },
         faceSelection );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 3 ) );
+
+    // Texture per faces
+    auto texturePerFaces = loadTexturePerFaceTextureBuffer_();
+    GL_EXEC( glActiveTexture( GL_TEXTURE4 ) );
+    faceSelectionTex_.loadDataOpt( faceSelection.dirty(),
+        { .resolution = texturePerFaceTextureSize_, .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type = GL_UNSIGNED_INT },
+        texturePerFaces );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "texturePerFace" ), 4 ) );
 
     dirty_ &= ~DIRTY_MESH;
     dirty_ &= ~DIRTY_VERTS_COLORMAP;
@@ -922,6 +942,34 @@ RenderBufferRef<unsigned> RenderMeshObject::loadFaceSelectionTextureBuffer_()
             }
             block = selectionData[r];
         }
+    } );
+
+    return buffer;
+}
+
+RenderBufferRef<unsigned> RenderMeshObject::loadTexturePerFaceTextureBuffer_()
+{
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
+    if ( !( dirty_ & DIRTY_TEXTURE ) || !objMesh_->mesh() )
+        return glBuffer.prepareBuffer<unsigned>( texturePerFaceTextureSize_.x * texturePerFaceTextureSize_.y, false );
+
+    const auto& mesh = objMesh_->mesh();
+    const auto& topology = mesh->topology;
+    auto numF = topology.lastValidFace() + 1;
+
+    auto size = numF;
+    texturePerFaceTextureSize_ = calcTextureRes( size, maxTexSize_ );
+    assert( texturePerFaceTextureSize_.x * texturePerFaceTextureSize_.y >= size );
+    auto buffer = glBuffer.prepareBuffer<unsigned>( texturePerFaceTextureSize_.x * texturePerFaceTextureSize_.y );
+
+    const auto& texPerFace = objMesh_->getTexturePerFace();
+    tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
+    {
+        for ( int r = range.begin(); r < range.end(); ++r )
+            if ( r < texPerFace.size() )
+                buffer[r] = texPerFace.vec_[r];
+            else
+                buffer[r] = 0;
     } );
 
     return buffer;

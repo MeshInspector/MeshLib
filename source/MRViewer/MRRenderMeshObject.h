@@ -31,6 +31,7 @@ protected:
     int selEdgeSize_{ 0 };
     int bordersSize_{ 0 };
     Vector2i faceSelectionTextureSize_;
+    Vector2i texturePerFaceTextureSize_;
     Vector2i faceNormalsTextureSize_;
 
     MRVIEWER_API RenderBufferRef<Vector3f> loadVertPosBuffer_();
@@ -39,6 +40,7 @@ protected:
     MRVIEWER_API RenderBufferRef<UVCoord> loadVertUVBuffer_();
     MRVIEWER_API RenderBufferRef<Vector3i> loadFaceIndicesBuffer_();
     MRVIEWER_API RenderBufferRef<unsigned> loadFaceSelectionTextureBuffer_();
+    MRVIEWER_API RenderBufferRef<unsigned> loadTexturePerFaceTextureBuffer_();
     MRVIEWER_API RenderBufferRef<Vector4f> loadFaceNormalsTextureBuffer_();
 
     typedef unsigned int GLuint;
@@ -60,8 +62,9 @@ protected:
 
     GlBuffer facesIndicesBuffer_;
 
-    GlTexture2 texture_;
+    GlTexture3 textureArray_;
     GlTexture2 faceSelectionTex_;
+    GlTexture2 texturePerFaceTex_;
     GlTexture2 faceColorsTex_;
     GlTexture2 facesNormalsTex_;
 

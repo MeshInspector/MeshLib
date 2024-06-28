@@ -99,11 +99,11 @@ public:
     [[nodiscard]] const ICPProperties& getParams() const { return prop_; }
 
     /// computes root-mean-square deviation between points
-    /// or the standard deviation of the points from the value
+    /// or the standard deviation from given value if present
     [[nodiscard]] MRMESH_API float getMeanSqDistToPoint( double* value = nullptr ) const;
 
     /// computes root-mean-square deviation from points to target planes
-    /// oor the standard deviation of the points to target planes from the value
+    /// or the standard deviation from given value if present
     [[nodiscard]] MRMESH_API float getMeanSqDistToPlane( double* value = nullptr ) const;
 
     /// computes the number of samples able to form pairs

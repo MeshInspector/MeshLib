@@ -194,8 +194,8 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
     ImGui::RenderNavHighlight( bb, id );
 
     // replaced part
-    // potentail fail. need check that customTexture is good
-    auto texture = custmParams.customTexture ? custmParams.customTexture : getTexture( TextureType::GradientBtn ).get();
+    // potential fail. need check that customTexture is good
+    auto texture = ( custmParams.customTexture || custmParams.forceImGuiBackground ) ? custmParams.customTexture : getTexture( TextureType::GradientBtn ).get();
     if ( texture )
     {
         const float textureU = 0.125f + ( !active ? 0.75f : ( held && hovered ) ? 0.5f : hovered ? 0.25f : 0.f );
@@ -221,6 +221,9 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
         sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnText ) );
     ImGui::RenderTextClipped( bb.Min, bb.Max, label, NULL, &label_size, style.ButtonTextAlign, &bb );
 
+    if ( custmParams.underlineFirstLetter )
+        ImGui::RenderTextClipped( bb.Min, bb.Max, "_", NULL, &label_size, style.ButtonTextAlign, &bb);
+
     IMGUI_TEST_ENGINE_ITEM_INFO( id, label, g.LastItemData.StatusFlags );
 
     return ( pressed || simulateClick ) && active;
@@ -234,12 +237,14 @@ bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, cGradientButtonFramePadding * scaling ) );
 
-    return buttonEx( label, active, size ) || ( active && checkKey( key ) );
+    bool sameKey = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( label, 1 );
+    return buttonEx( label, active, size, 0, { .underlineFirstLetter = sameKey } ) || ( active && checkKey( key ) );
 }
 
 bool buttonCommonSize( const char* label, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None */ )
 {
-    return buttonEx( label, true, size ) || checkKey( key );
+    bool sameKey = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( label, 1 );
+    return buttonEx( label, true, size, 0, { .underlineFirstLetter = sameKey } ) || checkKey( key );
 }
 
 bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None*/ )
@@ -249,17 +254,120 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
 
     Color clearBlue( 0x1b, 0x83, 0xff, 0xff );
     Color bgColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background );
+    Color textColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text );
 
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_FramePadding, { ( cButtonPadding + 1 ) * scaling, cButtonPadding * scaling } );
     sh.addVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x * 0.7f,  cDefaultItemSpacing * 2 * scaling } );
 
     sh.addColor( ImGuiCol_Button, *value == ownValue ? clearBlue : bgColor );
+    sh.addColor( ImGuiCol_Text, *value == ownValue ? Color::white() : textColor );
 
-    bool ret = ImGui::Button( label, ImVec2( size.x, size.y ) ) || checkKey( key );
-    ret = TestEngine::createButton( label ) || ret; // Don't want short-circuiting.
-    return ret;
+    ButtonCustomizationParams params;
+    params.forceImGuiBackground = true;
+    params.forceImguiTextColor = true;
+    params.underlineFirstLetter = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( label, 1 );
+
+    return buttonEx( label, true, ImVec2( size.x, size.y ), 0, params ) || checkKey( key );
 }
+
+void drawPoltHorizontalAxis( float menuScaling, const PlotAxis& plotAxis )
+{
+    auto drawList = ImGui::GetWindowDrawList();
+
+    const auto font = ImGui::GetFont();
+    const ImU32 color = ImGui::GetColorU32( ImGui::GetStyle().Colors[ImGuiCol_Text] );
+    const auto fontSize = ImGui::GetFontSize();
+
+    const float scrollY = ImGui::GetScrollY();
+
+    float length = plotAxis.maxValue - plotAxis.minValue;
+    int numDashes = std::max( 1, int( plotAxis.size / ( plotAxis.optimalLenth * menuScaling ) ) ) + 1;
+    float axisStep = std::max( 1.0f, float( int( length / ( numDashes - 1 ) ) ) );
+    numDashes = int( length / axisStep + 1 );
+    float step = plotAxis.size / length * axisStep;
+
+    float len = 0;
+
+    float padding = plotAxis.textPadding * menuScaling;
+    float lenDash = plotAxis.lenDash * menuScaling;
+    float lenDashWithText = plotAxis.lenDashWithText * menuScaling;
+
+    for ( size_t i = 0; i < numDashes; i++ )
+    {
+        float x = plotAxis.startAxisPoint.x + step * i;
+        const auto value = plotAxis.minValue + axisStep * i;
+
+        auto text = valueToImGuiFormatString( value, plotAxis.labelFormatParams );
+        auto end = text.find("#");
+        auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + end );
+
+        auto withText = i % plotAxis.textDashIndicesStep == 0;
+        if ( withText )
+            len = lenDashWithText;
+        else
+            len = lenDash;
+
+        ImVec2 pos( x, plotAxis.startAxisPoint.y - len - scrollY );
+        drawList->AddLine( ImVec2( x, plotAxis.startAxisPoint.y - scrollY ), pos, color );
+        if ( withText )
+            drawList->AddText(
+                font,
+                fontSize,
+                ImVec2( pos.x - textSize.x / 2.0f, pos.y - textSize.y - padding ),
+                color,
+                text.c_str(),
+                text.c_str() + end );
+    }
+}
+
+void drawPoltVerticalAxis( float menuScaling, const PlotAxis& plotAxis )
+{
+    auto drawList = ImGui::GetWindowDrawList();
+
+    const auto font = ImGui::GetFont();
+    const ImU32 color = ImGui::GetColorU32( ImGui::GetStyle().Colors[ImGuiCol_Text] );
+    const auto fontSize = ImGui::GetFontSize();
+
+    float length = plotAxis.maxValue - plotAxis.minValue;
+    int numDashes = std::max( 1, int( plotAxis.size / ( plotAxis.optimalLenth * menuScaling ) ) ) + 1;
+    float axisStep = float( length / ( numDashes - 1 ) );
+    float step = plotAxis.size / length * axisStep;
+
+    float len = 0;
+
+    float padding = plotAxis.textPadding * menuScaling;
+    float lenDash = plotAxis.lenDash * menuScaling;
+    float lenDashWithText = plotAxis.lenDashWithText * menuScaling;
+
+    for ( size_t i = 0; i < numDashes; i++ )
+    {
+        float y = plotAxis.startAxisPoint.y - step * i;
+        const auto value = plotAxis.minValue + axisStep * i;
+
+        auto text = valueToImGuiFormatString( value, plotAxis.labelFormatParams );
+        auto end = text.find( "#" );
+        auto textSize = ImGui::CalcTextSize( text.c_str(), text.c_str() + end );
+
+        auto withText = i % plotAxis.textDashIndicesStep == 0;
+        if ( withText )
+            len = lenDashWithText;
+        else
+            len = lenDash;
+
+        ImVec2 pos( plotAxis.startAxisPoint.x + len, y );
+        drawList->AddLine( ImVec2( plotAxis.startAxisPoint.x, y ), pos, color );
+        if ( withText )
+            drawList->AddText(
+                font,
+                fontSize,
+                ImVec2( pos.x + padding, pos.y - textSize.y / 2.0f ),
+                color,
+                text.c_str(),
+                text.c_str() + end );
+    }
+}
+
 bool buttonIconEx(
     const std::string& name,
     const Vector2f& iconSize,
@@ -385,7 +493,6 @@ bool buttonIconEx(
         ImVec2 pos;
         pos.x = startPosText.x - previosDetail.lenght / 2.0f;
         pos.y = startPosText.y + ( padding.y + curTextSize.y ) * numStr;
-        numStr++;
         ImGui::GetWindowDrawList()->AddText(
                 font,
                 fontSize,
@@ -393,6 +500,10 @@ bool buttonIconEx(
                 color,
                 detail.start,
                 detail.end );
+        if ( numStr == 0 && params.underlineFirstLetter )
+            ImGui::GetWindowDrawList()->AddText( font, fontSize, pos, color, "_" );
+
+        numStr++;
     }
 
     ImGui::GetWindowDrawList()->PopClipRect();

@@ -64,10 +64,10 @@ private:
     void drawMeasurementUnitsTab_( float menuScaling );
     void drawFeaturesTab_( float menuScaling );
 
-    void drawThemeSelector_( float menuWidth, float menuScaling );
+    void drawThemeSelector_( float menuScaling );
     void drawResetDialog_( bool activated, float menuScaling );
-    void drawShadingModeCombo_( bool inGroup, float menuScaling );
-    void drawProjectionModeSelector_( float menuScaling );
+    void drawShadingModeCombo_( bool inGroup, float menuScaling, float toolWidth );
+    void drawProjectionModeSelector_( float menuScaling, float toolWidth );
     void drawUpDirectionSelector_();
     void drawBackgroundButton_( bool allViewports );
     void drawRenderOptions_( float menuScaling );

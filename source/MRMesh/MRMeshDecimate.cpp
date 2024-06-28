@@ -202,14 +202,20 @@ private:
         User         ///< user callback prohibits the collapse
     };
 
+    struct CanCollapseRes
+    {
+        /// if collapse failed then it is invalid, otherwise it is input edge, oriented such that org( e ) will be the remaining vertex after collapse
+        EdgeId e;
+        CollapseStatus status = CollapseStatus::Ok;
+    };
+    CanCollapseRes canCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ); // not const because it changes temporary originNeis_ and triDblAreas_
+
     struct CollapseRes
     {
         /// if collapse failed (or it was the last edge) then it is invalid, otherwise it is the remaining vertex
         VertId v;
         CollapseStatus status = CollapseStatus::Ok;
     };
-
-    CollapseRes canCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ); // not const because it changes temporary originNeis_ and triDblAreas_
     CollapseRes collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos );
 };
 
@@ -461,7 +467,7 @@ void MeshDecimator::addInQueueIfMissing_( UndirectedEdgeId ue )
     }
 }
 
-auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CollapseRes
+auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CanCollapseRes
 {
     const auto & topology = mesh_.topology;
     auto vl = topology.left( edgeToCollapse ).valid()  ? topology.dest( topology.next( edgeToCollapse ) ) : VertId{};
@@ -638,27 +644,29 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
     if ( settings_.preCollapse && !settings_.preCollapse( edgeToCollapse, collapsePos ) )
         return { .status =  CollapseStatus::User }; // user prohibits the collapse
 
-    return { .v = vo };
+    assert( topology.org( edgeToCollapse ) == vo );
+    return { .e = edgeToCollapse };
 }
 
 auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CollapseRes
 {
-    CollapseRes res = canCollapse_( edgeToCollapse, collapsePos );
-    if ( res.status != CollapseStatus::Ok )
-        return res;
-
-    auto & topology = mesh_.topology;
+    CanCollapseRes can = canCollapse_( edgeToCollapse, collapsePos );
+    if ( can.status != CollapseStatus::Ok )
+        return { .status = can.status };
+    assert( can.e == edgeToCollapse || can.e == edgeToCollapse.sym() );
 
     ++res_.vertsDeleted;
 
-    const auto l = topology.left( edgeToCollapse );
-    const auto r = topology.left( edgeToCollapse.sym() );
+    auto & topology = mesh_.topology;
+    const auto l = topology.left( can.e );
+    const auto r = topology.left( can.e.sym() );
     if ( l )
         ++res_.facesDeleted;
     if ( r )
         ++res_.facesDeleted;
 
-    mesh_.points[res.v] = collapsePos;
+    const auto vo = topology.org( can.e );
+    mesh_.points[vo] = collapsePos;
     if ( settings_.region )
     {
         if ( l )
@@ -666,10 +674,8 @@ auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapseP
         if ( r )
             settings_.region->reset( r );
     }
-    auto eo = collapseEdge( topology, edgeToCollapse, settings_.notFlippable, settings_.onEdgeDel );
-    if ( !eo )
-        res.v = VertId{};
-    return res;
+    auto eo = collapseEdge( topology, can.e, settings_.notFlippable, settings_.onEdgeDel );
+    return { .v = eo ? vo : VertId{} };
 }
 
 static void optionalPackMesh( Mesh & mesh, const DecimateSettings & settings )

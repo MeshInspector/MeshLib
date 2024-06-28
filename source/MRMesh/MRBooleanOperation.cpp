@@ -266,9 +266,18 @@ Expected<MR::Mesh, std::string> doBooleanOperation(
         operation != BooleanOperation::OutsideB;
     bool pathsHaveLeftHole = operation == BooleanOperation::Intersection;
     connectPreparedParts( aPart, bPart, pathsHaveLeftHole,
-                          needStitch ? pathsACpy : std::vector<EdgePath>{}, 
-                          needStitch ? pathsBCpy : std::vector<EdgePath>{}, 
+                          needStitch ? pathsACpy : std::vector<EdgePath>{},
+                          needStitch ? pathsBCpy : std::vector<EdgePath>{},
                           rigidB2A, mapper );
+
+    if ( intParams.optionalOutCut )
+    {
+        if ( needStitch )
+            *intParams.optionalOutCut = pathsHaveLeftHole ? std::move( pathsBCpy ) : std::move( pathsACpy );
+        else
+            *intParams.optionalOutCut = ( operation == BooleanOperation::InsideA || operation == BooleanOperation::OutsideA ) ? std::move( pathsACpy ) : std::move( pathsBCpy );
+    }
+
 
     return pathsHaveLeftHole ? bPart : aPart;
 }

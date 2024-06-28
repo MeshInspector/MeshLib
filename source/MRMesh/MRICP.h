@@ -122,10 +122,12 @@ struct NumSum
 };
 
 /// computes the number of active pairs and the sum of squared distances between points
-[[nodiscard]] MRMESH_API NumSum getSumSqDistToPoint( const IPointPairs& pairs );
+/// or the difference between the squared distances between points and inaccuracy
+[[nodiscard]] MRMESH_API NumSum getSumSqDistToPoint( const IPointPairs& pairs, double* inaccuracy = nullptr );
 
 /// computes the number of active pairs and the sum of squared deviation from points to target planes
-[[nodiscard]] MRMESH_API NumSum getSumSqDistToPlane( const IPointPairs& pairs );
+/// or the difference between the squared distances between points to target planes and inaccuracy
+[[nodiscard]] MRMESH_API NumSum getSumSqDistToPlane( const IPointPairs& pairs, double* inaccuracy = nullptr);
 
 /// computes root-mean-square deviation between points
 [[nodiscard]] inline float getMeanSqDistToPoint( const IPointPairs& pairs ) { return getSumSqDistToPoint( pairs ).rootMeanSqF(); }

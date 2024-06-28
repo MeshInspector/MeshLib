@@ -413,26 +413,32 @@ size_t getNumActivePairs( const IPointPairs& pairs )
     return pairs.active.count();
 }
 
-NumSum getSumSqDistToPoint( const IPointPairs& pairs )
+NumSum getSumSqDistToPoint( const IPointPairs& pairs, double* inaccuracy )
 {
     NumSum res;
     for ( size_t idx : pairs.active )
     {
         const auto& vp = pairs[idx];
-        res.sum += vp.distSq;
+        if ( inaccuracy )
+            res.sum += std::abs( vp.distSq + *inaccuracy * *inaccuracy );
+        else
+            res.sum += vp.distSq;
         ++res.num;
     }
     return res;
 }
 
-NumSum getSumSqDistToPlane( const IPointPairs& pairs )
+NumSum getSumSqDistToPlane( const IPointPairs& pairs, double* inaccuracy )
 {
     NumSum res;
     for ( size_t idx : pairs.active )
     {
         const auto& vp = pairs[idx];
         auto v = dot( vp.tgtNorm, vp.tgtPoint - vp.srcPoint );
-        res.sum += sqr( v );
+        if ( inaccuracy )
+            res.sum += std::abs( sqr( v ) + *inaccuracy * *inaccuracy );
+        else
+            res.sum += sqr( v );
         ++res.num;
     }
     return res;

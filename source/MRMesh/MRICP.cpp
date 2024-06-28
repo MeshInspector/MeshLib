@@ -436,7 +436,7 @@ NumSum getSumSqDistToPlane( const IPointPairs& pairs, double* inaccuracy )
         const auto& vp = pairs[idx];
         auto v = dot( vp.tgtNorm, vp.tgtPoint - vp.srcPoint );
         if ( inaccuracy )
-            res.sum += sqr( v - *inaccuracy );
+            res.sum += sqr( std::abs( v ) - *inaccuracy );
         else
             res.sum += sqr( v );
         ++res.num;

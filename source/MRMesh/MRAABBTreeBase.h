@@ -61,5 +61,3 @@ protected:
 };
 
 } //namespace MR
-
-#include "MRAABBTreeBase.hpp"

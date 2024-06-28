@@ -1,5 +1,9 @@
 #pragma once
 
+#include "MRMesh/MRId.h"
+#include "MRMesh/MRMeshFwd.h"
+#include "MRMesh/MRVector.h"
+
 namespace MR
 {
 

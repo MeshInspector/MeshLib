@@ -3,6 +3,7 @@
 #include "MRIOFilters.h"
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
+#include "MRGcodeSource.h"
 #include <filesystem>
 #include <istream>
 #include <string>

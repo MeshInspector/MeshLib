@@ -27,6 +27,7 @@
 #include "MRZip.h"
 #include "MRPointsLoadE57.h"
 #include "MRMisonLoad.h"
+#include "MRGcodeSource.h"
 #include "MRPch/MRTBB.h"
 
 #ifndef MRMESH_NO_GLTF
@@ -65,7 +66,7 @@ bool detectFlatShading( const Mesh& mesh )
     {
         double sumDblArea = 0;
         double sumSharpDblArea = 0;
-        Data operator + ( const Data & b ) const 
+        Data operator + ( const Data & b ) const
         {
             return { sumDblArea + b.sumDblArea, sumSharpDblArea + b.sumSharpDblArea };
         }
@@ -166,7 +167,7 @@ Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std
     auto mesh = MeshLoad::fromAnySupportedFormat( file, newSettings );
     if ( !mesh.has_value() )
         return unexpected( mesh.error() );
-    
+
     if ( !mesh->points.empty() && mesh->topology.numValidFaces() <= 0 )
     {
         auto pointCloud = std::make_shared<MR::PointCloud>();
@@ -317,7 +318,7 @@ Expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObjectVoxe
             return unexpected( getCancelMessage( file ) );
         res.emplace_back( obj );
     }
-    
+
     return res;
 }
 #endif
@@ -347,8 +348,8 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
 
     auto ext = std::string( "*" ) + utf8string( filename.extension().u8string() );
     for ( auto& c : ext )
-        c = ( char )tolower( c );   
-    
+        c = ( char )tolower( c );
+
     if ( ext == "*.obj" )
     {
         MeshLoadSettings settings;
@@ -438,7 +439,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
         const auto objTree = loadSceneFromAnySupportedFormat( filename, loadWarn, callback );
         if ( !objTree.has_value() )
             return unexpected( objTree.error() );
-        
+
         result = std::vector( { *objTree } );
         ( *result )[0]->setName( utf8string( filename.stem() ) );
         loadedFromSceneFile = true;
@@ -664,7 +665,7 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
     };
     clearEmptySubfolders( filesTree );
 
-    
+
     if ( filesTree.subfolders.empty() && filesTree.files.empty() )
         return unexpected( std::string( "Error: folder is empty." ) );
 

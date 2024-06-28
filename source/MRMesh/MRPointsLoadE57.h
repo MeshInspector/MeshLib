@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRColor.h"
 #include "MRPointCloud.h"
 #include "MRExpected.h"
 #include "MRProgressCallback.h"

@@ -1391,7 +1391,7 @@ VoidOrErrStr interpolateArcs( std::vector<GCommand>& commands, const ArcInterpol
 
 std::shared_ptr<ObjectGcode> exportToolPathToGCode( const std::vector<GCommand>& commands )
 {
-    auto gcodeSource = std::make_shared<std::vector<std::string>>();
+    auto gcodeSource = std::make_shared<GcodeSource>();
 
     for ( const auto& command : commands )
     {
@@ -1421,7 +1421,7 @@ std::shared_ptr<ObjectGcode> exportToolPathToGCode( const std::vector<GCommand>&
             gcode << " F" << command.feed;
 
         gcode << std::endl;
-        gcodeSource->push_back( gcode.str() );
+        gcodeSource->lines.push_back( gcode.str() );
     }
 
     auto res = std::make_shared<ObjectGcode>();

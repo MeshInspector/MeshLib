@@ -16,16 +16,13 @@ class Timer
 {
 public:
     Timer( std::string name ) { start( std::move( name ) ); }
+    Timer( Timer&& other ) noexcept : start_( std::exchange( other.start_, {} ) ), started_( std::exchange( other.started_, {} ) ) {}
+    Timer& operator=( Timer other ) noexcept { std::swap( start_, other.start_ ); std::swap( started_, other.started_ ); return *this; }
     ~Timer() { finish(); }
 
     MRMESH_API void restart( std::string name );
     MRMESH_API void start( std::string name );
     MRMESH_API void finish();
-
-    Timer( const Timer & ) = delete;
-    Timer & operator =( const Timer & ) = delete;
-    Timer( Timer && ) = delete;
-    Timer & operator =( Timer && ) = delete;
 
     std::chrono::duration<double> secondsPassed() const { return std::chrono::high_resolution_clock::now() - start_; }
 

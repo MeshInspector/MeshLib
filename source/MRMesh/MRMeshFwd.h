@@ -456,7 +456,7 @@ using PolylineProjectionWithOffsetResult3 = PolylineProjectionWithOffsetResult<V
 
 class DistanceMap;
 
-using GcodeSource = std::vector<std::string>;
+struct GcodeSource;
 
 class Object;
 class SceneRootObject;

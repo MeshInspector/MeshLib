@@ -25,7 +25,7 @@ struct ICPGroupPairs : public IPointPairs
 
 using ICPGroupProjector = std::function<void( const Vector3f& p, MeshOrPoints::ProjectionResult& res, ObjId& resId )>;
 /// in each pair updates the target data and performs basic filtering (activation)
-void updateGroupPairs( ICPGroupPairs& pairs, const ICPObjects& objs,
+MRMESH_API void updateGroupPairs( ICPGroupPairs& pairs, const ICPObjects& objs,
     ICPGroupProjector srcProjector, ICPGroupProjector tgtProjector,
     float cosTreshold, float distThresholdSq, bool mutualClosest );
 
@@ -82,16 +82,16 @@ class MRMESH_CLASS MultiwayICP
 {
 public:
     MRMESH_API MultiwayICP( const ICPObjects& objects, const MultiwayICPSamplingParameters& samplingParams );
-    
+
     /// runs ICP algorithm given input objects, transformations, and parameters;
     /// \return adjusted transformations of all objects to reach registered state
     [[nodiscard]] MRMESH_API Vector<AffineXf3f, ObjId> calculateTransformations( ProgressCallback cb = {} );
-    
+
     /// select pairs with origin samples on all objects
     MRMESH_API bool resamplePoints( const MultiwayICPSamplingParameters& samplingParams );
 
     /// in each pair updates the target data and performs basic filtering (activation)
-    /// in cascade mode only useful for stats update 
+    /// in cascade mode only useful for stats update
     MRMESH_API bool updateAllPointPairs( ProgressCallback cb = {} );
 
     /// tune algorithm params before run calculateTransformations()

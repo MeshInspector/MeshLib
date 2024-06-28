@@ -4,6 +4,9 @@
 #include "openvdb/tree/TreeIterator.h"
 #include "openvdb/tree/Tree.h"
 #include "openvdb/tree/ValueAccessor.h"
+#include "openvdb/tools/ChangeBackground.h"
+#include "openvdb/tools/Prune.h"
+#include "openvdb/tools/SignedFloodFill.h"
 #include "MRProgressCallback.h"
 
 namespace MR
@@ -73,7 +76,7 @@ public:
             openvdb::math::CoordBBox bbox = i->getNodeBoundingBox();
             if ( !mBBox.empty() )
                 bbox.intersect( mBBox );
-            
+
             if ( !bbox.empty() )
             {
                 for ( auto it = bbox.begin(); it != bbox.end(); ++it )
@@ -300,7 +303,7 @@ public:
             openvdb::math::CoordBBox bbox = i->getNodeBoundingBox();
             if ( !mBBox.empty() )
                 bbox.intersect( mBBox );
-            
+
             if ( !bbox.empty() )
             {
                 mProc.action( i, mInAcc, bbox );
@@ -336,7 +339,7 @@ public:
             i.getBoundingBox( bbox );
             if ( !mBBox.empty() )
                 bbox.intersect( mBBox );
-            
+
             if ( !bbox.empty() )
             {
                 mProc.action( i, mInAcc, bbox );

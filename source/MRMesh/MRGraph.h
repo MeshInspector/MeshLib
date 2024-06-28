@@ -80,7 +80,7 @@ public:
 
     /// unites two vertices into one (deleting the second one),
     /// which leads to deletion and merge of some edges, for which callback is called
-    void merge( VertId remnant, VertId dead, std::function<void( EdgeId remnant, EdgeId dead )> onMergeEdges );
+    MRMESH_API void merge( VertId remnant, VertId dead, std::function<void( EdgeId remnant, EdgeId dead )> onMergeEdges );
 
     /// verifies that all internal data structures are valid
     MRMESH_API bool checkValidity() const;

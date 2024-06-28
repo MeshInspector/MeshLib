@@ -77,7 +77,7 @@ public:
 
 /// the class for fast approximate computation of winding number for a mesh (using its AABB tree)
 /// \ingroup AABBTreeGroup
-class [[nodiscard]] FastWindingNumber : public IFastWindingNumber
+class [[nodiscard]] MRMESH_CLASS FastWindingNumber : public IFastWindingNumber
 {
 public:
     /// constructs this from AABB tree of given mesh;
@@ -128,7 +128,7 @@ public:
     /// <param name="gridToMeshXf">transform from grid to mesh</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
     MRMESH_API VoidOrErrStr calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) override;
-    
+
     /// <summary>
     /// returns amount of required memory for calcFromVector operation
     /// does not take into account size of output vector

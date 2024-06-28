@@ -2,6 +2,7 @@
 #include "MRVector2.h"
 #include "MRMatrix2.h"
 #include "MRQuaternion.h"
+#include "MRGcodeSource.h"
 #include <cassert>
 #include <chrono>
 
@@ -30,9 +31,9 @@ void GcodeProcessor::reset()
 void GcodeProcessor::setGcodeSource( const GcodeSource& gcodeSource )
 {
     reset();
-    gcodeSource_.resize( gcodeSource.size() );
-    for ( int i = 0; i < gcodeSource.size(); ++i )
-        gcodeSource_[i] = gcodeSource[i];
+    gcodeSource_.resize( gcodeSource.lines.size() );
+    for ( std::size_t i = 0; i < gcodeSource.lines.size(); ++i )
+        gcodeSource_[i] = gcodeSource.lines[i];
 }
 
 std::vector<MR::GcodeProcessor::MoveAction> GcodeProcessor::processSource()
@@ -219,7 +220,7 @@ GcodeProcessor::MoveAction GcodeProcessor::generateMoveAction_()
 
     const bool anyCoordReaded = inputCoordsReaded_[0] || inputCoordsReaded_[1] || inputCoordsReaded_[2];
     const bool anyRotationReaded = inputRotationReaded_[0] || inputRotationReaded_[1] || inputRotationReaded_[2];
-    
+
     if ( ( moveMode_ == MoveMode::Idle || moveMode_ == MoveMode::Line ) && anyCoordReaded )
         res = moveLine_( newTranslationPos, newRotationAngles );
     else if ( ( moveMode_ == MoveMode::Clockwise || moveMode_ == MoveMode::Counterclockwise ) && (anyCoordReaded || arcCenter_) )
@@ -387,7 +388,7 @@ GcodeProcessor::MoveAction GcodeProcessor::getToolRotationPoints_( const Vector3
         return {};
 
     MoveAction res;
-    
+
     Vector3f rotationAnglesStep_ = ( newRotationAngles - rotationAngles_ ) / ( cPointInRotation - 1.f );
     res.action.path.resize( cPointInRotation );
     res.toolDirection.resize( cPointInRotation );
@@ -397,7 +398,7 @@ GcodeProcessor::MoveAction GcodeProcessor::getToolRotationPoints_( const Vector3
         res.action.path[i] = calcRealCoord_( translationPos_, currentRotationAngles_ );
         res.toolDirection[i] = calcRealCoord_( Vector3f::plusZ(), currentRotationAngles_ );
     }
-       
+
     return res;
 }
 

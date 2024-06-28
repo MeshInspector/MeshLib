@@ -15,9 +15,6 @@ namespace MR
 // args: position0, position1, value0, value1, iso
 using VoxelPointPositioner = std::function<Vector3f( const Vector3f&, const Vector3f&, float, float, float )>;
 
-// linear interpolation positioner
-MRMESH_API Vector3f voxelPositionerLinear( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso );
-
 struct MarchingCubesParams
 {
     /// origin point of voxels box

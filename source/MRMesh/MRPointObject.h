@@ -39,7 +39,7 @@ public:
 
     MRMESH_API virtual  std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 
-    [[nodiscard]] FeatureObjectProjectPointResult projectPoint( const Vector3f& /*point*/, ViewportId id = {} ) const override;
+    [[nodiscard]] MRMESH_API FeatureObjectProjectPointResult projectPoint( const Vector3f& /*point*/, ViewportId id = {} ) const override;
 
 protected:
     PointObject( const PointObject& other ) = default;

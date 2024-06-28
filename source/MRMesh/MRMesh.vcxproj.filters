@@ -1308,6 +1308,9 @@
     <ClInclude Include="MRPointCloudDistance.h">
       <Filter>Source Files\PointCloud</Filter>
     </ClInclude>
+    <ClInclude Include="MRGcodeSource.h">
+      <Filter>Source Files\Gcode</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

@@ -414,6 +414,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     if ( params.outPreCutA || params.outPreCutB )
         return {};
 
+    intParams.optionalOutCut = params.outCutEdges;
     // do operation
     auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), cutA, cutB, operation, params.rigidB2A, params.mapper, params.mergeAllNonIntersectingComponents, intParams );
 

@@ -26,6 +26,10 @@ struct FindInnerShellSettings
     /// positive side if winding number below or equal this threshold;
     /// ideal threshold: 0.5 for closed meshes; 0.0 for planar meshes
     float windingNumberThreshold = 0.25f;
+
+    /// components of proper side with smaller number of vertices than this value will be removed from the result;
+    /// components of wrong side with smaller number of vertices than this value will be added to the result
+    int minVertsInComp = 10;
 };
 
 /// information about shell vertex

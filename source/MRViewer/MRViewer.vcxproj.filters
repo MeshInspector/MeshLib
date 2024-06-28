@@ -397,6 +397,9 @@
     <ClCompile Include="MRUIRectAllocator.cpp">
       <Filter>UIStyle</Filter>
     </ClCompile>
+    <ClCompile Include="MRWelcomeWindow.cpp">
+      <Filter>RibbonMenu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -776,6 +779,9 @@
     <ClInclude Include="MRUIRectAllocator.h">
       <Filter>UIStyle</Filter>
     </ClInclude>
+    <ClInclude Include="MRWelcomeWindow.h">
+      <Filter>RibbonMenu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />
@@ -948,6 +954,12 @@
       <Filter>resource\independent_icons\X3</Filter>
     </Image>
     <Image Include="resource\independent_icons\X3\Plane YZ.png">
+      <Filter>resource\independent_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\Youtube.png">
+      <Filter>resource\independent_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\independent_icons\X3\DragDrop.png">
       <Filter>resource\independent_icons\X3</Filter>
     </Image>
   </ItemGroup>

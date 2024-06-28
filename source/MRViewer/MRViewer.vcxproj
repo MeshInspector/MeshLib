@@ -115,6 +115,7 @@
     <ClCompile Include="MRUITestEngine.cpp" />
     <ClCompile Include="MRSpaceMouseHandler3dxMacDriver.cpp" />
     <ClCompile Include="MRUIRectAllocator.cpp" />
+    <ClCompile Include="MRWelcomeWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -243,6 +244,7 @@
     <ClInclude Include="MRUITestEngine.h" />
     <ClInclude Include="MRSpaceMouseHandler3dxMacDriver.h" />
     <ClInclude Include="MRUIRectAllocator.h" />
+    <ClInclude Include="MRWelcomeWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />
@@ -296,10 +298,12 @@
     <Image Include="resource\independent_icons\X1\Plane XY.png" />
     <Image Include="resource\independent_icons\X1\Plane XZ.png" />
     <Image Include="resource\independent_icons\X1\Plane YZ.png" />
+    <Image Include="resource\independent_icons\X3\DragDrop.png" />
     <Image Include="resource\independent_icons\X3\Plane Import.png" />
     <Image Include="resource\independent_icons\X3\Plane XY.png" />
     <Image Include="resource\independent_icons\X3\Plane XZ.png" />
     <Image Include="resource\independent_icons\X3\Plane YZ.png" />
+    <Image Include="resource\independent_icons\X3\Youtube.png" />
     <Image Include="resource\object_icons\X1\AngleMeasurementObject.png" />
     <Image Include="resource\object_icons\X1\CircleObject.png" />
     <Image Include="resource\object_icons\X1\ConeObject.png" />

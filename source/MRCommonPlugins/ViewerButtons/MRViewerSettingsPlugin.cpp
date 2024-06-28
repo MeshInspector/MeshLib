@@ -283,6 +283,11 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
                                                 std::bind( &RibbonMenu::setAutoCloseBlockingPlugins, ribbonMenu_, std::placeholders::_1 ) );
         UI::setTooltipIfHovered( "Automatically close blocking tool when another blocking tool is activated", menuScaling );
 
+        auto& welcomeWindow = ribbonMenu_->getWelcomeWindow();
+        UI::checkbox( "Show Welcome Window",
+                                                std::bind( &WelcomeWindow::getShowOnStartup, &welcomeWindow ),
+                                                std::bind( &WelcomeWindow::setShowOnStartup, &welcomeWindow, std::placeholders::_1, false ) );
+
         UI::checkbox( "Show Experimental Features", &viewer->experimentalFeatures );
         UI::setTooltipIfHovered( "Show experimental or diagnostic tools and controls", menuScaling );
     }

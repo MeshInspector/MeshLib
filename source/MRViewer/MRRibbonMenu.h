@@ -8,6 +8,7 @@
 #include "MRRibbonSchema.h"
 #include "MRShortcutManager.h"
 #include "MRToolbar.h"
+#include "MRWelcomeWindow.h"
 #include "MRMesh/MRSignal.h"
 #include "MRRibbonNotification.h"
 #include <type_traits>
@@ -74,6 +75,8 @@ public:
 
     /// get access to Ribbon font manager
     const RibbonFontManager& getFontManager() { return fontManager_; };
+
+    WelcomeWindow& getWelcomeWindow() { return welcomeWindow_; }
 
     /// get Scene List window size
     Vector2i getSceneSize() { return Vector2i( int( sceneSize_.x ), int( sceneSize_.y ) ); };
@@ -262,7 +265,8 @@ private:
     RibbonButtonDrawer buttonDrawer_;
 
     std::unordered_map<std::string, CustomContextMenuCheckbox> customCheckBox_;
-
+    
+    WelcomeWindow welcomeWindow_;
     Toolbar toolbar_;
     RibbonNotifier notifier_;
 #ifndef __EMSCRIPTEN__

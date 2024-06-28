@@ -182,7 +182,7 @@ struct ICPProperties
 };
 
 /// reset active bit if pair distance is further than maxDistSq
-size_t deactivateFarPairs( IPointPairs& pairs, float maxDistSq );
+MRMESH_API size_t deactivateFarPairs( IPointPairs& pairs, float maxDistSq );
 
 /// in each pair updates the target data and performs basic filtering (activation)
 void updatePointPairs( PointPairs& pairs,

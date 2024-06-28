@@ -4,6 +4,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
+#include "MRMeshComponents.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -39,12 +40,25 @@ ShellVertexInfo classifyShellVert( const MeshPart & mp, const Vector3f & shellPo
 VertBitSet findInnerShellVerts( const MeshPart & mp, const Mesh & shell, const FindInnerShellSettings & settings )
 {
     MR_TIMER
-    VertBitSet res( shell.topology.vertSize() );
+    VertBitSet mySide( shell.topology.vertSize() ), notBd( shell.topology.vertSize() );
     BitSetParallelFor( shell.topology.getValidVerts(), [&]( VertId v )
     {
-        if ( classifyShellVert( mp, shell.points[v], settings ).valid() )
-            res.set( v );
+        const auto info = classifyShellVert( mp, shell.points[v], settings );
+        if ( info.inRange && !info.projOnBd )
+        {
+            notBd.set( v );
+            if ( info.rightSide )
+                mySide.set( v );
+        }
     } );
+
+    const auto largeComps = MeshComponents::getLargeComponentVerts( shell, settings.minVertsInComp, &notBd );
+    mySide &= largeComps;
+    const auto largeMySide = MeshComponents::getLargeComponentVerts( shell, settings.minVertsInComp, &mySide );
+    const auto otherSide = largeComps - mySide;
+    const auto largeOtherSide = MeshComponents::getLargeComponentVerts( shell, settings.minVertsInComp, &otherSide );
+
+    auto res = largeMySide | ( otherSide - largeOtherSide );
     return res;
 }
 

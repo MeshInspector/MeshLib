@@ -18,6 +18,7 @@ public:
     UnionFind() = default;
     explicit UnionFind( size_t size ) { reset( size ); }
     auto size() const { return roots_.size(); }
+
     /// reset roots to represent each element as disjoint set of rank 0
     void reset( size_t size )
     {
@@ -28,6 +29,7 @@ public:
         sizes_.clear();
         sizes_.resize( size, 1 );
     }
+
     /// unite two elements,
     /// \return first: new common root, second: true = union was done, false = first and second were already united
     std::pair<I,bool> unite( I first, I second )
@@ -50,6 +52,7 @@ public:
             return { firstRoot, true };
         }
     }
+
     /// returns true if given two elements are from one component
     bool united( I first, I second )
     {
@@ -57,16 +60,19 @@ public:
         auto secondRoot = updateRoot_( second );
         return firstRoot == secondRoot;
     }
+
     /// finds the root of the set containing given element with optimizing data structure updates
     I find( I a )
     {
         return updateRoot_( a, findRootNoUpdate_( a ) );
     }
+
     /// finds the root of the set containing given element with optimizing data structure in the range [begin, end)
     I findUpdateRange( I a, I begin, I end )
     {
         return updateRootInRange_( a, findRootNoUpdate_( a ), begin, end );
     }
+
     /// sets the root as the parent of each element, then returns the vector
     const Vector<I, I> & roots()
     {
@@ -74,8 +80,12 @@ public:
             updateRoot_( i, findRootNoUpdate_( i ) );
         return roots_;
     }
+
     /// gets the parents of all elements as in
     const Vector<I, I> & parents() const { return roots_; }
+
+    /// returns the size of component containing given element
+    size_t sizeOfComp( I a ) { return sizes_[ find( a ) ]; }
 
 private:
     /// finds the root of the set containing given element without optimizing data structure updates

@@ -29,14 +29,16 @@ enum FaceIncidence
 /// not effective to call more than once, if several components are needed use getAllComponentsVerts
 [[nodiscard]] MRMESH_API VertBitSet getComponentVerts( const Mesh& mesh, VertId id, const VertBitSet* region = nullptr );
 
-
-/// returns largest by surface area component
-[[nodiscard]] MRMESH_API FaceBitSet getLargestComponent( const MeshPart& meshPart,
-    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {} );
-
-/// returns largest by number of elements component
+/// returns the largest by number of elements component
 [[nodiscard]] MRMESH_API VertBitSet getLargestComponentVerts( const Mesh& mesh, const VertBitSet* region = nullptr );
 
+/// returns the union of vertex connected components, each having at least \param minVerts vertices
+[[nodiscard]] MRMESH_API VertBitSet getLargeComponentVerts( const Mesh& mesh, int minVerts, const VertBitSet* region = nullptr );
+
+
+/// returns the largest by surface area component
+[[nodiscard]] MRMESH_API FaceBitSet getLargestComponent( const MeshPart& meshPart,
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {} );
 
 /// returns union of connected components, each of which contains at least one seed face
 [[nodiscard]] MRMESH_API FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds,

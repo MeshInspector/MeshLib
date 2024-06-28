@@ -2,10 +2,19 @@
 
 #include "MRMeshFwd.h"
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PYTHON )
+
+#if defined( __clang__ )
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#endif
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include <pybind11/stl_bind.h>
 #include <pybind11/numpy.h>
+#if defined( __clang__ )
+#pragma clang diagnostic pop
+#endif
+
 #include "MRExpected.h"
 #include <functional>
 #include <filesystem>

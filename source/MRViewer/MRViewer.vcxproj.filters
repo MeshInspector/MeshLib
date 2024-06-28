@@ -962,5 +962,8 @@
     <Image Include="resource\independent_icons\X3\DragDrop.png">
       <Filter>resource\independent_icons\X3</Filter>
     </Image>
+    <Image Include="resource\independent_icons\X3\OperationSystems.png">
+      <Filter>resource\independent_icons\X3</Filter>
+    </Image>
   </ItemGroup>
 </Project>

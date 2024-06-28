@@ -299,6 +299,7 @@
     <Image Include="resource\independent_icons\X1\Plane XZ.png" />
     <Image Include="resource\independent_icons\X1\Plane YZ.png" />
     <Image Include="resource\independent_icons\X3\DragDrop.png" />
+    <Image Include="resource\independent_icons\X3\OperationSystems.png" />
     <Image Include="resource\independent_icons\X3\Plane Import.png" />
     <Image Include="resource\independent_icons\X3\Plane XY.png" />
     <Image Include="resource\independent_icons\X3\Plane XZ.png" />

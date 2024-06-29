@@ -40,6 +40,6 @@ namespace MR
 /// finds all twin edges in the mesh
 [[nodiscard]] MRMESH_API UndirectedEdgeBitSet findTwinUndirectedEdges( const Mesh & mesh, float closeDist );
 /// finds all twin edges from given map
-[[nodiscard]] MRMESH_API UndirectedEdgeBitSet findTwinUndirectedEdges( const EdgeHashMap & emap );
+[[nodiscard]] MRMESH_API UndirectedEdgeBitSet findTwinUndirectedEdges( const std::vector<EdgePair> & pairs );
 
 } //namespace MR

@@ -31,12 +31,12 @@ namespace MR
 
 // definition: if A,B and C,D are close vertices, then let us name AC and BD twin edges
 
-/// finds a mapping from an edge to a twin edge in given mesh (each twin edge will be present either in key or in the value of returned map)
-[[nodiscard]] MRMESH_API EdgeHashMap findTwinEdgeHashMap( const Mesh & mesh, float closeDist );
+/// finds pairs of twin edges (each twin edge will be present at least in one of pairs)
+[[nodiscard]] MRMESH_API std::vector<EdgePair> findTwinEdgePairs( const Mesh & mesh, float closeDist );
 /// finds all twin edges in the mesh
 [[nodiscard]] MRMESH_API EdgeBitSet findTwinEdges( const Mesh & mesh, float closeDist );
 /// finds all twin edges from given map
-[[nodiscard]] MRMESH_API EdgeBitSet findTwinEdges( const EdgeHashMap & emap );
+[[nodiscard]] MRMESH_API EdgeBitSet findTwinEdges( const std::vector<EdgePair> & pairs );
 /// finds all twin edges in the mesh
 [[nodiscard]] MRMESH_API UndirectedEdgeBitSet findTwinUndirectedEdges( const Mesh & mesh, float closeDist );
 /// finds all twin edges from given map

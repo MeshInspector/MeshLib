@@ -184,4 +184,31 @@ UndirectedEdgeBitSet findTwinUndirectedEdges( const Mesh & mesh, float closeDist
     return findTwinUndirectedEdges( findTwinEdgePairs( mesh, closeDist ) );
 }
 
+UndirectedEdgeHashMap findTwinUndirectedEdgeHashMap( const std::vector<EdgePair> & pairs )
+{
+    MR_TIMER
+    UndirectedEdgeHashMap res;
+    /// every edge is present twice in (pairs) in both orientations; and
+    /// every edge is present twice in (res): once in key and once in value
+    res.reserve( pairs.size() );
+    auto add = [&]( UndirectedEdgeId u1, UndirectedEdgeId u2 )
+    {
+        [[maybe_unused]] auto [it, inserted] = res.insert( { u1, u2 } );
+        assert( it->second == u2 );
+    };
+    for ( const auto & [e1, e2] : pairs )
+    {
+        const auto u1 = e1.undirected();
+        const auto u2 = e2.undirected();
+        add( u1, u2 );
+        add( u2, u1 );
+    }
+    return res;
+}
+
+UndirectedEdgeHashMap findTwinUndirectedEdgeHashMap( const Mesh & mesh, float closeDist )
+{
+    return findTwinUndirectedEdgeHashMap( findTwinEdgePairs( mesh, closeDist ) );
+}
+
 } //namespace MR

@@ -187,6 +187,7 @@ private:
     std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
         QuadraticForm3f * outCollapseForm = nullptr, Vector3f * outCollapsePos = nullptr ) const;
     void addInQueueIfMissing_( UndirectedEdgeId ue );
+    void flipEdge_( UndirectedEdgeId ue );
 
     enum class CollapseStatus
     {
@@ -212,7 +213,8 @@ private:
 
     struct CanCollapseRes
     {
-        /// if collapse failed then it is invalid, otherwise it is input edge, oriented such that org( e ) will be the remaining vertex after collapse
+        /// if collapse cannot be done then it is invalid,
+        /// otherwise it is input edge, oriented such that org( e ) will be the remaining vertex after collapse
         EdgeId e;
         CollapseStatus status = CollapseStatus::Ok;
     };
@@ -478,6 +480,19 @@ void MeshDecimator::addInQueueIfMissing_( UndirectedEdgeId ue )
         queue_.push( *qe );
         presentInQueue_.set( ue );
     }
+}
+
+void MeshDecimator::flipEdge_( UndirectedEdgeId ue )
+{
+    EdgeId e = ue;
+    mesh_.topology.flipEdge( e );
+    assert( mesh_.topology.left( e ) );
+    assert( mesh_.topology.right( e ) );
+    addInQueueIfMissing_( e.undirected() );
+    addInQueueIfMissing_( mesh_.topology.prev( e ).undirected() );
+    addInQueueIfMissing_( mesh_.topology.next( e ).undirected() );
+    addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
+    addInQueueIfMissing_( mesh_.topology.next( e.sym() ).undirected() );
 }
 
 auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CanCollapseRes
@@ -800,23 +815,15 @@ DecimateResult MeshDecimator::run()
         presentInQueue_.reset( ue );
         if ( qe->x.edgeOp == EdgeOp::Flip )
         {
-            EdgeId e = ue;
-            mesh_.topology.flipEdge( e );
-            assert( mesh_.topology.left( e ) );
-            assert( mesh_.topology.right( e ) );
-            addInQueueIfMissing_( e.undirected() );
-            addInQueueIfMissing_( mesh_.topology.prev( e ).undirected() );
-            addInQueueIfMissing_( mesh_.topology.next( e ).undirected() );
-            addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
-            addInQueueIfMissing_( mesh_.topology.next( e.sym() ).undirected() );
+            flipEdge_( ue );
         }
         else
         {
             // edge collapse
-            auto collapseRes = collapse_( ue, collapsePos );
-            if ( !collapseRes.v )
+            const auto canCollapseRes = canCollapse_( ue, collapsePos );
+            if ( !canCollapseRes.e )
             {
-                if ( topQE.x.edgeOp == EdgeOp::CollapseOptPos && geomFail_( collapseRes.status ) )
+                if ( topQE.x.edgeOp == EdgeOp::CollapseOptPos && geomFail_( canCollapseRes.status ) )
                 {
                     qe = computeQueueElement_( ue, false );
                     if ( qe )
@@ -827,8 +834,9 @@ DecimateResult MeshDecimator::run()
                 }
                 continue;
             }
-            assert( collapseRes.status == CollapseStatus::Ok );
-            (*pVertForms_)[collapseRes.v] = collapseForm;
+            assert( canCollapseRes.status == CollapseStatus::Ok );
+            const auto v = forceCollapse_( canCollapseRes.e, collapsePos );
+            (*pVertForms_)[v] = collapseForm;
         }
     }
 

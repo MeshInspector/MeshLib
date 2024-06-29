@@ -184,6 +184,7 @@ private:
     class EdgeMetricCalc;
 
     bool initializeQueue_();
+    QuadraticForm3f collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const;
     std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
         QuadraticForm3f * outCollapseForm = nullptr, Vector3f * outCollapsePos = nullptr ) const;
     void addInQueueIfMissing_( UndirectedEdgeId ue );
@@ -399,12 +400,24 @@ bool MeshDecimator::initializeQueue_()
     return true;
 }
 
+QuadraticForm3f MeshDecimator::collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const
+{
+    EdgeId e{ ue };
+    const auto o = mesh_.topology.org( e );
+    const auto d = mesh_.topology.dest( e );
+    const auto po = mesh_.points[o];
+    const auto pd = mesh_.points[d];
+    const auto vo = (*pVertForms_)[o];
+    const auto vd = (*pVertForms_)[d];
+    return sumAt( vo, po, vd, pd, collapsePos );
+}
+
 auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
     QuadraticForm3f * outCollapseForm, Vector3f * outCollapsePos ) const -> std::optional<QueueElement>
 {
     EdgeId e{ ue };
     const auto o = mesh_.topology.org( e );
-    const auto d = mesh_.topology.org( e.sym() );
+    const auto d = mesh_.topology.dest( e );
     const auto po = mesh_.points[o];
     const auto pd = mesh_.points[d];
     const auto vo = (*pVertForms_)[o];

@@ -210,12 +210,17 @@ private:
     };
     CanCollapseRes canCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ); // not const because it changes temporary originNeis_ and triDblAreas_
 
+    /// performs edge collapse after previous successful check by canCollapse_
+    /// \return org( edgeToCollapse ) or invalid id if it was the last edge
+    VertId forceCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos );
+
     struct CollapseRes
     {
         /// if collapse failed (or it was the last edge) then it is invalid, otherwise it is the remaining vertex
         VertId v;
         CollapseStatus status = CollapseStatus::Ok;
     };
+    /// canCollapse_ + forceCollapse_
     CollapseRes collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos );
 };
 
@@ -648,24 +653,19 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
     return { .e = edgeToCollapse };
 }
 
-auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CollapseRes
+VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos )
 {
-    CanCollapseRes can = canCollapse_( edgeToCollapse, collapsePos );
-    if ( can.status != CollapseStatus::Ok )
-        return { .status = can.status };
-    assert( can.e == edgeToCollapse || can.e == edgeToCollapse.sym() );
-
     ++res_.vertsDeleted;
 
     auto & topology = mesh_.topology;
-    const auto l = topology.left( can.e );
-    const auto r = topology.left( can.e.sym() );
+    const auto l = topology.left( edgeToCollapse );
+    const auto r = topology.left( edgeToCollapse.sym() );
     if ( l )
         ++res_.facesDeleted;
     if ( r )
         ++res_.facesDeleted;
 
-    const auto vo = topology.org( can.e );
+    const auto vo = topology.org( edgeToCollapse );
     mesh_.points[vo] = collapsePos;
     if ( settings_.region )
     {
@@ -674,8 +674,17 @@ auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapseP
         if ( r )
             settings_.region->reset( r );
     }
-    auto eo = collapseEdge( topology, can.e, settings_.notFlippable, settings_.onEdgeDel );
-    return { .v = eo ? vo : VertId{} };
+    auto eo = collapseEdge( topology, edgeToCollapse, settings_.notFlippable, settings_.onEdgeDel );
+    return eo ? vo : VertId{};
+}
+
+auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CollapseRes
+{
+    CanCollapseRes can = canCollapse_( edgeToCollapse, collapsePos );
+    if ( can.status != CollapseStatus::Ok )
+        return { .status = can.status };
+    assert( can.e == edgeToCollapse || can.e == edgeToCollapse.sym() );
+    return { .v = forceCollapse_( can.e, collapsePos ) };
 }
 
 static void optionalPackMesh( Mesh & mesh, const DecimateSettings & settings )

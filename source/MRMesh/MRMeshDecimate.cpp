@@ -190,7 +190,7 @@ private:
 
     enum class CollapseStatus
     {
-        Done,        ///< collapse was successful
+        Ok,          ///< collapse is possible or was successful
         SharedEdge,  ///< cannot collapse internal edge if its left and right faces share another edge
         PosFarBd,    ///< new vertex position is too far from collapsing boundary edge
         MultipleEdge,///< cannot collapse an edge because there is another edge in mesh with same ends
@@ -202,13 +202,20 @@ private:
         User         ///< user callback prohibits the collapse
     };
 
+    struct CanCollapseRes
+    {
+        /// if collapse failed then it is invalid, otherwise it is input edge, oriented such that org( e ) will be the remaining vertex after collapse
+        EdgeId e;
+        CollapseStatus status = CollapseStatus::Ok;
+    };
+    CanCollapseRes canCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ); // not const because it changes temporary originNeis_ and triDblAreas_
+
     struct CollapseRes
     {
         /// if collapse failed (or it was the last edge) then it is invalid, otherwise it is the remaining vertex
         VertId v;
-        CollapseStatus status = CollapseStatus::Done;
+        CollapseStatus status = CollapseStatus::Ok;
     };
-
     CollapseRes collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos );
 };
 
@@ -460,9 +467,9 @@ void MeshDecimator::addInQueueIfMissing_( UndirectedEdgeId ue )
     }
 }
 
-auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CollapseRes
+auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CanCollapseRes
 {
-    auto & topology = mesh_.topology;
+    const auto & topology = mesh_.topology;
     auto vl = topology.left( edgeToCollapse ).valid()  ? topology.dest( topology.next( edgeToCollapse ) ) : VertId{};
     auto vr = topology.right( edgeToCollapse ).valid() ? topology.dest( topology.prev( edgeToCollapse ) ) : VertId{};
 
@@ -637,23 +644,38 @@ auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapseP
     if ( settings_.preCollapse && !settings_.preCollapse( edgeToCollapse, collapsePos ) )
         return { .status =  CollapseStatus::User }; // user prohibits the collapse
 
+    assert( topology.org( edgeToCollapse ) == vo );
+    return { .e = edgeToCollapse };
+}
+
+auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CollapseRes
+{
+    CanCollapseRes can = canCollapse_( edgeToCollapse, collapsePos );
+    if ( can.status != CollapseStatus::Ok )
+        return { .status = can.status };
+    assert( can.e == edgeToCollapse || can.e == edgeToCollapse.sym() );
+
     ++res_.vertsDeleted;
-    if ( vl )
+
+    auto & topology = mesh_.topology;
+    const auto l = topology.left( can.e );
+    const auto r = topology.left( can.e.sym() );
+    if ( l )
         ++res_.facesDeleted;
-    if ( vr )
+    if ( r )
         ++res_.facesDeleted;
 
+    const auto vo = topology.org( can.e );
     mesh_.points[vo] = collapsePos;
     if ( settings_.region )
     {
-        if ( auto l = topology.left( edgeToCollapse ) )
+        if ( l )
             settings_.region->reset( l );
-        if ( auto r = topology.left( edgeToCollapse.sym() ) )
+        if ( r )
             settings_.region->reset( r );
     }
-    auto eo = collapseEdge( topology, edgeToCollapse, settings_.notFlippable, settings_.onEdgeDel );
-    const auto remainingVertex = eo ? vo : VertId{};
-    return { .v = remainingVertex };
+    auto eo = collapseEdge( topology, can.e, settings_.notFlippable, settings_.onEdgeDel );
+    return { .v = eo ? vo : VertId{} };
 }
 
 static void optionalPackMesh( Mesh & mesh, const DecimateSettings & settings )
@@ -781,7 +803,7 @@ DecimateResult MeshDecimator::run()
                 }
                 continue;
             }
-            assert( collapseRes.status == CollapseStatus::Done );
+            assert( collapseRes.status == CollapseStatus::Ok );
 
             (*pVertForms_)[collapseRes.v] = collapseForm;
 

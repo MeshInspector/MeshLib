@@ -202,6 +202,14 @@ private:
         User         ///< user callback prohibits the collapse
     };
 
+    /// true if collapse failed due to a geometric criterion, and may succeed for another collapse position
+    static bool geomFail_( CollapseStatus s )
+    {
+        return
+            s == CollapseStatus::TriAspect || s == CollapseStatus::NormalFlip ||
+            s == CollapseStatus::PosFarBd || s == CollapseStatus::LongEdge;
+    }
+
     struct CanCollapseRes
     {
         /// if collapse failed then it is invalid, otherwise it is input edge, oriented such that org( e ) will be the remaining vertex after collapse
@@ -675,7 +683,17 @@ VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & co
             settings_.region->reset( r );
     }
     auto eo = collapseEdge( topology, edgeToCollapse, settings_.notFlippable, settings_.onEdgeDel );
-    return eo ? vo : VertId{};
+    if ( !eo )
+        return {};
+
+    // update edges around remaining vertex
+    for ( EdgeId e : orgRing( mesh_.topology, vo ) )
+    {
+        addInQueueIfMissing_( e.undirected() );
+        if ( mesh_.topology.left( e ) )
+            addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
+    }
+    return vo;
 }
 
 auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos ) -> CollapseRes
@@ -798,10 +816,7 @@ DecimateResult MeshDecimator::run()
             auto collapseRes = collapse_( ue, collapsePos );
             if ( !collapseRes.v )
             {
-                if ( topQE.x.edgeOp == EdgeOp::CollapseOptPos &&
-                    // collapse failed due to a geometric criterion (e.g. bad collapse position)
-                    ( collapseRes.status == CollapseStatus::TriAspect || collapseRes.status == CollapseStatus::NormalFlip ||
-                      collapseRes.status == CollapseStatus::PosFarBd || collapseRes.status == CollapseStatus::LongEdge ) )
+                if ( topQE.x.edgeOp == EdgeOp::CollapseOptPos && geomFail_( collapseRes.status ) )
                 {
                     qe = computeQueueElement_( ue, false );
                     if ( qe )
@@ -813,15 +828,7 @@ DecimateResult MeshDecimator::run()
                 continue;
             }
             assert( collapseRes.status == CollapseStatus::Ok );
-
             (*pVertForms_)[collapseRes.v] = collapseForm;
-
-            for ( EdgeId e : orgRing( mesh_.topology, collapseRes.v ) )
-            {
-                addInQueueIfMissing_( e.undirected() );
-                if ( mesh_.topology.left( e ) )
-                    addInQueueIfMissing_( mesh_.topology.prev( e.sym() ).undirected() );
-            }
         }
     }
 

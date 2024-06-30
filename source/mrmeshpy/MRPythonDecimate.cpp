@@ -30,7 +30,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Decimate, [] ( pybind11::module_& m )
             "if true then after each edge collapse the position of remaining vertex is optimized to\n"
             "minimize local shape change, if false then the edge is collapsed in one of its vertices, which keeps its position" ).
         def_readwrite( "region", &MR::DecimateSettings::region, "Region on mesh to be decimated, it is updated during the operation" ).
-        def_readwrite( "touchBdVertices", &MR::DecimateSettings::touchBdVertices, "Whether to allow collapsing edges having at least one vertex on (region) boundary" ).
+        def_readwrite( "touchNearBdEdges", &MR::DecimateSettings::touchNearBdEdges, "Whether to allow collapsing or flipping edges having at least one vertex on (region) boundary" ).
         def_readwrite( "packMesh", &MR::DecimateSettings::packMesh, "whether to pack mesh at the end" ).
         def_readwrite( "subdivideParts", &MR::DecimateSettings::subdivideParts, 
             "If this value is more than 1, then virtually subdivides the mesh on given number of parts to process them in parallel (using many threads);\n"

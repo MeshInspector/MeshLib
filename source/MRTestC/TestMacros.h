@@ -3,9 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define EXPECT( ... ) \
+#define TEST_ASSERT( ... ) \
     if ( !( __VA_ARGS__ ) ) \
     {                 \
-        fprintf( stderr, "check failed: %s", ( #__VA_ARGS__ ) ); \
+        fprintf( stderr, "%s: check failed: %s\n", __func__, ( #__VA_ARGS__ ) ); \
         abort();      \
     }

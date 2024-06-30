@@ -65,8 +65,8 @@ void testMeshBoolean()
                     };
                     MRBooleanResult resultAB = mrBoolean( meshA, meshB, MRBooleanOperationUnion, &params );
                     MRBooleanResult resultBA = mrBoolean( meshB, meshA, MRBooleanOperationUnion, &params );
-                    EXPECT( mrStringSize( resultAB.errorString ) == 0 )
-                    EXPECT( mrStringSize( resultBA.errorString ) == 0 )
+                    TEST_ASSERT( mrStringSize( resultAB.errorString ) == 0 )
+                    TEST_ASSERT( mrStringSize( resultBA.errorString ) == 0 )
 
                     mrStringFree( resultBA.errorString );
                     mrMeshFree( resultBA.mesh );
@@ -137,8 +137,8 @@ void testBooleanMultipleEdgePropogationSort()
     {
         MRBooleanResult resultAB = mrBoolean( meshA, meshB, (MRBooleanOperation)i, NULL );
         MRBooleanResult resultBA = mrBoolean( meshB, meshA, (MRBooleanOperation)i, NULL );
-        EXPECT( mrStringSize( resultAB.errorString ) == 0 )
-        EXPECT( mrStringSize( resultBA.errorString ) == 0 )
+        TEST_ASSERT( mrStringSize( resultAB.errorString ) == 0 )
+        TEST_ASSERT( mrStringSize( resultBA.errorString ) == 0 )
 
         mrStringFree( resultBA.errorString );
         mrMeshFree( resultBA.mesh );

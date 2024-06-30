@@ -11,7 +11,7 @@ static_assert( sizeof( MRAffineXf3f ) == sizeof( AffineXf3f ) );
 
 MRAffineXf3f mrAffineXf3fNew()
 {
-    constexpr auto res = AffineXf3f();
+    static const auto res = AffineXf3f();
     return *reinterpret_cast<const MRAffineXf3f*>( &res );
 }
 

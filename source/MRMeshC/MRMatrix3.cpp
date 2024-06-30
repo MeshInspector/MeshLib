@@ -8,7 +8,7 @@ static_assert( sizeof( MRMatrix3f ) == sizeof( Matrix3f ) );
 
 MRMatrix3f mrMatrix3fIdentity()
 {
-    constexpr auto res = Matrix3f::identity();
+    static const auto res = Matrix3f::identity();
     return *reinterpret_cast<const MRMatrix3f*>( &res );
 }
 

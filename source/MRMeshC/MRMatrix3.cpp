@@ -10,10 +10,8 @@ static_assert( sizeof( MRMatrix3f ) == sizeof( Matrix3f ) );
 
 MRMatrix3f mrMatrix3fIdentity()
 {
-    constexpr auto m = Matrix3f::identity();
-    MRMatrix3f res;
-    std::memcpy( &res, &m, sizeof( m ) );
-    return res;
+    constexpr auto res = Matrix3f::identity();
+    return *reinterpret_cast<const MRMatrix3f*>( &res );
 }
 
 MRMatrix3f mrMatrix3fRotationVector( const MRVector3f* from, const MRVector3f* to )

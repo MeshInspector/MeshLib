@@ -13,10 +13,8 @@ static_assert( sizeof( MRAffineXf3f ) == sizeof( AffineXf3f ) );
 
 MRAffineXf3f mrAffineXf3fNew()
 {
-    constexpr auto xf = AffineXf3f();
-    MRAffineXf3f res;
-    std::memcpy( &res, &xf, sizeof( xf ) );
-    return res;
+    constexpr auto res = AffineXf3f();
+    return *reinterpret_cast<const MRAffineXf3f*>( &res );
 }
 
 MRAffineXf3f mrAffineXf3fTranslation( const MRVector3f* b_ )
@@ -24,8 +22,7 @@ MRAffineXf3f mrAffineXf3fTranslation( const MRVector3f* b_ )
     const auto& b = *reinterpret_cast<const Vector3f*>( b_ );
 
     const auto res = AffineXf3f::translation( b );
-    const auto* ptr = reinterpret_cast<const MRAffineXf3f*>( &res );
-    return { *ptr };
+    return *reinterpret_cast<const MRAffineXf3f*>( &res );
 }
 
 MRAffineXf3f mrAffineXf3fLinear( const MRMatrix3f* A_ )

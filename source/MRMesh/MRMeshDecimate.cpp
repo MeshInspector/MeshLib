@@ -22,18 +22,64 @@ namespace MR
 /// 1) faces: left( e ) and right( e );
 /// 2) vertex org( e )/dest( e ) if given edge was their only edge, otherwise only dest( e );
 /// 3) edges: e, next( e.sym() ), prev( e.sym() ), and optionally next( e ), prev( e ) if their left and right triangles are deleted;
-/// updates notFlippable removing deleted edges from there, and adding the edges that shall replace them;
+/// updates notFlippable/twinMap removing deleted edges from there, and adding the edges that shall replace them;
 /// calls onEdgeDel for every deleted edge;
-/// returns prev( e ) if it is valid;
-EdgeId collapseEdge( MeshTopology & topology, const EdgeId e, UndirectedEdgeBitSet* notFlippable, const std::function<void(EdgeId e, EdgeId e1)> & onEdgeDel )
+/// returns prev( e ) if it is valid
+EdgeId collapseEdge( MeshTopology & topology, const EdgeId e, UndirectedEdgeBitSet* notFlippable, UndirectedEdgeHashMap * twinMap,
+    const std::function<void(EdgeId e, EdgeId e1)> & onEdgeDel )
 {
+    auto delEdge = [&]( EdgeId del )
+    {
+        assert( del );
+        if ( notFlippable )
+            notFlippable->reset( del.undirected() );
+        if ( twinMap )
+        {
+            auto itDel = twinMap->find( del );
+            if ( itDel != twinMap->end() )
+            {
+                auto tgt = itDel->second;
+                auto itTgt = twinMap->find( tgt );
+                assert( itTgt != twinMap->end() );
+                assert( itTgt->second == del.undirected() );
+                twinMap->erase( itDel );
+                twinMap->erase( itTgt );
+            }
+        }
+        if ( onEdgeDel )
+            onEdgeDel( del, {} );
+    };
+    auto replaceEdge = [&]( EdgeId del, EdgeId rem )
+    {
+        assert( del && rem );
+        if ( notFlippable )
+        {
+            if ( notFlippable->test_set( del.undirected(), false ) )
+                notFlippable->autoResizeSet( rem.undirected() );
+        }
+        if ( twinMap )
+        {
+            auto itDel = twinMap->find( del );
+            if ( itDel != twinMap->end() )
+            {
+                auto tgt = itDel->second;
+                auto itTgt = twinMap->find( tgt );
+                assert( itTgt != twinMap->end() );
+                assert( itTgt->second == del.undirected() );
+                twinMap->erase( itDel );
+                assert( twinMap->count( rem ) == 0 );
+                (*twinMap)[rem] = tgt;
+                itTgt->second = rem;
+            }
+        }
+        if ( onEdgeDel )
+            onEdgeDel( del, rem );
+    };
+
     topology.setLeft( e, FaceId() );
     topology.setLeft( e.sym(), FaceId() );
 
-    if ( notFlippable )
-        notFlippable->reset( e.undirected() );
-    if ( onEdgeDel )
-        onEdgeDel( e, EdgeId{} );
+    delEdge( e );
 
     if ( topology.next( e ) == e )
     {
@@ -84,24 +130,11 @@ EdgeId collapseEdge( MeshTopology & topology, const EdgeId e, UndirectedEdgeBitS
             topology.setOrg( ePrev, {} );
             topology.setOrg( ePrev.sym(), {} );
             assert( topology.isLoneEdge( ePrev ) );
-            if ( notFlippable )
-            {
-                notFlippable->reset( a.undirected() );
-                notFlippable->reset( ePrev.undirected() );
-            }
-            if ( onEdgeDel )
-            {
-                onEdgeDel( a, EdgeId{} );
-                onEdgeDel( ePrev, EdgeId{} );
-            }
+            delEdge( a );
+            delEdge( ePrev );
         }
-        else 
-        {
-            if ( notFlippable && notFlippable->test_set( a.undirected(), false ) )
-                notFlippable->autoResizeSet( ePrev.undirected() );
-            if ( onEdgeDel )
-                onEdgeDel( a, ePrev );
-        }
+        else
+            replaceEdge( a, ePrev );
     }
 
     if ( topology.next( eNext.sym() ) == b.sym() )
@@ -116,24 +149,11 @@ EdgeId collapseEdge( MeshTopology & topology, const EdgeId e, UndirectedEdgeBitS
             topology.setOrg( eNext, {} );
             topology.setOrg( eNext.sym(), {} );
             assert( topology.isLoneEdge( eNext ) );
-            if ( notFlippable )
-            {
-                notFlippable->reset( b.undirected() );
-                notFlippable->reset( eNext.undirected() );
-            }
-            if ( onEdgeDel )
-            {
-                onEdgeDel( b, EdgeId{} );
-                onEdgeDel( eNext, EdgeId{} );
-            }
+            delEdge( b );
+            delEdge( eNext );
         }
         else
-        {
-            if ( notFlippable && notFlippable->test_set( b.undirected(), false ) )
-                notFlippable->autoResizeSet( eNext.undirected() );
-            if ( onEdgeDel )
-                onEdgeDel( b, eNext );
-        }
+            replaceEdge( b, eNext );
     }
 
     return ePrev != e ? ePrev : EdgeId();
@@ -710,7 +730,7 @@ VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & co
         if ( r )
             settings_.region->reset( r );
     }
-    auto eo = collapseEdge( topology, edgeToCollapse, settings_.notFlippable, settings_.onEdgeDel );
+    auto eo = collapseEdge( topology, edgeToCollapse, settings_.notFlippable, settings_.twinMap, settings_.onEdgeDel );
     if ( !eo )
         return {};
 
@@ -826,15 +846,22 @@ DecimateResult MeshDecimator::run()
         }
 
         presentInQueue_.reset( ue );
+
+        UndirectedEdgeId twin;
+        if ( settings_.twinMap )
+            twin = getAt( *settings_.twinMap, ue );
+
         if ( qe->x.edgeOp == EdgeOp::Flip )
         {
             flipEdge_( ue );
+            if ( twin )
+                flipEdge_( twin );
         }
         else
         {
             // edge collapse
             const auto canCollapseRes = canCollapse_( ue, collapsePos );
-            if ( !canCollapseRes.e )
+            if ( canCollapseRes.status != CollapseStatus::Ok )
             {
                 if ( topQE.x.edgeOp == EdgeOp::CollapseOptPos && geomFail_( canCollapseRes.status ) )
                 {
@@ -847,9 +874,17 @@ DecimateResult MeshDecimator::run()
                 }
                 continue;
             }
-            assert( canCollapseRes.status == CollapseStatus::Ok );
-            const auto v = forceCollapse_( canCollapseRes.e, collapsePos );
-            (*pVertForms_)[v] = collapseForm;
+            if ( twin )
+            {
+                const auto twinCollapseForm = collapseForm_( twin, collapsePos );
+                const auto twinCollapseRes = collapse_( twin, collapsePos );
+                if ( twinCollapseRes.status != CollapseStatus::Ok )
+                    continue;
+                if ( twinCollapseRes.v )
+                    (*pVertForms_)[twinCollapseRes.v] = twinCollapseForm;
+            }
+            if ( auto v = forceCollapse_( canCollapseRes.e, collapsePos ) )
+                (*pVertForms_)[v] = collapseForm;
         }
     }
 

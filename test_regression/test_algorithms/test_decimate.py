@@ -58,14 +58,14 @@ import pytest
          "strategy": "MinimizeError",
          "maxError": 0.05
      }},
-    {"name": "touchBdVertices_true",
+    {"name": "touchNearBdEdges_true",
      "params": {
-         "touchBdVertices": True,
+         "touchNearBdEdges": True,
          "maxError": 0.05
      }},
-    {"name": "touchBdVertices_false",
+    {"name": "touchNearBdEdges_false",
      "params": {
-         "touchBdVertices": False,
+         "touchNearBdEdges": False,
          "maxError": 0.05
      }},
     {"name": "optimizeVertexPos_false",

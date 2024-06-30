@@ -843,6 +843,7 @@ DecimateResult MeshDecimator::run()
             const auto canCollapseRes = canCollapse_( ue, collapsePos );
             if ( canCollapseRes.status != CollapseStatus::Ok )
             {
+                presentInQueue_.reset( ue );
                 if ( topQE.x.edgeOp == EdgeOp::CollapseOptPos && geomFail_( canCollapseRes.status ) )
                 {
                     qe = computeQueueElement_( ue, false );

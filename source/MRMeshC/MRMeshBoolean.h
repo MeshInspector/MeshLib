@@ -6,14 +6,14 @@
 
 MR_EXTERN_C_BEGIN
 
-typedef struct MRMESHC_CLASS MRBooleanParameters
+typedef struct MRBooleanParameters
 {
     const MRAffineXf3f* rigidB2A;
     bool mergeAllNonIntersectingComponents;
     MRProgressCallback cb;
 } MRBooleanParameters;
 
-typedef struct MRMESHC_CLASS MRBooleanResult
+typedef struct MRBooleanResult
 {
     MRMesh* mesh;
     MRString* errorString;

@@ -26,7 +26,7 @@ MRMESHC_API MRMeshTopology* mrMeshTopologyRef( MRMesh* mesh );
 
 MRMESHC_API void mrMeshTransform( MRMesh* mesh, const MRAffineXf3f* xf, const MRVertBitSet* region );
 
-typedef struct MRMESHC_CLASS MRMeshAddPartByMaskParameters
+typedef struct MRMeshAddPartByMaskParameters
 {
     bool flipOrientation;
     const MREdgePath* thisContours;

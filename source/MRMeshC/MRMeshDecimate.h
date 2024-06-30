@@ -4,13 +4,13 @@
 
 MR_EXTERN_C_BEGIN
 
-enum MRDecimateStrategy
+typedef enum MRDecimateStrategy
 {
     MRDecimateStrategyMinimizeError = 0,
     MRDecimateStrategyShortestEdgeFirst
-};
+} MRDecimateStrategy;
 
-typedef struct MRMESHC_CLASS MRDecimateSettings
+typedef struct MRDecimateSettings
 {
     MRDecimateStrategy strategy;
     float maxError;
@@ -43,7 +43,7 @@ typedef struct MRMESHC_CLASS MRDecimateSettings
 
 MRMESHC_API MRDecimateSettings mrDecimateSettingsDefault();
 
-typedef struct MRMESHC_CLASS MRDecimateResult
+typedef struct MRDecimateResult
 {
     int vertsDeleted;
     int facesDeleted;
@@ -53,7 +53,7 @@ typedef struct MRMESHC_CLASS MRDecimateResult
 
 MRMESHC_API MRDecimateResult mrDecimateMesh( MRMesh* mesh, const MRDecimateSettings* settings );
 
-typedef struct MRMESHC_CLASS MRResolveMeshDegenSettings
+typedef struct MRResolveMeshDegenSettings
 {
     float maxDeviation;
     float tinyEdgeLength;
@@ -67,7 +67,7 @@ MRMESHC_API MRResolveMeshDegenSettings mrResolveMeshDegenSettingsDefault();
 
 MRMESHC_API bool mrResolveMeshDegenerations( MRMesh* mesh, const MRResolveMeshDegenSettings* settings );
 
-typedef struct MRMESHC_CLASS MRRemeshSettings
+typedef struct MRRemeshSettings
 {
     float targetEdgeLen;
     int maxEdgeSplits;

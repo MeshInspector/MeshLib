@@ -15,10 +15,8 @@
 #   else
 #       define MRMESHC_API __declspec( dllimport )
 #   endif
-#   define MRMESHC_CLASS
 #else
 #   define MRMESHC_API __attribute__( ( visibility( "default" ) ) )
-#   define MRMESHC_CLASS __attribute__( ( visibility( "default" ) ) )
 #endif
 
 #ifdef __cplusplus
@@ -38,8 +36,6 @@ typedef MRBitSet MRFaceBitSet;
 typedef MRBitSet MRVertBitSet;
 
 typedef struct MRVector3f MRVector3f;
-
-typedef MRVector3f MRTriangle3f[3];
 
 typedef struct MRMeshTopology MRMeshTopology;
 typedef struct MRMesh MRMesh;

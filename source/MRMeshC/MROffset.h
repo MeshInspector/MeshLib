@@ -6,7 +6,7 @@
 
 MR_EXTERN_C_BEGIN
 
-typedef struct MRMESHC_CLASS MROffsetParameters
+typedef struct MROffsetParameters
 {
     float voxelSize;
     MRProgressCallback callBack;
@@ -32,7 +32,7 @@ enum MRGeneralOffsetParametersMode
     MRGeneralOffsetParametersModeSharpening
 };
 
-typedef struct MRMESHC_CLASS MRGeneralOffsetParameters
+typedef struct MRGeneralOffsetParameters
 {
     // TODO: outSharpEdges
     float minNewVertDev;

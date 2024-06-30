@@ -4,7 +4,7 @@
 
 MR_EXTERN_C_BEGIN
 
-typedef struct MRMESHC_CLASS MRMakeTorusParameters
+typedef struct MRMakeTorusParameters
 {
     float primaryRadius;
     float secondaryRadius;

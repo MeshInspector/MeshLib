@@ -4,7 +4,7 @@
 
 MR_EXTERN_C_BEGIN
 
-enum MRBooleanOperation
+typedef enum MRBooleanOperation
 {
     MRBooleanOperationInsideA = 0,
     MRBooleanOperationInsideB,
@@ -15,6 +15,6 @@ enum MRBooleanOperation
     MRBooleanOperationDifferenceBA,
     MRBooleanOperationDifferenceAB,
     MRBooleanOperationCount
-};
+} MRBooleanOperation;
 
 MR_EXTERN_C_END

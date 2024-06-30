@@ -4,7 +4,7 @@
 
 MR_EXTERN_C_BEGIN
 
-typedef struct MRMESHC_CLASS MRMakeCylinderAdvancedParameters
+typedef struct MRMakeCylinderAdvancedParameters
 {
     float radius0;
     float radius1;

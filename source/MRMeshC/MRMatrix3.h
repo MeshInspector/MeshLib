@@ -5,7 +5,7 @@
 
 MR_EXTERN_C_BEGIN
 
-typedef struct MRMESHC_CLASS MRMatrix3f
+typedef struct MRMatrix3f
 {
     MRVector3f x;
     MRVector3f y;

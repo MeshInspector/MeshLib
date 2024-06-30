@@ -4,7 +4,7 @@
 
 MR_EXTERN_C_BEGIN
 
-typedef struct MRMESHC_CLASS MRMeshPart
+typedef struct MRMeshPart
 {
     const MRMesh* mesh;
     const MRFaceBitSet* region;

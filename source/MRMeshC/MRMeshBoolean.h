@@ -8,7 +8,7 @@ MR_EXTERN_C_BEGIN
 
 typedef struct MRMESHC_CLASS MRBooleanParameters
 {
-    MRAffineXf3f* rigidB2A;
+    const MRAffineXf3f* rigidB2A;
     bool mergeAllNonIntersectingComponents;
     MRProgressCallback cb;
 } MRBooleanParameters;

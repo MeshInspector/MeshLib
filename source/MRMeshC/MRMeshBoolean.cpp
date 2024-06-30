@@ -10,7 +10,7 @@ MRBooleanResult mrBoolean( const MRMesh* meshA, const MRMesh* meshB, MRBooleanOp
     if ( params_ )
     {
         params = {
-            .rigidB2A = reinterpret_cast<AffineXf3f*>( params_->rigidB2A ),
+            .rigidB2A = reinterpret_cast<const AffineXf3f*>( params_->rigidB2A ),
             .mergeAllNonIntersectingComponents = params_->mergeAllNonIntersectingComponents,
             .cb = params_->cb,
         };

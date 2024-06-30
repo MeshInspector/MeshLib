@@ -9,6 +9,8 @@ file(GLOB HEADERS "*.h")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
+target_compile_options(${PROJECT_NAME} PRIVATE "-Wno-strict-aliasing")
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
   MRMesh
 )

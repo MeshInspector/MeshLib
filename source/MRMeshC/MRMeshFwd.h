@@ -33,20 +33,21 @@ MR_EXTERN_C_BEGIN
 
 typedef struct MRString MRString;
 
-typedef int MRVertId;
-typedef int MRFaceId;
-
-typedef MRVertId MRThreeVertIds[3];
-
 typedef struct MRBitSet MRBitSet;
 typedef MRBitSet MRFaceBitSet;
+typedef MRBitSet MRVertBitSet;
 
 typedef struct MRVector3f MRVector3f;
+
+typedef MRVector3f MRTriangle3f[3];
 
 typedef struct MRMeshTopology MRMeshTopology;
 typedef struct MRMesh MRMesh;
 
 typedef struct MRTriangulation MRTriangulation;
+
+typedef struct MREdgePath MREdgePath;
+typedef MREdgePath MREdgeLoop;
 
 typedef bool (*MRProgressCallback)( float );
 

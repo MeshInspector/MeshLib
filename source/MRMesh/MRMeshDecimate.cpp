@@ -497,7 +497,6 @@ void MeshDecimator::addInQueueIfMissing_( UndirectedEdgeId ue )
 
 void MeshDecimator::flipEdge_( UndirectedEdgeId ue )
 {
-    presentInQueue_.reset( ue );
     EdgeId e = ue;
     mesh_.topology.flipEdge( e );
     assert( mesh_.topology.left( e ) );
@@ -692,7 +691,6 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
 
 VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos )
 {
-    presentInQueue_.reset( edgeToCollapse );
     ++res_.vertsDeleted;
 
     auto & topology = mesh_.topology;
@@ -827,6 +825,8 @@ DecimateResult MeshDecimator::run()
             continue;
         }
 
+        presentInQueue_.reset( ue );
+
         UndirectedEdgeId twin;
         if ( settings_.twinMap )
             twin = getAt( *settings_.twinMap, ue );
@@ -843,7 +843,6 @@ DecimateResult MeshDecimator::run()
             const auto canCollapseRes = canCollapse_( ue, collapsePos );
             if ( canCollapseRes.status != CollapseStatus::Ok )
             {
-                presentInQueue_.reset( ue );
                 if ( topQE.x.edgeOp == EdgeOp::CollapseOptPos && geomFail_( canCollapseRes.status ) )
                 {
                     qe = computeQueueElement_( ue, false );

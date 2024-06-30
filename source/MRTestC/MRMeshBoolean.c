@@ -76,6 +76,9 @@ void testMeshBoolean()
             }
         }
     }
+
+    mrMeshFree( meshB );
+    mrMeshFree( meshA );
 }
 
 void testBooleanMultipleEdgePropogationSort()
@@ -118,6 +121,7 @@ void testBooleanMultipleEdgePropogationSort()
 
         mrEdgePathFree( border );
         mrEdgePathFree( meshAHoles );
+        mrMeshFree( meshASup );
     }
 
     const MRVector3f meshBSize = mrVector3fDiagonal( 2.0f );

@@ -2,6 +2,7 @@
 #include "MRAABBTree.h"
 #include "MRAABBTreePolyline.h"
 #include "MRAABBTreePoints.h"
+#include "MRDipole.h"
 #include "MRHeapBytes.h"
 #include "MRPch/MRTBB.h"
 #include <cassert>
@@ -138,5 +139,6 @@ template class UniqueThreadSafeOwner<AABBTree>;
 template class UniqueThreadSafeOwner<AABBTreePolyline2>;
 template class UniqueThreadSafeOwner<AABBTreePolyline3>;
 template class UniqueThreadSafeOwner<AABBTreePoints>;
+template class UniqueThreadSafeOwner<Dipoles>;
 
 } //namespace MR

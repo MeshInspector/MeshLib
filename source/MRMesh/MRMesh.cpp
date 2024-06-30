@@ -26,6 +26,7 @@
 #include "MRIdentifyVertices.h"
 #include "MRMeshFillHole.h"
 #include "MRTriMesh.h"
+#include "MRDipole.h"
 #include "MRPch/MRTBB.h"
 
 namespace MR
@@ -506,6 +507,19 @@ Vector3f Mesh::pseudonormal( const MeshTriPoint & p, const FaceBitSet * region )
     return leftNormal( p.e );
 }
 
+bool Mesh::isOutsideByProjNorm( const Vector3f & pt, const MeshProjectionResult & proj, const FaceBitSet * region ) const
+{
+    return dot( proj.proj.point - pt, pseudonormal( proj.mtp, region ) ) <= 0;
+}
+
+float Mesh::signedDistance( const Vector3f & pt, const MeshProjectionResult & proj, const FaceBitSet * region ) const
+{
+    if ( isOutsideByProjNorm( pt, proj, region ) )
+        return std::sqrt( proj.distSq );
+    else
+        return -std::sqrt( proj.distSq );
+}
+
 float Mesh::signedDistance( const Vector3f & pt, const MeshTriPoint & proj, const FaceBitSet * region ) const
 {
     const auto projPt = triPoint( proj );
@@ -529,6 +543,11 @@ std::optional<float> Mesh::signedDistance( const Vector3f & pt, float maxDistSq,
     if ( !signRes )
         return {};
     return signRes->dist;
+}
+
+float Mesh::calcFastWindingNumber( const Vector3f & pt, float beta ) const
+{
+    return MR::calcFastWindingNumber( getDipoles(), getAABBTree(), *this, pt, beta, {} );
 }
 
 float Mesh::sumAngles( VertId v, bool * outBoundaryVert ) const
@@ -1117,11 +1136,25 @@ const AABBTreePoints & Mesh::getAABBTreePoints() const
     return res;
 }
 
+const Dipoles & Mesh::getDipoles() const
+{
+    const auto & tree = getAABBTree(); // must be ready before lambda body for single-threaded Emscripten
+    const auto & res = dipolesOwner_.getOrCreate(
+        [this, &tree]{
+            Dipoles dipoles;
+            calcDipoles( dipoles, tree, *this );
+            return dipoles;
+        } );
+    assert( res.size() == tree.nodes().size() );
+    return res;
+}
+
 void Mesh::invalidateCaches( bool pointsChanged )
 {
     AABBTreeOwner_.reset();
     if ( pointsChanged )
         AABBTreePointsOwner_.reset();
+    dipolesOwner_.reset();
 }
 
 void Mesh::updateCaches( const VertBitSet & changedVerts )
@@ -1136,6 +1169,7 @@ void Mesh::updateCaches( const VertBitSet & changedVerts )
         assert( tree.orderedPoints().size() == topology.numValidVerts() );
         tree.refit( points, changedVerts ); 
     } );
+    dipolesOwner_.reset();
 }
 
 size_t Mesh::heapBytes() const
@@ -1143,7 +1177,8 @@ size_t Mesh::heapBytes() const
     return topology.heapBytes()
         + points.heapBytes()
         + AABBTreeOwner_.heapBytes()
-        + AABBTreePointsOwner_.heapBytes();
+        + AABBTreePointsOwner_.heapBytes()
+        + dipolesOwner_.heapBytes();
 }
 
 void Mesh::shrinkToFit()
@@ -1329,6 +1364,13 @@ TEST(MRMesh, SplitFace)
     EXPECT_EQ( mesh.points.size(), 4 );
     EXPECT_EQ( mesh.topology.numValidFaces(), 3 );
     EXPECT_EQ( mesh.topology.lastNotLoneEdge(), EdgeId(11) ); // 6*2 = 12 half-edges in total
+}
+
+TEST( MRMesh, isOutside )
+{
+    Mesh mesh = makeCube();
+    EXPECT_TRUE( mesh.isOutside( Vector3f( 2, 0, 0 ) ) );
+    EXPECT_FALSE( mesh.isOutside( Vector3f( 0, 0, 0 ) ) );
 }
 
 } //namespace MR

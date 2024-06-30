@@ -101,8 +101,8 @@ struct GeneralOffsetParameters : SharpOffsetParameters
 
 /// in case of positive offset, returns the mesh consisting of offset mesh merged with inversed original mesh (thickening mode);
 /// in case of negative offset, returns the mesh consisting of inversed offset mesh merged with original mesh (hollowing mode);
-/// if your input mesh is closed then please specify params.signDetectionMode = SignDetectionMode::Unsigned, and you will get closed mesh on output;
-/// if your input mesh is open then please specify another sign detection mode, and you will get open mesh on output
+/// if your input mesh is open then please specify params.signDetectionMode = SignDetectionMode::Unsigned, and you will get open mesh (with several components) on output
+/// if your input mesh is closed then please specify another sign detection mode, and you will get closed mesh (with several components) on output;
 [[nodiscard]] MRMESH_API Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters & params = {} );
 
 #ifndef MRMESH_NO_OPENVDB

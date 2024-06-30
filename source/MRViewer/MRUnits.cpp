@@ -521,6 +521,19 @@ DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_Y
 
 template <detail::Units::Scalar T>
+std::string valueToString( T value, const VarUnitToStringParams& params )
+{
+    return std::visit( [&]( const auto& visitedParams )
+    {
+        return (valueToString)( value, visitedParams );
+    }, params );
+}
+
+#define MR_X(T) template std::string valueToString<T>( T value, const VarUnitToStringParams& params );
+DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
+#undef MR_X
+
+template <detail::Units::Scalar T>
 int guessPrecision( T value )
 {
     if constexpr ( std::is_integral_v<T> )
@@ -656,5 +669,18 @@ std::string valueToImGuiFormatString( T value, const UnitToStringParams<E>& para
 DETAIL_MR_UNIT_ENUMS(MR_X)
 #undef MR_X
 #undef MR_Y
+
+template <detail::Units::Scalar T>
+std::string valueToImGuiFormatString( T value, const VarUnitToStringParams& params )
+{
+    return std::visit( [&]( const auto& visitedParams )
+    {
+        return (valueToImGuiFormatString)( value, visitedParams );
+    }, params );
+}
+
+#define MR_X(T) template std::string valueToImGuiFormatString<T>( T value, const VarUnitToStringParams& params );
+DETAIL_MR_UNIT_VALUE_TYPES(MR_X,)
+#undef MR_X
 
 }

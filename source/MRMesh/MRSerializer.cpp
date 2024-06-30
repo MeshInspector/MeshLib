@@ -85,6 +85,10 @@ const IOFilters SceneFileFilters =
 #ifndef __EMSCRIPTEN__
     {"MeshInSpector Object Notation (.mison)","*.mison"},
 #endif
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
+    { "3D Manufacturing format (.3mf)", "*.3mf"},
+    { "3D Manufacturing model (.model)", "*.model"},
+#endif
 #ifndef MRMESH_NO_GLTF
     {"glTF JSON scene (.gltf)","*.gltf"},
     {"glTF binary scene (.glb)","*.glb"},
@@ -447,6 +451,7 @@ void serializeToJson( const std::vector<Color>& colors, Json::Value& root )
 
 void serializeViaVerticesToJson( const UndirectedEdgeBitSet& edges, const MeshTopology & topology, Json::Value& root )
 {
+    MR_TIMER
     std::vector<VertId> verts;
     verts.reserve( edges.count() * 2 );
     for ( EdgeId e : edges )
@@ -460,20 +465,22 @@ void serializeViaVerticesToJson( const UndirectedEdgeBitSet& edges, const MeshTo
         }
     }
     static_assert( sizeof( VertId ) == 4 );
-    root["size"] = Json::UInt( edges.size() );
+    root["size"] = Json::UInt( edges.size() ); // saved for old versions of software before 1st July 2024
     root["vertpairs"] = encode64( (const std::uint8_t*) verts.data(), verts.size() * 4 );
 }
 
 void deserializeViaVerticesFromJson( const Json::Value& root, UndirectedEdgeBitSet& edges, const MeshTopology & topology )
 {
-    if ( !root.isObject() || !root["size"].isNumeric() || !root["vertpairs"].isString() )
+    if ( !root.isObject() || !root["vertpairs"].isString() )
     {
         deserializeFromJson( root, edges ); // deserialize from old format
         return;
     }
 
+    MR_TIMER
     edges.clear();
-    edges.resize( root["size"].asInt() );
+    // not edges.resize( root["size"].asInt() ), because edge ids can change after loading mesh from CTM
+    edges.resize( topology.undirectedEdgeSize() );
     auto bin = decode64( root["vertpairs"].asString() );
 
     for ( size_t i = 0; i + 8 <= bin.size(); i += 8 )

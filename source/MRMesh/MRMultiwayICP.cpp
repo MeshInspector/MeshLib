@@ -376,7 +376,7 @@ bool MultiwayICP::resamplePoints( const MultiwayICPSamplingParameters& samplingP
     return reserveUpperLayerPairs_( std::move( *samplesPerUnit ), subprogress( samplingParams.cb, maxProgress2, 1.0f ) );
 }
 
-float MultiwayICP::getMeanSqDistToPoint() const
+float MultiwayICP::getMeanSqDistToPoint( double* value ) const
 {
     NumSum numSum;
     for ( ICPLayer l( 0 ); l < pairsGridPerLayer_.size(); ++l )
@@ -391,7 +391,7 @@ float MultiwayICP::getMeanSqDistToPoint() const
                 size_t j = r / pairs.size();
                 if ( i == j )
                     continue;
-                curr = curr + MR::getSumSqDistToPoint( pairs[ICPElementId( i )][ICPElementId( j )] );
+                curr = curr + MR::getSumSqDistToPoint( pairs[ICPElementId( i )][ICPElementId( j )], value );
             }
             return curr;
         }, [] ( auto a, auto b ) { return a + b; } );
@@ -399,7 +399,7 @@ float MultiwayICP::getMeanSqDistToPoint() const
     return numSum.rootMeanSqF();
 }
 
-float MultiwayICP::getMeanSqDistToPlane() const
+float MultiwayICP::getMeanSqDistToPlane( double* value ) const
 {
     NumSum numSum;
     for ( ICPLayer l( 0 ); l < pairsGridPerLayer_.size(); ++l )
@@ -414,7 +414,7 @@ float MultiwayICP::getMeanSqDistToPlane() const
                 size_t j = r / pairs.size();
                 if ( i == j )
                     continue;
-                curr = curr + MR::getSumSqDistToPlane( pairs[ICPElementId( i )][ICPElementId( j )] );
+                curr = curr + MR::getSumSqDistToPlane( pairs[ICPElementId( i )][ICPElementId( j )], value );
             }
             return curr;
         }, [] ( auto a, auto b ) { return a + b; } );
@@ -733,9 +733,7 @@ void MultiwayICP::deactivateFarDistPairs_( ICPLayer l )
                 return;
             if ( maxDistSq[i] >= prop_.distThresholdSq )
                 return;
-            counters.local() += (
-                MR::deactivateFarPairs( pairs[i][j], maxDistSq[i] ) +
-                MR::deactivateFarPairs( pairs[j][i], maxDistSq[i] ) );
+            counters.local() += MR::deactivateFarPairs( pairs[i][j], maxDistSq[i] );
         } );
 
         size_t numDeactivated = 0;

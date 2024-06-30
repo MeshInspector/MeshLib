@@ -27,10 +27,16 @@ struct ButtonCustomizationParams
     /// {start, hover_start, acitve_start, disabled_start,
     ///  end, hover_end, acitve_end, disabled_end  }
     ImGuiImage* customTexture = nullptr;
+    /// force use imgui background if !customTexture
+    bool forceImGuiBackground = false;
+
     /// force use if ImGuiCol_Text for text
     bool forceImguiTextColor = false;
     /// show border or not
     bool border = false;
+
+    /// draw line under first letter of label
+    bool underlineFirstLetter = false;
 
     /// Allow interacting with this button from `UI::TestEngine`.
     bool enableTestEngine = true;
@@ -45,6 +51,31 @@ struct ButtonIconCustomizationParams : public ButtonCustomizationParams
     bool flatBackgroundColor = false;
 };
 
+struct PlotAxis
+{
+    // the point from which the axes will be drawn
+    ImVec2 startAxisPoint;
+
+    // size plot by axis
+    float size;
+    // optimal length between dashes
+    float optimalLenth = 10.0f;
+    // the minimum value of the axis
+    float minValue = 0.0f;
+    // the maximal value of the axis
+    float maxValue = 1.0f;
+    // sign every nth dash
+    size_t textDashIndicesStep = 1;
+
+    // length dash without text
+    float lenDash = 8.0f;
+    // length dash with text
+    float lenDashWithText = 12.0f;
+    // text offset from dash
+    float textPadding = 3.0f;
+    // the format of the text for labels
+    VarUnitToStringParams labelFormatParams;
+};
 
 /// draw gradient button, which can be disabled (active = false)
 MRVIEWER_API bool buttonEx( const char* label, bool active, const Vector2f& size = Vector2f( 0, 0 ),
@@ -63,6 +94,11 @@ inline bool button( const char* label, const Vector2f& size = Vector2f( 0, 0 ), 
 MRVIEWER_API bool buttonCommonSize( const char* label, const Vector2f& size = Vector2f( 0, 0 ), ImGuiKey key = ImGuiKey_None );
 /// draw button with same logic as radioButton
 MRVIEWER_API bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& size = Vector2f( 0, 0 ), ImGuiKey key = ImGuiKey_None );
+
+// draw dash with text along the horizontal axis
+MRVIEWER_API void drawPoltHorizontalAxis( float menuScaling, const PlotAxis& plotAxis );
+// draw dash with text along the vertical axis
+MRVIEWER_API void drawPoltVerticalAxis( float menuScaling, const PlotAxis& plotAxis );
 
 // draw a button with an icon and text under it
 MRVIEWER_API bool buttonIconEx( 

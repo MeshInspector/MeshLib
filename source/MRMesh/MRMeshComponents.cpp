@@ -18,12 +18,13 @@ namespace MeshComponents
 {
 
 /// returns
-/// 1. the mapping: FaceId -> Root ID in [0, 1, 2, ...)
-/// 2. the total number of roots
-static std::pair<Face2RegionMap, int> getUniqueRootIds( const FaceMap& allRoots, const FaceBitSet& region )
+/// 1. the mapping: Root Id -> Region Id in [0, 1, 2, ...)
+/// 2. the total number of roots/regions
+template<typename T>
+static std::pair<Vector<RegionId, Id<T>>, int> getUniqueRootIds( const Vector<Id<T>, Id<T>>& allRoots, const TaggedBitSet<T>& region )
 {
     MR_TIMER
-    Face2RegionMap uniqueRootsMap( allRoots.size() );
+    Vector<RegionId, Id<T>> uniqueRootsMap( allRoots.size() );
     int k = 0;
     for ( auto f : region )
     {
@@ -115,15 +116,53 @@ VertBitSet getLargestComponentVerts( const Mesh& mesh, const VertBitSet* region 
 {
     MR_TIMER
 
-    auto allComponents = getAllComponentsVerts( mesh, region );
+    auto unionFindStruct = getUnionFindStructureVerts( mesh, region );
+    const VertBitSet& vertsRegion = mesh.topology.getVertIds( region );
 
-    if ( allComponents.empty() )
-        return {};
+    const auto& allRoots = unionFindStruct.roots();
+    auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, vertsRegion );
 
-    return *std::max_element( allComponents.begin(), allComponents.end(), []( const VertBitSet& a, const VertBitSet& b )
+    int maxVerts = 0;
+    int maxI = 0;
+    std::vector<int> vertsInComp( k, 0 );
+    for ( auto v : vertsRegion )
     {
-        return a.count() < b.count();
-    } );
+        auto index = uniqueRootsMap[v];
+        auto& num = vertsInComp[index];
+        ++num;
+        if ( num > maxVerts )
+        {
+            maxI = index;
+            maxVerts = num;
+        }
+    }
+    VertBitSet largestComponent( vertsRegion.find_last() + 1 );
+    for ( auto v : vertsRegion )
+    {
+        auto index = uniqueRootsMap[v];
+        if ( index != maxI )
+            continue;
+        largestComponent.set( v );
+    }
+    return largestComponent;
+}
+
+VertBitSet getLargeComponentVerts( const Mesh& mesh, int minVerts, const VertBitSet* region )
+{
+    MR_TIMER
+    assert( minVerts >= 2 );
+    if ( minVerts <= 1 )
+        return mesh.topology.getVertIds( region );
+
+    auto unionFind = getUnionFindStructureVerts( mesh, region );
+
+    VertBitSet res( mesh.topology.vertSize() );
+    for ( auto f : mesh.topology.getVertIds( region ) )
+    {
+        if ( unionFind.sizeOfComp( f ) >= minVerts )
+            res.set( f );
+    }
+    return res;
 }
 
 FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )

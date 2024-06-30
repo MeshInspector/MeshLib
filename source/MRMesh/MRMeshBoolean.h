@@ -81,6 +81,8 @@ struct BooleanParameters
     BooleanPreCutResult* outPreCutA = nullptr;
     /// Optional precut output of meshB, if present - does not perform boolean and just return them
     BooleanPreCutResult* outPreCutB = nullptr;
+    /// Optional output cut edges of booleaned meshes 
+    std::vector<EdgeLoop>* outCutEdges = nullptr;
     /// By default produce valid operation on disconnected components
     /// if set merge all non-intersecting components
     bool mergeAllNonIntersectingComponents = false;

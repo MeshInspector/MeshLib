@@ -114,6 +114,9 @@ Expected<MR::Image, std::string> fromPng( std::istream& in )
       &filter
     );
 
+    if ( depth != 8 )
+        return unexpected( std::string( "Unsupported png depth: " ) + std::to_string( depth ) );
+
     result.resolution = Vector2i{ int( w ),int( h ) };
     result.pixels.resize( result.resolution.x * result.resolution.y );
 

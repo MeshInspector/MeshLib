@@ -4,43 +4,68 @@
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
+#include "MRMeshComponents.h"
 #include "MRTimer.h"
 
 namespace MR
 {
 
-bool isInnerShellVert( const MeshPart & mp, const Vector3f & shellPoint, Side side, float maxAbsDistSq )
+ShellVertexInfo classifyShellVert( const MeshPart & mp, const Vector3f & shellPoint, const FindInnerShellSettings & settings )
 {
-    auto sd = findSignedDistance( shellPoint, mp, maxAbsDistSq );
+    ShellVertexInfo res;
 
-    if ( !sd )
-        return false;
-
-    if ( sd->mtp.isBd( mp.mesh.topology, mp.region ) )
-        return false;
-    if ( side == Side::Positive && sd->dist <= 0 )
-        return false;
-    if ( side == Side::Negative && sd->dist >= 0 )
-        return false;
-    return true;
-}
-
-VertBitSet findInnerShellVerts( const MeshPart & mp, const Mesh & shell, Side side, float maxAbsDistSq )
-{
-    MR_TIMER
-    VertBitSet res( shell.topology.vertSize() );
-    BitSetParallelFor( shell.topology.getValidVerts(), [&]( VertId v )
+    MeshProjectionResult projRes;
+    if ( !settings.useWindingNumber || settings.maxDistSq < FLT_MAX )
     {
-        if ( isInnerShellVert( mp, shell.points[v], side, maxAbsDistSq ) )
-            res.set( v );
-    } );
+        projRes = findProjection( shellPoint, mp, settings.maxDistSq );
+        if ( !( projRes.distSq < settings.maxDistSq ) )
+            return res;
+    }
+    res.inRange = true;
+
+    if ( settings.useWindingNumber )
+    {
+        const bool outside = mp.mesh.isOutside( shellPoint, settings.windingNumberThreshold );
+        res.rightSide = outside == ( settings.side == Side::Positive );
+        return res;
+    }
+
+    res.projOnBd = projRes.mtp.isBd( mp.mesh.topology, mp.region );
+
+    const bool outside = mp.mesh.isOutsideByProjNorm( shellPoint, projRes, mp.region );
+    res.rightSide = outside == ( settings.side == Side::Positive );
     return res;
 }
 
-FaceBitSet findInnerShellFacesWithSplits( const MeshPart & mp, Mesh & shell, Side side )
+VertBitSet findInnerShellVerts( const MeshPart & mp, const Mesh & shell, const FindInnerShellSettings & settings )
 {
     MR_TIMER
-    const auto innerVerts = findInnerShellVerts( mp, shell, side );
+    VertBitSet mySide( shell.topology.vertSize() ), notBd( shell.topology.vertSize() );
+    BitSetParallelFor( shell.topology.getValidVerts(), [&]( VertId v )
+    {
+        const auto info = classifyShellVert( mp, shell.points[v], settings );
+        if ( info.inRange && !info.projOnBd )
+        {
+            notBd.set( v );
+            if ( info.rightSide )
+                mySide.set( v );
+        }
+    } );
+
+    const auto largeComps = MeshComponents::getLargeComponentVerts( shell, settings.minVertsInComp, &notBd );
+    mySide &= largeComps;
+    const auto largeMySide = MeshComponents::getLargeComponentVerts( shell, settings.minVertsInComp, &mySide );
+    const auto otherSide = largeComps - mySide;
+    const auto largeOtherSide = MeshComponents::getLargeComponentVerts( shell, settings.minVertsInComp, &otherSide );
+
+    auto res = largeMySide | ( otherSide - largeOtherSide );
+    return res;
+}
+
+FaceBitSet findInnerShellFacesWithSplits( const MeshPart & mp, Mesh & shell, const FindInnerShellSettings & settings )
+{
+    MR_TIMER
+    const auto innerVerts = findInnerShellVerts( mp, shell, settings );
 
     // find all edges connecting inner and not-inner vertices
     UndirectedEdgeBitSet ues( shell.topology.undirectedEdgeSize() );
@@ -71,7 +96,7 @@ FaceBitSet findInnerShellFacesWithSplits( const MeshPart & mp, Mesh & shell, Sid
         {
             const auto v = 0.5f * ( av + bv );
             const auto p = ( 1 - v ) * a + v * b;
-            if ( isInnerShellVert( mp, p, side ) )
+            if ( classifyShellVert( mp, p, settings ).valid() )
                 av = v;
             else
                 bv = v;

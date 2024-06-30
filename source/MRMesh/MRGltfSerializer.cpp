@@ -66,12 +66,15 @@ struct Material
     }
 };
 
-std::vector<MeshTexture> readImages( const tinygltf::Model& model )
+Expected<std::vector<MeshTexture>> readImages( const tinygltf::Model& model )
 {
     std::vector<MeshTexture> result;
     result.reserve( model.images.size() );
     for ( auto& image : model.images )
     {
+        if ( image.image.empty() )
+            return unexpected( "Image file '" + image.uri + "' is missing" );
+
         auto& meshTexture = result.emplace_back();
         meshTexture.filter = FilterType::Linear;
         meshTexture.resolution = { image.width, image.height };
@@ -441,7 +444,11 @@ Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromGltf( co
     if ( model.meshes.empty() )
         return unexpected( "No mesh in file" );
 
-    auto textures = readImages( model );
+    auto texturesOrErr = readImages( model );
+    if ( !texturesOrErr )
+        return unexpected( texturesOrErr.error() );
+
+    auto textures = std::move( *texturesOrErr );
     auto materials = readMaterials( model );
     auto meshesData = readMeshes( model, materials, callback );
 

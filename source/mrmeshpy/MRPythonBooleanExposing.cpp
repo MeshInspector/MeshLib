@@ -1,11 +1,96 @@
 #include "MRMesh/MRPython.h"
+#include "MRMesh/MRContoursCut.h"
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRMeshBoolean.h"
 #include "MRMesh/MRUniteManyMeshes.h"
+#include "MRMesh/MRId.h"
 #include <pybind11/functional.h>
+#include <variant>
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshIntersectinosTypes, [] ( pybind11::module_& m )
+{
+    pybind11::class_<MR::EdgeTri>( m, "EdgeTri", "edge from one mesh and triangle from another mesh" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "edge", &MR::EdgeTri::edge ).
+        def_readwrite( "tri", &MR::EdgeTri::tri );
+
+    pybind11::class_<MR::VariableEdgeTri, MR::EdgeTri>( m, "VariableEdgeTri" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "isEdgeATriB", &MR::VariableEdgeTri::isEdgeATriB );
+
+    pybind11::enum_<MR::OneMeshIntersection::VariantIndex>( m, "OneMeshIntersectionVariantType" ).
+        value( "Face", MR::OneMeshIntersection::VariantIndex::Face ).
+        value( "Edge", MR::OneMeshIntersection::VariantIndex::Edge ).
+        value( "Vertex", MR::OneMeshIntersection::VariantIndex::Vertex );
+
+    using OneMeshIntersectionVariant = std::variant<MR::FaceId, MR::EdgeId, MR::VertId>;
+    pybind11::class_<OneMeshIntersectionVariant>( m, "OneMeshIntersectionVariant" ).
+        def( pybind11::init<>() ).
+        def( "index", [] ( const OneMeshIntersectionVariant& self ) { return self.index(); } ).
+        def( "getFace", [] ( const OneMeshIntersectionVariant& self ) { return std::get<MR::FaceId>( self ); } ).
+        def( "getEdge", [] ( const OneMeshIntersectionVariant& self ) { return std::get<MR::EdgeId>( self ); } ).
+        def( "getVert", [] ( const OneMeshIntersectionVariant& self ) { return std::get<MR::VertId>( self ); } );
+
+    pybind11::class_<MR::OneMeshIntersection>( m, "OneMeshIntersection", "Simple point on mesh, represented by primitive id and coordinate in mesh space" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "primitiveId", &MR::OneMeshIntersection::primitiveId ).
+        def_readwrite( "coordinate", &MR::OneMeshIntersection::coordinate );
+
+    pybind11::class_<MR::CoordinateConverters>( m, "CoordinateConverters", "this struct contains coordinate converters float-int-float" ).
+        def( pybind11::init<>() );
+
+    m.def( "getVectorConverters", &MR::getVectorConverters, pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg( "rigidB2A" ) = nullptr,
+        "creates simple converters from Vector3f to Vector3i and back in mesh parts area range\n"
+        "\trigidB2A - rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation" );
+
+} )
+
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorEdgeTri, MR::EdgeTri )
+
+MR_ADD_PYTHON_VEC( mrmeshpy, ContinuousContour, MR::VariableEdgeTri )
+
+MR_ADD_PYTHON_VEC( mrmeshpy, ContinuousContours, MR::ContinuousContour )
+
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorOneMeshIntersection, MR::OneMeshIntersection )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshIntersectinosTypes2, [] ( pybind11::module_& m )
+{
+    pybind11::class_<MR::OneMeshContour>( m, "OneMeshContour", "One contour on mesh" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "intersections", &MR::OneMeshContour::intersections ).
+        def_readwrite( "closed", &MR::OneMeshContour::closed );
+} )
+
+MR_ADD_PYTHON_VEC( mrmeshpy, OneMeshContours, MR::OneMeshContour )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, BooleanExposing, [] ( pybind11::module_& m )
 {
+    pybind11::class_<MR::PreciseCollisionResult>( m, "PreciseCollisionResult" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "edgesAtrisB", &MR::PreciseCollisionResult::edgesAtrisB, "each edge is directed to have its origin inside and its destination outside of the other mesh" ).
+        def_readwrite( "edgesBtrisA", &MR::PreciseCollisionResult::edgesBtrisA, "each edge is directed to have its origin inside and its destination outside of the other mesh" );
+
+    m.def( "findCollidingEdgeTrisPrecise", [] ( const MR::MeshPart& pA, const MR::MeshPart& pB, MR::CoordinateConverters conv, const MR::AffineXf3f* xf, bool any )
+    {
+        return MR::findCollidingEdgeTrisPrecise( pA, pB, conv.toInt, xf, any );
+    },
+        pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg( "conv" ), pybind11::arg( "rigidB2A" ) = nullptr, pybind11::arg( "anyIntersection" ) = false,
+        "finds all pairs of colliding edges from one mesh and triangle from another mesh\n"
+        "\trigidB2A - rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation\n"
+        "\tanyIntersection - if true then the function returns as fast as it finds any intersection" );
+
+    m.def( "orderIntersectionContours", &MR::orderIntersectionContours, pybind11::arg( "topologyA" ), pybind11::arg( "topologyB" ), pybind11::arg( "intersections" ),
+        "Combines individual intersections into ordered contours with the properties:\n"
+        "  a. left  of contours on mesh A is inside of mesh B,\n"
+        "  b. right of contours on mesh B is inside of mesh A,\n"
+        "  c. each intersected edge has origin inside meshes intersection and destination outside of it" );
+
+    m.def( "getOneMeshIntersectionContours", &MR::getOneMeshIntersectionContours,
+        pybind11::arg( "meshA" ), pybind11::arg( "meshB" ), pybind11::arg( "contours" ), pybind11::arg( "getMeshAIntersections" ), pybind11::arg( "converters" ), pybind11::arg( "rigidB2A" ) = nullptr,
+        "Converts ordered continuous contours of two meshes to OneMeshContours\n"
+        "converters is required for better precision in case of degenerations\n"
+        "note that contours should not have intersections" );
+
     pybind11::enum_<MR::BooleanOperation>( m, "BooleanOperation", "Enum class of available CSG operations" ).
         value( "InsideA", MR::BooleanOperation::InsideA, "Part of mesh `A` that is inside of mesh `B`" ).
         value( "InsideB", MR::BooleanOperation::InsideB, "Part of mesh `B` that is inside of mesh `A`" ).

@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MR3MFSerializer.h" />
     <ClInclude Include="MRAABBTreeBase.h" />
     <ClInclude Include="MRAABBTreeBase.hpp" />
     <ClInclude Include="MRAABBTreeMaker.hpp" />
@@ -137,6 +138,7 @@
     <ClInclude Include="MROffsetContours.h" />
     <ClInclude Include="MRParabola.h" />
     <ClInclude Include="MRBestFitParabola.h" />
+    <ClInclude Include="MRPointCloudDistance.h" />
     <ClInclude Include="MRPointCloudDivideWithPlane.h" />
     <ClInclude Include="MRPointOnObject.h" />
     <ClInclude Include="MROverlappingTris.h" />
@@ -408,6 +410,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
+    <ClCompile Include="MR3MFSerializer.cpp" />
     <ClCompile Include="MRAABBTreeMaker.cpp" />
     <ClCompile Include="miniply.cpp" />
     <ClCompile Include="MRAABBTree.cpp" />
@@ -514,7 +517,6 @@
     <ClCompile Include="MRMeshBooleanFacade.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
     <ClCompile Include="MRMeshExtrude.cpp" />
-    <ClCompile Include="MRMeshLoad3mf.cpp" />
     <ClCompile Include="MRMeshOrPoints.cpp" />
     <ClCompile Include="MRMeshReplicate.cpp" />
     <ClCompile Include="MRMeshToDistanceVolume.cpp" />
@@ -527,6 +529,7 @@
     <ClCompile Include="MROffsetContours.cpp" />
     <ClCompile Include="MROverlappingTris.cpp" />
     <ClCompile Include="MRObjectGcode.cpp" />
+    <ClCompile Include="MRPointCloudDistance.cpp" />
     <ClCompile Include="MRPointOnObject.cpp" />
     <ClCompile Include="MRPointCloudDivideWithPlane.cpp" />
     <ClCompile Include="MRPointsComponents.cpp" />

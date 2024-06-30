@@ -33,6 +33,8 @@
 #include "MRGltfSerializer.h"
 #endif
 
+#include "MR3MFSerializer.h"
+
 namespace MR
 {
 
@@ -800,6 +802,16 @@ Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( 
     else if ( ext == "*.gltf" || ext == "*.glb" )
     {
         res = deserializeObjectTreeFromGltf( path, callback );
+    }
+#endif
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
+    else if ( ext == "*.3mf" )
+    {
+        res = deserializeObjectTreeFrom3mf( path, loadWarn, callback );
+    }
+    else if ( ext == "*.model" )
+    {
+        res = deserializeObjectTreeFromModel( path, loadWarn, callback );
     }
 #endif
 #ifndef MRMESH_NO_OPENCASCADE

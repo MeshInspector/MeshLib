@@ -111,7 +111,7 @@ void testBooleanMultipleEdgePropogationSort()
 
         const MRFaceBitSet* meshASupFaces = mrMeshTopologyGetValidFaces( mrMeshTopology( meshASup ) );
         const MRMeshAddPartByMaskParameters params = {
-            .flipOrientation = false,
+            .flipOrientation = true,
             .thisContours = border,
             .thisContoursNum = 1,
             .fromContours = border,

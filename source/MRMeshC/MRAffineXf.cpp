@@ -5,8 +5,6 @@
 #include "MRMesh/MRMatrix3.h"
 #include "MRMesh/MRVector3.h"
 
-#include <cstring>
-
 using namespace MR;
 
 static_assert( sizeof( MRAffineXf3f ) == sizeof( AffineXf3f ) );

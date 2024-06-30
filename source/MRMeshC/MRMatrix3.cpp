@@ -2,8 +2,6 @@
 
 #include "MRMesh/MRMatrix3.h"
 
-#include <cstring>
-
 using namespace MR;
 
 static_assert( sizeof( MRMatrix3f ) == sizeof( Matrix3f ) );

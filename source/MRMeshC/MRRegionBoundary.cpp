@@ -10,6 +10,6 @@ MREdgeLoop* mrTrackRightBoundaryLoop( const MRMeshTopology* topology_, MREdgeId 
     auto e0 = *reinterpret_cast<EdgeId*>( &e0_ );
     const auto* region = reinterpret_cast<const FaceBitSet*>( region_ );
 
-    auto res = trackLeftBoundaryLoop( topology, e0, region );
+    auto res = trackRightBoundaryLoop( topology, e0, region );
     return reinterpret_cast<MREdgeLoop*>( new EdgeLoop( std::move( res ) ) );
 }

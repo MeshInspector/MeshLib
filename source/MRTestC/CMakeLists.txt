@@ -12,9 +12,19 @@ IF(MR_EMSCRIPTEN)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --emrun")
 ENDIF()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-  MRMeshC
-)
+IF(NOT MR_EMSCRIPTEN)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMeshC
+  )
+ELSE()
+  set(CMAKE_EXECUTABLE_SUFFIX ".html")
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    gtest
+    -Wl,--whole-archive
+    MRMeshC
+    -Wl,--no-whole-archive
+  )
+ENDIF()
 
 add_test(
   NAME ${PROJECT_NAME}

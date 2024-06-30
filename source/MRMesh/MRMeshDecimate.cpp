@@ -375,7 +375,7 @@ bool MeshDecimator::initializeQueue_()
         regionEdges_ = getIncidentEdges( mesh_.topology, *settings_.region );
         if ( settings_.edgesToCollapse )
             regionEdges_ &= *settings_.edgesToCollapse;
-        if ( !settings_.touchBdVertices )
+        if ( !settings_.touchNearBdEdges )
         {
             // exclude edges touching boundary
             BitSetParallelFor( regionEdges_, [&]( UndirectedEdgeId ue )
@@ -386,7 +386,7 @@ bool MeshDecimator::initializeQueue_()
             } );
         }
     }
-    else if ( !settings_.touchBdVertices )
+    else if ( !settings_.touchNearBdEdges )
     {
         assert( !settings_.region );
         regionEdges_.clear();
@@ -793,7 +793,7 @@ DecimateResult MeshDecimator::run()
     else
     {
         pBdVerts_ = &myBdVerts_;
-        if ( !settings_.touchBdVertices )
+        if ( !settings_.touchNearBdEdges )
             myBdVerts_ = getBoundaryVerts( mesh_.topology, settings_.region );
     }
 
@@ -985,7 +985,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     ParallelFor( parts, [&]( size_t i )
     {
         auto & faces = parts[i].region;
-        if ( settings.touchBdVertices )
+        if ( settings.touchNearBdEdges )
         {
             /// vertices on the boundary of subdivision,
             /// if a vertex is only on hole's boundary or region's boundary but not on subdivision boundary, it is not here
@@ -1053,7 +1053,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
             }
             subSeqSettings.packMesh = false;
             subSeqSettings.vertForms = &mVertForms;
-            subSeqSettings.touchBdVertices = false;
+            subSeqSettings.touchNearBdEdges = false;
             // after mesh.topology.stopUpdatingValids(), seq-subdivider cannot find bdVerts by itself
             subSeqSettings.bdVerts = &parts[i].bdVerts;
             subSeqSettings.region = &parts[i].region;

@@ -81,10 +81,10 @@ struct DecimateSettings
     /// the algorithm updates this map during collapses, removing or replacing elements
     UndirectedEdgeHashMap * twinMap = nullptr;
 
-    /// Whether to allow collapsing edges having at least one vertex on (region) boundary
-    bool touchBdVertices = true;
+    /// Whether to allow collapsing or flipping edges having at least one vertex on (region) boundary
+    bool touchNearBdEdges = true;
 
-    /// if touchBdVertices=false then the algorithm needs to know about all boundary vertices;
+    /// if touchNearBdEdges=false then the algorithm needs to know about all boundary vertices;
     /// if the pointer is not null then boundary vertices detection is replaced with testing values in this bit-set
     const VertBitSet * bdVerts = nullptr;
 

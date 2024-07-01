@@ -84,7 +84,12 @@ struct DecimateSettings
     /// Whether to allow collapsing or flipping edges having at least one vertex on (region) boundary
     bool touchNearBdEdges = true;
 
-    /// if touchNearBdEdges=false then the algorithm needs to know about all boundary vertices;
+    /// touchBdVerts=true: allow moving and eliminating boundary vertices during edge collapses;
+    /// touchBdVerts=false: allow only collapsing an edge having only one boundary vertex in that vertex, so position and count of boundary vertices do not change;
+    /// this setting is ignored if touchNearBdEdges=false
+    bool touchBdVerts = true;
+
+    /// if touchNearBdEdges=false or touchBdVerts=false then the algorithm needs to know about all boundary vertices;
     /// if the pointer is not null then boundary vertices detection is replaced with testing values in this bit-set
     const VertBitSet * bdVerts = nullptr;
 

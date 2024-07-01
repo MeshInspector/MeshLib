@@ -14,20 +14,6 @@ namespace MR
 class PolylineTopology
 {
 public:
-    /// data of every half-edge
-    struct HalfEdgeRecord
-    {
-        EdgeId next; ///< next counter clock wise half-edge in the origin ring
-        VertId org;  ///< vertex at the origin of the edge
-
-        bool operator ==( const HalfEdgeRecord& b ) const
-        {
-            return next == b.next && org == b.org;
-        }
-        HalfEdgeRecord() noexcept = default;
-        explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), org( noInit ) {}
-    };
-
     /// builds this topology from given contours
     /// \details also builds the vector of referenced points using two functors: reserve and add \n
     /// if all even edges are consistently oriented, then the output contours will be oriented the same
@@ -73,7 +59,7 @@ public:
     /// 2) if a and b were from the same ring, puts them in separate rings;
     /// \details the cut in rings in both cases is made after a and b
     MRMESH_API void splice( EdgeId a, EdgeId b );
-
+    
     /// next (counter clock wise) half-edge in the origin ring
     [[nodiscard]] EdgeId next( EdgeId he ) const { assert(he.valid()); return edges_[he].next; }
     /// returns origin vertex of half-edge
@@ -165,6 +151,20 @@ public:
 private:
     /// sets new origin to the full origin ring including this edge, without updating edgePerVertex_ table
     void setOrg_( EdgeId a, VertId v );
+
+    /// data of every half-edge
+    struct HalfEdgeRecord
+    {
+        EdgeId next; ///< next counter clock wise half-edge in the origin ring
+        VertId org;  ///< vertex at the origin of the edge
+
+        bool operator ==( const HalfEdgeRecord& b ) const
+        {
+            return next == b.next && org == b.org;
+        }
+        HalfEdgeRecord() noexcept = default;
+        explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), org( noInit ) {}
+    };
 
     /// edges_: EdgeId -> edge data
     Vector<HalfEdgeRecord, EdgeId> edges_;

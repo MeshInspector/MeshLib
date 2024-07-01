@@ -17,22 +17,6 @@ namespace MR
 class MeshTopology
 {
 public:
-    /// data of every half-edge
-    struct HalfEdgeRecord
-    {
-        EdgeId next; ///< next counter clock wise half-edge in the origin ring
-        EdgeId prev; ///< next clock wise half-edge in the origin ring
-        VertId org;  ///< vertex at the origin of the edge
-        FaceId left; ///< face at the left of the edge
-
-        bool operator ==( const HalfEdgeRecord& b ) const
-        {
-            return next == b.next && prev == b.prev && org == b.org && left == b.left;
-        }
-        HalfEdgeRecord() noexcept = default;
-        explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
-    };
-
     /// creates an edge not associated with any vertex or face
     [[nodiscard]] MRMESH_API EdgeId makeEdge();
 
@@ -534,6 +518,21 @@ private:
     /// sets new left face to the full left ring including this edge, without updating edgePerFace_ table
     void setLeft_( EdgeId a, FaceId f );
 
+    /// data of every half-edge
+    struct HalfEdgeRecord
+    {
+        EdgeId next; ///< next counter clock wise half-edge in the origin ring
+        EdgeId prev; ///< next clock wise half-edge in the origin ring
+        VertId org;  ///< vertex at the origin of the edge
+        FaceId left; ///< face at the left of the edge
+
+        bool operator ==( const HalfEdgeRecord& b ) const
+        {
+            return next == b.next && prev == b.prev && org == b.org && left == b.left;
+        }
+        HalfEdgeRecord() noexcept = default;
+        explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
+    };
     /// translates all fields in the record for this edge given maps
     void translateNoFlip_( HalfEdgeRecord & r,
         const FaceMap & fmap, const VertMap & vmap, const WholeEdgeMap & emap ) const;

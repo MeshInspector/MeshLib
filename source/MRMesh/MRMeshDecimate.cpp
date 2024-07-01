@@ -475,7 +475,24 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVert
 
     QuadraticForm3f qf;
     Vector3f pos;
-    std::tie( qf, pos ) = sum( vo, po, vd, pd, !optimizeVertexPos );
+    if ( settings_.touchBdVerts )
+        std::tie( qf, pos ) = sum( vo, po, vd, pd, !optimizeVertexPos );
+    else
+    {
+        const bool bdO = pBdVerts_->test( o );
+        const bool bdD = pBdVerts_->test( d );
+        if ( bdO )
+        {
+            if ( bdD )
+                qf.c = FLT_MAX;
+            else
+                qf = sumAt( vo, po, vd, pd, pos = po );
+        }
+        else if ( bdD )
+            qf = sumAt( vo, po, vd, pd, pos = pd );
+        else
+            std::tie( qf, pos ) = sum( vo, po, vd, pd, !optimizeVertexPos );
+    }
 
     if ( settings_.strategy == DecimateStrategy::MinimizeError )
     {

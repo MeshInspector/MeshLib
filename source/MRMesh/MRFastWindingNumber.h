@@ -77,7 +77,7 @@ public:
 
 /// the class for fast approximate computation of winding number for a mesh (using its AABB tree)
 /// \ingroup AABBTreeGroup
-class [[nodiscard]] MRMESH_CLASS FastWindingNumber : public IFastWindingNumber
+class MRMESH_CLASS [[nodiscard]] FastWindingNumber : public IFastWindingNumber
 {
 public:
     /// constructs this from AABB tree of given mesh;

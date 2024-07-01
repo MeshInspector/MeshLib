@@ -25,10 +25,12 @@ public:
         float lastMergeVolume = 0; ///< water volume in the basin when it was formed (by merge or creation)
         Graph::EdgeId overflowVia; ///< when level=lowestBdLevel, volume=0, all water from this basin overflows via this boundary
 
+        BasinInfo() {} // Apparently I need this for `MR::Vector` to register default-constructibility inside the enclosing class.
+
         /// amount of precipitation (in same units as mesh coordinates and water level),
         /// which can be added before overflowing the basin
         float amountTillOverflow() const
-        { 
+        {
             assert( !overflowVia );
             assert( maxVolume >= accVolume );
             return ( maxVolume - accVolume ) / area;
@@ -36,7 +38,7 @@ public:
 
         /// approximate current level of water (z-coordinate) in the basin
         float approxLevel() const
-        { 
+        {
             assert( lastMergeLevel <= lowestBdLevel );
             assert( lastMergeVolume <= maxVolume );
             if ( maxVolume <= lastMergeVolume )
@@ -73,7 +75,7 @@ public:
 
     /// returns underlying graph where each basin is a vertex
     [[nodiscard]] const Graph & graph() const { return graph_; }
-    
+
     /// returns total precipitation area
     [[nodiscard]] float totalArea() const { return totalArea_; }
 

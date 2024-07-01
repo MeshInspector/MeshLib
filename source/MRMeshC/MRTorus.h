@@ -13,7 +13,7 @@ typedef struct MRMakeTorusParameters
     // TODO: points
 } MRMakeTorusParameters;
 
-MRMESHC_API MRMakeTorusParameters mrMakeTorusParametersDefault();
+MRMESHC_API MRMakeTorusParameters mrMakeTorusParametersDefault( void );
 
 MRMESHC_API MRMesh* mrMakeTorus( const MRMakeTorusParameters* params );
 

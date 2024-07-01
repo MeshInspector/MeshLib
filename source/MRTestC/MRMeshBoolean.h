@@ -1,5 +1,5 @@
 #pragma once
 
-void testMeshBoolean();
+void testMeshBoolean( void );
 
-void testBooleanMultipleEdgePropogationSort();
+void testBooleanMultipleEdgePropogationSort( void );

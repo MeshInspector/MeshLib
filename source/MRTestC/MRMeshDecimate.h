@@ -1,3 +1,3 @@
 #pragma once
 
-void testMeshDecimate();
+void testMeshDecimate( void );

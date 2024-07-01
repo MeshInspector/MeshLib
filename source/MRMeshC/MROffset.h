@@ -15,7 +15,7 @@ typedef struct MROffsetParameters
     bool memoryEfficient;
 } MROffsetParameters;
 
-MRMESHC_API MROffsetParameters mrOffsetParametersDefault();
+MRMESHC_API MROffsetParameters mrOffsetParametersDefault( void );
 
 MRMESHC_API MRMesh* mrOffsetMesh( MRMeshPart mp, float offset, const MROffsetParameters* params, MRString** errorString );
 
@@ -42,7 +42,7 @@ typedef struct MRGeneralOffsetParameters
     MRGeneralOffsetParametersMode mode;
 } MRGeneralOffsetParameters;
 
-MRMESHC_API MRGeneralOffsetParameters mrGeneralOffsetParametersDefault();
+MRMESHC_API MRGeneralOffsetParameters mrGeneralOffsetParametersDefault( void );
 
 MRMESHC_API MRMesh* mrSharpOffsetMesh( MRMeshPart mp, float offset, const MROffsetParameters* params, const MRGeneralOffsetParameters* generalParams, MRString** errorString );
 

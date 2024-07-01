@@ -11,7 +11,7 @@ typedef struct MRAffineXf3f
     MRVector3f b;
 } MRAffineXf3f;
 
-MRMESHC_API MRAffineXf3f mrAffineXf3fNew();
+MRMESHC_API MRAffineXf3f mrAffineXf3fNew( void );
 
 MRMESHC_API MRAffineXf3f mrAffineXf3fTranslation( const MRVector3f* b );
 

@@ -12,7 +12,7 @@ typedef struct MRMatrix3f
     MRVector3f z;
 } MRMatrix3f;
 
-MRMESHC_API MRMatrix3f mrMatrix3fIdentity();
+MRMESHC_API MRMatrix3f mrMatrix3fIdentity( void );
 
 MRMESHC_API MRMatrix3f mrMatrix3fRotationScalar( const MRVector3f* axis, float angle );
 

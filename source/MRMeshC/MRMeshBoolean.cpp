@@ -15,7 +15,7 @@ MRBooleanResult mrBoolean( const MRMesh* meshA, const MRMesh* meshB, MRBooleanOp
             .cb = params_->cb,
         };
     }
-    auto res = boolean(
+    auto res = MR::boolean(
         *reinterpret_cast<const Mesh*>( meshA ),
         *reinterpret_cast<const Mesh*>( meshB ),
         static_cast<BooleanOperation>(operation),

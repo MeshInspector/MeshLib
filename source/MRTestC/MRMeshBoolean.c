@@ -12,7 +12,7 @@
 #define PI_F 3.14159265358979f
 #define V( ID ) (MRVertId){ .id = ( ID ) }
 
-void testMeshBoolean()
+void testMeshBoolean( void )
 {
     MRMakeTorusParameters paramsA = { 1.1f, 0.5f, 8, 8 };
     MRMesh* meshA = mrMakeTorus( &paramsA );
@@ -81,7 +81,7 @@ void testMeshBoolean()
     mrMeshFree( meshA );
 }
 
-void testBooleanMultipleEdgePropogationSort()
+void testBooleanMultipleEdgePropogationSort( void )
 {
     const MRVector3f points[6] = {
         {  0.0f, 0.0f, 0.0f },

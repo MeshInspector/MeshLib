@@ -14,7 +14,7 @@ typedef struct MRMakeCylinderAdvancedParameters
     int resolution;
 } MRMakeCylinderAdvancedParameters;
 
-MRMESHC_API MRMakeCylinderAdvancedParameters mrMakeCylinderAdvancedParametersDefault();
+MRMESHC_API MRMakeCylinderAdvancedParameters mrMakeCylinderAdvancedParametersDefault( void );
 
 MRMESHC_API MRMesh* mrMakeCylinderAdvanced( const MRMakeCylinderAdvancedParameters* params );
 

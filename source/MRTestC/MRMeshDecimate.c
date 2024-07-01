@@ -8,7 +8,7 @@
 
 #define PI_F 3.14159265358979f
 
-void testMeshDecimate()
+void testMeshDecimate( void )
 {
     MRMakeCylinderAdvancedParameters params = {
         .radius0 = 0.5f,

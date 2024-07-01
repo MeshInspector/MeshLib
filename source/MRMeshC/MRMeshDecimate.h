@@ -41,7 +41,7 @@ typedef struct MRDecimateSettings
     int minFacesInPart;
 } MRDecimateSettings;
 
-MRMESHC_API MRDecimateSettings mrDecimateSettingsDefault();
+MRMESHC_API MRDecimateSettings mrDecimateSettingsDefault( void );
 
 typedef struct MRDecimateResult
 {
@@ -63,7 +63,7 @@ typedef struct MRResolveMeshDegenSettings
     MRFaceBitSet* region;
 } MRResolveMeshDegenSettings;
 
-MRMESHC_API MRResolveMeshDegenSettings mrResolveMeshDegenSettingsDefault();
+MRMESHC_API MRResolveMeshDegenSettings mrResolveMeshDegenSettingsDefault( void );
 
 MRMESHC_API bool mrResolveMeshDegenerations( MRMesh* mesh, const MRResolveMeshDegenSettings* settings );
 
@@ -86,7 +86,7 @@ typedef struct MRRemeshSettings
     MRProgressCallback progressCallback;
 } MRRemeshSettings;
 
-MRMESHC_API MRRemeshSettings mrRemeshSettingsDefault();
+MRMESHC_API MRRemeshSettings mrRemeshSettingsDefault( void );
 
 MRMESHC_API bool mrRemesh( MRMesh* mesh, const MRRemeshSettings* settings );
 

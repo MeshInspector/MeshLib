@@ -49,7 +49,7 @@ IF(MR_EMSCRIPTEN)
 ENDIF()
 
 file(GLOB SOURCES "*.cpp")
-file(GLOB HEADERS "*.h")
+file(GLOB HEADERS "*.h" "*.hpp")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 

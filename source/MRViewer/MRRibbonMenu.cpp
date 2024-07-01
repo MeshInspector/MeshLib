@@ -84,6 +84,11 @@ void RibbonMenu::init( MR::Viewer* _viewer )
 
     RibbonIcons::load();
 
+    welcomeWindow_.init( [&] ( std::shared_ptr<RibbonMenuItem> item, bool available )
+    {
+        itemPressed_( item, available );
+    } );
+
     callback_draw_viewer_window = [] ()
     {};
 
@@ -1458,6 +1463,7 @@ void RibbonMenu::drawSceneListButtons_()
 
 void RibbonMenu::drawWelcomeWindow_()
 {
+    welcomeWindow_.draw();
 }
 
 void RibbonMenu::readMenuItemsStructure_()

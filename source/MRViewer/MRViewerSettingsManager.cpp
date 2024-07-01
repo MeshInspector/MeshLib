@@ -46,6 +46,7 @@ const std::string cShowInfoInObjectTree = "showInfoInObjectTree";
 const std::string cAutoClosePlugins = "autoClosePlugins";
 const std::string cShowExperimentalFeatures = "showExperimentalFeatures";
 const std::string cAmbientCoefSelectedObj = "ambientCoefSelectedObj";
+const std::string cShowWelcomeWindowOnStartup = "showWelcomeWindowOnStartup";
 }
 
 namespace Defaults
@@ -59,6 +60,7 @@ const bool showSelectedObjects = false;
 const bool deselectNewHiddenObjects = false;
 const bool closeContextOnChange = false;
 const bool showExperimentalFeatures = false;
+const bool showWelcomeWindowOnStartup = true;
 }
 
 namespace MR
@@ -120,6 +122,7 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
         }
         ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
         ribbonMenu->resetQuickAccessList();
+        ribbonMenu->getWelcomeWindow().setShowOnStartup( cfg.getBool( cShowWelcomeWindowOnStartup, Defaults::showWelcomeWindowOnStartup ), true );
     }
 
 #if !defined(__EMSCRIPTEN__)
@@ -168,6 +171,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             }
         }
         ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
+        ribbonMenu->getWelcomeWindow().setShowOnStartup( cfg.getBool( cShowWelcomeWindowOnStartup, Defaults::showWelcomeWindowOnStartup ), true );
     }
 
     if ( cfg.hasJsonValue( cSceneControlParamKey ) )
@@ -402,6 +406,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
             if ( ribbonSceneObjectsList )
                 cfg.setBool( cCloseContextOnChange, ribbonSceneObjectsList->getCloseContextOnChange() );
         }
+        cfg.setBool( cShowWelcomeWindowOnStartup, ribbonMenu->getWelcomeWindow().getShowOnStartup() );
     }
 
     Json::Value sceneControls;

@@ -47,7 +47,7 @@ var download_file_dialog_popup = function (defaultName, extensions) {
   var name_selector = document.createElement('input');
   name_selector.setAttribute('type', 'text');
   name_selector.setAttribute('id', 'download_name');
-  name_selector.setAttribute('style', 'position: absolute;top: 81px;left: 50%;transform: translate(-50%, 0px);background-color:' + bgColor +';border-radius: 4px;width: 198px;height: 26px;border: solid 1px #5f6369;color:' + textColor + 'padding: 0px 0px;');
+  name_selector.setAttribute('style', 'position: absolute;top: 81px;left: 50%;transform: translate(-50%, 0px);background-color:' + bgColor +';border-radius: 4px;width: 198px;height: 26px;border: solid 1px #5f6369;color:' + textColor + ';padding: 0px 0px;');
 
   name_selector.value = defaultName;
 
@@ -58,7 +58,7 @@ var download_file_dialog_popup = function (defaultName, extensions) {
 
   var list_item = document.createElement('select');
   list_item.setAttribute('id', 'download_ext');
-  list_item.setAttribute('style', 'position: absolute;top: 125px;left: 50%;transform: translate(-50%, 0px);background-color:' + bgColor + ';border-radius: 4px;width: 200px;height: 28px;border: solid 1px #5f6369;color:' + textColor + 'padding: 0px 0px;');
+  list_item.setAttribute('style', 'position: absolute;top: 125px;left: 50%;transform: translate(-50%, 0px);background-color:' + bgColor + ';border-radius: 4px;width: 200px;height: 28px;border: solid 1px #5f6369;color:' + textColor + ';padding: 0px 0px;');
   var splitExt = extensions.split(', ');
   for (var i = 0; i < splitExt.length; i++) {
     var option_el = document.createElement('option');

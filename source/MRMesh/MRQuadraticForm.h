@@ -18,7 +18,7 @@ struct QuadraticForm
     T c = 0;
     
     /// evaluates the function at given x
-    T eval( const V & x ) const { return dot( x, A * x ) + c; }
+    [[nodiscard]] T eval( const V & x ) const { return dot( x, A * x ) + c; }
 
     /// adds to this squared distance to the origin point
     void addDistToOrigin( T weight ) { A += SM::diagonal( weight ); }
@@ -36,9 +36,18 @@ struct QuadraticForm
 /// computes sum quadratic form and the point where it reaches minimum
 /// \related QuadraticForm
 template <typename V>
-MRMESH_API std::pair< QuadraticForm<V>, V > sum(
+[[nodiscard]] MRMESH_API std::pair< QuadraticForm<V>, V > sum(
     const QuadraticForm<V> & q0, const V & x0,
     const QuadraticForm<V> & q1, const V & x1, 
     bool minAmong01 = false ); ///< if true then the minimum is selected only between points x0 and x1
+
+/// given two quadratic forms with points where they reach minima,
+/// computes sum quadratic form and the point (pos)
+/// \related QuadraticForm
+template <typename V>
+[[nodiscard]] MRMESH_API QuadraticForm<V> sumAt(
+    const QuadraticForm<V> & q0, const V & x0,
+    const QuadraticForm<V> & q1, const V & x1,
+    const V & pos );
 
 } // namespace MR

@@ -96,6 +96,8 @@ struct BooleanInternalParameters
     const Mesh* originalMeshA{ nullptr };
     /// Instance of original mesh with tree for better speed
     const Mesh* originalMeshB{ nullptr };
+    /// Optional output cut edges of booleaned meshes 
+    std::vector<EdgeLoop>* optionalOutCut{ nullptr };
 };
 
 /// Perform boolean operation on cut meshes

@@ -29,9 +29,6 @@ public:
     /// remove all lone edges from given set
     MRMESH_API void excludeLoneEdges( UndirectedEdgeBitSet & edges ) const;
 
-    /// allows to copy edges data when necessary
-    [[nodiscard]] const auto& edges() const { return edges_; }
-
     /// returns the number of half-edge records including lone ones
     [[nodiscard]] size_t edgeSize() const { return edges_.size(); }
 

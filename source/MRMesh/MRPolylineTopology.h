@@ -173,10 +173,6 @@ private:
     Vector<EdgeId, VertId> edgePerVertex_;
     VertBitSet validVerts_; ///< each true bit here corresponds to valid element in edgePerVertex_
     int numValidVerts_ = 0; ///< the number of valid elements in edgePerVertex_ or set bits in validVerts_
-
-public:
-    /// allows to copy EdgeId -> edge data when necessary
-    const auto& edges() const { return edges_; }
 };
 
 template<typename T, typename F1, typename F2>

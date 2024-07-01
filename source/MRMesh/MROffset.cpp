@@ -15,7 +15,6 @@
 #include "MRMeshFixer.h"
 #include "MRBitSetParallelFor.h"
 #include "MRRingIterator.h"
-#include "MRMeshCollide.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace MR
@@ -279,8 +278,7 @@ Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetP
         // for open input mesh, let us find only necessary portion on the shell
         auto innerFaces = findInnerShellFacesWithSplits( MeshPart{ mesh, &goodFaces }, resMesh,
             {
-                .side = offset > 0 ? Side::Positive : Side::Negative,
-                .useWindingNumber = findSelfCollidingTriangles( mesh, nullptr ).value()
+                .side = offset > 0 ? Side::Positive : Side::Negative
             } );
         resMesh.topology.deleteFaces( resMesh.topology.getValidFaces() - innerFaces );
         resMesh.pack();

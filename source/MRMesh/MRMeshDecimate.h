@@ -77,10 +77,19 @@ struct DecimateSettings
     /// If pointer is not null, then only edges from here can be collapsed (and some nearby edges can disappear)
     const UndirectedEdgeBitSet * edgesToCollapse = nullptr;
 
-    /// Whether to allow collapsing edges having at least one vertex on (region) boundary
-    bool touchBdVertices = true;
+    /// if an edge present as a key in this map is flipped or collapsed, then same happens to the value-edge (with same collapse position);
+    /// the algorithm updates this map during collapses, removing or replacing elements
+    UndirectedEdgeHashMap * twinMap = nullptr;
 
-    /// if touchBdVertices=false then the algorithm needs to know about all boundary vertices;
+    /// Whether to allow collapsing or flipping edges having at least one vertex on (region) boundary
+    bool touchNearBdEdges = true;
+
+    /// touchBdVerts=true: allow moving and eliminating boundary vertices during edge collapses;
+    /// touchBdVerts=false: allow only collapsing an edge having only one boundary vertex in that vertex, so position and count of boundary vertices do not change;
+    /// this setting is ignored if touchNearBdEdges=false
+    bool touchBdVerts = true;
+
+    /// if touchNearBdEdges=false or touchBdVerts=false then the algorithm needs to know about all boundary vertices;
     /// if the pointer is not null then boundary vertices detection is replaced with testing values in this bit-set
     const VertBitSet * bdVerts = nullptr;
 

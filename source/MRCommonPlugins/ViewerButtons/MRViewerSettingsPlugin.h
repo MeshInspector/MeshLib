@@ -76,6 +76,7 @@ private:
     void drawSpaceMouseSettings_( float menuWidth, float menuScaling );
     void drawTouchpadSettings_( float menuScaling );
 
+    void drawGlobalSettings_( float buttonWidth, float menuScaling );
     void drawCustomSettings_( TabType tabType, float menuScaling );
 
     void updateDialog_();

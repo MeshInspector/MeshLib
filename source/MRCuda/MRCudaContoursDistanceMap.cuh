@@ -27,12 +27,10 @@ struct Node2
     __device__ int leafId() const;
 };
 
-using PolylineHalfEdgeRecord = int2;
-
 // call polyline projection kerenel for each distance map pixel in parallel
 void contoursDistanceMapProjectionKernel(
     const float2 originPoint, const int2 resolution, const float2 pixelSize,
-    const Node2* nodes, const float2* polylinePoints, const PolylineHalfEdgeRecord* edges, float* dists,
+    const Node2* nodes, const float2* polylinePoints, const int* orgs, float* dists,
     const size_t size );
 
 }

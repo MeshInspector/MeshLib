@@ -2,7 +2,6 @@
 
 #include "MRMeshTriPoint.h"
 #include "MRVector.h"
-#include "MRVector2.h"
 #include "MRPolyline.h"
 #include <functional>
 

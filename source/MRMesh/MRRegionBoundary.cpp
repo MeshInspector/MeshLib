@@ -328,13 +328,38 @@ UndirectedEdgeBitSet getIncidentEdges( const MeshTopology& topology, const FaceB
 {
     MR_TIMER
     UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
-    for ( auto f : faces )
+    BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
     {
-        for ( auto e : leftRing( topology, f ) )
-        {
-            res.set( e.undirected() );
-        }
-    }
+        EdgeId e( ue );
+        if ( contains( faces, topology.left( e ) ) || contains( faces, topology.right( e ) ) )
+            res.set( ue );
+    } );
+    return res;
+}
+
+UndirectedEdgeBitSet getIncidentEdges( const MeshTopology& topology, const UndirectedEdgeBitSet& edges )
+{
+    MR_TIMER
+    UndirectedEdgeBitSet res = edges;
+    res.resize( topology.undirectedEdgeSize() );
+    BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
+    {
+        if ( res.test( ue ) )
+            return;
+        EdgeId e( ue );
+        for ( EdgeId ei : orgRing0( topology, e ) )
+            if ( edges.test( ei ) )
+            {
+                res.set( ue );
+                return;
+            }
+        for ( EdgeId ei : orgRing0( topology, e.sym() ) )
+            if ( edges.test( ei ) )
+            {
+                res.set( ue );
+                return;
+            }
+    } );
     return res;
 }
 

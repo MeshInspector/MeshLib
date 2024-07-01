@@ -66,11 +66,6 @@ public:
     MRMESH_API static const CNCMachineSettings& getCNCMachineSettings();
     MRMESH_API static void setCNCMachineSettings( const CNCMachineSettings& settings );
 
-    // Alpha for mesh features (plane, cylinder, cone...).
-    MRMESH_API static std::uint8_t getFeatureMeshAlpha();
-    MRMESH_API static void setFeatureMeshAlpha( std::uint8_t alpha );
-
-
 private:
     MRMESH_API SceneSettings();
     ~SceneSettings() = default;

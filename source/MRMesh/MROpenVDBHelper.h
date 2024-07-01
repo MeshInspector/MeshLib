@@ -4,9 +4,6 @@
 #include "openvdb/tree/TreeIterator.h"
 #include "openvdb/tree/Tree.h"
 #include "openvdb/tree/ValueAccessor.h"
-#include "openvdb/tools/ChangeBackground.h"
-#include "openvdb/tools/Prune.h"
-#include "openvdb/tools/SignedFloodFill.h"
 #include "MRProgressCallback.h"
 
 namespace MR

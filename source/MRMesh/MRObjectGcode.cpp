@@ -159,7 +159,7 @@ void ObjectGcode::serializeFields_( Json::Value& root ) const
     serializeToJson( idleColor_, root["IdleColor"] );
 
     auto& gcodeSourceRoot = root["GcodeSource"];
-    for ( const auto& str : gcodeSource_->lines )
+    for ( const auto& str : *gcodeSource_ )
         gcodeSourceRoot.append( str );
 }
 
@@ -176,12 +176,11 @@ void ObjectGcode::deserializeFields_( const Json::Value& root )
     const auto& gcodeSourceRoot = root["GcodeSource"];
     if ( !gcodeSourceRoot.isArray() )
         return;
-    GcodeSource gcodeSource;
-    gcodeSource.lines.resize( gcodeSourceRoot.size() );
-    for ( int i = 0; i < gcodeSource.lines.size(); ++i )
+    GcodeSource gcodeSource( gcodeSourceRoot.size() );
+    for ( int i = 0; i < gcodeSource.size(); ++i )
     {
         if ( gcodeSourceRoot[i].isString() )
-            gcodeSource.lines[i] = gcodeSourceRoot[i].asString();
+            gcodeSource[i] = gcodeSourceRoot[i].asString();
     }
     setGcodeSource( std::make_shared<GcodeSource>( std::move( gcodeSource ) ) );
 }
@@ -192,9 +191,9 @@ void ObjectGcode::updateHeapUsageCache_()
     if ( gcodeSource_ )
     {
         nonTrivialHeapUsageCache_ += sizeof( GcodeSource );
-        nonTrivialHeapUsageCache_ += sizeof( std::string ) * gcodeSource_->lines.capacity();
-        for ( int i = 0; i < gcodeSource_->lines.size(); ++i )
-            nonTrivialHeapUsageCache_ += gcodeSource_->lines[i].capacity();
+        nonTrivialHeapUsageCache_ += sizeof( std::string ) * gcodeSource_->capacity();
+        for ( int i = 0; i < gcodeSource_->size(); ++i )
+            nonTrivialHeapUsageCache_ += ( *gcodeSource_ )[i].capacity();
     }
     nonTrivialHeapUsageCache_ += sizeof( GcodeProcessor::MoveAction ) * actionList_.capacity();
     for ( int i = 0; i < actionList_.size(); ++i )

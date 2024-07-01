@@ -18,17 +18,17 @@ const IOFilters Filters =
 
 GcodeSource splitString( const std::string& source )
 {
-    GcodeSource res;
+    std::vector<std::string> res;
     size_t frameBegin = 0;
     size_t frameEnd = 0;
     frameEnd = source.find( '\n', frameBegin );
     while ( frameEnd != std::string::npos )
     {
-        res.lines.push_back( std::string( source.begin() + frameBegin, source.begin() + frameEnd ) );
+        res.push_back( std::string( source.begin() + frameBegin, source.begin() + frameEnd ) );
         frameBegin = frameEnd + 1;
         frameEnd = source.find( '\n', frameBegin );
     }
-    res.lines.push_back( std::string( source.begin() + frameBegin, source.end() ) );
+    res.push_back( std::string( source.begin() + frameBegin, source.end() ) );
     return res;
 }
 
@@ -52,7 +52,7 @@ Expected<GcodeSource, std::string> fromAnySupportedFormat( const std::filesystem
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    Expected<GcodeSource, std::string> res = unexpected( std::string( "unsupported file extension" ) );
+    Expected<std::vector<std::string>, std::string> res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".gcode" || ext == ".txt" || ext == ".nc" )
         res = fromGcode( file, callback );
     return res;

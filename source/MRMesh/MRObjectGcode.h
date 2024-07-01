@@ -2,10 +2,11 @@
 #include "MRObjectLinesHolder.h"
 #include "MRGcodeProcessor.h"
 #include "MRColor.h"
-#include "MRGcodeSource.h"
 
 namespace MR
 {
+
+using GcodeSource = std::vector<std::string>;
 
 /// an object that stores a g-code
 /// \ingroup DataModelGroup

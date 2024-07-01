@@ -35,7 +35,6 @@
     <ClInclude Include="MRFillHoleNicely.h" />
     <ClInclude Include="MRFinally.h" />
     <ClInclude Include="MRFixSelfIntersections.h" />
-    <ClInclude Include="MRGcodeSource.h" />
     <ClInclude Include="MRInTreePathBuilder.h" />
     <ClInclude Include="MRChangeColoringType.h" />
     <ClInclude Include="MRChangeColoringActions.h" />

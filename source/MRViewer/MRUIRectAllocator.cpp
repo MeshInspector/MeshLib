@@ -182,7 +182,10 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
                 if ( !win->WasActive || ( win->Flags & ImGuiWindowFlags_ChildWindow ) )
                     continue; // Skip inactive windows and child windows.
                 std::string_view winNameView = win->Name;
-                if ( auto pos = winNameView.find( "##" ); pos != std::string_view::npos && winNameView.find( "[rect_allocator_ignore]", pos + 2 ) != std::string_view::npos )
+                if ( auto pos = winNameView.find( "##" ); 
+                    pos != std::string_view::npos && 
+                    winNameView.find( "[rect_allocator_ignore]", pos + 2 ) != std::string_view::npos &&
+                    winNameView.find( "##ToolTip_", pos + 2 ) != std::string_view::npos )
                     continue; // Ignore if the name contains the special tag.
                 if ( std::strcmp( win->Name, expectedWindowName ) == 0 )
                     continue; // Skip the target window itself.

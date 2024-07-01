@@ -16,7 +16,7 @@ class MRVIEWER_CLASS RibbonMenuSearch
 {
 public:
     // returns search imgui popup window name
-    const char* windowName() const { return "##RibbonGlobalSearchPopup"; }
+    const char* windowName() const { return "##RibbonGlobalSearchPopup[rect_allocator_ignore]"; }
     // add item to recent items list
     void pushRecentItem( const std::shared_ptr<RibbonMenuItem>& item );
 

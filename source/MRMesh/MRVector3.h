@@ -42,7 +42,7 @@ struct Vector3
     T lengthSq() const { return x * x + y * y + z * z; }
     T length() const { return std::sqrt( lengthSq() ); }
 
-    [[nodiscard]] Vector3 normalized() const requires std::floating_point<T>
+    [[nodiscard]] Vector3 normalized() const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
     {
         auto len = length();
         if ( len <= 0 )
@@ -55,23 +55,23 @@ struct Vector3
 
     /// returns 2 unit vector, which together with this vector make an orthogonal basis
     /// Currently not implemented for integral vectors.
-    std::pair<Vector3, Vector3> perpendicular() const requires std::floating_point<T>;
+    std::pair<Vector3, Vector3> perpendicular() const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> );
 
     /// returns this vector transformed by xf if it is
-    Vector3 transformed( const AffineXf3<T>* xf ) const requires(!std::same_as<T, bool>)
+    Vector3 transformed( const AffineXf3<T>* xf ) const MR_REQUIRES_IF_SUPPORTED( !std::same_as<T, bool> )
     {
         return xf ? ( *xf )( *this ) : *this;
     }
 
     /// get rid of signed zero values to be sure that equal vectors have identical binary representation
-    void unsignZeroValues() requires std::floating_point<T>
+    void unsignZeroValues() MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
     {
         for ( auto i = 0; i < elements; ++i )
             if ( (*this)[i] == 0.f && std::signbit( (*this)[i] ) )
                 (*this)[i] = 0.f;
     }
 
-    [[nodiscard]] bool isFinite() const requires std::floating_point<T>
+    [[nodiscard]] bool isFinite() const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
     {
         return std::isfinite( x ) && std::isfinite( y ) && std::isfinite( z );
     }
@@ -157,7 +157,7 @@ inline Vector3<T> Vector3<T>::furthestBasisVector() const
 }
 
 template <typename T>
-inline std::pair<Vector3<T>, Vector3<T>> Vector3<T>::perpendicular() const requires std::floating_point<T>
+inline std::pair<Vector3<T>, Vector3<T>> Vector3<T>::perpendicular() const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
 {
     std::pair<Vector3<T>, Vector3<T>> res;
     auto c1 = furthestBasisVector();

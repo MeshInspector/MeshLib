@@ -27,7 +27,6 @@ void RibbonIcons::free()
     for ( auto& curData : instance_().data_ )
     {
         curData.map.clear();
-        curData.loadSize = std::array<int, size_t( Sizes::Count )>();
     }
 }
 
@@ -39,11 +38,7 @@ const ImGuiImage* RibbonIcons::findByName( const std::string& name, float width,
     auto iconsIt = map.find( name );
     if ( iconsIt == map.end() )
         return nullptr;
-    auto reqSize = int( instance.findRequiredSize_( width, iconType ) );
-    if ( colorType == ColorType::Colored )
-        return iconsIt->second[reqSize].colored.get();
-    else
-        return iconsIt->second[reqSize].white.get();
+    return instance.findRequiredSize_( iconsIt->second, width, colorType, iconType );
 }
 
 RibbonIcons::RibbonIcons()
@@ -92,17 +87,27 @@ const char* RibbonIcons::sizeSubFolder_( Sizes sz )
     return folders[int( sz )];
 }
 
-RibbonIcons::Sizes RibbonIcons::findRequiredSize_( float width, IconType iconType ) const
+const ImGuiImage* RibbonIcons::findRequiredSize_( const SizedIcons& icons, float width, ColorType colorType, IconType iconType ) const
 {
     const auto& curData = data_[size_t( iconType )];
 
+    int maxSize = -1;
+    const ImGuiImage* maxIcon{ nullptr };
     for ( int i = int( curData.minMaxSizes.first ); i <= int( curData.minMaxSizes.second ); ++i )
     {
-        float rate = float( curData.loadSize[i] ) / width;
+        const auto& icon = colorType == ColorType::White ? icons[i].white : icons[i].colored;
+        if ( !icon )
+            continue;
+        if ( i > maxSize )
+        {
+            maxSize = i;
+            maxIcon = icon.get();
+        }
+        float rate = float( icon->getImageWidth() ) / width;
         if ( rate > 0.95f ) // 5% upscaling is OK
-            return Sizes( i );
+            return maxIcon;
     }
-    return curData.minMaxSizes.second;
+    return maxIcon;
 }
 
 void RibbonIcons::load_( IconType type )
@@ -116,8 +121,6 @@ void RibbonIcons::load_( IconType type )
     std::filesystem::path path = currentData.pathDirectory;
     int minSize = static_cast< int >( currentData.minMaxSizes.first );
     int maxSize = static_cast< int >( currentData.minMaxSizes.second );
-
-    auto& loadedSizes = currentData.loadSize;
 
     for ( int sz = minSize; sz <= maxSize; ++sz )
     {
@@ -144,8 +147,6 @@ void RibbonIcons::load_( IconType type )
                 continue;
 
             MeshTexture texture{ std::move( *image ) };
-            if ( loadedSizes[sz] == 0 )
-                loadedSizes[sz] = texture.resolution.x;
             if ( sz != int( Sizes::X0_5 ) )
                 texture.filter = FilterType::Linear;
 

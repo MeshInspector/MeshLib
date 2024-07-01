@@ -57,7 +57,7 @@ private:
 
     static const char* sizeSubFolder_( Sizes sz );
 
-    Sizes findRequiredSize_( float width, IconType iconType ) const;
+    const ImGuiImage* findRequiredSize_( const SizedIcons& icons, float width, ColorType colorType, IconType iconType ) const;
 
     void load_( IconType type );
 
@@ -75,7 +75,6 @@ private:
         std::pair<Sizes, Sizes> minMaxSizes;
         AvailableColor availableColor = AvailableColor::White;
         HashMap<std::string, SizedIcons> map;
-        std::array<int, size_t( Sizes::Count )> loadSize;
     };
 
     std::array<IconTypeData, size_t( IconType::Count )> data_;

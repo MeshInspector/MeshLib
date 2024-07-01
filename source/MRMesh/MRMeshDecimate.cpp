@@ -626,7 +626,7 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
             assert( topology.isLeftBdEdge( oBdEdge ) );
             continue;
         }
-        if ( collapsingFlippable && settings_.notFlippable && settings_.notFlippable->test( e ) )
+        if ( !settings_.collapseNearNotFlippable && collapsingFlippable && settings_.notFlippable && settings_.notFlippable->test( e ) )
             return { .status =  CollapseStatus::Flippable }; // cannot collapse a flippable edge incident to a not-flippable edge
 
         const auto pDest2 = mesh_.destPnt( topology.next( e ) );
@@ -671,7 +671,7 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
             assert( topology.isLeftBdEdge( dBdEdge ) );
             continue;
         }
-        if ( collapsingFlippable && settings_.notFlippable && settings_.notFlippable->test( e ) )
+        if ( !settings_.collapseNearNotFlippable && collapsingFlippable && settings_.notFlippable && settings_.notFlippable->test( e ) )
             return { .status =  CollapseStatus::Flippable }; // cannot collapse a flippable edge incident to a not-flippable edge
 
         const auto pDest2 = mesh_.destPnt( topology.next( e ) );

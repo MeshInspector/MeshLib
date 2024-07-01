@@ -30,8 +30,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Decimate, [] ( pybind11::module_& m )
             "if true then after each edge collapse the position of remaining vertex is optimized to\n"
             "minimize local shape change, if false then the edge is collapsed in one of its vertices, which keeps its position" ).
         def_readwrite( "region", &MR::DecimateSettings::region, "Region on mesh to be decimated, it is updated during the operation" ).
+        def_readwrite( "notFlippable", &MR::DecimateSettings::notFlippable,
+            "Edges specified by this bit-set will never be flipped, but they can be collapsed or replaced during collapse of nearby edges so it is updated during the operation").
+        def_readwrite( "collapseNearNotFlippable", &MR::DecimateSettings::collapseNearNotFlippable,
+            "Whether to allow collapse of edges incident to notFlippable edges, which can move vertices of notFlippable edges unless they are fixed").
         def_readwrite( "touchNearBdEdges", &MR::DecimateSettings::touchNearBdEdges, "Whether to allow collapsing or flipping edges having at least one vertex on (region) boundary" ).
         def_readwrite( "touchBdVerts", &MR::DecimateSettings::touchBdVerts, "touchBdVerts=true: allow moving and eliminating boundary vertices during edge collapses; touchBdVerts=false: allow only collapsing an edge having only one boundary vertex in that vertex, so position and count of boundary vertices do not change; this setting is ignored if touchNearBdEdges=false" ).
+        def_readwrite( "maxAngleChange", &MR::DecimateSettings::maxAngleChange, "Permit edge flips (in addition to collapsing) to improve Delone quality of the mesh if it does not change dihedral angle more than on this value (negative value prohibits any edge flips)" ).
         def_readwrite( "packMesh", &MR::DecimateSettings::packMesh, "whether to pack mesh at the end" ).
         def_readwrite( "subdivideParts", &MR::DecimateSettings::subdivideParts, 
             "If this value is more than 1, then virtually subdivides the mesh on given number of parts to process them in parallel (using many threads);\n"

@@ -77,7 +77,9 @@ public:
 
 /// the class for fast approximate computation of winding number for a mesh (using its AABB tree)
 /// \ingroup AABBTreeGroup
-class MRMESH_CLASS [[nodiscard]] FastWindingNumber : public IFastWindingNumber
+/// Note, this used to be `[[nodiscard]]`, but GCC 12 doesn't understand both `[[...]]` and `__attribute__(...)` on the same class.
+/// A possible fix is to change `MRMESH_CLASS` globally to `[[__gnu__::__visibility__("default")]]`.
+class MRMESH_CLASS FastWindingNumber : public IFastWindingNumber
 {
 public:
     /// constructs this from AABB tree of given mesh;

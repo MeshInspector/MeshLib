@@ -84,7 +84,7 @@ const std::string& ViewerSettingsPlugin::uiName() const
 
 void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
 {
-    auto menuWidth = 380.0f * menuScaling;
+    auto menuWidth = 400.0f * menuScaling;
 
     ImVec2 position{ ( viewer->framebufferSize.x - menuWidth ) / 2, viewer->framebufferSize.y / 6.0f };
     if ( !ImGuiBeginWindow_( { .width = menuWidth, .position = &position, .menuScaling = menuScaling } ) )
@@ -235,18 +235,28 @@ void ViewerSettingsPlugin::drawQuickTab_( float menuWidth, float menuScaling )
     drawMouseSceneControlsSettings_( menuWidth, menuScaling );
 }
 
+void ViewerSettingsPlugin::drawGlobalSettings_( float buttonWidth, float menuScaling )
+{
+    UI::separator( menuScaling * cSeparatorIndentMultiplier, "Global" );
+    bool resetClicked = UI::button( "Reset Settings", Vector2f( buttonWidth, 0 ) );
+    drawResetDialog_( resetClicked, menuScaling );
+}
+
 void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScaling )
 {
     const float btnHalfSizeX = 168.0f * menuScaling;
 
     UI::separator( menuScaling * cSeparatorIndentMultiplier, "Interface" );
-
+    const auto& style = ImGui::GetStyle();
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
     drawThemeSelector_( menuScaling );
 
     bool savedDialogsBackUp = viewer->getMenuPlugin()->isSavedDialogPositionsEnabled();
     bool savedDialogsVal = savedDialogsBackUp;
     UI::checkbox( "Save Tool Window Positions", &savedDialogsVal );
     UI::setTooltipIfHovered( "If checked then enables using of saved positions of tool windows in the config file", menuScaling );
+    ImGui::PopStyleVar();
+
     if ( savedDialogsVal != savedDialogsBackUp )
         viewer->getMenuPlugin()->enableSavedDialogPositions( savedDialogsVal );
 
@@ -295,10 +305,7 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
         UI::setTooltipIfHovered( "Show experimental or diagnostic tools and controls", menuScaling );
     }
 
-    UI::separator( menuScaling * cSeparatorIndentMultiplier, "Global" );
-
-    bool resetClicked = UI::button( "Reset Settings", Vector2f( btnHalfSizeX, 0 ) );
-    drawResetDialog_( resetClicked, menuScaling );
+    drawGlobalSettings_( btnHalfSizeX, menuScaling );
 
 #if 0 // Hide unimplemented settings
     if ( !viewer->experimentalFeatures )
@@ -359,6 +366,9 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
 
     ImGui::SetNextItemWidth( 170.0f * menuScaling );
     auto rotMode = viewportParameters.rotationMode;
+
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
+
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
     UI::combo( "Rotation Mode", ( int* )&rotMode, { "Scene Center", "Pick / Scene Center", "Pick" } );
     viewer->viewport().rotationCenterMode( rotMode );
@@ -381,6 +391,7 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
     viewer->viewport().showRotationCenter( showRotCenter );
 
     ImGui::PopItemWidth();
+    ImGui::PopStyleVar();
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 2 } );
 
     drawProjectionModeSelector_( menuScaling, 170.0f * menuScaling );
@@ -441,6 +452,8 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
 
     drawRenderOptions_( menuScaling );
     drawShadowsOptions_( menuWidth, menuScaling );
+
+    drawGlobalSettings_( 168.0f * menuScaling, menuScaling );
 }
 
 void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
@@ -484,13 +497,15 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         UI::separator( menuScaling * cSeparatorIndentMultiplier, "Common" );
 
         // --- Leading zero
-
+        const auto& style = ImGui::GetStyle();
+        ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
         if ( UI::checkbox( "Leading zero", &paramsLen.leadingZero ) )
         {
             forAllParams( [&]( auto& params ){ params.leadingZero = paramsLen.leadingZero; } );
             applyParams();
         }
         ImGui::SetItemTooltip( "If disabled, remove the lone zeroes before the decimal point." );
+        ImGui::PopStyleVar();
 
         // --- Thousands separator
 
@@ -649,7 +664,7 @@ void ViewerSettingsPlugin::drawFeaturesTab_( float menuScaling )
     float value = 0;
     const auto& style = ImGui::GetStyle();
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
-
+    ImGui::PushItemWidth( 200.0f * menuScaling );
     value = SceneSettings::get( SceneSettings::FloatType::FeatureMeshAlpha );
     if ( UI::slider<NoUnit>( "Surface opacity", value, 0.f, 1.f ) )
         SceneSettings::set( SceneSettings::FloatType::FeatureMeshAlpha, value );
@@ -670,6 +685,7 @@ void ViewerSettingsPlugin::drawFeaturesTab_( float menuScaling )
     if ( UI::slider<PixelSizeUnit>( "Line width (subfeatures)", value, 1.f, 20.f ) )
         SceneSettings::set( SceneSettings::FloatType::FeatureSubLineWidth, value );
 
+    ImGui::PopItemWidth();
     ImGui::PopStyleVar();
 }
 
@@ -735,12 +751,14 @@ void ViewerSettingsPlugin::drawRenderOptions_( float menuScaling )
 void ViewerSettingsPlugin::drawShadowsOptions_( float, float menuScaling )
 {
     const auto& style = ImGui::GetStyle();
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * 1.5f } );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
     const bool showShadows = shadowGl_ && RibbonButtonDrawer::CustomCollapsingHeader( "Shadows" );
     ImGui::PopStyleVar();
 
     if ( showShadows )
     {
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cDefaultItemSpacing * menuScaling * 0.5f );
+        ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
         bool isEnableShadows = shadowGl_->isEnabled();
         UI::checkbox( "Enabled", &isEnableShadows );
         if ( isEnableShadows != shadowGl_->isEnabled() )
@@ -755,6 +773,7 @@ void ViewerSettingsPlugin::drawShadowsOptions_( float, float menuScaling )
         UI::colorEdit4( "Shadow Color", color,
             ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel );
         shadowGl_->setShadowColor( color );
+        ImGui::PopStyleVar();
 
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * 1.5f } );
         ImGui::PushItemWidth( 208.0f * menuScaling );
@@ -1028,7 +1047,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth, float menuS
         bool changed = UI::slider<NoUnit>( label, valueAbs, 1, 100 );
         ImGui::SameLine( menuWidth * 0.78f );
         const float cursorPosY = ImGui::GetCursorPosY();
-        ImGui::SetCursorPosY( cursorPosY + ( cButtonPadding - cCheckboxPadding ) * menuScaling );
+        ImGui::SetCursorPosY( cursorPosY + ( cInputPadding - cCheckboxPadding ) * menuScaling );
         changed = UI::checkbox( ( std::string( "Inverse##" ) + label ).c_str(), &inverse ) || changed;
         if ( changed )
             value = valueAbs * ( inverse ? -1.f : 1.f );
@@ -1087,12 +1106,14 @@ void ViewerSettingsPlugin::drawTouchpadSettings_( float menuScaling )
     const std::vector<std::string> swipeModeList = { "Swipe Rotates Camera", "Swipe Moves Camera" };
     assert( swipeModeList.size() == (size_t)TouchpadParameters::SwipeMode::Count );
 
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
     bool updateSettings = false;
     if ( UI::checkbox( "Ignore Kinetic Movements", &touchpadParameters_.ignoreKineticMoves ) )
         updateSettings = true;
     if ( UI::checkbox( "Allow System to Interrupt Gestures", &touchpadParameters_.cancellable ) )
         updateSettings = true;    
-    
+    ImGui::PopStyleVar();
+
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
     if ( UI::combo( "Swipe Mode", (int*)&touchpadParameters_.swipeMode, swipeModeList ) )
         updateSettings = true;

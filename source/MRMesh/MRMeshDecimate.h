@@ -74,6 +74,10 @@ struct DecimateSettings
     /// Edges specified by this bit-set will never be flipped, but they can be collapsed or replaced during collapse of nearby edges so it is updated during the operation
     UndirectedEdgeBitSet* notFlippable = nullptr;
 
+    /// Whether to allow collapse of edges incident to notFlippable edges,
+    /// which can move vertices of notFlippable edges unless they are fixed
+    bool collapseNearNotFlippable = false;
+
     /// If pointer is not null, then only edges from here can be collapsed (and some nearby edges can disappear)
     const UndirectedEdgeBitSet * edgesToCollapse = nullptr;
 

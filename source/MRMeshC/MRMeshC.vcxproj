@@ -22,6 +22,7 @@
     <ClInclude Include="MRMeshDecimate.h" />
     <ClInclude Include="MRMeshFwd.h" />
     <ClInclude Include="MRMesh.h" />
+    <ClInclude Include="MRMeshC.h" />
     <ClInclude Include="MRMeshLoad.h" />
     <ClInclude Include="MRMeshPart.h" />
     <ClInclude Include="MRMeshSave.h" />

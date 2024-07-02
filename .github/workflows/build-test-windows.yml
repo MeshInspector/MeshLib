@@ -134,6 +134,9 @@ jobs:
       - name: Unit Tests
         run: py -3 scripts\run_unit_test_script.py ${{ matrix.config }}
 
+      - name: C Unit Tests
+        run: py -3 scripts\run_c_unit_test_script.py ${{ matrix.config }}
+
       - name: Python Sanity Tests
         working-directory: source\x64\${{ matrix.config }}
         run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_python'

@@ -25,6 +25,7 @@ option(MESHLIB_BUILD_MRVIEWER "Build MRViewer library and application" ON)
 option(MESHLIB_BUILD_PYTHON_MODULES "Build Python modules" ON)
 option(MESHLIB_BUILD_MESHCONV "Build meshconv utility" ON)
 option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
+option(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING "(experimental) Build C binding library" ON)
 
 include(CTest)
 
@@ -196,9 +197,16 @@ IF(NOT MR_EMSCRIPTEN AND NOT APPLE)
   ENDIF()
 ENDIF()
 
+IF(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/MRMeshC ./MRMeshC)
+ENDIF()
+
 IF(BUILD_TESTING)
   enable_testing()
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)
+  IF(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/MRTestC ./MRTestC)
+  ENDIF()
 ENDIF()
 
 include(CMakePackageConfigHelpers)

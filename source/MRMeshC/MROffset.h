@@ -25,12 +25,12 @@ MRMESHC_API MRMesh* mrMcOffsetMesh( MRMeshPart mp, float offset, const MROffsetP
 
 MRMESHC_API MRMesh* mrMcShellMeshRegion( const MRMesh* mesh, const MRFaceBitSet* region, float offset, const MROffsetParameters* params, MRString** errorString );
 
-enum MRGeneralOffsetParametersMode
+typedef enum MRGeneralOffsetParametersMode
 {
     MRGeneralOffsetParametersModeSmooth = 0,
     MRGeneralOffsetParametersModeStandard,
     MRGeneralOffsetParametersModeSharpening
-};
+} MRGeneralOffsetParametersMode;
 
 typedef struct MRGeneralOffsetParameters
 {

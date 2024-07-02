@@ -4,13 +4,13 @@
 
 MR_EXTERN_C_BEGIN
 
-enum MRSignDetectionMode
+typedef enum MRSignDetectionMode
 {
     MRSignDetectionModeUnsigned = 0,
     MRSignDetectionModeOpenVDB,
     MRSignDetectionModeProjectionNormal,
     MRSignDetectionModeWindingRule,
     MRSignDetectionModeHoleWindingRule
-};
+} MRSignDetectionMode;
 
 MR_EXTERN_C_END

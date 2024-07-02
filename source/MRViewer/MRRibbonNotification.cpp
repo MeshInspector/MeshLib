@@ -74,6 +74,7 @@ void RibbonNotifier::drawNotifications( float scaling )
         if ( i + 1 == cNotificationNumberLimit )
             ImGui::SetNextWindowBgAlpha( 0.5f );
         ImGui::Begin( name.c_str(), nullptr, flags );
+        ImGui::BringWindowToDisplayFront( ImGui::GetCurrentWindow() );
         if ( ImGui::IsWindowAppearing() && !ProgressBar::isOrdered() )
             ImGui::SetWindowFocus();
         const int columnCount = 2;

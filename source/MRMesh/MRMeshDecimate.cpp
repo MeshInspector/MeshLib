@@ -475,8 +475,11 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVert
 
     QuadraticForm3f qf;
     Vector3f pos;
-    if ( settings_.touchBdVerts )
+    if ( settings_.touchBdVerts // if boundary vertices can be moved ...
+        || ( settings_.notFlippable && settings_.notFlippable->test( ue ) ) ) // ... or this is a not-flippable edge (if you do not want such collapses then exclude it from settings_.edgesToCollapse)
+    {
         std::tie( qf, pos ) = sum( vo, po, vd, pd, !optimizeVertexPos );
+    }
     else
     {
         const bool bdO = pBdVerts_->test( o );

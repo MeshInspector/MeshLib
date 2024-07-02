@@ -115,7 +115,7 @@ jobs:
         run: python3 -m pip install -r ./requirements/python.txt
 
       - name: Compile MRBind
-        if: ${{ matrix.os == ‘ubuntu24' }}
+        if: ${{ matrix.os == 'ubuntu24' }}
         run: |
           git clone https://github.com/MeshInspector/mrbind ../mrbind
           cmake -S ../mrbind -B ../mrbind/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=${{matrix.cxx-compiler}} -GNinja

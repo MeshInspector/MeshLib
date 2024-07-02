@@ -108,7 +108,7 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             {
                 activeTab_ = tab;
                 drawTab_( tab, menuWidth, menuScaling );
-                drawCustomSettings_( tab, menuScaling );
+                drawCustomSettings_( tab, "Tools", true, menuScaling );
                 UI::endTabItem();
             }
         }
@@ -213,6 +213,7 @@ void ViewerSettingsPlugin::drawTab_( TabType tab, float menuWidth, float menuSca
 void ViewerSettingsPlugin::drawQuickTab_( float menuWidth, float menuScaling )
 {
     UI::separator( menuScaling, "General" );
+    drawCustomSettings_( TabType::Quick, "General", false, menuScaling );
 
     drawThemeSelector_( menuScaling );
     drawProjectionModeSelector_( menuScaling, 200.0f * menuScaling );
@@ -238,6 +239,7 @@ void ViewerSettingsPlugin::drawQuickTab_( float menuWidth, float menuScaling )
 void ViewerSettingsPlugin::drawGlobalSettings_( float buttonWidth, float menuScaling )
 {
     UI::separator( menuScaling * cSeparatorIndentMultiplier, "Global" );
+    drawCustomSettings_( TabType::Application, "Global", false, menuScaling );
     bool resetClicked = UI::button( "Reset Settings", Vector2f( buttonWidth, 0 ) );
     drawResetDialog_( resetClicked, menuScaling );
 }
@@ -247,6 +249,7 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
     const float btnHalfSizeX = 168.0f * menuScaling;
 
     UI::separator( menuScaling * cSeparatorIndentMultiplier, "Interface" );
+    drawCustomSettings_( TabType::Application, "Interface", false, menuScaling );
     const auto& style = ImGui::GetStyle();
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
     drawThemeSelector_( menuScaling );
@@ -264,6 +267,7 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
         ribbonMenu_->openToolbarCustomize();
 
     UI::separator( menuScaling * cSeparatorIndentMultiplier, "Behavior" );
+    drawCustomSettings_( TabType::Application, "Behavior", false, menuScaling );
 
     ImGui::SetNextItemWidth( menuWidth * 0.5f );
     if ( ribbonMenu_ )
@@ -312,6 +316,7 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
         return; // TODO
 
     UI::separator( menuScaling, "Notifications" );
+    drawCustomSettings_( TabType::Application, "Notifications", false, menuScaling );
 
     static bool newVersion, importWarnings; // TODO
     UI::checkbox( "New application version", &newVersion );
@@ -321,6 +326,7 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
 
 #ifndef __EMSCRIPTEN__
     UI::separator( menuScaling, "Files and Folders" );
+    drawCustomSettings_( TabType::Application, "Files and Folders", false, menuScaling );
     // TODO
     static std::string logFolderPath = Logger::instance().getLogFileName().parent_path().string();
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 1.5f * cButtonPadding * menuScaling, cButtonPadding * menuScaling } );
@@ -344,6 +350,7 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
 void ViewerSettingsPlugin::drawControlTab_( float menuWidth, float menuScaling )
 {
     UI::separator( menuScaling * cSeparatorIndentMultiplier, "Keyboard" );
+    drawCustomSettings_( TabType::Control, "Keyboard", false, menuScaling );
 
     auto& style = ImGui::GetStyle();
     const float btnHalfSizeX = ( menuWidth - style.WindowPadding.x * 2 - style.ItemSpacing.x ) / 2.f;
@@ -361,6 +368,8 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
     const auto& style = ImGui::GetStyle();
 
     UI::separator( menuScaling * cSeparatorIndentMultiplier, "Viewport" );
+    drawCustomSettings_( TabType::Viewport, "Viewport", false, menuScaling );
+
     if ( viewer->viewport_list.size() > 1 )
         ImGui::Text( "Current viewport: %d", viewer->viewport().id.value() );
 
@@ -434,6 +443,7 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
     }
 
     UI::separator( menuScaling * cSeparatorIndentMultiplier, "Options" );
+    drawCustomSettings_( TabType::Viewport, "Options", false, menuScaling );
 
     ImGui::SetNextItemWidth( 170.0f * menuScaling );
     int pickRadius = int( getViewerInstance().glPickRadius );
@@ -444,11 +454,13 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
     UI::setTooltipIfHovered( "Radius of area under cursor to pick objects in scene.", menuScaling );
 
     UI::separator( menuScaling * cSeparatorIndentMultiplier, "Defaults" );
+    drawCustomSettings_( TabType::Viewport, "Defaults", false, menuScaling );
 
     drawShadingModeCombo_( true, menuScaling, 170.0f * menuScaling );
     drawUpDirectionSelector_();
 
     UI::separator( menuScaling * cSeparatorIndentMultiplier, "Render" );
+    drawCustomSettings_( TabType::Viewport, "Render", false, menuScaling );
 
     drawRenderOptions_( menuScaling );
     drawShadowsOptions_( menuWidth, menuScaling );
@@ -495,6 +507,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 
     { // Common.
         UI::separator( menuScaling * cSeparatorIndentMultiplier, "Common" );
+        drawCustomSettings_( TabType::MeasurementUnits, "Common", false, menuScaling );
 
         // --- Leading zero
         const auto& style = ImGui::GetStyle();
@@ -552,6 +565,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
     { // Length.
         ImGui::PushItemWidth( 170.0f * menuScaling );
         UI::separator( menuScaling * cSeparatorIndentMultiplier, "Linear" );
+        drawCustomSettings_( TabType::MeasurementUnits, "Linear", false, menuScaling );
 
         ImGui::PushID( "length" );
         MR_FINALLY{ ImGui::PopID(); };
@@ -607,6 +621,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
     { // Angle.
         ImGui::PushItemWidth( 170.0f * menuScaling );
         UI::separator( menuScaling, "Angular" );
+        drawCustomSettings_( TabType::MeasurementUnits, "Angular", false, menuScaling );
 
         static const std::vector<std::string> flavorOptions = { "Degrees", "Degrees, minutes", "Degrees, minutes, seconds" };
         static_assert( int( DegreesMode::degrees ) == 0 );
@@ -661,6 +676,7 @@ void ViewerSettingsPlugin::drawFeaturesTab_( float menuScaling )
     (void)menuScaling;
 
     UI::separator( menuScaling * cSeparatorIndentMultiplier, "Visuals" );
+    drawCustomSettings_( TabType::Features, "Visuals", false, menuScaling );
     float value = 0;
     const auto& style = ImGui::GetStyle();
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
@@ -946,6 +962,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
     const auto& style = ImGui::GetStyle();
 
     UI::separator( menuScaling * cSeparatorIndentMultiplier, "Mouse" );
+    drawCustomSettings_( TabType::Control, "Mouse", false, menuScaling );
 
     ImGui::SetNextItemWidth( 100 * menuScaling );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
@@ -1037,6 +1054,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
 void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth, float menuScaling )
 {
     UI::separator( menuScaling * cSeparatorIndentMultiplier, "Spacemouse" );
+    drawCustomSettings_( TabType::Control, "Spacemouse", false, menuScaling );
 
     bool anyChanged = false;
     auto drawSlider = [&anyChanged, menuWidth, menuScaling] ( const char* label, float& value )
@@ -1102,6 +1120,7 @@ void ViewerSettingsPlugin::drawTouchpadSettings_( float menuScaling )
     const auto& style = ImGui::GetStyle();
 
     UI::separator( menuScaling, "Touchpad" );
+    drawCustomSettings_( TabType::Control, "Touchpad", false, menuScaling );
 
     const std::vector<std::string> swipeModeList = { "Swipe Rotates Camera", "Swipe Moves Camera" };
     assert( swipeModeList.size() == (size_t)TouchpadParameters::SwipeMode::Count );
@@ -1122,14 +1141,24 @@ void ViewerSettingsPlugin::drawTouchpadSettings_( float menuScaling )
         viewer->setTouchpadParameters( touchpadParameters_ );
 }
 
-void ViewerSettingsPlugin::drawCustomSettings_( TabType tabType, float menuScaling )
+void ViewerSettingsPlugin::drawCustomSettings_( TabType tabType, const std::string& separatorName, bool needSeparator, float menuScaling )
 {
     if ( comboSettings_[size_t( tabType )].empty() )
         return;
-    UI::separator( menuScaling * cSeparatorIndentMultiplier, "Tools" );
+    int numRequired = 0;
     for ( auto& settings : comboSettings_[size_t( tabType )] )
     {
-        settings->draw( menuScaling );
+        if ( settings->separatorName() == separatorName )
+            ++numRequired;
+    }
+    if ( numRequired == 0 )
+        return;
+    if ( needSeparator )
+        UI::separator( menuScaling * cSeparatorIndentMultiplier, separatorName );
+    for ( auto& settings : comboSettings_[size_t( tabType )] )
+    {
+        if ( settings->separatorName() == separatorName )
+            settings->draw( menuScaling );
     }
 }
 

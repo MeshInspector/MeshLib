@@ -397,6 +397,9 @@
     <ClCompile Include="MRUIRectAllocator.cpp">
       <Filter>UIStyle</Filter>
     </ClCompile>
+    <ClCompile Include="MRViewerSettingsPlugin.cpp">
+      <Filter>Plugins</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -775,6 +778,9 @@
     </ClInclude>
     <ClInclude Include="MRUIRectAllocator.h">
       <Filter>UIStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="MRViewerSettingsPlugin.h">
+      <Filter>Plugins</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

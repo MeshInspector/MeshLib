@@ -130,7 +130,8 @@ jobs:
 
       - name: Generate MRBind bindings
         if: ${{ matrix.os == 'ubuntu24' }}
-        env: CXX=${{matrix.cxx-compiler}}
+        env:
+          CXX: ${{matrix.cxx-compiler}}
         run: scripts/mrbind/run.sh generate
 
       - name: Build
@@ -151,7 +152,8 @@ jobs:
 
       - name: Compile and link MRBind bindings
         if: ${{ matrix.os == 'ubuntu24' }}
-        env: CXX=${{matrix.cxx-compiler}}
+        env:
+          CXX: ${{matrix.cxx-compiler}}
         run: scripts/mrbind/run.sh
 
       - name: Collect Timings

@@ -2,8 +2,9 @@
 
 #include "MRMeshFwd.h"
 #include "MRConstants.h"
-#include <cmath>
 #include <algorithm>
+#include <cmath>
+#include <concepts>
 
 namespace MR
 {

@@ -3,72 +3,88 @@
 namespace MR
 {
 
+namespace
+{
+
+struct SettingsState
+{
+    std::array<bool, size_t( SceneSettings::BoolType::Count ) > boolSettings;
+    std::array<float, size_t( SceneSettings::FloatType::Count ) > floatSettings;
+
+    SceneSettings::ShadingMode defaultShadingMode = SceneSettings::ShadingMode::AutoDetect;
+    CNCMachineSettings cncMachineSettings;
+
+    SettingsState()
+    {
+        using namespace SceneSettings;
+
+        boolSettings[int( BoolType::UseDefaultScenePropertiesOnDeserialization )] = true;
+
+        floatSettings[int( FloatType::FeaturePointsAlpha )] = 1;
+        floatSettings[int( FloatType::FeatureLinesAlpha )] = 1;
+        floatSettings[int( FloatType::FeatureMeshAlpha )] = 0.5f;
+        floatSettings[int( FloatType::FeatureSubPointsAlpha )] = 1;
+        floatSettings[int( FloatType::FeatureSubLinesAlpha )] = 1;
+        floatSettings[int( FloatType::FeatureSubMeshAlpha )] = 0.5f;
+        floatSettings[int( FloatType::FeaturePointSize )] = 10;
+        floatSettings[int( FloatType::FeatureSubPointSize )] = 8;
+        floatSettings[int( FloatType::FeatureLineWidth )] = 3;
+        floatSettings[int( FloatType::FeatureSubLineWidth )] = 2;
+        floatSettings[int( FloatType::AmbientCoefSelectedObj )] = 2.5f;
+    }
+};
+
+SettingsState &GetSettingsState()
+{
+    static SettingsState ret;
+    return ret;
+}
+
+} // namespace
+
 void SceneSettings::reset()
 {
-    instance_() = SceneSettings();
+    GetSettingsState() = {};
 }
 
 bool SceneSettings::get( BoolType type )
 {
-    return instance_().boolSettings_[int( type )];
+    return GetSettingsState().boolSettings[int( type )];
 }
 
 float SceneSettings::get( FloatType type )
 {
-    return instance_().floatSettings_[int( type )];
+    return GetSettingsState().floatSettings[int( type )];
 }
 
 void SceneSettings::set( BoolType type, bool value )
 {
-    instance_().boolSettings_[int( type )] = value;
+    GetSettingsState().boolSettings[int( type )] = value;
 }
 
 void SceneSettings::set( FloatType type, float value )
 {
-    instance_().floatSettings_[int( type )] = value;
+    GetSettingsState().floatSettings[int( type )] = value;
 }
 
 SceneSettings::ShadingMode SceneSettings::getDefaultShadingMode()
 {
-    return instance_().defaultShadingMode_;
+    return GetSettingsState().defaultShadingMode;
 }
 
 void SceneSettings::setDefaultShadingMode( SceneSettings::ShadingMode mode )
 {
-    instance_().defaultShadingMode_ = mode;
+    GetSettingsState().defaultShadingMode = mode;
 }
 
 const CNCMachineSettings& SceneSettings::getCNCMachineSettings()
 {
-    return instance_().cncMachineSettings_;
+    return GetSettingsState().cncMachineSettings;
 }
 
 void SceneSettings::setCNCMachineSettings( const CNCMachineSettings& settings )
 {
-    instance_().cncMachineSettings_ = settings;
-}
-
-SceneSettings::SceneSettings()
-{
-    boolSettings_[int( BoolType::UseDefaultScenePropertiesOnDeserialization )] = true;
-
-    floatSettings_[int( FloatType::FeaturePointsAlpha )] = 1;
-    floatSettings_[int( FloatType::FeatureLinesAlpha )] = 1;
-    floatSettings_[int( FloatType::FeatureMeshAlpha )] = 0.5f;
-    floatSettings_[int( FloatType::FeatureSubPointsAlpha )] = 1;
-    floatSettings_[int( FloatType::FeatureSubLinesAlpha )] = 1;
-    floatSettings_[int( FloatType::FeatureSubMeshAlpha )] = 0.5f;
-    floatSettings_[int( FloatType::FeaturePointSize )] = 10;
-    floatSettings_[int( FloatType::FeatureSubPointSize )] = 8;
-    floatSettings_[int( FloatType::FeatureLineWidth )] = 3;
-    floatSettings_[int( FloatType::FeatureSubLineWidth )] = 2;
-    floatSettings_[int( FloatType::AmbientCoefSelectedObj )] = 2.5f;
-}
-
-SceneSettings& SceneSettings::instance_()
-{
-    static SceneSettings instance;
-    return instance;
+    GetSettingsState().cncMachineSettings = settings;
 }
 
 }

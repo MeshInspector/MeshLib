@@ -8,9 +8,9 @@
 namespace MR
 {
 
-/// This singleton struct contains default colors for scene objects
+/// Contains default colors for scene objects
 /// \ingroup BasicStructuresGroup
-struct SceneColors
+namespace SceneColors
 {
     enum Type
     {
@@ -40,20 +40,10 @@ struct SceneColors
         Count [[maybe_unused]],
     };
 
-    MRMESH_API static const Color& get( Type type );
-    MRMESH_API static void set( Type type, const Color& color );
+    MRMESH_API const Color& get( Type type );
+    MRMESH_API void set( Type type, const Color& color );
 
-    MRMESH_API static const char* getName( Type type );
-
-private:
-    SceneColors();
-    SceneColors( const SceneColors& ) = delete;
-    SceneColors( SceneColors&& ) = delete;
-    ~SceneColors() = default;
-
-    static SceneColors& instance_();
-
-    std::array<Color, size_t( Count )> colors_;
-};
+    MRMESH_API const char* getName( Type type );
+}
 
 }

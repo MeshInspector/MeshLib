@@ -128,6 +128,11 @@ jobs:
           CC=${{matrix.c-compiler}} CXX=${{matrix.cxx-compiler}} cmake -S _mrbind -B _mrbind/build -DCMAKE_BUILD_TYPE=Release
           cmake --build _mrbind/build
 
+      - name: Generate MRBind bindings
+        if: ${{ matrix.os == 'ubuntu24' }}
+        run: |
+          bash -c "CXX=${{matrix.cxx-compiler}} make -f _mrbind/scripts/apply_to_files.mk @scripts/mrbind/flags.txt generate"
+
       - name: Build
         run: ./scripts/build_source.sh
         env:
@@ -143,6 +148,11 @@ jobs:
                       -DMESHLIB_BUILD_MRCUDA=${{ matrix.build_mrcuda }}
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
+
+      - name: Compile and link MRBind bindings
+        if: ${{ matrix.os == 'ubuntu24' }}
+        run: |
+          bash -c "CXX=${{matrix.cxx-compiler}} make -f _mrbind/scripts/apply_to_files.mk @scripts/mrbind/flags.txt"
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.compiler}}"

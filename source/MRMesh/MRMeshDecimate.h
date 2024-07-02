@@ -193,13 +193,13 @@ MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & se
  * \brief Computes quadratic form at given vertex of the initial surface before decimation
  * \ingroup DecimateGroup
  */
-[[nodiscard]] MRMESH_API QuadraticForm3f computeFormAtVertex( const MeshPart & mp, VertId v, float stabilizer );
+[[nodiscard]] MRMESH_API QuadraticForm3f computeFormAtVertex( const MeshPart & mp, VertId v, float stabilizer, const UndirectedEdgeBitSet * creases = nullptr );
 
 /**
  * \brief Computes quadratic forms at every vertex of mesh part before decimation
  * \ingroup DecimateGroup
  */
-[[nodiscard]] MRMESH_API Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer );
+[[nodiscard]] MRMESH_API Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer, const UndirectedEdgeBitSet * creases = nullptr );
 
 /**
  * \brief returns given subdivision part of all valid faces;

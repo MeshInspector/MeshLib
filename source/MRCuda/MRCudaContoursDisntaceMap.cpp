@@ -1,5 +1,6 @@
 #include "MRCudaContoursDistanceMap.h"
 #include "MRMesh/MRAABBTreePolyline.h"
+#include "MRMesh/MRParallelFor.h"
 #include "MRCudaContoursDistanceMap.cuh"
 
 namespace MR
@@ -12,7 +13,6 @@ DistanceMap distanceMapFromContours( const MR::Polyline2& polyline, const Contou
 {
     const auto& tree = polyline.getAABBTree();
     const auto& nodes = tree.nodes();
-    const auto& edges = polyline.topology.edges();
 
     CUDA_EXEC( cudaSetDevice( 0 ) );
     const size_t size = size_t( params.resolution.x ) * params.resolution.y;
@@ -23,8 +23,14 @@ DistanceMap distanceMapFromContours( const MR::Polyline2& polyline, const Contou
     DynamicArray<Node2> cudaNodes;
     cudaNodes.fromVector( nodes.vec_ );
 
-    DynamicArray<PolylineHalfEdgeRecord> cudaEdges;
-    cudaEdges.fromVector( edges.vec_ );
+    Vector<int, EdgeId> orgs( polyline.topology.edgeSize() );
+    ParallelFor( orgs, [&]( EdgeId i )
+    {
+        orgs[i] = polyline.topology.org( i );
+    } );
+
+    DynamicArray<int> cudaOrgs;
+    cudaOrgs.fromVector( orgs.vec_ );
 
     DynamicArray<float> cudaRes( size );
 
@@ -33,7 +39,7 @@ DistanceMap distanceMapFromContours( const MR::Polyline2& polyline, const Contou
         { params.orgPoint.x + params.pixelSize.x * 0.5f, params.orgPoint.y + params.pixelSize.y * 0.5f }, 
         { params.resolution.x, params.resolution.y }, 
         { params.pixelSize.x, params.pixelSize.y }, 
-        cudaNodes.data(), cudaPts.data(), cudaEdges.data(), cudaRes.data(), size );
+        cudaNodes.data(), cudaPts.data(), cudaOrgs.data(), cudaRes.data(), size );
     CUDA_EXEC( cudaGetLastError() );
 
     DistanceMap res( params.resolution.x, params.resolution.y );
@@ -49,8 +55,8 @@ size_t distanceMapFromContoursHeapBytes( const MR::Polyline2& polyline, const Co
     /// cannot use polyline.heapBytes here because it has extra fields in topology and does not create AABBTree if it is not present
     return 
         polyline.points.heapBytes() + 
-        polyline.getAABBTree().nodes().heapBytes() + 
-        polyline.topology.edges().heapBytes() + 
+        polyline.getAABBTree().nodes().heapBytes() +
+        polyline.topology.edgeSize() +
         size_t( params.resolution.x ) * params.resolution.y * sizeof( float );
 }
 

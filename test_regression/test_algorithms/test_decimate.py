@@ -60,12 +60,12 @@ import pytest
      }},
     {"name": "touchBdVertices_true",
      "params": {
-         "touchBdVertices": True,
+         "touchNearBdEdges": True,
          "maxError": 0.05
      }},
     {"name": "touchBdVertices_false",
      "params": {
-         "touchBdVertices": False,
+         "touchNearBdEdges": False,
          "maxError": 0.05
      }},
     {"name": "optimizeVertexPos_false",

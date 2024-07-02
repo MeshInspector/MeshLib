@@ -74,6 +74,10 @@ struct DecimateSettings
     /// Edges specified by this bit-set will never be flipped, but they can be collapsed or replaced during collapse of nearby edges so it is updated during the operation
     UndirectedEdgeBitSet* notFlippable = nullptr;
 
+    /// Whether to allow collapse of edges incident to notFlippable edges,
+    /// which can move vertices of notFlippable edges unless they are fixed
+    bool collapseNearNotFlippable = false;
+
     /// If pointer is not null, then only edges from here can be collapsed (and some nearby edges can disappear)
     const UndirectedEdgeBitSet * edgesToCollapse = nullptr;
 
@@ -81,10 +85,15 @@ struct DecimateSettings
     /// the algorithm updates this map during collapses, removing or replacing elements
     UndirectedEdgeHashMap * twinMap = nullptr;
 
-    /// Whether to allow collapsing edges having at least one vertex on (region) boundary
-    bool touchBdVertices = true;
+    /// Whether to allow collapsing or flipping edges having at least one vertex on (region) boundary
+    bool touchNearBdEdges = true;
 
-    /// if touchBdVertices=false then the algorithm needs to know about all boundary vertices;
+    /// touchBdVerts=true: allow moving and eliminating boundary vertices during edge collapses;
+    /// touchBdVerts=false: allow only collapsing an edge having only one boundary vertex in that vertex, so position and count of boundary vertices do not change;
+    /// this setting is ignored if touchNearBdEdges=false
+    bool touchBdVerts = true;
+
+    /// if touchNearBdEdges=false or touchBdVerts=false then the algorithm needs to know about all boundary vertices;
     /// if the pointer is not null then boundary vertices detection is replaced with testing values in this bit-set
     const VertBitSet * bdVerts = nullptr;
 

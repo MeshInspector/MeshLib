@@ -277,7 +277,7 @@ void SurfaceManipulationWidget::initConnections_()
         }
         abortEdit_();
         init( obj_ );
-        updateRegion_( mousePos_ );
+        updateRegion_( Vector2f( getViewerInstance().mouseController().getMousePos() ) );
     } );
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
 }

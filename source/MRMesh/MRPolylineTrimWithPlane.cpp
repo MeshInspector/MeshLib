@@ -111,8 +111,7 @@ namespace MR
     std::vector<EdgeSegment> extractSectionsFromPolyline( const Polyline3& polyline, const Plane3f& plane, float eps )
     {
         std::vector<EdgeSegment> result;
-        const auto& edges = polyline.topology.edges();
-        if ( edges.empty() )
+        if ( polyline.topology.edgeSize() <= 0 )
             return {};
 
         Plane3f planePos( plane.n, plane.d + eps );

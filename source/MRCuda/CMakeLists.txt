@@ -31,7 +31,7 @@ set(CUDA_VERBOSE_BUILD ON)
 project(MRCuda CXX CUDA)
 
 file(GLOB SOURCES "*.cpp" "*.cu")
-file(GLOB HEADERS "*.h" "*.cuh")
+file(GLOB HEADERS "*.h" "*.hpp" "*.cuh")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 

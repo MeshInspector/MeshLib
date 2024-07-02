@@ -1,7 +1,7 @@
 #!/bin/bash
 
 make -f _mrbind/scripts/apply_to_files.mk \
-    INPUT_DIRS=MeshLib/source/MRMesh \
+    INPUT_DIRS=source/MRMesh \
     INPUT_FILES_BLACKLIST='%/MRPython.h %/MREmbeddedPython.h %/MRIOFormatsRegistry.h %/MROpenVDBHelper.h %/MRRestoringStreamsSink.h %/MRDirectory.h %/MRVDBProgressInterrupter.h %/MRTupleBindings.h' \
     OUTPUT_DIR=build/binds \
     INPUT_GLOBS='*.h' \

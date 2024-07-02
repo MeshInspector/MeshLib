@@ -5,6 +5,7 @@
 #include "MRHistoryAction.h"
 #include "MRPositionedText.h"
 #include "MRVector2.h"
+#include "MRMesh/MRObjectLabel.h"
 
 namespace MR
 {

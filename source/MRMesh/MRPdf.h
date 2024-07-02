@@ -35,6 +35,8 @@ class Pdf
 public:
     /// Ctor
     MRMESH_API Pdf( const std::filesystem::path& documentPath, const PdfParameters& params = PdfParameters() );
+    MRMESH_API Pdf( Pdf&& other ) noexcept;
+    MRMESH_API Pdf& operator=( Pdf other ) noexcept; // Sic, passing by value.
     /// Dtor. Automatically do close
     MRMESH_API ~Pdf();
 
@@ -56,7 +58,7 @@ public:
      * If image bigger than page size, autoscale image to page size.
      * Move cursor.
      * @param valuesMarks if not empty - add marks under image.
-     * valuesMarks contains pairs<relative_position, marks_text>. 
+     * valuesMarks contains pairs<relative_position, marks_text>.
      *     relative_position is in range [0., 1.], where 0. - left border of image, 1. - right border
      * @param caption if not empty - add caption under marks (if exist) or image.
      */
@@ -75,21 +77,25 @@ public:
     float getCursorPosY() const { return cursorY_; };
 
     /// Checking the ability to work with a document
-    operator bool() const { return document_ != 0; };
+    operator bool() const { return state_.document != 0; };
 
 private:
-    HPDF_Doc document_ = nullptr;
-    HPDF_Page activePage_ = nullptr;
-    HPDF_Font activeFont_ = nullptr;
+    struct State
+    {
+        HPDF_Doc document = nullptr;
+        HPDF_Page activePage = nullptr;
+        HPDF_Font activeFont = nullptr;
+    };
+    State state_;
 
-    const std::filesystem::path filename_;
+    std::filesystem::path filename_;
 
     PdfParameters params_;
 
     HPDF_REAL cursorX_ = 0;
     HPDF_REAL cursorY_ = 0;
 
-    bool checkDocument() const { return document_ && activePage_; };
+    bool checkDocument() const { return state_.document && state_.activePage; };
 };
 
 }

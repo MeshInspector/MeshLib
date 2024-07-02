@@ -104,6 +104,9 @@ MultiwayAligningTransform::MultiwayAligningTransform( int numObjs )
         reset( numObjs );
 }
 
+MultiwayAligningTransform::MultiwayAligningTransform( MultiwayAligningTransform&& ) noexcept = default;
+MultiwayAligningTransform& MultiwayAligningTransform::operator=( MultiwayAligningTransform&& ) noexcept = default;
+
 MultiwayAligningTransform::~MultiwayAligningTransform()
 {
 }

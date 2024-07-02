@@ -600,3 +600,11 @@ struct VertDuplication;
 #       define MR_UNREACHABLE_NO_RETURN assert( false );
 #   endif
 #endif
+
+// If the compiler supports `requires`, expands to `requires(...)`. Otherwise to nothing.
+// This is primarily useful for code that must be usable in Cuda, since everywhere else we're free to use C++20 and newer.
+#if __cpp_concepts
+#   define MR_REQUIRES_IF_SUPPORTED(...) requires(__VA_ARGS__)
+#else
+#   define MR_REQUIRES_IF_SUPPORTED(...)
+#endif

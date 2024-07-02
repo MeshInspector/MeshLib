@@ -1,6 +1,7 @@
 #include "MRMeshSaveObj.h"
 #include "MRMeshSave.h"
 #include "MRStringConvert.h"
+#include "MRColor.h"
 
 namespace MR
 {

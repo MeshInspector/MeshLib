@@ -13,6 +13,19 @@ struct MeshPart
     const FaceBitSet * region = nullptr; // nullptr here means whole mesh
 
     MeshPart( const Mesh & m, const FaceBitSet * bs = nullptr ) noexcept : mesh( m ), region( bs ) { }
+
+    // Make this assignable. A better idea would be to rewrite the class to not use references, but doing this instead preserves API compatibility.
+    MeshPart(const MeshPart &other) noexcept = default;
+    MeshPart &operator=(const MeshPart &other) noexcept
+    {
+        if (this != &other)
+        {
+            // In modern C++ the result doesn't need to be `std::launder`ed, right?
+            this->~MeshPart();
+            ::new((void *)this) MeshPart(other);
+        }
+        return *this;
+    }
 };
 
 } // namespace MR

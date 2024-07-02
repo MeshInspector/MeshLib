@@ -61,3 +61,7 @@ protected:
 };
 
 } //namespace MR
+
+#if defined(MR_PARSING_FOR_PB11_BINDINGS) || defined(MR_COMPILING_PB11_BINDINGS)
+#include "MRAABBTreeBase.hpp"
+#endif

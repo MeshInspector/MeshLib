@@ -9,21 +9,23 @@ namespace MR
 
 /// describes a triangle as three vertex IDs sorted in a way to quickly find same triangles
 /// irrespective of vertex order (clockwise or counterclockwise)
-struct UnorientedTriangle : ThreeVertIds
+struct UnorientedTriangle
 {
+    ThreeVertIds verts{};
+
     UnorientedTriangle( const ThreeVertIds & inVs,
         bool * outFlipped = nullptr ) ///< optional output: true if the orientation of the triangle has flipped
-        : ThreeVertIds( inVs )
+        : verts( inVs )
     {
         bool flipped = false;
         auto checkSwap = [this, &flipped]( int i, int j )
         {
             assert( i < j );
-            assert( (*this)[i] != (*this)[j] );
-            if ( (*this)[i] > (*this)[j] )
+            assert( verts[i] != verts[j] );
+            if ( verts[i] > verts[j] )
             {
                 flipped = !flipped;
-                std::swap( (*this)[i], (*this)[j] );
+                std::swap( verts[i], verts[j] );
             }
         };
         checkSwap( 0, 1 );
@@ -34,7 +36,13 @@ struct UnorientedTriangle : ThreeVertIds
     }
 
     /// returns this triangle with the opposite orientation
-    ThreeVertIds getFlipped() const { return { (*this)[0], (*this)[2], (*this)[1] }; } // id #0 remains the lowest
+    ThreeVertIds getFlipped() const { return { verts[0], verts[2], verts[1] }; } // id #0 remains the lowest
+
+    operator       ThreeVertIds &()       { return verts; }
+    operator const ThreeVertIds &() const { return verts; }
+
+          VertId &operator[]( std::size_t i )       { return verts[i]; }
+    const VertId &operator[]( std::size_t i ) const { return verts[i]; }
 
     friend bool operator==( const UnorientedTriangle& a, const UnorientedTriangle& b ) = default;
 };
@@ -49,10 +57,10 @@ struct hash<MR::UnorientedTriangle>
 {
     size_t operator() ( const MR::UnorientedTriangle& triplet ) const noexcept
     {
-        return 
-            2 * size_t( triplet[0] ) +
-            3 * size_t( triplet[1] ) +
-            5 * size_t( triplet[2] );
+        return
+            2 * size_t( triplet.verts[0] ) +
+            3 * size_t( triplet.verts[1] ) +
+            5 * size_t( triplet.verts[2] );
     }
 };
 

@@ -23,7 +23,7 @@ struct Dipole
         return ( q - pos() ).lengthSq() > sqr( beta ) * rr;
     }
     /// contribution of this dipole to the winding number at point \param q
-    [[nodiscard]] float w( const Vector3f& q ) const;
+    [[nodiscard]] MRMESH_API float w( const Vector3f& q ) const;
 };
 
 static_assert( sizeof( Dipole ) == 8 * sizeof( float ) );

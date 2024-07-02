@@ -93,7 +93,7 @@ public:
     /// sets new left face to the full left ring including this edge;
     /// edgePerFace_ table is updated accordingly
     MRMESH_API void setLeft( EdgeId a, FaceId f );
-    
+
 
     /// returns true if a and b are both from the same origin ring
     [[nodiscard]] MRMESH_API bool fromSameOriginRing( EdgeId a, EdgeId b ) const;
@@ -260,7 +260,7 @@ public:
 
     /// if region pointer is not null then converts it in reference, otherwise returns all valid faces in the mesh
     [[nodiscard]] const FaceBitSet & getFaceIds( const FaceBitSet * region ) const
-    { 
+    {
         assert( region || updateValids_ ); // region shall be either given on input or maintained in validFaces_
         assert( !updateValids_ || !region || ( *region - validFaces_ ).none() ); // if region is given and all valid faces are known, then region must be a subset of them
         return region ? *region : validFaces_;
@@ -444,7 +444,7 @@ public:
 
     /// tightly packs all arrays eliminating lone edges and invalid faces and vertices
     /// \param outFmap,outVmap,outEmap if given returns mappings: old.id -> new.id;
-    /// \param rearrangeTriangles if true then calls rotateTriangles() 
+    /// \param rearrangeTriangles if true then calls rotateTriangles()
     /// and selects the order of triangles according to the order of their vertices
     MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
 
@@ -504,7 +504,7 @@ public:
 private:
     friend class MeshDiff;
     /// computes from edges_ all remaining fields: \n
-    /// 1) numValidVerts_, 2) validVerts_, 3) edgePerVertex_, 
+    /// 1) numValidVerts_, 2) validVerts_, 3) edgePerVertex_,
     /// 4) numValidFaces_, 5) validFaces_, 6) edgePerFace_
     MRMESH_API void computeAllFromEdges_();
 
@@ -593,7 +593,7 @@ void MeshTopology::flipEdgesIn( const EdgeId e0, T && flipNeeded )
             if ( e == e0 )
                 break; // full ring has been inspected
         }
-    } 
+    }
 }
 
 template<typename T>
@@ -614,7 +614,7 @@ void MeshTopology::flipEdgesOut( EdgeId e0, T && flipNeeded )
             if ( e == e0 )
                 break; // full ring has been inspected
         }
-    } 
+    }
 }
 
 // rearrange vector values by map (old.id -> new.id)

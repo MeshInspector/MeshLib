@@ -2,6 +2,7 @@
 
 #include "MRVector.h"
 #include "MRExpected.h"
+#include "MRId.h"
 #include <array>
 
 namespace MR
@@ -48,7 +49,7 @@ enum class BooleanOperation
 /** \struct MR::BooleanResultMapper
   * \brief Structure to map old mesh BitSets to new
   * \details Structure to easily map topology of MR::boolean input meshes to result mesh
-  * 
+  *
   * This structure allows to map faces, vertices and edges of mesh `A` and mesh `B` input of MR::boolean to result mesh topology primitives
   * \sa \ref MR::boolean
   */
@@ -58,7 +59,7 @@ struct BooleanResultMapper
     enum class MapObject { A, B, Count };
 
     BooleanResultMapper() = default;
-    
+
     /// Returns faces bitset of result mesh corresponding input one
     MRMESH_API FaceBitSet map( const FaceBitSet& oldBS, MapObject obj ) const;
     /// Returns vertices bitset of result mesh corresponding input one
@@ -106,7 +107,7 @@ MRMESH_API Expected<Mesh, std::string> doBooleanOperation( Mesh&& meshACut, Mesh
     const std::vector<EdgePath>& cutEdgesA, const std::vector<EdgePath>& cutEdgesB,
     BooleanOperation operation, const AffineXf3f* rigidB2A = nullptr,
     BooleanResultMapper* mapper = nullptr,
-    bool mergeAllNonIntersectingComponents = false, 
+    bool mergeAllNonIntersectingComponents = false,
     const BooleanInternalParameters& intParams = {} );
 
 /// \}

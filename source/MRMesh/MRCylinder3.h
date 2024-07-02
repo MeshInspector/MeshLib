@@ -1,4 +1,6 @@
 #pragma once
+
+#include "MRMesh/MRMeshFwd.h"
 #include "MRLine.h"
 
 namespace MR

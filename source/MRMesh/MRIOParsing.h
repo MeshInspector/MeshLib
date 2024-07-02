@@ -22,11 +22,11 @@ template<typename T>
 VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Color& c );
 
 // reads the first integer number in the line
-VoidOrErrStr parseFirstNum( const std::string_view& str, int& num );
+MRMESH_API VoidOrErrStr parseFirstNum( const std::string_view& str, int& num );
 // reads the polygon points and optional number of polygon points
 // example
 // N vertex0 vertex1 ... vertexN
-VoidOrErrStr parsePolygon( const std::string_view& str, VertId* vertId, int* numPoints );
+MRMESH_API VoidOrErrStr parsePolygon( const std::string_view& str, VertId* vertId, int* numPoints );
 
 template<typename T>
 [[deprecated( "use parseTextCoordinate() instead")]]

@@ -116,16 +116,17 @@ jobs:
 
       - name: Checkout MRBind
         uses: actions/checkout@v4
+        if: ${{ matrix.os == 'ubuntu24' }}
         with:
           repository: MeshInspector/mrbind
-          path: ../mrbind
+          path: _mrbind
           token: ${{ secrets.BUILD_MACHINE_TOKEN }}
 
       - name: Compile MRBind
         if: ${{ matrix.os == 'ubuntu24' }}
         run: |
-          cmake -S ../mrbind -B ../mrbind/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=${{matrix.cxx-compiler}} -GNinja
-          cmake --build ../mrbind/build
+          cmake -S _mrbind -B _mrbind/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=${{matrix.cxx-compiler}} -GNinja
+          cmake --build _mrbind/build
 
       - name: Build
         run: ./scripts/build_source.sh

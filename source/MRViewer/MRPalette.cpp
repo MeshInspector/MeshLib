@@ -170,7 +170,7 @@ void Palette::saveCurrentToJson( Json::Value& root ) const
 {
     Json::Value colorsArray = Json::arrayValue;
     const std::vector<Color>& colors = texture_.pixels;
-    const auto colorsSize = colors.size();
+    const auto colorsSize = colors.size() / 2; // second half is gray color
     for ( int i = 0; i < colorsSize; ++i )
         serializeToJson( colors[i], colorsArray[i] );
     root["Colors"] = colorsArray;

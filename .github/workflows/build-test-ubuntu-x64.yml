@@ -125,7 +125,7 @@ jobs:
       - name: Compile MRBind
         if: ${{ matrix.os == 'ubuntu24' }}
         run: |
-          cmake -S _mrbind -B _mrbind/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=${{matrix.cxx-compiler}} -GNinja
+          CC=${{matrix.c-compiler}} CXX${{matrix.cxx-compiler}} cmake -S _mrbind -B _mrbind/build -DCMAKE_BUILD_TYPE=Release
           cmake --build _mrbind/build
 
       - name: Build

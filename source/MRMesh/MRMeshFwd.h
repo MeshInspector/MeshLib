@@ -603,7 +603,10 @@ struct VertDuplication;
 
 // If the compiler supports `requires`, expands to `requires(...)`. Otherwise to nothing.
 // This is primarily useful for code that must be usable in Cuda, since everywhere else we're free to use C++20 and newer.
-#if __cpp_concepts
+// While Clang 11 technically supports `requires`, we're getting a few weird issues with it (make a nested aggregate class,
+//   in the enclosing class make a `MR::Vector` of it, observe that `std::default_initializable` gets baked as `false` on it,
+//   disabling some member functions such as `.resize()`).
+#if __cpp_concepts && (!defined(__clang__) || __clang_major__ > 11)
 #   define MR_REQUIRES_IF_SUPPORTED(...) requires(__VA_ARGS__)
 #else
 #   define MR_REQUIRES_IF_SUPPORTED(...)

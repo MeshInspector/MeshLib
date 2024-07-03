@@ -13,6 +13,7 @@
 #include "MRMesh/MRColor.h"
 #include "MRViewer/MRUnits.h"
 #include <imgui.h>
+#include <misc/cpp/imgui_stdlib.h>
 #include <algorithm>
 #include <functional>
 #include <cstddef>
@@ -70,15 +71,7 @@ inline bool ListBox(const char* label, int* idx, const std::vector<std::string>&
 
 inline bool InputText(const char* label, std::string &str, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL)
 {
-  char buf[1024];
-  std::fill_n(buf, 1024, char(0));
-  std::copy_n(str.begin(), std::min(1024, (int) str.size()), buf);
-  if (ImGui::InputText(label, buf, 1024, flags, callback, user_data))
-  {
-    str = std::string(buf);
-    return true;
-  }
-  return false;
+  return ImGui::InputText( label, &str, flags, callback, user_data );
 }
 
 

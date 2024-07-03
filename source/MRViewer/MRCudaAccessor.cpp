@@ -70,6 +70,11 @@ CudaAccessor::CudaPointsToDistanceVolumeCallback CudaAccessor::getCudaPointsToDi
     return inst.pointsToDistanceVolumeCallback_;
 }
 
+size_t CudaAccessor::fromGridMemory( const Vector3i& dims )
+{
+    return size_t( dims.x ) * dims.y * dims.z * sizeof( float );
+}
+
 CudaAccessor& CudaAccessor::instance_()
 {
     static CudaAccessor instance;

@@ -66,13 +66,6 @@ public:
     /// </summary>
     /// <param name="mesh">input mesh</param>
     virtual size_t selfIntersectionsHeapBytes( const Mesh& mesh ) const = 0;
-
-    /// <summary>
-    /// returns amount of required memory for calcFromGrid and calcFromGridWithDistances operation
-    /// does not take into account size of output vector
-    /// </summary>
-    /// <param name="dims">dimensions of original grid</param>
-    virtual size_t fromGridHeapBytes( const Vector3i& dims ) const = 0;
 };
 
 /// the class for fast approximate computation of winding number for a mesh (using its AABB tree)
@@ -144,13 +137,6 @@ public:
     /// </summary>
     /// <param name="mesh">input mesh</param>
     MRMESH_API virtual size_t selfIntersectionsHeapBytes( const Mesh& mesh ) const override;
-
-    /// <summary>
-    /// returns amount of required memory for calcFromGrid and calcFromGridWithDistances operation
-    /// does not take into account size of output vector
-    /// </summary>
-    /// <param name="dims">dimensions of original grid</param>
-    MRMESH_API virtual size_t fromGridHeapBytes( const Vector3i& dims ) const override;
 
 private:
     [[nodiscard]] float calc_( const Vector3f & q, float beta, FaceId skipFace = {} ) const;

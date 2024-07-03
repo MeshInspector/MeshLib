@@ -106,9 +106,4 @@ size_t FastWindingNumber::selfIntersectionsHeapBytes( const Mesh& ) const
     return 0;
 }
 
-size_t FastWindingNumber::fromGridHeapBytes( const Vector3i& ) const
-{
-    return 0;
-}
-
 } // namespace MR

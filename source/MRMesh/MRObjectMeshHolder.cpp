@@ -316,6 +316,14 @@ ObjectMeshHolder::ObjectMeshHolder()
     setDefaultSceneProperties_();
 }
 
+
+// for backward compatibility
+const MeshTexture& ObjectMeshHolder::getTexture() const
+{
+    static const MeshTexture defaultTexture;
+    return textures_.size() ? textures_.front() : defaultTexture;
+}
+
 void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc, const FaceMap & thisToSrcFaces )
 {
     MR_TIMER

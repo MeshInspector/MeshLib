@@ -120,11 +120,7 @@ public:
     {}
 
     // for backward compatibility
-    const MeshTexture& getTexture() const 
-    {
-        static const MeshTexture defaultTexture;
-        return textures_.size() ? textures_.front() : defaultTexture;
-    }
+    const MeshTexture& getTexture() const;
 
     const std::vector<MeshTexture>& getTextures() const { return textures_; }
     virtual void setTextures( std::vector<MeshTexture> texture ) { textures_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }

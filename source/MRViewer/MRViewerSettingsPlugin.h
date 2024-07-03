@@ -57,7 +57,7 @@ private:
     virtual bool onEnable_() override;
     virtual bool onDisable_() override;
 
-    void drawTab_( TabType tab, float menuWidth, float menuScaling );
+    void drawTab_( float menuWidth, float menuScaling );
 
     void drawQuickTab_( float menuWidth, float menuScaling );
     void drawApplicationTab_( float menuWidth, float menuScaling );
@@ -79,7 +79,9 @@ private:
     void drawTouchpadSettings_( float menuScaling );
 
     void drawGlobalSettings_( float buttonWidth, float menuScaling );
-    void drawCustomSettings_( TabType tabType, const std::string& separatorName, bool needSeparator, float menuScaling );
+    void drawCustomSettings_( const std::string& separatorName, bool needSeparator, float menuScaling );
+    void drawSeparator_( const std::string& separatorName, float menuScaling );
+
 
     void updateDialog_();
     void resetSettings_();

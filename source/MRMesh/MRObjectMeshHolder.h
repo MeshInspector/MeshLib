@@ -120,7 +120,7 @@ public:
     {}
 
     // for backward compatibility
-    const MeshTexture& getTexture() const;
+    MRMESH_API const MeshTexture& getTexture() const;
 
     const std::vector<MeshTexture>& getTextures() const { return textures_; }
     virtual void setTextures( std::vector<MeshTexture> texture ) { textures_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }

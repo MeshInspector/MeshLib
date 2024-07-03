@@ -48,7 +48,7 @@ MRMESH_API Expected<std::vector<std::shared_ptr<Object>>, std::string> loadObjec
 MRMESH_API bool isSupportedFileInSubfolders( const std::filesystem::path& folder );
 
 /// loads meshes from given folder in new container object
-MRMESH_API Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::path& folder, ProgressCallback callback = {} );
+MRMESH_API Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::path& folder, std::string* loadWarn, ProgressCallback callback = {} );
 
 //tries to load scene from every format listed in SceneFormatFilters
 MRMESH_API Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, 

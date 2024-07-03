@@ -395,7 +395,7 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
     {
         ProgressBar::orderWithMainThreadPostProcessing( "Open Directory", [directory] ()->std::function<void()>
         {
-            auto loadRes = makeObjectTreeFromFolder( directory, ProgressBar::callBackSetProgress );
+            auto loadRes = makeObjectTreeFromFolder( directory, nullptr, ProgressBar::callBackSetProgress );
             if ( loadRes.has_value() )
             {
                 auto obj = std::make_shared<Object>( std::move( *loadRes ) );

@@ -93,7 +93,15 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     serializeToJson( facesColorMap_.vec_, root["FaceColors"] );
 
     // texture
-    serializeToJson( texture_, root["Texture"] );
+    if ( !textures_.empty() )
+    {
+        root["TextureCount"] = uint32_t ( textures_.size() );
+        serializeToJson( textures_[0], root["Texture"] );
+    }
+
+    for ( size_t i = 1; i < textures_.size(); ++i )
+        serializeToJson( textures_[i], root["Texture_" + std::to_string( i )] );
+
     serializeToJson( uvCoordinates_.vec_, root["UVCoordinates"] );
     // edges
     serializeToJson( Vector4f( edgesColor_.get() ), root["Colors"]["Edges"] );
@@ -156,8 +164,24 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     deserializeFromJson( selectionColor["Diffuse"], resVec );
     faceSelectionColor_.set( Color( resVec ) );
     // texture
+    uint32_t textureCount = 0;
+    if ( root["TextureCount"].isUInt() )
+    {
+        textureCount = root["TextureCount"].asUInt();
+        textures_.resize( textureCount );
+    }
+
     if ( root["Texture"].isObject() )
-        deserializeFromJson( root["Texture"], texture_ );
+    {
+        if ( textures_.empty() )
+            textures_.resize( 1 );
+
+        deserializeFromJson( root["Texture"], textures_[0] );
+    }
+
+    for ( uint32_t textureIndex = 1; textureIndex < textureCount; ++textureIndex )
+        deserializeFromJson( root["Texture_" + std::to_string( textureIndex )].isObject(), textures_[textureIndex] );
+
     if ( root["UVCoordinates"].isObject() )
         deserializeFromJson( root["UVCoordinates"], uvCoordinates_.vec_ );
     // edges
@@ -296,7 +320,7 @@ void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const
 {
     MR_TIMER
     copyColors( src, thisToSrc, thisToSrcFaces );
-    setTexture( src.getTexture() );
+    setTextures( src.getTextures() );
 
     const auto& srcUVCoords = src.getUVCoords();
     const auto lastVert = src.mesh()->topology.lastValidVert();
@@ -569,7 +593,7 @@ size_t ObjectMeshHolder::heapBytes() const
         + selectedTriangles_.heapBytes()
         + selectedEdges_.heapBytes()
         + creases_.heapBytes()
-        + texture_.heapBytes()
+        + MR::heapBytes( textures_ )
         + ancillaryTexture_.heapBytes()
         + uvCoordinates_.heapBytes()
         + ancillaryUVCoordinates_.heapBytes()

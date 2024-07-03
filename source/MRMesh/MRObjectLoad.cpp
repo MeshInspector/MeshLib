@@ -381,7 +381,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                 auto image = ImageLoad::fromAnySupportedFormat( resValue[i].pathToTexture );
                 if ( image.has_value() )
                 {
-                    objectMesh->setTexture( { image.value(), FilterType::Linear } );
+                    objectMesh->setTextures( { { image.value(), FilterType::Linear } } );
                     objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
                 }
                 if ( !resValue[i].colors.empty() )

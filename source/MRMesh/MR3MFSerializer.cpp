@@ -342,7 +342,7 @@ Expected<std::shared_ptr<Object>> ThreeMFLoader::load( const std::vector<std::fi
                 if ( it->second->texture.resolution.x > 0 && it->second->texture.resolution.y > 0 )
                 {
                     //cannot move because the same texture could be used in multiple objects
-                    objMesh->setTexture( it->second->texture );
+                    objMesh->setTextures( { it->second->texture } );
                     objMesh->setUVCoords( std::move( node->vertUVCoords ) );
                     objMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
                 }

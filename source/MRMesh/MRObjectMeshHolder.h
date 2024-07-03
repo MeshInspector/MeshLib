@@ -119,9 +119,16 @@ public:
     ObjectMeshHolder( ProtectedStruct, const ObjectMeshHolder& obj ) : ObjectMeshHolder( obj )
     {}
 
-    const MeshTexture& getTexture() const { return texture_; }
-    virtual void setTexture( MeshTexture texture ) { texture_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
-    virtual void updateTexture( MeshTexture& updated ) { std::swap( texture_, updated ); dirty_ |= DIRTY_TEXTURE; }
+    // for backward compatibility
+    const MeshTexture& getTexture() const 
+    {
+        static const MeshTexture defaultTexture;
+        return textures_.size() ? textures_.front() : defaultTexture;
+    }
+
+    const std::vector<MeshTexture>& getTextures() const { return textures_; }
+    virtual void setTextures( std::vector<MeshTexture> texture ) { textures_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
+    virtual void updateTextures( std::vector<MeshTexture>& updated ) { std::swap( textures_, updated ); dirty_ |= DIRTY_TEXTURE; }
 
     const VertUVCoords& getUVCoords() const { return uvCoordinates_; }
     virtual void setUVCoords( VertUVCoords uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
@@ -212,7 +219,7 @@ protected:
     UndirectedEdgeBitSet creases_;
 
     /// Texture options
-    MeshTexture texture_;
+    std::vector<MeshTexture> textures_;
     VertUVCoords uvCoordinates_; ///< vertices coordinates in texture
 
     MeshTexture ancillaryTexture_;

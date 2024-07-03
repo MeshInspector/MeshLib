@@ -4,6 +4,7 @@
 
 MR_EXTERN_C_BEGIN
 
+/// optional parameters for \ref mrMakeCylinderAdvanced
 typedef struct MRMakeCylinderAdvancedParameters
 {
     float radius0;
@@ -14,8 +15,10 @@ typedef struct MRMakeCylinderAdvancedParameters
     int resolution;
 } MRMakeCylinderAdvancedParameters;
 
-MRMESHC_API MRMakeCylinderAdvancedParameters mrMakeCylinderAdvancedParametersDefault( void );
+/// initializes a default instance
+MRMESHC_API MRMakeCylinderAdvancedParameters mrMakeCylinderAdvancedParametersNew( void );
 
+// creates a mesh representing a cylinder
 MRMESHC_API MRMesh* mrMakeCylinderAdvanced( const MRMakeCylinderAdvancedParameters* params );
 
 MR_EXTERN_C_END

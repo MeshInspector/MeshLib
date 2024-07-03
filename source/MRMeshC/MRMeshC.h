@@ -114,7 +114,7 @@ typedef struct MRMakeCylinderAdvancedParameters
     int resolution;
 } MRMakeCylinderAdvancedParameters;
 
-MRMESHC_API MRMakeCylinderAdvancedParameters mrMakeCylinderAdvancedParametersDefault( void );
+MRMESHC_API MRMakeCylinderAdvancedParameters mrMakeCylinderAdvancedParametersNew( void );
 
 MRMESHC_API MRMesh* mrMakeCylinderAdvanced( const MRMakeCylinderAdvancedParameters* params );
 
@@ -184,7 +184,7 @@ typedef struct MRDecimateSettings
     int minFacesInPart;
 } MRDecimateSettings;
 
-MRMESHC_API MRDecimateSettings mrDecimateSettingsDefault( void );
+MRMESHC_API MRDecimateSettings mrDecimateSettingsNew( void );
 
 typedef struct MRDecimateResult
 {
@@ -206,7 +206,7 @@ typedef struct MRResolveMeshDegenSettings
     MRFaceBitSet* region;
 } MRResolveMeshDegenSettings;
 
-MRMESHC_API MRResolveMeshDegenSettings mrResolveMeshDegenSettingsDefault( void );
+MRMESHC_API MRResolveMeshDegenSettings mrResolveMeshDegenSettingsNew( void );
 
 MRMESHC_API bool mrResolveMeshDegenerations( MRMesh* mesh, const MRResolveMeshDegenSettings* settings );
 
@@ -229,7 +229,7 @@ typedef struct MRRemeshSettings
     MRProgressCallback progressCallback;
 } MRRemeshSettings;
 
-MRMESHC_API MRRemeshSettings mrRemeshSettingsDefault( void );
+MRMESHC_API MRRemeshSettings mrRemeshSettingsNew( void );
 
 MRMESHC_API bool mrRemesh( MRMesh* mesh, const MRRemeshSettings* settings );
 
@@ -317,7 +317,7 @@ typedef struct MROffsetParameters
     bool memoryEfficient;
 } MROffsetParameters;
 
-MRMESHC_API MROffsetParameters mrOffsetParametersDefault( void );
+MRMESHC_API MROffsetParameters mrOffsetParametersNew( void );
 
 MRMESHC_API MRMesh* mrOffsetMesh( MRMeshPart mp, float offset, const MROffsetParameters* params, MRString** errorString );
 
@@ -344,7 +344,7 @@ typedef struct MRGeneralOffsetParameters
     MRGeneralOffsetParametersMode mode;
 } MRGeneralOffsetParameters;
 
-MRMESHC_API MRGeneralOffsetParameters mrGeneralOffsetParametersDefault( void );
+MRMESHC_API MRGeneralOffsetParameters mrGeneralOffsetParametersNew( void );
 
 MRMESHC_API MRMesh* mrSharpOffsetMesh( MRMeshPart mp, float offset, const MROffsetParameters* params, const MRGeneralOffsetParameters* generalParams, MRString** errorString );
 
@@ -369,7 +369,7 @@ typedef struct MRMakeTorusParameters
     // TODO: points
 } MRMakeTorusParameters;
 
-MRMESHC_API MRMakeTorusParameters mrMakeTorusParametersDefault( void );
+MRMESHC_API MRMakeTorusParameters mrMakeTorusParametersNew( void );
 
 MRMESHC_API MRMesh* mrMakeTorus( const MRMakeTorusParameters* params );
 

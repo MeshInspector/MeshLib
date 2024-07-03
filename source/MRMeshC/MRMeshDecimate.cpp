@@ -11,7 +11,7 @@ using namespace MR;
 
 #define COPY_FROM( obj, field ) . field = ( obj ). field ,
 
-MRDecimateSettings mrDecimateSettingsDefault()
+MRDecimateSettings mrDecimateSettingsNew()
 {
     static const DecimateSettings def;
     return {
@@ -28,8 +28,11 @@ MRDecimateSettings mrDecimateSettingsDefault()
         COPY_FROM( def, maxDeletedFaces )
         .region = nullptr,
         // TODO: notFlippable
+        COPY_FROM( def, collapseNearNotFlippable )
         // TODO: edgesToCollapse
-        // TODO: touchBdVertices
+        // TODO: twinMap
+        COPY_FROM( def, touchNearBdEdges )
+        COPY_FROM( def, touchBdVerts )
         // TODO: bdVerts
         COPY_FROM( def, maxAngleChange )
         // TODO: preCollapse
@@ -66,8 +69,11 @@ MRDecimateResult mrDecimateMesh( MRMesh* mesh, const MRDecimateSettings* setting
             COPY_FROM( src, maxDeletedFaces )
             .region = reinterpret_cast<FaceBitSet*>( src.region ),
             // TODO: notFlippable
+            COPY_FROM( src, collapseNearNotFlippable )
             // TODO: edgesToCollapse
-            // TODO: touchBdVertices
+            // TODO: twinMap
+            COPY_FROM( src, touchNearBdEdges )
+            COPY_FROM( src, touchBdVerts )
             // TODO: bdVerts
             COPY_FROM( src, maxAngleChange )
             // TODO: preCollapse
@@ -97,7 +103,7 @@ MRDecimateResult mrDecimateMesh( MRMesh* mesh, const MRDecimateSettings* setting
     };
 }
 
-MRResolveMeshDegenSettings mrResolveMeshDegenSettingsDefault()
+MRResolveMeshDegenSettings mrResolveMeshDegenSettingsNew()
 {
     static const ResolveMeshDegenSettings def;
     return {
@@ -132,7 +138,7 @@ bool mrResolveMeshDegenerations( MRMesh* mesh, const MRResolveMeshDegenSettings*
     );
 }
 
-MRRemeshSettings mrRemeshSettingsDefault()
+MRRemeshSettings mrRemeshSettingsNew()
 {
     static const RemeshSettings def;
     return {

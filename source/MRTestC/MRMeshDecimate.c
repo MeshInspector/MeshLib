@@ -25,7 +25,7 @@ void testMeshDecimate( void )
     MRFaceBitSet* regionSaved = mrFaceBitSetCopy( regionForDecimation );
 
     // setup and run decimator
-    MRDecimateSettings decimateSettings = mrDecimateSettingsDefault();
+    MRDecimateSettings decimateSettings = mrDecimateSettingsNew();
     decimateSettings.region = regionForDecimation;
     decimateSettings.maxTriangleAspectRatio = 80.0f;
 

@@ -7,7 +7,7 @@ using namespace MR;
 
 #define COPY_FROM( obj, field ) . field = ( obj ). field
 
-MROffsetParameters mrOffsetParametersDefault()
+MROffsetParameters mrOffsetParametersNew()
 {
     static const OffsetParameters def;
     return {
@@ -149,7 +149,7 @@ MRMesh* mrMcShellMeshRegion( const MRMesh* mesh, const MRFaceBitSet* region, flo
     return nullptr;
 }
 
-MRGeneralOffsetParameters mrGeneralOffsetParametersDefault()
+MRGeneralOffsetParameters mrGeneralOffsetParametersNew()
 {
     static const GeneralOffsetParameters def;
     return {

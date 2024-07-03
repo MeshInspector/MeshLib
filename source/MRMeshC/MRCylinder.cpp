@@ -5,7 +5,7 @@
 
 using namespace MR;
 
-MRMakeCylinderAdvancedParameters mrMakeCylinderAdvancedParametersDefault()
+MRMakeCylinderAdvancedParameters mrMakeCylinderAdvancedParametersNew()
 {
     return {
         .radius0 = 0.1f,

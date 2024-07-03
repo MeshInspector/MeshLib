@@ -4,6 +4,7 @@
 
 MR_EXTERN_C_BEGIN
 
+/// parameters for \ref mrMakeTorus
 typedef struct MRMakeTorusParameters
 {
     float primaryRadius;
@@ -13,8 +14,11 @@ typedef struct MRMakeTorusParameters
     // TODO: points
 } MRMakeTorusParameters;
 
-MRMESHC_API MRMakeTorusParameters mrMakeTorusParametersDefault( void );
+/// initializes a default instance
+MRMESHC_API MRMakeTorusParameters mrMakeTorusParametersNew( void );
 
+/// creates a mesh representing a torus
+/// Z is symmetry axis of this torus
 MRMESHC_API MRMesh* mrMakeTorus( const MRMakeTorusParameters* params );
 
 MR_EXTERN_C_END

@@ -5,7 +5,7 @@
 
 using namespace MR;
 
-MRMakeTorusParameters mrMakeTorusParametersDefault()
+MRMakeTorusParameters mrMakeTorusParametersNew()
 {
     return {
         .primaryRadius = 1.0f,

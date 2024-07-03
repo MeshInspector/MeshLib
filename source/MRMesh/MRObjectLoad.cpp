@@ -599,7 +599,7 @@ bool isSupportedFileInSubfolders( const std::filesystem::path& folder )
     return false;
 }
 
-Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::path & folder, ProgressCallback callback )
+Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::path & folder, std::string* loadWarn, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -696,7 +696,7 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
         {
             loadTasks.emplace_back( std::async( std::launch::async, [&] ()
             {
-                return loadObjectFromFile( file.path, nullptr, [&]( float ){ return !loadingCanceled; } );
+                return loadObjectFromFile( file.path, loadWarn, [&]( float ){ return !loadingCanceled; } );
             } ), objPtr );
         }
     };
@@ -760,7 +760,7 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
     return result;
 }
 
-Expected <Object, std::string> makeObjectTreeFromZip( const std::filesystem::path& zipPath, ProgressCallback callback )
+Expected <Object, std::string> makeObjectTreeFromZip( const std::filesystem::path& zipPath, std::string* loadWarn, ProgressCallback callback )
 {
     auto tmpFolder = UniqueTemporaryFolder( {} );
     auto contentsFolder = tmpFolder / zipPath.stem();
@@ -775,10 +775,10 @@ Expected <Object, std::string> makeObjectTreeFromZip( const std::filesystem::pat
     if ( !resZip )
         return unexpected( "ZIP container error: " + resZip.error() );
 
-    return makeObjectTreeFromFolder( contentsFolder, callback );
+    return makeObjectTreeFromFolder( contentsFolder, loadWarn, callback );
 }
 
-Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, [[maybe_unused]] std::string* loadWarn,
+Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, std::string* loadWarn,
     ProgressCallback callback )
 {
     auto ext = std::string( "*" ) + utf8string( path.extension().u8string() );
@@ -822,7 +822,7 @@ Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( 
 #endif
     else if ( ext == "*.zip" )
     {
-        auto result = makeObjectTreeFromZip( path, callback );
+        auto result = makeObjectTreeFromZip( path, loadWarn, callback );
         if ( result )
             res = std::make_shared<Object>( std::move( *result ) );
         else

@@ -395,17 +395,20 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
     {
         ProgressBar::orderWithMainThreadPostProcessing( "Open Directory", [directory] ()->std::function<void()>
         {
-            auto loadRes = makeObjectTreeFromFolder( directory, ProgressBar::callBackSetProgress );
+            std::string warnings;
+            auto loadRes = makeObjectTreeFromFolder( directory, &warnings, ProgressBar::callBackSetProgress );
             if ( loadRes.has_value() )
             {
                 auto obj = std::make_shared<Object>( std::move( *loadRes ) );
-                return [obj, directory]
+                return [obj, directory, warnings]
                 {
                     sSelectRecursive( *obj );
                     AppendHistory<ChangeSceneAction>( "Open Directory", obj, ChangeSceneAction::Type::AddObject );
                     SceneRoot::get().addChild( obj );
                     getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
                     getViewerInstance().recentFilesStore().storeFile( directory );
+                    if ( !warnings.empty() )
+                        pushNotification( { .text = warnings, .type = NotificationType::Warning } );
                 };
             }
             else

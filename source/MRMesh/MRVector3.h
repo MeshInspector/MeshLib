@@ -4,7 +4,7 @@
 #include "MRConstants.h"
 #include <algorithm>
 #include <cmath>
-#ifdef __cpp_concepts
+#if MR_HAS_REQUIRES
 #include <concepts>
 #endif
 

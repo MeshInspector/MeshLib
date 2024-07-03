@@ -100,7 +100,7 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     }
 
     for ( size_t i = 1; i < textures_.size(); ++i )
-        serializeToJson( textures_[i], root["Texture_" + std::to_string( i )] );
+        serializeToJson( textures_[i], root["Textures"][std::to_string( i )] );
 
     serializeToJson( uvCoordinates_.vec_, root["UVCoordinates"] );
     // edges
@@ -180,7 +180,7 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     }
 
     for ( uint32_t textureIndex = 1; textureIndex < textureCount; ++textureIndex )
-        deserializeFromJson( root["Texture_" + std::to_string( textureIndex )].isObject(), textures_[textureIndex] );
+        deserializeFromJson( root["Textures"][std::to_string(textureIndex)].isObject(), textures_[textureIndex]);
 
     if ( root["UVCoordinates"].isObject() )
         deserializeFromJson( root["UVCoordinates"], uvCoordinates_.vec_ );

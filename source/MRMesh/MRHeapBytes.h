@@ -17,7 +17,7 @@ template<typename T>
     constexpr bool hasHeapBytes = requires( const T& t ) { t.heapBytes(); };
     if constexpr ( hasHeapBytes )
     {
-        size_t res = 0;
+        size_t res = vec.capacity() * sizeof( T );
         for ( const T & t : vec )
             res += t.heapBytes();
         return res;

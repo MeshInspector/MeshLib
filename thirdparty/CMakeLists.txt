@@ -26,7 +26,7 @@ IF(MR_EMSCRIPTEN)
 ENDIF()
 
 #imgui build
-file(GLOB IMGUI_SOURCES "./imgui/*.cpp" "./../source/imgui/*.cpp" "./imgui/misc/freetype/*.cpp" "./imgui/backends/imgui_impl_opengl3.cpp" "./imgui/backends/imgui_impl_glfw.cpp")
+file(GLOB IMGUI_SOURCES "./imgui/*.cpp" "./../source/imgui/*.cpp" "./imgui/misc/freetype/*.cpp" "./imgui/misc/cpp/*.cpp" "./imgui/backends/imgui_impl_opengl3.cpp" "./imgui/backends/imgui_impl_glfw.cpp")
 file(GLOB IMGUI_HEADERS "./imgui/*.h" "./../source/imgui/*.h" "./imgui/misc/freetype/*.h" "./imgui/backends/imgui_impl_opengl3.h" "./imgui/backends/imgui_impl_glfw.h" "./imgui/backends/imgui_impl_opengl3_loader.h")
 include_directories("../source/")
 include_directories("../thirdparty/imgui/")

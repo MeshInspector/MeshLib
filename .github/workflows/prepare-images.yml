@@ -120,7 +120,7 @@ jobs:
   linux-image-build-upload:
     needs: [image-select]
     if: ${{ needs.image-select.outputs.need_linux_rebuild == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-image-rebuild')}}
-    timeout-minutes: 60
+    timeout-minutes: 75
     runs-on: ${{matrix.os}}
     strategy:
       fail-fast: false

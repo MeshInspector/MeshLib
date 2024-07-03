@@ -119,8 +119,9 @@ public:
     ObjectMeshHolder( ProtectedStruct, const ObjectMeshHolder& obj ) : ObjectMeshHolder( obj )
     {}
 
-    // for backward compatibility
+    /// returns first texture in the vector. If there is no textures, returns empty texture
     MRMESH_API const MeshTexture& getTexture() const;
+    // for backward compatibility
     [[deprecated]] MRMESH_API virtual void setTexture( MeshTexture texture );
     [[deprecated]] MRMESH_API virtual void updateTexture( MeshTexture& updated );
     

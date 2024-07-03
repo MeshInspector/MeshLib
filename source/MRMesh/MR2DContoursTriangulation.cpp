@@ -120,7 +120,7 @@ public:
         const HolesVertIds* holesVertId = nullptr,
         bool abortWhenIntersect = false,
         WindingMode mode = WindingMode::NonZero,
-        bool needOutline = false // if set do not do real triangulation, just marks inside faces as present, 
+        bool needOutline = false // if set do not do real triangulation, just marks inside faces as present,
                                  // also does not merge same vertices
         );
 
@@ -185,6 +185,8 @@ private:
                 return winding < 0;
             return false;
         }
+
+        EdgeWindingInfo() {} // Make `Vector` notice register the default constructor. :/
     };
     Vector<EdgeWindingInfo, UndirectedEdgeId> windingInfo_;
 
@@ -206,12 +208,12 @@ private:
     // sorted vertices with no left-going edges
     std::vector<VertId> startVerts_;
     std::vector<EdgeId> startVertLowestRight_;
-    // index of next `startVerts_` 
+    // index of next `startVerts_`
     int startVertIndex_{ 0 };
 
     // sorted vertices
     std::vector<VertId> sortedVerts_;
-    // index of next `startVerts_` 
+    // index of next `startVerts_`
     int sortedVertIndex_{ 0 };
 
     struct SweepEdgeInfo
@@ -273,10 +275,10 @@ private:
     void checkIntersection_( int indexLower );
 };
 
-SweepLineQueue::SweepLineQueue( 
-    const Contours2d& contours, 
+SweepLineQueue::SweepLineQueue(
+    const Contours2d& contours,
     const HolesVertIds* holesVertId,
-    bool abortWhenIntersect, 
+    bool abortWhenIntersect,
     WindingMode mode,
     bool needOutline ) :
     needOutline_{ needOutline },

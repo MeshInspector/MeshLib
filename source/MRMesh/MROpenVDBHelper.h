@@ -73,7 +73,7 @@ public:
             openvdb::math::CoordBBox bbox = i->getNodeBoundingBox();
             if ( !mBBox.empty() )
                 bbox.intersect( mBBox );
-            
+
             if ( !bbox.empty() )
             {
                 for ( auto it = bbox.begin(); it != bbox.end(); ++it )
@@ -300,7 +300,7 @@ public:
             openvdb::math::CoordBBox bbox = i->getNodeBoundingBox();
             if ( !mBBox.empty() )
                 bbox.intersect( mBBox );
-            
+
             if ( !bbox.empty() )
             {
                 mProc.action( i, mInAcc, bbox );
@@ -336,7 +336,7 @@ public:
             i.getBoundingBox( bbox );
             if ( !mBBox.empty() )
                 bbox.intersect( mBBox );
-            
+
             if ( !bbox.empty() )
             {
                 mProc.action( i, mInAcc, bbox );

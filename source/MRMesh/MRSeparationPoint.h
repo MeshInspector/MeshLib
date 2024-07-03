@@ -36,14 +36,14 @@ public:
     };
 
     /// prepares storage for given number of blocks, each containing given size of voxels
-    explicit SeparationPointStorage( size_t blockCount, size_t blockSize );
+    MRMESH_API explicit SeparationPointStorage( size_t blockCount, size_t blockSize );
 
     /// get block for filling in the thread responsible for it
     Block & getBlock( size_t blockIndex ) { return blocks_[blockIndex]; }
 
     /// shifts vertex ids in each block (after they are filled) to make them unique;
     /// returns the total number of valid points in the storage
-    int makeUniqueVids();
+    MRMESH_API int makeUniqueVids();
 
     /// finds the set (locating the block) by voxel id
     auto findSeparationPointSet( size_t voxelId ) const -> const SeparationPointSet *
@@ -54,10 +54,10 @@ public:
     }
 
     /// combines triangulations from every block into one and returns it
-    Triangulation getTriangulation( Vector<VoxelId, FaceId>* outVoxelPerFaceMap = nullptr ) const;
+    MRMESH_API Triangulation getTriangulation( Vector<VoxelId, FaceId>* outVoxelPerFaceMap = nullptr ) const;
 
     /// obtains coordinates of all stored points
-    void getPoints( VertCoords & points ) const;
+    MRMESH_API void getPoints( VertCoords & points ) const;
 
 private:
     size_t blockSize_ = 0;

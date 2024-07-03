@@ -1,7 +1,9 @@
 #pragma once
 
+#include "MRId.h"
 #include "MRMeshFwd.h"
 #include "MRVector.h"
+#include "MRVector3.h"
 #include <array>
 
 namespace MR

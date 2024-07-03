@@ -1,6 +1,8 @@
 #pragma once
 
 #include "MRVector.h"
+#include "MRId.h"
+#include "MRVector3.h"
 
 namespace MR
 {

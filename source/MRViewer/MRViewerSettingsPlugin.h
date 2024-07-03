@@ -10,7 +10,7 @@
 namespace MR
 {
 
-class MRCOMMONPLUGINS_CLASS ViewerSettingsPlugin : public StatePlugin
+class MRVIEWER_CLASS ViewerSettingsPlugin : public StatePlugin
 {
 public:
 
@@ -34,7 +34,7 @@ public:
     virtual bool blocking() const override { return false; }
 
     // call this function if you save/delete color theme, or change current theme outside of this plugin
-    void updateThemes();
+    MRVIEWER_API void updateThemes();
 
     // basic class of external settings
     class ExternalSettings
@@ -42,20 +42,22 @@ public:
     public:
         virtual ~ExternalSettings() {}
         // returns the name of the setting, which is a unique value
-        virtual const std::string& getName() = 0;
+        virtual const std::string& getName() const = 0;
         // the function of drawing the configuration UI
         virtual void draw( float menuScaling ) = 0;
         // restore the settings to their default values
         virtual void reset() {}
+        // if not overriden this setting will be drawn in tools block
+        virtual const char* separatorName() const { return "Tools"; }
     };
     // add external settings with UI combo box
-    MRCOMMONPLUGINS_API void addComboSettings( const TabType tab, std::shared_ptr<ExternalSettings> settings);
+    MRVIEWER_API void addComboSettings( const TabType tab, std::shared_ptr<ExternalSettings> settings);
 
 private:
     virtual bool onEnable_() override;
     virtual bool onDisable_() override;
 
-    void drawTab_( TabType tab, float menuWidth, float menuScaling );
+    void drawTab_( float menuWidth, float menuScaling );
 
     void drawQuickTab_( float menuWidth, float menuScaling );
     void drawApplicationTab_( float menuWidth, float menuScaling );
@@ -77,7 +79,9 @@ private:
     void drawTouchpadSettings_( float menuScaling );
 
     void drawGlobalSettings_( float buttonWidth, float menuScaling );
-    void drawCustomSettings_( TabType tabType, float menuScaling );
+    void drawCustomSettings_( const std::string& separatorName, bool needSeparator, float menuScaling );
+    void drawSeparator_( const std::string& separatorName, float menuScaling );
+
 
     void updateDialog_();
     void resetSettings_();

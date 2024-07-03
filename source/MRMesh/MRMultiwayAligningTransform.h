@@ -20,10 +20,13 @@ public:
     /// initializes internal data to start registering given number of objects
     MRMESH_API explicit MultiwayAligningTransform( int numObjs = 0 );
 
+    MRMESH_API MultiwayAligningTransform( MultiwayAligningTransform&& ) noexcept;
+    MRMESH_API MultiwayAligningTransform& operator=( MultiwayAligningTransform&& ) noexcept;
+
     MRMESH_API ~MultiwayAligningTransform();
 
     /// reinitializes internal data to start registering given number of objects
-    void reset( int numObjs );
+    MRMESH_API void reset( int numObjs );
 
     /// appends a 3D link into consideration: one point (pA) from (objA), and the other point (pB) from (objB)
     /// with link penalty equal to weight (w) times squared distance between two points

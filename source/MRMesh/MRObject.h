@@ -47,7 +47,7 @@ public:
 
     /// returns the amount of memory this object occupies on heap,
     /// including the memory of all recognized children
-    [[nodiscard]] size_t heapBytes() const;
+    [[nodiscard]] MRMESH_API size_t heapBytes() const;
 
 protected:
     ObjectChildrenHolder * parent_ = nullptr;
@@ -209,12 +209,12 @@ public:
     ///   models in the folder by given path and
     ///   fields in given JSON
     /// \param childId is its ordinal number within the parent
-    Expected<std::vector<std::future<VoidOrErrStr>>> serializeRecursive( const std::filesystem::path& path, Json::Value& root, int childId ) const;
+    MRMESH_API Expected<std::vector<std::future<VoidOrErrStr>>> serializeRecursive( const std::filesystem::path& path, Json::Value& root, int childId ) const;
 
     /// loads subtree into this Object
     ///   models from the folder by given path and
     ///   fields from given JSON
-    VoidOrErrStr deserializeRecursive( const std::filesystem::path& path, const Json::Value& root,
+    MRMESH_API VoidOrErrStr deserializeRecursive( const std::filesystem::path& path, const Json::Value& root,
         ProgressCallback progressCb = {}, int* objCounter = nullptr );
 
     /// swaps this object with other

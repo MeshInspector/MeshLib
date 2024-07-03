@@ -1,3 +1,5 @@
+#pragma once
+
 #include "MRAABBTreeBase.h"
 #include "MRBitSetParallelFor.h"
 #include "MRTimer.h"

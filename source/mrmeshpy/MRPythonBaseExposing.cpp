@@ -200,14 +200,17 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )\
         def( "__iter__", [](VectorType& data) {\
             return pybind11::make_iterator<pybind11::return_value_policy::reference_internal>( begin( data ), end( data ) );\
         }, pybind11::keep_alive<0, 1>() );\
-    if constexpr ( !std::is_same_v<type, int> ) \
+    [&]<typename T = type>() \
     {\
-        MR_PYTHON_CUSTOM_CLASS( name ).\
-            def( "length", &VectorType::length ).\
-            def( "normalized", &VectorType::normalized );\
-        m.def( "angle", ( type( * )( const VectorType&, const VectorType& ) )& MR::angle<type>,\
-            pybind11::arg( "a" ), pybind11::arg( "b" ), "angle in radians between two vectors" );\
-    }\
+        if constexpr ( !std::is_same_v<T, int> ) \
+        { \
+            MR_PYTHON_CUSTOM_CLASS( name ).\
+                def( "length", &MR::Vector3<T>::length ).\
+                def( "normalized", &MR::Vector3<T>::normalized );\
+            m.def( "angle", ( type( * )( const MR::Vector3<T>&, const MR::Vector3<T>& ) )& MR::angle<type>,\
+                pybind11::arg( "a" ), pybind11::arg( "b" ), "angle in radians between two vectors" );\
+        } \
+    }();\
 \
     m.def( "dot", ( type( * )( const VectorType&, const VectorType& ) )& MR::dot<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "dot product" );\
     m.def( "cross", ( VectorType( * )( const VectorType&, const VectorType& ) )& MR::cross<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "cross product" );\
@@ -533,12 +536,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPoint, [] ( pybind11::module_& )
         def( pybind11::init<>() ).
         def( pybind11::init<float, float>(), pybind11::arg( "a" ), pybind11::arg( "b" ) ).
         def( pybind11::init<const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&>(),
-            pybind11::arg( "p" ), pybind11::arg( "v0" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ), 
+            pybind11::arg( "p" ), pybind11::arg( "v0" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ),
             "given a point coordinates and triangle (v0,v1,v2) computes barycentric coordinates of the point" ).
         def( pybind11::init<const MR::Vector3f&, const MR::Vector3f&, const MR::Vector3f&>(),
             pybind11::arg( "p" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ),
             "given a point coordinates and triangle (0,v1,v2) computes barycentric coordinates of the point" ).
-        def_readwrite( "a", &MR::TriPointf::a, 
+        def_readwrite( "a", &MR::TriPointf::a,
             "barycentric coordinates:\n"
             "\ta+b in [0,1], a+b=0 => point is in v0, a+b=1 => point is on [v1,v2] edge\n"
             "a in [0,1], a=0 => point is on [v2,v0] edge, a=1 => point is in v1" ).
@@ -546,7 +549,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPoint, [] ( pybind11::module_& )
 
     MR_PYTHON_CUSTOM_CLASS( MeshTriPoint ).doc() =
         "encodes a point inside a triangular mesh face using barycentric coordinates\n"
-        "\tNotations used below:\n" 
+        "\tNotations used below:\n"
         "\t v0 - the value in org( e )\n"
         "\t v1 - the value in dest( e )\n"
         "\t v2 - the value in dest( next( e ) )" ;

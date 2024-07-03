@@ -15,9 +15,6 @@ namespace MR
 // args: position0, position1, value0, value1, iso
 using VoxelPointPositioner = std::function<Vector3f( const Vector3f&, const Vector3f&, float, float, float )>;
 
-// linear interpolation positioner
-MRMESH_API Vector3f voxelPositionerLinear( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso );
-
 struct MarchingCubesParams
 {
     /// origin point of voxels box
@@ -28,7 +25,7 @@ struct MarchingCubesParams
     bool lessInside{ false }; // should be false for dense volumes, and true for distance volume
     Vector<VoxelId, FaceId>* outVoxelPerFaceMap{ nullptr }; // optional output map FaceId->VoxelId
     // function to calculate position of result mesh points
-    // if the function isn't set, `voxelPositionerLinear` will be used
+    // if the function isn't set, a linear positioner will be used
     // note: this function is called in parallel from different threads
     VoxelPointPositioner positioner = {};
     /// if the mesh exceeds this number of vertices, an error returns

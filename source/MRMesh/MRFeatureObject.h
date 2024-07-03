@@ -106,7 +106,7 @@ public:
     // Since a point on an abstract feature is difficult to uniquely parameterize,
     // the projection function simultaneously returns the normal to the surface at the projection point.
     [[nodiscard]] virtual FeatureObjectProjectPointResult projectPoint( const Vector3f& point, ViewportId id = {} ) const = 0;
-    [[nodiscard]] std::optional<Vector3f> getNormal( const Vector3f& point ) const;
+    [[nodiscard]] MRMESH_API std::optional<Vector3f> getNormal( const Vector3f& point ) const;
 
     MRMESH_API void setXf( const AffineXf3f& xf, ViewportId id = {} ) override;
     MRMESH_API void resetXf( ViewportId id = {} ) override;

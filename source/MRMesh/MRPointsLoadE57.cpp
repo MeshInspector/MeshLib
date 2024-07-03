@@ -1,7 +1,6 @@
 #include "MRPointsLoadE57.h"
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
 #include "MRBox.h"
-#include "MRColor.h"
 #include "MRPointCloud.h"
 #include "MRStringConvert.h"
 #include "MRQuaternion.h"
@@ -79,7 +78,7 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
 
             if ( !eReader.GetData3DSizes( scanIndex, nRow, nColumn, nPointsSize, nGroupsSize, nCountSize, bColumnIndex) )
                 return MR::unexpected( std::string( "GetData3DSizes failed during reading of " + utf8string( file ) ) );
-    
+
             // how many points to read in a time
             const int64_t nSize = std::min( nPointsSize, int64_t( 1024 ) * 128 );
 
@@ -125,7 +124,7 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
                 }
                 if ( !aXf )
                 {
-                    aXf = AffineXf3d::translation( 
+                    aXf = AffineXf3d::translation(
                     {
                         -buffers.cartesianX[0],
                         -buffers.cartesianY[0],
@@ -159,7 +158,7 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
     }
     catch( const e57::E57Exception & e )
     {
-        return MR::unexpected( fmt::format( "Error '{}' during reading of {}", 
+        return MR::unexpected( fmt::format( "Error '{}' during reading of {}",
             e57::Utilities::errorCodeToString( e.errorCode() ), utf8string( file ) ) );
     }
 

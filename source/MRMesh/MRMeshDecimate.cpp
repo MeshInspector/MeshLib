@@ -302,14 +302,14 @@ public:
     std::vector<QueueElement> elems_;
 };
 
-QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, float stabilizer )
+QuadraticForm3f computeFormAtVertex( const MR::MeshPart & mp, MR::VertId v, float stabilizer, const UndirectedEdgeBitSet * creases )
 {
-    QuadraticForm3f qf = mp.mesh.quadraticForm( v, mp.region );
+    QuadraticForm3f qf = mp.mesh.quadraticForm( v, mp.region, creases );
     qf.addDistToOrigin( stabilizer );
     return qf;
 }
 
-Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer )
+Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, float stabilizer, const UndirectedEdgeBitSet * creases )
 {
     MR_TIMER;
 
@@ -319,7 +319,7 @@ Vector<QuadraticForm3f, VertId> computeFormsAtVertices( const MeshPart & mp, flo
     Vector<QuadraticForm3f, VertId> res( regionVertices.find_last() + 1 );
     BitSetParallelFor( regionVertices, [&]( VertId v )
     {
-        res[v] = computeFormAtVertex( mp, v, stabilizer );
+        res[v] = computeFormAtVertex( mp, v, stabilizer, creases );
     } );
 
     return res;
@@ -363,7 +363,7 @@ bool MeshDecimator::initializeQueue_()
         pVertForms_ = &myVertForms_;
 
     if ( pVertForms_->empty() )
-        *pVertForms_ = computeFormsAtVertices( MeshPart{ mesh_, settings_.region }, settings_.stabilizer );
+        *pVertForms_ = computeFormsAtVertices( MeshPart{ mesh_, settings_.region }, settings_.stabilizer, settings_.notFlippable );
 
     if ( settings_.progressCallback && !settings_.progressCallback( 0.1f ) )
         return false;
@@ -475,8 +475,11 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVert
 
     QuadraticForm3f qf;
     Vector3f pos;
-    if ( settings_.touchBdVerts )
+    if ( settings_.touchBdVerts // if boundary vertices can be moved ...
+        || ( settings_.notFlippable && settings_.notFlippable->test( ue ) ) ) // ... or this is a not-flippable edge (if you do not want such collapses then exclude it from settings_.edgesToCollapse)
+    {
         std::tie( qf, pos ) = sum( vo, po, vd, pd, !optimizeVertexPos );
+    }
     else
     {
         const bool bdO = pBdVerts_->test( o );
@@ -1030,7 +1033,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     if ( settings.vertForms )
         mVertForms = std::move( *settings.vertForms );
     if ( mVertForms.empty() )
-        mVertForms = computeFormsAtVertices( MeshPart{ mesh, settings.region }, settings.stabilizer );
+        mVertForms = computeFormsAtVertices( MeshPart{ mesh, settings.region }, settings.stabilizer, settings.notFlippable );
     if ( settings.progressCallback && !settings.progressCallback( 0.2f ) )
         return res;
 

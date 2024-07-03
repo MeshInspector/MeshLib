@@ -49,10 +49,10 @@ public:
     /// subtracts b from this, considering that bits in b are shifted right on bShiftInBlocks*bits_per_block
     MRMESH_API BitSet & subtract( const BitSet & b, int bShiftInBlocks );
 
-    /// return the highest index i such as bit i is set, or npos if *this has no on bits. 
+    /// return the highest index i such as bit i is set, or npos if *this has no on bits.
     [[nodiscard]] MRMESH_API IndexType find_last() const;
     /// returns the location of nth set bit (where the first bit corresponds to n=0) or npos if there are less bit set
-    [[nodiscard]] size_t nthSetBit( size_t n ) const;
+    [[nodiscard]] MRMESH_API size_t nthSetBit( size_t n ) const;
 
     /// doubles reserved memory until resize(newSize) can be done without reallocation
     void resizeWithReserve( size_t newSize )
@@ -87,6 +87,16 @@ public:
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return capacity() / 8; }
+
+    // Normally those are inherited from `boost::dynamic_bitset`, but MRBind currently chokes on it, so we provide those manually.
+    #if defined(MR_PARSING_FOR_PB11_BINDINGS) || defined(MR_COMPILING_PB11_BINDINGS)
+    std::size_t size() const { return dynamic_bitset::size(); }
+    std::size_t count() const { return dynamic_bitset::count(); }
+    void resize( std::size_t num_bits, bool value = false ) { dynamic_bitset::resize( num_bits, value ); }
+    void clear() { dynamic_bitset::clear(); }
+    void push_back( bool bit ) { dynamic_bitset::push_back( bit ); }
+    void pop_back() { dynamic_bitset::pop_back(); }
+    #endif
 };
 
 /// container of bits representing specific indices (faces, verts or edges)
@@ -110,7 +120,9 @@ public:
     [[nodiscard]] bool test( IndexType n ) const { return base::test( n ); }
     [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return base::test_set( n, val ); }
 
+    #ifndef MR_PARSING_FOR_PB11_BINDINGS // Disable for python bindings, because MRBind chokes on `boost::dynamic_bitset::reference`.
     [[nodiscard]] reference operator[]( IndexType pos ) { return base::operator[]( pos ); }
+    #endif
     [[nodiscard]] bool operator[]( IndexType pos ) const { return base::operator[]( pos ); }
 
     [[nodiscard]] IndexType find_first() const { return IndexType( base::find_first() ); }
@@ -193,7 +205,7 @@ class SetBitIteratorT
 {
 public:
     using IndexType = typename T::IndexType;
-    
+
     using iterator_category = std::forward_iterator_tag;
     using value_type        = IndexType;
     using difference_type   = std::ptrdiff_t;
@@ -218,7 +230,7 @@ public:
         operator++();
         return ret;
     }
-    
+
     [[nodiscard]] const T * bitset() const { return bitset_; }
     [[nodiscard]] reference operator *() const { return index_; }
 

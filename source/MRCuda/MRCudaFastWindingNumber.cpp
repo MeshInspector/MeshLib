@@ -215,17 +215,6 @@ size_t FastWindingNumber::selfIntersectionsHeapBytes( const Mesh& mesh ) const
     return newSize - currentSize;
 }
 
-size_t FastWindingNumber::fromGridHeapBytes( const Vector3i& dims ) const
-{
-    size_t currentSize = 0;
-    if ( data_ )
-        currentSize += data_->cudaResult.size() * sizeof( float );
-    size_t newSize = size_t( dims.x ) * dims.y * dims.z * sizeof( float );
-    if ( newSize <= currentSize )
-        return 0;
-    return newSize - currentSize;
-}
-
 } //namespace Cuda
 
 } //namespace MR

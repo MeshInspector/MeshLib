@@ -31,15 +31,24 @@ public:
     MRVIEWER_API static void setCudaPointsToDistanceVolumeCallback( CudaPointsToDistanceVolumeCallback callback );
 
     // Returns true if CUDA is available on this computer
-    MRVIEWER_API static bool isCudaAvailable();
+    [[nodiscard]] MRVIEWER_API static bool isCudaAvailable();
+
     // Returns number of free bytes on cuda
-    MRVIEWER_API static size_t getCudaFreeMemory();
+    [[nodiscard]] MRVIEWER_API static size_t getCudaFreeMemory();
+
     // Returns cuda implementation of IFastWindingNumber
-    MRVIEWER_API static std::unique_ptr<IFastWindingNumber> getCudaFastWindingNumber( const Mesh& mesh );
+    [[nodiscard]] MRVIEWER_API static std::unique_ptr<IFastWindingNumber> getCudaFastWindingNumber( const Mesh& mesh );
+
     // Returns cuda implementation of IPointsToMeshProjector
-    MRVIEWER_API static std::unique_ptr<IPointsToMeshProjector> getCudaPointsToMeshProjector();
+    [[nodiscard]] MRVIEWER_API static std::unique_ptr<IPointsToMeshProjector> getCudaPointsToMeshProjector();
+
     // Returns cuda implementation of PointsToDistanceVolumeCallback
-    MRVIEWER_API static CudaPointsToDistanceVolumeCallback getCudaPointsToDistanceVolumeCallback();
+    [[nodiscard]] MRVIEWER_API static CudaPointsToDistanceVolumeCallback getCudaPointsToDistanceVolumeCallback();
+
+    /// returns amount of required GPU memory for CudaFastWindingNumber::calcFromGrid and CudaFastWindingNumber::calcFromGridWithDistances operations,
+    /// does not take into account size of output vector
+    /// \param dims dimensions of the grid
+    [[nodiscard]] MRVIEWER_API static size_t fromGridMemory( const Vector3i& dims );
 
 private:
     CudaAccessor() = default;

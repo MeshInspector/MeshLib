@@ -121,10 +121,12 @@ public:
 
     // for backward compatibility
     MRMESH_API const MeshTexture& getTexture() const;
-
-    const std::vector<MeshTexture>& getTextures() const { return textures_; }
-    virtual void setTextures( std::vector<MeshTexture> texture ) { textures_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
-    virtual void updateTextures( std::vector<MeshTexture>& updated ) { std::swap( textures_, updated ); dirty_ |= DIRTY_TEXTURE; }
+    [[deprecated]] MRMESH_API virtual void setTexture( MeshTexture texture );
+    [[deprecated]] MRMESH_API virtual void updateTexture( MeshTexture& updated );
+    
+    const Vector<MeshTexture, TextureId>& getTextures() const { return textures_; }
+    virtual void setTextures( Vector<MeshTexture, TextureId> texture ) { textures_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
+    virtual void updateTextures( Vector<MeshTexture, TextureId>& updated ) { std::swap( textures_, updated ); dirty_ |= DIRTY_TEXTURE; }
 
     const VertUVCoords& getUVCoords() const { return uvCoordinates_; }
     virtual void setUVCoords( VertUVCoords uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
@@ -215,7 +217,7 @@ protected:
     UndirectedEdgeBitSet creases_;
 
     /// Texture options
-    std::vector<MeshTexture> textures_;
+    Vector<MeshTexture, TextureId> textures_;
     VertUVCoords uvCoordinates_; ///< vertices coordinates in texture
 
     MeshTexture ancillaryTexture_;

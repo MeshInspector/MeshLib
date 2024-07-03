@@ -95,11 +95,11 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     // texture
     if ( !textures_.empty() )
     {
-        root["TextureCount"] = uint32_t ( textures_.size() );
-        serializeToJson( textures_[0], root["Texture"] );
+        root["TextureCount"] = int ( textures_.size() );
+        serializeToJson( textures_[TextureId{ 0 }], root["Texture"] );
     }
 
-    for ( size_t i = 1; i < textures_.size(); ++i )
+    for ( TextureId i = TextureId{ 1 }; i < textures_.size(); ++i )
         serializeToJson( textures_[i], root["Textures"][std::to_string( i )] );
 
     serializeToJson( uvCoordinates_.vec_, root["UVCoordinates"] );
@@ -164,10 +164,10 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     deserializeFromJson( selectionColor["Diffuse"], resVec );
     faceSelectionColor_.set( Color( resVec ) );
     // texture
-    uint32_t textureCount = 0;
+    TextureId textureCount = TextureId{ 0 };
     if ( root["TextureCount"].isUInt() )
     {
-        textureCount = root["TextureCount"].asUInt();
+        textureCount = TextureId{ root["TextureCount"].asInt() };
         textures_.resize( textureCount );
     }
 
@@ -176,10 +176,10 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
         if ( textures_.empty() )
             textures_.resize( 1 );
 
-        deserializeFromJson( root["Texture"], textures_[0] );
+        deserializeFromJson( root["Texture"], textures_.front() );
     }
 
-    for ( uint32_t textureIndex = 1; textureIndex < textureCount; ++textureIndex )
+    for ( TextureId textureIndex = TextureId{ 1 }; textureIndex < textureCount; ++textureIndex )
         deserializeFromJson( root["Textures"][std::to_string(textureIndex)].isObject(), textures_[textureIndex]);
 
     if ( root["UVCoordinates"].isObject() )
@@ -322,6 +322,25 @@ const MeshTexture& ObjectMeshHolder::getTexture() const
 {
     static const MeshTexture defaultTexture;
     return textures_.size() ? textures_.front() : defaultTexture;
+}
+
+void ObjectMeshHolder::setTexture( MeshTexture texture )
+{
+    if ( textures_.empty() )
+        textures_.push_back( std::move( texture ) );
+    else
+        textures_.front() = std::move(texture);
+
+    dirty_ |= DIRTY_TEXTURE;
+}
+
+void ObjectMeshHolder::updateTexture( MeshTexture& updated )
+{
+    if ( textures_.empty() )
+        textures_.resize( 1 );
+
+    std::swap( textures_.front(), updated);
+    dirty_ |= DIRTY_TEXTURE;
 }
 
 void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc, const FaceMap & thisToSrcFaces )

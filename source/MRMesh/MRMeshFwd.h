@@ -64,6 +64,7 @@ class MRMESH_CLASS VoxelTag;
 class MRMESH_CLASS RegionTag;
 class MRMESH_CLASS NodeTag;
 class MRMESH_CLASS ObjTag;
+class MRMESH_CLASS TextureTag;
 
 template <typename T> class MRMESH_CLASS Id;
 template <typename T, typename I> class MRMESH_CLASS Vector;
@@ -79,6 +80,7 @@ using VoxelId = Id<VoxelTag>;
 using RegionId = Id<RegionTag>;
 using NodeId = Id<NodeTag>;
 using ObjId = Id<ObjTag>;
+using TextureId = Id<TextureTag>;
 
 class ViewportId;
 class ViewportMask;

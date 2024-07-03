@@ -168,7 +168,7 @@ public:
 
 private:
     std::shared_ptr<ObjectMeshHolder> obj_;
-    std::vector<MeshTexture> textures_;
+    Vector<MeshTexture, TextureId> textures_;
     std::string name_;
 };
 

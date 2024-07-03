@@ -19,7 +19,7 @@
 #include "MRPch/MRSuppressWarning.h"
 #include "MRViewer/MRRibbonButtonDrawer.h"
 #include "MRViewer/MRRibbonConstants.h"
-#include "MRViewerSettingsPlugin.h"
+#include "MRViewer/MRViewerSettingsPlugin.h"
 #include "MRViewer/MRUIStyle.h"
 #include <fstream>
 

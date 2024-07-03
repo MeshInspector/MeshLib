@@ -93,7 +93,13 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     serializeToJson( facesColorMap_.vec_, root["FaceColors"] );
 
     // texture
-    serializeToJson( texture_, root["Texture"] );
+    if ( !textures_.empty() )
+    {
+        root["TextureCount"] = int ( textures_.size() );
+        for ( TextureId i = TextureId{ 0 }; i < textures_.size(); ++i )
+            serializeToJson( textures_[i], root["Textures"][std::to_string( i )] );
+    }    
+
     serializeToJson( uvCoordinates_.vec_, root["UVCoordinates"] );
     // edges
     serializeToJson( Vector4f( edgesColor_.get() ), root["Colors"]["Edges"] );
@@ -156,8 +162,24 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     deserializeFromJson( selectionColor["Diffuse"], resVec );
     faceSelectionColor_.set( Color( resVec ) );
     // texture
-    if ( root["Texture"].isObject() )
-        deserializeFromJson( root["Texture"], texture_ );
+    TextureId textureCount = TextureId{ 0 };
+    if ( root["TextureCount"].isUInt() )
+    {
+        textureCount = TextureId{ root["TextureCount"].asInt() };
+        textures_.resize( textureCount );
+
+        for ( TextureId textureIndex = TextureId{ 0 }; textureIndex < textureCount; ++textureIndex )
+            deserializeFromJson( root["Textures"][std::to_string( textureIndex )], textures_[textureIndex] );
+    }
+    else if ( root["Texture"].isObject() )
+    {
+        if ( textures_.empty() )
+            textures_.resize( 1 );
+
+        deserializeFromJson( root["Texture"], textures_.front() );
+    }
+
+
     if ( root["UVCoordinates"].isObject() )
         deserializeFromJson( root["UVCoordinates"], uvCoordinates_.vec_ );
     // edges
@@ -292,11 +314,38 @@ ObjectMeshHolder::ObjectMeshHolder()
     setDefaultSceneProperties_();
 }
 
+
+// for backward compatibility
+const MeshTexture& ObjectMeshHolder::getTexture() const
+{
+    static const MeshTexture defaultTexture;
+    return textures_.size() ? textures_.front() : defaultTexture;
+}
+
+void ObjectMeshHolder::setTexture( MeshTexture texture )
+{
+    if ( textures_.empty() )
+        textures_.push_back( std::move( texture ) );
+    else
+        textures_.front() = std::move(texture);
+
+    dirty_ |= DIRTY_TEXTURE;
+}
+
+void ObjectMeshHolder::updateTexture( MeshTexture& updated )
+{
+    if ( textures_.empty() )
+        textures_.resize( 1 );
+
+    std::swap( textures_.front(), updated);
+    dirty_ |= DIRTY_TEXTURE;
+}
+
 void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const VertMap & thisToSrc, const FaceMap & thisToSrcFaces )
 {
     MR_TIMER
     copyColors( src, thisToSrc, thisToSrcFaces );
-    setTexture( src.getTexture() );
+    setTextures( src.getTextures() );
 
     const auto& srcUVCoords = src.getUVCoords();
     const auto lastVert = src.mesh()->topology.lastValidVert();
@@ -569,7 +618,7 @@ size_t ObjectMeshHolder::heapBytes() const
         + selectedTriangles_.heapBytes()
         + selectedEdges_.heapBytes()
         + creases_.heapBytes()
-        + texture_.heapBytes()
+        + MR::heapBytes( textures_ )
         + ancillaryTexture_.heapBytes()
         + uvCoordinates_.heapBytes()
         + ancillaryUVCoordinates_.heapBytes()

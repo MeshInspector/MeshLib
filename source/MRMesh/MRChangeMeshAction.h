@@ -140,7 +140,7 @@ public:
         name_{ name }
     {
         if ( obj )
-            texture_ = obj->getTexture();
+            textures_ = obj->getTextures();
     }
 
     virtual std::string name() const override
@@ -152,7 +152,7 @@ public:
     {
         if ( !obj_ )
             return;
-        obj_->updateTexture( texture_ );
+        obj_->updateTextures( textures_ );
     }
 
     static void setObjectDirty( const std::shared_ptr<ObjectMeshHolder>& obj )
@@ -163,12 +163,12 @@ public:
 
     [[nodiscard]] virtual size_t heapBytes() const override
     {
-        return name_.capacity() + texture_.heapBytes();
+        return name_.capacity() + MR::heapBytes( textures_ );
     }
 
 private:
     std::shared_ptr<ObjectMeshHolder> obj_;
-    MeshTexture texture_;
+    Vector<MeshTexture, TextureId> textures_;
     std::string name_;
 };
 

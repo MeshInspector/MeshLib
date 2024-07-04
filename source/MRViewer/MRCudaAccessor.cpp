@@ -4,6 +4,7 @@
 #include "MRMesh/MRSimpleVolume.h"
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRMesh.h"
+#include "MRMesh/MRAABBTreeMaker.h"
 
 namespace MR
 {
@@ -74,10 +75,10 @@ CudaAccessor::CudaPointsToDistanceVolumeCallback CudaAccessor::getCudaPointsToDi
 
 size_t CudaAccessor::fastWindingNumberMeshMemory( const Mesh& mesh )
 {
-    const AABBTree& tree = mesh.getAABBTree();
-    size_t memoryAmount = tree.nodes().size() * sizeof( Dipole );
+    size_t treeNodesSize = getNumNodes( mesh.topology.numValidFaces() );
+    size_t memoryAmount = treeNodesSize * sizeof( Dipole );
     memoryAmount += mesh.points.size() * sizeof( Vector3f );
-    memoryAmount += tree.nodes().size() * sizeof( AABBTree::Node );
+    memoryAmount += treeNodesSize * sizeof( AABBTree::Node );
     memoryAmount += mesh.topology.faceSize() * sizeof( Vector3i );
     return memoryAmount;
 }

@@ -46,25 +46,21 @@ public:
     [[nodiscard]] MRVIEWER_API static CudaPointsToDistanceVolumeCallback getCudaPointsToDistanceVolumeCallback();
 
     /// returns amount of required GPU memory for CudaFastWindingNumber internal data,
-    /// note that this function will build mesh AABB Tree if it has not been built already
     /// \param mesh input mesh
     [[nodiscard]] MRVIEWER_API static size_t fastWindingNumberMeshMemory( const Mesh& mesh );
 
     /// returns amount of required GPU memory for CudaFastWindingNumber::calcFromGrid and CudaFastWindingNumber::calcFromGridWithDistances operations,
-    /// note that this function will build mesh AABB Tree if it has not been built already
     /// \param dims dimensions of the grid
     [[nodiscard]] MRVIEWER_API static size_t fromGridMemory( const Mesh& mesh, const Vector3i& dims );
 
     /// <summary>
     /// returns amount of required GPU memory for CudaFastWindingNumber::calcFromVector operation
-    /// note that this function will build mesh AABB Tree if it has not been built already
     /// </summary>
     /// <param name="inputSize">size of input vector</param>
     [[nodiscard]] MRVIEWER_API static size_t fromVectorMemory( const Mesh& mesh, size_t inputSize );
 
     /// <summary>
     /// returns amount of required GPU memory for CudaFastWindingNumber::calcSelfIntersections operation
-    /// note that this function will build mesh AABB Tree if it has not been built already
     /// </summary>
     /// <param name="mesh">input mesh</param>
     [[nodiscard]] MRVIEWER_API static size_t selfIntersectionsMemory( const Mesh& mesh );

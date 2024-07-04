@@ -467,7 +467,7 @@ bool ProgressBar::tryRun_( const std::function<bool ()>& task )
         onFinish_ = [msg = std::string( badAllocE.what() )]
         {
             spdlog::error( msg );
-            showError( "Device ran out of memory during this operation." );
+            showError( "Not enough memory for the requested operation." );
         };
         return true;
     }

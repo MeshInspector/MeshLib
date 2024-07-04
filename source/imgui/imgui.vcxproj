@@ -20,6 +20,7 @@
     <ClInclude Include="..\..\thirdparty\imgui\imstb_rectpack.h" />
     <ClInclude Include="..\..\thirdparty\imgui\imstb_textedit.h" />
     <ClInclude Include="..\..\thirdparty\imgui\imstb_truetype.h" />
+    <ClInclude Include="..\..\thirdparty\imgui\misc\cpp\imgui_stdlib.h" />
     <ClInclude Include="..\..\thirdparty\imgui\misc\freetype\imgui_freetype.h" />
     <ClInclude Include="MRCustomImGuiConfig.h" />
   </ItemGroup>

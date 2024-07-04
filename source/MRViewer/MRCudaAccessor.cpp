@@ -2,6 +2,8 @@
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include "MRMesh/MRFastWindingNumber.h"
 #include "MRMesh/MRSimpleVolume.h"
+#include "MRMesh/MRAABBTree.h"
+#include "MRMesh/MRMesh.h"
 
 namespace MR
 {
@@ -70,9 +72,29 @@ CudaAccessor::CudaPointsToDistanceVolumeCallback CudaAccessor::getCudaPointsToDi
     return inst.pointsToDistanceVolumeCallback_;
 }
 
-size_t CudaAccessor::fromGridMemory( const Vector3i& dims )
+size_t CudaAccessor::fastWindingNumberMeshMemory( const Mesh& mesh )
 {
-    return size_t( dims.x ) * dims.y * dims.z * sizeof( float );
+    const AABBTree& tree = mesh.getAABBTree();
+    size_t memoryAmount = tree.nodes().size() * sizeof( Dipole );
+    memoryAmount += mesh.points.size() * sizeof( Vector3f );
+    memoryAmount += tree.nodes().size() * sizeof( AABBTree::Node );
+    memoryAmount += mesh.topology.faceSize() * sizeof( Vector3i );
+    return memoryAmount;
+}
+
+size_t CudaAccessor::fromGridMemory( const Mesh& mesh, const Vector3i& dims )
+{
+    return fastWindingNumberMeshMemory( mesh ) + size_t( dims.x ) * dims.y * dims.z * sizeof( float );
+}
+
+size_t CudaAccessor::fromVectorMemory( const Mesh& mesh, size_t inputSize )
+{
+    return fastWindingNumberMeshMemory( mesh ) + inputSize * ( sizeof( float ) + sizeof( Vector3f ) );
+}
+
+size_t CudaAccessor::selfIntersectionsMemory( const Mesh& mesh )
+{
+    return fastWindingNumberMeshMemory( mesh ) + mesh.topology.faceSize() * sizeof( float );
 }
 
 CudaAccessor& CudaAccessor::instance_()

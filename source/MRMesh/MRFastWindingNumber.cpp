@@ -96,14 +96,4 @@ VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& r
     return {};
 }
 
-size_t FastWindingNumber::fromVectorHeapBytes( size_t ) const
-{
-    return 0;
-}
-
-size_t FastWindingNumber::selfIntersectionsHeapBytes( const Mesh& ) const
-{
-    return 0;
-}
-
 } // namespace MR

@@ -51,23 +51,6 @@ public:
     /// <param name="gridToMeshXf">transform from grid to mesh</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
     MRCUDA_API VoidOrErrStr calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) override;
-
-    /// <summary>
-    /// returns amount of required memory for calcFromVector operation
-    /// does not take into account size of output vector
-    /// </summary>
-    /// <param name="inputSize">size of input vector</param>
-    /// <returns></returns>
-    MRCUDA_API virtual size_t fromVectorHeapBytes( size_t inputSize ) const override;
-
-    /// <summary>
-    /// returns amount of required memory for calcSelfIntersections operation
-    /// does not take into account size of output FaceBitSet
-    /// </summary>
-    /// <param name="mesh">input mesh</param>
-    /// <returns></returns>
-    MRCUDA_API virtual size_t selfIntersectionsHeapBytes( const Mesh& mesh ) const override;
-
 private:
     bool prepareData_( ProgressCallback cb );
 };

@@ -45,11 +45,25 @@ public:
     // Returns cuda implementation of PointsToDistanceVolumeCallback
     [[nodiscard]] MRVIEWER_API static CudaPointsToDistanceVolumeCallback getCudaPointsToDistanceVolumeCallback();
 
-    /// returns amount of required GPU memory for CudaFastWindingNumber::calcFromGrid and CudaFastWindingNumber::calcFromGridWithDistances operations,
-    /// does not take into account size of output vector
-    /// \param dims dimensions of the grid
-    [[nodiscard]] MRVIEWER_API static size_t fromGridMemory( const Vector3i& dims );
+    /// returns amount of required GPU memory for CudaFastWindingNumber internal data,
+    /// \param mesh input mesh
+    [[nodiscard]] MRVIEWER_API static size_t fastWindingNumberMeshMemory( const Mesh& mesh );
 
+    /// returns amount of required GPU memory for CudaFastWindingNumber::calcFromGrid and CudaFastWindingNumber::calcFromGridWithDistances operations,
+    /// \param dims dimensions of the grid
+    [[nodiscard]] MRVIEWER_API static size_t fromGridMemory( const Mesh& mesh, const Vector3i& dims );
+
+    /// <summary>
+    /// returns amount of required GPU memory for CudaFastWindingNumber::calcFromVector operation
+    /// </summary>
+    /// <param name="inputSize">size of input vector</param>
+    [[nodiscard]] MRVIEWER_API static size_t fromVectorMemory( const Mesh& mesh, size_t inputSize );
+
+    /// <summary>
+    /// returns amount of required GPU memory for CudaFastWindingNumber::calcSelfIntersections operation
+    /// </summary>
+    /// <param name="mesh">input mesh</param>
+    [[nodiscard]] MRVIEWER_API static size_t selfIntersectionsMemory( const Mesh& mesh );
 private:
     CudaAccessor() = default;
     ~CudaAccessor() = default;

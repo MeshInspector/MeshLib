@@ -415,6 +415,7 @@ bool SetViewportConfigPresetMenuItem::action()
             rect.max.x = rect.min.x + width;
             rect.max.y = rect.min.y + height;
             viewer.viewport().setViewportRect( rect );
+            updateViewports_( {} );
             break;
     }
     return false;

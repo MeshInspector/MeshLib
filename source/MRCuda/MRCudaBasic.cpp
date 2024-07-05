@@ -10,13 +10,30 @@ namespace MR
 namespace Cuda
 {
 
-bool isCudaAvailable()
+bool isCudaAvailable( int* driverVersionOut, int* runtimeVersionOut )
 {
     int n;
     cudaError err = cudaGetDeviceCount( &n );
     if ( err != cudaError::cudaSuccess )
         return false;
-    return n > 0;
+    if ( n <= 0 )
+        return false;
+    int driverVersion{ 0 };
+    int runtimeVersion{ 0 };
+    err = cudaDriverGetVersion( &driverVersion );
+    if ( err != cudaError::cudaSuccess )
+        return false;
+    
+    err = cudaRuntimeGetVersion( &runtimeVersion );
+    if ( err != cudaError::cudaSuccess )
+        return false;
+
+    if ( driverVersionOut )
+        *driverVersionOut = driverVersion;
+    if ( runtimeVersionOut )
+        *runtimeVersionOut = runtimeVersion;
+
+    return runtimeVersion <= driverVersion;
 }
 
 size_t getCudaAvailableMemory()

@@ -9,9 +9,12 @@
 namespace MR
 {
 
-void CudaAccessor::setCudaAvailable( bool val )
+void CudaAccessor::setCudaAvailable( bool val, int maxDriverVersion, int runtimeVersion )
 {
-    instance_().isCudaAvailable_ = val;
+    auto& inst = instance_();
+    inst.isCudaAvailable_ = val;
+    inst.maxDriverVersion_ = maxDriverVersion;
+    inst.runtimeVersion_ = runtimeVersion;
 }
 
 void CudaAccessor::setCudaFreeMemoryFunc( CudaFreeMemoryFunc freeMemFunc )
@@ -38,6 +41,16 @@ bool CudaAccessor::isCudaAvailable()
 {
     auto& inst = instance_();
     return inst.isCudaAvailable_;
+}
+
+int CudaAccessor::getCudaMaxDriverSupportedVersion()
+{
+    return instance_().maxDriverVersion_;
+}
+
+int CudaAccessor::getCudaRuntimeVersion()
+{
+    return instance_().runtimeVersion_;
 }
 
 size_t CudaAccessor::getCudaFreeMemory()

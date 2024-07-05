@@ -24,7 +24,7 @@ public:
     using CudaPointsToDistanceVolumeCallback = std::function<Expected<SimpleVolume>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )>;
 
     // setup functions
-    MRVIEWER_API static void setCudaAvailable( bool val );
+    MRVIEWER_API static void setCudaAvailable( bool val, int maxDriverVersion, int runtimeVersion );
     MRVIEWER_API static void setCudaFreeMemoryFunc( CudaFreeMemoryFunc freeMemFunc );
     MRVIEWER_API static void setCudaFastWindingNumberConstructor( CudaFwnConstructor fwnCtor );
     MRVIEWER_API static void setCudaMeshProjectorConstructor( CudaMeshProjectorConstructor mpCtor );
@@ -32,6 +32,12 @@ public:
 
     // Returns true if CUDA is available on this computer
     [[nodiscard]] MRVIEWER_API static bool isCudaAvailable();
+
+    // Returns maximum supported by driver version
+    [[nodiscard]] MRVIEWER_API static int getCudaMaxDriverSupportedVersion();
+
+    // Returns version of current runtime
+    [[nodiscard]] MRVIEWER_API static int getCudaRuntimeVersion();
 
     // Returns number of free bytes on cuda
     [[nodiscard]] MRVIEWER_API static size_t getCudaFreeMemory();
@@ -71,6 +77,8 @@ private:
     static CudaAccessor& instance_();
 
     bool isCudaAvailable_ = false;
+    int maxDriverVersion_ = 0;
+    int runtimeVersion_ = 0;
     CudaFreeMemoryFunc freeMemFunc_;
     CudaFwnConstructor fwnCtor_;
     CudaMeshProjectorConstructor mpCtor_;

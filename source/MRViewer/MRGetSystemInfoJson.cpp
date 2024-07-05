@@ -54,6 +54,10 @@ Json::Value GetSystemInfoJson()
             fmt::format( "{}.{}/{}.{}", cudaRTVersion / 1000, ( cudaRTVersion % 1000 ) / 10, cudaMaxDriverVersion / 1000, ( cudaMaxDriverVersion % 1000 ) / 10 )
             : "n/a";
 
+        int cudaCCMajor = CudaAccessor::getComputeCapabilityMajor();
+        int cudaCCMinor = CudaAccessor::getComputeCapabilityMinor();
+        glInfo["CUDA Compute Capability"] = cudaCCMajor != 0 && cudaCCMinor != 0 ? fmt::format( "{}.{}", cudaCCMajor, cudaCCMinor ) : "n/a";
+
         int frameBufferSizeX, frameBufferSizeY;
         int windowSizeX, windowSizeY;
         glfwGetFramebufferSize( getViewerInstance().window, &frameBufferSizeX, &frameBufferSizeY );

@@ -10,7 +10,7 @@ namespace MR
 namespace Cuda
 {
 
-bool isCudaAvailable( int* driverVersionOut, int* runtimeVersionOut )
+bool isCudaAvailable( int* driverVersionOut, int* runtimeVersionOut, int* computeMajorOut, int* computeMinorOut )
 {
     int n;
     cudaError err = cudaGetDeviceCount( &n );
@@ -28,10 +28,29 @@ bool isCudaAvailable( int* driverVersionOut, int* runtimeVersionOut )
     if ( err != cudaError::cudaSuccess )
         return false;
 
+    int computeMajor{ 0 };
+    int computeMinor{ 0 };
+    err = cudaDeviceGetAttribute( &computeMajor, cudaDevAttrComputeCapabilityMajor, 0 );
+    if ( err != cudaError::cudaSuccess )
+        return false;
+    err = cudaDeviceGetAttribute( &computeMinor, cudaDevAttrComputeCapabilityMinor, 0 );
+    if ( err != cudaError::cudaSuccess )
+        return false;
+
     if ( driverVersionOut )
         *driverVersionOut = driverVersion;
     if ( runtimeVersionOut )
         *runtimeVersionOut = runtimeVersion;
+    if ( computeMajorOut )
+        *computeMajorOut = computeMajor;
+    if ( computeMinorOut )
+        *computeMinorOut = computeMinor;
+
+    // according to https://en.wikipedia.org/wiki/CUDA Compute Capability (CUDA SDK support vs. Microarchitecture) table
+    if ( runtimeVersion / 1000 >= 12 && computeMajor < 5 )
+        return false;
+    else if ( runtimeVersion / 1000 > 10 && ( computeMajor < 3 || ( computeMajor == 3 && computeMinor < 5 ) ) )
+        return false;
 
     return runtimeVersion <= driverVersion;
 }

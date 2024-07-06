@@ -6,6 +6,8 @@
 #include "MRMesh/MRConvexHull.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRLog.h"
+#include "MRMesh/MRSystem.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
 #pragma warning(push)
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
@@ -15,10 +17,6 @@
 #pragma warning(pop)
 #include <boost/exception/diagnostic_information.hpp>
 #include <iostream>
-
-#ifdef _WIN32
-#include "psapi.h"
-#endif
 
 bool doCommand( const boost::program_options::option& option, MR::Mesh& mesh )
 {
@@ -191,15 +189,7 @@ static int mainInternal( int argc, char **argv )
     }
 
 #ifdef _WIN32
-    HANDLE hProcess = GetCurrentProcess();
-    PROCESS_MEMORY_COUNTERS pmc;
-    if ( GetProcessMemoryInfo( hProcess, &pmc, sizeof(pmc)) )
-    {
-        static constexpr size_t MB = 1024 * 1024;
-        const float bytesInMB = 1.0f / MB;
-        std::cout << "Peak working set:    " << pmc.PeakWorkingSetSize * bytesInMB << " MB\n";
-        std::cout << "Peak pagefile usage: " << pmc.PeakPagefileUsage * bytesInMB << " MB" << std::endl;
-    }
+    std::cout << "Peak virtual memory usage: " << MR::bytesString( MR::getProccessMemoryInfo().maxVirtual ) << std::endl;
 #endif
 
     return 0;

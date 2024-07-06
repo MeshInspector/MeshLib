@@ -46,9 +46,10 @@ bool split( std::string_view str, std::string_view sep, F&& func )
     return false;
 }
 
-// Replaces `from` with `to` in `target`, zero or more times.
+/// Returns \param target with all \param from replaced with \param to, zero or more times.
 [[nodiscard]] MRMESH_API std::string replace( std::string target, std::string_view from, std::string_view to );
-// Same, but modifies the target string directly.
+
+/// Replaces \param from with \param to in \param target (in-place), zero or more times.
 MRMESH_API void replaceInplace( std::string& target, std::string_view from, std::string_view to );
 
-}
+} //namespace MR

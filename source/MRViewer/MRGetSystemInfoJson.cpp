@@ -112,6 +112,13 @@ Json::Value GetSystemInfoJson()
     memoryInfo["Physical memory total"] = bytesString( memInfo.ullTotalPhys );
     memoryInfo["Physical memory available"] = bytesString( memInfo.ullAvailPhys );
     memoryInfo["Physical memory total MB"] = std::to_string( memInfo.ullTotalPhys / 1024 / 1024 );
+
+    const auto procMem = getProccessMemoryInfo();
+    auto& pm = root["Process Memory"];
+    pm["Peak virtual memory"] = bytesString( procMem.maxVirtual );
+    pm["Current virtual memory"] = bytesString( procMem.currVirtual );
+    pm["Peak physical memory"] = bytesString( procMem.maxPhysical );
+    pm["Current physical memory"] = bytesString( procMem.currPhysical );
 #else
 #ifndef __EMSCRIPTEN__
     // if lunix

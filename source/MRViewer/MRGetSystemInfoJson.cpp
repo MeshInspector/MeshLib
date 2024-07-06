@@ -25,7 +25,7 @@ static std::string toGbStr( size_t s )
     constexpr size_t GB = 1024 * 1024 * 1024;
     constexpr float inGB = 1.0f / GB;
     return fmt::format( "{:.2f} GB", s * inGB );
-};
+}
 
 Json::Value GetSystemInfoJson()
 {

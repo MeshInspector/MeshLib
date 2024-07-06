@@ -20,6 +20,13 @@
 namespace MR
 {
 
+static std::string toGbStr( size_t s )
+{
+    constexpr size_t GB = 1024 * 1024 * 1024;
+    constexpr float inGB = 1.0f / GB;
+    return fmt::format( "{:.2f} GB", s * inGB );
+};
+
 Json::Value GetSystemInfoJson()
 {
     Json::Value root;
@@ -45,7 +52,7 @@ Json::Value GetSystemInfoJson()
         glInfo["MSAA"] = std::to_string( curSamples );
 
         glInfo["CUDA memory"] = CudaAccessor::isCudaAvailable() ?
-            fmt::format( "{:.1f} GB", CudaAccessor::getCudaFreeMemory() / 1024 / 1024 / 1024.0f ) :
+            toGbStr( CudaAccessor::getCudaFreeMemory() ) :
             "n/a";
 
         int cudaRTVersion = CudaAccessor::getCudaRuntimeVersion();
@@ -99,16 +106,17 @@ Json::Value GetSystemInfoJson()
         windowInfo["System scaling"] = fmt::format( "{}", menu->hidpi_scaling() );
         windowInfo["Menu scaling"] = fmt::format( "{}", menu->menu_scaling() );
     }
+
 #ifdef _WIN32
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof( MEMORYSTATUSEX );
     GlobalMemoryStatusEx( &memInfo );
     auto& memoryInfo = root["Memory Info"];
-    memoryInfo["Virtual memory total"] = fmt::format( "{:.1f} GB", memInfo.ullTotalPageFile / 1024 / 1024 / 1024.0f );
-    memoryInfo["Virtual memory available"] = fmt::format( "{:.1f} GB", memInfo.ullAvailPageFile / 1024 / 1024 / 1024.0f );
+    memoryInfo["Virtual memory total"] = toGbStr( memInfo.ullTotalPageFile );
+    memoryInfo["Virtual memory available"] = toGbStr( memInfo.ullAvailPageFile );
 
-    memoryInfo["Physical memory total"] = fmt::format( "{:.1f} GB", memInfo.ullTotalPhys / 1024 / 1024 / 1024.0f );
-    memoryInfo["Physical memory available"] = fmt::format( "{:.1f} GB", memInfo.ullAvailPhys / 1024 / 1024 / 1024.0f );
+    memoryInfo["Physical memory total"] = toGbStr( memInfo.ullTotalPhys );
+    memoryInfo["Physical memory available"] = toGbStr( memInfo.ullAvailPhys );
     memoryInfo["Physical memory total MB"] = std::to_string( memInfo.ullTotalPhys / 1024 / 1024 );
 #else
 #ifndef __EMSCRIPTEN__
@@ -118,8 +126,8 @@ Json::Value GetSystemInfoJson()
     if ( sysinfo( &sysInfo ) == 0 )
     {
         auto& memoryInfo = root["Memory Info"];
-        memoryInfo["Physical memory total"] = fmt::format( "{:.1f} GB", sysInfo.totalram * sysInfo.mem_unit / 1024 / 1024 / 1024.0f );
-        memoryInfo["Physical memory available"] = fmt::format( "{:.1f} GB", sysInfo.freeram * sysInfo.mem_unit / 1024 / 1024 / 1024.0f );
+        memoryInfo["Physical memory total"] = toGbStr( sysInfo.totalram * sysInfo.mem_unit );
+        memoryInfo["Physical memory available"] = toGbStr( sysInfo.freeram * sysInfo.mem_unit );
         memoryInfo["Physical memory total MB"] = std::to_string( sysInfo.totalram * sysInfo.mem_unit / 1024 / 1024 );
     }
 #else // if apple
@@ -142,7 +150,7 @@ Json::Value GetSystemInfoJson()
         if ( aplMem != 0 )
         {
             auto& memoryInfo = root["Memory Info"];
-            memoryInfo["Physical memory total"] = fmt::format( "{:.1f} GB", aplMem / 1024 / 1024 / 1024.0f );
+            memoryInfo["Physical memory total"] = toGbStr( aplMem );
             memoryInfo["Physical memory total MB"] = std::to_string( aplMem / 1024 / 1024 );
         }
     }

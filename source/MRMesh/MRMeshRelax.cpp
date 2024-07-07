@@ -1,14 +1,9 @@
-#include "MRMeshRelax.h"
+#include "MRMeshRelax.hpp"
 #include "MRMesh.h"
-#include "MRTimer.h"
-#include "MRRingIterator.h"
-#include "MRBitSet.h"
-#include "MRBitSetParallelFor.h"
 #include "MRBestFit.h"
 #include "MREdgePaths.h"
 #include "MRBestFitQuadric.h"
 #include "MRVector4.h"
-#include "MRMeshFixer.h"
 #include "MRRegionBoundary.h"
 #include "MRMeshComponents.h"
 #include "MRLaplacian.h"
@@ -21,47 +16,8 @@ namespace MR
 
 bool relax( Mesh& mesh, const MeshRelaxParams& params, ProgressCallback cb )
 {
-    if ( params.iterations <= 0 )
-        return true;
-
-    MR_TIMER
-    VertCoords initialPos;
-    const auto maxInitialDistSq = sqr( params.maxInitialDist );
-    if ( params.limitNearInitial )
-        initialPos = mesh.points;
     MR_WRITER( mesh );
-
-    VertCoords newPoints;
-    const VertBitSet& zone = mesh.topology.getVertIds( params.region );
-    for ( int i = 0; i < params.iterations; ++i )
-    {
-        auto internalCb = subprogress( cb, [&]( float p ) { return ( float( i ) + p ) / float( params.iterations ); } );
-        newPoints = mesh.points;
-        if ( !BitSetParallelFor( zone, [&]( VertId v )
-        {
-            auto e0 = mesh.topology.edgeWithOrg( v );
-            if ( !e0.valid() )
-                return;
-            Vector3d sum;
-            int count = 0;
-            for ( auto e : orgRing( mesh.topology, e0 ) )
-            {
-                sum += Vector3d( mesh.points[mesh.topology.dest( e )] );
-                ++count;
-            }
-            auto np = newPoints[v];
-            auto pushForce = params.force * ( Vector3f{sum / double( count )} - np );
-            np += pushForce;
-            if ( params.limitNearInitial )
-                np = getLimitedPos( np, initialPos[v], maxInitialDistSq );
-            newPoints[v] = np;
-        }, internalCb ) )
-            return false;
-        mesh.points.swap( newPoints );
-    }
-    if ( params.hardSmoothTetrahedrons )
-        hardSmoothTetrahedrons( mesh, params.region );
-    return true;
+    return relax( mesh.topology, mesh.points, params, cb );
 }
 
 Vector3f vertexPosEqualNeiAreas( const Mesh& mesh, VertId v, bool noShrinkage )
@@ -449,16 +405,8 @@ void smoothRegionBoundary( Mesh & mesh, const FaceBitSet & regionFaces, int numI
 
 void hardSmoothTetrahedrons( Mesh & mesh, const VertBitSet *region )
 {
-    MR_TIMER
-    auto tetrahedrons = findNRingVerts( mesh.topology, 3, region );
-    // in normal mesh two vertices from tetrahedrons cannot be neighbors, so it is safe to run it in parallel
-    BitSetParallelFor( tetrahedrons, [&] ( VertId v )
-    {
-        Vector3f center;
-        for ( auto e : orgRing( mesh.topology, v ) )
-            center += mesh.destPnt( e );
-        mesh.points[v] = center / 3.0f;
-    } );
+    MR_WRITER( mesh );
+    return hardSmoothTetrahedrons( mesh.topology, mesh.points, region );
 }
 
 } //namespace MR

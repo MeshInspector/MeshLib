@@ -13,7 +13,7 @@ namespace MR
 
 /// set the field in the vertices with exactly three neighbor vertices as the average value of the field in the neighbors
 template<typename T>
-void hardSmoothTetrahedrons( const MeshTopology & topology, Vector<T, VertId> & field, const VertBitSet *region )
+void hardSmoothTetrahedrons( const MeshTopology & topology, Vector<T, VertId> & field, const VertBitSet *region = nullptr )
 {
     MR_TIMER
     auto tetrahedrons = findNRingVerts( topology, 3, region );
@@ -30,7 +30,7 @@ void hardSmoothTetrahedrons( const MeshTopology & topology, Vector<T, VertId> & 
 /// applies given number of relaxation iterations to given field on mesh vertices;
 /// \return true if was finished successfully, false if was interrupted by progress callback
 template<typename T>
-bool relax( const MeshTopology & topology, Vector<T, VertId> & field, const MeshRelaxParams& params, ProgressCallback cb )
+bool relax( const MeshTopology & topology, Vector<T, VertId> & field, const MeshRelaxParams& params = {}, ProgressCallback cb = {} )
 {
     if ( params.iterations <= 0 )
         return true;

@@ -133,6 +133,13 @@ inline T dot( const Vector4<T>& a, const Vector4<T>& b )
     return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
 
+/// squared length
+template <typename T>
+inline T sqr( const Vector4<T> & a )
+{
+    return a.lengthSq();
+}
+
 template <typename T> 
 inline auto begin( const Vector4<T> & v ) { return &v[0]; }
 template <typename T> 

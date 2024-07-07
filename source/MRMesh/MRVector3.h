@@ -125,6 +125,13 @@ inline T dot( const Vector3<T> & a, const Vector3<T> & b )
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
+/// squared length
+template <typename T>
+inline T sqr( const Vector3<T> & a )
+{
+    return a.lengthSq();
+}
+
 /// mixed product
 template <typename T>
 inline T mixed( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c )

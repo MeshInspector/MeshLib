@@ -14,6 +14,13 @@
 namespace MR
 {
 
+[[maybe_unused]] static void testForScalars()
+{
+    MeshTopology topology;
+    VertScalars field;
+    relax( topology, field );
+}
+
 bool relax( Mesh& mesh, const MeshRelaxParams& params, ProgressCallback cb )
 {
     MR_WRITER( mesh );

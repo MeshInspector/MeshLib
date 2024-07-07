@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRVector3.h"
+#include "MRVectorTraits.h"
 #include <cassert>
 
 namespace MR
@@ -33,11 +34,11 @@ enum class RelaxApproxType
 /// if (pos) is within the ball with the center at (guidePos) and squared radius (maxGuideDistSq), then returns (pos);
 /// otherwise returns the point on the ball's border closest to (pos)
 template <typename V>
-[[nodiscard]] inline V getLimitedPos( const V & pos, const V & guidePos, typename V::ValueType maxGuideDistSq )
+[[nodiscard]] inline V getLimitedPos( const V & pos, const V & guidePos, typename VectorTraits<V>::BaseType maxGuideDistSq )
 {
     assert( maxGuideDistSq > 0 );
     const auto d = pos - guidePos;
-    float distSq = d.lengthSq();
+    float distSq = sqr( d );
     if ( distSq <= maxGuideDistSq )
         return pos;
     return guidePos + std::sqrt( maxGuideDistSq / distSq ) * d;

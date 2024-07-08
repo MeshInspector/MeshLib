@@ -47,7 +47,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ExpectedVoid, [] ( pybind11::module_& )
 class DeprecatedPath
 {
 public:
-    DeprecatedPath( const std::filesystem::path& path ) : path_{ path } {}
+    DeprecatedPath( const std::filesystem::path& path ) : path_{ path } 
+    {
+        PyErr_WarnEx( PyExc_DeprecationWarning, "mrmeshpy.Path is deprecated, use os.PathLike type instead", 1 );
+    }
     operator std::string () const { return MR::utf8string( path_ ); }
 private:
     std::filesystem::path path_;
@@ -57,11 +60,7 @@ MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, Path, DeprecatedPath )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Path, [] ( pybind11::module_& )
 {
     MR_PYTHON_CUSTOM_CLASS( Path ).
-        def( pybind11::init( [] ( const std::filesystem::path& path )
-    {
-        PyErr_WarnEx( PyExc_DeprecationWarning, "mrmeshpy.Path is deprecated, use os.PathLike type instead", 1 );
-        return DeprecatedPath( path );
-    } ) ).
+        def( pybind11::init<const std::filesystem::path&>(), pybind11::arg( "path" ) ).
         def( "__fspath__", &DeprecatedPath::operator std::string );
 } )
 

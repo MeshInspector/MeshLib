@@ -69,7 +69,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& )
 } )
 
 // these declarations fix "Invalid expression" errors in pybind11_stubgen
-MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertColorMap, MR::VertColors ) //deprecated name
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertColors, MR::VertColors )
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertCoords, MR::VertCoords )
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, FaceMap, MR::FaceMap )
@@ -77,11 +76,30 @@ MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertMap, MR::VertMap )
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, WholeEdgeMap, MR::WholeEdgeMap )
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, UndirectedEdgeMap, MR::UndirectedEdgeMap )
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, EdgeMap, MR::EdgeMap )
-MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VectorFloatByVert, MR::VertScalars ) //deprecated name
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertScalars, MR::VertScalars )
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, FaceNormals, MR::FaceNormals )
 using VertCoords2 = Vector<Vector2f, VertId>;
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertCoords2, VertCoords2 )
+
+class DeprecatedVertColorMap : public MR::VertColors
+{
+public:
+    DeprecatedVertColorMap()
+    {
+        PyErr_WarnEx( PyExc_DeprecationWarning, "mrmeshpy.VertColorMap is deprecated, use mrmeshpy.VertColors type instead", 1 );
+    }
+};
+class DeprecatedVectorFloatByVert : public MR::VertScalars
+{
+public:
+    DeprecatedVectorFloatByVert()
+    {
+        PyErr_WarnEx( PyExc_DeprecationWarning, "mrmeshpy.VectorFloatByVert is deprecated, use mrmeshpy.VertScalars type instead", 1 );
+    }
+};
+
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VertColorMap, DeprecatedVertColorMap )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VectorFloatByVert, DeprecatedVectorFloatByVert )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Vector, [] ( pybind11::module_& )
 {

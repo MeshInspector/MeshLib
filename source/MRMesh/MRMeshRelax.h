@@ -16,7 +16,7 @@ struct MeshRelaxParams : RelaxParams
     bool hardSmoothTetrahedrons{ false };
 
     /// weight for each vertex. By default, all the vertices have equal weights.
-    const Vector<float, VertId> *weights = nullptr;
+    const VertScalars *weights = nullptr;
 };
 
 /// applies given number of relaxation iterations to the whole mesh ( or some region if it is specified )

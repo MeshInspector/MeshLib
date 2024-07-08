@@ -6,6 +6,7 @@
 #include "MRExpected.h"
 #include <cfloat>
 #include <memory>
+#include <optional>
 
 namespace MR
 {

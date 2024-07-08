@@ -1,5 +1,5 @@
 #include "MRPointsToDistanceVolume.h"
-#include "MRSimpleVolume.h"
+#include "MRVoxelsVolume.h"
 #include "MRVolumeIndexer.h"
 #include "MRParallelFor.h"
 #include "MRBitSetParallelFor.h"

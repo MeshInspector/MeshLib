@@ -1,6 +1,6 @@
 #include "MRMesh/MRPython.h"
 #include "MRMesh/MRMeshFwd.h"
-#include "MRMesh/MRSimpleVolume.h"
+#include "MRMesh/MRVoxelsVolume.h"
 #include "MRMesh/MRVector3.h"
 
 MR::SimpleVolume simpleVolumeFrom3Darray( const pybind11::buffer& voxelsArray )

@@ -1,4 +1,4 @@
-#include "MRVoxelsVolume.h"
+#include "MRComputeVolume.h"
 #ifndef MRMESH_NO_OPENVDB
 #include "MRAffineXf3.h"
 #include "MRMesh.h"

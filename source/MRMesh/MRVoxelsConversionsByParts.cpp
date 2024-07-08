@@ -4,7 +4,7 @@
 #include "MRMesh.h"
 #include "MRMeshTrimWithPlane.h"
 #include "MRPlane3.h"
-#include "MRSimpleVolume.h"
+#include "MRVoxelsVolume.h"
 #include "MRStringConvert.h"
 #include "MRTimer.h"
 #include "MRVDBConversions.h"

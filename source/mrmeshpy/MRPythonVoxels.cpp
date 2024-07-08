@@ -1,7 +1,7 @@
 #include "MRMesh/MRPython.h"
 #include "MRMesh/MRMeshFwd.h"
 #ifndef MRMESH_NO_OPENVDB
-#include "MRMesh/MRSimpleVolume.h"
+#include "MRMesh/MRVoxelsVolume.h"
 #include "MRMesh/MRVoxelsSave.h"
 #include "MRMesh/MRVoxelsLoad.h"
 #include "MRMesh/MRVDBFloatGrid.h"

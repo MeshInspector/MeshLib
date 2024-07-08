@@ -2,7 +2,7 @@
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
 #include "MRObject.h"
-#include "MRSimpleVolume.h"
+#include "MRVoxelsVolume.h"
 #include "MRIOFilters.h"
 #include <filesystem>
 #include "MRExpected.h"

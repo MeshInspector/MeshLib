@@ -36,6 +36,15 @@ bool relax( const MeshTopology & topology, Vector<T, VertId> & field, const Mesh
         return true;
 
     MR_TIMER
+
+    const auto getWeightOrDefault = [w = params.weights] ( VertId v ) -> float
+    {
+        if ( w )
+            return ( *w )[v];
+        else
+            return 1.f;
+    };
+
     Vector<T, VertId> initialPos;
     const auto maxInitialDistSq = sqr( params.maxInitialDist );
     if ( params.limitNearInitial )
@@ -53,14 +62,16 @@ bool relax( const MeshTopology & topology, Vector<T, VertId> & field, const Mesh
             if ( !e0.valid() )
                 return;
             T sum{};
-            int count = 0;
+            float sumWeight = 0.f;
             for ( auto e : orgRing( topology, e0 ) )
             {
-                sum += field[topology.dest( e )];
-                ++count;
+                const auto dst = topology.dest( e );
+                const auto w = getWeightOrDefault( dst );
+                sum += w * field[dst];
+                sumWeight += w;
             }
             auto np = newField[v];
-            auto pushForce = params.force * ( sum / float( count ) - np );
+            auto pushForce = params.force * ( sum / sumWeight - np );
             np += pushForce;
             if ( params.limitNearInitial )
                 np = getLimitedPos( np, initialPos[v], maxInitialDistSq );

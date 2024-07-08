@@ -14,6 +14,9 @@ struct MeshRelaxParams : RelaxParams
 {
     /// move all region vertices with exactly three neighbor vertices in the center of the neighbors
     bool hardSmoothTetrahedrons{ false };
+
+    /// weight for each vertex. By default, all the vertices have equal weights.
+    const Vector<float, VertId> *weights = nullptr;
 };
 
 /// applies given number of relaxation iterations to the whole mesh ( or some region if it is specified )

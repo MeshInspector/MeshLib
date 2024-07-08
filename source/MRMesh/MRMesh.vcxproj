@@ -126,6 +126,7 @@
     <ClInclude Include="MRIsNaN.h" />
     <ClInclude Include="MRMapEdge.h" />
     <ClInclude Include="MRMeshExtrude.h" />
+    <ClInclude Include="MRMeshRelax.hpp" />
     <ClInclude Include="MRMeshReplicate.h" />
     <ClInclude Include="MRMeshToDistanceVolume.h" />
     <ClInclude Include="MRMisonLoad.h" />

@@ -22,6 +22,7 @@ struct DistanceToMeshOptions
     SignDetectionMode signMode{ SignDetectionMode::ProjectionNormal };
 };
 
+/// computes signed distance from point (p) to mesh part (mp) following options (op)
 [[nodiscard]] MRMESH_API std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p, const DistanceToMeshOptions& op );
 
 struct MeshToDistanceVolumeParams

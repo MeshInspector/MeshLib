@@ -1,8 +1,5 @@
 #pragma once
-#include "MRNetMeshFwd.h"
-#pragma managed( push, off )
-#include <MRMesh/MRVector3.h>
-#pragma managed( pop )
+#include "MRMeshFwd.h"
 
 MR_DOTNET_NAMESPACE_BEGIN
 
@@ -26,13 +23,16 @@ public:
     static Vector3f^ operator*( Vector3f^ a, float b );
     static Vector3f^ operator*( float a, Vector3f^ b );
 
-    property float x { float get() { return vec_->x; } void set( float value ) { vec_->x = value; } }
-    property float y { float get() { return vec_->y; } void set( float value ) { vec_->y = value; } }
-    property float z { float get() { return vec_->z; } void set( float value ) { vec_->z = value; } }
+    property float x { float get(); void set( float value ); }
+    property float y { float get(); void set( float value ); }
+    property float z { float get(); void set( float value ); }    
 
 private:
     MR::Vector3f* vec_;
+
+internal:
     Vector3f( MR::Vector3f* vec );
+    MR::Vector3f* vec() { return vec_; }
 };
 
 MR_DOTNET_NAMESPACE_END

@@ -11,10 +11,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MRNetMeshFwd.h">
+    <ClInclude Include="MRMeshFwd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MRVector3.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMatrix3.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -23,6 +26,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRVector3.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMatrix3.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

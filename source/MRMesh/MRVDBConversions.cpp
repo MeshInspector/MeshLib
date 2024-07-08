@@ -4,7 +4,7 @@
 #include "MRMesh.h"
 #include "MRMeshBuilder.h"
 #include "MRTimer.h"
-#include "MRSimpleVolume.h"
+#include "MRVoxelsVolume.h"
 #include "MRPch/MROpenvdb.h"
 #include "MRFastWindingNumber.h"
 #include "MRVolumeIndexer.h"

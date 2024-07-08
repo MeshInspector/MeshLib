@@ -1,15 +1,49 @@
 #pragma once
-#include "MRMeshFwd.h"
-#ifndef MRMESH_NO_OPENVDB
-#include <memory>
+#include "MRVector3.h"
+#include "MRHeapBytes.h"
+#include <limits>
+#include <vector>
 
 namespace MR
 {
 
-// Computes summary volume of given meshes converting it to voxels of given size
-// note that each mesh should have closed topology
-// speed and precision depends on voxelSize (smaller voxel - faster, less precise; bigger voxel - slower, more precise)
-MRMESH_API float voxelizeAndComputeVolume( const std::vector<std::shared_ptr<Mesh>>& meshes, const AffineXf3f& xf, const Vector3f& voxelSize );
+template <typename T>
+struct VoxelTraits;
 
-}
+template <typename T>
+struct VoxelTraits<std::vector<T>>
+{
+    using ValueType = T;
+};
+
+template <typename T>
+struct VoxelTraits<VoxelValueGetter<T>>
+{
+    using ValueType = T;
+};
+
+#ifndef MRMESH_NO_OPENVDB
+template <>
+struct VoxelTraits<FloatGrid>
+{
+    using ValueType = float;
+};
 #endif
+
+/// represents a box in 3D space subdivided on voxels stored in T
+template <typename T>
+struct VoxelsVolume
+{
+    using ValueType = typename VoxelTraits<T>::ValueType;
+
+    T data;
+    Vector3i dims;
+    Vector3f voxelSize{ 1.f, 1.f, 1.f };
+    ValueType min = std::numeric_limits<ValueType>::max();
+    ValueType max = std::numeric_limits<ValueType>::lowest();
+
+    [[nodiscard]] size_t heapBytes() const { return MR::heapBytes( data ); }
+};
+
+} //namespace MR
+

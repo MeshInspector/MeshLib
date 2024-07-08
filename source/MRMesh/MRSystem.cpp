@@ -8,6 +8,7 @@
 
 #ifndef __EMSCRIPTEN__
 #ifdef _WIN32
+#include "psapi.h"
 // it is tricky to use std::stacktrace on other systems: https://stackoverflow.com/q/78395268/7325599
 #include <version>
 #if __cpp_lib_stacktrace >= 202011
@@ -655,5 +656,21 @@ std::string getCurrentStacktrace()
 #endif
 }
 #endif
+
+#ifdef _WIN32
+ProccessMemoryInfo getProccessMemoryInfo()
+{
+    ProccessMemoryInfo res;
+    PROCESS_MEMORY_COUNTERS pmc;
+    if ( GetProcessMemoryInfo( GetCurrentProcess(), &pmc, sizeof(pmc)) )
+    {
+        res.currVirtual =    pmc.PagefileUsage;
+        res.maxVirtual = pmc.PeakPagefileUsage;
+        res.currPhysical =    pmc.WorkingSetSize;
+        res.maxPhysical = pmc.PeakWorkingSetSize;
+    }
+    return res;
+}
+#endif //_WIN32
 
 } //namespace MR

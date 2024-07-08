@@ -1,7 +1,7 @@
 #include "MRCudaAccessor.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include "MRMesh/MRFastWindingNumber.h"
-#include "MRMesh/MRSimpleVolume.h"
+#include "MRMesh/MRVoxelsVolume.h"
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRAABBTreeMaker.h"
@@ -9,9 +9,14 @@
 namespace MR
 {
 
-void CudaAccessor::setCudaAvailable( bool val )
+void CudaAccessor::setCudaAvailable( bool val, int maxDriverVersion, int runtimeVersion, int computeMajor, int computeMinor )
 {
-    instance_().isCudaAvailable_ = val;
+    auto& inst = instance_();
+    inst.isCudaAvailable_ = val;
+    inst.maxDriverVersion_ = maxDriverVersion;
+    inst.runtimeVersion_ = runtimeVersion;
+    inst.computeMajor_ = computeMajor;
+    inst.computeMinor_ = computeMinor;
 }
 
 void CudaAccessor::setCudaFreeMemoryFunc( CudaFreeMemoryFunc freeMemFunc )
@@ -38,6 +43,26 @@ bool CudaAccessor::isCudaAvailable()
 {
     auto& inst = instance_();
     return inst.isCudaAvailable_;
+}
+
+int CudaAccessor::getCudaMaxDriverSupportedVersion()
+{
+    return instance_().maxDriverVersion_;
+}
+
+int CudaAccessor::getCudaRuntimeVersion()
+{
+    return instance_().runtimeVersion_;
+}
+
+int CudaAccessor::getComputeCapabilityMajor()
+{
+    return instance_().computeMajor_;
+}
+
+int CudaAccessor::getComputeCapabilityMinor()
+{
+    return instance_().computeMinor_;
 }
 
 size_t CudaAccessor::getCudaFreeMemory()

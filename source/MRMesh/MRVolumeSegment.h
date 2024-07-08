@@ -3,7 +3,7 @@
 #ifndef MRMESH_NO_OPENVDB
 #include "MRVector3.h"
 #include "MRExpected.h"
-#include "MRSimpleVolume.h"
+#include "MRVoxelsVolume.h"
 #include "MRBitSet.h"
 #include "MRProgressCallback.h"
 #include <string>

@@ -561,7 +561,7 @@
     <ClInclude Include="MRChangeMeshAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
-    <ClInclude Include="MRVoxelsVolume.h">
+    <ClInclude Include="MRComputeVolume.h">
       <Filter>Source Files\VDBConversions</Filter>
     </ClInclude>
     <ClInclude Include="MRLineSegm.h">
@@ -1308,6 +1308,12 @@
     <ClInclude Include="MRPointCloudDistance.h">
       <Filter>Source Files\PointCloud</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshRelax.hpp">
+      <Filter>Source Files\Relax</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVoxelsVolume.h">
+      <Filter>Source Files\BaseStructures</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1631,7 +1637,7 @@
     <ClCompile Include="MRRestoringStreamsSink.cpp">
       <Filter>Source Files\Basic</Filter>
     </ClCompile>
-    <ClCompile Include="MRVoxelsVolume.cpp">
+    <ClCompile Include="MRComputeVolume.cpp">
       <Filter>Source Files\VDBConversions</Filter>
     </ClCompile>
     <ClCompile Include="MRCombinedHistoryAction.cpp">

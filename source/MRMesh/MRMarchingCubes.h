@@ -2,7 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRAffineXf3.h"
-#include "MRSimpleVolume.h"
+#include "MRVoxelsVolume.h"
 #include "MRProgressCallback.h"
 #include "MRSignDetectionMode.h"
 #include "MRExpected.h"

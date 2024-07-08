@@ -93,6 +93,13 @@ inline T dot( const Vector2<T> & a, const Vector2<T> & b )
     return a.x * b.x + a.y * b.y;
 }
 
+/// squared length
+template <typename T>
+inline T sqr( const Vector2<T> & a )
+{
+    return a.lengthSq();
+}
+
 /// per component multiplication
 template <typename T>
 inline Vector2<T> mult( const Vector2<T>& a, const Vector2<T>& b )

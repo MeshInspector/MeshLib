@@ -5,7 +5,6 @@
 #include "MRVDBConversions.h"
 #include "MRVDBFloatGrid.h"
 #include "MRFloatGrid.h"
-#include "MRSimpleVolume.h"
 #include "MRVoxelsSave.h"
 #include "MRVoxelsLoad.h"
 #include "MRSerializer.h"

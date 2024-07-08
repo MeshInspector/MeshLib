@@ -21,31 +21,31 @@ var customSetCursor = function (cursor) {
         //ImGuiMouseCursor_ResizeAll
         case 2:
             {
-                Module["canvas"].style.cursor = "default";
+                Module["canvas"].style.cursor = "all-scroll";
                 break
             }
         //ImGuiMouseCursor_ResizeNS
         case 3:
             {
-                Module["canvas"].style.cursor = "row-resize";
+                Module["canvas"].style.cursor = "ns-resize";
                 break
             }
         //ImGuiMouseCursor_ResizeEW
         case 4:
             {
-                Module["canvas"].style.cursor = "col-resize";
+                Module["canvas"].style.cursor = "ew-resize";
                 break
             }
         //ImGuiMouseCursor_ResizeNESW
         case 5:
             {
-                Module["canvas"].style.cursor = "sw-resize";
+                Module["canvas"].style.cursor = "nesw-resize";
                 break
             }
         //ImGuiMouseCursor_ResizeNWSE
         case 6:
             {
-                Module["canvas"].style.cursor = "se-resize";
+                Module["canvas"].style.cursor = "nwse-resize";
                 break
             }
         //ImGuiMouseCursor_Hand
@@ -57,7 +57,7 @@ var customSetCursor = function (cursor) {
         //ImGuiMouseCursor_NotAllowed
         case 8:
             {
-                Module["canvas"].style.cursor = "default";
+                Module["canvas"].style.cursor = "not-allowed";
                 break
             }
         default:

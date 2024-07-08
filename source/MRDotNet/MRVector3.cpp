@@ -17,9 +17,6 @@ Vector3f::Vector3f( MR::Vector3f* vec )
 
 Vector3f::Vector3f( float x, float y, float z )
 {
-    this->x = x;
-    this->y = y;
-    this->z = z;
     vec_ = new MR::Vector3f( x, y, z );
 }
 

@@ -39,11 +39,23 @@ struct VoxelsVolume
     T data;
     Vector3i dims;
     Vector3f voxelSize{ 1.f, 1.f, 1.f };
-    ValueType min = std::numeric_limits<ValueType>::max();
-    ValueType max = std::numeric_limits<ValueType>::lowest();
 
     [[nodiscard]] size_t heapBytes() const { return MR::heapBytes( data ); }
 };
 
-} //namespace MR
+/// represents a box in 3D space subdivided on voxels stored in T;
+/// and stores minimum and maximum values among all valid voxels
+template <typename T>
+struct VoxelsVolumeMinMax : VoxelsVolume<T>
+{
+    using VoxelsVolume<T>::ValueType;
+    using VoxelsVolume<T>::data;
+    using VoxelsVolume<T>::dims;
+    using VoxelsVolume<T>::voxelSize;
+    using VoxelsVolume<T>::heapBytes;
 
+    ValueType min = std::numeric_limits<ValueType>::max();
+    ValueType max = std::numeric_limits<ValueType>::lowest();
+};
+
+} //namespace MR

@@ -148,7 +148,6 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         msParams.maxDistSq = sqr( absOffset + params.voxelSize );
         msParams.minDistSq = sqr( std::max( absOffset - params.voxelSize, 0.0f ) );
         msParams.fwn = params.fwn;
-        msParams.precomputeMinMax = !params.memoryEfficient;
 
         MarchingCubesParams vmParams;
         vmParams.origin = msParams.origin;

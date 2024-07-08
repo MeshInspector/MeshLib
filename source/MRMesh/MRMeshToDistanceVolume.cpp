@@ -133,15 +133,7 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, co
             return unexpectedOperationCanceled();
     }
 
-    if ( params.precomputeMinMax )
-    {
-        std::tie( res.min, res.max ) = parallelMinMax( res.data );
-    }
-    else
-    {
-        res.min = std::numeric_limits<float>::lowest();
-        res.max = std::numeric_limits<float>::max();
-    }
+    std::tie( res.min, res.max ) = parallelMinMax( res.data );
 
     return res;
 }
@@ -177,26 +169,6 @@ Expected<FunctionVolume> meshToDistanceFunctionVolume( const MeshPart& mp, const
             const auto voxelCenter = params.origin + mult( params.voxelSize, coord );
             return signedDistanceToMesh( mp, voxelCenter, params.signMode, params.maxDistSq, params.minDistSq );
         };
-    }
-
-    result.min = std::numeric_limits<float>::lowest();
-    result.max = std::numeric_limits<float>::max();
-    if ( params.precomputeMinMax )
-    {
-        VolumeIndexer indexer( params.dimensions );
-        auto body = [&indexer, &result] ( const tbb::blocked_range<size_t>& range, MinMax<float> minmax )
-        {
-            for ( auto i = range.begin(); i < range.end(); ++i )
-            {
-                const auto pos = indexer.toPos( VoxelId( i ) );
-                const auto value = result.data( pos );
-                minmax.update( value );
-            }
-            return minmax;
-        };
-        const auto minmax = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, indexer.size() ), MinMax<float>(), body, &MinMax<float>::merge );
-        result.min = minmax.min;
-        result.max = minmax.max;
     }
 
     return result;
@@ -241,15 +213,7 @@ Expected<SimpleVolume, std::string> meshRegionToIndicatorVolume( const Mesh& mes
     }, params.cb ) )
         return unexpectedOperationCanceled();
 
-    if ( params.precomputeMinMax )
-    {
-        std::tie( res.min, res.max ) = parallelMinMax( res.data );
-    }
-    else
-    {
-        res.min = std::numeric_limits<float>::lowest();
-        res.max = std::numeric_limits<float>::max();
-    }
+    std::tie( res.min, res.max ) = parallelMinMax( res.data );
 
     return res;
 }

@@ -1,7 +1,7 @@
 #include "MRCudaAccessor.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include "MRMesh/MRFastWindingNumber.h"
-#include "MRMesh/MRSimpleVolume.h"
+#include "MRMesh/MRVoxelsVolume.h"
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRAABBTreeMaker.h"

@@ -4,7 +4,7 @@
 #include "MRExpected.h"
 #include "MRProgressCallback.h"
 #include "MRVoxelPath.h"
-#include "MRSimpleVolume.h"
+#include "MRVoxelsVolume.h"
 #include <filesystem>
 
 namespace MR::VoxelsSave

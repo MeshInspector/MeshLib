@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-#include "MRSimpleVolume.h"
+#include "MRVoxelsVolume.h"
 #include "MRVolumeIndexer.h"
 
 #ifndef MRMESH_NO_OPENVDB

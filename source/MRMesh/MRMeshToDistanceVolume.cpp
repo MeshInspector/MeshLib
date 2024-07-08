@@ -1,7 +1,6 @@
 #include "MRMeshToDistanceVolume.h"
 #include "MRIsNaN.h"
 #include "MRMesh.h"
-#include "MRSimpleVolume.h"
 #include "MRTimer.h"
 #include "MRVolumeIndexer.h"
 #include "MRFastWindingNumber.h"

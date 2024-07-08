@@ -379,6 +379,7 @@
     <ClInclude Include="MRStreamOperators.h" />
     <ClInclude Include="MRUniqueThreadSafeOwner.h" />
     <ClInclude Include="MRObjectDistanceMap.h" />
+    <ClInclude Include="MRComputeVolume.h" />
     <ClInclude Include="MRVoxelsVolume.h" />
     <ClInclude Include="MRWatershedGraph.h" />
     <ClInclude Include="MRWriter.h" />
@@ -679,7 +680,7 @@
     <ClCompile Include="MRTorus.cpp" />
     <ClCompile Include="MRVDBConversions.cpp" />
     <ClCompile Include="MRObjectDistanceMap.cpp" />
-    <ClCompile Include="MRVoxelsVolume.cpp" />
+    <ClCompile Include="MRComputeVolume.cpp" />
     <ClCompile Include="MRPolylineRelax.cpp" />
     <ClCompile Include="MRUniteManyMeshes.cpp" />
     <ClCompile Include="MRVoxelsConversionsByParts.cpp" />

@@ -1,5 +1,5 @@
 #include "exports.h"
-#include "MRMesh/MRSimpleVolume.h"
+#include "MRMesh/MRVoxelsVolume.h"
 #include "MRMesh/MRPointsToDistanceVolume.h"
 
 namespace MR

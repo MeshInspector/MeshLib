@@ -2,7 +2,7 @@
 #include "MRVector.h"
 #include "MRBitSet.h"
 #include "MRTimer.h"
-#include "MRSimpleVolume.h"
+#include "MRVoxelsVolume.h"
 #include "MRVolumeIndexer.h"
 #include "MRBitSetParallelFor.h"
 #include "MRHash.h"

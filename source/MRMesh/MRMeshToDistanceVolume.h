@@ -2,7 +2,7 @@
 
 #include "MRDistanceVolumeParams.h"
 #include "MRSignDetectionMode.h"
-#include "MRSimpleVolume.h"
+#include "MRVoxelsVolume.h"
 #include "MRExpected.h"
 #include <cfloat>
 #include <memory>

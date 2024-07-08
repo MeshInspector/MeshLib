@@ -48,7 +48,7 @@ struct VoxelsVolume
 template <typename T>
 struct VoxelsVolumeMinMax : VoxelsVolume<T>
 {
-    using VoxelsVolume<T>::ValueType;
+    using typename VoxelsVolume<T>::ValueType;
     using VoxelsVolume<T>::data;
     using VoxelsVolume<T>::dims;
     using VoxelsVolume<T>::voxelSize;

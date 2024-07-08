@@ -23,14 +23,14 @@ struct MeshToDistanceVolumeParams : DistanceVolumeParams
 };
 
 /// makes SimpleVolume filled with (signed or unsigned) distances from Mesh with given settings
-MRMESH_API Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params = {} );
+MRMESH_API Expected<SimpleVolume> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params = {} );
 
 /// makes FunctionVolume representing (signed or unsigned) distances from Mesh with given settings
 MRMESH_API Expected<FunctionVolume> meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params = {} );
 
 /// returns a volume filled with the values:
 /// v < 0: this point is within offset distance to region-part of mesh and it is closer to region-part than to not-region-part
-MRMESH_API Expected<SimpleVolume, std::string> meshRegionToIndicatorVolume( const Mesh& mesh, const FaceBitSet& region,
+MRMESH_API Expected<SimpleVolume> meshRegionToIndicatorVolume( const Mesh& mesh, const FaceBitSet& region,
     float offset, const DistanceVolumeParams& params );
 
 } //namespace MR

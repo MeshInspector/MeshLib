@@ -264,21 +264,25 @@ TEST( MRMesh, volumeToMeshByParts )
         }
 
         return VdbVolume {
-            .data = std::move( grid ),
-            .dims = { end - begin, dimensions.y, dimensions.z },
-            .voxelSize = Vector3f::diagonal( voxelSize ),
-            .min = -radius,
-            .max = +radius,
+            {
+                .data = std::move( grid ),
+                .dims = { end - begin, dimensions.y, dimensions.z },
+                .voxelSize = Vector3f::diagonal( voxelSize )
+            },
+            -radius, //min
+            +radius  //max
         };
     };
 
     VolumePartBuilder<SimpleVolume> simpleBuilder = [&] ( int begin, int end, std::optional<Vector3i>& offset )
     {
         SimpleVolume result {
-            .dims = { end - begin, dimensions.y, dimensions.z },
-            .voxelSize = Vector3f::diagonal( voxelSize ),
-            .min = -radius,
-            .max = +radius,
+            {
+                .dims = { end - begin, dimensions.y, dimensions.z },
+                .voxelSize = Vector3f::diagonal( voxelSize )
+            },
+            -radius, //min
+            +radius  //max
         };
 
         VolumeIndexer indexer( result.dims );
@@ -309,9 +313,7 @@ TEST( MRMesh, volumeToMeshByParts )
     {
         FunctionVolume result {
             .dims = { end - begin, dimensions.y, dimensions.z },
-            .voxelSize = Vector3f::diagonal( voxelSize ),
-            .min = -radius,
-            .max = +radius,
+            .voxelSize = Vector3f::diagonal( voxelSize )
         };
 
         result.data = [radius = radius, offsetCenter = center - Vector3f( (float)begin, 0.f, 0.f )] ( const Vector3i& pos )

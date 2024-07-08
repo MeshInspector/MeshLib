@@ -137,20 +137,20 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
     else
     {
         MeshToDistanceVolumeParams msParams;
-        msParams.cb = meshToLSCb;
+        msParams.vol.cb = meshToLSCb;
         auto box = mp.mesh.computeBoundingBox( mp.region );
         auto absOffset = std::abs( offset );
         auto expansion = Vector3f::diagonal( 2 * params.voxelSize + absOffset );
-        msParams.origin = box.min - expansion;
-        msParams.voxelSize = Vector3f::diagonal( params.voxelSize );
-        msParams.dimensions = Vector3i( ( box.max + expansion - msParams.origin ) / params.voxelSize ) + Vector3i::diagonal( 1 );
-        msParams.signMode = params.signDetectionMode;
-        msParams.maxDistSq = sqr( absOffset + params.voxelSize );
-        msParams.minDistSq = sqr( std::max( absOffset - params.voxelSize, 0.0f ) );
+        msParams.vol.origin = box.min - expansion;
+        msParams.vol.voxelSize = Vector3f::diagonal( params.voxelSize );
+        msParams.vol.dimensions = Vector3i( ( box.max + expansion - msParams.vol.origin ) / params.voxelSize ) + Vector3i::diagonal( 1 );
+        msParams.dist.signMode = params.signDetectionMode;
+        msParams.dist.maxDistSq = sqr( absOffset + params.voxelSize );
+        msParams.dist.minDistSq = sqr( std::max( absOffset - params.voxelSize, 0.0f ) );
         msParams.fwn = params.fwn;
 
         MarchingCubesParams vmParams;
-        vmParams.origin = msParams.origin;
+        vmParams.origin = msParams.vol.origin;
         vmParams.iso = offset;
         vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
         vmParams.lessInside = true;
@@ -158,9 +158,7 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
 
         if ( params.memoryEfficient )
         {
-            return
-                meshToDistanceFunctionVolume( mp, msParams )
-                .and_then( [vmParams] ( auto&& volume ) { return marchingCubes( volume, vmParams ); } );
+            return marchingCubes( meshToDistanceFunctionVolume( mp, msParams ), vmParams );
         }
         else
         {

@@ -42,29 +42,6 @@ float signedDistanceToMesh( const MeshPart& mesh, const Vector3f& p, SignDetecti
     return dist;
 }
 
-template <typename T>
-struct MinMax
-{
-    T min = std::numeric_limits<T>::max();
-    T max = std::numeric_limits<T>::lowest();
-
-    void update( T v )
-    {
-        if ( v < min )
-            min = v;
-        if ( max < v )
-            max = v;
-    }
-
-    static MinMax<T> merge( const MinMax<T>& a, const MinMax<T>& b )
-    {
-        return {
-            .min = std::min( a.min, b.min ),
-            .max = std::max( a.max, b.max ),
-        };
-    }
-};
-
 } // namespace
 
 namespace MR

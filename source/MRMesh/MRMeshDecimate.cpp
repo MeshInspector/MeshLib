@@ -953,6 +953,12 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     assert( !settings.partFaces || settings.partFaces->size() == sz );
 
     DecimateResult res;
+    if ( mesh.topology.getFaceIds( settings.region ).none() )
+    {
+        // nothing to decimate
+        res.cancelled = false;
+        return res;
+    }
 
     MR_WRITER( mesh );
     if ( settings.progressCallback && !settings.progressCallback( 0 ) )

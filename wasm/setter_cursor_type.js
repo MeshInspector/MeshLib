@@ -51,7 +51,7 @@ var customSetCursor = function (cursor) {
         //ImGuiMouseCursor_Hand
         case 7:
             {
-                Module["canvas"].style.cursor = "move";
+                Module["canvas"].style.cursor = "pointer";
                 break
             }
         //ImGuiMouseCursor_NotAllowed

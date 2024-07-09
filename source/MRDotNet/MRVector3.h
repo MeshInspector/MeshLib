@@ -25,7 +25,10 @@ public:
 
     property float x { float get(); void set( float value ); }
     property float y { float get(); void set( float value ); }
-    property float z { float get(); void set( float value ); }    
+    property float z { float get(); void set( float value ); }
+
+    static bool operator == ( Vector3f^ a, Vector3f^ b );
+    static bool operator != ( Vector3f^ a, Vector3f^ b );    
 
 private:
     MR::Vector3f* vec_;

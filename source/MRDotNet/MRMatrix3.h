@@ -23,9 +23,17 @@ public:
 
     static Matrix3f^ operator*( Matrix3f^ a, Matrix3f^ b );
 
-private:
-    MR::Matrix3f* mat_;
+    static Vector3f^ operator*( Matrix3f^ a, Vector3f^ b );
+
+    static bool operator==( Matrix3f^ a, Matrix3f^ b );
+    static bool operator!=( Matrix3f^ a, Matrix3f^ b );
+
+internal:
     Matrix3f( MR::Matrix3f* mat );
+    MR::Matrix3f* mat() { return mat_; }
+
+private:
+    MR::Matrix3f* mat_;   
 
     Vector3f^ x_;
     Vector3f^ y_;

@@ -126,6 +126,24 @@ void Vector3f::z::set( float value )
     vec_->z = value;
 }
 
+bool Vector3f::operator ==( Vector3f^ a, Vector3f^ b )
+{
+    if ( !a )
+        throw gcnew System::ArgumentNullException( "a" );
+    if ( !b )
+        throw gcnew System::ArgumentNullException( "b" );
 
+    return *a->vec_ == *b->vec_;
+}
+
+bool Vector3f::operator != ( Vector3f^ a, Vector3f^ b )
+{
+    if ( !a )
+        throw gcnew System::ArgumentNullException( "a" );
+    if ( !b )
+        throw gcnew System::ArgumentNullException( "b" );
+
+    return *a->vec_ != *b->vec_;
+}
 
 MR_DOTNET_NAMESPACE_END

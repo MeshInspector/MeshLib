@@ -34,6 +34,9 @@ Matrix3f::~Matrix3f()
 Matrix3f::Matrix3f( MR::Matrix3f* mat )
 {
     mat_ = mat;
+    x = gcnew Vector3f( new MR::Vector3f( mat_->x ) );
+    y = gcnew Vector3f( new MR::Vector3f( mat_->y ) );
+    z = gcnew Vector3f( new MR::Vector3f( mat_->z ) );
 }
 
 Matrix3f^ Matrix3f::zero()
@@ -63,6 +66,14 @@ Matrix3f^ Matrix3f::operator*( Matrix3f^ a, Matrix3f^ b )
         throw gcnew System::ArgumentNullException();
 
     return gcnew Matrix3f( new MR::Matrix3f( *a->mat_ * *b->mat_ ) );
+}
+
+Vector3f^ Matrix3f::operator*( Matrix3f^ a, Vector3f^ b )
+{
+    if ( !a )
+        throw gcnew System::ArgumentNullException();
+
+    return gcnew Vector3f( new MR::Vector3f( *a->mat_ * *b->vec() ) );
 }
 
 Vector3f^ Matrix3f::x::get()
@@ -104,6 +115,22 @@ void Matrix3f::z::set( Vector3f^ value )
 
     z_ = value;
     mat_->z = *value->vec();
+}
+
+bool Matrix3f::operator==( Matrix3f^ a, Matrix3f^ b )
+{
+    if ( !a || !b )
+        throw gcnew System::ArgumentNullException();
+
+    return *a->mat_ == *b->mat_;
+}
+
+bool Matrix3f::operator!=( Matrix3f^ a, Matrix3f^ b )
+{
+    if ( !a || !b )
+        throw gcnew System::ArgumentNullException();
+
+    return *a->mat_ != *b->mat_;
 }
 
 MR_DOTNET_NAMESPACE_END

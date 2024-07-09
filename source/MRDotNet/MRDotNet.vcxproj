@@ -126,11 +126,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="MRAffineXf.h" />
     <ClInclude Include="MRMatrix3.h" />
     <ClInclude Include="MRVector3.h" />
     <ClInclude Include="MRMeshFwd.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRAffineXf.cpp" />
     <ClCompile Include="AssemblyInfo.cpp" />
     <ClCompile Include="MRMatrix3.cpp" />
     <ClCompile Include="MRVector3.cpp" />

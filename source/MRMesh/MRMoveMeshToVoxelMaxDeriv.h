@@ -12,6 +12,35 @@
 namespace MR
 {
 
+struct MoveMeshToVoxelMaxDerivSettings
+{
+    // number of iterations. Each iteration moves vertex only slightly and smooths the vector field of shifts.
+    int iters = 30;
+
+    // number of points to sample for each vertex. Samples are used to get the picewice-linear function of density and
+    // estimate the derivative based on it
+    int samplePoints = 6;
+
+    // force of the smoothing (relaxation) of vector field of shifts on each iteration
+    float intermediateSmoothForce = 0.3f;
+
+    // force of initial smoothing of vertices, before applying the algorithm
+    float preparationSmoothForce = 0.1f;
+};
+
+
+/// Moves each vertex along its normal to the minimize (with sign, i.e. maximize the absolute value with negative sign) the derivative
+/// of voxels.
+/// @return Vertices that were moved by the algorithm
+MRMESH_API VertBitSet moveMeshToVoxelMaxDeriv(
+        Mesh& mesh, const AffineXf3f& meshXf,
+        const VdbVolume& volume, const AffineXf3f& volumeXf,
+        const MoveMeshToVoxelMaxDerivSettings& settings,
+        ProgressCallback callback = {}
+    );
+
+
+
 // Helper class to organize mesh and voxels volume access and build point sequences
 template <typename MeshType>
 class MRMESH_API MeshOnVoxelsT

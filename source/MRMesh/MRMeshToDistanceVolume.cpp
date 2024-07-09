@@ -63,10 +63,11 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, co
     if ( params.dist.signMode == SignDetectionMode::HoleWindingRule && params.fwn )
     {
         assert( !mp.region ); // only whole mesh is supported for now
-        auto basis = AffineXf3f::linear( Matrix3f::scale( params.vol.voxelSize ) );
+        auto basis = AffineXf3f::linear( Matrix3f::scale( params.vol.voxelSize ) )
+            * AffineXf3f::translation( Vector3f::diagonal( 0.5f ) );
         basis.b = params.vol.origin;
         constexpr float beta = 2;
-        if ( auto d = params.fwn->calcFromGridWithDistances( res.data, res.dims, Vector3f::diagonal( 0.5f ), Vector3f::diagonal( 1.0f ), basis, beta,
+        if ( auto d = params.fwn->calcFromGridWithDistances( res.data, res.dims, basis, beta,
             params.dist.maxDistSq, params.dist.minDistSq, params.vol.cb ); !d )
         {
             return unexpected( std::move( d.error() ) );

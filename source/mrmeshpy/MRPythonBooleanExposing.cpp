@@ -4,17 +4,29 @@
 #include "MRMesh/MRMeshBoolean.h"
 #include "MRMesh/MRUniteManyMeshes.h"
 #include "MRMesh/MRId.h"
+
 #include <pybind11/functional.h>
+
 #include <variant>
+
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, EdgeTri, MR::EdgeTri )
+
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VariableEdgeTri, MR::VariableEdgeTri, MR::EdgeTri )
+
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, OneMeshIntersection, MR::OneMeshIntersection )
+
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, OneMeshContour, MR::OneMeshContour )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshIntersectinosTypes, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::EdgeTri>( m, "EdgeTri", "edge from one mesh and triangle from another mesh" ).
+    MR_PYTHON_CUSTOM_CLASS( EdgeTri ).doc() =
+        "edge from one mesh and triangle from another mesh";
+    MR_PYTHON_CUSTOM_CLASS( EdgeTri ).
         def( pybind11::init<>() ).
         def_readwrite( "edge", &MR::EdgeTri::edge ).
         def_readwrite( "tri", &MR::EdgeTri::tri );
 
-    pybind11::class_<MR::VariableEdgeTri, MR::EdgeTri>( m, "VariableEdgeTri" ).
+    MR_PYTHON_CUSTOM_CLASS( VariableEdgeTri ).
         def( pybind11::init<>() ).
         def_readwrite( "isEdgeATriB", &MR::VariableEdgeTri::isEdgeATriB );
 
@@ -31,7 +43,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshIntersectinosTypes, [] ( pybind11::modul
         def( "getEdge", [] ( const OneMeshIntersectionVariant& self ) { return std::get<MR::EdgeId>( self ); } ).
         def( "getVert", [] ( const OneMeshIntersectionVariant& self ) { return std::get<MR::VertId>( self ); } );
 
-    pybind11::class_<MR::OneMeshIntersection>( m, "OneMeshIntersection", "Simple point on mesh, represented by primitive id and coordinate in mesh space" ).
+    MR_PYTHON_CUSTOM_CLASS( OneMeshIntersection ).doc() =
+        "Simple point on mesh, represented by primitive id and coordinate in mesh space";
+    MR_PYTHON_CUSTOM_CLASS( OneMeshIntersection ).
         def( pybind11::init<>() ).
         def_readwrite( "primitiveId", &MR::OneMeshIntersection::primitiveId ).
         def_readwrite( "coordinate", &MR::OneMeshIntersection::coordinate );
@@ -53,9 +67,11 @@ MR_ADD_PYTHON_VEC( mrmeshpy, ContinuousContours, MR::ContinuousContour )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorOneMeshIntersection, MR::OneMeshIntersection )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshIntersectinosTypes2, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshIntersectinosTypes2, [] ( pybind11::module_& )
 {
-    pybind11::class_<MR::OneMeshContour>( m, "OneMeshContour", "One contour on mesh" ).
+    MR_PYTHON_CUSTOM_CLASS( OneMeshContour ).doc() =
+        "One contour on mesh";
+    MR_PYTHON_CUSTOM_CLASS( OneMeshContour ).
         def( pybind11::init<>() ).
         def_readwrite( "intersections", &MR::OneMeshContour::intersections ).
         def_readwrite( "closed", &MR::OneMeshContour::closed );

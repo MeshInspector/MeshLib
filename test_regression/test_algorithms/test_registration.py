@@ -11,13 +11,23 @@ import pytest
 
 @pytest.mark.smoke
 @pytest.mark.parametrize("input_case", [
-    {"case_name": "RigidScale", "input_mesh": "fox_geometrik_moved_rotated_scaled.ctm", "method": "RigidScale"},
-    {"case_name": "AnyRigidXf", "input_mesh": "fox_geometrik_moved_rotated.ctm", "method": "AnyRigidXf"},
-    {"case_name": "AnyRigidXf_rot-only", "input_mesh": "fox_geometrik_rotated.ctm", "method": "AnyRigidXf"},
-    {"case_name": "TranslationOnly ", "input_mesh": "fox_geometrik_moved.ctm", "method": "TranslationOnly"},
-    {"case_name": "OrthogonalAxis", "input_mesh": "fox_geometrik_rotated.ctm", "method": "OrthogonalAxis"},
-    {"case_name": "FixedAxis", "input_mesh": "fox_geometrik_rotated.ctm", "method": "FixedAxis"},
-    ]
+    pytest.param(
+        {"case_name": "RigidScale", "input_mesh": "fox_geometrik_moved_rotated_scaled.ctm", "method": "RigidScale"},
+        id="RigidScale"),
+    pytest.param({"case_name": "AnyRigidXf", "input_mesh": "fox_geometrik_moved_rotated.ctm", "method": "AnyRigidXf"},
+        id="AnyRigidXf"),
+    pytest.param(
+        {"case_name": "AnyRigidXf_rot-only", "input_mesh": "fox_geometrik_rotated.ctm", "method": "AnyRigidXf"},
+        id="AnyRigidXf_rot-only"),
+    pytest.param(
+        {"case_name": "TranslationOnly ", "input_mesh": "fox_geometrik_moved.ctm", "method": "TranslationOnly"},
+        id="TranslationOnly"),
+    pytest.param(
+        {"case_name": "OrthogonalAxis", "input_mesh": "fox_geometrik_rotated.ctm", "method": "OrthogonalAxis"},
+        id="OrthogonalAxis"),
+    pytest.param({"case_name": "FixedAxis", "input_mesh": "fox_geometrik_rotated.ctm", "method": "FixedAxis"},
+        id="FixedAxis"),
+]
 )
 def test_ICP(tmp_path, input_case):
     input_folder = Path(test_files_path) / "algorithms" / "icp"

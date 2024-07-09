@@ -74,12 +74,10 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, co
     }
     else
     {
+        const auto func = meshToDistanceFunctionVolume( mp, params );
         if ( !ParallelFor( size_t( 0 ), indexer.size(), [&]( size_t i )
         {
-            auto coord = Vector3f( indexer.toPos( VoxelId( i ) ) ) + Vector3f::diagonal( 0.5f );
-            auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
-            auto dist = signedDistanceToMesh( mp, voxelCenter, params.dist );
-            res.data[i] = dist ? *dist : cQuietNan;
+            res.data[i] = func.data( indexer.toPos( VoxelId( i ) ) );
         }, params.vol.cb ) )
             return unexpectedOperationCanceled();
     }

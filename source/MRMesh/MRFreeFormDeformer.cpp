@@ -2,6 +2,8 @@
 #include "MRMesh.h"
 #include "MRBox.h"
 #include "MRPch/MRTBB.h"
+#include "MRComputeBoundingBox.h"
+#include "MRBitSetParallelFor.h"
 #include <span>
 
 // unknown pragmas
@@ -165,34 +167,29 @@ std::vector<float> freeformWeights( const std::vector<int>& pascalLineX,
 namespace MR
 {
 
-FreeFormDeformer::FreeFormDeformer( Mesh& mesh ) :
-    mesh_{mesh}
+FreeFormDeformer::FreeFormDeformer( VertCoords& coords, const VertBitSet& valid ) :
+    coords_{ coords },
+    validPoints_{ valid }
 {
 }
 
 void FreeFormDeformer::init( const Vector3i& resolution /*= Vector3i::diagonal( 2 ) */, const Box3f& initialBox /*= Box3f() */ )
 {
     assert( resolution.x > 1 && resolution.y > 1 && resolution.z > 1 );
-    initialBox_ = initialBox.valid() ? initialBox : mesh_.computeBoundingBox();
-    const auto& meshPoints = mesh_.points;
-    meshPointsNormedPoses_.resize( meshPoints.size() );
+    initialBox_ = initialBox.valid() ? initialBox : computeBoundingBox( coords_, validPoints_ );
+    normedCoords_.resize( coords_.size() );
     auto diagonalVec = initialBox_.max - initialBox_.min;
     diagonalVec.x = 1.0f / diagonalVec.x;
     diagonalVec.y = 1.0f / diagonalVec.y;
     diagonalVec.z = 1.0f / diagonalVec.z;
-    tbb::parallel_for( tbb::blocked_range<int>( 0, (int)meshPointsNormedPoses_.size() ),
-        [&]( const tbb::blocked_range<int>& range )
+    BitSetParallelFor( validPoints_, [&] ( VertId vid )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            VertId vid = VertId( i );
-            const auto& point = meshPoints[vid];
-            auto minToPoint = point - initialBox_.min;
-            meshPointsNormedPoses_[i] = Vector3f(
-                minToPoint.x * diagonalVec.x,
-                minToPoint.y * diagonalVec.y,
-                minToPoint.z * diagonalVec.z );
-        }
+        const auto& point = coords_[vid];
+        auto minToPoint = point - initialBox_.min;
+        normedCoords_[vid] = Vector3f(
+            minToPoint.x * diagonalVec.x,
+            minToPoint.y * diagonalVec.y,
+            minToPoint.z * diagonalVec.z );
     } );
 
     resolution_ = resolution;
@@ -211,19 +208,26 @@ const Vector3f& FreeFormDeformer::getRefGridPointPosition( const Vector3i& coord
 
 void FreeFormDeformer::apply() const
 {
-    auto& meshPoints = mesh_.points;
     auto maxRes = std::max( { resolution_.x, resolution_.y, resolution_.z } );
-    tbb::enumerable_thread_specific<std::vector<Vector3f>> buffer( maxRes * ( maxRes - 1 ) / 2 - 1);
 
-    tbb::parallel_for( tbb::blocked_range<int>( 0, (int) meshPoints.size() ),
-        [&]( const tbb::blocked_range<int>& range )
+    struct CacheLines
     {
-        std::vector<Vector3f> xPlane( resolution_.y * resolution_.z );
-        std::vector<Vector3f> yLine( resolution_.z );
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            meshPoints[VertId( i )] = applyToNormedPoint_( meshPointsNormedPoses_[i], xPlane, yLine, buffer.local() );
-        }
+        std::vector<Vector3f> xPlane;
+        std::vector<Vector3f> yLine;
+        std::vector<Vector3f> buffer;
+    };
+    tbb::enumerable_thread_specific<CacheLines> caches;
+
+    BitSetParallelFor( validPoints_, [&] ( VertId vid )
+    {
+        auto& cache = caches.local();
+        if ( cache.xPlane.empty() )
+            cache.xPlane.resize( resolution_.y * resolution_.z );
+        if ( cache.yLine.empty() )
+            cache.yLine.resize( resolution_.z );
+        if ( cache.buffer.empty() )
+            cache.buffer.resize( maxRes * ( maxRes - 1 ) / 2 - 1 );
+        coords_[vid] = applyToNormedPoint_( normedCoords_[vid], cache.xPlane, cache.yLine, cache.buffer );
     } );
 }
 
@@ -278,7 +282,7 @@ Vector3f FreeFormDeformer::applyToNormedPoint_( const Vector3f& normedPoint, std
 }
 
 std::vector<Vector3f> findBestFreeformDeformation( const Box3f& box, const std::vector<Vector3f>& source, const std::vector<Vector3f>& target, 
-                                                   const Vector3i& resolution /*= Vector3i::diagonal( 2 ) */ )
+                                                   const Vector3i& resolution /*= Vector3i::diagonal( 2 ) */, const AffineXf3f* samplesToBox /*= nullptr */)
 {
     // This parameters are needed to optimize freeform weights calculations
     auto resXY = resolution.x * resolution.y;
@@ -310,8 +314,8 @@ std::vector<Vector3f> findBestFreeformDeformation( const Box3f& box, const std::
     // compute coefficient matrix (A) and target matrix (B)
     for ( int k = 0; k < source.size(); k++ )
     {
-        const auto& s = source[k];
-        const auto& t = target[k];
+        const auto& s = samplesToBox ? ( *samplesToBox )( source[k] ) : source[k] ;
+        const auto& t = samplesToBox ? ( *samplesToBox )( target[k] ) : target[k] ;
         auto ws = freeformWeights( pascalLineX,pascalLineY,pascalLineZ,
                                    box.min, backDiagonal, resXY, 
                                    s );

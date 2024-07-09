@@ -2,6 +2,7 @@
 #include "MRMeshFwd.h"
 #include "MRVector3.h"
 #include "MRBox.h"
+#include "MRVector.h"
 
 namespace MR
 {
@@ -10,7 +11,7 @@ class FreeFormDeformer
 {
 public:
     // Only set mesh ref
-    MRMESH_API FreeFormDeformer( Mesh& mesh );
+    MRMESH_API FreeFormDeformer( VertCoords& coords, const VertBitSet& valid );
     // Parallel calculates all points normed positions
     // sets ref grid by initialBox, if initialBox is invalid use mesh bounding box instead 
     MRMESH_API void init( const Vector3i& resolution = Vector3i::diagonal( 2 ), const Box3f& initialBox = Box3f() );
@@ -32,10 +33,11 @@ public:
     void setAllRefGridPositions( const std::vector<Vector3f>& refPoints ) { refPointsGrid_ = refPoints; }
     const Vector3i& getResolution() const { return resolution_; }
 private:
-    Mesh& mesh_;
+    VertCoords& coords_;
+    const VertBitSet& validPoints_;
     std::vector<Vector3f> refPointsGrid_;
     Box3f initialBox_;
-    std::vector<Vector3f> meshPointsNormedPoses_;
+    VertCoords normedCoords_;
     Vector3i resolution_;
 
     Vector3f applyToNormedPoint_( const Vector3f& normedPoint, std::vector<Vector3f>& xPlaneCache, std::vector<Vector3f>& yLineCache, std::vector<Vector3f>& tempPoints ) const;

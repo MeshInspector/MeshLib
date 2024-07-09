@@ -123,9 +123,11 @@ public:
     /// returns status info string
     [[nodiscard]] MRMESH_API std::string getStatusInfo() const;
 
+    using PairsPerLayer = Vector<ICPPairsGrid, ICPLayer>;
+    const PairsPerLayer& getPairsPerLayer() const { return pairsGridPerLayer_; }
 private:
     ICPObjects objs_;
-    Vector<ICPPairsGrid, ICPLayer> pairsGridPerLayer_;
+    PairsPerLayer pairsGridPerLayer_;
     ICPProperties prop_;
 
     ICPExitType resultType_{ ICPExitType::NotStarted };

@@ -46,7 +46,6 @@ std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p
 
     default: ; //nothing
     }
-
     return dist;
 }
 

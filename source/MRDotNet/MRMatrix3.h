@@ -6,6 +6,7 @@ MR_DOTNET_NAMESPACE_BEGIN
 ref class Vector3f;
 public ref class Matrix3f
 {
+public:
     Matrix3f();
     Matrix3f( Vector3f^ x, Vector3f^ y, Vector3f^ z );
     ~Matrix3f();
@@ -25,6 +26,10 @@ public ref class Matrix3f
 private:
     MR::Matrix3f* mat_;
     Matrix3f( MR::Matrix3f* mat );
+
+    Vector3f^ x_;
+    Vector3f^ y_;
+    Vector3f^ z_;
 };
 
 MR_DOTNET_NAMESPACE_END

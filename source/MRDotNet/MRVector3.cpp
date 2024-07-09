@@ -62,21 +62,37 @@ inline Vector3f^ Vector3f::minusZ()
 
 Vector3f^ Vector3f::operator * ( float a, Vector3f^ b )
 {
+    if ( !b )
+        throw gcnew System::ArgumentNullException( "b" );
+
     return gcnew Vector3f( new MR::Vector3f( a * *b->vec_ ) );
 }
 
 Vector3f^ Vector3f::operator * ( Vector3f^ a, float b )
 {
+    if ( !a )
+        throw gcnew System::ArgumentNullException( "a" );
+
     return gcnew Vector3f( new MR::Vector3f( *a->vec_ * b ) );
 }
 
 Vector3f^ Vector3f::operator + ( Vector3f^ a, Vector3f^ b )
 {
+    if ( !a )
+        throw gcnew System::ArgumentNullException( "a" );
+    if ( !b )
+        throw gcnew System::ArgumentNullException( "b" );
+
     return gcnew Vector3f( new MR::Vector3f( *a->vec_ + *b->vec_ ) );
 }
 
 Vector3f^ Vector3f::operator - ( Vector3f^ a, Vector3f^ b )
 {
+    if ( !a )
+        throw gcnew System::ArgumentNullException( "a" );
+    if ( !b )
+        throw gcnew System::ArgumentNullException( "b" );
+
     return gcnew Vector3f( new MR::Vector3f( *a->vec_ - *b->vec_ ) );
 }
 

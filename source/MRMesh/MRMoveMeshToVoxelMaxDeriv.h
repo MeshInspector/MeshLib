@@ -5,7 +5,6 @@
 #include "MRVolumeInterpolation.h"
 #include "MRMatrix3.h"
 #include "MRAffineXf.h"
-#include "MRTimer.h"
 #include "MRBestFitParabola.h"
 
 

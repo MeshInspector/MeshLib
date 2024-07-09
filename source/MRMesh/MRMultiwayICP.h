@@ -124,7 +124,12 @@ public:
     [[nodiscard]] MRMESH_API std::string getStatusInfo() const;
 
     using PairsPerLayer = Vector<ICPPairsGrid, ICPLayer>;
+    /// returns all pairs of all layers
     const PairsPerLayer& getPairsPerLayer() const { return pairsGridPerLayer_; }
+
+    /// returns pointer to class that is used to navigate among layers of cascade registration
+    /// if nullptr - cascade mode is not used
+    const IICPTreeIndexer* getCascadeIndexer() const { return cascadeIndexer_.get(); }
 private:
     ICPObjects objs_;
     PairsPerLayer pairsGridPerLayer_;

@@ -282,7 +282,7 @@ Vector3f FreeFormDeformer::applyToNormedPoint_( const Vector3f& normedPoint, std
 }
 
 std::vector<Vector3f> findBestFreeformDeformation( const Box3f& box, const std::vector<Vector3f>& source, const std::vector<Vector3f>& target, 
-                                                   const Vector3i& resolution /*= Vector3i::diagonal( 2 ) */ )
+                                                   const Vector3i& resolution /*= Vector3i::diagonal( 2 ) */, const AffineXf3f* samplesToBox /*= nullptr */)
 {
     // This parameters are needed to optimize freeform weights calculations
     auto resXY = resolution.x * resolution.y;
@@ -314,8 +314,8 @@ std::vector<Vector3f> findBestFreeformDeformation( const Box3f& box, const std::
     // compute coefficient matrix (A) and target matrix (B)
     for ( int k = 0; k < source.size(); k++ )
     {
-        const auto& s = source[k];
-        const auto& t = target[k];
+        const auto& s = samplesToBox ? ( *samplesToBox )( source[k] ) : source[k] ;
+        const auto& t = samplesToBox ? ( *samplesToBox )( target[k] ) : target[k] ;
         auto ws = freeformWeights( pascalLineX,pascalLineY,pascalLineZ,
                                    box.min, backDiagonal, resXY, 
                                    s );

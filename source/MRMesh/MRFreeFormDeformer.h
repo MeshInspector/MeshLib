@@ -45,8 +45,9 @@ private:
 
 // Calculates best Free Form transform to fit given source->target deformation
 // origin ref grid as box corners ( resolution parameter specifies how to divide box )
+// samplesToBox - if set used to transform source and target points to box space
 // returns new positions of ref grid
 MRMESH_API std::vector<Vector3f> findBestFreeformDeformation( const Box3f& box, const std::vector<Vector3f>& source, const std::vector<Vector3f>& target,
-                                                              const Vector3i& resolution = Vector3i::diagonal( 2 ) );
+                                                              const Vector3i& resolution = Vector3i::diagonal( 2 ), const AffineXf3f* samplesToBox = nullptr );
 
 }

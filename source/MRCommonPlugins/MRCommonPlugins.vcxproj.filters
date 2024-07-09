@@ -666,5 +666,20 @@
     <Image Include="resource\icons\X1\Active Plugins List.png">
       <Filter>resource\icons\X1</Filter>
     </Image>
+    <Image Include="resource\icons\X0_5\Show_Hide Global Basis.png">
+      <Filter>resource\icons\X0_5</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_75\Show_Hide Global Basis.png">
+      <Filter>resource\icons\X0_75</Filter>
+    </Image>
+    <Image Include="resource\icons\X1\Show_Hide Global Basis.png">
+      <Filter>resource\icons\X1</Filter>
+    </Image>
+    <Image Include="resource\icons\X3\Active Plugins List.png">
+      <Filter>resource\icons\X3</Filter>
+    </Image>
+    <Image Include="resource\icons\X3\Show_Hide Global Basis.png">
+      <Filter>resource\icons\X3</Filter>
+    </Image>
   </ItemGroup>
 </Project>

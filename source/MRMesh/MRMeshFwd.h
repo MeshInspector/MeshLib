@@ -485,8 +485,12 @@ class AnyVisualizeMaskEnum;
 
 template <typename T>
 struct VoxelsVolume;
-using SimpleVolume = VoxelsVolume<std::vector<float>>;
-using SimpleVolumeU16 = VoxelsVolume<std::vector<uint16_t>>;
+
+template <typename T>
+struct VoxelsVolumeMinMax;
+
+using SimpleVolume = VoxelsVolumeMinMax<std::vector<float>>;
+using SimpleVolumeU16 = VoxelsVolumeMinMax<std::vector<uint16_t>>;
 
 template <typename T>
 using VoxelValueGetter = std::function<T ( const Vector3i& )>;
@@ -498,7 +502,7 @@ class ObjectVoxels;
 
 struct OpenVdbFloatGrid;
 using FloatGrid = std::shared_ptr<OpenVdbFloatGrid>;
-using VdbVolume = VoxelsVolume<FloatGrid>;
+using VdbVolume = VoxelsVolumeMinMax<FloatGrid>;
 #endif
 
 class HistoryAction;

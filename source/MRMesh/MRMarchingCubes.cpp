@@ -463,22 +463,28 @@ template<> auto accessorCtor<FunctionVolume>( const FunctionVolume& ) { return (
 template<typename V, typename NaNChecker, typename Positioner>
 Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 {
+    TriMesh result;
 #ifndef MRMESH_NO_OPENVDB
     if constexpr ( std::is_same_v<V, VdbVolume> )
     {
         if ( !volume.data )
             return unexpected( "No volume data." );
+        if ( params.iso <= volume.min || params.iso >= volume.max )
+            return result;
     } else
 #endif
     if constexpr ( std::is_same_v<V, FunctionVolume> )
     {
         if ( !volume.data )
             return unexpected( "Getter function is not specified." );
+    } else
+    if constexpr ( std::is_same_v<V, SimpleVolume> )
+    {
+        if ( params.iso <= volume.min || params.iso >= volume.max )
+            return result;
     }
 
-    TriMesh result;
-    if ( params.iso <= volume.min || params.iso >= volume.max ||
-        volume.dims.x <= 0 || volume.dims.y <= 0 || volume.dims.z <= 0 )
+    if ( volume.dims.x <= 0 || volume.dims.y <= 0 || volume.dims.z <= 0 )
         return result;
 
     MR_TIMER

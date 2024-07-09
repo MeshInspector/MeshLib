@@ -211,7 +211,7 @@ void evalGridMinMax( const FloatGrid& grid, float& min, float& max )
 #endif
 }
 
-Expected<VdbVolume, std::string> meshToVolume( const Mesh& mesh, const MeshToVolumeParams& params /*= {} */ )
+Expected<VdbVolume> meshToVolume( const Mesh& mesh, const MeshToVolumeParams& params /*= {} */ )
 {
     if ( params.type == MeshToVolumeParams::Type::Signed && !mesh.topology.isClosed() )
         return unexpected( "Only closed mesh can be converted to signed volume" );
@@ -289,12 +289,12 @@ VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, ProgressCal
 // if VoxelsVolume values type is integral, performs mapping from [vdbVolume.min, vdbVolume.max] to
 // nonnegative range of target type
 template<typename T, bool Norm>
-Expected<VoxelsVolume<std::vector<T>>, std::string> vdbVolumeToSimpleVolumeImpl(
+Expected<VoxelsVolumeMinMax<std::vector<T>>> vdbVolumeToSimpleVolumeImpl(
     const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} )
 {
     constexpr bool isFloat = std::is_same_v<float, T> || std::is_same_v<double, T> || std::is_same_v<long double, T>;
 
-    VoxelsVolume<std::vector<T>> res;
+    VoxelsVolumeMinMax<std::vector<T>> res;
 
     res.dims = !activeBox.valid() ? vdbVolume.dims : activeBox.size();
     Vector3i org = activeBox.valid() ? activeBox.min : Vector3i{};
@@ -346,17 +346,17 @@ Expected<VoxelsVolume<std::vector<T>>, std::string> vdbVolumeToSimpleVolumeImpl(
     return res;
 }
 
-Expected<SimpleVolume, std::string> vdbVolumeToSimpleVolume( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
+Expected<SimpleVolume> vdbVolumeToSimpleVolume( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
 {
     return vdbVolumeToSimpleVolumeImpl<float, false>( vdbVolume, activeBox, cb );
 }
 
-Expected<MR::SimpleVolume, std::string> vdbVolumeToSimpleVolumeNorm( const VdbVolume& vdbVolume, const Box3i& activeBox /*= Box3i()*/, ProgressCallback cb /*= {} */ )
+Expected<MR::SimpleVolume> vdbVolumeToSimpleVolumeNorm( const VdbVolume& vdbVolume, const Box3i& activeBox /*= Box3i()*/, ProgressCallback cb /*= {} */ )
 {
     return vdbVolumeToSimpleVolumeImpl<float, true>( vdbVolume, activeBox, cb );
 }
 
-Expected<SimpleVolumeU16, std::string> vdbVolumeToSimpleVolumeU16( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
+Expected<SimpleVolumeU16> vdbVolumeToSimpleVolumeU16( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
 {
     return vdbVolumeToSimpleVolumeImpl<uint16_t, true>( vdbVolume, activeBox, cb );
 }

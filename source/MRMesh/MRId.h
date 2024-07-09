@@ -145,5 +145,6 @@ inline constexpr FaceId operator "" _f( unsigned long long i ) noexcept { return
 inline constexpr VertId operator "" _v( unsigned long long i ) noexcept { return VertId{ (int)i }; }
 inline constexpr EdgeId operator "" _e( unsigned long long i ) noexcept { return EdgeId{ (int)i }; }
 inline constexpr UndirectedEdgeId operator "" _ue( unsigned long long i ) noexcept { return UndirectedEdgeId{ (int)i }; }
+inline constexpr VoxelId operator "" _vox( unsigned long long i ) noexcept { return VoxelId{ i }; }
 
 } //namespace MR

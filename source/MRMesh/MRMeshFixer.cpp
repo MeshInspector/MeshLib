@@ -365,10 +365,8 @@ VertBitSet findRepeatedVertsOnHoleBd( const MeshTopology& topology )
     };
 
     tbb::enumerable_thread_specific<ThreadData> tls( topology.vertSize() );
-
-    ParallelFor( holeRepresEdges, [&]( size_t i )
+    ParallelFor( holeRepresEdges, tls, [&]( size_t i, ThreadData & threadData )
     {
-        auto & threadData = tls.local();
         const auto e0 = holeRepresEdges[i];
         for ( auto e : leftRing( topology, e0 ) )
         {

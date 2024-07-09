@@ -45,11 +45,9 @@ public:
     /// </summary>
     /// <param name="res">resulting signed distances, will be resized automatically</param>
     /// <param name="dims">dimensions of the grid</param>
-    /// <param name="minCoord">minimal coordinates of grid points</param>
-    /// <param name="voxelSize">size of voxel</param>
-    /// <param name="gridToMeshXf">transform from grid to mesh</param>
+    /// <param name="gridToMeshXf">transform from integer grid locations to voxel's centers in mesh reference frame</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    virtual VoidOrErrStr calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) = 0;
+    virtual VoidOrErrStr calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) = 0;
 };
 
 /// the class for fast approximate computation of winding number for a mesh (using its AABB tree)
@@ -100,11 +98,9 @@ public:
     /// </summary>
     /// <param name="res">resulting signed distances, will be resized automatically</param>
     /// <param name="dims">dimensions of the grid</param>
-    /// <param name="minCoord">minimal coordinates of grid points</param>
-    /// <param name="voxelSize">size of voxel</param>
-    /// <param name="gridToMeshXf">transform from grid to mesh</param>
+    /// <param name="gridToMeshXf">transform from integer grid locations to voxel's centers in mesh reference frame</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    MRMESH_API VoidOrErrStr calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) override;
+    MRMESH_API VoidOrErrStr calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) override;
 private:
     [[nodiscard]] float calc_( const Vector3f & q, float beta, FaceId skipFace = {} ) const;
 

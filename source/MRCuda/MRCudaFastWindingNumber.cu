@@ -204,7 +204,7 @@ __global__ void fastWindingNumberFromGridKernel( int3 dims, Matrix4 gridToMeshXf
     processPoint( transformedPoint, resVec[index], dipoles, nodes, meshPoints, faces, beta, index );
 }
 
-__global__ void signedDistanceKernel( int3 dims, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
+__global__ void signedDistanceKernel( int3 dims, Matrix4 gridToMeshXf,
     const Dipole* __restrict__ dipoles, const Node3* __restrict__ nodes, const float3* __restrict__ meshPoints, const FaceToThreeVerts* __restrict__ faces,
     float* resVec, float beta, float maxDistSq, float minDistSq, size_t size )
 {
@@ -221,7 +221,7 @@ __global__ void signedDistanceKernel( int3 dims, float3 minCoord, float3 voxelSi
     const int sizeXY = dims.x * dims.y;
     const int sumZ = int( index % sizeXY );
     const int3 voxel{ sumZ % dims.x, sumZ / dims.x, int( index / sizeXY ) };
-    const float3 point{ ( minCoord.x + voxel.x ) * voxelSize.x, ( minCoord.y + voxel.y ) * voxelSize.y, ( minCoord.z + voxel.z ) * voxelSize.z };
+    const float3 point{ float( voxel.x ), float( voxel.y ), float( voxel.z ) };
     const float3 transformedPoint = gridToMeshXf.isIdentity ? point : gridToMeshXf.transform( point );
 
     float& res = resVec[index];
@@ -258,13 +258,13 @@ void fastWindingNumberFromGrid( int3 dims, Matrix4 gridToMeshXf,
     fastWindingNumberFromGridKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, beta, size );       
 }
 
-void signedDistance( int3 dims, float3 minCoord, float3 voxelSize, Matrix4 gridToMeshXf,
+void signedDistance( int3 dims, Matrix4 gridToMeshXf,
                                         const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
                                         float* resVec, float beta, float maxDistSq, float minDistSq )
 {
     const size_t size = size_t( dims.x ) * dims.y * dims.z;
     int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
-    signedDistanceKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, minCoord, voxelSize, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, beta, maxDistSq, minDistSq, size );
+    signedDistanceKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, beta, maxDistSq, minDistSq, size );
 }
 
 } //namespece Cuda

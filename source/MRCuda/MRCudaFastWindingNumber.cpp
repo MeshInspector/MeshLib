@@ -148,7 +148,7 @@ VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vec
     return {};
 }
 
-VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb )
+VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb )
 {
     MR_TIMER
     prepareData_( {} );
@@ -172,8 +172,7 @@ VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& r
 
     signedDistance(
         int3{ dims.x, dims.y, dims.z },
-        float3{ minCoord.x, minCoord.y, minCoord.z },
-        float3{ voxelSize.x, voxelSize.y, voxelSize.z }, cudaGridToMeshXf,
+        cudaGridToMeshXf,
         data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(),
         data_->cudaResult.data(), beta, maxDistSq, minDistSq );
 

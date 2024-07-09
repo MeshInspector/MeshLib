@@ -13,17 +13,17 @@ namespace MR
 
 struct MoveMeshToVoxelMaxDerivSettings
 {
-    // number of iterations. Each iteration moves vertex only slightly and smooths the vector field of shifts.
+    /// number of iterations. Each iteration moves vertex only slightly and smooths the vector field of shifts.
     int iters = 30;
 
-    // number of points to sample for each vertex. Samples are used to get the picewice-linear function of density and
-    // estimate the derivative based on it
+    /// number of points to sample for each vertex. Samples are used to get the picewice-linear function of density and
+    /// estimate the derivative based on it
     int samplePoints = 6;
 
-    // force of the smoothing (relaxation) of vector field of shifts on each iteration
+    /// force of the smoothing (relaxation) of vector field of shifts on each iteration
     float intermediateSmoothForce = 0.3f;
 
-    // force of initial smoothing of vertices, before applying the algorithm
+    /// force of initial smoothing of vertices, before applying the algorithm
     float preparationSmoothForce = 0.1f;
 };
 
@@ -49,34 +49,54 @@ public:
 
     // Access to base data
     MRMESH_API MeshType& mesh() const;
+
     MRMESH_API const VdbVolume& volume() const;
+
+
     // Cached number of valid vertices
     MRMESH_API int numVerts() const;
+
     // Voxel size as scalar
     MRMESH_API float voxelSize() const;
+
+
     // Transformation mesh to volume
     // All points are in voxels volume space, unless otherwise is implied
     MRMESH_API AffineXf3f xf() const;
+
     MRMESH_API Vector3f xf( const Vector3f& pt ) const;
+
     MRMESH_API AffineXf3f xfInv() const;
+
     MRMESH_API Vector3f xfInv( const Vector3f &pt ) const;
+
+
     // Vertex position
     MRMESH_API Vector3f point( VertId v ) const;
+
     // Volume value
     MRMESH_API float getValue( const Vector3f& pos ) const;
+
     // Get offset vector (mesh normal for a vertex with `voxelSize` length)
     MRMESH_API Vector3f getOffsetVector( VertId v ) const;
+
     // Get a pseudo-index for a zero-based point index in a zero-centered row of `count` points
     // Pseudo-index is a signed number; for whole index, is is whole or half-whole
     MRMESH_API static float pseudoIndex( float index, int count );
+
     MRMESH_API static float pseudoIndex( int index, int count );
+
     MRMESH_API static float indexFromPseudoIndex( float pseudoIndex, int count );
+
     // Get row of points with `offset` stride
     MRMESH_API void getPoints( std::vector<Vector3f>& result, const Vector3f& pos, const Vector3f& offset ) const;
+
     // Get volume values for a row of points
     MRMESH_API void getValues( std::vector<float>& result, const Vector3f& pos, const Vector3f& offset ) const;
+
     // Get derivatives from result of `getValues`
     MRMESH_API static void getDerivatives( std::vector<float>& result, const std::vector<float>& values );
+    
     // Get best fit parabola in pseudo-index space for a zero-centered array
     static Parabolaf getBestParabola( auto begin, auto end )
     {

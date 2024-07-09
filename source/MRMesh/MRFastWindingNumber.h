@@ -36,11 +36,9 @@ public:
     /// </summary>
     /// <param name="res">resulting winding numbers, will be resized automatically</param>
     /// <param name="dims">dimensions of the grid</param>
-    /// <param name="minCoord">minimal coordinates of grid points</param>
-    /// <param name="voxelSize">size of voxel</param>
-    /// <param name="gridToMeshXf">transform from grid to mesh</param>
+    /// <param name="gridToMeshXf">transform from integer grid locations to voxel's centers in mesh reference frame</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    virtual VoidOrErrStr calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb = {} ) = 0;
+    virtual VoidOrErrStr calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb = {} ) = 0;
 
     /// <summary>
     /// calculates distances and winding numbers for each point in a three-dimensional grid
@@ -86,11 +84,9 @@ public:
     /// </summary>
     /// <param name="res">resulting winding numbers, will be resized automatically</param>
     /// <param name="dims">dimensions of the grid</param>
-    /// <param name="minCoord">minimal coordinates of grid points</param>
-    /// <param name="voxelSize">size of voxel</param>
-    /// <param name="gridToMeshXf">transform from grid to mesh</param>
+    /// <param name="gridToMeshXf">transform from integer grid locations to voxel's centers in mesh reference frame</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    MRMESH_API VoidOrErrStr calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb ) override;
+    MRMESH_API VoidOrErrStr calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb ) override;
 
     /// calculates distances and winding numbers at \param p
     /// \param beta determines the precision of the approximation: the more the better, recommended value 2 or more;

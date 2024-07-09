@@ -109,7 +109,7 @@ bool FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, Prog
     }, subprogress( cb, 0.9f, 1.0f ) );
 }
 
-VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb )
+VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb )
 {
     MR_TIMER
     prepareData_( {} );
@@ -133,8 +133,7 @@ VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vec
 
     fastWindingNumberFromGrid(
         int3{ dims.x, dims.y, dims.z },
-        float3{ minCoord.x, minCoord.y, minCoord.z },
-        float3{ voxelSize.x, voxelSize.y, voxelSize.z }, cudaGridToMeshXf,
+        cudaGridToMeshXf,
         data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(),
         data_->cudaResult.data(), beta );
     

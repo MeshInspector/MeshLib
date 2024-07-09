@@ -42,7 +42,7 @@ bool FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, Prog
     }, cb );
 }
 
-VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb )
+VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb )
 {
     MR_TIMER
 
@@ -51,14 +51,7 @@ VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vec
     VolumeIndexer indexer( dims );
     if ( !ParallelFor( size_t( 0 ), size, [&]( size_t i )
     {
-        auto pos = indexer.toPos( VoxelId( i ) );
-        auto coord = minCoord;
-        for ( int j = 0; j < 3; ++j )
-            coord[j] += pos[j];
-
-        auto coord3i = Vector3i( int( coord.x ), int( coord.y ), int( coord.z ) );
-        auto pointInSpace = mult( voxelSize, Vector3f( coord3i ) );
-        res[i] = calc_( gridToMeshXf( pointInSpace ), beta );
+        res[i] = calc_( gridToMeshXf( Vector3f( indexer.toPos( VoxelId( i ) ) ) ), beta );
     }, cb ) )
         return unexpectedOperationCanceled();
     return {};

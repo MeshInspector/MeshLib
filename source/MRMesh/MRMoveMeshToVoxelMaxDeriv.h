@@ -42,41 +42,41 @@ MRMESH_API VertBitSet moveMeshToVoxelMaxDeriv(
 
 // Helper class to organize mesh and voxels volume access and build point sequences
 template <typename MeshType>
-class MRMESH_API MeshOnVoxelsT
+class MeshOnVoxelsT
 {
 public:
-    MeshOnVoxelsT( MeshType& mesh, const AffineXf3f& meshXf, const VdbVolume& volume, const AffineXf3f& volumeXf );
+    MRMESH_API MeshOnVoxelsT( MeshType& mesh, const AffineXf3f& meshXf, const VdbVolume& volume, const AffineXf3f& volumeXf );
 
     // Access to base data
-    MeshType& mesh() const;
-    const VdbVolume& volume() const;
+    MRMESH_API MeshType& mesh() const;
+    MRMESH_API const VdbVolume& volume() const;
     // Cached number of valid vertices
-    int numVerts() const;
+    MRMESH_API int numVerts() const;
     // Voxel size as scalar
-    float voxelSize() const;
+    MRMESH_API float voxelSize() const;
     // Transformation mesh to volume
     // All points are in voxels volume space, unless otherwise is implied
-    AffineXf3f xf() const;
-    Vector3f xf( const Vector3f& pt ) const;
-    AffineXf3f xfInv() const;
-    Vector3f xfInv( const Vector3f &pt ) const;
+    MRMESH_API AffineXf3f xf() const;
+    MRMESH_API Vector3f xf( const Vector3f& pt ) const;
+    MRMESH_API AffineXf3f xfInv() const;
+    MRMESH_API Vector3f xfInv( const Vector3f &pt ) const;
     // Vertex position
-    Vector3f point( VertId v ) const;
+    MRMESH_API Vector3f point( VertId v ) const;
     // Volume value
-    float getValue( const Vector3f& pos ) const;
+    MRMESH_API float getValue( const Vector3f& pos ) const;
     // Get offset vector (mesh normal for a vertex with `voxelSize` length)
-    Vector3f getOffsetVector( VertId v ) const;
+    MRMESH_API Vector3f getOffsetVector( VertId v ) const;
     // Get a pseudo-index for a zero-based point index in a zero-centered row of `count` points
     // Pseudo-index is a signed number; for whole index, is is whole or half-whole
-    static float pseudoIndex( float index, int count );
-    static float pseudoIndex( int index, int count );
-    static float indexFromPseudoIndex( float pseudoIndex, int count );
+    MRMESH_API static float pseudoIndex( float index, int count );
+    MRMESH_API static float pseudoIndex( int index, int count );
+    MRMESH_API static float indexFromPseudoIndex( float pseudoIndex, int count );
     // Get row of points with `offset` stride
-    void getPoints( std::vector<Vector3f>& result, const Vector3f& pos, const Vector3f& offset ) const;
+    MRMESH_API void getPoints( std::vector<Vector3f>& result, const Vector3f& pos, const Vector3f& offset ) const;
     // Get volume values for a row of points
-    void getValues( std::vector<float>& result, const Vector3f& pos, const Vector3f& offset ) const;
+    MRMESH_API void getValues( std::vector<float>& result, const Vector3f& pos, const Vector3f& offset ) const;
     // Get derivatives from result of `getValues`
-    static void getDerivatives( std::vector<float>& result, const std::vector<float>& values );
+    MRMESH_API static void getDerivatives( std::vector<float>& result, const std::vector<float>& values );
     // Get best fit parabola in pseudo-index space for a zero-centered array
     static Parabolaf getBestParabola( auto begin, auto end )
     {

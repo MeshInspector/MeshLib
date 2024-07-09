@@ -408,8 +408,6 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
 {
     MR_TIMER
 
-    const auto gridToMeshXf = meshToGridXf.inverse();
-
     auto activeBox = grid->evalActiveVoxelBoundingBox();
     // make dense topology tree to copy its nodes topology to original grid
     std::unique_ptr<openvdb::TopologyTree> topologyTree = std::make_unique<openvdb::TopologyTree>();
@@ -428,10 +426,12 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
     if ( !fwn )
         fwn = std::make_shared<FastWindingNumber>( refMesh );
 
-    if ( auto res = fwn->calcFromGrid( windVals, 
-        Vector3i{ dims.x(),  dims.y(), dims.z() }, 
-        Vector3f{ float( minCoord.x() ), float( minCoord.y() ), float( minCoord.z() ) }, 
-        voxelSize, gridToMeshXf, 2.0f, subprogress( cb, 0.0f, 0.8f ) ); !res )
+    const auto gridToMeshXf = meshToGridXf.inverse()
+        * AffineXf3f::linear( Matrix3f::scale( voxelSize ) )
+        * AffineXf3f::translation( Vector3f{ float( minCoord.x() ), float( minCoord.y() ), float( minCoord.z() ) } );
+    if ( auto res = fwn->calcFromGrid( windVals,
+        Vector3i{ dims.x(),  dims.y(), dims.z() },
+        gridToMeshXf, 2.0f, subprogress( cb, 0.0f, 0.8f ) ); !res )
     {
         return res;
     }

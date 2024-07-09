@@ -6,12 +6,17 @@ import meshlib.mrmeshpy as mlib
 
 import pytest
 
+
 @pytest.mark.smoke
 @pytest.mark.parametrize("case", [
-    {"name": "maxEdgeSplits", "params": {"maxEdgeSplits": 1000}},
-    {"name": "finalRelaxIters", "params": {"maxEdgeSplits": 1000, "finalRelaxIters": 1}},
-    {"name": "maxAngleChangeAfterFlip", "params": {"maxEdgeSplits": 1000, "maxAngleChangeAfterFlip": 50}},
-    {"name": "maxBdShift", "params": {"maxEdgeSplits": 1000, "maxBdShift": 0.4}},
+    pytest.param({"name": "maxEdgeSplits", "params": {"maxEdgeSplits": 1000}},
+                 id="maxEdgeSplits"),
+    pytest.param({"name": "finalRelaxIters", "params": {"maxEdgeSplits": 1000, "finalRelaxIters": 1}},
+                 id="finalRelaxIters"),
+    pytest.param({"name": "maxAngleChangeAfterFlip", "params": {"maxEdgeSplits": 1000, "maxAngleChangeAfterFlip": 50}},
+                 id="maxAngleChangeAfterFlip"),
+    pytest.param({"name": "maxBdShift", "params": {"maxEdgeSplits": 1000, "maxBdShift": 0.4}},
+                 id="maxBdShift"),
 ])
 def test_remesh(tmp_path, case):
     """

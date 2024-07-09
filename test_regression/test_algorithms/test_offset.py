@@ -9,28 +9,28 @@ from constants import test_files_path
 
 
 @pytest.mark.parametrize("test_params", [
-    {"name": "thicken_open_vdb",
-     "mesh": "closed.ctm",
-     "params": {
-         "signDetectionMode": "OpenVDB",
-         "offset": 5
-     }
-     },
-    {"name": "thicken_unsigned",
-     "mesh": "open.ctm",
-     "params": {
-         "signDetectionMode": "Unsigned",
-         "offset": 0.5
-     }
-     },
-    {"name": "thicken_self-intersected",
-     "mesh": "self-intersected.ctm",
-     "skip_self-intsc_verif": True,  # Self-intersections presented in input
-     "params": {
-         "signDetectionMode": "WindingRule",
-         "offset": 5
-     }
-     },
+    pytest.param({"name": "thicken_open_vdb",
+                  "mesh": "closed.ctm",
+                  "params": {
+                      "signDetectionMode": "OpenVDB",
+                      "offset": 5
+                  }
+                  }, id="thicken_open_vdb"),
+    pytest.param({"name": "thicken_unsigned",
+                  "mesh": "open.ctm",
+                  "params": {
+                      "signDetectionMode": "Unsigned",
+                      "offset": 0.5
+                  }
+                  }, id="thicken_unsigned"),
+    pytest.param({"name": "thicken_self-intersected",
+                  "mesh": "self-intersected.ctm",
+                  "skip_self-intsc_verif": True,  # Self-intersections presented in input
+                  "params": {
+                      "signDetectionMode": "WindingRule",
+                      "offset": 5
+                  }
+                  }, id="thicken_self-intersected"),
 ])
 def test_offset_thickening(tmp_path, test_params):
     """
@@ -63,31 +63,31 @@ def test_offset_thickening(tmp_path, test_params):
 
 
 @pytest.mark.parametrize("test_params", [
-    {"name": "double_plus_OpenVDB",
-     "mesh": "morphed.ctm",
-     "params": {
-         "signDetectionMode": "OpenVDB",
-         "offset": 2.0,
-         "voxelSize": 0.2
-        }
-     },
-    {"name": "double_minus_OpenVDB",
-     "mesh": "morphed.ctm",
-     "params": {
-         "signDetectionMode": "OpenVDB",
-         "offset": -2.0,
-         "voxelSize": 0.2
-        }
-     },
-    {"name": "double_self-intersected_WindingRule",
-     "mesh": "self-intersected.ctm",
-     "skip_self-intsc_verif": True,  # Self-intersections presented in input
-     "params": {
-         "signDetectionMode": "WindingRule",
-         "offset": -5.0,
-         "voxelSize": 0.5
-        }
-     },
+    pytest.param({"name": "double_plus_OpenVDB",
+                  "mesh": "morphed.ctm",
+                  "params": {
+                      "signDetectionMode": "OpenVDB",
+                      "offset": 2.0,
+                      "voxelSize": 0.2
+                  }
+                  }, id="double_plus_OpenVDB"),
+    pytest.param({"name": "double_minus_OpenVDB",
+                  "mesh": "morphed.ctm",
+                  "params": {
+                      "signDetectionMode": "OpenVDB",
+                      "offset": -2.0,
+                      "voxelSize": 0.2
+                  }
+                  }, id="double_minus_OpenVDB"),
+    pytest.param({"name": "double_self-intersected_WindingRule",
+                  "mesh": "self-intersected.ctm",
+                  "skip_self-intsc_verif": True,  # Self-intersections presented in input
+                  "params": {
+                      "signDetectionMode": "WindingRule",
+                      "offset": -5.0,
+                      "voxelSize": 0.5
+                  }
+                  }, id="double_self-intersected_WindingRule"),
 ])
 def test_offset_double(tmp_path, test_params):
     """
@@ -126,14 +126,14 @@ def test_offset_double(tmp_path, test_params):
 
 
 @pytest.mark.parametrize("test_params", [
-    {"name": "shell",
-     "mesh": "morphed.ctm",
-     "params": {
-         "signDetectionMode": "Unsigned",
-         "offset": 1,
-         "voxelSize": 0.2,
-     }
-     },
+    pytest.param({"name": "shell",
+                  "mesh": "morphed.ctm",
+                  "params": {
+                      "signDetectionMode": "Unsigned",
+                      "offset": 1,
+                      "voxelSize": 0.2,
+                  }
+                  }, id="shell"),
 ])
 def test_offset_shell(tmp_path, test_params):
     """
@@ -170,63 +170,63 @@ def test_offset_shell(tmp_path, test_params):
 
 
 @pytest.mark.parametrize("test_params", [
-    {"name": "general_sharp_OpenVdb",
-     "mesh": "morphed.ctm",
-     "skip_self-intsc_verif": True,  # sharpening produces intersections, that decided not to fix for now
-     "params": {
-         "signDetectionMode": "OpenVDB",
-         "offset": 1,
-         "voxelSize": 0.1,
-         "mode": "Sharpening"
-     }
-     },
+    pytest.param({"name": "general_sharp_OpenVdb",
+                  "mesh": "morphed.ctm",
+                  "skip_self-intsc_verif": True,  # sharpening produces intersections, that decided not to fix for now
+                  "params": {
+                      "signDetectionMode": "OpenVDB",
+                      "offset": 1,
+                      "voxelSize": 0.1,
+                      "mode": "Sharpening"
+                  }
+                  }, id="general_sharp_OpenVdb"),
     pytest.param({"name": "general_smooth_OpenVdb",
-     "mesh": "morphed.ctm",
-     "params": {
-         "signDetectionMode": "OpenVDB",
-         "offset": 1,
-         "voxelSize": 0.2,
-         "mode": "Smooth"
-     }
-     }, marks=pytest.mark.smoke),
-    {"name": "general_Standard_ProjectionNormal",
-     "mesh": "morphed.ctm",
-     "params": {
-         "signDetectionMode": "ProjectionNormal",
-         "offset": 1,
-         "voxelSize": 0.2,
-         "mode": "Standard"
-     }
-     },
-    {"name": "general_Standard_WindingRule",
-     "mesh": "morphed.ctm",
-     "skip_self-intsc_verif": True,  # sharpening produces intersections, that decided not to fix for now
-     "params": {
-         "signDetectionMode": "WindingRule",
-         "offset": 1,
-         "voxelSize": 0.2,
-         "mode": "Sharpening"
-     }
-     },
-    {"name": "general_Standard_open_HoleWindingRule",
-     "mesh": "open.ctm",
-     "params": {
-         "signDetectionMode": "HoleWindingRule",
-         "offset": 1,
-         "voxelSize": 0.2,
-         "mode": "Standard"
-     }
-     },
-    {"name": "general_Standard_self-intersected_HoleWindingRule",
-     "mesh": "self-intersected.ctm",
-     "skip_self-intsc_verif": True,
-     "params": {
-         "signDetectionMode": "WindingRule",
-         "offset": 5,
-         "voxelSize": 1,
-         "mode": "Standard"
-     }
-     }
+                  "mesh": "morphed.ctm",
+                  "params": {
+                      "signDetectionMode": "OpenVDB",
+                      "offset": 1,
+                      "voxelSize": 0.2,
+                      "mode": "Smooth"
+                  }
+                  }, id="general_smooth_OpenVdb", marks=pytest.mark.smoke),
+    pytest.param({"name": "general_Standard_ProjectionNormal",
+                  "mesh": "morphed.ctm",
+                  "params": {
+                      "signDetectionMode": "ProjectionNormal",
+                      "offset": 1,
+                      "voxelSize": 0.2,
+                      "mode": "Standard"
+                  }
+                  }, id="general_Standard_ProjectionNormal"),
+    pytest.param({"name": "general_Standard_WindingRule",
+                  "mesh": "morphed.ctm",
+                  "skip_self-intsc_verif": True,  # sharpening produces intersections, that decided not to fix for now
+                  "params": {
+                      "signDetectionMode": "WindingRule",
+                      "offset": 1,
+                      "voxelSize": 0.2,
+                      "mode": "Sharpening"
+                  }
+                  }, id="general_Standard_WindingRule"),
+    pytest.param({"name": "general_Standard_open_HoleWindingRule",
+                  "mesh": "open.ctm",
+                  "params": {
+                      "signDetectionMode": "HoleWindingRule",
+                      "offset": 1,
+                      "voxelSize": 0.2,
+                      "mode": "Standard"
+                  }
+                  }, id="general_Standard_open_HoleWindingRule"),
+    pytest.param({"name": "general_Standard_self-intersected_HoleWindingRule",
+                  "mesh": "self-intersected.ctm",
+                  "skip_self-intsc_verif": True,
+                  "params": {
+                      "signDetectionMode": "WindingRule",
+                      "offset": 5,
+                      "voxelSize": 1,
+                      "mode": "Standard"
+                  }
+                  }, id="general_Standard_self-intersected_HoleWindingRule")
 ])
 def test_offset_general(tmp_path, test_params):
     """

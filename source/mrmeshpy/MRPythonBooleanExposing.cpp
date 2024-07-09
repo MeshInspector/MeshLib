@@ -67,7 +67,7 @@ MR_ADD_PYTHON_VEC( mrmeshpy, ContinuousContours, MR::ContinuousContour )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorOneMeshIntersection, MR::OneMeshIntersection )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshIntersectinosTypes2, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshIntersectinosTypes2, [] ( pybind11::module_& )
 {
     MR_PYTHON_CUSTOM_CLASS( OneMeshContour ).doc() =
         "One contour on mesh";

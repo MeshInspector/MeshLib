@@ -9,6 +9,26 @@
 namespace MR
 {
 
+namespace detail
+{
+
+template <typename IndexType>
+auto blockRange( IndexType begin, IndexType end )
+{
+    const size_t beginBlock = begin / BitSet::bits_per_block;
+    const size_t endBlock = ( size_t( end ) + BitSet::bits_per_block - 1 ) / BitSet::bits_per_block;
+    return tbb::blocked_range<size_t>( beginBlock, endBlock );
+}
+
+template <typename BS>
+auto blockRange( const BS & bs )
+{
+    const size_t endBlock = ( bs.size() + BS::bits_per_block - 1 ) / BS::bits_per_block;
+    return tbb::blocked_range<size_t>( 0, endBlock );
+}
+
+} // namespace detail
+
 /// \addtogroup BasicGroup
 /// \{
 
@@ -17,18 +37,16 @@ namespace MR
 template <typename IndexType, typename F>
 void BitSetParallelForAll( IndexType begin, IndexType end, F && f )
 {
-    const size_t beginBlock = begin / BitSet::bits_per_block;
-    const size_t endBlock = ( size_t( end ) + BitSet::bits_per_block - 1 ) / BitSet::bits_per_block;
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, endBlock ), 
-        [&]( const tbb::blocked_range<size_t> & range )
+    const auto range = detail::blockRange( begin, end );
+    tbb::parallel_for( range, [&]( const tbb::blocked_range<size_t> & subrange )
+    {
+        IndexType id{ subrange.begin() > range.begin() ? subrange.begin() * BitSet::bits_per_block : begin };
+        const IndexType idEnd{ subrange.end() < range.end() ? subrange.end() * BitSet::bits_per_block : end };
+        for ( ; id < idEnd; ++id )
         {
-            IndexType id{ range.begin() > beginBlock ? range.begin() * BitSet::bits_per_block : begin };
-            const IndexType idEnd{ range.end() < endBlock ? range.end() * BitSet::bits_per_block : end };
-            for ( ; id < idEnd; ++id )
-            {
-                f( id );
-            }
-        } );
+            f( id );
+        }
+    } );
 }
 
 /// executes given function f for each bit in bs in parallel threads;
@@ -40,19 +58,18 @@ void BitSetParallelForAll( const BS & bs, F && f )
 }
 
 /// executes given function f( IndexId, rangeBeginId, rangeEndId ) for each bit in bs in parallel threads;
-/// rangeBeginId, rangeEndId - boundaries of thread range in parallel processing
+/// rangeBeginId, rangeEndId - boundaries of thread subrange in parallel processing
 /// it is guaranteed that every individual block in bit-set is processed by one thread only;
 template <typename BS, typename F>
 void BitSetParallelForAllRanged( const BS& bs, F && f )
 {
     using IndexType = typename BS::IndexType;
 
-    const size_t endBlock = ( bs.size() + BS::bits_per_block - 1 ) / BS::bits_per_block;
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, endBlock ),
-        [&] ( const tbb::blocked_range<size_t>& range )
+    const auto range = detail::blockRange( bs );
+    tbb::parallel_for( range, [&] ( const tbb::blocked_range<size_t>& subrange )
     {
-        const IndexType idBegin{ range.begin() * BS::bits_per_block };
-        const IndexType idEnd{ range.end() < endBlock ? range.end() * BS::bits_per_block : bs.size() };
+        const IndexType idBegin{ subrange.begin() * BS::bits_per_block };
+        const IndexType idEnd{ subrange.end() < range.end() ? subrange.end() * BS::bits_per_block : bs.size() };
         for ( IndexType id = idBegin; id < idEnd; ++id )
         {
             f( id, idBegin, idEnd );
@@ -61,7 +78,7 @@ void BitSetParallelForAllRanged( const BS& bs, F && f )
 }
 
 /// executes given function f( IndexId, rangeBeginId, rangeEndId ) for each bit in bs in parallel threads;
-/// rangeBeginId, rangeEndId - boundaries of thread range in parallel processing
+/// rangeBeginId, rangeEndId - boundaries of thread subrange in parallel processing
 /// it is guaranteed that every individual block in bit-set is processed by one thread only;
 /// reports progress from calling thread only;
 /// \return false if the processing was canceled by progressCb
@@ -75,7 +92,7 @@ bool BitSetParallelForAllRanged( const BS& bs, F && f, ProgressCallback progress
         return true;
     }
 
-    const size_t endBlock = ( bs.size() + BS::bits_per_block - 1 ) / BS::bits_per_block;
+    const auto range = detail::blockRange( bs );
     auto callingThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };
 
@@ -89,11 +106,10 @@ bool BitSetParallelForAllRanged( const BS& bs, F && f, ProgressCallback progress
     static_assert( alignof( S ) == hardware_destructive_interference_size );
     static_assert( sizeof( S ) == hardware_destructive_interference_size );
 
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, endBlock ),
-        [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::parallel_for( range, [&] ( const tbb::blocked_range<size_t>& subrange )
     {
-        const IndexType idBegin{ range.begin() * BS::bits_per_block };
-        const IndexType idEnd{ range.end() < endBlock ? range.end() * BS::bits_per_block : bs.size() };
+        const IndexType idBegin{ subrange.begin() * BS::bits_per_block };
+        const IndexType idEnd{ subrange.end() < range.end() ? subrange.end() * BS::bits_per_block : bs.size() };
         size_t myProcessedBits = 0;
         const bool report = std::this_thread::get_id() == callingThreadId;
         for ( IndexType id = idBegin; id < idEnd; ++id )
@@ -137,7 +153,7 @@ bool BitSetParallelForAll( const BS& bs, F && f, ProgressCallback progressCb, si
 
     using IndexType = typename BS::IndexType;
 
-    const size_t endBlock = ( bs.size() + BS::bits_per_block - 1 ) / BS::bits_per_block;
+    const auto range = detail::blockRange( bs );
     auto callingThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };
     
@@ -151,11 +167,10 @@ bool BitSetParallelForAll( const BS& bs, F && f, ProgressCallback progressCb, si
     static_assert( alignof(S) == hardware_destructive_interference_size );
     static_assert( sizeof(S) == hardware_destructive_interference_size );
 
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, endBlock ),
-        [&] ( const tbb::blocked_range<size_t>& range )
+    tbb::parallel_for( range, [&] ( const tbb::blocked_range<size_t>& subrange )
     {
-        IndexType id{ range.begin() * BS::bits_per_block };
-        const IndexType idEnd{ range.end() < endBlock ? range.end() * BS::bits_per_block : bs.size() };
+        IndexType id{ subrange.begin() * BS::bits_per_block };
+        const IndexType idEnd{ subrange.end() < range.end() ? subrange.end() * BS::bits_per_block : bs.size() };
         size_t myProcessedBits = 0;
         const bool report = std::this_thread::get_id() == callingThreadId;
         for ( ; id < idEnd; ++id )

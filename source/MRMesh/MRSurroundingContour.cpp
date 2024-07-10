@@ -286,7 +286,7 @@ Expected<EdgeLoop, std::string> surroundingContour(
     }
     if ( !isEdgeLoop( mesh.topology, res ) )
     {
-        return unexpected( "the parts of the object where the points are located are not neighbors" );
+        return unexpected( "The parts of the object where the points are located are not neighbors" );
     }
     assert( isEdgeLoop( mesh.topology, res ) );
     return res;

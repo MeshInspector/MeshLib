@@ -89,8 +89,6 @@ void BitSetParallelForAll( const BS & bs, F && f )
 template <typename BS, typename F>
 void BitSetParallelForAllRanged( const BS& bs, F && f )
 {
-    using IndexType = typename BS::IndexType;
-
     const auto range = BitSetParallel::blockRange( bs );
     tbb::parallel_for( range, [&] ( const tbb::blocked_range<size_t>& subrange )
     {
@@ -108,7 +106,6 @@ void BitSetParallelForAllRanged( const BS& bs, F && f )
 template <typename BS, typename F> 
 bool BitSetParallelForAllRanged( const BS& bs, F && f, ProgressCallback progressCb, size_t reportProgressEveryBit = 1024 )
 {
-    using IndexType = typename BS::IndexType;
     if ( !progressCb )
     {
         BitSetParallelForAllRanged( bs, std::forward<F>( f ) );
@@ -172,8 +169,6 @@ bool BitSetParallelForAll( const BS& bs, F && f, ProgressCallback progressCb, si
         BitSetParallelForAll( bs, std::forward<F>( f ) );
         return true;
     }
-
-    using IndexType = typename BS::IndexType;
 
     const auto range = BitSetParallel::blockRange( bs );
     auto callingThreadId = std::this_thread::get_id();

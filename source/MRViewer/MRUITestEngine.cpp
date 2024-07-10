@@ -105,7 +105,11 @@ std::optional<T> detail::createValueLow( std::string_view name, std::optional<Bo
     {
         iter->second.visitedOnThisFrame = true;
         val->value = std::move( value->value ); // Could also read `ret` here, but that would be a bit weird, I guess?
-        if constexpr ( !std::is_same_v<T, std::string> )
+        if constexpr ( std::is_same_v<T, std::string> )
+        {
+            val->allowedValues = value->allowedValues;
+        }
+        else
         {
             val->min = value->min;
             val->max = value->max;
@@ -159,9 +163,9 @@ bool createButton( std::string_view name )
     #endif
 }
 
-std::optional<std::string> createValue( std::string_view name, std::string value )
+std::optional<std::string> createValue( std::string_view name, std::string value, std::optional<std::vector<std::string>> allowedValues )
 {
-    return detail::createValueLow<std::string>( name, detail::BoundedValue<std::string>{ .value = std::move( value ) } );
+    return detail::createValueLow<std::string>( name, detail::BoundedValue<std::string>{ .value = std::move( value ), .allowedValues = std::move( allowedValues ) } );
 }
 
 void pushTree( std::string_view name )

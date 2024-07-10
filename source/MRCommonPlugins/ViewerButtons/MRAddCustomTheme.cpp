@@ -59,7 +59,7 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::Text( "Viewport colors:" );
     for ( int i = 0; i < viewportColors_.size(); ++i )
     {
-        std::string label = ColorTheme::getViewportColorTypeName( ColorTheme::ViewportColorsType( i ) ) + 
+        std::string label = ColorTheme::getViewportColorTypeName( ColorTheme::ViewportColorsType( i ) ) +
             std::string( "##ViewportColors" );
         ImGui::ColorEdit4( label.c_str(), &viewportColors_[i].x );
     }
@@ -74,7 +74,7 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
     ImGui::Separator();
     UI::checkbox( "Apply to new objects only", &applyToNewObjectsOnly_ );
     ImGui::SetNextItemWidth( 150.0f * menuScaling );
-    ImGui::InputText( "Theme name", themeName_ );
+    UI::inputText( "Theme name", themeName_ );
     bool valid = !themeName_.empty() && !hasProhibitedChars( themeName_ );
     if ( UI::button( "Apply & Save", valid, Vector2f( -1, 0 ) ) )
     {

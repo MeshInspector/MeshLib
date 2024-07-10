@@ -1201,7 +1201,7 @@ PaletteChanges Palette(
         static std::string currentPaletteName;
 
         ImGui::SetNextItemWidth( windowSize.x - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - CalcTextSize( "Palette Name" ).x );
-        ImGui::InputText( "Palette Name", currentPaletteName );
+        UI::inputText( "Palette Name", currentPaletteName );
         ImGui::PopStyleVar();
 
         const float btnWidth = cModalButtonWidth * menuScaling;

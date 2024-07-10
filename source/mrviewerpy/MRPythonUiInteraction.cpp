@@ -20,6 +20,7 @@ namespace
         valueInt,
         valueUint,
         valueReal,
+        valueString,
         other,
         // Don't forget to add new values to `pybind11::enum_` below!
     };
@@ -58,6 +59,7 @@ namespace
                                 []( const TestEngine::ValueEntry::Value<std::int64_t>& ){ return EntryType::valueInt; },
                                 []( const TestEngine::ValueEntry::Value<std::uint64_t>& ){ return EntryType::valueUint; },
                                 []( const TestEngine::ValueEntry::Value<double>& ){ return EntryType::valueReal; },
+                                []( const TestEngine::ValueEntry::Value<std::string>& ){ return EntryType::valueString; },
                             }, e.value );
                         },
                         []( const TestEngine::GroupEntry& ) { return EntryType::group; },
@@ -92,9 +94,15 @@ namespace
         T min = 0;
         T max = 0;
     };
+    template <>
+    struct Value<std::string>
+    {
+        std::string value;
+    };
     using ValueInt = Value<std::int64_t>;
     using ValueUint = Value<std::uint64_t>;
     using ValueReal = Value<double>;
+    using ValueString = Value<std::string>;
 
     template <typename T>
     Value<T> readValue( const std::vector<std::string>& path )
@@ -140,8 +148,11 @@ namespace
             if ( auto val = std::get_if<TestEngine::ValueEntry::Value<T>>( &entry.value ) )
             {
                 ret.value = val->value;
-                ret.min = val->min;
-                ret.max = val->max;
+                if constexpr ( !std::is_same_v<T, std::string> )
+                {
+                    ret.min = val->min;
+                    ret.max = val->max;
+                }
                 return;
             }
 
@@ -207,14 +218,20 @@ namespace
                     );
                 }
 
-                min = opt->min;
-                max = opt->max;
+                if constexpr ( !std::is_same_v<T, std::string> )
+                {
+                    min = opt->min;
+                    max = opt->max;
+                }
             }
 
-            if ( value < min )
-                throw std::runtime_error( "The specified value is less than the min bound." );
-            if ( value > max )
-                throw std::runtime_error( "The specified value is less than the max bound." );
+            if constexpr ( !std::is_same_v<T, std::string> )
+            {
+                if ( value < min )
+                    throw std::runtime_error( "The specified value is less than the min bound." );
+                if ( value > max )
+                    throw std::runtime_error( "The specified value is less than the max bound." );
+            }
             simulatedValue = value;
 
             // Write the value back.
@@ -244,6 +261,7 @@ MR_ADD_PYTHON_CUSTOM_CLASS( mrviewerpy, UiEntry, TypedEntry )
 MR_ADD_PYTHON_CUSTOM_CLASS( mrviewerpy, UiValueInt, ValueInt )
 MR_ADD_PYTHON_CUSTOM_CLASS( mrviewerpy, UiValueUint, ValueUint )
 MR_ADD_PYTHON_CUSTOM_CLASS( mrviewerpy, UiValueReal, ValueReal )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrviewerpy, UiValueString, ValueString )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, UiEntry, [] ( pybind11::module_& m )
 {
@@ -253,12 +271,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, UiEntry, [] ( pybind11::module_& m )
         .value( "valueInt", EntryType::valueInt )
         .value( "valueUint", EntryType::valueUint )
         .value( "valueReal", EntryType::valueReal )
+        .value( "valueString", EntryType::valueString )
         .value( "other", EntryType::other )
     ;
 
     MR_PYTHON_CUSTOM_CLASS( UiValueInt ).def_readonly( "value", &ValueInt::value ).def_readonly( "min", &ValueInt::min ).def_readonly( "max", &ValueInt::max );
     MR_PYTHON_CUSTOM_CLASS( UiValueUint ).def_readonly( "value", &ValueUint::value ).def_readonly( "min", &ValueUint::min ).def_readonly( "max", &ValueUint::max );
     MR_PYTHON_CUSTOM_CLASS( UiValueReal ).def_readonly( "value", &ValueReal::value ).def_readonly( "min", &ValueReal::min ).def_readonly( "max", &ValueReal::max );
+    MR_PYTHON_CUSTOM_CLASS( UiValueString ).def_readonly( "value", &ValueString::value );
 
     MR_PYTHON_CUSTOM_CLASS( UiEntry )
         .def_readonly( "name", &TypedEntry::name )
@@ -272,6 +292,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, UiEntry, [] ( pybind11::module_& m )
                 case EntryType::valueInt: typeString = "valueInt"; break;
                 case EntryType::valueUint: typeString = "valueUint"; break;
                 case EntryType::valueReal: typeString = "valueReal"; break;
+                case EntryType::valueString: typeString = "valueString"; break;
                 case EntryType::group: typeString = "group"; break;
                 case EntryType::other: typeString = "other"; break;
             }
@@ -303,6 +324,9 @@ MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiReadValueUint, readValue<std::uint64_t>,
 MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiReadValueReal, readValue<double>,
     "Read a value from a drag/slider widget. This overload is for real numbers."
 )
+MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiReadValueString, readValue<std::string>,
+    "Read a value from a drag/slider widget. This overload is for strings."
+)
 
 MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiWriteValueInt, writeValue<std::int64_t>,
     "Write a value to a drag/slider widget. This overload is for signed integers."
@@ -312,4 +336,7 @@ MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiWriteValueUint, writeValue<std::uint64_t>,
 )
 MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiWriteValueReal, writeValue<double>,
     "Write a value to a drag/slider widget. This overload is for real numbers."
+)
+MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiWriteValueString, writeValue<std::string>,
+    "Write a value to a drag/slider widget. This overload is for strings."
 )

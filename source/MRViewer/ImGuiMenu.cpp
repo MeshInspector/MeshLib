@@ -582,7 +582,7 @@ bool ImGuiMenu::onCharPressed_( unsigned  key, int /*modifiers*/ )
 bool ImGuiMenu::onKeyDown_( int key, int modifiers )
 {
     ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_PRESS, modifiers );
-    
+
     if ( ImGui::GetIO().WantCaptureKeyboard || getOrderedKeys()[GlfwToImGuiKey_Duplicate( key )] )
         return true;
     return false;
@@ -858,7 +858,7 @@ void ImGuiMenu::draw_helpers()
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * menuScaling } );
         ImGui::SetNextItemWidth( windowSize.x - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - ImGui::CalcTextSize( "Name" ).x );
-        ImGui::InputText( "Name", popUpRenameBuffer_, ImGuiInputTextFlags_AutoSelectAll );
+        UI::inputText( "Name", popUpRenameBuffer_, ImGuiInputTextFlags_AutoSelectAll );
         ImGui::PopStyleVar();
 
         const float btnWidth = cModalButtonWidth * menuScaling;
@@ -1274,7 +1274,7 @@ float ImGuiMenu::drawSelectionInformation_()
             ImGui::Spacing();
             ImGui::Spacing();
 
-            if ( ImGui::InputText( "Label", oldLabelParams_.labelBuffer, ImGuiInputTextFlags_AutoSelectAll ) )
+            if ( UI::inputText( "Label", oldLabelParams_.labelBuffer, ImGuiInputTextFlags_AutoSelectAll ) )
                 pObjLabel->setLabel( { oldLabelParams_.labelBuffer, pObjLabel->getLabel().position } );
             if ( ImGui::IsItemDeactivatedAfterEdit() && oldLabelParams_.labelBuffer != oldLabelParams_.lastLabel )
             {
@@ -2335,7 +2335,7 @@ void ImGuiMenu::draw_custom_plugins()
     ImGui::Begin( "Plugins", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize );
 
     ImGui::SetCursorPosX( 570.f );
-    if ( ImGui::InputText( "Search", searchPluginsString_ ) )
+    if ( UI::inputText( "Search", searchPluginsString_ ) )
     {
         Viewer::instanceRef().incrementForceRedrawFrames( 2, true );
     }

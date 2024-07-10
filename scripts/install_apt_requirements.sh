@@ -34,7 +34,7 @@ if [ "$EUID" -ne 0 ]; then
   RUN_AS_ROOT="NO"
 fi
 
-if [ $MR_STATE != "DOCKER_BUILD" ]; then
+if [ "$MR_STATE" != "DOCKER_BUILD" ]; then
   sudo apt-get update && \
   sudo apt-get install ${MISSED_PACKAGES}
 else

@@ -93,7 +93,7 @@ std::optional<T> detail::createValueLow( std::string_view name, std::optional<Bo
     ValueEntry::Value<T>* val = std::get_if<ValueEntry::Value<T>>( &entry->value );
     if ( val )
     {
-        ret = val->simulatedValue;
+        ret = std::move( val->simulatedValue );
         val->simulatedValue = {};
     }
     else
@@ -104,9 +104,12 @@ std::optional<T> detail::createValueLow( std::string_view name, std::optional<Bo
     if ( value )
     {
         iter->second.visitedOnThisFrame = true;
-        val->value = value->value; // Could also read `ret` here, but that would be a bit weird, I guess?
-        val->min = value->min;
-        val->max = value->max;
+        val->value = std::move( value->value ); // Could also read `ret` here, but that would be a bit weird, I guess?
+        if constexpr ( !std::is_same_v<T, std::string> )
+        {
+            val->min = value->min;
+            val->max = value->max;
+        }
     }
 
     return ret;
@@ -119,6 +122,7 @@ std::optional<T> detail::createValueLow( std::string_view name, std::optional<Bo
 template std::optional<std::int64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::int64_t>> value );
 template std::optional<std::uint64_t> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::uint64_t>> value );
 template std::optional<double> detail::createValueLow( std::string_view name, std::optional<BoundedValue<double>> value );
+template std::optional<std::string> detail::createValueLow( std::string_view name, std::optional<BoundedValue<std::string>> value );
 
 bool createButton( std::string_view name )
 {
@@ -153,6 +157,11 @@ bool createButton( std::string_view name )
     #else
     return false;
     #endif
+}
+
+std::optional<std::string> createValue( std::string_view name, std::string value )
+{
+    return detail::createValueLow<std::string>( name, detail::BoundedValue<std::string>{ .value = std::move( value ) } );
 }
 
 void pushTree( std::string_view name )

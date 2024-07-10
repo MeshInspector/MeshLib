@@ -1390,18 +1390,59 @@ bool detail::isItemActive( const char* name )
     return ImGui::GetActiveID() == ImGui::GetID( name );
 }
 
-bool sliderFloat( const char* label, float* v, float v_min, float v_max, const char* format, ImGuiSliderFlags flags )
+static bool exposeTextInputToTestEngine( ImGuiInputTextFlags flags )
 {
-    return detail::genericSlider( label, ImGuiDataType_Float, v, &v_min, &v_max, format, flags );
+    return !bool( flags & ( ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_Password ) );
 }
 
-bool sliderInt( const char* label, int* v, int v_min, int v_max, const char* format, ImGuiSliderFlags flags )
+bool inputText( const char* label, std::string& str, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
 {
-    return detail::genericSlider( label, ImGuiDataType_S32, v, &v_min, &v_max, format, flags );
+    std::optional<std::string> valueOverride;
+    if ( exposeTextInputToTestEngine( flags ) )
+    {
+        valueOverride = TestEngine::createValue( label, str );
+        if ( valueOverride )
+            str = std::move( *valueOverride );
+    }
+
+    bool ret = ImGui::InputText( label, &str, flags, callback, user_data );
+
+    if ( valueOverride )
+    {
+        detail::markItemEdited( ImGui::GetID( label ) );
+        ret = true;
+    }
+
+    return ret;
+}
+
+bool inputTextIntoArray( const char* label, char* array, std::size_t size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
+{
+    std::optional<std::string> valueOverride;
+    if ( exposeTextInputToTestEngine( flags ) )
+    {
+        valueOverride = TestEngine::createValue( label, array );
+        if ( valueOverride && size > 0 )
+        {
+            // How many bytes (excluding `\0`) can we emit?
+            std::size_t n = std::min( size - 1, valueOverride->size() );
+            std::memcpy( array, valueOverride->c_str(), n );
+        }
+    }
+
+    bool ret = ImGui::InputText( label, array, size, flags, callback, user_data );
+
+    if ( valueOverride )
+    {
+        detail::markItemEdited( ImGui::GetID( label ) );
+        ret = true;
+    }
+
+    return ret;
 }
 
 bool inputTextCentered( const char* label, std::string& str, float width /*= 0.0f*/,
-    ImGuiInputTextFlags flags /*= 0*/, ImGuiInputTextCallback callback /*= NULL*/, void* user_data /*= NULL */ )
+    ImGuiInputTextFlags flags /*= 0*/, ImGuiInputTextCallback callback /*= nullptr*/, void* user_data /*= nullptr */ )
 {
     const auto& style = ImGui::GetStyle();
     const auto& viewer = MR::Viewer::instanceRef();
@@ -1415,7 +1456,7 @@ bool inputTextCentered( const char* label, std::string& str, float width /*= 0.0
     if ( actualWidth > estimatedSize.x )
         sh.addVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );
 
-    return ImGui::InputText( label, str, flags, callback, user_data );
+    return inputText( label, str, flags, callback, user_data );
 }
 
 void inputTextCenteredReadOnly( const char* label, const std::string& str, float width /*= 0.0f*/, const std::optional<ImVec4>& textColor /*= {} */ )
@@ -1440,7 +1481,7 @@ void inputTextCenteredReadOnly( const char* label, const std::string& str, float
         transparentColor.w *= 0.5f;
         ImGui::PushStyleColor( ImGuiCol_Text, transparentColor );
     }
-    ImGui::InputText( ( std::string( "##" ) + label ).c_str(), const_cast< std::string& >( str ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
+    inputText( ( std::string( "##" ) + label ).c_str(), const_cast< std::string& >( str ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
     ImGui::PopStyleColor();
 
     std::size_t endOfLabel = std::string_view( label ).find( "##" );

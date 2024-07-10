@@ -167,7 +167,7 @@ static EdgePath smallestPathInPositiveWedge(
 
 } //anonymous namespace
 
-Expected<EdgeLoop, std::string> surroundingContour(
+Expected<EdgeLoop> surroundingContour(
     const Mesh & mesh,
     std::vector<EdgeId> includeEdges,
     const EdgeMetric & edgeMetric,

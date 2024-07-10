@@ -167,7 +167,7 @@ static EdgePath smallestPathInPositiveWedge(
 
 } //anonymous namespace
 
-EdgeLoop surroundingContour(
+Expected<EdgeLoop, std::string> surroundingContour(
     const Mesh & mesh,
     std::vector<EdgeId> includeEdges,
     const EdgeMetric & edgeMetric,
@@ -233,7 +233,7 @@ EdgeLoop surroundingContour(
     return res;
 }
 
-EdgeLoop surroundingContour(
+Expected<EdgeLoop, std::string> surroundingContour(
     const Mesh & mesh,
     std::vector<VertId> keyVertices,
     const EdgeMetric & edgeMetric,
@@ -283,6 +283,10 @@ EdgeLoop surroundingContour(
         for ( int i = 0; i + 1 < sz; ++i )
             append( res, smallestPathInPositiveWedge( mesh, planes[i], planes[i+1], keyVertices[i], keyVertices[i+1], edgeMetric ) );
         append( res, smallestPathInPositiveWedge( mesh, planes.back(), planes.front(), keyVertices.back(), keyVertices.front(), edgeMetric ) );
+    }
+    if ( !isEdgeLoop( mesh.topology, res ) )
+    {
+        return unexpected( "the parts of the object where the points are located are not neighbors" );
     }
     assert( isEdgeLoop( mesh.topology, res ) );
     return res;

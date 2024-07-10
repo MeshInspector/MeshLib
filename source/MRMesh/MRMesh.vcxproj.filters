@@ -1314,6 +1314,9 @@
     <ClInclude Include="MRVoxelsVolume.h">
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
+    <ClInclude Include="MRMoveMeshToVoxelMaxDeriv.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2179,6 +2182,9 @@
     </ClCompile>
     <ClCompile Include="MRPointCloudDistance.cpp">
       <Filter>Source Files\PointCloud</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMoveMeshToVoxelMaxDeriv.cpp">
+      <Filter>Source Files\Voxels</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

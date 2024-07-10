@@ -46,12 +46,12 @@ VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vec
 {
     MR_TIMER
 
-    const size_t size = dims.x * dims.y * dims.z;
-    res.resize( size );
     VolumeIndexer indexer( dims );
-    if ( !ParallelFor( size_t( 0 ), size, [&]( size_t i )
+    res.resize( indexer.size() );
+
+    if ( !ParallelFor( 0_vox, indexer.endId(), [&]( VoxelId i )
     {
-        res[i] = calc_( gridToMeshXf( Vector3f( indexer.toPos( VoxelId( i ) ) ) ), beta );
+        res[i] = calc_( gridToMeshXf( Vector3f( indexer.toPos( i ) ) ), beta );
     }, cb ) )
         return unexpectedOperationCanceled();
     return {};
@@ -67,15 +67,14 @@ VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& r
 {
     MR_TIMER
 
-    const size_t size = dims.x * dims.y * dims.z;
-    res.resize( size );
     VolumeIndexer indexer( dims );
+    res.resize( indexer.size() );
 
     MeshPart mp( mesh_ );
 
-    if ( !ParallelFor( size_t( 0 ), size, [&]( size_t i )
+    if ( !ParallelFor( 0_vox, indexer.endId(), [&]( VoxelId i )
         {
-            const auto transformedPoint = gridToMeshXf( Vector3f( indexer.toPos( VoxelId( i ) ) ) );
+            const auto transformedPoint = gridToMeshXf( Vector3f( indexer.toPos( i ) ) );
             res[i] = calcWithDistances( transformedPoint, beta, maxDistSq, minDistSq );
         }, cb ) )
         return unexpectedOperationCanceled();

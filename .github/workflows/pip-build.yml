@@ -39,7 +39,7 @@ jobs:
         py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         include:
           - platform: "x86_64"
-            docker-image: "meshlib/meshlib-ubuntu:latest"
+            docker-image: "meshlib/meshlib-ubuntu20:latest"
             container-options: "--user root"
             runner: ubuntu-latest
           - platform: "aarch64"

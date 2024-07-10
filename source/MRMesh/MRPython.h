@@ -93,8 +93,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name##_inst_, [] ( pybind11::module_& modu
  * @endcode
  * See also \ref MR_ADD_PYTHON_VEC and \ref MR_ADD_PYTHON_MAP macros for customized class definition examples.
  */
-#define MR_ADD_PYTHON_CUSTOM_CLASS( moduleName, name, type ) \
-MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, type ) \
+#define MR_ADD_PYTHON_CUSTOM_CLASS( moduleName, name, ... ) \
+MR_ADD_PYTHON_CUSTOM_CLASS_DECL( moduleName, name, __VA_ARGS__ ) \
 MR_ADD_PYTHON_CUSTOM_CLASS_INST( moduleName, name )
 
 #define MR_ADD_PYTHON_VEC( moduleName, name, type) \

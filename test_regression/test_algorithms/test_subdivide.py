@@ -10,34 +10,34 @@ import pytest
 
 @pytest.mark.smoke
 @pytest.mark.parametrize("subdivide_params", [
-    {"name": "max_new_verticles",
+    pytest.param({"name": "max_new_verticles",
      "params": {
         "maxEdgeSplits": 2000
-     }},
-    {"name": "smoothMode",
+     }},id="max_new_verticles"),
+    pytest.param({"name": "smoothMode",
      "params": {
          "maxEdgeSplits": 2000,
          "smoothMode": True,
-     }},
-    {"name": "maxAngleChangeAfterFlip",
+     }},id="smoothMode"),
+    pytest.param({"name": "maxAngleChangeAfterFlip",
      "params": {
          "maxEdgeSplits": 2000,
          "maxAngleChangeAfterFlip": 120 * 3.14 / 180,
-     }},
-    {"name": "maxEdgeLen",
+     }},id="maxAngleChangeAfterFlip"),
+    pytest.param({"name": "maxEdgeLen",
      "params": {
          "maxEdgeLen": 0.1,
-     }},
-    {"name": "maxTriAspectRatio",
+     }},id="maxEdgeLen"),
+    pytest.param({"name": "maxTriAspectRatio",
      "params": {
          "maxTriAspectRatio": 3,
          "maxEdgeSplits": 2000,
-     }},
-    {"name": "maxSplittableTriAspectRatio",
+     }},id="maxTriAspectRatio"),
+    pytest.param({"name": "maxSplittableTriAspectRatio",
      "params": {
          "maxSplittableTriAspectRatio": 3,
          "maxEdgeSplits": 2000,
-     }},
+     }},id="maxSplittableTriAspectRatio"),
 ])
 def test_subdivide(tmp_path, subdivide_params):
     """

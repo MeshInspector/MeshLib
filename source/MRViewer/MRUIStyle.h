@@ -179,8 +179,9 @@ MRVIEWER_API bool combo( const char* label, int* v, const std::vector<std::strin
 MRVIEWER_API bool beginCombo( const char* label, const std::string& text = "Not selected", bool showPreview = true );
 MRVIEWER_API void endCombo( bool showPreview = true );
 
-
+/// Draws text input, should be used instead of `ImGui::InputText()`.
 MRVIEWER_API bool inputText( const char* label, std::string& str, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
+/// This overload is for arrays, as opposed to `std::string`s.
 MRVIEWER_API bool inputTextIntoArray( const char* label, char* array, std::size_t size, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
 
 /// draw input text box with text aligned by center

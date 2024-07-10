@@ -1494,6 +1494,9 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
             statePlugin->preDrawUpdate();
             statePlugin->drawDialog( menu_scaling(), ImGui::GetCurrentContext() );
 
+            if ( !itemPtr.item ) // if it was closed in drawDialog
+                return;
+
             if ( !itemPtr.dialogPositionFixed )
             {
                 itemPtr.dialogPositionFixed = true;

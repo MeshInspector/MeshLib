@@ -197,7 +197,7 @@ Expected<UnionFind<VertId>> getUnionFindStructureVerts( const PointCloud& pointC
         bdVerts.resize( numVerts );
         lastPassVerts = &bdVerts;
         subPc = subprogress( pc, 0.f, 0.7f );
-        BitSetParallelForAllRanged( vertsRegion, [&] ( VertId v0, VertId, VertId vEnd )
+        BitSetParallelForAllRanged( vertsRegion, [&] ( VertId v0, const auto & range )
         {
             if ( !contains( vertsRegion, v0 ) )
                 return;
@@ -206,7 +206,7 @@ Expected<UnionFind<VertId>> getUnionFindStructureVerts( const PointCloud& pointC
             {
                 if ( v0 < v1 && contains( vertsRegion, v1 ) )
                 {
-                    if ( v1 >= vEnd )
+                    if ( v1 >= range.end )
                         bdVerts.set( v0 );
                     else
                         unionFindStructure.unite( v0, v1 );

@@ -29,7 +29,7 @@ template<typename L>
 struct CallWithTLSMaker
 {
     tbb::enumerable_thread_specific<L> & e;
-    auto operator() () const { return CallWithTLS{ e.local() }; }
+    auto operator() () const { return CallWithTLS<L>{ e.local() }; }
 };
 
 } //namespace Parallel

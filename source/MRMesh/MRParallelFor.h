@@ -10,19 +10,112 @@
 namespace MR
 {
 
+namespace Parallel
+{
+
+struct CallSimply
+{
+    auto operator() ( auto && f, auto id ) const { return f( id ); }
+};
+
+struct CallSimplyMaker
+{
+    auto operator() () const { return CallSimply{}; }
+};
+
+template<typename T>
+struct CallWithTLS
+{
+    T & tls;
+    auto operator() ( auto && f, auto id ) const { return f( id, tls ); }
+};
+
+template<typename L>
+struct CallWithTLSMaker
+{
+    tbb::enumerable_thread_specific<L> & e;
+    auto operator() () const { return CallWithTLS{ e.local() }; }
+};
+
+template <typename I, typename CM, typename F>
+void For( I begin, I end, const CM & callMaker, F && f )
+{
+    tbb::parallel_for( tbb::blocked_range( begin, end ),
+        [&] ( const tbb::blocked_range<I>& range )
+    {
+        auto c = callMaker();
+        for ( I i = range.begin(); i < range.end(); ++i )
+            c( f, i );
+    } );
+}
+
+template <typename I, typename CM, typename F>
+bool For( I begin, I end, const CM & callMaker, F && f, ProgressCallback cb, size_t reportProgressEvery = 1024 )
+{
+    if ( !cb )
+    {
+        For( begin, end, callMaker, std::forward<F>( f ) );
+        return true;
+    }
+    const auto size = end - begin;
+    if ( size <= 0 )
+        return true;
+
+    auto callingThreadId = std::this_thread::get_id();
+    std::atomic<bool> keepGoing{ true };
+    
+    // avoid false sharing with other local variables
+    // by putting processedBits in its own cache line
+    constexpr int hardware_destructive_interference_size = 64;
+    struct alignas(hardware_destructive_interference_size) S
+    {
+        std::atomic<size_t> processed{ 0 };
+    } s;
+    static_assert( alignof(S) == hardware_destructive_interference_size );
+    static_assert( sizeof(S) == hardware_destructive_interference_size );
+
+    tbb::parallel_for( tbb::blocked_range( begin, end ),
+        [&] ( const tbb::blocked_range<I>& range )
+    {
+        const bool report = std::this_thread::get_id() == callingThreadId;
+        size_t myProcessed = 0;
+        auto c = callMaker();
+        for ( I i = range.begin(); i < range.end(); ++i )
+        {
+            if ( !keepGoing.load( std::memory_order_relaxed ) )
+                break;
+            c( f, i );
+            if ( ( ++myProcessed % reportProgressEvery ) == 0 )
+            {
+                if ( report )
+                {
+                    if ( !cb( float( myProcessed + s.processed.load( std::memory_order_relaxed ) ) / size ) )
+                        keepGoing.store( false, std::memory_order_relaxed );
+                }
+                else
+                {
+                    s.processed.fetch_add( myProcessed, std::memory_order_relaxed );
+                    myProcessed = 0;
+                }
+            }
+        }
+        const auto total = s.processed.fetch_add( myProcessed, std::memory_order_relaxed );
+        if ( report && !cb( float( total ) / size ) )
+            keepGoing.store( false, std::memory_order_relaxed );
+    } );
+    return keepGoing.load( std::memory_order_relaxed );
+}
+
+} //namespace Parallel
+
 /// \addtogroup BasicGroup
 /// \{
 
 /// executes given function f for each span element [begin, end)
 template <typename I, typename F>
-void ParallelFor( I begin, I end, F && f )
+inline void ParallelFor( I begin, I end, F && f )
 {
-    tbb::parallel_for( tbb::blocked_range( begin, end ),
-        [&] ( const tbb::blocked_range<I>& range )
-    {
-        for ( I i = range.begin(); i < range.end(); ++i )
-            f( i );
-    } );
+    Parallel::For( begin, end, Parallel::CallSimplyMaker{}, std::forward<F>( f ) );
 }
 
 /// executes given function f for each span element [begin, end), with periodic progress report
@@ -30,131 +123,24 @@ void ParallelFor( I begin, I end, F && f )
 template <typename I, typename F>
 bool ParallelFor( I begin, I end, F && f, ProgressCallback cb, size_t reportProgressEvery = 1024 )
 {
-    if ( !cb )
-    {
-        ParallelFor( begin, end, std::forward<F>( f ) );
-        return true;
-    }
-    const auto size = end - begin;
-    if ( size <= 0 )
-        return true;
-
-    auto callingThreadId = std::this_thread::get_id();
-    std::atomic<bool> keepGoing{ true };
-    
-    // avoid false sharing with other local variables
-    // by putting processedBits in its own cache line
-    constexpr int hardware_destructive_interference_size = 64;
-    struct alignas(hardware_destructive_interference_size) S
-    {
-        std::atomic<size_t> processed{ 0 };
-    } s;
-    static_assert( alignof(S) == hardware_destructive_interference_size );
-    static_assert( sizeof(S) == hardware_destructive_interference_size );
-
-    tbb::parallel_for( tbb::blocked_range( begin, end ),
-        [&] ( const tbb::blocked_range<I>& range )
-    {
-        const bool report = std::this_thread::get_id() == callingThreadId;
-        size_t myProcessed = 0;
-        for ( I i = range.begin(); i < range.end(); ++i )
-        {
-            if ( !keepGoing.load( std::memory_order_relaxed ) )
-                break;
-            f( i );
-            if ( ( ++myProcessed % reportProgressEvery ) == 0 )
-            {
-                if ( report )
-                {
-                    if ( !cb( float( myProcessed + s.processed.load( std::memory_order_relaxed ) ) / size ) )
-                        keepGoing.store( false, std::memory_order_relaxed );
-                }
-                else
-                {
-                    s.processed.fetch_add( myProcessed, std::memory_order_relaxed );
-                    myProcessed = 0;
-                }
-            }
-        }
-        const auto total = s.processed.fetch_add( myProcessed, std::memory_order_relaxed );
-        if ( report && !cb( float( total ) / size ) )
-            keepGoing.store( false, std::memory_order_relaxed );
-    } );
-    return keepGoing.load( std::memory_order_relaxed );
+    return Parallel::For( begin, end, Parallel::CallSimplyMaker{}, std::forward<F>( f ), cb, reportProgressEvery );
 }
 
 /// executes given function f for each span element [begin, end)
 /// passing e.local() (evaluated once for each sub-range) as the second argument to f
 template <typename I, typename L, typename F>
-void ParallelFor( I begin, I end, tbb::enumerable_thread_specific<L> & e, F && f )
+inline void ParallelFor( I begin, I end, tbb::enumerable_thread_specific<L> & e, F && f )
 {
-    tbb::parallel_for( tbb::blocked_range( begin, end ),
-        [&] ( const tbb::blocked_range<I>& range )
-    {
-        auto & tls = e.local();
-        for ( I i = range.begin(); i < range.end(); ++i )
-            f( i, tls );
-    } );
+    Parallel::For( begin, end, Parallel::CallWithTLSMaker{ e }, std::forward<F>( f ) );
 }
 
 /// executes given function f for each span element [begin, end), with periodic progress report
 /// passing e.local() (evaluated once for each sub-range) as the second argument to f
 /// \return false if terminated by callback
 template <typename I, typename L, typename F>
-bool ParallelFor( I begin, I end, tbb::enumerable_thread_specific<L> & e, F && f, ProgressCallback cb, size_t reportProgressEvery = 1024 )
+inline bool ParallelFor( I begin, I end, tbb::enumerable_thread_specific<L> & e, F && f, ProgressCallback cb, size_t reportProgressEvery = 1024 )
 {
-    if ( !cb )
-    {
-        ParallelFor( begin, end, e, std::forward<F>( f ) );
-        return true;
-    }
-    const auto size = end - begin;
-    if ( size <= 0 )
-        return true;
-
-    auto callingThreadId = std::this_thread::get_id();
-    std::atomic<bool> keepGoing{ true };
-    
-    // avoid false sharing with other local variables
-    // by putting processedBits in its own cache line
-    constexpr int hardware_destructive_interference_size = 64;
-    struct alignas(hardware_destructive_interference_size) S
-    {
-        std::atomic<size_t> processed{ 0 };
-    } s;
-    static_assert( alignof(S) == hardware_destructive_interference_size );
-    static_assert( sizeof(S) == hardware_destructive_interference_size );
-
-    tbb::parallel_for( tbb::blocked_range( begin, end ),
-        [&] ( const tbb::blocked_range<I>& range )
-    {
-        const bool report = std::this_thread::get_id() == callingThreadId;
-        size_t myProcessed = 0;
-        auto & tls = e.local();
-        for ( I i = range.begin(); i < range.end(); ++i )
-        {
-            if ( !keepGoing.load( std::memory_order_relaxed ) )
-                break;
-            f( i, tls );
-            if ( ( ++myProcessed % reportProgressEvery ) == 0 )
-            {
-                if ( report )
-                {
-                    if ( !cb( float( myProcessed + s.processed.load( std::memory_order_relaxed ) ) / size ) )
-                        keepGoing.store( false, std::memory_order_relaxed );
-                }
-                else
-                {
-                    s.processed.fetch_add( myProcessed, std::memory_order_relaxed );
-                    myProcessed = 0;
-                }
-            }
-        }
-        const auto total = s.processed.fetch_add( myProcessed, std::memory_order_relaxed );
-        if ( report && !cb( float( total ) / size ) )
-            keepGoing.store( false, std::memory_order_relaxed );
-    } );
-    return keepGoing.load( std::memory_order_relaxed );
+    return Parallel::For( begin, end, Parallel::CallWithTLSMaker{ e }, std::forward<F>( f ), cb, reportProgressEvery );
 }
 
 /// executes given function f for each vector element in parallel threads

@@ -88,6 +88,13 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return capacity() / 8; }
 
+    /// returns the identifier of the back() element
+    [[nodiscard]] IndexType backId() const { assert( !empty() ); return IndexType{ size() - 1 }; }
+
+    /// [beginId(), endId()) is the range of all bits in the set
+    [[nodiscard]] static IndexType beginId() { return IndexType{ 0 }; }
+    [[nodiscard]] IndexType endId() const { return IndexType{ size() }; }
+
     // Normally those are inherited from `boost::dynamic_bitset`, but MRBind currently chokes on it, so we provide those manually.
     #if defined(MR_PARSING_FOR_PB11_BINDINGS) || defined(MR_COMPILING_PB11_BINDINGS)
     std::size_t size() const { return dynamic_bitset::size(); }
@@ -161,7 +168,9 @@ public:
 
     /// returns the identifier of the back() element
     [[nodiscard]] IndexType backId() const { assert( !empty() ); return IndexType{ size() - 1 }; }
-    /// returns backId() + 1
+
+    /// [beginId(), endId()) is the range of all bits in the set
+    [[nodiscard]] static IndexType beginId() { return IndexType{ size_t( 0 ) }; }
     [[nodiscard]] IndexType endId() const { return IndexType{ size() }; }
 };
 

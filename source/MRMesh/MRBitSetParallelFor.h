@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRBitSet.h"
-#include "MRPch/MRTBB.h"
+#include "MRParallel.h"
 #include "MRProgressCallback.h"
 #include <atomic>
 #include <cassert>
@@ -25,7 +25,7 @@ namespace BitSetParallel
 {
 
 template <typename IndexType>
-auto blockRange( const IdRange<IndexType> & bitRange )
+inline auto blockRange( const IdRange<IndexType> & bitRange )
 {
     const size_t beginBlock = bitRange.beg / BitSet::bits_per_block;
     const size_t endBlock = ( size_t( bitRange.end ) + BitSet::bits_per_block - 1 ) / BitSet::bits_per_block;
@@ -33,14 +33,14 @@ auto blockRange( const IdRange<IndexType> & bitRange )
 }
 
 template <typename BS>
-auto blockRange( const BS & bs )
+inline auto blockRange( const BS & bs )
 {
     const size_t endBlock = ( bs.size() + BS::bits_per_block - 1 ) / BS::bits_per_block;
     return tbb::blocked_range<size_t>( 0, endBlock );
 }
 
 template <typename BS>
-auto bitRange( const BS & bs )
+inline auto bitRange( const BS & bs )
 {
     return IdRange<typename BS::IndexType>{ bs.beginId(), bs.endId() };
 }
@@ -55,59 +55,31 @@ auto bitSubRange( const IdRange<IndexType> & bitRange, const tbb::blocked_range<
     };
 }
 
-} // namespace BitSetParallel
-
-/// executes given function f( bit, subBitRange ) for each bit in bitRange in parallel threads,
-/// where (subBitRange) are the bits that will be processed by the same thread;
-/// it is guaranteed that every individual block in bit-set is processed by one thread only
-template <typename IndexType, typename F>
-void BitSetParallelForAllRanged( const IdRange<IndexType> & bitRange, F && f )
+template <typename IndexType, typename CM, typename F>
+void ForAllRanged( const IdRange<IndexType> & bitRange, const CM & callMaker, F && f )
 {
     const auto range = BitSetParallel::blockRange( bitRange );
     tbb::parallel_for( range, [&]( const tbb::blocked_range<size_t> & subRange )
     {
+        auto c = callMaker();
         const auto bitSubRange = BitSetParallel::bitSubRange( bitRange, range, subRange );
         for ( auto id = bitSubRange.beg; id < bitSubRange.end; ++id )
-            f( id, bitSubRange );
+            c( f, id, bitSubRange );
     } );
 }
 
-/// executes given function f for each index in bitRange in parallel threads;
-/// it is guaranteed that every individual block in BitSet is processed by one thread only
-template <typename IndexType, typename F>
-void BitSetParallelForAll( const IdRange<IndexType> & bitRange, F && f )
+template <typename BS, typename CM, typename F>
+inline void ForAllRanged( const BS & bs, const CM & callMaker, F && f )
 {
-    BitSetParallelForAllRanged( bitRange, [&f]( auto bit, auto && ) { f( bit ); } );
+    ForAllRanged( bitRange( bs ), callMaker, std::forward<F>( f ) );
 }
 
-/// executes given function f for each bit in bs in parallel threads;
-/// it is guaranteed that every individual block in bit-set is processed by one thread only
-template <typename BS, typename F>
-void BitSetParallelForAll( const BS & bs, F && f )
-{
-    BitSetParallelForAll( BitSetParallel::bitRange( bs ), std::forward<F>( f ) );
-}
-
-/// executes given function f( bit, subBitRange ) for each bit in bs in parallel threads,
-/// where (subBitRange) are the bits that will be processed by the same thread;
-/// it is guaranteed that every individual block in bit-set is processed by one thread only
-template <typename BS, typename F>
-void BitSetParallelForAllRanged( const BS& bs, F && f )
-{
-    return BitSetParallelForAllRanged( BitSetParallel::bitRange( bs ), std::forward<F>( f ) );
-}
-
-/// executes given function f( bit, subBitRange ) for each bit in bitRange in parallel threads,
-/// where (subBitRange) are the bits that will be processed by the same thread;
-/// it is guaranteed that every individual block in bit-set is processed by one thread only;
-/// reports progress from calling thread only;
-/// \return false if the processing was canceled by progressCb
-template <typename IndexType, typename F> 
-bool BitSetParallelForAllRanged( const IdRange<IndexType> & bitRange, F && f, ProgressCallback progressCb, size_t reportProgressEveryBit = 1024 )
+template <typename IndexType, typename CM, typename F> 
+bool ForAllRanged( const IdRange<IndexType> & bitRange, const CM & callMaker, F && f, ProgressCallback progressCb, size_t reportProgressEveryBit = 1024 )
 {
     if ( !progressCb )
     {
-        BitSetParallelForAllRanged( bitRange, std::forward<F>( f ) );
+        ForAllRanged( bitRange, callMaker, std::forward<F>( f ) );
         return true;
     }
 
@@ -130,11 +102,12 @@ bool BitSetParallelForAllRanged( const IdRange<IndexType> & bitRange, F && f, Pr
         const auto bitSubRange = BitSetParallel::bitSubRange( bitRange, range, subRange );
         size_t myProcessedBits = 0;
         const bool report = std::this_thread::get_id() == callingThreadId;
+        auto c = callMaker();
         for ( auto id = bitSubRange.beg; id < bitSubRange.end; ++id )
         {
             if ( !keepGoing.load( std::memory_order_relaxed ) )
                 break;
-            f( id, bitSubRange );
+            c( f, id, bitSubRange );
             if ( ( ++myProcessedBits % reportProgressEveryBit ) == 0 )
             {
                 if ( report )
@@ -156,55 +129,77 @@ bool BitSetParallelForAllRanged( const IdRange<IndexType> & bitRange, F && f, Pr
     return keepGoing.load( std::memory_order_relaxed );
 }
 
-/// executes given function f( bit, subBitRange ) for each bit in bs in parallel threads,
+template <typename BS, typename CM, typename F>
+inline bool ForAllRanged( const BS & bs, const CM & callMaker, F && f, ProgressCallback progressCb, size_t reportProgressEveryBit = 1024 )
+{
+    return ForAllRanged( bitRange( bs ), callMaker, std::forward<F>( f ), progressCb, reportProgressEveryBit );
+}
+
+} // namespace BitSetParallel
+
+/// executes given function f( bit, subBitRange ) for each bit in bitRange in parallel threads,
 /// where (subBitRange) are the bits that will be processed by the same thread;
 /// it is guaranteed that every individual block in bit-set is processed by one thread only;
-/// reports progress from calling thread only;
-/// \return false if the processing was canceled by progressCb
-template <typename BS, typename F> 
-bool BitSetParallelForAllRanged( const BS& bs, F && f, ProgressCallback progressCb, size_t reportProgressEveryBit = 1024 )
+/// optional parameters after f: ProgressCallback cb, size_t reportProgressEveryBit = 1024 for periodic progress report
+/// \return false if terminated by callback
+template <typename BS, typename ...F>
+inline auto BitSetParallelForAllRanged( const BS & bs, F &&... f )
 {
-    return BitSetParallelForAllRanged( BitSetParallel::bitRange( bs ), std::forward<F>( f ), progressCb, reportProgressEveryBit );
+    return BitSetParallel::ForAllRanged( bs, Parallel::CallSimplyMaker{}, std::forward<F>( f )... );
 }
 
-/// executes given function f for each bit in bs in parallel threads;
+/// executes given function f( bit, subBitRange, tls ) for each bit in IdRange or BitSet (bs) in parallel threads,
+/// where subBitRange are the bits that will be processed by the same thread,
+///       tls=e.local() (evaluated once for each subBitRange);
 /// it is guaranteed that every individual block in bit-set is processed by one thread only;
-/// reports progress from calling thread only;
-/// \return false if the processing was canceled by progressCb
-template <typename BS, typename F>
-bool BitSetParallelForAll( const BS& bs, F && f, ProgressCallback progressCb, size_t reportProgressEveryBit = 1024 )
+/// optional parameters after f: ProgressCallback cb, size_t reportProgressEveryBit = 1024 for periodic progress report
+/// \return false if terminated by callback
+template <typename BS, typename L, typename ...F>
+inline auto BitSetParallelForAllRanged( const BS & bs, tbb::enumerable_thread_specific<L> & e, F &&... f )
 {
-    return BitSetParallelForAllRanged( BitSetParallel::bitRange( bs ), [&f]( auto bit, auto && ) { f( bit ); }, progressCb, reportProgressEveryBit );
+    return BitSetParallel::ForAllRanged( bs, Parallel::CallWithTLSMaker<L>{ e }, std::forward<F>( f )... );
 }
 
-/// executes given function f for every _set_ bit in bs in parallel threads;
-/// it is guaranteed that every individual block in bit-set is processed by one thread only
+/// executes given function f for each index in IdRange or BitSet (bs) in parallel threads;
+/// it is guaranteed that every individual block in BitSet is processed by one thread only;
+/// optional parameters after f: ProgressCallback cb, size_t reportProgressEveryBit = 1024 for periodic progress report
+/// \return false if terminated by callback
 template <typename BS, typename F, typename ...Cb>
-auto BitSetParallelFor( const BS& bs, F && f, Cb&&... cb )
+inline auto BitSetParallelForAll( const BS & bs, F && f, Cb&&... cb )
 {
-    using IndexType = typename BS::IndexType;
-    return BitSetParallelForAll( bs, [&]( IndexType id )
-    {
-        if ( bs.test( id ) )
-        {
-            f( id );
-        }
-    }, std::forward<Cb>( cb )... );
+    return BitSetParallel::ForAllRanged( bs, Parallel::CallSimplyMaker{}, [&f]( auto bit, auto && ) { f( bit ); }, std::forward<Cb>( cb )... );
 }
 
-/// executes given function f for every _reset_ bit in bs in parallel threads;
-/// it is guaranteed that every individual block in bit-set is processed by one thread only
-template <typename BS, typename F, typename ...Cb>
-auto BitSetParallelForReset( const BS& bs, F && f, Cb&&... cb )
+/// executes given function f for each index in IdRange or BitSet (bs) in parallel threads
+/// passing e.local() (evaluated once for each sub-range) as the second argument to f;
+/// it is guaranteed that every individual block in BitSet is processed by one thread only;
+/// optional parameters after f: ProgressCallback cb, size_t reportProgressEveryBit = 1024 for periodic progress report
+/// \return false if terminated by callback
+template <typename BS, typename L, typename F, typename ...Cb>
+inline auto BitSetParallelForAll( const BS & bs, tbb::enumerable_thread_specific<L> & e, F && f, Cb&&... cb )
 {
-    using IndexType = typename BS::IndexType;
-    return BitSetParallelForAll( bs, [&]( IndexType id )
-    {
-        if ( !bs.test( id ) )
-        {
-            f( id );
-        }
-    }, std::forward<Cb>( cb )... );
+    return BitSetParallel::ForAllRanged( bs, Parallel::CallWithTLSMaker<L>{ e }, [&f]( auto bit, auto &&, auto & tls ) { f( bit, tls ); }, std::forward<Cb>( cb )... );
+}
+
+/// executes given function f for every _set_ bit in IdRange or BitSet (bs) in parallel threads;
+/// it is guaranteed that every individual block in bit-set is processed by one thread only;
+/// optional parameters after f: ProgressCallback cb, size_t reportProgressEveryBit = 1024 for periodic progress report
+/// \return false if terminated by callback
+template <typename BS, typename F, typename ...Cb>
+inline auto BitSetParallelFor( const BS& bs, F && f, Cb&&... cb )
+{
+    return BitSetParallelForAll( bs, [&]( auto bit ) { if ( bs.test( bit ) ) f( bit ); }, std::forward<Cb>( cb )... );
+}
+
+/// executes given function f for every _set_ bit in bs IdRange or BitSet (bs) parallel threads,
+/// passing e.local() (evaluated once for each sub-range) as the second argument to f;
+/// it is guaranteed that every individual block in bit-set is processed by one thread only;
+/// optional parameters after f: ProgressCallback cb, size_t reportProgressEveryBit = 1024 for periodic progress report
+/// \return false if terminated by callback
+template <typename BS, typename L, typename F, typename ...Cb>
+inline auto BitSetParallelFor( const BS& bs, tbb::enumerable_thread_specific<L> & e, F && f, Cb&&... cb )
+{
+    return BitSetParallelForAll( bs, e, [&]( auto bit, auto & tls ) { if ( bs.test( bit ) ) f( bit, tls ); }, std::forward<Cb>( cb )... );
 }
 
 /// \}

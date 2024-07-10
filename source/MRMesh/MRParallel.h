@@ -11,6 +11,7 @@ namespace Parallel
 struct CallSimply
 {
     auto operator() ( auto && f, auto id ) const { return f( id ); }
+    auto operator() ( auto && f, auto id, auto && subrange ) const { return f( id, subrange ); }
 };
 
 struct CallSimplyMaker
@@ -23,6 +24,7 @@ struct CallWithTLS
 {
     T & tls;
     auto operator() ( auto && f, auto id ) const { return f( id, tls ); }
+    auto operator() ( auto && f, auto id, auto && subrange ) const { return f( id, subrange, tls ); }
 };
 
 template<typename L>

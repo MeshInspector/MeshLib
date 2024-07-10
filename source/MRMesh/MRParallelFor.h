@@ -1,8 +1,8 @@
 #pragma once
 
 #include "MRVector.h"
-#include "MRPch/MRTBB.h"
 #include "MRProgressCallback.h"
+#include "MRParallel.h"
 #include <atomic>
 #include <limits>
 #include <thread>
@@ -12,30 +12,6 @@ namespace MR
 
 namespace Parallel
 {
-
-struct CallSimply
-{
-    auto operator() ( auto && f, auto id ) const { return f( id ); }
-};
-
-struct CallSimplyMaker
-{
-    auto operator() () const { return CallSimply{}; }
-};
-
-template<typename T>
-struct CallWithTLS
-{
-    T & tls;
-    auto operator() ( auto && f, auto id ) const { return f( id, tls ); }
-};
-
-template<typename L>
-struct CallWithTLSMaker
-{
-    tbb::enumerable_thread_specific<L> & e;
-    auto operator() () const { return CallWithTLS{ e.local() }; }
-};
 
 template <typename I, typename CM, typename F>
 void For( I begin, I end, const CM & callMaker, F && f )
@@ -111,46 +87,37 @@ bool For( I begin, I end, const CM & callMaker, F && f, ProgressCallback cb, siz
 /// \addtogroup BasicGroup
 /// \{
 
-/// executes given function f for each span element [begin, end)
-template <typename I, typename F>
-inline void ParallelFor( I begin, I end, F && f )
-{
-    Parallel::For( begin, end, Parallel::CallSimplyMaker{}, std::forward<F>( f ) );
-}
-
-/// executes given function f for each span element [begin, end), with periodic progress report
+/// executes given function f for each span element [begin, end);
+/// optional parameters after f: ProgressCallback cb, size_t reportProgressEvery = 1024 for periodic progress report
 /// \return false if terminated by callback
-template <typename I, typename F>
-bool ParallelFor( I begin, I end, F && f, ProgressCallback cb, size_t reportProgressEvery = 1024 )
+template <typename I, typename ...F>
+inline auto ParallelFor( I begin, I end, F &&... f )
 {
-    return Parallel::For( begin, end, Parallel::CallSimplyMaker{}, std::forward<F>( f ), cb, reportProgressEvery );
+    return Parallel::For( begin, end, Parallel::CallSimplyMaker{}, std::forward<F>( f )... );
 }
 
 /// executes given function f for each span element [begin, end)
-/// passing e.local() (evaluated once for each sub-range) as the second argument to f
-template <typename I, typename L, typename F>
-inline void ParallelFor( I begin, I end, tbb::enumerable_thread_specific<L> & e, F && f )
-{
-    Parallel::For( begin, end, Parallel::CallWithTLSMaker{ e }, std::forward<F>( f ) );
-}
-
-/// executes given function f for each span element [begin, end), with periodic progress report
-/// passing e.local() (evaluated once for each sub-range) as the second argument to f
+/// passing e.local() (evaluated once for each sub-range) as the second argument to f;
+/// optional parameters after f: ProgressCallback cb, size_t reportProgressEvery = 1024 for periodic progress report
 /// \return false if terminated by callback
-template <typename I, typename L, typename F>
-inline bool ParallelFor( I begin, I end, tbb::enumerable_thread_specific<L> & e, F && f, ProgressCallback cb, size_t reportProgressEvery = 1024 )
+template <typename I, typename L, typename ...F>
+inline auto ParallelFor( I begin, I end, tbb::enumerable_thread_specific<L> & e, F &&... f )
 {
-    return Parallel::For( begin, end, Parallel::CallWithTLSMaker{ e }, std::forward<F>( f ), cb, reportProgressEvery );
+    return Parallel::For( begin, end, Parallel::CallWithTLSMaker<L>{ e }, std::forward<F>( f )... );
 }
 
-/// executes given function f for each vector element in parallel threads
+/// executes given function f for each vector element in parallel threads;
+/// optional parameters after f: ProgressCallback cb, size_t reportProgressEvery = 1024 for periodic progress report
+/// \return false if terminated by callback
 template <typename T, typename ...F>
 inline auto ParallelFor( const std::vector<T> & v, F &&... f )
 {
     return ParallelFor( size_t(0), v.size(), std::forward<F>( f )... );
 }
 
-/// executes given function f for each vector element in parallel threads
+/// executes given function f for each vector element in parallel threads;
+/// optional parameters after f: ProgressCallback cb, size_t reportProgressEvery = 1024 for periodic progress report
+/// \return false if terminated by callback
 template <typename T, typename I, typename ...F>
 inline auto ParallelFor( const Vector<T, I> & v, F &&... f )
 {

@@ -15,7 +15,7 @@ namespace MR
 /// executes given function f for each index in [begin, end) in parallel threads;
 /// it is guaranteed that every individual block in BitSet is processed by one thread only
 template <typename IndexType, typename F>
-void BitSetParallelForAll( IndexType begin, IndexType end, F f )
+void BitSetParallelForAll( IndexType begin, IndexType end, F && f )
 {
     const size_t beginBlock = begin / BitSet::bits_per_block;
     const size_t endBlock = ( size_t( end ) + BitSet::bits_per_block - 1 ) / BitSet::bits_per_block;
@@ -34,28 +34,16 @@ void BitSetParallelForAll( IndexType begin, IndexType end, F f )
 /// executes given function f for each bit in bs in parallel threads;
 /// it is guaranteed that every individual block in bit-set is processed by one thread only
 template <typename BS, typename F>
-void BitSetParallelForAll( const BS & bs, F f )
+void BitSetParallelForAll( const BS & bs, F && f )
 {
-    using IndexType = typename BS::IndexType;
-
-    const size_t endBlock = ( bs.size() + BS::bits_per_block - 1 ) / BS::bits_per_block;
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, endBlock ), 
-        [&]( const tbb::blocked_range<size_t> & range )
-        {
-            IndexType id{ range.begin() * BS::bits_per_block };
-            const IndexType idEnd{ range.end() < endBlock ? range.end() * BS::bits_per_block : bs.size() };
-            for ( ; id < idEnd; ++id )
-            {
-                f( id );
-            }
-        } );
+    BitSetParallelForAll( bs.beginId(), bs.endId(), std::forward<F>( f ) );
 }
 
 /// executes given function f( IndexId, rangeBeginId, rangeEndId ) for each bit in bs in parallel threads;
 /// rangeBeginId, rangeEndId - boundaries of thread range in parallel processing
 /// it is guaranteed that every individual block in bit-set is processed by one thread only;
 template <typename BS, typename F>
-void BitSetParallelForAllRanged( const BS& bs, F f )
+void BitSetParallelForAllRanged( const BS& bs, F && f )
 {
     using IndexType = typename BS::IndexType;
 
@@ -78,12 +66,12 @@ void BitSetParallelForAllRanged( const BS& bs, F f )
 /// reports progress from calling thread only;
 /// \return false if the processing was canceled by progressCb
 template <typename BS, typename F> 
-bool BitSetParallelForAllRanged( const BS& bs, F f, ProgressCallback progressCb, size_t reportProgressEveryBit = 1024 )
+bool BitSetParallelForAllRanged( const BS& bs, F && f, ProgressCallback progressCb, size_t reportProgressEveryBit = 1024 )
 {
     using IndexType = typename BS::IndexType;
     if ( !progressCb )
     {
-        BitSetParallelForAllRanged( bs, f );
+        BitSetParallelForAllRanged( bs, std::forward<F>( f ) );
         return true;
     }
 
@@ -139,11 +127,11 @@ bool BitSetParallelForAllRanged( const BS& bs, F f, ProgressCallback progressCb,
 /// reports progress from calling thread only;
 /// \return false if the processing was canceled by progressCb
 template <typename BS, typename F>
-bool BitSetParallelForAll( const BS& bs, F f, ProgressCallback progressCb, size_t reportProgressEveryBit = 1024 )
+bool BitSetParallelForAll( const BS& bs, F && f, ProgressCallback progressCb, size_t reportProgressEveryBit = 1024 )
 {
     if ( !progressCb )
     {
-        BitSetParallelForAll( bs, f );
+        BitSetParallelForAll( bs, std::forward<F>( f ) );
         return true;
     }
 
@@ -199,7 +187,7 @@ bool BitSetParallelForAll( const BS& bs, F f, ProgressCallback progressCb, size_
 /// executes given function f for every set bit in bs in parallel threads;
 /// it is guaranteed that every individual block in bit-set is processed by one thread only
 template <typename BS, typename F, typename ...Cb>
-auto BitSetParallelFor( const BS& bs, F f, Cb&&... cb )
+auto BitSetParallelFor( const BS& bs, F && f, Cb&&... cb )
 {
     using IndexType = typename BS::IndexType;
     return BitSetParallelForAll( bs, [&]( IndexType id )
@@ -214,7 +202,7 @@ auto BitSetParallelFor( const BS& bs, F f, Cb&&... cb )
 /// executes given function f for every reset bit in bs in parallel threads;
 /// it is guaranteed that every individual block in bit-set is processed by one thread only
 template <typename BS, typename F, typename ...Cb>
-auto BitSetParallelForReset( const BS& bs, F f, Cb&&... cb )
+auto BitSetParallelForReset( const BS& bs, F && f, Cb&&... cb )
 {
     using IndexType = typename BS::IndexType;
     return BitSetParallelForAll( bs, [&]( IndexType id )

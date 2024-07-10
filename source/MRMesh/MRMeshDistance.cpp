@@ -174,7 +174,7 @@ InternalZoneWithProjections findSignedDistanceOneWay( const MeshPart & a, const 
     while ( queue.count() != 0 )
     {
         tbb::enumerable_thread_specific<std::vector<VertId>> threadData;
-        BitSetParallelFor( queue, [&]( VertId id )
+        BitSetParallelFor( queue, threadData, [&]( VertId id, auto& localData )
         {
             const auto point = rigidB2A ? ref2Test( ref.mesh.points[id] ) : ref.mesh.points[id];
             auto projectRes = findProjection( point, test.mesh );
@@ -185,7 +185,6 @@ InternalZoneWithProjections findSignedDistanceOneWay( const MeshPart & a, const 
                 return;
             res.projectons[id] = std::make_pair( projectRes.proj, distance );
 
-            auto& localData = threadData.local();
             for ( EdgeId e : orgRing( ref.mesh.topology, id ) )
             {
                 const auto v = ref.mesh.topology.dest( e );

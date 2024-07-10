@@ -41,7 +41,7 @@ auto blockRange( const BS & bs )
 template <typename BS>
 auto bitRange( const BS & bs )
 {
-    return IdRange<typename BS::IndexType>( bs.beginId(), bs.endId() );
+    return IdRange<typename BS::IndexType>{ bs.beginId(), bs.endId() };
 }
 
 template <typename IndexType>

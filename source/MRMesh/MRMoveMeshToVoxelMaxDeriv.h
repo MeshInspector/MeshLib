@@ -41,11 +41,13 @@ MRMESH_API VertBitSet moveMeshToVoxelMaxDeriv(
 
 
 // Helper class to organize mesh and voxels volume access and build point sequences
+// Note: this class is not thread-safe but accessing same volume from different instances is ok
 template <typename MeshType>
 class MeshOnVoxelsT
 {
 public:
     MRMESH_API MeshOnVoxelsT( MeshType& mesh, const AffineXf3f& meshXf, const VdbVolume& volume, const AffineXf3f& volumeXf );
+    MRMESH_API MeshOnVoxelsT( const MeshOnVoxelsT& other );
 
     // Access to base data
     MRMESH_API MeshType& mesh() const;

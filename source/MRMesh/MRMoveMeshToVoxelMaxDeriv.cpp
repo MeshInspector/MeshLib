@@ -21,6 +21,15 @@ MeshOnVoxelsT<MeshType>::MeshOnVoxelsT( MeshType& mesh, const AffineXf3f& meshXf
     numVerts_( mesh_.topology.numValidVerts() )
 {}
 
+template <typename MeshType>
+MeshOnVoxelsT<MeshType>::MeshOnVoxelsT( const MeshOnVoxelsT& other ) :
+    mesh_( other.mesh_ ), volume_( other.volume_ ),
+    voxelSize_( other.voxelSize_ ),
+    accessor_( other.accessor_ ), interpolator_( volume_, accessor_ ), // Note: accessor copy is created here
+    xf_( other.xf_ ), xfInv_( other.xfInv_ ), xfNormal_( other.xfNormal_ ), noXf_( other.noXf_ ),
+    numVerts_( other.numVerts_ )
+{}
+
 
 template <typename MeshType>
 MeshType& MeshOnVoxelsT<MeshType>::mesh() const

@@ -393,7 +393,7 @@ void Toolbar::drawCustomizeModal_()
 
     ImGui::SetNextItemWidth( searchWidth );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, 8 * scaling_ ) );
-    if ( ImGui::InputText( "##QuickAccessSearch", searchString_ ) )
+    if ( UI::inputText( "##QuickAccessSearch", searchString_ ) )
     {
         searchResult_.clear();
         searchResult_.resize( RibbonSchemaHolder::schema().tabsMap.size() );

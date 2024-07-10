@@ -86,7 +86,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
                 setInputFocus_ = false;
             }
             ImGui::SetNextItemWidth( minSearchSize );
-            if ( ImGui::InputText( "##SearchLine", searchLine_ ) )
+            if ( UI::inputText( "##SearchLine", searchLine_ ) )
                 updateSearchResult_();
             if ( !ImGui::IsWindowAppearing() &&
                 !( ImGui::IsWindowFocused() || ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) ) )
@@ -338,7 +338,7 @@ bool RibbonMenuSearch::searchInputText_( const char* label, std::string& str, co
     ImGui::SetNextItemWidth( inputWidth );
     ImGui::PushStyleColor( ImGuiCol_FrameBg, Color::transparent().getUInt32() );
     ImGui::PushStyleColor( ImGuiCol_Border, Color::transparent().getUInt32() );
-    const bool res = ImGui::InputText( label, str );
+    const bool res = UI::inputText( label, str );
     ImGui::PopStyleColor( 2 );
 
     ImGui::PopID();

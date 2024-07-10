@@ -114,8 +114,8 @@ struct ValueEntry
 
         Value() {} // Make `std::variant` below happy.
     };
-    template <>
-    struct Value<std::string>
+    template <std::same_as<std::string> T> // GCC chokes on full specializations at class scope, hence this.
+    struct Value<T>
     {
         // The current value.
         std::string value;

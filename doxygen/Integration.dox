@@ -57,7 +57,7 @@ You can download [dev package](https://github.com/MeshInspector/MeshLib/releases
 
 \section MacOS
 Same as for Linux, but requires brew packages to be installed:
-`xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/scripts/macos.txt`
+`xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt`
 
 */
 

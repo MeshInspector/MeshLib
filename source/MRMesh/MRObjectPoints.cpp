@@ -140,16 +140,13 @@ std::shared_ptr<ObjectPoints> merge( const std::vector<std::shared_ptr<ObjectPoi
     auto& points = pointCloud->points;
 
     bool allWithNormals = true;
-    bool allWithoutNormals = true;
     bool anyWithColors = false;
     for ( const auto& obj : objsPoints )
     {
         const auto & pc = obj->pointCloud();
         if ( !pc || !pc->validPoints.any() )
             continue;
-        if ( pc->hasNormals() )
-            allWithoutNormals = false;
-        else
+        if ( !pc->hasNormals() )
             allWithNormals = false;
         if ( ( obj->getColoringType() == ColoringType::VertsColorMap ) &&
              ( obj->getVertsColorMap().size() > int( obj->pointCloud()->validPoints.find_last() ) ) )

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRCommonPlugins/exports.h"
 #include "MRViewer/MRRibbonMenuItem.h"
 #include "MRViewer/MRHistoryStore.h"
 #include "MRViewer/MRViewerEventsListener.h"
@@ -59,10 +60,13 @@ public:
         Isometric,
         Count
     };
-   SetViewPresetMenuItem( Type type );
-   virtual bool action() override;
+    MRCOMMONPLUGINS_API static std::string toString( Type );
+    SetViewPresetMenuItem( Type type );
+    void setCustomUpdateView( const std::function<void( MR::Viewport& )>& callback ) { updateView_ = callback; }
+    virtual bool action() override;
 private:
     Type type_;
+    std::function<void( MR::Viewport& )> updateView_;
 };
 
 class SetViewportConfigPresetMenuItem : public RibbonMenuItem
@@ -78,7 +82,7 @@ public:
         Count
     };
    SetViewportConfigPresetMenuItem( Type type );
-   virtual void setCustomUpdateViewports( const std::function<void( const ViewportMask )>& callback ) { updateViewports_ = callback; }
+   void setCustomUpdateViewports( const std::function<void( const ViewportMask )>& callback ) { updateViewports_ = callback; }
    virtual bool action() override;
 private:
     Type type_;

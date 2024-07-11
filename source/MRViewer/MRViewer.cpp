@@ -1122,49 +1122,46 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
     {
         assert( result.scene );
         const auto childCount = result.scene->children().size();
-        if ( childCount > 0 )
+        const auto isSceneEmpty = SceneRoot::get().children().empty();
+        if ( !result.isSceneConstructed || ( childCount == 1 && isSceneEmpty ) )
         {
-            const auto isSceneEmpty = SceneRoot::get().children().empty();
-            if ( !result.isSceneConstructed || ( childCount == 1 && isSceneEmpty ) )
-            {
-                AppendHistory<SwapRootAction>( "Load Scene File" );
-                auto newRoot = result.scene;
-                std::swap( newRoot, SceneRoot::getSharedPtr() );
-                getViewerInstance().setSceneDirty();
+            AppendHistory<SwapRootAction>( "Load Scene File" );
+            auto newRoot = result.scene;
+            std::swap( newRoot, SceneRoot::getSharedPtr() );
+            getViewerInstance().setSceneDirty();
 
-                assert( result.loadedFiles.size() == 1 );
-                auto filePath = result.loadedFiles.front();
-                if ( !result.isSceneConstructed )
-                {
-                    getViewerInstance().onSceneSaved( filePath );
-                }
-                else
-                {
-                    // for constructed scenes, add original file path to the recent files' list and set a new scene extension afterward
-                    getViewerInstance().recentFilesStore().storeFile( filePath );
-                    getViewerInstance().onSceneSaved( filePath, false );
-                }
+            assert( result.loadedFiles.size() == 1 );
+            auto filePath = result.loadedFiles.front();
+            if ( !result.isSceneConstructed )
+            {
+                getViewerInstance().onSceneSaved( filePath );
             }
             else
             {
-                std::string historyName = childCount == 1 ? "Open file" : "Open files";
-                SCOPED_HISTORY( historyName );
+                // for constructed scenes, add original file path to the recent files' list and set a new scene extension afterward
+                getViewerInstance().recentFilesStore().storeFile( filePath );
+                getViewerInstance().onSceneSaved( filePath, false );
+            }
+        }
+        else
+        {
+            std::string historyName = childCount == 1 ? "Open file" : "Open files";
+            SCOPED_HISTORY( historyName );
 
-                const auto children = result.scene->children();
-                result.scene->removeAllChildren();
-                for ( const auto& obj : children )
-                {
-                    AppendHistory<ChangeSceneAction>( "Load File", obj, ChangeSceneAction::Type::AddObject );
-                    SceneRoot::get().addChild( obj );
-                }
-
-                auto& viewerInst = getViewerInstance();
-                for ( const auto& file : result.loadedFiles )
-                    viewerInst.recentFilesStore().storeFile( file );
+            const auto children = result.scene->children();
+            result.scene->removeAllChildren();
+            for ( const auto& obj : children )
+            {
+                AppendHistory<ChangeSceneAction>( "Load File", obj, ChangeSceneAction::Type::AddObject );
+                SceneRoot::get().addChild( obj );
             }
 
-            getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
+            auto& viewerInst = getViewerInstance();
+            for ( const auto& file : result.loadedFiles )
+                viewerInst.recentFilesStore().storeFile( file );
         }
+
+        getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
 
         if ( !result.errorSummary.empty() )
             showModal( result.errorSummary, NotificationType::Error );

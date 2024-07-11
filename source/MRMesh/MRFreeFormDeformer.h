@@ -3,6 +3,7 @@
 #include "MRVector3.h"
 #include "MRBox.h"
 #include "MRVector.h"
+#include "MRMeshEigen.h"
 
 namespace MR
 {
@@ -42,6 +43,41 @@ private:
 
     Vector3f applyToNormedPoint_( const Vector3f& normedPoint, std::vector<Vector3f>& xPlaneCache, std::vector<Vector3f>& yLineCache, std::vector<Vector3f>& tempPoints ) const;
 };
+
+/// Class to accumulate source and target points for free form alignment
+/// Calculates best Free Form transform to fit given source->target deformation
+/// origin ref grid as box corners ( resolution parameter specifies how to divide box )
+class MRMESH_CLASS FreeFormBestFit
+{
+public:
+    /// initialize the class, compute cached values and reserve space for matrices
+    MRMESH_API FreeFormBestFit( const Box3d& box, const Vector3i& resolution = Vector3i::diagonal( 2 ) );
+
+    /// add pair of source and target point to accumulator
+    MRMESH_API void addPair( const Vector3d& src, const Vector3d& tgt, double w = 1.0 );
+    void addPair( const Vector3f& src, const Vector3f& tgt, float w = 1.0f ) { addPair( Vector3d( src ), Vector3d( tgt ), double( w ) ); }
+
+    /// adds other instance of FreeFormBestFit if it has same ref grid
+    void addOther( const FreeFormBestFit& other );
+
+    /// finds best grid points positions to align source points to target points
+    [[nodiscard]] MRMESH_API std::vector<Vector3f> findBestDeformationReferenceGrid() const;
+private:
+    Box3d box_;
+    Vector3i resolution_;
+    size_t resXY_{ 0 };
+    size_t size_{ 0 };
+
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> accumA_;
+    Eigen::Matrix<double, Eigen::Dynamic, 3> accumB_;
+
+    std::vector<int> pascalLineX_;
+    std::vector<int> pascalLineY_;
+    std::vector<int> pascalLineZ_;
+
+    Vector3d reverseDiagonal_;
+};
+
 
 // Calculates best Free Form transform to fit given source->target deformation
 // origin ref grid as box corners ( resolution parameter specifies how to divide box )

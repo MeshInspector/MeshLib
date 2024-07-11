@@ -129,11 +129,9 @@ namespace
 VertBitSet adjustOneIter( MeshOnVoxels& mv, int samplePoints, float intermediateSmoothSpeed )
 {
     MR_TIMER
-    auto& meshCopy = mv.mesh();
-    VertCoords& newPoints = meshCopy.points;
 
     VertBitSet correctedPoints( mv.mesh().points.size() );
-    Vector<Vector3f, VertId> shifts( meshCopy.points.size(), Vector3f{ 0.f, 0.f, 0.f } );
+    Vector<Vector3f, VertId> shifts( mv.mesh().points.size(), Vector3f{ 0.f, 0.f, 0.f } );
 
     struct ThreadSpecific {
         MeshOnVoxels mv;            // Volume accessors are copied for thread safety
@@ -169,7 +167,7 @@ VertBitSet adjustOneIter( MeshOnVoxels& mv, int samplePoints, float intermediate
             }
         } );
 
-    Vector<float, VertId> weights( meshCopy.points.size(), 1.f );
+    Vector<float, VertId> weights( mv.mesh().points.size(), 1.f );
     BitSetParallelFor( correctedPoints,
         [weights = weights.data()] ( VertId v )
         {
@@ -179,7 +177,7 @@ VertBitSet adjustOneIter( MeshOnVoxels& mv, int samplePoints, float intermediate
     constexpr int smoothIters = 15;
 
     relax(
-        meshCopy.topology,
+        mv.mesh().topology,
         shifts,
         MeshRelaxParams{ {
                 .iterations = smoothIters,
@@ -189,13 +187,13 @@ VertBitSet adjustOneIter( MeshOnVoxels& mv, int samplePoints, float intermediate
     );
 
     BitSetParallelFor( mv.mesh().topology.getValidVerts(),
-        [newPoints = newPoints.data(), shifts = shifts.data()] ( VertId v )
+        [points = mv.mesh().points.data(), shifts = shifts.data()] ( VertId v )
         {
-            newPoints[v] += shifts[v];
+            points[v] += shifts[v];
         } );
 
     relax(
-        meshCopy,
+        mv.mesh(),
         MeshRelaxParams{ {
                 .iterations = smoothIters,
                 .force = 0.01f
@@ -203,7 +201,7 @@ VertBitSet adjustOneIter( MeshOnVoxels& mv, int samplePoints, float intermediate
             false, &weights }
     );
 
-    meshCopy.invalidateCaches();
+    mv.mesh().invalidateCaches();
     return correctedPoints;
 }
 

@@ -53,4 +53,8 @@ protected:
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 };
-}
+
+/// constructs new ObjectPoints containing the union of valid points from all input objects
+[[nodiscard]] MRMESH_API std::shared_ptr<ObjectPoints> merge( const std::vector<std::shared_ptr<ObjectPoints>>& objsPoints );
+
+} //namespace MR

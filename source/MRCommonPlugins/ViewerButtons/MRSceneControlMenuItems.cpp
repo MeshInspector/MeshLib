@@ -19,6 +19,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRViewer/MRUIStyle.h"
+#include "MRViewer/MRSceneCache.h"
 #include <array>
 
 namespace
@@ -111,43 +112,52 @@ void ResetSceneMenuItem::preDraw_()
         if ( headerFont )
             ImGui::PopFont();
 
-        const char* text = "Save your changes?";
-        ImGui::SetCursorPosX( ( windowSize.x - ImGui::CalcTextSize( text ).x ) * 0.5f );
-        ImGui::Text( "%s", text );
+        // do not suggest saving empty scene
+        const bool showSave = !SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>().empty();
+        if ( showSave )
+        {
+            const char* text = "Save your changes?";
+            ImGui::SetCursorPosX( ( windowSize.x - ImGui::CalcTextSize( text ).x ) * 0.5f );
+            ImGui::Text( "%s", text );
+        }
 
         const auto style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * scaling } );
 
         const float p = ImGui::GetStyle().ItemSpacing.x;
-        const Vector2f btnSize{ ( ImGui::GetContentRegionAvail().x - p * 2 ) / 3.f, 0 };
-        if ( UI::button( "Save", btnSize, ImGuiKey_Enter ) )
+        const Vector2f btnSize{ showSave ? ( ImGui::GetContentRegionAvail().x - p * 2 ) / 3.f : ( ImGui::GetContentRegionAvail().x - p ) / 2.f, 0 };
+
+        if ( showSave )
         {
-            auto savePath = SceneRoot::getScenePath();
-            if ( savePath.empty() )
-                savePath = saveFileDialog( { {}, {}, SceneFileWriteFilters } );
+            if ( UI::button( "Save", btnSize, ImGuiKey_Enter ) )
+            {
+                auto savePath = SceneRoot::getScenePath();
+                if ( savePath.empty() )
+                    savePath = saveFileDialog( { {}, {}, SceneFileWriteFilters } );
 
-            ImGui::CloseCurrentPopup();
-            if ( !savePath.empty() )
-                ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [this, savePath, &root = SceneRoot::get()]()->std::function<void()>
-                {
-                    auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
-
-                    return[this, savePath, res]()
+                ImGui::CloseCurrentPopup();
+                if ( !savePath.empty() )
+                    ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [this, savePath, &root = SceneRoot::get()]()->std::function<void()>
                     {
-                        if ( res )
+                        auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
+
+                        return[this, savePath, res]()
                         {
-                            getViewerInstance().onSceneSaved( savePath );
-                            resetScene_();
-                        }
-                        else
-                            showError( "Error saving scene: " + res.error() );
-                    };
-                } );
+                            if ( res )
+                            {
+                                getViewerInstance().onSceneSaved( savePath );
+                                resetScene_();
+                            }
+                            else
+                                showError( "Error saving scene: " + res.error() );
+                        };
+                    } );
+            }
+            UI::setTooltipIfHovered( "Save current scene and then remove all objects", scaling );
+            ImGui::SameLine();
         }
 
-        UI::setTooltipIfHovered( "Save current scene and then remove all objects", scaling );
-        ImGui::SameLine();
-        if ( UI::buttonCommonSize( "Don't Save", btnSize, ImGuiKey_N ) )
+        if ( UI::buttonCommonSize( showSave ? "Don't Save" : "New", btnSize, ImGuiKey_N ) )
         {
             ImGui::CloseCurrentPopup();
             resetScene_();

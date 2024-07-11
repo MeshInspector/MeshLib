@@ -58,7 +58,7 @@ public:
     void addPair( const Vector3f& src, const Vector3f& tgt, float w = 1.0f ) { addPair( Vector3d( src ), Vector3d( tgt ), double( w ) ); }
 
     /// adds other instance of FreeFormBestFit if it has same ref grid
-    void addOther( const FreeFormBestFit& other );
+    MRMESH_API void addOther( const FreeFormBestFit& other );
 
     /// finds best grid points positions to align source points to target points
     [[nodiscard]] MRMESH_API std::vector<Vector3f> findBestDeformationReferenceGrid() const;

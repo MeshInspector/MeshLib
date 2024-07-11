@@ -33,6 +33,7 @@
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRViewerSettingsManager.h"
+#include "MRViewer/MRSceneCache.h"
 #include "MRMesh/MRMeshSaveObj.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer/ImGuiMenu.h"
@@ -694,6 +695,13 @@ bool SaveSceneAsMenuItem::action()
             saveScene_( savePath );
     }, { {}, {}, SceneFileWriteFilters } );
     return false;
+}
+
+std::string SaveSceneAsMenuItem::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
+{
+    if ( SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>().empty() )
+        return "Scene is empty - nothing to save";
+    return {};
 }
 
 SaveSceneMenuItem::SaveSceneMenuItem() :

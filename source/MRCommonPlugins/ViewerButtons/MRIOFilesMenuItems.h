@@ -67,6 +67,7 @@ class SaveSceneAsMenuItem : public RibbonMenuItem
 public:
     SaveSceneAsMenuItem( const std::string& pluginName = "Save Scene As" );
     virtual bool action() override;
+    virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const override;
 
 protected:
     void saveScene_( const std::filesystem::path& savePath );

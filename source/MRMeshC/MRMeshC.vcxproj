@@ -16,6 +16,8 @@
     <ClInclude Include="MRBooleanOperation.h" />
     <ClInclude Include="MRCube.h" />
     <ClInclude Include="MRCylinder.h" />
+    <ClInclude Include="MRGridSampling.h" />
+    <ClInclude Include="MRICP.h" />
     <ClInclude Include="MRId.h" />
     <ClInclude Include="MRMatrix3.h" />
     <ClInclude Include="MRMeshBoolean.h" />
@@ -24,14 +26,20 @@
     <ClInclude Include="MRMesh.h" />
     <ClInclude Include="MRMeshC.h" />
     <ClInclude Include="MRMeshLoad.h" />
+    <ClInclude Include="MRMeshOrPoints.h" />
     <ClInclude Include="MRMeshPart.h" />
     <ClInclude Include="MRMeshSave.h" />
     <ClInclude Include="MRMeshTopology.h" />
+    <ClInclude Include="MRMultiwayICP.h" />
     <ClInclude Include="MROffset.h" />
+    <ClInclude Include="MRPointCloud.h" />
+    <ClInclude Include="MRPointsLoad.h" />
+    <ClInclude Include="MRPointsSave.h" />
     <ClInclude Include="MRRegionBoundary.h" />
     <ClInclude Include="MRSignDetectionMode.h" />
     <ClInclude Include="MRString.h" />
     <ClInclude Include="MRTorus.h" />
+    <ClInclude Include="MRVector.h" />
     <ClInclude Include="MRVector3.h" />
   </ItemGroup>
   <ItemGroup>
@@ -39,18 +47,25 @@
     <ClCompile Include="MRBitSet.cpp" />
     <ClCompile Include="MRCube.cpp" />
     <ClCompile Include="MRCylinder.cpp" />
+    <ClCompile Include="MRICP.cpp" />
     <ClCompile Include="MRId.cpp" />
     <ClCompile Include="MRMatrix3.cpp" />
     <ClCompile Include="MRMesh.cpp" />
     <ClCompile Include="MRMeshBoolean.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
     <ClCompile Include="MRMeshLoad.cpp" />
+    <ClCompile Include="MRMeshOrPoints.cpp" />
     <ClCompile Include="MRMeshSave.cpp" />
     <ClCompile Include="MRMeshTopology.cpp" />
+    <ClCompile Include="MRMultiwayICP.cpp" />
     <ClCompile Include="MROffset.cpp" />
+    <ClCompile Include="MRPointCloud.cpp" />
+    <ClCompile Include="MRPointsLoad.cpp" />
+    <ClCompile Include="MRPointsSave.cpp" />
     <ClCompile Include="MRRegionBoundary.cpp" />
     <ClCompile Include="MRString.cpp" />
     <ClCompile Include="MRTorus.cpp" />
+    <ClCompile Include="MRVector.cpp" />
     <ClCompile Include="MRVector3.cpp" />
   </ItemGroup>
   <ItemGroup>

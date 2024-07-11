@@ -45,6 +45,8 @@ typedef struct MRTriangulation MRTriangulation;
 typedef struct MREdgePath MREdgePath;
 typedef MREdgePath MREdgeLoop;
 
+typedef struct MRPointCloud MRPointCloud;
+
 typedef bool (*MRProgressCallback)( float );
 
 MR_EXTERN_C_END

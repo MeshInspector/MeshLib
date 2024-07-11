@@ -10,6 +10,8 @@ typedef struct MREdgeId { int id; } MREdgeId;
 typedef struct MRFaceId { int id; } MRFaceId;
 /// vertex index
 typedef struct MRVertId { int id; } MRVertId;
+/// object index
+typedef struct MRObjId { int id; } MRObjId;
 
 /// a set of 3 vertices; useful for representing a face via its vertex indices
 typedef MRVertId MRThreeVertIds[3];

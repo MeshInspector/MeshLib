@@ -1335,7 +1335,7 @@ float ImGuiMenu::drawSelectionInformation_()
     }
 
     bool firstField = true;
-    auto drawDimensionsVec3 = [this, &firstField]( const char* label, const auto& value )
+    auto drawDimensionsVec3 = [this, &firstField]<class Units>( const char* label, const auto& value )
     {
         if ( firstField )
         {
@@ -1347,13 +1347,13 @@ float ImGuiMenu::drawSelectionInformation_()
         ImGui::PushItemWidth( getSceneInfoItemWidth_() );
         MR_FINALLY{ ImGui::PopItemWidth(); };
 
-        UI::readOnlyValue<LengthUnit>( label, value );
+        UI::readOnlyValue<Units>( label, value );
     };
 
 #ifndef MRMESH_NO_OPENVDB
     if ( dimensions.x > 0 && dimensions.y > 0 && dimensions.z > 0 )
     {
-        drawDimensionsVec3( "Dimensions", dimensions );
+        drawDimensionsVec3.template operator()<NoUnit>( "Dimensions", dimensions );
     }
 #endif
     // Feature object properties.
@@ -1403,12 +1403,12 @@ float ImGuiMenu::drawSelectionInformation_()
         && !haveFeatureProperties
     )
     {
-        drawDimensionsVec3( "Box min", selectionBbox_.min );
-        drawDimensionsVec3( "Box max", selectionBbox_.max );
-        drawDimensionsVec3( "Box size", bsize );
+        drawDimensionsVec3.template operator()<LengthUnit>( "Box min", selectionBbox_.min );
+        drawDimensionsVec3.template operator()<LengthUnit>( "Box max", selectionBbox_.max );
+        drawDimensionsVec3.template operator()<LengthUnit>( "Box size", bsize );
 
         if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
-            drawDimensionsVec3( "World box size", wbsize );
+            drawDimensionsVec3.template operator()<LengthUnit>( "World box size", wbsize );
     }
 
     // This looks a bit better.

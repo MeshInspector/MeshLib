@@ -9,6 +9,7 @@
 #include <string_view>
 #include <string>
 #include <variant>
+#include <vector>
 
 // This is a low-level header for implementing GUIs that can be interacted with programmatically.
 // Most likely you don't need to touch this, just use widgets from `MRUIStyle.h`.
@@ -29,6 +30,8 @@ namespace detail
     struct BoundedValue<std::string>
     {
         std::string value;
+
+        std::optional<std::vector<std::string>> allowedValues;
     };
 
     template <typename T>
@@ -71,7 +74,7 @@ requires std::is_arithmetic_v<T>
     return ret ? std::optional<T>( T( *ret ) ) : std::nullopt;
 }
 // This overload is for strings.
-[[nodiscard]] MRVIEWER_API std::optional<std::string> createValue( std::string_view name, std::string value );
+[[nodiscard]] MRVIEWER_API std::optional<std::string> createValue( std::string_view name, std::string value, std::optional<std::vector<std::string>> allowedValues = std::nullopt );
 
 // Usually you don't need this function.
 // This is for widgets that require you to specify the value override before drawing it, such as `ImGui::CollapsingHeader()`.
@@ -119,6 +122,8 @@ struct ValueEntry
     {
         // The current value.
         std::string value;
+
+        std::optional<std::vector<std::string>> allowedValues;
 
         // Set to override the value.
         mutable std::optional<std::string> simulatedValue;

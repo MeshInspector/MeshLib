@@ -1104,6 +1104,17 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
 {
     assert( tooltips.empty() || tooltips.size() == options.size() );
 
+    bool valueOverridden = false;
+    if ( auto opt = TestEngine::createValue( label, options[*v], options ) )
+    {
+        if ( auto it = std::find( options.begin(), options.end(), *opt ); it != options.end() )
+        {
+            *v = int( it - options.begin() );
+            valueOverridden = true;
+            detail::markItemEdited( ImGui::GetID( label ) );
+        }
+    }
+
     StyleParamHolder sh;
     const float menuScaling = Viewer::instanceRef().getMenuPlugin()->menu_scaling();
     sh.addVar( ImGuiStyleVar_FramePadding, menuScaling * StyleConsts::CustomCombo::framePadding );
@@ -1141,7 +1152,7 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
     DrawCustomArrow( window->DrawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
 
     if ( !res )
-        return false;
+        return valueOverridden;
 
     bool selected = false;
     for ( int i = 0; i < int( options.size() ); ++i )
@@ -1162,7 +1173,7 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
     ImGui::EndCombo();
     if ( !showPreview )
         ImGui::PopItemWidth();
-    return selected;
+    return selected || valueOverridden;
 }
 
 bool beginCombo( const char* label, const std::string& text /*= "Not selected" */, bool showPreview /*= true*/ )
@@ -1682,7 +1693,12 @@ bool beginTabItem( const char* label, bool* p_open, ImGuiTabItemFlags flags )
     // Set spacing between tabs
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( style.ItemInnerSpacing.x - 1, style.ItemInnerSpacing.y ) );
 
+    if ( auto opt = TestEngine::createValueTentative<bool>( label ); opt && *opt )
+        flags |= ImGuiTabItemFlags_SetSelected;
+
     bool result = ImGui::BeginTabItem( label, p_open, flags );
+
+    (void)TestEngine::createValue( label, result, false, true );
 
     ImGui::PopStyleVar( 2 );
     ImGui::PopStyleColor( 3 );

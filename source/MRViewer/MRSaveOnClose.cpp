@@ -6,13 +6,15 @@
 #include "MRRibbonFontManager.h"
 #include "MRViewer.h"
 #include "MRHistoryStore.h"
+#include "MRRibbonConstants.h"
+#include "MRUIStyle.h"
+#include "MRSceneCache.h"
 #include <MRMesh/MRSerializer.h>
 #include <MRMesh/MRObjectSave.h>
 #include <MRMesh/MRSceneRoot.h>
+#include <MRMesh/MRVisualObject.h>
 #include "ImGuiHelpers.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRRibbonConstants.h"
-#include "MRUIStyle.h"
 #include <imgui_internal.h>
 #include <GLFW/glfw3.h>
 
@@ -76,46 +78,53 @@ void SaveOnClosePlugin::preDraw_()
         if ( headerFont )
             ImGui::PopFont();
 
-        const char* text = "Save your changes?";
-        ImGui::SetCursorPosX( ( windowSize.x - ImGui::CalcTextSize( text ).x ) * 0.5f );
-        ImGui::Text( "%s", text );
+        // do not suggest saving empty scene
+        const bool showSave = !SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>().empty();
+        if ( showSave )
+        {
+            const char* text = "Save your changes?";
+            ImGui::SetCursorPosX( ( windowSize.x - ImGui::CalcTextSize( text ).x ) * 0.5f );
+            ImGui::Text( "%s", text );
+        }
 
         const auto style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * scaling } );
 
         const float p = ImGui::GetStyle().ItemSpacing.x;
-        const Vector2f btnSize{ ( ImGui::GetContentRegionAvail().x - p * 2 ) / 3.f, 0 };
+        const Vector2f btnSize{ showSave ? ( ImGui::GetContentRegionAvail().x - p * 2 ) / 3.f : ( ImGui::GetContentRegionAvail().x - p ) / 2.f, 0 };
 
-        if ( UI::button( "Save", btnSize, ImGuiKey_Enter ) )
+        if ( showSave )
         {
-            auto savePath = SceneRoot::getScenePath();
-            if ( savePath.empty() )
-                savePath = saveFileDialog( { {}, {}, SceneFileWriteFilters } );
+            if ( UI::button( "Save", btnSize, ImGuiKey_Enter ) )
+            {
+                auto savePath = SceneRoot::getScenePath();
+                if ( savePath.empty() )
+                    savePath = saveFileDialog( { {}, {}, SceneFileWriteFilters } );
 
-            ImGui::CloseCurrentPopup();
-            if ( !savePath.empty() )
-                ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [&shouldClose = shouldClose_, savePath, &root = SceneRoot::get()]()->std::function<void()>
-                {
-                    auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
-
-                    return[&shouldClose = shouldClose, savePath, res]()
+                ImGui::CloseCurrentPopup();
+                if ( !savePath.empty() )
+                    ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [&shouldClose = shouldClose_, savePath, &root = SceneRoot::get()]()->std::function<void()>
                     {
-                        if ( res )
+                        auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
+
+                        return[&shouldClose = shouldClose, savePath, res]()
                         {
-                            getViewerInstance().onSceneSaved( savePath );
-                            glfwSetWindowShouldClose( Viewer::instance()->window, true );
-                            shouldClose = true;
-                        }
-                        else
-                            showError( "Error saving scene: " + res.error() );
-                    };
-                } );
+                            if ( res )
+                            {
+                                getViewerInstance().onSceneSaved( savePath );
+                                glfwSetWindowShouldClose( Viewer::instance()->window, true );
+                                shouldClose = true;
+                            }
+                            else
+                                showError( "Error saving scene: " + res.error() );
+                        };
+                    } );
             }
+            UI::setTooltipIfHovered( "Save the current scene and close the application", scaling );
+            ImGui::SameLine( 0, p );
+        }
 
-
-        UI::setTooltipIfHovered( "Save the current scene and close the application", scaling );
-        ImGui::SameLine( 0, p );
-        if ( UI::button( "Don't Save", btnSize, ImGuiKey_N ) )
+        if ( UI::button( showSave ? "Don't Save" : "Close", btnSize, ImGuiKey_N ) )
         {
             glfwSetWindowShouldClose( Viewer::instance()->window, true );
             shouldClose_ = true;
@@ -135,7 +144,7 @@ void SaveOnClosePlugin::preDraw_()
 
         ImGui::PopStyleVar();
         ImGui::EndPopup();
-	}
+    }
 
     ImGui::PopStyleVar( 2 );
 

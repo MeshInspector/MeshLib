@@ -23,7 +23,7 @@ MRMeshOrPointsXf* mrMeshOrPointsXfNew( const MRMeshOrPoints* obj_, const MRAffin
     const auto& obj = *reinterpret_cast<const MeshOrPoints*>( obj_ );
     const auto& xf = *reinterpret_cast<const AffineXf3f*>( xf_ );
 
-    return reinterpret_cast<MRMeshOrPointsXf*>( new MeshOrPointsXf( obj, xf ) );
+    return reinterpret_cast<MRMeshOrPointsXf*>( new MeshOrPointsXf { obj, xf } );
 }
 
 MRMeshOrPointsXf* mrMeshOrPointsXfFromMesh( const MRMesh* mesh_, const MRAffineXf3f* xf_ )
@@ -31,7 +31,7 @@ MRMeshOrPointsXf* mrMeshOrPointsXfFromMesh( const MRMesh* mesh_, const MRAffineX
     const auto& mesh = *reinterpret_cast<const Mesh*>( mesh_ );
     const auto& xf = *reinterpret_cast<const AffineXf3f*>( xf_ );
 
-    return reinterpret_cast<MRMeshOrPointsXf*>( new MeshOrPointsXf( mesh, xf ) );
+    return reinterpret_cast<MRMeshOrPointsXf*>( new MeshOrPointsXf { { mesh }, xf } );
 }
 
 MRMeshOrPointsXf* mrMeshOrPointsXfFromPointCloud( const MRPointCloud* pc_, const MRAffineXf3f* xf_ )
@@ -39,5 +39,5 @@ MRMeshOrPointsXf* mrMeshOrPointsXfFromPointCloud( const MRPointCloud* pc_, const
     const auto& pc = *reinterpret_cast<const PointCloud*>( pc_ );
     const auto& xf = *reinterpret_cast<const AffineXf3f*>( xf_ );
 
-    return reinterpret_cast<MRMeshOrPointsXf*>( new MeshOrPointsXf( pc, xf ) );
+    return reinterpret_cast<MRMeshOrPointsXf*>( new MeshOrPointsXf { { pc }, xf } );
 }

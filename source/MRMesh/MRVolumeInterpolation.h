@@ -11,6 +11,8 @@ namespace MR
 ///             I---*---I---*---I---
 ///             |       |       |
 /// value:     [0]     [1]     [2] ...
+/// note: this class is as thread-safe as the underlying Accessor
+/// e.g. VoxelsVolumeAccessor<VdbVolume> is not thread-safe (but several instances on same volume is thread-safe)
 template <typename Accessor>
 class VoxelsVolumeInterpolatedAccessor
 {
@@ -18,7 +20,9 @@ public:
     using VolumeType = typename Accessor::VolumeType;
     using ValueType = typename Accessor::ValueType;
 
-    explicit VoxelsVolumeInterpolatedAccessor( const VolumeType& volume, const Accessor &accessor )
+    /// create an accessor instance that stores references to volume and its accessor
+    /// the volume should not modified while it is accessed by this class
+    explicit VoxelsVolumeInterpolatedAccessor( const VolumeType& volume, const Accessor& accessor )
         : volume_( volume ), accessor_( accessor )
     {
 #ifndef MRMESH_NO_OPENVDB
@@ -29,6 +33,17 @@ public:
         }
 #endif
     }
+
+    /// delete copying constructor to avoid accidentally creating non-thread-safe accessors
+    VoxelsVolumeInterpolatedAccessor( const VoxelsVolumeInterpolatedAccessor& ) = delete;
+    /// a copying-like constructor with explicitly provided accessor
+    explicit VoxelsVolumeInterpolatedAccessor( const VoxelsVolumeInterpolatedAccessor& other, const Accessor& accessor )
+#ifndef MRMESH_NO_OPENVDB
+        : volume_( other.volume_ ), accessor_( accessor ), minCoord_( other.minCoord_ )
+#else
+        : volume_( other.volume_ ), accessor_( accessor )
+#endif
+    {}
 
     /// get value at specified coordinates
     ValueType get( const Vector3f& pos ) const

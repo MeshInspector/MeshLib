@@ -3,6 +3,7 @@
 #include "MRBestFitParabola.h"
 #include "MRMesh.h"
 #include "MRMeshRelax.hpp"
+#include <MRMesh/MRParallelFor.h>
 
 
 namespace MR
@@ -19,6 +20,15 @@ MeshOnVoxelsT<MeshType>::MeshOnVoxelsT( MeshType& mesh, const AffineXf3f& meshXf
     xfInv_( xf_.inverse() ), xfNormal_( xfInv_.A.transposed() ),
     noXf_( xf_.A == Matrix3f() ),
     numVerts_( mesh_.topology.numValidVerts() )
+{}
+
+template <typename MeshType>
+MeshOnVoxelsT<MeshType>::MeshOnVoxelsT( const MeshOnVoxelsT& other ) :
+    mesh_( other.mesh_ ), volume_( other.volume_ ),
+    voxelSize_( other.voxelSize_ ),
+    accessor_( other.accessor_ ), interpolator_( volume_, accessor_ ), // Note: accessor copy is created here
+    xf_( other.xf_ ), xfInv_( other.xfInv_ ), xfNormal_( other.xfNormal_ ), noXf_( other.noXf_ ),
+    numVerts_( other.numVerts_ )
 {}
 
 
@@ -119,45 +129,55 @@ namespace
 VertBitSet adjustOneIter( MeshOnVoxels& mv, int samplePoints, float intermediateSmoothSpeed )
 {
     MR_TIMER
-    auto& meshCopy = mv.mesh();
-    VertCoords& newPoints = meshCopy.points;
 
     VertBitSet correctedPoints( mv.mesh().points.size() );
-    Vector<Vector3f, VertId> shifts( meshCopy.points.size(), Vector3f{ 0.f, 0.f, 0.f } );
-    Vector<float, VertId> derivs( meshCopy.points.size(), 0.f );
+    Vector<Vector3f, VertId> shifts( mv.mesh().points.size(), Vector3f{ 0.f, 0.f, 0.f } );
 
-    for ( VertId v : mv.mesh().topology.getValidVerts() )
-    {
-        // Calculate values
-        Vector3f pt = mv.point( v ), offset = mv.getOffsetVector( v );
-
-        std::vector<float> values( samplePoints );
-        std::vector<float> derivatives( samplePoints - 1 );
-        mv.getValues( values, pt, offset );
-        mv.getDerivatives( derivatives, values );
-
-        auto parabola = mv.getBestParabola( derivatives.begin(), derivatives.end() );
-        if ( parabola.a < 0.f )
-            continue;
-
-        float minX = parabola.extremArg();
-        // Adjust point
-        if ( minX >= -1.f && minX <= 1.f )
-        {
-            correctedPoints.set( v );
-            shifts[v] = std::clamp( minX, -0.1f, 0.1f ) * offset;
-            derivs[v] = parabola.extremVal();
-        }
+    struct ThreadSpecific {
+        MeshOnVoxels mv;            // Volume accessors are copied for thread safety
+        std::vector<float> values;  // Pre-allocate working vectors
+        std::vector<float> derivatives;
+    } threadSpecificExemplar {
+        mv,
+        std::vector<float>( samplePoints ),
+        std::vector<float>( samplePoints - 1 )
     };
+    tbb::enumerable_thread_specific<ThreadSpecific> threadSpecific( std::move( threadSpecificExemplar ) );
+    BitSetParallelFor( mv.mesh().topology.getValidVerts(), threadSpecific,
+        [&correctedPoints, &shifts] ( VertId v, ThreadSpecific &local )
+        {
+            std::vector<float> &values = local.values;
+            std::vector<float> &derivatives = local.derivatives;
 
-    Vector<float, VertId> weights( meshCopy.points.size(), 1.f );
-    for ( VertId v : correctedPoints )
-        weights[v] = 10.f;
+            // Calculate values
+            Vector3f pt = local.mv.point( v ), offset = local.mv.getOffsetVector( v );
+            local.mv.getValues( values, pt, offset );
+            local.mv.getDerivatives( derivatives, values );
+
+            auto parabola = local.mv.getBestParabola( derivatives.begin(), derivatives.end() );
+            if ( parabola.a < 0.f )
+                return;
+
+            float minX = parabola.extremArg();
+            // Adjust point
+            if ( minX >= -1.f && minX <= 1.f )
+            {
+                correctedPoints.set( v );
+                shifts[v] = std::clamp( minX, -0.1f, 0.1f ) * offset;
+            }
+        } );
+
+    Vector<float, VertId> weights( mv.mesh().points.size(), 1.f );
+    BitSetParallelFor( correctedPoints,
+        [weights = weights.data()] ( VertId v )
+        {
+            weights[v] = 10.f;
+        } );
 
     constexpr int smoothIters = 15;
 
     relax(
-        meshCopy.topology,
+        mv.mesh().topology,
         shifts,
         MeshRelaxParams{ {
                 .iterations = smoothIters,
@@ -166,11 +186,14 @@ VertBitSet adjustOneIter( MeshOnVoxels& mv, int samplePoints, float intermediate
             false, &weights }
     );
 
-    for ( VertId v : meshCopy.topology.getValidVerts() )
-        newPoints[v] += shifts[v];
+    BitSetParallelFor( mv.mesh().topology.getValidVerts(),
+        [points = mv.mesh().points.data(), shifts = shifts.data()] ( VertId v )
+        {
+            points[v] += shifts[v];
+        } );
 
     relax(
-        meshCopy,
+        mv.mesh(),
         MeshRelaxParams{ {
                 .iterations = smoothIters,
                 .force = 0.01f
@@ -178,7 +201,7 @@ VertBitSet adjustOneIter( MeshOnVoxels& mv, int samplePoints, float intermediate
             false, &weights }
     );
 
-    meshCopy.invalidateCaches();
+    mv.mesh().invalidateCaches();
     return correctedPoints;
 }
 

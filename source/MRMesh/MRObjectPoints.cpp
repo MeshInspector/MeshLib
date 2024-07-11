@@ -4,8 +4,9 @@
 #include "MRObjectMesh.h"
 #include "MRRegionBoundary.h"
 #include "MRMesh.h"
+#include "MRParallelFor.h"
+#include "MRTimer.h"
 #include "MRPch/MRJson.h"
-#include "MRPch/MRTBB.h"
 
 namespace MR
 {
@@ -132,4 +133,68 @@ void ObjectPoints::serializeFields_( Json::Value& root ) const
     root["Type"].append( ObjectPoints::TypeName() );
 }
 
+std::shared_ptr<ObjectPoints> merge( const std::vector<std::shared_ptr<ObjectPoints>>& objsPoints )
+{
+    MR_TIMER
+    auto pointCloud = std::make_shared<PointCloud>();
+    auto& points = pointCloud->points;
+
+    bool allWithNormals = true;
+    bool allWithoutNormals = true;
+    bool anyWithColors = false;
+    for ( const auto& obj : objsPoints )
+    {
+        const auto & pc = obj->pointCloud();
+        if ( !pc || !pc->validPoints.any() )
+            continue;
+        if ( pc->hasNormals() )
+            allWithoutNormals = false;
+        else
+            allWithNormals = false;
+        if ( ( obj->getColoringType() == ColoringType::VertsColorMap ) &&
+             ( obj->getVertsColorMap().size() > int( obj->pointCloud()->validPoints.find_last() ) ) )
+            anyWithColors = true;
+    }
+    const VertNormals emptyNormals;
+
+    VertColors colors;
+    for ( const auto& obj : objsPoints )
+    {
+        if ( !obj->pointCloud() )
+            continue;
+
+        VertMap vertMap{};
+        pointCloud->addPartByMask( *obj->pointCloud(), obj->pointCloud()->validPoints, { .src2tgtVerts = &vertMap },
+            allWithNormals ? nullptr : &emptyNormals );
+
+        const bool withColors = ( obj->getColoringType() == ColoringType::VertsColorMap ) &&
+            ( obj->getVertsColorMap().size() > int( obj->pointCloud()->validPoints.find_last() ) ) ;
+        const auto& objColors = obj->getVertsColorMap();
+        if ( anyWithColors )
+            colors.resize( size_t( vertMap.back() ) + 1, obj->getFrontColor( true ) );
+        auto worldXf = obj->worldXf();
+        auto normalsMatrix = worldXf.A.inverse().transposed();
+        ParallelFor( vertMap, [&] ( VertId v )
+        {
+            auto vInd = vertMap[v];
+            if ( !vInd.valid() )
+                return;
+            points[vInd] = worldXf( points[vInd] );
+            if ( allWithNormals )
+                pointCloud->normals[vInd] = ( normalsMatrix * pointCloud->normals[vInd] ).normalized();
+            if ( withColors )
+                colors[vInd] = objColors[v];
+        } );
+    }
+
+    auto objectPoints = std::make_shared<ObjectPoints>();
+    objectPoints->setPointCloud( std::move( pointCloud ) );
+    if ( !colors.empty() )
+    {
+        objectPoints->setVertsColorMap( std::move( colors ) );
+        objectPoints->setColoringType( ColoringType::VertsColorMap );
+    }
+    return objectPoints;
 }
+
+} //namespace MR

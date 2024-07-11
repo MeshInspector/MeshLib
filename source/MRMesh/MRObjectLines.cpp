@@ -1,6 +1,7 @@
 #include "MRObjectLines.h"
 #include "MRObjectFactory.h"
 #include "MRPolyline.h"
+#include "MRTimer.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 
@@ -105,4 +106,32 @@ std::vector<std::string> ObjectLines::getInfoLines() const
     return res;
 }
 
+std::shared_ptr<ObjectLines> merge( const std::vector<std::shared_ptr<ObjectLines>>& objsLines )
+{
+    MR_TIMER
+    auto line = std::make_shared<Polyline3>();
+    auto& points = line->points;
+    for ( const auto& obj : objsLines )
+    {
+        if ( !obj->polyline() )
+            continue;
+
+        VertMap vertMap{};
+        UndirectedEdgeBitSet validPoints;
+        validPoints.resize( obj->polyline()->topology.undirectedEdgeSize(), true );
+        line->addPartByMask( *obj->polyline(), validPoints, &vertMap );
+
+        auto worldXf = obj->worldXf();
+        for ( const auto& vInd : vertMap )
+        {
+            if ( vInd.valid() )
+                points[vInd] = worldXf( points[vInd] );
+        }
+    }
+
+    auto objectLines = std::make_shared<ObjectLines>();
+    objectLines->setPolyline( std::move( line ) );
+    return objectLines;
 }
+
+} // namespace MR

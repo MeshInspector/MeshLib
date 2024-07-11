@@ -7,6 +7,7 @@
 #include "MRAABBTree.h"
 #include "MRAABBTreePoints.h"
 #include "MRLine3.h"
+#include "MRTimer.h"
 #include "MRGTest.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
@@ -179,6 +180,89 @@ void ObjectMesh::serializeFields_( Json::Value& root ) const
 {
     ObjectMeshHolder::serializeFields_( root );
     root["Type"].append( ObjectMesh::TypeName() );
+}
+
+std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>>& objsMesh )
+{
+    MR_TIMER
+
+    bool hasVertColorMap = false;
+    bool hasFaceColorMap = false;
+    size_t totalVerts = 0;
+    size_t totalFaces = 0;
+    for ( const auto& obj : objsMesh )
+    {
+        if ( auto curMesh = obj->mesh() )
+        {
+            totalVerts += curMesh->topology.numValidVerts();
+            totalFaces += curMesh->topology.numValidFaces();
+            if ( !obj->getVertsColorMap().empty() )
+                hasVertColorMap = true;
+            if ( !obj->getFacesColorMap().empty() )
+                hasFaceColorMap = true;
+        }
+    }
+    auto mesh = std::make_shared<Mesh>();
+    auto& points = mesh->points;
+    mesh->topology.vertReserve( totalVerts );
+    mesh->topology.faceReserve( totalFaces );
+
+    VertColors vertColors;
+    if ( hasVertColorMap )
+        vertColors.resizeNoInit( totalVerts );
+
+    FaceColors faceColors;
+    if ( hasFaceColorMap )
+        faceColors.resizeNoInit( totalFaces );
+
+    for ( const auto& obj : objsMesh )
+    {
+        if ( !obj->mesh() )
+            continue;
+
+        VertMap vertMap;
+        FaceMap faceMap;
+        mesh->addPart( *obj->mesh(), hasFaceColorMap ? &faceMap : nullptr, &vertMap );
+
+        auto worldXf = obj->worldXf();
+        for ( const auto& vInd : vertMap )
+        {
+            if ( vInd.valid() )
+                points[vInd] = worldXf( points[vInd] );
+        }
+
+        if ( hasVertColorMap )
+        {
+            const auto& curColorMap = obj->getVertsColorMap();
+            for ( VertId thisId = 0_v; thisId < vertMap.size(); ++thisId )
+            {
+                if ( auto mergeId = vertMap[thisId] )
+                    vertColors[mergeId] = curColorMap.size() <= thisId ? obj->getFrontColor() : curColorMap[thisId];
+            }
+        }
+        if ( hasFaceColorMap )
+        {
+            const auto& curColorMap = obj->getFacesColorMap();
+            for ( FaceId thisId = 0_f; thisId < faceMap.size(); ++thisId )
+            {
+                if ( auto mergeId = faceMap[thisId] )
+                    faceColors[mergeId] = curColorMap.size() <= thisId ? obj->getFrontColor() : curColorMap[thisId];
+            }
+        }
+    }
+    assert( totalVerts == mesh->topology.numValidVerts() );
+    assert( totalFaces == mesh->topology.numValidFaces() );
+
+    auto objectMesh = std::make_shared<ObjectMesh>();
+    objectMesh->setVertsColorMap( std::move( vertColors ) );
+    objectMesh->setFacesColorMap( std::move( faceColors ) );
+    objectMesh->setMesh( std::move( mesh ) );
+    if( hasVertColorMap )
+        objectMesh->setColoringType( ColoringType::VertsColorMap );
+    else if( hasFaceColorMap )
+        objectMesh->setColoringType( ColoringType::FacesColorMap );
+
+    return objectMesh;
 }
 
 TEST(MRMesh, DataModel)

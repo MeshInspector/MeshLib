@@ -60,6 +60,11 @@ public:
     /// adds other instance of FreeFormBestFit if it has same ref grid
     MRMESH_API void addOther( const FreeFormBestFit& other );
 
+    /// stabilizer adds additional weights to keep result grid closer to origins
+    /// recommended values (0;1], but it can be higher
+    void setStabilizer( double stabilizer ) { stabilizer_ = stabilizer; }
+    double getStabilizer() const { return stabilizer_; }
+
     /// finds best grid points positions to align source points to target points
     [[nodiscard]] MRMESH_API std::vector<Vector3f> findBestDeformationReferenceGrid();
 private:
@@ -78,6 +83,7 @@ private:
 
     Vector3d reverseDiagonal_;
 
+    double stabilizer_{ 0.2 };
     void stabilize_();
 };
 

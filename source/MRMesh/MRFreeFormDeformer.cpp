@@ -356,9 +356,11 @@ std::vector<MR::Vector3f> FreeFormBestFit::findBestDeformationReferenceGrid()
 
 void FreeFormBestFit::stabilize_()
 {
+    if ( stabilizer_ <= 0 )
+        return;
     std::vector<Vector3f> refGrid = makeFreeFormOriginGrid( Box3f( box_ ), resolution_ );
     for ( const auto& refPoint : refGrid )
-        addPair( refPoint, refPoint, float( numSamples_ ) / float( refGrid.size() ) );
+        addPair( Vector3d( refPoint ), Vector3d( refPoint ), double( numSamples_ ) / double( refGrid.size() ) * stabilizer_ );
 }
 
 }

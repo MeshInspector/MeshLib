@@ -61,12 +61,13 @@ public:
     MRMESH_API void addOther( const FreeFormBestFit& other );
 
     /// finds best grid points positions to align source points to target points
-    [[nodiscard]] MRMESH_API std::vector<Vector3f> findBestDeformationReferenceGrid() const;
+    [[nodiscard]] MRMESH_API std::vector<Vector3f> findBestDeformationReferenceGrid();
 private:
     Box3d box_;
     Vector3i resolution_;
     size_t resXY_{ 0 };
     size_t size_{ 0 };
+    size_t numSamples_{ 0 };
 
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> accumA_;
     Eigen::Matrix<double, Eigen::Dynamic, 3> accumB_;
@@ -76,8 +77,12 @@ private:
     std::vector<int> pascalLineZ_;
 
     Vector3d reverseDiagonal_;
+
+    void stabilize_();
 };
 
+/// Returns positions of grid points in given box with given resolution 
+MRMESH_API std::vector<Vector3f> makeFreeFormOriginGrid( const Box3f& box, const Vector3i& resolution );
 
 // Calculates best Free Form transform to fit given source->target deformation
 // origin ref grid as box corners ( resolution parameter specifies how to divide box )

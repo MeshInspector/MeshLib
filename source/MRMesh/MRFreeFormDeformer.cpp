@@ -54,25 +54,6 @@ Vector3f interpolateNPoints( const std::span<const Vector3f>& points, float coef
     return tempPoints[offset] * invCoef + tempPoints[offset + 1] * coef;
 }
 
-std::vector<Vector3f> makeOriginGrid( const Box3f& box, const Vector3i& resolution )
-{
-    auto resXY = resolution.x * resolution.y;
-    std::vector<Vector3f> res( resXY *resolution.z );
-    for ( int z = 0; z < resolution.z; ++z )
-    for ( int y = 0; y < resolution.y; ++y )
-    for ( int x = 0; x < resolution.x; ++x )
-    {
-        auto index = x + y * resolution.x + z * resXY;
-        Vector3f coef( x / float( resolution.x - 1 ), y / float( resolution.y - 1 ), z / float( resolution.z - 1 ) );
-
-        res[index] = Vector3f(
-            box.min.x * ( 1.0f - coef.x ) + box.max.x * coef.x,
-            box.min.y * ( 1.0f - coef.y ) + box.max.y * coef.y,
-            box.min.z * ( 1.0f - coef.z ) + box.max.z * coef.z );
-    }
-    return res;
-}
-
 // simple factorial func
 int factorial( int n )
 {
@@ -168,6 +149,25 @@ std::vector<double> freeformWeights( const std::vector<int>& pascalLineX,
 namespace MR
 {
 
+std::vector<Vector3f> makeFreeFormOriginGrid( const Box3f& box, const Vector3i& resolution )
+{
+    auto resXY = resolution.x * resolution.y;
+    std::vector<Vector3f> res( resXY * resolution.z );
+    for ( int z = 0; z < resolution.z; ++z )
+        for ( int y = 0; y < resolution.y; ++y )
+            for ( int x = 0; x < resolution.x; ++x )
+            {
+                auto index = x + y * resolution.x + z * resXY;
+                Vector3f coef( x / float( resolution.x - 1 ), y / float( resolution.y - 1 ), z / float( resolution.z - 1 ) );
+
+                res[index] = Vector3f(
+                    box.min.x * ( 1.0f - coef.x ) + box.max.x * coef.x,
+                    box.min.y * ( 1.0f - coef.y ) + box.max.y * coef.y,
+                    box.min.z * ( 1.0f - coef.z ) + box.max.z * coef.z );
+            }
+    return res;
+}
+
 FreeFormDeformer::FreeFormDeformer( VertCoords& coords, const VertBitSet& valid ) :
     coords_{ coords },
     validPoints_{ valid }
@@ -194,7 +194,7 @@ void FreeFormDeformer::init( const Vector3i& resolution /*= Vector3i::diagonal( 
     } );
 
     resolution_ = resolution;
-    refPointsGrid_ = makeOriginGrid( initialBox_, resolution );
+    refPointsGrid_ = makeFreeFormOriginGrid( initialBox_, resolution );
 }
 
 void FreeFormDeformer::setRefGridPointPosition( const Vector3i& coordOfPointInGrid, const Vector3f& newPos )
@@ -288,7 +288,7 @@ std::vector<Vector3f> findBestFreeformDeformation( const Box3f& box, const std::
     FreeFormBestFit ffbf( Box3d( box ), resolution );
 
     for ( int k = 0; k < source.size(); k++ )
-        ffbf.addPair( samplesToBox ? ( *samplesToBox )( source[k] ) : source[k], samplesToBox ? ( *samplesToBox )( target[k] ) : target[k], 100.0 );
+        ffbf.addPair( samplesToBox ? ( *samplesToBox )( source[k] ) : source[k], samplesToBox ? ( *samplesToBox )( target[k] ) : target[k] );
 
     return ffbf.findBestDeformationReferenceGrid();
 }
@@ -324,6 +324,7 @@ void FreeFormBestFit::addPair( const Vector3d& src, const Vector3d& tgt, double 
             accumA_( i, j ) += ( ws[i] * ws[j] * w );
         }
     }
+    ++numSamples_;
 }
 
 void FreeFormBestFit::addOther( const FreeFormBestFit& other )
@@ -335,19 +336,29 @@ void FreeFormBestFit::addOther( const FreeFormBestFit& other )
     }
     accumA_ += other.accumA_;
     accumB_ += other.accumB_;
+    numSamples_ += other.numSamples_;
 }
 
-std::vector<MR::Vector3f> FreeFormBestFit::findBestDeformationReferenceGrid() const
+std::vector<MR::Vector3f> FreeFormBestFit::findBestDeformationReferenceGrid()
 {
+    stabilize_();
+
     Eigen::Matrix<double, Eigen::Dynamic, 3> C = accumA_.colPivHouseholderQr().solve( accumB_ );
 
     // Make result equal to origin grid
-    std::vector<Vector3f> res = makeOriginGrid( Box3f( box_ ), resolution_ );
+    std::vector<Vector3f> res = makeFreeFormOriginGrid( Box3f( box_ ), resolution_ );
 
     // Add calculated diffs to origin grid
     for ( size_t i = 0; i < size_; ++i )
         res[i] += Vector3f( fromEigen( Eigen::Vector3d( C.row( i ) ) ) );
     return res;
+}
+
+void FreeFormBestFit::stabilize_()
+{
+    std::vector<Vector3f> refGrid = makeFreeFormOriginGrid( Box3f( box_ ), resolution_ );
+    for ( const auto& refPoint : refGrid )
+        addPair( refPoint, refPoint, float( numSamples_ ) / float( refGrid.size() ) );
 }
 
 }

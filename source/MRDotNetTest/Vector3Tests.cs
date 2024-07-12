@@ -9,18 +9,18 @@ namespace MR.DotNet.Test
         public void TestConstructor()
         {
             var a = new Vector3f(1, 2, 3);
-            Assert.That(1 == a.x);
-            Assert.That(2 == a.y);
-            Assert.That(3 == a.z);
+            Assert.That(1 == a.X);
+            Assert.That(2 == a.Y);
+            Assert.That(3 == a.Z);
         }
 
         [Test]
         public void TestDefaultConstructor()
         {
             var a = new Vector3f();
-            Assert.That(0 == a.x);
-            Assert.That(0 == a.y);
-            Assert.That(0 == a.z);
+            Assert.That(0 == a.X);
+            Assert.That(0 == a.Y);
+            Assert.That(0 == a.Z);
         }
 
         [Test]
@@ -30,9 +30,9 @@ namespace MR.DotNet.Test
             var b = new Vector3f(4, 5, 6);
             var c = a + b;
 
-            Assert.That(5 == c.x);
-            Assert.That(7 == c.y);
-            Assert.That(9 == c.z);
+            Assert.That(5 == c.X);
+            Assert.That(7 == c.Y);
+            Assert.That(9 == c.Z);
         }
 
         [Test]
@@ -42,9 +42,9 @@ namespace MR.DotNet.Test
             var b = new Vector3f(6, 5, 4);
             var c = b - a;
 
-            Assert.That(5 == c.x);
-            Assert.That(3 == c.y);
-            Assert.That(1 == c.z);            
+            Assert.That(5 == c.X);
+            Assert.That(3 == c.Y);
+            Assert.That(1 == c.Z);            
         }
 
         [Test]
@@ -54,14 +54,14 @@ namespace MR.DotNet.Test
             float k = 2;
             var c = a * k;
 
-            Assert.That(2 == c.x);
-            Assert.That(4 == c.y);
-            Assert.That(6 == c.z);
+            Assert.That(2 == c.X);
+            Assert.That(4 == c.Y);
+            Assert.That(6 == c.Z);
 
             c = k * a;
-            Assert.That(2 == c.x);
-            Assert.That(4 == c.y);
-            Assert.That(6 == c.z);
+            Assert.That(2 == c.X);
+            Assert.That(4 == c.Y);
+            Assert.That(6 == c.Z);
         }        
     }
 }

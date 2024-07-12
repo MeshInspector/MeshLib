@@ -25,37 +25,37 @@ Vector3f::~Vector3f()
     delete vec_;
 }
 
-Vector3f^ Vector3f::diagonal( float a )
+Vector3f^ Vector3f::Diagonal( float a )
 {
     return gcnew Vector3f( a, a, a );
 }
 
-inline Vector3f^ Vector3f::plusX()
+inline Vector3f^ Vector3f::PlusX()
 {
     return gcnew Vector3f( 1, 0, 0 );
 }
 
-inline Vector3f^ Vector3f::minusX()
+inline Vector3f^ Vector3f::MinusX()
 {
     return gcnew Vector3f( -1, 0, 0 );
 }
 
-inline Vector3f^ Vector3f::plusY()
+inline Vector3f^ Vector3f::PlusY()
 {
     return gcnew Vector3f( 0, 1, 0 );
 }
 
-inline Vector3f^ Vector3f::minusY()
+inline Vector3f^ Vector3f::MinusY()
 {
     return gcnew Vector3f( 0, -1, 0 );
 }
 
-inline Vector3f^ Vector3f::plusZ()
+inline Vector3f^ Vector3f::PlusZ()
 {
     return gcnew Vector3f( 0, 0, 1 );
 }
 
-inline Vector3f^ Vector3f::minusZ()
+inline Vector3f^ Vector3f::MinusZ()
 {
     return gcnew Vector3f( 0, 0, -1 );
 }
@@ -96,32 +96,32 @@ Vector3f^ Vector3f::operator - ( Vector3f^ a, Vector3f^ b )
     return gcnew Vector3f( new MR::Vector3f( *a->vec_ - *b->vec_ ) );
 }
 
-float Vector3f::x::get()
+float Vector3f::X::get()
 {
     return vec_->x;
 }
 
-void Vector3f::x::set( float value )
+void Vector3f::X::set( float value )
 {
     vec_->x = value;
 }
 
-float Vector3f::y::get()
+float Vector3f::Y::get()
 {
     return vec_->y;
 }
 
-void Vector3f::y::set( float value )
+void Vector3f::Y::set( float value )
 {
     vec_->y = value;
 }
 
-float Vector3f::z::get()
+float Vector3f::Z::get()
 {
     return vec_->z;
 }
 
-void Vector3f::z::set( float value )
+void Vector3f::Z::set( float value )
 {
     vec_->z = value;
 }

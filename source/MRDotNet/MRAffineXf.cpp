@@ -32,14 +32,14 @@ AffineXf3f::AffineXf3f( Matrix3f^ A, Vector3f^ b )
 
     xf_ = new MR::AffineXf3f( *A->mat(), *b->vec() );
     this->A = A;
-    this->b = b;
+    this->B = b;
 }
 
 AffineXf3f::AffineXf3f( MR::AffineXf3f* xf )
 {
     xf_ = xf;
     this->A = gcnew Matrix3f( new MR::Matrix3f( xf_->A ) );
-    this->b = gcnew Vector3f( new MR::Vector3f( xf_->b ) );
+    this->B = gcnew Vector3f( new MR::Vector3f( xf_->b ) );
 }
 
 AffineXf3f::~AffineXf3f()
@@ -69,12 +69,12 @@ void AffineXf3f::A::set( Matrix3f^ value )
     A_ = value;
 }
 
-Vector3f^ AffineXf3f::b::get()
+Vector3f^ AffineXf3f::B::get()
 {
     return b_;
 }
 
-void AffineXf3f::b::set( Vector3f^ value )
+void AffineXf3f::B::set( Vector3f^ value )
 {
     if ( !value )
         throw gcnew System::ArgumentNullException();

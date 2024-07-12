@@ -80,6 +80,9 @@
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <VcpkgTriplet>x64-windows-meshlib</VcpkgTriplet>
   </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <VcpkgTriplet>x64-windows-meshlib</VcpkgTriplet>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -91,6 +94,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies />
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -124,16 +128,19 @@
       <AdditionalIncludeDirectories>$(ProjectDir)..\;$(ProjectDir)..\..\thirdparty\parallel-hashmap\;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DisableSpecificWarnings>4945</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <AdditionalDependencies />
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="MRAffineXf.h" />
     <ClInclude Include="MRBitSet.h" />
     <ClInclude Include="MRMatrix3.h" />
-    <ClInclude Include="MRMeshTopology.h" />
+    <ClInclude Include="MRMesh.h" />
+    <ClInclude Include="MRMeshBoolean.h" />
     <ClInclude Include="MRVector3.h" />
     <ClInclude Include="MRMeshFwd.h" />
   </ItemGroup>
@@ -142,13 +149,9 @@
     <ClCompile Include="AssemblyInfo.cpp" />
     <ClCompile Include="MRBitSet.cpp" />
     <ClCompile Include="MRMatrix3.cpp" />
-    <ClCompile Include="MRMeshTopology.cpp" />
+    <ClCompile Include="MRMesh.cpp" />
+    <ClCompile Include="MRMeshBoolean.cpp" />
     <ClCompile Include="MRVector3.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">

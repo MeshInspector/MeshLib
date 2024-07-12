@@ -35,51 +35,52 @@ BitSet::BitSet(MR::BitSet* bs)
 :BitSetReadOnly( bs )
 {}
 
-int BitSetReadOnly::size()
+int BitSetReadOnly::Size()
 {
     return int( bs_->size() );
 }
 
-//call of MR::BitSet::find_last somehow breaks the build, so we provide an alternative implementation here
-int BitSetReadOnly::findLast()
+int BitSetReadOnly::Count()
 {
-    if ( !bs_->any() )
-        return -1;
-
-    for ( int i = int( bs_->size() ); i-- >= 1; )
-    {
-        if ( bs_->test( i ) )
-            return i;
-    }
-    return -1;
+    return int( bs_->count() );
 }
 
-bool BitSetReadOnly::test(int i)
+int BitSetReadOnly::FindLast()
+{
+    return int( bs_->find_last() );
+}
+
+int BitSetReadOnly::FindFirst()
+{
+    return int( bs_->find_first() );
+}
+
+bool BitSetReadOnly::Test(int i)
 {
     return bs_->test( i );
 }
 
-void BitSet::set(int i)
+void BitSet::Set(int i)
 {
     bs_->set( i, true );
 }
 
-void BitSet::set( int i, bool value )
+void BitSet::Set( int i, bool value )
 {
     bs_->set( i, value );
 }
 
-void BitSet::resize( int size )
+void BitSet::Resize( int size )
 {
     bs_->resize( size );
 }
 
-void BitSet::autoResizeSet( int i )
+void BitSet::AutoResizeSet( int i )
 {
     bs_->autoResizeSet( i, true );
 }
 
-void BitSet::autoResizeSet( int i, bool value )
+void BitSet::AutoResizeSet( int i, bool value )
 {
     bs_->autoResizeSet( i, value );
 }

@@ -6,9 +6,12 @@ MR_DOTNET_NAMESPACE_BEGIN
 public ref class BitSetReadOnly
 {
 public:
-    bool test( int index );
-    int findLast();
-    int size();
+    bool Test( int index );
+    int FindFirst();
+    int FindLast();
+    int Size();
+    int Count();
+
 internal:
     BitSetReadOnly( MR::BitSet* bs );
     ~BitSetReadOnly();
@@ -23,13 +26,13 @@ public:
     BitSet();
     BitSet(int size);
 
-    void set( int index );
-    void set( int index, bool value );
+    void Set( int index );
+    void Set( int index, bool value );
 
-    void resize( int size );
+    void Resize( int size );
     
-    void autoResizeSet( int index );
-    void autoResizeSet( int index, bool value );
+    void AutoResizeSet( int index );
+    void AutoResizeSet( int index, bool value );
 
 internal:
     BitSet( MR::BitSet* bs );

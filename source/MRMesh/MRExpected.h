@@ -3,18 +3,18 @@
 #include "MRMeshFwd.h"
 
 #include <version>
-#if __cpp_lib_expected >= 202211
-#include <expected>
-#else
+//#if __cpp_lib_expected >= 202211
+//#include <expected>
+//#else
 #include <tl/expected.hpp>
-#endif
+//#endif
 
 #include <string>
 
 namespace MR
 {
 
-#if __cpp_lib_expected >= 202211
+/*#if __cpp_lib_expected >= 202211
 
 template<class T, class E = std::string>
 using Expected = std::expected<T, E>;
@@ -25,7 +25,7 @@ inline auto unexpected( E &&e )
     return std::unexpected( std::forward<E>( e ) );
 }
 
-#else
+#else*/
 
 template<class T, class E = std::string>
 using Expected = tl::expected<T, E>;
@@ -36,7 +36,7 @@ inline auto unexpected( E &&e )
     return tl::make_unexpected( std::forward<E>( e ) );
 }
 
-#endif
+//#endif
 
 /// return type for a void function that can produce an error string
 using VoidOrErrStr = Expected<void, std::string>;

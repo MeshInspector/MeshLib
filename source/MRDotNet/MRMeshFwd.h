@@ -6,7 +6,6 @@
 #define MR_DOTNET_NAMESPACE_BEGIN namespace MR { namespace DotNet {
 #define MR_DOTNET_NAMESPACE_END }}
 
-using namespace System;
 using namespace System::Collections;
 using namespace System::Collections::Generic;
 using namespace System::Collections::ObjectModel;
@@ -45,5 +44,13 @@ using FaceBitSetReadOnly = BitSetReadOnly;
 
 using VertBitSet = BitSet;
 using FaceBitSet = BitSet;
+
+ref class Vector3f;
+ref class Matrix3f;
+ref class AffineXf3f;
+using VertCoords = List<Vector3f^>;
+using VertCoordsReadOnly = ReadOnlyCollection<Vector3f^>;
+
+ref class Mesh;
 
 MR_DOTNET_NAMESPACE_END

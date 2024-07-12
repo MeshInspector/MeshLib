@@ -18,7 +18,7 @@ public:
     static AffineXf3f^ operator*( AffineXf3f^ a, AffineXf3f^ b );
 
     property Matrix3f^ A { Matrix3f^ get(); void set( Matrix3f^ value ); }
-    property Vector3f^ b { Vector3f^ get(); void set( Vector3f^ value ); }
+    property Vector3f^ B { Vector3f^ get(); void set( Vector3f^ value ); }
 
 private:
     Matrix3f^ A_;

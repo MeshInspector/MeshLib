@@ -10,7 +10,7 @@ namespace MR.DotNet.Test
         {
             var a = new MR.DotNet.AffineXf3f();
             Assert.That( a.A == new Matrix3f() );
-            Assert.That( a.b == new Vector3f() );
+            Assert.That( a.B == new Vector3f() );
         }
 
         [Test]
@@ -21,7 +21,7 @@ namespace MR.DotNet.Test
 
             var a = new MR.DotNet.AffineXf3f( A, b );
             Assert.That( a.A == A );
-            Assert.That( a.b == b );
+            Assert.That( a.B == b );
         }
 
         [Test]
@@ -30,7 +30,7 @@ namespace MR.DotNet.Test
             var A = new Matrix3f( new Vector3f( 1, 2, 3 ), new Vector3f( 4, 5, 6 ), new Vector3f( 7, 8, 9 ) );
             var a = new MR.DotNet.AffineXf3f( A );
             Assert.That( a.A == A );
-            Assert.That( a.b == new Vector3f() );
+            Assert.That( a.B == new Vector3f() );
         }
 
         [Test]
@@ -39,7 +39,7 @@ namespace MR.DotNet.Test
             var b = new Vector3f( 10, 11, 12 );
             var a = new MR.DotNet.AffineXf3f( b );
             Assert.That( a.A == new Matrix3f() );
-            Assert.That( a.b == b );
+            Assert.That( a.B == b );
         }
 
         [Test]
@@ -51,7 +51,7 @@ namespace MR.DotNet.Test
 
             var res = xf * xf;
             Assert.That( res.A == A * A );
-            Assert.That( res.b == A * b + b );
+            Assert.That( res.B == A * b + b );
         }
 
     }

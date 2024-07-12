@@ -23,6 +23,15 @@
     <ClInclude Include="MRAffineXf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MRBitSet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshBoolean.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssemblyInfo.cpp">
@@ -35,6 +44,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRAffineXf.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRBitSet.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshBoolean.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

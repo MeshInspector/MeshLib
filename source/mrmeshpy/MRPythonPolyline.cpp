@@ -90,7 +90,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Polyline##dimension, [] ( pybind11::module_&
         def( "addFromSurfacePath", &PolylineType::addFromSurfacePath, pybind11::arg( "mesh" ), pybind11::arg( "path" ),\
             "Adds path to this polyline.\n"\
             "Return the edge from first new to second new vertex." );\
-} )
+    } ) \
+    MR_ADD_PYTHON_VEC( mrmeshpy, vectorPolyline##dimension, MR::Polyline<MR::Vector##dimension<float>> )
 
 MR_ADD_PYTHON_POLYLINE(2)
 MR_ADD_PYTHON_POLYLINE(3)

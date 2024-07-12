@@ -34,7 +34,7 @@ public:
     static Mesh^ MakeCube( Vector3f^ size, Vector3f^ base );
     static Mesh^ MakeSphere( float radius, int vertexCount );
 
-internal:
+private:
     MR::Mesh* mesh_;
 
     VertCoords^ points_;
@@ -44,6 +44,7 @@ internal:
     MR::DotNet::Triangulation^ triangulation_;
     EdgePath^ holeRepresentiveEdges_;
 
+internal:
     MR::Mesh* getMesh() { return mesh_; }
 };
 

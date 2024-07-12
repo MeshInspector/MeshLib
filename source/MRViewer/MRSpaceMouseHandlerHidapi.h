@@ -8,6 +8,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <thread>
+#include <unordered_map>
 #ifdef __APPLE__
 #include <hidapi/hidapi_darwin.h>
 #endif

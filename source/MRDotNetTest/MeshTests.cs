@@ -70,5 +70,26 @@ namespace MR.DotNet.Test
             Assert.That( mesh.Triangulation.Count == 12 );
             Assert.That( TestTools.AreMeshesEqual( mesh, TestTools.GetPathToPattern( "cube_from_triangles.mrmesh" ) ) );
         }
+
+        [Test]
+        public void TestEmptyFile()
+        {
+            string path = Path.GetTempFileName() + ".mrmesh"; ;
+            File.Create(path);
+            Assert.Throws<SystemException>( () => Mesh.FromFile(path)) ;
+            File.Delete(path);
+        }
+
+        [Test]
+        public void TestNullArgs()
+        {
+            Assert.Throws<ArgumentNullException>( () => Mesh.FromFile(null));
+            Assert.Throws<ArgumentNullException>( () => Mesh.ToFile(null, null));
+            Assert.Throws<ArgumentNullException>( () => Mesh.MakeCube(null, null));
+            Assert.Throws<ArgumentException>( () => Mesh.MakeSphere( 0.0f, -50 ) );
+
+            Assert.Throws<ArgumentNullException>( () => Mesh.FromTriangles(null, null) );
+            Assert.Throws<ArgumentNullException>( () => Mesh.FromTrianglesDuplicatingNonManifoldVertices( null, null ) );
+        }
     }
 }

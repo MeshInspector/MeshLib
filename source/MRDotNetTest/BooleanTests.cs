@@ -29,5 +29,11 @@ namespace MR.DotNet.Test
             var res = MeshBoolean.Boolean( meshA, meshB, BooleanOperation.Union );
             Assert.That( TestTools.AreMeshesEqual( res.mesh, TestTools.GetPathToPattern( "spartan_union.mrmesh" ) ) );
         }
+
+        [Test]
+        public void TestNullArgs()
+        {
+            Assert.Throws<ArgumentNullException>( () => MeshBoolean.Boolean( null, null, BooleanOperation.Union ) );
+        }
     }
 }

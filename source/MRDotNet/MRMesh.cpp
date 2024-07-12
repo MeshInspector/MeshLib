@@ -182,11 +182,17 @@ bool Mesh::operator!=( Mesh^ a, Mesh^ b )
 
 Mesh^ Mesh::MakeCube( Vector3f^ size, Vector3f^ base )
 { 
+    if ( !size || !base )
+        throw gcnew System::ArgumentNullException();
+
     return gcnew Mesh( new MR::Mesh( std::move( MR::makeCube( *size->vec(), *base->vec() ) ) ) );
 }
 
 Mesh^ Mesh::MakeSphere( float radius, int vertexCount )
 {
+    if ( vertexCount < 1 )
+        throw gcnew System::ArgumentException( "vertexCount" );
+
     return gcnew Mesh( new MR::Mesh( std::move( MR::makeSphere( { .radius = radius, .numMeshVertices = vertexCount }))));
 }
 

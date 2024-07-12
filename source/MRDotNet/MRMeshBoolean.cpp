@@ -17,7 +17,12 @@ BooleanResult MeshBoolean::Boolean( Mesh^ meshA, Mesh^ meshB, BooleanOperation o
 }
 
 BooleanResult MeshBoolean::Boolean( Mesh^ meshA, Mesh^ meshB, BooleanOperation op, BooleanParameters params )
-{    
+{
+    if ( !meshA )
+        throw gcnew System::ArgumentNullException( "meshA" );
+    if ( !meshB )
+        throw gcnew System::ArgumentNullException( "meshB" );
+
     MR::AffineXf3f xf;
     if ( params.rigidB2A )
         xf =  *params.rigidB2A->xf();

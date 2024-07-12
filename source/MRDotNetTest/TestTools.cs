@@ -1,4 +1,4 @@
-﻿#define GENERATE_PATTERNS
+﻿//#define GENERATE_PATTERNS
 using System;
 using System.Collections.Generic;
 using System.Linq;

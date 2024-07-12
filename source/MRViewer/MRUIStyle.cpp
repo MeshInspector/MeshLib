@@ -1401,22 +1401,22 @@ bool detail::isItemActive( const char* name )
     return ImGui::GetActiveID() == ImGui::GetID( name );
 }
 
-static bool exposeTextInputToTestEngine( ImGuiInputTextFlags flags )
+static bool shouldExposeTextInputToTestEngine( ImGuiInputTextFlags flags )
 {
     return !bool( flags & ( ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_Password ) );
 }
 
-bool inputText( const char* label, std::string& str, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
+static bool basicTextInput( const char* label, std::string& str, ImGuiInputTextFlags flags, auto &&func )
 {
     std::optional<std::string> valueOverride;
-    if ( exposeTextInputToTestEngine( flags ) )
+    if ( shouldExposeTextInputToTestEngine( flags ) )
     {
         valueOverride = TestEngine::createValue( label, str );
         if ( valueOverride )
             str = std::move( *valueOverride );
     }
 
-    bool ret = ImGui::InputText( label, &str, flags, callback, user_data );
+    bool ret = func();
 
     if ( valueOverride )
     {
@@ -1427,10 +1427,10 @@ bool inputText( const char* label, std::string& str, ImGuiInputTextFlags flags, 
     return ret;
 }
 
-bool inputTextIntoArray( const char* label, char* array, std::size_t size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
+static bool basicTextInputIntoArray( const char* label, char* array, std::size_t size, ImGuiInputTextFlags flags, auto &&func )
 {
     std::optional<std::string> valueOverride;
-    if ( exposeTextInputToTestEngine( flags ) )
+    if ( shouldExposeTextInputToTestEngine( flags ) )
     {
         valueOverride = TestEngine::createValue( label, array );
         if ( valueOverride && size > 0 )
@@ -1441,7 +1441,7 @@ bool inputTextIntoArray( const char* label, char* array, std::size_t size, ImGui
         }
     }
 
-    bool ret = ImGui::InputText( label, array, size, flags, callback, user_data );
+    bool ret = func();
 
     if ( valueOverride )
     {
@@ -1450,6 +1450,26 @@ bool inputTextIntoArray( const char* label, char* array, std::size_t size, ImGui
     }
 
     return ret;
+}
+
+bool inputText( const char* label, std::string& str, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
+{
+    return basicTextInput( label, str, flags, [&]{ return ImGui::InputText( label, &str, flags, callback, user_data ); } );
+}
+
+bool inputTextIntoArray( const char* label, char* array, std::size_t size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
+{
+    return basicTextInputIntoArray( label, array, size, flags, [&]{ return ImGui::InputText( label, array, size, flags, callback, user_data ); } );
+}
+
+bool inputTextMultiline( const char* label, std::string& str, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
+{
+    return basicTextInput( label, str, flags, [&]{ return ImGui::InputTextMultiline( label, &str, size, flags, callback, user_data ); } );
+}
+
+bool inputTextIntoArrayMultiline( const char* label, char* buf, size_t buf_size, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
+{
+    return basicTextInputIntoArray( label, buf, buf_size, flags, [&]{ return ImGui::InputTextMultiline( label, buf, buf_size, size, flags, callback, user_data ); } );
 }
 
 bool inputTextCentered( const char* label, std::string& str, float width /*= 0.0f*/,

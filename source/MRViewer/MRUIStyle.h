@@ -184,6 +184,11 @@ MRVIEWER_API bool inputText( const char* label, std::string& str, ImGuiInputText
 /// This overload is for arrays, as opposed to `std::string`s.
 MRVIEWER_API bool inputTextIntoArray( const char* label, char* array, std::size_t size, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
 
+/// Draws multiline text input, should be used instead of `ImGui::InputTextMultiline()`.
+MRVIEWER_API bool inputTextMultiline( const char* label, std::string& str, const ImVec2& size = ImVec2(), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
+/// This overload is for arrays, as opposed to `std::string`s.
+MRVIEWER_API bool inputTextIntoArrayMultiline( const char* label, char* buf, size_t buf_size, const ImVec2& size = ImVec2(), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
+
 /// draw input text box with text aligned by center
 MRVIEWER_API bool inputTextCentered( const char* label, std::string& str, float width = 0.0f, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
 

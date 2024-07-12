@@ -3,12 +3,12 @@
 #include "MRSpaceMouseHandler.h"
 #include "MRViewerEventsListener.h"
 #include "MRMesh/MRVector.h"
-#include "MRPch/MRSpdlog.h"
 #include <hidapi/hidapi.h>
 #include <bitset>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
+#include <unordered_map>
 #ifdef __APPLE__
 #include <hidapi/hidapi_darwin.h>
 #endif

@@ -6,6 +6,7 @@
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRStringConvert.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {

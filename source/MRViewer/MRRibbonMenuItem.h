@@ -21,9 +21,7 @@ class RibbonMenuItem : virtual public ISceneStateCheck
 public:
     MR_DELETE_MOVE( RibbonMenuItem );
 
-    RibbonMenuItem( std::string name ) :
-        name_{ std::move( name ) }
-    {}
+    MRVIEWER_API RibbonMenuItem( std::string name );
 
     virtual ~RibbonMenuItem() = default;
     

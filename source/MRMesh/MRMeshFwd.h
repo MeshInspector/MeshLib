@@ -64,6 +64,7 @@ class MRMESH_CLASS VoxelTag;
 class MRMESH_CLASS RegionTag;
 class MRMESH_CLASS NodeTag;
 class MRMESH_CLASS ObjTag;
+class MRMESH_CLASS TextureTag;
 
 template <typename T> class MRMESH_CLASS Id;
 template <typename T, typename I> class MRMESH_CLASS Vector;
@@ -79,6 +80,7 @@ using VoxelId = Id<VoxelTag>;
 using RegionId = Id<RegionTag>;
 using NodeId = Id<NodeTag>;
 using ObjId = Id<ObjTag>;
+using TextureId = Id<TextureTag>;
 
 class ViewportId;
 class ViewportMask;
@@ -483,8 +485,12 @@ class AnyVisualizeMaskEnum;
 
 template <typename T>
 struct VoxelsVolume;
-using SimpleVolume = VoxelsVolume<std::vector<float>>;
-using SimpleVolumeU16 = VoxelsVolume<std::vector<uint16_t>>;
+
+template <typename T>
+struct VoxelsVolumeMinMax;
+
+using SimpleVolume = VoxelsVolumeMinMax<std::vector<float>>;
+using SimpleVolumeU16 = VoxelsVolumeMinMax<std::vector<uint16_t>>;
 
 template <typename T>
 using VoxelValueGetter = std::function<T ( const Vector3i& )>;
@@ -496,7 +502,7 @@ class ObjectVoxels;
 
 struct OpenVdbFloatGrid;
 using FloatGrid = std::shared_ptr<OpenVdbFloatGrid>;
-using VdbVolume = VoxelsVolume<FloatGrid>;
+using VdbVolume = VoxelsVolumeMinMax<FloatGrid>;
 #endif
 
 class HistoryAction;
@@ -603,8 +609,13 @@ struct VertDuplication;
 
 // If the compiler supports `requires`, expands to `requires(...)`. Otherwise to nothing.
 // This is primarily useful for code that must be usable in Cuda, since everywhere else we're free to use C++20 and newer.
-#if __cpp_concepts
+// While Clang 14 technically supports `requires`, we're getting a few weird issues with it (make a nested aggregate class,
+//   in the enclosing class make a `MR::Vector` of it, observe that `std::default_initializable` gets baked as `false` on it,
+//   disabling some member functions such as `.resize()`).
+#if __cpp_concepts && __has_include(<concepts>) && !(defined(__clang__) && __clang_major__ <= 14) && !(defined(__GNUC__) && !defined(__clang__) && __GNUC__ <= 12)
 #   define MR_REQUIRES_IF_SUPPORTED(...) requires(__VA_ARGS__)
+#   define MR_HAS_REQUIRES 1
 #else
 #   define MR_REQUIRES_IF_SUPPORTED(...)
+#   define MR_HAS_REQUIRES 0
 #endif

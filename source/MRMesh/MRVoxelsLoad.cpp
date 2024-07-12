@@ -1,7 +1,6 @@
 #include "MRVoxelsLoad.h"
 #ifndef MRMESH_NO_OPENVDB
 #include "MRTimer.h"
-#include "MRSimpleVolume.h"
 #include "MRObjectVoxels.h"
 #include "MRVDBConversions.h"
 #include "MRStringConvert.h"

@@ -172,6 +172,9 @@ jobs:
       - name: Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTest
 
+      - name: C Unit Tests
+        run: ./build/${{ matrix.config }}/bin/MRTestC
+
       - name: Python Sanity Tests
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'

@@ -74,12 +74,15 @@ public:
         Horizontal,
         Vertical,
         Quad,
+        Hex,
         Count
     };
    SetViewportConfigPresetMenuItem( Type type );
+   virtual void setCustomUpdateViewports( const std::function<void( const ViewportMask )>& callback ) { updateViewports_ = callback; }
    virtual bool action() override;
 private:
     Type type_;
+    std::function<void( const ViewportMask appendedViewports )> updateViewports_;
 };
 
 }

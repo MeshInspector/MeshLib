@@ -14,7 +14,35 @@ namespace MR
 template<typename T>
 [[nodiscard]] inline size_t heapBytes( const std::vector<T> & vec )
 {
-    return vec.capacity() * sizeof( T );
+    constexpr bool hasHeapBytes = requires( const T& t ) { t.heapBytes(); };
+    if constexpr ( hasHeapBytes )
+    {
+        size_t res = vec.capacity() * sizeof( T );
+        for ( const T & t : vec )
+            res += t.heapBytes();
+        return res;
+    }
+    else
+    {
+        return vec.capacity() * sizeof( T );
+    }
+}
+
+template<typename T, typename U>
+[[nodiscard]] inline size_t heapBytes( const Vector<T, U>& vec )
+{
+    constexpr bool hasHeapBytes = requires( const T & t ) { t.heapBytes(); };
+    if constexpr ( hasHeapBytes )
+    {
+        size_t res = vec.size() * sizeof( T );
+        for ( const T & t : vec )
+            res += t.heapBytes();
+        return res;
+    }
+    else
+    {
+        return vec.size() * sizeof( T );
+    }
 }
 
 /// returns the amount of memory this smart pointer and its pointed object own together on heap

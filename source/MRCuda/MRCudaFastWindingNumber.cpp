@@ -109,7 +109,7 @@ bool FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, Prog
     }, subprogress( cb, 0.9f, 1.0f ) );
 }
 
-VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb )
+VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb )
 {
     MR_TIMER
     prepareData_( {} );
@@ -133,8 +133,7 @@ VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vec
 
     fastWindingNumberFromGrid(
         int3{ dims.x, dims.y, dims.z },
-        float3{ minCoord.x, minCoord.y, minCoord.z },
-        float3{ voxelSize.x, voxelSize.y, voxelSize.z }, cudaGridToMeshXf,
+        cudaGridToMeshXf,
         data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(),
         data_->cudaResult.data(), beta );
     
@@ -149,7 +148,7 @@ VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vec
     return {};
 }
 
-VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb )
+VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb )
 {
     MR_TIMER
     prepareData_( {} );
@@ -173,8 +172,7 @@ VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& r
 
     signedDistance(
         int3{ dims.x, dims.y, dims.z },
-        float3{ minCoord.x, minCoord.y, minCoord.z },
-        float3{ voxelSize.x, voxelSize.y, voxelSize.z }, cudaGridToMeshXf,
+        cudaGridToMeshXf,
         data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(),
         data_->cudaResult.data(), beta, maxDistSq, minDistSq );
 
@@ -188,42 +186,6 @@ VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& r
         return unexpectedOperationCanceled();
     return {};
 
-}
-
-size_t FastWindingNumber::fromVectorHeapBytes( size_t inputSize ) const
-{
-    size_t currentSize = 0;
-    if ( data_ )
-    {
-        currentSize += data_->cudaPoints.size() * sizeof( float3 );
-        currentSize += data_->cudaResult.size() * sizeof( float );
-    }
-    size_t newSize = inputSize * ( sizeof( float3 ) + sizeof( float ) );
-    if ( newSize <= currentSize )
-        return 0;
-    return newSize - currentSize;
-}
-
-size_t FastWindingNumber::selfIntersectionsHeapBytes( const Mesh& mesh ) const
-{
-    size_t currentSize = 0;
-    if ( data_ )
-        currentSize += data_->cudaResult.size() * sizeof( float );
-    size_t newSize = mesh.topology.faceSize() * sizeof( float );
-    if ( newSize <= currentSize )
-        return 0;
-    return newSize - currentSize;
-}
-
-size_t FastWindingNumber::fromGridHeapBytes( const Vector3i& dims ) const
-{
-    size_t currentSize = 0;
-    if ( data_ )
-        currentSize += data_->cudaResult.size() * sizeof( float );
-    size_t newSize = size_t( dims.x ) * dims.y * dims.z * sizeof( float );
-    if ( newSize <= currentSize )
-        return 0;
-    return newSize - currentSize;
 }
 
 } //namespace Cuda

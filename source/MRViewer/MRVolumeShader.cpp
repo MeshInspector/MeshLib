@@ -125,6 +125,38 @@ std::string getVolumeFragmentShader()
     color.rgb = ( ambient + diffuse + specular ) * color.rgb;
   }
 
+  void swap( inout float a, inout float b )
+  {
+    float c = a;
+    a = b;
+    b = c;
+  }
+
+  void rayVoxelIntersection( in vec3 minCorner, inout vec3 voxelCoord, in vec3 voxelSize,inout vec3 rayOrg, in vec3 ray )
+  {
+    vec3 voxelMin = voxelCoord * voxelSize + minCorner;
+    vec3 voxelMax = (voxelCoord + vec3(1.0,1.0,1.0) ) * voxelSize + minCorner;
+    vec3 minDot = (voxelMin - rayOrg) / ray;
+    vec3 maxDot = (voxelMax - rayOrg) / ray;
+    if ( ray.x < 0.0 )
+        swap( minDot.x, maxDot.x );
+    if ( ray.y < 0.0 )
+        swap( minDot.y, maxDot.y );
+    if ( ray.z < 0.0 )
+        swap( minDot.z, maxDot.z );
+
+    float absMinDot = max( max( minDot.x, minDot.y ), minDot.z );
+    rayOrg = rayOrg + ray * absMinDot;
+
+        
+    if ( maxDot.x <= maxDot.y && maxDot.x <= maxDot.z )
+        voxelCoord.x = voxelCoord.x + sign(ray.x);
+    else if ( maxDot.y <= maxDot.x && maxDot.y <= maxDot.z )
+        voxelCoord.y = voxelCoord.y + sign(ray.y);
+    else
+        voxelCoord.z = voxelCoord.z + sign(ray.z);
+  }
+
   void main()
   {
     mat4 eyeM = view * model;
@@ -161,15 +193,18 @@ std::string getVolumeFragmentShader()
 
     vec3 textCoord = vec3(0.0,0.0,0.0);
     outColor = vec4(0.0,0.0,0.0,0.0);
-    vec3 rayStep = step * normRayDir;
-    rayStart = rayStart - rayStep * 0.5;
+
+    vec3 startVoxel = floor(( rayStart - minPoint ) / voxelSize);
+    startVoxel = mix( startVoxel, vec3(0.0,0.0,0.0), lessThan(startVoxel,vec3(0.0,0.0,0.0)) );
+    startVoxel = mix( startVoxel, dims - vec3(1.0,1.0,1.0), greaterThan(startVoxel,dims - vec3(1.0,1.0,1.0)) );
+
     vec3 diagonal = maxPoint - minPoint;
     uint dimsXY = uint( dims.y * dims.x );
     uint dimsX = uint( dims.x );
     while ( outColor.a < 1.0 )
     {
-        rayStart = rayStart + rayStep;
-
+        rayVoxelIntersection( minPoint, startVoxel, voxelSize, rayStart, normRayDir);
+        
         textCoord = ( rayStart - minPoint ) / diagonal;
         if ( any( lessThan( textCoord, vec3(0.0,0.0,0.0) ) ) || any( greaterThan( textCoord, vec3(1.0,1.0,1.0) ) ) )
             break;
@@ -291,6 +326,37 @@ std::string getVolumePickerFragmentShader()
     return dot( grad, grad ) >= 1.0e-5;
   }
 
+  void swap( inout float a, inout float b )
+  {
+    float c = a;
+    a = b;
+    b = c;
+  }
+
+  void rayVoxelIntersection( in vec3 minCorner, inout vec3 voxelCoord, in vec3 voxelSize,inout vec3 rayOrg, in vec3 ray )
+  {
+    vec3 voxelMin = voxelCoord * voxelSize + minCorner;
+    vec3 voxelMax = (voxelCoord + vec3(1.0,1.0,1.0) ) * voxelSize + minCorner;
+    vec3 minDot = (voxelMin - rayOrg) / ray;
+    vec3 maxDot = (voxelMax - rayOrg) / ray;
+    if ( ray.x < 0.0 )
+        swap( minDot.x, maxDot.x );
+    if ( ray.y < 0.0 )
+        swap( minDot.y, maxDot.y );
+    if ( ray.z < 0.0 )
+        swap( minDot.z, maxDot.z );
+
+    float absMinDot = max( max( minDot.x, minDot.y ), minDot.z );
+    rayOrg = rayOrg + ray * absMinDot;
+
+        
+    if ( maxDot.x <= maxDot.y && maxDot.x <= maxDot.z )
+        voxelCoord.x = voxelCoord.x + sign(ray.x);
+    else if ( maxDot.y <= maxDot.x && maxDot.y <= maxDot.z )
+        voxelCoord.y = voxelCoord.y + sign(ray.y);
+    else
+        voxelCoord.z = voxelCoord.z + sign(ray.z);
+  }
 
   void main()
   {
@@ -325,14 +391,17 @@ std::string getVolumePickerFragmentShader()
     
     bool firstFound = false;
     vec3 textCoord = vec3(0.0,0.0,0.0);
-    vec3 rayStep = step * normRayDir;
-    rayStart = rayStart - rayStep * 0.5;
+
+    vec3 startVoxel = floor(( rayStart - minPoint ) / voxelSize);
+    startVoxel = mix( startVoxel, vec3(0.0,0.0,0.0), lessThan(startVoxel,vec3(0.0,0.0,0.0)) );
+    startVoxel = mix( startVoxel, dims - vec3(1.0,1.0,1.0), greaterThan(startVoxel,dims - vec3(1.0,1.0,1.0)) );
+
     vec3 diagonal = maxPoint - minPoint;
     uint dimsXY = uint( dims.y * dims.x );
     uint dimsX = uint( dims.x );
     while ( !firstFound )
     {
-        rayStart = rayStart + rayStep;
+        rayVoxelIntersection( minPoint, startVoxel, voxelSize, rayStart, normRayDir);
 
         textCoord = ( rayStart - minPoint ) / diagonal;
         if ( any( lessThan( textCoord, vec3(0.0,0.0,0.0) ) ) || any( greaterThan( textCoord, vec3(1.0,1.0,1.0) ) ) )

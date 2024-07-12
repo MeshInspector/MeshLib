@@ -37,7 +37,7 @@
       <Filter>Basic</Filter>
     </ClCompile>
     <ClCompile Include="Selectors\MRSelectObjectByClick.cpp">
-     <Filter>Selectors</Filter>
+      <Filter>Selectors</Filter>
     </ClCompile>
     <ClCompile Include="ViewerButtons\MRIOFilesMenuItems.cpp">
       <Filter>ViewerButtons</Filter>
@@ -55,9 +55,6 @@
       <Filter>Basic</Filter>
     </ClCompile>
     <ClCompile Include="ViewerButtons\MRAddCustomTheme.cpp">
-      <Filter>ViewerButtons</Filter>
-    </ClCompile>
-    <ClCompile Include="ViewerButtons\MRViewerSettingsPlugin.cpp">
       <Filter>ViewerButtons</Filter>
     </ClCompile>
     <ClCompile Include="Voxels\MROpenVoxelsFromTiffPlugin.cpp">
@@ -97,9 +94,6 @@
       <Filter>Basic</Filter>
     </ClInclude>
     <ClInclude Include="ViewerButtons\MRAddCustomTheme.h">
-      <Filter>ViewerButtons</Filter>
-    </ClInclude>
-    <ClInclude Include="ViewerButtons\MRViewerSettingsPlugin.h">
       <Filter>ViewerButtons</Filter>
     </ClInclude>
   </ItemGroup>
@@ -671,6 +665,21 @@
     </Image>
     <Image Include="resource\icons\X1\Active Plugins List.png">
       <Filter>resource\icons\X1</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_5\Show_Hide Global Basis.png">
+      <Filter>resource\icons\X0_5</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_75\Show_Hide Global Basis.png">
+      <Filter>resource\icons\X0_75</Filter>
+    </Image>
+    <Image Include="resource\icons\X1\Show_Hide Global Basis.png">
+      <Filter>resource\icons\X1</Filter>
+    </Image>
+    <Image Include="resource\icons\X3\Active Plugins List.png">
+      <Filter>resource\icons\X3</Filter>
+    </Image>
+    <Image Include="resource\icons\X3\Show_Hide Global Basis.png">
+      <Filter>resource\icons\X3</Filter>
     </Image>
   </ItemGroup>
 </Project>

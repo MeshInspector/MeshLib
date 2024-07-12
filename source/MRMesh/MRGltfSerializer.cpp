@@ -504,7 +504,7 @@ Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromGltf( co
                     if ( textureIndex >= 0 && model.textures[textureIndex].source >= 0 )
                     {
                         objectMesh->setUVCoords( meshData.uvCoords );
-                        objectMesh->setTexture( textures[model.textures[textureIndex].source] );
+                        objectMesh->setTextures( { textures[model.textures[textureIndex].source] } );
                         objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
                     }
                     else if ( !meshData.vertsColorMap.empty() )

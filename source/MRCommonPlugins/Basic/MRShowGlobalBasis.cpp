@@ -13,7 +13,7 @@ public:
 };
 
 ShowGlobalBasisMenuItem::ShowGlobalBasisMenuItem() :
-    RibbonMenuItem( "Show/Hide Global Basis" )
+    RibbonMenuItem( "Show_Hide Global Basis" )
 {}
 
 bool ShowGlobalBasisMenuItem::action()

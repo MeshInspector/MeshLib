@@ -1,7 +1,7 @@
 #include "MRVoxelPath.h"
 #ifndef MRMESH_NO_OPENVDB
 #include "MRVDBFloatGrid.h"
-#include "MRSimpleVolume.h"
+#include "MRVoxelsVolume.h"
 #include "MRVector3.h"
 #include "MRTimer.h"
 #include <cfloat>

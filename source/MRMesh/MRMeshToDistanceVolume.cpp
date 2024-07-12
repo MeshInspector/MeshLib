@@ -1,7 +1,6 @@
 #include "MRMeshToDistanceVolume.h"
 #include "MRIsNaN.h"
 #include "MRMesh.h"
-#include "MRSimpleVolume.h"
 #include "MRTimer.h"
 #include "MRVolumeIndexer.h"
 #include "MRFastWindingNumber.h"
@@ -11,196 +10,100 @@
 #include "MRAABBTree.h"
 #include <tuple>
 
-namespace
+namespace MR
 {
 
-using namespace MR;
-
-float signedDistanceToMesh( const MeshPart& mesh, const Vector3f& p, SignDetectionMode signMode, float maxDistSq, float minDistSq )
+std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p, const DistanceToMeshOptions& op )
 {
-    float dist;
-    if ( signMode != SignDetectionMode::ProjectionNormal )
-    {
-        dist = std::sqrt( findProjection( p, mesh, maxDistSq, nullptr, minDistSq ).distSq );
-    }
-    else
-    {
-        const auto s = findSignedDistance( p, mesh, maxDistSq, minDistSq );
-        dist = s ? s->dist : cQuietNan;
-    }
-    if ( isNanFast( dist ) )
-        return dist;
+    assert( op.signMode != SignDetectionMode::OpenVDB );
+    const auto proj = findProjection( p, mp, op.maxDistSq, nullptr, op.minDistSq );
+    if ( op.signMode != SignDetectionMode::HoleWindingRule // for HoleWindingRule the sign can change even for too small or too large distances
+        && ( proj.distSq <= op.minDistSq || proj.distSq >= op.maxDistSq ) )
+        return {}; // distance is too small or too large, discard them
 
-    if ( signMode == SignDetectionMode::WindingRule )
+    float dist = std::sqrt( proj.distSq );
+    switch ( op.signMode )
+    {
+    case SignDetectionMode::ProjectionNormal:
+        if ( !mp.mesh.isOutsideByProjNorm( p, proj, mp.region ) )
+            dist = -dist;
+        break;
+
+    case SignDetectionMode::WindingRule:
     {
         const Line3d ray( Vector3d( p ), Vector3d::plusX() );
         int count = 0;
-        rayMeshIntersectAll( mesh, ray, [&count] ( auto&& ) { ++count; return true; } );
+        rayMeshIntersectAll( mp, ray, [&count] ( auto&& ) { ++count; return true; } );
         if ( count % 2 == 1 ) // inside
             dist = -dist;
+        break;
     }
 
+    case SignDetectionMode::HoleWindingRule:
+        assert( !mp.region );
+        if ( !mp.mesh.isOutside( p ) )
+            dist = -dist;
+        break;
+
+    default: ; //nothing
+    }
     return dist;
 }
-
-template <typename T>
-struct MinMax
-{
-    T min = std::numeric_limits<T>::max();
-    T max = std::numeric_limits<T>::lowest();
-
-    void update( T v )
-    {
-        if ( v < min )
-            min = v;
-        if ( max < v )
-            max = v;
-    }
-
-    static MinMax<T> merge( const MinMax<T>& a, const MinMax<T>& b )
-    {
-        return {
-            .min = std::min( a.min, b.min ),
-            .max = std::max( a.max, b.max ),
-        };
-    }
-};
-
-} // namespace
-
-namespace MR
-{
 
 Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params /*= {} */ )
 {
     MR_TIMER
-    assert( params.signMode != SignDetectionMode::OpenVDB );
+    assert( params.dist.signMode != SignDetectionMode::OpenVDB );
     SimpleVolume res;
-    res.voxelSize = params.voxelSize;
-    res.dims = params.dimensions;
+    res.voxelSize = params.vol.voxelSize;
+    res.dims = params.vol.dimensions;
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size() );
 
-    if ( params.signMode == SignDetectionMode::HoleWindingRule )
+    if ( params.dist.signMode == SignDetectionMode::HoleWindingRule && params.fwn )
     {
         assert( !mp.region ); // only whole mesh is supported for now
-        auto fwn = params.fwn;
-        if ( !fwn )
-            fwn = std::make_shared<FastWindingNumber>( mp.mesh );
-
-        auto basis = AffineXf3f::linear( Matrix3f::scale( params.voxelSize ) );
-        basis.b = params.origin;
+        auto basis = AffineXf3f::linear( Matrix3f::scale( params.vol.voxelSize ) )
+            * AffineXf3f::translation( Vector3f::diagonal( 0.5f ) );
+        basis.b = params.vol.origin;
         constexpr float beta = 2;
-        if ( auto d = fwn->calcFromGridWithDistances( res.data, res.dims, Vector3f::diagonal( 0.5f ), Vector3f::diagonal( 1.0f ), basis, beta,
-            params.maxDistSq, params.minDistSq, params.cb ); !d )
+        if ( auto d = params.fwn->calcFromGridWithDistances( res.data, res.dims, basis, beta,
+            params.dist.maxDistSq, params.dist.minDistSq, params.vol.cb ); !d )
         {
             return unexpected( std::move( d.error() ) );
         }
     }
     else
     {
+        const auto func = meshToDistanceFunctionVolume( mp, params );
         if ( !ParallelFor( size_t( 0 ), indexer.size(), [&]( size_t i )
         {
-            auto coord = Vector3f( indexer.toPos( VoxelId( i ) ) ) + Vector3f::diagonal( 0.5f );
-            auto voxelCenter = params.origin + mult( params.voxelSize, coord );
-            float dist{ 0.0f };
-            if ( params.signMode != SignDetectionMode::ProjectionNormal )
-                dist = std::sqrt( findProjection( voxelCenter, mp, params.maxDistSq, nullptr, params.minDistSq ).distSq );
-            else
-            {
-                auto s = findSignedDistance( voxelCenter, mp, params.maxDistSq, params.minDistSq );
-                dist = s ? s->dist : cQuietNan;
-            }
-
-            if ( !isNanFast( dist ) )
-            {
-                bool changeSign = false;
-                if ( params.signMode == SignDetectionMode::WindingRule )
-                {
-                    int numInters = 0;
-                    rayMeshIntersectAll( mp, Line3d( Vector3d( voxelCenter ), Vector3d::plusX() ),
-                        [&numInters] ( const MeshIntersectionResult& ) mutable
-                    {
-                        ++numInters;
-                        return true;
-                    } );
-                    changeSign = numInters % 2 == 1; // inside
-                }
-                if ( changeSign )
-                    dist = -dist;
-            }
-            res.data[i] = dist;
-        }, params.cb ) )
+            res.data[i] = func.data( indexer.toPos( VoxelId( i ) ) );
+        }, params.vol.cb ) )
             return unexpectedOperationCanceled();
     }
 
-    if ( params.precomputeMinMax )
-    {
-        std::tie( res.min, res.max ) = parallelMinMax( res.data );
-    }
-    else
-    {
-        res.min = std::numeric_limits<float>::lowest();
-        res.max = std::numeric_limits<float>::max();
-    }
+    std::tie( res.min, res.max ) = parallelMinMax( res.data );
 
     return res;
 }
 
-Expected<FunctionVolume> meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params )
+FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params )
 {
-    MR_TIMER
-    assert( params.signMode != SignDetectionMode::OpenVDB );
+    assert( params.dist.signMode != SignDetectionMode::OpenVDB );
 
-    FunctionVolume result {
-        .dims = params.dimensions,
-        .voxelSize = params.voxelSize,
+    return FunctionVolume
+    {
+        .data = [params, mp = MeshPart( mp.mesh )] ( const Vector3i& pos ) -> float
+        {
+            const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
+            const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
+            auto dist = signedDistanceToMesh( mp, voxelCenter, params.dist );
+            return dist ? *dist : cQuietNan;
+        },
+        .dims = params.vol.dimensions,
+        .voxelSize = params.vol.voxelSize
     };
-    if ( params.signMode == SignDetectionMode::HoleWindingRule )
-    {
-        assert( !mp.region ); // only whole mesh is supported for now
-        // CUDA-based implementation is useless for FunctionVolume for obvious reasons
-        // using default implementation
-        auto fwn = std::make_shared<FastWindingNumber>( mp.mesh );
-        result.data = [params, fwn] ( const Vector3i& pos ) mutable -> float
-        {
-            const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
-            const auto voxelCenter = params.origin + mult( params.voxelSize, coord );
-            constexpr float beta = 2;
-            return fwn->calcWithDistances( voxelCenter, beta, params.maxDistSq, params.minDistSq );
-        };
-    }
-    else
-    {
-        result.data = [params, mp = MeshPart( mp.mesh )] ( const Vector3i& pos ) -> float
-        {
-            const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
-            const auto voxelCenter = params.origin + mult( params.voxelSize, coord );
-            return signedDistanceToMesh( mp, voxelCenter, params.signMode, params.maxDistSq, params.minDistSq );
-        };
-    }
-
-    result.min = std::numeric_limits<float>::lowest();
-    result.max = std::numeric_limits<float>::max();
-    if ( params.precomputeMinMax )
-    {
-        VolumeIndexer indexer( params.dimensions );
-        auto body = [&indexer, &result] ( const tbb::blocked_range<size_t>& range, MinMax<float> minmax )
-        {
-            for ( auto i = range.begin(); i < range.end(); ++i )
-            {
-                const auto pos = indexer.toPos( VoxelId( i ) );
-                const auto value = result.data( pos );
-                minmax.update( value );
-            }
-            return minmax;
-        };
-        const auto minmax = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, indexer.size() ), MinMax<float>(), body, &MinMax<float>::merge );
-        result.min = minmax.min;
-        result.max = minmax.max;
-    }
-
-    return result;
 }
 
 Expected<SimpleVolume, std::string> meshRegionToIndicatorVolume( const Mesh& mesh, const FaceBitSet& region,
@@ -242,15 +145,7 @@ Expected<SimpleVolume, std::string> meshRegionToIndicatorVolume( const Mesh& mes
     }, params.cb ) )
         return unexpectedOperationCanceled();
 
-    if ( params.precomputeMinMax )
-    {
-        std::tie( res.min, res.max ) = parallelMinMax( res.data );
-    }
-    else
-    {
-        res.min = std::numeric_limits<float>::lowest();
-        res.max = std::numeric_limits<float>::max();
-    }
+    std::tie( res.min, res.max ) = parallelMinMax( res.data );
 
     return res;
 }

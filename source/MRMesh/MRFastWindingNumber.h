@@ -36,43 +36,18 @@ public:
     /// </summary>
     /// <param name="res">resulting winding numbers, will be resized automatically</param>
     /// <param name="dims">dimensions of the grid</param>
-    /// <param name="minCoord">minimal coordinates of grid points</param>
-    /// <param name="voxelSize">size of voxel</param>
-    /// <param name="gridToMeshXf">transform from grid to mesh</param>
+    /// <param name="gridToMeshXf">transform from integer grid locations to voxel's centers in mesh reference frame</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    virtual VoidOrErrStr calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb = {} ) = 0;
+    virtual VoidOrErrStr calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb = {} ) = 0;
 
     /// <summary>
     /// calculates distances and winding numbers for each point in a three-dimensional grid
     /// </summary>
     /// <param name="res">resulting signed distances, will be resized automatically</param>
     /// <param name="dims">dimensions of the grid</param>
-    /// <param name="minCoord">minimal coordinates of grid points</param>
-    /// <param name="voxelSize">size of voxel</param>
-    /// <param name="gridToMeshXf">transform from grid to mesh</param>
+    /// <param name="gridToMeshXf">transform from integer grid locations to voxel's centers in mesh reference frame</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    virtual VoidOrErrStr calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) = 0;
-
-    /// <summary>
-    /// returns amount of required memory for calcFromVector operation
-    /// does not take into account size of output vector
-    /// </summary>
-    /// <param name="inputSize">size of input vector</param>
-    virtual size_t fromVectorHeapBytes( size_t inputSize ) const = 0;
-
-    /// <summary>
-    /// returns amount of required memory for calcSelfIntersections operation
-    /// does not take into account size of output FaceBitSet
-    /// </summary>
-    /// <param name="mesh">input mesh</param>
-    virtual size_t selfIntersectionsHeapBytes( const Mesh& mesh ) const = 0;
-
-    /// <summary>
-    /// returns amount of required memory for calcFromGrid and calcFromGridWithDistances operation
-    /// does not take into account size of output vector
-    /// </summary>
-    /// <param name="dims">dimensions of original grid</param>
-    virtual size_t fromGridHeapBytes( const Vector3i& dims ) const = 0;
+    virtual VoidOrErrStr calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) = 0;
 };
 
 /// the class for fast approximate computation of winding number for a mesh (using its AABB tree)
@@ -107,11 +82,9 @@ public:
     /// </summary>
     /// <param name="res">resulting winding numbers, will be resized automatically</param>
     /// <param name="dims">dimensions of the grid</param>
-    /// <param name="minCoord">minimal coordinates of grid points</param>
-    /// <param name="voxelSize">size of voxel</param>
-    /// <param name="gridToMeshXf">transform from grid to mesh</param>
+    /// <param name="gridToMeshXf">transform from integer grid locations to voxel's centers in mesh reference frame</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    MRMESH_API VoidOrErrStr calcFromGrid( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb ) override;
+    MRMESH_API VoidOrErrStr calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb ) override;
 
     /// calculates distances and winding numbers at \param p
     /// \param beta determines the precision of the approximation: the more the better, recommended value 2 or more;
@@ -125,33 +98,9 @@ public:
     /// </summary>
     /// <param name="res">resulting signed distances, will be resized automatically</param>
     /// <param name="dims">dimensions of the grid</param>
-    /// <param name="minCoord">minimal coordinates of grid points</param>
-    /// <param name="voxelSize">size of voxel</param>
-    /// <param name="gridToMeshXf">transform from grid to mesh</param>
+    /// <param name="gridToMeshXf">transform from integer grid locations to voxel's centers in mesh reference frame</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    MRMESH_API VoidOrErrStr calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const Vector3f& minCoord, const Vector3f& voxelSize, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) override;
-
-    /// <summary>
-    /// returns amount of required memory for calcFromVector operation
-    /// does not take into account size of output vector
-    /// </summary>
-    /// <param name="inputSize">size of input vector</param>
-    MRMESH_API virtual size_t fromVectorHeapBytes( size_t inputSize ) const override;
-
-    /// <summary>
-    /// returns amount of required memory for calcSelfIntersections operation
-    /// does not take into account size of output FaceBitSet
-    /// </summary>
-    /// <param name="mesh">input mesh</param>
-    MRMESH_API virtual size_t selfIntersectionsHeapBytes( const Mesh& mesh ) const override;
-
-    /// <summary>
-    /// returns amount of required memory for calcFromGrid and calcFromGridWithDistances operation
-    /// does not take into account size of output vector
-    /// </summary>
-    /// <param name="dims">dimensions of original grid</param>
-    MRMESH_API virtual size_t fromGridHeapBytes( const Vector3i& dims ) const override;
-
+    MRMESH_API VoidOrErrStr calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) override;
 private:
     [[nodiscard]] float calc_( const Vector3f & q, float beta, FaceId skipFace = {} ) const;
 

@@ -39,6 +39,9 @@
     <ClInclude Include="..\..\thirdparty\imgui\backends\imgui_impl_opengl3_loader.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\thirdparty\imgui\misc\cpp\imgui_stdlib.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\thirdparty\imgui\imgui.cpp">

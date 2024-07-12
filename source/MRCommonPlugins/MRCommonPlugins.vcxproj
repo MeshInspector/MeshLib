@@ -32,7 +32,6 @@
     <ClCompile Include="ViewerButtons\MRIOFilesMenuItems.cpp" />
     <ClCompile Include="ViewerButtons\MRRibbonSceneButtons.cpp" />
     <ClCompile Include="ViewerButtons\MRSceneControlMenuItems.cpp" />
-    <ClCompile Include="ViewerButtons\MRViewerSettingsPlugin.cpp" />
     <ClCompile Include="Voxels\MROpenRawVoxelsPlugin.cpp" />
     <ClCompile Include="Voxels\MROpenVoxelsFromTiffPlugin.cpp" />
   </ItemGroup>
@@ -46,7 +45,6 @@
     <ClInclude Include="ViewerButtons\MRIOFilesMenuItems.h" />
     <ClInclude Include="ViewerButtons\MRRibbonSceneButtons.h" />
     <ClInclude Include="ViewerButtons\MRSceneControlMenuItems.h" />
-    <ClInclude Include="ViewerButtons\MRViewerSettingsPlugin.h" />
     <ClInclude Include="Voxels\MROpenRawVoxelsPlugin.h" />
   </ItemGroup>
   <ItemGroup>
@@ -72,6 +70,7 @@
     <Image Include="resource\icons\X0_5\BestFit Plane.png" />
     <Image Include="resource\icons\X0_5\BestFit Point.png" />
     <Image Include="resource\icons\X0_5\BestFit Sphere.png" />
+    <Image Include="resource\icons\X0_5\Show_Hide Global Basis.png" />
     <Image Include="resource\icons\X0_75\Active Plugins List.png" />
     <Image Include="resource\icons\X0_75\BestFit Circle.png" />
     <Image Include="resource\icons\X0_75\BestFit Cone.png" />
@@ -80,6 +79,7 @@
     <Image Include="resource\icons\X0_75\BestFit Plane.png" />
     <Image Include="resource\icons\X0_75\BestFit Point.png" />
     <Image Include="resource\icons\X0_75\BestFit Sphere.png" />
+    <Image Include="resource\icons\X0_75\Show_Hide Global Basis.png" />
     <Image Include="resource\icons\X1\Active Plugins List.png" />
     <Image Include="resource\icons\X1\BestFit Circle.png" />
     <Image Include="resource\icons\X1\BestFit Cone.png" />
@@ -88,6 +88,8 @@
     <Image Include="resource\icons\X1\BestFit Plane.png" />
     <Image Include="resource\icons\X1\BestFit Point.png" />
     <Image Include="resource\icons\X1\BestFit Sphere.png" />
+    <Image Include="resource\icons\X1\Show_Hide Global Basis.png" />
+    <Image Include="resource\icons\X3\Active Plugins List.png" />
     <Image Include="resource\icons\X3\BestFit Circle.png" />
     <Image Include="resource\icons\X3\BestFit Cone.png" />
     <Image Include="resource\icons\X3\BestFit Cylinder.png" />
@@ -247,6 +249,7 @@
     <Image Include="resource\icons\X3\Save selected.png" />
     <Image Include="resource\icons\X3\Screenshot to clipboard.png" />
     <Image Include="resource\icons\X3\Select objects.png" />
+    <Image Include="resource\icons\X3\Show_Hide Global Basis.png" />
     <Image Include="resource\icons\X3\Single Viewport.png" />
     <Image Include="resource\icons\X3\Top View.png" />
     <Image Include="resource\icons\X3\Vertical Viewports.png" />

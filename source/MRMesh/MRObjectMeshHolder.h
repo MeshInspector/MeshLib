@@ -119,9 +119,15 @@ public:
     ObjectMeshHolder( ProtectedStruct, const ObjectMeshHolder& obj ) : ObjectMeshHolder( obj )
     {}
 
-    const MeshTexture& getTexture() const { return texture_; }
-    virtual void setTexture( MeshTexture texture ) { texture_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
-    virtual void updateTexture( MeshTexture& updated ) { std::swap( texture_, updated ); dirty_ |= DIRTY_TEXTURE; }
+    /// returns first texture in the vector. If there is no textures, returns empty texture
+    MRMESH_API const MeshTexture& getTexture() const;
+    // for backward compatibility
+    [[deprecated]] MRMESH_API virtual void setTexture( MeshTexture texture );
+    [[deprecated]] MRMESH_API virtual void updateTexture( MeshTexture& updated );
+    
+    const Vector<MeshTexture, TextureId>& getTextures() const { return textures_; }
+    virtual void setTextures( Vector<MeshTexture, TextureId> texture ) { textures_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
+    virtual void updateTextures( Vector<MeshTexture, TextureId>& updated ) { std::swap( textures_, updated ); dirty_ |= DIRTY_TEXTURE; }
 
     const VertUVCoords& getUVCoords() const { return uvCoordinates_; }
     virtual void setUVCoords( VertUVCoords uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
@@ -212,7 +218,7 @@ protected:
     UndirectedEdgeBitSet creases_;
 
     /// Texture options
-    MeshTexture texture_;
+    Vector<MeshTexture, TextureId> textures_;
     VertUVCoords uvCoordinates_; ///< vertices coordinates in texture
 
     MeshTexture ancillaryTexture_;

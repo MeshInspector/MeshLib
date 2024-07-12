@@ -1,12 +1,13 @@
 #include "MRGetSystemInfoJson.h"
 #include "MRViewer.h"
 #include "ImGuiMenu.h"
-#include "MRMesh/MRSystem.h"
 #include "MRGLMacro.h"
-#include "MRPch/MRTBB.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRGladGlfw.h"
 #include "MRCudaAccessor.h"
+#include "MRMesh/MRSystem.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRPch/MRTBB.h"
+#include "MRPch/MRSpdlog.h"
 #ifdef _WIN32
 #include <shlobj.h>
 #include <windows.h>
@@ -45,8 +46,18 @@ Json::Value GetSystemInfoJson()
         glInfo["MSAA"] = std::to_string( curSamples );
 
         glInfo["CUDA memory"] = CudaAccessor::isCudaAvailable() ?
-            fmt::format( "{:.1f} GB", CudaAccessor::getCudaFreeMemory() / 1024 / 1024 / 1024.0f ) :
+            bytesString( CudaAccessor::getCudaFreeMemory() ) :
             "n/a";
+
+        int cudaRTVersion = CudaAccessor::getCudaRuntimeVersion();
+        int cudaMaxDriverVersion = CudaAccessor::getCudaMaxDriverSupportedVersion();
+        glInfo["CUDA Versions"] = cudaRTVersion != 0 && cudaMaxDriverVersion != 0 ? 
+            fmt::format( "{}.{}/{}.{}", cudaRTVersion / 1000, ( cudaRTVersion % 1000 ) / 10, cudaMaxDriverVersion / 1000, ( cudaMaxDriverVersion % 1000 ) / 10 )
+            : "n/a";
+
+        int cudaCCMajor = CudaAccessor::getComputeCapabilityMajor();
+        int cudaCCMinor = CudaAccessor::getComputeCapabilityMinor();
+        glInfo["CUDA Compute Capability"] = cudaCCMajor != 0 && cudaCCMinor != 0 ? fmt::format( "{}.{}", cudaCCMajor, cudaCCMinor ) : "n/a";
 
         int frameBufferSizeX, frameBufferSizeY;
         int windowSizeX, windowSizeY;
@@ -89,17 +100,25 @@ Json::Value GetSystemInfoJson()
         windowInfo["System scaling"] = fmt::format( "{}", menu->hidpi_scaling() );
         windowInfo["Menu scaling"] = fmt::format( "{}", menu->menu_scaling() );
     }
+
 #ifdef _WIN32
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof( MEMORYSTATUSEX );
     GlobalMemoryStatusEx( &memInfo );
     auto& memoryInfo = root["Memory Info"];
-    memoryInfo["Virtual memory total"] = fmt::format( "{:.1f} GB", memInfo.ullTotalPageFile / 1024 / 1024 / 1024.0f );
-    memoryInfo["Virtual memory available"] = fmt::format( "{:.1f} GB", memInfo.ullAvailPageFile / 1024 / 1024 / 1024.0f );
+    memoryInfo["Virtual memory total"] = bytesString( memInfo.ullTotalPageFile );
+    memoryInfo["Virtual memory available"] = bytesString( memInfo.ullAvailPageFile );
 
-    memoryInfo["Physical memory total"] = fmt::format( "{:.1f} GB", memInfo.ullTotalPhys / 1024 / 1024 / 1024.0f );
-    memoryInfo["Physical memory available"] = fmt::format( "{:.1f} GB", memInfo.ullAvailPhys / 1024 / 1024 / 1024.0f );
+    memoryInfo["Physical memory total"] = bytesString( memInfo.ullTotalPhys );
+    memoryInfo["Physical memory available"] = bytesString( memInfo.ullAvailPhys );
     memoryInfo["Physical memory total MB"] = std::to_string( memInfo.ullTotalPhys / 1024 / 1024 );
+
+    const auto procMem = getProccessMemoryInfo();
+    auto& pm = root["Process Memory"];
+    pm["Peak virtual memory"] = bytesString( procMem.maxVirtual );
+    pm["Current virtual memory"] = bytesString( procMem.currVirtual );
+    pm["Peak physical memory"] = bytesString( procMem.maxPhysical );
+    pm["Current physical memory"] = bytesString( procMem.currPhysical );
 #else
 #ifndef __EMSCRIPTEN__
     // if lunix
@@ -108,8 +127,8 @@ Json::Value GetSystemInfoJson()
     if ( sysinfo( &sysInfo ) == 0 )
     {
         auto& memoryInfo = root["Memory Info"];
-        memoryInfo["Physical memory total"] = fmt::format( "{:.1f} GB", sysInfo.totalram * sysInfo.mem_unit / 1024 / 1024 / 1024.0f );
-        memoryInfo["Physical memory available"] = fmt::format( "{:.1f} GB", sysInfo.freeram * sysInfo.mem_unit / 1024 / 1024 / 1024.0f );
+        memoryInfo["Physical memory total"] = bytesString( sysInfo.totalram * sysInfo.mem_unit );
+        memoryInfo["Physical memory available"] = bytesString( sysInfo.freeram * sysInfo.mem_unit );
         memoryInfo["Physical memory total MB"] = std::to_string( sysInfo.totalram * sysInfo.mem_unit / 1024 / 1024 );
     }
 #else // if apple
@@ -132,7 +151,7 @@ Json::Value GetSystemInfoJson()
         if ( aplMem != 0 )
         {
             auto& memoryInfo = root["Memory Info"];
-            memoryInfo["Physical memory total"] = fmt::format( "{:.1f} GB", aplMem / 1024 / 1024 / 1024.0f );
+            memoryInfo["Physical memory total"] = bytesString( aplMem );
             memoryInfo["Physical memory total MB"] = std::to_string( aplMem / 1024 / 1024 );
         }
     }

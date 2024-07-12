@@ -1,14 +1,22 @@
 #include "MRCudaAccessor.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include "MRMesh/MRFastWindingNumber.h"
-#include "MRMesh/MRSimpleVolume.h"
+#include "MRMesh/MRVoxelsVolume.h"
+#include "MRMesh/MRAABBTree.h"
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRAABBTreeMaker.h"
 
 namespace MR
 {
 
-void CudaAccessor::setCudaAvailable( bool val )
+void CudaAccessor::setCudaAvailable( bool val, int maxDriverVersion, int runtimeVersion, int computeMajor, int computeMinor )
 {
-    instance_().isCudaAvailable_ = val;
+    auto& inst = instance_();
+    inst.isCudaAvailable_ = val;
+    inst.maxDriverVersion_ = maxDriverVersion;
+    inst.runtimeVersion_ = runtimeVersion;
+    inst.computeMajor_ = computeMajor;
+    inst.computeMinor_ = computeMinor;
 }
 
 void CudaAccessor::setCudaFreeMemoryFunc( CudaFreeMemoryFunc freeMemFunc )
@@ -35,6 +43,26 @@ bool CudaAccessor::isCudaAvailable()
 {
     auto& inst = instance_();
     return inst.isCudaAvailable_;
+}
+
+int CudaAccessor::getCudaMaxDriverSupportedVersion()
+{
+    return instance_().maxDriverVersion_;
+}
+
+int CudaAccessor::getCudaRuntimeVersion()
+{
+    return instance_().runtimeVersion_;
+}
+
+int CudaAccessor::getComputeCapabilityMajor()
+{
+    return instance_().computeMajor_;
+}
+
+int CudaAccessor::getComputeCapabilityMinor()
+{
+    return instance_().computeMinor_;
 }
 
 size_t CudaAccessor::getCudaFreeMemory()
@@ -68,6 +96,31 @@ CudaAccessor::CudaPointsToDistanceVolumeCallback CudaAccessor::getCudaPointsToDi
         return {};
 
     return inst.pointsToDistanceVolumeCallback_;
+}
+
+size_t CudaAccessor::fastWindingNumberMeshMemory( const Mesh& mesh )
+{
+    size_t treeNodesSize = getNumNodes( mesh.topology.numValidFaces() );
+    size_t memoryAmount = treeNodesSize * sizeof( Dipole );
+    memoryAmount += mesh.points.size() * sizeof( Vector3f );
+    memoryAmount += treeNodesSize * sizeof( AABBTree::Node );
+    memoryAmount += mesh.topology.faceSize() * sizeof( Vector3i );
+    return memoryAmount;
+}
+
+size_t CudaAccessor::fromGridMemory( const Mesh& mesh, const Vector3i& dims )
+{
+    return fastWindingNumberMeshMemory( mesh ) + size_t( dims.x ) * dims.y * dims.z * sizeof( float );
+}
+
+size_t CudaAccessor::fromVectorMemory( const Mesh& mesh, size_t inputSize )
+{
+    return fastWindingNumberMeshMemory( mesh ) + inputSize * ( sizeof( float ) + sizeof( Vector3f ) );
+}
+
+size_t CudaAccessor::selfIntersectionsMemory( const Mesh& mesh )
+{
+    return fastWindingNumberMeshMemory( mesh ) + mesh.topology.faceSize() * sizeof( float );
 }
 
 CudaAccessor& CudaAccessor::instance_()

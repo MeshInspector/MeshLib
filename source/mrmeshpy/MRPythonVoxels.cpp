@@ -1,7 +1,7 @@
 #include "MRMesh/MRPython.h"
 #include "MRMesh/MRMeshFwd.h"
 #ifndef MRMESH_NO_OPENVDB
-#include "MRMesh/MRSimpleVolume.h"
+#include "MRMesh/MRVoxelsVolume.h"
 #include "MRMesh/MRVoxelsSave.h"
 #include "MRMesh/MRVoxelsLoad.h"
 #include "MRMesh/MRVDBFloatGrid.h"
@@ -205,12 +205,18 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
 
     pybind11::class_<MR::MeshToDistanceVolumeParams>( m, "MeshToDistanceVolumeParams" ).
         def( pybind11::init<>() ).
-        def_readwrite( "origin", &MR::MeshToDistanceVolumeParams::origin, "origin point of voxels box" ).
-        def_readwrite( "voxelSize", &MR::MeshToDistanceVolumeParams::voxelSize, "size of voxel on each axis" ).
-        def_readwrite( "dimensions", &MR::MeshToDistanceVolumeParams::dimensions, "num voxels along each axis" ).
-        def_readwrite( "minDistSq", &MR::MeshToDistanceVolumeParams::minDistSq, "minimum squared value in a voxel" ).
-        def_readwrite( "maxDistSq", &MR::MeshToDistanceVolumeParams::maxDistSq, "maximum squared value in a voxel" ).
-        def_readwrite( "signMode", &MR::MeshToDistanceVolumeParams::signMode, "the method to compute distance sign" );
+        def_property( "origin", [] ( const MR::MeshToDistanceVolumeParams & p ) { return p.vol.origin; },
+            [] ( MR::MeshToDistanceVolumeParams & p, const MR::Vector3f & v ) { p.vol.origin = v; }, "origin point of voxels box" ).
+        def_property( "voxelSize", [] ( const MR::MeshToDistanceVolumeParams & p ) { return p.vol.voxelSize; },
+            [] ( MR::MeshToDistanceVolumeParams & p, const MR::Vector3f & v ) { p.vol.voxelSize = v; }, "size of voxel on each axis" ).
+        def_property( "dimensions", [] ( const MR::MeshToDistanceVolumeParams & p ) { return p.vol.dimensions; },
+            [] ( MR::MeshToDistanceVolumeParams & p, const MR::Vector3i & v ) { p.vol.dimensions = v; }, "num voxels along each axis" ).
+        def_property( "minDistSq", [] ( const MR::MeshToDistanceVolumeParams & p ) { return p.dist.minDistSq; },
+            [] ( MR::MeshToDistanceVolumeParams & p, float v ) { p.dist.minDistSq = v; }, "minimum squared value in a voxel" ).
+        def_property( "maxDistSq", [] ( const MR::MeshToDistanceVolumeParams & p ) { return p.dist.maxDistSq; },
+            [] ( MR::MeshToDistanceVolumeParams & p, float v ) { p.dist.maxDistSq = v; }, "maximum squared value in a voxel" ).
+        def_property( "signMode", [] ( const MR::MeshToDistanceVolumeParams & p ) { return p.dist.signMode; },
+            [] ( MR::MeshToDistanceVolumeParams & p, MR::SignDetectionMode v ) { p.dist.signMode = v; }, "the method to compute distance sign" );
 
     m.def( "meshToDistanceVolume", MR::decorateExpected( &MR::meshToDistanceVolume ),
         pybind11::arg( "mesh" ), pybind11::arg_v( "params", MR::MeshToDistanceVolumeParams(), "MeshToDistanceVolumeParams()" ),

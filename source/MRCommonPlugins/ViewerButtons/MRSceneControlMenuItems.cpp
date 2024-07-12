@@ -47,7 +47,8 @@ constexpr const char* sGetViewportConfigName( SetViewportConfigPresetMenuItem::T
         "Single Viewport",
         "Horizontal Viewports",
         "Vertical Viewports",
-        "Quad Viewports"
+        "Quad Viewports",
+        "Hex Viewports"
     };
     return names[int( type )];
 }
@@ -291,6 +292,23 @@ SetViewportConfigPresetMenuItem::SetViewportConfigPresetMenuItem( Type type ):
     RibbonMenuItem( sGetViewportConfigName( type ) ),
     type_{ type }
 {
+    updateViewports_ = [] ( const ViewportMask appendedViewports )
+    {
+        auto allObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Any );
+        const ViewportId activeViewportId = getViewerInstance().viewport().id;
+
+        for ( ViewportId newVpId : appendedViewports )
+        {
+            for ( auto& obj : allObjs )
+            {
+                auto masks = obj->getAllVisualizeProperties();
+                for ( auto& mask : masks )
+                    mask.set( newVpId, mask.contains( activeViewportId ) );
+
+                obj->setAllVisualizeProperties( masks );
+            }
+        }
+    };
 }
 
 bool SetViewportConfigPresetMenuItem::action()
@@ -304,22 +322,7 @@ bool SetViewportConfigPresetMenuItem::action()
     for ( int i = int( viewer.viewport_list.size() ) - 1; i > 0; --i )
         viewer.erase_viewport( i );
 
-    auto allObjs = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Any );
-
     ViewportRectangle rect;
-    const ViewportId activeViewportId = viewer.viewport().id;
-
-    const auto updateMasks = [&allObjs, activeViewportId] ( ViewportId newVpId )
-    {
-        for ( auto& obj : allObjs )
-        {
-            auto masks = obj->getAllVisualizeProperties();
-            for ( auto& mask : masks )
-                mask.set( newVpId, mask.contains( activeViewportId ) );
-
-            obj->setAllVisualizeProperties( masks );
-        }
-    };
 
     switch ( type_ )
     {
@@ -332,7 +335,7 @@ bool SetViewportConfigPresetMenuItem::action()
             rect.min.x = rect.max.x;
             rect.min.y = bounds.min.y;
             rect.max = bounds.max;
-            updateMasks( viewer.append_viewport( rect ) );
+            updateViewports_( viewer.append_viewport( rect ) );
 
             break;
         case Type::Horizontal:
@@ -344,10 +347,11 @@ bool SetViewportConfigPresetMenuItem::action()
             rect.min.x = bounds.min.x;
             rect.min.y = rect.max.y;
             rect.max = bounds.max;
-            updateMasks( viewer.append_viewport( rect ) );
+            updateViewports_( viewer.append_viewport( rect ) );
 
             break;
         case Type::Quad:
+        {
             rect.min = bounds.min;
             rect.max.x = std::ceil( bounds.min.x + width * 0.5f );
             rect.max.y = std::ceil( bounds.min.y + height * 0.5f );
@@ -356,19 +360,54 @@ bool SetViewportConfigPresetMenuItem::action()
             rect.min.y = rect.max.y;
             rect.max.x = rect.max.x;
             rect.max.y = bounds.max.y;
-            updateMasks( viewer.append_viewport( rect ) );
+            ViewportMask appendedViewports = viewer.append_viewport( rect );
 
             rect.min.x = rect.max.x;
             rect.min.y = bounds.min.y;
             rect.max.x = bounds.max.x;
             rect.max.y = std::ceil( bounds.min.y + height * 0.5f );
-            updateMasks( viewer.append_viewport( rect ) );
+            appendedViewports |= viewer.append_viewport( rect );
 
             rect.min.y = rect.max.y;
             rect.max = bounds.max;
-            updateMasks( viewer.append_viewport( rect ) );
-
+            appendedViewports |= viewer.append_viewport( rect );
+            updateViewports_( appendedViewports );
             break;
+        }
+        case Type::Hex:
+        {
+            rect.min = bounds.min;
+            rect.max.x = std::ceil( bounds.min.x + width * 0.333f );
+            rect.max.y = std::ceil( bounds.min.y + height * 0.5f );
+            viewer.viewport().setViewportRect( rect );
+
+            rect.min.y = rect.max.y;
+            rect.max.x = rect.max.x;
+            rect.max.y = bounds.max.y;
+            ViewportMask appendedViewports = viewer.append_viewport( rect );
+
+            rect.min.x = rect.max.x;
+            rect.min.y = bounds.min.y;
+            rect.max.x = std::ceil( bounds.min.x + width * 0.666f );
+            rect.max.y = std::ceil( bounds.min.y + height * 0.5f );
+            appendedViewports |= viewer.append_viewport( rect );
+
+            rect.min.y = rect.max.y;
+            rect.max.y = bounds.max.y;
+            appendedViewports |= viewer.append_viewport( rect );
+
+            rect.min.x = rect.max.x;
+            rect.min.y = bounds.min.y;
+            rect.max.x = bounds.max.x;
+            rect.max.y = std::ceil( bounds.min.y + height * 0.5f );
+            appendedViewports |= viewer.append_viewport( rect );
+
+            rect.min.y = rect.max.y;
+            rect.max = bounds.max;
+            appendedViewports |= viewer.append_viewport( rect );
+            updateViewports_( appendedViewports );
+            break;
+        }
         case Type::Single:
         default:
             rect.min.x = bounds.min.x;
@@ -376,6 +415,7 @@ bool SetViewportConfigPresetMenuItem::action()
             rect.max.x = rect.min.x + width;
             rect.max.y = rect.min.y + height;
             viewer.viewport().setViewportRect( rect );
+            updateViewports_( {} );
             break;
     }
     return false;
@@ -395,6 +435,7 @@ using SetSingleViewport = SetViewportConfigPresetMenuItemTemplate<SetViewportCon
 using SetHorizontalViewport = SetViewportConfigPresetMenuItemTemplate<SetViewportConfigPresetMenuItem::Type::Horizontal>;
 using SetVerticalViewport = SetViewportConfigPresetMenuItemTemplate<SetViewportConfigPresetMenuItem::Type::Vertical>;
 using SetQuadViewport = SetViewportConfigPresetMenuItemTemplate<SetViewportConfigPresetMenuItem::Type::Quad>;
+using SetHexViewport = SetViewportConfigPresetMenuItemTemplate<SetViewportConfigPresetMenuItem::Type::Hex>;
 
 MR_REGISTER_RIBBON_ITEM( ResetSceneMenuItem )
 
@@ -425,5 +466,7 @@ MR_REGISTER_RIBBON_ITEM( SetHorizontalViewport )
 MR_REGISTER_RIBBON_ITEM( SetVerticalViewport )
 
 MR_REGISTER_RIBBON_ITEM( SetQuadViewport )
+
+MR_REGISTER_RIBBON_ITEM( SetHexViewport )
 
 }

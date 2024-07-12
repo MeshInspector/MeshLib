@@ -217,7 +217,19 @@ void ImGuiMenu::startFrame()
     if ( viewer->isGLInitialized() )
     {
         ImGui_ImplOpenGL3_NewFrame();
+#ifdef __EMSCRIPTEN__
+        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+#endif
+
         ImGui_ImplGlfw_NewFrame();
+
+#ifdef __EMSCRIPTEN__
+        ImGui::GetIO().ConfigFlags &= ~( ImGuiConfigFlags_NoMouseCursorChange );
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
+        EM_ASM( customSetCursor( $0 ), int( ImGui::GetMouseCursor() ) );
+#pragma clang diagnostic pop
+#endif
 #ifdef __APPLE__
         // we want ImGui to think it is common scaling in case of retina monitor
         ImGui::GetIO().DisplaySize = ImVec2( float( viewer->framebufferSize.x ), float( viewer->framebufferSize.y ) );

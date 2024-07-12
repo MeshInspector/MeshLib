@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-#include "MRSimpleVolume.h"
+#include "MRVoxelsVolume.h"
 #include "MRVolumeIndexer.h"
 
 #ifndef MRMESH_NO_OPENVDB
@@ -53,10 +53,10 @@ private:
 
 /// VoxelsVolumeAccessor specialization for simple volumes
 template <typename T>
-class VoxelsVolumeAccessor<VoxelsVolume<std::vector<T>>>
+class VoxelsVolumeAccessor<VoxelsVolumeMinMax<std::vector<T>>>
 {
 public:
-    using VolumeType = VoxelsVolume<std::vector<T>>;
+    using VolumeType = VoxelsVolumeMinMax<std::vector<T>>;
     using ValueType = typename VolumeType::ValueType;
 
     explicit VoxelsVolumeAccessor( const VolumeType& volume )

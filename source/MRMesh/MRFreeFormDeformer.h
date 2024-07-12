@@ -72,7 +72,7 @@ private:
     Vector3i resolution_;
     size_t resXY_{ 0 };
     size_t size_{ 0 };
-    size_t numSamples_{ 0 };
+    double sumWeight_{ 0.0 };
 
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> accumA_;
     Eigen::Matrix<double, Eigen::Dynamic, 3> accumB_;
@@ -83,7 +83,7 @@ private:
 
     Vector3d reverseDiagonal_;
 
-    double stabilizer_{ 0.2 };
+    double stabilizer_{ 0.1 };
     void stabilize_();
 };
 

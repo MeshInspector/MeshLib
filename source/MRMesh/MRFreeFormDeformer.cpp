@@ -324,7 +324,7 @@ void FreeFormBestFit::addPair( const Vector3d& src, const Vector3d& tgt, double 
             accumA_( i, j ) += ( ws[i] * ws[j] * w );
         }
     }
-    ++numSamples_;
+    sumWeight_ += w;
 }
 
 void FreeFormBestFit::addOther( const FreeFormBestFit& other )
@@ -336,7 +336,10 @@ void FreeFormBestFit::addOther( const FreeFormBestFit& other )
     }
     accumA_ += other.accumA_;
     accumB_ += other.accumB_;
-    numSamples_ += other.numSamples_;
+
+    double sw = sumWeight_ + other.sumWeight_;
+    stabilizer_ = ( stabilizer_ * sumWeight_ + other.stabilizer_ * other.sumWeight_ ) / sw;
+    sumWeight_ += other.sumWeight_;
 }
 
 std::vector<MR::Vector3f> FreeFormBestFit::findBestDeformationReferenceGrid()
@@ -359,8 +362,9 @@ void FreeFormBestFit::stabilize_()
     if ( stabilizer_ <= 0 )
         return;
     std::vector<Vector3f> refGrid = makeFreeFormOriginGrid( Box3f( box_ ), resolution_ );
+    auto w = double( sumWeight_ ) / double( refGrid.size() ) * stabilizer_;
     for ( const auto& refPoint : refGrid )
-        addPair( Vector3d( refPoint ), Vector3d( refPoint ), double( numSamples_ ) / double( refGrid.size() ) * stabilizer_ );
+        addPair( Vector3d( refPoint ), Vector3d( refPoint ), w );
 }
 
 }

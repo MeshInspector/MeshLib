@@ -156,7 +156,8 @@ MRVIEWER_API void PlotCustomHistogram( const char* str_id,
                                  std::function<void( int idx )> on_click,
                                  int values_count, int values_offset = 0,
                                  float scale_min = FLT_MAX, float scale_max = FLT_MAX,
-                                 ImVec2 frame_size = ImVec2( 0, 0 ), int selectedBarId = -1, int hoveredBarId = -1 );
+                                 ImVec2 frame_size = ImVec2( 0, 0 ), int selectedBarId = -1, int hoveredBarId = -1,
+                                 std::vector<float> gridIndexes = {}, std::vector<float> gridValues = {} );
 
 /// begin typical state plugin window
 MRVIEWER_API bool BeginStatePlugin( const char* label, bool* open, float width );

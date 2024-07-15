@@ -185,6 +185,19 @@ auto pythonGetSelectedBitset()
     return ret;
 }
 
+template <typename T, typename U, auto M>
+void pythonSetSelectedBitset( const std::vector<U>& bitsets )
+{
+    MR::CommandLoop::runCommandFromGUIThread( [&]
+    {
+        auto selected = MR::getAllObjectsInTree<T>( &MR::SceneRoot::get(), MR::ObjectSelectivityType::Selected );
+        if ( selected.size() != bitsets.size() )
+            throw std::runtime_error( fmt::format( "Specified {} bitsets, but {} objects are selected.", bitsets.size(), selected.size() ) );
+        for ( std::size_t i = 0; i < selected.size(); i++ )
+            ( ( *selected[i] ).*M )( bitsets[i] );
+    } );
+}
+
 } // namespace
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Scene, [] ( pybind11::module_& m )
@@ -196,6 +209,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Scene, [] ( pybind11::module_& m )
     m.def( "getSelectedMeshFaces", &pythonGetSelectedBitset<MR::ObjectMeshHolder, &MR::ObjectMeshHolder::getSelectedFaces>, "Get selected face bitsets of the selected mesh objects." );
     m.def( "getSelectedMeshEdges", &pythonGetSelectedBitset<MR::ObjectMeshHolder, &MR::ObjectMeshHolder::getSelectedEdges>, "Get selected edge bitsets of the selected mesh objects." );
     m.def( "getSelectedPointCloudPoints", &pythonGetSelectedBitset<MR::ObjectPointsHolder, &MR::ObjectPointsHolder::getSelectedPoints>, "Get selected point bitsets of the selected point cloud objects." );
+    m.def( "setSelectedMeshFaces", &pythonSetSelectedBitset<MR::ObjectMeshHolder, MR::FaceBitSet, &MR::ObjectMeshHolder::selectFaces>, "Set selected face bitsets of the selected mesh objects." );
+    m.def( "setSelectedMeshEdges", &pythonSetSelectedBitset<MR::ObjectMeshHolder, MR::UndirectedEdgeBitSet, &MR::ObjectMeshHolder::selectEdges>, "Set selected edge bitsets of the selected mesh objects." );
+    m.def( "setSelectedPointCloudPoints", &pythonSetSelectedBitset<MR::ObjectPointsHolder, MR::VertBitSet, &MR::ObjectPointsHolder::selectPoints>, "Set selected point bitsets of the selected point cloud objects." );
     // Polylines don't have selection bitsets at the moment.
 
     m.def( "addPointCloudToScene", &pythonAddPointCloudToScene, pybind11::arg( "points" ), pybind11::arg( "name" ), "add given point cloud to scene tree" );

@@ -39,3 +39,15 @@ bool mrBitSetEq( const MRBitSet* a, const MRBitSet* b )
 {
     return *reinterpret_cast<const BitSet*>( a ) == *reinterpret_cast<const BitSet*>( b );
 }
+
+MRFaceBitSet* mrFaceBitSetNew( void )
+{
+    return reinterpret_cast<MRFaceBitSet*>( new FaceBitSet );
+}
+
+size_t mrBitSetCount( const MRBitSet* bs_ )
+{
+    const auto& bs = *reinterpret_cast<const BitSet*>( bs_ );
+
+    return bs.count();
+}

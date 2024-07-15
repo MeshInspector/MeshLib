@@ -30,6 +30,12 @@ MRMESHC_API MRVector3f mrVector3fAdd( const MRVector3f* a, const MRVector3f* b )
 /// multiplies a vector by a scalar value
 MRMESHC_API MRVector3f mrVector3fMulScalar( const MRVector3f* a, float b );
 
+/// squared length of the vector
+MRMESHC_API float mrVector3LengthSq( const MRVector3f* v );
+
+/// length of the vector
+MRMESHC_API float mrVector3Length( const MRVector3f* v );
+
 /// a set of 3 vectors; useful for representing a face via its vertex coordinates
 typedef MRVector3f MRTriangle3f[3];
 

@@ -109,3 +109,12 @@ void mrMeshFree( MRMesh* mesh )
 {
     delete reinterpret_cast<Mesh*>( mesh );
 }
+
+MRVector3f mrMeshHoleDirArea( const MRMesh* mesh_, MREdgeId e_ )
+{
+    const auto& mesh = *reinterpret_cast<const Mesh*>( mesh_ );
+    auto e = *reinterpret_cast<EdgeId*>( &e_ );
+
+    const auto res = (Vector3f)mesh.holeDirArea( e );
+    return reinterpret_cast<const MRVector3f&>( res );
+}

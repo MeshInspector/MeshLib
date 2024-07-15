@@ -27,6 +27,9 @@ MRMESHC_API size_t mrTriangulationSize( const MRTriangulation* tris );
 /// deallocates the Triangulation object
 MRMESHC_API void mrTriangulationFree( MRTriangulation* tris );
 
+/// returns the number of face records including invalid ones
+MRMESHC_API size_t mrMeshTopologyFaceSize( const MRMeshTopology* top );
+
 /// returns one edge with no valid left face for every boundary in the mesh
 MRMESHC_API MREdgePath* mrMeshTopologyFindHoleRepresentiveEdges( const MRMeshTopology* top );
 

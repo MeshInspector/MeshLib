@@ -170,6 +170,21 @@ void pythonModifySelectedMesh( MR::Mesh mesh )
     } );
 }
 
+template <typename T, auto M>
+auto pythonGetSelectedBitset()
+{
+    std::vector<std::remove_cvref_t<decltype( ( std::declval<T>().*M )() )>> ret;
+
+    MR::CommandLoop::runCommandFromGUIThread( [&]
+    {
+        auto selected = MR::getAllObjectsInTree<T>( &MR::SceneRoot::get(), MR::ObjectSelectivityType::Selected );
+        ret.resize( selected.size() );
+        for ( std::size_t i = 0; i < ret.size(); i++ )
+            ret[i] = ( ( *selected[i] ).*M )();
+    } );
+    return ret;
+}
+
 } // namespace
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Scene, [] ( pybind11::module_& m )
@@ -177,6 +192,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Scene, [] ( pybind11::module_& m )
     m.def( "addMeshToScene", &pythonAddMeshToScene, pybind11::arg( "mesh" ), pybind11::arg( "name" ), "add given mesh to scene tree" );
 
     m.def( "modifySelectedMesh", &pythonModifySelectedMesh, pybind11::arg( "mesh" ), "Assign a new mesh to the selected mesh object. Exactly one object must be selected." );
+
+    m.def( "getSelectedMeshFaces", &pythonGetSelectedBitset<MR::ObjectMeshHolder, &MR::ObjectMeshHolder::getSelectedFaces>, "Get selected face bitsets of the selected mesh objects." );
+    m.def( "getSelectedMeshEdges", &pythonGetSelectedBitset<MR::ObjectMeshHolder, &MR::ObjectMeshHolder::getSelectedEdges>, "Get selected edge bitsets of the selected mesh objects." );
+    m.def( "getSelectedPointCloudPoints", &pythonGetSelectedBitset<MR::ObjectPointsHolder, &MR::ObjectPointsHolder::getSelectedPoints>, "Get selected point bitsets of the selected point cloud objects." );
+    // Polylines don't have selection bitsets at the moment.
 
     m.def( "addPointCloudToScene", &pythonAddPointCloudToScene, pybind11::arg( "points" ), pybind11::arg( "name" ), "add given point cloud to scene tree" );
     m.def( "clearScene", &pythonClearScene, "remove all objects from scene tree" );

@@ -114,6 +114,26 @@ jobs:
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python.txt
 
+      - name: Checkout MRBind
+        uses: actions/checkout@v4
+        if: ${{ matrix.os == 'ubuntu24' }}
+        with:
+          repository: MeshInspector/mrbind
+          path: _mrbind
+          token: ${{ secrets.BUILD_MACHINE_TOKEN }}
+
+      - name: Compile MRBind
+        if: ${{ matrix.os == 'ubuntu24' }}
+        run: |
+          CC=${{matrix.c-compiler}} CXX=${{matrix.cxx-compiler}} cmake -S _mrbind -B _mrbind/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build _mrbind/build
+
+      - name: Generate MRBind bindings
+        if: ${{ matrix.os == 'ubuntu24' }}
+        env:
+          CXX: ${{matrix.cxx-compiler}}
+        run: scripts/mrbind/run.sh generate
+
       - name: Build
         run: ./scripts/build_source.sh
         env:
@@ -129,6 +149,12 @@ jobs:
                       -DMESHLIB_BUILD_MRCUDA=${{ matrix.build_mrcuda }}
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
+
+      - name: Compile and link MRBind bindings
+        if: ${{ matrix.os == 'ubuntu24' }}
+        env:
+          CXX: ${{matrix.cxx-compiler}}
+        run: scripts/mrbind/run.sh
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.compiler}}"

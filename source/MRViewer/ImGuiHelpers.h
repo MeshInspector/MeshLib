@@ -147,6 +147,17 @@ inline bool Checkbox(const char* label, Getter get, Setter set)
     return ret;
 }
 
+/// helper structure for PlotCustomHistogram describing background grid line and label
+struct HistogramGridLine
+{
+    /// value on the corresponding axis where the line and label are located
+    float value{};
+    /// label text
+    std::string label;
+    /// label tooltip
+    std::string tooltip;
+};
+
 /// draws a histogram
 /// \param selectedBarId (if not negative) the bar to highlight as selected
 /// \param hoveredBarId (if not negative) the bar to highlight as hovered
@@ -157,7 +168,8 @@ MRVIEWER_API void PlotCustomHistogram( const char* str_id,
                                  int values_count, int values_offset = 0,
                                  float scale_min = FLT_MAX, float scale_max = FLT_MAX,
                                  ImVec2 frame_size = ImVec2( 0, 0 ), int selectedBarId = -1, int hoveredBarId = -1,
-                                 std::vector<float> gridIndexes = {}, std::vector<float> gridValues = {} );
+                                 const std::vector<HistogramGridLine>& gridIndexes = {},
+                                 const std::vector<HistogramGridLine>& gridValues = {} );
 
 /// begin typical state plugin window
 MRVIEWER_API bool BeginStatePlugin( const char* label, bool* open, float width );

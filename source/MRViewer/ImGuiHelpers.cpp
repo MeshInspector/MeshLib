@@ -1,6 +1,7 @@
 #include "ImGuiHelpers.h"
 #include "MRViewer/MRUIRectAllocator.h"
 #include "MRViewer/MRUITestEngine.h"
+#include "MRViewer/MRImGuiVectorOperators.h"
 #include "imgui_internal.h"
 #include "MRMesh/MRBitSet.h"
 #include "MRPch/MRSpdlog.h"
@@ -105,6 +106,25 @@ void drawTooltip( T min, T max )
     }
 }
 
+// Helper function to calculate histogram value labels area
+static float calculateLabelsSizes( const std::vector<HistogramGridLine> &grid, int coord, std::vector<ImVec2> &sizes )
+{
+    float maxCoord = 0.0f;
+    int index = 0;
+    for ( const HistogramGridLine& line : grid )
+    {
+        if ( !line.label.empty() )
+        {
+            ImVec2 size = ImGui::CalcTextSize( line.label.c_str() );
+            maxCoord = std::max( size[coord], maxCoord );
+            sizes[index] = size;
+        }
+        index++;
+    }
+    if ( maxCoord == 0.0f )
+        return 0.0f;
+    return maxCoord + ImGui::GetStyle().ItemInnerSpacing[coord];
+}
 
 void PlotCustomHistogram( const char* str_id,
                                  std::function<float( int idx )> values_getter,
@@ -113,7 +133,8 @@ void PlotCustomHistogram( const char* str_id,
                                  int values_count, int values_offset,
                                  float scale_min, float scale_max,
                                  ImVec2 frame_size, int selectedBarId, int hoveredBarId,
-                                 std::vector<float> gridIndexes, std::vector<float> gridValues )
+                                 const std::vector<HistogramGridLine>& gridIndexes,
+                                 const std::vector<HistogramGridLine>& gridValues )
 {
     if ( frame_size.y < 0.0f )
         return;
@@ -127,22 +148,29 @@ void PlotCustomHistogram( const char* str_id,
     if ( frame_size.y == 0.0f )
         frame_size.y = frame_size.x / 2.f + ( style.FramePadding.y * 2 );
 
-    ImRect rect;
-    rect.Min = GetCursorScreenPos();
+    std::vector<ImVec2> gridValuesLabelsSizes( gridValues.size() );
+    ImVec2 gridIndexesFirstLabelSize = !gridIndexes.empty() && !gridIndexes.front().label.empty() ? ImGui::CalcTextSize( gridIndexes.front().label.c_str() ) : ImVec2();
+    ImVec2 gridIndexesLastLabelSize = !gridIndexes.empty() && !gridIndexes.back().label.empty() ? ImGui::CalcTextSize( gridIndexes.back().label.c_str() ) : ImVec2();
+    ImRect itemRect( GetCursorScreenPos(), GetCursorScreenPos() + frame_size ); // Full item rectangle
+    ImRect rect = itemRect; // Histogram area rectangle
+    rect.Max.x -= calculateLabelsSizes( gridValues, 0, gridValuesLabelsSizes );
+    rect.Max.y -= gridIndexesFirstLabelSize.y;
     ImVec2 minPlus, maxPlus;
-    rect.Max.x = rect.Min.x + frame_size.x; rect.Max.y = rect.Min.y + frame_size.y;
     ImVec2 innerMin = rect.Min; innerMin.x += style.FramePadding.x; innerMin.y += style.FramePadding.y;
     ImVec2 innerMax = rect.Max; innerMax.x -= style.FramePadding.x; innerMax.y -= style.FramePadding.y;
-    if ( ( innerMax.y - innerMin.y ) <= 0.0f )
+    if ( ( innerMax.x - innerMin.x ) <= 0.0f || ( innerMax.y - innerMin.y ) <= 0.0f )
         return;
 
     // ImGui::Dummy did not handle click properly (it somehow breaks modal openenig) so we changed it to ButtonBehavior
     //Dummy( frame_size );
 
-    ItemSize( rect.GetSize() );
-    ItemAdd( rect, id );
-    bool hovered, held;
-    ButtonBehavior( rect, id, &hovered, &held );
+    const ImVec2 mousePos = GetIO().MousePos;
+    ItemSize( itemRect.GetSize() );
+    ItemAdd( itemRect, id );
+    bool itemHovered, hovered, held;
+    ButtonBehavior( itemRect, id, &itemHovered, &held );
+    hovered = itemHovered && rect.Contains( mousePos );
+    held = held && rect.Contains( mousePos );
 
     // Determine scale from values if not specified
     if ( scale_min == FLT_MAX || scale_max == FLT_MAX )
@@ -183,9 +211,8 @@ void PlotCustomHistogram( const char* str_id,
         int res_w = std::min( (int) frame_size.x, values_count );
         int item_count = values_count;
 
-        const ImVec2 mousePos = GetIO().MousePos;
         // Tooltip on hover
-        if ( hovered && mousePos.x > innerMin.x && mousePos.y > innerMin.y &&mousePos.x < innerMax.x&&mousePos.y < innerMax.y )
+        if ( hovered && mousePos.x > innerMin.x && mousePos.y > innerMin.y && mousePos.x < innerMax.x && mousePos.y < innerMax.y )
         {
             const float t = std::clamp( ( mousePos.x - innerMin.x ) / ( innerMax.x - innerMin.x ), 0.0f, 0.9999f );
             const int v_idx = (int) ( t * item_count );
@@ -201,6 +228,7 @@ void PlotCustomHistogram( const char* str_id,
 
         const float t_step = 1.0f / (float) res_w;
         const float inv_scale = ( scale_min == scale_max ) ? 0.0f : ( 1.0f / ( scale_max - scale_min ) );
+        const float inv_value_scale = values_count > 1 ? 1.0f / float( values_count - 1 ) : 0.0f;
 
         float t0 = 0.0f;
         float histogram_zero_line_t = ( scale_min * scale_max < 0.0f ) ? ( -scale_min * inv_scale ) : ( scale_min < 0.0f ? 0.0f : 1.0f );   // Where does the zero line stands
@@ -212,17 +240,81 @@ void PlotCustomHistogram( const char* str_id,
         const ImU32 col_selected = GetColorU32(col);
         const ImU32 col_selected_top = GetColorU32(ImGuiCol_TabActive);
         const ImU32 col_grid = GetColorU32(ImGuiCol_PlotLines, 0.5f);
+        const ImU32 col_labels = GetColorU32(ImGuiCol_Text);
 
-        for ( float index : gridIndexes )
+        // Draw grid lines and labels, avoiding labels collisions
+        // Colliding labels are skipped, except first and last (unless collides with first); first and last better be present
+        if ( !gridIndexes.empty() )
         {
-            float x = innerMin.x + ( innerMax.x - innerMin.x - 1 ) * ( values_count > 1 ? index / float( values_count - 1 ) : 0.5f );
-            drawList->AddRectFilled( ImVec2( x, innerMin.y ), ImVec2( x + 1, innerMax.y ), col_grid );
+            auto toX = [=] ( float index )
+            {
+                return innerMin.x + ( innerMax.x - innerMin.x - 1 ) * index * inv_value_scale;
+            };
+            float firstX = std::max( rect.Min.x, toX( gridIndexes.front().value ) - gridIndexesFirstLabelSize.x / 2 );
+            float lastX = std::min( itemRect.Max.x - style.FramePadding.x - gridIndexesLastLabelSize.x,
+                                    toX( gridIndexes.back().value ) - gridIndexesLastLabelSize.x / 2 );
+            float prevMaxX = innerMin.x;
+            size_t i = 0;
+            size_t last = gridIndexes.size() - 1;
+            for ( const HistogramGridLine& line : gridIndexes )
+            {
+                ImVec2 size = i == 0 ? gridIndexesFirstLabelSize : i == last ? gridIndexesLastLabelSize :
+                    !line.label.empty() ? ImGui::CalcTextSize( line.label.c_str() ) : ImVec2();
+                float x = toX( line.value );
+                float textX = i == 0 ? firstX : i == last ? lastX : x - size.x / 2;
+                float textY = innerMax.y + ImGui::GetStyle().ItemInnerSpacing.y;
+                bool drawText = size.x != 0 && ( i == 0 || ( textX >= prevMaxX && ( i == last || textX + size.x <= lastX ) ) );
+                // Grid line (a little longer if label is present)
+                drawList->AddRectFilled( ImVec2( x, innerMin.y ), ImVec2( x + 1, !drawText ? innerMax.y : rect.Max.y ), col_grid );
+                if ( drawText )
+                    drawList->AddRectFilled( ImVec2( x, rect.Max.y ), ImVec2( x + 1, textY ), col_labels );
+                // Label
+                if ( drawText )
+                {
+                    drawList->AddText( { textX, textY }, col_labels, line.label.c_str() );
+                    if ( !line.tooltip.empty() && itemHovered &&
+                            mousePos.x >= textX && mousePos.y >= textY && mousePos.x < textX + size.x && mousePos.y < textY + size.y )
+                            ImGui::SetTooltip( "%s", line.tooltip.c_str() );
+                    prevMaxX = textX + size.x;
+                }
+                i++;
+            }
         }
-        for ( float val : gridValues )
+        if ( !gridValues.empty() )
         {
-            float line = 1.0f - std::clamp( ( val - scale_min ) * inv_scale, 0.0f, 1.0f );
-            float y = innerMin.y + ( innerMax.y - innerMin.y ) * line;
-            drawList->AddRectFilled( ImVec2( innerMin.x, y ), ImVec2( innerMax.x, y + 1 ), col_grid );
+            auto toY = [=] ( float value )
+            {
+                float line = 1.0f - std::clamp( ( value - scale_min ) * inv_scale, 0.0f, 1.0f );
+                return innerMin.y + ( innerMax.y - innerMin.y ) * line;
+            };
+            const std::vector<ImVec2>& sizes = gridValuesLabelsSizes;
+            float firstY = std::min( itemRect.Max.y - style.FramePadding.y - sizes.front().y, toY( gridValues.front().value ) - sizes.front().y / 2 );
+            float lastY = std::max( rect.Min.y, toY( gridValues.back().value ) - sizes.back().y / 2 );
+            float prevMinY = innerMax.y;
+            size_t i = 0;
+            size_t last = gridValues.size() - 1;
+            for ( const HistogramGridLine& line : gridValues )
+            {
+                float y = toY( line.value );
+                float textY = i == 0 ? firstY : i == last ? lastY : y - sizes[i].y / 2;
+                float textX = itemRect.Max.x - sizes[i].x;
+                bool drawText = sizes[i].x != 0 && (
+                    i == 0 || ( textY + sizes[i].y <= prevMinY && ( i == last || textY >= lastY + sizes.back().y ) ) );
+                // Grid line (a little longer if label is present)
+                drawList->AddRectFilled( ImVec2( innerMin.x, y ), ImVec2( !drawText ? innerMax.x : rect.Max.x, y + 1 ), col_grid );
+                if ( drawText )
+                    drawList->AddRectFilled( ImVec2( rect.Max.x, y ), ImVec2( rect.Max.x + ImGui::GetStyle().ItemInnerSpacing.x, y + 1 ), col_labels );
+                // Label
+                if ( drawText )
+                {
+                    drawList->AddText( { textX, textY }, col_labels, line.label.c_str() );
+                    if ( !line.tooltip.empty() && itemHovered &&
+                            mousePos.x >= textX && mousePos.y >= textY && mousePos.x < textX + sizes[i].x && mousePos.y < textY + sizes[i].y )
+                        ImGui::SetTooltip( "%s", line.tooltip.c_str() );
+                    prevMinY = textY;
+                }
+                i++;
+            }
         }
 
         for ( int n = 0; n < res_w; n++ )

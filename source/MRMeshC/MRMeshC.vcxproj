@@ -25,7 +25,9 @@
     <ClInclude Include="MRMeshFwd.h" />
     <ClInclude Include="MRMesh.h" />
     <ClInclude Include="MRMeshC.h" />
+    <ClInclude Include="MRMeshFillHole.h" />
     <ClInclude Include="MRMeshLoad.h" />
+    <ClInclude Include="MRMeshMetrics.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
     <ClInclude Include="MRMeshPart.h" />
     <ClInclude Include="MRMeshSave.h" />
@@ -53,7 +55,9 @@
     <ClCompile Include="MRMesh.cpp" />
     <ClCompile Include="MRMeshBoolean.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
+    <ClCompile Include="MRMeshFillHole.cpp" />
     <ClCompile Include="MRMeshLoad.cpp" />
+    <ClCompile Include="MRMeshMetrics.cpp" />
     <ClCompile Include="MRMeshOrPoints.cpp" />
     <ClCompile Include="MRMeshSave.cpp" />
     <ClCompile Include="MRMeshTopology.cpp" />

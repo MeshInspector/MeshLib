@@ -1,8 +1,10 @@
 #!/bin/bash
 
+DIR="$(dirname -- "$0")"
+
 make -f _mrbind/scripts/apply_to_files.mk \
     INPUT_DIRS=source/MRMesh \
-    INPUT_FILES_BLACKLIST='%/MRPython.h %/MREmbeddedPython.h %/MRIOFormatsRegistry.h %/MROpenVDBHelper.h %/MRRestoringStreamsSink.h %/MRDirectory.h %/MRVDBProgressInterrupter.h %/MRTupleBindings.h' \
+    INPUT_FILES_BLACKLIST="\$(file <$DIR/input_file_blacklist.txt)" \
     OUTPUT_DIR=build/binds \
     INPUT_GLOBS='*.h' \
     MRBIND='_mrbind/build/mrbind --format=macros --ignore-pch-flags --ignore :: --allow MR --ignore MR::detail --ignore MR::Signal --ignore MR::UniquePtr --ignore MR::OpenVdbFloatGrid --ignore MR::RegisterRenderObjectConstructor --ignore MR::Config --allow std::integral_constant --skip-base boost::dynamic_bitset' \

@@ -29,7 +29,7 @@ void mrFillHole( MRMesh* mesh_, MREdgeId a_, const MRFillHoleParams* params_ )
     if ( params_ )
     {
         params = {
-            .metric = *reinterpret_cast<const FillHoleMetric*>( params_->metric ),
+            .metric = params_->metric ? *reinterpret_cast<const FillHoleMetric*>( params_->metric ) : FillHoleMetric {},
             .outNewFaces = reinterpret_cast<FaceBitSet*>( params_->outNewFaces ),
             .multipleEdgesResolveMode = static_cast<FillHoleParams::MultipleEdgesResolveMode>( params_->multipleEdgesResolveMode ),
             .makeDegenerateBand = params_->makeDegenerateBand,
@@ -54,7 +54,7 @@ void mrFillHoles( MRMesh* mesh_, const MREdgeId* as_, size_t asNum, const MRFill
     if ( params_ )
     {
         params = {
-            .metric = *reinterpret_cast<const FillHoleMetric*>( params_->metric ),
+            .metric = params_->metric ? *reinterpret_cast<const FillHoleMetric*>( params_->metric ) : FillHoleMetric {},
             .outNewFaces = reinterpret_cast<FaceBitSet*>( params_->outNewFaces ),
             .multipleEdgesResolveMode = static_cast<FillHoleParams::MultipleEdgesResolveMode>( params_->multipleEdgesResolveMode ),
             .makeDegenerateBand = params_->makeDegenerateBand,

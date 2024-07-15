@@ -9,6 +9,7 @@ get_filename_component(SELF_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 
 set(MESHLIB_BUILD_MRVIEWER @MESHLIB_BUILD_MRVIEWER@)
 set(MESHLIB_BUILD_CUDA @MESHLIB_BUILD_CUDA@)
+set(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING @MESHLIB_EXPERIMENTAL_BUILD_C_BINDING@)
 
 include(${SELF_DIR}/MRMeshConfig.cmake)
 if(MESHLIB_BUILD_MRVIEWER)
@@ -18,6 +19,9 @@ endif(MESHLIB_BUILD_MRVIEWER)
 if(MESHLIB_BUILD_CUDA)
     include(${SELF_DIR}/MRCudaConfig.cmake)
 endif(MESHLIB_BUILD_CUDA)
+if(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING)
+    include(${SELF_DIR}/MRMeshCConfig.cmake)
+endif(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING)
 
 if(APPLE)
     message("You can install required packages via brew: ' xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt '")

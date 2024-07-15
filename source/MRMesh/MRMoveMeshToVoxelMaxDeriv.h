@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#ifndef MRMESH_NO_OPENVDB
 #include "MRVoxelsVolumeAccess.h"
 #include "MRVolumeInterpolation.h"
 #include "MRMatrix3.h"
@@ -127,3 +128,4 @@ using MeshOnVoxelsC = MeshOnVoxelsT<const Mesh>;
 
 
 }
+#endif

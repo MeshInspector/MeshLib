@@ -50,10 +50,45 @@ MRFillHoleMetric* mrGetCircumscribedMetric( const MRMesh* mesh_ )
     return reinterpret_cast<MRFillHoleMetric*>( new FillHoleMetric( std::move( res ) ) );
 }
 
+MRFillHoleMetric* mrGetPlaneFillMetric( const MRMesh* mesh_, MREdgeId e_ )
+{
+    const auto& mesh = *reinterpret_cast<const Mesh*>( mesh_ );
+    const auto& e = reinterpret_cast<const EdgeId&>( e_ );
+
+    auto res = getPlaneFillMetric( mesh, e );
+    return reinterpret_cast<MRFillHoleMetric*>( new FillHoleMetric( std::move( res ) ) );
+}
+
+MRFillHoleMetric* mrGetPlaneNormalizedFillMetric( const MRMesh* mesh_, MREdgeId e_ )
+{
+    const auto& mesh = *reinterpret_cast<const Mesh*>( mesh_ );
+    const auto& e = reinterpret_cast<const EdgeId&>( e_ );
+
+    auto res = getPlaneNormalizedFillMetric( mesh, e );
+    return reinterpret_cast<MRFillHoleMetric*>( new FillHoleMetric( std::move( res ) ) );
+}
+
+MRFillHoleMetric* mrGetComplexFillMetric( const MRMesh* mesh_, MREdgeId e_ )
+{
+    const auto& mesh = *reinterpret_cast<const Mesh*>( mesh_ );
+    const auto& e = reinterpret_cast<const EdgeId&>( e_ );
+
+    auto res = getComplexFillMetric( mesh, e );
+    return reinterpret_cast<MRFillHoleMetric*>( new FillHoleMetric( std::move( res ) ) );
+}
+
 MRFillHoleMetric* mrGetUniversalMetric( const MRMesh* mesh_ )
 {
     const auto& mesh = *reinterpret_cast<const Mesh*>( mesh_ );
 
     auto res = getUniversalMetric( mesh );
+    return reinterpret_cast<MRFillHoleMetric*>( new FillHoleMetric( std::move( res ) ) );
+}
+
+MRFillHoleMetric* mrGetMinAreaMetric( const MRMesh* mesh_ )
+{
+    const auto& mesh = *reinterpret_cast<const Mesh*>( mesh_ );
+
+    auto res = getMinAreaMetric( mesh );
     return reinterpret_cast<MRFillHoleMetric*>( new FillHoleMetric( std::move( res ) ) );
 }

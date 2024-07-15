@@ -18,6 +18,16 @@ namespace MR.DotNet.Test
         }
 
         [Test]
+        public void TestDoubleAssignment()
+        {
+            var path = TestTools.GetPathToTestFile( "cube.mrmesh" );
+            var mesh = Mesh.FromFile( path );
+            mesh = Mesh.FromFile(path);
+            Assert.That( mesh.Points.Count == 8 );
+            Assert.That( mesh.Triangulation.Count == 12 );
+        }
+
+        [Test]
         public void TestSaveLoad()
         {
             var cubeMesh = Mesh.MakeCube( Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f) );
@@ -34,7 +44,7 @@ namespace MR.DotNet.Test
         public void TestSpartan()
         {
             var mesh = Mesh.FromFile( TestTools.GetPathToTestFile( "spartan.mrmesh" ) );
-            Assert.That( mesh.Points.Count == 68230 );            
+            Assert.That( mesh.Points.Count == 68230 );
             Assert.That( mesh.Triangulation.Count == 136948 );
         }
 
@@ -74,8 +84,9 @@ namespace MR.DotNet.Test
         [Test]
         public void TestEmptyFile()
         {
-            string path = Path.GetTempFileName() + ".mrmesh"; ;
-            File.Create(path);
+            string path = Path.GetTempFileName() + ".mrmesh";
+            var file = File.Create(path);
+            file.Close();
             Assert.Throws<SystemException>( () => Mesh.FromFile(path)) ;
             File.Delete(path);
         }

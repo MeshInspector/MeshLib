@@ -58,7 +58,7 @@ typedef struct MRFillHoleParams
     bool* stopBeforeBadTriangulation;
 } MRFillHoleParams;
 
-MRMESHC_API MRFillHoleParams mrFillHoleParamsNew();
+MRMESHC_API MRFillHoleParams mrFillHoleParamsNew( void );
 
 /** \brief Fills hole in mesh\n
   *

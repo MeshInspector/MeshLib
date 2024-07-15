@@ -7,7 +7,7 @@
 
 using namespace MR;
 
-MRFillHoleParams mrFillHoleParamsNew()
+MRFillHoleParams mrFillHoleParamsNew( void )
 {
     static const FillHoleParams def;
     return {

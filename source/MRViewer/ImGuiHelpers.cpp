@@ -148,11 +148,13 @@ void PlotCustomHistogram( const char* str_id,
     if ( frame_size.y == 0.0f )
         frame_size.y = frame_size.x / 2.f + ( style.FramePadding.y * 2 );
 
-    std::vector<ImVec2> gridValuesLabelsSizes( gridValues.size() ), gridIndexesLabelsSizes( gridIndexes.size() );
+    std::vector<ImVec2> gridValuesLabelsSizes( gridValues.size() );
+    ImVec2 gridIndexesFirstLabelSize = !gridIndexes.empty() && !gridIndexes.front().label.empty() ? ImGui::CalcTextSize( gridIndexes.front().label.c_str() ) : ImVec2();
+    ImVec2 gridIndexesLastLabelSize = !gridIndexes.empty() && !gridIndexes.back().label.empty() ? ImGui::CalcTextSize( gridIndexes.back().label.c_str() ) : ImVec2();
     ImRect itemRect( GetCursorScreenPos(), GetCursorScreenPos() + frame_size ); // Full item rectangle
     ImRect rect = itemRect; // Histogram area rectangle
     rect.Max.x -= calculateLabelsSizes( gridValues, 0, gridValuesLabelsSizes );
-    rect.Max.y -= calculateLabelsSizes( gridIndexes, 1, gridIndexesLabelsSizes );
+    rect.Max.y -= gridIndexesFirstLabelSize.y;
     ImVec2 minPlus, maxPlus;
     ImVec2 innerMin = rect.Min; innerMin.x += style.FramePadding.x; innerMin.y += style.FramePadding.y;
     ImVec2 innerMax = rect.Max; innerMax.x -= style.FramePadding.x; innerMax.y -= style.FramePadding.y;
@@ -248,18 +250,20 @@ void PlotCustomHistogram( const char* str_id,
             {
                 return innerMin.x + ( innerMax.x - innerMin.x - 1 ) * index * inv_value_scale;
             };
-            const std::vector<ImVec2>& sizes = gridIndexesLabelsSizes;
-            float firstX = std::max( rect.Min.x, toX( gridIndexes.front().value ) - sizes.front().x / 2 );
-            float lastX = std::min( itemRect.Max.x - style.FramePadding.x - sizes.back().x, toX( gridIndexes.back().value ) - sizes.back().x / 2 );
+            float firstX = std::max( rect.Min.x, toX( gridIndexes.front().value ) - gridIndexesFirstLabelSize.x / 2 );
+            float lastX = std::min( itemRect.Max.x - style.FramePadding.x - gridIndexesLastLabelSize.x,
+                                    toX( gridIndexes.back().value ) - gridIndexesLastLabelSize.x / 2 );
             float prevMaxX = innerMin.x;
             size_t i = 0;
             size_t last = gridIndexes.size() - 1;
             for ( const HistogramGridLine& line : gridIndexes )
             {
+                ImVec2 size = i == 0 ? gridIndexesFirstLabelSize : i == last ? gridIndexesLastLabelSize :
+                    !line.label.empty() ? ImGui::CalcTextSize( line.label.c_str() ) : ImVec2();
                 float x = toX( line.value );
-                float textX = i == 0 ? firstX : i == last ? lastX : x - sizes[i].x / 2;
+                float textX = i == 0 ? firstX : i == last ? lastX : x - size.x / 2;
                 float textY = innerMax.y + ImGui::GetStyle().ItemInnerSpacing.y;
-                bool drawText = sizes[i].x != 0 && ( i == 0 || ( textX >= prevMaxX && ( i == last || textX + sizes[i].x <= lastX ) ) );
+                bool drawText = size.x != 0 && ( i == 0 || ( textX >= prevMaxX && ( i == last || textX + size.x <= lastX ) ) );
                 // Grid line (a little longer if label is present)
                 drawList->AddRectFilled( ImVec2( x, innerMin.y ), ImVec2( x + 1, !drawText ? innerMax.y : rect.Max.y ), col_grid );
                 if ( drawText )
@@ -269,9 +273,9 @@ void PlotCustomHistogram( const char* str_id,
                 {
                     drawList->AddText( { textX, textY }, col_labels, line.label.c_str() );
                     if ( !line.tooltip.empty() && itemHovered &&
-                            mousePos.x >= textX && mousePos.y >= textY && mousePos.x < textX + sizes[i].x && mousePos.y < textY + sizes[i].y )
+                            mousePos.x >= textX && mousePos.y >= textY && mousePos.x < textX + size.x && mousePos.y < textY + size.y )
                             ImGui::SetTooltip( "%s", line.tooltip.c_str() );
-                    prevMaxX = textX + sizes[i].x;
+                    prevMaxX = textX + size.x;
                 }
                 i++;
             }

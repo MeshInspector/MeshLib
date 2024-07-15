@@ -151,7 +151,7 @@ inline bool Checkbox(const char* label, Getter get, Setter set)
 struct HistogramGridLine
 {
     /// value on the corresponding axis where the line and label are located
-    float value;
+    float value{};
     /// label text
     std::string label;
     /// label tooltip

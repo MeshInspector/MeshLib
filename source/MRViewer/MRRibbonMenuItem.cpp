@@ -9,9 +9,6 @@ namespace MR
 RibbonMenuItem::RibbonMenuItem( std::string name ) :
     name_{ std::move( name ) }
 {
-    // this is needed for easier icon search
-    // use caption to show name with '/' in UI
-    assert( ( name_.find( "/" ) == std::string::npos ) && "Please replace '/' with '_' in RibbonItemName" );
 }
 
 void RibbonMenuItem::setDropItemsFromItemList( const MenuItemsList& itemsList )

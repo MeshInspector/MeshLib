@@ -326,7 +326,7 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
     // TODO
     static std::string logFolderPath = Logger::instance().getLogFileName().parent_path().string();
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 1.5f * cButtonPadding * menuScaling, cButtonPadding * menuScaling } );
-    ImGui::InputText( "##LogFolderPath", logFolderPath, 0 );
+    UI::inputText( "##LogFolderPath", logFolderPath );
     ImGui::SameLine( 0, 1.5f * style.ItemInnerSpacing.x );
     if ( ImGui::Link( "Logs folder") )
         OpenDocument( logFolderPath );
@@ -520,7 +520,8 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
             char thouSep[2] = { frac ? paramsNoUnit.thousandsSeparatorFrac : paramsNoUnit.thousandsSeparator, '\0' };
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( std::floor( ( ImGui::CalcItemWidth() - ImGui::CalcTextSize( thouSep ).x ) / 2 ), cButtonPadding * menuScaling ) );
             MR_FINALLY{ ImGui::PopStyleVar(); };
-            if ( ImGui::InputText( frac ? "Thousands separator (fractional part)" : "Thousands separator", thouSep, sizeof thouSep, ImGuiInputTextFlags_AutoSelectAll ) )
+
+            if ( UI::inputTextIntoArray( frac ? "Thousands separator (fractional part)" : "Thousands separator", thouSep, sizeof thouSep, ImGuiInputTextFlags_AutoSelectAll ) )
             {
                 forAllParams( [&]( auto& params )
                 {
@@ -653,7 +654,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
             if ( UI::drag<NoUnit>( "Precision##angle", paramsAngle.precision, 1, 0, 12 ) )
                 applyParams();
         }
-        
+
         ImGui::PopStyleVar();
         ImGui::PopItemWidth();
     }
@@ -990,7 +991,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, ( cRibbonButtonWindowPaddingY + 1 ) * menuScaling } );
             UI::inputTextCenteredReadOnly( "##modifierKey", ctrlStr.substr( 0, plusPos ), 54 * menuScaling );
             ImGui::PopStyleVar();
-            
+
             ImGui::SameLine();
             ImGui::SetCursorPosY( posY - cRibbonButtonWindowPaddingY * menuScaling / 2.f );
             ImGui::Text( "+" );
@@ -1063,7 +1064,7 @@ void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth, float menuS
 
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
 
-    drawSlider( "X##translate", spaceMouseParams_.translateScale[0] );    
+    drawSlider( "X##translate", spaceMouseParams_.translateScale[0] );
     drawSlider( "Y##translate", spaceMouseParams_.translateScale[2] );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 2.0f } );
     drawSlider( "Zoom##translate", spaceMouseParams_.translateScale[1] );
@@ -1113,7 +1114,7 @@ void ViewerSettingsPlugin::drawTouchpadSettings_( float menuScaling )
     if ( UI::checkbox( "Ignore Kinetic Movements", &touchpadParameters_.ignoreKineticMoves ) )
         updateSettings = true;
     if ( UI::checkbox( "Allow System to Interrupt Gestures", &touchpadParameters_.cancellable ) )
-        updateSettings = true;    
+        updateSettings = true;
     ImGui::PopStyleVar();
 
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );

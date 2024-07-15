@@ -9,6 +9,7 @@
 #include <string_view>
 #include <string>
 #include <variant>
+#include <vector>
 
 // This is a low-level header for implementing GUIs that can be interacted with programmatically.
 // Most likely you don't need to touch this, just use widgets from `MRUIStyle.h`.
@@ -25,6 +26,13 @@ namespace detail
         T min{};
         T max{};
     };
+    template <>
+    struct BoundedValue<std::string>
+    {
+        std::string value;
+
+        std::optional<std::vector<std::string>> allowedValues;
+    };
 
     template <typename T>
     [[nodiscard]] MRVIEWER_API std::optional<T> createValueLow( std::string_view name, std::optional<BoundedValue<T>> value );
@@ -32,6 +40,7 @@ namespace detail
     extern template MRVIEWER_API std::optional<std::int64_t> createValueLow( std::string_view name, std::optional<BoundedValue<std::int64_t>> value );
     extern template MRVIEWER_API std::optional<std::uint64_t> createValueLow( std::string_view name, std::optional<BoundedValue<std::uint64_t>> value );
     extern template MRVIEWER_API std::optional<double> createValueLow( std::string_view name, std::optional<BoundedValue<double>> value );
+    extern template MRVIEWER_API std::optional<std::string> createValueLow( std::string_view name, std::optional<BoundedValue<std::string>> value );
 
     template <typename T>
     using UnderlyingValueType = std::conditional_t<std::is_floating_point_v<T>, double, std::conditional_t<std::is_signed_v<T>, std::int64_t, std::uint64_t>>;
@@ -41,11 +50,14 @@ namespace detail
 // If this returns true, simulate a button click.
 [[nodiscard]] MRVIEWER_API bool createButton( std::string_view name );
 
+template <typename T>
+concept AllowedValueType = std::is_arithmetic_v<T> || std::is_same_v<T, std::string>;
+
 // Create a "value" (slider/drag/...).
 // `T` must be a scalar; vector support must be implemented manually.
 // Pass `min >= max` to disable the range checks.
 // If this returns true, use the new value in place of the current one.
-template <typename T>
+template <AllowedValueType T>
 requires std::is_arithmetic_v<T>
 [[nodiscard]] std::optional<T> createValue( std::string_view name, T value, T min, T max )
 {
@@ -61,13 +73,14 @@ requires std::is_arithmetic_v<T>
     auto ret = detail::createValueLow<U>( name, detail::BoundedValue<U>{ .value = U( value ), .min = U( min ), .max = U( max ) } );
     return ret ? std::optional<T>( T( *ret ) ) : std::nullopt;
 }
+// This overload is for strings.
+[[nodiscard]] MRVIEWER_API std::optional<std::string> createValue( std::string_view name, std::string value, std::optional<std::vector<std::string>> allowedValues = std::nullopt );
 
 // Usually you don't need this function.
 // This is for widgets that require you to specify the value override before drawing it, such as `ImGui::CollapsingHeader()`.
 // For those, call this version first to read the value override, then draw the widget, then call the normal `CreateValue()` with the same name
 //   and with the new value, and discard its return value.
-template <typename T>
-requires std::is_arithmetic_v<T>
+template <AllowedValueType T>
 [[nodiscard]] std::optional<T> createValueTentative( std::string_view name )
 {
     auto ret = detail::createValueLow<detail::UnderlyingValueType<T>>( name, std::nullopt );
@@ -104,7 +117,20 @@ struct ValueEntry
 
         Value() {} // Make `std::variant` below happy.
     };
-    using ValueVar = std::variant<Value<std::int64_t>, Value<std::uint64_t>, Value<double>>;
+    template <std::same_as<std::string> T> // GCC chokes on full specializations at class scope, hence this.
+    struct Value<T>
+    {
+        // The current value.
+        std::string value;
+
+        std::optional<std::vector<std::string>> allowedValues;
+
+        // Set to override the value.
+        mutable std::optional<std::string> simulatedValue;
+
+        Value() {} // Make `std::variant` below happy.
+    };
+    using ValueVar = std::variant<Value<std::int64_t>, Value<std::uint64_t>, Value<double>, Value<std::string>>;
     ValueVar value;
 };
 

@@ -369,7 +369,7 @@ static void getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const U
         bdFaces.resize( numFaces );
         lastPassFaces = &bdFaces;
 
-        BitSetParallelForAllRanged( region, [&] ( FaceId f0, FaceId, FaceId fEnd )
+        BitSetParallelForAllRanged( region, [&] ( FaceId f0, const auto & range )
         {
             if ( !contains( region, f0 ) )
                 return;
@@ -381,7 +381,7 @@ static void getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const U
                 FaceId f1 = mesh.topology.right( e[i] );
                 if ( f0 < f1 && contains( meshPart.region, f1 ) )
                 {
-                    if ( f1 >= fEnd )
+                    if ( f1 >= range.end )
                         bdFaces.set( f0 ); // remember the face to unite later in a sequential region
                     else if ( !isCompBd || !isCompBd( e[i].undirected() ) )
                         res.unite( f0, f1 ); // our region
@@ -856,7 +856,7 @@ UnionFind<UndirectedEdgeId> getUnionFindStructureUndirectedEdges( const Mesh& me
     UndirectedEdgeBitSet lastPass( mesh.topology.undirectedEdgeSize(), numThreads <= 1 );
     if ( numThreads > 1 )
     {
-        BitSetParallelForAllRanged( lastPass, [&] ( UndirectedEdgeId ue, UndirectedEdgeId, UndirectedEdgeId ueEnd )
+        BitSetParallelForAllRanged( lastPass, [&] ( UndirectedEdgeId ue, const auto & range )
         {
             const EdgeId e = ue;
             const UndirectedEdgeId ues[4] = 
@@ -871,7 +871,7 @@ UnionFind<UndirectedEdgeId> getUnionFindStructureUndirectedEdges( const Mesh& me
                 const auto uei = ues[i];
                 if ( ue < uei )
                 {
-                    if ( uei >= ueEnd )
+                    if ( uei >= range.end )
                         lastPass.set( ue ); // remember the edge to unite later in a sequential region
                     else
                         res.unite( ue, uei ); // our region

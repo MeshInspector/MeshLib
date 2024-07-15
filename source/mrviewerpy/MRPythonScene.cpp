@@ -1,4 +1,6 @@
+#include "MRMesh/MRObjectLinesHolder.h"
 #include "MRMesh/MRPython.h"
+#include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRObjectsAccess.h"
@@ -183,7 +185,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Scene, [] ( pybind11::module_& m )
     m.def( "unselectAll", &pythonUnselect, "unselect all objects in scene tree" );
 
     m.def( "getSelectedMeshes", &pythonGetSelectedModels<MR::ObjectMeshHolder, &MR::ObjectMeshHolder::mesh>, "Get copies of all selected meshes in the scene." );
-    // We don't have python bindings for those types yet.
-    // m.def( "getSelectedPointClouds", &pythonGetSelectedModels<MR::ObjectPointsHolder, &MR::ObjectPointsHolder::pointCloud>, "Get copies of all selected point clouds in the scene." );
-    // m.def( "getSelectedPolylines", &pythonGetSelectedModels<MR::ObjectLinesHolder, &MR::ObjectLinesHolder::polyline>, "Get copies of all selected polylines in the scene." );
+    m.def( "getSelectedPointClouds", &pythonGetSelectedModels<MR::ObjectPointsHolder, &MR::ObjectPointsHolder::pointCloud>, "Get copies of all selected point clouds in the scene." );
+    m.def( "getSelectedPolylines", &pythonGetSelectedModels<MR::ObjectLinesHolder, &MR::ObjectLinesHolder::polyline>, "Get copies of all selected polylines in the scene." );
 } )

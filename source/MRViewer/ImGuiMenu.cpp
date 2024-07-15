@@ -582,7 +582,7 @@ bool ImGuiMenu::onCharPressed_( unsigned  key, int /*modifiers*/ )
 bool ImGuiMenu::onKeyDown_( int key, int modifiers )
 {
     ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_PRESS, modifiers );
-    
+
     if ( ImGui::GetIO().WantCaptureKeyboard || getOrderedKeys()[GlfwToImGuiKey_Duplicate( key )] )
         return true;
     return false;
@@ -858,7 +858,7 @@ void ImGuiMenu::draw_helpers()
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cInputPadding * menuScaling } );
         ImGui::SetNextItemWidth( windowSize.x - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - ImGui::CalcTextSize( "Name" ).x );
-        ImGui::InputText( "Name", popUpRenameBuffer_, ImGuiInputTextFlags_AutoSelectAll );
+        UI::inputText( "Name", popUpRenameBuffer_, ImGuiInputTextFlags_AutoSelectAll );
         ImGui::PopStyleVar();
 
         const float btnWidth = cModalButtonWidth * menuScaling;
@@ -1274,7 +1274,7 @@ float ImGuiMenu::drawSelectionInformation_()
             ImGui::Spacing();
             ImGui::Spacing();
 
-            if ( ImGui::InputText( "Label", oldLabelParams_.labelBuffer, ImGuiInputTextFlags_AutoSelectAll ) )
+            if ( UI::inputText( "Label", oldLabelParams_.labelBuffer, ImGuiInputTextFlags_AutoSelectAll ) )
                 pObjLabel->setLabel( { oldLabelParams_.labelBuffer, pObjLabel->getLabel().position } );
             if ( ImGui::IsItemDeactivatedAfterEdit() && oldLabelParams_.labelBuffer != oldLabelParams_.lastLabel )
             {
@@ -1335,7 +1335,7 @@ float ImGuiMenu::drawSelectionInformation_()
     }
 
     bool firstField = true;
-    auto drawDimensionsVec3 = [this, &firstField]( const char* label, const auto& value )
+    auto drawDimensionsVec3 = [this, &firstField]<class Units>( const char* label, const auto& value )
     {
         if ( firstField )
         {
@@ -1347,13 +1347,13 @@ float ImGuiMenu::drawSelectionInformation_()
         ImGui::PushItemWidth( getSceneInfoItemWidth_() );
         MR_FINALLY{ ImGui::PopItemWidth(); };
 
-        UI::readOnlyValue<LengthUnit>( label, value );
+        UI::readOnlyValue<Units>( label, value );
     };
 
 #ifndef MRMESH_NO_OPENVDB
     if ( dimensions.x > 0 && dimensions.y > 0 && dimensions.z > 0 )
     {
-        drawDimensionsVec3( "Dimensions", dimensions );
+        drawDimensionsVec3.template operator()<NoUnit>( "Dimensions", dimensions );
     }
 #endif
     // Feature object properties.
@@ -1403,12 +1403,12 @@ float ImGuiMenu::drawSelectionInformation_()
         && !haveFeatureProperties
     )
     {
-        drawDimensionsVec3( "Box min", selectionBbox_.min );
-        drawDimensionsVec3( "Box max", selectionBbox_.max );
-        drawDimensionsVec3( "Box size", bsize );
+        drawDimensionsVec3.template operator()<LengthUnit>( "Box min", selectionBbox_.min );
+        drawDimensionsVec3.template operator()<LengthUnit>( "Box max", selectionBbox_.max );
+        drawDimensionsVec3.template operator()<LengthUnit>( "Box size", bsize );
 
         if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
-            drawDimensionsVec3( "World box size", wbsize );
+            drawDimensionsVec3.template operator()<LengthUnit>( "World box size", wbsize );
     }
 
     // This looks a bit better.
@@ -2335,7 +2335,7 @@ void ImGuiMenu::draw_custom_plugins()
     ImGui::Begin( "Plugins", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize );
 
     ImGui::SetCursorPosX( 570.f );
-    if ( ImGui::InputText( "Search", searchPluginsString_ ) )
+    if ( UI::inputText( "Search", searchPluginsString_ ) )
     {
         Viewer::instanceRef().incrementForceRedrawFrames( 2, true );
     }

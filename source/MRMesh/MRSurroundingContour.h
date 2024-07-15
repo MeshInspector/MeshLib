@@ -2,6 +2,7 @@
 
 #include "MRVector3.h"
 #include "MREdgePaths.h"
+#include "MRExpected.h"
 #include <vector>
 
 namespace MR
@@ -15,7 +16,7 @@ namespace MR
  * \param edgeMetric returned loop will minimize the sum of this metric
  * \param dir direction approximately orthogonal to the loop
  */
-[[nodiscard]] MRMESH_API EdgeLoop surroundingContour(
+[[nodiscard]] MRMESH_API Expected<EdgeLoop> surroundingContour(
     const Mesh & mesh,
     std::vector<EdgeId> includeEdges,
     const EdgeMetric & edgeMetric,
@@ -30,7 +31,7 @@ namespace MR
  * \param edgeMetric returned loop will minimize the sum of this metric
  * \param dir direction approximately orthogonal to the loop
  */
-[[nodiscard]] MRMESH_API EdgeLoop surroundingContour(
+[[nodiscard]] MRMESH_API Expected<EdgeLoop, std::string> surroundingContour(
     const Mesh & mesh,
     std::vector<VertId> keyVertices,
     const EdgeMetric & edgeMetric,

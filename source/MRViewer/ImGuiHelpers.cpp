@@ -112,7 +112,8 @@ void PlotCustomHistogram( const char* str_id,
                                  std::function<void( int idx )> on_click,
                                  int values_count, int values_offset,
                                  float scale_min, float scale_max,
-                                 ImVec2 frame_size, int selectedBarId, int hoveredBarId )
+                                 ImVec2 frame_size, int selectedBarId, int hoveredBarId,
+                                 std::vector<float> gridIndexes, std::vector<float> gridValues )
 {
     if ( frame_size.y < 0.0f )
         return;
@@ -210,6 +211,19 @@ void PlotCustomHistogram( const char* str_id,
         ImVec4 col{ 1.0f, 0.2f, 0.2f, 1.0f };
         const ImU32 col_selected = GetColorU32(col);
         const ImU32 col_selected_top = GetColorU32(ImGuiCol_TabActive);
+        const ImU32 col_grid = GetColorU32(ImGuiCol_PlotLines, 0.5f);
+
+        for ( float index : gridIndexes )
+        {
+            float x = innerMin.x + ( innerMax.x - innerMin.x - 1 ) * ( values_count > 1 ? index / float( values_count - 1 ) : 0.5f );
+            drawList->AddRectFilled( ImVec2( x, innerMin.y ), ImVec2( x + 1, innerMax.y ), col_grid );
+        }
+        for ( float val : gridValues )
+        {
+            float line = 1.0f - std::clamp( ( val - scale_min ) * inv_scale, 0.0f, 1.0f );
+            float y = innerMin.y + ( innerMax.y - innerMin.y ) * line;
+            drawList->AddRectFilled( ImVec2( innerMin.x, y ), ImVec2( innerMax.x, y + 1 ), col_grid );
+        }
 
         for ( int n = 0; n < res_w; n++ )
         {
@@ -1201,7 +1215,7 @@ PaletteChanges Palette(
         static std::string currentPaletteName;
 
         ImGui::SetNextItemWidth( windowSize.x - 2 * style.WindowPadding.x - style.ItemInnerSpacing.x - CalcTextSize( "Palette Name" ).x );
-        ImGui::InputText( "Palette Name", currentPaletteName );
+        UI::inputText( "Palette Name", currentPaletteName );
         ImGui::PopStyleVar();
 
         const float btnWidth = cModalButtonWidth * menuScaling;

@@ -1104,6 +1104,17 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
 {
     assert( tooltips.empty() || tooltips.size() == options.size() );
 
+    bool valueOverridden = false;
+    if ( auto opt = TestEngine::createValue( label, options[*v], options ) )
+    {
+        if ( auto it = std::find( options.begin(), options.end(), *opt ); it != options.end() )
+        {
+            *v = int( it - options.begin() );
+            valueOverridden = true;
+            detail::markItemEdited( ImGui::GetID( label ) );
+        }
+    }
+
     StyleParamHolder sh;
     const float menuScaling = Viewer::instanceRef().getMenuPlugin()->menu_scaling();
     sh.addVar( ImGuiStyleVar_FramePadding, menuScaling * StyleConsts::CustomCombo::framePadding );
@@ -1141,7 +1152,7 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
     DrawCustomArrow( window->DrawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
 
     if ( !res )
-        return false;
+        return valueOverridden;
 
     bool selected = false;
     for ( int i = 0; i < int( options.size() ); ++i )
@@ -1162,7 +1173,7 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
     ImGui::EndCombo();
     if ( !showPreview )
         ImGui::PopItemWidth();
-    return selected;
+    return selected || valueOverridden;
 }
 
 bool beginCombo( const char* label, const std::string& text /*= "Not selected" */, bool showPreview /*= true*/ )
@@ -1390,18 +1401,79 @@ bool detail::isItemActive( const char* name )
     return ImGui::GetActiveID() == ImGui::GetID( name );
 }
 
-bool sliderFloat( const char* label, float* v, float v_min, float v_max, const char* format, ImGuiSliderFlags flags )
+static bool shouldExposeTextInputToTestEngine( ImGuiInputTextFlags flags )
 {
-    return detail::genericSlider( label, ImGuiDataType_Float, v, &v_min, &v_max, format, flags );
+    return !bool( flags & ( ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_Password ) );
 }
 
-bool sliderInt( const char* label, int* v, int v_min, int v_max, const char* format, ImGuiSliderFlags flags )
+static bool basicTextInput( const char* label, std::string& str, ImGuiInputTextFlags flags, auto &&func )
 {
-    return detail::genericSlider( label, ImGuiDataType_S32, v, &v_min, &v_max, format, flags );
+    std::optional<std::string> valueOverride;
+    if ( shouldExposeTextInputToTestEngine( flags ) )
+    {
+        valueOverride = TestEngine::createValue( label, str );
+        if ( valueOverride )
+            str = std::move( *valueOverride );
+    }
+
+    bool ret = func();
+
+    if ( valueOverride )
+    {
+        detail::markItemEdited( ImGui::GetID( label ) );
+        ret = true;
+    }
+
+    return ret;
+}
+
+static bool basicTextInputIntoArray( const char* label, char* array, std::size_t size, ImGuiInputTextFlags flags, auto &&func )
+{
+    std::optional<std::string> valueOverride;
+    if ( shouldExposeTextInputToTestEngine( flags ) )
+    {
+        valueOverride = TestEngine::createValue( label, array );
+        if ( valueOverride && size > 0 )
+        {
+            // How many bytes (excluding `\0`) can we emit?
+            std::size_t n = std::min( size - 1, valueOverride->size() );
+            std::memcpy( array, valueOverride->c_str(), n );
+        }
+    }
+
+    bool ret = func();
+
+    if ( valueOverride )
+    {
+        detail::markItemEdited( ImGui::GetID( label ) );
+        ret = true;
+    }
+
+    return ret;
+}
+
+bool inputText( const char* label, std::string& str, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
+{
+    return basicTextInput( label, str, flags, [&]{ return ImGui::InputText( label, &str, flags, callback, user_data ); } );
+}
+
+bool inputTextIntoArray( const char* label, char* array, std::size_t size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
+{
+    return basicTextInputIntoArray( label, array, size, flags, [&]{ return ImGui::InputText( label, array, size, flags, callback, user_data ); } );
+}
+
+bool inputTextMultiline( const char* label, std::string& str, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
+{
+    return basicTextInput( label, str, flags, [&]{ return ImGui::InputTextMultiline( label, &str, size, flags, callback, user_data ); } );
+}
+
+bool inputTextIntoArrayMultiline( const char* label, char* buf, size_t buf_size, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
+{
+    return basicTextInputIntoArray( label, buf, buf_size, flags, [&]{ return ImGui::InputTextMultiline( label, buf, buf_size, size, flags, callback, user_data ); } );
 }
 
 bool inputTextCentered( const char* label, std::string& str, float width /*= 0.0f*/,
-    ImGuiInputTextFlags flags /*= 0*/, ImGuiInputTextCallback callback /*= NULL*/, void* user_data /*= NULL */ )
+    ImGuiInputTextFlags flags /*= 0*/, ImGuiInputTextCallback callback /*= nullptr*/, void* user_data /*= nullptr */ )
 {
     const auto& style = ImGui::GetStyle();
     const auto& viewer = MR::Viewer::instanceRef();
@@ -1415,7 +1487,7 @@ bool inputTextCentered( const char* label, std::string& str, float width /*= 0.0
     if ( actualWidth > estimatedSize.x )
         sh.addVar( ImGuiStyleVar_FramePadding, { ( actualWidth - estimatedSize.x ) * 0.5f, style.FramePadding.y } );
 
-    return ImGui::InputText( label, str, flags, callback, user_data );
+    return inputText( label, str, flags, callback, user_data );
 }
 
 void inputTextCenteredReadOnly( const char* label, const std::string& str, float width /*= 0.0f*/, const std::optional<ImVec4>& textColor /*= {} */ )
@@ -1440,7 +1512,7 @@ void inputTextCenteredReadOnly( const char* label, const std::string& str, float
         transparentColor.w *= 0.5f;
         ImGui::PushStyleColor( ImGuiCol_Text, transparentColor );
     }
-    ImGui::InputText( ( std::string( "##" ) + label ).c_str(), const_cast< std::string& >( str ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
+    inputText( ( std::string( "##" ) + label ).c_str(), const_cast< std::string& >( str ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
     ImGui::PopStyleColor();
 
     std::size_t endOfLabel = std::string_view( label ).find( "##" );
@@ -1641,7 +1713,12 @@ bool beginTabItem( const char* label, bool* p_open, ImGuiTabItemFlags flags )
     // Set spacing between tabs
     ImGui::PushStyleVar( ImGuiStyleVar_ItemInnerSpacing, ImVec2( style.ItemInnerSpacing.x - 1, style.ItemInnerSpacing.y ) );
 
+    if ( auto opt = TestEngine::createValueTentative<bool>( label ); opt && *opt )
+        flags |= ImGuiTabItemFlags_SetSelected;
+
     bool result = ImGui::BeginTabItem( label, p_open, flags );
+
+    (void)TestEngine::createValue( label, result, false, true );
 
     ImGui::PopStyleVar( 2 );
     ImGui::PopStyleColor( 3 );

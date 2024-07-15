@@ -2,6 +2,9 @@
 #include "MRMesh.h"
 #include "MRBox.h"
 #include "MRPch/MRTBB.h"
+#include "MRComputeBoundingBox.h"
+#include "MRBitSetParallelFor.h"
+#include "MRToFromEigen.h"
 #include <span>
 
 // unknown pragmas
@@ -51,25 +54,6 @@ Vector3f interpolateNPoints( const std::span<const Vector3f>& points, float coef
     return tempPoints[offset] * invCoef + tempPoints[offset + 1] * coef;
 }
 
-std::vector<Vector3f> makeOriginGrid( const Box3f& box, const Vector3i& resolution )
-{
-    auto resXY = resolution.x * resolution.y;
-    std::vector<Vector3f> res( resXY *resolution.z );
-    for ( int z = 0; z < resolution.z; ++z )
-    for ( int y = 0; y < resolution.y; ++y )
-    for ( int x = 0; x < resolution.x; ++x )
-    {
-        auto index = x + y * resolution.x + z * resXY;
-        Vector3f coef( x / float( resolution.x - 1 ), y / float( resolution.y - 1 ), z / float( resolution.z - 1 ) );
-
-        res[index] = Vector3f(
-            box.min.x * ( 1.0f - coef.x ) + box.max.x * coef.x,
-            box.min.y * ( 1.0f - coef.y ) + box.max.y * coef.y,
-            box.min.z * ( 1.0f - coef.z ) + box.max.z * coef.z );
-    }
-    return res;
-}
-
 // simple factorial func
 int factorial( int n )
 {
@@ -109,38 +93,38 @@ std::vector<int> getPascalTriangleLine( int line )
 }
 
 // simple pow function, not to use slow std::pow
-float cyclePow( float a, int b )
+double cyclePow( double a, int b )
 {
     if ( b == 0 )
         return 1.0f;
-    float res = a;
+    double res = a;
     for ( int i = 1; i < b; ++i )
         res *= a;
     return res;
 }
 
 // Optimized by passing precalculated parameters
-std::vector<float> freeformWeights( const std::vector<int>& pascalLineX,
+std::vector<double> freeformWeights( const std::vector<int>& pascalLineX,
                                     const std::vector<int>& pascalLineY,
                                     const std::vector<int>& pascalLineZ,
-                                    const Vector3f& boxMin,
-                                    const Vector3f& backDiagonal,// 1 - box.diagonal
-                                    const int resXY,
-                                    const Vector3f& point )
+                                    const Vector3d& boxMin,
+                                    const Vector3d& backDiagonal,// 1 - box.diagonal
+                                    const size_t resXY,
+                                    const Vector3d& point )
 {
     Vector3i resolution( int( pascalLineX.size() ), int( pascalLineY.size() ), int( pascalLineZ.size() ) );
-    std::vector<float> result( resXY * resolution.z );
+    std::vector<double> result( resXY * resolution.z );
 
-    std::vector<float> xCoefs( resolution.x );
-    std::vector<float> yCoefs( resolution.y );
-    std::vector<float> zCoefs( resolution.z );
+    std::vector<double> xCoefs( resolution.x );
+    std::vector<double> yCoefs( resolution.y );
+    std::vector<double> zCoefs( resolution.z );
 
     auto minToPoint = point - boxMin;
-    auto pointRatio = Vector3f(
+    auto pointRatio = Vector3d(
         minToPoint.x * backDiagonal.x,
         minToPoint.y * backDiagonal.y,
         minToPoint.z * backDiagonal.z );
-    auto backPointRatio = Vector3f::diagonal( 1.0f ) - pointRatio;
+    auto backPointRatio = Vector3d::diagonal( 1.0 ) - pointRatio;
 
     // Bezier curves reverse, to find each point weight
     for ( int xi = 0; xi < resolution.x; ++xi )
@@ -154,7 +138,7 @@ std::vector<float> freeformWeights( const std::vector<int>& pascalLineX,
     for ( int y = 0; y < resolution.y; ++y )
     for ( int z = 0; z < resolution.z; ++z )
     {
-        int index = x + y * resolution.x + z * resXY;
+        size_t index = x + y * resolution.x + z * resXY;
         result[index] = xCoefs[x] * yCoefs[y] * zCoefs[z];
     }
     return result;
@@ -165,38 +149,52 @@ std::vector<float> freeformWeights( const std::vector<int>& pascalLineX,
 namespace MR
 {
 
-FreeFormDeformer::FreeFormDeformer( Mesh& mesh ) :
-    mesh_{mesh}
+std::vector<Vector3f> makeFreeFormOriginGrid( const Box3f& box, const Vector3i& resolution )
+{
+    auto resXY = resolution.x * resolution.y;
+    std::vector<Vector3f> res( resXY * resolution.z );
+    for ( int z = 0; z < resolution.z; ++z )
+        for ( int y = 0; y < resolution.y; ++y )
+            for ( int x = 0; x < resolution.x; ++x )
+            {
+                auto index = x + y * resolution.x + z * resXY;
+                Vector3f coef( x / float( resolution.x - 1 ), y / float( resolution.y - 1 ), z / float( resolution.z - 1 ) );
+
+                res[index] = Vector3f(
+                    box.min.x * ( 1.0f - coef.x ) + box.max.x * coef.x,
+                    box.min.y * ( 1.0f - coef.y ) + box.max.y * coef.y,
+                    box.min.z * ( 1.0f - coef.z ) + box.max.z * coef.z );
+            }
+    return res;
+}
+
+FreeFormDeformer::FreeFormDeformer( VertCoords& coords, const VertBitSet& valid ) :
+    coords_{ coords },
+    validPoints_{ valid }
 {
 }
 
 void FreeFormDeformer::init( const Vector3i& resolution /*= Vector3i::diagonal( 2 ) */, const Box3f& initialBox /*= Box3f() */ )
 {
     assert( resolution.x > 1 && resolution.y > 1 && resolution.z > 1 );
-    initialBox_ = initialBox.valid() ? initialBox : mesh_.computeBoundingBox();
-    const auto& meshPoints = mesh_.points;
-    meshPointsNormedPoses_.resize( meshPoints.size() );
+    initialBox_ = initialBox.valid() ? initialBox : computeBoundingBox( coords_, validPoints_ );
+    normedCoords_.resize( coords_.size() );
     auto diagonalVec = initialBox_.max - initialBox_.min;
     diagonalVec.x = 1.0f / diagonalVec.x;
     diagonalVec.y = 1.0f / diagonalVec.y;
     diagonalVec.z = 1.0f / diagonalVec.z;
-    tbb::parallel_for( tbb::blocked_range<int>( 0, (int)meshPointsNormedPoses_.size() ),
-        [&]( const tbb::blocked_range<int>& range )
+    BitSetParallelFor( validPoints_, [&] ( VertId vid )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            VertId vid = VertId( i );
-            const auto& point = meshPoints[vid];
-            auto minToPoint = point - initialBox_.min;
-            meshPointsNormedPoses_[i] = Vector3f(
-                minToPoint.x * diagonalVec.x,
-                minToPoint.y * diagonalVec.y,
-                minToPoint.z * diagonalVec.z );
-        }
+        const auto& point = coords_[vid];
+        auto minToPoint = point - initialBox_.min;
+        normedCoords_[vid] = Vector3f(
+            minToPoint.x * diagonalVec.x,
+            minToPoint.y * diagonalVec.y,
+            minToPoint.z * diagonalVec.z );
     } );
 
     resolution_ = resolution;
-    refPointsGrid_ = makeOriginGrid( initialBox_, resolution );
+    refPointsGrid_ = makeFreeFormOriginGrid( initialBox_, resolution );
 }
 
 void FreeFormDeformer::setRefGridPointPosition( const Vector3i& coordOfPointInGrid, const Vector3f& newPos )
@@ -211,19 +209,26 @@ const Vector3f& FreeFormDeformer::getRefGridPointPosition( const Vector3i& coord
 
 void FreeFormDeformer::apply() const
 {
-    auto& meshPoints = mesh_.points;
     auto maxRes = std::max( { resolution_.x, resolution_.y, resolution_.z } );
-    tbb::enumerable_thread_specific<std::vector<Vector3f>> buffer( maxRes * ( maxRes - 1 ) / 2 - 1);
 
-    tbb::parallel_for( tbb::blocked_range<int>( 0, (int) meshPoints.size() ),
-        [&]( const tbb::blocked_range<int>& range )
+    struct CacheLines
     {
-        std::vector<Vector3f> xPlane( resolution_.y * resolution_.z );
-        std::vector<Vector3f> yLine( resolution_.z );
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            meshPoints[VertId( i )] = applyToNormedPoint_( meshPointsNormedPoses_[i], xPlane, yLine, buffer.local() );
-        }
+        std::vector<Vector3f> xPlane;
+        std::vector<Vector3f> yLine;
+        std::vector<Vector3f> buffer;
+    };
+    tbb::enumerable_thread_specific<CacheLines> caches;
+
+    BitSetParallelFor( validPoints_, [&] ( VertId vid )
+    {
+        auto& cache = caches.local();
+        if ( cache.xPlane.empty() )
+            cache.xPlane.resize( resolution_.y * resolution_.z );
+        if ( cache.yLine.empty() )
+            cache.yLine.resize( resolution_.z );
+        if ( cache.buffer.empty() )
+            cache.buffer.resize( maxRes * ( maxRes - 1 ) / 2 - 1 );
+        coords_[vid] = applyToNormedPoint_( normedCoords_[vid], cache.xPlane, cache.yLine, cache.buffer );
     } );
 }
 
@@ -278,64 +283,88 @@ Vector3f FreeFormDeformer::applyToNormedPoint_( const Vector3f& normedPoint, std
 }
 
 std::vector<Vector3f> findBestFreeformDeformation( const Box3f& box, const std::vector<Vector3f>& source, const std::vector<Vector3f>& target, 
-                                                   const Vector3i& resolution /*= Vector3i::diagonal( 2 ) */ )
+                                                   const Vector3i& resolution /*= Vector3i::diagonal( 2 ) */, const AffineXf3f* samplesToBox /*= nullptr */)
+{
+    FreeFormBestFit ffbf( Box3d( box ), resolution );
+
+    for ( int k = 0; k < source.size(); k++ )
+        ffbf.addPair( samplesToBox ? ( *samplesToBox )( source[k] ) : source[k], samplesToBox ? ( *samplesToBox )( target[k] ) : target[k] );
+
+    return ffbf.findBestDeformationReferenceGrid();
+}
+
+FreeFormBestFit::FreeFormBestFit( const Box3d& box, const Vector3i& resolution /*= Vector3i::diagonal( 2 ) */ ) :
+    box_{ Box3d( box ) },
+    resolution_{ resolution }
 {
     // This parameters are needed to optimize freeform weights calculations
-    auto resXY = resolution.x * resolution.y;
-    auto pascalLineX = getPascalTriangleLine( resolution.x - 1 );
-    auto pascalLineY = getPascalTriangleLine( resolution.y - 1 );
-    auto pascalLineZ = getPascalTriangleLine( resolution.z - 1 );
+    resXY_ = size_t( resolution_.x ) * resolution_.y;
+    size_ = resXY_ * resolution_.z;
+    pascalLineX_ = getPascalTriangleLine( resolution_.x - 1 );
+    pascalLineY_ = getPascalTriangleLine( resolution_.y - 1 );
+    pascalLineZ_ = getPascalTriangleLine( resolution_.z - 1 );
+    reverseDiagonal_ = box_.size();
+    reverseDiagonal_.x = 1.0 / reverseDiagonal_.x;
+    reverseDiagonal_.y = 1.0 / reverseDiagonal_.y;
+    reverseDiagonal_.z = 1.0 / reverseDiagonal_.z;
+    accumA_ = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>( size_, size_ );
+    accumB_ = Eigen::Matrix<double, Eigen::Dynamic, 3>( size_, size_t( 3 ) );
+    accumA_.setZero();
+    accumB_.setZero();
+}
 
-    auto refPointsCout = resXY * resolution.z;
-
-    auto backDiagonal = box.max - box.min;
-    backDiagonal.x = 1.0f / backDiagonal.x;
-    backDiagonal.y = 1.0f / backDiagonal.y;
-    backDiagonal.z = 1.0f / backDiagonal.z;
-
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> A( refPointsCout, refPointsCout );
-    Eigen::Matrix<double, Eigen::Dynamic, 3> B( refPointsCout, 3 );
-    A.setZero();
-    B.setZero();
-
-    auto vecToEigen = []( const Vector3f& vec )
+void FreeFormBestFit::addPair( const Vector3d& src, const Vector3d& tgt, double w /*= 1.0 */ )
+{
+    auto ws = freeformWeights( pascalLineX_, pascalLineY_, pascalLineZ_, box_.min, reverseDiagonal_, resXY_, src );
+    for ( size_t i = 0; i < size_; ++i )
     {
-        return Eigen::Vector3d( vec[0], vec[1], vec[2] );
-    };
-
-    auto eigenToVec = []( const Eigen::Vector3d& vec )
-    {
-        return Vector3f( float(vec( 0 )), float(vec( 1 )), float(vec( 2 )) );
-    };
-    // compute coefficient matrix (A) and target matrix (B)
-    for ( int k = 0; k < source.size(); k++ )
-    {
-        const auto& s = source[k];
-        const auto& t = target[k];
-        auto ws = freeformWeights( pascalLineX,pascalLineY,pascalLineZ,
-                                   box.min, backDiagonal, resXY, 
-                                   s );
-        for ( int i = 0; i < refPointsCout; i++ )
+        accumB_.row( i ) += ( toEigen( tgt - src ) * ws[i] * w );
+        for ( size_t j = 0; j < size_; ++j )
         {
-            B.row( i ) += vecToEigen( t - s ) * ws[i];
-            for ( int j = 0; j < refPointsCout; j++ )
-            {
-                A( i, j ) += ws[i] * ws[j];
-            }
+            accumA_( i, j ) += ( ws[i] * ws[j] * w );
         }
     }
+    sumWeight_ += w;
+}
 
-    Eigen::Matrix<double, Eigen::Dynamic, 3> C = A.colPivHouseholderQr().solve( B );
+void FreeFormBestFit::addOther( const FreeFormBestFit& other )
+{
+    if ( other.box_ != box_ || other.resolution_ != resolution_ )
+    {
+        assert( false && "Only similar instances should be joined" );
+        return;
+    }
+    accumA_ += other.accumA_;
+    accumB_ += other.accumB_;
+
+    double sw = sumWeight_ + other.sumWeight_;
+    stabilizer_ = ( stabilizer_ * sumWeight_ + other.stabilizer_ * other.sumWeight_ ) / sw;
+    sumWeight_ += other.sumWeight_;
+}
+
+std::vector<MR::Vector3f> FreeFormBestFit::findBestDeformationReferenceGrid()
+{
+    stabilize_();
+
+    Eigen::Matrix<double, Eigen::Dynamic, 3> C = accumA_.colPivHouseholderQr().solve( accumB_ );
 
     // Make result equal to origin grid
-    std::vector<Vector3f> res = makeOriginGrid( box, resolution );
+    std::vector<Vector3f> res = makeFreeFormOriginGrid( Box3f( box_ ), resolution_ );
 
     // Add calculated diffs to origin grid
-    for ( int i = 0; i < refPointsCout; ++i )
-    {
-        res[i] += eigenToVec( C.row( i ) );
-    }
+    for ( size_t i = 0; i < size_; ++i )
+        res[i] += Vector3f( fromEigen( Eigen::Vector3d( C.row( i ) ) ) );
     return res;
+}
+
+void FreeFormBestFit::stabilize_()
+{
+    if ( stabilizer_ <= 0 )
+        return;
+    std::vector<Vector3f> refGrid = makeFreeFormOriginGrid( Box3f( box_ ), resolution_ );
+    auto w = double( sumWeight_ ) / double( refGrid.size() ) * stabilizer_;
+    for ( const auto& refPoint : refGrid )
+        addPair( Vector3d( refPoint ), Vector3d( refPoint ), w );
 }
 
 }

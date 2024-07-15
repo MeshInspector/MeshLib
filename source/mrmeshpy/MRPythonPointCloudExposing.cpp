@@ -71,7 +71,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointCloud, [] ( pybind11::module_& m )
         "Creates mesh from given point cloud according params\n"
         "Returns empty optional if was interrupted by progress bar" );
 
-    m.def("findMaxDistanceSqOneWay",&MR::findMaxDistanceSqOneWay, 
+    m.def("findMaxDistanceSqOneWay",&MR::findMaxDistanceSqOneWay,
         pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg( "rigidB2A" ) = nullptr, pybind11::arg( "upDistLimitSq" ) = FLT_MAX,
         "returns the maximum of the squared distances from each B-point to A-cloud\n"
         "\trigidB2A - rigid transformation from B-cloud space to A-cloud space, nullptr considered as identity transformation\n"
@@ -85,3 +85,5 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointCloud, [] ( pybind11::module_& m )
 } )
 
 } //namespace MR
+
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorPointCloud, MR::PointCloud )

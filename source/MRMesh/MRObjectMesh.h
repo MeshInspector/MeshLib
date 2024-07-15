@@ -59,5 +59,7 @@ protected:
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 };
 
-} ///namespace MR
+/// constructs new ObjectMesh containing the union of valid data from all input objects
+[[nodiscard]] MRMESH_API std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>>& objsMesh );
 
+} ///namespace MR

@@ -452,9 +452,6 @@ bool RibbonButtonDrawer::drawTabArrawButton( const char* icon, const ImVec2& siz
 
 void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const DrawButtonParams& params ) const
 {
-    UI::TestEngine::pushTree( item.item->name() + "##ButtonDropList" );
-    MR_FINALLY{ UI::TestEngine::popTree(); };
-
     float iconSize = params.iconSize * 0.5f;
     ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
     if ( font )
@@ -501,7 +498,7 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
 
     int pushedColors = pushRibbonButtonColors_( dropBtnEnabled, menuOpened, params.forceHovered, params.rootType );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, cHeaderQuickAccessFrameRounding );
-    bool comboPressed = ImGui::Button( name.c_str(), itemSize ) && dropBtnEnabled;
+    bool comboPressed = ( ImGui::Button( name.c_str(), itemSize ) || UI::TestEngine::createButton( name ) ) && dropBtnEnabled;
 
     auto iconRealSize = ImGui::CalcTextSize( "\xef\x81\xb8" ); //down icon
     ImGui::SetCursorPosX( dropBtnPos.x + ( itemSize.x - iconRealSize.x + 1 ) * 0.5f );
@@ -545,6 +542,9 @@ void RibbonButtonDrawer::drawButtonDropItem_( const MenuItemInfo& item, const Dr
     ImGui::Begin( nameWindow.c_str(), NULL, window_flags );
     if ( menuOpened )
     {
+        UI::TestEngine::pushTree( item.item->name() + "##DropDownList" );
+        MR_FINALLY{ UI::TestEngine::popTree(); };
+
         drawDropList_( item.item );
         ImGui::EndPopup();
     }

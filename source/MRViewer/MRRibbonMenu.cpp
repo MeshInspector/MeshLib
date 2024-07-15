@@ -1494,6 +1494,9 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
             statePlugin->preDrawUpdate();
             statePlugin->drawDialog( menu_scaling(), ImGui::GetCurrentContext() );
 
+            if ( !itemPtr.item ) // if it was closed in drawDialog
+                return;
+
             if ( !itemPtr.dialogPositionFixed )
             {
                 itemPtr.dialogPositionFixed = true;
@@ -2176,7 +2179,7 @@ void RibbonMenu::drawShortcutsWindow_()
 
         auto framePaddingX = std::max( style.FramePadding.x, ( itemWidth - textWidth ) / 2.0f );
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { framePaddingX, cButtonPadding * scaling } );
-        ImGui::InputText( ( "##" + line + std::to_string( ++lineIndexer ) ).c_str(), const_cast< std::string& >( line ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
+        UI::inputText( ( "##" + line + std::to_string( ++lineIndexer ) ).c_str(), const_cast< std::string& >( line ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
         ImGui::PopItemWidth();
         ImGui::PopStyleVar();
     };

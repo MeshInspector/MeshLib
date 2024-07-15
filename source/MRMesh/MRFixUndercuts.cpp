@@ -19,7 +19,7 @@
 #include "MRLine3.h"
 #include "MRMeshDirMax.h"
 #include "MRIntersectionPrecomputes.h"
-#include "MRPch/MRTBB.h"
+#include "MRParallelFor.h"
 
 namespace MR
 {
@@ -273,15 +273,10 @@ double scoreUndercuts( const Mesh& mesh, const Vector3f& upDirection, const Vect
 
     // find distance map active pixels area
     tbb::enumerable_thread_specific<double> pixelAreaPerThread( 0.0 );
-    tbb::parallel_for( tbb::blocked_range<int>( 0, resolution.x * resolution.y ),
-        [&]( const tbb::blocked_range<int>& range )
+    ParallelFor( 0, resolution.x * resolution.y, pixelAreaPerThread, [&]( int i, double & local )
     {
-        auto& local = pixelAreaPerThread.local();
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            if ( dm.isValid( i ) )
-                local += pixelArea;
-        }
+        if ( dm.isValid( i ) )
+            local += pixelArea;
     } );
     double sumPixelsArea = 0.0;
     for ( const auto& papt : pixelAreaPerThread )

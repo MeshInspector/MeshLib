@@ -244,7 +244,7 @@ Examples of integration with cmake can be found in the `./examples` directory.
 ## MacOS
 Same as for Linux, but requires brew packages to be installed:
 ```
-xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/scripts/macos.txt
+xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
 ```
 
 

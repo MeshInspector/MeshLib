@@ -3,7 +3,6 @@
 
 MR_DOTNET_NAMESPACE_BEGIN
 
-ref class Vector3f;
 public ref class Matrix3f
 {
 public:

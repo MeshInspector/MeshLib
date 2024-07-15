@@ -40,7 +40,7 @@ bool mrBitSetEq( const MRBitSet* a, const MRBitSet* b )
     return *reinterpret_cast<const BitSet*>( a ) == *reinterpret_cast<const BitSet*>( b );
 }
 
-MRFaceBitSet* mrFaceBitSetNew()
+MRFaceBitSet* mrFaceBitSetNew( void )
 {
     return reinterpret_cast<MRFaceBitSet*>( new FaceBitSet );
 }

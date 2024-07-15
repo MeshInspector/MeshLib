@@ -23,7 +23,7 @@ MRMESHC_API bool mrBitSetEq( const MRBitSet* a, const MRBitSet* b );
 MRMESHC_API void mrBitSetFree( MRBitSet* bs );
 
 /// creates a new FaceBitSet object
-MRMESHC_API MRFaceBitSet* mrFaceBitSetNew();
+MRMESHC_API MRFaceBitSet* mrFaceBitSetNew( void );
 
 /// creates a copy of a FaceBitSet object
 MRMESHC_API MRFaceBitSet* mrFaceBitSetCopy( const MRFaceBitSet* fbs );

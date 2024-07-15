@@ -124,7 +124,7 @@ VoidOrErrStr toObj( const Mesh & mesh, const std::filesystem::path & file, const
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_PNG)
     // it is hard to handle several files output for browser, so for now it is under ifdef,
     // anyway later it may be reworked to save simple zip and taken out of ifdef
     if ( settings.uvMap )

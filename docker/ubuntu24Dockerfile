@@ -44,6 +44,9 @@ COPY --from=build /home/MeshLib/include /usr/local/lib/meshlib-thirdparty-lib/in
 ENV MR_STATE=DOCKER_BUILD
 
 # update and install req
+# clang-tools-18 libclang-18-dev llvm-18-dev are libclang libs, they are needed to compile mrbind.
+# clang-18 is needed to compile bindings produced by mrbind (didn't port to other compilers yet, at the time of writing)
+# lld-18 is for linking the bindings, it works marginally faster than LD.
 RUN export DEBIAN_FRONTEND=noninteractive; \
     export DEBCONF_NONINTERACTIVE_SEEN=true; \
     echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \

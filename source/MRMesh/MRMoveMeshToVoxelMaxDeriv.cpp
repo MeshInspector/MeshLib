@@ -4,6 +4,7 @@
 #include "MRMesh.h"
 #include "MRMeshRelax.hpp"
 #include <MRMesh/MRParallelFor.h>
+#include <spdlog/spdlog.h>
 
 
 namespace MR
@@ -119,6 +120,40 @@ void MeshOnVoxelsT<MeshType>::getDerivatives( std::vector<float>& result, const 
 }
 
 
+template <typename MeshType>
+Parabolaf MeshOnVoxelsT<MeshType>::getBestParabola( const std::vector<float>& values, const std::vector<float>& derivatives )
+{
+//    std::ofstream fout( "/home/andrew/Temp/out.txt" );
+//    for ( size_t i = 0; i < values.size(); ++i )
+//        fout << pseudoIndex( int( i ), int( derivatives.size() ) ) << ' ' << derivatives[i] << '\n';
+
+    // find maximum and minimum
+    auto [mn, mx] = std::ranges::minmax_element( values );
+    if ( mn < mx )
+        std::swap( mn, mx );
+
+    // add only points from the mn - mx range
+    BestFitParabola<float> bestFitParabola;
+    for ( auto it = mx; it != mn; ++it )
+    {
+        const auto i = it - values.begin();
+        bestFitParabola.addPoint( pseudoIndex( int( i ), int( derivatives.size() ) ), derivatives[i] );
+    }
+    return bestFitParabola.getBestParabola();
+}
+
+template <typename MeshType>
+Polynomialf<6> MeshOnVoxelsT<MeshType>::getBestPolynomial( const std::vector<float>& values )
+{
+    BestFitPolynomial<double, 6> bestFit( 0.001f );
+    for ( size_t i = 0; i < values.size(); ++i )
+        bestFit.addPoint( pseudoIndex( int( i ), int( values.size() ) ), values[i] );
+    auto poly = bestFit.getBestPolynomial().cast<float>();
+    return poly;
+}
+
+
+
 template class MeshOnVoxelsT<Mesh>;
 template class MeshOnVoxelsT<const Mesh>;
 
@@ -154,7 +189,7 @@ VertBitSet adjustOneIter( MeshOnVoxels& mv, int samplePoints, float intermediate
             local.mv.getValues( values, pt, offset );
             local.mv.getDerivatives( derivatives, values );
 
-            auto parabola = local.mv.getBestParabola( derivatives.begin(), derivatives.end() );
+            auto parabola = local.mv.getBestParabola( values, derivatives );
             if ( parabola.a < 0.f )
                 return;
 

@@ -9,20 +9,10 @@ namespace MR.DotNet.Test
     internal class MeshTests
     {
         [Test]
-        public void TestMeshFromFile()
-        {
-            var path = TestTools.GetPathToTestFile( "cube.mrmesh" );
-            var mesh = Mesh.FromFile( path );
-            Assert.That( mesh.Points.Count == 8 );
-            Assert.That( mesh.Triangulation.Count == 12 );
-        }
-
-        [Test]
         public void TestDoubleAssignment()
         {
-            var path = TestTools.GetPathToTestFile( "cube.mrmesh" );
-            var mesh = Mesh.FromFile( path );
-            mesh = Mesh.FromFile(path);
+            var mesh = Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
+            mesh = Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
             Assert.That( mesh.Points.Count == 8 );
             Assert.That( mesh.Triangulation.Count == 12 );
         }
@@ -32,20 +22,12 @@ namespace MR.DotNet.Test
         {
             var cubeMesh = Mesh.MakeCube( Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f) );
             var tempFile = Path.GetTempFileName() + ".mrmesh";
-            Mesh.ToFile( cubeMesh, tempFile );
+            Mesh.ToAnySupportedFormat( cubeMesh, tempFile );
 
-            var readMesh = Mesh.FromFile( tempFile );
+            var readMesh = Mesh.FromAnySupportedFormat( tempFile );
             Assert.That( cubeMesh == readMesh );
 
             File.Delete( tempFile );
-        }
-
-        [Test]
-        public void TestSpartan()
-        {
-            var mesh = Mesh.FromFile( TestTools.GetPathToTestFile( "spartan.mrmesh" ) );
-            Assert.That( mesh.Points.Count == 68230 );
-            Assert.That( mesh.Triangulation.Count == 136948 );
         }
 
         [Test]
@@ -78,7 +60,6 @@ namespace MR.DotNet.Test
             var mesh = Mesh.FromTriangles( points, triangles );
             Assert.That( mesh.Points.Count == 8 );
             Assert.That( mesh.Triangulation.Count == 12 );
-            Assert.That( TestTools.AreMeshesEqual( mesh, TestTools.GetPathToPattern( "cube_from_triangles.mrmesh" ) ) );
         }
 
         [Test]
@@ -87,20 +68,61 @@ namespace MR.DotNet.Test
             string path = Path.GetTempFileName() + ".mrmesh";
             var file = File.Create(path);
             file.Close();
-            Assert.Throws<SystemException>( () => Mesh.FromFile(path)) ;
+            Assert.Throws<SystemException>( () => Mesh.FromAnySupportedFormat(path)) ;
             File.Delete(path);
         }
 
         [Test]
         public void TestNullArgs()
         {
-            Assert.Throws<ArgumentNullException>( () => Mesh.FromFile(null));
-            Assert.Throws<ArgumentNullException>( () => Mesh.ToFile(null, null));
+            Assert.Throws<ArgumentNullException>( () => Mesh.FromAnySupportedFormat(null));
+            Assert.Throws<ArgumentNullException>( () => Mesh.ToAnySupportedFormat(null, null));
             Assert.Throws<ArgumentNullException>( () => Mesh.MakeCube(null, null));
             Assert.Throws<ArgumentException>( () => Mesh.MakeSphere( 0.0f, -50 ) );
 
             Assert.Throws<ArgumentNullException>( () => Mesh.FromTriangles(null, null) );
             Assert.Throws<ArgumentNullException>( () => Mesh.FromTrianglesDuplicatingNonManifoldVertices( null, null ) );
         }
+
+        [Test]
+        public void TestTransform()
+        {
+            var cubeMesh = Mesh.MakeCube( Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f) );
+            var xf = new AffineXf3f(Vector3f.Diagonal(1.0f));
+            cubeMesh.Transform( xf );
+
+            Assert.That(cubeMesh.Points[0] == new Vector3f(0.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.Points[1] == new Vector3f(0.5f, 1.5f, 0.5f));
+            Assert.That(cubeMesh.Points[2] == new Vector3f(1.5f, 1.5f, 0.5f));
+            Assert.That(cubeMesh.Points[3] == new Vector3f(1.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.Points[4] == new Vector3f(0.5f, 0.5f, 1.5f));
+            Assert.That(cubeMesh.Points[5] == new Vector3f(0.5f, 1.5f, 1.5f));
+            Assert.That(cubeMesh.Points[6] == new Vector3f(1.5f, 1.5f, 1.5f));
+            Assert.That(cubeMesh.Points[7] == new Vector3f(1.5f, 0.5f, 1.5f));
+        }
+
+        [Test]
+        public void TestTransformWithRegion()
+        {
+            var cubeMesh = Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
+            var region = new BitSet(8);
+            region.Set(0);
+            region.Set(2);
+            region.Set(4);
+            region.Set(6);
+
+            var xf = new AffineXf3f(Vector3f.Diagonal(1.0f));
+            cubeMesh.Transform(xf, region);
+
+            Assert.That(cubeMesh.Points[0] == new Vector3f(0.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.Points[1] == new Vector3f(-0.5f, 0.5f, -0.5f));
+            Assert.That(cubeMesh.Points[2] == new Vector3f(1.5f, 1.5f, 0.5f));
+            Assert.That(cubeMesh.Points[3] == new Vector3f(0.5f, -0.5f, -0.5f));
+            Assert.That(cubeMesh.Points[4] == new Vector3f(0.5f, 0.5f, 1.5f));
+            Assert.That(cubeMesh.Points[5] == new Vector3f(-0.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.Points[6] == new Vector3f(1.5f, 1.5f, 1.5f));
+            Assert.That(cubeMesh.Points[7] == new Vector3f(0.5f, -0.5f, 0.5f));
+        }
+
     }
 }

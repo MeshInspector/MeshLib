@@ -555,9 +555,6 @@ private:
     int numValidFaces_ = 0; ///< the number of valid elements in edgePerFace_ or set bits in validFaces_
 
     bool updateValids_ = true; ///< if false, validVerts_, validFaces_, numValidVerts_, numValidFaces_ are not updated
-
-public:
-    const Vector<HalfEdgeRecord, EdgeId>& edges() const { return edges_; }
 };
 
 template <typename T>

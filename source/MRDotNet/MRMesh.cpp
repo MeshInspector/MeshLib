@@ -1,6 +1,7 @@
 #include "MRMesh.h"
 #include "MRVector3.h"
 #include "MRBitSet.h"
+#include "MRAffineXf.h"
 
 #pragma managed( push, off )
 #include <MRMesh/MRMesh.h>
@@ -13,6 +14,7 @@
 
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRMakeSphereMesh.h>
+#include <MRMesh/MRTorus.h>
 
 #pragma managed( pop )
 
@@ -84,7 +86,7 @@ Mesh^ Mesh::FromTrianglesDuplicatingNonManifoldVertices( VertCoords^ points, MR:
     return gcnew Mesh( new MR::Mesh( std::move( MR::Mesh::fromTrianglesDuplicatingNonManifoldVertices( nativePoints, nativeTriangles ) ) ) );
 }
 
-Mesh^ Mesh::FromFile( System::String^ path )
+Mesh^ Mesh::FromAnySupportedFormat( System::String^ path )
 {
     if ( !path )
         throw gcnew System::ArgumentNullException();
@@ -98,7 +100,7 @@ Mesh^ Mesh::FromFile( System::String^ path )
     return gcnew Mesh( new MR::Mesh( std::move( *meshOrErr ) ) );
 }
 
-void Mesh::ToFile( Mesh^ mesh, System::String^ path )
+void Mesh::ToAnySupportedFormat( Mesh^ mesh, System::String^ path )
 {
     if ( !mesh )
         throw gcnew System::ArgumentNullException( "mesh" );
@@ -180,6 +182,23 @@ bool Mesh::operator!=( Mesh^ a, Mesh^ b )
     return *a->mesh_ != *b->mesh_;
 }
 
+void Mesh::Transform( AffineXf3f^ xf )
+{
+    return mesh_->transform( *xf->xf() );
+}
+
+void Mesh::Transform( AffineXf3f^ xf, VertBitSet^ region )
+{
+    if ( !xf )
+        throw gcnew System::ArgumentNullException( "xf" );
+
+    if ( !region )
+        throw gcnew System::ArgumentNullException( "region" );
+
+    MR::VertBitSet nativeRegion( region->bitSet()->m_bits.begin(), region->bitSet()->m_bits.end() );
+    return mesh_->transform( *xf->xf(), &nativeRegion );
+}
+
 Mesh^ Mesh::MakeCube( Vector3f^ size, Vector3f^ base )
 { 
     if ( !size || !base )
@@ -194,6 +213,16 @@ Mesh^ Mesh::MakeSphere( float radius, int vertexCount )
         throw gcnew System::ArgumentException( "vertexCount" );
 
     return gcnew Mesh( new MR::Mesh( std::move( MR::makeSphere( { .radius = radius, .numMeshVertices = vertexCount }))));
+}
+
+Mesh^ Mesh::MakeTorus( float primaryRadius, float secondaryRadius, int primaryResolution, int secondaryResolution )
+{
+    if ( primaryResolution < 1 )
+        throw gcnew System::ArgumentException( "primaryResolution" );
+    if ( secondaryResolution < 1 )
+        throw gcnew System::ArgumentException( "secondaryResolution" );
+
+    return gcnew Mesh( new MR::Mesh( std::move( MR::makeTorus( primaryRadius, secondaryRadius, primaryResolution, secondaryResolution ) ) ) );
 }
 
 MR_DOTNET_NAMESPACE_END

@@ -3,7 +3,7 @@
 
 MR_DOTNET_NAMESPACE_BEGIN
 
-
+/// represents a mesh, including topology (connectivity) information and point coordinates,
 public ref class Mesh
 {
 internal:
@@ -11,28 +11,41 @@ internal:
 
 public:
     ~Mesh();
-
+    /// point coordinates
     property VertCoordsReadOnly^ Points { VertCoordsReadOnly^ get(); }
-
+    /// set of all valid vertices
     property VertBitSetReadOnly^ ValidVerts { VertBitSetReadOnly^ get(); }
-
+    /// set of all valid faces
     property FaceBitSetReadOnly^ ValidFaces { FaceBitSetReadOnly^ get(); }
-
+    /// info about triangles
     property TriangulationReadOnly^ Triangulation { TriangulationReadOnly^ get(); }
-
+    /// edges with no valid left face for every boundary in the mesh
     property EdgePathReadOnly^ HoleRepresentiveEdges { EdgePathReadOnly^ get(); }
 
-    static Mesh^ FromTriangles( VertCoords^ points, MR::DotNet::Triangulation^ triangles );
-    static Mesh^ FromTrianglesDuplicatingNonManifoldVertices( VertCoords^ points, MR::DotNet::Triangulation^ triangles );
+    /// transforms all points
+    void Transform( AffineXf3f^ xf );
+    /// transforms all points in the region
+    void Transform( AffineXf3f^ xf, VertBitSet^ region );
 
-    static Mesh^ FromFile( System::String^ path );
-    static void ToFile( Mesh^ mesh, System::String^ path );
+    /// creates mesh from point coordinates and triangulation
+    static Mesh^ FromTriangles( VertCoords^ points, MR::DotNet::Triangulation^ triangles );
+    /// creates mesh from point coordinates and triangulation. If some vertices are not manifold, they will be duplicated
+    static Mesh^ FromTrianglesDuplicatingNonManifoldVertices( VertCoords^ points, MR::DotNet::Triangulation^ triangles );
+    
+    /// loads mesh from file of any supported format
+    static Mesh^ FromAnySupportedFormat( System::String^ path );
+    /// saves mesh to file of any supported format
+    static void ToAnySupportedFormat( Mesh^ mesh, System::String^ path );
 
     static bool operator==( Mesh^ a, Mesh^ b );
     static bool operator!=( Mesh^ a, Mesh^ b );
 
+    /// creates a parallelepiped with given sizes and base
     static Mesh^ MakeCube( Vector3f^ size, Vector3f^ base );
+    /// creates a sphere of given radius and vertex count
     static Mesh^ MakeSphere( float radius, int vertexCount );
+    /// creates a torus with given parameters
+    static Mesh^ MakeTorus( float primaryRadius, float secondaryRadius, int primaryResolution, int secondaryResolution );
 
 private:
     MR::Mesh* mesh_;

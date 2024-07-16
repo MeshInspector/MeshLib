@@ -3,13 +3,17 @@
 
 MR_DOTNET_NAMESPACE_BEGIN
 
+/// represents a 3-dimentional float-typed vector
 public ref class Vector3f
 {
 public:
+    /// creates a new vector with zero coordinates
     Vector3f();
+    /// creates a new vector with specified coordinates
     Vector3f( float x, float y, float z );
     ~Vector3f();
 
+    /// creates a new vector with same coordinates
     static Vector3f^ Diagonal( float a );
     static Vector3f^ PlusX();
     static Vector3f^ MinusX();
@@ -23,8 +27,11 @@ public:
     static Vector3f^ operator*( Vector3f^ a, float b );
     static Vector3f^ operator*( float a, Vector3f^ b );
 
+    /// first coordinate
     property float X { float get(); void set( float value ); }
+    /// second coordinate
     property float Y { float get(); void set( float value ); }
+    /// third coordinate
     property float Z { float get(); void set( float value ); }
 
     static bool operator == ( Vector3f^ a, Vector3f^ b );

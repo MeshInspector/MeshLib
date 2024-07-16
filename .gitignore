@@ -23,3 +23,5 @@ macos/Resources/LICENSE
 test_python/*.png
 source/MRMesh/config_cmake.h
 /.idea/
+source/MRDotNetTest/bin/*
+source/MRDotNetTest/obj/*

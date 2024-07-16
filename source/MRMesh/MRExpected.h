@@ -7,6 +7,8 @@
 #include <expected>
 #else
 #include <tl/expected.hpp>
+/// we have C++/CLI project MRMeshDotNet which doesn't support std::expected
+/// So we have to wrap tl::expected with this class in std namespace for correct linking
 #ifdef MR_DOT_NET_BUILD
 namespace std
 {

@@ -25,7 +25,7 @@
     <Keyword>ManagedCProj</Keyword>
     <RootNamespace>MeshLibDotNet</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>MRDotNet</ProjectName>
+    <ProjectName>MRMeshDotNet</ProjectName>
     <WindowsTargetPlatformMinVersion>7.0</WindowsTargetPlatformMinVersion>
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>

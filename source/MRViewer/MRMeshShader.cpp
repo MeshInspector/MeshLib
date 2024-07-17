@@ -82,7 +82,7 @@ std::string getMeshFragmentShaderArgumetsBlock()
   uniform vec4 clippingPlane;        // (in from base) clipping plane
   uniform bool invertNormals;        // (in from base) invert normals if true
   uniform bool mirrored;
-  uniform sampler2D tex;             // (in from base) texture
+  uniform sampler2DArray  tex;             // (in from base) texture
   uniform float specExp;   // (in from base) lighting parameter 
   uniform bool useTexture;           // (in from base) enable texture
   uniform vec3 ligthPosEye;   // (in from base) light position transformed by view only (not proj)
@@ -165,7 +165,8 @@ std::string getMeshFragmentShaderColoringBlock()
 
     if ( useTexture && !selected )
     {
-      vec4 textColor = texture(tex, texcoordi);
+      vec4 textColor = texture(tex, vec3(texcoordi.x, texcoordi.y, 0.0));
+
       float destA = colorCpy.a;
       colorCpy.a = textColor.a + destA * ( 1.0 - textColor.a );
       if ( colorCpy.a == 0.0 )

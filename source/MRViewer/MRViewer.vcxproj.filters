@@ -400,6 +400,9 @@
     <ClCompile Include="MRViewerSettingsPlugin.cpp">
       <Filter>Plugins</Filter>
     </ClCompile>
+    <ClCompile Include="MRGLTexture.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -781,6 +784,9 @@
     </ClInclude>
     <ClInclude Include="MRViewerSettingsPlugin.h">
       <Filter>Plugins</Filter>
+    </ClInclude>
+    <ClInclude Include="MRGLTexture.h">
+      <Filter>Render\Implementations</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

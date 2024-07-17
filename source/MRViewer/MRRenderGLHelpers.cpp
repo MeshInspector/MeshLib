@@ -1,6 +1,5 @@
 #include "MRRenderGLHelpers.h"
 #include "MRViewer.h"
-#include "MRGLMacro.h"
 
 namespace MR
 {
@@ -65,46 +64,21 @@ void GlBuffer::loadDataOpt( GLenum target, bool refresh, const char * arr, size_
         bind( target );
 }
 
-void GlTexture2::gen()
-{
-    del();
-    GL_EXEC( glGenTextures( 1, &textureID_ ) );
-    assert( valid() );
-}
-
-void GlTexture2::del()
-{
-    if ( !valid() )
-        return;
-    if ( Viewer::constInstance()->isGLInitialized() && loadGL() )
-    {
-        GL_EXEC( glDeleteTextures( 1, &textureID_ ) );
-    }
-    textureID_ = NO_TEX;
-    size_ = 0;
-}
-
-void GlTexture2::bind()
-{ 
-    assert( valid() );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, textureID_ ) );
-}
-
-void GlTexture2::loadData( const Settings & settings, const char * arr )
+void GlTexture3::loadData( const Settings& settings, const char* arr )
 {
     if ( !valid() )
         gen();
     bind();
 
-    setTextureWrapType( settings.wrap );
-    setTextureFilterType( settings.filter );
+    setTextureWrapType( settings.wrap, type_ );
+    setTextureFilterType( settings.filter, type_ );
     GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
-    GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, settings.internalFormat, settings.resolution.x, settings.resolution.y, 0, settings.format, settings.type, arr ) );
+    GL_EXEC( glTexImage3D( type_, 0, settings.internalFormat, settings.resolution.x, settings.resolution.y, settings.resolution.z, 0, settings.format, settings.type, arr ) );
 
     size_ = settings.size();
 }
 
-void GlTexture2::loadDataOpt( bool refresh, const Settings & settings, const char * arr )
+void GlTexture3::loadDataOpt( bool refresh, const Settings& settings, const char* arr )
 {
     if ( refresh )
         loadData( settings, arr );
@@ -112,80 +86,43 @@ void GlTexture2::loadDataOpt( bool refresh, const Settings & settings, const cha
         bind();
 }
 
-void GlTexture3::gen()
-{
-    del();
-    GL_EXEC( glGenTextures( 1, &textureID_ ) );
-    assert( valid() );
-}
-
-void GlTexture3::del()
-{
-    if ( !valid() )
-        return;
-    if ( Viewer::constInstance()->isGLInitialized() && loadGL() )
-    {
-        GL_EXEC( glDeleteTextures( 1, &textureID_ ) );
-    }
-    textureID_ = NO_TEX;
-    size_ = 0;
-}
-
-void GlTexture3::bind()
-{ 
-    assert( valid() );
-    GL_EXEC( glBindTexture( GL_TEXTURE_3D, textureID_ ) );
-}
-
-void setTextureFilterType( FilterType filterType, bool dim3d )
-{
-    GLint filter = filterType == FilterType::Linear ? GL_LINEAR : GL_NEAREST;
-    auto txtDim = dim3d ? GL_TEXTURE_3D : GL_TEXTURE_2D;
-    GL_EXEC( glTexParameteri( txtDim, GL_TEXTURE_MIN_FILTER, filter ) );
-    GL_EXEC( glTexParameteri( txtDim, GL_TEXTURE_MAG_FILTER, filter ) );
-}
-
-void setTextureWrapType( WrapType wrapType, bool dim3d )
-{
-    GLint wrap = GL_MIRRORED_REPEAT;
-    switch ( wrapType )
-    {
-    default:
-    case WrapType::Clamp:
-        wrap = GL_CLAMP_TO_EDGE;
-        break;
-    case WrapType::Repeat:
-        wrap = GL_REPEAT;
-        break;
-    case WrapType::Mirror:
-        wrap = GL_MIRRORED_REPEAT;
-        break;
-    }
-
-    auto txtDim = dim3d ? GL_TEXTURE_3D : GL_TEXTURE_2D;
-    GL_EXEC( glTexParameteri( txtDim, GL_TEXTURE_WRAP_S, wrap ) );
-    GL_EXEC( glTexParameteri( txtDim, GL_TEXTURE_WRAP_T, wrap ) );
-    if ( dim3d )
-    {
-        GL_EXEC( glTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, wrap ) );
-    }
-}
-
-void GlTexture3::loadData( const Settings & settings, const char * arr )
+void GlTexture2::loadData( const Settings& settings, const char* arr )
 {
     if ( !valid() )
         gen();
     bind();
 
-    setTextureWrapType( settings.wrap, true );
-    setTextureFilterType( settings.filter, true );
+    setTextureWrapType( settings.wrap, type_ );
+    setTextureFilterType( settings.filter, type_ );
     GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
-    GL_EXEC( glTexImage3D( GL_TEXTURE_3D, 0, settings.internalFormat, settings.resolution.x, settings.resolution.y, settings.resolution.z, 0, settings.format, settings.type, arr ) );
+    GL_EXEC( glTexImage2D( type_, 0, settings.internalFormat, settings.resolution.x, settings.resolution.y, 0, settings.format, settings.type, arr ) );
 
     size_ = settings.size();
 }
 
-void GlTexture3::loadDataOpt( bool refresh, const Settings & settings, const char * arr )
+void GlTexture2::loadDataOpt( bool refresh, const Settings& settings, const char* arr )
+{
+    if ( refresh )
+        loadData( settings, arr );
+    else
+        bind();
+}
+
+void GlTexture2DArray::loadData( const Settings& settings, const char* arr )
+{
+    if ( !valid() )
+        gen();
+    bind();
+
+    setTextureWrapType( settings.wrap, type_ );
+    setTextureFilterType( settings.filter, type_ );
+    GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
+    GL_EXEC( glTexImage3D( type_, 0, settings.internalFormat, settings.resolution.x, settings.resolution.y, settings.resolution.z, 0, settings.format, settings.type, arr ) );
+
+    size_ = settings.size();
+}
+
+void GlTexture2DArray::loadDataOpt( bool refresh, const Settings& settings, const char* arr )
 {
     if ( refresh )
         loadData( settings, arr );
@@ -342,7 +279,7 @@ void FramebufferData::resize_( const Vector2i& size, int msaaPow )
 
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, copyFramebuffer_ ) );
 
-    resTexture_.loadData( { .resolution = size, .wrap = WrapType::Clamp,.filter = FilterType::Linear }, ( const char* ) nullptr );
+    resTexture_.loadData( {.resolution = size, .wrap = WrapType::Clamp, .filter = FilterType::Linear }, ( const char* ) nullptr );
     GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, resTexture_.getId(), 0 ) );
     assert( glCheckFramebufferStatus( GL_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE );
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, 0 ) );

@@ -204,6 +204,92 @@ Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface
     }
 }
 
+
+/// @brief class to parallel reduce histogram calculation
+template<typename TreeT>
+class HistogramCalcProc
+{
+public:
+    using ValueT = typename TreeT::ValueType;
+    using TreeAccessor = openvdb::tree::ValueAccessor<const TreeT>;
+    using LeafIterT = typename TreeT::LeafCIter;
+    using TileIterT = typename TreeT::ValueAllCIter;
+
+    HistogramCalcProc( float min, float max ) :
+        hist( min, max, cVoxelsHistogramBinsNumber )
+    {}
+
+    HistogramCalcProc( const HistogramCalcProc& other ) :
+        hist( Histogram( other.hist.getMin(), other.hist.getMax(), cVoxelsHistogramBinsNumber ) )
+    {}
+
+    void action( const LeafIterT&, const TreeAccessor& treeAcc, const openvdb::math::CoordBBox& bbox )
+    {
+        for ( auto it = bbox.begin(); it != bbox.end(); ++it )
+        {
+            ValueT value = ValueT();
+            if ( treeAcc.probeValue( *it, value ) )
+                hist.addSample( value );
+        }
+    }
+
+    void action( const TileIterT& iter, const TreeAccessor&, const openvdb::math::CoordBBox& bbox )
+    {
+        ValueT value = iter.getValue();
+        const size_t count = size_t( bbox.volume() );
+        hist.addSample( value, count );
+    }
+
+    void join( const HistogramCalcProc& other )
+    {
+        hist.addHistogram( other.hist );
+    }
+
+    Histogram hist;
+};
+
+
+Histogram ObjectVoxels::recalculateHistogram( std::optional<Vector2f> minmax, ProgressCallback cb ) const
+{
+    RangeSize size = calculateRangeSize( *vdbVolume_.data );
+
+    float min, max;
+    if ( minmax )
+    {
+        min = minmax->x;
+        max = minmax->y;
+    }
+    else
+    {
+        evalGridMinMax( vdbVolume_.data, min, max );
+    }
+
+    using HistogramCalcProcFT = HistogramCalcProc<openvdb::FloatTree>;
+    HistogramCalcProcFT histCalcProc( min, max );
+    using HistRangeProcessorOne = RangeProcessorSingle<openvdb::FloatTree, HistogramCalcProcFT>;
+    HistRangeProcessorOne calc( vdbVolume_.data->evalActiveVoxelBoundingBox(), vdbVolume_.data->tree(), histCalcProc );
+
+    if ( size.tile > 0 )
+    {
+        typename HistRangeProcessorOne::TileIterT tileIterMain = vdbVolume_.data->tree().cbeginValueAll();
+        tileIterMain.setMaxDepth( tileIterMain.getLeafDepth() - 1 ); // skip leaf nodes
+        typename HistRangeProcessorOne::TileRange tileRangeMain( tileIterMain );
+        auto sb = size.leaf > 0 ? subprogress( cb, 0.0f, 0.5f ) : cb;
+        calc.setProgressHolder( std::make_shared<RangeProgress>( sb, size.tile, RangeProgress::Mode::Tiles ) );
+        tbb::parallel_reduce( tileRangeMain, calc );
+    }
+
+    if ( size.leaf > 0 )
+    {
+        typename HistRangeProcessorOne::LeafRange leafRangeMain( vdbVolume_.data->tree().cbeginLeaf() );
+        auto sb = size.tile > 0 ? subprogress( cb, 0.5f, 1.0f ) : cb;
+        calc.setProgressHolder( std::make_shared<RangeProgress>( sb, size.leaf, RangeProgress::Mode::Leaves ) );
+        tbb::parallel_reduce( leafRangeMain, calc );
+    }
+
+    return calc.mProc.hist;
+}
+
 void ObjectVoxels::setDualMarchingCubes( bool on, bool updateSurface, ProgressCallback cb )
 {
     MR_TIMER
@@ -408,81 +494,10 @@ void ObjectVoxels::swapSignals_( Object& other )
         assert( false );
 }
 
-/// @brief class to parallel reduce histogram calculation
-template<typename TreeT>
-class HistogramCalcProc
-{
-public:
-    using ValueT = typename TreeT::ValueType;
-    using TreeAccessor = openvdb::tree::ValueAccessor<const TreeT>;
-    using LeafIterT = typename TreeT::LeafCIter;
-    using TileIterT = typename TreeT::ValueAllCIter;
-
-    HistogramCalcProc( float min, float max ) :
-        hist( min, max, cVoxelsHistogramBinsNumber )
-    {}
-
-    HistogramCalcProc( const HistogramCalcProc& other ) :
-        hist( Histogram( other.hist.getMin(), other.hist.getMax(), cVoxelsHistogramBinsNumber ) )
-    {}
-
-    void action( const LeafIterT&, const TreeAccessor& treeAcc, const openvdb::math::CoordBBox& bbox )
-    {
-        for ( auto it = bbox.begin(); it != bbox.end(); ++it )
-        {
-            ValueT value = ValueT();
-            if ( treeAcc.probeValue( *it, value ) )
-                hist.addSample( value );
-        }
-    }
-
-    void action( const TileIterT& iter, const TreeAccessor&, const openvdb::math::CoordBBox& bbox )
-    {
-        ValueT value = iter.getValue();
-        const size_t count = size_t( bbox.volume() );
-        hist.addSample( value, count );
-    }
-
-    void join( const HistogramCalcProc& other )
-    {
-        hist.addHistogram( other.hist );
-    }
-
-    Histogram hist;
-};
-
-
 void ObjectVoxels::updateHistogram_( float min, float max, ProgressCallback cb /*= {}*/ )
 {
     MR_TIMER;
-
-    RangeSize size = calculateRangeSize( *vdbVolume_.data );
-    
-    using HistogramCalcProcFT = HistogramCalcProc<openvdb::FloatTree>;
-    HistogramCalcProcFT histCalcProc( min, max );
-    using HistRangeProcessorOne = RangeProcessorSingle<openvdb::FloatTree, HistogramCalcProcFT>;
-    HistRangeProcessorOne calc( vdbVolume_.data->evalActiveVoxelBoundingBox(), vdbVolume_.data->tree(), histCalcProc );
-    
-
-    if ( size.tile > 0 )
-    {
-        typename HistRangeProcessorOne::TileIterT tileIterMain = vdbVolume_.data->tree().cbeginValueAll();
-        tileIterMain.setMaxDepth( tileIterMain.getLeafDepth() - 1 ); // skip leaf nodes
-        typename HistRangeProcessorOne::TileRange tileRangeMain( tileIterMain );
-        auto sb = size.leaf > 0 ? subprogress( cb, 0.0f, 0.5f ) : cb;
-        calc.setProgressHolder( std::make_shared<RangeProgress>( sb, size.tile, RangeProgress::Mode::Tiles ) );
-        tbb::parallel_reduce( tileRangeMain, calc );
-    }
-
-    if ( size.leaf > 0 )
-    {
-        typename HistRangeProcessorOne::LeafRange leafRangeMain( vdbVolume_.data->tree().cbeginLeaf() );
-        auto sb = size.tile > 0 ? subprogress( cb, 0.5f, 1.0f ) : cb;
-        calc.setProgressHolder( std::make_shared<RangeProgress>( sb, size.leaf, RangeProgress::Mode::Leaves ) );
-        tbb::parallel_reduce( leafRangeMain, calc );
-    }
-
-    histogram_ = std::move( calc.mProc.hist );
+    histogram_ = recalculateHistogram( Vector2f{ min, max }, cb );
 }
 
 void ObjectVoxels::setDefaultColors_()

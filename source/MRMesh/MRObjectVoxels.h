@@ -82,6 +82,8 @@ public:
 
     /// Calculates and return new mesh or error message
     MRMESH_API Expected<std::shared_ptr<Mesh>, std::string> recalculateIsoSurface( float iso, ProgressCallback cb = {} ) const;
+    /// Calculates and returns new histogram
+    MRMESH_API Histogram recalculateHistogram( std::optional<Vector2f> minmax, ProgressCallback cb = {} ) const;
     /// returns true if the iso-surface is built using Dual Marching Cubes algorithm or false if using Standard Marching Cubes
     bool getDualMarchingCubes() const { return dualMarchingCubes_; }
     /// sets whether to use Dual Marching Cubes algorithm for visualization (true) or Standard Marching Cubes (false);

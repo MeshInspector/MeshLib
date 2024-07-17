@@ -6,7 +6,7 @@ using namespace MR;
 
 static_assert( sizeof( MRBox3f ) == sizeof( Box3f ) );
 
-MRBox3f mrBox3fNew()
+MRBox3f mrBox3fNew( void )
 {
     static const Box3f res;
     return reinterpret_cast<const MRBox3f&>( res );

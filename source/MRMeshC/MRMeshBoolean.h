@@ -23,7 +23,7 @@ typedef struct MRBooleanParameters
 } MRBooleanParameters;
 
 /// initializes a default instance
-MRMESHC_API MRBooleanParameters mrBooleanParametersNew();
+MRMESHC_API MRBooleanParameters mrBooleanParametersNew( void );
 
 /// This structure store result mesh of mrBoolean or some error info
 typedef struct MRBooleanResult

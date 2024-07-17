@@ -24,7 +24,7 @@ MRICPPairData* mrIPointPairsGetRef( MRIPointPairs* pp_, size_t idx )
     return reinterpret_cast<MRICPPairData*>( &res );
 }
 
-MRICPProperties mrICPPropertiesNew()
+MRICPProperties mrICPPropertiesNew( void )
 {
     static const ICPProperties def;
     return {

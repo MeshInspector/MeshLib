@@ -12,7 +12,7 @@ typedef struct MRBox3f
 } MRBox3f;
 
 /// creates invalid box by default
-MRMESHC_API MRBox3f mrBox3fNew();
+MRMESHC_API MRBox3f mrBox3fNew( void );
 
 /// true if the box contains at least one point
 MRMESHC_API bool mrBox3fValid( const MRBox3f* box );

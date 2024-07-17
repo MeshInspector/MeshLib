@@ -4,7 +4,7 @@
 
 using namespace MR;
 
-MRBooleanParameters mrBooleanParametersNew()
+MRBooleanParameters mrBooleanParametersNew( void )
 {
     static const BooleanParameters def;
     return {

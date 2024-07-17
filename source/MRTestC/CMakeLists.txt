@@ -4,9 +4,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(MRTestC C)
 
+file(GLOB HEADERS "*.h")
 file(GLOB SOURCES "*.c")
 
-add_executable(${PROJECT_NAME} ${SOURCES})
+add_executable(${PROJECT_NAME} ${HEADERS} ${SOURCES})
 
 IF(MR_EMSCRIPTEN)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --emrun")

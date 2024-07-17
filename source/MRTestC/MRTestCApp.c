@@ -1,11 +1,11 @@
 #include "MRMeshBoolean.h"
 #include "MRMeshDecimate.h"
+#include "MRMeshFillHole.h"
 
-int main( int argc, char* argv[] )
+int main( void )
 {
-    (void)argc, (void)argv;
     testMeshBoolean();
     testBooleanMultipleEdgePropogationSort();
     testMeshDecimate();
-    return 0;
+    testMeshFillHole();
 }

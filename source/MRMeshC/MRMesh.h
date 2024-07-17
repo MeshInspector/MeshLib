@@ -40,6 +40,10 @@ MRMESHC_API MRMeshTopology* mrMeshTopologyRef( MRMesh* mesh );
 /// if region is NULL, all valid mesh vertices are used
 MRMESHC_API void mrMeshTransform( MRMesh* mesh, const MRAffineXf3f* xf, const MRVertBitSet* region );
 
+/// computes directed area of the hole specified by one of its edges with no valid left face (left is hole);
+/// if the hole is planar then returned vector is orthogonal to the plane pointing outside and its magnitude is equal to hole area
+MRMESHC_API MRVector3f mrMeshHoleDirArea( const MRMesh* mesh, MREdgeId e );
+
 /// optional parameters for \ref mrMeshAddPartByMask
 typedef struct MRMeshAddPartByMaskParameters
 {

@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClCompile Include="MRMeshBoolean.c" />
     <ClCompile Include="MRMeshDecimate.c" />
+    <ClCompile Include="MRMeshFillHole.c" />
     <ClCompile Include="MRTestCApp.c" />
   </ItemGroup>
   <ItemGroup>
@@ -23,6 +24,7 @@
   <ItemGroup>
     <ClInclude Include="MRMeshBoolean.h" />
     <ClInclude Include="MRMeshDecimate.h" />
+    <ClInclude Include="MRMeshFillHole.h" />
     <ClInclude Include="TestMacros.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

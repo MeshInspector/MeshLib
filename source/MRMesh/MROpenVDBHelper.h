@@ -6,6 +6,14 @@
 #include "openvdb/tree/ValueAccessor.h"
 #include "MRProgressCallback.h"
 
+#if defined(MR_PARSING_FOR_PB11_BINDINGS) || defined(MR_COMPILING_PB11_BINDINGS)
+// We call functions from those files below. Without those includes, I get undefined references in the bindings, when importing them.
+// Maybe we should include those unconditionally, I'm not entirely sure.
+#include <openvdb/tools/ChangeBackground.h>
+#include <openvdb/tools/Prune.h>
+#include <openvdb/tools/SignedFloodFill.h>
+#endif
+
 namespace MR
 {
 

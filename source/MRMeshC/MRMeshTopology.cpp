@@ -65,3 +65,10 @@ void mrEdgePathFree( MREdgePath* ep )
 {
     delete reinterpret_cast<std::vector<EdgeId>*>( ep );
 }
+
+size_t mrMeshTopologyFaceSize( const MRMeshTopology* top_ )
+{
+    const auto& top = *reinterpret_cast<const MeshTopology*>( top_ );
+
+    return top.faceSize();
+}

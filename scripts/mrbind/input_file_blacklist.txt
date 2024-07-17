@@ -1,0 +1,8 @@
+%/MRPython.h
+%/MREmbeddedPython.h
+%/MRIOFormatsRegistry.h
+%/MROpenVDBHelper.h
+%/MRRestoringStreamsSink.h
+%/MRDirectory.h
+%/MRVDBProgressInterrupter.h
+%/MRTupleBindings.h

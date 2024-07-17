@@ -1,4 +1,5 @@
 #include "MRMoveMeshToVoxelMaxDeriv.h"
+#ifndef MRMESH_NO_OPENVDB
 #include "MRTimer.h"
 #include "MRBestFitParabola.h"
 #include "MRMesh.h"
@@ -267,3 +268,4 @@ VertBitSet moveMeshToVoxelMaxDeriv(
 }
 
 }
+#endif

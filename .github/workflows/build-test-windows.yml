@@ -125,7 +125,7 @@ jobs:
         uses: microsoft/setup-msbuild@v2
 
       - name: Install DotNET
-    	uses: codebeltnet/install-dotnet@v1
+        uses: codebeltnet/install-dotnet@v1
 
       - name: Restore Dependencies
         uses: codebeltnet/dotnet-restore@v1

@@ -32,6 +32,7 @@ MR_EXTERN_C_BEGIN
 typedef struct MRString MRString;
 
 typedef struct MRBitSet MRBitSet;
+typedef MRBitSet MREdgeBitSet;
 typedef MRBitSet MRFaceBitSet;
 typedef MRBitSet MRVertBitSet;
 

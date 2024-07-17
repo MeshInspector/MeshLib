@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRAffineXf.h"
+#include "MRBox.h"
 #include "MRId.h"
 
 MR_EXTERN_C_BEGIN
@@ -36,6 +37,10 @@ MRMESHC_API const MRMeshTopology* mrMeshTopology( const MRMesh* mesh );
 /// gets read-write access to the mesh topology object
 MRMESHC_API MRMeshTopology* mrMeshTopologyRef( MRMesh* mesh );
 
+/// passes through all valid vertices and finds the minimal bounding box containing all of them;
+/// if toWorld transformation is given then returns minimal bounding box in world space
+MRMESHC_API MRBox3f mrMeshComputeBoundingBox( const MRMesh* mesh, const MRAffineXf3f* toWorld );
+
 /// applies given transformation to specified vertices
 /// if region is NULL, all valid mesh vertices are used
 MRMESHC_API void mrMeshTransform( MRMesh* mesh, const MRAffineXf3f* xf, const MRVertBitSet* region );
@@ -61,7 +66,23 @@ typedef struct MRMeshAddPartByMaskParameters
 /// appends mesh (from) in addition to this mesh: creates new edges, faces, verts and points
 MRMESHC_API void mrMeshAddPartByMask( MRMesh* mesh, const MRMesh* from, const MRFaceBitSet* fromFaces, const MRMeshAddPartByMaskParameters* params );
 
+/// tightly packs all arrays eliminating lone edges and invalid face, verts and points
+MRMESHC_API void mrMeshPack( MRMesh* mesh, bool rearrangeTriangles );
+
+/// packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices
+/// \param preserveAABBTree whether to keep valid mesh's AABB tree after return (it will take longer to compute and it will occupy more memory)
+MRMESHC_API void mrMeshPackOptimally( MRMesh* mesh, bool preserveAABBTree );
+
 /// deallocates a Mesh object
 MRMESHC_API void mrMeshFree( MRMesh* mesh );
+
+/// returns three vertex ids for valid triangles (which can be accessed by FaceId),
+/// vertex ids for invalid triangles are undefined, and shall not be read
+/// NOTE: this is a shortcut for mrMeshTopologyGetTriangulation( mrMeshTopology( mesh ) )
+MRMESHC_API MRTriangulation* mrMeshGetTriangulation( const MRMesh* mesh );
+
+/// returns one edge with no valid left face for every boundary in the mesh
+/// NOTE: this is a shortcut for mrMeshTopologyFindHoleRepresentiveEdges( mrMeshTopology( mesh ) )
+MRMESHC_API MREdgePath* mrMeshFindHoleRepresentiveEdges( const MRMesh* mesh );
 
 MR_EXTERN_C_END

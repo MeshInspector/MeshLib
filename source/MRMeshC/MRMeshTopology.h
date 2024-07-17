@@ -42,4 +42,8 @@ MRMESHC_API size_t mrEdgePathSize( const MREdgePath* ep );
 /// deallocates the EdgePath object
 MRMESHC_API void mrEdgePathFree( MREdgePath* ep );
 
+/// returns the number of hole loops in the mesh;
+/// \param holeRepresentativeEdges optional output of the smallest edge id with no valid left face in every hole
+MRMESHC_API int mrMeshTopologyFindNumHoles( const MRMeshTopology* top, MREdgeBitSet* holeRepresentativeEdges );
+
 MR_EXTERN_C_END

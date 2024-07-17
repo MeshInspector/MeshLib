@@ -121,9 +121,7 @@ static float calculateLabelsSizes( const std::vector<HistogramGridLine> &grid, i
         }
         index++;
     }
-    if ( maxCoord == 0.0f )
-        return 0.0f;
-    return maxCoord + ImGui::GetStyle().ItemInnerSpacing[coord];
+    return maxCoord;
 }
 
 void PlotCustomHistogram( const char* str_id,
@@ -149,12 +147,16 @@ void PlotCustomHistogram( const char* str_id,
         frame_size.y = frame_size.x / 2.f + ( style.FramePadding.y * 2 );
 
     std::vector<ImVec2> gridValuesLabelsSizes( gridValues.size() );
+    ImVec2 labelsSpacing = ImGui::GetStyle().ItemInnerSpacing; // Between histogram area and labels
     ImVec2 gridIndexesFirstLabelSize = !gridIndexes.empty() && !gridIndexes.front().label.empty() ? ImGui::CalcTextSize( gridIndexes.front().label.c_str() ) : ImVec2();
     ImVec2 gridIndexesLastLabelSize = !gridIndexes.empty() && !gridIndexes.back().label.empty() ? ImGui::CalcTextSize( gridIndexes.back().label.c_str() ) : ImVec2();
     ImRect itemRect( GetCursorScreenPos(), GetCursorScreenPos() + frame_size ); // Full item rectangle
     ImRect rect = itemRect; // Histogram area rectangle
-    rect.Max.x -= calculateLabelsSizes( gridValues, 0, gridValuesLabelsSizes );
-    rect.Max.y -= gridIndexesFirstLabelSize.y;
+    ImVec2 maxLabelsSizes = { calculateLabelsSizes( gridValues, 0, gridValuesLabelsSizes ), gridIndexesFirstLabelSize.y };
+    if ( maxLabelsSizes.x != 0.0f )
+        rect.Max.x -= maxLabelsSizes.x + labelsSpacing.x;
+    if ( maxLabelsSizes.y != 0.0f )
+        rect.Max.y -= maxLabelsSizes.y + labelsSpacing.y;
     ImVec2 minPlus, maxPlus;
     ImVec2 innerMin = rect.Min; innerMin.x += style.FramePadding.x; innerMin.y += style.FramePadding.y;
     ImVec2 innerMax = rect.Max; innerMax.x -= style.FramePadding.x; innerMax.y -= style.FramePadding.y;
@@ -253,6 +255,7 @@ void PlotCustomHistogram( const char* str_id,
             float firstX = std::max( rect.Min.x, toX( gridIndexes.front().value ) - gridIndexesFirstLabelSize.x / 2 );
             float lastX = std::min( itemRect.Max.x - style.FramePadding.x - gridIndexesLastLabelSize.x,
                                     toX( gridIndexes.back().value ) - gridIndexesLastLabelSize.x / 2 );
+            float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
             float prevMaxX = innerMin.x;
             size_t i = 0;
             size_t last = gridIndexes.size() - 1;
@@ -262,12 +265,12 @@ void PlotCustomHistogram( const char* str_id,
                     !line.label.empty() ? ImGui::CalcTextSize( line.label.c_str() ) : ImVec2();
                 float x = toX( line.value );
                 float textX = i == 0 ? firstX : i == last ? lastX : x - size.x / 2;
-                float textY = innerMax.y + ImGui::GetStyle().ItemInnerSpacing.y;
-                bool drawText = size.x != 0 && ( i == 0 || ( textX >= prevMaxX && ( i == last || textX + size.x <= lastX ) ) );
+                float textY = rect.Max.y + labelsSpacing.y;
+                bool drawText = size.x != 0 && ( i == 0 || ( textX >= prevMaxX && ( i == last || textX + size.x <= lastX - spacing ) ) );
                 // Grid line (a little longer if label is present)
-                drawList->AddRectFilled( ImVec2( x, innerMin.y ), ImVec2( x + 1, !drawText ? innerMax.y : rect.Max.y ), col_grid );
+                drawList->AddRectFilled( ImVec2( x, innerMin.y ), ImVec2( x + 1, innerMax.y ), col_grid );
                 if ( drawText )
-                    drawList->AddRectFilled( ImVec2( x, rect.Max.y ), ImVec2( x + 1, textY ), col_labels );
+                    drawList->AddRectFilled( ImVec2( x, innerMax.y ), ImVec2( x + 1, textY ), col_labels );
                 // Label
                 if ( drawText )
                 {
@@ -275,7 +278,7 @@ void PlotCustomHistogram( const char* str_id,
                     if ( !line.tooltip.empty() && itemHovered &&
                             mousePos.x >= textX && mousePos.y >= textY && mousePos.x < textX + size.x && mousePos.y < textY + size.y )
                             ImGui::SetTooltip( "%s", line.tooltip.c_str() );
-                    prevMaxX = textX + size.x;
+                    prevMaxX = textX + size.x + spacing;
                 }
                 i++;
             }
@@ -290,6 +293,7 @@ void PlotCustomHistogram( const char* str_id,
             const std::vector<ImVec2>& sizes = gridValuesLabelsSizes;
             float firstY = std::min( itemRect.Max.y - style.FramePadding.y - sizes.front().y, toY( gridValues.front().value ) - sizes.front().y / 2 );
             float lastY = std::max( rect.Min.y, toY( gridValues.back().value ) - sizes.back().y / 2 );
+            float spacing = ImGui::GetStyle().ItemInnerSpacing.y;
             float prevMinY = innerMax.y;
             size_t i = 0;
             size_t last = gridValues.size() - 1;
@@ -299,11 +303,11 @@ void PlotCustomHistogram( const char* str_id,
                 float textY = i == 0 ? firstY : i == last ? lastY : y - sizes[i].y / 2;
                 float textX = itemRect.Max.x - sizes[i].x;
                 bool drawText = sizes[i].x != 0 && (
-                    i == 0 || ( textY + sizes[i].y <= prevMinY && ( i == last || textY >= lastY + sizes.back().y ) ) );
+                    i == 0 || ( textY + sizes[i].y <= prevMinY && ( i == last || textY >= lastY + sizes.back().y + spacing ) ) );
                 // Grid line (a little longer if label is present)
-                drawList->AddRectFilled( ImVec2( innerMin.x, y ), ImVec2( !drawText ? innerMax.x : rect.Max.x, y + 1 ), col_grid );
+                drawList->AddRectFilled( ImVec2( innerMin.x, y ), ImVec2( innerMax.x, y + 1 ), col_grid );
                 if ( drawText )
-                    drawList->AddRectFilled( ImVec2( rect.Max.x, y ), ImVec2( rect.Max.x + ImGui::GetStyle().ItemInnerSpacing.x, y + 1 ), col_labels );
+                    drawList->AddRectFilled( ImVec2( innerMax.x, y ), ImVec2( rect.Max.x + labelsSpacing.x, y + 1 ), col_labels );
                 // Label
                 if ( drawText )
                 {
@@ -311,7 +315,7 @@ void PlotCustomHistogram( const char* str_id,
                     if ( !line.tooltip.empty() && itemHovered &&
                             mousePos.x >= textX && mousePos.y >= textY && mousePos.x < textX + sizes[i].x && mousePos.y < textY + sizes[i].y )
                         ImGui::SetTooltip( "%s", line.tooltip.c_str() );
-                    prevMinY = textY;
+                    prevMinY = textY - spacing;
                 }
                 i++;
             }

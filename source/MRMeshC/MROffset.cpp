@@ -18,6 +18,17 @@ MROffsetParameters mrOffsetParametersNew()
     };
 }
 
+float mrSuggestVoxelSize( MRMeshPart mp, float approxNumVoxels )
+{
+    return suggestVoxelSize(
+        MeshPart {
+            *reinterpret_cast<const Mesh*>( mp.mesh ),
+            reinterpret_cast<const FaceBitSet*>( mp.region ),
+        },
+        approxNumVoxels
+    );
+}
+
 MRMesh* mrOffsetMesh( MRMeshPart mp, float offset, const MROffsetParameters* params_, MRString** errorString )
 {
     OffsetParameters params;

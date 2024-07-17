@@ -4,6 +4,16 @@
 
 using namespace MR;
 
+MRBooleanParameters mrBooleanParametersNew( void )
+{
+    static const BooleanParameters def;
+    return {
+        .rigidB2A = reinterpret_cast<const MRAffineXf3f*>( def.rigidB2A ),
+        .mergeAllNonIntersectingComponents = def.mergeAllNonIntersectingComponents,
+        .cb = nullptr,
+    };
+}
+
 MRBooleanResult mrBoolean( const MRMesh* meshA, const MRMesh* meshB, MRBooleanOperation operation, const MRBooleanParameters* params_ )
 {
     BooleanParameters params;

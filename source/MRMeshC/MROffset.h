@@ -26,6 +26,9 @@ typedef struct MROffsetParameters
 /// initializes a default instance
 MRMESHC_API MROffsetParameters mrOffsetParametersNew( void );
 
+/// computes size of a cubical voxel to get approximately given number of voxels during rasterization
+ MRMESHC_API float mrSuggestVoxelSize( MRMeshPart mp, float approxNumVoxels );
+
 /// Offsets mesh by converting it to distance field in voxels using OpenVDB library,
 /// signDetectionMode = Unsigned(from OpenVDB) | OpenVDB | HoleWindingRule,
 /// and then converts back using OpenVDB library (dual marching cubes),

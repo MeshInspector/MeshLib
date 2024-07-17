@@ -25,3 +25,4 @@ source/MRMesh/config_cmake.h
 /.idea/
 source/MRDotNetTest/bin/*
 source/MRDotNetTest/obj/*
+/cmake-build-*/

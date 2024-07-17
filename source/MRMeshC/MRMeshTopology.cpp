@@ -66,6 +66,14 @@ void mrEdgePathFree( MREdgePath* ep )
     delete reinterpret_cast<std::vector<EdgeId>*>( ep );
 }
 
+int mrMeshTopologyFindNumHoles( const MRMeshTopology* top_, MREdgeBitSet* holeRepresentativeEdges_ )
+{
+    const auto& top = *reinterpret_cast<const MeshTopology*>( top_ );
+    auto* holeRepresentativeEdges = reinterpret_cast<EdgeBitSet*>( holeRepresentativeEdges_ );
+
+    return top.findNumHoles( holeRepresentativeEdges );
+}
+
 size_t mrMeshTopologyFaceSize( const MRMeshTopology* top_ )
 {
     const auto& top = *reinterpret_cast<const MeshTopology*>( top_ );

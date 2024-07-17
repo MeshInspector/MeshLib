@@ -1,5 +1,8 @@
 #include "MRMesh.h"
+#include "MRMeshTopology.h"
 
+#include "MRMesh/MRBox.h"
+#include "MRMesh/MRBuffer.h"
 #include "MRMesh/MRMesh.h"
 
 #include <span>
@@ -73,6 +76,15 @@ MRMeshTopology* mrMeshTopologyRef( MRMesh* mesh )
     return reinterpret_cast<MRMeshTopology*>( &reinterpret_cast<Mesh*>( mesh )->topology );
 }
 
+MRBox3f mrMeshComputeBoundingBox( const MRMesh* mesh_, const MRAffineXf3f* toWorld_ )
+{
+    const auto& mesh = *reinterpret_cast<const Mesh*>( mesh_ );
+    const auto* toWorld = reinterpret_cast<const AffineXf3f*>( toWorld_ );
+
+    const auto res = mesh.computeBoundingBox( toWorld );
+    return reinterpret_cast<const MRBox3f&>( res );
+}
+
 void mrMeshTransform( MRMesh* mesh_, const MRAffineXf3f* xf_, const MRVertBitSet* region_ )
 {
     auto& mesh = *reinterpret_cast<Mesh*>( mesh_ );
@@ -117,4 +129,28 @@ MRVector3f mrMeshHoleDirArea( const MRMesh* mesh_, MREdgeId e_ )
 
     const auto res = (Vector3f)mesh.holeDirArea( e );
     return reinterpret_cast<const MRVector3f&>( res );
+}
+
+void mrMeshPack( MRMesh* mesh_, bool rearrangeTriangles )
+{
+    auto& mesh = *reinterpret_cast<Mesh*>( mesh_ );
+
+    mesh.pack( nullptr, nullptr, nullptr, rearrangeTriangles );
+}
+
+void mrMeshPackOptimally( MRMesh* mesh_, bool preserveAABBTree )
+{
+    auto& mesh = *reinterpret_cast<Mesh*>( mesh_ );
+
+    mesh.packOptimally( preserveAABBTree );
+}
+
+MRTriangulation* mrMeshGetTriangulation( const MRMesh* mesh )
+{
+    return mrMeshTopologyGetTriangulation( mrMeshTopology( mesh ) );
+}
+
+MREdgePath* mrMeshFindHoleRepresentiveEdges( const MRMesh* mesh )
+{
+    return mrMeshTopologyFindHoleRepresentiveEdges( mrMeshTopology( mesh ) );
 }

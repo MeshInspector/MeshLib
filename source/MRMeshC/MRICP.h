@@ -121,7 +121,7 @@ typedef struct MRICPProperties
 } MRICPProperties;
 
 /// initializes a default instance
-MRMESHC_API MRICPProperties mrICPPropertiesNew();
+MRMESHC_API MRICPProperties mrICPPropertiesNew( void );
 
 /// This class allows you to register two object with similar shape using
 /// Iterative Closest Points (ICP) point-to-point or point-to-plane algorithms

@@ -25,12 +25,15 @@ jobs:
             runner: [ self-hosted, linux-arm64 ]
           - os: "ubuntu:20.04"
             name: "ubuntu20"
+            c-compiler: /usr/bin/clang-11
             cxx-compiler: /usr/bin/clang++-11
           - os: "ubuntu:22.04"
             name: "ubuntu22"
+            c-compiler: /usr/bin/clang-14
             cxx-compiler: /usr/bin/clang++-14
           - os: "fedora:39"
             name: "fedora39"
+            c-compiler: /usr/bin/clang-17
             cxx-compiler: /usr/bin/clang++-17
         exclude:
           - os: "fedora:39"
@@ -116,6 +119,13 @@ jobs:
           cmake .. -DCMAKE_CXX_COMPILER=${{matrix.cxx-compiler}} && \
           cmake --build . && \
           ./cmake-example
+
+      - name: Build C examples
+        if: always()
+        working-directory: examples/cmake-c-example
+        run: |
+          cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
+          cmake --build build
 
       - name: Ubuntu python test
         if: ${{ always() && matrix.os != 'fedora:39' }}

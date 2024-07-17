@@ -151,10 +151,16 @@ Box3i ObjectVoxels::updateActiveBounds( const Box3i& box )
     return oldBox;
 }
 
-Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( float iso, ProgressCallback cb /*= {} */ ) const
+Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( float iso, MR::ProgressCallback cb ) const
+{
+    return recalculateIsoSurface( vdbVolume_, iso, cb );
+}
+
+Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( const VdbVolume& vdbVolumeCopy, float iso, ProgressCallback cb /*= {} */ ) const
 {
     MR_TIMER
-    if ( !vdbVolume_.data )
+    auto vdbVolume = vdbVolumeCopy;
+    if ( !vdbVolume.data )
         return unexpected("No VdbVolume available");
 
     float startProgress = 0;   // where the current iteration has started
@@ -167,7 +173,6 @@ Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface
             return cb( reachedProgress );
         };
 
-    auto vdbVolume = vdbVolume_;
     for (;;)
     {
         // continue progress bar from the value where it stopped on the previous iteration

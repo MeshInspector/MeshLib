@@ -31,6 +31,7 @@ public:
 
     /// Return VdbVolume
     const VdbVolume& vdbVolume() const { return vdbVolume_; };
+    VdbVolume& varVdbVolume() { return vdbVolume_; }
 
     /// Returns Float grid which contains voxels data, see more on openvdb::FloatGrid
     const FloatGrid& grid() const { return vdbVolume_.data; }

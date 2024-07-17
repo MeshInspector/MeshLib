@@ -153,7 +153,7 @@ struct BindVertexAttribArraySettings
     bool isColor = false;
 };
 
-// represents OpenGL 3D texture owner, and allows uploading data in it remembering texture size
+// represents OpenGL array texture 2D owner, and allows uploading data in it remembering texture size
 class GlTexture2DArray : public GlTexture
 {
 public:

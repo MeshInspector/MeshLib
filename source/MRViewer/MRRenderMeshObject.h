@@ -60,7 +60,6 @@ protected:
 
     GlBuffer facesIndicesBuffer_;
 
-    //GlTexture2 texture_;
     GlTexture2 faceSelectionTex_;
     GlTexture2 faceColorsTex_;
     GlTexture2 facesNormalsTex_;

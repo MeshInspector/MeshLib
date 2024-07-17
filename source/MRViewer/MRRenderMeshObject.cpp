@@ -209,7 +209,6 @@ size_t RenderMeshObject::glBytes() const
         + vertNormalsBuffer_.size()
         + vertColorsBuffer_.size()
         + facesIndicesBuffer_.size()
-        //+ texture_.size()
         + textureArray_.size()
         + faceSelectionTex_.size()
         + faceSelectionTex_.size()
@@ -365,10 +364,12 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
         auto wrap = textures.empty() ? WrapType::Clamp : textures.front().wrap;
         auto filter = textures.empty() ? FilterType::Linear : textures.front().filter;
 
-        std::vector<Color> pixels;
-        pixels.reserve( 2 * size_t( res.x ) * res.y * textures.size() );
+        auto& buffer = GLStaticHolder::getStaticGLBuffer();
+        auto texSize = res.x * res.y;
+        auto pixels = buffer.prepareBuffer<Color>( size_t( texSize * textures.size() ) );
+        size_t numTex = 0;
         for ( const auto& tex : textures )
-            pixels.insert( pixels.end(), tex.pixels.begin(), tex.pixels.end() );
+            std::copy( tex.pixels.begin(), tex.pixels.end(), pixels.data() + texSize * numTex++ );
 
         GlTexture2DArray::Settings settings;
         settings.resolution = Vector3i{ res.x, res.y, int( textures.size() ) };

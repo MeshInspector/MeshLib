@@ -12,7 +12,7 @@ namespace MR
 MRVIEWER_API void setTextureWrapType( WrapType wrapType, GLenum type = GL_TEXTURE_2D );
 MRVIEWER_API void setTextureFilterType( FilterType filterType, GLenum type = GL_TEXTURE_2D );
 
-// represents OpenGL 3D texture owner, and allows uploading data in it remembering texture size
+// represents OpenGL texture owner, and allows uploading data in it remembering texture size
 class GlTexture
 {
 public:

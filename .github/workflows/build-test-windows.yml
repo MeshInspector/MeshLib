@@ -124,7 +124,7 @@ jobs:
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v2
 
-      - name: Install .NET
+      - name: Install DotNET
     	uses: codebeltnet/install-dotnet@v1
 
       - name: Restore Dependencies

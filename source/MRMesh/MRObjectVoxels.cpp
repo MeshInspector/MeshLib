@@ -156,7 +156,7 @@ Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface
     return recalculateIsoSurface( vdbVolume_, iso, cb );
 }
 
-Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( VdbVolume vdbVolume, float iso, ProgressCallback cb /*= {} */ ) const
+Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( const VdbVolume& vdbVolume, float iso, ProgressCallback cb /*= {} */ ) const
 {
     MR_TIMER
     if ( !vdbVolume.data )

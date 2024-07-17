@@ -4,6 +4,8 @@
 #include "exports.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRVector2.h"
+#include "MRGLTexture.h"
+#include "MRGLMacro.h"
 #include <cassert>
 
 namespace MR
@@ -58,40 +60,19 @@ private:
     size_t size_ = 0;
 };
 
-MRVIEWER_API void setTextureFilterType( FilterType filter, bool dim3d = false );
-MRVIEWER_API void setTextureWrapType( WrapType wrap, bool dim3d = false );
-
 // represents OpenGL 2D texture owner, and allows uploading data in it remembering texture size
-class GlTexture2
+class GlTexture2 : public GlTexture
 {
 public:
-    constexpr static GLuint NO_TEX = 0;
-
-    GlTexture2() = default;
-    GlTexture2( const GlTexture2 & ) = delete;
-    GlTexture2( GlTexture2 && r ) : textureID_( r.textureID_ ), size_( r.size_ ) { r.detach_(); }
-    ~GlTexture2() { del(); }
-
-    GlTexture2& operator =( const GlTexture2 & ) = delete;
-    GlTexture2& operator =( GlTexture2 && r ) { del(); textureID_ = r.textureID_; size_ = r.size_; r.detach_(); return * this; }
-
-    auto getId() const { return textureID_; }
-    bool valid() const { return textureID_ != NO_TEX; }
-    size_t size() const { return size_; }
-
-    // generates new texture
-    MRVIEWER_API void gen();
-
-    // deletes the texture
-    MRVIEWER_API void del();
-
-    // binds current texture to OpenGL context
-    MRVIEWER_API void bind();
+    GlTexture2() : GlTexture( GL_TEXTURE_2D ){}
 
     struct Settings
     {
         Vector2i resolution;
-        size_t size() const { return size_t( resolution.x ) * resolution.y; }
+        size_t size() const
+        {
+            return size_t( resolution.x ) * resolution.y;
+        }
 
         GLint internalFormat = GL_RGBA;
         GLint format = GL_RGBA;
@@ -101,60 +82,37 @@ public:
     };
 
     // creates GL data texture using given data and binds it
-    MRVIEWER_API void loadData( const Settings & settings, const char * arr );
+    MRVIEWER_API void loadData( const Settings& settings, const char* arr );
     template<typename C>
-    void loadData( const Settings & settings, const C & cont ) {
+    void loadData( const Settings& settings, const C& cont )
+    {
         assert( cont.size() >= settings.size() );
-        loadData( settings, (const char *)cont.data() );
+        loadData( settings, ( const char* )cont.data() );
     }
 
     // binds current texture to OpenGL context, optionally refreshing its data
-    MRVIEWER_API void loadDataOpt( bool refresh, const Settings & settings, const char * arr );
+    MRVIEWER_API void loadDataOpt( bool refresh, const Settings& settings, const char* arr );
     template<typename C>
-    void loadDataOpt( bool refresh, const Settings & settings, const C & cont ) {
+    void loadDataOpt( bool refresh, const Settings& settings, const C& cont )
+    {
         assert( !refresh || cont.size() >= settings.size() );
-        loadDataOpt( refresh, settings, (const char *)cont.data() );
+        loadDataOpt( refresh, settings, ( const char* )cont.data() );
     }
-
-private:
-    /// another object takes control over the GL texture
-    void detach_() { textureID_ = NO_TEX; size_ = 0; }
-
-private:
-    GLuint textureID_ = NO_TEX;
-    size_t size_ = 0;
 };
 
 // represents OpenGL 3D texture owner, and allows uploading data in it remembering texture size
-class GlTexture3
+class GlTexture3 : public GlTexture
 {
-    constexpr static GLuint NO_TEX = 0;
 public:
-    GlTexture3() = default;
-    GlTexture3( const GlTexture3& ) = delete;
-    GlTexture3( GlTexture3&& r ) : textureID_( r.textureID_ ), size_( r.size_ ) { r.detach_(); }
-    ~GlTexture3() { del(); }
-
-    GlTexture3& operator =( const GlTexture3& ) = delete;
-    GlTexture3& operator =( GlTexture3&& r ) { del(); textureID_ = r.textureID_; size_ = r.size_; r.detach_(); return * this; }
-
-    auto getId() const { return textureID_; }
-    bool valid() const { return textureID_ != NO_TEX; }
-    size_t size() const { return size_; }
-
-    // generates new texture
-    MRVIEWER_API void gen();
-
-    // deletes the texture
-    MRVIEWER_API void del();
-
-    // binds current texture to OpenGL context
-    MRVIEWER_API void bind();
+    GlTexture3() : GlTexture( GL_TEXTURE_3D ){}
 
     struct Settings
     {
         Vector3i resolution;
-        size_t size() const { return size_t( resolution.x ) * resolution.y * resolution.z; }
+        size_t size() const
+        {
+            return size_t( resolution.x ) * resolution.y * resolution.z;
+        }
 
         GLint internalFormat = GL_RGBA;
         GLint format = GL_RGBA;
@@ -164,28 +122,22 @@ public:
     };
 
     // creates GL data texture using given data and binds it
-    MRVIEWER_API void loadData( const Settings & settings, const char * arr );
+    MRVIEWER_API void loadData( const Settings& settings, const char* arr );
     template<typename C>
-    void loadData( const Settings & settings, const C & cont ) {
+    void loadData( const Settings& settings, const C& cont )
+    {
         assert( cont.size() >= settings.size() );
-        loadData( settings, (const char *)cont.data() );
+        loadData( settings, ( const char* )cont.data() );
     }
 
     // binds current texture to OpenGL context, optionally refreshing its data
-    MRVIEWER_API void loadDataOpt( bool refresh, const Settings & settings, const char * arr );
+    MRVIEWER_API void loadDataOpt( bool refresh, const Settings& settings, const char* arr );
     template<typename C>
-    void loadDataOpt( bool refresh, const Settings & settings, const C & cont ) {
+    void loadDataOpt( bool refresh, const Settings& settings, const C& cont )
+    {
         assert( !refresh || cont.size() >= settings.size() );
-        loadDataOpt( refresh, settings, (const char *)cont.data() );
+        loadDataOpt( refresh, settings, ( const char* )cont.data() );
     }
-
-private:
-    /// another object takes control over the GL texture
-    void detach_() { textureID_ = NO_TEX; size_ = 0; }
-
-private:
-    GLuint textureID_ = NO_TEX;
-    size_t size_ = 0;
 };
 
 struct BindVertexAttribArraySettings
@@ -199,6 +151,46 @@ struct BindVertexAttribArraySettings
     bool refresh = false;
     bool forceUse = false;
     bool isColor = false;
+};
+
+// represents OpenGL 3D texture owner, and allows uploading data in it remembering texture size
+class GlTexture2DArray : public GlTexture
+{
+public:
+    GlTexture2DArray() : GlTexture( GL_TEXTURE_2D_ARRAY ){}
+
+    struct Settings
+    {
+        Vector3i resolution;
+        size_t size() const
+        {
+            return size_t( resolution.x ) * resolution.y * resolution.z;
+        }
+
+        GLint internalFormat = GL_RGBA;
+        GLint format = GL_RGBA;
+        GLint type = GL_UNSIGNED_BYTE;
+        WrapType wrap = WrapType::Mirror;
+        FilterType filter = FilterType::Discrete;
+    };
+
+    // creates GL data texture using given data and binds it
+    MRVIEWER_API void loadData( const Settings& settings, const char* arr );
+    template<typename C>
+    void loadData( const Settings& settings, const C& cont )
+    {
+        assert( cont.size() >= settings.size() );
+        loadData( settings, ( const char* )cont.data() );
+    }
+
+    // binds current texture to OpenGL context, optionally refreshing its data
+    MRVIEWER_API void loadDataOpt( bool refresh, const Settings& settings, const char* arr );
+    template<typename C>
+    void loadDataOpt( bool refresh, const Settings& settings, const C& cont )
+    {
+        assert( !refresh || cont.size() >= settings.size() );
+        loadDataOpt( refresh, settings, ( const char* )cont.data() );
+    }
 };
 
 MRVIEWER_API GLint bindVertexAttribArray( const BindVertexAttribArraySettings & settings );

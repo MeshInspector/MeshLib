@@ -265,7 +265,7 @@ void RenderVolumeObject::bindVolume_( bool picker )
     else
     {
         volume_.bind();
-        setTextureFilterType( params.volumeFilterType, true );
+        setTextureFilterType( params.volumeFilterType, GL_TEXTURE_3D );
     }
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "volume" ), 0 ) );
 

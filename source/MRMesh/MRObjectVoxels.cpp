@@ -156,9 +156,10 @@ Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface
     return recalculateIsoSurface( vdbVolume_, iso, cb );
 }
 
-Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( const VdbVolume& vdbVolume, float iso, ProgressCallback cb /*= {} */ ) const
+Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( const VdbVolume& vdbVolumeCopy, float iso, ProgressCallback cb /*= {} */ ) const
 {
     MR_TIMER
+    auto vdbVolume = vdbVolumeCopy;
     if ( !vdbVolume.data )
         return unexpected("No VdbVolume available");
 

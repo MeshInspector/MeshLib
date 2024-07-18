@@ -349,7 +349,7 @@ std::vector<MR::FaceBitSet> getAllComponents( Face2RegionMap& componentsMap, int
     // end of allocation block
     for ( auto f : region )
         res[componentsMap[f]].set( f );
-    return std::move( res );
+    return res;
 }
 
 std::vector<MR::FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidence incidence /*= FaceIncidence::PerEdge*/,

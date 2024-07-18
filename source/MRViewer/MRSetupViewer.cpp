@@ -3,14 +3,15 @@
 #include "MRViewer.h"
 #include "MRViewerSettingsManager.h"
 #include "MRMouseController.h"
+#include "MRHistoryStore.h"
+#include "MRGladGlfw.h"
 #include "MRMesh/MRConfig.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
-#include "MRHistoryStore.h"
+#include "MRMesh/MRTimer.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
-#include "MRGladGlfw.h"
 #if _WIN32
 #include <Windows.h>
 #else
@@ -80,6 +81,7 @@ void resetSettings( Viewer * viewer )
 
 void ViewerSetup::setupExtendedLibraries() const
 {
+    MR_TIMER
 #ifndef __EMSCRIPTEN__
     // get library names and their loading priority from *.ui.json files
     std::vector<std::pair<std::string, int>> lib2priority;
@@ -128,6 +130,8 @@ void ViewerSetup::setupExtendedLibraries() const
                 spdlog::error( "Load library {} error: {}", utf8string( pluginPath ), GetLastError() );
                 assert( false );
             }
+            else
+                loadedDlls_.push_back( result );
 #else
             auto result = dlopen( utf8string( pluginPath ).c_str(), RTLD_LAZY );
             if ( !result )
@@ -143,5 +147,18 @@ void ViewerSetup::setupExtendedLibraries() const
     }
 #endif // ifndef __EMSCRIPTEN__
 }
+
+void ViewerSetup::unloadExtendedLibraries() const
+{
+    MR_TIMER
+#if _WIN32
+    // unload in reverse order
+    while ( !loadedDlls_.empty() )
+    {
+        FreeLibrary( loadedDlls_.back() );
+        loadedDlls_.pop_back();
+    }
+#endif //_WIN32
 }
 
+} //namespace MR

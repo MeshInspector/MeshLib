@@ -350,10 +350,11 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     {
         setup.setupExtendedLibraries();
     }, CommandLoop::StartPosition::AfterSplashAppear );
-#if defined(__EMSCRIPTEN__) || !defined(NDEBUG)
-    return viewer.launch( params );
-#else
+
     int res = 0;
+#if defined(__EMSCRIPTEN__) || !defined(NDEBUG)
+    res = viewer.launch( params );
+#else
     try
     {
         res = viewer.launch( params );
@@ -365,9 +366,9 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         printCurrentTimerBranch();
         res = 1;
     }
-
-    return res;
 #endif
+    setup.unloadExtendedLibraries();
+    return res;
 }
 
 void loadMRViewerDll()

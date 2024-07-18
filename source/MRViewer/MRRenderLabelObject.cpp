@@ -187,7 +187,7 @@ void RenderLabelObject::renderSourcePoint_( const ModelRenderParams& renderParam
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
     unsigned selTexture = 0;
     srcIndicesSelectionTex_.loadDataOpt( dirtySrc_,
-        { .resolution = {1, 1}, .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type= GL_UNSIGNED_INT },
+        { .resolution = {1, 1, 1}, .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type= GL_UNSIGNED_INT },
         (const char*)&selTexture );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 0 ) );
 

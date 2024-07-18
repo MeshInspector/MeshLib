@@ -86,6 +86,28 @@ void GlTexture::bind()
     GL_EXEC( glBindTexture( type_, textureID_ ) );
 }
 
+void GlTexture::loadData( const Settings& settings, const char* arr )
+{
+    if ( !valid() )
+        gen();
+    bind();
+
+    setTextureWrapType( settings.wrap, type_ );
+    setTextureFilterType( settings.filter, type_ );
+    GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
+    texImage_( settings, arr );
+
+    size_ = settings.size();
+}
+
+void GlTexture::loadDataOpt( bool refresh, const Settings& settings, const char* arr )
+{
+    if ( refresh )
+        loadData( settings, arr );
+    else
+        bind();
+}
+
 void GlTexture::detach_()
 {
     textureID_ = NO_TEX; size_ = 0;

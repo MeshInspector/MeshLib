@@ -264,7 +264,7 @@ void RenderLinesObject::bindPositions_( GLuint shaderId )
             } );
         }
         positionsTex_.loadData(
-            { .resolution = res, .internalFormat = GL_RGB32UI, .format = GL_RGB_INTEGER, .type = GL_UNSIGNED_INT },
+            { .resolution = GlTexture2::ToResolution( res ), .internalFormat = GL_RGB32UI, .format = GL_RGB_INTEGER, .type = GL_UNSIGNED_INT },
             positions );
     }
     else
@@ -325,7 +325,7 @@ void RenderLinesObject::bindLines_( GLStaticHolder::ShaderType shaderType )
             } );
         }
         vertColorsTex_.loadData(
-            { .resolution = res, .internalFormat = GL_RGBA8, .format = GL_RGBA, .type = GL_UNSIGNED_BYTE },
+            { .resolution = GlTexture2::ToResolution( res ), .internalFormat = GL_RGBA8, .format = GL_RGBA, .type = GL_UNSIGNED_BYTE },
             textVertColorMap );
     }
     else
@@ -345,7 +345,7 @@ void RenderLinesObject::bindLines_( GLStaticHolder::ShaderType shaderType )
         auto res = calcTextureRes( int( linesColorMap.size() ), maxTexSize );
         linesColorMap.resize( res.x * res.y );
         lineColorsTex_.loadData(
-            { .resolution = res, .internalFormat = GL_RGBA8, .format = GL_RGBA, .type = GL_UNSIGNED_BYTE },
+            { .resolution = GlTexture2::ToResolution( res ), .internalFormat = GL_RGBA8, .format = GL_RGBA, .type = GL_UNSIGNED_BYTE },
             linesColorMap );
     }
     else

@@ -329,7 +329,7 @@ void RenderVolumeObject::bindVolume_( bool picker )
         }
         denseMap_.loadData(
             {
-                .resolution = Vector2i( (int)denseMap.size(), 1 ),
+                .resolution = Vector3i( (int)denseMap.size(), 1, 1 ),
                 .internalFormat = GL_RGBA8,
                 .format = GL_RGBA,
                 .type = GL_UNSIGNED_BYTE,
@@ -344,7 +344,7 @@ void RenderVolumeObject::bindVolume_( bool picker )
     auto activeVoxels = loadActiveVoxelsTextureBuffer_();
     GL_EXEC( glActiveTexture( GL_TEXTURE2 ) );
     activeVoxelsTex_.loadDataOpt( activeVoxels.dirty(),
-        { .resolution = activeVoxelsTextureSize_, .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type = GL_UNSIGNED_INT },
+        { .resolution = GlTexture2::ToResolution( activeVoxelsTextureSize_ ), .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type = GL_UNSIGNED_INT },
         activeVoxels );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "activeVoxels" ), 2 ) );
 

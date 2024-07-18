@@ -324,9 +324,15 @@ std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPa
     auto [uniqueRootsMap, componentsCount] = getAllComponentsMap( meshPart, incidence, isCompBd );
     if ( !componentsCount )
         return { {}, 0 };
+    return { getAllComponents( uniqueRootsMap, componentsCount, region, maxComponentCount ), componentsCount };
+}
+
+std::vector<MR::FaceBitSet> getAllComponents( Face2RegionMap& componentsMap, int componentsCount, const FaceBitSet& region,
+    int maxComponentCount )
+{
     const int componentsInGroup = maxComponentCount == INT_MAX ? 1 : ( componentsCount + maxComponentCount - 1 ) / maxComponentCount;
     if ( componentsInGroup != 1 )
-        for ( RegionId& id : uniqueRootsMap )
+        for ( RegionId& id : componentsMap )
             id = RegionId( id / componentsInGroup );
     componentsCount = ( componentsCount + componentsInGroup - 1 ) / componentsInGroup;
     std::vector<FaceBitSet> res( componentsCount );
@@ -334,7 +340,7 @@ std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPa
     std::vector<int> resSizes( componentsCount, 0 );
     for ( auto f : region )
     {
-        int index = uniqueRootsMap[f];
+        int index = componentsMap[f];
         if ( f > resSizes[index] )
             resSizes[index] = f;
     }
@@ -342,8 +348,8 @@ std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPa
         res[i].resize( resSizes[i] + 1 );
     // end of allocation block
     for ( auto f : region )
-        res[uniqueRootsMap[f]].set( f );
-    return { std::move( res ), componentsInGroup };
+        res[componentsMap[f]].set( f );
+    return std::move( res );
 }
 
 std::vector<MR::FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceIncidence incidence /*= FaceIncidence::PerEdge*/,

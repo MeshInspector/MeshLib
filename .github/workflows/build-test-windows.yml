@@ -137,9 +137,11 @@ jobs:
         uses: microsoft/setup-msbuild@v2
 
       - name: Install .NET
+        if:   ${{runner == 'windows-2022'}}
         uses: codebeltnet/install-dotnet@v1
 
       - name: Restore Dependencies
+        if:   ${{runner == 'windows-2022'}}
         uses: codebeltnet/dotnet-restore@v1
 
       - name: Build

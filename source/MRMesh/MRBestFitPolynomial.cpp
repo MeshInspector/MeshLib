@@ -210,7 +210,7 @@ struct Solver<T, 2>
 
         // y(x) = c[0] + c[1] * x + c[2] * x^2 = 0
         const auto b = coeffs[1] / coeffs[2];
-        const auto c = coeffs[0] / coeffs[1];
+        const auto c = coeffs[0] / coeffs[2];
 
         const auto D = std::sqrt( std::complex<T>{ b * b - 4 * c } );
         return { ( -b + D ) / T( 2 ), ( -b - D ) / T( 2 ) };
@@ -461,6 +461,15 @@ TEST( MRMesh, BestFitPolynomial )
         ASSERT_NEAR( poly.a[i], alpha[i], 0.000001 );
 }
 
+TEST( MRMesh, PolynomialRoots2 )
+{
+    Polynomialf<2> p{ { -1.f, 2.f, 1.f } };
+    auto roots = p.solve( 0.0001f );
+    ASSERT_EQ( roots.size(), 2 );
+    std::sort( roots.begin(), roots.end() );
+    ASSERT_NEAR( roots[0], -2.414f, 0.001f );
+    ASSERT_NEAR( roots[1], 0.414f, 0.001f );
+}
 
 TEST( MRMesh, PolynomialRoots3 )
 {

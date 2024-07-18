@@ -50,7 +50,9 @@ public:
     struct Settings
     {
         // the X and Y components are the dimensions of the target texture
-        // the Z component is the number of layers or textures
+        // Z - 1 for texture2d
+        // Z - number of textures for texture2d array
+        // Z - Z dimensions for texture3d
         Vector3i resolution;
         size_t size() const
         {
@@ -82,6 +84,11 @@ public:
         loadDataOpt( refresh, settings, ( const char* )cont.data() );
     }
 
+    static Vector3i ToResolution( const Vector2i& value )
+    {
+        return Vector3i( value.x, value.y, 1 );
+    }
+
 protected:
     virtual void texImage_( const Settings& settings, const char* arr ) = 0;
     GLuint textureID_ = NO_TEX;
@@ -93,10 +100,5 @@ private:
     /// another object takes control over the GL texture
     void detach_();
 };
-
-inline Vector3i ConvertToResolution( const Vector2i& value )
-{
-    return Vector3i( value.x, value.y, 1 );
-}
 
 }

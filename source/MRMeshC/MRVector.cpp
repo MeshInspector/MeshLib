@@ -21,7 +21,7 @@ size_t mrVectorAffineXf3fSize( const MRVectorAffineXf3f* vec_ )
     return vec.size();
 }
 
-void meVectorAffineXf3fFree( MRVectorAffineXf3f* vec )
+void mrVectorAffineXf3fFree( MRVectorAffineXf3f* vec )
 {
     delete reinterpret_cast<std::vector<AffineXf3f>*>( vec );
 }

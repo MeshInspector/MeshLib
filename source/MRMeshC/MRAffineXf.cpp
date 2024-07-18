@@ -39,3 +39,12 @@ MRAffineXf3f mrAffineXf3fMul( const MRAffineXf3f* a_, const MRAffineXf3f* b_ )
     const auto res = a * b;
     return *reinterpret_cast<const MRAffineXf3f*>( &res );
 }
+
+MRVector3f mrAffineXf3fApply( const MRAffineXf3f* xf_, const MRVector3f* v_ )
+{
+    const auto& xf = *reinterpret_cast<const AffineXf3f*>( xf_ );
+    const auto& v = *reinterpret_cast<const Vector3f*>( v_ );
+
+    const auto res = xf( v );
+    return reinterpret_cast<const MRVector3f&>( res );
+}

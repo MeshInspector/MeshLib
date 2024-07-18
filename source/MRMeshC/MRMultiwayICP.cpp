@@ -96,3 +96,8 @@ void mrMultiwayICPSetParams( MRMultiwayICP* mwicp_, const MRICPProperties* prop_
 
     mwicp.setParams( prop );
 }
+
+void mrMultiwayICPFree( MRMultiwayICP* mwicp )
+{
+    delete reinterpret_cast<MultiwayICP*>( mwicp );
+}

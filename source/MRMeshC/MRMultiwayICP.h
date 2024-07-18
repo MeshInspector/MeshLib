@@ -52,4 +52,7 @@ MRMESHC_API bool mrMultiwayICPUpdateAllPointPairs( MRMultiwayICP* mwicp, MRProgr
 /// tune algorithm params before run calculateTransformations()
 MRMESHC_API void mrMultiwayICPSetParams( MRMultiwayICP* mwicp, const MRICPProperties* prop );
 
+/// deallocates a MultiwayICP object
+MRMESHC_API void mrMultiwayICPFree( MRMultiwayICP* mwicp );
+
 MR_EXTERN_C_END

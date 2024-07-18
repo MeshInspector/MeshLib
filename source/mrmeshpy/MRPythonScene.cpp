@@ -36,6 +36,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SceneObject, []( pybind11::module_& )
         .def( "extractLines", extractModel<MR::ObjectLinesHolder, &MR::ObjectLinesHolder::polyline>, "Polyline of this object, or None." )
         .def( "xf", []( const MR::Object& o, MR::ViewportId v ){ return o.xf( v ); }, pybind11::arg( "viewport" ) = MR::ViewportId{}, "Mapping from object space to parent object space." )
         .def( "worldXf", []( const MR::Object& o, MR::ViewportId v ){ return o.worldXf( v ); }, pybind11::arg( "viewport" ) = MR::ViewportId{}, "Mapping from object space to world space." )
-        .def( "children", []( MR::Object& o ) -> auto & { return o.children(); }, "Retrusn the child objects of an object." )
+        .def( "children", []( MR::Object& o ) -> auto & { return o.children(); }, "Retruns the child objects of an object." )
     ;
 } )

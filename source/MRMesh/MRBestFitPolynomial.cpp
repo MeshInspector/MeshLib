@@ -15,175 +15,6 @@ namespace
 {
 
 
-const double PI = 3.141592653589793238463L;
-const double M_2PI = 2*PI;
-const double eps=1e-12;
-
-typedef std::complex<double> DComplex;
-
-//---------------------------------------------------------------------------
-// useful for testing
-inline DComplex polinom_2(DComplex x, double a, double b)
-{
-    //Horner's scheme for x*x + a*x + b
-    return x * (x + a) + b;
-}
-
-//---------------------------------------------------------------------------
-// useful for testing
-inline DComplex polinom_3(DComplex x, double a, double b, double c)
-{
-    //Horner's scheme for x*x*x + a*x*x + b*x + c;
-    return x * (x * (x + a) + b) + c;
-}
-
-//---------------------------------------------------------------------------
-// useful for testing
-inline DComplex polinom_4(DComplex x, double a, double b, double c, double d)
-{
-    //Horner's scheme for x*x*x*x + a*x*x*x + b*x*x + c*x + d;
-    return x * (x * (x * (x + a) + b) + c) + d;
-}
-
-
-//---------------------------------------------------------------------------
-// solve cubic equation x^3 + a*x^2 + b*x + c
-// x - array of size 3
-// In case 3 real roots: => x[0], x[1], x[2], return 3
-//         2 real roots: x[0], x[1],          return 2
-//         1 real root : x[0], x[1] ± i*x[2], return 1
-unsigned int solveP3(double *x,double a,double b,double c) {
-    double a2 = a*a;
-    double q  = (a2 - 3*b)/9;
-    double r  = (a*(2*a2-9*b) + 27*c)/54;
-    double r2 = r*r;
-    double q3 = q*q*q;
-    double A,B;
-    if(r2<q3)
-    {
-        double t=r/sqrt(q3);
-        if( t<-1) t=-1;
-        if( t> 1) t= 1;
-        t=acos(t);
-        a/=3; q=-2*sqrt(q);
-        x[0]=q*cos(t/3)-a;
-        x[1]=q*cos((t+M_2PI)/3)-a;
-        x[2]=q*cos((t-M_2PI)/3)-a;
-        return 3;
-    }
-    else
-    {
-        A =-pow(fabs(r)+sqrt(r2-q3),1./3);
-        if( r<0 ) A=-A;
-        B = (0==A ? 0 : q/A);
-
-        a/=3;
-        x[0] =(A+B)-a;
-        x[1] =-0.5*(A+B)-a;
-        x[2] = 0.5*sqrt(3.)*(A-B);
-        if(fabs(x[2])<eps) { x[2]=x[1]; return 2; }
-
-        return 1;
-    }
-}
-
-//---------------------------------------------------------------------------
-// Solve quartic equation x^4 + a*x^3 + b*x^2 + c*x + d
-// (attention - this function returns dynamically allocated array. It has to be released afterwards)
-DComplex* solve_quartic(double a, double b, double c, double d)
-{
-    double a3 = -b;
-    double b3 =  a*c -4.*d;
-    double c3 = -a*a*d - c*c + 4.*b*d;
-
-    // cubic resolvent
-    // y^3 − b*y^2 + (ac−4d)*y − a^2*d−c^2+4*b*d = 0
-
-    double x3[3];
-    unsigned int iZeroes = solveP3(x3, a3, b3, c3);
-
-    double q1, q2, p1, p2, D, sqD, y;
-
-    y = x3[0];
-    // THE ESSENCE - choosing Y with maximal absolute value !
-    if(iZeroes != 1)
-    {
-        if(fabs(x3[1]) > fabs(y)) y = x3[1];
-        if(fabs(x3[2]) > fabs(y)) y = x3[2];
-    }
-
-    // h1+h2 = y && h1*h2 = d  <=>  h^2 -y*h + d = 0    (h === q)
-
-    D = y*y - 4*d;
-    if(fabs(D) < eps) //in other words - D==0
-    {
-        q1 = q2 = y * 0.5;
-        // g1+g2 = a && g1+g2 = b-y   <=>   g^2 - a*g + b-y = 0    (p === g)
-        D = a*a - 4*(b-y);
-        if(fabs(D) < eps) //in other words - D==0
-            p1 = p2 = a * 0.5;
-
-        else
-        {
-            sqD = sqrt(D);
-            p1 = (a + sqD) * 0.5;
-            p2 = (a - sqD) * 0.5;
-        }
-    }
-    else
-    {
-        sqD = sqrt(D);
-        q1 = (y + sqD) * 0.5;
-        q2 = (y - sqD) * 0.5;
-        // g1+g2 = a && g1*h2 + g2*h1 = c       ( && g === p )  Krammer
-        p1 = (a*q1-c)/(q1-q2);
-        p2 = (c-a*q2)/(q1-q2);
-    }
-
-    DComplex* retval = new DComplex[4];
-
-    // solving quadratic eq. - x^2 + p1*x + q1 = 0
-    D = p1*p1 - 4*q1;
-    if(D < 0.0)
-    {
-        retval[0].real( -p1 * 0.5 );
-        retval[0].imag( sqrt(-D) * 0.5 );
-        retval[1] = std::conj(retval[0]);
-    }
-    else
-    {
-        sqD = sqrt(D);
-        retval[0].real( (-p1 + sqD) * 0.5 );
-        retval[1].real( (-p1 - sqD) * 0.5 );
-    }
-
-    // solving quadratic eq. - x^2 + p2*x + q2 = 0
-    D = p2*p2 - 4*q2;
-    if(D < 0.0)
-    {
-        retval[2].real( -p2 * 0.5 );
-        retval[2].imag( sqrt(-D) * 0.5 );
-        retval[3] = std::conj(retval[2]);
-    }
-    else
-    {
-        sqD = sqrt(D);
-        retval[2].real( (-p2 + sqD) * 0.5 );
-        retval[3].real( (-p2 - sqD) * 0.5 );
-    }
-
-    return retval;
-}
-
-
-
-}
-
-
-namespace
-{
-
-
 template <typename T, size_t degree>
 struct Solver
 {
@@ -252,15 +83,48 @@ struct Solver<T, 4>
 {
     Eigen::Vector<std::complex<T>, 4> operator()( const Eigen::Vector<T, 5>& coeffs )
     {
-        double a = coeffs[1] / coeffs[0];
-        double b = coeffs[2] / coeffs[0];
-        double c = coeffs[3] / coeffs[0];
-        double d = coeffs[4] / coeffs[0];
+        const auto A = coeffs[4];
+        const auto B = coeffs[3];
+        const auto C = coeffs[2];
+        const auto D = coeffs[1];
+        const auto E = coeffs[0];
 
-        const auto s = solve_quartic( a, b, c, d );
-        return
-             Eigen::Vector<std::complex<double>, 4>{ s[0], s[1], s[2], s[3] }
-            .cast<std::complex<T>>();
+        const auto alpha = B / ( T(4) * A );
+        // depressed equation
+        const auto a = -T(3)*B*B / ( T(8)*A*A ) + C/A;
+        const auto b = B*B*B / ( T(8)*A*A*A ) - B*C / ( T(2)*A*A ) + D/A;
+        const auto c = -T(3)*B*B*B*B / ( T(256)*A*A*A*A ) + C*B*B / ( T(16)*A*A*A ) - B*D/(4*A*A) + E/A;
+
+        // bi-quadratic
+        if ( std::abs( b ) < T( 0.0001 ) )
+        {
+            Solver<T, 2> solver2;
+            const auto ys = solver2( { c, a, T(1) } );
+            // u*u == y => u = std::sqrt(y)
+            return {
+                std::sqrt( ys[0] ) - alpha,
+                -std::sqrt( ys[0] ) - alpha,
+                std::sqrt( ys[1] ) - alpha,
+                -std::sqrt( ys[1] ) - alpha
+            };
+        }
+        else
+        {
+            Solver<T, 3> solver3;
+            const auto ys = solver3( { a*c - T(0.25)*b*b, -T(2)*c, -a, T(2) } );
+            const auto y = ys[0];
+
+            const auto t2 = std::complex<T>{ T(2)*y - a };
+            const auto mt2 = std::complex<T>{ -T(2)*y - a };
+            const auto t = std::sqrt( t2 );
+
+            return {
+                T(0.5) * ( -t + std::sqrt( mt2 + T(2)*b/t ) ) - alpha,
+                T(0.5) * ( -t - std::sqrt( mt2 + T(2)*b/t ) ) - alpha,
+                T(0.5) * ( t + std::sqrt( mt2 - T(2)*b/t ) ) - alpha,
+                T(0.5) * ( t - std::sqrt( mt2 - T(2)*b/t ) ) - alpha
+            };
+        }
     }
 };
 
@@ -288,19 +152,12 @@ template <typename T, size_t degree>
 std::vector<T> Polynomial<T, degree>::solve( T tol ) const
     requires canSolve
 {
-//    Solver<T, degree> solver;
-//    auto r_c = solver( a );
-//    std::vector<T> r;
-//    for ( std::complex<T> c : r_c )
-//        if ( c.imag() < tol )
-//            r.push_back( c.real() );
-//    return r;
-
-    // TODO: implement solvers for every possible degree
-    Eigen::PolynomialSolver<T, degree> solver;
-    solver.compute( a );
+    Solver<T, degree> solver;
+    auto r_c = solver( a );
     std::vector<T> r;
-    solver.realRoots( r, tol );
+    for ( std::complex<T> c : r_c )
+        if ( std::abs( c.imag() ) < tol )
+            r.push_back( c.real() );
     return r;
 }
 
@@ -480,6 +337,28 @@ TEST( MRMesh, PolynomialRoots3 )
     ASSERT_NEAR( roots[0], -2.636f, 0.001f );
     ASSERT_NEAR( roots[1], -1.072f, 0.001f );
     ASSERT_NEAR( roots[2], 0.708f, 0.001f );
+}
+
+TEST( MRMesh, PolynomialRoots4 )
+{
+    Polynomialf<4> p{ { -2.f, 0.3f, 4.f, -0.1f, -1.f } };
+    auto roots = p.solve( 0.0001f );
+    ASSERT_EQ( roots.size(), 4 );
+    std::sort( roots.begin(), roots.end() );
+    ASSERT_NEAR( roots[0], -1.856f, 0.001f );
+    ASSERT_NEAR( roots[1], -0.809f, 0.001f );
+    ASSERT_NEAR( roots[2], 0.724f, 0.001f );
+    ASSERT_NEAR( roots[3], 1.841f, 0.001f );
+}
+
+TEST( MRMesh, PolynomialRoots4_biquadratic )
+{
+    Polynomialf<4> p{ { 23.f, -40.f, 26.f, -8.f, 1.f } };
+    auto roots = p.solve( 0.0001f );
+    ASSERT_EQ( roots.size(), 2 );
+    std::sort( roots.begin(), roots.end() );
+    ASSERT_NEAR( roots[0], 1.356f, 0.001f );
+    ASSERT_NEAR( roots[1], 2.644f, 0.001f );
 }
 
 TEST( MRMesh, PolynomialRoots )

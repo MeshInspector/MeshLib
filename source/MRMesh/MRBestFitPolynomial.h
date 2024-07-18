@@ -49,7 +49,9 @@ template <typename T, size_t degree>
 class BestFitPolynomial
 {
 public:
+    /// @param reg Regularization term (L2-reg)
     MRMESH_API explicit BestFitPolynomial( T reg );
+
     MRMESH_API void addPoint( T x, T y );
 
     MRMESH_API Polynomial<T, degree> getBestPolynomial() const;

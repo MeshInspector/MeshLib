@@ -240,6 +240,8 @@ void SceneObjectsListDrawer::drawObjectsList_()
             while ( obj->parent() && obj->parent() != SceneRoot::getSharedPtr().get() )
             {
                 obj = obj->parent();
+                if ( obj->isAncillary() )
+                    --depth;
                 ++depth;
             }
             depths[i] = depth;

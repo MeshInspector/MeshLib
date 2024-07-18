@@ -190,6 +190,24 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
             "Simulate mouse move event.\n"
             "NOTE: Some plugins need at least TWO `mouseMove()`s in a row (possibly with the same position). If you're having issues, try sending two events."
         ).
+        def( "getMousePos",
+            []( const MR::Viewer& )
+            {
+                double x = -1, y = -1;
+                MR::pythonAppendOrRun( [&x, &y]
+                {
+                    const MR::Viewer &v = MR::getViewerInstance();
+                    if ( v.window )
+                    {
+                        glfwGetCursorPos( v.window, &x, &y );
+                        x *= v.pixelRatio;
+                        y *= v.pixelRatio;
+                    }
+                } );
+                return MR::Vector2f( float( x ), float( y ) );
+            },
+            "Get the current mouse position."
+        ).
         // Coord projections:
         def( "viewportToScreen", &MR::Viewer::viewportToScreen, "Convert viewport coordinates to to screen coordinates" );
 

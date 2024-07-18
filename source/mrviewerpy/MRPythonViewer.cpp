@@ -10,7 +10,7 @@
 #include "MRMesh/MRLog.h"
 #include "MRMesh/MRImageSave.h"
 #include "MRMesh/MRImage.h"
-#include <GLFW/glfw3.h>
+#include "MRViewer/MRGladGlfw.h"
 #include <pybind11/stl.h>
 #include <memory>
 
@@ -175,20 +175,20 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
             pybind11::arg( "button" ), pybind11::arg( "modifier" ) = PythonKeyMod{}, "Simulate mouse up event."
         ).
         def( "mouseMove",
-            []( MR::Viewer&, int x, int y )
+            []( MR::Viewer& viewer, int x, int y )
             {
-                auto* viewer = &MR::getViewerInstance();
-                auto eventCall = [x, y, viewer] ()
+                MR::pythonAppendOrRun( [&viewer, x, y]
                 {
-                    if ( viewer->window )
-                        glfwSetCursorPos( viewer->window, double( x ), double( y ) );
-                    viewer->mouseMove( x, y );
-                };
-                viewer->emplaceEvent( "simulatedMouseMove", eventCall, false );
-                MR::CommandLoop::runCommandFromGUIThread( []{} );
-                viewer->emplaceEvent( "simulatedMouseMove", eventCall, false );
+                    glfwSetCursorPos( viewer.window, double( x ) / viewer.pixelRatio, double( y ) / viewer.pixelRatio );
+
+                    // On Windows `glfwSetCursorPos()` automatically sends the `mouseMove()` event. On Linux it doesn't, so we need this:
+                    auto eventCall = [&viewer, x, y]{ viewer.mouseMove( x, y ); };
+                    viewer.emplaceEvent( "simulatedMouseMove", eventCall, false );
+                } );
             },
-            pybind11::arg( "x" ), pybind11::arg( "y" ), "Simulate mouse move event."
+            pybind11::arg( "x" ), pybind11::arg( "y" ),
+            "Simulate mouse move event.\n"
+            "NOTE: Some plugins need at least TWO `mouseMove()`s in a row (possibly with the same position). If you're having issues, try sending two events."
         ).
         def( "getMousePos",
             []( const MR::Viewer& )

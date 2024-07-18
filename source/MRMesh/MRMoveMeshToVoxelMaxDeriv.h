@@ -100,9 +100,16 @@ public:
 
     // Get derivatives from result of `getValues`
     MRMESH_API static void getDerivatives( std::vector<float>& result, const std::vector<float>& values );
-    
+
     // Get best fit parabola in pseudo-index space for a zero-centered array
-    MRMESH_API static Parabolaf getBestParabola( const std::vector<float>& values, const std::vector<float>& derivatives );
+    static Parabolaf getBestParabola( auto begin, auto end )
+    {
+        BestFitParabola<float> bestFitParabola;
+        auto size = std::distance( begin, end );
+        for ( auto it = begin; it != end; ++it )
+            bestFitParabola.addPoint( pseudoIndex( int( it - begin ), int( size ) ), *it );
+        return bestFitParabola.getBestParabola();
+    }
 
     MRMESH_API static Polynomialf<6> getBestPolynomial( const std::vector<float>& values );
 

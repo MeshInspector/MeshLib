@@ -10,7 +10,9 @@
 #include "MRMesh/MRLog.h"
 #include "MRMesh/MRImageSave.h"
 #include "MRMesh/MRImage.h"
+#include <GLFW/glfw3.h>
 #include <pybind11/stl.h>
+#include <backends/imgui_impl_glfw.h>
 #include <memory>
 
 MR_INIT_PYTHON_MODULE_PRECALL( mrviewerpy, [] ()
@@ -54,6 +56,16 @@ static void pythonSkipFrames( MR::Viewer* viewer, int frames )
     }
 }
 
+namespace
+{
+    enum class PythonKeyMod
+    {
+        Ctrl = GLFW_MOD_CONTROL,
+        Shift = GLFW_MOD_SHIFT,
+        Alt = GLFW_MOD_ALT,
+    };
+}
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
 {
     pybind11::class_<MR::ViewerSetup>( m, "ViewerSetup" ).
@@ -65,6 +77,19 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
         value( "Show", MR::Viewer::LaunchParams::WindowMode::Show, "Show window immediately" ).
         value( "TryHidden", MR::Viewer::LaunchParams::WindowMode::TryHidden, "Launches in \"Hide\" mode if OpenGL is present and \"NoWindow\" if it is not" ).
         value( "NoWindow", MR::Viewer::LaunchParams::WindowMode::NoWindow, "Don't initialize GL window (don't call GL functions)(force `isAnimating`)" );
+
+    pybind11::enum_<MR::MouseButton>( m, "MouseButton" )
+        .value( "Left", MR::MouseButton::Left )
+        .value( "Right", MR::MouseButton::Right )
+        .value( "Middle", MR::MouseButton::Middle )
+    ;
+
+    pybind11::enum_<PythonKeyMod>( m, "KeyMod", pybind11::arithmetic() )
+        .value( "None", PythonKeyMod{} )
+        .value( "Ctrl", PythonKeyMod::Ctrl )
+        .value( "Shift", PythonKeyMod::Shift )
+        .value( "Alt", PythonKeyMod::Alt )
+    ;
 
     pybind11::class_<MR::Viewer::LaunchParams>( m, "ViewerLaunchParams", "This struct contains rules for viewer launch" ).
         def( pybind11::init<>() ).
@@ -87,7 +112,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
         def( "cameraRotateAround", MR::pythonRunFromGUIThread( &MR::Viewport::cameraRotateAround ),
             pybind11::arg( "axis" ), pybind11::arg( "angle" ),
             "Rotates camera around axis +direction applied to axis point\n"
-            "note: this can make camera clip objects (as far as distance to scene center is not fixed)" );
+            "note: this can make camera clip objects (as far as distance to scene center is not fixed)" ).
+        def( "projectToViewportSpace", static_cast<MR::Vector3f ( MR::Viewport::* )( const MR::Vector3f& ) const>( &MR::Viewport::projectToViewportSpace ), "Project world space point to viewport coordinates (in pixels), (0,0) will be at the top-left corner of the viewport." ).
+        def_readonly( "id", &MR::Viewport::id )
+    ;
 
     pybind11::enum_<MR::FitMode>( m, "ViewportFitMode", "Fit mode ( types of objects for which the fit is applied )" ).
         value( "Visible", MR::FitMode::Visible, "fit all visible objects" ).
@@ -122,7 +150,64 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
             "params - params fit data" ).
         def( "captureScreenShot", &pythonCaptureScreenShot,pybind11::arg("path"),
             "Captures part of window (redraw 3d scene over UI (without redrawing UI))" ).
-        def( "shutdown", MR::pythonRunFromGUIThread( &MR::Viewer::stopEventLoop ), "sets stop event loop flag (this flag is glfwShouldWindowClose equivalent)" );
+        def( "shutdown", MR::pythonRunFromGUIThread( &MR::Viewer::stopEventLoop ), "sets stop event loop flag (this flag is glfwShouldWindowClose equivalent)" ).
+        // Input events:
+        def( "mouseDown",
+            []( MR::Viewer& v, MR::MouseButton b, PythonKeyMod m )
+            {
+                v.emplaceEvent( "simulatedMouseDown", [&v, b, m]{
+                    v.mouseDown( b, int( m ) );
+                } );
+            },
+            pybind11::arg( "button" ), pybind11::arg( "modifier" ) = PythonKeyMod{}, "Simulate mouse down event."
+        ).
+        def( "mouseUp",
+            []( MR::Viewer& v, MR::MouseButton b, PythonKeyMod m )
+            {
+                v.emplaceEvent( "simulatedMouseUp", [&v, b, m]{
+                    v.mouseUp( b, int( m ) );
+                } );
+            },
+            pybind11::arg( "button" ), pybind11::arg( "modifier" ) = PythonKeyMod{}, "Simulate mouse up event."
+        ).
+        def( "mouseMove",
+            []( MR::Viewer&, int x, int y )
+            {
+                // This is inspired by `glfw_mouse_move` from `MRViewer.cpp`.
+
+                auto* viewer = &MR::getViewerInstance();
+                auto eventCall = [x, y, viewer] ()
+                {
+                    if ( auto window = glfwGetCurrentContext() )
+                    {
+                        glfwSetCursorPos( window, double( x ), double( y ) );
+                        ImGui_ImplGlfw_CursorPosCallback( window, x, y );
+                    }
+
+                    viewer->mouseMove( x, y );
+                    viewer->draw();
+                };
+                viewer->emplaceEvent( "simulatedMouseMove", eventCall, false );
+                // Repeat the same position, otherwise ImGui doesn't register the mouse leaving a window.
+                viewer->emplaceEvent( "simulatedMouseMove", eventCall, false );
+            },
+            pybind11::arg( "x" ), pybind11::arg( "y" ), "Simulate mouse move event."
+        ).
+        def( "getMousePos",
+            []( const MR::Viewer& )
+            {
+                double x = -1, y = -1;
+                MR::pythonAppendOrRun( [&x, &y]
+                {
+                    if ( auto window = glfwGetCurrentContext() )
+                        glfwGetCursorPos( window, &x, &y );
+                } );
+                return MR::Vector2f( float( x ), float( y ) );
+            },
+            "Get current mouse pos."
+        ).
+        // Coord projections:
+        def( "viewportToScreen", &MR::Viewer::viewportToScreen, "Convert viewport coordinates to to screen coordinates" );
 
     m.def( "launch", &pythonLaunch,
         pybind11::arg_v( "params", MR::Viewer::LaunchParams(), "ViewerLaunchParams()" ),

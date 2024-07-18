@@ -20,7 +20,7 @@ void pythonAppendOrRun( F func, Args&&... args )
 // deferred instead of immediate call on current thread
 // with signature of `f` and returns void
 template<typename R, typename... Args>
-auto pythonRunFromGUIThread( std::function<R( Args... )>&& f ) -> std::function<void( Args... )>
+[[nodiscard]] auto pythonRunFromGUIThread( std::function<R( Args... )>&& f ) -> std::function<void( Args... )>
 {
     return[fLocal = std::move( f )]( Args&&... args ) mutable
     {
@@ -30,7 +30,7 @@ auto pythonRunFromGUIThread( std::function<R( Args... )>&& f ) -> std::function<
 }
 
 template<typename F>
-auto pythonRunFromGUIThread( F&& f )
+[[nodiscard]] auto pythonRunFromGUIThread( F&& f )
 {
     return pythonRunFromGUIThread( std::function( std::forward<F>( f ) ) );
 }

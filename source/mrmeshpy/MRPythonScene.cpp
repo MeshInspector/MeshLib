@@ -26,12 +26,15 @@ auto extractModel( const MR::Object& object ) -> std::unique_ptr<std::remove_cvr
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, SceneObject, MR::Object, std::shared_ptr<MR::Object> )
 MR_ADD_PYTHON_CUSTOM_CLASS_INST( mrmeshpy, SceneObject )
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorSceneObject, std::shared_ptr<MR::Object> )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SceneObject, []( pybind11::module_& )
 {
     MR_PYTHON_CUSTOM_CLASS( SceneObject )
-        .def( "extractMesh", extractModel<MR::ObjectMeshHolder, &MR::ObjectMeshHolder::mesh> )
-        .def( "extractPoints", extractModel<MR::ObjectPointsHolder, &MR::ObjectPointsHolder::pointCloud> )
-        .def( "extractLines", extractModel<MR::ObjectLinesHolder, &MR::ObjectLinesHolder::polyline> )
+        .def( "extractMesh", extractModel<MR::ObjectMeshHolder, &MR::ObjectMeshHolder::mesh>, "Mesh of this object, or None." )
+        .def( "extractPoints", extractModel<MR::ObjectPointsHolder, &MR::ObjectPointsHolder::pointCloud>, "Pointcloud of this object, or None." )
+        .def( "extractLines", extractModel<MR::ObjectLinesHolder, &MR::ObjectLinesHolder::polyline>, "Polyline of this object, or None." )
+        .def( "xf", []( const MR::Object& o, MR::ViewportId v ){ return o.xf( v ); }, pybind11::arg( "viewport" ) = MR::ViewportId{}, "Mapping from object space to parent object space." )
+        .def( "worldXf", []( const MR::Object& o, MR::ViewportId v ){ return o.worldXf( v ); }, pybind11::arg( "viewport" ) = MR::ViewportId{}, "Mapping from object space to world space." )
     ;
 } )

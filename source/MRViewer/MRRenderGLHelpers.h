@@ -65,6 +65,11 @@ class GlTexture2 : public GlTexture
 {
 public:
     GlTexture2() : GlTexture( GL_TEXTURE_2D ){}
+
+    static Vector3i ToResolution( const Vector2i& value )
+    {
+        return Vector3i( value.x, value.y, 1 );
+    }
 private:
     virtual void texImage_( const Settings& settings, const char* arr ) override;
 };

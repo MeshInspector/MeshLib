@@ -289,7 +289,7 @@ void RenderPointsObject::bindPoints_()
     auto vertSelectionTexture = loadVertSelectionTextureBuffer_();
     vertSelectionTex_.loadDataOpt( vertSelectionTexture.dirty(),
         {
-            .resolution = GlTexture::ToResolution( vertSelectionTextureSize_ ),
+            .resolution = GlTexture2::ToResolution( vertSelectionTextureSize_ ),
             .internalFormat = GL_R32UI,
             .format = GL_RED_INTEGER,
             .type = GL_UNSIGNED_INT

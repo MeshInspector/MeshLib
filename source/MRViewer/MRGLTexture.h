@@ -84,11 +84,6 @@ public:
         loadDataOpt( refresh, settings, ( const char* )cont.data() );
     }
 
-    static Vector3i ToResolution( const Vector2i& value )
-    {
-        return Vector3i( value.x, value.y, 1 );
-    }
-
 protected:
     virtual void texImage_( const Settings& settings, const char* arr ) = 0;
     GLuint textureID_ = NO_TEX;

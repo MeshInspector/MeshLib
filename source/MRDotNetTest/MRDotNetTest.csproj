@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <BaseOutputPath>..\..\..\source\x64</BaseOutputPath>
+    <Configurations>Debug;Release;Release_vs2019;Debug_vs2019</Configurations>
   </PropertyGroup>
 
   <ItemGroup>

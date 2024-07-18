@@ -12,7 +12,6 @@
 #include "MRMesh/MRImage.h"
 #include <GLFW/glfw3.h>
 #include <pybind11/stl.h>
-#include <backends/imgui_impl_glfw.h>
 #include <memory>
 
 MR_INIT_PYTHON_MODULE_PRECALL( mrviewerpy, [] ()
@@ -173,22 +172,15 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
         def( "mouseMove",
             []( MR::Viewer&, int x, int y )
             {
-                // This is inspired by `glfw_mouse_move` from `MRViewer.cpp`.
-
                 auto* viewer = &MR::getViewerInstance();
                 auto eventCall = [x, y, viewer] ()
                 {
-                    if ( auto window = glfwGetCurrentContext() )
-                    {
-                        glfwSetCursorPos( window, double( x ), double( y ) );
-                        ImGui_ImplGlfw_CursorPosCallback( window, x, y );
-                    }
-
+                    if ( viewer->window )
+                        glfwSetCursorPos( viewer->window, double( x ), double( y ) );
                     viewer->mouseMove( x, y );
-                    viewer->draw();
                 };
                 viewer->emplaceEvent( "simulatedMouseMove", eventCall, false );
-                // Repeat the same position, otherwise ImGui doesn't register the mouse leaving a window.
+                MR::CommandLoop::runCommandFromGUIThread( []{} );
                 viewer->emplaceEvent( "simulatedMouseMove", eventCall, false );
             },
             pybind11::arg( "x" ), pybind11::arg( "y" ), "Simulate mouse move event."

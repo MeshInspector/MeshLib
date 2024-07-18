@@ -39,7 +39,11 @@ struct EdgePoint
     /// represents the same point relative to sym edge in
     [[nodiscard]] EdgePoint sym() const { return EdgePoint{ e.sym(), 1 - a }; }
     /// returns true if two edge-points are equal including equal not-unique representation
+    #if __cplusplus >= 202002L
     [[nodiscard]] bool operator==( const EdgePoint& rhs ) const = default;
+    #else
+    [[nodiscard]] bool operator==( const EdgePoint& rhs ) const { return e == rhs.e && a == rhs.a; }
+    #endif
 };
 
 /// returns true if two edge-points are equal considering different representations
@@ -53,7 +57,11 @@ struct EdgePointPair
     EdgePointPair() = default;
     EdgePointPair( EdgePoint ia, EdgePoint ib ) : a( ia ), b( ib ) {}
     /// returns true if two edge-point pairs are equal including equal not-unique representation
+    #if __cplusplus >= 202002L
     bool operator==( const EdgePointPair& rhs ) const = default;
+    #else
+    bool operator==( const EdgePointPair& rhs ) const { return a == rhs.a && b == rhs.b; }
+    #endif
 };
 
 /// Represents a segment on one edge

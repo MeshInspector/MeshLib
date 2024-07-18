@@ -39,7 +39,11 @@ struct SegmPoint
     /// represents the same point relative to oppositely directed segment
     [[nodiscard]] SegmPoint sym() const { return { 1 - a }; }
     /// returns true if two points have equal (a) representation
+    #if __cplusplus >= 202002L
     [[nodiscard]] bool operator==( const SegmPoint& rhs ) const = default;
+    #else
+    [[nodiscard]] bool operator==( const SegmPoint& rhs ) const { return a == rhs.a; }
+    #endif
     [[nodiscard]] bool operator==( T rhs ) const { return a == rhs; }
 };
 

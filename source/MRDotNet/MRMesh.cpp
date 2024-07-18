@@ -179,7 +179,7 @@ bool Mesh::operator!=( Mesh^ a, Mesh^ b )
     if ( !a || !b )
         throw gcnew System::ArgumentNullException();
 
-    return *a->mesh_ != *b->mesh_;
+    return !(*a->mesh_ == *b->mesh_);
 }
 
 void Mesh::Transform( AffineXf3f^ xf )
@@ -212,7 +212,10 @@ Mesh^ Mesh::MakeSphere( float radius, int vertexCount )
     if ( vertexCount < 1 )
         throw gcnew System::ArgumentException( "vertexCount" );
 
-    return gcnew Mesh( new MR::Mesh( std::move( MR::makeSphere( { .radius = radius, .numMeshVertices = vertexCount }))));
+    MR::SphereParams sphereParams;
+    sphereParams.radius = radius;
+    sphereParams.numMeshVertices = vertexCount;
+    return gcnew Mesh( new MR::Mesh( std::move( MR::makeSphere( std::move( sphereParams ) ))));
 }
 
 Mesh^ Mesh::MakeTorus( float primaryRadius, float secondaryRadius, int primaryResolution, int secondaryResolution )

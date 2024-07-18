@@ -60,7 +60,11 @@ struct MeshTriPoint
     [[nodiscard]] MRMESH_API std::array<WeightedVertex, 3> getWeightedVerts( const MeshTopology & topology ) const;
 
     /// returns true if two points are equal including equal not-unique representation
+    #if cplusplus >= 202002L
     [[nodiscard]] bool operator==( const MeshTriPoint& rhs ) const = default;
+    #else
+    [[nodiscard]] bool operator==( const MeshTriPoint& rhs ) const { return e == rhs.e && bary == rhs.bary; }
+    #endif
 };
 
 /// \related MeshTriPoint

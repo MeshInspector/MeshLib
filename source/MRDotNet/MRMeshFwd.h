@@ -1,6 +1,7 @@
 #pragma once
 #pragma managed( push, off )
 #include "MRMesh/MRMeshFwd.h"
+#pragma comment(lib,"WS2_32")
 #pragma managed( pop )
 
 #define MR_DOTNET_NAMESPACE_BEGIN namespace MR { namespace DotNet {

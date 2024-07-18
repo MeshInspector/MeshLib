@@ -49,7 +49,11 @@ struct TriPoint
     constexpr int onEdge() const;
 
     /// returns true if two points have equal (a,b) representation
+    #if __cplusplus >= 202002L
     [[nodiscard]] constexpr bool operator==( const TriPoint& rhs ) const = default;
+    #else
+    [[nodiscard]] constexpr bool operator==( const TriPoint& rhs ) const { return a == rhs.a && b == rhs.b; }
+    #endif
 };
 
 /// \related TriPoint

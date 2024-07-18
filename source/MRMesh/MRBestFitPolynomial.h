@@ -32,16 +32,7 @@ struct Polynomial
     MRMESH_API Polynomial<T, degree - 1> deriv() const
         requires ( degree >= 1 );
 
-    MRMESH_API std::vector<T> localMins() const
-        requires canSolveDerivative;
-
-    MRMESH_API std::vector<T> localMaxs() const
-        requires canSolveDerivative;
-
     MRMESH_API T intervalMin( T a, T b ) const
-        requires canSolveDerivative;
-
-    MRMESH_API T intervalMax( T a, T b ) const
         requires canSolveDerivative;
 };
 

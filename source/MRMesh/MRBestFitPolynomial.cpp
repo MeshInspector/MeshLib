@@ -311,20 +311,6 @@ Polynomial<T, degree - 1> Polynomial<T, degree>::deriv() const
 }
 
 template <typename T, size_t degree>
-std::vector<T> Polynomial<T, degree>::localMins() const
-    requires canSolveDerivative
-{
-    return {};
-}
-
-template <typename T, size_t degree>
-std::vector<T> Polynomial<T, degree>::localMaxs() const
-    requires canSolveDerivative
-{
-    return {};
-}
-
-template <typename T, size_t degree>
 T Polynomial<T, degree>::intervalMin( T a, T b ) const
     requires canSolveDerivative
 {
@@ -353,13 +339,6 @@ T Polynomial<T, degree>::intervalMin( T a, T b ) const
     }
 
     return mn;
-}
-
-template <typename T, size_t degree>
-T Polynomial<T, degree>::intervalMax( T, T ) const
-    requires canSolveDerivative
-{
-    return {};
 }
 
 template struct Polynomial<float, 2>;

@@ -394,7 +394,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
         auto res = calcTextureRes( int( facesColorMap.size() ), maxTexSize_ );
         facesColorMap.resize( res.x * res.y );
         faceColorsTex_.loadData(
-            { .resolution = res, .internalFormat = GL_RGBA8, .format = GL_RGBA, .type = GL_UNSIGNED_BYTE },
+            { .resolution = Vector3i( res.x, res.y, 1 ), .internalFormat = GL_RGBA8, .format = GL_RGBA, .type = GL_UNSIGNED_BYTE },
             facesColorMap );
     }
     else
@@ -405,7 +405,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
     auto faceNormals = loadFaceNormalsTextureBuffer_();
     GL_EXEC( glActiveTexture( GL_TEXTURE2 ) );
     facesNormalsTex_.loadDataOpt( faceNormals.dirty(),
-        { .resolution = faceNormalsTextureSize_, .internalFormat = GL_RGBA32F, .format = GL_RGBA, .type = GL_FLOAT },
+        { .resolution = Vector3i( faceNormalsTextureSize_.x, faceNormalsTextureSize_.y, 1 ), .internalFormat = GL_RGBA32F, .format = GL_RGBA, .type = GL_FLOAT },
         faceNormals );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "faceNormals" ), 2 ) );
 
@@ -413,7 +413,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
     auto faceSelection = loadFaceSelectionTextureBuffer_();
     GL_EXEC( glActiveTexture( GL_TEXTURE3 ) );
     faceSelectionTex_.loadDataOpt( faceSelection.dirty(),
-        { .resolution = faceSelectionTextureSize_, .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type = GL_UNSIGNED_INT },
+        { .resolution = Vector3i( faceSelectionTextureSize_.x, faceSelectionTextureSize_.y, 1 ), .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type = GL_UNSIGNED_INT },
         faceSelection );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 3 ) );
 
@@ -474,7 +474,7 @@ void RenderMeshObject::bindEdges_()
         }
     } );
     edgesTexture_.loadData(
-        { .resolution = res, .internalFormat = GL_RGB32UI, .format = GL_RGB_INTEGER, .type = GL_UNSIGNED_INT },
+        { .resolution = Vector3i( res.x, res.y, 1 ), .internalFormat = GL_RGB32UI, .format = GL_RGB_INTEGER, .type = GL_UNSIGNED_INT },
         positions );
     dirtyEdges_ = false;
 }
@@ -506,7 +506,7 @@ void RenderMeshObject::bindBorders_()
         }
     }
     borderTexture_.loadData(
-        { .resolution = res, .internalFormat = GL_RGB32UI, .format = GL_RGB_INTEGER, .type = GL_UNSIGNED_INT },
+        { .resolution = Vector3i( res.x, res.y, 1 ), .internalFormat = GL_RGB32UI, .format = GL_RGB_INTEGER, .type = GL_UNSIGNED_INT },
         positions );
 }
 
@@ -534,7 +534,7 @@ void RenderMeshObject::bindSelectedEdges_()
         positions[i++] = mesh->destPnt( e );
     }
     selEdgesTexture_.loadData(
-        { .resolution = res, .internalFormat = GL_RGB32UI, .format = GL_RGB_INTEGER, .type = GL_UNSIGNED_INT },
+        { .resolution = Vector3i( res.x, res.y, 1 ), .internalFormat = GL_RGB32UI, .format = GL_RGB_INTEGER, .type = GL_UNSIGNED_INT },
         positions );
 }
 

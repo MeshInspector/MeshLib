@@ -47,8 +47,41 @@ public:
     // binds current texture to OpenGL context
     MRVIEWER_API void bind();
 
-protected:
+    struct Settings
+    {
+        Vector3i resolution;
+        size_t size() const
+        {
+            return size_t( resolution.x ) * resolution.y * resolution.z;
+        }
 
+        GLint internalFormat = GL_RGBA;
+        GLint format = GL_RGBA;
+        GLint type = GL_UNSIGNED_BYTE;
+        WrapType wrap = WrapType::Mirror;
+        FilterType filter = FilterType::Discrete;
+    };
+
+    // creates GL data texture using given data and binds it
+    MRVIEWER_API void loadData( const Settings& settings, const char* arr );
+    template<typename C>
+    void loadData( const Settings& settings, const C& cont )
+    {
+        assert( cont.size() >= settings.size() );
+        loadData( settings, ( const char* )cont.data() );
+    }
+
+    // binds current texture to OpenGL context, optionally refreshing its data
+    MRVIEWER_API void loadDataOpt( bool refresh, const Settings& settings, const char* arr );
+    template<typename C>
+    void loadDataOpt( bool refresh, const Settings& settings, const C& cont )
+    {
+        assert( !refresh || cont.size() >= settings.size() );
+        loadDataOpt( refresh, settings, ( const char* )cont.data() );
+    }
+
+protected:
+    virtual void texImage_( const Settings& settings, const char* arr ) = 0;
     GLuint textureID_ = NO_TEX;
     size_t size_ = 0;
     GLenum type_ = NO_TEX;

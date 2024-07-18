@@ -64,70 +64,19 @@ void GlBuffer::loadDataOpt( GLenum target, bool refresh, const char * arr, size_
         bind( target );
 }
 
-void GlTexture3::loadData( const Settings& settings, const char* arr )
+void GlTexture2::texImage_( const Settings& settings, const char* arr )
 {
-    if ( !valid() )
-        gen();
-    bind();
-
-    setTextureWrapType( settings.wrap, type_ );
-    setTextureFilterType( settings.filter, type_ );
-    GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
-    GL_EXEC( glTexImage3D( type_, 0, settings.internalFormat, settings.resolution.x, settings.resolution.y, settings.resolution.z, 0, settings.format, settings.type, arr ) );
-
-    size_ = settings.size();
-}
-
-void GlTexture3::loadDataOpt( bool refresh, const Settings& settings, const char* arr )
-{
-    if ( refresh )
-        loadData( settings, arr );
-    else
-        bind();
-}
-
-void GlTexture2::loadData( const Settings& settings, const char* arr )
-{
-    if ( !valid() )
-        gen();
-    bind();
-
-    setTextureWrapType( settings.wrap, type_ );
-    setTextureFilterType( settings.filter, type_ );
-    GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
     GL_EXEC( glTexImage2D( type_, 0, settings.internalFormat, settings.resolution.x, settings.resolution.y, 0, settings.format, settings.type, arr ) );
-
-    size_ = settings.size();
 }
 
-void GlTexture2::loadDataOpt( bool refresh, const Settings& settings, const char* arr )
+void GlTexture3::texImage_( const Settings& settings, const char* arr )
 {
-    if ( refresh )
-        loadData( settings, arr );
-    else
-        bind();
-}
-
-void GlTexture2DArray::loadData( const Settings& settings, const char* arr )
-{
-    if ( !valid() )
-        gen();
-    bind();
-
-    setTextureWrapType( settings.wrap, type_ );
-    setTextureFilterType( settings.filter, type_ );
-    GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
     GL_EXEC( glTexImage3D( type_, 0, settings.internalFormat, settings.resolution.x, settings.resolution.y, settings.resolution.z, 0, settings.format, settings.type, arr ) );
-
-    size_ = settings.size();
 }
 
-void GlTexture2DArray::loadDataOpt( bool refresh, const Settings& settings, const char* arr )
+void GlTexture2DArray::texImage_( const Settings& settings, const char* arr )
 {
-    if ( refresh )
-        loadData( settings, arr );
-    else
-        bind();
+    GL_EXEC( glTexImage3D( type_, 0, settings.internalFormat, settings.resolution.x, settings.resolution.y, settings.resolution.z, 0, settings.format, settings.type, arr ) );
 }
 
 GLint bindVertexAttribArray( const BindVertexAttribArraySettings & settings )
@@ -279,7 +228,7 @@ void FramebufferData::resize_( const Vector2i& size, int msaaPow )
 
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, copyFramebuffer_ ) );
 
-    resTexture_.loadData( {.resolution = size, .wrap = WrapType::Clamp, .filter = FilterType::Linear }, ( const char* ) nullptr );
+    resTexture_.loadData( {.resolution = Vector3i(size.x, size.y, 1), .wrap = WrapType::Clamp, .filter = FilterType::Linear }, ( const char* ) nullptr );
     GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, resTexture_.getId(), 0 ) );
     assert( glCheckFramebufferStatus( GL_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE );
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, 0 ) );

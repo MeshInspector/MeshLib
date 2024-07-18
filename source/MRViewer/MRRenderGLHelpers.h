@@ -65,39 +65,8 @@ class GlTexture2 : public GlTexture
 {
 public:
     GlTexture2() : GlTexture( GL_TEXTURE_2D ){}
-
-    struct Settings
-    {
-        Vector2i resolution;
-        size_t size() const
-        {
-            return size_t( resolution.x ) * resolution.y;
-        }
-
-        GLint internalFormat = GL_RGBA;
-        GLint format = GL_RGBA;
-        GLint type = GL_UNSIGNED_BYTE;
-        WrapType wrap = WrapType::Mirror;
-        FilterType filter = FilterType::Discrete;
-    };
-
-    // creates GL data texture using given data and binds it
-    MRVIEWER_API void loadData( const Settings& settings, const char* arr );
-    template<typename C>
-    void loadData( const Settings& settings, const C& cont )
-    {
-        assert( cont.size() >= settings.size() );
-        loadData( settings, ( const char* )cont.data() );
-    }
-
-    // binds current texture to OpenGL context, optionally refreshing its data
-    MRVIEWER_API void loadDataOpt( bool refresh, const Settings& settings, const char* arr );
-    template<typename C>
-    void loadDataOpt( bool refresh, const Settings& settings, const C& cont )
-    {
-        assert( !refresh || cont.size() >= settings.size() );
-        loadDataOpt( refresh, settings, ( const char* )cont.data() );
-    }
+private:
+    virtual void texImage_( const Settings& settings, const char* arr ) override;
 };
 
 // represents OpenGL 3D texture owner, and allows uploading data in it remembering texture size
@@ -105,39 +74,17 @@ class GlTexture3 : public GlTexture
 {
 public:
     GlTexture3() : GlTexture( GL_TEXTURE_3D ){}
+private:
+    virtual void texImage_( const Settings& settings, const char* arr ) override;
+};
 
-    struct Settings
-    {
-        Vector3i resolution;
-        size_t size() const
-        {
-            return size_t( resolution.x ) * resolution.y * resolution.z;
-        }
-
-        GLint internalFormat = GL_RGBA;
-        GLint format = GL_RGBA;
-        GLint type = GL_UNSIGNED_BYTE;
-        WrapType wrap = WrapType::Mirror;
-        FilterType filter = FilterType::Discrete;
-    };
-
-    // creates GL data texture using given data and binds it
-    MRVIEWER_API void loadData( const Settings& settings, const char* arr );
-    template<typename C>
-    void loadData( const Settings& settings, const C& cont )
-    {
-        assert( cont.size() >= settings.size() );
-        loadData( settings, ( const char* )cont.data() );
-    }
-
-    // binds current texture to OpenGL context, optionally refreshing its data
-    MRVIEWER_API void loadDataOpt( bool refresh, const Settings& settings, const char* arr );
-    template<typename C>
-    void loadDataOpt( bool refresh, const Settings& settings, const C& cont )
-    {
-        assert( !refresh || cont.size() >= settings.size() );
-        loadDataOpt( refresh, settings, ( const char* )cont.data() );
-    }
+// represents OpenGL array texture 2D owner, and allows uploading data in it remembering texture size
+class GlTexture2DArray : public GlTexture
+{
+public:
+    GlTexture2DArray() : GlTexture( GL_TEXTURE_2D_ARRAY ){}
+private:
+    virtual void texImage_( const Settings& settings, const char* arr ) override;
 };
 
 struct BindVertexAttribArraySettings
@@ -151,46 +98,6 @@ struct BindVertexAttribArraySettings
     bool refresh = false;
     bool forceUse = false;
     bool isColor = false;
-};
-
-// represents OpenGL array texture 2D owner, and allows uploading data in it remembering texture size
-class GlTexture2DArray : public GlTexture
-{
-public:
-    GlTexture2DArray() : GlTexture( GL_TEXTURE_2D_ARRAY ){}
-
-    struct Settings
-    {
-        Vector3i resolution;
-        size_t size() const
-        {
-            return size_t( resolution.x ) * resolution.y * resolution.z;
-        }
-
-        GLint internalFormat = GL_RGBA;
-        GLint format = GL_RGBA;
-        GLint type = GL_UNSIGNED_BYTE;
-        WrapType wrap = WrapType::Mirror;
-        FilterType filter = FilterType::Discrete;
-    };
-
-    // creates GL data texture using given data and binds it
-    MRVIEWER_API void loadData( const Settings& settings, const char* arr );
-    template<typename C>
-    void loadData( const Settings& settings, const C& cont )
-    {
-        assert( cont.size() >= settings.size() );
-        loadData( settings, ( const char* )cont.data() );
-    }
-
-    // binds current texture to OpenGL context, optionally refreshing its data
-    MRVIEWER_API void loadDataOpt( bool refresh, const Settings& settings, const char* arr );
-    template<typename C>
-    void loadDataOpt( bool refresh, const Settings& settings, const C& cont )
-    {
-        assert( !refresh || cont.size() >= settings.size() );
-        loadDataOpt( refresh, settings, ( const char* )cont.data() );
-    }
 };
 
 MRVIEWER_API GLint bindVertexAttribArray( const BindVertexAttribArraySettings & settings );

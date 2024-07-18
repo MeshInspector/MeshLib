@@ -49,6 +49,8 @@ public:
 
     struct Settings
     {
+        // the X and Y components are the dimensions of the target texture
+        // the Z component is the number of layers or textures
         Vector3i resolution;
         size_t size() const
         {
@@ -91,4 +93,10 @@ private:
     /// another object takes control over the GL texture
     void detach_();
 };
+
+inline Vector3i ConvertToResolution( const Vector2i& value )
+{
+    return Vector3i( value.x, value.y, 1 );
+}
+
 }

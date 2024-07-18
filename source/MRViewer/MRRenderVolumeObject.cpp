@@ -344,7 +344,7 @@ void RenderVolumeObject::bindVolume_( bool picker )
     auto activeVoxels = loadActiveVoxelsTextureBuffer_();
     GL_EXEC( glActiveTexture( GL_TEXTURE2 ) );
     activeVoxelsTex_.loadDataOpt( activeVoxels.dirty(),
-        { .resolution = Vector3i( activeVoxelsTextureSize_.x, activeVoxelsTextureSize_.y, 1 ), .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type = GL_UNSIGNED_INT },
+        { .resolution = ConvertToResolution( activeVoxelsTextureSize_ ), .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type = GL_UNSIGNED_INT },
         activeVoxels );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "activeVoxels" ), 2 ) );
 

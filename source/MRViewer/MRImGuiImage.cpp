@@ -28,7 +28,7 @@ void ImGuiImage::bind_()
         return;
     glTex_.loadData(
         { 
-            .resolution = Vector3i(texture_.resolution.x, texture_.resolution.y, 1),
+            .resolution = ConvertToResolution( texture_.resolution ),
             .internalFormat = GL_RGBA, 
             .format = GL_RGBA, 
             .type = GL_UNSIGNED_BYTE, 

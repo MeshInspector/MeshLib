@@ -405,7 +405,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
     auto faceNormals = loadFaceNormalsTextureBuffer_();
     GL_EXEC( glActiveTexture( GL_TEXTURE2 ) );
     facesNormalsTex_.loadDataOpt( faceNormals.dirty(),
-        { .resolution = Vector3i( faceNormalsTextureSize_.x, faceNormalsTextureSize_.y, 1 ), .internalFormat = GL_RGBA32F, .format = GL_RGBA, .type = GL_FLOAT },
+        { .resolution = ConvertToResolution( faceNormalsTextureSize_ ), .internalFormat = GL_RGBA32F, .format = GL_RGBA, .type = GL_FLOAT },
         faceNormals );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "faceNormals" ), 2 ) );
 

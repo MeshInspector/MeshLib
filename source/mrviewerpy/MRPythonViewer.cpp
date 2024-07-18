@@ -112,7 +112,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
             pybind11::arg( "axis" ), pybind11::arg( "angle" ),
             "Rotates camera around axis +direction applied to axis point\n"
             "note: this can make camera clip objects (as far as distance to scene center is not fixed)" ).
-        def( "projectToViewportSpace", static_cast<MR::Vector3f ( MR::Viewport::* )( const MR::Vector3f& ) const>( &MR::Viewport::projectToViewportSpace ), "Project world space point to viewport coordinates (in pixels), (0,0) will be at the top-left corner of the viewport." ).
+        def( "projectToViewportSpace", []( const MR::Viewport& v, const MR::Vector3f& input )
+            {
+                MR::Vector3f ret;
+                MR::pythonAppendOrRun( [&]{ ret = v.projectToViewportSpace( input ); } );
+                return ret;
+            }, "Project world space point to viewport coordinates (in pixels), (0,0) will be at the top-left corner of the viewport." ).
         def_readonly( "id", &MR::Viewport::id )
     ;
 

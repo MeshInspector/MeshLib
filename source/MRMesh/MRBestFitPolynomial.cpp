@@ -458,6 +458,47 @@ TEST( MRMesh, BestFitPolynomial )
 }
 
 
+TEST( MRMesh, PolynomialRoots )
+{
+    const std::vector<double> xs {
+        -5,
+        -4,
+        -3,
+        -2,
+        -1,
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+    };
+    const std::vector<double> ys {
+        0.0810,
+        0.0786689,
+        0.00405961,
+        -0.0595083,
+        -0.0204948,
+        0.00805113,
+        -0.0037784,
+        -0.00639334,
+        -0.00543275,
+        -0.00722818,
+        0
+    };
+    assert( xs.size() == ys.size() );
+
+    BestFitPolynomial<double, 6> bestFit( 0.0 );
+    for ( size_t i = 0; i < xs.size(); ++i )
+        bestFit.addPoint( xs[i], ys[i] );
+
+    const auto poly = bestFit.getBestPolynomial();
+    const auto deriv = poly.deriv();
+    const auto mn = deriv.intervalMin( -4.5, 4.5 );
+    ASSERT_NEAR( mn, -3.629f, 0.001f );
+}
+
+
 }
 
 

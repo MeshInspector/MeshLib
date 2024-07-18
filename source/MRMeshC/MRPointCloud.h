@@ -1,5 +1,7 @@
 #pragma once
 
+#include "MRAffineXf.h"
+#include "MRBox.h"
 #include "MRMeshFwd.h"
 #include "MRId.h"
 
@@ -26,7 +28,11 @@ MRMESHC_API size_t mrPointCloudNormalsNum( const MRPointCloud* pc );
 /// only points and normals corresponding to set bits here are valid
 MRMESHC_API const MRVertBitSet* mrPointCloudValidPoints( const MRPointCloud* pc );
 
-/// appends a point_ and returns its VertId
+/// passes through all valid points and finds the minimal bounding box containing all of them;
+/// if toWorld transformation is given then returns minimal bounding box in world space
+MRMESHC_API MRBox3f mrPointCloudComputeBoundingBox( const MRPointCloud* pc, const MRAffineXf3f* toWorld );
+
+/// appends a point and returns its VertId
 MRMESHC_API MRVertId mrPointCloudAddPoint( MRPointCloud* pc, const MRVector3f* point_ );
 
 /// deallocates a PointCloud object

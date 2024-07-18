@@ -1,5 +1,6 @@
 #include "MRPointCloud.h"
 
+#include "MRMesh/MRBox.h"
 #include "MRMesh/MRPointCloud.h"
 
 #include <span>
@@ -62,9 +63,13 @@ const MRVertBitSet* mrPointCloudValidPoints( const MRPointCloud* pc_ )
     return reinterpret_cast<const MRVertBitSet*>( &pc.validPoints );
 }
 
-void mrPointCloudFree( MRPointCloud* pc )
+MRBox3f mrPointCloudComputeBoundingBox( const MRPointCloud* pc_, const MRAffineXf3f* toWorld_ )
 {
-    delete reinterpret_cast<PointCloud*>( pc );
+    const auto& pc = *reinterpret_cast<const PointCloud*>( pc_ );
+    const auto* toWorld = reinterpret_cast<const AffineXf3f*>( toWorld_ );
+
+    const auto res = pc.computeBoundingBox( toWorld );
+    return reinterpret_cast<const MRBox3f&>( res );
 }
 
 MRVertId mrPointCloudAddPoint( MRPointCloud* pc_, const MRVector3f* point_ )
@@ -74,4 +79,9 @@ MRVertId mrPointCloudAddPoint( MRPointCloud* pc_, const MRVector3f* point_ )
 
     const auto res = pc.addPoint( point );
     return reinterpret_cast<const MRVertId&>( res );
+}
+
+void mrPointCloudFree( MRPointCloud* pc )
+{
+    delete reinterpret_cast<PointCloud*>( pc );
 }

@@ -201,6 +201,9 @@ protected:
 
     // draw welcome screen
     MRVIEWER_API virtual void drawWelcomeWindow_();
+
+    // updates viewport sizes with respect to ribbon top and left panels
+    MRVIEWER_API virtual void fixViewportsSize_( int w, int h );
 private:
     void changeTab_( int newTab );
 
@@ -225,8 +228,6 @@ private:
     void beginTopPanel_();
     void endTopPanel_();
     void drawTopPanelOpened_();
-
-    void fixViewportsSize_( int w, int h );
 
     std::string transformClipboardText_;
 

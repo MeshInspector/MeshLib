@@ -2,7 +2,6 @@
 #include "MRGTest.h"
 
 #include <Eigen/Dense>
-#include <unsupported/Eigen/Polynomials>
 
 #include <cmath>
 #include <complex>
@@ -158,13 +157,19 @@ std::vector<T> Polynomial<T, degree>::solve( T tol ) const
 }
 
 template <typename T, size_t degree>
-Polynomial<T, degree - 1> Polynomial<T, degree>::deriv() const
-    requires ( degree >= 1 )
+Polynomial<T, Polynomial<T, degree>::derivDegree> Polynomial<T, degree>::deriv() const
 {
-    Eigen::Vector<T, degree> r;
-    for ( size_t i = 1; i < n; ++i )
-        r[i - 1] = i * a[i];
-    return { r };
+    if constexpr ( degree == 0 )
+    {
+        return Polynomial<T, 0>{ { T{} } };
+    }
+    else
+    {
+        Eigen::Vector<T, degree> r;
+        for ( size_t i = 1; i < n; ++i )
+            r[i - 1] = i * a[i];
+        return { r };
+    }
 }
 
 template <typename T, size_t degree>
@@ -175,7 +180,7 @@ T Polynomial<T, degree>::intervalMin( T a, T b ) const
     {
         return ( *this ) ( x );
     };
-    auto argmin = [this, eval] ( T x1, T x2 )
+    auto argmin = [eval] ( T x1, T x2 )
     {
         return eval( x1 ) < eval( x2 ) ? x1 : x2;
     };
@@ -202,11 +207,11 @@ template struct Polynomial<float, 3>;
 template struct Polynomial<float, 4>;
 template struct Polynomial<float, 5>;
 template struct Polynomial<float, 6>;
-//
-//template struct Polynomial<double, 2>;
-//template struct Polynomial<double, 3>;
-//template struct Polynomial<double, 4>;
-//template struct Polynomial<double, 5>;
+
+template struct Polynomial<double, 2>;
+template struct Polynomial<double, 3>;
+template struct Polynomial<double, 4>;
+template struct Polynomial<double, 5>;
 template struct Polynomial<double, 6>;
 
 
@@ -245,16 +250,16 @@ Polynomial<T, degree> BestFitPolynomial<T, degree>::getBestPolynomial() const
 }
 
 
-//template class BestFitPolynomial<float, 2>;
-//template class BestFitPolynomial<float, 3>;
-//template class BestFitPolynomial<float, 4>;
-//template class BestFitPolynomial<float, 5>;
+template class BestFitPolynomial<float, 2>;
+template class BestFitPolynomial<float, 3>;
+template class BestFitPolynomial<float, 4>;
+template class BestFitPolynomial<float, 5>;
 template class BestFitPolynomial<float, 6>;
-//
-//template class BestFitPolynomial<double, 2>;
-//template class BestFitPolynomial<double, 3>;
-//template class BestFitPolynomial<double, 4>;
-//template class BestFitPolynomial<double, 5>;
+
+template class BestFitPolynomial<double, 2>;
+template class BestFitPolynomial<double, 3>;
+template class BestFitPolynomial<double, 4>;
+template class BestFitPolynomial<double, 5>;
 template class BestFitPolynomial<double, 6>;
 
 
@@ -311,6 +316,14 @@ TEST( MRMesh, BestFitPolynomial )
     ASSERT_EQ( poly.a.size(), alpha.size() );
     for ( size_t i = 0; i < alpha.size(); ++i )
         ASSERT_NEAR( poly.a[i], alpha[i], 0.000001 );
+}
+
+TEST( MRMesh, PolynomialRoots1 )
+{
+    Polynomialf<1> p{ { 3.f, 2.f } };
+    auto roots = p.solve( 0.0001f );
+    ASSERT_EQ( roots.size(), 1 );
+    ASSERT_NEAR( roots[0], -1.5f, 0.001f );
 }
 
 TEST( MRMesh, PolynomialRoots2 )

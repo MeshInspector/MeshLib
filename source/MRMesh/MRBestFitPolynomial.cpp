@@ -345,7 +345,7 @@ T Polynomial<T, degree>::intervalMin( T a, T b ) const
     {
         auto v = eval( r );
         spdlog::info( "Candidate: x={}, p(x)={}", r, v );
-        if ( v < mnVal )
+        if ( a <= r && r <= b && v < mnVal )
         {
             mn = r;
             mnVal = v;

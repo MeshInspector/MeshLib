@@ -6,9 +6,12 @@
 #include <cstddef>
 #include <vector>
 
+
 namespace MR
 {
 
+// Please note that these template classes are explicitly instantiated in the corresponding .cpp files.
+// The following degrees are instantiated: [2; 6].
 
 template <typename T, size_t degree>
 struct Polynomial

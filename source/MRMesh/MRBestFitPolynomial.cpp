@@ -206,7 +206,7 @@ struct Solver<T, 2>
 {
     Eigen::Vector<std::complex<T>, 2> operator() ( const Eigen::Vector<T, 3>& coeffs )
     {
-        assert( c[2] != 0 );
+        assert( coeffs[2] != 0 );
 
         // y(x) = c[0] + c[1] * x + c[2] * x^2 = 0
         const auto b = coeffs[1] / coeffs[2];
@@ -222,12 +222,16 @@ struct Solver<T, 3>
 {
     Eigen::Vector<std::complex<T>, 3> operator() ( const Eigen::Vector<T, 4>& coeffs )
     {
-        assert( c[3] != 0 );
-        const T p = ( 3 * coeffs[3] * coeffs[1] - coeffs[2]*coeffs[2] ) / ( 3 * coeffs[3] * coeffs[3] );
+        assert( coeffs[3] != 0 );
+        const auto& a = coeffs[3];
+        const auto& b = coeffs[2];
+        const auto& c = coeffs[1];
+        const auto& d = coeffs[0];
+
+        const T p = ( 3*a*c - b*b ) / ( 3*a*a );
         const T q
-            = ( 2 * coeffs[2] * coeffs[2] - 9 * coeffs[3] * coeffs[2] * coeffs[1] + 27 * coeffs[3] * coeffs[3] * coeffs[0] )
-                / ( 27 * coeffs[3] * coeffs[3] * coeffs[3] );
-        const T alpha = -coeffs[2] / ( 3 * coeffs[3] );
+            = ( 2*b*b*b - 9*a*b*c + 27*a*a*d ) / ( 27 * a*a*a );
+        const T alpha = b / ( 3 * a );
 
         const std::complex<T> D = q*q / T(4) + p*p*p / T(27);
         const auto Ds = std::sqrt( D );
@@ -238,7 +242,7 @@ struct Solver<T, 3>
         const auto u1s = std::pow( -q / T(2) + Ds, 1 / T(3) );
         const auto u2s = std::pow( -q / T(2) - Ds, 1 / T(3) );
 
-        return { u1s + u2s + alpha, e1*u1s + e2*u2s + alpha, e2*u1s + e1*u2s + alpha };
+        return { u1s + u2s - alpha, e1*u1s + e2*u2s - alpha, e2*u1s + e1*u2s - alpha };
     }
 };
 
@@ -457,6 +461,17 @@ TEST( MRMesh, BestFitPolynomial )
         ASSERT_NEAR( poly.a[i], alpha[i], 0.000001 );
 }
 
+
+TEST( MRMesh, PolynomialRoots3 )
+{
+    Polynomialf<3> p{ { -2.f, 0.2f, 3.f, 1.f } };
+    auto roots = p.solve( 0.0001f );
+    ASSERT_EQ( roots.size(), 3 );
+    std::sort( roots.begin(), roots.end() );
+    ASSERT_NEAR( roots[0], -2.636f, 0.001f );
+    ASSERT_NEAR( roots[1], -1.072f, 0.001f );
+    ASSERT_NEAR( roots[2], 0.708f, 0.001f );
+}
 
 TEST( MRMesh, PolynomialRoots )
 {

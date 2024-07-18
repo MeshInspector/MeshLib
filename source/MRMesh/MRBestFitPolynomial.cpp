@@ -1,12 +1,8 @@
 #include "MRBestFitPolynomial.h"
 #include "MRGTest.h"
 
-#include <MRPch/MRSpdlog.h>
-
 #include <Eigen/Dense>
 #include <unsupported/Eigen/Polynomials>
-
-#include <spdlog/fmt/ostr.h>
 
 #include <cmath>
 #include <complex>
@@ -191,7 +187,6 @@ T Polynomial<T, degree>::intervalMin( T a, T b ) const
     for ( auto r : candidates )
     {
         auto v = eval( r );
-        spdlog::info( "Candidate: x={}, p(x)={}", r, v );
         if ( a <= r && r <= b && v < mnVal )
         {
             mn = r;

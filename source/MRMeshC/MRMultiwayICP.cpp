@@ -96,3 +96,36 @@ void mrMultiwayICPSetParams( MRMultiwayICP* mwicp_, const MRICPProperties* prop_
 
     mwicp.setParams( prop );
 }
+
+float mrMultiWayICPGetMeanSqDistToPoint( const MRMultiwayICP* mwicp_, double* value )
+{
+    const auto& mwicp = *reinterpret_cast<const MultiwayICP*>( mwicp_ );
+
+    return mwicp.getMeanSqDistToPoint( value );
+}
+
+float mrMultiWayICPGetMeanSqDistToPlane( const MRMultiwayICP* mwicp_, double* value )
+{
+    const auto& mwicp = *reinterpret_cast<const MultiwayICP*>( mwicp_ );
+
+    return mwicp.getMeanSqDistToPlane( value );
+}
+
+size_t mrMultiWayICPGetNumSamples( const MRMultiwayICP* mwicp_ )
+{
+    const auto& mwicp = *reinterpret_cast<const MultiwayICP*>( mwicp_ );
+
+    return mwicp.getNumSamples();
+}
+
+size_t mrMultiWayICPGetNumActivePairs( const MRMultiwayICP* mwicp_ )
+{
+    const auto& mwicp = *reinterpret_cast<const MultiwayICP*>( mwicp_ );
+
+    return mwicp.getNumActivePairs();
+}
+
+void mrMultiwayICPFree( MRMultiwayICP* mwicp )
+{
+    delete reinterpret_cast<MultiwayICP*>( mwicp );
+}

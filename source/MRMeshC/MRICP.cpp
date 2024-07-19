@@ -151,3 +151,8 @@ MRAffineXf3f mrICPCalculateTransformation( MRICP* icp_ )
     const auto res = icp.calculateTransformation();
     return reinterpret_cast<const MRAffineXf3f&>( res );
 }
+
+void mrICPFree( MRICP* icp )
+{
+    delete reinterpret_cast<ICP*>( icp );
+}

@@ -652,6 +652,8 @@ private:
 
     std::shared_ptr<SpaceMouseHandler> spaceMouseHandler_;
 
+    boost::signals2::scoped_connection updateGlobalBasis_, updateBasisAxes_;
+
     friend MRVIEWER_API Viewer& getViewerInstance();
 };
 

@@ -18,6 +18,11 @@ MRMeshOrPoints* mrMeshOrPointsFromPointCloud( const MRPointCloud* pc_ )
     return reinterpret_cast<MRMeshOrPoints*>( new MeshOrPoints( pc ) );
 }
 
+void mrMeshOrPointsFree( MRMeshOrPoints* mp )
+{
+    delete reinterpret_cast<MeshOrPoints*>( mp );
+}
+
 MRMeshOrPointsXf* mrMeshOrPointsXfNew( const MRMeshOrPoints* obj_, const MRAffineXf3f* xf_ )
 {
     const auto& obj = *reinterpret_cast<const MeshOrPoints*>( obj_ );
@@ -40,4 +45,9 @@ MRMeshOrPointsXf* mrMeshOrPointsXfFromPointCloud( const MRPointCloud* pc_, const
     const auto& xf = *reinterpret_cast<const AffineXf3f*>( xf_ );
 
     return reinterpret_cast<MRMeshOrPointsXf*>( new MeshOrPointsXf { { pc }, xf } );
+}
+
+void mrMeshOrPointsXfFree( MRMeshOrPointsXf* mp )
+{
+    delete reinterpret_cast<MeshOrPointsXf*>( mp );
 }

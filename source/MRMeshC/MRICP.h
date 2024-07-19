@@ -169,4 +169,7 @@ MRMESHC_API const MRIPointPairs* mrICPGetRef2FltPairs( const MRICP* icp );
 /// \return adjusted transformation of the floating object to match reference object
 MRMESHC_API MRAffineXf3f mrICPCalculateTransformation( MRICP* icp );
 
+/// deallocates an ICP object
+MRMESHC_API void mrICPFree( MRICP* icp );
+
 MR_EXTERN_C_END

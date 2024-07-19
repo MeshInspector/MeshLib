@@ -33,3 +33,10 @@ float mrBox3fDiagonal( const MRBox3f* box_ )
 
     return box.diagonal();
 }
+
+float mrBox3fVolume( const MRBox3f* box_ )
+{
+    const auto& box = *reinterpret_cast<const Box3f*>( box_ );
+
+    return box.volume();
+}

@@ -532,6 +532,9 @@ public:
     // Window focus signal
     using PostFocusSignal = boost::signals2::signal<void( bool )>;
     PostFocusSignal postFocusSignal;
+    // Plugin enabled/disabled signal
+    using PluginEnabledChangedSignal = boost::signals2::signal<void( StateBasePlugin *, bool )>;
+    PluginEnabledChangedSignal pluginEnabledChangedSignal;
 
     /// emplace event at the end of the queue
     /// replace last skipable with new skipable

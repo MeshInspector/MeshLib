@@ -42,6 +42,9 @@ class ViewerEventQueue;
 class Viewport;
 class RibbonMenu;
 class RibbonMenuItem;
+class MRVIEWER_CLASS ShortcutManager;
+struct ShortcutKey;
+enum class ShortcutCategory : char;
 
 class TouchpadController;
 struct TouchpadParameters;

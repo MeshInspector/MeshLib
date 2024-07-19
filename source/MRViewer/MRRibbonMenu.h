@@ -6,7 +6,6 @@
 #include "MRRibbonButtonDrawer.h"
 #include "MRAsyncTimer.h"
 #include "MRRibbonSchema.h"
-#include "MRShortcutManager.h"
 #include "MRToolbar.h"
 #include "MRMesh/MRSignal.h"
 #include "MRRibbonNotification.h"
@@ -176,7 +175,7 @@ protected:
     MRVIEWER_API virtual bool drawCollapsingHeaderTransform_() override;
     MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& selected ) override;
 
-    MRVIEWER_API virtual void addRibbonItemShortcut_( const std::string& itemName, const ShortcutManager::ShortcutKey& key, ShortcutManager::Category category );
+    MRVIEWER_API virtual void addRibbonItemShortcut_( const std::string& itemName, const ShortcutKey& key, ShortcutCategory category );
 
     MRVIEWER_API virtual void setupShortcuts_() override;
 

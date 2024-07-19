@@ -81,8 +81,8 @@ void resetSettings( Viewer * viewer )
 
 void ViewerSetup::setupExtendedLibraries() const
 {
-    MR_TIMER
 #ifndef __EMSCRIPTEN__
+    MR_TIMER
     // get library names and their loading priority from *.ui.json files
     std::vector<std::pair<std::string, int>> lib2priority;
     std::error_code ec;
@@ -122,19 +122,18 @@ void ViewerSetup::setupExtendedLibraries() const
         {
             spdlog::info( "Loading library {} with priority {}", utf8string( libName ), priority );
             bool success = true;
+            LoadedModule lm{ libName };
 #if _WIN32
-            auto result = LoadLibraryW( pluginPath.wstring().c_str() );
-            if ( !result )
+            lm.module = LoadLibraryW( pluginPath.wstring().c_str() );
+            if ( !lm.module )
             {
                 success = false;
                 spdlog::error( "Load library {} error: {}", utf8string( pluginPath ), GetLastError() );
                 assert( false );
             }
-            else
-                loadedDlls_.push_back( result );
 #else
-            auto result = dlopen( utf8string( pluginPath ).c_str(), RTLD_LAZY );
-            if ( !result )
+            lm.module =  = dlopen( utf8string( pluginPath ).c_str(), RTLD_LAZY );
+            if ( !lm.module )
             {
                 success = false;
                 spdlog::error( "Load library {} error: {}", utf8string( pluginPath ), dlerror() );
@@ -142,7 +141,10 @@ void ViewerSetup::setupExtendedLibraries() const
             }
 #endif
             if ( success )
+            {
                 spdlog::info( "Load library {} was successful", utf8string( libName ) );
+                loadedModules_.push_back( lm );
+            }
         }
     }
 #endif // ifndef __EMSCRIPTEN__
@@ -150,15 +152,20 @@ void ViewerSetup::setupExtendedLibraries() const
 
 void ViewerSetup::unloadExtendedLibraries() const
 {
+#ifndef __EMSCRIPTEN__
     MR_TIMER
-#if _WIN32
     // unload in reverse order
-    while ( !loadedDlls_.empty() )
+    while ( !loadedModules_.empty() )
     {
-        FreeLibrary( loadedDlls_.back() );
-        loadedDlls_.pop_back();
-    }
+        spdlog::info( "Unloading library {}", utf8string( loadedModules_.back().filename ) );
+#if _WIN32
+        FreeLibrary( loadedModules_.back().module );
+#else
+        dlclose( loadedModules_.back().module );
 #endif //_WIN32
+        loadedModules_.pop_back();
+    }
+#endif // ifndef __EMSCRIPTEN__
 }
 
 } //namespace MR

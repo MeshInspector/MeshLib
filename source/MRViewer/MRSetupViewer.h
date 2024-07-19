@@ -2,6 +2,7 @@
 
 #include "MRViewerFwd.h"
 #include <string>
+#include <filesystem>
 
 namespace MR
 {
@@ -40,9 +41,18 @@ public:
     MRVIEWER_API virtual void unloadExtendedLibraries() const;
 
 private:
+#ifndef __EMSCRIPTEN__
+    struct LoadedModule
+    {
+        std::filesystem::path filename;
 #if _WIN32
-    mutable std::vector<HMODULE> loadedDlls_;
+        HMODULE module = nullptr;
+#else
+        void * module = nullptr;
 #endif
+    };
+    mutable std::vector<LoadedModule> loadedModules_;
+#endif // ifndef __EMSCRIPTEN__
 };
 
 } // namespace MR

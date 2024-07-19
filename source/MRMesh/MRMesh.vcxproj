@@ -412,6 +412,7 @@
     <ClInclude Include="MRFeatureHelpers.h" />
     <ClInclude Include="MRMoveMeshToVoxelMaxDeriv.h" />
     <ClInclude Include="MRBestFitPolynomial.h" />
+    <ClInclude Include="MRMeta.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />

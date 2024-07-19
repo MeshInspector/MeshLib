@@ -411,6 +411,7 @@
     <ClInclude Include="MRFeatureRefine.h" />
     <ClInclude Include="MRFeatureHelpers.h" />
     <ClInclude Include="MRMoveMeshToVoxelMaxDeriv.h" />
+    <ClInclude Include="MRBestFitPolynomial.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -702,6 +703,7 @@
     <ClCompile Include="MRFeatureRefine.cpp" />
     <ClCompile Include="MRFeatureHelpers.cpp" />
     <ClCompile Include="MRMoveMeshToVoxelMaxDeriv.cpp" />
+    <ClCompile Include="MRBestFitPolynomial.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="$(ProjectDir)..\..\thirdparty\python\python$(PythonVersion).zip">

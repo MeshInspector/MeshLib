@@ -22,12 +22,35 @@ bool onProgress( float v )
     return true;
 }
 
+void resetProgress( void )
+{
+    gProgress = -1;
+}
+
+void printStats( const MRMultiwayICP* icp )
+{
+    size_t numSamples = mrMultiWayICPGetNumSamples( icp );
+    size_t numActivePairs = mrMultiWayICPGetNumActivePairs( icp );
+    printf( "Samples: %zu\n", numSamples );
+    printf( "Active point pairs: %zu\n", numActivePairs );
+    if ( numActivePairs > 0 )
+    {
+        double p2ptMetric = mrMultiWayICPGetMeanSqDistToPoint( icp, NULL );
+        double p2ptInaccuracy = mrMultiWayICPGetMeanSqDistToPoint( icp, &p2ptMetric );
+        printf( "RMS point-to-point distance: %f ± %f\n", p2ptMetric, p2ptInaccuracy );
+
+        double p2plMetric = mrMultiWayICPGetMeanSqDistToPlane( icp, NULL );
+        double p2plInaccuracy = mrMultiWayICPGetMeanSqDistToPlane( icp, &p2plMetric );
+        printf( "RMS point-to-plane distance: %f ± %f\n", p2plMetric, p2plInaccuracy );
+    }
+}
+
 int main( int argc, char* argv[] )
 {
     int rc = EXIT_FAILURE;
     if ( argc < 4 )
     {
-        fprintf( stderr, "Usage: %s INPUT1 INPUT2 [INPUTS...] OUTPUT", argv[0] );
+        fprintf( stderr, "Usage: %s INPUT1 INPUT2 [INPUTS...] OUTPUT\n", argv[0] );
         goto out;
     }
 
@@ -39,6 +62,9 @@ int main( int argc, char* argv[] )
     const int inputNum = argc - 2;
     MRPointCloud** inputs = malloc( sizeof( MRPointCloud* ) * inputNum );
     memset( inputs, 0, sizeof( MRPointCloud* ) * inputNum );
+    // as ICP and MultiwayICP classes accept both meshes and point clouds,
+    // the input data must be converted to special wrapper objects
+    // NB: the wrapper objects hold *references* to the source data, NOT their copies
     MRMeshOrPointsXf** inputXfs = malloc( sizeof( MRMeshOrPointsXf* ) * inputNum );
     memset( inputXfs, 0, sizeof( MRMeshOrPointsXf* ) * inputNum );
     MRBox3f maxBBox = mrBox3fNew();
@@ -47,11 +73,12 @@ int main( int argc, char* argv[] )
         inputs[i] = mrPointsLoadFromAnySupportedFormat( argv[1 + i], &errorString );
         if ( errorString )
         {
-            fprintf( stderr, "Failed to load point cloud: %s", mrStringData( errorString ) );
+            fprintf( stderr, "Failed to load point cloud: %s\n", mrStringData( errorString ) );
             mrStringFree( errorString );
             goto out_inputs;
         }
 
+        // you may also set an affine transformation for each input as a second argument
         inputXfs[i] = mrMeshOrPointsXfFromPointCloud( inputs[i], NULL ); // or mrMeshOrPointsXfFromMesh for meshes
 
         MRBox3f bbox = mrPointCloudComputeBoundingBox( inputs[i], NULL );
@@ -59,8 +86,11 @@ int main( int argc, char* argv[] )
             maxBBox = bbox;
     }
 
+    // you can set various parameters for the global registration; see the documentation for more info
     MRMultiwayICPSamplingParameters samplingParams = mrMultiwayIcpSamplingParametersNew();
+    // set sampling voxel size
     samplingParams.samplingVoxelSize = mrBox3fDiagonal( &maxBBox ) * 0.03f;
+    // set progress callback
     samplingParams.cb = onProgress;
 
     MRMultiwayICP* icp = mrMultiwayICPNew( *inputXfs, inputNum, &samplingParams );
@@ -70,22 +100,12 @@ int main( int argc, char* argv[] )
 
     // gather statistics
     mrMultiwayICPUpdateAllPointPairs( icp, NULL );
-    size_t numSamples = mrMultiWayICPGetNumSamples( icp );
-    size_t numActivePairs = mrMultiWayICPGetNumActivePairs( icp );
-    printf( "Samples: %zu", numSamples );
-    printf( "Active point pairs: %zu", numActivePairs );
-    if ( numActivePairs > 0 )
-    {
-        double p2ptMetric = mrMultiWayICPGetMeanSqDistToPoint( icp, NULL );
-        double p2ptInaccuracy = mrMultiWayICPGetMeanSqDistToPoint( icp, &p2ptMetric );
-        printf( "RMS point-to-point distance: %f ± %f", p2ptMetric, p2ptInaccuracy );
+    printStats( icp );
 
-        double p2plMetric = mrMultiWayICPGetMeanSqDistToPlane( icp, NULL );
-        double p2plInaccuracy = mrMultiWayICPGetMeanSqDistToPlane( icp, &p2plMetric );
-        printf( "RMS point-to-plane distance: %f ± %f", p2plMetric, p2plInaccuracy );
-    }
-
-    MRVectorAffineXf3f* xfs = mrMultiwayICPCalculateTransformations( icp, NULL );
+    printf( "Calculating transformations...\n" );
+    resetProgress();
+    MRVectorAffineXf3f* xfs = mrMultiwayICPCalculateTransformations( icp, onProgress );
+    printStats( icp );
 
     MRPointCloud* output = mrPointCloudNew();
     for ( int i = 0; i < inputNum; i++ )
@@ -102,7 +122,7 @@ int main( int argc, char* argv[] )
     mrPointsSaveToAnySupportedFormat( output, argv[argc - 1], &errorString );
     if ( errorString )
     {
-        fprintf( stderr, "Failed to save point cloud: %s", mrStringData( errorString ) );
+        fprintf( stderr, "Failed to save point cloud: %s\n", mrStringData( errorString ) );
         mrStringFree( errorString );
         goto out_output;
     }

@@ -168,7 +168,7 @@ std::string getMeshFragmentShaderColoringBlock()
     {
       ivec2 tPFTexSize = textureSize( texturePerFace, 0 );
       vec4 textColor;
-      if(tPFTexSize.x * tPFTexSize.y == 0)
+      if(tPFTexSize.x == 0)
         textColor = texture(tex, vec3(texcoordi, 0.0));
       else
       {

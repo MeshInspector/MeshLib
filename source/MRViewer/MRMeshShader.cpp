@@ -167,8 +167,14 @@ std::string getMeshFragmentShaderColoringBlock()
     if ( useTexture && !selected )
     {
       ivec2 tPFTexSize = textureSize( texturePerFace, 0 );
-      uint textId = texelFetch(texturePerFace, ivec2( primitiveId % uint(tPFTexSize.x), primitiveId / uint(tPFTexSize.x) ), 0 ).r;
-      vec4 textColor = texture(tex, vec3(texcoordi,float(textId)));
+      vec4 textColor;
+      if(tPFTexSize.x * tPFTexSize.y == 0)
+        textColor = texture(tex, vec3(texcoordi, 0.0));
+      else
+      {
+        uint textId = texelFetch(texturePerFace, ivec2( primitiveId % uint(tPFTexSize.x), primitiveId / uint(tPFTexSize.x) ), 0 ).r;
+        textColor = texture(tex, vec3(texcoordi,float(textId)));
+      }
 
       float destA = colorCpy.a;
       colorCpy.a = textColor.a + destA * ( 1.0 - textColor.a );

@@ -9,6 +9,7 @@
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRVDBFloatGrid.h"
+#include "MRMesh/MRMeta.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRPch/MRFmt.h"
 
@@ -137,16 +138,11 @@ void pythonAddPointCloudToScene( const MR::PointCloud& points, const std::string
     } );
 }
 
-template <typename T>
-struct SharedPtrTraits { static constexpr bool isSharedPtr = false; using elem = T; };
-template <typename T>
-struct SharedPtrTraits<std::shared_ptr<T>> { static constexpr bool isSharedPtr = true; using elem = T; };
-
 template <typename ObjectType, auto MemberPtr>
 auto pythonGetSelectedModels()
 {
     using ReturnedElemType = std::remove_cvref_t<decltype((std::declval<ObjectType>().*MemberPtr)())>;
-    using ReturnedVecType = std::vector<std::remove_cvref_t<typename SharedPtrTraits<ReturnedElemType>::elem>>;
+    using ReturnedVecType = std::vector<std::remove_cvref_t<typename MR::Meta::SharedPtrTraits<ReturnedElemType>::elemType>>;
 
     ReturnedVecType ret;
 
@@ -157,7 +153,7 @@ auto pythonGetSelectedModels()
 
         for ( const auto& object : objects )
         {
-            if constexpr ( SharedPtrTraits<ReturnedElemType>::isSharedPtr )
+            if constexpr ( MR::Meta::SharedPtrTraits<ReturnedElemType>::isSharedPtr )
                 ret.push_back( *( ( *object ).*MemberPtr)() );
             else
                 ret.push_back( ( ( *object ).*MemberPtr)() );

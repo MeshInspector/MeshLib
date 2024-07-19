@@ -1,4 +1,5 @@
 #include "MRMesh/MRMesh.h"
+#include "MRMesh/MRMeta.h"
 #include "MRMesh/MRObject.h"
 #include "MRMesh/MRObjectLinesHolder.h"
 #include "MRMesh/MRObjectMeshHolder.h"
@@ -12,17 +13,12 @@
 namespace
 {
 
-template <typename T>
-struct SharedPtrTraits { static constexpr bool isSharedPtr = false; using elem = T; };
-template <typename T>
-struct SharedPtrTraits<std::shared_ptr<T>> { static constexpr bool isSharedPtr = true; using elem = T; };
-
 template <typename T, auto M, typename ReturnType = std::remove_cvref_t<decltype((std::declval<T>().*M)())>>
-auto extractModel( const MR::Object& object ) -> std::unique_ptr<typename SharedPtrTraits<ReturnType>::elem>
+auto extractModel( const MR::Object& object ) -> std::unique_ptr<typename MR::Meta::SharedPtrTraits<ReturnType>::elemType>
 {
     if ( auto base = dynamic_cast<const T*>( &object ) )
     {
-        if constexpr ( SharedPtrTraits<ReturnType>::isSharedPtr )
+        if constexpr ( MR::Meta::SharedPtrTraits<ReturnType>::isSharedPtr )
         {
             if ( auto ret = (base->*M)() )
                 return std::make_unique<std::remove_cvref_t<decltype( *ret )>>( *ret );

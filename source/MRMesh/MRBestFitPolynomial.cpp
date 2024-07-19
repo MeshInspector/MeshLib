@@ -225,7 +225,6 @@ BestFitPolynomial<T, degree>::BestFitPolynomial( T reg ):
 template <typename T, size_t degree>
 void BestFitPolynomial<T, degree>::addPoint( T x, T y )
 {
-
     // n-th power of x
     Eigen::Vector<T, n> xs;
     T xn = 1;
@@ -237,14 +236,31 @@ void BestFitPolynomial<T, degree>::addPoint( T x, T y )
 
     XtX_ += xs * xs.transpose();
     XtY_ += y * xs;
-    ++N_;
+    sumWeight_ += T( 1 );
+}
+
+template <typename T, size_t degree>
+void BestFitPolynomial<T, degree>::addPoint( T x, T y, T weight )
+{
+    // n-th power of x
+    Eigen::Vector<T, n> xs;
+    T xn = 1;
+    for ( size_t i = 0; i < n; ++i )
+    {
+        xs[i] = xn;
+        xn *= x;
+    }
+
+    XtX_ += weight * xs * xs.transpose();
+    XtY_ += weight * y * xs;
+    sumWeight_ += weight;
 }
 
 
 template <typename T, size_t degree>
 Polynomial<T, degree> BestFitPolynomial<T, degree>::getBestPolynomial() const
 {
-    const Eigen::Matrix<T, n, n> m = XtX_ + static_cast<float>( N_ ) * lambda_ * Eigen::Matrix<T, n, n>::Identity();
+    const Eigen::Matrix<T, n, n> m = XtX_ + sumWeight_ * lambda_ * Eigen::Matrix<T, n, n>::Identity();
     const Eigen::Vector<T, n> w = m.fullPivLu().solve( XtY_ );
     return { w };
 }

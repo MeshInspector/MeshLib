@@ -54,6 +54,8 @@ public:
 
     MRMESH_API void addPoint( T x, T y );
 
+    MRMESH_API void addPoint( T x, T y, T weight );
+
     MRMESH_API Polynomial<T, degree> getBestPolynomial() const;
 
 private:
@@ -61,7 +63,7 @@ private:
     T lambda_ {};
     Eigen::Matrix<T, n, n> XtX_;
     Eigen::Vector<T, n> XtY_;
-    size_t N_ = 0;
+    T sumWeight_ = 0;
 };
 
 template <size_t degree>

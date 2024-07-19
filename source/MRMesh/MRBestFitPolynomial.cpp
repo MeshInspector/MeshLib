@@ -200,7 +200,7 @@ T Polynomial<T, degree>::intervalMin( T a, T b ) const
 
     // workaround for old clang versions
 #if defined( __clang__ ) && ( __clang_major__ < 15 )
-    if constexpr ( degree <= 4 )
+    if constexpr ( degree <= 5 )
     {
 #endif
     const auto candidates = deriv().solve( T( 0.0001 ) );

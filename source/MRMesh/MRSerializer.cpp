@@ -433,6 +433,14 @@ void serializeToJson( const MeshTexture& texture, Json::Value& root )
     root["Data"] = encode64( ( const uint8_t* )texture.pixels.data(), texture.pixels.size() * sizeof( Color ) );
 }
 
+void serializeToJson( const std::vector<TextureId>& texturePerFace, Json::Value& root )
+{
+    if ( texturePerFace.empty() )
+        return;
+    root["Size"] = int( texturePerFace.size() );
+    root["Data"] = encode64( ( const uint8_t* )texturePerFace.data(), texturePerFace.size() * sizeof( TextureId ) );
+}
+
 void serializeToJson( const std::vector<UVCoord>& uvCoords, Json::Value& root )
 {
     if ( uvCoords.empty() )

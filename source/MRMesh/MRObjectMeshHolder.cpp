@@ -98,7 +98,10 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
         root["TextureCount"] = int ( textures_.size() );
         for ( TextureId i = TextureId{ 0 }; i < textures_.size(); ++i )
             serializeToJson( textures_[i], root["Textures"][std::to_string( i )] );
-    }    
+    }
+
+    // texture id per face id
+    serializeToJson( texturePerFace_.vec_, root["TexturePerFace"] );
 
     serializeToJson( uvCoordinates_.vec_, root["UVCoordinates"] );
     // edges

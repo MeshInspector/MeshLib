@@ -147,6 +147,11 @@ template <typename T, size_t degree>
 std::vector<T> Polynomial<T, degree>::solve( T tol ) const
     requires ( degree <= 4 )
 {
+    // workaround for old clang versions
+#if defined( __clang__ ) && ( __clang_major__ < 15 )
+    if constexpr ( degree <= 4 )
+    {
+#endif
     Solver<T, degree> solver;
     auto r_c = solver( a );
     std::vector<T> r;
@@ -154,6 +159,11 @@ std::vector<T> Polynomial<T, degree>::solve( T tol ) const
         if ( std::abs( c.imag() ) < tol )
             r.push_back( c.real() );
     return r;
+#if defined( __clang__ ) && ( __clang_major__ < 15 )
+    }
+    else
+        return {};
+#endif
 }
 
 template <typename T, size_t degree>

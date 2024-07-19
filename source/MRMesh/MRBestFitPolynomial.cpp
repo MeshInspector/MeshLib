@@ -347,7 +347,7 @@ TEST( MRMesh, BestFitPolynomial )
 
     const auto poly = bestFit.getBestPolynomial();
 
-    ASSERT_EQ( poly.a.size(), alpha.size() );
+    ASSERT_EQ( poly.a.size(), (int)alpha.size() );
     for ( size_t i = 0; i < alpha.size(); ++i )
         ASSERT_NEAR( poly.a[i], alpha[i], 0.000001 );
 }

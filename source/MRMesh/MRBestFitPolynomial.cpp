@@ -198,6 +198,11 @@ T Polynomial<T, degree>::intervalMin( T a, T b ) const
     T mn = argmin( a, b );
     T mnVal = eval( mn );
 
+    // workaround for old clang versions
+#if defined( __clang__ ) && ( __clang_major__ < 15 )
+    if constexpr ( degree <= 4 )
+    {
+#endif
     const auto candidates = deriv().solve( T( 0.0001 ) );
     for ( auto r : candidates )
     {
@@ -208,6 +213,9 @@ T Polynomial<T, degree>::intervalMin( T a, T b ) const
             mnVal = v;
         }
     }
+#if defined( __clang__ ) && ( __clang_major__ < 15 )
+    }
+#endif
 
     return mn;
 }

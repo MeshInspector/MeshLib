@@ -8,12 +8,14 @@
 #include "ImGuiHelpers.h"
 #include "MRImGuiImage.h"
 #include "MRFileDialog.h"
-#include "MRViewer/MRUITestEngine.h"
+#include "MRUITestEngine.h"
 #include "MRViewerSettingsManager.h"
 #include "MRUIStyle.h"
 #include "MRViewport.h"
 #include "MRViewer.h"
 #include "MRSceneCache.h"
+#include "MRShortcutManager.h"
+#include "MRRibbonSceneObjectsListDrawer.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include <MRMesh/MRString.h>
 #include <MRMesh/MRSystem.h>
@@ -36,7 +38,6 @@
 #include <MRPch/MRJson.h>
 #include <MRPch/MRSpdlog.h>
 #include <MRPch/MRWasm.h>
-#include "MRRibbonSceneObjectsListDrawer.h"
 #include <imgui_internal.h> // needed here to fix items dialogs windows positions
 #include <misc/freetype/imgui_freetype.h> // for proper font loading
 #include <regex>
@@ -1906,6 +1907,11 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
 
 void RibbonMenu::addRibbonItemShortcut_( const std::string& itemName, const ShortcutManager::ShortcutKey& key, ShortcutManager::Category category )
 {
+    if ( !shortcutManager_ )
+    {
+        assert( false );
+        return;
+    }
     auto itemIt = RibbonSchemaHolder::schema().items.find( itemName );
     if ( itemIt != RibbonSchemaHolder::schema().items.end() )
     {
@@ -1924,6 +1930,11 @@ void RibbonMenu::addRibbonItemShortcut_( const std::string& itemName, const Shor
 void RibbonMenu::setupShortcuts_()
 {
     ImGuiMenu::setupShortcuts_();
+    if ( !shortcutManager_ )
+    {
+        assert( false );
+        return;
+    }
 
     shortcutManager_->setShortcut( { GLFW_KEY_H,0 }, { ShortcutManager::Category::View, "Toggle selected objects visibility", [] ()
     {
@@ -2103,6 +2114,12 @@ void RibbonMenu::drawLastOperationTimeWindow_()
 
 void RibbonMenu::drawShortcutsWindow_()
 {
+    if ( !shortcutManager_ )
+    {
+        assert( false );
+        return;
+    }
+
     const auto& style = ImGui::GetStyle();
     const auto scaling = menu_scaling();
     float windowWidth = 1000.0f * scaling;

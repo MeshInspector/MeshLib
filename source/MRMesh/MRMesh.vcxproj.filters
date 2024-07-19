@@ -1320,6 +1320,9 @@
     <ClInclude Include="MRParallel.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRBestFitPolynomial.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2188,6 +2191,9 @@
     </ClCompile>
     <ClCompile Include="MRMoveMeshToVoxelMaxDeriv.cpp">
       <Filter>Source Files\Voxels</Filter>
+    </ClCompile>
+    <ClCompile Include="MRBestFitPolynomial.cpp">
+      <Filter>Source Files\Math</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

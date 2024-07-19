@@ -54,7 +54,7 @@ bool RibbonSchemaHolder::delItem( const std::shared_ptr<RibbonMenuItem>& item )
 
     staticMap.erase( it );
 #ifndef NDEBUG
-    spdlog::info( "Unregister ribbon item {}", item->name() );
+    spdlog::info( "Unregister ribbon item {}, use count={}", item->name(), item.use_count() );
 #endif
     return true;
 }

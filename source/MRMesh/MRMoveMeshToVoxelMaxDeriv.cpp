@@ -119,6 +119,17 @@ void MeshOnVoxelsT<MeshType>::getDerivatives( std::vector<float>& result, const 
         result[i] = values[i + 1] - values[i];
 }
 
+template <typename MeshType>
+Polynomialf<6> MeshOnVoxelsT<MeshType>::getBestPolynomial( const std::vector<float>& values )
+{
+    BestFitPolynomial<double, 6> bestFit( 0.f );
+    for ( size_t i = 0; i < values.size(); ++i )
+        bestFit.addPoint( pseudoIndex( int( i ), int( values.size() ) ), values[i] );
+    auto poly = bestFit.getBestPolynomial().cast<float>();
+    return poly;
+}
+
+
 
 template class MeshOnVoxelsT<Mesh>;
 template class MeshOnVoxelsT<const Mesh>;

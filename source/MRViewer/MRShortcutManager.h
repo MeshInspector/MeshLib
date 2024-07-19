@@ -9,6 +9,32 @@
 namespace MR
 {
 
+struct ShortcutKey
+{
+    int key{ 0 };
+    int mod{ 0 };
+
+    bool operator<( const ShortcutKey& other ) const
+    {
+        if ( key < other.key )
+            return true;
+        if ( key == other.key )
+            return mod < other.mod;
+        return false;
+    }
+};
+
+enum class ShortcutCategory : char
+{
+    Info,
+    Edit,
+    View,
+    Scene,
+    Objects,
+    Selection,
+    Count
+};
+
 // this class stores two maps:
 // 1) shortcut to action
 // 2) action name to shortcut
@@ -19,16 +45,8 @@ class MRVIEWER_CLASS ShortcutManager : public MultiListener<KeyDownListener, Key
 public:
     virtual ~ShortcutManager() = default;
 
-    enum class Category
-    {
-        Info,
-        Edit,
-        View,
-        Scene,
-        Objects,
-        Selection,
-        Count
-    };    
+    using ShortcutKey = MR::ShortcutKey;
+    using Category = MR::ShortcutCategory;
 
     struct ShortcutCommand
     {
@@ -36,21 +54,6 @@ public:
         std::string name; // name of action
         std::function<void()> action;
         bool repeatable = true; // shortcut shall be applied many times while the user holds the keys down
-    };
-
-    struct ShortcutKey
-    {
-        int key{ 0 };
-        int mod{ 0 };
-
-        bool operator<( const ShortcutKey& other ) const
-        {
-            if ( key < other.key )
-                return true;
-            if ( key == other.key )
-                return mod < other.mod;
-            return false;
-        }
     };
 
     inline static const std::string categoryNames[6] = { "Info", "Edit", "View", "Scene", "Objects", "Selection " };

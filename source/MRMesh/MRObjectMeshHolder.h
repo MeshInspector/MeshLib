@@ -124,6 +124,9 @@ public:
     // for backward compatibility
     [[deprecated]] MRMESH_API virtual void setTexture( MeshTexture texture );
     [[deprecated]] MRMESH_API virtual void updateTexture( MeshTexture& updated );
+
+    const Vector<TextureId, FaceId>& getTexturePerFace() const { return texturePerFace_; }
+    virtual void setTexturePerFace( Vector<TextureId, FaceId> texturePerFace ) { texturePerFace_ = std::move( texturePerFace ); dirty_ |= DIRTY_TEXTURE; }
     
     const Vector<MeshTexture, TextureId>& getTextures() const { return textures_; }
     virtual void setTextures( Vector<MeshTexture, TextureId> texture ) { textures_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
@@ -220,6 +223,8 @@ protected:
     /// Texture options
     Vector<MeshTexture, TextureId> textures_;
     VertUVCoords uvCoordinates_; ///< vertices coordinates in texture
+
+    Vector<TextureId, FaceId> texturePerFace_;
 
     MeshTexture ancillaryTexture_;
     VertUVCoords ancillaryUVCoordinates_; ///< vertices coordinates in ancillary texture

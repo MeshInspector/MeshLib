@@ -417,6 +417,15 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
         faceSelection );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 3 ) );
 
+    // Texture per faces
+    auto texturePerFaces = loadTexturePerFaceTextureBuffer_();
+    GL_EXEC( glActiveTexture( GL_TEXTURE4 ) );
+    texturePerFace_.loadDataOpt( 
+        texturePerFaces.dirty(),
+        { .resolution = GlTexture2::ToResolution( texturePerFaceTextureSize_ ), .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type = GL_UNSIGNED_INT },
+        texturePerFaces );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "texturePerFace" ), 4 ) );
+
     dirty_ &= ~DIRTY_MESH;
     dirty_ &= ~DIRTY_VERTS_COLORMAP;
 }
@@ -960,6 +969,34 @@ RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
     auto buffer = glBuffer.prepareBuffer<Vector4f>( faceNormalsTextureSize_.x * faceNormalsTextureSize_.y );
 
     computePerFaceNormals4( *mesh, buffer.data(), buffer.size() );
+
+    return buffer;
+}
+
+RenderBufferRef<unsigned> RenderMeshObject::loadTexturePerFaceTextureBuffer_()
+{
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
+    if ( !( dirty_ & DIRTY_TEXTURE ) || !objMesh_->mesh() )
+        return glBuffer.prepareBuffer<unsigned>( texturePerFaceTextureSize_.x * texturePerFaceTextureSize_.y, false );
+
+    const auto& mesh = objMesh_->mesh();
+    const auto& topology = mesh->topology;
+    auto numF = topology.lastValidFace() + 1;
+
+    auto size = numF;
+    texturePerFaceTextureSize_ = calcTextureRes( size, maxTexSize_ );
+    assert( texturePerFaceTextureSize_.x * texturePerFaceTextureSize_.y >= size );
+    auto buffer = glBuffer.prepareBuffer<unsigned>( texturePerFaceTextureSize_.x * texturePerFaceTextureSize_.y );
+
+    const auto& texPerFace = objMesh_->getTexturePerFace();
+    tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
+    {
+        for ( int r = range.begin(); r < range.end(); ++r )
+            if ( r < texPerFace.size() )
+                buffer[r] = texPerFace.vec_[r];
+            else
+                buffer[r] = 0;
+    } );
 
     return buffer;
 }

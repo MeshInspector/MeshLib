@@ -145,7 +145,7 @@ T Polynomial<T, degree>::operator()( T x ) const
 
 template <typename T, size_t degree>
 std::vector<T> Polynomial<T, degree>::solve( T tol ) const
-    requires ( degree <= 4 )
+    requires ( 1 <= degree && degree <= 4 )
 {
     // workaround for old clang versions
 #if defined( __clang__ ) && ( __clang_major__ < 15 )
@@ -171,7 +171,7 @@ Polynomial<T, degree == 0 ? 0 : degree - 1> Polynomial<T, degree>::deriv() const
 {
     if constexpr ( degree == 0 )
     {
-        return Polynomial<T, 0>{ { T{} } };
+        return Polynomial<T, 0>{ Eigen::Vector<T, 1>{ T{} } };
     }
     else
     {
@@ -203,14 +203,17 @@ T Polynomial<T, degree>::intervalMin( T l, T r ) const
     if constexpr ( degree <= 5 )
     {
 #endif
-    const auto candidates = deriv().solve( T( 0.0001 ) );
-    for ( auto root : candidates )
+    if constexpr ( degree >= 2 )
     {
-        auto v = eval( root );
-        if ( l <= root && root <= r && v < mnVal )
+        const auto candidates = deriv().solve( T( 0.0001 ) );
+        for ( auto root : candidates )
         {
-            mn = root;
-            mnVal = v;
+            auto v = eval( root );
+            if ( l <= root && root <= r && v < mnVal )
+            {
+                mn = root;
+                mnVal = v;
+            }
         }
     }
 #if defined( __clang__ ) && ( __clang_major__ < 15 )
@@ -220,17 +223,57 @@ T Polynomial<T, degree>::intervalMin( T l, T r ) const
     return mn;
 }
 
+template struct Polynomial<float, 0>;
+template struct Polynomial<float, 1>;
 template struct Polynomial<float, 2>;
 template struct Polynomial<float, 3>;
 template struct Polynomial<float, 4>;
 template struct Polynomial<float, 5>;
 template struct Polynomial<float, 6>;
 
+template struct Polynomial<double, 0>;
+template struct Polynomial<double, 1>;
 template struct Polynomial<double, 2>;
 template struct Polynomial<double, 3>;
 template struct Polynomial<double, 4>;
 template struct Polynomial<double, 5>;
 template struct Polynomial<double, 6>;
+
+
+template <typename T>
+T PolynomialWrapper<T>::operator()( T x ) const
+{
+    return std::visit( [x] ( const auto& p )
+    {
+        return p( x );
+    }, poly );
+}
+
+template <typename T>
+PolynomialWrapper<T> PolynomialWrapper<T>::deriv() const
+{
+    return std::visit( [] ( const auto& p ) -> PolynomialWrapper<T>
+    {
+        return p.deriv();
+    }, poly );
+}
+
+template <typename T>
+std::optional<T> PolynomialWrapper<T>::intervalMin( T a, T b ) const
+{
+    return std::visit( overloaded{
+        [a, b] <size_t degree> ( const Polynomial<T, degree>& p ) -> std::optional<T>
+        {
+            if constexpr ( 2 <= degree && degree <= 5 )
+                return p.intervalMin( a, b );
+            else
+                return std::nullopt;
+        }
+    }, poly );
+}
+
+template struct PolynomialWrapper<float>;
+template struct PolynomialWrapper<double>;
 
 
 template <typename T, size_t degree>

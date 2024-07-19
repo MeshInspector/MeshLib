@@ -5,6 +5,8 @@
 
 #include <cstddef>
 #include <vector>
+#include <variant>
+#include <optional>
 
 
 namespace MR
@@ -20,13 +22,13 @@ struct Polynomial
     Eigen::Vector<T, n> a;
 
     template <typename NewT>
-    Polynomial<NewT, degree> cast()
+    Polynomial<NewT, degree> cast() const
     { return { a.template cast<NewT>() }; }
 
     MRMESH_API T operator() ( T x ) const;
 
     MRMESH_API std::vector<T> solve( T tol ) const
-        requires ( degree <= 4 );
+        requires ( 1 <= degree && degree <= 4 );
 
     MRMESH_API Polynomial<T, degree == 0 ? 0 : degree - 1> deriv() const;
 
@@ -39,6 +41,39 @@ using Polynomialf = Polynomial<float, degree>;
 
 template <size_t degree>
 using Polynomiald = Polynomial<double, degree>;
+
+
+template <typename T>
+using Polynomialx = std::variant
+    < Polynomial<T, 0>
+    , Polynomial<T, 1>
+    , Polynomial<T, 2>
+    , Polynomial<T, 3>
+    , Polynomial<T, 4>
+    , Polynomial<T, 5>
+    , Polynomial<T, 6>
+    >;
+
+/// This is a unifying interface for a polynomial of some degree, known only in runtime
+template <typename T>
+struct PolynomialWrapper
+{
+    Polynomialx<T> poly;
+
+    template <size_t degree>
+    PolynomialWrapper( const Polynomial<T, degree>& p ):
+        poly( p )
+    {}
+
+    MRMESH_API T operator() ( T x ) const;
+
+    MRMESH_API PolynomialWrapper<T> deriv() const;
+
+    MRMESH_API std::optional<T> intervalMin( T a, T b ) const;
+};
+
+using PolynomialWrapperf = PolynomialWrapper<float>;
+using PolynomialWrapperd = PolynomialWrapper<double>;
 
 
 template <typename T, size_t degree>

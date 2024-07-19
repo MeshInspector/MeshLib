@@ -7,6 +7,12 @@
 namespace MR
 {
 
+CommandLoop::~CommandLoop()
+{
+    spdlog::debug( "CommandLoop::~CommandLoop(): queue size={}", commands_.size() );
+    assert( commands_.empty() );
+}
+
 void CommandLoop::setMainThreadId( const std::thread::id& id )
 {
     auto& inst = instance_();

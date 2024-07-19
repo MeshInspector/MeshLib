@@ -132,7 +132,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu24' }}
         env:
           CXX: ${{matrix.cxx-compiler}}
-        run: scripts/mrbind/run.sh generate
+        run: scripts/mrbind/run.sh generate --trace
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -154,7 +154,9 @@ jobs:
         if: ${{ matrix.os == 'ubuntu24' }}
         env:
           CXX: ${{matrix.cxx-compiler}}
-        run: scripts/mrbind/run.sh
+        run: |
+          scripts/mrbind/run.sh --trace
+          cd build/Release/bin && LD_LIBRARY_PATH=. python3 -c 'import mrmesh'
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.compiler}}"

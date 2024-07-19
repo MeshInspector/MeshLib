@@ -15,4 +15,4 @@ make -f _mrbind/scripts/apply_to_files.mk \
     LINKER="$CXX -fuse-ld=lld" \
     LINKER_FLAGS="$(pkg-config --libs python3-embed) -Lbuild/Release/bin -lMRMesh -shared \$(file <$DIR/linker_flags.txt)" \
     NUM_FRAGMENTS=4 \
-    "$@" --trace
+    "$@"

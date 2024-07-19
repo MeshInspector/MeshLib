@@ -411,6 +411,9 @@ void ImGuiMenu::shutdown()
     disconnect();
     // User is responsible for destroying context if a custom context is given
     // ImGui::DestroyContext(*context_);
+
+    // to release shared_ptr's on Ribbon items and let them be destroyed
+    shortcutManager_.reset();
 }
 
 void ImGuiMenu::postResize_( int width, int height )

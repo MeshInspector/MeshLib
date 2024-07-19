@@ -67,7 +67,7 @@ MRMESHC_API MRMesh* mrMeshLoadFromAnySupportedFormat( const char* file, MRString
 MRMESHC_API void mrMeshSaveToAnySupportedFormat( const MRMesh* mesh, const char* file, MRString** errorStr );
 
 /// creates a new PointCloud object
-MRMESHC_API MRPointCloud* mrPointCloudNew( const MRVector3f* points, size_t pointsNum );
+MRMESHC_API MRPointCloud* mrPointCloudFromPoints( const MRVector3f* points, size_t pointsNum );
 
 /// detects the format from file extension and loads points from it
 MRMESHC_API MRPointCloud* mrPointsLoadFromAnySupportedFormat( const char* filename, MRString** errorString );

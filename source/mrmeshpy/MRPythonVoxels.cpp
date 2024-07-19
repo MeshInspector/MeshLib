@@ -38,6 +38,8 @@ MR_ADD_PYTHON_VOXELS_VOLUME( SimpleVolume, "vector of float" )
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, FloatGrid, MR::OpenVdbFloatGrid, MR::FloatGrid )
 MR_ADD_PYTHON_CUSTOM_CLASS_INST( mrmeshpy, FloatGrid )
 
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorVdbVolume, MR::VdbVolume )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
 {
     MR_PYTHON_CUSTOM_CLASS( FloatGrid ).doc() =
@@ -134,7 +136,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
             } );
         } ),
         pybind11::arg( "vdbVolume" ), pybind11::arg( "maxFaces" ), pybind11::arg( "isoValue" ) = 0.f, pybind11::arg( "adaptivity" ) = 0.f, pybind11::arg( "cb" ) = MR::ProgressCallback{},
-        "Make mesh from VdbVolume.\n" 
+        "Make mesh from VdbVolume.\n"
         "maxFaces - If mesh faces exceed this value error returns.\n"
         "isoValue - Layer of grid with this value would be converted in mesh.\n"
         "isoValue can be negative only in level set grids.\n"

@@ -52,4 +52,21 @@ MRMESHC_API bool mrMultiwayICPUpdateAllPointPairs( MRMultiwayICP* mwicp, MRProgr
 /// tune algorithm params before run calculateTransformations()
 MRMESHC_API void mrMultiwayICPSetParams( MRMultiwayICP* mwicp, const MRICPProperties* prop );
 
+/// computes root-mean-square deviation between points
+/// or the standard deviation from given value if present
+MRMESHC_API float mrMultiWayICPGetMeanSqDistToPoint( const MRMultiwayICP* mwicp, double* value );
+
+/// computes root-mean-square deviation from points to target planes
+/// or the standard deviation from given value if present
+MRMESHC_API float mrMultiWayICPGetMeanSqDistToPlane( const MRMultiwayICP* mwicp, double* value );
+
+/// computes the number of samples able to form pairs
+MRMESHC_API size_t mrMultiWayICPGetNumSamples( const MRMultiwayICP* mwicp );
+
+/// computes the number of active point pairs
+MRMESHC_API size_t mrMultiWayICPGetNumActivePairs( const MRMultiwayICP* mwicp );
+
+/// deallocates a MultiwayICP object
+MRMESHC_API void mrMultiwayICPFree( MRMultiwayICP* mwicp );
+
 MR_EXTERN_C_END

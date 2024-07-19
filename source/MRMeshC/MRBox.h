@@ -23,4 +23,7 @@ MRMESHC_API MRVector3f mrBox3fSize( const MRBox3f* box );
 /// computes length from min to max
 MRMESHC_API float mrBox3fDiagonal( const MRBox3f* box );
 
+/// computes the volume of this box
+MRMESHC_API float mrBox3fVolume( const MRBox3f* box );
+
 MR_EXTERN_C_END

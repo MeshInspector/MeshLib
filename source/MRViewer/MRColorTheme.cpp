@@ -220,7 +220,7 @@ void ColorTheme::apply()
             params.borderColor = getViewportColor( ViewportColorsType::Borders );
             vp.setParameters( params );
         }
-        instance.colorThemeChangedSignal();
+        instance.changedSignal_();
     } );
 }
 
@@ -485,4 +485,9 @@ std::vector<std::string> ColorTheme::foundUserThemes()
     return instance.foundUserThemes_;
 }
 
+boost::signals2::connection ColorTheme::onChanged( const boost::function<void()> & slot, boost::signals2::connect_position position )
+{
+    return changedSignal_.connect( slot, position );
 }
+
+} //namespace MR

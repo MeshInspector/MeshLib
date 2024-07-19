@@ -251,7 +251,7 @@ void OpenFilesMenuItem::setupListUpdate_()
         }
     };
 
-    recentStoreConnection_ = getViewerInstance().recentFilesStore().storageUpdateSignal.connect( [this, cutLongFileNames] ( const FileNamesStack& fileNamesStack ) mutable
+    recentStoreConnection_ = getViewerInstance().recentFilesStore().onUpdate( [this, cutLongFileNames] ( const FileNamesStack& fileNamesStack )
     {
         recentPathsCache_ = fileNamesStack;
         dropList_.resize( recentPathsCache_.size() );

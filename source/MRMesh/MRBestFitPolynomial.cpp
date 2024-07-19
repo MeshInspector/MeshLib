@@ -167,7 +167,7 @@ std::vector<T> Polynomial<T, degree>::solve( T tol ) const
 }
 
 template <typename T, size_t degree>
-Polynomial<T, Polynomial<T, degree>::derivDegree> Polynomial<T, degree>::deriv() const
+Polynomial<T, degree == 0 ? 0 : degree - 1> Polynomial<T, degree>::deriv() const
 {
     if constexpr ( degree == 0 )
     {

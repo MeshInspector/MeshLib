@@ -16,7 +16,6 @@ namespace MR
 template <typename T, size_t degree>
 struct Polynomial
 {
-    static constexpr size_t derivDegree = degree == 0 ? 0 : degree - 1;
     static constexpr size_t n = degree + 1;
     Eigen::Vector<T, n> a;
 
@@ -29,7 +28,7 @@ struct Polynomial
     MRMESH_API std::vector<T> solve( T tol ) const
         requires ( degree <= 4 );
 
-    MRMESH_API Polynomial<T, derivDegree> deriv() const;
+    MRMESH_API Polynomial<T, degree == 0 ? 0 : degree - 1> deriv() const;
 
     MRMESH_API T intervalMin( T a, T b ) const
         requires ( degree <= 5 );

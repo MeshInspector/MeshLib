@@ -11,6 +11,11 @@ const std::string cRecentFilesStorageKey = "recentFileNames";
 namespace MR
 {
 
+RecentFilesStore::~RecentFilesStore()
+{
+    spdlog::debug( "RecentFilesStore::~RecentFilesStore()" );
+}
+
 #ifdef __EMSCRIPTEN__
 void RecentFilesStore::storeFile( const std::filesystem::path& ) const
 {}

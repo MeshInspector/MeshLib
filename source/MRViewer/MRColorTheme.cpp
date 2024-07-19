@@ -51,6 +51,11 @@ EMSCRIPTEN_KEEPALIVE int emsGetColorTheme()
 namespace MR
 {
 
+ColorTheme::~ColorTheme()
+{
+    spdlog::debug( "ColorTheme::~ColorTheme()" );
+}
+
 ColorTheme& ColorTheme::instance()
 {
     static ColorTheme instance;

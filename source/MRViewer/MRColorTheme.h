@@ -166,7 +166,7 @@ public:
 
 private:
     ColorTheme() = default;
-    ~ColorTheme() = default;
+    ~ColorTheme();
 
 
     std::vector<Color> sceneColors_;

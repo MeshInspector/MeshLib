@@ -145,7 +145,7 @@ T Polynomial<T, degree>::operator()( T x ) const
 
 template <typename T, size_t degree>
 std::vector<T> Polynomial<T, degree>::solve( T tol ) const
-    requires canSolve
+    requires ( degree <= 4 )
 {
     Solver<T, degree> solver;
     auto r_c = solver( a );
@@ -174,7 +174,7 @@ Polynomial<T, Polynomial<T, degree>::derivDegree> Polynomial<T, degree>::deriv()
 
 template <typename T, size_t degree>
 T Polynomial<T, degree>::intervalMin( T a, T b ) const
-    requires canSolveDerivative
+    requires ( degree <= 5 )
 {
     auto eval = [this] ( T x )
     {

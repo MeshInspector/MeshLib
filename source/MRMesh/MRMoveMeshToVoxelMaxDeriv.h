@@ -7,6 +7,7 @@
 #include "MRMatrix3.h"
 #include "MRAffineXf.h"
 #include "MRBestFitParabola.h"
+#include "MRBestFitPolynomial.h"
 
 
 namespace MR
@@ -99,7 +100,7 @@ public:
 
     // Get derivatives from result of `getValues`
     MRMESH_API static void getDerivatives( std::vector<float>& result, const std::vector<float>& values );
-    
+
     // Get best fit parabola in pseudo-index space for a zero-centered array
     static Parabolaf getBestParabola( auto begin, auto end )
     {
@@ -109,6 +110,8 @@ public:
             bestFitParabola.addPoint( pseudoIndex( int( it - begin ), int( size ) ), *it );
         return bestFitParabola.getBestParabola();
     }
+
+    MRMESH_API static Polynomialf<6> getBestPolynomial( const std::vector<float>& values );
 
 private:
     MeshType& mesh_;

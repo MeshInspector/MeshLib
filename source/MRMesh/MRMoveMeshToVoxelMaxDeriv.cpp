@@ -150,7 +150,22 @@ template class MeshOnVoxelsT<const Mesh>;
 namespace
 {
 
-VertBitSet adjustOneIter( MeshOnVoxels& mv, int samplePoints, int polynomialDegree, float intermediateSmoothSpeed )
+struct OneIterSettings
+{
+    OneIterSettings( MoveMeshToVoxelMaxDerivSettings s ):
+        samplePoints( s.samplePoints ),
+        polynomialDegree( s.degree ),
+        intermediateSmoothSpeed( s.intermediateSmoothForce ),
+        outlierThreshold( s.outlierThreshold )
+    {}
+
+    int samplePoints = 6;
+    int polynomialDegree = 3;
+    float intermediateSmoothSpeed = 0.3f;
+    float outlierThreshold = 1.f;
+};
+
+VertBitSet adjustOneIter( MeshOnVoxels& mv, OneIterSettings s )
 {
     MR_TIMER
 
@@ -163,12 +178,12 @@ VertBitSet adjustOneIter( MeshOnVoxels& mv, int samplePoints, int polynomialDegr
         std::vector<float> derivatives;
     } threadSpecificExemplar {
         mv,
-        std::vector<float>( samplePoints ),
-        std::vector<float>( samplePoints - 1 )
+        std::vector<float>( s.samplePoints ),
+        std::vector<float>( s.samplePoints - 1 )
     };
     tbb::enumerable_thread_specific<ThreadSpecific> threadSpecific( std::move( threadSpecificExemplar ) );
     BitSetParallelFor( mv.mesh().topology.getValidVerts(), threadSpecific,
-        [&correctedPoints, &shifts, samplePoints, polynomialDegree] ( VertId v, ThreadSpecific &local )
+        [&correctedPoints, &shifts, &s] ( VertId v, ThreadSpecific &local )
         {
             std::vector<float> &values = local.values;
             std::vector<float> &derivatives = local.derivatives;
@@ -178,14 +193,17 @@ VertBitSet adjustOneIter( MeshOnVoxels& mv, int samplePoints, int polynomialDegr
             local.mv.getValues( values, pt, offset );
             local.mv.getDerivatives( derivatives, values );
 
-            const auto argMinD = local.mv.pseudoIndex( 2, samplePoints );
-            const auto argMaxD = local.mv.pseudoIndex( samplePoints - 3, samplePoints - 1 );
+            const auto argMinD = local.mv.pseudoIndex( 2, s.samplePoints );
+            const auto argMaxD = local.mv.pseudoIndex( s.samplePoints - 3, s.samplePoints - 1 );
 
-            if ( auto maybeMinX = local.mv.getBestPolynomial( values, polynomialDegree ).deriv().intervalMin( argMinD, argMaxD ) )
+            if ( auto maybeMinX = local.mv.getBestPolynomial( values, s.polynomialDegree ).deriv().intervalMin( argMinD, argMaxD ) )
             {
-                if ( std::abs( *maybeMinX ) > 0.1f )
+                const auto& minX = *maybeMinX;
+                if ( std::abs( minX ) < s.outlierThreshold )
+                {
                     correctedPoints.set( v );
-                shifts[v] = std::clamp( *maybeMinX, -0.1f, 0.1f ) * offset;
+                    shifts[v] = std::clamp( minX, -0.1f, 0.1f ) * offset;
+                }
             }
         } );
 
@@ -196,7 +214,7 @@ VertBitSet adjustOneIter( MeshOnVoxels& mv, int samplePoints, int polynomialDegr
         shifts,
         MeshRelaxParams{ {
                 .iterations = smoothIters,
-                .force = intermediateSmoothSpeed
+                .force = s.intermediateSmoothSpeed
             },
             false }
     );
@@ -238,7 +256,7 @@ VertBitSet moveMeshToVoxelMaxDeriv(
     VertBitSet correctedPoints;
     for ( int i = 0; i < settings.iters; ++i )
     {
-        correctedPoints |= adjustOneIter( mv, settings.samplePoints, settings.degree, settings.intermediateSmoothForce );
+        correctedPoints |= adjustOneIter( mv, settings );
         if ( !reportProgress( callback, (float)i / (float)settings.iters ) )
             break;
     }

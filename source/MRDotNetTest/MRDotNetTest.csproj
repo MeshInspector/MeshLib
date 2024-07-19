@@ -5,7 +5,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <BaseOutputPath>..\..\..\source\x64</BaseOutputPath>
+    <BaseOutputPath>..\..\source\x64</BaseOutputPath>
   </PropertyGroup>
 
   <ItemGroup>

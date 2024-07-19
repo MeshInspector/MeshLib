@@ -20,21 +20,41 @@ RibbonSchema& RibbonSchemaHolder::schema()
     return schemaInst;
 }
 
-bool RibbonSchemaHolder::addItem( std::shared_ptr<RibbonMenuItem> item )
+bool RibbonSchemaHolder::addItem( const std::shared_ptr<RibbonMenuItem>& item )
 {
     auto& staticMap = schema().items;
     if ( !item )
         return false;
 
-    if ( staticMap.find( item->name() ) != staticMap.end() )
+    auto [it, inserted] = staticMap.insert( { item->name(), MenuItemInfo{ item } } );
+    if ( !inserted )
     {
         spdlog::warn( "Attempt to register again ribbon item {}", item->name() );
         return false;
     }
 
-    staticMap[item->name()] = { item };
 #ifndef NDEBUG
     spdlog::info( "Register ribbon item {}", item->name() );
+#endif
+    return true;
+}
+
+bool RibbonSchemaHolder::delItem( const std::shared_ptr<RibbonMenuItem>& item )
+{
+    auto& staticMap = schema().items;
+    if ( !item )
+        return false;
+
+    const auto it = staticMap.find( item->name() );
+    if ( it == staticMap.end() || it->second.item != item )
+    {
+        spdlog::warn( "Attempt to unregister missing ribbon item {}", item->name() );
+        return false;
+    }
+
+    staticMap.erase( it );
+#ifndef NDEBUG
+    spdlog::info( "Unregister ribbon item {}", item->name() );
 #endif
     return true;
 }

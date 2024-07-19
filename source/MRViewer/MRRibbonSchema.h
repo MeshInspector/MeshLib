@@ -60,17 +60,22 @@ class MRVIEWER_CLASS RibbonSchemaHolder
 public:
     MRVIEWER_API static RibbonSchema& schema();
 
-    // adds item to static holder (needed to be independent of construction time)
-    // returns false if item with such name is already present
-    MRVIEWER_API static bool addItem( std::shared_ptr<RibbonMenuItem> item );
+    /// adds item to static holder (needed to be independent of construction time)
+    /// returns false if item with such name is already present
+    MRVIEWER_API static bool addItem( const std::shared_ptr<RibbonMenuItem>& item );
 
-    // struct to hold information for search result presentation
+    /// removes item from the static holder
+    /// returns false if item was not present
+    MRVIEWER_API static bool delItem( const std::shared_ptr<RibbonMenuItem>& item );
+
+    /// struct to hold information for search result presentation
     struct SearchResult
     {
         int tabIndex{ -1 }; // -1 is default value if item has no tab
         const MenuItemInfo* item{ nullptr }; // item info to show correct caption
     };
-    // ancillary struct to hold information for search result order
+
+    /// ancillary struct to hold information for search result order
     struct SearchResultWeight
     {
         float captionWeight{ 1.f };
@@ -78,7 +83,7 @@ public:
         float tooltipWeight{ 1.f };
         float tooltipOrderWeight{ 1.f };
     };
-    // 
+
     MRVIEWER_API static std::vector<SearchResult> search( const std::string& searchStr, int* captionCount = nullptr,
         std::vector<SearchResultWeight>* weights = nullptr );
 
@@ -114,14 +119,24 @@ protected:
 
 
 template<typename T>
-struct RibbonMenuItemAdder
+class RibbonMenuItemAdder
 {
+public:
+    static_assert( std::is_base_of_v<RibbonMenuItem, T> );
+
     template<typename... Args>
-    RibbonMenuItemAdder( Args&&... args )
+    RibbonMenuItemAdder( Args&&... args ) : item_( std::make_shared<T>( std::forward<Args>( args )... ) )
     {
-        static_assert( std::is_base_of_v<RibbonMenuItem, T> );
-        RibbonSchemaHolder::addItem( std::make_shared<T>( std::forward<Args>( args )... ) );
+        RibbonSchemaHolder::addItem( item_ );
     }
+
+    ~RibbonMenuItemAdder()
+    {
+        RibbonSchemaHolder::delItem( item_ );
+    }
+
+private:
+    std::shared_ptr<T> item_;
 };
 
 template<typename T>

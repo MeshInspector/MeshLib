@@ -50,10 +50,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MRMeshC", "MRMeshC\MRMeshC.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MRTestC", "MRTestC\MRTestC.vcxproj", "{7054D052-4C80-46EE-B894-2E147B3C1D7E}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MRDotNet", "MRDotNet\MRDotNet.vcxproj", "{47B482C5-80DF-41BB-9936-19A2C11511B2}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MRDotNetTest", "MRDotNetTest\MRDotNetTest.csproj", "{B18757E8-1A0B-4CEF-BCF1-22AB491688CF}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -124,14 +120,6 @@ Global
 		{7054D052-4C80-46EE-B894-2E147B3C1D7E}.Debug|x64.Build.0 = Debug|x64
 		{7054D052-4C80-46EE-B894-2E147B3C1D7E}.Release|x64.ActiveCfg = Release|x64
 		{7054D052-4C80-46EE-B894-2E147B3C1D7E}.Release|x64.Build.0 = Release|x64
-		{47B482C5-80DF-41BB-9936-19A2C11511B2}.Debug|x64.ActiveCfg = Debug|x64
-		{47B482C5-80DF-41BB-9936-19A2C11511B2}.Debug|x64.Build.0 = Debug|x64
-		{47B482C5-80DF-41BB-9936-19A2C11511B2}.Release|x64.ActiveCfg = Release|x64
-		{47B482C5-80DF-41BB-9936-19A2C11511B2}.Release|x64.Build.0 = Release|x64
-		{B18757E8-1A0B-4CEF-BCF1-22AB491688CF}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{B18757E8-1A0B-4CEF-BCF1-22AB491688CF}.Debug|x64.Build.0 = Debug|Any CPU
-		{B18757E8-1A0B-4CEF-BCF1-22AB491688CF}.Release|x64.ActiveCfg = Release|Any CPU
-		{B18757E8-1A0B-4CEF-BCF1-22AB491688CF}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

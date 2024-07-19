@@ -5,7 +5,6 @@
 #include "MRMesh.h"
 #include "MRMeshRelax.hpp"
 #include <MRMesh/MRParallelFor.h>
-#include <spdlog/spdlog.h>
 
 
 namespace MR
@@ -123,7 +122,7 @@ void MeshOnVoxelsT<MeshType>::getDerivatives( std::vector<float>& result, const 
 template <typename MeshType>
 Polynomialf<6> MeshOnVoxelsT<MeshType>::getBestPolynomial( const std::vector<float>& values )
 {
-    BestFitPolynomial<double, 6> bestFit( 0.001f );
+    BestFitPolynomial<double, 6> bestFit( 0.f );
     for ( size_t i = 0; i < values.size(); ++i )
         bestFit.addPoint( pseudoIndex( int( i ), int( values.size() ) ), values[i] );
     auto poly = bestFit.getBestPolynomial().cast<float>();
@@ -167,7 +166,7 @@ VertBitSet adjustOneIter( MeshOnVoxels& mv, int samplePoints, float intermediate
             local.mv.getValues( values, pt, offset );
             local.mv.getDerivatives( derivatives, values );
 
-            auto parabola = local.mv.getBestParabola( values, derivatives );
+            auto parabola = local.mv.getBestParabola( derivatives.begin(), derivatives.end() );
             if ( parabola.a < 0.f )
                 return;
 

@@ -8,6 +8,7 @@
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRSceneRoot.h"
+#include "MRMesh/MRVDBFloatGrid.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRPch/MRFmt.h"
 
@@ -136,11 +137,16 @@ void pythonAddPointCloudToScene( const MR::PointCloud& points, const std::string
     } );
 }
 
+template <typename T>
+struct SharedPtrTraits { static constexpr bool isSharedPtr = false; using elem = T; };
+template <typename T>
+struct SharedPtrTraits<std::shared_ptr<T>> { static constexpr bool isSharedPtr = true; using elem = T; };
+
 template <typename ObjectType, auto MemberPtr>
 auto pythonGetSelectedModels()
 {
-    using ReturnedElemType = std::remove_cv_t<typename std::remove_cvref_t<decltype((std::declval<ObjectType>().*MemberPtr)())>::element_type>;
-    using ReturnedVecType = std::vector<ReturnedElemType>;
+    using ReturnedElemType = std::remove_cvref_t<decltype((std::declval<ObjectType>().*MemberPtr)())>;
+    using ReturnedVecType = std::vector<std::remove_cvref_t<typename SharedPtrTraits<ReturnedElemType>::elem>>;
 
     ReturnedVecType ret;
 
@@ -150,7 +156,12 @@ auto pythonGetSelectedModels()
         ret.reserve( objects.size() );
 
         for ( const auto& object : objects )
-            ret.push_back( *( ( *object ).*MemberPtr)() );
+        {
+            if constexpr ( SharedPtrTraits<ReturnedElemType>::isSharedPtr )
+                ret.push_back( *( ( *object ).*MemberPtr)() );
+            else
+                ret.push_back( ( ( *object ).*MemberPtr)() );
+        }
     } );
 
     return ret;
@@ -224,4 +235,5 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Scene, [] ( pybind11::module_& m )
     m.def( "getSelectedMeshes", &pythonGetSelectedModels<MR::ObjectMeshHolder, &MR::ObjectMeshHolder::mesh>, "Get copies of all selected meshes in the scene." );
     m.def( "getSelectedPointClouds", &pythonGetSelectedModels<MR::ObjectPointsHolder, &MR::ObjectPointsHolder::pointCloud>, "Get copies of all selected point clouds in the scene." );
     m.def( "getSelectedPolylines", &pythonGetSelectedModels<MR::ObjectLinesHolder, &MR::ObjectLinesHolder::polyline>, "Get copies of all selected polylines in the scene." );
+    m.def( "getSelectedVoxels", &pythonGetSelectedModels<MR::ObjectVoxels, &MR::ObjectVoxels::vdbVolume>, "Get copies of all selected voxel grids in the scene." );
 } )

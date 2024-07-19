@@ -161,9 +161,8 @@ public:
     // Reset ImGui style sizes and colors, and apply menu scaling to it
     MRVIEWER_API static void resetImGuiStyle();
 
-    /// signal about Color Theme changing, triggered in apply
-    using ColorThemeChangedSignal = Signal<void()>;
-    ColorThemeChangedSignal colorThemeChangedSignal;
+    /// Connects given slot to receive signal on every Color Theme change, triggered in apply
+    MRVIEWER_API boost::signals2::connection onChanged( const boost::function<void()> & slot, boost::signals2::connect_position position = boost::signals2::at_back );
 
 private:
     ColorTheme() = default;
@@ -179,6 +178,9 @@ private:
     std::string themeName_;
 
     std::vector<std::string> foundUserThemes_;
+
+    using ChangedSignal = Signal<void()>;
+    ChangedSignal changedSignal_;
 };
 
 }

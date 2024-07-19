@@ -1853,7 +1853,7 @@ void Viewer::initGlobalBasisAxesObject_()
     globalBasisAxes->setColoringType( ColoringType::VertsColorMap );
     globalBasisAxes->setFlatShading( true );
 
-    ColorTheme::instance().colorThemeChangedSignal.connect( [this] ()
+    updateGlobalBasis_ = ColorTheme::instance().onChanged( [this] ()
     {
         if ( !globalBasisAxes )
             return;
@@ -1901,7 +1901,7 @@ void Viewer::initBasisAxesObject_()
     basisAxes->setFacesColorMap( colorMap );
     basisAxes->setColoringType( ColoringType::FacesColorMap );
 
-    ColorTheme::instance().colorThemeChangedSignal.connect( [this] ()
+    updateBasisAxes_ = ColorTheme::instance().onChanged( [this] ()
     {
         if ( !basisAxes )
             return;

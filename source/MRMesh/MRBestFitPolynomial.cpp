@@ -38,7 +38,7 @@ struct Solver<T, 2>
         const auto b = coeffs[1] / coeffs[2];
         const auto c = coeffs[0] / coeffs[2];
 
-        const auto D = std::sqrt( std::complex<T>{ b * b - 4 * c } );
+        const auto D = std::sqrt( std::complex<T>{ b * b - T(4) * c } );
         return { ( -b + D ) / T( 2 ), ( -b - D ) / T( 2 ) };
     }
 };
@@ -54,10 +54,10 @@ struct Solver<T, 3>
         const auto& c = coeffs[1];
         const auto& d = coeffs[0];
 
-        const T p = ( 3*a*c - b*b ) / ( 3*a*a );
+        const T p = ( T(3)*a*c - b*b ) / ( T(3)*a*a );
         const T q
-            = ( 2*b*b*b - 9*a*b*c + 27*a*a*d ) / ( 27 * a*a*a );
-        const T alpha = b / ( 3 * a );
+            = ( T(2)*b*b*b - T(9)*a*b*c + T(27)*a*a*d ) / ( T(27) * a*a*a );
+        const T alpha = b / ( T(3) * a );
 
         const std::complex<T> D = q*q / T(4) + p*p*p / T(27);
         const auto Ds = std::sqrt( D );
@@ -65,8 +65,8 @@ struct Solver<T, 3>
         const std::complex<T> e1 = ( std::complex<T>( T(-1), sqrt( T(3) ) ) ) / T(2);
         const std::complex<T> e2 = ( std::complex<T>( T(-1), - sqrt( T(3) ) ) ) / T(2);
 
-        const auto u1s = std::pow( -q / T(2) + Ds, 1 / T(3) );
-        const auto u2s = std::pow( -q / T(2) - Ds, 1 / T(3) );
+        const auto u1s = std::pow( -q / T(2) + Ds, T(1) / T(3) );
+        const auto u2s = std::pow( -q / T(2) - Ds, T(1) / T(3) );
 
         return { u1s + u2s - alpha, e1*u1s + e2*u2s - alpha, e2*u1s + e1*u2s - alpha };
     }
@@ -88,7 +88,7 @@ struct Solver<T, 4>
         // depressed equation
         const auto a = -T(3)*B*B / ( T(8)*A*A ) + C/A;
         const auto b = B*B*B / ( T(8)*A*A*A ) - B*C / ( T(2)*A*A ) + D/A;
-        const auto c = -T(3)*B*B*B*B / ( T(256)*A*A*A*A ) + C*B*B / ( T(16)*A*A*A ) - B*D/(4*A*A) + E/A;
+        const auto c = -T(3)*B*B*B*B / ( T(256)*A*A*A*A ) + C*B*B / ( T(16)*A*A*A ) - B*D/(T(4)*A*A) + E/A;
 
         // bi-quadratic
         if ( std::abs( b ) < T( 0.0001 ) )
@@ -183,7 +183,7 @@ Polynomial<T, degree == 0 ? 0 : degree - 1> Polynomial<T, degree>::deriv() const
 }
 
 template <typename T, size_t degree>
-T Polynomial<T, degree>::intervalMin( T a, T b ) const
+T Polynomial<T, degree>::intervalMin( T l, T r ) const
     requires ( degree <= 5 )
 {
     auto eval = [this] ( T x )
@@ -195,7 +195,7 @@ T Polynomial<T, degree>::intervalMin( T a, T b ) const
         return eval( x1 ) < eval( x2 ) ? x1 : x2;
     };
 
-    T mn = argmin( a, b );
+    T mn = argmin( l, r );
     T mnVal = eval( mn );
 
     // workaround for old clang versions
@@ -204,12 +204,12 @@ T Polynomial<T, degree>::intervalMin( T a, T b ) const
     {
 #endif
     const auto candidates = deriv().solve( T( 0.0001 ) );
-    for ( auto r : candidates )
+    for ( auto root : candidates )
     {
-        auto v = eval( r );
-        if ( a <= r && r <= b && v < mnVal )
+        auto v = eval( root );
+        if ( l <= root && root <= r && v < mnVal )
         {
-            mn = r;
+            mn = root;
             mnVal = v;
         }
     }
@@ -356,7 +356,7 @@ TEST( MRMesh, PolynomialRoots1 )
 {
     Polynomialf<1> p{ { 3.f, 2.f } };
     auto roots = p.solve( 0.0001f );
-    ASSERT_EQ( roots.size(), 1 );
+    ASSERT_EQ( roots.size(), 1ull );
     ASSERT_NEAR( roots[0], -1.5f, 0.001f );
 }
 
@@ -364,7 +364,7 @@ TEST( MRMesh, PolynomialRoots2 )
 {
     Polynomialf<2> p{ { -1.f, 2.f, 1.f } };
     auto roots = p.solve( 0.0001f );
-    ASSERT_EQ( roots.size(), 2 );
+    ASSERT_EQ( roots.size(), 2ull );
     std::sort( roots.begin(), roots.end() );
     ASSERT_NEAR( roots[0], -2.414f, 0.001f );
     ASSERT_NEAR( roots[1], 0.414f, 0.001f );
@@ -374,7 +374,7 @@ TEST( MRMesh, PolynomialRoots3 )
 {
     Polynomialf<3> p{ { -2.f, 0.2f, 3.f, 1.f } };
     auto roots = p.solve( 0.0001f );
-    ASSERT_EQ( roots.size(), 3 );
+    ASSERT_EQ( roots.size(), 3ull );
     std::sort( roots.begin(), roots.end() );
     ASSERT_NEAR( roots[0], -2.636f, 0.001f );
     ASSERT_NEAR( roots[1], -1.072f, 0.001f );
@@ -385,7 +385,7 @@ TEST( MRMesh, PolynomialRoots4 )
 {
     Polynomialf<4> p{ { -2.f, 0.3f, 4.f, -0.1f, -1.f } };
     auto roots = p.solve( 0.0001f );
-    ASSERT_EQ( roots.size(), 4 );
+    ASSERT_EQ( roots.size(), 4ull );
     std::sort( roots.begin(), roots.end() );
     ASSERT_NEAR( roots[0], -1.856f, 0.001f );
     ASSERT_NEAR( roots[1], -0.809f, 0.001f );
@@ -397,7 +397,7 @@ TEST( MRMesh, PolynomialRoots4_biquadratic )
 {
     Polynomialf<4> p{ { 23.f, -40.f, 26.f, -8.f, 1.f } };
     auto roots = p.solve( 0.0001f );
-    ASSERT_EQ( roots.size(), 2 );
+    ASSERT_EQ( roots.size(), 2ull );
     std::sort( roots.begin(), roots.end() );
     ASSERT_NEAR( roots[0], 1.356f, 0.001f );
     ASSERT_NEAR( roots[1], 2.644f, 0.001f );

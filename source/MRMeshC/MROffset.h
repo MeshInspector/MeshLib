@@ -4,6 +4,8 @@
 #include "MRMeshPart.h"
 #include "MRSignDetectionMode.h"
 
+#include <MRMesh/config.h>
+
 MR_EXTERN_C_BEGIN
 
 typedef struct MROffsetParameters
@@ -29,6 +31,7 @@ MRMESHC_API MROffsetParameters mrOffsetParametersNew( void );
 /// computes size of a cubical voxel to get approximately given number of voxels during rasterization
  MRMESHC_API float mrSuggestVoxelSize( MRMeshPart mp, float approxNumVoxels );
 
+#ifndef MRMESH_NO_OPENVDB
 /// Offsets mesh by converting it to distance field in voxels using OpenVDB library,
 /// signDetectionMode = Unsigned(from OpenVDB) | OpenVDB | HoleWindingRule,
 /// and then converts back using OpenVDB library (dual marching cubes),
@@ -41,6 +44,7 @@ MRMESHC_API MRMesh* mrOffsetMesh( MRMeshPart mp, float offset, const MROffsetPar
 /// typically offsetA and offsetB have distinct signs
 /// if an error has occurred and errorString is not NULL, returns NULL and allocates an error message to errorStr
 MRMESHC_API MRMesh* mrDoubleOffsetMesh( MRMeshPart mp, float offsetA, float offsetB, const MROffsetParameters* params, MRString** errorString );
+#endif
 
 /// Offsets mesh by converting it to distance field in voxels (using OpenVDB library if SignDetectionMode::OpenVDB or our implementation otherwise)
 /// and back using standard Marching Cubes, as opposed to Dual Marching Cubes in offsetMesh(...)

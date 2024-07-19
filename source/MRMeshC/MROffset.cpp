@@ -29,6 +29,7 @@ float mrSuggestVoxelSize( MRMeshPart mp, float approxNumVoxels )
     );
 }
 
+#ifndef MRMESH_NO_OPENVDB
 MRMesh* mrOffsetMesh( MRMeshPart mp, float offset, const MROffsetParameters* params_, MRString** errorString )
 {
     OffsetParameters params;
@@ -95,6 +96,7 @@ MRMesh* mrDoubleOffsetMesh( MRMeshPart mp, float offsetA, float offsetB, const M
     }
     return nullptr;
 }
+#endif
 
 MRMesh* mrMcOffsetMesh( MRMeshPart mp, float offset, const MROffsetParameters* params_, MRString** errorString )
 {

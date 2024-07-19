@@ -66,6 +66,9 @@
     <ClCompile Include="Basic\MRShowGlobalBasis.cpp">
       <Filter>Basic</Filter>
     </ClCompile>
+    <ClCompile Include="Basic\MRMouseControlChecker.cpp">
+      <Filter>Basic</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />

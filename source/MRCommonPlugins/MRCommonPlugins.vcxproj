@@ -24,6 +24,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Basic\MRCameraOrientationPlugin.cpp" />
+    <ClCompile Include="Basic\MRMouseControlChecker.cpp" />
     <ClCompile Include="Basic\MRMoveObjectByMouse.cpp" />
     <ClCompile Include="Basic\MRShowGlobalBasis.cpp" />
     <ClCompile Include="Selectors\MRSelectObjectByClick.cpp" />

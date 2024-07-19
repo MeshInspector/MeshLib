@@ -163,6 +163,7 @@ void ViewerSetup::unloadExtendedLibraries() const
 #else
         dlclose( loadedModules_.back().module );
 #endif //_WIN32
+        spdlog::info( "Unload finished {}", utf8string( loadedModules_.back().filename ) );
         loadedModules_.pop_back();
     }
 #endif // ifndef __EMSCRIPTEN__

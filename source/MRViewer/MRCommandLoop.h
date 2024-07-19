@@ -42,9 +42,10 @@ public:
 
     // Execute all commands from loop
     MRVIEWER_API static void processCommands();
+
 private:
     CommandLoop() = default;
-    ~CommandLoop() = default;
+    ~CommandLoop();
 
     static CommandLoop& instance_();
 

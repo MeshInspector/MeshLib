@@ -58,7 +58,6 @@ private:
     {
         CommandFunc func;
         StartPosition state{ StartPosition::AfterSplashHide };
-        bool afterAppear{ false };
         std::condition_variable callerThreadCV;
         std::thread::id threadId;
     };

@@ -43,6 +43,9 @@ public:
     // Execute all commands from loop
     MRVIEWER_API static void processCommands();
 
+    // Clears the queue without executing the commands
+    MRVIEWER_API static void removeCommands();
+
 private:
     CommandLoop() = default;
     ~CommandLoop();

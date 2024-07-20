@@ -599,6 +599,7 @@ int Viewer::launch( const LaunchParams& params )
     }
     if ( params.close )
         launchShut();
+    CommandLoop::removeCommands();
     return EXIT_SUCCESS;
 }
 

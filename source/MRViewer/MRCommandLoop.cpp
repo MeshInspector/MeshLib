@@ -85,6 +85,14 @@ void CommandLoop::processCommands()
         cmdToNotify->callerThreadCV.notify_one();
 }
 
+void CommandLoop::removeCommands()
+{
+    auto& inst = instance_();
+    std::unique_lock<std::mutex> lock( inst.mutex_ );
+    while ( !inst.commands_.empty() )
+        inst.commands_.pop();
+}
+
 CommandLoop& CommandLoop::instance_()
 {
     static CommandLoop commadLoop_;

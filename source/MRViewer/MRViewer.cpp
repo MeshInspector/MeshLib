@@ -587,6 +587,7 @@ int Viewer::launch( const LaunchParams& params )
         glfwShowWindow( window );
 
     CommandLoop::setState( CommandLoop::StartPosition::AfterWindowAppear );
+    CommandLoop::processCommands(); // execute remaining commands in the queue, important for params.startEventLoop==false
 
     if ( params.startEventLoop )
     {
@@ -598,6 +599,7 @@ int Viewer::launch( const LaunchParams& params )
     }
     if ( params.close )
         launchShut();
+    CommandLoop::removeCommands();
     return EXIT_SUCCESS;
 }
 

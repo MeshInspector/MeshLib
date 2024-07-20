@@ -42,8 +42,8 @@ class ViewerEventQueue;
 class Viewport;
 class RibbonMenu;
 class RibbonMenuItem;
-class MRVIEWER_CLASS RibbonFontManager;
-class MRVIEWER_CLASS ShortcutManager;
+class RibbonFontManager;
+class ShortcutManager;
 struct ShortcutKey;
 enum class ShortcutCategory : char;
 
@@ -59,7 +59,7 @@ template<typename ...Connectables>
 class StateListenerPlugin;
 using StatePlugin = StateListenerPlugin<>;
 
-class MRVIEWER_CLASS HistoryStore;
+class HistoryStore;
 
 using ViewerEventCallback = std::function<void()>;
 

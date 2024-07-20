@@ -101,8 +101,6 @@ private:
     int selectedUserPreset_{ 0 };
     std::vector<std::string> userThemesPresets_;
 
-    RibbonMenu* ribbonMenu_ = nullptr;
-
     std::unique_ptr<ShadowsGL> shadowGl_;
 
     SpaceMouseParameters spaceMouseParams_;

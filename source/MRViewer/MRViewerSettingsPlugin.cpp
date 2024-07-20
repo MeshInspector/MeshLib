@@ -173,8 +173,6 @@ bool ViewerSettingsPlugin::onEnable_()
 {
     backgroundColor_.w = -1.0f;
 
-    ribbonMenu_ = getViewerInstance().getMenuPluginAs<RibbonMenu>().get();
-
     updateDialog_();
 
     return true;
@@ -183,7 +181,6 @@ bool ViewerSettingsPlugin::onEnable_()
 bool ViewerSettingsPlugin::onDisable_()
 {
     userThemesPresets_.clear();
-    ribbonMenu_ = nullptr;
     return true;
 }
 
@@ -217,6 +214,10 @@ void ViewerSettingsPlugin::drawTab_( float menuWidth, float menuScaling )
 
 void ViewerSettingsPlugin::drawQuickTab_( float menuWidth, float menuScaling )
 {
+    auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
+    if ( !ribbonMenu )
+        return;
+
     drawSeparator_( "General", menuScaling );
 
     drawThemeSelector_( menuScaling );
@@ -231,11 +232,11 @@ void ViewerSettingsPlugin::drawQuickTab_( float menuWidth, float menuScaling )
     ImGui::PopStyleVar();
 
     const float btnHalfSizeX = ( menuWidth - style.WindowPadding.x * 2 - style.ItemSpacing.x ) / 2.f;
-    if ( UI::button( "Toolbar Customize", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu_ )
-        ribbonMenu_->openToolbarCustomize();
+    if ( UI::button( "Toolbar Customize", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu )
+        ribbonMenu->openToolbarCustomize();
     ImGui::SameLine();
-    if ( UI::button( "Show Hotkeys", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu_ )
-        ribbonMenu_->setShowShortcuts( true );
+    if ( UI::button( "Show Hotkeys", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu )
+        ribbonMenu->setShowShortcuts( true );
 
     drawMouseSceneControlsSettings_( menuWidth, menuScaling );
 }
@@ -250,6 +251,9 @@ void ViewerSettingsPlugin::drawGlobalSettings_( float buttonWidth, float menuSca
 
 void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScaling )
 {
+    auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
+    if ( !ribbonMenu )
+        return;
     const float btnHalfSizeX = 168.0f * menuScaling;
 
     drawSeparator_( "Interface", menuScaling );
@@ -267,15 +271,15 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
     if ( savedDialogsVal != savedDialogsBackUp )
         viewer->getMenuPlugin()->enableSavedDialogPositions( savedDialogsVal );
 
-    if ( UI::button( "Toolbar Customize", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu_ )
-        ribbonMenu_->openToolbarCustomize();
+    if ( UI::button( "Toolbar Customize", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu )
+        ribbonMenu->openToolbarCustomize();
 
     drawSeparator_( "Behavior", menuScaling );
 
     ImGui::SetNextItemWidth( menuWidth * 0.5f );
-    if ( ribbonMenu_ )
+    if ( ribbonMenu )
     {
-        auto sceneObjectsListDrawer = ribbonMenu_->getSceneObjectsList();
+        auto sceneObjectsListDrawer = ribbonMenu->getSceneObjectsList();
         if ( sceneObjectsListDrawer )
         {
             UI::checkbox( "Make Visible on Select",
@@ -295,8 +299,8 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
         }
 
         UI::checkbox( "Auto Close Previous Tool",
-                                                std::bind( &RibbonMenu::getAutoCloseBlockingPlugins, ribbonMenu_ ),
-                                                std::bind( &RibbonMenu::setAutoCloseBlockingPlugins, ribbonMenu_, std::placeholders::_1 ) );
+                                                std::bind( &RibbonMenu::getAutoCloseBlockingPlugins, ribbonMenu ),
+                                                std::bind( &RibbonMenu::setAutoCloseBlockingPlugins, ribbonMenu, std::placeholders::_1 ) );
         UI::setTooltipIfHovered( "Automatically close blocking tool when another blocking tool is activated", menuScaling );
 
 
@@ -350,12 +354,15 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
 
 void ViewerSettingsPlugin::drawControlTab_( float menuWidth, float menuScaling )
 {
+    auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
+    if ( !ribbonMenu )
+        return;
     drawSeparator_( "Keyboard", menuScaling );
 
     auto& style = ImGui::GetStyle();
     const float btnHalfSizeX = ( menuWidth - style.WindowPadding.x * 2 - style.ItemSpacing.x ) / 2.f;
-    if ( UI::button( "Show Hotkeys", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu_ )
-        ribbonMenu_->setShowShortcuts( true );
+    if ( UI::button( "Show Hotkeys", Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu )
+        ribbonMenu->setShowShortcuts( true );
 
     drawMouseSceneControlsSettings_( menuWidth, menuScaling );
     drawTouchpadSettings_( menuScaling );

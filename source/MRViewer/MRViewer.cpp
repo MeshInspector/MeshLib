@@ -914,6 +914,7 @@ void Viewer::launchShut()
 
     // Clear plugins
     plugins.clear();
+    menuPlugin_.reset();
 
     // Clear objects
     SceneRoot::get().removeAllChildren();

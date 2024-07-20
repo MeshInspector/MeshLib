@@ -164,6 +164,11 @@ void ViewerSettingsPlugin::addComboSettings( const TabType tab, std::shared_ptr<
     comboSettings_[size_t( tab )].push_back( settings );
 }
 
+void ViewerSettingsPlugin::delComboSettings( const TabType tab, const ExternalSettings * settings )
+{
+    std::erase_if( comboSettings_[size_t( tab )], [settings]( const auto & v ) { return v.get() == settings; } );
+}
+
 bool ViewerSettingsPlugin::onEnable_()
 {
     backgroundColor_.w = -1.0f;

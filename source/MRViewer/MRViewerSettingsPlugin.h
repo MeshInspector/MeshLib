@@ -50,8 +50,12 @@ public:
         // if not overriden this setting will be drawn in tools block
         virtual const char* separatorName() const { return "Tools"; }
     };
-    // add external settings with UI combo box
-    MRVIEWER_API void addComboSettings( const TabType tab, std::shared_ptr<ExternalSettings> settings);
+
+    /// add external settings with UI combo box
+    MRVIEWER_API void addComboSettings( const TabType tab, std::shared_ptr<ExternalSettings> settings );
+
+    /// delete external settings with UI combo box
+    MRVIEWER_API void delComboSettings( const TabType tab, const ExternalSettings * settings );
 
 private:
     virtual bool onEnable_() override;

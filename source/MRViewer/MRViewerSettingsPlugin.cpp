@@ -166,7 +166,8 @@ void ViewerSettingsPlugin::addComboSettings( const TabType tab, std::shared_ptr<
 
 void ViewerSettingsPlugin::delComboSettings( const TabType tab, const ExternalSettings * settings )
 {
-    std::erase_if( comboSettings_[size_t( tab )], [settings]( const auto & v ) { return v.get() == settings; } );
+    [[maybe_unused]] auto c = std::erase_if( comboSettings_[size_t( tab )], [settings]( const auto & v ) { return v.get() == settings; } );
+    assert( c == 1 );
 }
 
 bool ViewerSettingsPlugin::onEnable_()

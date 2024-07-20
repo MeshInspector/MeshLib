@@ -140,27 +140,39 @@ private:
 };
 
 template<typename T>
-struct RibbonMenuItemCall
+class RibbonMenuItemCall
 {
-    template<typename Func>
-    RibbonMenuItemCall( Func f )
+    static_assert( std::is_base_of_v<RibbonMenuItem, T> );
+public:
+    template<typename F>
+    RibbonMenuItemCall( F f, std::function<void(std::shared_ptr<T>)> g ) : g_( std::move( g ) )
     {
-        static_assert( std::is_base_of_v<RibbonMenuItem, T> );
         const auto& items = RibbonSchemaHolder::schema().items;
         for ( const auto& item : items )
         {
             auto plugin = std::dynamic_pointer_cast< T >( item.second.item );
             if ( !plugin )
                 continue;
-            f( plugin );
+            f( plugin_ = std::move( plugin ) );
+            break;
         }
     }
+    ~RibbonMenuItemCall()
+    {
+        if ( g_ && plugin_ )
+            g_( plugin_ );
+    }
+private:
+    std::shared_ptr<T> plugin_;
+    std::function<void(std::shared_ptr<T>)> g_;
 };
 
+/// registers plugin on module loading, and unregister plugin on module unloading
 #define MR_REGISTER_RIBBON_ITEM(pluginType) \
     static MR::RibbonMenuItemAdder<pluginType> ribbonMenuItemAdder##pluginType##_;
 
-#define MR_RIBBON_ITEM_CALL(pluginType,func) \
-    static MR::RibbonMenuItemCall<pluginType> ribbonMenuItemCall##func##pluginType##_( func );
+/// calls f(const std::shared_ptr<plugin> &) on module loading, and calls g(const std::shared_ptr<plugin> &) on module unloading
+#define MR_RIBBON_ITEM_CALL(pluginType,f,g) \
+    static MR::RibbonMenuItemCall<pluginType> ribbonMenuItemCall##func##pluginType##_( f, g );
 
 }

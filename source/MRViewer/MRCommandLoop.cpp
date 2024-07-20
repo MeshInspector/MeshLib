@@ -3,6 +3,7 @@
 #include "MRPch/MRSpdlog.h"
 #include <GLFW/glfw3.h>
 #include <assert.h>
+#include "MRMesh/MRSystem.h"
 
 namespace MR
 {
@@ -91,6 +92,7 @@ void CommandLoop::removeCommands()
     std::unique_lock<std::mutex> lock( inst.mutex_ );
     while ( !inst.commands_.empty() )
         inst.commands_.pop();
+    spdlog::debug( "CommandLoop::removeCommands(): queue size={}", inst.commands_.size() );
 }
 
 CommandLoop& CommandLoop::instance_()
@@ -125,6 +127,9 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition
     cmd->threadId = std::this_thread::get_id();
     std::unique_lock<std::mutex> lock( inst.mutex_ );
     inst.commands_.push( cmd );
+
+    //!!!
+    spdlog::info( "Push command {}\n{}", inst.commands_.size(), getCurrentStacktrace() );
 
     getViewerInstance().postEmptyEvent();
     if ( blockThread )

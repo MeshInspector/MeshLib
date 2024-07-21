@@ -12,6 +12,17 @@
 namespace MR
 {
 
+
+constexpr bool canSolvePolynomial( auto degree )
+{
+    return 1 <= degree && degree <= 4;
+}
+
+constexpr bool canMinimizePolynomial( auto degree )
+{
+    return degree <= 5;
+}
+
 // Please note that these template classes are explicitly instantiated in the corresponding .cpp files.
 // The following degrees are instantiated: [2; 6].
 
@@ -28,12 +39,12 @@ struct Polynomial
     MRMESH_API T operator() ( T x ) const;
 
     MRMESH_API std::vector<T> solve( T tol ) const
-        requires ( 1 <= degree && degree <= 4 );
+        requires ( canSolvePolynomial( degree ) );
 
     MRMESH_API Polynomial<T, degree == 0 ? 0 : degree - 1> deriv() const;
 
     MRMESH_API T intervalMin( T a, T b ) const
-        requires ( degree <= 5 );
+        requires ( canMinimizePolynomial( degree ) );
 };
 
 template <size_t degree>

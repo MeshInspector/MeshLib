@@ -145,11 +145,11 @@ T Polynomial<T, degree>::operator()( T x ) const
 
 template <typename T, size_t degree>
 std::vector<T> Polynomial<T, degree>::solve( T tol ) const
-    requires ( 1 <= degree && degree <= 4 )
+    requires ( canSolvePolynomial( degree ) )
 {
     // workaround for old clang versions
 #if defined( __clang__ ) && ( __clang_major__ < 15 )
-    if constexpr ( degree <= 4 )
+    if constexpr ( canSolvePolynomial( degree ) )
     {
 #endif
     Solver<T, degree> solver;
@@ -184,7 +184,7 @@ Polynomial<T, degree == 0 ? 0 : degree - 1> Polynomial<T, degree>::deriv() const
 
 template <typename T, size_t degree>
 T Polynomial<T, degree>::intervalMin( T l, T r ) const
-    requires ( degree <= 5 )
+    requires ( canMinimizePolynomial( degree ) )
 {
     auto eval = [this] ( T x )
     {
@@ -200,7 +200,7 @@ T Polynomial<T, degree>::intervalMin( T l, T r ) const
 
     // workaround for old clang versions
 #if defined( __clang__ ) && ( __clang_major__ < 15 )
-    if constexpr ( degree <= 5 )
+    if constexpr ( canMinimizePolynomial( degree ) )
     {
 #endif
     if constexpr ( degree >= 2 )
@@ -264,7 +264,7 @@ std::optional<T> PolynomialWrapper<T>::intervalMin( T a, T b ) const
     return std::visit( overloaded{
         [a, b] <size_t degree> ( const Polynomial<T, degree>& p ) -> std::optional<T>
         {
-            if constexpr ( 2 <= degree && degree <= 5 )
+            if constexpr ( canMinimizePolynomial( degree ) )
                 return p.intervalMin( a, b );
             else
                 return std::nullopt;

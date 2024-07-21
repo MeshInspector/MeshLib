@@ -6,6 +6,7 @@
 #include "MRMesh/MRMeshBoolean.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRGetSystemInfoJson.h"
+#include "MRViewer/MRCommandLoop.h"
 
 #ifndef __EMSCRIPTEN__
 #include "MRMesh/MRPython.h"
@@ -92,5 +93,6 @@ int main( int argc, char** argv )
     spdlog::info(fmt::format( "Test {}", fmt::join( xs, "," ) ));
 
     ::testing::InitGoogleTest(&argc, argv);
+    MR::CommandLoop::removeCommands(); // that are added there by plugin constructors
     return RUN_ALL_TESTS();
 }

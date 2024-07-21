@@ -13,29 +13,25 @@ public:
     ActivePluginsList() :
         RibbonMenuItem( "Active Plugins List" )
     {
-        CommandLoop::appendCommand( [&]
-        {
-            menu_ = getViewerInstance().getMenuPluginAs<RibbonMenu>();
-        } );
     }
     virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const override
     {
-        if ( !menu_ )
+        auto menu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
+        if ( !menu )
             return "No menu present";
-        if ( !menu_->hasAnyActiveItem() )
+        if ( !menu->hasAnyActiveItem() )
             return "No active tools.";
         return "";
     }
 
     virtual bool action() override
     {
-        if ( !menu_ )
+        auto menu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
+        if ( !menu )
             return false;
-        menu_->showActiveList();
+        menu->showActiveList();
         return false;
     }
-private:
-    std::shared_ptr<RibbonMenu> menu_{ nullptr };
 };
 
 MR_REGISTER_RIBBON_ITEM( ActivePluginsList )

@@ -70,8 +70,8 @@ def test_relax_inside():
     torus.deleteFaces(faceBitSetToDelete)
 
     bdVerts = mrmesh.getBoundaryVerts(torus.topology)
-    extBdVerts = mrmesh.expand(torus.topology, bdVerts, 5);
-    region = torus.topology.getValidVerts() - extBdVerts;
+    mrmesh.expand(torus.topology, bdVerts, 5);
+    region = torus.topology.getValidVerts() - bdVerts;
 
     params = mrmesh.MeshApproxRelaxParams()
     params.region = region

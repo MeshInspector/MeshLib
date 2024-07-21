@@ -61,3 +61,19 @@ def test_straighten_boundary():
 
     holes = torus.topology.findHoleRepresentiveEdges()
     mrmesh.straightenBoundary(torus, holes[0], 13, 5)
+
+def test_relax_inside():
+    torus = mrmesh.makeTorus(2, 1, 10, 10, None)
+    faceBitSetToDelete = mrmesh.FaceBitSet()
+    faceBitSetToDelete.resize(5, False)
+    faceBitSetToDelete.set(mrmesh.FaceId(1), True)
+    torus.deleteFaces(faceBitSetToDelete)
+
+    bdVerts = getBoundaryVerts(torus.topology)
+    extBdVerts = expand(torus.topology, bdVerts, 5);
+    region = torus.topology.getValidVerts() - extBdVerts;
+
+    params = mrmesh.MeshApproxRelaxParams()
+    params.region = region
+    res = mrmesh.relaxApprox(torus, params)
+    assert( res )

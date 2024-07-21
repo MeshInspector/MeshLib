@@ -1,5 +1,7 @@
 #pragma once
 
+#include "MRMeshFwd.h"
+
 #if (defined(__APPLE__) && defined(__clang__))
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-parameter"
@@ -22,12 +24,17 @@ namespace MR
 template<typename T>
 struct Signal : boost::signals2::signal<T>
 {
+    using Parent = boost::signals2::signal<T>;
+
     Signal() noexcept = default;
-    Signal( const Signal& ) noexcept : boost::signals2::signal<T>() {}
+    Signal( const Signal& ) noexcept : Parent() {}
     Signal( Signal&& ) noexcept = default;
     Signal& operator =( const Signal& ) noexcept { return *this; }
     Signal& operator =( Signal&& ) noexcept = default;
-    Signal& operator =( boost::signals2::signal<T>&& b ) noexcept { *static_cast<boost::signals2::signal<T>*>(this) = std::move( b ); return *this; }
+    Signal& operator =( Parent&& b ) noexcept { *static_cast<Parent*>(this) = std::move( b ); return *this; }
+
+    /// implementation of connect method in MRMesh shared library allows the caller shared library to be safely unloaded
+    MRMESH_API boost::signals2::connection connect( const boost::function<T> & slot, boost::signals2::connect_position position = boost::signals2::at_back );
 };
 
 } //namespace MR

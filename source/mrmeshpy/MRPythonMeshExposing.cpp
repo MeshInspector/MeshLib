@@ -366,6 +366,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, RegionBoundary, [] ( pybind11::module_& m )
         pybind11::arg( "topology" ), pybind11::arg( "verts" ), "composes the set of all faces incident to given vertices" );
     m.def( "getInnerFaces", ( FaceBitSet( * )( const MeshTopology&, const VertBitSet& ) )& getInnerFaces,
         pybind11::arg( "topology" ), pybind11::arg( "verts" ), "composes the set of all faces with all their vertices in given set" );
+
+    m.def( "getBoundaryVerts", &getBoundaryVerts, pybind11::arg( "topology" ), pybind11::arg( "region" ) = nullptr,
+        "composes the set of all boundary vertices for given region (or whole mesh if !region)" );
+    m.def( "getRegionBoundaryVerts", &getRegionBoundaryVerts, pybind11::arg( "topology" ), pybind11::arg( "region" ),
+        "composes the set of all boundary vertices for given region, unlike getBoundaryVerts the vertices of mesh boundary having no incident not-region faces are not returned" );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshComponents, [] ( pybind11::module_& m )

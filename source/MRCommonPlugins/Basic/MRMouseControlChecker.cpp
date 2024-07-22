@@ -1,4 +1,3 @@
-#include "exports.h"
 #include "MRViewer/MRViewerPlugin.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRRibbonMenu.h"

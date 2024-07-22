@@ -751,7 +751,7 @@ void deserializeFromJson( const Json::Value& root, std::vector<TextureId>& textu
         const auto bin = decode64( root["Data"].asString() );
         const auto size = std::min<size_t>( root["Size"].asUInt64(), bin.size() / sizeof( TextureId ) );
         texturePerFace.resize( size );
-        std::copy( ( UVCoord* )bin.data(), ( UVCoord* )( bin.data() ) + size, texturePerFace.data() );
+        std::copy( ( TextureId* )bin.data(), ( TextureId* )( bin.data() ) + size, texturePerFace.data() );
     }
 }
 

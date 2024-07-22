@@ -367,7 +367,8 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         res = 1;
     }
 #endif
-    setup.unloadExtendedLibraries();
+    if ( params.unloadPluginsAtEnd )
+        setup.unloadExtendedLibraries();
     return res;
 }
 
@@ -416,7 +417,8 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
             flag == "-console" ||
             flag == "-openGL3" ||
             flag == "-noRenderInTexture" ||
-            flag == "-develop"
+            flag == "-develop" ||
+            flag == "-unloadPluginsAtEnd"
             )
             reserved = true;
         else if ( flag == "-width" )
@@ -505,6 +507,8 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             nextH = true;
         else if ( flag == "-animateFPS" )
             nextFPS = true;
+        else if ( flag == "-unloadPluginsAtEnd" )
+            params.unloadPluginsAtEnd = true;
     }
 }
 

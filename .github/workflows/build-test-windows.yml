@@ -141,7 +141,7 @@ jobs:
 
       - name: Run Start-and-Exit Tests
         working-directory: source\x64\${{ matrix.config }}
-        run: .\MeshViewer.exe -tryHidden -noEventLoop
+        run: .\MeshViewer.exe -tryHidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests
         run: py -3 scripts\run_unit_test_script.py ${{ matrix.config }}

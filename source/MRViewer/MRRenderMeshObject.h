@@ -32,7 +32,7 @@ protected:
     int bordersSize_{ 0 };
     Vector2i faceSelectionTextureSize_;
     Vector2i faceNormalsTextureSize_;
-    Vector2i texturePerFaceTextureSize_;
+    Vector2i texturePerFaceSize_;
 
     MRVIEWER_API RenderBufferRef<Vector3f> loadVertPosBuffer_();
     MRVIEWER_API RenderBufferRef<Vector3f> loadVertNormalsBuffer_();

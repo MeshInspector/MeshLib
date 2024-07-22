@@ -60,7 +60,6 @@
 #include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRPch/MRWasm.h"
-#include "MRPch/MRSpdlog.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -1107,7 +1106,6 @@ Viewer::Viewer() :
 
 Viewer::~Viewer()
 {
-    spdlog::debug( "Viewer::~Viewer()" );
     glInitialized_ = false;
     alphaSorter_.reset();
     sceneTexture_.reset();

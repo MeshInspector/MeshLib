@@ -17,16 +17,10 @@ class RecentFilesStore
 {
 public:
     RecentFilesStore() = default;
-
     /// Capacity is maximum stored filenames,
     /// it needs app name to store data to correct place in system storage
     RecentFilesStore( std::string appName, int capacity = 10 ) :
         appName_{std::move(appName)}, capacity_{capacity} {}
-
-    ~RecentFilesStore();
-
-    RecentFilesStore & operator = ( const RecentFilesStore & ) = default;
-    RecentFilesStore & operator = ( RecentFilesStore && ) = default;
 
     /// Saves filename on top of recently opened stack,
     /// if file is already in the storage put it on top
@@ -44,7 +38,7 @@ public:
 private:
     std::string appName_;
     int capacity_{5};
-    Signal<void( const FileNamesStack& files )> updateSignal_;
+    boost::signals2::signal<void( const FileNamesStack& files )> updateSignal_;
 };
 
 } //namespace MR

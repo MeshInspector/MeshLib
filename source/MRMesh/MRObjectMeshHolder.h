@@ -127,11 +127,12 @@ public:
     const Vector<MeshTexture, TextureId>& getTextures() const { return textures_; }
     virtual void setTextures( Vector<MeshTexture, TextureId> texture ) { textures_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
     virtual void updateTextures( Vector<MeshTexture, TextureId>& updated ) { std::swap( textures_, updated ); dirty_ |= DIRTY_TEXTURE; }
+
+    /// the texture ids for the faces if more than one texture is used to texture the object
+    virtual void setTexturePerFace( Vector<TextureId, FaceId> texturePerFace ) { texturePerFace_ = std::move( texturePerFace ); dirty_ |= DIRTY_TEXTURE; }
     virtual void addTexture( MeshTexture texture ) { textures_.emplace_back( std::move( texture ) ); dirty_ |= DIRTY_TEXTURE; }
     const Vector<TextureId, FaceId>& getTexturePerFace() const { return texturePerFace_; }
-    // the texture ids for the faces if more than one texture is used to texture the object
-    virtual void setTexturePerFace( Vector<TextureId, FaceId> texturePerFace ) { texturePerFace_ = std::move( texturePerFace ); dirty_ |= DIRTY_TEXTURE; }
-
+    
     const VertUVCoords& getUVCoords() const { return uvCoordinates_; }
     virtual void setUVCoords( VertUVCoords uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
     virtual void updateUVCoords( VertUVCoords& updated ) { std::swap( uvCoordinates_, updated ); dirty_ |= DIRTY_UV; }

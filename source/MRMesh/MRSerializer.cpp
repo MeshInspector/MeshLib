@@ -744,6 +744,17 @@ void deserializeFromJson( const Json::Value& root, MeshTexture& texture )
     }
 }
 
+void deserializeFromJson( const Json::Value& root, std::vector<TextureId>& texturePerFace )
+{
+    if ( root["Data"].isString() && root["Size"].isInt() )
+    {
+        const auto bin = decode64( root["Data"].asString() );
+        const auto size = std::min<size_t>( root["Size"].asUInt64(), bin.size() / sizeof( TextureId ) );
+        texturePerFace.resize( size );
+        std::copy( ( UVCoord* )bin.data(), ( UVCoord* )( bin.data() ) + size, texturePerFace.data() );
+    }
+}
+
 void deserializeFromJson( const Json::Value& root, std::vector<UVCoord>& uvCoords )
 {
     if ( root["Data"].isString() && root["Size"].isInt() )

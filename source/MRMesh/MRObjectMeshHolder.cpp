@@ -182,6 +182,8 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
         deserializeFromJson( root["Texture"], textures_.front() );
     }
 
+    if ( root["TexturePerFace"].isObject() )
+        deserializeFromJson( root["TexturePerFace"], texturePerFace_.vec_ );
 
     if ( root["UVCoordinates"].isObject() )
         deserializeFromJson( root["UVCoordinates"], uvCoordinates_.vec_ );

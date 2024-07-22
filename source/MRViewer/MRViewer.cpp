@@ -937,6 +937,43 @@ void Viewer::launchShut()
     glInitialized_ = false;
     isLaunched_ = false;
     spaceMouseHandler_.reset();
+
+    /// disconnect all slots before shared libraries with plugins are unloaded
+    mouseDownSignal = {};
+    mouseUpSignal = {};
+    mouseMoveSignal = {};
+    mouseScrollSignal = {};
+    cursorEntranceSignal = {};
+    charPressedSignal = {};
+    keyUpSignal = {};
+    keyDownSignal = {};
+    keyRepeatSignal = {};
+    spaceMouseMoveSignal = {};
+    spaceMouseDownSignal = {};
+    spaceMouseUpSignal = {};
+    spaceMouseRepeatSignal = {};
+    preDrawSignal = {};
+    preDrawPostViewportSignal = {};
+    drawSignal = {};
+    postDrawPreViewportSignal = {};
+    postDrawSignal = {};
+    dragDropSignal = {};
+    postResizeSignal = {};
+    postRescaleSignal = {};
+    interruptCloseSignal = {};
+    touchStartSignal = {};
+    touchMoveSignal = {};
+    touchEndSignal = {};
+    touchpadRotateGestureBeginSignal = {};
+    touchpadRotateGestureUpdateSignal = {};
+    touchpadRotateGestureEndSignal = {};
+    touchpadSwipeGestureBeginSignal = {};
+    touchpadSwipeGestureUpdateSignal = {};
+    touchpadSwipeGestureEndSignal = {};
+    touchpadZoomGestureBeginSignal = {};
+    touchpadZoomGestureUpdateSignal = {};
+    touchpadZoomGestureEndSignal = {};
+    postFocusSignal = {};
 }
 
 void Viewer::init_()

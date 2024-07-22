@@ -6,7 +6,13 @@ namespace MR
 
 class Object;
 
-class SelectObjectByClick : public StateListenerPlugin<MouseDownListener, MouseUpListener, MouseMoveListener>
+class SelectObjectByClick :
+    public StateListenerPlugin<
+        MouseDownListener,
+        MouseUpListener,
+        MouseMoveListener
+    >,
+    public PluginCloseOnEscPressed
 {
 public:
     SelectObjectByClick();

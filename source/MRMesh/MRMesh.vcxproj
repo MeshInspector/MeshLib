@@ -219,6 +219,7 @@
     <ClInclude Include="MRSeparationPoint.h" />
     <ClInclude Include="MRSolarRadiation.h" />
     <ClInclude Include="MRSphere.h" />
+    <ClInclude Include="MRStacktrace.h" />
     <ClInclude Include="MRSymMatrix4.h" />
     <ClInclude Include="MRTiffIO.h" />
     <ClInclude Include="MRRectIndexer.h" />

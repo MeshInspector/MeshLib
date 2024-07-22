@@ -124,11 +124,16 @@ public:
     // for backward compatibility
     [[deprecated]] MRMESH_API virtual void setTexture( MeshTexture texture );
     [[deprecated]] MRMESH_API virtual void updateTexture( MeshTexture& updated );
-    
     const Vector<MeshTexture, TextureId>& getTextures() const { return textures_; }
     virtual void setTextures( Vector<MeshTexture, TextureId> texture ) { textures_ = std::move( texture ); dirty_ |= DIRTY_TEXTURE; }
     virtual void updateTextures( Vector<MeshTexture, TextureId>& updated ) { std::swap( textures_, updated ); dirty_ |= DIRTY_TEXTURE; }
 
+    /// the texture ids for the faces if more than one texture is used to texture the object
+    /// texture coordinates (uvCoordinates_) at a point can belong to different textures, depending on which face the point belongs to
+    virtual void setTexturePerFace( Vector<TextureId, FaceId> texturePerFace ) { texturePerFace_ = std::move( texturePerFace ); dirty_ |= DIRTY_TEXTURE_PER_FACE; }
+    virtual void addTexture( MeshTexture texture ) { textures_.emplace_back( std::move( texture ) ); dirty_ |= DIRTY_TEXTURE_PER_FACE; }
+    const Vector<TextureId, FaceId>& getTexturePerFace() const { return texturePerFace_; }
+    
     const VertUVCoords& getUVCoords() const { return uvCoordinates_; }
     virtual void setUVCoords( VertUVCoords uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
     virtual void updateUVCoords( VertUVCoords& updated ) { std::swap( uvCoordinates_, updated ); dirty_ |= DIRTY_UV; }
@@ -220,6 +225,8 @@ protected:
     /// Texture options
     Vector<MeshTexture, TextureId> textures_;
     VertUVCoords uvCoordinates_; ///< vertices coordinates in texture
+
+    Vector<TextureId, FaceId> texturePerFace_;
 
     MeshTexture ancillaryTexture_;
     VertUVCoords ancillaryUVCoordinates_; ///< vertices coordinates in ancillary texture

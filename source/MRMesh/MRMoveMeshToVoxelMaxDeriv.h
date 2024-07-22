@@ -22,6 +22,14 @@ struct MoveMeshToVoxelMaxDerivSettings
     /// estimate the derivative based on it
     int samplePoints = 6;
 
+    /// degree of the polynomial used to fit sampled points. Must be in range [3; 6]
+    int degree = 3;
+
+    /// for each iteration, if target position of the vertex is greater than this threshold, it is disregarded
+    /// for small degrees, this value should be small, for large degrees it may be larger
+    /// measured in number of voxels
+    float outlierThreshold = 1.f;
+
     /// force of the smoothing (relaxation) of vector field of shifts on each iteration
     float intermediateSmoothForce = 0.3f;
 
@@ -111,7 +119,17 @@ public:
         return bestFitParabola.getBestParabola();
     }
 
-    MRMESH_API static Polynomialf<6> getBestPolynomial( const std::vector<float>& values );
+    template <size_t degree>
+    static Polynomialf<degree> getBestPolynomial( const std::vector<float>& values )
+    {
+        BestFitPolynomial<double, degree> bestFit( 0.f );
+        for ( size_t i = 0; i < values.size(); ++i )
+            bestFit.addPoint( pseudoIndex( int( i ), int( values.size() ) ), values[i] );
+        auto poly = bestFit.getBestPolynomial().template cast<float>();
+        return poly;
+    }
+
+    MRMESH_API static PolynomialWrapperf getBestPolynomial( const std::vector<float>& values, size_t degree );
 
 private:
     MeshType& mesh_;

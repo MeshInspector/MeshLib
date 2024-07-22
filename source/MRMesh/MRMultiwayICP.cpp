@@ -630,7 +630,12 @@ bool MultiwayICP::updateLayerPairs_( ICPLayer l, ProgressCallback cb )
     using LayerMaps = Vector<ObjMap, ICPElementId>;
     LayerTrees trees;
     LayerMaps maps;
-    if ( l > 0 )
+    if ( l == 0 )
+    {
+        for ( const auto& obj : objs_ )
+            obj.obj.cacheAABBTree(); // trigger AABB Tree build if needed not to fall in deep stack while projecting
+    }
+    else
     {
         // only for upper layers
         trees.resize( numGroups );

@@ -129,6 +129,7 @@ public:
     virtual void updateTextures( Vector<MeshTexture, TextureId>& updated ) { std::swap( textures_, updated ); dirty_ |= DIRTY_TEXTURE; }
 
     /// the texture ids for the faces if more than one texture is used to texture the object
+    /// texture coordinates (uvCoordinates_) at a point can belong to different textures, depending on which face the point belongs to
     virtual void setTexturePerFace( Vector<TextureId, FaceId> texturePerFace ) { texturePerFace_ = std::move( texturePerFace ); dirty_ |= DIRTY_TEXTURE; }
     virtual void addTexture( MeshTexture texture ) { textures_.emplace_back( std::move( texture ) ); dirty_ |= DIRTY_TEXTURE; }
     const Vector<TextureId, FaceId>& getTexturePerFace() const { return texturePerFace_; }

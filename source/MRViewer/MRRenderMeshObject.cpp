@@ -16,6 +16,7 @@
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRSceneSettings.h"
 #include "MRViewer/MRRenderDefaultObjects.h"
+#include "MRMesh/MRParallelFor.h"
 
 namespace MR
 {
@@ -989,13 +990,12 @@ RenderBufferRef<unsigned> RenderMeshObject::loadTexturePerFaceTextureBuffer_()
     auto buffer = glBuffer.prepareBuffer<unsigned>( texturePerFaceSize_.x * texturePerFaceSize_.y );
 
     const auto& texPerFace = objMesh_->getTexturePerFace();
-    tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( 0, ( int )buffer.size(), [&] ( int r )
     {
-        for ( int r = range.begin(); r < range.end(); ++r )
-            if ( r < texPerFace.size() )
-                buffer[r] = texPerFace.vec_[r];
-            else
-                buffer[r] = 0;
+        if ( r < texPerFace.size() )
+            buffer[r] = texPerFace.vec_[r];
+        else
+            buffer[r] = 0;
     } );
 
     return buffer;

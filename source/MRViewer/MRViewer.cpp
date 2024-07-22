@@ -555,6 +555,7 @@ void Viewer::mainLoopFunc_()
 
 int Viewer::launch( const LaunchParams& params )
 {
+    assert( false );
     if ( isLaunched_ )
     {
         spdlog::error( "Viewer is already launched!" );

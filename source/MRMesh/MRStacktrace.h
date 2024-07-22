@@ -15,6 +15,8 @@
 #include <boost/stacktrace.hpp>
 #endif
 #else //not _WIN32
+#define BOOST_STACKTRACE_LINK
+#define BOOST_STACKTRACE_USE_BACKTRACE
 #include <boost/stacktrace.hpp>
 #endif //_WIN32
 

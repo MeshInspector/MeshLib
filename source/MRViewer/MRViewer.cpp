@@ -312,13 +312,13 @@ void Viewer::popEventByName( const std::string& name )
         eventQueue_->popByName( name );
 }
 
-void addLabel( ObjectMesh& obj, const std::string& str, const Vector3f& pos )
+void addLabel( ObjectMesh& obj, const std::string& str, const Vector3f& pos, bool depthTest )
 {
     auto label = std::make_shared<ObjectLabel>();
     label->setFrontColor( Color::white(), false );
     label->setLabel( { str, pos } );
     label->setPivotPoint( Vector2f( 0.5f, 0.5f ) );
-    label->setVisualizeProperty( false, VisualizeMaskType::DepthTest, ViewportMask::all() );
+    label->setVisualizeProperty( depthTest, VisualizeMaskType::DepthTest, ViewportMask::all() );
     obj.addChild( label );
 }
 
@@ -1463,6 +1463,12 @@ bool Viewer::needRedraw_() const
         if ( viewport.getRedrawFlag() )
             return true;
 
+    if ( globalBasisAxes && globalBasisAxes->getRedrawFlag( presentViewportsMask_ ) )
+        return true;
+
+    if ( basisAxes && basisAxes->getRedrawFlag( presentViewportsMask_ ) )
+        return true;
+
     return getRedrawFlagRecursive( SceneRoot::get(), presentViewportsMask_ );
 }
 
@@ -1472,6 +1478,12 @@ void Viewer::resetRedraw_()
 
     for ( auto& viewport : viewport_list )
         viewport.resetRedrawFlag();
+
+    if ( globalBasisAxes )
+        globalBasisAxes->resetRedrawFlag();
+
+    if ( basisAxes )
+        basisAxes->resetRedrawFlag();
 
     resetRedrawFlagRecursive( SceneRoot::get() );
 }
@@ -1845,9 +1857,9 @@ void Viewer::initGlobalBasisAxesObject_()
         vertsColors.insert( vertsColors.end(), colors.begin(), colors.end() );
         vertsColors.insert( vertsColors.end(), colorsCone.begin(), colorsCone.end() );
     }
-    addLabel( *globalBasisAxes, "X", 1.1f * Vector3f::plusX() );
-    addLabel( *globalBasisAxes, "Y", 1.1f * Vector3f::plusY() );
-    addLabel( *globalBasisAxes, "Z", 1.1f * Vector3f::plusZ() );
+    addLabel( *globalBasisAxes, "X", 1.1f * Vector3f::plusX(), true );
+    addLabel( *globalBasisAxes, "Y", 1.1f * Vector3f::plusY(), true );
+    addLabel( *globalBasisAxes, "Z", 1.1f * Vector3f::plusZ(), true );
 
     globalBasisAxes->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
     globalBasisAxes->setAncillary( true );
@@ -1897,9 +1909,9 @@ void Viewer::initBasisAxesObject_()
     }
     const float labelPos = size + 0.2f;
 
-    addLabel( *basisAxes, "X", labelPos * Vector3f::plusX() );
-    addLabel( *basisAxes, "Y", labelPos * Vector3f::plusY() );
-    addLabel( *basisAxes, "Z", labelPos * Vector3f::plusZ() );
+    addLabel( *basisAxes, "X", labelPos * Vector3f::plusX(), false );
+    addLabel( *basisAxes, "Y", labelPos * Vector3f::plusY(), false );
+    addLabel( *basisAxes, "Z", labelPos * Vector3f::plusZ(), false );
 
     basisAxes->setFacesColorMap( colorMap );
     basisAxes->setColoringType( ColoringType::FacesColorMap );

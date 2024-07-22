@@ -96,13 +96,18 @@ public:
                 scene->addChild( object );
         }
 
-        return {
+        SceneLoad::SceneLoadResult ret{
             .scene = std::move( scene ),
             .isSceneConstructed = constructed,
             .loadedFiles = loadedFiles_,
             .errorSummary = errorSummary_.str(),
             .warningSummary = warningSummary_.str(),
         };
+
+        if ( ret.loadedFiles.empty() )
+            ret.scene = nullptr; // Don't emit the root object on failure.
+
+        return ret;
     }
 
 private:

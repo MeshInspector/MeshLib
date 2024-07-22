@@ -84,14 +84,16 @@ bool StateBasePlugin::enable( bool on )
     }
     if ( res )
     {
-        // Need to make sure initialization is finished when signal is emitted
-        CommandLoop::appendCommand( [this] ()
-        {
-            viewer->pluginEnabledChangedSignal( this, isEnabled_ );
-        } );
         auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
         if ( ribbonMenu )
+        {
             ribbonMenu->updateItemStatus( name() );
+            // Need to make sure initialization is finished when signal is emitted
+            CommandLoop::appendCommand( [this, ribbonMenu = ribbonMenu.get()] ()
+            {
+                ribbonMenu->pluginEnabledChangedSignal( this, isEnabled_ );
+            } );
+        }
     }
     return res;
 }

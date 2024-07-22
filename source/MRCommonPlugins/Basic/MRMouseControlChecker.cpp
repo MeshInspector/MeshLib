@@ -26,10 +26,12 @@ private:
 void MouseControlChecker::init( Viewer* _viewer )
 {
     viewer = _viewer;
-    connection_ = viewer->pluginEnabledChangedSignal.connect( 0, [this] ( StateBasePlugin*, bool enabled )
-    {
-        pluginEnabledChanged_( enabled );
-    } );
+    RibbonMenu* menu = getViewerInstance().getMenuPluginAs<RibbonMenu>().get();
+    if ( menu )
+        connection_ = menu->pluginEnabledChangedSignal.connect( 0, [this] ( StateBasePlugin*, bool enabled )
+        {
+            pluginEnabledChanged_( enabled );
+        } );
 
     mouseDownConnections_ = viewer->mouseDownSignal.num_slots();
 }

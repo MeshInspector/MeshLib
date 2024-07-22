@@ -88,6 +88,10 @@ public:
     /// updates status of item if it was changed outside of menu
     MRVIEWER_API void updateItemStatus( const std::string& itemName );
 
+    using PluginEnabledChangedSignal = boost::signals2::signal<void( StateBasePlugin*, bool )>;
+    /// this signal is called when a plugin gets enabled or disabled
+    PluginEnabledChangedSignal pluginEnabledChangedSignal;
+
     /// returns index of active tab in RibbonSchemaHolder::schema().tabsOrder
     int getActiveTabIndex() const { return activeTabIndex_; }
 

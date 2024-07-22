@@ -938,6 +938,9 @@ void Viewer::launchShut()
     isLaunched_ = false;
     spaceMouseHandler_.reset();
 
+    /// removes references on all cached objects before shared libraries with plugins are unloaded
+    SceneCache::invalidateAll();
+
     /// disconnect all slots before shared libraries with plugins are unloaded
     mouseDownSignal = {};
     mouseUpSignal = {};

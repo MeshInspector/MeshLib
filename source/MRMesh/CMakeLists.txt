@@ -251,6 +251,7 @@ ELSE()
     dl
     jsoncpp
     tbb
+    backtrace
     ${MRMESH_OPTIONAL_DEPENDENCIES}
   )
 ENDIF()

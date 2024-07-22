@@ -350,10 +350,11 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     {
         setup.setupExtendedLibraries();
     }, CommandLoop::StartPosition::AfterSplashAppear );
-#if defined(__EMSCRIPTEN__) || !defined(NDEBUG)
-    return viewer.launch( params );
-#else
+
     int res = 0;
+#if defined(__EMSCRIPTEN__) || !defined(NDEBUG)
+    res = viewer.launch( params );
+#else
     try
     {
         res = viewer.launch( params );
@@ -365,9 +366,10 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         printCurrentTimerBranch();
         res = 1;
     }
-
-    return res;
 #endif
+    if ( params.unloadPluginsAtEnd )
+        setup.unloadExtendedLibraries();
+    return res;
 }
 
 void loadMRViewerDll()
@@ -415,7 +417,8 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
             flag == "-console" ||
             flag == "-openGL3" ||
             flag == "-noRenderInTexture" ||
-            flag == "-develop"
+            flag == "-develop" ||
+            flag == "-unloadPluginsAtEnd"
             )
             reserved = true;
         else if ( flag == "-width" )
@@ -504,6 +507,8 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             nextH = true;
         else if ( flag == "-animateFPS" )
             nextFPS = true;
+        else if ( flag == "-unloadPluginsAtEnd" )
+            params.unloadPluginsAtEnd = true;
     }
 }
 

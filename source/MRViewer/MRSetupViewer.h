@@ -2,6 +2,7 @@
 
 #include "MRViewerFwd.h"
 #include <string>
+#include <filesystem>
 
 namespace MR
 {
@@ -35,6 +36,23 @@ public:
     /// use to load additional libraries with plugins.
     /// all libraries are taken from GetResourcesDirectory() *.ui.json files
     MRVIEWER_API virtual void setupExtendedLibraries() const;
+
+    /// free all libraries loaded in setupExtendedLibraries()
+    MRVIEWER_API virtual void unloadExtendedLibraries() const;
+
+private:
+#ifndef __EMSCRIPTEN__
+    struct LoadedModule
+    {
+        std::filesystem::path filename;
+#if _WIN32
+        HMODULE module = nullptr;
+#else
+        void * module = nullptr;
+#endif
+    };
+    mutable std::vector<LoadedModule> loadedModules_;
+#endif // ifndef __EMSCRIPTEN__
 };
 
 } // namespace MR

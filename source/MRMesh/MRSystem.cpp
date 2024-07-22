@@ -1,29 +1,14 @@
 #include "MRSystem.h"
 #include "MRStringConvert.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRConfig.h"
+#include "MRStacktrace.h"
+#include "MRPch/MRSpdlog.h"
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 
-#ifndef __EMSCRIPTEN__
 #ifdef _WIN32
 #include "psapi.h"
-// it is tricky to use std::stacktrace on other systems: https://stackoverflow.com/q/78395268/7325599
-#include <version>
-#if __cpp_lib_stacktrace >= 202011
-#pragma message("std::stacktrace is available")
-#include <stacktrace>
-#else
-#pragma message("std::stacktrace is NOT available, using boost::stacktrace instead")
-#include <boost/stacktrace.hpp>
-#endif
-#else //not _WIN32
-#include <boost/stacktrace.hpp>
-#endif //_WIN32
-#endif //__EMSCRIPTEN__
-
-#ifdef _WIN32
 
 #ifndef _MSC_VER
 #include <cpuid.h>
@@ -649,11 +634,7 @@ void setNewHandlerIfNeeded()
 #ifndef __EMSCRIPTEN__
 std::string getCurrentStacktrace()
 {
-#if defined _WIN32 && __cpp_lib_stacktrace >= 202011
-    return to_string( std::stacktrace::current() );
-#else
-    return to_string( boost::stacktrace::stacktrace() );
-#endif
+    return getCurrentStacktraceInline();
 }
 #endif
 

@@ -82,7 +82,7 @@ std::string getMeshFragmentShaderArgumetsBlock()
   uniform vec4 clippingPlane;        // (in from base) clipping plane
   uniform bool invertNormals;        // (in from base) invert normals if true
   uniform bool mirrored;
-  uniform mediump sampler2DArray tex;             // (in from base) texture
+  uniform high sampler2DArray tex;             // (in from base) texture
   uniform float specExp;   // (in from base) lighting parameter 
   uniform bool useTexture;           // (in from base) enable texture
   uniform vec3 ligthPosEye;   // (in from base) light position transformed by view only (not proj)

@@ -38,11 +38,11 @@ public:
     static bool operator != ( Vector3f^ a, Vector3f^ b );    
 
 private:
-    MR::Vector3f* vec_;
+    MR::Vector3<float>* vec_;
 
 internal:
-    Vector3f( MR::Vector3f* vec );
-    MR::Vector3f* vec() { return vec_; }
+    Vector3f( MR::Vector3<float>* vec );
+    MR::Vector3<float>* vec() { return vec_; }
 };
 
 MR_DOTNET_NAMESPACE_END

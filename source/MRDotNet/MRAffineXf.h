@@ -30,11 +30,11 @@ public:
 private:
     Matrix3f^ A_;
     Vector3f^ b_;
-    MR::AffineXf3f* xf_;
+    MR::AffineXf<Vector3<float>>* xf_;
 
 internal:
-    AffineXf3f( MR::AffineXf3f* xf );
-    MR::AffineXf3f* xf() { return xf_; }
+    AffineXf3f( MR::AffineXf<Vector3<float>>* xf );
+    MR::AffineXf<Vector3<float>>* xf() { return xf_; }
 };
 
 MR_DOTNET_NAMESPACE_END

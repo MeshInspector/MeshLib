@@ -1,6 +1,21 @@
 #pragma once
 #pragma managed( push, off )
-#include "MRMesh/MRMeshFwd.h"
+
+namespace MR
+{
+template<typename T>
+struct Vector3;
+
+template<typename T>
+struct Matrix3;
+
+template<typename V>
+struct AffineXf;
+
+struct Mesh;
+class BitSet;
+}
+
 #pragma managed( pop )
 
 #define MR_DOTNET_NAMESPACE_BEGIN namespace MR { namespace DotNet {

@@ -35,11 +35,11 @@ public:
     static bool operator!=( Matrix3f^ a, Matrix3f^ b );
 
 internal:
-    Matrix3f( MR::Matrix3f* mat );
-    MR::Matrix3f* mat() { return mat_; }
+    Matrix3f( MR::Matrix3<float>* mat );
+    MR::Matrix3<float>* mat() { return mat_; }
 
 private:
-    MR::Matrix3f* mat_;   
+    MR::Matrix3<float>* mat_;
 
     Vector3f^ x_;
     Vector3f^ y_;

@@ -16,6 +16,7 @@
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRSceneSettings.h"
 #include "MRViewer/MRRenderDefaultObjects.h"
+#include "MRMesh/MRParallelFor.h"
 
 namespace MR
 {
@@ -416,6 +417,15 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
         { .resolution = GlTexture2::ToResolution( faceSelectionTextureSize_ ), .internalFormat = GL_R32UI, .format = GL_RED_INTEGER, .type = GL_UNSIGNED_INT },
         faceSelection );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 3 ) );
+
+    // Texture per faces
+    auto texturePerFaces = loadTexturePerFaceTextureBuffer_();
+    GL_EXEC( glActiveTexture( GL_TEXTURE4 ) );
+    texturePerFace_.loadDataOpt( 
+        texturePerFaces.dirty(),
+        { .resolution = GlTexture2::ToResolution( texturePerFaceSize_ ), .internalFormat = GL_R8UI, .format = GL_RED_INTEGER, .type = GL_UNSIGNED_INT },
+        texturePerFaces );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "texturePerFace" ), 4 ) );
 
     dirty_ &= ~DIRTY_MESH;
     dirty_ &= ~DIRTY_VERTS_COLORMAP;
@@ -960,6 +970,33 @@ RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
     auto buffer = glBuffer.prepareBuffer<Vector4f>( faceNormalsTextureSize_.x * faceNormalsTextureSize_.y );
 
     computePerFaceNormals4( *mesh, buffer.data(), buffer.size() );
+
+    return buffer;
+}
+
+RenderBufferRef<uint8_t> RenderMeshObject::loadTexturePerFaceTextureBuffer_()
+{
+    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
+    if ( !( dirty_ & DIRTY_TEXTURE_PER_FACE ) || !objMesh_->mesh() )
+        return glBuffer.prepareBuffer<uint8_t>( texturePerFaceSize_.x * texturePerFaceSize_.y, false );
+
+    const auto& mesh = objMesh_->mesh();
+    const auto& topology = mesh->topology;
+    auto numF = topology.lastValidFace() + 1;
+
+    auto size = numF;
+    texturePerFaceSize_ = calcTextureRes( size, maxTexSize_ );
+    assert( texturePerFaceSize_.x * texturePerFaceSize_.y >= size );
+    auto buffer = glBuffer.prepareBuffer<uint8_t >( texturePerFaceSize_.x * texturePerFaceSize_.y );
+
+    const auto& texPerFace = objMesh_->getTexturePerFace();
+    ParallelFor( 0, ( int )buffer.size(), [&] ( size_t r )
+    {
+        if ( r < texPerFace.size() )
+            buffer[r] = static_cast<uint8_t>(texPerFace.vec_[r]);
+        else
+            buffer[r] = 0;
+    } );
 
     return buffer;
 }

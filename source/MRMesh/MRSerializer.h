@@ -116,6 +116,7 @@ MRMESH_API VoidOrErrStr serializeToJson( const Mesh& mesh, Json::Value& root );
 MRMESH_API void serializeToJson( const Plane3f& plane, Json::Value& root );
 MRMESH_API void serializeToJson( const TriPointf& tp, Json::Value& root );
 MRMESH_API void serializeToJson( const MeshTexture& texture, Json::Value& root );
+MRMESH_API void serializeToJson( const std::vector<TextureId>& texturePerFace, Json::Value& root );
 MRMESH_API void serializeToJson( const std::vector<UVCoord>& uvCoords, Json::Value& root );
 MRMESH_API void serializeToJson( const std::vector<Color>& colors, Json::Value& root );
 /// this version takes topology to convert MeshTriPoint in its representation relative a face;
@@ -144,6 +145,7 @@ MRMESH_API Expected<Mesh, std::string> deserializeFromJson( const Json::Value& r
 MRMESH_API void deserializeFromJson( const Json::Value& root, Plane3f& plane );
 MRMESH_API void deserializeFromJson( const Json::Value& root, TriPointf& tp );
 MRMESH_API void deserializeFromJson( const Json::Value& root, MeshTexture& texture );
+MRMESH_API void deserializeFromJson( const Json::Value& root, std::vector<TextureId>& texturePerFace );
 MRMESH_API void deserializeFromJson( const Json::Value& root, std::vector<UVCoord>& uvCoords );
 MRMESH_API void deserializeFromJson( const Json::Value& root, std::vector<Color>& colors );
 /// this version takes topology to construct MeshTriPoint from its representation relative a face;

@@ -10,7 +10,7 @@ boost::signals2::connection Signal<Signature, Combiner>::connect( const boost::f
 }
 
 #define INSTANTIATE(Signature) \
-    template boost::signals2::connection Signal<Signature>::connect( const boost::function<Signature> & slot, boost::signals2::connect_position position );
+    template boost::signals2::connection Signal<Signature,boost::signals2::optional_last_value<typename boost::function_traits<Signature>::result_type>>::connect( const boost::function<Signature> & slot, boost::signals2::connect_position position );
 
 INSTANTIATE(void())
 INSTANTIATE(void(uint32_t))

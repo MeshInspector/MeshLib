@@ -977,7 +977,7 @@ RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
 RenderBufferRef<uint8_t> RenderMeshObject::loadTexturePerFaceTextureBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_ATTRIBYTE_PER_FACE ) || !objMesh_->mesh() )
+    if ( !( dirty_ & DIRTY_ATTRIBUTE_PER_FACE ) || !objMesh_->mesh() )
         return glBuffer.prepareBuffer<uint8_t>( texturePerFaceSize_.x * texturePerFaceSize_.y, false );
 
     const auto& mesh = objMesh_->mesh();

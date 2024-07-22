@@ -356,30 +356,49 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
     facesIndicesBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, faces.dirty(), faces );
 
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
+    
     if ( bool( dirty_ & DIRTY_TEXTURE ) )
     {
-        const auto& textures = objMesh_->getTextures();
+        if ( objMesh_->hasAncillaryTexture() )
+        {
+            const auto& texture = objMesh_->getAncillaryTexture();
 
-        auto res = textures.empty() ? Vector2i() : textures.front().resolution;
-        auto wrap = textures.empty() ? WrapType::Clamp : textures.front().wrap;
-        auto filter = textures.empty() ? FilterType::Linear : textures.front().filter;
+            textureArray_.loadDataOpt( dirty_ & DIRTY_TEXTURE,
+                {
+                    .resolution = GlTexture2::ToResolution( texture.resolution ),
+                    .internalFormat = GL_RGBA,
+                    .format = GL_RGBA,
+                    .type = GL_UNSIGNED_BYTE,
+                    .wrap = texture.wrap,
+                    .filter = texture.filter
+                },
+                texture.pixels );
+        }
+        else
+        {
+            const auto& textures = objMesh_->getTextures();
 
-        auto& buffer = GLStaticHolder::getStaticGLBuffer();
-        auto texSize = res.x * res.y;
-        auto pixels = buffer.prepareBuffer<Color>( size_t( texSize * textures.size() ) );
-        size_t numTex = 0;
-        for ( const auto& tex : textures )
-            std::copy( tex.pixels.begin(), tex.pixels.end(), pixels.data() + texSize * numTex++ );
+            auto res = textures.empty() ? Vector2i() : textures.front().resolution;
+            auto wrap = textures.empty() ? WrapType::Clamp : textures.front().wrap;
+            auto filter = textures.empty() ? FilterType::Linear : textures.front().filter;
 
-        GlTexture2DArray::Settings settings;
-        settings.resolution = Vector3i{ res.x, res.y, int( textures.size() ) };
-        settings.internalFormat = GL_RGBA;
-        settings.format = GL_RGBA;
-        settings.type = GL_UNSIGNED_BYTE;
-        settings.wrap = wrap;
-        settings.filter = filter;
+            auto& buffer = GLStaticHolder::getStaticGLBuffer();
+            auto texSize = res.x * res.y;
+            auto pixels = buffer.prepareBuffer<Color>( size_t( texSize * textures.size() ) );
+            size_t numTex = 0;
+            for ( const auto& tex : textures )
+                std::copy( tex.pixels.begin(), tex.pixels.end(), pixels.data() + texSize * numTex++ );
 
-        textureArray_.loadData( settings, pixels );
+            GlTexture2DArray::Settings settings;
+            settings.resolution = Vector3i{ res.x, res.y, int( textures.size() ) };
+            settings.internalFormat = GL_RGBA;
+            settings.format = GL_RGBA;
+            settings.type = GL_UNSIGNED_BYTE;
+            settings.wrap = wrap;
+            settings.filter = filter;
+
+            textureArray_.loadData( settings, pixels );
+        }
     }
     else
         textureArray_.bind();

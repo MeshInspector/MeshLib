@@ -977,7 +977,7 @@ RenderBufferRef<Vector4f> RenderMeshObject::loadFaceNormalsTextureBuffer_()
 RenderBufferRef<uint8_t> RenderMeshObject::loadTexturePerFaceTextureBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_ATTRIBUTE_PER_FACE ) || !objMesh_->mesh() )
+    if ( !( dirty_ & DIRTY_TEXTURE_PER_FACE ) || !objMesh_->mesh() )
         return glBuffer.prepareBuffer<uint8_t>( texturePerFaceSize_.x * texturePerFaceSize_.y, false );
 
     const auto& mesh = objMesh_->mesh();
@@ -990,10 +990,10 @@ RenderBufferRef<uint8_t> RenderMeshObject::loadTexturePerFaceTextureBuffer_()
     auto buffer = glBuffer.prepareBuffer<uint8_t >( texturePerFaceSize_.x * texturePerFaceSize_.y );
 
     const auto& texPerFace = objMesh_->getTexturePerFace();
-    ParallelFor( 0, ( int )buffer.size(), [&] ( uint8_t r )
+    ParallelFor( 0, ( int )buffer.size(), [&] ( size_t r )
     {
         if ( r < texPerFace.size() )
-            buffer[r] = texPerFace.vec_[r];
+            buffer[r] = static_cast<uint8_t>(texPerFace.vec_[r]);
         else
             buffer[r] = 0;
     } );

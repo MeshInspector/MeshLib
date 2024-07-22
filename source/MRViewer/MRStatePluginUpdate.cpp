@@ -105,13 +105,16 @@ bool PluginCloseOnChangePointCloud::shouldClose_() const
 
 bool PluginCloseOnEscPressed::shouldClose_() const
 {
-    auto hasOpenedDialogs = false;
+    // ignore if there are opened dialogs
     if ( const auto& menu = Viewer::constInstanceRef().getMenuPlugin() )
-        hasOpenedDialogs = ( menu->getLastFocusedPlugin() != nullptr );
+        if ( menu->getLastFocusedPlugin() )
+            return false;
 
-    const auto hasOpenedPopups = ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+    // ignore if there are opened popups
+    if ( ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup ) )
+        return false;
 
-    return ImGui::IsKeyPressed( ImGuiKey_Escape ) && !hasOpenedDialogs && !hasOpenedPopups;
+    return ImGui::IsKeyPressed( ImGuiKey_Escape );
 }
 
 }

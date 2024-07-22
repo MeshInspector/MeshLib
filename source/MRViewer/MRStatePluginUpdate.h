@@ -86,6 +86,13 @@ private:
     std::vector<boost::signals2::scoped_connection> pointCloudChangedConnections_;
 };
 
+// Helper class to close a dialog-less plugin when the Esc key is pressed
+class MRVIEWER_CLASS PluginCloseOnEscPressed : public virtual IPluginUpdate
+{
+protected:
+    MRVIEWER_API bool shouldClose_() const override;
+};
+
 // Runs all preDrawUpdate and all shouldClose_ checks
 // shouldClose_ returns true if at least on of checks was ture 
 template<typename ...Updates>

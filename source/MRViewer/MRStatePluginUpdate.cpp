@@ -1,9 +1,13 @@
 #include "MRStatePluginUpdate.h"
-#include "MRMesh/MRObjectsAccess.h"
-#include "MRMesh/MRSceneRoot.h"
-#include "MRMesh/MRObject.h"
+#include "ImGuiMenu.h"
+#include "MRViewer.h"
+
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
+#include "MRMesh/MRObjectsAccess.h"
+#include "MRMesh/MRSceneRoot.h"
+
+#include <imgui/imgui.h>
 
 namespace MR
 {
@@ -99,5 +103,15 @@ bool PluginCloseOnChangePointCloud::shouldClose_() const
     return pointCloudChanged_;
 }
 
+bool PluginCloseOnEscPressed::shouldClose_() const
+{
+    auto hasOpenedDialogs = false;
+    if ( const auto& menu = Viewer::constInstanceRef().getMenuPlugin() )
+        hasOpenedDialogs = ( menu->getLastFocusedPlugin() != nullptr );
+
+    const auto hasOpenedPopups = ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
+
+    return ImGui::IsKeyPressed( ImGuiKey_Escape ) && !hasOpenedDialogs && !hasOpenedPopups;
+}
 
 }

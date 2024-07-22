@@ -41,7 +41,7 @@ protected:
     MRVIEWER_API RenderBufferRef<Vector3i> loadFaceIndicesBuffer_();
     MRVIEWER_API RenderBufferRef<unsigned> loadFaceSelectionTextureBuffer_();
     MRVIEWER_API RenderBufferRef<Vector4f> loadFaceNormalsTextureBuffer_();
-    MRVIEWER_API RenderBufferRef<unsigned> loadTexturePerFaceTextureBuffer_();
+    MRVIEWER_API RenderBufferRef<uint8_t> loadTexturePerFaceTextureBuffer_();
 
     typedef unsigned int GLuint;
 

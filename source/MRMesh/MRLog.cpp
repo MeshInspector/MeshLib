@@ -143,7 +143,7 @@ void setupLoggerByDefault()
     redirectSTDStreamsToLogger();
     // write log to console
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-    console_sink->set_color_mode( spdlog::color_mode::always ); // this is needed to prevent dead locks in powershell run like "MeshViewer.exe > log.txt"
+    //console_sink->set_color_mode( spdlog::color_mode::always ); // this is needed to prevent dead locks in powershell run like "MeshViewer.exe > log.txt"
     console_sink->set_level( spdlog::level::trace );
     console_sink->set_pattern( Logger::instance().getDefaultPattern() );
     Logger::instance().addSink( console_sink );

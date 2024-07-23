@@ -95,6 +95,12 @@ jobs:
       INTERNAL_BUILD: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
 
     steps:
+      - name: Toss a coin
+        if: ${{ matrix.os != 'ubuntu24' }}
+        run: |
+          toss() { return $(( $RANDOM % 3 )); }
+          toss
+
       - name: Checkout
         uses: actions/checkout@v4
         with:

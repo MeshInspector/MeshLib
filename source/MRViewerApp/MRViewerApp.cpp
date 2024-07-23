@@ -6,6 +6,8 @@
 #include <MRViewer/MRSplashWindow.h>
 
 #ifdef _WIN32
+#include "MRViewer/MRConsoleWindows.h"
+
 extern "C" __declspec( dllexport ) DWORD NvOptimusEnablement = 0x00000001;
 extern "C" __declspec( dllexport ) DWORD AmdPowerXpressRequestHighPerformance = 0x00000001;
 
@@ -15,21 +17,11 @@ extern "C" int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance
     // https://stackoverflow.com/q/78468776/7325599
     (void)MR::getCurrentStacktrace();
 
-    int argc = 0;
-    std::vector<std::string> arguments;
+    auto args = MR::ConvertArgv();
     std::vector<char*> argv;
-
-    LPWSTR* argvW = CommandLineToArgvW( GetCommandLineW(), &argc );
-    if ( argvW )
-    {
-        arguments.reserve( argc );
-        argv.reserve( argc );
-        for ( int i = 0; i < argc; ++i )
-        {
-            arguments.push_back( MR::Utf16ToUtf8( argvW[i] ) );
-            argv.push_back( arguments.back().data() );
-        }
-    }
+    argv.reserve( args.size() );
+    for ( auto& arg : args )
+        argv.push_back( arg.data() );
 
     // Init the viewer
     MR::Viewer::LaunchParams launchParams;
@@ -41,6 +33,9 @@ extern "C" int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance
     launchParams.argv = argv.data();
 
     MR::Viewer::parseLaunchParams( launchParams );
+
+    // Starts console if needed, free it on destructor
+    MR::ConsoleRunner console( launchParams.console );
 
     return MR::launchDefaultViewer( launchParams, MR::ViewerSetup() );
 }

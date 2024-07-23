@@ -403,6 +403,9 @@
     <ClCompile Include="MRGLTexture.cpp">
       <Filter>Render\Implementations</Filter>
     </ClCompile>
+    <ClCompile Include="MRConsoleWindows.cpp">
+      <Filter>IO</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -787,6 +790,9 @@
     </ClInclude>
     <ClInclude Include="MRGLTexture.h">
       <Filter>Render\Implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="MRConsoleWindows.h">
+      <Filter>IO</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

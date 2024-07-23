@@ -642,9 +642,12 @@ bool Viewer::checkOpenGL_(const LaunchParams& params )
         {
             spdlog::critical( "Cannot load OpenGL 3.3" );
 #ifdef _WIN32
-            MessageBoxA( NULL, "Cannot activate OpenGL 3.3.\n"
-                "Please verify that you have decent graphics card and its drivers are installed.",
-                "MeshInspector/MeshLib Error", MB_OK );
+            if ( params.windowMode != LaunchParams::WindowMode::TryHidden )
+            {
+                MessageBoxA( NULL, "Cannot activate OpenGL 3.3.\n"
+                    "Please verify that you have decent graphics card and its drivers are installed.",
+                    "MeshInspector/MeshLib Error", MB_OK );
+            }
 #endif
             return false;
         }

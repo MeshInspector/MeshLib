@@ -95,6 +95,12 @@ jobs:
       INTERNAL_BUILD: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
 
     steps:
+      - name: Fail on first run
+        if: ${{ matrix.os == 'ubuntu20' && matrix.compiler == 'Clang' }}
+        run: |
+          fail_on_first_run() { return [ ${{ github.run_attempt }} != "1"; }
+          fail_on_first_run()
+
       - name: Checkout
         uses: actions/checkout@v4
         with:

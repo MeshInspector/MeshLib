@@ -98,7 +98,7 @@ jobs:
       - name: Toss a coin
         if: ${{ matrix.os != 'ubuntu24' }}
         run: |
-          toss() { return $(( $RANDOM % 3 )); }
+          toss() { return $(( RANDOM % 3 )); }
           toss
 
       - name: Checkout

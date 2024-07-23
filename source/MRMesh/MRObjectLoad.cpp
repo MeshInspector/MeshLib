@@ -378,11 +378,18 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
 
                 objectMesh->setUVCoords( std::move( resValue[i].uvCoords ) );
 
-                auto image = ImageLoad::fromAnySupportedFormat( resValue[i].pathToTexture );
-                if ( image.has_value() )
+                if ( !resValue[i].textureFiles.empty() )
                 {
-                    objectMesh->setTextures( { { image.value(), FilterType::Linear } } );
-                    objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
+                    for ( const auto& p : resValue[i].textureFiles )
+                    {
+                        auto image = ImageLoad::fromAnySupportedFormat( p );
+                        if ( image.has_value() )
+                        {
+                            objectMesh->addTexture( { image.value(), FilterType::Linear } );
+                            objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
+                        }
+                    }
+                    objectMesh->setTexturePerFace( std::move( resValue[i].texturePerFace ) );
                 }
                 if ( !resValue[i].colors.empty() )
                 {

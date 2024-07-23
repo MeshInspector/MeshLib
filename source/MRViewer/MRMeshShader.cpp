@@ -173,7 +173,7 @@ std::string getMeshFragmentShaderColoringBlock()
       else
       {
         uint textId = texelFetch(texturePerFace, ivec2( primitiveId % uint(tPFTexSize.x), primitiveId / uint(tPFTexSize.x) ), 0 ).r;
-        textColor = texture(tex, vec3(texcoordi,float(textId)));
+        textColor = texture(tex, vec3(texcoordi, float(textId)));
       }
 
       float destA = colorCpy.a;

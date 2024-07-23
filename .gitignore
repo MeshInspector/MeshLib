@@ -2,6 +2,7 @@
 x64
 __pycache__
 install
+install_dotnet
 *.vcxproj.user
 *.orig
 *.aps

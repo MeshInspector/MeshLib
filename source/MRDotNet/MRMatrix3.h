@@ -39,7 +39,7 @@ internal:
     MR::Matrix3f* mat() { return mat_; }
 
 private:
-    MR::Matrix3f* mat_;   
+    MR::Matrix3f* mat_;
 
     Vector3f^ x_;
     Vector3f^ y_;

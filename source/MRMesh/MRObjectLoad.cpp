@@ -385,7 +385,12 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                         auto image = ImageLoad::fromAnySupportedFormat( p );
                         if ( image.has_value() )
                         {
-                            objectMesh->addTexture( { image.value(), FilterType::Linear } );
+                            MeshTexture meshTexture;
+                            meshTexture.resolution = std::move( image.value().resolution );
+                            meshTexture.pixels = std::move(image.value().pixels);
+                            meshTexture.filter = FilterType::Linear;
+                            meshTexture.wrap = WrapType::Clamp;
+                            objectMesh->addTexture( std::move( meshTexture ) );
                             objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
                         }
                     }

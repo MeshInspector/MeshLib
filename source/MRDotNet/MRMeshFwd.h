@@ -5,12 +5,15 @@ namespace MR
 {
 template<typename T>
 struct Vector3;
+using Vector3f = Vector3<float>;
 
 template<typename T>
 struct Matrix3;
+using Matrix3f = Matrix3 <float>;
 
 template<typename V>
 struct AffineXf;
+using AffineXf3f = AffineXf<Vector3f>;
 
 struct Mesh;
 class BitSet;

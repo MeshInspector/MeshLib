@@ -34,12 +34,12 @@ private:
 };
 
 /// Setups logger:
-/// 1) if console makes stdout sink
+/// 1) makes stdout sink
 /// 2) makes file sink (MRLog.txt)
 /// 3) redirect std streams to logger
 /// 4) print stacktrace on crash (not in wasm)
 /// log level - trace
-MRMESH_API void setupLoggerByDefault( bool console = true );
+MRMESH_API void setupLoggerByDefault();
 
 /// Redirects stdcout stdcerr stdclog to default logger
 /// \note do not call this function directly if you use MR::setupLoggerByDefault()

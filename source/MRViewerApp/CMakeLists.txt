@@ -22,6 +22,9 @@ IF(MR_EMSCRIPTEN)
     -Wl,--no-whole-archive
   )
 ELSE() # NOT MR_EMSCRIPTEN
+  IF(APPLE)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE _GNU_SOURCE) #for Boost.Stacktrace
+  ENDIF()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRViewer
     MRMesh

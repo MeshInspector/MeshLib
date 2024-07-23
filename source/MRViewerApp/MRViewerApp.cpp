@@ -1,6 +1,7 @@
 #include <MRMesh/MRLog.h>
 #include <MRMesh/MRStringConvert.h>
 #include <MRMesh/MRSystem.h>
+#include <MRMesh/MRStacktrace.h>
 #include <MRViewer/MRViewer.h>
 #include <MRViewer/MRSetupViewer.h>
 #include <MRViewer/MRSplashWindow.h>
@@ -15,7 +16,7 @@ extern "C" int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance
 {
     // Initialize getting stacktraces before loading DLLs
     // https://stackoverflow.com/q/78468776/7325599
-    (void)MR::getCurrentStacktrace();
+    (void)MR::getCurrentStacktraceInline();
 
     auto args = MR::ConvertArgv();
     std::vector<char*> argv;

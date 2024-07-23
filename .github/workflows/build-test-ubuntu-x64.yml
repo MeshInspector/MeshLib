@@ -98,7 +98,7 @@ jobs:
       - name: Fail on first run
         if: ${{ matrix.os == 'ubuntu20' && matrix.compiler == 'Clang' }}
         run: |
-          fail_on_first_run() { return [ ${{ github.run_attempt }} != "1"; }
+          fail_on_first_run() { [ "${{ github.run_attempt }}" != "1" ] && return 0 || return 1; }
           fail_on_first_run()
 
       - name: Checkout

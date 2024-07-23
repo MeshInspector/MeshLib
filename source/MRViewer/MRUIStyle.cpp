@@ -1105,7 +1105,7 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
     assert( tooltips.empty() || tooltips.size() == options.size() );
 
     bool valueOverridden = false;
-    if ( auto opt = TestEngine::createValue( label, options[*v], options ) )
+    if ( auto opt = TestEngine::createValue( label, std::size_t( *v ) < options.size() ? options[*v] : defaultText, options ) )
     {
         if ( auto it = std::find( options.begin(), options.end(), *opt ); it != options.end() )
         {

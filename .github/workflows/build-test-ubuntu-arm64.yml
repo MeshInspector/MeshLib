@@ -53,6 +53,9 @@ jobs:
       INTERNAL_BUILD: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
 
     steps:
+      - name: Clear workspace
+        run: rm -rf /__w/MeshLib/MeshLib && mkdir /__w/MeshLib/MeshLib
+        
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -88,7 +91,7 @@ jobs:
           path: time_log/
 
       - name: Run Start-and-Exit Tests
-        run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop
+        run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTest

@@ -21,6 +21,15 @@ Box3f MeshOrPoints::getObjBoundingBox() const
     }, var_ );
 }
 
+
+void MeshOrPoints::cacheAABBTree() const
+{
+    std::visit( overloaded{
+        []( const MeshPart& mp ) { mp.mesh.getAABBTree(); },
+        [] ( const PointCloud* pc ) { pc->getAABBTree(); }
+    }, var_ );
+}
+
 Box3f MeshOrPoints::computeBoundingBox( const AffineXf3f * toWorld ) const
 {
     return std::visit( overloaded{

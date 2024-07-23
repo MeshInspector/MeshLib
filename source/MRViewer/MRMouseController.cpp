@@ -114,11 +114,32 @@ void MouseController::connect()
     viewer.mouseMoveSignal.connect( MAKE_SLOT( &MouseController::preMouseMove_ ), boost::signals2::at_front );
     viewer.mouseScrollSignal.connect( MAKE_SLOT( &MouseController::mouseScroll_ ) );
     viewer.cursorEntranceSignal.connect( MAKE_SLOT( &MouseController::cursorEntrance_ ) );
+
+    connectionsCounter_ = viewer.mouseDownSignal.num_slots();
 }
 
 void MouseController::cursorEntrance_( bool entered )
 {
     isCursorInside_ = entered;
+}
+
+bool MouseController::checkConflicts()
+{
+    // Check for new connections
+    size_t connectionsCounter = getViewerInstance().mouseDownSignal.num_slots();
+    bool newConnections = connectionsCounter > connectionsCounter_;
+    connectionsCounter_ = connectionsCounter;
+    if ( !newConnections )
+        return false;
+    // Check if camera movement is set to use left mouse button, regardless of modifiers
+    bool usesLeftButton = false;
+    for ( auto& [mode, key] : backMap_ )
+        if ( keyToMouseAndMod( key ).btn == MouseButton::Left )
+        {
+            usesLeftButton = true;
+            break;
+        }
+    return usesLeftButton;
 }
 
 bool MouseController::preMouseDown_( MouseButton btn, int )

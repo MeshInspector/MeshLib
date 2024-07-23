@@ -191,12 +191,14 @@ void Toolbar::drawCustomize()
     ImGui::SetNextWindowPos( ImVec2( -100, -100 ) );
     ImGui::SetNextWindowSize( ImVec2( 1, 1 ) );
     ImGui::Begin( "Toolbar Customize##BaseWindow", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs );
+    UI::TestEngine::pushTree( "Toolbar Customize" );
     if ( openCustomizeFlag_ )
     {
         openCustomizeFlag_ = false;
         ImGui::OpenPopup( "Toolbar Customize" );
     }
     drawCustomizeModal_();
+    UI::TestEngine::popTree();
     ImGui::End();
 }
 
@@ -245,11 +247,16 @@ void Toolbar::drawCustomizeModal_()
         return;
     }
 
-    if ( ImGui::ModalBigTitle( "Customize Viewport Toolbar", scaling_ ) )
-    {
+    bool shouldClose = ImGui::ModalBigTitle( "Customize Viewport Toolbar", scaling_ );
+    if ( shouldClose )
         ImGui::CloseCurrentPopup();
-        searchString_.clear();
-    }
+
+    MR_FINALLY_ON_SUCCESS{
+        // Must clear late, otherwise `UI::checkbox()` sometimes get called twice with the same string,
+        // which triggers an assertion in the UI test engine.
+        if ( shouldClose )
+            searchString_.clear();
+    };
 
     ImGui::Text( "%s", "Select icons to show in Toolbar" );
 

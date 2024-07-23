@@ -312,13 +312,13 @@ void Viewer::popEventByName( const std::string& name )
         eventQueue_->popByName( name );
 }
 
-void addLabel( ObjectMesh& obj, const std::string& str, const Vector3f& pos )
+void addLabel( ObjectMesh& obj, const std::string& str, const Vector3f& pos, bool depthTest )
 {
     auto label = std::make_shared<ObjectLabel>();
     label->setFrontColor( Color::white(), false );
     label->setLabel( { str, pos } );
     label->setPivotPoint( Vector2f( 0.5f, 0.5f ) );
-    label->setVisualizeProperty( false, VisualizeMaskType::DepthTest, ViewportMask::all() );
+    label->setVisualizeProperty( depthTest, VisualizeMaskType::DepthTest, ViewportMask::all() );
     obj.addChild( label );
 }
 
@@ -350,10 +350,11 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     {
         setup.setupExtendedLibraries();
     }, CommandLoop::StartPosition::AfterSplashAppear );
-#if defined(__EMSCRIPTEN__) || !defined(NDEBUG)
-    return viewer.launch( params );
-#else
+
     int res = 0;
+#if defined(__EMSCRIPTEN__) || !defined(NDEBUG)
+    res = viewer.launch( params );
+#else
     try
     {
         res = viewer.launch( params );
@@ -365,9 +366,10 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         printCurrentTimerBranch();
         res = 1;
     }
-
-    return res;
 #endif
+    if ( params.unloadPluginsAtEnd )
+        setup.unloadExtendedLibraries();
+    return res;
 }
 
 void loadMRViewerDll()
@@ -415,7 +417,8 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
             flag == "-console" ||
             flag == "-openGL3" ||
             flag == "-noRenderInTexture" ||
-            flag == "-develop"
+            flag == "-develop" ||
+            flag == "-unloadPluginsAtEnd"
             )
             reserved = true;
         else if ( flag == "-width" )
@@ -504,6 +507,8 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             nextH = true;
         else if ( flag == "-animateFPS" )
             nextFPS = true;
+        else if ( flag == "-unloadPluginsAtEnd" )
+            params.unloadPluginsAtEnd = true;
     }
 }
 
@@ -936,6 +941,46 @@ void Viewer::launchShut()
     glInitialized_ = false;
     isLaunched_ = false;
     spaceMouseHandler_.reset();
+
+    /// removes references on all cached objects before shared libraries with plugins are unloaded
+    SceneCache::invalidateAll();
+
+    /// disconnect all slots before shared libraries with plugins are unloaded
+    mouseDownSignal = {};
+    mouseUpSignal = {};
+    mouseMoveSignal = {};
+    mouseScrollSignal = {};
+    cursorEntranceSignal = {};
+    charPressedSignal = {};
+    keyUpSignal = {};
+    keyDownSignal = {};
+    keyRepeatSignal = {};
+    spaceMouseMoveSignal = {};
+    spaceMouseDownSignal = {};
+    spaceMouseUpSignal = {};
+    spaceMouseRepeatSignal = {};
+    preDrawSignal = {};
+    preDrawPostViewportSignal = {};
+    drawSignal = {};
+    postDrawPreViewportSignal = {};
+    postDrawSignal = {};
+    dragDropSignal = {};
+    postResizeSignal = {};
+    postRescaleSignal = {};
+    interruptCloseSignal = {};
+    touchStartSignal = {};
+    touchMoveSignal = {};
+    touchEndSignal = {};
+    touchpadRotateGestureBeginSignal = {};
+    touchpadRotateGestureUpdateSignal = {};
+    touchpadRotateGestureEndSignal = {};
+    touchpadSwipeGestureBeginSignal = {};
+    touchpadSwipeGestureUpdateSignal = {};
+    touchpadSwipeGestureEndSignal = {};
+    touchpadZoomGestureBeginSignal = {};
+    touchpadZoomGestureUpdateSignal = {};
+    touchpadZoomGestureEndSignal = {};
+    postFocusSignal = {};
 }
 
 void Viewer::init_()
@@ -1124,49 +1169,50 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
 
     const auto postProcess = [] ( const SceneLoad::SceneLoadResult& result )
     {
-        assert( result.scene );
-        const auto childCount = result.scene->children().size();
-        const auto isSceneEmpty = SceneRoot::get().children().empty();
-        if ( !result.isSceneConstructed || ( childCount == 1 && isSceneEmpty ) )
+        if ( result.scene )
         {
-            AppendHistory<SwapRootAction>( "Load Scene File" );
-            auto newRoot = result.scene;
-            std::swap( newRoot, SceneRoot::getSharedPtr() );
-            getViewerInstance().setSceneDirty();
-
-            assert( result.loadedFiles.size() == 1 );
-            auto filePath = result.loadedFiles.front();
-            if ( !result.isSceneConstructed )
+            const auto childCount = result.scene->children().size();
+            const auto isSceneEmpty = SceneRoot::get().children().empty();
+            if ( !result.isSceneConstructed || ( childCount == 1 && isSceneEmpty ) )
             {
-                getViewerInstance().onSceneSaved( filePath );
+                AppendHistory<SwapRootAction>( "Load Scene File" );
+                auto newRoot = result.scene;
+                std::swap( newRoot, SceneRoot::getSharedPtr() );
+                getViewerInstance().setSceneDirty();
+
+                assert( result.loadedFiles.size() == 1 );
+                auto filePath = result.loadedFiles.front();
+                if ( !result.isSceneConstructed )
+                {
+                    getViewerInstance().onSceneSaved( filePath );
+                }
+                else
+                {
+                    // for constructed scenes, add original file path to the recent files' list and set a new scene extension afterward
+                    getViewerInstance().recentFilesStore().storeFile( filePath );
+                    getViewerInstance().onSceneSaved( filePath, false );
+                }
             }
             else
             {
-                // for constructed scenes, add original file path to the recent files' list and set a new scene extension afterward
-                getViewerInstance().recentFilesStore().storeFile( filePath );
-                getViewerInstance().onSceneSaved( filePath, false );
-            }
-        }
-        else
-        {
-            std::string historyName = childCount == 1 ? "Open file" : "Open files";
-            SCOPED_HISTORY( historyName );
+                std::string historyName = childCount == 1 ? "Open file" : "Open files";
+                SCOPED_HISTORY( historyName );
 
-            const auto children = result.scene->children();
-            result.scene->removeAllChildren();
-            for ( const auto& obj : children )
-            {
-                AppendHistory<ChangeSceneAction>( "Load File", obj, ChangeSceneAction::Type::AddObject );
-                SceneRoot::get().addChild( obj );
+                const auto children = result.scene->children();
+                result.scene->removeAllChildren();
+                for ( const auto& obj : children )
+                {
+                    AppendHistory<ChangeSceneAction>( "Load File", obj, ChangeSceneAction::Type::AddObject );
+                    SceneRoot::get().addChild( obj );
+                }
+
+                auto& viewerInst = getViewerInstance();
+                for ( const auto& file : result.loadedFiles )
+                    viewerInst.recentFilesStore().storeFile( file );
             }
 
-            auto& viewerInst = getViewerInstance();
-            for ( const auto& file : result.loadedFiles )
-                viewerInst.recentFilesStore().storeFile( file );
+            getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
         }
-
-        getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
-
         if ( !result.errorSummary.empty() )
             showModal( result.errorSummary, NotificationType::Error );
         else if ( !result.warningSummary.empty() )
@@ -1464,6 +1510,12 @@ bool Viewer::needRedraw_() const
         if ( viewport.getRedrawFlag() )
             return true;
 
+    if ( globalBasisAxes && globalBasisAxes->getRedrawFlag( presentViewportsMask_ ) )
+        return true;
+
+    if ( basisAxes && basisAxes->getRedrawFlag( presentViewportsMask_ ) )
+        return true;
+
     return getRedrawFlagRecursive( SceneRoot::get(), presentViewportsMask_ );
 }
 
@@ -1473,6 +1525,12 @@ void Viewer::resetRedraw_()
 
     for ( auto& viewport : viewport_list )
         viewport.resetRedrawFlag();
+
+    if ( globalBasisAxes )
+        globalBasisAxes->resetRedrawFlag();
+
+    if ( basisAxes )
+        basisAxes->resetRedrawFlag();
 
     resetRedrawFlagRecursive( SceneRoot::get() );
 }
@@ -1846,9 +1904,9 @@ void Viewer::initGlobalBasisAxesObject_()
         vertsColors.insert( vertsColors.end(), colors.begin(), colors.end() );
         vertsColors.insert( vertsColors.end(), colorsCone.begin(), colorsCone.end() );
     }
-    addLabel( *globalBasisAxes, "X", 1.1f * Vector3f::plusX() );
-    addLabel( *globalBasisAxes, "Y", 1.1f * Vector3f::plusY() );
-    addLabel( *globalBasisAxes, "Z", 1.1f * Vector3f::plusZ() );
+    addLabel( *globalBasisAxes, "X", 1.1f * Vector3f::plusX(), true );
+    addLabel( *globalBasisAxes, "Y", 1.1f * Vector3f::plusY(), true );
+    addLabel( *globalBasisAxes, "Z", 1.1f * Vector3f::plusZ(), true );
 
     globalBasisAxes->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
     globalBasisAxes->setAncillary( true );
@@ -1898,9 +1956,9 @@ void Viewer::initBasisAxesObject_()
     }
     const float labelPos = size + 0.2f;
 
-    addLabel( *basisAxes, "X", labelPos * Vector3f::plusX() );
-    addLabel( *basisAxes, "Y", labelPos * Vector3f::plusY() );
-    addLabel( *basisAxes, "Z", labelPos * Vector3f::plusZ() );
+    addLabel( *basisAxes, "X", labelPos * Vector3f::plusX(), false );
+    addLabel( *basisAxes, "Y", labelPos * Vector3f::plusY(), false );
+    addLabel( *basisAxes, "Z", labelPos * Vector3f::plusZ(), false );
 
     basisAxes->setFacesColorMap( colorMap );
     basisAxes->setColoringType( ColoringType::FacesColorMap );

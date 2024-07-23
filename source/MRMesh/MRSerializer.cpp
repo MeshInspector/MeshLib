@@ -433,6 +433,14 @@ void serializeToJson( const MeshTexture& texture, Json::Value& root )
     root["Data"] = encode64( ( const uint8_t* )texture.pixels.data(), texture.pixels.size() * sizeof( Color ) );
 }
 
+void serializeToJson( const std::vector<TextureId>& texturePerFace, Json::Value& root )
+{
+    if ( texturePerFace.empty() )
+        return;
+    root["Size"] = int( texturePerFace.size() );
+    root["Data"] = encode64( ( const uint8_t* )texturePerFace.data(), texturePerFace.size() * sizeof( TextureId ) );
+}
+
 void serializeToJson( const std::vector<UVCoord>& uvCoords, Json::Value& root )
 {
     if ( uvCoords.empty() )
@@ -733,6 +741,17 @@ void deserializeFromJson( const Json::Value& root, MeshTexture& texture )
         auto bin = decode64( root["Data"].asString() );
         auto numColors = std::min( bin.size() / sizeof( Color ), texture.pixels.size() );
         std::copy( ( Color* )bin.data(), ( Color* )( bin.data() ) + numColors, texture.pixels.data() );
+    }
+}
+
+void deserializeFromJson( const Json::Value& root, std::vector<TextureId>& texturePerFace )
+{
+    if ( root["Data"].isString() && root["Size"].isInt() )
+    {
+        const auto bin = decode64( root["Data"].asString() );
+        const auto size = std::min<size_t>( root["Size"].asUInt64(), bin.size() / sizeof( TextureId ) );
+        texturePerFace.resize( size );
+        std::copy( ( TextureId* )bin.data(), ( TextureId* )( bin.data() ) + size, texturePerFace.data() );
     }
 }
 

@@ -104,7 +104,7 @@ jobs:
 
       - name: Run MeshViewer
         if: always()
-        run: xvfb-run -a MeshViewer -hidden -noEventLoop
+        run: xvfb-run -a MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
         if: always()
@@ -161,7 +161,7 @@ jobs:
       # [error] NSGL: Failed to find a suitable pixel format
       #- name: Run MeshViewer
         #if: always()
-        #run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/MeshViewer -tryHidden -noEventLoop
+        #run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
         if: always()

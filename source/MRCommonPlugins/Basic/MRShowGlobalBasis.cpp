@@ -19,7 +19,7 @@ ShowGlobalBasisMenuItem::ShowGlobalBasisMenuItem() :
 bool ShowGlobalBasisMenuItem::action()
 {
     auto& viewer = Viewer::instanceRef();
-    viewer.viewport().showGlobalBasis( viewer.globalBasisAxes ? !viewer.globalBasisAxes->isVisible() : false );
+    viewer.globalBasisAxes->setVisibilityMask( viewer.globalBasisAxes->visibilityMask() ^ viewer.viewport().id );
     return false;
 }
 

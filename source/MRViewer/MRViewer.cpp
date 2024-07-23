@@ -339,7 +339,11 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
 
     auto& viewer = MR::Viewer::instanceRef();
 
-    MR::setupLoggerByDefault();
+#ifdef _WIN32
+    MR::setupLoggerByDefault( params.console );
+#else
+    MR::setupLoggerByDefault( true );
+#endif
 
     setup.setupBasePlugins( &viewer );
     setup.setupCommonModifiers( &viewer );

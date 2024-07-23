@@ -133,7 +133,7 @@ Logger::Logger()
 #endif
 }
 
-void setupLoggerByDefault()
+void setupLoggerByDefault( bool console )
 {
 #ifndef __EMSCRIPTEN__
 #ifndef _WIN32 //on Windows we use WindowsExceptionsLogger instead
@@ -142,10 +142,13 @@ void setupLoggerByDefault()
 #endif //__EMSCRIPTEN__
     redirectSTDStreamsToLogger();
     // write log to console
-    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-    console_sink->set_level( spdlog::level::trace );
-    console_sink->set_pattern( Logger::instance().getDefaultPattern() );
-    Logger::instance().addSink( console_sink );
+    if ( console )
+    {
+        auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+        console_sink->set_level( spdlog::level::trace );
+        console_sink->set_pattern( Logger::instance().getDefaultPattern() );
+        Logger::instance().addSink( console_sink );
+    }
 
     // write log to file
     auto now = std::chrono::system_clock::now();

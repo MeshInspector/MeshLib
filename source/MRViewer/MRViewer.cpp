@@ -642,9 +642,12 @@ bool Viewer::checkOpenGL_(const LaunchParams& params )
         {
             spdlog::critical( "Cannot load OpenGL 3.3" );
 #ifdef _WIN32
-            MessageBoxA( NULL, "Cannot activate OpenGL 3.3.\n"
-                "Please verify that you have decent graphics card and its drivers are installed.",
-                "MeshInspector/MeshLib Error", MB_OK );
+            if ( params.windowMode != LaunchParams::WindowMode::TryHidden )
+            {
+                MessageBoxA( NULL, "Cannot activate OpenGL 3.3.\n"
+                    "Please verify that you have decent graphics card and its drivers are installed.",
+                    "MeshInspector/MeshLib Error", MB_OK );
+            }
 #endif
             return false;
         }
@@ -1470,34 +1473,35 @@ static void resetRedrawFlagRecursive( const Object& obj )
         resetRedrawFlagRecursive( *child );
 }
 
-bool Viewer::tryCreateWindow_( bool fullscreen, int& width, int& height, const std::string& name, int major, int minor )
+bool Viewer::tryCreateWindow_( bool , int& , int& , const std::string& , int , int )
 {
-    glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, major );
-    glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, minor );
-    if ( fullscreen )
-    {
-        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-        const GLFWvidmode* mode = glfwGetVideoMode( monitor );
-        window = glfwCreateWindow( mode->width, mode->height, name.c_str(), monitor, nullptr );
-        width = mode->width;
-        height = mode->height;
-    }
-    else
-    {
-        const auto& rect = viewport().getViewportRect();
-        // Set default windows width
-        if ( width <= 0 && viewport_list.size() == 1 && MR::width( rect ) > 0 )
-            width = ( int ) MR::width( rect );
-        else if ( width <= 0 )
-            width = 1280;
-        // Set default windows height
-        if ( height <= 0 && viewport_list.size() == 1 && MR::height( rect ) > 0 )
-            height = ( int ) MR::height( rect );
-        else if ( height <= 0 )
-            height = 800;
-        window = glfwCreateWindow( width, height, name.c_str(), nullptr, nullptr );
-    }
-    return bool( window );
+    return false;
+    //glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, major );
+    //glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, minor );
+    //if ( fullscreen )
+    //{
+    //    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+    //    const GLFWvidmode* mode = glfwGetVideoMode( monitor );
+    //    window = glfwCreateWindow( mode->width, mode->height, name.c_str(), monitor, nullptr );
+    //    width = mode->width;
+    //    height = mode->height;
+    //}
+    //else
+    //{
+    //    const auto& rect = viewport().getViewportRect();
+    //    // Set default windows width
+    //    if ( width <= 0 && viewport_list.size() == 1 && MR::width( rect ) > 0 )
+    //        width = ( int ) MR::width( rect );
+    //    else if ( width <= 0 )
+    //        width = 1280;
+    //    // Set default windows height
+    //    if ( height <= 0 && viewport_list.size() == 1 && MR::height( rect ) > 0 )
+    //        height = ( int ) MR::height( rect );
+    //    else if ( height <= 0 )
+    //        height = 800;
+    //    window = glfwCreateWindow( width, height, name.c_str(), nullptr, nullptr );
+    //}
+    //return bool( window );
 }
 
 bool Viewer::needRedraw_() const

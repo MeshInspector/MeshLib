@@ -99,7 +99,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu20' && matrix.compiler == 'Clang' }}
         run: |
           fail_on_first_run() { [ "${{ github.run_attempt }}" != "1" ] && return 0 || return 1; }
-          fail_on_first_run()
+          fail_on_first_run
 
       - name: Checkout
         uses: actions/checkout@v4

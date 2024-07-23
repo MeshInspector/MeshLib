@@ -150,3 +150,7 @@ jobs:
           name: Distributives_${{matrix.os}}_arm64
           path: meshlib-${{matrix.os}}-arm64-dev.deb
           retention-days: 1
+
+      - name: Clear workspace
+        if: always()
+        run: rm -rf /__w/MeshLib/MeshLib

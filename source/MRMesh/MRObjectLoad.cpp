@@ -405,6 +405,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                         }
                         else
                         {
+                            objectMesh->setTextures( {} );
                             *loadWarn += image.error();
                         }
                     }

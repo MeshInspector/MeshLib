@@ -287,8 +287,8 @@ Make sure you copy all dlls from `distribution\install\app\$(Configuration);` to
 ### Distribution for .NET
 You can download [zip-archive MeshLibDotNetDist.zip](https://github.com/MeshInspector/MeshLib/releases) containing dynamic lybraries (.dll) of both MeshLib and dependant third-party libraries, and make them available during your project building and runtime execution as follows.
 
-1. Create a new C# project.
-2. Double-click on the project and open `.csproj` file
+1. Create a new C# project in Visual Studio.
+2. Double-click on the project in Solution Explorer. You will see content of the `.csproj` file
 3. Add the following lines before the `</Project>` closing tag
 ```
  <PropertyGroup>
@@ -302,7 +302,7 @@ You can download [zip-archive MeshLibDotNetDist.zip](https://github.com/MeshInsp
    </Reference>
  </ItemGroup>
  ```
- 4. Copy content of `MeshLibDotNetDist.zip` to `project\bin` directory
+ 4. Extract content of `MeshLibDotNetDist.zip` to `project\bin` directory
  
  You could find examples of usage in this repo in `examples\c-sharp-example` directory 
  > **_NOTE:_** MeshLib distribution has x64 build only.

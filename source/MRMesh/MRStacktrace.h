@@ -4,7 +4,7 @@
 
 #include <string>
 
-#ifdef _WIN32
+#ifndef __APPLE__
 // it is tricky to use std::stacktrace on other systems: https://stackoverflow.com/q/78395268/7325599
 #include <version>
 #if __cpp_lib_stacktrace >= 202011
@@ -26,7 +26,7 @@ namespace MR
 /// if std::stacktrace is first called from MRMesh.dll then it is not unloaded propely
 [[nodiscard]] inline std::string getCurrentStacktraceInline()
 {
-#if defined _WIN32 && __cpp_lib_stacktrace >= 202011
+#if !defined(__APPLE__) && __cpp_lib_stacktrace >= 202011
     return to_string( std::stacktrace::current() );
 #else
     return to_string( boost::stacktrace::stacktrace() );

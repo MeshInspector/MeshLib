@@ -1,9 +1,5 @@
 #pragma once
 
-#ifndef MRMESHNUMPY_MODULE_NAME
-#define MRMESHNUMPY_MODULE_NAME mrmeshnumpy
-#endif
-
 #ifndef MRMESHNUMPY_PARENT_MODULE_NAME
 #define MRMESHNUMPY_PARENT_MODULE_NAME meshlib
 #endif

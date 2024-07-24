@@ -77,7 +77,7 @@ pybind11::array_t<double> getNumpy3Darray( const MR::SimpleVolume& simpleVolume 
         freeWhenDone ); // numpy array references this parent
 }
 
-MR_ADD_PYTHON_CUSTOM_DEF( MRMESHNUMPY_MODULE_NAME, VoxelsVolumeNumpyConvert, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, VoxelsVolumeNumpyConvert, [] ( pybind11::module_& m )
 {
     m.def( "simpleVolumeFrom3Darray", &simpleVolumeFrom3Darray, pybind11::arg( "3DvoxelsArray" ),
         "Convert numpy 3D array to SimpleVolume" );

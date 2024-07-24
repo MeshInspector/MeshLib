@@ -1624,7 +1624,7 @@ void separator(
     ImGui::Dummy( ImVec2( 0, 0 ) );
 }
 
-MRVIEWER_API void separator( float scaling, const std::string& textureName, const std::string& text, const Vector2f& iconSize /*= { 24.f, 24.f }*/ )
+void separator( float scaling, const ImGuiImage& icon, const std::string& text, const Vector2f& iconSize /*= { 24.f, 24.f } */ )
 {
     const auto& style = ImGui::GetStyle();
     if ( style.ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
@@ -1641,9 +1641,7 @@ MRVIEWER_API void separator( float scaling, const std::string& textureName, cons
         // icon
         ImGui::TableNextColumn();
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() + shiftPosY );
-        auto icon = RibbonIcons::findByName( textureName, iconWidth, RibbonIcons::ColorType::White, RibbonIcons::IconType::IndependentIcons );
-        assert( icon );
-        ImGui::Image( *icon, { iconWidth, iconHeight }, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActiveText ) );
+        ImGui::Image( icon, { iconWidth, iconHeight }, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActiveText ) );
 
         // text
         if ( !text.empty() )
@@ -1669,6 +1667,16 @@ MRVIEWER_API void separator( float scaling, const std::string& textureName, cons
     {
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling );
     }
+}
+
+void separator( float scaling, const std::string& textureName, const std::string& text, const Vector2f& iconSize /*= { 24.f, 24.f }*/ )
+{
+    const auto icon = RibbonIcons::findByName( textureName, iconSize.x * scaling, RibbonIcons::ColorType::White, RibbonIcons::IconType::IndependentIcons );
+    assert( icon );
+    if ( icon )
+        separator( scaling, *icon, text, iconSize );
+    else
+        separator( scaling, text );
 }
 
 void progressBar( float scaling, float fraction, const Vector2f& sizeArg /*= Vector2f( -1, 0 ) */ )

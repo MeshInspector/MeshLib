@@ -294,6 +294,7 @@ MRVIEWER_API void separator(
     const std::string& issueCount );
 // separator line with icon and text
 // iconSize icon size without scaling
+MRVIEWER_API void separator( float scaling, const ImGuiImage& icon, const std::string& text, const Vector2f& iconSize = { 24.f, 24.f } );
 MRVIEWER_API void separator( float scaling, const std::string& iconName, const std::string& text, const Vector2f& iconSize = { 24.f, 24.f } );
 
 /// draws progress bar

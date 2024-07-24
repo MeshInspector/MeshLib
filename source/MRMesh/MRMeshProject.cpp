@@ -7,7 +7,7 @@
 namespace MR
 {
 
-MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart & mp, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq, FaceId skipFace )
+MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart & mp, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq, const FacePredicate & validFaces )
 {
     MeshProjectionResult res;
     res.distSq = upDistLimitSq;
@@ -53,7 +53,7 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
         if ( node.leaf() )
         {
             const auto face = node.leafId();
-            if ( face == skipFace )
+            if ( validFaces && !validFaces( face ) )
                 continue;
             if ( mp.region && !mp.region->test( face ) )
                 continue;
@@ -96,9 +96,9 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
     return res;
 }
 
-MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq, FaceId skipFace )
+MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq, const FacePredicate & validFaces )
 {
-    return findProjectionSubtree( pt, mp, mp.mesh.getAABBTree(), upDistLimitSq, xf, loDistLimitSq, skipFace );
+    return findProjectionSubtree( pt, mp, mp.mesh.getAABBTree(), upDistLimitSq, xf, loDistLimitSq, validFaces );
 }
 
 std::optional<SignedDistanceToMeshResult> findSignedDistance( const Vector3f & pt, const MeshPart & mp,

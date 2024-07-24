@@ -62,6 +62,11 @@ override mrbind_vars = \
 $(LINKER_OUTPUT): | $(MODULE_OUTPUT_DIR)
 	$(MAKE) -f $(MRBIND_SOURCE)/scripts/apply_to_files.mk $(mrbind_vars)
 
+# Only generate mrmeshpy, but don't compile.
+.PHONY: only-generate
+only-generate:
+	$(MAKE) -f $(MRBIND_SOURCE)/scripts/apply_to_files.mk generate $(mrbind_vars)
+
 # Handwritten mrmeshnumpy.
 MRMESHPY_MODULE := $(MODULE_OUTPUT_DIR)/mrmeshnumpy$(shell python3-config --extension-suffix)
 $(MRMESHPY_MODULE): | $(MODULE_OUTPUT_DIR)
@@ -73,9 +78,11 @@ $(MRMESHPY_MODULE): | $(MODULE_OUTPUT_DIR)
 		-L$(MESHLIB_SHLIB_DIR) -lMRMesh -shared \
 		-DMRMESHNUMPY_PARENT_MODULE_NAME=$(notdir $(MODULE_OUTPUT_DIR))
 
+# All modules.
 .DEFAULT_GOAL := all
 .PHONY: all
 all: $(LINKER_OUTPUT) $(MRMESHPY_MODULE)
 
+# The directory for the modules.
 $(MODULE_OUTPUT_DIR):
 	mkdir -p $@

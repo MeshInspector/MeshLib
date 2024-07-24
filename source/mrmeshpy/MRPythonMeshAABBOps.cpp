@@ -102,11 +102,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshProjection, [] ( pybind11::module_& m )
         def_readwrite( "mtp", &MR::MeshProjectionResult::mtp, "its barycentric representation" ).
         def_readwrite( "distSq", &MR::MeshProjectionResult::distSq, "squared distance from pt to proj" );
 
-    m.def( "findProjection", &MR::findProjection,
+    m.def( "findProjection", []( const Vector3f & pt, const MeshPart & mp, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq )
+        { return findProjection( pt, mp, upDistLimitSq, xf, loDistLimitSq ); },
         pybind11::arg( "pt" ), pybind11::arg( "mp" ),
         pybind11::arg( "upDistLimitSq" ) = FLT_MAX, pybind11::arg( "xf" ) = nullptr,
         pybind11::arg( "loDistLimitSq" ) = 0.0f,
-        pybind11::arg_v( "validFaces", FacePredicate{}, "All" ),
         "computes the closest point on mesh (or its region) to given point\n"
         "\tupDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exits returning upDistLimitSq and no valid point\n"
         "\txf mesh-to-point transformation, if not specified then identity transformation is assumed\n"

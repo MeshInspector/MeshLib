@@ -45,10 +45,6 @@ jobs:
           - full_config_build: false
             config: Release
             compiler: GCC
-          - os: ubuntu24
-            compiler: GCC
-          - os: ubuntu24
-            config: Debug
         include:
           - os: ubuntu20
             compiler: Clang

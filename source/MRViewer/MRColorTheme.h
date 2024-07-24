@@ -69,6 +69,7 @@ public:
     enum class RibbonColorsType
     {
         Background,
+        BackgroundSecStyle,
         HeaderBackground,
         HeaderSeparator,
         TopPanelBackground,
@@ -130,6 +131,13 @@ public:
         GradBtnActiveEnd,
         GradBtnDisableEnd,
         GradBtnText,
+
+        GradBtnSecStyleStart,
+        GradBtnSecStyleHoverStart,
+        GradBtnSecStyleActiveStart,
+        GradBtnSecStyleEnd,
+        GradBtnSecStyleHoverEnd,
+        GradBtnSecStyleActiveEnd,
 
         Count
     };

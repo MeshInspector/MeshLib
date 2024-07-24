@@ -1624,6 +1624,53 @@ void separator(
     ImGui::Dummy( ImVec2( 0, 0 ) );
 }
 
+MRVIEWER_API void separator( float scaling, const std::string& textureName, const std::string& text, const Vector2f& iconSize /*= { 24.f, 24.f }*/ )
+{
+    const auto& style = ImGui::GetStyle();
+    if ( style.ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
+    {
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling );
+    }
+
+    const float iconWidth = iconSize.x * scaling;
+    const float iconHeight = iconSize.y * scaling;
+    const float shiftPosY = ( ImGui::GetTextLineHeight() - iconHeight ) / 2.f;
+    const int elementsCount = 2 + ( text.empty() ? 0 : 1 );
+    if ( ImGui::BeginTable( ( std::string( "SeparatorTable_" ) + text ).c_str(), elementsCount, ImGuiTableFlags_SizingFixedFit ) )
+    {
+        // icon
+        ImGui::TableNextColumn();
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + shiftPosY );
+        auto icon = RibbonIcons::findByName( textureName, iconWidth, RibbonIcons::ColorType::White, RibbonIcons::IconType::IndependentIcons );
+        assert( icon );
+        ImGui::Image( *icon, { iconWidth, iconHeight }, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActiveText ) );
+
+        // text
+        if ( !text.empty() )
+        {
+            ImGui::TableNextColumn();
+            ImGui::PushFont( MR::RibbonFontManager::getFontByTypeStatic( MR::RibbonFontManager::FontType::SemiBold ) );
+            ImGui::Text( "%s", text.c_str() );
+            ImGui::PopFont();
+        }
+
+        // separator
+        ImGui::TableNextColumn();
+        auto width = ImGui::GetWindowWidth();
+        ImGui::SetCursorPos( { width - style.WindowPadding.x, ImGui::GetCursorPosY() + std::round( ImGui::GetTextLineHeight() * 0.5f ) } );
+        ImGui::Separator();
+
+        ImGui::EndTable();
+    }
+    if ( shiftPosY < 0.f )
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + shiftPosY );
+
+    if ( style.ItemSpacing.y < MR::cSeparateBlocksSpacing * scaling )
+    {
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + MR::cSeparateBlocksSpacing * scaling );
+    }
+}
+
 void progressBar( float scaling, float fraction, const Vector2f& sizeArg /*= Vector2f( -1, 0 ) */ )
 {
     auto& textureG = getTexture( TextureType::Gradient );

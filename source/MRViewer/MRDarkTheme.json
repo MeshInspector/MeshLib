@@ -25,6 +25,12 @@
 			"g": 37,
 			"r": 34
 		},
+		"BackgroundSecStyle": {
+			"a": 255,
+			"b": 58,
+			"g": 52,
+			"r": 48
+		},
 		"Borders": {
 			"a": 255,
 			"b": 71,
@@ -314,6 +320,43 @@
 			"b": 255,
 			"g": 255,
 			"r": 255
+		},
+
+		"GradBtnSecStyleStart": {
+			"a": 255,
+			"b": 0,
+			"g": 206,
+			"r": 86
+		},
+		"GradBtnSecStyleHoverStart": {
+			"a": 255,
+			"b": 0,
+			"g": 229,
+			"r": 96
+		},
+		"GradBtnSecStyleActiveStart": {
+			"a": 255,
+			"b": 0,
+			"g": 239,
+			"r": 100
+		},
+		"GradBtnSecStyleEnd": {
+			"a": 255,
+			"b": 0,
+			"g": 141,
+			"r": 38
+		},
+		"GradBtnSecStyleHoverEnd": {
+			"a": 255,
+			"b": 0,
+			"g": 154,
+			"r": 42
+		},
+		"GradBtnSecStyleActiveEnd": {
+			"a": 255,
+			"b": 0,
+			"g": 171,
+			"r": 46
 		}
 	},
 	"Viewport Colors": {

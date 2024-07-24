@@ -302,6 +302,7 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
     constexpr std::array<const char*, size_t( RibbonColorsType::Count )> colorNames
     {
         "Background",
+        "BackgroundSecStyle",
         "HeaderBackground",
         "HeaderSeparator",
         "TopPanelBackground",
@@ -358,7 +359,14 @@ const char* ColorTheme::getRibbonColorTypeName( RibbonColorsType type )
         "GradBtnHoverEnd",
         "GradBtnActiveEnd",
         "GradBtnDisableEnd",
-        "GradBtnText"
+        "GradBtnText",
+
+        "GradBtnSecStyleStart",
+        "GradBtnSecStyleHoverStart",
+        "GradBtnSecStyleActiveStart",
+        "GradBtnSecStyleEnd",
+        "GradBtnSecStyleHoverEnd",
+        "GradBtnSecStyleActiveEnd"
     };
     return colorNames[int( type )];
 }

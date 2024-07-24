@@ -9,11 +9,17 @@
 namespace MR
 {
 
-std::optional<MeshIntersectionResult> rayInsideIntersect( const Mesh& mesh, const MeshTriPoint & p )
+MRMESH_API void MeshPoint::set( const Mesh& mesh, const MeshTriPoint & p )
 {
-    const auto dir = -mesh.pseudonormal( p );
-    return rayMeshIntersect( mesh, { mesh.triPoint( p ), dir }, 0.0f, FLT_MAX, nullptr, true,
-        [&p, &top = mesh.topology]( FaceId f )
+    triPoint = p;
+    pt = mesh.triPoint( p );
+    inDir = -mesh.pseudonormal( p );
+}
+
+std::optional<MeshIntersectionResult> rayInsideIntersect( const Mesh& mesh, const MeshPoint & m )
+{
+    return rayMeshIntersect( mesh, { m.pt, m.inDir }, 0.0f, FLT_MAX, nullptr, true,
+        [&p = m.triPoint, &top = mesh.topology]( FaceId f )
         {
             // ignore intersections with incident faces of (p)
             return !p.fromTriangle( top, f );
@@ -22,7 +28,9 @@ std::optional<MeshIntersectionResult> rayInsideIntersect( const Mesh& mesh, cons
 
 std::optional<MeshIntersectionResult> rayInsideIntersect( const Mesh& mesh, VertId v )
 {
-    return rayInsideIntersect( mesh, MeshTriPoint( mesh.topology, v ) );
+    MeshPoint m;
+    m.set( mesh, MeshTriPoint( mesh.topology, v ) );
+    return rayInsideIntersect( mesh, m );
 }
 
 VertScalars computeRayThicknessAtVertices( const Mesh& mesh )
@@ -41,6 +49,30 @@ VertScalars computeRayThicknessAtVertices( const Mesh& mesh )
 VertScalars computeThicknessAtVertices( const Mesh& mesh )
 {
     return computeRayThicknessAtVertices( mesh );
+}
+
+InSphere findInCircle( const Mesh& mesh, const MeshPoint & m, const InSphereSearchSettings & settings )
+{
+    InSphere res;
+    if ( auto isec = rayInsideIntersect( mesh, m ) )
+    {
+        res.center = 0.5f * ( isec->proj.point + m.pt );
+        res.radius = 0.5f * isec->distanceAlongLine;
+        res.oppositeTouchPoint = MeshProjectionResult{ .proj = isec->proj, .mtp = isec->mtp, .distSq = sqr( res.radius ) };
+    }
+    else
+    {
+        res.center = m.pt + m.inDir * settings.maxRadius;
+        res.radius = settings.maxRadius;
+        res.oppositeTouchPoint.distSq = sqr( res.radius );
+    }
+
+    for ( int it = 0; it < settings.maxRadius; ++it )
+    {
+
+    }
+
+    return res;
 }
 
 } // namespace MR

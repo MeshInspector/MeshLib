@@ -377,23 +377,28 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                     objectMesh->setFrontColor( *resValue[i].diffuseColor, false );
 
                 objectMesh->setUVCoords( std::move( resValue[i].uvCoords ) );
-
-                if ( !resValue[i].textureFiles.empty() )
+                
+                int numEmptyTexture = 0;
+                for ( const auto& p : resValue[i].textureFiles )
                 {
-                    int num = 0;
+                    if ( p.empty() )
+                        numEmptyTexture++;
+                }
+
+                if ( numEmptyTexture != 0 && numEmptyTexture != resValue[i].textureFiles.size() )
+                {
+                    *loadWarn += " object has material with and without texture";
+                }
+                else if( numEmptyTexture == 0 )
+                {
                     for ( const auto& p : resValue[i].textureFiles )
                     {
-                        if ( p.empty() )
-                        {
-                            num++;
-                            continue;
-                        }
                         auto image = ImageLoad::fromAnySupportedFormat( p );
                         if ( image.has_value() )
                         {
                             MeshTexture meshTexture;
                             meshTexture.resolution = std::move( image.value().resolution );
-                            meshTexture.pixels = std::move(image.value().pixels);
+                            meshTexture.pixels = std::move( image.value().pixels );
                             meshTexture.filter = FilterType::Linear;
                             meshTexture.wrap = WrapType::Clamp;
                             objectMesh->addTexture( std::move( meshTexture ) );
@@ -403,16 +408,10 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                             *loadWarn += image.error();
                         }
                     }
-                    if ( num != 0 && num == resValue[i].textureFiles.size() )
-                    {
-                        *loadWarn += " object has material with and without texture";
-                    }
-                    else
-                    {
-                        objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
-                        objectMesh->setTexturePerFace( std::move( resValue[i].texturePerFace ) );
-                    }
+                    objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
+                    objectMesh->setTexturePerFace( std::move( resValue[i].texturePerFace ) );
                 }
+
                 if ( !resValue[i].colors.empty() )
                 {
                     objectMesh->setVertsColorMap( std::move( resValue[i].colors ) );

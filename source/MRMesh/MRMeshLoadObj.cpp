@@ -433,7 +433,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
     std::optional<Vector3d> pointOffset;
 
     TextureId maxTextureId;
-    TextureId currentTextureId;
+    TextureId currentTextureId = TextureId(-1);
     Vector<TextureId, FaceId> texturePerFace;
 
     std::map<int, int> additions;
@@ -758,11 +758,14 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
                    [] ( auto&& a, auto&& b ) { return a.offset < b.offset; } );
 
         triangulation.reserve( triangulation.size() + trisSize );
-        texturePerFace.reserve( triangulation.size() + trisSize );
+        bool hasMaterial = mtl.has_value() && mtl.value().size() > 0;
+        if ( hasMaterial )
+            texturePerFace.reserve( triangulation.size() + trisSize );
         for ( auto& ordTri : ordTrisAll )
         {
             triangulation.vec_.insert( triangulation.vec_.end(), ordTri.t.vec_.begin(), ordTri.t.vec_.end() );
-            texturePerFace.vec_.insert( texturePerFace.vec_.end(), ordTri.t.vec_.size(), currentTextureId );
+            if ( hasMaterial )
+                texturePerFace.vec_.insert( texturePerFace.vec_.end(), ordTri.t.vec_.size(), currentTextureId );
         }
     };
 
@@ -801,13 +804,9 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
             auto it = mtl->find( currentMaterialName );
             if ( it != mtl->end() )
             {
-                if ( it->second.id )
-                    currentTextureId = it->second.id;
-                else
-                {
-                    maxTextureId++;
-                    it->second.id = currentTextureId = maxTextureId;
-                }
+                if ( !it->second.id )
+                    it->second.id = ++maxTextureId;
+                currentTextureId = it->second.id;
             }
         }
     };

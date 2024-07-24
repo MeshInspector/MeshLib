@@ -393,6 +393,10 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                             objectMesh->addTexture( std::move( meshTexture ) );
                             objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
                         }
+                        else
+                        {
+                            *loadWarn += image.error();
+                        }
                     }
                     objectMesh->setTexturePerFace( std::move( resValue[i].texturePerFace ) );
                 }

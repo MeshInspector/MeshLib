@@ -11,7 +11,7 @@
 #include "MRMesh/MRCloseVertices.h"
 
 #include "MRMesh/MRMacros.h"
-#include "MRMeshNumpy.h"
+#include "MRPythonNumpy.h"
 
 MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
 {

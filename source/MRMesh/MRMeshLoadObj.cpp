@@ -506,11 +506,11 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
                     materialIt = mtl->begin();
                 }
                
-                result.textureFiles.reserve( maxTextureId + 1 );
+                result.textureFiles.resize( maxTextureId + 1 );
                 for ( const auto& [mtlName, material] : *mtl )
                 {
                     if ( !material.diffuseTextureFile.empty() )
-                        result.textureFiles.autoResizeSet( material.id, dir / material.diffuseTextureFile );
+                        result.textureFiles[material.id] = dir / material.diffuseTextureFile;
                 }
 
                 if ( materialIt->second.diffuseColor != Vector3f::diagonal(-1) )

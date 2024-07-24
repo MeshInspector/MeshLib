@@ -380,8 +380,14 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
 
                 if ( !resValue[i].textureFiles.empty() )
                 {
+                    int num = 0;
                     for ( const auto& p : resValue[i].textureFiles )
                     {
+                        if ( p.empty() )
+                        {
+                            num++;
+                            continue;
+                        }
                         auto image = ImageLoad::fromAnySupportedFormat( p );
                         if ( image.has_value() )
                         {
@@ -397,6 +403,10 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                         {
                             *loadWarn += image.error();
                         }
+                    }
+                    if ( num != 0 && num == resValue[i].textureFiles.size() )
+                    {
+                        *loadWarn += " object has material with and without texture";
                     }
                     objectMesh->setTexturePerFace( std::move( resValue[i].texturePerFace ) );
                 }

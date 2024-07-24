@@ -50,9 +50,10 @@ std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p
     return dist;
 }
 
-Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params /*= {} */ )
+Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& cParams /*= {} */ )
 {
     MR_TIMER
+    auto params = cParams;
     assert( params.dist.signMode != SignDetectionMode::OpenVDB );
     SimpleVolume res;
     res.voxelSize = params.vol.voxelSize;
@@ -60,8 +61,10 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, co
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size() );
 
-    if ( params.dist.signMode == SignDetectionMode::HoleWindingRule && params.fwn )
+    if ( params.dist.signMode == SignDetectionMode::HoleWindingRule )
     {
+        if ( !params.fwn )
+            params.fwn = std::make_shared<FastWindingNumber>( mp.mesh );
         assert( !mp.region ); // only whole mesh is supported for now
         auto basis = AffineXf3f::linear( Matrix3f::scale( params.vol.voxelSize ) );
         basis.b = params.vol.origin + 0.5f * params.vol.voxelSize;

@@ -61,9 +61,9 @@ public:
 
 private:
     /// start modifying mesh surface
-    MRVIEWER_API bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
+    MRVIEWER_API bool onMouseDown_( Viewer::MouseButton button, int modifiers ) override;
     /// stop modifying mesh surface, generate history action
-    MRVIEWER_API bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;
+    MRVIEWER_API bool onMouseUp_( Viewer::MouseButton button, int modifiers ) override;
     /// update
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
     /// need to visualize bad region (draw grey circle)

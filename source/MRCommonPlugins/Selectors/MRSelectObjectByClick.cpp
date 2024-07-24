@@ -32,13 +32,13 @@ void SelectObjectByClick::drawDialog( float, ImGuiContext* )
                        Color::white().getUInt32() );
 }
 
-bool SelectObjectByClick::onMouseDown_( MouseButton button, int modifier )
+bool SelectObjectByClick::onMouseDown_( MouseButton button, int modifiers )
 {
-    if ( button != MouseButton::Left )
+    if ( button != MouseButton::Left || ( modifiers & ~GLFW_MOD_CONTROL ) != 0 )
         return false;
 
     picked_ = true;
-    ctrl_ = modifier == GLFW_MOD_CONTROL;
+    ctrl_ = modifiers == GLFW_MOD_CONTROL;
     return true;
 }
 

@@ -398,8 +398,7 @@ bool SurfaceContoursWidget::onMouseDown_( Viewer::MouseButton button, int mod )
 
         assert( objVisual != nullptr ); // contoursWidget_ can join for mesh objects only
 
-        appendPoint( objVisual, pointOnObjectToPickedPoint( objVisual.get(), pick ) );
-        return true;
+        return appendPoint( objVisual, pointOnObjectToPickedPoint( objVisual.get(), pick ) );
     }
     else if ( mod == params.widgetContourCloseMod ) // close contour case 
     {

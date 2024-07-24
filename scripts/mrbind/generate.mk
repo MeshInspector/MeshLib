@@ -12,7 +12,7 @@ override quote = '$(subst ','"'"',$(subst $(lf), ,$1))'
 # You must set those when executing manually: [
 
 # Where to find MRBind.
-MESHLIB_SHLIB_DIR := build/bin
+MESHLIB_SHLIB_DIR := build/Release/bin
 
 # Source directory of MRBind.
 MRBIND_SOURCE := _mrbind

@@ -397,7 +397,6 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                             meshTexture.filter = FilterType::Linear;
                             meshTexture.wrap = WrapType::Clamp;
                             objectMesh->addTexture( std::move( meshTexture ) );
-                            objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
                         }
                         else
                         {
@@ -408,7 +407,11 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                     {
                         *loadWarn += " object has material with and without texture";
                     }
-                    objectMesh->setTexturePerFace( std::move( resValue[i].texturePerFace ) );
+                    else
+                    {
+                        objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
+                        objectMesh->setTexturePerFace( std::move( resValue[i].texturePerFace ) );
+                    }
                 }
                 if ( !resValue[i].colors.empty() )
                 {

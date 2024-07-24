@@ -22,15 +22,6 @@ namespace MR
 namespace UI
 {
 
-enum class TextureType
-{
-    Mono,
-    Gradient,
-    GradientBtn,
-    RainbowRect,
-    Count
-};
-
 std::vector<std::unique_ptr<MR::ImGuiImage>> textures = std::vector<std::unique_ptr<MR::ImGuiImage>>( int( TextureType::Count ) );
 
 std::unique_ptr<MR::ImGuiImage>& getTexture( TextureType type )
@@ -131,6 +122,24 @@ void init()
     };
     data.filter = FilterType::Linear;
     textureGb->update( data );
+
+
+    auto& textureGbSec = getTexture( TextureType::GradientBtnSecond );
+    if ( !textureGbSec )
+        textureGbSec = std::make_unique<ImGuiImage>();
+    data.resolution = Vector2i( 4, 2 );
+    data.pixels = {
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnSecStyleStart ),
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnSecStyleHoverStart ),
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnSecStyleActiveStart ),
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnDisableStart ),
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnSecStyleEnd ),
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnSecStyleHoverEnd ),
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnSecStyleActiveEnd ),
+        ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnDisableEnd ),
+    };
+    data.filter = FilterType::Linear;
+    textureGbSec->update( data );
 
 
     auto& textureR = getTexture( TextureType::RainbowRect );

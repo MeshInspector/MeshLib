@@ -188,6 +188,7 @@ jobs:
       - name: Rename Distributives
         run: |
           mv MeshLibDist.zip MeshLibDist_${{needs.versioning-and-release-url.outputs.app_version}}.zip
+          mv MeshLibDotNetDist.zip MeshLibDotNetDist_${{needs.versioning-and-release-url.outputs.app_version}}.zip
           mv meshlib-ubuntu20-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu20-dev.deb
           mv meshlib-ubuntu22-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu22-dev.deb
           mv meshlib-ubuntu20-arm64-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu20-arm64-dev.deb
@@ -201,6 +202,7 @@ jobs:
           echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
           gh release upload ${{needs.versioning-and-release-url.outputs.tag}} \
                             MeshLibDist_${{needs.versioning-and-release-url.outputs.app_version}}.zip \
+                            MeshLibDotNetDist_${{needs.versioning-and-release-url.outputs.app_version}}.zip \
                             meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu20-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu22-dev.deb \
                             meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu20-arm64-dev.deb \

@@ -53,7 +53,7 @@ def inject_copyright():
 	copyright_header = open(path_to_copyright_header,'r').read()
 	for src,dst in includes_src_dst:
 		with open(dst, "r+") as f: s = f.read(); f.seek(0); f.write(copyright_header + '\n' + s)
-        
+
 def add_version_file(version):
 	app_pathes = [os.path.join(path_to_app,'Debug'),os.path.join(path_to_app,'Release')]
 	for app_path in app_pathes:

@@ -17,6 +17,20 @@ class ImGuiImage;
 namespace UI
 {
 
+// enumeration texture types
+enum class TextureType
+{
+    Mono,
+    Gradient,
+    GradientBtn,
+    GradientBtnSecond,
+    RainbowRect,
+    Count
+};
+
+// get texture by type
+MRVIEWER_API std::unique_ptr<ImGuiImage>& getTexture( TextureType type );
+
 /// init internal parameters
 MRVIEWER_API void init();
 

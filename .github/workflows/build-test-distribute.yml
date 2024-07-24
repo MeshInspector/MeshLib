@@ -184,32 +184,28 @@ jobs:
         with:
           pattern: Distributives*
           merge-multiple: true
+          failOnError: false
 
       - name: Rename Distributives
         run: |
-          mv MeshLibDist.zip MeshLibDist_${{needs.versioning-and-release-url.outputs.app_version}}.zip
-          mv MeshLibDotNetDist.zip MeshLibDotNetDist_${{needs.versioning-and-release-url.outputs.app_version}}.zip
-          mv meshlib-ubuntu20-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu20-dev.deb
-          mv meshlib-ubuntu22-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu22-dev.deb
-          mv meshlib-ubuntu20-arm64-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu20-arm64-dev.deb
-          mv meshlib-ubuntu22-arm64-dev.deb meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu22-arm64-dev.deb
-          mv meshlib-dev.rpm meshlib_${{needs.versioning-and-release-url.outputs.app_version}}-dev.rpm
-          mv meshlib_x64.pkg meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_x64.pkg
-          mv meshlib_arm.pkg meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_arm.pkg
+          shopt -s nullglob
+          for PKG_FILE in MeshLib*Dist.zip ; do
+            echo mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.versioning-and-release-url.outputs.app_version }}}"
+            mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.versioning-and-release-url.outputs.app_version }}}"
+          done
+          for PKG_FILE in meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg ; do
+            echo mv "$PKG_FILE" "${PKG_FILE/meshlib/meshlib_${{ needs.versioning-and-release-url.outputs.app_version }}}"
+            mv "$PKG_FILE" "${PKG_FILE/meshlib/meshlib_${{ needs.versioning-and-release-url.outputs.app_version }}}"
+          done
 
       - name: Upload Distributives
         run: |
-          echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
-          gh release upload ${{needs.versioning-and-release-url.outputs.tag}} \
-                            MeshLibDist_${{needs.versioning-and-release-url.outputs.app_version}}.zip \
-                            MeshLibDotNetDist_${{needs.versioning-and-release-url.outputs.app_version}}.zip \
-                            meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu20-dev.deb \
-                            meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu22-dev.deb \
-                            meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu20-arm64-dev.deb \
-                            meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_ubuntu22-arm64-dev.deb \
-                            meshlib_${{needs.versioning-and-release-url.outputs.app_version}}-dev.rpm \
-                            meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_x64.pkg \
-                            meshlib_${{needs.versioning-and-release-url.outputs.app_version}}_arm.pkg
+          shopt -s nullglob
+          PKG_FILES=MeshLib*Dist.zip meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg
+          if [ -n "$(echo $PKG_FILES)" ] ; then
+            echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
+            gh release upload ${{ needs.versioning-and-release-url.outputs.tag }} $PKG_FILES --clobber
+          fi
 
   test-distribution:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
@@ -252,7 +248,15 @@ jobs:
           merge-multiple: true
 
       - name: Generate Timing Logs Archive
-        run: tar -cvzf time_log.tar.gz ./*.csv
+        run: |
+          shopt -s nullglob
+          if [ -n "$(echo *.csv)" ] ; then
+            tar -cvzf time_log.tar.gz *.csv
+          else
+            # create empty tar archive
+            # https://superuser.com/questions/448623/how-to-get-an-empty-tar-archive
+            tar -czf time_log.tar.gz -T /dev/null
+          fi
 
       - name: Upload Timing Logs Archive
         uses: actions/upload-artifact@v4

@@ -213,16 +213,16 @@ jobs:
       - name: Create Deb
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang' && matrix.config == 'Release'}}
         env:
-          MESHLIB_BUILD_RELEASE: ON
-          MESHLIB_BUILD_DEBUG: OFF
+          MESHLIB_BUILD_RELEASE: "ON"
+          MESHLIB_BUILD_DEBUG: "OFF"
         run: |
           ./scripts/distribution.sh ${{inputs.app_version}}
-          mv ./distr/meshlib-dev.deb meshlib-${{matrix.os}}-dev.deb
+          mv ./distr/meshlib-dev.deb meshlib_${{matrix.os}}-dev.deb
 
       - name: Upload Ubuntu Developer Distribution
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.compiler == 'Clang' && matrix.config == 'Release'}}
         uses: actions/upload-artifact@v4
         with:
           name: Distributives_${{matrix.os}}-x86
-          path: meshlib-${{matrix.os}}-dev.deb
+          path: meshlib_${{matrix.os}}-dev.deb
           retention-days: 1

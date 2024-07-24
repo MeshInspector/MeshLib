@@ -65,6 +65,11 @@ public:
     
     // set callback to modify new field of view before it is applied to viewport
     void setFOVModifierCb( std::function<void( float& )> cb ) { fovModifierCb_ = cb; }
+
+    // check if newly opened plugin (since last call) can conflict with the camera controls:
+    // camera controls use LMB and current plugin listens for mouse events
+    bool checkConflicts();
+
 private:
     bool preMouseDown_( MouseButton button, int modifier );
     bool mouseDown_( MouseButton button, int modifier );
@@ -97,6 +102,8 @@ private:
 
     std::function<void( AffineXf3f& )> transformModifierCb_;
     std::function<void( float& )> fovModifierCb_;
+
+    size_t connectionsCounter_{}; // for checkConflicts()
 };
 
 }

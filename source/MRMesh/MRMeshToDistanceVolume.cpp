@@ -66,8 +66,7 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, co
         if ( !params.fwn )
             params.fwn = std::make_shared<FastWindingNumber>( mp.mesh );
         assert( !mp.region ); // only whole mesh is supported for now
-        auto basis = AffineXf3f::linear( Matrix3f::scale( params.vol.voxelSize ) );
-        basis.b = params.vol.origin + 0.5f * params.vol.voxelSize;
+        auto basis = AffineXf3f( Matrix3f::scale( params.vol.voxelSize ), params.vol.origin + 0.5f * params.vol.voxelSize );
         constexpr float beta = 2;
         if ( auto d = params.fwn->calcFromGridWithDistances( res.data, res.dims, basis, beta,
             params.dist.maxDistSq, params.dist.minDistSq, params.vol.cb ); !d )

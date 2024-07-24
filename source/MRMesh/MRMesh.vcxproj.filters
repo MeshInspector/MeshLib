@@ -1329,6 +1329,9 @@
     <ClInclude Include="MRStacktrace.h">
       <Filter>Source Files\System</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshThickness.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2200,6 +2203,9 @@
     </ClCompile>
     <ClCompile Include="MRBestFitPolynomial.cpp">
       <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshThickness.cpp">
+      <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

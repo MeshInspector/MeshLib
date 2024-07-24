@@ -41,6 +41,19 @@ bool MeshTriPoint::isBd( const MeshTopology & topology, const FaceBitSet * regio
     return false;
 }
 
+bool MeshTriPoint::fromTriangle( const MeshTopology & topology, FaceId f ) const
+{
+    if ( auto v = inVertex( topology ) )
+    {
+        VertId a, b, c;
+        topology.getTriVerts( f, a, b, c );
+        return v == a || v == b || v == c;
+    }
+    if ( auto oe = onEdge( topology ) )
+        return topology.left( oe.e ) == f || topology.right( oe.e ) == f;
+    return topology.left( e ) == f;
+}
+
 MeshTriPoint MeshTriPoint::lnext( const MeshTopology & topology ) const
 {
     MeshTriPoint res;

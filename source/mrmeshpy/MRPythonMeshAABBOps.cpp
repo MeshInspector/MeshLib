@@ -1,6 +1,7 @@
 #include "MRMesh/MRPython.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshIntersect.h"
+#include "MRMesh/MRMeshThickness.h"
 #include "MRMesh/MRIntersectionPrecomputes.h"
 #include "MRMesh/MRLine3.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
@@ -48,7 +49,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshIntersect, [] ( pybind11::module_& m )
         "prec can be specified to reuse some precomputations (e.g. for checking many parallel rays).\n"
         "Finds the closest to ray origin intersection (or any intersection for better performance if !closestIntersect)." );
     
-    m.def( "computeThicknessAtVertices", &MR::computeThicknessAtVertices,
+    m.def( "computeRayThicknessAtVertices", &MR::computeRayThicknessAtVertices,
         pybind11::arg( "mesh" ),
         "Returns the distance from each vertex along minus normal to the nearest mesh intersection.\n"
         "Returns FLT_MAX if no intersection found)\n" );

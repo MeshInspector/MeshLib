@@ -162,7 +162,7 @@ jobs:
           retention-days: 1
 
   upload-distributions:
-    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    if: ${{ !cancelled() && ( github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') ) }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
     needs:

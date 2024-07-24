@@ -22,7 +22,8 @@
 
 #define MR_INIT_PYTHON_MODULE( moduleName ) MR_INIT_PYTHON_MODULE_PRECALL( moduleName, [](){} )
 
-#define MR_INIT_PYTHON_MODULE_PRECALL( moduleName, precall )\
+#define MR_INIT_PYTHON_MODULE_PRECALL( moduleName, precall ) MR_INIT_PYTHON_MODULE_PRECALL_( moduleName, precall )
+#define MR_INIT_PYTHON_MODULE_PRECALL_( moduleName, precall )\
 PYBIND11_MODULE( moduleName, m )\
 {\
     precall();\

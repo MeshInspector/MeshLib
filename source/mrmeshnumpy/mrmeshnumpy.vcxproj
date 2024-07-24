@@ -28,6 +28,9 @@
     <ClCompile Include="MRPythonNumpyExposing.cpp" />
     <ClCompile Include="MRPythonNumpyVoxels.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="MRPythonNumpy.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{649D8FD7-77FA-4F29-909B-6C32C1EAA709}</ProjectGuid>

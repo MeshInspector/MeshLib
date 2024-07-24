@@ -3,6 +3,8 @@
 #include "MRMesh/MRVoxelsVolume.h"
 #include "MRMesh/MRVector3.h"
 
+#include "MRMeshNumpy.h"
+
 MR::SimpleVolume simpleVolumeFrom3Darray( const pybind11::buffer& voxelsArray )
 {
     pybind11::buffer_info info = voxelsArray.request();
@@ -54,7 +56,7 @@ pybind11::array_t<double> getNumpy3Darray( const MR::SimpleVolume& simpleVolume 
     const size_t cXY = simpleVolume.dims.x * simpleVolume.dims.y;
     const size_t cZ = simpleVolume.dims.z;
     const size_t cZY = simpleVolume.dims.z * simpleVolume.dims.y;
-    
+
     for ( size_t x = 0; x < simpleVolume.dims.x; ++x )
     for ( size_t y = 0; y < simpleVolume.dims.y; ++y )
     for ( size_t z = 0; z < simpleVolume.dims.z; ++z )
@@ -75,7 +77,7 @@ pybind11::array_t<double> getNumpy3Darray( const MR::SimpleVolume& simpleVolume 
         freeWhenDone ); // numpy array references this parent
 }
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, VoxelsVolumeNumpyConvert, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( MRMESHNUMPY_MODULE_NAME, VoxelsVolumeNumpyConvert, [] ( pybind11::module_& m )
 {
     m.def( "simpleVolumeFrom3Darray", &simpleVolumeFrom3Darray, pybind11::arg( "3DvoxelsArray" ),
         "Convert numpy 3D array to SimpleVolume" );

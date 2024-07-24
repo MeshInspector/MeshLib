@@ -10,11 +10,14 @@
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRCloseVertices.h"
 
-MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
+#include "MRMesh/MRMacros.h"
+#include "MRMeshNumpy.h"
+
+MR_INIT_PYTHON_MODULE_PRECALL( MRMESHNUMPY_MODULE_NAME, [] ()
 {
     try
     {
-        pybind11::module_::import( "meshlib.mrmeshpy" );
+        pybind11::module_::import( MR_STR( MRMESHNUMPY_PARENT_MODULE_NAME ) ".mrmeshpy" );
     }
     catch ( const pybind11::error_already_set& )
     {
@@ -43,10 +46,10 @@ MR::Mesh fromFV( const pybind11::buffer& faces, const pybind11::buffer& verts, c
         for ( auto i = 0; i < infoFaces.shape[0]; i++ )
         {
             auto ind = strideF0 * i;
-            t.push_back( { 
+            t.push_back( {
                 MR::VertId( int( data[ind] ) ),
                 MR::VertId( int( data[ind + strideF1] ) ),
-                MR::VertId( int( data[ind + strideF1 * 2] ) ) 
+                MR::VertId( int( data[ind + strideF1 * 2] ) )
                 } );
         }
     };
@@ -232,7 +235,7 @@ MR::Mesh fromUVPoints( const pybind11::buffer& xArray, const pybind11::buffer& y
     return res;
 }
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyMesh, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( MRMESHNUMPY_MODULE_NAME, NumpyMesh, [] ( pybind11::module_& m )
 {
     m.def( "meshFromFacesVerts", &fromFV,
     pybind11::arg( "faces" ), pybind11::arg( "verts" ), pybind11::arg_v( "settings", MR::MeshBuilder::BuildSettings(), "MeshBuilderSettings()" ),
@@ -263,8 +266,8 @@ MR::PointCloud pointCloudFromNP( const pybind11::buffer& points, const pybind11:
             for ( auto i = 0; i < bufInfo.shape[0]; i++ )
             {
                 auto ind = stride0 * i;
-                vec[MR::VertId( i )] = MR::Vector3f( 
-                    float( data[ind] ), 
+                vec[MR::VertId( i )] = MR::Vector3f(
+                    float( data[ind] ),
                     float( data[ind + stride1] ),
                     float( data[ind + stride1 * 2] ) );
             }
@@ -333,7 +336,7 @@ MR::Polyline2 polyline2FromNP( const pybind11::buffer& points )
     return res;
 }
 
-// returns numpy array shapes [num faces,3] which represents vertices of mesh valid faces 
+// returns numpy array shapes [num faces,3] which represents vertices of mesh valid faces
 pybind11::array_t<int> getNumpyFaces( const MR::MeshTopology& topology )
 {
     using namespace MR;
@@ -533,7 +536,7 @@ pybind11::array_t<double> getNumpyCurvatureGradient( const MR::Mesh& mesh )
 }
 
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyMeshData, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( MRMESHNUMPY_MODULE_NAME, NumpyMeshData, [] ( pybind11::module_& m )
 {
     m.def( "getNumpyCurvature", &getNumpyCurvature, pybind11::arg( "mesh" ), "retunrs numpy array with curvature for each valid vertex of given mesh" );
     m.def( "getNumpyCurvatureGradient", &getNumpyCurvatureGradient, pybind11::arg( "mesh" ), "returns numpy array shapes [num verts,3] which represents gradient of mean curvature of mesh valid points" );
@@ -545,14 +548,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyMeshData, [] ( pybind11::module_& m 
     m.def( "toNumpyArray", ( pybind11::array_t<double>( * )( const std::vector<MR::Vector3f>& ) )& toNumpyArray, pybind11::arg( "coords" ), "// returns numpy array shapes [num coords,3] which represents coordinates from given vector" );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, PointCloudFromPoints, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( MRMESHNUMPY_MODULE_NAME, PointCloudFromPoints, [] ( pybind11::module_& m )
 {
     m.def( "pointCloudFromPoints", &pointCloudFromNP,
         pybind11::arg( "points" ), pybind11::arg( "normals" ) = pybind11::array{},
         "creates point cloud object from numpy arrays, first arg - points, second optional arg - normals" );
 } )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, Polyline2FromPoints, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( MRMESHNUMPY_MODULE_NAME, Polyline2FromPoints, [] ( pybind11::module_& m )
 {
     m.def( "polyline2FromPoints", &polyline2FromNP,
         pybind11::arg( "points" ),
@@ -581,7 +584,7 @@ MR::TaggedBitSet<T> bitSetFromNP( const pybind11::buffer& bools )
     return resultBitSet;
 }
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyBitSets, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( MRMESHNUMPY_MODULE_NAME, NumpyBitSets, [] ( pybind11::module_& m )
 {
     m.def( "faceBitSetFromBools", &bitSetFromNP<MR::FaceTag>, pybind11::arg( "boolArray" ), "returns FaceBitSet from numpy array with bools" );
     m.def( "vertBitSetFromBools", &bitSetFromNP<MR::VertTag>, pybind11::arg( "boolArray" ), "returns VertBitSet from numpy array with bools" );

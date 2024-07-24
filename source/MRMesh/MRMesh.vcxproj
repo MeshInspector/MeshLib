@@ -414,6 +414,7 @@
     <ClInclude Include="MRMoveMeshToVoxelMaxDeriv.h" />
     <ClInclude Include="MRBestFitPolynomial.h" />
     <ClInclude Include="MRMeta.h" />
+    <ClInclude Include="MRMacros.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />

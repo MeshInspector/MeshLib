@@ -105,12 +105,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshProjection, [] ( pybind11::module_& m )
     m.def( "findProjection", &MR::findProjection,
         pybind11::arg( "pt" ), pybind11::arg( "mp" ),
         pybind11::arg( "upDistLimitSq" ) = FLT_MAX, pybind11::arg( "xf" ) = nullptr,
-        pybind11::arg( "loDistLimitSq" ) = 0.0f, pybind11::arg_v( "skipFace", FaceId(), "FaceId()" ),
+        pybind11::arg( "loDistLimitSq" ) = 0.0f,
+        pybind11::arg( "validFaces" ) = FacePredicate{},
         "computes the closest point on mesh (or its region) to given point\n"
         "\tupDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exits returning upDistLimitSq and no valid point\n"
         "\txf mesh-to-point transformation, if not specified then identity transformation is assumed\n"
         "\tloDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one\n"
-        "\tskipFace this triangle will be skipped and never returned as a projection" );
+        "\tvalidFaces if provided then only faces from there will be considered as projections" );
 
     pybind11::class_<MR::SignedDistanceToMeshResult>( m, "SignedDistanceToMeshResult" ).
         def( pybind11::init<>() ).

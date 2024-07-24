@@ -57,6 +57,7 @@ InSphere findInCircle( const Mesh& mesh, const MeshPoint & m, const InSphereSear
     if ( auto isec = rayInsideIntersect( mesh, m ) )
     {
         res.center = 0.5f * ( isec->proj.point + m.pt );
+        assert( isec->distanceAlongLine >= 0 );
         res.radius = 0.5f * isec->distanceAlongLine;
         res.oppositeTouchPoint = MeshProjectionResult{ .proj = isec->proj, .mtp = isec->mtp, .distSq = sqr( res.radius ) };
     }
@@ -69,7 +70,28 @@ InSphere findInCircle( const Mesh& mesh, const MeshPoint & m, const InSphereSear
 
     for ( int it = 0; it < settings.maxRadius; ++it )
     {
+        const auto closer = findProjection( res.center, mesh, res.oppositeTouchPoint.distSq, nullptr, 0,
+            [&p = m.triPoint, &top = mesh.topology]( FaceId f )
+            {
+                // ignore incident faces of (p)
+                return !p.fromTriangle( top, f );
+            } );
+        if ( closer.distSq >= res.oppositeTouchPoint.distSq )
+            break; // no other point within circle found
 
+        const auto d = closer.proj.point - m.pt;
+        const auto x = sqr( d ) / ( 2 * dot( m.inDir, d ) );
+        assert ( x >= 0 );
+        if ( !( x >= 0 ) )
+            break; // circle inversion
+        const auto xSq = sqr( x );
+        if ( !( xSq < res.oppositeTouchPoint.distSq ) )
+            break; // no reduction of circle
+
+        res.center = m.pt + m.inDir * x;
+        res.radius = x;
+        res.oppositeTouchPoint = closer;
+        res.oppositeTouchPoint.distSq = xSq;
     }
 
     return res;

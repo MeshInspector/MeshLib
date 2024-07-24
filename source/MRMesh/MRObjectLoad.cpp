@@ -391,6 +391,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                 }
                 else if( numEmptyTexture == 0 )
                 {
+                    bool crashTextureLoad = false;
                     for ( const auto& p : resValue[i].textureFiles )
                     {
                         auto image = ImageLoad::fromAnySupportedFormat( p );
@@ -405,12 +406,17 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                         }
                         else
                         {
+                            crashTextureLoad = true;
                             objectMesh->setTextures( {} );
                             *loadWarn += image.error();
+                            break;
                         }
                     }
-                    objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
-                    objectMesh->setTexturePerFace( std::move( resValue[i].texturePerFace ) );
+                    if ( !crashTextureLoad )
+                    {
+                        objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
+                        objectMesh->setTexturePerFace( std::move( resValue[i].texturePerFace ) );
+                    }
                 }
 
                 if ( !resValue[i].colors.empty() )

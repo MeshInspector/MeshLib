@@ -17,7 +17,7 @@ def test_ray_mesh_intersect():
 def test_mesh_thickness():
     torus = mrmesh.makeTorus(2, 1, 10, 10, None)
     
-    dists = mrmesh.computeThicknessAtVertices(torus)
+    dists = mrmesh.computeRayThicknessAtVertices(torus)
 
     # Thickness for every valid vertex is found
     assert len(dists.vec) == torus.topology.getValidVerts().size()

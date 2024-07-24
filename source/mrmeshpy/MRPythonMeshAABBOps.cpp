@@ -53,6 +53,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshIntersect, [] ( pybind11::module_& m )
         pybind11::arg( "mesh" ),
         "Returns the distance from each vertex along minus normal to the nearest mesh intersection.\n"
         "Returns FLT_MAX if no intersection found)\n" );
+    // deprecated
+    m.def( "computeThicknessAtVertices", &MR::computeRayThicknessAtVertices,
+        pybind11::arg( "mesh" ),
+        "Returns the distance from each vertex along minus normal to the nearest mesh intersection.\n"
+        "Returns FLT_MAX if no intersection found)\n" );
 } )
 
 namespace

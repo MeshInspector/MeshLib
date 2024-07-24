@@ -86,12 +86,6 @@ MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& lin
 MRMESH_API void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
     FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs );
 
-/// returns the nearest intersection between the mesh and the ray from given vertex along minus normal (inside the mesh)
-[[nodiscard]] MRMESH_API std::optional<MeshIntersectionResult> rayInsideIntersect( const Mesh& mesh, VertId v );
-
-/// returns the distance from each vertex along minus normal to the nearest mesh intersection (or FLT_MAX if no intersection found)
-[[nodiscard]] MRMESH_API VertScalars computeThicknessAtVertices( const Mesh& mesh );
-
 /// \}
 
 } // namespace MR

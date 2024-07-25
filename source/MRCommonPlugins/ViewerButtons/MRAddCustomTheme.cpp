@@ -36,7 +36,7 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
     auto menuWidth = 450.0f * menuScaling;
     auto menuHeight = 600.0f * menuScaling;
 
-    if ( !ImGuiBeginWindow_( { .width = menuWidth,.height = menuHeight, .menuScaling = menuScaling } ) )
+    if ( !ImGuiBeginWindow_( { .width = menuWidth,.height = menuHeight, .menuScaling = menuScaling, .flags = 0 } ) )
         return;
 
     int selectedUserIdxBackup = selectedUserPreset_;

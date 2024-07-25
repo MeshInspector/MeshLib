@@ -152,7 +152,7 @@ std::filesystem::path GetResourcesDirectory()
     return exePath;
 #else
     if ( resourcesAreNearExe() )
-        return exePath;
+        return exePath / ".." / "share" / std::string( MR_PROJECT_NAME );
     #ifdef __APPLE__
         #ifdef MR_FRAMEWORK
     return "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/Resources/";
@@ -172,7 +172,7 @@ std::filesystem::path GetFontsDirectory()
     return exePath;
 #else
     if ( resourcesAreNearExe() )
-        return exePath;
+        return exePath / ".." / "share" / "fonts";
     #ifdef __APPLE__
     return GetResourcesDirectory() / "fonts/";
     #else
@@ -188,7 +188,7 @@ std::filesystem::path GetLibsDirectory()
     return exePath;
 #else
     if ( resourcesAreNearExe() )
-        return exePath;
+        return exePath / ".." / "lib" / std::string( MR_PROJECT_NAME );
     #ifdef __APPLE__
         #ifdef MR_FRAMEWORK
     return "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/lib/";

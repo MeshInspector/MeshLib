@@ -330,7 +330,7 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
     clear();
     if ( !async )
     {
-        spdlog::info( "WebRequest  {}", logName.c_str() );
+        spdlog::info( "WebRequest  {}: {}", logName.c_str(), urlP.c_str() );
         auto res = sendLambda();
         spdlog::info( "WebResponse {}: {}", logName.c_str(), int( res.status_code ) );
         Json::Value resJson;
@@ -344,7 +344,7 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
     {
         std::thread requestThread = std::thread( [sendLambda, callback, logName, url = urlP] ()
         {
-            spdlog::info( "WebRequest  {}", logName.c_str() );
+            spdlog::info( "WebRequest  {}: {}", logName.c_str(), url.c_str() );
             auto res = sendLambda();
 
             // log everything in one line for convenience

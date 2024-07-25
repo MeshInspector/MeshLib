@@ -8,7 +8,7 @@ namespace MR
 {
 
 /// returns the distance from each vertex along minus normal to the nearest mesh intersection (or FLT_MAX if no intersection found)
-[[nodiscard]] MRMESH_API VertScalars computeRayThicknessAtVertices( const Mesh& mesh );
+[[nodiscard]] MRMESH_API std::optional<VertScalars> computeRayThicknessAtVertices( const Mesh& mesh, const ProgressCallback & progress = {} );
 [[deprecated]] MRMESH_API VertScalars computeThicknessAtVertices( const Mesh& mesh );
 
 /// describes the point of measurement on mesh
@@ -36,6 +36,9 @@ struct InSphereSearchSettings
 
     /// maximum number of shrinking iterations
     int maxIter = 8;
+
+    /// to monitor current progress and cancel the operation
+    ProgressCallback progress;
 };
 
 /// found inscribed sphere touching input point with center along given direction
@@ -50,7 +53,7 @@ struct InSphere
 [[nodiscard]] MRMESH_API InSphere findInSphere( const Mesh& mesh, const MeshPoint & m, const InSphereSearchSettings & settings );
 [[nodiscard]] MRMESH_API InSphere findInSphere( const Mesh& mesh, VertId v, const InSphereSearchSettings & settings );
 
-/// returns the thickness from at each vertex as the diameter of the inscribed sphere
-[[nodiscard]] MRMESH_API VertScalars computeInSphereThicknessAtVertices( const Mesh& mesh, const InSphereSearchSettings & settings );
+/// returns the thickness at each vertex as the diameter of the inscribed sphere
+[[nodiscard]] MRMESH_API std::optional<VertScalars> computeInSphereThicknessAtVertices( const Mesh& mesh, const InSphereSearchSettings & settings );
 
 } // namespace MR

@@ -33,22 +33,23 @@ std::optional<MeshIntersectionResult> rayInsideIntersect( const Mesh& mesh, Vert
     return rayInsideIntersect( mesh, m );
 }
 
-VertScalars computeRayThicknessAtVertices( const Mesh& mesh )
+std::optional<VertScalars> computeRayThicknessAtVertices( const Mesh& mesh, const ProgressCallback & progress )
 {
     MR_TIMER
     VertScalars res( mesh.points.size(), FLT_MAX );
-    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    if ( !BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
         auto isec = rayInsideIntersect( mesh, v );
         if ( isec )
             res[v] = isec->distanceAlongLine;
-    } );
+    }, progress ) )
+        return {};
     return res;
 }
 
 VertScalars computeThicknessAtVertices( const Mesh& mesh )
 {
-    return computeRayThicknessAtVertices( mesh );
+    return *computeRayThicknessAtVertices( mesh );
 }
 
 InSphere findInSphere( const Mesh& mesh, const MeshPoint & m, const InSphereSearchSettings & settings )
@@ -104,15 +105,16 @@ InSphere findInSphere( const Mesh& mesh, VertId v, const InSphereSearchSettings 
     return findInSphere( mesh, m, settings );
 }
 
-VertScalars computeInSphereThicknessAtVertices( const Mesh& mesh, const InSphereSearchSettings & settings )
+std::optional<VertScalars> computeInSphereThicknessAtVertices( const Mesh& mesh, const InSphereSearchSettings & settings )
 {
     MR_TIMER
     VertScalars res( mesh.points.size(), FLT_MAX );
-    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    if ( !BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
         auto sph = findInSphere( mesh, v, settings );
         res[v] = 2 * sph.radius;
-    } );
+    }, settings.progress ) )
+        return {};
     return res;
 }
 

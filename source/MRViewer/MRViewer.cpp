@@ -782,11 +782,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         glfw_framebuffer_size( window, width, height );
 
         if ( hasScaledFramebuffer_ )
-        {
-            int winWidth, winHeight;
-            glfwGetWindowSize( window, &winWidth, &winHeight );
-            pixelRatio = float( width ) / float( winWidth );
-        }
+            updatePixelRatio_();
 
         float xscale{ 1.0f }, yscale{ 1.0f };
 #ifndef __EMSCRIPTEN__
@@ -1831,11 +1827,7 @@ void Viewer::postResize( int w, int h )
 #endif
 
     if ( hasScaledFramebuffer_ )
-    {
-        int winWidth, winHeight;
-        glfwGetWindowSize( window, &winWidth, &winHeight );
-        pixelRatio = float( framebufferSize.x ) / float( winWidth );
-    }
+        updatePixelRatio_();
 }
 
 void Viewer::postSetPosition( int xPos, int yPos )
@@ -1844,11 +1836,7 @@ void Viewer::postSetPosition( int xPos, int yPos )
         windowSavePos = { xPos, yPos };
 
     if ( hasScaledFramebuffer_ )
-    {
-        int winWidth, winHeight;
-        glfwGetWindowSize( window, &winWidth, &winHeight );
-        pixelRatio = float( framebufferSize.x ) / float( winWidth );
-    }
+        updatePixelRatio_();
 }
 
 void Viewer::postSetMaximized( bool maximized )
@@ -2586,6 +2574,13 @@ void Viewer::stopEventLoop()
 size_t Viewer::getStaticGLBufferSize() const
 {
     return GLStaticHolder::getStaticGLBuffer().heapBytes();
+}
+
+void Viewer::updatePixelRatio_()
+{
+    int winWidth, winHeight;
+    glfwGetWindowSize( window, &winWidth, &winHeight );
+    pixelRatio = float( framebufferSize.x ) / float( winWidth );
 }
 
 void Viewer::EventsCounter::reset()

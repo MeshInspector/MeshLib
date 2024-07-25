@@ -7,7 +7,8 @@
 namespace MR
 {
 
-MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart & mp, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq, const FacePredicate & validFaces )
+MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart & mp, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
+    const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
 {
     MeshProjectionResult res;
     res.distSq = upDistLimitSq;
@@ -69,16 +70,18 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
             // compute the closest point in double-precision, because float might be not enough
             const auto [projD, baryD] = closestPointInTriangle( Vector3d( pt ), Vector3d( a ), Vector3d( b ), Vector3d( c ) );
             const Vector3f proj( projD );
-            const TriPointf bary( baryD );
-
-            float distSq = ( proj - pt ).lengthSq();
-            if ( distSq < res.distSq )
+            const MeshProjectionResult candidate
             {
-                res.distSq = distSq;
-                res.proj.point = proj;
-                res.proj.face = face;
-                res.mtp = MeshTriPoint{ mp.mesh.topology.edgeWithLeft( face ), bary };
-                if ( distSq <= loDistLimitSq )
+                .proj = PointOnFace{ face, proj },
+                .mtp = MeshTriPoint{ mp.mesh.topology.edgeWithLeft( face ), TriPointf( baryD ) },
+                .distSq = ( proj - pt ).lengthSq()
+            };
+            if ( validProjections && !validProjections( candidate ) )
+                continue;
+            if ( candidate.distSq < res.distSq )
+            {
+                res = candidate;
+                if ( res.distSq <= loDistLimitSq )
                     break;
             }
             continue;
@@ -96,9 +99,10 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
     return res;
 }
 
-MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq, const FacePredicate & validFaces )
+MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
+    const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
 {
-    return findProjectionSubtree( pt, mp, mp.mesh.getAABBTree(), upDistLimitSq, xf, loDistLimitSq, validFaces );
+    return findProjectionSubtree( pt, mp, mp.mesh.getAABBTree(), upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
 }
 
 std::optional<SignedDistanceToMeshResult> findSignedDistance( const Vector3f & pt, const MeshPart & mp,

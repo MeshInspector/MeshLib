@@ -76,15 +76,19 @@ InSphere findInSphere( const Mesh& mesh, const MeshPoint & m, const InSphereSear
             {
                 // ignore incident faces of (p)
                 return !p.fromTriangle( top, f );
-            } );
+            },
+            [&m]( const MeshProjectionResult & candidate )
+            {
+                // avoid circle inversion
+                return dot( m.inDir, candidate.proj.point - m.pt ) > 0;
+            }
+            );
         if ( closer.distSq >= res.oppositeTouchPoint.distSq )
             break; // no other point within circle found
 
         const auto d = closer.proj.point - m.pt;
         const auto x = sqr( d ) / ( 2 * dot( m.inDir, d ) );
         assert ( x >= 0 );
-        if ( !( x >= 0 ) )
-            break; // circle inversion
         const auto xSq = sqr( x );
         if ( !( xSq < res.oppositeTouchPoint.distSq ) )
             break; // no reduction of circle

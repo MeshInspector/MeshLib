@@ -28,12 +28,14 @@ struct MeshProjectionResult
  * \param xf mesh-to-point transformation, if not specified then identity transformation is assumed
  * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
  * \param validFaces if provided then only faces from there will be considered as projections
+ * \param validProjections if provided then only projections passed this test can be returned
  */
 [[nodiscard]] MRMESH_API MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp,
     float upDistLimitSq = FLT_MAX,
     const AffineXf3f * xf = nullptr,
     float loDistLimitSq = 0,
-    const FacePredicate & validFaces = {} );
+    const FacePredicate & validFaces = {},
+    const std::function<bool(const MeshProjectionResult&)> & validProjections = {} );
 
 /**
  * \brief computes the closest point on mesh (or its region) to given point
@@ -42,13 +44,15 @@ struct MeshProjectionResult
  * \param xf mesh-to-point transformation, if not specified then identity transformation is assumed
  * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
  * \param validFaces if provided then only faces from there will be considered as projections
+ * \param validProjections if provided then only projections passed this test can be returned
  */
 [[nodiscard]] MRMESH_API MeshProjectionResult findProjectionSubtree( const Vector3f & pt,
     const MeshPart & mp, const AABBTree & tree,
     float upDistLimitSq = FLT_MAX,
     const AffineXf3f * xf = nullptr,
     float loDistLimitSq = 0,
-    const FacePredicate & validFaces = {} );
+    const FacePredicate & validFaces = {},
+    const std::function<bool(const MeshProjectionResult&)> & validProjections = {} );
 
 struct SignedDistanceToMeshResult
 {

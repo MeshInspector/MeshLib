@@ -100,7 +100,7 @@ typedef struct MRICPProperties
     /// Scaling during one iteration of PointToPlane will be limited by this value
     float p2plScaleLimit;
     /// Points pair will be counted only if cosine between surface normals in points is higher
-    float cosTreshold;
+    float cosThreshold;
     /// Points pair will be counted only if squared distance between points is lower than
     float distThresholdSq;
     /// Points pair will be counted only if distance between points is lower than

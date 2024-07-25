@@ -155,7 +155,7 @@ struct ICPProperties
     float p2plScaleLimit = 2;
 
     /// Points pair will be counted only if cosine between surface normals in points is higher
-    float cosTreshold = 0.7f; // in [-1,1]
+    float cosThreshold = 0.7f; // in [-1,1]
 
     /// Points pair will be counted only if squared distance between points is lower than
     float distThresholdSq = 1.f; // [distance^2]
@@ -189,7 +189,7 @@ MRMESH_API size_t deactivateFarPairs( IPointPairs& pairs, float maxDistSq );
 /// in each pair updates the target data and performs basic filtering (activation)
 MRMESH_API void updatePointPairs( PointPairs& pairs,
     const MeshOrPointsXf& src, const MeshOrPointsXf& tgt,
-    float cosTreshold, float distThresholdSq, bool mutualClosest );
+    float cosThreshold, float distThresholdSq, bool mutualClosest );
 
 /// This class allows you to register two object with similar shape using
 /// Iterative Closest Points (ICP) point-to-point or point-to-plane algorithms

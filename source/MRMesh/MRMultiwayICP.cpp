@@ -206,7 +206,7 @@ private:
 
 void updateGroupPairs( ICPGroupPairs& pairs, const ICPObjects& objs,
     ICPGroupProjector srcProjector, ICPGroupProjector tgtProjector, 
-    float cosTreshold, float distThresholdSq, bool mutualClosest )
+    float cosThreshold, float distThresholdSq, bool mutualClosest )
 {
     MR_TIMER;
     pairs.active.clear();
@@ -260,7 +260,7 @@ void updateGroupPairs( ICPGroupPairs& pairs, const ICPObjects& objs,
 
         auto normalsAngleCos = ( prj.normal && srcNormals ) ? dot( res.tgtNorm, res.srcNorm ) : 1.0f;
 
-        if ( normalsAngleCos < cosTreshold )
+        if ( normalsAngleCos < cosThreshold )
         {
             pairs.active.reset( idx );
             return;
@@ -693,7 +693,7 @@ bool MultiwayICP::updateLayerPairs_( ICPLayer l, ProgressCallback cb )
                 return;
         }
 
-        MR::updateGroupPairs( pairsGridPerLayer_[l][gI][gJ], objs_, createProjector( gI ), createProjector( gJ ), prop_.cosTreshold, prop_.distThresholdSq, prop_.mutualClosest );
+        MR::updateGroupPairs( pairsGridPerLayer_[l][gI][gJ], objs_, createProjector( gI ), createProjector( gJ ), prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest );
     }, cb );
     if ( !keepGoung )
         return false;

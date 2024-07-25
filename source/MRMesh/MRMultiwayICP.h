@@ -27,7 +27,7 @@ using ICPGroupProjector = std::function<void( const Vector3f& p, MeshOrPoints::P
 /// in each pair updates the target data and performs basic filtering (activation)
 MRMESH_API void updateGroupPairs( ICPGroupPairs& pairs, const ICPObjects& objs,
     ICPGroupProjector srcProjector, ICPGroupProjector tgtProjector,
-    float cosTreshold, float distThresholdSq, bool mutualClosest );
+    float cosThreshold, float distThresholdSq, bool mutualClosest );
 
 using ICPPairsGrid = Vector<Vector<ICPGroupPairs, ICPElementId>, ICPElementId>;
 

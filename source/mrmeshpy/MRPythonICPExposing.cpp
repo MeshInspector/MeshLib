@@ -47,7 +47,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ICPExposing, [] ( pybind11::module_& m )
         def_readwrite( "method", &MR::ICPProperties::method, "The method how to update transformation from point pairs" ).
         def_readwrite( "p2plAngleLimit", &MR::ICPProperties::p2plAngleLimit, "Rotation angle during one iteration of PointToPlane will be limited by this value").
         def_readwrite( "p2plScaleLimit", &MR::ICPProperties::p2plScaleLimit, "Scaling during one iteration of PointToPlane will be limited by this value").
-        def_readwrite( "cosTreshold", &MR::ICPProperties::cosTreshold, "Points pair will be counted only if cosine between surface normals in points is higher" ).
+        def_readwrite( "cosThreshold", &MR::ICPProperties::cosThreshold, "Points pair will be counted only if cosine between surface normals in points is higher" ).
         def_readwrite( "distThresholdSq", &MR::ICPProperties::distThresholdSq, "Points pair will be counted only if squared distance between points is lower than" ).
         def_readwrite( "farDistFactor", &MR::ICPProperties::farDistFactor,
             "Points pair will be counted only if distance between points is lower than root-mean-square distance times this factor" ).

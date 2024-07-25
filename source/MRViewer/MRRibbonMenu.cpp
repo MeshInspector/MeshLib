@@ -1387,13 +1387,12 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
                 .text = "That tool was closed due to other tool start.\nIt can be changed in the Settings.",
                 .type = NotificationType::Info } );
             }
-
-            getViewerInstance().mouseController().checkConflicts(); // Update state between disable and enable
         }
     }
     if ( !wasActive && !available )
         return;
     ImGui::CloseCurrentPopup();
+    getViewerInstance().mouseController().preCheckConflicts();
     bool stateChanged = item->action();
     bool hasConflicts = getViewerInstance().mouseController().checkConflicts();
     if ( !stateChanged )

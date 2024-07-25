@@ -31,7 +31,7 @@ MRICPProperties mrICPPropertiesNew( void )
         .method = static_cast<MRICPMethod>( def.method ),
         COPY_FROM( def, p2plAngleLimit )
         COPY_FROM( def, p2plScaleLimit )
-        COPY_FROM( def, cosTreshold )
+        COPY_FROM( def, cosThreshold )
         COPY_FROM( def, distThresholdSq )
         COPY_FROM( def, farDistFactor )
         .icpMode = static_cast<MRICPMode>( def.icpMode ),
@@ -59,7 +59,7 @@ void mrICPSetParams( MRICP* icp_, const MRICPProperties* prop_ )
         .method = static_cast<ICPMethod>( prop_->method ),
         COPY_FROM( *prop_, p2plAngleLimit )
         COPY_FROM( *prop_, p2plScaleLimit )
-        COPY_FROM( *prop_, cosTreshold )
+        COPY_FROM( *prop_, cosThreshold )
         COPY_FROM( *prop_, distThresholdSq )
         COPY_FROM( *prop_, farDistFactor )
         .icpMode = static_cast<ICPMode>( prop_->icpMode ),

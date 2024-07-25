@@ -83,7 +83,7 @@ void mrMultiwayICPSetParams( MRMultiwayICP* mwicp_, const MRICPProperties* prop_
         .method = static_cast<ICPMethod>( prop_->method ),
         COPY_FROM( *prop_, p2plAngleLimit )
         COPY_FROM( *prop_, p2plScaleLimit )
-        COPY_FROM( *prop_, cosTreshold )
+        COPY_FROM( *prop_, cosThreshold )
         COPY_FROM( *prop_, distThresholdSq )
         COPY_FROM( *prop_, farDistFactor )
         .icpMode = static_cast<ICPMode>( prop_->icpMode ),

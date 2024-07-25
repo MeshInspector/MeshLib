@@ -989,9 +989,10 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
         ImGui::SetCursorPosX( 110.0f * menuScaling );
         ImGui::SetCursorPosY( posY - cRibbonButtonWindowPaddingY * menuScaling / 2.f );
 
-        auto plusPos = ctrlStr.find( '+' );
+        auto plusPos = ctrlStr.rfind( '+' );
         if ( plusPos == std::string::npos )
         {
+            // Draw button name in a frame
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, ( cRibbonButtonWindowPaddingY + 1 ) * menuScaling } );
             UI::inputTextCenteredReadOnly( "##key", ctrlStr, 54 * menuScaling );
             ImGui::PopStyleVar();
@@ -999,10 +1000,13 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
         }
         else
         {
+            // Draw modifier and key in separate frames
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x * 0.25f, style.ItemSpacing.y } );
 
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, ( cRibbonButtonWindowPaddingY + 1 ) * menuScaling } );
-            UI::inputTextCenteredReadOnly( "##modifierKey", ctrlStr.substr( 0, plusPos ), 54 * menuScaling );
+            UI::inputTextCenteredReadOnly( "##modifierKey", ctrlStr.substr( 0, plusPos ),
+                // Expand the area in case of multiple modifiers (assume that is rarely used)
+                std::max( 54.0f, 7 * float( plusPos ) ) * menuScaling );
             ImGui::PopStyleVar();
 
             ImGui::SameLine();
@@ -1048,6 +1052,22 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth, flo
         }
     }
 
+    std::string keysListWithAlt;
+    for ( int i = 0; i < int( MouseMode::Count ); ++i )
+    {
+        MouseMode mode = MouseMode( i );
+        auto ctrl = viewer->mouseController().findControlByMode( mode );
+        if ( !ctrl || ( ctrl->mod & GLFW_MOD_ALT ) != 0 )
+            continue;
+        MouseController::MouseControlKey ctrlAlt = *ctrl;
+        ctrlAlt.mod |= GLFW_MOD_ALT;
+        if ( !keysListWithAlt.empty() )
+            keysListWithAlt += ", ";
+        keysListWithAlt += MouseController::getControlString( ctrlAlt );
+    }
+    UI::transparentTextWrapped( "Camera controls can also be used with Alt" );
+    if ( !keysListWithAlt.empty() )
+        UI::setTooltipIfHovered( keysListWithAlt, menuScaling );
 }
 
 void ViewerSettingsPlugin::drawSpaceMouseSettings_( float menuWidth, float menuScaling )

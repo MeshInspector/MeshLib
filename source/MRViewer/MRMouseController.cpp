@@ -164,6 +164,8 @@ bool MouseController::mouseDown_( MouseButton btn, int mod )
 
     auto modIt = map_.find( mouseAndModToKey( { btn,mod } ) );
     if ( modIt == map_.end() )
+        modIt = map_.find( mouseAndModToKey( { btn,mod & ~GLFW_MOD_ALT } ) );
+    if ( modIt == map_.end() )
         return false;
 
     currentMode_ = modIt->second;

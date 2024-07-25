@@ -1403,7 +1403,8 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
     if ( stateChanged && !wasActive && hasConflicts )
         pushNotification( {
             .text = "Camera operations that are controlled by left mouse button "
-                        "may not work while this tool is active",
+                    "may not work while this tool is active\n"
+                    "Hold Alt additionally to control camera",
             .type = NotificationType::Info,
             .lifeTimeSec = 3.0f } );
 

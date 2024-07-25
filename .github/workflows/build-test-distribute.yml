@@ -190,11 +190,9 @@ jobs:
         run: |
           shopt -s nullglob
           for PKG_FILE in MeshLib*Dist.zip ; do
-            echo mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.versioning-and-release-url.outputs.app_version }}}"
             mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.versioning-and-release-url.outputs.app_version }}}"
           done
           for PKG_FILE in meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg ; do
-            echo mv "$PKG_FILE" "${PKG_FILE/meshlib/meshlib_${{ needs.versioning-and-release-url.outputs.app_version }}}"
             mv "$PKG_FILE" "${PKG_FILE/meshlib/meshlib_${{ needs.versioning-and-release-url.outputs.app_version }}}"
           done
 

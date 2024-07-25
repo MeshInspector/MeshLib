@@ -25,17 +25,18 @@ struct MeshPoint
 [[nodiscard]] MRMESH_API std::optional<MeshIntersectionResult> rayInsideIntersect( const Mesh& mesh, const MeshPoint & m );
 [[nodiscard]] MRMESH_API std::optional<MeshIntersectionResult> rayInsideIntersect( const Mesh& mesh, VertId v );
 
-/// Shrinking sphere: A parallel algorithm for computing the thickness of 3D objects
-/// https://www.cad-journal.net/files/vol_13/CAD_13(2)_2016_199-207.pdf
+// Shrinking sphere: A parallel algorithm for computing the thickness of 3D objects
+// https://www.cad-journal.net/files/vol_13/CAD_13(2)_2016_199-207.pdf
 
 /// controls the finding of inscribed sphere in mesh
 struct InSphereSearchSettings
 {
-    /// maximum allowed radius of the sphere
+    /// maximum allowed radius of the sphere;
+    /// for almost closed meshes the article recommends maxRadius = 0.5f * std::min( { boxSize.x, boxSize.y, boxSize.z } )
     float maxRadius = 1;
 
     /// maximum number of shrinking iterations
-    int maxIter = 8;
+    int maxIter = 3;
 
     /// to monitor current progress and cancel the operation
     ProgressCallback progress;

@@ -76,34 +76,31 @@ InSphere findInSphere( const Mesh& mesh, const MeshPoint & m, const InSphereSear
 
     for ( int it = 0; it < settings.maxIters; ++it )
     {
-        const auto closer = findProjection( res.center, mesh, res.oppositeTouchPoint.distSq, nullptr, 0,
+        const auto preRadius = res.radius;
+        (void)findProjection( res.center, mesh, res.oppositeTouchPoint.distSq, nullptr, 0,
             [&p = m.triPoint, &top = mesh.topology]( FaceId f )
             {
                 // ignore incident faces of (p)
                 return !p.fromTriangle( top, f );
             },
-            [&m]( const MeshProjectionResult & candidate )
+            [&m, &res]( const MeshProjectionResult & candidate )
             {
-                // avoid circle inversion
-                return dot( m.inDir, candidate.proj.point - m.pt ) > 0;
+                const auto d = candidate.proj.point - m.pt;
+                const auto dn = dot( m.inDir, d );
+                if ( !( dn > 0 ) )
+                    return false; // avoid circle inversion
+                const auto x = sqr( d ) / ( 2 * dn );
+                const auto xSq = sqr( x );
+                if ( !( xSq < res.oppositeTouchPoint.distSq ) )
+                    return false; // no reduction of circle
+                res.center = m.pt + m.inDir * x;
+                res.radius = x;
+                res.oppositeTouchPoint = candidate;
+                res.oppositeTouchPoint.distSq = xSq;
+                return true;
             }
             );
-        if ( closer.distSq >= res.oppositeTouchPoint.distSq )
-            break; // no other point within circle found
-
-        const auto d = closer.proj.point - m.pt;
-        const auto x = sqr( d ) / ( 2 * dot( m.inDir, d ) );
-        assert ( x >= 0 );
-        const auto xSq = sqr( x );
-        if ( !( xSq < res.oppositeTouchPoint.distSq ) )
-            break; // no reduction of circle
-
-        const bool stop = x > res.radius * settings.minShrinkage;
-        res.center = m.pt + m.inDir * x;
-        res.radius = x;
-        res.oppositeTouchPoint = closer;
-        res.oppositeTouchPoint.distSq = xSq;
-        if ( stop )
+        if ( res.radius > preRadius * settings.minShrinkage )
             break;
     }
 

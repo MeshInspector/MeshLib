@@ -9,6 +9,7 @@
 
 #include <objc/objc-runtime.h>
 
+#include <atomic>
 #include <map>
 
 namespace

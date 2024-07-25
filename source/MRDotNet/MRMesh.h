@@ -47,6 +47,11 @@ public:
     /// creates a torus with given parameters
     static Mesh^ MakeTorus( float primaryRadius, float secondaryRadius, int primaryResolution, int secondaryResolution );
 
+    static Mesh^ MakeCylinder( float radius, float length );
+    static Mesh^ MakeCylinder( float radius, float startAngle, float arcSize, float length );
+    static Mesh^ MakeCylinder( float radius, float startAngle, float arcSize, float length, int resolution );
+    static Mesh^ MakeCylinder( float radius0, float radius1, float startAngle, float arcSize, float length, int resolution );
+
 private:
     MR::Mesh* mesh_;
 
@@ -59,6 +64,7 @@ private:
 
 internal:
     MR::Mesh* getMesh() { return mesh_; }
+    void invalidateCaches();
 };
 
 MR_DOTNET_NAMESPACE_END

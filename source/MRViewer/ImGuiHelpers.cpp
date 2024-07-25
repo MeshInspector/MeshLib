@@ -615,11 +615,22 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     else
     {
         SetNextWindowSize( ImVec2( params.width, height ), ImGuiCond_Appearing );
-        auto pHeight = params.height;
-        if ( pHeight <= 0.0f )
-            pHeight = -1.0f;
-        pHeight = std::min( pHeight, GetMainViewport()->Size.y - style.DisplaySafeAreaPadding.y * 2.0f );
-        SetNextWindowSizeConstraints( ImVec2( params.width, pHeight ), ImVec2( params.width, pHeight ) );
+        float minHeight = 0;
+        float maxHeight = ImGui::GetIO().DisplaySize.y;
+
+        if ( params.height > 0.0f )
+        {
+            maxHeight = std::min( maxHeight, params.height );
+        }
+        else if ( window )
+        {
+            if ( window->Pos.y + ImGui::GetFrameHeight() < ImGui::GetIO().DisplaySize.y && window->Pos.y + maxHeight > ImGui::GetIO().DisplaySize.y )
+            {
+                maxHeight = ImGui::GetIO().DisplaySize.y - window->Pos.y;
+            }
+        }
+
+        SetNextWindowSizeConstraints( ImVec2( params.width, minHeight ), ImVec2( params.width, maxHeight ) );
     }
 
     auto context = ImGui::GetCurrentContext();

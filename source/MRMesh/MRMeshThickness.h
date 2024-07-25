@@ -36,10 +36,10 @@ struct InSphereSearchSettings
     float maxRadius = 1;
 
     /// maximum number of shrinking iterations
-    int maxIter = 3;
+    int maxIters = 16;
 
-    /// to monitor current progress and cancel the operation
-    ProgressCallback progress;
+    /// iterations stop if next radius is larger than minShrinkage times previous radius
+    float minShrinkage = 0.99999f;
 };
 
 /// found inscribed sphere touching input point with center along given direction
@@ -55,6 +55,7 @@ struct InSphere
 [[nodiscard]] MRMESH_API InSphere findInSphere( const Mesh& mesh, VertId v, const InSphereSearchSettings & settings );
 
 /// returns the thickness at each vertex as the diameter of the inscribed sphere
-[[nodiscard]] MRMESH_API std::optional<VertScalars> computeInSphereThicknessAtVertices( const Mesh& mesh, const InSphereSearchSettings & settings );
+[[nodiscard]] MRMESH_API std::optional<VertScalars> computeInSphereThicknessAtVertices( const Mesh& mesh,
+    const InSphereSearchSettings & settings, const ProgressCallback & progress = {} );
 
 } // namespace MR

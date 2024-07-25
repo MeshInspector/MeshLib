@@ -54,6 +54,11 @@ VertScalars computeThicknessAtVertices( const Mesh& mesh )
 
 InSphere findInSphere( const Mesh& mesh, const MeshPoint & m, const InSphereSearchSettings & settings )
 {
+    assert( settings.maxRadius > 0 );
+    assert( settings.maxIters > 0 );
+    assert( settings.minShrinkage > 0 );
+    assert( settings.minShrinkage < 1 );
+
     InSphere res;
     if ( auto isec = rayInsideIntersect( mesh, m ) )
     {
@@ -69,7 +74,7 @@ InSphere findInSphere( const Mesh& mesh, const MeshPoint & m, const InSphereSear
         res.oppositeTouchPoint.distSq = sqr( res.radius );
     }
 
-    for ( int it = 0; it < settings.maxRadius; ++it )
+    for ( int it = 0; it < settings.maxIters; ++it )
     {
         const auto closer = findProjection( res.center, mesh, res.oppositeTouchPoint.distSq, nullptr, 0,
             [&p = m.triPoint, &top = mesh.topology]( FaceId f )
@@ -93,10 +98,13 @@ InSphere findInSphere( const Mesh& mesh, const MeshPoint & m, const InSphereSear
         if ( !( xSq < res.oppositeTouchPoint.distSq ) )
             break; // no reduction of circle
 
+        const bool stop = x > res.radius * settings.minShrinkage;
         res.center = m.pt + m.inDir * x;
         res.radius = x;
         res.oppositeTouchPoint = closer;
         res.oppositeTouchPoint.distSq = xSq;
+        if ( stop )
+            break;
     }
 
     return res;
@@ -109,7 +117,7 @@ InSphere findInSphere( const Mesh& mesh, VertId v, const InSphereSearchSettings 
     return findInSphere( mesh, m, settings );
 }
 
-std::optional<VertScalars> computeInSphereThicknessAtVertices( const Mesh& mesh, const InSphereSearchSettings & settings )
+std::optional<VertScalars> computeInSphereThicknessAtVertices( const Mesh& mesh, const InSphereSearchSettings & settings, const ProgressCallback & progress )
 {
     MR_TIMER
     VertScalars res( mesh.points.size(), FLT_MAX );
@@ -117,7 +125,7 @@ std::optional<VertScalars> computeInSphereThicknessAtVertices( const Mesh& mesh,
     {
         auto sph = findInSphere( mesh, v, settings );
         res[v] = 2 * sph.radius;
-    }, settings.progress ) )
+    }, progress ) )
         return {};
     return res;
 }

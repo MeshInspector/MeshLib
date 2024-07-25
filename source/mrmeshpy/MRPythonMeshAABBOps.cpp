@@ -64,7 +64,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshIntersect, [] ( pybind11::module_& m )
     pybind11::class_<InSphereSearchSettings>( m, "InSphereSearchSettings" ).
         def( pybind11::init<>() ).
         def_readwrite( "maxRadius", &InSphereSearchSettings::maxRadius, "maximum allowed radius of the sphere" ).
-        def_readwrite( "maxIter", &InSphereSearchSettings::maxIter, "maximum number of shrinking iterations" );
+        def_readwrite( "maxIters", &InSphereSearchSettings::maxIters, "maximum number of shrinking iterations" ).
+        def_readwrite( "minShrinkage", &InSphereSearchSettings::minShrinkage, "iterations stop if next radius is larger than minShrinkage times previous radius" );
 
     m.def( "computeInSphereThicknessAtVertices", []( const Mesh& mesh, const InSphereSearchSettings & settings ) { return *computeInSphereThicknessAtVertices( mesh, settings ); },
         pybind11::arg( "mesh" ),

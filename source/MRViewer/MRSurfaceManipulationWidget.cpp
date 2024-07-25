@@ -104,9 +104,9 @@ void SurfaceManipulationWidget::setSettings( const Settings& settings )
     updateRegion_( mousePos_ );
 }
 
-bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*modifier*/ )
+bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int modifiers )
 {
-    if ( button != MouseButton::Left )
+    if ( button != MouseButton::Left || modifiers != 0 )
         return false;
 
     auto [obj, pick] = getViewerInstance().viewport().pick_render_object();
@@ -155,7 +155,7 @@ bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int /*
     return true;
 }
 
-bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*modifier*/ )
+bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*modifiers*/ )
 {
     if ( button != MouseButton::Left || !mousePressed_ )
         return false;

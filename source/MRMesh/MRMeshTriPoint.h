@@ -40,12 +40,18 @@ struct MeshTriPoint
 
     /// returns valid vertex id if the point is in vertex, otherwise returns invalid id
     [[nodiscard]] MRMESH_API VertId inVertex( const MeshTopology & topology ) const;
+
     /// returns true if the point is in a vertex
     [[nodiscard]] bool inVertex() const { return bary.inVertex() >= 0; }
+
     /// returns valid value if the point is on edge, otherwise returns invalid MeshEdgePoint
     [[nodiscard]] MRMESH_API MeshEdgePoint onEdge( const MeshTopology & topology ) const;
+
     /// returns true if the point is in vertex or on edge, and that location is on the boundary of the region
     [[nodiscard]] MRMESH_API bool isBd( const MeshTopology & topology, const FaceBitSet * region = nullptr ) const;
+
+    /// returns true if the point is inside or on the boundary of given triangular face
+    [[nodiscard]] MRMESH_API bool fromTriangle( const MeshTopology & topology, FaceId f ) const;
 
     /// consider this valid if the edge ID is valid
     [[nodiscard]] bool valid() const { return e.valid(); }
@@ -53,6 +59,7 @@ struct MeshTriPoint
 
     /// represents the same point relative to next edge in the same triangle
     [[nodiscard]] MRMESH_API MeshTriPoint lnext( const MeshTopology & topology ) const;
+
     /// represents the same point relative to the topology.edgeWithLeft( topology.left( e ) )
     [[nodiscard]] MRMESH_API MeshTriPoint canonical( const MeshTopology & topology ) const;
 
@@ -72,6 +79,7 @@ struct MeshTriPoint
 /// returns true if points a and b are located insides or on a boundary of the same triangle;
 /// if true a.e and b.e are updated to have that triangle on the left
 [[nodiscard]] MRMESH_API bool fromSameTriangle( const MeshTopology & topology, MeshTriPoint & a, MeshTriPoint & b );
+
 /// returns true if points a and b are located insides or on a boundary of the same triangle;
 /// if true a.e and b.e are updated to have that triangle on the left
 [[nodiscard]] inline bool fromSameTriangle( const MeshTopology & topology, MeshTriPoint && a, MeshTriPoint && b ) { return fromSameTriangle( topology, a, b ); }

@@ -377,13 +377,48 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                     objectMesh->setFrontColor( *resValue[i].diffuseColor, false );
 
                 objectMesh->setUVCoords( std::move( resValue[i].uvCoords ) );
-
-                auto image = ImageLoad::fromAnySupportedFormat( resValue[i].pathToTexture );
-                if ( image.has_value() )
+                
+                int numEmptyTexture = 0;
+                for ( const auto& p : resValue[i].textureFiles )
                 {
-                    objectMesh->setTextures( { { image.value(), FilterType::Linear } } );
-                    objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
+                    if ( p.empty() )
+                        numEmptyTexture++;
                 }
+
+                if ( numEmptyTexture != 0 && numEmptyTexture != resValue[i].textureFiles.size() )
+                {
+                    *loadWarn += " object has material with and without texture";
+                }
+                else if( numEmptyTexture == 0 )
+                {
+                    bool crashTextureLoad = false;
+                    for ( const auto& p : resValue[i].textureFiles )
+                    {
+                        auto image = ImageLoad::fromAnySupportedFormat( p );
+                        if ( image.has_value() )
+                        {
+                            MeshTexture meshTexture;
+                            meshTexture.resolution = std::move( image.value().resolution );
+                            meshTexture.pixels = std::move( image.value().pixels );
+                            meshTexture.filter = FilterType::Linear;
+                            meshTexture.wrap = WrapType::Clamp;
+                            objectMesh->addTexture( std::move( meshTexture ) );
+                        }
+                        else
+                        {
+                            crashTextureLoad = true;
+                            objectMesh->setTextures( {} );
+                            *loadWarn += image.error();
+                            break;
+                        }
+                    }
+                    if ( !crashTextureLoad )
+                    {
+                        objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
+                        objectMesh->setTexturePerFace( std::move( resValue[i].texturePerFace ) );
+                    }
+                }
+
                 if ( !resValue[i].colors.empty() )
                 {
                     objectMesh->setVertsColorMap( std::move( resValue[i].colors ) );

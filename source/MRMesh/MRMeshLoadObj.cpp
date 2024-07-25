@@ -295,6 +295,7 @@ namespace
     {
         Vector3f diffuseColor = Vector3f::diagonal( -1.0f );
         std::string diffuseTextureFile;
+        TextureId id;
     };
 
     using MtlLibrary = HashMap<std::string, MtlMaterial>;
@@ -423,13 +424,17 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
     std::vector<Vector3f> points;
     std::vector<UVCoord> textureVertices;
     std::vector<int> texCoords;
-    Triangulation t;
+    Triangulation triangulation;
     VertUVCoords uvCoords;
     VertColors colors;
     auto hasColors = false;
     Expected<MtlLibrary, std::string> mtl;
     std::string currentMaterialName;
     std::optional<Vector3d> pointOffset;
+
+    TextureId maxTextureId;
+    TextureId currentTextureId = TextureId(-1);
+    Vector<TextureId, FaceId> texturePerFace;
 
     std::map<int, int> additions;
     additions[0] = 0;
@@ -438,19 +443,19 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
     auto finishObject = [&]() 
     {
         MR_NAMED_TIMER( "finish object" )
-        if ( !t.empty() )
+        if ( !triangulation.empty() )
         {
             auto& result = res.emplace_back();
             result.name = std::move( currentObjName );
 
             // copy only minimal span of vertices for this object
             VertId minV(INT_MAX), maxV(-1);
-            for ( const auto & vs : t )
+            for ( const auto & vs : triangulation )
             {
                 minV = std::min( { minV, vs[0], vs[1], vs[2] } );
                 maxV = std::max( { maxV, vs[0], vs[1], vs[2] } );
             }
-            for ( auto & vs : t )
+            for ( auto & vs : triangulation )
             {
                 for ( int i = 0; i < 3; ++i )
                     vs[i] -= minV;
@@ -461,12 +466,12 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
             MeshBuilder::BuildSettings buildSettings;
             if ( settings.skippedFaceCount )
             {
-                skippedFaces = FaceBitSet( t.size() );
+                skippedFaces = FaceBitSet( triangulation.size() );
                 skippedFaces.set();
                 buildSettings.region = &skippedFaces;
             }
             result.mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices(
-                VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), t, &dups, buildSettings );
+                VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), triangulation, &dups, buildSettings );
             if ( hasColors )
             {
                 colors.resize( result.mesh.points.size() );
@@ -481,7 +486,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
                 *settings.duplicatedVertexCount = int( dups.size() );
             if ( settings.skippedFaceCount )
                 *settings.skippedFaceCount = int( skippedFaces.count() );
-            t.clear();
+            triangulation.clear();
 
             VertHashMap dst2Src;
             dst2Src.reserve( dups.size() );
@@ -501,13 +506,17 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
                     materialIt = mtl->begin();
                 }
                
-                if ( !materialIt->second.diffuseTextureFile.empty() )
+                result.textureFiles.resize( maxTextureId + 1 );
+                for ( const auto& [mtlName, material] : *mtl )
                 {
-                    result.pathToTexture = dir / materialIt->second.diffuseTextureFile;
+                    if ( !material.diffuseTextureFile.empty() )
+                        result.textureFiles[material.id] = dir / material.diffuseTextureFile;
                 }
 
                 if ( materialIt->second.diffuseColor != Vector3f::diagonal(-1) )
                     result.diffuseColor = Color( materialIt->second.diffuseColor );
+
+                result.texturePerFace = std::move( texturePerFace );
 
                 if ( !texCoords.empty() )
                 {
@@ -747,9 +756,17 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
         }
         std::sort( ordTrisAll.begin(), ordTrisAll.end(),
                    [] ( auto&& a, auto&& b ) { return a.offset < b.offset; } );
-        t.reserve( t.size() + trisSize );
+
+        triangulation.reserve( triangulation.size() + trisSize );
+        bool hasMaterial = mtl.has_value() && mtl.value().size() > 0;
+        if ( hasMaterial )
+            texturePerFace.reserve( triangulation.size() + trisSize );
         for ( auto& ordTri : ordTrisAll )
-            t.vec_.insert( t.vec_.end(), ordTri.t.vec_.begin(), ordTri.t.vec_.end() );
+        {
+            triangulation.vec_.insert( triangulation.vec_.end(), ordTri.t.vec_.begin(), ordTri.t.vec_.end() );
+            if ( hasMaterial )
+                texturePerFace.vec_.insert( texturePerFace.vec_.end(), ordTri.t.vec_.size(), currentTextureId );
+        }
     };
 
     auto parseObject = [&] ( size_t, size_t end, std::string& )
@@ -782,6 +799,16 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
         std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
         currentMaterialName = line.substr( strlen( "usemtl" ), std::string_view::npos );
         boost::trim( currentMaterialName );
+        if ( mtl.has_value() )
+        {
+            auto it = mtl->find( currentMaterialName );
+            if ( it != mtl->end() )
+            {
+                if ( !it->second.id )
+                    it->second.id = ++maxTextureId;
+                currentTextureId = it->second.id;
+            }
+        }
     };
 
     timer.restart( "parse groups" );

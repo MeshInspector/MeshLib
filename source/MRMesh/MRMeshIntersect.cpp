@@ -398,32 +398,6 @@ void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
     }
 }
 
-std::optional<MeshIntersectionResult> rayInsideIntersect( const Mesh& mesh, VertId v )
-{
-    const auto dir = -mesh.pseudonormal( v );
-    return rayMeshIntersect( mesh, { mesh.points[v], dir }, 0.0f, FLT_MAX, nullptr, true,
-        [v, &top = mesh.topology]( FaceId f )
-        {
-            // ignore intersections with incident faces of (v)
-            VertId a, b, c;
-            top.getTriVerts( f, a, b, c );
-            return v != a && v != b && v != c;
-        } );
-}
-
-VertScalars computeThicknessAtVertices( const Mesh& mesh )
-{
-    MR_TIMER
-    VertScalars res( mesh.points.size(), FLT_MAX );
-    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
-    {
-        auto isec = rayInsideIntersect( mesh, v );
-        if ( isec )
-            res[v] = isec->distanceAlongLine;
-    } );
-    return res;
-}
-
 TEST(MRMesh, MeshIntersect) 
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );

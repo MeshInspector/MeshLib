@@ -388,7 +388,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
             auto pixels = buffer.prepareBuffer<Color>( size_t( texSize * textures.size() ) );
             size_t numTex = 0;
             for ( const auto& tex : textures )
-                std::copy( tex.pixels.begin(), tex.pixels.end(), pixels.data() + texSize * numTex++ );
+                std::copy( tex.pixels.begin(), tex.pixels.end(), &pixels[texSize * numTex++] );
 
             GlTexture2DArray::Settings settings;
             settings.resolution = Vector3i{ res.x, res.y, int( textures.size() ) };
@@ -442,7 +442,7 @@ void RenderMeshObject::bindMesh_( bool alphaSort )
     GL_EXEC( glActiveTexture( GL_TEXTURE4 ) );
     texturePerFace_.loadDataOpt( 
         texturePerFaces.dirty(),
-        { .resolution = GlTexture2::ToResolution( texturePerFaceSize_ ), .internalFormat = GL_R8UI, .format = GL_RED_INTEGER, .type = GL_UNSIGNED_INT },
+        { .resolution = GlTexture2::ToResolution( texturePerFaceSize_ ), .internalFormat = GL_R8UI, .format = GL_RED_INTEGER, .type = GL_UNSIGNED_BYTE },
         texturePerFaces );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "texturePerFace" ), 4 ) );
 

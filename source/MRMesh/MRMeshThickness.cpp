@@ -51,7 +51,7 @@ VertScalars computeThicknessAtVertices( const Mesh& mesh )
     return computeRayThicknessAtVertices( mesh );
 }
 
-InSphere findInCircle( const Mesh& mesh, const MeshPoint & m, const InSphereSearchSettings & settings )
+InSphere findInSphere( const Mesh& mesh, const MeshPoint & m, const InSphereSearchSettings & settings )
 {
     InSphere res;
     if ( auto isec = rayInsideIntersect( mesh, m ) )
@@ -94,6 +94,25 @@ InSphere findInCircle( const Mesh& mesh, const MeshPoint & m, const InSphereSear
         res.oppositeTouchPoint.distSq = xSq;
     }
 
+    return res;
+}
+
+InSphere findInSphere( const Mesh& mesh, VertId v, const InSphereSearchSettings & settings )
+{
+    MeshPoint m;
+    m.set( mesh, MeshTriPoint( mesh.topology, v ) );
+    return findInSphere( mesh, m, settings );
+}
+
+VertScalars computeInSphereThicknessAtVertices( const Mesh& mesh, const InSphereSearchSettings & settings )
+{
+    MR_TIMER
+    VertScalars res( mesh.points.size(), FLT_MAX );
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    {
+        auto sph = findInSphere( mesh, v, settings );
+        res[v] = 2 * sph.radius;
+    } );
     return res;
 }
 

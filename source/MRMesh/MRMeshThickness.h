@@ -47,6 +47,10 @@ struct InSphere
 };
 
 /// finds sphere inscribed in the mesh touching point (p) with center along the normal at (p)
-[[nodiscard]] MRMESH_API InSphere findInCircle( const Mesh& mesh, const MeshPoint & m, const InSphereSearchSettings & settings );
+[[nodiscard]] MRMESH_API InSphere findInSphere( const Mesh& mesh, const MeshPoint & m, const InSphereSearchSettings & settings );
+[[nodiscard]] MRMESH_API InSphere findInSphere( const Mesh& mesh, VertId v, const InSphereSearchSettings & settings );
+
+/// returns the thickness from at each vertex as the diameter of the inscribed sphere
+[[nodiscard]] MRMESH_API VertScalars computeInSphereThicknessAtVertices( const Mesh& mesh, const InSphereSearchSettings & settings );
 
 } // namespace MR

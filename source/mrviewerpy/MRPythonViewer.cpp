@@ -59,10 +59,12 @@ namespace
 {
     enum class PythonKeyMod
     {
+        Empty = 0,
         Ctrl = GLFW_MOD_CONTROL,
         Shift = GLFW_MOD_SHIFT,
         Alt = GLFW_MOD_ALT,
     };
+    MR_MAKE_FLAG_OPERATORS( PythonKeyMod )
 }
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
@@ -83,11 +85,14 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
         .value( "Middle", MR::MouseButton::Middle )
     ;
 
-    pybind11::enum_<PythonKeyMod>( m, "KeyMod", pybind11::arithmetic() )
-        .value( "None", PythonKeyMod{} )
+    pybind11::enum_<PythonKeyMod>( m, "KeyMod" )
+        .value( "Empty", PythonKeyMod::Empty )
         .value( "Ctrl", PythonKeyMod::Ctrl )
         .value( "Shift", PythonKeyMod::Shift )
         .value( "Alt", PythonKeyMod::Alt )
+        .def( pybind11::self | pybind11::self )
+        .def( pybind11::self & pybind11::self )
+        .def( ~pybind11::self )
     ;
 
     pybind11::class_<MR::Viewer::LaunchParams>( m, "ViewerLaunchParams", "This struct contains rules for viewer launch" ).
@@ -163,7 +168,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
                     v.mouseDown( b, int( m ) );
                 } );
             },
-            pybind11::arg( "button" ), pybind11::arg( "modifier" ) = PythonKeyMod{}, "Simulate mouse down event."
+            pybind11::arg( "button" ), pybind11::arg_v( "modifier", PythonKeyMod{}, "meshlib.mrviewerpy.KeyMod.Empty" ), "Simulate mouse down event."
         ).
         def( "mouseUp",
             []( MR::Viewer& v, MR::MouseButton b, PythonKeyMod m )
@@ -172,7 +177,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
                     v.mouseUp( b, int( m ) );
                 } );
             },
-            pybind11::arg( "button" ), pybind11::arg( "modifier" ) = PythonKeyMod{}, "Simulate mouse up event."
+            pybind11::arg( "button" ), pybind11::arg_v( "modifier", PythonKeyMod{}, "meshlib.mrviewerpy.KeyMod.Empty" ), "Simulate mouse up event."
         ).
         def( "mouseMove",
             []( MR::Viewer& viewer, int x, int y )

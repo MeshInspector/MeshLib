@@ -47,7 +47,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ExpectedVoid, [] ( pybind11::module_& )
 class DeprecatedPath
 {
 public:
-    DeprecatedPath( const std::filesystem::path& path ) : path_{ path } 
+    DeprecatedPath( const std::filesystem::path& path ) : path_{ path }
     {
         PyErr_WarnEx( PyExc_DeprecationWarning, "mrmeshpy.Path is deprecated, use os.PathLike type instead", 1 );
     }
@@ -638,3 +638,4 @@ ADD_PYTHON_BITSET( BitSet, MR::BitSet )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorVertBitSet, MR::VertBitSet )
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorFaceBitSet, MR::FaceBitSet )
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorUndirectedEdgeBitSet, MR::UndirectedEdgeBitSet )

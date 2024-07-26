@@ -59,7 +59,7 @@ namespace
 {
     enum class PythonKeyMod
     {
-        Empty = GLFW_MOD_CONTROL,
+        Empty = 0,
         Ctrl = GLFW_MOD_CONTROL,
         Shift = GLFW_MOD_SHIFT,
         Alt = GLFW_MOD_ALT,

@@ -17,6 +17,7 @@ struct MeshPoint
     MeshTriPoint triPoint; ///< relative position on mesh
     Vector3f pt;           ///< 3d coordinates
     Vector3f inDir;        ///< unit direction inside the mesh = minus normal
+    FacePredicate notIncidentFaces; ///< predicate that returns true for mesh faces not-incident to the point
 
     MRMESH_API void set( const Mesh& mesh, const MeshTriPoint & p );
 };

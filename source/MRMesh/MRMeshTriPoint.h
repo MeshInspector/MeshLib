@@ -44,7 +44,8 @@ struct MeshTriPoint
     /// returns true if the point is in a vertex
     [[nodiscard]] bool inVertex() const { return bary.inVertex() >= 0; }
 
-    /// returns valid value if the point is on edge, otherwise returns invalid MeshEdgePoint
+    /// returns valid value if the point is on edge and topology.left(result.e) == topology.left(this->e),
+    /// otherwise returns invalid MeshEdgePoint
     [[nodiscard]] MRMESH_API MeshEdgePoint onEdge( const MeshTopology & topology ) const;
 
     /// returns true if the point is in vertex or on edge, and that location is on the boundary of the region

@@ -14,16 +14,36 @@ MRMESH_API void MeshPoint::set( const Mesh& mesh, const MeshTriPoint & p )
     triPoint = p;
     pt = mesh.triPoint( p );
     inDir = -mesh.pseudonormal( p );
+
+    if ( auto v = p.inVertex( mesh.topology ) )
+    {
+        notIncidentFaces = [&topology=mesh.topology, v]( FaceId f )
+        {
+            VertId a, b, c;
+            topology.getTriVerts( f, a, b, c );
+            return v != a && v != b && v != c;
+        };
+    }
+    else if ( auto oe = p.onEdge( mesh.topology ); oe && mesh.topology.right( oe.e ) )
+    {
+        assert( mesh.topology.left( p.e ) == mesh.topology.left( oe.e ) );
+        notIncidentFaces = [f1 = mesh.topology.left( oe.e ), f2 = mesh.topology.right( oe.e )]( FaceId f )
+        {
+            return f1 != f && f2 != f;
+        };
+    }
+    else
+    {
+        notIncidentFaces = [f1 = mesh.topology.left( p.e )]( FaceId f )
+        {
+            return f1 != f;
+        };
+    }
 }
 
 std::optional<MeshIntersectionResult> rayInsideIntersect( const Mesh& mesh, const MeshPoint & m )
 {
-    return rayMeshIntersect( mesh, { m.pt, m.inDir }, 0.0f, FLT_MAX, nullptr, true,
-        [&p = m.triPoint, &top = mesh.topology]( FaceId f )
-        {
-            // ignore intersections with incident faces of (p)
-            return !p.fromTriangle( top, f );
-        } );
+    return rayMeshIntersect( mesh, { m.pt, m.inDir }, 0.0f, FLT_MAX, nullptr, true, m.notIncidentFaces );
 }
 
 std::optional<MeshIntersectionResult> rayInsideIntersect( const Mesh& mesh, VertId v )
@@ -77,12 +97,7 @@ InSphere findInSphere( const Mesh& mesh, const MeshPoint & m, const InSphereSear
     for ( int it = 0; it < settings.maxIters; ++it )
     {
         const auto preRadius = res.radius;
-        (void)findProjection( res.center, mesh, res.oppositeTouchPoint.distSq, nullptr, 0,
-            [&p = m.triPoint, &top = mesh.topology]( FaceId f )
-            {
-                // ignore incident faces of (p)
-                return !p.fromTriangle( top, f );
-            },
+        (void)findProjection( res.center, mesh, res.oppositeTouchPoint.distSq, nullptr, 0, m.notIncidentFaces,
             [&m, &res]( const MeshProjectionResult & candidate )
             {
                 const auto d = candidate.proj.point - m.pt;

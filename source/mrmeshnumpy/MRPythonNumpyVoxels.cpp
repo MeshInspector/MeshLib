@@ -3,8 +3,6 @@
 #include "MRMesh/MRVoxelsVolume.h"
 #include "MRMesh/MRVector3.h"
 
-#include "MRPythonNumpy.h"
-
 MR::SimpleVolume simpleVolumeFrom3Darray( const pybind11::buffer& voxelsArray )
 {
     pybind11::buffer_info info = voxelsArray.request();

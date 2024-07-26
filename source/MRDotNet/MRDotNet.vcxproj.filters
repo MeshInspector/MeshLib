@@ -32,6 +32,9 @@
     <ClInclude Include="MRMeshBoolean.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshDecimate.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssemblyInfo.cpp">
@@ -53,6 +56,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshBoolean.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshDecimate.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

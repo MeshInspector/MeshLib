@@ -21,6 +21,22 @@ BitSetReadOnly::~BitSetReadOnly()
     delete bs_;
 }
 
+bool BitSetReadOnly::operator==( BitSetReadOnly^ a, BitSetReadOnly^ b )
+{
+    if ( !a || !b )
+        throw gcnew System::ArgumentNullException();
+
+    return a->IsEqualTo( b );
+}
+
+bool BitSetReadOnly::operator!=( BitSetReadOnly^ a, BitSetReadOnly^ b )
+{
+    if ( !a || !b )
+        throw gcnew System::ArgumentNullException();
+
+    return !a->IsEqualTo( b );
+}
+
 BitSet::BitSet()
 :BitSetReadOnly()
 {}
@@ -83,6 +99,19 @@ void BitSet::AutoResizeSet( int i )
 void BitSet::AutoResizeSet( int i, bool value )
 {
     bs_->autoResizeSet( i, value );
+}
+
+BitSetReadOnly^ BitSet::Clone()
+{
+    return gcnew BitSet( new MR::BitSet( *bs_ ) );
+}
+
+bool BitSet::IsEqualTo( BitSetReadOnly^ other )
+{
+    if ( !other )
+        throw gcnew System::ArgumentNullException();
+
+    return *bs_ == *((BitSet^)other)->bs_;
 }
 
 MR_DOTNET_NAMESPACE_END

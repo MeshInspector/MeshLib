@@ -15,6 +15,7 @@
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRTorus.h>
+#include <MRMesh/MRCylinder.h>
 
 #pragma managed( pop )
 
@@ -223,6 +224,35 @@ Mesh^ Mesh::MakeTorus( float primaryRadius, float secondaryRadius, int primaryRe
         throw gcnew System::ArgumentException( "secondaryResolution" );
 
     return gcnew Mesh( new MR::Mesh( std::move( MR::makeTorus( primaryRadius, secondaryRadius, primaryResolution, secondaryResolution ) ) ) );
+}
+
+Mesh^ Mesh::MakeCylinder( float radius, float length )
+{
+    return MakeCylinder( radius, radius, 0, 2.0f * float( System::Math::PI ), length, 16 );
+}
+
+Mesh^ Mesh::MakeCylinder( float radius, float startAngle, float arcSize, float length )
+{
+    return MakeCylinder( radius, radius, startAngle, arcSize, length, 16 );
+}
+
+Mesh^ Mesh::MakeCylinder( float radius, float startAngle, float arcSize, float length, int resolution )
+{
+    return MakeCylinder( radius, radius, startAngle, arcSize, length, resolution );
+}
+
+Mesh^ Mesh::MakeCylinder( float radius0, float radius1, float startAngle, float arcSize, float length, int resolution )
+{
+    return gcnew Mesh( new MR::Mesh( std::move( MR::makeCylinderAdvanced( radius0, radius1, startAngle, arcSize, length, resolution ) ) ) );
+}
+
+void Mesh::clearManagedResources()
+{    
+    points_ = nullptr; 
+    triangulation_ = nullptr;    
+    validVerts_ = nullptr;    
+    validFaces_ = nullptr;
+    holeRepresentiveEdges_ = nullptr;
 }
 
 MR_DOTNET_NAMESPACE_END

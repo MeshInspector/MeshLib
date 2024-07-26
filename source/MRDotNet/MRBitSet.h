@@ -4,7 +4,7 @@
 MR_DOTNET_NAMESPACE_BEGIN
 
 /// container of bits
-public ref class BitSetReadOnly
+public ref class BitSetReadOnly abstract
 {
 public:
     /// test if given bit is set
@@ -18,12 +18,19 @@ public:
     /// returns number of set bits
     int Count();
 
+    virtual BitSetReadOnly^ Clone() = 0;
+
+    static bool operator==( BitSetReadOnly^ a, BitSetReadOnly^ b );
+    static bool operator!=( BitSetReadOnly^ a, BitSetReadOnly^ b );
+
 internal:
     BitSetReadOnly( MR::BitSet* bs );
     ~BitSetReadOnly();
 protected:
     BitSetReadOnly();
     MR::BitSet* bs_;
+
+    virtual bool IsEqualTo( BitSetReadOnly^ other ) = 0;
 };
 
 public ref class BitSet : public BitSetReadOnly
@@ -48,9 +55,14 @@ public:
     /// sets the given bit to given value. If index is out of range, it will be automatically resized
     void AutoResizeSet( int index, bool value );
 
+    virtual BitSetReadOnly^ Clone() override;
+
 internal:
     BitSet( MR::BitSet* bs );
     MR::BitSet* bitSet() { return bs_; }
+
+protected:
+    virtual bool IsEqualTo( BitSetReadOnly^ other ) override;
 };
 
 MR_DOTNET_NAMESPACE_END

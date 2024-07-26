@@ -852,8 +852,10 @@ Expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& path,
 
     auto parentPath = path.parent_path();
     std::error_code ec;
-    if ( !std::filesystem::is_directory( parentPath, ec ) )
-        return unexpected( utf8string( parentPath ) + " - is not directory" );
+    if ( parentPath.empty() )
+        parentPath = ".";
+    else if ( !std::filesystem::is_directory( parentPath, ec ) )
+        return unexpected( utf8string( parentPath ) + " is not existing directory" );
     std::vector<std::filesystem::path> candidatePaths;
     for ( auto entry : Directory{ parentPath, ec } )
     {

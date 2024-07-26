@@ -97,24 +97,24 @@ InSphere findInSphere( const Mesh& mesh, const MeshPoint & m, const InSphereSear
     for ( int it = 0; it < settings.maxIters; ++it )
     {
         const auto preRadius = res.radius;
-        (void)findProjection( res.center, mesh, res.oppositeTouchPoint.distSq, nullptr, 0, m.notIncidentFaces,
-            [&m, &res]( const MeshProjectionResult & candidate )
+        findTrisInBall( mesh, Ball{ res.center, res.oppositeTouchPoint.distSq },
+            [&m, &res]( const MeshProjectionResult & candidate, Ball & ball )
             {
                 const auto d = candidate.proj.point - m.pt;
                 const auto dn = dot( m.inDir, d );
                 if ( !( dn > 0 ) )
-                    return false; // avoid circle inversion
+                    return Processing::Continue; // avoid circle inversion
                 const auto x = sqr( d ) / ( 2 * dn );
                 const auto xSq = sqr( x );
                 if ( !( xSq < res.oppositeTouchPoint.distSq ) )
-                    return false; // no reduction of circle
+                    return Processing::Continue; // no reduction of circle
                 res.center = m.pt + m.inDir * x;
                 res.radius = x;
                 res.oppositeTouchPoint = candidate;
                 res.oppositeTouchPoint.distSq = xSq;
-                return true;
-            }
-            );
+                ball = Ball{ res.center, res.oppositeTouchPoint.distSq };
+                return Processing::Continue;
+            }, m.notIncidentFaces );
         if ( res.radius > preRadius * settings.minShrinkage )
             break;
     }

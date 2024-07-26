@@ -63,6 +63,8 @@ void MoveObjectByMouse::drawDialog( float menuScaling, ImGuiContext*)
 
 bool MoveObjectByMouse::onMouseDown_( MouseButton btn, int modifiers )
 {
+    if ( ( modifiers & ~( GLFW_MOD_SHIFT | GLFW_MOD_CONTROL ) ) != 0 )
+        return false;
     return moveByMouse_.onMouseDown( btn, modifiers );
 }
 

@@ -115,14 +115,14 @@ void findTrisInBall( const MeshPart & mp, Ball ball, const FoundTriCallback& fou
     NodeId subtasks[MaxStackSize];
     int stackSize = 0;
 
-    auto boxInBall = [&]( NodeId n )
+    auto boxIntersectsBall = [&]( NodeId n )
     {
         return ( tree.nodes()[n].box.getBoxClosestPointTo( ball.center ) - ball.center ).lengthSq() < ball.radiusSq;
     };
 
     auto addSubTask = [&]( NodeId n )
     {
-        if ( boxInBall( n ) )
+        if ( boxIntersectsBall( n ) )
         {
             assert( stackSize < MaxStackSize );
             subtasks[stackSize++] = n;
@@ -135,7 +135,7 @@ void findTrisInBall( const MeshPart & mp, Ball ball, const FoundTriCallback& fou
     {
         const auto n = subtasks[--stackSize];
         const auto & node = tree[n];
-        if ( !boxInBall( n ) ) // check again in case the ball has changed
+        if ( !boxIntersectsBall( n ) ) // check again in case the ball has changed
             continue;
 
         if ( node.leaf() )

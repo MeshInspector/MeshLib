@@ -315,13 +315,13 @@ DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapPara
                 -std::numeric_limits<T>::max(), std::numeric_limits<T>::max(), &prec ) )
             {
                 if ( !params.useDistanceLimits
-                    || ( meshIntersectionRes->distanceAlongLine < params.minValue )
-                    || ( meshIntersectionRes->distanceAlongLine > params.maxValue ) )
+                    || ( meshIntersectionRes.distanceAlongLine < params.minValue )
+                    || ( meshIntersectionRes.distanceAlongLine > params.maxValue ) )
                 {
                     const auto i = distMap.toIndex( { x, y } );
-                    distMap.set( i, meshIntersectionRes->distanceAlongLine );
+                    distMap.set( i, meshIntersectionRes.distanceAlongLine );
                     if ( outSamples )
-                        (*outSamples)[i] = meshIntersectionRes->mtp;
+                        (*outSamples)[i] = meshIntersectionRes.mtp;
                 }
             }
         }

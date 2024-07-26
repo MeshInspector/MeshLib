@@ -97,7 +97,7 @@ VertScalars computeSkyViewFactor( const Mesh & terrain, const VertCoords & sampl
             if ( !intersectionRes )
                 totalRadiation += skyPatches[i].radiation;
             else if ( outIntersections )
-                (*outIntersections)[ size_t( sampleVertId ) * skyPatches.size() + i ] = *intersectionRes;
+                (*outIntersections)[ size_t( sampleVertId ) * skyPatches.size() + i ] = intersectionRes;
         }
         res[sampleVertId] = rMaxRadiation * totalRadiation;
     } );
@@ -132,7 +132,7 @@ BitSet findSkyRays( const Mesh & terrain,
         if ( !intersectionRes )            
             res.set( ray );
         else if ( outIntersections )
-            (*outIntersections)[ray] =  *intersectionRes;
+            (*outIntersections)[ray] =  intersectionRes;
     } );
 
     return res;

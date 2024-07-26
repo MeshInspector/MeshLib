@@ -236,7 +236,7 @@ TEST( MRMesh, DistanceMapCompare )
     {
         MR_NAMED_TIMER( "intersectRay" );
         if ( auto mir = rayMeshIntersect( mesh, { xf.b, xf.A.z } ) )
-            pofRes = mir->proj;
+            pofRes = mir.proj;
     }
 
     MeshToDistanceMapParams params( xf, Vector2f{ pixSize,pixSize }, Vector2i{ 10,10 } );

@@ -18,9 +18,9 @@ namespace MR
 
 MR_ADD_CLASS_FACTORY( ObjectMesh )
 
-std::optional<MeshIntersectionResult> ObjectMesh::worldRayIntersection( const Line3f& worldRay, const FaceBitSet* region ) const
+MeshIntersectionResult ObjectMesh::worldRayIntersection( const Line3f& worldRay, const FaceBitSet* region ) const
 {
-    std::optional<MeshIntersectionResult> res;
+    MeshIntersectionResult res;
     if ( !mesh_ )
         return res;
     const AffineXf3f rayToMeshXf = worldXf().inverse();

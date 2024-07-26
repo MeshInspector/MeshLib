@@ -62,7 +62,7 @@ static void makeZThinkAtLeast( Mesh & mesh, float minThickness, Vector3f up )
             } );
         // if such intersection found then move bottom point down
         if ( isec )
-            newPoints[v] = isec->proj.point - minThickness * up;
+            newPoints[v] = isec.proj.point - minThickness * up;
     } );
 
     mesh.points = std::move( newPoints );

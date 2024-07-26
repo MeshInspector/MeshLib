@@ -252,7 +252,7 @@ Expected<TerrainEmbedder::MappedMeshContours, std::string> TerrainEmbedder::prep
                     canceled = true;
                 return;
             }
-            mtps[i] = interRes->mtp;
+            mtps[i] = interRes.mtp;
         } );
 
         if ( canceled )
@@ -285,7 +285,7 @@ Expected<TerrainEmbedder::MappedMeshContours, std::string> TerrainEmbedder::prep
                     auto interRes = rayMeshIntersect( result_, line, -FLT_MAX, FLT_MAX );
                     if ( !interRes )
                         return unexpected( "Cannot resolve bow ties on embedded structure wall" );
-                    noBowtiesMtp[j] = interRes->mtp;
+                    noBowtiesMtp[j] = interRes.mtp;
                 }
             }
         }

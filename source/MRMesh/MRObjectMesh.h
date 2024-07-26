@@ -41,7 +41,7 @@ public:
     /// given ray in world coordinates, e.g. obtained from Viewport::unprojectPixelRay;
     /// finds its intersection with the mesh of this object considering its transformation relative to the world;
     /// it is inefficient to call this function for many rays, because it computes world-to-local xf every time
-    MRMESH_API std::optional<MeshIntersectionResult> worldRayIntersection( const Line3f& worldRay, const FaceBitSet* region = nullptr ) const;
+    MRMESH_API MeshIntersectionResult worldRayIntersection( const Line3f& worldRay, const FaceBitSet* region = nullptr ) const;
 
     /// signal about mesh changing, triggered in setDirtyFlag
     using MeshChangedSignal = Signal<void( uint32_t mask )>;

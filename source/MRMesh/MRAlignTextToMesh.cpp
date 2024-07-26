@@ -78,7 +78,7 @@ Expected<Mesh, std::string>  alignTextToMesh(
         auto inter = rayMeshIntersect( mesh, Line3f{ textMeshPoints[VertId( i )] + norm * diagonalLength, -norm } );
         if ( !inter )
             return unexpected( std::string( "Cannot align text" ) );
-        hit = inter->proj;
+        hit = inter.proj;
 
         auto coords = hit.point;
         auto dir = coords - textMeshPoints[VertId( i )];

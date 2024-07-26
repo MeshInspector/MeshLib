@@ -41,12 +41,12 @@ MRMESH_API void MeshPoint::set( const Mesh& mesh, const MeshTriPoint & p )
     }
 }
 
-std::optional<MeshIntersectionResult> rayInsideIntersect( const Mesh& mesh, const MeshPoint & m )
+MeshIntersectionResult rayInsideIntersect( const Mesh& mesh, const MeshPoint & m )
 {
     return rayMeshIntersect( mesh, { m.pt, m.inDir }, 0.0f, FLT_MAX, nullptr, true, m.notIncidentFaces );
 }
 
-std::optional<MeshIntersectionResult> rayInsideIntersect( const Mesh& mesh, VertId v )
+MeshIntersectionResult rayInsideIntersect( const Mesh& mesh, VertId v )
 {
     MeshPoint m;
     m.set( mesh, MeshTriPoint( mesh.topology, v ) );
@@ -59,9 +59,8 @@ std::optional<VertScalars> computeRayThicknessAtVertices( const Mesh& mesh, cons
     VertScalars res( mesh.points.size(), FLT_MAX );
     if ( !BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
-        auto isec = rayInsideIntersect( mesh, v );
-        if ( isec )
-            res[v] = isec->distanceAlongLine;
+        if ( auto isec = rayInsideIntersect( mesh, v ) )
+            res[v] = isec.distanceAlongLine;
     }, progress ) )
         return {};
     return res;
@@ -82,10 +81,10 @@ InSphere findInSphere( const Mesh& mesh, const MeshPoint & m, const InSphereSear
     InSphere res;
     if ( auto isec = rayInsideIntersect( mesh, m ) )
     {
-        res.center = 0.5f * ( isec->proj.point + m.pt );
-        assert( isec->distanceAlongLine >= 0 );
-        res.radius = 0.5f * isec->distanceAlongLine;
-        res.oppositeTouchPoint = MeshProjectionResult{ .proj = isec->proj, .mtp = isec->mtp, .distSq = sqr( res.radius ) };
+        res.center = 0.5f * ( isec.proj.point + m.pt );
+        assert( isec.distanceAlongLine >= 0 );
+        res.radius = 0.5f * isec.distanceAlongLine;
+        res.oppositeTouchPoint = MeshProjectionResult{ .proj = isec.proj, .mtp = isec.mtp, .distSq = sqr( res.radius ) };
     }
     else
     {

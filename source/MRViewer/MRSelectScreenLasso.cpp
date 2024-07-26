@@ -250,7 +250,7 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, con
                 auto pointInOcc = xfMeshToOccMesh[i]( point );
                 myLineMeshes[i].line = Line3f{ pointInOcc, cameraEyes[i] - pointInOcc };
             }
-            return rayMultiMeshAnyIntersect( myLineMeshes, 0.0f, FLT_MAX ).has_value();
+            return (bool)rayMultiMeshAnyIntersect( myLineMeshes, 0.0f, FLT_MAX );
         };
 
         BitSetParallelFor( verts, [&] ( VertId vid )

@@ -23,8 +23,8 @@ struct MeshPoint
 };
 
 /// returns the nearest intersection between the mesh and the ray from given point along minus normal (inside the mesh)
-[[nodiscard]] MRMESH_API std::optional<MeshIntersectionResult> rayInsideIntersect( const Mesh& mesh, const MeshPoint & m );
-[[nodiscard]] MRMESH_API std::optional<MeshIntersectionResult> rayInsideIntersect( const Mesh& mesh, VertId v );
+[[nodiscard]] MRMESH_API MeshIntersectionResult rayInsideIntersect( const Mesh& mesh, const MeshPoint & m );
+[[nodiscard]] MRMESH_API MeshIntersectionResult rayInsideIntersect( const Mesh& mesh, VertId v );
 
 // Shrinking sphere: A parallel algorithm for computing the thickness of 3D objects
 // https://www.cad-journal.net/files/vol_13/CAD_13(2)_2016_199-207.pdf

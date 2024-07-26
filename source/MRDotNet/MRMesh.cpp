@@ -246,7 +246,7 @@ Mesh^ Mesh::MakeCylinder( float radius0, float radius1, float startAngle, float 
     return gcnew Mesh( new MR::Mesh( std::move( MR::makeCylinderAdvanced( radius0, radius1, startAngle, arcSize, length, resolution ) ) ) );
 }
 
-void Mesh::invalidateCaches()
+void Mesh::clearManagedResources()
 {    
     points_ = nullptr; 
     triangulation_ = nullptr;    

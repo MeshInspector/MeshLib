@@ -93,6 +93,7 @@ public value struct DecimateResult
 public ref class MeshDecimate
 {
 public:
+    /// Collapse edges in mesh region according to the settings
     static DecimateResult Decimate( Mesh^ mesh, DecimateParameters^ parameters );
 };
 

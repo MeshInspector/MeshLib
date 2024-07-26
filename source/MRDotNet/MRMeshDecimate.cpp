@@ -49,7 +49,7 @@ DecimateResult MeshDecimate::Decimate( Mesh^ mesh, DecimateParameters^ parameter
     }
     
     auto nativeRes = MR::decimateMesh( *mesh->getMesh(), nativeParams);
-    mesh->invalidateCaches();
+    mesh->clearManagedResources();
     if ( parameters->region )
     {
         parameters->region = gcnew FaceBitSet( new MR::BitSet( nativeParams.region->m_bits.begin(), nativeParams.region->m_bits.end() ) );

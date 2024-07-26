@@ -64,7 +64,7 @@ private:
 
 internal:
     MR::Mesh* getMesh() { return mesh_; }
-    void invalidateCaches();
+    void clearManagedResources();
 };
 
 MR_DOTNET_NAMESPACE_END

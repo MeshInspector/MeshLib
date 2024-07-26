@@ -315,10 +315,7 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
         return;
 
     activeBox_ = activeBox;
-    auto accessor = vdbVolume_.data->getAccessor();
 
-    size_t counter = 0;
-    float volume = float( vdbVolume_.dims.x ) * vdbVolume_.dims.y * vdbVolume_.dims.z;
     float cbModifier = 1.0f;
     if ( updateSurface && volumeRendering_ )
         cbModifier = 1.0f / 3.0f;
@@ -326,19 +323,40 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
         cbModifier = 1.0f / 2.0f;
     float lastProgress = 0.0f;
 
-    bool insideX = false;
-    bool insideY = false;
-    bool insideZ = false;
-    for ( int z = 0; z < vdbVolume_.dims.z; ++z )
-    for ( int y = 0; y < vdbVolume_.dims.y; ++y )
-    for ( int x = 0; x < vdbVolume_.dims.x; ++x )
+    openvdb::CoordBBox activeVdbBox;
+    activeVdbBox.min() = openvdb::Coord( activeBox_.min.x, activeBox_.min.y, activeBox_.min.z );
+    activeVdbBox.max() = openvdb::Coord( activeBox_.max.x - 1, activeBox_.max.y - 1, activeBox_.max.z - 1 );
+
+    // create active mask tree
+    openvdb::TopologyTree topologyTree;
+    // let it have same topology as our tree
+    topologyTree.topologyUnion( vdbVolume_.data->tree() );
+    assert( topologyTree.hasSameTopology( vdbVolume_.data->tree() ) );
+
+    reportProgress( cb, cbModifier * 0.2f );
+
+    // deactivate topology tree, while saving same topology
+    openvdb::tools::foreach( topologyTree.beginValueAll(), [] ( const openvdb::TopologyTree::ValueAllIter& iter )
     {
-        insideX = ( x >= activeBox_.min.x && x < activeBox_.max.x );
-        insideY = ( y >= activeBox_.min.y && y < activeBox_.max.y );
-        insideZ = ( z >= activeBox_.min.z && z < activeBox_.max.z );
-        accessor.setActiveState( {x,y,z}, insideX && insideY && insideZ );
-        reportProgress( cb, [&]{ return cbModifier * float( counter ) / volume; }, ++counter, 256 );
-    }
+        iter.setActiveState( false );
+    } );
+
+    reportProgress( cb, cbModifier * 0.4f );
+
+    // update topology tree with new active box
+    topologyTree.sparseFill( activeVdbBox, true );
+
+    reportProgress( cb, cbModifier * 0.6f );
+
+    // copy valid topology to our tree part 1
+    vdbVolume_.data->tree().topologyIntersection( topologyTree );
+
+    reportProgress( cb, cbModifier * 0.8f );
+
+    // copy valid topology to our tree part 2
+    vdbVolume_.data->tree().topologyUnion( std::move( topologyTree ) );
+
+    reportProgress( cb, cbModifier );
 
     volumeRenderActiveVoxels_.clear();
     dirty_ |= DIRTY_SELECTION;

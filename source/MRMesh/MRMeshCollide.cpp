@@ -2,6 +2,7 @@
 #include "MRAABBTree.h"
 #include "MRMesh.h"
 #include "MRTriangleIntersection.h"
+#include "MREnums.h"
 #include "MRTimer.h"
 #include "MRGTest.h"
 #include "MRPch/MRTBB.h"
@@ -170,12 +171,6 @@ inline std::pair<int, int> sharedVertex( const VertId av[3], const VertId bv[3] 
     }
     return { -1, -1 };
 }
-
-enum class Processing : bool
-{
-    Continue,
-    Stop
-};
 
 static void processSelfSubtasks( const AABBTree & tree,
     std::vector<NodeNode> & subtasks,

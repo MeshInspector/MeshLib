@@ -105,6 +105,71 @@ MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, f
     return findProjectionSubtree( pt, mp, mp.mesh.getAABBTree(), upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
 }
 
+void findTrisInBall( const MeshPart & mp, Ball ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
+{
+    const auto & tree = mp.mesh.getAABBTree();
+    if ( tree.nodes().empty() )
+        return;
+
+    constexpr int MaxStackSize = 32; // to avoid allocations
+    NodeId subtasks[MaxStackSize];
+    int stackSize = 0;
+
+    auto boxIntersectsBall = [&]( NodeId n )
+    {
+        return ( tree.nodes()[n].box.getBoxClosestPointTo( ball.center ) - ball.center ).lengthSq() < ball.radiusSq;
+    };
+
+    auto addSubTask = [&]( NodeId n )
+    {
+        if ( boxIntersectsBall( n ) )
+        {
+            assert( stackSize < MaxStackSize );
+            subtasks[stackSize++] = n;
+        }
+    };
+
+    addSubTask( tree.rootNodeId() );
+
+    while( stackSize > 0 )
+    {
+        const auto n = subtasks[--stackSize];
+        const auto & node = tree[n];
+        if ( !boxIntersectsBall( n ) ) // check again in case the ball has changed
+            continue;
+
+        if ( node.leaf() )
+        {
+            const auto face = node.leafId();
+            if ( validFaces && !validFaces( face ) )
+                continue;
+            if ( mp.region && !mp.region->test( face ) )
+                continue;
+            Vector3f a, b, c;
+            mp.mesh.getTriPoints( face, a, b, c );
+            
+            // compute the closest point in double-precision, because float might be not enough
+            const auto [projD, baryD] = closestPointInTriangle( Vector3d( ball.center ), Vector3d( a ), Vector3d( b ), Vector3d( c ) );
+            const Vector3f proj( projD );
+            const MeshProjectionResult candidate
+            {
+                .proj = PointOnFace{ face, proj },
+                .mtp = MeshTriPoint{ mp.mesh.topology.edgeWithLeft( face ), TriPointf( baryD ) },
+                .distSq = ( proj - ball.center ).lengthSq()
+            };
+            if ( candidate.distSq < ball.radiusSq )
+            {
+                if ( foundCallback( candidate, ball ) == Processing::Stop )
+                    break;
+            }
+            continue;
+        }
+        
+        addSubTask( node.r ); // look at right node later
+        addSubTask( node.l ); // look at left node first
+    }
+}
+
 std::optional<SignedDistanceToMeshResult> findSignedDistance( const Vector3f & pt, const MeshPart & mp,
     float upDistLimitSq, float loDistLimitSq )
 {

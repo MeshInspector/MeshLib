@@ -3,8 +3,10 @@
 #include "MRPointOnFace.h"
 #include "MRMeshTriPoint.h"
 #include "MRMeshPart.h"
+#include "MREnums.h"
 #include <cfloat>
 #include <optional>
+#include <functional>
 
 namespace MR
 {
@@ -53,6 +55,19 @@ struct MeshProjectionResult
     float loDistLimitSq = 0,
     const FacePredicate & validFaces = {},
     const std::function<bool(const MeshProjectionResult&)> & validProjections = {} );
+
+struct Ball
+{
+    Vector3f center;
+    float radiusSq = 0;
+};
+
+/// this callback is invoked on every triangle at least partially in the ball, and allows to change the ball
+using FoundTriCallback = std::function<Processing( const MeshProjectionResult & found, Ball & ball )>;
+
+/// enumerates all triangles within the ball until callback returns Stop;
+/// the ball during enumeration can shrink (new ball is always within the previous one) but never expand
+MRMESH_API void findTrisInBall( const MeshPart & mp, Ball ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces = {} );
 
 struct SignedDistanceToMeshResult
 {

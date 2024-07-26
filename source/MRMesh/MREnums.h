@@ -19,4 +19,11 @@ enum class EdgeWeights
     CotanWithAreaEqWeight
 };
 
+/// typically returned from callbacks to control the behavior of main algorithm
+enum class Processing : bool
+{
+    Continue,
+    Stop
+};
+
 } //namespace MR

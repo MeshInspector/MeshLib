@@ -29,16 +29,16 @@ static void myTrimWithPlane( Mesh& mesh, const Plane3f & plane, MR::FaceMap* map
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Segmentation, [] ( pybind11::module_& m )
 {
-    m.def( "surroundingContour", []( const MR::Mesh & mesh, std::vector<MR::EdgeId> includeEdges, const MR::EdgeMetric & edgeMetric, const MR::Vector3f & dir )
-        { return surroundingContour( mesh, std::move( includeEdges ), edgeMetric, dir ); },
+    m.def( "surroundingContour", MR::decorateExpected( []( const MR::Mesh & mesh, std::vector<MR::EdgeId> includeEdges, const MR::EdgeMetric & edgeMetric, const MR::Vector3f & dir )
+        { return surroundingContour( mesh, std::move( includeEdges ), edgeMetric, dir ); } ),
         pybind11::arg( "mesh" ), pybind11::arg( "includeEdges" ), pybind11::arg( "edgeMetric" ), pybind11::arg( "dir" ),
         "Find the best closed edge loop passing through given edges, which minimizes the sum of given edge metric\n"
         "\tincludeEdges - contain all edges that must be present in the returned loop, probably with reversed direction (should have at least 2 elements)\n"
         "\tedgeMetric - returned loop will minimize this metric\n"
         "\tdir - direction approximately orthogonal to the loop" );
 
-    m.def( "surroundingContour", []( const MR::Mesh & mesh, std::vector<MR::VertId> keyVertices, const MR::EdgeMetric & edgeMetric, const MR::Vector3f & dir )
-        { return surroundingContour( mesh, std::move( keyVertices ), edgeMetric, dir ); },
+    m.def( "surroundingContour", MR::decorateExpected( []( const MR::Mesh & mesh, std::vector<MR::VertId> keyVertices, const MR::EdgeMetric & edgeMetric, const MR::Vector3f & dir )
+        { return surroundingContour( mesh, std::move( keyVertices ), edgeMetric, dir ); } ),
         pybind11::arg( "mesh" ), pybind11::arg( "keyVertices" ), pybind11::arg( "edgeMetric" ), pybind11::arg( "dir" ),
         "Find the best closed edge loop passing through given vertices, which minimizes the sum of given edge metric\n"
         "\tkeyVertices - contain all vertices that returned loop must pass (should have at least 2 elements)\n"

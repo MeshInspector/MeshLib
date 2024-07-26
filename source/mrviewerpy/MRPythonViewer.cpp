@@ -168,7 +168,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
                     v.mouseDown( b, int( m ) );
                 } );
             },
-            pybind11::arg( "button" ), pybind11::arg( "modifier" ) = PythonKeyMod{}, "Simulate mouse down event."
+            pybind11::arg( "button" ), pybind11::arg_v( "modifier", PythonKeyMod{}, "meshlib.mrviewerpy.KeyMod.Empty" ), "Simulate mouse down event."
         ).
         def( "mouseUp",
             []( MR::Viewer& v, MR::MouseButton b, PythonKeyMod m )
@@ -177,7 +177,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
                     v.mouseUp( b, int( m ) );
                 } );
             },
-            pybind11::arg( "button" ), pybind11::arg( "modifier" ) = PythonKeyMod{}, "Simulate mouse up event."
+            pybind11::arg( "button" ), pybind11::arg_v( "modifier", PythonKeyMod{}, "meshlib.mrviewerpy.KeyMod.Empty" ), "Simulate mouse up event."
         ).
         def( "mouseMove",
             []( MR::Viewer& viewer, int x, int y )

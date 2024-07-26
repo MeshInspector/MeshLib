@@ -663,23 +663,36 @@ int Viewer::launchInit_( const LaunchParams& params )
     CommandLoop::setMainThreadId( std::this_thread::get_id() );
     spdlog::info( "Log file: {}", utf8string( Logger::instance().getLogFileName() ) );
     glfwSetErrorCallback( glfw_error_callback );
-    // TODO: Wayland support
-#ifdef __linux__
+
 #if GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
+#if !defined( MRVIEWER_EXPERIMENTAL_WAYLAND_SUPPORT ) && defined( __linux__ )
+    // force to use X11
     if ( glfwPlatformSupported( GLFW_PLATFORM_X11 ) )
         glfwInitHint( GLFW_PLATFORM, GLFW_PLATFORM_X11 );
 #endif
 #endif
+
     if ( !glfwInit() )
     {
         spdlog::error( "glfwInit failed" );
         return EXIT_FAILURE;
     }
     spdlog::info( "glfwInit succeeded" );
-#if defined(__APPLE__)
-    //Setting window properties
-    glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    glfwWindowHint( GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE );
+
+#if defined( __APPLE__ )
+    // Setting window properties
+    glfwWindowHint( GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE );
+    glfwWindowHint( GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE ); // required for GLFW 3.3
+    hasScaledFramebuffer_ = true;
+#else
+#if GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
+    if ( glfwGetPlatform() == GLFW_PLATFORM_WAYLAND )
+    {
+        glfwWindowHintString( GLFW_WAYLAND_APP_ID, MR_PROJECT_NAME );
+        glfwWindowHint( GLFW_SCALE_FRAMEBUFFER, GLFW_TRUE );
+        hasScaledFramebuffer_ = true;
+    }
+#endif
 #endif
 
 #ifdef __APPLE__
@@ -768,11 +781,8 @@ int Viewer::launchInit_( const LaunchParams& params )
         // Initialize IGL viewer
         glfw_framebuffer_size( window, width, height );
 
-#ifdef __APPLE__
-        int winWidth, winHeight;
-        glfwGetWindowSize( window, &winWidth, &winHeight );
-        pixelRatio = float( width ) / float( winWidth );
-#endif
+        if ( hasScaledFramebuffer_ )
+            updatePixelRatio_();
 
         float xscale{ 1.0f }, yscale{ 1.0f };
 #ifndef __EMSCRIPTEN__
@@ -1815,17 +1825,18 @@ void Viewer::postResize( int w, int h )
         while ( !draw_( true ) );
     }
 #endif
+
+    if ( hasScaledFramebuffer_ )
+        updatePixelRatio_();
 }
 
 void Viewer::postSetPosition( int xPos, int yPos )
 {
     if ( !windowMaximized && !glfwGetWindowMonitor( window ) )
         windowSavePos = { xPos, yPos };
-#ifdef __APPLE__
-    int winWidth, winHeight;
-    glfwGetWindowSize( window, &winWidth, &winHeight );
-    pixelRatio = float( framebufferSize.x ) / float( winWidth );
-#endif
+
+    if ( hasScaledFramebuffer_ )
+        updatePixelRatio_();
 }
 
 void Viewer::postSetMaximized( bool maximized )
@@ -2563,6 +2574,13 @@ void Viewer::stopEventLoop()
 size_t Viewer::getStaticGLBufferSize() const
 {
     return GLStaticHolder::getStaticGLBuffer().heapBytes();
+}
+
+void Viewer::updatePixelRatio_()
+{
+    int winWidth, winHeight;
+    glfwGetWindowSize( window, &winWidth, &winHeight );
+    pixelRatio = float( framebufferSize.x ) / float( winWidth );
 }
 
 void Viewer::EventsCounter::reset()

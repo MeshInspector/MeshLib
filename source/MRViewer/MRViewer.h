@@ -418,6 +418,9 @@ public:
     // update the title of the main window and, if any scene was opened, show its filename
     MRVIEWER_API void makeTitleFromSceneRootPath();
 
+    // returns true if the system framebuffer is scaled (valid for macOS and Wayland)
+    bool hasScaledFramebuffer() const { return hasScaledFramebuffer_; }
+
 public:
     //////////////////////
     // Member variables //
@@ -626,6 +629,9 @@ private:
     void initRotationCenterObject_();
     void initSpaceMouseHandler_();
 
+    // recalculate pixel ratio
+    void updatePixelRatio_();
+
     bool stopEventLoop_{ false };
 
     bool isLaunched_{ false };
@@ -641,6 +647,8 @@ private:
 
     bool isInDraw_{ false };
     bool dirtyScene_{ false };
+
+    bool hasScaledFramebuffer_{ false };
 
     LaunchParams launchParams_;
 

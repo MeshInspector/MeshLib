@@ -230,23 +230,25 @@ void ImGuiMenu::startFrame()
         EM_ASM( customSetCursor( $0 ), int( ImGui::GetMouseCursor() ) );
 #pragma clang diagnostic pop
 #endif
-#ifdef __APPLE__
-        // we want ImGui to think it is common scaling in case of retina monitor
-        ImGui::GetIO().DisplaySize = ImVec2( float( viewer->framebufferSize.x ), float( viewer->framebufferSize.y ) );
-        ImGui::GetIO().DisplayFramebufferScale = ImVec2( 1, 1 );
 
-        // ImGui takes mouse position from glfw each frame, but we scale mouse events, so need to update it
-        if ( context_ )
+        if ( viewer->hasScaledFramebuffer() )
         {
-            ImGuiInputEvent e;
-            auto curPos = Vector2f( viewer->mouseController().getMousePos() );
-            if ( !context_->InputEventsQueue.empty() && context_->InputEventsQueue.back().Type == ImGuiInputEventType_MousePos )
+            // we want ImGui to think it is common scaling in case of retina monitor
+            ImGui::GetIO().DisplaySize = ImVec2( float( viewer->framebufferSize.x ), float( viewer->framebufferSize.y ) );
+            ImGui::GetIO().DisplayFramebufferScale = ImVec2( 1, 1 );
+
+            // ImGui takes mouse position from glfw each frame, but we scale mouse events, so need to update it
+            if ( context_ )
             {
-                context_->InputEventsQueue.back().MousePos.PosX = curPos.x;
-                context_->InputEventsQueue.back().MousePos.PosY = curPos.y;
+                ImGuiInputEvent e;
+                auto curPos = Vector2f( viewer->mouseController().getMousePos() );
+                if ( !context_->InputEventsQueue.empty() && context_->InputEventsQueue.back().Type == ImGuiInputEventType_MousePos )
+                {
+                    context_->InputEventsQueue.back().MousePos.PosX = curPos.x;
+                    context_->InputEventsQueue.back().MousePos.PosY = curPos.y;
+                }
             }
         }
-#endif
     }
     else
     {

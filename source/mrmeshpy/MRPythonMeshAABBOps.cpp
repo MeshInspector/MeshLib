@@ -14,6 +14,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshIntersect, [] ( pybind11::module_& m )
 {
     pybind11::class_<MeshIntersectionResult>( m, "MeshIntersectionResult" ).
         def( pybind11::init<>() ).
+        def( "__bool__", &MeshIntersectionResult::operator bool ).
         def_readwrite( "proj", &MeshIntersectionResult::proj, "stores intersected face and global coordinates" ).
         def_readwrite( "mtp", &MeshIntersectionResult::mtp, "stores barycentric coordinates" ).
         def_readwrite( "distanceAlongLine", &MeshIntersectionResult::distanceAlongLine,

@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRMeshProject.h"
+#include <cfloat>
 #include <optional>
 
 namespace MR
@@ -23,13 +24,13 @@ struct MeshPoint
 };
 
 /// returns the nearest intersection between the mesh and the ray from given point along minus normal (inside the mesh)
-[[nodiscard]] MRMESH_API MeshIntersectionResult rayInsideIntersect( const Mesh& mesh, const MeshPoint & m );
-[[nodiscard]] MRMESH_API MeshIntersectionResult rayInsideIntersect( const Mesh& mesh, VertId v );
+[[nodiscard]] MRMESH_API MeshIntersectionResult rayInsideIntersect( const Mesh& mesh, const MeshPoint & m, float rayEnd = FLT_MAX );
+[[nodiscard]] MRMESH_API MeshIntersectionResult rayInsideIntersect( const Mesh& mesh, VertId v, float rayEnd = FLT_MAX );
 
 // Shrinking sphere: A parallel algorithm for computing the thickness of 3D objects
 // https://www.cad-journal.net/files/vol_13/CAD_13(2)_2016_199-207.pdf
 
-/// controls the finding of inscribed sphere in mesh
+/// controls the finding of maximal inscribed sphere in mesh
 struct InSphereSearchSettings
 {
     /// maximum allowed radius of the sphere;
@@ -43,19 +44,19 @@ struct InSphereSearchSettings
     float minShrinkage = 0.99999f;
 };
 
-/// found inscribed sphere touching input point with center along given direction
+/// found maximal inscribed sphere touching input point with center along given direction
 struct InSphere
 {
     Vector3f center;
     float radius = 0;
-    MeshProjectionResult oppositeTouchPoint; ///< not input point and on incident triangles
+    MeshProjectionResult oppositeTouchPoint; ///< excluding input point and incident triangles, distSq - squared distance to sphere's center
 };
 
-/// finds sphere inscribed in the mesh touching point (p) with center along the normal at (p)
+/// finds maximal sphere inscribed in the mesh touching point (p) with center along the normal at (p)
 [[nodiscard]] MRMESH_API InSphere findInSphere( const Mesh& mesh, const MeshPoint & m, const InSphereSearchSettings & settings );
 [[nodiscard]] MRMESH_API InSphere findInSphere( const Mesh& mesh, VertId v, const InSphereSearchSettings & settings );
 
-/// returns the thickness at each vertex as the diameter of the inscribed sphere
+/// returns the thickness at each vertex as the diameter of the maximal inscribed sphere
 [[nodiscard]] MRMESH_API std::optional<VertScalars> computeInSphereThicknessAtVertices( const Mesh& mesh,
     const InSphereSearchSettings & settings, const ProgressCallback & progress = {} );
 

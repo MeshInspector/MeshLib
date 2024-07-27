@@ -2,6 +2,7 @@
 #include "MRMesh.h"
 #include "MRMeshIntersect.h"
 #include "MRLine3.h"
+#include "MRRingIterator.h"
 #include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 #include <cfloat>
@@ -41,16 +42,16 @@ MRMESH_API void MeshPoint::set( const Mesh& mesh, const MeshTriPoint & p )
     }
 }
 
-MeshIntersectionResult rayInsideIntersect( const Mesh& mesh, const MeshPoint & m )
+MeshIntersectionResult rayInsideIntersect( const Mesh& mesh, const MeshPoint & m, float rayEnd )
 {
-    return rayMeshIntersect( mesh, { m.pt, m.inDir }, 0.0f, FLT_MAX, nullptr, true, m.notIncidentFaces );
+    return rayMeshIntersect( mesh, { m.pt, m.inDir }, 0.0f, rayEnd, nullptr, true, m.notIncidentFaces );
 }
 
-MeshIntersectionResult rayInsideIntersect( const Mesh& mesh, VertId v )
+MeshIntersectionResult rayInsideIntersect( const Mesh& mesh, VertId v, float rayEnd )
 {
     MeshPoint m;
     m.set( mesh, MeshTriPoint( mesh.topology, v ) );
-    return rayInsideIntersect( mesh, m );
+    return rayInsideIntersect( mesh, m, rayEnd );
 }
 
 std::optional<VertScalars> computeRayThicknessAtVertices( const Mesh& mesh, const ProgressCallback & progress )
@@ -78,40 +79,104 @@ InSphere findInSphere( const Mesh& mesh, const MeshPoint & m, const InSphereSear
     assert( settings.minShrinkage > 0 );
     assert( settings.minShrinkage < 1 );
 
-    InSphere res;
-    if ( auto isec = rayInsideIntersect( mesh, m ) )
+    // initial assessment - sphere with maximal radius
+    InSphere res
+    {
+        .center = m.pt + m.inDir * settings.maxRadius,
+        .radius = settings.maxRadius,
+        .oppositeTouchPoint = { .distSq = sqr( res.radius ) }
+    };
+
+    // check candidate point, and if the sphere though it is smaller than current res, then replaces res;
+    // returns true if res was updated
+    auto processCandidate = [&]( const MeshProjectionResult & candidate )
+    {
+        const auto d = candidate.proj.point - m.pt;
+        const auto dn = dot( m.inDir, d );
+        if ( !( dn > 0 ) )
+            return false; // avoid circle inversion
+        const auto x = sqr( d ) / ( 2 * dn );
+        const auto xSq = sqr( x );
+        if ( !( xSq < res.oppositeTouchPoint.distSq ) )
+            return false; // no reduction of circle
+        res.center = m.pt + m.inDir * x;
+        res.radius = x;
+        res.oppositeTouchPoint = candidate;
+        res.oppositeTouchPoint.distSq = xSq;
+        return true;
+    };
+
+    // returns any face incident to given vertex
+    auto getIncidentFace = [&mesh]( VertId d )
+    {
+        for ( auto ei : orgRing( mesh.topology, d ) )
+            if ( auto l = mesh.topology.left( ei ) )
+                return l;
+        return FaceId{};
+    };
+
+    // optimization: if the point is in vertex (or on edge), check all neighbor points as candidates
+    if ( auto v = m.triPoint.inVertex( mesh.topology ) )
+    {
+        for ( auto e : orgRing( mesh.topology, v ) )
+        {
+            const auto d = mesh.topology.dest( e );
+            MeshProjectionResult candidate
+            {
+                .proj = { .point = mesh.points[d] }, // delay face setting till candidate is actually selected
+                .mtp = MeshTriPoint( e.sym(), { 0, 0 } )
+            };
+            if ( processCandidate( candidate ) )
+                res.oppositeTouchPoint.proj.face = getIncidentFace( d );
+        }
+    }
+    else if ( auto oe = m.triPoint.onEdge( mesh.topology ) )
+    {
+        const auto e = oe.e;
+        if ( auto l = mesh.topology.left( e ) )
+        {
+            const auto ne = mesh.topology.next( e );
+            const auto d = mesh.topology.dest( ne );
+            MeshProjectionResult candidate
+            {
+                .proj = { .point = mesh.points[d] }, // delay face setting till candidate is actually selected
+                .mtp = MeshTriPoint( ne.sym(), { 0, 0 } )
+            };
+            if ( processCandidate( candidate ) )
+                res.oppositeTouchPoint.proj.face = getIncidentFace( d );
+        }
+        if ( auto r = mesh.topology.right( e ) )
+        {
+            const auto pe = mesh.topology.prev( e );
+            const auto d = mesh.topology.dest( pe );
+            MeshProjectionResult candidate
+            {
+                .proj = { .point = mesh.points[d] }, // delay face setting till candidate is actually selected
+                .mtp = MeshTriPoint( pe.sym(), { 0, 0 } )
+            };
+            if ( processCandidate( candidate ) )
+                res.oppositeTouchPoint.proj.face = getIncidentFace( d );
+        }
+    }
+    // otherwise if the point is inside a triangle, then its 3 vertices cannot touch sphere with the center located on a normal direction
+
+    // consider ray intersection at the distance closer than the current diameter
+    if ( auto isec = rayInsideIntersect( mesh, m, 2 * res.radius ) )
     {
         res.center = 0.5f * ( isec.proj.point + m.pt );
         assert( isec.distanceAlongLine >= 0 );
         res.radius = 0.5f * isec.distanceAlongLine;
         res.oppositeTouchPoint = MeshProjectionResult{ .proj = isec.proj, .mtp = isec.mtp, .distSq = sqr( res.radius ) };
     }
-    else
-    {
-        res.center = m.pt + m.inDir * settings.maxRadius;
-        res.radius = settings.maxRadius;
-        res.oppositeTouchPoint.distSq = sqr( res.radius );
-    }
 
     for ( int it = 0; it < settings.maxIters; ++it )
     {
         const auto preRadius = res.radius;
         findTrisInBall( mesh, Ball{ res.center, res.oppositeTouchPoint.distSq },
-            [&m, &res]( const MeshProjectionResult & candidate, Ball & ball )
+            [&]( const MeshProjectionResult & candidate, Ball & ball )
             {
-                const auto d = candidate.proj.point - m.pt;
-                const auto dn = dot( m.inDir, d );
-                if ( !( dn > 0 ) )
-                    return Processing::Continue; // avoid circle inversion
-                const auto x = sqr( d ) / ( 2 * dn );
-                const auto xSq = sqr( x );
-                if ( !( xSq < res.oppositeTouchPoint.distSq ) )
-                    return Processing::Continue; // no reduction of circle
-                res.center = m.pt + m.inDir * x;
-                res.radius = x;
-                res.oppositeTouchPoint = candidate;
-                res.oppositeTouchPoint.distSq = xSq;
-                ball = Ball{ res.center, res.oppositeTouchPoint.distSq };
+                if ( processCandidate( candidate ) )
+                    ball = Ball{ res.center, res.oppositeTouchPoint.distSq };
                 return Processing::Continue;
             }, m.notIncidentFaces );
         if ( res.radius > preRadius * settings.minShrinkage )

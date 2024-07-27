@@ -4,6 +4,7 @@
 #include "MRLine3.h"
 #include "MRRingIterator.h"
 #include "MRBitSetParallelFor.h"
+#include "MRClosestPointInTriangle.h"
 #include "MRTimer.h"
 #include <cfloat>
 
@@ -169,19 +170,36 @@ InSphere findInSphere( const Mesh& mesh, const MeshPoint & m, const InSphereSear
         res.oppositeTouchPoint = MeshProjectionResult{ .proj = isec.proj, .mtp = isec.mtp, .distSq = sqr( res.radius ) };
     }
 
-    for ( int it = 0; it < settings.maxIters; ++it )
-    {
-        const auto preRadius = res.radius;
-        findTrisInBall( mesh, Ball{ res.center, res.oppositeTouchPoint.distSq },
-            [&]( const MeshProjectionResult & candidate, Ball & ball )
-            {
-                if ( processCandidate( candidate ) )
-                    ball = Ball{ res.center, res.oppositeTouchPoint.distSq };
+    findTrisInBall( mesh, Ball{ res.center, res.oppositeTouchPoint.distSq },
+        [&]( MeshProjectionResult candidate, Ball & ball )
+        {
+            auto preRadius = res.radius;
+            if ( !processCandidate( candidate ) )
                 return Processing::Continue;
-            }, m.notIncidentFaces );
-        if ( res.radius > preRadius * settings.minShrinkage )
-            break;
-    }
+            if ( res.radius <= preRadius * settings.minShrinkage )
+            {
+                // since triangle's closest point to old sphere center is not the closest point for updated sphere center,
+                // repeat several times for the same triangle
+                Vector3f a, b, c;
+                mesh.getTriPoints( candidate.proj.face, a, b, c );
+                // start from 1 because 1 iteration was already done
+                for ( int subIt = 1; subIt < settings.maxIters; ++subIt )
+                {
+                    preRadius = res.radius;
+                    const auto [projD, baryD] = closestPointInTriangle( Vector3d( res.center ), Vector3d( a ), Vector3d( b ), Vector3d( c ) );
+                    candidate.proj.point = Vector3f( projD );
+                    assert( candidate.mtp.e == mesh.topology.edgeWithLeft( candidate.proj.face ) );
+                    candidate.mtp.bary = TriPointf( baryD );
+                    candidate.distSq = ( candidate.proj.point - res.center ).lengthSq();
+                    if ( !processCandidate( candidate ) )
+                        break;
+                    if ( res.radius > preRadius * settings.minShrinkage )
+                        break;
+                }
+            }
+            ball = Ball{ res.center, res.oppositeTouchPoint.distSq };
+            return Processing::Continue;
+        }, m.notIncidentFaces );
 
     return res;
 }

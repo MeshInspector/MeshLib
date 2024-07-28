@@ -73,7 +73,7 @@ VertScalars computeThicknessAtVertices( const Mesh& mesh )
     return *computeRayThicknessAtVertices( mesh );
 }
 
-InSphere findInSphere( const Mesh& mesh, const MeshPoint & m, const InSphereSearchSettings & settings )
+InSphere findInSphereImpl( const Mesh& mesh, const MeshPoint & m, const InSphereSearchSettings & settings )
 {
     assert( settings.maxRadius > 0 );
     assert( settings.maxIters > 0 );
@@ -201,6 +201,23 @@ InSphere findInSphere( const Mesh& mesh, const MeshPoint & m, const InSphereSear
             return Processing::Continue;
         }, m.notIncidentFaces );
 
+    return res;
+}
+
+InSphere findInSphere( const Mesh& mesh, const MeshPoint & m, const InSphereSearchSettings & settings )
+{
+    auto res = findInSphereImpl( mesh, m, settings );
+    if ( settings.insideAndOutside )
+    {
+        auto m2 = m;
+        m2.inDir = -m2.inDir;
+        auto res2 = findInSphereImpl( mesh, m2, settings );
+        if ( res2.radius < res.radius )
+        {
+            res = res2;
+            res.radius = -res.radius;
+        }
+    }
     return res;
 }
 

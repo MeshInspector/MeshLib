@@ -33,15 +33,20 @@ struct MeshPoint
 /// controls the finding of maximal inscribed sphere in mesh
 struct InSphereSearchSettings
 {
+    /// if false then searches for the maximal inscribed sphere in mesh;
+    /// if true then searches for both a) maximal inscribed sphere, and b) maximal sphere outside the mesh touching it at two points;
+    ///              and returns the smaller of two, and if it is b) then with minus sign
+    bool insideAndOutside = false;
+
     /// maximum allowed radius of the sphere;
     /// for almost closed meshes the article recommends maxRadius = 0.5f * std::min( { boxSize.x, boxSize.y, boxSize.z } )
     float maxRadius = 1;
 
-    /// maximum number of shrinking iterations for one triangle
-    int maxIters = 16;
-
     /// iterations stop if next radius is larger than minShrinkage times previous radius
     float minShrinkage = 0.99999f;
+
+    /// maximum number of shrinking iterations for one triangle
+    int maxIters = 16;
 };
 
 /// found maximal inscribed sphere touching input point with center along given direction

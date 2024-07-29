@@ -53,13 +53,13 @@ jobs:
       INTERNAL_BUILD: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
 
     steps:
-      - name: Try to clear workspace
+      - name: Work-around possible permission issues
         run: |
-          # NOTE: GITHUB_WORKSPACE != {{ github.workspace }}
-          echo $GITHUB_WORKSPACE
-          if [ -d /__w/MeshLib/MeshLib ] && [[ -n "$(find /__w/MeshLib/MeshLib -user root)" ]] ; then
-            mv /__w/MeshLib/MeshLib /__w/MeshLib/MeshLib_${RANDOM}
-            mkdir /__w/MeshLib/MeshLib
+          # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
+          # Related issue: https://github.com/actions/runner/issues/2058
+          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
+            mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
+            mkdir ${GITHUB_WORKSPACE}
           fi
 
       - name: Checkout

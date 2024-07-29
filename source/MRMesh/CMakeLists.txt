@@ -23,7 +23,7 @@ option(MRMESH_NO_GTEST "Disable building Google tests" OFF)
 option(MRMESH_NO_OPENCASCADE "Disable OpenCASCADE usage" OFF)
 option(MRMESH_NO_ZLIB "Disable Zlib usage" OFF)
 
-option(MRMESH_OPENCASCADE_USE_XDE "Use OpenCASCADE XDE module" OFF)
+option(MRMESH_OPENCASCADE_USE_XDE "Use OpenCASCADE XDE module" ON)
 option(MRMESH_OPENVDB_USE_IO "Use OpenVDB IO functions" OFF)
 
 IF(DEFINED MESHLIB_PYTHON_SUPPORT AND NOT MESHLIB_PYTHON_SUPPORT)

@@ -132,7 +132,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu24' }}
         env:
           CXX: ${{matrix.cxx-compiler}}
-        run: scripts/mrbind/run.sh generate
+        run: make -f scripts/mrbind/generate.mk only-generate
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -154,7 +154,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu24' }}
         env:
           CXX: ${{matrix.cxx-compiler}}
-        run: scripts/mrbind/run.sh
+        run: make -f scripts/mrbind/generate.mk
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.compiler}}"

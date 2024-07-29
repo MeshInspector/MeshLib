@@ -10,11 +10,14 @@
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRCloseVertices.h"
 
+#include "MRMesh/MRMacros.h"
+#include "MRPythonNumpy.h"
+
 MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
 {
     try
     {
-        pybind11::module_::import( "meshlib.mrmeshpy" );
+        pybind11::module_::import( MR_STR( MRMESHNUMPY_PARENT_MODULE_NAME ) ".mrmeshpy" );
     }
     catch ( const pybind11::error_already_set& )
     {
@@ -43,10 +46,10 @@ MR::Mesh fromFV( const pybind11::buffer& faces, const pybind11::buffer& verts, c
         for ( auto i = 0; i < infoFaces.shape[0]; i++ )
         {
             auto ind = strideF0 * i;
-            t.push_back( { 
+            t.push_back( {
                 MR::VertId( int( data[ind] ) ),
                 MR::VertId( int( data[ind + strideF1] ) ),
-                MR::VertId( int( data[ind + strideF1 * 2] ) ) 
+                MR::VertId( int( data[ind + strideF1 * 2] ) )
                 } );
         }
     };
@@ -263,8 +266,8 @@ MR::PointCloud pointCloudFromNP( const pybind11::buffer& points, const pybind11:
             for ( auto i = 0; i < bufInfo.shape[0]; i++ )
             {
                 auto ind = stride0 * i;
-                vec[MR::VertId( i )] = MR::Vector3f( 
-                    float( data[ind] ), 
+                vec[MR::VertId( i )] = MR::Vector3f(
+                    float( data[ind] ),
                     float( data[ind + stride1] ),
                     float( data[ind + stride1 * 2] ) );
             }
@@ -333,7 +336,7 @@ MR::Polyline2 polyline2FromNP( const pybind11::buffer& points )
     return res;
 }
 
-// returns numpy array shapes [num faces,3] which represents vertices of mesh valid faces 
+// returns numpy array shapes [num faces,3] which represents vertices of mesh valid faces
 pybind11::array_t<int> getNumpyFaces( const MR::MeshTopology& topology )
 {
     using namespace MR;

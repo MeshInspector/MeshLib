@@ -1,1 +1,1 @@
--Llib -ljsoncpp -lopenvdb -lTKernel
+-ljsoncpp -lopenvdb -lTKernel

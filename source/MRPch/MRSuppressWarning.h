@@ -1,7 +1,6 @@
 #pragma once
 
-// Helper macro for concatenating arguments into string literal.
-#define MR_STR(...) #__VA_ARGS__
+#include "MRMesh/MRMacros.h"
 
 // Macros for disabling compiler warnings.
 // `MESSAGE' is diagnostic message name used by Clang and GCC.

@@ -54,7 +54,7 @@ pybind11::array_t<double> getNumpy3Darray( const MR::SimpleVolume& simpleVolume 
     const size_t cXY = simpleVolume.dims.x * simpleVolume.dims.y;
     const size_t cZ = simpleVolume.dims.z;
     const size_t cZY = simpleVolume.dims.z * simpleVolume.dims.y;
-    
+
     for ( size_t x = 0; x < simpleVolume.dims.x; ++x )
     for ( size_t y = 0; y < simpleVolume.dims.y; ++y )
     for ( size_t z = 0; z < simpleVolume.dims.z; ++z )

@@ -389,7 +389,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                 {
                     *loadWarn += " object has material with and without texture";
                 }
-                else if( numEmptyTexture == 0 )
+                else if( numEmptyTexture == 0 && resValue[i].textureFiles.size() != 0 )
                 {
                     bool crashTextureLoad = false;
                     for ( const auto& p : resValue[i].textureFiles )

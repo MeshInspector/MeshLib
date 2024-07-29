@@ -55,7 +55,9 @@ jobs:
     steps:
       - name: Try to clear workspace
         run: |
-          if [ -d /__w/MeshLib/MeshLib ] ; then
+          # NOTE: GITHUB_WORKSPACE != {{ github.workspace }}
+          echo $GITHUB_WORKSPACE
+          if [ -d /__w/MeshLib/MeshLib ] && [[ -n "$(find /__w/MeshLib/MeshLib -user root)" ]] ; then
             mv /__w/MeshLib/MeshLib /__w/MeshLib/MeshLib_${RANDOM}
             mkdir /__w/MeshLib/MeshLib
           fi
@@ -154,7 +156,3 @@ jobs:
           name: Distributives_${{matrix.os}}_arm64
           path: meshlib_${{matrix.os}}-arm64-dev.deb
           retention-days: 1
-
-      - name: Clear workspace
-        if: ${{ always() }}
-        run: rm -rf /__w/MeshLib/MeshLib || exit 0

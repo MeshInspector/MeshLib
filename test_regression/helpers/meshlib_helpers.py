@@ -133,3 +133,59 @@ def compare_points_similarity(points_a: mrmesh.PointCloud or Path or str,
                 f"{test_report}Vertex numbers of result and reference differ too much, \n"
                 f"verts1={num_p_a}\nverts2={num_p_b}\n"
                 f"relative threshold is {verts_thresh}")
+
+
+def compare_voxels(voxels_a: mrmesh.VdbVolume or Path or str,
+                              voxels_b: mrmesh.VdbVolume or Path or str,
+                              testname: str = None,
+                              ):
+    """
+    Checks that two voxels have same properties and that means they can be treated as identical
+    :param voxels_a: first voxel
+    :param voxels_b: second voxel
+    :param testname: name of test, will be printed on fail
+    """
+    test_report = f"Testname is {testname}\n" if testname else ""
+    # load voxels if required
+    if isinstance(voxels_a, str) or isinstance(voxels_a, Path):
+        voxels_a = mrmesh.loadVoxels(Path(voxels_a))
+    if isinstance(voxels_b, str) or isinstance(voxels_b, Path):
+        voxels_b = mrmesh.loadVoxels(Path(voxels_b))
+    with check:
+        assert voxels_a.voxelSize == voxels_b.voxelSize, (
+                f"{test_report}Voxel sizes are differs, \n"
+                f"voxel_a:{voxels_a.voxelSize}\nvoxel_b:{voxels_b.voxelSize}\n")
+        assert voxels_a.min == voxels_b.min, (
+            f"{test_report}voxels.min of voxels are differs, \n"
+            f"voxel_a:{voxels_a.min}\nvoxel_b:{voxels_b.min}\n")
+        assert voxels_a.max == voxels_b.max, (
+            f"{test_report}voxels.min of voxels are differs, \n"
+            f"voxel_a:{voxels_a.max}\nvoxel_b:{voxels_b.max}\n")
+        assert voxels_a.dims == voxels_b.dims, (
+            f"{test_report}voxels.dims of voxels are differs, \n"
+            f"voxel_a:{voxels_a.dims}\nvoxel_b:{voxels_b.dims}\n")
+
+
+def compare_lines(lines_a: mrmesh.Polyline3 or Path or str,
+                  lines_b: mrmesh.Polyline3 or Path or str,
+                  testname: str = None,
+                  ):
+    """
+    Checks that two lines have same properties and that means they can be treated as identical
+    :param lines_a: first set of lines
+    :param lines_b: second set of lines
+    :param testname: name of test, will be printed on fail
+    """
+    test_report = f"Testname is {testname}\n" if testname else ""
+    # load lines from file if required
+    if isinstance(lines_a, str) or isinstance(lines_a, Path):
+        lines_a = mrmesh.loadLines(Path(lines_a))
+    if isinstance(lines_b, str) or isinstance(lines_b, Path):
+        lines_b = mrmesh.loadLines(Path(lines_b))
+    with check:
+        assert lines_a.getBoundingBox().diagonal() == lines_b.getBoundingBox().diagonal(), (
+                f"{test_report}Diagonals of bounding boxes are differs, \n"
+                f"lines_a:{lines_a.voxelSize}\nlines_b:{lines_b.voxelSize}\n")
+        assert lines_a.totalLength() == lines_b.totalLength(), (
+            f"{test_report}total length of lines are differs, \n"
+            f"lines_a:{lines_a.min}\nlines_b:{lines_b.min}\n")

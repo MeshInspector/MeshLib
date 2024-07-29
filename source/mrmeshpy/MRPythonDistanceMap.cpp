@@ -9,6 +9,8 @@
 #pragma warning(pop)
 
 // Distance Map
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorDistanceMap, MR::DistanceMap )
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
 {
     pybind11::class_<MR::DistanceMap>( m, "DistanceMap" ).
@@ -76,9 +78,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
            "MeshPart - input 3d model\n"
            "general call. You could customize params manually" );
 
-    m.def( "distanceMapToMesh", 
+    m.def( "distanceMapToMesh",
         MR::decorateExpected( &MR::distanceMapToMesh ),
-        pybind11::arg( "mp" ), 
+        pybind11::arg( "mp" ),
         pybind11::arg( "toWorld" ),
         pybind11::arg( "cb" ) = MR::ProgressCallback{},
            "converts distance map back to the mesh fragment with presented params" );

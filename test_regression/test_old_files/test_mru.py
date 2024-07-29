@@ -2,7 +2,7 @@ from pathlib import Path
 import meshlib.mrmeshpy as mlib
 from constants import test_files_path
 import pytest
-from helpers.meshlib_helpers import compare_points_similarity, compare_meshes_similarity
+from helpers.meshlib_helpers import compare_points_similarity, compare_meshes_similarity, compare_voxels, compare_lines
 
 
 @pytest.mark.parametrize("filename", [
@@ -42,3 +42,39 @@ def test_open_old_meshes(filename):
     mesh = scene_obj.children()[0].extractMesh()
     ref = mlib.loadMesh(input_folder / ref_file)
     compare_meshes_similarity(mesh, ref, verts_thresh=0, rhsdr_thresh=0.0001)
+
+
+@pytest.mark.parametrize("filename", [
+    "voxels_0.0.128.21.mru",
+    "voxels_0.1.0.0.mru",
+    "voxels_2.1.1.44.mru",
+    "voxels_2.2.0.79.mru",
+    "voxels_2.3.0.17.mru",
+    "voxels_2.4.3.65.mru",
+])
+def test_open_old_voxels(filename):
+    ref_file = "W74_H91_S124_V921_921_921_G0_F reff.raw"
+    input_folder = Path(test_files_path) / "old_files" / "mru" / "voxels"
+    scene_obj = mlib.loadSceneObject(input_folder / filename)
+    voxels = scene_obj.children()[0].extractVoxels()
+
+    compare_voxels(voxels, input_folder / ref_file)
+
+
+@pytest.mark.parametrize("filename", [
+    "lines_0.0.128.21.mru",
+    "lines_0.1.0.0.mru",
+    "lines_2.1.1.44.mru",
+    "lines_2.2.0.79.mru",
+    "lines_2.3.0.17.mru",
+    "lines_2.4.3.65.mru",
+])
+def test_open_old_lines(filename):
+    ref_file = "ref_IsoLines2.mrlines"
+    input_folder = Path(test_files_path) / "old_files" / "mru" / "lines"
+    scene_obj = mlib.loadSceneObject(input_folder / filename)
+    lines = scene_obj.children()[0].extractLines()
+
+    ref_lines = mlib.loadLines(input_folder / ref_file)
+    # assert ref_lines.computeBoundingBox().diagonal() == lines.computeBoundingBox().diagonal()
+    compare_lines(input_folder / ref_file, lines)

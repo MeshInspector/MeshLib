@@ -173,7 +173,7 @@ private:
 #pragma message( "Progress indication is currently unsupported for OpenCASCADE versions prior to 7.4" )
 #endif
 
-#if STEP_LOAD_COLORS
+#if defined( MRMESH_OPENCASCADE_USE_XDE ) && STEP_LOAD_COLORS
 Color toColor( const Quantity_ColorRGBA& rgba )
 {
     const auto& rgb = rgba.GetRGB();

@@ -92,8 +92,8 @@ using namespace MR;
 #define STEP_READSTREAM_SUPPORTED ( ( ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 5 ) ) )
 // reading STEP data fixed
 #define STEP_READER_FIXED ( ( ( OCC_VERSION_MAJOR > 7 ) || ( OCC_VERSION_MAJOR == 7 && OCC_VERSION_MINOR >= 7 ) ) )
-// TODO: full color support
-#define STEP_LOAD_COLORS 0
+// enable full color support
+#define STEP_LOAD_COLORS 1
 
 #if MODERN_MESSAGE_SUPPORTED
 /// spdlog adaptor for OpenCASCADE logging system

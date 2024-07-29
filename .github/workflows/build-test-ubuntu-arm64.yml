@@ -53,15 +53,12 @@ jobs:
       INTERNAL_BUILD: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
 
     steps:
-      - name: Clear workspace
+      - name: Try to clear workspace
         run: |
-          echo "Username: $(whoami)"
-          echo "Groups: $(groups)"
-          ls -ld /__w/MeshLib/MeshLib/
-          ls -l /__w/MeshLib/MeshLib/
-          ls -l /__w/MeshLib/MeshLib/source/
-          rm -rf /__w/MeshLib/MeshLib && mkdir /__w/MeshLib/MeshLib
-        
+          if [ -d /__w/MeshLib/MeshLib ] ; then
+            mv /__w/MeshLib/MeshLib /__w/MeshLib/MeshLib_${RANDOM}
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -156,3 +153,7 @@ jobs:
           name: Distributives_${{matrix.os}}_arm64
           path: meshlib_${{matrix.os}}-arm64-dev.deb
           retention-days: 1
+
+      - name: Clear workspace
+        if: ${{ always() }}
+        run: rm -rf /__w/MeshLib/MeshLib || exit 0

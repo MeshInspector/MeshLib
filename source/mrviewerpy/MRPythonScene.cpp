@@ -1,9 +1,11 @@
 #include "MRMesh/MRObjectLinesHolder.h"
+#include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MRPython.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRObjectsAccess.h"
+#include "MRMesh/MRObjectDistanceMap.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectVoxels.h"
@@ -232,4 +234,5 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Scene, [] ( pybind11::module_& m )
     m.def( "getSelectedPointClouds", &pythonGetSelectedModels<MR::ObjectPointsHolder, &MR::ObjectPointsHolder::pointCloud>, "Get copies of all selected point clouds in the scene." );
     m.def( "getSelectedPolylines", &pythonGetSelectedModels<MR::ObjectLinesHolder, &MR::ObjectLinesHolder::polyline>, "Get copies of all selected polylines in the scene." );
     m.def( "getSelectedVoxels", &pythonGetSelectedModels<MR::ObjectVoxels, &MR::ObjectVoxels::vdbVolume>, "Get copies of all selected voxel grids in the scene." );
+    m.def( "getSelectedDistanceMaps", &pythonGetSelectedModels<MR::ObjectDistanceMap, &MR::ObjectDistanceMap::getDistanceMap>, "Get copies of all selected voxel grids in the scene." );
 } )

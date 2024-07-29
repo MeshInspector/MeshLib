@@ -57,6 +57,7 @@ jobs:
         run: |
           if [ -d /__w/MeshLib/MeshLib ] ; then
             mv /__w/MeshLib/MeshLib /__w/MeshLib/MeshLib_${RANDOM}
+            mkdir /__w/MeshLib/MeshLib
           fi
 
       - name: Checkout

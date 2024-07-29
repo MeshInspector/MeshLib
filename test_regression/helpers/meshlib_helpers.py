@@ -171,13 +171,13 @@ def compare_lines(lines_a: mrmesh.Polyline3 or Path or str,
                   testname: str = None,
                   ):
     """
-    Checks that two voxels have same properties and that means they can be treated as identical
+    Checks that two lines have same properties and that means they can be treated as identical
     :param lines_a: first set of lines
     :param lines_b: second set of lines
     :param testname: name of test, will be printed on fail
     """
     test_report = f"Testname is {testname}\n" if testname else ""
-    # load voxels if required
+    # load lines from file if required
     if isinstance(lines_a, str) or isinstance(lines_a, Path):
         lines_a = mrmesh.loadLines(Path(lines_a))
     if isinstance(lines_b, str) or isinstance(lines_b, Path):

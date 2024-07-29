@@ -662,7 +662,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
     window = context->CurrentWindow;
     // Manually draw Y scroll bar if window cannot be big enough
-    if ( std::ceil( window->SizeFull.y ) < std::floor( window->ContentSizeIdeal.y + 2 * style.WindowPadding.y ) && !params.changedSize )
+    if ( std::ceil( window->SizeFull.y ) + 1 < std::floor( window->ContentSizeIdeal.y + 2 * style.WindowPadding.y ) && !params.changedSize )
     {
         // Set scrollbar size
         window->ScrollbarSizes[ImGuiAxis_Y ^ 1] = style.ScrollbarSize;
@@ -837,6 +837,9 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
     const ImGuiTableFlags tableFlags = ImGuiTableFlags_SizingStretchProp;
 
+    // This is popped in `EndCustomStatePlugin()`.
+    ImGui::PushClipRect( window->InnerRect.Min, window->InnerRect.Max, false );
+
     ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, { 0,0 } );
     ImGui::SetCursorPosY( titleBarHeight + style.WindowPadding.y - borderSize );
     if ( !ImGui::BeginTable( "ContentTable", 1, tableFlags, { -1, -1 } ) )
@@ -848,8 +851,6 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     ImGui::PopStyleVar();
 
     ImGui::TableNextColumn();
-    window->ClipRect = window->InnerRect;
-    window->DrawList->PushClipRect( window->InnerRect.Min, window->InnerRect.Max );
 
     { // Create a group for the UI testing engine.
         // Strip `##...` from the label.
@@ -867,9 +868,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 void EndCustomStatePlugin()
 {
     EndTable();
-    auto context = ImGui::GetCurrentContext();
-    auto window = context->CurrentWindow;
-    window->DrawList->PopClipRect();
+    ImGui::PopClipRect();
     ImGui::PopStyleVar();
     End();
 

@@ -54,7 +54,12 @@ jobs:
 
     steps:
       - name: Clear workspace
-        run: rm -rf /__w/MeshLib/MeshLib && mkdir /__w/MeshLib/MeshLib
+        run: |
+          echo "Username: $(whoami)"
+          echo "UID: ${UID}"
+          echo "Groups: $(groups)"
+          ls -ld /__w/MeshLib/MeshLib/
+          rm -rf /__w/MeshLib/MeshLib && mkdir /__w/MeshLib/MeshLib
         
       - name: Checkout
         uses: actions/checkout@v4

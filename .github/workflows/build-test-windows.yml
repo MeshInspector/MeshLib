@@ -138,6 +138,14 @@ jobs:
       - name: Build .NET
         if:   matrix.runner == 'windows-2022'
         run: msbuild -m source\MeshLibDotNet.sln -p:Configuration=${{ matrix.config }}
+        
+      - name: Generate NuGet specification
+        if:   matrix.runner == 'windows-2022'
+        run: py -3 scripts\generate_nuget_spec.py
+        
+      - name: Build NuGet package
+        if:   matrix.runner == 'windows-2022'
+        run: nuget.exe pack source\Package.nuspec
 
       - name: Run Start-and-Exit Tests
         working-directory: source\x64\${{ matrix.config }}

@@ -15,6 +15,7 @@ include_extensions = ['.h','.hpp','.cuh']
 lib_extentions = ['.lib','.pdb']
 includes_src_dst = list()
 includes_src_dst_thirdparty = list()
+path_to_copyright_header = os.path.join(os.path.dirname(os.path.abspath(__file__)),'copyright_header.txt')
 
 def check_python_version():
 	if (sys.version_info[0] < 3 or (sys.version_info[0] ==3 and sys.version_info[1] < 8)):

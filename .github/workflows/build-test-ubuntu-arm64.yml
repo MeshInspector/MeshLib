@@ -53,9 +53,15 @@ jobs:
       INTERNAL_BUILD: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
 
     steps:
-      - name: Clear workspace
-        run: rm -rf /__w/MeshLib/MeshLib && mkdir /__w/MeshLib/MeshLib
-        
+      - name: Work-around possible permission issues
+        run: |
+          # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
+          # Related issue: https://github.com/actions/runner/issues/2058
+          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
+            mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
+            mkdir ${GITHUB_WORKSPACE}
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
         with:

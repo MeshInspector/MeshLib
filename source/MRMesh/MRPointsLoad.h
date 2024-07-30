@@ -36,7 +36,7 @@ MRMESH_API Expected<PointCloud, std::string> fromText( const std::filesystem::pa
 [[deprecated( "use fromText( ..., PointsLoadSettings ) instead" )]]
 MRMESH_API Expected<PointCloud, std::string> fromText( std::istream& in, AffineXf3f* outXf = nullptr, ProgressCallback callback = {} );
 
-/// loads from .pts file
+/// loads from Laser scan plain data format (.pts) file
 MRMESH_API Expected<PointCloud, std::string> fromPts( const std::filesystem::path& file, VertColors* colors = nullptr, AffineXf3f* outXf = nullptr, ProgressCallback callback = {} );
 MRMESH_API Expected<PointCloud, std::string> fromPts( std::istream& in, VertColors* colors = nullptr, AffineXf3f* outXf = nullptr, ProgressCallback callback = {} );
 
@@ -58,12 +58,6 @@ MRMESH_API Expected<PointCloud, std::string> fromPly( std::istream& in, VertColo
 /// loads from .obj file
 MRMESH_API Expected<PointCloud, std::string> fromObj( const std::filesystem::path& file, ProgressCallback callback = {} );
 MRMESH_API Expected<PointCloud, std::string> fromObj( std::istream& in, ProgressCallback callback = {} );
-
-/// loads from .asc file
-[[deprecated( "use fromText() instead" )]]
-MRMESH_API Expected<PointCloud, std::string> fromAsc( const std::filesystem::path& file, VertColors* colors = nullptr, ProgressCallback callback = {} );
-[[deprecated( "use fromText() instead" )]]
-MRMESH_API Expected<PointCloud, std::string> fromAsc( std::istream& in, VertColors* colors = nullptr, ProgressCallback callback = {} );
 
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
 /// loads from .e57 file

@@ -852,6 +852,11 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
     ImGui::TableNextColumn();
 
+    // This is ALSO popped in `EndCustomStatePlugin()`.
+    // For some reason we need both clip rects. In some cases removing former results in an incorrect clipping (widgets appearing on top
+    // of the window titles). And some plugins like to draw very close to window borders, so we need this here to extend the rect sideways to allow that.
+    ImGui::PushClipRect( window->InnerRect.Min, window->InnerRect.Max, false );
+
     { // Create a group for the UI testing engine.
         // Strip `##...` from the label.
         std::string_view strippedLabel = label;
@@ -867,6 +872,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
 void EndCustomStatePlugin()
 {
+    ImGui::PopClipRect();
     EndTable();
     ImGui::PopClipRect();
     ImGui::PopStyleVar();

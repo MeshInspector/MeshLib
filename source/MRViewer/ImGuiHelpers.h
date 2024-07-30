@@ -184,6 +184,8 @@ struct CustomStatePluginWindowParameters
     float width{ 0.0f };
     /// window height, usually calculated internally (if value is zero)
     float height{ 0.0f };
+    /// If false, will never show the scrollbar.
+    bool allowScrollbar = true;
     /// start Position
     ImVec2* position{ nullptr };
     /// the position of the starting point of the window

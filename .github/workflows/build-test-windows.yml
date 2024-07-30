@@ -140,8 +140,10 @@ jobs:
         run: msbuild -m source\MeshLibDotNet.sln -p:Configuration=${{ matrix.config }}
         
       - name: Generate NuGet specification
+        needs:
+            - versioning-and-release-url
         if:   matrix.runner == 'windows-2022'
-        run: py -3 scripts\generate_nuget_spec.py
+        run: py -3 scripts\generate_nuget_spec.py needs.versioning-and-release-url.outputs.app_version
         
       - name: Build NuGet package
         if:   matrix.runner == 'windows-2022'

@@ -79,7 +79,7 @@ jobs:
             cxx-compiler: /usr/bin/clang++-18
             c-compiler: /usr/bin/clang-18
             use-cpp-23: "ON"
-            build_mrcuda: "OFF"
+            build_mrcuda: "ON"
           # - os: ubuntu24
             # compiler: GCC
             # cxx-compiler: /usr/bin/g++-13

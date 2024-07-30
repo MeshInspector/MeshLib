@@ -19,7 +19,7 @@ namespace PointsSave
 {
 const IOFilters Filters =
 {
-    {"ASCII (.asc)",      "*.asc"},
+    {"ASC (.asc)",        "*.asc"},
     {"PLY (.ply)",        "*.ply"},
 #ifndef MRMESH_NO_OPENCTM
     {"CTM (.ctm)",        "*.ctm"},

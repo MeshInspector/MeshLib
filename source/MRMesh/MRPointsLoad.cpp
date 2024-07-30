@@ -32,7 +32,7 @@ const IOFilters Filters =
     {"XYZ (.xyz)",        "*.xyz"},
     {"OBJ (.obj)",        "*.obj"},
     {"PLY (.ply)",        "*.ply"},
-    {"PTS (.pts)",        "*.pts"},
+    {"LIDAR scanner (.pts)", "*.pts"},
     {"DXF (.dxf)",        "*.dxf"},
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
     {"E57 (.e57)",        "*.e57"},
@@ -465,22 +465,6 @@ Expected<MR::PointCloud, std::string> fromObj( std::istream& in, ProgressCallbac
     return cloud;
 }
 
-Expected<MR::PointCloud, std::string> fromAsc( const std::filesystem::path& file, VertColors* colors, ProgressCallback callback )
-{
-    return fromText( file, {
-        .colors = colors,
-        .callback = std::move( callback ),
-    } );
-}
-
-Expected<MR::PointCloud, std::string> fromAsc( std::istream& in, VertColors* colors, ProgressCallback callback )
-{
-    return fromText( in, {
-        .colors = colors,
-        .callback = std::move( callback ),
-    } );
-}
-
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
 
 Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, VertColors* colors, AffineXf3f* outXf,
@@ -598,7 +582,7 @@ Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem:
 #endif
     else if ( ext == ".obj" )
         res = MR::PointsLoad::fromObj( file, callback );
-    else if ( ext == ".asc" || ext == ".csv" || ext == ".xyz"  )
+    else if ( ext == ".asc" || ext == ".csv" || ext == ".xyz" )
         res = MR::PointsLoad::fromText( file, settings );
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
     else if ( ext == ".e57" )

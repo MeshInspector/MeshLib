@@ -158,16 +158,14 @@ jobs:
         
       - name: Build NuGet package
         if:   matrix.runner == 'windows-2022'
-        run: nuget.exe pack source\Package.nuspec        
-                  
+        run: nuget.exe pack source\Package.nuspec -OutputFileNamesWithoutVersion
+          
       - name: Upload NuGet Package
-        env:
-          VERSION: ${{needs.setup.outputs.version_tag:1}}
         if: matrix.runner == 'windows-2022'
         uses: actions/upload-artifact@v4
         with:
           name: NuGetPackage
-          path: MeshLib.${{env.VERSION}}.nupkg
+          path: MeshLib.nupkg
           retention-days: 1
 
       - name: Run Start-and-Exit Tests

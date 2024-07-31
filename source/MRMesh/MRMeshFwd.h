@@ -114,6 +114,7 @@ using PixelBitSet = TaggedBitSet<PixelTag>;
 using VoxelBitSet = TaggedBitSet<VoxelTag>;
 using NodeBitSet = TaggedBitSet<NodeTag>;
 using ObjBitSet = TaggedBitSet<ObjTag>;
+using TextureBitSet = TaggedBitSet<TextureTag>;
 
 template <typename T> class SetBitIteratorT;
 

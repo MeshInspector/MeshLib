@@ -276,6 +276,65 @@ private:
     std::string name_;
 };
 
+/// Undo action for ObjectMeshHolder texturePerFace change
+class ChangeMeshTexturePerFaceAction : public HistoryAction
+{
+public:
+    using Obj = ObjectMeshHolder;
+
+    /// use this constructor to remember object's texturePerFace data before making any changes in them
+    ChangeMeshTexturePerFaceAction( std::string name, const std::shared_ptr<ObjectMeshHolder>& obj ) :
+        objMesh_{ obj },
+        name_{ std::move( name ) }
+    {
+        if ( obj )
+        {
+            texturePerFace_ = obj->getTexturePerFace();
+        }
+    }
+
+    /// use this constructor to remember object's texturePerFace data and immediate set new value
+    ChangeMeshTexturePerFaceAction( std::string name, const std::shared_ptr<ObjectMeshHolder>& obj, Vector<TextureId, FaceId>&& newTexturePerFace ) :
+        objMesh_{ obj },
+        name_{ std::move( name ) }
+    {
+        if ( obj )
+        {
+            texturePerFace_ = std::move( newTexturePerFace );
+            obj->updateTexturePerFace( texturePerFace_ );
+        }
+    }
+
+    virtual std::string name() const override
+    {
+        return name_;
+    }
+
+    virtual void action( HistoryAction::Type ) override
+    {
+        if ( !objMesh_ )
+            return;
+
+        objMesh_->updateTexturePerFace( texturePerFace_ );
+    }
+
+    static void setObjectDirty( const std::shared_ptr<ObjectMeshHolder>& obj )
+    {
+        if ( obj )
+            obj->setDirtyFlags( DIRTY_TEXTURE_PER_FACE );
+    }
+
+    [[nodiscard]] virtual size_t heapBytes() const override
+    {
+        return name_.capacity() + texturePerFace_.heapBytes();
+    }
+
+private:
+    Vector<TextureId, FaceId> texturePerFace_;
+    std::shared_ptr<ObjectMeshHolder> objMesh_;
+    std::string name_;
+};
+
 /// \}
 
 } // namespace MR

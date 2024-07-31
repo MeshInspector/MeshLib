@@ -266,6 +266,9 @@ jobs:
         working-directory: source\x64\Release
         run: py -${{matrix.py-version}} ..\..\..\scripts\run_python_test_script.py -cmd "py -${{matrix.py-version}}"
 
+      # We use --no-dll "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll" here to avoid starnge conflict that happend if we pack these dlls into whl.
+      # Other option is to use --no-mangle "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll" to pack these dlls with original names and let system solve conflicts on import
+      # https://stackoverflow.com/questions/78817088/vsruntime-dlls-conflict-after-delvewheel-repair
       - name: Create and fix Wheel
         run: |
           py -${{matrix.py-version}} -m pip install --upgrade pip

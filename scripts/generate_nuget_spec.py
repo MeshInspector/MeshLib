@@ -19,7 +19,7 @@ f.write('\t<metadata>\n')
 f.write('\t\t<id>MeshLib</id>\n')
 
 f.write('\t\t<version>')
-f.write(sys.argv[1])
+f.write(sys.argv[1][1:])
 f.write('\t\t</version>\n')
 
 f.write('\t\t<authors>AMV Consulting</authors>\n')

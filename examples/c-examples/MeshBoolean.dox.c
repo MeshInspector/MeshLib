@@ -1,3 +1,8 @@
+/// \page ExampleCMeshBoolean Mesh boolean
+///
+/// Example of Boolean operation
+///
+/// \code
 #include "MRMeshC/MRMesh.h"
 #include "MRMeshC/MRMeshBoolean.h"
 #include "MRMeshC/MRMeshLoad.h"
@@ -8,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/// print progress every 10%
+// print progress every 10%
 int gProgress = -1;
 bool onProgress( float v )
 {
@@ -94,3 +99,4 @@ out_mesh1:
 out:
     return rc;
 }
+/// \endcode

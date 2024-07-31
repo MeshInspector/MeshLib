@@ -1,3 +1,8 @@
+/// \page ExampleCMeshFillHole Filling holes
+///
+/// Example of filling holes
+///
+/// \code
 #include "MRMeshC/MRBitSet.h"
 #include "MRMeshC/MRMesh.h"
 #include "MRMeshC/MRMeshFillHole.h"
@@ -94,3 +99,4 @@ out_mesh:
 out:
     return rc;
 }
+/// \endcode

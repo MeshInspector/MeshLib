@@ -1,0 +1,25 @@
+/**
+\page CppCodeExamples C++ Basic Examples
+
+You can find example project in `MeshLib/source/meshconv`
+
+\subpage ExampleCppMeshLoadSave
+
+\subpage ExampleCppMeshModification
+
+\subpage ExampleCppMeshExport
+
+\subpage ExampleCppMeshDecimate
+
+\subpage ExampleCppMeshBoolean
+
+\subpage ExampleCppMeshOffset
+
+\subpage ExampleCppMeshICP
+
+\subpage ExampleCppMeshFillHole
+
+\subpage ExampleCppMeshStitchHole
+
+\subpage ExampleCppMeshExtrude
+*/

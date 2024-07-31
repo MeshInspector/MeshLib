@@ -301,7 +301,7 @@ public:
         if ( obj )
         {
             texturePerFace_ = std::move( newTexturePerFace );
-            obj->setTexturePerFace( texturePerFace_ );
+            obj->updateTexturePerFace( texturePerFace_ );
         }
     }
 
@@ -315,7 +315,7 @@ public:
         if ( !objMesh_ )
             return;
 
-        objMesh_->setTexturePerFace( texturePerFace_ );
+        objMesh_->updateTexturePerFace( texturePerFace_ );
     }
 
     static void setObjectDirty( const std::shared_ptr<ObjectMeshHolder>& obj )

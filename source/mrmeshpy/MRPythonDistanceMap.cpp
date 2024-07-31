@@ -8,12 +8,11 @@
 #include <pybind11/stl/filesystem.h>
 #pragma warning(pop)
 
-// Distance Map
-MR_ADD_PYTHON_VEC( mrmeshpy, vectorDistanceMap, MR::DistanceMap )
 
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, DistanceMap, MR::DistanceMap )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::DistanceMap>( m, "DistanceMap" ).
+    MR_PYTHON_CUSTOM_CLASS( DistanceMap ).
         def( pybind11::init<>() ).
         def( "get", static_cast< std::optional<float>( MR::DistanceMap::* )( size_t, size_t ) const >( &MR::DistanceMap::get ), "read X,Y value" ).
         def( "get", static_cast< std::optional<float>( MR::DistanceMap::* )( size_t ) const >( &MR::DistanceMap::get ), "read value by index" ).
@@ -112,3 +111,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
            "param useDepth true - the isolines will be located on distance map surface, false - isolines for any iso-value will be located on the common plane xf(0XY)" );
 
 } )
+
+// Distance Map
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorDistanceMap, MR::DistanceMap )

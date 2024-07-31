@@ -281,7 +281,7 @@ jobs:
           cd ..\..\..
           $WheelFile = (powershell -Command Get-ChildItem -Path scripts\wheel\meshlib\dist\*.whl -Name)
           echo $WheelFile
-          py -${{matrix.py-version}} -m delvewheel repair --add-path source\x64\Release scripts\wheel\meshlib\dist\$WheelFile
+          py -${{matrix.py-version}} -m delvewheel repair --no-dll "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll" --add-path source\x64\Release scripts\wheel\meshlib\dist\$WheelFile
 
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v4

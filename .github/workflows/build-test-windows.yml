@@ -222,3 +222,26 @@ jobs:
           name: WindowsArchive_${{matrix.config}}
           path: MREDist_${{matrix.config}}.zip
           retention-days: 1
+
+  windows-sign-package:
+    runs-on: [windows-x64-codesign]
+    timeout-minutes: 10
+    steps:
+      - name: Remove old local packages        
+        run: Remove-Item "MeshLib.nupkg"
+        
+      - name: Download NuGet package from Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: NuGetPackage
+          merge-multiple: true
+     
+      - name: Sign NuGet package with certificate
+        run: |
+          signtool.exe sign /d "MeshLib" `
+                            /f "${{ secrets.WINDOWS_SIGNTOOL_F_PARAM }}" `
+                            /csp "${{ secrets.WINDOWS_SIGNTOOL_CSP_PARAM }}" `
+                            /kc "[{{${{ secrets.WINDOWS_SIGNTOOL_KC_PARAM_TOKEN_PASSWORD }}}}]=${{ secrets.WINDOWS_SIGNTOOL_KC_PARAM_CONTAINER_NAME }}" `
+                            /fd SHA256 `
+                            /t http://timestamp.digicert.com `
+                            "MeshLib.nupkg"

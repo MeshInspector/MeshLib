@@ -19,7 +19,20 @@ env:
   VCPKG-VERSION: '2024.07.12'
 
 jobs:
+  setup:
+    timeout-minutes: 5
+    runs-on: windows-2022
+    outputs:
+      version_tag: ${{ steps.get-latest-tag.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: actions-ecosystem/action-get-latest-tag@v1    
+    id: get-latest-tag
+    
   windows-build-test:
+    needs: setup
     timeout-minutes: 50
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -141,7 +154,7 @@ jobs:
         
       - name: Generate NuGet specification       
         if:   matrix.runner == 'windows-2022'
-        run: py -3 scripts\generate_nuget_spec.py 2.4.3.125
+        run: py -3 scripts\generate_nuget_spec.py ${{needs.setup.outputs.version_tag}}
         
       - name: Build NuGet package
         if:   matrix.runner == 'windows-2022'

@@ -21,7 +21,7 @@ env:
 jobs:
   setup:
     timeout-minutes: 5
-    runs-on: windows-2022
+    runs-on: ubuntu-latest
     outputs:
       version_tag: ${{ steps.get-latest-tag.outputs.tag }}
     steps:

@@ -415,7 +415,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFi
                     if ( !crashTextureLoad )
                     {
                         objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
-                        objectMesh->setTexturePerFace( std::move( resValue[i].texturePerFace ) );
+                        objectMesh->setTexturePerFace( resValue[i].texturePerFace );
                     }
                 }
 

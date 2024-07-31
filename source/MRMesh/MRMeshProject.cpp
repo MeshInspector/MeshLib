@@ -115,27 +115,27 @@ void findTrisInBall( const MeshPart & mp, Ball ball, const FoundTriCallback& fou
     NodeId subtasks[MaxStackSize];
     int stackSize = 0;
 
-    auto boxIntersectsBall = [&]( NodeId n )
+    auto boxDistSq = [&]( NodeId n ) // squared distance from ball center to the box with interior
     {
-        return ( tree.nodes()[n].box.getBoxClosestPointTo( ball.center ) - ball.center ).lengthSq() < ball.radiusSq;
+        return ( tree.nodes()[n].box.getBoxClosestPointTo( ball.center ) - ball.center ).lengthSq();
     };
 
-    auto addSubTask = [&]( NodeId n )
+    auto addSubTask = [&]( NodeId n, float boxDistSq )
     {
-        if ( boxIntersectsBall( n ) )
+        if ( boxDistSq < ball.radiusSq ) // ball intersects the box
         {
             assert( stackSize < MaxStackSize );
             subtasks[stackSize++] = n;
         }
     };
 
-    addSubTask( tree.rootNodeId() );
+    addSubTask( tree.rootNodeId(), boxDistSq( tree.rootNodeId() ) );
 
     while( stackSize > 0 )
     {
         const auto n = subtasks[--stackSize];
         const auto & node = tree[n];
-        if ( !boxIntersectsBall( n ) ) // check again in case the ball has changed
+        if ( !( boxDistSq( n ) < ball.radiusSq ) ) // check again in case the ball has changed
             continue;
 
         if ( node.leaf() )
@@ -165,8 +165,19 @@ void findTrisInBall( const MeshPart & mp, Ball ball, const FoundTriCallback& fou
             continue;
         }
         
-        addSubTask( node.r ); // look at right node later
-        addSubTask( node.l ); // look at left node first
+        auto lDistSq = boxDistSq( node.l );
+        auto rDistSq = boxDistSq( node.r );
+        /// first go in the node located closer to ball's center (in case the ball will shrink and the other node will be away)
+        if ( lDistSq <= rDistSq )
+        {
+            addSubTask( node.r, rDistSq );
+            addSubTask( node.l, lDistSq );
+        }
+        else
+        {
+            addSubTask( node.l, lDistSq );
+            addSubTask( node.r, rDistSq );
+        }
     }
 }
 

@@ -42,11 +42,11 @@ struct InSphereSearchSettings
     /// for almost closed meshes the article recommends maxRadius = 0.5f * std::min( { boxSize.x, boxSize.y, boxSize.z } )
     float maxRadius = 1;
 
-    /// iterations stop if next radius is larger than minShrinkage times previous radius
-    float minShrinkage = 0.99999f;
-
     /// maximum number of shrinking iterations for one triangle
     int maxIters = 16;
+
+    /// iterations stop if next radius is larger than minShrinkage times previous radius
+    float minShrinkage = 0.99999f;
 };
 
 /// found maximal inscribed sphere touching input point with center along given direction

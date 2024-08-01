@@ -64,8 +64,12 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshIntersect, [] ( pybind11::module_& m )
     
     pybind11::class_<InSphereSearchSettings>( m, "InSphereSearchSettings" ).
         def( pybind11::init<>() ).
-        def_readwrite( "maxRadius", &InSphereSearchSettings::maxRadius, "maximum allowed radius of the sphere" ).
-        def_readwrite( "maxIters", &InSphereSearchSettings::maxIters, "maximum number of shrinking iterations" ).
+        def_readwrite( "insideAndOutside", &InSphereSearchSettings::insideAndOutside,
+            "if false then searches for the maximal inscribed sphere in mesh; "
+            "if true then searches for both a) maximal inscribed sphere, and b) maximal sphere outside the mesh touching it at two points; "
+            "and returns the smaller of two, and if it is b) then with minus sign" ).
+        def_readwrite( "maxRadius", &InSphereSearchSettings::maxRadius, "maximum allowed radius of the sphere; for almost closed meshes the article recommends maxRadius = 0.5f * std::min( { boxSize.x, boxSize.y, boxSize.z } )" ).
+        def_readwrite( "maxIters", &InSphereSearchSettings::maxIters, "maximum number of shrinking iterations for one triangle" ).
         def_readwrite( "minShrinkage", &InSphereSearchSettings::minShrinkage, "iterations stop if next radius is larger than minShrinkage times previous radius" );
 
     m.def( "computeInSphereThicknessAtVertices", []( const Mesh& mesh, const InSphereSearchSettings & settings ) { return *computeInSphereThicknessAtVertices( mesh, settings ); },

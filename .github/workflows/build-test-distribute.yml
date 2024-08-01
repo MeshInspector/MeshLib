@@ -213,18 +213,17 @@ jobs:
       release_id: ${{needs.versioning-and-release-url.outputs.release_id}}
 
   update-dev-documentation:
-    #if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     runs-on: ubuntu-latest
     container:
       image: alpine:3.20
     needs:
-      #- windows-build-test
-      #- ubuntu-x64-build-test
-      #- ubuntu-arm64-build-test
-      #- fedora-build-test
-      #- emscripten-build-test
-      #- macos-build-test
-      - versioning-and-release-url
+      - windows-build-test
+      - ubuntu-x64-build-test
+      - ubuntu-arm64-build-test
+      - fedora-build-test
+      - emscripten-build-test
+      - macos-build-test
     steps:
       - name: Install Git
         run: |
@@ -255,7 +254,6 @@ jobs:
       - name: Commit and push changes
         working-directory: MeshInspector.github.io
         run: |
-          rm -r MeshLib/html-dev
           git config user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
           git config user.name "meshinspector-bot"
           git add -A

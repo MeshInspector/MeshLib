@@ -235,7 +235,7 @@ void RibbonFontManager::addCustomGlyphs_( FontType font, float scaling, std::vec
         int height = int( std::floor( getFontSizeByType( font ) * scaling ) );
         int width = int( std::round( height * relWidth ) );
 
-        int index = ImGui::GetIO().Fonts->AddCustomRectFontGlyph( fonts_[int( font )], ch, width, height, width );
+        int index = ImGui::GetIO().Fonts->AddCustomRectFontGlyph( fonts_[int( font )], ch, width, height, float( width ) );
         auto renderWrapper = [index, func = std::move( render )]( unsigned char* texData, int texW )
         {
             const ImFontAtlasCustomRect* rect = ImGui::GetIO().Fonts->GetCustomRectByIndex(index);

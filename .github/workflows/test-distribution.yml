@@ -167,12 +167,19 @@ jobs:
         if: always()
         run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/meshconv --help
 
-      - name: Build example
+      - name: Build C++ examples
         if: always()
-        working-directory: examples/cmake-example
+        working-directory: examples/cpp-examples
         run: |
           mkdir build && \
           cd build && \
           cmake .. -DCMAKE_CXX_COMPILER=/usr/bin/clang++ && \
           cmake --build . && \
-          ./cmake-example
+          ./MeshModification
+
+      - name: Build C examples
+        if: always()
+        working-directory: examples/c-examples
+        run: |
+          cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
+          cmake --build build

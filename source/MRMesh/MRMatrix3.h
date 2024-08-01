@@ -32,14 +32,14 @@ struct Matrix3
     static constexpr Matrix3 scale( T sx, T sy, T sz ) noexcept { return Matrix3( { sx, T(0), T(0) }, { T(0), sy, T(0) }, { T(0), T(0), sz } ); }
     static constexpr Matrix3 scale( const Vector3<T> & s ) noexcept { return Matrix3( { s.x, T(0), T(0) }, { T(0), s.y, T(0) }, { T(0), T(0), s.z } ); }
     /// creates matrix representing rotation around given axis on given angle
-    static constexpr Matrix3 rotation( const Vector3<T> & axis, T angle ) noexcept;
+    static constexpr Matrix3 rotation( const Vector3<T> & axis, T angle ) noexcept MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> );
     /// creates matrix representing rotation that after application to (from) makes (to) vector
-    static constexpr Matrix3 rotation( const Vector3<T> & from, const Vector3<T> & to ) noexcept;
+    static constexpr Matrix3 rotation( const Vector3<T> & from, const Vector3<T> & to ) noexcept MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> );
     /// creates matrix representing rotation from 3 Euler angles: R=R(z)*R(y)*R(x)
     /// see more https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations
-    static constexpr Matrix3 rotationFromEuler( const Vector3<T> & eulerAngles ) noexcept;
+    static constexpr Matrix3 rotationFromEuler( const Vector3<T> & eulerAngles ) noexcept MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
     /// returns linear by angles approximation of the rotation matrix, which is close to true rotation matrix for small angles
-    static constexpr Matrix3 approximateLinearRotationMatrixFromEuler( const Vector3<T> & eulerAngles ) noexcept;
+    static constexpr Matrix3 approximateLinearRotationMatrixFromEuler( const Vector3<T> & eulerAngles ) noexcept MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
     /// constructs a matrix from its 3 rows
     static constexpr Matrix3 fromRows( const Vector3<T> & x, const Vector3<T> & y, const Vector3<T> & z ) noexcept { return Matrix3( x, y, z ); }
     /// constructs a matrix from its 3 columns;
@@ -57,22 +57,28 @@ struct Matrix3
     constexpr T trace() const noexcept { return x.x + y.y + z.z; }
     /// compute sum of squared matrix elements
     constexpr T normSq() const noexcept { return x.lengthSq() + y.lengthSq() + z.lengthSq(); }
-    constexpr T norm() const noexcept { return std::sqrt( normSq() ); }
+    constexpr auto norm() const noexcept
+    {
+        // Calling `sqrt` this way to hopefully support boost.multiprecision numbers.
+        // Returning `auto` to not break on integral types.
+        using std::sqrt;
+        return sqrt( normSq() );
+    }
     /// computes determinant of the matrix
     constexpr T det() const noexcept;
     /// computes inverse matrix
-    constexpr Matrix3<T> inverse() const noexcept;
+    constexpr Matrix3<T> inverse() const noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> );
     /// computes transposed matrix
     constexpr Matrix3<T> transposed() const noexcept;
     /// returns 3 Euler angles, assuming this is a rotation matrix composed as follows: R=R(z)*R(y)*R(x)
-    constexpr Vector3<T> toEulerAngles() const noexcept;
+    constexpr Vector3<T> toEulerAngles() const noexcept MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
 
     struct QR
     {
         Matrix3 q, r;
     };
     /// decompose this matrix on the product Q*R, where Q is orthogonal and R is upper triangular
-    QR qr() const noexcept;
+    QR qr() const noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> );
 
     Matrix3 & operator +=( const Matrix3<T> & b ) { x += b.x; y += b.y; z += b.z; return * this; }
     Matrix3 & operator -=( const Matrix3<T> & b ) { x -= b.x; y -= b.y; z -= b.z; return * this; }
@@ -150,7 +156,7 @@ inline Matrix3<T> operator /( Matrix3<T> b, T a )
     { b /= a; return b; }
 
 template <typename T>
-constexpr Matrix3<T> Matrix3<T>::rotation( const Vector3<T> & axis, T angle ) noexcept
+constexpr Matrix3<T> Matrix3<T>::rotation( const Vector3<T> & axis, T angle ) noexcept MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
 {
     // https://en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
     auto u = axis.normalized();
@@ -165,7 +171,7 @@ constexpr Matrix3<T> Matrix3<T>::rotation( const Vector3<T> & axis, T angle ) no
 }
 
 template <typename T>
-constexpr Matrix3<T> Matrix3<T>::rotation( const Vector3<T> & from, const Vector3<T> & to ) noexcept
+constexpr Matrix3<T> Matrix3<T>::rotation( const Vector3<T> & from, const Vector3<T> & to ) noexcept MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
 {
     auto axis = cross( from, to );
     if ( axis.lengthSq() > 0 )
@@ -176,7 +182,7 @@ constexpr Matrix3<T> Matrix3<T>::rotation( const Vector3<T> & from, const Vector
 }
 
 template <typename T>
-constexpr Matrix3<T> Matrix3<T>::rotationFromEuler( const Vector3<T> & eulerAngles ) noexcept
+constexpr Matrix3<T> Matrix3<T>::rotationFromEuler( const Vector3<T> & eulerAngles ) noexcept MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
 {
     // https://www.geometrictools.com/Documentation/EulerAngles.pdf (36)
     const auto cx = std::cos( eulerAngles.x );
@@ -193,7 +199,7 @@ constexpr Matrix3<T> Matrix3<T>::rotationFromEuler( const Vector3<T> & eulerAngl
 }
 
 template <typename T>
-constexpr Matrix3<T> Matrix3<T>::approximateLinearRotationMatrixFromEuler( const Vector3<T> & eulerAngles ) noexcept
+constexpr Matrix3<T> Matrix3<T>::approximateLinearRotationMatrixFromEuler( const Vector3<T> & eulerAngles ) noexcept MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
 {
     const auto alpha = eulerAngles.x;
     const auto  beta = eulerAngles.y;
@@ -215,7 +221,7 @@ constexpr T Matrix3<T>::det() const noexcept
 }
 
 template <typename T>
-constexpr Matrix3<T> Matrix3<T>::inverse() const noexcept
+constexpr Matrix3<T> Matrix3<T>::inverse() const noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> )
 {
     auto det = this->det();
     if ( det == 0 )
@@ -240,7 +246,7 @@ constexpr Matrix3<T> Matrix3<T>::transposed() const noexcept
 }
 
 template <typename T>
-constexpr Vector3<T> Matrix3<T>::toEulerAngles() const noexcept
+constexpr Vector3<T> Matrix3<T>::toEulerAngles() const noexcept MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
 {
     // https://stackoverflow.com/questions/15022630/how-to-calculate-the-angle-from-rotation-matrix
     return {
@@ -251,7 +257,7 @@ constexpr Vector3<T> Matrix3<T>::toEulerAngles() const noexcept
 }
 
 template <typename T>
-auto Matrix3<T>::qr() const noexcept -> QR
+auto Matrix3<T>::qr() const noexcept -> QR MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> )
 {
     // https://en.wikipedia.org/wiki/QR_decomposition#Computing_the_QR_decomposition
     const auto a0 = col( 0 );

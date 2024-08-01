@@ -7,7 +7,7 @@
 
 namespace MR
 {
- 
+
 /// symmetric 3x3 matrix
 /// \ingroup MatrixGroup
 template <typename T>
@@ -38,7 +38,7 @@ struct SymMatrix3
     SymMatrix3 & operator +=( const SymMatrix3<T> & b ) { xx += b.xx; xy += b.xy; xz += b.xz; yy += b.yy; yz += b.yz; zz += b.zz; return * this; }
     SymMatrix3 & operator -=( const SymMatrix3<T> & b ) { xx -= b.xx; xy -= b.xy; xz -= b.xz; yy -= b.yy; yz -= b.yz; zz -= b.zz; return * this; }
     SymMatrix3 & operator *=( T b ) { xx *= b; xy *= b; xz *= b; yy *= b; yz *= b; zz *= b; return * this; }
-    SymMatrix3 & operator /=( T b ) 
+    SymMatrix3 & operator /=( T b )
     {
         if constexpr ( std::is_integral_v<T> )
             { xx /= b; xy /= b; xz /= b; yy /= b; yz /= b; zz /= b; return * this; }
@@ -49,16 +49,16 @@ struct SymMatrix3
     /// returns eigenvalues of the matrix in ascending order (diagonal matrix L), and
     /// optionally returns corresponding unit eigenvectors in the rows of orthogonal matrix V,
     /// M*V^T = V^T*L; M = V^T*L*V
-    Vector3<T> eigens( Matrix3<T> * eigenvectors = nullptr ) const;
+    Vector3<T> eigens( Matrix3<T> * eigenvectors = nullptr ) const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> );
     /// computes not-unit eigenvector corresponding to a not-repeating eigenvalue
-    Vector3<T> eigenvector( T eigenvalue ) const;
+    Vector3<T> eigenvector( T eigenvalue ) const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> );
 
     /// for not-degenerate matrix returns just inverse matrix, otherwise
     /// returns degenerate matrix, which performs inversion on not-kernel subspace;
     /// \param tol relative epsilon-tolerance for too small number detection
     /// \param rank optional output for this matrix rank according to given tolerance
     /// \param space rank=1: unit direction of solution line, rank=2: unit normal to solution plane, rank=3: zero vector
-    SymMatrix3<T> pseudoinverse( T tol = std::numeric_limits<T>::epsilon(), int * rank = nullptr, Vector3<T> * space = nullptr ) const;
+    SymMatrix3<T> pseudoinverse( T tol = std::numeric_limits<T>::epsilon(), int * rank = nullptr, Vector3<T> * space = nullptr ) const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> );
 };
 
 /// \related SymMatrix3
@@ -68,8 +68,8 @@ struct SymMatrix3
 template <typename T>
 inline Vector3<T> operator *( const SymMatrix3<T> & a, const Vector3<T> & b )
 {
-    return 
-    { 
+    return
+    {
         a.xx * b.x + a.xy * b.y + a.xz * b.z,
         a.xy * b.x + a.yy * b.y + a.yz * b.z,
         a.xz * b.x + a.yz * b.y + a.zz * b.z
@@ -179,7 +179,7 @@ constexpr SymMatrix3<T> SymMatrix3<T>::inverse( T det ) const noexcept
 }
 
 template <typename T>
-Vector3<T> SymMatrix3<T>::eigens( Matrix3<T> * eigenvectors ) const
+Vector3<T> SymMatrix3<T>::eigens( Matrix3<T> * eigenvectors ) const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> )
 {
     //https://en.wikipedia.org/wiki/Eigenvalue_algorithm#3%C3%973_matrices
     const auto q = trace() / 3;
@@ -240,7 +240,7 @@ Vector3<T> SymMatrix3<T>::eigens( Matrix3<T> * eigenvectors ) const
 }
 
 template <typename T>
-Vector3<T> SymMatrix3<T>::eigenvector( T eigenvalue ) const
+Vector3<T> SymMatrix3<T>::eigenvector( T eigenvalue ) const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> )
 {
     const Vector3<T> row0( xx - eigenvalue, xy, xz );
     const Vector3<T> row1( xy, yy - eigenvalue, yz );
@@ -263,7 +263,7 @@ Vector3<T> SymMatrix3<T>::eigenvector( T eigenvalue ) const
 }
 
 template <typename T>
-SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * space ) const
+SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * space ) const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> )
 {
     SymMatrix3<T> res;
     Matrix3<T> eigenvectors;

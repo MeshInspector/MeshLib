@@ -138,7 +138,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m ) \
         def( pybind11::self == pybind11::self ).\
         def( "length", &VectorType::length ).\
         def( "lengthSq", &VectorType::lengthSq ).\
-        def( "normalized", &VectorType::normalized ).\
         def( "__repr__", [](const VectorType& data){\
             std::stringstream ss;\
             ss << #name << "[" << data.x << ", " << data.y << "]";\
@@ -149,6 +148,15 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m ) \
         }, pybind11::keep_alive<0, 1>() );\
     m.def( "dot", ( type( * )( const VectorType&, const VectorType& ) )& MR::dot<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "dot product" );\
     m.def( "cross", ( type( * )( const VectorType&, const VectorType& ) )& MR::cross<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "cross product" );\
+    \
+    []<typename T = type, typename V = VectorType>{ \
+        if constexpr (std::is_floating_point_v<T>) \
+        { \
+            MR_PYTHON_CUSTOM_CLASS( name ) \
+                .def( "normalized", &V::normalized ) \
+            ; \
+        } \
+    }(); \
 } )
 
 MR_ADD_PYTHON_VECTOR2( Vector2i, int )

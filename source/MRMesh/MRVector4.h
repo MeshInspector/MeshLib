@@ -26,8 +26,8 @@ struct Vector4
         return Vector4( a, a, a, a );
     }
     template <typename U>
-    constexpr explicit Vector4( const Vector4<U> & v ) noexcept : x( T( v.x ) ), y( T( v.y ) ), z( T( v.z ) ), w( T( v.w ) ) 
-    { 
+    constexpr explicit Vector4( const Vector4<U> & v ) noexcept : x( T( v.x ) ), y( T( v.y ) ), z( T( v.z ) ), w( T( v.w ) )
+    {
     }
 
     constexpr const T & operator []( int e ) const noexcept { return *( &x + e ); }
@@ -37,12 +37,15 @@ struct Vector4
     {
         return x * x + y * y + z * z + w * w;
     }
-    T length() const
+    auto length() const
     {
-        return std::sqrt( lengthSq() );
+        // Calling `sqrt` this way to hopefully support boost.multiprecision numbers.
+        // Returning `auto` to not break on integral types.
+        using std::sqrt;
+        return sqrt( lengthSq() );
     }
 
-    Vector4 normalized() const
+    Vector4 normalized() const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> )
     {
         auto len = length();
         if ( len <= 0 )
@@ -62,7 +65,7 @@ struct Vector4
         x -= b.x; y -= b.y; z -= b.z; w -= b.w; return *this;
     }
     Vector4 & operator *=( T b ) { x *= b; y *= b; z *= b; w *= b; return * this; }
-    Vector4 & operator /=( T b ) 
+    Vector4 & operator /=( T b )
     {
         if constexpr ( std::is_integral_v<T> )
             { x /= b; y /= b; z /= b; w /= b; return * this; }
@@ -71,12 +74,12 @@ struct Vector4
     }
 
     /// assuming this is a point represented in homogeneous 4D coordinates, returns the point as 3D-vector
-    Vector3<T> proj3d() const
+    Vector3<T> proj3d() const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> )
     {
         return { x / w, y / w, z / w };
     }
 
-    [[nodiscard]] bool isFinite() const
+    [[nodiscard]] bool isFinite() const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
     {
         return std::isfinite( x ) && std::isfinite( y ) && std::isfinite( z ) && std::isfinite( w );
     }
@@ -115,13 +118,13 @@ inline Vector4<T> operator *( T a, const Vector4<T> & b )
     return {a * b.x, a * b.y, a * b.z, a * b.w};
 }
 
-template <typename T> 
+template <typename T>
 inline Vector4<T> operator *( const Vector4<T> & b, T a )
-{ 
+{
     return {a * b.x, a * b.y, a * b.z, a * b.w};
 }
 
-template <typename T> 
+template <typename T>
 inline Vector4<T> operator /( Vector4<T> b, T a )
     { b /= a; return b; }
 
@@ -155,14 +158,14 @@ inline Vector4<T> div( const Vector4<T>& a, const Vector4<T>& b )
 }
 
 
-template <typename T> 
+template <typename T>
 inline auto begin( const Vector4<T> & v ) { return &v[0]; }
-template <typename T> 
+template <typename T>
 inline auto begin( Vector4<T> & v ) { return &v[0]; }
 
-template <typename T> 
+template <typename T>
 inline auto end( const Vector4<T> & v ) { return &v[4]; }
-template <typename T> 
+template <typename T>
 inline auto end( Vector4<T> & v ) { return &v[4]; }
 
 /// \}

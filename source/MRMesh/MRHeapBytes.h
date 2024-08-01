@@ -65,4 +65,21 @@ template<typename T>
 
 /// \}
 
+
+// Returns `heapBytes( value )` if supported, or 0 otherwise.
+// Note, this must be declared AFTER all `heapBytes` overloads above.
+template<typename T>
+[[nodiscard]] inline size_t heapBytesIfSupported( const T& value )
+{
+    if constexpr ( requires{ heapBytes( value ); } )
+    {
+        return heapBytes( value );
+    }
+    else
+    {
+        (void)value;
+        return 0;
+    }
+}
+
 } // namespace MR

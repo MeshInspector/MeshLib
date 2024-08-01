@@ -49,7 +49,7 @@ AABBTreePolyline<V>::AABBTreePolyline( const typename PolylineTraits<V>::Polylin
 }
 
 template<typename V>
-AABBTreePolyline<V>::AABBTreePolyline( const Mesh& mesh, const UndirectedEdgeBitSet & edgeSet )
+AABBTreePolyline<V>::AABBTreePolyline( const Mesh& mesh, const UndirectedEdgeBitSet & edgeSet ) MR_REQUIRES_IF_SUPPORTED( V::elements == 3 )
 {
     MR_TIMER;
 
@@ -59,7 +59,7 @@ AABBTreePolyline<V>::AABBTreePolyline( const Mesh& mesh, const UndirectedEdgeBit
     if ( boxedLines.size() <= 0 )
         return;
 
-    int numLines = 0; 
+    int numLines = 0;
     for ( auto ue : edgeSet )
         boxedLines[numLines++].leafId = ue;
 

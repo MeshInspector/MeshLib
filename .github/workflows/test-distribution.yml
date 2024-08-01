@@ -110,19 +110,19 @@ jobs:
         if: always()
         run: meshconv --help
 
-      - name: Build example
+      - name: Build C++ examples
         if: always()
-        working-directory: examples/cmake-example
+        working-directory: examples/cpp-examples
         run: |
           mkdir build && \
           cd build && \
           cmake .. -DCMAKE_CXX_COMPILER=${{matrix.cxx-compiler}} && \
           cmake --build . && \
-          ./cmake-example
+          ./MeshModification
 
       - name: Build C examples
         if: always()
-        working-directory: examples/cmake-c-example
+        working-directory: examples/c-examples
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
           cmake --build build

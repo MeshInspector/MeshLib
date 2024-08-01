@@ -214,7 +214,9 @@ jobs:
 
   update-dev-documentation:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-    runs-on: alpine:3.20
+    runs-on: ubuntu-latest
+    container:
+      image: alpine:3.20
     needs:
       - windows-build-test
       - ubuntu-x64-build-test

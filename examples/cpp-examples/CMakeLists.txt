@@ -28,4 +28,4 @@ endforeach()
 
 add_executable(MRBasedMainFunc MRBasedMainFunc.dox.cpp)
 target_include_directories(MRBasedMainFunc PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-target_link_libraries(MRBasedMainFunc PRIVATE MeshLib::MRViewer)
+target_link_libraries(MRBasedMainFunc PRIVATE MeshLib::MRMesh MeshLib::MRViewer)

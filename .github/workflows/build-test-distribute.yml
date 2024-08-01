@@ -232,6 +232,8 @@ jobs:
 
       - name: Checkout MeshLib
         uses: actions/checkout@v4
+        with:
+          path: 'MeshLib/'
 
       - name: Checkout documentation site
         uses: actions/checkout@v4
@@ -243,12 +245,12 @@ jobs:
       - name: Install Doxygen
         run: apk add doxygen
 
-      - name: Update documentation
-        working-directory: doxygen
+      - name: Run Doxygen
+        working-directory: MeshInspector.github.io
         run: |
           (
             cat Doxyfile
-            echo "OUTPUT_DIRECTORY=../MeshInspector.github.io/MeshLib/dev"
+            echo "OUTPUT_DIRECTORY=MeshLib/dev"
           ) | doxygen -
 
       - name: Commit and push changes

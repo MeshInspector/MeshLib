@@ -107,6 +107,13 @@ inline Vector2<T> mult( const Vector2<T>& a, const Vector2<T>& b )
     return { a.x * b.x,a.y * b.y };
 }
 
+/// per component division
+template <typename T>
+inline Vector2<T> div( const Vector2<T>& a, const Vector2<T>& b )
+{
+    return { a.x / b.x, a.y / b.y };
+}
+
 /// angle in radians between two vectors
 template <typename T> 
 inline T angle( const Vector2<T> & a, const Vector2<T> & b )

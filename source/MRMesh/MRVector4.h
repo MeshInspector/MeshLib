@@ -140,6 +140,21 @@ inline T sqr( const Vector4<T> & a )
     return a.lengthSq();
 }
 
+/// per component multiplication
+template <typename T>
+inline Vector4<T> mult( const Vector4<T>& a, const Vector4<T>& b )
+{
+    return { a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w };
+}
+
+/// per component division
+template <typename T>
+inline Vector4<T> div( const Vector4<T>& a, const Vector4<T>& b )
+{
+    return { a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w };
+}
+
+
 template <typename T> 
 inline auto begin( const Vector4<T> & v ) { return &v[0]; }
 template <typename T> 

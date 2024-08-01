@@ -215,13 +215,12 @@ jobs:
   update-dev-documentation:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     needs:
-      - update-win-version
+      - windows-build-test
       - ubuntu-x64-build-test
       - ubuntu-arm64-build-test
       - fedora-build-test
       - emscripten-build-test
       - macos-build-test
-      - versioning-and-release-url
     runs-on: alpine:3.20
     steps:
       - name: Checkout MeshLib

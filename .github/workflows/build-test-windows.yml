@@ -224,6 +224,7 @@ jobs:
           retention-days: 1
 
   windows-sign-package:
+    needs: windows-build-test
     runs-on: [windows-x64-codesign]
     timeout-minutes: 10
     steps:

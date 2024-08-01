@@ -86,7 +86,7 @@ enum class VolumeUnit
 enum class InvLengthUnit
 {
     inv_mm, // mm^-1
-    inv_inches, // mm^-1
+    inv_inches, // inches^-1
     _count [[maybe_unused]],
 };
 

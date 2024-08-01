@@ -45,7 +45,7 @@ void RibbonFontManager::loadAllFonts( ImWchar* charRanges, float scaling )
     }
     ImGui::GetIO().Fonts->Build();
 
-    finalizeCustomGlyphs_( customGlyphs );
+    renderCustomGlyphsToAtlas_( customGlyphs );
 }
 
 ImFont* RibbonFontManager::getFontByType( FontType type ) const
@@ -59,6 +59,7 @@ float RibbonFontManager::getFontSizeByType( FontType type )
     {
     case MR::RibbonFontManager::FontType::Default:
     case MR::RibbonFontManager::FontType::SemiBold:
+    case MR::RibbonFontManager::FontType::Monospace:
         return cDefaultFontSize;
     case MR::RibbonFontManager::FontType::Small:
         return cSmallFontSize;
@@ -70,10 +71,10 @@ float RibbonFontManager::getFontSizeByType( FontType type )
     case MR::RibbonFontManager::FontType::BigSemiBold:
         return cBigFontSize;
     case MR::RibbonFontManager::FontType::Count:
-    default:
-        return 0.f;
         break;
     }
+
+    assert( false && "Unknown font enum!" );
 }
 
 std::filesystem::path RibbonFontManager::getMenuFontPath() const
@@ -109,28 +110,9 @@ MR::RibbonFontManager*& RibbonFontManager::getFontManagerInstance_()
     return instance;
 }
 
-int RibbonFontManager::getDefaultFontSize_( FontType font, float scaling ) const
-{
-    float ret = -1;
-    switch ( font )
-    {
-        case FontType::Default:     ret = cDefaultFontSize; break;
-        case FontType::Small:       ret = cSmallFontSize; break;
-        case FontType::SemiBold:    ret = cDefaultFontSize; break;
-        case FontType::Icons:       ret = cBigIconSize; break;
-        case FontType::Big:         ret = cBigFontSize; break;
-        case FontType::BigSemiBold: ret = cBigFontSize; break;
-        case FontType::Headline:    ret = cHeadlineFontSize; break;
-        case FontType::Monospace:   ret = cDefaultFontSize; break;
-        case FontType::Count: /*nothing*/ break;
-    }
-    assert( ret > 0 && "Unknown font enum!" );
-    return int( ret * scaling );
-}
-
 void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float scaling )
 {
-    float fontSize = getDefaultFontSize_( type, scaling );
+    float fontSize = getFontSizeByType( type ) * scaling;
 
     if ( type == FontType::Default )
     {
@@ -250,8 +232,8 @@ void RibbonFontManager::addCustomGlyphs_( FontType font, float scaling, std::vec
         std::function<void( unsigned char* texture, int stride, int rectW, int rectH )> render
     )
     {
-        int height = getDefaultFontSize_( font, scaling );
-        int width = std::round( height * relWidth );
+        int height = int( std::floor( getFontSizeByType( font ) * scaling ) );
+        int width = int( std::round( height * relWidth ) );
 
         int index = ImGui::GetIO().Fonts->AddCustomRectFontGlyph( fonts_[int( font )], ch, width, height, width );
         auto renderWrapper = [index, func = std::move( render )]( unsigned char* texData, int texW )
@@ -262,20 +244,23 @@ void RibbonFontManager::addCustomGlyphs_( FontType font, float scaling, std::vec
         glyphs.push_back( CustomGlyph{ .render = renderWrapper } );
     };
 
-    addGlyph( 0x207B /*SUPERSCRIPT MINUS*/, 0.25f, []( unsigned char* texture, int stride, int rectW, int rectH )
+    if ( font != FontType::Icons )
     {
-        int lineH = int( rectH * 0.30f );
-
-        for ( int y = 0; y < rectH; y++ )
+        addGlyph( 0x207B /*SUPERSCRIPT MINUS*/, 0.25f, []( unsigned char* texture, int stride, int rectW, int rectH )
         {
-            unsigned char value = y == lineH ? 255 : 0;
-            for ( int x = 0; x < rectW; x++ )
-                texture[x + y * stride] = value;
-        }
-    } );
+            int lineH = int( rectH * 0.30f );
+
+            for ( int y = 0; y < rectH; y++ )
+            {
+                unsigned char value = y == lineH ? 255 : 0;
+                for ( int x = 0; x < rectW; x++ )
+                    texture[x + y * stride] = value;
+            }
+        } );
+    }
 }
 
-void RibbonFontManager::finalizeCustomGlyphs_( const std::vector<CustomGlyph>& glyphs )
+void RibbonFontManager::renderCustomGlyphsToAtlas_( const std::vector<CustomGlyph>& glyphs )
 {
     unsigned char* texData = nullptr;
     int texW = 0;

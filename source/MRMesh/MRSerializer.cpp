@@ -348,6 +348,18 @@ void serializeToJson( const Vector4f& vec, Json::Value& root )
     root["w"] = vec.w;
 }
 
+void serializeToJson( const Box3i& box, Json::Value& root )
+{
+    serializeToJson( box.min, root["min"] );
+    serializeToJson( box.max, root["max"] );
+}
+
+void serializeToJson( const Box3f& box, Json::Value& root )
+{
+    serializeToJson( box.min, root["min"] );
+    serializeToJson( box.max, root["max"] );
+}
+
 void serializeToJson( const Color& col, Json::Value& root )
 {
     root["r"] = col.r;

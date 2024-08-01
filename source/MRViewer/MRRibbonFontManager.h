@@ -53,10 +53,18 @@ private:
     /// get pointer to instance of this class (if it exists)
     static RibbonFontManager*& getFontManagerInstance_();
 
+    int getDefaultFontSize_( FontType font, float scaling ) const;
     void loadFont_( FontType type, const ImWchar* ranges, float scaling );
 
     /// load default font (droid_sans)
     void loadDefaultFont_( float fontSize, float yOffset = 0.0f );
+
+    struct CustomGlyph
+    {
+        std::function<void( unsigned char* texData, int texW )> render;
+    };
+    void addCustomGlyphs_( FontType font, float scaling, std::vector<CustomGlyph>& glyphs );
+    void finalizeCustomGlyphs_( const std::vector<CustomGlyph>& glyphs );
 };
 
 }

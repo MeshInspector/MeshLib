@@ -165,6 +165,23 @@ static constinit UnitToStringParams<E> defaultUnitToStringParams = []{
             .degreesMode = {},
         };
     }
+    else if constexpr ( std::is_same_v<E, InvLengthUnit> )
+    {
+        return UnitToStringParams<InvLengthUnit>{
+            .sourceUnit = std::nullopt,
+            .targetUnit = InvLengthUnit::inv_mm,
+            .unitSuffix = true,
+            .style = NumberStyle::normal,
+            .precision = 3,
+            .allowNegativeZero = false,
+            .unicodeMinusSign = true,
+            .thousandsSeparator = commonThouSep,
+            .thousandsSeparatorFrac = commonThouSepFrac,
+            .leadingZero = true,
+            .stripTrailingZeroes = true,
+            .degreesMode = {},
+        };
+    }
     else
     {
         static_assert( dependent_false<E>, "Unknown measurement unit type." );
@@ -259,6 +276,17 @@ const UnitInfo& getUnitInfo( VolumeUnit volume )
     };
     static_assert( std::extent_v<decltype( ret )> == int( VolumeUnit::_count ) );
     return ret[int( volume )];
+}
+template <>
+const UnitInfo& getUnitInfo( InvLengthUnit length )
+{
+    static const UnitInfo ret[] = {
+        // U+207B SUPERSCRIPT MINUS, U+00B9 SUPERSCRIPT ONE
+        { .conversionFactor = 1, .prettyName = "Millimeters", .unitSuffix = " mm\u207B\u00B9" },
+        { .conversionFactor = 25.4f, .prettyName = "Inches", .unitSuffix = " in\u207B\u00B9" },
+    };
+    static_assert( std::extent_v<decltype( ret )> == int( InvLengthUnit::_count ) );
+    return ret[int( length )];
 }
 
 template <UnitEnum E>

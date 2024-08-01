@@ -82,8 +82,16 @@ enum class VolumeUnit
     _count [[maybe_unused]],
 };
 
+// Measurement units for 1/length.
+enum class InvLengthUnit
+{
+    inv_mm, // mm^-1
+    inv_inches, // mm^-1
+    _count [[maybe_unused]],
+};
+
 // A list of all unit enums, for internal use.
-#define DETAIL_MR_UNIT_ENUMS(X) X(NoUnit) X(LengthUnit) X(AngleUnit) X(PixelSizeUnit) X(RatioUnit) X(TimeUnit) X(MovementSpeedUnit) X(AreaUnit) X(VolumeUnit)
+#define DETAIL_MR_UNIT_ENUMS(X) X(NoUnit) X(LengthUnit) X(AngleUnit) X(PixelSizeUnit) X(RatioUnit) X(TimeUnit) X(MovementSpeedUnit) X(AreaUnit) X(VolumeUnit) X(InvLengthUnit)
 
 // All supported value types for `valueToString()`.
 #define DETAIL_MR_UNIT_VALUE_TYPES(X, ...) \

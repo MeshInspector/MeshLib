@@ -485,6 +485,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
     auto paramsTime = getDefaultUnitParams<TimeUnit>();
     auto paramsRatio = getDefaultUnitParams<RatioUnit>();
     auto paramsPixelSize = getDefaultUnitParams<PixelSizeUnit>();
+    auto paramsInvLen = getDefaultUnitParams<InvLengthUnit>();
 
     auto forAllLengthParams = [&]( auto&& func )
     {
@@ -492,6 +493,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         func( paramsArea );
         func( paramsVol );
         func( paramsMoveSpeed );
+        func( paramsInvLen );
     };
     auto forAllParams = [&]( auto&& func )
     {
@@ -597,12 +599,14 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
                 paramsArea.targetUnit = AreaUnit::mm2;
                 paramsVol.targetUnit = VolumeUnit::mm3;
                 paramsMoveSpeed.targetUnit = MovementSpeedUnit::mmPerSecond;
+                paramsInvLen.targetUnit = InvLengthUnit::inv_mm;
                 break;
             case LengthUnit::inches:
                 forAllParams( [&]( auto&& params ){ params.leadingZero = false; } );
                 paramsArea.targetUnit = AreaUnit::inches2;
                 paramsVol.targetUnit = VolumeUnit::inches3;
                 paramsMoveSpeed.targetUnit = MovementSpeedUnit::inchesPerSecond;
+                paramsInvLen.targetUnit = InvLengthUnit::inv_inches;
                 break;
             case LengthUnit::_count:; // MSVC warns otherwise.
                 break;

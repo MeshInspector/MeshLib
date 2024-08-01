@@ -347,6 +347,8 @@ void ImGuiMenu::addMenuFontRanges_( ImFontGlyphRangesBuilder& builder ) const
     builder.AddChar( 0x2229 ); // INTERSECTION
     builder.AddChar( 0x2208 ); // INSIDE
     builder.AddChar( 0x2209 ); // OUTSIDE
+    // Characters not in the font, with custom glyphs added in `addCustomGlyphs_`:
+    // 0x207B SUPERSCRIPT MINUS
 #ifndef __EMSCRIPTEN__
     builder.AddRanges( ImGui::GetIO().Fonts->GetGlyphRangesChineseSimplifiedCommon() );
 #endif

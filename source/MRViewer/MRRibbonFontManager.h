@@ -57,6 +57,13 @@ private:
 
     /// load default font (droid_sans)
     void loadDefaultFont_( float fontSize, float yOffset = 0.0f );
+
+    struct CustomGlyph
+    {
+        std::function<void( unsigned char* texData, int texW )> render;
+    };
+    void addCustomGlyphs_( FontType font, float scaling, std::vector<CustomGlyph>& glyphs );
+    void renderCustomGlyphsToAtlas_( const std::vector<CustomGlyph>& glyphs );
 };
 
 }

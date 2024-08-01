@@ -142,6 +142,7 @@ void trimWithPlane( Mesh& mesh, const Plane3f & plane, std::vector<EdgeLoop> * o
 void trimWithPlane( Mesh& mesh, const TrimWithPlaneParams& params, const TrimOptionalOutput& optOut )
 {
     MR_TIMER
+    MR_WRITER( mesh );
     const auto posFaces = subdivideWithPlane( mesh, params.plane, optOut.new2Old, params.eps, params.onEdgeSplitCallback );
     if ( optOut.outCutEdges )
         *optOut.outCutEdges = findRegionBoundaryUndirectedEdgesInsideMesh( mesh.topology, posFaces );

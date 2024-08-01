@@ -244,9 +244,11 @@ jobs:
       - name: Update documentation
         run: |
           mkdir doc/
+          # remove after initializing
           ( cd MeshInspector.github.io/MeshLib ; test -d html-dev || cp -r html html-dev )
           ln -s MeshInspector.github.io/MeshLib/html-dev doc/html
-          doxygen doxygen/Doxyfile
+          cd doxygen
+          doxygen Doxyfile
 
       - name: Commit and push changes
         working-directory: MeshInspector.github.io

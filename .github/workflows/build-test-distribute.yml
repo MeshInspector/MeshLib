@@ -243,16 +243,14 @@ jobs:
 
       - name: Update documentation
         run: |
-          mkdir doc/
-          # remove after initializing
-          ( cd MeshInspector.github.io/MeshLib ; test -d html-dev || cp -r html html-dev )
-          ln -s MeshInspector.github.io/MeshLib/html-dev doc/html
-          cd doxygen
-          doxygen Doxyfile
+          cd doxygen && doxygen Doxyfile
 
       - name: Commit and push changes
         working-directory: MeshInspector.github.io
         run: |
+          # remove `test` after initializing
+          test -d MeshLib/html-dev && rm MeshLib/html-dev
+          mv ../doc/html MeshLib/html-dev
           git config user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
           git config user.name "meshinspector-bot"
           git add -A

@@ -146,6 +146,13 @@ inline Vector3<T> mult( const Vector3<T>& a, const Vector3<T>& b )
     return { a.x * b.x,a.y * b.y,a.z * b.z };
 }
 
+/// per component division
+template <typename T>
+inline Vector3<T> div( const Vector3<T>& a, const Vector3<T>& b )
+{
+    return { a.x / b.x, a.y / b.y, a.z / b.z };
+}
+
 
 /// computes minimal angle in [0,pi] between two vectors;
 /// the function is symmetric: angle( a, b ) == angle( b, a )

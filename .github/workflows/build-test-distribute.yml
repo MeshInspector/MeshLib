@@ -228,6 +228,8 @@ jobs:
     steps:
       - name: Checkout MeshLib
         uses: actions/checkout@v4
+        with:
+          path: 'MeshLib/'
 
       - name: Checkout documentation site
         uses: actions/checkout@v4
@@ -242,7 +244,7 @@ jobs:
           apk add doxygen git
 
       - name: Update documentation
-        working-directory: doxygen
+        working-directory: MeshLib/doxygen
         run: |
           (
             cat Doxyfile

@@ -226,10 +226,13 @@ jobs:
       #- macos-build-test
       - versioning-and-release-url
     steps:
+      - name: Install Git
+        run: |
+          apk update
+          apk add git
+
       - name: Checkout MeshLib
         uses: actions/checkout@v4
-        with:
-          path: 'MeshLib/'
 
       - name: Checkout documentation site
         uses: actions/checkout@v4
@@ -238,17 +241,15 @@ jobs:
           path: 'MeshInspector.github.io/'
           token: ${{ secrets.MESHINSPECTOR_BOT_TOKEN }}
 
-      - name: Install Doxygen and git
-        run: |
-          apk update
-          apk add doxygen git
+      - name: Install Doxygen
+        run: apk add doxygen
 
       - name: Update documentation
-        working-directory: MeshLib/doxygen
+        working-directory: doxygen
         run: |
           (
             cat Doxyfile
-            echo "OUTPUT_DIRECTORY=../../MeshInspector.github.io/MeshLib/html-dev"
+            echo "OUTPUT_DIRECTORY=../MeshInspector.github.io/MeshLib/html-dev"
           ) | doxygen -
 
       - name: Commit and push changes

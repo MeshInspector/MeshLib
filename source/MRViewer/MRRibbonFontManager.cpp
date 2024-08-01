@@ -75,6 +75,7 @@ float RibbonFontManager::getFontSizeByType( FontType type )
     }
 
     assert( false && "Unknown font enum!" );
+    return 0;
 }
 
 std::filesystem::path RibbonFontManager::getMenuFontPath() const

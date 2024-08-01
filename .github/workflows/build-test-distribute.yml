@@ -248,7 +248,7 @@ jobs:
         run: |
           (
             cat Doxyfile
-            echo "OUTPUT_DIRECTORY=../MeshInspector.github.io/MeshLib/html-dev"
+            echo "OUTPUT_DIRECTORY=../../MeshInspector.github.io/MeshLib/html-dev"
           ) | doxygen -
 
       - name: Commit and push changes

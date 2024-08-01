@@ -1,3 +1,8 @@
+/// \page ExampleCMeshDecimate Mesh decimation
+///
+/// Example of mesh decimate
+///
+/// \code
 #include "MRMeshC/MRMesh.h"
 #include "MRMeshC/MRMeshDecimate.h"
 #include "MRMeshC/MRMeshLoad.h"
@@ -7,7 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/// print progress every 10%
+// print progress every 10%
 int gProgress = -1;
 bool onProgress( float v )
 {
@@ -79,3 +84,4 @@ out_mesh:
 out:
     return rc;
 }
+/// \endcode

@@ -1,3 +1,8 @@
+/// \page ExampleCMeshOffset Mesh offset
+///
+/// Example of mesh offset
+///
+/// \code
 #include "MRMeshC/MRMesh.h"
 #include "MRMeshC/MRMeshLoad.h"
 #include "MRMeshC/MRMeshSave.h"
@@ -10,7 +15,7 @@
 
 #define APPROX_VOXEL_COUNT 10000000.f
 
-/// print progress every 10%
+// print progress every 10%
 int gProgress = -1;
 bool onProgress( float v )
 {
@@ -90,3 +95,4 @@ out_inputMesh:
 out:
     return rc;
 }
+/// \endcode

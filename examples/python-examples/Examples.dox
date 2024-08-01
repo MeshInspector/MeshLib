@@ -1,0 +1,33 @@
+/**
+\page PythonCodeExamples Python Basic Examples
+
+In this section we provide the same examples but with python code
+
+\subpage ExamplePythonMeshLoadSave
+
+\subpage ExamplePythonNumpy
+
+\subpage ExamplePythonMeshModification
+
+\subpage ExamplePythonTriangulation
+
+\subpage ExamplePythonNumpyTriangulation
+
+\subpage ExamplePythonPlotly
+
+\subpage ExamplePythonMeshDecimate
+
+\subpage ExamplePythonMeshBoolean
+
+\subpage ExamplePythonMeshOffset
+
+\subpage ExamplePythonMeshICP
+
+\subpage ExamplePythonMeshFillHole
+
+\subpage ExamplePythonMeshStitchHole
+
+\subpage ExamplePythonMeshExtrude
+
+\sa \ref EmbeddedPythonOverview
+*/

@@ -213,17 +213,18 @@ jobs:
       release_id: ${{needs.versioning-and-release-url.outputs.release_id}}
 
   update-dev-documentation:
-    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    #if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     runs-on: ubuntu-latest
     container:
       image: alpine:3.20
     needs:
-      - windows-build-test
-      - ubuntu-x64-build-test
-      - ubuntu-arm64-build-test
-      - fedora-build-test
-      - emscripten-build-test
-      - macos-build-test
+      #- windows-build-test
+      #- ubuntu-x64-build-test
+      #- ubuntu-arm64-build-test
+      #- fedora-build-test
+      #- emscripten-build-test
+      #- macos-build-test
+      - versioning-and-release-url
     steps:
       - name: Checkout MeshLib
         uses: actions/checkout@v4
@@ -241,18 +242,25 @@ jobs:
           apk add doxygen
 
       - name: Run Doxygen
-        run: doxygen doxygen/Doxyfile
+        run: |
+          doxygen doxygen/Doxyfile
+          ls -l
+          ls -l doc/
 
       - name: Commit and push changes
         working-directory: MeshInspector.github.io
         run: |
           test -d MeshLib/html-dev && rm -r MeshLib/html-dev
-          mv ../doc MeshLib/html-dev
+          pwd
+          ls -l .
+          ls -l ..
+          ls -l ../MeshLib
+          mv ../MeshLib/doc/html MeshLib/html-dev
           git config user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
           git config user.name "meshinspector-bot"
           git add -A
           git commit --allow-empty -m "Auto update docs" -a
-          git push
+          #git push
 
   update-artifacts:
     timeout-minutes: 15

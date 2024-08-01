@@ -252,6 +252,8 @@ jobs:
       - name: Commit and push changes
         working-directory: MeshInspector.github.io
         run: |
+          pwd
+          ls -la
           git config user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
           git config user.name "meshinspector-bot"
           git add -A

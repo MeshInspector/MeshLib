@@ -229,28 +229,29 @@ jobs:
       - name: Checkout MeshLib
         uses: actions/checkout@v4
 
-      - name: Checkout doc site
+      - name: Checkout documentation site
         uses: actions/checkout@v4
         with:
           repository: 'MeshInspector/MeshInspector.github.io'
           path: 'MeshInspector.github.io/'
           token: ${{ secrets.MESHINSPECTOR_BOT_TOKEN }}
 
-      - name: Install Doxygen
+      - name: Install Doxygen and git
         run: |
           apk update
-          apk add doxygen
+          apk add doxygen git
 
       - name: Update documentation
+        working-directory: doxygen
         run: |
-          cd doxygen && doxygen Doxyfile
+          (
+            cat Doxyfile
+            echo "OUTPUT_DIRECTORY=../MeshInspector.github.io/MeshLib/html-dev"
+          ) | doxygen -
 
       - name: Commit and push changes
         working-directory: MeshInspector.github.io
         run: |
-          # remove `test` after initializing
-          test -d MeshLib/html-dev && rm MeshLib/html-dev
-          mv ../doc/html MeshLib/html-dev
           git config user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
           git config user.name "meshinspector-bot"
           git add -A

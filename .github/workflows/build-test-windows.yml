@@ -228,9 +228,6 @@ jobs:
     runs-on: [windows-x64-codesign]
     timeout-minutes: 10
     steps:
-      - name: Remove old local packages        
-        run: Remove-Item "MeshLib.nupkg"
-        
       - name: Download NuGet package from Artifact
         uses: actions/download-artifact@v4
         with:

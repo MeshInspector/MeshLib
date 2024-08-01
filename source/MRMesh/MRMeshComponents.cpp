@@ -320,11 +320,15 @@ std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPa
     FaceIncidence incidence /*= FaceIncidence::PerEdge*/, const UndirectedEdgePredicate& isCompBd /*= {}*/ )
 {
     MR_TIMER
+    assert( maxComponentCount > 1 );
+    if ( maxComponentCount < 1 )
+        maxComponentCount = INT_MAX;
     const FaceBitSet& region = meshPart.mesh.topology.getFaceIds( meshPart.region );
     auto [uniqueRootsMap, componentsCount] = getAllComponentsMap( meshPart, incidence, isCompBd );
     if ( !componentsCount )
         return { {}, 0 };
-    return { getAllComponents( uniqueRootsMap, componentsCount, region, maxComponentCount ), componentsCount };
+    const int componentsInGroup = ( maxComponentCount == INT_MAX ) ? 1 : ( componentsCount + maxComponentCount - 1 ) / maxComponentCount;
+    return { getAllComponents( uniqueRootsMap, componentsCount, region, maxComponentCount ), componentsInGroup };
 }
 
 std::vector<MR::FaceBitSet> getAllComponents( Face2RegionMap& componentsMap, int componentsCount, const FaceBitSet& region,

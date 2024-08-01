@@ -241,21 +241,16 @@ jobs:
           apk update
           apk add doxygen
 
-      - name: Run Doxygen
+      - name: Update documentation
         run: |
+          mkdir doc/
+          ( cd MeshInspector.github.io/MeshLib ; test -d html-dev || cp -r html html-dev )
+          ln -s MeshInspector.github.io/MeshLib/html-dev doc/html
           doxygen doxygen/Doxyfile
-          ls -l
-          ls -l doc/
 
       - name: Commit and push changes
         working-directory: MeshInspector.github.io
         run: |
-          test -d MeshLib/html-dev && rm -r MeshLib/html-dev
-          pwd
-          ls -l .
-          ls -l ..
-          ls -l ../MeshLib
-          mv ../MeshLib/doc/html MeshLib/html-dev
           git config user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
           git config user.name "meshinspector-bot"
           git add -A

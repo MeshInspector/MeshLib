@@ -26,6 +26,7 @@ foreach(TARGET ${EXAMPLES})
   target_link_libraries(${TARGET} PRIVATE MeshLib::MRMesh TBB::tbb)
 endforeach()
 
-add_executable(MRBasedMainFunc MRBasedMainFunc.dox.cpp)
-target_include_directories(MRBasedMainFunc PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-target_link_libraries(MRBasedMainFunc PRIVATE MeshLib::MRMesh MeshLib::MRViewer)
+# FIXME: MRViewer dependencies
+#add_executable(MRBasedMainFunc MRBasedMainFunc.dox.cpp)
+#target_include_directories(MRBasedMainFunc PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+#target_link_libraries(MRBasedMainFunc PRIVATE MeshLib::MRMesh MeshLib::MRViewer)

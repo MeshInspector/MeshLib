@@ -2210,6 +2210,9 @@
     <ClCompile Include="MRMeshThickness.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
+    <ClCompile Include="MRColor.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

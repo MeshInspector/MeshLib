@@ -130,4 +130,8 @@ inline Color operator /( const Color& b, float a )
     return b * ( 1 / a );
 }
 
+/// Blend two colors together
+/// \note This operation is not commutative
+MRMESH_API Color blend( const Color& front, const Color& back );
+
 }

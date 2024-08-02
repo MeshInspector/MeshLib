@@ -156,6 +156,10 @@ jobs:
         if:   matrix.runner == 'windows-2022'
         run: py -3 scripts\generate_nuget_spec.py ${{needs.setup.outputs.version_tag}}
         
+      - name: Download NuGet Executable
+        if:   matrix.runner == 'windows-2022'
+        run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe
+        
       - name: Build NuGet package
         if:   matrix.runner == 'windows-2022'
         run: nuget.exe pack source\Package.nuspec -OutputFileNamesWithoutVersion
@@ -238,6 +242,6 @@ jobs:
         run: |
           jsign --storetype ETOKEN --storepass "${{ secrets.WINDOWS_SIGNTOOL_KC_PARAM_TOKEN_PASSWORD }}" -tsaurl http://timestamp.digicert.com MeshLib.nupkg
       
-      - name: Upload signed NuGet package
-        run: |
-          nuget push MeshLib.nupkg ${{ secrets.NUGET_API_KEY }} -Source https://api.nuget.org/v3/index.json
+     ' - name: Upload signed NuGet package
+     '   run: |
+     '     nuget push MeshLib.nupkg ${{ secrets.NUGET_API_KEY }} -Source https://api.nuget.org/v3/index.json

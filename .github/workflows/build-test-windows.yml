@@ -236,10 +236,4 @@ jobs:
      
       - name: Sign NuGet package with certificate
         run: |
-          signtool.exe sign /d "MeshLib" `
-                            /f "${{ secrets.WINDOWS_SIGNTOOL_F_PARAM }}" `
-                            /csp "${{ secrets.WINDOWS_SIGNTOOL_CSP_PARAM }}" `
-                            /kc "[{{${{ secrets.WINDOWS_SIGNTOOL_KC_PARAM_TOKEN_PASSWORD }}}}]=${{ secrets.WINDOWS_SIGNTOOL_KC_PARAM_CONTAINER_NAME }}" `
-                            /fd SHA256 `
-                            /t http://timestamp.digicert.com `
-                            "MeshLib.nupkg"
+          jsign --storetype ETOKEN --storepass "${{ secrets.WINDOWS_SIGNTOOL_KC_PARAM_TOKEN_PASSWORD }}" -tsaurl http://timestamp.digicert.com MeshLib.nupkg

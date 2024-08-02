@@ -9,8 +9,14 @@ namespace MR
 /// \addtogroup FillHoleGroup
 /// \{
 
+// args: three vertices of candidate triangle
 using FillTriangleMetric = std::function<double( VertId a, VertId b, VertId c )>;
+// args: 
+//  a->b: candidate edge
+//  l: next(a->b) note that they are not connected in topology untill triangulation process ends
+//  r: prev(a->b) note that they are not connected in topology untill triangulation process ends
 using FillEdgeMetric = std::function<double( VertId a, VertId b, VertId l, VertId r )>;
+// args: two metric weights to combine (usualy it is simple sum of them)
 using FillCombineMetric = std::function<double( double, double )>;
 
 /// Big value, but less then DBL_MAX, to be able to pass some bad triangulations instead of breaking it

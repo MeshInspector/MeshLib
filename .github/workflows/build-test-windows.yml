@@ -237,3 +237,7 @@ jobs:
       - name: Sign NuGet package with certificate
         run: |
           jsign --storetype ETOKEN --storepass "${{ secrets.WINDOWS_SIGNTOOL_KC_PARAM_TOKEN_PASSWORD }}" -tsaurl http://timestamp.digicert.com MeshLib.nupkg
+      
+      - name: Upload signed NuGet package
+        run: |
+          dotnet nuget push MeshLib.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json

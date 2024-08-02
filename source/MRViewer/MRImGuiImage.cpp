@@ -77,19 +77,19 @@ void MarkedVoxelSlice::forceUpdate()
 
         for ( const auto& backMark : params_.customBackgroundMarks )
             if ( backMark.mask.test( voxelIndex ) )
-                texture[i] = backMark.color;
+                texture[i] = blend( texture[i], backMark.color );
 
         if ( params_.marks[MaskType::Segment].mask.test( voxelIndex ) )
-            texture[i] = params_.marks[MaskType::Segment].color;
+            texture[i] = blend( params_.marks[MaskType::Segment].color, texture[i] );
 
         if ( params_.marks[MaskType::Inside].mask.test( voxelIndex ) )
-            texture[i] = params_.marks[MaskType::Inside].color;
+            texture[i] = blend( params_.marks[MaskType::Inside].color, texture[i] );
         else if ( params_.marks[MaskType::Outside].mask.test( voxelIndex ) )
-            texture[i] = params_.marks[MaskType::Outside].color;
+            texture[i] = blend( params_.marks[MaskType::Outside].color, texture[i] );
 
         for ( const auto& foreMark : params_.customForegroundMarks )
             if ( foreMark.mask.test( voxelIndex ) )
-                texture[i] = foreMark.color;
+                texture[i] = blend( foreMark.color, texture[i] );
     }
     update( { { texture, { textureWidth , textureHeight } } } );
 }

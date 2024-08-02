@@ -117,13 +117,7 @@ void ColorMapAggregator<Tag>::updateAggregated_( int newSize )
             const auto& colorMap = dataSet_[i].colorMap;
             BitSetParallelFor( dataSet_[i].elements, [&]( typename ElementBitSet::IndexType e )
             {
-                const Vector4f frontColor4 = Vector4f( colorMap[e] );
-                const Vector3f a = Vector3f( frontColor4.x, frontColor4.y, frontColor4.z ) * frontColor4.w;
-                const Vector4f backColor4 = Vector4f( aggregatedColorMap_[e] );
-                const Vector3f b = Vector3f( backColor4.x, backColor4.y, backColor4.z ) * backColor4.w * ( 1 - frontColor4.w );
-                const float alphaRes = frontColor4.w + backColor4.w * ( 1 - frontColor4.w );
-                const Vector3f newColor = ( a + b ) / alphaRes;
-                aggregatedColorMap_[e] = Color( newColor.x, newColor.y, newColor.z, alphaRes );
+                aggregatedColorMap_[e] = blend( colorMap[e], aggregatedColorMap_[e] );
             } );
         }
     }

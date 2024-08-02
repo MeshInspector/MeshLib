@@ -136,18 +136,29 @@ void getTriangulationWeights( const MeshTopology& topology, const NewEdgesMap& m
         }
         if ( metrics.edgeMetric )
         {
-            auto edgeACMetric = metrics.edgeMetric(
-                aVert, topology.org( loop[v] ),
-                !abConn.hasPrev() ? topology.dest( topology.prev( loop[processedConn.a] ) ) : topology.org( loop[abConn.prevA] ),
-                bVert );
+            VertId leftVert;
+            if ( abConn.hasPrev() )
+                leftVert = topology.org( loop[abConn.prevA] );
+            else if ( topology.right( loop[processedConn.a] ) )
+                leftVert = topology.dest( topology.prev( loop[processedConn.a] ) );
 
-            auto  edgeCBMetric = metrics.edgeMetric(
-                topology.org( loop[v] ), bVert,
-                !bcConn.hasPrev() ? topology.dest( topology.prev( loop[v] ) ) : topology.org( loop[bcConn.prevA] ),
-                aVert );
+            if ( leftVert )
+            {
+                auto edgeACMetric = metrics.edgeMetric( aVert, topology.org( loop[v] ), leftVert, bVert );
+                weight = metrics.combineMetric( weight, edgeACMetric );
+            }
 
-            weight = metrics.combineMetric( weight, edgeACMetric );
-            weight = metrics.combineMetric( weight, edgeCBMetric );
+            VertId rightVert;
+            if ( bcConn.hasPrev() )
+                rightVert = topology.org( loop[bcConn.prevA] );
+            else if ( topology.right( loop[v] ) )
+                rightVert = topology.dest( topology.prev( loop[v] ) );
+
+            if ( rightVert )
+            {
+                auto edgeCBMetric = metrics.edgeMetric( topology.org( loop[v] ), bVert, rightVert, aVert );
+                weight = metrics.combineMetric( weight, edgeCBMetric );
+            }
         }
 
         if ( weight < processedConn.weight )
@@ -634,12 +645,23 @@ HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId a0, const FillHoleParams&
         double weight = metrics.combineMetric( newEdgesMap[i][cIndex].weight, newEdgesMap[cIndex][i].weight );
         if ( metrics.edgeMetric )
         {
-            auto lastEdgeMetric = metrics.edgeMetric(
-                mesh.topology.org( edgeMap[i] ), mesh.topology.org( edgeMap[cIndex] ),
-                !newEdgesMap[i][cIndex].hasPrev() ? mesh.topology.dest( mesh.topology.prev( edgeMap[i] ) ) : mesh.topology.org( edgeMap[newEdgesMap[i][cIndex].prevA] ),
-                !newEdgesMap[cIndex][i].hasPrev() ? mesh.topology.dest( mesh.topology.prev( edgeMap[cIndex] ) ) : mesh.topology.org( edgeMap[newEdgesMap[cIndex][i].prevA] )
-            );
-            weight = metrics.combineMetric( weight, lastEdgeMetric );
+            VertId leftVert;
+            if ( newEdgesMap[i][cIndex].hasPrev() )
+                leftVert = mesh.topology.org( edgeMap[newEdgesMap[i][cIndex].prevA] );
+            else if ( mesh.topology.right( edgeMap[i] ) )
+                leftVert = mesh.topology.dest( mesh.topology.prev( edgeMap[i] ) );
+
+            VertId rightVert;
+            if ( newEdgesMap[cIndex][i].hasPrev() )
+                rightVert = mesh.topology.org( edgeMap[newEdgesMap[cIndex][i].prevA] );
+            else if ( mesh.topology.right( edgeMap[cIndex] ) )
+                rightVert = mesh.topology.dest( mesh.topology.prev( edgeMap[cIndex] ) );
+
+            if ( leftVert && rightVert )
+            {
+                auto lastEdgeMetric = metrics.edgeMetric( mesh.topology.org( edgeMap[i] ), mesh.topology.org( edgeMap[cIndex] ), leftVert, rightVert );
+                weight = metrics.combineMetric( weight, lastEdgeMetric );
+            }
         }
         if ( weight < finConn.weight &&
             ( params.multipleEdgesResolveMode != FillHoleParams::MultipleEdgesResolveMode::Strong || // try to fix multiple if needed

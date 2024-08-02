@@ -149,8 +149,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m ) \
     m.def( "dot", ( type( * )( const VectorType&, const VectorType& ) )& MR::dot<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "dot product" );\
     m.def( "cross", ( type( * )( const VectorType&, const VectorType& ) )& MR::cross<type>, pybind11::arg( "a" ), pybind11::arg( "b" ), "cross product" );\
     \
+    /* Need to wrap in a template lambda for `if constexpr` to work properly. */\
     []<typename T = type, typename V = VectorType>{ \
-        if constexpr (std::is_floating_point_v<T>) \
+        if constexpr ( std::is_floating_point_v<T> ) \
         { \
             MR_PYTHON_CUSTOM_CLASS( name ) \
                 .def( "normalized", &V::normalized ) \

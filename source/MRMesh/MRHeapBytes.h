@@ -63,23 +63,13 @@ template<typename T>
     return sizeof( T ) + ptr->heapBytes();
 }
 
-/// \}
-
-
-// Returns `heapBytes( value )` if supported, or 0 otherwise.
-// Note, this must be declared AFTER all `heapBytes` overloads above.
+/// Needed for generic code, always returns just the `sizeof`.
 template<typename T>
-[[nodiscard]] inline size_t heapBytesIfSupported( const T& value )
+[[nodiscard]] inline size_t heapBytes( const std::function<T> & func )
 {
-    if constexpr ( requires{ heapBytes( value ); } )
-    {
-        return heapBytes( value );
-    }
-    else
-    {
-        (void)value;
-        return 0;
-    }
+    return sizeof( func );
 }
+
+/// \}
 
 } // namespace MR

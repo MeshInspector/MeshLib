@@ -40,11 +40,7 @@ struct VoxelsVolume
     Vector3i dims;
     Vector3f voxelSize{ 1.f, 1.f, 1.f };
 
-    [[nodiscard]] size_t heapBytes() const
-    {
-        // `...IfSupported` because `T` can be a functor (`std::function`), then we can't compute this.
-        return MR::heapBytesIfSupported( data );
-    }
+    [[nodiscard]] size_t heapBytes() const { return MR::heapBytes( data ); }
 };
 
 /// represents a box in 3D space subdivided on voxels stored in T;

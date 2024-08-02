@@ -9,8 +9,8 @@ namespace MR
 /// \addtogroup FillHoleGroup
 /// \{
 
-using FillTriangleMetric = std::function<double( VertId, VertId, VertId )>;
-using FillEdgeMetric = std::function<double( VertId, VertId, VertId, VertId )>;
+using FillTriangleMetric = std::function<double( VertId a, VertId b, VertId c )>;
+using FillEdgeMetric = std::function<double( VertId a, VertId b, VertId l, VertId r )>;
 using FillCombineMetric = std::function<double( double, double )>;
 
 /// Big value, but less then DBL_MAX, to be able to pass some bad triangulations instead of breaking it

@@ -240,4 +240,4 @@ jobs:
       
       - name: Upload signed NuGet package
         run: |
-          dotnet nuget push MeshLib.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
+          nuget push MeshLib.nupkg ${{ secrets.NUGET_API_KEY }} -Source https://api.nuget.org/v3/index.json

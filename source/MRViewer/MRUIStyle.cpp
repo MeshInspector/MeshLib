@@ -1794,6 +1794,49 @@ void endTabItem()
     ImGui::EndTabItem();
 }
 
+
+void alignTextToFramePadding( float padding )
+{
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    window->DC.CurrLineSize.y = ImMax( window->DC.CurrLineSize.y, g.FontSize + 2 * padding );
+    window->DC.CurrLineTextBaseOffset = ImMax( window->DC.CurrLineTextBaseOffset, padding );
+}
+
+void alignTextToControl( float height )
+{
+    alignTextToFramePadding( std::floor( ( height - GImGui->FontSize ) * 0.5f ) );
+}
+
+void alignTextToRadioButton( float scaling )
+{
+    // Radio button text position is rounded up
+    alignTextToFramePadding( std::ceil( ( cRadioButtonSize * scaling - GImGui->FontSize ) * 0.5f ) );
+}
+
+void alignTextToCheckBox( float scaling )
+{
+    alignTextToFramePadding( cCheckboxPadding * scaling );
+}
+
+void alignTextToButton( float scaling )
+{
+    alignTextToFramePadding( cGradientButtonFramePadding * scaling );
+}
+
+
+void highlightWindowBottom( float scaling )
+{
+    const ImGuiStyle& style = ImGui::GetStyle();
+    ImVec2 boxMin = ImGui::GetCurrentWindowRead()->DC.CursorPos;
+    boxMin.x -= style.WindowPadding.x;
+    ImVec2 boxMax = ImGui::GetWindowPos();
+    boxMax.x += ImGui::GetContentRegionMax().x + style.WindowPadding.x * 2.f;
+    boxMax.y += ImGui::GetContentRegionMax().y + ImGui::GetScrollMaxY() + style.WindowPadding.y * 2.f;
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cSeparateBlocksSpacing * scaling );
+    ImGui::GetCurrentWindow()->DrawList->AddRectFilled( boxMin, boxMax, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::CollapseHeaderBackground ).getUInt32() );
+}
+
 } // namespace UI
 
 }

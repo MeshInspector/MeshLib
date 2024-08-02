@@ -323,6 +323,29 @@ MRVIEWER_API void endTabBar();
 MRVIEWER_API bool beginTabItem( const char* label, bool* p_open = NULL, ImGuiTabItemFlags flags = 0 );
 MRVIEWER_API void endTabItem();
 
+/// Sets the vertical text position to match the text of a specific control on the same line
+/// The control is assumed to contain standard one-line text with equal padding from top and bottom edges
+/// The padding is control-specific
+/// Sample usage:
+///   UI::alignTextToFramePadding( ImGui::GetStyle().FramePadding.y );
+///   // (with this value, it is equivalent to \ref ImGui::AlignTextToFramePadding() )
+///   ImGui::Text( "Button:" );
+///   ImGui::SameLine();
+///   UI::buttonCommonSize( "Button" ); // the control we align to
+MRVIEWER_API void alignTextToFramePadding( float padding );
+/// Variation of \ref alignTextToFramePadding that takes control height (e.g. for \ref UI::button with nondefault height)
+MRVIEWER_API void alignTextToControl( float height );
+/// Specialization of \ref alignTextToFramePadding for \ref UI::radioButton
+MRVIEWER_API void alignTextToRadioButton( float scaling );
+/// Specialization of \ref alignTextToFramePadding for \ref UI::checkbox
+MRVIEWER_API void alignTextToCheckBox( float scaling );
+/// Specialization of \ref alignTextToFramePadding for \ref UI::button
+MRVIEWER_API void alignTextToButton( float scaling );
+
+/// Highlight the background of current window's bottom part, starting from current position
+/// Some padding is added
+MRVIEWER_API void highlightWindowBottom( float scaling );
+
 } // namespace UI
 
 }

@@ -158,7 +158,8 @@ jobs:
 
       - name: Test MRBind bindings
         if: ${{ matrix.os == 'ubuntu24' }}
-        env: LD_LIBRARY_PATH: .
+        env:
+          LD_LIBRARY_PATH: .
         working-directory: build/Release/bin
         run: python3 -c 'from meshlib2 import mrmeshpy; from meshlib2 import mrmeshnumpy'
 

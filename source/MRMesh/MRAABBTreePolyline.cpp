@@ -82,7 +82,7 @@ AABBTreePolyline<V>::AABBTreePolyline( const Mesh& mesh, const UndirectedEdgeBit
 
 template AABBTreePolyline<Vector2f>::AABBTreePolyline( const Polyline2 & );
 template AABBTreePolyline<Vector3f>::AABBTreePolyline( const Polyline3 & );
-template AABBTreePolyline<Vector3f>::AABBTreePolyline( const Mesh &, const UndirectedEdgeBitSet & );
+template AABBTreePolyline<Vector3f>::AABBTreePolyline( const Mesh &, const UndirectedEdgeBitSet & ) MR_REQUIRES_IF_SUPPORTED( Vector3f::elements == 3 );
 
 template auto AABBTreeBase<LineTreeTraits<Vector2f>>::getSubtrees( int minNum ) const -> std::vector<NodeId>;
 template auto AABBTreeBase<LineTreeTraits<Vector3f>>::getSubtrees( int minNum ) const -> std::vector<NodeId>;

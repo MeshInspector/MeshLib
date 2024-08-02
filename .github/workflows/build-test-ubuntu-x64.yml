@@ -156,6 +156,13 @@ jobs:
           CXX: ${{matrix.cxx-compiler}}
         run: make -f scripts/mrbind/generate.mk
 
+      - name: Test MRBind bindings
+        if: ${{ matrix.os == 'ubuntu24' }}
+        env:
+          LD_LIBRARY_PATH: .
+        working-directory: build/Release/bin
+        run: python3 -c 'from meshlib2 import mrmeshpy; from meshlib2 import mrmeshnumpy' || true
+
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.compiler}}"
 

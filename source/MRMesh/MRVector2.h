@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMacros.h"
 #include "MRMeshFwd.h"
 #include <cmath>
 #include <algorithm>
@@ -9,10 +10,10 @@ namespace MR
 
 /// \defgroup VectorGroup Vector
 /// \ingroup MathGroup
- 
+
 /// two-dimensional vector
 /// \ingroup VectorGroup
-template <typename T> 
+template <typename T>
 struct Vector2
 {
     using ValueType = T;
@@ -40,9 +41,15 @@ struct Vector2
     constexpr       T & operator []( int e )       noexcept { return *( &x + e ); }
 
     T lengthSq() const { return x * x + y * y; }
-    T length() const { return T( std::sqrt( lengthSq() ) ); }
+    auto length() const
+    {
+        // Calling `sqrt` this way to hopefully support boost.multiprecision numbers.
+        // Returning `auto` to not break on integral types.
+        using std::sqrt;
+        return sqrt( lengthSq() );
+    }
 
-    Vector2 normalized() const 
+    Vector2 normalized() const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> )
     {
         auto len = length();
         if ( len <= 0 )
@@ -54,15 +61,15 @@ struct Vector2
     const Vector2 & operator +() const { return *this; }
 
     /// returns one of 2 basis unit vector that makes the biggest angle with the direction specified by this
-    Vector2 furthestBasisVector() const;
+    Vector2 furthestBasisVector() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> );
 
     /// returns same length vector orthogonal to this (rotated 90 degrees counter-clockwise)
-    Vector2 perpendicular() const { return Vector2{ -y, x }; }
+    Vector2 perpendicular() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> ) { return Vector2{ -y, x }; }
 
     Vector2 & operator +=( const Vector2<T> & b ) { x += b.x; y += b.y; return * this; }
     Vector2 & operator -=( const Vector2<T> & b ) { x -= b.x; y -= b.y; return * this; }
     Vector2 & operator *=( T b ) { x *= b; y *= b; return * this; }
-    Vector2 & operator /=( T b ) 
+    Vector2 & operator /=( T b )
     {
         if constexpr ( std::is_integral_v<T> )
             { x /= b; y /= b; return * this; }
@@ -70,7 +77,7 @@ struct Vector2
             return *this *= ( 1 / b );
     }
 
-    [[nodiscard]] bool isFinite() const
+    [[nodiscard]] bool isFinite() const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
     {
         return std::isfinite( x ) && std::isfinite( y );
     }
@@ -80,14 +87,14 @@ struct Vector2
 /// \{
 
 /// cross product
-template <typename T> 
+template <typename T>
 inline T cross( const Vector2<T> & a, const Vector2<T> & b )
 {
     return a.x * b.y - a.y * b.x;
 }
 
 /// dot product
-template <typename T> 
+template <typename T>
 inline T dot( const Vector2<T> & a, const Vector2<T> & b )
 {
     return a.x * b.x + a.y * b.y;
@@ -115,7 +122,7 @@ inline Vector2<T> div( const Vector2<T>& a, const Vector2<T>& b )
 }
 
 /// angle in radians between two vectors
-template <typename T> 
+template <typename T>
 inline T angle( const Vector2<T> & a, const Vector2<T> & b )
 {
     return std::atan2( std::abs( cross( a, b ) ), dot( a, b ) );
@@ -123,51 +130,52 @@ inline T angle( const Vector2<T> & a, const Vector2<T> & b )
     //return std::acos( std::clamp( dot( a.normalized(), b.normalized() ), T(-1), T(1) ) );
 }
 
-template <typename T> 
-inline Vector2<T> Vector2<T>::furthestBasisVector() const
+template <typename T>
+inline Vector2<T> Vector2<T>::furthestBasisVector() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
 {
-    if ( fabs( x ) < fabs( y ) )
+    using std::abs; // This allows boost.multiprecision numbers.
+    if ( abs( x ) < abs( y ) )
         return Vector2( 1, 0 );
     else
         return Vector2( 0, 1 );
 }
 
-template <typename T> 
+template <typename T>
 inline bool operator ==( const Vector2<T> & a, const Vector2<T> & b )
     { return a.x == b.x && a.y == b.y; }
 
-template <typename T> 
+template <typename T>
 inline bool operator !=( const Vector2<T> & a, const Vector2<T> & b )
     { return !( a == b ); }
 
-template <typename T> 
+template <typename T>
 inline Vector2<T> operator +( const Vector2<T> & a, const Vector2<T> & b )
     { return { a.x + b.x, a.y + b.y }; }
 
-template <typename T> 
+template <typename T>
 inline Vector2<T> operator -( const Vector2<T> & a, const Vector2<T> & b )
     { return { a.x - b.x, a.y - b.y }; }
 
-template <typename T> 
+template <typename T>
 inline Vector2<T> operator *( T a, const Vector2<T> & b )
     { return { a * b.x, a * b.y }; }
 
-template <typename T> 
+template <typename T>
 inline Vector2<T> operator *( const Vector2<T> & b, T a )
     { return { a * b.x, a * b.y }; }
 
-template <typename T> 
+template <typename T>
 inline Vector2<T> operator /( Vector2<T> b, T a )
     { b /= a; return b; }
 
-template <typename T> 
+template <typename T>
 inline auto begin( const Vector2<T> & v ) { return &v[0]; }
-template <typename T> 
+template <typename T>
 inline auto begin( Vector2<T> & v ) { return &v[0]; }
 
-template <typename T> 
+template <typename T>
 inline auto end( const Vector2<T> & v ) { return &v[2]; }
-template <typename T> 
+template <typename T>
 inline auto end( Vector2<T> & v ) { return &v[2]; }
 
 /// \}

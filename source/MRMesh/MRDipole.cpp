@@ -68,6 +68,13 @@ void calcDipoles( Dipoles& dipoles, const AABBTree& tree_, const Mesh& mesh )
     } );
 }
 
+Dipoles calcDipoles( const AABBTree& tree, const Mesh& mesh )
+{
+    Dipoles dipoles;
+    calcDipoles( dipoles, tree, mesh );
+    return dipoles;
+}
+
 constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
 
 float Dipole::w( const Vector3f & q ) const

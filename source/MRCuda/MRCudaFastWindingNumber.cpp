@@ -2,6 +2,7 @@
 #include "MRCudaFastWindingNumber.cuh"
 #include "MRCudaMath.cuh"
 #include "MRMesh/MRAABBTree.h"
+#include "MRMesh/MRDipole.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRTimer.h"
 
@@ -37,29 +38,25 @@ bool FastWindingNumber::prepareData_( ProgressCallback cb )
 
     if ( !reportProgress( cb, 0.0f ) )
         return false;
+
+    data->cudaMeshPoints.fromVector( mesh_.points.vec_ );
+    if ( !reportProgress( cb, 0.1f ) )
+        return false;
+
+    data->cudaFaces.fromVector( mesh_.topology.getTriangulation().vec_ );
+    if ( !reportProgress( cb, 0.3f ) )
+        return false;
+
     const AABBTree& tree = mesh_.getAABBTree();
-    Dipoles dipoles;
-    calcDipoles( dipoles, tree, mesh_ );
     if ( !reportProgress( cb, 0.5f ) )
         return false;
 
-    data->dipoles.fromVector( dipoles.vec_ );
-    if ( !reportProgress( cb, 0.625f ) )
-        return false;
-
     const auto& nodes = tree.nodes();
-    const auto& meshPoints = mesh_.points;
-    const auto tris = mesh_.topology.getTriangulation();
-
-    data->cudaMeshPoints.fromVector( meshPoints.vec_ );
-    if ( !reportProgress( cb, 0.75f ) )
-        return false;
-
     data->cudaNodes.fromVector( nodes.vec_ );
-    if ( !reportProgress( cb, 0.875f ) )
+    if ( !reportProgress( cb, 0.6f ) )
         return false;
 
-    data->cudaFaces.fromVector( tris.vec_ );
+    data->dipoles.fromVector( mesh_.getDipoles().vec_ );
     if ( !reportProgress( cb, 1.0f ) )
         return false;
 

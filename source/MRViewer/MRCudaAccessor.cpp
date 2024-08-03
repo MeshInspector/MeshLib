@@ -5,6 +5,7 @@
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRAABBTreeMaker.h"
+#include "MRMesh/MRDipole.h"
 
 namespace MR
 {

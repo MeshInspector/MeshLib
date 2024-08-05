@@ -218,7 +218,7 @@ Expected<EdgeLoop> surroundingContour(
         while ( includeEdges.size() > 1 && includeEdges.front().undirected() == includeEdges.back().undirected() )
             includeEdges.pop_back();
         if ( includeEdges.size() < 2 )
-            return unexpected( "Two few key edges after removing duplicates" );
+            return unexpected( "Too few key edges after removing duplicates" );
 
         std::vector<Plane3f> planes;
         planes.reserve( sz );

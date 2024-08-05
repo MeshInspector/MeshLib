@@ -285,7 +285,7 @@ Expected<EdgeLoop> surroundingContour(
         while ( keyVertices.size() > 1 && keyVertices.front() == keyVertices.back() )
             keyVertices.pop_back();
         if ( keyVertices.size() < 2 )
-            return unexpected( "Two few key vertices after removing duplicates" );
+            return unexpected( "Too few key vertices after removing duplicates" );
 
         std::vector<Plane3f> planes;
         planes.reserve( sz );

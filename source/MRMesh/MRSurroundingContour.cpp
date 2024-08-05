@@ -178,7 +178,7 @@ Expected<EdgeLoop> surroundingContour(
     EdgeLoop res;
     const auto sz = includeEdges.size();
     if ( sz < 2 )
-        return unexpected( "Two few key edges" );
+        return unexpected( "Too few key edges" );
     if ( sz == 2 )
     {
         if ( includeEdges[0].undirected() == includeEdges[1].undirected() )

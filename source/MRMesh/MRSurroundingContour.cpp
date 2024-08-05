@@ -250,7 +250,7 @@ Expected<EdgeLoop> surroundingContour(
     EdgeLoop res;
     const auto sz = keyVertices.size();
     if ( sz < 2 )
-        return unexpected( "Two few key vertices" );
+        return unexpected( "Too few key vertices" );
 
     if ( sz == 2 )
     {

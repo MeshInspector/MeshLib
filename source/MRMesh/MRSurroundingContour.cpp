@@ -178,12 +178,11 @@ Expected<EdgeLoop> surroundingContour(
     EdgeLoop res;
     const auto sz = includeEdges.size();
     if ( sz < 2 )
-    {
-        assert( false );
-        return res;
-    }
+        return unexpected( "Two few key edges" );
     if ( sz == 2 )
     {
+        if ( includeEdges[0].undirected() == includeEdges[1].undirected() )
+            return unexpected( "Two key points are the same" );
         auto e0 = includeEdges[0];
         auto e1 = includeEdges[1];
         const auto p0 = mesh.edgePoint( e0, 0.5f );
@@ -214,6 +213,12 @@ Expected<EdgeLoop> surroundingContour(
             return std::atan2( dot( d, dir1 ), dot( d, dir0 ) );
         };
         std::sort( includeEdges.begin(), includeEdges.end(), [&]( EdgeId a, EdgeId b ) { return angle( a ) > angle( b ); } );
+        // remove repeating edges
+        includeEdges.erase( std::unique( includeEdges.begin(), includeEdges.end(), []( UndirectedEdgeId a, UndirectedEdgeId b ) { return a == b; } ), includeEdges.end() );
+        while ( includeEdges.size() > 1 && includeEdges.front().undirected() == includeEdges.back().undirected() )
+            includeEdges.pop_back();
+        if ( includeEdges.size() < 2 )
+            return unexpected( "Two few key edges after removing duplicates" );
 
         std::vector<Plane3f> planes;
         planes.reserve( sz );
@@ -229,11 +234,12 @@ Expected<EdgeLoop> surroundingContour(
             append( res, smallestPathInPositiveWedge( mesh, planes[i], planes[i+1], includeEdges[i], includeEdges[i+1], edgeMetric ) );
         append( res, smallestPathInPositiveWedge( mesh, planes.back(), planes.front(), includeEdges.back(), includeEdges.front(), edgeMetric ) );
     }
-    assert( isEdgeLoop( mesh.topology, res ) );
+    if ( !isEdgeLoop( mesh.topology, res ) )
+        return unexpected( "Key edges are located on different connected components" );
     return res;
 }
 
-Expected<EdgeLoop, std::string> surroundingContour(
+Expected<EdgeLoop> surroundingContour(
     const Mesh & mesh,
     std::vector<VertId> keyVertices,
     const EdgeMetric & edgeMetric,
@@ -244,12 +250,12 @@ Expected<EdgeLoop, std::string> surroundingContour(
     EdgeLoop res;
     const auto sz = keyVertices.size();
     if ( sz < 2 )
-    {
-        assert( false );
-        return res;
-    }
+        return unexpected( "Two few key vertices" );
+
     if ( sz == 2 )
     {
+        if ( keyVertices[0] == keyVertices[1] )
+            return unexpected( "Two key points are the same" );
         auto v0 = keyVertices[0];
         auto v1 = keyVertices[1];
         const auto p0 = mesh.points[v0];
@@ -274,6 +280,12 @@ Expected<EdgeLoop, std::string> surroundingContour(
             return std::atan2( dot( d, dir1 ), dot( d, dir0 ) );
         };
         std::sort( keyVertices.begin(), keyVertices.end(), [&]( VertId a, VertId b ) { return angle( a ) > angle( b ); } );
+        // remove repeating vertices
+        keyVertices.erase( std::unique( keyVertices.begin(), keyVertices.end() ), keyVertices.end() );
+        while ( keyVertices.size() > 1 && keyVertices.front() == keyVertices.back() )
+            keyVertices.pop_back();
+        if ( keyVertices.size() < 2 )
+            return unexpected( "Two few key vertices after removing duplicates" );
 
         std::vector<Plane3f> planes;
         planes.reserve( sz );
@@ -285,10 +297,7 @@ Expected<EdgeLoop, std::string> surroundingContour(
         append( res, smallestPathInPositiveWedge( mesh, planes.back(), planes.front(), keyVertices.back(), keyVertices.front(), edgeMetric ) );
     }
     if ( !isEdgeLoop( mesh.topology, res ) )
-    {
-        return unexpected( "The parts of the object where the points are located are not neighbors" );
-    }
-    assert( isEdgeLoop( mesh.topology, res ) );
+        return unexpected( "Key vertices are located on different connected components" );
     return res;
 }
 

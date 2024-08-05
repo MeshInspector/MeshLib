@@ -153,19 +153,19 @@ jobs:
         run: msbuild -m source\MeshLibDotNet.sln -p:Configuration=${{ matrix.config }}
         
       - name: Generate NuGet specification       
-        if:   matrix.runner == 'windows-2022'
+        if:   ${{ inputs.UPLOAD_ARTIFACTS && matrix.runner == 'windows-2022' }}
         run: py -3 scripts\generate_nuget_spec.py ${{needs.setup.outputs.version_tag}}
         
       - name: Download NuGet Executable
-        if:   matrix.runner == 'windows-2022'
+        if:   ${{ inputs.UPLOAD_ARTIFACTS && matrix.runner == 'windows-2022' }}
         run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe
         
       - name: Build NuGet package
-        if:   matrix.runner == 'windows-2022'
+        if:   ${{ inputs.UPLOAD_ARTIFACTS && matrix.runner == 'windows-2022' }}
         run: nuget.exe pack source\Package.nuspec -OutputFileNamesWithoutVersion
           
       - name: Upload NuGet Package
-        if: matrix.runner == 'windows-2022'
+        if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.runner == 'windows-2022' }}
         uses: actions/upload-artifact@v4
         with:
           name: NuGetPackage
@@ -228,6 +228,7 @@ jobs:
           retention-days: 1
 
   windows-sign-package:
+    if: inputs.UPLOAD_ARTIFACTS
     needs: windows-build-test
     runs-on: [windows-x64-codesign]
     timeout-minutes: 10

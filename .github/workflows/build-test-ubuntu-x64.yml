@@ -74,12 +74,12 @@ jobs:
             c-compiler: /usr/bin/gcc-12
             use-cpp-23: "ON"
             build_mrcuda: "ON"
-            #- os: ubuntu24
-            #  compiler: Clang
-            #  cxx-compiler: /usr/bin/clang++-18
-            #  c-compiler: /usr/bin/clang-18
-            #  use-cpp-23: "ON"
-            #  build_mrcuda: "OFF"
+          - os: ubuntu24
+            compiler: Clang
+            cxx-compiler: /usr/bin/clang++-18
+            c-compiler: /usr/bin/clang-18
+            use-cpp-23: "ON"
+            build_mrcuda: "OFF"
           # - os: ubuntu24
             # compiler: GCC
             # cxx-compiler: /usr/bin/g++-13

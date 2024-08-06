@@ -13,6 +13,7 @@
     <ClInclude Include="MRWasm.h" />
     <ClInclude Include="MREigenCore.h" />
     <ClInclude Include="MRFmt.h" />
+    <ClInclude Include="MRFilesystem.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRPch.cpp" />

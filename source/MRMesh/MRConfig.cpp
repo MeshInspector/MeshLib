@@ -59,7 +59,8 @@ void Config::writeToFile()
 void Config::reset( const std::filesystem::path& filePath )
 {
 #ifndef __EMSCRIPTEN__
-    if ( std::filesystem::exists( filePath ) )
+    std::error_code ec;
+    if ( std::filesystem::exists( filePath, ec ) )
     {
         auto readRes = deserializeJsonValue( filePath );
         if ( !readRes.has_value() )

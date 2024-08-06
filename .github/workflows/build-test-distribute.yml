@@ -169,6 +169,11 @@ jobs:
     timeout-minutes: 20
     runs-on: windows-2022
     steps:
+    - name: Checkout
+        uses: actions/checkout@v4
+        with: 
+          submodules: recursive
+          
      - name: Generate NuGet specification
        run: py -3 scripts\generate_nuget_spec.py ${{needs.versioning-and-release-url.outputs.app_version}}
         

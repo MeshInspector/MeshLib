@@ -175,14 +175,14 @@ jobs:
          submodules: recursive
          
      - name: Download .NET Binaries Archive
-        uses: actions/download-artifact@v4
-        with:
-          pattern: WindowsArchive*
-          merge-multiple: true
+       uses: actions/download-artifact@v4
+       with:
+         pattern: WindowsArchive*
+         merge-multiple: true
 
-      - name: Extract Windows Binaries
-        run: |
-          tar -xvzf MREDist_DotNet.zip
+     - name: Extract Windows Binaries
+       run: |
+         tar -xvzf MREDist_DotNet.zip
           
      - name: Generate NuGet specification
        run: py -3 scripts\generate_nuget_spec.py ${{needs.versioning-and-release-url.outputs.app_version}}

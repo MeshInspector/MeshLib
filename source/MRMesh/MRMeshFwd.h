@@ -112,6 +112,7 @@ using EdgeBitSet = TaggedBitSet<EdgeTag>;
 using UndirectedEdgeBitSet = TaggedBitSet<UndirectedEdgeTag>;
 using PixelBitSet = TaggedBitSet<PixelTag>;
 using VoxelBitSet = TaggedBitSet<VoxelTag>;
+using RegionBitSet = TaggedBitSet<RegionTag>;
 using NodeBitSet = TaggedBitSet<NodeTag>;
 using ObjBitSet = TaggedBitSet<ObjTag>;
 using TextureBitSet = TaggedBitSet<TextureTag>;

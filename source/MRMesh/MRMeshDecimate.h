@@ -28,6 +28,9 @@ enum DecimateStrategy
  * 
  * \sa \ref decimateMesh
  */
+
+class EdgeId;
+
 struct DecimateSettings
 {  
     DecimateStrategy strategy = DecimateStrategy::MinimizeError;

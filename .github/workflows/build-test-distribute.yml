@@ -177,7 +177,7 @@ jobs:
      - name: Download .NET Binaries Archive
        uses: actions/download-artifact@v4
        with:
-         pattern: WindowsArchive*
+         pattern: DotNetArchive*
          merge-multiple: true
 
      - name: Extract Windows Binaries

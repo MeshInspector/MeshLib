@@ -215,6 +215,6 @@ jobs:
         if: ${{ inputs.UPLOAD_ARTIFACTS && matrix.runner == 'windows-2022' && matrix.config == 'Release' }}
         uses: actions/upload-artifact@v4
         with:
-          name: WindowsArchive_DotNet
-          path: MREDist_${{matrix.config}}.zip
+          name: DotNetArchive
+          path: MREDist_DotNet.zip 
           retention-days: 1

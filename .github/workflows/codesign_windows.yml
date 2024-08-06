@@ -1,27 +1,44 @@
-name: Codesign NuGet Ppackage
+name: Codesign Windows
 
 on:
-  release:
-    types: [ published ]
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+      app_version:
+        required: true
+        type: string
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release Tag'
+        required: true
+      app_version:
+        description: 'App Version'
+        required: true
 
 jobs:
- windows-sign-package:
-    needs: windows-build-test
-    runs-on: [windows-x64-codesign]
+  codesign:
     timeout-minutes: 10
+    runs-on: [windows-x64-codesign]
     steps:
-      - name: Download NuGet package from Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: NuGetPackage
-          merge-multiple: true
+      - name: Remove old local Windows MSIs
+        run: Remove-Item "MeshLib_*.nupkg"
+
+      - name: Download Windows MSI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download ${{inputs.tag}} `
+                              --repo $env:GITHUB_REPOSITORY `
+                              --pattern "MeshLib_${{inputs.app_version}}.nupkg"    
      
       - name: Sign NuGet package with certificate
         run: |
-          jsign --storetype ETOKEN --storepass "${{ secrets.WINDOWS_SIGNTOOL_KC_PARAM_TOKEN_PASSWORD }}" -tsaurl http://timestamp.digicert.com MeshLib.nupkg
+          jsign --storetype ETOKEN --storepass "${{ secrets.WINDOWS_SIGNTOOL_KC_PARAM_TOKEN_PASSWORD }}" -tsaurl http://timestamp.digicert.com MeshLib_${{inputs.app_version}}.nupkg
           nuget verify -All -Verbosity detailed MeshLib.nupkg
       
       - name: Upload signed NuGet package
         run: |
-          nuget push MeshLib.nupkg ${{ secrets.NUGET_API_KEY }} -Source https://api.nuget.org/v3/index.json
+          nuget push MeshLib_${{inputs.app_version}}.nupkg ${{ secrets.NUGET_API_KEY }} -Source https://api.nuget.org/v3/index.json

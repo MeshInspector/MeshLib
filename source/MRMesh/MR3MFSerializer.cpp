@@ -611,8 +611,9 @@ VoidOrErrStr Node::loadTexture2d_( const tinyxml2::XMLElement* xmlNode )
         return unexpected( std::string( "Texture2d node does not have 'path' attribute" ) );
 
     std::filesystem::path fullPath = loader->rootPath_ / innerPath;
-    if ( !std::filesystem::exists( fullPath ) )
-        return unexpected( std::string( "Texture2d does not exist: " ) + fullPath.string() );
+    std::error_code ec;
+    if ( !std::filesystem::exists( fullPath, ec ) )
+        return unexpected( std::string( "Texture2d does not exist: " ) + utf8string( fullPath ) );
 
     auto imageExp = ImageLoad::fromAnySupportedFormat( fullPath );
     if ( !imageExp )

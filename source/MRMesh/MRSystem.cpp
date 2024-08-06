@@ -437,7 +437,7 @@ bool OpenDocument( const std::filesystem::path& path )
     // "If the function succeeds, it returns a value greater than 32"
     if ( ( INT_PTR )result <= 32 )
     {
-        spdlog::warn( "Error opening {}, error code {}", path.string().c_str(), ( int )( INT_PTR )result );
+        spdlog::warn( "Error opening {}, error code {}", utf8string( path ), ( int )( INT_PTR )result );
         return false;
     }
     return true;

@@ -173,6 +173,16 @@ jobs:
        uses: actions/checkout@v4
        with: 
          submodules: recursive
+         
+     - name: Download .NET Binaries Archive
+        uses: actions/download-artifact@v4
+        with:
+          pattern: WindowsArchive*
+          merge-multiple: true
+
+      - name: Extract Windows Binaries
+        run: |
+          tar -xvzf MREDist_DotNet.zip
           
      - name: Generate NuGet specification
        run: py -3 scripts\generate_nuget_spec.py ${{needs.versioning-and-release-url.outputs.app_version}}
@@ -181,7 +191,7 @@ jobs:
        run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe
         
      - name: Build NuGet package
-       run: nuget.exe pack source\Package.nuspec -OutputFileNamesWithoutVersion
+       run: nuget.exe pack Package.nuspec -OutputFileNamesWithoutVersion
           
      - name: Upload NuGet Package
        uses: actions/upload-artifact@v4

@@ -4,8 +4,8 @@ import sys
 
 base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'..')
 path_to_sources = os.path.join(base_path,'source')
-path_to_objects = os.path.join(os.path.join(path_to_sources, 'x64'), 'Release')
-path_to_spec = os.path.join(path_to_sources, 'Package.nuspec')
+path_to_objects = base_path
+path_to_spec = os.path.join(base_path, 'Package.nuspec')
 
 excluded_modules = ['MRCommonPlugins', 'MRCuda', 'MRMeshC', 'MRViewer', 'MRMeshViewer', 'MRTest', 'MRTestC']
 path_to_copyright_header = os.path.join(os.path.dirname(os.path.abspath(__file__)),'copyright_header.txt')

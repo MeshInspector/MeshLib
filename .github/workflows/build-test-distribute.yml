@@ -30,7 +30,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: actions-ecosystem/action-get-latest-tag@v1    
+      - uses: actions-ecosystem/action-get-latest-tag@v1
         id: get-latest-tag
         
   prepare-image:

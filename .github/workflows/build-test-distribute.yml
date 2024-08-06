@@ -32,6 +32,7 @@ jobs:
 
       - uses: actions-ecosystem/action-get-latest-tag@v1    
         id: get-latest-tag
+        
   prepare-image:
     uses: ./.github/workflows/prepare-images.yml
     secrets: inherit

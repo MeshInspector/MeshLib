@@ -151,7 +151,7 @@ jobs:
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
 
       - name: Compile and link MRBind bindings
-        if: ${{ matrix.os == 'ubuntu24' }}
+        if: ${{ matrix.os == 'ubuntu24-off' }}
         env:
           CXX: ${{matrix.cxx-compiler}}
         run: make -f scripts/mrbind/generate.mk

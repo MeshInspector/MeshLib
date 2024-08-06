@@ -83,6 +83,15 @@ protected:
     virtual bool onMouseScroll_( float delta ) = 0;
 };
 
+struct MRVIEWER_CLASS MouseClickListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( MouseClickListener );
+    virtual ~MouseClickListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool onMouseClick_( MouseButton btn, int modifiers ) = 0;
+};
+
 struct MRVIEWER_CLASS CharPressedListener : ConnectionHolder
 {
     MR_ADD_CTOR_DELETE_MOVE( CharPressedListener );

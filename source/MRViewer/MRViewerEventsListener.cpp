@@ -32,6 +32,13 @@ void MouseScrollListener::connect( Viewer* viewer, int group, boost::signals2::c
     connection_ = viewer->mouseScrollSignal.connect( group, MAKE_SLOT( &MouseScrollListener::onMouseScroll_ ), pos );
 }
 
+void MouseClickListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
+{
+    if ( !viewer )
+        return;
+    connection_ = viewer->mouseClickSignal.connect( group, MAKE_SLOT( &MouseClickListener::onMouseClick_ ), pos );
+}
+
 void CharPressedListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
 {
     if ( !viewer )

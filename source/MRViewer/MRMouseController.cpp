@@ -31,6 +31,10 @@ EMSCRIPTEN_KEEPALIVE void emsDropEvents()
 namespace MR
 {
 
+// Maximum delay and offset for mouseClick
+static constexpr long long cMouseClickNs = 300'000'000; // 0.3s
+static constexpr int cMouseClickDist = 5;
+
 void MouseController::setMouseControl( const MouseControlKey& key, MouseMode mode )
 {
     auto newMapKey = mouseAndModToKey( key );
@@ -141,11 +145,20 @@ bool MouseController::checkConflicts()
     return usesLeftButton;
 }
 
-bool MouseController::preMouseDown_( MouseButton btn, int )
+bool MouseController::preMouseDown_( MouseButton btn, int mod )
 {
     resetAllIfNeeded_();
     if ( !downState_.any() )
         downMousePos_ = currentMousePos_;
+
+    // Click behavior is enabled only if it has listeners
+    if ( getViewerInstance().mouseClickSignal.num_slots() > 0 )
+    {
+        clickButton_ = btn; // Support click by one button only
+        clickPendingDown_ = NoButton;
+        clickModifiers_ = mod;
+        clickTime_ = std::chrono::steady_clock::now();
+    }
 
     downState_.set( int( btn ) );
     return false;
@@ -158,6 +171,13 @@ bool MouseController::mouseDown_( MouseButton btn, int mod )
 
     if ( downState_.count() > 1 )
         return false;
+
+    if ( clickButton_ != NoButton )
+    {
+        // Mouse down pending to be handled if mouse is actually moved
+        clickPendingDown_ = btn;
+        return false;
+    }
 
     auto& viewer = getViewerInstance();
     viewer.select_hovered_viewport();
@@ -176,9 +196,17 @@ bool MouseController::mouseDown_( MouseButton btn, int mod )
     return true;
 }
 
-bool MouseController::preMouseUp_( MouseButton btn, int )
+bool MouseController::preMouseUp_( MouseButton btn, int mod )
 {
     downState_.set( int( btn ), false );
+
+    if ( clickButton_ == btn )
+    {
+        if ( ( std::chrono::steady_clock::now() - clickTime_ ).count() < cMouseClickNs )
+            getViewerInstance().mouseClick( btn, mod );
+    }
+    clickButton_ = NoButton;
+
     if ( currentMode_ == MouseMode::None )
         return false;
 
@@ -196,8 +224,25 @@ bool MouseController::preMouseUp_( MouseButton btn, int )
     return false; // so others can override mouse up even if scene control was active
 }
 
-bool MouseController::preMouseMove_( int x, int y)
+bool MouseController::preMouseMove_( int x, int y )
 {
+    if ( clickButton_ != NoButton )
+    {
+        if ( std::abs( x - downMousePos_.x ) + std::abs( y - downMousePos_.y ) > cMouseClickDist ||
+             ( std::chrono::steady_clock::now() - clickTime_ ).count() > cMouseClickNs )
+        {
+            MouseButton btn = clickButton_;
+            clickButton_ = NoButton;
+            // Moved the mouse far/long enough - replay mouse down in original position
+            currentMousePos_ = downMousePos_;
+            if ( clickPendingDown_ == btn )
+                mouseDown_( btn, clickModifiers_ );
+            // Continue handling mouse move as if it was a single event from downMousePos_
+        }
+    }
+    if ( clickButton_ != NoButton )
+        return false;
+
     prevMousePos_ = currentMousePos_;
     currentMousePos_ = { x,y };
 

@@ -962,6 +962,7 @@ void Viewer::launchShut()
     mouseUpSignal = {};
     mouseMoveSignal = {};
     mouseScrollSignal = {};
+    mouseClickSignal = {};
     cursorEntranceSignal = {};
     charPressedSignal = {};
     keyUpSignal = {};
@@ -1418,6 +1419,11 @@ bool Viewer::mouseScroll( float delta_y )
         return true;
 
     return true;
+}
+
+bool Viewer::mouseClick( MouseButton button, int modifier )
+{
+    return mouseClickSignal( button, modifier );
 }
 
 bool Viewer::spaceMouseMove( const Vector3f& translate, const Vector3f& rotate )

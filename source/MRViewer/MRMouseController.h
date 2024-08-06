@@ -94,6 +94,13 @@ private:
     BitSet downState_;
     MouseMode currentMode_{ MouseMode::None };
 
+    // Variables related to mouseClick signal
+    MouseButton clickButton_{ NoButton };
+    MouseButton clickPendingDown_{ NoButton };
+    int clickModifiers_{};
+    std::chrono::steady_clock::time_point clickTime_{};
+    static constexpr MouseButton NoButton = MouseButton::Count;
+
     using MouseModeMap = HashMap<int, MouseMode>;
     using MouseModeBackMap = HashMap<MouseMode, int>;
 

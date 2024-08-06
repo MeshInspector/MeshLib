@@ -955,7 +955,7 @@ Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFrom3mf( con
     std::error_code ec;
 
     for ( auto const& dirEntry : DirectoryRecursive{ tmpFolder, ec } )
-        if ( !dirEntry.is_directory() )
+        if ( !dirEntry.is_directory( ec ) )
             files.push_back( dirEntry.path() );
 
     if ( files.empty() )

@@ -20,7 +20,18 @@ on:
 env:
   VCPKG-VERSION: '2024.07.12'
 
-jobs:
+jobs:          
+  setup:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    outputs:
+      version_tag: ${{ steps.get-latest-tag.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: actions-ecosystem/action-get-latest-tag@v1    
+        id: get-latest-tag
   prepare-image:
     uses: ./.github/workflows/prepare-images.yml
     secrets: inherit
@@ -160,18 +171,6 @@ jobs:
           name: DistributivesDotNet
           path: MeshLibDotNetDist.zip
           retention-days: 1
-          
-  setup:
-    timeout-minutes: 5
-    runs-on: ubuntu-latest
-    outputs:
-      version_tag: ${{ steps.get-latest-tag.outputs.tag }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - uses: actions-ecosystem/action-get-latest-tag@v1    
-        id: get-latest-tag
 
   update-nuget-package:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}

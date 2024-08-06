@@ -1,0 +1,27 @@
+name: Codesign NuGet Ppackage
+
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+
+jobs:
+ windows-sign-package:
+    needs: windows-build-test
+    runs-on: [windows-x64-codesign]
+    timeout-minutes: 10
+    steps:
+      - name: Download NuGet package from Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: NuGetPackage
+          merge-multiple: true
+     
+      - name: Sign NuGet package with certificate
+        run: |
+          jsign --storetype ETOKEN --storepass "${{ secrets.WINDOWS_SIGNTOOL_KC_PARAM_TOKEN_PASSWORD }}" -tsaurl http://timestamp.digicert.com MeshLib.nupkg
+          nuget verify -All -Verbosity detailed MeshLib.nupkg
+      
+      - name: Upload signed NuGet package
+        run: |
+          nuget push MeshLib.nupkg ${{ secrets.NUGET_API_KEY }} -Source https://api.nuget.org/v3/index.json

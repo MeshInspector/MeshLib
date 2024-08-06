@@ -42,7 +42,7 @@ COMPILER := $(CXX) $(file <$(makefile_dir)/compiler_only_flags.txt) -I$(MRBIND_S
 LINKER_OUTPUT := $(MODULE_OUTPUT_DIR)/mrmeshpy$(shell python3-config --extension-suffix)
 LINKER := $(CXX) -fuse-ld=lld
 LINKER_FLAGS := $(shell pkg-config --libs python3-embed) -L$(DEPS_BASE_DIR)/lib -L$(MESHLIB_SHLIB_DIR) -lMRMesh -shared $(file <$(makefile_dir)/linker_flags.txt)
-NUM_FRAGMENTS := 4
+NUM_FRAGMENTS := 5
 
 override mrbind_vars = \
 	INPUT_DIRS=$(call quote,$(INPUT_DIRS)) \

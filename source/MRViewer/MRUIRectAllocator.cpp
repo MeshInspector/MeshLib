@@ -38,7 +38,7 @@ RectAllocator::FindFreeRectResult RectAllocator::findFreeRect(
         return ret;
     };
 
-    visitedCoords.try_emplace( preferredRect.min, 0 );
+    visitedCoords.try_emplace( preferredRect.min, 0.0f );
     coordsToVisitHeap.push_back( { .pos = preferredRect.min, .cost = 0, .overlapWithBounds = getOverlapWithBounds( preferredRect ) } );
 
     auto heapComparator = []( const CoordsToVisit& a, const CoordsToVisit& b )

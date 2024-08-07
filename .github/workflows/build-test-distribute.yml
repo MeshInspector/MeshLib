@@ -245,7 +245,7 @@ jobs:
             mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.versioning-and-release-url.outputs.app_version }}}"
           done
           for PKG_FILE in MeshLib*.nupkg ; do
-            mv "$PKG_FILE" "${PKG_FILE/Dist/MeshLib_${{ needs.versioning-and-release-url.outputs.app_version }}}"
+            mv "$PKG_FILE" "${PKG_FILE/MeshLib/MeshLib_${{ needs.versioning-and-release-url.outputs.app_version }}}"
           done
           for PKG_FILE in meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg; do
             mv "$PKG_FILE" "${PKG_FILE/meshlib/meshlib_${{ needs.versioning-and-release-url.outputs.app_version }}}"

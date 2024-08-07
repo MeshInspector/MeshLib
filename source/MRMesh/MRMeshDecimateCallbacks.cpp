@@ -5,27 +5,26 @@
 namespace MR
 {
 
-PreCollapseCallback objectMeshPreCollapseCallback( const Mesh& mesh, const MeshParams& params )
+PreCollapseCallback meshAttributesUpdatePreCollapseCb( const Mesh& mesh, const MeshAttributesToUpdate& params )
 {
     if ( params.uvCoords && params.colorMap )
     {
-        auto uvFunc = preColapseVertAttribute( mesh, *params.uvCoords );
-        auto colorFunc = preColapseVertAttribute( mesh, *params.colorMap );
+        auto uvFunc = preCollapseVertAttribute( mesh, *params.uvCoords );
+        auto colorFunc = preCollapseVertAttribute( mesh, *params.colorMap );
         auto preCollapse = [=] ( EdgeId edgeToCollapse, const Vector3f& newEdgeOrgPos )
         {
-            bool res = true;
-            res = res && uvFunc( edgeToCollapse, newEdgeOrgPos );
-            res = res && colorFunc( edgeToCollapse, newEdgeOrgPos );
-            return res;
+            uvFunc( edgeToCollapse, newEdgeOrgPos );
+            colorFunc( edgeToCollapse, newEdgeOrgPos );
+            return true;
         };
 
         return preCollapse;
     }
 
     if ( params.uvCoords )
-        return preColapseVertAttribute( mesh, *params.uvCoords );
+        return preCollapseVertAttribute( mesh, *params.uvCoords );
     if ( params.colorMap )
-        return preColapseVertAttribute( mesh, *params.colorMap );
+        return preCollapseVertAttribute( mesh, *params.colorMap );
 
     return {};
 }

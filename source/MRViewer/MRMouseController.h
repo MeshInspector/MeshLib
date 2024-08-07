@@ -4,6 +4,7 @@
 #include "MRMesh/MRBitSet.h"
 #include "MRMesh/MRphmap.h"
 #include "MRMouse.h"
+#include "MRAsyncTimer.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRVector3.h"
 #include <optional>
@@ -95,11 +96,10 @@ private:
     MouseMode currentMode_{ MouseMode::None };
 
     // Variables related to mouseClick signal
-    MouseButton clickButton_{ NoButton };
-    MouseButton clickPendingDown_{ NoButton };
+    MouseButton clickButton_{ MouseButton::NoButton };
+    MouseButton clickPendingDown_{ MouseButton::NoButton };
     int clickModifiers_{};
-    std::chrono::steady_clock::time_point clickTime_{};
-    static constexpr MouseButton NoButton = MouseButton::Count;
+    Time clickTime_{};
 
     using MouseModeMap = HashMap<int, MouseMode>;
     using MouseModeBackMap = HashMap<MouseMode, int>;

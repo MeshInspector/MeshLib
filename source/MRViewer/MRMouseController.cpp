@@ -155,9 +155,9 @@ bool MouseController::preMouseDown_( MouseButton btn, int mod )
     if ( getViewerInstance().mouseClickSignal.num_slots() > 0 )
     {
         clickButton_ = btn; // Support click by one button only
-        clickPendingDown_ = NoButton;
+        clickPendingDown_ = MouseButton::NoButton;
         clickModifiers_ = mod;
-        clickTime_ = std::chrono::steady_clock::now();
+        clickTime_ = std::chrono::system_clock::now();
     }
 
     downState_.set( int( btn ) );
@@ -172,7 +172,7 @@ bool MouseController::mouseDown_( MouseButton btn, int mod )
     if ( downState_.count() > 1 )
         return false;
 
-    if ( clickButton_ != NoButton )
+    if ( clickButton_ != MouseButton::NoButton )
     {
         // Mouse down pending to be handled if mouse is actually moved
         clickPendingDown_ = btn;
@@ -202,10 +202,10 @@ bool MouseController::preMouseUp_( MouseButton btn, int mod )
 
     if ( clickButton_ == btn )
     {
-        if ( ( std::chrono::steady_clock::now() - clickTime_ ).count() < cMouseClickNs )
+        if ( ( std::chrono::system_clock::now() - clickTime_ ).count() < cMouseClickNs )
             getViewerInstance().mouseClick( btn, mod );
     }
-    clickButton_ = NoButton;
+    clickButton_ = MouseButton::NoButton;
 
     if ( currentMode_ == MouseMode::None )
         return false;
@@ -226,13 +226,13 @@ bool MouseController::preMouseUp_( MouseButton btn, int mod )
 
 bool MouseController::preMouseMove_( int x, int y )
 {
-    if ( clickButton_ != NoButton )
+    if ( clickButton_ != MouseButton::NoButton )
     {
         if ( std::abs( x - downMousePos_.x ) + std::abs( y - downMousePos_.y ) > cMouseClickDist ||
-             ( std::chrono::steady_clock::now() - clickTime_ ).count() > cMouseClickNs )
+             ( std::chrono::system_clock::now() - clickTime_ ).count() > cMouseClickNs )
         {
             MouseButton btn = clickButton_;
-            clickButton_ = NoButton;
+            clickButton_ = MouseButton::NoButton;
             // Moved the mouse far/long enough - replay mouse down in original position
             currentMousePos_ = downMousePos_;
             if ( clickPendingDown_ == btn )
@@ -240,7 +240,7 @@ bool MouseController::preMouseMove_( int x, int y )
             // Continue handling mouse move as if it was a single event from downMousePos_
         }
     }
-    if ( clickButton_ != NoButton )
+    if ( clickButton_ != MouseButton::NoButton )
         return false;
 
     prevMousePos_ = currentMousePos_;

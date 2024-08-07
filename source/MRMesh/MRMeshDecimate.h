@@ -28,7 +28,6 @@ enum DecimateStrategy
  * 
  * \sa \ref decimateMesh
  */
-
 struct DecimateSettings
 {  
     DecimateStrategy strategy = DecimateStrategy::MinimizeError;

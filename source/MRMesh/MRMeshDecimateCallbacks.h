@@ -1,6 +1,8 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRColor.h"
+#include "MRMesh/MRVector2.h"
 
 #include <functional>
 
@@ -39,5 +41,7 @@ static std::function<bool( EdgeId edgeToCollapse, const Vector3f& newEdgeOrgPos 
 
     return preCollapse;
 }
+
+std::function<bool( EdgeId edgeToCollapse, const Vector3f& newEdgeOrgPos )> creatorPreCollapseFunc( const Mesh& mesh, VertUVCoords& uvCoords, VertColors& colorMap );
 
 }

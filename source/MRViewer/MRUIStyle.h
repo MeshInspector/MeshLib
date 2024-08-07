@@ -203,6 +203,14 @@ MRVIEWER_API bool inputTextMultiline( const char* label, std::string& str, const
 /// This overload is for arrays, as opposed to `std::string`s.
 MRVIEWER_API bool inputTextIntoArrayMultiline( const char* label, char* buf, size_t buf_size, const ImVec2& size = ImVec2(), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
 
+struct CachedTextSize
+{
+    std::optional<ImVec2> cachedSize; // Reset this when manually modifying the text.
+};
+/// This version adds a horizontal scrollbar. Also it never draws the label, and uses full window width by default (so you can pass `0` as width).
+MRVIEWER_API bool inputTextMultilineFullyScrollable( CachedTextSize& cache, const char* label, std::string& str, const ImVec2& size = ImVec2(), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
+MRVIEWER_API bool inputTextIntoArrayMultilineFullyScrollable( CachedTextSize& cache, const char* label, char* buf, size_t buf_size, const ImVec2& size = ImVec2(), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
+
 /// draw input text box with text aligned by center
 MRVIEWER_API bool inputTextCentered( const char* label, std::string& str, float width = 0.0f, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
 

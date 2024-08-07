@@ -26,6 +26,9 @@ foreach(TARGET ${EXAMPLES})
   target_link_libraries(${TARGET} PRIVATE MeshLib::MRMesh TBB::tbb)
 endforeach()
 
+find_package(fmt REQUIRED)
+find_package(spdlog REQUIRED)
+
 add_executable(MRBasedMainFunc MRBasedMainFunc.dox.cpp)
 target_include_directories(MRBasedMainFunc PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
-target_link_libraries(MRBasedMainFunc PRIVATE MeshLib::MRMesh MeshLib::MRViewer)
+target_link_libraries(MRBasedMainFunc PRIVATE MeshLib::MRMesh MeshLib::MRViewer fmt spdlog)

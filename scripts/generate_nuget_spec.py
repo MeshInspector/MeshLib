@@ -3,9 +3,10 @@ import shutil
 import sys
 
 base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'..')
-path_to_sources = os.path.join(base_path,'source')
 path_to_objects = base_path
 path_to_spec = os.path.join(base_path, 'Package.nuspec')
+print( path_to_spec )
+print('\n')
 
 excluded_modules = ['MRCommonPlugins', 'MRCuda', 'MRMeshC', 'MRViewer', 'MRMeshViewer', 'MRTest', 'MRTestC']
 path_to_copyright_header = os.path.join(os.path.dirname(os.path.abspath(__file__)),'copyright_header.txt')
@@ -43,7 +44,9 @@ folder = os.walk(path_to_objects)
 for address, dirs, files in folder:
 	for file in files:
 		if ((file.endswith('.dll') and not any(map(file.startswith, excluded_modules)))):
-			f.write('\t\t<file src="./')
+            src = os.path.join(address,file)
+            print(src)
+			f.write('\t\t<file src="./source/x64/Release/')
 			f.write(file)
 			f.write('" target="lib/net8.0/"></file>\n')
             

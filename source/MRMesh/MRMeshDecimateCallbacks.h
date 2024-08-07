@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRMesh/MRMesh.h"
-#include "MRMesh/MRColor.h"
 
 namespace MR
 {

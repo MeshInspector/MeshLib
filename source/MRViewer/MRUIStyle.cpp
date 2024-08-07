@@ -67,16 +67,16 @@ private:
 
 bool checkKey( ImGuiKey passedKey )
 {
-    if ( passedKey == ImGuiKey_None )
+    if ( passedKey == ImGuiKey_None || ImGui::GetIO().KeyMods != ImGuiMod_None )
         return false;
 
     reserveKeyEvent( passedKey );
     bool pressed = false;
     if ( passedKey == ImGuiKey_Enter || passedKey == ImGuiKey_KeypadEnter )
-        pressed =  ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter );
+        pressed = ImGui::IsKeyPressed( ImGuiKey_Enter ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter );
     else
         pressed = ImGui::IsKeyPressed( passedKey );
-    return pressed && ImGui::GetIO().KeyMods == ImGuiMod_None;
+    return pressed;
 }
 
 //////////////////////////////////////////////////////////////////////////

@@ -6,15 +6,16 @@
 #include "MRVolumeIndexer.h"
 #include "MRMeshProject.h"
 #include "MRAABBTree.h"
+#include "MRDipole.h"
 
 namespace MR
 {
 
 FastWindingNumber::FastWindingNumber( const Mesh & mesh ) :
-    mesh_( mesh ), 
-    tree_( mesh.getAABBTree() )
+    mesh_( mesh ),
+    tree_( mesh.getAABBTree() ),
+    dipoles_( mesh.getDipoles() )
 {
-    calcDipoles( dipoles_, tree_, mesh_ );
 }
 
 inline float FastWindingNumber::calc_( const Vector3f & q, float beta, FaceId skipFace ) const

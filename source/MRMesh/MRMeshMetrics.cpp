@@ -45,9 +45,12 @@ double calcCombinedFillMetric( const Mesh & mesh, const FaceBitSet & filledRegio
                 continue; // do not examine edge twice
             const auto a = mesh.topology.org( e );
             const auto b = mesh.topology.dest( e );
-            const auto l = mesh.topology.dest( mesh.topology.next( e ) );
-            const auto r = mesh.topology.dest( mesh.topology.prev( e ) );
-            res = cm( res, metric.edgeMetric( a, b, l, r ) );
+            if ( mesh.topology.left( e ) && mesh.topology.right( e ) )
+            {
+                const auto l = mesh.topology.dest( mesh.topology.next( e ) );
+                const auto r = mesh.topology.dest( mesh.topology.prev( e ) );
+                res = cm( res, metric.edgeMetric( a, b, l, r ) );
+            }
         }
     }
     return res;

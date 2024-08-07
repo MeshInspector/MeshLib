@@ -1,11 +1,14 @@
 #pragma once
 
+#include "MRMacros.h"
+#include <type_traits>
+
 namespace MR
 {
- 
+
 /// affine transformation: y = A*x + b, where A in VxV, and b in V
 /// \ingroup MathGroup
-template <typename V> 
+template <typename V>
 struct AffineXf
 {
     using T = typename V::ValueType;
@@ -31,7 +34,7 @@ struct AffineXf
     /// for example if this is a rigid transformation, then only rotates input vector
     [[nodiscard]] constexpr V linearOnly( const V & x ) const noexcept { return A * x; }
     /// computes inverse transformation
-    [[nodiscard]] constexpr AffineXf inverse() const noexcept;
+    [[nodiscard]] constexpr AffineXf inverse() const noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> );
 };
 
 /// \related AffineXf
@@ -39,26 +42,26 @@ struct AffineXf
 
 /// composition of two transformations:
 /// \f( y = (u * v) ( x ) = u( v( x ) ) = ( u.A * ( v.A * x + v.b ) + u.b ) = ( u.A * v.A ) * x + ( u.A * v.b + u.b ) \f)
-template <typename V> 
+template <typename V>
 inline AffineXf<V> operator * ( const AffineXf<V> & u, const AffineXf<V> & v )
     { return { u.A * v.A, u.A * v.b + u.b }; }
 
 ///
-template <typename V> 
+template <typename V>
 inline bool operator == ( const AffineXf<V> & a, const AffineXf<V> & b )
 {
     return a.A == b.A && a.b == b.b;
 }
 
 ///
-template <typename V> 
+template <typename V>
 inline bool operator != ( const AffineXf<V> & a, const AffineXf<V> & b )
 {
     return !( a == b );
 }
 
-template <typename V> 
-inline constexpr AffineXf<V> AffineXf<V>::inverse() const noexcept
+template <typename V>
+inline constexpr AffineXf<V> AffineXf<V>::inverse() const noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> )
 {
     AffineXf<V> res;
     res.A = A.inverse();

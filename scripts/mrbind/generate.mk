@@ -31,7 +31,7 @@ MODULE_OUTPUT_DIR := $(MESHLIB_SHLIB_DIR)/meshlib2
 MRBIND_FLAGS := $(file <$(makefile_dir)/mrbind_flags.txt)
 
 # Those variables are for mrbind/scripts/apply_to_files.mk
-INPUT_DIRS := $(makefile_dir)/../../source/MRMesh
+INPUT_DIRS := $(makefile_dir)/../../source/MRMesh $(makefile_dir)
 INPUT_FILES_BLACKLIST := $(file <$(makefile_dir)/input_file_blacklist.txt)
 OUTPUT_DIR := build/binds
 INPUT_GLOBS := *.h

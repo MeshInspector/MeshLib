@@ -31,9 +31,9 @@ struct Matrix2
     static constexpr Matrix2 scale( T sx, T sy ) noexcept { return Matrix2( { sx, T(0) }, { T(0), sy } ); }
     static constexpr Matrix2 scale( const Vector2<T> & s ) noexcept { return Matrix2( { s.x, T(0) }, { T(0), s.y } ); }
     /// creates matrix representing rotation around origin on given angle
-    static constexpr Matrix2 rotation( T angle ) noexcept;
+    static constexpr Matrix2 rotation( T angle ) noexcept MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
     /// creates matrix representing rotation that after application to (from) makes (to) vector
-    static constexpr Matrix2 rotation( const Vector2<T> & from, const Vector2<T> & to ) noexcept;
+    static constexpr Matrix2 rotation( const Vector2<T> & from, const Vector2<T> & to ) noexcept MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
     /// constructs a matrix from its 2 rows
     static constexpr Matrix2 fromRows( const Vector2<T> & x, const Vector2<T> & y ) noexcept { return Matrix2( x, y ); }
     /// constructs a matrix from its 2 columns;
@@ -51,18 +51,24 @@ struct Matrix2
     constexpr T trace() const noexcept { return x.x + y.y; }
     /// compute sum of squared matrix elements
     constexpr T normSq() const noexcept { return x.lengthSq() + y.lengthSq(); }
-    constexpr T norm() const noexcept { return std::sqrt( normSq() ); }
+    constexpr auto norm() const noexcept
+    {
+        // Calling `sqrt` this way to hopefully support boost.multiprecision numbers.
+        // Returning `auto` to not break on integral types.
+        using std::sqrt;
+        return sqrt( normSq() );
+    }
     /// computes determinant of the matrix
     constexpr T det() const noexcept;
     /// computes inverse matrix
-    constexpr Matrix2<T> inverse() const noexcept;
+    constexpr Matrix2<T> inverse() const noexcept MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
     /// computes transposed matrix
     constexpr Matrix2<T> transposed() const noexcept;
 
     Matrix2 & operator +=( const Matrix2<T> & b ) { x += b.x; y += b.y; return * this; }
     Matrix2 & operator -=( const Matrix2<T> & b ) { x -= b.x; y -= b.y; return * this; }
     Matrix2 & operator *=( T b ) { x *= b; y *= b; return * this; }
-    Matrix2 & operator /=( T b ) 
+    Matrix2 & operator /=( T b )
     {
         if constexpr ( std::is_integral_v<T> )
             { x /= b; y /= b; return * this; }
@@ -135,7 +141,7 @@ inline Matrix2<T> operator /( Matrix2<T> b, T a )
     { b /= a; return b; }
 
 template <typename T>
-constexpr Matrix2<T> Matrix2<T>::rotation( T angle ) noexcept
+constexpr Matrix2<T> Matrix2<T>::rotation( T angle ) noexcept MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
 {
     T c = cos( angle );
     T s = sin( angle );
@@ -146,7 +152,7 @@ constexpr Matrix2<T> Matrix2<T>::rotation( T angle ) noexcept
 }
 
 template <typename T>
-constexpr Matrix2<T> Matrix2<T>::rotation( const Vector2<T> & from, const Vector2<T> & to ) noexcept
+constexpr Matrix2<T> Matrix2<T>::rotation( const Vector2<T> & from, const Vector2<T> & to ) noexcept MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
 {
     const auto x = cross( from, to );
     if ( x > 0 )
@@ -165,7 +171,7 @@ constexpr T Matrix2<T>::det() const noexcept
 }
 
 template <typename T>
-constexpr Matrix2<T> Matrix2<T>::inverse() const noexcept
+constexpr Matrix2<T> Matrix2<T>::inverse() const noexcept MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
 {
     auto det = this->det();
     if ( det == 0 )

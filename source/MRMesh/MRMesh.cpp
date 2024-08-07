@@ -1138,12 +1138,12 @@ const AABBTreePoints & Mesh::getAABBTreePoints() const
 
 const Dipoles & Mesh::getDipoles() const
 {
+    if ( auto pRes = dipolesOwner_.get() )
+        return *pRes; // fast path without tree access
     const auto & tree = getAABBTree(); // must be ready before lambda body for single-threaded Emscripten
     const auto & res = dipolesOwner_.getOrCreate(
-        [this, &tree]{
-            Dipoles dipoles;
-            calcDipoles( dipoles, tree, *this );
-            return dipoles;
+        [this, &tree] {
+            return calcDipoles( tree, *this );
         } );
     assert( res.size() == tree.nodes().size() );
     return res;

@@ -2,11 +2,7 @@
 
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
-#include "MRDipole.h"
-#include "MRVector.h"
 #include "MRId.h"
-#include <array>
-#include <string>
 
 namespace MR
 {
@@ -101,12 +97,13 @@ public:
     /// <param name="gridToMeshXf">transform from integer grid locations to voxel's centers in mesh reference frame</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
     MRMESH_API VoidOrErrStr calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) override;
+
 private:
     [[nodiscard]] float calc_( const Vector3f & q, float beta, FaceId skipFace = {} ) const;
 
     const Mesh & mesh_;
     const AABBTree & tree_;
-    Dipoles dipoles_;
+    const Dipoles & dipoles_;
 };
 
 } // namespace MR

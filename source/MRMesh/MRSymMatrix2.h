@@ -6,7 +6,7 @@
 
 namespace MR
 {
- 
+
 /// symmetric 2x2 matrix
 /// \ingroup MatrixGroup
 template <typename T>
@@ -37,7 +37,7 @@ struct SymMatrix2
     SymMatrix2 & operator +=( const SymMatrix2<T> & b ) { xx += b.xx; xy += b.xy; yy += b.yy; return * this; }
     SymMatrix2 & operator -=( const SymMatrix2<T> & b ) { xx -= b.xx; xy -= b.xy; yy -= b.yy; return * this; }
     SymMatrix2 & operator *=( T b ) { xx *= b; xy *= b; yy *= b; return * this; }
-    SymMatrix2 & operator /=( T b ) 
+    SymMatrix2 & operator /=( T b )
     {
         if constexpr ( std::is_integral_v<T> )
             { xx /= b; xy /= b; yy /= b; return * this; }
@@ -48,36 +48,36 @@ struct SymMatrix2
     /// returns eigenvalues of the matrix in ascending order (diagonal matrix L), and
     /// optionally returns corresponding unit eigenvectors in the rows of orthogonal matrix V,
     /// M*V^T = V^T*L; M = V^T*L*V
-    Vector2<T> eigens( Matrix2<T> * eigenvectors = nullptr ) const;
+    Vector2<T> eigens( Matrix2<T> * eigenvectors = nullptr ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
     /// computes not-unit eigenvector corresponding to a not-repeating eigenvalue
-    Vector2<T> eigenvector( T eigenvalue ) const;
+    Vector2<T> eigenvector( T eigenvalue ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
     /// computes not-unit eigenvector corresponding to maximum eigenvalue
-    Vector2<T> maxEigenvector() const;
+    Vector2<T> maxEigenvector() const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
 
     /// for not-degenerate matrix returns just inverse matrix, otherwise
     /// returns degenerate matrix, which performs inversion on not-kernel subspace;
     /// \param tol relative epsilon-tolerance for too small number detection
     /// \param rank optional output for this matrix rank according to given tolerance
     /// \param space rank=1: unit direction of solution line, rank=2: zero vector
-    SymMatrix2<T> pseudoinverse( T tol = std::numeric_limits<T>::epsilon(), int * rank = nullptr, Vector2<T> * space = nullptr ) const;
+    SymMatrix2<T> pseudoinverse( T tol = std::numeric_limits<T>::epsilon(), int * rank = nullptr, Vector2<T> * space = nullptr ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
 };
 
 /// \related SymMatrix2
 /// \{
 
 /// x = a * b
-template <typename T> 
+template <typename T>
 inline Vector2<T> operator *( const SymMatrix2<T> & a, const Vector2<T> & b )
 {
-    return 
-    { 
+    return
+    {
         a.xx * b.x + a.xy * b.y,
         a.xy * b.x + a.yy * b.y
     };
 }
 
 /// x = a * a^T
-template <typename T> 
+template <typename T>
 inline SymMatrix2<T> outerSquare( const Vector2<T> & a )
 {
     SymMatrix2<T> res;
@@ -88,7 +88,7 @@ inline SymMatrix2<T> outerSquare( const Vector2<T> & a )
 }
 
 /// x = k * a * a^T
-template <typename T> 
+template <typename T>
 inline SymMatrix2<T> outerSquare( T k, const Vector2<T> & a )
 {
     const auto ka = k * a;
@@ -99,41 +99,41 @@ inline SymMatrix2<T> outerSquare( T k, const Vector2<T> & a )
     return res;
 }
 
-template <typename T> 
+template <typename T>
 inline bool operator ==( const SymMatrix2<T> & a, const SymMatrix2<T> & b )
     { return a.xx = b.xx && a.xy = b.xy && a.yy = b.yy; }
 
-template <typename T> 
+template <typename T>
 inline bool operator !=( const SymMatrix2<T> & a, const SymMatrix2<T> & b )
     { return !( a == b ); }
 
-template <typename T> 
+template <typename T>
 inline SymMatrix2<T> operator +( const SymMatrix2<T> & a, const SymMatrix2<T> & b )
     { SymMatrix2<T> res{ a }; res += b; return res; }
 
-template <typename T> 
+template <typename T>
 inline SymMatrix2<T> operator -( const SymMatrix2<T> & a, const SymMatrix2<T> & b )
     { SymMatrix2<T> res{ a }; res -= b; return res; }
 
-template <typename T> 
+template <typename T>
 inline SymMatrix2<T> operator *( T a, const SymMatrix2<T> & b )
     { SymMatrix2<T> res{ b }; res *= a; return res; }
 
-template <typename T> 
+template <typename T>
 inline SymMatrix2<T> operator *( const SymMatrix2<T> & b, T a )
     { SymMatrix2<T> res{ b }; res *= a; return res; }
 
-template <typename T> 
+template <typename T>
 inline SymMatrix2<T> operator /( SymMatrix2<T> b, T a )
     { b /= a; return b; }
 
-template <typename T> 
+template <typename T>
 constexpr T SymMatrix2<T>::det() const noexcept
 {
     return xx * yy - xy * xy;
 }
 
-template <typename T> 
+template <typename T>
 constexpr SymMatrix2<T> SymMatrix2<T>::inverse( T det ) const noexcept
 {
     if ( det == 0 )
@@ -145,8 +145,8 @@ constexpr SymMatrix2<T> SymMatrix2<T>::inverse( T det ) const noexcept
     return res;
 }
 
-template <typename T> 
-Vector2<T> SymMatrix2<T>::eigens( Matrix2<T> * eigenvectors ) const
+template <typename T>
+Vector2<T> SymMatrix2<T>::eigens( Matrix2<T> * eigenvectors ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
 {
     //https://en.wikipedia.org/wiki/Eigenvalue_algorithm#2%C3%972_matrices
     const auto tr = trace();
@@ -171,8 +171,8 @@ Vector2<T> SymMatrix2<T>::eigens( Matrix2<T> * eigenvectors ) const
     return eig;
 }
 
-template <typename T> 
-Vector2<T> SymMatrix2<T>::eigenvector( T eigenvalue ) const
+template <typename T>
+Vector2<T> SymMatrix2<T>::eigenvector( T eigenvalue ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
 {
     const Vector2<T> row0( xx - eigenvalue, xy );
     const Vector2<T> row1( xy, yy - eigenvalue );
@@ -182,8 +182,8 @@ Vector2<T> SymMatrix2<T>::eigenvector( T eigenvalue ) const
     return lsq0 >= lsq1 ? row0.perpendicular() : row1.perpendicular();
 }
 
-template <typename T> 
-Vector2<T> SymMatrix2<T>::maxEigenvector() const
+template <typename T>
+Vector2<T> SymMatrix2<T>::maxEigenvector() const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
 {
     const auto tr = trace();
     const auto q = tr / 2;
@@ -196,8 +196,8 @@ Vector2<T> SymMatrix2<T>::maxEigenvector() const
     return eigenvector( q + p );
 }
 
-template <typename T> 
-SymMatrix2<T> SymMatrix2<T>::pseudoinverse( T tol, int * rank, Vector2<T> * space ) const
+template <typename T>
+SymMatrix2<T> SymMatrix2<T>::pseudoinverse( T tol, int * rank, Vector2<T> * space ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
 {
     SymMatrix2<T> res;
     Matrix2<T> eigenvectors;

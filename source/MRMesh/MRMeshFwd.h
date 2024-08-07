@@ -112,6 +112,7 @@ using EdgeBitSet = TaggedBitSet<EdgeTag>;
 using UndirectedEdgeBitSet = TaggedBitSet<UndirectedEdgeTag>;
 using PixelBitSet = TaggedBitSet<PixelTag>;
 using VoxelBitSet = TaggedBitSet<VoxelTag>;
+using RegionBitSet = TaggedBitSet<RegionTag>;
 using NodeBitSet = TaggedBitSet<NodeTag>;
 using ObjBitSet = TaggedBitSet<ObjTag>;
 using TextureBitSet = TaggedBitSet<TextureTag>;
@@ -606,17 +607,4 @@ struct VertDuplication;
 #       define MR_UNREACHABLE { assert( false ); return {}; }
 #       define MR_UNREACHABLE_NO_RETURN assert( false );
 #   endif
-#endif
-
-// If the compiler supports `requires`, expands to `requires(...)`. Otherwise to nothing.
-// This is primarily useful for code that must be usable in Cuda, since everywhere else we're free to use C++20 and newer.
-// While Clang 14 technically supports `requires`, we're getting a few weird issues with it (make a nested aggregate class,
-//   in the enclosing class make a `MR::Vector` of it, observe that `std::default_initializable` gets baked as `false` on it,
-//   disabling some member functions such as `.resize()`).
-#if __cpp_concepts && __has_include(<concepts>) && !(defined(__clang__) && __clang_major__ <= 14) && !(defined(__GNUC__) && !defined(__clang__) && __GNUC__ <= 12)
-#   define MR_REQUIRES_IF_SUPPORTED(...) requires(__VA_ARGS__)
-#   define MR_HAS_REQUIRES 1
-#else
-#   define MR_REQUIRES_IF_SUPPORTED(...)
-#   define MR_HAS_REQUIRES 0
 #endif

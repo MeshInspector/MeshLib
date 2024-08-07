@@ -44,8 +44,8 @@ folder = os.walk(path_to_objects)
 for address, dirs, files in folder:
 	for file in files:
 		if ((file.endswith('.dll') and not any(map(file.startswith, excluded_modules)))):
-            src = os.path.join(address,file)
-            print(src)
+        	src = os.path.join(address,file)
+        	print(src)
 			f.write('\t\t<file src="./source/x64/Release/')
 			f.write(file)
 			f.write('" target="lib/net8.0/"></file>\n')

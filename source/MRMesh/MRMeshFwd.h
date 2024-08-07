@@ -378,6 +378,8 @@ using FacePredicate = std::function<bool( FaceId )>;
 using EdgePredicate = std::function<bool( EdgeId )>;
 using UndirectedEdgePredicate = std::function<bool( UndirectedEdgeId )>;
 
+using PreCollapseCallback = std::function<bool( EdgeId edgeToCollapse, const Vector3f& newEdgeOrgPos )>;
+
 template <typename T>
 [[nodiscard]] inline bool contains( const std::function<bool( Id<T> )> & pred, Id<T> id )
 {

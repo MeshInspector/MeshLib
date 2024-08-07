@@ -8,9 +8,9 @@
 
 namespace MR
 {
-
+// add comment
 template <typename T>
-static std::function<bool( EdgeId edgeToCollapse, const Vector3f& newEdgeOrgPos )> preColapseVertAttribute( const Mesh& mesh, T& data )
+static PreCollapseCallback preColapseVertAttribute( const Mesh& mesh, Vector<T, VertId>& data )
 {
     auto preCollapse = [&] ( EdgeId edgeToCollapse, const Vector3f& newEdgeOrgPos )
     {
@@ -42,6 +42,12 @@ static std::function<bool( EdgeId edgeToCollapse, const Vector3f& newEdgeOrgPos 
     return preCollapse;
 }
 
-std::function<bool( EdgeId edgeToCollapse, const Vector3f& newEdgeOrgPos )> creatorPreCollapseFunc( const Mesh& mesh, VertUVCoords& uvCoords, VertColors& colorMap );
+struct MeshParams
+{
+    VertUVCoords* uvCoords = nullptr;
+    VertColors* colorMap = nullptr;
+};
+
+MRMESH_API PreCollapseCallback objectMeshPreCollapseCallback( const Mesh& mesh, const MeshParams& paras );
 
 }

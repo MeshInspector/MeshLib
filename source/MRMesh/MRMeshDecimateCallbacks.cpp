@@ -5,24 +5,29 @@
 namespace MR
 {
 
-std::function<bool( EdgeId edgeToCollapse, const Vector3f& newEdgeOrgPos )> creatorPreCollapseFunc( const Mesh & mesh, VertUVCoords & uvCoords, VertColors & colorMap )
+PreCollapseCallback objectMeshPreCollapseCallback( const Mesh& mesh, const MeshParams& params )
 {
-    if ( !uvCoords.empty() )
-        return preColapseVertAttribute( mesh, uvCoords );
-    if ( !colorMap.empty() )
-        return preColapseVertAttribute( mesh, colorMap );
-
-    auto uvFunc = preColapseVertAttribute( mesh, uvCoords );
-    auto colorFunc = preColapseVertAttribute( mesh, colorMap );
-    auto preCollapse = [=] ( EdgeId edgeToCollapse, const Vector3f& newEdgeOrgPos )
+    if ( params.uvCoords && params.colorMap )
     {
-        bool res = true;
-        res = res && uvFunc( edgeToCollapse, newEdgeOrgPos );
-        res = res && colorFunc( edgeToCollapse, newEdgeOrgPos );
-        return res;
-    };
+        auto uvFunc = preColapseVertAttribute( mesh, *params.uvCoords );
+        auto colorFunc = preColapseVertAttribute( mesh, *params.colorMap );
+        auto preCollapse = [=] ( EdgeId edgeToCollapse, const Vector3f& newEdgeOrgPos )
+        {
+            bool res = true;
+            res = res && uvFunc( edgeToCollapse, newEdgeOrgPos );
+            res = res && colorFunc( edgeToCollapse, newEdgeOrgPos );
+            return res;
+        };
 
-    return preCollapse;
+        return preCollapse;
+    }
+
+    if ( params.uvCoords )
+        return preColapseVertAttribute( mesh, *params.uvCoords );
+    if ( params.colorMap )
+        return preColapseVertAttribute( mesh, *params.colorMap );
+
+    return {};
 }
 
 }

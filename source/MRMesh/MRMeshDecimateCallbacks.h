@@ -28,7 +28,7 @@ struct MeshAttributesToUpdate
 *       meshParams.uvCoords = &uvCoords;
 *   if ( needUpdateColorMap )
 *       meshParams.colorMap = &colorMap;
-*   auto preCollapse = objectMeshPreCollapseCallback( mesh, meshParams );
+*   auto preCollapse = meshPreCollapseVertAttribute( mesh, meshParams );
 *   decimateMesh( mesh, DecimateSettings{ .preCollapse = preCollapse } );
 */
 MRMESH_API PreCollapseCallback meshPreCollapseVertAttribute( const Mesh& mesh, const MeshAttributesToUpdate& params );

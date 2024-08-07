@@ -2,7 +2,8 @@ from pathlib import Path
 import meshlib.mrmeshpy as mlib
 from constants import test_files_path
 import pytest
-from helpers.meshlib_helpers import compare_points_similarity, compare_meshes_similarity, compare_voxels, compare_lines
+from helpers.meshlib_helpers import (compare_points_similarity, compare_meshes_similarity, compare_voxels,
+                                     compare_lines, compare_distance_maps)
 
 
 @pytest.mark.parametrize("filename", [
@@ -78,3 +79,23 @@ def test_open_old_lines(filename):
     ref_lines = mlib.loadLines(input_folder / ref_file)
     # assert ref_lines.computeBoundingBox().diagonal() == lines.computeBoundingBox().diagonal()
     compare_lines(input_folder / ref_file, lines)
+
+
+@pytest.mark.parametrize("filename", [
+    "dm_0.0.128.21.mru",
+    "dm_0.1.0.0.mru",
+    "dm_2.1.1.144.mru",
+    "dm_2.2.0.79.mru",
+    "dm_2.3.0.17.mru",
+])
+def test_open_old_dm(filename):
+    ref_file = "ref.mru"
+    input_folder = Path(test_files_path) / "old_files" / "mru" / "distance_maps"
+
+    scene_obj_ref = mlib.loadSceneObject(input_folder / ref_file)
+    dm_ref = scene_obj_ref.children()[0].extractDistanceMap()
+
+    scene_obj = mlib.loadSceneObject(input_folder / filename)
+    dm = scene_obj.children()[0].extractDistanceMap()
+
+    compare_distance_maps(dm, dm_ref)

@@ -121,6 +121,7 @@ jobs:
           repository: MeshInspector/mrbind
           path: _mrbind
           token: ${{ secrets.BUILD_MACHINE_TOKEN }}
+          ref: 219de5a2931bd385d82247e40aada476cf1a44b5
 
       - name: Compile MRBind
         if: ${{ matrix.os == 'ubuntu24' }}
@@ -161,7 +162,7 @@ jobs:
         env:
           LD_LIBRARY_PATH: .
         working-directory: build/Release/bin
-        run: python3 -c 'from meshlib2 import mrmeshpy; from meshlib2 import mrmeshnumpy' || true
+        run: python3 -c 'from meshlib2 import mrmeshpy; from meshlib2 import mrmeshnumpy'
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.compiler}}"

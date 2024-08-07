@@ -1,7 +1,7 @@
 #include "MRSceneRoot.h"
 #include "MRObjectFactory.h"
+#include "MRStringConvert.h"
 #include "MRPch/MRJson.h"
-
 #include <regex>
 
 namespace MR
@@ -25,9 +25,10 @@ std::filesystem::path createNewFilePath( const std::filesystem::path& savePath )
 
     std::filesystem::path newPath = savePath;
 
-    while ( std::filesystem::exists( newPath ) )
+    std::error_code ec;
+    while ( std::filesystem::exists( newPath, ec ) )
     {
-        auto name = newPath.stem().string();
+        auto name = utf8string( newPath.stem() );
         if ( std::regex_match( name, pattern ) )
         {
             auto endBracPos = name.rfind( ')' );
@@ -40,7 +41,7 @@ std::filesystem::path createNewFilePath( const std::filesystem::path& savePath )
         {
             name += " (1)";
         }
-        newPath.replace_filename( name + savePath.extension().string() );
+        newPath.replace_filename( asU8String( name ) + savePath.extension().u8string() );
     }
     return newPath;
 }
@@ -48,7 +49,7 @@ std::filesystem::path createNewFilePath( const std::filesystem::path& savePath )
 void SceneRoot::setScenePath( const std::filesystem::path& scenePath )
 {
     auto newPath = scenePath;
-    if ( scenePath.extension().string() != ".mru" )
+    if ( !scenePath.empty() && scenePath.extension().u8string() != u8".mru" )
     {
         newPath.replace_extension( ".mru" );
         newPath = createNewFilePath( newPath );

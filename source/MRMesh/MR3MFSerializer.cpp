@@ -611,8 +611,9 @@ VoidOrErrStr Node::loadTexture2d_( const tinyxml2::XMLElement* xmlNode )
         return unexpected( std::string( "Texture2d node does not have 'path' attribute" ) );
 
     std::filesystem::path fullPath = loader->rootPath_ / innerPath;
-    if ( !std::filesystem::exists( fullPath ) )
-        return unexpected( std::string( "Texture2d does not exist: " ) + fullPath.string() );
+    std::error_code ec;
+    if ( !std::filesystem::exists( fullPath, ec ) )
+        return unexpected( std::string( "Texture2d does not exist: " ) + utf8string( fullPath ) );
 
     auto imageExp = ImageLoad::fromAnySupportedFormat( fullPath );
     if ( !imageExp )
@@ -954,7 +955,7 @@ Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFrom3mf( con
     std::error_code ec;
 
     for ( auto const& dirEntry : DirectoryRecursive{ tmpFolder, ec } )
-        if ( !dirEntry.is_directory() )
+        if ( !dirEntry.is_directory( ec ) )
             files.push_back( dirEntry.path() );
 
     if ( files.empty() )

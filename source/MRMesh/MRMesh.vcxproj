@@ -47,6 +47,7 @@
     <ClInclude Include="MRLevelOfDetails.h" />
     <ClInclude Include="MRLocalTriangulations.h" />
     <ClInclude Include="MRMapping.h" />
+    <ClInclude Include="MRMeshDecimateCallbacks.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
     <ClInclude Include="MRAggregateFlow.h" />
@@ -525,6 +526,7 @@
     <ClCompile Include="MRMeshBoolean.cpp" />
     <ClCompile Include="MRMeshBooleanFacade.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
+    <ClCompile Include="MRMeshDecimateCallbacks.cpp" />
     <ClCompile Include="MRMeshExtrude.cpp" />
     <ClCompile Include="MRMeshOrPoints.cpp" />
     <ClCompile Include="MRMeshReplicate.cpp" />

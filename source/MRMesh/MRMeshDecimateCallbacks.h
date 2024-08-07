@@ -4,9 +4,37 @@
 
 namespace MR
 {
-// there is a vertex parameter that needs to be recalculated when collapsing the edge
+// callback that is called when before edge is collapsed 
+// (i.e. in decimateMesh) and changes moved vertex attribute to correct value. 
+// Useful to update vertices based attributes like uv coordinates or verts colormaps
 template <typename T>
-static auto preCollapseVertAttribute( const Mesh& mesh, Vector<T, VertId>& data )
+auto preCollapseVertAttribute( const Mesh& mesh, Vector<T, VertId>& data );
+
+// the attribute data of the mesh that needs to be updated
+struct MeshAttributesToUpdate
+{
+    VertUVCoords* uvCoords = nullptr;
+    VertColors* colorMap = nullptr;
+};
+
+/**
+* Please use this callback when you decimate a mesh with associated data with each vertex
+* recalculate texture coordinates and mesh vertex colors for vertices moved during decimation
+* usage example
+*   MeshAttributesToUpdate meshParams;
+*   auto uvCoords = obj->getUVCoords();
+*   auto colorMap = obj->getVertsColorMap();
+*   if ( needUpdateUV )
+*       meshParams.uvCoords = &uvCoords;
+*   if ( needUpdateColorMap )
+*       meshParams.colorMap = &colorMap;
+*   auto preCollapse = objectMeshPreCollapseCallback( mesh, meshParams );
+*   decimateMesh( mesh, DecimateSettings{ .preCollapse = preCollapse } );
+*/
+MRMESH_API PreCollapseCallback meshPreCollapseVertAttribute( const Mesh& mesh, const MeshAttributesToUpdate& params );
+
+template <typename T>
+auto preCollapseVertAttribute( const Mesh& mesh, Vector<T, VertId>& data )
 {
     auto preCollapse = [&] ( EdgeId edgeToCollapse, const Vector3f& newEdgeOrgPos )
     {
@@ -37,27 +65,5 @@ static auto preCollapseVertAttribute( const Mesh& mesh, Vector<T, VertId>& data 
 
     return preCollapse;
 }
-
-// the attribute data of the mesh that needs to be updated
-struct MeshAttributesToUpdate
-{
-    VertUVCoords* uvCoords = nullptr;
-    VertColors* colorMap = nullptr;
-};
-
-/**
-* recalculate texture coordinates and mesh vertex colors for collapsible edges
-* usage example
-*   MeshAttributesToUpdate meshParams;
-*   auto& uvCoords = obj->getUVCoords();
-*   auto& colorMap = obj->getVertsColorMap();
-*   if ( needUpdateUV )
-*       meshParams.uvCoords = &uvCoords;
-*   if ( needUpdateColorMap )
-*       meshParams.colorMap = &colorMap;
-*   auto preCollapse = objectMeshPreCollapseCallback( mesh, meshParams );
-*   decimateMesh( mesh, DecimateSettings{ .preCollapse = preCollapse } );
-*/
-MRMESH_API PreCollapseCallback meshAttributesUpdatePreCollapseCb( const Mesh& mesh, const MeshAttributesToUpdate& params );
 
 }

@@ -1,11 +1,12 @@
 #include "MRMeshDecimateCallbacks.h"
 
 #include "MRMesh/MRVector.h"
+#include "MRMesh/MRColor.h"
 
 namespace MR
 {
 
-PreCollapseCallback meshAttributesUpdatePreCollapseCb( const Mesh& mesh, const MeshAttributesToUpdate& params )
+PreCollapseCallback meshPreCollapseVertAttribute( const Mesh& mesh, const MeshAttributesToUpdate& params )
 {
     if ( params.uvCoords && params.colorMap )
     {

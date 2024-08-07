@@ -2162,7 +2162,7 @@ VoidOrErrStr MeshTopology::read( std::istream & s, ProgressCallback callback )
 }
 
 
-bool MeshTopology::checkValidity( ProgressCallback cb ) const
+bool MeshTopology::checkValidity( ProgressCallback cb, bool allVerts ) const
 {
     MR_TIMER
 
@@ -2186,7 +2186,10 @@ bool MeshTopology::checkValidity( ProgressCallback cb ) const
             return;
         parCheck( edges_[edges_[e].next].prev == e );
         parCheck( edges_[edges_[e].prev].next == e );
-        if ( auto v = edges_[e].org )
+        auto v = edges_[e].org;
+        if ( allVerts && !isLoneEdge( e ) )
+            parCheck( v.valid() );
+        if ( v )
             parCheck( validVerts_.test( v ) );
         if ( auto f = edges_[e].left )
             parCheck( validFaces_.test( f ) );

@@ -498,8 +498,9 @@ public:
     // constructs triangular grid mesh topology in parallel
     MRMESH_API bool buildGridMesh( const GridSettings& settings, ProgressCallback cb = {} );
 
-    /// verifies that all internal data structures are valid
-    MRMESH_API bool checkValidity( ProgressCallback cb = {} ) const;
+    /// verifies that all internal data structures are valid;
+    /// if allVerts=true then checks in addition that all not-lone edges have valid vertices on both ends
+    MRMESH_API bool checkValidity( ProgressCallback cb = {}, bool allVerts = true ) const;
 
 private:
     friend class MeshDiff;

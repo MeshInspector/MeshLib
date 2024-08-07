@@ -333,13 +333,15 @@ MRVIEWER_API void endTabItem();
 ///   ImGui::SameLine();
 ///   UI::buttonCommonSize( "Button" ); // the control we align to
 MRVIEWER_API void alignTextToFramePadding( float padding );
-/// Variation of \ref alignTextToFramePadding that takes control height (e.g. for \ref UI::button with nondefault height)
-MRVIEWER_API void alignTextToControl( float height );
+/// Sets the vertical text position to match the text of a specific control on the same line
+/// Same as \ref alignTextToFramePadding, but takes the full control height
+/// Can be used, for example, for \ref UI::button with nondefault height
+MRVIEWER_API void alignTextToControl( float controlHeight );
 /// Specialization of \ref alignTextToFramePadding for \ref UI::radioButton
 MRVIEWER_API void alignTextToRadioButton( float scaling );
 /// Specialization of \ref alignTextToFramePadding for \ref UI::checkbox
 MRVIEWER_API void alignTextToCheckBox( float scaling );
-/// Specialization of \ref alignTextToFramePadding for \ref UI::button
+/// Specialization of \ref alignTextToFramePadding for \ref UI::button with default height
 MRVIEWER_API void alignTextToButton( float scaling );
 
 /// Highlight the background of current window's bottom part, starting from current position

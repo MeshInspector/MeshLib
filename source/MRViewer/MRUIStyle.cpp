@@ -1803,9 +1803,9 @@ void alignTextToFramePadding( float padding )
     window->DC.CurrLineTextBaseOffset = ImMax( window->DC.CurrLineTextBaseOffset, padding );
 }
 
-void alignTextToControl( float height )
+void alignTextToControl( float controlHeight )
 {
-    alignTextToFramePadding( std::floor( ( height - GImGui->FontSize ) * 0.5f ) );
+    alignTextToFramePadding( std::floor( ( controlHeight - GImGui->FontSize ) * 0.5f ) );
 }
 
 void alignTextToRadioButton( float scaling )

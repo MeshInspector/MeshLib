@@ -7,7 +7,7 @@
 # NOTE: 1.75+ version already has this fix
 # https://github.com/boostorg/signals2/commit/15fcf213563718d2378b6b83a1614680a4fa8cec
 FILENAME=/usr/include/boost/signals2/detail/auto_buffer.hpp
-if [ -d $FILENAME ] ; then
+if [ -f $FILENAME ] ; then
 cat $FILENAME | tr '\n' '\r' | \
 sed -e 's/\r        typedef typename Allocator::pointer              allocator_pointer;\r/\
 #ifdef BOOST_NO_CXX11_ALLOCATOR\

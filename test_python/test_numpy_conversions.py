@@ -3,7 +3,7 @@ import unittest as ut
 import numpy as np
 import pytest
 from helper import *
-from meshlib import mrmeshnumpy
+import_mrmeshnumpy()
 
 
 def test_numpy_conversoin():
@@ -36,4 +36,3 @@ def test_numpy_conversoin():
 
     assert vertNormsNp.shape[0] == len(vertNorms.vec)
     assert faceNormsNp.shape[0] == len(faceNorms.vec)
-

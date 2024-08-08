@@ -3,7 +3,7 @@ import unittest as ut
 import numpy as np
 import pytest
 from helper import *
-from meshlib import mrmeshnumpy
+import_mrmeshnumpy()
 
 
 def test_numpy_meshbuild():

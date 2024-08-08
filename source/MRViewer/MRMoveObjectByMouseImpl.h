@@ -27,7 +27,7 @@ public:
     /// Should be called from `drawDialog`
     MRVIEWER_API void onDrawDialog( float menuScaling ) const;
 
-    /// These functions should be called from corresponding mouse handlers
+    /// These functions should be called from corresponding mouse handlers (or better drag handlers)
     /// Return true if handled (picked/moved/released)
     /// It is recommended to call `viewer->select_hovered_viewport()` before `onMouseDown`
     /// The object is transformed temporarily in `onMouseMove`

@@ -1,4 +1,4 @@
-name: Codesign Windows
+name: Sign and Upload Windows
 
 on:
   release:
@@ -17,15 +17,15 @@ jobs:
 
       - uses: actions-ecosystem/action-get-latest-tag@v1
         id: get-latest-tag
-  codesign:
+  sign-upload:
     needs: setup
     timeout-minutes: 10
     runs-on: [windows-x64-codesign]
     steps:
-      - name: Remove old local Windows MSIs
+      - name: Remove old local NuGet packages
         run: Remove-Item "MeshLib_*.nupkg"
 
-      - name: Download Windows MSI
+      - name: Download NuGet package
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

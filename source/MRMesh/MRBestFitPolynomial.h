@@ -98,6 +98,7 @@ public:
 
     MRMESH_API void addPoint( T x, T y, T weight );
 
+    /// @note The result might have leading coefficient equal to zero.
     MRMESH_API Polynomial<T, degree> getBestPolynomial() const;
 
 private:

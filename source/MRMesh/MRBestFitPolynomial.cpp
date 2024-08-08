@@ -124,6 +124,39 @@ struct Solver<T, 4>
 };
 
 
+template <typename T, size_t degree>
+std::vector<std::complex<T>> solveWithFixedDegree( auto coeffs )
+{
+    assert( std::size( coeffs ) == degree + 1 );
+    if constexpr ( degree == 0 )
+    {
+        return {};
+    }
+    else
+    {
+        if ( coeffs[degree] != 0 )
+        {
+            Eigen::Vector<T, degree + 1> c;
+            for ( size_t i = 0; i < degree + 1; ++i )
+                c[i] = coeffs[i];
+
+            Solver<T, degree> s;
+            auto roots = s( c );
+
+            std::vector<std::complex<T>> res;
+            for ( auto v : roots )
+                res.push_back( v );
+            return res;
+        }
+        else
+        {
+            return solveWithFixedDegree<T, degree - 1>( std::ranges::subrange{ coeffs.begin(), std::next( coeffs.begin(), degree ) } );
+        }
+    }
+}
+
+
+
 }
 
 namespace MR
@@ -152,8 +185,7 @@ std::vector<T> Polynomial<T, degree>::solve( T tol ) const
     if constexpr ( canSolvePolynomial( degree ) )
     {
 #endif
-    Solver<T, degree> solver;
-    auto r_c = solver( a );
+    auto r_c = solveWithFixedDegree<T, degree>( a );
     std::vector<T> r;
     for ( std::complex<T> c : r_c )
         if ( std::abs( c.imag() ) < tol )

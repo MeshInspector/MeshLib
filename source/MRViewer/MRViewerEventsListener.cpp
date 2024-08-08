@@ -39,6 +39,27 @@ void MouseClickListener::connect( Viewer* viewer, int group, boost::signals2::co
     connection_ = viewer->mouseClickSignal.connect( group, MAKE_SLOT( &MouseClickListener::onMouseClick_ ), pos );
 }
 
+void DragStartListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
+{
+    if ( !viewer )
+        return;
+    connection_ = viewer->dragStartSignal.connect( group, MAKE_SLOT( &DragStartListener::onDragStart_ ), pos );
+}
+
+void DragEndListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
+{
+    if ( !viewer )
+        return;
+    connection_ = viewer->dragEndSignal.connect( group, MAKE_SLOT( &DragEndListener::onDragEnd_ ), pos );
+}
+
+void DragListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
+{
+    if ( !viewer )
+        return;
+    connection_ = viewer->dragSignal.connect( group, MAKE_SLOT( &DragListener::onDrag_ ), pos );
+}
+
 void CharPressedListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
 {
     if ( !viewer )

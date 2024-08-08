@@ -963,6 +963,9 @@ void Viewer::launchShut()
     mouseMoveSignal = {};
     mouseScrollSignal = {};
     mouseClickSignal = {};
+    dragStartSignal = {};
+    dragEndSignal = {};
+    dragSignal = {};
     cursorEntranceSignal = {};
     charPressedSignal = {};
     keyUpSignal = {};
@@ -1424,6 +1427,21 @@ bool Viewer::mouseScroll( float delta_y )
 bool Viewer::mouseClick( MouseButton button, int modifier )
 {
     return mouseClickSignal( button, modifier );
+}
+
+bool Viewer::dragStart( MouseButton button, int modifier )
+{
+    return dragStartSignal( button, modifier );
+}
+
+bool Viewer::dragEnd( MouseButton button, int modifier )
+{
+    return dragEndSignal( button, modifier );
+}
+
+bool Viewer::drag( int mouse_x, int mouse_y )
+{
+    return dragSignal( mouse_x, mouse_y );
 }
 
 bool Viewer::spaceMouseMove( const Vector3f& translate, const Vector3f& rotate )

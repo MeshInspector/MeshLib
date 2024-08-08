@@ -139,6 +139,9 @@ public:
     MRVIEWER_API bool mouseMove( int mouse_x, int mouse_y );
     MRVIEWER_API bool mouseScroll( float delta_y );
     MRVIEWER_API bool mouseClick( MouseButton button, int modifier );
+    MRVIEWER_API bool dragStart( MouseButton button, int modifier );
+    MRVIEWER_API bool dragEnd( MouseButton button, int modifier );
+    MRVIEWER_API bool drag( int mouse_x, int mouse_y );
     MRVIEWER_API bool spaceMouseMove( const Vector3f& translate, const Vector3f& rotate );
     MRVIEWER_API bool spaceMouseDown( int key );
     MRVIEWER_API bool spaceMouseUp( int key );
@@ -481,9 +484,15 @@ public:
     MouseUpDownSignal mouseUpSignal; // signal is called on mouse up
     MouseMoveSignal mouseMoveSignal; // signal is called on mouse move, note that input x and y are in screen space
     MouseScrollSignal mouseScrollSignal; // signal is called on mouse is scrolled
-    // High-level mouse event, emitted by MouseController
-    // When mouseClickSignal has connections, a small delay for click detection is introduced into camera operations
+    // High-level mouse events for clicks and dragging, emitted by MouseController
+    // When mouseClickSignal has connections, a small delay for click detection is introduced into camera operations and dragging
+    // Dragging starts if dragStartSignal is handled (returns true), and ends on button release
+    // When dragging is active, dragSignal and dragEndSignal are emitted instead of mouseMove and mouseUp
+    // mouseDown handler have priority over dragStart
     MouseUpDownSignal mouseClickSignal; // signal is called when mouse button is pressed and immediately released
+    MouseUpDownSignal dragStartSignal; // signal is called when mouse button is pressed (deterred if click behavior is on)
+    MouseUpDownSignal dragEndSignal; // signal is called when mouse button used to start drag is released
+    MouseMoveSignal dragSignal; // signal is called when mouse is being dragged with button down
     // Cursor enters/leaves
     using CursorEntranceSignal = boost::signals2::signal<void(bool)>;
     CursorEntranceSignal cursorEntranceSignal;

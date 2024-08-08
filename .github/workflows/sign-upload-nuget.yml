@@ -34,4 +34,4 @@ jobs:
       
       - name: Upload signed NuGet package
         run: |
-          nuget push MeshLib_${{setup.get-latest-tag}}.nupkg ${{ secrets.NUGET_API_KEY }} -Source https://api.nuget.org/v3/index.json
+          nuget push MeshLib_${{steps.get-latest-tag.outputs.tag}}.nupkg ${{ secrets.NUGET_API_KEY }} -Source https://api.nuget.org/v3/index.json

@@ -20,6 +20,12 @@ public:
     MeshOrPoints( const MeshPart & mp ) : var_( mp ) { }
     MeshOrPoints( const PointCloud & pc ) : var_( &pc ) { }
 
+    /// if this object holds a mesh part then returns pointer on it, otherwise returns nullptr
+    [[nodiscard]] const MeshPart* asMeshPart() const;
+
+    /// if this object holds a point cloud then returns pointer on it, otherwise returns nullptr
+    [[nodiscard]] const PointCloud* asPointCloud() const;
+
     /// returns the minimal bounding box containing all valid vertices of the object (and not only part of mesh);
     /// implemented via obj.getAABBTree()
     [[nodiscard]] MRMESH_API Box3f getObjBoundingBox() const;
@@ -106,5 +112,21 @@ MRMESH_API void projectOnAll(
     float upDistLimitSq, ///< upper limit on the distance in question
     const ProjectOnAllCallback & callback, ///< each found closest point within given distance will be returned via this callback
     ObjId skipObjId = {} ); ///< projection on given object will be skipped
+
+inline const MeshPart* MeshOrPoints::asMeshPart() const
+{
+    return std::visit( overloaded{
+        []( const MeshPart & mp ) { return &mp; },
+        []( const PointCloud * ) { return (const MeshPart*)nullptr; }
+    }, var_ );
+}
+
+inline const PointCloud* MeshOrPoints::asPointCloud() const
+{
+    return std::visit( overloaded{
+        []( const MeshPart & ) { return (const PointCloud *)nullptr; },
+        []( const PointCloud * pc ) { return pc; }
+    }, var_ );
+}
 
 } // namespace MR

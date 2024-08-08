@@ -1335,6 +1335,9 @@
     <ClInclude Include="MRMeshThickness.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshDecimateCallbacks.h">
+      <Filter>Source Files\Decimation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2212,6 +2215,9 @@
     </ClCompile>
     <ClCompile Include="MRColor.cpp">
       <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshDecimateCallbacks.cpp">
+      <Filter>Source Files\Decimation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

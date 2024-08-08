@@ -784,18 +784,23 @@ void MeshTopology::deleteFace( FaceId f, const UndirectedEdgeBitSet * keepEdges 
     const int d = getLeftDegree( e );
     for ( int i = 0; i < d; ++i )
     {
-        if ( !right( e ).valid() && prev( e ) == next( e ) && !( keepEdges && keepEdges->test( e ) ) )
-        {
-            // only two edges from e.origin, so this vertex does not belong to any other face
-            setOrg( e, VertId{} );
-        }
         EdgeId e1 = e;
         e = prev( e.sym() );
-        if ( !left( e1.sym() ).valid() && !( keepEdges && keepEdges->test( e1 ) ) )
+        if ( !right( e1 ) && !( keepEdges && keepEdges->test( e1 ) ) )
         {
-            // no face to the right of e1, delete it
-            splice( prev( e1 ), e1 );
-            splice( prev( e1.sym() ), e1.sym() );
+            // delete e1 since it has no right face as well (and not in keepEdges);
+            // also delete any end-vertex of e1 if e1 was the last edge from it
+            if ( prev( e1 ) == e1 )
+                setOrg( e1, VertId{} );
+            else
+                splice( prev( e1 ), e1 );
+
+            if ( prev( e1.sym() ) == e1.sym() )
+                setOrg( e1.sym(), VertId{} );
+            else
+                splice( prev( e1.sym() ), e1.sym() );
+
+            assert( isLoneEdge( e1 ) );
         }
     }
 }

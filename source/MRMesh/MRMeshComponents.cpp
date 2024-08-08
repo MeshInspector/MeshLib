@@ -310,7 +310,11 @@ std::vector<FaceBitSet> getLargeByAreaNumComponents( const MeshPart& mp, const L
     }
     else
     {
+#if __GNUC__ == 13 // in GCC 13 an error from std::partial_sort appears
+        std::sort( areaRootVec.begin(), areaRootVec.end(), std::greater() );
+#else
         std::partial_sort( areaRootVec.begin(), areaRootVec.begin() + settings.maxLargeComponents, areaRootVec.end(), std::greater() );
+#endif
         areaRootVec.resize( settings.maxLargeComponents );
     }
 

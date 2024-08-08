@@ -291,8 +291,7 @@ std::vector<FaceBitSet> getLargeByAreaNumComponents( const MeshPart& mp, const L
     {
         float area = 0;
         FaceId root;
-        auto asPair() const { return std::make_pair( area, root ); }
-        bool operator <( const AreaRoot& r ) const { return asPair() > r.asPair(); } // > for sort in descending order
+        constexpr auto operator <=>( const AreaRoot& ) const = default;
     };
 
     std::vector<AreaRoot> areaRootVec;
@@ -307,11 +306,11 @@ std::vector<FaceBitSet> getLargeByAreaNumComponents( const MeshPart& mp, const L
     // leave at most given number of roots sorted in descending by area order
     if ( areaRootVec.size() <= settings.maxLargeComponents )
     {
-        std::sort( areaRootVec.begin(), areaRootVec.end() );
+        std::sort( areaRootVec.begin(), areaRootVec.end(), std::greater() );
     }
     else
     {
-        std::partial_sort( areaRootVec.begin(), areaRootVec.begin() + settings.maxLargeComponents, areaRootVec.end() );
+        std::partial_sort( areaRootVec.begin(), areaRootVec.begin() + settings.maxLargeComponents, areaRootVec.end(), std::greater() );
         areaRootVec.resize( settings.maxLargeComponents );
     }
 

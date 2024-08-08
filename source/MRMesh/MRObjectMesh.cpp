@@ -188,8 +188,13 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
 
     bool hasVertColorMap = false;
     bool hasFaceColorMap = false;
+    bool needSaveTexture = true;
+    Vector2i resolution( -1, -1 );
+    std::vector<size_t> numTextures( objsMesh.size() );
+    size_t numTexture = 0;
     size_t totalVerts = 0;
     size_t totalFaces = 0;
+    size_t numObject = 0;
     for ( const auto& obj : objsMesh )
     {
         if ( auto curMesh = obj->mesh() )
@@ -200,6 +205,35 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
                 hasVertColorMap = true;
             if ( !obj->getFacesColorMap().empty() )
                 hasFaceColorMap = true;
+
+            const auto& textures = obj->getTextures();
+            if ( needSaveTexture )
+            {
+                if ( textures.empty() )
+                {
+                    needSaveTexture = false;
+                    continue;
+                }
+
+                numTexture += textures.size();
+
+                if ( numObject == 0 )
+                    numTextures[numObject] = textures.size();
+                else
+                    numTextures[numObject] = numTextures[numObject - 1] + textures.size();
+                numObject++;
+
+                for ( const auto& texture : textures )
+                {
+                    if ( resolution.x == -1 )
+                        resolution = texture.resolution;
+                    else if ( resolution != texture.resolution )
+                    {
+                        needSaveTexture = false;
+                        break;
+                    }
+                }
+            }
         }
     }
     auto mesh = std::make_shared<Mesh>();
@@ -215,6 +249,17 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
     if ( hasFaceColorMap )
         faceColors.resizeNoInit( totalFaces );
 
+    VertUVCoords uvCoords;
+    Vector<TextureId, FaceId> texturePerFace;
+    Vector<MeshTexture, TextureId> textures;
+    if ( needSaveTexture )
+    {
+        texturePerFace.resizeNoInit( totalFaces );
+        uvCoords.resizeNoInit( totalVerts );
+        textures.reserve( numTexture );
+    }
+
+    numObject = 0;
     for ( const auto& obj : objsMesh )
     {
         if ( !obj->mesh() )
@@ -222,7 +267,7 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
 
         VertMap vertMap;
         FaceMap faceMap;
-        mesh->addPart( *obj->mesh(), hasFaceColorMap ? &faceMap : nullptr, &vertMap );
+        mesh->addPart( *obj->mesh(), hasFaceColorMap || needSaveTexture ? &faceMap : nullptr, &vertMap );
 
         auto worldXf = obj->worldXf();
         for ( const auto& vInd : vertMap )
@@ -249,6 +294,29 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
                     faceColors[mergeId] = curColorMap.size() <= thisId ? obj->getFrontColor() : curColorMap[thisId];
             }
         }
+        if ( needSaveTexture )
+        {
+            const auto& curUvCoords = obj->getUVCoords();
+            for ( VertId thisId = 0_v; thisId < vertMap.size(); ++thisId )
+            {
+                if ( auto mergeId = vertMap[thisId] )
+                    uvCoords[mergeId] = curUvCoords[thisId];
+            }
+            const auto curTextures = obj->getTextures();
+            textures.vec_.insert( textures.vec_.end(), curTextures.vec_.begin(), curTextures.vec_.end() );
+            TextureId previousNumTexture;
+            if ( numObject == 0 )
+                previousNumTexture = TextureId( 0 );
+            else
+                previousNumTexture = TextureId( numTextures[ numObject - 1 ] );
+            const auto& curTexturePerFace = obj->getTexturePerFace();
+            for ( FaceId thisId = 0_f; thisId < faceMap.size(); ++thisId )
+            {
+                if ( auto mergeId = faceMap[thisId] )
+                    texturePerFace[mergeId] = previousNumTexture + curTexturePerFace[thisId];
+            }
+        }
+        numObject++;
     }
     assert( totalVerts == mesh->topology.numValidVerts() );
     assert( totalFaces == mesh->topology.numValidFaces() );
@@ -256,7 +324,10 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
     auto objectMesh = std::make_shared<ObjectMesh>();
     objectMesh->setVertsColorMap( std::move( vertColors ) );
     objectMesh->setFacesColorMap( std::move( faceColors ) );
+    objectMesh->setTexturePerFace( std::move( texturePerFace ) );
+    objectMesh->setTextures( std::move( textures ) );
     objectMesh->setMesh( std::move( mesh ) );
+    objectMesh->setUVCoords( std::move( uvCoords ) );
     if( hasVertColorMap )
         objectMesh->setColoringType( ColoringType::VertsColorMap );
     else if( hasFaceColorMap )

@@ -20,19 +20,7 @@ on:
 env:
   VCPKG-VERSION: '2024.07.12'
 
-jobs:          
-  setup:
-    timeout-minutes: 5
-    runs-on: ubuntu-latest
-    outputs:
-      version_tag: ${{ steps.get-latest-tag.outputs.tag }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - uses: actions-ecosystem/action-get-latest-tag@v1
-        id: get-latest-tag
-        
+jobs:        
   prepare-image:
     uses: ./.github/workflows/prepare-images.yml
     secrets: inherit
@@ -177,7 +165,6 @@ jobs:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     needs:
       - windows-build-test
-      - setup
     timeout-minutes: 20
     runs-on: windows-2022
     steps:
@@ -197,7 +184,7 @@ jobs:
          tar -xvzf MREDist_DotNet.zip
           
      - name: Generate NuGet specification
-       run: py -3 scripts\generate_nuget_spec.py ${{needs.setup.outputs.version_tag}}
+       run: py -3 scripts\generate_nuget_spec.py ${{ needs.versioning-and-release-url.outputs.app_version }}
         
      - name: Download NuGet Executable
        run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe

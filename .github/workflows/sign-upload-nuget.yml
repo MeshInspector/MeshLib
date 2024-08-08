@@ -6,10 +6,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  setup:
-    timeout-minutes: 5
-    runs-on: ubuntu-latest
-    
   sign-upload:
     timeout-minutes: 10
     runs-on: [windows-x64-codesign]

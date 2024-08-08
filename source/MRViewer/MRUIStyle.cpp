@@ -1481,6 +1481,52 @@ bool inputTextIntoArrayMultiline( const char* label, char* buf, size_t buf_size,
     return basicTextInputIntoArray( label, buf, buf_size, flags, [&]{ return ImGui::InputTextMultiline( label, buf, buf_size, size, flags, callback, user_data ); } );
 }
 
+static bool basicTextInputMultilineFullyScrollable( CachedTextSize& cache, const char *label, const char* buf, ImVec2 size, auto &&func )
+{
+    auto calcSize = [&]
+    {
+        cache.cachedSize = ImGui::CalcTextSize( buf ) + ( ImGui::GetStyle().FramePadding + ImGui::GetStyle().WindowPadding ) * 2;
+    };
+    if ( !cache.cachedSize )
+        calcSize();
+
+    // Default size.
+    // Height is taken from `ImGui::TextInputEx()`, from `const ImVec2 frame_size = ...`,
+    //   but it can be anything, we don't rely on it matching the default height.
+    // Width is completely arbitrary.
+    size = ImGui::CalcItemSize( size, ImGui::GetContentRegionAvail().x, ImGui::GetFontSize() * 8 + ImGui::GetStyle().FramePadding.y * 2 );
+
+    // We could always enable the horizontal scrollbar, but then it flashes for 1 frame when you add enough lines
+    //   to enable the VERTICAL scrollbar (both flash for 1 frame, then only the vertical one remains)
+    ImGui::BeginChild( label, size, false, ( cache.cachedSize->x > size.x ) * ImGuiWindowFlags_HorizontalScrollbar );
+    MR_FINALLY{ ImGui::EndChild(); };
+
+    bool ret = func( ImGuiMath::max( *cache.cachedSize, ImGui::GetContentRegionAvail() ) );
+
+    if ( ImGui::IsItemEdited() )
+        calcSize();
+
+    return ret;
+}
+
+bool inputTextMultilineFullyScrollable( CachedTextSize& cache, const char* label, std::string& str, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
+{
+    return basicTextInputMultilineFullyScrollable(
+        cache, label, str.c_str(), size,
+        // Since the textbox is inside a child window, we don't pass the actual label. It wouldn't fit anyway.
+        [&]( ImVec2 size ){ return inputTextMultiline( "###textbox", str, size, flags | ImGuiInputTextFlags_NoHorizontalScroll, callback, user_data ); }
+    );
+}
+
+bool inputTextIntoArrayMultilineFullyScrollable( CachedTextSize& cache, const char* label, char* buf, size_t buf_size, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
+{
+    return basicTextInputMultilineFullyScrollable(
+        cache, label, buf, size,
+        // Since the textbox is inside a child window, we don't pass the actual label. It wouldn't fit anyway.
+        [&]( ImVec2 size ){ return inputTextIntoArrayMultiline( "###textbox", buf, buf_size, size, flags | ImGuiInputTextFlags_NoHorizontalScroll, callback, user_data ); }
+    );
+}
+
 bool inputTextCentered( const char* label, std::string& str, float width /*= 0.0f*/,
     ImGuiInputTextFlags flags /*= 0*/, ImGuiInputTextCallback callback /*= nullptr*/, void* user_data /*= nullptr */ )
 {

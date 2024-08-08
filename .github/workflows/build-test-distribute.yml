@@ -20,7 +20,7 @@ on:
 env:
   VCPKG-VERSION: '2024.07.12'
 
-jobs:
+jobs:        
   prepare-image:
     uses: ./.github/workflows/prepare-images.yml
     secrets: inherit
@@ -161,12 +161,54 @@ jobs:
           path: MeshLibDotNetDist.zip
           retention-days: 1
 
+  create-nuget-package:
+    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+    needs:
+      - windows-build-test
+      - versioning-and-release-url
+    timeout-minutes: 20
+    runs-on: windows-2022
+    steps:
+     - name: Checkout
+       uses: actions/checkout@v4
+       with: 
+         submodules: recursive
+         
+     - name: Download .NET Binaries Archive
+       uses: actions/download-artifact@v4
+       with:
+         pattern: DotNetArchive*
+         merge-multiple: true
+
+     - name: Extract Windows Binaries
+       run: |
+         tar -xvzf MREDist_DotNet.zip
+          
+     - name: Generate NuGet specification
+       run: |
+        echo ${{ needs.versioning-and-release-url.outputs.app_version }}
+        py -3 scripts\generate_nuget_spec.py ${{ needs.versioning-and-release-url.outputs.app_version }}
+        
+     - name: Download NuGet Executable
+       run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe
+        
+     - name: Build NuGet package
+       run: nuget.exe pack Package.nuspec -OutputFileNamesWithoutVersion
+          
+     - name: Upload NuGet Package
+       uses: actions/upload-artifact@v4
+       with:
+         name: DistributivesNuGet
+         path: MeshLib.nupkg
+         retention-days: 1
+          
   upload-distributions:
     if: ${{ !cancelled() && ( github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') ) }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
     needs:
       - update-win-version
+      - create-nuget-package
       - ubuntu-x64-build-test
       - ubuntu-arm64-build-test
       - fedora-build-test
@@ -192,14 +234,17 @@ jobs:
           for PKG_FILE in MeshLib*Dist.zip ; do
             mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.versioning-and-release-url.outputs.app_version }}}"
           done
-          for PKG_FILE in meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg ; do
+          for PKG_FILE in MeshLib*.nupkg ; do
+            mv "$PKG_FILE" "${PKG_FILE/MeshLib/MeshLib_${{ needs.versioning-and-release-url.outputs.app_version }}}"
+          done
+          for PKG_FILE in meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg; do
             mv "$PKG_FILE" "${PKG_FILE/meshlib/meshlib_${{ needs.versioning-and-release-url.outputs.app_version }}}"
           done
 
       - name: Upload Distributives
         run: |
           shopt -s nullglob
-          PKG_FILES="MeshLib*Dist*.zip meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg"
+          PKG_FILES="MeshLib*Dist*.zip meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg MeshLib*.nupkg"
           if [ -n "$(echo $PKG_FILES)" ] ; then
             echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
             gh release upload ${{ needs.versioning-and-release-url.outputs.tag }} $PKG_FILES --clobber

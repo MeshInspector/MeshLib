@@ -125,20 +125,20 @@ struct Solver<T, 4>
 
 
 template <typename T, size_t degree>
-std::vector<std::complex<T>> solveWithFixedDegree( auto coeffs )
+std::vector<std::complex<T>> solveWithFixedDegree( auto coeffsBegin, auto coeffsEnd )
 {
-    assert( std::size( coeffs ) == degree + 1 );
+    assert( coeffsEnd - coeffsBegin == degree + 1 );
     if constexpr ( degree == 0 )
     {
         return {};
     }
     else
     {
-        if ( coeffs[degree] != 0 )
+        if ( *std::prev( coeffsEnd ) != 0 )
         {
             Eigen::Vector<T, degree + 1> c;
             for ( size_t i = 0; i < degree + 1; ++i )
-                c[i] = coeffs[i];
+                c[i] = *( coeffsBegin + i );
 
             Solver<T, degree> s;
             auto roots = s( c );
@@ -150,7 +150,7 @@ std::vector<std::complex<T>> solveWithFixedDegree( auto coeffs )
         }
         else
         {
-            return solveWithFixedDegree<T, degree - 1>( std::ranges::subrange{ coeffs.begin(), std::next( coeffs.begin(), degree ) } );
+            return solveWithFixedDegree<T, degree - 1>( coeffsBegin, std::prev( coeffsEnd ) );
         }
     }
 }
@@ -185,7 +185,7 @@ std::vector<T> Polynomial<T, degree>::solve( T tol ) const
     if constexpr ( canSolvePolynomial( degree ) )
     {
 #endif
-    auto r_c = solveWithFixedDegree<T, degree>( a );
+    auto r_c = solveWithFixedDegree<T, degree>( a.begin(), a.end() );
     std::vector<T> r;
     for ( std::complex<T> c : r_c )
         if ( std::abs( c.imag() ) < tol )

@@ -155,6 +155,7 @@ bool MouseController::preMouseDown_( MouseButton btn, int mod )
     if ( getViewerInstance().mouseClickSignal.num_slots() > 0 )
     {
         clickButton_ = btn; // Support click by one button only
+        // No pending button yet - so that camera operation starts only if mouseDown had not been handled by other tool
         clickPendingDown_ = MouseButton::NoButton;
         clickModifiers_ = mod;
         clickTime_ = std::chrono::system_clock::now();
@@ -174,7 +175,7 @@ bool MouseController::mouseDown_( MouseButton btn, int mod )
 
     if ( clickButton_ != MouseButton::NoButton )
     {
-        // Mouse down pending to be handled if mouse is actually moved
+        // Mouse down pending - will be handled if mouse is actually moved
         clickPendingDown_ = btn;
         return false;
     }
@@ -226,14 +227,16 @@ bool MouseController::preMouseUp_( MouseButton btn, int mod )
 
 bool MouseController::preMouseMove_( int x, int y )
 {
+    // Click behavior
     if ( clickButton_ != MouseButton::NoButton )
     {
         if ( std::abs( x - downMousePos_.x ) + std::abs( y - downMousePos_.y ) > cMouseClickDist ||
              ( std::chrono::system_clock::now() - clickTime_ ).count() > cMouseClickNs )
         {
+            // Moved the mouse far/long enough - replay mouse down in original position
             MouseButton btn = clickButton_;
             clickButton_ = MouseButton::NoButton;
-            // Moved the mouse far/long enough - replay mouse down in original position
+            // Note: currentMousePos_ is used as a position in pick functions
             currentMousePos_ = downMousePos_;
             if ( clickPendingDown_ == btn )
                 mouseDown_( btn, clickModifiers_ );
@@ -242,6 +245,8 @@ bool MouseController::preMouseMove_( int x, int y )
     }
     if ( clickButton_ != MouseButton::NoButton )
         return false;
+
+    // Own handle (camera control)
 
     prevMousePos_ = currentMousePos_;
     currentMousePos_ = { x,y };

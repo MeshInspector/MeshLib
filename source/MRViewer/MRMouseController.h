@@ -96,10 +96,10 @@ private:
     MouseMode currentMode_{ MouseMode::None };
 
     // Variables related to mouseClick signal
-    MouseButton clickButton_{ MouseButton::NoButton };
-    MouseButton clickPendingDown_{ MouseButton::NoButton };
-    int clickModifiers_{};
-    Time clickTime_{};
+    MouseButton clickButton_{ MouseButton::NoButton }; // Current candidate for mouseClick
+    int clickModifiers_{}; // Modifiers state at the moment of button press
+    Time clickTime_{}; // Time point of button press
+    MouseButton clickPendingDown_{ MouseButton::NoButton }; // Button for deterred camera operation
 
     using MouseModeMap = HashMap<int, MouseMode>;
     using MouseModeBackMap = HashMap<MouseMode, int>;

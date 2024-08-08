@@ -25,7 +25,7 @@ jobs:
         run: |
           gh release download ${{steps.get-latest-tag.outputs.tag}} `
                               --repo $env:GITHUB_REPOSITORY `
-                              --pattern "MeshLib_${{setup.get-latest-tag}}.nupkg"    
+                              --pattern "MeshLib_${{steps.get-latest-tag.outputs.tag}}.nupkg"    
      
       - name: Sign NuGet package with certificate
         run: |

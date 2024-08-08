@@ -12,6 +12,7 @@
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRFmt.h"
+#include "MRSceneSettings.h"
 
 namespace MR
 {
@@ -190,7 +191,6 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
     bool hasFaceColorMap = false;
     bool needSaveTexture = true;
     Vector2i resolution( -1, -1 );
-    std::vector<size_t> numTextures( objsMesh.size() );
     size_t numTexture = 0;
     size_t totalVerts = 0;
     size_t totalFaces = 0;
@@ -216,11 +216,6 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
                 }
 
                 numTexture += textures.size();
-
-                if ( numObject == 0 )
-                    numTextures[numObject] = textures.size();
-                else
-                    numTextures[numObject] = numTextures[numObject - 1] + textures.size();
                 numObject++;
 
                 for ( const auto& texture : textures )
@@ -260,6 +255,8 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
     }
 
     numObject = 0;
+    TextureId previousNumTexture(-1);
+    TextureId curNumTexture(-1);
     for ( const auto& obj : objsMesh )
     {
         if ( !obj->mesh() )
@@ -304,11 +301,14 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
             }
             const auto curTextures = obj->getTextures();
             textures.vec_.insert( textures.vec_.end(), curTextures.vec_.begin(), curTextures.vec_.end() );
-            TextureId previousNumTexture;
+            
             if ( numObject == 0 )
-                previousNumTexture = TextureId( 0 );
+                curNumTexture = TextureId( 0 );
             else
-                previousNumTexture = TextureId( numTextures[ numObject - 1 ] );
+                curNumTexture += previousNumTexture;
+
+            previousNumTexture = TextureId( curTextures.size() );
+
             const auto& curTexturePerFace = obj->getTexturePerFace();
             for ( FaceId thisId = 0_f; thisId < faceMap.size(); ++thisId )
             {
@@ -322,16 +322,34 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
     assert( totalFaces == mesh->topology.numValidFaces() );
 
     auto objectMesh = std::make_shared<ObjectMesh>();
+    // if this data does not need to be set, it will be empty at this point
     objectMesh->setVertsColorMap( std::move( vertColors ) );
     objectMesh->setFacesColorMap( std::move( faceColors ) );
+    objectMesh->setMesh( std::move( mesh ) );
     objectMesh->setTexturePerFace( std::move( texturePerFace ) );
     objectMesh->setTextures( std::move( textures ) );
-    objectMesh->setMesh( std::move( mesh ) );
     objectMesh->setUVCoords( std::move( uvCoords ) );
     if( hasVertColorMap )
         objectMesh->setColoringType( ColoringType::VertsColorMap );
     else if( hasFaceColorMap )
         objectMesh->setColoringType( ColoringType::FacesColorMap );
+
+    ViewportMask flat = ViewportMask::all();
+    ViewportMask smooth = ViewportMask::all();
+    for ( const auto& obj : objsMesh )
+    {
+        ViewportMask shading = obj->getVisualizePropertyMask( MeshVisualizePropertyType::FlatShading );
+        flat &= shading;
+        smooth &= ( ~shading );
+    }
+
+    if ( SceneSettings::getDefaultShadingMode() == SceneSettings::ShadingMode::Flat )
+        objectMesh->setVisualizePropertyMask( MeshVisualizePropertyType::FlatShading, ~smooth );
+    else
+        objectMesh->setVisualizePropertyMask( MeshVisualizePropertyType::FlatShading, flat );
+
+    if ( !objectMesh->getTextures().empty() )
+        objectMesh->setVisualizePropertyMask( MeshVisualizePropertyType::Texture, ViewportMask::all() );
 
     return objectMesh;
 }

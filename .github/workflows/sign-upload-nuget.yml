@@ -9,33 +9,31 @@ jobs:
   setup:
     timeout-minutes: 5
     runs-on: ubuntu-latest
-    outputs:
-      version_tag: ${{ steps.get-latest-tag.outputs.tag }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - uses: actions-ecosystem/action-get-latest-tag@v1
-        id: get-latest-tag
+    
   sign-upload:
-    needs: setup
     timeout-minutes: 10
     runs-on: [windows-x64-codesign]
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
       - name: Remove old local NuGet packages
         run: Remove-Item "MeshLib_*.nupkg"
-
+      
+      - uses: actions-ecosystem/action-get-latest-tag@v1
+        id: get-latest-tag
+        
       - name: Download NuGet package
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download ${{setup.get-latest-tag}} `
+          gh release download ${{steps.get-latest-tag.outputs.tag}} `
                               --repo $env:GITHUB_REPOSITORY `
                               --pattern "MeshLib_${{setup.get-latest-tag}}.nupkg"    
      
       - name: Sign NuGet package with certificate
         run: |
-          jsign --storetype ETOKEN --storepass "${{ secrets.WINDOWS_SIGNTOOL_KC_PARAM_TOKEN_PASSWORD }}" -tsaurl http://timestamp.digicert.com MeshLib_${{setup.get-latest-tag}}.nupkg
+          jsign --storetype ETOKEN --storepass "${{ secrets.WINDOWS_SIGNTOOL_KC_PARAM_TOKEN_PASSWORD }}" -tsaurl http://timestamp.digicert.com MeshLib_${{steps.get-latest-tag.outputs.tag}}.nupkg
           nuget verify -All -Verbosity detailed MeshLib.nupkg
       
       - name: Upload signed NuGet package

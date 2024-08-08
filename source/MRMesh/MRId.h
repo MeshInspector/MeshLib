@@ -13,7 +13,7 @@ class Id
 {
 public:
     constexpr Id() noexcept : id_( -1 ) { }
-    explicit constexpr Id( NoInit ) noexcept { }
+    explicit Id( NoInit ) noexcept { }
     explicit constexpr Id( int i ) noexcept : id_( i ) { }
     explicit constexpr Id( size_t i ) noexcept : id_( int( i ) ) { }
     template <typename U> Id( Id<U> ) = delete;
@@ -52,7 +52,7 @@ class Id<MR::EdgeTag> // Need `MR::` here to simplify binding generation. See li
 {
 public:
     constexpr Id() noexcept : id_( -1 ) { }
-    explicit constexpr Id( NoInit ) noexcept { }
+    explicit Id( NoInit ) noexcept { }
     constexpr Id( UndirectedEdgeId u ) noexcept : id_( (int)u << 1 ) { assert( u.valid() ); }
     explicit constexpr Id( int i ) noexcept : id_( i ) { }
     explicit constexpr Id( size_t i ) noexcept : id_( int( i ) ) { }
@@ -99,7 +99,7 @@ class Id<VoxelTag>
 {
 public:
     constexpr Id() noexcept : id_( ~size_t( 0 ) ) { }
-    explicit constexpr Id( NoInit ) noexcept { }
+    explicit Id( NoInit ) noexcept { }
     explicit constexpr Id( size_t i ) noexcept : id_( i ) { }
     explicit constexpr Id( int ) noexcept = delete;
     constexpr operator size_t() const { return id_; }

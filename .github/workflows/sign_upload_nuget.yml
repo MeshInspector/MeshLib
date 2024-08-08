@@ -1,4 +1,4 @@
-name: Sign and Upload Windows
+name: Sign and Upload NuGet
 
 on:
   release:

@@ -217,17 +217,11 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
 
                 numTexture += textures.size();
                 numObject++;
-
-                for ( const auto& texture : textures )
-                {
-                    if ( resolution.x == -1 )
-                        resolution = texture.resolution;
-                    else if ( resolution != texture.resolution )
-                    {
-                        needSaveTexture = false;
-                        break;
-                    }
-                }
+                
+                if ( resolution.x == -1 )
+                    resolution = textures.back().resolution;
+                else if ( resolution != textures.back().resolution )
+                    needSaveTexture = false;
             }
         }
     }

@@ -1,3 +1,8 @@
+/// \page ExampleCMeshResolveDegenerations Resolving mesh degeneration
+///
+/// Example of resolving degenerated faces
+///
+/// \code
 #include "MRMeshC/MRMesh.h"
 #include "MRMeshC/MRMeshDecimate.h"
 #include "MRMeshC/MRMeshLoad.h"
@@ -59,3 +64,4 @@ out_mesh:
 out:
     return rc;
 }
+/// \endcode

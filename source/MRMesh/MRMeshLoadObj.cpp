@@ -432,7 +432,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
     std::string currentMaterialName;
     std::optional<Vector3d> pointOffset;
 
-    TextureId maxTextureId;
+    TextureId maxTextureId = TextureId( -1 );
     TextureId currentTextureId = TextureId(-1);
     Vector<TextureId, FaceId> texturePerFace;
 
@@ -505,12 +505,15 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
                 {
                     materialIt = mtl->begin();
                 }
-               
-                result.textureFiles.resize( maxTextureId + 1 );
-                for ( const auto& [mtlName, material] : *mtl )
+                
+                if ( maxTextureId.valid() )
                 {
-                    if ( !material.diffuseTextureFile.empty() )
-                        result.textureFiles[material.id] = dir / material.diffuseTextureFile;
+                    result.textureFiles.resize( maxTextureId + 1 );
+                    for ( const auto& [mtlName, material] : *mtl )
+                    {
+                        if ( !material.diffuseTextureFile.empty() )
+                            result.textureFiles[material.id] = dir / material.diffuseTextureFile;
+                    }
                 }
 
                 if ( materialIt->second.diffuseColor != Vector3f::diagonal(-1) )

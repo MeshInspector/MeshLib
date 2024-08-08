@@ -189,3 +189,16 @@ def compare_lines(lines_a: mrmesh.Polyline3 or Path or str,
         assert lines_a.totalLength() == lines_b.totalLength(), (
             f"{test_report}total length of lines are differs, \n"
             f"lines_a:{lines_a.min}\nlines_b:{lines_b.min}\n")
+
+
+def compare_distance_maps(dm_a, dm_b, threshold=0.001):
+    assert dm_a.resX() == dm_b.resX() and dm_a.resY() == dm_b.resY(), \
+        f"resolution is different {dm_a.resX(), dm_a.resY()} vs {dm_a.resX(), dm_a.resY()}"
+    with check:
+        for i in range(dm_a.resX()):
+            for j in range(dm_a.resY()):
+                a = dm_a.get(i, j)
+                b = dm_b.get(i, j)
+                if a != b:
+                    assert abs(a - b) / max(a, b) < threshold, (
+                        f"values are different at {i}, {j}, {a}, {b}")

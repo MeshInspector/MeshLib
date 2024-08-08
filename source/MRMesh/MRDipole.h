@@ -30,6 +30,7 @@ static_assert( sizeof( Dipole ) == 8 * sizeof( float ) );
 
 /// calculates dipoles for given mesh and AABB-tree
 MRMESH_API void calcDipoles( Dipoles& dipoles, const AABBTree& tree, const Mesh& mesh );
+[[nodiscard]] MRMESH_API Dipoles calcDipoles( const AABBTree& tree, const Mesh& mesh );
 
 /// compute approximate winding number at \param q;
 /// \param beta determines the precision of the approximation: the more the better, recommended value 2 or more;

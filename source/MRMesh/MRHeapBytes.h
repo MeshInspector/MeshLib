@@ -63,6 +63,13 @@ template<typename T>
     return sizeof( T ) + ptr->heapBytes();
 }
 
+/// Needed for generic code, always returns zero.
+template<typename T>
+[[nodiscard]] inline size_t heapBytes( const std::function<T> & )
+{
+    return 0;
+}
+
 /// \}
 
 } // namespace MR

@@ -1,6 +1,6 @@
 namespace MR {
 
-/** \page EmbendedPythonOverview Python overview
+/** \page EmbeddedPythonOverview Python overview
 
 Python is one of the most popular and widely used programming language in scientific researches, machine learning, data analysis and advanced testing.\n
 

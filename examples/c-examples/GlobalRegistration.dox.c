@@ -1,3 +1,8 @@
+/// \page ExampleCGlobalRegistration Global registration
+///
+/// Example of global registration usage:
+///
+/// \code
 #include <MRMeshC/MRBox.h>
 #include <MRMeshC/MRMultiwayICP.h>
 #include <MRMeshC/MRPointCloud.h>
@@ -9,7 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/// print progress every 10%
+// print progress every 10%
 int gProgress = -1;
 bool onProgress( float v )
 {
@@ -145,3 +150,4 @@ out_inputs:
 out:
     return rc;
 }
+/// \endcode

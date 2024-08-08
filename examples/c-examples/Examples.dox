@@ -1,0 +1,17 @@
+/**
+\page CCodeExamples C Basic Examples
+
+\subpage ExampleCMeshLoadSave
+
+\subpage ExampleCMeshDecimate
+
+\subpage ExampleCMeshBoolean
+
+\subpage ExampleCMeshOffset
+
+\subpage ExampleCGlobalRegistration
+
+\subpage ExampleCMeshFillHole
+
+\subpage ExampleCMeshResolveDegenerations
+*/

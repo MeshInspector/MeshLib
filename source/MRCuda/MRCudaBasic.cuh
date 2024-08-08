@@ -16,10 +16,10 @@ class DynamicArray
 public:
     DynamicArray() = default;
     // malloc given size on GPU
-    DynamicArray( size_t size );
+    explicit DynamicArray( size_t size );
     // copy given vector to GPU
     template <typename U>
-    DynamicArray( const std::vector<U>& vec );
+    explicit DynamicArray( const std::vector<U>& vec );
     // free this array from GPU (if needed)
     ~DynamicArray();
 

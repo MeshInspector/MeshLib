@@ -2,6 +2,7 @@
 #include "MRCudaFastWindingNumber.cuh"
 #include "MRCudaMath.cuh"
 #include "MRMesh/MRAABBTree.h"
+#include "MRMesh/MRDipole.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRTimer.h"
 
@@ -14,7 +15,6 @@ struct FastWindingNumberData
 {
     DynamicArray<Dipole> dipoles;
     DynamicArray<float3> cudaPoints;
-    DynamicArrayF cudaResult;
     DynamicArray<float3> cudaMeshPoints;
     DynamicArray<Node3> cudaNodes;
     DynamicArray<FaceToThreeVerts> cudaFaces;
@@ -37,29 +37,25 @@ bool FastWindingNumber::prepareData_( ProgressCallback cb )
 
     if ( !reportProgress( cb, 0.0f ) )
         return false;
+
+    data->cudaMeshPoints.fromVector( mesh_.points.vec_ );
+    if ( !reportProgress( cb, 0.1f ) )
+        return false;
+
+    data->cudaFaces.fromVector( mesh_.topology.getTriangulation().vec_ );
+    if ( !reportProgress( cb, 0.3f ) )
+        return false;
+
     const AABBTree& tree = mesh_.getAABBTree();
-    Dipoles dipoles;
-    calcDipoles( dipoles, tree, mesh_ );
     if ( !reportProgress( cb, 0.5f ) )
         return false;
 
-    data->dipoles.fromVector( dipoles.vec_ );
-    if ( !reportProgress( cb, 0.625f ) )
-        return false;
-
     const auto& nodes = tree.nodes();
-    const auto& meshPoints = mesh_.points;
-    const auto tris = mesh_.topology.getTriangulation();
-
-    data->cudaMeshPoints.fromVector( meshPoints.vec_ );
-    if ( !reportProgress( cb, 0.75f ) )
-        return false;
-
     data->cudaNodes.fromVector( nodes.vec_ );
-    if ( !reportProgress( cb, 0.875f ) )
+    if ( !reportProgress( cb, 0.6f ) )
         return false;
 
-    data->cudaFaces.fromVector( tris.vec_ );
+    data->dipoles.fromVector( mesh_.getDipoles().vec_ );
     if ( !reportProgress( cb, 1.0f ) )
         return false;
 
@@ -75,12 +71,12 @@ void FastWindingNumber::calcFromVector( std::vector<float>& res, const std::vect
     const size_t size = points.size();
     res.resize( size );
     data_->cudaPoints.fromVector( points );
-    data_->cudaResult.resize( size );
+    DynamicArrayF cudaResult( size );
 
-    fastWindingNumberFromVector( data_->cudaPoints.data(), data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(), data_->cudaResult.data(), beta, int( skipFace ), size );
+    fastWindingNumberFromVector( data_->cudaPoints.data(), data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(), cudaResult.data(), beta, int( skipFace ), size );
     CUDA_EXEC( cudaGetLastError() );
 
-    data_->cudaResult.toVector( res );
+    CUDA_EXEC( cudaResult.toVector( res ) );
 }
 
 bool FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, ProgressCallback cb )
@@ -90,18 +86,19 @@ bool FastWindingNumber::calcSelfIntersections( FaceBitSet& res, float beta, Prog
         return false;
 
     const size_t size = mesh_.topology.faceSize();
-    res.resize( size );
-    data_->cudaResult.resize( size );
+    DynamicArrayF cudaResult( size );
 
-    fastWindingNumberFromMesh(data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(), data_->cudaResult.data(), beta, size);
+    fastWindingNumberFromMesh(data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(), cudaResult.data(), beta, size);
     if ( CUDA_EXEC( cudaGetLastError() ) )
         return false;
 
     std::vector<float> wns;
-    data_->cudaResult.toVector( wns );
+    if ( CUDA_EXEC( cudaResult.toVector( wns ) ) )
+        return false;
     if ( !reportProgress( cb, 0.9f ) )
         return false;
     
+    res.resize( size );
     return BitSetParallelForAll( res, [&] (FaceId f)
     {
         if ( wns[f] < 0 || wns[f] > 1 )
@@ -127,7 +124,7 @@ VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vec
     
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
     const size_t size = size_t( dims.x ) * dims.y * dims.z;
-    data_->cudaResult.resize( size );
+    DynamicArrayF cudaResult( size );
     if ( !reportProgress( cb, 0.0f ) )
         return unexpectedOperationCanceled();
 
@@ -135,12 +132,12 @@ VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vec
         int3{ dims.x, dims.y, dims.z },
         cudaGridToMeshXf,
         data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(),
-        data_->cudaResult.data(), beta );
+        cudaResult.data(), beta );
     
     if ( auto code = CUDA_EXEC( cudaGetLastError() ) )
         return unexpected( Cuda::getError( code ) );
 
-    if ( auto code = data_->cudaResult.toVector( res ) )
+    if ( auto code = cudaResult.toVector( res ) )
         return unexpected( Cuda::getError( code ) );
 
     if ( !reportProgress( cb, 1.0f ) )
@@ -166,7 +163,7 @@ VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& r
 
     const Matrix4 cudaGridToMeshXf = ( gridToMeshXf == AffineXf3f{} ) ? Matrix4{} : getCudaMatrix( gridToMeshXf );
     const size_t size = size_t( dims.x ) * dims.y * dims.z;
-    data_->cudaResult.resize( size );
+    DynamicArrayF cudaResult( size );
     if ( !reportProgress( cb, 0.0f ) )
         return unexpectedOperationCanceled();
 
@@ -174,12 +171,12 @@ VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& r
         int3{ dims.x, dims.y, dims.z },
         cudaGridToMeshXf,
         data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(),
-        data_->cudaResult.data(), beta, maxDistSq, minDistSq );
+        cudaResult.data(), beta, maxDistSq, minDistSq );
 
     if ( auto code = CUDA_EXEC( cudaGetLastError() ) )
         return unexpected( Cuda::getError( code ) );
 
-    if ( auto code = data_->cudaResult.toVector( res ) )
+    if ( auto code = cudaResult.toVector( res ) )
         return unexpected( Cuda::getError( code ) );
 
     if ( !reportProgress( cb, 1.0f ) )

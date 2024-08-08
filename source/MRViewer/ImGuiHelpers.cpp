@@ -662,7 +662,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
 
     window = context->CurrentWindow;
     // Manually draw Y scroll bar if window cannot be big enough
-    if ( std::ceil( window->SizeFull.y ) + 1 < std::floor( window->ContentSizeIdeal.y + 2 * style.WindowPadding.y ) && !params.changedSize )
+    if ( params.allowScrollbar && std::ceil( window->SizeFull.y ) + 1 < std::floor( window->ContentSizeIdeal.y + 2 * style.WindowPadding.y ) && !params.changedSize )
     {
         // Set scrollbar size
         window->ScrollbarSizes[ImGuiAxis_Y ^ 1] = style.ScrollbarSize;

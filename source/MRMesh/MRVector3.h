@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMacros.h"
 #include "MRMeshFwd.h"
 #include "MRConstants.h"
 #include <algorithm>
@@ -43,7 +44,13 @@ struct Vector3
     constexpr       T & operator []( int e )       noexcept { return *( &x + e ); }
 
     T lengthSq() const { return x * x + y * y + z * z; }
-    T length() const { return std::sqrt( lengthSq() ); }
+    auto length() const
+    {
+        // Calling `sqrt` this way to hopefully support boost.multiprecision numbers.
+        // Returning `auto` to not break on integral types.
+        using std::sqrt;
+        return sqrt( lengthSq() );
+    }
 
     [[nodiscard]] Vector3 normalized() const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
     {
@@ -54,7 +61,7 @@ struct Vector3
     }
 
     /// returns one of 3 basis unit vector that makes the biggest angle with the direction specified by this
-    Vector3 furthestBasisVector() const;
+    Vector3 furthestBasisVector() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> );
 
     /// returns 2 unit vector, which together with this vector make an orthogonal basis
     /// Currently not implemented for integral vectors.
@@ -146,6 +153,13 @@ inline Vector3<T> mult( const Vector3<T>& a, const Vector3<T>& b )
     return { a.x * b.x,a.y * b.y,a.z * b.z };
 }
 
+/// per component division
+template <typename T>
+inline Vector3<T> div( const Vector3<T>& a, const Vector3<T>& b )
+{
+    return { a.x / b.x, a.y / b.y, a.z / b.z };
+}
+
 
 /// computes minimal angle in [0,pi] between two vectors;
 /// the function is symmetric: angle( a, b ) == angle( b, a )
@@ -158,12 +172,13 @@ inline T angle( const Vector3<T> & a, const Vector3<T> & b )
 }
 
 template <typename T>
-inline Vector3<T> Vector3<T>::furthestBasisVector() const
+inline Vector3<T> Vector3<T>::furthestBasisVector() const MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, bool> )
 {
-    if ( fabs( x ) < fabs( y ) )
-        return ( fabs( x ) < fabs( z ) ) ? Vector3( 1, 0, 0 ) : Vector3( 0, 0, 1 );
+    using std::abs; // This should allow boost.multiprecision numbers here.
+    if ( abs( x ) < abs( y ) )
+        return ( abs( x ) < abs( z ) ) ? Vector3( 1, 0, 0 ) : Vector3( 0, 0, 1 );
     else
-        return ( fabs( y ) < fabs( z ) ) ? Vector3( 0, 1, 0 ) : Vector3( 0, 0, 1 );
+        return ( abs( y ) < abs( z ) ) ? Vector3( 0, 1, 0 ) : Vector3( 0, 0, 1 );
 }
 
 template <typename T>
@@ -186,19 +201,19 @@ template <typename T>
 
 template <typename T>
 [[nodiscard]] inline constexpr Vector3<T> operator +( const Vector3<T> & a, const Vector3<T> & b )
-    { return { a.x + b.x, a.y + b.y, a.z + b.z }; }
+    { return { T( a.x + b.x ), T( a.y + b.y ), T( a.z + b.z ) }; }
 
 template <typename T>
 [[nodiscard]] inline Vector3<T> operator -( const Vector3<T> & a, const Vector3<T> & b )
-    { return { a.x - b.x, a.y - b.y, a.z - b.z }; }
+    { return { T( a.x - b.x ), T( a.y - b.y ), T( a.z - b.z ) }; }
 
 template <typename T>
 [[nodiscard]] inline Vector3<T> operator *( T a, const Vector3<T> & b )
-    { return { a * b.x, a * b.y, a * b.z }; }
+    { return { T( a * b.x ), T( a * b.y ), T( a * b.z ) }; }
 
 template <typename T>
 [[nodiscard]] inline Vector3<T> operator *( const Vector3<T> & b, T a )
-    { return { a * b.x, a * b.y, a * b.z }; }
+    { return { T( a * b.x ), T( a * b.y ), T( a * b.z ) }; }
 
 template <typename T>
 [[nodiscard]] inline Vector3<T> operator /( Vector3<T> b, T a )

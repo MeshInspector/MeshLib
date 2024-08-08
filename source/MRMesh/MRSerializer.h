@@ -106,6 +106,8 @@ MRMESH_API void serializeToJson( const Vector2f& vec, Json::Value& root );
 MRMESH_API void serializeToJson( const Vector3i& vec, Json::Value& root );
 MRMESH_API void serializeToJson( const Vector3f& vec, Json::Value& root );
 MRMESH_API void serializeToJson( const Vector4f& vec, Json::Value& root );
+MRMESH_API void serializeToJson( const Box3i& box, Json::Value& root );
+MRMESH_API void serializeToJson( const Box3f& box, Json::Value& root );
 MRMESH_API void serializeToJson( const Color& col, Json::Value& root );
 MRMESH_API void serializeToJson( const Matrix2f& matrix, Json::Value& root, bool skipIdentity = true );
 MRMESH_API void serializeToJson( const Matrix3f& matrix, Json::Value& root, bool skipIdentity = true );

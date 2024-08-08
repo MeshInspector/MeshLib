@@ -32,14 +32,19 @@ public:
     /// make from 2d array
     [[nodiscard]] MRMESH_API DistanceMap( const MR::Matrix<float>& m );
 
-    /// checks if X,Y element is valid
+    /// checks if X,Y element is valid (i.e. not `std::numeric_limits<float>::lowest()`; passing invalid coords to this is UB)
     [[nodiscard]] MRMESH_API bool isValid( size_t x, size_t y ) const;
-    /// checks if index element is valid
+    /// checks if index element is valid (i.e. not `std::numeric_limits<float>::lowest()`; passing an invalid coord to this is UB)
     [[nodiscard]] MRMESH_API bool isValid( size_t i ) const;
 
-    /// returns value in (X,Y) element, returns nullopt if not valid
+    /// Returns true if (X,Y) coordinates are in bounds.
+    [[nodiscard]] bool isInBounds( size_t x, size_t y ) const { return x < size_t( dims_.x ) && y < size_t( dims_.y ); }
+    /// Returns true if a flattened coordinate is in bounds.
+    [[nodiscard]] bool isInBounds( size_t i ) const { return i < size_; }
+
+    /// returns value in (X,Y) element, returns nullopt if not valid (see `isValid()`), UB if out of bounds.
     [[nodiscard]] MRMESH_API std::optional<float> get( size_t x, size_t y ) const;
-    /// returns value of index element, returns nullopt if not valid
+    /// returns value of index element, returns nullopt if not valid (see `isValid()`), UB if out of bounds.
     [[nodiscard]] MRMESH_API std::optional<float> get( size_t i ) const;
     /// returns value in (X,Y) element without check on valid
     /// use this only if you sure that distance map has no invalid values or for serialization
@@ -70,11 +75,13 @@ public:
      * see https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-coordinates for details
      * all 4 elements around this point should be valid, returns nullopt if at least one is not valid
      * \param x,y should be in resolution range [0;resX][0;resY].
+     * If x,y are out of bounds, returns nullopt.
      */
     [[nodiscard]] MRMESH_API std::optional<float> getInterpolated( float x, float y ) const;
 
     /// finds 3d coordinates of the Point on the model surface for the (x,y) pixel
     /// Use the same params with distance map creation
+    /// (x,y) must be in bounds, the behavior is undefined otherwise.
     [[nodiscard]] MRMESH_API std::optional<Vector3f> unproject( size_t x, size_t y, const AffineXf3f& toWorld ) const;
 
     /**
@@ -83,6 +90,7 @@ public:
      * \details getInterpolated( 0.5f, 0.5f ) == get( 0, 0 )
      * see https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-coordinates for details
      * all 4 elements around this point should be valid, returns nullopt if at least one is not valid
+     * If x,y are out of bounds, returns nullopt.
      */
     [[nodiscard]] MRMESH_API std::optional<Vector3f> unprojectInterpolated( float x, float y, const AffineXf3f& toWorld ) const;
 
@@ -103,15 +111,15 @@ public:
     /// replaces values with cell-wise subtracted values. Invalid values remain only if both corresponding cells are invalid
     MRMESH_API const DistanceMap& operator-= ( const DistanceMap& rhs );
 
-    /// sets value in (X,Y) element
+    /// sets value in (X,Y) element (the coords must be valid, UB otherwise)
     MRMESH_API void set( size_t x, size_t y, float val );
-    /// sets value in index element
+    /// sets value in index element (the coord must be valid, UB otherwise)
     MRMESH_API void set( size_t i, float val );
     /// sets all values at one time
     MRMESH_API void set( std::vector<float> data );
-    /// invalidates value in (X,Y) element
+    /// invalidates value in (X,Y) element (the coords must be valid, UB otherwise)
     MRMESH_API void unset( size_t x, size_t y );
-    /// invalidates value in index element
+    /// invalidates value in index element (the coord must be valid, UB otherwise)
     MRMESH_API void unset( size_t i );
 
     /// invalidates all elements

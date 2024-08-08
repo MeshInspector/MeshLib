@@ -107,7 +107,7 @@ pip install --upgrade meshlib
 
 Find more:
   - \link DataModel Data model overview \endlink
-  - \link EmbendedPythonOverview Python overview \endlink
+  - \link EmbeddedPythonOverview Python overview \endlink
   - \link FillHoleGroup Fill Hole overview \endlink
   - \link MeshBuilder Mesh Building \endlink
 

@@ -27,3 +27,4 @@ source/MRMesh/config_cmake.h
 source/MRDotNetTest/bin/*
 source/MRDotNetTest/obj/*
 /cmake-build-*/
+/doc/

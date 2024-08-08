@@ -1,3 +1,8 @@
+/// \page ExampleCMeshLoadSave Loading and saving mesh files
+///
+/// Following code presents example of loading and saving mesh file
+///
+/// \code
 #include "MRMeshC/MRMesh.h"
 #include "MRMeshC/MRMeshLoad.h"
 #include "MRMeshC/MRMeshSave.h"
@@ -76,3 +81,4 @@ out_mesh1:
 out:
     return rc;
 }
+/// \endcode

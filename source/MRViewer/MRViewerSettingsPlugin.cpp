@@ -334,20 +334,20 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
 #ifndef __EMSCRIPTEN__
     drawSeparator_( "Files and Folders", menuScaling );
     // TODO
-    static std::string logFolderPath = Logger::instance().getLogFileName().parent_path().string();
+    static std::string logFolderPath = utf8string( Logger::instance().getLogFileName().parent_path() );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { 1.5f * cButtonPadding * menuScaling, cButtonPadding * menuScaling } );
     UI::inputText( "##LogFolderPath", logFolderPath );
     ImGui::SameLine( 0, 1.5f * style.ItemInnerSpacing.x );
     if ( ImGui::Link( "Logs folder") )
-        OpenDocument( logFolderPath );
+        OpenDocument( asU8String( logFolderPath ) );
     ImGui::PopStyleVar();
     ImGui::SameLine( 0.0f, 0.0f );
     ImGui::SameLine( 0.0f, -30.0f * menuScaling );
     if ( UI::button( "...", ImVec2( 24.0f * menuScaling, 24.0f * menuScaling ) ) )
     {
-        std::filesystem::path newPath = openFolderDialog( logFolderPath );
+        std::filesystem::path newPath = openFolderDialog( asU8String( logFolderPath ) );
         if ( !newPath.empty() )
-            logFolderPath = newPath.string();
+            logFolderPath = utf8string( newPath );
     }
 #endif
 #endif
@@ -485,6 +485,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
     auto paramsTime = getDefaultUnitParams<TimeUnit>();
     auto paramsRatio = getDefaultUnitParams<RatioUnit>();
     auto paramsPixelSize = getDefaultUnitParams<PixelSizeUnit>();
+    auto paramsInvLen = getDefaultUnitParams<InvLengthUnit>();
 
     auto forAllLengthParams = [&]( auto&& func )
     {
@@ -492,6 +493,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         func( paramsArea );
         func( paramsVol );
         func( paramsMoveSpeed );
+        func( paramsInvLen );
     };
     auto forAllParams = [&]( auto&& func )
     {
@@ -597,12 +599,14 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
                 paramsArea.targetUnit = AreaUnit::mm2;
                 paramsVol.targetUnit = VolumeUnit::mm3;
                 paramsMoveSpeed.targetUnit = MovementSpeedUnit::mmPerSecond;
+                paramsInvLen.targetUnit = InvLengthUnit::inv_mm;
                 break;
             case LengthUnit::inches:
                 forAllParams( [&]( auto&& params ){ params.leadingZero = false; } );
                 paramsArea.targetUnit = AreaUnit::inches2;
                 paramsVol.targetUnit = VolumeUnit::inches3;
                 paramsMoveSpeed.targetUnit = MovementSpeedUnit::inchesPerSecond;
+                paramsInvLen.targetUnit = InvLengthUnit::inv_inches;
                 break;
             case LengthUnit::_count:; // MSVC warns otherwise.
                 break;

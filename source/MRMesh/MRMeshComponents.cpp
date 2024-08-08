@@ -320,11 +320,15 @@ std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPa
     FaceIncidence incidence /*= FaceIncidence::PerEdge*/, const UndirectedEdgePredicate& isCompBd /*= {}*/ )
 {
     MR_TIMER
+    assert( maxComponentCount > 1 );
+    if ( maxComponentCount < 1 )
+        maxComponentCount = INT_MAX;
     const FaceBitSet& region = meshPart.mesh.topology.getFaceIds( meshPart.region );
     auto [uniqueRootsMap, componentsCount] = getAllComponentsMap( meshPart, incidence, isCompBd );
     if ( !componentsCount )
         return { {}, 0 };
-    return { getAllComponents( uniqueRootsMap, componentsCount, region, maxComponentCount ), componentsCount };
+    const int componentsInGroup = ( maxComponentCount == INT_MAX ) ? 1 : ( componentsCount + maxComponentCount - 1 ) / maxComponentCount;
+    return { getAllComponents( uniqueRootsMap, componentsCount, region, maxComponentCount ), componentsInGroup };
 }
 
 std::vector<MR::FaceBitSet> getAllComponents( Face2RegionMap& componentsMap, int componentsCount, const FaceBitSet& region,
@@ -532,28 +536,13 @@ static std::vector<VertBitSet> getAllComponentsVerts( UnionFind<VertId>& unionFi
     MR_TIMER
 
     const auto& allRoots = unionFindStruct.roots();
-    constexpr int InvalidRoot = -1;
-    std::vector<int> uniqueRootsMap( allRoots.size(), InvalidRoot );
-    int k = 0;
-    int curRoot;
-    for ( auto v : vertsRegion )
-    {
-        if ( doNotOutput && doNotOutput->test( v ) )
-            continue;
-        curRoot = allRoots[v];
-        auto& uniqIndex = uniqueRootsMap[curRoot];
-        if ( uniqIndex == InvalidRoot )
-        {
-            uniqIndex = k;
-            ++k;
-        }
-    }
+    auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, vertsRegion );
     std::vector<VertBitSet> res( k, VertBitSet( allRoots.size() ) );
     for ( auto v : vertsRegion )
     {
         if ( doNotOutput && doNotOutput->test( v ) )
             continue;
-        curRoot = allRoots[v];
+        auto curRoot = allRoots[v];
         res[uniqueRootsMap[curRoot]].set( v );
     }
     return res;
@@ -648,13 +637,19 @@ std::vector<UndirectedEdgeBitSet> getAllComponentsUndirectedEdges( const Mesh& m
 
 bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection )
 {
-    MR_TIMER
-    for ( const auto & component : getAllComponentsVerts( mesh ) )
-    {
-        if ( ( component - selection ).none() )
-            return true;
-    }
-    return false;
+    MR_TIMER;
+
+    auto unionFindStruct = getUnionFindStructureVerts( mesh );   
+    const auto& allRoots = unionFindStruct.roots();
+    auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, mesh.topology.getValidVerts() );
+    for ( auto sv : selection )
+        uniqueRootsMap[sv] = RegionId{};// mark invalid
+    RegionBitSet presentBitSets( k );
+    for ( auto rId : uniqueRootsMap )
+        if ( rId )
+            presentBitSets.set( rId );
+
+    return presentBitSets.count() != presentBitSets.size();
 }
 
 UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgePredicate & isCompBd )

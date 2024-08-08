@@ -8,26 +8,70 @@
 #include <pybind11/stl/filesystem.h>
 #pragma warning(pop)
 
-// Distance Map
-MR_ADD_PYTHON_VEC( mrmeshpy, vectorDistanceMap, MR::DistanceMap )
 
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, DistanceMap, MR::DistanceMap )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::DistanceMap>( m, "DistanceMap" ).
+    MR_PYTHON_CUSTOM_CLASS( DistanceMap ).
         def( pybind11::init<>() ).
-        def( "get", static_cast< std::optional<float>( MR::DistanceMap::* )( size_t, size_t ) const >( &MR::DistanceMap::get ), "read X,Y value" ).
-        def( "get", static_cast< std::optional<float>( MR::DistanceMap::* )( size_t ) const >( &MR::DistanceMap::get ), "read value by index" ).
+        def( "get",
+            []( const MR::DistanceMap& m, std::size_t x, std::size_t y ) -> std::optional<float>
+            {
+                if ( !m.isInBounds( x, y ) )
+                    return {};
+                return m.get( x, y );
+            },
+            "Read value at (X,Y), returns Null if out of bounds or if that pixel is invalid (aka infinite distance)." ).
+        def( "get",
+            []( const MR::DistanceMap& m, std::size_t i ) -> std::optional<float>
+            {
+                if ( !m.isInBounds( i ) )
+                    return {};
+                return m.get( i );
+            },
+            "Read value at the flattened index I, returns Null if out of bounds or if that pixel is invalid (aka infinite distance)." ).
+        // This validates the coords automatically:
         def( "getInterpolated", ( std::optional<float>( MR::DistanceMap::* )( float, float ) const )& MR::DistanceMap::getInterpolated, "bilinear interpolation between 4 pixels" ).
-        def( "isValid", ( bool( MR::DistanceMap::* )( size_t, size_t ) const )& MR::DistanceMap::isValid, "check if X,Y pixel is valid" ).
-        def( "isValid", ( bool( MR::DistanceMap::* )( size_t ) const )& MR::DistanceMap::isValid, "check if index pixel is valid").
+        def( "isInBounds", ( bool( MR::DistanceMap::* )( std::size_t, std::size_t ) const )& MR::DistanceMap::isInBounds, "Check if coordinates X,Y are not out of bounds." ).
+        def( "isInBounds", ( bool( MR::DistanceMap::* )( std::size_t ) const )& MR::DistanceMap::isInBounds, "Check if the flattened coordinate is not out of bounds.").
+        def( "isValid", []( const MR::DistanceMap& m, std::size_t x, std::size_t y ) { return m.isInBounds( x, y ) && m.isValid( x, y ); }, "Check if pixel at X,Y is in bounds and valid (i.e. not at infinite distance)" ).
+        def( "isValid", []( const MR::DistanceMap& m, std::size_t i ) { return m.isInBounds( i ) && m.isValid( i ); }, "Check if pixel at a flattened coordinate is in bounds and valid (i.e. not at infinite distance)" ).
         def( "resX", &MR::DistanceMap::resX, "X resolution" ).
         def( "resY", &MR::DistanceMap::resY, "Y resolution" ).
         def( "clear", &MR::DistanceMap::clear, "clear all values, set resolutions to zero" ).
         def( "invalidateAll", &MR::DistanceMap::invalidateAll, "invalidate all pixels" ).
-        def( "set", static_cast< void( MR::DistanceMap::* )( size_t, float ) >( &MR::DistanceMap::set ), "write value by index" ).
-        def( "set", static_cast< void( MR::DistanceMap::* )( size_t, size_t, float ) >( &MR::DistanceMap::set ), "write X,Y value" ).
-        def( "unset", static_cast< void( MR::DistanceMap::* )( size_t, size_t ) >( &MR::DistanceMap::unset), "invalidate X,Y pixel" ).
-        def( "unset", static_cast< void( MR::DistanceMap::* )( size_t ) >( &MR::DistanceMap::unset), "invalidate by index" );
+        def( "set",
+            []( MR::DistanceMap& m, std::size_t x, std::size_t y, float value )
+            {
+                if ( !m.isInBounds( x, y ) )
+                    throw std::out_of_range("Out of bounds!");
+                m.set( x, y, value );
+            },
+            "Sets a pixel, throws if the coordinates are out of bounds." ).
+        def( "set",
+            []( MR::DistanceMap& m, std::size_t i, float value )
+            {
+                if ( !m.isInBounds( i ) )
+                    throw std::out_of_range("Out of bounds!");
+                m.set( i, value );
+            },
+            "Sets a pixel at a flattened coordinate, throws if the coordinate is out of bounds." ).
+        def( "unset",
+            []( MR::DistanceMap& m, std::size_t x, std::size_t y )
+            {
+                if ( !m.isInBounds( x, y ) )
+                    throw std::out_of_range("Out of bounds!");
+                m.unset( x, y );
+            },
+            "Sets a pixel to the invalid value (see `isValid()`), throws if the coordinates are out of bounds." ).
+        def( "unset",
+            []( MR::DistanceMap& m, std::size_t i )
+            {
+                if ( !m.isInBounds( i ) )
+                    throw std::out_of_range("Out of bounds!");
+                m.unset( i );
+            },
+            "Sets a pixel to the invalid value (see `isValid()`), throws if the coordinate is out of bounds." );
 
     pybind11::class_<MR::MeshToDistanceMapParams>( m, "MeshToDistanceMapParams" ).
         def( pybind11::init<>(), "Default constructor. Manual params initialization is required" ).
@@ -112,3 +156,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
            "param useDepth true - the isolines will be located on distance map surface, false - isolines for any iso-value will be located on the common plane xf(0XY)" );
 
 } )
+
+// Distance Map
+MR_ADD_PYTHON_VEC( mrmeshpy, vectorDistanceMap, MR::DistanceMap )

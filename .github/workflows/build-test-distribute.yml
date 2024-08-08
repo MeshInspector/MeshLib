@@ -165,6 +165,7 @@ jobs:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     needs:
       - windows-build-test
+      - versioning-and-release-url
     timeout-minutes: 20
     runs-on: windows-2022
     steps:
@@ -184,7 +185,9 @@ jobs:
          tar -xvzf MREDist_DotNet.zip
           
      - name: Generate NuGet specification
-       run: py -3 scripts\generate_nuget_spec.py ${{ needs.versioning-and-release-url.outputs.app_version }}
+       run: |
+        echo ${{ needs.versioning-and-release-url.outputs.app_version }}
+        py -3 scripts\generate_nuget_spec.py ${{ needs.versioning-and-release-url.outputs.app_version }}
         
      - name: Download NuGet Executable
        run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe

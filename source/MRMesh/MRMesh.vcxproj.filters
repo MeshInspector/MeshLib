@@ -2219,6 +2219,9 @@
     <ClCompile Include="MRMeshDecimateCallbacks.cpp">
       <Filter>Source Files\Decimation</Filter>
     </ClCompile>
+    <ClCompile Include="MRVoxelsVolume.cpp">
+      <Filter>Source Files\BaseStructures</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

@@ -77,14 +77,10 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, co
         std::tie( res.min, res.max ) = parallelMinMax( res.data );
         return res;
     }
-    else
-    {
-        const auto func = meshToDistanceFunctionVolume( mp, params );
-        return functionVolumeToSimpleVolume( func, params.vol.cb );
-    }
 
-    assert( false ); // `if` shall be exhaustive
-    return unexpected( "" );
+    const auto func = meshToDistanceFunctionVolume( mp, params );
+    return functionVolumeToSimpleVolume( func, params.vol.cb );
+
 }
 
 FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params )

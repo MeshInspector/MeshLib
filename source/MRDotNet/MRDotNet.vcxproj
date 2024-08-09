@@ -61,6 +61,7 @@
     <ClInclude Include="MRMesh.h" />
     <ClInclude Include="MRMeshBoolean.h" />
     <ClInclude Include="MRMeshDecimate.h" />
+    <ClInclude Include="MROffset.h" />
     <ClInclude Include="MRVector3.h" />
     <ClInclude Include="MRMeshFwd.h" />
   </ItemGroup>
@@ -72,6 +73,7 @@
     <ClCompile Include="MRMesh.cpp" />
     <ClCompile Include="MRMeshBoolean.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
+    <ClCompile Include="MROffset.cpp" />
     <ClCompile Include="MRVector3.cpp" />
   </ItemGroup>
   <ItemGroup>

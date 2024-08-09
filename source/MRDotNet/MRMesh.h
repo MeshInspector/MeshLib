@@ -67,4 +67,10 @@ internal:
     void clearManagedResources();
 };
 
+public value struct MeshPart
+{
+    Mesh^ mesh;
+    FaceBitSet^ region;
+};
+
 MR_DOTNET_NAMESPACE_END

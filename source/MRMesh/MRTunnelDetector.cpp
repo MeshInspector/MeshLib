@@ -29,7 +29,7 @@ public:
     BasisTunnelsDetector( const MeshPart & mp, EdgeMetric metric );
     VoidOrErrStr prepare( ProgressCallback cb );
     // after prepare(...) region can only shrink, not become larger
-    Expected<std::vector<EdgeLoop>, std::string> detect( ProgressCallback cb );
+    Expected<std::vector<EdgeLoop>> detect( ProgressCallback cb );
 
 private:
     std::vector<EdgeCurvature> innerEdges_; // sorted by metric
@@ -95,7 +95,7 @@ VoidOrErrStr BasisTunnelsDetector::prepare( ProgressCallback cb )
     return {};
 }
 
-Expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( ProgressCallback cb )
+Expected<std::vector<EdgeLoop>> BasisTunnelsDetector::detect( ProgressCallback cb )
 {
     MR_TIMER
 
@@ -209,7 +209,7 @@ Expected<std::vector<EdgeLoop>, std::string> BasisTunnelsDetector::detect( Progr
 
 } //anonymous namespace
 
-Expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshPart & mp, EdgeMetric metric, ProgressCallback cb )
+Expected<std::vector<EdgeLoop>> detectBasisTunnels( const MeshPart & mp, EdgeMetric metric, ProgressCallback cb )
 {
     MR_TIMER
     if ( !metric )
@@ -221,7 +221,7 @@ Expected<std::vector<EdgeLoop>, std::string> detectBasisTunnels( const MeshPart 
     return d.detect( subprogress( cb, 0.25f, 1.0f ) );
 }
 
-Expected<FaceBitSet, std::string> detectTunnelFaces( const MeshPart & mp, const DetectTunnelSettings & settings )
+Expected<FaceBitSet> detectTunnelFaces( const MeshPart & mp, const DetectTunnelSettings & settings )
 {
     MR_TIMER
     auto metric = settings.metric;

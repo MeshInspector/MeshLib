@@ -30,14 +30,14 @@ struct NamedMesh
     Vector<TextureId, FaceId> texturePerFace;
     std::optional<Color> diffuseColor;
 };
-MRMESH_API Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const std::filesystem::path& file, bool combineAllObjects,
+MRMESH_API Expected<std::vector<NamedMesh>> fromSceneObjFile( const std::filesystem::path& file, bool combineAllObjects,
                                                                            const MeshLoadSettings& settings = {} );
 /// important on Windows: in stream must be open in binary mode
 /// \param dir working directory where materials and textures are located
-MRMESH_API Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream& in, bool combineAllObjects, const std::filesystem::path& dir,
+MRMESH_API Expected<std::vector<NamedMesh>> fromSceneObjFile( std::istream& in, bool combineAllObjects, const std::filesystem::path& dir,
                                                                            const MeshLoadSettings& settings = {} );
 /// \param dir working directory where materials and textures are located
-MRMESH_API Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data, size_t size, bool combineAllObjects, const std::filesystem::path& dir,
+MRMESH_API Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size, bool combineAllObjects, const std::filesystem::path& dir,
                                                                            const MeshLoadSettings& settings = {} );
 } // namespace MeshLoad
 

@@ -317,7 +317,7 @@ private:
 
 }
 
-Expected<Mesh, std::string> terrainTriangulation( std::vector<Vector3f> points, ProgressCallback cb /*= {} */ )
+Expected<Mesh> terrainTriangulation( std::vector<Vector3f> points, ProgressCallback cb /*= {} */ )
 {
     MR_TIMER;
 

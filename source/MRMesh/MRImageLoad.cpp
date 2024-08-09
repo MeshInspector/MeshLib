@@ -74,7 +74,7 @@ struct ReadPng
     int alphaPaletteSize{ 0 };
 };
 
-Expected<Image, std::string> fromPng( const std::filesystem::path& path )
+Expected<Image> fromPng( const std::filesystem::path& path )
 {
     std::ifstream in( path, std::ios::binary );
     if ( !in )
@@ -83,7 +83,7 @@ Expected<Image, std::string> fromPng( const std::filesystem::path& path )
     return addFileNameInError( fromPng( in ), path );
 }
 
-Expected<MR::Image, std::string> fromPng( std::istream& in )
+Expected<MR::Image> fromPng( std::istream& in )
 {
     ReadPng png( in );
 
@@ -186,7 +186,7 @@ struct JpegReader
     tjhandle tjInstance{ nullptr };
 };
 
-Expected<Image, std::string> fromJpeg( const std::filesystem::path& path )
+Expected<Image> fromJpeg( const std::filesystem::path& path )
 {
     std::ifstream in( path, std::ios::binary );
     if ( !in )
@@ -195,7 +195,7 @@ Expected<Image, std::string> fromJpeg( const std::filesystem::path& path )
     return addFileNameInError( fromJpeg( in ), path );
 }
 
-Expected<MR::Image, std::string> fromJpeg( std::istream& in )
+Expected<MR::Image> fromJpeg( std::istream& in )
 {
     std::error_code ec;
     in.seekg( 0, std::ios::end );
@@ -230,13 +230,13 @@ Expected<MR::Image, std::string> fromJpeg( std::istream& in )
 
 #endif
 
-Expected<Image, std::string> fromAnySupportedFormat( const std::filesystem::path& file )
+Expected<Image> fromAnySupportedFormat( const std::filesystem::path& file )
 {
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    Expected<Image, std::string> res = unexpected( std::string( "unsupported file extension" ) );
+    Expected<Image> res = unexpected( std::string( "unsupported file extension" ) );
 #ifndef MRMESH_NO_PNG
     if ( ext == ".png" )
         return MR::ImageLoad::fromPng( file );

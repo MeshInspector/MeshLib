@@ -183,7 +183,7 @@ class ThreeMFLoader
 
     std::vector<std::shared_ptr<Node>> roots_;
 
-    Expected<std::unique_ptr<tinyxml2::XMLDocument>, std::string> loadXml_( const std::filesystem::path& file );
+    Expected<std::unique_ptr<tinyxml2::XMLDocument>> loadXml_( const std::filesystem::path& file );
     // Load and parse all XML .model files
     VoidOrErrStr loadXmls_( const std::vector<std::filesystem::path>& files );
 
@@ -206,7 +206,7 @@ public:
     std::string* loadWarn = nullptr;
     bool failedToLoadColoring = false;
 
-    Expected<std::shared_ptr<Object>, std::string> load( const std::vector<std::filesystem::path>& files, std::filesystem::path root, ProgressCallback callback );
+    Expected<std::shared_ptr<Object>> load( const std::vector<std::filesystem::path>& files, std::filesystem::path root, ProgressCallback callback );
 
     friend class Node;
 };
@@ -940,7 +940,7 @@ VoidOrErrStr Node::loadMultiproperties_( const tinyxml2::XMLElement* xmlNode )
     return {};
 }
 
-Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFrom3mf( const std::filesystem::path& path, std::string* loadWarn, ProgressCallback callback )
+Expected<std::shared_ptr<Object>> deserializeObjectTreeFrom3mf( const std::filesystem::path& path, std::string* loadWarn, ProgressCallback callback )
 {
     const auto tmpFolder = UniqueTemporaryFolder( {} );
 
@@ -966,7 +966,7 @@ Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFrom3mf( con
     return loader.load( files, tmpFolder, subprogress( callback, 0.1f, 0.9f ) );
 }
 
-Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromModel( const std::filesystem::path& path, std::string* loadWarn, ProgressCallback callback )
+Expected<std::shared_ptr<Object>> deserializeObjectTreeFromModel( const std::filesystem::path& path, std::string* loadWarn, ProgressCallback callback )
 {
     ThreeMFLoader loader;
     loader.loadWarn = loadWarn;

@@ -78,7 +78,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
             ProgressBar::orderWithMainThreadPostProcessing( "Load voxels", [params = parameters_, path, autoMode = autoMode_] ()->std::function<void()>
             {
                 ProgressBar::nextTask( "Load file" );
-                Expected<VdbVolume, std::string> res;
+                Expected<VdbVolume> res;
                 auto error = std::make_shared<std::string>();
 
                 const auto showError = [error] () -> void

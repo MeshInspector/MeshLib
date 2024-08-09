@@ -78,7 +78,7 @@ public:
         result_{terrain}
     {
     }
-    Expected<Mesh, std::string> run();
+    Expected<Mesh> run();
 private:
     // cut structure by terrain intersection contour
     Expected<VertBitSet,std::string> createCutStructure_();
@@ -90,7 +90,7 @@ private:
         VertBitSet intBitSet;
     };
     // makes contour for further processing with marked vertices (cut vertices and terrain intersection vertices)
-    Expected<MarkedContour, std::string> createMarkedStructureContour_( VertBitSet&& structCutVerts );
+    Expected<MarkedContour> createMarkedStructureContour_( VertBitSet&& structCutVerts );
 
     struct MappedMeshContours
     {
@@ -102,9 +102,9 @@ private:
         VertBitSet cutBitSet; // bit set of cut part of structure mesh contour
     };
     // make preparation on terrain and finds contour for cut with mapping to cut structure boundary
-    Expected<MappedMeshContours, std::string> prepareTerrainCut( MarkedContour&& mc );
+    Expected<MappedMeshContours> prepareTerrainCut( MarkedContour&& mc );
     // cut terrain with filtered contours and remove internal part
-    Expected<std::vector<EdgeLoop>, std::string> cutTerrain( const MappedMeshContours& mmc );
+    Expected<std::vector<EdgeLoop>> cutTerrain( const MappedMeshContours& mmc );
 
     // contains newly added edges from connect_ functions
     struct ConnectionEdges
@@ -139,7 +139,7 @@ private:
     std::vector<EdgeLoop> bounds_;
 };
 
-Expected<Mesh, std::string> TerrainEmbedder::run()
+Expected<Mesh> TerrainEmbedder::run()
 {
     auto cutBs = createCutStructure_();
     if ( !cutBs.has_value() )
@@ -168,7 +168,7 @@ Expected<Mesh, std::string> TerrainEmbedder::run()
     return std::move( result_ );
 }
 
-Expected<VertBitSet, std::string> TerrainEmbedder::createCutStructure_()
+Expected<VertBitSet> TerrainEmbedder::createCutStructure_()
 {
     BooleanPreCutResult structPrecutRes;
     boolean( result_, struct_, BooleanOperation::InsideB, { .outPreCutB = &structPrecutRes } );
@@ -196,7 +196,7 @@ Expected<VertBitSet, std::string> TerrainEmbedder::createCutStructure_()
     return cutVerts;
 }
 
-Expected<TerrainEmbedder::MarkedContour, std::string> TerrainEmbedder::createMarkedStructureContour_( VertBitSet&& structCutVerts )
+Expected<TerrainEmbedder::MarkedContour> TerrainEmbedder::createMarkedStructureContour_( VertBitSet&& structCutVerts )
 {
     bounds_ = findRightBoundary( cutStructure_.topology );
     if ( bounds_.size() != 1 )
@@ -220,7 +220,7 @@ Expected<TerrainEmbedder::MarkedContour, std::string> TerrainEmbedder::createMar
     return res;
 }
 
-Expected<TerrainEmbedder::MappedMeshContours, std::string> TerrainEmbedder::prepareTerrainCut( MarkedContour&& mc )
+Expected<TerrainEmbedder::MappedMeshContours> TerrainEmbedder::prepareTerrainCut( MarkedContour&& mc )
 {
     auto cutOffset = std::clamp( std::tan( params_.cutAngle ), 0.0f, 100.0f );
     auto fillOffset = std::clamp( std::tan( params_.fillAngle ), 0.0f, 100.0f );
@@ -326,7 +326,7 @@ Expected<TerrainEmbedder::MappedMeshContours, std::string> TerrainEmbedder::prep
     return unexpected( "Cannot resolve lone cut on terrain" );
 }
 
-Expected<std::vector<EdgeLoop>, std::string> TerrainEmbedder::cutTerrain( const MappedMeshContours& mmc )
+Expected<std::vector<EdgeLoop>> TerrainEmbedder::cutTerrain( const MappedMeshContours& mmc )
 {
     CutMeshParameters cutParams;
     cutParams.new2OldMap = params_.new2oldFaces;
@@ -567,7 +567,7 @@ int TerrainEmbedder::findOffsetContourIndex_( int i, const std::vector<int>& ids
     return h;
 }
 
-Expected<Mesh, std::string> embedStructureToTerrain( 
+Expected<Mesh> embedStructureToTerrain( 
     const Mesh& terrain, const Mesh& structure, const EmbeddedStructureParameters& params )
 {
     MR_TIMER;

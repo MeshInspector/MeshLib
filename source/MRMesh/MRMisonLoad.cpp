@@ -11,7 +11,7 @@
 namespace MR
 {
 
-Expected<std::shared_ptr<MR::Object>, std::string> fromSceneMison( const std::filesystem::path& path, 
+Expected<std::shared_ptr<MR::Object>> fromSceneMison( const std::filesystem::path& path, 
     std::string* loadWarn, ProgressCallback callback )
 {
     std::ifstream in( path, std::ifstream::binary );
@@ -22,7 +22,7 @@ Expected<std::shared_ptr<MR::Object>, std::string> fromSceneMison( const std::fi
 }
 
 // TODO: we need some code to prevent recursive openeing same file with this format
-Expected<std::shared_ptr<MR::Object>, std::string> fromSceneMison( std::istream& in,
+Expected<std::shared_ptr<MR::Object>> fromSceneMison( std::istream& in,
     std::string* loadWarn, ProgressCallback callback )
 {
     auto rootVal = deserializeJsonValue( in );

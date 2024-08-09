@@ -33,7 +33,7 @@ public:
     MRMESH_API void setDistances( int width, int height, const std::vector<float>& distances );
 
     /// Creates mesh if all components were successfully loaded
-    MRMESH_API Expected<Mesh, std::string> createMesh() const;
+    MRMESH_API Expected<Mesh> createMesh() const;
 
 private:
     int width_{0};

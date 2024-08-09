@@ -33,6 +33,6 @@ struct TextMeshAlignParams : SymbolMeshParams
 };
 
 // Creates symbol mesh and aligns it to given surface
-MRMESH_API Expected<Mesh, std::string> alignTextToMesh( const Mesh& mesh, const TextMeshAlignParams& params );
+MRMESH_API Expected<Mesh> alignTextToMesh( const Mesh& mesh, const TextMeshAlignParams& params );
 }
 #endif

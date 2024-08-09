@@ -50,6 +50,12 @@ std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p
     return dist;
 }
 
+std::optional<Vector3f> directionFromMesh( const MeshPart& mp, const Vector3f& p, const DistanceToMeshOptions& op )
+{
+    const auto proj = findProjection( p, mp, op.maxDistSq, nullptr, op.minDistSq );
+    return ( p - proj.proj.point ).normalized();
+}
+
 Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& cParams /*= {} */ )
 {
     MR_TIMER
@@ -144,5 +150,58 @@ Expected<SimpleVolume, std::string> meshRegionToIndicatorVolume( const Mesh& mes
 
     return res;
 }
+
+
+
+VoxelsVolume<std::function<Vector3f( const Vector3i& )>> meshToProjectionDirFunctionVolume( const MeshPart& mp, const MeshToDirectionVolumeParams& params )
+{
+    assert( params.dist.signMode != SignDetectionMode::OpenVDB );
+    return VoxelsVolume
+    {
+        .data = std::function{ [params, mp = MeshPart( mp.mesh )] ( const Vector3i& pos ) -> Vector3f
+        {
+            const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
+            const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
+            auto dist = directionFromMesh( mp, voxelCenter, params.dist );
+            return dist ? *dist : Vector3f{};
+        } },
+        .dims = params.vol.dimensions,
+        .voxelSize = params.vol.voxelSize
+    };
+}
+
+
+Expected<std::array<SimpleVolume, 3>> meshToDirectionVolume( const MeshPart& mp, const MeshToDirectionVolumeParams& params )
+{
+    constexpr auto proj = [] ( auto f, auto i )
+    {
+        return [f, i] ( const Vector3i& pos )
+        {
+            return f( pos )[i];
+        };
+    };
+
+    auto func = meshToProjectionDirFunctionVolume( mp, params );
+
+    std::array<SimpleVolume, 3> res;
+    for ( size_t i = 0; i < 3; ++i )
+    {
+        auto cb = subprogress( params.vol.cb, i, 3 );
+
+        FunctionVolume projVolume{
+            .data = proj( func.data, i ),
+            .dims = func.dims,
+            .voxelSize = func.voxelSize
+        };
+
+        if ( auto r = functionVolumeToSimpleVolume( projVolume, cb ); !r )
+            return unexpected( r.error() );
+        else
+            res[i] = std::move( *r );
+    }
+
+    return res;
+}
+
 
 } //namespace MR

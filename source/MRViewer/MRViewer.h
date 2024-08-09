@@ -138,6 +138,7 @@ public:
     MRVIEWER_API bool mouseUp( MouseButton button, int modifier );
     MRVIEWER_API bool mouseMove( int mouse_x, int mouse_y );
     MRVIEWER_API bool mouseScroll( float delta_y );
+    MRVIEWER_API bool mouseClick( MouseButton button, int modifier );
     MRVIEWER_API bool spaceMouseMove( const Vector3f& translate, const Vector3f& rotate );
     MRVIEWER_API bool spaceMouseDown( int key );
     MRVIEWER_API bool spaceMouseUp( int key );
@@ -480,6 +481,9 @@ public:
     MouseUpDownSignal mouseUpSignal; // signal is called on mouse up
     MouseMoveSignal mouseMoveSignal; // signal is called on mouse move, note that input x and y are in screen space
     MouseScrollSignal mouseScrollSignal; // signal is called on mouse is scrolled
+    // High-level mouse event, emitted by MouseController
+    // When mouseClickSignal has connections, a small delay for click detection is introduced into camera operations
+    MouseUpDownSignal mouseClickSignal; // signal is called when mouse button is pressed and immediately released
     // Cursor enters/leaves
     using CursorEntranceSignal = boost::signals2::signal<void(bool)>;
     CursorEntranceSignal cursorEntranceSignal;

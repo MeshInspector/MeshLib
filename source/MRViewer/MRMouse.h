@@ -10,7 +10,8 @@ enum class MouseButton
     Left = 0, // GLFW_MOUSE_BUTTON_1
     Right = 1, // GLFW_MOUSE_BUTTON_2
     Middle = 2, // GLFW_MOUSE_BUTTON_3
-    Count
+    Count,
+    NoButton = Count
 };
 
 // Standard mouse functions for camera control

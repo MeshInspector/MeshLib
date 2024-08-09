@@ -101,25 +101,6 @@ FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDis
     };
 }
 
-
-Expected<SimpleVolume> functionVolumeToSimpleVolume( const FunctionVolume& volume, const ProgressCallback& cb )
-{
-    SimpleVolume res;
-    res.voxelSize = volume.voxelSize;
-    res.dims = volume.dims;
-    VolumeIndexer indexer( res.dims );
-    res.data.resize( indexer.size() );
-
-    if ( !ParallelFor( size_t( 0 ), indexer.size(), [&]( size_t i )
-    {
-        res.data[i] = volume.data( indexer.toPos( VoxelId( i ) ) );
-    }, cb ) )
-        return unexpectedOperationCanceled();
-
-    std::tie( res.min, res.max ) = parallelMinMax( res.data );
-    return res;
-}
-
 Expected<SimpleVolume, std::string> meshRegionToIndicatorVolume( const Mesh& mesh, const FaceBitSet& region,
     float offset, const DistanceVolumeParams& params )
 {

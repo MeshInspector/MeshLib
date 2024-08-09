@@ -41,9 +41,6 @@ MRMESH_API Expected<SimpleVolume> meshToDistanceVolume( const MeshPart& mp, cons
 /// makes FunctionVolume representing (signed or unsigned) distances from Mesh with given settings
 MRMESH_API FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params = {} );
 
-/// converts function volume into simple volume
-MRMESH_API Expected<SimpleVolume> functionVolumeToSimpleVolume( const FunctionVolume& volume, const ProgressCallback& callback = {} );
-
 /// returns a volume filled with the values:
 /// v < 0: this point is within offset distance to region-part of mesh and it is closer to region-part than to not-region-part
 MRMESH_API Expected<SimpleVolume> meshRegionToIndicatorVolume( const Mesh& mesh, const FaceBitSet& region,

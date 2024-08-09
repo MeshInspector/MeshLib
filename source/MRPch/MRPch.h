@@ -114,9 +114,10 @@
 #include <array>
 #include <cassert>
 #include <cfloat>
-#include <codecvt>
 #include <chrono>
 #include <cmath>
+#include <codecvt>
+#include <compare>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -127,8 +128,8 @@
 #include <future>
 #include <iomanip>
 #include <iostream>
-#include <iterator>
 #include <istream>
+#include <iterator>
 #include <limits>
 #include <locale>
 #include <map>
@@ -139,8 +140,8 @@
 #include <string>
 #include <thread>
 #include <tuple>
+#include <unordered_map>
 #include <variant>
 #include <vector>
-#include <unordered_map>
 
 #pragma warning(pop)

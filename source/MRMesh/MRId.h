@@ -12,20 +12,20 @@ template <typename T>
 class Id
 {
 public:
-    Id() noexcept : id_( -1 ) { }
+    constexpr Id() noexcept : id_( -1 ) { }
     explicit Id( NoInit ) noexcept { }
     explicit constexpr Id( int i ) noexcept : id_( i ) { }
     explicit constexpr Id( size_t i ) noexcept : id_( int( i ) ) { }
     template <typename U> Id( Id<U> ) = delete;
 
-    operator int() const { return id_; }
-    bool valid() const { return id_ >= 0; }
-    explicit operator bool() const { return id_ >= 0; }
+    constexpr operator int() const { return id_; }
+    constexpr bool valid() const { return id_ >= 0; }
+    explicit constexpr operator bool() const { return id_ >= 0; }
     constexpr int & get() noexcept { return id_; }
 
-    bool operator == (Id b) const { return id_ == b.id_; }
-    bool operator != (Id b) const { return id_ != b.id_; }
-    bool operator <  (Id b) const { return id_ <  b.id_; }
+    constexpr bool operator == (Id b) const { return id_ == b.id_; }
+    constexpr bool operator != (Id b) const { return id_ != b.id_; }
+    constexpr bool operator <  (Id b) const { return id_ <  b.id_; }
 
     template <typename U>
     bool operator == (Id<U> b) const = delete;
@@ -34,14 +34,14 @@ public:
     template <typename U>
     bool operator < (Id<U> b) const = delete;
 
-    Id & operator --() { --id_; return * this; }
-    Id & operator ++() { ++id_; return * this; }
+    constexpr Id & operator --() { --id_; return * this; }
+    constexpr Id & operator ++() { ++id_; return * this; }
 
-    Id operator --( int ) { auto res = *this; --id_; return res; }
-    Id operator ++( int ) { auto res = *this; ++id_; return res; }
+    constexpr Id operator --( int ) { auto res = *this; --id_; return res; }
+    constexpr Id operator ++( int ) { auto res = *this; ++id_; return res; }
 
-    Id & operator -=( int a ) { id_ -= a; return * this; }
-    Id & operator +=( int a ) { id_ += a; return * this; }
+    constexpr Id & operator -=( int a ) { id_ -= a; return * this; }
+    constexpr Id & operator +=( int a ) { id_ += a; return * this; }
 
 private:
     int id_;
@@ -51,28 +51,28 @@ template <>
 class Id<MR::EdgeTag> // Need `MR::` here to simplify binding generation. See libclang bug: https://github.com/llvm/llvm-project/issues/92371
 {
 public:
-    Id() noexcept : id_( -1 ) { }
+    constexpr Id() noexcept : id_( -1 ) { }
     explicit Id( NoInit ) noexcept { }
-    Id( UndirectedEdgeId u ) noexcept : id_( (int)u << 1 ) { assert( u.valid() ); }
+    constexpr Id( UndirectedEdgeId u ) noexcept : id_( (int)u << 1 ) { assert( u.valid() ); }
     explicit constexpr Id( int i ) noexcept : id_( i ) { }
     explicit constexpr Id( size_t i ) noexcept : id_( int( i ) ) { }
-    operator int() const { return id_; }
-    bool valid() const { return id_ >= 0; }
-    explicit operator bool() const { return id_ >= 0; }
+    constexpr operator int() const { return id_; }
+    constexpr bool valid() const { return id_ >= 0; }
+    explicit constexpr operator bool() const { return id_ >= 0; }
     constexpr int & get() noexcept { return id_; }
 
     // returns identifier of the edge with same ends but opposite orientation
-    Id sym() const { assert( valid() ); return Id(id_ ^ 1); }
+    constexpr Id sym() const { assert( valid() ); return Id(id_ ^ 1); }
     // among each pair of sym-edges: one is always even and the other is odd
-    bool even() const { assert( valid() ); return (id_ & 1) == 0; }
-    bool odd() const { assert( valid() ); return (id_ & 1) == 1; }
+    constexpr bool even() const { assert( valid() ); return (id_ & 1) == 0; }
+    constexpr bool odd() const { assert( valid() ); return (id_ & 1) == 1; }
     // returns unique identifier of the edge ignoring its direction
-    UndirectedEdgeId undirected() const { assert( valid() ); return UndirectedEdgeId( id_ >> 1 ); }
-    operator UndirectedEdgeId() const { return undirected(); }
+    constexpr UndirectedEdgeId undirected() const { assert( valid() ); return UndirectedEdgeId( id_ >> 1 ); }
+    constexpr operator UndirectedEdgeId() const { return undirected(); }
 
-    bool operator == (Id b) const { return id_ == b.id_; }
-    bool operator != (Id b) const { return id_ != b.id_; }
-    bool operator <  (Id b) const { return id_ <  b.id_; }
+    constexpr bool operator == (Id b) const { return id_ == b.id_; }
+    constexpr bool operator != (Id b) const { return id_ != b.id_; }
+    constexpr bool operator <  (Id b) const { return id_ <  b.id_; }
 
     template <typename U>
     bool operator == (Id<U> b) const = delete;
@@ -81,14 +81,14 @@ public:
     template <typename U>
     bool operator < (Id<U> b) const = delete;
 
-    Id & operator --() { --id_; return * this; }
-    Id & operator ++() { ++id_; return * this; }
+    constexpr Id & operator --() { --id_; return * this; }
+    constexpr Id & operator ++() { ++id_; return * this; }
 
-    Id operator --( int ) { auto res = *this; --id_; return res; }
-    Id operator ++( int ) { auto res = *this; ++id_; return res; }
+    constexpr Id operator --( int ) { auto res = *this; --id_; return res; }
+    constexpr Id operator ++( int ) { auto res = *this; ++id_; return res; }
 
-    Id & operator -=( int a ) { id_ -= a; return * this; }
-    Id & operator +=( int a ) { id_ += a; return * this; }
+    constexpr Id & operator -=( int a ) { id_ -= a; return * this; }
+    constexpr Id & operator +=( int a ) { id_ += a; return * this; }
 
 private:
     int id_;
@@ -98,18 +98,18 @@ template <>
 class Id<VoxelTag>
 {
 public:
-    Id() noexcept : id_( ~size_t( 0 ) ) { }
+    constexpr Id() noexcept : id_( ~size_t( 0 ) ) { }
     explicit Id( NoInit ) noexcept { }
     explicit constexpr Id( size_t i ) noexcept : id_( i ) { }
     explicit constexpr Id( int ) noexcept = delete;
-    operator size_t() const { return id_; }
-    bool valid() const { return id_ != ~size_t( 0 ); }
-    explicit operator bool() const { return id_ != ~size_t( 0 ); }
+    constexpr operator size_t() const { return id_; }
+    constexpr bool valid() const { return id_ != ~size_t( 0 ); }
+    explicit constexpr operator bool() const { return id_ != ~size_t( 0 ); }
     constexpr size_t& get() noexcept { return id_; }
 
-    bool operator == (Id b) const { return id_ == b.id_; }
-    bool operator != (Id b) const { return id_ != b.id_; }
-    bool operator <  (Id b) const { return id_ <  b.id_; }
+    constexpr bool operator == (Id b) const { return id_ == b.id_; }
+    constexpr bool operator != (Id b) const { return id_ != b.id_; }
+    constexpr bool operator <  (Id b) const { return id_ <  b.id_; }
 
     template <typename U>
     bool operator == (Id<U> b) const = delete;
@@ -118,28 +118,28 @@ public:
     template <typename U>
     bool operator < (Id<U> b) const = delete;
 
-    Id & operator --() { --id_; return * this; }
-    Id & operator ++() { ++id_; return * this; }
+    constexpr Id & operator --() { --id_; return * this; }
+    constexpr Id & operator ++() { ++id_; return * this; }
 
-    Id operator --( int ) { auto res = *this; --id_; return res; }
-    Id operator ++( int ) { auto res = *this; ++id_; return res; }
+    constexpr Id operator --( int ) { auto res = *this; --id_; return res; }
+    constexpr Id operator ++( int ) { auto res = *this; ++id_; return res; }
 
-    Id & operator -=( size_t a ) { id_ -= a; return * this; }
-    Id & operator +=( size_t a ) { id_ += a; return * this; }
+    constexpr Id & operator -=( size_t a ) { id_ -= a; return * this; }
+    constexpr Id & operator +=( size_t a ) { id_ += a; return * this; }
 
 private:
     size_t id_;
 };
 
-inline Id<VoxelTag> operator + ( Id<VoxelTag> id, size_t a ) { return Id<VoxelTag>{ ( size_t )id + a }; }
-inline Id<VoxelTag> operator - ( Id<VoxelTag> id, size_t a ) { return Id<VoxelTag>{ ( size_t )id - a }; }
+inline constexpr Id<VoxelTag> operator + ( Id<VoxelTag> id, size_t a ) { return Id<VoxelTag>{ ( size_t )id + a }; }
+inline constexpr Id<VoxelTag> operator - ( Id<VoxelTag> id, size_t a ) { return Id<VoxelTag>{ ( size_t )id - a }; }
 
 template <typename T>
-inline Id<T> operator + ( Id<T> id, int a ) { return Id<T>{ (int)id + a }; }
+inline constexpr Id<T> operator + ( Id<T> id, int a ) { return Id<T>{ (int)id + a }; }
 template <typename T>
-inline Id<T> operator + ( Id<T> id, unsigned int a ) { return Id<T>{ (int)id + (int)a }; }
+inline constexpr Id<T> operator + ( Id<T> id, unsigned int a ) { return Id<T>{ (int)id + (int)a }; }
 template <typename T>
-inline Id<T> operator - ( Id<T> id, int a ) { return Id<T>{ (int)id - a }; }
+inline constexpr Id<T> operator - ( Id<T> id, int a ) { return Id<T>{ (int)id - a }; }
 
 inline constexpr FaceId operator "" _f( unsigned long long i ) noexcept { return FaceId{ (int)i }; }
 inline constexpr VertId operator "" _v( unsigned long long i ) noexcept { return VertId{ (int)i }; }

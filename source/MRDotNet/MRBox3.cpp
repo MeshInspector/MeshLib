@@ -95,4 +95,9 @@ float Box3f::Diagonal()
     return box_->diagonal();
 }
 
+bool Box3f::Valid()
+{
+    return box_->valid();
+}
+
 MR_DOTNET_NAMESPACE_END

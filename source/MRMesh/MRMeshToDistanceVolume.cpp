@@ -55,14 +55,15 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, co
     MR_TIMER
     auto params = cParams;
     assert( params.dist.signMode != SignDetectionMode::OpenVDB );
-    SimpleVolume res;
-    res.voxelSize = params.vol.voxelSize;
-    res.dims = params.vol.dimensions;
-    VolumeIndexer indexer( res.dims );
-    res.data.resize( indexer.size() );
 
     if ( params.dist.signMode == SignDetectionMode::HoleWindingRule )
     {
+        SimpleVolume res;
+        res.voxelSize = params.vol.voxelSize;
+        res.dims = params.vol.dimensions;
+        VolumeIndexer indexer( res.dims );
+        res.data.resize( indexer.size() );
+
         if ( !params.fwn )
             params.fwn = std::make_shared<FastWindingNumber>( mp.mesh );
         assert( !mp.region ); // only whole mesh is supported for now
@@ -73,20 +74,17 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, co
         {
             return unexpected( std::move( d.error() ) );
         }
+        std::tie( res.min, res.max ) = parallelMinMax( res.data );
+        return res;
     }
     else
     {
         const auto func = meshToDistanceFunctionVolume( mp, params );
-        if ( !ParallelFor( size_t( 0 ), indexer.size(), [&]( size_t i )
-        {
-            res.data[i] = func.data( indexer.toPos( VoxelId( i ) ) );
-        }, params.vol.cb ) )
-            return unexpectedOperationCanceled();
+        return functionVolumeToSimpleVolume( func, params.vol.cb );
     }
 
-    std::tie( res.min, res.max ) = parallelMinMax( res.data );
-
-    return res;
+    assert( false ); // `if` shall be exhaustive
+    return unexpected( "" );
 }
 
 FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params )
@@ -105,6 +103,25 @@ FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDis
         .dims = params.vol.dimensions,
         .voxelSize = params.vol.voxelSize
     };
+}
+
+
+Expected<SimpleVolume> functionVolumeToSimpleVolume( const FunctionVolume& volume, const ProgressCallback& cb )
+{
+    SimpleVolume res;
+    res.voxelSize = volume.voxelSize;
+    res.dims = volume.dims;
+    VolumeIndexer indexer( res.dims );
+    res.data.resize( indexer.size() );
+
+    if ( !ParallelFor( size_t( 0 ), indexer.size(), [&]( size_t i )
+    {
+        res.data[i] = volume.data( indexer.toPos( VoxelId( i ) ) );
+    }, cb ) )
+        return unexpectedOperationCanceled();
+
+    std::tie( res.min, res.max ) = parallelMinMax( res.data );
+    return res;
 }
 
 Expected<SimpleVolume, std::string> meshRegionToIndicatorVolume( const Mesh& mesh, const FaceBitSet& region,

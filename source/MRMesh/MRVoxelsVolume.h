@@ -1,6 +1,7 @@
 #pragma once
 #include "MRVector3.h"
 #include "MRHeapBytes.h"
+#include "MRExpected.h"
 #include <limits>
 #include <vector>
 
@@ -57,5 +58,9 @@ struct VoxelsVolumeMinMax : VoxelsVolume<T>
     ValueType min = std::numeric_limits<ValueType>::max();
     ValueType max = std::numeric_limits<ValueType>::lowest();
 };
+
+
+/// converts function volume into simple volume
+MRMESH_API Expected<SimpleVolume> functionVolumeToSimpleVolume( const FunctionVolume& volume, const ProgressCallback& callback = {} );
 
 } //namespace MR

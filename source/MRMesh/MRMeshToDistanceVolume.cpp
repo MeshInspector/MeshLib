@@ -55,14 +55,15 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, co
     MR_TIMER
     auto params = cParams;
     assert( params.dist.signMode != SignDetectionMode::OpenVDB );
-    SimpleVolume res;
-    res.voxelSize = params.vol.voxelSize;
-    res.dims = params.vol.dimensions;
-    VolumeIndexer indexer( res.dims );
-    res.data.resize( indexer.size() );
 
     if ( params.dist.signMode == SignDetectionMode::HoleWindingRule )
     {
+        SimpleVolume res;
+        res.voxelSize = params.vol.voxelSize;
+        res.dims = params.vol.dimensions;
+        VolumeIndexer indexer( res.dims );
+        res.data.resize( indexer.size() );
+
         if ( !params.fwn )
             params.fwn = std::make_shared<FastWindingNumber>( mp.mesh );
         assert( !mp.region ); // only whole mesh is supported for now
@@ -73,20 +74,13 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, co
         {
             return unexpected( std::move( d.error() ) );
         }
-    }
-    else
-    {
-        const auto func = meshToDistanceFunctionVolume( mp, params );
-        if ( !ParallelFor( size_t( 0 ), indexer.size(), [&]( size_t i )
-        {
-            res.data[i] = func.data( indexer.toPos( VoxelId( i ) ) );
-        }, params.vol.cb ) )
-            return unexpectedOperationCanceled();
+        std::tie( res.min, res.max ) = parallelMinMax( res.data );
+        return res;
     }
 
-    std::tie( res.min, res.max ) = parallelMinMax( res.data );
+    const auto func = meshToDistanceFunctionVolume( mp, params );
+    return functionVolumeToSimpleVolume( func, params.vol.cb );
 
-    return res;
 }
 
 FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params )

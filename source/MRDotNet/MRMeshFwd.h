@@ -70,5 +70,6 @@ using VertCoords = List<Vector3f^>;
 using VertCoordsReadOnly = ReadOnlyCollection<Vector3f^>;
 
 ref class Mesh;
+value struct MeshPart;
 
 MR_DOTNET_NAMESPACE_END

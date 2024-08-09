@@ -2,4 +2,6 @@
 \page CSharpCodeExamples C# Basic Examples
 
 \subpage ExampleCSharpMeshBoolean
+
+\subpage ExampleCSharpOffset
 */

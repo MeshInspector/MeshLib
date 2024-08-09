@@ -300,7 +300,7 @@ namespace
 
     using MtlLibrary = HashMap<std::string, MtlMaterial>;
 
-    Expected<MtlLibrary, std::string> loadMtlLibrary( const std::filesystem::path& path )
+    Expected<MtlLibrary> loadMtlLibrary( const std::filesystem::path& path )
     {
         std::ifstream mtlIn( path, std::ios::binary );
         if ( !mtlIn.is_open() )
@@ -385,7 +385,7 @@ namespace MR
 namespace MeshLoad
 {
 
-Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const std::filesystem::path& file, bool combineAllObjects,
+Expected<std::vector<NamedMesh>> fromSceneObjFile( const std::filesystem::path& file, bool combineAllObjects,
                                                                 const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ios::binary );
@@ -395,7 +395,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const std::files
     return addFileNameInError( fromSceneObjFile( in, combineAllObjects, file.parent_path(), settings ), file );
 }
 
-Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream& in, bool combineAllObjects, const std::filesystem::path& dir,
+Expected<std::vector<NamedMesh>> fromSceneObjFile( std::istream& in, bool combineAllObjects, const std::filesystem::path& dir,
                                                                 const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
@@ -414,7 +414,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream& in
     return fromSceneObjFile( data->data(), data->size(), combineAllObjects, dir, newSettings );
 }
 
-Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data, size_t size, bool combineAllObjects, const std::filesystem::path& dir,
+Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size, bool combineAllObjects, const std::filesystem::path& dir,
                                                                 const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
@@ -428,7 +428,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
     VertUVCoords uvCoords;
     VertColors colors;
     auto hasColors = false;
-    Expected<MtlLibrary, std::string> mtl;
+    Expected<MtlLibrary> mtl;
     std::string currentMaterialName;
     std::optional<Vector3d> pointOffset;
 
@@ -557,7 +557,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
     if ( !reportProgress( settings.callback, 0.5f ) )
         return unexpected( "Loading canceled" );
 
-    auto parseVertex = [&] ( size_t li ) -> Expected<std::tuple<Vector3d, Vector3d>, std::string>
+    auto parseVertex = [&] ( size_t li ) -> Expected<std::tuple<Vector3d, Vector3d>>
     {
         Vector3d v;
         Vector3d c { cInvalidColor };

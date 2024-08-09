@@ -52,7 +52,7 @@ struct TiffParameters : BaseTiffParameters
 MRMESH_API bool isTIFFFile( const std::filesystem::path& path );
 
 // reads parameters of tiff file
-MRMESH_API Expected<TiffParameters, std::string> readTiffParameters( const std::filesystem::path& path );
+MRMESH_API Expected<TiffParameters> readTiffParameters( const std::filesystem::path& path );
 
 struct RawTiffOutput
 {

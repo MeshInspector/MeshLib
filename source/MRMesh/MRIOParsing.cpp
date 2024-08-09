@@ -70,7 +70,7 @@ std::vector<size_t> splitByLines( const char* data, size_t size )
     return newlines;
 }
 
-Expected<MR::Buffer<char>, std::string> readCharBuffer( std::istream& in )
+Expected<MR::Buffer<char>> readCharBuffer( std::istream& in )
 {
     const auto posStart = in.tellg();
     in.seekg( 0, std::ios_base::end );

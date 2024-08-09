@@ -47,7 +47,7 @@ struct MeshToVolumeParams
 MRMESH_API void evalGridMinMax( const FloatGrid& grid, float& min, float& max );
 
 // convert mesh to volume in (0,0,0)-(dim.x,dim.y,dim.z) grid box
-MRMESH_API Expected<VdbVolume, std::string> meshToVolume( const Mesh& mesh, const MeshToVolumeParams& params = {} );
+MRMESH_API Expected<VdbVolume> meshToVolume( const Mesh& mesh, const MeshToVolumeParams& params = {} );
 
 // fills VdbVolume data from FloatGrid (does not fill voxels size, cause we expect it outside)
 MRMESH_API VdbVolume floatGridToVdbVolume( const FloatGrid& grid );
@@ -60,15 +60,15 @@ MRMESH_API VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, 
 
 // make SimpleVolume from VdbVolume
 // make copy of data
-MRMESH_API Expected<SimpleVolume, std::string> vdbVolumeToSimpleVolume(
+MRMESH_API Expected<SimpleVolume> vdbVolumeToSimpleVolume(
     const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} );
 // make normalized SimpleVolume from VdbVolume
 // make copy of data
-MRMESH_API Expected<SimpleVolume, std::string> vdbVolumeToSimpleVolumeNorm(
+MRMESH_API Expected<SimpleVolume> vdbVolumeToSimpleVolumeNorm(
     const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} );
 // make SimpleVolumeU16 from VdbVolume
 // performs mapping from [vdbVolume.min, vdbVolume.max] to nonnegative range of uint16_t
-MRMESH_API Expected<SimpleVolumeU16, std::string> vdbVolumeToSimpleVolumeU16(
+MRMESH_API Expected<SimpleVolumeU16> vdbVolumeToSimpleVolumeU16(
     const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} );
 
 /// parameters of OpenVDB Grid to Mesh conversion using Dual Marching Cubes algorithm

@@ -18,7 +18,7 @@ const IOFilters Filters =
     {"PTS (.pts)",        "*.pts"}
 };
 
-Expected<Polyline3, std::string> fromMrLines( const std::filesystem::path & file, ProgressCallback callback )
+Expected<Polyline3> fromMrLines( const std::filesystem::path & file, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -27,7 +27,7 @@ Expected<Polyline3, std::string> fromMrLines( const std::filesystem::path & file
     return addFileNameInError( fromMrLines( in, callback ), file );
 }
 
-Expected<Polyline3, std::string> fromMrLines( std::istream & in, ProgressCallback callback )
+Expected<Polyline3> fromMrLines( std::istream & in, ProgressCallback callback )
 {
     MR_TIMER
 
@@ -54,7 +54,7 @@ Expected<Polyline3, std::string> fromMrLines( std::istream & in, ProgressCallbac
     return polyline;
 }
 
-Expected<MR::Polyline3, std::string> fromPts( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+Expected<MR::Polyline3> fromPts( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -63,7 +63,7 @@ Expected<MR::Polyline3, std::string> fromPts( const std::filesystem::path& file,
     return addFileNameInError( fromPts( in, callback ), file );
 }
 
-Expected<MR::Polyline3, std::string> fromPts( std::istream& in, ProgressCallback callback /*= {} */ )
+Expected<MR::Polyline3> fromPts( std::istream& in, ProgressCallback callback /*= {} */ )
 {
     std::string line;
     int pointCount = 0;
@@ -126,13 +126,13 @@ Expected<MR::Polyline3, std::string> fromPts( std::istream& in, ProgressCallback
     return polyline;
 }
 
-Expected<Polyline3, std::string> fromAnySupportedFormat( const std::filesystem::path& file, ProgressCallback callback )
+Expected<Polyline3> fromAnySupportedFormat( const std::filesystem::path& file, ProgressCallback callback )
 {
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
 
-    Expected<Polyline3, std::string> res = unexpected( std::string( "unsupported file extension" ) );
+    Expected<Polyline3> res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".mrlines" )
         res = fromMrLines( file, callback );
     if ( ext == ".pts" )
@@ -140,13 +140,13 @@ Expected<Polyline3, std::string> fromAnySupportedFormat( const std::filesystem::
     return res;
 }
 
-Expected<MR::Polyline3, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, ProgressCallback callback )
+Expected<MR::Polyline3> fromAnySupportedFormat( std::istream& in, const std::string& extension, ProgressCallback callback )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    Expected<Polyline3, std::string> res = unexpected( std::string( "unsupported file extension" ) );
+    Expected<Polyline3> res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".mrlines" )
         res = fromMrLines( in, callback );
     if ( ext == ".pts" )

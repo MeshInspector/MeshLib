@@ -29,7 +29,7 @@ struct EmbeddedStructureParameters
 // Returns terrain mesh with structure embedded to it, or error string
 // terrain - mesh with +Z normal (not-closed mesh is expected)
 // structure - mesh with one open contour and +Z normal, that will be embedded in terrain
-[[nodiscard]] MRMESH_API Expected<Mesh, std::string> embedStructureToTerrain( const Mesh& terrain, const Mesh& structure,
+[[nodiscard]] MRMESH_API Expected<Mesh> embedStructureToTerrain( const Mesh& terrain, const Mesh& structure,
     const EmbeddedStructureParameters& params );
 
 }

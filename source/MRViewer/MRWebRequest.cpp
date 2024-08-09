@@ -437,7 +437,7 @@ void WebRequest::send( WebRequest::ResponseCallback callback )
     send( url_, logName_, std::move( callback ), async_ );
 }
 
-Expected<Json::Value, std::string> parseResponse( const Json::Value& response )
+Expected<Json::Value> parseResponse( const Json::Value& response )
 {
     if ( response["code"].asInt() == 0 )
         return unexpected( "Bad internet connection." );

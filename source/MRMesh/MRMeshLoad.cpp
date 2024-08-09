@@ -36,7 +36,7 @@ namespace MR
 namespace MeshLoad
 {
 
-Expected<Mesh, std::string> fromMrmesh( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
+Expected<Mesh> fromMrmesh( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -45,7 +45,7 @@ Expected<Mesh, std::string> fromMrmesh( const std::filesystem::path& file, const
     return addFileNameInError( fromMrmesh( in, settings ), file );
 }
 
-Expected<Mesh, std::string> fromMrmesh( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
+Expected<Mesh> fromMrmesh( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
@@ -74,7 +74,7 @@ Expected<Mesh, std::string> fromMrmesh( std::istream& in, const MeshLoadSettings
     return mesh;
 }
 
-Expected<Mesh, std::string> fromOff( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
+Expected<Mesh> fromOff( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -83,7 +83,7 @@ Expected<Mesh, std::string> fromOff( const std::filesystem::path& file, const Me
     return addFileNameInError( fromOff( in, settings ), file );
 }
 
-Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
+Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
@@ -215,7 +215,7 @@ Expected<Mesh, std::string> fromOff( std::istream& in, const MeshLoadSettings& s
     return res;
 }
 
-Expected<Mesh, std::string> fromObj( const std::filesystem::path & file, const MeshLoadSettings& settings /*= {}*/ )
+Expected<Mesh> fromObj( const std::filesystem::path & file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ios::binary );
     if ( !in )
@@ -224,7 +224,7 @@ Expected<Mesh, std::string> fromObj( const std::filesystem::path & file, const M
     return addFileNameInError( fromObj( in, settings ), file );
 }
 
-Expected<Mesh, std::string> fromObj( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
+Expected<Mesh> fromObj( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
@@ -237,7 +237,7 @@ Expected<Mesh, std::string> fromObj( std::istream& in, const MeshLoadSettings& s
     return std::move( (*objs)[0].mesh );
 }
 
-Expected<MR::Mesh, std::string> fromAnyStl( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
+Expected<MR::Mesh> fromAnyStl( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -246,7 +246,7 @@ Expected<MR::Mesh, std::string> fromAnyStl( const std::filesystem::path& file, c
     return addFileNameInError( fromAnyStl( in, settings ), file );
 }
 
-Expected<MR::Mesh, std::string> fromAnyStl( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
+Expected<MR::Mesh> fromAnyStl( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     auto pos = in.tellg();
     auto resBin = fromBinaryStl( in, settings );
@@ -260,7 +260,7 @@ Expected<MR::Mesh, std::string> fromAnyStl( std::istream& in, const MeshLoadSett
     return unexpected( resBin.error() + '\n' + resAsc.error() );
 }
 
-Expected<Mesh, std::string> fromBinaryStl( const std::filesystem::path & file, const MeshLoadSettings& settings /*= {}*/ )
+Expected<Mesh> fromBinaryStl( const std::filesystem::path & file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -269,7 +269,7 @@ Expected<Mesh, std::string> fromBinaryStl( const std::filesystem::path & file, c
     return addFileNameInError( fromBinaryStl( in, settings ), file );
 }
 
-Expected<Mesh, std::string> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
+Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
@@ -380,7 +380,7 @@ Expected<Mesh, std::string> fromBinaryStl( std::istream& in, const MeshLoadSetti
     return res;
 }
 
-Expected<Mesh, std::string> fromASCIIStl( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
+Expected<Mesh> fromASCIIStl( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -389,7 +389,7 @@ Expected<Mesh, std::string> fromASCIIStl( const std::filesystem::path& file, con
     return addFileNameInError( fromASCIIStl( in, settings ), file );
 }
 
-Expected<Mesh, std::string> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
+Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER;
 
@@ -486,7 +486,7 @@ Expected<Mesh, std::string> fromASCIIStl( std::istream& in, const MeshLoadSettin
     return res;
 }
 
-Expected<Mesh, std::string> fromPly( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
+Expected<Mesh> fromPly( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -495,7 +495,7 @@ Expected<Mesh, std::string> fromPly( const std::filesystem::path& file, const Me
     return addFileNameInError( fromPly( in, settings ), file );
 }
 
-Expected<Mesh, std::string> fromPly( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
+Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
@@ -614,7 +614,7 @@ Expected<Mesh, std::string> fromPly( std::istream& in, const MeshLoadSettings& s
 
 #ifndef MRMESH_NO_OPENCTM
 
-Expected<Mesh, std::string> fromCtm( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
+Expected<Mesh> fromCtm( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -623,7 +623,7 @@ Expected<Mesh, std::string> fromCtm( const std::filesystem::path& file, const Me
     return addFileNameInError( fromCtm( in, settings ), file );
 }
 
-Expected<Mesh, std::string> fromCtm( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
+Expected<Mesh> fromCtm( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
@@ -734,7 +734,7 @@ Expected<Mesh, std::string> fromCtm( std::istream& in, const MeshLoadSettings& s
 }
 #endif
 
-Expected<Mesh, std::string> fromDxf( const std::filesystem::path& path, const MeshLoadSettings& settings /*= {}*/ )
+Expected<Mesh> fromDxf( const std::filesystem::path& path, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( path, std::ifstream::binary );
     if ( !in )
@@ -743,7 +743,7 @@ Expected<Mesh, std::string> fromDxf( const std::filesystem::path& path, const Me
     return addFileNameInError( fromDxf( in, settings ), path );
 }
 
-Expected<Mesh, std::string> fromDxf( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
+Expected<Mesh> fromDxf( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     // find size
     in.seekg( 0, std::ios_base::end );
@@ -804,7 +804,7 @@ Expected<Mesh, std::string> fromDxf( std::istream& in, const MeshLoadSettings& s
     return Mesh::fromPointTriples( triangles, true );
 }
 
-Expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
+Expected<Mesh> fromAnySupportedFormat( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     auto ext = utf8string( file.extension() );
     for ( auto & c : ext )
@@ -812,7 +812,7 @@ Expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path&
 
     ext = "*" + ext;
 
-    Expected<MR::Mesh, std::string> res = unexpected( std::string( "unsupported file extension" ) );
+    Expected<MR::Mesh> res = unexpected( std::string( "unsupported file extension" ) );
     auto filters = getFilters();
     auto itF = std::find_if( filters.begin(), filters.end(), [ext]( const IOFilter& filter )
     {
@@ -827,13 +827,13 @@ Expected<Mesh, std::string> fromAnySupportedFormat( const std::filesystem::path&
     return loader( file, settings );
 }
 
-Expected<Mesh, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, const MeshLoadSettings& settings /*= {}*/ )
+Expected<Mesh> fromAnySupportedFormat( std::istream& in, const std::string& extension, const MeshLoadSettings& settings /*= {}*/ )
 {
     auto ext = extension;
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    Expected<MR::Mesh, std::string> res = unexpected( std::string( "unsupported file extension" ) );
+    Expected<MR::Mesh> res = unexpected( std::string( "unsupported file extension" ) );
     auto filters = getFilters();
     auto itF = std::find_if( filters.begin(), filters.end(), [ext] ( const IOFilter& filter )
     {
@@ -850,7 +850,7 @@ Expected<Mesh, std::string> fromAnySupportedFormat( std::istream& in, const std:
 }
 
 /*
-MeshLoaderAdder __meshLoaderAdder( NamedMeshLoader{IOFilter( "MrMesh (.mrmesh)", "*.mrmesh" ),MeshLoader{static_cast<Expected<MR::Mesh, std::string>(*)(const std::filesystem::path&,VertColors*)>(fromMrmesh)}} );
+MeshLoaderAdder __meshLoaderAdder( NamedMeshLoader{IOFilter( "MrMesh (.mrmesh)", "*.mrmesh" ),MeshLoader{static_cast<Expected<MR::Mesh>(*)(const std::filesystem::path&,VertColors*)>(fromMrmesh)}} );
 */
 
 MR_ADD_MESH_LOADER( IOFilter( "MeshInspector (.mrmesh)", "*.mrmesh" ), fromMrmesh )

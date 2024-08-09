@@ -196,7 +196,7 @@ Mesh doTrivialBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut, BooleanOperati
     return aPart;
 }
 
-Expected<MR::Mesh, std::string> doBooleanOperation( 
+Expected<MR::Mesh> doBooleanOperation( 
     Mesh&& meshACutted, Mesh&& meshBCutted, 
     const std::vector<EdgePath>& cutEdgesA, const std::vector<EdgePath>& cutEdgesB,
     BooleanOperation operation, 

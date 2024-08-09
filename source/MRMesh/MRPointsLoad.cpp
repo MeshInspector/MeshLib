@@ -146,7 +146,7 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
     return cloud;
 }
 
-Expected<MR::PointCloud, std::string> fromText( const std::filesystem::path& file, AffineXf3f* outXf, ProgressCallback callback /*= {} */ )
+Expected<MR::PointCloud> fromText( const std::filesystem::path& file, AffineXf3f* outXf, ProgressCallback callback /*= {} */ )
 {
     return fromText( file, {
         .outXf = outXf,
@@ -154,7 +154,7 @@ Expected<MR::PointCloud, std::string> fromText( const std::filesystem::path& fil
     } );
 }
 
-Expected<MR::PointCloud, std::string> fromText( std::istream& in, AffineXf3f* outXf, ProgressCallback callback /*= {} */ )
+Expected<MR::PointCloud> fromText( std::istream& in, AffineXf3f* outXf, ProgressCallback callback /*= {} */ )
 {
     return fromText( in, {
         .outXf = outXf,
@@ -162,7 +162,7 @@ Expected<MR::PointCloud, std::string> fromText( std::istream& in, AffineXf3f* ou
     } );
 }
 
-Expected<MR::PointCloud, std::string> fromPts( const std::filesystem::path& file, VertColors* colors /*= nullptr*/, 
+Expected<MR::PointCloud> fromPts( const std::filesystem::path& file, VertColors* colors /*= nullptr*/, 
     AffineXf3f* outXf /*= nullptr*/, ProgressCallback callback /*= {} */ )
 {
     std::ifstream in( file, std::ifstream::binary );
@@ -172,7 +172,7 @@ Expected<MR::PointCloud, std::string> fromPts( const std::filesystem::path& file
     return addFileNameInError( fromPts( in, colors, outXf, callback ), file );
 }
 
-Expected<MR::PointCloud, std::string> fromPts( std::istream& in, VertColors* colors /*= nullptr*/, 
+Expected<MR::PointCloud> fromPts( std::istream& in, VertColors* colors /*= nullptr*/, 
     AffineXf3f* outXf /*= nullptr*/, ProgressCallback callback /*= {} */ )
 {
     MR_TIMER;
@@ -238,7 +238,7 @@ Expected<MR::PointCloud, std::string> fromPts( std::istream& in, VertColors* col
 
 #ifndef MRMESH_NO_OPENCTM
 
-Expected<MR::PointCloud, std::string> fromCtm( const std::filesystem::path& file, VertColors* colors /*= nullptr */, ProgressCallback callback )
+Expected<MR::PointCloud> fromCtm( const std::filesystem::path& file, VertColors* colors /*= nullptr */, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -247,7 +247,7 @@ Expected<MR::PointCloud, std::string> fromCtm( const std::filesystem::path& file
     return addFileNameInError( fromCtm( in, colors, callback ), file );
 }
 
-Expected<MR::PointCloud, std::string> fromCtm( std::istream& in, VertColors* colors /*= nullptr */, ProgressCallback callback )
+Expected<MR::PointCloud> fromCtm( std::istream& in, VertColors* colors /*= nullptr */, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -338,7 +338,7 @@ Expected<MR::PointCloud, std::string> fromCtm( std::istream& in, VertColors* col
 }
 #endif
 
-Expected<MR::PointCloud, std::string> fromPly( const std::filesystem::path& file, VertColors* colors /*= nullptr */, ProgressCallback callback )
+Expected<MR::PointCloud> fromPly( const std::filesystem::path& file, VertColors* colors /*= nullptr */, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -347,7 +347,7 @@ Expected<MR::PointCloud, std::string> fromPly( const std::filesystem::path& file
     return addFileNameInError( fromPly( in, colors, callback ), file );
 }
 
-Expected<MR::PointCloud, std::string> fromPly( std::istream& in, VertColors* colors /*= nullptr */, ProgressCallback callback )
+Expected<MR::PointCloud> fromPly( std::istream& in, VertColors* colors /*= nullptr */, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -413,7 +413,7 @@ Expected<MR::PointCloud, std::string> fromPly( std::istream& in, VertColors* col
     return res;
 }
 
-Expected<MR::PointCloud, std::string> fromObj( const std::filesystem::path& file, ProgressCallback callback )
+Expected<MR::PointCloud> fromObj( const std::filesystem::path& file, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -422,7 +422,7 @@ Expected<MR::PointCloud, std::string> fromObj( const std::filesystem::path& file
     return addFileNameInError( fromObj( in, callback ), file );
 }
 
-Expected<MR::PointCloud, std::string> fromObj( std::istream& in, ProgressCallback callback )
+Expected<MR::PointCloud> fromObj( std::istream& in, ProgressCallback callback )
 {
     PointCloud cloud;
 
@@ -467,7 +467,7 @@ Expected<MR::PointCloud, std::string> fromObj( std::istream& in, ProgressCallbac
 
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
 
-Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, VertColors* colors, AffineXf3f* outXf,
+Expected<PointCloud> fromE57( const std::filesystem::path& file, VertColors* colors, AffineXf3f* outXf,
                                            ProgressCallback progress )
 {
     auto x = fromSceneE57File( file, { .combineAllObjects = true, .identityXf = !outXf, .progress = progress } );
@@ -485,7 +485,7 @@ Expected<PointCloud, std::string> fromE57( const std::filesystem::path& file, Ve
 
 #endif
 
-Expected<MR::PointCloud, std::string> fromDxf( const std::filesystem::path& file, ProgressCallback callback )
+Expected<MR::PointCloud> fromDxf( const std::filesystem::path& file, ProgressCallback callback )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
@@ -494,7 +494,7 @@ Expected<MR::PointCloud, std::string> fromDxf( const std::filesystem::path& file
     return addFileNameInError( fromDxf( in, callback ), file );
 }
 
-Expected<MR::PointCloud, std::string> fromDxf( std::istream& in, ProgressCallback cb )
+Expected<MR::PointCloud> fromDxf( std::istream& in, ProgressCallback cb )
 {
     PointCloud cloud;
 
@@ -558,7 +558,7 @@ Expected<MR::PointCloud, std::string> fromDxf( std::istream& in, ProgressCallbac
     return cloud;
 }
 
-Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem::path& file, VertColors* colors,
+Expected<PointCloud> fromAnySupportedFormat( const std::filesystem::path& file, VertColors* colors,
                                                           AffineXf3f* outXf, ProgressCallback callback )
 {
     auto ext = utf8string( file.extension() );
@@ -571,7 +571,7 @@ Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem:
         .callback = callback,
     };
 
-    Expected<MR::PointCloud, std::string> res = unexpected( std::string( "unsupported file extension" ) );
+    Expected<MR::PointCloud> res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".ply" )
         res = MR::PointsLoad::fromPly( file, colors, callback );
     else if ( ext == ".pts" )
@@ -597,7 +597,7 @@ Expected<PointCloud, std::string> fromAnySupportedFormat( const std::filesystem:
     return res;
 }
 
-Expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension,
+Expected<PointCloud> fromAnySupportedFormat( std::istream& in, const std::string& extension,
                                                           VertColors* colors, AffineXf3f* outXf,
                                                           ProgressCallback callback )
 {
@@ -614,7 +614,7 @@ Expected<PointCloud, std::string> fromAnySupportedFormat( std::istream& in, cons
         .callback = callback,
     };
 
-    Expected<MR::PointCloud, std::string> res = unexpected( std::string( "unsupported file extension" ) );
+    Expected<MR::PointCloud> res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".ply" )
         res = MR::PointsLoad::fromPly( in, colors, callback );
     else if ( ext == ".pts" )

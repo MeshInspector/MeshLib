@@ -11,7 +11,7 @@ namespace MR
 MRMESH_API std::vector<size_t> splitByLines( const char* data, size_t size );
 
 // reads input stream to monolith char block
-MRMESH_API Expected<Buffer<char>, std::string> readCharBuffer( std::istream& in );
+MRMESH_API Expected<Buffer<char>> readCharBuffer( std::istream& in );
 
 // read coordinates to `v` separated by space
 template<typename T>

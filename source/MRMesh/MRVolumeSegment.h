@@ -23,7 +23,7 @@ namespace MR
  * \param mask in space of whole volume
  *  density inside mask is expected to be higher then outside
  */
-MRMESH_API Expected<MR::Mesh, std::string> meshFromVoxelsMask( const VdbVolume& volume, const VoxelBitSet& mask );
+MRMESH_API Expected<MR::Mesh> meshFromVoxelsMask( const VdbVolume& volume, const VoxelBitSet& mask );
 
  /**
   * \brief Parameters for volume segmentation
@@ -48,7 +48,7 @@ struct VolumeSegmentationParameters
  * 3. Mark volume part edges as outside part seeds \n
  * 4. Return mesh from segmented inside part
  */
-MRMESH_API Expected<MR::Mesh, std::string> segmentVolume( const VdbVolume& volume, const std::vector<std::pair<Vector3f, Vector3f>>& pairs,
+MRMESH_API Expected<MR::Mesh> segmentVolume( const VdbVolume& volume, const std::vector<std::pair<Vector3f, Vector3f>>& pairs,
                                                               const VolumeSegmentationParameters& params = VolumeSegmentationParameters() );
 
 struct VoxelMetricParameters;
@@ -87,10 +87,10 @@ public:
     MRMESH_API const std::vector<Vector3i>& getSeeds( SeedType seedType ) const;
 
     /// Segments volume, return inside part segmentation (VoxelBitSet in space of VolumePart)
-    MRMESH_API Expected<VoxelBitSet, std::string> segmentVolume( float segmentationExponentModifier = 3000.0f, int voxelsExpansion = 25, ProgressCallback cb = {} );
+    MRMESH_API Expected<VoxelBitSet> segmentVolume( float segmentationExponentModifier = 3000.0f, int voxelsExpansion = 25, ProgressCallback cb = {} );
     
     /// Returns mesh of given segment
-    MRMESH_API Expected<MR::Mesh, std::string> createMeshFromSegmentation( const VoxelBitSet& segmentation ) const;
+    MRMESH_API Expected<MR::Mesh> createMeshFromSegmentation( const VoxelBitSet& segmentation ) const;
 
     /// Dimensions of volume part, filled after segmentation
     MRMESH_API const Vector3i& getVolumePartDimensions() const;

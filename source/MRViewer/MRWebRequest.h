@@ -11,7 +11,7 @@
 namespace MR
 {
 // returns json value of text or error if response failed
-MRVIEWER_API Expected<Json::Value, std::string> parseResponse( const Json::Value& response );
+MRVIEWER_API Expected<Json::Value> parseResponse( const Json::Value& response );
 
 // this class is needed to unify cpp and wasm requests
 class MRVIEWER_CLASS WebRequest

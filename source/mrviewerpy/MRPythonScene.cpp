@@ -1,3 +1,4 @@
+#include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRObjectLinesHolder.h"
 #include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MRPython.h"
@@ -118,25 +119,18 @@ void pythonClearScene()
     } );
 }
 
-void pythonAddMeshToScene( const MR::Mesh& mesh, const std::string& name )
+template <typename ObjectType, typename ModelType, auto SetterFunc, typename ...P>
+void pythonAddModelToScene( const ModelType& model, const std::string& name, P&&... params )
 {
     MR::CommandLoop::runCommandFromGUIThread( [&] ()
     {
-        std::shared_ptr<MR::ObjectMesh> objMesh = std::make_shared<MR::ObjectMesh>();
-        objMesh->setMesh( std::make_shared<MR::Mesh>( mesh ) );
-        objMesh->setName( name );
-        MR::SceneRoot::get().addChild( objMesh );
-    } );
-}
-
-void pythonAddPointCloudToScene( const MR::PointCloud& points, const std::string& name )
-{
-    MR::CommandLoop::runCommandFromGUIThread( [&] ()
-    {
-        std::shared_ptr<MR::ObjectPoints> objPoints = std::make_shared<MR::ObjectPoints>();
-        objPoints->setPointCloud( std::make_shared<MR::PointCloud>( points ) );
-        objPoints->setName( name );
-        MR::SceneRoot::get().addChild( objPoints );
+        std::shared_ptr<ObjectType> newObject = std::make_shared<ObjectType>();
+        if constexpr ( std::is_invocable_v<decltype( SetterFunc ), ObjectType&> )
+            std::invoke( SetterFunc, newObject, std::forward<P>( params )... ) = model;
+        else
+            std::invoke( SetterFunc, newObject, std::make_shared<ModelType>( model ), std::forward<P>( params )... );
+        newObject->setName( name );
+        MR::SceneRoot::get().addChild( newObject );
     } );
 }
 
@@ -211,7 +205,19 @@ void pythonSetSelectedBitset( const std::vector<U>& bitsets )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Scene, [] ( pybind11::module_& m )
 {
-    m.def( "addMeshToScene", &pythonAddMeshToScene, pybind11::arg( "mesh" ), pybind11::arg( "name" ), "add given mesh to scene tree" );
+    m.def( "addMeshToScene", &pythonAddModelToScene<MR::ObjectMesh, MR::Mesh, &MR::ObjectMesh::setMesh>, pybind11::arg( "mesh" ), pybind11::arg( "name" ), "Add given mesh to scene tree." );
+    m.def( "addPointCloudToScene", &pythonAddModelToScene<MR::ObjectPoints, MR::PointCloud, &MR::ObjectPoints::setPointCloud>, pybind11::arg( "points" ), pybind11::arg( "name" ), "Add given point cloud to scene tree." );
+    m.def( "addLinesToScene", &pythonAddModelToScene<MR::ObjectLines, MR::Polyline3, &MR::ObjectLines::setPolyline>, pybind11::arg( "lines" ), pybind11::arg( "name" ), "Add given lines to scene tree." );
+    m.def( "addVoxelsToScene", &pythonAddModelToScene<MR::ObjectVoxels, MR::VdbVolume, &MR::ObjectVoxels::varVdbVolume>, pybind11::arg( "voxels" ), pybind11::arg( "name" ), "Add given voxels to scene tree." );
+    m.def( "addDistanceMapToScene",
+        &pythonAddModelToScene<
+            MR::ObjectDistanceMap, MR::DistanceMap,
+            []( const std::shared_ptr<MR::ObjectDistanceMap>& m, std::shared_ptr<MR::DistanceMap> n, const MR::AffineXf3f& xf ){ m->setDistanceMap( std::move( n ), xf ); },
+            const MR::AffineXf3f&
+        >,
+        pybind11::arg( "distancemap" ), pybind11::arg( "name" ), pybind11::arg( "dmap_to_local_xf" ),
+        "Add given distance map to scene tree."
+    );
 
     m.def( "modifySelectedMesh", &pythonModifySelectedMesh, pybind11::arg( "mesh" ), "Assign a new mesh to the selected mesh object. Exactly one object must be selected." );
 
@@ -223,7 +229,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Scene, [] ( pybind11::module_& m )
     m.def( "setSelectedPointCloudPoints", &pythonSetSelectedBitset<MR::ObjectPointsHolder, MR::VertBitSet, &MR::ObjectPointsHolder::selectPoints>, "Set selected point bitsets of the selected point cloud objects." );
     // Polylines don't have selection bitsets at the moment.
 
-    m.def( "addPointCloudToScene", &pythonAddPointCloudToScene, pybind11::arg( "points" ), pybind11::arg( "name" ), "add given point cloud to scene tree" );
     m.def( "clearScene", &pythonClearScene, "remove all objects from scene tree" );
     m.def( "selectByName", &pythonSelectName, pybind11::arg( "objectName" ), "select objects in scene tree with given name, unselect others" );
     m.def( "selectByType", &pythonSelectType, pybind11::arg( "typeName" ), "string typeName: {\"Meshes\", \"Points\", \"Voxels\"}\nobjects in scene tree with given type, unselect others" );

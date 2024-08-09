@@ -160,6 +160,8 @@ bool MouseController::preMouseDown_( MouseButton btn, int mod )
         clickModifiers_ = mod;
         clickTime_ = std::chrono::system_clock::now();
     }
+    if ( !dragActive_ && dragButton_ == MouseButton::NoButton )
+        dragButton_ = btn;
 
     downState_.set( int( btn ) );
     return false;
@@ -167,6 +169,15 @@ bool MouseController::preMouseDown_( MouseButton btn, int mod )
 
 bool MouseController::mouseDown_( MouseButton btn, int mod )
 {
+    auto& viewer = getViewerInstance();
+
+    if ( clickButton_ == MouseButton::NoButton && !dragActive_ && dragButton_ == btn &&
+         viewer.dragStart( btn, mod ) )
+    {
+        dragActive_ = true;
+        return true;
+    }
+
     if ( currentMode_ != MouseMode::None )
         return false;
 
@@ -180,7 +191,6 @@ bool MouseController::mouseDown_( MouseButton btn, int mod )
         return false;
     }
 
-    auto& viewer = getViewerInstance();
     viewer.select_hovered_viewport();
 
     auto modIt = map_.find( mouseAndModToKey( { btn,mod } ) );
@@ -199,6 +209,8 @@ bool MouseController::mouseDown_( MouseButton btn, int mod )
 
 bool MouseController::preMouseUp_( MouseButton btn, int mod )
 {
+    auto& viewer = getViewerInstance();
+
     downState_.set( int( btn ), false );
 
     if ( clickButton_ == btn )
@@ -207,6 +219,15 @@ bool MouseController::preMouseUp_( MouseButton btn, int mod )
             getViewerInstance().mouseClick( btn, mod );
     }
     clickButton_ = MouseButton::NoButton;
+    if ( dragButton_ == btn )
+    {
+        if ( dragActive_ )
+        {
+            viewer.dragEnd( btn, mod );
+            dragActive_ = false;
+        }
+        dragButton_ = MouseButton::NoButton;
+    }
 
     if ( currentMode_ == MouseMode::None )
         return false;
@@ -219,7 +240,7 @@ bool MouseController::preMouseUp_( MouseButton btn, int mod )
         return false;
 
     if ( currentMode_ == MouseMode::Rotation || currentMode_ == MouseMode::Roll )
-        getViewerInstance().viewport().setRotation( false );
+        viewer.viewport().setRotation( false );
 
     currentMode_ = MouseMode::None;
     return false; // so others can override mouse up even if scene control was active
@@ -227,7 +248,9 @@ bool MouseController::preMouseUp_( MouseButton btn, int mod )
 
 bool MouseController::preMouseMove_( int x, int y )
 {
-    // Click behavior
+    auto& viewer = getViewerInstance();
+
+    // Click and dragging behavior
     if ( clickButton_ != MouseButton::NoButton )
     {
         if ( std::abs( x - downMousePos_.x ) + std::abs( y - downMousePos_.y ) > cMouseClickDist ||
@@ -239,22 +262,24 @@ bool MouseController::preMouseMove_( int x, int y )
             // Note: currentMousePos_ is used as a position in pick functions
             currentMousePos_ = downMousePos_;
             if ( clickPendingDown_ == btn )
-                mouseDown_( btn, clickModifiers_ );
-            // Continue handling mouse move as if it was a single event from downMousePos_
+                mouseDown_( btn, clickModifiers_ ); // Also handles dragging
+            // Continue mouse move handle as if it was a single event from downMousePos_
         }
     }
+
+    prevMousePos_ = currentMousePos_;
+    currentMousePos_ = { x,y };
+
+    if ( dragActive_ )
+        return viewer.drag( x, y );
     if ( clickButton_ != MouseButton::NoButton )
         return false;
 
     // Own handle (camera control)
 
-    prevMousePos_ = currentMousePos_;
-    currentMousePos_ = { x,y };
-
     if ( currentMode_ == MouseMode::None )
         return false;
 
-    auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
     AffineXf3f xf;
     switch ( currentMode_ )

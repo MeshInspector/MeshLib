@@ -92,6 +92,33 @@ protected:
     virtual bool onMouseClick_( MouseButton btn, int modifiers ) = 0;
 };
 
+struct MRVIEWER_CLASS DragStartListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( DragStartListener );
+    virtual ~DragStartListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool onDragStart_( MouseButton btn, int modifiers ) = 0;
+};
+
+struct MRVIEWER_CLASS DragEndListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( DragEndListener );
+    virtual ~DragEndListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool onDragEnd_( MouseButton btn, int modifiers ) = 0;
+};
+
+struct MRVIEWER_CLASS DragListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( DragListener );
+    virtual ~DragListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool onDrag_( int x, int y ) = 0;
+};
+
 struct MRVIEWER_CLASS CharPressedListener : ConnectionHolder
 {
     MR_ADD_CTOR_DELETE_MOVE( CharPressedListener );

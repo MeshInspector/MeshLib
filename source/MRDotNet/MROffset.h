@@ -1,6 +1,10 @@
 #pragma once
 #include "MRMeshFwd.h"
 
+#pragma managed( push, off )
+#include <MRMesh/MROffset.h>
+#pragma managed( pop )
+
 MR_DOTNET_NAMESPACE_BEGIN
 
 public enum class SignDetectionMode
@@ -25,6 +29,9 @@ public:
     ///  - computation is about 2-3 times slower
     /// used only by \ref McOffsetMesh and \ref SharpOffsetMesh methods
     bool memoryEfficient = false;
+
+internal:
+    MR::OffsetParameters ToNative();
 };
 
 public ref class SharpOffsetParameters : public OffsetParameters
@@ -39,6 +46,9 @@ public:
     /// correct positions of the input vertices using reference mesh by not more than this distance, measured in voxelSize;
     /// big correction can be wrong and result from self-intersections in the reference mesh
     float maxOldVertPosCorrection = 0.5f;
+
+internal:
+    MR::SharpOffsetParameters ToNative();
 };
 
 public enum class GeneralOffsetMode
@@ -55,6 +65,9 @@ public ref class GeneralOffsetParameters : public SharpOffsetParameters
 {
 public:
     GeneralOffsetMode mode = GeneralOffsetMode::Standard;
+
+internal:
+    MR::GeneralOffsetParameters ToNative();
 };
 
 public ref class Offset

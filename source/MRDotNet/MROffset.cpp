@@ -3,12 +3,47 @@
 #include "MRBitSet.h"
 
 #pragma managed( push, off )
-#include <MRMesh/MROffset.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBitSet.h>
 #pragma managed( pop )
 
 MR_DOTNET_NAMESPACE_BEGIN
+
+MR::OffsetParameters OffsetParameters::ToNative()
+{
+    MR::OffsetParameters nativeParams;
+    nativeParams.voxelSize = voxelSize;
+    nativeParams.memoryEfficient = memoryEfficient;
+    nativeParams.signDetectionMode = MR::SignDetectionMode( signDetectionMode );
+    return nativeParams;
+}
+
+MR::SharpOffsetParameters SharpOffsetParameters::ToNative()
+{
+    MR::SharpOffsetParameters nativeParams;
+    nativeParams.voxelSize = voxelSize;
+    nativeParams.memoryEfficient = memoryEfficient;
+    nativeParams.signDetectionMode = MR::SignDetectionMode( signDetectionMode );
+    nativeParams.maxNewRank2VertDev = maxNewRank2VertDev;
+    nativeParams.maxNewRank3VertDev = maxNewRank3VertDev;
+    nativeParams.maxOldVertPosCorrection = maxOldVertPosCorrection;
+    nativeParams.minNewVertDev = minNewVertDev;
+    return nativeParams;
+}
+
+MR::GeneralOffsetParameters GeneralOffsetParameters::ToNative()
+{
+    MR::GeneralOffsetParameters nativeParams;
+    nativeParams.voxelSize = voxelSize;
+    nativeParams.memoryEfficient = memoryEfficient;
+    nativeParams.signDetectionMode = MR::SignDetectionMode( signDetectionMode );
+    nativeParams.maxNewRank2VertDev = maxNewRank2VertDev;
+    nativeParams.maxNewRank3VertDev = maxNewRank3VertDev;
+    nativeParams.maxOldVertPosCorrection = maxOldVertPosCorrection;
+    nativeParams.minNewVertDev = minNewVertDev;
+    nativeParams.mode = MR::GeneralOffsetParameters::Mode( mode );
+    return nativeParams;
+}
 
 float Offset::SuggestVoxelSize( MeshPart mp, float approxNumVoxels )
 {
@@ -37,13 +72,9 @@ Mesh^ Offset::OffsetMesh( MeshPart mp, float offset, OffsetParameters^ parameter
     if ( parameters->voxelSize <= 0.0f )
         throw gcnew System::ArgumentException( "voxelSize must be positive" );
 
-    MR::OffsetParameters nativeParams;
-    nativeParams.voxelSize = parameters->voxelSize;
-    nativeParams.memoryEfficient = parameters->memoryEfficient;
-    nativeParams.signDetectionMode = MR::SignDetectionMode( parameters->signDetectionMode );
+    MR::OffsetParameters nativeParams = parameters->ToNative();
 
-    MR::FaceBitSet nativeRegion;
-    
+    MR::FaceBitSet nativeRegion;    
     if ( mp.region )
         nativeRegion = MR::FaceBitSet( mp.region->bitSet()->m_bits.begin(), mp.region->bitSet()->m_bits.end() );
 
@@ -67,13 +98,9 @@ Mesh^ Offset::DoubleOffsetMesh( MeshPart mp, float offsetA, float offsetB, Offse
     if ( parameters->voxelSize <= 0.0f )
         throw gcnew System::ArgumentException( "voxelSize must be positive" );
 
-    MR::OffsetParameters nativeParams;
-    nativeParams.voxelSize = parameters->voxelSize;
-    nativeParams.memoryEfficient = parameters->memoryEfficient;
-    nativeParams.signDetectionMode = MR::SignDetectionMode( parameters->signDetectionMode );
+    MR::OffsetParameters nativeParams = parameters->ToNative();
 
     MR::FaceBitSet nativeRegion;
-
     if ( mp.region )
         nativeRegion = MR::FaceBitSet( mp.region->bitSet()->m_bits.begin(), mp.region->bitSet()->m_bits.end() );
 
@@ -98,10 +125,7 @@ Mesh^ Offset::McOffsetMesh( MeshPart mp, float offset, OffsetParameters^ paramet
     if ( parameters->voxelSize <= 0.0f )
         throw gcnew System::ArgumentException( "voxelSize must be positive" );
 
-    MR::OffsetParameters nativeParams;
-    nativeParams.voxelSize = parameters->voxelSize;
-    nativeParams.memoryEfficient = parameters->memoryEfficient;
-    nativeParams.signDetectionMode = MR::SignDetectionMode( parameters->signDetectionMode );
+    MR::OffsetParameters nativeParams = parameters->ToNative();
 
     MR::FaceBitSet nativeRegion;
     if ( mp.region )
@@ -148,14 +172,7 @@ Mesh^ Offset::SharpOffsetMesh( MeshPart mp, float offset, SharpOffsetParameters^
     if ( parameters->voxelSize <= 0.0f )
         throw gcnew System::ArgumentException( "voxelSize must be positive" );
 
-    MR::SharpOffsetParameters nativeParams;
-    nativeParams.voxelSize = parameters->voxelSize;
-    nativeParams.memoryEfficient = parameters->memoryEfficient;
-    nativeParams.signDetectionMode = MR::SignDetectionMode( parameters->signDetectionMode );
-    nativeParams.maxNewRank2VertDev = parameters->maxNewRank2VertDev;
-    nativeParams.maxNewRank3VertDev = parameters->maxNewRank3VertDev;
-    nativeParams.maxOldVertPosCorrection = parameters->maxOldVertPosCorrection;
-    nativeParams.minNewVertDev = parameters->minNewVertDev;
+    MR::SharpOffsetParameters nativeParams = parameters->ToNative();
 
     MR::FaceBitSet nativeRegion;
     if ( mp.region )
@@ -181,15 +198,7 @@ Mesh^ Offset::GeneralOffsetMesh( MeshPart mp, float offset, GeneralOffsetParamet
     if ( parameters->voxelSize <= 0.0f )
         throw gcnew System::ArgumentException( "voxelSize must be positive" );
 
-    MR::GeneralOffsetParameters nativeParams;
-    nativeParams.voxelSize = parameters->voxelSize;
-    nativeParams.memoryEfficient = parameters->memoryEfficient;
-    nativeParams.signDetectionMode = MR::SignDetectionMode( parameters->signDetectionMode );
-    nativeParams.maxNewRank2VertDev = parameters->maxNewRank2VertDev;
-    nativeParams.maxNewRank3VertDev = parameters->maxNewRank3VertDev;
-    nativeParams.maxOldVertPosCorrection = parameters->maxOldVertPosCorrection;
-    nativeParams.minNewVertDev = parameters->minNewVertDev;
-    nativeParams.mode = MR::GeneralOffsetParameters::Mode( parameters->mode );
+    MR::GeneralOffsetParameters nativeParams = parameters->ToNative();
 
     MR::FaceBitSet nativeRegion;
     if ( mp.region )
@@ -215,15 +224,7 @@ Mesh^ Offset::ThickenMesh( Mesh^ mesh, float offset, GeneralOffsetParameters^ pa
     if ( parameters->voxelSize <= 0.0f )
         throw gcnew System::ArgumentException( "voxelSize must be positive" );
 
-    MR::GeneralOffsetParameters nativeParams;
-    nativeParams.voxelSize = parameters->voxelSize;
-    nativeParams.memoryEfficient = parameters->memoryEfficient;
-    nativeParams.signDetectionMode = MR::SignDetectionMode( parameters->signDetectionMode );
-    nativeParams.maxNewRank2VertDev = parameters->maxNewRank2VertDev;
-    nativeParams.maxNewRank3VertDev = parameters->maxNewRank3VertDev;
-    nativeParams.maxOldVertPosCorrection = parameters->maxOldVertPosCorrection;
-    nativeParams.minNewVertDev = parameters->minNewVertDev;
-    nativeParams.mode = MR::GeneralOffsetParameters::Mode( parameters->mode );
+    MR::GeneralOffsetParameters nativeParams = parameters->ToNative();
 
     auto meshOrErr = MR::thickenMesh( *mesh->getMesh(), offset, nativeParams );
     if ( !meshOrErr )

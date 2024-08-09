@@ -4,4 +4,6 @@
 \subpage ExampleCSharpMeshBoolean
 
 \subpage ExampleCSharpOffset
+
+\subpage ExampleCSharpMeshDecimate
 */

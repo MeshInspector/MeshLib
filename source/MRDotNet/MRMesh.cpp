@@ -1,11 +1,13 @@
 #include "MRMesh.h"
 #include "MRVector3.h"
+#include "MRBox3.h"
 #include "MRBitSet.h"
 #include "MRAffineXf.h"
 
 #pragma managed( push, off )
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRVector3.h>
+#include <MRMesh/MRBox.h>
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRMeshTopology.h>
@@ -166,6 +168,15 @@ EdgePathReadOnly^ Mesh::HoleRepresentiveEdges::get()
     }
     return holeRepresentiveEdges_->AsReadOnly();
 }
+
+Box3f^ Mesh::BoundingBox::get()
+{
+    if ( !boundingBox_ )
+        boundingBox_ = gcnew Box3f( new MR::Box3f( std::move( mesh_->computeBoundingBox() ) ) );
+
+    return boundingBox_;
+}
+
 
 bool Mesh::operator==( Mesh^ a, Mesh^ b )
 {

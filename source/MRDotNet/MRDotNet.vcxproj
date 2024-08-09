@@ -57,6 +57,7 @@
   <ItemGroup>
     <ClInclude Include="MRAffineXf.h" />
     <ClInclude Include="MRBitSet.h" />
+    <ClInclude Include="MRBox3.h" />
     <ClInclude Include="MRMatrix3.h" />
     <ClInclude Include="MRMesh.h" />
     <ClInclude Include="MRMeshBoolean.h" />
@@ -69,6 +70,7 @@
     <ClCompile Include="MRAffineXf.cpp" />
     <ClCompile Include="AssemblyInfo.cpp" />
     <ClCompile Include="MRBitSet.cpp" />
+    <ClCompile Include="MRBox3.cpp" />
     <ClCompile Include="MRMatrix3.cpp" />
     <ClCompile Include="MRMesh.cpp" />
     <ClCompile Include="MRMeshBoolean.cpp" />

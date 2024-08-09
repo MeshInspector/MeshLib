@@ -15,6 +15,10 @@ template<typename V>
 struct AffineXf;
 using AffineXf3f = AffineXf<Vector3f>;
 
+template<typename V>
+struct Box;
+using Box3f = Box<Vector3f>;
+
 struct Mesh;
 class BitSet;
 }
@@ -64,6 +68,7 @@ using VertBitSet = BitSet;
 using FaceBitSet = BitSet;
 
 ref class Vector3f;
+ref class Box3f;
 ref class Matrix3f;
 ref class AffineXf3f;
 using VertCoords = List<Vector3f^>;

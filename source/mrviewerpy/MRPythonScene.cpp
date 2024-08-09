@@ -134,6 +134,11 @@ void pythonAddModelToScene( const ModelType& model, const std::string& name, P&&
     } );
 }
 
+void pythonSetDistanceMap( const std::shared_ptr<MR::ObjectDistanceMap>& m, std::shared_ptr<MR::DistanceMap> n, const MR::AffineXf3f& xf )
+{
+    m->setDistanceMap( std::move( n ), xf );
+};
+
 template <typename ObjectType, auto MemberPtr>
 auto pythonGetSelectedModels()
 {
@@ -209,11 +214,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Scene, [] ( pybind11::module_& m )
     m.def( "addPointCloudToScene", &pythonAddModelToScene<MR::ObjectPoints, MR::PointCloud, &MR::ObjectPoints::setPointCloud>, pybind11::arg( "points" ), pybind11::arg( "name" ), "Add given point cloud to scene tree." );
     m.def( "addLinesToScene", &pythonAddModelToScene<MR::ObjectLines, MR::Polyline3, &MR::ObjectLines::setPolyline>, pybind11::arg( "lines" ), pybind11::arg( "name" ), "Add given lines to scene tree." );
     m.def( "addVoxelsToScene", &pythonAddModelToScene<MR::ObjectVoxels, MR::VdbVolume, &MR::ObjectVoxels::varVdbVolume>, pybind11::arg( "voxels" ), pybind11::arg( "name" ), "Add given voxels to scene tree." );
-    static constexpr auto setDistanceMap = []( const std::shared_ptr<MR::ObjectDistanceMap>& m, std::shared_ptr<MR::DistanceMap> n, const MR::AffineXf3f& xf ){ m->setDistanceMap( std::move( n ), xf ); };
     m.def( "addDistanceMapToScene",
         &pythonAddModelToScene<
             MR::ObjectDistanceMap, MR::DistanceMap,
-            setDistanceMap,
+            pythonSetDistanceMap,
             const MR::AffineXf3f&
         >,
         pybind11::arg( "distancemap" ), pybind11::arg( "name" ), pybind11::arg( "dmap_to_local_xf" ),

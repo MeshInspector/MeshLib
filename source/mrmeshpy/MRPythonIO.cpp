@@ -293,7 +293,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveVoxels, [] ( pybind11::module_& m )
 {
     m.def( "saveVoxels",
         MR::decorateExpected( &MR::VoxelsSave::toRawAutoname ),
-        pybind11::arg( "path" ), pybind11::arg( "VdbVoxels" ), pybind11::arg( "callback" ) = ProgressCallback{},
+        pybind11::arg( "VdbVoxels" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "Save raw voxels file, writing parameters in name." );
 } )
 

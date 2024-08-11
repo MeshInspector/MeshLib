@@ -150,6 +150,7 @@ Expected<SimpleVolume, std::string> meshRegionToIndicatorVolume( const Mesh& mes
 
 Expected<std::array<SimpleVolume, 3>> meshToDirectionVolume( const MeshToDirectionVolumeParams& params )
 {
+    MR_TIMER
     VolumeIndexer indexer( params.vol.dimensions );
     std::vector<MeshProjectionResult> projs;
 

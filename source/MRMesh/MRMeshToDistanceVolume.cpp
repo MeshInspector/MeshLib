@@ -8,6 +8,7 @@
 #include "MRMeshIntersect.h"
 #include "MRParallelFor.h"
 #include "MRAABBTree.h"
+#include "MRPointsToMeshProjector.h"
 #include <tuple>
 
 namespace MR
@@ -144,5 +145,53 @@ Expected<SimpleVolume> meshRegionToIndicatorVolume( const Mesh& mesh, const Face
 
     return res;
 }
+
+
+
+Expected<std::array<SimpleVolume, 3>> meshToDirectionVolume( const MeshToDirectionVolumeParams& params )
+{
+    MR_TIMER
+    VolumeIndexer indexer( params.vol.dimensions );
+    std::vector<MeshProjectionResult> projs;
+
+    auto getPoint = [&indexer, &params] ( VoxelId i )
+    {
+        const auto c = Vector3f( indexer.toPos( i ) ) + Vector3f::diagonal( 0.5f );
+        return params.vol.origin + mult( params.vol.voxelSize, c );
+    };
+
+    {
+        std::vector<Vector3f> points( indexer.size() );
+        for ( auto i = VoxelId( size_t( 0 ) ); i < indexer.size(); ++i )
+        {
+            points[i] = getPoint( i );
+        }
+        params.projector->findProjections( projs, points );
+    }
+
+    std::array<SimpleVolume, 3> res;
+    for ( auto& v : res )
+    {
+        v.voxelSize = params.vol.voxelSize;
+        v.dims = params.vol.dimensions;
+        v.data.resize( indexer.size() );
+    }
+
+    for ( auto i = VoxelId( size_t( 0 ) ); i < indexer.size(); ++i )
+    {
+        const auto d = ( getPoint( i ) - projs[i].proj.point ).normalized();
+        res[0].data[i] = d.x;
+        res[1].data[i] = d.y;
+        res[2].data[i] = d.z;
+    }
+
+    for ( auto& v : res )
+    {
+        std::tie( v.min, v.max ) = parallelMinMax( v.data );
+    }
+
+    return res;
+}
+
 
 } //namespace MR

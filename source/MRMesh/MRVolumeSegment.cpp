@@ -13,7 +13,7 @@ namespace MR
 {
 
 // creates mesh from simple volume as 0.5 iso-surface
-Expected<MR::Mesh, std::string> meshFromSimpleVolume( const SimpleVolume& volumePart, const Vector3i& shift )
+Expected<MR::Mesh> meshFromSimpleVolume( const SimpleVolume& volumePart, const Vector3i& shift )
 {
     auto grid = simpleVolumeToDenseGrid( volumePart );
     auto mesh = gridToMesh( std::move( grid ), GridToMeshSettings{
@@ -118,7 +118,7 @@ void prepareVolumePart( SimpleVolume& volumePart, const VoxelBitSet& mask, Volum
     }
 }
 
-Expected<MR::Mesh, std::string> meshFromVoxelsMask( const VdbVolume& volume, const VoxelBitSet& mask )
+Expected<MR::Mesh> meshFromVoxelsMask( const VdbVolume& volume, const VoxelBitSet& mask )
 {
     if ( !volume.data )
         return unexpected( "Cannot create mesh from empty volume." );
@@ -132,7 +132,7 @@ Expected<MR::Mesh, std::string> meshFromVoxelsMask( const VdbVolume& volume, con
     return meshFromSimpleVolume( volumePart, minVoxel );
 }
 
-Expected<MR::Mesh, std::string> segmentVolume( const VdbVolume& volume, const std::vector<std::pair<Vector3f, Vector3f>>& pairs,
+Expected<MR::Mesh> segmentVolume( const VdbVolume& volume, const std::vector<std::pair<Vector3f, Vector3f>>& pairs,
                                                    const VolumeSegmentationParameters& params )
 {
     VolumeSegmenter segmentator( volume );
@@ -197,7 +197,7 @@ const std::vector<MR::Vector3i>& VolumeSegmenter::getSeeds( SeedType seedType ) 
     return seeds_[seedType];
 }
 
-Expected<VoxelBitSet, std::string> VolumeSegmenter::segmentVolume( float segmentationExponentModifier /*= 3000.0f*/, int voxelsExpansion /*= 25 */, ProgressCallback cb /* =nullptr */)
+Expected<VoxelBitSet> VolumeSegmenter::segmentVolume( float segmentationExponentModifier /*= 3000.0f*/, int voxelsExpansion /*= 25 */, ProgressCallback cb /* =nullptr */)
 {
     if ( seeds_[Inside].empty() )
         return unexpected( "No seeds presented" );
@@ -215,7 +215,7 @@ Expected<VoxelBitSet, std::string> VolumeSegmenter::segmentVolume( float segment
     return segmentVolumeByGraphCut( volumePart_, segmentationExponentModifier, seedsInVolumePartSpace_[Inside], seedsInVolumePartSpace_[Outside], cb );
 }
 
-Expected<MR::Mesh, std::string> VolumeSegmenter::createMeshFromSegmentation( const VoxelBitSet& segmentation ) const
+Expected<MR::Mesh> VolumeSegmenter::createMeshFromSegmentation( const VoxelBitSet& segmentation ) const
 {
     auto segmentBlockCopy = volumePart_;
     segmentBlockCopy.voxelSize = volume_.voxelSize;

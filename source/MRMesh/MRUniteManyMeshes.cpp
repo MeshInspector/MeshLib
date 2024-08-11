@@ -13,7 +13,7 @@
 namespace MR
 {
 
-Expected<Mesh, std::string> unitePairOfMeshes( Mesh&& a, Mesh&& b, 
+Expected<Mesh> unitePairOfMeshes( Mesh&& a, Mesh&& b, 
     bool fixDegenerations, float maxError, bool mergeMode, const Vector3f* shift = nullptr, BooleanResultMapper* mapper = nullptr )
 {
     if ( a.points.empty() )
@@ -164,7 +164,7 @@ private:
     bool mergeMode_{ false };
 };
 
-Expected<Mesh, std::string> uniteManyMeshes( 
+Expected<Mesh> uniteManyMeshes( 
     const std::vector<const Mesh*>& meshes, const UniteManyMeshesParams& params /*= {} */ )
 {
     MR_TIMER

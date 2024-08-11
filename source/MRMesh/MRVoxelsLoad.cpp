@@ -561,7 +561,7 @@ SeriesInfo sortDICOMFiles( std::vector<std::filesystem::path>& files, unsigned m
     return res;
 }
 
-Expected<DicomVolume, std::string> loadSingleDicomFolder( std::vector<std::filesystem::path>& files,
+Expected<DicomVolume> loadSingleDicomFolder( std::vector<std::filesystem::path>& files,
                                                         unsigned maxNumThreads, const ProgressCallback& cb )
 {
     MR_TIMER
@@ -709,7 +709,7 @@ Expected<SeriesMap,std::string> extractDCMSeries( const std::filesystem::path& p
     return seriesMap;
 }
 
-std::vector<Expected<DicomVolume, std::string>> loadDicomsFolder( const std::filesystem::path& path,
+std::vector<Expected<DicomVolume>> loadDicomsFolder( const std::filesystem::path& path,
                                                         unsigned maxNumThreads, const ProgressCallback& cb )
 {
     auto seriesMap = extractDCMSeries( path, subprogress( cb, 0.0f, 0.3f ) );
@@ -718,7 +718,7 @@ std::vector<Expected<DicomVolume, std::string>> loadDicomsFolder( const std::fil
 
     int seriesCounter = 0;
     auto seriesNum = seriesMap->size();
-    std::vector<Expected<DicomVolume, std::string>> res;
+    std::vector<Expected<DicomVolume>> res;
     for ( auto& [uid, series] : *seriesMap )
     {
         res.push_back( loadSingleDicomFolder( series, maxNumThreads,
@@ -733,7 +733,7 @@ std::vector<Expected<DicomVolume, std::string>> loadDicomsFolder( const std::fil
     return res;
 }
 
-Expected<MR::VoxelsLoad::DicomVolume, std::string> loadDicomFolder( const std::filesystem::path& path, unsigned maxNumThreads /*= 4*/, const ProgressCallback& cb /*= {} */ )
+Expected<MR::VoxelsLoad::DicomVolume> loadDicomFolder( const std::filesystem::path& path, unsigned maxNumThreads /*= 4*/, const ProgressCallback& cb /*= {} */ )
 {
     auto seriesMap = extractDCMSeries( path, subprogress( cb, 0.0f, 0.3f ) );
     if ( !seriesMap.has_value() )
@@ -742,11 +742,11 @@ Expected<MR::VoxelsLoad::DicomVolume, std::string> loadDicomFolder( const std::f
     return loadSingleDicomFolder( seriesMap->begin()->second, maxNumThreads, subprogress( cb, 0.3f, 1.0f ) );
 }
 
-std::vector<Expected<LoadDCMResult, std::string>> loadDCMsFolder( const std::filesystem::path& path,
+std::vector<Expected<LoadDCMResult>> loadDCMsFolder( const std::filesystem::path& path,
                                                      unsigned maxNumThreads, const ProgressCallback& cb )
 {
     auto dicomRes = loadDicomsFolder( path, maxNumThreads, subprogress( cb, 0, 0.5f ) );
-    std::vector<Expected<LoadDCMResult, std::string>> res( dicomRes.size() );
+    std::vector<Expected<LoadDCMResult>> res( dicomRes.size() );
     for ( int i = 0; i < dicomRes.size(); ++i )
     {
         if ( !dicomRes[i].has_value() )
@@ -768,7 +768,7 @@ std::vector<Expected<LoadDCMResult, std::string>> loadDCMsFolder( const std::fil
     return { res };
 }
 
-Expected<MR::VoxelsLoad::LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::path& path, unsigned maxNumThreads /*= 4*/, const ProgressCallback& cb /*= {} */ )
+Expected<MR::VoxelsLoad::LoadDCMResult> loadDCMFolder( const std::filesystem::path& path, unsigned maxNumThreads /*= 4*/, const ProgressCallback& cb /*= {} */ )
 {
     auto loadRes = loadDicomFolder( path, maxNumThreads, subprogress( cb, 0.0f, 0.5f ) );
     if ( !loadRes.has_value() )
@@ -780,10 +780,10 @@ Expected<MR::VoxelsLoad::LoadDCMResult, std::string> loadDCMFolder( const std::f
     return res;
 }
 
-std::vector<Expected<LoadDCMResult, std::string>> loadDCMFolderTree( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
+std::vector<Expected<LoadDCMResult>> loadDCMFolderTree( const std::filesystem::path& path, unsigned maxNumThreads, const ProgressCallback& cb )
 {
     MR_TIMER;
-    std::vector<Expected<LoadDCMResult, std::string>> res;
+    std::vector<Expected<LoadDCMResult>> res;
     auto tryLoadDir = [&]( const std::filesystem::path& dir )
     {
         auto loadRes = loadDCMsFolder( dir, maxNumThreads, cb );
@@ -806,7 +806,7 @@ std::vector<Expected<LoadDCMResult, std::string>> loadDCMFolderTree( const std::
     return res;
 }
 
-Expected<DicomVolume, std::string> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb )
+Expected<DicomVolume> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb )
 {
     MR_TIMER
     if ( !reportProgress( cb, 0.0f ) )
@@ -829,7 +829,7 @@ Expected<DicomVolume, std::string> loadDicomFile( const std::filesystem::path& p
 
 #endif // MRMESH_NO_DICOM
 
-Expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& path,
+Expected<VdbVolume> fromRaw( const std::filesystem::path& path,
     const ProgressCallback& cb )
 {
     MR_TIMER;
@@ -936,7 +936,7 @@ Expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& path,
 }
 
 #ifdef MRMESH_OPENVDB_USE_IO
-Expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
+Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
 {
     if ( cb && !cb( 0.f ) )
         return unexpected( getCancelMessage( path ) );
@@ -1007,14 +1007,14 @@ Expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem::pa
 }
 #endif
 
-inline Expected<std::vector<VdbVolume>, std::string> toSingleElementVector( Expected<VdbVolume, std::string> v )
+inline Expected<std::vector<VdbVolume>> toSingleElementVector( Expected<VdbVolume> v )
 {
     if ( !v.has_value() )
         return unexpected( std::move( v.error() ) );
     return std::vector<VdbVolume>{ std::move( v.value() ) };
 }
 
-Expected<std::vector<VdbVolume>, std::string> fromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
+Expected<std::vector<VdbVolume>> fromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
 {
     auto ext = utf8string( path.extension() );
     for ( auto& c : ext )
@@ -1054,7 +1054,7 @@ struct TiffParams
 };
 
 #ifndef MRMESH_NO_TIFF
-Expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& settings )
+Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
 {
     std::error_code ec;
     if ( !std::filesystem::is_directory( settings.dir, ec ) )
@@ -1145,7 +1145,7 @@ Expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& setting
 }
 #endif // MRMESH_NO_TIFF
 
-Expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& file, const RawParameters& params,
+Expected<VdbVolume> fromRaw( const std::filesystem::path& file, const RawParameters& params,
     const ProgressCallback& cb )
 {
     std::ifstream in( file, std::ios::binary );
@@ -1154,7 +1154,7 @@ Expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& file, con
     return addFileNameInError( fromRaw( in, params, cb ), file );
 }
 
-Expected<VdbVolume, std::string> fromRaw( std::istream& in, const RawParameters& params,  const ProgressCallback& cb )
+Expected<VdbVolume> fromRaw( std::istream& in, const RawParameters& params,  const ProgressCallback& cb )
 {
     if ( params.dimensions.x <= 0 || params.dimensions.y <= 0 || params.dimensions.z <= 0 )
         return unexpected( "Wrong volume dimension parameter value" );

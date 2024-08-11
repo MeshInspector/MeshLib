@@ -179,7 +179,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         def_readwrite( "progressCallback", &MR::VoxelsLoad::LoadingTiffSettings::cb, "Callback to report progress" );
 
     m.def( "loadTiffDir",
-        MR::decorateExpected( ( MR::Expected<MR::VdbVolume, std::string>( * ) ( const MR::VoxelsLoad::LoadingTiffSettings& ) )& MR::VoxelsLoad::loadTiffDir ),
+        MR::decorateExpected( ( MR::Expected<MR::VdbVolume>( * ) ( const MR::VoxelsLoad::LoadingTiffSettings& ) )& MR::VoxelsLoad::loadTiffDir ),
         pybind11::arg( "settings" ),
         "Load voxels from a directory with TIFF images.\n",
         "settings - Settings structure for loadTiffDir function\n" );

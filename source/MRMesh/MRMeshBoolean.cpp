@@ -428,7 +428,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     return result;
 }
 
-Expected<BooleanResultPoints, std::string> getBooleanPoints( const Mesh& meshA, const Mesh& meshB, 
+Expected<BooleanResultPoints> getBooleanPoints( const Mesh& meshA, const Mesh& meshB, 
     BooleanOperation operation, const AffineXf3f* rigidB2A )
 {
     MR_TIMER

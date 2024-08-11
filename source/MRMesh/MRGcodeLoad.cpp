@@ -32,13 +32,13 @@ GcodeSource splitString( const std::string& source )
     return res;
 }
 
-Expected<GcodeSource, std::string> fromGcode( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+Expected<GcodeSource> fromGcode( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
 {
     std::ifstream filestream( file );
     return fromGcode( filestream, callback );
 }
 
-Expected<MR::GcodeSource, std::string> fromGcode( std::istream& in, ProgressCallback /*= {} */ )
+Expected<MR::GcodeSource> fromGcode( std::istream& in, ProgressCallback /*= {} */ )
 {
     std::stringstream buffer;
     buffer << in.rdbuf();
@@ -46,25 +46,25 @@ Expected<MR::GcodeSource, std::string> fromGcode( std::istream& in, ProgressCall
     return splitString( buffer.str() );
 }
 
-Expected<GcodeSource, std::string> fromAnySupportedFormat( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+Expected<GcodeSource> fromAnySupportedFormat( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
 {
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    Expected<std::vector<std::string>, std::string> res = unexpected( std::string( "unsupported file extension" ) );
+    Expected<std::vector<std::string>> res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".gcode" || ext == ".txt" || ext == ".nc" )
         res = fromGcode( file, callback );
     return res;
 }
 
-Expected<MR::GcodeSource, std::string> fromAnySupportedFormat( std::istream& in, const std::string& extension, ProgressCallback callback /*= {} */ )
+Expected<MR::GcodeSource> fromAnySupportedFormat( std::istream& in, const std::string& extension, ProgressCallback callback /*= {} */ )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    Expected<GcodeSource, std::string> res = unexpected( std::string( "unsupported file extension" ) );
+    Expected<GcodeSource> res = unexpected( std::string( "unsupported file extension" ) );
     if ( ext == ".gcode" || ext == ".txt" || ext == ".nc" )
         res = fromGcode( in, callback );
     return res;

@@ -61,20 +61,20 @@ void MoveObjectByMouse::drawDialog( float menuScaling, ImGuiContext*)
     ImGui::EndCustomStatePlugin();
 }
 
-bool MoveObjectByMouse::onMouseDown_( MouseButton btn, int modifiers )
+bool MoveObjectByMouse::onDragStart_( MouseButton btn, int modifiers )
 {
     if ( ( modifiers & ~( GLFW_MOD_SHIFT | GLFW_MOD_CONTROL ) ) != 0 )
         return false;
     return moveByMouse_.onMouseDown( btn, modifiers );
 }
 
-bool MoveObjectByMouse::onMouseMove_( int x, int y )
+bool MoveObjectByMouse::onDrag_( int x, int y )
 {
     viewer->select_hovered_viewport();
     return moveByMouse_.onMouseMove( x, y );
 }
 
-bool MoveObjectByMouse::onMouseUp_( MouseButton btn, int modifiers )
+bool MoveObjectByMouse::onDragEnd_( MouseButton btn, int modifiers )
 {
     return moveByMouse_.onMouseUp( btn, modifiers );
 }

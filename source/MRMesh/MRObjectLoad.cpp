@@ -124,7 +124,7 @@ const IOFilters allFilters = SceneFileFilters
                              | LinesLoad::Filters
                              | PointsLoad::Filters;
 
-Expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
+Expected<ObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER;
 
@@ -152,7 +152,7 @@ Expected<ObjectMesh, std::string> makeObjectMeshFromFile( const std::filesystem:
     return objectMesh;
 }
 
-Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
+Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
@@ -201,7 +201,7 @@ Expected<std::shared_ptr<Object>, std::string> makeObjectFromMeshFile( const std
     return objectMesh;
 }
 
-Expected<ObjectLines, std::string> makeObjectLinesFromFile( const std::filesystem::path& file, ProgressCallback callback )
+Expected<ObjectLines> makeObjectLinesFromFile( const std::filesystem::path& file, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -218,7 +218,7 @@ Expected<ObjectLines, std::string> makeObjectLinesFromFile( const std::filesyste
     return objectLines;
 }
 
-Expected<ObjectPoints, std::string> makeObjectPointsFromFile( const std::filesystem::path& file, ProgressCallback callback )
+Expected<ObjectPoints> makeObjectPointsFromFile( const std::filesystem::path& file, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -243,7 +243,7 @@ Expected<ObjectPoints, std::string> makeObjectPointsFromFile( const std::filesys
     return objectPoints;
 }
 
-Expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( const std::filesystem::path& file, ProgressCallback callback )
+Expected<ObjectDistanceMap> makeObjectDistanceMapFromFile( const std::filesystem::path& file, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -261,7 +261,7 @@ Expected<ObjectDistanceMap, std::string> makeObjectDistanceMapFromFile( const st
     return objectDistanceMap;
 }
 
-Expected<ObjectGcode, std::string> makeObjectGcodeFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+Expected<ObjectGcode> makeObjectGcodeFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
 {
     MR_TIMER;
 
@@ -279,7 +279,7 @@ Expected<ObjectGcode, std::string> makeObjectGcodeFromFile( const std::filesyste
 }
 
 #ifndef MRMESH_NO_OPENVDB
-Expected<std::vector<std::shared_ptr<ObjectVoxels>>, std::string> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+Expected<std::vector<std::shared_ptr<ObjectVoxels>>> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
 {
     MR_TIMER;
 
@@ -336,13 +336,13 @@ static std::string makeWarningString( int skippedFaceCount, int duplicatedVertex
     return res;
 }
 
-Expected<std::vector<std::shared_ptr<MR::Object>>, std::string> loadObjectFromFile( const std::filesystem::path& filename,
+Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std::filesystem::path& filename,
                                                                                     std::string* loadWarn, ProgressCallback callback )
 {
     if ( callback && !callback( 0.f ) )
         return unexpected( std::string( "Loading canceled" ) );
 
-    Expected<std::vector<std::shared_ptr<Object>>, std::string> result;
+    Expected<std::vector<std::shared_ptr<Object>>> result;
     bool loadedFromSceneFile = false;
 
     auto ext = std::string( "*" ) + utf8string( filename.extension().u8string() );
@@ -634,7 +634,7 @@ bool isSupportedFileInSubfolders( const std::filesystem::path& folder )
     return false;
 }
 
-Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::path & folder, std::string* loadWarn, ProgressCallback callback )
+Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder, std::string* loadWarn, ProgressCallback callback )
 {
     MR_TIMER;
 
@@ -704,7 +704,7 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
         return unexpected( std::string( "Error: folder is empty." ) );
 
 
-    using loadObjResultType = Expected<std::vector<std::shared_ptr<MR::Object>>, std::string>;
+    using loadObjResultType = Expected<std::vector<std::shared_ptr<MR::Object>>>;
     // create folders objects
     struct LoadTask
     {
@@ -795,7 +795,7 @@ Expected<Object, std::string> makeObjectTreeFromFolder( const std::filesystem::p
     return result;
 }
 
-Expected <Object, std::string> makeObjectTreeFromZip( const std::filesystem::path& zipPath, std::string* loadWarn, ProgressCallback callback )
+Expected <Object> makeObjectTreeFromZip( const std::filesystem::path& zipPath, std::string* loadWarn, ProgressCallback callback )
 {
     auto tmpFolder = UniqueTemporaryFolder( {} );
     auto contentsFolder = tmpFolder / zipPath.stem();
@@ -813,7 +813,7 @@ Expected <Object, std::string> makeObjectTreeFromZip( const std::filesystem::pat
     return makeObjectTreeFromFolder( contentsFolder, loadWarn, callback );
 }
 
-Expected<std::shared_ptr<Object>, std::string> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, std::string* loadWarn,
+Expected<std::shared_ptr<Object>> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, std::string* loadWarn,
     ProgressCallback callback )
 {
     auto ext = std::string( "*" ) + utf8string( path.extension().u8string() );

@@ -92,7 +92,7 @@ void ObjectVoxels::updateHistogramAndSurface( ProgressCallback cb )
     }
 }
 
-Expected<bool, std::string> ObjectVoxels::setIsoValue( float iso, ProgressCallback cb, bool updateSurface )
+Expected<bool> ObjectVoxels::setIsoValue( float iso, ProgressCallback cb, bool updateSurface )
 {
     if ( !vdbVolume_.data )
         return false; // no volume presented in this
@@ -151,12 +151,12 @@ Box3i ObjectVoxels::updateActiveBounds( const Box3i& box )
     return oldBox;
 }
 
-Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( float iso, MR::ProgressCallback cb ) const
+Expected<std::shared_ptr<Mesh>> ObjectVoxels::recalculateIsoSurface( float iso, MR::ProgressCallback cb ) const
 {
     return recalculateIsoSurface( vdbVolume_, iso, cb );
 }
 
-Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface( const VdbVolume& vdbVolumeCopy, float iso, ProgressCallback cb /*= {} */ ) const
+Expected<std::shared_ptr<Mesh>> ObjectVoxels::recalculateIsoSurface( const VdbVolume& vdbVolumeCopy, float iso, ProgressCallback cb /*= {} */ ) const
 {
     MR_TIMER
     auto vdbVolume = vdbVolumeCopy;
@@ -177,7 +177,7 @@ Expected<std::shared_ptr<Mesh>, std::string> ObjectVoxels::recalculateIsoSurface
     {
         // continue progress bar from the value where it stopped on the previous iteration
         startProgress = reachedProgress;
-        Expected<Mesh, std::string> meshRes;
+        Expected<Mesh> meshRes;
         if ( dualMarchingCubes_ )
         {
             meshRes = gridToMesh( vdbVolume.data, GridToMeshSettings{

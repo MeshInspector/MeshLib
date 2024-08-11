@@ -10,7 +10,7 @@
 namespace MR
 {
 
-Expected<Mesh, std::string>  alignTextToMesh( 
+Expected<Mesh>  alignTextToMesh( 
     const Mesh& mesh, const TextMeshAlignParams& params )
 {
     auto meshOrError = createSymbolsMesh( params );

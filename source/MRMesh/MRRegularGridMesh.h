@@ -18,12 +18,12 @@ using RegularGridMeshFaceValidator =
         std::function<bool( size_t x0, size_t y0, size_t x1, size_t y1, size_t x2, size_t y2 )>;
 
 // Creates regular mesh with points in valid grid lattice
-MRMESH_API Expected<Mesh, std::string> makeRegularGridMesh( size_t width, size_t height,
+MRMESH_API Expected<Mesh> makeRegularGridMesh( size_t width, size_t height,
                                           const RegularGridLatticeValidator& validator,
                                           const RegularGridLatticePositioner& positioner,
                                           const RegularGridMeshFaceValidator& faceValidator = {},
                                           ProgressCallback cb = {} );
 
 // Creates regular mesh from monotone (connects point with closed x, y neighbors) points
-MRMESH_API Expected<Mesh, std::string> makeRegularGridMesh( VertCoords pc, ProgressCallback cb = {} );
+MRMESH_API Expected<Mesh> makeRegularGridMesh( VertCoords pc, ProgressCallback cb = {} );
 }

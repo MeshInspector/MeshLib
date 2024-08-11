@@ -58,7 +58,7 @@ void RegularMapMesher::setDistances( int width, int height, const std::vector<fl
     distances_ = distances;
 }
 
-Expected<Mesh, std::string> RegularMapMesher::createMesh() const
+Expected<Mesh> RegularMapMesher::createMesh() const
 {
     auto refSize = width_ * height_;
     if ( !surfacePC_ )

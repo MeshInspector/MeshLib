@@ -154,7 +154,7 @@
 			]
 		},
 		{
-			"Name": "Voxel",
+			"Name": "Voxels",
 			"Priority": 3,
 			"Groups": [
 				{

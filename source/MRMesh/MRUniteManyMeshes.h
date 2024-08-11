@@ -41,7 +41,7 @@ struct UniteManyMeshesParams
 // Computes the surface of objects' union each of which is defined by its own surface mesh
 // - merge non intersecting meshes first
 // - unite merged groups
-MRMESH_API Expected<Mesh, std::string> uniteManyMeshes( const std::vector<const Mesh*>& meshes, 
+MRMESH_API Expected<Mesh> uniteManyMeshes( const std::vector<const Mesh*>& meshes, 
     const UniteManyMeshesParams& params = {} );
 
 }

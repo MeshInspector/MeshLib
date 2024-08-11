@@ -162,7 +162,7 @@ Expected<std::array<SimpleVolume, 3>> meshToDirectionVolume( const MeshToDirecti
 
     {
         std::vector<Vector3f> points( indexer.size() );
-        for ( auto i = VoxelId( 0zu ); i < indexer.size(); ++i )
+        for ( auto i = VoxelId( size_t( 0 ) ); i < indexer.size(); ++i )
         {
             points[i] = getPoint( i );
         }
@@ -177,7 +177,7 @@ Expected<std::array<SimpleVolume, 3>> meshToDirectionVolume( const MeshToDirecti
         v.data.resize( indexer.size() );
     }
 
-    for ( auto i = VoxelId( 0zu ); i < indexer.size(); ++i )
+    for ( auto i = VoxelId( size_t( 0 ) ); i < indexer.size(); ++i )
     {
         const auto d = ( getPoint( i ) - projs[i].proj.point ).normalized();
         res[0].data[i] = d.x;

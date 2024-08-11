@@ -8,6 +8,7 @@
 #include "MRMeshIntersect.h"
 #include "MRParallelFor.h"
 #include "MRAABBTree.h"
+#include "MRPointsToMeshProjector.h"
 #include <tuple>
 
 namespace MR
@@ -48,12 +49,6 @@ std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p
     default: ; //nothing
     }
     return dist;
-}
-
-std::optional<Vector3f> directionFromMesh( const MeshPart& mp, const Vector3f& p, const DistanceToMeshOptions& op )
-{
-    const auto proj = findProjection( p, mp, op.maxDistSq, nullptr, op.minDistSq );
-    return ( p - proj.proj.point ).normalized();
 }
 
 Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& cParams /*= {} */ )
@@ -153,51 +148,45 @@ Expected<SimpleVolume, std::string> meshRegionToIndicatorVolume( const Mesh& mes
 
 
 
-VoxelsVolume<std::function<Vector3f( const Vector3i& )>> meshToProjectionDirFunctionVolume( const MeshPart& mp, const MeshToDirectionVolumeParams& params )
+Expected<std::array<SimpleVolume, 3>> meshToDirectionVolume( const MeshToDirectionVolumeParams& params )
 {
-    assert( params.dist.signMode != SignDetectionMode::OpenVDB );
-    return VoxelsVolume
-    {
-        .data = std::function{ [params, mp = MeshPart( mp.mesh )] ( const Vector3i& pos ) -> Vector3f
-        {
-            const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
-            const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
-            auto dist = directionFromMesh( mp, voxelCenter, params.dist );
-            return dist ? *dist : Vector3f{};
-        } },
-        .dims = params.vol.dimensions,
-        .voxelSize = params.vol.voxelSize
-    };
-}
+    VolumeIndexer indexer( params.vol.dimensions );
+    std::vector<MeshProjectionResult> projs;
 
-
-Expected<std::array<SimpleVolume, 3>> meshToDirectionVolume( const MeshPart& mp, const MeshToDirectionVolumeParams& params )
-{
-    constexpr auto proj = [] ( auto f, auto i )
+    auto getPoint = [&indexer, &params] ( VoxelId i )
     {
-        return [f, i] ( const Vector3i& pos )
-        {
-            return f( pos )[i];
-        };
+        const auto c = Vector3f( indexer.toPos( i ) ) + Vector3f::diagonal( 0.5f );
+        return params.vol.origin + mult( params.vol.voxelSize, c );
     };
 
-    auto func = meshToProjectionDirFunctionVolume( mp, params );
+    {
+        std::vector<Vector3f> points( indexer.size() );
+        for ( auto i = VoxelId( 0zu ); i < indexer.size(); ++i )
+        {
+            points[i] = getPoint( i );
+        }
+        params.projector->findProjections( projs, points );
+    }
 
     std::array<SimpleVolume, 3> res;
-    for ( size_t i = 0; i < 3; ++i )
+    for ( auto& v : res )
     {
-        auto cb = subprogress( params.vol.cb, i, 3 );
+        v.voxelSize = params.vol.voxelSize;
+        v.dims = params.vol.dimensions;
+        v.data.resize( indexer.size() );
+    }
 
-        FunctionVolume projVolume{
-            .data = proj( func.data, i ),
-            .dims = func.dims,
-            .voxelSize = func.voxelSize
-        };
+    for ( auto i = VoxelId( 0zu ); i < indexer.size(); ++i )
+    {
+        const auto d = ( getPoint( i ) - projs[i].proj.point ).normalized();
+        res[0].data[i] = d.x;
+        res[1].data[i] = d.y;
+        res[2].data[i] = d.z;
+    }
 
-        if ( auto r = functionVolumeToSimpleVolume( projVolume, cb ); !r )
-            return unexpected( r.error() );
-        else
-            res[i] = std::move( *r );
+    for ( auto& v : res )
+    {
+        std::tie( v.min, v.max ) = parallelMinMax( v.data );
     }
 
     return res;

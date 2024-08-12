@@ -12,9 +12,12 @@
 
 namespace MR
 {
+
+/// This class represents tooth id
 class DentalId
 {
 public:
+    /// Creates id from FDI number known at compile time
     template <int id>
     static constexpr DentalId fromFDI()
     {
@@ -25,8 +28,10 @@ public:
         return DentalId( id );
     }
 
+    /// Creates id from FDI number known only at runtime
     MRMESH_API static std::optional<DentalId> fromFDI( int id );
 
+    /// Returns FDI representation of the id
     MRMESH_API int fdi() const;
 
     auto operator <=> ( const DentalId& other ) const = default;

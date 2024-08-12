@@ -140,7 +140,7 @@ See Python Basic Examples [here](https://doc.meshinspector.com/HowToBasic.html) 
 Also you can integrate MeshLib into your .NET project via NuGet. The package can be installed from .NET CLI, VisualStudio UI, or downloaded from [NuGet website](https://www.nuget.org/packages/MeshLib/).
 * Installation via .NET CLI
 ```
-dotnet add package MeshLib --version 2.4.3.170
+dotnet add package MeshLib
 ```
 
 # Build

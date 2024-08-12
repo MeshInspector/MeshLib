@@ -87,6 +87,8 @@ void ColorMapAggregator<Tag>::setMode( AggregateMode mode )
 template<typename Tag>
 typename ColorMapAggregator<Tag>::ColorMap ColorMapAggregator<Tag>::aggregate( const ElementBitSet& elementBitSet )
 {
+    if ( elementBitSet.none() )
+        return {};
     int last = elementBitSet.find_last();
     if ( needUpdate_ )
         updateAggregated_( last + 1 );

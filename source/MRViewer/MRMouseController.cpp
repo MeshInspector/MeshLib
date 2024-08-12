@@ -125,24 +125,16 @@ void MouseController::cursorEntrance_( bool entered )
     isCursorInside_ = entered;
 }
 
-void MouseController::preCheckConflicts()
+int MouseController::getMouseConflicts()
 {
-    connectionsCounter_ = getViewerInstance().mouseDownSignal.num_slots();
-}
-bool MouseController::checkConflicts()
-{
-    // Check for new connections
-    if ( getViewerInstance().mouseDownSignal.num_slots() <= connectionsCounter_ )
-        return false;
     // Check if camera movement is set to use left mouse button, regardless of modifiers
-    bool usesLeftButton = false;
     for ( auto& [mode, key] : backMap_ )
         if ( keyToMouseAndMod( key ).btn == MouseButton::Left )
-        {
-            usesLeftButton = true;
-            break;
-        }
-    return usesLeftButton;
+            // Return relevant connections number
+            return
+                int( getViewerInstance().mouseDownSignal.num_slots() ) +
+                int( getViewerInstance().dragStartSignal.num_slots() );
+    return 0;
 }
 
 bool MouseController::preMouseDown_( MouseButton btn, int mod )

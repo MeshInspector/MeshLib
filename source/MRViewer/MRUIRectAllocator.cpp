@@ -1,6 +1,7 @@
 #include "MRUIRectAllocator.h"
 
 #include "MRViewer/MRViewer.h"
+#include "MRViewer/MRViewport.h"
 
 #include <imgui_internal.h>
 
@@ -127,15 +128,15 @@ RectAllocator::FindFreeRectResult RectAllocator::findFreeRect(
 void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, ImVec2 defaultPos, ImGuiCond cond, ImVec2 pivot )
 {
     // Once per frame, update the window list.
-    if ( lastFrameCount != ImGui::GetFrameCount() )
+    if ( lastFrameCount_ != ImGui::GetFrameCount() )
     {
-        lastFrameCount = ImGui::GetFrameCount();
+        lastFrameCount_ = ImGui::GetFrameCount();
 
-        for ( auto it = windows.begin(); it != windows.end(); )
+        for ( auto it = windows_.begin(); it != windows_.end(); )
         {
             if ( !std::exchange( it->second.visitedThisFrame, false ) )
             {
-                it = windows.erase( it );
+                it = windows_.erase( it );
                 continue;
             }
 
@@ -151,7 +152,7 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
         window = ImGui::FindWindowByName( expectedWindowName );
         if ( window )
         {
-            auto [iter, isNew] = windows.try_emplace( expectedWindowName );
+            auto [iter, isNew] = windows_.try_emplace( expectedWindowName );
             if ( isNew )
             {
                 findLocation = true;
@@ -202,6 +203,76 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
 WindowRectAllocator& getDefaultWindowRectAllocator()
 {
     static WindowRectAllocator ret;
+    return ret;
+}
+
+ImVec2 LabelRectAllocator::createRect( ViewportId viewportId, std::string id, ImVec2 pos, ImVec2 size, bool forceExactPosition )
+{
+    // FIXME: An AABB tree would be nice here, for better performance.
+
+    if ( lastFrameCount_ != ImGui::GetFrameCount() )
+    {
+        lastFrameCount_ = ImGui::GetFrameCount();
+
+        for ( auto& perViewportMap : entries_ )
+        {
+            for ( auto it = perViewportMap.begin(); it != perViewportMap.end(); )
+            {
+                if ( !std::exchange( it->second.visitedThisFrame, false ) )
+                {
+                    it = perViewportMap.erase( it );
+                    continue;
+                }
+
+                ++it;
+            }
+        }
+    }
+
+    Viewer& viewer = getViewerInstance();
+    std::size_t viewportIndex = viewer.viewport_index( viewportId );
+
+    if ( viewportIndex >= entries_.size() )
+        entries_.resize( viewportIndex + 1 );
+    auto& perViewportMap = entries_[viewportIndex];
+
+    if ( forceExactPosition )
+    {
+        auto [iter, isNew] = perViewportMap.try_emplace( std::move( id ) );
+        iter->second.visitedThisFrame = true;
+        iter->second.box = Box2f::fromMinAndSize( pos, size );
+    }
+
+    Viewport& viewport = viewer.viewport( viewportId );
+    Box2f viewportRect = viewport.getViewportRect();
+
+    FindFreeRectResult result = findFreeRect(
+        Box2f::fromMinAndSize( pos, size ),
+        Box2f( ImVec2( viewportRect.min.x, viewer.framebufferSize.y - viewportRect.max.y ), ImVec2( viewportRect.max.x, viewer.framebufferSize.y - viewportRect.min.y ) ),
+        [&]( Box2f target, std::function<void( const char* name, Box2f box )> overlaps )
+        {
+            // Ugh, linear search.
+            for ( const auto& elem : perViewportMap )
+            {
+                if ( elem.first == id )
+                    continue; // No self-overlap.
+                if ( rectRectOverlap( target, elem.second.box ) )
+                    overlaps( elem.first.c_str(), elem.second.box );
+            }
+        },
+        ImVec2( 1, 1 )
+    );
+
+    auto [iter, isNew] = perViewportMap.try_emplace( std::move( id ) );
+    iter->second.visitedThisFrame = true;
+    iter->second.box = result.rect;
+
+    return result.rect.min;
+}
+
+LabelRectAllocator& getDefaultLabelRectAllocator()
+{
+    static LabelRectAllocator ret;
     return ret;
 }
 

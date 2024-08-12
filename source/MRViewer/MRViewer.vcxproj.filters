@@ -373,7 +373,7 @@
     <ClCompile Include="MRRenderDefaultObjects.cpp">
       <Filter>Render\Implementations</Filter>
     </ClCompile>
-    <ClCompile Include="MRNameTagClickListener.cpp">
+    <ClCompile Include="MRImGuiMenuListeners.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
     <ClCompile Include="MRMoveObjectByMouseImpl.cpp">
@@ -395,6 +395,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRUIRectAllocator.cpp">
+      <Filter>UIStyle</Filter>
+    </ClCompile>
+    <ClCompile Include="MRUINonOverlappingLabels.cpp">
       <Filter>UIStyle</Filter>
     </ClCompile>
     <ClCompile Include="MRViewerSettingsPlugin.cpp">
@@ -761,7 +764,7 @@
     <ClInclude Include="MRSignalCombiners.h">
       <Filter>Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="MRNameTagClickListener.h">
+    <ClInclude Include="MRImGuiMenuListeners.h">
       <Filter>Helpers</Filter>
     </ClInclude>
     <ClInclude Include="MRMoveObjectByMouseImpl.h">
@@ -783,6 +786,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="MRUIRectAllocator.h">
+      <Filter>UIStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="MRUINonOverlappingLabels.h">
       <Filter>UIStyle</Filter>
     </ClInclude>
     <ClInclude Include="MRViewerSettingsPlugin.h">

@@ -78,8 +78,8 @@ Expected<TeethMaskToDirectionVolumeConvertor> TeethMaskToDirectionVolumeConverto
     {
         if ( val >= 0 && val <= 49 )
         {
-            unique[val] = true;
-            bounds[val].include( pos );
+            unique[size_t( val )] = true;
+            bounds[size_t( val )].include( pos );
         }
     } );
 
@@ -118,7 +118,7 @@ Expected<TeethMaskToDirectionVolumeConvertor::ProcessResult> TeethMaskToDirectio
     {
         const auto fullPt = pt + box.min;
         if ( fullMask.data[maskIndexer.toVoxelId( fullPt )] == id.fdi() )
-            v = id.fdi();
+            v = ( float )id.fdi();
         else
             v = 0;
     } );
@@ -149,7 +149,7 @@ Expected<TeethMaskToDirectionVolumeConvertor::ProcessResult> TeethMaskToDirectio
 
                 p.projector->updateMeshData( &mesh );
                 return meshToDirectionVolume( p )
-                    .transform( [&xf] ( auto&& volumes )
+                    .transform( [&xf] ( DirectionVolume&& volumes )
                     {
                         return ProcessResult{
                             .volume = std::move( volumes ),
@@ -167,7 +167,7 @@ Expected<TeethMaskToDirectionVolumeConvertor::ProcessResult> TeethMaskToDirectio
                             r.volume[i].data[v] = invalidValue;
                     }
                 }
-                return r;
+                return std::move( r );
             } );
 }
 

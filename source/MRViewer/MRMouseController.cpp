@@ -131,7 +131,9 @@ int MouseController::getMouseConflicts()
     for ( auto& [mode, key] : backMap_ )
         if ( keyToMouseAndMod( key ).btn == MouseButton::Left )
             // Return relevant connections number
-            return int( getViewerInstance().mouseDownSignal.num_slots() );
+            return
+                int( getViewerInstance().mouseDownSignal.num_slots() ) +
+                int( getViewerInstance().dragStartSignal.num_slots() );
     return 0;
 }
 

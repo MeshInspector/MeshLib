@@ -68,7 +68,7 @@ public:
     void setFOVModifierCb( std::function<void( float& )> cb ) { fovModifierCb_ = cb; }
 
     // get number of potential conflicts between opened plugins and camera controls
-    // plugin is conflicting if it listens for mouseDown events, and camera control uses LMB
+    // plugin is conflicting if it listens for mouseDown or dragStart events, and camera control uses LMB
     int getMouseConflicts();
 
 private:

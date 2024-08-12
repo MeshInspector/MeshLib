@@ -2,7 +2,7 @@
 
 #include "MRVector3.h"
 #include "MRId.h"
-#include "MRMeshCollidePrecise.h"
+
 #include <array>
 
 namespace MR
@@ -42,6 +42,22 @@ struct TriangleSegmentIntersectResult
 /// uses simulation-of-simplicity to avoid edge-segment intersections and co-planarity
 [[nodiscard]] MRMESH_API TriangleSegmentIntersectResult doTriangleSegmentIntersect(
     const std::array<PreciseVertCoords, 5> & vs );
+
+/// float-to-int coordinate converter
+using ConvertToIntVector = std::function<Vector3i( const Vector3f& )>;
+/// int-to-float coordinate converter
+using ConvertToFloatVector = std::function<Vector3f( const Vector3i& )>;
+/// this struct contains coordinate converters float-int-float
+struct CoordinateConverters
+{
+    ConvertToIntVector toInt{};
+    ConvertToFloatVector toFloat{};
+};
+
+/// creates converter from Vector3f to Vector3i in Box range (int diapason is mapped to box range)
+MRMESH_API ConvertToIntVector getToIntConverter( const Box3d& box );
+/// creates converter from Vector3i to Vector3f in Box range (int diapason is mapped to box range)
+MRMESH_API ConvertToFloatVector getToFloatConverter( const Box3d& box );
 
 /// finds intersection precise, using high precision int inside
 /// this function input should have intersection

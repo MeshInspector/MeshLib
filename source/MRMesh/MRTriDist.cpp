@@ -1,5 +1,4 @@
 #include "MRTriDist.h"
-#include "MRVector3.h"
 
 namespace MR
 {

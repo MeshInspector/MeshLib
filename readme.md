@@ -135,6 +135,14 @@ pip install --upgrade meshlib
 
 See Python Basic Examples [here](https://doc.meshinspector.com/HowToBasic.html) or search for more complex ones on [stackoverflow.com](https://stackoverflow.com/).
 
+# .NET integration
+
+Also you can integrate MeshLib into your .NET project via NuGet. The package can be installed from .NET CLI, VisualStudio UI, or downloaded from [NuGet website](https://www.nuget.org/packages/MeshLib/).
+* Installation via .NET CLI
+```
+dotnet add package MeshLib --version 2.4.3.170
+```
+
 # Build
 ## Windows
 MeshLib can be build on Windows using either Visual Studio 2019 or Visual Studio 2022, both of which support c++20 language standard. 

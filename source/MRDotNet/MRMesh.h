@@ -22,6 +22,8 @@ public:
     /// edges with no valid left face for every boundary in the mesh
     property EdgePathReadOnly^ HoleRepresentiveEdges { EdgePathReadOnly^ get(); }
 
+    property Box3f^ BoundingBox { Box3f^ get(); }
+
     /// transforms all points
     void Transform( AffineXf3f^ xf );
     /// transforms all points in the region
@@ -61,6 +63,7 @@ private:
     FaceBitSet^ validFaces_;
     MR::DotNet::Triangulation^ triangulation_;
     EdgePath^ holeRepresentiveEdges_;
+    Box3f^ boundingBox_;
 
 internal:
     MR::Mesh* getMesh() { return mesh_; }

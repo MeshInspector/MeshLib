@@ -327,6 +327,9 @@
     <ClInclude Include="MRVolumeIndexer.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
+    <ClInclude Include="MRTeethMaskToDirectionVolume.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
     <ClInclude Include="MRHighPrecision.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -1479,6 +1482,9 @@
       <Filter>Source Files\BaseStructures</Filter>
     </ClCompile>
     <ClCompile Include="MRVolumeIndexer.cpp">
+      <Filter>Source Files\Voxels</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTeethMaskToDirectionVolume.cpp">
       <Filter>Source Files\Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRPrecisePredicates3.cpp">

@@ -137,7 +137,7 @@ void pythonAddModelToScene( const ModelType& model, const std::string& name, P&&
 void pythonSetDistanceMap( const std::shared_ptr<MR::ObjectDistanceMap>& m, std::shared_ptr<MR::DistanceMap> n, const MR::AffineXf3f& xf )
 {
     m->setDistanceMap( std::move( n ), xf );
-};
+}
 
 template <typename ObjectType, auto MemberPtr>
 auto pythonGetSelectedModels()

@@ -9,13 +9,18 @@ namespace MR
 {
 using FileNamesStack = std::vector<std::filesystem::path>;
 
-class OpenDirectoryMenuItem : public RibbonMenuItem
+class OpenDirectoryMenuItem : public StatePlugin
 {
 public:
     OpenDirectoryMenuItem();
     std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const override;
     bool action() override;
+    virtual bool blocking() const override
+    {
+        return false;
+    }
     void openDirectory( const std::filesystem::path& directory ) const;
+    virtual void drawDialog( float menuScaling, ImGuiContext* ) override;
 };
 
 class OpenFilesMenuItem : public RibbonMenuItem, public MultiListener<DragDropListener>

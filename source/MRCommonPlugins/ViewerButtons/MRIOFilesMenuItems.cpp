@@ -96,14 +96,14 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
     // required to be deferred, resent items store to be initialized
     CommandLoop::appendCommand( [&] ()
     {
-        auto openDirIt = RibbonSchemaHolder::schema().items.find( "Open directory" );
+        auto openDirIt = RibbonSchemaHolder::schema().items.find( "Open Directory" );
         if ( openDirIt != RibbonSchemaHolder::schema().items.end() )
         {
             openDirectoryItem_ = std::dynamic_pointer_cast<OpenDirectoryMenuItem>( openDirIt->second.item );
         }
         else
         {
-            spdlog::warn( "Cannot find \"Open directory\" menu item for recent files." );
+            spdlog::warn( "Cannot find \"Open Directory\" menu item for recent files." );
             assert( false );
         }
 
@@ -279,7 +279,7 @@ bool OpenFilesMenuItem::checkPaths_( const std::vector<std::filesystem::path>& p
 }
 
 OpenDirectoryMenuItem::OpenDirectoryMenuItem() :
-    RibbonMenuItem( "Open directory" )
+    PluginParent( "Open Directory" )
 {
 }
 
@@ -382,8 +382,9 @@ std::string OpenDirectoryMenuItem::isAvailable( const std::vector<std::shared_pt
 
 bool OpenDirectoryMenuItem::action()
 {
-    openFolderDialogAsync( [this] ( auto&& path ) { openDirectory( path ); } );
-    return false;
+    //openFolderDialogAsync( [this] ( auto&& path ) { openDirectory( path ); } );
+    enable(!isEnabled());
+    return isActive();
 }
 
 void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& directory ) const
@@ -429,11 +430,54 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
 #endif
 }
 
+void OpenDirectoryMenuItem::drawDialog( float menuScaling, ImGuiContext* )
+{
+    auto menuWidth = 350.0f * menuScaling;
+    if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
+        return;
+    ImGui::EndCustomStatePlugin();
+}
+
 #if !defined( MRMESH_NO_DICOM ) && !defined( MRMESH_NO_OPENVDB )
 OpenDICOMsMenuItem::OpenDICOMsMenuItem() :
     RibbonMenuItem( "Open DICOMs" )
 {
 }
+
+class LeftMenuWidget : public MR::ViewerPlugin, public MR::MultiListener<MR::PreDrawListener>
+{
+public:
+    virtual void init( MR::Viewer* viewer_ ) override
+    {
+        ViewerPlugin::init( viewer_ );
+        connect( viewer_ );
+    }
+    virtual void shutdown() override
+    {
+        disconnect();
+    }
+private:
+    virtual void preDraw_() override
+    {
+        ImGui::Begin( std::string( "##TestWindow" ).c_str() );
+        if ( auto ribbonMenu = MR::Viewer::instance()->getMenuPluginAs<MR::RibbonMenu>() )
+        {
+            DrawButtonParams params{
+                DrawButtonParams::SizeType::Small, {30.0f, 30.0f}, 30.0f,
+                DrawButtonParams::RootType::Toolbar };
+
+            const auto& buttonDrawer = ribbonMenu->getRibbonButtonDrawer();
+            auto it = RibbonSchemaHolder::schema().items.find( "Open Directory" );
+            if ( it != RibbonSchemaHolder::schema().items.end() )
+            {
+                buttonDrawer.drawButtonItem( it->second, params );
+            }
+        }
+        ImGui::End();
+    }
+};
+
+MRVIEWER_PLUGIN_REGISTRATION( LeftMenuWidget );
 
 bool OpenDICOMsMenuItem::action()
 {

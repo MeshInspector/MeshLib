@@ -153,7 +153,7 @@
     <Image Include="resource\icons\X0_5\Open DICOMs.png">
       <Filter>resource\icons\X0_5</Filter>
     </Image>
-    <Image Include="resource\icons\X0_5\Open directory.png">
+    <Image Include="resource\icons\X0_5\Open Directory.png">
       <Filter>resource\icons\X0_5</Filter>
     </Image>
     <Image Include="resource\icons\X0_5\Open files.png">
@@ -249,7 +249,7 @@
     <Image Include="resource\icons\X0_75\Open DICOMs.png">
       <Filter>resource\icons\X0_75</Filter>
     </Image>
-    <Image Include="resource\icons\X0_75\Open directory.png">
+    <Image Include="resource\icons\X0_75\Open Directory.png">
       <Filter>resource\icons\X0_75</Filter>
     </Image>
     <Image Include="resource\icons\X0_75\Open files.png">
@@ -345,7 +345,7 @@
     <Image Include="resource\icons\X1\Open DICOMs.png">
       <Filter>resource\icons\X1</Filter>
     </Image>
-    <Image Include="resource\icons\X1\Open directory.png">
+    <Image Include="resource\icons\X1\Open Directory.png">
       <Filter>resource\icons\X1</Filter>
     </Image>
     <Image Include="resource\icons\X1\Open files.png">
@@ -441,7 +441,7 @@
     <Image Include="resource\icons\X3\Open DICOMs.png">
       <Filter>resource\icons\X3</Filter>
     </Image>
-    <Image Include="resource\icons\X3\Open directory.png">
+    <Image Include="resource\icons\X3\Open Directory.png">
       <Filter>resource\icons\X3</Filter>
     </Image>
     <Image Include="resource\icons\X3\Open files.png">

@@ -12,7 +12,7 @@
       "Icon": "\uF15B"
     },
     {
-      "Name": "Open directory",
+      "Name": "Open Directory",
       "Caption": "Open Directory",
       "Tooltip": "Load all supported files from given directory and subdirectories.",
       "Icon": "\uF07C"

@@ -2508,7 +2508,7 @@ void ImGuiMenu::draw_mr_menu()
         ImGui::SameLine( 0, p );
         if ( ImGui::Button( "Load Dir##Main", ImVec2( ( w - p ) / 2.f, 0 ) ) )
         {
-            auto openDir = RibbonSchemaHolder::schema().items.find( "Open directory" );
+            auto openDir = RibbonSchemaHolder::schema().items.find( "Open Directory" );
             if ( openDir != RibbonSchemaHolder::schema().items.end() && openDir->second.item )
             {
                 openDir->second.item->action();

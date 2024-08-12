@@ -134,6 +134,10 @@ bool createButton( std::string_view name )
     checkForNewFrame();
 
     auto& map = state.stack.back()->elems;
+    if ( name == "Open Directory" )
+    {
+        spdlog::info( name );
+    }
     auto iter = map.find( name ); // I wish I could use `std::try_emplace` here directly...
     if ( iter == map.end() )
     {
@@ -174,6 +178,10 @@ void pushTree( std::string_view name )
     checkForNewFrame();
 
     auto& map = state.stack.back()->elems;
+    if ( name == "Open Directory" )
+    {
+        spdlog::info( name );
+    }
     auto iter = map.find( name ); // I wish I could use `std::try_emplace` here directly...
     if ( iter == map.end() )
         iter = map.try_emplace( std::string( name ) ).first;

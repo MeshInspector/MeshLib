@@ -21,9 +21,6 @@
 							"Name": "Open files"
 						},
 						{
-							"Name": "Open directory"
-						},
-						{
 							"Name": "Open DICOMs"
 						},
 						{
@@ -206,9 +203,6 @@
 	"Header Quick Access": [
 		{
 			"Name": "Open files"
-		},
-		{
-			"Name": "Open directory"
 		},
 		{
 			"Name": "Save Scene"

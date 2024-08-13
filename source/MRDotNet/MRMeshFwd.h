@@ -20,6 +20,7 @@ struct Box;
 using Box3f = Box<Vector3f>;
 
 struct Mesh;
+struct PointCloud;
 class BitSet;
 }
 

@@ -1,27 +1,8 @@
 #pragma once
 #include "MRMeshFwd.h"
+#include "MRMesh/MRICPEnums.h"
 
 MR_DOTNET_NAMESPACE_BEGIN
-
-/// The method how to update transformation from point pairs
-enum class ICPMethod
-{
-    Combined = 0,     ///< PointToPoint for the first 2 iterations, and PointToPlane for the remaining iterations
-    PointToPoint = 1, ///< select transformation that minimizes mean squared distance between two points in each pair,
-    ///< it is the safest approach but can converge slowly
-    PointToPlane = 2  ///< select transformation that minimizes mean squared distance between a point and a plane via the other point in each pair,
-    ///< converge much faster than PointToPoint in case of many good (with not all points/normals in one plane) pairs
-};
-
-/// The group of transformations, each with its own degrees of freedom
-enum class ICPMode
-{
-    RigidScale,     ///< rigid body transformation with uniform scaling (7 degrees of freedom)
-    AnyRigidXf,     ///< rigid body transformation (6 degrees of freedom)
-    OrthogonalAxis, ///< rigid body transformation with rotation except argument axis (5 degrees of freedom)
-    FixedAxis,      ///< rigid body transformation with rotation around given axis only (4 degrees of freedom)
-    TranslationOnly ///< only translation (3 degrees of freedom)
-};
 
 /// Stores a pair of points: one samples on the source and the closest to it on the target
 public ref struct PointPair
@@ -64,15 +45,6 @@ public ref struct PointPairs
 
     List<PointPair^>^ pairs;
     BitSet^ active;
-};
-
-// types of exit conditions in calculation
-enum class ICPExitType {
-    NotStarted, // calculation is not started yet
-    NotFoundSolution, // solution not found in some iteration
-    MaxIterations, // iteration limit reached
-    MaxBadIterations, // limit of non-improvement iterations in a row reached
-    StopMsdReached // stop mean square deviation reached
 };
 
 public ref struct ICPProperties

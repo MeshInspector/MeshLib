@@ -1338,6 +1338,9 @@
     <ClInclude Include="MRMeshDecimateCallbacks.h">
       <Filter>Source Files\Decimation</Filter>
     </ClInclude>
+    <ClInclude Include="MRICPEnums.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

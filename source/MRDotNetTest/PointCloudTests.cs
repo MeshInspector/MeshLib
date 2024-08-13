@@ -47,6 +47,18 @@ namespace MR.DotNet.Test
         }
 
         [Test]
+        public void TestNormalsError()
+        {
+            var points = new PointCloud();
+            points.AddPoint(new Vector3f(0, 0, 0), new Vector3f(0, 0, 1));
+            Assert.Throws<InvalidOperationException>(() => points.AddPoint(new Vector3f(0, 0, 0)));
+
+            points = new PointCloud();
+            points.AddPoint(new Vector3f(0, 0, 0));
+            Assert.Throws<InvalidOperationException>(() => points.AddPoint(new Vector3f(0, 0, 0), new Vector3f(0, 0, 1)));
+        }
+
+        [Test]
         public void TestSaveLoad()
         {
             var points = MakeCube();

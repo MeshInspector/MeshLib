@@ -58,3 +58,6 @@
 [submodule "thirdparty/GDCM"]
 	path = thirdparty/GDCM
 	url = https://github.com/malaterre/GDCM.git
+[submodule "thirdparty/tinyxml2"]
+	path = thirdparty/tinyxml2
+	url = https://github.com/leethomason/tinyxml2.git

@@ -18,7 +18,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
             []( const MR::DistanceMap& m, std::size_t x, std::size_t y ) -> std::optional<float>
             {
                 if ( !m.isInBounds( x, y ) )
-                    return {};
+                    throw std::out_of_range( "Out of bounds!" );
                 return m.get( x, y );
             },
             "Read value at (X,Y), returns Null if out of bounds or if that pixel is invalid (aka infinite distance)." ).
@@ -26,7 +26,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
             []( const MR::DistanceMap& m, std::size_t i ) -> std::optional<float>
             {
                 if ( !m.isInBounds( i ) )
-                    return {};
+                    throw std::out_of_range( "Out of bounds!" );
                 return m.get( i );
             },
             "Read value at the flattened index I, returns Null if out of bounds or if that pixel is invalid (aka infinite distance)." ).
@@ -44,7 +44,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
             []( MR::DistanceMap& m, std::size_t x, std::size_t y, float value )
             {
                 if ( !m.isInBounds( x, y ) )
-                    throw std::out_of_range("Out of bounds!");
+                    throw std::out_of_range( "Out of bounds!" );
                 m.set( x, y, value );
             },
             "Sets a pixel, throws if the coordinates are out of bounds." ).
@@ -52,7 +52,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
             []( MR::DistanceMap& m, std::size_t i, float value )
             {
                 if ( !m.isInBounds( i ) )
-                    throw std::out_of_range("Out of bounds!");
+                    throw std::out_of_range( "Out of bounds!" );
                 m.set( i, value );
             },
             "Sets a pixel at a flattened coordinate, throws if the coordinate is out of bounds." ).
@@ -60,7 +60,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
             []( MR::DistanceMap& m, std::size_t x, std::size_t y )
             {
                 if ( !m.isInBounds( x, y ) )
-                    throw std::out_of_range("Out of bounds!");
+                    throw std::out_of_range( "Out of bounds!" );
                 m.unset( x, y );
             },
             "Sets a pixel to the invalid value (see `isValid()`), throws if the coordinates are out of bounds." ).
@@ -68,7 +68,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
             []( MR::DistanceMap& m, std::size_t i )
             {
                 if ( !m.isInBounds( i ) )
-                    throw std::out_of_range("Out of bounds!");
+                    throw std::out_of_range( "Out of bounds!" );
                 m.unset( i );
             },
             "Sets a pixel to the invalid value (see `isValid()`), throws if the coordinate is out of bounds." );

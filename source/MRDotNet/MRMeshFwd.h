@@ -22,6 +22,9 @@ using Box3f = Box<Vector3f>;
 struct Mesh;
 struct PointCloud;
 class BitSet;
+
+class ICP;
+struct PointPairs;
 }
 
 #pragma managed( pop )
@@ -77,5 +80,9 @@ using VertCoordsReadOnly = ReadOnlyCollection<Vector3f^>;
 
 ref class Mesh;
 value struct MeshPart;
+
+interface class MeshOrPoints;
+ref class PointCloud;
+value struct MeshOrPointsXf;
 
 MR_DOTNET_NAMESPACE_END

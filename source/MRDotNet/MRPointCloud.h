@@ -1,10 +1,9 @@
 #pragma once
-#include "MRMeshFwd.h"
-
+#include "MRMeshOrPoints.h"
 MR_DOTNET_NAMESPACE_BEGIN
 
 /// represents a point cloud
-public ref class PointCloud
+public ref class PointCloud : public MeshOrPoints
 {
 internal:
     PointCloud( MR::PointCloud* pc );
@@ -13,10 +12,11 @@ public:
     PointCloud();
     ~PointCloud();
 
-    property VertCoordsReadOnly^ Points { VertCoordsReadOnly^ get(); }
+    virtual property VertCoordsReadOnly^ Points { VertCoordsReadOnly^ get(); }    
+    virtual property VertBitSetReadOnly^ ValidPoints { VertBitSetReadOnly^ get(); }
+    virtual property Box3f^ BoundingBox { Box3f^ get(); }
+
     property VertCoordsReadOnly^ Normals { VertCoordsReadOnly^ get(); }
-    property VertBitSetReadOnly^ ValidPoints { VertBitSetReadOnly^ get(); }
-    property Box3f^ BoundingBox { Box3f^ get(); }
 
     /// loads point cloud from file of any supported format
     static PointCloud^ FromAnySupportedFormat( System::String^ path );
@@ -31,7 +31,7 @@ private:
     MR::PointCloud* pc_;
     VertCoords^ points_;
     VertCoords^ normals_;
-    VertBitSet^ validVerts_;
+    VertBitSet^ validPoints_;
     Box3f^ boundingBox_;    
 
 internal:

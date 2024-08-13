@@ -58,10 +58,10 @@ VertCoordsReadOnly^ PointCloud::Normals::get()
 
 VertBitSetReadOnly^ PointCloud::ValidPoints::get()
 {
-    if ( !validVerts_ )
-        validVerts_ = gcnew VertBitSet( new MR::VertBitSet( pc_->validPoints ) );
+    if ( !validPoints_ )
+        validPoints_ = gcnew VertBitSet( new MR::VertBitSet( pc_->validPoints ) );
 
-    return validVerts_;
+    return validPoints_;
 }
 
 Box3f^ PointCloud::BoundingBox::get()
@@ -108,7 +108,7 @@ void PointCloud::clearManagedResources()
 {
     points_ = nullptr;
     normals_ = nullptr;
-    validVerts_ = nullptr;
+    validPoints_ = nullptr;
 }
 
 void PointCloud::AddPoint( Vector3f^ p )

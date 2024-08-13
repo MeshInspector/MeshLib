@@ -124,7 +124,7 @@ struct UiRenderManager
 
     // Returns the parameters for the `IRenderObject::earlyBackwardPass()`.
     // This will be called exactly once per viewport, each time the UI in it is rendered.
-    virtual BasicUiRenderTask::BackwardPassParams beginBackwardPass() { return {}; }
+    virtual BasicUiRenderTask::BackwardPassParams beginBackwardPass( ViewportId viewport, UiRenderParams::UiTaskList& tasks ) { (void)viewport; (void)tasks; return {}; }
     // After the backward pass is performed, the parameters should be passed back into this function.
     virtual void finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params ) { (void)params; }
 };

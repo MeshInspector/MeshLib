@@ -3036,8 +3036,11 @@ void ImGuiMenu::UiRenderManagerImpl::postRenderViewport( ViewportId viewport )
     ImGui::GetForegroundDrawList()->PopClipRect();
 }
 
-BasicUiRenderTask::BackwardPassParams ImGuiMenu::UiRenderManagerImpl::beginBackwardPass()
+BasicUiRenderTask::BackwardPassParams ImGuiMenu::UiRenderManagerImpl::beginBackwardPass( ViewportId viewport, UiRenderParams::UiTaskList& tasks )
 {
+    const auto& menuPlugin = getViewerInstance().getMenuPlugin();
+    menuPlugin->drawSceneUiSignal( menuPlugin->menu_scaling(), viewport, tasks );
+
     return { .consumedInteractions = ImGui::GetIO().WantCaptureMouse * BasicUiRenderTask::InteractionMask::mouseHover };
 }
 

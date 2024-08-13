@@ -1681,9 +1681,9 @@ void Viewer::drawUiRenderObjects_()
         };
         lambda( lambda, SceneRoot::get() );
 
-        std::sort( tasks.begin(), tasks.end(), []( const auto& a, const auto& b ){ return a->renderTaskDepth > b->renderTaskDepth; } );
+        auto backwardPassParams = uiRenderManager.beginBackwardPass( viewport.id, tasks );
 
-        auto backwardPassParams = uiRenderManager.beginBackwardPass();
+        std::sort( tasks.begin(), tasks.end(), []( const auto& a, const auto& b ){ return a->renderTaskDepth > b->renderTaskDepth; } );
         for ( auto it = tasks.end(); it != tasks.begin(); )
         {
             --it;

@@ -31,6 +31,23 @@ namespace
         EntryType type;
     };
 
+    static std::string listKeys( const MR::UI::TestEngine::GroupEntry& group )
+    {
+        std::string ret;
+        bool first = true;
+        for ( const auto& elem : group.elems )
+        {
+            if ( first )
+                first = false;
+            else
+                ret += ", ";
+            ret += '`';
+            ret += elem.first;
+            ret += '`';
+        }
+        return ret;
+    }
+
     const TestEngine::GroupEntry& findGroup( std::span<const std::string> path )
     {
         const TestEngine::GroupEntry* cur = &TestEngine::getRootEntry();
@@ -38,7 +55,7 @@ namespace
         {
             auto iter = cur->elems.find( segment );
             if ( iter == cur->elems.end() )
-                throw std::runtime_error( "No such entry: " + segment );
+                throw std::runtime_error( fmt::format( "No such entry: `{}`. Known entries are: {}.", segment, listKeys( *cur ) ) );
             cur = &std::get<TestEngine::GroupEntry>( iter->second.value );
         }
         return *cur;
@@ -87,7 +104,7 @@ namespace
             auto& group = findGroup( { path.data(), path.size() - 1 } );
             auto iter = group.elems.find( path.back() );
             if ( iter == group.elems.end() )
-                throw std::runtime_error( "No such entry: " + path.back() );
+                throw std::runtime_error( fmt::format( "No such entry: `{}`. Known entries are: {}.", path.back(), listKeys( group ) ) );
             std::get<TestEngine::ButtonEntry>( iter->second.value ).simulateClick = true;
         } );
         for ( int i = 0; i < MR::getViewerInstance().forceRedrawMinimumIncrementAfterEvents; ++i )
@@ -126,7 +143,7 @@ namespace
             const auto& group = findGroup( { path.data(), path.size() - 1 } );
             auto iter = group.elems.find( path.back() );
             if ( iter == group.elems.end() )
-                throw std::runtime_error( "No such entry: " + path.back() );
+                throw std::runtime_error( fmt::format( "No such entry: `{}`. Known entries are: {}.", path.back(), listKeys( group ) ) );
             const auto& entry = std::get<TestEngine::ValueEntry>( iter->second.value );
 
             if constexpr ( std::is_same_v<T, std::string> )
@@ -200,7 +217,7 @@ namespace
             const auto& group = findGroup( { path.data(), path.size() - 1 } );
             auto iter = group.elems.find( path.back() );
             if ( iter == group.elems.end() )
-                throw std::runtime_error( "No such entry: " + path.back() );
+                throw std::runtime_error( fmt::format( "No such entry: `{}`. Known entries are: {}.", path.back(), listKeys( group ) ) );
             const auto& entry = std::get<TestEngine::ValueEntry>( iter->second.value );
 
             T simulatedValue{};
@@ -257,8 +274,8 @@ namespace
                     if ( !opt )
                     {
                         throw std::runtime_error( std::is_floating_point_v<T>
-                            ? "Attempt to write a floating-point value into an integer."
-                            : "Attempt to write an integer into a floating-point value."
+                            ? "This isn't a floating-point value."
+                            : "This isn't an integer value."
                         );
                     }
 

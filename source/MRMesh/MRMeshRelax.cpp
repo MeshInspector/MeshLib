@@ -21,6 +21,32 @@ namespace MR
     relax( topology, field );
 }
 
+/// This class is responsible for limiting vertex movement during relaxation according to parameters
+class VertLimiter
+{
+public:
+    /// initialization
+    VertLimiter( const Mesh& mesh, const MeshRelaxParams& params ) : params_( params )
+    {
+        maxInitialDistSq_ = sqr( params.maxInitialDist );
+        if ( params.limitNearInitial )
+            initialPos_ = mesh.points;
+    }
+
+    /// returns limited coordinates of the vertex (v) given its target unlimited position
+    Vector3f operator()( VertId v, Vector3f targetPos ) const
+    {
+        if ( params_.limitNearInitial )
+            targetPos = getLimitedPos( targetPos, initialPos_[v], maxInitialDistSq_ );
+        return targetPos;
+    }
+
+private:
+    const MeshRelaxParams& params_;
+    VertCoords initialPos_;
+    float maxInitialDistSq_ = 0;
+};
+
 bool relax( Mesh& mesh, const MeshRelaxParams& params, ProgressCallback cb )
 {
     MR_WRITER( mesh );
@@ -92,10 +118,7 @@ bool equalizeTriAreas( Mesh& mesh, const MeshEqualizeTriAreasParams& params, Pro
         return true;
 
     MR_TIMER
-    VertCoords initialPos;
-    const auto maxInitialDistSq = sqr( params.maxInitialDist );
-    if ( params.limitNearInitial )
-        initialPos = mesh.points;
+    VertLimiter limiter( mesh, params );
     MR_WRITER( mesh );
 
     VertCoords newPoints;
@@ -112,9 +135,7 @@ bool equalizeTriAreas( Mesh& mesh, const MeshEqualizeTriAreasParams& params, Pro
             auto np = newPoints[v];
             auto pushForce = params.force * ( vertexPosEqualNeiAreas( mesh, v, params.noShrinkage ) - np );
             np += pushForce;
-            if ( params.limitNearInitial )
-                np = getLimitedPos( np, initialPos[v], maxInitialDistSq );
-            newPoints[v] = np;
+            newPoints[v] = limiter( v, np );
         }, internalCb ) )
             return false;
         mesh.points.swap( newPoints );
@@ -130,10 +151,7 @@ bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params, ProgressCallbac
         return true;
 
     MR_TIMER
-    VertCoords initialPos;
-    const auto maxInitialDistSq = sqr( params.maxInitialDist );
-    if ( params.limitNearInitial )
-        initialPos = mesh.points;
+    VertLimiter limiter( mesh, params );
     MR_WRITER( mesh );
 
     VertCoords newPoints;
@@ -170,9 +188,7 @@ bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params, ProgressCallbac
                 ++count;
             }
             auto np = newPoints[v] + vertPushForces[v] - Vector3f{ sum / double( count ) };
-            if ( params.limitNearInitial )
-                np = getLimitedPos( np, initialPos[v], maxInitialDistSq );
-            newPoints[v] = np;
+            newPoints[v] = limiter( v, np );
         }, internalCb2 ) )
             return false;
 
@@ -189,10 +205,7 @@ bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params, ProgressCallb
         return true;
 
     MR_TIMER
-    VertCoords initialPos;
-    const auto maxInitialDistSq = sqr( params.maxInitialDist );
-    if ( params.limitNearInitial )
-        initialPos = mesh.points;
+    VertLimiter limiter( mesh, params );
     MR_WRITER( mesh );
 
     float surfaceRadius = ( params.surfaceDilateRadius <= 0.0f ) ?
@@ -255,9 +268,7 @@ bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params, ProgressCallb
                 target = Vector3f( basis( centerPoint ) );
             }
             np += ( params.force * ( target - np ) );
-            if ( params.limitNearInitial )
-                np = getLimitedPos( np, initialPos[v], maxInitialDistSq );
-            newPoints[v] = np;
+            newPoints[v] = limiter( v, np );
         }, internalCb ) )
             return false;
         mesh.points.swap( newPoints );

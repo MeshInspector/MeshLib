@@ -154,6 +154,7 @@ public:
         ICPMode mode, float angleLimit, float scaleLimit, const Vector3f& fixedRotationAxis );*/
 
     ICP( MeshOrPointsXf^ flt, MeshOrPointsXf^ ref, float samplingVoxelSize );
+    ICP( MeshOrPointsXf^ flt, MeshOrPointsXf^ ref, BitSet^ fltSamples, BitSet^ refSamples );
     ~ICP();
 
     void SetParams( ICPProperties^ props );

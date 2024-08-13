@@ -38,6 +38,22 @@ ICP::ICP( MeshOrPointsXf^ flt, MeshOrPointsXf^ ref, float samplingVoxelSize )
     icp_ = new MR::ICP( flt->ToNative(), ref->ToNative(), samplingVoxelSize );
 }
 
+ICP::ICP( MeshOrPointsXf^ flt, MeshOrPointsXf^ ref, BitSet^ fltSamples, BitSet^ refSamples )
+{
+    if ( !flt )
+        throw gcnew System::ArgumentNullException( "flt" );
+    if ( !ref )
+        throw gcnew System::ArgumentNullException( "ref" );
+    if ( !fltSamples )
+        throw gcnew System::ArgumentNullException( "fltSamples" );
+    if ( !refSamples )
+        throw gcnew System::ArgumentNullException( "refSamples" );
+
+    MR::VertBitSet nativeFltSamples( fltSamples->bitSet()->m_bits.begin(), fltSamples->bitSet()->m_bits.end() );
+    MR::VertBitSet nativeRefSamples( refSamples->bitSet()->m_bits.begin(), refSamples->bitSet()->m_bits.end() );
+    icp_ = new MR::ICP( flt->ToNative(), ref->ToNative(), nativeFltSamples, nativeRefSamples );
+}
+
 ICP::~ICP()
 {
     delete icp_;

@@ -35,12 +35,12 @@ struct MeshEqualizeTriAreasParams : MeshRelaxParams
 };
 
 /// applies given number of iterations with movement toward vertexPosEqualNeiAreas() to the whole mesh ( or some region if it is specified )
-/// \return true if the operation completed succesfully, and false if it was interrupted by the progress callback.
+/// \return true if the operation completed successfully, and false if it was interrupted by the progress callback.
 MRMESH_API bool equalizeTriAreas( Mesh& mesh, const MeshEqualizeTriAreasParams& params = {}, ProgressCallback cb = {} );
 
 /// applies given number of relaxation iterations to the whole mesh ( or some region if it is specified ) \n
 /// do not really keeps volume but tries hard
-/// \return true if the operation completed succesfully, and false if it was interrupted by the progress callback.
+/// \return true if the operation completed successfully, and false if it was interrupted by the progress callback.
 MRMESH_API bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params = {}, ProgressCallback cb = {} );
 
 struct MeshApproxRelaxParams : MeshRelaxParams
@@ -53,15 +53,15 @@ struct MeshApproxRelaxParams : MeshRelaxParams
 
 /// applies given number of relaxation iterations to the whole mesh ( or some region if it is specified )
 /// approx neighborhoods
-/// \return true if the operation completed succesfully, and false if it was interrupted by the progress callback.
+/// \return true if the operation completed successfully, and false if it was interrupted by the progress callback.
 MRMESH_API bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params = {}, ProgressCallback cb = {} );
 
 /// applies at most given number of relaxation iterations the spikes detected by given threshold
 MRMESH_API void removeSpikes( Mesh & mesh, int maxIterations, float minSumAngle, const VertBitSet * region = nullptr );
 
 /// given a region of faces on the mesh, moves boundary vertices of the region
-/// to make the region contour much smoother with minor optimiziztion of mesh topology near region boundary;
-/// \param numIters >= 1 how many times to run the algorithm to achive a better quality,
+/// to make the region contour much smoother with minor optimization of mesh topology near region boundary;
+/// \param numIters >= 1 how many times to run the algorithm to achieve a better quality,
 /// solution is typically oscillates back and forth so even number of iterations is recommended
 MRMESH_API void smoothRegionBoundary( Mesh & mesh, const FaceBitSet & regionFaces, int numIters = 4 );
 

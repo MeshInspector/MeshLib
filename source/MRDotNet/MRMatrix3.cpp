@@ -133,4 +133,14 @@ bool Matrix3f::operator!=( Matrix3f^ a, Matrix3f^ b )
     return *a->mat_ != *b->mat_;
 }
 
+Matrix3f^ Matrix3f::operator-( Matrix3f^ a, Matrix3f^ b )
+{
+    return gcnew Matrix3f( new MR::Matrix3f( *a->mat_ - *b->mat_ ) );
+}
+
+Matrix3f^ Matrix3f::operator+( Matrix3f^ a, Matrix3f^ b )
+{
+    return gcnew Matrix3f( new MR::Matrix3f( *a->mat_ + *b->mat_ ) );
+}
+
 MR_DOTNET_NAMESPACE_END

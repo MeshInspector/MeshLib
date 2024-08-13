@@ -1,10 +1,10 @@
 #pragma once
-#include "MRMeshFwd.h"
+#include "MRMeshOrPoints.h"
 
 MR_DOTNET_NAMESPACE_BEGIN
 
 /// represents a mesh, including topology (connectivity) information and point coordinates,
-public ref class Mesh
+public ref class Mesh : public MeshOrPoints
 {
 internal:
     Mesh( MR::Mesh* mesh );
@@ -12,9 +12,11 @@ internal:
 public:
     ~Mesh();
     /// point coordinates
-    property VertCoordsReadOnly^ Points { VertCoordsReadOnly^ get(); }
+    virtual property VertCoordsReadOnly^ Points { VertCoordsReadOnly^ get(); }
     /// set of all valid vertices
-    property VertBitSetReadOnly^ ValidVerts { VertBitSetReadOnly^ get(); }
+    virtual property VertBitSetReadOnly^ ValidPoints { VertBitSetReadOnly^ get(); }
+
+    virtual property Box3f^ BoundingBox { Box3f^ get(); }
     /// set of all valid faces
     property FaceBitSetReadOnly^ ValidFaces { FaceBitSetReadOnly^ get(); }
     /// info about triangles
@@ -22,7 +24,7 @@ public:
     /// edges with no valid left face for every boundary in the mesh
     property EdgePathReadOnly^ HoleRepresentiveEdges { EdgePathReadOnly^ get(); }
 
-    property Box3f^ BoundingBox { Box3f^ get(); }
+    
 
     /// transforms all points
     void Transform( AffineXf3f^ xf );
@@ -59,7 +61,7 @@ private:
 
     VertCoords^ points_;
 
-    VertBitSet^ validVerts_;
+    VertBitSet^ validPoints_;
     FaceBitSet^ validFaces_;
     MR::DotNet::Triangulation^ triangulation_;
     EdgePath^ holeRepresentiveEdges_;

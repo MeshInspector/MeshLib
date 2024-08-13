@@ -121,12 +121,12 @@ void Mesh::ToAnySupportedFormat( Mesh^ mesh, System::String^ path )
     }
 }
 
-VertBitSetReadOnly^ Mesh::ValidVerts::get()
+VertBitSetReadOnly^ Mesh::ValidPoints::get()
 {
-    if ( !validVerts_ )
-        validVerts_ = gcnew VertBitSet( new MR::VertBitSet( mesh_->topology.getValidVerts() ) );
+    if ( !validPoints_ )
+        validPoints_ = gcnew VertBitSet( new MR::VertBitSet( mesh_->topology.getValidVerts() ) );
 
-    return validVerts_;
+    return validPoints_;
 }
 
 FaceBitSetReadOnly^ Mesh::ValidFaces::get()
@@ -261,7 +261,7 @@ void Mesh::clearManagedResources()
 {    
     points_ = nullptr; 
     triangulation_ = nullptr;    
-    validVerts_ = nullptr;    
+    validPoints_ = nullptr;    
     validFaces_ = nullptr;
     holeRepresentiveEdges_ = nullptr;
 }

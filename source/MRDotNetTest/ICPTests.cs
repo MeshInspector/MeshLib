@@ -48,6 +48,12 @@ namespace MR.DotNet.Test
             Assert.That(Math.Abs(diffXf.B.X), Is.LessThan(1e-6f));
             Assert.That(Math.Abs(diffXf.B.Y), Is.LessThan(1e-6f));
             Assert.That(Math.Abs(diffXf.B.Z), Is.LessThan(1e-6f));
+
+            var pairs = icp.GetRef2FltPairs();
+            Assert.That(pairs.pairs.Count, Is.EqualTo(1024));
+
+            pairs = icp.GetFlt2RefPairs();
+            Assert.That(pairs.pairs.Count, Is.EqualTo(1024));
         }
     }
 }

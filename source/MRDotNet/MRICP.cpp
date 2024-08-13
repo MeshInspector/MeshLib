@@ -25,7 +25,7 @@ PointPairs::PointPairs( const MR::PointPairs& nativePairs )
         pairs->Add( pair );
     }
 
-    active = gcnew BitSet( new MR::BitSet( *active->bitSet() ) );
+    active = gcnew BitSet( new MR::BitSet( nativePairs.active ) );
 }
 
 ICP::ICP( MeshOrPointsXf^ flt, MeshOrPointsXf^ ref, float samplingVoxelSize )

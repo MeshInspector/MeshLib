@@ -75,16 +75,6 @@ enum class ICPExitType {
     StopMsdReached // stop mean square deviation reached
 };
 
-/*public ref struct NumSum
-{
-    int num = 0;
-    double sum = 0;
-
-    static NumSum^ operator + ( NumSum^ a, NumSum^ b );
-
-    float rootMeanSqF();
-};*/
-
 public ref struct ICPProperties
 {
     /// The method how to update transformation from point pairs

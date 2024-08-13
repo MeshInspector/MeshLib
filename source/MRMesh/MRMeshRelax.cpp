@@ -21,32 +21,6 @@ namespace MR
     relax( topology, field );
 }
 
-/// This class is responsible for limiting vertex movement during relaxation according to parameters
-class VertLimiter
-{
-public:
-    /// initialization
-    VertLimiter( const Mesh& mesh, const MeshRelaxParams& params ) : params_( params )
-    {
-        maxInitialDistSq_ = sqr( params.maxInitialDist );
-        if ( params.limitNearInitial )
-            initialPos_ = mesh.points;
-    }
-
-    /// returns limited coordinates of the vertex (v) given its target unlimited position
-    Vector3f operator()( VertId v, Vector3f targetPos ) const
-    {
-        if ( params_.limitNearInitial )
-            targetPos = getLimitedPos( targetPos, initialPos_[v], maxInitialDistSq_ );
-        return targetPos;
-    }
-
-private:
-    const MeshRelaxParams& params_;
-    VertCoords initialPos_;
-    float maxInitialDistSq_ = 0;
-};
-
 bool relax( Mesh& mesh, const MeshRelaxParams& params, ProgressCallback cb )
 {
     MR_WRITER( mesh );
@@ -114,11 +88,12 @@ Vector3f vertexPosEqualNeiAreas( const Mesh& mesh, VertId v, bool noShrinkage )
 
 bool equalizeTriAreas( Mesh& mesh, const MeshEqualizeTriAreasParams& params, ProgressCallback cb )
 {
+    assert( !params.weights ); // custom weights are not supported
     if ( params.iterations <= 0 )
         return true;
 
     MR_TIMER
-    VertLimiter limiter( mesh, params );
+    VertLimiter limiter( mesh.points, params );
     MR_WRITER( mesh );
 
     VertCoords newPoints;
@@ -147,11 +122,12 @@ bool equalizeTriAreas( Mesh& mesh, const MeshEqualizeTriAreasParams& params, Pro
 
 bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params, ProgressCallback cb )
 {
+    assert( !params.weights ); // custom weights are not supported
     if ( params.iterations <= 0 )
         return true;
 
     MR_TIMER
-    VertLimiter limiter( mesh, params );
+    VertLimiter limiter( mesh.points, params );
     MR_WRITER( mesh );
 
     VertCoords newPoints;
@@ -201,11 +177,12 @@ bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params, ProgressCallbac
 
 bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params, ProgressCallback cb )
 {
+    assert( !params.weights ); // custom weights are not supported
     if ( params.iterations <= 0 )
         return true;
 
     MR_TIMER
-    VertLimiter limiter( mesh, params );
+    VertLimiter limiter( mesh.points, params );
     MR_WRITER( mesh );
 
     float surfaceRadius = ( params.surfaceDilateRadius <= 0.0f ) ?

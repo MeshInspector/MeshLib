@@ -7,7 +7,7 @@
 
 MR_DOTNET_NAMESPACE_BEGIN
 
-/// represents a point cloud
+/// represents a point cloud or a mesh
 public interface class MeshOrPoints
 {
 public:
@@ -16,6 +16,7 @@ public:
     property Box3f^ BoundingBox { Box3f^ get(); }
 };
 
+/// holds together mesh/point cloud and its transformation
 public value struct MeshOrPointsXf
 {
     MeshOrPoints^ obj;

@@ -23,7 +23,8 @@ enum class ICPMode
     TranslationOnly ///< only translation (3 degrees of freedom)
 };
 
-public ref struct ICPPairData
+/// Stores a pair of points: one samples on the source and the closest to it on the target
+public ref struct PointPair
 {
     /// coordinates of the source point after transforming in world space
     Vector3f^ srcPoint;
@@ -43,12 +44,6 @@ public ref struct ICPPairData
     /// weight of the pair (to prioritize over other pairs)
     float weight = 1.f;
 
-    //static bool operator == ( ICPPairData^ a, ICPPairData^ b );
-};
-
-/// Stores a pair of points: one samples on the source and the closest to it on the target
-public ref struct PointPair : public ICPPairData
-{
     /// id of the source point
     VertId srcVertId;
 
@@ -61,8 +56,6 @@ public ref struct PointPair : public ICPPairData
 
     /// true if if the closest point on target is located on the boundary (only for meshes)
     bool tgtOnBd = false;
-
-   // static bool operator == ( PointPair^, PointPair^ );
 };
 
 public ref struct PointPairs
@@ -135,45 +128,45 @@ public ref struct ICPProperties
 public ref class ICP
 {
 public:
-    /*static int GetNumSamples(PointPairs^ pairs);
-    static int GetNumActivePairs( PointPairs^ pairs );
-
-    static NumSum^ GetSumSqDistToPoint( PointPairs^ pairs );
-    static NumSum^ GetSumSqDistToPoint( PointPairs^ pairs, double inaccuracy );
-
-    static NumSum^ GetSumSqDistToPlane( PointPairs^ pairs );
-    static NumSum^ GetSumSqDistToPlane( PointPairs^ pairs, double inaccuracy );
-
-    float GetMeanSqDistToPoint( PointPairs^ pairs );
-    float GetMeanSqDistToPlane( PointPairs^ pairs );
-
-    System::String^ GetICPStatusInfo( int iterations, ICPExitType exitType );
-
-    /// given prepared (p2pl) object, finds the best transformation from it of given type with given limitations on rotation angle and global scale
-    AffineXf3f^ GetAligningXf( const PointToPlaneAligningTransform& p2pl,
-        ICPMode mode, float angleLimit, float scaleLimit, const Vector3f& fixedRotationAxis );*/
-
+    /// Constructs ICP framework with given sample points on both objects
+    /// \param flt floating object and transformation from floating object space to global space
+    /// \param ref reference object and transformation from reference object space to global space
+    /// \param samplingVoxelSize approximate distance between samples on each of two objects
     ICP( MeshOrPointsXf^ flt, MeshOrPointsXf^ ref, float samplingVoxelSize );
+
+    /// Constructs ICP framework with given sample points on both objects
+    /// \param flt floating object and transformation from floating object space to global space
+    /// \param ref reference object and transformation from reference object space to global space
+    /// \param fltSamples samples on floating object to find projections on the reference object during the algorithm
+    /// \param refSamples samples on reference object to find projections on the floating object during the algorithm
     ICP( MeshOrPointsXf^ flt, MeshOrPointsXf^ ref, BitSet^ fltSamples, BitSet^ refSamples );
     ~ICP();
-
+    /// tune algorithm params before run calculateTransformation()
     void SetParams( ICPProperties^ props );
+    /// select pairs with origin samples on both objects
     void SamplePoints( float sampleVoxelSize );
-
+    /// automatically selects initial transformation for the floating object
+    /// based on covariance matrices of both floating and reference objects;
+    /// applies the transformation to the floating object and returns it
     void AutoSelectFloatXf();
+    /// recompute point pairs after manual change of transformations or parameters
     void UpdatePointPairs();
-
+    /// returns status info string
     System::String^ GetStatusInfo();
-
+    /// computes the number of samples able to form pairs
     int GetNumSamples();
+    /// computes the number of active point pairs
     int GetNumActivePairs();
-
+    /// computes root-mean-square deviation between points
     float GetMeanSqDistToPoint();
+    /// computes root-mean-square deviation from points to target planes
     float GetMeanSqDistToPlane();
-
+    /// returns current pairs formed from samples on floating object and projections on reference object
     PointPairs^ GetFlt2RefPairs();
+    /// returns current pairs formed from samples on reference object and projections on floating object
     PointPairs^ GetRef2FltPairs();
-
+    /// runs ICP algorithm given input objects, transformations, and parameters;
+    /// \return adjusted transformation of the floating object to match reference object
     AffineXf3f^ CalculateTransformation();
 
 private:

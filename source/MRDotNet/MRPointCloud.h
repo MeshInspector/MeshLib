@@ -22,9 +22,9 @@ public:
     static PointCloud^ FromAnySupportedFormat( System::String^ path );
     /// saves point cloud to file of any supported format
     static void ToAnySupportedFormat( PointCloud^ mesh, System::String^ path );
-
+    /// adds a point
     void AddPoint( Vector3f^ point );
-
+    /// adds a point with a normal
     void AddPoint( Vector3f^ point, Vector3f^ normal );
 
 private:

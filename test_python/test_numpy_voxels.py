@@ -3,7 +3,6 @@ import unittest as ut
 import numpy as np
 import pytest
 from helper import *
-import_mrmeshnumpy()
 
 
 def test_numpy_voxels():

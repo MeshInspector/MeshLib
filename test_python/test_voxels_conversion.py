@@ -4,7 +4,6 @@ import numpy as np
 import pytest
 import math
 from helper import *
-import_mrmeshnumpy()
 
 
 def test_voxels_conversion():

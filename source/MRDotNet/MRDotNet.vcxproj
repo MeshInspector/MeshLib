@@ -64,6 +64,7 @@
     <ClInclude Include="MRMeshBoolean.h" />
     <ClInclude Include="MRMeshDecimate.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
+    <ClInclude Include="MRMultiwayICP.h" />
     <ClInclude Include="MROffset.h" />
     <ClInclude Include="MRPointCloud.h" />
     <ClInclude Include="MRVector3.h" />
@@ -80,6 +81,7 @@
     <ClCompile Include="MRMeshBoolean.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
     <ClCompile Include="MRMeshOrPoints.cpp" />
+    <ClCompile Include="MRMultiwayICP.cpp" />
     <ClCompile Include="MROffset.cpp" />
     <ClCompile Include="MRPointCloud.cpp" />
     <ClCompile Include="MRVector3.cpp" />

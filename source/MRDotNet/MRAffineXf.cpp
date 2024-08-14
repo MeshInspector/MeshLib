@@ -83,4 +83,12 @@ void AffineXf3f::B::set( Vector3f^ value )
     b_ = value;
 }
 
+Vector3f^ AffineXf3f::Apply( Vector3f^ x )
+{
+    if ( !x )
+        throw gcnew System::ArgumentNullException( "x" );
+
+    return gcnew Vector3f( new MR::Vector3f( (*xf_)( *x->vec() ) ) );
+}
+
 MR_DOTNET_NAMESPACE_END

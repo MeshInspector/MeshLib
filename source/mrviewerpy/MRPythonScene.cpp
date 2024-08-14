@@ -102,11 +102,13 @@ void pythonSelectType( const std::string modelType )
             MR::selectType<MR::ObjectPoints>();
             return;
         }
+#ifndef MRMESH_NO_OPENVDB
         if ( modelType == "Voxels" )
         {
             MR::selectType<MR::ObjectVoxels>();
             return;
         }
+#endif
         MR::unselect();
     } );
 }
@@ -213,7 +215,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Scene, [] ( pybind11::module_& m )
     m.def( "addMeshToScene", &pythonAddModelToScene<MR::ObjectMesh, MR::Mesh, &MR::ObjectMesh::setMesh>, pybind11::arg( "mesh" ), pybind11::arg( "name" ), "Add given mesh to scene tree." );
     m.def( "addPointCloudToScene", &pythonAddModelToScene<MR::ObjectPoints, MR::PointCloud, &MR::ObjectPoints::setPointCloud>, pybind11::arg( "points" ), pybind11::arg( "name" ), "Add given point cloud to scene tree." );
     m.def( "addLinesToScene", &pythonAddModelToScene<MR::ObjectLines, MR::Polyline3, &MR::ObjectLines::setPolyline>, pybind11::arg( "lines" ), pybind11::arg( "name" ), "Add given lines to scene tree." );
-    m.def( "addVoxelsToScene", &pythonAddModelToScene<MR::ObjectVoxels, MR::VdbVolume, &MR::ObjectVoxels::varVdbVolume>, pybind11::arg( "voxels" ), pybind11::arg( "name" ), "Add given voxels to scene tree." );
     m.def( "addDistanceMapToScene",
         &pythonAddModelToScene<
             MR::ObjectDistanceMap, MR::DistanceMap,
@@ -243,6 +244,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Scene, [] ( pybind11::module_& m )
     m.def( "getSelectedMeshes", &pythonGetSelectedModels<MR::ObjectMeshHolder, &MR::ObjectMeshHolder::mesh>, "Get copies of all selected meshes in the scene." );
     m.def( "getSelectedPointClouds", &pythonGetSelectedModels<MR::ObjectPointsHolder, &MR::ObjectPointsHolder::pointCloud>, "Get copies of all selected point clouds in the scene." );
     m.def( "getSelectedPolylines", &pythonGetSelectedModels<MR::ObjectLinesHolder, &MR::ObjectLinesHolder::polyline>, "Get copies of all selected polylines in the scene." );
-    m.def( "getSelectedVoxels", &pythonGetSelectedModels<MR::ObjectVoxels, &MR::ObjectVoxels::vdbVolume>, "Get copies of all selected voxel grids in the scene." );
     m.def( "getSelectedDistanceMaps", &pythonGetSelectedModels<MR::ObjectDistanceMap, &MR::ObjectDistanceMap::getDistanceMap>, "Get copies of all selected voxel grids in the scene." );
 } )
+
+#ifndef MRMESH_NO_OPENVDB
+MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, SceneVoxels, [] ( pybind11::module_& m )
+{
+    m.def( "addVoxelsToScene", &pythonAddModelToScene<MR::ObjectVoxels, MR::VdbVolume, &MR::ObjectVoxels::varVdbVolume>, pybind11::arg( "voxels" ), pybind11::arg( "name" ), "Add given voxels to scene tree." );
+    m.def( "getSelectedVoxels", &pythonGetSelectedModels<MR::ObjectVoxels, &MR::ObjectVoxels::vdbVolume>, "Get copies of all selected voxel grids in the scene." );
+} )
+#endif

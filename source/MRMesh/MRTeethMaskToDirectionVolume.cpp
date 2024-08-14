@@ -1,5 +1,5 @@
 #include "MRTeethMaskToDirectionVolume.h"
-
+#ifndef MRMESH_NO_OPENVDB
 #include "MRVDBConversions.h"
 #include "MRVolumeIndexer.h"
 #include "MRParallelFor.h"
@@ -9,13 +9,10 @@
 
 #include <MRPch/MRFmt.h>
 
-
 namespace
 {
 
 constexpr float invalidValue = -1.1f; // invalid value for a component of a normalized vector
-
-
 
 void forEachInSimpleVolume( auto& vol, auto f )
 {
@@ -216,3 +213,4 @@ Expected<TeethMaskToDirectionVolumeConvertor::ProcessResult> TeethMaskToDirectio
 }
 
 }
+#endif

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#ifndef MRMESH_NO_OPENVDB
 #include "MRExpected.h"
 #include "MRVoxelsVolume.h"
 #include "MRAffineXf3.h"
@@ -8,7 +9,6 @@
 
 #include <array>
 #include <optional>
-
 
 namespace MR
 {
@@ -55,7 +55,6 @@ struct std::hash<MR::DentalId>
     }
 };
 
-
 namespace MR
 {
 
@@ -92,5 +91,5 @@ private:
     SimpleVolume mask_;
 };
 
-
 }
+#endif

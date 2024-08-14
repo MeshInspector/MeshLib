@@ -1,0 +1,9 @@
+[metadata]
+version = $VERSION
+
+[options]
+packages = meshlib
+include_package_data = True
+
+[options.package_data]
+meshlib = $PACKAGE_DATA

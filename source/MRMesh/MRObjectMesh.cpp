@@ -304,10 +304,14 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
             previousNumTexture = TextureId( curTextures.size() );
 
             const auto& curTexturePerFace = obj->getTexturePerFace();
+
             for ( FaceId thisId = 0_f; thisId < faceMap.size(); ++thisId )
             {
                 if ( auto mergeId = faceMap[thisId] )
-                    texturePerFace[mergeId] = curNumTexture + curTexturePerFace[thisId];
+                    if ( curTexturePerFace.size() < thisId )
+                        texturePerFace[mergeId] = curNumTexture;
+                    else
+                        texturePerFace[mergeId] = curNumTexture + curTexturePerFace[thisId];
             }
         }
         numObject++;

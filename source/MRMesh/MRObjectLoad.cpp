@@ -145,12 +145,16 @@ Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem:
     MR_TIMER
 
     VertColors colors;
+    VertUVCoords uvCoords;
     VertNormals normals;
+    MeshTexture texture;
     AffineXf3f xf;
     MeshLoadSettings settings
     {
         .colors = &colors,
+        .uvCoords = &uvCoords,
         .normals = returnOnlyMesh ? nullptr : &normals,
+        .texture = &texture,
         .skippedFaceCount = metrics.skippedFaceCount,
         .duplicatedVertexCount = metrics.duplicatedVertexCount,
         .xf = &xf,
@@ -178,6 +182,7 @@ Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem:
             objectPoints->setVertsColorMap( std::move( colors ) );
             objectPoints->setColoringType( ColoringType::VertsColorMap );
         }
+
         objectPoints->setXf( xf );
 
         return objectPoints;
@@ -185,12 +190,23 @@ Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem:
 
     auto objectMesh = std::make_unique<ObjectMesh>();
     objectMesh->setName( utf8string( file.stem() ) );
-    objectMesh->setMesh( std::make_shared<MR::Mesh>( std::move( mesh.value() ) ) );
-    if ( !colors.empty() )
-    {
+    objectMesh->setMesh( std::make_shared<Mesh>( std::move( mesh.value() ) ) );
+
+    const bool hasColors = !colors.empty();
+    const bool hasUV = !uvCoords.empty();
+    const bool hasTexture = !texture.pixels.empty();
+    if ( hasColors )
         objectMesh->setVertsColorMap( std::move( colors ) );
+    if ( hasUV )
+        objectMesh->setUVCoords( std::move( uvCoords ) );
+    if ( hasTexture )
+        objectMesh->setTextures( { std::move( texture ) } );
+
+    if ( hasUV && hasTexture )
+        objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
+    else if ( hasColors )
         objectMesh->setColoringType( ColoringType::VertsColorMap );
-    }
+
     objectMesh->setXf( xf );
 
     return objectMesh;

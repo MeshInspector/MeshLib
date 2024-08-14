@@ -13,10 +13,11 @@ namespace MR
 /// \{
 
 /// loads mesh from given file in new object
-MRMESH_API Expected<ObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
+MRMESH_API Expected<ObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadMetrics& metrics = {} );
 
 /// loads mesh from given file and makes either ObjectMesh or ObjectPoints (if the file has points but not faces)
-MRMESH_API Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
+MRMESH_API Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem::path& file, const MeshLoadMetrics& metrics = {},
+    bool returnOnlyMesh = false ); ///< if true the function can return only ObjectMesh and never ObjectPoints
 
 /// loads lines from given file in new object
 MRMESH_API Expected<ObjectLines> makeObjectLinesFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );

@@ -228,10 +228,7 @@ VoidOrErrStr ObjectMeshHolder::deserializeModel_( const std::filesystem::path& p
         if ( modelPath.empty() )
             return unexpected( "No mesh file found: " + utf8string( path ) );
     }
-    MeshLoadSettings settings;
-    settings.callback = progressCb;
-    settings.colors = &vertsColorMap_;
-    auto res = MeshLoad::fromAnySupportedFormat( modelPath, settings );
+    auto res = MeshLoad::fromAnySupportedFormat( modelPath, { .colors = &vertsColorMap_, .callback = progressCb } );
     if ( !res.has_value() )
         return unexpected( res.error() );
 

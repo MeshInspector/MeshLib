@@ -12,6 +12,14 @@ namespace MR
 /// \ingroup DataModelGroup
 /// \{
 
+/// information about loading process and mesh construction from primitives
+struct MeshLoadMetrics
+{
+    int* skippedFaceCount = nullptr; ///< counter of skipped faces (faces than can't be created)
+    int* duplicatedVertexCount = nullptr; ///< counter of duplicated vertices (that created for resolve non-manifold geometry)
+    ProgressCallback callback;       ///< callback for set progress and stop process
+};
+
 /// loads mesh from given file in new object
 MRMESH_API Expected<ObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadMetrics& metrics = {} );
 

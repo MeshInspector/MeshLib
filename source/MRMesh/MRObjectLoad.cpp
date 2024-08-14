@@ -144,14 +144,19 @@ Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem:
 {
     MR_TIMER
 
-    MeshLoadSettings newSettings{ metrics };
     VertColors colors;
-    newSettings.colors = &colors;
     VertNormals normals;
-    newSettings.normals = returnOnlyMesh ? nullptr : &normals;
     AffineXf3f xf;
-    newSettings.xf = &xf;
-    auto mesh = MeshLoad::fromAnySupportedFormat( file, newSettings );
+    MeshLoadSettings settings
+    {
+        .colors = &colors,
+        .normals = returnOnlyMesh ? nullptr : &normals,
+        .skippedFaceCount = metrics.skippedFaceCount,
+        .duplicatedVertexCount = metrics.duplicatedVertexCount,
+        .xf = &xf,
+        .callback = metrics.callback
+    };
+    auto mesh = MeshLoad::fromAnySupportedFormat( file, settings );
     if ( !mesh.has_value() )
         return unexpected( mesh.error() );
     
@@ -472,7 +477,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
     }
     else
     {
-        MeshLoadSettings settings;
+        MeshLoadMetrics settings;
         settings.callback = callback;
         int skippedFaceCount = 0;
         int duplicatedVertexCount = 0;
@@ -839,7 +844,7 @@ Expected<std::shared_ptr<Object>> loadSceneFromAnySupportedFormat( const std::fi
 #ifndef MRMESH_NO_OPENCASCADE
     else if ( ext == "*.step" || ext == "*.stp" )
     {
-        res = MeshLoad::fromSceneStepFile( path, { { .callback = callback } } );
+        res = MeshLoad::fromSceneStepFile( path, { .callback = callback } );
     }
 #endif
     else if ( ext == "*.zip" )

@@ -1344,6 +1344,9 @@
     <ClInclude Include="MRICPEnums.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
+    <ClInclude Include="MRObjectImGuiLabel.h">
+      <Filter>Source Files\DataModel</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2230,6 +2233,9 @@
     </ClCompile>
     <ClCompile Include="MRVoxelsVolume.cpp">
       <Filter>Source Files\BaseStructures</Filter>
+    </ClCompile>
+    <ClCompile Include="MRObjectImGuiLabel.cpp">
+      <Filter>Source Files\DataModel</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

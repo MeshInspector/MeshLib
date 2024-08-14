@@ -409,6 +409,9 @@
     <ClCompile Include="MRConsoleWindows.cpp">
       <Filter>IO</Filter>
     </ClCompile>
+    <ClCompile Include="MRRenderImGuiLabelObject.cpp">
+      <Filter>Render\Implementations</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -799,6 +802,9 @@
     </ClInclude>
     <ClInclude Include="MRConsoleWindows.h">
       <Filter>IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRenderImGuiLabelObject.h">
+      <Filter>Render\Implementations</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -124,51 +124,46 @@ const IOFilters allFilters = SceneFileFilters
                              | LinesLoad::Filters
                              | PointsLoad::Filters;
 
-Expected<ObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
+Expected<ObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadMetrics& metrics /*= {}*/ )
 {
-    MR_TIMER;
+    auto expObj = makeObjectFromMeshFile( file, metrics, true );
+    if ( !expObj )
+        return unexpected( std::move( expObj.error() ) );
 
-    MeshLoadSettings newSettings = settings;
-    VertColors colors;
-    newSettings.colors = &colors;
-    AffineXf3f xf;
-    newSettings.xf = &xf;
-    auto mesh = MeshLoad::fromAnySupportedFormat( file, newSettings );
-    if ( !mesh.has_value() )
+    auto * mesh = dynamic_cast<ObjectMesh*>( expObj.value().get() );
+    if ( !mesh )
     {
-        return unexpected( mesh.error() );
+        assert( false );
+        return unexpected( "makeObjectFromMeshFile returned not a mesh" );
     }
 
-    ObjectMesh objectMesh;
-    objectMesh.setName( utf8string( file.stem() ) );
-    objectMesh.setMesh( std::make_shared<MR::Mesh>( std::move( mesh.value() ) ) );
-    if ( !colors.empty() )
-    {
-        objectMesh.setVertsColorMap( std::move( colors ) );
-        objectMesh.setColoringType( ColoringType::VertsColorMap );
-    }
-    objectMesh.setXf( xf );
-
-    return objectMesh;
+    return std::move( *mesh );
 }
 
-Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
+Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem::path& file, const MeshLoadMetrics& metrics, bool returnOnlyMesh )
 {
     MR_TIMER
 
-    MeshLoadSettings newSettings = settings;
     VertColors colors;
-    newSettings.colors = &colors;
     VertNormals normals;
-    newSettings.normals = &normals;
     AffineXf3f xf;
-    newSettings.xf = &xf;
-    auto mesh = MeshLoad::fromAnySupportedFormat( file, newSettings );
+    MeshLoadSettings settings
+    {
+        .colors = &colors,
+        .normals = returnOnlyMesh ? nullptr : &normals,
+        .skippedFaceCount = metrics.skippedFaceCount,
+        .duplicatedVertexCount = metrics.duplicatedVertexCount,
+        .xf = &xf,
+        .callback = metrics.callback
+    };
+    auto mesh = MeshLoad::fromAnySupportedFormat( file, settings );
     if ( !mesh.has_value() )
         return unexpected( mesh.error() );
     
     if ( !mesh->points.empty() && mesh->topology.numValidFaces() <= 0 )
     {
+        if ( returnOnlyMesh )
+            return unexpected( "File contains a point cloud and not a mesh: " + utf8string( file ) );
         auto pointCloud = std::make_shared<MR::PointCloud>();
         pointCloud->points = std::move( mesh->points );
         pointCloud->normals = std::move( normals );
@@ -482,7 +477,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
     }
     else
     {
-        MeshLoadSettings settings;
+        MeshLoadMetrics settings;
         settings.callback = callback;
         int skippedFaceCount = 0;
         int duplicatedVertexCount = 0;

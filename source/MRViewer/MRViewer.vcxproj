@@ -119,6 +119,7 @@
     <ClCompile Include="MRSpaceMouseHandler3dxMacDriver.cpp" />
     <ClCompile Include="MRUIRectAllocator.cpp" />
     <ClCompile Include="MRUINonOverlappingLabels.cpp" />
+    <ClCompile Include="MRRenderImGuiLabelObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -251,6 +252,7 @@
     <ClInclude Include="MRSpaceMouseHandler3dxMacDriver.h" />
     <ClInclude Include="MRUIRectAllocator.h" />
     <ClInclude Include="MRUINonOverlappingLabels.h" />
+    <ClInclude Include="MRRenderImGuiLabelObject.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

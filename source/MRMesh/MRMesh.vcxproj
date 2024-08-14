@@ -419,6 +419,7 @@
     <ClInclude Include="MRMeta.h" />
     <ClInclude Include="MRMacros.h" />
     <ClInclude Include="MRTeethMaskToDirectionVolume.h" />
+    <ClInclude Include="MRObjectImGuiLabel.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -716,6 +717,7 @@
     <ClCompile Include="MRColor.cpp" />
     <ClCompile Include="MRVoxelsVolume.cpp" />
     <ClCompile Include="MRTeethMaskToDirectionVolume.cpp" />
+    <ClCompile Include="MRObjectImGuiLabel.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="$(ProjectDir)..\..\thirdparty\python\python$(PythonVersion).zip">

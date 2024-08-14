@@ -351,19 +351,13 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
     
     if ( ext == "*.obj" )
     {
-        MeshLoadSettings settings;
-        settings.callback = callback;
-        int skippedFaceCount = 0;
-        settings.skippedFaceCount = &skippedFaceCount;
-        int duplicatedVertexCount = 0;
-        settings.duplicatedVertexCount = &duplicatedVertexCount;
-        AffineXf3f xf;
-        settings.xf = &xf;
-        auto res = MeshLoad::fromSceneObjFile( filename, false, settings );
+        auto res = MeshLoad::fromSceneObjFile( filename, false, { .customXf = true, .countSkippedFaces = true, .callback = callback } );
         if ( res.has_value() )
         {
-            std::vector<std::shared_ptr<Object>> objects( res.value().size() );
+            int totalSkippedFaceCount = 0;
+            int totalDuplicatedVertexCount = 0;
             auto& resValue = *res;
+            std::vector<std::shared_ptr<Object>> objects( resValue.size() );
             for ( int i = 0; i < objects.size(); ++i )
             {
                 std::shared_ptr<ObjectMesh> objectMesh = std::make_shared<ObjectMesh>();
@@ -425,14 +419,17 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
                     objectMesh->setColoringType( ColoringType::VertsColorMap );
                 }
 
-                objectMesh->setXf( xf );
+                objectMesh->setXf( resValue[i].xf );
 
                 objects[i] = std::dynamic_pointer_cast< Object >( objectMesh );
+
+                totalSkippedFaceCount += resValue[i].skippedFaceCount;
+                totalDuplicatedVertexCount += resValue[i].duplicatedVertexCount;
             }
             result = objects;
 
             if ( loadWarn )
-                *loadWarn = makeWarningString( skippedFaceCount, duplicatedVertexCount );
+                *loadWarn = makeWarningString( totalSkippedFaceCount, totalDuplicatedVertexCount );
         }
         else
             result = unexpected( res.error() );

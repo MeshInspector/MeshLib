@@ -228,13 +228,28 @@ Expected<Mesh> fromObj( std::istream& in, const MeshLoadSettings& settings /*= {
 {
     MR_TIMER
 
-    auto objs = fromSceneObjFile( in, true, {}, settings );
+    ObjLoadSettings objLoadSettings
+    {
+        .customXf = settings.xf != nullptr,
+        .countSkippedFaces = settings.skippedFaceCount != nullptr,
+        .callback = settings.callback
+    };
+    auto objs = fromSceneObjFile( in, true, {}, objLoadSettings );
     if ( !objs.has_value() )
         return unexpected( objs.error() );
-    if ( objs->size() != 1 )
+    if ( objs->empty() )
         return unexpected( "OBJ-file is empty" );
-
-    return std::move( (*objs)[0].mesh );
+    assert( objs->size() == 1 );
+    auto & r = (*objs)[0];
+    if ( settings.colors )
+        *settings.colors = std::move( r.colors );
+    if ( settings.skippedFaceCount )
+        *settings.skippedFaceCount = r.skippedFaceCount;
+    if ( settings.duplicatedVertexCount )
+        *settings.duplicatedVertexCount = r.duplicatedVertexCount;
+    if ( settings.xf )
+        *settings.xf = r.xf;
+    return std::move( r.mesh );
 }
 
 Expected<MR::Mesh> fromAnyStl( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )

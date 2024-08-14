@@ -96,6 +96,7 @@ def setup_workspace(version, modules):
         config = Template(config_template_file.read()).substitute(
             VERSION=version,
             PACKAGE_DATA=", ".join(package_files),
+            PYTHON_TAG=f"py{sys.version_info.major}{sys.version_info.minor}",
         )
     with open(WHEEL_ROOT_DIR / "setup.cfg", 'w') as config_file:
         config_file.write(config)

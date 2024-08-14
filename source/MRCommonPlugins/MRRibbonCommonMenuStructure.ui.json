@@ -228,6 +228,12 @@
 			"Name": "Ribbon Scene Unselect all"
 		},
 		{
+			"Name": "Ribbon Scene Show all"
+		},
+		{
+			"Name": "Ribbon Scene Hide all"
+		},
+		{
 			"Name": "Ribbon Scene Show only previous"
 		},
 		{

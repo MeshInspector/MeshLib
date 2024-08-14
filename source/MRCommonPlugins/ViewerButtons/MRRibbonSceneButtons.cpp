@@ -78,6 +78,39 @@ bool RibbonSceneUnselectAll::action()
     return false;
 }
 
+RibbonSceneShowAll::RibbonSceneShowAll() :
+    RibbonMenuItem( "Ribbon Scene Show all" )
+{}
+
+std::string RibbonSceneShowAll::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
+{
+    if ( !getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
+        return "At least one objects should be in scene";
+    return "";
+}
+
+bool RibbonSceneShowAll::action()
+{
+    if ( auto menu = getViewerInstance().getMenuPlugin() )
+    {
+        if ( auto sceneList = menu->getSceneObjectsList() )
+            sceneList->showAllObjects();
+    }
+    return false;
+}
+
+RibbonSceneHideAll::RibbonSceneHideAll() :
+    RibbonMenuItem( "Ribbon Scene Hide all" )
+{}
+
+bool RibbonSceneHideAll::action()
+{
+    const auto selectable = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selectable );
+    for ( auto obj : selectable )
+        obj->setVisible( false );
+    return false;
+}
+
 RibbonSceneShowOnlyPrev::RibbonSceneShowOnlyPrev() :
     RibbonMenuItem( "Ribbon Scene Show only previous" )
 {
@@ -174,6 +207,8 @@ bool RibbonSceneRemoveSelected::action()
 MR_REGISTER_RIBBON_ITEM( RibbonSceneSortByName )
 MR_REGISTER_RIBBON_ITEM( RibbonSceneSelectAll )
 MR_REGISTER_RIBBON_ITEM( RibbonSceneUnselectAll )
+MR_REGISTER_RIBBON_ITEM( RibbonSceneShowAll )
+MR_REGISTER_RIBBON_ITEM( RibbonSceneHideAll )
 MR_REGISTER_RIBBON_ITEM( RibbonSceneShowOnlyPrev )
 MR_REGISTER_RIBBON_ITEM( RibbonSceneShowOnlyNext )
 MR_REGISTER_RIBBON_ITEM( RibbonSceneRename )

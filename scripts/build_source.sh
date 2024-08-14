@@ -74,8 +74,8 @@ fi
 if [ "${MESHLIB_KEEP_BUILD}" != "ON" ]; then
   rm -rf ./build
   mkdir build
-  cd build
 fi
+cd build
 
 # add env options to cmake
 if [[ -z "${MR_CMAKE_OPTIONS}" ]]; then

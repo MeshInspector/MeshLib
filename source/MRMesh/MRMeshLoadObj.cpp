@@ -861,9 +861,12 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
     finishObject();
 
     // for now the transform is the same for all meshes, might be changed in future
-    if ( settings.customXf )
+    if ( pointOffset )
+    {
+        assert( settings.customXf );
         for ( auto & m : res )
             m.xf = AffineXf3f::translation( Vector3f( *pointOffset ) );
+    }
 
     return res;
 }

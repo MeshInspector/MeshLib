@@ -55,7 +55,7 @@ void ObjectImGuiLabel::deserializeFields_( const Json::Value& root )
     VisualObject::deserializeFields_( root );
 
     if ( const auto& json = root["LabelText"]; json.isString() )
-        labelText_ = root.asString();
+        labelText_ = json.asString();
 }
 
 void ObjectImGuiLabel::setupRenderObject_() const

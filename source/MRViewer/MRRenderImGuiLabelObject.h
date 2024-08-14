@@ -8,6 +8,7 @@ namespace MR
 
 class ObjectImGuiLabel;
 
+// The implementation of `IRenderObject` used by `ObjectImGuiLabel`. Draws an label using ImGui.
 class RenderImGuiLabelObject : public RenderObjectCombinator<RenderDefaultUiObject, RenderResetDirtyComponent>
 {
     const ObjectImGuiLabel* object_ = nullptr;

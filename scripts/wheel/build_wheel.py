@@ -140,6 +140,11 @@ def build_wheel():
             [
                 sys.executable, "-m", "delvewheel",
                 "repair",
+                # We use --no-dll "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll" here to avoid strange conflict
+                # that happens if we pack these dlls into whl.
+                # Another option is to use --no-mangle "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll"
+                # to pack these dlls with original names and let system solve conflicts on import
+                # https://stackoverflow.com/questions/78817088/vsruntime-dlls-conflict-after-delvewheel-repair
                 "--no-dll", "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll",
                 "--add-path", LIB_DIR,
                 wheel_file

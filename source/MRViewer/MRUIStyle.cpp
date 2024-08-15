@@ -724,24 +724,22 @@ bool checkboxOrModifier( const char* label, CheckboxOrModifierState& value, int 
 
     { // Modifiers hint.
         std::string modsText;
-        if ( modifiers & ImGuiMod_Ctrl )
+
+        for ( const auto& [bit, name] : {
+            std::pair( ImGuiMod_Ctrl, "Ctrl" ),
+            std::pair( ImGuiMod_Shift, "Shift" ),
+            std::pair( ImGuiMod_Alt, "Alt" ),
+        } )
         {
-            if ( !modsText.empty() )
-                modsText += '+';
-            modsText += "Ctrl";
+            if ( modifiers & bit )
+            {
+                modifiers &= ~bit;
+                if ( !modsText.empty() )
+                    modsText += '+';
+                modsText += "Ctrl";
+            }
         }
-        if ( modifiers & ImGuiMod_Shift )
-        {
-            if ( !modsText.empty() )
-                modsText += '+';
-            modsText += "Shift";
-        }
-        if ( modifiers & ImGuiMod_Alt )
-        {
-            if ( !modsText.empty() )
-                modsText += '+';
-            modsText += "Alt";
-        }
+        assert( modifiers == 0 && "Don't know the name of this modifier!" );
 
         ImGui::SameLine();
         // ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cCheckboxPadding * getViewerInstance().getMenuPlugin()->menu_scaling() );

@@ -124,8 +124,7 @@ void ColorMapAggregator<Tag>::updateAggregated_( int newSize )
 
     if ( mode_ == AggregateMode::Overlay )
     {
-        ElementBitSet remaining;
-        remaining.resize( maxSize, true );
+        ElementBitSet remaining( maxSize, true );
 
         for ( int i = int( dataSet_.size() ) - 1; i >= 0; --i )
         {
@@ -172,8 +171,7 @@ TEST( MRMesh, ColorMapAggregator )
     cma.setDefaultColor( cWhite );
 
     int size = 5;
-    FaceBitSet faces;
-    faces.resize( 5, true );
+    FaceBitSet faces( 5, true );
     cma.pushBack( { FaceColors( size, cRed ), FaceBitSet( std::string( "00110" ) ) }  );
     cma.pushBack( { FaceColors( size, cGreen ), FaceBitSet( std::string( "01100" ) ) } );
     cma.setMode( FaceColorMapAggregator::AggregateMode::Overlay );

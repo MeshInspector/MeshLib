@@ -276,8 +276,7 @@ void VoxelGraphCut::resize( const VoxelBitSet & sourceSeeds, const VoxelBitSet &
 {
     MR_TIMER
 
-    VoxelBitSet region;
-    region.resize( size_, true );
+    VoxelBitSet region( size_, true );
     region -= sourceSeeds;
     region -= sinkSeeds;
     const auto cnt0 = region.count();

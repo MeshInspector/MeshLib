@@ -104,29 +104,20 @@ def setup_workspace(version, modules, plat_name):
 
 
 def generate_stubs(modules):
-    os.chdir(WHEEL_ROOT_DIR)
     env = dict(os.environ)
+    env['PYTHONPATH'] = str(WHEEL_ROOT_DIR)
+
     if SYSTEM == "Windows":
-        print(f"env = {env}")
-        # see: https://stackoverflow.com/questions/65110036
-        def is_ascii(s):
-            try:
-                s.encode('ascii')
-                return True
-            except (AttributeError, UnicodeEncodeError):
-                return False
-        env = {
-            k: v
-            for k, v in env.items()
-            if is_ascii(k) and is_ascii(v)
-        }
+        env['PYBIND11_STUBGEN_PATH'] = str(LIB_DIR)
+        pybind11_stubgen_command = [sys.executable, "..\\pybind11-stubgen.py"]
+    else:
+        pybind11_stubgen_command = ["pybind11-stubgen"]
+
+    os.chdir(WHEEL_ROOT_DIR)
     for module in modules:
         subprocess.check_call(
-            ["pybind11-stubgen", "--exit-code", "--output-dir", ".", f"meshlib.{module}"],
-            env={
-                'PYTHONPATH': WHEEL_ROOT_DIR,
-                **env
-            },
+            [*pybind11_stubgen_command, "--exit-code", "--output-dir", ".", f"meshlib.{module}"],
+            env=env,
         )
 
 

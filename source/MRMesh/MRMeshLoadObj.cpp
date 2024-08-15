@@ -462,7 +462,6 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
             }
 
             std::vector<MeshBuilder::VertDuplication> dups;
-            MeshBuilder::BuildSettings buildSettings;
             result.mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices(
                 VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), triangulation, &dups,
                 { .skippedFaceCount = settings.countSkippedFaces ? &result.skippedFaceCount : nullptr } );

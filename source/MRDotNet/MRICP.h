@@ -1,6 +1,10 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRMesh/MRICPEnums.h"
+#include "MRVector3.h"
+#pragma managed( push, off )
+#include <MRMesh/MRICP.h>
+#pragma managed( pop )
 
 MR_DOTNET_NAMESPACE_BEGIN
 
@@ -72,7 +76,7 @@ public ref struct ICPProperties
     ICPMode icpMode = ICPMode::AnyRigidXf;
 
     /// If this vector is not zero then rotation is allowed relative to this axis only
-    Vector3f^ fixedRotationAxis;
+    Vector3f^ fixedRotationAxis = gcnew Vector3f( 0, 0, 0 );
 
     /// maximum iterations
     int iterLimit = 10;
@@ -85,6 +89,8 @@ public ref struct ICPProperties
 
     /// a pair of points is formed only if both points in the pair are mutually closest (reciprocity test passed)
     bool mutualClosest = false;
+
+    MR::ICPProperties ToNative();
 };
 
 public ref class ICP

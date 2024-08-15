@@ -50,6 +50,9 @@
     <ClInclude Include="MRICP.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MRMultiwayICP.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssemblyInfo.cpp">
@@ -89,6 +92,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRICP.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMultiwayICP.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

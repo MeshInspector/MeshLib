@@ -4,9 +4,7 @@
 #include "MRBitSet.h"
 #include "MRAffineXf.h"
 
-#pragma managed( push, off )
-#include <MRMesh/MRICP.h>
-#pragma managed( pop )
+
 
 MR_DOTNET_NAMESPACE_BEGIN
 
@@ -26,6 +24,25 @@ PointPairs::PointPairs( const MR::PointPairs& nativePairs )
     }
 
     active = gcnew BitSet( new MR::BitSet( nativePairs.active ) );
+}
+
+MR::ICPProperties ICPProperties::ToNative()
+{
+    return MR::ICPProperties
+    {
+        .method = MR::ICPMethod( method ),
+        .p2plAngleLimit = p2plAngleLimit,
+        .p2plScaleLimit = p2plScaleLimit,
+        .cosThreshold = cosThreshold,
+        .distThresholdSq = distThresholdSq,
+        .farDistFactor = farDistFactor,
+        .icpMode = MR::ICPMode( icpMode ),
+        .fixedRotationAxis = *fixedRotationAxis->vec(),
+        .iterLimit = iterLimit,
+        .badIterStopCount = badIterStopCount,
+        .exitVal = exitVal,
+        .mutualClosest = mutualClosest
+    };
 }
 
 ICP::ICP( MeshOrPointsXf^ flt, MeshOrPointsXf^ ref, float samplingVoxelSize )
@@ -61,23 +78,7 @@ ICP::~ICP()
 
 void ICP::SetParams( ICPProperties^ props )
 {
-    MR::ICPProperties nativeProps
-    {
-        .method = MR::ICPMethod( props->method ),
-        .p2plAngleLimit = props->p2plAngleLimit,
-        .p2plScaleLimit = props->p2plScaleLimit,
-        .cosThreshold = props->cosThreshold,
-        .distThresholdSq = props->distThresholdSq,
-        .farDistFactor = props->farDistFactor,
-        .icpMode = MR::ICPMode( props->icpMode ),
-        .fixedRotationAxis = *props->fixedRotationAxis->vec(),
-        .iterLimit = props->iterLimit,
-        .badIterStopCount = props->badIterStopCount,
-        .exitVal = props->exitVal,
-        .mutualClosest = props->mutualClosest
-    };
-
-    icp_->setParams( std::move( nativeProps ) );
+    icp_->setParams( props->ToNative() );
 }
 
 void ICP::SamplePoints( float samplingVoxelSize )

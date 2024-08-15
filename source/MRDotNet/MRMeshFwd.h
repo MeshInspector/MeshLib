@@ -24,6 +24,7 @@ struct PointCloud;
 class BitSet;
 
 class ICP;
+class MultiwayICP;
 struct PointPairs;
 }
 

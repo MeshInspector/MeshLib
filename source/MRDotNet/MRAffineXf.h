@@ -27,6 +27,8 @@ public:
     /// translation
     property Vector3f^ B { Vector3f^ get(); void set( Vector3f^ value ); }
 
+    Vector3f^ Apply( Vector3f^ x );
+
 private:
     Matrix3f^ A_;
     Vector3f^ b_;

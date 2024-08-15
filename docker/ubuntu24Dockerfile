@@ -26,7 +26,7 @@ ENV MR_STATE=DOCKER_BUILD
 RUN ./scripts/build_thirdparty.sh
 
 
-FROM nvidia/cuda:12.5.1-devel-ubuntu24.04 AS production
+FROM nvidia/cuda:12.6.0-devel-ubuntu24.04 AS production
 
 RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
 WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"

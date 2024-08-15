@@ -29,6 +29,9 @@ public:
     using base::base;
     using IndexType = size_t;
 
+    /// creates bitset of given size filled with given value
+    explicit BitSet( size_t numBits, bool fillValue ) { resize( numBits, fillValue ); }
+
     // all bits after size() we silently consider as not-set
     [[nodiscard]] bool test( IndexType n ) const { return n < size() && base::test( n ); }
     [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return ( val || n < size() ) ? base::test_set( n, val ) : false; }

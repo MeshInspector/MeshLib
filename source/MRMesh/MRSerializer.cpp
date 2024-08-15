@@ -191,8 +191,7 @@ VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::p
         return unexpectedOperationCanceled();
 
     // wait for all models are saved before making compressed folder
-    BitSet inProgress;
-    inProgress.resize( saveModelFutures.size(), true );
+    BitSet inProgress( saveModelFutures.size(), true );
     while ( inProgress.any() )
     {
         for ( auto i : inProgress )

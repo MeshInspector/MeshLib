@@ -65,7 +65,7 @@ def install_packages():
     )
 
 
-def setup_workspace(version, modules):
+def setup_workspace(version, modules, plat_name):
     if WHEEL_ROOT_DIR.exists():
         shutil.rmtree(WHEEL_ROOT_DIR)
 
@@ -97,6 +97,7 @@ def setup_workspace(version, modules):
             VERSION=version,
             PACKAGE_DATA=", ".join(package_files),
             PYTHON_TAG=f"py{sys.version_info.major}{sys.version_info.minor}",
+            PLAT_NAME=plat_name,
         )
     with open(WHEEL_ROOT_DIR / "setup.cfg", 'w') as config_file:
         config_file.write(config)
@@ -170,11 +171,12 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--version", required=True)
     parser.add_argument("--modules", type=csv, default=MODULES)
+    parser.add_argument("--plat-name", default="any")
     args = parser.parse_args()
 
     try:
         install_packages()
-        setup_workspace(version=args.version, modules=args.modules)
+        setup_workspace(version=args.version, modules=args.modules, plat_name=args.plat_name)
         generate_stubs(modules=args.modules)
         build_wheel()
     except subprocess.CalledProcessError as e:

@@ -10,3 +10,4 @@ meshlib = $PACKAGE_DATA
 
 [bdist_wheel]
 python_tag = $PYTHON_TAG
+plat_name = $PLAT_NAME

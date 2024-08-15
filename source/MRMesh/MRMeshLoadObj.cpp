@@ -461,16 +461,11 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
                     vs[i] -= minV;
             }
 
-            FaceBitSet skippedFaces;
             std::vector<MeshBuilder::VertDuplication> dups;
             MeshBuilder::BuildSettings buildSettings;
-            if ( settings.countSkippedFaces )
-            {
-                skippedFaces.resize( triangulation.size(), true );
-                buildSettings.region = &skippedFaces;
-            }
             result.mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices(
-                VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), triangulation, &dups, buildSettings );
+                VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), triangulation, &dups,
+                { .skippedFaceCount = settings.countSkippedFaces ? &result.skippedFaceCount : nullptr } );
             if ( hasColors )
             {
                 colors.resize( result.mesh.points.size() );
@@ -482,7 +477,6 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
                 hasColors = false;
             }
             result.duplicatedVertexCount = int( dups.size() );
-            result.skippedFaceCount = int( skippedFaces.count() );
             triangulation.clear();
 
             VertHashMap dst2Src;

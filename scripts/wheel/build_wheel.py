@@ -109,6 +109,7 @@ def generate_stubs(modules):
             ["pybind11-stubgen", "--exit-code", "--output-dir", ".", f"meshlib.{module}"],
             env={
                 'PYTHONPATH': WHEEL_ROOT_DIR,
+                **os.environ
             },
         )
 

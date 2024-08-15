@@ -874,9 +874,8 @@ Expected<Mesh> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
         return unexpected( std::string( "Loading canceled" ) );
 
     std::vector<MeshBuilder::VertDuplication> dups;
-    FaceBitSet skippedFaces( tris.size() );
-    skippedFaces.set();
-    MeshBuilder::BuildSettings buildSettings{ .region = &skippedFaces };
+    int skippedFaceCount = 0;
+    MeshBuilder::BuildSettings buildSettings{ .skippedFaceCount = &skippedFaceCount };
 
     MR::Mesh res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( vertexCoordinates ), tris, &dups, buildSettings );
     
@@ -902,7 +901,7 @@ Expected<Mesh> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
         }
     }
     
-    loader->skippedFaceCountAccum += int( skippedFaces.count() );
+    loader->skippedFaceCountAccum += skippedFaceCount;
 
     if ( !reportProgress( callback, 0.75f ) )
         return unexpected( std::string( "Loading canceled" ) );

@@ -218,10 +218,7 @@ static FaceBitSet getLocalRegion( FaceBitSet * region, size_t tSize )
     if ( region )
         res = *region;
     else
-    {
-        res = FaceBitSet( tSize );
-        res.set();
-    }
+        res.resize( tSize, true );
     return res;
 }
 
@@ -252,10 +249,13 @@ static void addTrianglesSeqCore( MeshTopology& res, const Triangulation & t, con
         if ( triAddedOnThisPass == 0 )
             break; // no single triangle added during the pass
     }
-    if ( settings.region )
+    if ( settings.region || settings.skippedFaceCount )
     {
         active |= bad;
-        *settings.region = std::move( active );
+        if ( settings.skippedFaceCount )
+            *settings.skippedFaceCount = (int)active.count();
+        if ( settings.region )
+            *settings.region = std::move( active );
     }
 }
 
@@ -305,10 +305,13 @@ MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const Vector<VertS
         faceAdded += faceAddedOnThisPass;
         reportProgress( progressCb, faceAdded * rtarget );
     }
-    if ( settings.region )
+    if ( settings.region || settings.skippedFaceCount )
     {
         active |= bad;
-        *settings.region = std::move( active );
+        if ( settings.skippedFaceCount )
+            *settings.skippedFaceCount = (int)active.count();
+        if ( settings.region )
+            *settings.region = std::move( active );
     }
     return res;
 }
@@ -411,6 +414,8 @@ MeshTopology fromDisjointMeshPieces( const Triangulation & t, VertId maxVertId,
     BuildSettings settings = settings0;
     settings.region = &region;
     addTrianglesSeqCore( res, t, settings );
+    if ( settings0.skippedFaceCount )
+        *settings0.skippedFaceCount = (int)region.count();
     if ( settings0.region )
         *settings0.region = std::move( region );
 
@@ -498,6 +503,8 @@ static MeshTopology fromTrianglesPar( const Triangulation & t, const BuildSettin
     if ( progressCb && !progressCb( 0.66f ) )
         return {};
     res = fromDisjointMeshPieces( t, maxVertId, parts, joinSettings );
+    if ( settings.skippedFaceCount )
+        *settings.skippedFaceCount = int( borderTris.count() );
     if ( settings.region )
         *settings.region = std::move( borderTris );
     return res;

@@ -202,16 +202,7 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
         return unexpectedOperationCanceled();
     }
 
-    FaceBitSet skippedFaces;
-    MeshBuilder::BuildSettings buildSettings;
-    if ( settings.skippedFaceCount )
-    {
-        skippedFaces.resize( faces.size(), true );
-        buildSettings.region = &skippedFaces;
-    }
-    auto res = Mesh::fromFaceSoup( std::move( pointsBlocks ), flatPolygonIndices, faces, buildSettings );
-    if ( settings.skippedFaceCount )
-        *settings.skippedFaceCount = int( skippedFaces.count() );
+    auto res = Mesh::fromFaceSoup( std::move( pointsBlocks ), flatPolygonIndices, faces, { .skippedFaceCount = settings.skippedFaceCount } );
     return res;
 }
 
@@ -373,23 +364,13 @@ Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings
 //         "max_load_factor = " << hmap.max_load_factor() << "\n";
 
     auto t = vi.takeTriangulation();
-    FaceBitSet skippedFaces;
     std::vector<MeshBuilder::VertDuplication> dups;
     std::vector<MeshBuilder::VertDuplication>* dupsPtr = nullptr;
     if ( settings.duplicatedVertexCount )
         dupsPtr = &dups;
-    MeshBuilder::BuildSettings buildSettings;
-    if ( settings.skippedFaceCount )
-    {
-        skippedFaces = FaceBitSet( t.size() );
-        skippedFaces.set();
-        buildSettings.region = &skippedFaces;
-    }
-    const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( vi.takePoints(), t, dupsPtr, buildSettings );
+    const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( vi.takePoints(), t, dupsPtr, { .skippedFaceCount = settings.skippedFaceCount } );
     if ( settings.duplicatedVertexCount )
         *settings.duplicatedVertexCount = int( dups.size() );
-    if ( settings.skippedFaceCount )
-        *settings.skippedFaceCount = int( skippedFaces.count() );
     if ( !reportProgress( settings.callback , 1.0f ) )
         return unexpected( std::string( "Loading canceled" ) );
     return res;
@@ -481,23 +462,13 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
 
 
 
-    FaceBitSet skippedFaces;
     std::vector<MeshBuilder::VertDuplication> dups;
     std::vector<MeshBuilder::VertDuplication>* dupsPtr = nullptr;
     if ( settings.duplicatedVertexCount )
         dupsPtr = &dups;
-    MeshBuilder::BuildSettings buildSettings;
-    if ( settings.skippedFaceCount )
-    {
-        skippedFaces = FaceBitSet( t.size() );
-        skippedFaces.set();
-        buildSettings.region = &skippedFaces;
-    }
-    const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), t, dupsPtr, buildSettings );
+    const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), t, dupsPtr, { .skippedFaceCount = settings.skippedFaceCount } );
     if ( settings.duplicatedVertexCount )
         *settings.duplicatedVertexCount = int( dups.size() );
-    if ( settings.skippedFaceCount )
-        *settings.skippedFaceCount = int( skippedFaces.count() );
     return res;
 }
 
@@ -592,16 +563,10 @@ Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings /*= {
                 return res;
             } : settings.callback;
 
-            MeshBuilder::BuildSettings buildSettings;
+            int mySkippedFaceCount = 0;
+            res.topology = MeshBuilder::fromTriangles( tris, { .skippedFaceCount = settings.skippedFaceCount ? &mySkippedFaceCount : nullptr }, partedProgressCb );
             if ( settings.skippedFaceCount )
-            {
-                skippedFaces = FaceBitSet( tris.size() );
-                skippedFaces.set();
-                buildSettings.region = &skippedFaces;
-            }
-            res.topology = MeshBuilder::fromTriangles( tris, buildSettings, partedProgressCb );
-            if ( settings.skippedFaceCount )
-                *settings.skippedFaceCount += int( skippedFaces.count() );
+                *settings.skippedFaceCount += mySkippedFaceCount;
             if ( settings.callback && ( !settings.callback( float( posCurent - posStart ) / streamSize ) || isCanceled ) )
                 return unexpected( std::string( "Loading canceled" ) );
             gotFaces = true;
@@ -733,17 +698,7 @@ Expected<Mesh> fromCtm( std::istream& in, const MeshLoadSettings& settings /*= {
     for ( FaceId i{0}; i < (int)triCount; ++i )
         t.push_back( { VertId( (int)indices[3*i] ), VertId( (int)indices[3*i+1] ), VertId( (int)indices[3*i+2] ) } );
 
-    FaceBitSet skippedFaces;
-    MeshBuilder::BuildSettings buildSettings;
-    if ( settings.skippedFaceCount )
-    {
-        skippedFaces = FaceBitSet( t.size() );
-        skippedFaces.set();
-        buildSettings.region = &skippedFaces;
-    }
-    mesh.topology = MeshBuilder::fromTriangles( t, buildSettings );
-    if ( settings.skippedFaceCount )
-        *settings.skippedFaceCount = int( skippedFaces.count() );
+    mesh.topology = MeshBuilder::fromTriangles( t, { .skippedFaceCount = settings.skippedFaceCount } );
 
     return mesh;
 }

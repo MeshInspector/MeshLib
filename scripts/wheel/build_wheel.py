@@ -86,8 +86,8 @@ def setup_workspace(version, modules, plat_name):
         shutil.copy(lib, WHEEL_SRC_DIR)
 
     shutil.copy(WHEEL_SCRIPT_DIR / "pyproject.toml", WHEEL_ROOT_DIR)
-    #shutil.copy(WHEEL_SCRIPT_DIR / "setup.py", WHEEL_ROOT_DIR)
 
+    # generate setup.cfg
     package_files = itertools.chain.from_iterable(
         [f"{module}{LIB_EXTENSION}", f"{module}.pyi"]
         for module in modules
@@ -142,6 +142,10 @@ def build_wheel():
                 wheel_file
             ]
         )
+
+        print("Wheel files are ready:")
+        for repaired_wheel_file in WHEEL_ROOT_DIR.glob("wheelhouse/meshlib-*.whl"):
+            print(repaired_wheel_file)
 
     elif SYSTEM == "Windows":
         os.chdir(SOURCE_DIR)

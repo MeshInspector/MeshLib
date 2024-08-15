@@ -72,8 +72,8 @@ def setup_workspace(version, modules):
     WHEEL_SRC_DIR.mkdir(parents=True)
 
     print("Copying LICENSE and readme.md")
-    shutil.copy(SOURCE_DIR / "LICENSE", WHEEL_SRC_DIR)
-    shutil.copy(SOURCE_DIR / "readme.md", WHEEL_SRC_DIR)
+    shutil.copy(SOURCE_DIR / "LICENSE", WHEEL_ROOT_DIR)
+    shutil.copy(SOURCE_DIR / "readme.md", WHEEL_ROOT_DIR)
 
     # create empty file
     with open(WHEEL_SRC_DIR / "__init__.py", 'w'):

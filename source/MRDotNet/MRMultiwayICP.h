@@ -21,24 +21,34 @@ public ref struct MultiwayICPSamplingParameters
     } cascadeMode{ CascadeMode::AABBTreeBased };
 };
 
-/// Stores a pair of points: one samples on the source and the closest to it on the target
+/// This class allows you to register many objects having similar parts
+/// and known initial approximations of orientations/locations using
+/// Iterative Closest Points (ICP) point-to-point or point-to-plane algorithms
 public ref class MultiwayICP
 {
 public:
     MultiwayICP( List<MeshOrPointsXf>^ objs, MultiwayICPSamplingParameters^ samplingParams );
     ~MultiwayICP();
 
+    /// runs ICP algorithm given input objects, transformations, and parameters;
+    /// \return adjusted transformations of all objects to reach registered state
     List<AffineXf3f^>^ CalculateTransformations();
+    /// select pairs with origin samples on all objects
     void ResamplePoints( MultiwayICPSamplingParameters^ samplingParams );
+    /// in each pair updates the target data and performs basic filtering (activation)
+    /// in cascade mode only useful for stats update
     bool UpdateAllPointPairs();
+    /// tune algorithm params before run calculateTransformations()
     void SetParams( ICPProperties^ props );
+    /// computes root-mean-square deviation between points
     float GetMeanSqDistToPoint();
+    /// computes the standard deviation from given value
     float GetMeanSqDistToPoint( double value );
     /// computes root-mean-square deviation from points to target planes
     float GetMeanSqDistToPlane();
+    /// computes the standard deviation from given value
     float GetMeanSqDistToPlane( double value );
-    /// returns current pairs formed from samples on floating object and projections on reference object
-     /// computes the number of samples able to form pairs
+    /// computes the number of samples able to form pairs
     int GetNumSamples();
     /// computes the number of active point pairs
     int GetNumActivePairs();

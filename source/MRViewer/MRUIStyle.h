@@ -145,8 +145,9 @@ inline bool buttonIconFlatBG( const std::string& name, const Vector2f& iconSize,
 
 /// draw gradient checkbox
 MRVIEWER_API bool checkbox( const char* label, bool* value );
-/// draw gradient checkbox
-/// if valid is false checkbox is disabled
+/// If `valueOverride` is specified, then the checkbox is disabled and that value is displayed instead of `value`.
+MRVIEWER_API bool checkboxOrFixedValue( const char* label, bool* value, std::optional<bool> valueOverride );
+/// If valid is false checkbox is disabled. Same as `checkboxOrFixedValue( ..., valid ? nullopt : false )`.
 MRVIEWER_API bool checkboxValid( const char* label, bool* value, bool valid );
 /// draw gradient checkbox with mixed state
 MRVIEWER_API bool checkboxMixed( const char* label, bool* value, bool mixed );
@@ -176,6 +177,26 @@ bool checkboxFlags( const char* label, T& target, T flags )
     }
     return false;
 }
+
+struct CheckboxOrModifierState
+{
+    // The permanent value of this setting, as set by the user by clicking the checkbox.
+    bool checkboxEnabled = false;
+    // Whether the setting is currently inverted because the modifier is held.
+    bool modifierHeld = false;
+
+    // You usually want to read this instead of the variables above.
+    // Returns `checkboxEnabled`, but inverted if `modifierHeld` is set.
+    [[nodiscard]] explicit operator bool() const { return checkboxEnabled != modifierHeld; }
+};
+
+/// Draws a checkbox, that gets inverted while a modifier key is held.
+/// `modifiers` must be one or more of `ImGuiMod_{Shift,Alt,Ctrl}`.
+/// By default ignores all modifiers not in `modifiers`. But if `checkedModifiers` is specified, then only ignores modifiers not included in it.
+/// `checkedModifiers` must be a superset of `modifiers`. `-1` has special meaning, making it same as `modifiers` (which makes it have no effect).
+/// If `valueOverride` is specified, then acts as `checkboxOrFixedValue`: disables the checkbox and displays that value instead of the real one,
+///   and also pretends that the modifier isn't held.
+MRVIEWER_API bool checkboxOrModifier( const char* label, CheckboxOrModifierState& value, int modifiers, int checkedModifiers = -1, std::optional<bool> valueOverride = {} );
 
 
 /// draw gradient radio button

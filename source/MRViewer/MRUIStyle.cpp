@@ -657,17 +657,24 @@ bool checkbox( const char* label, bool* value )
     return ret;
 }
 
-bool checkboxValid( const char* label, bool* value, bool valid )
+bool checkboxOrFixedValue( const char* label, bool* value, std::optional<bool> valueOverride )
 {
-    if ( valid )
+    if ( !valueOverride )
         return checkbox( label, value );
 
     StyleParamHolder sh;
     const auto disColor = ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled );
     sh.addColor( ImGuiCol_Text, Color( disColor.x, disColor.y, disColor.z, disColor.w ) );
-    bool falseVal = false;
-    checkboxWithoutTestEngine( label, &falseVal );
+
+    ImGui::PushItemFlag( ImGuiItemFlags_Disabled, true );
+    checkboxWithoutTestEngine( label, &*valueOverride );
+    ImGui::PopItemFlag();
     return false;
+}
+
+bool checkboxValid( const char* label, bool* value, bool valid )
+{
+    return checkboxOrFixedValue( label, value, valid ? std::nullopt : std::optional( false ) );
 }
 
 bool checkboxMixed( const char* label, bool* value, bool mixed )
@@ -695,6 +702,57 @@ bool checkboxMixed( const char* label, bool* value, bool mixed )
     {
         return checkbox( label, value );
     }
+}
+
+bool checkboxOrModifier( const char* label, CheckboxOrModifierState& value, int modifiers, int checkedModifiers, std::optional<bool> valueOverride )
+{
+    assert( modifiers != 0 );
+
+    if ( checkedModifiers == -1 )
+        checkedModifiers = modifiers;
+
+    assert( ( checkedModifiers & modifiers ) == modifiers && "`checkedModifiers` must be a superset of `modifiers`." );
+
+    // Unsure if `!valueOverride &&` is a good idea here. Sounds good on the surface, to prevent silent value modifications via the modifier while
+    //   the override is active. And delaying it until it becomes inactive would be weird too.
+    bool modHeld = !valueOverride && ( ImGui::GetIO().KeyMods & checkedModifiers ) == modifiers;
+
+    bool modChanged = value.modifierHeld != modHeld;
+    value.modifierHeld = modHeld;
+
+    bool ret = checkboxOrFixedValue( label, &value.checkboxEnabled, valueOverride ? valueOverride : modHeld ? std::optional( bool( value ) ) : std::nullopt );
+
+    { // Modifiers hint.
+        std::string modsText;
+
+        for ( const auto& [bit, name] : {
+            std::pair( ImGuiMod_Ctrl, "Ctrl" ),
+            std::pair( ImGuiMod_Shift, "Shift" ),
+            std::pair( ImGuiMod_Alt, "Alt" ),
+        } )
+        {
+            if ( modifiers & bit )
+            {
+                modifiers &= ~bit;
+                if ( !modsText.empty() )
+                    modsText += '+';
+                modsText += name;
+            }
+        }
+        assert( modifiers == 0 && "Don't know the name of this modifier!" );
+
+        ImGui::SameLine();
+        // ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cCheckboxPadding * getViewerInstance().getMenuPlugin()->menu_scaling() );
+        ImGui::TextDisabled( "[%s]", modsText.c_str() );
+    }
+
+    if ( modChanged )
+    {
+        ret = true;
+        detail::markItemEdited( ImGui::GetID( label ) );
+    }
+
+    return ret;
 }
 
 bool radioButton( const char* label, int* value, int valButton )

@@ -736,7 +736,7 @@ bool checkboxOrModifier( const char* label, CheckboxOrModifierState& value, int 
                 modifiers &= ~bit;
                 if ( !modsText.empty() )
                     modsText += '+';
-                modsText += "Ctrl";
+                modsText += name;
             }
         }
         assert( modifiers == 0 && "Don't know the name of this modifier!" );

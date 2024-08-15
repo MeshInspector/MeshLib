@@ -6,4 +6,6 @@
 \subpage ExampleCSharpOffset
 
 \subpage ExampleCSharpMeshDecimate
+
+\subpage ExampleCSharpGlobalRegistration
 */

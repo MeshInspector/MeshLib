@@ -4,6 +4,7 @@
 #include "MRPch/MRJson.h"
 #include "MRSerializer.h"
 #include "MRSceneSettings.h"
+#include "MRTimer.h"
 
 namespace MR
 {
@@ -205,6 +206,7 @@ void ObjectGcode::updateHeapUsageCache_()
 
 void ObjectGcode::updateColors_()
 {
+    MR_TIMER
     const bool feedrateValid = maxFeedrate_ > 0.f;
     VertColors colors;
     const Color workColor = getFrontColor( true );
@@ -237,7 +239,7 @@ void ObjectGcode::updateAll_()
         setDirtyFlags( DIRTY_ALL );
         return;
     }
-
+    MR_TIMER
     GcodeProcessor executor;
     executor.setCNCMachineSettings( cncMachineSettings_ );
     executor.setGcodeSource( *gcodeSource_ );
@@ -261,4 +263,4 @@ void ObjectGcode::updateAll_()
     setDirtyFlags( DIRTY_ALL );
 }
 
-}
+} //namespace MR

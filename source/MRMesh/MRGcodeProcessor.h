@@ -44,22 +44,25 @@ public:
 
     // set g-code source
     MRMESH_API void setGcodeSource( const GcodeSource& gcodeSource );
+
     // process all lines g-code source and generate corresponding move actions
     MRMESH_API std::vector<MoveAction> processSource();
-    // process all commands from one line g-code source and generate corresponding move action
-    MRMESH_API MoveAction processLine( const std::string_view& line );
-
-    // settings
-    MRMESH_API void setCNCMachineSettings( const CNCMachineSettings& settings );
-    const CNCMachineSettings& getCNCMachineSettings() { return cncSettings_; }
-
-private:
 
     struct Command
     {
         char key; // in lowercase
         float value;
     };
+
+    // process all commands from one line g-code source and generate corresponding move action;
+    // \param tmp to avoid memory allocation on each line
+    MRMESH_API MoveAction processLine( const std::string_view& line, std::vector<Command> & tmp );
+
+    // settings
+    MRMESH_API void setCNCMachineSettings( const CNCMachineSettings& settings );
+    const CNCMachineSettings& getCNCMachineSettings() { return cncSettings_; }
+
+private:
     enum class WorkPlane
     {
         xy,
@@ -68,7 +71,7 @@ private:
     };
 
     // parse program methods
-    std::vector<Command> parseFrame_( const std::string_view& frame );
+    static void parseFrame_( const std::string_view& frame, std::vector<Command> & outCommands );
     void applyCommand_( const Command& command );
     void applyCommandG_( const Command& command );
     MoveAction generateMoveAction_();

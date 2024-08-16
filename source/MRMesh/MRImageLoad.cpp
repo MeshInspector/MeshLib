@@ -216,14 +216,14 @@ Expected<Image> fromJpeg( const char* data, size_t size )
         return unexpected( "Cannot initialize JPEG decompressor" );
 
     int width, height, jpegSubsamp, jpegColorspace;
-    auto res = tjDecompressHeader3( reader.tjInstance, ( const unsigned char* )data, size, &width, &height, &jpegSubsamp, &jpegColorspace );
+    auto res = tjDecompressHeader3( reader.tjInstance, ( const unsigned char* )data, ( unsigned long )size, &width, &height, &jpegSubsamp, &jpegColorspace );
     if ( res != 0 )
         return unexpected( "Failed to decompress JPEG header" );
 
     Image image;
     image.pixels.resize( width * height );
     image.resolution = { width, height };
-    res = tjDecompress2( reader.tjInstance, ( const unsigned char* )data, size, reinterpret_cast< unsigned char* >( image.pixels.data() ), width, 0, height, TJPF_RGBA, TJFLAG_BOTTOMUP );
+    res = tjDecompress2( reader.tjInstance, ( const unsigned char* )data, ( unsigned long )size, reinterpret_cast< unsigned char* >( image.pixels.data() ), width, 0, height, TJPF_RGBA, TJFLAG_BOTTOMUP );
     if ( res != 0 )
         return unexpected( "Failed to decompress JPEG file" );
 

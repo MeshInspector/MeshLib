@@ -26,10 +26,6 @@
 #include "OpenCTM/openctm.h"
 #endif
 
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
-#include <tinyxml2.h>
-#endif
-
 namespace MR
 {
 

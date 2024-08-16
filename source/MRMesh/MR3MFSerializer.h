@@ -2,7 +2,7 @@
 
 #include "MRMeshFwd.h"
 
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
+#ifndef MRMESH_NO_XML
 #include "MRObject.h"
 #include "MRExpected.h"
 

@@ -845,7 +845,7 @@ Expected<std::shared_ptr<Object>> loadSceneFromAnySupportedFormat( const std::fi
         res = deserializeObjectTreeFromGltf( path, callback );
     }
 #endif
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
+#ifndef MRMESH_NO_XML
     else if ( ext == "*.3mf" )
     {
         res = deserializeObjectTreeFrom3mf( path, loadWarn, callback );

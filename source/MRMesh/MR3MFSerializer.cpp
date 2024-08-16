@@ -505,7 +505,7 @@ VoidOrErrStr Node::loadBuildData_( const tinyxml2::XMLElement* xmlNode )
             if ( resXf->A.det() == 0 && loader->loadWarn )
                 loader->loadWarn->append( "Degenerative object transform: " + objNode->objName + "\n" );
 
-            objNode->xf = objNode->xf * (*resXf);
+            objNode->xf = *resXf;
         }
 
         loader->objectNodes_.push_back( objNode );
@@ -661,22 +661,18 @@ Expected<Mesh> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
         return unexpected( std::string( "3DF model 'vertices' node not found" ) );    
 
     VertCoords vertexCoordinates;
-    Vector3d origin;
     for ( auto vertexNode = verticesNode->FirstChildElement( "vertex" ); vertexNode;
           vertexNode = vertexNode->NextSiblingElement( "vertex" ) )
     {
-        Vector3d p;
-        if ( tinyxml2::XML_SUCCESS != vertexNode->QueryDoubleAttribute( "x", &p.x ) )
+        Vector3f p;
+        if ( tinyxml2::XML_SUCCESS != vertexNode->QueryFloatAttribute( "x", &p.x ) )
             return unexpected( std::string( "3DF model vertex node does not have 'x' attribute" ) );
-        if ( tinyxml2::XML_SUCCESS != vertexNode->QueryDoubleAttribute( "y", &p.y ) )
+        if ( tinyxml2::XML_SUCCESS != vertexNode->QueryFloatAttribute( "y", &p.y ) )
             return unexpected( std::string( "3DF model vertex node does not have 'y' attribute" ) );
-        if ( tinyxml2::XML_SUCCESS != vertexNode->QueryDoubleAttribute( "z", &p.z ) )
+        if ( tinyxml2::XML_SUCCESS != vertexNode->QueryFloatAttribute( "z", &p.z ) )
             return unexpected( std::string( "3DF model vertex node does not have 'z' attribute" ) );
-        if ( vertexCoordinates.empty() )
-            origin = p;
-        vertexCoordinates.push_back( Vector3f( p - origin ) );
+        vertexCoordinates.push_back( p );
     }
-    xf = AffineXf3f::translation( Vector3f( origin ) );
 
     if ( !reportProgress( callback, 0.25f ) )
         return unexpected( std::string( "Loading canceled" ) );

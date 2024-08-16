@@ -6,6 +6,7 @@
 #include "MRViewer/MRGladGlfw.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRViewer/ImGuiHelpers.h"
+#include "MRViewer/MRMouseController.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRChangeXfAction.h"
@@ -63,8 +64,6 @@ void MoveObjectByMouse::drawDialog( float menuScaling, ImGuiContext*)
 
 bool MoveObjectByMouse::onDragStart_( MouseButton btn, int modifiers )
 {
-    if ( ( modifiers & ~( GLFW_MOD_SHIFT | GLFW_MOD_CONTROL ) ) != 0 )
-        return false;
     return moveByMouse_.onMouseDown( btn, modifiers );
 }
 
@@ -79,12 +78,50 @@ bool MoveObjectByMouse::onDragEnd_( MouseButton btn, int modifiers )
     return moveByMouse_.onMouseUp( btn, modifiers );
 }
 
-std::vector<std::shared_ptr<Object>> MoveObjectByMouse::MoveObjectByMouseWithSelected::getObjects_(
-    const std::shared_ptr<VisualObject>& obj, const PointOnObject&, int modifiers )
+MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSelected::pick_( MouseButton button, int modifiers,
+    std::vector<std::shared_ptr<Object>>& objects, Vector3f& centerPoint, Vector3f& startPoint )
 {
-    if ( ( modifiers & GLFW_MOD_SHIFT ) != 0 && obj->isSelected() )
-        return getAllObjectsInTree<Object>( SceneRoot::get(), ObjectSelectivityType::Selected );
-    return { obj };
+    if ( button != MouseButton::Left || ( modifiers & ~( GLFW_MOD_SHIFT | GLFW_MOD_CONTROL ) ) != 0 )
+        return TransformMode::None;
+
+    Viewer& viewerInstance = getViewerInstance();
+    Viewport& viewport = viewerInstance.viewport();
+
+    // Pick non-ancillary object
+    auto [obj, pick] = viewport.pickRenderObject();
+    if ( obj && obj->isAncillary() )
+        obj = nullptr;
+
+    if ( ( modifiers & GLFW_MOD_SHIFT ) == 0 )
+    {
+        // Move picked object
+        if ( !obj )
+            return TransformMode::None;
+        objects = { obj };
+    }
+    else
+    {
+        // Move selected objects regardless of pick
+        objects = getAllObjectsInTree<Object>( SceneRoot::get(), ObjectSelectivityType::Selected );
+        if ( std::find( objects.begin(), objects.end(), obj ) == objects.end() )
+            obj = nullptr; // Use picked object only if it is selected
+    }
+
+    // See MoveObjectByMouseImpl::pick_
+    if ( obj )
+    {
+        startPoint = obj->worldXf()( pick.point );
+    }
+    else
+    {
+        Vector2i mousePos = viewerInstance.mouseController().getMousePos();
+        Vector3f viewportPos = viewerInstance.screenToViewport( Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), viewport.id );
+        startPoint = viewport.unprojectPixelRay( Vector2f( viewportPos.x, viewportPos.y ) ).project( startPoint );
+    }
+    Box3f box = getBbox_( objects );
+    centerPoint = box.valid() ? box.center() : Vector3f{};
+
+    return ( modifiers & GLFW_MOD_CONTROL ) == 0 ? TransformMode::Translation : TransformMode::Rotation;
 }
 
 MR_REGISTER_RIBBON_ITEM( MoveObjectByMouse )

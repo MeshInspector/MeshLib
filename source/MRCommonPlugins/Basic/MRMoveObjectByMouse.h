@@ -29,11 +29,12 @@ private:
     virtual bool onDrag_( int x, int y ) override;
     virtual bool onDragEnd_( MouseButton btn, int modifiers ) override;
 
+    // Same as basic implementation but allows to move selected objects together by holding Shift
     class MoveObjectByMouseWithSelected : public MoveObjectByMouseImpl
     {
     protected:
-        std::vector<std::shared_ptr<Object>> getObjects_( 
-            const std::shared_ptr<VisualObject>& obj, const PointOnObject& point, int modifiers ) override;
+        TransformMode pick_( MouseButton button, int modifiers,
+            std::vector<std::shared_ptr<Object>>& objects, Vector3f& centerPoint, Vector3f& startPoint ) override;
     } moveByMouse_;
 };
 

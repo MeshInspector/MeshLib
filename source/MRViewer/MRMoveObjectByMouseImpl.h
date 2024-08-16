@@ -9,7 +9,7 @@ namespace MR
 {
 
 /// Helper class to incorporate basic object transformation feature into plugins
-/// User can move objects by dragging them, rotate by dragging with Ctrl key
+/// User can move objects by dragging them, rotate by dragging with Ctrl key; scaling is disabled by default
 /// To use, create class instance and call its event handlers
 /// For extra features, override the `pick_` method
 class MRVIEWER_CLASS MoveObjectByMouseImpl
@@ -53,7 +53,8 @@ protected:
     {
         None,
         Translation,
-        Rotation
+        Rotation,
+        Scale
     };
 
     /// Called from `onMouseDown`
@@ -91,9 +92,10 @@ private:
     Vector3f worldStartPoint_;  // World point corresponding to cursor, for transform calculation
     Vector3f xfCenterPoint_;
     float viewportStartPointZ_;
-    Plane3f rotationPlane_;
+    Plane3f referencePlane_;
     float angle_ = 0.f;
     float shift_ = 0.f;
+    float scale_ = 1.f;
 
     std::vector<ImVec2> visualizeVectors_;
 };

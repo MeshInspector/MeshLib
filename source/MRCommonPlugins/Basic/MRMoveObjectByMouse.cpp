@@ -55,6 +55,7 @@ void MoveObjectByMouse::drawDialog( float menuScaling, ImGuiContext*)
 
     ImGui::Text( "%s", "Click and hold LMB on object to move" );
     ImGui::Text( "%s", "Click CTRL + LMB and hold LMB on object to rotate" );
+    ImGui::Text( "%s", "Click ALT + LMB and hold LMB on object to scale" );
     ImGui::Text( "%s", "Press Shift to move selected objects together" );
 
     moveByMouse_.onDrawDialog( menuScaling );
@@ -81,7 +82,8 @@ bool MoveObjectByMouse::onDragEnd_( MouseButton btn, int modifiers )
 MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSelected::pick_( MouseButton button, int modifiers,
     std::vector<std::shared_ptr<Object>>& objects, Vector3f& centerPoint, Vector3f& startPoint )
 {
-    if ( button != MouseButton::Left || ( modifiers & ~( GLFW_MOD_SHIFT | GLFW_MOD_CONTROL ) ) != 0 )
+    if ( button != MouseButton::Left || ( modifiers & ~( GLFW_MOD_SHIFT | GLFW_MOD_CONTROL | GLFW_MOD_ALT ) ) != 0 ||
+         ( modifiers & ( GLFW_MOD_CONTROL | GLFW_MOD_ALT ) ) == ( GLFW_MOD_CONTROL | GLFW_MOD_ALT ) )
         return TransformMode::None;
 
     Viewer& viewerInstance = getViewerInstance();
@@ -121,7 +123,8 @@ MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSel
     Box3f box = getBbox_( objects );
     centerPoint = box.valid() ? box.center() : Vector3f{};
 
-    return ( modifiers & GLFW_MOD_CONTROL ) == 0 ? TransformMode::Translation : TransformMode::Rotation;
+    return ( modifiers & GLFW_MOD_CONTROL ) != 0 ? TransformMode::Rotation : 
+        ( modifiers & GLFW_MOD_ALT ) != 0 ? TransformMode::Scale : TransformMode::Translation;
 }
 
 MR_REGISTER_RIBBON_ITEM( MoveObjectByMouse )

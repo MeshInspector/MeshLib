@@ -45,6 +45,8 @@ void MoveObjectByMouseImpl::onDrawDialog( float /* menuScaling */ ) const
         ImGui::SetTooltip( "Distance : %s", valueToString<LengthUnit>( shift_ ).c_str() );
     if ( transformMode_ == TransformMode::Rotation )
         ImGui::SetTooltip( "Angle : %s", valueToString<AngleUnit>( angle_ ).c_str() );
+    if ( transformMode_ == TransformMode::Scale )
+        ImGui::SetTooltip( "Scale : %s", valueToString<RatioUnit>( scale_ ).c_str() );
 }
 
 bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
@@ -64,6 +66,7 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
     screenStartPoint_ = minDistance() > 0 ? viewer.mouseController().getMousePos() : cNoPoint;
     angle_ = 0.f;
     shift_ = 0.f;
+    scale_ = 1.f;
     currentXf_ = {};
     viewportStartPointZ_ = viewport.projectToViewportSpace( worldStartPoint_ ).z;
     initialXfs_.clear();
@@ -75,19 +78,35 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
         Vector3f viewportCenterPoint = viewport.projectToViewportSpace( xfCenterPoint_ );
 
         Line3f centerAxis = viewport.unprojectPixelRay( Vector2f( viewportCenterPoint.x, viewportCenterPoint.y ) );
-        rotationPlane_ = Plane3f::fromDirAndPt( centerAxis.d.normalized(), xfCenterPoint_ );
+        referencePlane_ = Plane3f::fromDirAndPt( centerAxis.d.normalized(), xfCenterPoint_ );
 
         Vector3f viewportStartPoint = viewport.projectToViewportSpace( worldStartPoint_ );
         Line3f startAxis = viewport.unprojectPixelRay( Vector2f( viewportStartPoint.x, viewportStartPoint.y ) );
 
-        if ( auto crossPL = intersection( rotationPlane_, startAxis ) )
+        if ( auto crossPL = intersection( referencePlane_, startAxis ) )
             worldStartPoint_ = *crossPL;
         else
             spdlog::warn( "Bad cross start axis and rotation plane" );
 
         setVisualizeVectors_( { xfCenterPoint_, worldStartPoint_, xfCenterPoint_, worldStartPoint_ } );
     }
-    else
+    else if ( transformMode_ == TransformMode::Scale )
+    {
+        Vector3f viewportCenterPoint = viewport.projectToViewportSpace( xfCenterPoint_ );
+
+        Line3f centerAxis = viewport.unprojectPixelRay( Vector2f( viewportCenterPoint.x, viewportCenterPoint.y ) );
+        referencePlane_ = Plane3f::fromDirAndPt( centerAxis.d.normalized(), xfCenterPoint_ );
+
+        Vector3f viewportStartPoint = viewport.projectToViewportSpace( worldStartPoint_ );
+        Line3f startAxis = viewport.unprojectPixelRay( Vector2f( viewportStartPoint.x, viewportStartPoint.y ) );
+
+        if ( auto crossPL = intersection( referencePlane_, startAxis ) )
+            worldStartPoint_ = *crossPL;
+        else
+            spdlog::warn( "Bad cross start axis and rotation plane" );
+        setVisualizeVectors_( { xfCenterPoint_, worldStartPoint_ } );
+    }
+    else // if ( transformMode_ == TransformMode::Translation )
         setVisualizeVectors_( { worldStartPoint_, worldStartPoint_ } );
 
     return true;
@@ -114,7 +133,7 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
     if ( transformMode_ == TransformMode::Rotation )
     {
         auto endAxis = viewport.unprojectPixelRay( Vector2f( viewportEnd.x, viewportEnd.y ) );
-        if ( auto crossPL = intersection( rotationPlane_, endAxis ) )
+        if ( auto crossPL = intersection( referencePlane_, endAxis ) )
             worldEndPoint = *crossPL;
         else
             spdlog::warn( "Bad cross end axis and rotation plane" );
@@ -127,7 +146,7 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
         else
             angle_ = angle( vectorStart, vectorEnd );
 
-        if ( dot( rotationPlane_.n, cross( vectorStart, vectorEnd ) ) > 0.f )
+        if ( dot( referencePlane_.n, cross( vectorStart, vectorEnd ) ) > 0.f )
             angle_ = 2.f * PI_F - angle_;
 
         setVisualizeVectors_( { xfCenterPoint_, worldStartPoint_, xfCenterPoint_, worldEndPoint } );
@@ -137,7 +156,26 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
         AffineXf3f toCenterPoint = AffineXf3f::translation( xfCenterPoint_ );
         currentXf_ = toCenterPoint * rotation * toCenterPoint.inverse();
     }
-    else
+    else if ( transformMode_ == TransformMode::Scale )
+    {
+        auto endAxis = viewport.unprojectPixelRay( Vector2f( viewportEnd.x, viewportEnd.y ) );
+        if ( auto crossPL = intersection( referencePlane_, endAxis ) )
+            worldEndPoint = *crossPL;
+        else
+            spdlog::warn( "Bad cross end axis and rotation plane" );
+
+        const Vector3f vectorStart = worldStartPoint_ - xfCenterPoint_;
+        const Vector3f vectorEnd = worldEndPoint - xfCenterPoint_;
+        scale_ = vectorStart.lengthSq() < 1.0e-7f ? 1.0f :
+            std::clamp( std::sqrt( vectorEnd.lengthSq() / vectorStart.lengthSq() ), 0.01f, 100.0f );
+
+        setVisualizeVectors_( { xfCenterPoint_, worldEndPoint } );
+
+        // Scale around center point (e.g. bounding box center)
+        AffineXf3f toCenterPoint = AffineXf3f::translation( xfCenterPoint_ );
+        currentXf_ = toCenterPoint * AffineXf3f::linear( Matrix3f::scale( scale_ ) ) * toCenterPoint.inverse();
+    }
+    else // if ( transformMode_ == TransformMode::Translation )
     {
         shift_ = ( worldEndPoint - worldStartPoint_ ).length();
         setVisualizeVectors_( { worldStartPoint_, worldEndPoint } );

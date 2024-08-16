@@ -1,5 +1,5 @@
 #include "MR3MFSerializer.h"
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
+#ifndef MRMESH_NO_XML
 
 #include "MRMeshBuilder.h"
 #include "MRMesh.h"

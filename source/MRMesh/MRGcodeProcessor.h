@@ -55,8 +55,8 @@ public:
     };
 
     // process all commands from one line g-code source and generate corresponding move action;
-    // \param tmp to avoid memory allocation on each line
-    MRMESH_API MoveAction processLine( const std::string_view& line, std::vector<Command> & tmp );
+    // \param externalStorage to avoid memory allocation on each line
+    MRMESH_API MoveAction processLine( const std::string_view& line, std::vector<Command> & externalStorage );
 
     // settings
     MRMESH_API void setCNCMachineSettings( const CNCMachineSettings& settings );

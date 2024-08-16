@@ -12,11 +12,13 @@
 #include "MRZip.h"
 #include "MRDirectory.h"
 #include "MRImageLoad.h"
+#include "MRPch/MRFmt.h"
 
 #include <tinyxml2.h>
+
 #include <charconv>
-#include <unordered_map>
 #include <cmath>
+#include <unordered_map>
 
 namespace MR
 {
@@ -321,13 +323,18 @@ Expected<std::shared_ptr<Object>> ThreeMFLoader::load( const std::vector<std::fi
     if ( objectNodes_.empty() )
         return unexpected( "No objects found" );
 
+    size_t unnamedMeshCounter = 0;
+
     std::shared_ptr<Object> objRes = std::make_shared<Object>();
     for ( auto& node : objectNodes_ )
     {
         std::shared_ptr<ObjectMesh> objMesh = std::make_shared<ObjectMesh>();
         objMesh->setMesh( std::make_shared<Mesh>( std::move( node->mesh ) ) );
         objMesh->setXf( node->xf );
-        objMesh->setName( node->objName );
+        if ( !node->objName.empty() )
+            objMesh->setName( node->objName );
+        else
+            objMesh->setName( fmt::format( "Mesh {}", ++unnamedMeshCounter ) );
         objMesh->setFrontColor( node->bgColor, false );
 
         if ( node->texId != -1 )

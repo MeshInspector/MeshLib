@@ -1,5 +1,6 @@
 #include "MRGcodeLoad.h"
 #include "MRStringConvert.h"
+#include "MRTimer.h"
 #include <fstream>
 #include <sstream>
 
@@ -16,22 +17,6 @@ const IOFilters Filters =
     {"Text file", "*.txt"}
 };
 
-GcodeSource splitString( const std::string& source )
-{
-    std::vector<std::string> res;
-    size_t frameBegin = 0;
-    size_t frameEnd = 0;
-    frameEnd = source.find( '\n', frameBegin );
-    while ( frameEnd != std::string::npos )
-    {
-        res.push_back( std::string( source.begin() + frameBegin, source.begin() + frameEnd ) );
-        frameBegin = frameEnd + 1;
-        frameEnd = source.find( '\n', frameBegin );
-    }
-    res.push_back( std::string( source.begin() + frameBegin, source.end() ) );
-    return res;
-}
-
 Expected<GcodeSource> fromGcode( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
 {
     std::ifstream filestream( file );
@@ -40,10 +25,16 @@ Expected<GcodeSource> fromGcode( const std::filesystem::path& file, ProgressCall
 
 Expected<MR::GcodeSource> fromGcode( std::istream& in, ProgressCallback /*= {} */ )
 {
-    std::stringstream buffer;
-    buffer << in.rdbuf();
-
-    return splitString( buffer.str() );
+    MR_TIMER
+    std::vector<std::string> res;
+    while ( in )
+    {
+        std::string s;
+        std::getline( in, s );
+        if ( !s.empty() )
+            res.push_back( std::move( s ) );
+    }
+    return res;
 }
 
 Expected<GcodeSource> fromAnySupportedFormat( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )

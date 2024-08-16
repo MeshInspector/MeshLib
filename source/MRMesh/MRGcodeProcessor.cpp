@@ -2,6 +2,7 @@
 #include "MRVector2.h"
 #include "MRMatrix2.h"
 #include "MRQuaternion.h"
+#include "MRTimer.h"
 #include <cassert>
 #include <chrono>
 
@@ -37,12 +38,14 @@ void GcodeProcessor::setGcodeSource( const GcodeSource& gcodeSource )
 
 std::vector<MR::GcodeProcessor::MoveAction> GcodeProcessor::processSource()
 {
+    MR_TIMER
     if ( gcodeSource_.empty() )
         return {};
 
     std::vector<MoveAction> res( gcodeSource_.size() );
+    std::vector<Command> tmp;
     for ( int i = 0; i < gcodeSource_.size(); ++i )
-        res[i] = processLine( gcodeSource_[i] );
+        res[i] = processLine( gcodeSource_[i], tmp );
 
     for ( auto& action : res )
     {
@@ -53,12 +56,13 @@ std::vector<MR::GcodeProcessor::MoveAction> GcodeProcessor::processSource()
     return res;
 }
 
-GcodeProcessor::MoveAction GcodeProcessor::processLine( const std::string_view& line )
+GcodeProcessor::MoveAction GcodeProcessor::processLine( const std::string_view& line, std::vector<Command> & commands )
 {
     if ( line.empty() )
         return {};
 
-    auto commands = parseFrame_( line );
+    commands.clear();
+    parseFrame_( line, commands );
     if ( commands.empty() )
         return {};
 
@@ -92,9 +96,8 @@ void GcodeProcessor::setCNCMachineSettings( const CNCMachineSettings& settings )
     }
 }
 
-std::vector<GcodeProcessor::Command> GcodeProcessor::parseFrame_( const std::string_view& frame )
+void GcodeProcessor::parseFrame_( const std::string_view& frame, std::vector<Command> & outCommands )
 {
-    std::vector<Command> commands;
     size_t it = 0;
     char* numEnd = nullptr;
     auto commentStartInd = frame.find( ';' );
@@ -103,7 +106,7 @@ std::vector<GcodeProcessor::Command> GcodeProcessor::parseFrame_( const std::str
     while ( it < frame.size() )
     {
         if ( commentStartInd <= it )
-            return commands;
+            return;
         if ( frame[it] == '(' )
         {
             it = frame.find( ')', it + 1 );
@@ -126,13 +129,11 @@ std::vector<GcodeProcessor::Command> GcodeProcessor::parseFrame_( const std::str
         if ( newIt != it )
         {
             it = newIt;
-            commands.push_back( cmd );
+            outCommands.push_back( cmd );
         }
         while ( std::isspace( frame[it] ) )
             ++it;
     }
-
-    return commands;
 }
 
 void GcodeProcessor::applyCommand_( const Command& command )

@@ -278,13 +278,11 @@ Expected<ObjectGcode> makeObjectGcodeFromFile( const std::filesystem::path& file
 
     auto gcodeSource = GcodeLoad::fromAnySupportedFormat( file, callback );
     if ( !gcodeSource.has_value() )
-    {
-        return unexpected( gcodeSource.error() );
-    }
+        return unexpected( std::move( gcodeSource.error() ) );
 
     ObjectGcode objectGcode;
     objectGcode.setName( utf8string( file.stem() ) );
-    objectGcode.setGcodeSource( std::make_shared<GcodeSource>( *gcodeSource ) );
+    objectGcode.setGcodeSource( std::make_shared<GcodeSource>( std::move( *gcodeSource ) ) );
 
     return objectGcode;
 }

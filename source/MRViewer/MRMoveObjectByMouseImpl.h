@@ -2,6 +2,7 @@
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRAffineXf3.h"
 #include "MRViewer/MRViewerFwd.h"
+#include "MRViewer/MRMouse.h"
 #include "imgui.h"
 
 namespace MR
@@ -10,7 +11,7 @@ namespace MR
 /// Helper class to incorporate basic object transformation feature into plugins
 /// User can move objects by dragging them, rotate by dragging with Ctrl key
 /// To use, create class instance and call its event handlers
-/// For extra features, override the pick and object selection functions
+/// For extra features, override the `pick_` method
 class MRVIEWER_CLASS MoveObjectByMouseImpl
 {
 public:
@@ -37,12 +38,8 @@ public:
     MRVIEWER_API bool onMouseMove( int x, int y );
     MRVIEWER_API bool onMouseUp( MouseButton button, int modifiers );
 
-    /// Object currently picked for moving (if any, otherwise null)
-    /// The current object is set in `onMouseDown` and set to null in `onMouseUp`
-    std::shared_ptr<VisualObject> currentObject() const { return obj_; }
-
-    /// Returns true if has a picked object, and actually started moving it
-    /// Return false if no object, or `minDistance` has not yet reached
+    /// Returns true if currently moving object(s)
+    /// Return false if not active, or object picked but `minDistance` has not yet reached
     MRVIEWER_API bool isMoving() const;
 
     /// Reset transformation and stop moving the object(s). Does nothing if not moving anything
@@ -51,53 +48,54 @@ public:
     MRVIEWER_API void cancel();
 
 protected:
-    /// Called when `onMouseDown` picks an object
-    /// Return true to start transformation, false to skip
-    /// `obj` and `point` can be modified if necessary (in `point`, only `point` member is used)
-    /// Default implementation returns true for all non-ancillary objects
-    MRVIEWER_API virtual bool onPick_(
-        std::shared_ptr<VisualObject>& obj, PointOnObject& point, int modifiers );
+    /// Transformation mode
+    enum class TransformMode
+    {
+        None,
+        Translation,
+        Rotation
+    };
 
-    // Returns a list of objects that will be moved
-    // Default implementation returns `{ obj }`
-    // Regardless of the list, `obj` is used as a reference object in transformation
-    MRVIEWER_API virtual std::vector<std::shared_ptr<Object>> getObjects_(
-        const std::shared_ptr<VisualObject>& obj, const PointOnObject& point, int modifiers );
+    /// Called from `onMouseDown`
+    /// Returns chosen `TransformMode` to start transformation, `None` to skip; fills the output parameters:
+    /// `objects` - list of objects to be affected by transformation
+    /// `centerPoint` - center point for rotation (world coordinates)
+    /// `startPoint` - a point under cursor for transform calculation, can be the picked point or else (world coordinates)
+    /// Default implementation can be used as a reference for custom implementations
+    MRVIEWER_API virtual TransformMode pick_( MouseButton button, int modifiers,
+        std::vector<std::shared_ptr<Object>>& objects, Vector3f& centerPoint, Vector3f& startPoint );
+
+    /// Helper function to calculate world bounding box for several objects
+    /// Note: can be invalid (feature objects give an invalid box etc.)
+    MRVIEWER_API Box3f getBbox_( const std::vector<std::shared_ptr<Object>>& objects );
 
 private:
     int minDistance_ = 0;
 
     void clear_();
 
-    void setWorldXf_( AffineXf3f worldXf, bool history );
-    void resetWorldXf_();
+    void applyCurrentXf_( bool history );
+    void resetXfs_();
 
     void setVisualizeVectors_( std::vector<Vector3f> worldPoints );
 
-    std::shared_ptr<VisualObject> obj_;
-
     std::vector<std::shared_ptr<Object>> objects_;
-    std::vector<AffineXf3f> objectsXfs_;
+    std::vector<AffineXf3f> initialXfs_;
 
+    TransformMode transformMode_ = TransformMode::None;
     Vector2i screenStartPoint_; // cNoPoint when moving actually started, {} when inactive
-    Vector3f worldStartPoint_;
-    Vector3f worldBboxCenter_;
-    Vector3f bboxCenter_;
-    AffineXf3f objWorldXf_;
-    AffineXf3f newWorldXf_;
+    AffineXf3f currentXf_;      // Transform currently applied to objects
+    MouseButton currentButton_ = MouseButton::NoButton;
+
+    // Data used to calculate transform
+    Vector3f worldStartPoint_;  // World point corresponding to cursor, for transform calculation
+    Vector3f xfCenterPoint_;
     float viewportStartPointZ_;
     Plane3f rotationPlane_;
-
-    std::vector<ImVec2> visualizeVectors_;
     float angle_ = 0.f;
     float shift_ = 0.f;
 
-    enum class TransformMode
-    {
-        Translation,
-        Rotation,
-        None
-    } transformMode_ = TransformMode::None;
+    std::vector<ImVec2> visualizeVectors_;
 };
 
 }

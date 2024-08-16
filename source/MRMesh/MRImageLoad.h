@@ -30,6 +30,7 @@ MRMESH_API Expected<Image> fromPng( std::istream& in );
 /// loads from .jpg format
 MRMESH_API Expected<Image> fromJpeg( const std::filesystem::path& path );
 MRMESH_API Expected<Image> fromJpeg( std::istream& in );
+MRMESH_API Expected<Image> fromJpeg( const char* data, size_t size );
 #endif
 
 #endif

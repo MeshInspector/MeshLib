@@ -13,10 +13,11 @@
 #endif
 #endif
 
-#ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_JPEG
 #include <turbojpeg.h>
 #endif
+
+#ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_TIFF
 #include "MRTiffIO.h"
 #endif
@@ -32,10 +33,10 @@ const IOFilters Filters =
 #ifndef MRMESH_NO_PNG
     {"Portable Network Graphics (.png)",  "*.png"},
 #endif
-#ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_JPEG
     {"JPEG (.jpg)",  "*.jpg"},
 #endif
+#ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_TIFF
     {"TIFF (.tif)",  "*.tif"},
     {"TIFF (.tiff)",  "*.tiff"},
@@ -167,8 +168,6 @@ VoidOrErrStr toPng( const Image& image, std::ostream& os )
 }
 #endif
 
-#ifndef __EMSCRIPTEN__
-
 #ifndef MRMESH_NO_JPEG
 struct JpegWriter
 {
@@ -210,6 +209,8 @@ VoidOrErrStr toJpeg( const Image& image, const std::filesystem::path& path )
 }
 #endif
 
+#ifndef __EMSCRIPTEN__
+
 #ifndef MRMESH_NO_TIFF
 VoidOrErrStr toTiff( const Image& image, const std::filesystem::path& path )
 {
@@ -237,11 +238,11 @@ VoidOrErrStr toAnySupportedFormat( const Image& image, const std::filesystem::pa
     else if ( ext == ".png" )
         res = MR::ImageSave::toPng( image, file );
 #endif
-#ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_JPEG
     else if ( ext == ".jpg" )
         res = MR::ImageSave::toJpeg( image, file );
 #endif
+#ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_TIFF
     else if ( ext == ".tif" || ext == ".tiff" )
         res = MR::ImageSave::toTiff( image, file );

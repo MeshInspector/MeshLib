@@ -1,5 +1,5 @@
 #pragma once
-#include "MRMeshFwd.h"
+#include "MRKernelFwd.h"
 #include "MRVector3.h"
 #include "MRVector4.h"
 

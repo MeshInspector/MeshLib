@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRCone3.h"
 #include "MRMesh/MRCylinder3.h"
 #include "MRMesh/MRLine3.h"

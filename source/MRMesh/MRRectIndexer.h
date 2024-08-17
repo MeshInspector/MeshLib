@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "MRBaseFwd.h"
 #include "MRVector2.h"
 #include "MRId.h"
 #include <array>
@@ -32,6 +32,9 @@ inline OutEdge2 opposite( OutEdge2 e )
 }
 
 static constexpr int OutEdge2Count = 4;
+
+class MRMESH_CLASS PixelTag;
+using PixelId = Id<PixelTag>;
 
 /// a class for converting 2D integer coordinates into 1D linear coordinates and backward
 class RectIndexer
@@ -80,6 +83,8 @@ inline size_t RectIndexer::toIndex( const Vector2i & pos ) const
 {
     return pos.x + pos.y * size_t(dims_.x);
 }
+
+using PixelBitSet = TaggedBitSet<PixelTag>;
 
 /// expands PixelBitSet with given number of steps
 MRMESH_API void expandPixelMask( PixelBitSet& mask, const RectIndexer& indexer, int expansion = 1 );

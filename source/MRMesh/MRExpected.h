@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "MRBaseFwd.h"
 
 #include <version>
 #if __cpp_lib_expected >= 202211

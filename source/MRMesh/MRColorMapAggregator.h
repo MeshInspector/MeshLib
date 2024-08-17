@@ -1,5 +1,5 @@
 #pragma once
-#include "MRMeshFwd.h"
+#include "MRBaseFwd.h"
 #include "MRVector.h"
 #include "MRColor.h"
 #include "MRId.h"

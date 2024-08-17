@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "MRBaseFwd.h"
 #include "MRId.h"
 #include "MRphmap.h"
 #include "MRVector.h"

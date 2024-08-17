@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "MRKernelFwd.h"
 #include "MRVector3.h"
 
 namespace MR

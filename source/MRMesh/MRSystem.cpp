@@ -2,6 +2,8 @@
 #include "MRStringConvert.h"
 #include "MRConfig.h"
 #include "MRStacktrace.h"
+#include "MRDirectory.h"
+#include "MRRestoringStreamsSink.h"
 #include "MRPch/MRSpdlog.h"
 #include <cstring>
 #include <filesystem>
@@ -51,6 +53,40 @@
 #ifndef MR_PROJECT_NAME
 #define MR_PROJECT_NAME "MeshInspector"
 #endif
+
+namespace
+{
+
+// removes log files from given folder that are older than given amount of hours
+void removeOldLogs( const std::filesystem::path& dir, int hours = 24 )
+{
+    std::error_code ec;
+    if ( !std::filesystem::is_directory( dir, ec ) )
+        return;
+
+    auto now = std::chrono::system_clock::now();
+    std::time_t nowSinceEpoch = std::chrono::system_clock::to_time_t( now );
+
+    for ( auto entry : MR::Directory{ dir, ec } )
+    {
+        auto fileName = MR::utf8string( entry.path().filename() );
+        auto prefixOffset = fileName.find( "MRLog_" );
+        if ( prefixOffset == std::string::npos )
+            continue; // not log file
+        std::tm tm;
+        std::stringstream ss( fileName.substr( prefixOffset + 6, 19 ) );
+        ss >> std::get_time( &tm, "%Y-%m-%d_%H-%M-%S" );
+        if ( ss.fail() )
+            continue; // cannot parse time
+        std::time_t fileDateSinceEpoch = std::mktime( &tm );
+        auto diffHours = ( nowSinceEpoch - fileDateSinceEpoch ) / 3600;
+        if ( diffHours < hours )
+            continue; // "young" file
+        std::filesystem::remove( entry.path(), ec );
+    }
+}
+
+}
 
 namespace MR
 {
@@ -653,5 +689,51 @@ ProccessMemoryInfo getProccessMemoryInfo()
     return res;
 }
 #endif //_WIN32
+
+void setupLoggerByDefault()
+{
+#ifndef __EMSCRIPTEN__
+#ifndef _WIN32 //on Windows we use WindowsExceptionsLogger instead
+    printStacktraceOnCrash();
+#endif
+#endif //__EMSCRIPTEN__
+    redirectSTDStreamsToLogger();
+    // write log to console
+    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+    console_sink->set_level( spdlog::level::trace );
+    console_sink->set_pattern( Logger::instance().getDefaultPattern() );
+    Logger::instance().addSink( console_sink );
+
+    // write log to file
+    auto now = std::chrono::system_clock::now();
+    std::time_t t = std::chrono::system_clock::to_time_t( now );
+    auto fileName = GetTempDirectory();
+    fileName /= "Logs";
+    removeOldLogs( fileName );
+
+    fileName /= fmt::format( "MRLog_{:%Y-%m-%d_%H-%M-%S}_{}.txt", fmt::localtime( t ),
+                std::chrono::milliseconds( now.time_since_epoch().count() ).count() % 1000 );
+
+    auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>( utf8string( fileName ), 1024 * 1024 * 5, 1, true );
+    file_sink->set_level( spdlog::level::trace );
+    file_sink->set_pattern( Logger::instance().getDefaultPattern() );
+    Logger::instance().addSink( file_sink );
+
+#ifdef _WIN32
+    auto msvc_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
+    msvc_sink->set_level( spdlog::level::trace );
+    msvc_sink->set_pattern( Logger::instance().getDefaultPattern() );
+    Logger::instance().addSink( msvc_sink );
+#endif
+
+    auto logger = Logger::instance().getSpdLogger();
+
+    logger->set_level( spdlog::level::trace );
+
+    // update file on each msg
+    logger->flush_on( spdlog::level::trace );
+
+    spdlog::info( "MR Version info: {}", GetMRVersionString() );
+}
 
 } //namespace MR

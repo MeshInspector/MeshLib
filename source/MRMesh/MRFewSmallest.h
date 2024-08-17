@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "MRKernelFwd.h"
 #include <algorithm>
 #include <cassert>
 #include <vector>

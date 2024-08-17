@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "MRKernelFwd.h"
 #include "MRAffineXf3.h"
 #include <algorithm>
 #include <cassert>

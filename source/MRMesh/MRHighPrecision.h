@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "MRBaseFwd.h"
 #include <boost/multiprecision/cpp_int.hpp>
 
 namespace MR

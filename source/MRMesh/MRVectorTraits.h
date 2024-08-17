@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMesh/MRMeshFwd.h"
+#include "MRKernelFwd.h"
 
 #include <cassert>
 

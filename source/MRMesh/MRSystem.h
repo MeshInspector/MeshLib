@@ -89,4 +89,12 @@ struct ProccessMemoryInfo
 [[nodiscard]] MRMESH_API ProccessMemoryInfo getProccessMemoryInfo();
 #endif //_WIN32
 
+/// Setups logger:
+/// 1) makes stdout sink
+/// 2) makes file sink (MRLog.txt)
+/// 3) redirect std streams to logger
+/// 4) print stacktrace on crash (not in wasm)
+/// log level - trace
+MRMESH_API void setupLoggerByDefault();
+
 } // namespace MR

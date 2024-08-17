@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "MRBaseFwd.h"
 #include "MRRigidScaleXf3.h"
 #include <MRPch/MREigenCore.h>
 

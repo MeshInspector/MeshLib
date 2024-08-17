@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRMacros.h"
-#include "MRMeshFwd.h"
+#include "MRKernelFwd.h"
 #include <cassert>
 #include <vector>
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "MRBaseFwd.h"
 #include <filesystem>
 #include <string>
 #include "MRExpected.h"

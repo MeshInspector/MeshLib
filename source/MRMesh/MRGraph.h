@@ -13,11 +13,14 @@ namespace MR
 class Graph
 {
 public:
-    using VertId = GraphVertId;
-    using EdgeId = GraphEdgeId;
+    class VertTag;
+    class EdgeTag;
 
-    using VertBitSet = GraphVertBitSet;
-    using EdgeBitSet = GraphEdgeBitSet;
+    using VertId = Id<VertTag>;
+    using EdgeId = Id<EdgeTag>;
+
+    using VertBitSet = TaggedBitSet<VertTag>;
+    using EdgeBitSet = TaggedBitSet<EdgeTag>;
 
     using Neighbours = std::vector<EdgeId>; // sorted by edgeID
     using NeighboursPerVertex = Vector<Neighbours, VertId>;

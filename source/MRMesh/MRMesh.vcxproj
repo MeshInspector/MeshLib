@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="exports.h" />
     <ClInclude Include="MR3MFSerializer.h" />
     <ClInclude Include="MRAABBTreeBase.h" />
     <ClInclude Include="MRAABBTreeBase.hpp" />
@@ -19,6 +20,7 @@
     <ClInclude Include="MRAddNoise.h" />
     <ClInclude Include="MRAligningTransform.h" />
     <ClInclude Include="MRAlphaShape.h" />
+    <ClInclude Include="MRBaseFwd.h" />
     <ClInclude Include="MRChangeValue.h" />
     <ClInclude Include="MRCone3.h" />
     <ClInclude Include="MRConeApproximator.h" />
@@ -36,6 +38,7 @@
     <ClInclude Include="MRFinally.h" />
     <ClInclude Include="MRFixSelfIntersections.h" />
     <ClInclude Include="MRICPEnums.h" />
+    <ClInclude Include="MRIdBase.h" />
     <ClInclude Include="MRInTreePathBuilder.h" />
     <ClInclude Include="MRChangeColoringType.h" />
     <ClInclude Include="MRChangeColoringActions.h" />
@@ -45,10 +48,12 @@
     <ClInclude Include="MRFilterCreaseEdges.h" />
     <ClInclude Include="MRImproveSampling.h" />
     <ClInclude Include="MRIterativeSampling.h" />
+    <ClInclude Include="MRKernelFwd.h" />
     <ClInclude Include="MRLevelOfDetails.h" />
     <ClInclude Include="MRLocalTriangulations.h" />
     <ClInclude Include="MRMapping.h" />
     <ClInclude Include="MRMeshDecimateCallbacks.h" />
+    <ClInclude Include="MRMeshId.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
     <ClInclude Include="MRAggregateFlow.h" />
@@ -339,6 +344,7 @@
     <ClInclude Include="MRVolumeIndexer.h" />
     <ClInclude Include="MRVolumeInterpolation.h" />
     <ClInclude Include="MRVoxelGraphCut.h" />
+    <ClInclude Include="MRVoxelId.h" />
     <ClInclude Include="MRVoxelPath.h" />
     <ClInclude Include="MRVisualObject.h" />
     <ClInclude Include="MRVolumeSegment.h" />
@@ -610,6 +616,7 @@
     <ClCompile Include="MRSceneLoad.cpp" />
     <ClCompile Include="MRSeparationPoint.cpp" />
     <ClCompile Include="MRSolarRadiation.cpp" />
+    <ClCompile Include="MRStacktrace.cpp" />
     <ClCompile Include="MRTiffIO.cpp" />
     <ClCompile Include="MRRectIndexer.cpp" />
     <ClCompile Include="MRSceneColors.cpp" />

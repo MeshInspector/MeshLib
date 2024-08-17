@@ -84,6 +84,16 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   emmake make -j `nproc` #VERBOSE=1
   make install
 
+  # build libjpeg-turbo separately
+  LIBJPEG_TURBO_CMAKE_OPTIONS="-D WITH_JAVA=OFF -D WITH_JPEG8=ON"
+  # fix linkage
+  if [[ ${MR_EMSCRIPTEN_SINGLETHREAD} == 0 ]] ; then
+    LIBJPEG_TURBO_CMAKE_OPTIONS="${LIBJPEG_TURBO_CMAKE_OPTIONS} -D CMAKE_CXX_FLAGS=-pthread"
+  fi
+  emcmake cmake -S ${MESHLIB_THIRDPARTY_DIR}/libjpeg-turbo/ -B libjpeg-turbo_build -DCMAKE_INSTALL_PREFIX="${MESHLIB_THIRDPARTY_ROOT_DIR}"
+  emmake cmake --build libjpeg-turbo_build -j `nproc`
+  emmake cmake --install libjpeg-turbo_build
+
   # build OpenVDB separately
   OPENVDB_CMAKE_OPTIONS="-DOPENVDB_ENABLE_UNINSTALL=OFF -DOPENVDB_ENABLE_INSTALL=OFF -DOPENVDB_CORE_SHARED=OFF -DOPENVDB_CORE_STATIC=ON -DOPENVDB_BUILD_BINARIES=OFF -DOPENVDB_BUILD_VDB_PRINT=OFF -DUSE_BLOSC=OFF -DUSE_EXPLICIT_INSTANTIATION=OFF"
   # fix TBB lookup

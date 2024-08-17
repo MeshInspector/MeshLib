@@ -136,10 +136,6 @@ IF(MR_EMSCRIPTEN)
   install(DIRECTORY onetbb/include/tbb DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 
   add_subdirectory(./tinyxml2)
-
-  set(WITH_JAVA OFF)
-  set(WITH_JPEG8 ON)
-  add_subdirectory(./libjpeg-turbo)
 ELSE() # not MR_EMSCRIPTEN
   set(CLIP_EXAMPLES OFF)
   set(CLIP_TESTS OFF)

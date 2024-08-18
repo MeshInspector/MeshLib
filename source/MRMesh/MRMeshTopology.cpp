@@ -479,34 +479,31 @@ EdgeId MeshTopology::findEdge( VertId o, VertId d ) const
     }
 }
 
-bool MeshTopology::isClosed() const
-{
-    MR_TIMER
-    for ( EdgeId e(0); e < edges_.size(); ++e )
-    {
-        if ( !edges_[e].org.valid() )
-            continue; // skip edges without valid vertices
-        if ( !edges_[e].left.valid() )
-            return false;
-    }
-    return true;
-}
-
 bool MeshTopology::isClosed( const FaceBitSet * region ) const
 {
-    if ( !region )
-        return isClosed();
-
     MR_TIMER
-    for ( FaceId f : *region )
+    std::atomic_bool res{ true };
+    tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( undirectedEdgeSize() ) ),
+        [&]( const tbb::blocked_range<UndirectedEdgeId> & range )
     {
-        for ( EdgeId e : leftRing( *this, f ) )
+        for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
         {
-            if ( !right( e ) )
-                return false;
+            if ( !res.load( std::memory_order_relaxed ) )
+                return;
+            EdgeId e( ue );
+            if ( isLoneEdge( e ) )
+                continue;
+            const auto l = left( e );
+            const auto r = right( e );
+            if ( l && r )
+                continue; // no neighboring holes
+            if ( region && !contains( *region, l ) && !contains( *region, r ) )
+                continue; // both left and right are not in the region
+            res.store( false, std::memory_order_relaxed );
+            return;
         }
-    }
-    return true;
+    } );
+    return res.load( std::memory_order_relaxed );
 }
 
 std::vector<EdgeId> MeshTopology::findHoleRepresentiveEdges() const

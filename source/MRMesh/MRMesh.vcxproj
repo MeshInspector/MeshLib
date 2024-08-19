@@ -38,7 +38,6 @@
     <ClInclude Include="MRFinally.h" />
     <ClInclude Include="MRFixSelfIntersections.h" />
     <ClInclude Include="MRICPEnums.h" />
-    <ClInclude Include="MRIdBase.h" />
     <ClInclude Include="MRInTreePathBuilder.h" />
     <ClInclude Include="MRChangeColoringType.h" />
     <ClInclude Include="MRChangeColoringActions.h" />
@@ -53,7 +52,6 @@
     <ClInclude Include="MRLocalTriangulations.h" />
     <ClInclude Include="MRMapping.h" />
     <ClInclude Include="MRMeshDecimateCallbacks.h" />
-    <ClInclude Include="MRMeshId.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
     <ClInclude Include="MRAggregateFlow.h" />

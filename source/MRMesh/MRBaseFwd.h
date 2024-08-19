@@ -46,5 +46,11 @@ template <typename Tag>
 class MRMESH_CLASS ColorMapAggregator;
 
 class Graph;
+class GraphVertTag;
+class GraphEdgeTag;
+using GraphVertId = Id<GraphVertTag>;
+using GraphEdgeId = Id<GraphEdgeTag>;
+using GraphVertBitSet = TaggedBitSet<GraphVertTag>;
+using GraphEdgeBitSet = TaggedBitSet<GraphEdgeTag>;
 
 } // namespace MR

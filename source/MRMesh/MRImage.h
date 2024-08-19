@@ -2,8 +2,8 @@
 
 #include "MRKernelFwd.h"
 #include "MRColor.h"
-#include "MRHeapBytes.h"
 #include "MRVector2.h"
+#include "MRHeapBytes.h"
 
 #include <cassert>
 #include <vector>

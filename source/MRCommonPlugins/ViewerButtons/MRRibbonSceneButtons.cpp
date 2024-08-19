@@ -104,6 +104,13 @@ RibbonSceneHideAll::RibbonSceneHideAll() :
     RibbonMenuItem( "Ribbon Scene Hide all" )
 {}
 
+std::string RibbonSceneHideAll::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
+{
+    if ( SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>().empty() )
+        return "At least one objects should be in scene";
+    return "";
+}
+
 bool RibbonSceneHideAll::action()
 {
     if ( auto menu = getViewerInstance().getMenuPlugin() )

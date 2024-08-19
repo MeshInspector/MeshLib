@@ -124,9 +124,9 @@ const IOFilters allFilters = SceneFileFilters
                              | LinesLoad::Filters
                              | PointsLoad::Filters;
 
-Expected<ObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadMetrics& metrics /*= {}*/ )
+Expected<ObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadInfo& info /*= {}*/ )
 {
-    auto expObj = makeObjectFromMeshFile( file, metrics, true );
+    auto expObj = makeObjectFromMeshFile( file, info, true );
     if ( !expObj )
         return unexpected( std::move( expObj.error() ) );
 
@@ -154,7 +154,7 @@ static std::string makeWarningString( int skippedFaceCount, int duplicatedVertex
     return res;
 }
 
-Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem::path& file, const MeshLoadMetrics& metrics, bool returnOnlyMesh )
+Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem::path& file, const MeshLoadInfo& info, bool returnOnlyMesh )
 {
     MR_TIMER
 
@@ -171,10 +171,10 @@ Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem:
         .uvCoords = &uvCoords,
         .normals = returnOnlyMesh ? nullptr : &normals,
         .texture = &texture,
-        .skippedFaceCount = metrics.warnings ? &skippedFaceCount : nullptr,
-        .duplicatedVertexCount = metrics.warnings ? &duplicatedVertexCount : nullptr,
+        .skippedFaceCount = info.warnings ? &skippedFaceCount : nullptr,
+        .duplicatedVertexCount = info.warnings ? &duplicatedVertexCount : nullptr,
         .xf = &xf,
-        .callback = metrics.callback
+        .callback = info.callback
     };
     auto mesh = MeshLoad::fromAnySupportedFormat( file, settings );
     if ( !mesh.has_value() )
@@ -226,27 +226,22 @@ Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem:
         objectMesh->setColoringType( ColoringType::VertsColorMap );
 
     objectMesh->setXf( xf );
-    if ( metrics.warnings )
+    if ( info.warnings )
     {
+        if ( !info.warnings->empty() )
+            *info.warnings += '\n';
         auto s = makeWarningString( skippedFaceCount, duplicatedVertexCount );
         if ( !s.empty() )
         {
-            if ( !metrics.warnings->empty() )
-                *metrics.warnings += '\n';
-            *metrics.warnings += s;
+            *info.warnings += s;
+            *info.warnings += '\n';
         }
         if ( !colors.empty() && !hasColors )
-        {
-            if ( !metrics.warnings->empty() )
-                *metrics.warnings += '\n';
-            *metrics.warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} vertices.", colors.size(), numVerts );
-        }
+            *info.warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} vertices.\n", colors.size(), numVerts );
         if ( !uvCoords.empty() && !hasUV )
-        {
-            if ( !metrics.warnings->empty() )
-                *metrics.warnings += '\n';
-            *metrics.warnings += fmt::format( "Ignoring too few ({}) uv-coordinates loaded for a mesh with {} vertices.", uvCoords.size(), numVerts );
-        }
+            *info.warnings += fmt::format( "Ignoring too few ({}) uv-coordinates loaded for a mesh with {} vertices.\n", uvCoords.size(), numVerts );
+        if ( !info.warnings->empty() && info.warnings->back() == '\n' )
+            info.warnings->pop_back();
     }
 
     return objectMesh;
@@ -517,12 +512,12 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
     }
     else
     {
-        MeshLoadMetrics settings
+        MeshLoadInfo info
         {
             .warnings = loadWarn,
             .callback = callback
         };
-        auto object = makeObjectFromMeshFile( filename, settings );
+        auto object = makeObjectFromMeshFile( filename, info );
         if ( object && *object )
         {
             (*object)->select( true );

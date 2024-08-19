@@ -124,9 +124,9 @@ const IOFilters allFilters = SceneFileFilters
                              | LinesLoad::Filters
                              | PointsLoad::Filters;
 
-Expected<ObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadMetrics& metrics /*= {}*/ )
+Expected<ObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadInfo& info /*= {}*/ )
 {
-    auto expObj = makeObjectFromMeshFile( file, metrics, true );
+    auto expObj = makeObjectFromMeshFile( file, info, true );
     if ( !expObj )
         return unexpected( std::move( expObj.error() ) );
 
@@ -140,7 +140,21 @@ Expected<ObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, 
     return std::move( *mesh );
 }
 
-Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem::path& file, const MeshLoadMetrics& metrics, bool returnOnlyMesh )
+static std::string makeWarningString( int skippedFaceCount, int duplicatedVertexCount )
+{
+    std::string res;
+    if ( skippedFaceCount )
+        res = fmt::format( "{} triangles were skipped as inconsistent with others.", skippedFaceCount );
+    if ( duplicatedVertexCount )
+    {
+        if ( !res.empty() )
+            res += '\n';
+        res += fmt::format( "{} vertices were duplicated to make them manifold.", duplicatedVertexCount );
+    }
+    return res;
+}
+
+Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem::path& file, const MeshLoadInfo& info, bool returnOnlyMesh )
 {
     MR_TIMER
 
@@ -148,6 +162,8 @@ Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem:
     VertUVCoords uvCoords;
     VertNormals normals;
     MeshTexture texture;
+    int skippedFaceCount = 0;
+    int duplicatedVertexCount = 0;
     AffineXf3f xf;
     MeshLoadSettings settings
     {
@@ -155,10 +171,10 @@ Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem:
         .uvCoords = &uvCoords,
         .normals = returnOnlyMesh ? nullptr : &normals,
         .texture = &texture,
-        .skippedFaceCount = metrics.skippedFaceCount,
-        .duplicatedVertexCount = metrics.duplicatedVertexCount,
+        .skippedFaceCount = info.warnings ? &skippedFaceCount : nullptr,
+        .duplicatedVertexCount = info.warnings ? &duplicatedVertexCount : nullptr,
         .xf = &xf,
-        .callback = metrics.callback
+        .callback = info.callback
     };
     auto mesh = MeshLoad::fromAnySupportedFormat( file, settings );
     if ( !mesh.has_value() )
@@ -188,13 +204,15 @@ Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem:
         return objectPoints;
     }
 
+    const auto numVerts = mesh->points.size();
+    const bool hasColors = colors.size() >= numVerts;
+    const bool hasUV = uvCoords.size() >= numVerts;
+    const bool hasTexture = !texture.pixels.empty();
+
     auto objectMesh = std::make_unique<ObjectMesh>();
     objectMesh->setName( utf8string( file.stem() ) );
     objectMesh->setMesh( std::make_shared<Mesh>( std::move( mesh.value() ) ) );
 
-    const bool hasColors = !colors.empty();
-    const bool hasUV = !uvCoords.empty();
-    const bool hasTexture = !texture.pixels.empty();
     if ( hasColors )
         objectMesh->setVertsColorMap( std::move( colors ) );
     if ( hasUV )
@@ -208,6 +226,23 @@ Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem:
         objectMesh->setColoringType( ColoringType::VertsColorMap );
 
     objectMesh->setXf( xf );
+    if ( info.warnings )
+    {
+        if ( !info.warnings->empty() )
+            *info.warnings += '\n';
+        auto s = makeWarningString( skippedFaceCount, duplicatedVertexCount );
+        if ( !s.empty() )
+        {
+            *info.warnings += s;
+            *info.warnings += '\n';
+        }
+        if ( !colors.empty() && !hasColors )
+            *info.warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} vertices.\n", colors.size(), numVerts );
+        if ( !uvCoords.empty() && !hasUV )
+            *info.warnings += fmt::format( "Ignoring too few ({}) uv-coordinates loaded for a mesh with {} vertices.\n", uvCoords.size(), numVerts );
+        if ( !info.warnings->empty() && info.warnings->back() == '\n' )
+            info.warnings->pop_back();
+    }
 
     return objectMesh;
 }
@@ -330,20 +365,6 @@ Expected<std::vector<std::shared_ptr<ObjectVoxels>>> makeObjectVoxelsFromFile( c
     return res;
 }
 #endif
-
-static std::string makeWarningString( int skippedFaceCount, int duplicatedVertexCount )
-{
-    std::string res;
-    if ( skippedFaceCount )
-        res = fmt::format( "{} triangles were skipped as inconsistent with others.", skippedFaceCount );
-    if ( duplicatedVertexCount )
-    {
-        if ( !res.empty() )
-            res += '\n';
-        res += fmt::format( "{} vertices were duplicated to make them manifold.", duplicatedVertexCount );
-    }
-    return res;
-}
 
 Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std::filesystem::path& filename,
                                                                                     std::string* loadWarn, ProgressCallback callback )
@@ -491,22 +512,16 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
     }
     else
     {
-        MeshLoadMetrics settings;
-        settings.callback = callback;
-        int skippedFaceCount = 0;
-        int duplicatedVertexCount = 0;
-        if ( loadWarn )
+        MeshLoadInfo info
         {
-            settings.skippedFaceCount = &skippedFaceCount;
-            settings.duplicatedVertexCount = &duplicatedVertexCount;
-        }
-        auto object = makeObjectFromMeshFile( filename, settings );
+            .warnings = loadWarn,
+            .callback = callback
+        };
+        auto object = makeObjectFromMeshFile( filename, info );
         if ( object && *object )
         {
             (*object)->select( true );
             result = { *object };
-            if ( loadWarn )
-                *loadWarn = makeWarningString( skippedFaceCount, duplicatedVertexCount );
         }
         else if ( object.error() == "Loading canceled" )
         {

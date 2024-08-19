@@ -191,7 +191,7 @@ Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem:
     auto objectMesh = std::make_unique<ObjectMesh>();
     objectMesh->setName( utf8string( file.stem() ) );
     objectMesh->setMesh( std::make_shared<Mesh>( std::move( mesh.value() ) ) );
-
+    metrics.holesCount[0] = int(objectMesh->numHoles());
     const bool hasColors = !colors.empty();
     const bool hasUV = !uvCoords.empty();
     const bool hasTexture = !texture.pixels.empty();
@@ -331,7 +331,7 @@ Expected<std::vector<std::shared_ptr<ObjectVoxels>>> makeObjectVoxelsFromFile( c
 }
 #endif
 
-static std::string makeWarningString( int skippedFaceCount, int duplicatedVertexCount )
+static std::string makeWarningString( int skippedFaceCount, int duplicatedVertexCount, int holesCount )
 {
     std::string res;
     if ( skippedFaceCount )
@@ -342,6 +342,8 @@ static std::string makeWarningString( int skippedFaceCount, int duplicatedVertex
             res += '\n';
         res += fmt::format( "{} vertices were duplicated to make them manifold.", duplicatedVertexCount );
     }
+    if( holesCount )
+        res = fmt::format( "the objects contains {} holes. Please use the Mesh Healer plugin for fix this.", holesCount );
     return res;
 }
 
@@ -365,6 +367,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
         {
             int totalSkippedFaceCount = 0;
             int totalDuplicatedVertexCount = 0;
+            int holesCount = 0;
             auto& resValue = *res;
             std::vector<std::shared_ptr<Object>> objects( resValue.size() );
             for ( int i = 0; i < objects.size(); ++i )
@@ -429,16 +432,16 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
                 }
 
                 objectMesh->setXf( resValue[i].xf );
-
                 objects[i] = std::dynamic_pointer_cast< Object >( objectMesh );
 
+                holesCount += int(objectMesh->numHoles());
                 totalSkippedFaceCount += resValue[i].skippedFaceCount;
                 totalDuplicatedVertexCount += resValue[i].duplicatedVertexCount;
             }
             result = objects;
 
             if ( loadWarn )
-                *loadWarn = makeWarningString( totalSkippedFaceCount, totalDuplicatedVertexCount );
+                *loadWarn = makeWarningString( totalSkippedFaceCount, totalDuplicatedVertexCount, holesCount );
         }
         else
             result = unexpected( res.error() );
@@ -495,10 +498,12 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
         settings.callback = callback;
         int skippedFaceCount = 0;
         int duplicatedVertexCount = 0;
+        int holesCount = 0;
         if ( loadWarn )
         {
             settings.skippedFaceCount = &skippedFaceCount;
             settings.duplicatedVertexCount = &duplicatedVertexCount;
+            settings.holesCount = &holesCount;
         }
         auto object = makeObjectFromMeshFile( filename, settings );
         if ( object && *object )
@@ -506,7 +511,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
             (*object)->select( true );
             result = { *object };
             if ( loadWarn )
-                *loadWarn = makeWarningString( skippedFaceCount, duplicatedVertexCount );
+                *loadWarn = makeWarningString( skippedFaceCount, duplicatedVertexCount, holesCount );
         }
         else if ( object.error() == "Loading canceled" )
         {

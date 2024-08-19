@@ -17,6 +17,7 @@ struct MeshLoadMetrics
 {
     int* skippedFaceCount = nullptr; ///< counter of skipped faces (faces than can't be created)
     int* duplicatedVertexCount = nullptr; ///< counter of duplicated vertices (that created for resolve non-manifold geometry)
+    int* holesCount = nullptr;
     ProgressCallback callback;       ///< callback for set progress and stop process
 };
 

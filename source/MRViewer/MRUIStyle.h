@@ -201,6 +201,30 @@ MRVIEWER_API bool checkboxOrModifier( const char* label, CheckboxOrModifierState
 
 /// draw gradient radio button
 MRVIEWER_API bool radioButton( const char* label, int* value, int valButton );
+/// If `valueOverride` is specified, then the radio button is disabled and that value is displayed instead of `value`.
+MRVIEWER_API bool radioButtonOrFixedValue( const char* label, int* value, int valButton, std::optional<int> valueOverride );
+
+struct RadioButtonOrModifierState
+{
+    // The permanent value of this setting, as set by the user by clicking the radio button.
+    int value{};
+    // The value that is displayed, and to be used - can differ from `value` if modifiers are pressed.
+    int effectiveValue{};
+
+    // The effective value, affected by modifiers.
+    [[nodiscard]] explicit operator int() const
+    {
+        return effectiveValue;
+    }
+};
+
+/// Draws a radio button, that can be affected by modifier keys.
+/// `modifiers` must be one or more of `ImGuiMod_{Shift,Alt,Ctrl}`.
+/// By default ignores all modifiers not in `modifiers`. But if `checkedModifiers` is specified, then only ignores modifiers not included in it.
+/// `checkedModifiers` must be a superset of `modifiers`. `-1` has special meaning, making it same as `modifiers` (which makes it have no effect).
+/// If `valueOverride` is specified, then acts as `radioButtonOrFixedValue`: disables the radio button and displays that value instead of the real one,
+///   and also pretends that the modifier isn't held.
+MRVIEWER_API bool radioButtonOrModifier( const char* label, RadioButtonOrModifierState& value, int valButton, int modifiers, int checkedModifiers = -1, std::optional<int> valueOverride = {} );
 
 /// draw gradient color edit 4
 MRVIEWER_API bool colorEdit4( const char* label, Vector4f& color, ImGuiColorEditFlags flags = ImGuiColorEditFlags_None );

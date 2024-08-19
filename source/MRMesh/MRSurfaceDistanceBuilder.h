@@ -1,8 +1,10 @@
 #pragma once
 
+#include "MRMeshFwd.h"
 #include "MRId.h"
 #include "MRVector.h"
 #include "MRVector3.h"
+
 #include <cfloat>
 #include <optional>
 #include <queue>

@@ -30,6 +30,8 @@ using VertBitSet = TaggedBitSet<VertTag>;
 using EdgeBitSet = TaggedBitSet<EdgeTag>;
 using UndirectedEdgeBitSet = TaggedBitSet<UndirectedEdgeTag>;
 using FaceBitSet = TaggedBitSet<FaceTag>;
+using PixelBitSet = TaggedBitSet<PixelTag>;
+using VoxelBitSet = TaggedBitSet<VoxelTag>;
 
 template <typename T> class MRMESH_CLASS SetBitIteratorT;
 using SetBitIterator = SetBitIteratorT<BitSet>;

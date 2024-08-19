@@ -10,13 +10,11 @@
 namespace MR
 {
 
-class MRMESH_CLASS VoxelTag;
 class MRMESH_CLASS RegionTag;
 class MRMESH_CLASS NodeTag;
 class MRMESH_CLASS ObjTag;
 class MRMESH_CLASS TextureTag;
 
-using VoxelId = Id<VoxelTag>;
 using RegionId = Id<RegionTag>;
 using NodeId = Id<NodeTag>;
 using ObjId = Id<ObjTag>;
@@ -40,7 +38,6 @@ using EdgeLoop = std::vector<EdgeId>;
 struct MRMESH_CLASS Dipole;
 using Dipoles = Vector<Dipole, NodeId>;
 
-using VoxelBitSet = TaggedBitSet<VoxelTag>;
 using RegionBitSet = TaggedBitSet<RegionTag>;
 using NodeBitSet = TaggedBitSet<NodeTag>;
 using ObjBitSet = TaggedBitSet<ObjTag>;
@@ -74,10 +71,6 @@ struct PointOnObject;
 struct MeshTriPoint;
 struct MeshProjectionResult;
 struct MeshIntersectionResult;
-
-/// Coordinates on texture
-/// \param x,y should be in range [0..1], otherwise result depends on wrap type of texture (no need to clamp it, it is done on GPU if wrap type is "Clamp" )
-using UVCoord = Vector2f;
 
 using ObjMap = Vector<ObjId, ObjId>;
 ///  mapping of whole edges: map[e]->f, map[e.sym()]->f.sym(), where only map[e] for even edges is stored
@@ -217,12 +210,6 @@ using UndirEdgeColorMapAggregator = ColorMapAggregator<UndirectedEdgeTag>;
 using FaceColorMapAggregator = ColorMapAggregator<FaceTag>;
 
 class WatershedGraph;
-
-enum class FilterType : char
-{
-    Linear,
-    Discrete
-};
 
 enum class WrapType : char
 {

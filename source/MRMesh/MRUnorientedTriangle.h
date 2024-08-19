@@ -1,6 +1,8 @@
 #pragma once
 
+#include "MRMeshFwd.h"
 #include "MRId.h"
+
 #include <cassert>
 #include <utility>
 

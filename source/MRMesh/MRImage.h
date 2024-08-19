@@ -1,8 +1,10 @@
 #pragma once
 
+#include "MRKernelFwd.h"
 #include "MRColor.h"
-#include "MRVector2.h"
 #include "MRHeapBytes.h"
+#include "MRVector2.h"
+
 #include <cassert>
 #include <vector>
 

@@ -1,7 +1,10 @@
 #pragma once
+
+#include "MRMeshFwd.h"
 #include "MRVector3.h"
 #include "MRHeapBytes.h"
 #include "MRExpected.h"
+
 #include <limits>
 #include <vector>
 

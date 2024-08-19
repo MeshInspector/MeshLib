@@ -1,9 +1,11 @@
 #pragma once
 
+#include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
 #include "MRAffineXf3.h"
 #include "MRId.h"
 #include "MRVector.h"
+
 #include <cassert>
 
 namespace MR

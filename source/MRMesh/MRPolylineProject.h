@@ -1,6 +1,9 @@
 #pragma once
+
+#include "MRMeshFwd.h"
 #include "MRId.h"
 #include "MRVector3.h"
+
 #include <cfloat>
 #include <functional>
 

@@ -1,6 +1,8 @@
 #pragma once
 
+#include "MRMeshFwd.h"
 #include "MRGraph.h"
+
 #include <cassert>
 #include <cfloat>
 

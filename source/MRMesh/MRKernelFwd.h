@@ -45,12 +45,16 @@ class MRMESH_CLASS VertTag;
 class MRMESH_CLASS EdgeTag;
 class MRMESH_CLASS UndirectedEdgeTag;
 class MRMESH_CLASS FaceTag;
+class MRMESH_CLASS PixelTag;
+class MRMESH_CLASS VoxelTag;
 
 template <typename T> class MRMESH_CLASS Id;
 using VertId = Id<VertTag>;
 using EdgeId = Id<EdgeTag>;
 using UndirectedEdgeId = Id<UndirectedEdgeTag>;
 using FaceId = Id<FaceTag>;
+using PixelId = Id<PixelTag>;
+using VoxelId = Id<VoxelTag>;
 
 template <typename T, typename I> class MRMESH_CLASS Vector;
 template <typename T, typename I = size_t> class MRMESH_CLASS Buffer;
@@ -243,6 +247,10 @@ template <typename T> struct TriPoint;
 using TriPointf = TriPoint<float>;
 using TriPointd = TriPoint<double>;
 
+/// Coordinates on texture
+/// \param x,y should be in range [0..1], otherwise result depends on wrap type of texture (no need to clamp it, it is done on GPU if wrap type is "Clamp" )
+using UVCoord = Vector2f;
+
 using VertMap = Vector<VertId, VertId>;
 using EdgeMap = Vector<EdgeId, EdgeId>;
 using UndirectedEdgeMap = Vector<UndirectedEdgeId, UndirectedEdgeId>;
@@ -280,6 +288,12 @@ template <typename I> class UnionFind;
 
 template<typename T>
 class FewSmallest;
+
+enum class FilterType : char
+{
+	Linear,
+	Discrete
+};
 
 /// Argument value - progress in [0,1];
 /// returns true to continue the operation and returns false to stop the operation

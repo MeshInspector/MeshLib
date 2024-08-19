@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRBaseFwd.h"
 #include "MRHash.h"
 
 #if defined(__EMSCRIPTEN__)

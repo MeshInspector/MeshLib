@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMeshFwd.h"
 #include "MRDistanceVolumeParams.h"
 #include "MRExpected.h"
 

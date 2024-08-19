@@ -1,5 +1,6 @@
 #include "MRUnits.h"
 
+#include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRString.h"
 #include "MRPch/MRFmt.h"

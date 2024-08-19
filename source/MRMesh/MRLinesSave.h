@@ -1,8 +1,10 @@
 #pragma once
 
+#include "MRMeshFwd.h"
 #include "MRExpected.h"
 #include "MRIOFilters.h"
 #include "MRSaveSettings.h"
+
 #include <filesystem>
 #include <ostream>
 

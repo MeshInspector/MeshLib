@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRBaseFwd.h"
+#include "MRKernelFwd.h"
 #include <vector>
 #include <memory>
 

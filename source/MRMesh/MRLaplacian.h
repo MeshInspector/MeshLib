@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRMeshFwd.h"
 #include "MRBitSet.h"
 #include "MRVector.h"
 #include "MRVector3.h"

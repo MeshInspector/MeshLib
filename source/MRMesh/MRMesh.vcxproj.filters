@@ -285,9 +285,6 @@
     <ClInclude Include="MRSceneColors.h">
       <Filter>Source Files\Mesh\BaseStructures</Filter>
     </ClInclude>
-    <ClInclude Include="MRVolumeIndexer.h">
-      <Filter>Source Files\Voxels</Filter>
-    </ClInclude>
     <ClInclude Include="MRTeethMaskToDirectionVolume.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
@@ -428,9 +425,6 @@
     </ClInclude>
     <ClInclude Include="MRImageLoad.h">
       <Filter>Source Files\IO</Filter>
-    </ClInclude>
-    <ClInclude Include="MRImage.h">
-      <Filter>Source Files\Mesh\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineTopology.h">
       <Filter>Source Files\Mesh\Polyline</Filter>
@@ -1143,9 +1137,6 @@
     <ClInclude Include="MRHeap.h">
       <Filter>Source Files\2. Base\DataStructures</Filter>
     </ClInclude>
-    <ClInclude Include="MRHeapBytes.h">
-      <Filter>Source Files\2. Base\Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="MRIteratorRange.h">
       <Filter>Source Files\1. Kernel\Helpers</Filter>
     </ClInclude>
@@ -1247,9 +1238,6 @@
     </ClInclude>
     <ClInclude Include="MRHighPrecision.h">
       <Filter>Source Files\2. Base\Helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="MRHistogram.h">
-      <Filter>Source Files\2. Base\DataStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRIntersection.h">
       <Filter>Source Files\1. Kernel\Algorithms</Filter>
@@ -1392,9 +1380,6 @@
     <ClInclude Include="MRProgressCallback.h">
       <Filter>Source Files\1. Kernel\Algorithms</Filter>
     </ClInclude>
-    <ClInclude Include="MRVoxelId.h">
-      <Filter>Source Files\Voxels</Filter>
-    </ClInclude>
     <ClInclude Include="MRMeshId.h">
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
@@ -1406,6 +1391,18 @@
     </ClInclude>
     <ClInclude Include="MRGraph.h">
       <Filter>Source Files\2. Base\DataStructures</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVolumeIndexer.h">
+      <Filter>Source Files\2. Base\DataStructures</Filter>
+    </ClInclude>
+    <ClInclude Include="MRHeapBytes.h">
+      <Filter>Source Files\1. Kernel\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRImage.h">
+      <Filter>Source Files\1. Kernel\DataStructures</Filter>
+    </ClInclude>
+    <ClInclude Include="MRHistogram.h">
+      <Filter>Source Files\1. Kernel\DataStructures</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1516,9 +1513,6 @@
     </ClCompile>
     <ClCompile Include="MRSceneColors.cpp">
       <Filter>Source Files\Mesh\BaseStructures</Filter>
-    </ClCompile>
-    <ClCompile Include="MRVolumeIndexer.cpp">
-      <Filter>Source Files\Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRTeethMaskToDirectionVolume.cpp">
       <Filter>Source Files\Voxels</Filter>
@@ -2039,9 +2033,6 @@
     <ClCompile Include="MRSaveSettings.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
-    <ClCompile Include="MRImage.cpp">
-      <Filter>Source Files\Mesh\BaseStructures</Filter>
-    </ClCompile>
     <ClCompile Include="MRSceneLoad.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
@@ -2240,9 +2231,6 @@
     <ClCompile Include="MRFeatures.cpp">
       <Filter>Source Files\Feature</Filter>
     </ClCompile>
-    <ClCompile Include="MRHistogram.cpp">
-      <Filter>Source Files\2. Base\DataStructures</Filter>
-    </ClCompile>
     <ClCompile Include="MRIntersection.cpp">
       <Filter>Source Files\1. Kernel\Algorithms</Filter>
     </ClCompile>
@@ -2299,6 +2287,15 @@
     </ClCompile>
     <ClCompile Include="MRGraph.cpp">
       <Filter>Source Files\2. Base\DataStructures</Filter>
+    </ClCompile>
+    <ClCompile Include="MRVolumeIndexer.cpp">
+      <Filter>Source Files\2. Base\DataStructures</Filter>
+    </ClCompile>
+    <ClCompile Include="MRImage.cpp">
+      <Filter>Source Files\1. Kernel\DataStructures</Filter>
+    </ClCompile>
+    <ClCompile Include="MRHistogram.cpp">
+      <Filter>Source Files\1. Kernel\DataStructures</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -1,6 +1,8 @@
 #pragma once
 
+#include "MRMeshFwd.h"
 #include "MRUnionFind.h"
+
 #include <functional>
 
 namespace MR

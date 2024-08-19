@@ -1,7 +1,9 @@
 #pragma once
 
+#include "MRMeshFwd.h"
 #include "MRId.h"
 #include "MRBuffer.h"
+
 #include <tuple>
 
 namespace MR

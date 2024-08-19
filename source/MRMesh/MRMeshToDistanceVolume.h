@@ -1,9 +1,11 @@
 #pragma once
 
+#include "MRMeshFwd.h"
 #include "MRDistanceVolumeParams.h"
 #include "MRSignDetectionMode.h"
 #include "MRVoxelsVolume.h"
 #include "MRExpected.h"
+
 #include <cfloat>
 #include <memory>
 #include <optional>

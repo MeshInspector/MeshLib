@@ -1,7 +1,10 @@
 #pragma once
 
+#include "MRMeshFwd.h"
 #include "MRId.h"
+#include "MRGraph.h"
 #include "MRHeap.h"
+
 #include <cfloat>
 
 namespace MR
@@ -25,9 +28,9 @@ public:
     {
         Event event = Event::Finish;
         float amount = FLT_MAX;///< amount of precipitation (in same units as mesh coordinates and water level)
-        GraphVertId basin;     ///< BasinFull: this basin just became full
+        Graph::VertId basin;   ///< BasinFull: this basin just became full
                                ///< Merge: this basin just absorbed the other basin
-        GraphVertId neiBasin;  ///< BasinFull: the flow from full basin will first go here (may be not the last destination)
+        Graph::VertId neiBasin;///< BasinFull: the flow from full basin will first go here (may be not the last destination)
                                ///< Merge: this basin was just absorbed
     };
 
@@ -36,7 +39,7 @@ public:
 
 private:
     WatershedGraph& wg_;
-    Heap<float, GraphVertId, std::greater<float>> heap_;
+    Heap<float, Graph::VertId, std::greater<float>> heap_;
 };
 
 } //namespace MR

@@ -1,5 +1,6 @@
 #include "MRId.h"
 
+#include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRId.h"
 
 using namespace MR;

@@ -216,12 +216,12 @@ void SceneObjectsListDrawer::selectAllObjects()
     }
 }
 
-void SceneObjectsListDrawer::showAllObjects()
+void SceneObjectsListDrawer::setVisible( bool visible )
 {
     const auto& selectable = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
     for ( auto obj : selectable )
     {
-        obj->setVisible( true );
+        obj->setVisible( visible );
     }
 }
 

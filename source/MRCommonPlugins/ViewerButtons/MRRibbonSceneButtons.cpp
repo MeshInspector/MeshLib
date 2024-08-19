@@ -94,7 +94,7 @@ bool RibbonSceneShowAll::action()
     if ( auto menu = getViewerInstance().getMenuPlugin() )
     {
         if ( auto sceneList = menu->getSceneObjectsList() )
-            sceneList->showAllObjects();
+            sceneList->setVisible( true );
     }
     return false;
 }
@@ -105,9 +105,11 @@ RibbonSceneHideAll::RibbonSceneHideAll() :
 
 bool RibbonSceneHideAll::action()
 {
-    const auto selectable = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selectable );
-    for ( auto obj : selectable )
-        obj->setVisible( false );
+    if ( auto menu = getViewerInstance().getMenuPlugin() )
+    {
+        if ( auto sceneList = menu->getSceneObjectsList() )
+            sceneList->setVisible( false );
+    }
     return false;
 }
 

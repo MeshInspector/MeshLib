@@ -226,9 +226,6 @@ enum class Reorder : char
     AABBTree           ///< the order is determined so to put close in space points in close indices (optimal for compression)
 };
 
-template<typename...>
-inline constexpr bool dependent_false = false;
-
 class IFastWindingNumber;
 class IPointsToMeshProjector;
 

@@ -3,7 +3,7 @@
 // A template implementation file for `MRUIStyle.h`. Include that file.
 
 #include "MRUIStyle.h" // To help intellisense.
-#include "MRMesh/MRMeshFwd.h"
+#include "MRMesh/MRKernelFwd.h"
 #include "MRViewer/MRUITestEngine.h"
 
 namespace MR::UI

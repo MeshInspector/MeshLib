@@ -319,6 +319,9 @@ struct overloaded : Ts... { using Ts::operator()...; };
 template<class... Ts>
 overloaded( Ts... ) -> overloaded<Ts...>;
 
+template<typename...>
+inline constexpr bool dependent_false = false;
+
 } // namespace MR
 
 #ifdef __cpp_lib_unreachable

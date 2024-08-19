@@ -15,8 +15,7 @@ namespace MR
 /// information about loading process and mesh construction from primitives
 struct MeshLoadMetrics
 {
-    int* skippedFaceCount = nullptr; ///< counter of skipped faces (faces than can't be created)
-    int* duplicatedVertexCount = nullptr; ///< counter of duplicated vertices (that created for resolve non-manifold geometry)
+    std::string* warnings = nullptr; ///< any warnings during loading will be appended here
     ProgressCallback callback;       ///< callback for set progress and stop process
 };
 

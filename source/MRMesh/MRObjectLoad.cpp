@@ -343,8 +343,12 @@ static std::string makeWarningString( int skippedFaceCount, int duplicatedVertex
             res += '\n';
         res += fmt::format( "{} vertices were duplicated to make them manifold.", duplicatedVertexCount );
     }
-    if( holesCount )
-        res = fmt::format( "the objects contains {} holes. Please consider using Fill Holes tool.", holesCount );
+    if ( holesCount )
+    {
+        if ( !res.empty() )
+            res += '\n';
+        res += fmt::format( "The objects contains {} holes. Please consider using Fill Holes tool.", holesCount );
+    }
     return res;
 }
 

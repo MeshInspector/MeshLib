@@ -105,10 +105,6 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/libjpeg-turbo.sh ${MESHLIB_THIRDPARTY_DIR}/libjpeg-turbo
 
   emcmake cmake -DMR_EMSCRIPTEN=1 -DMR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} ${MESHLIB_THIRDPARTY_DIR} -DCMAKE_INSTALL_PREFIX=${MESHLIB_THIRDPARTY_ROOT_DIR}
-  # build might fail on the first try due to linkage's race condition (?)
-  set +e
-  emmake make -j `nproc` #VERBOSE=1
-  set -e
   emmake make -j `nproc` #VERBOSE=1
   make install
 

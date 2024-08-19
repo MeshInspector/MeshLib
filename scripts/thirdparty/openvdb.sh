@@ -16,5 +16,6 @@ CMAKE_OPTIONS="${CMAKE_OPTIONS} \
   -D Tbb_VERSION=2021.12 \
 "
 
-source "$( dirname $0 )"/functions.sh
-build_install "${SOURCE_DIR}" "${BUILD_DIR}" "${CMAKE_OPTIONS}"
+cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" ${CMAKE_OPTIONS}
+cmake --build "${BUILD_DIR}" -j `nproc`
+cmake --install "${BUILD_DIR}"

@@ -51,7 +51,7 @@ enum FaceIncidence
 [[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, UnionFind<FaceId> & unionFind, float minArea,
     UndirectedEdgeBitSet * outBdEdgesBetweenLargeComps = nullptr );
 
-struct LargeByAreaNumComponentsSettings
+struct LargeByAreaComponentsSettings
 {
     /// return at most given number of largest by area connected components
     int maxLargeComponents = 2;
@@ -64,7 +64,7 @@ struct LargeByAreaNumComponentsSettings
 };
 
 /// returns requested number of largest by area connected components in descending by area order
-[[nodiscard]] MRMESH_API std::vector<FaceBitSet> getLargeByAreaNumComponents( const MeshPart& meshPart, const LargeByAreaNumComponentsSettings & settings );
+[[nodiscard]] MRMESH_API std::vector<FaceBitSet> getNLargeByAreaComponents( const MeshPart& meshPart, const LargeByAreaComponentsSettings & settings );
 
 /// returns the union of connected components, each having at least given area,
 /// and any two faces in a connected component have a path along the surface across the edges, where surface does not deviate from plane more than on given angle

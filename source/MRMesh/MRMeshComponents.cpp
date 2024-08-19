@@ -264,7 +264,7 @@ FaceBitSet getLargeByAreaComponents( const MeshPart& mp, UnionFind<FaceId> & uni
     return res;
 }
 
-std::vector<FaceBitSet> getLargeByAreaNumComponents( const MeshPart& mp, const LargeByAreaNumComponentsSettings & settings )
+std::vector<FaceBitSet> getNLargeByAreaComponents( const MeshPart& mp, const LargeByAreaComponentsSettings & settings )
 {
     MR_TIMER
     std::vector<FaceBitSet> res;

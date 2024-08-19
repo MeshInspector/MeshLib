@@ -4,6 +4,7 @@
 #include "MRTimer.h"
 #include "MRRingIterator.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
 #include "MRMeshBuilder.h"
 #include "MREdgeIterator.h"
@@ -76,7 +77,7 @@ VertBitSet getComponentVerts( const Mesh& mesh, VertId id, const VertBitSet* reg
 
 }
 
-FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd )
+FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd, float minArea )
 {
     MR_TIMER
 
@@ -87,21 +88,24 @@ FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidenc
     const auto& allRoots = unionFindStruct.roots();
     auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, region );
 
-    double maxArea = -DBL_MAX;
+    double maxDblArea = -DBL_MAX;
     int maxI = 0;
-    std::vector<double> areas( k, 0.0 );
+    std::vector<double> dblAreas( k, 0.0 );
     for ( auto f : region )
     {
         auto index = uniqueRootsMap[f];
-        auto& area = areas[index];
-        area += meshPart.mesh.dblArea( f );
-        if ( area > maxArea )
+        auto& dblArea = dblAreas[index];
+        dblArea += meshPart.mesh.dblArea( f );
+        if ( dblArea > maxDblArea )
         {
             maxI = index;
-            maxArea = area;
+            maxDblArea = dblArea;
         }
     }
-    FaceBitSet maxAreaComponent( region.find_last() + 1 );
+    FaceBitSet maxAreaComponent;
+    if ( maxDblArea < 2 * minArea )
+        return maxAreaComponent;
+    maxAreaComponent.resize( region.find_last() + 1 );
     for ( auto f : region )
     {
         auto index = uniqueRootsMap[f];
@@ -205,15 +209,15 @@ FaceBitSet getLargeByAreaComponents( const MeshPart& mp, float minArea, const Un
 }
 
 FaceBitSet getLargeByAreaSmoothComponents( const MeshPart& mp, float minArea, float angleFromPlanar,
-    UndirectedEdgeBitSet * bdEdgesBetweenLargeComps )
+    UndirectedEdgeBitSet * outBdEdgesBetweenLargeComps )
 {
     const float critCos = std::cos( angleFromPlanar );
     auto unionFind = MeshComponents::getUnionFindStructureFacesPerEdge( mp, [&]( UndirectedEdgeId ue ) { return mp.mesh.dihedralAngleCos( ue ) < critCos; } );
-    return MeshComponents::getLargeByAreaComponents( mp, unionFind, minArea, bdEdgesBetweenLargeComps );
+    return MeshComponents::getLargeByAreaComponents( mp, unionFind, minArea, outBdEdgesBetweenLargeComps );
 }
 
 FaceBitSet getLargeByAreaComponents( const MeshPart& mp, UnionFind<FaceId> & unionFind, float minArea,
-    UndirectedEdgeBitSet * bdEdgesBetweenLargeComps )
+    UndirectedEdgeBitSet * outBdEdgesBetweenLargeComps )
 {
     MR_TIMER
 
@@ -233,12 +237,12 @@ FaceBitSet getLargeByAreaComponents( const MeshPart& mp, UnionFind<FaceId> & uni
             res.set( f );
     }
 
-    if ( bdEdgesBetweenLargeComps )
+    if ( outBdEdgesBetweenLargeComps )
     {
-        bdEdgesBetweenLargeComps->clear();
-        bdEdgesBetweenLargeComps->resize( mp.mesh.topology.undirectedEdgeSize() );
+        outBdEdgesBetweenLargeComps->clear();
+        outBdEdgesBetweenLargeComps->resize( mp.mesh.topology.undirectedEdgeSize() );
         const auto & roots = unionFind.parents();
-        BitSetParallelForAll( *bdEdgesBetweenLargeComps, [&]( UndirectedEdgeId ue )
+        BitSetParallelForAll( *outBdEdgesBetweenLargeComps, [&]( UndirectedEdgeId ue )
         {
             auto l = mp.mesh.topology.left( ue );
             if ( !l )
@@ -253,10 +257,72 @@ FaceBitSet getLargeByAreaComponents( const MeshPart& mp, UnionFind<FaceId> & uni
             if ( root2area[ rroot ] < minArea )
                 return;
             if ( lroot != rroot )
-                bdEdgesBetweenLargeComps->set( ue );
+                outBdEdgesBetweenLargeComps->set( ue );
         } );
     }
 
+    return res;
+}
+
+std::vector<FaceBitSet> getNLargeByAreaComponents( const MeshPart& mp, const LargeByAreaComponentsSettings & settings )
+{
+    MR_TIMER
+    std::vector<FaceBitSet> res;
+
+    assert( settings.maxLargeComponents > 0 );
+    if ( settings.maxLargeComponents <= 0 )
+        return res;
+    if ( settings.maxLargeComponents == 1 )
+    {
+        res.push_back( getLargestComponent( mp, PerEdge, settings.isCompBd, settings.minArea ) );
+        return res;
+    }
+
+    auto unionFind = getUnionFindStructureFacesPerEdge( mp, settings.isCompBd );
+    const auto & roots = unionFind.roots();
+
+    HashMap<FaceId, float> root2area;
+    const FaceBitSet& region = mp.mesh.topology.getFaceIds( mp.region );
+    for ( auto f : region )
+        root2area[ roots[f] ] += mp.mesh.area( f );
+
+    struct AreaRoot
+    {
+        float area = 0;
+        FaceId root;
+        constexpr auto operator <=>( const AreaRoot& ) const = default;
+    };
+
+    std::vector<AreaRoot> areaRootVec;
+    areaRootVec.reserve( root2area.size() );
+    // fill it with not too small components
+    for ( const auto & [root, area] : root2area )
+    {
+        if ( area >= settings.minArea )
+            areaRootVec.push_back( { area, root } );
+    }
+
+    // leave at most given number of roots sorted in descending by area order
+    if ( areaRootVec.size() <= settings.maxLargeComponents )
+    {
+        std::sort( areaRootVec.begin(), areaRootVec.end(), std::greater() );
+    }
+    else
+    {
+        std::partial_sort( areaRootVec.begin(), areaRootVec.begin() + settings.maxLargeComponents, areaRootVec.end(), std::greater() );
+        areaRootVec.resize( settings.maxLargeComponents );
+    }
+
+    res.resize( areaRootVec.size() );
+    ParallelFor( res, [&]( size_t i )
+    {
+        const auto myRoot = areaRootVec[i].root;
+        auto & fs = res[i];
+        fs.resize( mp.mesh.topology.faceSize() );
+        for ( auto f : region )
+            if ( roots[f] == myRoot )
+                fs.set( f );
+    } );
     return res;
 }
 

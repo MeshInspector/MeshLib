@@ -41,24 +41,24 @@ struct NoInit {};
 inline constexpr NoInit noInit;
 template <typename T> struct MRMESH_CLASS NoDefInit;
 
-class MRMESH_CLASS VertTag;
 class MRMESH_CLASS EdgeTag;
 class MRMESH_CLASS UndirectedEdgeTag;
 class MRMESH_CLASS FaceTag;
+class MRMESH_CLASS VertTag;
 class MRMESH_CLASS PixelTag;
 class MRMESH_CLASS VoxelTag;
 
 template <typename T> class MRMESH_CLASS Id;
-using VertId = Id<VertTag>;
-using EdgeId = Id<EdgeTag>;
-using UndirectedEdgeId = Id<UndirectedEdgeTag>;
-using FaceId = Id<FaceTag>;
-using PixelId = Id<PixelTag>;
-using VoxelId = Id<VoxelTag>;
-
 template <typename T, typename I> class MRMESH_CLASS Vector;
 template <typename T, typename I = size_t> class MRMESH_CLASS Buffer;
 struct PackMapping;
+
+using EdgeId = Id<EdgeTag>;
+using UndirectedEdgeId = Id<UndirectedEdgeTag>;
+using FaceId = Id<FaceTag>;
+using VertId = Id<VertTag>;
+using PixelId = Id<PixelTag>;
+using VoxelId = Id<VoxelTag>;
 
 struct Color;
 
@@ -247,36 +247,26 @@ template <typename T> struct TriPoint;
 using TriPointf = TriPoint<float>;
 using TriPointd = TriPoint<double>;
 
+template <typename I> struct IteratorRange;
+
 /// Coordinates on texture
 /// \param x,y should be in range [0..1], otherwise result depends on wrap type of texture (no need to clamp it, it is done on GPU if wrap type is "Clamp" )
 using UVCoord = Vector2f;
 
+using FaceMap = Vector<FaceId, FaceId>;
 using VertMap = Vector<VertId, VertId>;
 using EdgeMap = Vector<EdgeId, EdgeId>;
 using UndirectedEdgeMap = Vector<UndirectedEdgeId, UndirectedEdgeId>;
-using FaceMap = Vector<FaceId, FaceId>;
 
 using VertColors = Vector<Color, VertId>;
+using FaceColors = Vector<Color, FaceId>;
 using EdgeColors = Vector<Color, EdgeId>;
 using UndirectedEdgeColors = Vector<Color, UndirectedEdgeId>;
-using FaceColors = Vector<Color, FaceId>;
 
 using VertScalars = Vector<float, VertId>;
+using FaceScalars = Vector<float, FaceId>;
 using EdgeScalars = Vector<float, EdgeId>;
 using UndirectedEdgeScalars = Vector<float, UndirectedEdgeId>;
-using FaceScalars = Vector<float, FaceId>;
-
-template <typename T> struct IntersectionPrecomputes;
-template <typename T> struct IntersectionPrecomputes2;
-
-template <typename I> struct IteratorRange;
-
-template <typename T, typename I> struct MRMESH_CLASS BMap;
-using VertBMap = BMap<VertId, VertId>;
-using EdgeBMap = BMap<EdgeId, EdgeId>;
-using UndirectedEdgeBMap = BMap<UndirectedEdgeId, UndirectedEdgeId>;
-using WholeEdgeBMap = BMap<EdgeId, UndirectedEdgeId>;
-using FaceBMap = BMap<FaceId, FaceId>;
 
 template <typename T>
 [[nodiscard]] inline bool contains( const std::function<bool( Id<T> )>& pred, Id<T> id )
@@ -284,10 +274,25 @@ template <typename T>
 	return id.valid() && ( !pred || pred( id ) );
 }
 
+template <typename T, typename I> struct MRMESH_CLASS BMap;
+using FaceBMap = BMap<FaceId, FaceId>;
+using VertBMap = BMap<VertId, VertId>;
+using EdgeBMap = BMap<EdgeId, EdgeId>;
+using UndirectedEdgeBMap = BMap<UndirectedEdgeId, UndirectedEdgeId>;
+using WholeEdgeBMap = BMap<EdgeId, UndirectedEdgeId>;
+
 template <typename I> class UnionFind;
+
+template <typename T> struct IntersectionPrecomputes;
+template <typename T> struct IntersectionPrecomputes2;
 
 template<typename T>
 class FewSmallest;
+
+/// Argument value - progress in [0,1];
+/// returns true to continue the operation and returns false to stop the operation
+/// \ingroup BasicStructuresGroup
+typedef std::function<bool( float )> ProgressCallback;
 
 enum class FilterType : char
 {
@@ -295,22 +300,14 @@ enum class FilterType : char
 	Discrete
 };
 
-/// Argument value - progress in [0,1];
-/// returns true to continue the operation and returns false to stop the operation
-/// \ingroup BasicStructuresGroup
-typedef std::function<bool( float )> ProgressCallback;
+template <typename T>
+constexpr inline T sqr( T x ) noexcept { return x * x; }
 
 template <typename T>
-constexpr inline T sqr( T x ) noexcept
-{
-	return x * x;
-}
+constexpr inline int sgn( T x ) noexcept { return x > 0 ? 1 : ( x < 0 ? -1 : 0 ); }
 
-template <typename T>
-constexpr inline int sgn( T x ) noexcept
-{
-	return x > 0 ? 1 : ( x < 0 ? -1 : 0 );
-}
+template<typename...>
+inline constexpr bool dependent_false = false;
 
 template<class... Ts>
 struct overloaded : Ts... { using Ts::operator()...; };
@@ -318,9 +315,6 @@ struct overloaded : Ts... { using Ts::operator()...; };
 // explicit deduction guide (not needed as of C++20, but still needed in Clang)
 template<class... Ts>
 overloaded( Ts... ) -> overloaded<Ts...>;
-
-template<typename...>
-inline constexpr bool dependent_false = false;
 
 } // namespace MR
 

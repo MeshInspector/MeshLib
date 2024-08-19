@@ -11,6 +11,23 @@
 namespace MR
 {
 
+class MRMESH_CLASS BitSet;
+template <typename T> class MRMESH_CLASS TaggedBitSet;
+template <typename T> class MRMESH_CLASS SetBitIteratorT;
+
+using FaceBitSet = TaggedBitSet<FaceTag>;
+using VertBitSet = TaggedBitSet<VertTag>;
+using EdgeBitSet = TaggedBitSet<EdgeTag>;
+using UndirectedEdgeBitSet = TaggedBitSet<UndirectedEdgeTag>;
+using PixelBitSet = TaggedBitSet<PixelTag>;
+using VoxelBitSet = TaggedBitSet<VoxelTag>;
+
+using SetBitIterator     = SetBitIteratorT<BitSet>;
+using FaceSetBitIterator = SetBitIteratorT<FaceBitSet>;
+using VertSetBitIterator = SetBitIteratorT<VertBitSet>;
+using EdgeSetBitIterator = SetBitIteratorT<EdgeBitSet>;
+using UndirectedEdgeSetBitIterator = SetBitIteratorT<UndirectedEdgeBitSet>;
+
 class PointToPointAligningTransform;
 class PointToPlaneAligningTransform;
 
@@ -23,22 +40,6 @@ template <typename K, typename V, typename Hash = phmap::priv::hash_default_hash
 using HashMap = phmap::flat_hash_map<K, V, Hash, Eq>;
 template <typename K, typename V, typename Hash = phmap::priv::hash_default_hash<K>, typename Eq = phmap::priv::hash_default_eq<K>>
 using ParallelHashMap = phmap::parallel_flat_hash_map<K, V, Hash, Eq>;
-
-class MRMESH_CLASS BitSet;
-template <typename T> class MRMESH_CLASS TaggedBitSet;
-using VertBitSet = TaggedBitSet<VertTag>;
-using EdgeBitSet = TaggedBitSet<EdgeTag>;
-using UndirectedEdgeBitSet = TaggedBitSet<UndirectedEdgeTag>;
-using FaceBitSet = TaggedBitSet<FaceTag>;
-using PixelBitSet = TaggedBitSet<PixelTag>;
-using VoxelBitSet = TaggedBitSet<VoxelTag>;
-
-template <typename T> class MRMESH_CLASS SetBitIteratorT;
-using SetBitIterator = SetBitIteratorT<BitSet>;
-using VertSetBitIterator = SetBitIteratorT<VertBitSet>;
-using EdgeSetBitIterator = SetBitIteratorT<EdgeBitSet>;
-using UndirectedEdgeSetBitIterator = SetBitIteratorT<UndirectedEdgeBitSet>;
-using FaceSetBitIterator = SetBitIteratorT<FaceBitSet>;
 
 template <typename T, typename I, typename P> class Heap;
 

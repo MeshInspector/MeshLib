@@ -300,7 +300,7 @@ namespace
 
     using MtlLibrary = HashMap<std::string, MtlMaterial>;
 
-    Expected<MtlLibrary, std::string> loadMtlLibrary( const std::filesystem::path& path )
+    Expected<MtlLibrary> loadMtlLibrary( const std::filesystem::path& path )
     {
         std::ifstream mtlIn( path, std::ios::binary );
         if ( !mtlIn.is_open() )
@@ -385,8 +385,8 @@ namespace MR
 namespace MeshLoad
 {
 
-Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const std::filesystem::path& file, bool combineAllObjects,
-                                                                const MeshLoadSettings& settings /*= {}*/ )
+Expected<std::vector<NamedMesh>> fromSceneObjFile( const std::filesystem::path& file, bool combineAllObjects,
+                                                                const ObjLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ios::binary );
     if ( !in )
@@ -395,8 +395,8 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const std::files
     return addFileNameInError( fromSceneObjFile( in, combineAllObjects, file.parent_path(), settings ), file );
 }
 
-Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream& in, bool combineAllObjects, const std::filesystem::path& dir,
-                                                                const MeshLoadSettings& settings /*= {}*/ )
+Expected<std::vector<NamedMesh>> fromSceneObjFile( std::istream& in, bool combineAllObjects, const std::filesystem::path& dir,
+                                                                const ObjLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
@@ -408,14 +408,14 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( std::istream& in
         return unexpected( "Loading canceled" );
     // TODO: redefine callback
 
-    MeshLoadSettings newSettings = settings;
+    ObjLoadSettings newSettings = settings;
     newSettings.callback = subprogress( settings.callback, 0.25f, 1.f );
 
     return fromSceneObjFile( data->data(), data->size(), combineAllObjects, dir, newSettings );
 }
 
-Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data, size_t size, bool combineAllObjects, const std::filesystem::path& dir,
-                                                                const MeshLoadSettings& settings /*= {}*/ )
+Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size, bool combineAllObjects, const std::filesystem::path& dir,
+                                                                const ObjLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER
 
@@ -428,7 +428,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
     VertUVCoords uvCoords;
     VertColors colors;
     auto hasColors = false;
-    Expected<MtlLibrary, std::string> mtl;
+    Expected<MtlLibrary> mtl;
     std::string currentMaterialName;
     std::optional<Vector3d> pointOffset;
 
@@ -461,17 +461,10 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
                     vs[i] -= minV;
             }
 
-            FaceBitSet skippedFaces;
             std::vector<MeshBuilder::VertDuplication> dups;
-            MeshBuilder::BuildSettings buildSettings;
-            if ( settings.skippedFaceCount )
-            {
-                skippedFaces = FaceBitSet( triangulation.size() );
-                skippedFaces.set();
-                buildSettings.region = &skippedFaces;
-            }
             result.mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices(
-                VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), triangulation, &dups, buildSettings );
+                VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), triangulation, &dups,
+                { .skippedFaceCount = settings.countSkippedFaces ? &result.skippedFaceCount : nullptr } );
             if ( hasColors )
             {
                 colors.resize( result.mesh.points.size() );
@@ -482,10 +475,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
                 colors = {};
                 hasColors = false;
             }
-            if ( settings.duplicatedVertexCount )
-                *settings.duplicatedVertexCount = int( dups.size() );
-            if ( settings.skippedFaceCount )
-                *settings.skippedFaceCount = int( skippedFaces.count() );
+            result.duplicatedVertexCount = int( dups.size() );
             triangulation.clear();
 
             VertHashMap dst2Src;
@@ -557,7 +547,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
     if ( !reportProgress( settings.callback, 0.5f ) )
         return unexpected( "Loading canceled" );
 
-    auto parseVertex = [&] ( size_t li ) -> Expected<std::tuple<Vector3d, Vector3d>, std::string>
+    auto parseVertex = [&] ( size_t li ) -> Expected<std::tuple<Vector3d, Vector3d>>
     {
         Vector3d v;
         Vector3d c { cInvalidColor };
@@ -823,7 +813,7 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
         case ObjElement::Unknown:
             break;
         case ObjElement::Vertex:
-            if ( settings.xf && !pointOffset.has_value() )
+            if ( settings.customXf && !pointOffset.has_value() )
             {
                 auto res1 = parseVertex( group.begin );
                 if ( !res1.has_value() )
@@ -835,7 +825,6 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
                 pointOffset.emplace( v );
                 if ( c != cInvalidColor )
                     hasColors = true;
-                *settings.xf = AffineXf3f::translation( Vector3f( *pointOffset ) );
             }
             parseVertices( group.begin, group.end, parseError );
             break;
@@ -863,6 +852,15 @@ Expected<std::vector<NamedMesh>, std::string> fromSceneObjFile( const char* data
     }
 
     finishObject();
+
+    // for now the transform is the same for all meshes, might be changed in future
+    if ( pointOffset )
+    {
+        assert( settings.customXf );
+        for ( auto & m : res )
+            m.xf = AffineXf3f::translation( Vector3f( *pointOffset ) );
+    }
+
     return res;
 }
 

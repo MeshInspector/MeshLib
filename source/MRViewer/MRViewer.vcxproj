@@ -114,10 +114,12 @@
     <ClCompile Include="MRRenderMeasurementObjects.cpp" />
     <ClCompile Include="MRUnits.cpp" />
     <ClCompile Include="MRVisualSubfeatures.cpp" />
-    <ClCompile Include="MRNameTagClickListener.cpp" />
+    <ClCompile Include="MRImGuiMenuListeners.cpp" />
     <ClCompile Include="MRUITestEngine.cpp" />
     <ClCompile Include="MRSpaceMouseHandler3dxMacDriver.cpp" />
     <ClCompile Include="MRUIRectAllocator.cpp" />
+    <ClCompile Include="MRUINonOverlappingLabels.cpp" />
+    <ClCompile Include="MRRenderImGuiLabelObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -245,10 +247,12 @@
     <ClInclude Include="MRUIStyle.ipp" />
     <ClInclude Include="MRVisualSubfeatures.h" />
     <ClInclude Include="MRSignalCombiners.h" />
-    <ClInclude Include="MRNameTagClickListener.h" />
+    <ClInclude Include="MRImGuiMenuListeners.h" />
     <ClInclude Include="MRUITestEngine.h" />
     <ClInclude Include="MRSpaceMouseHandler3dxMacDriver.h" />
     <ClInclude Include="MRUIRectAllocator.h" />
+    <ClInclude Include="MRUINonOverlappingLabels.h" />
+    <ClInclude Include="MRRenderImGuiLabelObject.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

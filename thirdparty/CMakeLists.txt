@@ -134,6 +134,8 @@ IF(MR_EMSCRIPTEN)
   add_subdirectory(./onetbb)
   set(CMAKE_SYSTEM_PROCESSOR "${CMAKE_SYSTEM_PROCESSOR_BACKUP}")
   install(DIRECTORY onetbb/include/tbb DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+
+  add_subdirectory(./tinyxml2)
 ELSE() # not MR_EMSCRIPTEN
   set(CLIP_EXAMPLES OFF)
   set(CLIP_TESTS OFF)

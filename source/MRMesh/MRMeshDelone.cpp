@@ -134,10 +134,8 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
     MR_TIMER;
     MR_WRITER( mesh );
 
-    UndirectedEdgeBitSet flipCandidates;
-    flipCandidates.resize( mesh.topology.undirectedEdgeSize() );
-    UndirectedEdgeBitSet nextFlipCandidates;
-    nextFlipCandidates.resize( mesh.topology.undirectedEdgeSize(), true );
+    UndirectedEdgeBitSet flipCandidates( mesh.topology.undirectedEdgeSize() );
+    UndirectedEdgeBitSet nextFlipCandidates( mesh.topology.undirectedEdgeSize(), true );
 
     int flipsDone = 0;
     for ( int iter = 0; iter < numIters; ++iter )

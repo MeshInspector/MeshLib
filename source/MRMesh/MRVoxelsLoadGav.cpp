@@ -11,7 +11,7 @@ namespace MR
 namespace VoxelsLoad
 {
 
-Expected<VdbVolume, std::string> fromGav( const std::filesystem::path& file, const ProgressCallback& cb )
+Expected<VdbVolume> fromGav( const std::filesystem::path& file, const ProgressCallback& cb )
 {
     std::ifstream in( file, std::ios::binary );
     if ( !in )
@@ -19,7 +19,7 @@ Expected<VdbVolume, std::string> fromGav( const std::filesystem::path& file, con
     return addFileNameInError( fromGav( in, cb ), file );
 }
 
-Expected<VdbVolume, std::string> fromGav( std::istream& in, const ProgressCallback& cb )
+Expected<VdbVolume> fromGav( std::istream& in, const ProgressCallback& cb )
 {
     uint32_t headerLen = 0;
     if ( !in.read( (char*) &headerLen, sizeof( headerLen ) ) )

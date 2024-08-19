@@ -81,7 +81,7 @@ MRMESH_API std::string replaceProhibitedChars( const std::string& line, char rep
 
 /// if (v) contains an error, then appends given file name to that error
 template<typename T>
-inline Expected<T, std::string> addFileNameInError( Expected<T, std::string> v, const std::filesystem::path & file )
+inline Expected<T> addFileNameInError( Expected<T> v, const std::filesystem::path & file )
 {
     if ( !v.has_value() )
         v = unexpected( v.error() + ": " + utf8string( file ) );

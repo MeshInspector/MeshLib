@@ -30,10 +30,15 @@ struct BuildSettings
 {
     /// if region is given then on input it contains the faces to be added, and on output the faces failed to be added
     FaceBitSet * region = nullptr;
+
     /// this value to be added to every faceId before its inclusion in the topology
     int shiftFaceId = 0;
+
     /// whether to permit non-manifold edges in the resulting topology
     bool allowNonManifoldEdge = true;
+
+    /// optional output: counter of skipped faces during mesh creation
+    int* skippedFaceCount = nullptr;
 };
 
 // each face is surrounded by a closed contour of vertices [fistVertex, lastVertex)

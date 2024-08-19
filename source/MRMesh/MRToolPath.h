@@ -131,19 +131,19 @@ struct ToolPathResult
 // this toolpath is built from the parallel sections along Z-axis
 // mesh can be transformed using xf parameter
 
-MRMESH_API Expected<ToolPathResult, std::string> constantZToolPath( const MeshPart& mp, const ToolPathParams& params );
+MRMESH_API Expected<ToolPathResult> constantZToolPath( const MeshPart& mp, const ToolPathParams& params );
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
 // // this one is traditional lace-roughing toolpath
 
 // Slices are built along the axis defined by cutDirection argument (can be Axis::X or Axis::Y)
-MRMESH_API Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const ToolPathParams& params, Axis cutDirection );
+MRMESH_API Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParams& params, Axis cutDirection );
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
 // this toolpath is built from geodesic parallels divercing from the given start point or from the bounaries of selected areas
 // if neither is specified, the lowest section by XY plane will be used as a start contour
 // mesh can be transformed using xf parameter
-MRMESH_API Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, const ConstantCuspParams& params );
+MRMESH_API Expected<ToolPathResult> constantCuspToolPath( const MeshPart& mp, const ConstantCuspParams& params );
 
 // generates G-Code for milling tool
 MRMESH_API std::shared_ptr<ObjectGcode> exportToolPathToGCode( const std::vector<GCommand>& commands );

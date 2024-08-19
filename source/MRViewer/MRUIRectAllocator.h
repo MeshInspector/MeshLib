@@ -5,6 +5,7 @@
 #include "MRMesh/MRHash.h"
 #include "MRMesh/MRphmap.h"
 #include "MRMesh/MRVector2.h"
+#include "MRMesh/MRViewportId.h"
 
 #include <imgui.h>
 
@@ -73,17 +74,41 @@ public:
     // `expectedWindowName` must match the window name.
     // The remaining parameters are forwarded to `ImGui::SetNextWindowPos()`, expect for one time where we find a free rect and use it instead.
     // `cond` must not be `ImGuiCond_Always` (aka 0), in that case we just forward the arguments and don't try to find a rect.
+    // We automatically avoid all windows with `[rect_allocator_ignore]` anywhere after `##` in the name.
     MRVIEWER_API void setFreeNextWindowPos( const char* expectedWindowName, ImVec2 defaultPos, ImGuiCond cond = ImGuiCond_Appearing, ImVec2 pivot = ImVec2() );
 
 private:
-    int lastFrameCount = -1;
+    int lastFrameCount_ = -1;
 
     struct WindowEntry
     {
         bool visitedThisFrame = true;
     };
-    phmap::flat_hash_map<std::string, WindowEntry> windows;
+    phmap::flat_hash_map<std::string, WindowEntry> windows_;
 };
 [[nodiscard]] MRVIEWER_API WindowRectAllocator& getDefaultWindowRectAllocator();
+
+// A rect allocator for labels.
+class LabelRectAllocator : public RectAllocator
+{
+public:
+    // Call this every frame to maintain a rectangle. Using the same ID more than once per frame triggers an assertion.
+    // Returns the free position closest to `pos`.
+    // Separate label lists are maintained per viewport.
+    // If `forceExactPosition == true`, the input position is returned unchanged, but the rect is still added to the internal list to push away other rects.
+    MRVIEWER_API ImVec2 createRect( ViewportId viewportId, std::string id, ImVec2 pos, ImVec2 size, bool forceExactPosition = false );
+
+private:
+    int lastFrameCount_ = -1;
+
+    struct Entry
+    {
+        Box2f box;
+        bool visitedThisFrame = true;
+    };
+    // The vector uses viewport indices.
+    std::vector<phmap::flat_hash_map<std::string, Entry>> entries_;
+};
+[[nodiscard]] MRVIEWER_API LabelRectAllocator& getDefaultLabelRectAllocator();
 
 }

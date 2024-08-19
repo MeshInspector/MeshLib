@@ -1392,9 +1392,9 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
     if ( !wasActive && !available )
         return;
     ImGui::CloseCurrentPopup();
-    getViewerInstance().mouseController().preCheckConflicts();
+    int conflicts = getViewerInstance().mouseController().getMouseConflicts();
     bool stateChanged = item->action();
-    bool hasConflicts = getViewerInstance().mouseController().checkConflicts();
+    bool hasConflicts = getViewerInstance().mouseController().getMouseConflicts() > conflicts;
     if ( !stateChanged )
         spdlog::info( "Action item: \"{}\"", name );
     else

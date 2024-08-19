@@ -276,8 +276,7 @@ void VoxelGraphCut::resize( const VoxelBitSet & sourceSeeds, const VoxelBitSet &
 {
     MR_TIMER
 
-    VoxelBitSet region;
-    region.resize( size_, true );
+    VoxelBitSet region( size_, true );
     region -= sourceSeeds;
     region -= sinkSeeds;
     const auto cnt0 = region.count();
@@ -1119,7 +1118,7 @@ inline bool VoxelGraphCut::isGrandparent_( SeqVoxelId s, SeqVoxelId sGrand ) con
 
 } // anonymous namespace
 
-Expected<VoxelBitSet, std::string> segmentVolumeByGraphCut( const SimpleVolume & densityVolume, float k, const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds, ProgressCallback cb )
+Expected<VoxelBitSet> segmentVolumeByGraphCut( const SimpleVolume & densityVolume, float k, const VoxelBitSet & sourceSeeds, const VoxelBitSet & sinkSeeds, ProgressCallback cb )
 {
     MR_TIMER
 

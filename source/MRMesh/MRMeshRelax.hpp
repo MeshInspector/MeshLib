@@ -27,6 +27,33 @@ void hardSmoothTetrahedrons( const MeshTopology & topology, Vector<T, VertId> & 
     } );
 }
 
+/// This class is responsible for limiting vertex movement during relaxation according to parameters
+template<typename T>
+class VertLimiter
+{
+public:
+    /// initialization
+    VertLimiter( const Vector<T, VertId> & initialPos, const MeshRelaxParams& params ) : params_( params )
+    {
+        maxInitialDistSq_ = sqr( params.maxInitialDist );
+        if ( params.limitNearInitial )
+            initialPos_ = initialPos;
+    }
+
+    /// returns limited coordinates of the vertex (v) given its target unlimited position
+    T operator()( VertId v, T targetPos ) const
+    {
+        if ( params_.limitNearInitial )
+            targetPos = getLimitedPos( targetPos, initialPos_[v], maxInitialDistSq_ );
+        return targetPos;
+    }
+
+private:
+    const MeshRelaxParams& params_;
+    Vector<T, VertId> initialPos_;
+    float maxInitialDistSq_ = 0;
+};
+
 /// applies given number of relaxation iterations to given field on mesh vertices;
 /// \return true if was finished successfully, false if was interrupted by progress callback
 template<typename T>
@@ -45,10 +72,7 @@ bool relax( const MeshTopology & topology, Vector<T, VertId> & field, const Mesh
             return 1.f;
     };
 
-    Vector<T, VertId> initialPos;
-    const auto maxInitialDistSq = sqr( params.maxInitialDist );
-    if ( params.limitNearInitial )
-        initialPos = field;
+    VertLimiter limiter( field, params );
 
     Vector<T, VertId> newField;
     const VertBitSet& zone = topology.getVertIds( params.region );
@@ -73,9 +97,7 @@ bool relax( const MeshTopology & topology, Vector<T, VertId> & field, const Mesh
             auto np = newField[v];
             auto pushForce = params.force * ( sum / sumWeight - np );
             np += pushForce;
-            if ( params.limitNearInitial )
-                np = getLimitedPos( np, initialPos[v], maxInitialDistSq );
-            newField[v] = np;
+            newField[v] = limiter( v, np );
         }, internalCb ) )
             return false;
         field.swap( newField );

@@ -19,6 +19,6 @@ struct FindOverlappingSettings
 };
 
 /// finds all triangles that have oppositely oriented close triangle in the mesh
-[[nodiscard]] MRMESH_API Expected<FaceBitSet, std::string> findOverlappingTris( const MeshPart & mp, const FindOverlappingSettings & settings );
+[[nodiscard]] MRMESH_API Expected<FaceBitSet> findOverlappingTris( const MeshPart & mp, const FindOverlappingSettings & settings );
 
 } //namespace MR

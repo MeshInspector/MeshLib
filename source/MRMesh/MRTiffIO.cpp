@@ -215,7 +215,7 @@ bool isTIFFFile( const std::filesystem::path& path )
     return bool( tiff );
 }
 
-Expected<TiffParameters, std::string> readTifParameters( TIFF* tiff )
+Expected<TiffParameters> readTifParameters( TIFF* tiff )
 {
     TiffParameters params;
 
@@ -270,7 +270,7 @@ Expected<TiffParameters, std::string> readTifParameters( TIFF* tiff )
     return params;
 }
 
-Expected<TiffParameters, std::string> readTiffParameters( const std::filesystem::path& path )
+Expected<TiffParameters> readTiffParameters( const std::filesystem::path& path )
 {
     TiffHolder tif( path, "r" );
     if ( !tif )

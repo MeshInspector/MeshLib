@@ -35,6 +35,7 @@
     <ClInclude Include="MRFillHoleNicely.h" />
     <ClInclude Include="MRFinally.h" />
     <ClInclude Include="MRFixSelfIntersections.h" />
+    <ClInclude Include="MRICPEnums.h" />
     <ClInclude Include="MRInTreePathBuilder.h" />
     <ClInclude Include="MRChangeColoringType.h" />
     <ClInclude Include="MRChangeColoringActions.h" />
@@ -417,6 +418,8 @@
     <ClInclude Include="MRBestFitPolynomial.h" />
     <ClInclude Include="MRMeta.h" />
     <ClInclude Include="MRMacros.h" />
+    <ClInclude Include="MRTeethMaskToDirectionVolume.h" />
+    <ClInclude Include="MRObjectImGuiLabel.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -712,6 +715,9 @@
     <ClCompile Include="MRMoveMeshToVoxelMaxDeriv.cpp" />
     <ClCompile Include="MRBestFitPolynomial.cpp" />
     <ClCompile Include="MRColor.cpp" />
+    <ClCompile Include="MRVoxelsVolume.cpp" />
+    <ClCompile Include="MRTeethMaskToDirectionVolume.cpp" />
+    <ClCompile Include="MRObjectImGuiLabel.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="$(ProjectDir)..\..\thirdparty\python\python$(PythonVersion).zip">

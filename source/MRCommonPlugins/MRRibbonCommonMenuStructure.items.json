@@ -73,8 +73,8 @@
     },
     {
       "Name": "Capture UI screenshot",
-      "Caption": "UI Screenshot",
-      "Tooltip": "Saves a screenshot of the viewer to file.",
+      "Caption": "Save Screenshot",
+      "Tooltip": "Saves a screenshot of the current view to file.",
       "Icon": "\uF03E"
     },
     {

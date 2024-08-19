@@ -40,25 +40,25 @@ struct LoadDCMResult
 };
 
 /// Loads 3D all volumetric data from DICOM files in a folder
-MRMESH_API std::vector<Expected<LoadDCMResult, std::string>> loadDCMsFolder( const std::filesystem::path& path,
+MRMESH_API std::vector<Expected<LoadDCMResult>> loadDCMsFolder( const std::filesystem::path& path,
                                                         unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 /// Loads 3D first volumetric data from DICOM files in a folder
-MRMESH_API Expected<LoadDCMResult, std::string> loadDCMFolder( const std::filesystem::path& path,
+MRMESH_API Expected<LoadDCMResult> loadDCMFolder( const std::filesystem::path& path,
                                                         unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 
 /// Loads 3D all volumetric data from DICOM files in a folder
-MRMESH_API std::vector<Expected<DicomVolume, std::string>> loadDicomsFolder( const std::filesystem::path& path,
+MRMESH_API std::vector<Expected<DicomVolume>> loadDicomsFolder( const std::filesystem::path& path,
                                                         unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 /// Loads 3D first volumetric data from DICOM files in a folder
-MRMESH_API Expected<DicomVolume, std::string> loadDicomFolder( const std::filesystem::path& path,
+MRMESH_API Expected<DicomVolume> loadDicomFolder( const std::filesystem::path& path,
                                                         unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 
 /// Loads every subfolder with DICOM volume as new object
-MRMESH_API std::vector<Expected<LoadDCMResult, std::string>> loadDCMFolderTree( const std::filesystem::path& path,
+MRMESH_API std::vector<Expected<LoadDCMResult>> loadDCMFolderTree( const std::filesystem::path& path,
                                                         unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 
 /// Loads 3D volumetric data from a single DICOM file
-MRMESH_API Expected<DicomVolume, std::string> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb = {} );
+MRMESH_API Expected<DicomVolume> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb = {} );
 #endif // MRMESH_NO_DICOM
 
 struct RawParameters
@@ -84,31 +84,31 @@ struct RawParameters
     } scalarType{ ScalarType::Float32 };
 };
 /// Load raw voxels from file with provided parameters
-MRMESH_API Expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& file, const RawParameters& params,
+MRMESH_API Expected<VdbVolume> fromRaw( const std::filesystem::path& file, const RawParameters& params,
                                                          const ProgressCallback& cb = {} );
 /// Load raw voxels from stream with provided parameters;
 /// important on Windows: in stream must be open in binary mode
-MRMESH_API Expected<VdbVolume, std::string> fromRaw( std::istream& in, const RawParameters& params,
+MRMESH_API Expected<VdbVolume> fromRaw( std::istream& in, const RawParameters& params,
                                                          const ProgressCallback& cb = {} );
 
 /// Load raw voxels file, parsing parameters from name 
-MRMESH_API Expected<VdbVolume, std::string> fromRaw( const std::filesystem::path& file,
+MRMESH_API Expected<VdbVolume> fromRaw( const std::filesystem::path& file,
                                                          const ProgressCallback& cb = {} );
 
 #ifdef MRMESH_OPENVDB_USE_IO
 /// Load raw voxels OpenVDB file
-MRMESH_API Expected<std::vector<VdbVolume>, std::string> fromVdb( const std::filesystem::path& file,
+MRMESH_API Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& file,
                                                          const ProgressCallback& cb = {} );
 #endif
 
 /// Load voxel from Gav-file with micro CT reconstruction
-MRMESH_API Expected<VdbVolume, std::string> fromGav( const std::filesystem::path& file, const ProgressCallback& cb = {} );
+MRMESH_API Expected<VdbVolume> fromGav( const std::filesystem::path& file, const ProgressCallback& cb = {} );
 /// Load voxel from Gav-stream with micro CT reconstruction
-MRMESH_API Expected<VdbVolume, std::string> fromGav( std::istream& in, const ProgressCallback& cb = {} );
+MRMESH_API Expected<VdbVolume> fromGav( std::istream& in, const ProgressCallback& cb = {} );
 
 
 /// Detects the format from file extension and loads voxels from it
-MRMESH_API Expected<std::vector<VdbVolume>, std::string> fromAnySupportedFormat( const std::filesystem::path& file,
+MRMESH_API Expected<std::vector<VdbVolume>> fromAnySupportedFormat( const std::filesystem::path& file,
                                                                         const ProgressCallback& cb = {} );
 
 /// \}
@@ -131,7 +131,7 @@ struct LoadingTiffSettings
     ProgressCallback cb = {};
 };
 /// Load voxels from a set of TIFF files
-MRMESH_API Expected<VdbVolume, std::string> loadTiffDir( const LoadingTiffSettings& settings );
+MRMESH_API Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings );
 #endif // MRMESH_NO_TIFF
 
 #endif // MRMESH_NO_OPENVDB

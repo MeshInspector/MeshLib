@@ -17,8 +17,8 @@ namespace MeshLoad
 /// \ingroup IOGroup
 /// \{
 
-using MeshLoader = Expected<MR::Mesh, std::string>( * )( const std::filesystem::path&, const MeshLoadSettings& );
-using MeshStreamLoader = Expected<MR::Mesh, std::string>( * )( std::istream&, const MeshLoadSettings& );
+using MeshLoader = Expected<MR::Mesh>( * )( const std::filesystem::path&, const MeshLoadSettings& );
+using MeshStreamLoader = Expected<MR::Mesh>( * )( std::istream&, const MeshLoadSettings& );
 
 struct NamedMeshLoader
 {
@@ -41,7 +41,7 @@ MRMESH_API void setMeshStreamLoader( IOFilter filter, MeshStreamLoader streamLoa
 
 /** 
  * \brief Register filter with loader function
- * \details loader function signature: Expected<Mesh, std::string> fromFormat( const std::filesystem::path& path, std::vector<Color>* colors );
+ * \details loader function signature: Expected<Mesh> fromFormat( const std::filesystem::path& path, std::vector<Color>* colors );
  * example:
  * ADD_MESH_LOADER( IOFilter("Name of filter (.ext)","*.ext"), fromFormat)
  */

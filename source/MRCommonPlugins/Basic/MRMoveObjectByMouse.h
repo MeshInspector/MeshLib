@@ -11,7 +11,7 @@ namespace MR
 
 class Object;
 
-class MoveObjectByMouse : public StateListenerPlugin<MouseDownListener, MouseMoveListener, MouseUpListener>
+class MoveObjectByMouse : public StateListenerPlugin<DragStartListener, DragListener, DragEndListener>
 {
 public:
     MoveObjectByMouse();
@@ -25,9 +25,9 @@ public:
     virtual bool blocking() const override { return false; };
 
 private:
-    virtual bool onMouseDown_( MouseButton btn, int modifiers ) override;
-    virtual bool onMouseMove_( int x, int y ) override;
-    virtual bool onMouseUp_( MouseButton btn, int modifiers ) override;
+    virtual bool onDragStart_( MouseButton btn, int modifiers ) override;
+    virtual bool onDrag_( int x, int y ) override;
+    virtual bool onDragEnd_( MouseButton btn, int modifiers ) override;
 
     class MoveObjectByMouseWithSelected : public MoveObjectByMouseImpl
     {

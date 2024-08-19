@@ -323,11 +323,8 @@ public:
     /// finds and returns edge from o to d in the mesh; returns invalid edge otherwise
     [[nodiscard]] MRMESH_API EdgeId findEdge( VertId o, VertId d ) const;
 
-    /// returns true if the mesh does not have any holes
-    [[nodiscard]] MRMESH_API bool isClosed() const;
-
-    /// returns true if the mesh region does not have any neighboring holes
-    [[nodiscard]] MRMESH_API bool isClosed( const FaceBitSet * region ) const;
+    /// returns true if the mesh (region) does not have any neighboring holes
+    [[nodiscard]] MRMESH_API bool isClosed( const FaceBitSet * region = nullptr ) const;
 
     /// returns one edge with no valid left face for every boundary in the mesh
     [[nodiscard]] MRMESH_API std::vector<EdgeId> findHoleRepresentiveEdges() const;

@@ -24,8 +24,12 @@ namespace MR
 class Palette
 {
 public:
-    // preset palette colors
+    /// preset palette colors: from blue via green to red
     MRVIEWER_API static const std::vector<Color> DefaultColors;
+    [[nodiscard]] static const std::vector<Color> & BlueGreenRedColors() { return DefaultColors; }
+
+    /// simpler palette colors: from green to red
+    [[nodiscard]] MRVIEWER_API static const std::vector<Color> & GreenRedColors();
 
     MRVIEWER_API Palette( const std::vector<Color>& colors );
     /**

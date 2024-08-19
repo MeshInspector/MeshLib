@@ -57,7 +57,7 @@ inline auto unexpected( E &&e )
 #endif
 
 /// return type for a void function that can produce an error string
-using VoidOrErrStr = Expected<void, std::string>;
+using VoidOrErrStr = Expected<void>;
 
 /// Common operation canceled line for all
 inline std::string stringOperationCanceled()

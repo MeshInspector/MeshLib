@@ -75,7 +75,7 @@ Vector2f project( const GCommand& command, Axis axis )
         ( axis == Axis::Y ) ? Vector2f{ command.x, command.z } : Vector2f{ command.x, command.y };
 }
 
-Expected<Mesh, std::string> preprocessMesh( const Mesh& inputMesh, const ToolPathParams& params, bool needToDecimate )
+Expected<Mesh> preprocessMesh( const Mesh& inputMesh, const ToolPathParams& params, bool needToDecimate )
 {
     Mesh meshCopy = inputMesh;
 
@@ -492,7 +492,7 @@ void transitOverSafeZ( const Vector3f& p, ToolPathResult& res, const ToolPathPar
     lastFeed = params.plungeFeed;
 }
 
-Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const ToolPathParams& params, Axis cutDirection )
+Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParams& params, Axis cutDirection )
 {
     if ( cutDirection != Axis::X && cutDirection != Axis::Y )
         return unexpected( "Lacing can be done along the X or Y axis" );
@@ -676,7 +676,7 @@ Expected<ToolPathResult, std::string> lacingToolPath( const MeshPart& mp, const 
     return res;
 }
 
-Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, const ToolPathParams& params )
+Expected<ToolPathResult>  constantZToolPath( const MeshPart& mp, const ToolPathParams& params )
 {
     ToolPathResult  res;
 
@@ -880,7 +880,7 @@ Expected<ToolPathResult, std::string>  constantZToolPath( const MeshPart& mp, co
     return res;
 }
 
-Expected<ToolPathResult, std::string> constantCuspToolPath( const MeshPart& mp, const ConstantCuspParams& params )
+Expected<ToolPathResult> constantCuspToolPath( const MeshPart& mp, const ConstantCuspParams& params )
 {
     ToolPathResult  res;
 

@@ -112,7 +112,7 @@ std::vector<Material> readMaterials( const tinygltf::Model& model )
     return result;
 }
 
-Expected<int, std::string> readVertCoords( VertCoords& vertexCoordinates, const tinygltf::Model& model, const tinygltf::Primitive& primitive )
+Expected<int> readVertCoords( VertCoords& vertexCoordinates, const tinygltf::Model& model, const tinygltf::Primitive& primitive )
 {
     if ( primitive.mode != TINYGLTF_MODE_TRIANGLES )
         return unexpected( "This topology is not implemented" );
@@ -321,7 +321,7 @@ std::string readTriangulation( Triangulation& t, const tinygltf::Model& model, c
     return "";
 }
 
-Expected<std::vector<MeshData>, std::string> readMeshes( const tinygltf::Model& model, const std::vector<Material> materials, ProgressCallback callback )
+Expected<std::vector<MeshData>> readMeshes( const tinygltf::Model& model, const std::vector<Material> materials, ProgressCallback callback )
 {
     std::vector<MeshData> result;
     result.reserve( model.meshes.size() );
@@ -426,7 +426,7 @@ AffineXf3f readXf( const tinygltf::Node& node )
 namespace MR
 {
 
-Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromGltf( const std::filesystem::path& file, ProgressCallback callback )
+Expected<std::shared_ptr<Object>> deserializeObjectTreeFromGltf( const std::filesystem::path& file, ProgressCallback callback )
 {
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;

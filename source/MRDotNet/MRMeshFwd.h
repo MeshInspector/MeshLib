@@ -15,8 +15,17 @@ template<typename V>
 struct AffineXf;
 using AffineXf3f = AffineXf<Vector3f>;
 
+template<typename V>
+struct Box;
+using Box3f = Box<Vector3f>;
+
 struct Mesh;
+struct PointCloud;
 class BitSet;
+
+class ICP;
+class MultiwayICP;
+struct PointPairs;
 }
 
 #pragma managed( pop )
@@ -64,11 +73,17 @@ using VertBitSet = BitSet;
 using FaceBitSet = BitSet;
 
 ref class Vector3f;
+ref class Box3f;
 ref class Matrix3f;
 ref class AffineXf3f;
 using VertCoords = List<Vector3f^>;
 using VertCoordsReadOnly = ReadOnlyCollection<Vector3f^>;
 
 ref class Mesh;
+value struct MeshPart;
+
+interface class MeshOrPoints;
+ref class PointCloud;
+value struct MeshOrPointsXf;
 
 MR_DOTNET_NAMESPACE_END

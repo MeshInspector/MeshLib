@@ -304,6 +304,10 @@ public:
   // Behaves as if the user clicked the object name tag, by invoking `nameTagClickSignal`.
   MRVIEWER_API bool simulateNameTagClick( Object& object, NameTagSelectionMode mode );
 
+  using DrawSceneUiSignal = boost::signals2::signal<void( float menuScaling, ViewportId viewportId, UiRenderParams::UiTaskList& tasks )>;
+  // This is called every frame for every viewport. Use this to draw UI bits on top of the scene.
+  DrawSceneUiSignal drawSceneUiSignal;
+
   // Scene pick should be disabled because an ImGui window is in the way.
   MRVIEWER_API bool anyImGuiWindowIsHovered() const;
   // Scene pick should be disabled because a `renderUi()` UI of some object is in the way.
@@ -379,7 +383,7 @@ protected:
     public:
         MRVIEWER_API void preRenderViewport( ViewportId viewport ) override;
         MRVIEWER_API void postRenderViewport( ViewportId viewport ) override;
-        MRVIEWER_API BasicUiRenderTask::BackwardPassParams beginBackwardPass() override;
+        MRVIEWER_API BasicUiRenderTask::BackwardPassParams beginBackwardPass( ViewportId viewport, UiRenderParams::UiTaskList& tasks ) override;
         MRVIEWER_API void finishBackwardPass( const BasicUiRenderTask::BackwardPassParams& params ) override;
 
         // Which things are blocked by our `renderUi()` calls.

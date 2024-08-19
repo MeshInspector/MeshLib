@@ -1,11 +1,13 @@
 #include "MRMesh.h"
 #include "MRVector3.h"
+#include "MRBox3.h"
 #include "MRBitSet.h"
 #include "MRAffineXf.h"
 
 #pragma managed( push, off )
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRVector3.h>
+#include <MRMesh/MRBox.h>
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRMeshTopology.h>
@@ -119,12 +121,12 @@ void Mesh::ToAnySupportedFormat( Mesh^ mesh, System::String^ path )
     }
 }
 
-VertBitSetReadOnly^ Mesh::ValidVerts::get()
+VertBitSetReadOnly^ Mesh::ValidPoints::get()
 {
-    if ( !validVerts_ )
-        validVerts_ = gcnew VertBitSet( new MR::VertBitSet( mesh_->topology.getValidVerts() ) );
+    if ( !validPoints_ )
+        validPoints_ = gcnew VertBitSet( new MR::VertBitSet( mesh_->topology.getValidVerts() ) );
 
-    return validVerts_;
+    return validPoints_;
 }
 
 FaceBitSetReadOnly^ Mesh::ValidFaces::get()
@@ -166,6 +168,15 @@ EdgePathReadOnly^ Mesh::HoleRepresentiveEdges::get()
     }
     return holeRepresentiveEdges_->AsReadOnly();
 }
+
+Box3f^ Mesh::BoundingBox::get()
+{
+    if ( !boundingBox_ )
+        boundingBox_ = gcnew Box3f( new MR::Box3f( std::move( mesh_->computeBoundingBox() ) ) );
+
+    return boundingBox_;
+}
+
 
 bool Mesh::operator==( Mesh^ a, Mesh^ b )
 {
@@ -250,7 +261,7 @@ void Mesh::clearManagedResources()
 {    
     points_ = nullptr; 
     triangulation_ = nullptr;    
-    validVerts_ = nullptr;    
+    validPoints_ = nullptr;    
     validFaces_ = nullptr;
     holeRepresentiveEdges_ = nullptr;
 }

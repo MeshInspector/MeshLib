@@ -34,6 +34,9 @@ public:
     static bool operator==( Matrix3f^ a, Matrix3f^ b );
     static bool operator!=( Matrix3f^ a, Matrix3f^ b );
 
+    static Matrix3f^ operator-( Matrix3f^ a, Matrix3f^ b );
+    static Matrix3f^ operator+( Matrix3f^ a, Matrix3f^ b );
+
 internal:
     Matrix3f( MR::Matrix3f* mat );
     MR::Matrix3f* mat() { return mat_; }

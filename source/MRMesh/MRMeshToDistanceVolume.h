@@ -46,4 +46,17 @@ MRMESH_API FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, cons
 MRMESH_API Expected<SimpleVolume> meshRegionToIndicatorVolume( const Mesh& mesh, const FaceBitSet& region,
     float offset, const DistanceVolumeParams& params );
 
+
+struct MeshToDirectionVolumeParams
+{
+    DistanceVolumeParams vol;
+    DistanceToMeshOptions dist; // note that signMode is ignored in this algorithm
+    std::shared_ptr<IPointsToMeshProjector> projector;
+};
+
+/// Converts mesh into 4d voxels, so that each cell in 3d space holds the direction from the closest point on mesh to the cell position.
+/// Resulting volume is encoded by 3 separate 3d volumes, corresponding to `x`, `y` and `z` components of vectors respectively.
+/// \param params Expected to have valid (not null) projector, with invoked method \ref IPointsToMeshProjector::updateMeshData
+MRMESH_API Expected<std::array<SimpleVolume, 3>> meshToDirectionVolume( const MeshToDirectionVolumeParams& params );
+
 } //namespace MR

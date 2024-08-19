@@ -20,14 +20,26 @@ namespace MR
 
 const std::vector<Color> Palette::DefaultColors =
 {
-    Color( Vector4f { 0.1f, 0.25f, 1.0f, 1.f } ),// almost blue   |
-    Color( Vector4f { 0.15f, 0.5f, 0.75f,1.f } ),//               | -> "inside" the ref mesh
-    Color( Vector4f { 0.2f, 0.75f, 0.5f, 1.f } ),//               |
-    Color( Vector4f { 0.25f, 1.0f, 0.25f,1.f } ),// almost green -> zero distance
-    Color( Vector4f { 0.5f, 0.75f, 0.2f, 1.f } ),//               |
-    Color( Vector4f { 0.75f, 0.5f, 0.15f,1.f } ),//               | -> "outside"
-    Color( Vector4f { 1.0f, 0.25f, 0.1f, 1.f } ),// almost red    |
+    Color( Vector4f { 0.1f, 0.25f, 1.0f, 1.f } ), // almost blue  -> min value
+    Color( Vector4f { 0.15f, 0.5f, 0.75f,1.f } ),
+    Color( Vector4f { 0.2f, 0.75f, 0.5f, 1.f } ),
+    Color( Vector4f { 0.25f, 1.0f, 0.25f,1.f } ), // almost green -> zero value
+    Color( Vector4f { 0.5f, 0.75f, 0.2f, 1.f } ),
+    Color( Vector4f { 0.75f, 0.5f, 0.15f,1.f } ),
+    Color( Vector4f { 1.0f, 0.25f, 0.1f, 1.f } ), // almost red   -> max value
 };
+
+const std::vector<Color> & Palette::GreenRedColors()
+{
+    static const std::vector<Color> colors =
+    {
+        Color( Vector4f { 0.25f, 1.0f, 0.25f,1.f } ), // almost green -> min value
+        Color( Vector4f { 0.5f, 0.75f, 0.2f, 1.f } ),
+        Color( Vector4f { 0.75f, 0.5f, 0.15f,1.f } ),
+        Color( Vector4f { 1.0f, 0.25f, 0.1f, 1.f } ), // almost red   -> max value
+    };
+    return colors;
+}
 
 Palette::Palette( const std::vector<Color>& colors )
 {

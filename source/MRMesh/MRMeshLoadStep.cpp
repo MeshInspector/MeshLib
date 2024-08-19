@@ -406,8 +406,8 @@ private:
             objMesh->select( true );
             objStack_.top()->addChild( objMesh );
 
-            const auto subShapeCount = iterateLabel_( ref, objMesh );
-            if ( subShapeCount == 0 && ShapeTool::IsSimpleShape( ref ) )
+            iterateLabel_( ref, objMesh );
+            if ( ShapeTool::IsSimpleShape( ref ) )
             {
                 const auto refShape = ShapeTool::GetShape( ref );
 
@@ -422,6 +422,11 @@ private:
                     edgeColor = toColor( color );
 #endif
 
+                // remove existing sub-shape triangulations
+                std::erase_if( meshTriangulationContexts_, [&] ( const MeshTriangulationContext& ctx )
+                {
+                    return ctx.mesh == objMesh;
+                } );
                 meshTriangulationContexts_.emplace_back( refShape, objMesh, faceColor, edgeColor );
             }
         }

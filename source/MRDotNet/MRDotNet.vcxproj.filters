@@ -35,6 +35,24 @@
     <ClInclude Include="MRMeshDecimate.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MROffset.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPointCloud.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRBox3.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshOrPoints.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRICP.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMultiwayICP.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssemblyInfo.cpp">
@@ -59,6 +77,24 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshDecimate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MROffset.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointCloud.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRBox3.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshOrPoints.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRICP.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMultiwayICP.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

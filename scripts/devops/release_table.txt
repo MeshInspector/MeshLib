@@ -37,6 +37,12 @@
       </td>
     </tr>
     <tr>
+      <td align="center">Ubuntu 24 LTS x64</td>
+      <td align="center">
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu24-dev.deb">deb</a>
+      </td>
+    </tr>
+    <tr>
       <td align="center">Fedora 39 x64</td>
       <td align="center">
         <a href="RELEASE_PATH/meshlib_SHORT_VERSION-dev.rpm">rpm</a>

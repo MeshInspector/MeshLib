@@ -22,7 +22,7 @@ const IOFilters Filters =
     {"MRDistanceMap (.mrdistancemap)","*.mrdistancemap"}
 };
 
-Expected<DistanceMap, std::string> fromRaw( const std::filesystem::path& path, ProgressCallback progressCb )
+Expected<DistanceMap> fromRaw( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     MR_TIMER;
 
@@ -73,7 +73,7 @@ Expected<DistanceMap, std::string> fromRaw( const std::filesystem::path& path, P
     return dmap;
 }
 
-Expected<DistanceMap, std::string> fromMrDistanceMap( const std::filesystem::path& path, DistanceMapToWorld& params, ProgressCallback progressCb )
+Expected<DistanceMap> fromMrDistanceMap( const std::filesystem::path& path, DistanceMapToWorld& params, ProgressCallback progressCb )
 {
     if ( path.empty() )
         return unexpected( "Path is empty" );
@@ -121,7 +121,7 @@ Expected<DistanceMap, std::string> fromMrDistanceMap( const std::filesystem::pat
     return dmap;
 }
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
-Expected<DistanceMap, std::string> fromTiff( const std::filesystem::path& path, DistanceMapToWorld& params, ProgressCallback progressCb /*= {} */ )
+Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapToWorld& params, ProgressCallback progressCb /*= {} */ )
 {
     MR_TIMER;
 
@@ -156,14 +156,14 @@ Expected<DistanceMap, std::string> fromTiff( const std::filesystem::path& path, 
 }
 #endif
 
-Expected<DistanceMap, std::string> fromAnySupportedFormat( const std::filesystem::path& path, DistanceMapToWorld* params, ProgressCallback progressCb )
+Expected<DistanceMap> fromAnySupportedFormat( const std::filesystem::path& path, DistanceMapToWorld* params, ProgressCallback progressCb )
 {
     auto ext = utf8string( path.extension() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
     ext.insert( std::begin( ext ), '*' );
-    Expected<DistanceMap, std::string> res = unexpected( std::string( "unsupported file extension" ) );
+    Expected<DistanceMap> res = unexpected( std::string( "unsupported file extension" ) );
 
     auto itF = std::find_if( Filters.begin(), Filters.end(), [ext] ( const IOFilter& filter )
     {

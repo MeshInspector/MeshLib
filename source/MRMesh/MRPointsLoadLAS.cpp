@@ -223,7 +223,7 @@ Color getColor( uint8_t classification )
         return Color::black();
 }
 
-Expected<PointCloud, std::string> process( lazperf::reader::basic_file& reader, VertColors* colors, AffineXf3f* outXf, ProgressCallback callback )
+Expected<PointCloud> process( lazperf::reader::basic_file& reader, VertColors* colors, AffineXf3f* outXf, ProgressCallback callback )
 {
     const auto pointCount = reader.pointCount();
 
@@ -298,7 +298,7 @@ Expected<PointCloud, std::string> process( lazperf::reader::basic_file& reader, 
 namespace MR::PointsLoad
 {
 
-Expected<PointCloud, std::string> fromLas( const std::filesystem::path& file, VertColors* colors, AffineXf3f* outXf, ProgressCallback callback )
+Expected<PointCloud> fromLas( const std::filesystem::path& file, VertColors* colors, AffineXf3f* outXf, ProgressCallback callback )
 {
     try
     {
@@ -311,7 +311,7 @@ Expected<PointCloud, std::string> fromLas( const std::filesystem::path& file, Ve
     }
 }
 
-Expected<PointCloud, std::string> fromLas( std::istream& in, VertColors* colors, AffineXf3f* outXf, ProgressCallback callback )
+Expected<PointCloud> fromLas( std::istream& in, VertColors* colors, AffineXf3f* outXf, ProgressCallback callback )
 {
     try
     {

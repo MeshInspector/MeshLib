@@ -657,17 +657,24 @@ bool checkbox( const char* label, bool* value )
     return ret;
 }
 
-bool checkboxValid( const char* label, bool* value, bool valid )
+bool checkboxOrFixedValue( const char* label, bool* value, std::optional<bool> valueOverride )
 {
-    if ( valid )
+    if ( !valueOverride )
         return checkbox( label, value );
 
     StyleParamHolder sh;
     const auto disColor = ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled );
     sh.addColor( ImGuiCol_Text, Color( disColor.x, disColor.y, disColor.z, disColor.w ) );
-    bool falseVal = false;
-    checkboxWithoutTestEngine( label, &falseVal );
+
+    ImGui::PushItemFlag( ImGuiItemFlags_Disabled, true );
+    checkboxWithoutTestEngine( label, &*valueOverride );
+    ImGui::PopItemFlag();
     return false;
+}
+
+bool checkboxValid( const char* label, bool* value, bool valid )
+{
+    return checkboxOrFixedValue( label, value, valid ? std::nullopt : std::optional( false ) );
 }
 
 bool checkboxMixed( const char* label, bool* value, bool mixed )
@@ -695,6 +702,57 @@ bool checkboxMixed( const char* label, bool* value, bool mixed )
     {
         return checkbox( label, value );
     }
+}
+
+bool checkboxOrModifier( const char* label, CheckboxOrModifierState& value, int modifiers, int checkedModifiers, std::optional<bool> valueOverride )
+{
+    assert( modifiers != 0 );
+
+    if ( checkedModifiers == -1 )
+        checkedModifiers = modifiers;
+
+    assert( ( checkedModifiers & modifiers ) == modifiers && "`checkedModifiers` must be a superset of `modifiers`." );
+
+    // Unsure if `!valueOverride &&` is a good idea here. Sounds good on the surface, to prevent silent value modifications via the modifier while
+    //   the override is active. And delaying it until it becomes inactive would be weird too.
+    bool modHeld = !valueOverride && ( ImGui::GetIO().KeyMods & checkedModifiers ) == modifiers;
+
+    bool modChanged = value.modifierHeld != modHeld;
+    value.modifierHeld = modHeld;
+
+    bool ret = checkboxOrFixedValue( label, &value.checkboxEnabled, valueOverride ? valueOverride : modHeld ? std::optional( bool( value ) ) : std::nullopt );
+
+    { // Modifiers hint.
+        std::string modsText;
+
+        for ( const auto& [bit, name] : {
+            std::pair( ImGuiMod_Ctrl, "Ctrl" ),
+            std::pair( ImGuiMod_Shift, "Shift" ),
+            std::pair( ImGuiMod_Alt, "Alt" ),
+        } )
+        {
+            if ( modifiers & bit )
+            {
+                modifiers &= ~bit;
+                if ( !modsText.empty() )
+                    modsText += '+';
+                modsText += name;
+            }
+        }
+        assert( modifiers == 0 && "Don't know the name of this modifier!" );
+
+        ImGui::SameLine();
+        // ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cCheckboxPadding * getViewerInstance().getMenuPlugin()->menu_scaling() );
+        ImGui::TextDisabled( "[%s]", modsText.c_str() );
+    }
+
+    if ( modChanged )
+    {
+        ret = true;
+        detail::markItemEdited( ImGui::GetID( label ) );
+    }
+
+    return ret;
 }
 
 bool radioButton( const char* label, int* value, int valButton )
@@ -1838,6 +1896,49 @@ bool beginTabItem( const char* label, bool* p_open, ImGuiTabItemFlags flags )
 void endTabItem()
 {
     ImGui::EndTabItem();
+}
+
+
+void alignTextToFramePadding( float padding )
+{
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    window->DC.CurrLineSize.y = ImMax( window->DC.CurrLineSize.y, g.FontSize + 2 * padding );
+    window->DC.CurrLineTextBaseOffset = ImMax( window->DC.CurrLineTextBaseOffset, padding );
+}
+
+void alignTextToControl( float controlHeight )
+{
+    alignTextToFramePadding( std::floor( ( controlHeight - GImGui->FontSize ) * 0.5f ) );
+}
+
+void alignTextToRadioButton( float scaling )
+{
+    // Radio button text position is rounded up
+    alignTextToFramePadding( std::ceil( ( cRadioButtonSize * scaling - GImGui->FontSize ) * 0.5f ) );
+}
+
+void alignTextToCheckBox( float scaling )
+{
+    alignTextToFramePadding( cCheckboxPadding * scaling );
+}
+
+void alignTextToButton( float scaling )
+{
+    alignTextToFramePadding( cGradientButtonFramePadding * scaling );
+}
+
+
+void highlightWindowBottom( float scaling )
+{
+    const ImGuiStyle& style = ImGui::GetStyle();
+    ImVec2 boxMin = ImGui::GetCurrentWindowRead()->DC.CursorPos;
+    boxMin.x -= style.WindowPadding.x;
+    ImVec2 boxMax = ImGui::GetWindowPos();
+    boxMax.x += ImGui::GetContentRegionMax().x + style.WindowPadding.x * 2.f;
+    boxMax.y += ImGui::GetContentRegionMax().y + ImGui::GetScrollMaxY() + style.WindowPadding.y * 2.f;
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cSeparateBlocksSpacing * scaling );
+    ImGui::GetCurrentWindow()->DrawList->AddRectFilled( boxMin, boxMax, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::CollapseHeaderBackground ).getUInt32() );
 }
 
 } // namespace UI

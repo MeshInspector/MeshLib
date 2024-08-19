@@ -4,6 +4,7 @@
 #include "MRMesh/MRBitSet.h"
 #include "MRMesh/MRphmap.h"
 #include "MRMouse.h"
+#include "MRAsyncTimer.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRVector3.h"
 #include <optional>
@@ -66,11 +67,9 @@ public:
     // set callback to modify new field of view before it is applied to viewport
     void setFOVModifierCb( std::function<void( float& )> cb ) { fovModifierCb_ = cb; }
 
-    // check if an opened plugin can conflict with the camera controls:
-    // camera controls use LMB and current plugin listens for mouse events
-    // call preCheckConflicts() before plugin activation and checkConflicts() after
-    void preCheckConflicts();
-    bool checkConflicts();
+    // get number of potential conflicts between opened plugins and camera controls
+    // plugin is conflicting if it listens for mouseDown or dragStart events, and camera control uses LMB
+    int getMouseConflicts();
 
 private:
     bool preMouseDown_( MouseButton button, int modifier );
@@ -94,6 +93,14 @@ private:
     BitSet downState_;
     MouseMode currentMode_{ MouseMode::None };
 
+    // Variables related to mouseClick signal
+    MouseButton clickButton_{ MouseButton::NoButton };  // Current candidate for mouseClick
+    int clickModifiers_{};                              // Modifiers state at the moment of button press
+    Time clickTime_{};                                  // Time point of button press
+    MouseButton clickPendingDown_{ MouseButton::NoButton }; // Button for deterred camera operation
+    MouseButton dragButton_{ MouseButton::NoButton };   // Current candidate for dragging
+    bool dragActive_{};                                 // Dragging currently active
+
     using MouseModeMap = HashMap<int, MouseMode>;
     using MouseModeBackMap = HashMap<MouseMode, int>;
 
@@ -104,8 +111,6 @@ private:
 
     std::function<void( AffineXf3f& )> transformModifierCb_;
     std::function<void( float& )> fovModifierCb_;
-
-    size_t connectionsCounter_{}; // for checkConflicts()
 };
 
 }

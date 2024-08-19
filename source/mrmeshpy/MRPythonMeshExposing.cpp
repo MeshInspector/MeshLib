@@ -186,7 +186,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilderSettings, [] ( pybind11::module_&
         def( pybind11::init<>() ).
         def_readwrite( "region", &MeshBuilder::BuildSettings::region, "if region is given then on input it contains the faces to be added, and on output the faces failed to be added" ).
         def_readwrite( "shiftFaceId", &MeshBuilder::BuildSettings::shiftFaceId, "this value to be added to every faceId before its inclusion in the topology" ).
-        def_readwrite( "allowNonManifoldEdge", &MeshBuilder::BuildSettings::allowNonManifoldEdge, "whether to permit non-manifold edges in the resulting topology" );
+        def_readwrite( "allowNonManifoldEdge", &MeshBuilder::BuildSettings::allowNonManifoldEdge, "whether to permit non-manifold edges in the resulting topology" ).
+        def_readwrite( "skippedFaceCount", &MeshBuilder::BuildSettings::skippedFaceCount, "optional output: counter of skipped faces during mesh creation" );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshBuilder, []( pybind11::module_& m )

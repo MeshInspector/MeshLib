@@ -962,6 +962,10 @@ void Viewer::launchShut()
     mouseUpSignal = {};
     mouseMoveSignal = {};
     mouseScrollSignal = {};
+    mouseClickSignal = {};
+    dragStartSignal = {};
+    dragEndSignal = {};
+    dragSignal = {};
     cursorEntranceSignal = {};
     charPressedSignal = {};
     keyUpSignal = {};
@@ -1420,6 +1424,26 @@ bool Viewer::mouseScroll( float delta_y )
     return true;
 }
 
+bool Viewer::mouseClick( MouseButton button, int modifier )
+{
+    return mouseClickSignal( button, modifier );
+}
+
+bool Viewer::dragStart( MouseButton button, int modifier )
+{
+    return dragStartSignal( button, modifier );
+}
+
+bool Viewer::dragEnd( MouseButton button, int modifier )
+{
+    return dragEndSignal( button, modifier );
+}
+
+bool Viewer::drag( int mouse_x, int mouse_y )
+{
+    return dragSignal( mouse_x, mouse_y );
+}
+
 bool Viewer::spaceMouseMove( const Vector3f& translate, const Vector3f& rotate )
 {
     return spaceMouseMoveSignal( translate, rotate );
@@ -1657,9 +1681,9 @@ void Viewer::drawUiRenderObjects_()
         };
         lambda( lambda, SceneRoot::get() );
 
-        std::sort( tasks.begin(), tasks.end(), []( const auto& a, const auto& b ){ return a->renderTaskDepth > b->renderTaskDepth; } );
+        auto backwardPassParams = uiRenderManager.beginBackwardPass( viewport.id, tasks );
 
-        auto backwardPassParams = uiRenderManager.beginBackwardPass();
+        std::sort( tasks.begin(), tasks.end(), []( const auto& a, const auto& b ){ return a->renderTaskDepth > b->renderTaskDepth; } );
         for ( auto it = tasks.end(); it != tasks.begin(); )
         {
             --it;

@@ -1,5 +1,5 @@
 #include "MR3MFSerializer.h"
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
+#ifndef MRMESH_NO_XML
 
 #include "MRMeshBuilder.h"
 #include "MRMesh.h"
@@ -12,11 +12,13 @@
 #include "MRZip.h"
 #include "MRDirectory.h"
 #include "MRImageLoad.h"
+#include "MRPch/MRFmt.h"
 
 #include <tinyxml2.h>
+
 #include <charconv>
-#include <unordered_map>
 #include <cmath>
+#include <unordered_map>
 
 namespace MR
 {
@@ -183,7 +185,7 @@ class ThreeMFLoader
 
     std::vector<std::shared_ptr<Node>> roots_;
 
-    Expected<std::unique_ptr<tinyxml2::XMLDocument>, std::string> loadXml_( const std::filesystem::path& file );
+    Expected<std::unique_ptr<tinyxml2::XMLDocument>> loadXml_( const std::filesystem::path& file );
     // Load and parse all XML .model files
     VoidOrErrStr loadXmls_( const std::vector<std::filesystem::path>& files );
 
@@ -206,7 +208,7 @@ public:
     std::string* loadWarn = nullptr;
     bool failedToLoadColoring = false;
 
-    Expected<std::shared_ptr<Object>, std::string> load( const std::vector<std::filesystem::path>& files, std::filesystem::path root, ProgressCallback callback );
+    Expected<std::shared_ptr<Object>> load( const std::vector<std::filesystem::path>& files, std::filesystem::path root, ProgressCallback callback );
 
     friend class Node;
 };
@@ -321,13 +323,18 @@ Expected<std::shared_ptr<Object>> ThreeMFLoader::load( const std::vector<std::fi
     if ( objectNodes_.empty() )
         return unexpected( "No objects found" );
 
+    size_t unnamedMeshCounter = 0;
+
     std::shared_ptr<Object> objRes = std::make_shared<Object>();
     for ( auto& node : objectNodes_ )
     {
         std::shared_ptr<ObjectMesh> objMesh = std::make_shared<ObjectMesh>();
         objMesh->setMesh( std::make_shared<Mesh>( std::move( node->mesh ) ) );
         objMesh->setXf( node->xf );
-        objMesh->setName( node->objName );
+        if ( !node->objName.empty() )
+            objMesh->setName( node->objName );
+        else
+            objMesh->setName( fmt::format( "Mesh {}", ++unnamedMeshCounter ) );
         objMesh->setFrontColor( node->bgColor, false );
 
         if ( node->texId != -1 )
@@ -874,9 +881,8 @@ Expected<Mesh> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
         return unexpected( std::string( "Loading canceled" ) );
 
     std::vector<MeshBuilder::VertDuplication> dups;
-    FaceBitSet skippedFaces( tris.size() );
-    skippedFaces.set();
-    MeshBuilder::BuildSettings buildSettings{ .region = &skippedFaces };
+    int skippedFaceCount = 0;
+    MeshBuilder::BuildSettings buildSettings{ .skippedFaceCount = &skippedFaceCount };
 
     MR::Mesh res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( vertexCoordinates ), tris, &dups, buildSettings );
     
@@ -902,7 +908,7 @@ Expected<Mesh> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
         }
     }
     
-    loader->skippedFaceCountAccum += int( skippedFaces.count() );
+    loader->skippedFaceCountAccum += skippedFaceCount;
 
     if ( !reportProgress( callback, 0.75f ) )
         return unexpected( std::string( "Loading canceled" ) );
@@ -940,7 +946,7 @@ VoidOrErrStr Node::loadMultiproperties_( const tinyxml2::XMLElement* xmlNode )
     return {};
 }
 
-Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFrom3mf( const std::filesystem::path& path, std::string* loadWarn, ProgressCallback callback )
+Expected<std::shared_ptr<Object>> deserializeObjectTreeFrom3mf( const std::filesystem::path& path, std::string* loadWarn, ProgressCallback callback )
 {
     const auto tmpFolder = UniqueTemporaryFolder( {} );
 
@@ -966,7 +972,7 @@ Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFrom3mf( con
     return loader.load( files, tmpFolder, subprogress( callback, 0.1f, 0.9f ) );
 }
 
-Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromModel( const std::filesystem::path& path, std::string* loadWarn, ProgressCallback callback )
+Expected<std::shared_ptr<Object>> deserializeObjectTreeFromModel( const std::filesystem::path& path, std::string* loadWarn, ProgressCallback callback )
 {
     ThreeMFLoader loader;
     loader.loadWarn = loadWarn;

@@ -85,7 +85,7 @@ const IOFilters SceneFileFilters =
 #ifndef __EMSCRIPTEN__
     {"MeshInSpector Object Notation (.mison)","*.mison"},
 #endif
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_XML )
+#ifndef MRMESH_NO_XML
     { "3D Manufacturing format (.3mf)", "*.3mf"},
     { "3D Manufacturing model (.model)", "*.model"},
 #endif
@@ -108,7 +108,7 @@ const IOFilters SceneFileWriteFilters =
 #endif
 };
 
-Expected<Json::Value, std::string> deserializeJsonValue( const std::string& str )
+Expected<Json::Value> deserializeJsonValue( const std::string& str )
 {
     Json::Value root;
     Json::CharReaderBuilder readerBuilder;
@@ -120,7 +120,7 @@ Expected<Json::Value, std::string> deserializeJsonValue( const std::string& str 
     return root;
 }
 
-Expected<Json::Value, std::string> deserializeJsonValue( const std::filesystem::path& path )
+Expected<Json::Value> deserializeJsonValue( const std::filesystem::path& path )
 {
     if ( path.empty() )
         return unexpected( "Cannot find parameters file" );
@@ -132,7 +132,7 @@ Expected<Json::Value, std::string> deserializeJsonValue( const std::filesystem::
     return addFileNameInError( deserializeJsonValue( ifs ), path );
 }
 
-Expected<Json::Value, std::string> deserializeJsonValue( std::istream& in )
+Expected<Json::Value> deserializeJsonValue( std::istream& in )
 {
     std::string str( ( std::istreambuf_iterator<char>( in ) ),
                      std::istreambuf_iterator<char>() );
@@ -191,8 +191,7 @@ VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::p
         return unexpectedOperationCanceled();
 
     // wait for all models are saved before making compressed folder
-    BitSet inProgress;
-    inProgress.resize( saveModelFutures.size(), true );
+    BitSet inProgress( saveModelFutures.size(), true );
     while ( inProgress.any() )
     {
         for ( auto i : inProgress )
@@ -218,7 +217,7 @@ VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::p
     return compressZip( path, scenePath, {}, nullptr, subprogress( progressCb, 0.9f, 1.0f ) );
 }
 
-Expected<std::shared_ptr<Object>, std::string> deserializeObjectTree( const std::filesystem::path& path, FolderCallback postDecompress,
+Expected<std::shared_ptr<Object>> deserializeObjectTree( const std::filesystem::path& path, FolderCallback postDecompress,
                                                                           ProgressCallback progressCb )
 {
     MR_TIMER;
@@ -232,7 +231,7 @@ Expected<std::shared_ptr<Object>, std::string> deserializeObjectTree( const std:
     return deserializeObjectTreeFromFolder( scenePath, progressCb );
 }
 
-Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
+Expected<std::shared_ptr<Object>> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
                                                                                     ProgressCallback progressCb )
 {
     MR_TIMER;
@@ -712,7 +711,7 @@ void deserializeFromJson( const Json::Value& root, BitSet& bitset )
     }
 }
 
-Expected<Mesh, std::string> deserializeFromJson( const Json::Value& root, VertColors* colors )
+Expected<Mesh> deserializeFromJson( const Json::Value& root, VertColors* colors )
 {
     if ( !root.isObject() )
         return unexpected( std::string{ "deserialize mesh: json value is not an object" } );

@@ -8,7 +8,7 @@
 namespace MR
 {
 //loads scene from glTF file in a new container object
-MRMESH_API Expected<std::shared_ptr<Object>, std::string> deserializeObjectTreeFromGltf( const std::filesystem::path& file, ProgressCallback callback = {} );
+MRMESH_API Expected<std::shared_ptr<Object>> deserializeObjectTreeFromGltf( const std::filesystem::path& file, ProgressCallback callback = {} );
 //saves scene to a glTF file
 MRMESH_API VoidOrErrStr serializeObjectTreeToGltf( const Object& root, const std::filesystem::path& file, ProgressCallback callback = {} );
 

@@ -8,6 +8,7 @@
 #include "MRMeshIntersect.h"
 #include "MRParallelFor.h"
 #include "MRAABBTree.h"
+#include "MRPointsToMeshProjector.h"
 #include <tuple>
 
 namespace MR
@@ -50,19 +51,20 @@ std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p
     return dist;
 }
 
-Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& cParams /*= {} */ )
+Expected<SimpleVolume> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& cParams /*= {} */ )
 {
     MR_TIMER
     auto params = cParams;
     assert( params.dist.signMode != SignDetectionMode::OpenVDB );
-    SimpleVolume res;
-    res.voxelSize = params.vol.voxelSize;
-    res.dims = params.vol.dimensions;
-    VolumeIndexer indexer( res.dims );
-    res.data.resize( indexer.size() );
 
     if ( params.dist.signMode == SignDetectionMode::HoleWindingRule )
     {
+        SimpleVolume res;
+        res.voxelSize = params.vol.voxelSize;
+        res.dims = params.vol.dimensions;
+        VolumeIndexer indexer( res.dims );
+        res.data.resize( indexer.size() );
+
         if ( !params.fwn )
             params.fwn = std::make_shared<FastWindingNumber>( mp.mesh );
         assert( !mp.region ); // only whole mesh is supported for now
@@ -73,20 +75,13 @@ Expected<SimpleVolume, std::string> meshToDistanceVolume( const MeshPart& mp, co
         {
             return unexpected( std::move( d.error() ) );
         }
-    }
-    else
-    {
-        const auto func = meshToDistanceFunctionVolume( mp, params );
-        if ( !ParallelFor( size_t( 0 ), indexer.size(), [&]( size_t i )
-        {
-            res.data[i] = func.data( indexer.toPos( VoxelId( i ) ) );
-        }, params.vol.cb ) )
-            return unexpectedOperationCanceled();
+        std::tie( res.min, res.max ) = parallelMinMax( res.data );
+        return res;
     }
 
-    std::tie( res.min, res.max ) = parallelMinMax( res.data );
+    const auto func = meshToDistanceFunctionVolume( mp, params );
+    return functionVolumeToSimpleVolume( func, params.vol.cb );
 
-    return res;
 }
 
 FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params )
@@ -107,7 +102,7 @@ FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDis
     };
 }
 
-Expected<SimpleVolume, std::string> meshRegionToIndicatorVolume( const Mesh& mesh, const FaceBitSet& region,
+Expected<SimpleVolume> meshRegionToIndicatorVolume( const Mesh& mesh, const FaceBitSet& region,
     float offset, const DistanceVolumeParams& params )
 {
     MR_TIMER
@@ -150,5 +145,53 @@ Expected<SimpleVolume, std::string> meshRegionToIndicatorVolume( const Mesh& mes
 
     return res;
 }
+
+
+
+Expected<std::array<SimpleVolume, 3>> meshToDirectionVolume( const MeshToDirectionVolumeParams& params )
+{
+    MR_TIMER
+    VolumeIndexer indexer( params.vol.dimensions );
+    std::vector<MeshProjectionResult> projs;
+
+    auto getPoint = [&indexer, &params] ( VoxelId i )
+    {
+        const auto c = Vector3f( indexer.toPos( i ) ) + Vector3f::diagonal( 0.5f );
+        return params.vol.origin + mult( params.vol.voxelSize, c );
+    };
+
+    {
+        std::vector<Vector3f> points( indexer.size() );
+        for ( auto i = VoxelId( size_t( 0 ) ); i < indexer.size(); ++i )
+        {
+            points[i] = getPoint( i );
+        }
+        params.projector->findProjections( projs, points );
+    }
+
+    std::array<SimpleVolume, 3> res;
+    for ( auto& v : res )
+    {
+        v.voxelSize = params.vol.voxelSize;
+        v.dims = params.vol.dimensions;
+        v.data.resize( indexer.size() );
+    }
+
+    for ( auto i = VoxelId( size_t( 0 ) ); i < indexer.size(); ++i )
+    {
+        const auto d = ( getPoint( i ) - projs[i].proj.point ).normalized();
+        res[0].data[i] = d.x;
+        res[1].data[i] = d.y;
+        res[2].data[i] = d.z;
+    }
+
+    for ( auto& v : res )
+    {
+        std::tie( v.min, v.max ) = parallelMinMax( v.data );
+    }
+
+    return res;
+}
+
 
 } //namespace MR

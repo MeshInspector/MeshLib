@@ -47,7 +47,7 @@ public:
     MRVIEWER_API void selectAllObjects();
 
     // stt visible flag all selectable objects
-    MRVIEWER_API void setVisible( bool visible );
+    MRVIEWER_API void setLeavesVisibility( bool visible );
 
     /// set object collapse state (hiding children)
     MRVIEWER_API void setObjectTreeState( const Object* obj, bool open );

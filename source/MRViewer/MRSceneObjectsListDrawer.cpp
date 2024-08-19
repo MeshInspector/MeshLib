@@ -216,7 +216,7 @@ void SceneObjectsListDrawer::selectAllObjects()
     }
 }
 
-void SceneObjectsListDrawer::setVisible( bool visible )
+void SceneObjectsListDrawer::setLeavesVisibility( bool visible )
 {
     const auto& selectable = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
     for ( auto obj : selectable )

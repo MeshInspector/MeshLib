@@ -51,7 +51,7 @@ public:
     virtual bool action() override;
 };
 
-class RibbonSceneHideAll : public RibbonMenuItem, public SceneStateAtLeastCheck<1, Object, NoModelCheck>
+class RibbonSceneHideAll : public RibbonMenuItem
 {
 public:
     RibbonSceneHideAll();

@@ -5,6 +5,7 @@
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRSceneObjectsListDrawer.h"
 #include "MRViewer/ImGuiMenu.h"
+#include "MRViewer/MRSceneCache.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRViewer/MRViewer.h"
 #include "MRMesh/MRChangeSceneObjectsOrder.h"
@@ -84,7 +85,7 @@ RibbonSceneShowAll::RibbonSceneShowAll() :
 
 std::string RibbonSceneShowAll::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
-    if ( !getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
+    if ( SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>().empty() )
         return "At least one objects should be in scene";
     return "";
 }
@@ -94,7 +95,7 @@ bool RibbonSceneShowAll::action()
     if ( auto menu = getViewerInstance().getMenuPlugin() )
     {
         if ( auto sceneList = menu->getSceneObjectsList() )
-            sceneList->setVisible( true );
+            sceneList->setLeavesVisibility( true );
     }
     return false;
 }
@@ -108,7 +109,7 @@ bool RibbonSceneHideAll::action()
     if ( auto menu = getViewerInstance().getMenuPlugin() )
     {
         if ( auto sceneList = menu->getSceneObjectsList() )
-            sceneList->setVisible( false );
+            sceneList->setLeavesVisibility( false );
     }
     return false;
 }

@@ -191,7 +191,8 @@ Expected<std::shared_ptr<Object>> makeObjectFromMeshFile( const std::filesystem:
     auto objectMesh = std::make_unique<ObjectMesh>();
     objectMesh->setName( utf8string( file.stem() ) );
     objectMesh->setMesh( std::make_shared<Mesh>( std::move( mesh.value() ) ) );
-    metrics.holesCount[0] = int(objectMesh->numHoles());
+    if( metrics.holesCount )
+        *metrics.holesCount = int( objectMesh->numHoles() );
     const bool hasColors = !colors.empty();
     const bool hasUV = !uvCoords.empty();
     const bool hasTexture = !texture.pixels.empty();
@@ -343,7 +344,7 @@ static std::string makeWarningString( int skippedFaceCount, int duplicatedVertex
         res += fmt::format( "{} vertices were duplicated to make them manifold.", duplicatedVertexCount );
     }
     if( holesCount )
-        res = fmt::format( "the objects contains {} holes. Please use the Mesh Healer plugin for fix this.", holesCount );
+        res = fmt::format( "the objects contains {} holes. Please consider using Fill Holes tool.", holesCount );
     return res;
 }
 

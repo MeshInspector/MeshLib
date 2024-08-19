@@ -5,9 +5,11 @@
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRSceneObjectsListDrawer.h"
 #include "MRViewer/ImGuiMenu.h"
+#include "MRViewer/MRSceneCache.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRViewer/MRViewer.h"
 #include "MRMesh/MRChangeSceneObjectsOrder.h"
+#include "MRMesh/MRVisualObject.h"
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRViewer/MRSceneObjectsListDrawer.h"
 
@@ -75,6 +77,48 @@ bool RibbonSceneUnselectAll::action()
     const auto selectable = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selectable );
     for ( auto obj : selectable )
         obj->select( false );
+    return false;
+}
+
+RibbonSceneShowAll::RibbonSceneShowAll() :
+    RibbonMenuItem( "Ribbon Scene Show all" )
+{}
+
+std::string RibbonSceneShowAll::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
+{
+    if ( SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>().empty() )
+        return "At least one objects should be in scene";
+    return "";
+}
+
+bool RibbonSceneShowAll::action()
+{
+    if ( auto menu = getViewerInstance().getMenuPlugin() )
+    {
+        if ( auto sceneList = menu->getSceneObjectsList() )
+            sceneList->setLeavesVisibility( true );
+    }
+    return false;
+}
+
+RibbonSceneHideAll::RibbonSceneHideAll() :
+    RibbonMenuItem( "Ribbon Scene Hide all" )
+{}
+
+std::string RibbonSceneHideAll::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
+{
+    if ( SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>().empty() )
+        return "At least one objects should be in scene";
+    return "";
+}
+
+bool RibbonSceneHideAll::action()
+{
+    if ( auto menu = getViewerInstance().getMenuPlugin() )
+    {
+        if ( auto sceneList = menu->getSceneObjectsList() )
+            sceneList->setLeavesVisibility( false );
+    }
     return false;
 }
 
@@ -174,6 +218,8 @@ bool RibbonSceneRemoveSelected::action()
 MR_REGISTER_RIBBON_ITEM( RibbonSceneSortByName )
 MR_REGISTER_RIBBON_ITEM( RibbonSceneSelectAll )
 MR_REGISTER_RIBBON_ITEM( RibbonSceneUnselectAll )
+MR_REGISTER_RIBBON_ITEM( RibbonSceneShowAll )
+MR_REGISTER_RIBBON_ITEM( RibbonSceneHideAll )
 MR_REGISTER_RIBBON_ITEM( RibbonSceneShowOnlyPrev )
 MR_REGISTER_RIBBON_ITEM( RibbonSceneShowOnlyNext )
 MR_REGISTER_RIBBON_ITEM( RibbonSceneRename )

@@ -222,6 +222,12 @@
 			"Name": "Ribbon Scene Sort by name"
 		},
 		{
+			"Name": "Ribbon Scene Show all"
+		},
+		{
+			"Name": "Ribbon Scene Hide all"
+		},
+		{
 			"Name": "Ribbon Scene Select all"
 		},
 		{

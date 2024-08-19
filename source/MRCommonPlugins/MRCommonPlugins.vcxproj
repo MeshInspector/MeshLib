@@ -70,6 +70,8 @@
     <Image Include="resource\icons\X0_5\BestFit Plane.png" />
     <Image Include="resource\icons\X0_5\BestFit Point.png" />
     <Image Include="resource\icons\X0_5\BestFit Sphere.png" />
+    <Image Include="resource\icons\X0_5\Ribbon Scene Hide all.png" />
+    <Image Include="resource\icons\X0_5\Ribbon Scene Show all.png" />
     <Image Include="resource\icons\X0_5\Show_Hide Global Basis.png" />
     <Image Include="resource\icons\X0_75\Active Plugins List.png" />
     <Image Include="resource\icons\X0_75\BestFit Circle.png" />
@@ -79,6 +81,8 @@
     <Image Include="resource\icons\X0_75\BestFit Plane.png" />
     <Image Include="resource\icons\X0_75\BestFit Point.png" />
     <Image Include="resource\icons\X0_75\BestFit Sphere.png" />
+    <Image Include="resource\icons\X0_75\Ribbon Scene Hide all.png" />
+    <Image Include="resource\icons\X0_75\Ribbon Scene Show all.png" />
     <Image Include="resource\icons\X0_75\Show_Hide Global Basis.png" />
     <Image Include="resource\icons\X1\Active Plugins List.png" />
     <Image Include="resource\icons\X1\BestFit Circle.png" />
@@ -88,6 +92,8 @@
     <Image Include="resource\icons\X1\BestFit Plane.png" />
     <Image Include="resource\icons\X1\BestFit Point.png" />
     <Image Include="resource\icons\X1\BestFit Sphere.png" />
+    <Image Include="resource\icons\X1\Ribbon Scene Hide all.png" />
+    <Image Include="resource\icons\X1\Ribbon Scene Show all.png" />
     <Image Include="resource\icons\X1\Show_Hide Global Basis.png" />
     <Image Include="resource\icons\X3\Active Plugins List.png" />
     <Image Include="resource\icons\X3\BestFit Circle.png" />
@@ -235,9 +241,11 @@
     <Image Include="resource\icons\X3\Open RAW Voxels.png" />
     <Image Include="resource\icons\X3\Open Voxels From TIFF.png" />
     <Image Include="resource\icons\X3\Quad Viewports.png" />
+    <Image Include="resource\icons\X3\Ribbon Scene Hide all.png" />
     <Image Include="resource\icons\X3\Ribbon Scene Remove selected objects.png" />
     <Image Include="resource\icons\X3\Ribbon Scene Rename.png" />
     <Image Include="resource\icons\X3\Ribbon Scene Select all.png" />
+    <Image Include="resource\icons\X3\Ribbon Scene Show all.png" />
     <Image Include="resource\icons\X3\Ribbon Scene Show only next.png" />
     <Image Include="resource\icons\X3\Ribbon Scene Show only previous.png" />
     <Image Include="resource\icons\X3\Ribbon Scene Sort by name.png" />

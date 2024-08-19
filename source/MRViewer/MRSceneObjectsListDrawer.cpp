@@ -216,6 +216,15 @@ void SceneObjectsListDrawer::selectAllObjects()
     }
 }
 
+void SceneObjectsListDrawer::setLeavesVisibility( bool visible )
+{
+    const auto& selectable = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    for ( auto obj : selectable )
+    {
+        obj->setVisible( visible );
+    }
+}
+
 void SceneObjectsListDrawer::setObjectTreeState( const Object* obj, bool open )
 {
     if ( obj )

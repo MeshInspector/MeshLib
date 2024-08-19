@@ -208,6 +208,18 @@
       "Icon": "\uF15D"
     },
     {
+      "Name": "Ribbon Scene Show all",
+      "Caption": "Show All",
+      "Tooltip": "Show all objects in the scene",
+      "Icon": "\uF205"
+    },
+    {
+      "Name": "Ribbon Scene Hide all",
+      "Caption": "Hide All",
+      "Tooltip": "Hide all objects in the scene",
+      "Icon": "\uF205"
+    },
+    {
       "Name": "Ribbon Scene Select all",
       "Caption": "Select All",
       "Tooltip": "Select all objects in the scene",

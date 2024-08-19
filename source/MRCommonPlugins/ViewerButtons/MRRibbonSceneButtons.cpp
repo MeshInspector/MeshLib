@@ -9,6 +9,7 @@
 #include "MRViewer/MRAppendHistory.h"
 #include "MRViewer/MRViewer.h"
 #include "MRMesh/MRChangeSceneObjectsOrder.h"
+#include "MRMesh/MRVisualObject.h"
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRViewer/MRSceneObjectsListDrawer.h"
 

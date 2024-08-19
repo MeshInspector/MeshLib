@@ -30,12 +30,12 @@ MRMESH_API VoidOrErrStr toPng( const Image& image, const std::filesystem::path& 
 MRMESH_API VoidOrErrStr toPng( const Image& image, std::ostream& os );
 #endif
 
-#ifndef __EMSCRIPTEN__
-
 #ifndef MRMESH_NO_JPEG
 /// saves in .jpg format
 MRMESH_API VoidOrErrStr toJpeg( const Image& image, const std::filesystem::path& path );
 #endif
+
+#ifndef __EMSCRIPTEN__
 
 #ifndef MRMESH_NO_TIFF
 MRMESH_API VoidOrErrStr toTiff( const Image& image, const std::filesystem::path& path );

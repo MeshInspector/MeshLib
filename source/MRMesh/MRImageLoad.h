@@ -24,15 +24,11 @@ MRMESH_API Expected<Image> fromPng( const std::filesystem::path& path );
 MRMESH_API Expected<Image> fromPng( std::istream& in );
 #endif
 
-#ifndef __EMSCRIPTEN__
-
 #ifndef MRMESH_NO_JPEG
 /// loads from .jpg format
 MRMESH_API Expected<Image> fromJpeg( const std::filesystem::path& path );
 MRMESH_API Expected<Image> fromJpeg( std::istream& in );
 MRMESH_API Expected<Image> fromJpeg( const char* data, size_t size );
-#endif
-
 #endif
 
 /// detects the format from file extension and loads image from it

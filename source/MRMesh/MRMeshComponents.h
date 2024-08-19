@@ -38,7 +38,8 @@ enum FaceIncidence
 
 /// returns the largest by surface area component or empty set if its area is smaller than \param minArea
 [[nodiscard]] MRMESH_API FaceBitSet getLargestComponent( const MeshPart& meshPart,
-    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {}, float minArea = 0 );
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {}, float minArea = 0,
+    int * numSmallerComponents = nullptr ); ///< optional output: the number of components in addition to returned one
 
 /// returns union of connected components, each of which contains at least one seed face
 [[nodiscard]] MRMESH_API FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds,
@@ -55,6 +56,9 @@ struct LargeByAreaComponentsSettings
 {
     /// return at most given number of largest by area connected components
     int maxLargeComponents = 2;
+
+    /// optional output: the number of components in addition to returned ones
+    int * numSmallerComponents = nullptr;
 
     /// do not consider a component large if its area is below this value
     float minArea = 0;

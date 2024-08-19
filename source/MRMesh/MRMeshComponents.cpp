@@ -4,6 +4,7 @@
 #include "MRTimer.h"
 #include "MRRingIterator.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
 #include "MRMeshBuilder.h"
 #include "MREdgeIterator.h"
@@ -278,14 +279,12 @@ std::vector<FaceBitSet> getLargeByAreaNumComponents( const MeshPart& mp, const L
     }
 
     auto unionFind = getUnionFindStructureFacesPerEdge( mp, settings.isCompBd );
+    const auto & roots = unionFind.roots();
 
     HashMap<FaceId, float> root2area;
     const FaceBitSet& region = mp.mesh.topology.getFaceIds( mp.region );
     for ( auto f : region )
-    {
-        auto root = unionFind.find( f );
-        root2area[ root ] += mp.mesh.area( f );
-    }
+        root2area[ roots[f] ] += mp.mesh.area( f );
 
     struct AreaRoot
     {
@@ -314,16 +313,16 @@ std::vector<FaceBitSet> getLargeByAreaNumComponents( const MeshPart& mp, const L
         areaRootVec.resize( settings.maxLargeComponents );
     }
 
-    res.reserve( areaRootVec.size() );
-
-/*    FaceBitSet res( mp.mesh.topology.faceSize() );
-    for ( auto f : region )
+    res.resize( areaRootVec.size() );
+    ParallelFor( res, [&]( size_t i )
     {
-        auto root = unionFind.find( f );
-        if ( root2area[ root ] >= minArea )
-            res.set( f );
-    }*/
-
+        const auto myRoot = areaRootVec[i].root;
+        auto & fs = res[i];
+        fs.resize( mp.mesh.topology.faceSize() );
+        for ( auto f : region )
+            if ( roots[f] == myRoot )
+                fs.set( f );
+    } );
     return res;
 }
 

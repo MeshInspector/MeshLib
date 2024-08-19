@@ -815,7 +815,7 @@ bool radioButton( const char* label, int* value, int valButton )
         const ImVec2 pos = window->DC.CursorPos;
         const ImRect check_bb( pos, ImVec2( pos.x + clickSize, pos.y + clickSize ) );
         const ImRect total_bb( pos, ImVec2( pos.x + clickSize + ( label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f ), pos.y + label_size.y + style.FramePadding.y * 2.0f ) );
-        ImGui::ItemSize( total_bb, style.FramePadding.y );
+        ImGui::ItemSize( total_bb, std::ceil( ( clickSize - label_size.y ) * 0.5f ) );
         if ( !ImGui::ItemAdd( total_bb, id ) )
             return false;
 

@@ -29,7 +29,7 @@ MRMESH_API VoidOrErrStr toGav( const VdbVolume& vdbVolume, const std::filesystem
 /// Save voxels in Gav-format in given binary stream
 MRMESH_API VoidOrErrStr toGav( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback = {} );
 
-#ifdef MRMESH_OPENVDB_USE_IO
+#ifndef MRMESH_OPENVDB_DISABLE_IO
 /// Save vdb voxels file, using openVdb methods
 MRMESH_API VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& file,
                                ProgressCallback callback = {} );

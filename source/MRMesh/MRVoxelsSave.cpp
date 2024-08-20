@@ -24,8 +24,8 @@ const IOFilters Filters =
 {
 #ifndef MRMESH_NO_OPENVDB
     { "Raw (.raw)", "*.raw" },
-    { "Micro CT (.gav)", "*.gav" }
-#ifdef MRMESH_OPENVDB_USE_IO
+    { "Micro CT (.gav)", "*.gav" },
+#ifndef MRMESH_OPENVDB_DISABLE_IO
     { "OpenVDB (.vdb)", "*.vdb" },
 #endif
 #endif
@@ -153,7 +153,7 @@ VoidOrErrStr toGav( const VdbVolume& vdbVolume, std::ostream & out, ProgressCall
     return toRawFloat( vdbVolume, out, callback );
 }
 
-#ifdef MRMESH_OPENVDB_USE_IO
+#ifndef MRMESH_OPENVDB_DISABLE_IO
 VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& filename, ProgressCallback /*callback*/ )
 {
     MR_TIMER
@@ -195,7 +195,7 @@ VoidOrErrStr toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesy
         return toRawAutoname( vdbVolume, file, callback );
     else if ( ext == ".gav" )
         return toGav( vdbVolume, file, callback );
-#ifdef MRMESH_OPENVDB_USE_IO
+#ifndef MRMESH_OPENVDB_DISABLE_IO
     else if ( ext == ".vdb" )
         return toVdb( vdbVolume, file, callback );
 #endif

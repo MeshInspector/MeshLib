@@ -151,11 +151,14 @@
     <Filter Include="Source Files\3. Mesh\Boolean">
       <UniqueIdentifier>{c1e21c06-9f10-4e81-87cd-a550a822f2bd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\3. Mesh\BaseStructures">
-      <UniqueIdentifier>{cc99f9b7-b598-4504-bf99-8d838fbe408f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\3. Mesh\AABBTree">
       <UniqueIdentifier>{8523856f-61f8-4a64-be2c-e62368f09852}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\Helpers">
+      <UniqueIdentifier>{662f9420-ca3a-4fa5-9fb7-3661f5149b48}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\DataStructures">
+      <UniqueIdentifier>{cc99f9b7-b598-4504-bf99-8d838fbe408f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -252,14 +255,8 @@
     <ClInclude Include="MRMeshProject.h">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshTexture.h">
-      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
-    </ClInclude>
     <ClInclude Include="MROffset.h">
       <Filter>Source Files\Voxels\VDBConversions</Filter>
-    </ClInclude>
-    <ClInclude Include="MRPositionedText.h">
-      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MREdgePaths.h">
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
@@ -272,9 +269,6 @@
     </ClInclude>
     <ClInclude Include="MRGeodesicPath.h">
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
-    </ClInclude>
-    <ClInclude Include="MRSceneColors.h">
-      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRTeethMaskToDirectionVolume.h">
       <Filter>Source Files\Voxels</Filter>
@@ -378,9 +372,6 @@
     <ClInclude Include="MRAlignTextToMesh.h">
       <Filter>Source Files\SymbolMesh</Filter>
     </ClInclude>
-    <ClInclude Include="MR2DContoursTriangulation.h">
-      <Filter>Source Files\SymbolMesh</Filter>
-    </ClInclude>
     <ClInclude Include="MRConfig.h">
       <Filter>Source Files\System</Filter>
     </ClInclude>
@@ -452,9 +443,6 @@
     </ClInclude>
     <ClInclude Include="MRXfBasedCache.h">
       <Filter>Source Files\Scene</Filter>
-    </ClInclude>
-    <ClInclude Include="MRSceneSettings.h">
-      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRLinesSave.h">
       <Filter>Source Files\IO</Filter>
@@ -534,9 +522,6 @@
     <ClInclude Include="MRMeshFillHole.h">
       <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
-    <ClInclude Include="MREdgePoint.h">
-      <Filter>Source Files\3. Mesh\Mesh</Filter>
-    </ClInclude>
     <ClInclude Include="MRMeshBoundary.h">
       <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
@@ -591,9 +576,6 @@
     <ClInclude Include="MRMeshBooleanFacade.h">
       <Filter>Source Files\3. Mesh\Boolean</Filter>
     </ClInclude>
-    <ClInclude Include="MRPartialOffset.h">
-      <Filter>Source Files\3. Mesh\Boolean</Filter>
-    </ClInclude>
     <ClInclude Include="MRMeshSaveObj.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
@@ -623,9 +605,6 @@
     </ClInclude>
     <ClInclude Include="MRChangeLabelAction.h">
       <Filter>Source Files\History</Filter>
-    </ClInclude>
-    <ClInclude Include="MRProgressReadWrite.h">
-      <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeVoxelsAction.h">
       <Filter>Source Files\History</Filter>
@@ -732,9 +711,6 @@
     <ClInclude Include="MRFillContours2D.h">
       <Filter>Source Files\3. Mesh\Contours</Filter>
     </ClInclude>
-    <ClInclude Include="MRFixUndercuts.h">
-      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
-    </ClInclude>
     <ClInclude Include="MRGridSampling.h">
       <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClInclude>
@@ -767,9 +743,6 @@
     </ClInclude>
     <ClInclude Include="MRDirectory.h">
       <Filter>Source Files\System</Filter>
-    </ClInclude>
-    <ClInclude Include="MRAxis.h">
-      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeObjectFields.h">
       <Filter>Source Files\History</Filter>
@@ -827,9 +800,6 @@
     </ClInclude>
     <ClInclude Include="MRPrecipitationSimulator.h">
       <Filter>Source Files\3. Mesh\WaterFlow</Filter>
-    </ClInclude>
-    <ClInclude Include="MRMeshOrPoints.h">
-      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshLoadStep.h">
       <Filter>Source Files\IO</Filter>
@@ -923,9 +893,6 @@
     </ClInclude>
     <ClInclude Include="MRAngleMeasurementObject.h">
       <Filter>Source Files\Feature\Measurements</Filter>
-    </ClInclude>
-    <ClInclude Include="MRUnorientedTriangle.h">
-      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRPointsComponents.h">
       <Filter>Source Files\3. Mesh\Components</Filter>
@@ -1146,9 +1113,6 @@
     <ClInclude Include="MRRestoringStreamsSink.h">
       <Filter>Source Files\2. Base\Logging</Filter>
     </ClInclude>
-    <ClInclude Include="MRRingIterator.h">
-      <Filter>Source Files\3. Mesh</Filter>
-    </ClInclude>
     <ClInclude Include="MRStringConvert.h">
       <Filter>Source Files\2. Base\Algorithms</Filter>
     </ClInclude>
@@ -1163,9 +1127,6 @@
     </ClInclude>
     <ClInclude Include="MRVectorTraits.h">
       <Filter>Source Files\1. Kernel\Helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="MRWriter.h">
-      <Filter>Source Files\3. Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRViewportProperty.h">
       <Filter>Source Files\Scene</Filter>
@@ -1196,9 +1157,6 @@
     </ClInclude>
     <ClInclude Include="MRCylinder3.h">
       <Filter>Source Files\1. Kernel\Geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="MRDipole.h">
-      <Filter>Source Files\3. Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRVector4.h">
       <Filter>Source Files\1. Kernel\Vector</Filter>
@@ -1401,6 +1359,51 @@
     <ClInclude Include="MRFloatGrid.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
+    <ClInclude Include="MRAxis.h">
+      <Filter>Source Files\1. Kernel\Geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPositionedText.h">
+      <Filter>Source Files\SymbolMesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshTexture.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSceneColors.h">
+      <Filter>Source Files\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSceneSettings.h">
+      <Filter>Source Files\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPartialOffset.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
+    <ClInclude Include="MRWriter.h">
+      <Filter>Source Files\3. Mesh\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDipole.h">
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRingIterator.h">
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MREdgePoint.h">
+      <Filter>Source Files\3. Mesh\DataStructures</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshOrPoints.h">
+      <Filter>Source Files\3. Mesh\DataStructures</Filter>
+    </ClInclude>
+    <ClInclude Include="MRProgressReadWrite.h">
+      <Filter>Source Files\1. Kernel\Algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="MRUnorientedTriangle.h">
+      <Filter>Source Files\3. Mesh\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFixUndercuts.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
+    <ClInclude Include="MR2DContoursTriangulation.h">
+      <Filter>Source Files\3. Mesh\Contours</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1505,9 +1508,6 @@
     <ClCompile Include="MRGeodesicPath.cpp">
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClCompile>
-    <ClCompile Include="MRSceneColors.cpp">
-      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
-    </ClCompile>
     <ClCompile Include="MRTeethMaskToDirectionVolume.cpp">
       <Filter>Source Files\Voxels</Filter>
     </ClCompile>
@@ -1586,9 +1586,6 @@
     <ClCompile Include="MRIRenderObject.cpp">
       <Filter>Source Files\Scene\Render</Filter>
     </ClCompile>
-    <ClCompile Include="MR2DContoursTriangulation.cpp">
-      <Filter>Source Files\SymbolMesh</Filter>
-    </ClCompile>
     <ClCompile Include="MRConfig.cpp">
       <Filter>Source Files\System</Filter>
     </ClCompile>
@@ -1658,9 +1655,6 @@
     <ClCompile Include="MREmbeddedPython.cpp">
       <Filter>Source Files\Python</Filter>
     </ClCompile>
-    <ClCompile Include="MRSceneSettings.cpp">
-      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
-    </ClCompile>
     <ClCompile Include="MRLinesSave.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
@@ -1703,9 +1697,6 @@
     <ClCompile Include="MRMeshBuilder.cpp">
       <Filter>Source Files\3. Mesh\MeshBuilder</Filter>
     </ClCompile>
-    <ClCompile Include="MRMeshBuildDeleteTest.cpp">
-      <Filter>Source Files\3. Mesh\MeshBuilder</Filter>
-    </ClCompile>
     <ClCompile Include="MRIdentifyVertices.cpp">
       <Filter>Source Files\3. Mesh\MeshBuilder</Filter>
     </ClCompile>
@@ -1741,9 +1732,6 @@
     </ClCompile>
     <ClCompile Include="MRMeshFixer.cpp">
       <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
-    </ClCompile>
-    <ClCompile Include="MREdgePoint.cpp">
-      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshBoundary.cpp">
       <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
@@ -1802,9 +1790,6 @@
     <ClCompile Include="MRMeshBooleanFacade.cpp">
       <Filter>Source Files\3. Mesh\Boolean</Filter>
     </ClCompile>
-    <ClCompile Include="MRPartialOffset.cpp">
-      <Filter>Source Files\3. Mesh\Boolean</Filter>
-    </ClCompile>
     <ClCompile Include="MRMeshSaveObj.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
@@ -1825,9 +1810,6 @@
     </ClCompile>
     <ClCompile Include="MRPrism.cpp">
       <Filter>Source Files\3. Mesh\Primitives</Filter>
-    </ClCompile>
-    <ClCompile Include="MRProgressReadWrite.cpp">
-      <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRVertexAttributeGradient.cpp">
       <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
@@ -1900,9 +1882,6 @@
     </ClCompile>
     <ClCompile Include="MRFillContours2D.cpp">
       <Filter>Source Files\3. Mesh\Contours</Filter>
-    </ClCompile>
-    <ClCompile Include="MRFixUndercuts.cpp">
-      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRGridSampling.cpp">
       <Filter>Source Files\3. Mesh\PointCloud</Filter>
@@ -1984,9 +1963,6 @@
     </ClCompile>
     <ClCompile Include="MRMeshOverhangs.cpp">
       <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
-    </ClCompile>
-    <ClCompile Include="MRMeshOrPoints.cpp">
-      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshLoadStep.cpp">
       <Filter>Source Files\IO</Filter>
@@ -2114,9 +2090,6 @@
     <ClCompile Include="MRFeatureHelpers.cpp">
       <Filter>Source Files\Feature\Features</Filter>
     </ClCompile>
-    <ClCompile Include="MRLevelOfDetails.cpp">
-      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
-    </ClCompile>
     <ClCompile Include="MRFillHoleNicely.cpp">
       <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
@@ -2207,9 +2180,6 @@
     <ClCompile Include="MRContour.cpp">
       <Filter>Source Files\1. Kernel\Algorithms</Filter>
     </ClCompile>
-    <ClCompile Include="MRDipole.cpp">
-      <Filter>Source Files\3. Mesh</Filter>
-    </ClCompile>
     <ClCompile Include="MRTupleBindings.cpp">
       <Filter>Source Files\1. Kernel\Helpers</Filter>
     </ClCompile>
@@ -2293,6 +2263,39 @@
     </ClCompile>
     <ClCompile Include="MRFloatGrid.cpp">
       <Filter>Source Files\Voxels</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSceneColors.cpp">
+      <Filter>Source Files\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSceneSettings.cpp">
+      <Filter>Source Files\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPartialOffset.cpp">
+      <Filter>Source Files\Voxels</Filter>
+    </ClCompile>
+    <ClCompile Include="MRDipole.cpp">
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MREdgePoint.cpp">
+      <Filter>Source Files\3. Mesh\DataStructures</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshOrPoints.cpp">
+      <Filter>Source Files\3. Mesh\DataStructures</Filter>
+    </ClCompile>
+    <ClCompile Include="MRProgressReadWrite.cpp">
+      <Filter>Source Files\1. Kernel\Algorithms</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFixUndercuts.cpp">
+      <Filter>Source Files\Voxels</Filter>
+    </ClCompile>
+    <ClCompile Include="MRLevelOfDetails.cpp">
+      <Filter>Source Files\3. Mesh\Decimation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshBuildDeleteTest.cpp">
+      <Filter>Source Files\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="MR2DContoursTriangulation.cpp">
+      <Filter>Source Files\3. Mesh\Contours</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

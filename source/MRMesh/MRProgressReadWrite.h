@@ -1,6 +1,8 @@
 #pragma once
+
+#include "MRKernelFwd.h"
 #include "MRProgressCallback.h"
-#include "MRMeshFwd.h"
+
 #include <ostream>
 #include <istream>
 

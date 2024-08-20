@@ -9,7 +9,6 @@
 #include "MRMeshBuilder.h"
 #include "MRMeshFillHole.h"
 #include "MRPointsInBall.h"
-#include "MRBestFit.h"
 #include "MRPlane3.h"
 #include "MRVector3.h"
 #include "MRBox.h"

@@ -1,6 +1,7 @@
 #include "MRMesh/MRPython.h"
 #include "MRMesh/MRRegularMapMesher.h"
 #include "MRMesh/MRObjectMesh.h"
+#include "MRMesh/MRPointsLoad.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRLog.h"
 
@@ -11,20 +12,24 @@ MR::Mesh meshRegularMap( const char* surfacePCPath, const char* directionsPCPath
 {
     RegularMapMesher mesher;
     {
-        auto res = mesher.loadSurfacePC( surfacePCPath );
-        if ( !res.has_value() )
+        auto surfacePC = PointsLoad::fromAnySupportedFormat( surfacePCPath );
+        if ( !surfacePC.has_value() )
         {
-            spdlog::error( res.error() );
+            spdlog::error( surfacePC.error() );
             return {};
         }
+
+        mesher.setSurfacePC( std::make_unique<PointCloud>( std::move( surfacePC.value() ) ) );
     }
     {
-        auto res = mesher.loadDirectionsPC( directionsPCPath );
-        if ( !res.has_value() )
+        auto directionsPC = PointsLoad::fromAnySupportedFormat( directionsPCPath );
+        if ( !directionsPC.has_value() )
         {
-            spdlog::error( res.error() );
+            spdlog::error( directionsPC.error() );
             return {};
         }
+
+        mesher.setDirectionsPC( std::make_unique<PointCloud>( std::move( directionsPC.value() ) ) );
     }
     {
         auto res = mesher.loadDistances( width, height, distancesPath );

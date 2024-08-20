@@ -24,7 +24,7 @@ const IOFilters Filters =
 {
 #ifndef MRMESH_NO_OPENVDB
     { "Raw (.raw)", "*.raw" },
-    { "Micro CT (.gav)", "*.gav" }
+    { "Micro CT (.gav)", "*.gav" },
 #ifndef MRMESH_OPENVDB_DISABLE_IO
     { "OpenVDB (.vdb)", "*.vdb" },
 #endif

@@ -813,9 +813,6 @@
     <ClInclude Include="MRVoxelsConversions.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
-    <ClInclude Include="MRIOParsing.h">
-      <Filter>Source Files\IO</Filter>
-    </ClInclude>
     <ClInclude Include="MRTiffIO.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
@@ -1380,12 +1377,6 @@
     <ClInclude Include="MRProgressCallback.h">
       <Filter>Source Files\1. Kernel\Algorithms</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshId.h">
-      <Filter>Source Files\Mesh</Filter>
-    </ClInclude>
-    <ClInclude Include="MRIdBase.h">
-      <Filter>Source Files\1. Kernel\DataStructures</Filter>
-    </ClInclude>
     <ClInclude Include="MRId.h">
       <Filter>Source Files\1. Kernel\DataStructures</Filter>
     </ClInclude>
@@ -1403,6 +1394,9 @@
     </ClInclude>
     <ClInclude Include="MRHistogram.h">
       <Filter>Source Files\1. Kernel\DataStructures</Filter>
+    </ClInclude>
+    <ClInclude Include="MRIOParsing.h">
+      <Filter>Source Files\2. Base\Algorithms</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1958,9 +1952,6 @@
     <ClCompile Include="MRMeshToDistanceVolume.cpp">
       <Filter>Source Files\Voxels</Filter>
     </ClCompile>
-    <ClCompile Include="MRIOParsing.cpp">
-      <Filter>Source Files\IO</Filter>
-    </ClCompile>
     <ClCompile Include="MRTiffIO.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
@@ -2296,6 +2287,9 @@
     </ClCompile>
     <ClCompile Include="MRHistogram.cpp">
       <Filter>Source Files\1. Kernel\DataStructures</Filter>
+    </ClCompile>
+    <ClCompile Include="MRIOParsing.cpp">
+      <Filter>Source Files\2. Base\Algorithms</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

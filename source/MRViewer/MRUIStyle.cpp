@@ -907,9 +907,6 @@ MRVIEWER_API bool radioButtonOrModifier( const char* label, RadioButtonOrModifie
     if ( modActivated )
         detail::markItemEdited( ImGui::GetID( label ) );
 
-    if ( buttonActivated || modActivated )
-        spdlog::info( "Activated {}", valButton );
-
     return buttonActivated || modActivated;
 }
 

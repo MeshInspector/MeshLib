@@ -7,6 +7,7 @@
 #include "MRViewer/MRAppendHistory.h"
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRMouseController.h"
+#include "MRViewer/MRUIStyle.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRChangeXfAction.h"
@@ -53,10 +54,21 @@ void MoveObjectByMouse::drawDialog( float menuScaling, ImGuiContext*)
     if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
         return;
 
-    ImGui::Text( "%s", "Click and hold LMB on object to move" );
-    ImGui::Text( "%s", "Click CTRL + LMB and hold LMB on object to rotate" );
-    ImGui::Text( "%s", "Click ALT + LMB and hold LMB on object to scale" );
-    ImGui::Text( "%s", "Press Shift to move selected objects together" );
+    ImGui::Text( "Click and hold LMB to move or transform" );
+
+    ImGui::Separator();
+
+    ImGui::Text( "Mode:" );
+    UI::radioButtonOrModifier( "Move",   moveByMouse_.modXfMode_, int( XfMode::Move ),   0,              ImGuiMod_Ctrl | ImGuiMod_Alt );
+    ImGui::SameLine();
+    UI::radioButtonOrModifier( "Rotate", moveByMouse_.modXfMode_, int( XfMode::Rotate ), ImGuiMod_Ctrl,  ImGuiMod_Ctrl | ImGuiMod_Alt );
+    ImGui::SameLine();
+    UI::radioButtonOrModifier( "Scale",  moveByMouse_.modXfMode_, int( XfMode::Scale ),  ImGuiMod_Alt,   ImGuiMod_Ctrl | ImGuiMod_Alt );
+
+    ImGui::Text( "Target:" );
+    UI::radioButtonOrModifier( "Picked object",      moveByMouse_.modXfTarget_, int( XfTarget::Picked ),                0, ImGuiMod_Shift );
+    ImGui::SameLine();
+    UI::radioButtonOrModifier( "Selected object(s)", moveByMouse_.modXfTarget_, int( XfTarget::Selected ), ImGuiMod_Shift, ImGuiMod_Shift );
 
     moveByMouse_.onDrawDialog( menuScaling );
 
@@ -94,7 +106,7 @@ MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSel
     if ( obj && obj->isAncillary() )
         obj = nullptr;
 
-    if ( ( modifiers & GLFW_MOD_SHIFT ) == 0 )
+    if ( int( modXfTarget_ ) == int( XfTarget::Picked ) )
     {
         // Move picked object
         if ( !obj )
@@ -123,8 +135,8 @@ MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSel
     Box3f box = getBbox_( objects );
     centerPoint = box.valid() ? box.center() : Vector3f{};
 
-    return ( modifiers & GLFW_MOD_CONTROL ) != 0 ? TransformMode::Rotation : 
-        ( modifiers & GLFW_MOD_ALT ) != 0 ? TransformMode::Scale : TransformMode::Translation;
+    return int( modXfMode_ ) == int( XfMode::Rotate ) ? TransformMode::Rotation :
+        int( modXfMode_ ) == int( XfMode::Scale ) ? TransformMode::Scale : TransformMode::Translation;
 }
 
 MR_REGISTER_RIBBON_ITEM( MoveObjectByMouse )

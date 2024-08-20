@@ -128,7 +128,6 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
 
     auto viewportEnd = viewer.screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewport.id );
     auto worldEndPoint = viewport.unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
-    AffineXf3f newXf;
 
     if ( transformMode_ == TransformMode::Rotation )
     {

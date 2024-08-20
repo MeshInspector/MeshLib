@@ -1,6 +1,7 @@
 #pragma once
 #include "MRViewer/MRStatePlugin.h"
 #include "MRViewer/MRMoveObjectByMouseImpl.h"
+#include "MRViewer/MRUIStyle.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRAffineXf3.h"
 #include "MRCommonPlugins/exports.h"
@@ -25,6 +26,11 @@ public:
     virtual bool blocking() const override { return false; };
 
 private:
+    // Transformation mode
+    enum class XfMode { Move, Rotate, Scale };
+    // Transformation target: pick an object or move selected object(s)
+    enum class XfTarget { Picked, Selected };
+
     virtual bool onDragStart_( MouseButton btn, int modifiers ) override;
     virtual bool onDrag_( int x, int y ) override;
     virtual bool onDragEnd_( MouseButton btn, int modifiers ) override;
@@ -35,6 +41,11 @@ private:
     protected:
         TransformMode pick_( MouseButton button, int modifiers,
             std::vector<std::shared_ptr<Object>>& objects, Vector3f& centerPoint, Vector3f& startPoint ) override;
+
+    public:
+        // Options are provided externally rather than directly from modifiers
+        UI::RadioButtonOrModifierState modXfMode_{};    // XfMode
+        UI::RadioButtonOrModifierState modXfTarget_{};  // XfTarget
     } moveByMouse_;
 };
 

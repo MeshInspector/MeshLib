@@ -77,7 +77,7 @@ VertBitSet getComponentVerts( const Mesh& mesh, VertId id, const VertBitSet* reg
 
 }
 
-FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd, float minArea )
+FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgePredicate & isCompBd, float minArea, int * numSmallerComponents )
 {
     MR_TIMER
 
@@ -85,8 +85,15 @@ FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidenc
     const auto& mesh = meshPart.mesh;
     const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
 
+    FaceBitSet maxAreaComponent;
     const auto& allRoots = unionFindStruct.roots();
     auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, region );
+    if ( k <= 0 )
+    {
+        if ( numSmallerComponents )
+            *numSmallerComponents = 0;
+        return maxAreaComponent;
+    }
 
     double maxDblArea = -DBL_MAX;
     int maxI = 0;
@@ -102,9 +109,14 @@ FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidenc
             maxDblArea = dblArea;
         }
     }
-    FaceBitSet maxAreaComponent;
     if ( maxDblArea < 2 * minArea )
+    {
+        if ( numSmallerComponents )
+            *numSmallerComponents = k;
         return maxAreaComponent;
+    }
+    if ( numSmallerComponents )
+        *numSmallerComponents = k - 1;
     maxAreaComponent.resize( region.find_last() + 1 );
     for ( auto f : region )
     {
@@ -271,10 +283,14 @@ std::vector<FaceBitSet> getNLargeByAreaComponents( const MeshPart& mp, const Lar
 
     assert( settings.maxLargeComponents > 0 );
     if ( settings.maxLargeComponents <= 0 )
+    {
+        if ( settings.numSmallerComponents )
+            *settings.numSmallerComponents = -1; //unknown
         return res;
+    }
     if ( settings.maxLargeComponents == 1 )
     {
-        res.push_back( getLargestComponent( mp, PerEdge, settings.isCompBd, settings.minArea ) );
+        res.push_back( getLargestComponent( mp, PerEdge, settings.isCompBd, settings.minArea, settings.numSmallerComponents ) );
         return res;
     }
 
@@ -305,10 +321,14 @@ std::vector<FaceBitSet> getNLargeByAreaComponents( const MeshPart& mp, const Lar
     // leave at most given number of roots sorted in descending by area order
     if ( areaRootVec.size() <= settings.maxLargeComponents )
     {
+        if ( settings.numSmallerComponents )
+            *settings.numSmallerComponents = 0;
         std::sort( areaRootVec.begin(), areaRootVec.end(), std::greater() );
     }
     else
     {
+        if ( settings.numSmallerComponents )
+            *settings.numSmallerComponents = int( areaRootVec.size() - settings.maxLargeComponents );
         std::partial_sort( areaRootVec.begin(), areaRootVec.begin() + settings.maxLargeComponents, areaRootVec.end(), std::greater() );
         areaRootVec.resize( settings.maxLargeComponents );
     }

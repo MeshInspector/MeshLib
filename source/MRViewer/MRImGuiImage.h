@@ -131,6 +131,8 @@ public:
         float max{0.0f};
         // Slice plane
         SlicePlane activePlane{XY};
+        // if inactiveVoxelColor is set to some color then it will be blended with inactive voxel's color
+        std::optional<Color> inactiveVoxelColor;
     };
 
     // Get all parameters as one structure

@@ -69,27 +69,32 @@ void MarkedVoxelSlice::forceUpdate()
         coord[( params_.activePlane + 1 ) % 3] = ( i % textureWidth ) + params_.activeBox.min[( params_.activePlane + 1 ) % 3];
         coord[( params_.activePlane + 2 ) % 3] = ( i / textureWidth ) + params_.activeBox.min[( params_.activePlane + 2 ) % 3];
 
+        Color c;
         auto val = accessor.getValue( coord );
         float normedValue = ( val - params_.min ) / ( params_.max - params_.min );
-        texture[i] = Color( Vector3f::diagonal( normedValue ) );
+        c = Color( Vector3f::diagonal( normedValue ) );
+        if ( params_.inactiveVoxelColor && !accessor.isValueOn( coord ) )
+            c = blend( *params_.inactiveVoxelColor, c );
 
         VoxelId voxelIndex = VoxelId( coord[0] + coord[1] * dimX + coord[2] * dimXY );
 
         for ( const auto& backMark : params_.customBackgroundMarks )
             if ( backMark.mask.test( voxelIndex ) )
-                texture[i] = blend( texture[i], backMark.color );
+                c = blend( c, backMark.color );
 
         if ( params_.marks[MaskType::Segment].mask.test( voxelIndex ) )
-            texture[i] = blend( params_.marks[MaskType::Segment].color, texture[i] );
+            c = blend( params_.marks[MaskType::Segment].color, c );
 
         if ( params_.marks[MaskType::Inside].mask.test( voxelIndex ) )
-            texture[i] = blend( params_.marks[MaskType::Inside].color, texture[i] );
+            c = blend( params_.marks[MaskType::Inside].color, c );
         else if ( params_.marks[MaskType::Outside].mask.test( voxelIndex ) )
-            texture[i] = blend( params_.marks[MaskType::Outside].color, texture[i] );
+            c = blend( params_.marks[MaskType::Outside].color, c );
 
         for ( const auto& foreMark : params_.customForegroundMarks )
             if ( foreMark.mask.test( voxelIndex ) )
-                texture[i] = blend( foreMark.color, texture[i] );
+                c = blend( foreMark.color, c );
+
+        texture[i] = c;
     }
     update( { { texture, { textureWidth , textureHeight } } } );
 }

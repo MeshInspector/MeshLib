@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "MRVoxelsFwd.h"
 #include "MRVector3.h"
 #include "MRHeapBytes.h"
 #include "MRExpected.h"

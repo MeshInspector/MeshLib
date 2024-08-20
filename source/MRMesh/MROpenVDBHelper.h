@@ -1,5 +1,6 @@
 #pragma once
-#include "MRMeshFwd.h"
+
+#include "MRVoxelsFwd.h"
 #ifndef MRMESH_NO_OPENVDB
 #include "openvdb/tree/TreeIterator.h"
 #include "openvdb/tree/Tree.h"

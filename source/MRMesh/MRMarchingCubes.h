@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "MRVoxelsFwd.h"
 #include "MRAffineXf3.h"
 #include "MRVoxelsVolume.h"
 #include "MRProgressCallback.h"

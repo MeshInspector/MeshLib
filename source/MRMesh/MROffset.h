@@ -1,5 +1,6 @@
 #pragma once
-#include "MRMeshFwd.h"
+
+#include "MRVoxelsFwd.h"
 #include "MRMeshPart.h"
 #include "MRSignDetectionMode.h"
 #include "MRProgressCallback.h"

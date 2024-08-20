@@ -347,6 +347,7 @@
     <ClInclude Include="MRVolumeSegment.h" />
     <ClInclude Include="MRMarchingCubes.h" />
     <ClInclude Include="MRVoxelsConversions.h" />
+    <ClInclude Include="MRVoxelsFwd.h" />
     <ClInclude Include="MRVoxelsLoad.h" />
     <ClInclude Include="MRMatrix3.h" />
     <ClInclude Include="MRMesh.h" />

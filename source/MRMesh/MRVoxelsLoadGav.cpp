@@ -1,4 +1,4 @@
-#include "MRMeshFwd.h"
+#include "MRVoxelsFwd.h"
 #ifndef MRMESH_NO_OPENVDB
 #include "MRVoxelsLoad.h"
 #include "MRStringConvert.h"

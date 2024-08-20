@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "MRVoxelsFwd.h"
 #ifndef MRMESH_NO_OPENVDB
 #include "MRMeshPart.h"
 #include "MRProgressCallback.h"

@@ -2,6 +2,7 @@
 
 #include "exports.h"
 #include "MRMesh/MRMeshFwd.h"
+#include "MRMesh/MRVoxelsFwd.h"
 #include "MRMesh/MRExpected.h"
 #include <functional>
 #include <memory>

@@ -1,5 +1,6 @@
 #pragma once
-#include "MRMeshFwd.h"
+
+#include "MRVoxelsFwd.h"
 #ifndef MRMESH_NO_OPENVDB
 // this header includes the whole OpenVDB, so please include it from .cpp files only
 

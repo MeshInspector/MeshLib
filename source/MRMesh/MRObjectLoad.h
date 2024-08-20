@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRVoxelsFwd.h"
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
 #include "MRMeshLoadSettings.h"

@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMesh/MRMeshFwd.h"
 #ifndef MRMESH_NO_OPENVDB
+#include "MRMesh/MRVoxelsFwd.h"
 #include "MRMesh/MRIRenderObject.h"
 #include "MRMesh/MRMeshTexture.h"
 #include "MRMesh/MRBuffer.h"

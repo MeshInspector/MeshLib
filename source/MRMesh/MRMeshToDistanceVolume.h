@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "MRVoxelsFwd.h"
 #include "MRDistanceVolumeParams.h"
 #include "MRSignDetectionMode.h"
 #include "MRVoxelsVolume.h"

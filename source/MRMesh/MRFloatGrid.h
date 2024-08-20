@@ -1,5 +1,6 @@
 #pragma once
-#include "MRMeshFwd.h"
+
+#include "MRVoxelsFwd.h"
 #ifndef MRMESH_NO_OPENVDB
 // this is a lightweight header unlike MRVDBFloatGrid.h
 

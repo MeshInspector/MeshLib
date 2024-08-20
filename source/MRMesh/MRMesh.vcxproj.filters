@@ -186,12 +186,6 @@
     <ClInclude Include="MRSystem.h">
       <Filter>Source Files\System</Filter>
     </ClInclude>
-    <ClInclude Include="MRSimpleVolume.h">
-      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
-    </ClInclude>
-    <ClInclude Include="MRFloatGrid.h">
-      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
-    </ClInclude>
     <ClInclude Include="MRObjectVoxels.h">
       <Filter>Source Files\Scene</Filter>
     </ClInclude>
@@ -389,9 +383,6 @@
     </ClInclude>
     <ClInclude Include="MRConfig.h">
       <Filter>Source Files\System</Filter>
-    </ClInclude>
-    <ClInclude Include="MRFloatGridComponents.h">
-      <Filter>Source Files\3. Mesh\Components</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshComponents.h">
       <Filter>Source Files\3. Mesh\Components</Filter>
@@ -798,9 +789,6 @@
     <ClInclude Include="MRVDBProgressInterrupter.h">
       <Filter>Source Files\Voxels\VDBConversions</Filter>
     </ClInclude>
-    <ClInclude Include="MRVDBFloatGrid.h">
-      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
-    </ClInclude>
     <ClInclude Include="MRCNCMachineSettings.h">
       <Filter>Source Files\Gcode</Filter>
     </ClInclude>
@@ -1031,9 +1019,6 @@
     </ClInclude>
     <ClInclude Include="MRMeshRelax.hpp">
       <Filter>Source Files\3. Mesh\Relax</Filter>
-    </ClInclude>
-    <ClInclude Include="MRVoxelsVolume.h">
-      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRMoveMeshToVoxelMaxDeriv.h">
       <Filter>Source Files\Voxels</Filter>
@@ -1395,8 +1380,26 @@
     <ClInclude Include="MRIOParsing.h">
       <Filter>Source Files\2. Base\Algorithms</Filter>
     </ClInclude>
+    <ClInclude Include="MRVoxelsFwd.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
     <ClInclude Include="MRMeshFwd.h">
       <Filter>Source Files\3. Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFloatGridComponents.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSimpleVolume.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVDBFloatGrid.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVoxelsVolume.h">
+      <Filter>Source Files\Voxels</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFloatGrid.h">
+      <Filter>Source Files\Voxels</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1426,9 +1429,6 @@
     </ClCompile>
     <ClCompile Include="MRSystem.cpp">
       <Filter>Source Files\System</Filter>
-    </ClCompile>
-    <ClCompile Include="MRFloatGrid.cpp">
-      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectVoxels.cpp">
       <Filter>Source Files\Scene</Filter>
@@ -1597,9 +1597,6 @@
     </ClCompile>
     <ClCompile Include="MRCPRTests.cpp">
       <Filter>Source Files\Tests</Filter>
-    </ClCompile>
-    <ClCompile Include="MRFloatGridComponents.cpp">
-      <Filter>Source Files\3. Mesh\Components</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshComponents.cpp">
       <Filter>Source Files\3. Mesh\Components</Filter>
@@ -2138,9 +2135,6 @@
     <ClCompile Include="MRMeshDecimateCallbacks.cpp">
       <Filter>Source Files\3. Mesh\Decimation</Filter>
     </ClCompile>
-    <ClCompile Include="MRVoxelsVolume.cpp">
-      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
-    </ClCompile>
     <ClCompile Include="MRObjectImGuiLabel.cpp">
       <Filter>Source Files\Scene</Filter>
     </ClCompile>
@@ -2290,6 +2284,15 @@
     </ClCompile>
     <ClCompile Include="MRIOParsing.cpp">
       <Filter>Source Files\2. Base\Algorithms</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFloatGridComponents.cpp">
+      <Filter>Source Files\Voxels</Filter>
+    </ClCompile>
+    <ClCompile Include="MRVoxelsVolume.cpp">
+      <Filter>Source Files\Voxels</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFloatGrid.cpp">
+      <Filter>Source Files\Voxels</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

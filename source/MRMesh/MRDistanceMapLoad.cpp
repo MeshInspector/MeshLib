@@ -4,6 +4,7 @@
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
 #include "MRTiffIO.h"
+#include "MRImageLoad.h"
 #include <filesystem>
 #include <fstream>
 
@@ -197,5 +198,13 @@ Expected<DistanceMap> fromAnySupportedFormat( const std::filesystem::path& path,
 }
 
 } // namespace DistanceMapLoad
+
+Expected<MR::DistanceMap> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold /*= 1.f / 255*/ )
+{
+    auto resLoad = ImageLoad::fromAnySupportedFormat( filename );
+    if ( !resLoad.has_value() )
+        return unexpected( resLoad.error() );
+    return convertImageToDistanceMap( *resLoad, threshold );
+}
 
 } // namespace MR

@@ -31,4 +31,11 @@ MRMESH_API VoidOrErrStr toAnySupportedFormat( const std::filesystem::path& path,
 
 } // namespace DistanceMapSave
 
+/// saves distance map to monochrome image in scales of gray:
+/// \param threshold - threshold of maximum values [0.; 1.]. invalid pixel set as 0. (black)
+/// minimum (close): 1.0 (white)
+/// maximum (far): threshold
+/// invalid (infinity): 0.0 (black)
+MRMESH_API VoidOrErrStr saveDistanceMapToImage( const DistanceMap& distMap, const std::filesystem::path& filename, float threshold = 1.f / 255 );
+
 } // namespace MR

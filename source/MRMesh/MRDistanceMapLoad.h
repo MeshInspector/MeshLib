@@ -34,4 +34,8 @@ MRMESH_API Expected<DistanceMap> fromAnySupportedFormat( const std::filesystem::
 
 } // namespace DistanceMapLoad
 
+/// load distance map from monochrome image file
+/// \param threshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid
+[[nodiscard]] MRMESH_API Expected<DistanceMap> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold = 1.f / 255 );
+
 } // namespace MR

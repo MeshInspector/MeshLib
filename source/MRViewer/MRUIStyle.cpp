@@ -726,23 +726,23 @@ static std::string modifiersToString( int modifiers )
     return modsText;
 }
 
-bool checkboxOrModifier( const char* label, CheckboxOrModifierState& value, int modifiers, int checkedModifiers, std::optional<bool> valueOverride )
+bool checkboxOrModifier( const char* label, CheckboxOrModifierState& value, int modifiers, int respectedModifiers, std::optional<bool> valueOverride )
 {
     assert( modifiers != 0 );
 
-    if ( checkedModifiers == -1 )
-        checkedModifiers = modifiers;
+    if ( respectedModifiers == -1 )
+        respectedModifiers = modifiers;
 
-    assert( ( checkedModifiers & modifiers ) == modifiers && "`checkedModifiers` must be a superset of `modifiers`." );
+    assert( ( respectedModifiers & modifiers ) == modifiers && "`respectedModifiers` must be a superset of `modifiers`." );
 
     // Unsure if `!valueOverride &&` is a good idea here. Sounds good on the surface, to prevent silent value modifications via the modifier while
     //   the override is active. And delaying it until it becomes inactive would be weird too.
-    bool modHeld = !valueOverride && ( ImGui::GetIO().KeyMods & checkedModifiers ) == modifiers;
+    bool modHeld = !valueOverride && ( ImGui::GetIO().KeyMods & respectedModifiers ) == modifiers;
 
     bool modChanged = value.modifierHeld != modHeld;
     value.modifierHeld = modHeld;
 
-    bool ret = checkboxOrFixedValue( label, &value.checkboxEnabled, valueOverride ? valueOverride : modHeld ? std::optional( bool( value ) ) : std::nullopt );
+    bool ret = checkboxOrFixedValue( label, &value.baseValue, valueOverride ? valueOverride : modHeld ? std::optional( bool( value ) ) : std::nullopt );
 
     { // Modifiers hint.
         std::string modsText = modifiersToString( modifiers );
@@ -878,13 +878,13 @@ bool radioButtonOrFixedValue( const char* label, int* value, int valButton, std:
     return false;
 }
 
-bool radioButtonOrModifier( const char* label, RadioButtonOrModifierState& value, int valButton, int modifiers, int checkedModifiers, std::optional<int> valueOverride )
+bool radioButtonOrModifier( const char* label, RadioButtonOrModifierState& value, int valButton, int modifiers, int respectedModifiers, std::optional<int> valueOverride )
 {
     // See `checkboxOrModifier` for detailed comments
-    if ( checkedModifiers == -1 )
-        checkedModifiers = modifiers;
-    assert( ( checkedModifiers & modifiers ) == modifiers && "`checkedModifiers` must be a superset of `modifiers`." );
-    int modsPressed = ImGui::GetIO().KeyMods & checkedModifiers;
+    if ( respectedModifiers == -1 )
+        respectedModifiers = modifiers;
+    assert( ( respectedModifiers & modifiers ) == modifiers && "`respectedModifiers` must be a superset of `modifiers`." );
+    int modsPressed = ImGui::GetIO().KeyMods & respectedModifiers;
 
     bool modAnyHeld = !valueOverride && modsPressed != 0; // Any nonzero combination of relevant modifiers is pressed
     bool modActivated = !valueOverride && value.effectiveValue != valButton &&

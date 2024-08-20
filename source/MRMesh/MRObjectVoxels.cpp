@@ -31,6 +31,7 @@ constexpr size_t cVoxelsHistogramBinsNumber = 256;
 void ObjectVoxels::construct( const SimpleVolume& volume, ProgressCallback cb )
 {
     mesh_.reset();
+    activeVoxels_.reset();
     vdbVolume_.data = simpleVolumeToDenseGrid( volume, cb );
     vdbVolume_.dims = volume.dims;
     vdbVolume_.voxelSize = volume.voxelSize;
@@ -49,6 +50,7 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
 {
     if ( !grid )
         return;
+    activeVoxels_.reset();
     vdbVolume_.data = grid;
 
     auto vdbDims = vdbVolume_.data->evalActiveVoxelDim();
@@ -127,6 +129,7 @@ std::shared_ptr<Mesh> ObjectVoxels::updateIsoSurface( std::shared_ptr<Mesh> mesh
 VdbVolume ObjectVoxels::updateVdbVolume( VdbVolume vdbVolume )
 {
     auto oldVdbVolume = std::move( vdbVolume_ );
+    activeVoxels_.reset();
     vdbVolume_ = std::move( vdbVolume );
     indexer_ = VolumeIndexer( vdbVolume_.dims );
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x, 1 / vdbVolume_.voxelSize.y, 1 / vdbVolume_.voxelSize.z };
@@ -492,6 +495,13 @@ void ObjectVoxels::setDirtyFlags( uint32_t mask, bool invalidateCaches )
         mesh_->invalidateCaches();
 }
 
+size_t ObjectVoxels::activeVoxels() const
+{
+    if ( !activeVoxels_ )
+        activeVoxels_ = vdbVolume_.data ? vdbVolume_.data->activeVoxelCount() : 0;
+    return *activeVoxels_;
+}
+
 size_t ObjectVoxels::heapBytes() const
 {
     return ObjectMeshHolder::heapBytes()
@@ -634,6 +644,13 @@ std::vector<std::string> ObjectVoxels::getInfoLines() const
     res.push_back( fmt::format( "iso-value: {:.3}", isoValue_ ) );
     res.push_back( fmt::format( "max-value: {:.3}", vdbVolume_.max ) );
     res.push_back( dualMarchingCubes_ ? "visual: dual marching cubes" : "visual: standard marching cubes" );
+
+    auto totalVoxels = size_t( vdbVolume_.dims.x ) * vdbVolume_.dims.y * vdbVolume_.dims.z;
+    auto activeVoxels = this->activeVoxels();
+    res.push_back( "voxels: " + std::to_string( totalVoxels ) );
+    if( activeVoxels != totalVoxels )
+        res.back() += " / " + std::to_string( activeVoxels ) + " active";
+
     return res;
 }
 

@@ -184,6 +184,9 @@ public:
 
     MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
 
+    /// returns cached information about the number of active voxels
+    [[nodiscard]] MRMESH_API size_t activeVoxels() const;
+
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectVoxels( ProtectedStruct, const ObjectVoxels& obj ) : ObjectVoxels( obj ) {}
 
@@ -205,6 +208,7 @@ private:
     VoxelPointPositioner positioner_ = {};
     Histogram histogram_;
     Box3i activeBox_;
+    mutable std::optional<size_t> activeVoxels_;
 
     /// Service data
     VolumeIndexer indexer_ = VolumeIndexer( vdbVolume_.dims );

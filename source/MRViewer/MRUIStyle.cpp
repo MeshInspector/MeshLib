@@ -878,7 +878,7 @@ bool radioButtonOrFixedValue( const char* label, int* value, int valButton, std:
     return false;
 }
 
-MRVIEWER_API bool radioButtonOrModifier( const char* label, RadioButtonOrModifierState& value, int valButton, int modifiers, int checkedModifiers, std::optional<int> valueOverride )
+bool radioButtonOrModifier( const char* label, RadioButtonOrModifierState& value, int valButton, int modifiers, int checkedModifiers, std::optional<int> valueOverride )
 {
     // See `checkboxOrModifier` for detailed comments
     if ( checkedModifiers == -1 )

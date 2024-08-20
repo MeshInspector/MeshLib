@@ -317,6 +317,7 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
     if ( !activeBox.valid() )
         return;
 
+    activeVoxels_.reset();
     activeBox_ = activeBox;
 
     float cbModifier = 1.0f;

@@ -166,7 +166,6 @@ class SphereObject;
 class CylinderObject;
 class ConeObject;
 
-struct Image;
 class AnyVisualizeMaskEnum;
 
 template <typename T>
@@ -204,10 +203,6 @@ class ChangeMeshTopologyAction;
 class ChangeXfAction;
 class CombinedHistoryAction;
 class SwapRootAction;
-
-using VertColorMapAggregator = ColorMapAggregator<VertTag>;
-using UndirEdgeColorMapAggregator = ColorMapAggregator<UndirectedEdgeTag>;
-using FaceColorMapAggregator = ColorMapAggregator<FaceTag>;
 
 class WatershedGraph;
 

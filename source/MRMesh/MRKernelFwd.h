@@ -289,6 +289,8 @@ template <typename T> struct IntersectionPrecomputes2;
 template<typename T>
 class FewSmallest;
 
+struct Image;
+
 /// Argument value - progress in [0,1];
 /// returns true to continue the operation and returns false to stop the operation
 /// \ingroup BasicStructuresGroup

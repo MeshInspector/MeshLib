@@ -46,6 +46,10 @@ template <typename T, typename I, typename P> class Heap;
 template <typename Tag>
 class MRMESH_CLASS ColorMapAggregator;
 
+using VertColorMapAggregator = ColorMapAggregator<VertTag>;
+using UndirEdgeColorMapAggregator = ColorMapAggregator<UndirectedEdgeTag>;
+using FaceColorMapAggregator = ColorMapAggregator<FaceTag>;
+
 class Graph;
 class GraphVertTag;
 class GraphEdgeTag;

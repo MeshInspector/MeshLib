@@ -43,69 +43,6 @@
     <Filter Include="Source Files\Scene\ModelHolder">
       <UniqueIdentifier>{2e5c8a08-b968-4732-be0c-9b07bb4b051e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Mesh">
-      <UniqueIdentifier>{4d24a7a6-c422-4dd4-9865-b3d27a290436}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\WaterFlow">
-      <UniqueIdentifier>{3bf8efb6-7251-4ef8-890d-0e5c5940c8b8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\Triangulation">
-      <UniqueIdentifier>{e8616b21-1a75-42a5-990d-2f54914e7219}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\SurfacePath">
-      <UniqueIdentifier>{d5bc819e-53e1-4574-a15c-d7d4bce01a2c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\SelfIntersectoins">
-      <UniqueIdentifier>{7a9f7691-d5a0-49ca-936f-cc25cfe18f8d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\Segmentation">
-      <UniqueIdentifier>{482540be-d903-4a0a-8c4c-c783316c31e6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\Relax">
-      <UniqueIdentifier>{435d3e5d-8726-43e7-be69-b9d4c1799c95}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\Primitives">
-      <UniqueIdentifier>{752d7e31-3225-4338-9964-5d511c6b8ec1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\Polyline">
-      <UniqueIdentifier>{176e10d8-480b-466d-be49-299f1d1b94be}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\PointCloud">
-      <UniqueIdentifier>{c300f0c9-5a9b-44ee-98c2-1ac7dad01b16}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\MeshBuilder">
-      <UniqueIdentifier>{c83e4212-7072-40c2-8354-827c896c1628}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\MeshAlgorithm">
-      <UniqueIdentifier>{90f9bd42-738e-4a33-a884-2a347d12cbb7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\Mesh">
-      <UniqueIdentifier>{2608cf85-c5d3-45cd-b44b-659771dd743c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\LinearSystem">
-      <UniqueIdentifier>{77366470-1db8-45b3-9971-1b5af90c1eac}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\DistanceMap">
-      <UniqueIdentifier>{7ce0eb63-0e26-416f-a991-db2be3e673b8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\Decimation">
-      <UniqueIdentifier>{c0473824-4c92-4d7b-8dd8-53467111d7b5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\Contours">
-      <UniqueIdentifier>{d4c0f533-10a6-48fd-9e33-a1aa4bf27a4d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\Components">
-      <UniqueIdentifier>{fdb0ec66-343d-41e6-80ec-44d4360e11a8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\Boolean">
-      <UniqueIdentifier>{c1e21c06-9f10-4e81-87cd-a550a822f2bd}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\BaseStructures">
-      <UniqueIdentifier>{cc99f9b7-b598-4504-bf99-8d838fbe408f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Mesh\AABBTree">
-      <UniqueIdentifier>{8523856f-61f8-4a64-be2c-e62368f09852}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\2. Base">
       <UniqueIdentifier>{7d09069f-dc58-4781-8c4c-6bcf463e869a}</UniqueIdentifier>
     </Filter>
@@ -157,6 +94,69 @@
     <Filter Include="Source Files\Scene\Render">
       <UniqueIdentifier>{63cd613f-62f1-4c45-a91b-3417a018a563}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\3. Mesh">
+      <UniqueIdentifier>{4d24a7a6-c422-4dd4-9865-b3d27a290436}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\WaterFlow">
+      <UniqueIdentifier>{3bf8efb6-7251-4ef8-890d-0e5c5940c8b8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\Triangulation">
+      <UniqueIdentifier>{e8616b21-1a75-42a5-990d-2f54914e7219}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\SurfacePath">
+      <UniqueIdentifier>{d5bc819e-53e1-4574-a15c-d7d4bce01a2c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\SelfIntersectoins">
+      <UniqueIdentifier>{7a9f7691-d5a0-49ca-936f-cc25cfe18f8d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\Segmentation">
+      <UniqueIdentifier>{482540be-d903-4a0a-8c4c-c783316c31e6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\Relax">
+      <UniqueIdentifier>{435d3e5d-8726-43e7-be69-b9d4c1799c95}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\Primitives">
+      <UniqueIdentifier>{752d7e31-3225-4338-9964-5d511c6b8ec1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\Polyline">
+      <UniqueIdentifier>{176e10d8-480b-466d-be49-299f1d1b94be}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\PointCloud">
+      <UniqueIdentifier>{c300f0c9-5a9b-44ee-98c2-1ac7dad01b16}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\MeshBuilder">
+      <UniqueIdentifier>{c83e4212-7072-40c2-8354-827c896c1628}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\MeshAlgorithm">
+      <UniqueIdentifier>{90f9bd42-738e-4a33-a884-2a347d12cbb7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\Mesh">
+      <UniqueIdentifier>{2608cf85-c5d3-45cd-b44b-659771dd743c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\LinearSystem">
+      <UniqueIdentifier>{77366470-1db8-45b3-9971-1b5af90c1eac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\DistanceMap">
+      <UniqueIdentifier>{7ce0eb63-0e26-416f-a991-db2be3e673b8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\Decimation">
+      <UniqueIdentifier>{c0473824-4c92-4d7b-8dd8-53467111d7b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\Contours">
+      <UniqueIdentifier>{d4c0f533-10a6-48fd-9e33-a1aa4bf27a4d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\Components">
+      <UniqueIdentifier>{fdb0ec66-343d-41e6-80ec-44d4360e11a8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\Boolean">
+      <UniqueIdentifier>{c1e21c06-9f10-4e81-87cd-a550a822f2bd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\BaseStructures">
+      <UniqueIdentifier>{cc99f9b7-b598-4504-bf99-8d838fbe408f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\3. Mesh\AABBTree">
+      <UniqueIdentifier>{8523856f-61f8-4a64-be2c-e62368f09852}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRMeshFwd.h">
@@ -169,10 +169,10 @@
       <Filter>Source Files\Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRCylinder.h">
-      <Filter>Source Files\Mesh\Primitives</Filter>
+      <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClInclude>
     <ClInclude Include="MRCube.h">
-      <Filter>Source Files\Mesh\Primitives</Filter>
+      <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClInclude>
     <ClInclude Include="MRVDBConversions.h">
       <Filter>Source Files\Voxels\VDBConversions</Filter>
@@ -184,16 +184,16 @@
       <Filter>Source Files\Voxels\VDBConversions</Filter>
     </ClInclude>
     <ClInclude Include="MRTorus.h">
-      <Filter>Source Files\Mesh\Primitives</Filter>
+      <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClInclude>
     <ClInclude Include="MRSystem.h">
       <Filter>Source Files\System</Filter>
     </ClInclude>
     <ClInclude Include="MRSimpleVolume.h">
-      <Filter>Source Files\Mesh\BaseStructures</Filter>
+      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRFloatGrid.h">
-      <Filter>Source Files\Mesh\BaseStructures</Filter>
+      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectVoxels.h">
       <Filter>Source Files\Scene</Filter>
@@ -241,49 +241,49 @@
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRArrow.h">
-      <Filter>Source Files\Mesh\Primitives</Filter>
+      <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClInclude>
     <ClInclude Include="MRVolumeSegment.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRAABBTree.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshDistance.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRMakePlane.h">
-      <Filter>Source Files\Mesh\Primitives</Filter>
+      <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshCollide.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshProject.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshTexture.h">
-      <Filter>Source Files\Mesh\BaseStructures</Filter>
+      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MROffset.h">
       <Filter>Source Files\Voxels\VDBConversions</Filter>
     </ClInclude>
     <ClInclude Include="MRPositionedText.h">
-      <Filter>Source Files\Mesh\BaseStructures</Filter>
+      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MREdgePaths.h">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRSurfaceDistance.h">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRSurfacePath.h">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRGeodesicPath.h">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRSceneColors.h">
-      <Filter>Source Files\Mesh\BaseStructures</Filter>
+      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRTeethMaskToDirectionVolume.h">
       <Filter>Source Files\Voxels</Filter>
@@ -304,10 +304,10 @@
       <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshCollidePrecise.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRFaceFace.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRStreamOperators.h">
       <Filter>Source Files\IO</Filter>
@@ -316,13 +316,13 @@
       <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshIntersect.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRAABBTreePoints.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRPointsInBall.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRPython.h">
       <Filter>Source Files\Python</Filter>
@@ -331,31 +331,31 @@
       <Filter>Source Files\Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRRegularGridMesh.h">
-      <Filter>Source Files\Mesh\Primitives</Filter>
+      <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClInclude>
     <ClInclude Include="MRPointCloud.h">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClInclude>
     <ClInclude Include="MRUniformSampling.h">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClInclude>
     <ClInclude Include="MRPointCloudMakeNormals.h">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClInclude>
     <ClInclude Include="MRRegularMapMesher.h">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClInclude>
     <ClInclude Include="MRIOFormatsRegistry.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineProject.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshDirMax.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRPointCloudRadius.h">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClInclude>
     <ClInclude Include="MRHistoryAction.h">
       <Filter>Source Files\History</Filter>
@@ -376,10 +376,10 @@
       <Filter>Source Files\History</Filter>
     </ClInclude>
     <ClInclude Include="MRTunnelDetector.h">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRUniqueThreadSafeOwner.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRIRenderObject.h">
       <Filter>Source Files\Scene\Render</Filter>
@@ -394,10 +394,10 @@
       <Filter>Source Files\System</Filter>
     </ClInclude>
     <ClInclude Include="MRFloatGridComponents.h">
-      <Filter>Source Files\Mesh\Components</Filter>
+      <Filter>Source Files\3. Mesh\Components</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshComponents.h">
-      <Filter>Source Files\Mesh\Components</Filter>
+      <Filter>Source Files\3. Mesh\Components</Filter>
     </ClInclude>
     <ClInclude Include="MRGTest.h">
       <Filter>Source Files\Tests</Filter>
@@ -412,34 +412,34 @@
       <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRAABBTreeNode.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRAABBTreeMaker.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRDistanceMapParams.h">
-      <Filter>Source Files\Mesh\DistanceMap</Filter>
+      <Filter>Source Files\3. Mesh\DistanceMap</Filter>
     </ClInclude>
     <ClInclude Include="MRDistanceMap.h">
-      <Filter>Source Files\Mesh\DistanceMap</Filter>
+      <Filter>Source Files\3. Mesh\DistanceMap</Filter>
     </ClInclude>
     <ClInclude Include="MRImageLoad.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineTopology.h">
-      <Filter>Source Files\Mesh\Polyline</Filter>
+      <Filter>Source Files\3. Mesh\Polyline</Filter>
     </ClInclude>
     <ClInclude Include="MRPolyline2Project.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRPdf.h">
       <Filter>Source Files\PDF</Filter>
     </ClInclude>
     <ClInclude Include="MRAABBTreePolyline.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRSurfaceDistanceBuilder.h">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeMeshAction.h">
       <Filter>Source Files\History</Filter>
@@ -460,13 +460,13 @@
       <Filter>Source Files\Python</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineEdgeIterator.h">
-      <Filter>Source Files\Mesh\Polyline</Filter>
+      <Filter>Source Files\3. Mesh\Polyline</Filter>
     </ClInclude>
     <ClInclude Include="MRXfBasedCache.h">
       <Filter>Source Files\Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRSceneSettings.h">
-      <Filter>Source Files\Mesh\BaseStructures</Filter>
+      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRLinesSave.h">
       <Filter>Source Files\IO</Filter>
@@ -475,7 +475,7 @@
       <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRMakeSphereMesh.h">
-      <Filter>Source Files\Mesh\Primitives</Filter>
+      <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClInclude>
     <ClInclude Include="MRSphereObject.h">
       <Filter>Source Files\Feature\Features</Filter>
@@ -487,7 +487,7 @@
       <Filter>Source Files\Feature\Features</Filter>
     </ClInclude>
     <ClInclude Include="MRPolyline.h">
-      <Filter>Source Files\Mesh\Polyline</Filter>
+      <Filter>Source Files\3. Mesh\Polyline</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectLinesHolder.h">
       <Filter>Source Files\Scene\ModelHolder</Filter>
@@ -499,7 +499,7 @@
       <Filter>Source Files\Feature\Features</Filter>
     </ClInclude>
     <ClInclude Include="MRPolyline2Collide.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectPointsHolder.h">
       <Filter>Source Files\Scene\ModelHolder</Filter>
@@ -511,100 +511,100 @@
       <Filter>Source Files\Feature\Features</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshBuilder.h">
-      <Filter>Source Files\Mesh\MeshBuilder</Filter>
+      <Filter>Source Files\3. Mesh\MeshBuilder</Filter>
     </ClInclude>
     <ClInclude Include="MRIdentifyVertices.h">
-      <Filter>Source Files\Mesh\MeshBuilder</Filter>
+      <Filter>Source Files\3. Mesh\MeshBuilder</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshBuilderTypes.h">
-      <Filter>Source Files\Mesh\MeshBuilder</Filter>
+      <Filter>Source Files\3. Mesh\MeshBuilder</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshTopology.h">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRMesh.h">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshTriPoint.h">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshToPointCloud.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshMetrics.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshNormals.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshSubdivide.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshFixer.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshFillHole.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MREdgePoint.h">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshBoundary.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshDelete.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshDelone.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRPolyline2Intersect.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineComponents.h">
-      <Filter>Source Files\Mesh\Components</Filter>
+      <Filter>Source Files\3. Mesh\Components</Filter>
     </ClInclude>
     <ClInclude Include="MRFillContourByGraphCut.h">
-      <Filter>Source Files\Mesh\Segmentation</Filter>
+      <Filter>Source Files\3. Mesh\Segmentation</Filter>
     </ClInclude>
     <ClInclude Include="MRSurroundingContour.h">
-      <Filter>Source Files\Mesh\Segmentation</Filter>
+      <Filter>Source Files\3. Mesh\Segmentation</Filter>
     </ClInclude>
     <ClInclude Include="MRContoursCut.h">
-      <Filter>Source Files\Mesh\Contours</Filter>
+      <Filter>Source Files\3. Mesh\Contours</Filter>
     </ClInclude>
     <ClInclude Include="MRContoursSeparation.h">
-      <Filter>Source Files\Mesh\Contours</Filter>
+      <Filter>Source Files\3. Mesh\Contours</Filter>
     </ClInclude>
     <ClInclude Include="MRIntersectionContour.h">
-      <Filter>Source Files\Mesh\Contours</Filter>
+      <Filter>Source Files\3. Mesh\Contours</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshDecimate.h">
-      <Filter>Source Files\Mesh\Decimation</Filter>
+      <Filter>Source Files\3. Mesh\Decimation</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshDecimateParallel.h">
-      <Filter>Source Files\Mesh\Decimation</Filter>
+      <Filter>Source Files\3. Mesh\Decimation</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineDecimate.h">
-      <Filter>Source Files\Mesh\Decimation</Filter>
+      <Filter>Source Files\3. Mesh\Decimation</Filter>
     </ClInclude>
     <ClInclude Include="MRPointCloudTriangulation.h">
-      <Filter>Source Files\Mesh\Triangulation</Filter>
+      <Filter>Source Files\3. Mesh\Triangulation</Filter>
     </ClInclude>
     <ClInclude Include="MRPointCloudTriangulationHelpers.h">
-      <Filter>Source Files\Mesh\Triangulation</Filter>
+      <Filter>Source Files\3. Mesh\Triangulation</Filter>
     </ClInclude>
     <ClInclude Include="MRBooleanOperation.h">
-      <Filter>Source Files\Mesh\Boolean</Filter>
+      <Filter>Source Files\3. Mesh\Boolean</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshBoolean.h">
-      <Filter>Source Files\Mesh\Boolean</Filter>
+      <Filter>Source Files\3. Mesh\Boolean</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshBooleanFacade.h">
-      <Filter>Source Files\Mesh\Boolean</Filter>
+      <Filter>Source Files\3. Mesh\Boolean</Filter>
     </ClInclude>
     <ClInclude Include="MRPartialOffset.h">
-      <Filter>Source Files\Mesh\Boolean</Filter>
+      <Filter>Source Files\3. Mesh\Boolean</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshSaveObj.h">
       <Filter>Source Files\IO</Filter>
@@ -613,25 +613,25 @@
       <Filter>Source Files\Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineSubdivide.h">
-      <Filter>Source Files\Mesh\Polyline</Filter>
+      <Filter>Source Files\3. Mesh\Polyline</Filter>
     </ClInclude>
     <ClInclude Include="MRChangePolylineAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
     <ClInclude Include="MRRelaxParams.h">
-      <Filter>Source Files\Mesh\Relax</Filter>
+      <Filter>Source Files\3. Mesh\Relax</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshRelax.h">
-      <Filter>Source Files\Mesh\Relax</Filter>
+      <Filter>Source Files\3. Mesh\Relax</Filter>
     </ClInclude>
     <ClInclude Include="MRPointCloudRelax.h">
-      <Filter>Source Files\Mesh\Relax</Filter>
+      <Filter>Source Files\3. Mesh\Relax</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineRelax.h">
-      <Filter>Source Files\Mesh\Relax</Filter>
+      <Filter>Source Files\3. Mesh\Relax</Filter>
     </ClInclude>
     <ClInclude Include="MRPrism.h">
-      <Filter>Source Files\Mesh\Primitives</Filter>
+      <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeLabelAction.h">
       <Filter>Source Files\History</Filter>
@@ -643,7 +643,7 @@
       <Filter>Source Files\History</Filter>
     </ClInclude>
     <ClInclude Include="MRVertexAttributeGradient.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeVoxelSelectionAction.h">
       <Filter>Source Files\History</Filter>
@@ -652,19 +652,19 @@
       <Filter>Source Files\History</Filter>
     </ClInclude>
     <ClInclude Include="MRUniteManyMeshes.h">
-      <Filter>Source Files\Mesh\Boolean</Filter>
+      <Filter>Source Files\3. Mesh\Boolean</Filter>
     </ClInclude>
     <ClInclude Include="MRPlanarPath.h">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MROrder.h">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MREdgePathsBuilder.h">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRExtractIsolines.h">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRMarchingCubes.h">
       <Filter>Source Files\Voxels</Filter>
@@ -673,10 +673,10 @@
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MREdgeMetric.h">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRFastWindingNumber.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MROpenVDBHelper.h">
       <Filter>Source Files\Voxels\VDBConversions</Filter>
@@ -688,82 +688,82 @@
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRGridSettings.h">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRPointsToMeshProjector.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRGltfSerializer.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRFreeFormDeformer.h">
-      <Filter>Source Files\Mesh\LinearSystem</Filter>
+      <Filter>Source Files\3. Mesh\LinearSystem</Filter>
     </ClInclude>
     <ClInclude Include="MRToolPath.h">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRLaplacian.h">
-      <Filter>Source Files\Mesh\LinearSystem</Filter>
+      <Filter>Source Files\3. Mesh\LinearSystem</Filter>
     </ClInclude>
     <ClInclude Include="MRPositionVertsSmoothly.h">
-      <Filter>Source Files\Mesh\LinearSystem</Filter>
+      <Filter>Source Files\3. Mesh\LinearSystem</Filter>
     </ClInclude>
     <ClInclude Include="MRNormalsToPoints.h">
-      <Filter>Source Files\Mesh\LinearSystem</Filter>
+      <Filter>Source Files\3. Mesh\LinearSystem</Filter>
     </ClInclude>
     <ClInclude Include="MRNormalDenoising.h">
-      <Filter>Source Files\Mesh\LinearSystem</Filter>
+      <Filter>Source Files\3. Mesh\LinearSystem</Filter>
     </ClInclude>
     <ClInclude Include="MREdgeIterator.h">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRPartMapping.h">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRPointOnFace.h">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshPart.h">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshEigen.h">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRConvexHull.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRExpandShrink.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRContoursStitch.h">
-      <Filter>Source Files\Mesh\Contours</Filter>
+      <Filter>Source Files\3. Mesh\Contours</Filter>
     </ClInclude>
     <ClInclude Include="MRFillContour.h">
-      <Filter>Source Files\Mesh\Contours</Filter>
+      <Filter>Source Files\3. Mesh\Contours</Filter>
     </ClInclude>
     <ClInclude Include="MRFillContours2D.h">
-      <Filter>Source Files\Mesh\Contours</Filter>
+      <Filter>Source Files\3. Mesh\Contours</Filter>
     </ClInclude>
     <ClInclude Include="MRFixUndercuts.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRGridSampling.h">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClInclude>
     <ClInclude Include="MRRegionBoundary.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRICP.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshTrimWithPlane.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRCloseVertices.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MROverlappingTris.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectGcode.h">
       <Filter>Source Files\Scene</Filter>
@@ -781,7 +781,7 @@
       <Filter>Source Files\System</Filter>
     </ClInclude>
     <ClInclude Include="MRAxis.h">
-      <Filter>Source Files\Mesh\BaseStructures</Filter>
+      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeObjectFields.h">
       <Filter>Source Files\History</Filter>
@@ -793,16 +793,16 @@
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRInnerShell.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRMovementBuildBody.h">
-      <Filter>Source Files\Mesh\Primitives</Filter>
+      <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClInclude>
     <ClInclude Include="MRVDBProgressInterrupter.h">
       <Filter>Source Files\Voxels\VDBConversions</Filter>
     </ClInclude>
     <ClInclude Include="MRVDBFloatGrid.h">
-      <Filter>Source Files\Mesh\BaseStructures</Filter>
+      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRCNCMachineSettings.h">
       <Filter>Source Files\Gcode</Filter>
@@ -817,34 +817,34 @@
       <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRTerrainTriangulation.h">
-      <Filter>Source Files\Mesh\Triangulation</Filter>
+      <Filter>Source Files\3. Mesh\Triangulation</Filter>
     </ClInclude>
     <ClInclude Include="MRPointsProject.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MREmbedTerrainStructure.h">
-      <Filter>Source Files\Mesh\Boolean</Filter>
+      <Filter>Source Files\3. Mesh\Boolean</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshExtrude.h">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRWatershedGraph.h">
-      <Filter>Source Files\Mesh\WaterFlow</Filter>
+      <Filter>Source Files\3. Mesh\WaterFlow</Filter>
     </ClInclude>
     <ClInclude Include="MRAggregateFlow.h">
-      <Filter>Source Files\Mesh\WaterFlow</Filter>
+      <Filter>Source Files\3. Mesh\WaterFlow</Filter>
     </ClInclude>
     <ClInclude Include="MRBasinVolume.h">
-      <Filter>Source Files\Mesh\WaterFlow</Filter>
+      <Filter>Source Files\3. Mesh\WaterFlow</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshOverhangs.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRPrecipitationSimulator.h">
-      <Filter>Source Files\Mesh\WaterFlow</Filter>
+      <Filter>Source Files\3. Mesh\WaterFlow</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshOrPoints.h">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshLoadStep.h">
       <Filter>Source Files\IO</Filter>
@@ -856,37 +856,37 @@
       <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MROffsetContours.h">
-      <Filter>Source Files\Mesh\Polyline</Filter>
+      <Filter>Source Files\3. Mesh\Polyline</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeColoringType.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
     <ClInclude Include="MRSolarRadiation.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRImproveSampling.h">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeColoringActions.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
     <ClInclude Include="MRCloudPartMapping.h">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClInclude>
     <ClInclude Include="MREnumNeighbours.h">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshDiff.h">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRFilterCreaseEdges.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshReplicate.h">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRInTreePathBuilder.h">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRSaveSettings.h">
       <Filter>Source Files\IO</Filter>
@@ -898,7 +898,7 @@
       <Filter>Source Files\History</Filter>
     </ClInclude>
     <ClInclude Include="MRUVSphere.h">
-      <Filter>Source Files\Mesh\Primitives</Filter>
+      <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectSave.h">
       <Filter>Source Files\IO</Filter>
@@ -916,7 +916,7 @@
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRAlphaShape.h">
-      <Filter>Source Files\Mesh\Triangulation</Filter>
+      <Filter>Source Files\3. Mesh\Triangulation</Filter>
     </ClInclude>
     <ClInclude Include="MRFeatureObject.h">
       <Filter>Source Files\Feature\Features</Filter>
@@ -925,7 +925,7 @@
       <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRLocalTriangulations.h">
-      <Filter>Source Files\Mesh\Triangulation</Filter>
+      <Filter>Source Files\3. Mesh\Triangulation</Filter>
     </ClInclude>
     <ClInclude Include="MRMeasurementObject.h">
       <Filter>Source Files\Feature\Measurements</Filter>
@@ -940,16 +940,16 @@
       <Filter>Source Files\Feature\Measurements</Filter>
     </ClInclude>
     <ClInclude Include="MRUnorientedTriangle.h">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRPointsComponents.h">
-      <Filter>Source Files\Mesh\Components</Filter>
+      <Filter>Source Files\3. Mesh\Components</Filter>
     </ClInclude>
     <ClInclude Include="MRPointCloudDivideWithPlane.h">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineTrimWithPlane.h">
-      <Filter>Source Files\Mesh\Polyline</Filter>
+      <Filter>Source Files\3. Mesh\Polyline</Filter>
     </ClInclude>
     <ClInclude Include="MRDistanceVolumeParams.h">
       <Filter>Source Files\Voxels</Filter>
@@ -973,43 +973,43 @@
       <Filter>Source Files\Scene\Render</Filter>
     </ClInclude>
     <ClInclude Include="MRFaceDistance.h">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRTriMesh.h">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRAddNoise.h">
-      <Filter>Source Files\Mesh\Relax</Filter>
+      <Filter>Source Files\3. Mesh\Relax</Filter>
     </ClInclude>
     <ClInclude Include="MRSeparationPoint.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRMultiwayICP.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRFixSelfIntersections.h">
-      <Filter>Source Files\Mesh\SelfIntersectoins</Filter>
+      <Filter>Source Files\3. Mesh\SelfIntersectoins</Filter>
     </ClInclude>
     <ClInclude Include="MRMapping.h">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRIterativeSampling.h">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClInclude>
     <ClInclude Include="MRAABBTreeBase.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRAABBTreeBase.hpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRAABBTreeObjects.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRAABBTreeMaker.hpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRLevelOfDetails.h">
-      <Filter>Source Files\Mesh\Decimation</Filter>
+      <Filter>Source Files\3. Mesh\Decimation</Filter>
     </ClInclude>
     <ClInclude Include="MRFeatureObjectImpls.h">
       <Filter>Source Files\Feature\Features</Filter>
@@ -1024,19 +1024,19 @@
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRFillHoleNicely.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MR3MFSerializer.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRPointCloudDistance.h">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshRelax.hpp">
-      <Filter>Source Files\Mesh\Relax</Filter>
+      <Filter>Source Files\3. Mesh\Relax</Filter>
     </ClInclude>
     <ClInclude Include="MRVoxelsVolume.h">
-      <Filter>Source Files\Mesh\BaseStructures</Filter>
+      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRMoveMeshToVoxelMaxDeriv.h">
       <Filter>Source Files\Voxels</Filter>
@@ -1045,13 +1045,13 @@
       <Filter>Source Files\System</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshThickness.h">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshDecimateCallbacks.h">
-      <Filter>Source Files\Mesh\Decimation</Filter>
+      <Filter>Source Files\3. Mesh\Decimation</Filter>
     </ClInclude>
     <ClInclude Include="MRICPEnums.h">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectImGuiLabel.h">
       <Filter>Source Files\Scene</Filter>
@@ -1159,13 +1159,13 @@
       <Filter>Source Files\1. Kernel\Algorithms</Filter>
     </ClInclude>
     <ClInclude Include="MRPointOnObject.h">
-      <Filter>Source Files\Mesh</Filter>
+      <Filter>Source Files\3. Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRRestoringStreamsSink.h">
       <Filter>Source Files\2. Base\Logging</Filter>
     </ClInclude>
     <ClInclude Include="MRRingIterator.h">
-      <Filter>Source Files\Mesh</Filter>
+      <Filter>Source Files\3. Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRStringConvert.h">
       <Filter>Source Files\2. Base\Algorithms</Filter>
@@ -1183,7 +1183,7 @@
       <Filter>Source Files\1. Kernel\Helpers</Filter>
     </ClInclude>
     <ClInclude Include="MRWriter.h">
-      <Filter>Source Files\Mesh</Filter>
+      <Filter>Source Files\3. Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRViewportProperty.h">
       <Filter>Source Files\Scene</Filter>
@@ -1216,7 +1216,7 @@
       <Filter>Source Files\1. Kernel\Geometry</Filter>
     </ClInclude>
     <ClInclude Include="MRDipole.h">
-      <Filter>Source Files\Mesh</Filter>
+      <Filter>Source Files\3. Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRVector4.h">
       <Filter>Source Files\1. Kernel\Vector</Filter>
@@ -1258,7 +1258,7 @@
       <Filter>Source Files\1. Kernel\Geometry</Filter>
     </ClInclude>
     <ClInclude Include="MRMakeRigidXf.h">
-      <Filter>Source Files\Mesh</Filter>
+      <Filter>Source Files\3. Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRTriPoint.h">
       <Filter>Source Files\1. Kernel\Geometry</Filter>
@@ -1360,7 +1360,7 @@
       <Filter>Source Files\1. Kernel\DataStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRPrimitiveMapsComposition.h">
-      <Filter>Source Files\Mesh</Filter>
+      <Filter>Source Files\3. Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRBaseFwd.h">
       <Filter>Source Files\2. Base</Filter>
@@ -1372,7 +1372,7 @@
       <Filter>Source Files\2. Base\Math</Filter>
     </ClInclude>
     <ClInclude Include="MRMapEdge.h">
-      <Filter>Source Files\Mesh</Filter>
+      <Filter>Source Files\3. Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRProgressCallback.h">
       <Filter>Source Files\1. Kernel\Algorithms</Filter>
@@ -1407,10 +1407,10 @@
       <Filter>Source Files\Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRCylinder.cpp">
-      <Filter>Source Files\Mesh\Primitives</Filter>
+      <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClCompile>
     <ClCompile Include="MRCube.cpp">
-      <Filter>Source Files\Mesh\Primitives</Filter>
+      <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClCompile>
     <ClCompile Include="MRVDBConversions.cpp">
       <Filter>Source Files\Voxels\VDBConversions</Filter>
@@ -1422,13 +1422,13 @@
       <Filter>Source Files\Voxels\VDBConversions</Filter>
     </ClCompile>
     <ClCompile Include="MRTorus.cpp">
-      <Filter>Source Files\Mesh\Primitives</Filter>
+      <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClCompile>
     <ClCompile Include="MRSystem.cpp">
       <Filter>Source Files\System</Filter>
     </ClCompile>
     <ClCompile Include="MRFloatGrid.cpp">
-      <Filter>Source Files\Mesh\BaseStructures</Filter>
+      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectVoxels.cpp">
       <Filter>Source Files\Scene</Filter>
@@ -1470,43 +1470,43 @@
       <Filter>Source Files\Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRArrow.cpp">
-      <Filter>Source Files\Mesh\Primitives</Filter>
+      <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClCompile>
     <ClCompile Include="MRVolumeSegment.cpp">
       <Filter>Source Files\Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTree.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshDistance.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRMakePlane.cpp">
-      <Filter>Source Files\Mesh\Primitives</Filter>
+      <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshCollide.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshProject.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MROffset.cpp">
       <Filter>Source Files\Voxels\VDBConversions</Filter>
     </ClCompile>
     <ClCompile Include="MREdgePaths.cpp">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRSurfaceDistance.cpp">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRSurfacePath.cpp">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRGeodesicPath.cpp">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRSceneColors.cpp">
-      <Filter>Source Files\Mesh\BaseStructures</Filter>
+      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
     </ClCompile>
     <ClCompile Include="MRTeethMaskToDirectionVolume.cpp">
       <Filter>Source Files\Voxels</Filter>
@@ -1521,7 +1521,7 @@
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshCollidePrecise.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRStreamOperators.cpp">
       <Filter>Source Files\IO</Filter>
@@ -1530,13 +1530,13 @@
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshIntersect.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTreePoints.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRPointsInBall.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRPython.cpp">
       <Filter>Source Files\Python</Filter>
@@ -1545,43 +1545,43 @@
       <Filter>Source Files\Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRRegularGridMesh.cpp">
-      <Filter>Source Files\Mesh\Primitives</Filter>
+      <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClCompile>
     <ClCompile Include="MRPointCloud.cpp">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClCompile>
     <ClCompile Include="MRUniformSampling.cpp">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClCompile>
     <ClCompile Include="MRPointCloudMakeNormals.cpp">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClCompile>
     <ClCompile Include="MRRegularMapMesher.cpp">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClCompile>
     <ClCompile Include="MRIOFormatsRegistry.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTreePolyline3.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineProject.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshDirMax.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRPointCloudRadius.cpp">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClCompile>
     <ClCompile Include="MRChangeSceneAction.cpp">
       <Filter>Source Files\History</Filter>
     </ClCompile>
     <ClCompile Include="MRTunnelDetector.cpp">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRUniqueThreadSafeOwner.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRIRenderObject.cpp">
       <Filter>Source Files\Scene\Render</Filter>
@@ -1599,10 +1599,10 @@
       <Filter>Source Files\Tests</Filter>
     </ClCompile>
     <ClCompile Include="MRFloatGridComponents.cpp">
-      <Filter>Source Files\Mesh\Components</Filter>
+      <Filter>Source Files\3. Mesh\Components</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshComponents.cpp">
-      <Filter>Source Files\Mesh\Components</Filter>
+      <Filter>Source Files\3. Mesh\Components</Filter>
     </ClCompile>
     <ClCompile Include="MRBestFitTests.cpp">
       <Filter>Source Files\Tests</Filter>
@@ -1620,34 +1620,34 @@
       <Filter>Source Files\Tests</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTreeMaker.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRDistanceMapParams.cpp">
-      <Filter>Source Files\Mesh\DistanceMap</Filter>
+      <Filter>Source Files\3. Mesh\DistanceMap</Filter>
     </ClCompile>
     <ClCompile Include="MRDistanceMapTests.cpp">
-      <Filter>Source Files\Mesh\DistanceMap</Filter>
+      <Filter>Source Files\3. Mesh\DistanceMap</Filter>
     </ClCompile>
     <ClCompile Include="MRDistanceMap.cpp">
-      <Filter>Source Files\Mesh\DistanceMap</Filter>
+      <Filter>Source Files\3. Mesh\DistanceMap</Filter>
     </ClCompile>
     <ClCompile Include="MRImageLoad.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTreePolyline2.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineTopology.cpp">
-      <Filter>Source Files\Mesh\Polyline</Filter>
+      <Filter>Source Files\3. Mesh\Polyline</Filter>
     </ClCompile>
     <ClCompile Include="MRPdf.cpp">
       <Filter>Source Files\PDF</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTreePolyline.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRSurfaceDistanceBuilder.cpp">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRComputeVolume.cpp">
       <Filter>Source Files\Voxels\VDBConversions</Filter>
@@ -1662,7 +1662,7 @@
       <Filter>Source Files\Python</Filter>
     </ClCompile>
     <ClCompile Include="MRSceneSettings.cpp">
-      <Filter>Source Files\Mesh\BaseStructures</Filter>
+      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
     </ClCompile>
     <ClCompile Include="MRLinesSave.cpp">
       <Filter>Source Files\IO</Filter>
@@ -1671,7 +1671,7 @@
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRMakeSphereMesh.cpp">
-      <Filter>Source Files\Mesh\Primitives</Filter>
+      <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClCompile>
     <ClCompile Include="MRSphereObject.cpp">
       <Filter>Source Files\Feature\Features</Filter>
@@ -1683,7 +1683,7 @@
       <Filter>Source Files\Feature\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRPolyline.cpp">
-      <Filter>Source Files\Mesh\Polyline</Filter>
+      <Filter>Source Files\3. Mesh\Polyline</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectLinesHolder.cpp">
       <Filter>Source Files\Scene\ModelHolder</Filter>
@@ -1695,7 +1695,7 @@
       <Filter>Source Files\Feature\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRPolyline2Collide.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectPointsHolder.cpp">
       <Filter>Source Files\Scene\ModelHolder</Filter>
@@ -1704,13 +1704,13 @@
       <Filter>Source Files\Feature\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshBuilder.cpp">
-      <Filter>Source Files\Mesh\MeshBuilder</Filter>
+      <Filter>Source Files\3. Mesh\MeshBuilder</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshBuildDeleteTest.cpp">
-      <Filter>Source Files\Mesh\MeshBuilder</Filter>
+      <Filter>Source Files\3. Mesh\MeshBuilder</Filter>
     </ClCompile>
     <ClCompile Include="MRIdentifyVertices.cpp">
-      <Filter>Source Files\Mesh\MeshBuilder</Filter>
+      <Filter>Source Files\3. Mesh\MeshBuilder</Filter>
     </ClCompile>
     <ClCompile Include="MRAlignTextToMesh.cpp">
       <Filter>Source Files\SymbolMesh</Filter>
@@ -1719,94 +1719,94 @@
       <Filter>Source Files\Tests</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshTopology.cpp">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRMesh.cpp">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshTriPoint.cpp">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshToPointCloud.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshNormals.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshMetrics.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshSubdivide.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshFillHole.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshFixer.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MREdgePoint.cpp">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshBoundary.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshDelete.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshDelone.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRPolyline2Intersect.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineComponents.cpp">
-      <Filter>Source Files\Mesh\Components</Filter>
+      <Filter>Source Files\3. Mesh\Components</Filter>
     </ClCompile>
     <ClCompile Include="MRExampleTest.cpp">
       <Filter>Source Files\Tests</Filter>
     </ClCompile>
     <ClCompile Include="MRFillContourByGraphCut.cpp">
-      <Filter>Source Files\Mesh\Segmentation</Filter>
+      <Filter>Source Files\3. Mesh\Segmentation</Filter>
     </ClCompile>
     <ClCompile Include="MRSurroundingContour.cpp">
-      <Filter>Source Files\Mesh\Segmentation</Filter>
+      <Filter>Source Files\3. Mesh\Segmentation</Filter>
     </ClCompile>
     <ClCompile Include="MRContoursCut.cpp">
-      <Filter>Source Files\Mesh\Contours</Filter>
+      <Filter>Source Files\3. Mesh\Contours</Filter>
     </ClCompile>
     <ClCompile Include="MRContoursSeparation.cpp">
-      <Filter>Source Files\Mesh\Contours</Filter>
+      <Filter>Source Files\3. Mesh\Contours</Filter>
     </ClCompile>
     <ClCompile Include="MRIntersectionContour.cpp">
-      <Filter>Source Files\Mesh\Contours</Filter>
+      <Filter>Source Files\3. Mesh\Contours</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshDecimate.cpp">
-      <Filter>Source Files\Mesh\Decimation</Filter>
+      <Filter>Source Files\3. Mesh\Decimation</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshDecimateParallel.cpp">
-      <Filter>Source Files\Mesh\Decimation</Filter>
+      <Filter>Source Files\3. Mesh\Decimation</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineDecimate.cpp">
-      <Filter>Source Files\Mesh\Decimation</Filter>
+      <Filter>Source Files\3. Mesh\Decimation</Filter>
     </ClCompile>
     <ClCompile Include="MRPointCloudTriangulation.cpp">
-      <Filter>Source Files\Mesh\Triangulation</Filter>
+      <Filter>Source Files\3. Mesh\Triangulation</Filter>
     </ClCompile>
     <ClCompile Include="MRPointCloudTriangulationHelpers.cpp">
-      <Filter>Source Files\Mesh\Triangulation</Filter>
+      <Filter>Source Files\3. Mesh\Triangulation</Filter>
     </ClCompile>
     <ClCompile Include="MRBooleanOperation.cpp">
-      <Filter>Source Files\Mesh\Boolean</Filter>
+      <Filter>Source Files\3. Mesh\Boolean</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshBoolean.cpp">
-      <Filter>Source Files\Mesh\Boolean</Filter>
+      <Filter>Source Files\3. Mesh\Boolean</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshBooleanFacade.cpp">
-      <Filter>Source Files\Mesh\Boolean</Filter>
+      <Filter>Source Files\3. Mesh\Boolean</Filter>
     </ClCompile>
     <ClCompile Include="MRPartialOffset.cpp">
-      <Filter>Source Files\Mesh\Boolean</Filter>
+      <Filter>Source Files\3. Mesh\Boolean</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshSaveObj.cpp">
       <Filter>Source Files\IO</Filter>
@@ -1815,34 +1815,34 @@
       <Filter>Source Files\Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineSubdivide.cpp">
-      <Filter>Source Files\Mesh\Polyline</Filter>
+      <Filter>Source Files\3. Mesh\Polyline</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshRelax.cpp">
-      <Filter>Source Files\Mesh\Relax</Filter>
+      <Filter>Source Files\3. Mesh\Relax</Filter>
     </ClCompile>
     <ClCompile Include="MRPointCloudRelax.cpp">
-      <Filter>Source Files\Mesh\Relax</Filter>
+      <Filter>Source Files\3. Mesh\Relax</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineRelax.cpp">
-      <Filter>Source Files\Mesh\Relax</Filter>
+      <Filter>Source Files\3. Mesh\Relax</Filter>
     </ClCompile>
     <ClCompile Include="MRPrism.cpp">
-      <Filter>Source Files\Mesh\Primitives</Filter>
+      <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClCompile>
     <ClCompile Include="MRProgressReadWrite.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRVertexAttributeGradient.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRUniteManyMeshes.cpp">
-      <Filter>Source Files\Mesh\Boolean</Filter>
+      <Filter>Source Files\3. Mesh\Boolean</Filter>
     </ClCompile>
     <ClCompile Include="MROrder.cpp">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRExtractIsolines.cpp">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRMarchingCubes.cpp">
       <Filter>Source Files\Voxels</Filter>
@@ -1851,13 +1851,13 @@
       <Filter>Source Files\Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MREdgeMetric.cpp">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRFastWindingNumber.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRPointsToMeshProjector.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRVoxelsLoadGav.cpp">
       <Filter>Source Files\IO</Filter>
@@ -1866,64 +1866,64 @@
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRToolPath.cpp">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRFreeFormDeformer.cpp">
-      <Filter>Source Files\Mesh\LinearSystem</Filter>
+      <Filter>Source Files\3. Mesh\LinearSystem</Filter>
     </ClCompile>
     <ClCompile Include="MRLaplacian.cpp">
-      <Filter>Source Files\Mesh\LinearSystem</Filter>
+      <Filter>Source Files\3. Mesh\LinearSystem</Filter>
     </ClCompile>
     <ClCompile Include="MRPositionVertsSmoothly.cpp">
-      <Filter>Source Files\Mesh\LinearSystem</Filter>
+      <Filter>Source Files\3. Mesh\LinearSystem</Filter>
     </ClCompile>
     <ClCompile Include="MRNormalsToPoints.cpp">
-      <Filter>Source Files\Mesh\LinearSystem</Filter>
+      <Filter>Source Files\3. Mesh\LinearSystem</Filter>
     </ClCompile>
     <ClCompile Include="MRNormalDenoising.cpp">
-      <Filter>Source Files\Mesh\LinearSystem</Filter>
+      <Filter>Source Files\3. Mesh\LinearSystem</Filter>
     </ClCompile>
     <ClCompile Include="MRPartMapping.cpp">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshEigen.cpp">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRConvexHull.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRExpandShrink.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRContoursStitch.cpp">
-      <Filter>Source Files\Mesh\Contours</Filter>
+      <Filter>Source Files\3. Mesh\Contours</Filter>
     </ClCompile>
     <ClCompile Include="MRFillContour.cpp">
-      <Filter>Source Files\Mesh\Contours</Filter>
+      <Filter>Source Files\3. Mesh\Contours</Filter>
     </ClCompile>
     <ClCompile Include="MRFillContours2D.cpp">
-      <Filter>Source Files\Mesh\Contours</Filter>
+      <Filter>Source Files\3. Mesh\Contours</Filter>
     </ClCompile>
     <ClCompile Include="MRFixUndercuts.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRGridSampling.cpp">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClCompile>
     <ClCompile Include="MRRegionBoundary.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRICP.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshTrimWithPlane.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRCloseVertices.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MROverlappingTris.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectGcode.cpp">
       <Filter>Source Files\Scene</Filter>
@@ -1941,10 +1941,10 @@
       <Filter>Source Files\Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRMovementBuildBody.cpp">
-      <Filter>Source Files\Mesh\Primitives</Filter>
+      <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClCompile>
     <ClCompile Include="MRInnerShell.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRCNCMachineSettings.cpp">
       <Filter>Source Files\Gcode</Filter>
@@ -1956,25 +1956,25 @@
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRTerrainTriangulation.cpp">
-      <Filter>Source Files\Mesh\Triangulation</Filter>
+      <Filter>Source Files\3. Mesh\Triangulation</Filter>
     </ClCompile>
     <ClCompile Include="MRPointsProject.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MREmbedTerrainStructure.cpp">
-      <Filter>Source Files\Mesh\Boolean</Filter>
+      <Filter>Source Files\3. Mesh\Boolean</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshExtrude.cpp">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRWatershedGraph.cpp">
-      <Filter>Source Files\Mesh\WaterFlow</Filter>
+      <Filter>Source Files\3. Mesh\WaterFlow</Filter>
     </ClCompile>
     <ClCompile Include="MRAggregateFlow.cpp">
-      <Filter>Source Files\Mesh\WaterFlow</Filter>
+      <Filter>Source Files\3. Mesh\WaterFlow</Filter>
     </ClCompile>
     <ClCompile Include="MRBasinVolume.cpp">
-      <Filter>Source Files\Mesh\WaterFlow</Filter>
+      <Filter>Source Files\3. Mesh\WaterFlow</Filter>
     </ClCompile>
     <ClCompile Include="MRPointsLoadE57.cpp">
       <Filter>Source Files\IO</Filter>
@@ -1983,13 +1983,13 @@
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRPrecipitationSimulator.cpp">
-      <Filter>Source Files\Mesh\WaterFlow</Filter>
+      <Filter>Source Files\3. Mesh\WaterFlow</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshOverhangs.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshOrPoints.cpp">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshLoadStep.cpp">
       <Filter>Source Files\IO</Filter>
@@ -1998,28 +1998,28 @@
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MROffsetContours.cpp">
-      <Filter>Source Files\Mesh\Polyline</Filter>
+      <Filter>Source Files\3. Mesh\Polyline</Filter>
     </ClCompile>
     <ClCompile Include="MRSolarRadiation.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRImproveSampling.cpp">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClCompile>
     <ClCompile Include="MREnumNeighbours.cpp">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshDiff.cpp">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshReplicate.cpp">
-      <Filter>Source Files\Mesh\Mesh</Filter>
+      <Filter>Source Files\3. Mesh\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRFilterCreaseEdges.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRInTreePathBuilder.cpp">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRSaveSettings.cpp">
       <Filter>Source Files\IO</Filter>
@@ -2040,10 +2040,10 @@
       <Filter>Source Files\Feature\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRAlphaShape.cpp">
-      <Filter>Source Files\Mesh\Triangulation</Filter>
+      <Filter>Source Files\3. Mesh\Triangulation</Filter>
     </ClCompile>
     <ClCompile Include="MRLocalTriangulations.cpp">
-      <Filter>Source Files\Mesh\Triangulation</Filter>
+      <Filter>Source Files\3. Mesh\Triangulation</Filter>
     </ClCompile>
     <ClCompile Include="MRDirectory.cpp">
       <Filter>Source Files\System</Filter>
@@ -2058,13 +2058,13 @@
       <Filter>Source Files\Feature\Measurements</Filter>
     </ClCompile>
     <ClCompile Include="MRPointsComponents.cpp">
-      <Filter>Source Files\Mesh\Components</Filter>
+      <Filter>Source Files\3. Mesh\Components</Filter>
     </ClCompile>
     <ClCompile Include="MRPointCloudDivideWithPlane.cpp">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineTrimWithPlane.cpp">
-      <Filter>Source Files\Mesh\Polyline</Filter>
+      <Filter>Source Files\3. Mesh\Polyline</Filter>
     </ClCompile>
     <ClCompile Include="MRPointsToDistanceVolume.cpp">
       <Filter>Source Files\Voxels</Filter>
@@ -2088,10 +2088,10 @@
       <Filter>Source Files\Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRFaceDistance.cpp">
-      <Filter>Source Files\Mesh\SurfacePath</Filter>
+      <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRAddNoise.cpp">
-      <Filter>Source Files\Mesh\Relax</Filter>
+      <Filter>Source Files\3. Mesh\Relax</Filter>
     </ClCompile>
     <ClCompile Include="MRLogWindowsExceptions.cpp">
       <Filter>Source Files\System</Filter>
@@ -2100,16 +2100,16 @@
       <Filter>Source Files\Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRFixSelfIntersections.cpp">
-      <Filter>Source Files\Mesh\SelfIntersectoins</Filter>
+      <Filter>Source Files\3. Mesh\SelfIntersectoins</Filter>
     </ClCompile>
     <ClCompile Include="MRMultiwayICP.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRIterativeSampling.cpp">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTreeObjects.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRFeatureRefine.cpp">
       <Filter>Source Files\Feature\Features</Filter>
@@ -2118,28 +2118,28 @@
       <Filter>Source Files\Feature\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRLevelOfDetails.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRFillHoleNicely.cpp">
-      <Filter>Source Files\Mesh\MeshAlgorithm</Filter>
+      <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MR3MFSerializer.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRPointCloudDistance.cpp">
-      <Filter>Source Files\Mesh\PointCloud</Filter>
+      <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClCompile>
     <ClCompile Include="MRMoveMeshToVoxelMaxDeriv.cpp">
       <Filter>Source Files\Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshThickness.cpp">
-      <Filter>Source Files\Mesh\AABBTree</Filter>
+      <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshDecimateCallbacks.cpp">
-      <Filter>Source Files\Mesh\Decimation</Filter>
+      <Filter>Source Files\3. Mesh\Decimation</Filter>
     </ClCompile>
     <ClCompile Include="MRVoxelsVolume.cpp">
-      <Filter>Source Files\Mesh\BaseStructures</Filter>
+      <Filter>Source Files\3. Mesh\BaseStructures</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectImGuiLabel.cpp">
       <Filter>Source Files\Scene</Filter>
@@ -2187,7 +2187,7 @@
       <Filter>Source Files\1. Kernel\Algorithms</Filter>
     </ClCompile>
     <ClCompile Include="MRPointOnObject.cpp">
-      <Filter>Source Files\Mesh</Filter>
+      <Filter>Source Files\3. Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRRestoringStreamsSink.cpp">
       <Filter>Source Files\2. Base\Logging</Filter>
@@ -2214,7 +2214,7 @@
       <Filter>Source Files\1. Kernel\Algorithms</Filter>
     </ClCompile>
     <ClCompile Include="MRDipole.cpp">
-      <Filter>Source Files\Mesh</Filter>
+      <Filter>Source Files\3. Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRTupleBindings.cpp">
       <Filter>Source Files\1. Kernel\Helpers</Filter>
@@ -2229,7 +2229,7 @@
       <Filter>Source Files\1. Kernel\Geometry</Filter>
     </ClCompile>
     <ClCompile Include="MRMakeRigidXf.cpp">
-      <Filter>Source Files\Mesh</Filter>
+      <Filter>Source Files\3. Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRTriMath.cpp">
       <Filter>Source Files\1. Kernel\Algorithms</Filter>
@@ -2262,13 +2262,13 @@
       <Filter>Source Files\2. Base\Algorithms</Filter>
     </ClCompile>
     <ClCompile Include="MRPrimitiveMapsComposition.cpp">
-      <Filter>Source Files\Mesh</Filter>
+      <Filter>Source Files\3. Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRMultiwayAligningTransform.cpp">
       <Filter>Source Files\2. Base\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRMapEdge.cpp">
-      <Filter>Source Files\Mesh</Filter>
+      <Filter>Source Files\3. Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRStacktrace.cpp">
       <Filter>Source Files\System</Filter>

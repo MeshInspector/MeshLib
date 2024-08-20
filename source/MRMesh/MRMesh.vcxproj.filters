@@ -159,9 +159,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MRMeshFwd.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="MRObject.h">
       <Filter>Source Files\Scene</Filter>
     </ClInclude>
@@ -1397,6 +1394,9 @@
     </ClInclude>
     <ClInclude Include="MRIOParsing.h">
       <Filter>Source Files\2. Base\Algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshFwd.h">
+      <Filter>Source Files\3. Mesh</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

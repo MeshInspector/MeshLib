@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "meshlib"
+description = "3d processing library"
+authors = [
+    { name = "MeshLib Team", email = "support@meshinspector.com" },
+]
+readme = "readme.md"
+license = { file = "LICENSE" }
+classifiers = [
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: Free For Educational Use",
+    "License :: Free for non-commercial use",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy >= 1.19.0",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://meshlib.meshinspector.com/"
+Documentation = "https://doc.meshinspector.com/"
+Source = "https://github.com/MeshInspector/MeshLib"
+"Bug Reports" = "https://github.com/MeshInspector/MeshLib/issues"

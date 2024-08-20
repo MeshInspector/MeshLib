@@ -45,59 +45,68 @@ void MoveObjectByMouseImpl::onDrawDialog( float /* menuScaling */ ) const
         ImGui::SetTooltip( "Distance : %s", valueToString<LengthUnit>( shift_ ).c_str() );
     if ( transformMode_ == TransformMode::Rotation )
         ImGui::SetTooltip( "Angle : %s", valueToString<AngleUnit>( angle_ ).c_str() );
+    if ( transformMode_ == TransformMode::Scale )
+        ImGui::SetTooltip( "Scale : %s", valueToString<RatioUnit>( scale_ ).c_str() );
 }
 
 bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
 {
-    if ( button != Viewer::MouseButton::Left )
-        return false;
-
     Viewer& viewer = getViewerInstance();
     Viewport& viewport = viewer.viewport();
-    
-    screenStartPoint_ = minDistance() > 0 ? viewer.mouseController().getMousePos() : cNoPoint;
 
-    auto [obj, pick] = viewport.pick_render_object();
-
-    if ( !obj || !onPick_( obj, pick, modifiers ) || !obj )
+    cancel();
+    transformMode_ = pick_( button, modifiers, objects_, xfCenterPoint_, worldStartPoint_ );
+    if ( transformMode_ == TransformMode::None )
+    {
+        clear_();
         return false;
+    }
 
-    objects_ = getObjects_( obj, pick, modifiers );
-
-    visualizeVectors_.clear();
+    currentButton_ = button;
+    screenStartPoint_ = minDistance() > 0 ? viewer.mouseController().getMousePos() : cNoPoint;
     angle_ = 0.f;
     shift_ = 0.f;
-
-    obj_ = obj;
-    newWorldXf_ = objWorldXf_ = obj_->worldXf();
-    worldStartPoint_ = objWorldXf_( pick.point );
+    scale_ = 1.f;
+    currentXf_ = {};
     viewportStartPointZ_ = viewport.projectToViewportSpace( worldStartPoint_ ).z;
-    objectsXfs_.clear();
-    for ( std::shared_ptr<Object>& f : objects_ )
-        objectsXfs_.push_back( f->worldXf() );
-
-    transformMode_ = ( modifiers & GLFW_MOD_CONTROL ) != 0 ? TransformMode::Rotation : TransformMode::Translation;
+    initialXfs_.clear();
+    for ( std::shared_ptr<Object>& obj : objects_ )
+        initialXfs_.push_back( obj->worldXf() );
 
     if ( transformMode_ == TransformMode::Rotation )
     {
-        bboxCenter_ = obj_->getBoundingBox().center();
-        worldBboxCenter_ = obj_->worldXf()( bboxCenter_ );
-        auto viewportBboxCenter = viewport.projectToViewportSpace( worldBboxCenter_ );
+        Vector3f viewportCenterPoint = viewport.projectToViewportSpace( xfCenterPoint_ );
 
-        auto bboxCenterAxis = viewport.unprojectPixelRay( Vector2f( viewportBboxCenter.x, viewportBboxCenter.y ) );
-        rotationPlane_ = Plane3f::fromDirAndPt( bboxCenterAxis.d.normalized(), worldBboxCenter_ );
+        Line3f centerAxis = viewport.unprojectPixelRay( Vector2f( viewportCenterPoint.x, viewportCenterPoint.y ) );
+        referencePlane_ = Plane3f::fromDirAndPt( centerAxis.d.normalized(), xfCenterPoint_ );
 
-        auto viewportStartPoint = viewport.projectToViewportSpace( worldStartPoint_ );
-        auto startAxis = viewport.unprojectPixelRay( Vector2f( viewportStartPoint.x, viewportStartPoint.y ) );
+        Vector3f viewportStartPoint = viewport.projectToViewportSpace( worldStartPoint_ );
+        Line3f startAxis = viewport.unprojectPixelRay( Vector2f( viewportStartPoint.x, viewportStartPoint.y ) );
 
-        if ( auto crossPL = intersection( rotationPlane_, startAxis ) )
+        if ( auto crossPL = intersection( referencePlane_, startAxis ) )
             worldStartPoint_ = *crossPL;
         else
             spdlog::warn( "Bad cross start axis and rotation plane" );
 
-        setVisualizeVectors_( { worldBboxCenter_, worldStartPoint_, worldBboxCenter_, worldStartPoint_ } );
+        setVisualizeVectors_( { xfCenterPoint_, worldStartPoint_, xfCenterPoint_, worldStartPoint_ } );
     }
-    else
+    else if ( transformMode_ == TransformMode::Scale )
+    {
+        Vector3f viewportCenterPoint = viewport.projectToViewportSpace( xfCenterPoint_ );
+
+        Line3f centerAxis = viewport.unprojectPixelRay( Vector2f( viewportCenterPoint.x, viewportCenterPoint.y ) );
+        referencePlane_ = Plane3f::fromDirAndPt( centerAxis.d.normalized(), xfCenterPoint_ );
+
+        Vector3f viewportStartPoint = viewport.projectToViewportSpace( worldStartPoint_ );
+        Line3f startAxis = viewport.unprojectPixelRay( Vector2f( viewportStartPoint.x, viewportStartPoint.y ) );
+
+        if ( auto crossPL = intersection( referencePlane_, startAxis ) )
+            worldStartPoint_ = *crossPL;
+        else
+            spdlog::warn( "Bad cross start axis and rotation plane" );
+        setVisualizeVectors_( { xfCenterPoint_, worldStartPoint_ } );
+    }
+    else // if ( transformMode_ == TransformMode::Translation )
         setVisualizeVectors_( { worldStartPoint_, worldStartPoint_ } );
 
     return true;
@@ -105,7 +114,7 @@ bool MoveObjectByMouseImpl::onMouseDown( MouseButton button, int modifiers )
 
 bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
 {
-    if ( !obj_ )
+    if ( transformMode_ == TransformMode::None )
         return false;
 
     Viewer& viewer = getViewerInstance();
@@ -119,65 +128,80 @@ bool MoveObjectByMouseImpl::onMouseMove( int x, int y )
 
     auto viewportEnd = viewer.screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewport.id );
     auto worldEndPoint = viewport.unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
-    AffineXf3f worldXf;
 
     if ( transformMode_ == TransformMode::Rotation )
     {
         auto endAxis = viewport.unprojectPixelRay( Vector2f( viewportEnd.x, viewportEnd.y ) );
-        if ( auto crossPL = intersection( rotationPlane_, endAxis ) )
+        if ( auto crossPL = intersection( referencePlane_, endAxis ) )
             worldEndPoint = *crossPL;
         else
             spdlog::warn( "Bad cross end axis and rotation plane" );
 
-        const Vector3f vectorStart = worldStartPoint_ - worldBboxCenter_;
-        const Vector3f vectorEnd = worldEndPoint - worldBboxCenter_;
+        const Vector3f vectorStart = worldStartPoint_ - xfCenterPoint_;
+        const Vector3f vectorEnd = worldEndPoint - xfCenterPoint_;
         const float abSquare = vectorStart.length() * vectorEnd.length();
         if ( abSquare < 1.e-6 )
             angle_ = 0.f;
         else
             angle_ = angle( vectorStart, vectorEnd );
 
-        if ( dot( rotationPlane_.n, cross( vectorStart, vectorEnd ) ) > 0.f )
+        if ( dot( referencePlane_.n, cross( vectorStart, vectorEnd ) ) > 0.f )
             angle_ = 2.f * PI_F - angle_;
 
-        setVisualizeVectors_( { worldBboxCenter_, worldStartPoint_, worldBboxCenter_, worldEndPoint } );
+        setVisualizeVectors_( { xfCenterPoint_, worldStartPoint_, xfCenterPoint_, worldEndPoint } );
 
-        AffineXf3f rotation = AffineXf3f::linear( Matrix3f::rotation( vectorStart, worldEndPoint - worldBboxCenter_ ) );
-        AffineXf3f worldXfA = AffineXf3f::linear( objWorldXf_.A );
-        AffineXf3f toBboxCenter = AffineXf3f::translation( worldXfA( bboxCenter_ ) );
-        worldXf = AffineXf3f::translation( objWorldXf_.b ) * toBboxCenter * rotation * toBboxCenter.inverse() * worldXfA;
+        // Rotate around center point (e.g. bounding box center)
+        AffineXf3f rotation = AffineXf3f::linear( Matrix3f::rotation( vectorStart, worldEndPoint - xfCenterPoint_ ) );
+        AffineXf3f toCenterPoint = AffineXf3f::translation( xfCenterPoint_ );
+        currentXf_ = toCenterPoint * rotation * toCenterPoint.inverse();
     }
-    else
+    else if ( transformMode_ == TransformMode::Scale )
+    {
+        auto endAxis = viewport.unprojectPixelRay( Vector2f( viewportEnd.x, viewportEnd.y ) );
+        if ( auto crossPL = intersection( referencePlane_, endAxis ) )
+            worldEndPoint = *crossPL;
+        else
+            spdlog::warn( "Bad cross end axis and rotation plane" );
+
+        const Vector3f vectorStart = worldStartPoint_ - xfCenterPoint_;
+        const Vector3f vectorEnd = worldEndPoint - xfCenterPoint_;
+        scale_ = vectorStart.lengthSq() < 1.0e-7f ? 1.0f :
+            std::clamp( std::sqrt( vectorEnd.lengthSq() / vectorStart.lengthSq() ), 0.01f, 100.0f );
+
+        setVisualizeVectors_( { xfCenterPoint_, worldEndPoint } );
+
+        // Scale around center point (e.g. bounding box center)
+        AffineXf3f toCenterPoint = AffineXf3f::translation( xfCenterPoint_ );
+        currentXf_ = toCenterPoint * AffineXf3f::linear( Matrix3f::scale( scale_ ) ) * toCenterPoint.inverse();
+    }
+    else // if ( transformMode_ == TransformMode::Translation )
     {
         shift_ = ( worldEndPoint - worldStartPoint_ ).length();
         setVisualizeVectors_( { worldStartPoint_, worldEndPoint } );
 
-        worldXf = AffineXf3f::translation( worldEndPoint - worldStartPoint_ ) * objWorldXf_;
+        currentXf_ = AffineXf3f::translation( worldEndPoint - worldStartPoint_ );
 
-        // Clamp movement.
-        float minSizeDim = 0;
-        if ( auto worldBox = transformed( obj_->getBoundingBox(), worldXf ); worldBox.valid() ) // Feature objects give an invalid box.
-        {
-            auto wbsize = worldBox.size();
-            minSizeDim = wbsize.length();
-        }
-
+        // Clamp movement
+        Box3f worldBox = getBbox_( objects_ );
+        float minSizeDim = worldBox.valid() ? worldBox.size().length() : 0;
         if ( minSizeDim == 0 )
             minSizeDim = 1.f;
-
-        for ( auto i = 0; i < 3; i++ )
-            worldXf.b[i] = std::clamp( worldXf.b[i], -cMaxTranslationMultiplier * minSizeDim, +cMaxTranslationMultiplier * minSizeDim );
+        for ( const AffineXf3f &xf : initialXfs_ )
+            for ( auto i = 0; i < 3; i++ )
+                // ( currentXf_ * initialXf_ ).b[i] must be in -/+ cMaxTranslationMultiplier * minSizeDim
+                currentXf_.b[i] = std::clamp( currentXf_.b[i],
+                     -xf.b[i] - cMaxTranslationMultiplier * minSizeDim,
+                     -xf.b[i] + cMaxTranslationMultiplier * minSizeDim );
     }
 
-    newWorldXf_ = worldXf;
-    setWorldXf_( worldXf, false );
+    applyCurrentXf_( false );
 
     return true;
 }
 
 bool MoveObjectByMouseImpl::onMouseUp( MouseButton button, int /*modifiers*/ )
 {
-    if ( !obj_ || button != Viewer::MouseButton::Left )
+    if ( transformMode_ == TransformMode::None || button != currentButton_ )
         return false;
 
     if ( screenStartPoint_ != cNoPoint )
@@ -186,9 +210,8 @@ bool MoveObjectByMouseImpl::onMouseUp( MouseButton button, int /*modifiers*/ )
         return false;
     }
 
-    resetWorldXf_();
-    setWorldXf_( newWorldXf_, true );
-
+    resetXfs_();
+    applyCurrentXf_( true );
     clear_();
 
     return true;
@@ -196,56 +219,79 @@ bool MoveObjectByMouseImpl::onMouseUp( MouseButton button, int /*modifiers*/ )
 
 bool MoveObjectByMouseImpl::isMoving() const
 {
-    return screenStartPoint_ == cNoPoint;
+    return transformMode_ != TransformMode::None && screenStartPoint_ == cNoPoint;
 }
 
 void MoveObjectByMouseImpl::cancel()
 {
-    if ( !obj_ )
+    if ( transformMode_ == TransformMode::None )
         return;
-    resetWorldXf_();
+    resetXfs_();
     clear_();
 }
 
-bool MoveObjectByMouseImpl::onPick_( std::shared_ptr<VisualObject>& obj, PointOnObject&, int )
+MRVIEWER_API MoveObjectByMouseImpl::TransformMode MoveObjectByMouseImpl::pick_( MouseButton button, int modifiers,
+    std::vector<std::shared_ptr<Object>>& objects, Vector3f& centerPoint, Vector3f& startPoint )
 {
-    return !obj->isAncillary();
+    // Use LMB for `Translation` and Ctrl+LMB for `Rotation`
+    if ( !( button == MouseButton::Left && ( modifiers == 0 || modifiers == GLFW_MOD_CONTROL ) ) )
+        return TransformMode::None;
+
+    Viewer& viewer = getViewerInstance();
+    Viewport& viewport = viewer.viewport();
+
+    // Pick a single object under cursor
+    auto [obj, pick] = viewport.pickRenderObject();
+
+    // Check if picked something, and is not an ancillary object
+    if ( !obj || obj->isAncillary() )
+        return TransformMode::None;
+
+    // Use bounding box center as transform center and the picked point as an initial position
+    objects = { obj };
+    Box3f box = getBbox_( objects );
+    centerPoint = box.valid() ? box.center() : Vector3f{};
+    startPoint = obj->worldXf()( pick.point );
+    // Sample code to calculate reasonable startPoint when pick is unavailable
+    // Vector2i mousePos = viewer.mouseController().getMousePos();
+    // Vector3f viewportPos = viewer.screenToViewport( Vector3f( float( mousePos.x ), float( mousePos.y ), 0.f ), viewport.id );
+    // startPoint = viewport.unprojectPixelRay( Vector2f( viewportPos.x, viewportPos.y ) ).project( startPoint );
+    return modifiers == 0 ? TransformMode::Translation : TransformMode::Rotation;
 }
 
-std::vector<std::shared_ptr<Object>> MoveObjectByMouseImpl::getObjects_( 
-    const std::shared_ptr<VisualObject>& obj, const PointOnObject &, int )
+Box3f MoveObjectByMouseImpl::getBbox_( const std::vector<std::shared_ptr<Object>>& objects )
 {
-    return { obj };
+    Box3f worldBbox;
+    for ( const std::shared_ptr<Object>& obj : objects )
+        if ( obj )
+            worldBbox.include( obj->getWorldBox() );
+    return worldBbox;
 }
 
 void MoveObjectByMouseImpl::clear_()
 {
-    obj_ = nullptr;
     transformMode_ = TransformMode::None;
     objects_.clear();
-    objectsXfs_.clear();
-    screenStartPoint_ = {};
+    initialXfs_.clear();
+    visualizeVectors_.clear();
+    currentButton_ = MouseButton::NoButton;
 }
 
-void MoveObjectByMouseImpl::setWorldXf_( AffineXf3f worldXf, bool history )
+void MoveObjectByMouseImpl::applyCurrentXf_( bool history )
 {
     std::unique_ptr<ScopeHistory> scope = history ? std::make_unique<ScopeHistory>( "Change Xf" ) : nullptr;
-    auto itXf = objectsXfs_.begin();
+    auto itXf = initialXfs_.begin();
     for ( std::shared_ptr<Object>& obj : objects_ )
     {
         if ( history )
             AppendHistory<ChangeXfAction>( "Change Xf", obj );
-        if ( obj == obj_ )
-            obj->setWorldXf( worldXf );
-        else
-            obj->setWorldXf( worldXf * objWorldXf_.inverse() * *itXf );
-        itXf++;
+        obj->setWorldXf( currentXf_ * *itXf++ );
     }
 }
 
-void MoveObjectByMouseImpl::resetWorldXf_()
+void MoveObjectByMouseImpl::resetXfs_()
 {
-    auto itXf = objectsXfs_.begin();
+    auto itXf = initialXfs_.begin();
     for ( std::shared_ptr<Object>& f : objects_ )
         f->setWorldXf( *itXf++ );
 }

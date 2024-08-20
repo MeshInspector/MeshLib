@@ -704,45 +704,52 @@ bool checkboxMixed( const char* label, bool* value, bool mixed )
     }
 }
 
-bool checkboxOrModifier( const char* label, CheckboxOrModifierState& value, int modifiers, int checkedModifiers, std::optional<bool> valueOverride )
+// Helper function for `checkboxOrModifier` and `radioButtonOrModifier`
+static std::string modifiersToString( int modifiers )
+{
+    std::string modsText;
+    for ( const auto& [bit, name] : {
+        std::pair( ImGuiMod_Ctrl, "Ctrl" ),
+        std::pair( ImGuiMod_Shift, "Shift" ),
+        std::pair( ImGuiMod_Alt, "Alt" ),
+    } )
+    {
+        if ( modifiers & bit )
+        {
+            modifiers &= ~bit;
+            if ( !modsText.empty() )
+                modsText += '+';
+            modsText += name;
+        }
+    }
+    assert( modifiers == 0 && "Don't know the name of this modifier!" );
+    return modsText;
+}
+
+bool checkboxOrModifier( const char* label, CheckboxOrModifierState& value, int modifiers, int respectedModifiers, std::optional<bool> valueOverride )
 {
     assert( modifiers != 0 );
 
-    if ( checkedModifiers == -1 )
-        checkedModifiers = modifiers;
+    if ( respectedModifiers == -1 )
+        respectedModifiers = modifiers;
 
-    assert( ( checkedModifiers & modifiers ) == modifiers && "`checkedModifiers` must be a superset of `modifiers`." );
+    assert( ( respectedModifiers & modifiers ) == modifiers && "`respectedModifiers` must be a superset of `modifiers`." );
 
     // Unsure if `!valueOverride &&` is a good idea here. Sounds good on the surface, to prevent silent value modifications via the modifier while
     //   the override is active. And delaying it until it becomes inactive would be weird too.
-    bool modHeld = !valueOverride && ( ImGui::GetIO().KeyMods & checkedModifiers ) == modifiers;
+    bool modHeld = !valueOverride && ( ImGui::GetIO().KeyMods & respectedModifiers ) == modifiers;
 
     bool modChanged = value.modifierHeld != modHeld;
     value.modifierHeld = modHeld;
 
-    bool ret = checkboxOrFixedValue( label, &value.checkboxEnabled, valueOverride ? valueOverride : modHeld ? std::optional( bool( value ) ) : std::nullopt );
+    bool ret = checkboxOrFixedValue( label, &value.baseValue, valueOverride ? valueOverride : modHeld ? std::optional( bool( value ) ) : std::nullopt );
 
     { // Modifiers hint.
-        std::string modsText;
-
-        for ( const auto& [bit, name] : {
-            std::pair( ImGuiMod_Ctrl, "Ctrl" ),
-            std::pair( ImGuiMod_Shift, "Shift" ),
-            std::pair( ImGuiMod_Alt, "Alt" ),
-        } )
-        {
-            if ( modifiers & bit )
-            {
-                modifiers &= ~bit;
-                if ( !modsText.empty() )
-                    modsText += '+';
-                modsText += name;
-            }
-        }
-        assert( modifiers == 0 && "Don't know the name of this modifier!" );
-
+        std::string modsText = modifiersToString( modifiers );
         ImGui::SameLine();
         // ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cCheckboxPadding * getViewerInstance().getMenuPlugin()->menu_scaling() );
+        // alignTextToCheckBox( getViewerInstance().getMenuPlugin()->menu_scaling() );
+        // Neither of above is needed, the UI::checkbox... functions align the following text automatically
         ImGui::TextDisabled( "[%s]", modsText.c_str() );
     }
 
@@ -808,7 +815,7 @@ bool radioButton( const char* label, int* value, int valButton )
         const ImVec2 pos = window->DC.CursorPos;
         const ImRect check_bb( pos, ImVec2( pos.x + clickSize, pos.y + clickSize ) );
         const ImRect total_bb( pos, ImVec2( pos.x + clickSize + ( label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f ), pos.y + label_size.y + style.FramePadding.y * 2.0f ) );
-        ImGui::ItemSize( total_bb, style.FramePadding.y );
+        ImGui::ItemSize( total_bb, std::ceil( ( clickSize - label_size.y ) * 0.5f ) );
         if ( !ImGui::ItemAdd( total_bb, id ) )
             return false;
 
@@ -855,6 +862,54 @@ bool radioButton( const char* label, int* value, int valButton )
 
     return res;
 }
+
+bool radioButtonOrFixedValue( const char* label, int* value, int valButton, std::optional<int> valueOverride )
+{
+    if ( !valueOverride )
+        return radioButton( label, value, valButton );
+
+    StyleParamHolder sh;
+    const auto disColor = ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled );
+    sh.addColor( ImGuiCol_Text, Color( disColor.x, disColor.y, disColor.z, disColor.w ) );
+
+    ImGui::PushItemFlag( ImGuiItemFlags_Disabled, true );
+    radioButton( label, &*valueOverride, valButton );
+    ImGui::PopItemFlag();
+    return false;
+}
+
+bool radioButtonOrModifier( const char* label, RadioButtonOrModifierState& value, int valButton, int modifiers, int respectedModifiers, std::optional<int> valueOverride )
+{
+    // See `checkboxOrModifier` for detailed comments
+    if ( respectedModifiers == -1 )
+        respectedModifiers = modifiers;
+    assert( ( respectedModifiers & modifiers ) == modifiers && "`respectedModifiers` must be a superset of `modifiers`." );
+    int modsPressed = ImGui::GetIO().KeyMods & respectedModifiers;
+
+    bool modAnyHeld = !valueOverride && modsPressed != 0; // Any nonzero combination of relevant modifiers is pressed
+    bool modActivated = !valueOverride && value.effectiveValue != valButton &&
+        // Return to base value if no modifiers pressed
+        ( modsPressed != 0 ? modsPressed == modifiers : value.value == valButton );
+    if ( modActivated )
+        value.effectiveValue = valButton;
+    // If no modifiers combination matches any button, a previous effective value remains
+
+    bool buttonActivated = radioButtonOrFixedValue( label, &value.effectiveValue, valButton,
+        valueOverride ? valueOverride : modAnyHeld ? std::optional( int( value ) ) : std::nullopt );
+    if ( modifiers != 0 )
+    {
+        ImGui::SameLine();
+        ImGui::TextDisabled( "[%s]", modifiersToString( modifiers ).c_str() );
+    }
+
+    if ( buttonActivated )
+        value.value = valButton;
+    if ( modActivated )
+        detail::markItemEdited( ImGui::GetID( label ) );
+
+    return buttonActivated || modActivated;
+}
+
 
 /// copy of internal ImGui method
 void ColorEditRestoreHS( const float* col, float* H, float* S, float* V )

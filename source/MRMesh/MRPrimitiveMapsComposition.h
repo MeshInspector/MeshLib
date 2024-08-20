@@ -1,5 +1,5 @@
 #pragma once
-#include "MRMeshFwd.h"
+#include "MRKernelFwd.h"
 
 namespace MR
 {

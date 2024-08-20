@@ -95,7 +95,7 @@ MRMESH_API Expected<VdbVolume> fromRaw( std::istream& in, const RawParameters& p
 MRMESH_API Expected<VdbVolume> fromRaw( const std::filesystem::path& file,
                                                          const ProgressCallback& cb = {} );
 
-#ifdef MRMESH_OPENVDB_USE_IO
+#ifndef MRMESH_OPENVDB_DISABLE_IO
 /// Load raw voxels OpenVDB file
 MRMESH_API Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& file,
                                                          const ProgressCallback& cb = {} );

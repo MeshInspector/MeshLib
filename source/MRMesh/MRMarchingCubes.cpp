@@ -336,15 +336,21 @@ using VdbCoord = openvdb::Coord;
 
 #ifndef MRMESH_NO_OPENVDB
 template <class Positioner>
-bool findSeparationPoint( Vector3f & pos, const VdbVolume& volume, const ConstAccessor& acc,
-                          const openvdb::Coord& coord, const Vector3i& basePos, float valueB, NeighborDir dir,
+bool findSeparationPoint( Vector3f & pos, const VdbVolume& volume, const VoxelsVolumeAccessor<VdbVolume>& acc,
+                          const Vector3i& basePos, float valueB, NeighborDir dir,
                           const MarchingCubesParams& params, Positioner&& positioner )
 {
-    if ( basePos[int( dir )] + 1 >= volume.dims[int( dir )] )
+    auto nextPos = basePos;
+    nextPos[int( dir )] += 1;
+    if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
         return false;
+
+    float valueD = acc.get( nextPos, VoxelId{} );
+
+    const auto& minCoord = acc.minCoord();
+    const auto coord = openvdb::Coord{ basePos.x + minCoord.x(), basePos.y + minCoord.y(), basePos.z + minCoord.z() };
     auto nextCoord = coord;
     nextCoord[int( dir )] += 1;
-    float valueD = acc.getValue( nextCoord );// volume.data[nextId];
 
     bool bLower = valueB < params.iso;
     bool dLower = valueD < params.iso;
@@ -450,16 +456,6 @@ bool findSeparationPoint( Vector3f & pos, const V& volume, const Accessor& acces
     return true;
 }
 
-template<typename V> auto accessorCtor( const V& v );
-
-template<> auto accessorCtor<SimpleVolume>( const SimpleVolume& ) { return ( void* )nullptr; }
-
-#ifndef MRMESH_NO_OPENVDB
-template<> auto accessorCtor<VdbVolume>( const VdbVolume& v ) { return v.data->getConstAccessor(); }
-#endif
-
-template<> auto accessorCtor<FunctionVolume>( const FunctionVolume& ) { return (void*)nullptr; }
-
 template<typename V, typename NaNChecker, typename Positioner>
 Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 {
@@ -532,11 +528,9 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
     ParallelFor( size_t( 0 ), blockCount, [&] ( size_t blockIndex )
     {
         auto & block = sepStorage.getBlock( blockIndex );
-        // vdb version cache
-        [[maybe_unused]] auto acc = accessorCtor( volume );
-#ifndef MRMESH_NO_OPENVDB
-        [[maybe_unused]] VdbCoord baseCoord;
-#endif
+
+        VoxelsVolumeAccessor<V> acc( volume );
+
         [[maybe_unused]] float baseValue{ 0.0f };
 
         if ( std::this_thread::get_id() == mainThreadId && lastSubMap == -1 )
@@ -576,13 +570,9 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
             SeparationPointSet set;
             bool atLeastOneOk = false;
-#ifndef MRMESH_NO_OPENVDB
-            if constexpr ( std::is_same_v<V, VdbVolume> )
-            {
-                baseCoord = openvdb::Coord{ basePos.x + minCoord.x(), basePos.y + minCoord.y(), basePos.z + minCoord.z() };
-                baseValue = acc.getValue( baseCoord );
-            }
-#endif
+            if ( !cache )
+                baseValue = acc.get( basePos, VoxelId( i ) );
+
             for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
             {
                 bool ok = false;
@@ -592,7 +582,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                 else
 #ifndef MRMESH_NO_OPENVDB
                 if constexpr ( std::is_same_v<V, VdbVolume> )
-                    ok = findSeparationPoint( pos, volume, acc, baseCoord, basePos, baseValue, NeighborDir( n ), params, std::forward<Positioner>( positioner ) );
+                    ok = findSeparationPoint( pos, volume, acc, basePos, baseValue, NeighborDir( n ), params, std::forward<Positioner>( positioner ) );
                 else
 #endif
                 if constexpr ( std::is_same_v<V, SimpleVolume> )
@@ -669,8 +659,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
         const bool runCallback = subprogress2 && std::this_thread::get_id() == mainThreadId;
 
-        // vdb accessor
-        [[maybe_unused]] auto acc = accessorCtor( volume );
+        VoxelsVolumeAccessor<V> acc( volume );
 
         // cell data
         std::array<const SeparationPointSet*, 7> neis;
@@ -706,7 +695,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                     if ( cache )
                         value = cache->get( pos );
                     else
-                        value = acc.getValue( { pos.x + minCoord.x(),pos.y + minCoord.y(),pos.z + minCoord.z() } );
+                        value = acc.get( pos, VoxelId( ind + cVoxelNeighborsIndexAdd[i] ) );
                 } else
 #endif
                 if constexpr ( std::is_same_v<V, SimpleVolume> || std::is_same_v<V, FunctionVolume> )

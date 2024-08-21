@@ -33,17 +33,6 @@ struct MarchingCubesParams
     /// for simple volumes only: omit checks for NaN values
     /// use it if you're aware that the input volume has no NaN values
     bool omitNaNCheck = false;
-    /// voxel volume data caching mode
-    enum class CachingMode
-    {
-        /// choose caching mode depending on input
-        /// (current defaults: Normal for FunctionVolume, None for others)
-        Automatic,
-        /// don't cache any data
-        None,
-        /// cache some voxel volume data
-        Normal,
-    } cachingMode = CachingMode::Automatic;
 };
 
 // makes Mesh from SimpleVolume with given settings using Marching Cubes algorithm

@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRVoxelsVolume.h"
 #include "MRVolumeIndexer.h"
+#include "MRIsNaN.h"
 
 #ifndef MRMESH_NO_OPENVDB
 #include "MRVDBFloatGrid.h"
@@ -36,7 +37,7 @@ public:
             pos.y + minCoord_.y(),
             pos.z + minCoord_.z(),
         };
-        return accessor_.getValue( coord );
+        return accessor_.isValueOn( coord ) ? accessor_.getValue( coord ) : cQuietNan;
     }
 
     ValueType safeGet( const Vector3i& pos ) const

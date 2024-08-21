@@ -34,14 +34,14 @@ RenderPointsObject::~RenderPointsObject()
 
 bool RenderPointsObject::render( const ModelRenderParams& renderParams )
 {
-    bool isBackColorTransparent = false;
-    if ( objPoints_ && objPoints_->pointCloud() && objPoints_->pointCloud()->hasNormals() )
+    bool isColorTransparent = objPoints_->getFrontColor( objPoints_->isSelected(), renderParams.viewportId ).a < 255;
+    if ( !isColorTransparent && objPoints_->pointCloud() && objPoints_->pointCloud()->hasNormals() )
     {
-        isBackColorTransparent = objPoints_->getBackColor( renderParams.viewportId ).a < 255;
+        isColorTransparent = objPoints_->getBackColor( renderParams.viewportId ).a < 255;
     }
     RenderModelPassMask desiredPass =
         !objPoints_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
-        ( objPoints_->getGlobalAlpha( renderParams.viewportId ) < 255 || objPoints_->getFrontColor( objPoints_->isSelected(), renderParams.viewportId ).a < 255 ) || isBackColorTransparent ? RenderModelPassMask::Transparent :
+        ( objPoints_->getGlobalAlpha( renderParams.viewportId ) < 255 || isColorTransparent ) ? RenderModelPassMask::Transparent :
         RenderModelPassMask::Opaque;
     if ( !bool( renderParams.passMask & desiredPass ) )
         return false; // Nothing to draw in this pass.

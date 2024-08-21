@@ -127,14 +127,6 @@ std::string getPointsFragmentShaderArgumetsBlock()
 )";
 }
 
-std::string getPointsFragmentPositionCheckBlock()
-{
-    return R"(
-    if (length(gl_PointCoord - vec2(0.5)) > 0.5)
-      discard;
-)";
-}
-
 std::string getPointsFragmentShaderColoringBlock()
 {
     return R"(
@@ -228,7 +220,7 @@ std::string getPointsFragmentShader( bool alphaSort )
         getPointsShaderViewBlock() +
         getPointsFragmentShaderArgumetsBlock() +
         getShaderMainBeginBlock() +
-        getPointsFragmentPositionCheckBlock() +
+        getFragmentShaderPointSizeBlock() +
         getFragmentShaderClippingBlock() +
         getPointsFragmentShaderColoringBlock() +
         getFragmentShaderEndBlock( alphaSort );

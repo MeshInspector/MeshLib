@@ -4,45 +4,6 @@
     <Filter Include="Source Files">
       <UniqueIdentifier>{8b0f8e8e-d502-4c1c-bf4a-bd6e26e948c1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\SymbolMesh">
-      <UniqueIdentifier>{dd69ed88-89d4-4c22-92e5-3d01c7126046}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\System">
-      <UniqueIdentifier>{9ea2ed18-2ae5-4809-b738-03a166627a32}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\IO">
-      <UniqueIdentifier>{dd1e9625-263f-4192-bb1d-baa91613a15e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Python">
-      <UniqueIdentifier>{95252bd3-f30e-416e-98f8-1e76c2c7fff4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\History">
-      <UniqueIdentifier>{81c8f6c2-9f7d-4609-9a19-a4aaa5edfbbd}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Tests">
-      <UniqueIdentifier>{2bfe88a4-61f4-4317-8dae-b473f2202be0}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\PDF">
-      <UniqueIdentifier>{6e164873-f97c-4112-be31-701b3284f4c6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Voxels">
-      <UniqueIdentifier>{cfca1a51-70d1-46de-ad9f-c8662f2b85c8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Gcode">
-      <UniqueIdentifier>{b00cbb7d-8f55-486d-9a3f-834bc49c40f3}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Voxels\VDBConversions">
-      <UniqueIdentifier>{63de0e31-0ce5-41d4-83cf-95476a8961cb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Feature">
-      <UniqueIdentifier>{600a963f-33f7-4f1b-8184-7a6337523a85}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Scene">
-      <UniqueIdentifier>{46dd214b-ec09-403a-9f69-180e234941d3}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Scene\ModelHolder">
-      <UniqueIdentifier>{2e5c8a08-b968-4732-be0c-9b07bb4b051e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\2. Base">
       <UniqueIdentifier>{7d09069f-dc58-4781-8c4c-6bcf463e869a}</UniqueIdentifier>
     </Filter>
@@ -84,15 +45,6 @@
     </Filter>
     <Filter Include="Source Files\1. Kernel\Vector">
       <UniqueIdentifier>{7fd26e99-c23e-47d8-8774-d79fbc8ba193}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Feature\Features">
-      <UniqueIdentifier>{f6ea3197-3e0d-44ec-9b3e-6b8fe7e0bc15}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Feature\Measurements">
-      <UniqueIdentifier>{744e0637-b69b-442b-b0f8-19f0f815c033}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Scene\Render">
-      <UniqueIdentifier>{63cd613f-62f1-4c45-a91b-3417a018a563}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\3. Mesh">
       <UniqueIdentifier>{4d24a7a6-c422-4dd4-9865-b3d27a290436}</UniqueIdentifier>
@@ -160,13 +112,64 @@
     <Filter Include="Source Files\3. Mesh\DataStructures">
       <UniqueIdentifier>{cc99f9b7-b598-4504-bf99-8d838fbe408f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\4. Scene">
+      <UniqueIdentifier>{46dd214b-ec09-403a-9f69-180e234941d3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\4. Scene\ModelHolder">
+      <UniqueIdentifier>{2e5c8a08-b968-4732-be0c-9b07bb4b051e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\4. Scene\Render">
+      <UniqueIdentifier>{63cd613f-62f1-4c45-a91b-3417a018a563}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\5. Feature">
+      <UniqueIdentifier>{600a963f-33f7-4f1b-8184-7a6337523a85}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\5. Feature\Features">
+      <UniqueIdentifier>{f6ea3197-3e0d-44ec-9b3e-6b8fe7e0bc15}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\5. Feature\Measurements">
+      <UniqueIdentifier>{744e0637-b69b-442b-b0f8-19f0f815c033}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\4. Align">
+      <UniqueIdentifier>{e75f9d35-3fbe-41f5-98a1-a2aa3fcba243}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\5. Voxels">
+      <UniqueIdentifier>{cfca1a51-70d1-46de-ad9f-c8662f2b85c8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\5. Voxels\VDBConversions">
+      <UniqueIdentifier>{63de0e31-0ce5-41d4-83cf-95476a8961cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\6. IO">
+      <UniqueIdentifier>{dd1e9625-263f-4192-bb1d-baa91613a15e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\6. Gcode">
+      <UniqueIdentifier>{b00cbb7d-8f55-486d-9a3f-834bc49c40f3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\6. History">
+      <UniqueIdentifier>{81c8f6c2-9f7d-4609-9a19-a4aaa5edfbbd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\6. PDF">
+      <UniqueIdentifier>{6e164873-f97c-4112-be31-701b3284f4c6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\6. Python">
+      <UniqueIdentifier>{95252bd3-f30e-416e-98f8-1e76c2c7fff4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\6. SymbolMesh">
+      <UniqueIdentifier>{dd69ed88-89d4-4c22-92e5-3d01c7126046}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\6. System">
+      <UniqueIdentifier>{9ea2ed18-2ae5-4809-b738-03a166627a32}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\6. Tests">
+      <UniqueIdentifier>{2bfe88a4-61f4-4317-8dae-b473f2202be0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRObject.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectLoad.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRCylinder.h">
       <Filter>Source Files\3. Mesh\Primitives</Filter>
@@ -175,70 +178,70 @@
       <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClInclude>
     <ClInclude Include="MRVDBConversions.h">
-      <Filter>Source Files\Voxels\VDBConversions</Filter>
+      <Filter>Source Files\5. Voxels\VDBConversions</Filter>
     </ClInclude>
     <ClInclude Include="MRSymbolMesh.h">
-      <Filter>Source Files\SymbolMesh</Filter>
+      <Filter>Source Files\6. SymbolMesh</Filter>
     </ClInclude>
     <ClInclude Include="MRBoolean.h">
-      <Filter>Source Files\Voxels\VDBConversions</Filter>
+      <Filter>Source Files\5. Voxels\VDBConversions</Filter>
     </ClInclude>
     <ClInclude Include="MRTorus.h">
       <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClInclude>
     <ClInclude Include="MRSystem.h">
-      <Filter>Source Files\System</Filter>
+      <Filter>Source Files\6. System</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectVoxels.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRVoxelsSave.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshSave.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshLoad.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRVoxelsLoad.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRIOFilters.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRVoxelPath.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRAlignTextToMesh.h">
       <Filter>Source Files\1. Kernel</Filter>
     </ClInclude>
     <ClInclude Include="miniply.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectMesh.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRVisualObject.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectFactory.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRSerializer.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectLines.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRVoxelGraphCut.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRArrow.h">
       <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClInclude>
     <ClInclude Include="MRVolumeSegment.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRAABBTree.h">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
@@ -256,7 +259,7 @@
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MROffset.h">
-      <Filter>Source Files\Voxels\VDBConversions</Filter>
+      <Filter>Source Files\5. Voxels\VDBConversions</Filter>
     </ClInclude>
     <ClInclude Include="MREdgePaths.h">
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
@@ -271,22 +274,22 @@
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRTeethMaskToDirectionVolume.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectsAccess.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectsAccess.hpp">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectPoints.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRPointsLoad.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRPointsSave.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshCollidePrecise.h">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
@@ -295,10 +298,10 @@
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRStreamOperators.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRImageSave.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshIntersect.h">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
@@ -310,10 +313,10 @@
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRPython.h">
-      <Filter>Source Files\Python</Filter>
+      <Filter>Source Files\6. Python</Filter>
     </ClInclude>
     <ClInclude Include="MRSceneRoot.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRRegularGridMesh.h">
       <Filter>Source Files\3. Mesh\Primitives</Filter>
@@ -331,7 +334,7 @@
       <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClInclude>
     <ClInclude Include="MRIOFormatsRegistry.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineProject.h">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
@@ -343,22 +346,22 @@
       <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClInclude>
     <ClInclude Include="MRHistoryAction.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeObjectAction.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeSceneAction.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeXfAction.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MRCombinedHistoryAction.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeSelectionAction.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MRTunnelDetector.h">
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
@@ -367,28 +370,28 @@
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRIRenderObject.h">
-      <Filter>Source Files\Scene\Render</Filter>
+      <Filter>Source Files\4. Scene\Render</Filter>
     </ClInclude>
     <ClInclude Include="MRAlignTextToMesh.h">
       <Filter>Source Files\SymbolMesh</Filter>
     </ClInclude>
     <ClInclude Include="MRConfig.h">
-      <Filter>Source Files\System</Filter>
+      <Filter>Source Files\6. System</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshComponents.h">
       <Filter>Source Files\3. Mesh\Components</Filter>
     </ClInclude>
     <ClInclude Include="MRGTest.h">
-      <Filter>Source Files\Tests</Filter>
+      <Filter>Source Files\6. Tests</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectDistanceMap.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRDistanceMapSave.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRDistanceMapLoad.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRAABBTreeNode.h">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
@@ -403,7 +406,7 @@
       <Filter>Source Files\3. Mesh\DistanceMap</Filter>
     </ClInclude>
     <ClInclude Include="MRImageLoad.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineTopology.h">
       <Filter>Source Files\3. Mesh\Polyline</Filter>
@@ -412,7 +415,7 @@
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRPdf.h">
-      <Filter>Source Files\PDF</Filter>
+      <Filter>Source Files\6. PDF</Filter>
     </ClInclude>
     <ClInclude Include="MRAABBTreePolyline.h">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
@@ -421,70 +424,70 @@
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeMeshAction.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MRComputeVolume.h">
-      <Filter>Source Files\Voxels\VDBConversions</Filter>
+      <Filter>Source Files\5. Voxels\VDBConversions</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeSceneObjectsOrder.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshLoadObj.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeNameAction.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MREmbeddedPython.h">
-      <Filter>Source Files\Python</Filter>
+      <Filter>Source Files\6. Python</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineEdgeIterator.h">
       <Filter>Source Files\3. Mesh\Polyline</Filter>
     </ClInclude>
     <ClInclude Include="MRXfBasedCache.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRLinesSave.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRLinesLoad.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRMakeSphereMesh.h">
       <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClInclude>
     <ClInclude Include="MRSphereObject.h">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectMeshHolder.h">
-      <Filter>Source Files\Scene\ModelHolder</Filter>
+      <Filter>Source Files\4. Scene\ModelHolder</Filter>
     </ClInclude>
     <ClInclude Include="MRPlaneObject.h">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClInclude>
     <ClInclude Include="MRPolyline.h">
       <Filter>Source Files\3. Mesh\Polyline</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectLinesHolder.h">
-      <Filter>Source Files\Scene\ModelHolder</Filter>
+      <Filter>Source Files\4. Scene\ModelHolder</Filter>
     </ClInclude>
     <ClInclude Include="MRLineObject.h">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClInclude>
     <ClInclude Include="MRCircleObject.h">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClInclude>
     <ClInclude Include="MRPolyline2Collide.h">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectPointsHolder.h">
-      <Filter>Source Files\Scene\ModelHolder</Filter>
+      <Filter>Source Files\4. Scene\ModelHolder</Filter>
     </ClInclude>
     <ClInclude Include="MRChangePointCloudAction.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MRPointObject.h">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshBuilder.h">
       <Filter>Source Files\3. Mesh\MeshBuilder</Filter>
@@ -577,16 +580,16 @@
       <Filter>Source Files\3. Mesh\Boolean</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshSaveObj.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectLabel.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineSubdivide.h">
       <Filter>Source Files\3. Mesh\Polyline</Filter>
     </ClInclude>
     <ClInclude Include="MRChangePolylineAction.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MRRelaxParams.h">
       <Filter>Source Files\3. Mesh\Relax</Filter>
@@ -604,19 +607,19 @@
       <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeLabelAction.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeVoxelsAction.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MRVertexAttributeGradient.h">
       <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeVoxelSelectionAction.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MRChangePointCloudNormalsAction.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MRUniteManyMeshes.h">
       <Filter>Source Files\3. Mesh\Boolean</Filter>
@@ -634,10 +637,10 @@
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRMarchingCubes.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRSharpenMarchingCubesMesh.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MREdgeMetric.h">
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
@@ -646,13 +649,13 @@
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MROpenVDBHelper.h">
-      <Filter>Source Files\Voxels\VDBConversions</Filter>
+      <Filter>Source Files\5. Voxels\VDBConversions</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeVertsColorMapAction.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MRSignDetectionMode.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRGridSettings.h">
       <Filter>Source Files\3. Mesh\Mesh</Filter>
@@ -661,7 +664,7 @@
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRGltfSerializer.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRFreeFormDeformer.h">
       <Filter>Source Files\3. Mesh\LinearSystem</Filter>
@@ -730,28 +733,28 @@
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectGcode.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRGcodeProcessor.h">
-      <Filter>Source Files\Gcode</Filter>
+      <Filter>Source Files\6. Gcode</Filter>
     </ClInclude>
     <ClInclude Include="MRGcodeLoad.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRFile.h">
-      <Filter>Source Files\System</Filter>
+      <Filter>Source Files\6. System</Filter>
     </ClInclude>
     <ClInclude Include="MRDirectory.h">
-      <Filter>Source Files\System</Filter>
+      <Filter>Source Files\6. System</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeObjectFields.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MRMutexOwner.h">
-      <Filter>Source Files\System</Filter>
+      <Filter>Source Files\6. System</Filter>
     </ClInclude>
     <ClInclude Include="MRVoxelsConversionsByParts.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRInnerShell.h">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
@@ -760,19 +763,19 @@
       <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClInclude>
     <ClInclude Include="MRVDBProgressInterrupter.h">
-      <Filter>Source Files\Voxels\VDBConversions</Filter>
+      <Filter>Source Files\5. Voxels\VDBConversions</Filter>
     </ClInclude>
     <ClInclude Include="MRCNCMachineSettings.h">
-      <Filter>Source Files\Gcode</Filter>
+      <Filter>Source Files\6. Gcode</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshToDistanceVolume.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRVoxelsConversions.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRTiffIO.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRTerrainTriangulation.h">
       <Filter>Source Files\3. Mesh\Triangulation</Filter>
@@ -802,19 +805,19 @@
       <Filter>Source Files\3. Mesh\WaterFlow</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshLoadStep.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRZip.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshLoadSettings.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MROffsetContours.h">
       <Filter>Source Files\3. Mesh\Polyline</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeColoringType.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MRSolarRadiation.h">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
@@ -823,7 +826,7 @@
       <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeColoringActions.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MRCloudPartMapping.h">
       <Filter>Source Files\3. Mesh\PointCloud</Filter>
@@ -844,55 +847,55 @@
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRSaveSettings.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRSceneLoad.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeValue.h">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClInclude>
     <ClInclude Include="MRUVSphere.h">
       <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectSave.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRCylinderObject.h">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClInclude>
     <ClInclude Include="MRZlib.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRConeObject.h">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClInclude>
     <ClInclude Include="MRVoxelsVolumeAccess.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRAlphaShape.h">
       <Filter>Source Files\3. Mesh\Triangulation</Filter>
     </ClInclude>
     <ClInclude Include="MRFeatureObject.h">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClInclude>
     <ClInclude Include="MRPointsLoadE57.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRLocalTriangulations.h">
       <Filter>Source Files\3. Mesh\Triangulation</Filter>
     </ClInclude>
     <ClInclude Include="MRMeasurementObject.h">
-      <Filter>Source Files\Feature\Measurements</Filter>
+      <Filter>Source Files\5. Feature\Measurements</Filter>
     </ClInclude>
     <ClInclude Include="MRRadiusMeasurementObject.h">
-      <Filter>Source Files\Feature\Measurements</Filter>
+      <Filter>Source Files\5. Feature\Measurements</Filter>
     </ClInclude>
     <ClInclude Include="MRDistanceMeasurementObject.h">
-      <Filter>Source Files\Feature\Measurements</Filter>
+      <Filter>Source Files\5. Feature\Measurements</Filter>
     </ClInclude>
     <ClInclude Include="MRAngleMeasurementObject.h">
-      <Filter>Source Files\Feature\Measurements</Filter>
+      <Filter>Source Files\5. Feature\Measurements</Filter>
     </ClInclude>
     <ClInclude Include="MRPointsComponents.h">
       <Filter>Source Files\3. Mesh\Components</Filter>
@@ -904,25 +907,25 @@
       <Filter>Source Files\3. Mesh\Polyline</Filter>
     </ClInclude>
     <ClInclude Include="MRDistanceVolumeParams.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRPointsToDistanceVolume.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRPointsToMeshFusion.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRMisonLoad.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRAddVisualPropertiesMixin.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectDimensionsEnum.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRRenderModelParameters.h">
-      <Filter>Source Files\Scene\Render</Filter>
+      <Filter>Source Files\4. Scene\Render</Filter>
     </ClInclude>
     <ClInclude Include="MRFaceDistance.h">
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
@@ -934,7 +937,7 @@
       <Filter>Source Files\3. Mesh\Relax</Filter>
     </ClInclude>
     <ClInclude Include="MRSeparationPoint.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRMultiwayICP.h">
       <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
@@ -964,22 +967,22 @@
       <Filter>Source Files\3. Mesh\Decimation</Filter>
     </ClInclude>
     <ClInclude Include="MRFeatureObjectImpls.h">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClInclude>
     <ClInclude Include="MRFeatureRefine.h">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClInclude>
     <ClInclude Include="MRFeatureHelpers.h">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClInclude>
     <ClInclude Include="MRVolumeInterpolation.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRFillHoleNicely.h">
       <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MR3MFSerializer.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRPointCloudDistance.h">
       <Filter>Source Files\3. Mesh\PointCloud</Filter>
@@ -988,10 +991,10 @@
       <Filter>Source Files\3. Mesh\Relax</Filter>
     </ClInclude>
     <ClInclude Include="MRMoveMeshToVoxelMaxDeriv.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRStacktrace.h">
-      <Filter>Source Files\System</Filter>
+      <Filter>Source Files\6. System</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshThickness.h">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
@@ -1003,19 +1006,19 @@
       <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectImGuiLabel.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRBestFitQuadric.h">
-      <Filter>Source Files\Feature</Filter>
+      <Filter>Source Files\5. Feature</Filter>
     </ClInclude>
     <ClInclude Include="MRBestFit.h">
-      <Filter>Source Files\Feature</Filter>
+      <Filter>Source Files\5. Feature</Filter>
     </ClInclude>
     <ClInclude Include="MRBestFitParabola.h">
-      <Filter>Source Files\Feature</Filter>
+      <Filter>Source Files\5. Feature</Filter>
     </ClInclude>
     <ClInclude Include="MRBestFitPolynomial.h">
-      <Filter>Source Files\Feature</Filter>
+      <Filter>Source Files\5. Feature</Filter>
     </ClInclude>
     <ClInclude Include="MR2to3.h">
       <Filter>Source Files\1. Kernel\Helpers</Filter>
@@ -1107,9 +1110,6 @@
     <ClInclude Include="MRString.h">
       <Filter>Source Files\1. Kernel\Algorithms</Filter>
     </ClInclude>
-    <ClInclude Include="MRPointOnObject.h">
-      <Filter>Source Files\3. Mesh</Filter>
-    </ClInclude>
     <ClInclude Include="MRRestoringStreamsSink.h">
       <Filter>Source Files\2. Base\Logging</Filter>
     </ClInclude>
@@ -1129,22 +1129,22 @@
       <Filter>Source Files\1. Kernel\Helpers</Filter>
     </ClInclude>
     <ClInclude Include="MRViewportProperty.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRViewportId.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRBox.h">
       <Filter>Source Files\1. Kernel\DataStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRConeApproximator.h">
-      <Filter>Source Files\Feature</Filter>
+      <Filter>Source Files\5. Feature</Filter>
     </ClInclude>
     <ClInclude Include="MRCylinderApproximator.h">
-      <Filter>Source Files\Feature</Filter>
+      <Filter>Source Files\5. Feature</Filter>
     </ClInclude>
     <ClInclude Include="MRDenseBox.h">
-      <Filter>Source Files\Feature</Filter>
+      <Filter>Source Files\5. Feature</Filter>
     </ClInclude>
     <ClInclude Include="MRComputeBoundingBox.h">
       <Filter>Source Files\2. Base\Algorithms</Filter>
@@ -1171,7 +1171,7 @@
       <Filter>Source Files\1. Kernel\Helpers</Filter>
     </ClInclude>
     <ClInclude Include="MRFeatures.h">
-      <Filter>Source Files\Feature</Filter>
+      <Filter>Source Files\5. Feature</Filter>
     </ClInclude>
     <ClInclude Include="MRHighPrecision.h">
       <Filter>Source Files\2. Base\Helpers</Filter>
@@ -1196,9 +1196,6 @@
     </ClInclude>
     <ClInclude Include="MRLineSegm3.h">
       <Filter>Source Files\1. Kernel\Geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="MRMakeRigidXf.h">
-      <Filter>Source Files\3. Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRTriPoint.h">
       <Filter>Source Files\1. Kernel\Geometry</Filter>
@@ -1249,7 +1246,7 @@
       <Filter>Source Files\1. Kernel\Transformation</Filter>
     </ClInclude>
     <ClInclude Include="MRSubfeatures.h">
-      <Filter>Source Files\Feature</Filter>
+      <Filter>Source Files\5. Feature</Filter>
     </ClInclude>
     <ClInclude Include="MRSphere.h">
       <Filter>Source Files\1. Kernel\Geometry</Filter>
@@ -1299,9 +1296,6 @@
     <ClInclude Include="MRVector.h">
       <Filter>Source Files\1. Kernel\DataStructures</Filter>
     </ClInclude>
-    <ClInclude Include="MRPrimitiveMapsComposition.h">
-      <Filter>Source Files\3. Mesh</Filter>
-    </ClInclude>
     <ClInclude Include="MRBaseFwd.h">
       <Filter>Source Files\2. Base</Filter>
     </ClInclude>
@@ -1310,9 +1304,6 @@
     </ClInclude>
     <ClInclude Include="MRMultiwayAligningTransform.h">
       <Filter>Source Files\2. Base\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="MRMapEdge.h">
-      <Filter>Source Files\3. Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRProgressCallback.h">
       <Filter>Source Files\1. Kernel\Algorithms</Filter>
@@ -1339,43 +1330,43 @@
       <Filter>Source Files\2. Base\Algorithms</Filter>
     </ClInclude>
     <ClInclude Include="MRVoxelsFwd.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshFwd.h">
       <Filter>Source Files\3. Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRFloatGridComponents.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRSimpleVolume.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRVDBFloatGrid.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRVoxelsVolume.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRFloatGrid.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRAxis.h">
       <Filter>Source Files\1. Kernel\Geometry</Filter>
     </ClInclude>
     <ClInclude Include="MRPositionedText.h">
-      <Filter>Source Files\SymbolMesh</Filter>
+      <Filter>Source Files\6. SymbolMesh</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshTexture.h">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClInclude>
     <ClInclude Include="MRSceneColors.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRSceneSettings.h">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClInclude>
     <ClInclude Include="MRPartialOffset.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRWriter.h">
       <Filter>Source Files\3. Mesh\Helpers</Filter>
@@ -1399,18 +1390,30 @@
       <Filter>Source Files\3. Mesh\Helpers</Filter>
     </ClInclude>
     <ClInclude Include="MRFixUndercuts.h">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MR2DContoursTriangulation.h">
       <Filter>Source Files\3. Mesh\Contours</Filter>
     </ClInclude>
+    <ClInclude Include="MRPrimitiveMapsComposition.h">
+      <Filter>Source Files\3. Mesh\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMakeRigidXf.h">
+      <Filter>Source Files\3. Mesh\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMapEdge.h">
+      <Filter>Source Files\3. Mesh\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPointOnObject.h">
+      <Filter>Source Files\3. Mesh\Helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectLoad.cpp">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRCylinder.cpp">
       <Filter>Source Files\3. Mesh\Primitives</Filter>
@@ -1419,64 +1422,64 @@
       <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClCompile>
     <ClCompile Include="MRVDBConversions.cpp">
-      <Filter>Source Files\Voxels\VDBConversions</Filter>
+      <Filter>Source Files\5. Voxels\VDBConversions</Filter>
     </ClCompile>
     <ClCompile Include="MRSymbolMesh.cpp">
-      <Filter>Source Files\SymbolMesh</Filter>
+      <Filter>Source Files\6. SymbolMesh</Filter>
     </ClCompile>
     <ClCompile Include="MRBoolean.cpp">
-      <Filter>Source Files\Voxels\VDBConversions</Filter>
+      <Filter>Source Files\5. Voxels\VDBConversions</Filter>
     </ClCompile>
     <ClCompile Include="MRTorus.cpp">
       <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClCompile>
     <ClCompile Include="MRSystem.cpp">
-      <Filter>Source Files\System</Filter>
+      <Filter>Source Files\6. System</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectVoxels.cpp">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRVoxelsSave.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshSave.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshLoad.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRVoxelsLoad.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRVoxelPath.cpp">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClCompile>
     <ClCompile Include="miniply.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectMesh.cpp">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRVisualObject.cpp">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectFactory.cpp">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRSerializer.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRVoxelGraphCut.cpp">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectLines.cpp">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRArrow.cpp">
       <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClCompile>
     <ClCompile Include="MRVolumeSegment.cpp">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTree.cpp">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
@@ -1494,7 +1497,7 @@
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MROffset.cpp">
-      <Filter>Source Files\Voxels\VDBConversions</Filter>
+      <Filter>Source Files\5. Voxels\VDBConversions</Filter>
     </ClCompile>
     <ClCompile Include="MREdgePaths.cpp">
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
@@ -1509,25 +1512,25 @@
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRTeethMaskToDirectionVolume.cpp">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectPoints.cpp">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRPointsLoad.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRPointsSave.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshCollidePrecise.cpp">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRStreamOperators.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRImageSave.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshIntersect.cpp">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
@@ -1539,10 +1542,10 @@
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRPython.cpp">
-      <Filter>Source Files\Python</Filter>
+      <Filter>Source Files\6. Python</Filter>
     </ClCompile>
     <ClCompile Include="MRSceneRoot.cpp">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRRegularGridMesh.cpp">
       <Filter>Source Files\3. Mesh\Primitives</Filter>
@@ -1560,7 +1563,7 @@
       <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClCompile>
     <ClCompile Include="MRIOFormatsRegistry.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTreePolyline3.cpp">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
@@ -1575,7 +1578,7 @@
       <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClCompile>
     <ClCompile Include="MRChangeSceneAction.cpp">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClCompile>
     <ClCompile Include="MRTunnelDetector.cpp">
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
@@ -1584,34 +1587,34 @@
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRIRenderObject.cpp">
-      <Filter>Source Files\Scene\Render</Filter>
+      <Filter>Source Files\4. Scene\Render</Filter>
     </ClCompile>
     <ClCompile Include="MRConfig.cpp">
-      <Filter>Source Files\System</Filter>
+      <Filter>Source Files\6. System</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshTests.cpp">
-      <Filter>Source Files\Tests</Filter>
+      <Filter>Source Files\6. Tests</Filter>
     </ClCompile>
     <ClCompile Include="MRCPRTests.cpp">
-      <Filter>Source Files\Tests</Filter>
+      <Filter>Source Files\6. Tests</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshComponents.cpp">
       <Filter>Source Files\3. Mesh\Components</Filter>
     </ClCompile>
     <ClCompile Include="MRBestFitTests.cpp">
-      <Filter>Source Files\Tests</Filter>
+      <Filter>Source Files\6. Tests</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectDistanceMap.cpp">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRDistanceMapSave.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRDistanceMapLoad.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRExtractIsolinesTests.cpp">
-      <Filter>Source Files\Tests</Filter>
+      <Filter>Source Files\6. Tests</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTreeMaker.cpp">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
@@ -1626,7 +1629,7 @@
       <Filter>Source Files\3. Mesh\DistanceMap</Filter>
     </ClCompile>
     <ClCompile Include="MRImageLoad.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTreePolyline2.cpp">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
@@ -1635,7 +1638,7 @@
       <Filter>Source Files\3. Mesh\Polyline</Filter>
     </ClCompile>
     <ClCompile Include="MRPdf.cpp">
-      <Filter>Source Files\PDF</Filter>
+      <Filter>Source Files\6. PDF</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTreePolyline.cpp">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
@@ -1644,55 +1647,55 @@
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRComputeVolume.cpp">
-      <Filter>Source Files\Voxels\VDBConversions</Filter>
+      <Filter>Source Files\5. Voxels\VDBConversions</Filter>
     </ClCompile>
     <ClCompile Include="MRCombinedHistoryAction.cpp">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshLoadObj.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MREmbeddedPython.cpp">
-      <Filter>Source Files\Python</Filter>
+      <Filter>Source Files\6. Python</Filter>
     </ClCompile>
     <ClCompile Include="MRLinesSave.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRLinesLoad.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRMakeSphereMesh.cpp">
       <Filter>Source Files\3. Mesh\Primitives</Filter>
     </ClCompile>
     <ClCompile Include="MRSphereObject.cpp">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectMeshHolder.cpp">
-      <Filter>Source Files\Scene\ModelHolder</Filter>
+      <Filter>Source Files\4. Scene\ModelHolder</Filter>
     </ClCompile>
     <ClCompile Include="MRPlaneObject.cpp">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRPolyline.cpp">
       <Filter>Source Files\3. Mesh\Polyline</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectLinesHolder.cpp">
-      <Filter>Source Files\Scene\ModelHolder</Filter>
+      <Filter>Source Files\4. Scene\ModelHolder</Filter>
     </ClCompile>
     <ClCompile Include="MRLineObject.cpp">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRCircleObject.cpp">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRPolyline2Collide.cpp">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectPointsHolder.cpp">
-      <Filter>Source Files\Scene\ModelHolder</Filter>
+      <Filter>Source Files\4. Scene\ModelHolder</Filter>
     </ClCompile>
     <ClCompile Include="MRPointObject.cpp">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshBuilder.cpp">
       <Filter>Source Files\3. Mesh\MeshBuilder</Filter>
@@ -1701,10 +1704,10 @@
       <Filter>Source Files\3. Mesh\MeshBuilder</Filter>
     </ClCompile>
     <ClCompile Include="MRAlignTextToMesh.cpp">
-      <Filter>Source Files\SymbolMesh</Filter>
+      <Filter>Source Files\6. SymbolMesh</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshLoadSaveTest.cpp">
-      <Filter>Source Files\Tests</Filter>
+      <Filter>Source Files\6. Tests</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshTopology.cpp">
       <Filter>Source Files\3. Mesh\Mesh</Filter>
@@ -1749,7 +1752,7 @@
       <Filter>Source Files\3. Mesh\Components</Filter>
     </ClCompile>
     <ClCompile Include="MRExampleTest.cpp">
-      <Filter>Source Files\Tests</Filter>
+      <Filter>Source Files\6. Tests</Filter>
     </ClCompile>
     <ClCompile Include="MRFillContourByGraphCut.cpp">
       <Filter>Source Files\3. Mesh\Segmentation</Filter>
@@ -1791,10 +1794,10 @@
       <Filter>Source Files\3. Mesh\Boolean</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshSaveObj.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectLabel.cpp">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineSubdivide.cpp">
       <Filter>Source Files\3. Mesh\Polyline</Filter>
@@ -1824,10 +1827,10 @@
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRMarchingCubes.cpp">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRSharpenMarchingCubesMesh.cpp">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MREdgeMetric.cpp">
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
@@ -1839,10 +1842,10 @@
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRVoxelsLoadGav.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRGltfSerializer.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRToolPath.cpp">
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
@@ -1902,19 +1905,19 @@
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectGcode.cpp">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRGcodeProcessor.cpp">
-      <Filter>Source Files\Gcode</Filter>
+      <Filter>Source Files\6. Gcode</Filter>
     </ClCompile>
     <ClCompile Include="MRGcodeLoad.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRFile.cpp">
-      <Filter>Source Files\System</Filter>
+      <Filter>Source Files\6. System</Filter>
     </ClCompile>
     <ClCompile Include="MRVoxelsConversionsByParts.cpp">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRMovementBuildBody.cpp">
       <Filter>Source Files\3. Mesh\Primitives</Filter>
@@ -1923,13 +1926,13 @@
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRCNCMachineSettings.cpp">
-      <Filter>Source Files\Gcode</Filter>
+      <Filter>Source Files\6. Gcode</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshToDistanceVolume.cpp">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRTiffIO.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRTerrainTriangulation.cpp">
       <Filter>Source Files\3. Mesh\Triangulation</Filter>
@@ -1953,10 +1956,10 @@
       <Filter>Source Files\3. Mesh\WaterFlow</Filter>
     </ClCompile>
     <ClCompile Include="MRPointsLoadE57.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRPointsLoadLas.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRPrecipitationSimulator.cpp">
       <Filter>Source Files\3. Mesh\WaterFlow</Filter>
@@ -1965,10 +1968,10 @@
       <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshLoadStep.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRZip.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MROffsetContours.cpp">
       <Filter>Source Files\3. Mesh\Polyline</Filter>
@@ -1995,22 +1998,22 @@
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRSaveSettings.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRSceneLoad.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectSave.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRCylinderObject.cpp">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRZlib.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRConeObject.cpp">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRAlphaShape.cpp">
       <Filter>Source Files\3. Mesh\Triangulation</Filter>
@@ -2019,16 +2022,16 @@
       <Filter>Source Files\3. Mesh\Triangulation</Filter>
     </ClCompile>
     <ClCompile Include="MRDirectory.cpp">
-      <Filter>Source Files\System</Filter>
+      <Filter>Source Files\6. System</Filter>
     </ClCompile>
     <ClCompile Include="MRRadiusMeasurementObject.cpp">
-      <Filter>Source Files\Feature\Measurements</Filter>
+      <Filter>Source Files\5. Feature\Measurements</Filter>
     </ClCompile>
     <ClCompile Include="MRDistanceMeasurementObject.cpp">
-      <Filter>Source Files\Feature\Measurements</Filter>
+      <Filter>Source Files\5. Feature\Measurements</Filter>
     </ClCompile>
     <ClCompile Include="MRAngleMeasurementObject.cpp">
-      <Filter>Source Files\Feature\Measurements</Filter>
+      <Filter>Source Files\5. Feature\Measurements</Filter>
     </ClCompile>
     <ClCompile Include="MRPointsComponents.cpp">
       <Filter>Source Files\3. Mesh\Components</Filter>
@@ -2040,25 +2043,25 @@
       <Filter>Source Files\3. Mesh\Polyline</Filter>
     </ClCompile>
     <ClCompile Include="MRPointsToDistanceVolume.cpp">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRPointsToMeshFusion.cpp">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRFeatureObject.cpp">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRHistoryAction.cpp">
-      <Filter>Source Files\History</Filter>
+      <Filter>Source Files\6. History</Filter>
     </ClCompile>
     <ClCompile Include="MRMisonLoad.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRMeasurementObject.cpp">
-      <Filter>Source Files\Feature\Measurements</Filter>
+      <Filter>Source Files\5. Feature\Measurements</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectDimensionsEnum.cpp">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRFaceDistance.cpp">
       <Filter>Source Files\3. Mesh\SurfacePath</Filter>
@@ -2067,10 +2070,10 @@
       <Filter>Source Files\3. Mesh\Relax</Filter>
     </ClCompile>
     <ClCompile Include="MRLogWindowsExceptions.cpp">
-      <Filter>Source Files\System</Filter>
+      <Filter>Source Files\6. System</Filter>
     </ClCompile>
     <ClCompile Include="MRSeparationPoint.cpp">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRFixSelfIntersections.cpp">
       <Filter>Source Files\3. Mesh\SelfIntersectoins</Filter>
@@ -2085,22 +2088,22 @@
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRFeatureRefine.cpp">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRFeatureHelpers.cpp">
-      <Filter>Source Files\Feature\Features</Filter>
+      <Filter>Source Files\5. Feature\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRFillHoleNicely.cpp">
       <Filter>Source Files\3. Mesh\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MR3MFSerializer.cpp">
-      <Filter>Source Files\IO</Filter>
+      <Filter>Source Files\6. IO</Filter>
     </ClCompile>
     <ClCompile Include="MRPointCloudDistance.cpp">
       <Filter>Source Files\3. Mesh\PointCloud</Filter>
     </ClCompile>
     <ClCompile Include="MRMoveMeshToVoxelMaxDeriv.cpp">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshThickness.cpp">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
@@ -2109,19 +2112,19 @@
       <Filter>Source Files\3. Mesh\Decimation</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectImGuiLabel.cpp">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRBestFit.cpp">
-      <Filter>Source Files\Feature</Filter>
+      <Filter>Source Files\5. Feature</Filter>
     </ClCompile>
     <ClCompile Include="MRBestFitParabola.cpp">
-      <Filter>Source Files\Feature</Filter>
+      <Filter>Source Files\5. Feature</Filter>
     </ClCompile>
     <ClCompile Include="MRBestFitPolynomial.cpp">
-      <Filter>Source Files\Feature</Filter>
+      <Filter>Source Files\5. Feature</Filter>
     </ClCompile>
     <ClCompile Include="MRBestFitQuadric.cpp">
-      <Filter>Source Files\Feature</Filter>
+      <Filter>Source Files\5. Feature</Filter>
     </ClCompile>
     <ClCompile Include="MRRectIndexer.cpp">
       <Filter>Source Files\2. Base\DataStructures</Filter>
@@ -2153,9 +2156,6 @@
     <ClCompile Include="MRString.cpp">
       <Filter>Source Files\1. Kernel\Algorithms</Filter>
     </ClCompile>
-    <ClCompile Include="MRPointOnObject.cpp">
-      <Filter>Source Files\3. Mesh</Filter>
-    </ClCompile>
     <ClCompile Include="MRRestoringStreamsSink.cpp">
       <Filter>Source Files\2. Base\Logging</Filter>
     </ClCompile>
@@ -2166,13 +2166,13 @@
       <Filter>Source Files\2. Base\Logging</Filter>
     </ClCompile>
     <ClCompile Include="MRViewportId.cpp">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRBox.cpp">
       <Filter>Source Files\1. Kernel\DataStructures</Filter>
     </ClCompile>
     <ClCompile Include="MRDenseBox.cpp">
-      <Filter>Source Files\Feature</Filter>
+      <Filter>Source Files\5. Feature</Filter>
     </ClCompile>
     <ClCompile Include="MRComputeBoundingBox.cpp">
       <Filter>Source Files\2. Base\Algorithms</Filter>
@@ -2184,16 +2184,13 @@
       <Filter>Source Files\1. Kernel\Helpers</Filter>
     </ClCompile>
     <ClCompile Include="MRFeatures.cpp">
-      <Filter>Source Files\Feature</Filter>
+      <Filter>Source Files\5. Feature</Filter>
     </ClCompile>
     <ClCompile Include="MRIntersection.cpp">
       <Filter>Source Files\1. Kernel\Algorithms</Filter>
     </ClCompile>
     <ClCompile Include="MRLine3.cpp">
       <Filter>Source Files\1. Kernel\Geometry</Filter>
-    </ClCompile>
-    <ClCompile Include="MRMakeRigidXf.cpp">
-      <Filter>Source Files\3. Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRTriMath.cpp">
       <Filter>Source Files\1. Kernel\Algorithms</Filter>
@@ -2202,7 +2199,7 @@
       <Filter>Source Files\1. Kernel\Algorithms</Filter>
     </ClCompile>
     <ClCompile Include="MRSubfeatures.cpp">
-      <Filter>Source Files\Feature</Filter>
+      <Filter>Source Files\5. Feature</Filter>
     </ClCompile>
     <ClCompile Include="MRQuadraticForm.cpp">
       <Filter>Source Files\1. Kernel\Matrix</Filter>
@@ -2225,17 +2222,11 @@
     <ClCompile Include="MRBase64.cpp">
       <Filter>Source Files\2. Base\Algorithms</Filter>
     </ClCompile>
-    <ClCompile Include="MRPrimitiveMapsComposition.cpp">
-      <Filter>Source Files\3. Mesh</Filter>
-    </ClCompile>
     <ClCompile Include="MRMultiwayAligningTransform.cpp">
       <Filter>Source Files\2. Base\Math</Filter>
     </ClCompile>
-    <ClCompile Include="MRMapEdge.cpp">
-      <Filter>Source Files\3. Mesh</Filter>
-    </ClCompile>
     <ClCompile Include="MRStacktrace.cpp">
-      <Filter>Source Files\System</Filter>
+      <Filter>Source Files\6. System</Filter>
     </ClCompile>
     <ClCompile Include="MRId.cpp">
       <Filter>Source Files\1. Kernel\DataStructures</Filter>
@@ -2256,22 +2247,22 @@
       <Filter>Source Files\2. Base\Algorithms</Filter>
     </ClCompile>
     <ClCompile Include="MRFloatGridComponents.cpp">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRVoxelsVolume.cpp">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRFloatGrid.cpp">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRSceneColors.cpp">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRSceneSettings.cpp">
-      <Filter>Source Files\Scene</Filter>
+      <Filter>Source Files\4. Scene</Filter>
     </ClCompile>
     <ClCompile Include="MRPartialOffset.cpp">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRDipole.cpp">
       <Filter>Source Files\3. Mesh\AABBTree</Filter>
@@ -2286,16 +2277,28 @@
       <Filter>Source Files\1. Kernel\Algorithms</Filter>
     </ClCompile>
     <ClCompile Include="MRFixUndercuts.cpp">
-      <Filter>Source Files\Voxels</Filter>
+      <Filter>Source Files\5. Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRLevelOfDetails.cpp">
       <Filter>Source Files\3. Mesh\Decimation</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshBuildDeleteTest.cpp">
-      <Filter>Source Files\Tests</Filter>
+      <Filter>Source Files\6. Tests</Filter>
     </ClCompile>
     <ClCompile Include="MR2DContoursTriangulation.cpp">
       <Filter>Source Files\3. Mesh\Contours</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMakeRigidXf.cpp">
+      <Filter>Source Files\3. Mesh\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMapEdge.cpp">
+      <Filter>Source Files\3. Mesh\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointOnObject.cpp">
+      <Filter>Source Files\3. Mesh\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPrimitiveMapsComposition.cpp">
+      <Filter>Source Files\3. Mesh\Helpers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -2303,7 +2306,7 @@
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="$(ProjectDir)..\..\thirdparty\python\python$(PythonVersion).zip">
-      <Filter>Source Files\Python</Filter>
+      <Filter>Source Files\6. Python</Filter>
     </CopyFileToFolders>
   </ItemGroup>
 </Project>

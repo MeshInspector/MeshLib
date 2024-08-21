@@ -21,6 +21,10 @@
 
 #else //not Windows
 
+#ifndef __EMSCRIPTEN__
+#include <fmt/chrono.h>
+#endif
+
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
 #ifndef MRMESH_NO_CLIPBOARD

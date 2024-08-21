@@ -1,7 +1,10 @@
 #pragma once
+
 #include "MRKernelFwd.h"
 #include "MRVector3.h"
 #include "MRVector4.h"
+
+#include <cstdint>
 
 namespace MR
 {

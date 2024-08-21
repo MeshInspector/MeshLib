@@ -91,6 +91,11 @@ MRMESH_API Expected<VdbVolume> fromRaw( const std::filesystem::path& file, const
 MRMESH_API Expected<VdbVolume> fromRaw( std::istream& in, const RawParameters& params,
                                                          const ProgressCallback& cb = {} );
 
+/// finds raw voxels file and its encoding parameters
+/// \param file on input: file name probably without suffix with parameters
+///             on output: if success existing file name
+MRMESH_API Expected<RawParameters> findRawParameters( std::filesystem::path& file );
+
 /// Load raw voxels file, parsing parameters from name 
 MRMESH_API Expected<VdbVolume> fromRaw( const std::filesystem::path& file,
                                                          const ProgressCallback& cb = {} );

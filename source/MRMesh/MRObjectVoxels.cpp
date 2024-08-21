@@ -14,6 +14,7 @@
 #include "MRStringConvert.h"
 #include "MROpenVDBHelper.h"
 #include "MRVoxelsConversions.h"
+#include "MRDirectory.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRAsyncLaunchType.h"
@@ -511,6 +512,16 @@ size_t ObjectVoxels::heapBytes() const
         + MR::heapBytes( volumeRenderingData_ );
 }
 
+void ObjectVoxels::setSerializeFormat( const char * newFormat )
+{
+    if ( !newFormat || *newFormat != '.' )
+    {
+        assert( false );
+        return;
+    }
+    serializeFormat_ = newFormat;
+}
+
 void ObjectVoxels::swapBase_( Object& other )
 {
     if ( auto otherVoxels = other.asType<ObjectVoxels>() )
@@ -579,9 +590,9 @@ Expected<std::future<VoidOrErrStr>> ObjectVoxels::serializeModel_( const std::fi
         return {};
 
     return std::async( getAsyncLaunchType(),
-        [this, filename = utf8string( path ) + ".raw"] ()
+        [this, filename = std::filesystem::path( path ) += serializeFormat_] ()
     {
-        return MR::VoxelsSave::toRawAutoname( vdbVolume_, pathFromUtf8( filename ) );
+        return MR::VoxelsSave::toAnySupportedFormat( vdbVolume_, filename );
     } );
 }
 
@@ -621,11 +632,24 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
 
 VoidOrErrStr ObjectVoxels::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
-    auto res = VoxelsLoad::fromRaw( pathFromUtf8( utf8string( path ) + ".raw" ), progressCb );
+    // in case of raw file, we need to find its full name with suffix
+    auto modelPath = pathFromUtf8( utf8string( path ) + ".raw" );
+    auto expParams = VoxelsLoad::findRawParameters( modelPath );
+    if ( !expParams )
+    {
+        modelPath = findPathWithExtension( path );
+        if ( modelPath.empty() )
+            return unexpected( "No voxels file found: " + utf8string( path ) );
+    }
+    auto res = VoxelsLoad::fromAnySupportedFormat( modelPath, progressCb );
     if ( !res.has_value() )
         return unexpected( res.error() );
     
-    construct( res.value().data, res.value().voxelSize );
+    if ( res->empty() )
+        return unexpected( "No voxels found in file: " + utf8string( modelPath ) );
+    assert( res->size() == 1 );
+
+    construct( (*res).front().data, (*res).front().voxelSize );
     if ( !vdbVolume_.data )
         return unexpected( "No grid loaded" );
 

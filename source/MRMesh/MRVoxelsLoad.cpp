@@ -7,11 +7,12 @@
 #include "MRVDBFloatGrid.h"
 #include "MRStringConvert.h"
 #include "MRDirectory.h"
+#include "MROpenVDBHelper.h"
+#include "MRTiffIO.h"
+#include "MRParallelFor.h"
+#include <MRPch/MROpenvdb.h>
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
-#include <cfloat>
-#include <compare>
-#include <fstream>
 
 #ifndef MRMESH_NO_DICOM
 #include <gdcmImageHelper.h>
@@ -19,14 +20,12 @@
 #include <gdcmTagKeywords.h>
 #endif // MRMESH_NO_DICOM
 
-#include <MRPch/MROpenvdb.h>
 #include <openvdb/tools/GridTransformer.h>
 #include <openvdb/tools/Interpolation.h>
-#include <MRPch/MRTBB.h>
 
-#include "MROpenVDBHelper.h"
-#include "MRTiffIO.h"
-#include "MRParallelFor.h"
+#include <cfloat>
+#include <compare>
+#include <fstream>
 
 namespace
 {
@@ -829,15 +828,10 @@ Expected<DicomVolume> loadDicomFile( const std::filesystem::path& path, const Pr
 
 #endif // MRMESH_NO_DICOM
 
-Expected<VdbVolume> fromRaw( const std::filesystem::path& path,
-    const ProgressCallback& cb )
+Expected<RawParameters> findRawParameters( std::filesystem::path& path )
 {
-    MR_TIMER;
-
     if ( path.empty() )
-    {
         return unexpected( "Path is empty" );
-    }
 
     auto ext = utf8string( path.extension() );
     for ( auto& c : ext )
@@ -847,7 +841,7 @@ Expected<VdbVolume> fromRaw( const std::filesystem::path& path,
     {
         std::stringstream ss;
         ss << "Extension is not correct, expected \".raw\" current \"" << ext << "\"" << std::endl;
-        return unexpected( ss.str() );
+        return unexpected( fmt::format( "Extension is not correct, expected \".raw\" current \"{}\"", ext ) );
     }
 
     auto parentPath = path.parent_path();
@@ -870,8 +864,8 @@ Expected<VdbVolume> fromRaw( const std::filesystem::path& path,
         return unexpected( "More than one file exists: " + utf8string( path.filename() ) );
 
     RawParameters outParams;
-    auto filepathToOpen = candidatePaths[0];
-    auto filename = utf8string( filepathToOpen.filename() );
+    path = candidatePaths[0];
+    auto filename = utf8string( path.filename() );
     auto wEndChar = filename.find("_");
     if ( wEndChar == std::string::npos )
         return unexpected( "Cannot parse filename: " + filename );
@@ -931,8 +925,17 @@ Expected<VdbVolume> fromRaw( const std::filesystem::path& path,
         }
     }
     outParams.scalarType = RawParameters::ScalarType::Float32;
+    return outParams;
+}
 
-    return fromRaw( filepathToOpen, outParams, cb );
+Expected<VdbVolume> fromRaw( const std::filesystem::path& path,
+    const ProgressCallback& cb )
+{
+    auto filepathToOpen = path;
+    auto expParams = findRawParameters( filepathToOpen );
+    if ( !expParams )
+        return unexpected( std::move( expParams.error() ) );
+    return fromRaw( filepathToOpen, *expParams, cb );
 }
 
 #ifndef MRMESH_OPENVDB_DISABLE_IO
@@ -1148,6 +1151,7 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
 Expected<VdbVolume> fromRaw( const std::filesystem::path& file, const RawParameters& params,
     const ProgressCallback& cb )
 {
+    MR_TIMER
     std::ifstream in( file, std::ios::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
@@ -1156,6 +1160,7 @@ Expected<VdbVolume> fromRaw( const std::filesystem::path& file, const RawParamet
 
 Expected<VdbVolume> fromRaw( std::istream& in, const RawParameters& params,  const ProgressCallback& cb )
 {
+    MR_TIMER
     if ( params.dimensions.x <= 0 || params.dimensions.y <= 0 || params.dimensions.z <= 0 )
         return unexpected( "Wrong volume dimension parameter value" );
 

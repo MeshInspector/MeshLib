@@ -193,6 +193,12 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
+    /// returns file extension used to serialize the voxels
+    [[nodiscard]] const char * serializeFormat() const { return serializeFormat_; }
+
+    /// sets file extension used to serialize the voxels: must be not null and must start from '.'
+    MRMESH_API void setSerializeFormat( const char * newFormat );
+
     /// signal about Iso-surface changes (from updateIsoSurface)
     using IsoSurfaceChangedSignal = Signal<void()>;
     IsoSurfaceChangedSignal isoSurfaceChangedSignal;
@@ -209,6 +215,8 @@ private:
     Histogram histogram_;
     Box3i activeBox_;
     mutable std::optional<size_t> activeVoxels_;
+
+    const char * serializeFormat_ = ".raw";
 
     /// Service data
     VolumeIndexer indexer_ = VolumeIndexer( vdbVolume_.dims );

@@ -485,12 +485,6 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
     MR_TIMER
 
-#ifndef MRMESH_NO_OPENVDB
-    VdbCoord minCoord;
-    if constexpr ( std::is_same_v<V, VdbVolume> )
-        minCoord = volume.data->evalActiveVoxelBoundingBox().min();
-#endif
-
     auto cachingMode = params.cachingMode;
     if ( cachingMode == MarchingCubesParams::CachingMode::Automatic )
     {

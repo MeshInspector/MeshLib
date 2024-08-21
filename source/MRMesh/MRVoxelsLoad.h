@@ -100,11 +100,9 @@ MRMESH_API Expected<RawParameters> findRawParameters( std::filesystem::path& fil
 MRMESH_API Expected<VdbVolume> fromRaw( const std::filesystem::path& file,
                                                          const ProgressCallback& cb = {} );
 
-#ifndef MRMESH_OPENVDB_DISABLE_IO
 /// Load raw voxels OpenVDB file
 MRMESH_API Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& file,
                                                          const ProgressCallback& cb = {} );
-#endif
 
 /// Load voxel from Gav-file with micro CT reconstruction
 MRMESH_API Expected<VdbVolume> fromGav( const std::filesystem::path& file, const ProgressCallback& cb = {} );

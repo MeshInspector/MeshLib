@@ -24,7 +24,6 @@ option(MRMESH_NO_OPENCASCADE "Disable OpenCASCADE usage" OFF)
 option(MRMESH_NO_ZLIB "Disable Zlib usage" OFF)
 
 option(MRMESH_OPENCASCADE_USE_XDE "Use OpenCASCADE XDE module" ON)
-option(MRMESH_OPENVDB_DISABLE_IO "Disable OpenVDB IO functions" OFF)
 
 IF(DEFINED MESHLIB_PYTHON_SUPPORT AND NOT MESHLIB_PYTHON_SUPPORT)
   set(MRMESH_NO_PYTHON ON)
@@ -45,7 +44,6 @@ IF(MR_EMSCRIPTEN)
   set(MRMESH_NO_PDF ON)
   set(MRMESH_NO_PYTHON ON)
   set(MRMESH_NO_TIFF ON)
-  set(MRMESH_OPENVDB_DISABLE_IO ON)
 ENDIF()
 
 file(GLOB SOURCES "*.cpp")
@@ -223,6 +221,7 @@ IF(APPLE OR MR_EMSCRIPTEN)
       ${MRMESH_OPTIONAL_LIBRARY_DIRS}
     )
     target_link_libraries(${PROJECT_NAME} PRIVATE
+      blosc
       mbedtls
       mbedx509
       mbedcrypto

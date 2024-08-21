@@ -69,9 +69,7 @@ const IOFilters Filters =
 #ifndef MRMESH_NO_OPENVDB
     { "Raw (.raw)", "*.raw" },
     { "Micro CT (.gav)", "*.gav" },
-#ifndef MRMESH_OPENVDB_DISABLE_IO
     { "OpenVDB (.vdb)", "*.vdb" },
-#endif
 #endif
 };
 
@@ -939,7 +937,6 @@ Expected<VdbVolume> fromRaw( const std::filesystem::path& path,
     return fromRaw( filepathToOpen, *expParams, cb );
 }
 
-#ifndef MRMESH_OPENVDB_DISABLE_IO
 Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
 {
     if ( cb && !cb( 0.f ) )
@@ -1018,7 +1015,6 @@ Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, con
 
     return res;
 }
-#endif
 
 inline Expected<std::vector<VdbVolume>> toSingleElementVector( Expected<VdbVolume> v )
 {
@@ -1037,10 +1033,8 @@ Expected<std::vector<VdbVolume>> fromAnySupportedFormat( const std::filesystem::
         return toSingleElementVector( fromRaw( path, cb ) );
     if ( ext == ".gav" )
         return toSingleElementVector( fromGav( path, cb ) );
-#ifndef MRMESH_OPENVDB_DISABLE_IO
     if ( ext == ".vdb" )
         return fromVdb( path, cb );
-#endif
 
     return unexpected( std::string( "Unsupported file extension" ) );
 }

@@ -15,6 +15,9 @@ struct MeshAttributesToUpdate
 {
     VertUVCoords* uvCoords = nullptr;
     VertColors* colorMap = nullptr;
+
+    TexturePerFace* texturePerFace = nullptr;
+    FaceColors* faceColors = nullptr;
 };
 
 /**

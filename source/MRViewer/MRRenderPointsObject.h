@@ -47,7 +47,7 @@ private:
 
     int maxTexSize_{ 0 };
 
-    void bindPoints_();
+    void bindPoints_( bool alphaSort );
     void bindPointsPicker_();
 
     // Create a new set of OpenGL buffer objects

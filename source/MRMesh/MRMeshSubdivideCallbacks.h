@@ -43,23 +43,16 @@ auto onEdgeSplitFaceAttribute( const Mesh& mesh, Vector<T, FaceId>& data )
         FaceId existing;
         if ( oldLeft < data.size() )
             existing = oldLeft;
-        else if ( newLeft < data.size() )
-            existing = newLeft;
         else
             existing = FaceId( 0 );
 
         data.autoResizeSet( newLeft, data[existing] );
-
-        //if ( oldLeft < data.size() )
-        //if ( oldRight < data.size() )
 
         auto oldRight = mesh.topology.right( e.undirected() );
         auto newRight = mesh.topology.right( e1.undirected() );
 
         if ( oldRight < data.size() )
             existing = oldRight;
-        else if ( newRight < data.size() )
-            existing = newRight;
         else
             existing = FaceId( 0 );
 

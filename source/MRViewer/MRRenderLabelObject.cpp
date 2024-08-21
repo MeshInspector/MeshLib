@@ -163,7 +163,7 @@ void RenderLabelObject::renderSourcePoint_( const ModelRenderParams& renderParam
 {
     GL_EXEC( glBindVertexArray( srcArrayObjId_ ) );
 
-    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::DrawPoints );
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::Points );
     GL_EXEC( glUseProgram( shader ) );
 
     const std::array<Vector3f, 1> point { objLabel_->getLabel().position };

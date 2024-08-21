@@ -415,6 +415,9 @@
     <ClCompile Include="MRMarkedVoxelSlice.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRPointsShader.cpp">
+      <Filter>Render\Shaders</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -811,6 +814,9 @@
     </ClInclude>
     <ClInclude Include="MRMarkedVoxelSlice.h">
       <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPointsShader.h">
+      <Filter>Render\Shaders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

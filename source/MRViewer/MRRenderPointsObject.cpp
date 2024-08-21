@@ -34,9 +34,14 @@ RenderPointsObject::~RenderPointsObject()
 
 bool RenderPointsObject::render( const ModelRenderParams& renderParams )
 {
+    bool isColorTransparent = objPoints_->getFrontColor( objPoints_->isSelected(), renderParams.viewportId ).a < 255;
+    if ( !isColorTransparent && objPoints_->pointCloud() && objPoints_->pointCloud()->hasNormals() )
+    {
+        isColorTransparent = objPoints_->getBackColor( renderParams.viewportId ).a < 255;
+    }
     RenderModelPassMask desiredPass =
         !objPoints_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId ) ? RenderModelPassMask::NoDepthTest :
-        ( objPoints_->getGlobalAlpha( renderParams.viewportId ) < 255 || objPoints_->getFrontColor( objPoints_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
+        ( objPoints_->getGlobalAlpha( renderParams.viewportId ) < 255 || isColorTransparent ) ? RenderModelPassMask::Transparent :
         RenderModelPassMask::Opaque;
     if ( !bool( renderParams.passMask & desiredPass ) )
         return false; // Nothing to draw in this pass.
@@ -67,11 +72,12 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
     GL_EXEC( glEnable( GL_BLEND ) );
     GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
 
-    bindPoints_();
+    const bool useAlphaSort = renderParams.allowAlphaSort && desiredPass == RenderModelPassMask::Transparent;
+    bindPoints_( useAlphaSort );
 
     // Send transformations to the GPU
 
-    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::DrawPoints );
+    auto shader = GLStaticHolder::getShaderId( useAlphaSort ? GLStaticHolder::TransparentPoints : GLStaticHolder::Points );
 
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "model" ), 1, GL_TRUE, renderParams.modelMatrix.data() ) );
     GL_EXEC( glUniformMatrix4fv( glGetUniformLocation( shader, "view" ), 1, GL_TRUE, renderParams.viewMatrix.data() ) );
@@ -181,7 +187,7 @@ size_t RenderPointsObject::glBytes() const
 void RenderPointsObject::forceBindAll()
 {
     update_();
-    bindPoints_();
+    bindPoints_( false );
 }
 
 RenderBufferRef<Vector3f> RenderPointsObject::loadVertPosBuffer_()
@@ -256,9 +262,9 @@ RenderBufferRef<Color> RenderPointsObject::loadVertColorsBuffer_()
 }
 
 
-void RenderPointsObject::bindPoints_()
+void RenderPointsObject::bindPoints_( bool alphaSort )
 {
-    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::DrawPoints );
+    auto shader = GLStaticHolder::getShaderId( alphaSort ? GLStaticHolder::TransparentPoints : GLStaticHolder::Points );
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
     if ( objPoints_->hasVisualRepresentation() )

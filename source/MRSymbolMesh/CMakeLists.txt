@@ -9,12 +9,23 @@ file(GLOB HEADERS "*.h")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
-find_package(Freetype REQUIRED)
+IF(MR_EMSCRIPTEN)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1")
+ELSE()
+  find_package(Freetype REQUIRED)
+ENDIF()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-  MRMesh
-  Freetype::Freetype
-)
+IF(MR_EMSCRIPTEN)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    freetype
+  )
+ELSE()
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    Freetype::Freetype
+  )
+ENDIF()
 
 IF(WIN32 AND MINGW)
   target_compile_definitions(${PROJECT_NAME} PRIVATE MRSYMBOLMESH_EXPORT)

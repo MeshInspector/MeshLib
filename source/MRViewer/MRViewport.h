@@ -399,12 +399,13 @@ public:
     //   overlay basis
     void postDraw() const;
 
-    // fill = 1.0 parameter means that scene will 0.5 of screen
+    // fit camera to the scene box (note: scene box does not include ancillary objects)
+    // fill = 1.0 parameter means that scene will be approximately 0.5 of screen
     // snapView - to snap camera angle to closest canonical quaternion
     MRVIEWER_API void fitData( float fill = 1.0f, bool snapView = true );
 
     // set scene box by given one and fit camera to it
-    // fill = 1.0 parameter means that box diagonal will 0.5 of screen
+    // fill = 1.0 parameter means that box diagonal will be approximately 0.5 of the viewport
     // snapView - to snap camera angle to closest canonical quaternion
     MRVIEWER_API void fitBox( const Box3f& newSceneBox, float fill = 1.0f, bool snapView = true );
 

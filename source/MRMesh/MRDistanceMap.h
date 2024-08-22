@@ -302,6 +302,7 @@ MRMESH_API void distanceMapFromContours( DistanceMap & distMap, const Polyline2&
 /// minimum (close): 1.0 (white)
 /// maximum (far): threshold
 /// invalid (infinity): 0.0 (black)
+[[deprecated( "convert to an image and save it explicitly" )]]
 MRMESH_API VoidOrErrStr saveDistanceMapToImage( const DistanceMap& distMap, const std::filesystem::path& filename, float threshold = 1.f / 255 );
 
 /// load distance map from a grayscale image:
@@ -310,6 +311,7 @@ MRMESH_API VoidOrErrStr saveDistanceMapToImage( const DistanceMap& distMap, cons
 
 /// load distance map from a grayscale image file
 /// \param threshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid
+[[deprecated( "load an image and convert from it explicitly" )]]
 [[nodiscard]] MRMESH_API Expected<DistanceMap> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold = 1.f / 255 );
 
 /// \}

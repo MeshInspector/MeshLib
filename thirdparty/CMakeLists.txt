@@ -105,6 +105,7 @@ IF(MR_EMSCRIPTEN)
   add_subdirectory(./googletest)
 
   set(ENABLE_PROGRAMS OFF CACHE BOOL "")
+  set(ENABLE_TESTING OFF CACHE BOOL "")
   add_subdirectory(./mbedtls)
   install(DIRECTORY mbedtls/include/mbedtls DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 
@@ -136,6 +137,12 @@ IF(MR_EMSCRIPTEN)
   install(DIRECTORY onetbb/include/tbb DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 
   add_subdirectory(./tinyxml2)
+
+  set(BUILD_TESTS OFF CACHE BOOL "")
+  set(BUILD_FUZZERS OFF CACHE BOOL "")
+  set(BUILD_BENCHMARKS OFF CACHE BOOL "")
+  set(BLOSC_INSTALL ON)
+  add_subdirectory(./c-blosc)
 ELSE() # not MR_EMSCRIPTEN
   set(CLIP_EXAMPLES OFF)
   set(CLIP_TESTS OFF)

@@ -51,6 +51,7 @@
 
 #define IMATH_HALF_NO_LOOKUP_TABLE // fix for unresolved external symbol "imath_half_to_float_table"
 #include <openvdb/openvdb.h>
+#include <openvdb/io/Stream.h>
 #include <openvdb/tools/Composite.h>
 #include <openvdb/tools/GridTransformer.h>
 #include <openvdb/tools/MeshToVolume.h>

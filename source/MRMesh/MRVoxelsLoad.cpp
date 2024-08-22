@@ -20,6 +20,7 @@
 #include <gdcmTagKeywords.h>
 #endif // MRMESH_NO_DICOM
 
+#include <openvdb/io/Stream.h>
 #include <openvdb/tools/GridTransformer.h>
 #include <openvdb/tools/Interpolation.h>
 
@@ -68,9 +69,7 @@ const IOFilters Filters =
 #ifndef MRMESH_NO_OPENVDB
     { "Raw (.raw)", "*.raw" },
     { "Micro CT (.gav)", "*.gav" },
-#ifndef MRMESH_OPENVDB_DISABLE_IO
     { "OpenVDB (.vdb)", "*.vdb" },
-#endif
 #endif
 };
 
@@ -938,17 +937,25 @@ Expected<VdbVolume> fromRaw( const std::filesystem::path& path,
     return fromRaw( filepathToOpen, *expParams, cb );
 }
 
-#ifndef MRMESH_OPENVDB_DISABLE_IO
 Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
 {
     if ( cb && !cb( 0.f ) )
         return unexpected( getCancelMessage( path ) );
-    openvdb::io::File file( utf8string( path ) );
-    openvdb::initialize();
-    file.open();
+
     std::vector<VdbVolume> res;
-    auto grids = file.getGrids();
-    file.close();
+
+    openvdb::GridPtrVecPtr grids;
+    {
+        // in order to load on Windows a file with Unicode symbols in the name, we need to open ifstream by ourselves,
+        // because openvdb constructs it from std::string, which on Windows means "local codepage" and not Unicode
+        std::ifstream file( path, std::ios::binary );
+        if ( !file )
+            return unexpected( "cannot open file for reading: " + utf8string( path ) );
+
+        openvdb::initialize();
+        openvdb::io::Stream stream( file, false );
+        grids = stream.getGrids();
+    }
     if ( grids )
     {
         auto& gridsRef = *grids;
@@ -1008,7 +1015,6 @@ Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, con
 
     return res;
 }
-#endif
 
 inline Expected<std::vector<VdbVolume>> toSingleElementVector( Expected<VdbVolume> v )
 {
@@ -1027,10 +1033,8 @@ Expected<std::vector<VdbVolume>> fromAnySupportedFormat( const std::filesystem::
         return toSingleElementVector( fromRaw( path, cb ) );
     if ( ext == ".gav" )
         return toSingleElementVector( fromGav( path, cb ) );
-#ifndef MRMESH_OPENVDB_DISABLE_IO
     if ( ext == ".vdb" )
         return fromVdb( path, cb );
-#endif
 
     return unexpected( std::string( "Unsupported file extension" ) );
 }

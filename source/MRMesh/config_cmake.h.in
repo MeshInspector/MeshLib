@@ -23,4 +23,3 @@
 #cmakedefine MRMESH_NO_ZLIB
 
 #cmakedefine MRMESH_OPENCASCADE_USE_XDE
-#cmakedefine MRMESH_OPENVDB_DISABLE_IO

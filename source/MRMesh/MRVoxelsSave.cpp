@@ -11,7 +11,9 @@
 #include "MRPch/MROpenvdb.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRFmt.h"
-#include <openvdb/io/File.h>
+
+#include <openvdb/io/Stream.h>
+
 #include <fstream>
 #include <filesystem>
 #include <sstream>
@@ -25,9 +27,7 @@ const IOFilters Filters =
 #ifndef MRMESH_NO_OPENVDB
     { "Raw (.raw)", "*.raw" },
     { "Micro CT (.gav)", "*.gav" },
-#ifndef MRMESH_OPENVDB_DISABLE_IO
     { "OpenVDB (.vdb)", "*.vdb" },
-#endif
 #endif
 };
 
@@ -153,7 +153,6 @@ VoidOrErrStr toGav( const VdbVolume& vdbVolume, std::ostream & out, ProgressCall
     return toRawFloat( vdbVolume, out, callback );
 }
 
-#ifndef MRMESH_OPENVDB_DISABLE_IO
 VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& filename, ProgressCallback /*callback*/ )
 {
     MR_TIMER
@@ -166,23 +165,17 @@ VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& fil
 
     // in order to save on Windows a file with Unicode symbols in the name, we need to open ofstream by ourselves,
     // because openvdb constructs it from std::string, which on Windows means "local codepage" and not Unicode
-    std::ofstream file;
-    file.open( filename, std::ios_base::out | std::ios_base::binary | std::ios_base::trunc );
+    std::ofstream file( filename, std::ios::binary );
     if ( !file )
         return unexpected( "cannot open file for writing: " + utf8string( filename ) );
 
-    struct MyArch : openvdb::io::Archive
-    {
-        using Archive::write;
-    };
-
-    MyArch{}.write( file, openvdb::GridCPtrVec{ gridPtr }, /*seekable=*/true, {} );
+    openvdb::io::Stream stream( file );
+    stream.write( openvdb::GridCPtrVec{ gridPtr } );
     if ( !file )
         return unexpected( "error writing in file: " + utf8string( filename ) );
 
     return {};
 }
-#endif
 
 VoidOrErrStr toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesystem::path& file,
                                    ProgressCallback callback /*= {} */ )
@@ -195,10 +188,8 @@ VoidOrErrStr toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesy
         return toRawAutoname( vdbVolume, file, callback );
     else if ( ext == ".gav" )
         return toGav( vdbVolume, file, callback );
-#ifndef MRMESH_OPENVDB_DISABLE_IO
     else if ( ext == ".vdb" )
         return toVdb( vdbVolume, file, callback );
-#endif
     else
         return unexpected( std::string( "unsupported file extension" ) );
 }

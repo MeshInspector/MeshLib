@@ -15,7 +15,7 @@ auto onEdgeSplitVertAttribute( const Mesh& mesh, Vector<T, VertId>& data );
 // (i.e. in subdivideMesh) and changes moved vertex attribute to correct value. 
 // Useful to update face based attributes like texturePerFace or face colors
 template <typename T>
-auto onEdgeSplitFaceAttribute( const Mesh& mesh, Vector<T, VertId>& data );
+auto onEdgeSplitFaceAttribute( const Mesh& mesh, Vector<T, FaceId>& data );
 
 /**
 * auto uvCoords = obj_->getUVCoords();
@@ -53,21 +53,27 @@ auto onEdgeSplitFaceAttribute( const Mesh& mesh, Vector<T, FaceId>& data )
 {
     auto onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
     {
+        // getting a left face for an edge that has been split.
         auto oldLeft = mesh.topology.left( e );
+        // getting a left face for a new edge that was added during splitting.
         auto newLeft = mesh.topology.left( e1 );
 
         FaceId existing( 0 );
         if ( oldLeft < data.size() )
             existing = oldLeft;
 
+        // adding an attribute for a new left face
         data.autoResizeSet( newLeft, data[existing] );
 
+        // getting a right face for an edge that has been split.
         auto oldRight = mesh.topology.right( e );
+        // getting a right face for a new edge that was added during splitting.
         auto newRight = mesh.topology.right( e1 );
 
         if ( oldRight < data.size() )
             existing = oldRight;
 
+        // adding an attribute for a new right face
         data.autoResizeSet( newRight, data[existing] );
     };
 

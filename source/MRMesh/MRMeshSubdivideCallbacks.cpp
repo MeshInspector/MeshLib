@@ -81,9 +81,9 @@ OnEdgeSplit meshOnEdgeSplitFaceAttribute( const Mesh& mesh, const MeshAttributes
         return onEdgeSplit;
     }
 
-    if ( params.uvCoords )
+    if ( params.texturePerFace )
         return onEdgeSplitFaceAttribute( mesh, *params.texturePerFace );
-    if ( params.colorMap )
+    if ( params.faceColors )
         return onEdgeSplitFaceAttribute( mesh, *params.faceColors );
 
     return {};

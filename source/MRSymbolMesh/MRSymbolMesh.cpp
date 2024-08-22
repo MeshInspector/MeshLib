@@ -1,18 +1,19 @@
 #include "MRSymbolMesh.h"
-#ifndef MRMESH_NO_LABEL
-#include "MRMesh.h"
-#include "MRVector2.h"
-#include "MRBox.h"
-#include "MRMeshBuilder.h"
-#include "MRMeshFillHole.h"
-#include "MRStringConvert.h"
-#include "MR2DContoursTriangulation.h"
-#include "MRGTest.h"
-#include "MRPolyline.h"
-#include "MRDistanceMap.h"
-#include "MRTimer.h"
-#include "MRBuffer.h"
+
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRVector2.h"
+#include "MRMesh/MRBox.h"
+#include "MRMesh/MRMeshBuilder.h"
+#include "MRMesh/MRMeshFillHole.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MR2DContoursTriangulation.h"
+#include "MRMesh/MRGTest.h"
+#include "MRMesh/MRPolyline.h"
+#include "MRMesh/MRDistanceMap.h"
+#include "MRMesh/MRTimer.h"
+#include "MRMesh/MRBuffer.h"
 #include "MRPch/MRSpdlog.h"
+
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_OUTLINE_H
@@ -355,4 +356,3 @@ Expected<Mesh> createSymbolsMesh( const SymbolMeshParams& params )
 }
 
 }
-#endif

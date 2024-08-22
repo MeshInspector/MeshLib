@@ -1,0 +1,42 @@
+cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
+set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+project(MRSymbolMesh CXX)
+
+file(GLOB SOURCES "*.cpp")
+file(GLOB HEADERS "*.h")
+
+add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
+
+find_package(Freetype REQUIRED)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+  MRMesh
+  Freetype::Freetype
+)
+
+IF(WIN32 AND MINGW)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MRSYMBOLMESH_EXPORT)
+ENDIF()
+
+set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
+install(
+  TARGETS ${PROJECT_NAME}
+  EXPORT ${PROJECT_NAME}
+  LIBRARY DESTINATION "${MR_MAIN_LIB_DIR}"
+  ARCHIVE DESTINATION "${MR_MAIN_LIB_DIR}"
+  RUNTIME DESTINATION "${MR_BIN_DIR}"
+)
+
+install(
+  FILES ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}Config.cmake
+  DESTINATION ${MR_CONFIG_DIR}
+)
+
+install(
+  EXPORT ${PROJECT_NAME}
+  FILE ${PROJECT_NAME}Targets.cmake
+  NAMESPACE MeshLib::
+  DESTINATION ${MR_CONFIG_DIR}
+)

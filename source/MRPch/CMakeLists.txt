@@ -30,8 +30,6 @@ IF(MR_PCH)
     find_package(GDCM CONFIG REQUIRED)
     pkg_check_modules(JSONCPP jsoncpp)
     include_directories(${JSONCPP_INCLUDE_DIRS})
-    find_package(Freetype REQUIRED)
-    include_directories(${FREETYPE_INCLUDE_DIRS})
 
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 

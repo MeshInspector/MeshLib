@@ -34,7 +34,7 @@
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRRibbonButtonDrawer.h"
-#include "MRMesh/MRObjectLabel.h"
+#include "MRSymbolMesh/MRObjectLabel.h"
 
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMeshModifier.h"
@@ -72,7 +72,7 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRTimer.h"
-#include "MRMesh/MRChangeLabelAction.h"
+#include "MRSymbolMesh/MRChangeLabelAction.h"
 #include "MRMesh/MRMatrix3Decompose.h"
 #include "MRMesh/MRFeatureObject.h"
 #include "MRMesh/MRFinally.h"

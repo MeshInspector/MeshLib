@@ -1,6 +1,6 @@
 #include "MRRenderLabelObject.h"
-#include "MRMesh/MRObjectLabel.h"
-#include "MRMesh/MRSymbolMesh.h"
+#include "MRSymbolMesh/MRObjectLabel.h"
+#include "MRSymbolMesh/MRSymbolMesh.h"
 #include "MRMesh/MRTimer.h"
 #include "MRCreateShader.h"
 #include "MRMesh/MRMesh.h"

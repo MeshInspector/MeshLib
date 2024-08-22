@@ -7,10 +7,18 @@ namespace MR
 
 OnEdgeSplit meshOnEdgeSplitAttribute( const Mesh& mesh, const MeshAttributesToUpdate& params )
 {
-    auto uvFunc = onEdgeSplitVertAttribute( mesh, *params.uvCoords );
-    auto colorFunc = onEdgeSplitVertAttribute( mesh, *params.colorMap );
-    auto texturePerFaceFunc = onEdgeSplitFaceAttribute( mesh, *params.texturePerFace );
-    auto faceColorsFunc = onEdgeSplitFaceAttribute( mesh, *params.faceColors );
+    OnEdgeSplit uvFunc;
+    OnEdgeSplit colorFunc = onEdgeSplitVertAttribute( mesh, *params.colorMap );
+    OnEdgeSplit texturePerFaceFunc = onEdgeSplitFaceAttribute( mesh, *params.texturePerFace );
+    OnEdgeSplit faceColorsFunc = onEdgeSplitFaceAttribute( mesh, *params.faceColors );
+    if ( params.uvCoords )
+        uvFunc = onEdgeSplitVertAttribute( mesh, *params.uvCoords );
+    if ( params.colorMap )
+        colorFunc = onEdgeSplitVertAttribute( mesh, *params.colorMap );
+    if ( params.texturePerFace )
+        texturePerFaceFunc = onEdgeSplitFaceAttribute( mesh, *params.texturePerFace );
+    if ( params.faceColors )
+        faceColorsFunc = onEdgeSplitFaceAttribute( mesh, *params.faceColors );
 
     auto onEdgeSplit = [=] ( EdgeId e1, EdgeId e )
     {

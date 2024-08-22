@@ -368,14 +368,13 @@ bool findSeparationPoint( Vector3f & pos, const VdbVolume& volume, const VoxelsV
 
 template <typename NaNChecker, typename Positioner>
 bool findSeparationPoint( Vector3f & pos, const SimpleVolume& volume, const VolumeIndexer& indexer,
-                          const VoxelLocation& baseLoc, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
+                          const VoxelLocation& baseLoc, float valueB, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 {
     auto nextPos = baseLoc.pos;
     nextPos[int( dir )] += 1;
     if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
         return false;
 
-    float valueB = volume.data[baseLoc.id];
     float valueD = volume.data[indexer.getExistingNeighbor( baseLoc.id, cOutEdgeMap[int( dir )] )];
     if ( nanChecker( valueB ) || nanChecker( valueD ) )
         return false;
@@ -394,7 +393,7 @@ bool findSeparationPoint( Vector3f & pos, const SimpleVolume& volume, const Volu
 }
 
 template <typename NaNChecker, typename Positioner>
-bool findSeparationPoint( Vector3f & pos, const FunctionVolume& volume, const VoxelLocation& baseLoc, NeighborDir dir,
+bool findSeparationPoint( Vector3f & pos, const FunctionVolume& volume, const VoxelLocation& baseLoc, float valueB, NeighborDir dir,
                           const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 {
     auto nextPos = baseLoc.pos;
@@ -402,7 +401,6 @@ bool findSeparationPoint( Vector3f & pos, const FunctionVolume& volume, const Vo
     if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
         return false;
 
-    float valueB = volume.data( baseLoc.pos );
     float valueD = volume.data( nextPos );
     if ( nanChecker( valueB ) || nanChecker( valueD ) )
         return false;
@@ -421,14 +419,13 @@ bool findSeparationPoint( Vector3f & pos, const FunctionVolume& volume, const Vo
 }
 
 template <typename Positioner, typename V, typename NaNChecker, typename Accessor>
-bool findSeparationPoint( Vector3f & pos, const V& volume, const Accessor& accessor, const VoxelLocation& baseLoc, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
+bool findSeparationPoint( Vector3f & pos, const V& volume, const Accessor& accessor, const VoxelLocation& baseLoc, float valueB, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 {
     auto nextPos = baseLoc.pos;
     nextPos[int( dir )] += 1;
     if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
         return false;
 
-    float valueB = accessor.get( baseLoc.pos );
     float valueD = accessor.get( nextPos );
 #ifndef MRMESH_NO_OPENVDB
     if constexpr ( !std::is_same_v<V, VdbVolume> )
@@ -525,8 +522,6 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
         VoxelsVolumeAccessor<V> acc( volume );
 
-        [[maybe_unused]] float baseValue{ 0.0f };
-
         if ( std::this_thread::get_id() == mainThreadId && lastSubMap == -1 )
             lastSubMap = int( blockIndex );
         const bool runCallback = params.cb && std::this_thread::get_id() == mainThreadId && lastSubMap == blockIndex;
@@ -564,15 +559,14 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
             SeparationPointSet set;
             bool atLeastOneOk = false;
-            if ( !cache )
-                baseValue = acc.get( baseLoc );
+            const float baseValue = acc.get( baseLoc );
 
             for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
             {
                 bool ok = false;
                 Vector3f pos;
                 if ( cache )
-                    ok = findSeparationPoint( pos, volume, *cache, baseLoc, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
+                    ok = findSeparationPoint( pos, volume, *cache, baseLoc, baseValue, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
                 else
 #ifndef MRMESH_NO_OPENVDB
                 if constexpr ( std::is_same_v<V, VdbVolume> )
@@ -580,9 +574,9 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                 else
 #endif
                 if constexpr ( std::is_same_v<V, SimpleVolume> )
-                    ok = findSeparationPoint( pos, volume, indexer, baseLoc, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
+                    ok = findSeparationPoint( pos, volume, indexer, baseLoc, baseValue, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
                 else if constexpr ( std::is_same_v<V, FunctionVolume> )
-                    ok = findSeparationPoint( pos, volume, baseLoc, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
+                    ok = findSeparationPoint( pos, volume, baseLoc, baseValue, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
                 else
                     static_assert( !sizeof( V ), "Unsupported voxel volume type." );
 

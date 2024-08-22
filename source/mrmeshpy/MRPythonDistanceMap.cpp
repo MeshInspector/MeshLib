@@ -1,5 +1,7 @@
 #include "MRMesh/MRPython.h"
 #include "MRMesh/MRDistanceMap.h"
+#include "MRMesh/MRImageLoad.h"
+#include "MRMesh/MRImageSave.h"
 #include <MRMesh/MRMesh.h>
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
@@ -8,6 +10,26 @@
 #include <pybind11/stl/filesystem.h>
 #pragma warning(pop)
 
+namespace
+{
+
+using namespace MR;
+
+VoidOrErrStr saveDistanceMapToImage( const DistanceMap& dm, const std::filesystem::path& filename, float threshold /*= 1.f / 255*/ )
+{
+    const auto image = convertDistanceMapToImage( dm, threshold );
+    return ImageSave::toAnySupportedFormat( image, filename );
+}
+
+Expected<MR::DistanceMap> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold /*= 1.f / 255*/ )
+{
+    auto resLoad = ImageLoad::fromAnySupportedFormat( filename );
+    if ( !resLoad.has_value() )
+        return unexpected( resLoad.error() );
+    return convertImageToDistanceMap( *resLoad, threshold );
+}
+
+}
 
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, DistanceMap, MR::DistanceMap )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
@@ -130,7 +152,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
            "converts distance map back to the mesh fragment with presented params" );
 
     m.def( "saveDistanceMapToImage",
-           MR::decorateExpected( &MR::saveDistanceMapToImage ),
+           MR::decorateExpected( &::saveDistanceMapToImage ),
            pybind11::arg( "distMap" ), pybind11::arg( "filename" ), pybind11::arg( "threshold" ) = 1.0f / 255.0f,
            "saves distance map to a grayscale image file\n"
            "\tthreshold - threshold of maximum values [0.; 1.]. invalid pixel set as 0. (black)\n"
@@ -139,7 +161,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
            "invalid (infinity): 0.0 (black)" );
 
     m.def( "loadDistanceMapFromImage",
-           MR::decorateExpected( &MR::loadDistanceMapFromImage ),
+           MR::decorateExpected( &::loadDistanceMapFromImage ),
            pybind11::arg( "filename" ), pybind11::arg( "threshold" ) = 1.0f / 255.0f,
            "load distance map from a grayscale image file\n"
            "\tthreshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid" );

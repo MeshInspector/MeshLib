@@ -11,7 +11,7 @@ VoidOrErrStr RegularMapMesher::loadSurfacePC( const std::filesystem::path& path 
     if ( !res.has_value() )
         return unexpected( res.error() );
 
-    surfacePC_ = std::make_unique<PointCloud>( std::move( res.value() ) );
+    surfacePC_ = std::make_shared<PointCloud>( std::move( res.value() ) );
     return {};
 }
 
@@ -26,7 +26,7 @@ VoidOrErrStr RegularMapMesher::loadDirectionsPC( const std::filesystem::path& pa
     if ( !res.has_value() )
         return unexpected( res.error() );
     
-    directionsPC_ = std::make_unique<PointCloud>( std::move( res.value() ) );
+    directionsPC_ = std::make_shared<PointCloud>( std::move( res.value() ) );
     return {};
 }
 

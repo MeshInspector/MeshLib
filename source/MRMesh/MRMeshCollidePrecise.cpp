@@ -7,12 +7,6 @@
 #include "MRPch/MRTBB.h"
 #include <array>
 
-namespace
-{
-// INT_MAX in double for mapping in int range
-constexpr double cRangeIntMax = 0.99 * std::numeric_limits<int>::max(); // 0.99 to be sure the no overflow will ever happen due to rounding errors
-}
-
 namespace MR
 {
 
@@ -355,39 +349,6 @@ std::vector<EdgeTri> findCollidingEdgeTrisPrecise(
     }
 
     return res;
-}
-
-ConvertToIntVector getToIntConverter( const Box3d& box )
-{
-    Vector3d center{ box.center() };
-    auto bbSize = box.size();
-    double maxDim = std::max( { bbSize[0],bbSize[1],bbSize[2] } );
-
-    // range is selected so that after centering each integer point is within [-max/2; +max/2] range,
-    // so the difference of any two points will be within [-max; +max] range
-    double invRange = cRangeIntMax / maxDim;
-
-    return [invRange, center] ( const Vector3f& v )
-    {
-        // perform intermediate operations in double for better precision
-        return Vector3i( ( Vector3d{ v } - center ) * invRange );
-    };
-}
-
-ConvertToFloatVector getToFloatConverter( const Box3d& box )
-{
-    Vector3d center{ box.center() };
-    auto bbSize = box.size();
-    double maxDim = std::max( { bbSize[0],bbSize[1],bbSize[2] } );
-        
-    // range is selected so that after centering each integer point is within [-max/2; +max/2] range,
-    // so the difference of any two points will be within [-max; +max] range
-    double range = maxDim / cRangeIntMax;
-
-    return [range, center] ( const Vector3i& v )
-    {
-        return Vector3f( Vector3d{ v }*range + center );
-    };
 }
 
 CoordinateConverters getVectorConverters( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A )

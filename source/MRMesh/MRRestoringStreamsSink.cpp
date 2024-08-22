@@ -1,4 +1,5 @@
 #include "MRRestoringStreamsSink.h"
+#include "MRLog.h"
 #include <iostream>
 
 namespace MR
@@ -61,6 +62,12 @@ RestoringStreamsSink::~RestoringStreamsSink()
     std::cout.rdbuf( coutBuf_ );
     std::cerr.rdbuf( cerrBuf_ );
     std::clog.rdbuf( clogBuf_ );
+}
+
+void redirectSTDStreamsToLogger()
+{
+    auto restoringSink = std::make_shared<RestoringStreamsSink>();
+    Logger::instance().addSink( restoringSink );
 }
 
 } //namespace MR

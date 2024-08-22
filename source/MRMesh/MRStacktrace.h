@@ -1,5 +1,7 @@
 #pragma once
 
+#include "MRMeshFwd.h"
+
 #ifndef __EMSCRIPTEN__
 
 #include <string>
@@ -32,6 +34,9 @@ namespace MR
     return to_string( boost::stacktrace::stacktrace() );
 #endif
 }
+
+/// Print stacktrace on application crash
+MRMESH_API void printStacktraceOnCrash();
 
 } //namespace MR
 

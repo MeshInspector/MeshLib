@@ -610,6 +610,7 @@
     <ClCompile Include="MRSceneLoad.cpp" />
     <ClCompile Include="MRSeparationPoint.cpp" />
     <ClCompile Include="MRSolarRadiation.cpp" />
+    <ClCompile Include="MRStacktrace.cpp" />
     <ClCompile Include="MRTiffIO.cpp" />
     <ClCompile Include="MRRectIndexer.cpp" />
     <ClCompile Include="MRSceneColors.cpp" />

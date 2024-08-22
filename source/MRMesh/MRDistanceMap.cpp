@@ -207,7 +207,7 @@ Expected<Mesh> distanceMapToMesh( const DistanceMap& distMap, const AffineXf3f& 
     }, {}, cb );
 }
 
-VoidOrErrStr saveDistanceMapToImage( const DistanceMap& dm, const std::filesystem::path& filename, float threshold /*= 1.f / 255*/ )
+MRMESH_API Image convertDistanceMapToImage( const DistanceMap& dm, float threshold )
 {
     threshold = std::clamp( threshold, 0.f, 1.f );
     auto size = dm.numPoints();
@@ -236,7 +236,13 @@ VoidOrErrStr saveDistanceMapToImage( const DistanceMap& dm, const std::filesyste
             Color::black();
     }
 
-    return ImageSave::toAnySupportedFormat( { pixels, { int( dm.resX() ), int( dm.resY() ) } }, filename );
+    return { std::move( pixels ), { int( dm.resX() ), int( dm.resY() ) } };
+}
+
+VoidOrErrStr saveDistanceMapToImage( const DistanceMap& dm, const std::filesystem::path& filename, float threshold /*= 1.f / 255*/ )
+{
+    const auto image = convertDistanceMapToImage( dm, threshold );
+    return ImageSave::toAnySupportedFormat( image, filename );
 }
 
 

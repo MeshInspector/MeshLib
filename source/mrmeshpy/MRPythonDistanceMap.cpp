@@ -132,7 +132,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
     m.def( "saveDistanceMapToImage",
            MR::decorateExpected( &MR::saveDistanceMapToImage ),
            pybind11::arg( "distMap" ), pybind11::arg( "filename" ), pybind11::arg( "threshold" ) = 1.0f / 255.0f,
-           "saves distance map to monochrome image in scales of gray:\n"
+           "saves distance map to a grayscale image file\n"
            "\tthreshold - threshold of maximum values [0.; 1.]. invalid pixel set as 0. (black)\n"
            "minimum (close): 1.0 (white)\n"
            "maximum (far): threshold\n"
@@ -141,7 +141,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DistanceMap, [] ( pybind11::module_& m )
     m.def( "loadDistanceMapFromImage",
            MR::decorateExpected( &MR::loadDistanceMapFromImage ),
            pybind11::arg( "filename" ), pybind11::arg( "threshold" ) = 1.0f / 255.0f,
-           "load distance map from monochrome image file\n"
+           "load distance map from a grayscale image file\n"
            "\tthreshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid" );
 
     m.def( "distanceMapTo2DIsoPolyline", ( MR::Polyline2( * )(const MR::DistanceMap&, float) ) &MR::distanceMapTo2DIsoPolyline,

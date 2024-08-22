@@ -548,7 +548,6 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                     ok = findSeparationPoint( pos, volume, acc, baseLoc, baseValue, NeighborDir( n ), params, std::forward<Positioner>( positioner ) );
                 else
 #endif
-                if constexpr ( std::is_same_v<V, SimpleVolume> )
                     ok = findSeparationPointAcc( pos, acc, indexer, volume.voxelSize, baseLoc, baseValue, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
 
                 if ( ok )

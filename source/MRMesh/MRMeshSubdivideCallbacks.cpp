@@ -12,7 +12,7 @@ OnEdgeSplit meshOnEdgeSplitAttribute( const Mesh& mesh, const MeshAttributesToUp
     auto texturePerFaceFunc = onEdgeSplitFaceAttribute( mesh, *params.texturePerFace );
     auto faceColorsFunc = onEdgeSplitFaceAttribute( mesh, *params.faceColors );
 
-    auto preCollapse = [=] ( EdgeId e1, EdgeId e )
+    auto onEdgeSplit = [=] ( EdgeId e1, EdgeId e )
     {
         if ( params.uvCoords )
             uvFunc( e1, e );
@@ -25,7 +25,7 @@ OnEdgeSplit meshOnEdgeSplitAttribute( const Mesh& mesh, const MeshAttributesToUp
         return true;
     };
 
-    return preCollapse;
+    return onEdgeSplit;
 }
 
 OnEdgeSplit meshOnEdgeSplitVertAttribute( const Mesh& mesh, const MeshAttributesToUpdate& params )
@@ -34,14 +34,14 @@ OnEdgeSplit meshOnEdgeSplitVertAttribute( const Mesh& mesh, const MeshAttributes
     {
         auto uvFunc = onEdgeSplitVertAttribute( mesh, *params.uvCoords );
         auto colorFunc = onEdgeSplitVertAttribute( mesh, *params.colorMap );
-        auto preCollapse = [=] ( EdgeId e1, EdgeId e )
+        auto onEdgeSplit = [=] ( EdgeId e1, EdgeId e )
         {
             uvFunc( e1, e );
             colorFunc( e1, e );
             return true;
         };
 
-        return preCollapse;
+        return onEdgeSplit;
     }
 
     if ( params.uvCoords )
@@ -58,14 +58,14 @@ OnEdgeSplit meshOnEdgeSplitFaceAttribute( const Mesh& mesh, const MeshAttributes
     {
         auto texturePerFaceFunc = onEdgeSplitFaceAttribute( mesh, *params.texturePerFace );
         auto faceColorsFunc = onEdgeSplitFaceAttribute( mesh, *params.faceColors );
-        auto preCollapse = [=] ( EdgeId e1, EdgeId e )
+        auto onEdgeSplit = [=] ( EdgeId e1, EdgeId e )
         {
             texturePerFaceFunc( e1, e );
             faceColorsFunc( e1, e );
             return true;
         };
 
-        return preCollapse;
+        return onEdgeSplit;
     }
 
     if ( params.uvCoords )

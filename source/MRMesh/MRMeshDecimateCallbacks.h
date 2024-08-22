@@ -1,6 +1,7 @@
 #pragma once
 
-#include "MRMesh/MRMesh.h"
+#include "MRMesh.h"
+#include "MRMeshAttributesToUpdate.h"
 
 namespace MR
 {
@@ -9,16 +10,6 @@ namespace MR
 // Useful to update vertices based attributes like uv coordinates or verts colormaps
 template <typename T>
 auto preCollapseVertAttribute( const Mesh& mesh, Vector<T, VertId>& data );
-
-// the attribute data of the mesh that needs to be updated
-struct MeshAttributesToUpdate
-{
-    VertUVCoords* uvCoords = nullptr;
-    VertColors* colorMap = nullptr;
-
-    TexturePerFace* texturePerFace = nullptr;
-    FaceColors* faceColors = nullptr;
-};
 
 /**
 * Please use this callback when you decimate a mesh with associated data with each vertex

@@ -48,6 +48,7 @@
     <ClInclude Include="MRLevelOfDetails.h" />
     <ClInclude Include="MRLocalTriangulations.h" />
     <ClInclude Include="MRMapping.h" />
+    <ClInclude Include="MRMeshAttributesToUpdate.h" />
     <ClInclude Include="MRMeshDecimateCallbacks.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />
     <ClInclude Include="MRMeshOrPoints.h" />

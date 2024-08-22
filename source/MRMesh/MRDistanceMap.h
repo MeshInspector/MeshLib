@@ -293,18 +293,22 @@ MRMESH_API void distanceMapFromContours( DistanceMap & distMap, const Polyline2&
 /// converts distance map into mesh and applies a transformation to all points
 [[nodiscard]] MRMESH_API Expected<Mesh> distanceMapToMesh( const DistanceMap& distMap, const AffineXf3f& toWorld, ProgressCallback cb = {} );
 
-/// saves distance map to monochrome image in scales of gray:
+/// export distance map to a grayscale image
+/// \param threshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid
+[[nodiscard]] MRMESH_API Image convertDistanceMapToImage( const DistanceMap& distMap, float threshold = 1.f / 255 );
+
+/// saves distance map to a grayscale image file
 /// \param threshold - threshold of maximum values [0.; 1.]. invalid pixel set as 0. (black)
 /// minimum (close): 1.0 (white)
 /// maximum (far): threshold
 /// invalid (infinity): 0.0 (black)
 MRMESH_API VoidOrErrStr saveDistanceMapToImage( const DistanceMap& distMap, const std::filesystem::path& filename, float threshold = 1.f / 255 );
 
-/// load distance map from monochrome image in scales of gray:
+/// load distance map from a grayscale image:
 /// \param threshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid
 [[nodiscard]] MRMESH_API Expected<DistanceMap> convertImageToDistanceMap( const Image& image, float threshold = 1.f / 255 );
 
-/// load distance map from monochrome image file
+/// load distance map from a grayscale image file
 /// \param threshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid
 [[nodiscard]] MRMESH_API Expected<DistanceMap> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold = 1.f / 255 );
 

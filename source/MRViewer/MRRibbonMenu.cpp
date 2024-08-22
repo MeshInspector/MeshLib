@@ -1504,6 +1504,16 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
         if ( statePlugin && statePlugin->isEnabled() )
         {
             statePlugin->preDrawUpdate();
+
+            // check before drawDialog to avoid calling sthing like:
+            // ImGui::Image( textId ) // with removed texture in deferred render calls
+            if ( !statePlugin->dialogIsOpen() )
+            {
+                itemPressed_( itemPtr.item, true );
+                if ( !itemPtr.item )
+                    return; // do not proceed if we closed dialog in this call
+            }
+
             statePlugin->drawDialog( menu_scaling(), ImGui::GetCurrentContext() );
 
             if ( !itemPtr.item ) // if it was closed in drawDialog
@@ -1521,7 +1531,7 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
                 }
             }
 
-            if ( !statePlugin->dialogIsOpen() )
+            if ( !statePlugin->dialogIsOpen() ) // still need to check here we ordered to close dialog in `drawDialog`
                 itemPressed_( itemPtr.item, true );
             else if ( prevFrameSelectedObjectsCache_ != SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() )
                 statePlugin->updateSelection( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() );

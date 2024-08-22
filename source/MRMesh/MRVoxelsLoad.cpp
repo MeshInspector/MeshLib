@@ -20,6 +20,7 @@
 #include <gdcmTagKeywords.h>
 #endif // MRMESH_NO_DICOM
 
+#include <openvdb/io/Stream.h>
 #include <openvdb/tools/GridTransformer.h>
 #include <openvdb/tools/Interpolation.h>
 
@@ -943,12 +944,21 @@ Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, con
 {
     if ( cb && !cb( 0.f ) )
         return unexpected( getCancelMessage( path ) );
-    openvdb::io::File file( utf8string( path ) );
-    openvdb::initialize();
-    file.open();
+
     std::vector<VdbVolume> res;
-    auto grids = file.getGrids();
-    file.close();
+
+    openvdb::GridPtrVecPtr grids;
+    {
+        // in order to load on Windows a file with Unicode symbols in the name, we need to open ifstream by ourselves,
+        // because openvdb constructs it from std::string, which on Windows means "local codepage" and not Unicode
+        std::ifstream file( path, std::ios::binary );
+        if ( !file )
+            return unexpected( "cannot open file for reading: " + utf8string( path ) );
+
+        openvdb::initialize();
+        openvdb::io::Stream stream( file, false );
+        grids = stream.getGrids();
+    }
     if ( grids )
     {
         auto& gridsRef = *grids;

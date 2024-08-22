@@ -756,7 +756,9 @@ bool checkboxOrModifier( const char* label, CheckboxOrModifierState& value, int 
     if ( modChanged )
     {
         ret = true;
-        detail::markItemEdited( ImGui::GetID( label ) );
+        // Consider changes made with modifiers not permanent, IsItemDeactivatedAfterEdit() not affected
+        // Actually, having two active elements (activated with mouse and with mods) confuses ImGui, better avoid it
+        // detail::markItemEdited( ImGui::GetID( label ) );
     }
 
     return ret;
@@ -904,8 +906,8 @@ bool radioButtonOrModifier( const char* label, RadioButtonOrModifierState& value
 
     if ( buttonActivated )
         value.value = valButton;
-    if ( modActivated )
-        detail::markItemEdited( ImGui::GetID( label ) );
+    //if ( modActivated )
+    //    detail::markItemEdited( ImGui::GetID( label ) );
 
     return buttonActivated || modActivated;
 }

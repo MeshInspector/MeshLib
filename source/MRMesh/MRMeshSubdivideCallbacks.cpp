@@ -20,16 +20,21 @@ OnEdgeSplit meshOnEdgeSplitAttribute( const Mesh& mesh, const MeshAttributesToUp
     if ( params.faceColors )
         faceColorsFunc = onEdgeSplitFaceAttribute( mesh, *params.faceColors );
 
-    auto onEdgeSplit = [=] ( EdgeId e1, EdgeId e )
+    auto onEdgeSplit = [&,
+        uvFunc_ = std::move( uvFunc ),
+        colorFunc_ = std::move( colorFunc ),
+        texturePerFaceFunc_ = std::move( texturePerFaceFunc ),
+        faceColorsFunc_ = std::move( faceColorsFunc )] 
+        (EdgeId e1, EdgeId e)
     {
         if ( params.uvCoords )
-            uvFunc( e1, e );
+            uvFunc_( e1, e );
         if ( params.colorMap )
-            colorFunc( e1, e );
+            colorFunc_( e1, e );
         if ( params.texturePerFace )
-            texturePerFaceFunc( e1, e );
+            texturePerFaceFunc_( e1, e );
         if ( params.faceColors )
-            faceColorsFunc( e1, e );
+            faceColorsFunc_( e1, e );
         return true;
     };
 
@@ -42,10 +47,10 @@ OnEdgeSplit meshOnEdgeSplitVertAttribute( const Mesh& mesh, const MeshAttributes
     {
         auto uvFunc = onEdgeSplitVertAttribute( mesh, *params.uvCoords );
         auto colorFunc = onEdgeSplitVertAttribute( mesh, *params.colorMap );
-        auto onEdgeSplit = [=] ( EdgeId e1, EdgeId e )
+        auto onEdgeSplit = [&, uvFunc_ = std::move( uvFunc ), colorFunc_ = std::move( colorFunc ) ] ( EdgeId e1, EdgeId e )
         {
-            uvFunc( e1, e );
-            colorFunc( e1, e );
+            uvFunc_( e1, e );
+            colorFunc_( e1, e );
             return true;
         };
 
@@ -66,10 +71,10 @@ OnEdgeSplit meshOnEdgeSplitFaceAttribute( const Mesh& mesh, const MeshAttributes
     {
         auto texturePerFaceFunc = onEdgeSplitFaceAttribute( mesh, *params.texturePerFace );
         auto faceColorsFunc = onEdgeSplitFaceAttribute( mesh, *params.faceColors );
-        auto onEdgeSplit = [=] ( EdgeId e1, EdgeId e )
+        auto onEdgeSplit = [&, texturePerFaceFunc_ = std::move( texturePerFaceFunc ), faceColorsFunc_ = std::move( faceColorsFunc )] ( EdgeId e1, EdgeId e )
         {
-            texturePerFaceFunc( e1, e );
-            faceColorsFunc( e1, e );
+            texturePerFaceFunc_( e1, e );
+            faceColorsFunc_( e1, e );
             return true;
         };
 

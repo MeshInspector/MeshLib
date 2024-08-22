@@ -347,18 +347,15 @@ bool findSeparationPoint( Vector3f & pos, const VdbVolume& volume, const VoxelsV
 
     float valueD = acc.get( nextPos );
 
-    const auto& minCoord = acc.minCoord();
-    const auto coord = openvdb::Coord{ baseLoc.pos.x + minCoord.x(), baseLoc.pos.y + minCoord.y(), baseLoc.pos.z + minCoord.z() };
-    auto nextCoord = coord;
-    nextCoord[int( dir )] += 1;
-
     bool bLower = valueB < params.iso;
     bool dLower = valueD < params.iso;
     if ( bLower == dLower )
         return false;
 
-    Vector3f coordF = Vector3f( float( coord.x() ), float( coord.y() ), float( coord.z() ) );
-    Vector3f nextCoordF = Vector3f( float( nextCoord.x() ), float( nextCoord.y() ), float( nextCoord.z() ) );
+    const auto& minCoord = acc.minCoord();
+    Vector3f coordF( Vector3( baseLoc.pos.x + minCoord.x(), baseLoc.pos.y + minCoord.y(), baseLoc.pos.z + minCoord.z() ) );
+    auto nextCoordF = coordF;
+    nextCoordF[int( dir )] += 1;
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
     pos = positioner( bPos, dPos, valueB, valueD, params.iso );

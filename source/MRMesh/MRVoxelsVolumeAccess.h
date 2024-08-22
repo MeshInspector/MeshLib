@@ -39,11 +39,18 @@ public:
         return accessor_.getValue( coord );
     }
 
+    ValueType get( const VoxelLocation & loc ) const
+    {
+        return get( loc.pos );
+    }
+
     ValueType safeGet( const Vector3i& pos ) const
     {
         // bounds checking is done by the accessor (returns background value)
         return get( pos );
     }
+
+    const openvdb::Coord& minCoord() const { return minCoord_; }
 
 private:
     openvdb::FloatGrid::ConstAccessor accessor_;
@@ -67,6 +74,11 @@ public:
     ValueType get( const Vector3i& pos ) const
     {
         return data_[indexer_.toVoxelId( pos )];
+    }
+
+    ValueType get( const VoxelLocation & loc ) const
+    {
+        return data_[loc.id];
     }
 
     ValueType safeGet( const Vector3i& pos ) const
@@ -94,6 +106,11 @@ public:
     ValueType get( const Vector3i& pos ) const
     {
         return data_( pos );
+    }
+
+    ValueType get( const VoxelLocation & loc ) const
+    {
+        return get( loc.pos );
     }
 
     ValueType safeGet( const Vector3i& pos ) const

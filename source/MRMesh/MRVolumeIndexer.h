@@ -41,6 +41,13 @@ inline OutEdge opposite( OutEdge e )
 
 static constexpr int OutEdgeCount = 6;
 
+/// contains both linear Id and 3D coordinates of the same voxel
+struct VoxelLocation
+{
+    VoxelId id;
+    Vector3i pos;
+};
+
 class VolumeIndexer
 {
 public:
@@ -59,6 +66,9 @@ public:
     Vector3i toPos( VoxelId id ) const;
 
     VoxelId toVoxelId( const Vector3i & pos ) const;
+
+    VoxelLocation toLoc( VoxelId id ) const { return { id, toPos( id ) }; }
+    VoxelLocation toLoc( const Vector3i & pos ) const { return { toVoxelId( pos ), pos }; }
 
     /// returns true if this voxel is within dimensions
     bool isInDims( const Vector3i& pos ) const { return pos.x >= 0 && pos.x < dims_.x && pos.y >= 0 && pos.y < dims_.y && pos.z >= 0 && pos.z < dims_.z; }

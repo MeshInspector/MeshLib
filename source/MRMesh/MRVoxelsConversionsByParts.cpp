@@ -332,24 +332,23 @@ TEST( MRMesh, volumeToMeshByParts )
     auto vdbMesh = volumeToMeshByParts( vdbBuilder, dimensions, Vector3f::diagonal( voxelSize ), {
         .maxVolumePartMemoryUsage = memoryUsage,
     } );
+    EXPECT_TRUE( vdbMesh.has_value() );
+
     auto simpleMesh = volumeToMeshByParts( simpleBuilder, dimensions, Vector3f::diagonal( voxelSize ), {
         .maxVolumePartMemoryUsage = memoryUsage,
     } );
+    EXPECT_TRUE( simpleMesh.has_value() );
+
     auto functionMesh = volumeToMeshByParts( functionBuilder, dimensions, Vector3f::diagonal( voxelSize ), {
         .maxVolumePartMemoryUsage = memoryUsage,
     } );
-    for ( auto* ptr : { &vdbMesh, &simpleMesh, &functionMesh } )
-    {
-        auto& mesh = *ptr;
-        EXPECT_TRUE( mesh.has_value() );
-        if ( mesh.has_value() )
-        {
-            constexpr auto r = radius * voxelSize;
-            constexpr auto expectedVolume = 4.f * PI_F * r * r * r / 3.f;
-            const auto actualVolume = mesh->volume();
-            EXPECT_NEAR( expectedVolume, actualVolume, 0.001f );
-        }
-    }
+    EXPECT_TRUE( functionMesh.has_value() );
+
+    constexpr auto r = radius * voxelSize;
+    constexpr auto expectedVolume = 4.f * PI_F * r * r * r / 3.f;
+    EXPECT_NEAR( expectedVolume, vdbMesh->volume(), 0.001f );
+    EXPECT_NEAR( expectedVolume, simpleMesh->volume(), 0.001f );
+    EXPECT_NEAR( expectedVolume, functionMesh->volume(), 0.001f );
 }
 
 template MRMESH_API VoidOrErrStr mergeVolumePart<SimpleVolume>( Mesh&, std::vector<EdgePath>&, SimpleVolume&&, float, float, const MergeVolumePartSettings& );

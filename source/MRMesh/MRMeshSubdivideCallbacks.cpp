@@ -8,9 +8,9 @@ namespace MR
 OnEdgeSplit meshOnEdgeSplitAttribute( const Mesh& mesh, const MeshAttributesToUpdate& params )
 {
     OnEdgeSplit uvFunc;
-    OnEdgeSplit colorFunc = onEdgeSplitVertAttribute( mesh, *params.colorMap );
-    OnEdgeSplit texturePerFaceFunc = onEdgeSplitFaceAttribute( mesh, *params.texturePerFace );
-    OnEdgeSplit faceColorsFunc = onEdgeSplitFaceAttribute( mesh, *params.faceColors );
+    OnEdgeSplit colorFunc;
+    OnEdgeSplit texturePerFaceFunc;
+    OnEdgeSplit faceColorsFunc;
     if ( params.uvCoords )
         uvFunc = onEdgeSplitVertAttribute( mesh, *params.uvCoords );
     if ( params.colorMap )

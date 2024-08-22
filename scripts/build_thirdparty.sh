@@ -109,9 +109,6 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   make install
 
   # build OpenVDB separately
-  # mock the missing dependencies that are not actually used
-  # if you want to use the OpenVDB file functions (see MRMESH_OPENVDB_USE_IO), you'll have to build these libraries by yourself
-  touch ${MESHLIB_THIRDPARTY_ROOT_DIR}/lib/libboost_iostreams.a ${MESHLIB_THIRDPARTY_ROOT_DIR}/lib/libboost_regex.a
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/openvdb.sh ${MESHLIB_THIRDPARTY_DIR}/openvdb/v10/openvdb
 else
   cmake ${MESHLIB_THIRDPARTY_DIR} -DCMAKE_INSTALL_PREFIX=${MESHLIB_THIRDPARTY_ROOT_DIR} -DCMAKE_BUILD_TYPE=Release

@@ -37,8 +37,8 @@ auto onEdgeSplitFaceAttribute( const Mesh& mesh, Vector<T, FaceId>& data )
 {
     auto preCollapse = [&] ( EdgeId e1, EdgeId e )
     {
-        auto oldLeft = mesh.topology.left( e.undirected() );
-        auto newLeft = mesh.topology.left( e1.undirected() );
+        auto oldLeft = mesh.topology.left( e );
+        auto newLeft = mesh.topology.left( e1 );
 
         FaceId existing;
         if ( oldLeft < data.size() )
@@ -48,8 +48,8 @@ auto onEdgeSplitFaceAttribute( const Mesh& mesh, Vector<T, FaceId>& data )
 
         data.autoResizeSet( newLeft, data[existing] );
 
-        auto oldRight = mesh.topology.right( e.undirected() );
-        auto newRight = mesh.topology.right( e1.undirected() );
+        auto oldRight = mesh.topology.right( e );
+        auto newRight = mesh.topology.right( e1 );
 
         if ( oldRight < data.size() )
             existing = oldRight;

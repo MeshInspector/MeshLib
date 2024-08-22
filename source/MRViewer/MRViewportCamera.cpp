@@ -700,6 +700,7 @@ std::pair<float, bool> Viewport::getZoomFOVtoScreen_( std::function<Box3f()> get
     }
     else
     {
+        assert( cameraShift == nullptr );
         auto maxX = std::max( box.max.x, -box.min.x ) / winRatio;
         auto maxY = std::max( box.max.y, -box.min.y );
         return std::make_pair( (2.f * atan( std::max( maxX, maxY ) ) ) / PI_F * 180.f, allInside );

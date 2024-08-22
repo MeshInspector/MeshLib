@@ -399,12 +399,12 @@ public:
     //   overlay basis
     void postDraw() const;
 
-    // fill = 0.5 parameter means that scene will 0.5 of screen
+    // fill = 1.0 parameter means that scene will 0.5 of screen
     // snapView - to snap camera angle to closest canonical quaternion
     MRVIEWER_API void fitData( float fill = 1.0f, bool snapView = true );
 
     // set scene box by given one and fit camera to it
-    // fill = 0.5 parameter means that scene will 0.5 of screen
+    // fill = 1.0 parameter means that box diagonal will 0.5 of screen
     // snapView - to snap camera angle to closest canonical quaternion
     MRVIEWER_API void fitBox( const Box3f& newSceneBox, float fill = 1.0f, bool snapView = true );
 
@@ -534,8 +534,10 @@ private:
     Box3f calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs, Space space, bool selectedPrimitives = false ) const;
 
     /**
-     * @brief find maximum FOV angle allows to keep box (space of box depends of viewport params)
-     * given by getBoxFn visible inside the screen
+     * @brief find minimum FOV angle allows to keep box given by getBoxFn visible inside the screen
+     * The box is either in CameraOrthographic or CameraPerspective, depending on viewport setting
+     * If cameraShift is not null, calculate angle assuming the camera can be moved, and fills the shift value
+     * (orthogonal only; for perspective mode, must be null)
      * @returns true if all models are inside the projection volume
      */
     std::pair<float, bool> getZoomFOVtoScreen_( std::function<Box3f()> getBoxFn, Vector3f* cameraShift = nullptr ) const;

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "MRMeshFwd.h"
-#ifndef MRMESH_NO_LABEL
-#include "MRHistoryAction.h"
-#include "MRPositionedText.h"
-#include "MRVector2.h"
-#include "MRMesh/MRObjectLabel.h"
+#include "MRSymbolMeshFwd.h"
+#include "MRObjectLabel.h"
+
+#include "MRMesh/MRHistoryAction.h"
+#include "MRMesh/MRPositionedText.h"
+#include "MRMesh/MRVector2.h"
 
 namespace MR
 {
@@ -52,4 +52,3 @@ private:
 };
 
 }
-#endif

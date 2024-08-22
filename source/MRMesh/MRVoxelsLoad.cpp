@@ -949,7 +949,7 @@ Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, con
 
     openvdb::GridPtrVecPtr grids;
     {
-        // in order to save on Windows a file with Unicode symbols in the name, we need to open ifstream by ourselves,
+        // in order to load on Windows a file with Unicode symbols in the name, we need to open ifstream by ourselves,
         // because openvdb constructs it from std::string, which on Windows means "local codepage" and not Unicode
         std::ifstream file( path, std::ios::binary );
         if ( !file )

@@ -1505,7 +1505,7 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
         {
             statePlugin->preDrawUpdate();
 
-            // check before drawDialog to avoid calling sthing like:
+            // check before drawDialog to avoid calling something like:
             // ImGui::Image( textId ) // with removed texture in deferred render calls
             if ( !statePlugin->dialogIsOpen() )
             {

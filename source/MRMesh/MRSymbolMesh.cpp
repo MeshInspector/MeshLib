@@ -8,7 +8,6 @@
 #include "MRStringConvert.h"
 #include "MR2DContoursTriangulation.h"
 #include "MRGTest.h"
-#include "MRMeshSave.h"
 #include "MRPolyline.h"
 #include "MRDistanceMap.h"
 #include "MRTimer.h"

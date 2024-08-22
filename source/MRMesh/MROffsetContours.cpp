@@ -8,7 +8,6 @@
 #include "MRRegionBoundary.h"
 #include "MR2to3.h"
 #include "MRPolyline.h"
-#include "MRLinesSave.h"
 #include "MRParallelFor.h"
 #include "MRLine.h"
 #include <numeric>

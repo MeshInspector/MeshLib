@@ -337,18 +337,18 @@ using VdbCoord = openvdb::Coord;
 #ifndef MRMESH_NO_OPENVDB
 template <class Positioner>
 bool findSeparationPoint( Vector3f & pos, const VdbVolume& volume, const VoxelsVolumeAccessor<VdbVolume>& acc,
-                          const Vector3i& basePos, float valueB, NeighborDir dir,
+                          const VoxelLocation& baseLoc, float valueB, NeighborDir dir,
                           const MarchingCubesParams& params, Positioner&& positioner )
 {
-    auto nextPos = basePos;
+    auto nextPos = baseLoc.pos;
     nextPos[int( dir )] += 1;
     if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
         return false;
 
-    float valueD = acc.get( nextPos, VoxelId{} );
+    float valueD = acc.get( nextPos );
 
     const auto& minCoord = acc.minCoord();
-    const auto coord = openvdb::Coord{ basePos.x + minCoord.x(), basePos.y + minCoord.y(), basePos.z + minCoord.z() };
+    const auto coord = openvdb::Coord{ baseLoc.pos.x + minCoord.x(), baseLoc.pos.y + minCoord.y(), baseLoc.pos.z + minCoord.z() };
     auto nextCoord = coord;
     nextCoord[int( dir )] += 1;
 
@@ -367,16 +367,16 @@ bool findSeparationPoint( Vector3f & pos, const VdbVolume& volume, const VoxelsV
 #endif
 
 template <typename NaNChecker, typename Positioner>
-bool findSeparationPoint( Vector3f & pos, const SimpleVolume& volume, const VolumeIndexer& indexer, VoxelId base,
-                          const Vector3i& basePos, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
+bool findSeparationPoint( Vector3f & pos, const SimpleVolume& volume, const VolumeIndexer& indexer,
+                          const VoxelLocation& baseLoc, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 {
-    auto nextPos = basePos;
+    auto nextPos = baseLoc.pos;
     nextPos[int( dir )] += 1;
     if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
         return false;
 
-    float valueB = volume.data[base];
-    float valueD = volume.data[indexer.getExistingNeighbor( base, cOutEdgeMap[int( dir )] ).get()];
+    float valueB = volume.data[baseLoc.id];
+    float valueD = volume.data[indexer.getExistingNeighbor( baseLoc.id, cOutEdgeMap[int( dir )] )];
     if ( nanChecker( valueB ) || nanChecker( valueD ) )
         return false;
 
@@ -385,7 +385,7 @@ bool findSeparationPoint( Vector3f & pos, const SimpleVolume& volume, const Volu
     if ( bLower == dLower )
         return false;
 
-    Vector3f coordF = Vector3f( basePos ) + Vector3f::diagonal( 0.5f );
+    Vector3f coordF = Vector3f( baseLoc.pos ) + Vector3f::diagonal( 0.5f );
     Vector3f nextCoordF = Vector3f( nextPos ) + Vector3f::diagonal( 0.5f );
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
@@ -394,15 +394,15 @@ bool findSeparationPoint( Vector3f & pos, const SimpleVolume& volume, const Volu
 }
 
 template <typename NaNChecker, typename Positioner>
-bool findSeparationPoint( Vector3f & pos, const FunctionVolume& volume, const Vector3i& basePos, NeighborDir dir,
+bool findSeparationPoint( Vector3f & pos, const FunctionVolume& volume, const VoxelLocation& baseLoc, NeighborDir dir,
                           const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 {
-    auto nextPos = basePos;
+    auto nextPos = baseLoc.pos;
     nextPos[int( dir )] += 1;
     if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
         return false;
 
-    float valueB = volume.data( basePos );
+    float valueB = volume.data( baseLoc.pos );
     float valueD = volume.data( nextPos );
     if ( nanChecker( valueB ) || nanChecker( valueD ) )
         return false;
@@ -412,7 +412,7 @@ bool findSeparationPoint( Vector3f & pos, const FunctionVolume& volume, const Ve
     if ( bLower == dLower )
         return false;
 
-    Vector3f coordF = Vector3f( basePos ) + Vector3f::diagonal( 0.5f );
+    Vector3f coordF = Vector3f( baseLoc.pos ) + Vector3f::diagonal( 0.5f );
     Vector3f nextCoordF = Vector3f( nextPos ) + Vector3f::diagonal( 0.5f );
     auto bPos = params.origin + mult( volume.voxelSize, coordF );
     auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
@@ -421,14 +421,14 @@ bool findSeparationPoint( Vector3f & pos, const FunctionVolume& volume, const Ve
 }
 
 template <typename Positioner, typename V, typename NaNChecker, typename Accessor>
-bool findSeparationPoint( Vector3f & pos, const V& volume, const Accessor& accessor, const Vector3i& basePos, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
+bool findSeparationPoint( Vector3f & pos, const V& volume, const Accessor& accessor, const VoxelLocation& baseLoc, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 {
-    auto nextPos = basePos;
+    auto nextPos = baseLoc.pos;
     nextPos[int( dir )] += 1;
     if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
         return false;
 
-    float valueB = accessor.get( basePos );
+    float valueB = accessor.get( baseLoc.pos );
     float valueD = accessor.get( nextPos );
 #ifndef MRMESH_NO_OPENVDB
     if constexpr ( !std::is_same_v<V, VdbVolume> )
@@ -441,7 +441,7 @@ bool findSeparationPoint( Vector3f & pos, const V& volume, const Accessor& acces
     if ( bLower == dLower )
         return false;
 
-    auto coordF = Vector3f( basePos );
+    auto coordF = Vector3f( baseLoc.pos );
     auto nextCoordF = Vector3f( nextPos );
 #ifndef MRMESH_NO_OPENVDB
     if constexpr ( !std::is_same_v<V, VdbVolume> )
@@ -555,34 +555,34 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
             if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
                 break;
 
-            const auto basePos = indexer.toPos( VoxelId( i ) );
-            if ( cache && basePos.z != cache->currentLayer() )
+            const auto baseLoc = indexer.toLoc( VoxelId( i ) );
+            if ( cache && baseLoc.pos.z != cache->currentLayer() )
             {
                 cache->preloadNextLayer();
-                assert( basePos.z == cache->currentLayer() );
+                assert( baseLoc.pos.z == cache->currentLayer() );
             }
 
             SeparationPointSet set;
             bool atLeastOneOk = false;
             if ( !cache )
-                baseValue = acc.get( basePos, VoxelId( i ) );
+                baseValue = acc.get( baseLoc );
 
             for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
             {
                 bool ok = false;
                 Vector3f pos;
                 if ( cache )
-                    ok = findSeparationPoint( pos, volume, *cache, basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
+                    ok = findSeparationPoint( pos, volume, *cache, baseLoc, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
                 else
 #ifndef MRMESH_NO_OPENVDB
                 if constexpr ( std::is_same_v<V, VdbVolume> )
-                    ok = findSeparationPoint( pos, volume, acc, basePos, baseValue, NeighborDir( n ), params, std::forward<Positioner>( positioner ) );
+                    ok = findSeparationPoint( pos, volume, acc, baseLoc, baseValue, NeighborDir( n ), params, std::forward<Positioner>( positioner ) );
                 else
 #endif
                 if constexpr ( std::is_same_v<V, SimpleVolume> )
-                    ok = findSeparationPoint( pos, volume, indexer, VoxelId( i ), basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
+                    ok = findSeparationPoint( pos, volume, indexer, baseLoc, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
                 else if constexpr ( std::is_same_v<V, FunctionVolume> )
-                    ok = findSeparationPoint( pos, volume, basePos, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
+                    ok = findSeparationPoint( pos, volume, baseLoc, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
                 else
                     static_assert( !sizeof( V ), "Unsupported voxel volume type." );
 
@@ -663,16 +663,16 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
             if ( subprogress2 && !keepGoing.load( std::memory_order_relaxed ) )
                 break;
 
-            Vector3i basePos = indexer.toPos( VoxelId( ind ) );
-            if ( basePos.x + 1 >= volume.dims.x ||
-                basePos.y + 1 >= volume.dims.y ||
-                basePos.z + 1 >= volume.dims.z )
+            const auto baseLoc = indexer.toLoc( VoxelId( ind ) );
+            if ( baseLoc.pos.x + 1 >= volume.dims.x ||
+                baseLoc.pos.y + 1 >= volume.dims.y ||
+                baseLoc.pos.z + 1 >= volume.dims.z )
                 continue;
 
-            if ( cache && basePos.z != cache->currentLayer() )
+            if ( cache && baseLoc.pos.z != cache->currentLayer() )
             {
                 cache->preloadNextLayer();
-                assert( basePos.z == cache->currentLayer() );
+                assert( baseLoc.pos.z == cache->currentLayer() );
             }
 
             bool voxelValid = true;
@@ -681,7 +681,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
             [[maybe_unused]] bool atLeastOneNan = false;
             for ( int i = 0; i < cVoxelNeighbors.size(); ++i )
             {
-                auto pos = basePos + cVoxelNeighbors[i];
+                auto pos = baseLoc.pos + cVoxelNeighbors[i];
                 float value{ 0.0f };
 #ifndef MRMESH_NO_OPENVDB
                 if constexpr ( std::is_same_v<V, VdbVolume> )
@@ -689,7 +689,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                     if ( cache )
                         value = cache->get( pos );
                     else
-                        value = acc.get( pos, VoxelId( ind + cVoxelNeighborsIndexAdd[i] ) );
+                        value = acc.get( pos );
                 } else
 #endif
                 if constexpr ( std::is_same_v<V, SimpleVolume> || std::is_same_v<V, FunctionVolume> )

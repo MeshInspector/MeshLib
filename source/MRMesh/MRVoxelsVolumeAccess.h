@@ -39,7 +39,10 @@ public:
         return accessor_.getValue( coord );
     }
 
-    ValueType get( const Vector3i& pos, VoxelId ) const { return get( pos ); }
+    ValueType get( const VoxelLocation & loc ) const
+    {
+        return get( loc.pos );
+    }
 
     ValueType safeGet( const Vector3i& pos ) const
     {
@@ -73,7 +76,10 @@ public:
         return data_[indexer_.toVoxelId( pos )];
     }
 
-    ValueType get( const Vector3i&, VoxelId vid ) const { return data_[vid]; }
+    ValueType get( const VoxelLocation & loc ) const
+    {
+        return data_[loc.id];
+    }
 
     ValueType safeGet( const Vector3i& pos ) const
     {
@@ -102,7 +108,10 @@ public:
         return data_( pos );
     }
 
-    ValueType get( const Vector3i& pos, VoxelId ) const { return get( pos ); }
+    ValueType get( const VoxelLocation & loc ) const
+    {
+        return get( loc.pos );
+    }
 
     ValueType safeGet( const Vector3i& pos ) const
     {

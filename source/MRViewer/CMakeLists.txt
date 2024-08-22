@@ -34,6 +34,7 @@ ENDIF() # MR_EMSCRIPTEN
 IF(MR_EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
+    MRSymbolMesh
     tbb
     jsoncpp
     imgui
@@ -48,6 +49,7 @@ ELSE() # NOT MR_EMSCRIPTEN
     )
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRMesh
+      MRSymbolMesh
       GTest::gtest
       fmt
       tbb
@@ -70,6 +72,7 @@ ELSE() # NOT MR_EMSCRIPTEN
 
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRMesh
+      MRSymbolMesh
       gtest
       dl
       cpr

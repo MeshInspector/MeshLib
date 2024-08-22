@@ -33,23 +33,6 @@ private:
     std::shared_ptr<spdlog::logger> logger_;
 };
 
-/// Setups logger:
-/// 1) makes stdout sink
-/// 2) makes file sink (MRLog.txt)
-/// 3) redirect std streams to logger
-/// 4) print stacktrace on crash (not in wasm)
-/// log level - trace
-MRMESH_API void setupLoggerByDefault();
-
-/// Redirects stdcout stdcerr stdclog to default logger
-/// \note do not call this function directly if you use MR::setupLoggerByDefault()
-MRMESH_API void redirectSTDStreamsToLogger();
-
-#ifndef __EMSCRIPTEN__
-/// Print stacktrace on application crash
-MRMESH_API void printStacktraceOnCrash();
-#endif
-
 /// \}
 
 }

@@ -4,6 +4,7 @@
 #include "MRMesh/MRGTest.h"
 #include "MRMesh/MRQuadraticForm.h"
 #include "MRMesh/MRMeshBoolean.h"
+#include "MRMesh/MRSystem.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRGetSystemInfoJson.h"
 #include "MRViewer/MRCommandLoop.h"

@@ -50,6 +50,10 @@ private:
     LoggingStreambuf spdClogBuf_;
 };
 
+/// Redirects stdcout stdcerr stdclog to default logger
+/// \note do not call this function directly if you use MR::setupLoggerByDefault()
+MRMESH_API void redirectSTDStreamsToLogger();
+
 /// \}
 
 } // namespace MR

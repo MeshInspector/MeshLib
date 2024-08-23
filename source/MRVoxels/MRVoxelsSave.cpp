@@ -1,17 +1,17 @@
 #include "MRVoxelsSave.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MRMeshFwd.h"
-#include "MRIOFormatsRegistry.h"
-#include "MRImageSave.h"
+
+#include "MRObjectVoxels.h"
+#include "MRMesh/MRImageSave.h"
 #include "MRVDBFloatGrid.h"
-#include "MRStringConvert.h"
-#include "MRProgressReadWrite.h"
-#include "MRColor.h"
-#include "MRMeshTexture.h"
-#include "MRTimer.h"
-#include "MRPch/MROpenvdb.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRProgressReadWrite.h"
+#include "MRMesh/MRColor.h"
+#include "MRMesh/MRMeshTexture.h"
+#include "MRMesh/MRTimer.h"
+#include "MROpenVDB.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRFmt.h"
+#include "MRMesh/MRObjectsAccess.h"
 
 #include <openvdb/io/Stream.h>
 
@@ -19,7 +19,10 @@
 #include <filesystem>
 #include <sstream>
 
-namespace MR::VoxelsSave
+namespace MR
+{
+
+namespace VoxelsSave
 {
 
 VoidOrErrStr toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback )
@@ -167,6 +170,8 @@ VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& fil
     return {};
 }
 
+MR_FORMAT_REGISTRY_IMPL( VoxelsSaver )
+
 VoidOrErrStr toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesystem::path& file,
                                    ProgressCallback callback /*= {} */ )
 {
@@ -181,6 +186,29 @@ VoidOrErrStr toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesy
 
     return saver( vdbVolume, file, callback );
 }
+
+template <VoxelsSaver voxelsSaver>
+Expected<void> toVoxels( const Object& object, const std::filesystem::path& path, const ProgressCallback& callback )
+{
+    const auto objVoxels = getAllObjectsInTree<ObjectVoxels>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable );
+    if ( objVoxels.empty() )
+        return voxelsSaver( {}, path, callback );
+    else if ( objVoxels.size() > 1 )
+        return unexpected( "Multiple voxel grids in the given object" );
+
+    const auto& objVoxel = objVoxels.front();
+    if ( !objVoxel )
+        return voxelsSaver( {}, path, callback );
+
+    return voxelsSaver( objVoxel->vdbVolume(), path, callback );
+}
+
+#define MR_ADD_VOXELS_SAVER( filter, saver )                   \
+MR_ON_INIT {                                                   \
+    MR::VoxelsSave::setVoxelsSaver( filter, saver );           \
+    /* additionally register the saver as an object saver */   \
+    MR::ObjectSave::setObjectSaver( filter, toVoxels<saver> ); \
+};
 
 MR_ADD_VOXELS_SAVER( IOFilter( "Raw (.raw)", "*.raw" ), toRawAutoname )
 MR_ADD_VOXELS_SAVER( IOFilter( "Micro CT (.gav)", "*.gav" ), toGav )
@@ -281,5 +309,11 @@ VoidOrErrStr saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSetti
     return {};
 }
 
-} // namespace MR::VoxelsSave
-#endif
+} // namespace VoxelsSave
+
+Expected<void> saveObjectVoxelsToFile( const Object& object, const std::filesystem::path& path, ProgressCallback callback )
+{
+    return VoxelsSave::toVoxels<VoxelsSave::toAnySupportedFormat>( object, path, callback );
+}
+
+} // namespace MR

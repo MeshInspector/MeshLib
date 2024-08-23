@@ -1,10 +1,10 @@
 #include "MRBoolean.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MRMesh.h"
-#include "MRObjectMesh.h"
+
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRObjectMesh.h"
 #include "MRFloatGrid.h"
-#include "MRTimer.h"
-#include "MRPch/MROpenvdb.h"
+#include "MRMesh/MRTimer.h"
+#include "MROpenVDB.h"
 #include "MRPch/MRSpdlog.h"
 #include <filesystem>
 
@@ -33,4 +33,3 @@ Mesh MeshVoxelsConverter::operator() ( const FloatGrid & grid ) const
 }
 
 } //namespace MR
-#endif

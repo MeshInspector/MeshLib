@@ -1,11 +1,14 @@
 #include "MRCudaAccessor.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include "MRMesh/MRFastWindingNumber.h"
-#include "MRMesh/MRVoxelsVolume.h"
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRAABBTreeMaker.h"
 #include "MRMesh/MRDipole.h"
+
+#ifndef MRVIEWER_NO_VOXELS
+#include "MRVoxels/MRVoxelsVolume.h"
+#endif
 
 namespace MR
 {
@@ -35,10 +38,12 @@ void CudaAccessor::setCudaMeshProjectorConstructor( CudaMeshProjectorConstructor
     instance_().mpCtor_ = mpCtor;
 }
 
+#ifndef MRVIEWER_NO_VOXELS
 void CudaAccessor::setCudaPointsToDistanceVolumeCallback( CudaPointsToDistanceVolumeCallback callback )
 {
     instance_().pointsToDistanceVolumeCallback_ = callback;
 }
+#endif
 
 bool CudaAccessor::isCudaAvailable()
 {
@@ -90,6 +95,7 @@ std::unique_ptr<IPointsToMeshProjector> CudaAccessor::getCudaPointsToMeshProject
     return inst.mpCtor_();
 }
 
+#ifndef MRVIEWER_NO_VOXELS
 CudaAccessor::CudaPointsToDistanceVolumeCallback CudaAccessor::getCudaPointsToDistanceVolumeCallback()
 {
     auto& inst = instance_();
@@ -98,6 +104,7 @@ CudaAccessor::CudaPointsToDistanceVolumeCallback CudaAccessor::getCudaPointsToDi
 
     return inst.pointsToDistanceVolumeCallback_;
 }
+#endif
 
 size_t CudaAccessor::fastWindingNumberMeshMemory( const Mesh& mesh )
 {

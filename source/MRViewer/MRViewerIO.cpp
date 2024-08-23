@@ -2,14 +2,12 @@
 
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshSave.h>
-#include <MRMesh/MRVoxelsSave.h>
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRPointsSave.h"
 #include "MRMesh/MRLinesSave.h"
 #include "MRMesh/MRDistanceMapSave.h"
-#include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectDistanceMap.h"
 #include "MRMesh/MRDistanceMap.h"
@@ -23,6 +21,11 @@
 #include "MRMesh/MRObjectLoad.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRMesh/MRTimer.h"
+
+#ifndef MRVIEWER_NO_VOXELS
+#include <MRVoxels/MRVoxelsSave.h>
+#include "MRVoxels/MRObjectVoxels.h"
+#endif
 
 namespace MR
 {
@@ -102,7 +105,7 @@ VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& f
             result = unexpected( std::string( "ObjectDistanceMap has no DistanceMap in it" ) );
         }
     }
-#ifndef MRMESH_NO_OPENVDB
+#ifndef MRVIEWER_NO_VOXELS
     else if ( auto objVoxels = obj.asType<ObjectVoxels>() )
     {
         auto ext = filename.extension().u8string();

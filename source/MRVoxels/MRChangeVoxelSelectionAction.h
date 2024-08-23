@@ -1,7 +1,7 @@
 #pragma once
-#include "MRMeshFwd.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MRHistoryAction.h"
+#include "MRVoxelsFwd.h"
+
+#include "MRMesh/MRHistoryAction.h"
 #include "MRObjectVoxels.h"
 
 namespace MR
@@ -60,4 +60,3 @@ private:
 };
 
 }
-#endif

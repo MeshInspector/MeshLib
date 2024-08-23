@@ -65,28 +65,19 @@ MR_FORMAT_REGISTRY_IMPL( ImageSaver )
 
 } // namespace ImageSave
 
-#ifndef MRMESH_NO_OPENVDB
-namespace VoxelsLoad
-{
-
-MR_FORMAT_REGISTRY_IMPL( VoxelsLoader )
-
-} // namespace VoxelsLoad
-
-namespace VoxelsSave
-{
-
-MR_FORMAT_REGISTRY_IMPL( VoxelsSaver )
-
-} // namespace VoxelsSave
-#endif
-
 namespace ObjectLoad
 {
 
 MR_FORMAT_REGISTRY_IMPL( ObjectLoader )
 
 } // namespace ObjectLoad
+
+namespace ObjectSave
+{
+
+MR_FORMAT_REGISTRY_IMPL( ObjectSaver )
+
+} // namespace ObjectSave
 
 namespace AsyncObjectLoad
 {

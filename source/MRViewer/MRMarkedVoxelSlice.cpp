@@ -1,11 +1,12 @@
 #include "MRMarkedVoxelSlice.h"
-#include <MRMesh/MRObjectVoxels.h>
-#include <MRMesh/MRVDBFloatGrid.h>
+
+#ifndef MRVIEWER_NO_VOXELS
+#include <MRVoxels/MRObjectVoxels.h>
+#include <MRVoxels/MRVDBFloatGrid.h>
 
 namespace MR
 {
 
-#ifndef MRMESH_NO_OPENVDB
 MarkedVoxelSlice::MarkedVoxelSlice( const ObjectVoxels& voxels )
 {
     grid_ = voxels.grid();
@@ -66,6 +67,5 @@ void MarkedVoxelSlice::forceUpdate()
     update( { { texture, { textureWidth , textureHeight } } } );
 }
 
-#endif //!MRMESH_NO_OPENVDB
-
 } //namespace MR
+#endif

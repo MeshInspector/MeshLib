@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config.h"
 #include "exports.h"
 #include <MRMesh/MRMeshFwd.h>
 #include <functional>

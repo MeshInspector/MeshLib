@@ -9,12 +9,15 @@
 #include "MRMesh/MRObjectDistanceMap.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
-#include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRSceneRoot.h"
-#include "MRMesh/MRVDBFloatGrid.h"
 #include "MRMesh/MRMeta.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRPch/MRFmt.h"
+
+#ifndef MRVIEWER_NO_VOXELS
+#include "MRVoxels/MRObjectVoxels.h"
+#include "MRVoxels/MRVDBFloatGrid.h"
+#endif
 
 namespace MR
 {
@@ -102,7 +105,7 @@ void pythonSelectType( const std::string modelType )
             MR::selectType<MR::ObjectPoints>();
             return;
         }
-#ifndef MRMESH_NO_OPENVDB
+#ifndef MRVIEWER_NO_VOXELS
         if ( modelType == "Voxels" )
         {
             MR::selectType<MR::ObjectVoxels>();

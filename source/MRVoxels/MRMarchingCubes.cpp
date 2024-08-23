@@ -1,19 +1,18 @@
 #include "MRMarchingCubes.h"
-#include "MRSeparationPoint.h"
-#include "MRIsNaN.h"
-#include "MRMesh.h"
-#include "MRVolumeIndexer.h"
+#include "MRMesh/MRSeparationPoint.h"
+#include "MRMesh/MRIsNaN.h"
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRVolumeIndexer.h"
 #include "MRVoxelsVolumeAccess.h"
-#include "MRLine3.h"
-#include "MRMeshBuilder.h"
+#include "MRMesh/MRLine3.h"
+#include "MRMesh/MRMeshBuilder.h"
 #include "MRVDBFloatGrid.h"
-#include "MRTimer.h"
-#include "MRParallelFor.h"
-#include "MRTriMesh.h"
-#include "MRGTest.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MRPch/MROpenvdb.h"
-#endif
+#include "MRMesh/MRTimer.h"
+#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRTriMesh.h"
+#include "MRMesh/MRGTest.h"
+#include "MROpenVDB.h"
+
 #include <thread>
 
 namespace MR
@@ -832,7 +831,6 @@ Expected<Mesh> marchingCubes( const SimpleVolume& volume, const MarchingCubesPar
     } );
 }
 
-#ifndef MRMESH_NO_OPENVDB
 Expected<TriMesh> marchingCubesAsTriMesh( const VdbVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {
     if ( !volume.data )
@@ -852,7 +850,6 @@ Expected<Mesh> marchingCubes( const VdbVolume& volume, const MarchingCubesParams
         return Mesh::fromTriMesh( std::move( tm ), {}, subprogress( params.cb, 0.9f, 1.0f ) );
     } );
 }
-#endif
 
 Expected<TriMesh> marchingCubesAsTriMesh( const FunctionVolume& volume, const MarchingCubesParams& params )
 {

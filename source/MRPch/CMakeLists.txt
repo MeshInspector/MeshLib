@@ -27,7 +27,6 @@ IF(MR_PCH)
 
     find_package(Boost COMPONENTS REQUIRED)
     find_package(TBB REQUIRED)
-    find_package(GDCM CONFIG REQUIRED)
     pkg_check_modules(JSONCPP jsoncpp)
     include_directories(${JSONCPP_INCLUDE_DIRS})
 
@@ -39,7 +38,6 @@ IF(MR_PCH)
       Boost::boost
       jsoncpp
       tbb
-      gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF
       cpr
       Python::Python
     )

@@ -2,7 +2,7 @@
 #include "MRMeshFwd.h"
 
 #pragma managed( push, off )
-#include <MRMesh/MROffset.h>
+#include <MRVoxels/MROffset.h>
 #pragma managed( pop )
 
 MR_DOTNET_NAMESPACE_BEGIN

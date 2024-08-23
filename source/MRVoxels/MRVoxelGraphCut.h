@@ -1,8 +1,8 @@
 #pragma once
 
-#include "MRMeshFwd.h"
-#include "MRProgressCallback.h"
-#include "MRExpected.h"
+#include "MRVoxelsFwd.h"
+#include "MRMesh/MRProgressCallback.h"
+#include "MRMesh/MRExpected.h"
 
 namespace MR
 {
@@ -17,6 +17,6 @@ namespace MR
  * 
  * \sa \ref VolumeSegmenter
  */
-MRMESH_API Expected<VoxelBitSet> segmentVolumeByGraphCut( const SimpleVolume& densityVolume, float k, const VoxelBitSet& sourceSeeds, const VoxelBitSet& sinkSeeds, ProgressCallback cb = {} );
+MRVOXELS_API Expected<VoxelBitSet> segmentVolumeByGraphCut( const SimpleVolume& densityVolume, float k, const VoxelBitSet& sourceSeeds, const VoxelBitSet& sinkSeeds, ProgressCallback cb = {} );
 
 } // namespace MR

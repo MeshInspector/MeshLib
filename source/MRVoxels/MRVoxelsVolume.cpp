@@ -1,8 +1,8 @@
 #include "MRVoxelsVolume.h"
-#include "MRExpected.h"
-#include "MRTimer.h"
-#include "MRVolumeIndexer.h"
-#include "MRParallelFor.h"
+#include "MRMesh/MRExpected.h"
+#include "MRMesh/MRTimer.h"
+#include "MRMesh/MRVolumeIndexer.h"
+#include "MRMesh/MRParallelFor.h"
 
 
 

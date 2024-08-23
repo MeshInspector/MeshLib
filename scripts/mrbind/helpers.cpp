@@ -1,5 +1,4 @@
 #include "MRMesh/MRBitSetParallelFor.h"
-#include "MRMesh/MRBoolean.h"
 #include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MREdgeIterator.h"
 #include "MRMesh/MRImageLoad.h"
@@ -8,6 +7,7 @@
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include "MRMesh/MRSceneLoad.h"
 #include "MRMesh/MRSceneRoot.h"
+#include "MRVoxels/MRBoolean.h"
 
 // Only the functions that should be exported should be in `MR::Extra`. Place everything else somewhere outside.
 // Note that the comments are pasted to Python too.

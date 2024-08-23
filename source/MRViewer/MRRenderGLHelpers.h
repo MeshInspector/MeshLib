@@ -71,7 +71,7 @@ public:
         return Vector3i( value.x, value.y, 1 );
     }
 private:
-    virtual void texImage_( const Settings& settings, const char* arr ) override;
+    MRVIEWER_API virtual void texImage_( const Settings& settings, const char* arr ) override;
 };
 
 // represents OpenGL 3D texture owner, and allows uploading data in it remembering texture size
@@ -80,7 +80,7 @@ class GlTexture3 : public GlTexture
 public:
     GlTexture3() : GlTexture( GL_TEXTURE_3D ){}
 private:
-    virtual void texImage_( const Settings& settings, const char* arr ) override;
+    MRVIEWER_API virtual void texImage_( const Settings& settings, const char* arr ) override;
 };
 
 // represents OpenGL array texture 2D owner, and allows uploading data in it remembering texture size
@@ -89,7 +89,7 @@ class GlTexture2DArray : public GlTexture
 public:
     GlTexture2DArray() : GlTexture( GL_TEXTURE_2D_ARRAY ){}
 private:
-    virtual void texImage_( const Settings& settings, const char* arr ) override;
+    MRVIEWER_API virtual void texImage_( const Settings& settings, const char* arr ) override;
 };
 
 struct BindVertexAttribArraySettings

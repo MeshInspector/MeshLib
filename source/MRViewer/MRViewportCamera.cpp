@@ -9,6 +9,7 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectLinesHolder.h"
 #include "MRMesh/MRObjectLabel.h"
+#include "MRMesh/MRObjectImGuiLabel.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRLine3.h"
@@ -614,7 +615,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
                 coords = &pointCloud.points;
                 selectedVerts = &pointCloud.validPoints;
             }
-            else if ( obj->asType<ObjectLabel>() )
+            else if ( obj->asType<ObjectLabel>() || obj->asType<ObjectImGuiLabel>() )
             {
                 // do nothing
             }

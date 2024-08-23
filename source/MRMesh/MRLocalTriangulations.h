@@ -54,7 +54,8 @@ struct AllLocalTriangulations
 /// into one AllLocalTriangulations with records for all points
 [[nodiscard]] MRMESH_API std::optional<AllLocalTriangulations> uniteLocalTriangulations( const std::vector<SomeLocalTriangulations> & in, const ProgressCallback & progress = {} );
 
-/// compute normal at point by averaging neighbor triangle normals weighted by triangle's angle at the point
+/// compute normal at point by averaging neighbor triangle normals weighted by triangle's angle at the point,
+/// and direct the normal toward the origin
 [[nodiscard]] MRMESH_API Vector3f computeNormal( const AllLocalTriangulations & triangs, const VertCoords & points, VertId v );
 
 /// orient neighbors around each point in \param region so they will be in clockwise order if look from the tip of target direction

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "MRMeshFwd.h"
-#include "MRMeshPart.h"
-#include "MRExpected.h"
-#include "MREnums.h"
+#include "MRVoxelsFwd.h"
+#include "MRMesh/MRMeshPart.h"
+#include "MRMesh/MRExpected.h"
+#include "MRMesh/MREnums.h"
 
 namespace MR
 {
@@ -45,6 +45,6 @@ struct RebuildMeshSettings
 
 /// fixes all types of issues in input mesh (degenerations, holes, self-intersections, etc.)
 /// by first converting mesh in voxel representation, and then backward
-[[nodiscard]] MRMESH_API Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& settings );
+[[nodiscard]] MRVOXELS_API Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& settings );
 
 } //namespace MR

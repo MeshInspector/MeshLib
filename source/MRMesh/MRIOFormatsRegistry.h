@@ -1,5 +1,6 @@
 #pragma once
 #include "MRMeshFwd.h"
+#ifndef MR_PARSING_FOR_PB11_BINDINGS
 #include "MRExpected.h"
 #include "MRIOFilters.h"
 #include "MRMeshLoadSettings.h"
@@ -10,11 +11,13 @@
 #include <filesystem>
 #include <map>
 
-#define MR_FORMAT_REGISTRY_DECL( ProcName )                                                                    \
-MRMESH_API ProcName MR_CONCAT( get, ProcName )( const IOFilter& filter );                                      \
-MRMESH_API ProcName MR_CONCAT( get, ProcName )( const std::string& extension );                                \
-MRMESH_API void MR_CONCAT( set, ProcName )( const IOFilter& filter, ProcName proc, int8_t priorityScore = 0 ); \
-MRMESH_API const IOFilters& getFilters();
+#define MR_FORMAT_REGISTRY_EXTERNAL_DECL( API_ATTR, ProcName )                                               \
+API_ATTR ProcName MR_CONCAT( get, ProcName )( const IOFilter& filter );                                      \
+API_ATTR ProcName MR_CONCAT( get, ProcName )( const std::string& extension );                                \
+API_ATTR void MR_CONCAT( set, ProcName )( const IOFilter& filter, ProcName proc, int8_t priorityScore = 0 ); \
+API_ATTR const IOFilters& getFilters();
+
+#define MR_FORMAT_REGISTRY_DECL( ProcName ) MR_FORMAT_REGISTRY_EXTERNAL_DECL( MRMESH_API, ProcName )
 
 #define MR_FORMAT_REGISTRY_IMPL( ProcName )                                                         \
 ProcName MR_CONCAT( get, ProcName )( const IOFilter& filter )                                       \
@@ -283,32 +286,6 @@ MR_ON_INIT { using namespace MR::ImageSave; setImageSaver( filter, saver ); };
 
 } // namespace ImageSave
 
-#ifndef MRMESH_NO_OPENVDB
-namespace VoxelsLoad
-{
-
-using VoxelsLoader = Expected<std::vector<VdbVolume>>( * )( const std::filesystem::path&, const ProgressCallback& );
-
-MR_FORMAT_REGISTRY_DECL( VoxelsLoader )
-
-#define MR_ADD_VOXELS_LOADER( filter, loader ) \
-MR_ON_INIT { using namespace MR::VoxelsLoad; setVoxelsLoader( filter, loader ); };
-
-} // namespace VoxelsLoad
-
-namespace VoxelsSave
-{
-
-using VoxelsSaver = Expected<void>( * )( const VdbVolume&, const std::filesystem::path&, ProgressCallback );
-
-MR_FORMAT_REGISTRY_DECL( VoxelsSaver )
-
-#define MR_ADD_VOXELS_SAVER( filter, saver ) \
-MR_ON_INIT { using namespace MR::VoxelsSave; setVoxelsSaver( filter, saver ); };
-
-} // namespace VoxelsSave
-#endif
-
 using ObjectPtr = std::shared_ptr<Object>;
 
 namespace ObjectLoad
@@ -322,6 +299,18 @@ MR_FORMAT_REGISTRY_DECL( ObjectLoader )
 MR_ON_INIT { using namespace MR::ObjectLoad; setObjectLoader( filter, loader ); };
 
 } // namespace ObjectLoad
+
+namespace ObjectSave
+{
+
+using ObjectSaver = Expected<void>( * )( const Object&, const std::filesystem::path&, const ProgressCallback& );
+
+MR_FORMAT_REGISTRY_DECL( ObjectSaver )
+
+#define MR_ADD_OBJECT_SAVER( filter, saver ) \
+MR_ON_INIT { using namespace MR::ObjectSave; setObjectSaver( filter, saver ); };
+
+} // namespace ObjectSave
 
 namespace AsyncObjectLoad
 {
@@ -364,3 +353,4 @@ MR_ON_INIT { using namespace MR::SceneSave; setSceneSaver( filter, saver, priori
 } // namespace SceneSave
 
 } // namespace MR
+#endif

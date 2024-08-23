@@ -1,4 +1,5 @@
 #include "MRCudaPointsToDistanceVolume.h"
+#ifndef MRCUDA_NO_VOXELS
 #include "MRCudaPointsToDistanceVolume.cuh"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRAABBTreePoints.h"
@@ -54,3 +55,4 @@ namespace Cuda
     }
 }
 }
+#endif

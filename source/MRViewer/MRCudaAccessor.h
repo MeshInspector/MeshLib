@@ -1,10 +1,14 @@
 #pragma once
 
-#include "exports.h"
-#include "MRMesh/MRMeshFwd.h"
+#include "MRViewerFwd.h"
 #include "MRMesh/MRExpected.h"
+
 #include <functional>
 #include <memory>
+
+#ifndef MRVIEWER_NO_VOXELS
+#include "MRVoxels/MRVoxelsFwd.h"
+#endif
 
 namespace MR
 {
@@ -21,14 +25,19 @@ public:
     /// Returns specific implementation of IPointsToMeshProjector interface projects on GPU
     using CudaMeshProjectorConstructor = std::function<std::unique_ptr<IPointsToMeshProjector>()>;
 
+#ifndef MRVIEWER_NO_VOXELS
     using CudaPointsToDistanceVolumeCallback = std::function<Expected<SimpleVolume>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )>;
+#endif
 
     // setup functions
     MRVIEWER_API static void setCudaAvailable( bool val, int maxDriverVersion, int runtimeVersion, int computeMajor, int computeMinor );
     MRVIEWER_API static void setCudaFreeMemoryFunc( CudaFreeMemoryFunc freeMemFunc );
     MRVIEWER_API static void setCudaFastWindingNumberConstructor( CudaFwnConstructor fwnCtor );
     MRVIEWER_API static void setCudaMeshProjectorConstructor( CudaMeshProjectorConstructor mpCtor );
+
+#ifndef MRVIEWER_NO_VOXELS
     MRVIEWER_API static void setCudaPointsToDistanceVolumeCallback( CudaPointsToDistanceVolumeCallback callback );
+#endif
 
     // Returns true if CUDA is available on this computer
     [[nodiscard]] MRVIEWER_API static bool isCudaAvailable();
@@ -54,8 +63,10 @@ public:
     // Returns cuda implementation of IPointsToMeshProjector
     [[nodiscard]] MRVIEWER_API static std::unique_ptr<IPointsToMeshProjector> getCudaPointsToMeshProjector();
 
+#ifndef MRVIEWER_NO_VOXELS
     // Returns cuda implementation of PointsToDistanceVolumeCallback
     [[nodiscard]] MRVIEWER_API static CudaPointsToDistanceVolumeCallback getCudaPointsToDistanceVolumeCallback();
+#endif
 
     /// returns amount of required GPU memory for CudaFastWindingNumber internal data,
     /// \param mesh input mesh
@@ -90,7 +101,9 @@ private:
     CudaFreeMemoryFunc freeMemFunc_;
     CudaFwnConstructor fwnCtor_;
     CudaMeshProjectorConstructor mpCtor_;
+#ifndef MRVIEWER_NO_VOXELS
     CudaPointsToDistanceVolumeCallback pointsToDistanceVolumeCallback_;
+#endif
 };
 
 } //namespace MR

@@ -1,11 +1,11 @@
 #pragma once
-#include "MRMeshFwd.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MRAxis.h"
-#include "MRMesh.h"
-#include "MRPolyline.h"
-#include "MRProgressCallback.h"
-#include "MRExpected.h"
+#include "MRVoxelsFwd.h"
+
+#include "MRMesh/MRAxis.h"
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRPolyline.h"
+#include "MRMesh/MRProgressCallback.h"
+#include "MRMesh/MRExpected.h"
 
 namespace MR
 {
@@ -131,32 +131,31 @@ struct ToolPathResult
 // this toolpath is built from the parallel sections along Z-axis
 // mesh can be transformed using xf parameter
 
-MRMESH_API Expected<ToolPathResult> constantZToolPath( const MeshPart& mp, const ToolPathParams& params );
+MRVOXELS_API Expected<ToolPathResult> constantZToolPath( const MeshPart& mp, const ToolPathParams& params );
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
 // // this one is traditional lace-roughing toolpath
 
 // Slices are built along the axis defined by cutDirection argument (can be Axis::X or Axis::Y)
-MRMESH_API Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParams& params, Axis cutDirection );
+MRVOXELS_API Expected<ToolPathResult> lacingToolPath( const MeshPart& mp, const ToolPathParams& params, Axis cutDirection );
 
 // compute path of the milling tool for the given mesh with parameters ( direction of milling is from up to down along Z-direction )
 // this toolpath is built from geodesic parallels divercing from the given start point or from the bounaries of selected areas
 // if neither is specified, the lowest section by XY plane will be used as a start contour
 // mesh can be transformed using xf parameter
-MRMESH_API Expected<ToolPathResult> constantCuspToolPath( const MeshPart& mp, const ConstantCuspParams& params );
+MRVOXELS_API Expected<ToolPathResult> constantCuspToolPath( const MeshPart& mp, const ConstantCuspParams& params );
 
 // generates G-Code for milling tool
-MRMESH_API std::shared_ptr<ObjectGcode> exportToolPathToGCode( const std::vector<GCommand>& commands );
+MRVOXELS_API std::shared_ptr<ObjectGcode> exportToolPathToGCode( const std::vector<GCommand>& commands );
 
 // interpolates several points lying on the same straight line with one move
-MRMESH_API VoidOrErrStr interpolateLines( std::vector<GCommand>& commands, const LineInterpolationParams& params, Axis axis );
+MRVOXELS_API VoidOrErrStr interpolateLines( std::vector<GCommand>& commands, const LineInterpolationParams& params, Axis axis );
 // interpolates given path with arcs
-MRMESH_API VoidOrErrStr interpolateArcs( std::vector<GCommand>& commands, const ArcInterpolationParams& params, Axis axis );
+MRVOXELS_API VoidOrErrStr interpolateArcs( std::vector<GCommand>& commands, const ArcInterpolationParams& params, Axis axis );
 
 // makes the given selection more smooth with shifthing a boundary of the selection outside and back. Input mesh is changed because we have to cut new edges along the new boundaries
 // \param expandOffset defines how much the boundary is expanded
 // \param expandOffset defines how much the boundary is shrinked after that
-MRMESH_API FaceBitSet smoothSelection( Mesh& mesh, const FaceBitSet& region, float expandOffset, float shrinkOffset );
+MRVOXELS_API FaceBitSet smoothSelection( Mesh& mesh, const FaceBitSet& region, float expandOffset, float shrinkOffset );
 
 }
-#endif

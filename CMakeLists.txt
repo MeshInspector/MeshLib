@@ -27,6 +27,7 @@ option(MESHLIB_BUILD_MESHCONV "Build meshconv utility" ON)
 option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
 option(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING "(experimental) Build C binding library" ON)
 option(MESHLIB_BUILD_SYMBOLMESH "Build symbol-to-mesh library" ON)
+option(MESHLIB_BUILD_VOXELS "Build voxels library" ON)
 
 include(CTest)
 
@@ -151,6 +152,10 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
 
 IF(MESHLIB_BUILD_SYMBOLMESH)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRSymbolMesh ./MRSymbolMesh)
+ENDIF()
+
+IF(MESHLIB_BUILD_VOXELS)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/MRVoxels ./MRVoxels)
 ENDIF()
 
 IF(MESHLIB_BUILD_MRVIEWER)

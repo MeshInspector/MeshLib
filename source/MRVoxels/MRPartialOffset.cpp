@@ -1,6 +1,6 @@
 #include "MRPartialOffset.h"
-#include "MRMesh.h"
-#include "MRMeshBoolean.h"
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRMeshBoolean.h"
 
 namespace MR
 {

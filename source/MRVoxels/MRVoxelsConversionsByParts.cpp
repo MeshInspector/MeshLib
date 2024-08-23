@@ -1,17 +1,17 @@
 #include "MRVoxelsConversionsByParts.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MREdgePaths.h"
-#include "MRMesh.h"
-#include "MRMeshTrimWithPlane.h"
-#include "MRPlane3.h"
+
+#include "MRMesh/MREdgePaths.h"
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRMeshTrimWithPlane.h"
+#include "MRMesh/MRPlane3.h"
 #include "MRVoxelsVolume.h"
-#include "MRStringConvert.h"
-#include "MRTimer.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRTimer.h"
 #include "MRVDBConversions.h"
-#include "MRVolumeIndexer.h"
+#include "MRMesh/MRVolumeIndexer.h"
 #include "MRVoxelsConversions.h"
 
-#include "MRGTest.h"
+#include "MRMesh/MRGTest.h"
 #include "MRVDBFloatGrid.h"
 
 #include "MRPch/MRFmt.h"
@@ -354,14 +354,12 @@ TEST( MRMesh, volumeToMeshByParts )
     EXPECT_NEAR( expectedVolume, functionMesh->volume(), 0.001f );
 }
 
-template MRMESH_API VoidOrErrStr mergeVolumePart<SimpleVolume>( Mesh&, std::vector<EdgePath>&, SimpleVolume&&, float, float, const MergeVolumePartSettings& );
-template MRMESH_API VoidOrErrStr mergeVolumePart<VdbVolume>( Mesh&, std::vector<EdgePath>&, VdbVolume&&, float, float, const MergeVolumePartSettings& );
-template MRMESH_API VoidOrErrStr mergeVolumePart<FunctionVolume>( Mesh&, std::vector<EdgePath>&, FunctionVolume&&, float, float, const MergeVolumePartSettings& );
+template MRVOXELS_API VoidOrErrStr mergeVolumePart<SimpleVolume>( Mesh&, std::vector<EdgePath>&, SimpleVolume&&, float, float, const MergeVolumePartSettings& );
+template MRVOXELS_API VoidOrErrStr mergeVolumePart<VdbVolume>( Mesh&, std::vector<EdgePath>&, VdbVolume&&, float, float, const MergeVolumePartSettings& );
+template MRVOXELS_API VoidOrErrStr mergeVolumePart<FunctionVolume>( Mesh&, std::vector<EdgePath>&, FunctionVolume&&, float, float, const MergeVolumePartSettings& );
 
-template MRMESH_API Expected<Mesh> volumeToMeshByParts<SimpleVolume>( const VolumePartBuilder<SimpleVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
-template MRMESH_API Expected<Mesh> volumeToMeshByParts<VdbVolume>( const VolumePartBuilder<VdbVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
-template MRMESH_API Expected<Mesh> volumeToMeshByParts<FunctionVolume>( const VolumePartBuilder<FunctionVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
+template MRVOXELS_API Expected<Mesh> volumeToMeshByParts<SimpleVolume>( const VolumePartBuilder<SimpleVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
+template MRVOXELS_API Expected<Mesh> volumeToMeshByParts<VdbVolume>( const VolumePartBuilder<VdbVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
+template MRVOXELS_API Expected<Mesh> volumeToMeshByParts<FunctionVolume>( const VolumePartBuilder<FunctionVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
 
 } // namespace MR
-
-#endif

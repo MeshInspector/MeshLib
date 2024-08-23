@@ -9,9 +9,7 @@
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshSave.h>
 
-#include "MRMesh/MRVoxelsLoad.h"
 #include "MRMesh/MRPointsLoad.h"
-#include "MRMesh/MRVoxelsSave.h"
 #include "MRMesh/MRPointsSave.h"
 #include "MRMesh/MRLinesSave.h"
 #include "MRMesh/MRSerializer.h"

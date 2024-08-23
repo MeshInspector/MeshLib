@@ -1,6 +1,5 @@
 #pragma once
-#include "MRMeshFwd.h"
-#ifndef MRMESH_NO_OPENVDB
+#include "MRVoxelsFwd.h"
 
 namespace MR
 {
@@ -16,9 +15,8 @@ namespace FloatGridComponents
 
 /// finds separated by iso-value components in grid space (0 voxel id is minimum active voxel in grid)
 /// \ingroup ComponentsGroup
-MRMESH_API std::vector<VoxelBitSet> getAllComponents( const FloatGrid& grid, float isoValue = 0.0f );
+MRVOXELS_API std::vector<VoxelBitSet> getAllComponents( const FloatGrid& grid, float isoValue = 0.0f );
 
 }
 
 }
-#endif

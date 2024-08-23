@@ -1,11 +1,11 @@
 #include "MRRebuildMesh.h"
 #include "MROffset.h"
-#include "MRMesh.h"
-#include "MRBuffer.h"
-#include "MRMapEdge.h"
-#include "MRMeshDecimate.h"
-#include "MRMeshCollide.h"
-#include "MRTimer.h"
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRBuffer.h"
+#include "MRMesh/MRMapEdge.h"
+#include "MRMesh/MRMeshDecimate.h"
+#include "MRMesh/MRMeshCollide.h"
+#include "MRMesh/MRTimer.h"
 
 namespace MR
 {

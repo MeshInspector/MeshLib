@@ -1,7 +1,7 @@
 #include "MRComputeVolume.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MRAffineXf3.h"
-#include "MRMesh.h"
+
+#include "MRMesh/MRAffineXf3.h"
+#include "MRMesh/MRMesh.h"
 #include "MRVDBConversions.h"
 #include "MRBoolean.h"
 #include "MRVDBFloatGrid.h"
@@ -61,4 +61,3 @@ float voxelizeAndComputeVolume( const std::vector<std::shared_ptr<Mesh>>& meshes
 }
 
 }
-#endif

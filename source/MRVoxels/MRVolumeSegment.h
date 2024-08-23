@@ -1,11 +1,11 @@
 #pragma once
-#include "MRMeshFwd.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MRVector3.h"
-#include "MRExpected.h"
+#include "MRVoxelsFwd.h"
+
+#include "MRMesh/MRVector3.h"
+#include "MRMesh/MRExpected.h"
 #include "MRVoxelsVolume.h"
-#include "MRBitSet.h"
-#include "MRProgressCallback.h"
+#include "MRMesh/MRBitSet.h"
+#include "MRMesh/MRProgressCallback.h"
 #include <string>
 
 namespace MR
@@ -23,7 +23,7 @@ namespace MR
  * \param mask in space of whole volume
  *  density inside mask is expected to be higher then outside
  */
-MRMESH_API Expected<MR::Mesh> meshFromVoxelsMask( const VdbVolume& volume, const VoxelBitSet& mask );
+MRVOXELS_API Expected<MR::Mesh> meshFromVoxelsMask( const VdbVolume& volume, const VoxelBitSet& mask );
 
  /**
   * \brief Parameters for volume segmentation
@@ -48,7 +48,7 @@ struct VolumeSegmentationParameters
  * 3. Mark volume part edges as outside part seeds \n
  * 4. Return mesh from segmented inside part
  */
-MRMESH_API Expected<MR::Mesh> segmentVolume( const VdbVolume& volume, const std::vector<std::pair<Vector3f, Vector3f>>& pairs,
+MRVOXELS_API Expected<MR::Mesh> segmentVolume( const VdbVolume& volume, const std::vector<std::pair<Vector3f, Vector3f>>& pairs,
                                                               const VolumeSegmentationParameters& params = VolumeSegmentationParameters() );
 
 struct VoxelMetricParameters;
@@ -65,7 +65,7 @@ struct VoxelMetricParameters;
 class VolumeSegmenter
 {
 public:
-    MRMESH_API VolumeSegmenter( const VdbVolume& volume );
+    MRVOXELS_API VolumeSegmenter( const VdbVolume& volume );
 
     enum SeedType
     {
@@ -75,28 +75,28 @@ public:
     };
 
     /// Builds path with given parameters, marks result as seedType seeds
-    MRMESH_API void addPathSeeds( const VoxelMetricParameters& metricParameters, SeedType seedType, float exponentModifier = -1.0f );
+    MRVOXELS_API void addPathSeeds( const VoxelMetricParameters& metricParameters, SeedType seedType, float exponentModifier = -1.0f );
     
     /// Reset seeds with given ones
-    MRMESH_API void setSeeds( const std::vector<Vector3i>& seeds, SeedType seedType );
+    MRVOXELS_API void setSeeds( const std::vector<Vector3i>& seeds, SeedType seedType );
     
     /// Adds new seeds to stored
-    MRMESH_API void addSeeds( const std::vector<Vector3i>& seeds, SeedType seedType );
+    MRVOXELS_API void addSeeds( const std::vector<Vector3i>& seeds, SeedType seedType );
 
     /// Return currently stored seeds
-    MRMESH_API const std::vector<Vector3i>& getSeeds( SeedType seedType ) const;
+    MRVOXELS_API const std::vector<Vector3i>& getSeeds( SeedType seedType ) const;
 
     /// Segments volume, return inside part segmentation (VoxelBitSet in space of VolumePart)
-    MRMESH_API Expected<VoxelBitSet> segmentVolume( float segmentationExponentModifier = 3000.0f, int voxelsExpansion = 25, ProgressCallback cb = {} );
+    MRVOXELS_API Expected<VoxelBitSet> segmentVolume( float segmentationExponentModifier = 3000.0f, int voxelsExpansion = 25, ProgressCallback cb = {} );
     
     /// Returns mesh of given segment
-    MRMESH_API Expected<MR::Mesh> createMeshFromSegmentation( const VoxelBitSet& segmentation ) const;
+    MRVOXELS_API Expected<MR::Mesh> createMeshFromSegmentation( const VoxelBitSet& segmentation ) const;
 
     /// Dimensions of volume part, filled after segmentation
-    MRMESH_API const Vector3i& getVolumePartDimensions() const;
+    MRVOXELS_API const Vector3i& getVolumePartDimensions() const;
 
     /// Min voxel of volume part box in whole volume space, filled after segmentation
-    MRMESH_API const Vector3i& getMinVoxel() const;
+    MRVOXELS_API const Vector3i& getMinVoxel() const;
 private:
     const VdbVolume& volume_;
 
@@ -116,4 +116,3 @@ private:
 /// \}
 
 }
-#endif

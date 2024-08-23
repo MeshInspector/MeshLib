@@ -1,9 +1,8 @@
 #pragma once
 
-#include "MRMeshFwd.h"
-#ifndef MRMESH_NO_OPENVDB
+#include "MRVoxelsFwd.h"
 
-#include "MRProgressCallback.h"
+#include "MRMesh/MRProgressCallback.h"
 #include <openvdb/util/NullInterrupter.h>
 #include <algorithm>
 #include <thread>
@@ -33,5 +32,3 @@ private:
 };
 
 } //namespace MR
-
-#endif

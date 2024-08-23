@@ -13,17 +13,29 @@ IF(MR_EMSCRIPTEN)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_FREETYPE=1")
 ELSE()
   find_package(Freetype REQUIRED)
+
+  find_package(fmt REQUIRED)
+  find_package(spdlog REQUIRED)
+
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(jsoncpp REQUIRED QUIET IMPORTED_TARGET jsoncpp)
 ENDIF()
 
 IF(MR_EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     freetype
+    fmt
+    spdlog
+    jsoncpp
   )
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     Freetype::Freetype
+    fmt::fmt
+    spdlog::spdlog
+    PkgConfig::jsoncpp
   )
 ENDIF()
 

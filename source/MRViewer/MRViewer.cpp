@@ -41,7 +41,6 @@
 #include "MRMesh/MRMeshLoad.h"
 #include "MRMesh/MRLinesLoad.h"
 #include "MRMesh/MRPointsLoad.h"
-#include "MRMesh/MRVoxelsLoad.h"
 #include "MRMesh/MRDistanceMapLoad.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRImageSave.h"
@@ -58,7 +57,6 @@
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRSceneColors.h"
-#include "MRMesh/MRObjectVoxels.h"
 #include "MRPch/MRWasm.h"
 
 #ifndef __EMSCRIPTEN__
@@ -1146,6 +1144,11 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
     for( auto& c : ext )
         c = (char) tolower( c );
 
+    for ( const auto& filter : ObjectLoad::getFilters() )
+    {
+        if ( filter.extensions.find( ext ) != std::string::npos )
+            return true;
+    }
     for( auto& filter : MeshLoad::getFilters() )
     {
         if( filter.extensions.find( ext ) != std::string::npos )
@@ -1157,11 +1160,6 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
             return true;
     }
     for ( auto& filter : PointsLoad::Filters )
-    {
-        if ( filter.extensions.find( ext ) != std::string::npos )
-            return true;
-    }
-    for ( auto& filter : VoxelsLoad::Filters )
     {
         if ( filter.extensions.find( ext ) != std::string::npos )
             return true;

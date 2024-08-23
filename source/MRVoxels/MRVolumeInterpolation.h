@@ -25,24 +25,18 @@ public:
     explicit VoxelsVolumeInterpolatedAccessor( const VolumeType& volume, const Accessor& accessor )
         : volume_( volume ), accessor_( accessor )
     {
-#ifndef MRMESH_NO_OPENVDB
         if constexpr ( std::is_same_v<VolumeType, VdbVolume> )
         {
             openvdb::Coord coord = volume.data->evalActiveVoxelBoundingBox().min();
             minCoord_ = { coord.x(), coord.y(), coord.z() };
         }
-#endif
     }
 
     /// delete copying constructor to avoid accidentally creating non-thread-safe accessors
     VoxelsVolumeInterpolatedAccessor( const VoxelsVolumeInterpolatedAccessor& ) = delete;
     /// a copying-like constructor with explicitly provided accessor
     explicit VoxelsVolumeInterpolatedAccessor( const VoxelsVolumeInterpolatedAccessor& other, const Accessor& accessor )
-#ifndef MRMESH_NO_OPENVDB
         : volume_( other.volume_ ), accessor_( accessor ), minCoord_( other.minCoord_ )
-#else
-        : volume_( other.volume_ ), accessor_( accessor )
-#endif
     {}
 
     /// get value at specified coordinates
@@ -70,9 +64,7 @@ public:
 private:
     const VolumeType& volume_;
     const Accessor& accessor_;
-#ifndef MRMESH_NO_OPENVDB
     Vector3i minCoord_{};
-#endif
 
     struct IndexAndPos
     {
@@ -95,10 +87,8 @@ private:
         res.pos.x -= pos.x;
         res.pos.y -= pos.y;
         res.pos.z -= pos.z;
-#ifndef MRMESH_NO_OPENVDB
         if constexpr ( std::is_same_v<VolumeType, VdbVolume> )
             res.index -= minCoord_;
-#endif
         return res;
     }
 };

@@ -1,5 +1,6 @@
-#include "MRMesh/MRMeshFwd.h"
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF ) && !defined( MRMESH_NO_OPENVDB )
+#ifndef MESHLIB_NO_VOXELS
+#include <MRVoxels/MRVoxelsFwd.h>
+#ifndef MRVOXELS_NO_TIFF
 
 #include "MRViewer/MRRibbonSchema.h"
 #include "MRViewer/MRStatePlugin.h"
@@ -9,8 +10,8 @@
 #include "MRViewer/MRFileDialog.h"
 #include "MRViewer/MRProgressBar.h"
 #include "MRViewer/MRViewport.h"
-#include "MRMesh/MRObjectVoxels.h"
-#include "MRMesh/MRVoxelsLoad.h"
+#include "MRVoxels/MRObjectVoxels.h"
+#include "MRVoxels/MRVoxelsLoad.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRMesh/MRChangeSceneAction.h"
@@ -127,8 +128,9 @@ MR_REGISTER_RIBBON_ITEM( OpenVoxelsFromTiffPlugin )
 }
 
 #endif
+#endif
 
-#if defined( __EMSCRIPTEN__ ) && ( defined( MRMESH_NO_TIFF ) || defined( MRMESH_NO_OPENVDB ) )
+#if defined( __EMSCRIPTEN__ ) && ( defined( MESHLIB_NO_VOXELS ) || defined( MRVOXELS_NO_TIFF ) )
 #include "MRCommonPlugins/Basic/MRWasmUnavailablePlugin.h"
 MR_REGISTER_WASM_UNAVAILABLE_ITEM( OpenVoxelsFromTiffPlugin, "Open Voxels From TIFF" )
 #endif

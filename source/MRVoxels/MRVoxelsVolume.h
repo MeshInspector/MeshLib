@@ -1,7 +1,10 @@
 #pragma once
-#include "MRVector3.h"
-#include "MRHeapBytes.h"
-#include "MRExpected.h"
+
+#include "MRVoxelsFwd.h"
+
+#include "MRMesh/MRVector3.h"
+#include "MRMesh/MRHeapBytes.h"
+#include "MRMesh/MRExpected.h"
 #include <limits>
 #include <vector>
 
@@ -23,13 +26,11 @@ struct VoxelTraits<VoxelValueGetter<T>>
     using ValueType = T;
 };
 
-#ifndef MRMESH_NO_OPENVDB
 template <>
 struct VoxelTraits<FloatGrid>
 {
     using ValueType = float;
 };
-#endif
 
 /// represents a box in 3D space subdivided on voxels stored in T
 template <typename T>
@@ -61,6 +62,6 @@ struct VoxelsVolumeMinMax : VoxelsVolume<T>
 
 
 /// converts function volume into simple volume
-MRMESH_API Expected<SimpleVolume> functionVolumeToSimpleVolume( const FunctionVolume& volume, const ProgressCallback& callback = {} );
+MRVOXELS_API Expected<SimpleVolume> functionVolumeToSimpleVolume( const FunctionVolume& volume, const ProgressCallback& callback = {} );
 
 } //namespace MR

@@ -1,20 +1,20 @@
 #include "MROffset.h"
-#include "MRMesh.h"
-#include "MRBox.h"
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRBox.h"
 #include "MRFloatGrid.h"
 #include "MRVDBConversions.h"
-#include "MRTimer.h"
-#include "MRPolyline.h"
-#include "MRMeshFillHole.h"
-#include "MRRegionBoundary.h"
+#include "MRMesh/MRTimer.h"
+#include "MRMesh/MRPolyline.h"
+#include "MRMesh/MRMeshFillHole.h"
+#include "MRMesh/MRRegionBoundary.h"
 #include "MRVoxelsConversions.h"
-#include "MRSharpenMarchingCubesMesh.h"
-#include "MRFastWindingNumber.h"
-#include "MRVolumeIndexer.h"
-#include "MRInnerShell.h"
-#include "MRMeshFixer.h"
-#include "MRBitSetParallelFor.h"
-#include "MRRingIterator.h"
+#include "MRMesh/MRSharpenMarchingCubesMesh.h"
+#include "MRMesh/MRFastWindingNumber.h"
+#include "MRMesh/MRVolumeIndexer.h"
+#include "MRMesh/MRInnerShell.h"
+#include "MRMesh/MRMeshFixer.h"
+#include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMesh/MRRingIterator.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace MR
@@ -28,7 +28,6 @@ float suggestVoxelSize( const MeshPart & mp, float approxNumVoxels )
     return std::cbrt( vol / approxNumVoxels );
 }
 
-#ifndef MRMESH_NO_OPENVDB
 Expected<Mesh> offsetMesh( const MeshPart & mp, float offset, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER
@@ -116,7 +115,6 @@ Expected<Mesh> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offset
         .progress = params.callBack
     } );
 }
-#endif
 
 Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
     const OffsetParameters& params, Vector<VoxelId, FaceId> * outMap )
@@ -125,7 +123,6 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
     auto meshToLSCb = subprogress( params.callBack, 0.0f, 0.4f );
     if ( params.signDetectionMode == SignDetectionMode::OpenVDB )
     {
-#ifndef MRMESH_NO_OPENVDB
         auto offsetInVoxels = offset / params.voxelSize;
         auto voxelRes = meshToLevelSet( mp, AffineXf3f(),
             Vector3f::diagonal( params.voxelSize ),
@@ -147,10 +144,6 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
             volume.data.reset();
         };
         return marchingCubes( volume, vmParams );
-#else
-        assert( false );
-        return unexpected( "OpenVDB is not available" );
-#endif
     }
     else
     {
@@ -261,10 +254,8 @@ Expected<Mesh> generalOffsetMesh( const MeshPart& mp, float offset, const Genera
     default:
         assert( false );
         [[fallthrough]];
-#ifndef MRMESH_NO_OPENVDB
     case GeneralOffsetParameters::Mode::Smooth:
         return offsetMesh( mp, offset, params );
-#endif
     case GeneralOffsetParameters::Mode::Standard:
         return mcOffsetMesh( mp, offset, params );
     case GeneralOffsetParameters::Mode::Sharpening:
@@ -331,7 +322,6 @@ Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetP
     return res;
 }
 
-#ifndef MRMESH_NO_OPENVDB
 Expected<Mesh> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params /*= {} */ )
 {
     MR_TIMER;
@@ -361,6 +351,5 @@ Expected<Mesh> offsetPolyline( const Polyline3& polyline, float offset, const Of
 
     return offsetMesh( mesh, offset, p );
 }
-#endif
 
 }

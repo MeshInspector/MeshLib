@@ -6,11 +6,14 @@
 #include "MRMesh/MRObjectLinesHolder.h"
 #include "MRMesh/MRObjectMeshHolder.h"
 #include "MRMesh/MRObjectPointsHolder.h"
-#include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRPython.h"
-#include "MRMesh/MRVDBFloatGrid.h"
+
+#ifndef MESHLIB_NO_VOXELS
+#include "MRVoxels/MRObjectVoxels.h"
+#include "MRVoxels/MRVDBFloatGrid.h"
+#endif
 
 namespace
 {
@@ -52,7 +55,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SceneObject, []( pybind11::module_& )
         .def( "children", []( MR::Object& o ) -> auto & { return o.children(); }, "Retruns the child objects of an object." )
     ;
 } )
-#ifndef MRMESH_NO_OPENVDB
+
+#ifndef MESHLIB_NO_VOXELS
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SceneObjectVoxels, []( pybind11::module_& )
 {
     MR_PYTHON_CUSTOM_CLASS( SceneObject )

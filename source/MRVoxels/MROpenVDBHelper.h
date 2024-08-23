@@ -1,10 +1,10 @@
 #pragma once
-#include "MRMeshFwd.h"
-#ifndef MRMESH_NO_OPENVDB
+#include "MRVoxelsFwd.h"
+
 #include "openvdb/tree/TreeIterator.h"
 #include "openvdb/tree/Tree.h"
 #include "openvdb/tree/ValueAccessor.h"
-#include "MRProgressCallback.h"
+#include "MRMesh/MRProgressCallback.h"
 
 #if defined(MR_PARSING_FOR_PB11_BINDINGS) || defined(MR_COMPILING_PB11_BINDINGS)
 // We call functions from those files below. Without those includes, I get undefined references in the bindings, when importing them.
@@ -453,5 +453,3 @@ RangeSize calculateRangeSize( const GridT& grid )
 }
 
 }
-
-#endif

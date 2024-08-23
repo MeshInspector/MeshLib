@@ -1,31 +1,30 @@
 #include "MRToolPath.h"
-#ifndef MRMESH_NO_OPENVDB
 
-#include "MR2to3.h"
-#include "MRSurfacePath.h"
+#include "MRMesh/MR2to3.h"
+#include "MRMesh/MRSurfacePath.h"
 #include "MRFixUndercuts.h"
 #include "MROffset.h"
-#include "MRBox.h"
-#include "MRExtractIsolines.h"
-#include "MRSurfaceDistance.h"
-#include "MRMeshDirMax.h"
-#include "MRParallelFor.h"
-#include "MRObjectGcode.h"
-#include "MRExpected.h"
-#include "MRMeshIntersect.h"
-#include "MRLine3.h"
-#include "MRRegionBoundary.h"
-#include "MRMeshDecimate.h"
-#include "MRBitSetParallelFor.h"
-#include "MRDistanceMap.h"
-#include "MRMeshComponents.h"
-#include "MRPolylineProject.h"
-#include "MRContoursCut.h"
-#include "MRFillContourByGraphCut.h"
-#include "MRInnerShell.h"
-#include "MRRingIterator.h"
+#include "MRMesh/MRBox.h"
+#include "MRMesh/MRExtractIsolines.h"
+#include "MRMesh/MRSurfaceDistance.h"
+#include "MRMesh/MRMeshDirMax.h"
+#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRObjectGcode.h"
+#include "MRMesh/MRExpected.h"
+#include "MRMesh/MRMeshIntersect.h"
+#include "MRMesh/MRLine3.h"
+#include "MRMesh/MRRegionBoundary.h"
+#include "MRMesh/MRMeshDecimate.h"
+#include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMesh/MRDistanceMap.h"
+#include "MRMesh/MRMeshComponents.h"
+#include "MRMesh/MRPolylineProject.h"
+#include "MRMesh/MRContoursCut.h"
+#include "MRMesh/MRFillContourByGraphCut.h"
+#include "MRMesh/MRInnerShell.h"
+#include "MRMesh/MRRingIterator.h"
 
-#include "MRParallelFor.h"
+#include "MRMesh/MRParallelFor.h"
 #include "MRPch/MRTBB.h"
 #include <sstream>
 #include <span>
@@ -1630,4 +1629,3 @@ FaceBitSet smoothSelection( Mesh& mesh, const FaceBitSet& region, float expandOf
 }
 
 }
-#endif

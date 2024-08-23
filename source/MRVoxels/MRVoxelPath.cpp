@@ -1,9 +1,9 @@
 #include "MRVoxelPath.h"
-#ifndef MRMESH_NO_OPENVDB
+
 #include "MRVDBFloatGrid.h"
 #include "MRVoxelsVolume.h"
-#include "MRVector3.h"
-#include "MRTimer.h"
+#include "MRMesh/MRVector3.h"
+#include "MRMesh/MRTimer.h"
 #include <cfloat>
 #include <parallel_hashmap/phmap.h>
 #include <queue>
@@ -322,4 +322,3 @@ std::vector<size_t> buildSmallestMetricPath( const VdbVolume& voxels,  const Vox
 }
 
 }
-#endif

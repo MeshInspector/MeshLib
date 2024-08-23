@@ -1,10 +1,10 @@
 #pragma once
-#include "MRMeshFwd.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MRObjectMeshHolder.h"
-#include "MRProgressCallback.h"
-#include "MRHistogram.h"
-#include "MRVolumeIndexer.h"
+#include "MRVoxelsFwd.h"
+
+#include "MRMesh/MRObjectMeshHolder.h"
+#include "MRMesh/MRProgressCallback.h"
+#include "MRMesh/MRHistogram.h"
+#include "MRMesh/MRVolumeIndexer.h"
 #include "MRVoxelsVolume.h"
 #include "MRMarchingCubes.h"
 
@@ -13,10 +13,10 @@ namespace MR
 
 /// This class stores information about voxels object
 /// \ingroup DataModelGroup
-class MRMESH_CLASS ObjectVoxels : public ObjectMeshHolder
+class MRVOXELS_CLASS ObjectVoxels : public ObjectMeshHolder
 {
 public:
-    MRMESH_API ObjectVoxels();
+    MRVOXELS_API ObjectVoxels();
     ObjectVoxels& operator = ( ObjectVoxels&& ) noexcept = default;
     ObjectVoxels( ObjectVoxels&& ) noexcept = default;
     virtual ~ObjectVoxels() = default;
@@ -24,7 +24,7 @@ public:
     constexpr static const char* TypeName() noexcept { return "ObjectVoxels"; }
     virtual const char* typeName() const override { return TypeName(); }
 
-    MRMESH_API virtual void applyScale( float scaleFactor ) override;
+    MRVOXELS_API virtual void applyScale( float scaleFactor ) override;
 
     /// Returns iso surface, empty if iso value is not set
     const std::shared_ptr<Mesh>& surface() const { return mesh_; }
@@ -51,44 +51,44 @@ public:
     const Vector3f& voxelSize() const
     { return vdbVolume_.voxelSize; }
 
-    MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
+    MRVOXELS_API virtual std::vector<std::string> getInfoLines() const override;
     virtual std::string getClassName() const override { return "Voxels"; }
 
     /// Clears all internal data and then creates grid and calculates histogram (surface is not built, call \ref updateHistogramAndSurface)
-    MRMESH_API void construct( const SimpleVolume& simpleVolume, ProgressCallback cb = {} );
+    MRVOXELS_API void construct( const SimpleVolume& simpleVolume, ProgressCallback cb = {} );
     /// Clears all internal data and calculates histogram
-    MRMESH_API void construct( const FloatGrid& grid, const Vector3f& voxelSize, ProgressCallback cb = {} );
+    MRVOXELS_API void construct( const FloatGrid& grid, const Vector3f& voxelSize, ProgressCallback cb = {} );
     /// Clears all internal data and calculates histogram
-    MRMESH_API void construct( const VdbVolume& vdbVolume, ProgressCallback cb = {} );
+    MRVOXELS_API void construct( const VdbVolume& vdbVolume, ProgressCallback cb = {} );
     /// Updates histogram, by stored grid (evals min and max values from grid)
     /// rebuild iso surface if it is present
-    MRMESH_API void updateHistogramAndSurface( ProgressCallback cb = {} );
+    MRVOXELS_API void updateHistogramAndSurface( ProgressCallback cb = {} );
 
     /// Sets iso value and updates iso-surfaces if needed: 
     /// Returns true if iso-value was updated, false - otherwise
-    MRMESH_API virtual Expected<bool> setIsoValue( float iso, ProgressCallback cb = {}, bool updateSurface = true );
+    MRVOXELS_API virtual Expected<bool> setIsoValue( float iso, ProgressCallback cb = {}, bool updateSurface = true );
 
     /// Sets external surface mesh for this object
     /// and returns back previous mesh of this
-    MRMESH_API std::shared_ptr<Mesh> updateIsoSurface( std::shared_ptr<Mesh> mesh );
+    MRVOXELS_API std::shared_ptr<Mesh> updateIsoSurface( std::shared_ptr<Mesh> mesh );
     /// Sets external vdb volume for this object
     /// and returns back previous vdb volume of this
-    MRMESH_API VdbVolume updateVdbVolume( VdbVolume vdbVolume );
+    MRVOXELS_API VdbVolume updateVdbVolume( VdbVolume vdbVolume );
     /// Sets external histogram for this object
     /// and returns back previous histogram of this
-    MRMESH_API Histogram updateHistogram( Histogram histogram );
+    MRVOXELS_API Histogram updateHistogram( Histogram histogram );
 
     /// Calculates and return new mesh or error message
-    MRMESH_API Expected<std::shared_ptr<Mesh>> recalculateIsoSurface( float iso, ProgressCallback cb = {} ) const;
+    MRVOXELS_API Expected<std::shared_ptr<Mesh>> recalculateIsoSurface( float iso, ProgressCallback cb = {} ) const;
     /// Same as above, but takes external volume
-    MRMESH_API Expected<std::shared_ptr<Mesh>> recalculateIsoSurface( const VdbVolume& volume, float iso, ProgressCallback cb = {} ) const;
+    MRVOXELS_API Expected<std::shared_ptr<Mesh>> recalculateIsoSurface( const VdbVolume& volume, float iso, ProgressCallback cb = {} ) const;
     /// Calculates and returns new histogram
-    MRMESH_API Histogram recalculateHistogram( std::optional<Vector2f> minmax, ProgressCallback cb = {} ) const;
+    MRVOXELS_API Histogram recalculateHistogram( std::optional<Vector2f> minmax, ProgressCallback cb = {} ) const;
     /// returns true if the iso-surface is built using Dual Marching Cubes algorithm or false if using Standard Marching Cubes
     bool getDualMarchingCubes() const { return dualMarchingCubes_; }
     /// sets whether to use Dual Marching Cubes algorithm for visualization (true) or Standard Marching Cubes (false);
     /// \param updateSurface forces immediate update
-    MRMESH_API virtual void setDualMarchingCubes( bool on, bool updateSurface = true, ProgressCallback cb = {} );
+    MRVOXELS_API virtual void setDualMarchingCubes( bool on, bool updateSurface = true, ProgressCallback cb = {} );
     /// set voxel point positioner for Marching Cubes (only for Standard Marching Cubes)
     virtual void setVoxelPointPositioner( VoxelPointPositioner positioner ) { positioner_ = positioner; }
 
@@ -96,12 +96,12 @@ public:
     /// Sets active bounds for some simplifications (max excluded)
     /// active bounds is box in voxel coordinates, note that voxels under (0,0,0) and voxels over (dimensions) are empty 
     /// NOTE: don't forget to call `invalidateActiveBoundsCaches` if you call this function from progress bar thread
-    MRMESH_API virtual void setActiveBounds( const Box3i& activeBox, ProgressCallback cb = {}, bool updateSurface = true );
+    MRVOXELS_API virtual void setActiveBounds( const Box3i& activeBox, ProgressCallback cb = {}, bool updateSurface = true );
     /// Returns active bounds (max excluded)
     /// active bounds is box in voxel coordinates, note that voxels under (0,0,0) and voxels over (dimensions) are empty 
-    MRMESH_API const Box3i& getActiveBounds() const;
+    MRVOXELS_API const Box3i& getActiveBounds() const;
     /// Call this function in main thread post processing if you call setActiveBounds from progress bar thread
-    MRMESH_API virtual void invalidateActiveBoundsCaches();
+    MRVOXELS_API virtual void invalidateActiveBoundsCaches();
 
     const VoxelBitSet& getSelectedVoxels() const { return selectedVoxels_; }
     void selectVoxels( const VoxelBitSet& selectedVoxels ) { selectedVoxels_ = selectedVoxels; }
@@ -109,27 +109,27 @@ public:
     /// get active (visible) voxels
     const VoxelBitSet& getVolumeRenderActiveVoxels() const { return volumeRenderActiveVoxels_; }
     /// set active (visible) voxels (using only in Volume Rendering mode)
-    MRMESH_API void setVolumeRenderActiveVoxels( const VoxelBitSet& activeVoxels );
+    MRVOXELS_API void setVolumeRenderActiveVoxels( const VoxelBitSet& activeVoxels );
 
     /// VoxelId is numerical representation of voxel
     /// Coordinate is {x,y,z} indices of voxels in box (base dimensions space, NOT active dimensions)
     /// Point is local space coordinate of point in scene
-    MRMESH_API VoxelId getVoxelIdByCoordinate( const Vector3i& coord ) const;
-    MRMESH_API VoxelId getVoxelIdByPoint( const Vector3f& point ) const;
-    MRMESH_API Vector3i getCoordinateByVoxelId( VoxelId id ) const;
+    MRVOXELS_API VoxelId getVoxelIdByCoordinate( const Vector3i& coord ) const;
+    MRVOXELS_API VoxelId getVoxelIdByPoint( const Vector3f& point ) const;
+    MRVOXELS_API Vector3i getCoordinateByVoxelId( VoxelId id ) const;
 
     /// Returns indexer with more options
     const VolumeIndexer& getVolumeIndexer() const { return indexer_; }
 
     // prepare data for volume rendering
     // returns false if canceled or voxel data is empty
-    MRMESH_API bool prepareDataForVolumeRendering( ProgressCallback cb = {} ) const;
+    MRVOXELS_API bool prepareDataForVolumeRendering( ProgressCallback cb = {} ) const;
 
     bool isVolumeRenderingEnabled() const { return volumeRendering_; }
     // this function should only be called from GUI thread because it changes rendering object,
     // it can take some time to prepare data, so you can prepare data with progress callback
     // by calling `prepareDataForVolumeRendering(cb)` function before calling this one
-    MRMESH_API void enableVolumeRendering( bool on );
+    MRVOXELS_API void enableVolumeRendering( bool on );
     // move volume rendering data to caller: basically used in RenderVolumeObject 
     [[nodiscard]] std::unique_ptr<SimpleVolume> getVolumeRenderingData() const { return std::move( volumeRenderingData_ ); }
 
@@ -169,34 +169,34 @@ public:
         bool operator==( const VolumeRenderingParams& )const = default;
     };
     const VolumeRenderingParams& getVolumeRenderingParams() const { return volumeRenderingParams_; }
-    MRMESH_API void setVolumeRenderingParams( const VolumeRenderingParams& params );
+    MRVOXELS_API void setVolumeRenderingParams( const VolumeRenderingParams& params );
 
-    MRMESH_API virtual bool hasVisualRepresentation() const override;
+    MRVOXELS_API virtual bool hasVisualRepresentation() const override;
 
     /// sets top limit on the number of vertices in the iso-surface
-    MRMESH_API void setMaxSurfaceVertices( int maxVerts );
+    MRVOXELS_API void setMaxSurfaceVertices( int maxVerts );
     /// gets top limit on the number of vertices in the iso-surface
     int getMaxSurfaceVertices() const { return maxSurfaceVertices_; }
 
-    MRMESH_API virtual std::shared_ptr<Object> clone() const override;
-    MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
+    MRVOXELS_API virtual std::shared_ptr<Object> clone() const override;
+    MRVOXELS_API virtual std::shared_ptr<Object> shallowClone() const override;
 
-    MRMESH_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
+    MRVOXELS_API virtual void setDirtyFlags( uint32_t mask, bool invalidateCaches = true ) override;
 
     /// returns cached information about the number of active voxels
-    [[nodiscard]] MRMESH_API size_t activeVoxels() const;
+    [[nodiscard]] MRVOXELS_API size_t activeVoxels() const;
 
     /// \note this ctor is public only for std::make_shared used inside clone()
     ObjectVoxels( ProtectedStruct, const ObjectVoxels& obj ) : ObjectVoxels( obj ) {}
 
     /// returns the amount of memory this object occupies on heap
-    [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
+    [[nodiscard]] MRVOXELS_API virtual size_t heapBytes() const override;
 
     /// returns file extension used to serialize the voxels
     [[nodiscard]] const char * serializeFormat() const { return serializeFormat_; }
 
     /// sets file extension used to serialize the voxels: must be not null and must start from '.'
-    MRMESH_API void setSerializeFormat( const char * newFormat );
+    MRVOXELS_API void setSerializeFormat( const char * newFormat );
 
     /// signal about Iso-surface changes (from updateIsoSurface)
     using IsoSurfaceChangedSignal = Signal<void()>;
@@ -238,20 +238,19 @@ protected:
     bool volumeRendering_{ false };
 
     /// swaps this object with other
-    MRMESH_API virtual void swapBase_( Object& other ) override;
+    MRVOXELS_API virtual void swapBase_( Object& other ) override;
     /// swaps signals, used in `swap` function to return back signals after `swapBase_`
     /// pls call Parent::swapSignals_ first when overriding this function
-    MRMESH_API virtual void swapSignals_( Object& other ) override;
+    MRVOXELS_API virtual void swapSignals_( Object& other ) override;
 
-    MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
+    MRVOXELS_API virtual void serializeFields_( Json::Value& root ) const override;
 
-    MRMESH_API void deserializeFields_( const Json::Value& root ) override;
+    MRVOXELS_API void deserializeFields_( const Json::Value& root ) override;
 
-    MRMESH_API VoidOrErrStr deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
+    MRVOXELS_API VoidOrErrStr deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
 
-    MRMESH_API virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& path ) const override;
+    MRVOXELS_API virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& path ) const override;
 };
 
 
 }
-#endif

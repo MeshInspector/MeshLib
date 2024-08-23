@@ -13,16 +13,13 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRViewer/MRProgressBar.h"
-#include "MRMesh/MRVoxelsLoad.h"
 #include "MRMesh/MRObjectSave.h"
 #include "MRMesh/MRMeshSave.h"
 #include "MRMesh/MRLinesSave.h"
 #include "MRMesh/MRPointsSave.h"
-#include "MRMesh/MRVoxelsSave.h"
 #include "MRMesh/MRDistanceMapSave.h"
 #include "MRMesh/MRDistanceMapLoad.h"
 #include "MRMesh/MRGcodeLoad.h"
-#include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRObjectPoints.h"
@@ -46,6 +43,12 @@
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRLambdaRibbonItem.h"
 #include "MRPch/MRWasm.h"
+
+#ifndef MESHLIB_NO_VOXELS
+#include "MRVoxels/MRObjectVoxels.h"
+#include "MRVoxels/MRVoxelsLoad.h"
+#include "MRVoxels/MRVoxelsSave.h"
+#endif
 
 #ifndef __EMSCRIPTEN__
 #include <fmt/chrono.h>
@@ -167,15 +170,13 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
         setupListUpdate_();
         connect( &getViewerInstance() );
         // required to be deferred, for valid emscripten static constructors order
-        filters_ = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | SceneFileFilters | DistanceMapLoad::Filters | GcodeLoad::Filters | VoxelsLoad::Filters;
+        filters_ = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | SceneFileFilters | DistanceMapLoad::Filters | GcodeLoad::Filters | ObjectLoad::getFilters();
 #ifdef __EMSCRIPTEN__
         std::erase_if( filters_, [] ( const auto& filter )
         {
             return filter.extensions == "*.*";
         } );
-#ifdef __EMSCRIPTEN_PTHREADS__
-        filters_ = filters_ | ObjectLoad::getFilters();
-#else
+#ifndef __EMSCRIPTEN_PTHREADS__
         filters_ = filters_ | AsyncObjectLoad::getFilters();
 #endif
 #endif
@@ -324,7 +325,7 @@ OpenDirectoryMenuItem::OpenDirectoryMenuItem() :
 {
 }
 
-#if !defined( MRMESH_NO_DICOM ) && !defined( MRMESH_NO_OPENVDB )
+#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
 void sOpenDICOMs( const std::filesystem::path & directory, const std::string & simpleError )
 {
     ProgressBar::orderWithMainThreadPostProcessing( "Open DICOMs", [directory, simpleError, viewer = Viewer::instance()] () -> std::function<void()>
@@ -462,7 +463,7 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
             }
         } );
     }
-#if !defined( MRMESH_NO_DICOM ) && !defined( MRMESH_NO_OPENVDB )
+#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
     else
     {
         sOpenDICOMs( directory, "No supported files can be open from the directory:\n" + utf8string( directory ) );
@@ -470,7 +471,7 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
 #endif
 }
 
-#if !defined( MRMESH_NO_DICOM ) && !defined( MRMESH_NO_OPENVDB )
+#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
 OpenDICOMsMenuItem::OpenDICOMsMenuItem() :
     RibbonMenuItem( "Open DICOMs" )
 {
@@ -516,7 +517,7 @@ std::optional<SaveInfo> getSaveInfo( const std::vector<std::shared_ptr<T>> & obj
     || checkObjects.template operator()<ObjectLines>( { ViewerSettingsManager::ObjType::Lines, LinesSave::Filters } )
     || checkObjects.template operator()<ObjectPoints>( { ViewerSettingsManager::ObjType::Points, PointsSave::Filters } )
     || checkObjects.template operator()<ObjectDistanceMap>( { ViewerSettingsManager::ObjType::DistanceMap, DistanceMapSave::Filters } )
-#ifndef MRMESH_NO_OPENVDB
+#ifndef MESHLIB_NO_VOXELS
     || checkObjects.template operator()<ObjectVoxels>( { ViewerSettingsManager::ObjType::Voxels, VoxelsSave::Filters } )
 #endif
     ;
@@ -989,7 +990,7 @@ MR_REGISTER_RIBBON_ITEM( SaveSceneAsMenuItem )
 
 MR_REGISTER_RIBBON_ITEM( OpenDirectoryMenuItem )
 
-#if !defined( MRMESH_NO_DICOM ) && !defined( MRMESH_NO_OPENVDB )
+#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
 MR_REGISTER_RIBBON_ITEM( OpenDICOMsMenuItem )
 #endif
 
@@ -1008,7 +1009,7 @@ MR_REGISTER_RIBBON_ITEM( CaptureScreenshotToClipBoardMenuItem )
 #endif
 
 }
-#if defined( __EMSCRIPTEN__ ) && defined( MRMESH_NO_DICOM )
+#if defined( __EMSCRIPTEN__ ) && ( defined( MESHLIB_NO_VOXELS ) || defined( MRVOXELS_NO_DICOM ) )
 #include "MRCommonPlugins/Basic/MRWasmUnavailablePlugin.h"
 MR_REGISTER_WASM_UNAVAILABLE_ITEM( OpenDICOMsMenuItem, "Open DICOMs" )
 #endif

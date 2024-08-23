@@ -1,20 +1,20 @@
 #include "MRObjectVoxels.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MRObjectFactory.h"
-#include "MRMesh.h"
+
+#include "MRMesh/MRObjectFactory.h"
+#include "MRMesh/MRMesh.h"
 #include "MRVDBConversions.h"
 #include "MRVDBFloatGrid.h"
 #include "MRFloatGrid.h"
 #include "MRVoxelsSave.h"
 #include "MRVoxelsLoad.h"
-#include "MRSerializer.h"
-#include "MRMeshNormals.h"
-#include "MRTimer.h"
-#include "MRSceneColors.h"
-#include "MRStringConvert.h"
+#include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRMeshNormals.h"
+#include "MRMesh/MRTimer.h"
+#include "MRMesh/MRSceneColors.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MROpenVDBHelper.h"
 #include "MRVoxelsConversions.h"
-#include "MRDirectory.h"
+#include "MRMesh/MRDirectory.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRAsyncLaunchType.h"
@@ -695,4 +695,3 @@ std::vector<std::string> ObjectVoxels::getInfoLines() const
 }
 
 }
-#endif

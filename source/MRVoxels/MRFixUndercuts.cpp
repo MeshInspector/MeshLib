@@ -1,25 +1,25 @@
 #include "MRFixUndercuts.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MRMesh.h"
-#include "MRMatrix3.h"
-#include "MRVector3.h"
-#include "MRAffineXf3.h"
-#include "MRBox.h"
-#include "MRBitSet.h"
+
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRMatrix3.h"
+#include "MRMesh/MRVector3.h"
+#include "MRMesh/MRAffineXf3.h"
+#include "MRMesh/MRBox.h"
+#include "MRMesh/MRBitSet.h"
 #include "MRVDBConversions.h"
-#include "MRMeshFillHole.h"
-#include "MRBitSetParallelFor.h"
-#include "MRTimer.h"
-#include "MRPlane3.h"
-#include "MRRingIterator.h"
-#include "MRDistanceMap.h"
-#include "MRColor.h"
+#include "MRMesh/MRMeshFillHole.h"
+#include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMesh/MRTimer.h"
+#include "MRMesh/MRPlane3.h"
+#include "MRMesh/MRRingIterator.h"
+#include "MRMesh/MRDistanceMap.h"
+#include "MRMesh/MRColor.h"
 #include "MRVDBFloatGrid.h"
-#include "MRMeshIntersect.h"
-#include "MRLine3.h"
-#include "MRMeshDirMax.h"
-#include "MRIntersectionPrecomputes.h"
-#include "MRParallelFor.h"
+#include "MRMesh/MRMeshIntersect.h"
+#include "MRMesh/MRLine3.h"
+#include "MRMesh/MRMeshDirMax.h"
+#include "MRMesh/MRIntersectionPrecomputes.h"
+#include "MRMesh/MRParallelFor.h"
 
 namespace MR
 {
@@ -362,4 +362,3 @@ Vector3f distMapImproveDirection( const Mesh& mesh, const DistMapImproveDirectio
 
 } // namespace FixUndercuts
 } // namespace MR
-#endif

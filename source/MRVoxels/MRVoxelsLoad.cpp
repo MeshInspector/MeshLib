@@ -1,24 +1,34 @@
 #include "MRVoxelsLoad.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MRTimer.h"
+
+#include "MRMesh/MRIOFormatsRegistry.h"
+#include "MRMesh/MRTimer.h"
 #include "MRObjectVoxels.h"
 #include "MRVDBConversions.h"
-#include "MRStringConvert.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRVDBFloatGrid.h"
-#include "MRStringConvert.h"
-#include "MRDirectory.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRDirectory.h"
 #include "MROpenVDBHelper.h"
-#include "MRTiffIO.h"
-#include "MRParallelFor.h"
-#include <MRPch/MROpenvdb.h>
+#include "MRMesh/MRParallelFor.h"
+#include "MROpenVDB.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
 
-#ifndef MRMESH_NO_DICOM
+#ifndef MRVOXELS_NO_DICOM
+#pragma warning(push)
+#pragma warning(disable: 4515)
+#if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
+#pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
+#endif
 #include <gdcmImageHelper.h>
 #include <gdcmImageReader.h>
 #include <gdcmTagKeywords.h>
-#endif // MRMESH_NO_DICOM
+#pragma warning(pop)
+#endif // MRVOXELS_NO_DICOM
+
+#ifndef MRVOXELS_NO_TIFF
+#include "MRMesh/MRTiffIO.h"
+#endif // MRVOXELS_NO_TIFF
 
 #include <openvdb/io/Stream.h>
 #include <openvdb/tools/GridTransformer.h>
@@ -32,7 +42,7 @@ namespace
 {
     using namespace MR::VoxelsLoad;
 
-#ifndef MRMESH_NO_DICOM
+#ifndef MRVOXELS_NO_DICOM
     RawParameters::ScalarType convertToScalarType( const gdcm::PixelFormat& format )
     {
         switch ( gdcm::PixelFormat::ScalarType( format ) )
@@ -57,23 +67,21 @@ namespace
             return RawParameters::ScalarType::Unknown;
         }
     }
-#endif // MRMESH_NO_DICOM
+#endif // MRVOXELS_NO_DICOM
 }
-#endif // MRMESH_NO_OPENVDB
 
-namespace MR::VoxelsLoad
+namespace MR
+{
+
+namespace VoxelsLoad
 {
 
 const IOFilters Filters =
 {
-#ifndef MRMESH_NO_OPENVDB
     { "Raw (.raw)", "*.raw" },
     { "Micro CT (.gav)", "*.gav" },
     { "OpenVDB (.vdb)", "*.vdb" },
-#endif
 };
-
-#ifndef MRMESH_NO_OPENVDB
 
 struct SliceInfoBase
 {
@@ -202,7 +210,7 @@ std::function<float( char* )> getTypeConverter( const RawParameters::ScalarType&
     return {};
 }
 
-#ifndef MRMESH_NO_DICOM
+#ifndef MRVOXELS_NO_DICOM
 bool isDICOMFile( const std::filesystem::path& path, std::string& seriesUid )
 {
     std::ifstream ifs( path, std::ios_base::binary );
@@ -825,7 +833,7 @@ Expected<DicomVolume> loadDicomFile( const std::filesystem::path& path, const Pr
     return res;
 }
 
-#endif // MRMESH_NO_DICOM
+#endif // MRVOXELS_NO_DICOM
 
 Expected<RawParameters> findRawParameters( std::filesystem::path& path )
 {
@@ -1039,6 +1047,7 @@ Expected<std::vector<VdbVolume>> fromAnySupportedFormat( const std::filesystem::
     return unexpected( std::string( "Unsupported file extension" ) );
 }
 
+#ifndef MRVOXELS_NO_TIFF
 struct TiffParams
 {
     int bitsPerSample = 0;
@@ -1060,7 +1069,6 @@ struct TiffParams
     }
 };
 
-#ifndef MRMESH_NO_TIFF
 Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
 {
     std::error_code ec;
@@ -1150,7 +1158,7 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
     
     return res;
 }
-#endif // MRMESH_NO_TIFF
+#endif // MRVOXELS_NO_TIFF
 
 Expected<VdbVolume> fromRaw( const std::filesystem::path& file, const RawParameters& params,
     const ProgressCallback& cb )
@@ -1298,6 +1306,67 @@ Expected<VdbVolume> fromRaw( std::istream& in, const RawParameters& params,  con
     return res;
 }
 
-#endif // MRMESH_NO_OPENVDB
+} // namespace VoxelsLoad
 
-} // namespace MR::VoxelsLoad
+Expected<std::vector<std::shared_ptr<ObjectVoxels>>> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+{
+    MR_TIMER;
+
+    auto cb = callback;
+    if ( cb )
+        cb = [callback] ( float v ) { return callback( v / 3.f ); };
+    auto loadRes = VoxelsLoad::fromAnySupportedFormat( file, cb );
+    if ( !loadRes.has_value() )
+    {
+        return unexpected( loadRes.error() );
+    }
+    auto& loadResRef = *loadRes;
+    std::vector<std::shared_ptr<ObjectVoxels>> res;
+    int size = int( loadResRef.size() );
+    for ( int i = 0; i < size; ++i )
+    {
+        std::shared_ptr<ObjectVoxels> obj = std::make_shared<ObjectVoxels>();
+        const std::string name = i > 1 ? fmt::format( "{} {}", utf8string(file.stem()), i) : utf8string(file.stem());
+        obj->setName( name );
+        int step = 0;
+        bool callbackRes = true;
+        if ( cb )
+            cb = [callback, &i, &step, size, &callbackRes] ( float v )
+            {
+                callbackRes = callback( ( 1.f + 2 * ( i + ( step + v ) / 2.f ) / size ) / 3.f );
+                return callbackRes;
+            };
+
+        obj->construct( loadResRef[i], cb );
+        if ( cb && !callbackRes )
+            return unexpected( getCancelMessage( file ) );
+        step = 1;
+        obj->setIsoValue( ( loadResRef[i].min + loadResRef[i].max ) / 2.f, cb );
+        if ( cb && !callbackRes )
+            return unexpected( getCancelMessage( file ) );
+        res.emplace_back( obj );
+    }
+
+    return res;
+}
+
+Expected<std::vector<std::shared_ptr<Object>>> makeObjectFromVoxelsFile( const std::filesystem::path& file, std::string*, ProgressCallback callback )
+{
+    auto objsVoxels = makeObjectVoxelsFromFile( file, callback );
+    if ( !objsVoxels.has_value() )
+        return unexpected( std::move( objsVoxels.error() ) );
+
+    std::vector<std::shared_ptr<Object>> resObjs;
+    for ( auto& objPtr : *objsVoxels )
+    {
+        objPtr->select( true );
+        resObjs.emplace_back( std::dynamic_pointer_cast< Object >( objPtr ) );
+    }
+    return resObjs;
+}
+
+MR_ADD_OBJECT_LOADER( IOFilter( "Raw (.raw)", "*.raw" ), &makeObjectFromVoxelsFile )
+MR_ADD_OBJECT_LOADER( IOFilter( "Micro CT (.gav)", "*.gav" ), &makeObjectFromVoxelsFile )
+MR_ADD_OBJECT_LOADER( IOFilter( "OpenVDB (.vdb)", "*.vdb" ), &makeObjectFromVoxelsFile )
+
+} // namespace MR

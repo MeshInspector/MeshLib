@@ -27,7 +27,6 @@
     <ClInclude Include="MRCylinderApproximator.h" />
     <ClInclude Include="MRCylinderObject.h" />
     <ClInclude Include="MRDipole.h" />
-    <ClInclude Include="MRDistanceVolumeParams.h" />
     <ClInclude Include="MREnums.h" />
     <ClInclude Include="MRFaceDistance.h" />
     <ClInclude Include="MRFeatureObject.h" />
@@ -111,7 +110,6 @@
     <ClInclude Include="MRFaceFace.h" />
     <ClInclude Include="MRFillContourByGraphCut.h" />
     <ClInclude Include="MRFillContours2D.h" />
-    <ClInclude Include="MRFloatGridComponents.h" />
     <ClInclude Include="MRGcodeProcessor.h" />
     <ClInclude Include="MRGcodeLoad.h" />
     <ClInclude Include="MRGraph.h" />
@@ -133,7 +131,6 @@
     <ClInclude Include="MRMeshReplicate.h" />
     <ClInclude Include="MRMeshSubdivideCallbacks.h" />
     <ClInclude Include="MRMeshThickness.h" />
-    <ClInclude Include="MRMeshToDistanceVolume.h" />
     <ClInclude Include="MRMisonLoad.h" />
     <ClInclude Include="MRMovementBuildBody.h" />
     <ClInclude Include="MRMultiwayAligningTransform.h" />
@@ -153,8 +150,6 @@
     <ClInclude Include="MRPointsComponents.h" />
     <ClInclude Include="MRPointsLoadE57.h" />
     <ClInclude Include="MRPointsProject.h" />
-    <ClInclude Include="MRPointsToDistanceVolume.h" />
-    <ClInclude Include="MRPointsToMeshFusion.h" />
     <ClInclude Include="MRPointsToMeshProjector.h" />
     <ClInclude Include="MRIntersection.h" />
     <ClInclude Include="MRIntersectionContour.h" />
@@ -185,9 +180,7 @@
     <ClInclude Include="MRObjectMeshHolder.h" />
     <ClInclude Include="MRMeshLoadObj.h" />
     <ClInclude Include="MRObjectPointsHolder.h" />
-    <ClInclude Include="MROpenVDBHelper.h" />
     <ClInclude Include="MROrder.h" />
-    <ClInclude Include="MRPartialOffset.h" />
     <ClInclude Include="MRPartMapping.h" />
     <ClInclude Include="MRPdf.h" />
     <ClInclude Include="MRPlaneObject.h" />
@@ -240,7 +233,6 @@
     <ClInclude Include="MRSymMatrix2.h" />
     <ClInclude Include="MRTerrainTriangulation.h" />
     <ClInclude Include="MRTimeRecord.h" />
-    <ClInclude Include="MRToolPath.h" />
     <ClInclude Include="MRTriMesh.h" />
     <ClInclude Include="MRTunnelDetector.h" />
     <ClInclude Include="MRMeshDirMax.h" />
@@ -253,7 +245,6 @@
     <ClInclude Include="MRArrow.h" />
     <ClInclude Include="MRColor.h" />
     <ClInclude Include="MRConstants.h" />
-    <ClInclude Include="MRBoolean.h" />
     <ClInclude Include="MREdgeIterator.h" />
     <ClInclude Include="MRAffineXf3.h" />
     <ClInclude Include="MRBestFit.h" />
@@ -264,8 +255,6 @@
     <ClInclude Include="MREdgePaths.h" />
     <ClInclude Include="MRExpandShrink.h" />
     <ClInclude Include="MRExtractIsolines.h" />
-    <ClInclude Include="MRFixUndercuts.h" />
-    <ClInclude Include="MRFloatGrid.h" />
     <ClInclude Include="MRGridSampling.h" />
     <ClInclude Include="MRHeap.h" />
     <ClInclude Include="MRHighPrecision.h" />
@@ -294,7 +283,6 @@
     <ClInclude Include="MRObjectPoints.h" />
     <ClInclude Include="MRObjectsAccess.h" />
     <ClInclude Include="MRObjectsAccess.hpp" />
-    <ClInclude Include="MROffset.h" />
     <ClInclude Include="MRGeodesicPath.h" />
     <ClInclude Include="MRPointCloud.h" />
     <ClInclude Include="MRPointCloudMakeNormals.h" />
@@ -330,21 +318,12 @@
     <ClInclude Include="MRUniteManyMeshes.h" />
     <ClInclude Include="MRUnorientedTriangle.h" />
     <ClInclude Include="MRUVSphere.h" />
-    <ClInclude Include="MRVDBFloatGrid.h" />
-    <ClInclude Include="MRVDBProgressInterrupter.h" />
     <ClInclude Include="MRVector2.h" />
     <ClInclude Include="MRVertexAttributeGradient.h" />
     <ClInclude Include="MRViewportId.h" />
     <ClInclude Include="MRViewportProperty.h" />
     <ClInclude Include="MRVolumeIndexer.h" />
-    <ClInclude Include="MRVolumeInterpolation.h" />
-    <ClInclude Include="MRVoxelGraphCut.h" />
-    <ClInclude Include="MRVoxelPath.h" />
     <ClInclude Include="MRVisualObject.h" />
-    <ClInclude Include="MRVolumeSegment.h" />
-    <ClInclude Include="MRMarchingCubes.h" />
-    <ClInclude Include="MRVoxelsConversions.h" />
-    <ClInclude Include="MRVoxelsLoad.h" />
     <ClInclude Include="MRMatrix3.h" />
     <ClInclude Include="MRMesh.h" />
     <ClInclude Include="MRMeshBoundary.h" />
@@ -356,13 +335,9 @@
     <ClInclude Include="MRMeshRelax.h" />
     <ClInclude Include="MRMeshSave.h" />
     <ClInclude Include="MRMeshSubdivide.h" />
-    <ClInclude Include="MRObjectVoxels.h" />
     <ClInclude Include="MRProgressCallback.h" />
-    <ClInclude Include="MRVoxelsSave.h" />
-    <ClInclude Include="MRSimpleVolume.h" />
     <ClInclude Include="MRSystem.h" />
     <ClInclude Include="MRTorus.h" />
-    <ClInclude Include="MRVDBConversions.h" />
     <ClInclude Include="MRMeshTopology.h" />
     <ClInclude Include="MRMeshBuilder.h" />
     <ClInclude Include="MRMeshFwd.h" />
@@ -382,8 +357,6 @@
     <ClInclude Include="MRStreamOperators.h" />
     <ClInclude Include="MRUniqueThreadSafeOwner.h" />
     <ClInclude Include="MRObjectDistanceMap.h" />
-    <ClInclude Include="MRComputeVolume.h" />
-    <ClInclude Include="MRVoxelsVolume.h" />
     <ClInclude Include="MRWatershedGraph.h" />
     <ClInclude Include="MRWriter.h" />
     <ClInclude Include="MRXfBasedCache.h" />
@@ -392,13 +365,11 @@
     <ClInclude Include="MRMatrix3Decompose.h" />
     <ClInclude Include="MRNoDefInit.h" />
     <ClInclude Include="MRParallelFor.h" />
-    <ClInclude Include="MRVoxelsConversionsByParts.h" />
     <ClInclude Include="MRMeshOverhangs.h" />
     <ClInclude Include="MRMeshLoadStep.h" />
     <ClInclude Include="MRZip.h" />
     <ClInclude Include="MRObjectSave.h" />
     <ClInclude Include="MRZlib.h" />
-    <ClInclude Include="MRVoxelsVolumeAccess.h" />
     <ClInclude Include="MRFlagOperators.h" />
     <ClInclude Include="MRMeasurementObject.h" />
     <ClInclude Include="MRRadiusMeasurementObject.h" />
@@ -412,11 +383,9 @@
     <ClInclude Include="MRFeatureObjectImpls.h" />
     <ClInclude Include="MRFeatureRefine.h" />
     <ClInclude Include="MRFeatureHelpers.h" />
-    <ClInclude Include="MRMoveMeshToVoxelMaxDeriv.h" />
     <ClInclude Include="MRBestFitPolynomial.h" />
     <ClInclude Include="MRMeta.h" />
     <ClInclude Include="MRMacros.h" />
-    <ClInclude Include="MRTeethMaskToDirectionVolume.h" />
     <ClInclude Include="MRCanonicalTypedefs.h" />
     <ClInclude Include="MRBindingMacros.h" />
   </ItemGroup>
@@ -463,7 +432,6 @@
     <ClCompile Include="MRAffineXf3.cpp" />
     <ClCompile Include="MRBestFit.cpp" />
     <ClCompile Include="MRBitSet.cpp" />
-    <ClCompile Include="MRBoolean.cpp" />
     <ClCompile Include="MRBox.cpp" />
     <ClCompile Include="MRBase64.cpp" />
     <ClCompile Include="MRCube.cpp" />
@@ -493,9 +461,6 @@
     <ClCompile Include="MRFilterCreaseEdges.cpp" />
     <ClCompile Include="MRFinally.cpp" />
     <ClCompile Include="MRFixSelfIntersections.cpp" />
-    <ClCompile Include="MRFixUndercuts.cpp" />
-    <ClCompile Include="MRFloatGrid.cpp" />
-    <ClCompile Include="MRFloatGridComponents.cpp" />
     <ClCompile Include="MRGcodeProcessor.cpp" />
     <ClCompile Include="MRGcodeLoad.cpp" />
     <ClCompile Include="MRHistoryAction.cpp" />
@@ -532,7 +497,6 @@
     <ClCompile Include="MRMeshReplicate.cpp" />
     <ClCompile Include="MRMeshSubdivideCallbacks.cpp" />
     <ClCompile Include="MRMeshThickness.cpp" />
-    <ClCompile Include="MRMeshToDistanceVolume.cpp" />
     <ClCompile Include="MRMisonLoad.cpp" />
     <ClCompile Include="MRMovementBuildBody.cpp" />
     <ClCompile Include="MRMultiwayAligningTransform.cpp" />
@@ -549,8 +513,6 @@
     <ClCompile Include="MRPointsLoadE57.cpp" />
     <ClCompile Include="MRPointsLoadLas.cpp" />
     <ClCompile Include="MRPointsProject.cpp" />
-    <ClCompile Include="MRPointsToDistanceVolume.cpp" />
-    <ClCompile Include="MRPointsToMeshFusion.cpp" />
     <ClCompile Include="MRPointsToMeshProjector.cpp" />
     <ClCompile Include="MRMeshTrimWithPlane.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
@@ -565,7 +527,6 @@
     <ClCompile Include="MRObjectPoints.cpp" />
     <ClCompile Include="MRObjectPointsHolder.cpp" />
     <ClCompile Include="MROrder.cpp" />
-    <ClCompile Include="MRPartialOffset.cpp" />
     <ClCompile Include="MRPartMapping.cpp" />
     <ClCompile Include="MRPdf.cpp" />
     <ClCompile Include="MRPlaneObject.cpp" />
@@ -618,7 +579,6 @@
     <ClCompile Include="MRMeshProject.cpp" />
     <ClCompile Include="MRMeshTriPoint.cpp" />
     <ClCompile Include="MRMakePlane.cpp" />
-    <ClCompile Include="MROffset.cpp" />
     <ClCompile Include="MRGeodesicPath.cpp" />
     <ClCompile Include="MRPrimitiveMapsComposition.cpp" />
     <ClCompile Include="MRPython.cpp" />
@@ -634,7 +594,6 @@
     <ClCompile Include="MRSurfaceDistanceBuilder.cpp" />
     <ClCompile Include="MRSurroundingContour.cpp" />
     <ClCompile Include="MRTerrainTriangulation.cpp" />
-    <ClCompile Include="MRToolPath.cpp" />
     <ClCompile Include="MRTriMath.cpp" />
     <ClCompile Include="MRTunnelDetector.cpp" />
     <ClCompile Include="MRTupleBindings.cpp" />
@@ -650,9 +609,7 @@
     <ClCompile Include="MRVertexAttributeGradient.cpp" />
     <ClCompile Include="MRViewportId.cpp" />
     <ClCompile Include="MRVolumeIndexer.cpp" />
-    <ClCompile Include="MRVoxelGraphCut.cpp" />
     <ClCompile Include="MRObjectLines.cpp" />
-    <ClCompile Include="MRVoxelPath.cpp" />
     <ClCompile Include="MRMeshDiff.cpp" />
     <ClCompile Include="MRMeshFixer.cpp" />
     <ClCompile Include="MRObjectFactory.cpp" />
@@ -660,9 +617,6 @@
     <ClCompile Include="MRRegionBoundary.cpp" />
     <ClCompile Include="MRSerializer.cpp" />
     <ClCompile Include="MRVisualObject.cpp" />
-    <ClCompile Include="MRVolumeSegment.cpp" />
-    <ClCompile Include="MRMarchingCubes.cpp" />
-    <ClCompile Include="MRVoxelsLoad.cpp" />
     <ClCompile Include="MRMesh.cpp" />
     <ClCompile Include="MRMeshBoundary.cpp" />
     <ClCompile Include="MRMeshBuildDeleteTest.cpp" />
@@ -681,19 +635,13 @@
     <ClCompile Include="MRMeshLoad.cpp" />
     <ClCompile Include="MRObject.cpp" />
     <ClCompile Include="MRObjectLoad.cpp" />
-    <ClCompile Include="MRObjectVoxels.cpp" />
-    <ClCompile Include="MRVoxelsLoadGav.cpp" />
-    <ClCompile Include="MRVoxelsSave.cpp" />
     <ClCompile Include="MRSystem.cpp" />
     <ClCompile Include="MRTimer.cpp" />
     <ClCompile Include="MRPositionVertsSmoothly.cpp" />
     <ClCompile Include="MRTorus.cpp" />
-    <ClCompile Include="MRVDBConversions.cpp" />
     <ClCompile Include="MRObjectDistanceMap.cpp" />
-    <ClCompile Include="MRComputeVolume.cpp" />
     <ClCompile Include="MRPolylineRelax.cpp" />
     <ClCompile Include="MRUniteManyMeshes.cpp" />
-    <ClCompile Include="MRVoxelsConversionsByParts.cpp" />
     <ClCompile Include="MRWatershedGraph.cpp" />
     <ClCompile Include="MRMeshOverhangs.cpp" />
     <ClCompile Include="MRMeshLoadStep.cpp" />
@@ -709,11 +657,8 @@
     <ClCompile Include="MRObjectDimensionsEnum.cpp" />
     <ClCompile Include="MRFeatureRefine.cpp" />
     <ClCompile Include="MRFeatureHelpers.cpp" />
-    <ClCompile Include="MRMoveMeshToVoxelMaxDeriv.cpp" />
     <ClCompile Include="MRBestFitPolynomial.cpp" />
     <ClCompile Include="MRColor.cpp" />
-    <ClCompile Include="MRVoxelsVolume.cpp" />
-    <ClCompile Include="MRTeethMaskToDirectionVolume.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="$(ProjectDir)..\..\thirdparty\python\python$(PythonVersion).zip">

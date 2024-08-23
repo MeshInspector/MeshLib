@@ -1,7 +1,7 @@
-#include "MRMeshFwd.h"
-#ifndef MRMESH_NO_OPENVDB
+#include "MRVoxelsFwd.h"
+
 #include "MRVoxelsLoad.h"
-#include "MRStringConvert.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRJson.h"
 #include <fstream>
 
@@ -85,5 +85,3 @@ Expected<VdbVolume> fromGav( std::istream& in, const ProgressCallback& cb )
 } //namespace VoxelsLoad
 
 } //namespace MR
-
-#endif // !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_VOXELS )

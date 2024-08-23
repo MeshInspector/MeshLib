@@ -9,13 +9,12 @@
 #include "MRObjectLines.h"
 #include "MRObjectMesh.h"
 #include "MRObjectPoints.h"
-#include "MRObjectVoxels.h"
 #include "MRObjectsAccess.h"
 #include "MRPointsSave.h"
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
-#include "MRVoxelsSave.h"
 #include "MRMesh.h"
+#include "MRIOFormatsRegistry.h"
 
 namespace
 {
@@ -151,6 +150,10 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
     // NOTE: single-char string literal may break due to the GCC bug:
     // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
     const auto extension = '*' + toLower( utf8string( file.extension() ) );
+    if ( auto saver = ObjectSave::getObjectSaver( extension ) )
+    {
+        return saver( object, file, callback );
+    }
     if ( hasExtension( SceneFileWriteFilters, extension ) )
     {
         return toAnySupportedSceneFormat( object, file, callback );
@@ -184,22 +187,6 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
 
         return DistanceMapSave::toAnySupportedFormat( file, *objDmap->getDistanceMap(), &objDmap->getToWorldParameters() );
     }
-#ifndef MRMESH_NO_OPENVDB
-    else if ( hasExtension( VoxelsSave::Filters, extension ) )
-    {
-        const auto objVoxels = getAllObjectsInTree<ObjectVoxels>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable );
-        if ( objVoxels.empty() )
-            return VoxelsSave::toAnySupportedFormat( {}, file, callback );
-        else if ( objVoxels.size() > 1 )
-            return unexpected( "Multiple voxel grids in the given object" );
-
-        const auto& objVoxel = objVoxels.front();
-        if ( !objVoxel )
-            return VoxelsSave::toAnySupportedFormat( {}, file, callback );
-
-        return VoxelsSave::toAnySupportedFormat( objVoxel->vdbVolume(), file, callback );
-    }
-#endif
     else
     {
         return unexpected( "unsupported file extension" );

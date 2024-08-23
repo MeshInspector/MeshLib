@@ -1,11 +1,11 @@
 #pragma once
 
-#include "MRMeshFwd.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MRExpected.h"
+#include "MRVoxelsFwd.h"
+
+#include "MRMesh/MRExpected.h"
 #include "MRVoxelsVolume.h"
-#include "MRAffineXf3.h"
-#include "MRphmap.h"
+#include "MRMesh/MRAffineXf3.h"
+#include "MRMesh/MRphmap.h"
 
 #include <array>
 #include <optional>
@@ -29,10 +29,10 @@ public:
     }
 
     /// Creates id from FDI number known only at runtime
-    MRMESH_API static std::optional<DentalId> fromFDI( int id );
+    MRVOXELS_API static std::optional<DentalId> fromFDI( int id );
 
     /// Returns FDI representation of the id
-    MRMESH_API int fdi() const;
+    MRVOXELS_API int fdi() const;
 
     auto operator <=> ( const DentalId& other ) const = default;
 
@@ -65,10 +65,10 @@ class TeethMaskToDirectionVolumeConvertor
 {
 public:
     /// Initialize class
-    MRMESH_API static Expected<TeethMaskToDirectionVolumeConvertor> create( const VdbVolume& volume );
+    MRVOXELS_API static Expected<TeethMaskToDirectionVolumeConvertor> create( const VdbVolume& volume );
 
     /// Returns all the teeth present in volume and corresponding bounding boxes
-    MRMESH_API const HashMap<DentalId, Box3i>& getToothBounds() const;
+    MRVOXELS_API const HashMap<DentalId, Box3i>& getToothBounds() const;
 
     /// See \ref meshToDirectionVolume for details
     using DirectionVolume = std::array<SimpleVolume, 3>;
@@ -79,17 +79,16 @@ public:
     };
 
     /// Converts single tooth into direction volume
-    MRMESH_API Expected<ProcessResult> convertTooth( DentalId id ) const;
+    MRVOXELS_API Expected<ProcessResult> convertTooth( DentalId id ) const;
 
     /// Converts all the teeth into direction volume
-    MRMESH_API Expected<ProcessResult> convertAll() const;
+    MRVOXELS_API Expected<ProcessResult> convertAll() const;
 
 private:
-    MRMESH_API TeethMaskToDirectionVolumeConvertor();
+    MRVOXELS_API TeethMaskToDirectionVolumeConvertor();
 
     HashMap<DentalId, Box3i> presentTeeth_;
     SimpleVolume mask_;
 };
 
 }
-#endif

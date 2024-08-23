@@ -9,6 +9,7 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectLinesHolder.h"
 #include "MRMesh/MRObjectLabel.h"
+#include "MRMesh/MRObjectImGuiLabel.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRLine3.h"
@@ -614,7 +615,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
                 coords = &pointCloud.points;
                 selectedVerts = &pointCloud.validPoints;
             }
-            else if ( obj->asType<ObjectLabel>() )
+            else if ( obj->asType<ObjectLabel>() || obj->asType<ObjectImGuiLabel>() )
             {
                 // do nothing
             }
@@ -681,22 +682,26 @@ std::pair<float, bool> Viewport::getZoomFOVtoScreen_( std::function<Box3f()> get
     bool allInside = (-box.max.z < params_.cameraDfar) && (-box.min.z > params_.cameraDnear);
 
     const auto winRatio = getRatio();
-    if( params_.orthographic )
+    if( params_.orthographic && cameraShift )
     {
-        auto dX = (box.max.x - box.min.x) / 2.f / winRatio;
-        auto dY = (box.max.y - box.min.y) / 2.f;
-        float maxD = std::max(dX, dY);
-        if( cameraShift )
-        {
-            auto meanX = (box.max.x + box.min.x) / 2.f;
-            auto meanY = (box.max.y + box.min.y) / 2.f;
-            const AffineXf3f xfV = getViewXf_();
-            *cameraShift = -xfV.A.x.normalized() * (meanX / params_.cameraZoom) - xfV.A.y.normalized() * (meanY / params_.cameraZoom);
-        }
-        return std::make_pair( (2.f * atan2( maxD, params_.cameraDnear )) / PI_F * 180.f, allInside );
+        auto dX = ( box.max.x - box.min.x ) / 2.f / winRatio;
+        auto dY = ( box.max.y - box.min.y ) / 2.f;
+        float maxD = std::max( dX, dY );
+        auto meanX = ( box.max.x + box.min.x ) / 2.f;
+        auto meanY = ( box.max.y + box.min.y ) / 2.f;
+        const AffineXf3f xfV = getViewXf_();
+        *cameraShift = -xfV.A.x.normalized() * ( meanX / params_.cameraZoom ) - xfV.A.y.normalized() * ( meanY / params_.cameraZoom );
+        return std::make_pair( ( 2.f * atan2( maxD, params_.cameraDnear ) ) / PI_F * 180.f, allInside );
+    }
+    else if ( params_.orthographic )
+    {
+        auto maxX = std::max( box.max.x, -box.min.x ) / winRatio;
+        auto maxY = std::max( box.max.y, -box.min.y );
+        return std::make_pair( ( 2.f * atan2( std::max( maxX, maxY ), params_.cameraDnear ) ) / PI_F * 180.f, allInside );
     }
     else
     {
+        assert( cameraShift == nullptr );
         auto maxX = std::max( box.max.x, -box.min.x ) / winRatio;
         auto maxY = std::max( box.max.y, -box.min.y );
         return std::make_pair( (2.f * atan( std::max( maxX, maxY ) ) ) / PI_F * 180.f, allInside );

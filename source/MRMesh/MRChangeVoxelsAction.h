@@ -227,7 +227,6 @@ public:
         {
             vdbVolume_ = obj->vdbVolume();
             histogram_ = obj->histogram();
-            activeBox_ = obj->getActiveBounds();
         }
     }
 
@@ -243,7 +242,6 @@ public:
 
         vdbVolume_ = objVoxels_->updateVdbVolume( std::move( vdbVolume_ ) );
         histogram_ = objVoxels_->updateHistogram( std::move( histogram_ ) );
-        activeBox_ = objVoxels_->updateActiveBounds( activeBox_ );
         changeIsoAction_.action( obj );
         changeSurfaceAction_.action( obj );
     }
@@ -265,7 +263,6 @@ private:
     Histogram histogram_;
     ChangeIsoAction changeIsoAction_;
     ChangeSurfaceAction changeSurfaceAction_;
-    Box3i activeBox_;
 
     std::string name_;
 };

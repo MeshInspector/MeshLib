@@ -33,7 +33,7 @@ void ObjectVoxels::construct( const SimpleVolume& volume, ProgressCallback cb )
 {
     mesh_.reset();
     activeVoxels_.reset();
-    activeVoxelsBox_.reset();
+    activeBounds_.reset();
     vdbVolume_.data = simpleVolumeToDenseGrid( volume, cb );
     vdbVolume_.dims = volume.dims;
     vdbVolume_.voxelSize = volume.voxelSize;
@@ -52,7 +52,7 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
     if ( !grid )
         return;
     activeVoxels_.reset();
-    activeVoxelsBox_.reset();
+    activeBounds_.reset();
     vdbVolume_.data = grid;
 
     auto vdbDims = vdbVolume_.data->evalActiveVoxelDim();
@@ -131,7 +131,7 @@ VdbVolume ObjectVoxels::updateVdbVolume( VdbVolume vdbVolume )
 {
     auto oldVdbVolume = std::move( vdbVolume_ );
     activeVoxels_.reset();
-    activeVoxelsBox_.reset();
+    activeBounds_.reset();
     vdbVolume_ = std::move( vdbVolume );
     indexer_ = VolumeIndexer( vdbVolume_.dims );
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x, 1 / vdbVolume_.voxelSize.y, 1 / vdbVolume_.voxelSize.z };
@@ -313,7 +313,7 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
         return;
 
     activeVoxels_.reset();
-    activeVoxelsBox_.reset();
+    activeBounds_.reset();
 
     float cbModifier = 1.0f;
     if ( updateSurface && volumeRendering_ )
@@ -380,13 +380,13 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
 
 const Box3i& ObjectVoxels::getActiveBounds() const
 {
-    if ( !activeVoxelsBox_ )
+    if ( !activeBounds_ )
     {
         auto activeBox = vdbVolume_.data->evalActiveVoxelBoundingBox();
-        activeVoxelsBox_.emplace( Vector3i{ activeBox.min().x(), activeBox.min().y(), activeBox.min().z() },
-                                  Vector3i{ activeBox.max().x(), activeBox.max().y(), activeBox.max().z() } );
+        activeBounds_.emplace( Vector3i{ activeBox.min().x(), activeBox.min().y(), activeBox.min().z() },
+                               Vector3i{ activeBox.max().x(), activeBox.max().y(), activeBox.max().z() } );
     }
-    return *activeVoxelsBox_;
+    return *activeBounds_;
 }
 
 void ObjectVoxels::setVolumeRenderActiveVoxels( const VoxelBitSet& activeVoxels )

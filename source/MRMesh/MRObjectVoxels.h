@@ -209,7 +209,7 @@ private:
     bool dualMarchingCubes_{true};
     VoxelPointPositioner positioner_ = {};
     Histogram histogram_;
-    mutable std::optional<Box3i> activeVoxelsBox_;
+    mutable std::optional<Box3i> activeBounds_;
     mutable std::optional<size_t> activeVoxels_;
 
     const char * serializeFormat_ = ".raw";

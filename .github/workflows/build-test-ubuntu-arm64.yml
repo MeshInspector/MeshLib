@@ -54,6 +54,7 @@ jobs:
 
     steps:
       - name: Work-around possible permission issues
+        shell: bash
         run: |
           # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
           # Related issue: https://github.com/actions/runner/issues/2058

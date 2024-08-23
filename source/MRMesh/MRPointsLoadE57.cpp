@@ -66,7 +66,12 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
                     { bounds.xMaximum, bounds.yMaximum, bounds.zMaximum },
                 };
                 if ( box.valid() )
-                    aXf = AffineXf3d::translation( -box.center() );
+                {
+                    if ( box.contains( Vector3d() ) ) // if zero of space is within bounding box (e.g. the position of camera capturing 360 degrees around),
+                        aXf = AffineXf3d();           // then keep point coordinates as is
+                    else
+                        aXf = AffineXf3d::translation( -box.center() ); // otherwise shift all points for the center of bounding box to receive zero coordinates
+                }
             }
 
             int64_t nColumn = 0;

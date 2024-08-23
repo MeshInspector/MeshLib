@@ -613,7 +613,13 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
     else
         deserializeFromJson( root["VoxelSize"], vdbVolume_.voxelSize );
 
+    Box3i activeBox;
+
     deserializeFromJson( root["Dimensions"], vdbVolume_.dims );
+
+    deserializeFromJson( root["MinCorner"], activeBox.min );
+
+    deserializeFromJson( root["MaxCorner"], activeBox.max );
 
     deserializeFromJson( root["SelectionVoxels"], selectedVoxels_ );
 
@@ -622,6 +628,9 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
 
     if ( root["DualMarchingCubes"].isBool() )
         dualMarchingCubes_ = root["DualMarchingCubes"].asBool();
+
+    if ( activeBox.valid() && ( activeBox.min != Vector3i() || activeBox.max != vdbVolume_.dims ) )
+        setActiveBounds( activeBox );
 
     setIsoValue( isoValue_ );
 

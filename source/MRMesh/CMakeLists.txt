@@ -178,7 +178,7 @@ IF(NOT MR_EMSCRIPTEN)
   pkg_check_modules(JSONCPP jsoncpp)
   include_directories(${JSONCPP_INCLUDE_DIRS})
 ELSE()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_FREETYPE=1 -s USE_LIBPNG=1")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_LIBPNG=1")
 ENDIF()
 
 IF(APPLE OR MR_EMSCRIPTEN)
@@ -219,7 +219,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
       mbedx509
       mbedcrypto
       zip
-      freetype
       jsoncpp
       tbb
       ${MRMESH_OPTIONAL_DEPENDENCIES}

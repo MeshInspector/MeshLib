@@ -363,7 +363,7 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
     reportProgress( cb, cbModifier );
 
     // not safe to call from progress bar thread
-    if ( !cb ) // we assume that cb presence indicates thread: if cb is set than it is progress bar thread, otherwise it is UI thread
+    if ( !cb ) // we assume that cb presence indicates thread: if cb is set then it is progress bar thread, otherwise it is UI thread
         invalidateActiveBoundsCaches();
 
     lastProgress = cbModifier;

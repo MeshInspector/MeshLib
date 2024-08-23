@@ -631,8 +631,8 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
 
     if ( activeBox.valid() && ( activeBox.min != Vector3i() || activeBox.max != vdbVolume_.dims ) )
         setActiveBounds( activeBox );
-
-    setIsoValue( isoValue_ );
+    else
+        setIsoValue( isoValue_ ); // is called automatically in `setActiveBounds`
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
         setDefaultSceneProperties_();

@@ -98,11 +98,13 @@ public:
 
     /// Sets active bounds for some simplifications (max excluded)
     /// active bounds is box in voxel coordinates, note that voxels under (0,0,0) and voxels over (dimensions) are empty 
+    /// NOTE: don't forget to call `invalidateActiveBoundsCaches` if you call this function from progress bar thread
     MRMESH_API virtual void setActiveBounds( const Box3i& activeBox, ProgressCallback cb = {}, bool updateSurface = true );
     /// Returns active bounds (max excluded)
     /// active bounds is box in voxel coordinates, note that voxels under (0,0,0) and voxels over (dimensions) are empty 
-    const Box3i& getActiveBounds() const
-    { return activeBox_; }
+    const Box3i& getActiveBounds() const { return activeBox_; }
+    /// Call this function in main thread post processing if you call setActiveBounds from progress bar thread
+    MRMESH_API virtual void invalidateActiveBoundsCaches();
 
     const VoxelBitSet& getSelectedVoxels() const { return selectedVoxels_; }
     void selectVoxels( const VoxelBitSet& selectedVoxels ) { selectedVoxels_ = selectedVoxels; }

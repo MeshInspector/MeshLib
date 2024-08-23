@@ -25,7 +25,6 @@ IF(MR_EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     freetype
-    fmt
     spdlog
     jsoncpp
   )

@@ -179,7 +179,6 @@
     <ClInclude Include="MRMeshDecimate.h" />
     <ClInclude Include="MRMeshDecimateParallel.h" />
     <ClInclude Include="MRMeshSaveObj.h" />
-    <ClInclude Include="MRObjectLabel.h" />
     <ClInclude Include="MRObjectLinesHolder.h" />
     <ClInclude Include="MRObjectMeshHolder.h" />
     <ClInclude Include="MRMeshLoadObj.h" />
@@ -347,7 +346,6 @@
     <ClInclude Include="MRVoxelsLoad.h" />
     <ClInclude Include="MRMatrix3.h" />
     <ClInclude Include="MRMesh.h" />
-    <ClInclude Include="MRAlignTextToMesh.h" />
     <ClInclude Include="MRMeshBoundary.h" />
     <ClInclude Include="MRMeshDelete.h" />
     <ClInclude Include="MRMeshDelone.h" />
@@ -361,7 +359,6 @@
     <ClInclude Include="MRProgressCallback.h" />
     <ClInclude Include="MRVoxelsSave.h" />
     <ClInclude Include="MRSimpleVolume.h" />
-    <ClInclude Include="MRSymbolMesh.h" />
     <ClInclude Include="MRSystem.h" />
     <ClInclude Include="MRTorus.h" />
     <ClInclude Include="MRVDBConversions.h" />
@@ -419,7 +416,6 @@
     <ClInclude Include="MRMeta.h" />
     <ClInclude Include="MRMacros.h" />
     <ClInclude Include="MRTeethMaskToDirectionVolume.h" />
-    <ClInclude Include="MRObjectImGuiLabel.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -435,7 +431,6 @@
     <ClCompile Include="MRAddNoise.cpp" />
     <ClCompile Include="MRAffineXf2.cpp" />
     <ClCompile Include="MRAggregateFlow.cpp" />
-    <ClCompile Include="MRAlignTextToMesh.cpp" />
     <ClCompile Include="MRAlphaShape.cpp" />
     <ClCompile Include="MRArrow.cpp" />
     <ClCompile Include="MRBasinVolume.cpp" />
@@ -559,7 +554,6 @@
     <ClCompile Include="MRMeshDecimateParallel.cpp" />
     <ClCompile Include="MRMeshDirMax.cpp" />
     <ClCompile Include="MRMeshSaveObj.cpp" />
-    <ClCompile Include="MRObjectLabel.cpp" />
     <ClCompile Include="MRObjectLinesHolder.cpp" />
     <ClCompile Include="MRObjectMeshHolder.cpp" />
     <ClCompile Include="MRMeshIntersect.cpp" />
@@ -687,7 +681,6 @@
     <ClCompile Include="MRObjectVoxels.cpp" />
     <ClCompile Include="MRVoxelsLoadGav.cpp" />
     <ClCompile Include="MRVoxelsSave.cpp" />
-    <ClCompile Include="MRSymbolMesh.cpp" />
     <ClCompile Include="MRSystem.cpp" />
     <ClCompile Include="MRTimer.cpp" />
     <ClCompile Include="MRPositionVertsSmoothly.cpp" />
@@ -718,7 +711,6 @@
     <ClCompile Include="MRColor.cpp" />
     <ClCompile Include="MRVoxelsVolume.cpp" />
     <ClCompile Include="MRTeethMaskToDirectionVolume.cpp" />
-    <ClCompile Include="MRObjectImGuiLabel.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="$(ProjectDir)..\..\thirdparty\python\python$(PythonVersion).zip">

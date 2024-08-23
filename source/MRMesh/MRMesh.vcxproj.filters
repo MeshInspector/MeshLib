@@ -168,9 +168,6 @@
     <ClInclude Include="MRVDBConversions.h">
       <Filter>Source Files\VDBConversions</Filter>
     </ClInclude>
-    <ClInclude Include="MRSymbolMesh.h">
-      <Filter>Source Files\SymbolMesh</Filter>
-    </ClInclude>
     <ClInclude Include="MRBoolean.h">
       <Filter>Source Files\VDBConversions</Filter>
     </ClInclude>
@@ -218,9 +215,6 @@
     </ClInclude>
     <ClInclude Include="MRVoxelPath.h">
       <Filter>Source Files\Voxels</Filter>
-    </ClInclude>
-    <ClInclude Include="MRAlignTextToMesh.h">
-      <Filter>Source Files\Math</Filter>
     </ClInclude>
     <ClInclude Include="miniply.h">
       <Filter>Source Files\IO</Filter>
@@ -743,9 +737,6 @@
     </ClInclude>
     <ClInclude Include="MRMeshSaveObj.h">
       <Filter>Source Files\IO</Filter>
-    </ClInclude>
-    <ClInclude Include="MRObjectLabel.h">
-      <Filter>Source Files\DataModel</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineSubdivide.h">
       <Filter>Source Files\Polyline</Filter>
@@ -1344,9 +1335,6 @@
     <ClInclude Include="MRICPEnums.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
-    <ClInclude Include="MRObjectImGuiLabel.h">
-      <Filter>Source Files\DataModel</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -1378,9 +1366,6 @@
     </ClCompile>
     <ClCompile Include="MRVDBConversions.cpp">
       <Filter>Source Files\VDBConversions</Filter>
-    </ClCompile>
-    <ClCompile Include="MRSymbolMesh.cpp">
-      <Filter>Source Files\SymbolMesh</Filter>
     </ClCompile>
     <ClCompile Include="MRBoolean.cpp">
       <Filter>Source Files\VDBConversions</Filter>
@@ -1745,9 +1730,6 @@
     <ClCompile Include="MRIdentifyVertices.cpp">
       <Filter>Source Files\MeshBuilder</Filter>
     </ClCompile>
-    <ClCompile Include="MRAlignTextToMesh.cpp">
-      <Filter>Source Files\SymbolMesh</Filter>
-    </ClCompile>
     <ClCompile Include="MRMeshLoadSaveTest.cpp">
       <Filter>Source Files\Tests</Filter>
     </ClCompile>
@@ -1843,9 +1825,6 @@
     </ClCompile>
     <ClCompile Include="MRMeshSaveObj.cpp">
       <Filter>Source Files\IO</Filter>
-    </ClCompile>
-    <ClCompile Include="MRObjectLabel.cpp">
-      <Filter>Source Files\DataModel</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineSubdivide.cpp">
       <Filter>Source Files\Polyline</Filter>
@@ -2234,8 +2213,8 @@
     <ClCompile Include="MRVoxelsVolume.cpp">
       <Filter>Source Files\BaseStructures</Filter>
     </ClCompile>
-    <ClCompile Include="MRObjectImGuiLabel.cpp">
-      <Filter>Source Files\DataModel</Filter>
+    <ClCompile Include="MRStacktrace.cpp">
+      <Filter>Source Files\System</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

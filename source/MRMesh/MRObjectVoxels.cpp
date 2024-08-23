@@ -579,7 +579,13 @@ void ObjectVoxels::serializeFields_( Json::Value& root ) const
     VisualObject::serializeFields_( root );
     serializeToJson( vdbVolume_.voxelSize, root["VoxelSize"] );
 
+    const auto activeBounds = getActiveBounds();
+
     serializeToJson( vdbVolume_.dims, root["Dimensions"] );
+    // Min and Max corners are serialized for backward-compatibility
+    serializeToJson( activeBounds.min, root["MinCorner"] );
+    serializeToJson( activeBounds.max, root["MaxCorner"] );
+    //
     serializeToJson( selectedVoxels_, root["SelectionVoxels"] );
 
     root["IsoValue"] = isoValue_;

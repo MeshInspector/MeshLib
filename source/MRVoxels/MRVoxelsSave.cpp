@@ -1,13 +1,13 @@
 #include "MRVoxelsSave.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MRMeshFwd.h"
-#include "MRImageSave.h"
+
+#include "MRVoxelsFwd.h"
+#include "MRMesh/MRImageSave.h"
 #include "MRVDBFloatGrid.h"
-#include "MRStringConvert.h"
-#include "MRProgressReadWrite.h"
-#include "MRColor.h"
-#include "MRMeshTexture.h"
-#include "MRTimer.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRProgressReadWrite.h"
+#include "MRMesh/MRColor.h"
+#include "MRMesh/MRMeshTexture.h"
+#include "MRMesh/MRTimer.h"
 #include "MRPch/MROpenvdb.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRFmt.h"
@@ -17,21 +17,17 @@
 #include <fstream>
 #include <filesystem>
 #include <sstream>
-#endif
 
 namespace MR::VoxelsSave
 {
 
 const IOFilters Filters = 
 {
-#ifndef MRMESH_NO_OPENVDB
     { "Raw (.raw)", "*.raw" },
     { "Micro CT (.gav)", "*.gav" },
     { "OpenVDB (.vdb)", "*.vdb" },
-#endif
 };
 
-#ifndef MRMESH_NO_OPENVDB
 VoidOrErrStr toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback )
 {
     MR_TIMER
@@ -290,7 +286,5 @@ VoidOrErrStr saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSetti
         settings.cb( 1.f );
     return {};
 }
-
-#endif
 
 } // namespace MR::VoxelsSave

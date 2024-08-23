@@ -12,7 +12,6 @@
 #cmakedefine MRMESH_NO_JPEG
 #cmakedefine MRMESH_NO_PNG
 #cmakedefine MRMESH_NO_TIFF
-#cmakedefine MRMESH_NO_OPENVDB
 #cmakedefine MRMESH_NO_GLTF
 #cmakedefine MRMESH_NO_XML
 #cmakedefine MRMESH_NO_E57

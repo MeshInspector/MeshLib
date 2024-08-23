@@ -1,10 +1,10 @@
 #include "MRFloatGridComponents.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MRUnionFind.h"
+
+#include "MRMesh/MRUnionFind.h"
 #include "MRVDBFloatGrid.h"
-#include "MRVolumeIndexer.h"
-#include "MRBitSet.h"
-#include "MRTimer.h"
+#include "MRMesh/MRVolumeIndexer.h"
+#include "MRMesh/MRBitSet.h"
+#include "MRMesh/MRTimer.h"
 
 namespace MR
 {
@@ -73,4 +73,3 @@ std::vector<VoxelBitSet> getAllComponents( const FloatGrid& grid, float isoValue
 
 }
 }
-#endif

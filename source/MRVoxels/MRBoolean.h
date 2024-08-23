@@ -1,9 +1,9 @@
 #pragma once
 
-#include "MRMeshFwd.h"
-#ifndef MRMESH_NO_OPENVDB
+#include "MRVoxelsFwd.h"
+
 #include "MRVDBConversions.h"
-#include "MRAffineXf3.h"
+#include "MRMesh/MRAffineXf3.h"
 #include "MRFloatGrid.h"
 
 namespace MR
@@ -22,15 +22,13 @@ struct MeshVoxelsConverter
 
     FloatGrid operator() ( const MeshPart & mp, const AffineXf3f& xf = {} ) const
         { return meshToLevelSet( mp, xf, Vector3f::diagonal( voxelSize ), surfaceOffset, callBack); }
-    MRMESH_API FloatGrid operator() ( const ObjectMesh & obj ) const;
+    MRVOXELS_API FloatGrid operator() ( const ObjectMesh & obj ) const;
 
     // from voxels:
     float offsetVoxels = 0;   // the value is in voxels (not in meters!), 0 for no-offset
     float adaptivity = 0;     // [0, 1] ratio of combining small triangles into bigger ones
 
-    MRMESH_API Mesh operator() ( const FloatGrid & grid ) const;
+    MRVOXELS_API Mesh operator() ( const FloatGrid & grid ) const;
 };
 
 } //namespace MR
-
-#endif

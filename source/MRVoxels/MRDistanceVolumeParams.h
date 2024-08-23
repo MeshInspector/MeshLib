@@ -1,7 +1,7 @@
 #pragma once
 
-#include "MRVector3.h"
-#include "MRProgressCallback.h"
+#include "MRMesh/MRVector3.h"
+#include "MRMesh/MRProgressCallback.h"
 
 namespace MR
 {

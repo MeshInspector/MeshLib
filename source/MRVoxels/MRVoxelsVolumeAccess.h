@@ -1,13 +1,11 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "MRVoxelsFwd.h"
 #include "MRVoxelsVolume.h"
-#include "MRVolumeIndexer.h"
+#include "MRMesh/MRVolumeIndexer.h"
 
-#ifndef MRMESH_NO_OPENVDB
 #include "MRVDBFloatGrid.h"
-#include "MRIsNaN.h"
-#endif
+#include "MRMesh/MRIsNaN.h"
 
 namespace MR
 {
@@ -16,7 +14,6 @@ namespace MR
 template <typename Volume>
 class VoxelsVolumeAccessor;
 
-#ifndef MRMESH_NO_OPENVDB
 /// VoxelsVolumeAccessor specialization for VDB volume
 template <>
 class VoxelsVolumeAccessor<VdbVolume>
@@ -53,7 +50,6 @@ private:
     openvdb::FloatGrid::ConstAccessor accessor_;
     Vector3i minCoord_;
 };
-#endif
 
 /// VoxelsVolumeAccessor specialization for simple volumes
 template <typename T>

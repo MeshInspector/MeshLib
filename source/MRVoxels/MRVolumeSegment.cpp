@@ -1,12 +1,12 @@
 #include "MRVolumeSegment.h"
-#ifndef MRMESH_NO_OPENVDB
+
 #include "MRVoxelPath.h"
-#include "MRVolumeIndexer.h"
-#include "MRBox.h"
+#include "MRMesh/MRVolumeIndexer.h"
+#include "MRMesh/MRBox.h"
 #include "MRVoxelGraphCut.h"
 #include "MRVDBConversions.h"
 #include "MRVDBFloatGrid.h"
-#include "MRMesh.h"
+#include "MRMesh/MRMesh.h"
 #include <filesystem>
 
 namespace MR
@@ -345,4 +345,3 @@ void VolumeSegmenter::setupVolumePart_( int voxelsExpansion )
 }
 
 }
-#endif

@@ -1,24 +1,24 @@
 #include "MRVoxelsLoad.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MRTimer.h"
+
+#include "MRMesh/MRTimer.h"
 #include "MRObjectVoxels.h"
 #include "MRVDBConversions.h"
-#include "MRStringConvert.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRVDBFloatGrid.h"
-#include "MRStringConvert.h"
-#include "MRDirectory.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRDirectory.h"
 #include "MROpenVDBHelper.h"
-#include "MRTiffIO.h"
-#include "MRParallelFor.h"
+#include "MRMesh/MRTiffIO.h"
+#include "MRMesh/MRParallelFor.h"
 #include <MRPch/MROpenvdb.h>
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
 
-#ifndef MRMESH_NO_DICOM
+#ifndef MRVOXELS_NO_DICOM
 #include <gdcmImageHelper.h>
 #include <gdcmImageReader.h>
 #include <gdcmTagKeywords.h>
-#endif // MRMESH_NO_DICOM
+#endif // MRVOXELS_NO_DICOM
 
 #include <openvdb/io/Stream.h>
 #include <openvdb/tools/GridTransformer.h>
@@ -32,7 +32,7 @@ namespace
 {
     using namespace MR::VoxelsLoad;
 
-#ifndef MRMESH_NO_DICOM
+#ifndef MRVOXELS_NO_DICOM
     RawParameters::ScalarType convertToScalarType( const gdcm::PixelFormat& format )
     {
         switch ( gdcm::PixelFormat::ScalarType( format ) )
@@ -57,23 +57,18 @@ namespace
             return RawParameters::ScalarType::Unknown;
         }
     }
-#endif // MRMESH_NO_DICOM
+#endif // MRVOXELS_NO_DICOM
 }
-#endif // MRMESH_NO_OPENVDB
 
 namespace MR::VoxelsLoad
 {
 
 const IOFilters Filters =
 {
-#ifndef MRMESH_NO_OPENVDB
     { "Raw (.raw)", "*.raw" },
     { "Micro CT (.gav)", "*.gav" },
     { "OpenVDB (.vdb)", "*.vdb" },
-#endif
 };
-
-#ifndef MRMESH_NO_OPENVDB
 
 struct SliceInfoBase
 {
@@ -202,7 +197,7 @@ std::function<float( char* )> getTypeConverter( const RawParameters::ScalarType&
     return {};
 }
 
-#ifndef MRMESH_NO_DICOM
+#ifndef MRVOXELS_NO_DICOM
 bool isDICOMFile( const std::filesystem::path& path, std::string& seriesUid )
 {
     std::ifstream ifs( path, std::ios_base::binary );
@@ -825,7 +820,7 @@ Expected<DicomVolume> loadDicomFile( const std::filesystem::path& path, const Pr
     return res;
 }
 
-#endif // MRMESH_NO_DICOM
+#endif // MRVOXELS_NO_DICOM
 
 Expected<RawParameters> findRawParameters( std::filesystem::path& path )
 {
@@ -1297,7 +1292,5 @@ Expected<VdbVolume> fromRaw( std::istream& in, const RawParameters& params,  con
     res.max = outVolume.max;
     return res;
 }
-
-#endif // MRMESH_NO_OPENVDB
 
 } // namespace MR::VoxelsLoad

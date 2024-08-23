@@ -1,8 +1,8 @@
 #pragma once
-#include "MRMeshFwd.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MRExpected.h"
-#include "MRPartMapping.h"
+#include "MRVoxelsFwd.h"
+
+#include "MRMesh/MRExpected.h"
+#include "MRMesh/MRPartMapping.h"
 
 namespace MR
 {
@@ -97,4 +97,3 @@ volumeToMeshByParts( const VolumePartBuilder<Volume>& builder, const Vector3i& d
                      const VolumeToMeshByPartsSettings& settings = {}, const MergeVolumePartSettings& mergeSettings = {} );
 
 }
-#endif

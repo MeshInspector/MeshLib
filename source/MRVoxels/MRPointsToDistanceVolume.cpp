@@ -1,12 +1,12 @@
 #include "MRPointsToDistanceVolume.h"
 #include "MRVoxelsVolume.h"
-#include "MRVolumeIndexer.h"
-#include "MRParallelFor.h"
-#include "MRBitSetParallelFor.h"
-#include "MRPointCloud.h"
-#include "MRPointsInBall.h"
-#include "MRColor.h"
-#include "MRTimer.h"
+#include "MRMesh/MRVolumeIndexer.h"
+#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMesh/MRPointCloud.h"
+#include "MRMesh/MRPointsInBall.h"
+#include "MRMesh/MRColor.h"
+#include "MRMesh/MRTimer.h"
 #include <limits>
 
 namespace MR

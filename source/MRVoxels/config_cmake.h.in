@@ -1,0 +1,3 @@
+#pragma once
+
+#cmakedefine MRVOXELS_NO_DICOM

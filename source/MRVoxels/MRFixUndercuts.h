@@ -1,9 +1,9 @@
 #pragma once
-#include "MRMeshFwd.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MRVector3.h"
-#include "MRVector2.h"
-#include "MRConstants.h"
+#include "MRVoxelsFwd.h"
+
+#include "MRMesh/MRVector3.h"
+#include "MRMesh/MRVector2.h"
+#include "MRMesh/MRConstants.h"
 #include <functional>
 
 namespace MR
@@ -20,7 +20,7 @@ namespace FixUndercuts
 //   if mesh is not closed this is used to prolong hole and make bottom
 // 
 // if voxelSize == 0.0f it will be counted automaticly
-MRMESH_API void fixUndercuts( Mesh& mesh, const Vector3f& upDirection, float voxelSize = 0.0f, float bottomExtension = 0.0f );
+MRVOXELS_API void fixUndercuts( Mesh& mesh, const Vector3f& upDirection, float voxelSize = 0.0f, float bottomExtension = 0.0f );
 
 // Changes mesh:
 // Fills all holes first, then:
@@ -32,30 +32,30 @@ MRMESH_API void fixUndercuts( Mesh& mesh, const Vector3f& upDirection, float vox
 //   if mesh is not closed this is used to prolong hole and make bottom
 // 
 // if voxelSize == 0.0f it will be counted automaticly
-MRMESH_API void fixUndercuts( Mesh& mesh, const FaceBitSet& selectedArea, const Vector3f& upDirection, float voxelSize = 0.0f, float bottomExtension = 0.0f );
+MRVOXELS_API void fixUndercuts( Mesh& mesh, const FaceBitSet& selectedArea, const Vector3f& upDirection, float voxelSize = 0.0f, float bottomExtension = 0.0f );
 
 // Input - undercut faces, insertion direction
 // Output - metric value
 using UndercutMetric = std::function<double( const FaceBitSet&, const Vector3f& upDir )>;
 
 /// returns the metric that computes total area of undercut faces
-[[nodiscard]] MRMESH_API UndercutMetric getUndercutAreaMetric( const Mesh& mesh );
+[[nodiscard]] MRVOXELS_API UndercutMetric getUndercutAreaMetric( const Mesh& mesh );
 
 /// returns the metric that computes summed absolute area of undercut faces as visible if look from upDir
-[[nodiscard]] MRMESH_API UndercutMetric getUndercutAreaProjectionMetric( const Mesh& mesh );
+[[nodiscard]] MRVOXELS_API UndercutMetric getUndercutAreaProjectionMetric( const Mesh& mesh );
 
 /// Adds to \param outUndercuts undercut faces
-MRMESH_API void findUndercuts( const Mesh& mesh, const Vector3f& upDirection, FaceBitSet& outUndercuts );
+MRVOXELS_API void findUndercuts( const Mesh& mesh, const Vector3f& upDirection, FaceBitSet& outUndercuts );
 /// Adds to \param outUndercuts undercut vertices
-MRMESH_API void findUndercuts( const Mesh& mesh, const Vector3f& upDirection, VertBitSet& outUndercuts );
+MRVOXELS_API void findUndercuts( const Mesh& mesh, const Vector3f& upDirection, VertBitSet& outUndercuts );
 
 /// Adds to \param outUndercuts undercut faces
 /// Returns summary metric of undercut faces
-[[nodiscard]] MRMESH_API double findUndercuts( const Mesh& mesh, const Vector3f& upDirection, FaceBitSet& outUndercuts, const UndercutMetric& metric );
+[[nodiscard]] MRVOXELS_API double findUndercuts( const Mesh& mesh, const Vector3f& upDirection, FaceBitSet& outUndercuts, const UndercutMetric& metric );
 
 // Fast score undercuts projected area via distance map with given resolution
 // lower resolution means lower precision, but faster work
-[[nodiscard]] MRMESH_API double scoreUndercuts( const Mesh& mesh, const Vector3f& upDirection, const Vector2i& resolution );
+[[nodiscard]] MRVOXELS_API double scoreUndercuts( const Mesh& mesh, const Vector3f& upDirection, const Vector2i& resolution );
 
 struct ImproveDirectionParameters
 {
@@ -83,9 +83,8 @@ struct DistMapImproveDirectionParameters : ImproveDirectionParameters
 //                    \  \_/\_/  /                                        | / _/
 //                     \__/__\__/                                         |/_/
 // This picture shows polarAngle = 60 deg
-[[nodiscard]] MRMESH_API Vector3f improveDirection( const Mesh& mesh, const ImproveDirectionParameters& params, const UndercutMetric& metric );
+[[nodiscard]] MRVOXELS_API Vector3f improveDirection( const Mesh& mesh, const ImproveDirectionParameters& params, const UndercutMetric& metric );
 // Score candidates with distance maps, lower resolution -> faster score
-[[nodiscard]] MRMESH_API Vector3f distMapImproveDirection( const Mesh& mesh, const DistMapImproveDirectionParameters& params );
+[[nodiscard]] MRVOXELS_API Vector3f distMapImproveDirection( const Mesh& mesh, const DistMapImproveDirectionParameters& params );
 }
 }
-#endif

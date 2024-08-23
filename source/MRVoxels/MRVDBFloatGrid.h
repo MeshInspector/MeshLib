@@ -1,10 +1,7 @@
 #pragma once
-
-#include "MRMeshFwd.h"
-#include "MRVector3.h"
-
-#ifndef MRMESH_NO_OPENVDB
+#include "MRVoxelsFwd.h"
 // this header includes the whole OpenVDB, so please include it from .cpp files only
+#include "MRMesh/MRVector3.h"
 
 #include "MRPch/MROpenvdb.h"
 
@@ -49,4 +46,3 @@ inline openvdb::Coord toVdb( const Vector3i & v )
 /// \}
 
 }
-#endif

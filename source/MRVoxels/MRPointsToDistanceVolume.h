@@ -1,7 +1,9 @@
 #pragma once
 
+#include "MRVoxelsFwd.h"
+
 #include "MRDistanceVolumeParams.h"
-#include "MRExpected.h"
+#include "MRMesh/MRExpected.h"
 
 namespace MR
 {
@@ -20,7 +22,7 @@ struct PointsToDistanceVolumeParams : DistanceVolumeParams
 };
 
 /// makes SimpleVolume filled with signed distances to points with normals
-[[nodiscard]] MRMESH_API Expected<SimpleVolume> pointsToDistanceVolume( const PointCloud & cloud, const PointsToDistanceVolumeParams& params );
+[[nodiscard]] MRVOXELS_API Expected<SimpleVolume> pointsToDistanceVolume( const PointCloud & cloud, const PointsToDistanceVolumeParams& params );
 
 /// given
 /// \param cloud      a point cloud
@@ -30,7 +32,7 @@ struct PointsToDistanceVolumeParams : DistanceVolumeParams
 /// \param sigma      the distance of highest influence of a point
 /// \param cb         progress callback
 /// computes the colors in valid target points by averaging the colors from the point cloud
-[[nodiscard]] MRMESH_API Expected<VertColors> calcAvgColors( const PointCloud & cloud, const VertColors & colors,
+[[nodiscard]] MRVOXELS_API Expected<VertColors> calcAvgColors( const PointCloud & cloud, const VertColors & colors,
     const VertCoords & tgtPoints, const VertBitSet & tgtVerts, float sigma, const ProgressCallback & cb = {} );
 
 } //namespace MR

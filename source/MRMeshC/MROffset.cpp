@@ -1,7 +1,7 @@
 #include "MROffset.h"
 
 #include "MRMesh/MRMesh.h"
-#include "MRMesh/MROffset.h"
+#include "MRVoxels/MROffset.h"
 
 using namespace MR;
 

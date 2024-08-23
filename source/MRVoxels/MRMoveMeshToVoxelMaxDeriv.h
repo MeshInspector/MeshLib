@@ -1,13 +1,13 @@
 #pragma once
 
-#include "MRMeshFwd.h"
-#ifndef MRMESH_NO_OPENVDB
+#include "MRVoxelsFwd.h"
+
 #include "MRVoxelsVolumeAccess.h"
 #include "MRVolumeInterpolation.h"
-#include "MRMatrix3.h"
-#include "MRAffineXf.h"
-#include "MRBestFitParabola.h"
-#include "MRBestFitPolynomial.h"
+#include "MRMesh/MRMatrix3.h"
+#include "MRMesh/MRAffineXf.h"
+#include "MRMesh/MRBestFitParabola.h"
+#include "MRMesh/MRBestFitPolynomial.h"
 
 
 namespace MR
@@ -41,7 +41,7 @@ struct MoveMeshToVoxelMaxDerivSettings
 /// Moves each vertex along its normal to the minimize (with sign, i.e. maximize the absolute value with negative sign) the derivative
 /// of voxels.
 /// @return Vertices that were moved by the algorithm
-MRMESH_API VertBitSet moveMeshToVoxelMaxDeriv(
+MRVOXELS_API VertBitSet moveMeshToVoxelMaxDeriv(
         Mesh& mesh, const AffineXf3f& meshXf,
         const VdbVolume& volume, const AffineXf3f& volumeXf,
         const MoveMeshToVoxelMaxDerivSettings& settings,
@@ -56,58 +56,58 @@ template <typename MeshType>
 class MeshOnVoxelsT
 {
 public:
-    MRMESH_API MeshOnVoxelsT( MeshType& mesh, const AffineXf3f& meshXf, const VdbVolume& volume, const AffineXf3f& volumeXf );
-    MRMESH_API MeshOnVoxelsT( const MeshOnVoxelsT& other );
+    MRVOXELS_API MeshOnVoxelsT( MeshType& mesh, const AffineXf3f& meshXf, const VdbVolume& volume, const AffineXf3f& volumeXf );
+    MRVOXELS_API MeshOnVoxelsT( const MeshOnVoxelsT& other );
 
     // Access to base data
-    MRMESH_API MeshType& mesh() const;
+    MRVOXELS_API MeshType& mesh() const;
 
-    MRMESH_API const VdbVolume& volume() const;
+    MRVOXELS_API const VdbVolume& volume() const;
 
 
     // Cached number of valid vertices
-    MRMESH_API int numVerts() const;
+    MRVOXELS_API int numVerts() const;
 
     // Voxel size as scalar
-    MRMESH_API float voxelSize() const;
+    MRVOXELS_API float voxelSize() const;
 
 
     // Transformation mesh to volume
     // All points are in voxels volume space, unless otherwise is implied
-    MRMESH_API AffineXf3f xf() const;
+    MRVOXELS_API AffineXf3f xf() const;
 
-    MRMESH_API Vector3f xf( const Vector3f& pt ) const;
+    MRVOXELS_API Vector3f xf( const Vector3f& pt ) const;
 
-    MRMESH_API AffineXf3f xfInv() const;
+    MRVOXELS_API AffineXf3f xfInv() const;
 
-    MRMESH_API Vector3f xfInv( const Vector3f &pt ) const;
+    MRVOXELS_API Vector3f xfInv( const Vector3f &pt ) const;
 
 
     // Vertex position
-    MRMESH_API Vector3f point( VertId v ) const;
+    MRVOXELS_API Vector3f point( VertId v ) const;
 
     // Volume value
-    MRMESH_API float getValue( const Vector3f& pos ) const;
+    MRVOXELS_API float getValue( const Vector3f& pos ) const;
 
     // Get offset vector (mesh normal for a vertex with `voxelSize` length)
-    MRMESH_API Vector3f getOffsetVector( VertId v ) const;
+    MRVOXELS_API Vector3f getOffsetVector( VertId v ) const;
 
     // Get a pseudo-index for a zero-based point index in a zero-centered row of `count` points
     // Pseudo-index is a signed number; for whole index, is is whole or half-whole
-    MRMESH_API static float pseudoIndex( float index, int count );
+    MRVOXELS_API static float pseudoIndex( float index, int count );
 
-    MRMESH_API static float pseudoIndex( int index, int count );
+    MRVOXELS_API static float pseudoIndex( int index, int count );
 
-    MRMESH_API static float indexFromPseudoIndex( float pseudoIndex, int count );
+    MRVOXELS_API static float indexFromPseudoIndex( float pseudoIndex, int count );
 
     // Get row of points with `offset` stride
-    MRMESH_API void getPoints( std::vector<Vector3f>& result, const Vector3f& pos, const Vector3f& offset ) const;
+    MRVOXELS_API void getPoints( std::vector<Vector3f>& result, const Vector3f& pos, const Vector3f& offset ) const;
 
     // Get volume values for a row of points
-    MRMESH_API void getValues( std::vector<float>& result, const Vector3f& pos, const Vector3f& offset ) const;
+    MRVOXELS_API void getValues( std::vector<float>& result, const Vector3f& pos, const Vector3f& offset ) const;
 
     // Get derivatives from result of `getValues`
-    MRMESH_API static void getDerivatives( std::vector<float>& result, const std::vector<float>& values );
+    MRVOXELS_API static void getDerivatives( std::vector<float>& result, const std::vector<float>& values );
 
     // Get best fit parabola in pseudo-index space for a zero-centered array
     static Parabolaf getBestParabola( auto begin, auto end )
@@ -129,7 +129,7 @@ public:
         return poly;
     }
 
-    MRMESH_API static PolynomialWrapperf getBestPolynomial( const std::vector<float>& values, size_t degree );
+    MRVOXELS_API static PolynomialWrapperf getBestPolynomial( const std::vector<float>& values, size_t degree );
 
 private:
     MeshType& mesh_;
@@ -149,4 +149,3 @@ using MeshOnVoxelsC = MeshOnVoxelsT<const Mesh>;
 
 
 }
-#endif

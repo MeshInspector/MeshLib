@@ -11,13 +11,16 @@
 #include "MRSymbolMesh/MRObjectLabel.h"
 #include "MRSymbolMesh/MRObjectImGuiLabel.h"
 #include "MRMesh/MRObjectPoints.h"
-#include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRLine3.h"
 #include "MRMesh/MRRegionBoundary.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRPch/MRTBB.h"
+
+#ifndef MRVIEWER_NO_VOXELS
+#include "MRVoxels/MRObjectVoxels.h"
+#endif
 
 namespace MR
 {
@@ -555,7 +558,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
             const VertCoords* coords = nullptr;
             const VertBitSet* selectedVerts = nullptr;
             auto objMesh = obj->asType<ObjectMeshHolder>();
-#ifndef MRMESH_NO_OPENVDB
+#ifndef MRVIEWER_NO_VOXELS
             VertCoords tempVertCoords;
             VertBitSet tempSelected;
             auto objVox = obj->asType<ObjectVoxels>();

@@ -72,6 +72,21 @@ MRMESH_API void setObjectLoader( IOFilter filter, ObjectLoader loader );
 /// Get all registered filters
 MRMESH_API IOFilters getFilters();
 
+class ObjectLoaderAdder
+{
+public:
+    MRMESH_API ObjectLoaderAdder( IOFilter filter, ObjectLoader loader );
+};
+
+/**
+ * \brief Register filter with loader function
+ * \details loader function signature: Expected<std::vector<std::shared_ptr<Object>>> fromFormat( const std::filesystem::path& path, std::string* warnings, ProgressCallback cb );
+ * example:
+ * MR_ADD_OBJECT_LOADER( IOFilter( "Name of filter (.ext)", "*.ext" ), fromFormat )
+ */
+#define MR_ADD_OBJECT_LOADER( filter, loader ) \
+MR::ObjectLoad::ObjectLoaderAdder MR_CONCAT( __objectLoaderAdder_, __LINE__ )( filter, loader );
+
 } // namespace ObjectLoad
 
 namespace AsyncObjectLoad
@@ -87,6 +102,36 @@ MRMESH_API void setObjectLoader( IOFilter filter, AsyncObjectLoader loader );
 /// Get all registered filters
 MRMESH_API IOFilters getFilters();
 
-}
+} // namespace AsyncObjectLoad
+
+namespace ObjectSave
+{
+
+using ObjectSaver = Expected<void>( * )( const Object&, const std::filesystem::path&, ProgressCallback );
+
+/// Find an appropriate loader from the registry
+MRMESH_API ObjectSaver getObjectSaver( IOFilter filter );
+MRMESH_API ObjectSaver getObjectSaver( const std::string& extension );
+/// Add or override a loader in the registry
+MRMESH_API void setObjectSaver( IOFilter filter, ObjectSaver saver );
+/// Get all registered filters
+MRMESH_API IOFilters getFilters();
+
+class ObjectSaverAdder
+{
+public:
+    MRMESH_API ObjectSaverAdder( IOFilter filter, ObjectSaver saver );
+};
+
+/**
+ * \brief Register filter with saver function
+ * \details saver function signature: Expected<void> toFormat( const Object& object, const std::filesystem::path& path, ProgressCallback cb );
+ * example:
+ * MR_ADD_OBJECT_SAVER( IOFilter( "Name of filter (.ext)", "*.ext" ), toFormat )
+ */
+#define MR_ADD_OBJECT_SAVER( filter, saver ) \
+MR::ObjectSave::ObjectSaverAdder MR_CONCAT( __objectSaverAdder_, __LINE__ )( filter, saver );
+
+} // namespace ObjectSave
 
 }

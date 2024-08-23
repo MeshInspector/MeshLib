@@ -1,11 +1,11 @@
 #include "MRTeethMaskToDirectionVolume.h"
-#ifndef MRMESH_NO_OPENVDB
+
 #include "MRVDBConversions.h"
-#include "MRVolumeIndexer.h"
-#include "MRParallelFor.h"
+#include "MRMesh/MRVolumeIndexer.h"
+#include "MRMesh/MRParallelFor.h"
 #include "MRMeshToDistanceVolume.h"
-#include "MRPointsToMeshProjector.h"
-#include "MRMesh.h"
+#include "MRMesh/MRPointsToMeshProjector.h"
+#include "MRMesh/MRMesh.h"
 
 #include <MRPch/MRFmt.h>
 
@@ -213,4 +213,3 @@ Expected<TeethMaskToDirectionVolumeConvertor::ProcessResult> TeethMaskToDirectio
 }
 
 }
-#endif

@@ -38,11 +38,6 @@ MRMESH_API Expected<ObjectDistanceMap> makeObjectDistanceMapFromFile( const std:
 /// loads gcode from given file in new object
 MRMESH_API Expected<ObjectGcode> makeObjectGcodeFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
 
-#ifndef MRMESH_NO_OPENVDB
-/// loads voxels from given file in new object
-MRMESH_API Expected<std::vector<std::shared_ptr<ObjectVoxels>>> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
-#endif
-
 /**
  * \brief load object (mesh, lines, points, voxels or scene) from file
  * \param loadWarn - string that collect warning messages

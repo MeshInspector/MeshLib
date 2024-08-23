@@ -7,8 +7,6 @@
 #include "MRDistanceMapLoad.h"
 #include "MRImageLoad.h"
 #include "MRPointsLoad.h"
-#include "MRVoxelsLoad.h"
-#include "MRObjectVoxels.h"
 #include "MRObjectLines.h"
 #include "MRObjectPoints.h"
 #include "MRDistanceMap.h"
@@ -118,11 +116,11 @@ void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::
 } // namespace
 
 const IOFilters allFilters = SceneFileFilters
-                             | ObjectLoad::getFilters()
                              | MeshLoad::getFilters()
-                             | VoxelsLoad::Filters
                              | LinesLoad::Filters
-                             | PointsLoad::Filters;
+                             | PointsLoad::Filters
+                             | ObjectLoad::getFilters()
+                             ;
 
 Expected<ObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadInfo& info /*= {}*/ )
 {
@@ -329,50 +327,6 @@ Expected<ObjectGcode> makeObjectGcodeFromFile( const std::filesystem::path& file
 
     return objectGcode;
 }
-
-#ifndef MRMESH_NO_OPENVDB
-Expected<std::vector<std::shared_ptr<ObjectVoxels>>> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
-{
-    MR_TIMER;
-
-    auto cb = callback;
-    if ( cb )
-        cb = [callback] ( float v ) { return callback( v / 3.f ); };
-    auto loadRes = VoxelsLoad::fromAnySupportedFormat( file, cb );
-    if ( !loadRes.has_value() )
-    {
-        return unexpected( loadRes.error() );
-    }
-    auto& loadResRef = *loadRes;
-    std::vector<std::shared_ptr<ObjectVoxels>> res;
-    int size = int( loadResRef.size() );
-    for ( int i = 0; i < size; ++i )
-    {
-        std::shared_ptr<ObjectVoxels> obj = std::make_shared<ObjectVoxels>();
-        const std::string name = i > 1 ? fmt::format( "{} {}", utf8string(file.stem()), i) : utf8string(file.stem());
-        obj->setName( name );
-        int step = 0;
-        bool callbackRes = true;
-        if ( cb )
-            cb = [callback, &i, &step, size, &callbackRes] ( float v )
-        {
-            callbackRes = callback( ( 1.f + 2 * ( i + ( step + v ) / 2.f ) / size ) / 3.f );
-            return callbackRes;
-        };
-
-        obj->construct( loadResRef[i], cb );
-        if ( cb && !callbackRes )
-            return unexpected( getCancelMessage( file ) );
-        step = 1;
-        obj->setIsoValue( ( loadResRef[i].min + loadResRef[i].max ) / 2.f, cb );
-        if ( cb && !callbackRes )
-            return unexpected( getCancelMessage( file ) );
-        res.emplace_back( obj );
-    }
-    
-    return res;
-}
-#endif
 
 Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std::filesystem::path& filename,
                                                                                     std::string* loadWarn, ProgressCallback callback )
@@ -582,26 +536,9 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
                             auto obj = std::make_shared<ObjectGcode>( std::move( objectGcode.value() ) );
                             result = { obj };
                         }
-                        else if ( result.error() == "unsupported file extension" )
+                        else
                         {
-                            result = unexpected( objectDistanceMap.error() );
-
-#ifndef MRMESH_NO_OPENVDB
-                            auto objsVoxels = makeObjectVoxelsFromFile( filename, callback );
-                            std::vector<std::shared_ptr<Object>> resObjs;
-                            if ( objsVoxels.has_value() )
-                            {
-                                auto& objsVoxelsRef = *objsVoxels;
-                                for ( auto& objPtr : objsVoxelsRef )
-                                {
-                                    objPtr->select( true );
-                                    resObjs.emplace_back( std::dynamic_pointer_cast< Object >( objPtr ) );
-                                }
-                                result = resObjs;
-                            }
-                            else
-                                result = unexpected( objsVoxels.error() );
-#endif
+                            result = unexpected( objectGcode.error() );
                         }
                     }
                 }
@@ -685,7 +622,7 @@ Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder,
 
 
     // Global variable is not correctly initialized in emscripten build
-    const IOFilters filters = SceneFileFilters | MeshLoad::getFilters() | VoxelsLoad::Filters | LinesLoad::Filters | PointsLoad::Filters;
+    const IOFilters filters = SceneFileFilters | MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | ObjectLoad::getFilters();
 
     std::function<void( FilePathNode& )> fillFilesTree = {};
     fillFilesTree = [&fillFilesTree, &filters] ( FilePathNode& node )

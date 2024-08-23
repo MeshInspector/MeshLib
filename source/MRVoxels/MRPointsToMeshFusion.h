@@ -1,7 +1,9 @@
 #pragma once
 
-#include "MRExpected.h"
-#include "MRProgressCallback.h"
+#include "MRVoxelsFwd.h"
+
+#include "MRMesh/MRExpected.h"
+#include "MRMesh/MRProgressCallback.h"
 
 namespace MR
 {
@@ -36,6 +38,6 @@ struct PointsToMeshParameters
 
 /// makes mesh from points with normals by constructing intermediate volume with signed distances
 /// and then using marching cubes algorithm to extract the surface from there
-[[nodiscard]] MRMESH_API Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshParameters& params );
+[[nodiscard]] MRVOXELS_API Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshParameters& params );
 
 } //namespace MR

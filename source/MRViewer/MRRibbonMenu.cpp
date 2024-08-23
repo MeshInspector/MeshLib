@@ -30,7 +30,6 @@
 #include <MRMesh/MRChangeSceneAction.h>
 #include <MRMesh/MRChangeObjectFields.h>
 #include <MRMesh/MRSceneRoot.h>
-#include <MRMesh/MRObjectVoxels.h>
 #include <MRMesh/MRObjectPoints.h>
 #include <MRMesh/MRObjectMesh.h>
 #include <MRMesh/MRObjectLines.h>

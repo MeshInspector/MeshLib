@@ -1,6 +1,6 @@
+#ifndef MESHLIB_NO_VOXELS
 #include "MRMesh/MRPython.h"
-#include "MRMesh/MRMeshFwd.h"
-#include "MRMesh/MRVoxelsVolume.h"
+#include "MRVoxels/MRVoxelsVolume.h"
 #include "MRMesh/MRVector3.h"
 
 MR::SimpleVolume simpleVolumeFrom3Darray( const pybind11::buffer& voxelsArray )
@@ -82,3 +82,4 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, VoxelsVolumeNumpyConvert, [] ( pybind11::
     m.def( "getNumpy3Darray", &getNumpy3Darray, pybind11::arg( "simpleVolume" ),
         "Convert SimpleVolume to numpy 3D array" );
 } )
+#endif

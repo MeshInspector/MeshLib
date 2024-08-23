@@ -10,16 +10,11 @@ enum class RenderModelPassMask
 {
     Opaque = 1 << 0,
     Transparent = 1 << 1,
-#ifndef MRMESH_NO_OPENVDB
     VolumeRendering = 1 << 2,
-#endif
     NoDepthTest = 1 << 3,
 
     All =
-        Opaque | Transparent | NoDepthTest
-#ifndef MRMESH_NO_OPENVDB
-        | VolumeRendering
-#endif
+        Opaque | Transparent | NoDepthTest | VolumeRendering
 };
 MR_MAKE_FLAG_OPERATORS( RenderModelPassMask )
 

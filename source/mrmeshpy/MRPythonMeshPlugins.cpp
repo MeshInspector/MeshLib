@@ -1,14 +1,11 @@
 #include "MRMesh/MRPython.h"
 #include "MRMesh/MRMesh.h"
-#include "MRMesh/MRBoolean.h"
-#include "MRMesh/MRVDBConversions.h"
 #include "MRMesh/MRMeshFillHole.h"
 #include "MRMesh/MRMeshMetrics.h"
 #include "MRMesh/MRTunnelDetector.h"
 #include "MRSymbolMesh/MRSymbolMesh.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRBox.h"
-#include "MRMesh/MRFixUndercuts.h"
 #include "MRMesh/MRMeshCollide.h"
 #include "MRMesh/MRMeshDistance.h"
 #include "MRMesh/MRMeshRelax.h"
@@ -23,7 +20,6 @@
 #include "MRMesh/MRFaceFace.h"
 #include "MRMesh/MRLaplacian.h"
 #include "MRMesh/MRMeshFixer.h"
-#include "MRMesh/MROffset.h"
 #include "MRMesh/MRSurfaceDistance.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRExtractIsolines.h"
@@ -42,9 +38,15 @@
 #include <pybind11/stl/filesystem.h>
 #pragma warning(pop)
 
+#ifndef MESHLIB_NO_VOXELS
+#include "MRVoxels/MRBoolean.h"
+#include "MRVoxels/MRFixUndercuts.h"
+#include "MRVoxels/MROffset.h"
+#endif
+
 using namespace MR;
 
-#ifndef MRMESH_NO_OPENVDB
+#ifndef MESHLIB_NO_VOXELS
 // Fix self-intersections
 void fixSelfIntersections( Mesh& mesh1, float voxelSize )
 {
@@ -145,7 +147,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::modul
         "applies at most given number of relaxation iterations the spikes detected by given threshold" );
 } )
 
-#ifndef MRMESH_NO_OPENVDB
+#ifndef MESHLIB_NO_VOXELS
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, FixUndercuts, [] ( pybind11::module_& m )
 {
     m.def( "fixUndercuts", ( void ( * )( Mesh&, const FaceBitSet&, const Vector3f&, float, float ) )& MR::FixUndercuts::fixUndercuts,
@@ -429,7 +431,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, InflateSettings, [] ( pybind11::module_& m )
     );
 } )
 
-#ifndef MRMESH_NO_OPENVDB
+#ifndef MESHLIB_NO_VOXELS
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
 {
     pybind11::enum_<MR::SignDetectionMode>( m, "SignDetectionMode", "How to determine the sign of distances from a mesh" ).

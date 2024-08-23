@@ -1,11 +1,11 @@
 #include "MRRenderVolumeObject.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MRMesh/MRObjectVoxels.h"
+#ifndef MRVIEWER_NO_VOXELS
+#include "MRVoxels/MRObjectVoxels.h"
 #include "MRViewer.h"
 #include "MRGLMacro.h"
 #include "MRGladGlfw.h"
 #include "MRGLStaticHolder.h"
-#include "MRMesh/MRFloatGrid.h"
+#include "MRVoxels/MRFloatGrid.h"
 #include "MRMesh/MRMatrix4.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRSceneSettings.h"

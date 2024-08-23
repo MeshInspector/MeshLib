@@ -1,11 +1,11 @@
 #pragma once
 
-#include "MRMeshFwd.h"
-#include "MRAffineXf3.h"
+#include "MRVoxelsFwd.h"
+#include "MRMesh/MRAffineXf3.h"
 #include "MRVoxelsVolume.h"
-#include "MRProgressCallback.h"
-#include "MRSignDetectionMode.h"
-#include "MRExpected.h"
+#include "MRMesh/MRProgressCallback.h"
+#include "MRMesh/MRSignDetectionMode.h"
+#include "MRMesh/MRExpected.h"
 #include <climits>
 
 namespace MR
@@ -58,17 +58,15 @@ struct MarchingCubesParams
 };
 
 // makes Mesh from SimpleVolume with given settings using Marching Cubes algorithm
-MRMESH_API Expected<Mesh> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params = {} );
-MRMESH_API Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolume& volume, const MarchingCubesParams& params = {} );
+MRVOXELS_API Expected<Mesh> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params = {} );
+MRVOXELS_API Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolume& volume, const MarchingCubesParams& params = {} );
 
-#ifndef MRMESH_NO_OPENVDB
 // makes Mesh from VdbVolume with given settings using Marching Cubes algorithm
-MRMESH_API Expected<Mesh> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params = {} );
-MRMESH_API Expected<TriMesh> marchingCubesAsTriMesh( const VdbVolume& volume, const MarchingCubesParams& params = {} );
-#endif
+MRVOXELS_API Expected<Mesh> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params = {} );
+MRVOXELS_API Expected<TriMesh> marchingCubesAsTriMesh( const VdbVolume& volume, const MarchingCubesParams& params = {} );
 
 // makes Mesh from FunctionVolume with given settings using Marching Cubes algorithm
-MRMESH_API Expected<Mesh> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params = {} );
-MRMESH_API Expected<TriMesh> marchingCubesAsTriMesh( const FunctionVolume& volume, const MarchingCubesParams& params = {} );
+MRVOXELS_API Expected<Mesh> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params = {} );
+MRVOXELS_API Expected<TriMesh> marchingCubesAsTriMesh( const FunctionVolume& volume, const MarchingCubesParams& params = {} );
 
 } //namespace MR

@@ -1,16 +1,16 @@
 #include "MRVDBConversions.h"
-#ifndef MRMESH_NO_OPENVDB
+
 #include "MRVDBFloatGrid.h"
-#include "MRMesh.h"
-#include "MRMeshBuilder.h"
-#include "MRTimer.h"
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRMeshBuilder.h"
+#include "MRMesh/MRTimer.h"
 #include "MRVoxelsVolume.h"
-#include "MRPch/MROpenvdb.h"
-#include "MRFastWindingNumber.h"
-#include "MRVolumeIndexer.h"
-#include "MRRegionBoundary.h"
-#include "MRParallelFor.h"
-#include "MRTriMesh.h"
+#include "MROpenVDB.h"
+#include "MRMesh/MRFastWindingNumber.h"
+#include "MRMesh/MRVolumeIndexer.h"
+#include "MRMesh/MRRegionBoundary.h"
+#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRTriMesh.h"
 #include "MRVDBProgressInterrupter.h"
 
 namespace MR
@@ -535,4 +535,3 @@ Expected<Mesh> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& x
 }
 
 } //namespace MR
-#endif

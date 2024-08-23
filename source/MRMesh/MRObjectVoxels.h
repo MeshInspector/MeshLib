@@ -77,9 +77,6 @@ public:
     /// Sets external histogram for this object
     /// and returns back previous histogram of this
     MRMESH_API Histogram updateHistogram( Histogram histogram );
-    /// Sets active bounds for this object
-    /// and returns back previous active bounds of this
-    MRMESH_API Box3i updateActiveBounds( const Box3i &box );
 
     /// Calculates and return new mesh or error message
     MRMESH_API Expected<std::shared_ptr<Mesh>> recalculateIsoSurface( float iso, ProgressCallback cb = {} ) const;
@@ -101,8 +98,7 @@ public:
     MRMESH_API virtual void setActiveBounds( const Box3i& activeBox, ProgressCallback cb = {}, bool updateSurface = true );
     /// Returns active bounds (max excluded)
     /// active bounds is box in voxel coordinates, note that voxels under (0,0,0) and voxels over (dimensions) are empty 
-    const Box3i& getActiveBounds() const
-    { return activeBox_; }
+    MRMESH_API const Box3i& getActiveBounds() const;
 
     const VoxelBitSet& getSelectedVoxels() const { return selectedVoxels_; }
     void selectVoxels( const VoxelBitSet& selectedVoxels ) { selectedVoxels_ = selectedVoxels; }
@@ -213,7 +209,7 @@ private:
     bool dualMarchingCubes_{true};
     VoxelPointPositioner positioner_ = {};
     Histogram histogram_;
-    Box3i activeBox_;
+    mutable std::optional<Box3i> activeVoxelsBox_;
     mutable std::optional<size_t> activeVoxels_;
 
     const char * serializeFormat_ = ".raw";

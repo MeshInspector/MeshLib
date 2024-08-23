@@ -357,8 +357,9 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
 
     reportProgress( cb, cbModifier );
 
-    volumeRenderActiveVoxels_.clear();
-    dirty_ |= DIRTY_SELECTION;
+    // not safe to call from progress bar thread
+    if ( !cb ) // we assume that cb presence indicates thread: if cb is set then it is progress bar thread, otherwise it is UI thread
+        invalidateActiveBoundsCaches();
 
     lastProgress = cbModifier;
     if ( updateSurface )
@@ -376,6 +377,13 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
         prepareDataForVolumeRendering( subprogress( cb, lastProgress, 1.0f ) );
         setDirtyFlags( DIRTY_PRIMITIVES );
     }
+}
+
+void ObjectVoxels::invalidateActiveBoundsCaches()
+{
+    volumeRenderActiveVoxels_.clear();
+    dirty_ |= DIRTY_SELECTION;
+    activeVoxels_.reset();
 }
 
 const Box3i& ObjectVoxels::getActiveBounds() const

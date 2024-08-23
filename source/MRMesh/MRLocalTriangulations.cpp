@@ -93,7 +93,10 @@ Vector3f computeNormal( const AllLocalTriangulations & triangs, const VertCoords
         auto angle = MR::angle( d0, d1 );
         sum += angle * cross( d0, d1 ).normalized();
     }
-    return sum.normalized();
+    auto n = sum.normalized();
+    if ( dot( n, points[v] ) > 0 )
+        n = -n; // orient the normal toward the origin
+    return n;
 }
 
 void orientLocalTriangulations( AllLocalTriangulations & triangs, const VertCoords & coords, const VertBitSet & region, const VertNormals & targetDir )

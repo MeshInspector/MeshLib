@@ -363,6 +363,7 @@ using VertNormals = Vector<Vector3f, VertId>;
 using VertUVCoords = Vector<UVCoord, VertId>;
 using FaceNormals = Vector<Vector3f, FaceId>;
 
+using TexturePerFace = Vector<TextureId, FaceId>;
 using VertColors = Vector<Color, VertId>;
 using FaceColors = Vector<Color, FaceId>;
 using EdgeColors = Vector<Color, EdgeId>;
@@ -379,6 +380,7 @@ using EdgePredicate = std::function<bool( EdgeId )>;
 using UndirectedEdgePredicate = std::function<bool( UndirectedEdgeId )>;
 
 using PreCollapseCallback = std::function<bool( EdgeId edgeToCollapse, const Vector3f& newEdgeOrgPos )>;
+using OnEdgeSplit = std::function<void( EdgeId e1, EdgeId e )>;
 
 template <typename T>
 [[nodiscard]] inline bool contains( const std::function<bool( Id<T> )> & pred, Id<T> id )

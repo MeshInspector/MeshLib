@@ -52,15 +52,6 @@ GlTexture::~GlTexture()
     del();
 }
 
-bool GlTexture::valid() const
-{
-    return textureID_ != NO_TEX;
-}
-size_t GlTexture::size() const
-{
-    return size_;
-}
-
 void GlTexture::gen()
 {
     del();

@@ -492,10 +492,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
         const Vector3f zeroPoint = [&]
         {
             if constexpr ( std::is_same_v<V, VdbVolume> )
-            {
-                const auto & m = acc.minCoord();
-                return Vector3f( Vector3( m.x(), m.y(), m.z() ) );
-            }
+                return mult( Vector3f( acc.minCoord() ), volume.voxelSize );
             else
                 return 0.5f * volume.voxelSize;
         }();

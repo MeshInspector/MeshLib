@@ -26,15 +26,15 @@ public:
 
     explicit VoxelsVolumeAccessor( const VolumeType& volume )
         : accessor_( volume.data->getConstAccessor() )
-        , minCoord_( volume.data->evalActiveVoxelBoundingBox().min() )
+        , minCoord_( [&]{ auto m = volume.data->evalActiveVoxelBoundingBox().min(); return Vector3i( m.x(), m.y(), m.z() ); }() )
     {}
 
     ValueType get( const Vector3i& pos ) const
     {
         const openvdb::Coord coord {
-            pos.x + minCoord_.x(),
-            pos.y + minCoord_.y(),
-            pos.z + minCoord_.z(),
+            pos.x + minCoord_.x,
+            pos.y + minCoord_.y,
+            pos.z + minCoord_.z,
         };
         return accessor_.getValue( coord );
     }
@@ -50,11 +50,11 @@ public:
         return get( pos );
     }
 
-    const openvdb::Coord& minCoord() const { return minCoord_; }
+    const Vector3i& minCoord() const { return minCoord_; }
 
 private:
     openvdb::FloatGrid::ConstAccessor accessor_;
-    openvdb::Coord minCoord_;
+    Vector3i minCoord_;
 };
 #endif
 

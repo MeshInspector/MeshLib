@@ -4,6 +4,7 @@
 ///
 /// \code
 #include <MRMesh/MRLog.h>
+#include <MRMesh/MRSystem.h>
 #include <MRViewer/MRSetupViewer.h>
 #include <MRViewer/MRViewer.h>
 

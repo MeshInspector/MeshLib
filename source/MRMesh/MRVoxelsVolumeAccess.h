@@ -213,6 +213,7 @@ public:
     {
         assert( 0 <= z && z < indexer_.dims().z );
         z_ = z;
+        firstCachedVoxelId_ = indexer_.toVoxelId( { 0, 0, z } );
         for ( auto layerIndex = 0; layerIndex < layers_.size(); ++layerIndex )
         {
             if ( indexer_.dims().z <= z_ + layerIndex )
@@ -225,6 +226,7 @@ public:
     void preloadNextLayer()
     {
         z_ += 1;
+        firstCachedVoxelId_ += indexer_.sizeXY();
         for ( auto i = 0, j = 1; j < layers_.size(); ++i, ++j )
             std::swap( layers_[i], layers_[j] );
         if ( z_ + params_.preloadedLayerCount - 1 < indexer_.dims().z )
@@ -232,13 +234,14 @@ public:
     }
 
     /// get voxel volume data
-    ValueType get( const Vector3i& pos ) const
+    ValueType get( const VoxelLocation & loc ) const
     {
-        const auto layerIndex = pos.z - z_;
-        if ( 0 <= layerIndex && layerIndex < layers_.size() )
-            return layers_[layerIndex][toLayerIndex( pos )];
-
-        return accessor_.get( pos );
+        assert( loc.id >= firstCachedVoxelId_ );
+        assert( loc.id < firstCachedVoxelId_ + layers_.size() * indexer_.sizeXY() );
+        const auto layerIndex = loc.pos.z - z_;
+        assert( 0 <= layerIndex && layerIndex < layers_.size() );
+        size_t n( loc.id - firstCachedVoxelId_ - layerIndex * indexer_.sizeXY() );
+        return layers_[layerIndex][n];
     }
 
 private:
@@ -254,10 +257,11 @@ private:
         const auto z = z_ + (int)layerIndex;
         const auto& dims = indexer_.dims();
         assert( 0 <= z && z < dims.z );
-        Vector3i pos { 0, 0, z };
-        for ( pos.y = 0; pos.y < dims.y; ++pos.y )
-            for ( pos.x = 0; pos.x < dims.x; ++pos.x )
-                layer[toLayerIndex( pos )] = accessor_.get( pos );
+        auto loc = indexer_.toLoc( Vector3i{ 0, 0, z } );
+        size_t n = 0;
+        for ( loc.pos.y = 0; loc.pos.y < dims.y; ++loc.pos.y )
+            for ( loc.pos.x = 0; loc.pos.x < dims.x; ++loc.pos.x, ++loc.id, ++n )
+                layer[n] = accessor_.get( loc );
     }
 
 private:
@@ -266,6 +270,7 @@ private:
     Parameters params_;
 
     int z_ = -1;
+    VoxelId firstCachedVoxelId_;
     std::vector<std::vector<ValueType>> layers_;
 };
 

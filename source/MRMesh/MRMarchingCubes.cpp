@@ -325,7 +325,7 @@ TriangulationPlan{0, 3, 8},
 TriangulationPlan{}
 };
 
-const std::array<OutEdge, size_t( NeighborDir::Count )> cOutEdgeMap { OutEdge::PlusX, OutEdge::PlusY, OutEdge::PlusZ };
+const std::array<OutEdge, size_t( NeighborDir::Count )> cPlusOutEdges { OutEdge::PlusX, OutEdge::PlusY, OutEdge::PlusZ };
 
 }
 
@@ -416,7 +416,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
             SeparationPointSet set;
             bool atLeastOneOk = false;
-            const float baseValue = cache ? cache->get( baseLoc.pos ) : acc.get( baseLoc );
+            const float baseValue = cache ? cache->get( baseLoc ) : acc.get( baseLoc );
             if ( !nanChecker( baseValue ) )
             {
                 const auto baseCoords = zeroPoint + mult( volume.voxelSize, Vector3f( baseLoc.pos ) );
@@ -428,8 +428,8 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                     nextLoc.pos[n] += 1;
                     if ( nextLoc.pos[n] >= indexer.dims()[n] )
                         continue;
-                    nextLoc.id = indexer.getExistingNeighbor( baseLoc.id, cOutEdgeMap[n] );
-                    const float nextValue = cache ? cache->get( nextLoc.pos ) : acc.get( nextLoc );
+                    nextLoc.id = indexer.getExistingNeighbor( baseLoc.id, cPlusOutEdges[n] );
+                    const float nextValue = cache ? cache->get( nextLoc ) : acc.get( nextLoc );
                     if ( nanChecker( nextValue ) )
                         continue;
 
@@ -469,7 +469,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
     auto subprogress2 = MR::subprogress( params.cb, 0.5f, 0.85f );
 
-    const std::array<size_t, 8> cVoxelNeighborsIndexAdd = 
+    const size_t cVoxelNeighborsIndexAdd[8] = 
     {
         0,
         1,
@@ -480,6 +480,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
         indexer.sizeXY() + size_t( indexer.dims().x ),
         indexer.sizeXY() + size_t( indexer.dims().x ) + 1
     };
+    const size_t cDimStep[3] = { 1, size_t( indexer.dims().x ), indexer.sizeXY() };
 
     ParallelFor( size_t( 0 ), blockCount, [&] ( size_t blockIndex )
     {
@@ -534,11 +535,11 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                 VoxelLocation loc{ baseLoc.id + cVoxelNeighborsIndexAdd[i], baseLoc.pos + cVoxelNeighbors[i] };
                 float value{ 0.0f };
                 if ( cache )
-                    value = cache->get( loc.pos );
+                    value = cache->get( loc );
                 else
 #ifndef MRMESH_NO_OPENVDB
                 if constexpr ( std::is_same_v<V, VdbVolume> )
-                    value = acc.get( loc.pos );
+                    value = acc.get( loc );
                 else
 #endif
                 {
@@ -557,21 +558,23 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                     // iterates over nan neighbors to find consistent value
                     while ( nanChecker( value ) && neighIndex < 7 )
                     {
-                        auto neighPos = loc.pos;
+                        auto neighLoc = loc;
                         for ( int posCoord = 0; posCoord < 3; ++posCoord )
                         {
-                            int sign = 1;
+                            if ( !( ( cNeighborsOrder[neighIndex] & ( 1 << posCoord ) ) >> posCoord ) )
+                                continue;
                             if ( cVoxelNeighbors[i][posCoord] == 1 )
-                                sign = -1;
-                            neighPos[posCoord] += ( sign *
-                                ( ( cNeighborsOrder[neighIndex] & ( 1 << posCoord ) ) >> posCoord ) );
+                            {
+                                --neighLoc.pos[posCoord];
+                                neighLoc.id -= cDimStep[posCoord];
+                            }
+                            else
+                            {
+                                ++neighLoc.pos[posCoord];
+                                neighLoc.id += cDimStep[posCoord];
+                            }
                         }
-                        if ( cache )
-                            value = cache->get( neighPos );
-                        else if constexpr ( std::is_same_v<V, SimpleVolume> )
-                            value = volume.data[indexer.toVoxelId( neighPos ).get()];
-                        else
-                            value = volume.data( neighPos );
+                        value = cache ? cache->get( neighLoc ) : acc.get( neighLoc );
                         ++neighIndex;
                     }
                     if ( nanChecker( value ) )

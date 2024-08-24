@@ -489,7 +489,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
         const VoxelsVolumeAccessor<V> acc( volume );
         /// grid point with integer coordinates (0,0,0) will be shifted to this position in 3D space
-        const Vector3f zeroPoint = [&]
+        const Vector3f zeroPoint = params.origin + [&]
         {
             if constexpr ( std::is_same_v<V, VdbVolume> )
                 return mult( Vector3f( acc.minCoord() ), volume.voxelSize );

@@ -52,6 +52,9 @@ public:
 
     const Vector3i& minCoord() const { return minCoord_; }
 
+    /// this additional shift shall be added to integer voxel coordinates during transformation in 3D space
+    Vector3f shift() const { return Vector3f( minCoord_ ); }
+
 private:
     openvdb::FloatGrid::ConstAccessor accessor_;
     Vector3i minCoord_;
@@ -86,6 +89,9 @@ public:
         return indexer_.isInDims( pos ) ? get( pos ) : ValueType{};
     }
 
+    /// this additional shift shall be added to integer voxel coordinates during transformation in 3D space
+    Vector3f shift() const { return Vector3f::diagonal( 0.5f ); }
+
 private:
     const std::vector<T>& data_;
     VolumeIndexer indexer_;
@@ -117,6 +123,9 @@ public:
     {
         return get( pos ); // assume bounds checking is handled by the getter
     }
+
+    /// this additional shift shall be added to integer voxel coordinates during transformation in 3D space
+    Vector3f shift() const { return Vector3f::diagonal( 0.5f ); }
 
 private:
     const VoxelValueGetter<T>& data_;

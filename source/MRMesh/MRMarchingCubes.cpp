@@ -329,112 +329,10 @@ const std::array<OutEdge, size_t( NeighborDir::Count )> cOutEdgeMap { OutEdge::P
 
 }
 
-#ifndef MRMESH_NO_OPENVDB
-using ConstAccessor = openvdb::FloatGrid::ConstAccessor;
-using VdbCoord = openvdb::Coord;
-#endif
-
-#ifndef MRMESH_NO_OPENVDB
-template <class Positioner>
-bool findSeparationPoint( Vector3f & pos, const VdbVolume& volume, const VoxelsVolumeAccessor<VdbVolume>& acc,
-                          const VoxelLocation& baseLoc, float baseValue, NeighborDir dir,
-                          float iso, const Vector3f & zeroPoint, Positioner&& positioner )
-{
-    auto nextPos = baseLoc.pos;
-    nextPos[int( dir )] += 1;
-    if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
-        return false;
-
-    float nextValue = acc.get( nextPos );
-
-    bool baseLower = baseValue < iso;
-    bool nextLower = nextValue < iso;
-    if ( baseLower == nextLower )
-        return false;
-
-    auto bPos = zeroPoint + mult( volume.voxelSize, Vector3f( baseLoc.pos ) );
-    auto dPos = zeroPoint + mult( volume.voxelSize, Vector3f( nextPos ) );
-    pos = positioner( bPos, dPos, baseValue, nextValue, iso );
-    return true;
-}
-#endif
-
-template <typename V, typename NaNChecker, typename Positioner>
-bool findSeparationPointAcc( Vector3f & pos, const VoxelsVolumeAccessor<V>& acc, const VolumeIndexer& indexer, const Vector3f& voxelSize,
-                          const VoxelLocation& baseLoc, float baseValue, NeighborDir dir, float iso, const Vector3f & zeroPoint, NaNChecker&& nanChecker, Positioner&& positioner )
-{
-    auto nextLoc = baseLoc;
-    nextLoc.pos[int( dir )] += 1;
-    if ( nextLoc.pos[int( dir )] >= indexer.dims()[int( dir )] )
-        return false;
-    nextLoc.id = indexer.getExistingNeighbor( baseLoc.id, cOutEdgeMap[int( dir )] );
-
-    float nextValue = acc.get( nextLoc );
-    if ( nanChecker( baseValue ) || nanChecker( nextValue ) )
-        return false;
-
-    bool baseLower = baseValue < iso;
-    bool nextLower = nextValue < iso;
-    if ( baseLower == nextLower )
-        return false;
-
-    auto bPos = zeroPoint + mult( voxelSize, Vector3f( baseLoc.pos ) );
-    auto dPos = zeroPoint + mult( voxelSize, Vector3f( nextLoc.pos ) );
-    pos = positioner( bPos, dPos, baseValue, nextValue, iso );
-    return true;
-}
-
-template <typename Positioner, typename V, typename NaNChecker, typename Accessor>
-bool findSeparationPoint( Vector3f & pos, const V& volume, const Accessor& acc, const VoxelLocation& baseLoc, float baseValue, NeighborDir dir,
-    float iso, const Vector3f & zeroPoint, NaNChecker&& nanChecker, Positioner&& positioner )
-{
-    auto nextPos = baseLoc.pos;
-    nextPos[int( dir )] += 1;
-    if ( nextPos[int( dir )] >= volume.dims[int( dir )] )
-        return false;
-
-    float nextValue = acc.get( nextPos );
-#ifndef MRMESH_NO_OPENVDB
-    if constexpr ( !std::is_same_v<V, VdbVolume> )
-#endif
-        if ( nanChecker( baseValue ) || nanChecker( nextValue ) )
-            return false;
-
-    bool baseLower = baseValue < iso;
-    bool nextLower = nextValue < iso;
-    if ( baseLower == nextLower )
-        return false;
-
-    auto bPos = zeroPoint + mult( volume.voxelSize, Vector3f( baseLoc.pos ) );
-    auto dPos = zeroPoint + mult( volume.voxelSize, Vector3f( nextPos ) );
-    pos = positioner( bPos, dPos, baseValue, nextValue, iso );
-    return true;
-}
-
 template<typename V, typename NaNChecker, typename Positioner>
 Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
 {
     TriMesh result;
-#ifndef MRMESH_NO_OPENVDB
-    if constexpr ( std::is_same_v<V, VdbVolume> )
-    {
-        if ( !volume.data )
-            return unexpected( "No volume data." );
-        if ( params.iso <= volume.min || params.iso >= volume.max )
-            return result;
-    } else
-#endif
-    if constexpr ( std::is_same_v<V, FunctionVolume> )
-    {
-        if ( !volume.data )
-            return unexpected( "Getter function is not specified." );
-    } else
-    if constexpr ( std::is_same_v<V, SimpleVolume> )
-    {
-        if ( params.iso <= volume.min || params.iso >= volume.max )
-            return result;
-    }
-
     if ( volume.dims.x <= 0 || volume.dims.y <= 0 || volume.dims.z <= 0 )
         return result;
 
@@ -489,13 +387,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
         const VoxelsVolumeAccessor<V> acc( volume );
         /// grid point with integer coordinates (0,0,0) will be shifted to this position in 3D space
-        const Vector3f zeroPoint = params.origin + [&]
-        {
-            if constexpr ( std::is_same_v<V, VdbVolume> )
-                return mult( Vector3f( acc.minCoord() ), volume.voxelSize );
-            else
-                return 0.5f * volume.voxelSize;
-        }();
+        const Vector3f zeroPoint = params.origin + mult( acc.shift(), volume.voxelSize );
 
         std::optional<VoxelsVolumeCachingAccessor<V>> cache;
         if ( cachingMode == MarchingCubesParams::CachingMode::Normal )
@@ -524,24 +416,30 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
             SeparationPointSet set;
             bool atLeastOneOk = false;
-            const float baseValue = acc.get( baseLoc );
-
-            for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
+            const float baseValue = cache ? cache->get( baseLoc.pos ) : acc.get( baseLoc );
+            if ( !nanChecker( baseValue ) )
             {
-                bool ok = false;
-                Vector3f pos;
-                if ( cache )
-                    ok = findSeparationPoint( pos, volume, *cache, baseLoc, baseValue, NeighborDir( n ), params.iso, zeroPoint, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
-                else
-#ifndef MRMESH_NO_OPENVDB
-                if constexpr ( std::is_same_v<V, VdbVolume> )
-                    ok = findSeparationPoint( pos, volume, acc, baseLoc, baseValue, NeighborDir( n ), params.iso, zeroPoint, std::forward<Positioner>( positioner ) );
-                else
-#endif
-                    ok = findSeparationPointAcc( pos, acc, indexer, volume.voxelSize, baseLoc, baseValue, NeighborDir( n ), params.iso, zeroPoint, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
+                const auto baseCoords = zeroPoint + mult( volume.voxelSize, Vector3f( baseLoc.pos ) );
+                const bool baseLower = baseValue < params.iso;
 
-                if ( ok )
+                for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
                 {
+                    auto nextLoc = baseLoc;
+                    nextLoc.pos[n] += 1;
+                    if ( nextLoc.pos[n] >= indexer.dims()[n] )
+                        continue;
+                    nextLoc.id = indexer.getExistingNeighbor( baseLoc.id, cOutEdgeMap[n] );
+                    const float nextValue = cache ? cache->get( nextLoc.pos ) : acc.get( nextLoc );
+                    if ( nanChecker( nextValue ) )
+                        continue;
+
+                    const bool nextLower = nextValue < params.iso;
+                    if ( baseLower == nextLower )
+                        continue;
+
+                    auto nextCoords = baseCoords;
+                    nextCoords[n] += volume.voxelSize[n];
+                    Vector3f pos = positioner( baseCoords, nextCoords, baseValue, nextValue, params.iso );
                     set[n] = block.nextVid();
                     block.coords.push_back( pos );
                     atLeastOneOk = true;
@@ -825,6 +723,8 @@ Expected<TriMesh> volumeToMeshHelper2( const V& volume, const MarchingCubesParam
 
 Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {
+    if ( params.iso <= volume.min || params.iso >= volume.max )
+        return TriMesh{};
     return volumeToMeshHelper2( volume, params );
 }
 
@@ -842,6 +742,10 @@ Expected<Mesh> marchingCubes( const SimpleVolume& volume, const MarchingCubesPar
 #ifndef MRMESH_NO_OPENVDB
 Expected<TriMesh> marchingCubesAsTriMesh( const VdbVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {
+    if ( !volume.data )
+        return unexpected( "No volume data." );
+    if ( params.iso <= volume.min || params.iso >= volume.max )
+        return TriMesh{};
     return volumeToMeshHelper2( volume, params );
 }
 
@@ -859,6 +763,8 @@ Expected<Mesh> marchingCubes( const VdbVolume& volume, const MarchingCubesParams
 
 Expected<TriMesh> marchingCubesAsTriMesh( const FunctionVolume& volume, const MarchingCubesParams& params )
 {
+    if ( !volume.data )
+        return unexpected( "Getter function is not specified." );
     return volumeToMeshHelper2( volume, params );
 }
 

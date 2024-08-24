@@ -338,7 +338,7 @@ using VdbCoord = openvdb::Coord;
 template <class Positioner>
 bool findSeparationPoint( Vector3f & pos, const VdbVolume& volume, const VoxelsVolumeAccessor<VdbVolume>& acc,
                           const VoxelLocation& baseLoc, float baseValue, NeighborDir dir,
-                          const MarchingCubesParams& params, Positioner&& positioner )
+                          float iso, const Vector3f & zeroPoint, Positioner&& positioner )
 {
     auto nextPos = baseLoc.pos;
     nextPos[int( dir )] += 1;
@@ -347,25 +347,21 @@ bool findSeparationPoint( Vector3f & pos, const VdbVolume& volume, const VoxelsV
 
     float nextValue = acc.get( nextPos );
 
-    bool baseLower = baseValue < params.iso;
-    bool nextLower = nextValue < params.iso;
+    bool baseLower = baseValue < iso;
+    bool nextLower = nextValue < iso;
     if ( baseLower == nextLower )
         return false;
 
-    const auto& minCoord = acc.minCoord();
-    Vector3f coordF( Vector3( baseLoc.pos.x + minCoord.x(), baseLoc.pos.y + minCoord.y(), baseLoc.pos.z + minCoord.z() ) );
-    auto nextCoordF = coordF;
-    nextCoordF[int( dir )] += 1;
-    auto bPos = params.origin + mult( volume.voxelSize, coordF );
-    auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    pos = positioner( bPos, dPos, baseValue, nextValue, params.iso );
+    auto bPos = zeroPoint + mult( volume.voxelSize, Vector3f( baseLoc.pos ) );
+    auto dPos = zeroPoint + mult( volume.voxelSize, Vector3f( nextPos ) );
+    pos = positioner( bPos, dPos, baseValue, nextValue, iso );
     return true;
 }
 #endif
 
 template <typename V, typename NaNChecker, typename Positioner>
 bool findSeparationPointAcc( Vector3f & pos, const VoxelsVolumeAccessor<V>& acc, const VolumeIndexer& indexer, const Vector3f& voxelSize,
-                          const VoxelLocation& baseLoc, float baseValue, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
+                          const VoxelLocation& baseLoc, float baseValue, NeighborDir dir, float iso, const Vector3f & zeroPoint, NaNChecker&& nanChecker, Positioner&& positioner )
 {
     auto nextLoc = baseLoc;
     nextLoc.pos[int( dir )] += 1;
@@ -377,21 +373,20 @@ bool findSeparationPointAcc( Vector3f & pos, const VoxelsVolumeAccessor<V>& acc,
     if ( nanChecker( baseValue ) || nanChecker( nextValue ) )
         return false;
 
-    bool baseLower = baseValue < params.iso;
-    bool nextLower = nextValue < params.iso;
+    bool baseLower = baseValue < iso;
+    bool nextLower = nextValue < iso;
     if ( baseLower == nextLower )
         return false;
 
-    Vector3f coordF = Vector3f( baseLoc.pos ) + Vector3f::diagonal( 0.5f );
-    Vector3f nextCoordF = Vector3f( nextLoc.pos ) + Vector3f::diagonal( 0.5f );
-    auto bPos = params.origin + mult( voxelSize, coordF );
-    auto dPos = params.origin + mult( voxelSize, nextCoordF );
-    pos = positioner( bPos, dPos, baseValue, nextValue, params.iso );
+    auto bPos = zeroPoint + mult( voxelSize, Vector3f( baseLoc.pos ) );
+    auto dPos = zeroPoint + mult( voxelSize, Vector3f( nextLoc.pos ) );
+    pos = positioner( bPos, dPos, baseValue, nextValue, iso );
     return true;
 }
 
 template <typename Positioner, typename V, typename NaNChecker, typename Accessor>
-bool findSeparationPoint( Vector3f & pos, const V& volume, const Accessor& acc, const VoxelLocation& baseLoc, float baseValue, NeighborDir dir, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
+bool findSeparationPoint( Vector3f & pos, const V& volume, const Accessor& acc, const VoxelLocation& baseLoc, float baseValue, NeighborDir dir,
+    float iso, const Vector3f & zeroPoint, NaNChecker&& nanChecker, Positioner&& positioner )
 {
     auto nextPos = baseLoc.pos;
     nextPos[int( dir )] += 1;
@@ -405,23 +400,14 @@ bool findSeparationPoint( Vector3f & pos, const V& volume, const Accessor& acc, 
         if ( nanChecker( baseValue ) || nanChecker( nextValue ) )
             return false;
 
-    bool baseLower = baseValue < params.iso;
-    bool nextLower = nextValue < params.iso;
+    bool baseLower = baseValue < iso;
+    bool nextLower = nextValue < iso;
     if ( baseLower == nextLower )
         return false;
 
-    auto coordF = Vector3f( baseLoc.pos );
-    auto nextCoordF = Vector3f( nextPos );
-#ifndef MRMESH_NO_OPENVDB
-    if constexpr ( !std::is_same_v<V, VdbVolume> )
-#endif
-    {
-        coordF += Vector3f::diagonal( 0.5f );
-        nextCoordF += Vector3f::diagonal( 0.5f );
-    }
-    auto bPos = params.origin + mult( volume.voxelSize, coordF );
-    auto dPos = params.origin + mult( volume.voxelSize, nextCoordF );
-    pos = positioner( bPos, dPos, baseValue, nextValue, params.iso );
+    auto bPos = zeroPoint + mult( volume.voxelSize, Vector3f( baseLoc.pos ) );
+    auto dPos = zeroPoint + mult( volume.voxelSize, Vector3f( nextPos ) );
+    pos = positioner( bPos, dPos, baseValue, nextValue, iso );
     return true;
 }
 
@@ -502,6 +488,18 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
         const auto layerEnd = std::min( ( blockIndex + 1 ) * layerPerBlockCount, layerCount );
 
         const VoxelsVolumeAccessor<V> acc( volume );
+        /// grid point with integer coordinates (0,0,0) will be shifted to this position in 3D space
+        const Vector3f zeroPoint = [&]
+        {
+            if constexpr ( std::is_same_v<V, VdbVolume> )
+            {
+                const auto & m = acc.minCoord();
+                return Vector3f( Vector3( m.x(), m.y(), m.z() ) );
+            }
+            else
+                return 0.5f * volume.voxelSize;
+        }();
+
         std::optional<VoxelsVolumeCachingAccessor<V>> cache;
         if ( cachingMode == MarchingCubesParams::CachingMode::Normal )
         {
@@ -536,14 +534,14 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                 bool ok = false;
                 Vector3f pos;
                 if ( cache )
-                    ok = findSeparationPoint( pos, volume, *cache, baseLoc, baseValue, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
+                    ok = findSeparationPoint( pos, volume, *cache, baseLoc, baseValue, NeighborDir( n ), params.iso, zeroPoint, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
                 else
 #ifndef MRMESH_NO_OPENVDB
                 if constexpr ( std::is_same_v<V, VdbVolume> )
-                    ok = findSeparationPoint( pos, volume, acc, baseLoc, baseValue, NeighborDir( n ), params, std::forward<Positioner>( positioner ) );
+                    ok = findSeparationPoint( pos, volume, acc, baseLoc, baseValue, NeighborDir( n ), params.iso, zeroPoint, std::forward<Positioner>( positioner ) );
                 else
 #endif
-                    ok = findSeparationPointAcc( pos, acc, indexer, volume.voxelSize, baseLoc, baseValue, NeighborDir( n ), params, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
+                    ok = findSeparationPointAcc( pos, acc, indexer, volume.voxelSize, baseLoc, baseValue, NeighborDir( n ), params.iso, zeroPoint, std::forward<NaNChecker>( nanChecker ), std::forward<Positioner>( positioner ) );
 
                 if ( ok )
                 {
@@ -699,9 +697,9 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                 continue;
 
             // find only necessary neighbor separation points by comparing
-            // voxel values in both ends of each edge relative params.iso (stored in vx array);
+            // voxel values in both ends of each edge relative iso (stored in vx array);
             // separation points will not be used (and can be not searched for better performance)
-            // if both ends of the edge are higher or both are lower than params.iso
+            // if both ends of the edge are higher or both are lower than iso
             voxelValid = false;
             auto findNei = [&]( int i, auto check )
             {

@@ -17,22 +17,33 @@ using VoxelPointPositioner = std::function<Vector3f( const Vector3f&, const Vect
 
 struct MarchingCubesParams
 {
-    /// origin point of voxels box
+    /// origin point of voxels box in 3D space with output mesh
     Vector3f origin;
+
     /// progress callback
     ProgressCallback cb;
+
+    /// target iso-value of the surface to be extracted from volume
     float iso{ 0.0f };
-    bool lessInside{ false }; // should be false for dense volumes, and true for distance volume
-    Vector<VoxelId, FaceId>* outVoxelPerFaceMap{ nullptr }; // optional output map FaceId->VoxelId
-    // function to calculate position of result mesh points
-    // if the function isn't set, a linear positioner will be used
-    // note: this function is called in parallel from different threads
+
+    /// should be false for dense volumes, and true for distance volume
+    bool lessInside{ false };
+
+    /// optional output map FaceId->VoxelId
+    Vector<VoxelId, FaceId>* outVoxelPerFaceMap{ nullptr };
+
+    /// function to calculate position of result mesh points
+    /// if the function isn't set, a linear positioner will be used
+    /// note: this function is called in parallel from different threads
     VoxelPointPositioner positioner = {};
+
     /// if the mesh exceeds this number of vertices, an error returns
     int maxVertices = INT_MAX;
+
     /// for simple volumes only: omit checks for NaN values
     /// use it if you're aware that the input volume has no NaN values
     bool omitNaNCheck = false;
+
     /// voxel volume data caching mode
     enum class CachingMode
     {
@@ -47,17 +58,17 @@ struct MarchingCubesParams
 };
 
 // makes Mesh from SimpleVolume with given settings using Marching Cubes algorithm
-MRMESH_API Expected<Mesh> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params = {} );
-MRMESH_API Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolume& volume, const MarchingCubesParams& params = {} );
+MRMESH_API Expected<Mesh> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params );
+MRMESH_API Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolume& volume, const MarchingCubesParams& params );
 
 #ifndef MRMESH_NO_OPENVDB
 // makes Mesh from VdbVolume with given settings using Marching Cubes algorithm
-MRMESH_API Expected<Mesh> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params = {} );
-MRMESH_API Expected<TriMesh> marchingCubesAsTriMesh( const VdbVolume& volume, const MarchingCubesParams& params = {} );
+MRMESH_API Expected<Mesh> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params );
+MRMESH_API Expected<TriMesh> marchingCubesAsTriMesh( const VdbVolume& volume, const MarchingCubesParams& params );
 #endif
 
 // makes Mesh from FunctionVolume with given settings using Marching Cubes algorithm
-MRMESH_API Expected<Mesh> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params = {} );
-MRMESH_API Expected<TriMesh> marchingCubesAsTriMesh( const FunctionVolume& volume, const MarchingCubesParams& params = {} );
+MRMESH_API Expected<Mesh> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params );
+MRMESH_API Expected<TriMesh> marchingCubesAsTriMesh( const FunctionVolume& volume, const MarchingCubesParams& params );
 
 } //namespace MR

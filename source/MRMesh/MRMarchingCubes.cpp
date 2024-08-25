@@ -741,7 +741,9 @@ Expected<TriMesh> marchingCubesAsTriMesh( const VdbVolume& volume, const Marchin
         return unexpected( "No volume data." );
     if ( params.iso <= volume.min || params.iso >= volume.max )
         return TriMesh{};
-    return volumeToMeshHelper2( volume, params );
+    auto params2 = params;
+    params2.omitNaNCheck = true;
+    return volumeToMeshHelper2( volume, params2 );
 }
 
 Expected<Mesh> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params /*= {} */ )

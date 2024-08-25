@@ -533,17 +533,9 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
             for ( int i = 0; i < cVoxelNeighbors.size(); ++i )
             {
                 VoxelLocation loc{ baseLoc.id + cVoxelNeighborsIndexAdd[i], baseLoc.pos + cVoxelNeighbors[i] };
-                float value{ 0.0f };
-                if ( cache )
-                    value = cache->get( loc );
-                else
-#ifndef MRMESH_NO_OPENVDB
-                if constexpr ( std::is_same_v<V, VdbVolume> )
-                    value = acc.get( loc );
-                else
-#endif
+                float value = cache ? cache->get( loc ) : acc.get( loc );
+                if ( !params.omitNaNCheck )
                 {
-                    value = acc.get( loc );
                     // find non nan neighbor
                     constexpr std::array<uint8_t, 7> cNeighborsOrder{
                         0b001,

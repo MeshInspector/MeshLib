@@ -44,12 +44,6 @@ public:
         return get( loc.pos );
     }
 
-    ValueType safeGet( const Vector3i& pos ) const
-    {
-        // bounds checking is done by the accessor (returns background value)
-        return get( pos );
-    }
-
     const Vector3i& minCoord() const { return minCoord_; }
 
     /// this additional shift shall be added to integer voxel coordinates during transformation in 3D space
@@ -84,11 +78,6 @@ public:
         return data_[loc.id];
     }
 
-    ValueType safeGet( const Vector3i& pos ) const
-    {
-        return indexer_.isInDims( pos ) ? get( pos ) : ValueType{};
-    }
-
     /// this additional shift shall be added to integer voxel coordinates during transformation in 3D space
     Vector3f shift() const { return Vector3f::diagonal( 0.5f ); }
 
@@ -117,11 +106,6 @@ public:
     ValueType get( const VoxelLocation & loc ) const
     {
         return get( loc.pos );
-    }
-
-    ValueType safeGet( const Vector3i& pos ) const
-    {
-        return get( pos ); // assume bounds checking is handled by the getter
     }
 
     /// this additional shift shall be added to integer voxel coordinates during transformation in 3D space

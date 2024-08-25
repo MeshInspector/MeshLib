@@ -15,6 +15,7 @@ public:
     constexpr Id() noexcept : id_( -1 ) { }
     explicit Id( NoInit ) noexcept { }
     explicit constexpr Id( int i ) noexcept : id_( i ) { }
+    explicit constexpr Id( unsigned int i ) noexcept : id_( i ) { }
     explicit constexpr Id( size_t i ) noexcept : id_( int( i ) ) { }
     template <typename U> Id( Id<U> ) = delete;
 
@@ -55,6 +56,7 @@ public:
     explicit Id( NoInit ) noexcept { }
     constexpr Id( UndirectedEdgeId u ) noexcept : id_( (int)u << 1 ) { assert( u.valid() ); }
     explicit constexpr Id( int i ) noexcept : id_( i ) { }
+    explicit constexpr Id( unsigned int i ) noexcept : id_( i ) { }
     explicit constexpr Id( size_t i ) noexcept : id_( int( i ) ) { }
     constexpr operator int() const { return id_; }
     constexpr bool valid() const { return id_ >= 0; }
@@ -131,15 +133,19 @@ private:
     size_t id_;
 };
 
-inline constexpr Id<VoxelTag> operator + ( Id<VoxelTag> id, size_t a ) { return Id<VoxelTag>{ ( size_t )id + a }; }
-inline constexpr Id<VoxelTag> operator - ( Id<VoxelTag> id, size_t a ) { return Id<VoxelTag>{ ( size_t )id - a }; }
+template <typename T>
+inline constexpr Id<T> operator + ( Id<T> id, int a )          { return Id<T>{ id.get() + a }; }
+template <typename T>
+inline constexpr Id<T> operator + ( Id<T> id, unsigned int a ) { return Id<T>{ id.get() + a }; }
+template <typename T>
+inline constexpr Id<T> operator + ( Id<T> id, size_t a )       { return Id<T>{ id.get() + a }; }
 
 template <typename T>
-inline constexpr Id<T> operator + ( Id<T> id, int a ) { return Id<T>{ (int)id + a }; }
+inline constexpr Id<T> operator - ( Id<T> id, int a )          { return Id<T>{ id.get() - a }; }
 template <typename T>
-inline constexpr Id<T> operator + ( Id<T> id, unsigned int a ) { return Id<T>{ (int)id + (int)a }; }
+inline constexpr Id<T> operator - ( Id<T> id, unsigned int a ) { return Id<T>{ id.get() - a }; }
 template <typename T>
-inline constexpr Id<T> operator - ( Id<T> id, int a ) { return Id<T>{ (int)id - a }; }
+inline constexpr Id<T> operator - ( Id<T> id, size_t a )       { return Id<T>{ id.get() - a }; }
 
 inline constexpr FaceId operator "" _f( unsigned long long i ) noexcept { return FaceId{ (int)i }; }
 inline constexpr VertId operator "" _v( unsigned long long i ) noexcept { return VertId{ (int)i }; }

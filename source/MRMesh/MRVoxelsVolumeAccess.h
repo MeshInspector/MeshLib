@@ -131,54 +131,6 @@ private:
     const VoxelValueGetter<T>& data_;
 };
 
-/// accessor override with a preset background value: out-of bounds indexes correspond to a fixed value
-template <typename Accessor>
-class VoxelsVolumeAccessorWithBackground : public Accessor
-{
-public:
-    using VolumeType = typename Accessor::VolumeType;
-    using ValueType = typename VolumeType::ValueType;
-
-    VoxelsVolumeAccessorWithBackground( const VolumeType& volume, ValueType bgValue )
-        : Accessor( volume ), dims_( volume.dims ), bgValue_( bgValue )
-    {}
-
-    ValueType safeGet( const Vector3i& pos ) const
-    {
-        if ( pos.x < 0 || pos.y < 0 || pos.z < 0 ||
-             pos.x >= dims_.x || pos.y >= dims_.y || pos.z >= dims_.z )
-            return bgValue_;
-        return Accessor::get( pos );
-    }
-
-private:
-    Vector3i dims_;
-    ValueType bgValue_;
-};
-
-/// accessor override with clamping coordinates to volume bounds (for out-of-bounds indexes, edge values are repeated)
-template <typename Accessor>
-class VoxelsVolumeAccessorWithClamp : public Accessor
-{
-public:
-    using VolumeType = typename Accessor::VolumeType;
-    using ValueType = typename VolumeType::ValueType;
-
-    explicit VoxelsVolumeAccessorWithClamp( const VolumeType& volume )
-        : Accessor( volume ), dims_( volume.dims )
-    {}
-
-    ValueType safeGet( const Vector3i& pos ) const
-    {
-        return Accessor::get( { std::clamp( pos.x, 0, dims_.x - 1 ),
-                                std::clamp( pos.y, 0, dims_.y - 1 ),
-                                std::clamp( pos.z, 0, dims_.z - 1 ) } );
-    }
-
-private:
-    Vector3i dims_;
-};
-
 /// helper class to preload voxel volume data
 template <typename V>
 class VoxelsVolumeCachingAccessor

@@ -26,4 +26,12 @@ enum class Processing : bool
     Stop
 };
 
+/// the method how to choose between two opposite normal orientations
+enum class OrientNormals
+{
+    TowardOrigin,
+    AwayFromOrigin,
+    Smart
+};
+
 } //namespace MR

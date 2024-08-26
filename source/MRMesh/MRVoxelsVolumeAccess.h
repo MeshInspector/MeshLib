@@ -26,17 +26,12 @@ public:
 
     explicit VoxelsVolumeAccessor( const VolumeType& volume )
         : accessor_( volume.data->getConstAccessor() )
-        , minCoord_( [&]{ auto m = volume.data->evalActiveVoxelBoundingBox().min(); return Vector3i( m.x(), m.y(), m.z() ); }() )
+        , minCoord_( fromVdb( volume.data->evalActiveVoxelBoundingBox().min() ) )
     {}
 
     ValueType get( const Vector3i& pos ) const
     {
-        const openvdb::Coord coord {
-            pos.x + minCoord_.x,
-            pos.y + minCoord_.y,
-            pos.z + minCoord_.z,
-        };
-        return accessor_.getValue( coord );
+        return accessor_.getValue( toVdb( pos + minCoord_ ) );
     }
 
     ValueType get( const VoxelLocation & loc ) const
@@ -115,7 +110,8 @@ private:
     const VoxelValueGetter<T>& data_;
 };
 
-/// helper class to preload voxel volume data
+/// This accessor first loads data for given number of layers in internal cache, and then returns values from the cache.
+/// Direct access to data outside of cache is not allowed.
 template <typename V>
 class VoxelsVolumeCachingAccessor
 {

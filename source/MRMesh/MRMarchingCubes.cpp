@@ -587,9 +587,9 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                 continue;
 
             // find only necessary neighbor separation points by comparing
-            // voxel values in both ends of each edge relative iso (stored in vx array);
+            // voxel values in both ends of each edge relative params.iso (stored in vx array);
             // separation points will not be used (and can be not searched for better performance)
-            // if both ends of the edge are higher or both are lower than iso
+            // if both ends of the edge are higher or both are lower than params.iso
             voxelValid = false;
             auto findNei = [&]( int i, auto check )
             {

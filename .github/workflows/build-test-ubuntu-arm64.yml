@@ -30,7 +30,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu20, ubuntu22 ]
+        os: [ ubuntu20, ubuntu22, ubuntu24 ]
         config: [ Release ]
         compiler: [ clang ]
         include:
@@ -44,6 +44,11 @@ jobs:
             cxx-compiler: /usr/bin/clang++-14
             c-compiler: /usr/bin/clang-14
             use-cpp-23: "OFF"
+          - os: ubuntu24
+            docker-image: meshlib/meshlib-ubuntu24-arm64:${{inputs.docker_image_tag}}
+            cxx-compiler: /usr/bin/clang++-18
+            c-compiler: /usr/bin/clang-18
+            use-cpp-23: "ON"
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout

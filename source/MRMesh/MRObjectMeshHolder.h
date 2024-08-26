@@ -12,6 +12,7 @@ enum class MRMESH_CLASS MeshVisualizePropertyType
     Faces,
     Texture,
     Edges,
+    Points,
     SelectedFaces,
     SelectedEdges,
     EnableShading,
@@ -103,13 +104,18 @@ public:
     virtual void updateFacesColorMap( FaceColors& updated )
     { std::swap( facesColorMap_, updated ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
 
+    MRMESH_API virtual void setEdgeWidth( float edgeWidth );
     float getEdgeWidth() const { return edgeWidth_; }
-    virtual void setEdgeWidth( float edgeWidth )
-    { edgeWidth_ = edgeWidth; needRedraw_ = true; }
+    MRMESH_API virtual void setPointSize( float size );
+    virtual float getPointSize() const { return pointSize_; }
 
     const Color& getEdgesColor( ViewportId id = {} ) const { return edgesColor_.get(id); }
     virtual void setEdgesColor( const Color& color, ViewportId id = {} )
     { edgesColor_.set( color, id ); needRedraw_ = true; }
+    
+    const Color& getVertsColor( ViewportId id = {} ) const { return vertsColor_.get(id); }
+    virtual void setVertsColor( const Color& color, ViewportId id = {} )
+    { vertsColor_.set( color, id ); needRedraw_ = true; }
 
     const Color& getBordersColor( ViewportId id = {} ) const { return bordersColor_.get( id ); }
     virtual void setBordersColor( const Color& color, ViewportId id = {} )
@@ -269,6 +275,7 @@ protected:
     ViewportMask showTexture_;
     ViewportMask showFaces_ = ViewportMask::all();
     ViewportMask showEdges_;
+    ViewportMask showPoints_;
     ViewportMask showSelectedEdges_ = ViewportMask::all();
     ViewportMask showSelectedFaces_ = ViewportMask::all();
     ViewportMask showBordersHighlight_;
@@ -282,12 +289,14 @@ protected:
     ViewportMask onlyOddFragments_;
 
     ViewportProperty<Color> edgesColor_;
+    ViewportProperty<Color> vertsColor_;
     ViewportProperty<Color> bordersColor_;
     ViewportProperty<Color> edgeSelectionColor_;
     ViewportProperty<Color> faceSelectionColor_;
 
     FaceColors facesColorMap_;
     float edgeWidth_{ 0.5f };
+    float pointSize_{ 5.f };
 
     std::shared_ptr<Mesh> mesh_;
 

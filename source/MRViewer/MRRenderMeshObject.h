@@ -30,6 +30,8 @@ protected:
     int edgeSize_{ 0 };
     int selEdgeSize_{ 0 };
     int bordersSize_{ 0 };
+    int pointSize_{ 0 };
+    int pointValidSize_{ 0 };
     Vector2i faceSelectionTextureSize_;
     Vector2i faceNormalsTextureSize_;
     Vector2i texturePerFaceSize_;
@@ -42,6 +44,8 @@ protected:
     MRVIEWER_API RenderBufferRef<unsigned> loadFaceSelectionTextureBuffer_();
     MRVIEWER_API RenderBufferRef<Vector4f> loadFaceNormalsTextureBuffer_();
     MRVIEWER_API RenderBufferRef<uint8_t> loadTexturePerFaceTextureBuffer_();
+    MRVIEWER_API RenderBufferRef<Vector3f> loadPointPosBuffer_();
+    MRVIEWER_API RenderBufferRef<VertId> loadPointValidIndicesBuffer_();
 
     typedef unsigned int GLuint;
 
@@ -77,9 +81,17 @@ protected:
 
     int maxTexSize_{ 0 };
 
+    GLuint pointsArrayObjId_{ 0 };
+    GlBuffer pointPosBuffer_;
+    GlBuffer pointNormalsBuffer_;
+    GlBuffer pointColorsBuffer_;
+    GlBuffer pointValidBuffer_;
+    bool dirtyPointPos_ = false;
+
     MRVIEWER_API virtual void renderEdges_( const ModelRenderParams& parameters, bool alphaSort, GLuint vao, const Color& color, uint32_t dirtyFlag );
 
     MRVIEWER_API virtual void renderMeshEdges_( const ModelRenderParams& parameters, bool alphaSort );
+    MRVIEWER_API virtual void renderMeshVerts_( const ModelRenderParams& parameters, bool alphaSort );
 
     MRVIEWER_API virtual void bindMesh_( bool alphaSort );
 
@@ -89,6 +101,7 @@ protected:
     MRVIEWER_API virtual void bindBorders_();
     MRVIEWER_API virtual void bindSelectedEdges_();
     MRVIEWER_API virtual void bindEmptyTextures_( GLuint shaderId );
+    MRVIEWER_API virtual void bindPoints_( bool alphaSort );
 
     MRVIEWER_API virtual void drawMesh_( bool solid, ViewportId viewportId, bool picker = false ) const;
 

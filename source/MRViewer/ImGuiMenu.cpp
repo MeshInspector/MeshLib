@@ -1703,6 +1703,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<Vis
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Shading", MeshVisualizePropertyType::EnableShading, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Flat Shading", MeshVisualizePropertyType::FlatShading, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Edges", MeshVisualizePropertyType::Edges, viewportid );
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Points", MeshVisualizePropertyType::Points, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Selected Edges", MeshVisualizePropertyType::SelectedEdges, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Selected Faces", MeshVisualizePropertyType::SelectedFaces, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Borders", MeshVisualizePropertyType::BordersHighlight, viewportid );
@@ -1720,6 +1721,13 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<Vis
         }
         if ( allHaveTexture )
             someChanges |= make_visualize_checkbox( selectedVisualObjs, "Texture", MeshVisualizePropertyType::Texture, viewportid );
+        make_width<ObjectMeshHolder>( selectedVisualObjs, "Point size", [&] ( const ObjectMeshHolder* objMesh )
+        {
+            return objMesh->getPointSize();
+        }, [&] ( ObjectMeshHolder* objMesh, float value )
+        {
+            objMesh->setPointSize( value );
+        } );
     }
     if ( allIsObjLines )
     {
@@ -1886,6 +1894,13 @@ MR_SUPPRESS_WARNING_POP
         }, [&] ( ObjectMeshHolder* data, const Vector4f& color )
         {
             data->setEdgesColor( Color( color ), selectedViewport_ );
+        } );
+        make_color_selector<ObjectMeshHolder>( selectedMeshObjs, "Vertices color", [&] ( const ObjectMeshHolder* data )
+        {
+            return Vector4f( data->getVertsColor( selectedViewport_ ) );
+        }, [&] ( ObjectMeshHolder* data, const Vector4f& color )
+        {
+            data->setVertsColor( Color( color ), selectedViewport_ );
         } );
         make_color_selector<ObjectMeshHolder>( selectedMeshObjs, "Selected Faces color", [&] ( const ObjectMeshHolder* data )
         {
@@ -2284,7 +2299,7 @@ void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedV
     if ( lineWidth )
         UI::drag<PixelSizeUnit>( label, value );
     else
-        UI::drag<PixelSizeUnit>( label, value, 0.02f, 1.0f, 10.0f );
+        UI::drag<PixelSizeUnit>( label, value, 0.02f, 1.0f, 25.0f );
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
     ImGui::PopItemWidth();
     if ( value != valueConstForComparation )

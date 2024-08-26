@@ -1,6 +1,10 @@
+var freeFSCallback = function () {
+  Module.ccall('emsFreeFSCallback', 'void', [], []);
+}
+
 var open_files_dialog_popup = function (extensions, multi) {
   var labelString = multi ? "Select Files" : "Select File";
-  var { overlay, popup } = createOverlayPopup('show_browse_dialog', labelString, 400, 150, true, true);
+  var { overlay, popup } = createOverlayPopup('show_browse_dialog', labelString, 400, 150, true, true, freeFSCallback);
 
   var file_selector_label = document.createElement('label');
   file_selector_label.setAttribute('for', 'FileSelectorTag');
@@ -35,19 +39,19 @@ var open_files_dialog_popup = function (extensions, multi) {
 
 var download_file_dialog_popup = function (defaultName, extensions) {
   var isLightThemeEnabled = getColorTheme();
-  var { overlay, popup } = createOverlayPopup('show_download_dialog', "Save File", 440, 232);
+  var { overlay, popup } = createOverlayPopup('show_download_dialog', "Save File", 440, 232, true, true, freeFSCallback);
 
   var textColor = isLightThemeEnabled ? '#181a1d' : '#fff';
   var bgColor = isLightThemeEnabled ? '#f5f6f9' : '#000';
   var name_label = document.createElement('label');
-  name_label.setAttribute('style', 'width: 144px;height: 20px;position: absolute;top: 86px;left: 62px;margin-left: 0px;font-size: 14px;color:' + textColor );
+  name_label.setAttribute('style', 'width: 144px;height: 20px;position: absolute;top: 86px;left: 62px;margin-left: 0px;font-size: 14px;color:' + textColor);
   name_label.innerHTML = 'Name';
   name_label.setAttribute('class', 'unselectable');
 
   var name_selector = document.createElement('input');
   name_selector.setAttribute('type', 'text');
   name_selector.setAttribute('id', 'download_name');
-  name_selector.setAttribute('style', 'position: absolute;top: 81px;left: 50%;transform: translate(-50%, 0px);background-color:' + bgColor +';border-radius: 4px;width: 198px;height: 26px;border: solid 1px #5f6369;color:' + textColor + ';padding: 0px 0px;');
+  name_selector.setAttribute('style', 'position: absolute;top: 81px;left: 50%;transform: translate(-50%, 0px);background-color:' + bgColor + ';border-radius: 4px;width: 198px;height: 26px;border: solid 1px #5f6369;color:' + textColor + ';padding: 0px 0px;');
 
   name_selector.value = defaultName;
 
@@ -86,7 +90,7 @@ var download_file_dialog_popup = function (defaultName, extensions) {
 }
 
 var open_directory_dialog_popup = function () {
-  var { overlay, popup } = createOverlayPopup('show_browse_dialog', "Select Directory", 400, 150);  
+  var { overlay, popup } = createOverlayPopup('show_browse_dialog', "Select Directory", 400, 150, true, true, freeFSCallback);
   var file_selector_label = document.createElement('label');
   file_selector_label.setAttribute('for', 'FileSelectorTag');
   file_selector_label.setAttribute('style', 'position:absolute;top:50%;left:50%;transform:translate(-50%,50%);width: 120px;  height: 28px; border-radius: 4px;');
@@ -265,3 +269,69 @@ var open_dir = function (e) {
   document.getElementById('show_browse_dialog').remove();
   return false;
 };
+
+var emplace_file_in_local_FS_and_open = function (name_with_ext, bytes) {
+  var directory = ".use_open_files";
+  FS.createPath("/", directory);
+  var path = "/" + directory + "/" + name_with_ext.replace(/\//g, "_");
+  FS.writeFile(path, bytes);
+
+  Module.ccall('emsAddFileToScene', 'void', ['string'], [path]);
+  // enforce several frames to toggle animation when popup closed
+  for (var i = 0; i < 500; i += 100)
+    setTimeout(function () { Module.ccall('emsPostEmptyEvent', 'void', ['number'], [1]); }, i);
+}
+
+var get_object_data_from_scene = function (object_name, temp_filename_with_ext) {
+  Module.ccall('emsGetObjectFromScene', 'void', ['string', 'string'], [object_name, temp_filename_with_ext]);
+  if (!FS.analyzePath(temp_filename_with_ext).exists)
+    return;
+  return FS.readFile(temp_filename_with_ext);
+}
+
+var test_download_file = function (url) {
+  var options = {
+    method: 'GET'
+  };
+
+  const controller = new AbortController();
+
+  fetch(url, options).then(async (response) => {
+    if (!response.ok || !response.body) {
+      // nothing to process
+      return response;
+    }
+    const contentEncoding = response.headers.get('content-encoding');
+    const contentLength = response.headers.get(contentEncoding ? 'x-file-size' : 'content-length');
+    if (contentLength === null) {
+      return response;
+    }
+    const total = parseInt(contentLength, 10);
+    if (total == 0) {
+      return response;
+    }
+
+    let loaded = 0;
+    return new Response(
+      new ReadableStream({
+        async start(controller) {
+          const reader = response.body.getReader();
+          for (; ;) {
+            const { done, value } = await reader.read();
+            if (done) {
+              break;
+            }
+            loaded += value.byteLength;
+            var v = loaded / total;
+            console.log(v)
+            controller.enqueue(value);
+          }
+          controller.close();
+        }
+      })
+    );
+  }).then(async (response) => {
+    console.log(response);
+    emplace_file_in_local_FS_and_open("downloadedFile.stl", new Uint8Array(await response.arrayBuffer()));
+  });
+}

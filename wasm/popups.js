@@ -21,7 +21,9 @@ var addKeyboardEvents = function () {
         setTimeout(function () { Module.ccall('emsPostEmptyEvent', 'void', ['number'], [1]); }, i);
 };
 
-var createPopup = function (closeId, label, width, height, center = true, showCloseButton = true) {
+var curentCancelCb = function(){};
+
+var createPopup = function (closeId, label, width, height, center = true, showCloseButton = true, oncancel = function(){}) {
     var isLightThemeEnabled = getColorTheme();
     var popup = document.createElement('div');
 
@@ -45,12 +47,12 @@ var createPopup = function (closeId, label, width, height, center = true, showCl
     var bgColor = isLightThemeEnabled ? "#fff" : "#1c1f24";
     popup.setAttribute('style', 'width:' + width + 'px;height:' + height + 'px;border-radius: 4px;background:' + bgColor + ';position:absolute;' + positionStyle);
 
-
+    curentCancelCb = oncancel;
     var close = document.createElement('div');
     close.setAttribute('class', 'unselectable');
     close.innerHTML = '&#x2715;';
     close.setAttribute('style', 'margin-left:' + (width - 26) + 'px;width:24;height:24px;margin-top:7px;cursor:pointer;color:#5f6369;display: inline-block;');
-    close.setAttribute('onclick', 'document.getElementById(\'' + closeId + '\').remove();addKeyboardEvents()');
+    close.setAttribute('onclick', 'curentCancelCb();document.getElementById(\'' + closeId + '\').remove();addKeyboardEvents()');
     if (!showCloseButton)
         close.setAttribute('style', 'visibility: hidden;');
 
@@ -68,7 +70,7 @@ var createPopup = function (closeId, label, width, height, center = true, showCl
     return popup;
 }
 
-var createOverlayPopup = function (id, label, width, height, center = true, showCloseButton = true) {    
+var createOverlayPopup = function (id, label, width, height, center = true, showCloseButton = true, oncancel = function(){}) {    
     var overlay = document.createElement('div');    
     overlay.setAttribute('style', 'position:absolute;top:0;right:0;bottom:0;left:0;background-color:rgba(0,0,0,0.8);z-index:9999;');
     overlay.setAttribute('id', id);
@@ -84,7 +86,7 @@ var createOverlayPopup = function (id, label, width, height, center = true, show
         lastTouchEnd = now;
     }, false);
 
-    var popup = createPopup(id, label, width, height, center, showCloseButton);
+    var popup = createPopup(id, label, width, height, center, showCloseButton,oncancel);
     overlay.appendChild(popup);
 
     return { overlay, popup };

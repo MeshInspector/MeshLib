@@ -84,7 +84,64 @@ bool isMobileBrowser()
 #endif
 }
 
+bool checkPaths( const std::vector<std::filesystem::path>& paths, const MR::IOFilters& filters )
+{
+    for ( const auto& path : paths )
+    {
+        std::string fileExt = utf8string( path.extension() );
+        for ( auto& c : fileExt )
+            c = ( char ) std::tolower( c );
+        if ( std::any_of( filters.begin(), filters.end(), [&fileExt] ( const auto& filter )
+        {
+            return filter.extensions.find( fileExt ) != std::string::npos;
+        } ) )
+            return true;
+    }
+    return false;
 }
+
+}
+
+
+#ifdef __EMSCRIPTEN__
+extern "C" {
+
+EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename )
+{
+    using namespace MR;
+    auto filters = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | SceneFileFilters | DistanceMapLoad::Filters | GcodeLoad::Filters | VoxelsLoad::Filters;
+    std::erase_if( filters, [] ( const auto& filter )
+    {
+        return filter.extensions == "*.*";
+    } );
+#ifdef __EMSCRIPTEN_PTHREADS__
+        filters = filters | ObjectLoad::getFilters();
+#else
+        filters = filters | AsyncObjectLoad::getFilters();
+#endif
+    std::vector<std::filesystem::path> paths = {pathFromUtf8(filename)};
+    if ( !checkPaths( paths, filters ) )
+    {
+        showError( "Unsupported file extension" );
+        return;
+    }
+    getViewerInstance().loadFiles( paths );
+}
+
+EMSCRIPTEN_KEEPALIVE void emsGetObjectFromScene( const char* objectName, const char* filename )
+{
+    using namespace MR;
+    auto obj = SceneRoot::get().find( objectName );
+    if ( !obj )
+        return;
+    auto res = saveObjectToFile( *obj, pathFromUtf8(filename), { .backupOriginalFile = false} );
+    if ( !res )
+        showError( res.error() );
+}
+
+}
+#endif
+
 
 namespace MR
 {
@@ -137,7 +194,7 @@ bool OpenFilesMenuItem::action()
     {
         if ( filenames.empty() )
             return;
-        if ( !checkPaths_( filenames ) )
+        if ( !checkPaths( filenames, filters_ ) )
         {
             showError( "Unsupported file extension" );
             return;
@@ -157,7 +214,7 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
     if ( paths.empty() )
         return false;
 
-    if ( !checkPaths_( paths ) )
+    if ( !checkPaths( paths, filters_ ) )
     {
         showError( "Unsupported file extension" );
         return false;
@@ -260,22 +317,6 @@ void OpenFilesMenuItem::setupListUpdate_()
     recentPathsCache_ = getViewerInstance().recentFilesStore().getStoredFiles();
     dropList_.resize( recentPathsCache_.size() );
     cutLongFileNames();
-}
-
-bool OpenFilesMenuItem::checkPaths_( const std::vector<std::filesystem::path>& paths )
-{
-    for ( const auto& path : paths )
-    {
-        std::string fileExt = utf8string( path.extension() );
-        for ( auto& c : fileExt )
-            c = ( char ) std::tolower( c );
-        if ( std::any_of( filters_.begin(), filters_.end(), [&fileExt] ( const auto& filter )
-        {
-            return filter.extensions.find( fileExt ) != std::string::npos;
-        } ) )
-            return true;
-    }
-    return false;
 }
 
 OpenDirectoryMenuItem::OpenDirectoryMenuItem() :

@@ -269,3 +269,62 @@ var open_dir = function (e) {
   document.getElementById('show_browse_dialog').remove();
   return false;
 };
+
+var emplace_file_in_local_FS_and_open = function (name_with_ext, bytes) {
+  var directory = ".use_open_files";
+  FS.createPath("/", directory);
+  var path = "/" + directory + "/" + name_with_ext.replace(/\//g, "_");
+  FS.writeFile(path, bytes);
+
+  Module.ccall('emsAddFileToSene', 'void', ['string'], [path]);
+  // enforce several frames to toggle animation when popup closed
+  for (var i = 0; i < 500; i += 100)
+    setTimeout(function () { Module.ccall('emsPostEmptyEvent', 'void', ['number'], [1]); }, i);
+}
+
+var test_download_file = function (url) {
+  var options = {
+    method: 'GET'
+  };
+
+  const controller = new AbortController();
+
+  fetch(url, options).then(async (response) => {
+    if (!response.ok || !response.body) {
+      // nothing to process
+      return response;
+    }
+    const contentEncoding = response.headers.get('content-encoding');
+    const contentLength = response.headers.get(contentEncoding ? 'x-file-size' : 'content-length');
+    if (contentLength === null) {
+        return response;
+    }
+    const total = parseInt(contentLength, 10);
+    if (total == 0) {
+        return response;
+    }
+
+    let loaded = 0;
+    return new Response(
+      new ReadableStream({
+        async start(controller) {
+          const reader = response.body.getReader();
+          for (; ;) {
+            const { done, value } = await reader.read();
+            if (done) {
+              break;
+            }
+            loaded += value.byteLength;
+            var v = loaded / total;
+            console.log(v)
+            controller.enqueue(value);
+          }
+          controller.close();
+        }
+      })
+    );
+  }).then(async (response) => {
+    console.log(response);
+    emplace_file_in_local_FS_and_open("downloadedFile.stl", new Uint8Array(await response.arrayBuffer()));
+  });
+}

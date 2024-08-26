@@ -133,9 +133,12 @@ public:
         : accessor_( accessor )
         , indexer_( indexer )
         , params_( std::move( parameters ) )
-        , layers_( params_.preloadedLayerCount, std::vector<ValueType>( indexer_.sizeXY() ) )
+        , layers_( params_.preloadedLayerCount )
+        , firstLayerVoxelId_( params_.preloadedLayerCount )
     {
         assert( params_.preloadedLayerCount > 0 );
+        for ( auto & l : layers_ )
+            l.resize( indexer_.sizeXY() );
     }
 
     /// get current layer
@@ -149,7 +152,6 @@ public:
     {
         assert( 0 <= z && z < indexer_.dims().z );
         z_ = z;
-        firstCachedVoxelId_ = indexer_.toVoxelId( { 0, 0, z } );
         for ( auto layerIndex = 0; layerIndex < layers_.size(); ++layerIndex )
         {
             if ( indexer_.dims().z <= z_ + layerIndex )
@@ -162,9 +164,11 @@ public:
     void preloadNextLayer()
     {
         z_ += 1;
-        firstCachedVoxelId_ += indexer_.sizeXY();
-        for ( auto i = 0, j = 1; j < layers_.size(); ++i, ++j )
-            std::swap( layers_[i], layers_[j] );
+        for ( auto i = 0; i + 1 < layers_.size(); ++i )
+        {
+            std::swap( layers_[i], layers_[i + 1] );
+            firstLayerVoxelId_[i] = firstLayerVoxelId_[i + 1];
+        }
         if ( z_ + params_.preloadedLayerCount - 1 < indexer_.dims().z )
             preloadLayer_( params_.preloadedLayerCount - 1 );
     }
@@ -172,12 +176,11 @@ public:
     /// get voxel volume data
     ValueType get( const VoxelLocation & loc ) const
     {
-        assert( loc.id >= firstCachedVoxelId_ );
-        assert( loc.id < firstCachedVoxelId_ + layers_.size() * indexer_.sizeXY() );
         const auto layerIndex = loc.pos.z - z_;
         assert( 0 <= layerIndex && layerIndex < layers_.size() );
-        size_t n( loc.id - firstCachedVoxelId_ - layerIndex * indexer_.sizeXY() );
-        return layers_[layerIndex][n];
+        assert( loc.id >= firstLayerVoxelId_[layerIndex] );
+        assert( loc.id < firstLayerVoxelId_[layerIndex] + indexer_.sizeXY() );
+        return layers_[layerIndex][loc.id - firstLayerVoxelId_[layerIndex]];
     }
 
 private:
@@ -194,6 +197,7 @@ private:
         const auto& dims = indexer_.dims();
         assert( 0 <= z && z < dims.z );
         auto loc = indexer_.toLoc( Vector3i{ 0, 0, z } );
+        firstLayerVoxelId_[layerIndex] = loc.id;
         size_t n = 0;
         for ( loc.pos.y = 0; loc.pos.y < dims.y; ++loc.pos.y )
             for ( loc.pos.x = 0; loc.pos.x < dims.x; ++loc.pos.x, ++loc.id, ++n )
@@ -206,8 +210,8 @@ private:
     Parameters params_;
 
     int z_ = -1;
-    VoxelId firstCachedVoxelId_;
     std::vector<std::vector<ValueType>> layers_;
+    std::vector<VoxelId> firstLayerVoxelId_;
 };
 
 } // namespace MR

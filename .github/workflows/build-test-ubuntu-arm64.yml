@@ -78,6 +78,12 @@ jobs:
           ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
           ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
 
+      - name: Create virtualenv
+        run: |
+          python3 -m venv .venv
+          . .venv/bin/activate
+          echo PATH=$PATH >> $GITHUB_ENV
+
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python.txt
 

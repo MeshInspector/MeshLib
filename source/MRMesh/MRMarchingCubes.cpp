@@ -424,11 +424,9 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
                 for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
                 {
-                    auto nextLoc = baseLoc;
-                    nextLoc.pos[n] += 1;
-                    if ( nextLoc.pos[n] >= indexer.dims()[n] )
+                    auto nextLoc = indexer.getNeighbor( baseLoc, cPlusOutEdges[n] );
+                    if ( !nextLoc )
                         continue;
-                    nextLoc.id = indexer.getExistingNeighbor( baseLoc.id, cPlusOutEdges[n] );
                     const float nextValue = cache ? cache->get( nextLoc ) : acc.get( nextLoc );
                     if ( nanChecker( nextValue ) )
                         continue;

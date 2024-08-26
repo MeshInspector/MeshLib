@@ -117,7 +117,7 @@ EMSCRIPTEN_KEEPALIVE void emsAddFileToSene( const char* filename )
 #ifdef __EMSCRIPTEN_PTHREADS__
         filters = filters | ObjectLoad::getFilters();
 #else
-        filters_= filters | AsyncObjectLoad::getFilters();
+        filters = filters | AsyncObjectLoad::getFilters();
 #endif
     std::vector<std::filesystem::path> paths = {pathFromUtf8(filename)};
     if ( !checkPaths( paths, filters ) )

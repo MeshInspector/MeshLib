@@ -106,7 +106,7 @@ bool checkPaths( const std::vector<std::filesystem::path>& paths, const MR::IOFi
 #ifdef __EMSCRIPTEN__
 extern "C" {
 
-EMSCRIPTEN_KEEPALIVE void emsAddFileToSene( const char* filename )
+EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename )
 {
     using namespace MR;
     auto filters = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | SceneFileFilters | DistanceMapLoad::Filters | GcodeLoad::Filters | VoxelsLoad::Filters;
@@ -126,6 +126,17 @@ EMSCRIPTEN_KEEPALIVE void emsAddFileToSene( const char* filename )
         return;
     }
     getViewerInstance().loadFiles( paths );
+}
+
+EMSCRIPTEN_KEEPALIVE void emsGetObjectFromScene( const char* objectName, const char* filename )
+{
+    using namespace MR;
+    auto obj = SceneRoot::get().find( objectName );
+    if ( !obj )
+        return;
+    auto res = saveObjectToFile( *obj, pathFromUtf8(filename), { .backupOriginalFile = false} );
+    if ( !res )
+        showError( res.error() );
 }
 
 }

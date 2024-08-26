@@ -31,7 +31,10 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, 
         {
             accum.addPoint( Vector3d( coord ) );
         } );
-        normals[vid] = Vector3f( accum.getBestPlane().n );
+         auto n = Vector3f( accum.getBestPlane().n );
+         if ( dot( n, pointCloud.points[vid] ) > 0 )
+             n = -n; // orient the normal toward the origin
+         normals[vid] = n;
     }, progress ) )
         return {};
 

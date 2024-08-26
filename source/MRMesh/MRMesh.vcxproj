@@ -48,6 +48,7 @@
     <ClInclude Include="MRLevelOfDetails.h" />
     <ClInclude Include="MRLocalTriangulations.h" />
     <ClInclude Include="MRMapping.h" />
+    <ClInclude Include="MRMeshAttributesToUpdate.h" />
     <ClInclude Include="MRMeshDecimateCallbacks.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
@@ -130,6 +131,7 @@
     <ClInclude Include="MRMeshExtrude.h" />
     <ClInclude Include="MRMeshRelax.hpp" />
     <ClInclude Include="MRMeshReplicate.h" />
+    <ClInclude Include="MRMeshSubdivideCallbacks.h" />
     <ClInclude Include="MRMeshThickness.h" />
     <ClInclude Include="MRMeshToDistanceVolume.h" />
     <ClInclude Include="MRMisonLoad.h" />
@@ -528,6 +530,7 @@
     <ClCompile Include="MRMeshExtrude.cpp" />
     <ClCompile Include="MRMeshOrPoints.cpp" />
     <ClCompile Include="MRMeshReplicate.cpp" />
+    <ClCompile Include="MRMeshSubdivideCallbacks.cpp" />
     <ClCompile Include="MRMeshThickness.cpp" />
     <ClCompile Include="MRMeshToDistanceVolume.cpp" />
     <ClCompile Include="MRMisonLoad.cpp" />

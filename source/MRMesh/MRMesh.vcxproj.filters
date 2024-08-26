@@ -1335,6 +1335,12 @@
     <ClInclude Include="MRICPEnums.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshSubdivideCallbacks.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshAttributesToUpdate.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2215,6 +2221,9 @@
     </ClCompile>
     <ClCompile Include="MRStacktrace.cpp">
       <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshSubdivideCallbacks.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

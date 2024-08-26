@@ -33,11 +33,11 @@ void ObjectVoxels::construct( const SimpleVolume& volume, ProgressCallback cb )
 {
     mesh_.reset();
     activeVoxels_.reset();
+    activeBounds_.reset();
     vdbVolume_.data = simpleVolumeToDenseGrid( volume, cb );
     vdbVolume_.dims = volume.dims;
     vdbVolume_.voxelSize = volume.voxelSize;
     indexer_ = VolumeIndexer( vdbVolume_.dims );
-    activeBox_ = Box3i( Vector3i(), vdbVolume_.dims );
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
 
     volumeRenderActiveVoxels_.clear();
@@ -52,12 +52,12 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
     if ( !grid )
         return;
     activeVoxels_.reset();
+    activeBounds_.reset();
     vdbVolume_.data = grid;
 
     auto vdbDims = vdbVolume_.data->evalActiveVoxelDim();
     vdbVolume_.dims = {vdbDims.x(),vdbDims.y(),vdbDims.z()};
     indexer_ = VolumeIndexer( vdbVolume_.dims );
-    activeBox_ = Box3i( Vector3i(), vdbVolume_.dims );
     vdbVolume_.voxelSize = voxelSize;
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
 
@@ -131,6 +131,7 @@ VdbVolume ObjectVoxels::updateVdbVolume( VdbVolume vdbVolume )
 {
     auto oldVdbVolume = std::move( vdbVolume_ );
     activeVoxels_.reset();
+    activeBounds_.reset();
     vdbVolume_ = std::move( vdbVolume );
     indexer_ = VolumeIndexer( vdbVolume_.dims );
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x, 1 / vdbVolume_.voxelSize.y, 1 / vdbVolume_.voxelSize.z };
@@ -146,13 +147,6 @@ Histogram ObjectVoxels::updateHistogram( Histogram histogram )
     auto oldHistogram = std::move( histogram_ );
     histogram_ = std::move( histogram );
     return oldHistogram;
-}
-
-Box3i ObjectVoxels::updateActiveBounds( const Box3i& box )
-{
-    Box3i oldBox = activeBox_;
-    activeBox_ = box;
-    return oldBox;
 }
 
 Expected<std::shared_ptr<Mesh>> ObjectVoxels::recalculateIsoSurface( float iso, MR::ProgressCallback cb ) const
@@ -319,7 +313,7 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
         return;
 
     activeVoxels_.reset();
-    activeBox_ = activeBox;
+    activeBounds_.reset();
 
     float cbModifier = 1.0f;
     if ( updateSurface && volumeRendering_ )
@@ -329,8 +323,8 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
     float lastProgress = 0.0f;
 
     openvdb::CoordBBox activeVdbBox;
-    activeVdbBox.min() = openvdb::Coord( activeBox_.min.x, activeBox_.min.y, activeBox_.min.z );
-    activeVdbBox.max() = openvdb::Coord( activeBox_.max.x - 1, activeBox_.max.y - 1, activeBox_.max.z - 1 );
+    activeVdbBox.min() = openvdb::Coord( activeBox.min.x, activeBox.min.y, activeBox.min.z );
+    activeVdbBox.max() = openvdb::Coord( activeBox.max.x - 1, activeBox.max.y - 1, activeBox.max.z - 1 );
 
     // create active mask tree
     openvdb::TopologyTree topologyTree;
@@ -363,8 +357,9 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
 
     reportProgress( cb, cbModifier );
 
-    volumeRenderActiveVoxels_.clear();
-    dirty_ |= DIRTY_SELECTION;
+    // not safe to call from progress bar thread
+    if ( !cb ) // we assume that cb presence indicates thread: if cb is set then it is progress bar thread, otherwise it is UI thread
+        invalidateActiveBoundsCaches();
 
     lastProgress = cbModifier;
     if ( updateSurface )
@@ -384,9 +379,27 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
     }
 }
 
+void ObjectVoxels::invalidateActiveBoundsCaches()
+{
+    volumeRenderActiveVoxels_.clear();
+    dirty_ |= DIRTY_SELECTION;
+    activeVoxels_.reset();
+}
+
+const Box3i& ObjectVoxels::getActiveBounds() const
+{
+    if ( !activeBounds_ )
+    {
+        auto activeBox = vdbVolume_.data->evalActiveVoxelBoundingBox();
+        activeBounds_.emplace( Vector3i{ activeBox.min().x(), activeBox.min().y(), activeBox.min().z() },
+                               Vector3i{ activeBox.max().x(), activeBox.max().y(), activeBox.max().z() } );
+    }
+    return *activeBounds_;
+}
+
 void ObjectVoxels::setVolumeRenderActiveVoxels( const VoxelBitSet& activeVoxels )
 {
-    auto box = activeBox_.size();
+    auto box = getActiveBounds().size();
     const bool valid = activeVoxels.empty() || activeVoxels.size() == box.x * box.y * box.z;
     assert( valid );
     if ( !valid )
@@ -574,9 +587,13 @@ void ObjectVoxels::serializeFields_( Json::Value& root ) const
     VisualObject::serializeFields_( root );
     serializeToJson( vdbVolume_.voxelSize, root["VoxelSize"] );
 
+    const auto activeBounds = getActiveBounds();
+
     serializeToJson( vdbVolume_.dims, root["Dimensions"] );
-    serializeToJson( activeBox_.min, root["MinCorner"] );
-    serializeToJson( activeBox_.max, root["MaxCorner"] );
+    // Min and Max corners are serialized for backward-compatibility
+    serializeToJson( activeBounds.min, root["MinCorner"] );
+    serializeToJson( activeBounds.max, root["MaxCorner"] );
+    //
     serializeToJson( selectedVoxels_, root["SelectionVoxels"] );
 
     root["IsoValue"] = isoValue_;
@@ -604,11 +621,13 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
     else
         deserializeFromJson( root["VoxelSize"], vdbVolume_.voxelSize );
 
+    Box3i activeBox;
+
     deserializeFromJson( root["Dimensions"], vdbVolume_.dims );
 
-    deserializeFromJson( root["MinCorner"], activeBox_.min );
+    deserializeFromJson( root["MinCorner"], activeBox.min );
 
-    deserializeFromJson( root["MaxCorner"], activeBox_.max );
+    deserializeFromJson( root["MaxCorner"], activeBox.max );
 
     deserializeFromJson( root["SelectionVoxels"], selectedVoxels_ );
 
@@ -618,13 +637,10 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
     if ( root["DualMarchingCubes"].isBool() )
         dualMarchingCubes_ = root["DualMarchingCubes"].asBool();
 
-    if ( !activeBox_.valid() )
-        activeBox_ = Box3i( Vector3i(), vdbVolume_.dims );
-
-    if ( activeBox_.min != Vector3i() || activeBox_.max != vdbVolume_.dims )
-        setActiveBounds( activeBox_ );
-    else 
-        setIsoValue( isoValue_ );
+    if ( activeBox.valid() && ( activeBox.min != Vector3i() || activeBox.max != vdbVolume_.dims ) )
+        setActiveBounds( activeBox );
+    else
+        setIsoValue( isoValue_ ); // is called automatically in `setActiveBounds`
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
         setDefaultSceneProperties_();
@@ -658,6 +674,7 @@ VoidOrErrStr ObjectVoxels::deserializeModel_( const std::filesystem::path& path,
 
 std::vector<std::string> ObjectVoxels::getInfoLines() const
 {
+    auto activeBox = getActiveBounds();
     std::vector<std::string> res = ObjectMeshHolder::getInfoLines();
     res.push_back( fmt::format( "dims: ({}, {}, {})", vdbVolume_.dims.x, vdbVolume_.dims.y, vdbVolume_.dims.z ) );
     res.push_back( fmt::format( "voxel size: ({:.3}, {:.3}, {:.3})", vdbVolume_.voxelSize.x, vdbVolume_.voxelSize.y, vdbVolume_.voxelSize.z ) );
@@ -665,6 +682,9 @@ std::vector<std::string> ObjectVoxels::getInfoLines() const
         vdbVolume_.dims.x * vdbVolume_.voxelSize.x,
         vdbVolume_.dims.y * vdbVolume_.voxelSize.y,
         vdbVolume_.dims.z * vdbVolume_.voxelSize.z ) );
+    res.push_back( fmt::format( "active box: ({}, {}, {}; {}, {}, {})",
+        activeBox.min.x, activeBox.min.y, activeBox.min.z,
+        activeBox.max.x, activeBox.max.y, activeBox.max.z ) );
     res.push_back( fmt::format( "min-value: {:.3}", vdbVolume_.min ) );
     res.push_back( fmt::format( "iso-value: {:.3}", isoValue_ ) );
     res.push_back( fmt::format( "max-value: {:.3}", vdbVolume_.max ) );

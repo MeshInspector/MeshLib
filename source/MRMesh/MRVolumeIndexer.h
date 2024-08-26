@@ -158,10 +158,10 @@ inline VoxelLocation VolumeIndexer::getNeighbor( const VoxelLocation & loc, OutE
 }
 
 /// expands VoxelBitSet with given number of steps
-[[nodiscard]] MRMESH_API void expandVoxelsMask( VoxelBitSet& mask, const VolumeIndexer& indexer, int expansion = 1 );
+MRMESH_API void expandVoxelsMask( VoxelBitSet& mask, const VolumeIndexer& indexer, int expansion = 1 );
 
 /// shrinks VoxelBitSet with given number of steps
-[[nodiscard]] MRMESH_API void shrinkVoxelsMask( VoxelBitSet& mask, const VolumeIndexer& indexer, int shrinkage = 1 );
+MRMESH_API void shrinkVoxelsMask( VoxelBitSet& mask, const VolumeIndexer& indexer, int shrinkage = 1 );
 
 /// \}
 

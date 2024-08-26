@@ -50,6 +50,7 @@ EMSCRIPTEN_KEEPALIVE int emsSaveFile( const char* filename )
 
     std::filesystem::path savePath = std::string( filename );
     sDialogFilesCallback( { savePath } );
+    sDialogFilesCallback = {};
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
@@ -68,6 +69,11 @@ EMSCRIPTEN_KEEPALIVE int emsOpenDirectory( const char* dirname )
     sDialogFilesCallback = {};
 
     return 0;
+}
+
+EMSCRIPTEN_KEEPALIVE void emsFreeFSCallback()
+{
+    sDialogFilesCallback = {};
 }
 
 }

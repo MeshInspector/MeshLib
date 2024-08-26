@@ -85,7 +85,10 @@ jobs:
           echo PATH=$PATH >> $GITHUB_ENV
 
       - name: Setup python requirements
-        run: python3 -m pip install -r ./requirements/python.txt
+        run: |
+          echo $PATH
+          which python3
+          python3 -m pip install -r ./requirements/python.txt
 
       - name: Build
         run: ./scripts/build_source.sh

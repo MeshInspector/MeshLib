@@ -28,6 +28,14 @@ IF(MR_EMSCRIPTEN)
     spdlog
     jsoncpp
   )
+ELSEIF(APPLE)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    Freetype::Freetype
+    PkgConfig::jsoncpp
+    fmt
+    spdlog
+  )
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh

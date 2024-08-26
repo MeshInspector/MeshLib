@@ -6,7 +6,7 @@
 namespace MR
 {
 
-VoxelId VolumeIndexer::getNeighbor( VoxelId v, const Vector3i & pos, OutEdge toNei ) const
+bool VolumeIndexer::hasNeighbour( const Vector3i & pos, OutEdge toNei ) const
 {
     switch ( toNei )
     {
@@ -16,17 +16,17 @@ VoxelId VolumeIndexer::getNeighbor( VoxelId v, const Vector3i & pos, OutEdge toN
     case OutEdge::Invalid:
         return {};
     case OutEdge::PlusZ:
-        return pos.z + 1 < dims_.z ? v + sizeXY_ : VoxelId{};
+        return pos.z + 1 < dims_.z;
     case OutEdge::MinusZ:
-        return pos.z > 0 ? v - sizeXY_ : VoxelId{};
+        return pos.z > 0;
     case OutEdge::PlusY:
-        return pos.y + 1 < dims_.y ? v + size_t( dims_.x ) : VoxelId{};
+        return pos.y + 1 < dims_.y;
     case OutEdge::MinusY:
-        return pos.y > 0 ? v - size_t( dims_.x ) : VoxelId{};
+        return pos.y > 0;
     case OutEdge::PlusX:
-        return pos.x + 1 < dims_.x ? v + size_t( 1 ) : VoxelId{};
+        return pos.x + 1 < dims_.x;
     case OutEdge::MinusX:
-        return pos.x > 0 ? v - size_t( 1 ) : VoxelId{};
+        return pos.x > 0;
     }
 }
 

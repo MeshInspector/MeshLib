@@ -23,7 +23,7 @@ var addKeyboardEvents = function () {
 
 var curentCancelCb = function(){};
 
-var createPopup = function (closeId, label, width, height, center = true, showCloseButton = true, thisOnCancel = function(){}) {
+var createPopup = function (closeId, label, width, height, center = true, showCloseButton = true, oncancel = function(){}) {
     var isLightThemeEnabled = getColorTheme();
     var popup = document.createElement('div');
 
@@ -47,7 +47,7 @@ var createPopup = function (closeId, label, width, height, center = true, showCl
     var bgColor = isLightThemeEnabled ? "#fff" : "#1c1f24";
     popup.setAttribute('style', 'width:' + width + 'px;height:' + height + 'px;border-radius: 4px;background:' + bgColor + ';position:absolute;' + positionStyle);
 
-    curentCancelCb = thisOnCancel;
+    curentCancelCb = oncancel;
     var close = document.createElement('div');
     close.setAttribute('class', 'unselectable');
     close.innerHTML = '&#x2715;';

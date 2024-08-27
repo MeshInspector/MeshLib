@@ -528,7 +528,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                 const auto dl = vl.pos.z - loc.pos.z;
                 assert( dl >= 0 && dl <= 1 );
                 // (*bs)[dl] is one of two bit sets, and layerFirstVoxelId[dl] is VoxelId corresponding to zeroth bit in it
-                return (*bs)[dl][vl.id - layerFirstVoxelId[dl]];
+                return (*bs)[dl].test( vl.id - layerFirstVoxelId[dl] );
             };
             for ( loc.pos.y = 0; loc.pos.y + 1 < volume.dims.y; ++loc.pos.y )
             {

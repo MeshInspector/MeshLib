@@ -1,8 +1,9 @@
 #pragma once
-#include "MRMesh/MRMeshFwd.h"
-#ifndef MRMESH_NO_OPENVDB
+#include "MRCommonPlugins/config.h"
+#ifndef MRCOMMONPLUGINS_NO_VOXELS
+
 #include "MRViewer/MRStatePlugin.h"
-#include "MRMesh/MRVoxelsLoad.h"
+#include "MRVoxels/MRVoxelsLoad.h"
 
 namespace MR
 {

@@ -1,0 +1,3 @@
+#pragma once
+
+#cmakedefine MRCOMMONPLUGINS_NO_VOXELS

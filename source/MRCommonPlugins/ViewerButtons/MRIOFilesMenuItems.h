@@ -5,6 +5,11 @@
 #include "MRMesh/MRIOFilters.h"
 #include <filesystem>
 
+#include "MRCommonPlugins/config.h"
+#ifndef MRCOMMONPLUGINS_NO_VOXELS
+#include "MRVoxels/MRVoxelsFwd.h"
+#endif
+
 namespace MR
 {
 using FileNamesStack = std::vector<std::filesystem::path>;
@@ -37,7 +42,7 @@ private:
     std::shared_ptr<OpenDirectoryMenuItem> openDirectoryItem_;
 };
 
-#ifndef MRMESH_NO_DICOM
+#if !defined( MRCOMMONPLUGINS_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
 class OpenDICOMsMenuItem : public RibbonMenuItem
 {
 public:

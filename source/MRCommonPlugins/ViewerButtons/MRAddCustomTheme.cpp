@@ -11,7 +11,6 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRDirectory.h"
-#include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRObjectDistanceMap.h"
@@ -22,6 +21,11 @@
 #include "MRViewer/MRViewerSettingsPlugin.h"
 #include "MRViewer/MRUIStyle.h"
 #include <fstream>
+
+#include "MRCommonPlugins/config.h"
+#ifndef MRCOMMONPLUGINS_NO_VOXELS
+#include "MRVoxels/MRObjectVoxels.h"
+#endif
 
 namespace MR
 {
@@ -315,7 +319,7 @@ MR_SUPPRESS_WARNING_PUSH
 MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
             obj->setLabelsColor( SceneColors::get( SceneColors::Labels ) );
 MR_SUPPRESS_WARNING_POP
-#ifndef MRMESH_NO_OPENVDB
+#ifndef MRCOMMONPLUGINS_NO_VOXELS
             if ( auto objVoxels = std::dynamic_pointer_cast< ObjectVoxels >( obj ) )
             {
                 objVoxels->setFrontColor( SceneColors::get( SceneColors::SelectedObjectVoxels ), true );

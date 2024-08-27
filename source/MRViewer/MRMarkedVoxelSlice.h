@@ -1,13 +1,14 @@
 #pragma once
 
+#include "MRViewerFwd.h"
+#ifndef MRVIEWER_NO_VOXELS
+
 #include "MRImGuiImage.h"
 #include <MRMesh/MRColor.h>
 #include <MRMesh/MRVector3.h>
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRBox.h>
-#include <MRMesh/MRVoxelPath.h>
-
-#ifndef MRMESH_NO_OPENVDB
+#include <MRVoxels/MRVoxelPath.h>
 
 namespace MR
 {
@@ -121,4 +122,4 @@ private:
 
 } //namespace MR
 
-#endif //!MRMESH_NO_OPENVDB
+#endif

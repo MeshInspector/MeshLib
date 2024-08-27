@@ -28,6 +28,7 @@
     <ClCompile Include="MRDirectionWidget.cpp" />
     <ClCompile Include="MRGLTexture.cpp" />
     <ClCompile Include="MRHistoryStore.cpp" />
+    <ClCompile Include="MRApple.cpp" />
     <ClCompile Include="MRMarkedVoxelSlice.cpp" />
     <ClCompile Include="MRMeshBoundarySelectionWidget.cpp" />
     <ClCompile Include="MRFrameCounter.cpp" />
@@ -146,6 +147,7 @@
     <ClInclude Include="MRHistoryStore.h" />
     <ClInclude Include="MRISceneStateCheck.h" />
     <ClInclude Include="MRLambdaRibbonItem.h" />
+    <ClInclude Include="MRApple.h" />
     <ClInclude Include="MRMarkedVoxelSlice.h" />
     <ClInclude Include="MRMeshBoundarySelectionWidget.h" />
     <ClInclude Include="MRFrameCounter.h" />

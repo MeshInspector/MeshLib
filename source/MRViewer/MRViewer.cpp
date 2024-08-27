@@ -28,6 +28,7 @@
 #include "MRFrameCounter.h"
 #include "MRColorTheme.h"
 #include "MRHistoryStore.h"
+#include "MRApple.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -775,6 +776,10 @@ int Viewer::launchInit_( const LaunchParams& params )
         glfwSetCharCallback( window, glfw_char_mods_callback );
         glfwSetDropCallback( window, glfw_drop_callback );
         glfwSetJoystickCallback( glfw_joystick_callback );
+#ifdef __APPLE__
+        Apple::registerOpenDocumentsCallback();
+#endif
+
         // Handle retina displays (windows and mac)
         int width, height;
         glfwGetFramebufferSize( window, &width, &height );

@@ -376,8 +376,8 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
     constexpr int hardware_destructive_interference_size = 64;
     struct alignas(hardware_destructive_interference_size) S
     {
-        std::atomic<int> numProcessedLeyers{ 0 };
-    } s;
+        std::atomic<int> numProcessedLayers{ 0 };
+    } cacheLineStorage;
     static_assert( alignof(S) == hardware_destructive_interference_size );
     static_assert( sizeof(S) == hardware_destructive_interference_size );
 
@@ -458,8 +458,8 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                     block.smap.insert( { loc.id, set } );
                 }
             }
-            const auto numProcessedLeyers = s.numProcessedLeyers.fetch_add( 1, std::memory_order_relaxed );
-            if ( report && !reportProgress( currentSubprogress, float( numProcessedLeyers ) / layerCount ) )
+            const auto numProcessedLayers = cacheLineStorage.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
+            if ( report && !reportProgress( currentSubprogress, float( numProcessedLayers ) / layerCount ) )
                 keepGoing.store( false, std::memory_order_relaxed );
         }
     } );
@@ -488,7 +488,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
     const size_t cDimStep[3] = { 1, size_t( indexer.dims().x ), indexer.sizeXY() };
 
     currentSubprogress = subprogress( params.cb, 0.5f, 0.85f );
-    s.numProcessedLeyers = 0;
+    cacheLineStorage.numProcessedLayers = 0;
     ParallelFor( 0, blockCount, [&] ( int blockIndex )
     {
         auto & block = sepStorage.getBlock( blockIndex );
@@ -672,8 +672,8 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                     }
                 }
             }
-            const auto numProcessedLeyers = s.numProcessedLeyers.fetch_add( 1, std::memory_order_relaxed );
-            if ( report && !reportProgress( currentSubprogress, float( numProcessedLeyers ) / layerCount ) )
+            const auto numProcessedLayers = cacheLineStorage.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
+            if ( report && !reportProgress( currentSubprogress, float( numProcessedLayers ) / layerCount ) )
             {
                 keepGoing.store( false, std::memory_order_relaxed );
                 return;

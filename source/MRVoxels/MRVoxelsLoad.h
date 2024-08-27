@@ -23,7 +23,7 @@ MRVOXELS_API extern const IOFilters Filters;
 /// usually needed for scans
 MRVOXELS_API void sortFilesByName( std::vector<std::filesystem::path>& scans );
 
-#if !defined(MRVOXELS_NO_DICOM)
+#ifndef MRVOXELS_NO_DICOM
 struct DicomVolume
 {
     SimpleVolume vol;
@@ -58,7 +58,7 @@ MRVOXELS_API std::vector<Expected<LoadDCMResult>> loadDCMFolderTree( const std::
 
 /// Loads 3D volumetric data from a single DICOM file
 MRVOXELS_API Expected<DicomVolume> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb = {} );
-#endif // MRMESH_NO_DICOM
+#endif // MRVOXELS_NO_DICOM
 
 struct RawParameters
 {
@@ -124,7 +124,7 @@ enum class GridType
     LevelSet = 1
 };
 
-#ifndef MRMESH_NO_TIFF
+#ifndef MRVOXELS_NO_TIFF
 struct LoadingTiffSettings
 {
     std::filesystem::path dir;
@@ -134,7 +134,7 @@ struct LoadingTiffSettings
 };
 /// Load voxels from a set of TIFF files
 MRVOXELS_API Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings );
-#endif // MRMESH_NO_TIFF
+#endif // MRVOXELS_NO_TIFF
 
 }
 

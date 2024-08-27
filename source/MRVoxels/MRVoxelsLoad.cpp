@@ -9,7 +9,6 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRDirectory.h"
 #include "MROpenVDBHelper.h"
-#include "MRMesh/MRTiffIO.h"
 #include "MRMesh/MRParallelFor.h"
 #include <MRPch/MROpenvdb.h>
 #include "MRPch/MRSpdlog.h"
@@ -20,6 +19,10 @@
 #include <gdcmImageReader.h>
 #include <gdcmTagKeywords.h>
 #endif // MRVOXELS_NO_DICOM
+
+#ifndef MRVOXELS_NO_TIFF
+#include "MRMesh/MRTiffIO.h"
+#endif // MRVOXELS_NO_TIFF
 
 #include <openvdb/io/Stream.h>
 #include <openvdb/tools/GridTransformer.h>
@@ -1038,6 +1041,7 @@ Expected<std::vector<VdbVolume>> fromAnySupportedFormat( const std::filesystem::
     return unexpected( std::string( "Unsupported file extension" ) );
 }
 
+#ifndef MRVOXELS_NO_TIFF
 struct TiffParams
 {
     int bitsPerSample = 0;
@@ -1059,7 +1063,6 @@ struct TiffParams
     }
 };
 
-#ifndef MRMESH_NO_TIFF
 Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
 {
     std::error_code ec;
@@ -1149,7 +1152,7 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
     
     return res;
 }
-#endif // MRMESH_NO_TIFF
+#endif // MRVOXELS_NO_TIFF
 
 Expected<VdbVolume> fromRaw( const std::filesystem::path& file, const RawParameters& params,
     const ProgressCallback& cb )

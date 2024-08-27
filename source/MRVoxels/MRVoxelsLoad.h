@@ -138,4 +138,9 @@ MRVOXELS_API Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& setting
 
 }
 
+/// loads voxels from given file in new object
+MRVOXELS_API Expected<std::vector<std::shared_ptr<ObjectVoxels>>> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback = {} );
+
+MRVOXELS_API Expected<std::vector<std::shared_ptr<Object>>> makeObjectFromVoxelsFile( const std::filesystem::path& file, std::string* warnings = nullptr, ProgressCallback callback = {} );
+
 }

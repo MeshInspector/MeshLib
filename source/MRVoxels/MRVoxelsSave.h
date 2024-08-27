@@ -7,7 +7,10 @@
 #include "MRVoxelsVolume.h"
 #include <filesystem>
 
-namespace MR::VoxelsSave
+namespace MR
+{
+
+namespace VoxelsSave
 {
 
 /// \addtogroup IOGroup
@@ -55,4 +58,9 @@ MRVOXELS_API VoidOrErrStr saveAllSlicesToImage( const VdbVolume& vdbVolume, cons
 
 /// \}
 
-}
+} // namespace VoxelsSave
+
+MRVOXELS_API Expected<void> saveObjectVoxelsToFile( const Object& object, const std::filesystem::path& path,
+                                                    ProgressCallback callback = {} );
+
+} // namespace MR

@@ -1,5 +1,6 @@
 #include "MRVoxelsLoad.h"
 
+#include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRTimer.h"
 #include "MRObjectVoxels.h"
 #include "MRVDBConversions.h"
@@ -60,7 +61,10 @@ namespace
 #endif // MRVOXELS_NO_DICOM
 }
 
-namespace MR::VoxelsLoad
+namespace MR
+{
+
+namespace VoxelsLoad
 {
 
 const IOFilters Filters =
@@ -1293,4 +1297,67 @@ Expected<VdbVolume> fromRaw( std::istream& in, const RawParameters& params,  con
     return res;
 }
 
-} // namespace MR::VoxelsLoad
+} // namespace VoxelsLoad
+
+Expected<std::vector<std::shared_ptr<ObjectVoxels>>> makeObjectVoxelsFromFile( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
+{
+    MR_TIMER;
+
+    auto cb = callback;
+    if ( cb )
+        cb = [callback] ( float v ) { return callback( v / 3.f ); };
+    auto loadRes = VoxelsLoad::fromAnySupportedFormat( file, cb );
+    if ( !loadRes.has_value() )
+    {
+        return unexpected( loadRes.error() );
+    }
+    auto& loadResRef = *loadRes;
+    std::vector<std::shared_ptr<ObjectVoxels>> res;
+    int size = int( loadResRef.size() );
+    for ( int i = 0; i < size; ++i )
+    {
+        std::shared_ptr<ObjectVoxels> obj = std::make_shared<ObjectVoxels>();
+        const std::string name = i > 1 ? fmt::format( "{} {}", utf8string(file.stem()), i) : utf8string(file.stem());
+        obj->setName( name );
+        int step = 0;
+        bool callbackRes = true;
+        if ( cb )
+            cb = [callback, &i, &step, size, &callbackRes] ( float v )
+            {
+                callbackRes = callback( ( 1.f + 2 * ( i + ( step + v ) / 2.f ) / size ) / 3.f );
+                return callbackRes;
+            };
+
+        obj->construct( loadResRef[i], cb );
+        if ( cb && !callbackRes )
+            return unexpected( getCancelMessage( file ) );
+        step = 1;
+        obj->setIsoValue( ( loadResRef[i].min + loadResRef[i].max ) / 2.f, cb );
+        if ( cb && !callbackRes )
+            return unexpected( getCancelMessage( file ) );
+        res.emplace_back( obj );
+    }
+
+    return res;
+}
+
+Expected<std::vector<std::shared_ptr<Object>>> makeObjectFromVoxelsFile( const std::filesystem::path& file, std::string*, ProgressCallback callback )
+{
+    auto objsVoxels = makeObjectVoxelsFromFile( file, callback );
+    if ( !objsVoxels.has_value() )
+        return unexpected( std::move( objsVoxels.error() ) );
+
+    std::vector<std::shared_ptr<Object>> resObjs;
+    for ( auto& objPtr : *objsVoxels )
+    {
+        objPtr->select( true );
+        resObjs.emplace_back( std::dynamic_pointer_cast< Object >( objPtr ) );
+    }
+    return resObjs;
+}
+
+MR_ADD_OBJECT_LOADER( IOFilter( "Raw (.raw)", "*.raw" ), &makeObjectFromVoxelsFile )
+MR_ADD_OBJECT_LOADER( IOFilter( "Micro CT (.gav)", "*.gav" ), &makeObjectFromVoxelsFile )
+MR_ADD_OBJECT_LOADER( IOFilter( "OpenVDB (.vdb)", "*.vdb" ), &makeObjectFromVoxelsFile )
+
+} // namespace MR

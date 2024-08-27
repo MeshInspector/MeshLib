@@ -1,6 +1,6 @@
 #include "MRVoxelsSave.h"
 
-#include "MRVoxelsFwd.h"
+#include "MRObjectVoxels.h"
 #include "MRMesh/MRImageSave.h"
 #include "MRVDBFloatGrid.h"
 #include "MRMesh/MRStringConvert.h"
@@ -11,6 +11,8 @@
 #include "MRPch/MROpenvdb.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRFmt.h"
+#include "MRMesh/MRObjectsAccess.h"
+#include "MRMesh/MRIOFormatsRegistry.h"
 
 #include <openvdb/io/Stream.h>
 
@@ -18,7 +20,10 @@
 #include <filesystem>
 #include <sstream>
 
-namespace MR::VoxelsSave
+namespace MR
+{
+
+namespace VoxelsSave
 {
 
 const IOFilters Filters = 
@@ -287,4 +292,25 @@ VoidOrErrStr saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSetti
     return {};
 }
 
-} // namespace MR::VoxelsSave
+} // namespace VoxelsSave
+
+Expected<void> saveObjectVoxelsToFile( const Object& object, const std::filesystem::path& path, ProgressCallback callback )
+{
+    const auto objVoxels = getAllObjectsInTree<ObjectVoxels>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable );
+    if ( objVoxels.empty() )
+        return VoxelsSave::toAnySupportedFormat( {}, path, callback );
+    else if ( objVoxels.size() > 1 )
+        return unexpected( "Multiple voxel grids in the given object" );
+
+    const auto& objVoxel = objVoxels.front();
+    if ( !objVoxel )
+        return VoxelsSave::toAnySupportedFormat( {}, path, callback );
+
+    return VoxelsSave::toAnySupportedFormat( objVoxel->vdbVolume(), path, callback );
+}
+
+MR_ADD_OBJECT_SAVER( IOFilter( "Raw (.raw)", "*.raw" ), &saveObjectVoxelsToFile )
+MR_ADD_OBJECT_SAVER( IOFilter( "Micro CT (.gav)", "*.gav" ), &saveObjectVoxelsToFile )
+MR_ADD_OBJECT_SAVER( IOFilter( "OpenVDB (.vdb)", "*.vdb" ), &saveObjectVoxelsToFile )
+
+} // namespace MR

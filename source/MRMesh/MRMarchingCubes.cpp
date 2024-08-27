@@ -349,38 +349,45 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
     VolumeIndexer indexer( volume.dims );
 
-    std::atomic<bool> keepGoing{ true };
-    auto mainThreadId = std::this_thread::get_id();
-    int lastSubMap = -1;
-
-    size_t threadCount = tbb::global_control::parameter( tbb::global_control::max_allowed_parallelism );
+    int threadCount = tbb::global_control::parameter( tbb::global_control::max_allowed_parallelism );
     if ( threadCount == 0 )
         threadCount = std::thread::hardware_concurrency();
     if ( threadCount == 0 )
         threadCount = 1;
 
-    const auto layerCount = (size_t)indexer.dims().z;
+    const int layerCount = indexer.dims().z;
     const auto layerSize = indexer.sizeXY();
     assert( indexer.size() == layerCount * layerSize );
 
     // more blocks than threads is recommended for better work distribution among threads since
     // every block demands unique amount of processing
-    const auto blockCount = std::min( layerCount, threadCount > 1 ? 4 * threadCount : 1 );
-    const auto layerPerBlockCount = (size_t)std::ceil( (float)layerCount / (float)blockCount );
+    const int blockCount = std::min( layerCount, threadCount > 1 ? 4 * threadCount : 1 );
+    const int layerPerBlockCount = (int)std::ceil( (float)layerCount / (float)blockCount );
     const auto blockSize = layerPerBlockCount * layerSize;
     assert( indexer.size() <= blockSize * blockCount );
 
     SeparationPointStorage sepStorage( blockCount, blockSize );
 
-    ParallelFor( size_t( 0 ), blockCount, [&] ( size_t blockIndex )
+    const auto callingThreadId = std::this_thread::get_id();
+    std::atomic<bool> keepGoing{ true };
+    
+    // avoid false sharing with other local variables
+    // by putting processedBits in its own cache line
+    constexpr int hardware_destructive_interference_size = 64;
+    struct alignas(hardware_destructive_interference_size) S
+    {
+        std::atomic<int> numProcessedLeyers{ 0 };
+    } s;
+    static_assert( alignof(S) == hardware_destructive_interference_size );
+    static_assert( sizeof(S) == hardware_destructive_interference_size );
+
+    auto currentSubprogress = subprogress( params.cb, 0.0f, 0.3f );
+    ParallelFor( 0, blockCount, [&] ( int blockIndex )
     {
         auto & block = sepStorage.getBlock( blockIndex );
+        const bool report = std::this_thread::get_id() == callingThreadId;
 
-        if ( std::this_thread::get_id() == mainThreadId && lastSubMap == -1 )
-            lastSubMap = int( blockIndex );
-        const bool runCallback = params.cb && std::this_thread::get_id() == mainThreadId && lastSubMap == blockIndex;
-
-        const auto layerBegin = blockIndex * layerPerBlockCount;
+        const int layerBegin = blockIndex * layerPerBlockCount;
         if ( layerBegin >= layerCount )
             return;
         const auto layerEnd = std::min( ( blockIndex + 1 ) * layerPerBlockCount, layerCount );
@@ -396,62 +403,64 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
             cache.emplace( acc, indexer, Parameters {
                 .preloadedLayerCount = 2,
             } );
-            cache->preloadLayer( (int)layerBegin );
+            cache->preloadLayer( layerBegin );
         }
 
-        const auto begin = layerBegin * layerSize;
-        const auto end = layerEnd * layerSize;
-
-        for ( size_t i = begin; i < end; ++i )
+        VoxelLocation loc = indexer.toLoc( Vector3i( 0, 0, layerBegin ) );
+        for ( ; loc.pos.z < layerEnd; ++loc.pos.z )
         {
-            if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
-                break;
-
-            const auto baseLoc = indexer.toLoc( VoxelId( i ) );
-            if ( cache && baseLoc.pos.z != cache->currentLayer() )
+            if ( cache && loc.pos.z != cache->currentLayer() )
             {
                 cache->preloadNextLayer();
-                assert( baseLoc.pos.z == cache->currentLayer() );
+                assert( loc.pos.z == cache->currentLayer() );
             }
-
-            SeparationPointSet set;
-            bool atLeastOneOk = false;
-            const float baseValue = cache ? cache->get( baseLoc ) : acc.get( baseLoc );
-            if ( !nanChecker( baseValue ) )
+            for ( loc.pos.y = 0; loc.pos.y < volume.dims.y; ++loc.pos.y )
             {
-                const auto baseCoords = zeroPoint + mult( volume.voxelSize, Vector3f( baseLoc.pos ) );
-                const bool baseLower = baseValue < params.iso;
-
-                for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
+                for ( loc.pos.x = 0; loc.pos.x < volume.dims.x; ++loc.pos.x, ++loc.id )
                 {
-                    auto nextLoc = indexer.getNeighbor( baseLoc, cPlusOutEdges[n] );
-                    if ( !nextLoc )
-                        continue;
-                    const float nextValue = cache ? cache->get( nextLoc ) : acc.get( nextLoc );
-                    if ( nanChecker( nextValue ) )
+                    assert( indexer.toVoxelId( loc.pos ) == loc.id );
+                    if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
+                        break;
+
+                    SeparationPointSet set;
+                    bool atLeastOneOk = false;
+                    const float value = cache ? cache->get( loc ) : acc.get( loc );
+                    if ( !nanChecker( value ) )
+                    {
+                        const auto coords = zeroPoint + mult( volume.voxelSize, Vector3f( loc.pos ) );
+                        const bool lower = value < params.iso;
+
+                        for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
+                        {
+                            auto nextLoc = indexer.getNeighbor( loc, cPlusOutEdges[n] );
+                            if ( !nextLoc )
+                                continue;
+                            const float nextValue = cache ? cache->get( nextLoc ) : acc.get( nextLoc );
+                            if ( nanChecker( nextValue ) )
+                                continue;
+
+                            const bool nextLower = nextValue < params.iso;
+                            if ( lower == nextLower )
+                                continue;
+
+                            auto nextCoords = coords;
+                            nextCoords[n] += volume.voxelSize[n];
+                            Vector3f pos = positioner( coords, nextCoords, value, nextValue, params.iso );
+                            set[n] = block.nextVid();
+                            block.coords.push_back( pos );
+                            atLeastOneOk = true;
+                        }
+                    }
+
+                    if ( !atLeastOneOk )
                         continue;
 
-                    const bool nextLower = nextValue < params.iso;
-                    if ( baseLower == nextLower )
-                        continue;
-
-                    auto nextCoords = baseCoords;
-                    nextCoords[n] += volume.voxelSize[n];
-                    Vector3f pos = positioner( baseCoords, nextCoords, baseValue, nextValue, params.iso );
-                    set[n] = block.nextVid();
-                    block.coords.push_back( pos );
-                    atLeastOneOk = true;
+                    block.smap.insert( { loc.id, set } );
                 }
             }
-
-            if ( runCallback && ( i - begin ) % 16384 == 0 )
-                if ( !params.cb( 0.3f * float( i - begin ) / float( end - begin ) ) )
-                    keepGoing.store( false, std::memory_order_relaxed );
-
-            if ( !atLeastOneOk )
-                continue;
-
-            block.smap.insert( { i, set } );
+            const auto numProcessedLeyers = s.numProcessedLeyers.fetch_add( 1, std::memory_order_relaxed );
+            if ( report && !reportProgress( currentSubprogress, float( numProcessedLeyers ) / layerCount ) )
+                keepGoing.store( false, std::memory_order_relaxed );
         }
     } );
 
@@ -464,8 +473,6 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
     if ( params.cb && !params.cb( 0.5f ) )
         return unexpectedOperationCanceled();
-
-    auto subprogress2 = MR::subprogress( params.cb, 0.5f, 0.85f );
 
     const size_t cVoxelNeighborsIndexAdd[8] = 
     {
@@ -480,10 +487,12 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
     };
     const size_t cDimStep[3] = { 1, size_t( indexer.dims().x ), indexer.sizeXY() };
 
-    ParallelFor( size_t( 0 ), blockCount, [&] ( size_t blockIndex )
+    currentSubprogress = subprogress( params.cb, 0.5f, 0.85f );
+    s.numProcessedLeyers = 0;
+    ParallelFor( 0, blockCount, [&] ( int blockIndex )
     {
         auto & block = sepStorage.getBlock( blockIndex );
-        const auto layerBegin = blockIndex * layerPerBlockCount;
+        const int layerBegin = blockIndex * layerPerBlockCount;
         if ( layerBegin >= layerCount )
             return;
         const auto layerEnd = std::min( ( blockIndex + 1 ) * layerPerBlockCount, layerCount );
@@ -496,20 +505,20 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
             cache.emplace( acc, indexer, Parameters {
                 .preloadedLayerCount = 2,
             } );
-            cache->preloadLayer( (int)layerBegin );
+            cache->preloadLayer( layerBegin );
         }
 
         const auto begin = layerBegin * layerSize;
         const auto end = layerEnd * layerSize;
 
-        const bool runCallback = subprogress2 && std::this_thread::get_id() == mainThreadId;
+        const bool runCallback = currentSubprogress && std::this_thread::get_id() == callingThreadId;
 
         // cell data
         std::array<const SeparationPointSet*, 7> neis;
         unsigned char voxelConfiguration;
         for ( size_t ind = begin; ind < end; ++ind )
         {
-            if ( subprogress2 && !keepGoing.load( std::memory_order_relaxed ) )
+            if ( currentSubprogress && !keepGoing.load( std::memory_order_relaxed ) )
                 break;
 
             const auto baseLoc = indexer.toLoc( VoxelId( ind ) );
@@ -665,7 +674,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
             }
 
             if ( runCallback && ( ind - begin ) % 16384 == 0 )
-                if ( !subprogress2( float( ind - begin ) / float( end - begin ) ) )
+                if ( !currentSubprogress( float( ind - begin ) / float( end - begin ) ) )
                     keepGoing.store( false, std::memory_order_relaxed );
         }
     } );

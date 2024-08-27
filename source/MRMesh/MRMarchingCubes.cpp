@@ -359,6 +359,9 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
     const auto layerSize = indexer.sizeXY();
     assert( indexer.size() == layerCount * layerSize );
 
+    std::vector<BitSet> invalids( layerCount ); ///< invalid voxels in each layer
+    std::vector<BitSet> lowerIso( layerCount ); ///< voxels with the values lower then params.iso
+
     // more blocks than threads is recommended for better work distribution among threads since
     // every block demands unique amount of processing
     const int blockCount = std::min( layerCount, threadCount > 1 ? 4 * threadCount : 1 );
@@ -414,9 +417,14 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                 cache->preloadNextLayer();
                 assert( loc.pos.z == cache->currentLayer() );
             }
+            auto & layerInvalids = invalids[loc.pos.z];
+            layerInvalids.resize( layerSize );
+            auto & layerLowerIso = lowerIso[loc.pos.z];
+            layerLowerIso.resize( layerSize );
+            size_t inLayerPos = 0;
             for ( loc.pos.y = 0; loc.pos.y < volume.dims.y; ++loc.pos.y )
             {
-                for ( loc.pos.x = 0; loc.pos.x < volume.dims.x; ++loc.pos.x, ++loc.id )
+                for ( loc.pos.x = 0; loc.pos.x < volume.dims.x; ++loc.pos.x, ++loc.id, ++inLayerPos )
                 {
                     assert( indexer.toVoxelId( loc.pos ) == loc.id );
                     if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )
@@ -425,10 +433,13 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                     SeparationPointSet set;
                     bool atLeastOneOk = false;
                     const float value = cache ? cache->get( loc ) : acc.get( loc );
-                    if ( !nanChecker( value ) )
+                    if ( nanChecker( value ) )
+                        layerInvalids.set( inLayerPos );
+                    else
                     {
                         const auto coords = zeroPoint + mult( volume.voxelSize, Vector3f( loc.pos ) );
                         const bool lower = value < params.iso;
+                        layerLowerIso.set( inLayerPos, lower );
 
                         for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
                         {
@@ -487,6 +498,9 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
     };
     const size_t cDimStep[3] = { 1, size_t( indexer.dims().x ), indexer.sizeXY() };
 
+    const bool hasInvalidVoxels = !params.omitNaNCheck &&
+        std::any_of( invalids.begin(), invalids.end(), []( const BitSet & bs ) { return bs.any(); } );
+
     currentSubprogress = subprogress( params.cb, 0.5f, 0.85f );
     cacheLineStorage.numProcessedLayers = 0;
     ParallelFor( 0, blockCount, [&] ( int blockIndex )
@@ -499,28 +513,21 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
             return;
         const auto layerEnd = std::min( ( blockIndex + 1 ) * layerPerBlockCount, layerCount - 1 ); // skip last layer since no data from next layer
 
-        const VoxelsVolumeAccessor<V> acc( volume );
-        std::optional<VoxelsVolumeCachingAccessor<V>> cache;
-        if ( cachingMode == MarchingCubesParams::CachingMode::Normal )
-        {
-            using Parameters = typename VoxelsVolumeCachingAccessor<V>::Parameters;
-            cache.emplace( acc, indexer, Parameters {
-                .preloadedLayerCount = 2,
-            } );
-            cache->preloadLayer( layerBegin );
-        }
-
         // cell data
         std::array<const SeparationPointSet*, 7> neis;
         unsigned char voxelConfiguration;
         VoxelLocation loc = indexer.toLoc( Vector3i( 0, 0, layerBegin ) );
         for ( ; loc.pos.z < layerEnd; ++loc.pos.z )
         {
-            if ( cache && loc.pos.z != cache->currentLayer() )
+            const BitSet* layerInvalids[2] = { &invalids[loc.pos.z], &invalids[loc.pos.z+1] };
+            const BitSet* layerLowerIso[2] = { &lowerIso[loc.pos.z], &lowerIso[loc.pos.z+1] };
+            const VoxelId firstLayerVoxelId[2] = { indexer.toVoxelId( { 0, 0, loc.pos.z } ), indexer.toVoxelId( { 0, 0, loc.pos.z + 1 } ) };
+            auto getBit = [&]( const BitSet *bs[2], const VoxelLocation & vl )
             {
-                cache->preloadNextLayer();
-                assert( loc.pos.z == cache->currentLayer() );
-            }
+                const auto dl = vl.pos.z - loc.pos.z;
+                assert( dl >= 0 && dl <= 1 );
+                return (*bs)[dl][vl.id - firstLayerVoxelId[dl]];
+            };
             for ( loc.pos.y = 0; loc.pos.y + 1 < volume.dims.y; ++loc.pos.y )
             {
                 loc.pos.x = 0;
@@ -538,9 +545,10 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                     for ( int i = 0; i < cVoxelNeighbors.size(); ++i )
                     {
                         VoxelLocation nloc{ loc.id + cVoxelNeighborsIndexAdd[i], loc.pos + cVoxelNeighbors[i] };
-                        float value = cache ? cache->get( nloc ) : acc.get( nloc );
-                        if ( !params.omitNaNCheck )
+                        bool voxelValueLowerIso = getBit( layerLowerIso, nloc );
+                        if ( hasInvalidVoxels )
                         {
+                            bool invalidVoxelValue = getBit( layerInvalids, nloc );
                             // find non nan neighbor
                             constexpr std::array<uint8_t, 7> cNeighborsOrder{
                                 0b001,
@@ -553,7 +561,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                             };
                             int neighIndex = 0;
                             // iterates over nan neighbors to find consistent value
-                            while ( nanChecker( value ) && neighIndex < 7 )
+                            while ( invalidVoxelValue && neighIndex < 7 )
                             {
                                 auto neighLoc = nloc;
                                 for ( int posCoord = 0; posCoord < 3; ++posCoord )
@@ -571,10 +579,11 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                                         neighLoc.id += cDimStep[posCoord];
                                     }
                                 }
-                                value = cache ? cache->get( neighLoc ) : acc.get( neighLoc );
+                                invalidVoxelValue = getBit( layerInvalids, neighLoc );
+                                voxelValueLowerIso = getBit( layerLowerIso, neighLoc );
                                 ++neighIndex;
                             }
-                            if ( nanChecker( value ) )
+                            if ( invalidVoxelValue )
                             {
                                 voxelValid = false;
                                 break;
@@ -583,7 +592,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                                 atLeastOneNan = true;
                         }
                 
-                        if ( value >= params.iso )
+                        if ( !voxelValueLowerIso )
                             continue;
                         voxelConfiguration |= cMapNeighbors[i];
                         vx[i] = true;

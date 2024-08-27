@@ -30,10 +30,24 @@ set(CUDA_VERBOSE_BUILD ON)
 
 project(MRCuda CXX CUDA)
 
+option(MRCUDA_NO_VOXELS "Disable voxels support" OFF)
+
+IF(NOT MESHLIB_BUILD_VOXELS)
+  set(MRCUDA_NO_VOXELS ON)
+ENDIF()
+
 file(GLOB SOURCES "*.cpp" "*.cu")
 file(GLOB HEADERS "*.h" "*.hpp" "*.cuh")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
+
+set(MRCUDA_OPTIONAL_DEPENDENCIES "")
+
+IF(NOT MRCUDA_NO_VOXELS)
+  list(APPEND MRCUDA_OPTIONAL_DEPENDENCIES MRVoxels)
+ENDIF()
 
 target_include_directories(${PROJECT_NAME} PUBLIC
   ${CUDA_INCLUDE_DIRS}
@@ -44,6 +58,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   spdlog
   fmt
   tbb
+  ${MRCUDA_OPTIONAL_DEPENDENCIES}
 )
 
 set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")

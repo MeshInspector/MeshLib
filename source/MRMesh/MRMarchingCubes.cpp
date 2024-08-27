@@ -521,12 +521,14 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
         {
             const BitSet* layerInvalids[2] = { &invalids[loc.pos.z], &invalids[loc.pos.z+1] };
             const BitSet* layerLowerIso[2] = { &lowerIso[loc.pos.z], &lowerIso[loc.pos.z+1] };
-            const VoxelId firstLayerVoxelId[2] = { indexer.toVoxelId( { 0, 0, loc.pos.z } ), indexer.toVoxelId( { 0, 0, loc.pos.z + 1 } ) };
+            const VoxelId layerFirstVoxelId[2] = { indexer.toVoxelId( { 0, 0, loc.pos.z } ), indexer.toVoxelId( { 0, 0, loc.pos.z + 1 } ) };
+            // returns a bit from from one-of-two bit sets (bs) corresponding to given location (vl)
             auto getBit = [&]( const BitSet *bs[2], const VoxelLocation & vl )
             {
                 const auto dl = vl.pos.z - loc.pos.z;
                 assert( dl >= 0 && dl <= 1 );
-                return (*bs)[dl][vl.id - firstLayerVoxelId[dl]];
+                // (*bs)[dl] is one of two bit sets, and layerFirstVoxelId[dl] is VoxelId corresponding to zeroth bit in it
+                return (*bs)[dl][vl.id - layerFirstVoxelId[dl]];
             };
             for ( loc.pos.y = 0; loc.pos.y + 1 < volume.dims.y; ++loc.pos.y )
             {
@@ -692,6 +694,10 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
 
     if ( params.cb && !keepGoing )
         return unexpectedOperationCanceled();
+
+    // no longer needed, reduce peak memory consumption
+    invalids = {};
+    lowerIso = {};
 
     // create result triangulation
     result.tris = sepStorage.getTriangulation( params.outVoxelPerFaceMap );

@@ -191,6 +191,15 @@ protected:
     virtual bool dragDrop_( const std::vector<std::filesystem::path>& paths ) = 0;
 };
 
+struct MRVIEWER_CLASS OpenFilesListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( OpenFilesListener );
+    virtual ~OpenFilesListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual bool openFiles_( const std::vector<std::filesystem::path>& paths ) = 0;
+};
+
 struct MRVIEWER_CLASS PostResizeListener : ConnectionHolder
 {
     MR_ADD_CTOR_DELETE_MOVE( PostResizeListener );

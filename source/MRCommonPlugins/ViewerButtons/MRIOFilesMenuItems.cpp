@@ -253,6 +253,29 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
     return true;
 }
 
+bool OpenFilesMenuItem::openFiles_( const std::vector<std::filesystem::path>& paths )
+{
+    if ( paths.empty() )
+        return false;
+
+    CommandLoop::appendCommand( [=] ()
+    {
+        auto& viewerRef = getViewerInstance();
+        auto menu = viewerRef.getMenuPluginAs<RibbonMenu>();
+
+        if ( ProgressBar::isOrdered() )
+        {
+            if ( menu )
+                menu->pushNotification( { .text = "Another operation in progress.", .lifeTimeSec = 3.0f } );
+            return;
+        }
+
+        viewerRef.loadFiles( paths );
+    }, CommandLoop::StartPosition::AfterPluginInit );
+
+    return true;
+}
+
 void OpenFilesMenuItem::parseLaunchParams_()
 {
     std::vector<std::filesystem::path> supportedFiles;

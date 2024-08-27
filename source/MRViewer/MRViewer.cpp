@@ -608,7 +608,7 @@ int Viewer::launch( const LaunchParams& params )
     return EXIT_SUCCESS;
 }
 
-bool Viewer::checkOpenGL_(const LaunchParams& params )
+bool Viewer::checkOpenGL_( const LaunchParams& params )
 {
     int windowWidth = params.width;
     int windowHeight = params.height;
@@ -981,6 +981,7 @@ void Viewer::launchShut()
     postDrawPreViewportSignal = {};
     postDrawSignal = {};
     dragDropSignal = {};
+    openFilesSignal = {};
     postResizeSignal = {};
     postRescaleSignal = {};
     interruptCloseSignal = {};
@@ -1467,6 +1468,14 @@ bool Viewer::spaceMouseRepeat( int key )
 bool Viewer::dragDrop( const std::vector<std::filesystem::path>& paths )
 {
     if ( dragDropSignal( paths ) )
+        return true;
+
+    return false;
+}
+
+bool Viewer::openFiles( const std::vector<std::filesystem::path>& paths )
+{
+    if ( openFilesSignal( paths ) )
         return true;
 
     return false;

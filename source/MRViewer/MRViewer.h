@@ -147,6 +147,7 @@ public:
     MRVIEWER_API bool spaceMouseUp( int key );
     MRVIEWER_API bool spaceMouseRepeat( int key );
     MRVIEWER_API bool dragDrop( const std::vector<std::filesystem::path>& paths  );
+    MRVIEWER_API bool openFiles( const std::vector<std::filesystem::path>& paths  );
     // Touch callbacks (now used in EMSCRIPTEN build only)
     MRVIEWER_API bool touchStart( int id, int x, int y );
     MRVIEWER_API bool touchMove( int id, int x, int y );
@@ -519,10 +520,13 @@ public:
     RenderSignal postDrawSignal; // signal is called after scene draw
     // Scene events
     using DragDropSignal = boost::signals2::signal<bool( const std::vector<std::filesystem::path>& paths ), SignalStopHandler>;
+    using OpenFilesSignal = boost::signals2::signal<bool( const std::vector<std::filesystem::path>& paths ), SignalStopHandler>;
     using PostResizeSignal = boost::signals2::signal<void( int x, int y )>;
     using PostRescaleSignal = boost::signals2::signal<void( float xscale, float yscale )>;
     using InterruptCloseSignal = boost::signals2::signal<bool(), SignalStopHandler>;
     DragDropSignal dragDropSignal; // signal is called on drag and drop file
+    OpenFilesSignal openFilesSignal; // signal is called when the application is requested to open files
+                                     // it can be called early in app startup, defer handle to StartPosition::AfterPluginInit
     PostResizeSignal postResizeSignal; // signal is called after window resize
     PostRescaleSignal postRescaleSignal; // signal is called after window rescale
     InterruptCloseSignal interruptCloseSignal; // signal is called before close window (return true will prevent closing)

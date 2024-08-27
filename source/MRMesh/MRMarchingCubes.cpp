@@ -417,10 +417,8 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                 cache->preloadNextLayer();
                 assert( loc.pos.z == cache->currentLayer() );
             }
-            auto & layerInvalids = invalids[loc.pos.z];
-            layerInvalids.resize( layerSize );
-            auto & layerLowerIso = lowerIso[loc.pos.z];
-            layerLowerIso.resize( layerSize );
+            BitSet layerInvalids( layerSize );
+            BitSet layerLowerIso( layerSize );
             size_t inLayerPos = 0;
             for ( loc.pos.y = 0; loc.pos.y < volume.dims.y; ++loc.pos.y )
             {
@@ -469,6 +467,10 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                     block.smap.insert( { loc.id, set } );
                 }
             }
+            if ( layerInvalids.any() )
+                invalids[loc.pos.z] = std::move( layerInvalids );
+            if ( layerLowerIso.any() )
+                lowerIso[loc.pos.z] = std::move( layerLowerIso );
             const auto numProcessedLayers = cacheLineStorage.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
             if ( report && !reportProgress( currentSubprogress, float( numProcessedLayers ) / layerCount ) )
                 keepGoing.store( false, std::memory_order_relaxed );
@@ -499,7 +501,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
     const size_t cDimStep[3] = { 1, size_t( indexer.dims().x ), indexer.sizeXY() };
 
     const bool hasInvalidVoxels = !params.omitNaNCheck &&
-        std::any_of( invalids.begin(), invalids.end(), []( const BitSet & bs ) { return bs.any(); } );
+        std::any_of( invalids.begin(), invalids.end(), []( const BitSet & bs ) { return !bs.empty(); } ); // bit set is not empty only if at least one bit is set
 
     currentSubprogress = subprogress( params.cb, 0.5f, 0.85f );
     cacheLineStorage.numProcessedLayers = 0;
@@ -683,6 +685,18 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                     }
                 }
             }
+            // free memory containing unused data
+            if ( loc.pos.z > layerBegin || loc.pos.z == 0 ) // processed layer, not the first in the block (or the first in the first block)
+            {
+                invalids[loc.pos.z] = {};
+                lowerIso[loc.pos.z] = {};
+            }
+            if ( loc.pos.z + 2 == layerCount ) // the very last layer after this one
+            {
+                invalids[loc.pos.z + 1] = {};
+                lowerIso[loc.pos.z + 1] = {};
+            }
+
             const auto numProcessedLayers = cacheLineStorage.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
             if ( report && !reportProgress( currentSubprogress, float( numProcessedLayers ) / layerCount ) )
             {

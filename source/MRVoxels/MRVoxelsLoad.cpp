@@ -15,9 +15,15 @@
 #include "MRPch/MRTBB.h"
 
 #ifndef MRVOXELS_NO_DICOM
+#pragma warning(push)
+#pragma warning(disable: 4515)
+#if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
+#pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
+#endif
 #include <gdcmImageHelper.h>
 #include <gdcmImageReader.h>
 #include <gdcmTagKeywords.h>
+#pragma warning(pop)
 #endif // MRVOXELS_NO_DICOM
 
 #ifndef MRVOXELS_NO_TIFF

@@ -2,11 +2,6 @@
 
 #include "MRMesh/MRMacros.h"
 
-#if defined(_MSC_VER) && !defined(__clang__) && (!defined(_MSVC_TRADITIONAL) || _MSVC_TRADITIONAL == 1)
-#error The standard-conformant MSVC preprocessor is required, enable it with `/Zc:preprocessor`.
-#endif
-
-
 // This helper macro is used to declare canonical typedefs. For example, if you have this:
 //     template <typename T> struct MRMESH_CLASS Vector3;  // `MRMESH_CLASS` isn't necessary, just to demonstrate that it's supported.
 //     using Vector3f = Vector3<float>;
@@ -33,8 +28,9 @@
     DETAIL_MR_CANONICAL_TYPEDEFS(type_, name_, aliases_)
 
 #define DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_USING_BODY(name_, ...) using name_ = __VA_ARGS__;
-#define DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_USING_A(...) DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_USING_BODY(__VA_ARGS__) DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_USING_B
-#define DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_USING_B(...) DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_USING_BODY(__VA_ARGS__) DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_USING_A
+// `MR_IDENTITY` here keeps the legacy MSVC preprocessor happy.
+#define DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_USING_A(...) DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_USING_BODY MR_IDENTITY()(__VA_ARGS__) DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_USING_B
+#define DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_USING_B(...) DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_USING_BODY MR_IDENTITY()(__VA_ARGS__) DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_USING_A
 #define DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_USING_A_END
 #define DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_USING_B_END
 

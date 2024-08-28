@@ -16,6 +16,7 @@ IF(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     MRIOExtras
+    MRPython
     MRViewer
     jsoncpp
     fmt
@@ -29,6 +30,7 @@ ELSE()
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRMesh
       MRIOExtras
+      MRPython
       MRViewer
       jsoncpp
       fmt

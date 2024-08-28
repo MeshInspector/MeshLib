@@ -1,4 +1,4 @@
-#include "MRMesh/MRPython.h"
+#include "MRPython/MRPython.h"
 #include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MRImageLoad.h"
 #include "MRMesh/MRImageSave.h"

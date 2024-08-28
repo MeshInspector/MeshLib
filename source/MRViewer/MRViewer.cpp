@@ -37,7 +37,6 @@
 #include <MRMesh/MRToFromEigen.h>
 #include <MRMesh/MRTimer.h>
 #include "MRMesh/MRMakeSphereMesh.h"
-#include "MRMesh/MREmbeddedPython.h"
 #include "MRMesh/MRMeshLoad.h"
 #include "MRMesh/MRLinesLoad.h"
 #include "MRMesh/MRPointsLoad.h"

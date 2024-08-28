@@ -1,5 +1,5 @@
 #ifndef MESHLIB_NO_VOXELS
-#include "MRMesh/MRPython.h"
+#include "MRPython/MRPython.h"
 #include "MRVoxels/MRVoxelsVolume.h"
 #include "MRVoxels/MRVoxelsSave.h"
 #include "MRVoxels/MRVoxelsLoad.h"

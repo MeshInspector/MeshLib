@@ -8,7 +8,7 @@
 #include "MRMesh/MRObjectPointsHolder.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPolyline.h"
-#include "MRMesh/MRPython.h"
+#include "MRPython/MRPython.h"
 
 #ifndef MESHLIB_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"

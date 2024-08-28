@@ -1,10 +1,10 @@
 #include "MREmbeddedPython.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PYTHON )
+
 #include "MRPython.h"
-#include "MRStringConvert.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRString.h"
-#include "MRSystem.h"
+#include "MRMesh/MRString.h"
+#include "MRMesh/MRSystem.h"
 #include <pybind11/embed.h>
 #include <fstream>
 
@@ -136,4 +136,3 @@ EmbeddedPython& EmbeddedPython::instance_()
 }
 
 } //namespace MR
-#endif

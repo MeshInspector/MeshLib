@@ -1,21 +1,9 @@
 #pragma once
 
-#include "MRMeshFwd.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PYTHON )
+#include "exports.h"
+#include "MRPybind11.h"
 
-#if defined( __clang__ )
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
-#endif
-#include <pybind11/pybind11.h>
-#include <pybind11/operators.h>
-#include <pybind11/stl_bind.h>
-#include <pybind11/numpy.h>
-#if defined( __clang__ )
-#pragma clang diagnostic pop
-#endif
-
-#include "MRExpected.h"
+#include "MRMesh/MRExpected.h"
 #include <functional>
 #include <filesystem>
 #include <unordered_map>
@@ -157,9 +145,9 @@ template<StreamType T>
 class PythonStreamRedirector
 {
 public:
-    MRMESH_API void write( const std::string& text );
+    MRPYTHON_API void write( const std::string& text );
     void flush() {}
-    MRMESH_API static int getNumWritten();
+    MRPYTHON_API static int getNumWritten();
 };
 
 using StdoutPyRedirector = PythonStreamRedirector<Stdout>;
@@ -171,7 +159,7 @@ namespace MR
 class PythonExport
 {
 public:
-    MRMESH_API static PythonExport& instance();
+    MRPYTHON_API static PythonExport& instance();
 
     using PythonRegisterFuncton = std::function<void( pybind11::module_& m )>;
 
@@ -220,8 +208,8 @@ private:
 
 struct PythonFunctionAdder
 {
-    MRMESH_API PythonFunctionAdder( const std::string& moduleName, std::function<void( pybind11::module_& m )> func, PythonExport::Priority priority = PythonExport::Priority::Implementation );
-    MRMESH_API PythonFunctionAdder( const std::string& moduleName, PyObject* ( *initFncPointer )( void ) );
+    MRPYTHON_API PythonFunctionAdder( const std::string& moduleName, std::function<void( pybind11::module_& m )> func, PythonExport::Priority priority = PythonExport::Priority::Implementation );
+    MRPYTHON_API PythonFunctionAdder( const std::string& moduleName, PyObject* ( *initFncPointer )( void ) );
 };
 
 // overload `toString` functoion to throw exception from custom `Expected::error` type
@@ -263,4 +251,3 @@ auto decorateExpected( R( T::* memFunction )( Args... ) )
 }
 
 }
-#endif

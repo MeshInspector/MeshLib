@@ -39,7 +39,6 @@ IF(MR_PCH)
       jsoncpp
       tbb
       cpr
-      Python::Python
     )
   ENDIF()
 

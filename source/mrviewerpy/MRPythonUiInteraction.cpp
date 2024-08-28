@@ -1,4 +1,4 @@
-#include "MRMesh/MRPython.h"
+#include "MRPython/MRPython.h"
 #include "MRPch/MRFmt.h"
 #include "MRViewer/MRPythonAppendCommand.h"
 #include "MRViewer/MRUITestEngine.h"

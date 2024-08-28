@@ -10,8 +10,8 @@
 #include "MRViewer/MRCommandLoop.h"
 
 #ifndef __EMSCRIPTEN__
-#include "MRMesh/MRPython.h"
-#include "MRMesh/MREmbeddedPython.h"
+#include "MRPython/MRPython.h"
+#include "MRPython/MREmbeddedPython.h"
 #include "mrmeshpy/MRLoadModule.h"
 #endif
 

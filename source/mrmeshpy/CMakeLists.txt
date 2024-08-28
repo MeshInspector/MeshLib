@@ -20,6 +20,7 @@ if(APPLE)
     MRMesh
     MRIOExtras
     MRSymbolMesh
+    MRPython
     spdlog
     fmt
     pybind11::module
@@ -29,6 +30,7 @@ ELSE()
     MRMesh
     MRIOExtras
     MRSymbolMesh
+    MRPython
     spdlog
     fmt
     tbb
@@ -48,5 +50,5 @@ install(TARGETS ${PROJECT_NAME} DESTINATION "${MR_PY_LIB_DIR}")
 install(TARGETS ${PROJECT_NAME} EXPORT MeshLib DESTINATION "${MR_MAIN_LIB_DIR}")
 
 IF(MR_PCH)
-  TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
+  TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPython)
 ENDIF()

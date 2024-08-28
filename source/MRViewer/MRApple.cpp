@@ -1,5 +1,5 @@
 #include "MRApple.h"
-#include "MRPch/MRPch.h"
+#include "MRPch/MRSpdlog.h"
 #include "MRViewer.h"
 #include "MRViewerEventQueue.h"
 #include <spdlog/fmt/ranges.h> // TODO: remove when it is in PCH

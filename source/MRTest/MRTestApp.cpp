@@ -90,9 +90,6 @@ int main( int argc, char** argv )
     }
 #endif
 
-    std::vector<std::string> xs{"text0", "text1"};
-    spdlog::info(fmt::format( "Test {}", fmt::join( xs, "," ) ));
-
     ::testing::InitGoogleTest(&argc, argv);
     MR::CommandLoop::removeCommands(); // that are added there by plugin constructors
     return RUN_ALL_TESTS();

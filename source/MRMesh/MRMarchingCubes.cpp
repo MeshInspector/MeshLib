@@ -330,8 +330,8 @@ const std::array<OutEdge, size_t( NeighborDir::Count )> cPlusOutEdges { OutEdge:
 
 }
 
-template<typename V, typename NaNChecker, typename Positioner>
-Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker, Positioner&& positioner )
+template<typename V, typename Positioner>
+Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& params, Positioner&& positioner )
 {
     TriMesh result;
     if ( volume.dims.x <= 0 || volume.dims.y <= 0 || volume.dims.z <= 0 )
@@ -432,12 +432,13 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                     SeparationPointSet set;
                     bool atLeastOneOk = false;
                     const float value = cache ? cache->get( loc ) : acc.get( loc );
-                    if ( nanChecker( value ) )
+                    const bool lower = value < params.iso;
+                    const bool notLower = value >= params.iso;
+                    if ( !lower && !notLower )
                         layerInvalids.set( inLayerPos );
                     else
                     {
                         const auto coords = zeroPoint + mult( volume.voxelSize, Vector3f( loc.pos ) );
-                        const bool lower = value < params.iso;
                         layerLowerIso.set( inLayerPos, lower );
 
                         for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
@@ -446,12 +447,16 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                             if ( !nextLoc )
                                 continue;
                             const float nextValue = cache ? cache->get( nextLoc ) : acc.get( nextLoc );
-                            if ( nanChecker( nextValue ) )
-                                continue;
-
-                            const bool nextLower = nextValue < params.iso;
-                            if ( lower == nextLower )
-                                continue;
+                            if ( lower )
+                            {
+                                if ( !( nextValue >= params.iso ) )
+                                    continue;
+                            }
+                            else
+                            {
+                                if ( !( nextValue < params.iso ) )
+                                    continue;
+                            }
 
                             auto nextCoords = coords;
                             nextCoords[n] += volume.voxelSize[n];
@@ -501,7 +506,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
     };
     const size_t cDimStep[3] = { 1, size_t( indexer.dims().x ), indexer.sizeXY() };
 
-    const bool hasInvalidVoxels = !params.omitNaNCheck &&
+    const bool hasInvalidVoxels =
         std::any_of( invalids.begin(), invalids.end(), []( const BitSet & bs ) { return !bs.empty(); } ); // bit set is not empty only if at least one bit is set
 
     currentSubprogress = subprogress( params.cb, 0.5f, 0.85f );
@@ -730,13 +735,13 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
     return result;
 }
 
-template <typename V, typename NaNChecker>
-Expected<TriMesh> volumeToMeshHelper1( const V& volume, const MarchingCubesParams& params, NaNChecker&& nanChecker )
+template <typename V>
+Expected<TriMesh> volumeToMeshHelper1( const V& volume, const MarchingCubesParams& params )
 {
     if ( params.positioner )
-        return volumeToMesh( volume, params, std::forward<NaNChecker>( nanChecker ), params.positioner );
+        return volumeToMesh( volume, params, params.positioner );
 
-    return volumeToMesh( volume, params, std::forward<NaNChecker>( nanChecker ),
+    return volumeToMesh( volume, params,
         []( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
         {
             assert( v0 != v1 );
@@ -746,20 +751,11 @@ Expected<TriMesh> volumeToMeshHelper1( const V& volume, const MarchingCubesParam
         } );
 }
 
-template <typename V>
-Expected<TriMesh> volumeToMeshHelper2( const V& volume, const MarchingCubesParams& params )
-{
-    if ( params.omitNaNCheck )
-        return volumeToMeshHelper1( volume, params, [] ( float ) { return false; } );
-    else
-        return volumeToMeshHelper1( volume, params, isNanFast );
-}
-
 Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {
     if ( params.iso <= volume.min || params.iso >= volume.max )
         return TriMesh{};
-    return volumeToMeshHelper2( volume, params );
+    return volumeToMeshHelper1( volume, params );
 }
 
 Expected<Mesh> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params )
@@ -780,9 +776,7 @@ Expected<TriMesh> marchingCubesAsTriMesh( const VdbVolume& volume, const Marchin
         return unexpected( "No volume data." );
     if ( params.iso <= volume.min || params.iso >= volume.max )
         return TriMesh{};
-    auto params2 = params;
-    params2.omitNaNCheck = true;
-    return volumeToMeshHelper2( volume, params2 );
+    return volumeToMeshHelper1( volume, params );
 }
 
 Expected<Mesh> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params /*= {} */ )
@@ -801,7 +795,7 @@ Expected<TriMesh> marchingCubesAsTriMesh( const FunctionVolume& volume, const Ma
 {
     if ( !volume.data )
         return unexpected( "Getter function is not specified." );
-    return volumeToMeshHelper2( volume, params );
+    return volumeToMeshHelper1( volume, params );
 }
 
 Expected<Mesh> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params )

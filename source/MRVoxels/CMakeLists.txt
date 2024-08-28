@@ -47,6 +47,13 @@ IF(WIN32 AND MINGW)
   target_compile_definitions(${PROJECT_NAME} PRIVATE MRVOXELS_EXPORT)
 ENDIF()
 
+IF(MR_PCH)
+  target_precompile_headers(${PROJECT_NAME} PRIVATE
+    "$<$<COMPILE_LANGUAGE:CXX>:MRPch/MRPch.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MROpenVDB.h>"
+  )
+ENDIF()
+
 set(CMAKE_INSTALL_PREFIX "/Library/Frameworks")
 install(
   TARGETS ${PROJECT_NAME}

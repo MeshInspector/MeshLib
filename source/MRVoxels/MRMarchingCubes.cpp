@@ -11,7 +11,7 @@
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRTriMesh.h"
 #include "MRMesh/MRGTest.h"
-#include "MRPch/MROpenvdb.h"
+#include "MROpenVDB.h"
 
 #include <thread>
 

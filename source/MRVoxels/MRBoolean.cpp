@@ -4,7 +4,7 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRFloatGrid.h"
 #include "MRMesh/MRTimer.h"
-#include "MRPch/MROpenvdb.h"
+#include "MROpenVDB.h"
 #include "MRPch/MRSpdlog.h"
 #include <filesystem>
 

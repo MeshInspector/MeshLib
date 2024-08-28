@@ -32,20 +32,6 @@
 #include <boost/stacktrace.hpp>
 #pragma warning(pop)
 
-#ifndef __EMSCRIPTEN__
-#pragma warning(push)
-#pragma warning(disable: 4515)
-#if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
-#pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
-#endif
-#include <gdcmImageReader.h>
-#include <gdcmImageHelper.h>
-#pragma warning(pop)
-
-//adding this include decreases MI compilation time from 160 sec to 130 sec at the cost of twice large MRPch.pch (436M -> 903M)
-//#include "MROpenvdb.h"
-#endif
-
 #include "MRJson.h"
 #include "MRSpdlog.h"
 #include "MRSuppressWarning.h"

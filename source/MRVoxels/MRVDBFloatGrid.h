@@ -3,7 +3,7 @@
 // this header includes the whole OpenVDB, so please include it from .cpp files only
 #include "MRMesh/MRVector3.h"
 
-#include "MRPch/MROpenvdb.h"
+#include "MROpenVDB.h"
 
 namespace MR
 {

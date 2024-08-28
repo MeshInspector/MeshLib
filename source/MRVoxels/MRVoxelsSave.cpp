@@ -8,7 +8,7 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRMeshTexture.h"
 #include "MRMesh/MRTimer.h"
-#include "MRPch/MROpenvdb.h"
+#include "MROpenVDB.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRFmt.h"
 #include "MRMesh/MRObjectsAccess.h"

@@ -2,7 +2,6 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer.h"
 #include "MRViewerEventQueue.h"
-#include <spdlog/fmt/ranges.h> // TODO: remove when it is in PCH
 
 #ifdef __APPLE__
 
@@ -35,6 +34,7 @@ static OSErr handleOpenDocuments( const AppleEvent* event, AppleEvent* /* reply 
 
     // Build paths list
     std::vector<std::filesystem::path> paths;
+    std::string joined;
     for ( long i = 1; i <= itemCount; ++i )
     {
         err = AEGetNthPtr( &docList, i, typeFSRef, nullptr, nullptr, &fileRef, sizeof( fileRef ), nullptr );
@@ -43,11 +43,16 @@ static OSErr handleOpenDocuments( const AppleEvent* event, AppleEvent* /* reply 
         err = FSRefMakePath( &fileRef, ( UInt8* )path, sizeof( path ) );
         if ( err == noErr )
             paths.push_back( path );
+        else
+            path[0] = '?', path[1] = '\x0';
+        if ( !joined.empty() )
+            joined += ',';
+        joined += path;
     }
     AEDisposeDesc( &docList );
 
     // Signal to open files
-    spdlog::info( fmt::format( "Request to open files: ", fmt::join( paths, "," ) ) );
+    spdlog::info( "Request to open files: {}", joined );
     MR::getViewerInstance().openFiles( paths );
 
     return noErr;

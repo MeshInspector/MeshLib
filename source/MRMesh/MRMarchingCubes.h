@@ -40,10 +40,6 @@ struct MarchingCubesParams
     /// if the mesh exceeds this number of vertices, an error returns
     int maxVertices = INT_MAX;
 
-    /// for simple volumes only: omit checks for NaN values
-    /// use it if you're aware that the input volume has no NaN values
-    bool omitNaNCheck = false;
-
     /// caching mode to reduce the number of accesses to voxel volume data on the first pass of the algorithm by consuming more memory on cache;
     /// note: the cache for the second pass of the algorithm (bit sets of invalid and lower-than-iso voxels are always allocated)
     enum class CachingMode

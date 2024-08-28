@@ -5,10 +5,10 @@
 namespace MR
 {
 
-SeparationPointStorage::SeparationPointStorage( size_t blockCount, size_t blockSize )
-    : blockSize_( blockSize )
-    , blocks_( blockCount )
+void SeparationPointStorage::resize( size_t blockCount, size_t blockSize )
 {
+    blockSize_ = blockSize;
+    blocks_.resize( blockCount );
 }
 
 int SeparationPointStorage::makeUniqueVids()

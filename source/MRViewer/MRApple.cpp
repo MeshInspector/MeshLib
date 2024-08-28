@@ -1,6 +1,8 @@
 #include "MRApple.h"
+#include "MRPch/MRPch.h"
 #include "MRViewer.h"
 #include "MRViewerEventQueue.h"
+#include <spdlog/fmt/ranges.h> // TODO: remove when it is in PCH
 
 #ifdef __APPLE__
 
@@ -45,6 +47,7 @@ static OSErr handleOpenDocuments( const AppleEvent* event, AppleEvent* /* reply 
     AEDisposeDesc( &docList );
 
     // Signal to open files
+    spdlog::info( fmt::format( "Request to open files: ", fmt::join( paths, "," ) ) );
     MR::getViewerInstance().openFiles( paths );
 
     return noErr;

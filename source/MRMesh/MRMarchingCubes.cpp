@@ -10,6 +10,7 @@
 #include "MRTimer.h"
 #include "MRParallelFor.h"
 #include "MRTriMesh.h"
+#include "MRGTest.h"
 #ifndef MRMESH_NO_OPENVDB
 #include "MRPch/MROpenvdb.h"
 #endif
@@ -812,6 +813,16 @@ Expected<Mesh> marchingCubes( const FunctionVolume& volume, const MarchingCubesP
     {
         return Mesh::fromTriMesh( std::move( tm ), {}, subprogress( params.cb, 0.9f, 1.0f ) );
     } );
+}
+
+// global variables with external visibility to avoid compile-time optimizations
+float gTestNaN = cQuietNan;
+float gTestZero = 0;
+
+TEST( MRMesh, NaN )
+{
+    // tests basic precondition for the algorithm above to be correct
+    EXPECT_FALSE( gTestNaN < gTestZero || gTestNaN >= gTestZero );
 }
 
 } //namespace MR

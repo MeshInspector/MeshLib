@@ -77,15 +77,18 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
         res = marchingCubes( volume, {
             .iso = 0.f,
             .lessInside = true,
-            .omitNaNCheck = true,
+            .freeVolume = [&volume]
+            {
+                Timer t( "~SimpleVolume" );
+                volume = {};
+            }
         } );
     }
     else if constexpr ( std::is_same_v<Volume, FunctionVolume> )
     {
         res = marchingCubes( volume, {
             .iso = 0.f,
-            .lessInside = true,
-            .omitNaNCheck = true,
+            .lessInside = true
         } );
     }
     else

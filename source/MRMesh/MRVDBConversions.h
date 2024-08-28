@@ -50,7 +50,7 @@ MRMESH_API void evalGridMinMax( const FloatGrid& grid, float& min, float& max );
 MRMESH_API Expected<VdbVolume> meshToVolume( const Mesh& mesh, const MeshToVolumeParams& params = {} );
 
 // fills VdbVolume data from FloatGrid (does not fill voxels size, cause we expect it outside)
-MRMESH_API VdbVolume floatGridToVdbVolume( const FloatGrid& grid );
+MRMESH_API VdbVolume floatGridToVdbVolume( FloatGrid grid );
 
 // make FloatGrid from SimpleVolume
 // make copy of data

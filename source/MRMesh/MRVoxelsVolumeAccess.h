@@ -6,6 +6,7 @@
 
 #ifndef MRMESH_NO_OPENVDB
 #include "MRVDBFloatGrid.h"
+#include "MRIsNaN.h"
 #endif
 
 namespace MR
@@ -31,7 +32,10 @@ public:
 
     ValueType get( const Vector3i& pos ) const
     {
-        return accessor_.getValue( toVdb( pos + minCoord_ ) );
+        ValueType res;
+        if ( !accessor_.probeValue( toVdb( pos + minCoord_ ), res ) )
+            return cQuietNan;
+        return res;
     }
 
     ValueType get( const VoxelLocation & loc ) const

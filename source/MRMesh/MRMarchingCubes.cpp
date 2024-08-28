@@ -642,27 +642,24 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                     if ( vx[6] != vx[7] )
                         findNei( 6, []( auto && s ) { return (bool)s[(int)NeighborDir::X]; } );
 
-                    if constexpr ( std::is_same_v<V, SimpleVolume> || std::is_same_v<V, FunctionVolume> )
+                    // ensure consistent nan voxel
+                    if ( atLeastOneNan && voxelValid )
                     {
-                        // ensure consistent nan voxel
-                        if ( atLeastOneNan && voxelValid )
+                        const auto& plan = cTriangleTable[voxelConfiguration];
+                        for ( int i = 0; i < plan.size() && voxelValid; i += 3 )
                         {
-                            const auto& plan = cTriangleTable[voxelConfiguration];
-                            for ( int i = 0; i < plan.size() && voxelValid; i += 3 )
-                            {
-                                const auto& [interIndex0, dir0] = cEdgeIndicesMap[plan[i]];
-                                const auto& [interIndex1, dir1] = cEdgeIndicesMap[plan[i + 1]];
-                                const auto& [interIndex2, dir2] = cEdgeIndicesMap[plan[i + 2]];
-                                // `neis` indicates that current voxel has valid point for desired triangulation
-                                // as far as nei has 3 directions we use `dir` to validate (make sure that there is point in needed edge) desired direction
-                                voxelValid = voxelValid && neis[interIndex0] && (*neis[interIndex0])[int( dir0 )];
-                                voxelValid = voxelValid && neis[interIndex1] && (*neis[interIndex1])[int( dir1 )];
-                                voxelValid = voxelValid && neis[interIndex2] && (*neis[interIndex2])[int( dir2 )];
-                            }
+                            const auto& [interIndex0, dir0] = cEdgeIndicesMap[plan[i]];
+                            const auto& [interIndex1, dir1] = cEdgeIndicesMap[plan[i + 1]];
+                            const auto& [interIndex2, dir2] = cEdgeIndicesMap[plan[i + 2]];
+                            // `neis` indicates that current voxel has valid point for desired triangulation
+                            // as far as nei has 3 directions we use `dir` to validate (make sure that there is point in needed edge) desired direction
+                            voxelValid = voxelValid && neis[interIndex0] && (*neis[interIndex0])[int( dir0 )];
+                            voxelValid = voxelValid && neis[interIndex1] && (*neis[interIndex1])[int( dir1 )];
+                            voxelValid = voxelValid && neis[interIndex2] && (*neis[interIndex2])[int( dir2 )];
                         }
-                        if ( !voxelValid )
-                            continue;
                     }
+                    if ( !voxelValid )
+                        continue;
 
                     const auto& plan = cTriangleTable[voxelConfiguration];
                     for ( int i = 0; i < plan.size(); i += 3 )

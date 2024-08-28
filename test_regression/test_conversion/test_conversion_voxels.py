@@ -13,11 +13,15 @@ def test_conversion_from_raw(ext, tmp_path):
 
     input_folder = Path(test_files_path) / "conversion" / "voxels_from_raw"
 
-    in_vxl = mlib.loadVoxels(input_folder / filename_in)
+    vxl_in = mlib.loadVoxels(input_folder / filename_in)
 
-    mlib.saveVoxelsGav(in_vxl, str(tmp_path / filename_out))
+    mlib.saveVoxelsGav(vxl_in, str(tmp_path / filename_out))
 
-    compare_voxels(tmp_path / filename_out, input_folder / filename_ref)
+    # Verify
+    vxl_ref =  mlib.loadVoxelsGav(input_folder / filename_ref)
+    vxl_out =  mlib.loadVoxelsGav(tmp_path / filename_out)
+
+    compare_voxels(vxl_out, vxl_ref)
 
 
 @pytest.mark.parametrize("ext", ["gav"])
@@ -29,9 +33,11 @@ def test_conversion_to_raw(ext, tmp_path):
 
     input_folder = Path(test_files_path) / "conversion" / "voxels_to_raw"
 
-    in_vxl = mlib.loadVoxelsGav(input_folder / filename_in)
+    vxl_in = mlib.loadVoxelsGav(input_folder / filename_in)
 
-    mlib.saveVoxels(in_vxl, str(tmp_path / filename_out))
+    mlib.saveVoxels(vxl_in, str(tmp_path / filename_out))
 
-    saved_vxl = mlib.loadVoxels(tmp_path / filename_out_full)
-    compare_voxels(saved_vxl, input_folder / filename_in)
+    # Verify
+    vxl_out = mlib.loadVoxels(tmp_path / filename_out_full)
+    vxl_ref = mlib.loadVoxelsGav(input_folder / filename_in)
+    compare_voxels(vxl_out, vxl_ref)

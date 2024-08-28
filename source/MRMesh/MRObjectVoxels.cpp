@@ -383,6 +383,7 @@ const Box3i& ObjectVoxels::getActiveBounds() const
         auto max = fromVdb( activeBox.max() ) + Vector3i::diagonal( 1 );
         for ( int i = 0; i < 3; ++i )
         {
+            // we should clamp values, because actual active box may lay outside of [0,dims), that we do not count in algorithms
             if ( min[i] < 0 ) min[i] = 0;
             if ( max[i] > vdbVolume_.dims[i] ) max[i] = vdbVolume_.dims[i];
         }

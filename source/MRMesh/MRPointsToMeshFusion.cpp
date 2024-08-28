@@ -31,7 +31,12 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     vmParams.lessInside = true;
 
     auto res = ( params.createVolumeCallback ?
-        params.createVolumeCallback( cloud, p2vParams ) : pointsToDistanceVolume( cloud, p2vParams ) ).and_then( [vmParams] ( auto&& volume ) { return marchingCubes( volume, vmParams ); } );
+        params.createVolumeCallback( cloud, p2vParams ) : pointsToDistanceVolume( cloud, p2vParams ) ).and_then( [&vmParams] ( SimpleVolume&& volume )
+        {
+            Timer t( "~SimpleVolume" );
+            volume = {};
+            return marchingCubes( volume, vmParams );
+        } );
 
     if ( res && params.ptColors && params.vColors )
     {

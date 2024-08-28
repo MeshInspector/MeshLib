@@ -52,6 +52,9 @@ struct MarchingCubesParams
         /// allocates 2 full slices per parallel thread
         Normal,
     } cachingMode = CachingMode::Automatic;
+
+    /// this optional function is called when volume is no longer needed to deallocate it and reduce peak memory consumption
+    std::function<void()> freeVolume;
 };
 
 // makes Mesh from SimpleVolume with given settings using Marching Cubes algorithm

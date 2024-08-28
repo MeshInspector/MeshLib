@@ -173,14 +173,11 @@ namespace detail
     template <UnitEnum E, VectorOrScalar T>
     [[nodiscard]] std::string getDragRangeTooltip( T min, T max, const UnitToStringParams<E>& unitParams )
     {
-        if ( !( min <= max ) )
+        if ( !( min < max ) )
             return "";
 
         bool haveMin = min > std::numeric_limits<T>::lowest();
         bool haveMax = max < std::numeric_limits<T>::max();
-
-        if ( !haveMin && !haveMax )
-            return "";
 
         std::string minString = valueToString<E>( min, unitParams );
         std::string maxString = valueToString<E>( max, unitParams );
@@ -240,7 +237,7 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
                 elemMax = &VectorTraits<decltype(fixedMax)>::getElem( i, fixedMax );
             }
 
-            if ( *elemMin <= *elemMax && bool( flags & ImGuiSliderFlags_AlwaysClamp ) ) // sometimes ImGui does not clamp it, so make sure that value is clamped
+            if ( *elemMin < *elemMax && bool( flags & ImGuiSliderFlags_AlwaysClamp ) ) // sometimes ImGui does not clamp it, so make sure that value is clamped
                 elemVal = std::clamp( elemVal, *elemMin, *elemMax );
 
             // Don't strip trailing zeroes when active, otherwise the numbers jump too much.
@@ -317,7 +314,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 elemStepFast = &VectorTraits<decltype(fixedStepFast)>::getElem( i, fixedStepFast );
             }
 
-            if ( *elemMin <= *elemMax && bool( flags & ImGuiSliderFlags_AlwaysClamp ) ) // sometimes ImGui does not clamp it, so make sure that value is clamped
+            if ( *elemMin < *elemMax && bool( flags & ImGuiSliderFlags_AlwaysClamp ) ) // sometimes ImGui does not clamp it, so make sure that value is clamped
                 elemVal = std::clamp( elemVal, *elemMin, *elemMax );
 
             bool plusMinusButtons = step > 0 && stepFast > 0;
@@ -356,13 +353,6 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 float( VectorTraits<SpeedType>::getElem( i, fixedSpeed ) ), elemMin, elemMax, valueToImGuiFormatString( elemVal, unitParams ).c_str(), flags
             );
 
-            if ( ret )
-            {
-                // could be that after dragging value ImGui does not clamp value in first frame
-                if ( *elemMin <= *elemMax && bool( flags & ImGuiSliderFlags_AlwaysClamp ) )
-                    elemVal = std::clamp( elemVal, *elemMin, *elemMax );
-            }
-
             auto dragId = ImGui::GetItemID();
 
             if ( forceShowZeroes )
@@ -394,7 +384,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 {
                     ret = true;
                     elemVal += ( ImGui::GetIO().KeyCtrl ? *elemStepFast : *elemStep ) * action;
-                    if ( *elemMin <= *elemMax )
+                    if ( *elemMin < *elemMax )
                         elemVal = std::clamp( elemVal, *elemMin, *elemMax );
 
                     detail::markItemEdited( dragId );

@@ -2246,6 +2246,9 @@
     <ClCompile Include="MRMeshSubdivideCallbacks.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
+    <ClCompile Include="MRCanonicalTypedefs.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />

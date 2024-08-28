@@ -128,11 +128,12 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         vmParams.lessInside = true;
         vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
         vmParams.outVoxelPerFaceMap = outMap;
-        auto res = marchingCubes( volume, vmParams );
-        Timer t( "~FloatGrid" );
-        volume.data.reset();
-        t.finish();
-        return res;
+        vmParams.freeVolume = [&volume]
+        {
+            Timer t( "~FloatGrid" );
+            volume.data.reset();
+        };
+        return marchingCubes( volume, vmParams );
 #else
         assert( false );
         return unexpected( "OpenVDB is not available" );

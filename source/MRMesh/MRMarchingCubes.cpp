@@ -486,6 +486,10 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
     if ( params.cb && !keepGoing )
         return unexpectedOperationCanceled();
 
+    // free input volume, since it will not be used below any more
+    if ( params.freeVolume )
+        params.freeVolume();
+
     const auto totalVertices = sepStorage.makeUniqueVids();
     if ( totalVertices > params.maxVertices )
         return unexpected( "Vertices number limit exceeded." );
@@ -538,11 +542,11 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                 // (*bs)[dl] is one of two bit sets, and layerFirstVoxelId[dl] is VoxelId corresponding to zeroth bit in it
                 return (*bs)[dl].test( vl.id - layerFirstVoxelId[dl] );
             };
-            for ( loc.pos.y = 0; loc.pos.y + 1 < volume.dims.y; ++loc.pos.y )
+            for ( loc.pos.y = 0; loc.pos.y + 1 < indexer.dims().y; ++loc.pos.y )
             {
                 loc.pos.x = 0;
                 loc.id = indexer.toVoxelId( loc.pos );
-                for ( ; loc.pos.x + 1 < volume.dims.x; ++loc.pos.x, ++loc.id )
+                for ( ; loc.pos.x + 1 < indexer.dims().x; ++loc.pos.x, ++loc.id )
                 {
                     assert( indexer.toVoxelId( loc.pos ) == loc.id );
                     if ( params.cb && !keepGoing.load( std::memory_order_relaxed ) )

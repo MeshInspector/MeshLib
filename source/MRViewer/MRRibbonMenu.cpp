@@ -24,7 +24,7 @@
 #include <MRMesh/MRSerializer.h>
 #include <MRMesh/MRObjectsAccess.h>
 #include <MRMesh/MRChangeXfAction.h>
-#include <MRMesh/MRObjectLabel.h>
+#include <MRSymbolMesh/MRObjectLabel.h>
 #include <MRMesh/MRChangeSceneObjectsOrder.h>
 #include <MRMesh/MRChangeSceneAction.h>
 #include <MRMesh/MRChangeObjectFields.h>

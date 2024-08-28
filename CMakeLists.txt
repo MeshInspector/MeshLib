@@ -26,6 +26,7 @@ option(MESHLIB_BUILD_PYTHON_MODULES "Build Python modules" ON)
 option(MESHLIB_BUILD_MESHCONV "Build meshconv utility" ON)
 option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
 option(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING "(experimental) Build C binding library" ON)
+option(MESHLIB_BUILD_SYMBOLMESH "Build symbol-to-mesh library" ON)
 
 include(CTest)
 
@@ -147,6 +148,10 @@ ENDIF()
 # MRMesh library is always built
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRPch ./MRPch)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
+
+IF(MESHLIB_BUILD_SYMBOLMESH)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/MRSymbolMesh ./MRSymbolMesh)
+ENDIF()
 
 IF(MESHLIB_BUILD_MRVIEWER)
   set(IMGUI_DIR ${MESHLIB_THIRDPARTY_ROOT_DIR}/include/imgui)

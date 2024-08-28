@@ -100,7 +100,6 @@
     <ClInclude Include="MRDistanceMapSave.h" />
     <ClInclude Include="MREdgeMetric.h" />
     <ClInclude Include="MREdgePathsBuilder.h" />
-    <ClInclude Include="MREmbeddedPython.h" />
     <ClInclude Include="MREmbedTerrainStructure.h" />
     <ClInclude Include="MRExpected.h" />
     <ClInclude Include="MRFastWindingNumber.h" />
@@ -288,7 +287,6 @@
     <ClInclude Include="MRPointsSave.h" />
     <ClInclude Include="MRPolylineProject.h" />
     <ClInclude Include="MRPrecisePredicates3.h" />
-    <ClInclude Include="MRPython.h" />
     <ClInclude Include="MRRegularMapMesher.h" />
     <ClInclude Include="MRRegularGridMesh.h" />
     <ClInclude Include="MRSceneRoot.h" />
@@ -439,7 +437,6 @@
     <ClCompile Include="MRDistanceMapTests.cpp" />
     <ClCompile Include="MREdgeMetric.cpp" />
     <ClCompile Include="MREdgePaths.cpp" />
-    <ClCompile Include="MREmbeddedPython.cpp" />
     <ClCompile Include="MREmbedTerrainStructure.cpp" />
     <ClCompile Include="MREnumNeighbours.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />
@@ -574,7 +571,6 @@
     <ClCompile Include="MRMakePlane.cpp" />
     <ClCompile Include="MRGeodesicPath.cpp" />
     <ClCompile Include="MRPrimitiveMapsComposition.cpp" />
-    <ClCompile Include="MRPython.cpp" />
     <ClCompile Include="MRRegularMapMesher.cpp" />
     <ClCompile Include="MRRegularGridMesh.cpp" />
     <ClCompile Include="MRRestoringStreamsSink.cpp" />
@@ -653,11 +649,6 @@
     <ClCompile Include="MRUniqueTemporaryFolder.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="$(ProjectDir)..\..\thirdparty\python\python$(PythonVersion).zip">
-      <FileType>Document</FileType>
-    </CopyFileToFolders>
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">
       <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
     </ProjectReference>
@@ -715,13 +706,10 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies);$(PythonLibPath)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>
       </DelayLoadDLLs>
     </Link>
-    <PostBuildEvent>
-      <Command>copy $(PythonDllPath) $(TargetDir)python$(PythonVersion).dll</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -745,7 +733,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies);$(PythonLibPath)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>
       </DelayLoadDLLs>
     </Link>

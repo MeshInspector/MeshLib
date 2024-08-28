@@ -20,6 +20,7 @@ if(APPLE)
     MRMesh
     MRIOExtras
     MRSymbolMesh
+    MRPython
     spdlog
     fmt
     pybind11::module
@@ -29,6 +30,7 @@ ELSE()
     MRMesh
     MRIOExtras
     MRSymbolMesh
+    MRPython
     spdlog
     fmt
     tbb

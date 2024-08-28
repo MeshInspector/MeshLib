@@ -8,12 +8,14 @@
 #include "MRMesh/MRObjectPointsHolder.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPolyline.h"
-#include "MRMesh/MRPython.h"
 
 #ifndef MESHLIB_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
 #include "MRVoxels/MRVDBFloatGrid.h"
 #endif
+
+// NOTE: see the disclaimer in the header file
+#include "MRPython/MRPython.h"
 
 namespace
 {

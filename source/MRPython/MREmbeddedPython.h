@@ -1,31 +1,31 @@
 #pragma once
 
-#include "MRMeshFwd.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PYTHON )
+#include "exports.h"
+
 #include <string>
 #include <filesystem>
 
 namespace MR
 {
 
-class MRMESH_CLASS EmbeddedPython
+class MRPYTHON_CLASS EmbeddedPython
 {
 public:
-    static MRMESH_API void init();
+    static MRPYTHON_API void init();
 
-    static MRMESH_API bool isAvailable();
+    static MRPYTHON_API bool isAvailable();
 
-    static MRMESH_API bool isInitialized();
+    static MRPYTHON_API bool isInitialized();
 
-    static MRMESH_API void finalize();
+    static MRPYTHON_API void finalize();
 
-    static MRMESH_API bool setupArgv( int argc, char** argv );
+    static MRPYTHON_API bool setupArgv( int argc, char** argv );
 
-    static MRMESH_API bool runString( const std::string& pythonString );
+    static MRPYTHON_API bool runString( const std::string& pythonString );
 
-    static MRMESH_API bool runScript( const std::filesystem::path& path );
+    static MRPYTHON_API bool runScript( const std::filesystem::path& path );
 
-    static MRMESH_API bool isPythonScript( const std::filesystem::path& path );
+    static MRPYTHON_API bool isPythonScript( const std::filesystem::path& path );
 private:
     EmbeddedPython();
     ~EmbeddedPython() = default;
@@ -35,5 +35,3 @@ private:
 };
 
 } //namespace MR
-
-#endif

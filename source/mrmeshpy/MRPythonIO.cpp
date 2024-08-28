@@ -1,4 +1,4 @@
-#include "MRMesh/MRPython.h"
+#include "MRPython/MRPython.h"
 #include <pybind11/iostream.h>
 #include <pybind11/functional.h>
 #include "MRMesh/MRObjectsAccess.h"

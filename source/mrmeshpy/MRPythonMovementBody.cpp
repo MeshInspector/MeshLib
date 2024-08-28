@@ -1,4 +1,4 @@
-#include "MRMesh/MRPython.h"
+#include "MRPython/MRPython.h"
 #include "MRMesh/MRMovementBuildBody.h"
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRMesh.h"

@@ -19,6 +19,7 @@ if(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRViewer
     MRMesh
+    MRPython
     fmt
     spdlog
     pybind11::module
@@ -27,6 +28,7 @@ ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRViewer
     MRMesh
+    MRPython
     fmt
     spdlog
     tbb

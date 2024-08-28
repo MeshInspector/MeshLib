@@ -1,5 +1,5 @@
 #include "MRPython.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PYTHON )
+
 #include <vector>
 #include <string>
 #include <iostream>
@@ -68,4 +68,3 @@ PythonFunctionAdder::PythonFunctionAdder( const std::string& moduleName, PyObjec
 }
 
 }
-#endif

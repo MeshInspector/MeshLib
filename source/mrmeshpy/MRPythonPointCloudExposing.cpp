@@ -1,4 +1,4 @@
-#include "MRMesh/MRPython.h"
+#include "MRPython/MRPython.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPointCloudTriangulation.h"
 #include "MRMesh/MRMeshToPointCloud.h"

@@ -27,10 +27,6 @@
 
 #include <type_traits>
 
-#if defined(_MSC_VER) && !defined(__clang__) && (!defined(_MSVC_TRADITIONAL) || _MSVC_TRADITIONAL == 1)
-#error The standard-conformant MSVC preprocessor is required, enable it with `/Zc:preprocessor`.
-#endif
-
 #define MR_CANONICAL_TYPEDEFS(type_, name_, aliases_) \
     MR_IDENTITY type_ name_; \
     MR_END(DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_USING_A aliases_) \

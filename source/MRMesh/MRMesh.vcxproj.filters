@@ -2246,7 +2246,7 @@
     <ClCompile Include="MRMeshSubdivideCallbacks.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
-    <ClCompile Include="MRCanonicalTypedefs.cpp">
+    <ClCompile Include="MRCanonicalTypedefs.h">
       <Filter>Source Files\Basic</Filter>
     </ClCompile>
   </ItemGroup>

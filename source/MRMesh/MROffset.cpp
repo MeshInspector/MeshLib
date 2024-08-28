@@ -120,7 +120,7 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         if ( !voxelRes )
             return unexpectedOperationCanceled();
 
-        VdbVolume volume = floatGridToVdbVolume( voxelRes );
+        VdbVolume volume = floatGridToVdbVolume( std::move( voxelRes ) );
         volume.voxelSize = Vector3f::diagonal( params.voxelSize );
 
         MarchingCubesParams vmParams;
@@ -128,7 +128,11 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         vmParams.lessInside = true;
         vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
         vmParams.outVoxelPerFaceMap = outMap;
-        return marchingCubes( volume, vmParams );
+        auto res = marchingCubes( volume, vmParams );
+        Timer t( "~FloatGrid" );
+        volume.data.reset();
+        t.finish();
+        return res;
 #else
         assert( false );
         return unexpected( "OpenVDB is not available" );

@@ -362,14 +362,14 @@ Expected<TriMesh> VolumeMesher::run( const V& volume, const MarchingCubesParams&
     MR_TIMER
 
     VolumeMesher mesher( volume.dims, params );
-    if ( auto e = mesher.firstPass_( volume, std::forward<Positioner>( positioner ) ); !e )
-        return unexpected( std::move( e.error() ) );
-
-    // free input volume, since it will not be used below any more
-    if ( params.freeVolume )
-        params.freeVolume();
-
-    return mesher.secondPass_();
+    return mesher.firstPass_( volume, std::forward<Positioner>( positioner ) ).and_then( [&]
+    {
+        // free input volume, since it will not be used below any more
+        if ( params.freeVolume )
+            params.freeVolume();
+            
+        return mesher.secondPass_();
+    } );
 }
 
 VolumeMesher::VolumeMesher( const Vector3i & dims, const MarchingCubesParams& params ) : indexer_( dims ), params_( params )

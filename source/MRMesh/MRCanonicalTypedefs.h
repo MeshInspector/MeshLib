@@ -20,8 +20,6 @@
 // NOTE:
 // * Only non-template `using`s can be declared like this. If you want to add additional templated ones, add them below the macro manually.
 
-#include <type_traits>
-
 #define MR_CANONICAL_TYPEDEFS(type_, name_, aliases_) \
     MR_IDENTITY type_ name_; \
     MR_END(DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_USING_A aliases_) \

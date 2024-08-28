@@ -388,9 +388,8 @@ VolumeMesher::VolumeMesher( const Vector3i & dims, const MarchingCubesParams& pa
     // every block demands unique amount of processing
     blockCount_ = std::min( layerCount, threadCount > 1 ? 4 * threadCount : 1 );
     layerPerBlockCount_ = (int)std::ceil( (float)layerCount / (float)blockCount_ );
-    const auto blockSize = layerPerBlockCount_ * layerSize;
+    [[maybe_unused]] const auto blockSize = layerPerBlockCount_ * layerSize;
     assert( indexer_.size() <= blockSize * blockCount_ );
-
 }
 
 template<typename V, typename Positioner>

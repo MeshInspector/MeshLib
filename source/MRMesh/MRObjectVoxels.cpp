@@ -55,8 +55,7 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
     activeBounds_.reset();
     vdbVolume_.data = grid;
 
-    auto vdbDims = vdbVolume_.data->evalActiveVoxelBoundingBox().max();
-    vdbVolume_.dims = { vdbDims.x() + 1,vdbDims.y() + 1,vdbDims.z() + 1 };
+    vdbVolume_.dims = fromVdb( vdbVolume_.data->evalActiveVoxelDim() );
     indexer_ = VolumeIndexer( vdbVolume_.dims );
     vdbVolume_.voxelSize = voxelSize;
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
@@ -202,8 +201,7 @@ Expected<std::shared_ptr<Mesh>> ObjectVoxels::recalculateIsoSurface( const VdbVo
             return unexpectedOperationCanceled();
         vdbVolume.data = resampled( vdbVolume.data, 2.0f );
         vdbVolume.voxelSize *= 2.0f;
-        auto vdbDims = vdbVolume.data->evalActiveVoxelBoundingBox().max();
-        vdbVolume.dims = { vdbDims.x() + 1,vdbDims.y() + 1,vdbDims.z() + 1 };
+        vdbVolume.dims = fromVdb( vdbVolume.data->evalActiveVoxelDim() );
     }
 }
 
@@ -381,8 +379,14 @@ const Box3i& ObjectVoxels::getActiveBounds() const
     if ( !activeBounds_ )
     {
         auto activeBox = vdbVolume_.data->evalActiveVoxelBoundingBox();
-        activeBounds_.emplace( Vector3i{ activeBox.min().x(), activeBox.min().y(), activeBox.min().z() },
-                               Vector3i{ activeBox.max().x() + 1, activeBox.max().y() + 1, activeBox.max().z() + 1 } );
+        auto min = fromVdb( activeBox.min() );
+        auto max = fromVdb( activeBox.max() ) + Vector3i::diagonal( 1 );
+        for ( int i = 0; i < 3; ++i )
+        {
+            if ( min[i] < 0 ) min[i] = 0;
+            if ( max[i] > vdbVolume_.dims[i] ) max[i] = vdbVolume_.dims[i];
+        }
+        activeBounds_.emplace( min, max );
     }
     return *activeBounds_;
 }

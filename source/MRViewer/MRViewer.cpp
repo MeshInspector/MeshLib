@@ -665,10 +665,6 @@ int Viewer::launchInit_( const LaunchParams& params )
     spdlog::info( "Log file: {}", utf8string( Logger::instance().getLogFileName() ) );
     glfwSetErrorCallback( glfw_error_callback );
 
-#ifdef __APPLE__
-    Apple::registerOpenDocumentsCallback();
-#endif
-
 #if GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
 #if !defined( MRVIEWER_EXPERIMENTAL_WAYLAND_SUPPORT ) && defined( __linux__ )
     // force to use X11
@@ -780,6 +776,9 @@ int Viewer::launchInit_( const LaunchParams& params )
         glfwSetCharCallback( window, glfw_char_mods_callback );
         glfwSetDropCallback( window, glfw_drop_callback );
         glfwSetJoystickCallback( glfw_joystick_callback );
+#ifdef __APPLE__
+        Apple::registerOpenDocumentsCallback();
+#endif
 
         // Handle retina displays (windows and mac)
         int width, height;

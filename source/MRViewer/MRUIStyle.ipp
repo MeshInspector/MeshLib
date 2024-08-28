@@ -173,11 +173,14 @@ namespace detail
     template <UnitEnum E, VectorOrScalar T>
     [[nodiscard]] std::string getDragRangeTooltip( T min, T max, const UnitToStringParams<E>& unitParams )
     {
-        if ( !( min < max ) )
+        if ( !( min <= max ) )
             return "";
 
         bool haveMin = min > std::numeric_limits<T>::lowest();
         bool haveMax = max < std::numeric_limits<T>::max();
+
+        if ( !haveMin && !haveMax )
+            return "";
 
         std::string minString = valueToString<E>( min, unitParams );
         std::string maxString = valueToString<E>( max, unitParams );
@@ -355,6 +358,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
 
             if ( ret )
             {
+                // could be that after dragging value ImGui does not clamp value in first frame
                 if ( *elemMin <= *elemMax && bool( flags & ImGuiSliderFlags_AlwaysClamp ) )
                     elemVal = std::clamp( elemVal, *elemMin, *elemMax );
             }

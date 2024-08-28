@@ -1,5 +1,6 @@
-#include "MRCommonPlugins/config.h"
-#if !defined( MRCOMMONPLUGINS_NO_VOXELS ) && !defined( MRVOXELS_NO_TIFF )
+#ifndef MESHLIB_NO_VOXELS
+#include <MRVoxels/MRVoxelsFwd.h>
+#ifndef MRVOXELS_NO_TIFF
 
 #include "MRViewer/MRRibbonSchema.h"
 #include "MRViewer/MRStatePlugin.h"
@@ -127,8 +128,9 @@ MR_REGISTER_RIBBON_ITEM( OpenVoxelsFromTiffPlugin )
 }
 
 #endif
+#endif
 
-#if defined( __EMSCRIPTEN__ ) && ( defined( MRCOMMONPLUGINS_NO_VOXELS ) || defined( MRVOXELS_NO_TIFF ) )
+#if defined( __EMSCRIPTEN__ ) && ( defined( MESHLIB_NO_VOXELS ) || defined( MRVOXELS_NO_TIFF ) )
 #include "MRCommonPlugins/Basic/MRWasmUnavailablePlugin.h"
 MR_REGISTER_WASM_UNAVAILABLE_ITEM( OpenVoxelsFromTiffPlugin, "Open Voxels From TIFF" )
 #endif

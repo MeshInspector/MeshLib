@@ -5,8 +5,7 @@
 #include "MRMesh/MRIOFilters.h"
 #include <filesystem>
 
-#include "MRCommonPlugins/config.h"
-#ifndef MRCOMMONPLUGINS_NO_VOXELS
+#ifndef MESHLIB_NO_VOXELS
 #include "MRVoxels/MRVoxelsFwd.h"
 #endif
 
@@ -42,7 +41,7 @@ private:
     std::shared_ptr<OpenDirectoryMenuItem> openDirectoryItem_;
 };
 
-#if !defined( MRCOMMONPLUGINS_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
+#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
 class OpenDICOMsMenuItem : public RibbonMenuItem
 {
 public:

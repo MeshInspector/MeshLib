@@ -44,7 +44,7 @@
 #include "MRViewer/MRLambdaRibbonItem.h"
 #include "MRPch/MRWasm.h"
 
-#ifndef MRCOMMONPLUGINS_NO_VOXELS
+#ifndef MESHLIB_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
 #include "MRVoxels/MRVoxelsLoad.h"
 #include "MRVoxels/MRVoxelsSave.h"
@@ -325,7 +325,7 @@ OpenDirectoryMenuItem::OpenDirectoryMenuItem() :
 {
 }
 
-#if !defined( MRCOMMONPLUGINS_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
+#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
 void sOpenDICOMs( const std::filesystem::path & directory, const std::string & simpleError )
 {
     ProgressBar::orderWithMainThreadPostProcessing( "Open DICOMs", [directory, simpleError, viewer = Viewer::instance()] () -> std::function<void()>
@@ -463,7 +463,7 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
             }
         } );
     }
-#if !defined( MRCOMMONPLUGINS_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
+#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
     else
     {
         sOpenDICOMs( directory, "No supported files can be open from the directory:\n" + utf8string( directory ) );
@@ -471,7 +471,7 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
 #endif
 }
 
-#if !defined( MRCOMMONPLUGINS_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
+#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
 OpenDICOMsMenuItem::OpenDICOMsMenuItem() :
     RibbonMenuItem( "Open DICOMs" )
 {
@@ -517,7 +517,7 @@ std::optional<SaveInfo> getSaveInfo( const std::vector<std::shared_ptr<T>> & obj
     || checkObjects.template operator()<ObjectLines>( { ViewerSettingsManager::ObjType::Lines, LinesSave::Filters } )
     || checkObjects.template operator()<ObjectPoints>( { ViewerSettingsManager::ObjType::Points, PointsSave::Filters } )
     || checkObjects.template operator()<ObjectDistanceMap>( { ViewerSettingsManager::ObjType::DistanceMap, DistanceMapSave::Filters } )
-#ifndef MRCOMMONPLUGINS_NO_VOXELS
+#ifndef MESHLIB_NO_VOXELS
     || checkObjects.template operator()<ObjectVoxels>( { ViewerSettingsManager::ObjType::Voxels, VoxelsSave::Filters } )
 #endif
     ;
@@ -990,7 +990,7 @@ MR_REGISTER_RIBBON_ITEM( SaveSceneAsMenuItem )
 
 MR_REGISTER_RIBBON_ITEM( OpenDirectoryMenuItem )
 
-#if !defined( MRCOMMONPLUGINS_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
+#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
 MR_REGISTER_RIBBON_ITEM( OpenDICOMsMenuItem )
 #endif
 
@@ -1009,7 +1009,7 @@ MR_REGISTER_RIBBON_ITEM( CaptureScreenshotToClipBoardMenuItem )
 #endif
 
 }
-#if defined( __EMSCRIPTEN__ ) && ( defined( MRCOMMONPLUGINS_NO_VOXELS ) || defined( MRVOXELS_NO_DICOM ) )
+#if defined( __EMSCRIPTEN__ ) && ( defined( MESHLIB_NO_VOXELS ) || defined( MRVOXELS_NO_DICOM ) )
 #include "MRCommonPlugins/Basic/MRWasmUnavailablePlugin.h"
 MR_REGISTER_WASM_UNAVAILABLE_ITEM( OpenDICOMsMenuItem, "Open DICOMs" )
 #endif

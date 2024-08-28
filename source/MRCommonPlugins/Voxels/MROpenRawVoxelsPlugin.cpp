@@ -1,5 +1,5 @@
 #include "MROpenRawVoxelsPlugin.h"
-#ifndef MRCOMMONPLUGINS_NO_VOXELS
+#ifndef MESHLIB_NO_VOXELS
 #include "MRViewer/MRRibbonSchema.h"
 #include "MRViewer/ImGuiMenu.h"
 #include "MRViewer/MRRibbonConstants.h"
@@ -165,7 +165,7 @@ MR_REGISTER_RIBBON_ITEM( OpenRawVoxelsPlugin )
 
 }
 #endif
-#if defined( MRCOMMONPLUGINS_NO_VOXELS ) && defined( __EMSCRIPTEN__ )
+#if defined( MESHLIB_NO_VOXELS ) && defined( __EMSCRIPTEN__ )
 #include "MRCommonPlugins/Basic/MRWasmUnavailablePlugin.h"
 MR_REGISTER_WASM_UNAVAILABLE_ITEM( OpenRawVoxelsPlugin, "Open RAW Voxels" )
 #endif

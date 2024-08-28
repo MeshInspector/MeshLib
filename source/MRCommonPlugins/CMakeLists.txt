@@ -4,12 +4,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(MRCommonPlugins CXX)
 
-option(MRCOMMONPLUGINS_NO_VOXELS "Disable voxels support" OFF)
-
-IF(NOT MESHLIB_BUILD_VOXELS)
-  set(MRCOMMONPLUGINS_NO_VOXELS ON)
-ENDIF()
-
 file(GLOB_RECURSE SOURCES "*.cpp")
 file(GLOB_RECURSE HEADERS "*.h")
 
@@ -27,14 +21,6 @@ ENDIF() # MR_EMSCRIPTEN
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
-
-set(MRCOMMONPLUGINS_OPTIONAL_DEPENDENCIES "")
-
-IF(NOT MRCOMMONPLUGINS_NO_VOXELS)
-  list(APPEND MRCOMMONPLUGINS_OPTIONAL_DEPENDENCIES MRVoxels)
-ENDIF()
-
 IF(MR_EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     tbb
@@ -45,7 +31,6 @@ IF(MR_EMSCRIPTEN)
     imgui
     jsoncpp
     spdlog
-    ${MRCOMMONPLUGINS_OPTIONAL_DEPENDENCIES}
   )
 ELSE() # NOT MR_EMSCRIPTEN
   target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -59,9 +44,16 @@ ELSE() # NOT MR_EMSCRIPTEN
     jsoncpp
     spdlog
     fmt
-    ${MRCOMMONPLUGINS_OPTIONAL_DEPENDENCIES}
   )
 ENDIF() # MR_EMSCRIPTEN
+
+IF(MESHLIB_BUILD_VOXELS)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRVoxels
+  )
+ELSE()
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VOXELS)
+ENDIF()
 
 install(
   TARGETS ${PROJECT_NAME}

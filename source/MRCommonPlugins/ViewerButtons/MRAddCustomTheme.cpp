@@ -22,8 +22,7 @@
 #include "MRViewer/MRUIStyle.h"
 #include <fstream>
 
-#include "MRCommonPlugins/config.h"
-#ifndef MRCOMMONPLUGINS_NO_VOXELS
+#ifndef MESHLIB_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
 #endif
 
@@ -319,7 +318,7 @@ MR_SUPPRESS_WARNING_PUSH
 MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
             obj->setLabelsColor( SceneColors::get( SceneColors::Labels ) );
 MR_SUPPRESS_WARNING_POP
-#ifndef MRCOMMONPLUGINS_NO_VOXELS
+#ifndef MESHLIB_NO_VOXELS
             if ( auto objVoxels = std::dynamic_pointer_cast< ObjectVoxels >( obj ) )
             {
                 objVoxels->setFrontColor( SceneColors::get( SceneColors::SelectedObjectVoxels ), true );

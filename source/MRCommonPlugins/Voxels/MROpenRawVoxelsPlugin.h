@@ -1,6 +1,5 @@
 #pragma once
-#include "MRCommonPlugins/config.h"
-#ifndef MRCOMMONPLUGINS_NO_VOXELS
+#ifndef MESHLIB_NO_VOXELS
 
 #include "MRViewer/MRStatePlugin.h"
 #include "MRVoxels/MRVoxelsLoad.h"

@@ -237,7 +237,7 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
                 elemMax = &VectorTraits<decltype(fixedMax)>::getElem( i, fixedMax );
             }
 
-            if ( *elemMin < *elemMax && bool( flags & ImGuiSliderFlags_AlwaysClamp ) ) // sometimes ImGui does not clamp it, so make sure that value is clamped
+            if ( *elemMin <= *elemMax && bool( flags & ImGuiSliderFlags_AlwaysClamp ) ) // sometimes ImGui does not clamp it, so make sure that value is clamped
                 elemVal = std::clamp( elemVal, *elemMin, *elemMax );
 
             // Don't strip trailing zeroes when active, otherwise the numbers jump too much.
@@ -314,7 +314,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 elemStepFast = &VectorTraits<decltype(fixedStepFast)>::getElem( i, fixedStepFast );
             }
 
-            if ( *elemMin < *elemMax && bool( flags & ImGuiSliderFlags_AlwaysClamp ) ) // sometimes ImGui does not clamp it, so make sure that value is clamped
+            if ( *elemMin <= *elemMax && bool( flags & ImGuiSliderFlags_AlwaysClamp ) ) // sometimes ImGui does not clamp it, so make sure that value is clamped
                 elemVal = std::clamp( elemVal, *elemMin, *elemMax );
 
             bool plusMinusButtons = step > 0 && stepFast > 0;
@@ -353,6 +353,12 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 float( VectorTraits<SpeedType>::getElem( i, fixedSpeed ) ), elemMin, elemMax, valueToImGuiFormatString( elemVal, unitParams ).c_str(), flags
             );
 
+            if ( ret )
+            {
+                if ( *elemMin <= *elemMax && bool( flags & ImGuiSliderFlags_AlwaysClamp ) )
+                    elemVal = std::clamp( elemVal, *elemMin, *elemMax );
+            }
+
             auto dragId = ImGui::GetItemID();
 
             if ( forceShowZeroes )
@@ -384,7 +390,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 {
                     ret = true;
                     elemVal += ( ImGui::GetIO().KeyCtrl ? *elemStepFast : *elemStep ) * action;
-                    if ( *elemMin < *elemMax )
+                    if ( *elemMin <= *elemMax )
                         elemVal = std::clamp( elemVal, *elemMin, *elemMax );
 
                     detail::markItemEdited( dragId );

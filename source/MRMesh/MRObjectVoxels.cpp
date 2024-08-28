@@ -55,8 +55,8 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
     activeBounds_.reset();
     vdbVolume_.data = grid;
 
-    auto vdbDims = vdbVolume_.data->evalActiveVoxelDim();
-    vdbVolume_.dims = {vdbDims.x(),vdbDims.y(),vdbDims.z()};
+    auto vdbDims = vdbVolume_.data->evalActiveVoxelBoundingBox().max();
+    vdbVolume_.dims = { vdbDims.x() + 1,vdbDims.y() + 1,vdbDims.z() + 1 };
     indexer_ = VolumeIndexer( vdbVolume_.dims );
     vdbVolume_.voxelSize = voxelSize;
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
@@ -202,8 +202,8 @@ Expected<std::shared_ptr<Mesh>> ObjectVoxels::recalculateIsoSurface( const VdbVo
             return unexpectedOperationCanceled();
         vdbVolume.data = resampled( vdbVolume.data, 2.0f );
         vdbVolume.voxelSize *= 2.0f;
-        auto vdbDims = vdbVolume.data->evalActiveVoxelDim();
-        vdbVolume.dims = {vdbDims.x(),vdbDims.y(),vdbDims.z()};
+        auto vdbDims = vdbVolume.data->evalActiveVoxelBoundingBox().max();
+        vdbVolume.dims = { vdbDims.x() + 1,vdbDims.y() + 1,vdbDims.z() + 1 };
     }
 }
 
@@ -312,9 +312,6 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
     if ( !activeBox.valid() )
         return;
 
-    activeVoxels_.reset();
-    activeBounds_.reset();
-
     float cbModifier = 1.0f;
     if ( updateSurface && volumeRendering_ )
         cbModifier = 1.0f / 3.0f;
@@ -328,32 +325,24 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
 
     // create active mask tree
     openvdb::TopologyTree topologyTree;
-    // let it have same topology as our tree
-    topologyTree.topologyUnion( vdbVolume_.data->tree() );
-    assert( topologyTree.hasSameTopology( vdbVolume_.data->tree() ) );
 
-    reportProgress( cb, cbModifier * 0.2f );
-
-    // deactivate topology tree, while saving same topology
-    openvdb::tools::foreach( topologyTree.beginValueAll(), [] ( const openvdb::TopologyTree::ValueAllIter& iter )
-    {
-        iter.setActiveState( false );
-    } );
-
-    reportProgress( cb, cbModifier * 0.4f );
+    reportProgress( cb, cbModifier * 0.25f );
 
     // update topology tree with new active box
     topologyTree.sparseFill( activeVdbBox, true );
 
-    reportProgress( cb, cbModifier * 0.6f );
+    reportProgress( cb, cbModifier * 0.5f );
 
-    // copy valid topology to our tree part 1
-    vdbVolume_.data->tree().topologyIntersection( topologyTree );
+    // deactivate all of current grid
+    openvdb::tools::foreach( vdbVolume_.data->tree().beginValueOn(), [] ( const openvdb::FloatTree::ValueOnIter& iter )
+    {
+        iter.setActiveState( false );
+    }, false ); // looks like this operation is not safe to do in threaded mode
 
-    reportProgress( cb, cbModifier * 0.8f );
+    reportProgress( cb, cbModifier * 0.75f );
 
-    // copy valid topology to our tree part 2
-    vdbVolume_.data->tree().topologyUnion( std::move( topologyTree ) );
+    // copy valid topology to our tree part
+    vdbVolume_.data->tree().topologyUnion( topologyTree );
 
     reportProgress( cb, cbModifier );
 
@@ -384,6 +373,7 @@ void ObjectVoxels::invalidateActiveBoundsCaches()
     volumeRenderActiveVoxels_.clear();
     dirty_ |= DIRTY_SELECTION;
     activeVoxels_.reset();
+    activeBounds_.reset();
 }
 
 const Box3i& ObjectVoxels::getActiveBounds() const
@@ -392,7 +382,7 @@ const Box3i& ObjectVoxels::getActiveBounds() const
     {
         auto activeBox = vdbVolume_.data->evalActiveVoxelBoundingBox();
         activeBounds_.emplace( Vector3i{ activeBox.min().x(), activeBox.min().y(), activeBox.min().z() },
-                               Vector3i{ activeBox.max().x(), activeBox.max().y(), activeBox.max().z() } );
+                               Vector3i{ activeBox.max().x() + 1, activeBox.max().y() + 1, activeBox.max().z() + 1 } );
     }
     return *activeBounds_;
 }

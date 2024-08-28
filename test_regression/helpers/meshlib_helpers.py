@@ -148,9 +148,9 @@ def compare_voxels(voxels_a: mrmesh.VdbVolume or Path or str,
     test_report = f"Testname is {testname}\n" if testname else ""
     # load voxels if required
     if isinstance(voxels_a, str) or isinstance(voxels_a, Path):
-        voxels_a = mrmesh.loadVoxels(Path(voxels_a))
+        voxels_a = mrmesh.loadVoxelsGav(Path(voxels_a))
     if isinstance(voxels_b, str) or isinstance(voxels_b, Path):
-        voxels_b = mrmesh.loadVoxels(Path(voxels_b))
+        voxels_b = mrmesh.loadVoxelsGav(Path(voxels_b))
     with check:
         assert voxels_a.voxelSize == voxels_b.voxelSize, (
                 f"{test_report}Voxel sizes are differs, \n"

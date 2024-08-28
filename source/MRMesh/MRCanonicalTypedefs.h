@@ -2,8 +2,6 @@
 
 #include "MRMesh/MRMacros.h"
 
-#include <type_traits>
-
 #if defined(_MSC_VER) && !defined(__clang__) && (!defined(_MSVC_TRADITIONAL) || _MSVC_TRADITIONAL == 1)
 #error The standard-conformant MSVC preprocessor is required, enable it with `/Zc:preprocessor`.
 #endif
@@ -63,7 +61,12 @@
 #define DETAIL_MR_CANONICAL_TYPEDEFS_CLANG_WORKAROUND(aliases_) \
     MR_END(DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_TOUCH_A aliases_)
 
-#define DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_TOUCH_BODY(name_, ...) static_assert((void(std::type_identity<__VA_ARGS__>{}), true));
+namespace MR::detail::CanonicalTypedefs
+{
+template <typename> struct RegisterType {};
+}
+
+#define DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_TOUCH_BODY(name_, ...) static_assert((void(::MR::detail::CanonicalTypedefs::RegisterType<__VA_ARGS__>{}), true));
 #define DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_TOUCH_A(...) DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_TOUCH_BODY(__VA_ARGS__) DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_TOUCH_B
 #define DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_TOUCH_B(...) DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_TOUCH_BODY(__VA_ARGS__) DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_TOUCH_A
 #define DETAIL_MR_CANONICAL_TYPEDEFS_LOOP_TOUCH_A_END

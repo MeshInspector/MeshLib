@@ -434,7 +434,7 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                     const float value = cache ? cache->get( loc ) : acc.get( loc );
                     const bool lower = value < params.iso;
                     const bool notLower = value >= params.iso;
-                    if ( !lower && !notLower )
+                    if ( !lower && !notLower ) // both not-lower and not-same-or-higher can be true only if value is not-a-number (NaN)
                         layerInvalids.set( inLayerPos );
                     else
                     {
@@ -450,12 +450,12 @@ Expected<TriMesh> volumeToMesh( const V& volume, const MarchingCubesParams& para
                             if ( lower )
                             {
                                 if ( !( nextValue >= params.iso ) )
-                                    continue;
+                                    continue; // nextValue is lower than params.iso (same as value) or nextValue is NaN
                             }
                             else
                             {
                                 if ( !( nextValue < params.iso ) )
-                                    continue;
+                                    continue; // nextValue is same or higher than params.iso (same as value) or nextValue is NaN
                             }
 
                             auto nextCoords = coords;

@@ -8,8 +8,6 @@
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshSave.h"
-#include "MRMesh/MRVoxelsSave.h"
-#include "MRMesh/MRVoxelsLoad.h"
 #include "MRMesh/MRLinesSave.h"
 #include "MRMesh/MRLinesLoad.h"
 #include "MRMesh/MRPointsSave.h"
@@ -25,6 +23,11 @@
 #pragma warning(disable: 4464) // relative include path contains '..'
 #include <pybind11/stl/filesystem.h>
 #pragma warning(pop)
+
+#ifndef MESHLIB_NO_VOXELS
+#include "MRVoxels/MRVoxelsSave.h"
+#include "MRVoxels/MRVoxelsLoad.h"
+#endif
 
 using namespace MR;
 
@@ -291,7 +294,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadPoints, [] ( pybind11::module_& m )
         pybind11::arg( "fileHandle" ), pybind11::arg( "extension" ), "load point cloud from python file handler, second arg: extension (`*.ext` format)" );
 } )
 
-#ifndef MRMESH_NO_OPENVDB
+#ifndef MESHLIB_NO_VOXELS
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveVoxels, [] ( pybind11::module_& m )
 {
     m.def( "saveVoxels",
@@ -304,6 +307,19 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveVoxels, [] ( pybind11::module_& m )
         "Save Gav voxels file." );
 } )
 
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
+{
+    m.def( "loadVoxels",
+           MR::decorateExpected( static_cast<Expected<VdbVolume>( * )( const std::filesystem::path&, const ProgressCallback& )>( &MR::VoxelsLoad::fromRaw ) ),
+           pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
+           "Load raw voxels file, parsing parameters from name." );
+    m.def( "loadVoxelsGav",
+           MR::decorateExpected( static_cast<Expected<VdbVolume>( * )( const std::filesystem::path&, const ProgressCallback& )>( &MR::VoxelsLoad::fromGav ) ),
+           pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
+           "Load Gav voxels file, parsing parameters from name." );
+} )
+
+#ifndef MRVOXELS_NO_DICOM
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, LoadDCMResult, MR::VoxelsLoad::LoadDCMResult )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadDCMResult, [] ( pybind11::module_& )
 {
@@ -315,17 +331,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadDCMResult, [] ( pybind11::module_& )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, LoadDCMResults, MR::VoxelsLoad::LoadDCMResult )
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxelsDicom, [] ( pybind11::module_& m )
 {
-    m.def( "loadVoxels",
-        MR::decorateExpected( static_cast<Expected<VdbVolume>( * )( const std::filesystem::path&, const ProgressCallback& )>( &MR::VoxelsLoad::fromRaw ) ),
-        pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
-        "Load raw voxels file, parsing parameters from name." );
-    m.def( "loadVoxelsGav",
-        MR::decorateExpected( static_cast<Expected<VdbVolume>( * )( const std::filesystem::path&, const ProgressCallback& )>( &MR::VoxelsLoad::fromGav ) ),
-        pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
-        "Load Gav voxels file, parsing parameters from name." );
-
     m.def( "loadDCMFolder", MR::decorateExpected( &MR::VoxelsLoad::loadDCMFolder ),
         pybind11::arg( "path" ), pybind11::arg( "maxNumThreads" ) = 4, pybind11::arg( "callback" ) = ProgressCallback{},
         "Loads first volumetric data from DICOM file(s)" );
@@ -350,6 +357,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
         pybind11::arg( "path" ), pybind11::arg( "maxNumThreads" ) = 4, pybind11::arg( "callback" ) = ProgressCallback{},
         "Loads all volumetric data from DICOM file(s)" );
 } )
+#endif
 #endif
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadSceneObject, [] ( pybind11::module_& m )

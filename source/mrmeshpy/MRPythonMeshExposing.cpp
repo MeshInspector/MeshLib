@@ -9,7 +9,6 @@
 #include "MRMesh/MRMeshComponents.h"
 #include "MRMesh/MRCube.h"
 #include "MRMesh/MRTorus.h"
-#include "MRMesh/MRBoolean.h"
 #include "MRMesh/MRMeshMetrics.h"
 #include "MRMesh/MRMeshBuilder.h"
 #include "MRMesh/MRExpandShrink.h"

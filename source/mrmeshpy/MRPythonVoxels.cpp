@@ -1,15 +1,14 @@
+#ifndef MESHLIB_NO_VOXELS
 #include "MRMesh/MRPython.h"
-#include "MRMesh/MRMeshFwd.h"
-#ifndef MRMESH_NO_OPENVDB
-#include "MRMesh/MRVoxelsVolume.h"
-#include "MRMesh/MRVoxelsSave.h"
-#include "MRMesh/MRVoxelsLoad.h"
-#include "MRMesh/MRVDBFloatGrid.h"
-#include "MRMesh/MRVDBConversions.h"
+#include "MRVoxels/MRVoxelsVolume.h"
+#include "MRVoxels/MRVoxelsSave.h"
+#include "MRVoxels/MRVoxelsLoad.h"
+#include "MRVoxels/MRVDBFloatGrid.h"
+#include "MRVoxels/MRVDBConversions.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRExpected.h"
-#include "MRMesh/MRMeshToDistanceVolume.h"
+#include "MRVoxels/MRMeshToDistanceVolume.h"
 #include <pybind11/functional.h>
 #pragma warning(push)
 #pragma warning(disable: 4464) // relative include path contains '..'

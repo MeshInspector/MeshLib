@@ -30,9 +30,16 @@ ELSE()
     spdlog
     fmt
     tbb
-    openvdb
     Python::Python
   )
+ENDIF()
+
+IF(MESHLIB_BUILD_VOXELS)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRVoxels
+  )
+ELSE()
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VOXELS)
 ENDIF()
 
 install(TARGETS ${PROJECT_NAME} DESTINATION "${MR_PY_LIB_DIR}")

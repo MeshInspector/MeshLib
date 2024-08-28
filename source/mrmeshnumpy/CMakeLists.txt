@@ -31,6 +31,14 @@ ELSE()
   )
 ENDIF()
 
+IF(MESHLIB_BUILD_VOXELS)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRVoxels
+  )
+ELSE()
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VOXELS)
+ENDIF()
+
 install(TARGETS ${PROJECT_NAME} DESTINATION "${MR_PY_LIB_DIR}")
 install(TARGETS ${PROJECT_NAME} EXPORT MeshLib DESTINATION "${MR_MAIN_LIB_DIR}")
 

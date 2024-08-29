@@ -5,7 +5,7 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRObjectsAccess.h"
-#include "MRMesh/MRObjectLabel.h"
+#include "MRSymbolMesh/MRObjectLabel.h"
 #include "MRRibbonButtonDrawer.h"
 #include "MRCommandLoop.h"
 #include "MRViewer.h"

@@ -1,12 +1,12 @@
 #pragma once
 
-#include "MRMeshFwd.h"
-#ifndef MRMESH_NO_LABEL
-#include "MRExpected.h"
-#include "MRId.h"
-#include "MRVector3.h"
+#include "MRSymbolMeshFwd.h"
 #include "MRSymbolMesh.h"
-#include "MRMeshTriPoint.h"
+
+#include "MRMesh/MRExpected.h"
+#include "MRMesh/MRId.h"
+#include "MRMesh/MRVector3.h"
+#include "MRMesh/MRMeshTriPoint.h"
 
 namespace MR
 {
@@ -33,6 +33,5 @@ struct TextMeshAlignParams : SymbolMeshParams
 };
 
 // Creates symbol mesh and aligns it to given surface
-MRMESH_API Expected<Mesh> alignTextToMesh( const Mesh& mesh, const TextMeshAlignParams& params );
+MRSYMBOLMESH_API Expected<Mesh> alignTextToMesh( const Mesh& mesh, const TextMeshAlignParams& params );
 }
-#endif

@@ -18,7 +18,7 @@
 namespace MR
 {
 
-std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, float radius, const ProgressCallback & progress )
+std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, float radius, const ProgressCallback & progress, OrientNormals orient )
 {
     MR_TIMER
 
@@ -31,17 +31,20 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, 
         {
             accum.addPoint( Vector3d( coord ) );
         } );
-         auto n = Vector3f( accum.getBestPlane().n );
-         if ( dot( n, pointCloud.points[vid] ) > 0 )
-             n = -n; // orient the normal toward the origin
-         normals[vid] = n;
+        auto n = Vector3f( accum.getBestPlane().n );
+        if ( orient != OrientNormals::Smart )
+        {
+            if ( ( dot( n, pointCloud.points[vid] ) > 0 ) == ( orient == OrientNormals::TowardOrigin ) )
+                n = -n;
+        }
+        normals[vid] = n;
     }, progress ) )
         return {};
 
     return normals;
 }
 
-std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, const AllLocalTriangulations& triangs, const ProgressCallback & progress )
+std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, const AllLocalTriangulations& triangs, const ProgressCallback & progress, OrientNormals orient )
 {
     MR_TIMER
 
@@ -49,7 +52,13 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, 
     normals.resizeNoInit( pointCloud.points.size() );
     if ( !BitSetParallelFor( pointCloud.validPoints, [&]( VertId v )
     {
-        normals[v] = computeNormal( triangs, pointCloud.points, v );
+        auto n = computeNormal( triangs, pointCloud.points, v );
+        if ( orient != OrientNormals::Smart )
+        {
+            if ( ( dot( n, pointCloud.points[v] ) > 0 ) == ( orient == OrientNormals::TowardOrigin ) )
+                n = -n;
+        }
+        normals[v] = n;
     }, progress ) )
         return {};
 
@@ -57,7 +66,7 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud, 
 }
 
 std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud,
-    const Buffer<VertId> & closeVerts, int numNei, const ProgressCallback & progress )
+    const Buffer<VertId> & closeVerts, int numNei, const ProgressCallback & progress, OrientNormals orient )
 {
     MR_TIMER
 
@@ -71,7 +80,13 @@ std::optional<VertNormals> makeUnorientedNormals( const PointCloud& pointCloud,
         const VertId * pEnd = p + numNei;
         for ( ; p < pEnd && *p; ++p )
             accum.addPoint( pointCloud.points[*p] );
-        normals[vid] = Vector3f( accum.getBestPlane().n );
+        auto n = Vector3f( accum.getBestPlane().n );
+        if ( orient != OrientNormals::Smart )
+        {
+            if ( ( dot( n, pointCloud.points[vid] ) > 0 ) == ( orient == OrientNormals::TowardOrigin ) )
+                n = -n;
+        }
+        normals[vid] = n;
     }, progress ) )
         return {};
 

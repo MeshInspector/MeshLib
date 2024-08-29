@@ -1,15 +1,15 @@
 #include "MRObjectLabel.h"
-#ifndef MRMESH_NO_LABEL
-#include "MRObjectFactory.h"
-#include "MRSerializer.h"
-#include "MRMesh.h"
-#include "MRSceneColors.h"
-#include "MRMeshSave.h"
-#include "MRMeshLoad.h"
-#include "MRStringConvert.h"
-#include "MR2DContoursTriangulation.h"
-#include "MRString.h"
-#include "MRTimer.h"
+
+#include "MRMesh/MRObjectFactory.h"
+#include "MRMesh/MRSerializer.h"
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRSceneColors.h"
+#include "MRMesh/MRMeshSave.h"
+#include "MRMesh/MRMeshLoad.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MR2DContoursTriangulation.h"
+#include "MRMesh/MRString.h"
+#include "MRMesh/MRTimer.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRAsyncLaunchType.h"
 #include "MRPch/MRJson.h"
@@ -393,4 +393,3 @@ void ObjectLabel::setDefaultSceneProperties_()
 }
 
 }
-#endif

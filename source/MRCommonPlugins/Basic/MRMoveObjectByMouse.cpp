@@ -8,6 +8,7 @@
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRMouseController.h"
 #include "MRViewer/MRUIStyle.h"
+#include "MRViewer/ImGuiMenu.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRChangeXfAction.h"
@@ -70,8 +71,6 @@ void MoveObjectByMouse::drawDialog( float menuScaling, ImGuiContext*)
     ImGui::SameLine();
     UI::radioButtonOrModifier( "Selected object(s)", moveByMouse_.modXfTarget_, int( XfTarget::Selected ), ImGuiMod_Shift, ImGuiMod_Shift );
 
-    moveByMouse_.onDrawDialog( menuScaling );
-
     ImGui::EndCustomStatePlugin();
 }
 
@@ -89,6 +88,12 @@ bool MoveObjectByMouse::onDrag_( int x, int y )
 bool MoveObjectByMouse::onDragEnd_( MouseButton btn, int modifiers )
 {
     return moveByMouse_.onMouseUp( btn, modifiers );
+}
+
+void MoveObjectByMouse::postDraw_()
+{
+    if (const auto& menu = getViewerInstance().getMenuPlugin() )
+        moveByMouse_.onDrawDialog( menu->menu_scaling() );
 }
 
 MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSelected::pick_( MouseButton button, int modifiers,

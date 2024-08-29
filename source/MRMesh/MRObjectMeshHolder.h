@@ -133,7 +133,7 @@ public:
     virtual void setTexturePerFace( Vector<TextureId, FaceId> texturePerFace ) { texturePerFace_ = std::move( texturePerFace ); dirty_ |= DIRTY_TEXTURE_PER_FACE; }
     virtual void updateTexturePerFace( Vector<TextureId, FaceId>& texturePerFace ) { std::swap( texturePerFace_, texturePerFace ); dirty_ |= DIRTY_TEXTURE_PER_FACE; }
     virtual void addTexture( MeshTexture texture ) { textures_.emplace_back( std::move( texture ) ); dirty_ |= DIRTY_TEXTURE_PER_FACE; }
-    const Vector<TextureId, FaceId>& getTexturePerFace() const { return texturePerFace_; }
+    const TexturePerFace& getTexturePerFace() const { return texturePerFace_; }
     
     const VertUVCoords& getUVCoords() const { return uvCoordinates_; }
     virtual void setUVCoords( VertUVCoords uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }

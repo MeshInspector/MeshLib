@@ -194,4 +194,24 @@ std::shared_ptr<ObjectPoints> merge( const std::vector<std::shared_ptr<ObjectPoi
     return objectPoints;
 }
 
+std::shared_ptr<MR::ObjectPoints> cloneRegion( const std::shared_ptr<ObjectPoints>& objPoints, const VertBitSet& region )
+{
+    VertMap vertMap;
+    CloudPartMapping partMapping;
+    if ( !objPoints->getVertsColorMap().empty() )
+        partMapping.tgt2srcVerts = &vertMap;
+    std::shared_ptr<PointCloud> newCloud = std::make_shared<PointCloud>();
+    newCloud->addPartByMask( *objPoints->pointCloud(), region, partMapping );
+
+    std::shared_ptr<ObjectPoints> newObj = std::make_shared<ObjectPoints>();
+    newObj->setFrontColor( objPoints->getFrontColor( true ), true );
+    newObj->setFrontColor( objPoints->getFrontColor( false ), false );
+    newObj->setBackColor( objPoints->getBackColor() );
+    newObj->setPointCloud( newCloud );
+    newObj->setAllVisualizeProperties( objPoints->getAllVisualizeProperties() );
+    newObj->copyColors( *objPoints, vertMap );
+    newObj->setName( objPoints->name() + "_part" );
+    return newObj;
+}
+
 } //namespace MR

@@ -57,4 +57,8 @@ protected:
 /// constructs new ObjectPoints containing the union of valid points from all input objects
 [[nodiscard]] MRMESH_API std::shared_ptr<ObjectPoints> merge( const std::vector<std::shared_ptr<ObjectPoints>>& objsPoints );
 
+/// constructs new ObjectPoints containing the region of data from input object
+/// does not copy selection
+[[nodiscard]] MRMESH_API std::shared_ptr<ObjectPoints> cloneRegion( const std::shared_ptr<ObjectPoints>& objPoints, const VertBitSet& region );
+
 } //namespace MR

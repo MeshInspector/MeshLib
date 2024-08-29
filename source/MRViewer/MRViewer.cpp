@@ -680,6 +680,10 @@ int Viewer::launchInit_( const LaunchParams& params )
     }
     spdlog::info( "glfwInit succeeded" );
 
+#ifdef __APPLE__
+    Apple::registerOpenDocumentsCallback();
+#endif
+
 #if defined( __APPLE__ )
     // Setting window properties
     glfwWindowHint( GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE );

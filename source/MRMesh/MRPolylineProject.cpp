@@ -85,11 +85,17 @@ PolylineProjectionResult<V> findProjectionCore( const AABBTreePolyline<V> & tree
 
         auto s1 = getSubTask( node.l );
         auto s2 = getSubTask( node.r );
+        // add task with smaller distance last to descend there first
         if ( s1.distSq < s2.distSq )
-            std::swap( s1, s2 );
-        assert( s1.distSq >= s2.distSq );
-        addSubTask( s1 ); // larger distance to look later
-        addSubTask( s2 ); // smaller distance to look first
+        {
+            addSubTask( s2 );
+            addSubTask( s1 );
+        }
+        else
+        {
+            addSubTask( s1 );
+            addSubTask( s2 );
+        }
     }
 
     return res;
@@ -237,11 +243,17 @@ PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
 
         auto s1 = getSubTask( node.l );
         auto s2 = getSubTask( node.r );
+        // add task with smaller distance last to descend there first
         if ( s1.dist < s2.dist )
-            std::swap( s1, s2 );
-        assert( s1.dist >= s2.dist );
-        addSubTask( s1 ); // larger distance to look later
-        addSubTask( s2 ); // smaller distance to look first
+        {
+            addSubTask( s2 );
+            addSubTask( s1 );
+        }
+        else
+        {
+            addSubTask( s1 );
+            addSubTask( s2 );
+        }
     }
 
     return res;

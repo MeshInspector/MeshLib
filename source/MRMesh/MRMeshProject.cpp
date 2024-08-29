@@ -90,7 +90,7 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
         
         auto s1 = getSubTask( node.l );
         auto s2 = getSubTask( node.r );
-        // push with smaller distance last to descend there first
+        // add task with smaller distance last to descend there first
         if ( s1.distSq < s2.distSq )
         {
             addSubTask( s2 );

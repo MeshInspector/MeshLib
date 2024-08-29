@@ -91,11 +91,17 @@ PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCl
 
         auto s1 = getSubTask( node.leftOrFirst );
         auto s2 = getSubTask( node.rightOrLast );
+        // add task with smaller distance last to descend there first
         if ( s1.distSq < s2.distSq )
-            std::swap( s1, s2 );
-        assert( s1.distSq >= s2.distSq );
-        addSubTask( s1 ); // larger distance to look later
-        addSubTask( s2 ); // smaller distance to look first
+        {
+            addSubTask( s2 );
+            addSubTask( s1 );
+        }
+        else
+        {
+            addSubTask( s1 );
+            addSubTask( s2 );
+        }
     }
 
     return res;
@@ -171,11 +177,17 @@ void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest
 
         auto s1 = getSubTask( node.leftOrFirst );
         auto s2 = getSubTask( node.rightOrLast );
+        // add task with smaller distance last to descend there first
         if ( s1.distSq < s2.distSq )
-            std::swap( s1, s2 );
-        assert( s1.distSq >= s2.distSq );
-        addSubTask( s1 ); // larger distance to look later
-        addSubTask( s2 ); // smaller distance to look first
+        {
+            addSubTask( s2 );
+            addSubTask( s1 );
+        }
+        else
+        {
+            addSubTask( s1 );
+            addSubTask( s2 );
+        }
     }
 }
 

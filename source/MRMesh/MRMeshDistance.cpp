@@ -127,11 +127,17 @@ MeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const Aff
             s1 = getSubTask( s.a, bNode.l );
             s2 = getSubTask( s.a, bNode.r );
         }
+        // add task with smaller distance last to descend there first
         if ( s1.distSq < s2.distSq )
-            std::swap( s1, s2 );
-        assert( s1.distSq >= s2.distSq );
-        addSubTask( s1 ); // larger distance to look later
-        addSubTask( s2 ); // smaller distance to look first
+        {
+            addSubTask( s2 );
+            addSubTask( s1 );
+        }
+        else
+        {
+            addSubTask( s1 );
+            addSubTask( s2 );
+        }
     }
 
     if ( rigidB2A && res.distSq < upDistLimitSq )

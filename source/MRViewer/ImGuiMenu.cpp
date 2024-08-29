@@ -2295,7 +2295,7 @@ void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedV
     }
     const auto valueConstForComparation = value;
 
-    ImGui::PushItemWidth( 40 * menu_scaling() );
+    ImGui::PushItemWidth( 50 * menu_scaling() );
     if ( lineWidth )
         UI::drag<PixelSizeUnit>( label, value );
     else

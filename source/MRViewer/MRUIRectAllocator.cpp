@@ -2,6 +2,7 @@
 
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
+#include "MRViewer/MRImGuiVectorOperators.h"
 
 #include <imgui_internal.h>
 
@@ -193,7 +194,7 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
             }
         }, ImVec2( 5, 1 ) );
 
-        defaultPos = result.rect.min;
+        defaultPos = ImGuiMath::round( ImVec2( result.rect.min ) + ImVec2( result.rect.size() ) * pivot );
         cond = ImGuiCond_Always;
     }
 

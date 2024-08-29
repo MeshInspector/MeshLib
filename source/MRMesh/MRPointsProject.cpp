@@ -15,10 +15,9 @@ namespace {
 struct SubTask
 {
     NodeId n;
-    float distSq = 0;
-    SubTask() = default;
-    SubTask( NodeId n, float dd ) : n( n ), distSq( dd )
-    {}
+    float distSq;
+    SubTask() : n( noInit ) {}
+    SubTask( NodeId n, float dd ) : n( n ), distSq( dd ) {}
 };
 
 } //anonymous namespace

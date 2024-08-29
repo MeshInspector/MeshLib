@@ -69,6 +69,7 @@ MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, name, MR::Box<VectorType> ) \
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )      \
 {\
     using BoxType = MR::Box<VectorType>;      \
+    using ValueType = typename VectorType::ValueType;  \
     MR_PYTHON_CUSTOM_CLASS( name ).doc() =                               \
         "Box given by its min- and max- corners";                      \
     MR_PYTHON_CUSTOM_CLASS( name ).                                      \
@@ -87,8 +88,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )      \
         def( "intersects", &BoxType::intersects, pybind11::arg( "b" ), "checks whether this box intersects or touches given box" ).\
         def( "intersection", &BoxType::intersection, pybind11::arg( "b" ), "computes intersection between this and other box" ).\
         def( "intersect", &BoxType::intersect, pybind11::arg( "b" ), "computes intersection between this and other box" ).\
-        def( "getDistanceSq", &BoxType::getDistanceSq, pybind11::arg( "b" ), "returns squared distance between this box and given one; " \
+        def( "getDistanceSq", ( ValueType( BoxType::* )( const BoxType& ) const ) &BoxType::getDistanceSq, pybind11::arg( "b" ), "returns squared distance between this box and given one; " \
                                                                                                                     "returns zero if the boxes touch or intersect").\
+        def( "getDistanceSq", ( ValueType( BoxType::* )( const VectorType& ) const ) &BoxType::getDistanceSq, pybind11::arg( "pt" ), \
+            "returns squared distance between this box and given point; returns zero if the point is inside or on the boundary of the box").\
         def( "insignificantlyExpanded", &BoxType::insignificantlyExpanded, "expands min and max to their closest representable value" ).\
         def( pybind11::self == pybind11::self ).\
         def( pybind11::self != pybind11::self );\

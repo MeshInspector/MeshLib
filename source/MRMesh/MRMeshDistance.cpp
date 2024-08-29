@@ -46,11 +46,9 @@ MeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const Aff
     struct SubTask
     {
         NodeId a, b;
-        float distSq = 0;
-        SubTask() = default;
-        SubTask( NodeId a, NodeId b, float dd ) : a( a ), b( b ), distSq( dd )
-        {
-        }
+        float distSq;
+        SubTask() : a( noInit ), b( noInit ) {}
+        SubTask( NodeId a, NodeId b, float dd ) : a( a ), b( b ), distSq( dd ) {}
     };
 
     constexpr int MaxStackSize = 128; // to avoid allocations
@@ -317,9 +315,9 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
     struct SubTask
     {
         NodeId n;
-        float distSq = 0;
-        SubTask() = default;
-        SubTask( NodeId n, float dd ) : n( n ), distSq( dd ) { }
+        float distSq;
+        SubTask() : n( noInit ) {}
+        SubTask( NodeId n, float dd ) : n( n ), distSq( dd ) {}
     };
 
     constexpr int MaxStackSize = 32; // to avoid allocations

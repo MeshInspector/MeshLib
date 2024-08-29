@@ -59,8 +59,8 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
     struct SubTask
     {
         NodeId n;
-        float furthestBoxProj = 0;
-        SubTask() = default;
+        float furthestBoxProj;
+        SubTask() : n( noInit ) {}
         SubTask( NodeId n, float bp ) : n( n ), furthestBoxProj( bp ) { }
     };
 

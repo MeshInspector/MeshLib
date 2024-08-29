@@ -108,7 +108,7 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     // edges
     serializeToJson( Vector4f( edgesColor_.get() ), root["Colors"]["Edges"] );
     // vertices
-    serializeToJson( Vector4f( pointsColor_.get() ), root["Colors"]["Verts"] );
+    serializeToJson( Vector4f( pointsColor_.get() ), root["Colors"]["Points"] );
     // borders
     serializeToJson( Vector4f( bordersColor_.get() ), root["Colors"]["Borders"] );
 
@@ -198,7 +198,7 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     deserializeFromJson( root["Colors"]["Edges"], resVec );
     edgesColor_.set( Color( resVec ) );
     // vertices
-    deserializeFromJson( root["Colors"]["Verts"], resVec );
+    deserializeFromJson( root["Colors"]["Points"], resVec );
     pointsColor_.set( Color( resVec ) );
     // borders
     deserializeFromJson( root["Colors"]["Borders"], resVec );

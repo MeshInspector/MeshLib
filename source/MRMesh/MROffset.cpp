@@ -141,8 +141,10 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
     }
     else
     {
+        const bool funcVolume = !params.fwn && params.memoryEfficient;
         MeshToDistanceVolumeParams msParams;
-        msParams.vol.cb = meshToLSCb;
+        if ( !funcVolume )
+            msParams.vol.cb = meshToLSCb;
         auto box = mp.mesh.computeBoundingBox( mp.region );
         auto absOffset = std::abs( offset );
         auto expansion = Vector3f::diagonal( 2 * params.voxelSize + absOffset );
@@ -157,11 +159,11 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         MarchingCubesParams vmParams;
         vmParams.origin = msParams.vol.origin;
         vmParams.iso = offset;
-        vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
+        vmParams.cb = funcVolume ? params.callBack : subprogress( params.callBack, 0.4f, 1.0f );
         vmParams.lessInside = true;
         vmParams.outVoxelPerFaceMap = outMap;
 
-        if ( params.memoryEfficient )
+        if ( funcVolume )
         {
             return marchingCubes( meshToDistanceFunctionVolume( mp, msParams ), vmParams );
         }

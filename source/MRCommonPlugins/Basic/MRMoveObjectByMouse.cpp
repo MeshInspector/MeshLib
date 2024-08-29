@@ -50,6 +50,7 @@ bool MoveObjectByMouse::onDisable_()
 
 void MoveObjectByMouse::drawDialog( float menuScaling, ImGuiContext*)
 {
+    menuScaling_ = menuScaling;
     auto menuWidth = 400.f * menuScaling;
     if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
         return;
@@ -89,6 +90,11 @@ bool MoveObjectByMouse::onDrag_( int x, int y )
 bool MoveObjectByMouse::onDragEnd_( MouseButton btn, int modifiers )
 {
     return moveByMouse_.onMouseUp( btn, modifiers );
+}
+
+void MoveObjectByMouse::postDraw_()
+{
+    moveByMouse_.onDrawDialog( menuScaling_ );
 }
 
 MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSelected::pick_( MouseButton button, int modifiers,

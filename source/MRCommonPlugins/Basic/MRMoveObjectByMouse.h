@@ -12,7 +12,7 @@ namespace MR
 
 class Object;
 
-class MoveObjectByMouse : public StateListenerPlugin<DragStartListener, DragListener, DragEndListener>
+class MoveObjectByMouse : public StateListenerPlugin<DragStartListener, DragListener, DragEndListener, PostDrawListener>
 {
 public:
     MoveObjectByMouse();
@@ -34,7 +34,9 @@ private:
     virtual bool onDragStart_( MouseButton btn, int modifiers ) override;
     virtual bool onDrag_( int x, int y ) override;
     virtual bool onDragEnd_( MouseButton btn, int modifiers ) override;
+    virtual void postDraw_() override;
 
+    float menuScaling_;
     // Same as basic implementation but allows to move selected objects together by holding Shift
     class MoveObjectByMouseWithSelected : public MoveObjectByMouseImpl
     {

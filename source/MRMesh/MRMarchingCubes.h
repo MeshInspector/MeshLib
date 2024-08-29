@@ -45,7 +45,7 @@ struct MarchingCubesParams
     enum class CachingMode
     {
         /// choose caching mode automatically depending on volume type
-        /// (current defaults: Normal for FunctionVolume, None for others)
+        /// (current defaults: Normal for FunctionVolume and VdbVolume, None for others)
         Automatic,
         /// don't cache any data
         None,

@@ -116,10 +116,11 @@ void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::
 } // namespace
 
 const IOFilters allFilters = SceneFileFilters
-                             | ObjectLoad::getFilters()
                              | MeshLoad::getFilters()
                              | LinesLoad::Filters
-                             | PointsLoad::Filters;
+                             | PointsLoad::Filters
+                             | ObjectLoad::getFilters()
+                             ;
 
 Expected<ObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadInfo& info /*= {}*/ )
 {
@@ -621,7 +622,7 @@ Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder,
 
 
     // Global variable is not correctly initialized in emscripten build
-    const IOFilters filters = SceneFileFilters | ObjectLoad::getFilters() | MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters;
+    const IOFilters filters = SceneFileFilters | MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | ObjectLoad::getFilters();
 
     std::function<void( FilePathNode& )> fillFilesTree = {};
     fillFilesTree = [&fillFilesTree, &filters] ( FilePathNode& node )

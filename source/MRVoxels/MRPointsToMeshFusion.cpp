@@ -6,9 +6,9 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRTimer.h"
 #include "MRPointsToDistanceVolume.h"
-#include "MRLocalTriangulations.h"
-#include "MRPointCloudTriangulationHelpers.h"
-#include "MRPointCloudMakeNormals.h"
+#include "MRMesh/MRLocalTriangulations.h"
+#include "MRMesh/MRPointCloudTriangulationHelpers.h"
+#include "MRMesh/MRPointCloudMakeNormals.h"
 
 namespace MR
 {

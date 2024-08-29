@@ -17,7 +17,9 @@ Expected<SimpleVolume> pointsToDistanceVolume( const PointCloud & cloud, const P
     MR_TIMER
     assert( params.sigma > 0 );
     assert( params.minWeight > 0 );
-    assert( cloud.hasNormals() );
+    assert( params.ptNormals || cloud.hasNormals() );
+
+    const VertNormals& normals = params.ptNormals ? *params.ptNormals : cloud.normals;
 
     SimpleVolume res;
     res.voxelSize = params.voxelSize;
@@ -38,7 +40,7 @@ Expected<SimpleVolume> pointsToDistanceVolume( const PointCloud & cloud, const P
             const auto distSq = ( voxelCenter - p ).lengthSq();
             const auto w = std::exp( distSq * inv2SgSq );
             sumWeight += w;
-            sumDist += dot( cloud.normals[v], voxelCenter - p ) * w;
+            sumDist += dot( normals[v], voxelCenter - p ) * w;
         } );
 
         if ( sumWeight >= params.minWeight )
@@ -56,7 +58,6 @@ Expected<VertColors> calcAvgColors( const PointCloud & cloud, const VertColors &
 {
     MR_TIMER
     assert( sigma > 0 );
-    assert( cloud.hasNormals() );
 
     VertColors res;
     res.resizeNoInit( tgtPoints.size() );

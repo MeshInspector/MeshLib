@@ -6,6 +6,9 @@
 #include "MRColor.h"
 #include "MRTimer.h"
 #include "MRPointsToDistanceVolume.h"
+#include "MRLocalTriangulations.h"
+#include "MRPointCloudTriangulationHelpers.h"
+#include "MRPointCloudMakeNormals.h"
 
 namespace MR
 {
@@ -15,7 +18,24 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     MR_TIMER
 
     PointsToDistanceVolumeParams p2vParams;
-    p2vParams.cb = subprogress( params.progress, 0.0f, 0.5f );
+
+    VertNormals normals;
+    if ( !cloud.hasNormals() )
+    {
+        auto optTriang = TriangulationHelpers::buildUnitedLocalTriangulations( cloud,
+            { .radius = params.sigma }, subprogress( params.progress, 0.0f, 0.2f ) );
+
+        if ( !optTriang )
+            return unexpectedOperationCanceled();
+
+        auto norms = makeOrientedNormals( cloud, *optTriang, subprogress( params.progress, 0.2f, 0.4f ) );
+        if ( !norms )
+            return unexpectedOperationCanceled();
+        normals = std::move( *norms );
+        p2vParams.ptNormals = &normals;
+    }
+
+    p2vParams.cb = p2vParams.ptNormals ? subprogress( params.progress, 0.4f, 0.65f ) : subprogress( params.progress, 0.0f, 0.5f );
     auto box = cloud.getBoundingBox();
     auto expansion = Vector3f::diagonal( 2 * params.voxelSize );
     p2vParams.origin = box.min - expansion;
@@ -27,7 +47,7 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     MarchingCubesParams vmParams;
     vmParams.origin = p2vParams.origin;
     vmParams.iso = 0;
-    vmParams.cb = subprogress( params.progress, 0.5f, ( params.ptColors && params.vColors ) ? 0.9f : 1.0f );
+    vmParams.cb = subprogress( params.progress, p2vParams.ptNormals ? 0.65f : 0.5f, ( params.ptColors && params.vColors ) ? 0.9f : 1.0f );
     vmParams.lessInside = true;
 
     auto res = ( params.createVolumeCallback ?

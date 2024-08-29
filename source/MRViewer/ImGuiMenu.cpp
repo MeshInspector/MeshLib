@@ -1739,7 +1739,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<Vis
         }, [&] ( ObjectLinesHolder* objLines, float value )
         {
             objLines->setLineWidth( value );
-        }, true );
+        } );
         make_width<ObjectLinesHolder>( selectedVisualObjs, "Point size", [&] ( const ObjectLinesHolder* objLines )
         {
             return objLines->getPointSize();
@@ -2275,8 +2275,7 @@ void ImGuiMenu::make_slider( std::vector<std::shared_ptr<ObjectType>> selectedVi
 template<typename ObjType>
 void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
     std::function<float( const ObjType* )> getter,
-    std::function<void( ObjType*, const float& )> setter,
-    bool lineWidth )
+    std::function<void( ObjType*, const float& )> setter )
 {
     auto objLines = selectedVisualObjs[0]->asType<ObjType>();
     auto value = getter( objLines );
@@ -2296,10 +2295,7 @@ void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedV
     const auto valueConstForComparation = value;
 
     ImGui::PushItemWidth( 50 * menu_scaling() );
-    if ( lineWidth )
-        UI::drag<PixelSizeUnit>( label, value );
-    else
-        UI::drag<PixelSizeUnit>( label, value, 0.02f, 1.0f, 25.0f );
+    UI::drag<PixelSizeUnit>( label, value, 0.02f, 0.5f, 30.0f );
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
     ImGui::PopItemWidth();
     if ( value != valueConstForComparation )

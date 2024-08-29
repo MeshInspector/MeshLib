@@ -81,8 +81,6 @@ protected:
     int maxTexSize_{ 0 };
 
     GLuint pointsArrayObjId_{ 0 };
-    GlBuffer pointNormalsBuffer_;
-    GlBuffer pointColorsBuffer_;
     GlBuffer pointValidBuffer_;
     bool dirtyPointPos_ = false;
 

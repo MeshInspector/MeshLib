@@ -220,8 +220,6 @@ size_t RenderMeshObject::glBytes() const
         + edgesTexture_.size()
         + selEdgesTexture_.size()
         + borderTexture_.size()
-        + pointNormalsBuffer_.size()
-        + pointColorsBuffer_.size()
         + pointValidBuffer_.size();
 }
 
@@ -358,14 +356,14 @@ void RenderMeshObject::renderMeshVerts_( const ModelRenderParams& renderParams, 
     }
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "invertNormals" ), objMesh_->getVisualizeProperty( VisualizeMaskType::InvertedNormals, renderParams.viewportId ) ) );
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perVertColoring" ), false ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "perVertColoring" ), objMesh_->getColoringType() == ColoringType::VertsColorMap ) );
 
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useClippingPlane" ), objMesh_->getVisualizeProperty( VisualizeMaskType::ClippedByPlane, renderParams.viewportId ) ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "clippingPlane" ),
         renderParams.clipPlane.n.x, renderParams.clipPlane.n.y,
         renderParams.clipPlane.n.z, renderParams.clipPlane.d ) );
 
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "hasNormals" ), 0 ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "hasNormals" ), 1 ) );
 
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specExp" ), objMesh_->getShininess() ) );
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "specularStrength" ), objMesh_->getSpecularStrength() ) );
@@ -658,11 +656,11 @@ void RenderMeshObject::bindPoints_( bool alphaSort )
     const auto positions = loadVertPosBuffer_();
     bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
 
-    const auto normals = GLStaticHolder::getStaticGLBuffer().prepareBuffer<Vector3f>( 0 );
-    bindVertexAttribArray( shader, "normal", pointNormalsBuffer_, normals, 3, normals.dirty(), normals.glSize() != 0 );
+    const auto normals = loadVertNormalsBuffer_();
+    bindVertexAttribArray( shader, "normal", vertNormalsBuffer_, normals, 3, normals.dirty(), normals.glSize() != 0 );
 
-    const auto colors = GLStaticHolder::getStaticGLBuffer().prepareBuffer<Color>( 0 );
-    bindVertexAttribArray( shader, "K", pointColorsBuffer_, colors, 4, colors.dirty(), colors.glSize() != 0 );
+    const auto colors = loadVertColorsBuffer_();
+    bindVertexAttribArray( shader, "K", vertColorsBuffer_, colors, 4, colors.dirty(), colors.glSize() != 0 );
 
     auto validIndices = loadPointValidIndicesBuffer_();
     pointValidBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, validIndices.dirty(), validIndices );

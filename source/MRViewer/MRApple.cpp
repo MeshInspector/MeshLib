@@ -28,9 +28,10 @@ static OSErr handleOpenDocuments( const AppleEvent* event, AppleEvent* /* reply 
 
     // Get the list of files to open and obtain its size
     err = AEGetParamDesc( event, keyDirectObject, typeAEList, &docList );
-    if ( err != noErr ) return err;
-    err = AECountItems( &docList, &itemCount );
-    if ( err != noErr ) return err;
+    if ( err == noErr )
+        err = AECountItems( &docList, &itemCount );
+    else
+        itemCount = 0;
 
     // Build paths list
     std::vector<std::filesystem::path> paths;
@@ -55,14 +56,18 @@ static OSErr handleOpenDocuments( const AppleEvent* event, AppleEvent* /* reply 
     spdlog::info( "Request to open files: {}", joined );
     MR::getViewerInstance().openFiles( paths );
 
-    return noErr;
+    if ( err != noErr )
+        spdlog::warn( "kAEOpenDocuments error: (OSErr){}", err );
+    return err;
 }
 
 #pragma clang diagnostic pop
 
 void registerOpenDocumentsCallback()
 {
-    AEInstallEventHandler( kCoreEventClass, kAEOpenDocuments, NewAEEventHandlerUPP( handleOpenDocuments ), 0, false );
+    OSErr err = AEInstallEventHandler( kCoreEventClass, kAEOpenDocuments, NewAEEventHandlerUPP( handleOpenDocuments ), 0, false );
+    if ( err != noErr )
+        spdlog::warn( "AEInstallEventHandler(...kAEOpenDocuments...) failed: (OSErr){}", err );
 }
 
 }

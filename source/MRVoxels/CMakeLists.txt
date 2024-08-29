@@ -18,6 +18,14 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
+IF(NOT MR_EMSCRIPTEN)
+  find_package(fmt REQUIRED)
+  find_package(spdlog REQUIRED)
+
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(jsoncpp REQUIRED QUIET IMPORTED_TARGET jsoncpp)
+ENDIF()
+
 set(MRVOXELS_OPTIONAL_DEPENDENCIES "")
 
 IF(NOT MRVOXELS_NO_DICOM)
@@ -29,16 +37,42 @@ IF(NOT MRVOXELS_NO_TIFF)
   list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES tiff)
 ENDIF()
 
-IF(APPLE)
+IF(BUILD_TESTING)
+  IF(APPLE)
+    list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES GTest::gtest)
+  ELSE()
+    list(APPEND MRVOXELS_OPTIONAL_DEPENDENCIES gtest)
+  ENDIF()
+ENDIF()
+
+IF(MR_EMSCRIPTEN)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    openvdb
+    fmt
+    jsoncpp
+    spdlog
+    tbb
+    ${MRVOXELS_OPTIONAL_DEPENDENCIES}
+  )
+ELSEIF(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     OpenVDB
+    PkgConfig::jsoncpp
+    fmt
+    spdlog
+    tbb
     ${MRVOXELS_OPTIONAL_DEPENDENCIES}
   )
 ELSE()
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     openvdb
+    fmt::fmt
+    spdlog::spdlog
+    PkgConfig::jsoncpp
+    tbb
     ${MRVOXELS_OPTIONAL_DEPENDENCIES}
   )
 ENDIF()

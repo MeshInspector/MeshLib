@@ -46,11 +46,9 @@ MeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const Aff
     struct SubTask
     {
         NodeId a, b;
-        float distSq = 0;
-        SubTask() = default;
-        SubTask( NodeId a, NodeId b, float dd ) : a( a ), b( b ), distSq( dd )
-        {
-        }
+        float distSq;
+        SubTask() : a( noInit ), b( noInit ) {}
+        SubTask( NodeId a, NodeId b, float dd ) : a( a ), b( b ), distSq( dd ) {}
     };
 
     constexpr int MaxStackSize = 128; // to avoid allocations
@@ -129,11 +127,17 @@ MeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const Aff
             s1 = getSubTask( s.a, bNode.l );
             s2 = getSubTask( s.a, bNode.r );
         }
+        // add task with smaller distance last to descend there first
         if ( s1.distSq < s2.distSq )
-            std::swap( s1, s2 );
-        assert( s1.distSq >= s2.distSq );
-        addSubTask( s1 ); // larger distance to look later
-        addSubTask( s2 ); // smaller distance to look first
+        {
+            addSubTask( s2 );
+            addSubTask( s1 );
+        }
+        else
+        {
+            addSubTask( s1 );
+            addSubTask( s2 );
+        }
     }
 
     if ( rigidB2A && res.distSq < upDistLimitSq )
@@ -317,9 +321,9 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
     struct SubTask
     {
         NodeId n;
-        float distSq = 0;
-        SubTask() = default;
-        SubTask( NodeId n, float dd ) : n( n ), distSq( dd ) { }
+        float distSq;
+        SubTask() : n( noInit ) {}
+        SubTask( NodeId n, float dd ) : n( n ), distSq( dd ) {}
     };
 
     constexpr int MaxStackSize = 32; // to avoid allocations

@@ -143,6 +143,23 @@ public:
         return distSq;
     }
 
+    /// returns squared distance between this box and given point;
+    /// returns zero if the point is inside or on the boundary of the box
+    T getDistanceSq( const V & pt ) const
+    {
+        assert( valid() );
+        T res{};
+        for ( int i = 0; i < V::elements; ++i )
+        {
+            if ( pt[i] < min[i] )
+                res += sqr( pt[i] - min[i] );
+            else
+            if ( pt[i] > max[i] )
+                res += sqr( pt[i] - max[i] );
+        }
+        return res;
+    }
+
     /// expands min and max to their closest representable value
     Box insignificantlyExpanded() const
     {

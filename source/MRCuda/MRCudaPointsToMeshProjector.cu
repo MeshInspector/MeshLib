@@ -25,7 +25,7 @@ __global__ void kernel( const float3* points,
     struct SubTask
     {
         int n;
-        float distSq = 0;
+        float distSq;
     };
 
     constexpr int MaxStackSize = 32; // to avoid allocations

@@ -124,7 +124,7 @@ void findTrisInBall( const MeshPart & mp, Ball ball, const FoundTriCallback& fou
 
     auto boxDistSq = [&]( NodeId n ) // squared distance from ball center to the box with interior
     {
-        return ( tree.nodes()[n].box.getBoxClosestPointTo( ball.center ) - ball.center ).lengthSq();
+        return tree.nodes()[n].box.getDistanceSq( ball.center );
     };
 
     auto addSubTask = [&]( NodeId n, float boxDistSq )

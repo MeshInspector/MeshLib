@@ -39,7 +39,8 @@ void findPointsInBall( const AABBTreePoints& tree, const Vector3f& center, float
 
     auto addSubTask = [&]( NodeId n )
     {
-        float distSq = ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( center ) - center ).lengthSq();
+        const auto & box = tree.nodes()[n].box;
+        float distSq = xf ? transformed( box, *xf ).getDistanceSq( center ) : box.getDistanceSq( center );
         if ( distSq <= radiusSq )
             subtasks[stackSize++] = n;
     };

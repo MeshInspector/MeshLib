@@ -51,7 +51,8 @@ PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCl
 
     auto getSubTask = [&] ( NodeId n )
     {
-        float distSq = ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( pt ) - pt ).lengthSq();
+        const auto & box = tree.nodes()[n].box;
+        float distSq = xf ? transformed( box, *xf ).getDistanceSq( pt ) : box.getDistanceSq( pt );
         return SubTask( n, distSq );
     };
 
@@ -133,7 +134,8 @@ void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest
 
     auto getSubTask = [&] ( NodeId n )
     {
-        float distSq = ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( pt ) - pt ).lengthSq();
+        const auto & box = tree.nodes()[n].box;
+        float distSq = xf ? transformed( box, *xf ).getDistanceSq( pt ) : box.getDistanceSq( pt );
         return SubTask( n, distSq );
     };
 

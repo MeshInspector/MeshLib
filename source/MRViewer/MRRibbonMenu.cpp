@@ -978,22 +978,14 @@ void RibbonMenu::cloneSelectedPart( const std::shared_ptr<Object>& object )
     {
         if ( !selectedMesh->mesh() )
             return;
-        const auto& curMesh = *selectedMesh->mesh();
-        std::shared_ptr<ObjectMesh> objMesh = std::make_shared<ObjectMesh>();
-        objMesh->setMesh( std::make_shared<Mesh>( curMesh.cloneRegion( selectedMesh->getSelectedFaces() ) ) );
-        newObj = objMesh;
+        newObj = cloneRegion( selectedMesh, selectedMesh->getSelectedFaces() );
         name = "ObjectMesh";
     }
     else if ( auto selectedPoints = std::dynamic_pointer_cast< ObjectPoints >( object ) )
     {
         if ( !selectedPoints->pointCloud() )
             return;
-        PointCloud newPointCloud;
-        const auto& curPointCloud = *selectedPoints->pointCloud();
-        newPointCloud.addPartByMask( curPointCloud, selectedPoints->getSelectedPoints() );
-        std::shared_ptr<ObjectPoints> objPoints = std::make_shared<ObjectPoints>();
-        objPoints->setPointCloud( std::make_shared<PointCloud>( std::move( newPointCloud ) ) );
-        newObj = objPoints;
+        newObj = cloneRegion( selectedPoints, selectedPoints->getSelectedPoints() );
         name = "ObjectPoints";
     }
 

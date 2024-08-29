@@ -352,6 +352,18 @@ void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const
     copyColors( src, thisToSrc, thisToSrcFaces );
     setTextures( src.getTextures() );
 
+    const auto& srcTexPerFace = src.getTexturePerFace();
+    if ( !srcTexPerFace.empty() )
+    {
+        TexturePerFace texPerFace;
+        texPerFace.resizeNoInit( thisToSrcFaces.size() );
+        ParallelFor( texPerFace, [&] ( FaceId id )
+        {
+            texPerFace[id] = srcTexPerFace[thisToSrcFaces[id]];
+        } );
+        setTexturePerFace( std::move( texPerFace ) );
+    }
+
     const auto& srcUVCoords = src.getUVCoords();
     const auto lastVert = src.mesh()->topology.lastValidVert();
     const bool updateUV = lastVert < srcUVCoords.size();

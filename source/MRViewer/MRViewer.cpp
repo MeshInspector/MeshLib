@@ -680,10 +680,6 @@ int Viewer::launchInit_( const LaunchParams& params )
     }
     spdlog::info( "glfwInit succeeded" );
 
-#ifdef __APPLE__
-    Apple::registerOpenDocumentsCallback();
-#endif
-
 #if defined( __APPLE__ )
     // Setting window properties
     glfwWindowHint( GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE );
@@ -739,6 +735,9 @@ int Viewer::launchInit_( const LaunchParams& params )
         assert( window );
 
 #ifdef __APPLE__
+        // Not sure when to call it
+        // Does not work if placed before window creation
+        // But here, if application is initially not active, and MacOS starts it to handle the files, the event gets lost
         Apple::registerOpenDocumentsCallback();
 #endif
 

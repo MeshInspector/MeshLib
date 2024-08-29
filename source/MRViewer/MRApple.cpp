@@ -68,6 +68,8 @@ void registerOpenDocumentsCallback()
     OSErr err = AEInstallEventHandler( kCoreEventClass, kAEOpenDocuments, NewAEEventHandlerUPP( handleOpenDocuments ), 0, false );
     if ( err != noErr )
         spdlog::warn( "AEInstallEventHandler(...kAEOpenDocuments...) failed: (OSErr){}", err );
+    else
+        spdlog::info( "AEInstallEventHandler(...kAEOpenDocuments...) succeeded" );
 }
 
 }

@@ -8,9 +8,8 @@ namespace MR
 namespace Apple
 {
 	
-// Register callback for a "documents open" event
-// This event is sent in MacOS to the application when the user opens the files in Finder
-// If the application is not active, it is started and then the event is sent: command line is not used for GUI apps
+// Register callback for "documents open" event, when the user opens the files in Finder
+// MacOS does not use command line for GUI apps, it starts the application (unless already open) and then sends this event
 // So it must be installed before any events processing
 void registerOpenDocumentsCallback();
 

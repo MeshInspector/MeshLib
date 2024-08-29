@@ -91,6 +91,14 @@ Expected<MR::Image> fromPng( std::istream& in )
 
     Image result;
 
+    char sign[8];
+    if ( !in.read( sign, 8 ) )
+        return unexpected( "Cannot read png signature" );
+    in.seekg( 0 );
+
+    if ( png_sig_cmp( ( png_const_bytep )sign, 0, 8 ) != 0 )
+        return unexpected( "Invalid png signature" );
+
     unsigned w{ 0 }, h{ 0 };
     int depth{ 0 }; // 8
     int colorType{ 0 }; // PNG_COLOR_TYPE_RGBA

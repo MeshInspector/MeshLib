@@ -407,7 +407,7 @@ Expected<void> VolumeMesher::firstPass_( const V& volume, Positioner&& positione
     auto cachingMode = params_.cachingMode;
     if ( cachingMode == MarchingCubesParams::CachingMode::Automatic )
     {
-        if constexpr ( VoxelsVolumeAccessor<V>::cacheMe )
+        if constexpr ( VoxelsVolumeAccessor<V>::cacheEffective )
             cachingMode = MarchingCubesParams::CachingMode::Normal;
         else
             cachingMode = MarchingCubesParams::CachingMode::None;

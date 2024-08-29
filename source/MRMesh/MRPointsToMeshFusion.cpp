@@ -6,6 +6,8 @@
 #include "MRColor.h"
 #include "MRTimer.h"
 #include "MRPointsToDistanceVolume.h"
+#include "MRLocalTriangulations.h"
+#include "MRPointCloudTriangulationHelpers.h"
 #include "MRPointCloudMakeNormals.h"
 
 namespace MR
@@ -13,14 +15,20 @@ namespace MR
 
 Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshParameters& params )
 {
-    MR_TIMER;
+    MR_TIMER
 
     PointsToDistanceVolumeParams p2vParams;
 
     VertNormals normals;
     if ( !cloud.hasNormals() )
     {
-        auto norms = makeOrientedNormals( cloud, params.sigma, subprogress( params.progress, 0.0f, 0.4f ) );
+        auto optTriang = TriangulationHelpers::buildUnitedLocalTriangulations( cloud,
+            { .radius = params.sigma }, subprogress( params.progress, 0.0f, 0.2f ) );
+
+        if ( !optTriang )
+            return unexpectedOperationCanceled();
+
+        auto norms = makeOrientedNormals( cloud, *optTriang, subprogress( params.progress, 0.2f, 0.4f ) );
         if ( !norms )
             return unexpectedOperationCanceled();
         normals = std::move( *norms );

@@ -720,6 +720,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         if ( params.render3dSceneInTexture )
             sceneTexture_ = std::make_unique<SceneTextureGL>();
 
+        // Create the window
         if ( !checkOpenGL_( params ) )
         {
             if ( params.windowMode == LaunchParams::TryHidden )
@@ -732,6 +733,10 @@ int Viewer::launchInit_( const LaunchParams& params )
     if ( windowMode )
     {
         assert( window );
+
+#ifdef __APPLE__
+        Apple::registerOpenDocumentsCallback();
+#endif
 
         glfwMakeContextCurrent( window );
         if ( !loadGL() )
@@ -776,9 +781,6 @@ int Viewer::launchInit_( const LaunchParams& params )
         glfwSetCharCallback( window, glfw_char_mods_callback );
         glfwSetDropCallback( window, glfw_drop_callback );
         glfwSetJoystickCallback( glfw_joystick_callback );
-#ifdef __APPLE__
-        Apple::registerOpenDocumentsCallback();
-#endif
 
         // Handle retina displays (windows and mac)
         int width, height;

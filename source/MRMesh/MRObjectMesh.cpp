@@ -365,8 +365,6 @@ std::shared_ptr<MR::ObjectMesh> cloneRegion( const std::shared_ptr<ObjectMesh>& 
         partMapping.tgt2srcFaces = &faceMap;
     std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>( objMesh->mesh()->cloneRegion( region, false, partMapping ) );
     std::shared_ptr<ObjectMesh> newObj = std::make_shared<ObjectMesh>();
-    newObj->setVisualizePropertyMask( MeshVisualizePropertyType::FlatShading,
-                                        objMesh->getVisualizePropertyMask( MeshVisualizePropertyType::FlatShading ) );
     newObj->setFrontColor( objMesh->getFrontColor( true ), true );
     newObj->setFrontColor( objMesh->getFrontColor( false ), false );
     newObj->setBackColor( objMesh->getBackColor() );

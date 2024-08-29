@@ -113,9 +113,9 @@ public:
     virtual void setEdgesColor( const Color& color, ViewportId id = {} )
     { edgesColor_.set( color, id ); needRedraw_ = true; }
     
-    const Color& getVertsColor( ViewportId id = {} ) const { return vertsColor_.get(id); }
-    virtual void setVertsColor( const Color& color, ViewportId id = {} )
-    { vertsColor_.set( color, id ); needRedraw_ = true; }
+    const Color& getPointsColor( ViewportId id = {} ) const { return pointsColor_.get(id); }
+    virtual void setPointsColor( const Color& color, ViewportId id = {} )
+    { pointsColor_.set( color, id ); needRedraw_ = true; }
 
     const Color& getBordersColor( ViewportId id = {} ) const { return bordersColor_.get( id ); }
     virtual void setBordersColor( const Color& color, ViewportId id = {} )
@@ -289,7 +289,7 @@ protected:
     ViewportMask onlyOddFragments_;
 
     ViewportProperty<Color> edgesColor_;
-    ViewportProperty<Color> vertsColor_;
+    ViewportProperty<Color> pointsColor_;
     ViewportProperty<Color> bordersColor_;
     ViewportProperty<Color> edgeSelectionColor_;
     ViewportProperty<Color> faceSelectionColor_;

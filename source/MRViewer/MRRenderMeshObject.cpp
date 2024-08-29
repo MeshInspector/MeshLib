@@ -372,7 +372,7 @@ void RenderMeshObject::renderMeshVerts_( const ModelRenderParams& renderParams, 
     GL_EXEC( glUniform1f( glGetUniformLocation( shader, "globalAlpha" ), objMesh_->getGlobalAlpha( renderParams.viewportId ) / 255.0f ) );
     GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &renderParams.lightPos.x ) );
 
-    const auto& mainColor = Vector4f( objMesh_->getVertsColor( renderParams.viewportId ) );
+    const auto& mainColor = Vector4f( objMesh_->getPointsColor( renderParams.viewportId ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
 
     const auto& backColor = mainColor;
@@ -1134,30 +1134,24 @@ RenderBufferRef<VertId> RenderMeshObject::loadPointValidIndicesBuffer_()
     if ( cornerMode )
     {
         auto unprocessedPoints = validPoints;
-        auto numF = topology.lastValidFace() + 1;
-        for ( int f = 0, out = 0; f < numF; ++f )
+        const auto& validFaces = topology.getValidFaces();
+        VertId verts[3];
+        size_t out = 0;
+        for ( auto f : validFaces )
         {
-            if ( !topology.hasFace( FaceId( f ) ) )
-                continue;
-            const auto triVerts = topology.getTriVerts( FaceId( f ) );
+            topology.getTriVerts( f, verts );
             for ( int i = 0; i < 3; ++i )
             {
-                VertId v = triVerts[i];
-                if ( !unprocessedPoints.test( v ) )
-                    continue;
-                unprocessedPoints.set( v, false );
-                buffer[out++] = VertId( v );
+                if ( unprocessedPoints.test_set( VertId( verts[i] ), false ) )
+                    buffer[out++] = VertId( int( f ) * 3 + i );
             }
         }
     }
     else
     {
-        const size_t numV = validPoints.find_last() + 1;
-        for ( int in = 0, out = 0; in < numV; ++in )
-        {
-            if ( validPoints.test( VertId( in ) ) )
-                buffer[out++] = VertId( in );
-        }
+        size_t out = 0;
+        for ( auto v : validPoints )
+            buffer[out++] = v;
     }
     return buffer;
 }

@@ -108,7 +108,7 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     // edges
     serializeToJson( Vector4f( edgesColor_.get() ), root["Colors"]["Edges"] );
     // vertices
-    serializeToJson( Vector4f( vertsColor_.get() ), root["Colors"]["Verts"] );
+    serializeToJson( Vector4f( pointsColor_.get() ), root["Colors"]["Verts"] );
     // borders
     serializeToJson( Vector4f( bordersColor_.get() ), root["Colors"]["Borders"] );
 
@@ -199,7 +199,7 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     edgesColor_.set( Color( resVec ) );
     // vertices
     deserializeFromJson( root["Colors"]["Verts"], resVec );
-    vertsColor_.set( Color( resVec ) );
+    pointsColor_.set( Color( resVec ) );
     // borders
     deserializeFromJson( root["Colors"]["Borders"], resVec );
     bordersColor_.set( Color( resVec ) );
@@ -344,7 +344,7 @@ void ObjectMeshHolder::setDefaultColors_()
     setSelectedFacesColor( SceneColors::get( SceneColors::SelectedFaces ) );
     setSelectedEdgesColor( SceneColors::get( SceneColors::SelectedEdges ) );
     setEdgesColor( SceneColors::get( SceneColors::Edges ) );
-    setVertsColor( SceneColors::get( SceneColors::Vertices ) );
+    setPointsColor( SceneColors::get( SceneColors::Points ) );
     setBordersColor( SceneColors::get( SceneColors::Labels ) );
 }
 

@@ -1895,12 +1895,12 @@ MR_SUPPRESS_WARNING_POP
         {
             data->setEdgesColor( Color( color ), selectedViewport_ );
         } );
-        make_color_selector<ObjectMeshHolder>( selectedMeshObjs, "Vertices color", [&] ( const ObjectMeshHolder* data )
+        make_color_selector<ObjectMeshHolder>( selectedMeshObjs, "Points color", [&] ( const ObjectMeshHolder* data )
         {
-            return Vector4f( data->getVertsColor( selectedViewport_ ) );
+            return Vector4f( data->getPointsColor( selectedViewport_ ) );
         }, [&] ( ObjectMeshHolder* data, const Vector4f& color )
         {
-            data->setVertsColor( Color( color ), selectedViewport_ );
+            data->setPointsColor( Color( color ), selectedViewport_ );
         } );
         make_color_selector<ObjectMeshHolder>( selectedMeshObjs, "Selected Faces color", [&] ( const ObjectMeshHolder* data )
         {

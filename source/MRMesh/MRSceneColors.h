@@ -27,7 +27,7 @@ struct SceneColors
         BackFaces,
         Labels,
         Edges,
-        Vertices,
+        Points,
         SelectedFaces,
         SelectedEdges,
         SelectedPoints,

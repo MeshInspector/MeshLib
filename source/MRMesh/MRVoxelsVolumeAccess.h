@@ -24,6 +24,7 @@ class VoxelsVolumeAccessor<VdbVolume>
 public:
     using VolumeType = VdbVolume;
     using ValueType = typename VolumeType::ValueType;
+    static constexpr bool cacheMe = true;
 
     explicit VoxelsVolumeAccessor( const VolumeType& volume )
         : accessor_( volume.data->getConstAccessor() )
@@ -61,6 +62,7 @@ class VoxelsVolumeAccessor<VoxelsVolumeMinMax<std::vector<T>>>
 public:
     using VolumeType = VoxelsVolumeMinMax<std::vector<T>>;
     using ValueType = typename VolumeType::ValueType;
+    static constexpr bool cacheMe = false;
 
     explicit VoxelsVolumeAccessor( const VolumeType& volume )
         : data_( volume.data )
@@ -92,6 +94,7 @@ class VoxelsVolumeAccessor<VoxelsVolume<VoxelValueGetter<T>>>
 public:
     using VolumeType = VoxelsVolume<VoxelValueGetter<T>>;
     using ValueType = typename VolumeType::ValueType;
+    static constexpr bool cacheMe = true;
 
     explicit VoxelsVolumeAccessor( const VolumeType& volume )
         : data_( volume.data )

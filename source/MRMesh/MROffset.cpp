@@ -161,7 +161,7 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         vmParams.lessInside = true;
         vmParams.outVoxelPerFaceMap = outMap;
 
-        if ( params.memoryEfficient )
+        if ( !params.fwn && params.memoryEfficient )
         {
             return marchingCubes( meshToDistanceFunctionVolume( mp, msParams ), vmParams );
         }

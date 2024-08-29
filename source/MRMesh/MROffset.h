@@ -32,11 +32,13 @@ struct OffsetParameters : BaseShellParameters
     std::shared_ptr<IFastWindingNumber> fwn;
 
     /// use FunctionVolume for voxel grid representation:
-    ///  - memory consumption is approx. (z / (2 * thread_count)) lesser
-    ///  - computation is about 2-3 times slower
-    ///  - custom IFastWindingNumber interface \ref fwn is ignored (CPU-only computation, no CUDA support)
+    ///  - memory consumption for voxel storage is approx. (dims.z / (2 * thread_count)) lesser
+    ///  - computations are about 15% slower (because some z-layers are computed twice)
+    /// this setting is ignored (as if memoryEfficient == false) if
+    ///  a) signDetectionMode = SignDetectionMode::OpenVDB, or
+    ///  b) \ref fwn is provided (CUDA computations require full memory storage)
     /// used only by \ref mcOffsetMesh and \ref sharpOffsetMesh methods
-    bool memoryEfficient = false;
+    bool memoryEfficient = true;
 };
 
 struct SharpOffsetParameters : OffsetParameters

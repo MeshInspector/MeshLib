@@ -1557,6 +1557,13 @@ bool ImGuiMenu::drawAdvancedOptions( const std::vector<std::shared_ptr<VisualObj
     if ( allIsObjMesh )
     {
         make_visualize_checkbox( selectedObjs, "Polygon Offset", MeshVisualizePropertyType::PolygonOffsetFromCamera, viewportid );
+        make_width<ObjectMeshHolder>( selectedObjs, "Point size", [&] ( const ObjectMeshHolder* objMesh )
+        {
+            return objMesh->getPointSize();
+        }, [&] ( ObjectMeshHolder* objMesh, float value )
+        {
+            objMesh->setPointSize( value );
+        } );
     }
 
     make_light_strength( selectedObjs, "Shininess", [&] ( const VisualObject* obj )
@@ -1721,13 +1728,6 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<Vis
         }
         if ( allHaveTexture )
             someChanges |= make_visualize_checkbox( selectedVisualObjs, "Texture", MeshVisualizePropertyType::Texture, viewportid );
-        make_width<ObjectMeshHolder>( selectedVisualObjs, "Point size", [&] ( const ObjectMeshHolder* objMesh )
-        {
-            return objMesh->getPointSize();
-        }, [&] ( ObjectMeshHolder* objMesh, float value )
-        {
-            objMesh->setPointSize( value );
-        } );
     }
     if ( allIsObjLines )
     {

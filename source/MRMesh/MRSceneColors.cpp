@@ -36,6 +36,7 @@ const char* SceneColors::getName( Type type )
         case BackFaces:                    return "BackFaces";
         case Labels:                       return "Labels";
         case Edges:                        return "Edges";
+        case Vertices:                     return "Vertices";
         case SelectedFaces:                return "SelectedFaces";
         case SelectedEdges:                return "SelectedEdges";
         case SelectedPoints:               return "SelectedPoints";
@@ -68,6 +69,8 @@ SceneColors::SceneColors()
     colors_[Labels] = Color( Vector4f{ 0.0f,0.0f,0.0f,1.0f } );
     // color of edges
     colors_[Edges] = Color( Vector4f{ 0.0f,0.0f,0.0f,1.0f } );
+    // color of vertices
+    colors_[Vertices] = Color( Vector4f{ 0.0f,0.0f,0.0f,1.0f } );
     // color of selected faces
     colors_[SelectedFaces] = Color( Vector4f{ 0.8f,0.2f,0.2f,1.0f } );
     // color of selected edges

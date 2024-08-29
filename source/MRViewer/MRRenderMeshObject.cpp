@@ -656,7 +656,7 @@ void RenderMeshObject::bindPoints_( bool alphaSort )
     GL_EXEC( glBindVertexArray( pointsArrayObjId_ ) );
     GL_EXEC( glUseProgram( shader ) );
             
-    const auto positions = loadPointPosBuffer_();
+    const auto positions = loadVertPosBuffer_();
     bindVertexAttribArray( shader, "position", pointPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
 
     const auto normals = GLStaticHolder::getStaticGLBuffer().prepareBuffer<Vector3f>( 0 );
@@ -669,11 +669,11 @@ void RenderMeshObject::bindPoints_( bool alphaSort )
     pointValidBuffer_.loadDataOpt( GL_ELEMENT_ARRAY_BUFFER, validIndices.dirty(), validIndices );
 
     // VertColors
-    GL_EXEC( glActiveTexture( GL_TEXTURE5 ) );
+    GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
     if ( !emptyVertsColorTexture_.valid() )
         emptyVertsColorTexture_.gen();
     emptyVertsColorTexture_.bind();
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 5 ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "selection" ), 0 ) );
 
     dirtyPointPos_ = false;
 }
@@ -779,6 +779,7 @@ void RenderMeshObject::update_( ViewportMask mask )
         dirty_ |= DIRTY_VERTS_COLORMAP;
         dirty_ |= DIRTY_UV;
         dirty_ |= DIRTY_FACE;
+        dirtyPointPos_ = true;
     }
     if ( cornerMode && bool( dirty_ & DIRTY_VERTS_RENDER_NORMAL ) )
     {
@@ -790,6 +791,7 @@ void RenderMeshObject::update_( ViewportMask mask )
         dirty_ |= DIRTY_VERTS_COLORMAP;
         dirty_ |= DIRTY_UV;
         dirty_ |= DIRTY_FACE;
+        dirtyPointPos_ = true;
     }
 #endif
 }
@@ -1145,14 +1147,37 @@ RenderBufferRef<VertId> RenderMeshObject::loadPointValidIndicesBuffer_()
 
     MR_NAMED_TIMER( "mesh_points_dirty_valid_indices" );
 
-    const auto& validPoints = objMesh_->mesh()->topology.getValidVerts();
-    const size_t lastValid = validPoints.find_last() + 1;
+    const auto& topology = objMesh_->mesh()->topology;
+    const auto& validPoints = topology.getValidVerts();
     pointValidSize_ = int( validPoints.count() );
     auto buffer = glBuffer.prepareBuffer<VertId>( pointValidSize_ );
-    for ( int in = 0, out = 0; in < lastValid; ++in )
+    if ( cornerMode )
     {
-        if ( validPoints.test( VertId( in ) ) )
-            buffer[out++] = VertId( in );
+        auto unprocessedPoints = validPoints;
+        auto numF = topology.lastValidFace() + 1;
+        for ( int f = 0, out = 0; f < numF; ++f )
+        {
+            if ( !topology.hasFace( FaceId( f ) ) )
+                continue;
+            const auto triVerts = topology.getTriVerts( FaceId( f ) );
+            for ( int i = 0; i < 3; ++i )
+            {
+                VertId v = triVerts[i];
+                if ( !unprocessedPoints.test( v ) )
+                    continue;
+                unprocessedPoints.set( v, false );
+                buffer[out++] = VertId( v );
+            }
+        }
+    }
+    else
+    {
+        const size_t numV = validPoints.find_last() + 1;
+        for ( int in = 0, out = 0; in < numV; ++in )
+        {
+            if ( validPoints.test( VertId( in ) ) )
+                buffer[out++] = VertId( in );
+        }
     }
     return buffer;
 }

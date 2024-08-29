@@ -335,6 +335,7 @@ MR_SUPPRESS_WARNING_POP
                 meshObj->setSelectedFacesColor( SceneColors::get( SceneColors::SelectedFaces ) );
                 meshObj->setSelectedEdgesColor( SceneColors::get( SceneColors::SelectedEdges ) );
                 meshObj->setEdgesColor( SceneColors::get( SceneColors::Edges ) );
+                meshObj->setVertsColor( SceneColors::get( SceneColors::Vertices ) );
             }
             else if ( auto objPoints = std::dynamic_pointer_cast< ObjectPoints >( obj ) )
             {

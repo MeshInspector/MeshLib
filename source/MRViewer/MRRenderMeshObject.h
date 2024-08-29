@@ -44,7 +44,6 @@ protected:
     MRVIEWER_API RenderBufferRef<unsigned> loadFaceSelectionTextureBuffer_();
     MRVIEWER_API RenderBufferRef<Vector4f> loadFaceNormalsTextureBuffer_();
     MRVIEWER_API RenderBufferRef<uint8_t> loadTexturePerFaceTextureBuffer_();
-    MRVIEWER_API RenderBufferRef<Vector3f> loadPointPosBuffer_();
     MRVIEWER_API RenderBufferRef<VertId> loadPointValidIndicesBuffer_();
 
     typedef unsigned int GLuint;
@@ -82,7 +81,6 @@ protected:
     int maxTexSize_{ 0 };
 
     GLuint pointsArrayObjId_{ 0 };
-    GlBuffer pointPosBuffer_;
     GlBuffer pointNormalsBuffer_;
     GlBuffer pointColorsBuffer_;
     GlBuffer pointValidBuffer_;

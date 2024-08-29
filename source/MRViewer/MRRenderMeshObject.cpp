@@ -220,7 +220,6 @@ size_t RenderMeshObject::glBytes() const
         + edgesTexture_.size()
         + selEdgesTexture_.size()
         + borderTexture_.size()
-        + pointPosBuffer_.size()
         + pointNormalsBuffer_.size()
         + pointColorsBuffer_.size()
         + pointValidBuffer_.size();
@@ -657,7 +656,7 @@ void RenderMeshObject::bindPoints_( bool alphaSort )
     GL_EXEC( glUseProgram( shader ) );
             
     const auto positions = loadVertPosBuffer_();
-    bindVertexAttribArray( shader, "position", pointPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
+    bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
 
     const auto normals = GLStaticHolder::getStaticGLBuffer().prepareBuffer<Vector3f>( 0 );
     bindVertexAttribArray( shader, "normal", pointNormalsBuffer_, normals, 3, normals.dirty(), normals.glSize() != 0 );
@@ -1121,23 +1120,6 @@ RenderBufferRef<uint8_t> RenderMeshObject::loadTexturePerFaceTextureBuffer_()
 
     return buffer;
 }
-
-RenderBufferRef<MR::Vector3f> RenderMeshObject::loadPointPosBuffer_()
-{
-    auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !dirtyPointPos_ || !objMesh_->mesh() )
-        return glBuffer.prepareBuffer<Vector3f>( pointSize_, false );
-
-    MR_NAMED_TIMER( "mesh_points_dirty_positions" );
-
-    const auto& mesh = objMesh_->mesh();
-    const auto& topology = mesh->topology;
-
-    auto buffer = glBuffer.prepareBuffer<Vector3f>( pointSize_ = topology.lastValidVert() + 1 );
-    std::copy( MR::begin( mesh->points ), MR::begin( mesh->points ) + pointSize_, buffer.data() );
-    return buffer;
-}
-
 
 RenderBufferRef<VertId> RenderMeshObject::loadPointValidIndicesBuffer_()
 {

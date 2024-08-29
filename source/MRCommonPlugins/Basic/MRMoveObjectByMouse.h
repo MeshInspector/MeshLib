@@ -36,7 +36,6 @@ private:
     virtual bool onDragEnd_( MouseButton btn, int modifiers ) override;
     virtual void postDraw_() override;
 
-    float menuScaling_;
     // Same as basic implementation but allows to move selected objects together by holding Shift
     class MoveObjectByMouseWithSelected : public MoveObjectByMouseImpl
     {

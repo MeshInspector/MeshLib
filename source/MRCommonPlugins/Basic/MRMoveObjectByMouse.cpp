@@ -8,6 +8,7 @@
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRMouseController.h"
 #include "MRViewer/MRUIStyle.h"
+#include "MRViewer/ImGuiMenu.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRChangeXfAction.h"
@@ -50,7 +51,6 @@ bool MoveObjectByMouse::onDisable_()
 
 void MoveObjectByMouse::drawDialog( float menuScaling, ImGuiContext*)
 {
-    menuScaling_ = menuScaling;
     auto menuWidth = 400.f * menuScaling;
     if ( !ImGuiBeginWindow_( { .width = menuWidth, .menuScaling = menuScaling } ) )
         return;
@@ -70,8 +70,6 @@ void MoveObjectByMouse::drawDialog( float menuScaling, ImGuiContext*)
     UI::radioButtonOrModifier( "Picked object",      moveByMouse_.modXfTarget_, int( XfTarget::Picked ),                0, ImGuiMod_Shift );
     ImGui::SameLine();
     UI::radioButtonOrModifier( "Selected object(s)", moveByMouse_.modXfTarget_, int( XfTarget::Selected ), ImGuiMod_Shift, ImGuiMod_Shift );
-
-    moveByMouse_.onDrawDialog( menuScaling );
 
     ImGui::EndCustomStatePlugin();
 }
@@ -94,7 +92,8 @@ bool MoveObjectByMouse::onDragEnd_( MouseButton btn, int modifiers )
 
 void MoveObjectByMouse::postDraw_()
 {
-    moveByMouse_.onDrawDialog( menuScaling_ );
+    if (const auto& menu = getViewerInstance().getMenuPlugin() )
+        moveByMouse_.onDrawDialog( menu->menu_scaling() );
 }
 
 MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSelected::pick_( MouseButton button, int modifiers,

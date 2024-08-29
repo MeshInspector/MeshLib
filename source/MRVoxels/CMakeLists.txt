@@ -51,7 +51,6 @@ IF(MR_EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     openvdb
-    fmt
     jsoncpp
     spdlog
     tbb

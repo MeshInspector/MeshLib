@@ -65,7 +65,10 @@ def test_unite_close_vertices():
 	tris = mrmesh.Triangulation()
 	tris.vec.resize(12)
 	for i in range(12):
-		tris.vec[i] = mrmesh.ThreeVertIds(mrmesh.VertId(i*3 + 0),mrmesh.VertId(i*3 + 1),mrmesh.VertId(i*3 + 2))
+		if is_new_binding:
+			tris.vec[i] = mrmesh.ThreeVertIds([mrmesh.VertId(i*3 + 0),mrmesh.VertId(i*3 + 1),mrmesh.VertId(i*3 + 2)])
+		else:
+			tris.vec[i] = mrmesh.ThreeVertIds(mrmesh.VertId(i*3 + 0),mrmesh.VertId(i*3 + 1),mrmesh.VertId(i*3 + 2))
 	mesh.topology = mrmesh.topologyFromTriangles(tris)
 
 	assert mrmesh.getAllComponents(mesh).size() == 12

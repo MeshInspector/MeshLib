@@ -77,11 +77,15 @@ Dipoles calcDipoles( const AABBTree& tree, const Mesh& mesh )
 
 constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
 
-float Dipole::w( const Vector3f & q ) const
+bool Dipole::addIfGoodApprox( const Vector3f& q, float betaSq, float& addTo ) const
 {
     const auto dp = pos() - q;
-    const auto d = dp.length();
-    return d > 0 ? INV_4PI * dot( dp, dirArea ) / ( d * d * d ) : 0;
+    const auto dd = dp.lengthSq();
+    if ( dd <= betaSq * rr )
+        return false;
+    if ( const auto d = std::sqrt( dd ); d > 0 )
+        addTo += INV_4PI * dot( dp, dirArea ) / ( d * dd );
+    return true;
 }
 
 /// see (6) in https://users.cs.utah.edu/~ladislav/jacobson13robust/jacobson13robust.pdf
@@ -108,6 +112,7 @@ float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const
         return res;
     }
 
+    const float betaSq = sqr( beta );
     constexpr int MaxStackSize = 32; // to avoid allocations
     NodeId subtasks[MaxStackSize];
     int stackSize = 0;
@@ -118,11 +123,8 @@ float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const
         const auto i = subtasks[--stackSize];
         const auto & node = tree[i];
         const auto & d = dipoles[i];
-        if ( d.goodApprox( q, beta ) )
-        {
-            res += d.w( q );
+        if ( d.addIfGoodApprox( q, betaSq, res ) )
             continue;
-        }
         if ( !node.leaf() )
         {
             // recurse deeper

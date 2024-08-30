@@ -17,13 +17,9 @@ struct Dipole
     {
         return area > 0 ? areaPos / area : areaPos;
     }
-    /// returns true if this dipole is good approximation for a point \param q
-    [[nodiscard]] bool goodApprox( const Vector3f& q, float beta ) const
-    {
-        return ( q - pos() ).lengthSq() > sqr( beta ) * rr;
-    }
-    /// contribution of this dipole to the winding number at point \param q
-    [[nodiscard]] MRMESH_API float w( const Vector3f& q ) const;
+    /// returns true if this dipole is good approximation for a point \param q;
+    /// and adds the contribution of this dipole to the winding number at point \param q to \param addTo
+    [[nodiscard]] MRMESH_API bool addIfGoodApprox( const Vector3f& q, float betaSq, float& addTo ) const;
 };
 
 static_assert( sizeof( Dipole ) == 8 * sizeof( float ) );

@@ -419,7 +419,7 @@
       <Filter>Render\Shaders</Filter>
     </ClCompile>
     <ClCompile Include="MRClipboard.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Helpers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -822,7 +822,7 @@
       <Filter>Render\Shaders</Filter>
     </ClInclude>
     <ClInclude Include="MRClipboard.h">
-      <Filter>Source Files</Filter>
+      <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

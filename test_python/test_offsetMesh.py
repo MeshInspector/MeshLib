@@ -17,8 +17,10 @@ def test_offset_mesh():
 
 def test_general_offset_mesh():
     cube = mrmesh.makeCube()
+    params = mrmesh.GeneralOffsetParameters()
+    params.voxelSize = mrmesh.suggestVoxelSize(cube, 5e6)
     try:
-        cube_offset = mrmesh.generalOffsetMesh(cube, 0.1)
+        cube_offset = mrmesh.generalOffsetMesh(cube, 0.1, params)
     except ValueError as e:
         print(e)
         assert False

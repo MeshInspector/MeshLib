@@ -328,7 +328,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
     m.def( "loadVoxels",
         MR::decorateExpected( &MR::VoxelsLoad::fromAnySupportedFormat ),
         pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
-        "Detects the format from file extension and loads voxels from it." );
+        "Detects the format from file extension and loads voxels from it. The older version of this function is avaiable now as loadVoxelsRaw." );
     m.def( "loadVoxelsRaw",
         MR::decorateExpected( static_cast<Expected<VdbVolume>( * )( const std::filesystem::path&, const ProgressCallback& )>( &MR::VoxelsLoad::fromRaw ) ),
         pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},

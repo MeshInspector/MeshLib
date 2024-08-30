@@ -31,7 +31,7 @@ MODULE_OUTPUT_DIR := $(MESHLIB_SHLIB_DIR)/meshlib2
 MRBIND_FLAGS := $(file <$(makefile_dir)/mrbind_flags.txt)
 
 # Those variables are for mrbind/scripts/apply_to_files.mk
-INPUT_DIRS := $(makefile_dir)/../../source/MRMesh $(makefile_dir)
+INPUT_DIRS := $(addprefix $(makefile_dir)/../../source/,MRMesh MRSymbolMesh) $(makefile_dir)
 INPUT_FILES_BLACKLIST := $(file <$(makefile_dir)/input_file_blacklist.txt)
 OUTPUT_DIR := build/binds
 INPUT_GLOBS := *.h
@@ -41,7 +41,7 @@ COMPILER_FLAGS_LIBCLANG := $(file <$(makefile_dir)/parser_only_flags.txt)
 COMPILER := $(CXX) $(file <$(makefile_dir)/compiler_only_flags.txt) -I$(MRBIND_SOURCE)/include
 LINKER_OUTPUT := $(MODULE_OUTPUT_DIR)/mrmeshpy$(shell python3-config --extension-suffix)
 LINKER := $(CXX) -fuse-ld=lld
-LINKER_FLAGS := -Wl,-rpath='$$ORIGIN/..:$$ORIGIN' $(shell pkg-config --libs python3-embed) -L$(DEPS_BASE_DIR)/lib -L$(MESHLIB_SHLIB_DIR) -lMRMesh -shared $(file <$(makefile_dir)/linker_flags.txt)
+LINKER_FLAGS := -Wl,-rpath='$$ORIGIN/..:$$ORIGIN' $(shell pkg-config --libs python3-embed) -L$(DEPS_BASE_DIR)/lib -L$(MESHLIB_SHLIB_DIR) -lMRMesh -lMRSymbolMesh -shared $(file <$(makefile_dir)/linker_flags.txt)
 NUM_FRAGMENTS := 4
 
 override mrbind_vars = $(subst $,$$$$, \

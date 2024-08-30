@@ -28,7 +28,6 @@
 #include "MRFrameCounter.h"
 #include "MRColorTheme.h"
 #include "MRHistoryStore.h"
-#include "MRApple.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -733,13 +732,6 @@ int Viewer::launchInit_( const LaunchParams& params )
     if ( windowMode )
     {
         assert( window );
-
-#ifdef __APPLE__
-        // Not sure when to call it
-        // Does not work if placed before window creation
-        // But here, if application is initially not active, and MacOS starts it to handle the files, the event gets lost
-        Apple::registerOpenDocumentsCallback();
-#endif
 
         glfwMakeContextCurrent( window );
         if ( !loadGL() )

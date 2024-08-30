@@ -13,7 +13,7 @@ def test_conversion_from_raw(ext, tmp_path):
 
     input_folder = Path(test_files_path) / "conversion" / "voxels_from_raw"
 
-    vxl_in = mlib.loadVoxels(input_folder / filename_in)
+    vxl_in = mlib.loadVoxelsRaw(input_folder / filename_in)
 
     mlib.saveVoxelsGav(vxl_in, str(tmp_path / filename_out))
 
@@ -35,9 +35,9 @@ def test_conversion_to_raw(ext, tmp_path):
 
     vxl_in = mlib.loadVoxelsGav(input_folder / filename_in)
 
-    mlib.saveVoxels(vxl_in, str(tmp_path / filename_out))
+    mlib.saveVoxelsRaw(vxl_in, str(tmp_path / filename_out))
 
     # Verify
-    vxl_out = mlib.loadVoxels(tmp_path / filename_out_full)
+    vxl_out = mlib.loadVoxelsRaw(tmp_path / filename_out_full)
     vxl_ref = mlib.loadVoxelsGav(input_folder / filename_in)
     compare_voxels(vxl_out, vxl_ref)

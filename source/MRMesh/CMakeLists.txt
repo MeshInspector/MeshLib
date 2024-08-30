@@ -4,7 +4,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(MRMesh CXX)
 
-option(MRMESH_NO_CLIPBOARD "Disable clipboard support for Linux and Mac" OFF)
 option(MRMESH_NO_PDF "Disable PDF support" OFF)
 option(MRMESH_NO_CPR "Disable CPR tests" OFF)
 option(MRMESH_NO_PYTHON "Disable Python bindings" OFF)
@@ -87,10 +86,6 @@ IF(NOT MRMESH_NO_JPEG)
 ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
-  IF(NOT MRMESH_NO_CLIPBOARD)
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES clip)
-  ENDIF()
-
   IF(NOT MRMESH_NO_PDF)
     list(APPEND MRMESH_OPTIONAL_DEPENDENCIES hpdf)
   ENDIF()

@@ -41,12 +41,6 @@ MRMESH_API void SetCurrentThreadName( const char * name );
 // returns home directory
 [[nodiscard]] MRMESH_API std::filesystem::path GetHomeDirectory();
 
-// returns data in clipboard
-[[nodiscard]] MRMESH_API std::string GetClipboardText();
-
-// sets data in clipboard
-MRMESH_API void SetClipboardText( const std::string& text );
-
 #ifdef _WIN32
 // returns the folder where Windows installed, typically "C:\Windows"
 [[nodiscard]] MRMESH_API std::filesystem::path GetWindowsInstallDirectory();

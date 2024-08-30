@@ -1,3 +1,4 @@
+#include "MRPch/MRSpdlog.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRViewer.h"
 

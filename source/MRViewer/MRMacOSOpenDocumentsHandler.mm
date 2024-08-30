@@ -3,17 +3,17 @@
 
 // callback function implemented in .cpp
 // accumulates file names until called with null, then handles the list
-extern void handle_load_message(const char* filePath);
+extern "C" void handle_load_message(const char* filePath);
 
 @implementation GLFWCustomDelegate
 
 + (void)load{
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        Class class = objc_getClass("GLFWApplicationDelegate");
+        Class class_  = objc_getClass("GLFWApplicationDelegate");
     
-        [GLFWCustomDelegate swizzle:class src:@selector(application:openFile:) tgt:@selector(swz_application:openFile:)];
-        [GLFWCustomDelegate swizzle:class src:@selector(application:openFiles:) tgt:@selector(swz_application:openFiles:)];
+        [GLFWCustomDelegate swizzle:class_ src:@selector(application:openFile:) tgt:@selector(swz_application:openFile:)];
+        [GLFWCustomDelegate swizzle:class_ src:@selector(application:openFiles:) tgt:@selector(swz_application:openFiles:)];
     });
 }
 
@@ -40,13 +40,14 @@ extern void handle_load_message(const char* filePath);
 
 - (BOOL)swz_application:(NSApplication *)sender openFile:(NSString *)filename{
     handle_load_message(filename.UTF8String);
-    handle_load_message(null);
+    handle_load_message(NULL);
+    return TRUE;
 }
 
 - (void)swz_application:(NSApplication *)sender openFiles:(NSArray<NSString *> *)filenames{
-    for (NSString *nsString in stringArray)
+    for (NSString *nsString in filenames)
         handle_load_message(nsString.UTF8String);
-    handle_load_message(null);
+    handle_load_message(NULL);
 }
 
 @end

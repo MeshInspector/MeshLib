@@ -14,8 +14,12 @@
 #include "MRPointsSave.h"
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
+#include "MRTimer.h"
 #include "MRVoxelsSave.h"
 #include "MRMesh.h"
+#include "MRZip.h"
+
+#include "MRPch/MRJson.h"
 
 namespace
 {
@@ -128,7 +132,10 @@ Polyline3 mergeToLines( const Object& object )
 
 } // namespace
 
-namespace MR::ObjectSave
+namespace MR
+{
+
+namespace ObjectSave
 {
 
 Expected<void> toAnySupportedSceneFormat( const Object& object, const std::filesystem::path& file,
@@ -206,4 +213,69 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
     }
 }
 
-} // namespace MR::ObjectSave
+} // namespace ObjectSave
+
+VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::path& path,
+                                  ProgressCallback progressCb, FolderCallback preCompress )
+{
+    MR_TIMER;
+    if (path.empty())
+        return unexpected( "Cannot save to empty path" );
+
+    UniqueTemporaryFolder scenePath( {} );
+    if ( !scenePath )
+        return unexpected( "Cannot create temporary folder" );
+
+    if ( progressCb && !progressCb( 0.0f ) )
+        return unexpected( "Canceled" );
+
+    Json::Value root;
+    root["FormatVersion"] = "0.0";
+    auto expectedSaveModelFutures = object.serializeRecursive( scenePath, root, 0 );
+    if ( !expectedSaveModelFutures.has_value() )
+        return unexpected( expectedSaveModelFutures.error() );
+    auto & saveModelFutures = expectedSaveModelFutures.value();
+
+    assert( !object.name().empty() );
+    auto paramsFile = scenePath / ( object.name() + ".json" );
+    // although json is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
+    std::ofstream ofs( paramsFile, std::ofstream::binary );
+    Json::StreamWriterBuilder builder;
+    std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
+    if ( !ofs || writer->write( root, &ofs ) != 0 )
+        return unexpected( "Cannot write parameters " + utf8string( paramsFile ) );
+
+    ofs.close();
+
+#ifndef __EMSCRIPTEN__
+    if ( !reportProgress( progressCb, 0.1f ) )
+        return unexpectedOperationCanceled();
+
+    // wait for all models are saved before making compressed folder
+    BitSet inProgress( saveModelFutures.size(), true );
+    while ( inProgress.any() )
+    {
+        for ( auto i : inProgress )
+        {
+            if ( saveModelFutures[i].wait_for( std::chrono::milliseconds( 200 ) ) != std::future_status::timeout )
+                inProgress.reset( i );
+        }
+        if ( !reportProgress( subprogress( progressCb, 0.1f, 0.9f ), 1.0f - (float)inProgress.count() / inProgress.size() ) )
+            return unexpectedOperationCanceled();
+    }
+#endif
+
+    for ( auto & f : saveModelFutures )
+    {
+        auto v = f.get();
+        if ( !v )
+            return v;
+    }
+
+    if ( preCompress )
+        preCompress( scenePath );
+
+    return compressZip( path, scenePath, {}, nullptr, subprogress( progressCb, 0.9f, 1.0f ) );
+}
+
+} // namespace MR

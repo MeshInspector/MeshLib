@@ -2,10 +2,14 @@
 
 #include "MRMeshFwd.h"
 #include "MRExpected.h"
+#include "MRSerializer.h"
 
 #include <filesystem>
 
-namespace MR::ObjectSave
+namespace MR
+{
+
+namespace ObjectSave
 {
 
 /// save an object tree to a given file
@@ -19,4 +23,18 @@ MRMESH_API Expected<void> toAnySupportedSceneFormat( const Object& object, const
 MRMESH_API Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem::path& file,
                                                 ProgressCallback callback = {} );
 
-} // namespace MR::ObjectSave
+} // namespace ObjectSave
+
+/**
+ * \brief saves object subtree in given scene file (zip/mru)
+ * \details format specification:
+ *  children are saved under folder with name of their parent object
+ *  all objects parameters are saved in one JSON file in the root folder
+ *
+ * if preCompress is set, it is called before compression
+ * saving is controlled with Object::serializeModel_ and Object::serializeFields_
+ */
+MRMESH_API VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::path& path,
+                                             ProgressCallback progress = {}, FolderCallback preCompress = {} );
+
+} // namespace MR

@@ -12,9 +12,6 @@
     <ClCompile Include="MRAlignTextToMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MRObjectImGuiLabel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MRObjectLabel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -27,9 +24,6 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeLabelAction.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MRObjectImGuiLabel.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="MRObjectLabel.h">

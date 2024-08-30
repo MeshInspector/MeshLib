@@ -23,14 +23,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRAlignTextToMesh.cpp" />
-    <ClCompile Include="MRObjectImGuiLabel.cpp" />
     <ClCompile Include="MRObjectLabel.cpp" />
     <ClCompile Include="MRSymbolMesh.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlignTextToMesh.h" />
     <ClInclude Include="MRChangeLabelAction.h" />
-    <ClInclude Include="MRObjectImGuiLabel.h" />
     <ClInclude Include="MRObjectLabel.h" />
     <ClInclude Include="MRSymbolMesh.h" />
     <ClInclude Include="MRSymbolMeshFwd.h" />

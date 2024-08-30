@@ -1,6 +1,5 @@
 #include "MRMesh.h"
 #include "MRTorus.h"
-#include "MRMeshLoad.h"
 #include "MRMeshRelax.h"
 #include "MRMeshSubdivide.h"
 #include "MRAffineXf3.h"

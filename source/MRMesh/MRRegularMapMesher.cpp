@@ -1,33 +1,12 @@
 #include "MRRegularMapMesher.h"
-#include "MRPointsLoad.h"
 #include "MRRegularGridMesh.h"
 
 namespace MR
 {
 
-VoidOrErrStr RegularMapMesher::loadSurfacePC( const std::filesystem::path& path )
-{
-    auto res = PointsLoad::fromAnySupportedFormat( path );
-    if ( !res.has_value() )
-        return unexpected( res.error() );
-
-    surfacePC_ = std::make_shared<PointCloud>( std::move( res.value() ) );
-    return {};
-}
-
 void RegularMapMesher::setSurfacePC( const std::shared_ptr<PointCloud>& surfacePC )
 {
     surfacePC_ = surfacePC;
-}
-
-VoidOrErrStr RegularMapMesher::loadDirectionsPC( const std::filesystem::path& path )
-{
-    auto res = PointsLoad::fromAnySupportedFormat( path );
-    if ( !res.has_value() )
-        return unexpected( res.error() );
-    
-    directionsPC_ = std::make_shared<PointCloud>( std::move( res.value() ) );
-    return {};
 }
 
 void RegularMapMesher::setDirectionsPC( const std::shared_ptr<PointCloud>& directionsPC )

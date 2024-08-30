@@ -7,7 +7,6 @@
 #include "MRMesh.h"
 #include "MRMeshBuilder.h"
 #include "MRMeshComponents.h"
-#include "MRMeshLoad.h"
 #include "MRMeshPart.h"
 #include "MRPlanarPath.h"
 #include "MRRegionBoundary.h"

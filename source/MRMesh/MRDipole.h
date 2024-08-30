@@ -19,7 +19,16 @@ struct Dipole
     }
     /// returns true if this dipole is good approximation for a point \param q;
     /// and adds the contribution of this dipole to the winding number at point \param q to \param addTo
-    [[nodiscard]] MRMESH_API bool addIfGoodApprox( const Vector3f& q, float betaSq, float& addTo ) const;
+    [[nodiscard]] bool addIfGoodApprox( const Vector3f& q, float betaSq, float& addTo ) const
+    {
+        const auto dp = pos() - q;
+        const auto dd = dp.lengthSq();
+        if ( dd <= betaSq * rr )
+            return false;
+        if ( const auto d = std::sqrt( dd ); d > 0 )
+            addTo += dot( dp, dirArea ) / ( d * dd );
+        return true;
+    }
 };
 
 static_assert( sizeof( Dipole ) == 8 * sizeof( float ) );

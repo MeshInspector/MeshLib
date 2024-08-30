@@ -75,19 +75,6 @@ Dipoles calcDipoles( const AABBTree& tree, const Mesh& mesh )
     return dipoles;
 }
 
-constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
-
-bool Dipole::addIfGoodApprox( const Vector3f& q, float betaSq, float& addTo ) const
-{
-    const auto dp = pos() - q;
-    const auto dd = dp.lengthSq();
-    if ( dd <= betaSq * rr )
-        return false;
-    if ( const auto d = std::sqrt( dd ); d > 0 )
-        addTo += INV_4PI * dot( dp, dirArea ) / ( d * dd );
-    return true;
-}
-
 /// see (6) in https://users.cs.utah.edu/~ladislav/jacobson13robust/jacobson13robust.pdf
 static float triangleSolidAngle( const Vector3f & p, const Triangle3f & tri )
 {
@@ -105,11 +92,10 @@ static float triangleSolidAngle( const Vector3f & p, const Triangle3f & tri )
 float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const Mesh& mesh,
     const Vector3f & q, float beta, FaceId skipFace )
 {
-    float res = 0;
     if ( dipoles.empty() )
     {
         assert( false );
-        return res;
+        return 0;
     }
 
     const float betaSq = sqr( beta );
@@ -118,6 +104,7 @@ float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const
     int stackSize = 0;
     subtasks[stackSize++] = tree.rootNodeId();
 
+    float res = 0;
     while( stackSize > 0 )
     {
         const auto i = subtasks[--stackSize];
@@ -133,9 +120,10 @@ float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const
             continue;
         }
         if ( node.leafId() != skipFace )
-            res += INV_4PI * triangleSolidAngle( q, mesh.getTriPoints( node.leafId() ) );
+            res += triangleSolidAngle( q, mesh.getTriPoints( node.leafId() ) );
     }
-    return res;
+    constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
+    return INV_4PI * res;
 }
 
 TEST(MRMesh, TriangleSolidAngle) 

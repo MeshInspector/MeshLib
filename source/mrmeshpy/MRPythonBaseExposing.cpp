@@ -559,8 +559,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPoint, [] ( pybind11::module_& )
         def_readwrite( "b", &MR::TriPointf::b, "b in [0,1], b=0 => point is on [v0,v1] edge, b=1 => point is in v2" ).
         def( "interpolate", &MR::TriPointf::interpolate<float>, "given three values in three vertices, computes interpolated value at this barycentric coordinates" ).
         def( "interpolate", &MR::TriPointf::interpolate<MR::Vector2f>, "given three values in three vertices, computes interpolated value at this barycentric coordinates" ).
-        def( "interpolate", &MR::TriPointf::interpolate<MR::Vector3f>, "given three values in three vertices, computes interpolated value at this barycentric coordinates" ).
-        def( "interpolate", &MR::TriPointf::interpolate<MR::Vector4f>, "given three values in three vertices, computes interpolated value at this barycentric coordinates" );
+        def( "interpolate", &MR::TriPointf::interpolate<MR::Vector3f>, "given three values in three vertices, computes interpolated value at this barycentric coordinates" ); //Vector4f is not exposed to python yet
 
     MR_PYTHON_CUSTOM_CLASS( MeshTriPoint ).doc() =
         "encodes a point inside a triangular mesh face using barycentric coordinates\n"

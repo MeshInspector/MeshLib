@@ -65,6 +65,7 @@ ELSE() # NOT MR_EMSCRIPTEN
       glfw
       gtkmm-3.0
       hidapi
+      clip
       ${APPKIT_LIBRARY}
     )
   ELSE() # NOT APPLE and NOT EMPSCRIPTEN
@@ -89,6 +90,7 @@ ELSE() # NOT MR_EMSCRIPTEN
       fmt
       openvdb
       tbb
+      clip
     )
   ENDIF() # APPLE
 ENDIF() # MR_EMSCRIPTEN

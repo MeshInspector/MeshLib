@@ -17,6 +17,7 @@
 #include "MRShortcutManager.h"
 #include "MRMouseController.h"
 #include "MRRibbonSceneObjectsListDrawer.h"
+#include "MRClipboard.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include <MRMesh/MRString.h>
 #include <MRMesh/MRSystem.h>
@@ -1806,12 +1807,18 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         Json::Value root;
         serializeTransform( root, { startXf, uniformScale_ } );
         transformClipboardText_ = root.toStyledString();
-        SetClipboardText( transformClipboardText_ );
+        if ( auto res = SetClipboardText( transformClipboardText_ ); !res )
+            spdlog::warn( res.error() );
         ImGui::CloseCurrentPopup();
     }
 #endif
     if ( ImGui::IsWindowAppearing() )
-        transformClipboardText_ = GetClipboardText();
+    {
+        if ( auto text = GetClipboardText() )
+            transformClipboardText_ = *text;
+        else
+            spdlog::warn( text.error() );
+    }
 
     if ( !transformClipboardText_.empty() )
     {

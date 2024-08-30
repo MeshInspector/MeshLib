@@ -21,9 +21,9 @@ extern "C" void handle_load_message( const char* filePath )
     else
     {
         spdlog::info( "Open file(s) requested: {}", joined );
-        MR::CommandLoop::appendCommand( [=] ()
+        MR::CommandLoop::appendCommand( [paths = filePaths] ()
         {
-            MR::getViewerInstance().openFilesRequested( filePaths );
+            MR::getViewerInstance().openFilesRequested( paths );
         }, MR::CommandLoop::StartPosition::AfterPluginInit );
         joined.clear();
         filePaths.clear();

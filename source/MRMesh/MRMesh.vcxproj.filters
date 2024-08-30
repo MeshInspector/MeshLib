@@ -1580,9 +1580,6 @@
     <ClCompile Include="MRMeshTests.cpp">
       <Filter>Source Files\Tests</Filter>
     </ClCompile>
-    <ClCompile Include="MRCPRTests.cpp">
-      <Filter>Source Files\Tests</Filter>
-    </ClCompile>
     <ClCompile Include="MRDenseBox.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>

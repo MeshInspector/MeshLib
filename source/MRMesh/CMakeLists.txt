@@ -6,7 +6,6 @@ project(MRMesh CXX)
 
 option(MRMESH_NO_CLIPBOARD "Disable clipboard support for Linux and Mac" OFF)
 option(MRMESH_NO_PDF "Disable PDF support" OFF)
-option(MRMESH_NO_CPR "Disable CPR tests" OFF)
 option(MRMESH_NO_PYTHON "Disable Python bindings" OFF)
 option(MRMESH_NO_DICOM "Disable DICOM image support" OFF)
 option(MRMESH_NO_OPENCTM "Disable OpenCTM support" OFF)
@@ -37,7 +36,6 @@ IF(DEFINED BUILD_TESTING AND NOT BUILD_TESTING)
 ENDIF()
 
 IF(MR_EMSCRIPTEN)
-  set(MRMESH_NO_CPR ON)
   set(MRMESH_NO_E57 ON)
   set(MRMESH_NO_OPENCASCADE ON)
   set(MRMESH_NO_PDF ON)
@@ -93,10 +91,6 @@ IF(NOT MR_EMSCRIPTEN)
 
   IF(NOT MRMESH_NO_PDF)
     list(APPEND MRMESH_OPTIONAL_DEPENDENCIES hpdf)
-  ENDIF()
-
-  IF(NOT MRMESH_NO_CPR)
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES cpr)
   ENDIF()
 
   IF(NOT MRMESH_NO_PYTHON)

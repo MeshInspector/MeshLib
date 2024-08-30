@@ -418,6 +418,9 @@
     <ClCompile Include="MRPointsShader.cpp">
       <Filter>Render\Shaders</Filter>
     </ClCompile>
+    <ClCompile Include="MRCPRTests.cpp">
+      <Filter>Requests</Filter>
+    </ClCompile>
     <ClCompile Include="MRClipboard.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>

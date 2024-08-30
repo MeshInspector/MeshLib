@@ -455,7 +455,6 @@
     <ClCompile Include="MRContoursSeparation.cpp" />
     <ClCompile Include="MRContoursStitch.cpp" />
     <ClCompile Include="MRConvexHull.cpp" />
-    <ClCompile Include="MRCPRTests.cpp" />
     <ClCompile Include="MRCylinderObject.cpp" />
     <ClCompile Include="MRDenseBox.cpp" />
     <ClCompile Include="MRDipole.cpp" />

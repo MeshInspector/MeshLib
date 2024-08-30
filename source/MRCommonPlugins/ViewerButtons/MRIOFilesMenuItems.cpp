@@ -258,20 +258,17 @@ bool OpenFilesMenuItem::openFiles_( const std::vector<std::filesystem::path>& pa
     if ( paths.empty() )
         return false;
 
-    CommandLoop::appendCommand( [=] ()
+    auto& viewerRef = getViewerInstance();
+    auto menu = viewerRef.getMenuPluginAs<RibbonMenu>();
+
+    if ( ProgressBar::isOrdered() )
     {
-        auto& viewerRef = getViewerInstance();
-        auto menu = viewerRef.getMenuPluginAs<RibbonMenu>();
+        if ( menu )
+            menu->pushNotification( { .text = "Another operation in progress.", .lifeTimeSec = 3.0f } );
+        return true;
+    }
 
-        if ( ProgressBar::isOrdered() )
-        {
-            if ( menu )
-                menu->pushNotification( { .text = "Another operation in progress.", .lifeTimeSec = 3.0f } );
-            return;
-        }
-
-        viewerRef.loadFiles( paths );
-    }, CommandLoop::StartPosition::AfterPluginInit );
+    viewerRef.loadFiles( paths );
 
     return true;
 }

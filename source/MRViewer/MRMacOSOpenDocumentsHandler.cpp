@@ -1,6 +1,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRViewer.h"
+#include "MRCommandLoop.h"
 
 #ifdef __APPLE__
 
@@ -20,8 +21,12 @@ extern "C" void handle_load_message( const char* filePath )
     else
     {
         spdlog::info( "Open file(s) requested: {}", joined );
+        MR::CommandLoop::appendCommand( [=] ()
+        {
+            MR::getViewerInstance().openFilesRequested( filePaths );
+        }, MR::CommandLoop::StartPosition::AfterPluginInit );
         joined.clear();
-        MR::getViewerInstance().openFiles( { filePaths } );
+        filePaths.clear();
     }
 }
 

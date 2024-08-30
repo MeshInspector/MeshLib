@@ -1475,7 +1475,7 @@ bool Viewer::dragDrop( const std::vector<std::filesystem::path>& paths )
     return false;
 }
 
-bool Viewer::openFiles( const std::vector<std::filesystem::path>& paths )
+bool Viewer::openFilesRequested( const std::vector<std::filesystem::path>& paths )
 {
     if ( openFilesSignal( paths ) )
         return true;

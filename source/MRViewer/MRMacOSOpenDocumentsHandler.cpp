@@ -1,6 +1,9 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRViewer.h"
+#include "MRProgressBar.h"
+#include "MRViewerInstance.h"
+#include "MRRibbonMenu.h"
 #include "MRCommandLoop.h"
 
 #ifdef __APPLE__
@@ -23,7 +26,15 @@ extern "C" void handle_load_message( const char* filePath )
         spdlog::info( "Open file(s) requested: {}", joined );
         MR::CommandLoop::appendCommand( [paths = filePaths] ()
         {
-            MR::getViewerInstance().openFilesRequested( paths );
+            auto& viewerRef = MR::getViewerInstance();
+            auto menu = viewerRef.getMenuPluginAs<MR::RibbonMenu>();
+            if ( MR::ProgressBar::isOrdered() )
+            {
+                if ( menu )
+                    menu->pushNotification( { .text = "Another operation in progress.", .lifeTimeSec = 3.0f } );
+                return;
+            }
+            viewerRef.loadFiles( paths );
         }, MR::CommandLoop::StartPosition::AfterPluginInit );
         joined.clear();
         filePaths.clear();

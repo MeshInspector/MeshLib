@@ -608,7 +608,7 @@ int Viewer::launch( const LaunchParams& params )
     return EXIT_SUCCESS;
 }
 
-bool Viewer::checkOpenGL_(const LaunchParams& params )
+bool Viewer::checkOpenGL_( const LaunchParams& params )
 {
     int windowWidth = params.width;
     int windowHeight = params.height;

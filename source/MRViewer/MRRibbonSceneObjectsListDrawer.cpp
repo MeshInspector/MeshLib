@@ -10,7 +10,7 @@
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRObjectDistanceMap.h"
-#include "MRMesh/MRObjectLabel.h"
+#include "MRSymbolMesh/MRObjectLabel.h"
 #include "MRMesh/MRSphereObject.h"
 #include "MRMesh/MRPointObject.h"
 #include "MRMesh/MRPlaneObject.h"

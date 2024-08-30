@@ -62,6 +62,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshTopology, [] ( pybind11::module_& )
             pybind11::arg("f"), pybind11::arg( "v0" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ),
             "gets 3 vertices of given triangular face;\n"
             "the vertices are returned in counter-clockwise order if look from mesh outside" ).
+        def( "getLeftTriVerts", ( void( MeshTopology::* )( EdgeId, VertId&, VertId&, VertId& )const )& MeshTopology::getLeftTriVerts,
+            pybind11::arg( "e" ), pybind11::arg( "v0" ), pybind11::arg( "v1" ), pybind11::arg( "v2" ),
+            "gets 3 vertices of the left face ( face-id may not exist, but the shape must be triangular)\n"
+            "the vertices are returned in counter-clockwise order if look from mesh outside" ).
         def( "edgeSize", &MeshTopology::edgeSize, "returns the number of half-edge records including lone ones" ).
         def( "undirectedEdgeSize", &MeshTopology::undirectedEdgeSize, "returns the number of undirected edges (pairs of half-edges) including lone ones" ).
         def( "computeNotLoneUndirectedEdges", &MeshTopology::computeNotLoneUndirectedEdges, "computes the number of not-lone (valid) undirected edges" ).

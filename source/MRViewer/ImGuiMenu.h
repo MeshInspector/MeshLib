@@ -245,8 +245,7 @@ public:
   template<typename ObjType>
   void make_width( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
                    std::function<float( const ObjType* )> getter,
-                   std::function<void( ObjType*, const float& )> setter,
-                   bool lineWidth = false );
+                   std::function<void( ObjType*, const float& )> setter );
 
   void make_light_strength( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
     std::function<float( const VisualObject* )> getter,

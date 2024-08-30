@@ -6,6 +6,7 @@
 
 #ifndef MRMESH_NO_OPENVDB
 #include "MRVDBFloatGrid.h"
+#include "MRIsNaN.h"
 #endif
 
 namespace MR
@@ -23,6 +24,7 @@ class VoxelsVolumeAccessor<VdbVolume>
 public:
     using VolumeType = VdbVolume;
     using ValueType = typename VolumeType::ValueType;
+    static constexpr bool cacheEffective = true; ///< caching results of this accessor can improve performance
 
     explicit VoxelsVolumeAccessor( const VolumeType& volume )
         : accessor_( volume.data->getConstAccessor() )
@@ -31,7 +33,10 @@ public:
 
     ValueType get( const Vector3i& pos ) const
     {
-        return accessor_.getValue( toVdb( pos + minCoord_ ) );
+        ValueType res;
+        if ( !accessor_.probeValue( toVdb( pos + minCoord_ ), res ) )
+            return cQuietNan;
+        return res;
     }
 
     ValueType get( const VoxelLocation & loc ) const
@@ -57,6 +62,7 @@ class VoxelsVolumeAccessor<VoxelsVolumeMinMax<std::vector<T>>>
 public:
     using VolumeType = VoxelsVolumeMinMax<std::vector<T>>;
     using ValueType = typename VolumeType::ValueType;
+    static constexpr bool cacheEffective = false; ///< caching results of this accessor does not make any sense since it returns values from a simple container
 
     explicit VoxelsVolumeAccessor( const VolumeType& volume )
         : data_( volume.data )
@@ -88,6 +94,7 @@ class VoxelsVolumeAccessor<VoxelsVolume<VoxelValueGetter<T>>>
 public:
     using VolumeType = VoxelsVolume<VoxelValueGetter<T>>;
     using ValueType = typename VolumeType::ValueType;
+    static constexpr bool cacheEffective = true; ///< caching results of this accessor can improve performance
 
     explicit VoxelsVolumeAccessor( const VolumeType& volume )
         : data_( volume.data )

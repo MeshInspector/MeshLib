@@ -151,12 +151,12 @@ FloatGrid meshToLevelSet( const MeshPart& mp, const AffineXf3f& xf,
                           const Vector3f& voxelSize, float surfaceOffset,
                           ProgressCallback cb )
 {
-    MR_TIMER;
     if ( surfaceOffset <= 0.0f )
     {
         assert( false );
         return {};
     }
+    MR_TIMER
     std::vector<openvdb::Vec3s> points;
     std::vector<openvdb::Vec3I> tris;
 
@@ -175,7 +175,7 @@ FloatGrid meshToDistanceField( const MeshPart& mp, const AffineXf3f& xf,
     const Vector3f& voxelSize, float surfaceOffset /*= 3 */,
     ProgressCallback cb )
 {
-    MR_TIMER;
+    MR_TIMER
     if ( surfaceOffset <= 0.0f )
     {
         assert( false );
@@ -215,6 +215,7 @@ Expected<VdbVolume> meshToVolume( const Mesh& mesh, const MeshToVolumeParams& pa
 {
     if ( params.type == MeshToVolumeParams::Type::Signed && !mesh.topology.isClosed() )
         return unexpected( "Only closed mesh can be converted to signed volume" );
+    MR_TIMER
 
     auto shift = AffineXf3f::translation( mesh.computeBoundingBox( &params.worldXf ).min - params.surfaceOffset * params.voxelSize );
     FloatGrid grid;
@@ -242,22 +243,23 @@ Expected<VdbVolume> meshToVolume( const Mesh& mesh, const MeshToVolumeParams& pa
     return res;
 }
 
-VdbVolume floatGridToVdbVolume( const FloatGrid& grid )
+VdbVolume floatGridToVdbVolume( FloatGrid grid )
 {
     if ( !grid )
         return {};
+    MR_TIMER
     VdbVolume res;
-    res.data = grid;
     evalGridMinMax( grid, res.min, res.max );
     auto dim = grid->evalActiveVoxelDim();
     res.dims = Vector3i( dim.x(), dim.y(), dim.z() );
+    res.data = std::move( grid );
     return res;
 }
 
 FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,
                                    ProgressCallback cb )
 {
-    MR_TIMER;
+    MR_TIMER
     if ( cb )
         cb( 0.0f );
     openvdb::math::Coord minCoord( 0, 0, 0 );

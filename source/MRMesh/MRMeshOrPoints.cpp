@@ -180,7 +180,7 @@ void projectOnAll(
         const auto& box = tree.nodes()[n].box;
         if ( !box.valid() )
             return;
-        float distSq = ( box.getBoxClosestPointTo( pt ) - pt ).lengthSq();
+        float distSq = box.getDistanceSq( pt );
         if ( distSq < upDistLimitSq )
         {
             assert( stackSize < MaxStackSize );

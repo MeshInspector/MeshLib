@@ -34,7 +34,7 @@
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRRibbonButtonDrawer.h"
-#include "MRMesh/MRObjectLabel.h"
+#include "MRSymbolMesh/MRObjectLabel.h"
 
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMeshModifier.h"
@@ -72,7 +72,7 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRTimer.h"
-#include "MRMesh/MRChangeLabelAction.h"
+#include "MRSymbolMesh/MRChangeLabelAction.h"
 #include "MRMesh/MRMatrix3Decompose.h"
 #include "MRMesh/MRFeatureObject.h"
 #include "MRMesh/MRFinally.h"
@@ -1557,6 +1557,13 @@ bool ImGuiMenu::drawAdvancedOptions( const std::vector<std::shared_ptr<VisualObj
     if ( allIsObjMesh )
     {
         make_visualize_checkbox( selectedObjs, "Polygon Offset", MeshVisualizePropertyType::PolygonOffsetFromCamera, viewportid );
+        make_width<ObjectMeshHolder>( selectedObjs, "Point size", [&] ( const ObjectMeshHolder* objMesh )
+        {
+            return objMesh->getPointSize();
+        }, [&] ( ObjectMeshHolder* objMesh, float value )
+        {
+            objMesh->setPointSize( value );
+        } );
     }
 
     make_light_strength( selectedObjs, "Shininess", [&] ( const VisualObject* obj )
@@ -1703,11 +1710,12 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<Vis
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Shading", MeshVisualizePropertyType::EnableShading, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Flat Shading", MeshVisualizePropertyType::FlatShading, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Edges", MeshVisualizePropertyType::Edges, viewportid );
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Points", MeshVisualizePropertyType::Points, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Selected Edges", MeshVisualizePropertyType::SelectedEdges, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Selected Faces", MeshVisualizePropertyType::SelectedFaces, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Borders", MeshVisualizePropertyType::BordersHighlight, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Faces", MeshVisualizePropertyType::Faces, viewportid );
-        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Only Odd Fragments", MeshVisualizePropertyType::OnlyOddFragments, viewportid );
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Transparency", MeshVisualizePropertyType::OnlyOddFragments, viewportid );
         bool allHaveTexture = true;
         for ( const auto& visObj : selectedVisualObjs )
         {
@@ -1731,7 +1739,7 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<Vis
         }, [&] ( ObjectLinesHolder* objLines, float value )
         {
             objLines->setLineWidth( value );
-        }, true );
+        } );
         make_width<ObjectLinesHolder>( selectedVisualObjs, "Point size", [&] ( const ObjectLinesHolder* objLines )
         {
             return objLines->getPointSize();
@@ -1886,6 +1894,13 @@ MR_SUPPRESS_WARNING_POP
         }, [&] ( ObjectMeshHolder* data, const Vector4f& color )
         {
             data->setEdgesColor( Color( color ), selectedViewport_ );
+        } );
+        make_color_selector<ObjectMeshHolder>( selectedMeshObjs, "Points color", [&] ( const ObjectMeshHolder* data )
+        {
+            return Vector4f( data->getPointsColor( selectedViewport_ ) );
+        }, [&] ( ObjectMeshHolder* data, const Vector4f& color )
+        {
+            data->setPointsColor( Color( color ), selectedViewport_ );
         } );
         make_color_selector<ObjectMeshHolder>( selectedMeshObjs, "Selected Faces color", [&] ( const ObjectMeshHolder* data )
         {
@@ -2260,8 +2275,7 @@ void ImGuiMenu::make_slider( std::vector<std::shared_ptr<ObjectType>> selectedVi
 template<typename ObjType>
 void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedVisualObjs, const char* label,
     std::function<float( const ObjType* )> getter,
-    std::function<void( ObjType*, const float& )> setter,
-    bool lineWidth )
+    std::function<void( ObjType*, const float& )> setter )
 {
     auto objLines = selectedVisualObjs[0]->asType<ObjType>();
     auto value = getter( objLines );
@@ -2280,11 +2294,8 @@ void ImGuiMenu::make_width( std::vector<std::shared_ptr<VisualObject>> selectedV
     }
     const auto valueConstForComparation = value;
 
-    ImGui::PushItemWidth( 40 * menu_scaling() );
-    if ( lineWidth )
-        UI::drag<PixelSizeUnit>( label, value );
-    else
-        UI::drag<PixelSizeUnit>( label, value, 0.02f, 1.0f, 10.0f );
+    ImGui::PushItemWidth( 50 * menu_scaling() );
+    UI::drag<PixelSizeUnit>( label, value, 0.02f, 0.5f, 30.0f );
     ImGui::GetStyle().Colors[ImGuiCol_Text] = backUpTextColor;
     ImGui::PopItemWidth();
     if ( value != valueConstForComparation )

@@ -19,6 +19,7 @@
     <ClCompile Include="MRAppendHistory.cpp" />
     <ClCompile Include="MRAlphaSortGL.cpp" />
     <ClCompile Include="ImGuiMenu.cpp" />
+    <ClCompile Include="MRClipboard.cpp" />
     <ClCompile Include="MRConsoleWindows.cpp" />
     <ClCompile Include="MRAsyncTimer.cpp" />
     <ClCompile Include="MRColorTheme.cpp" />
@@ -36,6 +37,7 @@
     <ClCompile Include="MRMeshBoundarySelectionWidget.cpp" />
     <ClCompile Include="MRFrameCounter.cpp" />
     <ClCompile Include="MRMoveObjectByMouseImpl.cpp" />
+    <ClCompile Include="MRObjectImGuiLabel.cpp" />
     <ClCompile Include="MRPointsShader.cpp" />
     <ClCompile Include="MRRenderDefaultObjects.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
@@ -126,6 +128,7 @@
     <ClCompile Include="MRUIRectAllocator.cpp" />
     <ClCompile Include="MRUINonOverlappingLabels.cpp" />
     <ClCompile Include="MRRenderImGuiLabelObject.cpp" />
+    <ClCompile Include="MRCPRTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -138,6 +141,7 @@
     <ClInclude Include="ImGuiHelpers.h" />
     <ClInclude Include="ImGuiMenu.h" />
     <ClInclude Include="imgui_fonts_droid_sans.h" />
+    <ClInclude Include="MRClipboard.h" />
     <ClInclude Include="MRConsoleWindows.h" />
     <ClInclude Include="MRAsyncTimer.h" />
     <ClInclude Include="MRColorTheme.h" />
@@ -159,6 +163,7 @@
     <ClInclude Include="MRFrameCounter.h" />
     <ClInclude Include="MRMoveObjectByMouseImpl.h" />
     <ClInclude Include="MRNotificationType.h" />
+    <ClInclude Include="MRObjectImGuiLabel.h" />
     <ClInclude Include="MRPointsShader.h" />
     <ClInclude Include="MRRibbonNotification.h" />
     <ClInclude Include="MRRibbonSceneObjectsListDrawer.h" />
@@ -372,6 +377,9 @@
     </ProjectReference>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">
       <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MRSymbolMesh\MRSymbolMesh.vcxproj">
+      <Project>{eaa47dfb-ecea-4d46-90be-718b190f06c4}</Project>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">

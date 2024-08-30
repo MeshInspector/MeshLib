@@ -17,6 +17,7 @@
 #include "MRShortcutManager.h"
 #include "MRMouseController.h"
 #include "MRRibbonSceneObjectsListDrawer.h"
+#include "MRClipboard.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include <MRMesh/MRString.h>
 #include <MRMesh/MRSystem.h>
@@ -24,7 +25,7 @@
 #include <MRMesh/MRSerializer.h>
 #include <MRMesh/MRObjectsAccess.h>
 #include <MRMesh/MRChangeXfAction.h>
-#include <MRMesh/MRObjectLabel.h>
+#include <MRSymbolMesh/MRObjectLabel.h>
 #include <MRMesh/MRChangeSceneObjectsOrder.h>
 #include <MRMesh/MRChangeSceneAction.h>
 #include <MRMesh/MRChangeObjectFields.h>
@@ -978,22 +979,14 @@ void RibbonMenu::cloneSelectedPart( const std::shared_ptr<Object>& object )
     {
         if ( !selectedMesh->mesh() )
             return;
-        const auto& curMesh = *selectedMesh->mesh();
-        std::shared_ptr<ObjectMesh> objMesh = std::make_shared<ObjectMesh>();
-        objMesh->setMesh( std::make_shared<Mesh>( curMesh.cloneRegion( selectedMesh->getSelectedFaces() ) ) );
-        newObj = objMesh;
+        newObj = cloneRegion( selectedMesh, selectedMesh->getSelectedFaces() );
         name = "ObjectMesh";
     }
     else if ( auto selectedPoints = std::dynamic_pointer_cast< ObjectPoints >( object ) )
     {
         if ( !selectedPoints->pointCloud() )
             return;
-        PointCloud newPointCloud;
-        const auto& curPointCloud = *selectedPoints->pointCloud();
-        newPointCloud.addPartByMask( curPointCloud, selectedPoints->getSelectedPoints() );
-        std::shared_ptr<ObjectPoints> objPoints = std::make_shared<ObjectPoints>();
-        objPoints->setPointCloud( std::make_shared<PointCloud>( std::move( newPointCloud ) ) );
-        newObj = objPoints;
+        newObj = cloneRegion( selectedPoints, selectedPoints->getSelectedPoints() );
         name = "ObjectPoints";
     }
 
@@ -1814,12 +1807,18 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         Json::Value root;
         serializeTransform( root, { startXf, uniformScale_ } );
         transformClipboardText_ = root.toStyledString();
-        SetClipboardText( transformClipboardText_ );
+        if ( auto res = SetClipboardText( transformClipboardText_ ); !res )
+            spdlog::warn( res.error() );
         ImGui::CloseCurrentPopup();
     }
 #endif
     if ( ImGui::IsWindowAppearing() )
-        transformClipboardText_ = GetClipboardText();
+    {
+        if ( auto text = GetClipboardText() )
+            transformClipboardText_ = *text;
+        else
+            spdlog::warn( text.error() );
+    }
 
     if ( !transformClipboardText_.empty() )
     {

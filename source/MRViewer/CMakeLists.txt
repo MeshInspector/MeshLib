@@ -34,6 +34,7 @@ ENDIF() # MR_EMSCRIPTEN
 IF(MR_EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
+    MRSymbolMesh
     tbb
     jsoncpp
     imgui
@@ -48,6 +49,7 @@ ELSE() # NOT MR_EMSCRIPTEN
     )
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRMesh
+      MRSymbolMesh
       GTest::gtest
       fmt
       tbb
@@ -63,6 +65,7 @@ ELSE() # NOT MR_EMSCRIPTEN
       glfw
       gtkmm-3.0
       hidapi
+      clip
       ${APPKIT_LIBRARY}
     )
   ELSE() # NOT APPLE and NOT EMPSCRIPTEN
@@ -70,6 +73,7 @@ ELSE() # NOT MR_EMSCRIPTEN
 
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRMesh
+      MRSymbolMesh
       gtest
       dl
       cpr
@@ -86,6 +90,7 @@ ELSE() # NOT MR_EMSCRIPTEN
       fmt
       openvdb
       tbb
+      clip
     )
   ENDIF() # APPLE
 ENDIF() # MR_EMSCRIPTEN

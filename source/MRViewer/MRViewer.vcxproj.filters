@@ -421,6 +421,15 @@
     <ClCompile Include="MRMacOSOpenDocumentsHandler.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
+    <ClCompile Include="MRCPRTests.cpp">
+      <Filter>Requests</Filter>
+    </ClCompile>
+    <ClCompile Include="MRClipboard.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRObjectImGuiLabel.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -823,6 +832,12 @@
     </ClInclude>
     <ClInclude Include="MRMacOSOpenDocumentsHandler.h">
       <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRClipboard.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRObjectImGuiLabel.h">
+      <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

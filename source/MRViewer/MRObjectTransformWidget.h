@@ -195,7 +195,7 @@ class MRVIEWER_CLASS ObjectTransformWidget : public MultiListener<MouseDownListe
 public:
     // Creates transform widget around given box and applies given xf
     // subscribes to viewer events
-    // controls: class that is responsiple for visualizatoin
+    // controls: class that is responsible for visualization
     // if controls is empty default TransformControls is used
     MRVIEWER_API void create( const Box3f& box, const AffineXf3f& xf, std::shared_ptr<ITransformControls> controls = {} );
     // Removes widget from scene and clears all widget objects

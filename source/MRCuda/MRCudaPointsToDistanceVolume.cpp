@@ -19,7 +19,7 @@ namespace Cuda
         cudaPoints.fromVector( tree.orderedPoints() );
 
         DynamicArray<float3> cudaNormals;
-        cudaNormals.fromVector( cloud.normals.vec_ );
+        cudaNormals.fromVector( params.ptNormals ? params.ptNormals->vec_ : cloud.normals.vec_ );
 
         PointsToDistanceVolumeParams cudaParams
         {

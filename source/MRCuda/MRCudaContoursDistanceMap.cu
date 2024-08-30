@@ -66,7 +66,7 @@ __global__ void kernel(
     struct SubTask
     {
         int n;
-        float distSq = 0;
+        float distSq;
     };
 
     constexpr int MaxStackSize = 32; // to avoid allocations

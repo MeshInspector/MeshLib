@@ -18,6 +18,7 @@ if(APPLE)
   set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
+    MRSymbolMesh
     spdlog
     fmt
     pybind11::module
@@ -25,6 +26,7 @@ if(APPLE)
 ELSE()
   target_link_libraries(${PROJECT_NAME} PUBLIC
     MRMesh
+    MRSymbolMesh
     spdlog
     fmt
     tbb

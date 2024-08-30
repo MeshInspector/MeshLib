@@ -4,8 +4,10 @@ from helper import *
 
 def test_offset_mesh():
     cube = mrmesh.makeCube()
+    params = mrmesh.GeneralOffsetParameters()
+    params.voxelSize = mrmesh.suggestVoxelSize(cube, 5e6)
     try:
-        cube_offset = mrmesh.offsetMesh(cube, 0.1)
+        cube_offset = mrmesh.offsetMesh(cube, 0.1, params)
     except ValueError as e:
         print(e)
         assert False
@@ -33,7 +35,10 @@ def test_thicken_mesh():
     cube.topology.deleteFaces(removeFaces)
     cube.invalidateCaches()
 
-    params = mrmesh.OffsetParameters()
+    if is_new_binding:
+        params = mrmesh.GeneralOffsetParameters()
+    else:
+        params = mrmesh.OffsetParameters()
     params.signDetectionMode = mrmesh.SignDetectionMode.Unsigned
     params.voxelSize = mrmesh.suggestVoxelSize(cube, 5e6)
     try:

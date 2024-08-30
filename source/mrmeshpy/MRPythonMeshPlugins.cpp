@@ -123,7 +123,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SelfIntersections, [] ( pybind11::module_& m
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::module_& m )
 {
     m.def( "detectTunnelFaces", []( const MeshPart & mp, float maxTunnelLength ) { return MR::detectTunnelFaces( mp, { .maxTunnelLength = maxTunnelLength } ).value(); },
-        pybind11::arg( "mp" ), pybind11::arg( "maxTunnelLength" ), 
+        pybind11::arg( "mp" ), pybind11::arg( "maxTunnelLength" ),
         "returns tunnels as a number of faces;\n"
         "if you remove these faces and patch every boundary with disk, then the surface will be topology equivalent to sphere" );
 
@@ -141,7 +141,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DegenerationsDetection, [] ( pybind11::modul
         pybind11::arg( "topology" ), "finds multiple edges in the mesh" );
 
     m.def( "removeSpikes", &MR::removeSpikes,
-        pybind11::arg( "mesh" ), pybind11::arg( "maxIterations" ), pybind11::arg( "minSumAngle" ), pybind11::arg( "region" ) = nullptr, 
+        pybind11::arg( "mesh" ), pybind11::arg( "maxIterations" ), pybind11::arg( "minSumAngle" ), pybind11::arg( "region" ) = nullptr,
         "applies at most given number of relaxation iterations the spikes detected by given threshold" );
 } )
 
@@ -230,7 +230,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshSignedDistanceResult, [] ( pybind11::mod
         "\trigidB2A - rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation\n"
         "\tupDistLimitSq - upper limit on the positive distance in question, if the real distance is larger than the function exists returning upDistLimitSq and no valid points" );
 
-    m.def("findMaxDistanceSqOneWay",&MR::findMaxDistanceSqOneWay, 
+    m.def("findMaxDistanceSqOneWay",&MR::findMaxDistanceSqOneWay,
         pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg( "rigidB2A" ) = nullptr, pybind11::arg( "upDistLimitSq" ) = FLT_MAX,
         "returns the maximum of the squared distances from each B-mesh vertex to A-mesh\n"
         "\trigidB2A - rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation\n"
@@ -257,7 +257,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PlaneSections, [] ( pybind11::module_& m )
         ( double( * )( const Contour2f& ) )& calcOrientedArea<float, double>,
         pybind11::arg( "contour" ),
         ">0 for clockwise loop, < 0 for CCW loop" );
-    
+
     m.def( "calcOrientedArea",
         ( Vector3f( * )( const Contour3f& ) )& calcOrientedArea<float, float>,
         pybind11::arg( "contour" ),
@@ -292,7 +292,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Relax, [] ( pybind11::module_& m )
     pybind11::enum_<MR::RelaxApproxType>( m, "RelaxApproxType", "Approximation strategy to use during `relaxApprox`" ).
         value( "Planar", MR::RelaxApproxType::Planar, "Projects the new neighborhood points onto a best approximating plane." ).
         value( "Quadric", MR::RelaxApproxType::Quadric, "Projects the new neighborhood points onto a best quadratic approximating." );
-    
+
     pybind11::class_<MeshApproxRelaxParams, MeshRelaxParams>( m, "MeshApproxRelaxParams" ).
         def( pybind11::init<>() ).
         def_readwrite( "surfaceDilateRadius", &MeshApproxRelaxParams::surfaceDilateRadius, "Radius to find neighbors by surface. `0.0f - default = 1e-3 * sqrt(surface area)`" ).
@@ -411,16 +411,16 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, InflateSettings, [] ( pybind11::module_& m )
             "Positive pressure moves the vertices outward, negative moves them inward. \n"
             "Provided value should be in range of the [-region_diagonal, +region_diagonal]."
         ).
-        def_readwrite( "iterations", &InflateSettings::iterations, 
+        def_readwrite( "iterations", &InflateSettings::iterations,
             "The number of internal iterations (>=1) \n"
             "A larger number of iterations makes the performance slower, but the quality better"
         ).
-        def_readwrite( "preSmooth", &InflateSettings::preSmooth, 
+        def_readwrite( "preSmooth", &InflateSettings::preSmooth,
             "Smooths the area before starting inflation. \n"
             "Set to false only if the region is known to be already smooth"
         ).
         def_readwrite( "gradualPressureGrowth", &InflateSettings::gradualPressureGrowth, "whether to increase the pressure gradually during the iterations (recommended for best quality)" );
-    
+
     m.def( "inflate", &MR::inflate,
         pybind11::arg( "mesh" ), pybind11::arg( "verts" ), pybind11::arg_v( "settings", InflateSettings(), "InflateSettings()" ),
         "Inflates (in one of two sides) given mesh region by"
@@ -504,13 +504,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshOffset, [] ( pybind11::module_& m )
         "if your input mesh is closed then please specify another sign detection mode, and you will get closed mesh (with several components) on output" );
 
 
-    m.def( "doubleOffsetMesh", 
+    m.def( "doubleOffsetMesh",
         MR::decorateExpected( [] ( const MR::MeshPart& mp, float offsetA, float offsetB, MR::OffsetParameters params )
     {
         if ( params.voxelSize <= 0 )
             params.voxelSize = suggestVoxelSize( mp, 5e6f );
         return MR::doubleOffsetMesh( mp, offsetA, offsetB, params );
-    } ), 
+    } ),
         pybind11::arg( "mp" ), pybind11::arg( "offsetA" ), pybind11::arg( "offsetB" ), pybind11::arg_v( "params", MR::OffsetParameters(), "OffsetParameters()" ),
         "Offsets mesh by converting it to voxels and back two times\n"
         "only closed meshes allowed (only Offset mode)\n"
@@ -539,10 +539,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, GeodesicPath, [] ( pybind11::module_& m )
     m.def( "computeSurfaceDistances", (MR::Vector<float, MR::VertId>(*)(const MR::Mesh&, const MeshTriPoint&, float maxDist, const VertBitSet*, int ) )&MR::computeSurfaceDistances,
         pybind11::arg( "mesh" ), pybind11::arg( "start" ), pybind11::arg( "maxDist" ) = FLT_MAX, pybind11::arg( "region" ) = nullptr, pybind11::arg( "maxVertUpdates" ) = 3,
         "Computes path distances in mesh vertices from given start point, stopping when maxDist is reached;\n"
-        "considered paths can go either along edges or straightly within triangles" 
+        "considered paths can go either along edges or straightly within triangles"
     );
 
-    m.def( "computeSurfaceDistances", 
+    m.def( "computeSurfaceDistances",
         ( MR::Vector<float, MR::VertId>( * )( const MR::Mesh&, const VertBitSet&, const VertBitSet&, float maxDist, const VertBitSet*, int ) )& MR::computeSurfaceDistances,
         pybind11::arg( "mesh" ), pybind11::arg( "startVertices" ), pybind11::arg( "targetVertices" ), pybind11::arg( "maxDist" ) = FLT_MAX, pybind11::arg( "region" ) = nullptr, pybind11::arg( "maxVertUpdates" ) = 3,
         "Computes path distances in mesh vertices from given start vertices, stopping when all targetVertices or maxDist is reached;\n"
@@ -552,15 +552,15 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, GeodesicPath, [] ( pybind11::module_& m )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ConvexHull, [] ( pybind11::module_& m )
 {
-    m.def( "makeConvexHull",  ( Mesh ( * ) ( const VertCoords&, const VertBitSet& ) )&  makeConvexHull, 
+    m.def( "makeConvexHull",  ( Mesh ( * ) ( const VertCoords&, const VertBitSet& ) )&  makeConvexHull,
         pybind11::arg( "points" ), pybind11::arg( "validPoints" ),
         "Computes the Mesh of convex hull from given input points" );
 
-    m.def( "makeConvexHull",  ( Mesh ( * ) ( const Mesh& ) )&  makeConvexHull, 
+    m.def( "makeConvexHull",  ( Mesh ( * ) ( const Mesh& ) )&  makeConvexHull,
         pybind11::arg( "mesh" ),
         "Computes the Mesh of convex hull from given input `Mesh`" );
 
-    m.def( "makeConvexHull",  ( Mesh ( * ) ( const PointCloud& ) )&  makeConvexHull, 
+    m.def( "makeConvexHull",  ( Mesh ( * ) ( const PointCloud& ) )&  makeConvexHull,
         pybind11::arg( "pointCloud" ),
         "Computes the Mesh of convex hull from given input `PointCloud`" );
 } )

@@ -52,10 +52,13 @@ Expected<void> SetClipboardText( const std::string& text )
     HGLOBAL hMem = GlobalAlloc( GMEM_MOVEABLE, text.size() + 1 );
     memcpy( GlobalLock( hMem ), text.c_str(), text.size() + 1 );
     GlobalUnlock( hMem );
-    OpenClipboard( 0 );
-    EmptyClipboard();
-    SetClipboardData( CF_TEXT, hMem );
-    CloseClipboard();
+
+    if ( !OpenClipboard( nullptr ) )
+        return unexpected( "Could not open clipboard" );
+    MR_FINALLY{ CloseClipboard(); };
+
+    if ( !EmptyClipboard() || !SetClipboardData( CF_TEXT, hMem ) )
+        return unexpected( "Could not set clipboard" );
 #else
     if ( !clip::set_text( text ) )
         return unexpected( "Could not set clipboard" );

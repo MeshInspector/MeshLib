@@ -17,6 +17,7 @@
 #include "MRShortcutManager.h"
 #include "MRMouseController.h"
 #include "MRRibbonSceneObjectsListDrawer.h"
+#include "MRClipboard.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include <MRMesh/MRString.h>
 #include <MRMesh/MRSystem.h>

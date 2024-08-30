@@ -1,5 +1,5 @@
 #include "MRRenderImGuiLabelObject.h"
-#include "MRSymbolMesh/MRObjectImGuiLabel.h"
+#include "MRObjectImGuiLabel.h"
 
 #include "MRPch/MRFmt.h"
 

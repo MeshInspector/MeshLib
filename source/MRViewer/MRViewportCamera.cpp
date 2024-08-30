@@ -9,7 +9,7 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectLinesHolder.h"
 #include "MRSymbolMesh/MRObjectLabel.h"
-#include "MRSymbolMesh/MRObjectImGuiLabel.h"
+#include "MRObjectImGuiLabel.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRLine3.h"

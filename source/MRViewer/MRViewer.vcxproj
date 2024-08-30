@@ -33,6 +33,7 @@
     <ClCompile Include="MRMeshBoundarySelectionWidget.cpp" />
     <ClCompile Include="MRFrameCounter.cpp" />
     <ClCompile Include="MRMoveObjectByMouseImpl.cpp" />
+    <ClCompile Include="MRObjectImGuiLabel.cpp" />
     <ClCompile Include="MRPointsShader.cpp" />
     <ClCompile Include="MRRenderDefaultObjects.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
@@ -154,6 +155,7 @@
     <ClInclude Include="MRFrameCounter.h" />
     <ClInclude Include="MRMoveObjectByMouseImpl.h" />
     <ClInclude Include="MRNotificationType.h" />
+    <ClInclude Include="MRObjectImGuiLabel.h" />
     <ClInclude Include="MRPointsShader.h" />
     <ClInclude Include="MRRibbonNotification.h" />
     <ClInclude Include="MRRibbonSceneObjectsListDrawer.h" />

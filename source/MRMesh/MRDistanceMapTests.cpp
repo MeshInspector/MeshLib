@@ -1,8 +1,6 @@
 #include "MRDistanceMap.h"
 #include "MRDistanceMapParams.h"
 #include "MRGTest.h"
-#include "MRMeshLoad.h"
-#include "MRMeshSave.h"
 #include "MRVector2.h"
 #include "MRMakeSphereMesh.h"
 #include "MRTimer.h"
@@ -206,15 +204,6 @@ TEST( MRMesh, DistanceMapWatertight )
     // Number of distance map pixels with big differ between dm1 and dm2
     const int numberOfMisses = 25;
     EXPECT_EQ( count, numberOfMisses ); //for watertight
-
-    //debug line
-    const bool saveMesh = false;
-    if ( saveMesh )
-    {
-        MeshSave::toMrmesh( sphere, std::filesystem::path( "c:/temp/sphere.mrmesh" ) );
-        MeshSave::toMrmesh( meshFromDm1, std::filesystem::path( "c:/temp/dm1.mrmesh" ) );
-        MeshSave::toMrmesh( meshFromDm2, std::filesystem::path( "c:/temp/dm2.mrmesh" ) );
-    }
 }
 
 TEST( MRMesh, DistanceMapCompare )
@@ -242,23 +231,6 @@ TEST( MRMesh, DistanceMapCompare )
     MeshToDistanceMapParams params( xf, Vector2f{ pixSize,pixSize }, Vector2i{ 10,10 } );
     auto resD = computeDistanceMapD( mesh, params );
     auto resF = computeDistanceMap( mesh, params );
-
-    //debug line
-    const bool saveMesh = false;
-    if ( saveMesh )
-    {
-        if ( auto res = distanceMapToMesh( resD, params ) )
-        {
-            EXPECT_TRUE( res.has_value() );
-            MeshSave::toMrmesh( res.value(), std::filesystem::path( "c:/temp/Double.mrmesh" ) );
-        }
-
-        if ( auto res = distanceMapToMesh( resD, params ) )
-        {
-            EXPECT_TRUE( res.has_value() );
-            MeshSave::toMrmesh( res.value(), std::filesystem::path( "c:/temp/Float.mrmesh" ) );
-        }
-    }
 }
 
 TEST( MRMesh, DistanceMapNegativeValue )
@@ -305,23 +277,6 @@ TEST( MRMesh, DistanceMapNegativeValue )
     }
     const int numberOfMisses = 0;
     EXPECT_EQ( count, numberOfMisses );
-
-    //debug line
-    const bool saveMesh = true;
-    if ( saveMesh )
-    {
-        if ( auto res = distanceMapToMesh( dm, params ) )
-        {
-            EXPECT_TRUE( res.has_value() );
-            MeshSave::toMrmesh( res.value(), std::filesystem::path( "c:/temp/dm.mrmesh" ) );
-        }
-
-        if ( auto res = distanceMapToMesh( dm2, params ) )
-        {
-            EXPECT_TRUE( res.has_value() );
-            MeshSave::toMrmesh( res.value(), std::filesystem::path( "c:/temp/dm2.mrmesh" ) );
-        }
-    }
 }
 
 TEST( MRMesh, DistanceMapOffsetMap )

@@ -5,7 +5,6 @@
 
 #cmakedefine MRMESH_NO_CLIPBOARD
 #cmakedefine MRMESH_NO_PDF
-#cmakedefine MRMESH_NO_CPR
 #cmakedefine MRMESH_NO_PYTHON
 #cmakedefine MRMESH_NO_DICOM
 #cmakedefine MRMESH_NO_OPENCTM

@@ -1,13 +1,13 @@
 #include "MRMeshFwd.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_CPR )
+#if !defined( __EMSCRIPTEN__)
 #include <cpr/cpr.h>
 #include "MRPch/MRSpdlog.h"
-#include "MRGTest.h"
+#include "MRMesh/MRGTest.h"
 
 constexpr int MAX_RETRIES = 10;
 constexpr std::chrono::seconds COOLDOWN_PERIOD { 10 };
 
-TEST( MRMesh, CPRTestGet )
+TEST( MRViewer, CPRTestGet )
 {
     std::string baseUrl = "https://postman-echo.com/get";
     std::vector<std::pair<std::string, std::string>> params = { {"1","1"} };
@@ -30,7 +30,7 @@ TEST( MRMesh, CPRTestGet )
     }
 }
 
-TEST( MRMesh, CPRTestPost )
+TEST( MRViewer, CPRTestPost )
 {
     std::string baseUrl = "https://postman-echo.com/post";
     std::vector<std::pair<std::string, std::string>> params = { {"1","1"} };

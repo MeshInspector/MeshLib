@@ -295,13 +295,21 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadPoints, [] ( pybind11::module_& m )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveVoxels, [] ( pybind11::module_& m )
 {
     m.def( "saveVoxels",
+        MR::decorateExpected( &MR::VoxelsSave::toAnySupportedFormat ),
+        pybind11::arg( "vdbVoxels" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
+        "Saves voxels in a file, detecting the format from file extension." );
+    m.def( "saveVoxelsRaw",
         MR::decorateExpected( &MR::VoxelsSave::toRawAutoname ),
-        pybind11::arg( "VdbVoxels" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
+        pybind11::arg( "vdbVoxels" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "Save raw voxels file, writing parameters in name." );
     m.def( "saveVoxelsGav",
         MR::decorateExpected( static_cast<VoidOrErrStr ( * )( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback )>( &MR::VoxelsSave::toGav ) ),
-        pybind11::arg( "VdbVoxels" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
+        pybind11::arg( "vdbVoxels" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "Save Gav voxels file." );
+    m.def( "saveVoxelsVdb",
+        MR::decorateExpected( &MR::VoxelsSave::toVdb ),
+        pybind11::arg( "vdbVoxels" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
+        "Save voxels file in OpenVDB format." );
 } )
 
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, LoadDCMResult, MR::VoxelsLoad::LoadDCMResult )
@@ -318,6 +326,10 @@ MR_ADD_PYTHON_VEC( mrmeshpy, LoadDCMResults, MR::VoxelsLoad::LoadDCMResult )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
 {
     m.def( "loadVoxels",
+        MR::decorateExpected( &MR::VoxelsLoad::fromAnySupportedFormat ),
+        pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
+        "Detects the format from file extension and loads voxels from it. The older version of this function is avaiable now as loadVoxelsRaw." );
+    m.def( "loadVoxelsRaw",
         MR::decorateExpected( static_cast<Expected<VdbVolume>( * )( const std::filesystem::path&, const ProgressCallback& )>( &MR::VoxelsLoad::fromRaw ) ),
         pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "Load raw voxels file, parsing parameters from name." );
@@ -325,6 +337,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
         MR::decorateExpected( static_cast<Expected<VdbVolume>( * )( const std::filesystem::path&, const ProgressCallback& )>( &MR::VoxelsLoad::fromGav ) ),
         pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "Load Gav voxels file, parsing parameters from name." );
+    m.def( "loadVoxelsVdb",
+        MR::decorateExpected( &MR::VoxelsLoad::fromVdb ),
+        pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
+        "Load all voxel volumes from OpenVDB file." );
 
     m.def( "loadDCMFolder", MR::decorateExpected( &MR::VoxelsLoad::loadDCMFolder ),
         pybind11::arg( "path" ), pybind11::arg( "maxNumThreads" ) = 4, pybind11::arg( "callback" ) = ProgressCallback{},

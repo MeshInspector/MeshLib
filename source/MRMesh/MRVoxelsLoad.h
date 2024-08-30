@@ -100,7 +100,7 @@ MRMESH_API Expected<RawParameters> findRawParameters( std::filesystem::path& fil
 MRMESH_API Expected<VdbVolume> fromRaw( const std::filesystem::path& file,
                                                          const ProgressCallback& cb = {} );
 
-/// Load raw voxels OpenVDB file
+/// Load all voxel volumes from OpenVDB file
 MRMESH_API Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& file,
                                                          const ProgressCallback& cb = {} );
 

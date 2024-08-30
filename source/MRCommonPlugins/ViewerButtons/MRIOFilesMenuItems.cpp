@@ -268,6 +268,27 @@ bool OpenFilesMenuItem::openFiles_( const std::vector<std::filesystem::path>& pa
         return true;
     }
 
+    if ( !checkPaths( paths, filters_ ) )
+    {
+        showError( "Unsupported file extension" );
+        return false;
+    }
+
+#ifdef __APPLE__
+    // Try to start another instance if current scene is not empty
+    if ( SceneRoot::get().children().size() > 0 )
+    {
+        std::ostringstream command;
+        command << "open -n ";
+        for ( auto& p : paths )
+            command << std::quoted( p.string(), '\'' );
+        auto openres = system( command.str().c_str() );
+        if ( openres != -1 )
+            return true;
+        // Failed, open in current window
+    }
+#endif
+
     viewerRef.loadFiles( paths );
 
     return true;

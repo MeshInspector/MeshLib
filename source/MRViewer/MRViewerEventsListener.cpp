@@ -116,13 +116,6 @@ void DragDropListener::connect( Viewer* viewer, int group, boost::signals2::conn
     connection_ = viewer->dragDropSignal.connect( group, MAKE_SLOT( &DragDropListener::dragDrop_ ), pos );
 }
 
-void OpenFilesListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
-{
-    if ( !viewer )
-        return;
-    connection_ = viewer->openFilesSignal.connect( group, MAKE_SLOT( &OpenFilesListener::openFiles_ ), pos );
-}
-
 void PostResizeListener::connect( Viewer* viewer, int group, boost::signals2::connect_position pos )
 {
     if ( !viewer )

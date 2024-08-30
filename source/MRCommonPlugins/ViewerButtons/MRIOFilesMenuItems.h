@@ -18,7 +18,7 @@ public:
     void openDirectory( const std::filesystem::path& directory ) const;
 };
 
-class OpenFilesMenuItem : public RibbonMenuItem, public MultiListener<DragDropListener, OpenFilesListener>
+class OpenFilesMenuItem : public RibbonMenuItem, public MultiListener<DragDropListener>
 {
 public:
     OpenFilesMenuItem();
@@ -28,7 +28,6 @@ public:
     virtual const DropItemsList& dropItems() const override;
 private:
     virtual bool dragDrop_( const std::vector<std::filesystem::path>& paths ) override;
-    virtual bool openFiles_( const std::vector<std::filesystem::path>& paths ) override;
     void parseLaunchParams_();
     void setupListUpdate_();
 

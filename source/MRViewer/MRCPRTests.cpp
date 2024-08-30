@@ -1,4 +1,4 @@
-#include "MRMeshFwd.h"
+#include "MRMesh/MRMeshFwd.h"
 #if !defined( __EMSCRIPTEN__)
 #include <cpr/cpr.h>
 #include "MRPch/MRSpdlog.h"

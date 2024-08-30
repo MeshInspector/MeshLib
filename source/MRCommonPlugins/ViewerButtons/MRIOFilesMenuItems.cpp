@@ -214,12 +214,6 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
     if ( paths.empty() )
         return false;
 
-    if ( !checkPaths( paths, filters_ ) )
-    {
-        showError( "Unsupported file extension" );
-        return false;
-    }
-
     // if drop to menu scene window -> add objects
     // if drop to viewport -> replace objects
     auto& viewerRef = getViewerInstance();
@@ -230,6 +224,12 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
         if ( menu )
             menu->pushNotification( { .text = "Another operation in progress.", .lifeTimeSec = 3.0f } );
         return true;
+    }
+
+    if ( !checkPaths( paths, filters_ ) )
+    {
+        showError( "Unsupported file extension" );
+        return false;
     }
 
     SCOPED_HISTORY( "Drag and drop files" );

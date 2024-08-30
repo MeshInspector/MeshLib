@@ -29,6 +29,10 @@
     <ClCompile Include="MRDirectionWidget.cpp" />
     <ClCompile Include="MRGLTexture.cpp" />
     <ClCompile Include="MRHistoryStore.cpp" />
+    <ClCompile Include="MRMacOSOpenDocumentsHandler.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="MRMarkedVoxelSlice.cpp" />
     <ClCompile Include="MRMeshBoundarySelectionWidget.cpp" />
     <ClCompile Include="MRFrameCounter.cpp" />
@@ -150,6 +154,10 @@
     <ClInclude Include="MRHistoryStore.h" />
     <ClInclude Include="MRISceneStateCheck.h" />
     <ClInclude Include="MRLambdaRibbonItem.h" />
+    <ClInclude Include="MRMacOSOpenDocumentsHandler.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="MRMarkedVoxelSlice.h" />
     <ClInclude Include="MRMeshBoundarySelectionWidget.h" />
     <ClInclude Include="MRFrameCounter.h" />
@@ -274,6 +282,10 @@
     <CopyFileToFolders Include="MRLightTheme.json">
       <FileType>Document</FileType>
     </CopyFileToFolders>
+    <None Include="MRMacOSOpenDocumentsHandler.mm">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="..\..\thirdparty\Noto_Sans\NotoSans-Regular.ttf">

@@ -12,15 +12,10 @@
 #include "MRTimer.h"
 #include "MRObjectFactory.h"
 #include "MRPointOnFace.h"
-#include "MRMeshLoad.h"
-#include "MRMeshSave.h"
 #include "MRMeshTriPoint.h"
 #include "MRMesh.h"
 #include "MRStreamOperators.h"
-#include "MRCube.h"
-#include "MRObjectMesh.h"
 #include "MRStringConvert.h"
-#include "MRGTest.h"
 #include "MRMeshTexture.h"
 #include "MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
@@ -140,17 +135,6 @@ Expected<Json::Value> deserializeJsonValue( std::istream& in )
         return unexpected( "Cannot read json file" );
 
     return deserializeJsonValue( str );
-}
-
-VoidOrErrStr serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection, const char * saveMeshFormat )
-{
-    ObjectMesh obj;
-    obj.setSaveMeshFormat( saveMeshFormat );
-    obj.setMesh( std::make_shared<Mesh>( mesh ) );
-    if ( selection )
-        obj.selectFaces( *selection );
-    obj.setName( utf8string( path.stem() ) );
-    return serializeObjectTree( obj, path );
 }
 
 void serializeToJson( const Vector2i& vec, Json::Value& root )
@@ -354,18 +338,6 @@ void deserializeViaVerticesFromJson( const Json::Value& root, UndirectedEdgeBitS
     }
 }
 
-VoidOrErrStr serializeToJson( const Mesh& mesh, Json::Value& root )
-{
-    std::ostringstream out;
-    auto res = MeshSave::toPly( mesh, out );
-    if ( res )
-    {
-        auto binString = out.str();
-        root["ply"] = encode64( (const std::uint8_t*) binString.data(), binString.size() );
-    }
-    return res;
-}
-
 void serializeToJson( const Plane3f& plane, Json::Value& root )
 {
     serializeToJson( plane.n, root["n"] );
@@ -551,19 +523,6 @@ void deserializeFromJson( const Json::Value& root, BitSet& bitset )
     }
 }
 
-Expected<Mesh> deserializeFromJson( const Json::Value& root, VertColors* colors )
-{
-    if ( !root.isObject() )
-        return unexpected( std::string{ "deserialize mesh: json value is not an object" } );
-
-    if ( !root["ply"].isString() )
-        return unexpected( std::string{ "deserialize mesh: json value does not have 'ply' string"} );
-        
-    auto bin = decode64( root["ply"].asString() );
-    std::istringstream in( std::string( (const char *)bin.data(), bin.size() ) );
-    return MeshLoad::fromPly( in, { .colors = colors } );
-}
-
 void deserializeFromJson( const Json::Value& root, MeshTexture& texture )
 {
     if ( root["FilterType"].isString() )
@@ -626,18 +585,6 @@ void deserializeFromJson( const Json::Value& root, std::vector<Color>& colors )
         colors.resize( size );
         std::copy( ( Color* )bin.data(), ( Color* )( bin.data() ) + size, colors.data() );
     }
-}
-
-TEST( MRMesh, MeshToJson )
-{
-    Json::Value root;
-    auto mesh = makeCube();
-    auto saveRes = serializeToJson( mesh, root );
-    ASSERT_TRUE( saveRes.has_value() );
-    auto loadRes = deserializeFromJson( root );
-    ASSERT_TRUE( loadRes.has_value() );
-    auto mesh1 = std::move( loadRes.value() );
-    ASSERT_EQ( mesh, mesh1 );
 }
 
 } // namespace MR

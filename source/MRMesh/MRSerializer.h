@@ -60,40 +60,6 @@ MRMESH_API Expected<Json::Value> deserializeJsonValue( std::istream& in );
 MRMESH_API Expected<Json::Value> deserializeJsonValue( const std::string& str );
 MRMESH_API Expected<Json::Value> deserializeJsonValue( const std::filesystem::path& path );
 
-/**
- * \brief saves object subtree in given scene file (zip/mru)
- * \details format specification:
- *  children are saved under folder with name of their parent object
- *  all objects parameters are saved in one JSON file in the root folder
- *  
- * if preCompress is set, it is called before compression
- * saving is controlled with Object::serializeModel_ and Object::serializeFields_
- */
-MRMESH_API VoidOrErrStr serializeObjectTree( const Object& object, 
-    const std::filesystem::path& path, ProgressCallback progress = {}, FolderCallback preCompress = {} );
-/**
- * \brief loads objects tree from given scene file (zip/mru)
- * \details format specification:
- *  children are saved under folder with name of their parent object
- *  all objects parameters are saved in one JSON file in the root folder
- *  
- * if postDecompress is set, it is called after decompression
- * loading is controlled with Object::deserializeModel_ and Object::deserializeFields_
- */
-MRMESH_API Expected<std::shared_ptr<Object>> deserializeObjectTree( const std::filesystem::path& path,
-    FolderCallback postDecompress = {}, ProgressCallback progressCb = {} );
-
-/**
- * \brief loads objects tree from given scene folder
- * \details format specification:
- *  children are saved under folder with name of their parent object
- *  all objects parameters are saved in one JSON file in the root folder
- *  
- * loading is controlled with Object::deserializeModel_ and Object::deserializeFields_
- */
-MRMESH_API Expected<std::shared_ptr<Object>> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
-    ProgressCallback progressCb = {} );
-
 /// saves mesh with optional selection to mru format;
 /// this is very convenient for saving intermediate states during algorithm debugging;
 /// ".mrmesh" save mesh format is not space efficient, but guaranties no changes in the topology after loading

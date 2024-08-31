@@ -37,7 +37,7 @@ void calcDipoles( Dipoles& dipoles, const AABBTree& tree_, const Mesh& mesh )
         const auto ap = a * mesh.triCenter( f );
         dipoles[i] = Dipole
         {
-            .pos = ap, // ( area * pos ) till for now
+            .pos = ap, // ( area * pos ) for now
             .area = a,
             .dirArea = da
         };
@@ -53,7 +53,7 @@ void calcDipoles( Dipoles& dipoles, const AABBTree& tree_, const Mesh& mesh )
         const auto& dr = dipoles[node.r];
         dipoles[i] = Dipole
         {
-            .pos = dl.pos + dr.pos, // ( area * pos ) till for now
+            .pos = dl.pos + dr.pos, // ( area * pos ) for now
             .area = dl.area + dr.area,
             .dirArea = dl.dirArea + dr.dirArea
         };

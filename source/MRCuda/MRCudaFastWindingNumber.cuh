@@ -11,21 +11,23 @@ namespace Cuda
 // GPU analog of CPU Dipole struct
 struct Dipole
 {
-    float3 areaPos;
+    float3 pos;
     float area = 0;
     float3 dirArea;
     float rr = 0; // maximum squared distance from pos to any corner of the bounding box
-    __device__ float3 pos() const
+
+    /// returns true if this dipole is good approximation for a point \param q;
+    /// and adds the contribution of this dipole to the winding number at point \param q to \param addTo
+    __device__ bool addIfGoodApprox( const float3& q, float betaSq, float& addTo ) const
     {
-        return area > 0 ? areaPos / area : areaPos;
+        const auto dp = pos - q;
+        const auto dd = lengthSq( dp );
+        if ( dd <= betaSq * rr )
+            return false;
+        if ( const auto d = std::sqrt( dd ); d > 0 )
+            addTo += dot( dp, dirArea ) / ( d * dd );
+        return true;
     }
-    /// returns true if this dipole is good approximation for a point \param q
-    __device__ bool goodApprox( const float3& q, float beta ) const
-    {
-        return lengthSq( q - pos() ) > beta * beta * rr;
-    }
-    /// contribution of this dipole to the winding number at point \param q
-    __device__ float w( const float3& q ) const;
 };
 
 // calls fast winding number for each point in parallel

@@ -37,7 +37,7 @@ void calcDipoles( Dipoles& dipoles, const AABBTree& tree_, const Mesh& mesh )
         const auto ap = a * mesh.triCenter( f );
         dipoles[i] = Dipole
         {
-            .areaPos = ap,
+            .pos = ap, // ( area * pos ) for now
             .area = a,
             .dirArea = da
         };
@@ -53,18 +53,20 @@ void calcDipoles( Dipoles& dipoles, const AABBTree& tree_, const Mesh& mesh )
         const auto& dr = dipoles[node.r];
         dipoles[i] = Dipole
         {
-            .areaPos = dl.areaPos + dr.areaPos,
+            .pos = dl.pos + dr.pos, // ( area * pos ) for now
             .area = dl.area + dr.area,
             .dirArea = dl.dirArea + dr.dirArea
         };
     }
 
-    // compute distance to farthest corner for all nodes
+    // compute 1) center mass 2) distance to farthest corner for all nodes
     ParallelFor( dipoles, [&]( NodeId i )
     {
         const auto& node = tree_[i];
         auto& d = dipoles[i];
-        d.rr = distToFarthestCornerSq( node.box, d.pos() );
+        if ( d.area > 0 )
+            d.pos /= d.area;
+        d.rr = distToFarthestCornerSq( node.box, d.pos );
     } );
 }
 
@@ -73,15 +75,6 @@ Dipoles calcDipoles( const AABBTree& tree, const Mesh& mesh )
     Dipoles dipoles;
     calcDipoles( dipoles, tree, mesh );
     return dipoles;
-}
-
-constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
-
-float Dipole::w( const Vector3f & q ) const
-{
-    const auto dp = pos() - q;
-    const auto d = dp.length();
-    return d > 0 ? INV_4PI * dot( dp, dirArea ) / ( d * d * d ) : 0;
 }
 
 /// see (6) in https://users.cs.utah.edu/~ladislav/jacobson13robust/jacobson13robust.pdf
@@ -101,39 +94,43 @@ static float triangleSolidAngle( const Vector3f & p, const Triangle3f & tri )
 float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const Mesh& mesh,
     const Vector3f & q, float beta, FaceId skipFace )
 {
-    float res = 0;
     if ( dipoles.empty() )
     {
         assert( false );
-        return res;
+        return 0;
     }
 
+    const float betaSq = sqr( beta );
     constexpr int MaxStackSize = 32; // to avoid allocations
-    NodeId subtasks[MaxStackSize];
+    struct SubTask
+    {
+        NodeId n;
+        SubTask() : n( noInit ) {}
+    };
+    SubTask subtasks[MaxStackSize];
     int stackSize = 0;
-    subtasks[stackSize++] = tree.rootNodeId();
+    subtasks[stackSize++].n = tree.rootNodeId();
 
+    float res = 0;
     while( stackSize > 0 )
     {
-        const auto i = subtasks[--stackSize];
+        const auto i = subtasks[--stackSize].n;
         const auto & node = tree[i];
         const auto & d = dipoles[i];
-        if ( d.goodApprox( q, beta ) )
-        {
-            res += d.w( q );
+        if ( d.addIfGoodApprox( q, betaSq, res ) )
             continue;
-        }
         if ( !node.leaf() )
         {
             // recurse deeper
-            subtasks[stackSize++] = node.r; // to look later
-            subtasks[stackSize++] = node.l; // to look first
+            subtasks[stackSize++].n = node.r; // to look later
+            subtasks[stackSize++].n = node.l; // to look first
             continue;
         }
         if ( node.leafId() != skipFace )
-            res += INV_4PI * triangleSolidAngle( q, mesh.getTriPoints( node.leafId() ) );
+            res += triangleSolidAngle( q, mesh.getTriPoints( node.leafId() ) );
     }
-    return res;
+    constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
+    return INV_4PI * res;
 }
 
 TEST(MRMesh, TriangleSolidAngle) 

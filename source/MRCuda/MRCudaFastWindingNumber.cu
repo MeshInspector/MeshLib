@@ -11,15 +11,6 @@ namespace Cuda
 
 constexpr int maxThreadsPerBlock = 32;
 
-constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
-
-__device__ float Dipole::w( const float3& q ) const
-{
-    const auto dp = pos() - q;
-    const auto d = length( dp );
-    return d > 0 ? INV_4PI * dot( dp, dirArea ) / ( d * d * d ) : 0;
-}
-
 __device__ float triangleSolidAngle( const float3& p, const float3& tri0, const float3& tri1, const float3& tri2 )
 {
     const auto mx = tri0 - p;
@@ -38,6 +29,7 @@ __device__ void processPoint( const float3& q, float& res, const Dipole* dipoles
     const Node3* __restrict__ nodes, const float3* __restrict__ meshPoints, const FaceToThreeVerts* __restrict__ faces,
     float beta, int skipFace = -1 )
 {
+    const float betaSq = beta * beta;
     constexpr int MaxStackSize = 32; // to avoid allocations
     int subtasks[MaxStackSize];
     int stackSize = 0;
@@ -48,11 +40,8 @@ __device__ void processPoint( const float3& q, float& res, const Dipole* dipoles
         const auto i = subtasks[--stackSize];
         const auto& node = nodes[i];
         const auto& d = dipoles[i];
-        if ( d.goodApprox( q, beta ) )
-        {
-            res += d.w( q );
+        if ( d.addIfGoodApprox( q, betaSq, res ) )
             continue;
-        }
         if ( !node.leaf() )
         {
             // recurse deeper
@@ -63,9 +52,11 @@ __device__ void processPoint( const float3& q, float& res, const Dipole* dipoles
         if ( node.leafId() != skipFace )
         {
             const auto faceVerts = faces[node.leafId()];
-            res += INV_4PI * triangleSolidAngle( q, meshPoints[faceVerts.verts[0]], meshPoints[faceVerts.verts[1]], meshPoints[faceVerts.verts[2]] );
+            res += triangleSolidAngle( q, meshPoints[faceVerts.verts[0]], meshPoints[faceVerts.verts[1]], meshPoints[faceVerts.verts[2]] );
         }
     }
+    constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
+    res *= INV_4PI;
 }
 
 __device__ float calcDistance( const float3& pt,

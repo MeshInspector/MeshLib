@@ -145,7 +145,7 @@ VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vec
     return {};
 }
 
-VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb )
+VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq, ProgressCallback cb )
 {
     MR_TIMER
     prepareData_( {} );
@@ -171,7 +171,7 @@ VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& r
         int3{ dims.x, dims.y, dims.z },
         cudaGridToMeshXf,
         data_->dipoles.data(), data_->cudaNodes.data(), data_->cudaMeshPoints.data(), data_->cudaFaces.data(),
-        cudaResult.data(), beta, maxDistSq, minDistSq );
+        cudaResult.data(), windingNumberThreshold, beta, maxDistSq, minDistSq );
 
     if ( auto code = CUDA_EXEC( cudaGetLastError() ) )
         return unexpected( Cuda::getError( code ) );
@@ -182,7 +182,6 @@ VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& r
     if ( !reportProgress( cb, 1.0f ) )
         return unexpectedOperationCanceled();
     return {};
-
 }
 
 } //namespace Cuda

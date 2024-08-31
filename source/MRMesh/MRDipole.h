@@ -9,19 +9,15 @@ namespace MR
 /// https://www.dgp.toronto.edu/projects/fast-winding-numbers/fast-winding-numbers-for-soups-and-clouds-siggraph-2018-barill-et-al.pdf
 struct Dipole
 {
-    Vector3f areaPos;
+    Vector3f pos;
     float area = 0;
     Vector3f dirArea;
     float rr = 0; // maximum squared distance from pos to any corner of the bounding box
-    [[nodiscard]] Vector3f pos() const
-    {
-        return area > 0 ? areaPos / area : areaPos;
-    }
     /// returns true if this dipole is good approximation for a point \param q;
     /// and adds the contribution of this dipole to the winding number at point \param q to \param addTo
     [[nodiscard]] bool addIfGoodApprox( const Vector3f& q, float betaSq, float& addTo ) const
     {
-        const auto dp = pos() - q;
+        const auto dp = pos - q;
         const auto dd = dp.lengthSq();
         if ( dd <= betaSq * rr )
             return false;

@@ -37,7 +37,7 @@ void calcDipoles( Dipoles& dipoles, const AABBTree& tree_, const Mesh& mesh )
         const auto ap = a * mesh.triCenter( f );
         dipoles[i] = Dipole
         {
-            .areaPos = ap,
+            .pos = ap, // ( area * pos ) till for now
             .area = a,
             .dirArea = da
         };
@@ -53,18 +53,20 @@ void calcDipoles( Dipoles& dipoles, const AABBTree& tree_, const Mesh& mesh )
         const auto& dr = dipoles[node.r];
         dipoles[i] = Dipole
         {
-            .areaPos = dl.areaPos + dr.areaPos,
+            .pos = dl.pos + dr.pos, // ( area * pos ) till for now
             .area = dl.area + dr.area,
             .dirArea = dl.dirArea + dr.dirArea
         };
     }
 
-    // compute distance to farthest corner for all nodes
+    // compute 1) center mass 2) distance to farthest corner for all nodes
     ParallelFor( dipoles, [&]( NodeId i )
     {
         const auto& node = tree_[i];
         auto& d = dipoles[i];
-        d.rr = distToFarthestCornerSq( node.box, d.pos() );
+        if ( d.area > 0 )
+            d.pos /= d.area;
+        d.rr = distToFarthestCornerSq( node.box, d.pos );
     } );
 }
 

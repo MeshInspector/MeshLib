@@ -151,9 +151,11 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         msParams.vol.origin = box.min - expansion;
         msParams.vol.voxelSize = Vector3f::diagonal( params.voxelSize );
         msParams.vol.dimensions = Vector3i( ( box.max + expansion - msParams.vol.origin ) / params.voxelSize ) + Vector3i::diagonal( 1 );
-        msParams.dist.signMode = params.signDetectionMode;
         msParams.dist.maxDistSq = sqr( absOffset + params.voxelSize );
         msParams.dist.minDistSq = sqr( std::max( absOffset - params.voxelSize, 0.0f ) );
+        msParams.dist.signMode = params.signDetectionMode;
+        msParams.dist.windingNumberThreshold = params.windingNumberThreshold;
+        msParams.dist.windingNumberBeta = params.windingNumberBeta;
         msParams.fwn = params.fwn;
 
         MarchingCubesParams vmParams;

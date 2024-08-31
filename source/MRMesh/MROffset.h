@@ -28,6 +28,15 @@ struct OffsetParameters : BaseShellParameters
     /// determines the method to compute distance sign
     SignDetectionMode signDetectionMode = SignDetectionMode::OpenVDB;
 
+    /// only for SignDetectionMode::HoleWindingRule:
+    /// positive distance if winding number below or equal this threshold;
+    /// ideal threshold: 0.5 for closed meshes; 0.0 for planar meshes
+    float windingNumberThreshold = 0.5f;
+
+    /// only for SignDetectionMode::HoleWindingRule:
+    /// determines the precision of fast approximation: the more the better, minimum value is 1
+    float windingNumberBeta = 2;
+
     /// defines particular implementation of IFastWindingNumber interface that will compute windings. If it is not specified, default FastWindingNumber is used
     std::shared_ptr<IFastWindingNumber> fwn;
 

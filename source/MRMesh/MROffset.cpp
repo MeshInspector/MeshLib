@@ -101,7 +101,7 @@ Expected<Mesh> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offset
     {
         spdlog::warn( "Cannot use shell for double offset, using offset mode instead." );
     }
-    return levelSetDoubleConvertion( mp, AffineXf3f(), params.voxelSize, offsetA, offsetB, 0, params.fwn, params.callBack );
+    return levelSetDoubleConvertion( mp, params.voxelSize, offsetA, offsetB, 0, params.fwn, params.callBack );
 }
 #endif
 

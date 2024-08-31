@@ -467,7 +467,7 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
     return {};
 }
 
-Expected<Mesh> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf, float voxelSize,
+Expected<Mesh> levelSetDoubleConvertion( const MeshPart& mp, float voxelSize,
     float offsetA, float offsetB, float adaptivity, std::shared_ptr<IFastWindingNumber> fwn, ProgressCallback cb /*= {} */ )
 {
     MR_TIMER
@@ -475,18 +475,18 @@ Expected<Mesh> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& x
     auto offsetInVoxelsA = offsetA / voxelSize;
     auto offsetInVoxelsB = offsetB / voxelSize;
 
-    if ( cb && !cb( 0.0f ) )
+    if ( !reportProgress( cb, 0.0f ) )
         return unexpectedOperationCanceled();
 
     std::vector<openvdb::Vec3s> points;
     std::vector<openvdb::Vec3I> tris;
     std::vector<openvdb::Vec4I> quads;
-    convertToVDMMesh( mp, xf, Vector3f::diagonal( voxelSize ), points, tris );
+    convertToVDMMesh( mp, AffineXf3f(), Vector3f::diagonal( voxelSize ), points, tris );
 
-    if (cb && !cb( 0.1f ) )
+    if ( !reportProgress( cb, 0.1f ) )
         return unexpectedOperationCanceled();
 
-    bool needSignUpdate = !findLeftBoundary( mp.mesh.topology, mp.region ).empty();
+    const bool needSignUpdate = !mp.mesh.topology.isClosed( mp.region );
 
     auto sp = subprogress( cb, 0.1f, needSignUpdate ? 0.2f : 0.3f );
     openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
@@ -511,7 +511,7 @@ Expected<Mesh> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& x
 
     openvdb::tools::volumeToMesh( *grid, points, tris, quads, offsetInVoxelsA, adaptivity );
 
-    if ( cb && !cb( 0.5f ) )
+    if ( !reportProgress( cb, 0.5f ) )
         return unexpectedOperationCanceled();
     sp = subprogress( cb, 0.5f, 0.7f );
 
@@ -519,7 +519,7 @@ Expected<Mesh> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& x
     grid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, ProgressInterrupter>
         ( interrupter2, *xform, points, tris, quads, std::abs( offsetInVoxelsB ) + 1 ) );
 
-    if ( interrupter2.getWasInterrupted() || ( cb && !cb( 0.9f ) ) )
+    if ( interrupter2.getWasInterrupted() || !reportProgress( cb, 0.9f ) )
         return unexpectedOperationCanceled();
 
     auto expTriMesh = gridToTriMesh( *grid, GridToMeshSettings{
@@ -530,7 +530,8 @@ Expected<Mesh> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& x
     } );
 
     Mesh res = Mesh::fromTriMesh( std::move( *expTriMesh ) );
-    cb && !cb( 1.0f );
+    if ( !reportProgress( cb, 1.0f ) )
+        return unexpectedOperationCanceled();
     return res;
 }
 

@@ -107,7 +107,7 @@ MRMESH_API VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector
 // adaptivity - [0.0;1.0] ratio of combining small triangles into bigger ones 
 //                       (curvature can be lost on high values)
 /// \param fwn defines particular implementation of IFastWindingNumber interface that will compute windings. If it is not specified, default FastWindingNumber is used
-MRMESH_API Expected<Mesh> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf,
+MRMESH_API Expected<Mesh> levelSetDoubleConvertion( const MeshPart& mp,
     float voxelSize, float offsetA, float offsetB, float adaptivity = 0.0f, std::shared_ptr<IFastWindingNumber> fwn = {}, ProgressCallback cb = {} );
 
 }

@@ -42,7 +42,7 @@ std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p
 
     case SignDetectionMode::HoleWindingRule:
         assert( !mp.region );
-        if ( !mp.mesh.isOutside( p ) )
+        if ( !mp.mesh.isOutside( p, op.windingNumberThreshold, op.windingNumberBeta ) )
             dist = -dist;
         break;
 
@@ -69,8 +69,8 @@ Expected<SimpleVolume> meshToDistanceVolume( const MeshPart& mp, const MeshToDis
             params.fwn = std::make_shared<FastWindingNumber>( mp.mesh );
         assert( !mp.region ); // only whole mesh is supported for now
         auto basis = AffineXf3f( Matrix3f::scale( params.vol.voxelSize ), params.vol.origin + 0.5f * params.vol.voxelSize );
-        constexpr float beta = 2;
-        if ( auto d = params.fwn->calcFromGridWithDistances( res.data, res.dims, basis, beta,
+        if ( auto d = params.fwn->calcFromGridWithDistances( res.data, res.dims, basis,
+            params.dist.windingNumberThreshold, params.dist.windingNumberBeta,
             params.dist.maxDistSq, params.dist.minDistSq, params.vol.cb ); !d )
         {
             return unexpected( std::move( d.error() ) );

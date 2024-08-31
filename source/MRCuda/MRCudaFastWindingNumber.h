@@ -2,11 +2,15 @@
 #include "exports.h"
 #include "MRMesh/MRFastWindingNumber.h"
 #include "MRMesh/MRMesh.h"
+
 namespace MR
 {
+
 namespace Cuda
 {
+
 struct FastWindingNumberData;
+
 /// the class for fast approximate computation of winding number for a mesh (using its AABB tree)
 /// \ingroup AABBTreeGroup
 class FastWindingNumber : public IFastWindingNumber
@@ -17,39 +21,17 @@ class FastWindingNumber : public IFastWindingNumber
 public:
     /// constructs this from AABB tree of given mesh;
     MRCUDA_API FastWindingNumber( const Mesh& mesh );
-    /// <summary>
-    /// calculates winding numbers for a vector of points
-    /// </summary>
-    /// <param name="res">resulting winding numbers, will be resized automatically</param>
-    /// <param name="points">incoming points</param>
-    /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    /// <param name="skipFace">this triangle (if it is close to \param q) will be skipped from summation</param>
+
+    // see methods' descriptions in IFastWindingNumber
     MRCUDA_API void calcFromVector( std::vector<float>& res, const std::vector<Vector3f>& points, float beta, FaceId skipFace = {} ) override;
-    /// <summary>
-    /// calculates winding numbers for all centers of mesh's triangles. if winding number is less than 0 or greater then 1, that face is marked as self-intersected
-    /// </summary>
-    /// <param name="res">resulting bit set</param>
-    /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
     MRCUDA_API bool calcSelfIntersections( FaceBitSet& res, float beta, ProgressCallback cb ) override;
-    /// <summary>
-    /// calculates winding numbers for each point in a three-dimensional grid
-    /// </summary>
-    /// <param name="res">resulting winding numbers, will be resized automatically</param>
-    /// <param name="dims">dimensions of the grid</param>
-    /// <param name="gridToMeshXf">transform from integer grid locations to voxel's centers in mesh reference frame</param>
-    /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
     MRCUDA_API VoidOrErrStr calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb ) override;
-    /// <summary>
-    /// calculates winding numbers for each point in a three-dimensional grid
-    /// </summary>
-    /// <param name="res">resulting winding numbers, will be resized automatically</param>
-    /// <param name="dims">dimensions of the grid</param>
-    /// <param name="gridToMeshXf">transform from integer grid locations to voxel's centers in mesh reference frame</param>
-    /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    MRCUDA_API VoidOrErrStr calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) override;
+    MRCUDA_API float calcWithDistances( const Vector3f& p, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq );
+    MRCUDA_API VoidOrErrStr calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) override;
+
 private:
     bool prepareData_( ProgressCallback cb );
 };
 
-}
-}
+} // namespace Cuda
+} // namespace MR

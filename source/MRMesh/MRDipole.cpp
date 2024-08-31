@@ -102,14 +102,19 @@ float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const
 
     const float betaSq = sqr( beta );
     constexpr int MaxStackSize = 32; // to avoid allocations
-    NodeId subtasks[MaxStackSize];
+    struct SubTask
+    {
+        NodeId n;
+        SubTask() : n( noInit ) {}
+    };
+    SubTask subtasks[MaxStackSize];
     int stackSize = 0;
-    subtasks[stackSize++] = tree.rootNodeId();
+    subtasks[stackSize++].n = tree.rootNodeId();
 
     float res = 0;
     while( stackSize > 0 )
     {
-        const auto i = subtasks[--stackSize];
+        const auto i = subtasks[--stackSize].n;
         const auto & node = tree[i];
         const auto & d = dipoles[i];
         if ( d.addIfGoodApprox( q, betaSq, res ) )
@@ -117,8 +122,8 @@ float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const
         if ( !node.leaf() )
         {
             // recurse deeper
-            subtasks[stackSize++] = node.r; // to look later
-            subtasks[stackSize++] = node.l; // to look first
+            subtasks[stackSize++].n = node.r; // to look later
+            subtasks[stackSize++].n = node.l; // to look first
             continue;
         }
         if ( node.leafId() != skipFace )

@@ -197,6 +197,48 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
     }
 }
 
+Expected<Mesh> rebuildMesh( const MeshPart& mp, const OffsetParameters& params, Vector<VoxelId, FaceId> * outMap )
+{
+    MR_TIMER
+    assert( params.signDetectionMode == SignDetectionMode::HoleWindingRule );
+
+    const bool funcVolume = !params.fwn && params.memoryEfficient;
+    MeshToWindingNumberVolumeParams msParams;
+    if ( !funcVolume )
+        msParams.vol.cb = subprogress( params.callBack, 0.0f, 0.4f );
+    auto box = mp.mesh.computeBoundingBox( mp.region );
+    auto expansion = Vector3f::diagonal( 2 * params.voxelSize );
+    msParams.vol.origin = box.min - expansion;
+    msParams.vol.voxelSize = Vector3f::diagonal( params.voxelSize );
+    msParams.vol.dimensions = Vector3i( ( box.max + expansion - msParams.vol.origin ) / params.voxelSize ) + Vector3i::diagonal( 1 );
+    msParams.windingNumberBeta = params.windingNumberBeta;
+    msParams.fwn = params.fwn;
+
+    MarchingCubesParams vmParams;
+    vmParams.origin = msParams.vol.origin;
+    vmParams.iso = params.windingNumberThreshold;
+    vmParams.cb = funcVolume ? params.callBack : subprogress( params.callBack, 0.4f, 1.0f );
+    vmParams.lessInside = false;
+    vmParams.outVoxelPerFaceMap = outMap;
+
+    if ( funcVolume )
+    {
+        return marchingCubes( meshToWindingNumberFunctionVolume( mp, msParams ), vmParams );
+    }
+    else
+    {
+        return meshToWindingNumberVolume( mp, msParams ).and_then( [&vmParams] ( SimpleVolume&& volume )
+        {
+            vmParams.freeVolume = [&volume]
+            {
+                Timer t( "~SimpleVolume" );
+                volume = {};
+            };
+            return marchingCubes( volume, vmParams );
+        } );
+    }
+}
+
 Expected<Mesh> mcShellMeshRegion( const Mesh& mesh, const FaceBitSet& region, float offset,
     const BaseShellParameters& params, Vector<VoxelId, FaceId> * outMap )
 {

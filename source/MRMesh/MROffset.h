@@ -80,7 +80,13 @@ struct SharpOffsetParameters : OffsetParameters
 
 /// Offsets mesh by converting it to distance field in voxels (using OpenVDB library if SignDetectionMode::OpenVDB or our implementation otherwise)
 /// and back using standard Marching Cubes, as opposed to Dual Marching Cubes in offsetMesh(...)
-[[nodiscard]] MRMESH_API Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset, 
+[[nodiscard]] MRMESH_API Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
+    const OffsetParameters& params = {}, Vector<VoxelId, FaceId>* outMap = nullptr );
+
+/// Converts the mesh into volume with generalized winding number function values in grid points,
+/// then constructs resulting mesh as an iso-value of that volume using marching cubes algorithm;
+/// signDetectionMode must be SignDetectionMode::HoleWindingRule
+[[nodiscard]] MRMESH_API Expected<Mesh> rebuildMesh( const MeshPart& mp,
     const OffsetParameters& params = {}, Vector<VoxelId, FaceId>* outMap = nullptr );
 
 /// Constructs a shell around selected mesh region with the properties that every point on the shall must

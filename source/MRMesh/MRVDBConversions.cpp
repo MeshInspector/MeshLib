@@ -406,7 +406,7 @@ Expected<Mesh> gridToMesh( FloatGrid&& grid, const GridToMeshSettings & settings
     return res;
 }
 
-VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh, const AffineXf3f& meshToGridXf, std::shared_ptr<IFastWindingNumber> fwn, ProgressCallback cb /*= {} */ )
+VoidOrErrStr makeSignedByWindingNumber( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh, const MakeSignedByWindingNumberSettings & settings )
 {
     MR_TIMER
 
@@ -425,15 +425,14 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
     const size_t volume = activeBox.volume();
 
     std::vector<float> windVals;
-    if ( !fwn )
-        fwn = std::make_shared<FastWindingNumber>( refMesh );
+    auto fwn = settings.fwn ? settings.fwn : std::make_shared<FastWindingNumber>( refMesh );
 
-    const auto gridToMeshXf = meshToGridXf.inverse()
+    const auto gridToMeshXf = settings.meshToGridXf.inverse()
         * AffineXf3f::linear( Matrix3f::scale( voxelSize ) )
-        * AffineXf3f::translation( Vector3f{ float( minCoord.x() ), float( minCoord.y() ), float( minCoord.z() ) } );
+        * AffineXf3f::translation( Vector3f{ fromVdb( minCoord ) } );
     if ( auto res = fwn->calcFromGrid( windVals,
         Vector3i{ dims.x(),  dims.y(), dims.z() },
-        gridToMeshXf, 2.0f, subprogress( cb, 0.0f, 0.8f ) ); !res )
+        gridToMeshXf, settings.windingNumberBeta, subprogress( settings.progress, 0.0f, 0.8f ) ); !res )
     {
         return res;
     }
@@ -449,7 +448,7 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
             for ( int j = 0; j < 3; ++j )
                 coord[j] += pos[j];
 
-            auto windVal = std::clamp( 1.0f - 2.0f * windVals[i], -1.0f, 1.0f );
+            auto windVal = std::clamp( 2 * ( settings.windingNumberThreshold - windVals[i] ), -1.0f, 1.0f );
             if ( windVal < 0.0f )
                 windVal *= -windVal;
             else
@@ -458,7 +457,7 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
             {
                 val *= windVal;
             } );
-        }, subprogress( cb, 0.8f, 1.0f ) ) )
+        }, subprogress( settings.progress, 0.8f, 1.0f ) ) )
     {
         return unexpectedOperationCanceled();
     }
@@ -467,28 +466,27 @@ VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSi
     return {};
 }
 
-Expected<Mesh> levelSetDoubleConvertion( const MeshPart& mp, float voxelSize,
-    float offsetA, float offsetB, float adaptivity, std::shared_ptr<IFastWindingNumber> fwn, ProgressCallback cb /*= {} */ )
+Expected<Mesh> doubleOffsetVdb( const MeshPart& mp, const DoubleOffsetSettings & settings )
 {
     MR_TIMER
 
-    auto offsetInVoxelsA = offsetA / voxelSize;
-    auto offsetInVoxelsB = offsetB / voxelSize;
+    auto offsetInVoxelsA = settings.offsetA / settings.voxelSize;
+    auto offsetInVoxelsB = settings.offsetB / settings.voxelSize;
 
-    if ( !reportProgress( cb, 0.0f ) )
+    if ( !reportProgress( settings.progress, 0.0f ) )
         return unexpectedOperationCanceled();
 
     std::vector<openvdb::Vec3s> points;
     std::vector<openvdb::Vec3I> tris;
     std::vector<openvdb::Vec4I> quads;
-    convertToVDMMesh( mp, AffineXf3f(), Vector3f::diagonal( voxelSize ), points, tris );
+    convertToVDMMesh( mp, AffineXf3f(), Vector3f::diagonal( settings.voxelSize ), points, tris );
 
-    if ( !reportProgress( cb, 0.1f ) )
+    if ( !reportProgress( settings.progress, 0.1f ) )
         return unexpectedOperationCanceled();
 
     const bool needSignUpdate = !mp.mesh.topology.isClosed( mp.region );
 
-    auto sp = subprogress( cb, 0.1f, needSignUpdate ? 0.2f : 0.3f );
+    auto sp = subprogress( settings.progress, 0.1f, needSignUpdate ? 0.2f : 0.3f );
     openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
     ProgressInterrupter interrupter1( sp );
     auto grid = MakeFloatGrid( 
@@ -503,34 +501,39 @@ Expected<Mesh> levelSetDoubleConvertion( const MeshPart& mp, float voxelSize,
 
     if ( needSignUpdate )
     {
-        sp = subprogress( cb, 0.2f, 0.3f );
-        auto signRes = makeSignedWithFastWinding( grid, Vector3f::diagonal(voxelSize), mp.mesh, {}, fwn, sp );
+        auto signRes = makeSignedByWindingNumber( grid, Vector3f::diagonal( settings.voxelSize ), mp.mesh,
+        {
+            .fwn = settings.fwn,
+            .windingNumberThreshold = settings.windingNumberThreshold,
+            .windingNumberBeta = settings.windingNumberBeta,
+            .progress = subprogress( settings.progress, 0.2f, 0.3f )
+        } );
         if ( !signRes.has_value() )
             return unexpected( signRes.error() );
     }
 
-    openvdb::tools::volumeToMesh( *grid, points, tris, quads, offsetInVoxelsA, adaptivity );
+    openvdb::tools::volumeToMesh( *grid, points, tris, quads, offsetInVoxelsA, settings.adaptivity );
 
-    if ( !reportProgress( cb, 0.5f ) )
+    if ( !reportProgress( settings.progress, 0.5f ) )
         return unexpectedOperationCanceled();
-    sp = subprogress( cb, 0.5f, 0.7f );
+    sp = subprogress( settings.progress, 0.5f, 0.7f );
 
     ProgressInterrupter interrupter2( sp );
     grid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, ProgressInterrupter>
         ( interrupter2, *xform, points, tris, quads, std::abs( offsetInVoxelsB ) + 1 ) );
 
-    if ( interrupter2.getWasInterrupted() || !reportProgress( cb, 0.9f ) )
+    if ( interrupter2.getWasInterrupted() || !reportProgress( settings.progress, 0.9f ) )
         return unexpectedOperationCanceled();
 
     auto expTriMesh = gridToTriMesh( *grid, GridToMeshSettings{
-        .voxelSize = Vector3f::diagonal( voxelSize ),
+        .voxelSize = Vector3f::diagonal( settings.voxelSize ),
         .isoValue = offsetInVoxelsB,
-        .adaptivity = adaptivity,
-        .cb = subprogress( cb, 0.9f, 0.95f )
+        .adaptivity = settings.adaptivity,
+        .cb = subprogress( settings.progress, 0.9f, 0.95f )
     } );
 
     Mesh res = Mesh::fromTriMesh( std::move( *expTriMesh ) );
-    if ( !reportProgress( cb, 1.0f ) )
+    if ( !reportProgress( settings.progress, 1.0f ) )
         return unexpectedOperationCanceled();
     return res;
 }

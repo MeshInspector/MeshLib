@@ -73,11 +73,15 @@ Expected<Mesh> offsetMesh( const MeshPart & mp, float offset, const OffsetParame
 
     if ( signPostprocess )
     {
-        // Compute signs for initially unsigned distance field
-        auto sp = subprogress( params.callBack, 0.33f, 0.66f );
-        auto signRes = makeSignedWithFastWinding( grid, Vector3f::diagonal( voxelSize ), mp.mesh, {}, params.fwn, sp );
+        auto signRes = makeSignedByWindingNumber( grid, Vector3f::diagonal( voxelSize ), mp.mesh,
+        {
+            .fwn = params.fwn,
+            .windingNumberThreshold = params.windingNumberThreshold,
+            .windingNumberBeta = params.windingNumberBeta,
+            .progress = subprogress( params.callBack, 0.33f, 0.66f )
+        } );
         if ( !signRes.has_value() )
-            return unexpected( signRes.error() );
+            return unexpected( std::move( signRes.error() ) );
     }
 
     // Make offset mesh
@@ -101,7 +105,16 @@ Expected<Mesh> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offset
     {
         spdlog::warn( "Cannot use shell for double offset, using offset mode instead." );
     }
-    return levelSetDoubleConvertion( mp, params.voxelSize, offsetA, offsetB, 0, params.fwn, params.callBack );
+    return doubleOffsetVdb( mp,
+    {
+        .voxelSize = params.voxelSize,
+        .offsetA = offsetA,
+        .offsetB = offsetB,
+        .fwn = params.fwn,
+        .windingNumberThreshold = params.windingNumberThreshold,
+        .windingNumberBeta = params.windingNumberBeta,
+        .progress = params.callBack
+    } );
 }
 #endif
 

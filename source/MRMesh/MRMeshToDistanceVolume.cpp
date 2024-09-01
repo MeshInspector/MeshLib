@@ -51,10 +51,9 @@ std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p
     return dist;
 }
 
-Expected<SimpleVolume> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& cParams /*= {} */ )
+Expected<SimpleVolume> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params )
 {
     MR_TIMER
-    auto params = cParams;
     assert( params.dist.signMode != SignDetectionMode::OpenVDB );
 
     if ( params.dist.signMode == SignDetectionMode::HoleWindingRule )
@@ -65,11 +64,10 @@ Expected<SimpleVolume> meshToDistanceVolume( const MeshPart& mp, const MeshToDis
         VolumeIndexer indexer( res.dims );
         res.data.resize( indexer.size() );
 
-        if ( !params.fwn )
-            params.fwn = std::make_shared<FastWindingNumber>( mp.mesh );
+        auto fwn = params.fwn ? params.fwn : std::make_shared<FastWindingNumber>( mp.mesh );
         assert( !mp.region ); // only whole mesh is supported for now
         auto basis = AffineXf3f( Matrix3f::scale( params.vol.voxelSize ), params.vol.origin + 0.5f * params.vol.voxelSize );
-        if ( auto d = params.fwn->calcFromGridWithDistances( res.data, res.dims, basis,
+        if ( auto d = fwn->calcFromGridWithDistances( res.data, res.dims, basis,
             params.dist.windingNumberThreshold, params.dist.windingNumberBeta,
             params.dist.maxDistSq, params.dist.minDistSq, params.vol.cb ); !d )
         {
@@ -81,7 +79,6 @@ Expected<SimpleVolume> meshToDistanceVolume( const MeshPart& mp, const MeshToDis
 
     const auto func = meshToDistanceFunctionVolume( mp, params );
     return functionVolumeToSimpleVolume( func, params.vol.cb );
-
 }
 
 FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& params )
@@ -90,12 +87,48 @@ FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDis
 
     return FunctionVolume
     {
-        .data = [params, mp = MeshPart( mp.mesh )] ( const Vector3i& pos ) -> float
+        .data = [params, mp] ( const Vector3i& pos ) -> float
         {
             const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
             const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
             auto dist = signedDistanceToMesh( mp, voxelCenter, params.dist );
             return dist ? *dist : cQuietNan;
+        },
+        .dims = params.vol.dimensions,
+        .voxelSize = params.vol.voxelSize
+    };
+}
+
+Expected<SimpleVolume> meshToWindingNumberVolume( const MeshPart& mp, const MeshToWindingNumberVolumeParams& params )
+{
+    MR_TIMER
+    SimpleVolume res;
+    res.voxelSize = params.vol.voxelSize;
+    res.dims = params.vol.dimensions;
+    VolumeIndexer indexer( res.dims );
+    res.data.resize( indexer.size() );
+
+    auto fwn = params.fwn ? params.fwn : std::make_shared<FastWindingNumber>( mp.mesh );
+    assert( !mp.region ); // only whole mesh is supported for now
+    auto basis = AffineXf3f( Matrix3f::scale( params.vol.voxelSize ), params.vol.origin + 0.5f * params.vol.voxelSize );
+    if ( auto d = fwn->calcFromGrid( res.data, res.dims, basis,
+        params.windingNumberBeta, params.vol.cb ); !d )
+    {
+        return unexpected( std::move( d.error() ) );
+    }
+    std::tie( res.min, res.max ) = parallelMinMax( res.data );
+    return res;
+}
+
+FunctionVolume meshToWindingNumberFunctionVolume( const MeshPart& mp, const MeshToWindingNumberVolumeParams& params )
+{
+    return FunctionVolume
+    {
+        .data = [params, mp] ( const Vector3i& pos ) -> float
+        {
+            const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
+            const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
+            return mp.mesh.calcFastWindingNumber( voxelCenter, params.windingNumberBeta );
         },
         .dims = params.vol.dimensions,
         .voxelSize = params.vol.voxelSize

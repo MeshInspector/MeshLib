@@ -522,6 +522,13 @@ bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
     if ( capturedMouse_ )
         ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
 
+    if ( !capturedMouse_ )
+    {
+        auto* ctx = ImGui::GetCurrentContext();
+        if ( ctx->ActiveId == ctx->TempInputId ) // some item in temp input mode, but we clicked out of imgui
+            ImGui::ClearActiveID(); // disable temp input mode
+    }
+
     return capturedMouse_;
 }
 

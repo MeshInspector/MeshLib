@@ -6,6 +6,7 @@
 #include "MRQuaternion.h"
 #include "MRTimer.h"
 #include <MRPch/MRFmt.h>
+#include <climits>
 
 #pragma warning(push)
 #pragma warning(disable: 4251) // class needs to have dll-interface to be used by clients of another class
@@ -83,6 +84,9 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
 
             if ( !eReader.GetData3DSizes( scanIndex, nRow, nColumn, nPointsSize, nGroupsSize, nCountSize, bColumnIndex) )
                 return MR::unexpected( std::string( "GetData3DSizes failed during reading of " + utf8string( file ) ) );
+
+            if ( nPointsSize > INT_MAX )
+                return MR::unexpected( fmt::format( "Too many points {} in {}.\nMaximum supported is {}.", nPointsSize, utf8string( file ), INT_MAX ) );
 
             // how many points to read in a time
             const int64_t nSize = std::min( nPointsSize, int64_t( 1024 ) * 128 );

@@ -1,4 +1,5 @@
 #include "MRObjectDistanceMap.h"
+#include "MRDirectory.h"
 #include "MRObjectFactory.h"
 #include "MRDistanceMap.h"
 #include "MRSerializer.h"
@@ -149,7 +150,14 @@ void ObjectDistanceMap::deserializeFields_( const Json::Value& root )
 
 VoidOrErrStr ObjectDistanceMap::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
-    auto res = DistanceMapLoad::fromRaw( pathFromUtf8( utf8string( path ) + ".raw" ), progressCb );
+    auto modelPath = pathFromUtf8( utf8string( path ) + saveDistanceMapFormat_ );
+    std::error_code ec;
+    if ( !std::filesystem::is_regular_file( modelPath, ec ) )
+        modelPath = findPathWithExtension( path );
+    if ( modelPath.empty() || std::filesystem::file_size( modelPath, ec ) == 0 )
+        return unexpected( "Could not find model file" );
+
+    auto res = DistanceMapLoad::fromAnySupportedFormat( modelPath, nullptr, progressCb );
     if ( !res.has_value() )
         return unexpected( res.error() );
     
@@ -162,10 +170,9 @@ Expected<std::future<VoidOrErrStr>> ObjectDistanceMap::serializeModel_( const st
     if ( !dmap_ )
         return {};
 
-    return std::async( getAsyncLaunchType(),
-        [this, filename = utf8string( path ) + ".raw"] ()
+    return std::async( getAsyncLaunchType(), [this, filename = utf8string( path ) + saveDistanceMapFormat_] ()
     {
-        return DistanceMapSave::toRAW( pathFromUtf8( filename ), *dmap_ );
+        return DistanceMapSave::toAnySupportedFormat( pathFromUtf8( filename ), *dmap_ );
     } );
 }
 

@@ -4,6 +4,7 @@
 
 #include "MRUIStyle.h" // To help intellisense.
 #include "MRViewer/MRUITestEngine.h"
+#include "MRViewer.h"
 
 namespace MR::UI
 {
@@ -256,6 +257,9 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
                 elemLabel, detail::imGuiTypeEnum<ElemType>(), &elemVal, elemMin, elemMax, valueToImGuiFormatString( elemVal, unitParams ).c_str(), flags
             );
 
+            if ( ret ) // it is needed if we in drag mode to update frame with changed value after moving mouse
+                getViewerInstance().incrementForceRedrawFrames();
+
             // Test engine stuff:
             if ( auto opt = TestEngine::createValue( detail::Scalar<T> ? label : detail::getTestEngineLabelForVecElem( i ), elemVal, *elemMin, *elemMax ) )
             {
@@ -361,8 +365,10 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                 // could be that after dragging value ImGui does not clamp value in first frame
                 if ( *elemMin <= *elemMax && bool( flags & ImGuiSliderFlags_AlwaysClamp ) )
                     elemVal = std::clamp( elemVal, *elemMin, *elemMax );
-            }
 
+                // it is needed if we in drag mode to update frame with changed value after moving mouse
+                getViewerInstance().incrementForceRedrawFrames();
+            }
             auto dragId = ImGui::GetItemID();
 
             if ( forceShowZeroes )

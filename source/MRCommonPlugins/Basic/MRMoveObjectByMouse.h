@@ -45,8 +45,8 @@ private:
 
     public:
         // Options are provided externally rather than directly from modifiers
-        UI::RadioButtonOrModifierState modXfMode_{};    // XfMode
-        UI::RadioButtonOrModifierState modXfTarget_{};  // XfTarget
+        UI::RadioButtonOrModifierState modXfMode{};    // XfMode
+        UI::RadioButtonOrModifierState modXfTarget{};  // XfTarget
     } moveByMouse_;
 };
 

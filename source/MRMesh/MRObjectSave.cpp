@@ -135,6 +135,15 @@ Polyline3 mergeToLines( const Object& object )
 namespace MR
 {
 
+const IOFilters SceneFileWriteFilters =
+{
+    {"MeshInspector scene (.mru)","*.mru"},
+#ifndef MRMESH_NO_GLTF
+    {"glTF JSON scene (.gltf)","*.gltf"},
+    {"glTF binary scene (.glb)","*.glb"},
+#endif
+};
+
 namespace ObjectSave
 {
 

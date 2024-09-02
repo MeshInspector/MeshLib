@@ -24,38 +24,6 @@ namespace MR
 /// \ingroup IOGroup
 /// \{
 
-/// this callback will be called before compression on serialization and after decompression on deserialization
-using FolderCallback = std::function<void( const std::filesystem::path& tempFolderName )>;
-
-class UniqueTemporaryFolder
-{
-public:
-    /// creates new folder in temp directory
-    MRMESH_API UniqueTemporaryFolder( FolderCallback onPreTempFolderDelete );
-    /// removes folder with all its content
-    MRMESH_API ~UniqueTemporaryFolder();
-
-    explicit operator bool() const
-    {
-        return !folder_.empty();
-    }
-    operator const std::filesystem::path& ( ) const
-    {
-        return folder_;
-    }
-    std::filesystem::path operator /( const std::filesystem::path& child ) const
-    {
-        return folder_ / child;
-    }
-
-private:
-    std::filesystem::path folder_;
-    FolderCallback onPreTempFolderDelete_;
-};
-
-MRMESH_API extern const IOFilters SceneFileFilters;
-MRMESH_API extern const IOFilters SceneFileWriteFilters;
-
 MRMESH_API Expected<Json::Value> deserializeJsonValue( std::istream& in );
 MRMESH_API Expected<Json::Value> deserializeJsonValue( const std::string& str );
 MRMESH_API Expected<Json::Value> deserializeJsonValue( const std::filesystem::path& path );

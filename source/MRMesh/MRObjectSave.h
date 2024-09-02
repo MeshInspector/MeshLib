@@ -2,12 +2,15 @@
 
 #include "MRMeshFwd.h"
 #include "MRExpected.h"
-#include "MRSerializer.h"
+#include "MRIOFilters.h"
+#include "MRUniqueTemporaryFolder.h"
 
 #include <filesystem>
 
 namespace MR
 {
+
+MRMESH_API extern const IOFilters SceneFileWriteFilters;
 
 namespace ObjectSave
 {

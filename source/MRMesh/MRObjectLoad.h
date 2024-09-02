@@ -1,10 +1,11 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRIOFilters.h"
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
 #include "MRMeshLoadSettings.h"
-#include "MRSerializer.h"
+#include "MRUniqueTemporaryFolder.h"
 
 #include <filesystem>
 
@@ -13,6 +14,8 @@ namespace MR
 
 /// \ingroup DataModelGroup
 /// \{
+
+MRMESH_API extern const IOFilters SceneFileFilters;
 
 /// information about loading process and mesh construction from primitives
 struct MeshLoadInfo

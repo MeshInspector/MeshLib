@@ -118,6 +118,26 @@ void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::
 
 } // namespace
 
+const IOFilters SceneFileFilters =
+{
+    {"MeshInspector scene (.mru)","*.mru"},
+#ifndef __EMSCRIPTEN__
+    {"MeshInSpector Object Notation (.mison)","*.mison"},
+#endif
+#ifndef MRMESH_NO_XML
+    { "3D Manufacturing format (.3mf)", "*.3mf"},
+    { "3D Manufacturing model (.model)", "*.model"},
+#endif
+#ifndef MRMESH_NO_GLTF
+    {"glTF JSON scene (.gltf)","*.gltf"},
+    {"glTF binary scene (.glb)","*.glb"},
+#endif
+#ifndef MRMESH_NO_OPENCASCADE
+    { "STEP model (.step,.stp)", "*.step;*.stp" },
+#endif
+    { "ZIP files (.zip)","*.zip" },
+};
+
 const IOFilters allFilters = SceneFileFilters
                              | ObjectLoad::getFilters()
                              | MeshLoad::getFilters()

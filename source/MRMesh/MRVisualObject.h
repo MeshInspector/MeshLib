@@ -140,7 +140,7 @@ public:
     virtual const char* typeName() const override { return TypeName(); }
 
     /// return human readable name of subclass
-    virtual std::string getClassName() const { return "Visual Object"; }
+    virtual std::string getClassName() const override { return "Visual Object"; }
 
     /// Returns true if this class supports the property `type`. Otherwise passing it to the functions below is illegal.
     [[nodiscard]] MRMESH_API virtual bool supportsVisualizeProperty( AnyVisualizeMaskEnum type ) const;

@@ -535,10 +535,10 @@ std::string SaveObjectMenuItem::isAvailable( const std::vector<std::shared_ptr<c
 {
 #ifdef __EMSCRIPTEN__
     if ( objs.size() != 1 || !getSaveInfo( objs ) )
-        return "Exactly one object of an exportable type must be selected.";
+        return "Select exactly one object of an exportable type (e.g. Mesh, Point Cloud or Volume)";
 #else
     if ( !getSaveInfo( objs ) )
-        return "One or several objects of same exportable type must be selected.";
+        return "Select objects of the same type (e.g. Meshes, Point Clouds or Volumes)";
 #endif
     return "";
 }

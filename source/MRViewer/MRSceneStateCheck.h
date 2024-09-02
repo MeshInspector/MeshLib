@@ -12,13 +12,49 @@ struct NoVisualRepresentationCheck {};
 // special struct for disabling model check
 struct NoModelCheck {};
 
+template<typename ObjectT>
+std::string getNObjectsLine( unsigned n )
+{
+    std::string typeName = ObjectT::TypeName();
+    if ( typeName.starts_with( "Object" ) && !typeName.ends_with( "Object" ) )
+        typeName = typeName.substr( 6 );
+    if ( typeName == "Points" )
+        typeName = "Point Cloud";
+    else if ( typeName == "Lines" )
+        typeName = "Polyline";
+    else if ( typeName == "Voxels" )
+        typeName = "Volume";
+
+    if ( n != 1 )
+    {
+        if ( typeName.ends_with( "s" ) || typeName.ends_with( "sh" ) )
+            typeName += "es";
+        else
+            typeName += "s";
+    }
+
+    switch ( n )
+    {
+    case 1:
+        return "one " + typeName;
+    case 2:
+        return "two " + typeName;
+    case 3:
+        return "three " + typeName;
+    case 4:
+        return "four " + typeName;
+    default:
+        return std::to_string( n ) + " " + typeName;
+    }    
+}
+
 // check that given vector has exactly N objects if type ObjectT
 // returns error message if requirements are not satisfied
 template<typename ObjectT, bool visualRepresentationCheck, bool modelCheck>
 std::string sceneSelectedExactly( const std::vector<std::shared_ptr<const Object>>& objs, unsigned n )
 {
     if ( objs.size() != n )
-        return "Exactly " + std::to_string( n ) + " " + ObjectT::TypeName() + "(s) must be selected";
+        return "Select exactly " + getNObjectsLine<ObjectT>( n );
     for ( const auto& obj : objs )
     {
         auto tObj = dynamic_cast<const ObjectT*>( obj.get() );
@@ -42,7 +78,7 @@ template<typename ObjectT, bool visualRepresentationCheck, bool modelCheck>
 std::string sceneSelectedAtLeast( const std::vector<std::shared_ptr<const Object>>& objs, unsigned n )
 {
     if ( objs.size() < n )
-        return "At least " + std::to_string( n ) + " " + ObjectT::TypeName() + "(s) must be selected";
+        return "Select at least " + getNObjectsLine<ObjectT>( n );
     unsigned i = 0;
     for ( const auto& obj : objs )
     {
@@ -61,7 +97,7 @@ std::string sceneSelectedAtLeast( const std::vector<std::shared_ptr<const Object
     }
     return ( i >= n ) ? 
         "" : 
-        ( "At least " + std::to_string( n ) + " selected object(s) must have type: " + ObjectT::TypeName() + " with valid model" );
+        ( "Select at least " + getNObjectsLine<ObjectT>( n ) + " with valid model" );
 }
 
 // check that given vector has exactly N objects if type ObjectT
@@ -144,16 +180,18 @@ public:
         checkRes.reserve( sizeof...( Checks ) );
         ( checkRes.push_back( Checks::isAvailable( objs ) ), ... );
         std::string combinedRes;
-        for ( int i = 0; i + 1 < checkRes.size(); ++i )
+        for ( int i = 0; i  < checkRes.size(); ++i )
         {
             if ( checkRes[i].empty() )
                 return "";
+
+            if ( i != 0 )
+                checkRes[i].front() = ( char )tolower( checkRes[i].front() );
+
             combinedRes += checkRes[i];
-            combinedRes += " or ";
+            if ( i + 1 < checkRes.size() )
+                combinedRes += " or ";
         }
-        if ( checkRes.back().empty() )
-            return "";
-        combinedRes += checkRes.back();
         return combinedRes;
     }
 };
@@ -169,12 +207,20 @@ public:
         std::vector<std::string> checkRes;
         checkRes.reserve( sizeof...( Checks ) );
         ( checkRes.push_back( Checks::isAvailable( objs ) ), ... );
-        for ( const auto& res : checkRes )
+        std::string combinedRes;
+        for ( int i = 0; i < checkRes.size(); ++i )
         {
-            if ( !res.empty() )
-                return res;
+            if ( checkRes[i].empty() )
+                continue;
+
+            if ( !combinedRes.empty() )
+            {
+                combinedRes += " and ";
+                checkRes[i].front() = ( char )tolower( checkRes[i].front() );
+            }
+            combinedRes += checkRes[i];
         }
-        return "";
+        return combinedRes;
     }
 };
 

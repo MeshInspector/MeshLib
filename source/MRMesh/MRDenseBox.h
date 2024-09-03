@@ -43,13 +43,13 @@ struct DenseBox
 
 private:
     /// Include given points into this dense box
-    void include_( const std::vector<Vector3f>& points, const std::vector<float>* weights = nullptr, const AffineXf3f* xf = nullptr );
+    void init_( const std::vector<Vector3f>& points, const std::vector<float>* weights = nullptr, const AffineXf3f* xf = nullptr );
     /// Include mesh part into this dense box
-    void include_( const MeshPart& meshPart, const AffineXf3f* xf = nullptr );
+    void init_( const MeshPart& meshPart, const AffineXf3f* xf = nullptr );
     /// Include point into this dense box
-    void include_( const PointCloud& points, const AffineXf3f* xf = nullptr );
+    void init_( const PointCloud& points, const AffineXf3f* xf = nullptr );
     /// Include line into this dense box
-    void include_( const Polyline3& line, const AffineXf3f* xf = nullptr );
+    void init_( const Polyline3& line, const AffineXf3f* xf = nullptr );
 
     Box3f box_;
     AffineXf3f basisXf_;

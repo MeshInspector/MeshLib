@@ -55,6 +55,13 @@ void PlaneWidget::definePlane()
 
 void PlaneWidget::undefinePlane()
 {
+    if ( line_ )
+    {
+        line_->detachFromParent();
+        line_.reset();
+        pressed_ = false;
+    }
+
     if ( !planeObj_ )
         return;
     

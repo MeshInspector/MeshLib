@@ -4,13 +4,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(MRMesh CXX)
 
-option(MRMESH_NO_CLIPBOARD "Disable clipboard support for Linux and Mac" OFF)
 option(MRMESH_NO_PDF "Disable PDF support" OFF)
-option(MRMESH_NO_CPR "Disable CPR tests" OFF)
 option(MRMESH_NO_PYTHON "Disable Python bindings" OFF)
 option(MRMESH_NO_DICOM "Disable DICOM image support" OFF)
 option(MRMESH_NO_OPENCTM "Disable OpenCTM support" OFF)
-option(MRMESH_NO_LABEL "Disable support of label objects" OFF)
 option(MRMESH_NO_JPEG "Disable JPEG support" OFF)
 option(MRMESH_NO_PNG "Disable PNG support" OFF)
 option(MRMESH_NO_TIFF "Disable TIFF support" OFF)
@@ -38,7 +35,6 @@ IF(DEFINED BUILD_TESTING AND NOT BUILD_TESTING)
 ENDIF()
 
 IF(MR_EMSCRIPTEN)
-  set(MRMESH_NO_CPR ON)
   set(MRMESH_NO_E57 ON)
   set(MRMESH_NO_OPENCASCADE ON)
   set(MRMESH_NO_PDF ON)
@@ -88,26 +84,12 @@ IF(NOT MRMESH_NO_JPEG)
 ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
-  IF(NOT MRMESH_NO_CLIPBOARD)
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES clip)
-  ENDIF()
-
   IF(NOT MRMESH_NO_PDF)
     list(APPEND MRMESH_OPTIONAL_DEPENDENCIES hpdf)
   ENDIF()
 
-  IF(NOT MRMESH_NO_CPR)
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES cpr)
-  ENDIF()
-
   IF(NOT MRMESH_NO_PYTHON)
     list(APPEND MRMESH_OPTIONAL_DEPENDENCIES Python::Python)
-  ENDIF()
-
-  IF(NOT MRMESH_NO_LABEL)
-    find_package(Freetype REQUIRED)
-    include_directories(${FREETYPE_INCLUDE_DIRS})
-    list(APPEND MRMESH_OPTIONAL_DEPENDENCIES freetype)
   ENDIF()
 
   IF(NOT MRMESH_NO_PNG)
@@ -185,7 +167,7 @@ IF(NOT MR_EMSCRIPTEN)
   pkg_check_modules(JSONCPP jsoncpp)
   include_directories(${JSONCPP_INCLUDE_DIRS})
 ELSE()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_FREETYPE=1 -s USE_LIBPNG=1")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_LIBPNG=1")
 ENDIF()
 
 IF(APPLE OR MR_EMSCRIPTEN)
@@ -226,7 +208,6 @@ IF(APPLE OR MR_EMSCRIPTEN)
       mbedx509
       mbedcrypto
       zip
-      freetype
       jsoncpp
       tbb
       ${MRMESH_OPTIONAL_DEPENDENCIES}

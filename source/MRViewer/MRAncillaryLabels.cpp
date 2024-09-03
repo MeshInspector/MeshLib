@@ -1,5 +1,5 @@
 #include "MRAncillaryLabels.h"
-#include "MRMesh/MRObjectLabel.h"
+#include "MRSymbolMesh/MRObjectLabel.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRViewer.h"

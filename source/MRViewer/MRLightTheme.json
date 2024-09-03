@@ -12,6 +12,12 @@
 		"g": 0,
 		"r": 0
 	},
+	"Points": {
+		"a": 255,
+		"b": 0,
+		"g": 72,
+		"r": 246
+	},
 	"Labels": {
 		"a": 255,
 		"b": 0,
@@ -391,48 +397,48 @@
 		"g": 52,
 		"r": 204
 	},
-    "SelectedFeatures": {
-        "a": 255,
-        "b": 107,
-        "g": 40,
-        "r": 193
-    },
-    "UnselectedFeatures": {
-        "a": 255,
-        "b": 70,
-        "g": 128,
-        "r": 216
-    },
-    "FeatureBackFaces": {
-        "a": 255,
-        "b": 91,
-        "g": 124,
-        "r": 176
-    },
-    "SelectedFeatureDecorations": {
+	"SelectedFeatures": {
+		"a": 255,
+		"b": 107,
+		"g": 40,
+		"r": 193
+	},
+	"UnselectedFeatures": {
+		"a": 255,
+		"b": 70,
+		"g": 128,
+		"r": 216
+	},
+	"FeatureBackFaces": {
+		"a": 255,
+		"b": 91,
+		"g": 124,
+		"r": 176
+	},
+	"SelectedFeatureDecorations": {
 		"a": 255,
 		"b": 192,
 		"g": 64,
 		"r": 255
 	},
-    "UnselectedFeatureDecorations": {
+	"UnselectedFeatureDecorations": {
 		"a": 255,
 		"b": 192,
 		"g": 64,
 		"r": 255
 	},
-    "SelectedMeasurements": {
-        "a": 255,
-        "b": 240,
-        "g": 255,
-        "r": 50
-    },
-    "UnselectedMeasurements": {
-        "a": 255,
-        "b": 255,
-        "g": 255,
-        "r": 255
-    },
+	"SelectedMeasurements": {
+		"a": 255,
+		"b": 240,
+		"g": 255,
+		"r": 50
+	},
+	"UnselectedMeasurements": {
+		"a": 255,
+		"b": 255,
+		"g": 255,
+		"r": 255
+	},
 	"SelectedObjectMesh": {
 		"a": 255,
 		"b": 236,

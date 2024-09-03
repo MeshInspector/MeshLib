@@ -72,6 +72,7 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     root["ShowTexture"] = showTexture_.value();
     root["ShowFaces"] = showFaces_.value();
     root["ShowLines"] = showEdges_.value();
+    root["ShowPoints"] = showPoints_.value();
     root["ShowBordersHighlight"] = showBordersHighlight_.value();
     root["ShowSelectedEdges"] = showSelectedEdges_.value();
     root["ShowSelectedFaces"] = showSelectedFaces_.value();
@@ -106,6 +107,8 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     serializeToJson( uvCoordinates_.vec_, root["UVCoordinates"] );
     // edges
     serializeToJson( Vector4f( edgesColor_.get() ), root["Colors"]["Edges"] );
+    // vertices
+    serializeToJson( Vector4f( pointsColor_.get() ), root["Colors"]["Points"] );
     // borders
     serializeToJson( Vector4f( bordersColor_.get() ), root["Colors"]["Borders"] );
 
@@ -123,6 +126,8 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
         serializeToJson( creases_, root["MeshCreasesUndirEdgeBitSet"] );
     }
 
+    root["PointSize"] = pointSize_;
+
     root["Type"].append( ObjectMeshHolder::TypeName() );
 }
 
@@ -137,6 +142,8 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
         showFaces_ = ViewportMask{ root["ShowFaces"].asUInt() };
     if ( root["ShowLines"].isUInt() )
         showEdges_ = ViewportMask{ root["ShowLines"].asUInt() };
+    if ( root["ShowPoints"].isUInt() )
+        showPoints_ = ViewportMask{ root["ShowPoints"].asUInt() };
     if ( root["ShowBordersHighlight"].isUInt() )
         showBordersHighlight_ = ViewportMask{ root["ShowBordersHighlight"].asUInt() };
     if ( root["ShowSelectedEdges"].isUInt() )
@@ -190,6 +197,9 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     // edges
     deserializeFromJson( root["Colors"]["Edges"], resVec );
     edgesColor_.set( Color( resVec ) );
+    // vertices
+    deserializeFromJson( root["Colors"]["Points"], resVec );
+    pointsColor_.set( Color( resVec ) );
     // borders
     deserializeFromJson( root["Colors"]["Borders"], resVec );
     bordersColor_.set( Color( resVec ) );
@@ -212,6 +222,9 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
         deserializeFromJson( root["SelectionEdgeBitSet"], selectedEdges_ );
         deserializeFromJson( root["MeshCreasesUndirEdgeBitSet"], creases_ );
     }
+
+    if ( const auto& pointSizeJson = root["PointSize"]; pointSizeJson.isDouble() )
+        pointSize_ = float( pointSizeJson.asDouble() );
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
         setDefaultSceneProperties_();
@@ -273,6 +286,8 @@ const ViewportMask &ObjectMeshHolder::getVisualizePropertyMask( AnyVisualizeMask
                 return showTexture_;
             case MeshVisualizePropertyType::Edges:
                 return showEdges_;
+            case MeshVisualizePropertyType::Points:
+                return showPoints_;
             case MeshVisualizePropertyType::FlatShading:
                 return flatShading_;
             case MeshVisualizePropertyType::EnableShading:
@@ -298,6 +313,24 @@ const ViewportMask &ObjectMeshHolder::getVisualizePropertyMask( AnyVisualizeMask
     }
 }
 
+void ObjectMeshHolder::setEdgeWidth( float edgeWidth )
+{
+    if ( edgeWidth_ == edgeWidth )
+        return;
+
+    edgeWidth_ = edgeWidth;
+    needRedraw_ = true;
+}
+
+void ObjectMeshHolder::setPointSize( float size )
+{
+    if ( pointSize_ == size )
+        return;
+
+    pointSize_ = size;
+    needRedraw_ = true;
+}
+
 void ObjectMeshHolder::setupRenderObject_() const
 {
     if ( !renderObj_ )
@@ -311,6 +344,7 @@ void ObjectMeshHolder::setDefaultColors_()
     setSelectedFacesColor( SceneColors::get( SceneColors::SelectedFaces ) );
     setSelectedEdgesColor( SceneColors::get( SceneColors::SelectedEdges ) );
     setEdgesColor( SceneColors::get( SceneColors::Edges ) );
+    setPointsColor( SceneColors::get( SceneColors::Points ) );
     setBordersColor( SceneColors::get( SceneColors::Labels ) );
 }
 
@@ -351,6 +385,18 @@ void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const
     MR_TIMER
     copyColors( src, thisToSrc, thisToSrcFaces );
     setTextures( src.getTextures() );
+
+    const auto& srcTexPerFace = src.getTexturePerFace();
+    if ( !srcTexPerFace.empty() )
+    {
+        TexturePerFace texPerFace;
+        texPerFace.resizeNoInit( thisToSrcFaces.size() );
+        ParallelFor( texPerFace, [&] ( FaceId id )
+        {
+            texPerFace[id] = srcTexPerFace[thisToSrcFaces[id]];
+        } );
+        setTexturePerFace( std::move( texPerFace ) );
+    }
 
     const auto& srcUVCoords = src.getUVCoords();
     const auto lastVert = src.mesh()->topology.lastValidVert();

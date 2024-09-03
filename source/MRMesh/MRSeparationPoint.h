@@ -36,7 +36,7 @@ public:
     };
 
     /// prepares storage for given number of blocks, each containing given size of voxels
-    MRMESH_API explicit SeparationPointStorage( size_t blockCount, size_t blockSize );
+    MRMESH_API void resize( size_t blockCount, size_t blockSize );
 
     /// get block for filling in the thread responsible for it
     Block & getBlock( size_t blockIndex ) { return blocks_[blockIndex]; }

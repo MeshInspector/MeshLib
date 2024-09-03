@@ -73,11 +73,15 @@ Expected<Mesh> offsetMesh( const MeshPart & mp, float offset, const OffsetParame
 
     if ( signPostprocess )
     {
-        // Compute signs for initially unsigned distance field
-        auto sp = subprogress( params.callBack, 0.33f, 0.66f );
-        auto signRes = makeSignedWithFastWinding( grid, Vector3f::diagonal( voxelSize ), mp.mesh, {}, params.fwn, sp );
+        auto signRes = makeSignedByWindingNumber( grid, Vector3f::diagonal( voxelSize ), mp.mesh,
+        {
+            .fwn = params.fwn,
+            .windingNumberThreshold = params.windingNumberThreshold,
+            .windingNumberBeta = params.windingNumberBeta,
+            .progress = subprogress( params.callBack, 0.33f, 0.66f )
+        } );
         if ( !signRes.has_value() )
-            return unexpected( signRes.error() );
+            return unexpected( std::move( signRes.error() ) );
     }
 
     // Make offset mesh
@@ -101,7 +105,16 @@ Expected<Mesh> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offset
     {
         spdlog::warn( "Cannot use shell for double offset, using offset mode instead." );
     }
-    return levelSetDoubleConvertion( mp, AffineXf3f(), params.voxelSize, offsetA, offsetB, 0, params.fwn, params.callBack );
+    return doubleOffsetVdb( mp,
+    {
+        .voxelSize = params.voxelSize,
+        .offsetA = offsetA,
+        .offsetB = offsetB,
+        .fwn = params.fwn,
+        .windingNumberThreshold = params.windingNumberThreshold,
+        .windingNumberBeta = params.windingNumberBeta,
+        .progress = params.callBack
+    } );
 }
 #endif
 
@@ -120,7 +133,7 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         if ( !voxelRes )
             return unexpectedOperationCanceled();
 
-        VdbVolume volume = floatGridToVdbVolume( voxelRes );
+        VdbVolume volume = floatGridToVdbVolume( std::move( voxelRes ) );
         volume.voxelSize = Vector3f::diagonal( params.voxelSize );
 
         MarchingCubesParams vmParams;
@@ -128,6 +141,11 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         vmParams.lessInside = true;
         vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
         vmParams.outVoxelPerFaceMap = outMap;
+        vmParams.freeVolume = [&volume]
+        {
+            Timer t( "~FloatGrid" );
+            volume.data.reset();
+        };
         return marchingCubes( volume, vmParams );
 #else
         assert( false );
@@ -136,35 +154,45 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
     }
     else
     {
+        const bool funcVolume = !params.fwn && params.memoryEfficient;
         MeshToDistanceVolumeParams msParams;
-        msParams.vol.cb = meshToLSCb;
+        if ( !funcVolume )
+            msParams.vol.cb = meshToLSCb;
         auto box = mp.mesh.computeBoundingBox( mp.region );
         auto absOffset = std::abs( offset );
         auto expansion = Vector3f::diagonal( 2 * params.voxelSize + absOffset );
         msParams.vol.origin = box.min - expansion;
         msParams.vol.voxelSize = Vector3f::diagonal( params.voxelSize );
         msParams.vol.dimensions = Vector3i( ( box.max + expansion - msParams.vol.origin ) / params.voxelSize ) + Vector3i::diagonal( 1 );
-        msParams.dist.signMode = params.signDetectionMode;
         msParams.dist.maxDistSq = sqr( absOffset + params.voxelSize );
         msParams.dist.minDistSq = sqr( std::max( absOffset - params.voxelSize, 0.0f ) );
+        msParams.dist.signMode = params.signDetectionMode;
+        msParams.dist.windingNumberThreshold = params.windingNumberThreshold;
+        msParams.dist.windingNumberBeta = params.windingNumberBeta;
         msParams.fwn = params.fwn;
 
         MarchingCubesParams vmParams;
         vmParams.origin = msParams.vol.origin;
         vmParams.iso = offset;
-        vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
+        vmParams.cb = funcVolume ? params.callBack : subprogress( params.callBack, 0.4f, 1.0f );
         vmParams.lessInside = true;
         vmParams.outVoxelPerFaceMap = outMap;
 
-        if ( params.memoryEfficient )
+        if ( funcVolume )
         {
             return marchingCubes( meshToDistanceFunctionVolume( mp, msParams ), vmParams );
         }
         else
         {
-            return
-                meshToDistanceVolume( mp, msParams )
-                .and_then( [vmParams] ( auto&& volume ) { return marchingCubes( volume, vmParams ); } );
+            return meshToDistanceVolume( mp, msParams ).and_then( [&vmParams] ( SimpleVolume&& volume )
+            {
+                vmParams.freeVolume = [&volume]
+                {
+                    Timer t( "~SimpleVolume" );
+                    volume = {};
+                };
+                return marchingCubes( volume, vmParams );
+            } );
         }
     }
 }
@@ -193,7 +221,12 @@ Expected<Mesh> mcShellMeshRegion( const Mesh& mesh, const FaceBitSet& region, fl
     vmParams.cb = subprogress( params.callBack, 0.5f, 1.0f );
     vmParams.lessInside = true;
     vmParams.outVoxelPerFaceMap = outMap;
-    return marchingCubes( std::move( *volume ), vmParams );
+    vmParams.freeVolume = [&volume]
+    {
+        Timer t( "~SimpleVolume" );
+        volume = {};
+    };
+    return marchingCubes( *volume, vmParams );
 }
 
 Expected<Mesh> sharpOffsetMesh( const MeshPart& mp, float offset, const SharpOffsetParameters& params )

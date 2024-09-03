@@ -56,7 +56,13 @@ public:
         for ( int i = 0; i < 8; i++ )
         {
             Vector3i d{ i & 1, ( i >> 1 ) & 1, i >> 2 };
-            value += accessor_.safeGet( index.index + d ) * ( cx[d.x] * cy[d.y] * cz[d.z] );
+            const auto voxPos = index.index + d;
+            if ( voxPos.x >= 0 && voxPos.x < volume_.dims.x &&
+                 voxPos.y >= 0 && voxPos.y < volume_.dims.y &&
+                 voxPos.z >= 0 && voxPos.z < volume_.dims.z )
+            {
+                value += accessor_.get( voxPos ) * ( cx[d.x] * cy[d.y] * cz[d.z] );
+            }
         }
         return value;
     }

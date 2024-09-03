@@ -15,10 +15,9 @@ namespace {
 struct SubTask
 {
     NodeId n;
-    float distSq = 0;
-    SubTask() = default;
-    SubTask( NodeId n, float dd ) : n( n ), distSq( dd )
-    {}
+    float distSq;
+    SubTask() : n( noInit ) {}
+    SubTask( NodeId n, float dd ) : n( n ), distSq( dd ) {}
 };
 
 } //anonymous namespace
@@ -52,7 +51,8 @@ PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCl
 
     auto getSubTask = [&] ( NodeId n )
     {
-        float distSq = ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( pt ) - pt ).lengthSq();
+        const auto & box = tree.nodes()[n].box;
+        float distSq = xf ? transformed( box, *xf ).getDistanceSq( pt ) : box.getDistanceSq( pt );
         return SubTask( n, distSq );
     };
 
@@ -91,11 +91,17 @@ PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCl
 
         auto s1 = getSubTask( node.leftOrFirst );
         auto s2 = getSubTask( node.rightOrLast );
+        // add task with smaller distance last to descend there first
         if ( s1.distSq < s2.distSq )
-            std::swap( s1, s2 );
-        assert( s1.distSq >= s2.distSq );
-        addSubTask( s1 ); // larger distance to look later
-        addSubTask( s2 ); // smaller distance to look first
+        {
+            addSubTask( s2 );
+            addSubTask( s1 );
+        }
+        else
+        {
+            addSubTask( s1 );
+            addSubTask( s2 );
+        }
     }
 
     return res;
@@ -134,7 +140,8 @@ void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest
 
     auto getSubTask = [&] ( NodeId n )
     {
-        float distSq = ( transformed( tree.nodes()[n].box, xf ).getBoxClosestPointTo( pt ) - pt ).lengthSq();
+        const auto & box = tree.nodes()[n].box;
+        float distSq = xf ? transformed( box, *xf ).getDistanceSq( pt ) : box.getDistanceSq( pt );
         return SubTask( n, distSq );
     };
 
@@ -170,11 +177,17 @@ void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest
 
         auto s1 = getSubTask( node.leftOrFirst );
         auto s2 = getSubTask( node.rightOrLast );
+        // add task with smaller distance last to descend there first
         if ( s1.distSq < s2.distSq )
-            std::swap( s1, s2 );
-        assert( s1.distSq >= s2.distSq );
-        addSubTask( s1 ); // larger distance to look later
-        addSubTask( s2 ); // smaller distance to look first
+        {
+            addSubTask( s2 );
+            addSubTask( s1 );
+        }
+        else
+        {
+            addSubTask( s1 );
+            addSubTask( s2 );
+        }
     }
 }
 

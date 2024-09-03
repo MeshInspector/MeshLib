@@ -50,10 +50,6 @@
 #include "MRSpdlog.h"
 #include "MRSuppressWarning.h"
 
-#include <ft2build.h>
-#include FT_FREETYPE_H
-#include FT_OUTLINE_H
-
 #ifdef _WIN32
 #include <windows.h>
 #include <shlobj.h>

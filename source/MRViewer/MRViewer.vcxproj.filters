@@ -418,6 +418,18 @@
     <ClCompile Include="MRPointsShader.cpp">
       <Filter>Render\Shaders</Filter>
     </ClCompile>
+    <ClCompile Include="MRMacOSOpenDocumentsHandler.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCPRTests.cpp">
+      <Filter>Requests</Filter>
+    </ClCompile>
+    <ClCompile Include="MRClipboard.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MRObjectImGuiLabel.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -818,9 +830,21 @@
     <ClInclude Include="MRPointsShader.h">
       <Filter>Render\Shaders</Filter>
     </ClInclude>
+    <ClInclude Include="MRMacOSOpenDocumentsHandler.h">
+      <Filter>Viewer</Filter>
+    </ClInclude>
+    <ClInclude Include="MRClipboard.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MRObjectImGuiLabel.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />
+    <None Include="MRMacOSOpenDocumentsHandler.mm">
+      <Filter>Viewer</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="..\..\thirdparty\imgui\misc\fonts\Cousine-Regular.ttf">

@@ -12,6 +12,7 @@ enum class MRMESH_CLASS MeshVisualizePropertyType
     Faces,
     Texture,
     Edges,
+    Points,
     SelectedFaces,
     SelectedEdges,
     EnableShading,
@@ -103,13 +104,18 @@ public:
     virtual void updateFacesColorMap( FaceColors& updated )
     { std::swap( facesColorMap_, updated ); dirty_ |= DIRTY_PRIMITIVE_COLORMAP; }
 
+    MRMESH_API virtual void setEdgeWidth( float edgeWidth );
     float getEdgeWidth() const { return edgeWidth_; }
-    virtual void setEdgeWidth( float edgeWidth )
-    { edgeWidth_ = edgeWidth; needRedraw_ = true; }
+    MRMESH_API virtual void setPointSize( float size );
+    virtual float getPointSize() const { return pointSize_; }
 
     const Color& getEdgesColor( ViewportId id = {} ) const { return edgesColor_.get(id); }
     virtual void setEdgesColor( const Color& color, ViewportId id = {} )
     { edgesColor_.set( color, id ); needRedraw_ = true; }
+    
+    const Color& getPointsColor( ViewportId id = {} ) const { return pointsColor_.get(id); }
+    virtual void setPointsColor( const Color& color, ViewportId id = {} )
+    { pointsColor_.set( color, id ); needRedraw_ = true; }
 
     const Color& getBordersColor( ViewportId id = {} ) const { return bordersColor_.get( id ); }
     virtual void setBordersColor( const Color& color, ViewportId id = {} )
@@ -133,7 +139,7 @@ public:
     virtual void setTexturePerFace( Vector<TextureId, FaceId> texturePerFace ) { texturePerFace_ = std::move( texturePerFace ); dirty_ |= DIRTY_TEXTURE_PER_FACE; }
     virtual void updateTexturePerFace( Vector<TextureId, FaceId>& texturePerFace ) { std::swap( texturePerFace_, texturePerFace ); dirty_ |= DIRTY_TEXTURE_PER_FACE; }
     virtual void addTexture( MeshTexture texture ) { textures_.emplace_back( std::move( texture ) ); dirty_ |= DIRTY_TEXTURE_PER_FACE; }
-    const Vector<TextureId, FaceId>& getTexturePerFace() const { return texturePerFace_; }
+    const TexturePerFace& getTexturePerFace() const { return texturePerFace_; }
     
     const VertUVCoords& getUVCoords() const { return uvCoordinates_; }
     virtual void setUVCoords( VertUVCoords uvCoordinates ) { uvCoordinates_ = std::move( uvCoordinates ); dirty_ |= DIRTY_UV; }
@@ -269,6 +275,7 @@ protected:
     ViewportMask showTexture_;
     ViewportMask showFaces_ = ViewportMask::all();
     ViewportMask showEdges_;
+    ViewportMask showPoints_;
     ViewportMask showSelectedEdges_ = ViewportMask::all();
     ViewportMask showSelectedFaces_ = ViewportMask::all();
     ViewportMask showBordersHighlight_;
@@ -282,12 +289,14 @@ protected:
     ViewportMask onlyOddFragments_;
 
     ViewportProperty<Color> edgesColor_;
+    ViewportProperty<Color> pointsColor_;
     ViewportProperty<Color> bordersColor_;
     ViewportProperty<Color> edgeSelectionColor_;
     ViewportProperty<Color> faceSelectionColor_;
 
     FaceColors facesColorMap_;
     float edgeWidth_{ 0.5f };
+    float pointSize_{ 5.f };
 
     std::shared_ptr<Mesh> mesh_;
 

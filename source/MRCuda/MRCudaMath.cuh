@@ -265,12 +265,12 @@ __device__ inline MeshIntersectionResult rayMeshIntersect( const Node3* nodes, c
 
     struct SubTask
     {
-        int n = -1;
-        float rayStart = 0;
+        int n;
+        float rayStart;
     };
 
     constexpr int MaxStackSize = 32; // to avoid allocations
-    SubTask subtasks[MaxStackSize] = {};
+    SubTask subtasks[MaxStackSize];
     int stackSize = 0;
 
     auto addSubTask = [&] ( int n, float rayStart )

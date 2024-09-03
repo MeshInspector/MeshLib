@@ -14,7 +14,7 @@ install(
 IF(MR_PCH)
   IF(MR_EMSCRIPTEN)
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_FREETYPE=1 -s USE_LIBPNG=1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1 -s USE_LIBPNG=1")
 
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
@@ -30,8 +30,6 @@ IF(MR_PCH)
     find_package(GDCM CONFIG REQUIRED)
     pkg_check_modules(JSONCPP jsoncpp)
     include_directories(${JSONCPP_INCLUDE_DIRS})
-    find_package(Freetype REQUIRED)
-    include_directories(${FREETYPE_INCLUDE_DIRS})
 
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 

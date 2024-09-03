@@ -58,13 +58,13 @@ VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vec
     return {};
 }
 
-float FastWindingNumber::calcWithDistances( const Vector3f& p, float beta, float maxDistSq, float minDistSq )
+float FastWindingNumber::calcWithDistances( const Vector3f& p, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq )
 {
-    const auto sign = calc_( p, beta ) > 0.5f ? -1.f : +1.f;
+    const auto sign = calc_( p, beta ) > windingNumberThreshold ? -1.f : +1.f;
     return sign * std::sqrt( findProjection( p, mesh_, maxDistSq, nullptr, minDistSq ).distSq );
 }
 
-VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, float maxDistSq, float minDistSq, ProgressCallback cb )
+VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq, ProgressCallback cb )
 {
     MR_TIMER
 
@@ -76,7 +76,7 @@ VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& r
     if ( !ParallelFor( 0_vox, indexer.endId(), [&]( VoxelId i )
         {
             const auto transformedPoint = gridToMeshXf( Vector3f( indexer.toPos( i ) ) );
-            res[i] = calcWithDistances( transformedPoint, beta, maxDistSq, minDistSq );
+            res[i] = calcWithDistances( transformedPoint, windingNumberThreshold, beta, maxDistSq, minDistSq );
         }, cb ) )
         return unexpectedOperationCanceled();
     return {};

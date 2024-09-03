@@ -127,10 +127,7 @@ void pythonAddModelToScene( const ModelType& model, const std::string& name, P&&
     MR::CommandLoop::runCommandFromGUIThread( [&] ()
     {
         std::shared_ptr<ObjectType> newObject = std::make_shared<ObjectType>();
-        if constexpr ( std::is_invocable_v<decltype( SetterFunc ), ObjectType&> )
-            std::invoke( SetterFunc, newObject, std::forward<P>( params )... ) = model;
-        else
-            std::invoke( SetterFunc, newObject, std::make_shared<ModelType>( model ), std::forward<P>( params )... );
+        std::invoke( SetterFunc, newObject, std::make_shared<ModelType>( model ), std::forward<P>( params )... );
         newObject->setName( name );
         MR::SceneRoot::get().addChild( newObject );
     } );
@@ -248,9 +245,24 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Scene, [] ( pybind11::module_& m )
 } )
 
 #ifndef MRMESH_NO_OPENVDB
+
+void pythonAddVoxelsToScene( const MR::VdbVolume& model, const std::string& name )
+{
+    MR::CommandLoop::runCommandFromGUIThread( [&] ()
+    {
+        auto newObject = std::make_shared<MR::ObjectVoxels>();
+        newObject->construct( model );
+        auto bins = newObject->histogram().getBins();
+        auto minMax = newObject->histogram().getBinMinMax( bins.size() / 3 );
+        newObject->setIsoValue( minMax.first );
+        newObject->setName( name );
+        MR::SceneRoot::get().addChild( newObject );
+    } );
+}
+
 MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, SceneVoxels, [] ( pybind11::module_& m )
 {
-    m.def( "addVoxelsToScene", &pythonAddModelToScene<MR::ObjectVoxels, MR::VdbVolume, &MR::ObjectVoxels::varVdbVolume>, pybind11::arg( "voxels" ), pybind11::arg( "name" ), "Add given voxels to scene tree." );
+    m.def( "addVoxelsToScene", &pythonAddVoxelsToScene, pybind11::arg( "voxels" ), pybind11::arg( "name" ), "Add given voxels to scene tree." );
     m.def( "getSelectedVoxels", &pythonGetSelectedModels<MR::ObjectVoxels, &MR::ObjectVoxels::vdbVolume>, "Get copies of all selected voxel grids in the scene." );
 } )
 #endif

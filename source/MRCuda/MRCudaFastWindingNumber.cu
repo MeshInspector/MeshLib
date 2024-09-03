@@ -11,15 +11,6 @@ namespace Cuda
 
 constexpr int maxThreadsPerBlock = 32;
 
-constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
-
-__device__ float Dipole::w( const float3& q ) const
-{
-    const auto dp = pos() - q;
-    const auto d = length( dp );
-    return d > 0 ? INV_4PI * dot( dp, dirArea ) / ( d * d * d ) : 0;
-}
-
 __device__ float triangleSolidAngle( const float3& p, const float3& tri0, const float3& tri1, const float3& tri2 )
 {
     const auto mx = tri0 - p;
@@ -38,6 +29,7 @@ __device__ void processPoint( const float3& q, float& res, const Dipole* dipoles
     const Node3* __restrict__ nodes, const float3* __restrict__ meshPoints, const FaceToThreeVerts* __restrict__ faces,
     float beta, int skipFace = -1 )
 {
+    const float betaSq = beta * beta;
     constexpr int MaxStackSize = 32; // to avoid allocations
     int subtasks[MaxStackSize];
     int stackSize = 0;
@@ -48,11 +40,8 @@ __device__ void processPoint( const float3& q, float& res, const Dipole* dipoles
         const auto i = subtasks[--stackSize];
         const auto& node = nodes[i];
         const auto& d = dipoles[i];
-        if ( d.goodApprox( q, beta ) )
-        {
-            res += d.w( q );
+        if ( d.addIfGoodApprox( q, betaSq, res ) )
             continue;
-        }
         if ( !node.leaf() )
         {
             // recurse deeper
@@ -63,9 +52,11 @@ __device__ void processPoint( const float3& q, float& res, const Dipole* dipoles
         if ( node.leafId() != skipFace )
         {
             const auto faceVerts = faces[node.leafId()];
-            res += INV_4PI * triangleSolidAngle( q, meshPoints[faceVerts.verts[0]], meshPoints[faceVerts.verts[1]], meshPoints[faceVerts.verts[2]] );
+            res += triangleSolidAngle( q, meshPoints[faceVerts.verts[0]], meshPoints[faceVerts.verts[1]], meshPoints[faceVerts.verts[2]] );
         }
     }
+    constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
+    res *= INV_4PI;
 }
 
 __device__ float calcDistance( const float3& pt,
@@ -76,7 +67,7 @@ __device__ float calcDistance( const float3& pt,
     struct SubTask
     {
         int n;
-        float distSq = 0;
+        float distSq;
     };
 
     constexpr int MaxStackSize = 32; // to avoid allocations
@@ -206,7 +197,7 @@ __global__ void fastWindingNumberFromGridKernel( int3 dims, Matrix4 gridToMeshXf
 
 __global__ void signedDistanceKernel( int3 dims, Matrix4 gridToMeshXf,
     const Dipole* __restrict__ dipoles, const Node3* __restrict__ nodes, const float3* __restrict__ meshPoints, const FaceToThreeVerts* __restrict__ faces,
-    float* resVec, float beta, float maxDistSq, float minDistSq, size_t size )
+    float* resVec, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq, size_t size )
 {
     if ( size == 0 )
     {
@@ -229,7 +220,7 @@ __global__ void signedDistanceKernel( int3 dims, Matrix4 gridToMeshXf,
 
     float fwn{ 0 };
     processPoint( transformedPoint, fwn, dipoles, nodes, meshPoints, faces, beta, index );
-    if ( fwn > 0.5f )
+    if ( fwn > windingNumberThreshold )
         res = -res;
 }
 
@@ -260,11 +251,11 @@ void fastWindingNumberFromGrid( int3 dims, Matrix4 gridToMeshXf,
 
 void signedDistance( int3 dims, Matrix4 gridToMeshXf,
                                         const Dipole* dipoles, const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces,
-                                        float* resVec, float beta, float maxDistSq, float minDistSq )
+                                        float* resVec, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq )
 {
     const size_t size = size_t( dims.x ) * dims.y * dims.z;
     int numBlocks = ( int( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock;
-    signedDistanceKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, beta, maxDistSq, minDistSq, size );
+    signedDistanceKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, gridToMeshXf, dipoles, nodes, meshPoints, faces, resVec, windingNumberThreshold, beta, maxDistSq, minDistSq, size );
 }
 
 } //namespece Cuda

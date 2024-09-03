@@ -1,5 +1,8 @@
 #pragma once
+
 #include "MRMeshFwd.h"
+#include "MRVector3.h"
+
 #ifndef MRMESH_NO_OPENVDB
 // this header includes the whole OpenVDB, so please include it from .cpp files only
 
@@ -31,6 +34,16 @@ inline FloatGrid MakeFloatGrid( openvdb::FloatGrid::Ptr&& p )
     if ( !p )
         return {};
     return std::make_shared<OpenVdbFloatGrid>( std::move( *p ) );
+}
+
+inline Vector3i fromVdb( const openvdb::Coord & v )
+{
+    return Vector3i( v.x(), v.y(), v.z() );
+}
+
+inline openvdb::Coord toVdb( const Vector3i & v )
+{
+    return openvdb::Coord( v.x, v.y, v.z );
 }
 
 /// \}

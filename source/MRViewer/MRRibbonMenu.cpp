@@ -17,6 +17,7 @@
 #include "MRShortcutManager.h"
 #include "MRMouseController.h"
 #include "MRRibbonSceneObjectsListDrawer.h"
+#include "MRClipboard.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include <MRMesh/MRString.h>
 #include <MRMesh/MRSystem.h>
@@ -24,7 +25,7 @@
 #include <MRMesh/MRSerializer.h>
 #include <MRMesh/MRObjectsAccess.h>
 #include <MRMesh/MRChangeXfAction.h>
-#include <MRMesh/MRObjectLabel.h>
+#include <MRSymbolMesh/MRObjectLabel.h>
 #include <MRMesh/MRChangeSceneObjectsOrder.h>
 #include <MRMesh/MRChangeSceneAction.h>
 #include <MRMesh/MRChangeObjectFields.h>
@@ -234,13 +235,9 @@ void RibbonMenu::updateItemStatus( const std::string& itemName )
         }
         else
         {
-            activeNonBlockingItems_.erase(
-                std::remove_if( activeNonBlockingItems_.begin(), activeNonBlockingItems_.end(), [&] ( const auto& it )
-            {
-                return it.item == item;
-            } ),
-                activeNonBlockingItems_.end()
-                );
+            for ( auto& it : activeNonBlockingItems_ )
+                if ( it.item == item )
+                    it.item = {}; // do not erase while we could be iterating over this item right now, it will be removed from list after it
         }
     }
 }
@@ -978,22 +975,14 @@ void RibbonMenu::cloneSelectedPart( const std::shared_ptr<Object>& object )
     {
         if ( !selectedMesh->mesh() )
             return;
-        const auto& curMesh = *selectedMesh->mesh();
-        std::shared_ptr<ObjectMesh> objMesh = std::make_shared<ObjectMesh>();
-        objMesh->setMesh( std::make_shared<Mesh>( curMesh.cloneRegion( selectedMesh->getSelectedFaces() ) ) );
-        newObj = objMesh;
+        newObj = cloneRegion( selectedMesh, selectedMesh->getSelectedFaces() );
         name = "ObjectMesh";
     }
     else if ( auto selectedPoints = std::dynamic_pointer_cast< ObjectPoints >( object ) )
     {
         if ( !selectedPoints->pointCloud() )
             return;
-        PointCloud newPointCloud;
-        const auto& curPointCloud = *selectedPoints->pointCloud();
-        newPointCloud.addPartByMask( curPointCloud, selectedPoints->getSelectedPoints() );
-        std::shared_ptr<ObjectPoints> objPoints = std::make_shared<ObjectPoints>();
-        objPoints->setPointCloud( std::make_shared<PointCloud>( std::move( newPointCloud ) ) );
-        newObj = objPoints;
+        newObj = cloneRegion( selectedPoints, selectedPoints->getSelectedPoints() );
         name = "ObjectPoints";
     }
 
@@ -1498,45 +1487,44 @@ void RibbonMenu::postRescale_( float x, float y )
 
 void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
 {
-    if ( itemPtr.item )
+    if ( !itemPtr.item )
+        return;
+
+    auto statePlugin = std::dynamic_pointer_cast< StateBasePlugin >( itemPtr.item );
+    if ( !statePlugin || !statePlugin->isEnabled() )
+        return;
+    statePlugin->preDrawUpdate();
+
+    // check before drawDialog to avoid calling something like:
+    // ImGui::Image( textId ) // with removed texture in deferred render calls
+    if ( !statePlugin->dialogIsOpen() )
     {
-        auto statePlugin = std::dynamic_pointer_cast< StateBasePlugin >( itemPtr.item );
-        if ( statePlugin && statePlugin->isEnabled() )
+        itemPressed_( itemPtr.item, true );
+        if ( !itemPtr.item )
+            return; // do not proceed if we closed dialog in this call
+    }
+
+    statePlugin->drawDialog( menu_scaling(), ImGui::GetCurrentContext() );
+
+    if ( !itemPtr.item ) // if it was closed in drawDialog
+        return;
+
+    if ( !itemPtr.dialogPositionFixed )
+    {
+        itemPtr.dialogPositionFixed = true;
+        auto* window = ImGui::FindWindowByName( itemPtr.item->name().c_str() ); // this function is hidden in imgui_internal.h
+        // viewer->framebufferSize.x here because ImGui use screen space
+        if ( window )
         {
-            statePlugin->preDrawUpdate();
-
-            // check before drawDialog to avoid calling something like:
-            // ImGui::Image( textId ) // with removed texture in deferred render calls
-            if ( !statePlugin->dialogIsOpen() )
-            {
-                itemPressed_( itemPtr.item, true );
-                if ( !itemPtr.item )
-                    return; // do not proceed if we closed dialog in this call
-            }
-
-            statePlugin->drawDialog( menu_scaling(), ImGui::GetCurrentContext() );
-
-            if ( !itemPtr.item ) // if it was closed in drawDialog
-                return;
-
-            if ( !itemPtr.dialogPositionFixed )
-            {
-                itemPtr.dialogPositionFixed = true;
-                auto* window = ImGui::FindWindowByName( itemPtr.item->name().c_str() ); // this function is hidden in imgui_internal.h
-                // viewer->framebufferSize.x here because ImGui use screen space
-                if ( window )
-                {
-                    ImVec2 pos = ImVec2( viewer->framebufferSize.x - window->Size.x, float( topPanelOpenedHeight_ - 1.0f ) * menu_scaling() );
-                    ImGui::SetWindowPos( window, pos, ImGuiCond_Always );
-                }
-            }
-
-            if ( !statePlugin->dialogIsOpen() ) // still need to check here we ordered to close dialog in `drawDialog`
-                itemPressed_( itemPtr.item, true );
-            else if ( prevFrameSelectedObjectsCache_ != SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() )
-                statePlugin->updateSelection( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() );
+            ImVec2 pos = ImVec2( viewer->framebufferSize.x - window->Size.x, float( topPanelOpenedHeight_ - 1.0f ) * menu_scaling() );
+            ImGui::SetWindowPos( window, pos, ImGuiCond_Always );
         }
     }
+
+    if ( !statePlugin->dialogIsOpen() ) // still need to check here we ordered to close dialog in `drawDialog`
+        itemPressed_( itemPtr.item, true );
+    else if ( prevFrameSelectedObjectsCache_ != SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() )
+        statePlugin->updateSelection( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() );
 }
 
 void RibbonMenu::drawRibbonSceneList_()
@@ -1814,12 +1802,18 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
         Json::Value root;
         serializeTransform( root, { startXf, uniformScale_ } );
         transformClipboardText_ = root.toStyledString();
-        SetClipboardText( transformClipboardText_ );
+        if ( auto res = SetClipboardText( transformClipboardText_ ); !res )
+            spdlog::warn( res.error() );
         ImGui::CloseCurrentPopup();
     }
 #endif
     if ( ImGui::IsWindowAppearing() )
-        transformClipboardText_ = GetClipboardText();
+    {
+        if ( auto text = GetClipboardText() )
+            transformClipboardText_ = *text;
+        else
+            spdlog::warn( text.error() );
+    }
 
     if ( !transformClipboardText_.empty() )
     {

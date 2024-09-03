@@ -8,6 +8,7 @@
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRMouseController.h"
 #include "MRViewer/MRUIStyle.h"
+#include "MRViewer/ImGuiMenu.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRChangeXfAction.h"
@@ -59,18 +60,16 @@ void MoveObjectByMouse::drawDialog( float menuScaling, ImGuiContext*)
     ImGui::Separator();
 
     ImGui::Text( "Mode:" );
-    UI::radioButtonOrModifier( "Move",   moveByMouse_.modXfMode_, int( XfMode::Move ),   0,              ImGuiMod_Ctrl | ImGuiMod_Alt );
+    UI::radioButtonOrModifier( "Move",   moveByMouse_.modXfMode, int( XfMode::Move ),   0,              ImGuiMod_Ctrl | ImGuiMod_Alt );
     ImGui::SameLine();
-    UI::radioButtonOrModifier( "Rotate", moveByMouse_.modXfMode_, int( XfMode::Rotate ), ImGuiMod_Ctrl,  ImGuiMod_Ctrl | ImGuiMod_Alt );
+    UI::radioButtonOrModifier( "Rotate", moveByMouse_.modXfMode, int( XfMode::Rotate ), ImGuiMod_Ctrl,  ImGuiMod_Ctrl | ImGuiMod_Alt );
     ImGui::SameLine();
-    UI::radioButtonOrModifier( "Scale",  moveByMouse_.modXfMode_, int( XfMode::Scale ),  ImGuiMod_Alt,   ImGuiMod_Ctrl | ImGuiMod_Alt );
+    UI::radioButtonOrModifier( "Scale",  moveByMouse_.modXfMode, int( XfMode::Scale ),  ImGuiMod_Alt,   ImGuiMod_Ctrl | ImGuiMod_Alt );
 
     ImGui::Text( "Target:" );
-    UI::radioButtonOrModifier( "Picked object",      moveByMouse_.modXfTarget_, int( XfTarget::Picked ),                0, ImGuiMod_Shift );
+    UI::radioButtonOrModifier( "Picked object",      moveByMouse_.modXfTarget, int( XfTarget::Picked ),                0, ImGuiMod_Shift );
     ImGui::SameLine();
-    UI::radioButtonOrModifier( "Selected object(s)", moveByMouse_.modXfTarget_, int( XfTarget::Selected ), ImGuiMod_Shift, ImGuiMod_Shift );
-
-    moveByMouse_.onDrawDialog( menuScaling );
+    UI::radioButtonOrModifier( "Selected object(s)", moveByMouse_.modXfTarget, int( XfTarget::Selected ), ImGuiMod_Shift, ImGuiMod_Shift );
 
     ImGui::EndCustomStatePlugin();
 }
@@ -91,6 +90,12 @@ bool MoveObjectByMouse::onDragEnd_( MouseButton btn, int modifiers )
     return moveByMouse_.onMouseUp( btn, modifiers );
 }
 
+void MoveObjectByMouse::postDraw_()
+{
+    if (const auto& menu = getViewerInstance().getMenuPlugin() )
+        moveByMouse_.onDrawDialog( menu->menu_scaling() );
+}
+
 MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSelected::pick_( MouseButton button, int modifiers,
     std::vector<std::shared_ptr<Object>>& objects, Vector3f& centerPoint, Vector3f& startPoint )
 {
@@ -106,19 +111,19 @@ MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSel
     if ( obj && obj->isAncillary() )
         obj = nullptr;
 
-    if ( int( modXfTarget_ ) == int( XfTarget::Picked ) )
-    {
-        // Move picked object
-        if ( !obj )
-            return TransformMode::None;
-        objects = { obj };
-    }
-    else
+    if ( int( modXfTarget ) == int( XfTarget::Selected ) || ( modifiers & GLFW_MOD_SHIFT ) == GLFW_MOD_SHIFT )
     {
         // Move selected objects regardless of pick
         objects = getAllObjectsInTree<Object>( SceneRoot::get(), ObjectSelectivityType::Selected );
         if ( std::find( objects.begin(), objects.end(), obj ) == objects.end() )
             obj = nullptr; // Use picked object only if it is selected
+    }
+    else
+    {
+        // Move picked object
+        if ( !obj )
+            return TransformMode::None;
+        objects = { obj };
     }
 
     // See MoveObjectByMouseImpl::pick_
@@ -135,8 +140,12 @@ MoveObjectByMouseImpl::TransformMode MoveObjectByMouse::MoveObjectByMouseWithSel
     Box3f box = getBbox_( objects );
     centerPoint = box.valid() ? box.center() : Vector3f{};
 
-    return int( modXfMode_ ) == int( XfMode::Rotate ) ? TransformMode::Rotation :
-        int( modXfMode_ ) == int( XfMode::Scale ) ? TransformMode::Scale : TransformMode::Translation;
+    if ( int( modXfMode ) == int( XfMode::Scale ) || ( modifiers & GLFW_MOD_ALT ) == GLFW_MOD_ALT )
+        return TransformMode::Scale;
+    else if ( int( modXfMode ) == int( XfMode::Rotate ) || ( modifiers & GLFW_MOD_CONTROL ) == GLFW_MOD_CONTROL )
+        return TransformMode::Rotation;
+    else
+        return TransformMode::Translation;
 }
 
 MR_REGISTER_RIBBON_ITEM( MoveObjectByMouse )

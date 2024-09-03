@@ -69,6 +69,7 @@ MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, name, MR::Box<VectorType> ) \
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )      \
 {\
     using BoxType = MR::Box<VectorType>;      \
+    using ValueType = typename VectorType::ValueType;  \
     MR_PYTHON_CUSTOM_CLASS( name ).doc() =                               \
         "Box given by its min- and max- corners";                      \
     MR_PYTHON_CUSTOM_CLASS( name ).                                      \
@@ -87,8 +88,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, name, [] ( pybind11::module_& m )      \
         def( "intersects", &BoxType::intersects, pybind11::arg( "b" ), "checks whether this box intersects or touches given box" ).\
         def( "intersection", &BoxType::intersection, pybind11::arg( "b" ), "computes intersection between this and other box" ).\
         def( "intersect", &BoxType::intersect, pybind11::arg( "b" ), "computes intersection between this and other box" ).\
-        def( "getDistanceSq", &BoxType::getDistanceSq, pybind11::arg( "b" ), "returns squared distance between this box and given one; " \
+        def( "getDistanceSq", ( ValueType( BoxType::* )( const BoxType& ) const ) &BoxType::getDistanceSq, pybind11::arg( "b" ), "returns squared distance between this box and given one; " \
                                                                                                                     "returns zero if the boxes touch or intersect").\
+        def( "getDistanceSq", ( ValueType( BoxType::* )( const VectorType& ) const ) &BoxType::getDistanceSq, pybind11::arg( "pt" ), \
+            "returns squared distance between this box and given point; returns zero if the point is inside or on the boundary of the box").\
         def( "insignificantlyExpanded", &BoxType::insignificantlyExpanded, "expands min and max to their closest representable value" ).\
         def( pybind11::self == pybind11::self ).\
         def( pybind11::self != pybind11::self );\
@@ -553,7 +556,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshPoint, [] ( pybind11::module_& )
             "barycentric coordinates:\n"
             "\ta+b in [0,1], a+b=0 => point is in v0, a+b=1 => point is on [v1,v2] edge\n"
             "a in [0,1], a=0 => point is on [v2,v0] edge, a=1 => point is in v1" ).
-        def_readwrite( "b", &MR::TriPointf::b, "b in [0,1], b=0 => point is on [v0,v1] edge, b=1 => point is in v2" );
+        def_readwrite( "b", &MR::TriPointf::b, "b in [0,1], b=0 => point is on [v0,v1] edge, b=1 => point is in v2" ).
+        def( "interpolate", &MR::TriPointf::interpolate<float>, "given three values in three vertices, computes interpolated value at this barycentric coordinates" ).
+        def( "interpolate", &MR::TriPointf::interpolate<MR::Vector2f>, "given three values in three vertices, computes interpolated value at this barycentric coordinates" ).
+        def( "interpolate", &MR::TriPointf::interpolate<MR::Vector3f>, "given three values in three vertices, computes interpolated value at this barycentric coordinates" ); //Vector4f is not exposed to python yet
 
     MR_PYTHON_CUSTOM_CLASS( MeshTriPoint ).doc() =
         "encodes a point inside a triangular mesh face using barycentric coordinates\n"

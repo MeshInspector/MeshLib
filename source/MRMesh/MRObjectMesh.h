@@ -62,4 +62,8 @@ protected:
 /// constructs new ObjectMesh containing the union of valid data from all input objects
 [[nodiscard]] MRMESH_API std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>>& objsMesh );
 
+/// constructs new ObjectMesh containing the region of data from input object
+/// does not copy selection
+[[nodiscard]] MRMESH_API std::shared_ptr<ObjectMesh> cloneRegion( const std::shared_ptr<ObjectMesh>& objMesh, const FaceBitSet& region, bool copyTexture = true );
+
 } ///namespace MR

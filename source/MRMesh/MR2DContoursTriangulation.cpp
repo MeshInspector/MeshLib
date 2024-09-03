@@ -146,8 +146,6 @@ private:
     bool needOutline_ = false;
     // if set fails on first found intersection
     bool abortWhenIntersect_ = false;
-    // this flag is set true if triangulation requires merging of two points that is forbidden
-    bool incompleteMerge_ = false;
     // make base mesh only containing input contours as edge loops
     void initMeshByContours_( const Contours2d& contours );
     // merge same points on base mesh
@@ -307,8 +305,6 @@ SweepLineQueue::SweepLineQueue(
 std::optional<MR::Mesh> SweepLineQueue::run( IntersectionsMap* interMap )
 {
     MR_TIMER;
-    if ( incompleteMerge_ )
-        return {};
     if ( !findIntersections() )
         return {};
     injectIntersections( interMap );
@@ -963,9 +959,10 @@ void SweepLineQueue::mergeSamePoints_( const HolesVertIds* holesVertId )
         // if same coords
         if ( !holesVertId || findRealVertId( sortedVerts_[prevUnique] ) == findRealVertId( sortedVerts_[i] ) )
             mergeSinglePare_( sortedVerts_[prevUnique], sortedVerts_[i] );
-        else
-            incompleteMerge_ = true;
     }
+
+    if ( holesVertId ) // sort with correct indices in case of other way sort before
+        std::sort( sortedVerts_.begin(), sortedVerts_.end(), [&] ( VertId l, VertId r ) { return less_( l, r ); } );
 
     removeMultipleAfterMerge_();
 }

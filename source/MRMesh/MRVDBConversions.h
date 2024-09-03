@@ -50,7 +50,7 @@ MRMESH_API void evalGridMinMax( const FloatGrid& grid, float& min, float& max );
 MRMESH_API Expected<VdbVolume> meshToVolume( const Mesh& mesh, const MeshToVolumeParams& params = {} );
 
 // fills VdbVolume data from FloatGrid (does not fill voxels size, cause we expect it outside)
-MRMESH_API VdbVolume floatGridToVdbVolume( const FloatGrid& grid );
+MRMESH_API VdbVolume floatGridToVdbVolume( FloatGrid grid );
 
 // make FloatGrid from SimpleVolume
 // make copy of data
@@ -96,19 +96,61 @@ MRMESH_API Expected<Mesh> gridToMesh( const FloatGrid& grid, const GridToMeshSet
 /// deletes grid in the middle to reduce peak memory consumption
 MRMESH_API Expected<Mesh> gridToMesh( FloatGrid&& grid, const GridToMeshSettings & settings );
 
+struct MakeSignedByWindingNumberSettings
+{
+    /// defines the mapping from mesh reference from to grid reference frame
+    AffineXf3f meshToGridXf;
+
+    /// defines particular implementation of IFastWindingNumber interface that will compute windings. If it is not specified, default FastWindingNumber is used
+    std::shared_ptr<IFastWindingNumber> fwn;
+
+    /// positive distance if winding number below or equal this threshold;
+    /// ideal threshold: 0.5 for closed meshes; 0.0 for planar meshes
+    float windingNumberThreshold = 0.5f;
+
+    /// determines the precision of fast approximation: the more the better, minimum value is 1
+    float windingNumberBeta = 2;
+
+    /// to report algorithm's progress and to cancel it
+    ProgressCallback progress;
+};
+
 /// set signs for unsigned distance field grid using refMesh FastWindingNumber;
-/// \param meshToGridXf defines the mapping from mesh reference from to grid reference frame
-/// \param fwn defines particular implementation of IFastWindingNumber interface that will compute windings. If it is not specified, default FastWindingNumber is used
-MRMESH_API VoidOrErrStr makeSignedWithFastWinding( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh,
-    const AffineXf3f& meshToGridXf = {}, std::shared_ptr<IFastWindingNumber> fwn = {}, ProgressCallback cb = {} );
+/// not only the sign but the magnitudes of distances in the grid are changed to make smooth transition from positive to negative
+MRMESH_API VoidOrErrStr makeSignedByWindingNumber( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh,
+    const MakeSignedByWindingNumberSettings & settings );
 
-// performs convention from mesh to levelSet and back with offsetA, and than same with offsetB
-// allowed only for closed meshes
-// adaptivity - [0.0;1.0] ratio of combining small triangles into bigger ones 
-//                       (curvature can be lost on high values)
-/// \param fwn defines particular implementation of IFastWindingNumber interface that will compute windings. If it is not specified, default FastWindingNumber is used
-MRMESH_API Expected<Mesh> levelSetDoubleConvertion( const MeshPart& mp, const AffineXf3f& xf,
-    float voxelSize, float offsetA, float offsetB, float adaptivity = 0.0f, std::shared_ptr<IFastWindingNumber> fwn = {}, ProgressCallback cb = {} );
+struct DoubleOffsetSettings
+{
+    /// the size of voxel in intermediate voxel grid representation
+    float voxelSize = 0;
 
-}
+    /// the amount of first offset
+    float offsetA = 0;
+
+    /// the amount of second offset
+    float offsetB = 0;
+
+    /// in [0; 1] - ratio of combining small triangles into bigger ones (curvature can be lost on high values)
+    float adaptivity = 0;
+
+    /// defines particular implementation of IFastWindingNumber interface that will compute windings. If it is not specified, default FastWindingNumber is used
+    std::shared_ptr<IFastWindingNumber> fwn;
+
+    /// positive distance if winding number below or equal this threshold;
+    /// ideal threshold: 0.5 for closed meshes; 0.0 for planar meshes
+    float windingNumberThreshold = 0.5f;
+
+    /// determines the precision of fast approximation: the more the better, minimum value is 1
+    float windingNumberBeta = 2;
+
+    /// to report algorithm's progress and to cancel it
+    ProgressCallback progress;
+};
+
+/// performs convention from mesh to voxel grid and back with offsetA, and than same with offsetB;
+/// if input mesh is not closed then the sign of distance field will be obtained using generalized winding number computation
+MRMESH_API Expected<Mesh> doubleOffsetVdb( const MeshPart& mp, const DoubleOffsetSettings & settings );
+
+} //namespace MR
 #endif

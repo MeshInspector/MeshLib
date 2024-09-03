@@ -6,6 +6,7 @@
 #include "MRQuaternion.h"
 #include "MRTimer.h"
 #include <MRPch/MRFmt.h>
+#include <climits>
 
 #pragma warning(push)
 #pragma warning(disable: 4251) // class needs to have dll-interface to be used by clients of another class
@@ -51,6 +52,12 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
                 Quaterniond( scanHeader.pose.rotation.w, scanHeader.pose.rotation.x, scanHeader.pose.rotation.y, scanHeader.pose.rotation.z ),
                 Vector3d( scanHeader.pose.translation.x, scanHeader.pose.translation.y, scanHeader.pose.translation.z )
             );
+            const bool sphericalCoords = scanHeader.pointFields.sphericalRangeField
+                && scanHeader.pointFields.sphericalAzimuthField
+                && scanHeader.pointFields.sphericalElevationField;
+            assert( sphericalCoords || ( scanHeader.pointFields.cartesianXField
+                && scanHeader.pointFields.cartesianYField
+                && scanHeader.pointFields.cartesianZField ) );
 
             std::optional<AffineXf3d> aXf; // will be applied to all points
             if ( settings.identityXf )
@@ -60,17 +67,22 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
 
             if ( !aXf )
             {
-                const auto& bounds = scanHeader.cartesianBounds;
-                const Box3d box {
-                    { bounds.xMinimum, bounds.yMinimum, bounds.zMinimum },
-                    { bounds.xMaximum, bounds.yMaximum, bounds.zMaximum },
-                };
-                if ( box.valid() )
+                if ( sphericalCoords )
+                    aXf = AffineXf3d();
+                else
                 {
-                    if ( box.contains( Vector3d() ) ) // if zero of space is within bounding box (e.g. the position of camera capturing 360 degrees around),
-                        aXf = AffineXf3d();           // then keep point coordinates as is
-                    else
-                        aXf = AffineXf3d::translation( -box.center() ); // otherwise shift all points for the center of bounding box to receive zero coordinates
+                    const auto& bounds = scanHeader.cartesianBounds;
+                    const Box3d box {
+                        { bounds.xMinimum, bounds.yMinimum, bounds.zMinimum },
+                        { bounds.xMaximum, bounds.yMaximum, bounds.zMaximum },
+                    };
+                    if ( box.valid() )
+                    {
+                        if ( box.contains( Vector3d() ) ) // if zero of space is within bounding box (e.g. the position of camera capturing 360 degrees around),
+                            aXf = AffineXf3d();           // then keep point coordinates as is
+                        else
+                            aXf = AffineXf3d::translation( -box.center() ); // otherwise shift all points for the center of bounding box to receive zero coordinates
+                    }
                 }
             }
 
@@ -84,6 +96,9 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
             if ( !eReader.GetData3DSizes( scanIndex, nRow, nColumn, nPointsSize, nGroupsSize, nCountSize, bColumnIndex) )
                 return MR::unexpected( std::string( "GetData3DSizes failed during reading of " + utf8string( file ) ) );
 
+            if ( nPointsSize > INT_MAX )
+                return MR::unexpected( fmt::format( "Too many points {} in {}.\nMaximum supported is {}.", nPointsSize, utf8string( file ), INT_MAX ) );
+
             // how many points to read in a time
             const int64_t nSize = std::min( nPointsSize, int64_t( 1024 ) * 128 );
 
@@ -92,10 +107,28 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
     #else
             e57::Data3DPointsDouble buffers;
     #endif
-            std::vector<double> xs( nSize ), ys( nSize ), zs( nSize );
-            buffers.cartesianX = xs.data();
-            buffers.cartesianY = ys.data();
-            buffers.cartesianZ = zs.data();
+
+            std::vector<double> xs, ys, zs;
+            std::vector<double> rgs, azs, els;
+            if ( sphericalCoords )
+            {
+                rgs.resize( nSize );
+                azs.resize( nSize );
+                els.resize( nSize );
+                buffers.sphericalRange = rgs.data();
+                buffers.sphericalAzimuth = azs.data();
+                buffers.sphericalElevation = els.data();
+            }
+            else
+            {
+                xs.resize( nSize );
+                ys.resize( nSize );
+                zs.resize( nSize );
+                buffers.cartesianX = xs.data();
+                buffers.cartesianY = ys.data();
+                buffers.cartesianZ = zs.data();
+            }
+
     #ifdef MR_OLD_E57
             std::vector<uint8_t> rs, gs, bs;
     #else
@@ -138,7 +171,18 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
                 }
                 for ( unsigned long i = 0; i < size; ++i )
                 {
-                    const auto p = Vector3d( buffers.cartesianX[i], buffers.cartesianY[i], buffers.cartesianZ[i] );
+                    Vector3d p;
+                    if ( sphericalCoords )
+                    {
+                        const auto r = buffers.sphericalRange[i];
+                        const auto a = buffers.sphericalAzimuth[i];
+                        const auto e = buffers.sphericalElevation[i];
+                        p.x = r * std::cos( e ) * std::cos( a );
+                        p.y = r * std::cos( e ) * std::sin( a );
+                        p.z = r * std::sin( e );
+                    }
+                    else
+                        p = Vector3d( buffers.cartesianX[i], buffers.cartesianY[i], buffers.cartesianZ[i] );
                     cloud.points.emplace_back( Vector3f( (*aXf)( p ) ) );
                     if ( hasInputColors )
                     {

@@ -1,11 +1,11 @@
 #include "MRAlignTextToMesh.h"
-#ifndef MRMESH_NO_LABEL
-#include "MRMesh.h"
-#include "MRBox.h"
-#include "MRAffineXf3.h"
-#include "MRMeshIntersect.h"
-#include "MRLine3.h"
-#include "MRQuaternion.h"
+
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRBox.h"
+#include "MRMesh/MRAffineXf3.h"
+#include "MRMesh/MRMeshIntersect.h"
+#include "MRMesh/MRLine3.h"
+#include "MRMesh/MRQuaternion.h"
 
 namespace MR
 {
@@ -93,4 +93,3 @@ Expected<Mesh>  alignTextToMesh(
 }
 
 }
-#endif

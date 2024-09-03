@@ -6,6 +6,7 @@
 
 #ifndef MRMESH_NO_OPENVDB
 #include "MRVDBFloatGrid.h"
+#include "MRIsNaN.h"
 #endif
 
 namespace MR
@@ -23,20 +24,19 @@ class VoxelsVolumeAccessor<VdbVolume>
 public:
     using VolumeType = VdbVolume;
     using ValueType = typename VolumeType::ValueType;
+    static constexpr bool cacheEffective = true; ///< caching results of this accessor can improve performance
 
     explicit VoxelsVolumeAccessor( const VolumeType& volume )
         : accessor_( volume.data->getConstAccessor() )
-        , minCoord_( volume.data->evalActiveVoxelBoundingBox().min() )
+        , minCoord_( fromVdb( volume.data->evalActiveVoxelBoundingBox().min() ) )
     {}
 
     ValueType get( const Vector3i& pos ) const
     {
-        const openvdb::Coord coord {
-            pos.x + minCoord_.x(),
-            pos.y + minCoord_.y(),
-            pos.z + minCoord_.z(),
-        };
-        return accessor_.getValue( coord );
+        ValueType res;
+        if ( !accessor_.probeValue( toVdb( pos + minCoord_ ), res ) )
+            return cQuietNan;
+        return res;
     }
 
     ValueType get( const VoxelLocation & loc ) const
@@ -44,17 +44,14 @@ public:
         return get( loc.pos );
     }
 
-    ValueType safeGet( const Vector3i& pos ) const
-    {
-        // bounds checking is done by the accessor (returns background value)
-        return get( pos );
-    }
+    const Vector3i& minCoord() const { return minCoord_; }
 
-    const openvdb::Coord& minCoord() const { return minCoord_; }
+    /// this additional shift shall be added to integer voxel coordinates during transformation in 3D space
+    Vector3f shift() const { return Vector3f( minCoord_ ); }
 
 private:
     openvdb::FloatGrid::ConstAccessor accessor_;
-    openvdb::Coord minCoord_;
+    Vector3i minCoord_;
 };
 #endif
 
@@ -65,6 +62,7 @@ class VoxelsVolumeAccessor<VoxelsVolumeMinMax<std::vector<T>>>
 public:
     using VolumeType = VoxelsVolumeMinMax<std::vector<T>>;
     using ValueType = typename VolumeType::ValueType;
+    static constexpr bool cacheEffective = false; ///< caching results of this accessor does not make any sense since it returns values from a simple container
 
     explicit VoxelsVolumeAccessor( const VolumeType& volume )
         : data_( volume.data )
@@ -81,10 +79,8 @@ public:
         return data_[loc.id];
     }
 
-    ValueType safeGet( const Vector3i& pos ) const
-    {
-        return indexer_.isInDims( pos ) ? get( pos ) : ValueType{};
-    }
+    /// this additional shift shall be added to integer voxel coordinates during transformation in 3D space
+    Vector3f shift() const { return Vector3f::diagonal( 0.5f ); }
 
 private:
     const std::vector<T>& data_;
@@ -98,6 +94,7 @@ class VoxelsVolumeAccessor<VoxelsVolume<VoxelValueGetter<T>>>
 public:
     using VolumeType = VoxelsVolume<VoxelValueGetter<T>>;
     using ValueType = typename VolumeType::ValueType;
+    static constexpr bool cacheEffective = true; ///< caching results of this accessor can improve performance
 
     explicit VoxelsVolumeAccessor( const VolumeType& volume )
         : data_( volume.data )
@@ -113,64 +110,15 @@ public:
         return get( loc.pos );
     }
 
-    ValueType safeGet( const Vector3i& pos ) const
-    {
-        return get( pos ); // assume bounds checking is handled by the getter
-    }
+    /// this additional shift shall be added to integer voxel coordinates during transformation in 3D space
+    Vector3f shift() const { return Vector3f::diagonal( 0.5f ); }
 
 private:
     const VoxelValueGetter<T>& data_;
 };
 
-/// accessor override with a preset background value: out-of bounds indexes correspond to a fixed value
-template <typename Accessor>
-class VoxelsVolumeAccessorWithBackground : public Accessor
-{
-public:
-    using VolumeType = typename Accessor::VolumeType;
-    using ValueType = typename VolumeType::ValueType;
-
-    VoxelsVolumeAccessorWithBackground( const VolumeType& volume, ValueType bgValue )
-        : Accessor( volume ), dims_( volume.dims ), bgValue_( bgValue )
-    {}
-
-    ValueType safeGet( const Vector3i& pos ) const
-    {
-        if ( pos.x < 0 || pos.y < 0 || pos.z < 0 ||
-             pos.x >= dims_.x || pos.y >= dims_.y || pos.z >= dims_.z )
-            return bgValue_;
-        return Accessor::get( pos );
-    }
-
-private:
-    Vector3i dims_;
-    ValueType bgValue_;
-};
-
-/// accessor override with clamping coordinates to volume bounds (for out-of-bounds indexes, edge values are repeated)
-template <typename Accessor>
-class VoxelsVolumeAccessorWithClamp : public Accessor
-{
-public:
-    using VolumeType = typename Accessor::VolumeType;
-    using ValueType = typename VolumeType::ValueType;
-
-    explicit VoxelsVolumeAccessorWithClamp( const VolumeType& volume )
-        : Accessor( volume ), dims_( volume.dims )
-    {}
-
-    ValueType safeGet( const Vector3i& pos ) const
-    {
-        return Accessor::get( { std::clamp( pos.x, 0, dims_.x - 1 ),
-                                std::clamp( pos.y, 0, dims_.y - 1 ),
-                                std::clamp( pos.z, 0, dims_.z - 1 ) } );
-    }
-
-private:
-    Vector3i dims_;
-};
-
-/// helper class to preload voxel volume data
+/// This accessor first loads data for given number of layers in internal cache, and then returns values from the cache.
+/// Direct access to data outside of cache is not allowed.
 template <typename V>
 class VoxelsVolumeCachingAccessor
 {
@@ -188,9 +136,12 @@ public:
         : accessor_( accessor )
         , indexer_( indexer )
         , params_( std::move( parameters ) )
-        , layers_( params_.preloadedLayerCount, std::vector<ValueType>( indexer_.sizeXY() ) )
+        , layers_( params_.preloadedLayerCount )
+        , firstLayerVoxelId_( params_.preloadedLayerCount )
     {
         assert( params_.preloadedLayerCount > 0 );
+        for ( auto & l : layers_ )
+            l.resize( indexer_.sizeXY() );
     }
 
     /// get current layer
@@ -216,20 +167,23 @@ public:
     void preloadNextLayer()
     {
         z_ += 1;
-        for ( auto i = 0, j = 1; j < layers_.size(); ++i, ++j )
-            std::swap( layers_[i], layers_[j] );
+        for ( auto i = 0; i + 1 < layers_.size(); ++i )
+        {
+            std::swap( layers_[i], layers_[i + 1] );
+            firstLayerVoxelId_[i] = firstLayerVoxelId_[i + 1];
+        }
         if ( z_ + params_.preloadedLayerCount - 1 < indexer_.dims().z )
             preloadLayer_( params_.preloadedLayerCount - 1 );
     }
 
     /// get voxel volume data
-    ValueType get( const Vector3i& pos ) const
+    ValueType get( const VoxelLocation & loc ) const
     {
-        const auto layerIndex = pos.z - z_;
-        if ( 0 <= layerIndex && layerIndex < layers_.size() )
-            return layers_[layerIndex][toLayerIndex( pos )];
-
-        return accessor_.get( pos );
+        const auto layerIndex = loc.pos.z - z_;
+        assert( 0 <= layerIndex && layerIndex < layers_.size() );
+        assert( loc.id >= firstLayerVoxelId_[layerIndex] );
+        assert( loc.id < firstLayerVoxelId_[layerIndex] + indexer_.sizeXY() );
+        return layers_[layerIndex][loc.id - firstLayerVoxelId_[layerIndex]];
     }
 
 private:
@@ -245,10 +199,12 @@ private:
         const auto z = z_ + (int)layerIndex;
         const auto& dims = indexer_.dims();
         assert( 0 <= z && z < dims.z );
-        Vector3i pos { 0, 0, z };
-        for ( pos.y = 0; pos.y < dims.y; ++pos.y )
-            for ( pos.x = 0; pos.x < dims.x; ++pos.x )
-                layer[toLayerIndex( pos )] = accessor_.get( pos );
+        auto loc = indexer_.toLoc( Vector3i{ 0, 0, z } );
+        firstLayerVoxelId_[layerIndex] = loc.id;
+        size_t n = 0;
+        for ( loc.pos.y = 0; loc.pos.y < dims.y; ++loc.pos.y )
+            for ( loc.pos.x = 0; loc.pos.x < dims.x; ++loc.pos.x, ++loc.id, ++n )
+                layer[n] = accessor_.get( loc );
     }
 
 private:
@@ -258,6 +214,7 @@ private:
 
     int z_ = -1;
     std::vector<std::vector<ValueType>> layers_;
+    std::vector<VoxelId> firstLayerVoxelId_;
 };
 
 } // namespace MR

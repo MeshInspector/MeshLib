@@ -54,7 +54,7 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRGTest.h"
-#include "MRMesh/MRObjectLabel.h"
+#include "MRSymbolMesh/MRObjectLabel.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRSceneColors.h"
@@ -608,7 +608,7 @@ int Viewer::launch( const LaunchParams& params )
     return EXIT_SUCCESS;
 }
 
-bool Viewer::checkOpenGL_(const LaunchParams& params )
+bool Viewer::checkOpenGL_( const LaunchParams& params )
 {
     int windowWidth = params.width;
     int windowHeight = params.height;
@@ -719,6 +719,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         if ( params.render3dSceneInTexture )
             sceneTexture_ = std::make_unique<SceneTextureGL>();
 
+        // Create the window
         if ( !checkOpenGL_( params ) )
         {
             if ( params.windowMode == LaunchParams::TryHidden )
@@ -775,6 +776,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         glfwSetCharCallback( window, glfw_char_mods_callback );
         glfwSetDropCallback( window, glfw_drop_callback );
         glfwSetJoystickCallback( glfw_joystick_callback );
+
         // Handle retina displays (windows and mac)
         int width, height;
         glfwGetFramebufferSize( window, &width, &height );

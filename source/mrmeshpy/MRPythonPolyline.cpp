@@ -9,7 +9,7 @@
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRAABBTreePolyline.h"
 #include "MRMesh/MR2DContoursTriangulation.h"
-#include "MRMesh/MRSymbolMesh.h"
+#include "MRSymbolMesh/MRSymbolMesh.h"
 #include "MRMesh/MRFaceFace.h"
 #include "MRMesh/MRPolyline2Collide.h"
 

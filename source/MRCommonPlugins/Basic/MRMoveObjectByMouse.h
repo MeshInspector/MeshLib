@@ -12,7 +12,7 @@ namespace MR
 
 class Object;
 
-class MoveObjectByMouse : public StateListenerPlugin<DragStartListener, DragListener, DragEndListener>
+class MoveObjectByMouse : public StateListenerPlugin<DragStartListener, DragListener, DragEndListener, PostDrawListener>
 {
 public:
     MoveObjectByMouse();
@@ -34,6 +34,7 @@ private:
     virtual bool onDragStart_( MouseButton btn, int modifiers ) override;
     virtual bool onDrag_( int x, int y ) override;
     virtual bool onDragEnd_( MouseButton btn, int modifiers ) override;
+    virtual void postDraw_() override;
 
     // Same as basic implementation but allows to move selected objects together by holding Shift
     class MoveObjectByMouseWithSelected : public MoveObjectByMouseImpl
@@ -44,8 +45,8 @@ private:
 
     public:
         // Options are provided externally rather than directly from modifiers
-        UI::RadioButtonOrModifierState modXfMode_{};    // XfMode
-        UI::RadioButtonOrModifierState modXfTarget_{};  // XfTarget
+        UI::RadioButtonOrModifierState modXfMode{};    // XfMode
+        UI::RadioButtonOrModifierState modXfTarget{};  // XfTarget
     } moveByMouse_;
 };
 

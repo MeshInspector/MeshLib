@@ -26,6 +26,8 @@ class BitSet;
 class ICP;
 class MultiwayICP;
 struct PointPairs;
+
+struct MeshTriPoint;
 }
 
 #pragma managed( pop )
@@ -72,12 +74,24 @@ using FaceBitSetReadOnly = BitSetReadOnly;
 using VertBitSet = BitSet;
 using FaceBitSet = BitSet;
 
+using VertMap = List<VertId>;
+using VertMapReadOnly = ReadOnlyCollection<VertId>;
+
+using FaceMap = List<FaceId>;
+using FaceMapReadOnly = ReadOnlyCollection<FaceId>;
+
 ref class Vector3f;
 ref class Box3f;
 ref class Matrix3f;
 ref class AffineXf3f;
+
 using VertCoords = List<Vector3f^>;
 using VertCoordsReadOnly = ReadOnlyCollection<Vector3f^>;
+
+using VertNormals = List<Vector3f^>;
+using VertNormalsReadOnly = ReadOnlyCollection<Vector3f^>;
+using FaceNormals = List<Vector3f^>;
+using FaceNormalsReadOnly = ReadOnlyCollection<Vector3f^>;
 
 ref class Mesh;
 value struct MeshPart;
@@ -86,4 +100,8 @@ interface class MeshOrPoints;
 ref class PointCloud;
 value struct MeshOrPointsXf;
 
+ref class BooleanMaps;
+ref class BooleanResultMapper;
+
+ref struct MeshTriPoint;
 MR_DOTNET_NAMESPACE_END

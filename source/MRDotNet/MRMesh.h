@@ -3,6 +3,25 @@
 
 MR_DOTNET_NAMESPACE_BEGIN
 
+public value struct PointOnFace
+{
+    FaceId faceId;
+    Vector3f^ point;
+};
+
+public value struct MeshProjectionResult
+{
+    PointOnFace pointOnFace;
+    MeshTriPoint^ meshTriPoint;
+    float distanceSquared;
+};
+
+public value struct MeshPart
+{
+    Mesh^ mesh;
+    FaceBitSet^ region;
+};
+
 /// represents a mesh, including topology (connectivity) information and point coordinates,
 public ref class Mesh : public MeshOrPoints
 {
@@ -56,6 +75,11 @@ public:
     static Mesh^ MakeCylinder( float radius, float startAngle, float arcSize, float length, int resolution );
     static Mesh^ MakeCylinder( float radius0, float radius1, float startAngle, float arcSize, float length, int resolution );
 
+    static MeshProjectionResult FindProjection( Vector3f^ point, MeshPart meshPart );
+    static MeshProjectionResult FindProjection( Vector3f^ point, MeshPart meshPart, float maxDistanceSquared );
+    static MeshProjectionResult FindProjection( Vector3f^ point, MeshPart meshPart, float maxDistanceSquared, AffineXf3f^ xf );
+    static MeshProjectionResult FindProjection( Vector3f^ point, MeshPart meshPart, float maxDistanceSquared, AffineXf3f^ xf, float minDistanceSquared );
+
 private:
     MR::Mesh* mesh_;
 
@@ -72,10 +96,6 @@ internal:
     void clearManagedResources();
 };
 
-public value struct MeshPart
-{
-    Mesh^ mesh;
-    FaceBitSet^ region;
-};
+
 
 MR_DOTNET_NAMESPACE_END

@@ -37,6 +37,15 @@ bool BitSetReadOnly::operator!=( BitSetReadOnly^ a, BitSetReadOnly^ b )
     return !a->IsEqualTo( b );
 }
 
+BitSetReadOnly^ BitSetReadOnly::operator-( BitSetReadOnly^ a, BitSetReadOnly^ b )
+{
+    if ( !a || !b )
+        throw gcnew System::ArgumentNullException();
+
+    auto nativeRes = *a->bs_ - *b->bs_;
+    return gcnew BitSet( new MR::BitSet( std::move( nativeRes ) ) );
+}
+
 BitSet::BitSet()
 :BitSetReadOnly()
 {}

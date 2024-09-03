@@ -57,6 +57,7 @@
   <ItemGroup>
     <ClInclude Include="MRAffineXf.h" />
     <ClInclude Include="MRBitSet.h" />
+    <ClInclude Include="MRBooleanResultMapper.h" />
     <ClInclude Include="MRBox3.h" />
     <ClInclude Include="MRICP.h" />
     <ClInclude Include="MRMatrix3.h" />
@@ -64,6 +65,7 @@
     <ClInclude Include="MRMeshBoolean.h" />
     <ClInclude Include="MRMeshDecimate.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
+    <ClInclude Include="MRMeshTriPoint.h" />
     <ClInclude Include="MRMultiwayICP.h" />
     <ClInclude Include="MROffset.h" />
     <ClInclude Include="MRPointCloud.h" />
@@ -74,6 +76,7 @@
     <ClCompile Include="MRAffineXf.cpp" />
     <ClCompile Include="AssemblyInfo.cpp" />
     <ClCompile Include="MRBitSet.cpp" />
+    <ClCompile Include="MRBooleanResultMapper.cpp" />
     <ClCompile Include="MRBox3.cpp" />
     <ClCompile Include="MRICP.cpp" />
     <ClCompile Include="MRMatrix3.cpp" />
@@ -81,6 +84,7 @@
     <ClCompile Include="MRMeshBoolean.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
     <ClCompile Include="MRMeshOrPoints.cpp" />
+    <ClCompile Include="MRMeshTriPoint.cpp" />
     <ClCompile Include="MRMultiwayICP.cpp" />
     <ClCompile Include="MROffset.cpp" />
     <ClCompile Include="MRPointCloud.cpp" />

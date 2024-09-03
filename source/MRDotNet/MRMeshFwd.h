@@ -1,11 +1,17 @@
 #pragma once
 #pragma managed( push, off )
-
+#include <functional>
 namespace MR
 {
 template<typename T>
 struct Vector3;
 using Vector3f = Vector3<float>;
+using Vector3i = Vector3<int>;
+
+/// float-to-int coordinate converter
+using ConvertToIntVector = std::function<Vector3i( const Vector3f& )>;
+/// int-to-float coordinate converter
+using ConvertToFloatVector = std::function<Vector3f( const Vector3i& )>;
 
 template<typename T>
 struct Matrix3;
@@ -104,4 +110,16 @@ ref class BooleanMaps;
 ref class BooleanResultMapper;
 
 ref struct MeshTriPoint;
+ref class CoordinateConverters;
+ref class PreciseCollisionResult;
+
+public value struct VariableEdgeTri
+{
+    EdgeId edge;
+    FaceId tri;
+    bool isEdgeATriB;
+};
+
+using ContinousContour = List<VariableEdgeTri>;
+using ContinousContours = List<ContinousContour^>;
 MR_DOTNET_NAMESPACE_END

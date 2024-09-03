@@ -71,6 +71,9 @@
     <ClInclude Include="MRContoursCut.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshNormals.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssemblyInfo.cpp">
@@ -131,6 +134,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRContoursCut.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshNormals.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

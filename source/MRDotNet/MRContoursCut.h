@@ -29,6 +29,8 @@ public ref class ContoursCut
 {
 public:
     static OneMeshContours^ GetOneMeshIntersectionContours( Mesh^ meshA, Mesh^ meshB, ContinousContours^ contours, bool getMeshAIntersections,
+    CoordinateConverters^ converters );
+    static OneMeshContours^ GetOneMeshIntersectionContours( Mesh^ meshA, Mesh^ meshB, ContinousContours^ contours, bool getMeshAIntersections,
     CoordinateConverters^ converters, AffineXf3f^ rigidB2A );
 };
 

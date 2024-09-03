@@ -3,8 +3,9 @@
 
 MR_DOTNET_NAMESPACE_BEGIN
 
-ref class MeshNormals
+public ref class MeshNormals
 {
+public:
     static VertNormals^ ComputePerVertNormals( Mesh^ mesh );
     static FaceNormals^ ComputePerFaceNormals( Mesh^ mesh );
 };

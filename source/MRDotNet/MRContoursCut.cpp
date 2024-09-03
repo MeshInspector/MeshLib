@@ -10,6 +10,12 @@
 MR_DOTNET_NAMESPACE_BEGIN
 
 OneMeshContours^ ContoursCut::GetOneMeshIntersectionContours( Mesh^ meshA, Mesh^ meshB, ContinousContours^ contours, bool getMeshAIntersections,
+    CoordinateConverters^ converters )
+{
+    return GetOneMeshIntersectionContours( meshA, meshB, contours, getMeshAIntersections, converters, nullptr );
+}
+
+OneMeshContours^ ContoursCut::GetOneMeshIntersectionContours( Mesh^ meshA, Mesh^ meshB, ContinousContours^ contours, bool getMeshAIntersections,
     CoordinateConverters^ converters, AffineXf3f^ rigidB2A )
 {
 
@@ -62,6 +68,7 @@ OneMeshContours^ ContoursCut::GetOneMeshIntersectionContours( Mesh^ meshA, Mesh^
                 omi.index = std::get<2>( nativeId );
                 break;
             }
+            contour.intersections->Add( omi );
         }
         res->Add( contour );
     }

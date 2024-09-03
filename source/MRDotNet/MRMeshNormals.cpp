@@ -8,7 +8,7 @@
 
 MR_DOTNET_NAMESPACE_BEGIN
 
-VertNormals^ ComputePerVertNormals( Mesh^ mesh )
+VertNormals^ MeshNormals::ComputePerVertNormals( Mesh^ mesh )
 {
     auto nativeRes = MR::computePerFaceNormals( *mesh->getMesh() );
     VertNormals^ res = gcnew VertNormals( int( nativeRes.size() ) );
@@ -18,7 +18,7 @@ VertNormals^ ComputePerVertNormals( Mesh^ mesh )
     return res;
 }
 
-FaceNormals^ ComputePerFaceNormals( Mesh^ mesh )
+FaceNormals^ MeshNormals::ComputePerFaceNormals( Mesh^ mesh )
 {
     auto nativeRes = MR::computePerFaceNormals( *mesh->getMesh() );
     FaceNormals^ res = gcnew FaceNormals( int( nativeRes.size() ) );

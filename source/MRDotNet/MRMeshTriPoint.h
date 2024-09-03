@@ -3,10 +3,12 @@
 
 MR_DOTNET_NAMESPACE_BEGIN
 
-public ref struct TriPoint
+public value struct TriPoint
 {
     float a;
     float b;
+
+    Vector3f^ Interpolate( Vector3f^ p0, Vector3f^ p1, Vector3f^ p2 );
 };
 
 public ref struct MeshTriPoint

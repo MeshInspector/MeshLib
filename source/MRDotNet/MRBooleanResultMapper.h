@@ -26,7 +26,7 @@ private:
     MR::BooleanResultMapper::Maps* maps_;
 };
 
-enum class MapObject
+public enum class MapObject
 {
     A,
     B

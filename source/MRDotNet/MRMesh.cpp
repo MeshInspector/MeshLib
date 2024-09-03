@@ -6,6 +6,7 @@
 #include "MRMeshTriPoint.h"
 
 #pragma managed( push, off )
+#include <MRMesh/MRBuffer.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRVector3.h>
 #include <MRMesh/MRBox.h>
@@ -170,6 +171,18 @@ EdgePathReadOnly^ Mesh::HoleRepresentiveEdges::get()
     return holeRepresentiveEdges_->AsReadOnly();
 }
 
+array<VertId>^ Mesh::GetLeftTriVerts( EdgeId e )
+{
+    MR::ThreeVertIds threeVerts;
+    mesh_->topology.getLeftTriVerts( MR::EdgeId{ e }, threeVerts );
+    return gcnew array<VertId>( 3 )
+    {
+        VertId( threeVerts[0] ),
+        VertId( threeVerts[1] ),
+        VertId( threeVerts[2] )
+    };
+}
+
 Box3f^ Mesh::BoundingBox::get()
 {
     if ( !boundingBox_ )
@@ -210,6 +223,12 @@ void Mesh::Transform( AffineXf3f^ xf, VertBitSet^ region )
 
     MR::VertBitSet nativeRegion( region->bitSet()->m_bits.begin(), region->bitSet()->m_bits.end() );
     return mesh_->transform( *xf->xf(), &nativeRegion );
+}
+
+void Mesh::PackOptimally()
+{
+    mesh_->packOptimally();
+    clearManagedResources();
 }
 
 Mesh^ Mesh::MakeCube( Vector3f^ size, Vector3f^ base )
@@ -304,6 +323,23 @@ void Mesh::clearManagedResources()
     validPoints_ = nullptr;    
     validFaces_ = nullptr;
     holeRepresentiveEdges_ = nullptr;
+}
+
+MeshPart::MeshPart( Mesh^ m )
+{
+    if ( !m )
+        throw gcnew System::ArgumentNullException( "mesh" );
+
+    mesh = m;
+}
+
+MeshPart::MeshPart( Mesh^ m, FaceBitSet^ r )
+{
+    if ( !m )
+        throw gcnew System::ArgumentNullException( "mesh" );
+
+    mesh = m;
+    region = r;
 }
 
 MR_DOTNET_NAMESPACE_END

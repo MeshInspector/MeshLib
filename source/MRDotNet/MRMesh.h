@@ -20,6 +20,9 @@ public value struct MeshPart
 {
     Mesh^ mesh;
     FaceBitSet^ region;
+
+    MeshPart( Mesh^ mesh );
+    MeshPart( Mesh^ mesh, FaceBitSet^ region );
 };
 
 /// represents a mesh, including topology (connectivity) information and point coordinates,
@@ -43,12 +46,14 @@ public:
     /// edges with no valid left face for every boundary in the mesh
     property EdgePathReadOnly^ HoleRepresentiveEdges { EdgePathReadOnly^ get(); }
 
-    
+    array<VertId>^ GetLeftTriVerts( EdgeId e );
 
     /// transforms all points
     void Transform( AffineXf3f^ xf );
     /// transforms all points in the region
     void Transform( AffineXf3f^ xf, VertBitSet^ region );
+
+    void PackOptimally();
 
     /// creates mesh from point coordinates and triangulation
     static Mesh^ FromTriangles( VertCoords^ points, MR::DotNet::Triangulation^ triangles );

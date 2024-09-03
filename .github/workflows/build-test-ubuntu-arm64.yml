@@ -82,7 +82,7 @@ jobs:
         run: |
           echo $PATH
           python3 -m venv .venv
-          source .venv/bin/activate
+          . .venv/bin/activate
           echo PATH=$PATH >> $GITHUB_ENV
 
       - name: Setup python requirements

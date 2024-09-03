@@ -77,4 +77,16 @@ To copyContours( const From & from )
 
 /// \}
 
+#ifdef MR_PARSING_FOR_PB11_BINDINGS
+// Instantiate the templates when generating bindings.
+extern template float calcOrientedArea( const Contour2<float> & contour );
+extern template double calcOrientedArea( const Contour2<double> & contour );
+extern template Vector3<float> calcOrientedArea( const Contour3<float> & contour );
+extern template Vector3<double> calcOrientedArea( const Contour3<double> & contour );
+extern template Contour2<float> copyContour( const Contour2<double> & from );
+extern template Contour3<float> copyContour( const Contour3<double> & from );
+extern template Contour2<double> copyContour( const Contour2<float> & from );
+extern template Contour3<double> copyContour( const Contour3<float> & from );
+#endif
+
 } // namespace MR

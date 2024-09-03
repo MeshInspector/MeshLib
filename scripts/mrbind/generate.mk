@@ -28,14 +28,15 @@ DEPS_BASE_DIR := .
 # ]
 
 MODULE_OUTPUT_DIR := $(MESHLIB_SHLIB_DIR)/meshlib2
-MRBIND_FLAGS := $(file <$(makefile_dir)/mrbind_flags.txt)
 
 # Those variables are for mrbind/scripts/apply_to_files.mk
 INPUT_DIRS := $(addprefix $(makefile_dir)/../../source/,MRMesh MRSymbolMesh) $(makefile_dir)
 INPUT_FILES_BLACKLIST := $(file <$(makefile_dir)/input_file_blacklist.txt)
 OUTPUT_DIR := build/binds
 INPUT_GLOBS := *.h
-MRBIND := $(MRBIND_EXE) $(MRBIND_FLAGS)
+MRBIND := $(MRBIND_EXE)
+MRBIND_FLAGS := $(file <$(makefile_dir)/mrbind_flags.txt)
+MRBIND_FLAGS_FOR_EXTRA_INPUTS := $(file <$(makefile_dir)/mrbind_flags_for_helpers.txt)
 COMPILER_FLAGS := $(file <$(makefile_dir)/common_compiler_parser_flags.txt) $(shell pkg-config --cflags python3-embed) -I. -I$(DEPS_BASE_DIR)/include -I$(makefile_dir)/../../source
 COMPILER_FLAGS_LIBCLANG := $(file <$(makefile_dir)/parser_only_flags.txt)
 COMPILER := $(CXX) $(file <$(makefile_dir)/compiler_only_flags.txt) -I$(MRBIND_SOURCE)/include
@@ -43,6 +44,7 @@ LINKER_OUTPUT := $(MODULE_OUTPUT_DIR)/mrmeshpy$(shell python3-config --extension
 LINKER := $(CXX) -fuse-ld=lld
 LINKER_FLAGS := -Wl,-rpath='$$ORIGIN/..:$$ORIGIN' $(shell pkg-config --libs python3-embed) -L$(DEPS_BASE_DIR)/lib -L$(MESHLIB_SHLIB_DIR) -lMRMesh -lMRSymbolMesh -shared $(file <$(makefile_dir)/linker_flags.txt)
 NUM_FRAGMENTS := 4
+EXTRA_INPUT_SOURCES := $(makefile_dir)/helpers.cpp
 
 override mrbind_vars = $(subst $,$$$$, \
 	INPUT_DIRS=$(call quote,$(INPUT_DIRS)) \
@@ -50,6 +52,8 @@ override mrbind_vars = $(subst $,$$$$, \
 	OUTPUT_DIR=$(call quote,$(OUTPUT_DIR)) \
 	INPUT_GLOBS=$(call quote,$(INPUT_GLOBS)) \
 	MRBIND=$(call quote,$(MRBIND)) \
+	MRBIND_FLAGS=$(call quote,$(MRBIND_FLAGS)) \
+	MRBIND_FLAGS_FOR_EXTRA_INPUTS=$(call quote,$(MRBIND_FLAGS_FOR_EXTRA_INPUTS)) \
 	COMPILER_FLAGS=$(call quote,$(COMPILER_FLAGS)) \
 	COMPILER_FLAGS_LIBCLANG=$(call quote,$(COMPILER_FLAGS_LIBCLANG)) \
 	COMPILER=$(call quote,$(COMPILER)) \
@@ -57,6 +61,7 @@ override mrbind_vars = $(subst $,$$$$, \
 	LINKER=$(call quote,$(LINKER)) \
 	LINKER_FLAGS=$(call quote,$(LINKER_FLAGS)) \
 	NUM_FRAGMENTS=$(call quote,$(NUM_FRAGMENTS)) \
+	EXTRA_INPUT_SOURCES=$(call quote,$(EXTRA_INPUT_SOURCES)) \
 )
 
 # Generated mrmeshpy.
@@ -69,8 +74,8 @@ only-generate:
 	$(MAKE) -f $(MRBIND_SOURCE)/scripts/apply_to_files.mk generate $(mrbind_vars)
 
 # Handwritten mrmeshnumpy.
-MRMESHPY_MODULE := $(MODULE_OUTPUT_DIR)/mrmeshnumpy$(shell python3-config --extension-suffix)
-$(MRMESHPY_MODULE): | $(MODULE_OUTPUT_DIR)
+MRMESHNUMPY_MODULE := $(MODULE_OUTPUT_DIR)/mrmeshnumpy$(shell python3-config --extension-suffix)
+$(MRMESHNUMPY_MODULE): | $(MODULE_OUTPUT_DIR)
 	$(CXX) \
 		-o $@ \
 		$(makefile_dir)/../../source/mrmeshnumpy/*.cpp \
@@ -82,7 +87,7 @@ $(MRMESHPY_MODULE): | $(MODULE_OUTPUT_DIR)
 # All modules.
 .DEFAULT_GOAL := all
 .PHONY: all
-all: $(LINKER_OUTPUT) $(MRMESHPY_MODULE)
+all: $(LINKER_OUTPUT) $(MRMESHNUMPY_MODULE)
 
 # The directory for the modules.
 $(MODULE_OUTPUT_DIR):

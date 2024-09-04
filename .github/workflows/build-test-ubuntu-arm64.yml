@@ -81,11 +81,14 @@ jobs:
       - name: Create virtualenv
         run: |
           python3 -m venv .venv
-          . .venv/bin/activate
-          echo PATH=$PATH >> $GITHUB_ENV
+          # FIXME: custom runners are unable to process custom PATH correctly
+          #. .venv/bin/activate
+          #echo PATH=$PATH >> $GITHUB_ENV
 
       - name: Setup python requirements
-        run: python3 -m pip install -r ./requirements/python.txt
+        run: |
+          . .venv/bin/activate
+          python3 -m pip install -r ./requirements/python.txt
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -119,7 +122,9 @@ jobs:
 
       - name: Python Sanity Tests
         working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
+        run: |
+          . .venv/bin/activate
+          python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 
       - name: Configure AWS Credentials
         if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' }}
@@ -146,7 +151,9 @@ jobs:
           SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
         if: ${{ env.INTERNAL_BUILD == 'true' }}
         working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}}
+        run: |
+          . .venv/bin/activate
+          python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}}
 
       - name: Copy test artifacts to S3
         if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}

@@ -85,9 +85,9 @@ jobs:
           echo PATH=$PATH >> $GITHUB_ENV
 
       - name: Setup python requirements
-        shell: bash --verbose --noprofile --norc -e -o pipefail {0}
+        shell: bash -vx --noprofile --norc -e -o pipefail {0}
         run: |
-          echo $PATH
+          env
           python3 -m pip install -r ./requirements/python.txt
 
       - name: Build

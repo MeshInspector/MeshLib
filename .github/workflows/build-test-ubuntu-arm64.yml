@@ -79,15 +79,14 @@ jobs:
           ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
 
       - name: Create virtualenv
-        shell: bash --verbose --noprofile --norc -e -o pipefail {0}
         run: |
           python3 -m venv .venv
-          #. .venv/bin/activate
+          . .venv/bin/activate
           echo VENV_PATH=$PATH >> $GITHUB_ENV
+          #echo PATH=$PATH >> $GITHUB_ENV
           env
 
       - name: Setup python requirements
-        shell: bash --verbose --noprofile --norc -e -o pipefail {0}
         run: |
           env
           python3 -m pip install -r ./requirements/python.txt

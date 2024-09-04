@@ -33,7 +33,8 @@ class ICP;
 class MultiwayICP;
 struct PointPairs;
 
-struct MeshTriPoint;
+struct MeshTriPoint; 
+struct PreciseCollisionResult;
 }
 
 #pragma managed( pop )

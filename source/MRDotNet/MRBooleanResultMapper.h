@@ -10,9 +10,14 @@ public ref class BooleanMaps
 public:
     ~BooleanMaps();
 
+    /// "after cut" faces to "origin" faces
+    /// this map is not 1-1, but N-1
     property FaceMapReadOnly^ Cut2Origin { FaceMapReadOnly^ get(); }
+    /// "after cut" faces to "after stitch" faces (1-1)
     property FaceMapReadOnly^ Cut2NewFaces { FaceMapReadOnly^ get(); }
+    /// "origin" vertices to "after stitch" vertices (1-1)
     property VertMapReadOnly^ Old2NewVerts { VertMapReadOnly^ get(); }
+    /// old topology indexes are valid if true
     property bool Identity { bool get(); }
 
 internal:
@@ -26,22 +31,24 @@ private:
     MR::BooleanResultMapper::Maps* maps_;
 };
 
+/// input object index enum
 public enum class MapObject
 {
     A,
     B
 };
 
+///this class allows to map faces, vertices and edges of mesh `A` and mesh `B` input of MeshBoolean to result mesh topology primitives
 public ref class BooleanResultMapper
 {
 public:
     BooleanResultMapper();
     ~BooleanResultMapper();
-    /// Returns faces bitset of result mesh corresponding input one
+    /// returns faces bitset of result mesh corresponding input one
     FaceBitSet^ FaceMap( FaceBitSet^ oldBS, MapObject obj );
-    /// Returns vertices bitset of result mesh corresponding input one
+    /// returns vertices bitset of result mesh corresponding input one
     VertBitSet^ VertMap( VertBitSet^ oldBS, MapObject obj );
-    /// Returns only new faces that are created during boolean operation
+    /// returns only new faces that are created during boolean operation
     FaceBitSet^ NewFaces();
 
     BooleanMaps^ GetMaps( MapObject obj );

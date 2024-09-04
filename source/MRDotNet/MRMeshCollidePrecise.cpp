@@ -4,6 +4,7 @@
 #include "MRAffineXf.h"
 
 #pragma managed( push, off )
+#include <MRMesh/MRMeshCollidePrecise.h>
 #include <MRMesh/MRBitSet.h>
 #pragma managed( pop )
 

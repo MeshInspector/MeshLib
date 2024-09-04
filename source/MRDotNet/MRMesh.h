@@ -45,14 +45,15 @@ public:
     property TriangulationReadOnly^ Triangulation { TriangulationReadOnly^ get(); }
     /// edges with no valid left face for every boundary in the mesh
     property EdgePathReadOnly^ HoleRepresentiveEdges { EdgePathReadOnly^ get(); }
-
+    /// gets 3 vertices of the left face ( face-id may not exist, but the shape must be triangular)
+    /// the vertices are returned in counter-clockwise order if look from mesh outside
     array<VertId>^ GetLeftTriVerts( EdgeId e );
 
     /// transforms all points
     void Transform( AffineXf3f^ xf );
     /// transforms all points in the region
     void Transform( AffineXf3f^ xf, VertBitSet^ region );
-
+    /// packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices
     void PackOptimally();
 
     /// creates mesh from point coordinates and triangulation

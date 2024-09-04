@@ -7,10 +7,11 @@
 #pragma managed( pop )
 
 MR_DOTNET_NAMESPACE_BEGIN
-
+/// this class contains coordinate converters float-int-float
 public ref class CoordinateConverters
 {
 public:
+    /// creates new converters for given pair of meshes
     CoordinateConverters( MeshPart meshA, MeshPart meshB );
     ~CoordinateConverters();
 

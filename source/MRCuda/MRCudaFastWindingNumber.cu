@@ -220,8 +220,8 @@ __global__ void signedDistanceKernel( int3 dims, Matrix4 gridToMeshXf,
 
     float fwn{ 0 };
     processPoint( transformedPoint, fwn, dipoles, nodes, meshPoints, faces, beta, index );
-    if ( fwn > windingNumberThreshold )
-        res = -res;
+    const auto w = clamp( 2 * ( windingNumberThreshold - fwn ), -1.0f, 1.0f );
+    res *= ( 1.5f - 0.5f * w * w ) * w;
 }
 
 void fastWindingNumberFromVector( const float3* points, const Dipole* dipoles,

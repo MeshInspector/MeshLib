@@ -60,8 +60,10 @@ VoidOrErrStr FastWindingNumber::calcFromGrid( std::vector<float>& res, const Vec
 
 float FastWindingNumber::calcWithDistances( const Vector3f& p, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq )
 {
-    const auto sign = calc_( p, beta ) > windingNumberThreshold ? -1.f : +1.f;
-    return sign * std::sqrt( findProjection( p, mesh_, maxDistSq, nullptr, minDistSq ).distSq );
+    const auto dist = std::sqrt( findProjection( p, mesh_, maxDistSq, nullptr, minDistSq ).distSq );
+    const auto fwn = calc_( p, beta );
+    const auto w = std::clamp( 2 * ( windingNumberThreshold - fwn ), -1.0f, 1.0f );
+    return dist * ( 1.5f - 0.5f * w * w ) * w;
 }
 
 VoidOrErrStr FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq, ProgressCallback cb )

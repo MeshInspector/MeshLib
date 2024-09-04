@@ -448,14 +448,10 @@ VoidOrErrStr makeSignedByWindingNumber( FloatGrid& grid, const Vector3f& voxelSi
             for ( int j = 0; j < 3; ++j )
                 coord[j] += pos[j];
 
-            auto windVal = std::clamp( 2 * ( settings.windingNumberThreshold - windVals[i] ), -1.0f, 1.0f );
-            if ( windVal < 0.0f )
-                windVal *= -windVal;
-            else
-                windVal *= windVal;
-            accessor.modifyValue( coord, [windVal] ( float& val )
+            const auto w = std::clamp( 2 * ( settings.windingNumberThreshold - windVals[i] ), -1.0f, 1.0f );
+            accessor.modifyValue( coord, [k = ( 1.5f - 0.5f * w * w ) * w] ( float& val )
             {
-                val *= windVal;
+                val *= k;
             } );
         }, subprogress( settings.progress, 0.8f, 1.0f ) ) )
     {

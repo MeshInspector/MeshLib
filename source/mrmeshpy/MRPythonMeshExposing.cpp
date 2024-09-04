@@ -333,6 +333,11 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
             "appends mesh (from) in addition to this mesh: creates new edges, faces, verts and points\n"
             "copies only portion of (from) specified by fromFaces" ).
 
+        def( "holePerimiter", &Mesh::holePerimiter, pybind11::arg( "e" ), "computes the perimeter of the hole specified by one of its edges with no valid left face (left is hole)" ).
+        def( "holeDirArea", &Mesh::holeDirArea, pybind11::arg( "e" ), 
+            "computes directed area of the hole specified by one of its edges with no valid left face (left is hole);\n"
+            "if the hole is planar then returned vector is orthogonal to the plane pointing outside and its magnitude is equal to hole area" ).
+
         def( pybind11::self == pybind11::self, "compare that two meshes are exactly the same" );
 
     m.def( "copyMesh", &pythonCopyMeshFunction, pybind11::arg( "mesh" ), "returns copy of input mesh" );

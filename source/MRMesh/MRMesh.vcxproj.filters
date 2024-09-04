@@ -456,9 +456,6 @@
     <ClInclude Include="MRIRenderObject.h">
       <Filter>Source Files\Render</Filter>
     </ClInclude>
-    <ClInclude Include="MRAlignTextToMesh.h">
-      <Filter>Source Files\SymbolMesh</Filter>
-    </ClInclude>
     <ClInclude Include="MR2DContoursTriangulation.h">
       <Filter>Source Files\SymbolMesh</Filter>
     </ClInclude>
@@ -785,9 +782,6 @@
     </ClInclude>
     <ClInclude Include="MRUniteManyMeshes.h">
       <Filter>Source Files\Boolean</Filter>
-    </ClInclude>
-    <ClInclude Include="MRPlanarPath.h">
-      <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRIntersectionPrecomputes2.h">
       <Filter>Source Files\AABBTree</Filter>
@@ -1341,6 +1335,7 @@
     <ClInclude Include="MRMeshAttributesToUpdate.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
+    <ClInclude Include="MRCanonicalTypedefs.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2221,9 +2216,6 @@
     </ClCompile>
     <ClCompile Include="MRMeshSubdivideCallbacks.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
-    </ClCompile>
-    <ClCompile Include="MRCanonicalTypedefs.h">
-      <Filter>Source Files\Basic</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

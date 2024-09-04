@@ -13,7 +13,7 @@
 #include "MRMesh/MRMeshDistance.h"
 #include "MRMesh/MRMeshRelax.h"
 #include "MRMesh/MRSurfacePath.h"
-#include "MRMesh/MRPlanarPath.h"
+#include "MRMesh/MRGeodesicPath.h"
 #include "MRMesh/MRMeshRelax.h"
 #include "MRMesh/MRMeshDelone.h"
 #include "MRMesh/MRMeshSubdivide.h"

@@ -190,7 +190,6 @@
     <ClInclude Include="MRPartialOffset.h" />
     <ClInclude Include="MRPartMapping.h" />
     <ClInclude Include="MRPdf.h" />
-    <ClInclude Include="MRPlanarPath.h" />
     <ClInclude Include="MRPlaneObject.h" />
     <ClInclude Include="MRPointCloudRelax.h" />
     <ClInclude Include="MRPointCloudTriangulation.h" />

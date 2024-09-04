@@ -23,6 +23,8 @@ public:
     static bool operator==( BitSetReadOnly^ a, BitSetReadOnly^ b );
     static bool operator!=( BitSetReadOnly^ a, BitSetReadOnly^ b );
 
+    static BitSetReadOnly^ operator-( BitSetReadOnly^ a, BitSetReadOnly^ b );
+
 internal:
     BitSetReadOnly( MR::BitSet* bs );
     ~BitSetReadOnly();

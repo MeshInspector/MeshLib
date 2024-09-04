@@ -1,4 +1,5 @@
 #include "MRMeshBoolean.h"
+#include "MRBooleanResultMapper.h"
 #include "MRMesh.h"
 #include "MRAffineXf.h"
 
@@ -27,7 +28,7 @@ BooleanResult MeshBoolean::Boolean( Mesh^ meshA, Mesh^ meshB, BooleanOperation o
     if ( params.rigidB2A )
         xf =  *params.rigidB2A->xf();
 
-    MR::BooleanParameters nativeParams{ .rigidB2A = &xf, .mergeAllNonIntersectingComponents = params.mergeAllNonIntersectingComponents };
+    MR::BooleanParameters nativeParams{ .rigidB2A = &xf, .mapper = params.mapper ? params.mapper->getMapper() : nullptr, .mergeAllNonIntersectingComponents = params.mergeAllNonIntersectingComponents};
     auto nativeRes = MR::boolean( *meshA->getMesh(), *meshB->getMesh(), MR::BooleanOperation( op ), nativeParams );
     if ( !nativeRes.errorString.empty() )
         throw gcnew System::Exception( gcnew System::String( nativeRes.errorString.c_str() ) );

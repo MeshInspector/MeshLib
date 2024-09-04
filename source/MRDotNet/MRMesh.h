@@ -3,6 +3,28 @@
 
 MR_DOTNET_NAMESPACE_BEGIN
 
+public value struct PointOnFace
+{
+    FaceId faceId;
+    Vector3f^ point;
+};
+
+public value struct MeshProjectionResult
+{
+    PointOnFace pointOnFace;
+    MeshTriPoint^ meshTriPoint;
+    float distanceSquared;
+};
+
+public value struct MeshPart
+{
+    Mesh^ mesh;
+    FaceBitSet^ region;
+
+    MeshPart( Mesh^ mesh );
+    MeshPart( Mesh^ mesh, FaceBitSet^ region );
+};
+
 /// represents a mesh, including topology (connectivity) information and point coordinates,
 public ref class Mesh : public MeshOrPoints
 {
@@ -23,13 +45,16 @@ public:
     property TriangulationReadOnly^ Triangulation { TriangulationReadOnly^ get(); }
     /// edges with no valid left face for every boundary in the mesh
     property EdgePathReadOnly^ HoleRepresentiveEdges { EdgePathReadOnly^ get(); }
-
-    
+    /// gets 3 vertices of the left face ( face-id may not exist, but the shape must be triangular)
+    /// the vertices are returned in counter-clockwise order if look from mesh outside
+    array<VertId>^ GetLeftTriVerts( EdgeId e );
 
     /// transforms all points
     void Transform( AffineXf3f^ xf );
     /// transforms all points in the region
     void Transform( AffineXf3f^ xf, VertBitSet^ region );
+    /// packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices
+    void PackOptimally();
 
     /// creates mesh from point coordinates and triangulation
     static Mesh^ FromTriangles( VertCoords^ points, MR::DotNet::Triangulation^ triangles );
@@ -56,6 +81,11 @@ public:
     static Mesh^ MakeCylinder( float radius, float startAngle, float arcSize, float length, int resolution );
     static Mesh^ MakeCylinder( float radius0, float radius1, float startAngle, float arcSize, float length, int resolution );
 
+    static MeshProjectionResult FindProjection( Vector3f^ point, MeshPart meshPart );
+    static MeshProjectionResult FindProjection( Vector3f^ point, MeshPart meshPart, float maxDistanceSquared );
+    static MeshProjectionResult FindProjection( Vector3f^ point, MeshPart meshPart, float maxDistanceSquared, AffineXf3f^ xf );
+    static MeshProjectionResult FindProjection( Vector3f^ point, MeshPart meshPart, float maxDistanceSquared, AffineXf3f^ xf, float minDistanceSquared );
+
 private:
     MR::Mesh* mesh_;
 
@@ -72,10 +102,6 @@ internal:
     void clearManagedResources();
 };
 
-public value struct MeshPart
-{
-    Mesh^ mesh;
-    FaceBitSet^ region;
-};
+
 
 MR_DOTNET_NAMESPACE_END

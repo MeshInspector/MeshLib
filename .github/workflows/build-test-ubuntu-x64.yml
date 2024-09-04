@@ -112,9 +112,7 @@ jobs:
           echo PATH=$PATH >> $GITHUB_ENV
 
       - name: Setup python requirements
-        run: |
-          echo $PATH
-          python3 -m pip install -r ./requirements/python.txt
+        run: python3 -m pip install -r ./requirements/python.txt
 
       - name: Checkout MRBind
         uses: actions/checkout@v4

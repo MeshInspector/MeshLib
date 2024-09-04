@@ -14,11 +14,11 @@ public:
     CoordinateConverters( MeshPart meshA, MeshPart meshB );
     ~CoordinateConverters();
 
-    MR::CoordinateConverters ToNative();
-
 internal:
     MR::ConvertToFloatVector* getConvertToFloatVector() { return convertToFloatVector_; }
     MR::ConvertToIntVector* getConvertToIntVector() { return convertToIntVector_; }
+
+    MR::CoordinateConverters ToNative();
 private:
     MR::ConvertToFloatVector* convertToFloatVector_;
     MR::ConvertToIntVector* convertToIntVector_;

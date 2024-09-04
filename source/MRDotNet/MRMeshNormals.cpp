@@ -10,7 +10,7 @@ MR_DOTNET_NAMESPACE_BEGIN
 
 VertNormals^ MeshNormals::ComputePerVertNormals( Mesh^ mesh )
 {
-    auto nativeRes = MR::computePerFaceNormals( *mesh->getMesh() );
+    auto nativeRes = MR::computePerVertNormals( *mesh->getMesh() );
     VertNormals^ res = gcnew VertNormals( int( nativeRes.size() ) );
     for ( size_t i = 0; i < nativeRes.size(); i++ )
         res->Add( gcnew Vector3f( new MR::Vector3f( std::move( nativeRes.vec_[i] ) ) ) );

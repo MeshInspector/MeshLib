@@ -81,7 +81,7 @@ jobs:
       - name: Create virtualenv
         run: |
           python3 -m venv .venv
-          # FIXME: custom runners are unable to process custom PATH correctly
+          # FIXME: self-hosted (on vm) runners are unable to process custom PATH correctly
           #. .venv/bin/activate
           #echo PATH=$PATH >> $GITHUB_ENV
 

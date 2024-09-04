@@ -115,8 +115,7 @@ struct MakeSignedByWindingNumberSettings
     ProgressCallback progress;
 };
 
-/// set signs for unsigned distance field grid using refMesh FastWindingNumber;
-/// not only the sign but the magnitudes of distances in the grid are changed to make smooth transition from positive to negative
+/// set signs for unsigned distance field grid using generalized winding number computed at voxel grid point from refMesh
 MRMESH_API VoidOrErrStr makeSignedByWindingNumber( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh,
     const MakeSignedByWindingNumberSettings & settings );
 

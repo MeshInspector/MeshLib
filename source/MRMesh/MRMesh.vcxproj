@@ -419,6 +419,7 @@
     <ClInclude Include="MRMacros.h" />
     <ClInclude Include="MRTeethMaskToDirectionVolume.h" />
     <ClInclude Include="MRCanonicalTypedefs.h" />
+    <ClInclude Include="MRBindingMacros.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />

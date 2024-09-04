@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRBindingMacros.h"
 #include "MRMeshFwd.h"
 #include "MRVector3.h"
 
@@ -77,16 +78,14 @@ To copyContours( const From & from )
 
 /// \}
 
-#ifdef MR_PARSING_FOR_PB11_BINDINGS
 // Instantiate the templates when generating bindings.
-extern template float calcOrientedArea( const Contour2<float> & contour );
-extern template double calcOrientedArea( const Contour2<double> & contour );
-extern template Vector3<float> calcOrientedArea( const Contour3<float> & contour );
-extern template Vector3<double> calcOrientedArea( const Contour3<double> & contour );
-extern template Contour2<float> copyContour( const Contour2<double> & from );
-extern template Contour3<float> copyContour( const Contour3<double> & from );
-extern template Contour2<double> copyContour( const Contour2<float> & from );
-extern template Contour3<double> copyContour( const Contour3<float> & from );
-#endif
+MR_BIND_TEMPLATE( float calcOrientedArea( const Contour2<float> & contour ) )
+MR_BIND_TEMPLATE( double calcOrientedArea( const Contour2<double> & contour ) )
+MR_BIND_TEMPLATE( Vector3<float> calcOrientedArea( const Contour3<float> & contour ) )
+MR_BIND_TEMPLATE( Vector3<double> calcOrientedArea( const Contour3<double> & contour ) )
+MR_BIND_TEMPLATE( Contour2<float> copyContour( const Contour2<double> & from ) )
+MR_BIND_TEMPLATE( Contour3<float> copyContour( const Contour3<double> & from ) )
+MR_BIND_TEMPLATE( Contour2<double> copyContour( const Contour2<float> & from ) )
+MR_BIND_TEMPLATE( Contour3<double> copyContour( const Contour3<float> & from ) )
 
 } // namespace MR

@@ -1341,6 +1341,9 @@
     <ClInclude Include="MRMeshAttributesToUpdate.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
+    <ClInclude Include="MRBindingMacros.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

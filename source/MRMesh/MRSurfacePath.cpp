@@ -9,7 +9,7 @@
 #include "MRMeshComponents.h"
 #include "MRMeshLoad.h"
 #include "MRMeshPart.h"
-#include "MRPlanarPath.h"
+#include "MRGeodesicPath.h"
 #include "MRRegionBoundary.h"
 #include "MRRingIterator.h"
 #include "MRSurfaceDistance.h"

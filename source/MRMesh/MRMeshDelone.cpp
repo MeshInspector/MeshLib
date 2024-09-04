@@ -6,7 +6,7 @@
 #include "MRTimer.h"
 #include "MRTriMath.h"
 #include "MRVector2.h"
-#include "MRPlanarPath.h"
+#include "MRGeodesicPath.h"
 #include "MRTriDist.h"
 
 namespace MR

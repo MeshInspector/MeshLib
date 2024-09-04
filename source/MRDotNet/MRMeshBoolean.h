@@ -20,6 +20,7 @@ public enum class BooleanOperation
 /// optional parameters for boolean operations
 public value struct BooleanParameters
 {
+    BooleanResultMapper^ mapper;
     /// transform from mesh `B` space to mesh `A` space
     AffineXf3f^ rigidB2A;
     /// if set merge all non-intersecting components

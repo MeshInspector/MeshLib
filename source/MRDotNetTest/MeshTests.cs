@@ -124,5 +124,20 @@ namespace MR.DotNet.Test
             Assert.That(cubeMesh.Points[7] == new Vector3f(0.5f, -0.5f, 0.5f));
         }
 
+        [Test]
+        public void TestLeftTriVerts()
+        {
+            var cubeMesh = Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
+            var triVerts = cubeMesh.GetLeftTriVerts(0);
+            Assert.That(triVerts[0], Is.EqualTo(0) );
+            Assert.That(triVerts[1], Is.EqualTo(1));
+            Assert.That(triVerts[2], Is.EqualTo(2));
+
+            triVerts = cubeMesh.GetLeftTriVerts(6);
+            Assert.That(triVerts[0], Is.EqualTo(2));
+            Assert.That(triVerts[1], Is.EqualTo(3));
+            Assert.That(triVerts[2], Is.EqualTo(0));
+        }
+
     }
 }

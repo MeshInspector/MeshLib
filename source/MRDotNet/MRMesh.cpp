@@ -3,8 +3,10 @@
 #include "MRBox3.h"
 #include "MRBitSet.h"
 #include "MRAffineXf.h"
+#include "MRMeshTriPoint.h"
 
 #pragma managed( push, off )
+#include <MRMesh/MRBuffer.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRVector3.h>
 #include <MRMesh/MRBox.h>
@@ -169,6 +171,18 @@ EdgePathReadOnly^ Mesh::HoleRepresentiveEdges::get()
     return holeRepresentiveEdges_->AsReadOnly();
 }
 
+array<VertId>^ Mesh::GetLeftTriVerts( EdgeId e )
+{
+    MR::ThreeVertIds threeVerts;
+    mesh_->topology.getLeftTriVerts( MR::EdgeId{ e }, threeVerts );
+    return gcnew array<VertId>( 3 )
+    {
+        VertId( threeVerts[0] ),
+        VertId( threeVerts[1] ),
+        VertId( threeVerts[2] )
+    };
+}
+
 Box3f^ Mesh::BoundingBox::get()
 {
     if ( !boundingBox_ )
@@ -209,6 +223,12 @@ void Mesh::Transform( AffineXf3f^ xf, VertBitSet^ region )
 
     MR::VertBitSet nativeRegion( region->bitSet()->m_bits.begin(), region->bitSet()->m_bits.end() );
     return mesh_->transform( *xf->xf(), &nativeRegion );
+}
+
+void Mesh::PackOptimally()
+{
+    mesh_->packOptimally();
+    clearManagedResources();
 }
 
 Mesh^ Mesh::MakeCube( Vector3f^ size, Vector3f^ base )
@@ -257,6 +277,45 @@ Mesh^ Mesh::MakeCylinder( float radius0, float radius1, float startAngle, float 
     return gcnew Mesh( new MR::Mesh( std::move( MR::makeCylinderAdvanced( radius0, radius1, startAngle, arcSize, length, resolution ) ) ) );
 }
 
+MeshProjectionResult Mesh::FindProjection( Vector3f^ point, MeshPart meshPart )
+{
+    return FindProjection( point, meshPart, FLT_MAX, nullptr, 0 );
+}
+
+MeshProjectionResult Mesh::FindProjection( Vector3f^ point, MeshPart meshPart, float maxDistanceSquared )
+{
+    return FindProjection( point, meshPart, maxDistanceSquared, nullptr, 0 );
+}
+
+MeshProjectionResult Mesh::FindProjection( Vector3f^ point, MeshPart meshPart, float maxDistanceSquared, AffineXf3f^ xf )
+{
+    return FindProjection( point, meshPart, maxDistanceSquared, xf, 0 );
+}
+
+MeshProjectionResult Mesh::FindProjection( Vector3f^ point, MeshPart meshPart, float maxDistanceSquared, AffineXf3f^ xf, float minDistanceSquared )
+{
+    if ( !point || !meshPart.mesh )
+        throw gcnew System::ArgumentNullException();
+    
+    MR::FaceBitSet nativeRegion;
+    if ( meshPart.region )
+        nativeRegion = MR::FaceBitSet( meshPart.region->bitSet()->m_bits.begin(), meshPart.region->bitSet()->m_bits.end() );
+
+    MR::MeshPart nativeMeshPart( *meshPart.mesh->getMesh(), meshPart.region ? &nativeRegion : nullptr );
+    MR::Vector3f nativePoint( *point->vec() );
+    MR::AffineXf3f nativeXf( xf ? *xf->xf() : MR::AffineXf3f() );
+
+    auto nativeRes = MR::findProjection( nativePoint, nativeMeshPart,  maxDistanceSquared, xf? &nativeXf : nullptr, minDistanceSquared );
+
+    MeshProjectionResult res;
+    res.pointOnFace.faceId = nativeRes.proj.face;
+    res.pointOnFace.point = gcnew Vector3f( new MR::Vector3f( nativeRes.proj.point ) );
+    res.meshTriPoint = gcnew MeshTriPoint( new MR::MeshTriPoint( nativeRes.mtp ) );
+    res.distanceSquared = nativeRes.distSq;
+
+    return res;       
+}
+
 void Mesh::clearManagedResources()
 {    
     points_ = nullptr; 
@@ -264,6 +323,23 @@ void Mesh::clearManagedResources()
     validPoints_ = nullptr;    
     validFaces_ = nullptr;
     holeRepresentiveEdges_ = nullptr;
+}
+
+MeshPart::MeshPart( Mesh^ m )
+{
+    if ( !m )
+        throw gcnew System::ArgumentNullException( "mesh" );
+
+    mesh = m;
+}
+
+MeshPart::MeshPart( Mesh^ m, FaceBitSet^ r )
+{
+    if ( !m )
+        throw gcnew System::ArgumentNullException( "mesh" );
+
+    mesh = m;
+    region = r;
 }
 
 MR_DOTNET_NAMESPACE_END

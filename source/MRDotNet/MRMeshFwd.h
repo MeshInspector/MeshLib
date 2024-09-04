@@ -1,11 +1,17 @@
 #pragma once
 #pragma managed( push, off )
-
+#include <functional>
 namespace MR
 {
 template<typename T>
 struct Vector3;
 using Vector3f = Vector3<float>;
+using Vector3i = Vector3<int>;
+
+/// float-to-int coordinate converter
+using ConvertToIntVector = std::function<Vector3i( const Vector3f& )>;
+/// int-to-float coordinate converter
+using ConvertToFloatVector = std::function<Vector3f( const Vector3i& )>;
 
 template<typename T>
 struct Matrix3;
@@ -26,6 +32,9 @@ class BitSet;
 class ICP;
 class MultiwayICP;
 struct PointPairs;
+
+struct MeshTriPoint; 
+struct PreciseCollisionResult;
 }
 
 #pragma managed( pop )
@@ -72,12 +81,24 @@ using FaceBitSetReadOnly = BitSetReadOnly;
 using VertBitSet = BitSet;
 using FaceBitSet = BitSet;
 
+using VertMap = List<VertId>;
+using VertMapReadOnly = ReadOnlyCollection<VertId>;
+
+using FaceMap = List<FaceId>;
+using FaceMapReadOnly = ReadOnlyCollection<FaceId>;
+
 ref class Vector3f;
 ref class Box3f;
 ref class Matrix3f;
 ref class AffineXf3f;
+
 using VertCoords = List<Vector3f^>;
 using VertCoordsReadOnly = ReadOnlyCollection<Vector3f^>;
+
+using VertNormals = List<Vector3f^>;
+using VertNormalsReadOnly = ReadOnlyCollection<Vector3f^>;
+using FaceNormals = List<Vector3f^>;
+using FaceNormalsReadOnly = ReadOnlyCollection<Vector3f^>;
 
 ref class Mesh;
 value struct MeshPart;
@@ -86,4 +107,20 @@ interface class MeshOrPoints;
 ref class PointCloud;
 value struct MeshOrPointsXf;
 
+ref class BooleanMaps;
+ref class BooleanResultMapper;
+
+ref struct MeshTriPoint;
+ref class CoordinateConverters;
+ref class PreciseCollisionResult;
+
+public value struct VariableEdgeTri
+{
+    EdgeId edge;
+    FaceId tri;
+    bool isEdgeATriB;
+};
+
+using ContinousContour = List<VariableEdgeTri>;
+using ContinousContours = List<ContinousContour^>;
 MR_DOTNET_NAMESPACE_END

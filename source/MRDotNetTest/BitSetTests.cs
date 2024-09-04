@@ -43,5 +43,18 @@ namespace MR.DotNet.Test
             a.AutoResizeSet(6);
             Assert.That( a.Size() == 7 );
         }
+
+        [Test]
+        public void TestSubtraction()
+        {
+            var a = new MR.DotNet.BitSet( 10 );
+            a.Set( 5 );
+            a.Set(6);
+            var b = new MR.DotNet.BitSet( 10 );
+            b.Set( 6 );
+            var c = a - b;
+            Assert.That( c.Test( 5 ) );
+            Assert.That( !c.Test( 6 ) );
+        }
     }
 }

@@ -5,6 +5,7 @@
 #include "MRMesh/MRIntersectionPrecomputes.h"
 #include "MRMesh/MRLine3.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
+#include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include <pybind11/stl.h>
 
@@ -81,6 +82,34 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshIntersect, [] ( pybind11::module_& m )
 namespace
 {
 
+std::vector<float> projectAllPoints( const Mesh& refMesh, const std::vector<Vector3f>& points, const AffineXf3f* refXf = nullptr, const AffineXf3f* xf = nullptr, float upDistLimitSq = FLT_MAX, float loDistLimitSq = 0.0f )
+{
+    PointsToMeshProjector projector;
+    projector.updateMeshData( &refMesh );
+    std::vector<MeshProjectionResult> mpRes( points.size() );
+    projector.findProjections( mpRes, points, xf, refXf, upDistLimitSq, loDistLimitSq );
+    std::vector<float> res( points.size(), std::sqrt( upDistLimitSq ) );
+
+    AffineXf3f fullXf;
+    if ( refXf )
+        fullXf = refXf->inverse();
+    if ( xf )
+        fullXf = fullXf * ( *xf );
+
+    ParallelFor( points, [&] ( size_t i )
+    {
+        const auto& mpResV = mpRes[i];
+        auto& resV = res[i];
+
+        resV = mpResV.distSq;
+        if ( mpResV.mtp.e )
+            resV = refMesh.signedDistance( fullXf( points[i] ), mpResV );
+        else
+            resV = std::sqrt( resV );
+    } );
+    return res;
+}
+
 VertScalars projectAllMeshVertices( const Mesh& refMesh, const Mesh& mesh, const AffineXf3f* refXf = nullptr, const AffineXf3f* xf = nullptr, float upDistLimitSq = FLT_MAX, float loDistLimitSq = 0.0f )
 {
     PointsToMeshProjector projector;
@@ -151,6 +180,19 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshProjection, [] ( pybind11::module_& m )
         "\trefMesh all points will me projected to this mesh\n"
         "\tmesh this mesh points will be projected\n"
         "\trefXf world transform for refMesh\n"
+        "\txf world transform for mesh\n"
+        "\tupDistLimitSq upper limit on the distance in question, if the real distance is larger than the returning upDistLimit\n"
+        "\tloDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one" );
+
+    m.def( "projectAllPoints", &projectAllPoints,
+        pybind11::arg( "refMesh" ), pybind11::arg( "points" ),
+        pybind11::arg( "refXf" ) = nullptr, pybind11::arg( "xf" ) = nullptr,
+        pybind11::arg( "upDistLimitSq" ) = FLT_MAX, pybind11::arg( "loDistLimitSq" ) = 0.0f,
+        "computes signed distances from all points to refMesh\n"
+        "\trefMesh all points will me projected to this mesh\n"
+        "\tpoints will be projected\n"
+        "\trefXf world transform for refMesh\n"
+        "\txf world transform for points\n"
         "\tupDistLimitSq upper limit on the distance in question, if the real distance is larger than the returning upDistLimit\n"
         "\tloDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one" );
 } )

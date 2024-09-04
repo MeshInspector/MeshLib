@@ -53,6 +53,27 @@
     <ClInclude Include="MRMultiwayICP.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MRBooleanResultMapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshTriPoint.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCoordinateConverters.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshCollidePrecise.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRIntersectionContour.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRContoursCut.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshNormals.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssemblyInfo.cpp">
@@ -95,6 +116,27 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRMultiwayICP.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRBooleanResultMapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshTriPoint.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCoordinateConverters.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshCollidePrecise.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRIntersectionContour.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRContoursCut.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshNormals.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

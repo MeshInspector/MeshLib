@@ -83,12 +83,16 @@ jobs:
           python3 -m venv .venv
           . .venv/bin/activate
           echo VENV_PATH=$PATH >> $GITHUB_ENV
-          echo PATH=$PATH >> $GITHUB_ENV
-          env
+      
+      - name: Intermediate step
+        run: |
+          echo $PATH
+          echo $VENV_PATH
+          echo PATH=$VENV_PATH >> $GITHUB_ENV
 
       - name: Setup python requirements
         run: |
-          env
+          echo $PATH
           python3 -m pip install -r ./requirements/python.txt
           false
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRBindingMacros.h"
 #include "MRMeshFwd.h"
 #include "MRVector3.h"
 
@@ -76,5 +77,15 @@ To copyContours( const From & from )
 }
 
 /// \}
+
+// Instantiate the templates when generating bindings.
+MR_BIND_TEMPLATE( float calcOrientedArea( const Contour2<float> & contour ) )
+MR_BIND_TEMPLATE( double calcOrientedArea( const Contour2<double> & contour ) )
+MR_BIND_TEMPLATE( Vector3<float> calcOrientedArea( const Contour3<float> & contour ) )
+MR_BIND_TEMPLATE( Vector3<double> calcOrientedArea( const Contour3<double> & contour ) )
+MR_BIND_TEMPLATE( Contour2<float> copyContour( const Contour2<double> & from ) )
+MR_BIND_TEMPLATE( Contour3<float> copyContour( const Contour3<double> & from ) )
+MR_BIND_TEMPLATE( Contour2<double> copyContour( const Contour2<float> & from ) )
+MR_BIND_TEMPLATE( Contour3<double> copyContour( const Contour3<float> & from ) )
 
 } // namespace MR

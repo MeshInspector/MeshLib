@@ -1335,7 +1335,12 @@
     <ClInclude Include="MRMeshAttributesToUpdate.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
-    <ClInclude Include="MRCanonicalTypedefs.h" />
+    <ClInclude Include="MRBindingMacros.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCanonicalTypedefs.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

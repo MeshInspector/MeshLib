@@ -1,0 +1,4 @@
+--format=macros
+--ignore-pch-flags
+--ignore ::
+--allow MR::Extra

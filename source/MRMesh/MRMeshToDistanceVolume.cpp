@@ -41,11 +41,18 @@ std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p
     }
 
     case SignDetectionMode::HoleWindingRule:
+    {
         assert( !mp.region );
-        if ( !mp.mesh.isOutside( p, op.windingNumberThreshold, op.windingNumberBeta ) )
-            dist = -dist;
-        break;
+            auto windNum = mp.mesh.calcFastWindingNumber( p, op.windingNumberBeta );
 
+            auto k = std::clamp( 2 * ( op.windingNumberThreshold - windNum ), -1.0f, 1.0f );
+            if ( k < 0.0f )
+                k *= -k;
+            else
+                k *= k;
+            dist *= k;
+        break;
+    }
     default: ; //nothing
     }
     return dist;

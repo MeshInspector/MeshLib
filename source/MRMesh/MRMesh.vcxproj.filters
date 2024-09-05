@@ -2228,6 +2228,9 @@
     <ClCompile Include="MRMeshSubdivideCallbacks.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
+    <ClCompile Include="MRProjectionVertAttribute.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
     <ClCompile Include="MRRebuildMesh.cpp">
       <Filter>Source Files\VDBConversions</Filter>
     </ClCompile>

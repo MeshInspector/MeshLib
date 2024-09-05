@@ -717,6 +717,7 @@
     <ClCompile Include="MRColor.cpp" />
     <ClCompile Include="MRVoxelsVolume.cpp" />
     <ClCompile Include="MRTeethMaskToDirectionVolume.cpp" />
+    <ClCompile Include="MRProjectionVertAttribute.h" />
     <ClCompile Include="MRUniqueTemporaryFolder.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -2,6 +2,7 @@
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PDF )
 #include "MRSerializer.h"
 #include "MRImageSave.h"
+#include "MRUniqueTemporaryFolder.h"
 #include "MRVector2.h"
 #include "MRImage.h"
 #include "MRBox.h"

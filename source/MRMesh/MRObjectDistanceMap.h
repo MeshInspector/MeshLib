@@ -74,6 +74,8 @@ private:
     std::shared_ptr<DistanceMap> dmap_;
     AffineXf3f dmap2local_;
 
+    const char * saveDistanceMapFormat_{ "*.raw" };
+
     /// rebuilds the mesh;
     /// if it is executed in the rendering stream then you can set the needUpdateMesh = true
     /// otherwise you should set the needUpdateMesh = false and call the function calculateMesh

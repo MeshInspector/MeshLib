@@ -7,6 +7,7 @@
 #include "MRMeshTexture.h"
 #include "MRAffineXf3.h"
 #include "MRTimer.h"
+#include "MRUniqueTemporaryFolder.h"
 #include "MRStringConvert.h"
 #include "MRSerializer.h"
 #include "MRZip.h"

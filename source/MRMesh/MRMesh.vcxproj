@@ -420,6 +420,7 @@
     <ClInclude Include="MRTeethMaskToDirectionVolume.h" />
     <ClInclude Include="MRCanonicalTypedefs.h" />
     <ClInclude Include="MRBindingMacros.h" />
+    <ClInclude Include="MRUniqueTemporaryFolder.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
@@ -716,6 +717,7 @@
     <ClCompile Include="MRColor.cpp" />
     <ClCompile Include="MRVoxelsVolume.cpp" />
     <ClCompile Include="MRTeethMaskToDirectionVolume.cpp" />
+    <ClCompile Include="MRUniqueTemporaryFolder.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="$(ProjectDir)..\..\thirdparty\python\python$(PythonVersion).zip">

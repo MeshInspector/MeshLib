@@ -1,9 +1,12 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRIOFilters.h"
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
 #include "MRMeshLoadSettings.h"
+#include "MRUniqueTemporaryFolder.h"
+
 #include <filesystem>
 
 namespace MR
@@ -11,6 +14,8 @@ namespace MR
 
 /// \ingroup DataModelGroup
 /// \{
+
+MRMESH_API extern const IOFilters SceneFileFilters;
 
 /// information about loading process and mesh construction from primitives
 struct MeshLoadInfo
@@ -61,6 +66,30 @@ MRMESH_API Expected<Object> makeObjectTreeFromFolder( const std::filesystem::pat
 //tries to load scene from every format listed in SceneFormatFilters
 MRMESH_API Expected<std::shared_ptr<Object>> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, 
     std::string* loadWarn = nullptr, ProgressCallback callback = {} );
+
+/**
+ * \brief loads objects tree from given scene file (zip/mru)
+ * \details format specification:
+ *  children are saved under folder with name of their parent object
+ *  all objects parameters are saved in one JSON file in the root folder
+ *
+ * if postDecompress is set, it is called after decompression
+ * loading is controlled with Object::deserializeModel_ and Object::deserializeFields_
+ */
+MRMESH_API Expected<std::shared_ptr<Object>> deserializeObjectTree( const std::filesystem::path& path,
+                                                                    FolderCallback postDecompress = {},
+                                                                    ProgressCallback progressCb = {} );
+
+/**
+ * \brief loads objects tree from given scene folder
+ * \details format specification:
+ *  children are saved under folder with name of their parent object
+ *  all objects parameters are saved in one JSON file in the root folder
+ *
+ * loading is controlled with Object::deserializeModel_ and Object::deserializeFields_
+ */
+MRMESH_API Expected<std::shared_ptr<Object>> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
+                                                                              ProgressCallback progressCb = {} );
 
 /// \}
 

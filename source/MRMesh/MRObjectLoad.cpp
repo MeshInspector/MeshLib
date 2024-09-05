@@ -9,6 +9,7 @@
 #include "MRPointsLoad.h"
 #include "MRVoxelsLoad.h"
 #include "MRObjectVoxels.h"
+#include "MRObjectFactory.h"
 #include "MRObjectLines.h"
 #include "MRObjectPoints.h"
 #include "MRDistanceMap.h"
@@ -116,6 +117,26 @@ void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::
 }
 
 } // namespace
+
+const IOFilters SceneFileFilters =
+{
+    {"MeshInspector scene (.mru)","*.mru"},
+#ifndef __EMSCRIPTEN__
+    {"MeshInSpector Object Notation (.mison)","*.mison"},
+#endif
+#ifndef MRMESH_NO_XML
+    { "3D Manufacturing format (.3mf)", "*.3mf"},
+    { "3D Manufacturing model (.model)", "*.model"},
+#endif
+#ifndef MRMESH_NO_GLTF
+    {"glTF JSON scene (.gltf)","*.gltf"},
+    {"glTF binary scene (.glb)","*.glb"},
+#endif
+#ifndef MRMESH_NO_OPENCASCADE
+    { "STEP model (.step,.stp)", "*.step;*.stp" },
+#endif
+    { "ZIP files (.zip)","*.zip" },
+};
 
 const IOFilters allFilters = SceneFileFilters
                              | ObjectLoad::getFilters()
@@ -906,6 +927,102 @@ Expected<std::shared_ptr<Object>> loadSceneFromAnySupportedFormat( const std::fi
         postImportObject( res.value(), path );
 
     return res;
+}
+
+Expected<std::shared_ptr<Object>> deserializeObjectTree( const std::filesystem::path& path, FolderCallback postDecompress,
+                                                         ProgressCallback progressCb )
+{
+    MR_TIMER;
+    UniqueTemporaryFolder scenePath( postDecompress );
+    if ( !scenePath )
+        return unexpected( "Cannot create temporary folder" );
+    auto res = decompressZip( path, scenePath );
+    if ( !res.has_value() )
+        return unexpected( std::move( res.error() ) );
+
+    return deserializeObjectTreeFromFolder( scenePath, progressCb );
+}
+
+Expected<std::shared_ptr<Object>> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
+                                                                   ProgressCallback progressCb )
+{
+    MR_TIMER;
+
+    std::error_code ec;
+    std::filesystem::path jsonFile;
+    for ( auto entry : Directory{ folder, ec } )
+    {
+        // unlike extension() this works even if full file name is simply ".json"
+        if ( entry.path().u8string().ends_with( u8".json" ) )
+        {
+            jsonFile = entry.path();
+            break;
+        }
+    }
+
+    auto readRes = deserializeJsonValue( jsonFile );
+    if( !readRes.has_value() )
+    {
+        return unexpected( readRes.error() );
+    }
+    auto root = readRes.value();
+
+    auto typeTreeSize = root["Type"].size();
+    std::shared_ptr<Object> rootObject;
+    for (int i = typeTreeSize-1;i>=0;--i)
+    {
+        const auto& type = root["Type"][unsigned( i )];
+        if ( type.isString() )
+            rootObject = createObject( type.asString() );
+        if ( rootObject )
+            break;
+    }
+    if ( !rootObject )
+        return unexpected( "Unknown root object type" );
+
+    int modelNumber{ 0 };
+    int modelCounter{ 0 };
+    if ( progressCb )
+    {
+        std::function<int( const Json::Value& )> calculateModelNum = [&calculateModelNum] ( const Json::Value& root )
+        {
+            int res{ 1 };
+
+            if ( root["Children"].isNull() )
+                return res;
+
+            for ( const std::string& childKey : root["Children"].getMemberNames() )
+            {
+                if ( !root["Children"].isMember( childKey ) )
+                    continue;
+
+                const auto& child = root["Children"][childKey];
+                if ( child.isNull() )
+                    continue;
+                res += calculateModelNum( child );
+            }
+
+            return res;
+        };
+        modelNumber = calculateModelNum( root );
+
+        modelNumber = std::max( modelNumber, 1 );
+        progressCb = [progressCb, &modelCounter, modelNumber] ( float v )
+        {
+            return progressCb( ( modelCounter + v ) / modelNumber );
+        };
+    }
+
+    auto resDeser = rootObject->deserializeRecursive( folder, root, progressCb, &modelCounter );
+    if ( !resDeser.has_value() )
+    {
+        std::string errorStr = resDeser.error();
+        if ( errorStr != "Loading canceled" )
+            errorStr = "Cannot deserialize: " + errorStr;
+        return unexpected( errorStr );
+    }
+
+    return rootObject;
 }
 
 } //namespace MR

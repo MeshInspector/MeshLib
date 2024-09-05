@@ -1,8 +1,6 @@
 #include "MRDistanceMap.h"
 #include "MRMeshIntersect.h"
 #include "MRBox.h"
-#include "MRImageSave.h"
-#include "MRImageLoad.h"
 #include "MRImage.h"
 #include "MRTriangleIntersection.h"
 #include "MRLine3.h"
@@ -239,13 +237,6 @@ MRMESH_API Image convertDistanceMapToImage( const DistanceMap& dm, float thresho
     return { std::move( pixels ), { int( dm.resX() ), int( dm.resY() ) } };
 }
 
-VoidOrErrStr saveDistanceMapToImage( const DistanceMap& dm, const std::filesystem::path& filename, float threshold /*= 1.f / 255*/ )
-{
-    const auto image = convertDistanceMapToImage( dm, threshold );
-    return ImageSave::toAnySupportedFormat( image, filename );
-}
-
-
 Expected<MR::DistanceMap> convertImageToDistanceMap( const Image& image, float threshold /*= 1.f / 255*/ )
 {
     threshold = std::clamp( threshold * 255, 0.f, 255.f );
@@ -266,14 +257,6 @@ Expected<MR::DistanceMap> convertImageToDistanceMap( const Image& image, float t
         dm.set( i, 255.0f - value );
     }
     return dm;
-}
-
-Expected<MR::DistanceMap> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold /*= 1.f / 255*/ )
-{
-    auto resLoad = ImageLoad::fromAnySupportedFormat( filename );
-    if ( !resLoad.has_value() )
-        return unexpected( resLoad.error() );
-    return convertImageToDistanceMap( *resLoad, threshold );
 }
 
 template <typename T = float>

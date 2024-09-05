@@ -1344,6 +1344,9 @@
     <ClInclude Include="MRRebuildMesh.h">
       <Filter>Source Files\VDBConversions</Filter>
     </ClInclude>
+    <ClInclude Include="MRUniqueTemporaryFolder.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2227,6 +2230,9 @@
     </ClCompile>
     <ClCompile Include="MRRebuildMesh.cpp">
       <Filter>Source Files\VDBConversions</Filter>
+    </ClCompile>
+    <ClCompile Include="MRUniqueTemporaryFolder.cpp">
+      <Filter>Source Files\IO</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

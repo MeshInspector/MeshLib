@@ -12,18 +12,12 @@
 #include "MRTimer.h"
 #include "MRObjectFactory.h"
 #include "MRPointOnFace.h"
-#include "MRMeshLoad.h"
-#include "MRMeshSave.h"
 #include "MRMeshTriPoint.h"
 #include "MRMesh.h"
 #include "MRStreamOperators.h"
-#include "MRCube.h"
-#include "MRObjectMesh.h"
 #include "MRStringConvert.h"
-#include "MRGTest.h"
 #include "MRMeshTexture.h"
 #include "MRDirectory.h"
-#include "MRZip.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRJson.h"
 
@@ -31,82 +25,6 @@
 
 namespace MR
 {
-
-
-UniqueTemporaryFolder::UniqueTemporaryFolder( FolderCallback onPreTempFolderDelete )
-    : onPreTempFolderDelete_( std::move( onPreTempFolderDelete ) )
-{
-    MR_TIMER;
-    std::error_code ec;
-    const auto tmp = std::filesystem::temp_directory_path( ec );
-    if ( ec )
-    {
-        spdlog::error( "Cannot get temporary directory: {}", systemToUtf8( ec.message() ) );
-        return;
-    }
-
-    constexpr int MAX_ATTEMPTS = 32;
-    // if the process is terminated in between temporary folder creation and removal, then
-    // all 32 folders can be present, so we use current time to ignore old folders
-    auto t0 = std::time( nullptr );
-    for ( int i = 0; i < MAX_ATTEMPTS; ++i )
-    {
-        auto folder = tmp / ( "MeshInspectorScene" + std::to_string( t0 + i ) );
-        if ( create_directories( folder, ec ) )
-        {
-            folder_ = std::move( folder );
-            spdlog::info( "Temporary folder created: {}", utf8string( folder_ ) );
-            break;
-        }
-    }
-    if ( folder_.empty() )
-        spdlog::error( "Failed to create unique temporary folder" );
-}
-
-UniqueTemporaryFolder::~UniqueTemporaryFolder()
-{
-    if ( folder_.empty() )
-        return;
-    MR_TIMER;
-    if ( onPreTempFolderDelete_ )
-        onPreTempFolderDelete_( folder_ );
-    spdlog::info( "Deleting temporary folder: {}", utf8string( folder_ ) );
-    std::error_code ec;
-    if ( !std::filesystem::remove_all( folder_, ec ) )
-    {
-        spdlog::error( "Failed to remove folder: {}", systemToUtf8( ec.message() ) );
-        return;
-    }
-}
-
-const IOFilters SceneFileFilters =
-{
-    {"MeshInspector scene (.mru)","*.mru"},
-#ifndef __EMSCRIPTEN__
-    {"MeshInSpector Object Notation (.mison)","*.mison"},
-#endif
-#ifndef MRMESH_NO_XML
-    { "3D Manufacturing format (.3mf)", "*.3mf"},
-    { "3D Manufacturing model (.model)", "*.model"},
-#endif
-#ifndef MRMESH_NO_GLTF
-    {"glTF JSON scene (.gltf)","*.gltf"},
-    {"glTF binary scene (.glb)","*.glb"},
-#endif
-#ifndef MRMESH_NO_OPENCASCADE
-    { "STEP model (.step,.stp)", "*.step;*.stp" },
-#endif
-    { "ZIP files (.zip)","*.zip" },
-};
-
-const IOFilters SceneFileWriteFilters =
-{
-    {"MeshInspector scene (.mru)","*.mru"},
-#ifndef MRMESH_NO_GLTF
-    {"glTF JSON scene (.gltf)","*.gltf"},
-    {"glTF binary scene (.glb)","*.glb"},
-#endif
-};
 
 Expected<Json::Value> deserializeJsonValue( const std::string& str )
 {
@@ -141,176 +59,6 @@ Expected<Json::Value> deserializeJsonValue( std::istream& in )
         return unexpected( "Cannot read json file" );
 
     return deserializeJsonValue( str );
-}
-
-VoidOrErrStr serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection, const char * saveMeshFormat )
-{
-    ObjectMesh obj;
-    obj.setSaveMeshFormat( saveMeshFormat );
-    obj.setMesh( std::make_shared<Mesh>( mesh ) );
-    if ( selection )
-        obj.selectFaces( *selection );
-    obj.setName( utf8string( path.stem() ) );
-    return serializeObjectTree( obj, path );
-}
-
-VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::path& path, 
-    ProgressCallback progressCb, FolderCallback preCompress )
-{
-    MR_TIMER;
-    if (path.empty())
-        return unexpected( "Cannot save to empty path" );
-
-    UniqueTemporaryFolder scenePath( {} );
-    if ( !scenePath )
-        return unexpected( "Cannot create temporary folder" );
-
-    if ( progressCb && !progressCb( 0.0f ) )
-        return unexpected( "Canceled" );
-
-    Json::Value root;
-    root["FormatVersion"] = "0.0";
-    auto expectedSaveModelFutures = object.serializeRecursive( scenePath, root, 0 );
-    if ( !expectedSaveModelFutures.has_value() )
-        return unexpected( expectedSaveModelFutures.error() );
-    auto & saveModelFutures = expectedSaveModelFutures.value();
-
-    assert( !object.name().empty() );
-    auto paramsFile = scenePath / ( object.name() + ".json" );
-    // although json is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
-    std::ofstream ofs( paramsFile, std::ofstream::binary );
-    Json::StreamWriterBuilder builder;
-    std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
-    if ( !ofs || writer->write( root, &ofs ) != 0 )
-        return unexpected( "Cannot write parameters " + utf8string( paramsFile ) );
-
-    ofs.close();
-
-#ifndef __EMSCRIPTEN__
-    if ( !reportProgress( progressCb, 0.1f ) )
-        return unexpectedOperationCanceled();
-
-    // wait for all models are saved before making compressed folder
-    BitSet inProgress( saveModelFutures.size(), true );
-    while ( inProgress.any() )
-    {
-        for ( auto i : inProgress )
-        {
-            if ( saveModelFutures[i].wait_for( std::chrono::milliseconds( 200 ) ) != std::future_status::timeout )
-                inProgress.reset( i );
-        }
-        if ( !reportProgress( subprogress( progressCb, 0.1f, 0.9f ), 1.0f - (float)inProgress.count() / inProgress.size() ) )
-            return unexpectedOperationCanceled();
-    }
-#endif
-
-    for ( auto & f : saveModelFutures )
-    {
-        auto v = f.get();
-        if ( !v )
-            return v;
-    }
-
-    if ( preCompress )
-        preCompress( scenePath );
-
-    return compressZip( path, scenePath, {}, nullptr, subprogress( progressCb, 0.9f, 1.0f ) );
-}
-
-Expected<std::shared_ptr<Object>> deserializeObjectTree( const std::filesystem::path& path, FolderCallback postDecompress,
-                                                                          ProgressCallback progressCb )
-{
-    MR_TIMER;
-    UniqueTemporaryFolder scenePath( postDecompress );
-    if ( !scenePath )
-        return unexpected( "Cannot create temporary folder" );
-    auto res = decompressZip( path, scenePath );
-    if ( !res.has_value() )
-        return unexpected( res.error() );
-
-    return deserializeObjectTreeFromFolder( scenePath, progressCb );
-}
-
-Expected<std::shared_ptr<Object>> deserializeObjectTreeFromFolder( const std::filesystem::path& folder,
-                                                                                    ProgressCallback progressCb )
-{
-    MR_TIMER;
-
-    std::error_code ec;
-    std::filesystem::path jsonFile;
-    for ( auto entry : Directory{ folder, ec } )
-    {
-        // unlike extension() this works even if full file name is simply ".json"
-        if ( entry.path().u8string().ends_with( u8".json" ) )
-        {
-            jsonFile = entry.path();
-            break;
-        }
-    }
-
-    auto readRes = deserializeJsonValue( jsonFile );
-    if( !readRes.has_value() )
-    {
-        return unexpected( readRes.error() );
-    }
-    auto root = readRes.value();
-
-    auto typeTreeSize = root["Type"].size();
-    std::shared_ptr<Object> rootObject;
-    for (int i = typeTreeSize-1;i>=0;--i)
-    {
-        const auto& type = root["Type"][unsigned( i )];
-        if ( type.isString() )
-            rootObject = createObject( type.asString() );
-        if ( rootObject )
-            break;
-    }
-    if ( !rootObject )
-        return unexpected( "Unknown root object type" );
-
-    int modelNumber{ 0 };
-    int modelCounter{ 0 };
-    if ( progressCb )
-    {
-        std::function<int( const Json::Value& )> calculateModelNum = [&calculateModelNum] ( const Json::Value& root )
-        {
-            int res{ 1 };
-
-            if ( root["Children"].isNull() )
-                return res;
-
-            for ( const std::string& childKey : root["Children"].getMemberNames() )
-            {
-                if ( !root["Children"].isMember( childKey ) )
-                    continue;
-
-                const auto& child = root["Children"][childKey];
-                if ( child.isNull() )
-                    continue;
-                res += calculateModelNum( child );
-            }
-
-            return res;
-        };
-        modelNumber = calculateModelNum( root );
-
-        modelNumber = std::max( modelNumber, 1 );
-        progressCb = [progressCb, &modelCounter, modelNumber] ( float v )
-        {
-            return progressCb( ( modelCounter + v ) / modelNumber );
-        };
-    }
-
-    auto resDeser = rootObject->deserializeRecursive( folder, root, progressCb, &modelCounter );
-    if ( !resDeser.has_value() )
-    {
-        std::string errorStr = resDeser.error();
-        if ( errorStr != "Loading canceled" )
-            errorStr = "Cannot deserialize: " + errorStr;
-        return unexpected( errorStr );
-    }
-
-    return rootObject;
 }
 
 void serializeToJson( const Vector2i& vec, Json::Value& root )
@@ -514,18 +262,6 @@ void deserializeViaVerticesFromJson( const Json::Value& root, UndirectedEdgeBitS
     }
 }
 
-VoidOrErrStr serializeToJson( const Mesh& mesh, Json::Value& root )
-{
-    std::ostringstream out;
-    auto res = MeshSave::toPly( mesh, out );
-    if ( res )
-    {
-        auto binString = out.str();
-        root["ply"] = encode64( (const std::uint8_t*) binString.data(), binString.size() );
-    }
-    return res;
-}
-
 void serializeToJson( const Plane3f& plane, Json::Value& root )
 {
     serializeToJson( plane.n, root["n"] );
@@ -711,19 +447,6 @@ void deserializeFromJson( const Json::Value& root, BitSet& bitset )
     }
 }
 
-Expected<Mesh> deserializeFromJson( const Json::Value& root, VertColors* colors )
-{
-    if ( !root.isObject() )
-        return unexpected( std::string{ "deserialize mesh: json value is not an object" } );
-
-    if ( !root["ply"].isString() )
-        return unexpected( std::string{ "deserialize mesh: json value does not have 'ply' string"} );
-        
-    auto bin = decode64( root["ply"].asString() );
-    std::istringstream in( std::string( (const char *)bin.data(), bin.size() ) );
-    return MeshLoad::fromPly( in, { .colors = colors } );
-}
-
 void deserializeFromJson( const Json::Value& root, MeshTexture& texture )
 {
     if ( root["FilterType"].isString() )
@@ -786,18 +509,6 @@ void deserializeFromJson( const Json::Value& root, std::vector<Color>& colors )
         colors.resize( size );
         std::copy( ( Color* )bin.data(), ( Color* )( bin.data() ) + size, colors.data() );
     }
-}
-
-TEST( MRMesh, MeshToJson )
-{
-    Json::Value root;
-    auto mesh = makeCube();
-    auto saveRes = serializeToJson( mesh, root );
-    ASSERT_TRUE( saveRes.has_value() );
-    auto loadRes = deserializeFromJson( root );
-    ASSERT_TRUE( loadRes.has_value() );
-    auto mesh1 = std::move( loadRes.value() );
-    ASSERT_EQ( mesh, mesh1 );
 }
 
 } // namespace MR

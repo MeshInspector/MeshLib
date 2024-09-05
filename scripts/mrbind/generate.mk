@@ -42,7 +42,7 @@ COMPILER_FLAGS_LIBCLANG := $(file <$(makefile_dir)/parser_only_flags.txt)
 COMPILER := $(CXX) $(file <$(makefile_dir)/compiler_only_flags.txt) -I$(MRBIND_SOURCE)/include
 LINKER_OUTPUT := $(MODULE_OUTPUT_DIR)/mrmeshpy$(shell python3-config --extension-suffix)
 LINKER := $(CXX) -fuse-ld=lld
-LINKER_FLAGS := -Wl,-rpath='$$ORIGIN/..:$$ORIGIN' $(shell pkg-config --libs python3-embed) -L$(DEPS_BASE_DIR)/lib -L$(MESHLIB_SHLIB_DIR) -lMRMesh -lMRSymbolMesh -shared $(file <$(makefile_dir)/linker_flags.txt)
+LINKER_FLAGS := -Wl,-rpath='$$ORIGIN/..:$$ORIGIN' $(shell pkg-config --libs python3-embed) -L$(DEPS_BASE_DIR)/lib -L$(MESHLIB_SHLIB_DIR) -lMRMesh -lMRSymbolMesh -lMRVoxels -shared $(file <$(makefile_dir)/linker_flags.txt)
 NUM_FRAGMENTS := 4
 EXTRA_INPUT_SOURCES := $(makefile_dir)/helpers.cpp
 

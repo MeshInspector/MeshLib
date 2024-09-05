@@ -153,9 +153,11 @@ VoidOrErrStr ObjectDistanceMap::deserializeModel_( const std::filesystem::path& 
     auto modelPath = pathFromUtf8( utf8string( path ) + saveDistanceMapFormat_ );
     std::error_code ec;
     if ( !std::filesystem::is_regular_file( modelPath, ec ) )
+    {
         modelPath = findPathWithExtension( path );
-    if ( modelPath.empty() || std::filesystem::file_size( modelPath, ec ) == 0 )
-        return unexpected( "Could not find model file" );
+        if ( modelPath.empty() )
+            return unexpected( "No distance map file found: " + utf8string( path ) );
+    }
 
     auto res = DistanceMapLoad::fromAnySupportedFormat( modelPath, nullptr, progressCb );
     if ( !res.has_value() )

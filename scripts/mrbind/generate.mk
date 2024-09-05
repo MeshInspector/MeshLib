@@ -30,7 +30,7 @@ DEPS_BASE_DIR := .
 MODULE_OUTPUT_DIR := $(MESHLIB_SHLIB_DIR)/meshlib2
 
 # Those variables are for mrbind/scripts/apply_to_files.mk
-INPUT_DIRS := $(addprefix $(makefile_dir)/../../source/,MRMesh MRSymbolMesh) $(makefile_dir)
+INPUT_DIRS := $(addprefix $(makefile_dir)/../../source/,MRMesh MRSymbolMesh MRVoxels) $(makefile_dir)
 INPUT_FILES_BLACKLIST := $(file <$(makefile_dir)/input_file_blacklist.txt)
 OUTPUT_DIR := build/binds
 INPUT_GLOBS := *.h

@@ -129,6 +129,7 @@
     <ClInclude Include="MRIsNaN.h" />
     <ClInclude Include="MRMapEdge.h" />
     <ClInclude Include="MRMeshExtrude.h" />
+    <ClInclude Include="MRRebuildMesh.h" />
     <ClInclude Include="MRMeshRelax.hpp" />
     <ClInclude Include="MRMeshReplicate.h" />
     <ClInclude Include="MRMeshSubdivideCallbacks.h" />
@@ -603,6 +604,7 @@
     <ClCompile Include="MRMeshCollide.cpp" />
     <ClCompile Include="MRPrism.cpp" />
     <ClCompile Include="MRProgressReadWrite.cpp" />
+    <ClCompile Include="MRRebuildMesh.cpp" />
     <ClCompile Include="MRSaveSettings.cpp" />
     <ClCompile Include="MRSceneLoad.cpp" />
     <ClCompile Include="MRSeparationPoint.cpp" />

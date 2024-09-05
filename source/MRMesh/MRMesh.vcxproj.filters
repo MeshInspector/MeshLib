@@ -1341,6 +1341,9 @@
     <ClInclude Include="MRCanonicalTypedefs.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRRebuildMesh.h">
+      <Filter>Source Files\VDBConversions</Filter>
+    </ClInclude>
     <ClInclude Include="MRUniqueTemporaryFolder.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
@@ -2224,6 +2227,9 @@
     </ClCompile>
     <ClCompile Include="MRMeshSubdivideCallbacks.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRebuildMesh.cpp">
+      <Filter>Source Files\VDBConversions</Filter>
     </ClCompile>
     <ClCompile Include="MRUniqueTemporaryFolder.cpp">
       <Filter>Source Files\IO</Filter>

@@ -4,6 +4,7 @@
 #include "MRSignDetectionMode.h"
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
+#include "MREnums.h"
 #include <optional>
 #include <string>
 
@@ -96,14 +97,7 @@ struct SharpOffsetParameters : OffsetParameters
 /// allows the user to select in the parameters which offset algorithm to call
 struct GeneralOffsetParameters : SharpOffsetParameters
 {
-    enum class Mode : int
-    {
-#ifndef MRMESH_NO_OPENVDB
-        Smooth,     ///< create mesh using dual marching cubes from OpenVDB library
-#endif
-        Standard,   ///< create mesh using standard marching cubes implemented in MeshLib
-        Sharpening  ///< create mesh using standard marching cubes with additional sharpening implemented in MeshLib
-    };
+    using Mode = MR::OffsetMode;
     Mode mode = Mode::Standard;
 };
 

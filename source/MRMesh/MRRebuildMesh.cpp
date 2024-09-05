@@ -4,6 +4,7 @@
 #include "MRBuffer.h"
 #include "MRMapEdge.h"
 #include "MRMeshDecimate.h"
+#include "MRMeshCollide.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -14,16 +15,22 @@ Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& setti
     MR_TIMER
     GeneralOffsetParameters genOffsetParams;
 
+    if ( mp.mesh.topology.isClosed( mp.region ) )
+    {
+        auto expSelfy = findSelfCollidingTriangles( mp, nullptr, subprogress( settings.progress, 0.0f, 0.1f ) );
+        if ( !expSelfy )
+            return unexpected( std::move( expSelfy.error() ) );
+        genOffsetParams.signDetectionMode = *expSelfy ? SignDetectionMode::HoleWindingRule : SignDetectionMode::ProjectionNormal;
+    }
+    else
+        genOffsetParams.signDetectionMode = SignDetectionMode::HoleWindingRule;
+
     genOffsetParams.voxelSize = settings.voxelSize;
     genOffsetParams.mode = settings.offsetMode;
     genOffsetParams.windingNumberThreshold = settings.windingNumberThreshold;
     genOffsetParams.windingNumberBeta = settings.windingNumberBeta;
     genOffsetParams.fwn = settings.fwn;
-    genOffsetParams.callBack = subprogress( settings.progress, 0.0f, ( settings.decimate ? 0.7f : 1.0f ) );
-
-    genOffsetParams.signDetectionMode = SignDetectionMode::HoleWindingRule;
-    if ( mp.mesh.topology.isClosed( mp.region ) )
-        genOffsetParams.signDetectionMode = SignDetectionMode::OpenVDB;
+    genOffsetParams.callBack = subprogress( settings.progress, 0.1f, ( settings.decimate ? 0.7f : 1.0f ) );
 
     UndirectedEdgeBitSet sharpEdges;
     genOffsetParams.outSharpEdges = &sharpEdges;

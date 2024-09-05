@@ -1347,6 +1347,9 @@
     <ClInclude Include="MRUniqueTemporaryFolder.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRProjectionMeshAttribute.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2226,9 +2229,6 @@
       <Filter>Source Files\System</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshSubdivideCallbacks.cpp">
-      <Filter>Source Files\MeshAlgorithm</Filter>
-    </ClCompile>
-    <ClCompile Include="MRProjectionMeshAttribute.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRRebuildMesh.cpp">

@@ -3,22 +3,22 @@
 #include "MRMesh.h"
 #include "MRBitSetParallelFor.h"
 #include "MRMeshProject.h"
-
+#include "MRMeshAttributesToUpdate.h"
 
 namespace MR
 {
 
 // projecting the vertex attributes of the old onto the new one
 template<typename F>
-void projectVertAttribute( const Mesh& newMesh, const Mesh& oldMesh, F& func, ProgressCallback progressCb );
+void projectVertAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, ProgressCallback progressCb );
 
 // projecting the face attributes of the old onto the new one
 template<typename F>
-void projectFaceAttribute( const Mesh& newMesh, const Mesh& oldMesh, F& func, ProgressCallback progressCb );
+void projectFaceAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, ProgressCallback progressCb );
 
 
 template<typename F>
-void projectVertAttribute( const Mesh& newMesh, const Mesh& oldMesh, F& func, ProgressCallback progressCb )
+void projectVertAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, ProgressCallback progressCb )
 {
     BitSetParallelFor( newMesh.topology.getValidVerts(), [&] ( VertId id )
         {
@@ -33,7 +33,7 @@ void projectVertAttribute( const Mesh& newMesh, const Mesh& oldMesh, F& func, Pr
 }
 
 template<typename F>
-void projectFaceAttribute( const Mesh& newMesh, const Mesh& oldMesh, F& func, ProgressCallback progressCb )
+void projectFaceAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, ProgressCallback progressCb )
 {
     BitSetParallelFor( newMesh.topology.getValidFaces(), [&] ( FaceId newFaceId )
     {

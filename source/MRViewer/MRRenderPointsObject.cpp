@@ -56,6 +56,23 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
     if ( !objPoints_->hasVisualRepresentation() )
         return false;
 
+    if ( renderParams.allowAlphaSort && desiredPass == RenderModelPassMask::Transparent )
+    {
+        GL_EXEC( glDepthMask( GL_FALSE ) );
+        GL_EXEC( glColorMask( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE ) );
+#ifndef __EMSCRIPTEN__
+        GL_EXEC( glDisable( GL_MULTISAMPLE ) );
+#endif
+    }
+    else
+    {
+        GL_EXEC( glDepthMask( GL_TRUE ) );
+        GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
+#ifndef __EMSCRIPTEN__
+        GL_EXEC( glEnable( GL_MULTISAMPLE ) );
+#endif
+    }
+
     // Initialize uniform
     GL_EXEC( glViewport( ( GLsizei )renderParams.viewport.x, ( GLsizei )renderParams.viewport.y,
         ( GLsizei )renderParams.viewport.z, ( GLsizei )renderParams.viewport.w ) );
@@ -128,6 +145,16 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
     GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
     GL_EXEC( glDrawElements( GL_POINTS, ( GLsizei )validIndicesSize_, GL_UNSIGNED_INT, 0 ) );
     GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
+
+    if ( renderParams.allowAlphaSort && desiredPass == RenderModelPassMask::Transparent )
+    {
+        // enable back masks, disabled for alpha sort
+        GL_EXEC( glDepthMask( GL_TRUE ) );
+        GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
+#ifndef __EMSCRIPTEN__
+        GL_EXEC( glEnable( GL_MULTISAMPLE ) );
+#endif
+    }
 
     return true;
 }

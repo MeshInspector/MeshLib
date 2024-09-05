@@ -938,7 +938,7 @@ Expected<std::shared_ptr<Object>> deserializeObjectTree( const std::filesystem::
         return unexpected( "Cannot create temporary folder" );
     auto res = decompressZip( path, scenePath );
     if ( !res.has_value() )
-        return unexpected( res.error() );
+        return unexpected( std::move( res.error() ) );
 
     return deserializeObjectTreeFromFolder( scenePath, progressCb );
 }

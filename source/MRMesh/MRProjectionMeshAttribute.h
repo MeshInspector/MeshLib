@@ -37,8 +37,7 @@ void projectFaceAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, P
 {
     BitSetParallelFor( newMesh.topology.getValidFaces(), [&] ( FaceId newFaceId )
     {
-        auto verts = oldMesh.topology.getTriVerts( newFaceId );
-        auto point = oldMesh.points[verts[0]] / 3.0f + oldMesh.points[verts[1]] / 3.0f + oldMesh.points[verts[2]] / 3.0f;
+        auto point = newMesh.triCenter( newFaceId );
         auto projectionResult = findProjection( point, oldMesh );
         func( newFaceId, projectionResult );
     },

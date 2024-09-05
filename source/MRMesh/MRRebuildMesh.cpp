@@ -25,8 +25,8 @@ Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& setti
     if ( mp.mesh.topology.isClosed( mp.region ) )
         genOffsetParams.signDetectionMode = SignDetectionMode::OpenVDB;
 
-    auto sharpEdges = std::make_shared<UndirectedEdgeBitSet>();
-    genOffsetParams.outSharpEdges = sharpEdges.get();
+    UndirectedEdgeBitSet sharpEdges;
+    genOffsetParams.outSharpEdges = &sharpEdges;
 
     auto resMesh = generalOffsetMesh( mp, 0.0f, genOffsetParams );
     if ( !resMesh.has_value() )
@@ -38,14 +38,14 @@ Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& setti
         if ( !reportProgress( settings.progress, 0.75f ) )
             return unexpectedOperationCanceled();
 
-        *sharpEdges = mapEdges( map.e, *sharpEdges );
+        sharpEdges = mapEdges( map.e, sharpEdges );
 
         DecimateSettings decimSettings
         {
             .maxError = 0.25f * genOffsetParams.voxelSize,
             .tinyEdgeLength = settings.tinyEdgeLength,
             .stabilizer = 1e-5f, // 1e-6 here resulted in a bit worse mesh
-            .notFlippable = sharpEdges.get(),
+            .notFlippable = sharpEdges.any() ? &sharpEdges : nullptr,
             .packMesh = true,
             .progressCallback = subprogress( settings.progress, 0.75f, 1.0f ),
             .subdivideParts = 64
@@ -53,6 +53,9 @@ Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& setti
         if ( decimateMesh( *resMesh, decimSettings ).cancelled )
             return unexpectedOperationCanceled();
     }
+
+    if ( settings.outSharpEdges )
+        *settings.outSharpEdges = std::move( sharpEdges );
 
     return resMesh;
 }

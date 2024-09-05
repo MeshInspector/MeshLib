@@ -16,6 +16,9 @@ struct RebuildMeshSettings
 
     OffsetMode offsetMode = OffsetMode::Standard;
 
+    /// if non-null then created sharp edges (only if offsetMode = OffsetMode::Sharpening) will be saved here
+    UndirectedEdgeBitSet* outSharpEdges = nullptr;
+
     /// if general winding number is used to differentiate inside from outside:
     /// positive distance if winding number below or equal this threshold;
     /// ideal threshold: 0.5 for closed meshes; 0.0 for planar meshes

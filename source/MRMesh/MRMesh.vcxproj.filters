@@ -1341,6 +1341,9 @@
     <ClInclude Include="MRCanonicalTypedefs.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRUniqueTemporaryFolder.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">
@@ -2221,6 +2224,9 @@
     </ClCompile>
     <ClCompile Include="MRMeshSubdivideCallbacks.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MRUniqueTemporaryFolder.cpp">
+      <Filter>Source Files\IO</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

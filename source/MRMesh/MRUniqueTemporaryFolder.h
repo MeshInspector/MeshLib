@@ -10,6 +10,7 @@ namespace MR
 /// this callback will be called before compression on serialization and after decompression on deserialization
 using FolderCallback = std::function<void( const std::filesystem::path& tempFolderName )>;
 
+/// helper class to create a temporary folder; the folder will be removed on the object's destruction
 class UniqueTemporaryFolder
 {
 public:

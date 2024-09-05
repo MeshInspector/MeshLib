@@ -96,7 +96,13 @@ FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap *
         else
         {
             // introduce new vertex if both existing vertices are far from plane
-            const auto p = ( o * pd - d * po ) / ( o - d );
+            auto p = ( o * pd - d * po ) / ( o - d );
+            auto dotCheck = dot( p - po, pd - po ) / ( pd - po ).lengthSq();
+            if ( dotCheck < 0 )
+                p = po;
+            else if ( dotCheck > 1 )
+                p = pd;
+
             auto eNew = mesh.splitEdge( e, p, nullptr, new2Old );
             assert( isNewVert( mesh.topology.org( e ) ) );
 

@@ -170,7 +170,7 @@ VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, std::ostream& out,
     return saver.streamSave( polyline, out, settings );
 }
 
-MR_ADD_LINES_SAVER( IOFilter( "MrLines (.mrlines)", "*.mrlines" ), toMrLines, -1 )
+MR_ADD_LINES_SAVER_WITH_PRIORITY( IOFilter( "MrLines (.mrlines)", "*.mrlines" ), toMrLines, -1 )
 MR_ADD_LINES_SAVER( IOFilter( "PTS (.pts)", "*.pts" ), toPts )
 MR_ADD_LINES_SAVER( IOFilter( "Drawing exchange format (.dxf)", "*.dxf" ), toDxf )
 

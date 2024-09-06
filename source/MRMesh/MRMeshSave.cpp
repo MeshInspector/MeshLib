@@ -637,7 +637,7 @@ VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const st
     return saver.streamSave( mesh, out, settings );
 }
 
-MR_ADD_MESH_SAVER( IOFilter( "MrMesh (.mrmesh)", "*.mrmesh" ), toMrmesh, -1 )
+MR_ADD_MESH_SAVER_WITH_PRIORITY( IOFilter( "MrMesh (.mrmesh)", "*.mrmesh" ), toMrmesh, -1 )
 MR_ADD_MESH_SAVER( IOFilter( "Binary STL (.stl)", "*.stl"   ), toBinaryStl )
 MR_ADD_MESH_SAVER( IOFilter( "OFF (.off)",        "*.off"   ), toOff )
 MR_ADD_MESH_SAVER( IOFilter( "OBJ (.obj)",        "*.obj"   ), toObj )

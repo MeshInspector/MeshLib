@@ -140,8 +140,11 @@ MR_FORMAT_REGISTRY_DECL( MeshLoader )
  * example:
  * MR_ADD_MESH_LOADER( IOFilter("Name of filter (.ext)","*.ext"), fromFormat)
  */
-#define MR_ADD_MESH_LOADER( filter, loader, ... ) \
-MR_ON_INIT { using namespace MR::MeshLoad; setMeshLoader( filter, { static_cast<MeshFileLoader>( loader ), static_cast<MeshStreamLoader>( loader ) } __VA_OPT__(,)__VA_ARGS__ ); };
+#define MR_ADD_MESH_LOADER( filter, loader ) \
+MR_ON_INIT { using namespace MR::MeshLoad; setMeshLoader( filter, { static_cast<MeshFileLoader>( loader ), static_cast<MeshStreamLoader>( loader ) } ); };
+
+#define MR_ADD_MESH_LOADER_WITH_PRIORITY( filter, loader, priority ) \
+MR_ON_INIT { using namespace MR::MeshLoad; setMeshLoader( filter, { static_cast<MeshFileLoader>( loader ), static_cast<MeshStreamLoader>( loader ) }, priority ); };
 
 /// \}
 
@@ -161,8 +164,11 @@ struct MeshSaver
 
 MR_FORMAT_REGISTRY_DECL( MeshSaver )
 
-#define MR_ADD_MESH_SAVER( filter, saver, ... ) \
-MR_ON_INIT { using namespace MR::MeshSave; setMeshSaver( filter, { static_cast<MeshFileSaver>( saver ), static_cast<MeshStreamSaver>( saver ) } __VA_OPT__(,)__VA_ARGS__ ); };
+#define MR_ADD_MESH_SAVER( filter, saver ) \
+MR_ON_INIT { using namespace MR::MeshSave; setMeshSaver( filter, { static_cast<MeshFileSaver>( saver ), static_cast<MeshStreamSaver>( saver ) } ); };
+
+#define MR_ADD_MESH_SAVER_WITH_PRIORITY( filter, saver, priority ) \
+MR_ON_INIT { using namespace MR::MeshSave; setMeshSaver( filter, { static_cast<MeshFileSaver>( saver ), static_cast<MeshStreamSaver>( saver ) }, priority ); };
 
 } // namespace MeshSave
 
@@ -180,8 +186,11 @@ struct LinesLoader
 
 MR_FORMAT_REGISTRY_DECL( LinesLoader )
 
-#define MR_ADD_LINES_LOADER( filter, loader, ... ) \
-MR_ON_INIT { using namespace MR::LinesLoad; setLinesLoader( filter, { static_cast<LinesFileLoader>( loader ), static_cast<LinesStreamLoader>( loader ) } __VA_OPT__(,)__VA_ARGS__ ); };
+#define MR_ADD_LINES_LOADER( filter, loader ) \
+MR_ON_INIT { using namespace MR::LinesLoad; setLinesLoader( filter, { static_cast<LinesFileLoader>( loader ), static_cast<LinesStreamLoader>( loader ) } ); };
+
+#define MR_ADD_LINES_LOADER_WITH_PRIORITY( filter, loader, priority ) \
+MR_ON_INIT { using namespace MR::LinesLoad; setLinesLoader( filter, { static_cast<LinesFileLoader>( loader ), static_cast<LinesStreamLoader>( loader ) }, priority ); };
 
 } // namespace LinesLoad
 
@@ -199,8 +208,11 @@ struct LinesSaver
 
 MR_FORMAT_REGISTRY_DECL( LinesSaver )
 
-#define MR_ADD_LINES_SAVER( filter, saver, ... ) \
-MR_ON_INIT { using namespace MR::LinesSave; setLinesSaver( filter, { static_cast<LinesFileSaver>( saver ), static_cast<LinesStreamSaver>( saver ) } __VA_OPT__(,)__VA_ARGS__ ); };
+#define MR_ADD_LINES_SAVER( filter, saver ) \
+MR_ON_INIT { using namespace MR::LinesSave; setLinesSaver( filter, { static_cast<LinesFileSaver>( saver ), static_cast<LinesStreamSaver>( saver ) } ); };
+
+#define MR_ADD_LINES_SAVER_WITH_PRIORITY( filter, saver, priority ) \
+MR_ON_INIT { using namespace MR::LinesSave; setLinesSaver( filter, { static_cast<LinesFileSaver>( saver ), static_cast<LinesStreamSaver>( saver ) }, priority ); };
 
 } // namespace LinesSave
 
@@ -218,8 +230,8 @@ struct PointsLoader
 
 MR_FORMAT_REGISTRY_DECL( PointsLoader )
 
-#define MR_ADD_POINTS_LOADER( filter, loader, ... ) \
-MR_ON_INIT { using namespace MR::PointsLoad; setPointsLoader( filter, { static_cast<PointsFileLoader>( loader ), static_cast<PointsStreamLoader>( loader ) } __VA_OPT__(,)__VA_ARGS__ ); };
+#define MR_ADD_POINTS_LOADER( filter, loader ) \
+MR_ON_INIT { using namespace MR::PointsLoad; setPointsLoader( filter, { static_cast<PointsFileLoader>( loader ), static_cast<PointsStreamLoader>( loader ) } ); };
 
 } // namespace PointsLoad
 
@@ -237,8 +249,8 @@ struct PointsSaver
 
 MR_FORMAT_REGISTRY_DECL( PointsSaver )
 
-#define MR_ADD_POINTS_SAVER( filter, saver, ... ) \
-MR_ON_INIT { using namespace MR::PointsSave; setPointsSaver( filter, { static_cast<PointsFileSaver>( saver ), static_cast<PointsStreamSaver>( saver ) } __VA_OPT__(,)__VA_ARGS__ ); };
+#define MR_ADD_POINTS_SAVER( filter, saver ) \
+MR_ON_INIT { using namespace MR::PointsSave; setPointsSaver( filter, { static_cast<PointsFileSaver>( saver ), static_cast<PointsStreamSaver>( saver ) } ); };
 
 } // namespace PointsSave
 
@@ -249,8 +261,8 @@ using ImageLoader = Expected<Image>( * )( const std::filesystem::path& );
 
 MR_FORMAT_REGISTRY_DECL( ImageLoader )
 
-#define MR_ADD_IMAGE_LOADER( filter, loader, ... ) \
-MR_ON_INIT { using namespace MR::ImageLoad; setImageLoader( filter, loader __VA_OPT__(,)__VA_ARGS__ ); };
+#define MR_ADD_IMAGE_LOADER( filter, loader ) \
+MR_ON_INIT { using namespace MR::ImageLoad; setImageLoader( filter, loader ); };
 
 } // namespace ImageLoad
 
@@ -261,8 +273,8 @@ using ImageSaver = Expected<void>( * )( const Image&, const std::filesystem::pat
 
 MR_FORMAT_REGISTRY_DECL( ImageSaver )
 
-#define MR_ADD_IMAGE_SAVER( filter, saver, ... ) \
-MR_ON_INIT { using namespace MR::ImageSave; setImageSaver( filter, saver __VA_OPT__(,)__VA_ARGS__ ); };
+#define MR_ADD_IMAGE_SAVER( filter, saver ) \
+MR_ON_INIT { using namespace MR::ImageSave; setImageSaver( filter, saver ); };
 
 } // namespace ImageSave
 
@@ -274,8 +286,8 @@ using VoxelsLoader = Expected<std::vector<VdbVolume>>( * )( const std::filesyste
 
 MR_FORMAT_REGISTRY_DECL( VoxelsLoader )
 
-#define MR_ADD_VOXELS_LOADER( filter, loader, ... ) \
-MR_ON_INIT { using namespace MR::VoxelsLoad; setVoxelsLoader( filter, loader __VA_OPT__(,)__VA_ARGS__ ); };
+#define MR_ADD_VOXELS_LOADER( filter, loader ) \
+MR_ON_INIT { using namespace MR::VoxelsLoad; setVoxelsLoader( filter, loader ); };
 
 } // namespace VoxelsLoad
 
@@ -286,8 +298,8 @@ using VoxelsSaver = Expected<void>( * )( const VdbVolume&, const std::filesystem
 
 MR_FORMAT_REGISTRY_DECL( VoxelsSaver )
 
-#define MR_ADD_VOXELS_SAVER( filter, saver, ... ) \
-MR_ON_INIT { using namespace MR::VoxelsSave; setVoxelsSaver( filter, saver __VA_OPT__(,)__VA_ARGS__ ); };
+#define MR_ADD_VOXELS_SAVER( filter, saver ) \
+MR_ON_INIT { using namespace MR::VoxelsSave; setVoxelsSaver( filter, saver ); };
 
 } // namespace VoxelsSave
 #endif
@@ -301,8 +313,8 @@ using ObjectLoader = Expected<std::vector<ObjectPtr>>( * )( const std::filesyste
 
 MR_FORMAT_REGISTRY_DECL( ObjectLoader )
 
-#define MR_ADD_OBJECT_LOADER( filter, loader, ... ) \
-MR_ON_INIT { using namespace MR::ObjectLoad; setObjectLoader( filter, loader __VA_OPT__(,)__VA_ARGS__ ); };
+#define MR_ADD_OBJECT_LOADER( filter, loader ) \
+MR_ON_INIT { using namespace MR::ObjectLoad; setObjectLoader( filter, loader ); };
 
 } // namespace ObjectLoad
 
@@ -323,8 +335,11 @@ using SceneLoader = Expected<ObjectPtr>( * )( const std::filesystem::path&, std:
 
 MR_FORMAT_REGISTRY_DECL( SceneLoader )
 
-#define MR_ADD_SCENE_LOADER( filter, loader, ... ) \
-MR_ON_INIT { using namespace MR::SceneLoad; setSceneLoader( filter, loader __VA_OPT__(,)__VA_ARGS__ ); };
+#define MR_ADD_SCENE_LOADER( filter, loader ) \
+MR_ON_INIT { using namespace MR::SceneLoad; setSceneLoader( filter, loader ); };
+
+#define MR_ADD_SCENE_LOADER_WITH_PRIORITY( filter, loader, priority ) \
+MR_ON_INIT { using namespace MR::SceneLoad; setSceneLoader( filter, loader, priority ); };
 
 } // namespace SceneLoad
 
@@ -335,8 +350,11 @@ using SceneSaver = Expected<void>( * )( const Object&, const std::filesystem::pa
 
 MR_FORMAT_REGISTRY_DECL( SceneSaver )
 
-#define MR_ADD_SCENE_SAVER( filter, saver, ... ) \
-MR_ON_INIT { using namespace MR::SceneSave; setSceneSaver( filter, saver __VA_OPT__(,)__VA_ARGS__ ); };
+#define MR_ADD_SCENE_SAVER( filter, saver ) \
+MR_ON_INIT { using namespace MR::SceneSave; setSceneSaver( filter, saver ); };
+
+#define MR_ADD_SCENE_SAVER_WITH_PRIORITY( filter, saver, priority ) \
+MR_ON_INIT { using namespace MR::SceneSave; setSceneSaver( filter, saver, priority ); };
 
 } // namespace SceneSave
 

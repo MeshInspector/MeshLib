@@ -149,7 +149,7 @@ Expected<MR::Polyline3> fromAnySupportedFormat( std::istream& in, const std::str
     return loader.streamLoad( in, callback );
 }
 
-MR_ADD_LINES_LOADER( IOFilter( "MrLines (.mrlines)", "*.mrlines" ), fromMrLines, -1 )
+MR_ADD_LINES_LOADER_WITH_PRIORITY( IOFilter( "MrLines (.mrlines)", "*.mrlines" ), fromMrLines, -1 )
 MR_ADD_LINES_LOADER( IOFilter( "PTS (.pts)",         "*.pts" ),     fromPts )
 
 } //namespace LinesLoad

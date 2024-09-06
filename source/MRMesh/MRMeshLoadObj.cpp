@@ -566,7 +566,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
 
     auto parseVertices = [&] ( size_t begin, size_t end, std::string& parseError )
     {
-        if ( end > begin )
+        assert ( end > begin );
         {
             // detect presence of colors from the first vertex
             Vector3d v;

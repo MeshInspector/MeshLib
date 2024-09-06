@@ -248,7 +248,7 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
     return res;
 }
 
-Expected<std::vector<std::shared_ptr<Object>>> loadObjectFromE57( const std::filesystem::path& path, std::string* warnings, ProgressCallback cb )
+Expected<std::vector<std::shared_ptr<Object>>> loadObjectFromE57( const std::filesystem::path& path, std::string*, ProgressCallback cb )
 {
     return fromSceneE57File( path, { .progress = std::move( cb ) } )
     .transform( [&path] ( std::vector<NamedCloud>&& nclouds )

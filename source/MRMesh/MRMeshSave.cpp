@@ -75,8 +75,14 @@ VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & se
     {
         if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
             continue;
-        auto p = applyDouble( settings.xf, mesh.points[i] );
-        out << fmt::format( "{} {} {}\n", p.x, p.y, p.z );
+        auto saveVertex = [&]( auto && p )
+        {
+            out << fmt::format( "{} {} {}\n", p.x, p.y, p.z );
+        };
+        if ( settings.xf )
+            saveVertex( applyDouble( settings.xf, mesh.points[i] ) );
+        else
+            saveVertex( mesh.points[i] );
         ++numSaved;
         if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / numPoints * 0.5f ) )
             return unexpected( std::string( "Saving canceled" ) );
@@ -148,16 +154,23 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & 
     {
         if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
             continue;
-        auto p = applyDouble( settings.xf, mesh.points[i] );
-        if ( settings.colors )
+
+        auto saveVertex = [&]( auto && p )
         {
-            const auto c = (Vector4f)( *settings.colors )[i];
-            out << fmt::format( "v {} {} {} {} {} {}\n", p.x, p.y, p.z, c[0], c[1], c[2] );
-        }
+            if ( settings.colors )
+            {
+                const auto c = (Vector4f)( *settings.colors )[i];
+                out << fmt::format( "v {} {} {} {} {} {}\n", p.x, p.y, p.z, c[0], c[1], c[2] );
+            }
+            else
+            {
+                out << fmt::format( "v {} {} {}\n", p.x, p.y, p.z );
+            }
+        };
+        if ( settings.xf )
+            saveVertex( applyDouble( settings.xf, mesh.points[i] ) );
         else
-        {
-            out << fmt::format( "v {} {} {}\n", p.x, p.y, p.z );
-        }
+            saveVertex( mesh.points[i] );
         ++numSaved;
         if ( settings.progress && !( numSaved & 0x3FF ) && !sb( float( numSaved ) / numPoints ) )
             return unexpected( std::string( "Saving canceled" ) );
@@ -318,16 +331,20 @@ VoidOrErrStr toAsciiStl( const Mesh& mesh, std::ostream& out, const SaveSettings
         VertId a, b, c;
         mesh.topology.getTriVerts( f, a, b, c );
         assert( a.valid() && b.valid() && c.valid() );
-        const auto ap = applyDouble( settings.xf, mesh.points[a] );
-        const auto bp = applyDouble( settings.xf, mesh.points[b] );
-        const auto cp = applyDouble( settings.xf, mesh.points[c] );
-        const auto normal = cross( bp - ap, cp - ap ).normalized();
-        out << "" << fmt::format( "facet normal {} {} {}\n", normal.x, normal.y, normal.z );
-        out << "outer loop\n";
-        for ( const auto & p : { ap, bp, cp } )
+        auto saveVertex = [&]( auto && ap, auto && bp, auto && cp )
         {
-            out << fmt::format( "vertex {} {} {}\n", p.x, p.y, p.z );
-        }
+            const auto normal = cross( bp - ap, cp - ap ).normalized();
+            out << "" << fmt::format( "facet normal {} {} {}\n", normal.x, normal.y, normal.z );
+            out << "outer loop\n";
+            for ( const auto & p : { ap, bp, cp } )
+                out << fmt::format( "vertex {} {} {}\n", p.x, p.y, p.z );
+        };
+        if ( settings.xf )
+            saveVertex( applyDouble( settings.xf, mesh.points[a] ),
+                        applyDouble( settings.xf, mesh.points[b] ),
+                        applyDouble( settings.xf, mesh.points[c] ) );
+        else
+            saveVertex( mesh.points[a], mesh.points[b], mesh.points[c] );
         out << "endloop\n";
         out << "endfacet\n";
         if ( settings.progress && !( trisIndex & 0x3FF ) && !settings.progress( trisIndex / trisNum ) )

@@ -301,6 +301,9 @@ using ObjectLoader = Expected<std::vector<ObjectPtr>>( * )( const std::filesyste
 
 MR_FORMAT_REGISTRY_DECL( ObjectLoader )
 
+#define MR_ADD_OBJECT_LOADER( filter, loader, ... ) \
+MR_ON_INIT { using namespace MR::ObjectLoad; setObjectLoader( filter, loader __VA_OPT__(,)__VA_ARGS__ ); };
+
 } // namespace ObjectLoad
 
 namespace AsyncObjectLoad

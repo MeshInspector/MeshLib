@@ -383,7 +383,7 @@ Expected<std::vector<std::shared_ptr<ObjectVoxels>>> makeObjectVoxelsFromFile( c
 #endif
 
 Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std::filesystem::path& filename,
-                                                                                    std::string* loadWarn, ProgressCallback callback )
+                                                                       std::string* loadWarn, ProgressCallback callback )
 {
     if ( callback && !callback( 0.f ) )
         return unexpected( std::string( "Loading canceled" ) );
@@ -395,126 +395,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
     for ( auto& c : ext )
         c = ( char )tolower( c );   
     
-    if ( ext == "*.obj" )
-    {
-        auto res = MeshLoad::fromSceneObjFile( filename, false, { .customXf = true, .countSkippedFaces = true, .callback = callback } );
-        if ( res.has_value() )
-        {
-            int totalSkippedFaceCount = 0;
-            int totalDuplicatedVertexCount = 0;
-            int holesCount = 0;
-            auto& resValue = *res;
-            std::vector<std::shared_ptr<Object>> objects( resValue.size() );
-            for ( int i = 0; i < objects.size(); ++i )
-            {
-                std::shared_ptr<ObjectMesh> objectMesh = std::make_shared<ObjectMesh>();
-                if ( resValue[i].name.empty() )
-                    objectMesh->setName( utf8string( filename.stem() ) );
-                else
-                    objectMesh->setName( std::move( resValue[i].name ) );
-                objectMesh->select( true );
-                objectMesh->setMesh( std::make_shared<Mesh>( std::move( resValue[i].mesh ) ) );
-                if ( resValue[i].diffuseColor )
-                    objectMesh->setFrontColor( *resValue[i].diffuseColor, false );
-
-                objectMesh->setUVCoords( std::move( resValue[i].uvCoords ) );
-                
-                int numEmptyTexture = 0;
-                for ( const auto& p : resValue[i].textureFiles )
-                {
-                    if ( p.empty() )
-                        numEmptyTexture++;
-                }
-
-                if ( numEmptyTexture != 0 && numEmptyTexture != resValue[i].textureFiles.size() )
-                {
-                    *loadWarn += " object has material with and without texture";
-                }
-                else if( numEmptyTexture == 0 && resValue[i].textureFiles.size() != 0 )
-                {
-                    bool crashTextureLoad = false;
-                    for ( const auto& p : resValue[i].textureFiles )
-                    {
-                        auto image = ImageLoad::fromAnySupportedFormat( p );
-                        if ( image.has_value() )
-                        {
-                            MeshTexture meshTexture;
-                            meshTexture.resolution = std::move( image.value().resolution );
-                            meshTexture.pixels = std::move( image.value().pixels );
-                            meshTexture.filter = FilterType::Linear;
-                            meshTexture.wrap = WrapType::Clamp;
-                            objectMesh->addTexture( std::move( meshTexture ) );
-                        }
-                        else
-                        {
-                            crashTextureLoad = true;
-                            objectMesh->setTextures( {} );
-                            *loadWarn += image.error();
-                            break;
-                        }
-                    }
-                    if ( !crashTextureLoad )
-                    {
-                        objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
-                        objectMesh->setTexturePerFace( std::move( resValue[i].texturePerFace ) );
-                    }
-                }
-
-                if ( !resValue[i].colors.empty() )
-                {
-                    objectMesh->setVertsColorMap( std::move( resValue[i].colors ) );
-                    objectMesh->setColoringType( ColoringType::VertsColorMap );
-                }
-
-                objectMesh->setXf( resValue[i].xf );
-
-                objects[i] = std::dynamic_pointer_cast< Object >( objectMesh );
-
-                holesCount += int( objectMesh->numHoles() );
-
-                totalSkippedFaceCount += resValue[i].skippedFaceCount;
-                totalDuplicatedVertexCount += resValue[i].duplicatedVertexCount;
-            }
-            result = objects;
-
-            if ( loadWarn )
-                *loadWarn = makeWarningString( totalSkippedFaceCount, totalDuplicatedVertexCount, holesCount );
-        }
-        else
-            result = unexpected( res.error() );
-    }
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
-    else if ( ext == "*.e57" )
-    {
-        auto enclouds = PointsLoad::fromSceneE57File( filename, { .progress = callback } );
-        if ( enclouds.has_value() )
-        {
-            auto& nclouds = *enclouds;
-            std::vector<std::shared_ptr<Object>> objects( nclouds.size() );
-            for ( int i = 0; i < objects.size(); ++i )
-            {
-                auto objectPoints = std::make_shared<ObjectPoints>();
-                if ( nclouds[i].name.empty() )
-                    objectPoints->setName( utf8string( filename.stem() ) );
-                else
-                    objectPoints->setName( std::move( nclouds[i].name ) );
-                objectPoints->select( true );
-                objectPoints->setPointCloud( std::make_shared<PointCloud>( std::move( nclouds[i].cloud ) ) );
-                objectPoints->setXf( nclouds[i].xf );
-                if ( !nclouds[i].colors.empty() )
-                {
-                    objectPoints->setVertsColorMap( std::move( nclouds[i].colors ) );
-                    objectPoints->setColoringType( ColoringType::VertsColorMap );
-                }
-                objects[i] = std::dynamic_pointer_cast< Object >( std::move( objectPoints ) );
-            }
-            result = std::move( objects );
-        }
-        else
-            result = unexpected( std::move( enclouds.error() ) );
-    }
-#endif //!defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
-    else if ( findFilter( SceneLoad::getFilters(), ext ) )
+    if ( findFilter( SceneLoad::getFilters(), ext ) )
     {
         const auto objTree = loadSceneFromAnySupportedFormat( filename, loadWarn, callback );
         if ( !objTree.has_value() )

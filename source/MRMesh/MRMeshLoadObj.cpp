@@ -376,8 +376,6 @@ namespace
             result.emplace( std::move( currentMaterialName ), std::move( currentMaterial ) );
         return result;
     }
-
-    constexpr Vector3d cInvalidColor = { -1., -1., -1. };
 }
 
 namespace MR

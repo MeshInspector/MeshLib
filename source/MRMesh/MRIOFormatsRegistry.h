@@ -14,7 +14,7 @@
 MRMESH_API ProcName MR_CONCAT( get, ProcName )( const IOFilter& filter );                                      \
 MRMESH_API ProcName MR_CONCAT( get, ProcName )( const std::string& extension );                                \
 MRMESH_API void MR_CONCAT( set, ProcName )( const IOFilter& filter, ProcName proc, int8_t priorityScore = 0 ); \
-MRMESH_API IOFilters getFilters();
+MRMESH_API const IOFilters& getFilters();
 
 #define MR_FORMAT_REGISTRY_IMPL( ProcName )                                                         \
 ProcName MR_CONCAT( get, ProcName )( const IOFilter& filter )                                       \
@@ -29,7 +29,7 @@ void MR_CONCAT( set, ProcName )( const IOFilter& filter, ProcName processor, int
 {                                                                                                   \
     FormatRegistry<ProcName>::setProcessor( filter, processor, priorityScore );                     \
 }                                                                                                   \
-IOFilters getFilters()                                                                              \
+const IOFilters& getFilters()                                                                       \
 {                                                                                                   \
     return FormatRegistry<ProcName>::getFilters();                                                  \
 }
@@ -47,14 +47,9 @@ class FormatRegistry
 {
 public:
     // get all registered filters
-    static IOFilters getFilters()
+    static const IOFilters& getFilters()
     {
-        const auto& filters = get_().filterPriorityQueue_;
-        IOFilters results;
-        results.reserve( filters.size() );
-        for ( const auto& [_, filter] : filters )
-            results.emplace_back( filter );
-        return results;
+        return get_().filters_;
     }
 
     // get a registered loader for the filter
@@ -99,6 +94,7 @@ public:
 
             auto& filters = get_().filterPriorityQueue_;
             filters.emplace( priorityScore, filter );
+            get_().updateFilterList_();
         }
     }
 
@@ -112,8 +108,17 @@ private:
         return instance;
     }
 
+    void updateFilterList_()
+    {
+        filters_.clear();
+        filters_.reserve( filterPriorityQueue_.size() );
+        for ( const auto& [_, filter] : filterPriorityQueue_ )
+            filters_.emplace_back( filter );
+    }
+
     std::map<IOFilter, Processor> processors_;
     std::multimap<int8_t, IOFilter> filterPriorityQueue_;
+    std::vector<IOFilter> filters_;
 };
 
 namespace MeshLoad

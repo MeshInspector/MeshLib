@@ -2,7 +2,6 @@ import pytest
 
 from helpers.meshlib_helpers import compare_meshes_similarity
 from module_helper import *
-import meshlib.mrmeshpy as mlib
 from pytest_check import check
 from pathlib import Path
 from constants import test_files_path
@@ -39,26 +38,26 @@ def test_offset_thickening(tmp_path, test_params):
     #  Load input meshes
     input_folder = Path(test_files_path) / "algorithms" / "offset"
     case_name = test_params["name"]
-    mesh = mlib.loadMesh(input_folder / test_params["mesh"])
+    mesh = mrmeshpy.loadMesh(input_folder / test_params["mesh"])
 
-    offset_params = mlib.OffsetParameters()
+    offset_params = mrmeshpy.OffsetParameters()
     sign_mode = test_params["params"]["signDetectionMode"]
-    offset_params.signDetectionMode = mlib.SignDetectionMode.__members__[sign_mode]
-    thicked_mesh = mlib.thickenMesh(mesh=mesh, offset=test_params["params"]["offset"], params=offset_params)
+    offset_params.signDetectionMode = mrmeshpy.SignDetectionMode.__members__[sign_mode]
+    thicked_mesh = mrmeshpy.thickenMesh(mesh=mesh, offset=test_params["params"]["offset"], params=offset_params)
 
     # === Verification
-    mlib.saveMesh(thicked_mesh, tmp_path / f"{case_name}.ctm")
+    mrmeshpy.saveMesh(thicked_mesh, tmp_path / f"{case_name}.ctm")
     ref_mesh_path = input_folder / f"{case_name}.ctm"
-    ref_mesh = mlib.loadMesh(ref_mesh_path)
+    ref_mesh = mrmeshpy.loadMesh(ref_mesh_path)
 
     with check:
         compare_meshes_similarity(thicked_mesh, ref_mesh)
     with check:
         if "skip_self-intsc_verif" in test_params.keys() and not test_params["skip_self-intsc_verif"]:
-            self_col_tri = mlib.findSelfCollidingTriangles(thicked_mesh).size()
+            self_col_tri = mrmeshpy.findSelfCollidingTriangles(thicked_mesh).size()
             assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"
     with check:
-        degen_faces = mlib.findDegenerateFaces(mesh).count()
+        degen_faces = mrmeshpy.findDegenerateFaces(mesh).count()
         assert degen_faces == 0, f"Mesh should have no degenerate faces, actual value is {degen_faces}"
 
 
@@ -96,32 +95,32 @@ def test_offset_double(tmp_path, test_params):
     #  Load input meshes
     input_folder = Path(test_files_path) / "algorithms" / "offset"
     case_name = test_params["name"]
-    mesh = mlib.loadMesh(input_folder / test_params["mesh"])
+    mesh = mrmeshpy.loadMesh(input_folder / test_params["mesh"])
 
     # params
-    offset_params = mlib.OffsetParameters()
+    offset_params = mrmeshpy.OffsetParameters()
     sign_mode = test_params["params"]["signDetectionMode"]
-    offset_params.signDetectionMode = mlib.SignDetectionMode.__members__[sign_mode]
+    offset_params.signDetectionMode = mrmeshpy.SignDetectionMode.__members__[sign_mode]
     offset_params.voxelSize = test_params["params"]["voxelSize"]
 
-    offseted_mesh = mlib.doubleOffsetMesh(mp=mesh,
+    offseted_mesh = mrmeshpy.doubleOffsetMesh(mp=mesh,
                                          offsetA=test_params["params"]["offset"],
                                          offsetB=-test_params["params"]["offset"],
                                          params=offset_params)
 
     # # === Verification
-    mlib.saveMesh(offseted_mesh, tmp_path / f"{case_name}.ctm")
+    mrmeshpy.saveMesh(offseted_mesh, tmp_path / f"{case_name}.ctm")
     ref_mesh_path = input_folder / f"{case_name}.ctm"
-    ref_mesh = mlib.loadMesh(ref_mesh_path)
+    ref_mesh = mrmeshpy.loadMesh(ref_mesh_path)
 
     with check:
         compare_meshes_similarity(offseted_mesh, ref_mesh, rhsdr_thresh=0.99)
     with check:
         if "skip_self-intsc_verif" in test_params.keys() and not test_params["skip_self-intsc_verif"]:
-            self_col_tri = mlib.findSelfCollidingTriangles(offseted_mesh).size()
+            self_col_tri = mrmeshpy.findSelfCollidingTriangles(offseted_mesh).size()
             assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"
     with check:
-        degen_faces = mlib.findDegenerateFaces(mesh).count()
+        degen_faces = mrmeshpy.findDegenerateFaces(mesh).count()
         assert degen_faces == 0, f"Mesh should have no degenerate faces, actual value is {degen_faces}"
 
 
@@ -142,30 +141,30 @@ def test_offset_shell(tmp_path, test_params):
     #  Load input meshes
     input_folder = Path(test_files_path) / "algorithms" / "offset"
     case_name = test_params["name"]
-    mesh = mlib.loadMesh(input_folder / test_params["mesh"])
+    mesh = mrmeshpy.loadMesh(input_folder / test_params["mesh"])
 
     # params
-    offset_params = mlib.OffsetParameters()
+    offset_params = mrmeshpy.OffsetParameters()
     sign_mode = test_params["params"]["signDetectionMode"]
-    offset_params.signDetectionMode = mlib.SignDetectionMode.__members__[sign_mode]
+    offset_params.signDetectionMode = mrmeshpy.SignDetectionMode.__members__[sign_mode]
     offset_params.voxelSize = test_params["params"]["voxelSize"]
 
-    new_mesh = mlib.offsetMesh(mp=mesh, offset=test_params["params"]["offset"],
+    new_mesh = mrmeshpy.offsetMesh(mp=mesh, offset=test_params["params"]["offset"],
                                params=offset_params)
 
     # === Verification
-    mlib.saveMesh(new_mesh, tmp_path / f"{case_name}.ctm")
+    mrmeshpy.saveMesh(new_mesh, tmp_path / f"{case_name}.ctm")
     ref_mesh_path = input_folder / f"{case_name}.ctm"
-    ref_mesh = mlib.loadMesh(ref_mesh_path)
+    ref_mesh = mrmeshpy.loadMesh(ref_mesh_path)
 
     with check:
         compare_meshes_similarity(new_mesh, ref_mesh)
     with check:
         if "skip_self-intsc_verif" in test_params.keys() and not test_params["skip_self-intsc_verif"]:
-            self_col_tri = mlib.findSelfCollidingTriangles(new_mesh).size()
+            self_col_tri = mrmeshpy.findSelfCollidingTriangles(new_mesh).size()
             assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"
     with check:
-        degen_faces = mlib.findDegenerateFaces(mesh).count()
+        degen_faces = mrmeshpy.findDegenerateFaces(mesh).count()
         assert degen_faces == 0, f"Mesh should have no degenerate faces, actual value is {degen_faces}"
 
 
@@ -235,29 +234,29 @@ def test_offset_general(tmp_path, test_params):
     #  Load input meshes
     input_folder = Path(test_files_path) / "algorithms" / "offset"
     case_name = test_params["name"]
-    mesh = mlib.loadMesh(input_folder / test_params["mesh"])
+    mesh = mrmeshpy.loadMesh(input_folder / test_params["mesh"])
 
     # params
-    offset_params = mlib.GeneralOffsetParameters()
-    offset_params.signDetectionMode = mlib.SignDetectionMode.__members__[test_params["params"]["signDetectionMode"]]
-    offset_params.mode = mlib.GeneralOffsetParametersMode.__members__[test_params["params"]["mode"]]
+    offset_params = mrmeshpy.GeneralOffsetParameters()
+    offset_params.signDetectionMode = mrmeshpy.SignDetectionMode.__members__[test_params["params"]["signDetectionMode"]]
+    offset_params.mode = mrmeshpy.GeneralOffsetParametersMode.__members__[test_params["params"]["mode"]]
     offset_params.voxelSize = test_params["params"]["voxelSize"]
 
-    new_mesh = mlib.generalOffsetMesh(mp=mesh, offset=test_params["params"]["offset"],
+    new_mesh = mrmeshpy.generalOffsetMesh(mp=mesh, offset=test_params["params"]["offset"],
                                       params=offset_params)
 
     # === Verification
-    mlib.saveMesh(new_mesh, tmp_path / f"{case_name}.ctm")
+    mrmeshpy.saveMesh(new_mesh, tmp_path / f"{case_name}.ctm")
     ref_mesh_path = input_folder / f"{case_name}.ctm"
-    ref_mesh = mlib.loadMesh(ref_mesh_path)
+    ref_mesh = mrmeshpy.loadMesh(ref_mesh_path)
 
     with check:
         compare_meshes_similarity(new_mesh, ref_mesh)
 
     with check:
         if "skip_self-intsc_verif" in test_params.keys() and not test_params["skip_self-intsc_verif"]:
-            self_col_tri = mlib.findSelfCollidingTriangles(new_mesh).size()
+            self_col_tri = mrmeshpy.findSelfCollidingTriangles(new_mesh).size()
             assert self_col_tri == 0, f"Mesh should have no self-colliding triangles, actual value is {self_col_tri}"
     with check:
-        degen_faces = mlib.findDegenerateFaces(mesh).count()
+        degen_faces = mrmeshpy.findDegenerateFaces(mesh).count()
         assert degen_faces == 0, f"Mesh should have no degenerate faces, actual value is {degen_faces}"

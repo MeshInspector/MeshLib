@@ -25,16 +25,19 @@ def test_conversion_from_ply(test_points_name, ext, use_fileHandler, tmp_path):
     input_folder = Path(test_files_path) / "conversion" / "points_from_ply" / test_points_name / ext
     if use_fileHandler:
         with open(input_folder / (test_points_name + ".ply"), "rb") as file_handler:
-            input_mesh = mrmesh.loadPoints(fileHandle=file_handler, extension="*.ply")
+            input_mesh = mrmeshpy.loadPoints(file_handler, "*.ply")
     else:
-        input_mesh = mrmesh.loadPoints(path=str(input_folder / (test_points_name + ".ply")))
+        input_mesh = mrmeshpy.loadPoints(Path(input_folder / (test_points_name + ".ply")))
     # Save points
     filename = test_points_name + "." + ext
     if use_fileHandler:
         with open(tmp_path / filename, "wb") as f:
-            mrmesh.savePoints(pointCloud=input_mesh, extension="*." + ext, fileHandle=f)
+            if is_new_binding:
+                mrmeshpy.savePoints(input_mesh, f, "*." + ext)
+            else:
+                mrmeshpy.savePoints(pointCloud=input_mesh, extension="*." + ext, fileHandle=f)
     else:
-        mrmesh.savePoints(pointCloud=input_mesh, path=str(tmp_path / filename))
+        mrmeshpy.savePoints(input_mesh, Path(tmp_path / filename))
     # Comparing files
     ref_files_list = get_reference_files_list(input_folder / filename)
     is_same_found = compare_file_with_multiple_references(tmp_path / filename, ref_files_list)
@@ -61,16 +64,19 @@ def test_conversion_to_ply(test_points_name, ext, use_fileHandler, tmp_path):
     input_folder = Path(test_files_path) / "conversion" / "points_to_ply" / test_points_name / ext
     if use_fileHandler:
         with open(input_folder / (test_points_name + "." + ext), "rb") as file_handler:
-            input_points = mrmesh.loadPoints(fileHandle=file_handler, extension="*." + ext)
+            input_points = mrmeshpy.loadPoints(file_handler, "*." + ext)
     else:
-        input_points = mrmesh.loadPoints(path=str(input_folder / (test_points_name + "." + ext)))
+        input_points = mrmeshpy.loadPoints(Path(input_folder / (test_points_name + "." + ext)))
     # Saving mesh
     filename = test_points_name + ".ply"
     if use_fileHandler:
         with open(tmp_path / filename, "wb") as f:
-            mrmesh.savePoints(pointCloud=input_points, extension="*.ply", fileHandle=f)
+            if is_new_binding:
+                mrmeshpy.savePoints(input_points, f, "*.ply")
+            else:
+                mrmeshpy.savePoints(pointCloud=input_points, extension="*.ply", fileHandle=f)
     else:
-        mrmesh.savePoints(pointCloud=input_points, path=str(tmp_path / filename))
+        mrmeshpy.savePoints(input_points, Path(tmp_path / filename))
 
     # Comparing files
 

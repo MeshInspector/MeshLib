@@ -11,7 +11,6 @@ def test_extrude_faces_sample(tmp_path):
     input_folder = Path(test_files_path) / "doc_samples" / "extrude_faces"
 
     # === Sample code
-    import meshlib.mrmeshpy as mrmeshpy
 
     # Load mesh
     mesh = mrmeshpy.loadMesh(str(input_folder / "fox_geometrik.stl"))

@@ -3,6 +3,8 @@
 #include "MRMesh/MREdgeIterator.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
+#include "MRMesh/MRSceneLoad.h"
+#include "MRMesh/MRSceneRoot.h"
 
 // Only the functions that should be exported should be in `MR::Extra`. Place everything else somewhere outside.
 // Note that the comments are pasted to Python too.
@@ -113,5 +115,18 @@ namespace MR::Extra
             }
         }
         return resultFaces;
+    }
+
+    // Detects the format from file extension and loads scene object from it.
+    Expected<std::shared_ptr<Object>> loadSceneObject( const std::filesystem::path& path, ProgressCallback callback = {} )
+    {
+        auto result = SceneLoad::fromAnySupportedFormat( { path }, std::move( callback ) );
+        if ( !result.scene || !result.errorSummary.empty() )
+            return unexpected( std::move( result.errorSummary ) );
+
+        if ( !result.isSceneConstructed || result.scene->children().size() != 1 )
+            return result.scene;
+        else
+            return result.scene->children().front();
     }
 }

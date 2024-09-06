@@ -12,8 +12,6 @@ def test_icp_sample(tmp_path):
 
     # === Sample code
 
-    import meshlib.mrmeshpy as mrmeshpy
-
     # Load meshes
     meshFloating = mrmeshpy.loadMesh(str(input_folder / "beethoven_moved.stl"))
     meshFixed = mrmeshpy.loadMesh(str(input_folder / "beethoven_in.stl"))

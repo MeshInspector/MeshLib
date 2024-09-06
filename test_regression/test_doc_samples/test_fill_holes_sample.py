@@ -12,8 +12,6 @@ def test_fill_holes_sample(tmp_path):
 
     # === Sample code
 
-    import meshlib.mrmeshpy as mrmeshpy
-
     # Load mesh
     mesh = mrmeshpy.loadMesh(str(input_folder / "detail_with_holes.ctm"))
 

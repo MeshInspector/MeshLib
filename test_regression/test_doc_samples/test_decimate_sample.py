@@ -11,7 +11,6 @@ def test_decimate_sample(tmp_path):
     input_folder = Path(test_files_path) / "doc_samples" / "decimate"
 
     # === Sample code
-    import meshlib.mrmeshpy as mrmeshpy
 
     # Load mesh
     mesh = mrmeshpy.loadMesh(str(Path(input_folder) / "beethoven_in.stl"))

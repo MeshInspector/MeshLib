@@ -7,6 +7,7 @@
 #include "MRTimer.h"
 #include "MRphmap.h"
 #include "MRIOParsing.h"
+#include "MRComputeBoundingBox.h"
 #include "MRPch/MRTBB.h"
 
 #include <boost/algorithm/string/trim.hpp>
@@ -375,8 +376,6 @@ namespace
             result.emplace( std::move( currentMaterialName ), std::move( currentMaterial ) );
         return result;
     }
-
-    constexpr Vector3d cInvalidColor = { -1., -1., -1. };
 }
 
 namespace MR
@@ -421,16 +420,15 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
 
     std::vector<NamedMesh> res;
     std::string currentObjName;
-    std::vector<Vector3f> points;
+    Vector<Vector3d, VertId> points;
     std::vector<UVCoord> textureVertices;
     std::vector<int> texCoords;
     Triangulation triangulation;
     VertUVCoords uvCoords;
     VertColors colors;
-    auto hasColors = false;
+    bool hasColors = true; //assume that colors are present unless we find they are not
     Expected<MtlLibrary> mtl;
     std::string currentMaterialName;
-    std::optional<Vector3d> pointOffset;
 
     TextureId maxTextureId = TextureId( -1 );
     TextureId currentTextureId = TextureId(-1);
@@ -462,10 +460,29 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
             }
 
             std::vector<MeshBuilder::VertDuplication> dups;
-            result.mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices(
-                VertCoords( points.begin() + minV, points.begin() + maxV + 1 ), triangulation, &dups,
-                { .skippedFaceCount = settings.countSkippedFaces ? &result.skippedFaceCount : nullptr } );
-            if ( hasColors )
+            if ( settings.customXf )
+            {
+                const auto box = computeBoundingBox( points, minV, maxV + 1 );
+                // shift the reference frame to the center of bounding box for best relative precision of mesh point coordinates (they are stored as 32-bit floats),
+                // with the exception when boundary box already contains the origin point (0,0,0)
+                Vector3d pointOffset = box.contains( Vector3d{} ) ? Vector3d{} : box.center();
+                result.xf = AffineXf3f::translation( Vector3f( pointOffset ) );
+                VertCoords floatPoints;
+                floatPoints.reserve( maxV - minV + 1 );
+                for ( auto v = minV; v <= maxV; ++v )
+                    floatPoints.emplace_back( points[v] - pointOffset );
+                assert( floatPoints.size() == maxV - minV + 1 );
+                result.mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices(
+                    std::move( floatPoints ), triangulation, &dups,
+                    { .skippedFaceCount = settings.countSkippedFaces ? &result.skippedFaceCount : nullptr } );
+            }
+            else
+            {
+                result.mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices(
+                    VertCoords( begin( points ) + minV, begin( points ) + maxV + 1 ), triangulation, &dups,
+                    { .skippedFaceCount = settings.countSkippedFaces ? &result.skippedFaceCount : nullptr } );
+            }
+            if ( !colors.empty() )
             {
                 colors.resize( result.mesh.points.size() );
                 for ( const auto& [src, dup] : dups )
@@ -473,8 +490,8 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
 
                 result.colors = std::move( colors );
                 colors = {};
-                hasColors = false;
             }
+            hasColors = true; //assume that colors for next object are present unless we find they are not
             result.duplicatedVertexCount = int( dups.size() );
             triangulation.clear();
 
@@ -547,20 +564,26 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
     if ( !reportProgress( settings.callback, 0.5f ) )
         return unexpected( "Loading canceled" );
 
-    auto parseVertex = [&] ( size_t li ) -> Expected<std::tuple<Vector3d, Vector3d>>
-    {
-        Vector3d v;
-        Vector3d c { cInvalidColor };
-        std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-        auto res = parseObjCoordinate( line, v, &c );
-        if ( !res.has_value() )
-            return unexpected( std::move( res.error() ) );
-        return std::make_tuple( v, c );
-    };
-
     auto parseVertices = [&] ( size_t begin, size_t end, std::string& parseError )
     {
-        const auto offset = points.size();
+        assert ( end > begin );
+        if ( hasColors && colors.empty() ) // check the presence of colors only once per object (parseVertices can be called many times)
+        {
+            // detect presence of colors from the first vertex
+            Vector3d v;
+            constexpr Vector3d cInvalidColor = { -1., -1., -1. };
+            Vector3d c { cInvalidColor };
+            std::string_view line( data + newlines[begin], newlines[begin + 1] - newlines[begin] );
+            auto res = parseObjCoordinate( line, v, &c );
+            if ( !res.has_value() )
+            {
+                parseError = std::move( res.error() );
+                return;
+            }
+            hasColors = c != cInvalidColor;
+        }
+
+        const auto offset = points.endId();
         originalPointCount += int( end - begin );
         const size_t newSize = points.size() + ( end - begin );
         texCoords.resize( newSize, -1 );
@@ -586,7 +609,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
                     return;
                 }
                 const auto n = offset + ( li - begin );
-                points[n] = pointOffset ? Vector3f( v - *pointOffset ) : Vector3f( v );
+                points[n] = v;
                 if ( hasColors )
                     colors[VertId( n )] = Color( c );
             }
@@ -719,7 +742,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
                             texCoords[vs[j]] = vts[j];
                             continue;
                         }
-                        points.push_back( points[vs[j]] );
+                        points.push_back( points[ VertId( vs[j] ) ] );
                         texCoords.push_back( vts[j] );
                         vs[j] = int( points.size() ) - 1;
                         ++newPoints;
@@ -813,19 +836,6 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
         case ObjElement::Unknown:
             break;
         case ObjElement::Vertex:
-            if ( settings.customXf && !pointOffset.has_value() )
-            {
-                auto res1 = parseVertex( group.begin );
-                if ( !res1.has_value() )
-                {
-                    parseError = std::move( res1.error() );
-                    break;
-                }
-                auto [v, c] = *res1;
-                pointOffset.emplace( v );
-                if ( c != cInvalidColor )
-                    hasColors = true;
-            }
             parseVertices( group.begin, group.end, parseError );
             break;
         case ObjElement::Face:
@@ -852,14 +862,6 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
     }
 
     finishObject();
-
-    // for now the transform is the same for all meshes, might be changed in future
-    if ( pointOffset )
-    {
-        assert( settings.customXf );
-        for ( auto & m : res )
-            m.xf = AffineXf3f::translation( Vector3f( *pointOffset ) );
-    }
 
     return res;
 }

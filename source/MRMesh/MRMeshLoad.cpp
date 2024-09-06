@@ -775,21 +775,12 @@ Expected<Mesh> fromAnySupportedFormat( const std::filesystem::path& file, const 
     auto ext = utf8string( file.extension() );
     for ( auto & c : ext )
         c = (char)tolower( c );
-
     ext = "*" + ext;
 
-    Expected<MR::Mesh> res = unexpected( std::string( "unsupported file extension" ) );
-    auto filters = getFilters();
-    auto itF = std::find_if( filters.begin(), filters.end(), [ext]( const IOFilter& filter )
-    {
-        return filter.extensions.find( ext ) != std::string::npos;
-    } );
-    if ( itF == filters.end() )
-        return res;
-
-    auto loader = getMeshLoader( *itF );
+    auto loader = getMeshLoader( ext );
     if ( !loader.fileLoad )
-        return res;
+        return unexpected( std::string( "unsupported file extension" ) );
+
     return loader.fileLoad( file, settings );
 }
 
@@ -798,19 +789,11 @@ Expected<Mesh> fromAnySupportedFormat( std::istream& in, const std::string& exte
     auto ext = extension;
     for ( auto& c : ext )
         c = ( char )tolower( c );
+    ext = "*" + ext;
 
-    Expected<MR::Mesh> res = unexpected( std::string( "unsupported file extension" ) );
-    auto filters = getFilters();
-    auto itF = std::find_if( filters.begin(), filters.end(), [ext] ( const IOFilter& filter )
-    {
-        return filter.extensions.find( ext ) != std::string::npos;
-    } );
-    if ( itF == filters.end() )
-        return res;
-
-    auto loader = getMeshLoader( *itF );
+    auto loader = getMeshLoader( ext );
     if ( !loader.streamLoad )
-        return res;
+        return unexpected( std::string( "unsupported file extension" ) );
 
     return loader.streamLoad( in, settings );
 }

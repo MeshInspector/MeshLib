@@ -10,6 +10,7 @@
 
 #define MR_FORMAT_REGISTRY_DECL( ProcName )                                          \
 MRMESH_API ProcName MR_CONCAT( get, ProcName )( const IOFilter& filter );            \
+MRMESH_API ProcName MR_CONCAT( get, ProcName )( const std::string& extension );      \
 MRMESH_API void MR_CONCAT( set, ProcName )( const IOFilter& filter, ProcName proc ); \
 MRMESH_API const IOFilters& getFilters();
 
@@ -17,6 +18,10 @@ MRMESH_API const IOFilters& getFilters();
 ProcName MR_CONCAT( get, ProcName )( const IOFilter& filter )                 \
 {                                                                             \
     return FormatRegistry<ProcName>::getProcessor( filter );                  \
+}                                                                             \
+ProcName MR_CONCAT( get, ProcName )( const std::string& extension )           \
+{                                                                             \
+    return FormatRegistry<ProcName>::getProcessor( extension );               \
 }                                                                             \
 void MR_CONCAT( set, ProcName )( const IOFilter& filter, ProcName processor ) \
 {                                                                             \
@@ -46,7 +51,7 @@ public:
     }
 
     // get a registered loader for the filter
-    static Processor getProcessor( IOFilter filter )
+    static Processor getProcessor( const IOFilter& filter )
     {
         const auto& processors = get_().processors_;
         auto it = processors.find( filter );
@@ -56,8 +61,24 @@ public:
             return {};
     }
 
+    // get a registered loader for the extension
+    static Processor getProcessor( const std::string& extension )
+    {
+        const auto& processors = get_().processors_;
+        // TODO: extension cache
+        auto it = std::find_if( processors.begin(), processors.end(), [&extension] ( auto&& item )
+        {
+            const auto& [filter, _] = item;
+            return filter.extensions.find( extension ) != std::string::npos;
+        } );
+        if ( it != processors.end() )
+            return it->second;
+        else
+            return {};
+    }
+
     // register or update a loader for the filter
-    static void setProcessor( IOFilter filter, Processor processor )
+    static void setProcessor( const IOFilter& filter, Processor processor )
     {
         auto& processors = get_().processors_;
         auto it = processors.find( filter );

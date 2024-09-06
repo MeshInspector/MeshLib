@@ -2,6 +2,7 @@
 #include "MRTimer.h"
 #include "miniply.h"
 #include "MRColor.h"
+#include "MRIOFormatsRegistry.h"
 #include "MRStringConvert.h"
 #include "MRStreamOperators.h"
 #include "MRProgressReadWrite.h"
@@ -18,33 +19,8 @@
 #include "OpenCTM/openctm.h"
 #endif
 
-namespace MR
+namespace MR::PointsLoad
 {
-
-namespace PointsLoad
-{
-
-const IOFilters Filters =
-{
-    {"All (*.*)",         "*.*"},
-    {"ASC (.asc)",        "*.asc"},
-    {"CSV (.csv)",        "*.csv"},
-    {"XYZ (.xyz)",        "*.xyz"},
-    {"OBJ (.obj)",        "*.obj"},
-    {"PLY (.ply)",        "*.ply"},
-    {"LIDAR scanner (.pts)", "*.pts"},
-    {"DXF (.dxf)",        "*.dxf"},
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
-    {"E57 (.e57)",        "*.e57"},
-#endif
-#ifndef MRMESH_NO_LAS
-    {"LAS (.las)",        "*.las"},
-    {"LASzip (.laz)",     "*.laz"},
-#endif
-#ifndef MRMESH_NO_OPENCTM
-    {"CTM (.ctm)",        "*.ctm"},
-#endif
-};
 
 Expected<PointCloud> fromText( const std::filesystem::path& file, const PointsLoadSettings& settings )
 {
@@ -146,34 +122,16 @@ Expected<PointCloud> fromText( std::istream& in, const PointsLoadSettings& setti
     return cloud;
 }
 
-Expected<MR::PointCloud> fromText( const std::filesystem::path& file, AffineXf3f* outXf, ProgressCallback callback /*= {} */ )
-{
-    return fromText( file, {
-        .outXf = outXf,
-        .callback = std::move( callback ),
-    } );
-}
-
-Expected<MR::PointCloud> fromText( std::istream& in, AffineXf3f* outXf, ProgressCallback callback /*= {} */ )
-{
-    return fromText( in, {
-        .outXf = outXf,
-        .callback = std::move( callback ),
-    } );
-}
-
-Expected<MR::PointCloud> fromPts( const std::filesystem::path& file, VertColors* colors /*= nullptr*/, 
-    AffineXf3f* outXf /*= nullptr*/, ProgressCallback callback /*= {} */ )
+Expected<MR::PointCloud> fromPts( const std::filesystem::path& file, const PointsLoadSettings& settings )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromPts( in, colors, outXf, callback ), file );
+    return addFileNameInError( fromPts( in, settings ), file );
 }
 
-Expected<MR::PointCloud> fromPts( std::istream& in, VertColors* colors /*= nullptr*/, 
-    AffineXf3f* outXf /*= nullptr*/, ProgressCallback callback /*= {} */ )
+Expected<MR::PointCloud> fromPts( std::istream& in, const PointsLoadSettings& settings )
 {
     MR_TIMER;
     std::string numPointsLine;
@@ -187,7 +145,7 @@ Expected<MR::PointCloud> fromPts( std::istream& in, VertColors* colors /*= nullp
     if ( !dataExp.has_value() )
         return unexpected( dataExp.error() );
 
-    if ( callback && !callback( 0.25f ) )
+    if ( settings.callback && !settings.callback( 0.25f ) )
         return unexpected( "Loading canceled" );
 
     const auto& data = *dataExp;
@@ -201,11 +159,11 @@ Expected<MR::PointCloud> fromPts( std::istream& in, VertColors* colors /*= nullp
     if ( !shiftLineRes.has_value() )
         return unexpected( shiftLineRes.error() );
 
-    if ( outXf )
-        *outXf = AffineXf3f::translation( Vector3f( firstLineCoord ) );
+    if ( settings.outXf )
+        *settings.outXf = AffineXf3f::translation( Vector3f( firstLineCoord ) );
 
-    if ( colors )
-        colors->resize( lineOffsets.size() - firstLine - 1 );
+    if ( settings.colors )
+        settings.colors->resize( lineOffsets.size() - firstLine - 1 );
 
     PointCloud pc;
     pc.points.resize( lineOffsets.size() - firstLine - 1 );
@@ -222,9 +180,9 @@ Expected<MR::PointCloud> fromPts( std::istream& in, VertColors* colors /*= nullp
             parseError = std::move( parseRes.error() );
 
         pc.points[VertId( i )] = Vector3f( tempDoubleCoord - firstLineCoord );
-        if ( colors )
-            ( *colors )[VertId( i )] = tempColor;
-    }, subprogress( callback, 0.25f, 1.0f ) );
+        if ( settings.colors )
+            ( *settings.colors )[VertId( i )] = tempColor;
+    }, subprogress( settings.callback, 0.25f, 1.0f ) );
 
     if ( !keepGoing )
         return unexpected( "Loading canceled" );
@@ -238,16 +196,16 @@ Expected<MR::PointCloud> fromPts( std::istream& in, VertColors* colors /*= nullp
 
 #ifndef MRMESH_NO_OPENCTM
 
-Expected<MR::PointCloud> fromCtm( const std::filesystem::path& file, VertColors* colors /*= nullptr */, ProgressCallback callback )
+Expected<MR::PointCloud> fromCtm( const std::filesystem::path& file, const PointsLoadSettings& settings )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromCtm( in, colors, callback ), file );
+    return addFileNameInError( fromCtm( in, settings ), file );
 }
 
-Expected<MR::PointCloud> fromCtm( std::istream& in, VertColors* colors /*= nullptr */, ProgressCallback callback )
+Expected<MR::PointCloud> fromCtm( std::istream& in, const PointsLoadSettings& settings )
 {
     MR_TIMER;
 
@@ -278,9 +236,9 @@ Expected<MR::PointCloud> fromCtm( std::istream& in, VertColors* colors /*= nullp
     const auto posEnd = in.tellg();
     in.seekg( posStart );
 
-    if ( callback )
+    if ( settings.callback )
     {
-        loadData.callbackFn = [callback, posStart, sizeAll = float( posEnd - posStart ), &in]( float )
+        loadData.callbackFn = [callback = settings.callback, posStart, sizeAll = float( posEnd - posStart ), &in]( float )
         {
             float progress = float( in.tellg() - posStart ) / sizeAll;
             return callback( progress );
@@ -305,17 +263,17 @@ Expected<MR::PointCloud> fromCtm( std::istream& in, VertColors* colors /*= nullp
     if ( ctmGetError( context ) != CTM_NONE )
         return unexpected( "Error reading CTM format" );
 
-    if ( colors )
+    if ( settings.colors )
     {
         auto colorAttrib = ctmGetNamedAttribMap( context, "Color" );
         if ( colorAttrib != CTM_NONE )
         {
             auto colorArray = ctmGetFloatArray( context, colorAttrib );
-            colors->resize( vertCount );
+            settings.colors->resize( vertCount );
             for ( VertId i{ 0 }; CTMuint( i ) < vertCount; ++i )
             {
                 auto j = 4 * i;
-                ( *colors )[i] = Color( colorArray[j], colorArray[j + 1], colorArray[j + 2], colorArray[j + 3] );
+                ( *settings.colors )[i] = Color( colorArray[j], colorArray[j + 1], colorArray[j + 2], colorArray[j + 3] );
             }
         }
     }
@@ -338,16 +296,16 @@ Expected<MR::PointCloud> fromCtm( std::istream& in, VertColors* colors /*= nullp
 }
 #endif
 
-Expected<MR::PointCloud> fromPly( const std::filesystem::path& file, VertColors* colors /*= nullptr */, ProgressCallback callback )
+Expected<MR::PointCloud> fromPly( const std::filesystem::path& file, const PointsLoadSettings& settings )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromPly( in, colors, callback ), file );
+    return addFileNameInError( fromPly( in, settings ), file );
 }
 
-Expected<MR::PointCloud> fromPly( std::istream& in, VertColors* colors /*= nullptr */, ProgressCallback callback )
+Expected<MR::PointCloud> fromPly( std::istream& in, const PointsLoadSettings& settings )
 {
     MR_TIMER;
 
@@ -362,7 +320,7 @@ Expected<MR::PointCloud> fromPly( std::istream& in, VertColors* colors /*= nullp
     std::vector<unsigned char> colorsBuffer;
     PointCloud res;
     const auto posEnd = reader.get_end_pos();
-    const float streamSize = float( posEnd - posStart );
+    const auto streamSize = float( posEnd - posStart );
 
     for ( int i = 0; reader.has_element() && !gotVerts; reader.next_element(), ++i )
     {
@@ -381,13 +339,13 @@ Expected<MR::PointCloud> fromPly( std::istream& in, VertColors* colors /*= nullp
                 res.normals.resize( numVerts );
                 reader.extract_properties( indecies, 3, miniply::PLYPropertyType::Float, res.normals.data() );
             }
-            if ( colors && reader.find_color( indecies ) )
+            if ( settings.colors && reader.find_color( indecies ) )
             {
                 colorsBuffer.resize( 3 * numVerts );
                 reader.extract_properties( indecies, 3, miniply::PLYPropertyType::UChar, colorsBuffer.data() );
             }
             const float progress = float( in.tellg() - posStart ) / streamSize;
-            if ( callback && !callback( progress ) )
+            if ( settings.callback && !settings.callback( progress ) )
                 return unexpected( std::string( "Loading canceled" ) );
             continue;
         }
@@ -400,29 +358,29 @@ Expected<MR::PointCloud> fromPly( std::istream& in, VertColors* colors /*= nullp
         return unexpected( std::string( "PLY file does not contain vertices" ) );
 
     res.validPoints.resize( res.points.size(), true );
-    if ( colors && !colorsBuffer.empty() )
+    if ( settings.colors && !colorsBuffer.empty() )
     {
-        colors->resize( res.points.size() );
+        settings.colors->resize( res.points.size() );
         for ( VertId i{ 0 }; i < res.points.size(); ++i )
         {
             int ind = 3 * i;
-            ( *colors )[i] = Color( colorsBuffer[ind], colorsBuffer[ind + 1], colorsBuffer[ind + 2] );
+            ( *settings.colors )[i] = Color( colorsBuffer[ind], colorsBuffer[ind + 1], colorsBuffer[ind + 2] );
         }
     }
 
     return res;
 }
 
-Expected<MR::PointCloud> fromObj( const std::filesystem::path& file, ProgressCallback callback )
+Expected<MR::PointCloud> fromObj( const std::filesystem::path& file, const PointsLoadSettings& settings )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromObj( in, callback ), file );
+    return addFileNameInError( fromObj( in, settings ), file );
 }
 
-Expected<MR::PointCloud> fromObj( std::istream& in, ProgressCallback callback )
+Expected<MR::PointCloud> fromObj( std::istream& in, const PointsLoadSettings& settings )
 {
     PointCloud cloud;
 
@@ -430,7 +388,7 @@ Expected<MR::PointCloud> fromObj( std::istream& in, ProgressCallback callback )
     in.seekg( 0, std::ios_base::end );
     const auto posEnd = in.tellg();
     in.seekg( posStart );
-    const float streamSize = float( posEnd - posStart );
+    const auto streamSize = float( posEnd - posStart );
 
     for ( int i = 0;; ++i )
     {
@@ -453,10 +411,10 @@ Expected<MR::PointCloud> fromObj( std::istream& in, ProgressCallback callback )
             std::getline( in, str );
         }
 
-        if ( callback && !( i & 0x3FF ) )
+        if ( settings.callback && !( i & 0x3FF ) )
         {
             const float progress = float( in.tellg() - posStart ) / streamSize;
-            if ( !callback( progress ) )
+            if ( !settings.callback( progress ) )
                 return unexpected( std::string( "Loading canceled" ) );
         }
     }
@@ -467,34 +425,38 @@ Expected<MR::PointCloud> fromObj( std::istream& in, ProgressCallback callback )
 
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
 
-Expected<PointCloud> fromE57( const std::filesystem::path& file, VertColors* colors, AffineXf3f* outXf,
-                                           ProgressCallback progress )
+Expected<PointCloud> fromE57( const std::filesystem::path& file, const PointsLoadSettings& settings )
 {
-    auto x = fromSceneE57File( file, { .combineAllObjects = true, .identityXf = !outXf, .progress = progress } );
+    auto x = fromSceneE57File( file, { .combineAllObjects = true, .identityXf = !settings.outXf, .progress = settings.callback } );
     if ( !x )
         return unexpected( std::move( x.error() ) );
     if ( x->empty() )
         return PointCloud();
     assert( x->size() == 1 );
-    if ( colors )
-        *colors = std::move( (*x)[0].colors );
-    if ( outXf )
-        *outXf = (*x)[0].xf;
+    if ( settings.colors )
+        *settings.colors = std::move( (*x)[0].colors );
+    if ( settings.outXf )
+        *settings.outXf = (*x)[0].xf;
     return std::move( (*x)[0].cloud );
+}
+
+Expected<PointCloud> fromE57( std::istream&, const PointsLoadSettings& )
+{
+    return unexpected( "no support for reading e57 from arbitrary stream yet" );
 }
 
 #endif
 
-Expected<MR::PointCloud> fromDxf( const std::filesystem::path& file, ProgressCallback callback )
+Expected<MR::PointCloud> fromDxf( const std::filesystem::path& file, const PointsLoadSettings& settings )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromDxf( in, callback ), file );
+    return addFileNameInError( fromDxf( in, settings ), file );
 }
 
-Expected<MR::PointCloud> fromDxf( std::istream& in, ProgressCallback cb )
+Expected<MR::PointCloud> fromDxf( std::istream& in, const PointsLoadSettings& settings )
 {
     PointCloud cloud;
 
@@ -502,7 +464,7 @@ Expected<MR::PointCloud> fromDxf( std::istream& in, ProgressCallback cb )
     in.seekg( 0, std::ios_base::end );
     const auto posEnd = in.tellg();
     in.seekg( posStart );
-    const float streamSize = float( posEnd - posStart );
+    const auto streamSize = float( posEnd - posStart );
 
     std::string str;
     std::getline( in, str );
@@ -515,7 +477,7 @@ Expected<MR::PointCloud> fromDxf( std::istream& in, ProgressCallback cb )
 
     for ( int i = 0; !in.eof(); ++i )
     {
-        if ( i % 1024 == 0 && !reportProgress( cb, float( in.tellg() ) / streamSize ) )
+        if ( i % 1024 == 0 && !reportProgress( settings.callback, float( in.tellg() ) / streamSize ) )
             return unexpectedOperationCanceled();
 
         std::getline( in, str );
@@ -548,7 +510,7 @@ Expected<MR::PointCloud> fromDxf( std::istream& in, ProgressCallback cb )
             isPointFound = false;
     }
 
-    if ( !reportProgress( cb, 1.0f ) )
+    if ( !reportProgress( settings.callback, 1.0f ) )
         return unexpectedOperationCanceled();
 
     if ( cloud.points.empty() )
@@ -558,83 +520,50 @@ Expected<MR::PointCloud> fromDxf( std::istream& in, ProgressCallback cb )
     return cloud;
 }
 
-Expected<PointCloud> fromAnySupportedFormat( const std::filesystem::path& file, VertColors* colors,
-                                                          AffineXf3f* outXf, ProgressCallback callback )
+Expected<PointCloud> fromAnySupportedFormat( const std::filesystem::path& file, const PointsLoadSettings& settings )
 {
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
+    ext = "*" + ext;
 
-    PointsLoadSettings settings {
-        .colors = colors,
-        .outXf = outXf,
-        .callback = callback,
-    };
+    auto loader = getPointsLoader( ext );
+    if ( !loader.fileLoad )
+        return unexpected( std::string( "unsupported file extension" ) );
 
-    Expected<MR::PointCloud> res = unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == ".ply" )
-        res = MR::PointsLoad::fromPly( file, colors, callback );
-    else if ( ext == ".pts" )
-        res = MR::PointsLoad::fromPts( file, colors, outXf, callback );
-#ifndef MRMESH_NO_OPENCTM
-    else if ( ext == ".ctm" )
-        res = MR::PointsLoad::fromCtm( file, colors, callback );
-#endif
-    else if ( ext == ".obj" )
-        res = MR::PointsLoad::fromObj( file, callback );
-    else if ( ext == ".asc" || ext == ".csv" || ext == ".xyz" )
-        res = MR::PointsLoad::fromText( file, settings );
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
-    else if ( ext == ".e57" )
-        res = MR::PointsLoad::fromE57( file, colors, outXf, callback );
-#endif
-#if !defined( MRMESH_NO_LAS )
-    else if ( ext == ".las" || ext == ".laz" )
-        res = MR::PointsLoad::fromLas( file, colors, outXf, callback );
-#endif
-    else if ( ext == ".dxf" )
-        res = MR::PointsLoad::fromDxf( file, callback );
-    return res;
+    return loader.fileLoad( file, settings );
 }
 
-Expected<PointCloud> fromAnySupportedFormat( std::istream& in, const std::string& extension,
-                                                          VertColors* colors, AffineXf3f* outXf,
-                                                          ProgressCallback callback )
+Expected<PointCloud> fromAnySupportedFormat( std::istream& in, const std::string& extension, const PointsLoadSettings& settings )
 {
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
         c = ( char )tolower( c );
+    ext = "*" + ext;
+
+    auto loader = getPointsLoader( ext );
+    if ( !loader.streamLoad )
+        return unexpected( std::string( "unsupported file extension" ) );
+
+    return loader.streamLoad( in, settings );
+}
+
+MR_ADD_POINTS_LOADER( IOFilter( "ASC (.asc)",        "*.asc" ), fromText )
+MR_ADD_POINTS_LOADER( IOFilter( "CSV (.csv)",        "*.csv" ), fromText )
+MR_ADD_POINTS_LOADER( IOFilter( "XYZ (.xyz)",        "*.xyz" ), fromText )
+MR_ADD_POINTS_LOADER( IOFilter( "OBJ (.obj)",        "*.obj" ), fromObj )
+MR_ADD_POINTS_LOADER( IOFilter( "PLY (.ply)",        "*.ply" ), fromPly )
+MR_ADD_POINTS_LOADER( IOFilter( "LIDAR scanner (.pts)", "*.pts" ), fromPts )
+MR_ADD_POINTS_LOADER( IOFilter( "DXF (.dxf)",        "*.dxf" ), fromDxf )
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
-    assert( ext != ".e57" ); // no support for reading e57 from arbitrary stream yet
+MR_ADD_POINTS_LOADER( IOFilter( "E57 (.e57)",        "*.e57" ), fromE57 )
 #endif
-
-    PointsLoadSettings settings {
-        .colors = colors,
-        .outXf = outXf,
-        .callback = callback,
-    };
-
-    Expected<MR::PointCloud> res = unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == ".ply" )
-        res = MR::PointsLoad::fromPly( in, colors, callback );
-    else if ( ext == ".pts" )
-        res = MR::PointsLoad::fromPts( in, colors, outXf, callback );
+#ifndef MRMESH_NO_LAS
+MR_ADD_POINTS_LOADER( IOFilter( "LAS (.las)",        "*.las" ), fromLas )
+MR_ADD_POINTS_LOADER( IOFilter( "LASzip (.laz)",     "*.laz" ), fromLas )
+#endif
 #ifndef MRMESH_NO_OPENCTM
-    else if ( ext == ".ctm" )
-        res = MR::PointsLoad::fromCtm( in, colors, callback );
+MR_ADD_POINTS_LOADER( IOFilter( "CTM (.ctm)",        "*.ctm" ), fromCtm )
 #endif
-    else if ( ext == ".obj" )
-        res = MR::PointsLoad::fromObj( in, callback );
-    else if ( ext == ".asc" || ext == ".csv" || ext == ".xyz" )
-        res = MR::PointsLoad::fromText( in, settings );
-#if !defined( MRMESH_NO_LAS )
-    else if ( ext == ".las" || ext == ".laz" )
-        res = MR::PointsLoad::fromLas( in, colors, outXf, callback );
-#endif
-    else if ( ext == ".dxf" )
-        res = MR::PointsLoad::fromDxf( in, callback );
-    return res;
-}
 
-}
-}
+} // namespace MR::PointsLoad

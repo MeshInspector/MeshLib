@@ -17,8 +17,6 @@ namespace MeshSave
 /// \ingroup IOGroup
 /// \{
 
-MRMESH_API extern const IOFilters Filters;
-
 /// saves in internal file format;
 /// SaveSettings::saveValidOnly = true is ignored
 MRMESH_API VoidOrErrStr toMrmesh( const Mesh & mesh, const std::filesystem::path & file,
@@ -35,9 +33,11 @@ MRMESH_API VoidOrErrStr toOff( const Mesh & mesh, std::ostream & out,
 /// saves in .obj file
 /// \param firstVertId is the index of first mesh vertex in the output file (if this object is not the first there)
 MRMESH_API VoidOrErrStr toObj( const Mesh & mesh, const std::filesystem::path & file,
-                                                  const SaveSettings & settings = {}, int firstVertId = 1 );
+                                                  const SaveSettings & settings, int firstVertId );
 MRMESH_API VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out,
-                                                  const SaveSettings & settings = {}, int firstVertId = 1 );
+                                                  const SaveSettings & settings, int firstVertId );
+MRMESH_API VoidOrErrStr toObj( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
+MRMESH_API VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
 
 /// saves in binary .stl file;
 /// SaveSettings::saveValidOnly = false is ignored
@@ -73,8 +73,10 @@ struct CtmSaveOptions : SaveSettings
 
 #ifndef MRMESH_NO_OPENCTM
 /// saves in .ctm file
-MRMESH_API VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options = {} );
-MRMESH_API VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options = {} );
+MRMESH_API VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions & options );
+MRMESH_API VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions & options );
+MRMESH_API VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
+MRMESH_API VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
 #endif
 
 /// detects the format from file extension and save mesh to it

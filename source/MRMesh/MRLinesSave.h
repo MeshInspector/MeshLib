@@ -16,8 +16,6 @@ namespace LinesSave
 /// \ingroup IOGroup
 /// \{
 
-MRMESH_API extern const IOFilters Filters;
-
 /// saves in .mrlines file;
 /// SaveSettings::saveValidOnly = true is ignored
 MRMESH_API VoidOrErrStr toMrLines( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );

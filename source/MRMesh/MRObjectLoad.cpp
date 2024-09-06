@@ -141,9 +141,12 @@ const IOFilters SceneFileFilters =
 const IOFilters allFilters = SceneFileFilters
                              | ObjectLoad::getFilters()
                              | MeshLoad::getFilters()
-                             | VoxelsLoad::Filters
-                             | LinesLoad::Filters
-                             | PointsLoad::Filters;
+                             | LinesLoad::getFilters()
+                             | PointsLoad::getFilters()
+#ifndef MRMESH_NO_OPENVDB
+                             | VoxelsLoad::getFilters()
+#endif
+;
 
 Expected<ObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadInfo& info /*= {}*/ )
 {
@@ -299,7 +302,11 @@ Expected<ObjectPoints> makeObjectPointsFromFile( const std::filesystem::path& fi
 
     VertColors colors;
     AffineXf3f xf;
-    auto pointsCloud = PointsLoad::fromAnySupportedFormat( file, &colors, &xf, callback );
+    auto pointsCloud = PointsLoad::fromAnySupportedFormat( file, {
+        .colors = &colors,
+        .outXf = &xf,
+        .callback = callback,
+    } );
     if ( !pointsCloud.has_value() )
     {
         return unexpected( pointsCloud.error() );
@@ -706,7 +713,11 @@ Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder,
 
 
     // Global variable is not correctly initialized in emscripten build
-    const IOFilters filters = SceneFileFilters | MeshLoad::getFilters() | VoxelsLoad::Filters | LinesLoad::Filters | PointsLoad::Filters;
+    const IOFilters filters = SceneFileFilters | MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters()
+#ifndef MRMESH_NO_OPENVDB
+        | VoxelsLoad::getFilters()
+#endif
+    ;
 
     std::function<void( FilePathNode& )> fillFilesTree = {};
     fillFilesTree = [&fillFilesTree, &filters] ( FilePathNode& node )

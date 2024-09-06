@@ -18,8 +18,6 @@ namespace PointsSave
 /// \ingroup IOGroup
 /// \{
 
-MRMESH_API extern const IOFilters Filters;
-
 /// save valid points with normals in textual .asc file
 MRMESH_API VoidOrErrStr toAsc( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings = {} );
 MRMESH_API VoidOrErrStr toAsc( const PointCloud& points, std::ostream& out, const SaveSettings& settings = {} );
@@ -28,6 +26,7 @@ MRMESH_API VoidOrErrStr toAsc( const PointCloud& points, std::ostream& out, cons
 MRMESH_API VoidOrErrStr toPly( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings = {} );
 MRMESH_API VoidOrErrStr toPly( const PointCloud& points, std::ostream& out, const SaveSettings& settings = {} );
 
+#ifndef MRMESH_NO_OPENCTM
 struct CtmSavePointsOptions : SaveSettings
 {
     /// 0 - minimal compression, but fast; 9 - maximal compression, but slow
@@ -36,10 +35,11 @@ struct CtmSavePointsOptions : SaveSettings
     const char* comment = "MeshInspector Points";
 };
 
-#ifndef MRMESH_NO_OPENCTM
 /// saves in .ctm file
-MRMESH_API VoidOrErrStr toCtm( const PointCloud& points, const std::filesystem::path& file, const CtmSavePointsOptions& options = {} );
-MRMESH_API VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const CtmSavePointsOptions& options = {} );
+MRMESH_API VoidOrErrStr toCtm( const PointCloud& points, const std::filesystem::path& file, const CtmSavePointsOptions& options );
+MRMESH_API VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const CtmSavePointsOptions& options );
+MRMESH_API VoidOrErrStr toCtm( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings = {} );
+MRMESH_API VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const SaveSettings& settings = {} );
 #endif
 
 /// detects the format from file extension and save points to it

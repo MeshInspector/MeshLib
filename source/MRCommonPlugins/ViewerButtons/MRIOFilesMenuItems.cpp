@@ -110,10 +110,6 @@ EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename )
 {
     using namespace MR;
     auto filters = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | SceneFileFilters | DistanceMapLoad::Filters | GcodeLoad::Filters | VoxelsLoad::Filters;
-    std::erase_if( filters, [] ( const auto& filter )
-    {
-        return filter.extensions == "*.*";
-    } );
 #ifdef __EMSCRIPTEN_PTHREADS__
         filters = filters | ObjectLoad::getFilters();
 #else
@@ -167,12 +163,16 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
         setupListUpdate_();
         connect( &getViewerInstance() );
         // required to be deferred, for valid emscripten static constructors order
-        filters_ = MeshLoad::getFilters() | LinesLoad::Filters | PointsLoad::Filters | SceneFileFilters | DistanceMapLoad::Filters | GcodeLoad::Filters | VoxelsLoad::Filters;
+        filters_ =
+#ifndef __EMSCRIPTEN__
+            AllFilter |
+#endif
+            MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneFileFilters | DistanceMapLoad::Filters | GcodeLoad::Filters
+#ifndef MRMESH_NO_OPENVDB
+            | VoxelsLoad::getFilters()
+#endif
+        ;
 #ifdef __EMSCRIPTEN__
-        std::erase_if( filters_, [] ( const auto& filter )
-        {
-            return filter.extensions == "*.*";
-        } );
 #ifdef __EMSCRIPTEN_PTHREADS__
         filters_ = filters_ | ObjectLoad::getFilters();
 #else
@@ -512,12 +512,12 @@ std::optional<SaveInfo> getSaveInfo( const std::vector<std::shared_ptr<T>> & obj
         return true;
     };
 
-    checkObjects.template operator()<ObjectMesh>( { ViewerSettingsManager::ObjType::Mesh, MeshSave::Filters } )
-    || checkObjects.template operator()<ObjectLines>( { ViewerSettingsManager::ObjType::Lines, LinesSave::Filters } )
-    || checkObjects.template operator()<ObjectPoints>( { ViewerSettingsManager::ObjType::Points, PointsSave::Filters } )
+    checkObjects.template operator()<ObjectMesh>( { ViewerSettingsManager::ObjType::Mesh, MeshSave::getFilters() } )
+    || checkObjects.template operator()<ObjectLines>( { ViewerSettingsManager::ObjType::Lines, LinesSave::getFilters() } )
+    || checkObjects.template operator()<ObjectPoints>( { ViewerSettingsManager::ObjType::Points, PointsSave::getFilters() } )
     || checkObjects.template operator()<ObjectDistanceMap>( { ViewerSettingsManager::ObjType::DistanceMap, DistanceMapSave::Filters } )
 #ifndef MRMESH_NO_OPENVDB
-    || checkObjects.template operator()<ObjectVoxels>( { ViewerSettingsManager::ObjType::Voxels, VoxelsSave::Filters } )
+    || checkObjects.template operator()<ObjectVoxels>( { ViewerSettingsManager::ObjType::Voxels, VoxelsSave::getFilters() } )
 #endif
     ;
 

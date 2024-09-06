@@ -1137,35 +1137,37 @@ Viewer::~Viewer()
 bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
 {
     std::error_code ec;
-    if( !std::filesystem::exists( mesh_file_name, ec ) )
+    if ( !std::filesystem::exists( mesh_file_name, ec ) )
         return false;
-    if( !std::filesystem::is_regular_file( mesh_file_name, ec ) )
+    if ( !std::filesystem::is_regular_file( mesh_file_name, ec ) )
         return false;
 
     std::string ext = utf8string( mesh_file_name.extension() );
-    for( auto& c : ext )
+    for ( auto& c : ext )
         c = (char) tolower( c );
 
-    for( auto& filter : MeshLoad::getFilters() )
-    {
-        if( filter.extensions.find( ext ) != std::string::npos )
-            return true;
-    }
-    for ( auto& filter : LinesLoad::Filters )
+    for ( auto& filter : MeshLoad::getFilters() )
     {
         if ( filter.extensions.find( ext ) != std::string::npos )
             return true;
     }
-    for ( auto& filter : PointsLoad::Filters )
+    for ( auto& filter : LinesLoad::getFilters() )
     {
         if ( filter.extensions.find( ext ) != std::string::npos )
             return true;
     }
-    for ( auto& filter : VoxelsLoad::Filters )
+    for ( auto& filter : PointsLoad::getFilters() )
     {
         if ( filter.extensions.find( ext ) != std::string::npos )
             return true;
     }
+#ifndef MRMESH_NO_OPENVDB
+    for ( auto& filter : VoxelsLoad::getFilters() )
+    {
+        if ( filter.extensions.find( ext ) != std::string::npos )
+            return true;
+    }
+#endif
     for ( auto& filter : DistanceMapLoad::Filters )
     {
         if ( filter.extensions.find( ext ) != std::string::npos )

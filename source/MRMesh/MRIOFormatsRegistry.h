@@ -4,6 +4,8 @@
 #include "MRIOFilters.h"
 #include "MRMeshLoadSettings.h"
 #include "MROnInit.h"
+#include "MRPointsLoadSettings.h"
+#include "MRSaveSettings.h"
 
 #include <filesystem>
 #include <map>
@@ -136,7 +138,128 @@ MR_ON_INIT { using namespace MR::MeshLoad; setMeshLoader( filter, { static_cast<
 
 /// \}
 
-}
+} // namespace MeshLoad
+
+namespace MeshSave
+{
+
+using MeshFileSaver = Expected<void>( * )( const Mesh&, const std::filesystem::path&, const SaveSettings& );
+using MeshStreamSaver = Expected<void>( * )( const Mesh&, std::ostream&, const SaveSettings& );
+
+struct MeshSaver
+{
+    MeshFileSaver fileSave{ nullptr };
+    MeshStreamSaver streamSave{ nullptr };
+};
+
+MR_FORMAT_REGISTRY_DECL( MeshSaver )
+
+#define MR_ADD_MESH_SAVER( filter, saver ) \
+MR_ON_INIT { using namespace MR::MeshSave; setMeshSaver( filter, { static_cast<MeshFileSaver>( saver ), static_cast<MeshStreamSaver>( saver ) } ); };
+
+} // namespace MeshSave
+
+namespace LinesLoad
+{
+
+using LinesFileLoader = Expected<Polyline3>( * )( const std::filesystem::path&, ProgressCallback );
+using LinesStreamLoader = Expected<Polyline3>( * )( std::istream&, ProgressCallback );
+
+struct LinesLoader
+{
+    LinesFileLoader fileLoad{ nullptr };
+    LinesStreamLoader streamLoad{ nullptr };
+};
+
+MR_FORMAT_REGISTRY_DECL( LinesLoader )
+
+#define MR_ADD_LINES_LOADER( filter, loader ) \
+MR_ON_INIT { using namespace MR::LinesLoad; setLinesLoader( filter, { static_cast<LinesFileLoader>( loader ), static_cast<LinesStreamLoader>( loader ) } ); };
+
+} // namespace LinesLoad
+
+namespace LinesSave
+{
+
+using LinesFileSaver = Expected<void>( * )( const Polyline3&, const std::filesystem::path&, const SaveSettings& );
+using LinesStreamSaver = Expected<void>( * )( const Polyline3&, std::ostream&, const SaveSettings& );
+
+struct LinesSaver
+{
+    LinesFileSaver fileSave{ nullptr };
+    LinesStreamSaver streamSave{ nullptr };
+};
+
+MR_FORMAT_REGISTRY_DECL( LinesSaver )
+
+#define MR_ADD_LINES_SAVER( filter, saver ) \
+MR_ON_INIT { using namespace MR::LinesSave; setLinesSaver( filter, { static_cast<LinesFileSaver>( saver ), static_cast<LinesStreamSaver>( saver ) } ); };
+
+} // namespace LinesSave
+
+namespace PointsLoad
+{
+
+using PointsFileLoader = Expected<PointCloud>( * )( const std::filesystem::path&, const PointsLoadSettings& );
+using PointsStreamLoader = Expected<PointCloud>( * )( std::istream&, const PointsLoadSettings& );
+
+struct PointsLoader
+{
+    PointsFileLoader fileLoad{ nullptr };
+    PointsStreamLoader streamLoad{ nullptr };
+};
+
+MR_FORMAT_REGISTRY_DECL( PointsLoader )
+
+#define MR_ADD_POINTS_LOADER( filter, loader ) \
+MR_ON_INIT { using namespace MR::PointsLoad; setPointsLoader( filter, { static_cast<PointsFileLoader>( loader ), static_cast<PointsStreamLoader>( loader ) } ); };
+
+} // namespace PointsLoad
+
+namespace PointsSave
+{
+
+using PointsFileSaver = Expected<void>( * )( const PointCloud&, const std::filesystem::path&, const SaveSettings& );
+using PointsStreamSaver = Expected<void>( * )( const PointCloud&, std::ostream&, const SaveSettings& );
+
+struct PointsSaver
+{
+    PointsFileSaver fileSave{ nullptr };
+    PointsStreamSaver streamSave{ nullptr };
+};
+
+MR_FORMAT_REGISTRY_DECL( PointsSaver )
+
+#define MR_ADD_POINTS_SAVER( filter, saver ) \
+MR_ON_INIT { using namespace MR::PointsSave; setPointsSaver( filter, { static_cast<PointsFileSaver>( saver ), static_cast<PointsStreamSaver>( saver ) } ); };
+
+} // namespace PointsSave
+
+#ifndef MRMESH_NO_OPENVDB
+namespace VoxelsLoad
+{
+
+using VoxelsLoader = Expected<std::vector<VdbVolume>>( * )( const std::filesystem::path&, const ProgressCallback& );
+
+MR_FORMAT_REGISTRY_DECL( VoxelsLoader )
+
+#define MR_ADD_VOXELS_LOADER( filter, loader ) \
+MR_ON_INIT { using namespace MR::VoxelsLoad; setVoxelsLoader( filter, loader ); };
+
+} // namespace VoxelsLoad
+
+namespace VoxelsSave
+{
+
+using VoxelsSaver = Expected<void>( * )( const VdbVolume&, const std::filesystem::path&, ProgressCallback );
+
+MR_FORMAT_REGISTRY_DECL( VoxelsSaver )
+
+#define MR_ADD_VOXELS_SAVER( filter, saver ) \
+MR_ON_INIT { using namespace MR::VoxelsSave; setVoxelsSaver( filter, saver ); };
+
+} // namespace VoxelsSave
+#endif
 
 using ObjectPtr = std::shared_ptr<Object>;
 

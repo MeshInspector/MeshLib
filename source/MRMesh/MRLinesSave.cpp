@@ -1,4 +1,5 @@
 #include "MRLinesSave.h"
+#include "MRIOFormatsRegistry.h"
 #include "MRPolyline.h"
 #include "MRTimer.h"
 #include "MRVector3.h"
@@ -13,13 +14,6 @@ namespace MR
 
 namespace LinesSave
 {
-
-const IOFilters Filters =
-{
-    {"MrLines (.mrlines)", "*.mrlines"},
-    {"PTS (.pts)", "*.pts"},
-    {"Drawing exchange format (.dxf)", "*.dxf"}
-};
 
 VoidOrErrStr toMrLines( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings )
 {
@@ -153,15 +147,13 @@ VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, const std::filesys
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
+    ext = "*" + ext;
 
-    VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == ".mrlines" )
-        res = toMrLines( polyline, file, settings );
-    else if ( ext == ".pts" )
-        res = toPts( polyline, file, settings );
-    else if ( ext == ".dxf" )
-        res = toDxf( polyline, file, settings );
-    return res;
+    auto saver = getLinesSaver( ext );
+    if ( !saver.fileSave )
+        return unexpected( std::string( "unsupported file extension" ) );
+
+    return saver.fileSave( polyline, file, settings );
 }
 
 VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, std::ostream& out, const std::string& extension, const SaveSettings & settings )
@@ -169,16 +161,18 @@ VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, std::ostream& out,
     auto ext = extension.substr( 1 );
     for ( auto& c : ext )
         c = ( char )tolower( c );
+    ext = "*" + ext;
 
-    VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == ".mrlines" )
-        res = toMrLines( polyline, out, settings );
-    else if ( ext == ".pts" )
-        res = toPts( polyline, out, settings );
-    else if ( ext == ".dxf" )
-        res = toDxf( polyline, out, settings );
-    return res;
+    auto saver = getLinesSaver( ext );
+    if ( !saver.streamSave )
+        return unexpected( std::string( "unsupported stream extension" ) );
+
+    return saver.streamSave( polyline, out, settings );
 }
+
+MR_ADD_LINES_SAVER( IOFilter( "MrLines (.mrlines)", "*.mrlines" ), toMrLines )
+MR_ADD_LINES_SAVER( IOFilter( "PTS (.pts)", "*.pts" ), toPts )
+MR_ADD_LINES_SAVER( IOFilter( "Drawing exchange format (.dxf)", "*.dxf" ), toDxf )
 
 } //namespace LinesSave
 

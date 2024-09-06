@@ -3,6 +3,7 @@
 #include "MRDistanceMap.h"
 #include "MRDistanceMapSave.h"
 #include "MRGltfSerializer.h"
+#include "MRIOFormatsRegistry.h"
 #include "MRLinesSave.h"
 #include "MRMeshSave.h"
 #include "MRObjectDistanceMap.h"
@@ -171,17 +172,17 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
     {
         return toAnySupportedSceneFormat( object, file, callback );
     }
-    else if ( hasExtension( MeshSave::Filters, extension ) )
+    else if ( hasExtension( MeshSave::getFilters(), extension ) )
     {
         const auto mesh = mergeToMesh( object );
         return MeshSave::toAnySupportedFormat( mesh, file, { .progress = callback } );
     }
-    else if ( hasExtension( PointsSave::Filters, extension ) )
+    else if ( hasExtension( PointsSave::getFilters(), extension ) )
     {
         const auto pointCloud = mergeToPoints( object );
         return PointsSave::toAnySupportedFormat( pointCloud, file, { .progress = callback } );
     }
-    else if ( hasExtension( LinesSave::Filters, extension ) )
+    else if ( hasExtension( LinesSave::getFilters(), extension ) )
     {
         const auto polyline = mergeToLines( object );
         return LinesSave::toAnySupportedFormat( polyline, file, { .progress = callback } );
@@ -201,7 +202,7 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
         return DistanceMapSave::toAnySupportedFormat( file, *objDmap->getDistanceMap(), &objDmap->getToWorldParameters() );
     }
 #ifndef MRMESH_NO_OPENVDB
-    else if ( hasExtension( VoxelsSave::Filters, extension ) )
+    else if ( hasExtension( VoxelsSave::getFilters(), extension ) )
     {
         const auto objVoxels = getAllObjectsInTree<ObjectVoxels>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable );
         if ( objVoxels.empty() )

@@ -4,6 +4,8 @@
 #include "MRBox.h"
 #include "MRColor.h"
 #include "MRPointCloud.h"
+#include "MRPointsLoadSettings.h"
+#include "MRProgressCallback.h"
 #include "MRStringConvert.h"
 #include "MRPch/MRFmt.h"
 
@@ -223,7 +225,7 @@ Color getColor( uint8_t classification )
         return Color::black();
 }
 
-Expected<PointCloud> process( lazperf::reader::basic_file& reader, VertColors* colors, AffineXf3f* outXf, ProgressCallback callback )
+Expected<PointCloud> process( lazperf::reader::basic_file& reader, const PointsLoadSettings& settings )
 {
     const auto pointCount = reader.pointCount();
 
@@ -237,29 +239,29 @@ Expected<PointCloud> process( lazperf::reader::basic_file& reader, VertColors* c
 
     PointCloud result;
     result.points.reserve( pointCount );
-    if ( colors )
-        colors->reserve( pointCount );
+    if ( settings.colors )
+        settings.colors->reserve( pointCount );
 
     Vector3d offset {
         header.offset.x,
         header.offset.y,
         header.offset.z,
     };
-    if ( outXf )
+    if ( settings.outXf )
     {
         const Box3d box {
             { header.minx, header.miny, header.minz },
             { header.maxx, header.maxy, header.maxz },
         };
         const auto center = box.center();
-        *outXf = AffineXf3f::translation( Vector3f( center ) );
+        *settings.outXf = AffineXf3f::translation( Vector3f( center ) );
         offset -= center;
     }
 
     for ( auto i = 0; i < pointCount; ++i )
     {
         if ( i % 4096 == 0 )
-            reportProgress( callback, (float)i / (float)pointCount );
+            reportProgress( settings.callback, (float)i / (float)pointCount );
 
         reader.readPoint( buf.data() );
         const auto point = getPoint( buf.data(), pointFormat );
@@ -270,12 +272,12 @@ Expected<PointCloud> process( lazperf::reader::basic_file& reader, VertColors* c
         };
         result.points.emplace_back( pos );
 
-        if ( colors )
+        if ( settings.colors )
         {
             if ( hasColorChannels( pointFormat ) )
             {
                 const auto colorChannels = *getColorChannels( buf.data(), pointFormat );
-                colors->emplace_back(
+                settings.colors->emplace_back(
                     colorChannels.red,
                     colorChannels.green,
                     colorChannels.blue
@@ -283,7 +285,7 @@ Expected<PointCloud> process( lazperf::reader::basic_file& reader, VertColors* c
             }
             else
             {
-                colors->emplace_back( getColor( getClassification( buf.data(), pointFormat ) ) );
+                settings.colors->emplace_back( getColor( getClassification( buf.data(), pointFormat ) ) );
             }
         }
     }
@@ -298,12 +300,12 @@ Expected<PointCloud> process( lazperf::reader::basic_file& reader, VertColors* c
 namespace MR::PointsLoad
 {
 
-Expected<PointCloud> fromLas( const std::filesystem::path& file, VertColors* colors, AffineXf3f* outXf, ProgressCallback callback )
+Expected<PointCloud> fromLas( const std::filesystem::path& file, const PointsLoadSettings& settings )
 {
     try
     {
         lazperf::reader::named_file reader( utf8string( file ) );
-        return process( reader, colors, outXf, std::move( callback ) );
+        return process( reader, settings );
     }
     catch ( const std::exception& exc )
     {
@@ -311,12 +313,12 @@ Expected<PointCloud> fromLas( const std::filesystem::path& file, VertColors* col
     }
 }
 
-Expected<PointCloud> fromLas( std::istream& in, VertColors* colors, AffineXf3f* outXf, ProgressCallback callback )
+Expected<PointCloud> fromLas( std::istream& in, const PointsLoadSettings& settings )
 {
     try
     {
         lazperf::reader::generic_file reader( in );
-        return process( reader, colors, outXf, std::move( callback ) );
+        return process( reader, settings );
     }
     catch ( const std::exception& exc )
     {

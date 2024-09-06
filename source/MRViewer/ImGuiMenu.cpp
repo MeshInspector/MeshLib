@@ -2518,7 +2518,7 @@ void ImGuiMenu::draw_mr_menu()
         float p = ImGui::GetStyle().FramePadding.x;
         if ( ImGui::Button( "Load##Main", ImVec2( ( w - p ) / 2.f - p - ImGui::GetFrameHeight(), 0 ) ) )
         {
-            auto filenames = openFilesDialog( { {},{},MeshLoad::getFilters() | PointsLoad::Filters | SceneFileFilters } );
+            auto filenames = openFilesDialog( { {}, {}, AllFilter | MeshLoad::getFilters() | PointsLoad::getFilters() | SceneFileFilters } );
             viewer->loadFiles( filenames );
         }
         ImGui::SameLine( 0, p );
@@ -2535,7 +2535,11 @@ void ImGuiMenu::draw_mr_menu()
 
         if ( ImGui::Button( "Save##Main", ImVec2( ( w - p ) / 2.f, 0 ) ) )
         {
-            auto filters = MeshSave::Filters | LinesSave::Filters | PointsSave::Filters | VoxelsLoad::Filters;
+            auto filters = MeshSave::getFilters() | LinesSave::getFilters() | PointsSave::getFilters()
+#ifndef MRMESH_NO_OPENVDB
+                | VoxelsLoad::getFilters()
+#endif
+            ;
             auto savePath = saveFileDialog( { {}, {}, filters } );
             if ( !savePath.empty() )
                 viewer->saveToFile( savePath );

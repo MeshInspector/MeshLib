@@ -181,7 +181,7 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
 
             for ( const ImGuiWindow* win : ImGui::GetCurrentContext()->Windows )
             {
-                if ( !win->WasActive || ( win->Flags & ImGuiWindowFlags_ChildWindow ) )
+                if ( ( !win->WasActive && !win->Appearing ) || ( win->Flags & ImGuiWindowFlags_ChildWindow ) )
                     continue; // Skip inactive windows and child windows.
                 std::string_view winNameView = win->Name;
                 if ( auto pos = winNameView.find( "##" ); pos != std::string_view::npos && winNameView.find( "[rect_allocator_ignore]", pos + 2 ) != std::string_view::npos)

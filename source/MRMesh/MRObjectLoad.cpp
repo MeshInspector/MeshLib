@@ -765,7 +765,7 @@ Expected<std::shared_ptr<Object>> loadSceneFromAnySupportedFormat( const std::fi
         if ( ext != "*.mru" && ext != "*.zip" )
             postImportObject( obj, path );
 
-        return obj;
+        return std::move( obj );
     } );
 }
 

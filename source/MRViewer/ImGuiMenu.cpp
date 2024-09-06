@@ -2518,7 +2518,7 @@ void ImGuiMenu::draw_mr_menu()
         float p = ImGui::GetStyle().FramePadding.x;
         if ( ImGui::Button( "Load##Main", ImVec2( ( w - p ) / 2.f - p - ImGui::GetFrameHeight(), 0 ) ) )
         {
-            auto filenames = openFilesDialog( { {}, {}, AllFilter | MeshLoad::getFilters() | PointsLoad::getFilters() | SceneFileFilters } );
+            auto filenames = openFilesDialog( { {}, {}, AllFilter | MeshLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() } );
             viewer->loadFiles( filenames );
         }
         ImGui::SameLine( 0, p );
@@ -2548,7 +2548,7 @@ void ImGuiMenu::draw_mr_menu()
 
         if ( ImGui::Button( "Save Scene##Main", ImVec2( ( w - p ) / 2.f, 0 ) ) )
         {
-            auto savePath = saveFileDialog( { {}, {}, SceneFileWriteFilters } );
+            auto savePath = saveFileDialog( { {}, {}, SceneSave::getFilters() } );
 
             if ( !savePath.empty() )
                 ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [savePath, &root = SceneRoot::get()]()->std::function<void()>

@@ -8,6 +8,7 @@
 #include "MRViewer/MRRibbonFontManager.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
+#include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectSave.h"
@@ -133,7 +134,7 @@ void ResetSceneMenuItem::preDraw_()
             {
                 auto savePath = SceneRoot::getScenePath();
                 if ( savePath.empty() )
-                    savePath = saveFileDialog( { {}, {}, SceneFileWriteFilters } );
+                    savePath = saveFileDialog( { {}, {}, SceneSave::getFilters() } );
 
                 ImGui::CloseCurrentPopup();
                 if ( !savePath.empty() )

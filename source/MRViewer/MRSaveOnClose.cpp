@@ -9,6 +9,7 @@
 #include "MRRibbonConstants.h"
 #include "MRUIStyle.h"
 #include "MRSceneCache.h"
+#include <MRMesh/MRIOFormatsRegistry.h>
 #include <MRMesh/MRSerializer.h>
 #include <MRMesh/MRObjectSave.h>
 #include <MRMesh/MRSceneRoot.h>
@@ -99,7 +100,7 @@ void SaveOnClosePlugin::preDraw_()
             {
                 auto savePath = SceneRoot::getScenePath();
                 if ( savePath.empty() )
-                    savePath = saveFileDialog( { {}, {}, SceneFileWriteFilters } );
+                    savePath = saveFileDialog( { {}, {}, SceneSave::getFilters() } );
 
                 ImGui::CloseCurrentPopup();
                 if ( !savePath.empty() )

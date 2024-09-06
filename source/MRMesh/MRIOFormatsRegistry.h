@@ -282,4 +282,28 @@ MR_FORMAT_REGISTRY_DECL( ObjectLoader )
 
 } // namespace AsyncObjectLoad
 
+namespace SceneLoad
+{
+
+using SceneLoader = Expected<ObjectPtr>( * )( const std::filesystem::path&, std::string*, ProgressCallback );
+
+MR_FORMAT_REGISTRY_DECL( SceneLoader )
+
+#define MR_ADD_SCENE_LOADER( filter, loader ) \
+MR_ON_INIT { using namespace MR::SceneLoad; setSceneLoader( filter, loader ); };
+
+} // namespace SceneLoad
+
+namespace SceneSave
+{
+
+using SceneSaver = Expected<void>( * )( const Object&, const std::filesystem::path&, ProgressCallback );
+
+MR_FORMAT_REGISTRY_DECL( SceneSaver )
+
+#define MR_ADD_SCENE_SAVER( filter, saver ) \
+MR_ON_INIT { using namespace MR::SceneSave; setSceneSaver( filter, saver ); };
+
+} // namespace SceneSave
+
 } // namespace MR

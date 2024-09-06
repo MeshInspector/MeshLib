@@ -167,7 +167,7 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
 #ifndef __EMSCRIPTEN__
             AllFilter |
 #endif
-            MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneFileFilters | DistanceMapLoad::Filters | GcodeLoad::Filters
+            MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneSave::getFilters() | DistanceMapLoad::Filters | GcodeLoad::Filters
 #ifndef MRMESH_NO_OPENVDB
             | VoxelsLoad::getFilters()
 #endif
@@ -652,10 +652,10 @@ bool SaveSelectedMenuItem::action()
     auto selectedMeshes = getAllObjectsInTree<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     auto selectedObjs = getAllObjectsInTree<Object>( &SceneRoot::get(), ObjectSelectivityType::Selected );
 
-    IOFilters filters = SceneFileWriteFilters;
+    IOFilters filters = SceneSave::getFilters();
     // allow obj format only if all selected objects are meshes
     if ( selectedMeshes.size() == selectedObjs.size() )
-        filters = SceneFileWriteFilters | IOFilters{ IOFilter{"OBJ meshes (.obj)","*.obj"} };
+        filters = filters | IOFilters{ IOFilter{"OBJ meshes (.obj)","*.obj"} };
 
     auto savePath = saveFileDialog( { {},{},filters } );
     if ( savePath.empty() )
@@ -734,7 +734,7 @@ bool SaveSceneAsMenuItem::action()
     {
         if ( !savePath.empty() )
             saveScene_( savePath );
-    }, { {}, {}, SceneFileWriteFilters } );
+    }, { {}, {}, SceneSave::getFilters() } );
     return false;
 }
 
@@ -754,7 +754,7 @@ bool SaveSceneMenuItem::action()
 {
     auto savePath = SceneRoot::getScenePath();
     if ( savePath.empty() )
-        savePath = saveFileDialog( { {}, {}, SceneFileWriteFilters } );
+        savePath = saveFileDialog( { {}, {}, SceneSave::getFilters() } );
     if ( !savePath.empty() )
         saveScene_( savePath );
     return false;

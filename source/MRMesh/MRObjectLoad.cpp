@@ -118,27 +118,7 @@ void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::
 
 } // namespace
 
-const IOFilters SceneFileFilters =
-{
-    {"MeshInspector scene (.mru)","*.mru"},
-#ifndef __EMSCRIPTEN__
-    {"MeshInSpector Object Notation (.mison)","*.mison"},
-#endif
-#ifndef MRMESH_NO_XML
-    { "3D Manufacturing format (.3mf)", "*.3mf"},
-    { "3D Manufacturing model (.model)", "*.model"},
-#endif
-#ifndef MRMESH_NO_GLTF
-    {"glTF JSON scene (.gltf)","*.gltf"},
-    {"glTF binary scene (.glb)","*.glb"},
-#endif
-#ifndef MRMESH_NO_OPENCASCADE
-    { "STEP model (.step,.stp)", "*.step;*.stp" },
-#endif
-    { "ZIP files (.zip)","*.zip" },
-};
-
-const IOFilters allFilters = SceneFileFilters
+const IOFilters allFilters = SceneLoad::getFilters()
                              | ObjectLoad::getFilters()
                              | MeshLoad::getFilters()
                              | LinesLoad::getFilters()
@@ -534,7 +514,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
             result = unexpected( std::move( enclouds.error() ) );
     }
 #endif //!defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
-    else if ( std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const auto& filter ) { return filter.extensions.find( ext ) != std::string::npos; }) != SceneFileFilters.end() )
+    else if ( findFilter( SceneLoad::getFilters(), ext ) )
     {
         const auto objTree = loadSceneFromAnySupportedFormat( filename, loadWarn, callback );
         if ( !objTree.has_value() )
@@ -713,7 +693,7 @@ Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder,
 
 
     // Global variable is not correctly initialized in emscripten build
-    const IOFilters filters = SceneFileFilters | MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters()
+    const IOFilters filters = SceneLoad::getFilters() | MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters()
 #ifndef MRMESH_NO_OPENVDB
         | VoxelsLoad::getFilters()
 #endif
@@ -877,6 +857,16 @@ Expected <Object> makeObjectTreeFromZip( const std::filesystem::path& zipPath, s
     return makeObjectTreeFromFolder( contentsFolder, loadWarn, callback );
 }
 
+Expected<ObjectPtr> toObjectPtr( Object&& obj )
+{
+    return std::make_shared<Object>( std::move( obj ) );
+}
+
+Expected<ObjectPtr> makeObjectPtrFromZip( const std::filesystem::path& zipPath, std::string* loadWarn, ProgressCallback callback )
+{
+    return makeObjectTreeFromZip( zipPath, loadWarn, callback ).and_then( toObjectPtr );
+}
+
 Expected<std::shared_ptr<Object>> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, std::string* loadWarn,
     ProgressCallback callback )
 {
@@ -884,60 +874,18 @@ Expected<std::shared_ptr<Object>> loadSceneFromAnySupportedFormat( const std::fi
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    Expected<std::shared_ptr<Object>> res = unexpected( std::string( "unsupported file extension" ) );
+    auto loader = SceneLoad::getSceneLoader( ext );
+    if ( !loader )
+        return unexpected( std::string( "unsupported file extension" ) );
 
-    auto itF = std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const IOFilter& filter )
+    return loader( path, loadWarn, callback )
+    .and_then( [&] ( ObjectPtr&& obj ) -> Expected<ObjectPtr>
     {
-        return filter.extensions.find( ext ) != std::string::npos;
+        if ( ext != "*.mru" && ext != "*.zip" )
+            postImportObject( obj, path );
+
+        return obj;
     } );
-    if ( itF == SceneFileFilters.end() )
-        return res;
-
-    if ( ext == "*.mru" )
-    {
-        res = deserializeObjectTree( path, {}, callback );
-    }
-#ifndef MRMESH_NO_GLTF
-    else if ( ext == "*.gltf" || ext == "*.glb" )
-    {
-        res = deserializeObjectTreeFromGltf( path, callback );
-    }
-#endif
-#ifndef MRMESH_NO_XML
-    else if ( ext == "*.3mf" )
-    {
-        res = deserializeObjectTreeFrom3mf( path, loadWarn, callback );
-    }
-    else if ( ext == "*.model" )
-    {
-        res = deserializeObjectTreeFromModel( path, loadWarn, callback );
-    }
-#endif
-#ifndef MRMESH_NO_OPENCASCADE
-    else if ( ext == "*.step" || ext == "*.stp" )
-    {
-        res = MeshLoad::fromSceneStepFile( path, { .callback = callback } );
-    }
-#endif
-    else if ( ext == "*.zip" )
-    {
-        auto result = makeObjectTreeFromZip( path, loadWarn, callback );
-        if ( result )
-            res = std::make_shared<Object>( std::move( *result ) );
-        else
-            res = unexpected( result.error() );
-    }
-#ifndef __EMSCRIPTEN__
-    else if ( ext == "*.mison" )
-    {
-        res = MR::fromSceneMison( path, loadWarn, callback );
-    }
-#endif // !__EMSCRIPTEN__
-
-    if ( res.has_value() && ( ext != "*.mru" && ext != "*.zip" ) )
-        postImportObject( res.value(), path );
-
-    return res;
 }
 
 Expected<std::shared_ptr<Object>> deserializeObjectTree( const std::filesystem::path& path, FolderCallback postDecompress,
@@ -1035,5 +983,13 @@ Expected<std::shared_ptr<Object>> deserializeObjectTreeFromFolder( const std::fi
 
     return rootObject;
 }
+
+Expected<ObjectPtr> deserializeObjectTree( const std::filesystem::path& path, std::string*, ProgressCallback progressCb )
+{
+    return deserializeObjectTree( path, FolderCallback{}, std::move( progressCb ) );
+}
+
+MR_ADD_SCENE_LOADER( IOFilter( "MeshInspector scene (.mru)", "*.mru" ), deserializeObjectTree )
+MR_ADD_SCENE_LOADER( IOFilter( "ZIP files (.zip)","*.zip" ), makeObjectPtrFromZip )
 
 } //namespace MR

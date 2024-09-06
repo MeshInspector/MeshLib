@@ -15,8 +15,6 @@ namespace MR
 /// \ingroup DataModelGroup
 /// \{
 
-MRMESH_API extern const IOFilters SceneFileFilters;
-
 /// information about loading process and mesh construction from primitives
 struct MeshLoadInfo
 {

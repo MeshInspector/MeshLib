@@ -80,4 +80,18 @@ MR_FORMAT_REGISTRY_IMPL( ObjectLoader )
 
 } // namespace AsyncObjectLoad
 
+namespace SceneLoad
+{
+
+MR_FORMAT_REGISTRY_IMPL( SceneLoader )
+
+} // namespace SceneLoad
+
+namespace SceneSave
+{
+
+MR_FORMAT_REGISTRY_IMPL( SceneSaver )
+
+} // namespace SceneSave
+
 } // namespace MR

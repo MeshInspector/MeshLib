@@ -1173,7 +1173,7 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
         if ( filter.extensions.find( ext ) != std::string::npos )
             return true;
     }
-    for ( auto& filter : SceneFileFilters )
+    for ( auto& filter : SceneSave::getFilters() )
     {
         if ( filter.extensions.find( ext ) != std::string::npos )
             return true;

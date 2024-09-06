@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <compare>
 #include <string>
 #include <vector>
 

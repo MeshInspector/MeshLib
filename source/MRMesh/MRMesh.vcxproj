@@ -422,6 +422,8 @@
     <ClInclude Include="MRBindingMacros.h" />
     <ClInclude Include="MRProjectionMeshAttribute.h" />
     <ClInclude Include="MRUniqueTemporaryFolder.h" />
+    <ClInclude Include="MROnInit.h" />
+    <ClInclude Include="MRPointsLoadSettings.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />

@@ -426,7 +426,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
     Triangulation triangulation;
     VertUVCoords uvCoords;
     VertColors colors;
-    auto hasColors = false;
+    bool hasColors = true; //assume that colors are present unless we find they are not
     Expected<MtlLibrary> mtl;
     std::string currentMaterialName;
 
@@ -482,7 +482,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
                     VertCoords( begin( points ) + minV, begin( points ) + maxV + 1 ), triangulation, &dups,
                     { .skippedFaceCount = settings.countSkippedFaces ? &result.skippedFaceCount : nullptr } );
             }
-            if ( hasColors )
+            if ( !colors.empty() )
             {
                 colors.resize( result.mesh.points.size() );
                 for ( const auto& [src, dup] : dups )
@@ -490,8 +490,8 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
 
                 result.colors = std::move( colors );
                 colors = {};
-                hasColors = false;
             }
+            hasColors = true; //assume that colors for next object are present unless we find they are not
             result.duplicatedVertexCount = int( dups.size() );
             triangulation.clear();
 
@@ -567,6 +567,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
     auto parseVertices = [&] ( size_t begin, size_t end, std::string& parseError )
     {
         assert ( end > begin );
+        if ( hasColors && colors.empty() ) // check the presence of colors only once per object (parseVertices can be called many times)
         {
             // detect presence of colors from the first vertex
             Vector3d v;

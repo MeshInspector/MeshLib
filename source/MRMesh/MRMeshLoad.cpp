@@ -789,7 +789,6 @@ Expected<Mesh> fromAnySupportedFormat( std::istream& in, const std::string& exte
     auto ext = extension;
     for ( auto& c : ext )
         c = ( char )tolower( c );
-    ext = "*" + ext;
 
     auto loader = getMeshLoader( ext );
     if ( !loader.streamLoad )

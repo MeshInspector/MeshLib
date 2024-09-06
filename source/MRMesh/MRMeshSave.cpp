@@ -625,10 +625,9 @@ VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path
 
 VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension, const SaveSettings & settings )
 {
-    auto ext = extension.substr( 1 );
+    auto ext = extension;
     for ( auto& c : ext )
         c = ( char )tolower( c );
-    ext = "*" + ext;
 
     auto saver = getMeshSaver( ext );
     if ( !saver.streamSave )

@@ -536,10 +536,9 @@ Expected<PointCloud> fromAnySupportedFormat( const std::filesystem::path& file, 
 
 Expected<PointCloud> fromAnySupportedFormat( std::istream& in, const std::string& extension, const PointsLoadSettings& settings )
 {
-    auto ext = extension.substr( 1 );
+    auto ext = extension;
     for ( auto& c : ext )
         c = ( char )tolower( c );
-    ext = "*" + ext;
 
     auto loader = getPointsLoader( ext );
     if ( !loader.streamLoad )

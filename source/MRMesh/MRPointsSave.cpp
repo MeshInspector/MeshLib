@@ -341,10 +341,9 @@ VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesyst
 }
 VoidOrErrStr toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const SaveSettings& settings )
 {
-    auto ext = extension.substr( 1 );
+    auto ext = extension;
     for ( auto& c : ext )
         c = ( char )tolower( c );
-    ext = "*" + ext;
 
     auto saver = getPointsSaver( ext );
     if ( !saver.streamSave )

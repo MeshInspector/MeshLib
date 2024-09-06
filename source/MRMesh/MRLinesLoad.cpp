@@ -137,10 +137,9 @@ Expected<Polyline3> fromAnySupportedFormat( const std::filesystem::path& file, P
 
 Expected<MR::Polyline3> fromAnySupportedFormat( std::istream& in, const std::string& extension, ProgressCallback callback )
 {
-    auto ext = extension.substr( 1 );
+    auto ext = extension;
     for ( auto& c : ext )
         c = ( char )tolower( c );
-    ext = "*" + ext;
 
     auto loader = getLinesLoader( ext );
     if ( !loader.streamLoad )

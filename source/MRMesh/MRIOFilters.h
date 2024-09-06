@@ -22,7 +22,7 @@ struct IOFilter
     std::string name;
     std::string extensions; // "*.ext" or "*.ext1;*.ext2;*.ext3"
 
-    auto operator <=>( const IOFilter& ) const = default;
+    std::partial_ordering operator <=>( const IOFilter& ) const = default;
 };
 
 using IOFilters = std::vector<IOFilter>;

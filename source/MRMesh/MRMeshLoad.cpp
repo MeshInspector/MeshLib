@@ -788,9 +788,9 @@ Expected<Mesh> fromAnySupportedFormat( const std::filesystem::path& file, const 
         return res;
 
     auto loader = getMeshLoader( *itF );
-    if ( !loader )
+    if ( !loader.fileLoad )
         return res;
-    return loader( file, settings );
+    return loader.fileLoad( file, settings );
 }
 
 Expected<Mesh> fromAnySupportedFormat( std::istream& in, const std::string& extension, const MeshLoadSettings& settings /*= {}*/ )
@@ -808,11 +808,11 @@ Expected<Mesh> fromAnySupportedFormat( std::istream& in, const std::string& exte
     if ( itF == filters.end() )
         return res;
 
-    auto loader = getMeshStreamLoader( *itF );
-    if ( !loader )
+    auto loader = getMeshLoader( *itF );
+    if ( !loader.streamLoad )
         return res;
 
-    return loader( in, settings );
+    return loader.streamLoad( in, settings );
 }
 
 /*

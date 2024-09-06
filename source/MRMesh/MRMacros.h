@@ -13,6 +13,9 @@
 #define MR_END(...) DETAIL_MR_END(__VA_ARGS__)
 #define DETAIL_MR_END(...) __VA_ARGS__##_END
 
+// Concat strings
+#define MR_CONCAT( a, b ) MR_CONCAT_( a, b )
+#define MR_CONCAT_( a, b ) a ## b
 
 // If the compiler supports `requires`, expands to `requires(...)`. Otherwise to nothing.
 // This is primarily useful for code that must be usable in Cuda, since everywhere else we're free to use C++20 and newer.

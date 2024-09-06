@@ -3,12 +3,88 @@
 #include "MRExpected.h"
 #include "MRIOFilters.h"
 #include "MRMeshLoadSettings.h"
-#include "MRProgressCallback.h"
+#include "MROnInit.h"
 
 #include <filesystem>
+#include <map>
+
+#define MR_FORMAT_REGISTRY_DECL( ProcName )                                          \
+MRMESH_API ProcName MR_CONCAT( get, ProcName )( const IOFilter& filter );            \
+MRMESH_API void MR_CONCAT( set, ProcName )( const IOFilter& filter, ProcName proc ); \
+MRMESH_API const IOFilters& getFilters();
+
+#define MR_FORMAT_REGISTRY_IMPL( ProcName )                                   \
+ProcName MR_CONCAT( get, ProcName )( const IOFilter& filter )                 \
+{                                                                             \
+    return FormatRegistry<ProcName>::getProcessor( filter );                  \
+}                                                                             \
+void MR_CONCAT( set, ProcName )( const IOFilter& filter, ProcName processor ) \
+{                                                                             \
+    FormatRegistry<ProcName>::setProcessor( filter, processor );              \
+}                                                                             \
+const IOFilters& getFilters()                                                 \
+{                                                                             \
+    return FormatRegistry<ProcName>::getFilters();                            \
+}
 
 namespace MR
 {
+
+MRMESH_API extern const IOFilters AllFilter;
+
+/// format loader registry
+/// NOTE: this is a singleton class, do NOT access it from header files
+/// you might use MR_FORMAT_REGISTRY_DECL and MR_FORMAT_REGISTRY_IMPL macros to simplify the usage for most common cases
+template <typename Processor>
+class FormatRegistry
+{
+public:
+    // get all registered filters
+    static const IOFilters& getFilters()
+    {
+        return get_().filters_;
+    }
+
+    // get a registered loader for the filter
+    static Processor getProcessor( IOFilter filter )
+    {
+        const auto& processors = get_().processors_;
+        auto it = processors.find( filter );
+        if ( it != processors.end() )
+            return it->second;
+        else
+            return {};
+    }
+
+    // register or update a loader for the filter
+    static void setProcessor( IOFilter filter, Processor processor )
+    {
+        auto& processors = get_().processors_;
+        auto it = processors.find( filter );
+        if ( it != processors.end() )
+        {
+            it->second = processor;
+        }
+        else
+        {
+            processors.emplace( filter, processor );
+            get_().filters_.emplace_back( filter );
+        }
+    }
+
+private:
+    FormatRegistry() = default;
+    ~FormatRegistry() = default;
+
+    static FormatRegistry<Processor>& get_()
+    {
+        static FormatRegistry<Processor> instance;
+        return instance;
+    }
+
+    std::map<IOFilter, Processor> processors_;
+    IOFilters filters_;
+};
 
 namespace MeshLoad
 {
@@ -17,42 +93,25 @@ namespace MeshLoad
 /// \ingroup IOGroup
 /// \{
 
-using MeshLoader = Expected<MR::Mesh>( * )( const std::filesystem::path&, const MeshLoadSettings& );
+using MeshFileLoader = Expected<MR::Mesh>( * )( const std::filesystem::path&, const MeshLoadSettings& );
 using MeshStreamLoader = Expected<MR::Mesh>( * )( std::istream&, const MeshLoadSettings& );
 
-struct NamedMeshLoader
+struct MeshLoader
 {
-    IOFilter filter;
-    MeshLoader loader{ nullptr };
-    MeshStreamLoader streamLoader{ nullptr };
+    MeshFileLoader fileLoad{ nullptr };
+    MeshStreamLoader streamLoad{ nullptr };
 };
 
-/// Finds expected loader from registry
-MRMESH_API MeshLoader getMeshLoader( IOFilter filter );
-/// Finds expected loader from registry
-MRMESH_API MeshStreamLoader getMeshStreamLoader( IOFilter filter );
-/// Gets all registered filters
-MRMESH_API IOFilters getFilters();
-
-/// Add or override a loader in the registry
-MRMESH_API void setMeshLoader( IOFilter filter, MeshLoader loader );
-/// Add or override a loader in the registry
-MRMESH_API void setMeshStreamLoader( IOFilter filter, MeshStreamLoader streamLoader );
+MR_FORMAT_REGISTRY_DECL( MeshLoader )
 
 /** 
  * \brief Register filter with loader function
- * \details loader function signature: Expected<Mesh> fromFormat( const std::filesystem::path& path, std::vector<Color>* colors );
+ * \details loader function signature: Expected<Mesh> fromFormat( const std::filesystem::path& path, const MeshLoadSettings& settings );
  * example:
- * ADD_MESH_LOADER( IOFilter("Name of filter (.ext)","*.ext"), fromFormat)
+ * MR_ADD_MESH_LOADER( IOFilter("Name of filter (.ext)","*.ext"), fromFormat)
  */
 #define MR_ADD_MESH_LOADER( filter, loader ) \
-MR::MeshLoad::MeshLoaderAdder __meshLoaderAdder_##loader(MR::MeshLoad::NamedMeshLoader{filter,static_cast<MR::MeshLoad::MeshLoader>(loader),static_cast<MR::MeshLoad::MeshStreamLoader>(loader)});\
-
-class MeshLoaderAdder
-{
-public:
-    MRMESH_API MeshLoaderAdder( const NamedMeshLoader& loader );
-};
+MR_ON_INIT { using namespace MR::MeshLoad; setMeshLoader( filter, { static_cast<MeshFileLoader>( loader ), static_cast<MeshStreamLoader>( loader ) } ); };
 
 /// \}
 
@@ -65,12 +124,7 @@ namespace ObjectLoad
 
 using ObjectLoader = Expected<std::vector<ObjectPtr>>( * )( const std::filesystem::path&, std::string*, ProgressCallback );
 
-/// Find an appropriate loader from the registry
-MRMESH_API ObjectLoader getObjectLoader( IOFilter filter );
-/// Add or override a loader in the registry
-MRMESH_API void setObjectLoader( IOFilter filter, ObjectLoader loader );
-/// Get all registered filters
-MRMESH_API IOFilters getFilters();
+MR_FORMAT_REGISTRY_DECL( ObjectLoader )
 
 } // namespace ObjectLoad
 
@@ -78,15 +132,10 @@ namespace AsyncObjectLoad
 {
 
 using PostLoadCallback = std::function<void ( Expected<std::vector<ObjectPtr>> )>;
-using AsyncObjectLoader = void( * )( const std::filesystem::path&, std::string*, PostLoadCallback, ProgressCallback );
+using ObjectLoader = void( * )( const std::filesystem::path&, std::string*, PostLoadCallback, ProgressCallback );
 
-/// Find an appropriate loader from the registry
-MRMESH_API AsyncObjectLoader getObjectLoader( IOFilter filter );
-/// Add or override a loader in the registry
-MRMESH_API void setObjectLoader( IOFilter filter, AsyncObjectLoader loader );
-/// Get all registered filters
-MRMESH_API IOFilters getFilters();
+MR_FORMAT_REGISTRY_DECL( ObjectLoader )
 
-}
+} // namespace AsyncObjectLoad
 
-}
+} // namespace MR

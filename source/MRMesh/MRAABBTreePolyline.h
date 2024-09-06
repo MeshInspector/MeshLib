@@ -58,6 +58,9 @@ private:
     using Base::nodes_;
 };
 
+extern template class MRMESH_API AABBTreeBase<AABBTreePolyline<Vector2f>>;
+extern template class MRMESH_API AABBTreeBase<AABBTreePolyline<Vector3f>>;
+
 /// \}
 
 } // namespace MR

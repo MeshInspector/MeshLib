@@ -566,6 +566,22 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
 
     auto parseVertices = [&] ( size_t begin, size_t end, std::string& parseError )
     {
+        if ( end > begin )
+        {
+            // detect presence of colors from the first vertex
+            Vector3d v;
+            constexpr Vector3d cInvalidColor = { -1., -1., -1. };
+            Vector3d c { cInvalidColor };
+            std::string_view line( data + newlines[begin], newlines[begin + 1] - newlines[begin] );
+            auto res = parseObjCoordinate( line, v, &c );
+            if ( !res.has_value() )
+            {
+                parseError = std::move( res.error() );
+                return;
+            }
+            hasColors = c != cInvalidColor;
+        }
+
         const auto offset = points.endId();
         originalPointCount += int( end - begin );
         const size_t newSize = points.size() + ( end - begin );

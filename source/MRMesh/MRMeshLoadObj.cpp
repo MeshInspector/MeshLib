@@ -566,17 +566,6 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
     if ( !reportProgress( settings.callback, 0.5f ) )
         return unexpected( "Loading canceled" );
 
-    auto parseVertex = [&] ( size_t li ) -> Expected<std::tuple<Vector3d, Vector3d>>
-    {
-        Vector3d v;
-        Vector3d c { cInvalidColor };
-        std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-        auto res = parseObjCoordinate( line, v, &c );
-        if ( !res.has_value() )
-            return unexpected( std::move( res.error() ) );
-        return std::make_tuple( v, c );
-    };
-
     auto parseVertices = [&] ( size_t begin, size_t end, std::string& parseError )
     {
         const auto offset = points.endId();

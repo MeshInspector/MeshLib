@@ -71,12 +71,25 @@ VoidOrErrStr toAsc( const PointCloud& cloud, std::ostream& out, const SaveSettin
     {
         if ( settings.saveValidOnly && !cloud.validPoints.test( v ) )
             continue;
-        const auto p = applyDouble( settings.xf, cloud.points[v] );
-        out << fmt::format( "{} {} {}", p.x, p.y, p.z );
-        if ( saveNormals )
+        auto saveVertex = [&]( auto && p )
         {
-            const auto n = applyDouble( normXf, cloud.normals[v] );
+            out << fmt::format( "{} {} {}", p.x, p.y, p.z );
+        };
+        auto saveNormal = [&]( auto && n )
+        {
             out << fmt::format( " {} {} {}", n.x, n.y, n.z );
+        };
+        if ( settings.xf )
+        {
+            saveVertex( applyDouble( settings.xf, cloud.points[v] ) );
+            if ( saveNormals )
+                saveNormal( applyDouble( normXf, cloud.normals[v] ) );
+        }
+        else
+        {
+            saveVertex( cloud.points[v] );
+            if ( saveNormals )
+                saveNormal( cloud.normals[v] );
         }
         out << '\n';
         ++numSaved;

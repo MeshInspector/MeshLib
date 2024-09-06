@@ -75,8 +75,14 @@ VoidOrErrStr toPts( const Polyline3& polyline, std::ostream& out, const SaveSett
         out << "BEGIN_Polyline\n";
         for ( auto v : contour )
         {
-            const auto p = applyDouble( settings.xf, v );
-            out << fmt::format( "{} {} {}\n", p.x, p.y, p.z );
+            auto saveVertex = [&]( auto && p )
+            {
+                out << fmt::format( "{} {} {}\n", p.x, p.y, p.z );
+            };
+            if ( settings.xf )
+                saveVertex( applyDouble( settings.xf, v ) );
+            else
+                saveVertex( v );
             ++pointIndex;
             if ( settings.progress && !( pointIndex & 0x3FF ) && !settings.progress( float( pointIndex ) / pointsNum ) )
                 return unexpected( std::string( "Saving canceled" ) );
@@ -122,15 +128,21 @@ VoidOrErrStr toDxf( const Polyline3& polyline, std::ostream& out, const SaveSett
         out << "70\n" << flags << "\n";
         for ( auto v : contour )
         {
-            const auto p = applyDouble( settings.xf, v );
-            out << fmt::format( 
-                "0\nVERTEX\n"
-                "8\n0\n"
-                "70\n32\n"
-                "10\n{}\n"
-                "20\n{}\n"
-                "30\n{}\n",
-                p.x, p.y, p.z );
+            auto saveVertex = [&]( auto && p )
+            {
+                out << fmt::format(
+                    "0\nVERTEX\n"
+                    "8\n0\n"
+                    "70\n32\n"
+                    "10\n{}\n"
+                    "20\n{}\n"
+                    "30\n{}\n",
+                    p.x, p.y, p.z );
+            };
+            if ( settings.xf )
+                saveVertex( applyDouble( settings.xf, v ) );
+            else
+                saveVertex( v );
             ++pointIndex;
             if ( settings.progress && !( pointIndex & 0x3FF ) && !settings.progress( float( pointIndex ) / pointsNum ) )
                 return unexpected( std::string( "Saving canceled" ) );

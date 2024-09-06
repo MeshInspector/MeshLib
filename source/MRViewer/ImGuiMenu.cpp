@@ -2575,7 +2575,7 @@ void ImGuiMenu::draw_mr_menu()
             std::time_t t = std::chrono::system_clock::to_time_t( now );
             auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", fmt::localtime( t ) );
 
-            auto savePath = saveFileDialog( { name,{},ImageSave::Filters } );
+            auto savePath = saveFileDialog( { name, {}, ImageSave::getFilters() } );
             if ( !savePath.empty() )
             {
                 auto image = viewer->captureSceneScreenShot();

@@ -784,7 +784,7 @@ void CaptureScreenshotMenuItem::drawDialog( float menuScaling, ImGuiContext* )
         std::time_t t = std::chrono::system_clock::to_time_t( now );
         auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", fmt::localtime( t ) );
 
-        auto savePath = saveFileDialog( { name, {},ImageSave::Filters } );
+        auto savePath = saveFileDialog( { name, {}, ImageSave::getFilters() } );
         if ( !savePath.empty() )
         {
             std::vector<Color> backgroundBackup;
@@ -831,7 +831,7 @@ bool CaptureUIScreenshotMenuItem::action()
         std::time_t t = std::chrono::system_clock::to_time_t( now );
         auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", fmt::localtime( t ) );
 
-        auto savePath = saveFileDialog( { name, {},ImageSave::Filters});
+        auto savePath = saveFileDialog( { name, {}, ImageSave::getFilters() });
         if ( !savePath.empty() )
         {
             auto res = ImageSave::toAnySupportedFormat( image, savePath );

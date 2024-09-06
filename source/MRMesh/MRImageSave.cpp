@@ -1,4 +1,5 @@
 #include "MRImageSave.h"
+#include "MRIOFormatsRegistry.h"
 #include "MRImage.h"
 #include "MRFile.h"
 #include "MRStringConvert.h"
@@ -27,23 +28,6 @@ namespace MR
 {
 namespace ImageSave
 {
-
-const IOFilters Filters =
-{
-#ifndef MRMESH_NO_PNG
-    {"Portable Network Graphics (.png)",  "*.png"},
-#endif
-#ifndef MRMESH_NO_JPEG
-    {"JPEG (.jpg)",  "*.jpg"},
-#endif
-#ifndef __EMSCRIPTEN__
-#ifndef MRMESH_NO_TIFF
-    {"TIFF (.tif)",  "*.tif"},
-    {"TIFF (.tiff)",  "*.tiff"},
-#endif
-#endif
-    {"BitMap Picture (.bmp)",  "*.bmp"},
-};
 
 #pragma pack(push, 1)
 struct BMPHeader
@@ -230,26 +214,28 @@ VoidOrErrStr toAnySupportedFormat( const Image& image, const std::filesystem::pa
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
+    ext = "*" + ext;
 
-    VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == ".bmp" )
-        res = MR::ImageSave::toBmp( image, file );
+    auto saver = getImageSaver( ext );
+    if ( !saver )
+        return unexpected( std::string( "unsupported file extension" ) );
+
+    return saver( image, file );
+}
+
 #ifndef MRMESH_NO_PNG
-    else if ( ext == ".png" )
-        res = MR::ImageSave::toPng( image, file );
+MR_ADD_IMAGE_SAVER( IOFilter( "Portable Network Graphics (.png)",  "*.png" ), toPng )
 #endif
 #ifndef MRMESH_NO_JPEG
-    else if ( ext == ".jpg" )
-        res = MR::ImageSave::toJpeg( image, file );
+MR_ADD_IMAGE_SAVER( IOFilter( "JPEG (.jpg)",  "*.jpg" ), toJpeg )
 #endif
 #ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_TIFF
-    else if ( ext == ".tif" || ext == ".tiff" )
-        res = MR::ImageSave::toTiff( image, file );
+MR_ADD_IMAGE_SAVER( IOFilter( "TIFF (.tif)",  "*.tif" ), toTiff )
+MR_ADD_IMAGE_SAVER( IOFilter( "TIFF (.tiff)",  "*.tiff" ), toTiff )
 #endif
 #endif
-    return res;
-}
+MR_ADD_IMAGE_SAVER( IOFilter( "BitMap Picture (.bmp)",  "*.bmp" ), toBmp )
 
 }
 }

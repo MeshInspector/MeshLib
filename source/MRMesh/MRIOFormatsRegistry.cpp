@@ -1,4 +1,5 @@
 #include "MRIOFormatsRegistry.h"
+#include "MRImage.h"
 
 namespace MR
 {
@@ -49,6 +50,20 @@ namespace PointsSave
 MR_FORMAT_REGISTRY_IMPL( PointsSaver )
 
 } // namespace PointsSave
+
+namespace ImageLoad
+{
+
+MR_FORMAT_REGISTRY_IMPL( ImageLoader )
+
+} // namespace ImageLoad
+
+namespace ImageSave
+{
+
+MR_FORMAT_REGISTRY_IMPL( ImageSaver )
+
+} // namespace ImageSave
 
 #ifndef MRMESH_NO_OPENVDB
 namespace VoxelsLoad

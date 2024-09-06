@@ -242,6 +242,30 @@ MR_ON_INIT { using namespace MR::PointsSave; setPointsSaver( filter, { static_ca
 
 } // namespace PointsSave
 
+namespace ImageLoad
+{
+
+using ImageLoader = Expected<Image>( * )( const std::filesystem::path& );
+
+MR_FORMAT_REGISTRY_DECL( ImageLoader )
+
+#define MR_ADD_IMAGE_LOADER( filter, loader, ... ) \
+MR_ON_INIT { using namespace MR::ImageLoad; setImageLoader( filter, loader __VA_OPT__(,)__VA_ARGS__ ); };
+
+} // namespace ImageLoad
+
+namespace ImageSave
+{
+
+using ImageSaver = Expected<void>( * )( const Image&, const std::filesystem::path& );
+
+MR_FORMAT_REGISTRY_DECL( ImageSaver )
+
+#define MR_ADD_IMAGE_SAVER( filter, saver, ... ) \
+MR_ON_INIT { using namespace MR::ImageSave; setImageSaver( filter, saver __VA_OPT__(,)__VA_ARGS__ ); };
+
+} // namespace ImageSave
+
 #ifndef MRMESH_NO_OPENVDB
 namespace VoxelsLoad
 {

@@ -1,9 +1,9 @@
 #include "MRImageLoad.h"
 #include "MRBuffer.h"
 #include "MRFile.h"
+#include "MRIOFormatsRegistry.h"
 #include "MRImage.h"
 #include "MRStringConvert.h"
-
 #include "MRExpected.h"
 
 #include <filesystem>
@@ -26,16 +26,6 @@ namespace MR
 {
 namespace ImageLoad
 {
-
-const IOFilters Filters =
-{
-#ifndef MRMESH_NO_PNG
-    {"Portable Network Graphics (.png)",  "*.png"},
-#endif
-#ifndef MRMESH_NO_JPEG
-    {"JPEG (.jpg,.jpeg)",  "*.jpg;*.jpeg"}
-#endif
-};
 
 #ifndef MRMESH_NO_PNG
 struct ReadPng
@@ -239,18 +229,21 @@ Expected<Image> fromAnySupportedFormat( const std::filesystem::path& file )
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
+    ext = "*" + ext;
 
-    Expected<Image> res = unexpected( std::string( "unsupported file extension" ) );
+    auto loader = getImageLoader( ext );
+    if ( !loader )
+        return unexpected( std::string( "unsupported file extension" ) );
+
+    return loader( file );
+}
+
 #ifndef MRMESH_NO_PNG
-    if ( ext == ".png" )
-        return MR::ImageLoad::fromPng( file );
+MR_ADD_IMAGE_LOADER( IOFilter( "Portable Network Graphics (.png)", "*.png" ), fromPng )
 #endif
 #ifndef MRMESH_NO_JPEG
-    if ( ext == ".jpg" || ext == ".jpeg" )
-        return MR::ImageLoad::fromJpeg( file );
+MR_ADD_IMAGE_LOADER( IOFilter( "JPEG (.jpg,.jpeg)", "*.jpg;*.jpeg" ), fromJpeg )
 #endif
-    return res;
-}
 
 }
 

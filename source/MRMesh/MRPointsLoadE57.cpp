@@ -1,6 +1,8 @@
 #include "MRPointsLoadE57.h"
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
 #include "MRBox.h"
+#include "MRIOFormatsRegistry.h"
+#include "MRObjectPoints.h"
 #include "MRPointCloud.h"
 #include "MRStringConvert.h"
 #include "MRQuaternion.h"
@@ -245,6 +247,35 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
 
     return res;
 }
+
+Expected<std::vector<std::shared_ptr<Object>>> loadObjectFromE57( const std::filesystem::path& path, std::string*, ProgressCallback cb )
+{
+    return fromSceneE57File( path, { .progress = std::move( cb ) } )
+    .transform( [&path] ( std::vector<NamedCloud>&& nclouds )
+    {
+        std::vector<std::shared_ptr<Object>> objects( nclouds.size() );
+        for ( int i = 0; i < objects.size(); ++i )
+        {
+            auto objectPoints = std::make_shared<ObjectPoints>();
+            if ( nclouds[i].name.empty() )
+                objectPoints->setName( utf8string( path.stem() ) );
+            else
+                objectPoints->setName( std::move( nclouds[i].name ) );
+            objectPoints->select( true );
+            objectPoints->setPointCloud( std::make_shared<PointCloud>( std::move( nclouds[i].cloud ) ) );
+            objectPoints->setXf( nclouds[i].xf );
+            if ( !nclouds[i].colors.empty() )
+            {
+                objectPoints->setVertsColorMap( std::move( nclouds[i].colors ) );
+                objectPoints->setColoringType( ColoringType::VertsColorMap );
+            }
+            objects[i] = std::dynamic_pointer_cast< Object >( std::move( objectPoints ) );
+        }
+        return objects;
+    } );
+}
+
+MR_ADD_OBJECT_LOADER( IOFilter( "E57 (.e57)", "*.e57" ), loadObjectFromE57 )
 
 } //namespace PointsLoad
 

@@ -18,8 +18,6 @@ namespace LinesLoad
 /// \ingroup IOGroup
 /// \{
 
-MRMESH_API extern const IOFilters Filters;
-
 /// loads from .mrlines file
 MRMESH_API Expected<Polyline3> fromMrLines( const std::filesystem::path& file, ProgressCallback callback = {} );
 MRMESH_API Expected<Polyline3> fromMrLines( std::istream& in, ProgressCallback callback = {} );

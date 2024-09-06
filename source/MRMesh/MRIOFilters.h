@@ -14,10 +14,15 @@ namespace MR
 struct IOFilter
 {
     IOFilter() = default;
-    IOFilter( const std::string& _name, const std::string& _ext ) :
-        name{_name}, extensions{_ext}{}
+    IOFilter( std::string _name, std::string _ext )
+        : name{ std::move( _name ) }
+        , extensions{ std::move( _ext ) }
+    {}
+
     std::string name;
     std::string extensions; // "*.ext" or "*.ext1;*.ext2;*.ext3"
+
+    std::partial_ordering operator <=>( const IOFilter& ) const = default;
 };
 
 using IOFilters = std::vector<IOFilter>;

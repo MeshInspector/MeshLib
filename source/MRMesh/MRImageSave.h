@@ -17,8 +17,6 @@ namespace ImageSave
 /// \ingroup IOGroup
 /// \{
 
-MRMESH_API extern const IOFilters Filters;
-
 /// saves in .bmp format
 MRMESH_API VoidOrErrStr toBmp( const Image& image, const std::filesystem::path& path );
 

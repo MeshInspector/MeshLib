@@ -1,6 +1,7 @@
 #include "MR3MFSerializer.h"
 #ifndef MRMESH_NO_XML
 
+#include "MRIOFormatsRegistry.h"
 #include "MRMeshBuilder.h"
 #include "MRMesh.h"
 #include "MRObjectMesh.h"
@@ -979,6 +980,9 @@ Expected<std::shared_ptr<Object>> deserializeObjectTreeFromModel( const std::fil
     loader.loadWarn = loadWarn;
     return loader.load( { path }, path.parent_path(), callback );
 }
+
+MR_ADD_SCENE_LOADER( IOFilter( "3D Manufacturing format (.3mf)", "*.3mf" ), deserializeObjectTreeFrom3mf )
+MR_ADD_SCENE_LOADER( IOFilter( "3D Manufacturing model (.model)", "*.model" ), deserializeObjectTreeFromModel )
 
 }
 #endif

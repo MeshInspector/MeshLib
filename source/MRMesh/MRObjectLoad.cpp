@@ -118,32 +118,15 @@ void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::
 
 } // namespace
 
-const IOFilters SceneFileFilters =
-{
-    {"MeshInspector scene (.mru)","*.mru"},
-#ifndef __EMSCRIPTEN__
-    {"MeshInSpector Object Notation (.mison)","*.mison"},
-#endif
-#ifndef MRMESH_NO_XML
-    { "3D Manufacturing format (.3mf)", "*.3mf"},
-    { "3D Manufacturing model (.model)", "*.model"},
-#endif
-#ifndef MRMESH_NO_GLTF
-    {"glTF JSON scene (.gltf)","*.gltf"},
-    {"glTF binary scene (.glb)","*.glb"},
-#endif
-#ifndef MRMESH_NO_OPENCASCADE
-    { "STEP model (.step,.stp)", "*.step;*.stp" },
-#endif
-    { "ZIP files (.zip)","*.zip" },
-};
-
-const IOFilters allFilters = SceneFileFilters
+const IOFilters allFilters = SceneLoad::getFilters()
                              | ObjectLoad::getFilters()
                              | MeshLoad::getFilters()
-                             | VoxelsLoad::Filters
-                             | LinesLoad::Filters
-                             | PointsLoad::Filters;
+                             | LinesLoad::getFilters()
+                             | PointsLoad::getFilters()
+#ifndef MRMESH_NO_OPENVDB
+                             | VoxelsLoad::getFilters()
+#endif
+;
 
 Expected<ObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadInfo& info /*= {}*/ )
 {
@@ -299,7 +282,11 @@ Expected<ObjectPoints> makeObjectPointsFromFile( const std::filesystem::path& fi
 
     VertColors colors;
     AffineXf3f xf;
-    auto pointsCloud = PointsLoad::fromAnySupportedFormat( file, &colors, &xf, callback );
+    auto pointsCloud = PointsLoad::fromAnySupportedFormat( file, {
+        .colors = &colors,
+        .outXf = &xf,
+        .callback = callback,
+    } );
     if ( !pointsCloud.has_value() )
     {
         return unexpected( pointsCloud.error() );
@@ -396,7 +383,7 @@ Expected<std::vector<std::shared_ptr<ObjectVoxels>>> makeObjectVoxelsFromFile( c
 #endif
 
 Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std::filesystem::path& filename,
-                                                                                    std::string* loadWarn, ProgressCallback callback )
+                                                                       std::string* loadWarn, ProgressCallback callback )
 {
     if ( callback && !callback( 0.f ) )
         return unexpected( std::string( "Loading canceled" ) );
@@ -408,126 +395,7 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
     for ( auto& c : ext )
         c = ( char )tolower( c );   
     
-    if ( ext == "*.obj" )
-    {
-        auto res = MeshLoad::fromSceneObjFile( filename, false, { .customXf = true, .countSkippedFaces = true, .callback = callback } );
-        if ( res.has_value() )
-        {
-            int totalSkippedFaceCount = 0;
-            int totalDuplicatedVertexCount = 0;
-            int holesCount = 0;
-            auto& resValue = *res;
-            std::vector<std::shared_ptr<Object>> objects( resValue.size() );
-            for ( int i = 0; i < objects.size(); ++i )
-            {
-                std::shared_ptr<ObjectMesh> objectMesh = std::make_shared<ObjectMesh>();
-                if ( resValue[i].name.empty() )
-                    objectMesh->setName( utf8string( filename.stem() ) );
-                else
-                    objectMesh->setName( std::move( resValue[i].name ) );
-                objectMesh->select( true );
-                objectMesh->setMesh( std::make_shared<Mesh>( std::move( resValue[i].mesh ) ) );
-                if ( resValue[i].diffuseColor )
-                    objectMesh->setFrontColor( *resValue[i].diffuseColor, false );
-
-                objectMesh->setUVCoords( std::move( resValue[i].uvCoords ) );
-                
-                int numEmptyTexture = 0;
-                for ( const auto& p : resValue[i].textureFiles )
-                {
-                    if ( p.empty() )
-                        numEmptyTexture++;
-                }
-
-                if ( numEmptyTexture != 0 && numEmptyTexture != resValue[i].textureFiles.size() )
-                {
-                    *loadWarn += " object has material with and without texture";
-                }
-                else if( numEmptyTexture == 0 && resValue[i].textureFiles.size() != 0 )
-                {
-                    bool crashTextureLoad = false;
-                    for ( const auto& p : resValue[i].textureFiles )
-                    {
-                        auto image = ImageLoad::fromAnySupportedFormat( p );
-                        if ( image.has_value() )
-                        {
-                            MeshTexture meshTexture;
-                            meshTexture.resolution = std::move( image.value().resolution );
-                            meshTexture.pixels = std::move( image.value().pixels );
-                            meshTexture.filter = FilterType::Linear;
-                            meshTexture.wrap = WrapType::Clamp;
-                            objectMesh->addTexture( std::move( meshTexture ) );
-                        }
-                        else
-                        {
-                            crashTextureLoad = true;
-                            objectMesh->setTextures( {} );
-                            *loadWarn += image.error();
-                            break;
-                        }
-                    }
-                    if ( !crashTextureLoad )
-                    {
-                        objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
-                        objectMesh->setTexturePerFace( std::move( resValue[i].texturePerFace ) );
-                    }
-                }
-
-                if ( !resValue[i].colors.empty() )
-                {
-                    objectMesh->setVertsColorMap( std::move( resValue[i].colors ) );
-                    objectMesh->setColoringType( ColoringType::VertsColorMap );
-                }
-
-                objectMesh->setXf( resValue[i].xf );
-
-                objects[i] = std::dynamic_pointer_cast< Object >( objectMesh );
-
-                holesCount += int( objectMesh->numHoles() );
-
-                totalSkippedFaceCount += resValue[i].skippedFaceCount;
-                totalDuplicatedVertexCount += resValue[i].duplicatedVertexCount;
-            }
-            result = objects;
-
-            if ( loadWarn )
-                *loadWarn = makeWarningString( totalSkippedFaceCount, totalDuplicatedVertexCount, holesCount );
-        }
-        else
-            result = unexpected( res.error() );
-    }
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
-    else if ( ext == "*.e57" )
-    {
-        auto enclouds = PointsLoad::fromSceneE57File( filename, { .progress = callback } );
-        if ( enclouds.has_value() )
-        {
-            auto& nclouds = *enclouds;
-            std::vector<std::shared_ptr<Object>> objects( nclouds.size() );
-            for ( int i = 0; i < objects.size(); ++i )
-            {
-                auto objectPoints = std::make_shared<ObjectPoints>();
-                if ( nclouds[i].name.empty() )
-                    objectPoints->setName( utf8string( filename.stem() ) );
-                else
-                    objectPoints->setName( std::move( nclouds[i].name ) );
-                objectPoints->select( true );
-                objectPoints->setPointCloud( std::make_shared<PointCloud>( std::move( nclouds[i].cloud ) ) );
-                objectPoints->setXf( nclouds[i].xf );
-                if ( !nclouds[i].colors.empty() )
-                {
-                    objectPoints->setVertsColorMap( std::move( nclouds[i].colors ) );
-                    objectPoints->setColoringType( ColoringType::VertsColorMap );
-                }
-                objects[i] = std::dynamic_pointer_cast< Object >( std::move( objectPoints ) );
-            }
-            result = std::move( objects );
-        }
-        else
-            result = unexpected( std::move( enclouds.error() ) );
-    }
-#endif //!defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
-    else if ( std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const auto& filter ) { return filter.extensions.find( ext ) != std::string::npos; }) != SceneFileFilters.end() )
+    if ( findFilter( SceneLoad::getFilters(), ext ) )
     {
         const auto objTree = loadSceneFromAnySupportedFormat( filename, loadWarn, callback );
         if ( !objTree.has_value() )
@@ -706,7 +574,11 @@ Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder,
 
 
     // Global variable is not correctly initialized in emscripten build
-    const IOFilters filters = SceneFileFilters | MeshLoad::getFilters() | VoxelsLoad::Filters | LinesLoad::Filters | PointsLoad::Filters;
+    const IOFilters filters = SceneLoad::getFilters() | MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters()
+#ifndef MRMESH_NO_OPENVDB
+        | VoxelsLoad::getFilters()
+#endif
+    ;
 
     std::function<void( FilePathNode& )> fillFilesTree = {};
     fillFilesTree = [&fillFilesTree, &filters] ( FilePathNode& node )
@@ -866,6 +738,16 @@ Expected <Object> makeObjectTreeFromZip( const std::filesystem::path& zipPath, s
     return makeObjectTreeFromFolder( contentsFolder, loadWarn, callback );
 }
 
+Expected<ObjectPtr> toObjectPtr( Object&& obj )
+{
+    return std::make_shared<Object>( std::move( obj ) );
+}
+
+Expected<ObjectPtr> makeObjectPtrFromZip( const std::filesystem::path& zipPath, std::string* loadWarn, ProgressCallback callback )
+{
+    return makeObjectTreeFromZip( zipPath, loadWarn, callback ).and_then( toObjectPtr );
+}
+
 Expected<std::shared_ptr<Object>> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, std::string* loadWarn,
     ProgressCallback callback )
 {
@@ -873,60 +755,18 @@ Expected<std::shared_ptr<Object>> loadSceneFromAnySupportedFormat( const std::fi
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    Expected<std::shared_ptr<Object>> res = unexpected( std::string( "unsupported file extension" ) );
+    auto loader = SceneLoad::getSceneLoader( ext );
+    if ( !loader )
+        return unexpected( std::string( "unsupported file extension" ) );
 
-    auto itF = std::find_if( SceneFileFilters.begin(), SceneFileFilters.end(), [ext] ( const IOFilter& filter )
+    return loader( path, loadWarn, callback )
+    .and_then( [&] ( ObjectPtr&& obj ) -> Expected<ObjectPtr>
     {
-        return filter.extensions.find( ext ) != std::string::npos;
+        if ( ext != "*.mru" && ext != "*.zip" )
+            postImportObject( obj, path );
+
+        return std::move( obj );
     } );
-    if ( itF == SceneFileFilters.end() )
-        return res;
-
-    if ( ext == "*.mru" )
-    {
-        res = deserializeObjectTree( path, {}, callback );
-    }
-#ifndef MRMESH_NO_GLTF
-    else if ( ext == "*.gltf" || ext == "*.glb" )
-    {
-        res = deserializeObjectTreeFromGltf( path, callback );
-    }
-#endif
-#ifndef MRMESH_NO_XML
-    else if ( ext == "*.3mf" )
-    {
-        res = deserializeObjectTreeFrom3mf( path, loadWarn, callback );
-    }
-    else if ( ext == "*.model" )
-    {
-        res = deserializeObjectTreeFromModel( path, loadWarn, callback );
-    }
-#endif
-#ifndef MRMESH_NO_OPENCASCADE
-    else if ( ext == "*.step" || ext == "*.stp" )
-    {
-        res = MeshLoad::fromSceneStepFile( path, { .callback = callback } );
-    }
-#endif
-    else if ( ext == "*.zip" )
-    {
-        auto result = makeObjectTreeFromZip( path, loadWarn, callback );
-        if ( result )
-            res = std::make_shared<Object>( std::move( *result ) );
-        else
-            res = unexpected( result.error() );
-    }
-#ifndef __EMSCRIPTEN__
-    else if ( ext == "*.mison" )
-    {
-        res = MR::fromSceneMison( path, loadWarn, callback );
-    }
-#endif // !__EMSCRIPTEN__
-
-    if ( res.has_value() && ( ext != "*.mru" && ext != "*.zip" ) )
-        postImportObject( res.value(), path );
-
-    return res;
 }
 
 Expected<std::shared_ptr<Object>> deserializeObjectTree( const std::filesystem::path& path, FolderCallback postDecompress,
@@ -1024,5 +864,13 @@ Expected<std::shared_ptr<Object>> deserializeObjectTreeFromFolder( const std::fi
 
     return rootObject;
 }
+
+Expected<ObjectPtr> deserializeObjectTree( const std::filesystem::path& path, std::string*, ProgressCallback progressCb )
+{
+    return deserializeObjectTree( path, FolderCallback{}, std::move( progressCb ) );
+}
+
+MR_ADD_SCENE_LOADER_WITH_PRIORITY( IOFilter( "MeshInspector scene (.mru)", "*.mru" ), deserializeObjectTree, -1 )
+MR_ADD_SCENE_LOADER( IOFilter( "ZIP files (.zip)","*.zip" ), makeObjectPtrFromZip )
 
 } //namespace MR

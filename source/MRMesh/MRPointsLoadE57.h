@@ -38,7 +38,10 @@ struct NamedCloud
 };
 
 MRMESH_API Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path& file,
-    const E57LoadSettings & settings = {} );
+                                                               const E57LoadSettings & settings = {} );
+
+MRMESH_API Expected<std::vector<std::shared_ptr<Object>>> loadObjectFromE57( const std::filesystem::path& path,
+                                                                             std::string* warnings = nullptr, ProgressCallback cb = {} );
 
 } // namespace PointsLoad
 

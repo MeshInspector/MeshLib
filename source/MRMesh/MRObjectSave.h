@@ -10,8 +10,6 @@
 namespace MR
 {
 
-MRMESH_API extern const IOFilters SceneFileWriteFilters;
-
 namespace ObjectSave
 {
 
@@ -38,6 +36,8 @@ MRMESH_API Expected<void> toAnySupportedFormat( const Object& object, const std:
  * saving is controlled with Object::serializeModel_ and Object::serializeFields_
  */
 MRMESH_API VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::path& path,
-                                             ProgressCallback progress = {}, FolderCallback preCompress = {} );
+                                             ProgressCallback progress, FolderCallback preCompress );
+MRMESH_API VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::path& path,
+                                             ProgressCallback progress = {} );
 
 } // namespace MR

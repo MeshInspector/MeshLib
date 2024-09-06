@@ -775,22 +775,13 @@ Expected<Mesh> fromAnySupportedFormat( const std::filesystem::path& file, const 
     auto ext = utf8string( file.extension() );
     for ( auto & c : ext )
         c = (char)tolower( c );
-
     ext = "*" + ext;
 
-    Expected<MR::Mesh> res = unexpected( std::string( "unsupported file extension" ) );
-    auto filters = getFilters();
-    auto itF = std::find_if( filters.begin(), filters.end(), [ext]( const IOFilter& filter )
-    {
-        return filter.extensions.find( ext ) != std::string::npos;
-    } );
-    if ( itF == filters.end() )
-        return res;
+    auto loader = getMeshLoader( ext );
+    if ( !loader.fileLoad )
+        return unexpected( std::string( "unsupported file extension" ) );
 
-    auto loader = getMeshLoader( *itF );
-    if ( !loader )
-        return res;
-    return loader( file, settings );
+    return loader.fileLoad( file, settings );
 }
 
 Expected<Mesh> fromAnySupportedFormat( std::istream& in, const std::string& extension, const MeshLoadSettings& settings /*= {}*/ )
@@ -799,27 +790,18 @@ Expected<Mesh> fromAnySupportedFormat( std::istream& in, const std::string& exte
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    Expected<MR::Mesh> res = unexpected( std::string( "unsupported file extension" ) );
-    auto filters = getFilters();
-    auto itF = std::find_if( filters.begin(), filters.end(), [ext] ( const IOFilter& filter )
-    {
-        return filter.extensions.find( ext ) != std::string::npos;
-    } );
-    if ( itF == filters.end() )
-        return res;
+    auto loader = getMeshLoader( ext );
+    if ( !loader.streamLoad )
+        return unexpected( std::string( "unsupported file extension" ) );
 
-    auto loader = getMeshStreamLoader( *itF );
-    if ( !loader )
-        return res;
-
-    return loader( in, settings );
+    return loader.streamLoad( in, settings );
 }
 
 /*
 MeshLoaderAdder __meshLoaderAdder( NamedMeshLoader{IOFilter( "MrMesh (.mrmesh)", "*.mrmesh" ),MeshLoader{static_cast<Expected<MR::Mesh>(*)(const std::filesystem::path&,VertColors*)>(fromMrmesh)}} );
 */
 
-MR_ADD_MESH_LOADER( IOFilter( "MeshInspector (.mrmesh)", "*.mrmesh" ), fromMrmesh )
+MR_ADD_MESH_LOADER_WITH_PRIORITY( IOFilter( "MeshInspector (.mrmesh)", "*.mrmesh" ), fromMrmesh, -1 )
 MR_ADD_MESH_LOADER( IOFilter( "Stereolithography (.stl)", "*.stl" ), fromAnyStl )
 MR_ADD_MESH_LOADER( IOFilter( "Object format file (.off)", "*.off" ), fromOff )
 MR_ADD_MESH_LOADER( IOFilter( "3D model object (.obj)", "*.obj" ), fromObj )

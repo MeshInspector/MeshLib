@@ -2,12 +2,16 @@
 #include "MRAffineXf3.h"
 #include "MRBitSetParallelFor.h"
 #include "MRBuffer.h"
+#include "MRComputeBoundingBox.h"
+#include "MRIOFormatsRegistry.h"
+#include "MRIOParsing.h"
+#include "MRImageLoad.h"
 #include "MRMeshBuilder.h"
+#include "MRObjectMesh.h"
 #include "MRStringConvert.h"
 #include "MRTimer.h"
 #include "MRphmap.h"
-#include "MRIOParsing.h"
-#include "MRComputeBoundingBox.h"
+#include "MRPch/MRFmt.h"
 #include "MRPch/MRTBB.h"
 
 #include <boost/algorithm/string/trim.hpp>
@@ -865,6 +869,120 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
 
     return res;
 }
+
+Expected<std::vector<std::shared_ptr<Object>>> loadObjectFromObj( const std::filesystem::path& path, std::string* warnings, ProgressCallback cb )
+{
+    return fromSceneObjFile( path, false, { .customXf = true, .countSkippedFaces = true, .callback = cb } )
+    .transform( [&] ( std::vector<NamedMesh>&& results )
+    {
+        int totalSkippedFaceCount = 0;
+        int totalDuplicatedVertexCount = 0;
+        int holesCount = 0;
+        std::vector<std::shared_ptr<Object>> objects( results.size() );
+        for ( int i = 0; i < objects.size(); ++i )
+        {
+            auto& result = results[i];
+
+            std::shared_ptr<ObjectMesh> objectMesh = std::make_shared<ObjectMesh>();
+            if ( result.name.empty() )
+                objectMesh->setName( utf8string( path.stem() ) );
+            else
+                objectMesh->setName( std::move( result.name ) );
+            objectMesh->select( true );
+            objectMesh->setMesh( std::make_shared<Mesh>( std::move( result.mesh ) ) );
+            if ( result.diffuseColor )
+                objectMesh->setFrontColor( *result.diffuseColor, false );
+
+            objectMesh->setUVCoords( std::move( result.uvCoords ) );
+
+            int numEmptyTexture = 0;
+            for ( const auto& p : result.textureFiles )
+            {
+                if ( p.empty() )
+                    numEmptyTexture++;
+            }
+
+            if ( numEmptyTexture != 0 && numEmptyTexture != result.textureFiles.size() )
+            {
+                if ( warnings )
+                    *warnings += " object has material with and without texture";
+            }
+            else if ( numEmptyTexture == 0 && result.textureFiles.size() != 0 )
+            {
+                bool crashTextureLoad = false;
+                for ( const auto& p : result.textureFiles )
+                {
+                    auto image = ImageLoad::fromAnySupportedFormat( p );
+                    if ( image.has_value() )
+                    {
+                        MeshTexture meshTexture;
+                        meshTexture.resolution = std::move( image.value().resolution );
+                        meshTexture.pixels = std::move( image.value().pixels );
+                        meshTexture.filter = FilterType::Linear;
+                        meshTexture.wrap = WrapType::Clamp;
+                        objectMesh->addTexture( std::move( meshTexture ) );
+                    }
+                    else
+                    {
+                        crashTextureLoad = true;
+                        objectMesh->setTextures( {} );
+                        if ( warnings )
+                            *warnings += image.error();
+                        break;
+                    }
+                }
+                if ( !crashTextureLoad )
+                {
+                    objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
+                    objectMesh->setTexturePerFace( std::move( result.texturePerFace ) );
+                }
+            }
+
+            if ( !result.colors.empty() )
+            {
+                objectMesh->setVertsColorMap( std::move( result.colors ) );
+                objectMesh->setColoringType( ColoringType::VertsColorMap );
+            }
+
+            objectMesh->setXf( result.xf );
+
+            objects[i] = std::dynamic_pointer_cast< Object >( objectMesh );
+
+            holesCount += int( objectMesh->numHoles() );
+
+            totalSkippedFaceCount += result.skippedFaceCount;
+            totalDuplicatedVertexCount += result.duplicatedVertexCount;
+        }
+
+        if ( warnings )
+        {
+            const auto makeWarningString = [] ( int skippedFaceCount, int duplicatedVertexCount, int holesCount )
+            {
+                std::string res;
+                if ( skippedFaceCount )
+                    res = fmt::format( "{} triangles were skipped as inconsistent with others.", skippedFaceCount );
+                if ( duplicatedVertexCount )
+                {
+                    if ( !res.empty() )
+                        res += '\n';
+                    res += fmt::format( "{} vertices were duplicated to make them manifold.", duplicatedVertexCount );
+                }
+                if ( holesCount )
+                {
+                    if ( !res.empty() )
+                        res += '\n';
+                    res += fmt::format( "The objects contains {} holes. Please consider using Fill Holes tool.", holesCount );
+                }
+                return res;
+            };
+            *warnings = makeWarningString( totalSkippedFaceCount, totalDuplicatedVertexCount, holesCount );
+        }
+
+        return objects;
+    } );
+}
+
+MR_ADD_OBJECT_LOADER( IOFilter( "3D model object (.obj)", "*.obj" ), loadObjectFromObj )
 
 } //namespace MeshLoad
 

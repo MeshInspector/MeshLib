@@ -3,6 +3,7 @@
 #include "MRDistanceMap.h"
 #include "MRDistanceMapSave.h"
 #include "MRGltfSerializer.h"
+#include "MRIOFormatsRegistry.h"
 #include "MRLinesSave.h"
 #include "MRMeshSave.h"
 #include "MRObjectDistanceMap.h"
@@ -135,30 +136,20 @@ Polyline3 mergeToLines( const Object& object )
 namespace MR
 {
 
-const IOFilters SceneFileWriteFilters =
-{
-    {"MeshInspector scene (.mru)","*.mru"},
-#ifndef MRMESH_NO_GLTF
-    {"glTF JSON scene (.gltf)","*.gltf"},
-    {"glTF binary scene (.glb)","*.glb"},
-#endif
-};
-
 namespace ObjectSave
 {
 
 Expected<void> toAnySupportedSceneFormat( const Object& object, const std::filesystem::path& file,
                                      ProgressCallback callback )
 {
-    const auto extension = toLower( utf8string( file.extension() ) );
-    if ( extension == ".mru" )
-        return serializeObjectTree( object, file, callback );
-#ifndef MRMESH_NO_GLTF
-    else if ( extension == ".glb" || extension == ".gltf" )
-        return serializeObjectTreeToGltf( object, file, callback );
-#endif
-    else
+    // NOTE: single-char string literal may break due to the GCC bug:
+    // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
+    auto extension = '*' + toLower( utf8string( file.extension() ) );
+    auto saver = SceneSave::getSceneSaver( extension );
+    if ( !saver )
         return unexpected( "unsupported file format" );
+
+    return saver( object, file, callback );
 }
 
 Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem::path& file,
@@ -167,21 +158,21 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
     // NOTE: single-char string literal may break due to the GCC bug:
     // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
     const auto extension = '*' + toLower( utf8string( file.extension() ) );
-    if ( hasExtension( SceneFileWriteFilters, extension ) )
+    if ( hasExtension( SceneSave::getFilters(), extension ) )
     {
         return toAnySupportedSceneFormat( object, file, callback );
     }
-    else if ( hasExtension( MeshSave::Filters, extension ) )
+    else if ( hasExtension( MeshSave::getFilters(), extension ) )
     {
         const auto mesh = mergeToMesh( object );
         return MeshSave::toAnySupportedFormat( mesh, file, { .progress = callback } );
     }
-    else if ( hasExtension( PointsSave::Filters, extension ) )
+    else if ( hasExtension( PointsSave::getFilters(), extension ) )
     {
         const auto pointCloud = mergeToPoints( object );
         return PointsSave::toAnySupportedFormat( pointCloud, file, { .progress = callback } );
     }
-    else if ( hasExtension( LinesSave::Filters, extension ) )
+    else if ( hasExtension( LinesSave::getFilters(), extension ) )
     {
         const auto polyline = mergeToLines( object );
         return LinesSave::toAnySupportedFormat( polyline, file, { .progress = callback } );
@@ -201,7 +192,7 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
         return DistanceMapSave::toAnySupportedFormat( file, *objDmap->getDistanceMap(), &objDmap->getToWorldParameters() );
     }
 #ifndef MRMESH_NO_OPENVDB
-    else if ( hasExtension( VoxelsSave::Filters, extension ) )
+    else if ( hasExtension( VoxelsSave::getFilters(), extension ) )
     {
         const auto objVoxels = getAllObjectsInTree<ObjectVoxels>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable );
         if ( objVoxels.empty() )
@@ -286,5 +277,12 @@ VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::p
 
     return compressZip( path, scenePath, {}, nullptr, subprogress( progressCb, 0.9f, 1.0f ) );
 }
+
+VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::path& path, ProgressCallback progress )
+{
+    return serializeObjectTree( object, path, std::move( progress ), {} );
+}
+
+MR_ADD_SCENE_SAVER_WITH_PRIORITY( IOFilter( "MeshInspector scene (.mru)", "*.mru" ), serializeObjectTree, -1 )
 
 } // namespace MR

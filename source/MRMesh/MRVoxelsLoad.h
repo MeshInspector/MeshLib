@@ -1,5 +1,6 @@
 #pragma once
 #include "MRMeshFwd.h"
+#ifndef MRMESH_NO_OPENVDB
 #include "MRProgressCallback.h"
 #include "MRObject.h"
 #include "MRVoxelsVolume.h"
@@ -17,9 +18,6 @@ namespace VoxelsLoad
 /// \ingroup IOGroup
 /// \{
 
-MRMESH_API extern const IOFilters Filters;
-
-#ifndef MRMESH_NO_OPENVDB
 /// Sort files in given vector by names (respect numbers in it)
 /// usually needed for scans
 MRMESH_API void sortFilesByName( std::vector<std::filesystem::path>& scans );
@@ -137,7 +135,7 @@ struct LoadingTiffSettings
 MRMESH_API Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings );
 #endif // MRMESH_NO_TIFF
 
-#endif // MRMESH_NO_OPENVDB
 }
 
 }
+#endif // MRMESH_NO_OPENVDB

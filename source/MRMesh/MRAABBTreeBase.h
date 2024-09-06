@@ -34,7 +34,7 @@ public:
     [[nodiscard]] BoxT getBoundingBox() const { return nodes_.empty() ? BoxT{} : nodes_[rootNodeId()].box; }
 
     /// returns the amount of memory this object occupies on heap
-    [[nodiscard]] MRMESH_API size_t heapBytes() const { return nodes_.heapBytes(); }
+    [[nodiscard]] size_t heapBytes() const { return nodes_.heapBytes(); }
 
     /// returns the number of leaves in whole tree
     [[nodiscard]] size_t numLeaves() const { return nodes_.empty() ? 0 : ( nodes_.size() + 1 ) / 2; }

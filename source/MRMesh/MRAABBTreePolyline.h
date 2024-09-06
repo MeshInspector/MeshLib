@@ -58,8 +58,10 @@ private:
     using Base::nodes_;
 };
 
-extern template class MRMESH_API AABBTreeBase<AABBTreePolyline<Vector2f>>;
-extern template class MRMESH_API AABBTreeBase<AABBTreePolyline<Vector3f>>;
+#if !MR_COMPILING_PB11_BINDINGS
+extern template class MRMESH_CLASS AABBTreeBase<LineTreeTraits<Vector2f>>;
+extern template class MRMESH_CLASS AABBTreeBase<LineTreeTraits<Vector3f>>;
+#endif
 
 /// \}
 

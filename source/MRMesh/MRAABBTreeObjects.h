@@ -40,6 +40,8 @@ private:
     Vector<AffineXf3f, ObjId> toLocal_;
 };
 
-extern template class MRMESH_API AABBTreeBase<ObjTreeTraits>;
+#if !MR_COMPILING_PB11_BINDINGS
+extern template class MRMESH_CLASS AABBTreeBase<ObjTreeTraits>;
+#endif
 
 } // namespace MR

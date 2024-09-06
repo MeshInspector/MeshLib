@@ -34,6 +34,8 @@ private:
     friend class UniqueThreadSafeOwner<AABBTree>;
 };
 
-extern template class MRMESH_API AABBTreeBase<FaceTreeTraits3>;
+#if !MR_COMPILING_PB11_BINDINGS
+extern template class MRMESH_CLASS AABBTreeBase<FaceTreeTraits3>;
+#endif
 
 } // namespace MR

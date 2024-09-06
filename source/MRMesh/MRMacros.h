@@ -26,3 +26,10 @@
 #   define MR_REQUIRES_IF_SUPPORTED(...)
 #   define MR_HAS_REQUIRES 0
 #endif
+
+
+#ifdef _MSC_VER
+#define MR_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]] // The unprefixed version has no effect on MSVC.
+#else
+#define MR_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#endif

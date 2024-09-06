@@ -10,28 +10,28 @@
 #include <filesystem>
 #include <map>
 
-#define MR_FORMAT_REGISTRY_DECL( ProcName )                                          \
-MRMESH_API ProcName MR_CONCAT( get, ProcName )( const IOFilter& filter );            \
-MRMESH_API ProcName MR_CONCAT( get, ProcName )( const std::string& extension );      \
-MRMESH_API void MR_CONCAT( set, ProcName )( const IOFilter& filter, ProcName proc ); \
-MRMESH_API const IOFilters& getFilters();
+#define MR_FORMAT_REGISTRY_DECL( ProcName )                                                                    \
+MRMESH_API ProcName MR_CONCAT( get, ProcName )( const IOFilter& filter );                                      \
+MRMESH_API ProcName MR_CONCAT( get, ProcName )( const std::string& extension );                                \
+MRMESH_API void MR_CONCAT( set, ProcName )( const IOFilter& filter, ProcName proc, int8_t priorityScore = 0 ); \
+MRMESH_API IOFilters getFilters();
 
-#define MR_FORMAT_REGISTRY_IMPL( ProcName )                                   \
-ProcName MR_CONCAT( get, ProcName )( const IOFilter& filter )                 \
-{                                                                             \
-    return FormatRegistry<ProcName>::getProcessor( filter );                  \
-}                                                                             \
-ProcName MR_CONCAT( get, ProcName )( const std::string& extension )           \
-{                                                                             \
-    return FormatRegistry<ProcName>::getProcessor( extension );               \
-}                                                                             \
-void MR_CONCAT( set, ProcName )( const IOFilter& filter, ProcName processor ) \
-{                                                                             \
-    FormatRegistry<ProcName>::setProcessor( filter, processor );              \
-}                                                                             \
-const IOFilters& getFilters()                                                 \
-{                                                                             \
-    return FormatRegistry<ProcName>::getFilters();                            \
+#define MR_FORMAT_REGISTRY_IMPL( ProcName )                                                         \
+ProcName MR_CONCAT( get, ProcName )( const IOFilter& filter )                                       \
+{                                                                                                   \
+    return FormatRegistry<ProcName>::getProcessor( filter );                                        \
+}                                                                                                   \
+ProcName MR_CONCAT( get, ProcName )( const std::string& extension )                                 \
+{                                                                                                   \
+    return FormatRegistry<ProcName>::getProcessor( extension );                                     \
+}                                                                                                   \
+void MR_CONCAT( set, ProcName )( const IOFilter& filter, ProcName processor, int8_t priorityScore ) \
+{                                                                                                   \
+    FormatRegistry<ProcName>::setProcessor( filter, processor, priorityScore );                     \
+}                                                                                                   \
+IOFilters getFilters()                                                                              \
+{                                                                                                   \
+    return FormatRegistry<ProcName>::getFilters();                                                  \
 }
 
 namespace MR
@@ -47,9 +47,14 @@ class FormatRegistry
 {
 public:
     // get all registered filters
-    static const IOFilters& getFilters()
+    static IOFilters getFilters()
     {
-        return get_().filters_;
+        const auto& filters = get_().filterPriorityQueue_;
+        IOFilters results;
+        results.reserve( filters.size() );
+        for ( const auto& [_, filter] : filters )
+            results.emplace_back( filter );
+        return results;
     }
 
     // get a registered loader for the filter
@@ -80,7 +85,7 @@ public:
     }
 
     // register or update a loader for the filter
-    static void setProcessor( const IOFilter& filter, Processor processor )
+    static void setProcessor( const IOFilter& filter, Processor processor, int8_t priorityScore = 0 )
     {
         auto& processors = get_().processors_;
         auto it = processors.find( filter );
@@ -91,7 +96,9 @@ public:
         else
         {
             processors.emplace( filter, processor );
-            get_().filters_.emplace_back( filter );
+
+            auto& filters = get_().filterPriorityQueue_;
+            filters.emplace( priorityScore, filter );
         }
     }
 
@@ -106,7 +113,7 @@ private:
     }
 
     std::map<IOFilter, Processor> processors_;
-    IOFilters filters_;
+    std::multimap<int8_t, IOFilter> filterPriorityQueue_;
 };
 
 namespace MeshLoad
@@ -133,8 +140,8 @@ MR_FORMAT_REGISTRY_DECL( MeshLoader )
  * example:
  * MR_ADD_MESH_LOADER( IOFilter("Name of filter (.ext)","*.ext"), fromFormat)
  */
-#define MR_ADD_MESH_LOADER( filter, loader ) \
-MR_ON_INIT { using namespace MR::MeshLoad; setMeshLoader( filter, { static_cast<MeshFileLoader>( loader ), static_cast<MeshStreamLoader>( loader ) } ); };
+#define MR_ADD_MESH_LOADER( filter, loader, ... ) \
+MR_ON_INIT { using namespace MR::MeshLoad; setMeshLoader( filter, { static_cast<MeshFileLoader>( loader ), static_cast<MeshStreamLoader>( loader ) } __VA_OPT__(,)__VA_ARGS__ ); };
 
 /// \}
 
@@ -154,8 +161,8 @@ struct MeshSaver
 
 MR_FORMAT_REGISTRY_DECL( MeshSaver )
 
-#define MR_ADD_MESH_SAVER( filter, saver ) \
-MR_ON_INIT { using namespace MR::MeshSave; setMeshSaver( filter, { static_cast<MeshFileSaver>( saver ), static_cast<MeshStreamSaver>( saver ) } ); };
+#define MR_ADD_MESH_SAVER( filter, saver, ... ) \
+MR_ON_INIT { using namespace MR::MeshSave; setMeshSaver( filter, { static_cast<MeshFileSaver>( saver ), static_cast<MeshStreamSaver>( saver ) } __VA_OPT__(,)__VA_ARGS__ ); };
 
 } // namespace MeshSave
 
@@ -173,8 +180,8 @@ struct LinesLoader
 
 MR_FORMAT_REGISTRY_DECL( LinesLoader )
 
-#define MR_ADD_LINES_LOADER( filter, loader ) \
-MR_ON_INIT { using namespace MR::LinesLoad; setLinesLoader( filter, { static_cast<LinesFileLoader>( loader ), static_cast<LinesStreamLoader>( loader ) } ); };
+#define MR_ADD_LINES_LOADER( filter, loader, ... ) \
+MR_ON_INIT { using namespace MR::LinesLoad; setLinesLoader( filter, { static_cast<LinesFileLoader>( loader ), static_cast<LinesStreamLoader>( loader ) } __VA_OPT__(,)__VA_ARGS__ ); };
 
 } // namespace LinesLoad
 
@@ -192,8 +199,8 @@ struct LinesSaver
 
 MR_FORMAT_REGISTRY_DECL( LinesSaver )
 
-#define MR_ADD_LINES_SAVER( filter, saver ) \
-MR_ON_INIT { using namespace MR::LinesSave; setLinesSaver( filter, { static_cast<LinesFileSaver>( saver ), static_cast<LinesStreamSaver>( saver ) } ); };
+#define MR_ADD_LINES_SAVER( filter, saver, ... ) \
+MR_ON_INIT { using namespace MR::LinesSave; setLinesSaver( filter, { static_cast<LinesFileSaver>( saver ), static_cast<LinesStreamSaver>( saver ) } __VA_OPT__(,)__VA_ARGS__ ); };
 
 } // namespace LinesSave
 
@@ -211,8 +218,8 @@ struct PointsLoader
 
 MR_FORMAT_REGISTRY_DECL( PointsLoader )
 
-#define MR_ADD_POINTS_LOADER( filter, loader ) \
-MR_ON_INIT { using namespace MR::PointsLoad; setPointsLoader( filter, { static_cast<PointsFileLoader>( loader ), static_cast<PointsStreamLoader>( loader ) } ); };
+#define MR_ADD_POINTS_LOADER( filter, loader, ... ) \
+MR_ON_INIT { using namespace MR::PointsLoad; setPointsLoader( filter, { static_cast<PointsFileLoader>( loader ), static_cast<PointsStreamLoader>( loader ) } __VA_OPT__(,)__VA_ARGS__ ); };
 
 } // namespace PointsLoad
 
@@ -230,8 +237,8 @@ struct PointsSaver
 
 MR_FORMAT_REGISTRY_DECL( PointsSaver )
 
-#define MR_ADD_POINTS_SAVER( filter, saver ) \
-MR_ON_INIT { using namespace MR::PointsSave; setPointsSaver( filter, { static_cast<PointsFileSaver>( saver ), static_cast<PointsStreamSaver>( saver ) } ); };
+#define MR_ADD_POINTS_SAVER( filter, saver, ... ) \
+MR_ON_INIT { using namespace MR::PointsSave; setPointsSaver( filter, { static_cast<PointsFileSaver>( saver ), static_cast<PointsStreamSaver>( saver ) } __VA_OPT__(,)__VA_ARGS__ ); };
 
 } // namespace PointsSave
 
@@ -243,8 +250,8 @@ using VoxelsLoader = Expected<std::vector<VdbVolume>>( * )( const std::filesyste
 
 MR_FORMAT_REGISTRY_DECL( VoxelsLoader )
 
-#define MR_ADD_VOXELS_LOADER( filter, loader ) \
-MR_ON_INIT { using namespace MR::VoxelsLoad; setVoxelsLoader( filter, loader ); };
+#define MR_ADD_VOXELS_LOADER( filter, loader, ... ) \
+MR_ON_INIT { using namespace MR::VoxelsLoad; setVoxelsLoader( filter, loader __VA_OPT__(,)__VA_ARGS__ ); };
 
 } // namespace VoxelsLoad
 
@@ -255,8 +262,8 @@ using VoxelsSaver = Expected<void>( * )( const VdbVolume&, const std::filesystem
 
 MR_FORMAT_REGISTRY_DECL( VoxelsSaver )
 
-#define MR_ADD_VOXELS_SAVER( filter, saver ) \
-MR_ON_INIT { using namespace MR::VoxelsSave; setVoxelsSaver( filter, saver ); };
+#define MR_ADD_VOXELS_SAVER( filter, saver, ... ) \
+MR_ON_INIT { using namespace MR::VoxelsSave; setVoxelsSaver( filter, saver __VA_OPT__(,)__VA_ARGS__ ); };
 
 } // namespace VoxelsSave
 #endif
@@ -289,8 +296,8 @@ using SceneLoader = Expected<ObjectPtr>( * )( const std::filesystem::path&, std:
 
 MR_FORMAT_REGISTRY_DECL( SceneLoader )
 
-#define MR_ADD_SCENE_LOADER( filter, loader ) \
-MR_ON_INIT { using namespace MR::SceneLoad; setSceneLoader( filter, loader ); };
+#define MR_ADD_SCENE_LOADER( filter, loader, ... ) \
+MR_ON_INIT { using namespace MR::SceneLoad; setSceneLoader( filter, loader __VA_OPT__(,)__VA_ARGS__ ); };
 
 } // namespace SceneLoad
 
@@ -301,8 +308,8 @@ using SceneSaver = Expected<void>( * )( const Object&, const std::filesystem::pa
 
 MR_FORMAT_REGISTRY_DECL( SceneSaver )
 
-#define MR_ADD_SCENE_SAVER( filter, saver ) \
-MR_ON_INIT { using namespace MR::SceneSave; setSceneSaver( filter, saver ); };
+#define MR_ADD_SCENE_SAVER( filter, saver, ... ) \
+MR_ON_INIT { using namespace MR::SceneSave; setSceneSaver( filter, saver __VA_OPT__(,)__VA_ARGS__ ); };
 
 } // namespace SceneSave
 

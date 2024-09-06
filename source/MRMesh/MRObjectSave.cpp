@@ -283,6 +283,6 @@ VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::p
     return serializeObjectTree( object, path, std::move( progress ), {} );
 }
 
-MR_ADD_SCENE_SAVER( IOFilter( "MeshInspector scene (.mru)", "*.mru" ), serializeObjectTree );
+MR_ADD_SCENE_SAVER( IOFilter( "MeshInspector scene (.mru)", "*.mru" ), serializeObjectTree, -1 );
 
 } // namespace MR

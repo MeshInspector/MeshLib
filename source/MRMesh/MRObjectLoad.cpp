@@ -989,7 +989,7 @@ Expected<ObjectPtr> deserializeObjectTree( const std::filesystem::path& path, st
     return deserializeObjectTree( path, FolderCallback{}, std::move( progressCb ) );
 }
 
-MR_ADD_SCENE_LOADER( IOFilter( "MeshInspector scene (.mru)", "*.mru" ), deserializeObjectTree )
+MR_ADD_SCENE_LOADER( IOFilter( "MeshInspector scene (.mru)", "*.mru" ), deserializeObjectTree, -1 )
 MR_ADD_SCENE_LOADER( IOFilter( "ZIP files (.zip)","*.zip" ), makeObjectPtrFromZip )
 
 } //namespace MR

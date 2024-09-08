@@ -230,22 +230,6 @@ Matrix4f Viewport::getFullViewportInversedMatrix() const
     return Matrix4f( ( Matrix4d( projM_ ) * Matrix4d( viewM_ ) ).inverse() );
 }
 
-Vector3f Viewport::getUpDirection() const
-{
-    Vector3f res = Vector3f( viewM_.y.x, viewM_.y.y, viewM_.y.z ).normalized();
-    return res;
-}
-Vector3f Viewport::getRightDirection() const
-{
-    Vector3f res = Vector3f( viewM_.x.x, viewM_.x.y, viewM_.x.z ).normalized();
-    return res;
-}
-Vector3f Viewport::getBackwardDirection() const
-{
-    Vector3f res = Vector3f( viewM_.z.x, viewM_.z.y, viewM_.z.z ).normalized();
-    return res;
-}
-
 Line3f Viewport::unprojectPixelRay( const Vector2f& viewportPoint ) const
 {
     auto M = getFullViewportInversedMatrix();

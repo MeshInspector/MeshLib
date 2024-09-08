@@ -48,13 +48,11 @@ void RotatorPlugin::drawDialog( float menuScaling, ImGuiContext* )
 
 bool RotatorPlugin::onEnable_()
 {
-    connect( viewer );
     return true;
 }
 
 bool RotatorPlugin::onDisable_()
 {
-    disconnect();
     lastDrawTime_.reset();
     return true;
 }

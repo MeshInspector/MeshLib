@@ -121,8 +121,15 @@
 							"Name": "Quad Viewports"
 						}
 					]
+				},
+				{
+					"Name": "Animate",
+					"List": [
+						{
+							"Name": "Rotator"
+						}
+					]
 				}
-
 			]
 		},
 		{

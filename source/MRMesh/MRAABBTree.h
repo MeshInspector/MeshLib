@@ -34,6 +34,9 @@ private:
     friend class UniqueThreadSafeOwner<AABBTree>;
 };
 
+// Not 100% sure what's going on here, `extern template` behind an `#if` is the only option that has worked for me.
+// If you make this unconditional, you get undefined references in the python bindings, complaining about the functions defined inline in `MRAABBTreeBase.h` (sic!).
+// In theory you just need to instantiate them in the .cpp file, but I couldn't figure out how to do that while preserving their dllexport-ness.
 #if !MR_COMPILING_PB11_BINDINGS
 extern template class MRMESH_CLASS AABBTreeBase<FaceTreeTraits3>;
 #endif

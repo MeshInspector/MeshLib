@@ -45,7 +45,7 @@ MRMESH_API VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, cons
 /// detects the format from file extension and save points to it
 MRMESH_API VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings = {} );
 /// extension in `*.ext` format
-MRMESH_API VoidOrErrStr toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const SaveSettings& settings = {} );
+MRMESH_API VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::string& extension, std::ostream& out, const SaveSettings& settings = {} );
 
 /// \}
 

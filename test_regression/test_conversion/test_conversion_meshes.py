@@ -11,8 +11,8 @@ from helpers.file_helpers import compare_file_with_multiple_references, get_refe
 @pytest.mark.parametrize("use_fileHandler", [True, False])
 def test_conversion_from_mrmesh(test_mesh_name, ext, use_fileHandler, tmp_path):
     """
-    Test conversion from .mrmeshpy to different formats
-    1. Loads mesh from {test_mesh_name}.mrmeshpy file from test_data/conversion/meshes_from_mrmesh/{test_mesh_name}/{ext}
+    Test conversion from .mrmesh to different formats
+    1. Loads mesh from {test_mesh_name}.mrmesh file from test_data/conversion/meshes_from_mrmesh/{test_mesh_name}/{ext}
     2. Save it to {test_mesh_name}.{ext} into temporary folder
     3. Compare saved file and file test_data/conversion/meshes_from_mrmesh/{test_mesh_name}/{ext}/{test_mesh_name}.{ext}
     If files are same byte-by-byte test passed, otherwise - failed
@@ -49,10 +49,10 @@ def test_conversion_from_mrmesh(test_mesh_name, ext, use_fileHandler, tmp_path):
 @pytest.mark.parametrize("use_fileHandler", [True, False])
 def test_conversion_to_mrmesh(test_mesh_name, ext, use_fileHandler, tmp_path):
     """
-    Test conversion from different formats to .mrmeshpy
+    Test conversion from different formats to .mrmesh
     1. Loads mesh from {test_mesh_name}.{ext} file from test_data/conversion/meshes_to_mrmesh/{test_mesh_name}/{ext}
-    2. Save it to {test_mesh_name}.mrmeshpy into temporary folder
-    3. Compare saved file and file test_data/conversion/meshes_to_mrmesh/{test_mesh_name}/{ext}/{test_mesh_name}.mrmeshpy
+    2. Save it to {test_mesh_name}.mrmesh into temporary folder
+    3. Compare saved file and file test_data/conversion/meshes_to_mrmesh/{test_mesh_name}/{ext}/{test_mesh_name}.mrmesh
     If files are same byte-by-byte test passed, otherwise - failed
 
     use_filehandler: parameter to choose the way of loading and saving mesh. If True - method got fileHandler,

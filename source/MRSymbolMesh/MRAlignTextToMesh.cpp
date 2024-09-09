@@ -31,7 +31,6 @@ Expected<Mesh>  alignTextToMesh(
         if ( c == '\n' )
             ++numLines;
     auto diagonal = bbox.size();
-    const auto diagonalLength = diagonal.length();
     AffineXf3f transform;
 
     const auto& vecx = params.direction.normalized();
@@ -75,7 +74,7 @@ Expected<Mesh>  alignTextToMesh(
     for ( int i = 0; i < textMeshPoints.size() / 2; ++i )
     {
         PointOnFace hit;
-        auto inter = rayMeshIntersect( mesh, Line3f{ textMeshPoints[VertId( i )] + norm * diagonalLength, -norm } );
+        auto inter = rayMeshIntersect( mesh, Line3f{ textMeshPoints[VertId( i )] + norm * bbox.size().y, -norm});
         if ( !inter )
             return unexpected( std::string( "Cannot align text" ) );
         hit = inter.proj;

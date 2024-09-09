@@ -96,7 +96,11 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet & changedVerts )
     }
 }
 
-template class MRMESH_CLASS AABBTreeBase<FaceTreeTraits3>;
+template auto AABBTreeBase<FaceTreeTraits3>::getSubtrees( int minNum ) const -> std::vector<NodeId>;
+template auto AABBTreeBase<FaceTreeTraits3>::getSubtreeLeaves( NodeId subtreeRoot ) const -> LeafBitSet;
+template NodeBitSet AABBTreeBase<FaceTreeTraits3>::getNodesFromLeaves( const LeafBitSet & leaves ) const;
+template void AABBTreeBase<FaceTreeTraits3>::getLeafOrder( LeafBMap & leafMap ) const;
+template void AABBTreeBase<FaceTreeTraits3>::getLeafOrderAndReset( LeafBMap & leafMap );
 
 TEST(MRMesh, AABBTree)
 {

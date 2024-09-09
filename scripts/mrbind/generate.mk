@@ -1,7 +1,8 @@
 # Some helper funcions. See below for the configuration variables...
 
 # Where the makefile is located.
-override makefile_dir := $(patsubst ./,.,$(dir $(firstword $(MAKEFILE_LIST))))
+# Not entirely sure why I need to adjust `\` to `/` on Windows, since non-mingw32 Make should already operate on Linux-style paths?
+override makefile_dir := $(patsubst ./,.,$(subst \,/,$(dir $(firstword $(MAKEFILE_LIST)))))
 
 # A newline.
 override define lf :=
@@ -37,6 +38,14 @@ IS_WINDOWS := 0
 endif
 override IS_WINDOWS := $(filter-out 0,$(IS_WINDOWS))
 
+# On Windows, check that we are in the VS prompt, or at least that `VCToolsInstallDir` is defined (which is what Clang needs).
+# Otherwise Clang may or may not choose some weird system libraries.
+ifneq ($(IS_WINDOWS),)
+ifeq ($(origin VCToolsInstallDir),undefined)
+$(error Must run this in Visual Studio developer command prompt, or at least copy the value of the `VCToolsInstallDir` env variable)
+endif
+endif
+
 # Windows-only vars: [
 
 # For Windows, set this to Debug or Release. This controls which MeshLib build we'll be using.
@@ -66,6 +75,9 @@ MESHLIB_SHLIB_DIR := source/x64/$(VS_MODE)
 else
 MESHLIB_SHLIB_DIR := build/Release/bin
 endif
+ifeq ($(wildcard $(MESHLIB_SHLIB_DIR)),)
+$(error MeshLib build directory `$(abspath $(MESHLIB_SHLIB_DIR))` doesn't exist! You either forgot to build MeshLib, or are running this script with the wrong current directory. Call this from your project's root)
+endif
 
 # Source directory of MRBind.
 ifneq ($(IS_WINDOWS),)
@@ -83,6 +95,10 @@ CXX = clang++
 else
 CXX ?= $(error Must set `CXX=...`)
 endif
+
+# Extra compiler and linker flags.
+EXTRA_CFLAGS :=
+EXTRA_LDLAGS :=
 
 # Look for MeshLib  dependencies relative to this. On Linux should point to the project root, because that's where `./include` and `./lib` are.
 ifneq ($(IS_WINDOWS),)
@@ -149,12 +165,12 @@ INPUT_GLOBS := *.h
 MRBIND := $(MRBIND_EXE)
 MRBIND_FLAGS := $(call load_file,$(makefile_dir)/mrbind_flags.txt)
 MRBIND_FLAGS_FOR_EXTRA_INPUTS := $(call load_file,$(makefile_dir)/mrbind_flags_for_helpers.txt)
-COMPILER_FLAGS := $(call load_file,$(makefile_dir)/common_compiler_parser_flags.txt) $(PYTHON_CFLAGS) -I. -I$(DEPS_INCLUDE_DIR) -I$(makefile_dir)/../../source
+COMPILER_FLAGS := $(EXTRA_CFLAGS) $(call load_file,$(makefile_dir)/common_compiler_parser_flags.txt) $(PYTHON_CFLAGS) -I. -I$(DEPS_INCLUDE_DIR) -I$(makefile_dir)/../../source
 COMPILER_FLAGS_LIBCLANG := $(call load_file,$(makefile_dir)/parser_only_flags.txt)
 COMPILER := $(CXX) $(subst $(lf), ,$(call load_file,$(makefile_dir)/compiler_only_flags.txt)) -I$(MRBIND_SOURCE)/include
 LINKER_OUTPUT := $(MODULE_OUTPUT_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
 LINKER := $(CXX) -fuse-ld=lld
-LINKER_FLAGS := -L$(DEPS_LIB_DIR) $(PYTHON_LDFLAGS) -L$(MESHLIB_SHLIB_DIR) -lMRMesh -lMRSymbolMesh -shared $(call load_file,$(makefile_dir)/linker_flags.txt)
+LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(DEPS_LIB_DIR) $(PYTHON_LDFLAGS) -L$(MESHLIB_SHLIB_DIR) -lMRMesh -lMRSymbolMesh -shared $(call load_file,$(makefile_dir)/linker_flags.txt)
 NUM_FRAGMENTS := 4
 EXTRA_INPUT_SOURCES := $(makefile_dir)/helpers.cpp
 
@@ -171,8 +187,8 @@ LINKER_FLAGS += -rtlib=platform
 # Don't generate .lib files.
 LINKER_FLAGS += -Wl,-noimplib
 # Library paths:
-COMPILER_FLAGS += -isystem$(makefile_dir)/../../thirdparty/pybind11/include
-COMPILER_FLAGS += -isystem$(makefile_dir)/../../thirdparty/parallel-hashmap
+COMPILER_FLAGS += -isystem $(makefile_dir)/../../thirdparty/pybind11/include
+COMPILER_FLAGS += -isystem $(makefile_dir)/../../thirdparty/parallel-hashmap
 COMPILER_FLAGS += -D_DLL -D_MT
 ifeq ($(VS_MODE),Debug)
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrtd -D_DEBUG

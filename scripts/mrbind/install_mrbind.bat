@@ -20,6 +20,7 @@ if not exist %MSYS2_DIR% (
     if exist %MRBIND_DIR% (
         echo Found MRBind sources at `%MRBIND_DIR%`. Pulling the latest version.
         cd %MRBIND_DIR%
+        git checkout master
         git pull
     ) else (
         echo Didn't find MRBind sources at `%MRBIND_DIR%`, cloning...

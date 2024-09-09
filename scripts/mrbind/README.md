@@ -10,7 +10,7 @@ Run those once:
 
   Note that this downloads the latest `master`, while CI might be pointing to a specific commit. But it's simple to manually build a specific commit.
 
-Lastly, open the VS developer command prompt, and from it run `scripts/mrbind/generate_win.bat` to generate the bindings.
+Lastly, open the VS developer command prompt (x64), and from it run `scripts/mrbind/generate_win.bat` to generate the bindings.
 
 #### Current directory
 

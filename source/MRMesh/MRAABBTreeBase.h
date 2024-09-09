@@ -8,7 +8,7 @@ namespace MR
 
 /// base class for most AABB-trees (except for AABBTreePoints)
 template <typename T>
-class AABBTreeBase
+class MRMESH_CLASS AABBTreeBase
 {
 public:
     using Traits = T;

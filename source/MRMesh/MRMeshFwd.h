@@ -294,7 +294,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Plane3,
     ( Plane3d, Plane3<double> )
 )
 
-MR_CANONICAL_TYPEDEFS( (template <typename V> struct), Box,
+MR_CANONICAL_TYPEDEFS( (template <typename V> struct MRMESH_CLASS), Box,
     ( Box2i,  Box<Vector2<int>>       )
     ( Box2ll, Box<Vector2<long long>> )
     ( Box2f,  Box<Vector2<float>>     )

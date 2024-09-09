@@ -12,5 +12,5 @@ if os.environ.get('USE_MESHLIB2_PY', '0') != '0':
     from meshlib2 import mrmeshpy
     from meshlib2 import mrmeshnumpy
 else:
-    import meshlib.mrmeshpy as mrmesh
-    import meshlib.mrmeshnumpy as mrmeshnumpy
+    import meshlib.mrmeshpy
+    import meshlib.mrmeshnumpy

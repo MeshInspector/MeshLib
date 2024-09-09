@@ -31,10 +31,7 @@ def test_conversion_from_mrmesh(test_mesh_name, ext, use_fileHandler, tmp_path):
     filename = test_mesh_name + "." + ext
     if use_fileHandler:
         with open(tmp_path / filename, "wb") as f:
-            if is_new_binding:
-                mrmeshpy.saveMesh(input_mesh, f, "*." + ext)
-            else:
-                mrmeshpy.saveMesh(mesh=input_mesh, extension="*." + ext, fileHandle=f)
+            mrmeshpy.saveMesh(input_mesh, "*." + ext, f)
     else:
         mrmeshpy.saveMesh(input_mesh, str(tmp_path / filename))
     # Comparing files
@@ -69,10 +66,7 @@ def test_conversion_to_mrmesh(test_mesh_name, ext, use_fileHandler, tmp_path):
     filename = test_mesh_name + ".mrmesh"
     if use_fileHandler:
         with open(tmp_path / filename, "wb") as f:
-            if is_new_binding:
-                mrmeshpy.saveMesh(input_mesh, f, "*.mrmesh")
-            else:
-                mrmeshpy.saveMesh(mesh=input_mesh, extension="*.mrmesh", fileHandle=f)
+            mrmeshpy.saveMesh(input_mesh, "*.mrmesh", f)
     else:
         mrmeshpy.saveMesh(input_mesh, str(tmp_path / filename))
 

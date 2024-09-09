@@ -32,10 +32,7 @@ def test_conversion_from_ply(test_points_name, ext, use_fileHandler, tmp_path):
     filename = test_points_name + "." + ext
     if use_fileHandler:
         with open(tmp_path / filename, "wb") as f:
-            if is_new_binding:
-                mrmeshpy.savePoints(input_mesh, f, "*." + ext)
-            else:
-                mrmeshpy.savePoints(pointCloud=input_mesh, extension="*." + ext, fileHandle=f)
+            mrmeshpy.savePoints(input_mesh, "*." + ext, f)
     else:
         mrmeshpy.savePoints(input_mesh, Path(tmp_path / filename))
     # Comparing files
@@ -71,10 +68,7 @@ def test_conversion_to_ply(test_points_name, ext, use_fileHandler, tmp_path):
     filename = test_points_name + ".ply"
     if use_fileHandler:
         with open(tmp_path / filename, "wb") as f:
-            if is_new_binding:
-                mrmeshpy.savePoints(input_points, f, "*.ply")
-            else:
-                mrmeshpy.savePoints(pointCloud=input_points, extension="*.ply", fileHandle=f)
+            mrmeshpy.savePoints(input_points, "*.ply", f)
     else:
         mrmeshpy.savePoints(input_points, Path(tmp_path / filename))
 

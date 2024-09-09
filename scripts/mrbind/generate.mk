@@ -76,7 +76,7 @@ else
 MESHLIB_SHLIB_DIR := build/Release/bin
 endif
 ifeq ($(wildcard $(MESHLIB_SHLIB_DIR)),)
-$(error MeshLib build directory `$(abspath $(MESHLIB_SHLIB_DIR))` doesn't exist! You either forgot to build MeshLib, or are running this script with the wrong current directory. Call this from your project's root)
+$(warning MeshLib build directory `$(abspath $(MESHLIB_SHLIB_DIR))` doesn't exist! You either forgot to build MeshLib, or are running this script with the wrong current directory. Call this from your project's root)
 endif
 
 # Source directory of MRBind.

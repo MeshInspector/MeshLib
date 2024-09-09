@@ -15,9 +15,13 @@ override quote = '$(subst ','"'"',$(subst $(lf), ,$1))'
 # Same as `$(shell ...)`, but triggers an error on failure.
 override safe_shell =
 ifneq ($(filter --trace,$(MAKEFLAGS)),)
-override safe_shell = $(info Shell command: $1)
+override safe_shell = $(info Shell command: $1)$(shell $1)$(if $(filter-out 0,$(.SHELLSTATUS)),$(error Unable to execute `$1`, exit code $(.SHELLSTATUS)))
+else
+override safe_shell = $(shell $1)$(if $(filter-out 0,$(.SHELLSTATUS)),$(error Unable to execute `$1`, exit code $(.SHELLSTATUS)))
 endif
-override safe_shell += $(shell $1)$(if $(filter-out 0,$(.SHELLSTATUS)),$(error Unable to execute `$1`, exit code $(.SHELLSTATUS)))
+
+# Loads the contents of file $1, replacing newlines with spaces.
+override load_file = $(subst $(lf), ,$(file <$1))
 
 
 
@@ -39,14 +43,18 @@ override IS_WINDOWS := $(filter-out 0,$(IS_WINDOWS))
 VS_MODE := Debug
 
 # Vcpkg installation directory. We try to auto-detect it.
+ifneq ($(IS_WINDOWS),)
 VCPKG_DIR :=
 ifeq ($(VCPKG_DIR),)
 override vcpkg_marker_path := $(LOCALAPPDATA)\vcpkg\vcpkg.path.txt
-VCPKG_DIR := $(file <$(vcpkg_marker_path))
+VCPKG_DIR := $(call load_file,$(vcpkg_marker_path))
 ifeq ($(VCPKG_DIR),)
 $(error Can't find vcpkg! The path to it should be stored in `$(vcpkg_marker_path)`, but it's not there)
 endif
 $(info Using vcpkg at: $(VCPKG_DIR))
+endif
+else
+VCPKG_DIR = $(error We're only using vcpkg on Windows)
 endif
 
 # ]
@@ -107,7 +115,7 @@ ifneq ($(IS_WINDOWS),)
 PYTHON_CFLAGS := $(call safe_shell,PKG_CONFIG_PATH=$(call quote,$(DEPS_BASE_DIR)/lib/pkgconfig) PKG_CONFIG_LIBDIR=- pkg-config --cflags $(PYTHON_PKGCONF_NAME))
 PYTHON_LDFLAGS := $(call safe_shell,PKG_CONFIG_PATH=$(call quote,$(DEPS_BASE_DIR)/lib/pkgconfig) PKG_CONFIG_LIBDIR=- pkg-config --libs $(PYTHON_PKGCONF_NAME))
 else
-PYTHON_LDFLAGS := $(call safe_shell,pkg-config --cflags $(PYTHON_PKGCONF_NAME))
+PYTHON_CFLAGS := $(call safe_shell,pkg-config --cflags $(PYTHON_PKGCONF_NAME))
 PYTHON_LDFLAGS := $(call safe_shell,pkg-config --libs $(PYTHON_PKGCONF_NAME))
 endif
 endif
@@ -131,7 +139,7 @@ MODULE_OUTPUT_DIR := $(MESHLIB_SHLIB_DIR)/meshlib2
 
 # Those variables are for mrbind/scripts/apply_to_files.mk
 INPUT_DIRS := $(addprefix $(makefile_dir)/../../source/,MRMesh MRSymbolMesh) $(makefile_dir)
-INPUT_FILES_BLACKLIST := $(file <$(makefile_dir)/input_file_blacklist.txt)
+INPUT_FILES_BLACKLIST := $(call load_file,$(makefile_dir)/input_file_blacklist.txt)
 ifneq ($(IS_WINDOWS),)
 OUTPUT_DIR := source/TempOutput/PythonBindings/x64/$(VS_MODE)
 else
@@ -139,14 +147,14 @@ OUTPUT_DIR := build/binds
 endif
 INPUT_GLOBS := *.h
 MRBIND := $(MRBIND_EXE)
-MRBIND_FLAGS := $(file <$(makefile_dir)/mrbind_flags.txt)
-MRBIND_FLAGS_FOR_EXTRA_INPUTS := $(file <$(makefile_dir)/mrbind_flags_for_helpers.txt)
-COMPILER_FLAGS := $(file <$(makefile_dir)/common_compiler_parser_flags.txt) $(PYTHON_CFLAGS) -I. -I$(DEPS_INCLUDE_DIR) -I$(makefile_dir)/../../source
-COMPILER_FLAGS_LIBCLANG := $(file <$(makefile_dir)/parser_only_flags.txt)
-COMPILER := $(CXX) $(file <$(makefile_dir)/compiler_only_flags.txt) -I$(MRBIND_SOURCE)/include
+MRBIND_FLAGS := $(call load_file,$(makefile_dir)/mrbind_flags.txt)
+MRBIND_FLAGS_FOR_EXTRA_INPUTS := $(call load_file,$(makefile_dir)/mrbind_flags_for_helpers.txt)
+COMPILER_FLAGS := $(call load_file,$(makefile_dir)/common_compiler_parser_flags.txt) $(PYTHON_CFLAGS) -I. -I$(DEPS_INCLUDE_DIR) -I$(makefile_dir)/../../source
+COMPILER_FLAGS_LIBCLANG := $(call load_file,$(makefile_dir)/parser_only_flags.txt)
+COMPILER := $(CXX) $(subst $(lf), ,$(call load_file,$(makefile_dir)/compiler_only_flags.txt)) -I$(MRBIND_SOURCE)/include
 LINKER_OUTPUT := $(MODULE_OUTPUT_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
 LINKER := $(CXX) -fuse-ld=lld
-LINKER_FLAGS := -L$(DEPS_LIB_DIR) $(PYTHON_LDFLAGS) -L$(MESHLIB_SHLIB_DIR) -lMRMesh -lMRSymbolMesh -shared $(file <$(makefile_dir)/linker_flags.txt)
+LINKER_FLAGS := -L$(DEPS_LIB_DIR) $(PYTHON_LDFLAGS) -L$(MESHLIB_SHLIB_DIR) -lMRMesh -lMRSymbolMesh -shared $(call load_file,$(makefile_dir)/linker_flags.txt)
 NUM_FRAGMENTS := 4
 EXTRA_INPUT_SOURCES := $(makefile_dir)/helpers.cpp
 
@@ -210,16 +218,19 @@ only-generate:
 # Handwritten mrmeshnumpy.
 MRMESHNUMPY_MODULE := $(MODULE_OUTPUT_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX)
 $(MRMESHNUMPY_MODULE): | $(MODULE_OUTPUT_DIR)
-	$(CXX) \
+	$(COMPILER) \
 		-o $@ \
 		$(makefile_dir)/../../source/mrmeshnumpy/*.cpp \
-		$(subst $(lf), ,$(COMPILER_FLAGS) $(LINKER_FLAGS)) \
+		$(COMPILER_FLAGS) $(LINKER_FLAGS) \
 		-DMRMESHNUMPY_PARENT_MODULE_NAME=$(notdir $(MODULE_OUTPUT_DIR))
 
 # The init script.
 INIT_SCRIPT := $(MODULE_OUTPUT_DIR)/__init__.py
 $(INIT_SCRIPT): $(makefile_dir)/__init__.py
 	cp $< $@
+ifeq ($(IS_WINDOWS),) # If not on Windows, strip the windows-only part.
+	gawk -i inplace '/### windows-only: \[/{x=1} {if (!x) print} x && /### \]/{x=0}' $@
+endif
 
 # All modules.
 .DEFAULT_GOAL := all

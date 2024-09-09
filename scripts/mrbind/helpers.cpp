@@ -1,6 +1,9 @@
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRBoolean.h"
+#include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MREdgeIterator.h"
+#include "MRMesh/MRImageLoad.h"
+#include "MRMesh/MRImageSave.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include "MRMesh/MRSceneLoad.h"
@@ -128,5 +131,26 @@ namespace MR::Extra
             return result.scene;
         else
             return result.scene->children().front();
+    }
+
+    // saves distance map to a grayscale image file
+    //     threshold - threshold of maximum values [0.; 1.]. invalid pixel set as 0. (black)
+    // minimum (close): 1.0 (white)
+    // maximum (far): threshold
+    // invalid (infinity): 0.0 (black)
+    VoidOrErrStr saveDistanceMapToImage( const DistanceMap& distMap, const std::filesystem::path& filename, float threshold = 1.f / 255 )
+    {
+        const auto image = convertDistanceMapToImage( distMap, threshold );
+        return ImageSave::toAnySupportedFormat( image, filename );
+    }
+
+    // load distance map from a grayscale image file
+    //     threshold - threshold of valid values [0.; 1.]. pixel with color less then threshold set invalid
+    Expected<MR::DistanceMap> loadDistanceMapFromImage( const std::filesystem::path& filename, float threshold = 1.f / 255 )
+    {
+        auto resLoad = ImageLoad::fromAnySupportedFormat( filename );
+        if ( !resLoad.has_value() )
+            return unexpected( resLoad.error() );
+        return convertImageToDistanceMap( *resLoad, threshold );
     }
 }

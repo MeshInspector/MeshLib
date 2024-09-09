@@ -1,3 +1,4 @@
+from module_helper import *
 from pathlib import Path
 from pytest_check import check
 from constants import test_files_path

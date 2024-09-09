@@ -1,4 +1,6 @@
-# Fixes DLL loading on Windows.
+### windows-only: [
+
+# Fixes DLL loading paths.
 
 def _init_patch():
     import os
@@ -7,6 +9,8 @@ def _init_patch():
 
 _init_patch()
 del _init_patch
+
+### ]
 
 
 
@@ -22,6 +26,7 @@ def _init_patch():
     mrmeshpy.FixSelfIntersectionMethod = mrmeshpy.SelfIntersections_Settings_Method
     mrmeshpy.FixSelfIntersectionSettings = mrmeshpy.SelfIntersections_Settings
     mrmeshpy.fixUndercuts = mrmeshpy.FixUndercuts_fixUndercuts
+    mrmeshpy.GeneralOffsetParametersMode = mrmeshpy.GeneralOffsetParameters_Mode
     mrmeshpy.getAllComponents = mrmeshpy.MeshComponents_getAllComponents
     mrmeshpy.getAllComponentsVerts = mrmeshpy.MeshComponents_getAllComponentsVerts
     mrmeshpy.ICP.getLastICPInfo = mrmeshpy.ICP.getStatusInfo
@@ -42,7 +47,7 @@ def _init_patch():
     mrmeshpy.objectSave = mrmeshpy.ObjectSave_toAnySupportedFormat
     mrmeshpy.ObjectVoxels.extractVoxels = mrmeshpy.ObjectVoxels.vdbVolume
     mrmeshpy.saveAllSlicesToImage = mrmeshpy.VoxelsSave_saveAllSlicesToImage
-    mrmeshpy.saveMesh = mrmeshpy.MeshSave_toAnySupportedFormat # There was also a manually written overload, hmm.
+    mrmeshpy.saveMesh = mrmeshpy.MeshSave_toAnySupportedFormat
     mrmeshpy.savePoints = mrmeshpy.PointsSave_toAnySupportedFormat
     mrmeshpy.saveSliceToImage = mrmeshpy.VoxelsSave_saveSliceToImage
     mrmeshpy.saveVoxelsGav = mrmeshpy.VoxelsSave_toGav

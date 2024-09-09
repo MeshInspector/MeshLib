@@ -23,7 +23,7 @@ def test_fusion(tmp_path, voxel):
     params.voxelSize = voxel
     params.sigma = 0.8
     params.minWeight = 6
-    mesh = mrmeshpy.pointsToMeshFusion(pointCloud=points, params=params)
+    mesh = mrmeshpy.pointsToMeshFusion(points, params)
 
     # === Verification
     mrmeshpy.saveMesh(mesh, tmp_path / f"{case_name}.ctm")  # used to store

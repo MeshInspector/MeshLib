@@ -31,7 +31,7 @@ def test_mesh_to_distance_map_to_mesh(tmp_path):
     # === Verification
     map = mrmeshpy.loadDistanceMapFromImage(tmp_path / "a.png")
     aff = mrmeshpy.AffineXf3f()
-    mesh = mrmeshpy.distanceMapToMesh(mp=map, toWorld=aff)
+    mesh = mrmeshpy.distanceMapToMesh(map, aff)
     mrmeshpy.saveMesh(mesh, tmp_path / f"{case_name}.ctm")
     ref_mesh_path = input_folder / f"{case_name}.ctm"
     ref_mesh = mrmeshpy.loadMesh(ref_mesh_path)
@@ -53,7 +53,7 @@ def test_distance_map_to_mesh(tmp_path):
 
     dmap = mrmeshpy.loadDistanceMapFromImage(input_folder / "input_map.png")
     aff = mrmeshpy.AffineXf3f()
-    mesh = mrmeshpy.distanceMapToMesh(mp=dmap, toWorld=aff)
+    mesh = mrmeshpy.distanceMapToMesh(dmap, aff)
 
     # === Verification
     mrmeshpy.saveMesh(mesh, tmp_path / f"{case_name}.ctm")

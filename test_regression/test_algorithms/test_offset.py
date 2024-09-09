@@ -40,10 +40,11 @@ def test_offset_thickening(tmp_path, test_params):
     case_name = test_params["name"]
     mesh = mrmeshpy.loadMesh(input_folder / test_params["mesh"])
 
-    offset_params = mrmeshpy.OffsetParameters()
+    offset_params = mrmeshpy.GeneralOffsetParameters()
+    offset_params.voxelSize = mrmeshpy.suggestVoxelSize(mesh, 5e6)
     sign_mode = test_params["params"]["signDetectionMode"]
     offset_params.signDetectionMode = mrmeshpy.SignDetectionMode.__members__[sign_mode]
-    thicked_mesh = mrmeshpy.thickenMesh(mesh=mesh, offset=test_params["params"]["offset"], params=offset_params)
+    thicked_mesh = mrmeshpy.thickenMesh(mesh, test_params["params"]["offset"], offset_params)
 
     # === Verification
     mrmeshpy.saveMesh(thicked_mesh, tmp_path / f"{case_name}.ctm")

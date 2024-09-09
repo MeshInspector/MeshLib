@@ -170,7 +170,9 @@ jobs:
           LD_LIBRARY_PATH: .
           USE_MESHLIB2_PY: 1
         working-directory: build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
+        run: \
+          python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
+          python3 ./../../../scripts/run_python_test_script.py -d '../test_regression'
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.compiler}}"

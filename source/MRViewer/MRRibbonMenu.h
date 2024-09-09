@@ -143,6 +143,9 @@ protected:
                                                DrawGroupConfig config );
     // ribbon menu item pressed
     MRVIEWER_API virtual void itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool available );
+    // this function is called when ribbon item is activated
+    // this implementation only updates `searcher_`
+    MRVIEWER_API virtual void onItemActivated_( const std::shared_ptr<RibbonMenuItem>& item );
 
     MRVIEWER_API virtual void drawActiveBlockingDialog_();
     MRVIEWER_API virtual void drawActiveNonBlockingDialogs_();

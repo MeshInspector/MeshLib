@@ -1,4 +1,5 @@
 #include "MRMeshSave.h"
+#include "MRIOFormatsRegistry.h"
 #include "MRMesh.h"
 #include "MRTimer.h"
 #include "MRColor.h"
@@ -18,18 +19,6 @@ namespace MR
 
 namespace MeshSave
 {
-
-const IOFilters Filters =
-{
-    {"MrMesh (.mrmesh)",  "*.mrmesh"},
-    {"Binary STL (.stl)", "*.stl"},
-    {"OFF (.off)",        "*.off"},
-    {"OBJ (.obj)",        "*.obj"},
-    {"PLY (.ply)",        "*.ply"},
-#ifndef MRMESH_NO_OPENCTM
-    {"CTM (.ctm)",        "*.ctm"},
-#endif
-};
 
 VoidOrErrStr toMrmesh( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
@@ -86,8 +75,14 @@ VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & se
     {
         if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
             continue;
-        auto p = applyDouble( settings.xf, mesh.points[i] );
-        out << fmt::format( "{} {} {}\n", p.x, p.y, p.z );
+        auto saveVertex = [&]( auto && p )
+        {
+            out << fmt::format( "{} {} {}\n", p.x, p.y, p.z );
+        };
+        if ( settings.xf )
+            saveVertex( applyDouble( settings.xf, mesh.points[i] ) );
+        else
+            saveVertex( mesh.points[i] );
         ++numSaved;
         if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / numPoints * 0.5f ) )
             return unexpected( std::string( "Saving canceled" ) );
@@ -159,16 +154,23 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & 
     {
         if ( settings.saveValidOnly && !mesh.topology.hasVert( i ) )
             continue;
-        auto p = applyDouble( settings.xf, mesh.points[i] );
-        if ( settings.colors )
+
+        auto saveVertex = [&]( auto && p )
         {
-            const auto c = (Vector4f)( *settings.colors )[i];
-            out << fmt::format( "v {} {} {} {} {} {}\n", p.x, p.y, p.z, c[0], c[1], c[2] );
-        }
+            if ( settings.colors )
+            {
+                const auto c = (Vector4f)( *settings.colors )[i];
+                out << fmt::format( "v {} {} {} {} {} {}\n", p.x, p.y, p.z, c[0], c[1], c[2] );
+            }
+            else
+            {
+                out << fmt::format( "v {} {} {}\n", p.x, p.y, p.z );
+            }
+        };
+        if ( settings.xf )
+            saveVertex( applyDouble( settings.xf, mesh.points[i] ) );
         else
-        {
-            out << fmt::format( "v {} {} {}\n", p.x, p.y, p.z );
-        }
+            saveVertex( mesh.points[i] );
         ++numSaved;
         if ( settings.progress && !( numSaved & 0x3FF ) && !sb( float( numSaved ) / numPoints ) )
             return unexpected( std::string( "Saving canceled" ) );
@@ -220,6 +222,16 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & 
 
     reportProgress( settings.progress, 1.f );
     return {};
+}
+
+VoidOrErrStr toObj( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings& settings )
+{
+    return toObj( mesh, file, settings, 1 );
+}
+
+VoidOrErrStr toObj( const Mesh& mesh, std::ostream& out, const SaveSettings& settings )
+{
+    return toObj( mesh, out, settings, 1 );
 }
 
 static FaceBitSet getNotDegenTris( const Mesh &mesh )
@@ -319,16 +331,20 @@ VoidOrErrStr toAsciiStl( const Mesh& mesh, std::ostream& out, const SaveSettings
         VertId a, b, c;
         mesh.topology.getTriVerts( f, a, b, c );
         assert( a.valid() && b.valid() && c.valid() );
-        const auto ap = applyDouble( settings.xf, mesh.points[a] );
-        const auto bp = applyDouble( settings.xf, mesh.points[b] );
-        const auto cp = applyDouble( settings.xf, mesh.points[c] );
-        const auto normal = cross( bp - ap, cp - ap ).normalized();
-        out << "" << fmt::format( "facet normal {} {} {}\n", normal.x, normal.y, normal.z );
-        out << "outer loop\n";
-        for ( const auto & p : { ap, bp, cp } )
+        auto saveVertex = [&]( auto && ap, auto && bp, auto && cp )
         {
-            out << fmt::format( "vertex {} {} {}\n", p.x, p.y, p.z );
-        }
+            const auto normal = cross( bp - ap, cp - ap ).normalized();
+            out << "" << fmt::format( "facet normal {} {} {}\n", normal.x, normal.y, normal.z );
+            out << "outer loop\n";
+            for ( const auto & p : { ap, bp, cp } )
+                out << fmt::format( "vertex {} {} {}\n", p.x, p.y, p.z );
+        };
+        if ( settings.xf )
+            saveVertex( applyDouble( settings.xf, mesh.points[a] ),
+                        applyDouble( settings.xf, mesh.points[b] ),
+                        applyDouble( settings.xf, mesh.points[c] ) );
+        else
+            saveVertex( mesh.points[a], mesh.points[b], mesh.points[c] );
         out << "endloop\n";
         out << "endfacet\n";
         if ( settings.progress && !( trisIndex & 0x3FF ) && !settings.progress( trisIndex / trisNum ) )
@@ -430,7 +446,7 @@ VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & 
 }
 
 #ifndef MRMESH_NO_OPENCTM
-VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions options )
+VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions& options )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -439,7 +455,7 @@ VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const
     return toCtm( mesh, out, options );
 }
 
-VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions options )
+VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions& options )
 {
     MR_TIMER
 
@@ -598,6 +614,16 @@ VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions 
     reportProgress( options.progress, 1.f );
     return {};
 }
+
+VoidOrErrStr toCtm( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings& settings )
+{
+    return toCtm( mesh, file, CtmSaveOptions { settings } );
+}
+
+VoidOrErrStr toCtm( const Mesh& mesh, std::ostream& out, const SaveSettings& settings )
+{
+    return toCtm( mesh, out, CtmSaveOptions { settings } );
+}
 #endif
 
 VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings & settings )
@@ -605,48 +631,36 @@ VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path
     auto ext = utf8string( file.extension() );
     for ( auto & c : ext )
         c = (char) tolower( c );
+    ext = "*" + ext;
 
-    VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == ".off" )
-        res = MR::MeshSave::toOff( mesh, file, settings );
-    else if ( ext == ".obj" )
-        res = MR::MeshSave::toObj( mesh, file, settings );
-    else if ( ext == ".stl" )
-        res = MR::MeshSave::toBinaryStl( mesh, file, settings );
-    else if ( ext == ".ply" )
-        res = MR::MeshSave::toPly( mesh, file, settings );
-#ifndef MRMESH_NO_OPENCTM
-    else if ( ext == ".ctm" )
-        res = MR::MeshSave::toCtm( mesh, file, { settings } );
-#endif
-    else if ( ext == ".mrmesh" )
-        res = MR::MeshSave::toMrmesh( mesh, file, settings );
-    return res;
+    auto saver = getMeshSaver( ext );
+    if ( !saver.fileSave )
+        return unexpected( std::string( "unsupported file extension" ) );
+
+    return saver.fileSave( mesh, file, settings );
 }
 
 VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension, const SaveSettings & settings )
 {
-    auto ext = extension.substr( 1 );
+    auto ext = extension;
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == ".off" )
-        res = MR::MeshSave::toOff( mesh, out, settings );
-    else if ( ext == ".obj" )
-        res = MR::MeshSave::toObj( mesh, out, settings );
-    else if ( ext == ".stl" )
-        res = MR::MeshSave::toBinaryStl( mesh, out, settings );
-    else if ( ext == ".ply" )
-        res = MR::MeshSave::toPly( mesh, out, settings );
-#ifndef MRMESH_NO_OPENCTM
-    else if ( ext == ".ctm" )
-        res = MR::MeshSave::toCtm( mesh, out, { settings } );
-#endif
-    else if ( ext == ".mrmesh" )
-        res = MR::MeshSave::toMrmesh( mesh, out, settings );
-    return res;
+    auto saver = getMeshSaver( ext );
+    if ( !saver.streamSave )
+        return unexpected( std::string( "unsupported stream extension" ) );
+
+    return saver.streamSave( mesh, out, settings );
 }
+
+MR_ADD_MESH_SAVER_WITH_PRIORITY( IOFilter( "MrMesh (.mrmesh)", "*.mrmesh" ), toMrmesh, -1 )
+MR_ADD_MESH_SAVER( IOFilter( "Binary STL (.stl)", "*.stl"   ), toBinaryStl )
+MR_ADD_MESH_SAVER( IOFilter( "OFF (.off)",        "*.off"   ), toOff )
+MR_ADD_MESH_SAVER( IOFilter( "OBJ (.obj)",        "*.obj"   ), toObj )
+MR_ADD_MESH_SAVER( IOFilter( "PLY (.ply)",        "*.ply"   ), toPly )
+#ifndef MRMESH_NO_OPENCTM
+MR_ADD_MESH_SAVER( IOFilter( "CTM (.ctm)",        "*.ctm"   ), toCtm )
+#endif
 
 } //namespace MeshSave
 

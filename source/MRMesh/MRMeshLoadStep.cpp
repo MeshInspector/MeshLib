@@ -1,14 +1,15 @@
 #include "MRMeshLoadStep.h"
 #ifndef MRMESH_NO_OPENCASCADE
 #include "MRFinally.h"
+#include "MRIOFormatsRegistry.h"
 #include "MRMesh.h"
 #include "MRMeshBuilder.h"
+#include "MRMeshLoadSettings.h"
 #include "MRObjectMesh.h"
 #include "MRObjectsAccess.h"
 #include "MRParallelFor.h"
 #include "MRStringConvert.h"
 #include "MRTimer.h"
-#include "MRMeshLoadSettings.h"
 
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRSuppressWarning.h"
@@ -924,6 +925,13 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( std::istream& in, const Mes
 #endif
     ;
 }
+
+Expected<ObjectPtr> fromSceneStepFile( const std::filesystem::path& path, std::string*, ProgressCallback progressCb )
+{
+    return fromSceneStepFile( path, { .callback = progressCb } );
+}
+
+MR_ADD_SCENE_LOADER( IOFilter( "STEP model (.step,.stp)", "*.step;*.stp" ), fromSceneStepFile )
 
 } // namespace MR::MeshLoad
 

@@ -1,4 +1,5 @@
 #include "MRLinesSave.h"
+#include "MRIOFormatsRegistry.h"
 #include "MRPolyline.h"
 #include "MRTimer.h"
 #include "MRVector3.h"
@@ -13,13 +14,6 @@ namespace MR
 
 namespace LinesSave
 {
-
-const IOFilters Filters =
-{
-    {"MrLines (.mrlines)", "*.mrlines"},
-    {"PTS (.pts)", "*.pts"},
-    {"Drawing exchange format (.dxf)", "*.dxf"}
-};
 
 VoidOrErrStr toMrLines( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings )
 {
@@ -75,8 +69,14 @@ VoidOrErrStr toPts( const Polyline3& polyline, std::ostream& out, const SaveSett
         out << "BEGIN_Polyline\n";
         for ( auto v : contour )
         {
-            const auto p = applyDouble( settings.xf, v );
-            out << fmt::format( "{} {} {}\n", p.x, p.y, p.z );
+            auto saveVertex = [&]( auto && p )
+            {
+                out << fmt::format( "{} {} {}\n", p.x, p.y, p.z );
+            };
+            if ( settings.xf )
+                saveVertex( applyDouble( settings.xf, v ) );
+            else
+                saveVertex( v );
             ++pointIndex;
             if ( settings.progress && !( pointIndex & 0x3FF ) && !settings.progress( float( pointIndex ) / pointsNum ) )
                 return unexpected( std::string( "Saving canceled" ) );
@@ -122,15 +122,21 @@ VoidOrErrStr toDxf( const Polyline3& polyline, std::ostream& out, const SaveSett
         out << "70\n" << flags << "\n";
         for ( auto v : contour )
         {
-            const auto p = applyDouble( settings.xf, v );
-            out << fmt::format( 
-                "0\nVERTEX\n"
-                "8\n0\n"
-                "70\n32\n"
-                "10\n{}\n"
-                "20\n{}\n"
-                "30\n{}\n",
-                p.x, p.y, p.z );
+            auto saveVertex = [&]( auto && p )
+            {
+                out << fmt::format(
+                    "0\nVERTEX\n"
+                    "8\n0\n"
+                    "70\n32\n"
+                    "10\n{}\n"
+                    "20\n{}\n"
+                    "30\n{}\n",
+                    p.x, p.y, p.z );
+            };
+            if ( settings.xf )
+                saveVertex( applyDouble( settings.xf, v ) );
+            else
+                saveVertex( v );
             ++pointIndex;
             if ( settings.progress && !( pointIndex & 0x3FF ) && !settings.progress( float( pointIndex ) / pointsNum ) )
                 return unexpected( std::string( "Saving canceled" ) );
@@ -153,32 +159,31 @@ VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, const std::filesys
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
+    ext = "*" + ext;
 
-    VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == ".mrlines" )
-        res = toMrLines( polyline, file, settings );
-    else if ( ext == ".pts" )
-        res = toPts( polyline, file, settings );
-    else if ( ext == ".dxf" )
-        res = toDxf( polyline, file, settings );
-    return res;
+    auto saver = getLinesSaver( ext );
+    if ( !saver.fileSave )
+        return unexpected( std::string( "unsupported file extension" ) );
+
+    return saver.fileSave( polyline, file, settings );
 }
 
 VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, std::ostream& out, const std::string& extension, const SaveSettings & settings )
 {
-    auto ext = extension.substr( 1 );
+    auto ext = extension;
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == ".mrlines" )
-        res = toMrLines( polyline, out, settings );
-    else if ( ext == ".pts" )
-        res = toPts( polyline, out, settings );
-    else if ( ext == ".dxf" )
-        res = toDxf( polyline, out, settings );
-    return res;
+    auto saver = getLinesSaver( ext );
+    if ( !saver.streamSave )
+        return unexpected( std::string( "unsupported stream extension" ) );
+
+    return saver.streamSave( polyline, out, settings );
 }
+
+MR_ADD_LINES_SAVER_WITH_PRIORITY( IOFilter( "MrLines (.mrlines)", "*.mrlines" ), toMrLines, -1 )
+MR_ADD_LINES_SAVER( IOFilter( "PTS (.pts)", "*.pts" ), toPts )
+MR_ADD_LINES_SAVER( IOFilter( "Drawing exchange format (.dxf)", "*.dxf" ), toDxf )
 
 } //namespace LinesSave
 

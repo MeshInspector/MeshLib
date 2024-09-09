@@ -173,15 +173,7 @@ void GcodeToolsLibrary::addNewToolFromFile_()
     if ( folderPath.empty() )
         return;
 
-    auto filters = MeshLoad::getFilters();
-    auto allIt = std::find_if( filters.begin(), filters.end(), [] ( const auto& it )
-    {
-        return it.extensions == "*.*";
-    } );
-    if ( allIt != filters.end() )
-        filters.erase( allIt );
-    
-    auto path = openFileDialog( { .filters = filters } );
+    auto path = openFileDialog( { .filters = MeshLoad::getFilters() } );
     if ( path.empty() )
         return;
 

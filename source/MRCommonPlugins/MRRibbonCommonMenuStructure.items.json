@@ -260,6 +260,11 @@
       "Caption": "Active List",
       "Tooltip": "Show list of active tools",
       "Icon": "\uF560"
+    },
+    {
+      "Name": "Rotator",
+      "Tooltip": "Permanently rotates the scene around vertical axis.",
+      "Icon": "\uF2F1"
     }
   ]
 }

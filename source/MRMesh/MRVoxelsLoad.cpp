@@ -1,6 +1,7 @@
 #include "MRVoxelsLoad.h"
 #ifndef MRMESH_NO_OPENVDB
 #include "MRTimer.h"
+#include "MRIOFormatsRegistry.h"
 #include "MRObjectVoxels.h"
 #include "MRVDBConversions.h"
 #include "MRStringConvert.h"
@@ -59,21 +60,9 @@ namespace
     }
 #endif // MRMESH_NO_DICOM
 }
-#endif // MRMESH_NO_OPENVDB
 
 namespace MR::VoxelsLoad
 {
-
-const IOFilters Filters =
-{
-#ifndef MRMESH_NO_OPENVDB
-    { "Raw (.raw)", "*.raw" },
-    { "Micro CT (.gav)", "*.gav" },
-    { "OpenVDB (.vdb)", "*.vdb" },
-#endif
-};
-
-#ifndef MRMESH_NO_OPENVDB
 
 struct SliceInfoBase
 {
@@ -1016,11 +1005,19 @@ Expected<std::vector<VdbVolume>> fromVdb( const std::filesystem::path& path, con
     return res;
 }
 
-inline Expected<std::vector<VdbVolume>> toSingleElementVector( Expected<VdbVolume> v )
+inline Expected<std::vector<VdbVolume>> toSingleElementVector( VdbVolume&& v )
 {
-    if ( !v.has_value() )
-        return unexpected( std::move( v.error() ) );
-    return std::vector<VdbVolume>{ std::move( v.value() ) };
+    return std::vector<VdbVolume>{ std::move( v ) };
+}
+
+Expected<std::vector<VdbVolume>> vecFromRaw(  const std::filesystem::path& path, const ProgressCallback& cb )
+{
+    return fromRaw( path, cb ).and_then( toSingleElementVector );
+}
+
+Expected<std::vector<VdbVolume>> vecFromGav(  const std::filesystem::path& path, const ProgressCallback& cb )
+{
+    return fromGav( path, cb ).and_then( toSingleElementVector );
 }
 
 Expected<std::vector<VdbVolume>> fromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& cb /*= {} */ )
@@ -1028,16 +1025,17 @@ Expected<std::vector<VdbVolume>> fromAnySupportedFormat( const std::filesystem::
     auto ext = utf8string( path.extension() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
+    ext = "*" + ext;
 
-    if ( ext == ".raw" )
-        return toSingleElementVector( fromRaw( path, cb ) );
-    if ( ext == ".gav" )
-        return toSingleElementVector( fromGav( path, cb ) );
-    if ( ext == ".vdb" )
-        return fromVdb( path, cb );
-
-    return unexpected( std::string( "Unsupported file extension" ) );
+    auto loader = getVoxelsLoader( ext );
+    if ( !loader )
+        return unexpected( std::string( "unsupported file extension" ) );
+    return loader( path, cb );
 }
+
+MR_ADD_VOXELS_LOADER( IOFilter( "Raw (.raw)", "*.raw" ), vecFromRaw )
+MR_ADD_VOXELS_LOADER( IOFilter( "Micro CT (.gav)", "*.gav" ), vecFromGav )
+MR_ADD_VOXELS_LOADER( IOFilter( "OpenVDB (.vdb)", "*.vdb" ), fromVdb )
 
 struct TiffParams
 {
@@ -1298,6 +1296,5 @@ Expected<VdbVolume> fromRaw( std::istream& in, const RawParameters& params,  con
     return res;
 }
 
-#endif // MRMESH_NO_OPENVDB
-
 } // namespace MR::VoxelsLoad
+#endif // MRMESH_NO_OPENVDB

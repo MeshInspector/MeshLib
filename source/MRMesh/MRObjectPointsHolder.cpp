@@ -279,7 +279,10 @@ VoidOrErrStr ObjectPointsHolder::deserializeModel_( const std::filesystem::path&
         points_ = std::make_shared<PointCloud>();
         return {};
     }
-    auto res = PointsLoad::fromAnySupportedFormat( modelPath, &vertsColorMap_, nullptr, progressCb );
+    auto res = PointsLoad::fromAnySupportedFormat( modelPath, {
+        .colors = &vertsColorMap_,
+        .callback = progressCb,
+    } );
     if ( !res.has_value() )
         return unexpected( std::move( res.error() ) );
 

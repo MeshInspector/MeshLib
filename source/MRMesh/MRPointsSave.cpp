@@ -2,6 +2,7 @@
 #include "MRTimer.h"
 #include "MRVector3.h"
 #include "MRColor.h"
+#include "MRIOFormatsRegistry.h"
 #include "MRStringConvert.h"
 #include "MRStreamOperators.h"
 #include "MRProgressReadWrite.h"
@@ -17,14 +18,6 @@ namespace MR
 
 namespace PointsSave
 {
-const IOFilters Filters =
-{
-    {"ASC (.asc)",        "*.asc"},
-    {"PLY (.ply)",        "*.ply"},
-#ifndef MRMESH_NO_OPENCTM
-    {"CTM (.ctm)",        "*.ctm"},
-#endif
-};
 
 namespace
 {
@@ -71,12 +64,25 @@ VoidOrErrStr toAsc( const PointCloud& cloud, std::ostream& out, const SaveSettin
     {
         if ( settings.saveValidOnly && !cloud.validPoints.test( v ) )
             continue;
-        const auto p = applyDouble( settings.xf, cloud.points[v] );
-        out << fmt::format( "{} {} {}", p.x, p.y, p.z );
-        if ( saveNormals )
+        auto saveVertex = [&]( auto && p )
         {
-            const auto n = applyDouble( normXf, cloud.normals[v] );
+            out << fmt::format( "{} {} {}", p.x, p.y, p.z );
+        };
+        auto saveNormal = [&]( auto && n )
+        {
             out << fmt::format( " {} {} {}", n.x, n.y, n.z );
+        };
+        if ( settings.xf )
+        {
+            saveVertex( applyDouble( settings.xf, cloud.points[v] ) );
+            if ( saveNormals )
+                saveNormal( applyDouble( normXf, cloud.normals[v] ) );
+        }
+        else
+        {
+            saveVertex( cloud.points[v] );
+            if ( saveNormals )
+                saveNormal( cloud.normals[v] );
         }
         out << '\n';
         ++numSaved;
@@ -321,6 +327,16 @@ VoidOrErrStr toCtm( const PointCloud& cloud, std::ostream& out, const CtmSavePoi
     reportProgress( options.progress, 1.f );
     return {};
 }
+
+VoidOrErrStr toCtm( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
+{
+    return toCtm( points, file, CtmSavePointsOptions{ settings } );
+}
+
+VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const SaveSettings& settings )
+{
+    return toCtm( points, out, CtmSavePointsOptions{ settings } );
+}
 #endif
 
 VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
@@ -328,35 +344,32 @@ VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesyst
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
+    ext = "*" + ext;
 
-    VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == ".asc" )
-        res = MR::PointsSave::toAsc( points, file, settings );
-    if ( ext == ".ply" )
-        res = MR::PointsSave::toPly( points, file, settings );
-#ifndef MRMESH_NO_OPENCTM
-    else if ( ext == ".ctm" )
-        res = MR::PointsSave::toCtm( points, file, { settings } );
-#endif
-    return res;
+    auto saver = getPointsSaver( ext );
+    if ( !saver.fileSave )
+        return unexpected( std::string( "unsupported file extension" ) );
+
+    return saver.fileSave( points, file, settings );
 }
 VoidOrErrStr toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const SaveSettings& settings )
 {
-    auto ext = extension.substr( 1 );
+    auto ext = extension;
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    VoidOrErrStr res = unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == ".asc" )
-        res = MR::PointsSave::toAsc( points, out, settings );
-    else if ( ext == ".ply" )
-        res = MR::PointsSave::toPly( points, out, settings );
-#ifndef MRMESH_NO_OPENCTM
-    else if ( ext == ".ctm" )
-        res = MR::PointsSave::toCtm( points, out, { settings } );
-#endif
-    return res;
+    auto saver = getPointsSaver( ext );
+    if ( !saver.streamSave )
+        return unexpected( std::string( "unsupported stream extension" ) );
+
+    return saver.streamSave( points, out, settings );
 }
+
+MR_ADD_POINTS_SAVER( IOFilter( "ASC (.asc)",        "*.asc" ), toAsc )
+MR_ADD_POINTS_SAVER( IOFilter( "PLY (.ply)",        "*.ply" ), toPly )
+#ifndef MRMESH_NO_OPENCTM
+MR_ADD_POINTS_SAVER( IOFilter( "CTM (.ctm)",        "*.ctm" ), toCtm )
+#endif
 
 } // namespace PointsSave
 

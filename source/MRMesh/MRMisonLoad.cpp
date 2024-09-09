@@ -1,5 +1,6 @@
 #include "MRMisonLoad.h"
 #ifndef __EMSCRIPTEN__
+#include "MRIOFormatsRegistry.h"
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
 #include "MRPch/MRJson.h"
@@ -79,6 +80,8 @@ Expected<std::shared_ptr<MR::Object>> fromSceneMison( std::istream& in,
 
     return rootObj;
 }
+
+MR_ADD_SCENE_LOADER( IOFilter( "MeshInSpector Object Notation (.mison)", "*.mison" ), fromSceneMison )
 
 }
 

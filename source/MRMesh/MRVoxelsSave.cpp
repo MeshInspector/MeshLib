@@ -1,6 +1,7 @@
 #include "MRVoxelsSave.h"
 #ifndef MRMESH_NO_OPENVDB
 #include "MRMeshFwd.h"
+#include "MRIOFormatsRegistry.h"
 #include "MRImageSave.h"
 #include "MRVDBFloatGrid.h"
 #include "MRStringConvert.h"
@@ -17,21 +18,10 @@
 #include <fstream>
 #include <filesystem>
 #include <sstream>
-#endif
 
 namespace MR::VoxelsSave
 {
 
-const IOFilters Filters = 
-{
-#ifndef MRMESH_NO_OPENVDB
-    { "Raw (.raw)", "*.raw" },
-    { "Micro CT (.gav)", "*.gav" },
-    { "OpenVDB (.vdb)", "*.vdb" },
-#endif
-};
-
-#ifndef MRMESH_NO_OPENVDB
 VoidOrErrStr toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback )
 {
     MR_TIMER
@@ -183,18 +173,18 @@ VoidOrErrStr toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesy
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
+    ext = "*" + ext;
 
-    if ( ext == ".raw" )
-        return toRawAutoname( vdbVolume, file, callback );
-    else if ( ext == ".gav" )
-        return toGav( vdbVolume, file, callback );
-    else if ( ext == ".vdb" )
-        return toVdb( vdbVolume, file, callback );
-    else
+    auto saver = getVoxelsSaver( ext );
+    if ( !saver )
         return unexpected( std::string( "unsupported file extension" ) );
+
+    return saver( vdbVolume, file, callback );
 }
 
-
+MR_ADD_VOXELS_SAVER( IOFilter( "Raw (.raw)", "*.raw" ), toRawAutoname )
+MR_ADD_VOXELS_SAVER( IOFilter( "Micro CT (.gav)", "*.gav" ), toGav )
+MR_ADD_VOXELS_SAVER( IOFilter( "OpenVDB (.vdb)", "*.vdb" ), toVdb )
 
 VoidOrErrStr saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlane& slicePlain, int sliceNumber, ProgressCallback callback )
 {
@@ -291,6 +281,5 @@ VoidOrErrStr saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSetti
     return {};
 }
 
-#endif
-
 } // namespace MR::VoxelsSave
+#endif

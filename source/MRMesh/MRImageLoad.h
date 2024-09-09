@@ -16,8 +16,6 @@ namespace ImageLoad
 /// \ingroup IOGroup
 /// \{
 
-MRMESH_API extern const IOFilters Filters;
-
 #ifndef MRMESH_NO_PNG
 /// loads from .png format
 MRMESH_API Expected<Image> fromPng( const std::filesystem::path& path );

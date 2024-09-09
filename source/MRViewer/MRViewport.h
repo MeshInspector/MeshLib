@@ -334,17 +334,20 @@ private:
     Matrix4f projM_;
 
 public:
-    // returns orthonormal matrix with translation
-    MRVIEWER_API AffineXf3f getUnscaledViewXf() const;
-    // converts directly from the view matrix
-    AffineXf3f getViewXf() const { return AffineXf3f( viewM_ ); }
+    /// returns orthonormal matrix with translation
+    [[nodiscard]] MRVIEWER_API AffineXf3f getUnscaledViewXf() const;
 
-    // returns Y axis of view matrix. Shows Up direction with zoom-depended length
-    MRVIEWER_API Vector3f getUpDirection() const;
-    // returns X axis of view matrix. Shows Right direction with zoom-depended length
-    MRVIEWER_API Vector3f getRightDirection() const;
-    // returns Z axis of view matrix. Shows Backward direction with zoom-depended length
-    MRVIEWER_API Vector3f getBackwardDirection() const;
+    /// converts directly from the view matrix
+    [[nodiscard]] AffineXf3f getViewXf() const { return AffineXf3f( viewM_ ); }
+
+    /// returns unit vector in world space corresponding to up-direction in camera space
+    [[nodiscard]] Vector3f getUpDirection() const { return Vector3f( viewM_.y.x, viewM_.y.y, viewM_.y.z ).normalized(); } // assume that viewM is orthogonal and inverse=transpose
+
+    /// returns unit vector in world space corresponding to right-direction in camera space
+    [[nodiscard]] Vector3f getRightDirection() const { return Vector3f( viewM_.x.x, viewM_.x.y, viewM_.x.z ).normalized(); } // assume that viewM is orthogonal and inverse=transpose
+
+    /// returns unit vector in world space corresponding to direction toward camera in camera space
+    [[nodiscard]] Vector3f getBackwardDirection() const { return Vector3f( viewM_.z.x, viewM_.z.y, viewM_.z.z ).normalized(); } // assume that viewM is orthogonal and inverse=transpose
 
     // returns the line from Dnear to Dfar planes for the current pixel
     // viewport space: X [0,viewport_width], Y [0,viewport_height] - (0,0) is upper left of viewport

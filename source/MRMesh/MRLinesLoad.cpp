@@ -1,4 +1,5 @@
 #include "MRLinesLoad.h"
+#include "MRIOFormatsRegistry.h"
 #include "MRPolyline.h"
 #include "MRTimer.h"
 #include "MRStringConvert.h"
@@ -11,12 +12,6 @@ namespace MR
 
 namespace LinesLoad
 {
-
-const IOFilters Filters =
-{
-    {"MrLines (.mrlines)", "*.mrlines"},
-    {"PTS (.pts)",        "*.pts"}
-};
 
 Expected<Polyline3> fromMrLines( const std::filesystem::path & file, ProgressCallback callback )
 {
@@ -131,28 +126,30 @@ Expected<Polyline3> fromAnySupportedFormat( const std::filesystem::path& file, P
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
         c = (char) tolower( c );
+    ext = "*" + ext;
 
-    Expected<Polyline3> res = unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == ".mrlines" )
-        res = fromMrLines( file, callback );
-    if ( ext == ".pts" )
-        res = fromPts( file, callback );
-    return res;
+    auto loader = getLinesLoader( ext );
+    if ( !loader.fileLoad )
+        return unexpected( std::string( "unsupported file extension" ) );
+
+    return loader.fileLoad( file, callback );
 }
 
 Expected<MR::Polyline3> fromAnySupportedFormat( std::istream& in, const std::string& extension, ProgressCallback callback )
 {
-    auto ext = extension.substr( 1 );
+    auto ext = extension;
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
-    Expected<Polyline3> res = unexpected( std::string( "unsupported file extension" ) );
-    if ( ext == ".mrlines" )
-        res = fromMrLines( in, callback );
-    if ( ext == ".pts" )
-        res = fromPts( in, callback );
-    return res;
+    auto loader = getLinesLoader( ext );
+    if ( !loader.streamLoad )
+        return unexpected( std::string( "unsupported stream extension" ) );
+
+    return loader.streamLoad( in, callback );
 }
+
+MR_ADD_LINES_LOADER_WITH_PRIORITY( IOFilter( "MrLines (.mrlines)", "*.mrlines" ), fromMrLines, -1 )
+MR_ADD_LINES_LOADER( IOFilter( "PTS (.pts)",         "*.pts" ),     fromPts )
 
 } //namespace LinesLoad
 

@@ -1350,6 +1350,12 @@
     <ClInclude Include="MRProjectionMeshAttribute.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
+    <ClInclude Include="MROnInit.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPointsLoadSettings.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

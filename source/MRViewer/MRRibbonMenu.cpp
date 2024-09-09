@@ -1383,22 +1383,29 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
     ImGui::CloseCurrentPopup();
     int conflicts = getViewerInstance().mouseController().getMouseConflicts();
     bool stateChanged = item->action();
-    bool hasConflicts = getViewerInstance().mouseController().getMouseConflicts() > conflicts;
     if ( !stateChanged )
         spdlog::info( "Action item: \"{}\"", name );
     else
         spdlog::info( "{} item: \"{}\"", wasActive ? std::string( "Deactivated" ) : std::string( "Activated" ), name );
 
-    if ( stateChanged && !wasActive && hasConflicts )
-        pushNotification( {
-            .text = "Camera operations that are controlled by left mouse button "
-                    "may not work while this tool is active\n"
-                    "Hold Alt additionally to control camera",
-            .type = NotificationType::Info,
-            .lifeTimeSec = 3.0f } );
-
     if ( stateChanged && !wasActive )
-        searcher_.pushRecentItem( item );
+    {
+        if ( getViewerInstance().mouseController().getMouseConflicts() > conflicts )
+        {
+            pushNotification( {
+                .text = "Camera operations that are controlled by left mouse button "
+                        "may not work while this tool is active\n"
+                        "Hold Alt additionally to control camera",
+                .type = NotificationType::Info,
+                .lifeTimeSec = 3.0f } );
+        }
+        onItemActivated_( item );
+    }
+}
+
+void RibbonMenu::onItemActivated_( const std::shared_ptr<RibbonMenuItem>& item )
+{
+    searcher_.pushRecentItem( item );
 }
 
 void RibbonMenu::changeTab_( int newTab )

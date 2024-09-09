@@ -16,5 +16,5 @@ if not exist %MSYS2_DIR% (
     rem Here we save all additional arguments to a variable, and then apply string replacement to it to escape `"` as `""`.
     set args=%*
 
-    call %MSYS2_DIR%\msys2_shell -no-start -defterm -full-path -here -clang64 -c "time make -f '%~dp0generate.mk' -B %args:"=""%"
+    call %MSYS2_DIR%\msys2_shell -no-start -defterm -full-path -here -clang64 -c "time make -f '%~dp0generate.mk' -B %args:"=""% "
 )

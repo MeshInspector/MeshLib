@@ -24,7 +24,7 @@ By default we're using the `Debug` build of MeshLib. Use `.../generate_win.bat V
 
 By default the bindings are built without optimizations and without debug symbols.
 
-To enable optimizations: `.../generate_win.bat EXTRA_CFLAGS="-O3 -flto" EXTRA_LDFLAGS="-O3 -flto -s"`.
+To enable optimizations: `.../generate_win.bat EXTRA_CFLAGS="-O3 -flto-thin" EXTRA_LDFLAGS="-O3 -flto-thin -s"`.
 
 To enable debug symbols: `.../generate_win.bat EXTRA_CFLAGS=-g EXTRA_LDFLAGS=-g`.
 

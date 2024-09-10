@@ -159,7 +159,7 @@ VoidOrErrStr pythonSaveMeshToAnyFormat( const Mesh& mesh, const std::string& ext
         return unexpected( "Argument is not file handle" );
     PythonOstreamBuf pybuf( fileHandle );
     std::ostream outfs( &pybuf );
-    return MR::MeshSave::toAnySupportedFormat( mesh, outfs, extension );
+    return MR::MeshSave::toAnySupportedFormat( mesh, extension, outfs );
 }
 
 VoidOrErrStr pythonSaveLinesToAnyFormat( const MR::Polyline3& lines, const std::string& extension, pybind11::object fileHandle )
@@ -168,7 +168,7 @@ VoidOrErrStr pythonSaveLinesToAnyFormat( const MR::Polyline3& lines, const std::
         return unexpected( "Argument is not file handle" );
     PythonOstreamBuf pybuf( fileHandle );
     std::ostream outfs( &pybuf );
-    return MR::LinesSave::toAnySupportedFormat( lines, outfs, extension );
+    return MR::LinesSave::toAnySupportedFormat( lines, extension, outfs );
 }
 
 Expected<Polyline3> pythonLoadLinesFromAnyFormat( pybind11::object fileHandle, const std::string& extension )
@@ -186,7 +186,7 @@ VoidOrErrStr pythonSavePointCloudToAnyFormat( const PointCloud& points, const st
         return unexpected( "Argument is not file handle" );
     PythonOstreamBuf pybuf( fileHandle );
     std::ostream outfs( &pybuf );
-    return MR::PointsSave::toAnySupportedFormat( points, outfs, extension );
+    return MR::PointsSave::toAnySupportedFormat( points, extension, outfs );
 }
 
 Expected<PointCloud> pythonLoadPointCloudFromAnyFormat( pybind11::object fileHandle, const std::string& extension )

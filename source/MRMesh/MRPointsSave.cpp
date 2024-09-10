@@ -352,7 +352,7 @@ VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesyst
 
     return saver.fileSave( points, file, settings );
 }
-VoidOrErrStr toAnySupportedFormat( const PointCloud& points, std::ostream& out, const std::string& extension, const SaveSettings& settings )
+VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::string& extension, std::ostream& out, const SaveSettings& settings )
 {
     auto ext = extension;
     for ( auto& c : ext )

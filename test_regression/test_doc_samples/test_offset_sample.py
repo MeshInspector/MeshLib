@@ -11,7 +11,6 @@ def test_offset_sample(tmp_path):
     input_folder = Path(test_files_path) / "doc_samples" / "offset"
 
     # === Sample code
-    import meshlib.mrmeshpy as mrmeshpy
 
     # Load mesh
     mesh = mrmeshpy.loadMesh(str(input_folder / "beethoven_in.stl"))

@@ -6,7 +6,7 @@
 namespace MR
 {
 
-struct ObjTreeTraits
+struct MRMESH_CLASS ObjTreeTraits
 {
     using LeafTag = ObjTag;
     using LeafId = ObjId;

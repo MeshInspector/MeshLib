@@ -5,6 +5,7 @@
 #include "MRMesh.h"
 #include "MRRingIterator.h"
 #include "MRphmap.h"
+#include "MRMacros.h"
 #include <queue>
 
 namespace MR
@@ -73,7 +74,7 @@ public:
     EdgePath getPathBack( VertId backpathStart ) const;
 
 protected:
-    [[no_unique_address]] MetricToPenalty metricToPenalty_;
+    MR_NO_UNIQUE_ADDRESS MetricToPenalty metricToPenalty_;
 
 private:
     const MeshTopology & topology_;

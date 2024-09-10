@@ -12,7 +12,7 @@ namespace MR
 /// \{
 
 template<typename L, typename B>
-struct AABBTreeTraits
+struct MRMESH_CLASS AABBTreeTraits
 {
     using LeafTag = L;
     using LeafId = Id<L>;

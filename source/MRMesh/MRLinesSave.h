@@ -34,7 +34,7 @@ MRMESH_API VoidOrErrStr toDxf( const Polyline3& polyline, std::ostream& out, con
 /// detects the format from file extension and saves polyline in it
 MRMESH_API VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );
 /// extension in `*.ext` format
-MRMESH_API VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, std::ostream& out, const std::string& extension, const SaveSettings & settings = {} );
+MRMESH_API VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, const std::string& extension, std::ostream& out, const SaveSettings & settings = {} );
 
 } // namespace LinesSave
 

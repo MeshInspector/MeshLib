@@ -62,11 +62,11 @@ struct CtmSaveOptions : SaveSettings
         Lossy     ///< compression with loss in vertex coordinates
     };
     MeshCompression meshCompression = MeshCompression::Lossless;
-    /// fixed point precision for vertex coordinates in case of MeshCompression::Lossy. 
+    /// fixed point precision for vertex coordinates in case of MeshCompression::Lossy.
     /// For instance, if this value is 0.001, all vertex coordinates will be rounded to three decimals
     float vertexPrecision = 1.0f / 1024.0f; //~= 0.00098
     /// LZMA compression: 0 - minimal compression, but fast; 9 - maximal compression, but slow
-    int compressionLevel = 1; 
+    int compressionLevel = 1;
     /// comment saved in the file
     const char * comment = "MeshInspector.com";
 };
@@ -82,7 +82,7 @@ MRMESH_API VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const Save
 /// detects the format from file extension and save mesh to it
 MRMESH_API VoidOrErrStr toAnySupportedFormat( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
 /// extension in `*.ext` format
-MRMESH_API VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension, const SaveSettings & settings = {} );
+MRMESH_API VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, const std::string& extension, std::ostream& out, const SaveSettings & settings = {} );
 
 /// \}
 

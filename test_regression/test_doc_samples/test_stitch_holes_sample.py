@@ -11,7 +11,6 @@ def test_stitch_holes_sample(tmp_path):
     input_folder = Path(test_files_path) / "doc_samples" / "stitch_holes"
 
     # === Sample code
-    import meshlib.mrmeshpy as mrmeshpy
 
     # Load meshes
     meshA = mrmeshpy.loadMesh(str(input_folder / "crocodile_sad.stl"))

@@ -11,7 +11,6 @@ def test_boolean_sample(tmp_path):
     input_folder = Path(test_files_path) / "doc_samples" / "boolean"
 
     # === Sample code
-    import meshlib.mrmeshpy as mrmeshpy
 
     # create first sphere with radius of 1 unit
     sphere1 = mrmeshpy.makeUVSphere(1.0, 64, 64)

@@ -12,7 +12,6 @@ def test_mesh_modification_sample(tmp_path):
 
     # === Code sample
 
-    import meshlib.mrmeshpy as mrmeshpy
     mesh = mrmeshpy.loadMesh(str(input_folder / "beethoven_in.stl"))
     # assert (expectedMesh.has_value())
     # mesh = expectedMesh.value()

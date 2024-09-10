@@ -34,7 +34,7 @@ VoidOrErrStr toMrLines( const Polyline3& polyline, std::ostream& out, const Save
     out.write( (const char*)&type, 4 );
     auto numPoints = (std::uint32_t)( polyline.topology.lastValidVert() + 1 );
     out.write( ( const char* )&numPoints, 4 );
-        
+
     VertCoords buf;
     const auto & xfVerts = transformPoints( polyline.points, polyline.topology.getValidVerts(), settings.xf, buf );
     if ( !writeByBlocks( out, ( const char* )xfVerts.data(), numPoints * sizeof( Vector3f ), settings.progress ) )
@@ -168,7 +168,7 @@ VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, const std::filesys
     return saver.fileSave( polyline, file, settings );
 }
 
-VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, std::ostream& out, const std::string& extension, const SaveSettings & settings )
+VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, const std::string& extension, std::ostream& out, const SaveSettings & settings )
 {
     auto ext = extension;
     for ( auto& c : ext )

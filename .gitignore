@@ -28,3 +28,4 @@ source/MRDotNetTest/bin/*
 source/MRDotNetTest/obj/*
 /cmake-build-*/
 /doc/
+/pytest_temp

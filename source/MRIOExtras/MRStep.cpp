@@ -868,6 +868,8 @@ Expected<Mesh> fromStep( std::istream& in, const MeshLoadSettings& settings )
     }, settings );
 }
 
+MR_ADD_MESH_LOADER( IOFilter( "STEP model (.step,.stp)", "*.step;*.stp" ), fromStep )
+
 Expected<std::shared_ptr<Object>> fromSceneStepFile( const std::filesystem::path& path, const MeshLoadSettings& settings )
 {
     return fromSceneStepFileImpl( [&] ( STEPControl_Reader& reader )

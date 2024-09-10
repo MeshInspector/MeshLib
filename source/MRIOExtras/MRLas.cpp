@@ -3,6 +3,7 @@
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRColor.h"
+#include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPointsLoadSettings.h"
 #include "MRMesh/MRProgressCallback.h"
@@ -325,6 +326,9 @@ Expected<PointCloud> fromLas( std::istream& in, const PointsLoadSettings& settin
         return unexpected( fmt::format( "Failed to read file: {}", exc.what() ) );
     }
 }
+
+MR_ADD_POINTS_LOADER( IOFilter( "LAS (.las)", "*.las" ), fromLas )
+MR_ADD_POINTS_LOADER( IOFilter( "LASzip (.laz)", "*.laz" ), fromLas )
 
 } // namespace MR::PointsLoad
 #endif

@@ -40,6 +40,8 @@
     <ClCompile Include="MRZlib.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="config.h" />
+    <ClInclude Include="exports.h" />
     <ClInclude Include="MR3mf.h" />
     <ClInclude Include="MRCtm.h" />
     <ClInclude Include="MRE57.h" />

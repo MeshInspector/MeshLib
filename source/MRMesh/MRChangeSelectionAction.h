@@ -79,6 +79,17 @@ public:
         selection_ = objMesh_->getSelectedEdges();
     }
 
+    /// use this constructor to remember object's edge selection and immediate set new selection
+    ChangeMeshEdgeSelectionAction( const std::string& name, const std::shared_ptr<ObjectMesh>& objMesh, UndirectedEdgeBitSet&& newSelection ) :
+        name_{ name },
+        objMesh_{ objMesh }
+    {
+        if( !objMesh_ )
+            return;
+        selection_ = objMesh_->getSelectedEdges();
+        objMesh_->selectEdges( std::move( newSelection ) );
+    }
+
     virtual std::string name() const override { return name_; }
 
     virtual void action( Type ) override

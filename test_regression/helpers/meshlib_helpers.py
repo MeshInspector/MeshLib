@@ -2,12 +2,12 @@ from constants import DEFAULT_RHAUSDORF_THRESHOLD
 from helpers.file_helpers import get_reference_files_list
 from module_helper import *
 from pytest_check import check
-import meshlib.mrmeshpy as mrmesh
 from pathlib import Path
 
 
-def relative_hausdorff(mesh1: mrmesh.Mesh or mrmesh.PointCloud or Path or str,
-                       mesh2: mrmesh.Mesh or mrmesh.PointCloud or Path or str):
+
+def relative_hausdorff(mesh1: mrmeshpy.Mesh or mrmeshpy.PointCloud or Path or str,
+                       mesh2: mrmeshpy.Mesh or mrmeshpy.PointCloud or Path or str):
     """
     Calculate Hausdorff distance between two meshes, normalized on smallest bounding box diagonal.
     1.0 means that the meshes are equal, 0.0 means that they are completely different.
@@ -17,10 +17,10 @@ def relative_hausdorff(mesh1: mrmesh.Mesh or mrmesh.PointCloud or Path or str,
     :param mesh2: second mesh or path to it
     """
     if isinstance(mesh1, str) or isinstance(mesh1, Path):
-        mesh1 = mrmesh.loadMesh(str(mesh1))
+        mesh1 = mrmeshpy.loadMesh(str(mesh1))
     if isinstance(mesh2, str) or isinstance(mesh2, Path):
-        mesh2 = mrmesh.loadMesh(str(mesh2))
-    distance = mrmesh.findMaxDistanceSq(mesh1, mesh2) ** 0.5
+        mesh2 = mrmeshpy.loadMesh(str(mesh2))
+    distance = mrmeshpy.findMaxDistanceSq(mesh1, mesh2) ** 0.5
     diagonal = min(mesh1.getBoundingBox().diagonal(), mesh2.getBoundingBox().diagonal())
     val = 1.0 - (distance / diagonal)
     val = 0.0 if val < 0.0 else val  # there are some specific cases when metric can be below zero,
@@ -28,7 +28,7 @@ def relative_hausdorff(mesh1: mrmesh.Mesh or mrmesh.PointCloud or Path or str,
     return val
 
 
-def compare_meshes_similarity(mesh1: mrmesh.Mesh, mesh2: mrmesh.Mesh,
+def compare_meshes_similarity(mesh1: mrmeshpy.Mesh, mesh2: mrmeshpy.Mesh,
                               rhsdr_thresh=DEFAULT_RHAUSDORF_THRESHOLD,
                               vol_thresh=0.005,
                               area_thresh=0.005,
@@ -71,7 +71,7 @@ def compare_meshes_similarity(mesh1: mrmesh.Mesh, mesh2: mrmesh.Mesh,
                 f"relative threshold is {verts_thresh}")
 
 
-def compare_mesh(mesh1: mrmesh.Mesh or Path or str, ref_file_path: Path, multi_ref=True):
+def compare_mesh(mesh1: mrmeshpy.Mesh or Path or str, ref_file_path: Path, multi_ref=True):
     """
     Compare mesh by full equality with multiple reference files by content
     :param mesh1: mesh to compare
@@ -79,19 +79,19 @@ def compare_mesh(mesh1: mrmesh.Mesh or Path or str, ref_file_path: Path, multi_r
     :param multi_ref: if True, it compares file with multiple references, otherwise with single reference
     """
     if isinstance(mesh1, str) or isinstance(mesh1, Path):
-        mesh1 = mrmesh.loadMesh(mesh1)
+        mesh1 = mrmeshpy.loadMesh(mesh1)
     if multi_ref:
         ref_files = get_reference_files_list(ref_file_path)
     else:
         ref_files = [ref_file_path]
     for ref_file in ref_files:
-        if mesh1 == mrmesh.loadMesh(ref_file):
+        if mesh1 == mrmeshpy.loadMesh(ref_file):
             return True
     return False
 
 
-def compare_points_similarity(points_a: mrmesh.PointCloud or Path or str,
-                              points_b: mrmesh.PointCloud or Path or str,
+def compare_points_similarity(points_a: mrmeshpy.PointCloud or Path or str,
+                              points_b: mrmeshpy.PointCloud or Path or str,
                               rhsdr_thresh=DEFAULT_RHAUSDORF_THRESHOLD,
                               verts_thresh=0.005,
                               testname: str = None):
@@ -109,9 +109,9 @@ def compare_points_similarity(points_a: mrmesh.PointCloud or Path or str,
 
     # load points if required
     if isinstance(points_a, str) or isinstance(points_a, Path):
-        points_a = mrmesh.loadPoints(str(points_a))
+        points_a = mrmeshpy.loadPoints(str(points_a))
     if isinstance(points_b, str) or isinstance(points_b, Path):
-        points_b = mrmesh.loadPoints(str(points_b))
+        points_b = mrmeshpy.loadPoints(str(points_b))
 
     num_p_a = points_a.validPoints.size()
     num_p_b = points_b.validPoints.size()
@@ -135,8 +135,8 @@ def compare_points_similarity(points_a: mrmesh.PointCloud or Path or str,
                 f"relative threshold is {verts_thresh}")
 
 
-def compare_voxels(voxels_a: mrmesh.VdbVolume or Path or str,
-                              voxels_b: mrmesh.VdbVolume or Path or str,
+def compare_voxels(voxels_a: mrmeshpy.VdbVolume or Path or str,
+                              voxels_b: mrmeshpy.VdbVolume or Path or str,
                               testname: str = None,
                               ):
     """
@@ -148,9 +148,9 @@ def compare_voxels(voxels_a: mrmesh.VdbVolume or Path or str,
     test_report = f"Testname is {testname}\n" if testname else ""
     # load voxels if required
     if isinstance(voxels_a, str) or isinstance(voxels_a, Path):
-        voxels_a = mrmesh.loadVoxelsRaw(Path(voxels_a))
+        voxels_a = mrmeshpy.loadVoxelsRaw(Path(voxels_a))
     if isinstance(voxels_b, str) or isinstance(voxels_b, Path):
-        voxels_b = mrmesh.loadVoxelsRaw(Path(voxels_b))
+        voxels_b = mrmeshpy.loadVoxelsRaw(Path(voxels_b))
     with check:
         assert voxels_a.voxelSize == voxels_b.voxelSize, (
                 f"{test_report}Voxel sizes are differs, \n"
@@ -166,8 +166,8 @@ def compare_voxels(voxels_a: mrmesh.VdbVolume or Path or str,
             f"voxel_a:{voxels_a.dims}\nvoxel_b:{voxels_b.dims}\n")
 
 
-def compare_lines(lines_a: mrmesh.Polyline3 or Path or str,
-                  lines_b: mrmesh.Polyline3 or Path or str,
+def compare_lines(lines_a: mrmeshpy.Polyline3 or Path or str,
+                  lines_b: mrmeshpy.Polyline3 or Path or str,
                   testname: str = None,
                   ):
     """
@@ -179,9 +179,9 @@ def compare_lines(lines_a: mrmesh.Polyline3 or Path or str,
     test_report = f"Testname is {testname}\n" if testname else ""
     # load lines from file if required
     if isinstance(lines_a, str) or isinstance(lines_a, Path):
-        lines_a = mrmesh.loadLines(Path(lines_a))
+        lines_a = mrmeshpy.loadLines(Path(lines_a))
     if isinstance(lines_b, str) or isinstance(lines_b, Path):
-        lines_b = mrmesh.loadLines(Path(lines_b))
+        lines_b = mrmeshpy.loadLines(Path(lines_b))
     with check:
         assert lines_a.getBoundingBox().diagonal() == lines_b.getBoundingBox().diagonal(), (
                 f"{test_report}Diagonals of bounding boxes are differs, \n"

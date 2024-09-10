@@ -361,8 +361,11 @@ void FreeFormBestFit::stabilize_()
 {
     if ( stabilizer_ <= 0 )
         return;
+    double sw = sumWeight_;
+    if ( sw <= 0 )
+        sw = 1.0;
     std::vector<Vector3f> refGrid = makeFreeFormOriginGrid( Box3f( box_ ), resolution_ );
-    auto w = double( sumWeight_ ) / double( refGrid.size() ) * stabilizer_;
+    auto w = sw / double( refGrid.size() ) * stabilizer_;
     for ( const auto& refPoint : refGrid )
         addPair( Vector3d( refPoint ), Vector3d( refPoint ), w );
 }

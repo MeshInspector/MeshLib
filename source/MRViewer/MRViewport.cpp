@@ -16,13 +16,16 @@
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRPolylineProject.h"
 #include "MRMesh/MR2to3.h"
-#include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRPch/MRSuppressWarning.h"
 #include "MRPch/MRTBB.h"
+
+#ifndef MRVIEWER_NO_VOXELS
+#include "MRVoxels/MRObjectVoxels.h"
+#endif
 
 using VisualObjectTreeDataVector = std::vector<MR::VisualObject*>;
 
@@ -259,7 +262,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( std::span<VisualObject* cons
         PointOnObject res;
         res.primId = int( pickRes.primId );
         res.zBuffer = pickRes.zBuffer;
-#ifndef MRMESH_NO_OPENVDB
+#ifndef MRVIEWER_NO_VOXELS
         auto voxObj = renderVector[pickRes.geomId]->asType<ObjectVoxels>();
         if ( voxObj && voxObj->isVolumeRenderingEnabled() )
         {

@@ -1,6 +1,8 @@
+#include "config.h"
+#ifndef MRCUDA_NO_VOXELS
 #include "exports.h"
-#include "MRMesh/MRVoxelsVolume.h"
-#include "MRMesh/MRPointsToDistanceVolume.h"
+#include "MRVoxels/MRVoxelsVolume.h"
+#include "MRVoxels/MRPointsToDistanceVolume.h"
 
 namespace MR
 {
@@ -12,3 +14,4 @@ MRCUDA_API Expected<MR::SimpleVolume> pointsToDistanceVolume( const PointCloud& 
 
 }
 }
+#endif

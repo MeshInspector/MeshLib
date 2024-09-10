@@ -294,7 +294,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Plane3,
     ( Plane3d, Plane3<double> )
 )
 
-MR_CANONICAL_TYPEDEFS( (template <typename V> struct), Box,
+MR_CANONICAL_TYPEDEFS( (template <typename V> struct MRMESH_CLASS), Box,
     ( Box2i,  Box<Vector2<int>>       )
     ( Box2ll, Box<Vector2<long long>> )
     ( Box2f,  Box<Vector2<float>>     )
@@ -529,33 +529,6 @@ class ConeObject;
 
 struct Image;
 class AnyVisualizeMaskEnum;
-
-#ifndef MRMESH_NO_OPENVDB
-class ObjectVoxels;
-
-struct OpenVdbFloatGrid;
-using FloatGrid = std::shared_ptr<OpenVdbFloatGrid>;
-#define MRMESH_IF_HAVE_OPENVDB(...) __VA_ARGS__
-#else
-#define MRMESH_IF_HAVE_OPENVDB(...)
-#endif
-
-MR_CANONICAL_TYPEDEFS( (template <typename T> struct), VoxelsVolumeMinMax,
-    ( SimpleVolume, VoxelsVolumeMinMax<std::vector<float>> )
-    ( SimpleVolumeU16, VoxelsVolumeMinMax<std::vector<uint16_t>> )
-    MRMESH_IF_HAVE_OPENVDB(
-        ( VdbVolume, VoxelsVolumeMinMax<FloatGrid> )
-    )
-)
-
-template <typename T>
-using VoxelValueGetter = std::function<T ( const Vector3i& )>;
-
-MR_CANONICAL_TYPEDEFS( (template <typename T> struct), VoxelsVolume,
-    ( FunctionVolume, VoxelsVolume<VoxelValueGetter<float>> )
-    ( FunctionVolumeU8, VoxelsVolume<VoxelValueGetter<uint8_t>> )
-)
-
 
 class HistoryAction;
 class ChangeObjectAction;

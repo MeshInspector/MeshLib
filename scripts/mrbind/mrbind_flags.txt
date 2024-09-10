@@ -7,6 +7,6 @@
 --ignore MR::UniquePtr
 --ignore MR::RegisterRenderObjectConstructor
 --ignore MR::Config
---allow std::integral_constant
+--skip-base std::integral_constant
 --skip-base boost::dynamic_bitset
 --skip-base /openvdb::v[0-9][0-9_a-zA-Z]*::Grid/

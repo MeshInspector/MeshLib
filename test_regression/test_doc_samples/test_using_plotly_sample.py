@@ -10,15 +10,13 @@ def test_using_plotly_sample(tmp_path):
     input_folder = Path(test_files_path) / "doc_samples" / "plotly"
 
     # === Sample code
-    from meshlib import mrmeshpy as mm
-    from meshlib import mrmeshnumpy as mn
     import numpy as np
 
     # load mesh
-    mesh = mm.loadMesh(str(Path(input_folder / "fox_geometrik.stl")))
+    mesh = mrmeshpy.loadMesh(str(Path(input_folder / "fox_geometrik.stl")))
     # extract numpy arrays
-    verts = mn.getNumpyVerts(mesh)
-    faces = mn.getNumpyFaces(mesh.topology)
+    verts = mrmeshnumpy.getNumpyVerts(mesh)
+    faces = mrmeshnumpy.getNumpyFaces(mesh.topology)
 
     #  === Verification
     assert isinstance(verts, np.ndarray)

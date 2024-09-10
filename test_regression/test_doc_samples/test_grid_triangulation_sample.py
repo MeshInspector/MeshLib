@@ -11,7 +11,6 @@ def test_grid_traingulation_samlpe(tmp_path):
     input_folder = Path(test_files_path) / "doc_samples" / "grid_triangulation"
 
     # === Sample code
-    from meshlib import mrmeshnumpy as mn
     import numpy as np
 
     u, v = np.mgrid[0:2 * np.pi:50j, 0:np.pi:100j]
@@ -19,7 +18,7 @@ def test_grid_traingulation_samlpe(tmp_path):
     y = np.sin(u) * np.sin(v)
     z = np.cos(v)
 
-    mesh = mn.meshFromUVPoints(x, y, z)
+    mesh = mrmeshnumpy.meshFromUVPoints(x, y, z)
 
     #  === Verification
     assert relative_hausdorff(mesh,

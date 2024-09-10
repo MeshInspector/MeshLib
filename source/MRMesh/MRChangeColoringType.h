@@ -12,13 +12,26 @@ class ChangeColoringType : public HistoryAction
 {
 public:
     using Obj = VisualObject;
-    /// Constructed from original obj
+
+    /// use this constructor to remember object's coloring type before making any changes in it
     ChangeColoringType( const std::string& name, const std::shared_ptr<VisualObject>& obj ) :
         obj_{ obj },
         name_{ name }
     {
         if ( obj )
             coloringType_ = obj->getColoringType();
+    }
+
+    /// use this constructor to remember object's coloring type and immediate set new value
+    ChangeColoringType( const std::string& name, const std::shared_ptr<VisualObject>& obj, ColoringType newType ) :
+        obj_{ obj },
+        name_{ name }
+    {
+        if ( obj_ )
+        {
+            coloringType_ =  obj_->getColoringType();
+            obj_->setColoringType( newType );
+        }
     }
 
     virtual std::string name() const override

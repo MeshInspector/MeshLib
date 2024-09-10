@@ -50,9 +50,7 @@
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshSave.h>
 
-#include "MRMesh/MRVoxelsLoad.h"
 #include "MRMesh/MRPointsLoad.h"
-#include "MRMesh/MRVoxelsSave.h"
 #include "MRMesh/MRPointsSave.h"
 #include "MRMesh/MRLinesSave.h"
 #include "MRMesh/MRSerializer.h"
@@ -92,8 +90,9 @@
 #include "MRSceneCache.h"
 #include "MRSceneObjectsListDrawer.h"
 
-#ifndef MRMESH_NO_OPENVDB
-#include "MRMesh/MRObjectVoxels.h"
+#ifndef MRVIEWER_NO_VOXELS
+#include "MRVoxels/MRObjectVoxels.h"
+#include "MRVoxels/MRVoxelsSave.h"
 #endif
 
 #ifndef __EMSCRIPTEN__
@@ -1145,7 +1144,7 @@ float ImGuiMenu::drawSelectionInformation_()
     size_t totalSelectedFaces = 0;
     size_t totalVerts = 0;
     std::optional<float> totalVolume = 0.0f;
-#ifndef MRMESH_NO_OPENVDB
+#ifndef MRVIEWER_NO_VOXELS
     // Voxels info
     Vector3i dimensions;
 #endif
@@ -1198,7 +1197,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 totalVerts += polyline->topology.numValidVerts();
             }
         }
-#ifndef MRMESH_NO_OPENVDB
+#ifndef MRVIEWER_NO_VOXELS
         else if ( auto vObj = obj->asType<ObjectVoxels>() )
         {
             auto newDims = vObj->dimensions();
@@ -1364,7 +1363,7 @@ float ImGuiMenu::drawSelectionInformation_()
         UI::readOnlyValue<Units>( label, value );
     };
 
-#ifndef MRMESH_NO_OPENVDB
+#ifndef MRVIEWER_NO_VOXELS
     if ( dimensions.x > 0 && dimensions.y > 0 && dimensions.z > 0 )
     {
         drawDimensionsVec3.template operator()<NoUnit>( "Dimensions", dimensions );
@@ -2536,8 +2535,8 @@ void ImGuiMenu::draw_mr_menu()
         if ( ImGui::Button( "Save##Main", ImVec2( ( w - p ) / 2.f, 0 ) ) )
         {
             auto filters = MeshSave::getFilters() | LinesSave::getFilters() | PointsSave::getFilters()
-#ifndef MRMESH_NO_OPENVDB
-                | VoxelsLoad::getFilters()
+#ifndef MRVIEWER_NO_VOXELS
+                | VoxelsSave::getFilters()
 #endif
             ;
             auto savePath = saveFileDialog( { {}, {}, filters } );

@@ -134,13 +134,26 @@ class ChangeTextureAction : public HistoryAction
 {
 public:
     using Obj = ObjectMeshHolder;
-    /// Constructed from original obj
-    ChangeTextureAction( const std::string& name, const std::shared_ptr<ObjectMeshHolder>& obj ) :
+
+    /// use this constructor to remember object's textures before making any changes in them
+    ChangeTextureAction( std::string name, const std::shared_ptr<ObjectMeshHolder>& obj ) :
         obj_{ obj },
-        name_{ name }
+        name_{ std::move( name ) }
     {
         if ( obj )
             textures_ = obj->getTextures();
+    }
+
+    /// use this constructor to remember object's textures and immediate set new value
+    ChangeTextureAction( std::string name, const std::shared_ptr<ObjectMeshHolder>& obj, Vector<MeshTexture, TextureId>&& newTextures ) :
+        obj_{ obj },
+        name_{ std::move( name ) }
+    {
+        if ( obj )
+        {
+            textures_ = std::move( newTextures );
+            obj->updateTextures( textures_ );
+        }
     }
 
     virtual std::string name() const override

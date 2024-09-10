@@ -47,6 +47,14 @@ ELSE() # NOT MR_EMSCRIPTEN
   )
 ENDIF() # MR_EMSCRIPTEN
 
+IF(MESHLIB_BUILD_VOXELS)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRVoxels
+  )
+ELSE()
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VOXELS)
+ENDIF()
+
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}

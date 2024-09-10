@@ -8,8 +8,6 @@
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshSave.h"
-#include "MRMesh/MRVoxelsSave.h"
-#include "MRMesh/MRVoxelsLoad.h"
 #include "MRMesh/MRLinesSave.h"
 #include "MRMesh/MRLinesLoad.h"
 #include "MRMesh/MRPointsSave.h"
@@ -25,6 +23,11 @@
 #pragma warning(disable: 4464) // relative include path contains '..'
 #include <pybind11/stl/filesystem.h>
 #pragma warning(pop)
+
+#ifndef MESHLIB_NO_VOXELS
+#include "MRVoxels/MRVoxelsSave.h"
+#include "MRVoxels/MRVoxelsLoad.h"
+#endif
 
 using namespace MR;
 
@@ -159,7 +162,7 @@ VoidOrErrStr pythonSaveMeshToAnyFormat( const Mesh& mesh, const std::string& ext
         return unexpected( "Argument is not file handle" );
     PythonOstreamBuf pybuf( fileHandle );
     std::ostream outfs( &pybuf );
-    return MR::MeshSave::toAnySupportedFormat( mesh, outfs, extension );
+    return MR::MeshSave::toAnySupportedFormat( mesh, extension, outfs );
 }
 
 VoidOrErrStr pythonSaveLinesToAnyFormat( const MR::Polyline3& lines, const std::string& extension, pybind11::object fileHandle )
@@ -168,7 +171,7 @@ VoidOrErrStr pythonSaveLinesToAnyFormat( const MR::Polyline3& lines, const std::
         return unexpected( "Argument is not file handle" );
     PythonOstreamBuf pybuf( fileHandle );
     std::ostream outfs( &pybuf );
-    return MR::LinesSave::toAnySupportedFormat( lines, outfs, extension );
+    return MR::LinesSave::toAnySupportedFormat( lines, extension, outfs );
 }
 
 Expected<Polyline3> pythonLoadLinesFromAnyFormat( pybind11::object fileHandle, const std::string& extension )
@@ -186,7 +189,7 @@ VoidOrErrStr pythonSavePointCloudToAnyFormat( const PointCloud& points, const st
         return unexpected( "Argument is not file handle" );
     PythonOstreamBuf pybuf( fileHandle );
     std::ostream outfs( &pybuf );
-    return MR::PointsSave::toAnySupportedFormat( points, outfs, extension );
+    return MR::PointsSave::toAnySupportedFormat( points, extension, outfs );
 }
 
 Expected<PointCloud> pythonLoadPointCloudFromAnyFormat( pybind11::object fileHandle, const std::string& extension )
@@ -297,7 +300,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadPoints, [] ( pybind11::module_& m )
         pybind11::arg( "fileHandle" ), pybind11::arg( "extension" ), "load point cloud from python file handler, second arg: extension (`*.ext` format)" );
 } )
 
-#ifndef MRMESH_NO_OPENVDB
+#ifndef MESHLIB_NO_VOXELS
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveVoxels, [] ( pybind11::module_& m )
 {
     m.def( "saveVoxels",
@@ -318,17 +321,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveVoxels, [] ( pybind11::module_& m )
         "Save voxels file in OpenVDB format." );
 } )
 
-MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, LoadDCMResult, MR::VoxelsLoad::LoadDCMResult )
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadDCMResult, [] ( pybind11::module_& )
-{
-    MR_PYTHON_CUSTOM_CLASS( LoadDCMResult ).
-        def_readwrite( "vdbVolume", &MR::VoxelsLoad::LoadDCMResult::vdbVolume ).
-        def_readwrite( "name", &MR::VoxelsLoad::LoadDCMResult::name ).
-        def_readwrite( "xf", &MR::VoxelsLoad::LoadDCMResult::xf );
-} )
-
-MR_ADD_PYTHON_VEC( mrmeshpy, LoadDCMResults, MR::VoxelsLoad::LoadDCMResult )
-
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
 {
     m.def( "loadVoxels",
@@ -348,6 +340,22 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
         pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "Load all voxel volumes from OpenVDB file." );
 
+} )
+
+#ifndef MRVOXELS_NO_DICOM
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, LoadDCMResult, MR::VoxelsLoad::LoadDCMResult )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadDCMResult, [] ( pybind11::module_& )
+{
+    MR_PYTHON_CUSTOM_CLASS( LoadDCMResult ).
+        def_readwrite( "vdbVolume", &MR::VoxelsLoad::LoadDCMResult::vdbVolume ).
+        def_readwrite( "name", &MR::VoxelsLoad::LoadDCMResult::name ).
+        def_readwrite( "xf", &MR::VoxelsLoad::LoadDCMResult::xf );
+} )
+
+MR_ADD_PYTHON_VEC( mrmeshpy, LoadDCMResults, MR::VoxelsLoad::LoadDCMResult )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxelsDicom, [] ( pybind11::module_& m )
+{
     m.def( "loadDCMFolder", MR::decorateExpected( &MR::VoxelsLoad::loadDCMFolder ),
         pybind11::arg( "path" ), pybind11::arg( "maxNumThreads" ) = 4, pybind11::arg( "callback" ) = ProgressCallback{},
         "Loads first volumetric data from DICOM file(s)" );
@@ -372,6 +380,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadVoxels, [] ( pybind11::module_& m )
         pybind11::arg( "path" ), pybind11::arg( "maxNumThreads" ) = 4, pybind11::arg( "callback" ) = ProgressCallback{},
         "Loads all volumetric data from DICOM file(s)" );
 } )
+#endif
 #endif
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadSceneObject, [] ( pybind11::module_& m )

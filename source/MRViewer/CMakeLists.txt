@@ -4,6 +4,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(MRViewer CXX)
 
+option(MRVIEWER_NO_VOXELS "Disable voxels support" OFF)
+
+IF(NOT MESHLIB_BUILD_VOXELS)
+  set(MRVIEWER_NO_VOXELS ON)
+ENDIF()
+
 file(GLOB HEADERS "*.h")
 IF(APPLE)
   file(GLOB SOURCES "*.cpp" "*.mm")
@@ -16,6 +22,19 @@ IF(MR_EMSCRIPTEN)
 ENDIF() # MR_EMSCRIPTEN
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
+
+set(MRVIEWER_OPTIONAL_DEPENDENCIES "")
+
+IF(NOT MRVIEWER_NO_VOXELS)
+  list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES MRVoxels)
+  IF(APPLE)
+    list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES OpenVDB)
+  ELSE()
+    list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES openvdb)
+  ENDIF()
+ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
   pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
@@ -39,6 +58,7 @@ IF(MR_EMSCRIPTEN)
     jsoncpp
     imgui
     glfw
+    ${MRVIEWER_OPTIONAL_DEPENDENCIES}
   )
 ELSE() # NOT MR_EMSCRIPTEN
   IF(APPLE)
@@ -53,7 +73,6 @@ ELSE() # NOT MR_EMSCRIPTEN
       GTest::gtest
       fmt
       tbb
-      OpenVDB
       spdlog
       jsoncpp
       cpr
@@ -67,6 +86,7 @@ ELSE() # NOT MR_EMSCRIPTEN
       hidapi
       clip
       ${APPKIT_LIBRARY}
+      ${MRVIEWER_OPTIONAL_DEPENDENCIES}
     )
   ELSE() # NOT APPLE and NOT EMPSCRIPTEN
     find_package(GDCM CONFIG REQUIRED)
@@ -88,9 +108,9 @@ ELSE() # NOT MR_EMSCRIPTEN
       jsoncpp
       spdlog
       fmt
-      openvdb
       tbb
       clip
+      ${MRVIEWER_OPTIONAL_DEPENDENCIES}
     )
   ENDIF() # APPLE
 ENDIF() # MR_EMSCRIPTEN

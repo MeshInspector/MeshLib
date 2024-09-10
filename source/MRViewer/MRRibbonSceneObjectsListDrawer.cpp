@@ -6,7 +6,6 @@
 #include "MRRibbonFontManager.h"
 // Object Types
 #include "MRMesh/MRObjectMesh.h"
-#include "MRMesh/MRObjectVoxels.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRObjectDistanceMap.h"
@@ -25,6 +24,10 @@
 #include "MRViewer.h"
 #include "MRSceneCache.h"
 #include "imgui.h"
+
+#ifndef MRVIEWER_NO_VOXELS
+#include "MRVoxels/MRObjectVoxels.h"
+#endif
 
 namespace MR
 {
@@ -118,7 +121,7 @@ const char* RibbonSceneObjectsListDrawer::getSceneItemIconByTypeName_( const std
 {
     if ( typeName == ObjectMesh::TypeName() )
         return "\xef\x82\xac";
-#ifndef MRMESH_NO_OPENVDB
+#ifndef MRVIEWER_NO_VOXELS
     if ( typeName == ObjectVoxels::TypeName() )
         return "\xef\x86\xb3";
 #endif

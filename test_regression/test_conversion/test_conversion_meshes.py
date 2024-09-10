@@ -24,16 +24,16 @@ def test_conversion_from_mrmesh(test_mesh_name, ext, use_fileHandler, tmp_path):
     input_folder = Path(test_files_path) / "conversion" / "meshes_from_mrmesh" / test_mesh_name / ext
     if use_fileHandler:
         with open(input_folder / (test_mesh_name + ".mrmesh"), "rb") as mesh_handler:
-            input_mesh = mrmesh.loadMesh(fileHandle=mesh_handler, extension="*.mrmesh")
+            input_mesh = mrmeshpy.loadMesh(mesh_handler, "*.mrmesh")
     else:
-        input_mesh = mrmesh.loadMesh(path=str(input_folder / (test_mesh_name + ".mrmesh")))
+        input_mesh = mrmeshpy.loadMesh(str(input_folder / (test_mesh_name + ".mrmesh")))
     # Save mesh
     filename = test_mesh_name + "." + ext
     if use_fileHandler:
         with open(tmp_path / filename, "wb") as f:
-            mrmesh.saveMesh(mesh=input_mesh, extension="*." + ext, fileHandle=f)
+            mrmeshpy.saveMesh(input_mesh, "*." + ext, f)
     else:
-        mrmesh.saveMesh(mesh=input_mesh, path=str(tmp_path / filename))
+        mrmeshpy.saveMesh(input_mesh, str(tmp_path / filename))
     # Comparing files
     ref_files_list = get_reference_files_list(input_folder / filename)
     is_same_found = compare_file_with_multiple_references(tmp_path / filename, ref_files_list)
@@ -59,16 +59,16 @@ def test_conversion_to_mrmesh(test_mesh_name, ext, use_fileHandler, tmp_path):
     input_folder = Path(test_files_path) / "conversion" / "meshes_to_mrmesh" / test_mesh_name / ext
     if use_fileHandler:
         with open(input_folder / (test_mesh_name + "." + ext), "rb") as mesh_file:
-            input_mesh = mrmesh.loadMesh(fileHandle=mesh_file, extension="*." + ext)
+            input_mesh = mrmeshpy.loadMesh(mesh_file, "*." + ext)
     else:
-        input_mesh = mrmesh.loadMesh(path=str(input_folder / (test_mesh_name + "." + ext)))
+        input_mesh = mrmeshpy.loadMesh(str(input_folder / (test_mesh_name + "." + ext)))
     # Saving mesh
     filename = test_mesh_name + ".mrmesh"
     if use_fileHandler:
         with open(tmp_path / filename, "wb") as f:
-            mrmesh.saveMesh(mesh=input_mesh, extension="*.mrmesh", fileHandle=f)
+            mrmeshpy.saveMesh(input_mesh, "*.mrmesh", f)
     else:
-        mrmesh.saveMesh(mesh=input_mesh, path=str(tmp_path / filename))
+        mrmeshpy.saveMesh(input_mesh, str(tmp_path / filename))
 
     # Comparing files
 

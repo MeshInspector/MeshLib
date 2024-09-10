@@ -16,9 +16,6 @@
     <Filter Include="Source Files\Primitives">
       <UniqueIdentifier>{752d7e31-3225-4338-9964-5d511c6b8ec1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\VDBConversions">
-      <UniqueIdentifier>{63de0e31-0ce5-41d4-83cf-95476a8961cb}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\SymbolMesh">
       <UniqueIdentifier>{dd69ed88-89d4-4c22-92e5-3d01c7126046}</UniqueIdentifier>
     </Filter>
@@ -165,12 +162,6 @@
     <ClInclude Include="MRBitSet.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRVDBConversions.h">
-      <Filter>Source Files\VDBConversions</Filter>
-    </ClInclude>
-    <ClInclude Include="MRBoolean.h">
-      <Filter>Source Files\VDBConversions</Filter>
-    </ClInclude>
     <ClInclude Include="MRTorus.h">
       <Filter>Source Files\Primitives</Filter>
     </ClInclude>
@@ -186,25 +177,10 @@
     <ClInclude Include="MRProgressCallback.h">
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
-    <ClInclude Include="MRSimpleVolume.h">
-      <Filter>Source Files\BaseStructures</Filter>
-    </ClInclude>
-    <ClInclude Include="MRFloatGrid.h">
-      <Filter>Source Files\BaseStructures</Filter>
-    </ClInclude>
-    <ClInclude Include="MRObjectVoxels.h">
-      <Filter>Source Files\DataModel</Filter>
-    </ClInclude>
-    <ClInclude Include="MRVoxelsSave.h">
-      <Filter>Source Files\IO</Filter>
-    </ClInclude>
     <ClInclude Include="MRMeshSave.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshLoad.h">
-      <Filter>Source Files\IO</Filter>
-    </ClInclude>
-    <ClInclude Include="MRVoxelsLoad.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRIOFilters.h">
@@ -212,9 +188,6 @@
     </ClInclude>
     <ClInclude Include="MRUnionFind.h">
       <Filter>Source Files\Basic</Filter>
-    </ClInclude>
-    <ClInclude Include="MRVoxelPath.h">
-      <Filter>Source Files\Voxels</Filter>
     </ClInclude>
     <ClInclude Include="miniply.h">
       <Filter>Source Files\IO</Filter>
@@ -240,9 +213,6 @@
     <ClInclude Include="MRObjectLines.h">
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
-    <ClInclude Include="MRVoxelGraphCut.h">
-      <Filter>Source Files\Voxels</Filter>
-    </ClInclude>
     <ClInclude Include="MRHeap.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
@@ -257,9 +227,6 @@
     </ClInclude>
     <ClInclude Include="MRQuaternion.h">
       <Filter>Source Files\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="MRVolumeSegment.h">
-      <Filter>Source Files\Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRTriDist.h">
       <Filter>Source Files\Math</Filter>
@@ -291,9 +258,6 @@
     <ClInclude Include="MRMeshTexture.h">
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
-    <ClInclude Include="MROffset.h">
-      <Filter>Source Files\VDBConversions</Filter>
-    </ClInclude>
     <ClInclude Include="MRVector2.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -319,9 +283,6 @@
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRVolumeIndexer.h">
-      <Filter>Source Files\Voxels</Filter>
-    </ClInclude>
-    <ClInclude Include="MRTeethMaskToDirectionVolume.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRHighPrecision.h">
@@ -465,9 +426,6 @@
     <ClInclude Include="MRDenseBox.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
-    <ClInclude Include="MRFloatGridComponents.h">
-      <Filter>Source Files\Components</Filter>
-    </ClInclude>
     <ClInclude Include="MRMeshComponents.h">
       <Filter>Source Files\Components</Filter>
     </ClInclude>
@@ -554,9 +512,6 @@
     </ClInclude>
     <ClInclude Include="MRChangeMeshAction.h">
       <Filter>Source Files\History</Filter>
-    </ClInclude>
-    <ClInclude Include="MRComputeVolume.h">
-      <Filter>Source Files\VDBConversions</Filter>
     </ClInclude>
     <ClInclude Include="MRLineSegm.h">
       <Filter>Source Files\Math</Filter>
@@ -729,9 +684,6 @@
     <ClInclude Include="MRMeshBooleanFacade.h">
       <Filter>Source Files\Boolean</Filter>
     </ClInclude>
-    <ClInclude Include="MRPartialOffset.h">
-      <Filter>Source Files\Boolean</Filter>
-    </ClInclude>
     <ClInclude Include="MRMeshSaveObj.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
@@ -807,9 +759,6 @@
     <ClInclude Include="MRExtractIsolines.h">
       <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
-    <ClInclude Include="MRMarchingCubes.h">
-      <Filter>Source Files\Voxels</Filter>
-    </ClInclude>
     <ClInclude Include="MRSharpenMarchingCubesMesh.h">
       <Filter>Source Files\Voxels</Filter>
     </ClInclude>
@@ -818,9 +767,6 @@
     </ClInclude>
     <ClInclude Include="MRFastWindingNumber.h">
       <Filter>Source Files\AABBTree</Filter>
-    </ClInclude>
-    <ClInclude Include="MROpenVDBHelper.h">
-      <Filter>Source Files\VDBConversions</Filter>
     </ClInclude>
     <ClInclude Include="MRChangeVertsColorMapAction.h">
       <Filter>Source Files\History</Filter>
@@ -842,9 +788,6 @@
     </ClInclude>
     <ClInclude Include="MRFreeFormDeformer.h">
       <Filter>Source Files\LinearSystem</Filter>
-    </ClInclude>
-    <ClInclude Include="MRToolPath.h">
-      <Filter>Source Files\SurfacePath</Filter>
     </ClInclude>
     <ClInclude Include="MRLaplacian.h">
       <Filter>Source Files\LinearSystem</Filter>
@@ -896,9 +839,6 @@
     </ClInclude>
     <ClInclude Include="MRFillContours2D.h">
       <Filter>Source Files\Contours</Filter>
-    </ClInclude>
-    <ClInclude Include="MRFixUndercuts.h">
-      <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
     <ClInclude Include="MRGridSampling.h">
       <Filter>Source Files\PointCloud</Filter>
@@ -969,32 +909,17 @@
     <ClInclude Include="MRViewportId.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRVoxelsConversionsByParts.h">
-      <Filter>Source Files\Voxels</Filter>
-    </ClInclude>
     <ClInclude Include="MRInnerShell.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRMovementBuildBody.h">
       <Filter>Source Files\Primitives</Filter>
     </ClInclude>
-    <ClInclude Include="MRVDBProgressInterrupter.h">
-      <Filter>Source Files\VDBConversions</Filter>
-    </ClInclude>
-    <ClInclude Include="MRVDBFloatGrid.h">
-      <Filter>Source Files\BaseStructures</Filter>
-    </ClInclude>
     <ClInclude Include="MRCNCMachineSettings.h">
       <Filter>Source Files\Gcode</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshToDistanceVolume.h">
-      <Filter>Source Files\Voxels</Filter>
-    </ClInclude>
     <ClInclude Include="MRIsNaN.h">
       <Filter>Source Files\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="MRVoxelsConversions.h">
-      <Filter>Source Files\Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRIOParsing.h">
       <Filter>Source Files\IO</Filter>
@@ -1140,9 +1065,6 @@
     <ClInclude Include="MRConeApproximator.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
-    <ClInclude Include="MRVoxelsVolumeAccess.h">
-      <Filter>Source Files\Voxels</Filter>
-    </ClInclude>
     <ClInclude Include="MRAlphaShape.h">
       <Filter>Source Files\Triangulation</Filter>
     </ClInclude>
@@ -1190,15 +1112,6 @@
     </ClInclude>
     <ClInclude Include="MRPolylineTrimWithPlane.h">
       <Filter>Source Files\Polyline</Filter>
-    </ClInclude>
-    <ClInclude Include="MRDistanceVolumeParams.h">
-      <Filter>Source Files\Voxels</Filter>
-    </ClInclude>
-    <ClInclude Include="MRPointsToDistanceVolume.h">
-      <Filter>Source Files\Voxels</Filter>
-    </ClInclude>
-    <ClInclude Include="MRPointsToMeshFusion.h">
-      <Filter>Source Files\Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRMisonLoad.h">
       <Filter>Source Files\IO</Filter>
@@ -1275,9 +1188,6 @@
     <ClInclude Include="MRFeatureHelpers.h">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClInclude>
-    <ClInclude Include="MRVolumeInterpolation.h">
-      <Filter>Source Files\Voxels</Filter>
-    </ClInclude>
     <ClInclude Include="MRFillHoleNicely.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
@@ -1298,12 +1208,6 @@
     </ClInclude>
     <ClInclude Include="MRMeshRelax.hpp">
       <Filter>Source Files\Relax</Filter>
-    </ClInclude>
-    <ClInclude Include="MRVoxelsVolume.h">
-      <Filter>Source Files\BaseStructures</Filter>
-    </ClInclude>
-    <ClInclude Include="MRMoveMeshToVoxelMaxDeriv.h">
-      <Filter>Source Files\Voxels</Filter>
     </ClInclude>
     <ClInclude Include="MRParallel.h">
       <Filter>Source Files\Basic</Filter>
@@ -1340,9 +1244,6 @@
     </ClInclude>
     <ClInclude Include="MRCanonicalTypedefs.h">
       <Filter>Source Files\Basic</Filter>
-    </ClInclude>
-    <ClInclude Include="MRRebuildMesh.h">
-      <Filter>Source Files\VDBConversions</Filter>
     </ClInclude>
     <ClInclude Include="MRUniqueTemporaryFolder.h">
       <Filter>Source Files\IO</Filter>
@@ -1385,12 +1286,6 @@
     <ClCompile Include="MRCube.cpp">
       <Filter>Source Files\Primitives</Filter>
     </ClCompile>
-    <ClCompile Include="MRVDBConversions.cpp">
-      <Filter>Source Files\VDBConversions</Filter>
-    </ClCompile>
-    <ClCompile Include="MRBoolean.cpp">
-      <Filter>Source Files\VDBConversions</Filter>
-    </ClCompile>
     <ClCompile Include="MRTorus.cpp">
       <Filter>Source Files\Primitives</Filter>
     </ClCompile>
@@ -1400,26 +1295,11 @@
     <ClCompile Include="MRSystem.cpp">
       <Filter>Source Files\System</Filter>
     </ClCompile>
-    <ClCompile Include="MRFloatGrid.cpp">
-      <Filter>Source Files\BaseStructures</Filter>
-    </ClCompile>
-    <ClCompile Include="MRObjectVoxels.cpp">
-      <Filter>Source Files\DataModel</Filter>
-    </ClCompile>
-    <ClCompile Include="MRVoxelsSave.cpp">
-      <Filter>Source Files\IO</Filter>
-    </ClCompile>
     <ClCompile Include="MRMeshSave.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshLoad.cpp">
       <Filter>Source Files\IO</Filter>
-    </ClCompile>
-    <ClCompile Include="MRVoxelsLoad.cpp">
-      <Filter>Source Files\IO</Filter>
-    </ClCompile>
-    <ClCompile Include="MRVoxelPath.cpp">
-      <Filter>Source Files\Voxels</Filter>
     </ClCompile>
     <ClCompile Include="miniply.cpp">
       <Filter>Source Files\IO</Filter>
@@ -1436,9 +1316,6 @@
     <ClCompile Include="MRSerializer.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
-    <ClCompile Include="MRVoxelGraphCut.cpp">
-      <Filter>Source Files\Voxels</Filter>
-    </ClCompile>
     <ClCompile Include="MRObjectLines.cpp">
       <Filter>Source Files\DataModel</Filter>
     </ClCompile>
@@ -1450,9 +1327,6 @@
     </ClCompile>
     <ClCompile Include="MRQuadraticForm.cpp">
       <Filter>Source Files\Math</Filter>
-    </ClCompile>
-    <ClCompile Include="MRVolumeSegment.cpp">
-      <Filter>Source Files\Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRTriDist.cpp">
       <Filter>Source Files\Math</Filter>
@@ -1475,9 +1349,6 @@
     <ClCompile Include="MRStringConvert.cpp">
       <Filter>Source Files\Basic</Filter>
     </ClCompile>
-    <ClCompile Include="MROffset.cpp">
-      <Filter>Source Files\VDBConversions</Filter>
-    </ClCompile>
     <ClCompile Include="MREdgePaths.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
@@ -1494,9 +1365,6 @@
       <Filter>Source Files\BaseStructures</Filter>
     </ClCompile>
     <ClCompile Include="MRVolumeIndexer.cpp">
-      <Filter>Source Files\Voxels</Filter>
-    </ClCompile>
-    <ClCompile Include="MRTeethMaskToDirectionVolume.cpp">
       <Filter>Source Files\Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRPrecisePredicates3.cpp">
@@ -1598,9 +1466,6 @@
     <ClCompile Include="MRDenseBox.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
-    <ClCompile Include="MRFloatGridComponents.cpp">
-      <Filter>Source Files\Components</Filter>
-    </ClCompile>
     <ClCompile Include="MRMeshComponents.cpp">
       <Filter>Source Files\Components</Filter>
     </ClCompile>
@@ -1675,9 +1540,6 @@
     </ClCompile>
     <ClCompile Include="MRRestoringStreamsSink.cpp">
       <Filter>Source Files\Basic</Filter>
-    </ClCompile>
-    <ClCompile Include="MRComputeVolume.cpp">
-      <Filter>Source Files\VDBConversions</Filter>
     </ClCompile>
     <ClCompile Include="MRCombinedHistoryAction.cpp">
       <Filter>Source Files\History</Filter>
@@ -1838,9 +1700,6 @@
     <ClCompile Include="MRMeshBooleanFacade.cpp">
       <Filter>Source Files\Boolean</Filter>
     </ClCompile>
-    <ClCompile Include="MRPartialOffset.cpp">
-      <Filter>Source Files\Boolean</Filter>
-    </ClCompile>
     <ClCompile Include="MRMeshSaveObj.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
@@ -1877,9 +1736,6 @@
     <ClCompile Include="MRExtractIsolines.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
-    <ClCompile Include="MRMarchingCubes.cpp">
-      <Filter>Source Files\Voxels</Filter>
-    </ClCompile>
     <ClCompile Include="MRSharpenMarchingCubesMesh.cpp">
       <Filter>Source Files\Voxels</Filter>
     </ClCompile>
@@ -1892,14 +1748,8 @@
     <ClCompile Include="MRPointsToMeshProjector.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
-    <ClCompile Include="MRVoxelsLoadGav.cpp">
-      <Filter>Source Files\IO</Filter>
-    </ClCompile>
     <ClCompile Include="MRGltfSerializer.cpp">
       <Filter>Source Files\IO</Filter>
-    </ClCompile>
-    <ClCompile Include="MRToolPath.cpp">
-      <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
     <ClCompile Include="MRFreeFormDeformer.cpp">
       <Filter>Source Files\LinearSystem</Filter>
@@ -1940,9 +1790,6 @@
     <ClCompile Include="MRFillContours2D.cpp">
       <Filter>Source Files\Contours</Filter>
     </ClCompile>
-    <ClCompile Include="MRFixUndercuts.cpp">
-      <Filter>Source Files\MeshAlgorithm</Filter>
-    </ClCompile>
     <ClCompile Include="MRGridSampling.cpp">
       <Filter>Source Files\PointCloud</Filter>
     </ClCompile>
@@ -1976,9 +1823,6 @@
     <ClCompile Include="MRFile.cpp">
       <Filter>Source Files\System</Filter>
     </ClCompile>
-    <ClCompile Include="MRVoxelsConversionsByParts.cpp">
-      <Filter>Source Files\Voxels</Filter>
-    </ClCompile>
     <ClCompile Include="MRExpected.cpp">
       <Filter>Source Files\Basic</Filter>
     </ClCompile>
@@ -1993,9 +1837,6 @@
     </ClCompile>
     <ClCompile Include="MRCNCMachineSettings.cpp">
       <Filter>Source Files\Gcode</Filter>
-    </ClCompile>
-    <ClCompile Include="MRMeshToDistanceVolume.cpp">
-      <Filter>Source Files\Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRIOParsing.cpp">
       <Filter>Source Files\IO</Filter>
@@ -2138,12 +1979,6 @@
     <ClCompile Include="MRPolylineTrimWithPlane.cpp">
       <Filter>Source Files\Polyline</Filter>
     </ClCompile>
-    <ClCompile Include="MRPointsToDistanceVolume.cpp">
-      <Filter>Source Files\Voxels</Filter>
-    </ClCompile>
-    <ClCompile Include="MRPointsToMeshFusion.cpp">
-      <Filter>Source Files\Voxels</Filter>
-    </ClCompile>
     <ClCompile Include="MRFeatureObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
@@ -2213,9 +2048,6 @@
     <ClCompile Include="MRPointCloudDistance.cpp">
       <Filter>Source Files\PointCloud</Filter>
     </ClCompile>
-    <ClCompile Include="MRMoveMeshToVoxelMaxDeriv.cpp">
-      <Filter>Source Files\Voxels</Filter>
-    </ClCompile>
     <ClCompile Include="MRBestFitPolynomial.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
@@ -2228,17 +2060,11 @@
     <ClCompile Include="MRMeshDecimateCallbacks.cpp">
       <Filter>Source Files\Decimation</Filter>
     </ClCompile>
-    <ClCompile Include="MRVoxelsVolume.cpp">
-      <Filter>Source Files\BaseStructures</Filter>
-    </ClCompile>
     <ClCompile Include="MRStacktrace.cpp">
       <Filter>Source Files\System</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshSubdivideCallbacks.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
-    </ClCompile>
-    <ClCompile Include="MRRebuildMesh.cpp">
-      <Filter>Source Files\VDBConversions</Filter>
     </ClCompile>
     <ClCompile Include="MRUniqueTemporaryFolder.cpp">
       <Filter>Source Files\IO</Filter>

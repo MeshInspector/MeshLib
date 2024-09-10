@@ -459,7 +459,7 @@ VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions&
 {
     MR_TIMER
 
-    class ScopedCtmConext 
+    class ScopedCtmConext
     {
         CTMcontext context_ = ctmNewContext( CTM_EXPORT );
     public:
@@ -516,7 +516,7 @@ VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions&
     VertCoords buf;
     const auto & xfVerts = transformPoints( mesh.points, mesh.topology.getValidVerts(), options.xf, buf, &vertRenumber );
     ctmDefineMesh( context,
-        (const CTMfloat *)xfVerts.data(), aVertexCount, 
+        (const CTMfloat *)xfVerts.data(), aVertexCount,
         aIndices.data(), numSaveFaces, nullptr );
 
     if ( ctmGetError(context) != CTM_NONE )
@@ -640,7 +640,7 @@ VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path
     return saver.fileSave( mesh, file, settings );
 }
 
-VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, std::ostream& out, const std::string& extension, const SaveSettings & settings )
+VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, const std::string& extension, std::ostream& out, const SaveSettings & settings )
 {
     auto ext = extension;
     for ( auto& c : ext )

@@ -1,0 +1,539 @@
+#include "MRVDBConversions.h"
+
+#include "MRVDBFloatGrid.h"
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRMeshBuilder.h"
+#include "MRMesh/MRTimer.h"
+#include "MRVoxelsVolume.h"
+#include "MROpenVDB.h"
+#include "MRMesh/MRFastWindingNumber.h"
+#include "MRMesh/MRVolumeIndexer.h"
+#include "MRMesh/MRRegionBoundary.h"
+#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRTriMesh.h"
+#include "MRVDBProgressInterrupter.h"
+
+namespace MR
+{
+constexpr float denseVolumeToGridTolerance = 1e-6f;
+
+void convertToVDMMesh( const MeshPart& mp, const AffineXf3f& xf, const Vector3f& voxelSize,
+                       std::vector<openvdb::Vec3s>& points, std::vector<openvdb::Vec3I>& tris )
+{
+    MR_TIMER
+        const auto& pointsRef = mp.mesh.points;
+    const auto& topology = mp.mesh.topology;
+    points.resize( pointsRef.size() );
+    tris.resize( mp.region ? mp.region->count() : topology.numValidFaces() );
+
+    int i = 0;
+    VertId v[3];
+    for ( FaceId f : topology.getFaceIds( mp.region ) )
+    {
+        if ( mp.region && !topology.hasFace( f ) )
+            continue; // f is in given region but not in mesh topology
+        topology.getTriVerts( f, v );
+        tris[i++] = openvdb::Vec3I{ ( uint32_t )v[0], ( uint32_t )v[1], ( uint32_t )v[2] };
+    }
+    i = 0;
+    for ( const auto& p0 : pointsRef )
+    {
+        auto p = xf( p0 );
+        points[i][0] = p[0] / voxelSize[0];
+        points[i][1] = p[1] / voxelSize[1];
+        points[i][2] = p[2] / voxelSize[2];
+        ++i;
+    }
+}
+
+template<typename GridType>
+Expected<TriMesh> gridToTriMesh(
+    const GridType& grid,
+    const GridToMeshSettings & settings )
+{
+    MR_TIMER
+
+    if ( !reportProgress( settings.cb, 0.0f ) )
+        return unexpectedOperationCanceled();
+
+    openvdb::tools::VolumeToMesh mesher( settings.isoValue, settings.adaptivity, settings.relaxDisorientedTriangles );
+    mesher(grid);
+
+    if ( !reportProgress( settings.cb, 0.7f ) )
+        return unexpectedOperationCanceled();
+
+    if ( mesher.pointListSize() > settings.maxVertices )
+        return unexpected( "Vertices number limit exceeded." );
+
+    // Preallocate the point list
+    TriMesh res;
+    res.points.resize( mesher.pointListSize() );
+
+    // Copy points
+    auto & inPts = mesher.pointList();
+    ParallelFor( res.points, [&]( size_t i )
+    {
+        auto inPt = inPts[i];
+        res.points[ VertId{ i } ] = Vector3f{
+            inPt.x() * settings.voxelSize.x,
+            inPt.y() * settings.voxelSize.y,
+            inPt.z() * settings.voxelSize.z };
+    } );
+    inPts.reset(nullptr);
+
+    if ( !reportProgress( settings.cb, 0.8f ) )
+        return unexpectedOperationCanceled();
+
+    auto& polygonPoolList = mesher.polygonPoolList();
+
+    // Preallocate primitive lists
+    size_t numQuads = 0, numTriangles = 0;
+    for (size_t n = 0, N = mesher.polygonPoolListSize(); n < N; ++n) {
+        openvdb::tools::PolygonPool& polygons = polygonPoolList[n];
+        numTriangles += polygons.numTriangles();
+        numQuads += polygons.numQuads();
+    }
+
+    const size_t tNum = numTriangles + 2 * numQuads;
+
+    if ( tNum > settings.maxFaces )
+        return unexpected( "Triangles number limit exceeded." );
+
+    res.tris.reserve( tNum );
+
+    // Copy primitives
+    for (size_t n = 0, N = mesher.polygonPoolListSize(); n < N; ++n) 
+    {
+        openvdb::tools::PolygonPool& polygons = polygonPoolList[n];
+
+        for ( size_t i = 0, I = polygons.numQuads(); i < I; ++i )
+        {
+            auto quad = polygons.quad(i);
+
+            ThreeVertIds newTri
+            {
+                VertId( ( int )quad[2] ),
+                VertId( ( int )quad[1] ),
+                VertId( ( int )quad[0] ),
+            };
+            res.tris.push_back( newTri );
+
+            newTri =
+            {
+                VertId( ( int )quad[0] ),
+                VertId( ( int )quad[3] ),
+                VertId( ( int )quad[2] ),
+            };
+            res.tris.push_back( newTri );
+        }
+
+        for ( size_t i = 0, I = polygons.numTriangles(); i < I; ++i )
+        {
+            auto tri = polygons.triangle(i);
+
+            ThreeVertIds newTri
+            {
+                VertId( ( int )tri[2] ),
+                VertId( ( int )tri[1] ),
+                VertId( ( int )tri[0] )
+            };
+            res.tris.push_back( newTri );
+        }
+    }
+
+    if ( !reportProgress( settings.cb, 1.0f ) )
+        return unexpectedOperationCanceled();
+
+    return res;
+}
+
+FloatGrid meshToLevelSet( const MeshPart& mp, const AffineXf3f& xf,
+                          const Vector3f& voxelSize, float surfaceOffset,
+                          ProgressCallback cb )
+{
+    if ( surfaceOffset <= 0.0f )
+    {
+        assert( false );
+        return {};
+    }
+    MR_TIMER
+    std::vector<openvdb::Vec3s> points;
+    std::vector<openvdb::Vec3I> tris;
+
+    convertToVDMMesh( mp, xf, voxelSize, points, tris );
+
+    openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
+    ProgressInterrupter interrupter( cb );
+    auto resGrid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, ProgressInterrupter>
+        ( interrupter, *xform, points, tris, surfaceOffset ) );
+    if ( interrupter.getWasInterrupted() )
+        return {};
+    return resGrid;
+}
+
+FloatGrid meshToDistanceField( const MeshPart& mp, const AffineXf3f& xf,
+    const Vector3f& voxelSize, float surfaceOffset /*= 3 */,
+    ProgressCallback cb )
+{
+    MR_TIMER
+    if ( surfaceOffset <= 0.0f )
+    {
+        assert( false );
+        return {};
+    }
+    std::vector<openvdb::Vec3s> points;
+    std::vector<openvdb::Vec3I> tris;
+
+    convertToVDMMesh( mp, xf, voxelSize, points, tris );
+
+    openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
+    ProgressInterrupter interrupter( cb );
+
+    auto resGrid = MakeFloatGrid( openvdb::tools::meshToUnsignedDistanceField<openvdb::FloatGrid, ProgressInterrupter>
+        ( interrupter, *xform, points, tris, {}, surfaceOffset ) );
+
+    if ( interrupter.getWasInterrupted() )
+        return {};
+    return resGrid;
+}
+
+void evalGridMinMax( const FloatGrid& grid, float& min, float& max )
+{
+    if ( !grid )
+        return;
+#if (OPENVDB_LIBRARY_MAJOR_VERSION_NUMBER >= 9 && (OPENVDB_LIBRARY_MINOR_VERSION_NUMBER >= 1 || OPENVDB_LIBRARY_PATCH_VERSION_NUMBER >= 1)) || \
+    (OPENVDB_LIBRARY_MAJOR_VERSION_NUMBER >= 10)
+    auto minMax = openvdb::tools::minMax( grid->tree() );
+    min = minMax.min();
+    max = minMax.max();
+#else
+    grid->evalMinMax( min, max );
+#endif
+}
+
+Expected<VdbVolume> meshToVolume( const Mesh& mesh, const MeshToVolumeParams& params /*= {} */ )
+{
+    if ( params.type == MeshToVolumeParams::Type::Signed && !mesh.topology.isClosed() )
+        return unexpected( "Only closed mesh can be converted to signed volume" );
+    MR_TIMER
+
+    auto shift = AffineXf3f::translation( mesh.computeBoundingBox( &params.worldXf ).min - params.surfaceOffset * params.voxelSize );
+    FloatGrid grid;
+    if ( params.type == MeshToVolumeParams::Type::Signed )
+        grid = meshToLevelSet( mesh, shift.inverse() * params.worldXf, params.voxelSize, params.surfaceOffset, params.cb );
+    else
+        grid = meshToDistanceField( mesh, shift.inverse() * params.worldXf, params.voxelSize, params.surfaceOffset, params.cb );
+
+    if ( !grid )
+        return unexpected( "Operation canceled" );
+
+    // to get proper normal orientation both for signed and unsigned cases
+    grid->setGridClass( openvdb::GRID_LEVEL_SET );
+
+    if ( params.outXf )
+        *params.outXf = shift;
+
+    VdbVolume res;
+    res.data = grid;
+    evalGridMinMax( grid, res.min, res.max );
+    auto dim = grid->evalActiveVoxelBoundingBox().extents();
+    res.dims = Vector3i( dim.x(), dim.y(), dim.z() );
+    res.voxelSize = params.voxelSize;
+
+    return res;
+}
+
+VdbVolume floatGridToVdbVolume( FloatGrid grid )
+{
+    if ( !grid )
+        return {};
+    MR_TIMER
+    VdbVolume res;
+    evalGridMinMax( grid, res.min, res.max );
+    auto dim = grid->evalActiveVoxelDim();
+    res.dims = Vector3i( dim.x(), dim.y(), dim.z() );
+    res.data = std::move( grid );
+    return res;
+}
+
+FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,
+                                   ProgressCallback cb )
+{
+    MR_TIMER
+    if ( cb )
+        cb( 0.0f );
+    openvdb::math::Coord minCoord( 0, 0, 0 );
+    openvdb::math::Coord dimsCoord( simpleVolume.dims.x, simpleVolume.dims.y, simpleVolume.dims.z );
+    openvdb::math::CoordBBox denseBBox( minCoord, minCoord + dimsCoord.offsetBy( -1 ) );
+    openvdb::tools::Dense<float, openvdb::tools::LayoutXYZ> dense( denseBBox, const_cast< float* >( simpleVolume.data.data() ) );
+    if ( cb )
+        cb( 0.5f );
+    std::shared_ptr<openvdb::FloatGrid> grid = std::make_shared<openvdb::FloatGrid>( FLT_MAX );
+    openvdb::tools::copyFromDense( dense, *grid, denseVolumeToGridTolerance );
+    openvdb::tools::changeBackground( grid->tree(), 0.f );
+    if ( cb )
+        cb( 1.0f );
+    return MakeFloatGrid( std::move( grid ) );
+}
+
+VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, ProgressCallback cb /*= {} */ )
+{
+    VdbVolume res;
+    res.data = simpleVolumeToDenseGrid( simpleVolume, cb );
+    res.dims = simpleVolume.dims;
+    res.voxelSize = simpleVolume.voxelSize;
+    res.min = simpleVolume.min;
+    res.max = simpleVolume.max;
+    return res;
+}
+
+// make VoxelsVolume (e.g. SimpleVolume or SimpleVolumeU16) from VdbVolume
+// if VoxelsVolume values type is integral, performs mapping from [vdbVolume.min, vdbVolume.max] to
+// nonnegative range of target type
+template<typename T, bool Norm>
+Expected<VoxelsVolumeMinMax<std::vector<T>>> vdbVolumeToSimpleVolumeImpl(
+    const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} )
+{
+    constexpr bool isFloat = std::is_same_v<float, T> || std::is_same_v<double, T> || std::is_same_v<long double, T>;
+
+    VoxelsVolumeMinMax<std::vector<T>> res;
+
+    res.dims = !activeBox.valid() ? vdbVolume.dims : activeBox.size();
+    Vector3i org = activeBox.valid() ? activeBox.min : Vector3i{};
+    res.voxelSize = vdbVolume.voxelSize;
+    if constexpr ( isFloat )
+    {
+        if constexpr ( Norm )
+        {
+            res.min = T( 0.0 );
+            res.max = T( 1.0 );
+        }
+        else
+        {
+            res.min = vdbVolume.min;
+            res.max = vdbVolume.max;
+        }
+    }
+    else
+    {
+        res.min = 0;
+        res.max = std::numeric_limits<T>::max();
+    }
+    [[maybe_unused]] const float oMin = float( res.min );
+    [[maybe_unused]] const float oMax = float( res.max );
+    [[maybe_unused]] const float k =
+        vdbVolume.max > vdbVolume.min ? ( oMax - oMin ) / ( vdbVolume.max - vdbVolume.min ) : 0.0f;
+
+    VolumeIndexer indexer( res.dims );
+    res.data.resize( indexer.size() );
+
+    if ( !vdbVolume.data )
+    {
+        std::fill( res.data.begin(), res.data.end(), T{} );
+        return res;
+    }
+
+    tbb::enumerable_thread_specific accessorPerThread( vdbVolume.data->getConstAccessor() );
+    if ( !ParallelFor( size_t( 0 ), indexer.size(), [&] ( size_t i )
+    {
+        auto& accessor = accessorPerThread.local();
+        auto coord = indexer.toPos( VoxelId( i ) );
+        float value = accessor.getValue( openvdb::Coord( coord.x + org.x, coord.y + org.y, coord.z + org.z ) );
+        if constexpr ( isFloat && !Norm )
+            res.data[i] = T( value );
+        else
+            res.data[i] = T( std::clamp( ( value - vdbVolume.min ) * k + oMin, oMin, oMax ) );
+    }, cb ) )
+        return unexpectedOperationCanceled();
+    return res;
+}
+
+Expected<SimpleVolume> vdbVolumeToSimpleVolume( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
+{
+    return vdbVolumeToSimpleVolumeImpl<float, false>( vdbVolume, activeBox, cb );
+}
+
+Expected<MR::SimpleVolume> vdbVolumeToSimpleVolumeNorm( const VdbVolume& vdbVolume, const Box3i& activeBox /*= Box3i()*/, ProgressCallback cb /*= {} */ )
+{
+    return vdbVolumeToSimpleVolumeImpl<float, true>( vdbVolume, activeBox, cb );
+}
+
+Expected<SimpleVolumeU16> vdbVolumeToSimpleVolumeU16( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
+{
+    return vdbVolumeToSimpleVolumeImpl<uint16_t, true>( vdbVolume, activeBox, cb );
+}
+
+Expected<Mesh> gridToMesh( const FloatGrid& grid, const GridToMeshSettings & settings )
+{
+    MR_TIMER;
+    if ( !reportProgress( settings.cb, 0.0f ) )
+        return unexpectedOperationCanceled();
+
+    auto s = settings;
+    s.cb = subprogress( settings.cb, 0.0f, 0.2f );
+    auto expTriMesh = gridToTriMesh( *grid, s );
+    if ( !expTriMesh )
+        return unexpected( std::move( expTriMesh.error() ) );
+
+    if ( !reportProgress( settings.cb, 0.2f ) )
+        return unexpectedOperationCanceled();
+
+    Mesh res = Mesh::fromTriMesh( std::move( *expTriMesh ), {}, subprogress( settings.cb, 0.2f, 1.0f ) );
+    if ( !reportProgress( settings.cb, 1.0f ) )
+        return unexpectedOperationCanceled();
+    return res;
+}
+
+Expected<Mesh> gridToMesh( FloatGrid&& grid, const GridToMeshSettings & settings )
+{
+    MR_TIMER;
+    if ( !reportProgress( settings.cb, 0.0f ) )
+        return unexpectedOperationCanceled();
+
+    auto s = settings;
+    s.cb = subprogress( settings.cb, 0.0f, 0.2f );
+    auto expTriMesh = gridToTriMesh( *grid, s );
+    if ( !expTriMesh )
+        return unexpected( std::move( expTriMesh.error() ) );
+    grid.reset(); // free grid's memory
+
+    if ( !reportProgress( settings.cb, 0.2f ) )
+        return unexpectedOperationCanceled();
+
+    Mesh res = Mesh::fromTriMesh( std::move( *expTriMesh ), {}, subprogress( settings.cb, 0.2f, 1.0f ) );
+    if ( !reportProgress( settings.cb, 1.0f ) )
+        return unexpectedOperationCanceled();
+    return res;
+}
+
+VoidOrErrStr makeSignedByWindingNumber( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh, const MakeSignedByWindingNumberSettings & settings )
+{
+    MR_TIMER
+
+    auto activeBox = grid->evalActiveVoxelBoundingBox();
+    // make dense topology tree to copy its nodes topology to original grid
+    std::unique_ptr<openvdb::TopologyTree> topologyTree = std::make_unique<openvdb::TopologyTree>();
+    // make it dense
+    topologyTree->denseFill( activeBox, {} );
+    grid->tree().topologyUnion( *topologyTree ); // after this all voxels should be active and trivial parallelism is ok
+    // free topology tree
+    topologyTree.reset();
+
+    auto minCoord = activeBox.min();
+    auto dims = activeBox.dim();
+    VolumeIndexer indexer( Vector3i( dims.x(), dims.y(), dims.z() ) );
+    const size_t volume = activeBox.volume();
+
+    std::vector<float> windVals;
+    auto fwn = settings.fwn ? settings.fwn : std::make_shared<FastWindingNumber>( refMesh );
+
+    const auto gridToMeshXf = settings.meshToGridXf.inverse()
+        * AffineXf3f::linear( Matrix3f::scale( voxelSize ) )
+        * AffineXf3f::translation( Vector3f{ fromVdb( minCoord ) } );
+    if ( auto res = fwn->calcFromGrid( windVals,
+        Vector3i{ dims.x(),  dims.y(), dims.z() },
+        gridToMeshXf, settings.windingNumberBeta, subprogress( settings.progress, 0.0f, 0.8f ) ); !res )
+    {
+        return res;
+    }
+    
+    tbb::enumerable_thread_specific<openvdb::FloatGrid::Accessor> perThreadAccessor( grid->getAccessor() );
+
+    if ( !ParallelFor( size_t( 0 ), volume, [&]( size_t i )
+        {
+            auto & accessor = perThreadAccessor.local();
+
+            auto pos = indexer.toPos( VoxelId( i ) );
+            auto coord = minCoord;
+            for ( int j = 0; j < 3; ++j )
+                coord[j] += pos[j];
+
+            if ( windVals[i] > settings.windingNumberThreshold )
+            {
+                accessor.modifyValue( coord, [] ( float& val )
+                {
+                    val = -val;
+                } );
+            }
+        }, subprogress( settings.progress, 0.8f, 1.0f ) ) )
+    {
+        return unexpectedOperationCanceled();
+    }
+
+    grid->pruneGrid( 0.0f );
+    return {};
+}
+
+Expected<Mesh> doubleOffsetVdb( const MeshPart& mp, const DoubleOffsetSettings & settings )
+{
+    MR_TIMER
+
+    auto offsetInVoxelsA = settings.offsetA / settings.voxelSize;
+    auto offsetInVoxelsB = settings.offsetB / settings.voxelSize;
+
+    if ( !reportProgress( settings.progress, 0.0f ) )
+        return unexpectedOperationCanceled();
+
+    std::vector<openvdb::Vec3s> points;
+    std::vector<openvdb::Vec3I> tris;
+    std::vector<openvdb::Vec4I> quads;
+    convertToVDMMesh( mp, AffineXf3f(), Vector3f::diagonal( settings.voxelSize ), points, tris );
+
+    if ( !reportProgress( settings.progress, 0.1f ) )
+        return unexpectedOperationCanceled();
+
+    const bool needSignUpdate = !mp.mesh.topology.isClosed( mp.region );
+
+    auto sp = subprogress( settings.progress, 0.1f, needSignUpdate ? 0.2f : 0.3f );
+    openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
+    ProgressInterrupter interrupter1( sp );
+    auto grid = MakeFloatGrid( 
+        needSignUpdate ?
+        openvdb::tools::meshToUnsignedDistanceField<openvdb::FloatGrid, ProgressInterrupter>
+        ( interrupter1, *xform, points, tris, {}, std::abs( offsetInVoxelsA ) + 1 ) :
+        openvdb::tools::meshToLevelSet<openvdb::FloatGrid, ProgressInterrupter>
+        ( interrupter1, *xform, points, tris, std::abs( offsetInVoxelsA ) + 1 ) );
+
+    if ( interrupter1.getWasInterrupted() )
+        return unexpectedOperationCanceled();
+
+    if ( needSignUpdate )
+    {
+        auto signRes = makeSignedByWindingNumber( grid, Vector3f::diagonal( settings.voxelSize ), mp.mesh,
+        {
+            .fwn = settings.fwn,
+            .windingNumberThreshold = settings.windingNumberThreshold,
+            .windingNumberBeta = settings.windingNumberBeta,
+            .progress = subprogress( settings.progress, 0.2f, 0.3f )
+        } );
+        if ( !signRes.has_value() )
+            return unexpected( signRes.error() );
+    }
+
+    openvdb::tools::volumeToMesh( *grid, points, tris, quads, offsetInVoxelsA, settings.adaptivity );
+
+    if ( !reportProgress( settings.progress, 0.5f ) )
+        return unexpectedOperationCanceled();
+    sp = subprogress( settings.progress, 0.5f, 0.7f );
+
+    ProgressInterrupter interrupter2( sp );
+    grid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, ProgressInterrupter>
+        ( interrupter2, *xform, points, tris, quads, std::abs( offsetInVoxelsB ) + 1 ) );
+
+    if ( interrupter2.getWasInterrupted() || !reportProgress( settings.progress, 0.9f ) )
+        return unexpectedOperationCanceled();
+
+    auto expTriMesh = gridToTriMesh( *grid, GridToMeshSettings{
+        .voxelSize = Vector3f::diagonal( settings.voxelSize ),
+        .isoValue = offsetInVoxelsB,
+        .adaptivity = settings.adaptivity,
+        .cb = subprogress( settings.progress, 0.9f, 0.95f )
+    } );
+
+    Mesh res = Mesh::fromTriMesh( std::move( *expTriMesh ) );
+    if ( !reportProgress( settings.progress, 1.0f ) )
+        return unexpectedOperationCanceled();
+    return res;
+}
+
+} //namespace MR

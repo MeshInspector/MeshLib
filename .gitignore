@@ -22,9 +22,10 @@ distr/*
 /docker/logs/
 macos/Resources/LICENSE
 test_python/*.png
-source/MRMesh/config_cmake.h
+source/**/config_cmake.h
 /.idea/
 source/MRDotNetTest/bin/*
 source/MRDotNetTest/obj/*
 /cmake-build-*/
 /doc/
+/pytest_temp

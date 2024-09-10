@@ -11,8 +11,6 @@ def test_simple_traingulation_sample(tmp_path):
     input_folder = Path(test_files_path) / "doc_samples" / "simple_triangulation"
 
     # === Sample code
-    from meshlib import mrmeshpy as mm
-    from meshlib import mrmeshnumpy as mn
     import numpy as np
 
     u, v = np.mgrid[0:2 * np.pi:100j, 0:np.pi:100j]
@@ -23,16 +21,23 @@ def test_simple_traingulation_sample(tmp_path):
     # Prepare for MeshLib PointCloud
     verts = np.stack((x.flatten(), y.flatten(), z.flatten()), axis=-1).reshape(-1, 3)
     # Create MeshLib PointCloud from np ndarray
-    pc = mn.pointCloudFromPoints(verts)
+    pc = mrmeshnumpy.pointCloudFromPoints(verts)
     # Remove duplicate points
-    pc.validPoints = mm.pointUniformSampling(pc, 1e-3)
+    if is_new_binding:
+        samplingSettings = mrmeshpy.UniformSamplingSettings()
+        samplingSettings.distance = 1e-3
+        pc.validPoints = mrmeshpy.pointUniformSampling(pc, samplingSettings)
+    else:
+        pc.validPoints = mrmeshpy.pointUniformSampling(pc, 1e-3)
     pc.invalidateCaches()
 
     # Triangulate it
-    triangulatedPC = mm.triangulatePointCloud(pc)
+    triangulatedPC = mrmeshpy.triangulatePointCloud(pc)
 
     # Fix possible issues
-    triangulatedPC = mm.offsetMesh(triangulatedPC, 0.0)
+    offsetSettings = mrmeshpy.OffsetParameters()
+    offsetSettings.voxelSize = mrmeshpy.suggestVoxelSize(triangulatedPC, 5e6)
+    triangulatedPC = mrmeshpy.offsetMesh(triangulatedPC, 0, offsetSettings)
 
     #  === Verification
     assert relative_hausdorff(triangulatedPC,

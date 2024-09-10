@@ -58,4 +58,6 @@ private:
     using Base::nodes_;
 };
 
+/// \}
+
 } // namespace MR

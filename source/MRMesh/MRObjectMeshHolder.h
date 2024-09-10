@@ -307,11 +307,9 @@ private:
     /// set default scene-related properties
     void setDefaultSceneProperties_();
 
-#ifndef MRMESH_NO_OPENCTM
+    // falls back to the internal format if no CTM format support is available
+    // NOTE: CTM format support is available in the MRIOExtras library; make sure to load it if you prefer CTM
     const char * saveMeshFormat_ = ".ctm";
-#else
-    const char * saveMeshFormat_ = ".mrmesh";
-#endif
 };
 
 } // namespace MR

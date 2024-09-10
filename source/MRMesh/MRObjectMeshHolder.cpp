@@ -1,4 +1,5 @@
 #include "MRObjectMeshHolder.h"
+#include "MRIOFormatsRegistry.h"
 #include "MRObjectFactory.h"
 #include "MRMesh.h"
 #include "MRMeshComponents.h"
@@ -58,9 +59,20 @@ Expected<std::future<VoidOrErrStr>> ObjectMeshHolder::serializeModel_( const std
     saveSettings.rearrangeTriangles = false;
     if ( !vertsColorMap_.empty() )
         saveSettings.colors = &vertsColorMap_;
-    auto save = [mesh = mesh_, filename = std::filesystem::path( path ) += saveMeshFormat_, saveSettings]()
+    auto save = [mesh = mesh_, saveMeshFormat = saveMeshFormat_, path, saveSettings]()
     {
-        return MR::MeshSave::toAnySupportedFormat( *mesh, filename, saveSettings );
+        auto filename = path;
+        const auto extension = std::string( "*" ) + saveMeshFormat;
+        if ( auto meshSaver = MeshSave::getMeshSaver( extension ); meshSaver.fileSave != nullptr )
+        {
+            filename += saveMeshFormat;
+            return meshSaver.fileSave( *mesh, filename, saveSettings );
+        }
+        else
+        {
+            filename += ".mrmesh";
+            return MR::MeshSave::toAnySupportedFormat( *mesh, filename, saveSettings );
+        }
     };
     return std::async( getAsyncLaunchType(), save );
 }

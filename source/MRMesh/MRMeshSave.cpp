@@ -10,10 +10,6 @@
 #include "MRMeshTexture.h"
 #include "MRImageSave.h"
 
-#ifndef MRMESH_NO_OPENCTM
-#include "OpenCTM/openctm.h"
-#endif
-
 namespace MR
 {
 
@@ -119,18 +115,21 @@ VoidOrErrStr toObj( const Mesh & mesh, const std::filesystem::path & file, const
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-#if !defined(__EMSCRIPTEN__) && !defined(MRMESH_NO_PNG)
+#ifndef __EMSCRIPTEN__
     // it is hard to handle several files output for browser, so for now it is under ifdef,
     // anyway later it may be reworked to save simple zip and taken out of ifdef
     if ( settings.uvMap )
     {
-        auto mtlPath = file.parent_path() / ( settings.materialName + ".mtl" );
-        std::ofstream ofMtl( mtlPath, std::ofstream::binary );
-        if ( ofMtl )
+        if ( auto pngSaver = ImageSave::getImageSaver( "*.png" ) )
         {
-            ofMtl << "newmtl Texture\n";
-            if ( settings.texture && ImageSave::toPng( *settings.texture, file.parent_path() / ( settings.materialName + ".png" ) ).has_value() )
-                ofMtl << fmt::format( "map_Kd {}\n", settings.materialName + ".png" );
+            auto mtlPath = file.parent_path() / ( settings.materialName + ".mtl" );
+            std::ofstream ofMtl( mtlPath, std::ofstream::binary );
+            if ( ofMtl )
+            {
+                ofMtl << "newmtl Texture\n";
+                if ( settings.texture && pngSaver( *settings.texture, file.parent_path() / ( settings.materialName + ".png" ) ).has_value() )
+                    ofMtl << fmt::format( "map_Kd {}\n", settings.materialName + ".png" );
+            }
         }
     }
 #endif
@@ -445,187 +444,6 @@ VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & 
     return {};
 }
 
-#ifndef MRMESH_NO_OPENCTM
-VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions& options )
-{
-    std::ofstream out( file, std::ofstream::binary );
-    if ( !out )
-        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
-
-    return toCtm( mesh, out, options );
-}
-
-VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions& options )
-{
-    MR_TIMER
-
-    class ScopedCtmConext
-    {
-        CTMcontext context_ = ctmNewContext( CTM_EXPORT );
-    public:
-        ~ScopedCtmConext() { ctmFreeContext( context_ ); }
-        operator CTMcontext() { return context_; }
-    } context;
-
-    ctmFileComment( context, options.comment );
-    switch ( options.meshCompression )
-    {
-    default:
-        assert( false );
-        [[fallthrough]];
-    case CtmSaveOptions::MeshCompression::None:
-        ctmCompressionMethod( context, CTM_METHOD_RAW );
-        break;
-    case CtmSaveOptions::MeshCompression::Lossless:
-        ctmCompressionMethod( context, CTM_METHOD_MG1 );
-        break;
-    case CtmSaveOptions::MeshCompression::Lossy:
-        ctmCompressionMethod( context, CTM_METHOD_MG2 );
-        ctmVertexPrecision( context, options.vertexPrecision );
-        break;
-    }
-    ctmRearrangeTriangles( context, options.rearrangeTriangles ? 1 : 0 );
-    ctmCompressionLevel( context, options.compressionLevel );
-
-    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), options.saveValidOnly );
-    const int numPoints = vertRenumber.sizeVerts();
-    const VertId lastVertId = mesh.topology.lastValidVert();
-
-    std::vector<CTMuint> aIndices;
-    const auto fLast = mesh.topology.lastValidFace();
-    const auto numSaveFaces = options.rearrangeTriangles ? mesh.topology.numValidFaces() : int( fLast + 1 );
-    aIndices.reserve( numSaveFaces * 3 );
-    for ( FaceId f{0}; f <= fLast; ++f )
-    {
-        if ( mesh.topology.hasFace( f ) )
-        {
-            VertId v[3];
-            mesh.topology.getTriVerts( f, v );
-            for ( int i = 0; i < 3; ++i )
-                aIndices.push_back( vertRenumber( v[i] ) );
-        }
-        else if ( !options.rearrangeTriangles )
-        {
-            for ( int i = 0; i < 3; ++i )
-                aIndices.push_back( 0 );
-        }
-    }
-    assert( aIndices.size() == numSaveFaces * 3 );
-
-    CTMuint aVertexCount = numPoints;
-    VertCoords buf;
-    const auto & xfVerts = transformPoints( mesh.points, mesh.topology.getValidVerts(), options.xf, buf, &vertRenumber );
-    ctmDefineMesh( context,
-        (const CTMfloat *)xfVerts.data(), aVertexCount,
-        aIndices.data(), numSaveFaces, nullptr );
-
-    if ( ctmGetError(context) != CTM_NONE )
-        return unexpected( "Error encoding in CTM-format" );
-
-    std::vector<Vector4f> colors4f; // should be alive when save is performed
-    if ( options.colors )
-    {
-        colors4f.reserve( aVertexCount );
-        for ( VertId i{ 0 }; i <= lastVertId; ++i )
-        {
-            if ( options.saveValidOnly && !mesh.topology.hasVert( i ) )
-                continue;
-            colors4f.push_back( Vector4f( ( *options.colors )[i] ) );
-        }
-        assert( colors4f.size() == aVertexCount );
-
-        ctmAddAttribMap( context, (const CTMfloat*) colors4f.data(), "Color" );
-    }
-
-    if ( ctmGetError( context ) != CTM_NONE )
-        return unexpected( "Error encoding in CTM-format colors" );
-
-    struct SaveData
-    {
-        std::function<bool( float )> callbackFn{};
-        std::ostream* stream;
-        size_t sum{ 0 };
-        size_t blockSize{ 0 };
-        size_t maxSize{ 0 };
-        bool wasCanceled{ false };
-    } saveData;
-    if ( options.progress )
-    {
-        if ( options.meshCompression == CtmSaveOptions::MeshCompression::None )
-        {
-            saveData.callbackFn = [callback = options.progress, &saveData] ( float progress )
-            {
-                // calculate full progress
-                progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
-                return callback( progress );
-            };
-        }
-        else
-        {
-            saveData.callbackFn = [callback = options.progress, &saveData] ( float progress )
-            {
-                // calculate full progress in partial-linear scale (we don't know compressed size and it less than real size)
-                // conversion rules:
-                // step 1) range (0, rangeBefore) is converted in range (0, rangeAfter)
-                // step 2) moving on to new ranges: (rangeBefore, 1) and (rangeAfter, 1)
-                // step 3) go to step 1)
-                const float rangeBefore = 0.2f;
-                const float rangeAfter = 0.7f;
-                progress = ( saveData.sum + progress * saveData.blockSize ) / saveData.maxSize;
-                float newProgress = 0.f;
-                for ( ; newProgress < 98.5f; )
-                {
-                    if ( progress < rangeBefore )
-                    {
-                        newProgress += progress / rangeBefore * rangeAfter * ( 1 - newProgress );
-                        break;
-                    }
-                    else
-                    {
-                        progress = ( progress - rangeBefore ) / ( 1 - rangeBefore );
-                        newProgress += ( 1 - newProgress ) * rangeAfter;
-                    }
-                }
-                return callback( newProgress );
-            };
-        }
-    }
-    saveData.stream = &out;
-    saveData.maxSize = mesh.points.size() * sizeof( Vector3f ) + mesh.topology.getValidFaces().count() * 3 * sizeof( int ) + 150; // 150 - reserve for some ctm specific data
-    ctmSaveCustom( context, []( const void * buf, CTMuint size, void * data )
-    {
-        SaveData& saveData = *reinterpret_cast< SaveData* >( data );
-        std::ostream& outStream = *saveData.stream;
-        saveData.blockSize = size;
-
-        saveData.wasCanceled |= !MR::writeByBlocks( outStream, (const char*) buf, size, saveData.callbackFn, 1u << 12 );
-        saveData.sum += size;
-        if ( saveData.wasCanceled )
-            return 0u;
-
-        return outStream.good() ? size : 0;
-    }, &saveData );
-
-    if ( saveData.wasCanceled )
-        return unexpected( std::string( "Saving canceled" ) );
-    if ( !out || ctmGetError(context) != CTM_NONE )
-        return unexpected( std::string( "Error saving in CTM-format" ) );
-
-    reportProgress( options.progress, 1.f );
-    return {};
-}
-
-VoidOrErrStr toCtm( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings& settings )
-{
-    return toCtm( mesh, file, CtmSaveOptions { settings } );
-}
-
-VoidOrErrStr toCtm( const Mesh& mesh, std::ostream& out, const SaveSettings& settings )
-{
-    return toCtm( mesh, out, CtmSaveOptions { settings } );
-}
-#endif
-
 VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings & settings )
 {
     auto ext = utf8string( file.extension() );
@@ -658,9 +476,6 @@ MR_ADD_MESH_SAVER( IOFilter( "Binary STL (.stl)", "*.stl"   ), toBinaryStl )
 MR_ADD_MESH_SAVER( IOFilter( "OFF (.off)",        "*.off"   ), toOff )
 MR_ADD_MESH_SAVER( IOFilter( "OBJ (.obj)",        "*.obj"   ), toObj )
 MR_ADD_MESH_SAVER( IOFilter( "PLY (.ply)",        "*.ply"   ), toPly )
-#ifndef MRMESH_NO_OPENCTM
-MR_ADD_MESH_SAVER( IOFilter( "CTM (.ctm)",        "*.ctm"   ), toCtm )
-#endif
 
 } //namespace MeshSave
 

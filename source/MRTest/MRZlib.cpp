@@ -1,7 +1,7 @@
-#include <MRMesh/MRMeshFwd.h>
-#ifndef MRMESH_NO_ZLIB
+#include <MRIOExtras/config.h>
+#ifndef MRIOEXTRAS_NO_ZLIB
 #include <MRMesh/MRGTest.h>
-#include <MRMesh/MRZlib.h>
+#include <MRIOExtras/MRZlib.h>
 
 namespace
 {

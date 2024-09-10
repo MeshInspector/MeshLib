@@ -13,6 +13,8 @@
 #include "MRGladGlfw.h"
 #include "ImGuiHelpers.h"
 
+#include "MRIOExtras/MRPng.h"
+
 namespace MR
 {
 

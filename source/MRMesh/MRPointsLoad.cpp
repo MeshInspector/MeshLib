@@ -10,14 +10,9 @@
 #include "MRIOParsing.h"
 #include "MRParallelFor.h"
 #include "MRComputeBoundingBox.h"
-#include "MRPointsLoadE57.h"
 #include "MRBitSetParallelFor.h"
 
 #include <fstream>
-
-#ifndef MRMESH_NO_OPENCTM
-#include "OpenCTM/openctm.h"
-#endif
 
 namespace MR::PointsLoad
 {
@@ -194,108 +189,6 @@ Expected<MR::PointCloud> fromPts( std::istream& in, const PointsLoadSettings& se
     return pc;
 }
 
-#ifndef MRMESH_NO_OPENCTM
-
-Expected<MR::PointCloud> fromCtm( const std::filesystem::path& file, const PointsLoadSettings& settings )
-{
-    std::ifstream in( file, std::ifstream::binary );
-    if ( !in )
-        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
-
-    return addFileNameInError( fromCtm( in, settings ), file );
-}
-
-Expected<MR::PointCloud> fromCtm( std::istream& in, const PointsLoadSettings& settings )
-{
-    MR_TIMER;
-
-    class ScopedCtmConext
-    {
-        CTMcontext context_ = ctmNewContext( CTM_IMPORT );
-    public:
-        ~ScopedCtmConext()
-        {
-            ctmFreeContext( context_ );
-        }
-        operator CTMcontext()
-        {
-            return context_;
-        }
-    } context;
-
-    struct LoadData
-    {
-        std::function<bool( float )> callbackFn{};
-        std::istream* stream;
-        bool wasCanceled{ false };
-    } loadData;
-    loadData.stream = &in;
-
-    const auto posStart = in.tellg();
-    in.seekg( 0, std::ios_base::end );
-    const auto posEnd = in.tellg();
-    in.seekg( posStart );
-
-    if ( settings.callback )
-    {
-        loadData.callbackFn = [callback = settings.callback, posStart, sizeAll = float( posEnd - posStart ), &in]( float )
-        {
-            float progress = float( in.tellg() - posStart ) / sizeAll;
-            return callback( progress );
-        };
-    }
-
-    ctmLoadCustom( context, []( void* buf, CTMuint size, void* data )
-    {
-        LoadData& loadData = *reinterpret_cast< LoadData* >( data );
-        auto& stream = *loadData.stream;
-        auto pos = stream.tellg();
-        loadData.wasCanceled |= !readByBlocks( stream, (char*)buf, size, loadData.callbackFn, 1u << 12 );
-        if ( loadData.wasCanceled )
-            return 0u;
-        return ( CTMuint )( stream.tellg() - pos );
-    }, & loadData );
-
-    auto vertCount = ctmGetInteger( context, CTM_VERTEX_COUNT );
-    auto vertices = ctmGetFloatArray( context, CTM_VERTICES );
-    if ( loadData.wasCanceled )
-        return unexpected( "Loading canceled" );
-    if ( ctmGetError( context ) != CTM_NONE )
-        return unexpected( "Error reading CTM format" );
-
-    if ( settings.colors )
-    {
-        auto colorAttrib = ctmGetNamedAttribMap( context, "Color" );
-        if ( colorAttrib != CTM_NONE )
-        {
-            auto colorArray = ctmGetFloatArray( context, colorAttrib );
-            settings.colors->resize( vertCount );
-            for ( VertId i{ 0 }; CTMuint( i ) < vertCount; ++i )
-            {
-                auto j = 4 * i;
-                ( *settings.colors )[i] = Color( colorArray[j], colorArray[j + 1], colorArray[j + 2], colorArray[j + 3] );
-            }
-        }
-    }
-
-    PointCloud points;
-    points.points.resize( vertCount );
-    points.validPoints.resize( vertCount, true );
-    for ( VertId i{0}; i < (int) vertCount; ++i )
-        points.points[i] = Vector3f( vertices[3 * i], vertices[3 * i + 1], vertices[3 * i + 2] );
-
-    if ( ctmGetInteger( context, CTM_HAS_NORMALS ) == CTM_TRUE )
-    {
-        auto normals = ctmGetFloatArray( context, CTM_NORMALS );
-        points.normals.resize( vertCount );
-        for ( VertId i{0}; i < (int) vertCount; ++i )
-            points.normals[i] = Vector3f( normals[3 * i], normals[3 * i + 1], normals[3 * i + 2] );
-    }
-
-    return points;
-}
-#endif
-
 Expected<MR::PointCloud> fromPly( const std::filesystem::path& file, const PointsLoadSettings& settings )
 {
     std::ifstream in( file, std::ifstream::binary );
@@ -423,30 +316,6 @@ Expected<MR::PointCloud> fromObj( std::istream& in, const PointsLoadSettings& se
     return cloud;
 }
 
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
-
-Expected<PointCloud> fromE57( const std::filesystem::path& file, const PointsLoadSettings& settings )
-{
-    auto x = fromSceneE57File( file, { .combineAllObjects = true, .identityXf = !settings.outXf, .progress = settings.callback } );
-    if ( !x )
-        return unexpected( std::move( x.error() ) );
-    if ( x->empty() )
-        return PointCloud();
-    assert( x->size() == 1 );
-    if ( settings.colors )
-        *settings.colors = std::move( (*x)[0].colors );
-    if ( settings.outXf )
-        *settings.outXf = (*x)[0].xf;
-    return std::move( (*x)[0].cloud );
-}
-
-Expected<PointCloud> fromE57( std::istream&, const PointsLoadSettings& )
-{
-    return unexpected( "no support for reading e57 from arbitrary stream yet" );
-}
-
-#endif
-
 Expected<MR::PointCloud> fromDxf( const std::filesystem::path& file, const PointsLoadSettings& settings )
 {
     std::ifstream in( file, std::ifstream::binary );
@@ -554,15 +423,5 @@ MR_ADD_POINTS_LOADER( IOFilter( "OBJ (.obj)",        "*.obj" ), fromObj )
 MR_ADD_POINTS_LOADER( IOFilter( "PLY (.ply)",        "*.ply" ), fromPly )
 MR_ADD_POINTS_LOADER( IOFilter( "LIDAR scanner (.pts)", "*.pts" ), fromPts )
 MR_ADD_POINTS_LOADER( IOFilter( "DXF (.dxf)",        "*.dxf" ), fromDxf )
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
-MR_ADD_POINTS_LOADER( IOFilter( "E57 (.e57)",        "*.e57" ), fromE57 )
-#endif
-#ifndef MRMESH_NO_LAS
-MR_ADD_POINTS_LOADER( IOFilter( "LAS (.las)",        "*.las" ), fromLas )
-MR_ADD_POINTS_LOADER( IOFilter( "LASzip (.laz)",     "*.laz" ), fromLas )
-#endif
-#ifndef MRMESH_NO_OPENCTM
-MR_ADD_POINTS_LOADER( IOFilter( "CTM (.ctm)",        "*.ctm" ), fromCtm )
-#endif
 
 } // namespace MR::PointsLoad

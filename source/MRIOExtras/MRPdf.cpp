@@ -1,20 +1,18 @@
 #include "MRPdf.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PDF )
-#include "MRSerializer.h"
-#include "MRImageSave.h"
-#include "MRUniqueTemporaryFolder.h"
-#include "MRVector2.h"
-#include "MRImage.h"
-#include "MRBox.h"
-#include "MRStringConvert.h"
-#include "MRGTest.h"
+#ifndef MRIOEXTRAS_NO_PDF
+#include "MRMesh/MRImageSave.h"
+#include "MRMesh/MRUniqueTemporaryFolder.h"
+#include "MRMesh/MRVector2.h"
+#include "MRMesh/MRImage.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRGTest.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRSystem.h"
+
 #include <fstream>
 
 #undef NOMINMAX
 
-#include "hpdf.h"
+#include <hpdf.h>
 
 namespace MR
 {

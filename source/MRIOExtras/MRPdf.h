@@ -1,9 +1,13 @@
 #pragma once
-#include "MRMeshFwd.h"
-#if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_PDF )
-#include <filesystem>
 
-#include "hpdf.h"
+#include "config.h"
+#ifndef MRIOEXTRAS_NO_PDF
+#include "exports.h"
+
+#include <hpdf.h>
+
+#include <filesystem>
+#include <vector>
 
 namespace MR
 {
@@ -34,11 +38,11 @@ class Pdf
 {
 public:
     /// Ctor
-    MRMESH_API Pdf( const std::filesystem::path& documentPath, const PdfParameters& params = PdfParameters() );
-    MRMESH_API Pdf( Pdf&& other ) noexcept;
-    MRMESH_API Pdf& operator=( Pdf other ) noexcept; // Sic, passing by value.
+    MRIOEXTRAS_API Pdf( const std::filesystem::path& documentPath, const PdfParameters& params = PdfParameters() );
+    MRIOEXTRAS_API Pdf( Pdf&& other ) noexcept;
+    MRIOEXTRAS_API Pdf& operator=( Pdf other ) noexcept; // Sic, passing by value.
     /// Dtor. Automatically do close
-    MRMESH_API ~Pdf();
+    MRIOEXTRAS_API ~Pdf();
 
     Pdf( const Pdf& rhs ) = delete;
     Pdf& operator = ( const Pdf& rhs ) = delete;
@@ -51,7 +55,7 @@ public:
      * horAlignment = left
      * if isTitle - horAlignment = center, use titleFontSize
      */
-    MRMESH_API void addText( const std::string& text, bool isTitle = false );
+    MRIOEXTRAS_API void addText( const std::string& text, bool isTitle = false );
 
     /**
      * @brief Add image from file in current cursor position.
@@ -62,14 +66,14 @@ public:
      *     relative_position is in range [0., 1.], where 0. - left border of image, 1. - right border
      * @param caption if not empty - add caption under marks (if exist) or image.
      */
-    MRMESH_API void addImageFromFile( const std::filesystem::path& imagePath, const std::string& caption = {},
+    MRIOEXTRAS_API void addImageFromFile( const std::filesystem::path& imagePath, const std::string& caption = {},
         const std::vector<std::pair<double, std::string>>& valuesMarks = {} );
 
     /// Add new pageand move cursor on it
-    MRMESH_API void newPage();
+    MRIOEXTRAS_API void newPage();
 
     /// Save and close document. After this impossible add anything in document
-    MRMESH_API void close();
+    MRIOEXTRAS_API void close();
 
     void setCursorPosX( HPDF_REAL posX ) { cursorX_ = posX; };
     void setCursorPosY( HPDF_REAL posY ) { cursorY_ = posY; };

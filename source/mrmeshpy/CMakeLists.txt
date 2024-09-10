@@ -18,6 +18,7 @@ if(APPLE)
   set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
+    MRIOExtras
     MRSymbolMesh
     spdlog
     fmt
@@ -26,6 +27,7 @@ if(APPLE)
 ELSE()
   target_link_libraries(${PROJECT_NAME} PUBLIC
     MRMesh
+    MRIOExtras
     MRSymbolMesh
     spdlog
     fmt

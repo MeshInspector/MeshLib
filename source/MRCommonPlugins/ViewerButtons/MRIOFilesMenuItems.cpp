@@ -7,7 +7,6 @@
 #include "MRMesh/MRLinesLoad.h"
 #include "MRMesh/MRPointsLoad.h"
 #include "MRMesh/MRSerializer.h"
-#include "MRMesh/MRGltfSerializer.h"
 #include "MRViewer/MRAppendHistory.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRStringConvert.h"
@@ -43,6 +42,7 @@
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRLambdaRibbonItem.h"
 #include "MRPch/MRWasm.h"
+#include "MRIOExtras/MRPng.h"
 
 #ifndef MESHLIB_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"

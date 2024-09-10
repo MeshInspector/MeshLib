@@ -1,0 +1,14 @@
+#pragma once
+
+#cmakedefine MRIOEXTRAS_NO_3MF
+#cmakedefine MRIOEXTRAS_NO_CTM
+#cmakedefine MRIOEXTRAS_NO_E57
+#cmakedefine MRIOEXTRAS_NO_GLTF
+#cmakedefine MRIOEXTRAS_NO_JPEG
+#cmakedefine MRIOEXTRAS_NO_LAS
+#cmakedefine MRIOEXTRAS_NO_PDF
+#cmakedefine MRIOEXTRAS_NO_PNG
+#cmakedefine MRIOEXTRAS_NO_STEP
+#cmakedefine MRIOEXTRAS_NO_ZLIB
+
+#cmakedefine MRIOEXTRAS_OPENCASCADE_USE_XDE

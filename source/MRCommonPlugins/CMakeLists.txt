@@ -25,6 +25,7 @@ IF(MR_EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     tbb
     MRMesh
+    MRIOExtras
     MRViewer
     glad
     glfw
@@ -36,6 +37,7 @@ ELSE() # NOT MR_EMSCRIPTEN
   target_link_libraries(${PROJECT_NAME} PRIVATE
     tbb
     MRMesh
+    MRIOExtras
     MRViewer
     clip
     glad

@@ -1,6 +1,7 @@
 #include "MRZlib.h"
-#include "MRBuffer.h"
-#include "MRFinally.h"
+#ifndef MRIOEXTRAS_NO_ZLIB
+#include "MRMesh/MRBuffer.h"
+#include "MRMesh/MRFinally.h"
 
 #include <zlib.h>
 
@@ -136,3 +137,4 @@ VoidOrErrStr zlibDecompressStream( std::istream& in, std::ostream& out )
 }
 
 } // namespace MR
+#endif

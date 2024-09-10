@@ -6,18 +6,6 @@
 #include <fstream>
 #include <filesystem>
 
-#ifndef MRMESH_NO_PNG
-#ifdef __EMSCRIPTEN__
-#include <png.h>
-#else
-#include <libpng16/png.h>
-#endif
-#endif
-
-#ifndef MRMESH_NO_JPEG
-#include <turbojpeg.h>
-#endif
-
 #ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_TIFF
 #include "MRTiffIO.h"
@@ -77,122 +65,6 @@ VoidOrErrStr toBmp( const Image& image, const std::filesystem::path& file )
     return {};
 }
 
-#ifndef MRMESH_NO_PNG
-VoidOrErrStr toPng( const Image& image, const std::filesystem::path& file )
-{
-    std::ofstream fp( file, std::ios::binary );
-    if ( !fp )
-        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
-
-    return toPng( image, fp );
-}
-
-struct WritePng
-{
-    WritePng()
-    {
-        pngPtr = png_create_write_struct( PNG_LIBPNG_VER_STRING, NULL, NULL, NULL );
-        if ( !pngPtr )
-            return;
-        infoPtr = png_create_info_struct( pngPtr );
-    }
-    ~WritePng()
-    {
-        if ( pngPtr )
-            png_destroy_write_struct( &pngPtr, &infoPtr );
-    }
-
-    png_structp pngPtr{ nullptr };
-    png_infop infoPtr{ nullptr };
-};
-
-static void write_to_png( png_structp png_ptr, png_bytep data, png_size_t length )
-{
-    std::ostream* stream = ( std::ostream* )png_get_io_ptr( png_ptr );
-    stream->write( ( char* )data, length );
-}
-
-static void flush_png( png_structp png_ptr )
-{
-    std::ostream* stream = ( std::ostream* )png_get_io_ptr( png_ptr );
-    stream->flush();
-}
-
-VoidOrErrStr toPng( const Image& image, std::ostream& os )
-{
-    WritePng png;
-    if ( !png.pngPtr )
-        return unexpected( "Cannot create png" );
-
-    if ( !png.infoPtr )
-        return unexpected( "Cannot create png info" );
-
-    png_set_write_fn( png.pngPtr, &os, write_to_png, flush_png );
-
-    // Output is 8bit depth, RGBA format.
-    png_set_IHDR(
-      png.pngPtr,
-      png.infoPtr,
-      image.resolution.x, image.resolution.y,
-      8,
-      PNG_COLOR_TYPE_RGBA,
-      PNG_INTERLACE_NONE,
-      PNG_COMPRESSION_TYPE_DEFAULT,
-      PNG_FILTER_TYPE_DEFAULT
-    );
-    png_write_info( png.pngPtr, png.infoPtr );
-
-    std::vector<unsigned char*> ptrs( image.resolution.y );
-    for ( int i = 0; i < image.resolution.y; ++i )
-        ptrs[image.resolution.y - i - 1] = ( unsigned char* )( image.pixels.data() + image.resolution.x * i );
-
-    png_write_image( png.pngPtr, ptrs.data() );
-    png_write_end( png.pngPtr, NULL );
-    return {};
-}
-#endif
-
-#ifndef MRMESH_NO_JPEG
-struct JpegWriter
-{
-    JpegWriter()
-    {
-        tjInstance = tjInitCompress();
-    }
-    ~JpegWriter()
-    {
-        if ( tjInstance )
-            tjDestroy( tjInstance );
-        if ( jpegBuf )
-            tjFree( jpegBuf );
-    }
-    unsigned char* jpegBuf{ nullptr };
-    tjhandle tjInstance{ nullptr };
-};
-
-VoidOrErrStr toJpeg( const Image& image, const std::filesystem::path& path )
-{
-    unsigned long jpegSize = 0;
-    JpegWriter writer;
-
-    if ( !writer.tjInstance )
-        return unexpected( "Cannot initialize JPEG compressor." );
-
-    auto compressRes = tjCompress2( writer.tjInstance, ( unsigned char* )image.pixels.data(), image.resolution.x, 0, image.resolution.y, TJPF_RGBA, &writer.jpegBuf, &jpegSize, TJSAMP_444, 95, TJFLAG_BOTTOMUP );
-    if ( compressRes != 0 )
-        return unexpected( "Error occurred while compressing image data." );
-
-    std::ofstream outFile( path, std::ios::binary );
-    if ( !outFile )
-        return unexpected( "Cannot write file " + utf8string( path ) );
-
-    if ( !outFile.write( ( char* )writer.jpegBuf, jpegSize ) )
-        return unexpected( "Cannot write file " + utf8string( path ) );
-
-    return {};
-}
-#endif
-
 #ifndef __EMSCRIPTEN__
 
 #ifndef MRMESH_NO_TIFF
@@ -223,12 +95,6 @@ VoidOrErrStr toAnySupportedFormat( const Image& image, const std::filesystem::pa
     return saver( image, file );
 }
 
-#ifndef MRMESH_NO_PNG
-MR_ADD_IMAGE_SAVER( IOFilter( "Portable Network Graphics (.png)",  "*.png" ), toPng )
-#endif
-#ifndef MRMESH_NO_JPEG
-MR_ADD_IMAGE_SAVER( IOFilter( "JPEG (.jpg)",  "*.jpg" ), toJpeg )
-#endif
 #ifndef __EMSCRIPTEN__
 #ifndef MRMESH_NO_TIFF
 MR_ADD_IMAGE_SAVER( IOFilter( "TIFF (.tif)",  "*.tif" ), toTiff )

@@ -272,6 +272,9 @@ MR_FORMAT_REGISTRY_DECL( ImageLoader )
 #define MR_ADD_IMAGE_LOADER( filter, loader ) \
 MR_ON_INIT { using namespace MR::ImageLoad; setImageLoader( filter, loader ); };
 
+#define MR_ADD_IMAGE_LOADER_WITH_PRIORITY( filter, loader, priority ) \
+MR_ON_INIT { using namespace MR::ImageLoad; setImageLoader( filter, loader, priority ); };
+
 } // namespace ImageLoad
 
 namespace ImageSave
@@ -283,6 +286,9 @@ MR_FORMAT_REGISTRY_DECL( ImageSaver )
 
 #define MR_ADD_IMAGE_SAVER( filter, saver ) \
 MR_ON_INIT { using namespace MR::ImageSave; setImageSaver( filter, saver ); };
+
+#define MR_ADD_IMAGE_SAVER_WITH_PRIORITY( filter, saver, priority ) \
+MR_ON_INIT { using namespace MR::ImageSave; setImageSaver( filter, saver, priority ); };
 
 } // namespace ImageSave
 

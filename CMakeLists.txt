@@ -28,6 +28,7 @@ option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
 option(MESHLIB_EXPERIMENTAL_BUILD_C_BINDING "(experimental) Build C binding library" ON)
 option(MESHLIB_BUILD_SYMBOLMESH "Build symbol-to-mesh library" ON)
 option(MESHLIB_BUILD_VOXELS "Build voxels library" ON)
+option(MESHLIB_BUILD_EXTRA_IO_FORMATS "Build extra IO format support library" ON)
 
 include(CTest)
 
@@ -149,6 +150,10 @@ ENDIF()
 # MRMesh library is always built
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRPch ./MRPch)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
+
+IF(MESHLIB_BUILD_EXTRA_IO_FORMATS)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/MRIOExtras ./MRIOExtras)
+ENDIF()
 
 IF(MESHLIB_BUILD_SYMBOLMESH)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRSymbolMesh ./MRSymbolMesh)

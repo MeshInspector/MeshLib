@@ -55,9 +55,6 @@
     <Filter Include="Source Files\DistanceMap">
       <UniqueIdentifier>{7ce0eb63-0e26-416f-a991-db2be3e673b8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\PDF">
-      <UniqueIdentifier>{6e164873-f97c-4112-be31-701b3284f4c6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\DataModel\Features">
       <UniqueIdentifier>{f6ea3197-3e0d-44ec-9b3e-6b8fe7e0bc15}</UniqueIdentifier>
     </Filter>
@@ -489,9 +486,6 @@
     <ClInclude Include="MRPrimitiveMapsComposition.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRPdf.h">
-      <Filter>Source Files\PDF</Filter>
-    </ClInclude>
     <ClInclude Include="MRAABBTreePolyline.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
@@ -780,9 +774,6 @@
     <ClInclude Include="MRPointsToMeshProjector.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
-    <ClInclude Include="MRGltfSerializer.h">
-      <Filter>Source Files\IO</Filter>
-    </ClInclude>
     <ClInclude Include="MRParallelFor.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
@@ -969,9 +960,6 @@
     <ClInclude Include="MRMeshOrPoints.h">
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshLoadStep.h">
-      <Filter>Source Files\IO</Filter>
-    </ClInclude>
     <ClInclude Include="MRZip.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
@@ -1047,9 +1035,6 @@
     <ClInclude Include="MRFinally.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRZlib.h">
-      <Filter>Source Files\IO</Filter>
-    </ClInclude>
     <ClInclude Include="MRCylinderApproximator.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -1079,9 +1064,6 @@
     </ClInclude>
     <ClInclude Include="MRSubfeatures.h">
       <Filter>Source Files\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="MRPointsLoadE57.h">
-      <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRLocalTriangulations.h">
       <Filter>Source Files\Triangulation</Filter>
@@ -1193,9 +1175,6 @@
     </ClInclude>
     <ClInclude Include="MREnums.h">
       <Filter>Source Files\Basic</Filter>
-    </ClInclude>
-    <ClInclude Include="MR3MFSerializer.h">
-      <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRParabola.h">
       <Filter>Source Files\Math</Filter>
@@ -1520,9 +1499,6 @@
     <ClCompile Include="MRPrimitiveMapsComposition.cpp">
       <Filter>Source Files\Basic</Filter>
     </ClCompile>
-    <ClCompile Include="MRPdf.cpp">
-      <Filter>Source Files\PDF</Filter>
-    </ClCompile>
     <ClCompile Include="MRAABBTreePolyline.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
@@ -1748,9 +1724,6 @@
     <ClCompile Include="MRPointsToMeshProjector.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
-    <ClCompile Include="MRGltfSerializer.cpp">
-      <Filter>Source Files\IO</Filter>
-    </ClCompile>
     <ClCompile Include="MRFreeFormDeformer.cpp">
       <Filter>Source Files\LinearSystem</Filter>
     </ClCompile>
@@ -1868,12 +1841,6 @@
     <ClCompile Include="MRBasinVolume.cpp">
       <Filter>Source Files\WaterFlow</Filter>
     </ClCompile>
-    <ClCompile Include="MRPointsLoadE57.cpp">
-      <Filter>Source Files\IO</Filter>
-    </ClCompile>
-    <ClCompile Include="MRPointsLoadLas.cpp">
-      <Filter>Source Files\IO</Filter>
-    </ClCompile>
     <ClCompile Include="MRPrecipitationSimulator.cpp">
       <Filter>Source Files\WaterFlow</Filter>
     </ClCompile>
@@ -1882,9 +1849,6 @@
     </ClCompile>
     <ClCompile Include="MRMeshOrPoints.cpp">
       <Filter>Source Files\Mesh</Filter>
-    </ClCompile>
-    <ClCompile Include="MRMeshLoadStep.cpp">
-      <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRZip.cpp">
       <Filter>Source Files\IO</Filter>
@@ -1936,9 +1900,6 @@
     </ClCompile>
     <ClCompile Include="MRCylinderObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
-    </ClCompile>
-    <ClCompile Include="MRZlib.cpp">
-      <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRConeObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
@@ -2038,9 +1999,6 @@
     </ClCompile>
     <ClCompile Include="MRFillHoleNicely.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
-    </ClCompile>
-    <ClCompile Include="MR3MFSerializer.cpp">
-      <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRBestFitParabola.cpp">
       <Filter>Source Files\Math</Filter>

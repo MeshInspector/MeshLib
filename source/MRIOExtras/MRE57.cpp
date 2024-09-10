@@ -1,13 +1,15 @@
-#include "MRPointsLoadE57.h"
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
-#include "MRBox.h"
-#include "MRIOFormatsRegistry.h"
-#include "MRObjectPoints.h"
-#include "MRPointCloud.h"
-#include "MRStringConvert.h"
-#include "MRQuaternion.h"
-#include "MRTimer.h"
+#include "MRE57.h"
+#ifndef MRIOEXTRAS_NO_E57
+#include <MRMesh/MRBox.h>
+#include <MRMesh/MRIOFormatsRegistry.h>
+#include <MRMesh/MRObjectPoints.h>
+#include <MRMesh/MRPointCloud.h>
+#include <MRMesh/MRProgressCallback.h>
+#include <MRMesh/MRStringConvert.h>
+#include <MRMesh/MRQuaternion.h>
+#include <MRMesh/MRTimer.h>
 #include <MRPch/MRFmt.h>
+
 #include <climits>
 
 #pragma warning(push)
@@ -20,10 +22,7 @@
 
 #pragma warning(pop)
 
-namespace MR
-{
-
-namespace PointsLoad
+namespace MR::PointsLoad
 {
 
 Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path& file, const E57LoadSettings & settings )
@@ -248,6 +247,28 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
     return res;
 }
 
+Expected<PointCloud> fromE57( const std::filesystem::path& file, const PointsLoadSettings& settings )
+{
+    auto x = fromSceneE57File( file, { .combineAllObjects = true, .identityXf = !settings.outXf, .progress = settings.callback } );
+    if ( !x )
+        return unexpected( std::move( x.error() ) );
+    if ( x->empty() )
+        return PointCloud();
+    assert( x->size() == 1 );
+    if ( settings.colors )
+        *settings.colors = std::move( (*x)[0].colors );
+    if ( settings.outXf )
+        *settings.outXf = (*x)[0].xf;
+    return std::move( (*x)[0].cloud );
+}
+
+Expected<PointCloud> fromE57( std::istream&, const PointsLoadSettings& )
+{
+    return unexpected( "no support for reading e57 from arbitrary stream yet" );
+}
+
+MR_ADD_POINTS_LOADER( IOFilter( "E57 (.e57)", "*.e57" ), fromE57 )
+
 Expected<std::vector<std::shared_ptr<Object>>> loadObjectFromE57( const std::filesystem::path& path, std::string*, ProgressCallback cb )
 {
     return fromSceneE57File( path, { .progress = std::move( cb ) } )
@@ -277,8 +298,5 @@ Expected<std::vector<std::shared_ptr<Object>>> loadObjectFromE57( const std::fil
 
 MR_ADD_OBJECT_LOADER( IOFilter( "E57 (.e57)", "*.e57" ), loadObjectFromE57 )
 
-} //namespace PointsLoad
-
-} //namespace MR
-
-#endif // !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_E57 )
+} //namespace MR::PointsLoad
+#endif

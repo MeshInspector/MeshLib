@@ -1,15 +1,15 @@
-#include "MRMeshLoadStep.h"
-#ifndef MRMESH_NO_OPENCASCADE
-#include "MRFinally.h"
-#include "MRIOFormatsRegistry.h"
-#include "MRMesh.h"
-#include "MRMeshBuilder.h"
-#include "MRMeshLoadSettings.h"
-#include "MRObjectMesh.h"
-#include "MRObjectsAccess.h"
-#include "MRParallelFor.h"
-#include "MRStringConvert.h"
-#include "MRTimer.h"
+#include "MRStep.h"
+#ifndef MRIOEXTRAS_NO_STEP
+#include "MRMesh/MRFinally.h"
+#include "MRMesh/MRIOFormatsRegistry.h"
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRMeshBuilder.h"
+#include "MRMesh/MRMeshLoadSettings.h"
+#include "MRMesh/MRObjectMesh.h"
+#include "MRMesh/MRObjectsAccess.h"
+#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRTimer.h"
 
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRSuppressWarning.h"
@@ -174,7 +174,7 @@ private:
 #pragma message( "Progress indication is currently unsupported for OpenCASCADE versions prior to 7.4" )
 #endif
 
-#if defined( MRMESH_OPENCASCADE_USE_XDE ) && STEP_LOAD_COLORS
+#if defined( MRIOEXTRAS_OPENCASCADE_USE_XDE ) && STEP_LOAD_COLORS
 Color toColor( const Quantity_ColorRGBA& rgba )
 {
     const auto& rgb = rgba.GetRGB();
@@ -269,7 +269,7 @@ public:
         }
     }
 
-#ifdef MRMESH_OPENCASCADE_USE_XDE
+#ifdef MRIOEXTRAS_OPENCASCADE_USE_XDE
     /// load object structure without actual geometry data
     void loadModelStructure( const Handle( TDocStd_Document )& document )
     {
@@ -371,7 +371,7 @@ public:
     }
 
 private:
-#ifdef MRMESH_OPENCASCADE_USE_XDE
+#ifdef MRIOEXTRAS_OPENCASCADE_USE_XDE
     void readLabel_( const TDF_Label& label )
     {
         using ShapeTool = XCAFDoc_ShapeTool;
@@ -766,7 +766,7 @@ Expected<Mesh> fromStepImpl( const std::function<VoidOrErrStr ( STEPControl_Read
     return result;
 }
 
-#ifndef MRMESH_OPENCASCADE_USE_XDE
+#ifndef MRIOEXTRAS_OPENCASCADE_USE_XDE
 Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<VoidOrErrStr ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
 {
     MR_TIMER
@@ -791,7 +791,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Voi
 }
 #endif
 
-#ifdef MRMESH_OPENCASCADE_USE_XDE
+#ifdef MRIOEXTRAS_OPENCASCADE_USE_XDE
 Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<VoidOrErrStr ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
 {
     MR_TIMER
@@ -878,7 +878,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( const std::filesystem::path
 #endif
         ;
     }, settings )
-#ifndef MRMESH_OPENCASCADE_USE_XDE
+#ifndef MRIOEXTRAS_OPENCASCADE_USE_XDE
     .and_then( [&] ( std::shared_ptr<Object> result ) -> Expected<std::shared_ptr<Object>>
     {
         result->setName( utf8string( path.stem() ) );
@@ -908,7 +908,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( std::istream& in, const Mes
 #endif
         ;
     }, settings )
-#ifndef MRMESH_OPENCASCADE_USE_XDE
+#ifndef MRIOEXTRAS_OPENCASCADE_USE_XDE
     .and_then( [&] ( std::shared_ptr<Object> result ) -> Expected<std::shared_ptr<Object>>
     {
         auto counter = 0;
@@ -935,4 +935,4 @@ MR_ADD_SCENE_LOADER( IOFilter( "STEP model (.step,.stp)", "*.step;*.stp" ), from
 
 } // namespace MR::MeshLoad
 
-#endif // MRMESH_NO_OPENCASCADE
+#endif

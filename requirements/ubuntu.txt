@@ -1,6 +1,5 @@
 build-essential
 cmake
-gawk
 libblosc-dev
 libboost-all-dev
 libexpected-dev

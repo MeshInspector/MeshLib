@@ -75,13 +75,26 @@ class ChangeFacesColorMapAction : public HistoryAction
 {
 public:
     using Obj = ObjectMeshHolder;
-    /// Constructed from original obj
+
+    /// use this constructor to remember object's face colors before making any changes in them
     ChangeFacesColorMapAction( const std::string& name, const std::shared_ptr<ObjectMeshHolder>& obj ) :
         obj_{ obj },
         name_{ name }
     {
         if ( obj )
             colorMap_ = obj->getFacesColorMap();
+    }
+
+    /// use this constructor to remember object's face colors and immediate set new value
+    ChangeFacesColorMapAction( const std::string& name, const std::shared_ptr<ObjectMeshHolder>& obj, FaceColors&& newColorMap ) :
+        obj_{ obj },
+        name_{ name }
+    {
+        if ( obj_ )
+        {
+            colorMap_ = std::move( newColorMap );
+            obj_->updateFacesColorMap( colorMap_ );
+        }
     }
 
     virtual std::string name() const override

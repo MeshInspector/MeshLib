@@ -212,4 +212,11 @@ Expected<TeethMaskToDirectionVolumeConvertor::ProcessResult> TeethMaskToDirectio
     };
 }
 
+Expected<std::array<SimpleVolume, 3>> teethMaskToDirectionVolume( const VdbVolume& volume )
+{
+    return TeethMaskToDirectionVolumeConvertor::create( volume )
+            .and_then( &TeethMaskToDirectionVolumeConvertor::convertAll )
+            .transform( [] ( auto&& x ) { return x.volume; } );
+}
+
 }

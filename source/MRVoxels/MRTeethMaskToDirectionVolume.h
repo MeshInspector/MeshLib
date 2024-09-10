@@ -91,4 +91,9 @@ private:
     SimpleVolume mask_;
 };
 
+
+/// A shortcut for \ref TeethMaskToDirectionVolumeConvertor::create and \ref TeethMaskToDirectionVolumeConvertor::convertAll
+MRVOXELS_API Expected<std::array<SimpleVolume, 3>> teethMaskToDirectionVolume( const VdbVolume& volume );
+
+
 }

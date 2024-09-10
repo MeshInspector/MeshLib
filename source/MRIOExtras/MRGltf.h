@@ -1,16 +1,19 @@
 #pragma once
 
-#include "MRMeshFwd.h"
-#ifndef MRMESH_NO_GLTF
-#include "MRObject.h"
-#include "MRExpected.h"
+#include "config.h"
+#ifndef MRIOEXTRAS_NO_GLTF
+#include "exports.h"
+
+#include <MRMesh/MRExpected.h>
+#include <MRMesh/MRObject.h>
 
 namespace MR
 {
-//loads scene from glTF file in a new container object
-MRMESH_API Expected<std::shared_ptr<Object>> deserializeObjectTreeFromGltf( const std::filesystem::path& file, ProgressCallback callback = {} );
-//saves scene to a glTF file
-MRMESH_API VoidOrErrStr serializeObjectTreeToGltf( const Object& root, const std::filesystem::path& file, ProgressCallback callback = {} );
 
-}
+// loads scene from glTF file in a new container object
+MRIOEXTRAS_API Expected<std::shared_ptr<Object>> deserializeObjectTreeFromGltf( const std::filesystem::path& file, ProgressCallback callback = {} );
+// saves scene to a glTF file
+MRIOEXTRAS_API VoidOrErrStr serializeObjectTreeToGltf( const Object& root, const std::filesystem::path& file, ProgressCallback callback = {} );
+
+} // namespace MR
 #endif

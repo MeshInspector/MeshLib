@@ -2,7 +2,6 @@
 #include "MRBitSetParallelFor.h"
 #include "MRDistanceMap.h"
 #include "MRDistanceMapSave.h"
-#include "MRGltfSerializer.h"
 #include "MRIOFormatsRegistry.h"
 #include "MRLinesSave.h"
 #include "MRMeshSave.h"

@@ -67,12 +67,6 @@
 #pragma warning(pop)
 #endif
 
-#ifndef __EMSCRIPTEN__
-#include <libpng16/png.h>
-#endif
-
-#include "OpenCTM/openctm.h"
-
 #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
 // in Debug Clang builds with PCH including pybind, all libraries and executable depend on python
 #if !defined(__clang__) || defined(NDEBUG)

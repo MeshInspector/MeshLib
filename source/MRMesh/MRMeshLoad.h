@@ -49,12 +49,6 @@ MRMESH_API Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings
 MRMESH_API Expected<Mesh> fromPly( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
 MRMESH_API Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings = {} );
 
-#ifndef MRMESH_NO_OPENCTM
-/// loads from .ctm file
-MRMESH_API Expected<Mesh> fromCtm( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
-MRMESH_API Expected<Mesh> fromCtm( std::istream& in, const MeshLoadSettings& settings = {} );
-#endif
-
 MRMESH_API Expected<Mesh> fromDxf( const std::filesystem::path& path, const MeshLoadSettings& settings = {} );
 MRMESH_API Expected<Mesh> fromDxf( std::istream& in, const MeshLoadSettings& settings = {} );
 

@@ -8,7 +8,6 @@
 #include "MRIOFormatsRegistry.h"
 #include "MRStringConvert.h"
 #include "MRMeshLoadObj.h"
-#include "MRMeshLoadStep.h"
 #include "MRObjectMesh.h"
 #include "MRObjectsAccess.h"
 #include "MRColor.h"
@@ -21,10 +20,6 @@
 
 #include <array>
 #include <future>
-
-#ifndef MRMESH_NO_OPENCTM
-#include "OpenCTM/openctm.h"
-#endif
 
 namespace MR
 {
@@ -588,118 +583,6 @@ Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings /*= {
     return res;
 }
 
-#ifndef MRMESH_NO_OPENCTM
-
-Expected<Mesh> fromCtm( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
-{
-    std::ifstream in( file, std::ifstream::binary );
-    if ( !in )
-        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
-
-    return addFileNameInError( fromCtm( in, settings ), file );
-}
-
-Expected<Mesh> fromCtm( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
-{
-    MR_TIMER
-
-    class ScopedCtmConext 
-    {
-        CTMcontext context_ = ctmNewContext( CTM_IMPORT );
-    public:
-        ~ScopedCtmConext() { ctmFreeContext( context_ ); }
-        operator CTMcontext() { return context_; }
-    } context;
-
-
-    struct LoadData
-    {
-        std::function<bool( float )> callbackFn{};
-        std::istream* stream;
-        bool wasCanceled{ false };
-    } loadData;
-    loadData.stream = &in;
-
-    const auto posStart = in.tellg();
-    in.seekg( 0, std::ios_base::end );
-    const auto posEnd = in.tellg();
-    in.seekg( posStart );
-
-    if ( settings.callback )
-    {
-        loadData.callbackFn = [callback = settings.callback, posStart, sizeAll = float( posEnd - posStart ), &in] ( float )
-        {
-            float progress = float( in.tellg() - posStart ) / sizeAll;
-            return callback( progress );
-        };
-    }
-
-    ctmLoadCustom( context, []( void * buf, CTMuint size, void * data )
-    {
-        LoadData& loadData = *reinterpret_cast<LoadData*>( data );
-        auto& stream = *loadData.stream;
-        auto pos = stream.tellg();
-        loadData.wasCanceled |= !readByBlocks( stream, ( char* )buf, size, loadData.callbackFn, 1u << 12 );
-        if ( loadData.wasCanceled )
-            return 0u;
-        return (CTMuint)( stream.tellg() - pos );
-    }, &loadData );
-
-    auto vertCount = ctmGetInteger( context, CTM_VERTEX_COUNT );
-    auto triCount  = ctmGetInteger( context, CTM_TRIANGLE_COUNT );
-    auto vertices  = ctmGetFloatArray( context, CTM_VERTICES );
-    auto indices   = ctmGetIntegerArray( context, CTM_INDICES );
-    if ( loadData.wasCanceled )
-        return unexpected( "Loading canceled" );
-    if ( ctmGetError(context) != CTM_NONE )
-        return unexpected( "Error reading CTM format" );
-
-    // even if we save false triangle (0,0,0) in MG2 format, it can be open as triangle (i,i,i)
-    if ( triCount == 1 && indices[0] == indices[1] && indices[0] == indices[2] )
-    {
-        // CTM file is representing points, but it was written with the library requiring the presence of at least one triangle
-        triCount = 0;
-    }
-
-    if ( settings.colors )
-    {
-        auto colorAttrib = ctmGetNamedAttribMap( context, "Color" );
-        if ( colorAttrib != CTM_NONE )
-        {
-            auto colorArray = ctmGetFloatArray( context, colorAttrib );
-            settings.colors->resize( vertCount );
-            for ( VertId i{ 0 }; CTMuint( i ) < vertCount; ++i )
-            {
-                auto j = 4 * i;
-                (*settings.colors)[i] = Color( colorArray[j], colorArray[j + 1], colorArray[j + 2], colorArray[j + 3] );
-            }
-        }
-    }
-
-    if ( settings.normals && ctmGetInteger( context, CTM_HAS_NORMALS ) == CTM_TRUE )
-    {
-        auto normals = ctmGetFloatArray( context, CTM_NORMALS );
-        settings.normals->resize( vertCount );
-        for ( VertId i{0}; i < (int) vertCount; ++i )
-            (*settings.normals)[i] = Vector3f( normals[3 * i], normals[3 * i + 1], normals[3 * i + 2] );
-    }
-
-    Mesh mesh;
-    mesh.points.resize( vertCount );
-    for ( VertId i{0}; i < (int)vertCount; ++i )
-        mesh.points[i] = Vector3f( vertices[3*i], vertices[3*i+1], vertices[3*i+2] );
-
-    Triangulation t;
-    t.reserve( triCount );
-    for ( FaceId i{0}; i < (int)triCount; ++i )
-        t.push_back( { VertId( (int)indices[3*i] ), VertId( (int)indices[3*i+1] ), VertId( (int)indices[3*i+2] ) } );
-
-    mesh.topology = MeshBuilder::fromTriangles( t, { .skippedFaceCount = settings.skippedFaceCount } );
-
-    return mesh;
-}
-#endif
-
 Expected<Mesh> fromDxf( const std::filesystem::path& path, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( path, std::ifstream::binary );
@@ -807,12 +690,6 @@ MR_ADD_MESH_LOADER( IOFilter( "Object format file (.off)", "*.off" ), fromOff )
 MR_ADD_MESH_LOADER( IOFilter( "3D model object (.obj)", "*.obj" ), fromObj )
 MR_ADD_MESH_LOADER( IOFilter( "Polygon File Format (.ply)", "*.ply" ), fromPly )
 MR_ADD_MESH_LOADER( IOFilter( "Drawing Interchange Format (.dxf)", "*.dxf" ), fromDxf )
-#ifndef MRMESH_NO_OPENCTM
-MR_ADD_MESH_LOADER( IOFilter( "Compact triangle-based mesh (.ctm)", "*.ctm" ), fromCtm )
-#endif
-#ifndef MRMESH_NO_OPENCASCADE
-MR_ADD_MESH_LOADER( IOFilter( "STEP files (.step,.stp)", "*.step;*.stp" ), fromStep )
-#endif
 
 } //namespace MeshLoad
 

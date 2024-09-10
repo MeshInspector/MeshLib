@@ -3,18 +3,6 @@
 #cmakedefine MESHLIB_VERSION "@MESHLIB_VERSION@"
 #cmakedefine MR_PLATFORM "@MR_PLATFORM@"
 
-#cmakedefine MRMESH_NO_PDF
 #cmakedefine MRMESH_NO_PYTHON
-#cmakedefine MRMESH_NO_OPENCTM
-#cmakedefine MRMESH_NO_JPEG
-#cmakedefine MRMESH_NO_PNG
 #cmakedefine MRMESH_NO_TIFF
-#cmakedefine MRMESH_NO_GLTF
-#cmakedefine MRMESH_NO_XML
-#cmakedefine MRMESH_NO_E57
-#cmakedefine MRMESH_NO_LAS
 #cmakedefine MRMESH_NO_GTEST
-#cmakedefine MRMESH_NO_OPENCASCADE
-#cmakedefine MRMESH_NO_ZLIB
-
-#cmakedefine MRMESH_OPENCASCADE_USE_XDE

@@ -15,6 +15,7 @@ ENDIF()
 IF(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
+    MRIOExtras
     MRViewer
     jsoncpp
     fmt
@@ -27,6 +28,7 @@ ELSE()
   IF(NOT MR_EMSCRIPTEN)
     target_link_libraries(${PROJECT_NAME} PRIVATE
       MRMesh
+      MRIOExtras
       MRViewer
       jsoncpp
       fmt
@@ -42,6 +44,7 @@ ELSE()
       jsoncpp
       -Wl,--whole-archive
       MRMesh
+      MRIOExtras
       MRViewer
       -Wl,--no-whole-archive
     )

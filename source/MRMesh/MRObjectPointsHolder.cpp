@@ -1,4 +1,5 @@
 #include "MRObjectPointsHolder.h"
+#include "MRIOFormatsRegistry.h"
 #include "MRObjectFactory.h"
 #include "MRBitSetParallelFor.h"
 #include "MRPointsSave.h"
@@ -260,9 +261,20 @@ Expected<std::future<VoidOrErrStr>> ObjectPointsHolder::serializeModel_( const s
     saveSettings.rearrangeTriangles = false;
     if ( !vertsColorMap_.empty() )
         saveSettings.colors = &vertsColorMap_;
-    auto save = [points = points_, filename = std::filesystem::path( path ) += savePointsFormat_, saveSettings]()
+    auto save = [points = points_, savePointsFormat = savePointsFormat_, path, saveSettings]()
     {
-        return MR::PointsSave::toAnySupportedFormat( *points, filename, saveSettings );
+        auto filename = path;
+        const auto extension = std::string( "*" ) + savePointsFormat;
+        if ( auto pointsSaver = PointsSave::getPointsSaver( extension ); pointsSaver.fileSave != nullptr )
+        {
+            filename += savePointsFormat;
+            return pointsSaver.fileSave( *points, filename, saveSettings );
+        }
+        else
+        {
+            filename += ".ply";
+            return MR::PointsSave::toAnySupportedFormat( *points, filename, saveSettings );
+        }
     };
     return std::async( getAsyncLaunchType(), save );
 }

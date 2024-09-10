@@ -1,14 +1,14 @@
-#include "MRGltfSerializer.h"
-#ifndef MRMESH_NO_GLTF
-#include "MRVector.h"
-#include "MRIOFormatsRegistry.h"
-#include "MRMesh.h"
-#include "MRMeshBuilder.h"
-#include "MRObjectMesh.h"
-#include "MRMeshTexture.h"
-#include "MRQuaternion.h"
-#include "MRStringConvert.h"
-#include "MRParallelFor.h"
+#include "MRGltf.h"
+#ifndef MRIOEXTRAS_NO_GLTF
+#include "MRMesh/MRVector.h"
+#include "MRMesh/MRIOFormatsRegistry.h"
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRMeshBuilder.h"
+#include "MRMesh/MRObjectMesh.h"
+#include "MRMesh/MRMeshTexture.h"
+#include "MRMesh/MRQuaternion.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRParallelFor.h"
 
 #if (defined(__APPLE__) && defined(__clang__))
 #pragma clang diagnostic push
@@ -40,7 +40,7 @@
 #pragma clang diagnostic pop
 #endif
 
-#include<stack>
+#include <stack>
 
 namespace
 {

@@ -13,26 +13,18 @@
 #include "MRDistanceMap.h"
 #include "MRObjectDistanceMap.h"
 #include "MRObjectGcode.h"
+#include "MRPointCloud.h"
 #include "MRGcodeLoad.h"
 #include "MRStringConvert.h"
 #include "MRIOFormatsRegistry.h"
 #include "MRMeshLoadObj.h"
-#include "MRMeshLoadStep.h"
 #include "MRSerializer.h"
 #include "MRDirectory.h"
 #include "MRSceneSettings.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRMeshLoadSettings.h"
 #include "MRZip.h"
-#include "MRPointsLoadE57.h"
-#include "MRMisonLoad.h"
 #include "MRPch/MRTBB.h"
-
-#ifndef MRMESH_NO_GLTF
-#include "MRGltfSerializer.h"
-#endif
-
-#include "MR3MFSerializer.h"
 
 namespace MR
 {

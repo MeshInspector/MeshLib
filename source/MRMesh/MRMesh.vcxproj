@@ -11,7 +11,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MR3MFSerializer.h" />
     <ClInclude Include="MRAABBTreeBase.h" />
     <ClInclude Include="MRAABBTreeBase.hpp" />
     <ClInclude Include="MRAABBTreeMaker.hpp" />
@@ -148,7 +147,6 @@
     <ClInclude Include="MROverlappingTris.h" />
     <ClInclude Include="MRObjectGcode.h" />
     <ClInclude Include="MRPointsComponents.h" />
-    <ClInclude Include="MRPointsLoadE57.h" />
     <ClInclude Include="MRPointsProject.h" />
     <ClInclude Include="MRPointsToMeshProjector.h" />
     <ClInclude Include="MRIntersection.h" />
@@ -162,7 +160,6 @@
     <ClInclude Include="MRLineObject.h" />
     <ClInclude Include="MRLineSegm.h" />
     <ClInclude Include="MRLineSegm3.h" />
-    <ClInclude Include="MRGltfSerializer.h" />
     <ClInclude Include="MRLog.h" />
     <ClInclude Include="MRMakeRigidXf.h" />
     <ClInclude Include="MRMatrix.h" />
@@ -182,7 +179,6 @@
     <ClInclude Include="MRObjectPointsHolder.h" />
     <ClInclude Include="MROrder.h" />
     <ClInclude Include="MRPartMapping.h" />
-    <ClInclude Include="MRPdf.h" />
     <ClInclude Include="MRPlaneObject.h" />
     <ClInclude Include="MRPointCloudRelax.h" />
     <ClInclude Include="MRPointCloudTriangulation.h" />
@@ -366,10 +362,8 @@
     <ClInclude Include="MRNoDefInit.h" />
     <ClInclude Include="MRParallelFor.h" />
     <ClInclude Include="MRMeshOverhangs.h" />
-    <ClInclude Include="MRMeshLoadStep.h" />
     <ClInclude Include="MRZip.h" />
     <ClInclude Include="MRObjectSave.h" />
-    <ClInclude Include="MRZlib.h" />
     <ClInclude Include="MRFlagOperators.h" />
     <ClInclude Include="MRMeasurementObject.h" />
     <ClInclude Include="MRRadiusMeasurementObject.h" />
@@ -395,7 +389,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
-    <ClCompile Include="MR3MFSerializer.cpp" />
     <ClCompile Include="MRAABBTreeMaker.cpp" />
     <ClCompile Include="miniply.cpp" />
     <ClCompile Include="MRAABBTree.cpp" />
@@ -489,7 +482,6 @@
     <ClCompile Include="MRIRenderObject.cpp" />
     <ClCompile Include="MRLine3.cpp" />
     <ClCompile Include="MRLineObject.cpp" />
-    <ClCompile Include="MRGltfSerializer.cpp" />
     <ClCompile Include="MRLog.cpp" />
     <ClCompile Include="MRMakeRigidXf.cpp" />
     <ClCompile Include="MRMeshBoolean.cpp" />
@@ -514,8 +506,6 @@
     <ClCompile Include="MRPointOnObject.cpp" />
     <ClCompile Include="MRPointCloudDivideWithPlane.cpp" />
     <ClCompile Include="MRPointsComponents.cpp" />
-    <ClCompile Include="MRPointsLoadE57.cpp" />
-    <ClCompile Include="MRPointsLoadLas.cpp" />
     <ClCompile Include="MRPointsProject.cpp" />
     <ClCompile Include="MRPointsToMeshProjector.cpp" />
     <ClCompile Include="MRMeshTrimWithPlane.cpp" />
@@ -532,7 +522,6 @@
     <ClCompile Include="MRObjectPointsHolder.cpp" />
     <ClCompile Include="MROrder.cpp" />
     <ClCompile Include="MRPartMapping.cpp" />
-    <ClCompile Include="MRPdf.cpp" />
     <ClCompile Include="MRPlaneObject.cpp" />
     <ClCompile Include="MRPointCloud.cpp" />
     <ClCompile Include="MRPointCloudMakeNormals.cpp" />
@@ -648,10 +637,8 @@
     <ClCompile Include="MRUniteManyMeshes.cpp" />
     <ClCompile Include="MRWatershedGraph.cpp" />
     <ClCompile Include="MRMeshOverhangs.cpp" />
-    <ClCompile Include="MRMeshLoadStep.cpp" />
     <ClCompile Include="MRZip.cpp" />
     <ClCompile Include="MRObjectSave.cpp" />
-    <ClCompile Include="MRZlib.cpp" />
     <ClCompile Include="MRRadiusMeasurementObject.cpp" />
     <ClCompile Include="MRDistanceMeasurementObject.cpp" />
     <ClCompile Include="MRAngleMeasurementObject.cpp" />
@@ -671,14 +658,8 @@
     </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\laz-perf\laz-perf.vcxproj">
-      <Project>{daa055af-38ed-4836-a553-7539216bb64f}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">
       <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\OpenCTM\OpenCTM.vcxproj">
-      <Project>{2b2a22c0-f6a7-473b-8849-e1d9cb2b5793}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
@@ -726,7 +707,7 @@
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\laz-perf\cpp\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
@@ -739,16 +720,7 @@
       </DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
-      <Command>copy $(SolutionDir)$(Platform)\Release\OpenCTM.dll $(TargetDir)OpenCTM.dll
-copy $(SolutionDir)$(Platform)\Release\OpenCTM.exp $(TargetDir)OpenCTM.exp
-copy $(SolutionDir)$(Platform)\Release\OpenCTM.lib $(TargetDir)OpenCTM.lib
-copy $(SolutionDir)$(Platform)\Release\OpenCTM.pdb $(TargetDir)OpenCTM.pdb
-copy $(SolutionDir)$(Platform)\Release\laz-perf.dll $(TargetDir)laz-perf.dll
-copy $(SolutionDir)$(Platform)\Release\laz-perf.exp $(TargetDir)laz-perf.exp
-copy $(SolutionDir)$(Platform)\Release\laz-perf.lib $(TargetDir)laz-perf.lib
-copy $(SolutionDir)$(Platform)\Release\laz-perf.pdb $(TargetDir)laz-perf.pdb
-copy $(PythonDllPath) $(TargetDir)python$(PythonVersion).dll
-copy $(VcpkgCurrentInstalledDir)\bin\zlib1.dll $(TargetDir)zlib1.dll</Command>
+      <Command>copy $(PythonDllPath) $(TargetDir)python$(PythonVersion).dll</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -763,7 +735,7 @@ copy $(VcpkgCurrentInstalledDir)\bin\zlib1.dll $(TargetDir)zlib1.dll</Command>
       <ConformanceMode>true</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\laz-perf\cpp\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>

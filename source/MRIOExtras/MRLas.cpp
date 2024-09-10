@@ -1,12 +1,13 @@
-#include "MRPointsLoad.h"
-#if !defined( MRMESH_NO_LAS )
-#include "MRAffineXf3.h"
-#include "MRBox.h"
-#include "MRColor.h"
-#include "MRPointCloud.h"
-#include "MRPointsLoadSettings.h"
-#include "MRProgressCallback.h"
-#include "MRStringConvert.h"
+#include "MRLas.h"
+#ifndef MRIOEXTRAS_NO_LAS
+#include "MRMesh/MRAffineXf3.h"
+#include "MRMesh/MRBox.h"
+#include "MRMesh/MRColor.h"
+#include "MRMesh/MRIOFormatsRegistry.h"
+#include "MRMesh/MRPointCloud.h"
+#include "MRMesh/MRPointsLoadSettings.h"
+#include "MRMesh/MRProgressCallback.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRFmt.h"
 
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
@@ -326,6 +327,8 @@ Expected<PointCloud> fromLas( std::istream& in, const PointsLoadSettings& settin
     }
 }
 
-} // namespace MR::PointsLoad
+MR_ADD_POINTS_LOADER( IOFilter( "LAS (.las)", "*.las" ), fromLas )
+MR_ADD_POINTS_LOADER( IOFilter( "LASzip (.laz)", "*.laz" ), fromLas )
 
-#endif // !defined( MRMESH_NO_LAS )
+} // namespace MR::PointsLoad
+#endif

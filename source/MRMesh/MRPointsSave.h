@@ -26,22 +26,6 @@ MRMESH_API VoidOrErrStr toAsc( const PointCloud& points, std::ostream& out, cons
 MRMESH_API VoidOrErrStr toPly( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings = {} );
 MRMESH_API VoidOrErrStr toPly( const PointCloud& points, std::ostream& out, const SaveSettings& settings = {} );
 
-#ifndef MRMESH_NO_OPENCTM
-struct CtmSavePointsOptions : SaveSettings
-{
-    /// 0 - minimal compression, but fast; 9 - maximal compression, but slow
-    int compressionLevel = 1;
-    /// comment saved in the file
-    const char* comment = "MeshInspector Points";
-};
-
-/// saves in .ctm file
-MRMESH_API VoidOrErrStr toCtm( const PointCloud& points, const std::filesystem::path& file, const CtmSavePointsOptions& options );
-MRMESH_API VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const CtmSavePointsOptions& options );
-MRMESH_API VoidOrErrStr toCtm( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings = {} );
-MRMESH_API VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const SaveSettings& settings = {} );
-#endif
-
 /// detects the format from file extension and save points to it
 MRMESH_API VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings = {} );
 /// extension in `*.ext` format

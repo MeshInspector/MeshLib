@@ -171,11 +171,10 @@ private:
     void updateRenderDiscretization_();
 
     int renderDiscretization_ = 1; // auxiliary parameter to avoid recalculation in every frame
-#ifndef MRMESH_NO_OPENCTM
+
+    // falls back to the PLY format if no CTM format support is available
+    // NOTE: CTM format support is available in the MRIOExtras library; make sure to load it if you prefer CTM
     const char * savePointsFormat_ = ".ctm";
-#else
-    const char * savePointsFormat_ = ".ply";
-#endif
 };
 
 }

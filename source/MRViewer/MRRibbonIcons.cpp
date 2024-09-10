@@ -8,6 +8,8 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
 
+#include "MRIOExtras/MRPng.h"
+
 namespace MR
 {
 

@@ -19,6 +19,8 @@
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRSceneLoad.h"
 #include "MRMesh/MRObjectSave.h"
+#include "MRMesh/MROnInit.h"
+#include "MRIOExtras/MRIOExtras.h"
 #pragma warning(push)
 #pragma warning(disable: 4464) // relative include path contains '..'
 #include <pybind11/stl/filesystem.h>
@@ -399,3 +401,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveSceneObject, [] ( pybind11::module_& m )
            "Detects the format from file extension and saves scene object to it. "
            "If the object doesn't contain any entities of the corresponding type, an empty file will be created." );
 } )
+
+// force load MRIOExtras library to load extra file formats
+MR_ON_INIT { MR::loadIOExtras(); };

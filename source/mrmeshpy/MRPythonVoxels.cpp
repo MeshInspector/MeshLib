@@ -10,10 +10,11 @@
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRMeshToDistanceVolume.h"
+#include "MRMesh/MRTeethMaskToDirectionVolume.h"
 #include <pybind11/functional.h>
 #pragma warning(push)
 #pragma warning(disable: 4464) // relative include path contains '..'
-#include <pybind11/stl/filesystem.h>
+#include <pybind11/stl.h>
 #pragma warning(pop)
 
 
@@ -223,5 +224,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
     m.def( "meshToDistanceVolume", MR::decorateExpected( &MR::meshToDistanceVolume ),
         pybind11::arg( "mesh" ), pybind11::arg_v( "params", MR::MeshToDistanceVolumeParams(), "MeshToDistanceVolumeParams()" ),
         "makes SimpleVolume filled with (signed or unsigned) distances from Mesh with given settings" );
+
+    m.def( "teethMaskToDirectionVolume", MR::decorateExpected( &MR::teethMaskToDirectionVolume ),
+           pybind11::arg( "volume" ), "Convert 3d teeth mask into directional volume" );
 } )
 #endif

@@ -33,7 +33,8 @@ void RibbonMenuSearch::pushRecentItem( const std::shared_ptr<RibbonMenuItem>& it
     auto sIt = RibbonSchemaHolder::schema().items.find( item->name() );
     if ( sIt == RibbonSchemaHolder::schema().items.end() )
     {
-        assert( false );
+        // no need to assert here, we could fall int this function from LambdaRibbonItem that is not present in scheme
+        //assert( false );
         return;
     }
 

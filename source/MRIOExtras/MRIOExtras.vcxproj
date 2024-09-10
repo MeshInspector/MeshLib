@@ -32,7 +32,6 @@
     <ClCompile Include="MRCtm.cpp" />
     <ClCompile Include="MRE57.cpp" />
     <ClCompile Include="MRGltf.cpp" />
-    <ClCompile Include="MRIOExtras.cpp" />
     <ClCompile Include="MRJpeg.cpp" />
     <ClCompile Include="MRLas.cpp" />
     <ClCompile Include="MRPdf.cpp" />
@@ -47,7 +46,6 @@
     <ClInclude Include="MRCtm.h" />
     <ClInclude Include="MRE57.h" />
     <ClInclude Include="MRGltf.h" />
-    <ClInclude Include="MRIOExtras.h" />
     <ClInclude Include="MRJpeg.h" />
     <ClInclude Include="MRLas.h" />
     <ClInclude Include="MRPdf.h" />

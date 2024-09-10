@@ -12,7 +12,8 @@ class ChangeVisualizePropertyAction : public HistoryAction
 {
 public:
     using Obj = VisualObject;
-    /// Constructed from original obj
+    
+    /// use this constructor to remember object's visualize property mask before making any changes in it
     ChangeVisualizePropertyAction( const std::string& name, const std::shared_ptr<VisualObject>& obj, AnyVisualizeMaskEnum visualizeMaskType ) :
         obj_{ obj },
         maskType_{ visualizeMaskType },
@@ -20,6 +21,19 @@ public:
     {
         if ( obj )
             visualMask_ = obj_->getVisualizePropertyMask( maskType_ );
+    }
+
+    /// use this constructor to remember object's visualize property mask and immediately set new value
+    ChangeVisualizePropertyAction( const std::string& name, const std::shared_ptr<VisualObject>& obj, AnyVisualizeMaskEnum visualizeMaskType, ViewportMask newMask ) :
+        obj_{ obj },
+        maskType_{ visualizeMaskType },
+        name_{ name }
+    {
+        if ( obj )
+        {
+            visualMask_ = obj_->getVisualizePropertyMask( maskType_ );
+            obj_->setVisualizePropertyMask( maskType_, newMask );
+        }
     }
 
     virtual std::string name() const override

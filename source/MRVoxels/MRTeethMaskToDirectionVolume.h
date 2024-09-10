@@ -93,7 +93,7 @@ private:
 
 
 /// A shortcut for \ref TeethMaskToDirectionVolumeConvertor::create and \ref TeethMaskToDirectionVolumeConvertor::convertAll
-MRMESH_API Expected<std::array<SimpleVolume, 3>> teethMaskToDirectionVolume( const VdbVolume& volume );
+MRVOXELS_API Expected<std::array<SimpleVolume, 3>> teethMaskToDirectionVolume( const VdbVolume& volume );
 
 
 }

@@ -23,6 +23,35 @@ MRIOEXTRAS_API Expected<Mesh> fromCtm( std::istream& in, const MeshLoadSettings&
 
 } // namespace MeshLoad
 
+namespace MeshSave
+{
+
+struct CtmSaveOptions : SaveSettings
+{
+    enum class MeshCompression
+    {
+        None,     ///< no compression at all, fast but not effective
+        Lossless, ///< compression without any loss in vertex coordinates
+        Lossy     ///< compression with loss in vertex coordinates
+    };
+    MeshCompression meshCompression = MeshCompression::Lossless;
+    /// fixed point precision for vertex coordinates in case of MeshCompression::Lossy.
+    /// For instance, if this value is 0.001, all vertex coordinates will be rounded to three decimals
+    float vertexPrecision = 1.0f / 1024.0f; //~= 0.00098
+    /// LZMA compression: 0 - minimal compression, but fast; 9 - maximal compression, but slow
+    int compressionLevel = 1;
+    /// comment saved in the file
+    const char * comment = "MeshInspector.com";
+};
+
+/// saves in .ctm file
+MRIOEXTRAS_API VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions & options );
+MRIOEXTRAS_API VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions & options );
+MRIOEXTRAS_API VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
+MRIOEXTRAS_API VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
+
+} // namespace MeshSave
+
 namespace PointsLoad
 {
 

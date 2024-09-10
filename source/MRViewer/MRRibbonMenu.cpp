@@ -1388,9 +1388,10 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
     else
         spdlog::info( "{} item: \"{}\"", wasActive ? std::string( "Deactivated" ) : std::string( "Activated" ), name );
 
-    if ( stateChanged && !wasActive )
+    if ( !wasActive )
     {
-        if ( getViewerInstance().mouseController().getMouseConflicts() > conflicts )
+        onItemActivated_( item );
+        if ( stateChanged && getViewerInstance().mouseController().getMouseConflicts() > conflicts )
         {
             pushNotification( {
                 .text = "Camera operations that are controlled by left mouse button "
@@ -1399,7 +1400,6 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
                 .type = NotificationType::Info,
                 .lifeTimeSec = 3.0f } );
         }
-        onItemActivated_( item );
     }
 }
 

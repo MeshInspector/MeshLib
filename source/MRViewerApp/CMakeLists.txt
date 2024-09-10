@@ -18,6 +18,7 @@ IF(MR_EMSCRIPTEN)
     -Wl,--whole-archive
     MRCommonPlugins
     MRMesh
+    MRIOExtras
     MRViewer
     -Wl,--no-whole-archive
   )

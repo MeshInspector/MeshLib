@@ -46,7 +46,7 @@ for address, dirs, files in folder:
 			print(src)
 			f.write('\t\t<file src="./source/x64/Release/')
 			f.write(file)
-			f.write('" target="lib/net8.0/"></file>\n')
+			f.write('" target="lib/net6.0/"></file>\n')
             
 f.write('\t</files>\n')
 f.write('</package>\n')

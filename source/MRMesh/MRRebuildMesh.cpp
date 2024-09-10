@@ -20,7 +20,12 @@ Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& setti
         auto expSelfy = findSelfCollidingTriangles( mp, nullptr, subprogress( settings.progress, 0.0f, 0.1f ) );
         if ( !expSelfy )
             return unexpected( std::move( expSelfy.error() ) );
-        genOffsetParams.signDetectionMode = *expSelfy ? SignDetectionMode::HoleWindingRule : SignDetectionMode::ProjectionNormal;
+        if ( *expSelfy )
+            genOffsetParams.signDetectionMode = SignDetectionMode::HoleWindingRule;
+        else if ( settings.offsetMode == OffsetMode::Smooth )
+            genOffsetParams.signDetectionMode = SignDetectionMode::OpenVDB;
+        else
+            genOffsetParams.signDetectionMode = SignDetectionMode::ProjectionNormal;
     }
     else
         genOffsetParams.signDetectionMode = SignDetectionMode::HoleWindingRule;

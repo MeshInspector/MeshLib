@@ -108,16 +108,41 @@ IF(NOT MRIOEXTRAS_NO_ZLIB)
   ENDIF()
 ENDIF()
 
+IF(BUILD_TESTING)
+  IF(APPLE)
+    list(APPEND MRIOEXTRAS_DEPENDENCIES GTest::gtest)
+  ELSE()
+    list(APPEND MRIOEXTRAS_DEPENDENCIES gtest)
+  ENDIF()
+ENDIF()
+
 target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
   ${MRIOEXTRAS_INCLUDE_DIRS}
 )
 target_link_directories(${PROJECT_NAME} BEFORE PRIVATE
   ${MRIOEXTRAS_LIBRARY_DIRS}
 )
-target_link_libraries(${PROJECT_NAME} PRIVATE
-  MRMesh
-  ${MRIOEXTRAS_DEPENDENCIES}
-)
+IF(MR_EMSCRIPTEN)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    spdlog
+    ${MRIOEXTRAS_DEPENDENCIES}
+  )
+ELSEIF(APPLE)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    fmt
+    spdlog
+    ${MRIOEXTRAS_DEPENDENCIES}
+  )
+ELSE()
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    fmt::fmt
+    spdlog::spdlog
+    ${MRIOEXTRAS_DEPENDENCIES}
+  )
+ENDIF()
 
 IF(WIN32 AND MINGW)
   target_compile_definitions(${PROJECT_NAME} PRIVATE MRIOEXTRAS_EXPORT)

@@ -161,6 +161,20 @@
 			]
 		},
 		{
+			"Name": "Inspect",
+			"Priority": 3,
+			"Groups": [
+				{
+					"Name": "Info",
+					"List": [
+						{
+							"Name": "Object Info"
+						}
+					]
+				}
+			]
+		},
+		{
 			"Name": "Voxels",
 			"Priority": 3,
 			"Groups": [

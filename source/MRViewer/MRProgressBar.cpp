@@ -12,6 +12,7 @@
 #include "MRCommandLoop.h"
 #include "MRColorTheme.h"
 #include "MRRibbonFontManager.h"
+#include "MRRibbonMenu.h"
 #include <thread>
 #include <GLFW/glfw3.h>
 #include "MRViewer/MRUITestEngine.h"
@@ -341,6 +342,8 @@ void ProgressBar::finish()
     auto& instance = instance_();
     instance.finished_ = true;
     instance.frameRequest_.requestFrame();
+    pushNotification( { .header = fmt::format( "{:.1f} sec", instance.lastOperationTimeSec_ < 1.e-3f ? 0.f : instance.lastOperationTimeSec_ ),
+                        .text = instance.title_, .type = NotificationType::Time } );
 }
 
 bool ProgressBar::isOrdered()

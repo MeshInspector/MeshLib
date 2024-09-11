@@ -185,8 +185,6 @@ protected:
     // override this function to draw your custom version window somewhere
     virtual void drawVersionWindow_()
     {};
-    // draws window that shows time of last operation performed with progress bar
-    MRVIEWER_API virtual void drawLastOperationTimeWindow_();
 
     MRVIEWER_API virtual void drawShortcutsWindow_() override;
     // reads files with panel description

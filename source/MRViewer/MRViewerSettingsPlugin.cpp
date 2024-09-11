@@ -304,15 +304,6 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
                                                 std::bind( &RibbonMenu::setAutoCloseBlockingPlugins, ribbonMenu, std::placeholders::_1 ) );
         UI::setTooltipIfHovered( "Automatically close blocking tool when another blocking tool is activated", menuScaling );
 
-
-        if ( sceneObjectsListDrawer )
-        {
-            UI::checkbox( "Show Info in Object Tree",
-                                                    std::bind( &SceneObjectsListDrawer::getShowInfoInObjectTree, sceneObjectsListDrawer ),
-                                                    std::bind( &SceneObjectsListDrawer::setShowInfoInObjectTree, sceneObjectsListDrawer, std::placeholders::_1 ) );
-            UI::setTooltipIfHovered( "Show detailed information in the object tree", menuScaling );
-        }
-
         UI::checkbox( "Show Experimental Features", &viewer->experimentalFeatures );
         UI::setTooltipIfHovered( "Show experimental or diagnostic tools and controls", menuScaling );
     }

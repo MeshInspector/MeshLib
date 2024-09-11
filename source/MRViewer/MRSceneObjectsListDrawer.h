@@ -20,11 +20,6 @@ public:
     /// \detail Not creat window. Use in window block (between ImGui::Begin and ImGui::End)
     MRVIEWER_API void draw( float height, float scaling );
     
-    /// set flag show detailed information in the object tree
-    void setShowInfoInObjectTree( bool value ) { showInfoInObjectTree_ = value; }
-    /// returns flag show detailed information in the object tree
-    bool getShowInfoInObjectTree() const { return showInfoInObjectTree_; }
-    
     /// set flag of the object visibility activation after selection
     void setShowNewSelectedObjects( bool show ) { showNewSelectedObjects_ = show; };
     /// get flag of the object visibility activation after selection
@@ -105,7 +100,6 @@ private:
 
     float menuScaling_ = 1.f;
 
-    bool showInfoInObjectTree_ = false;
     bool showNewSelectedObjects_ = true;
     bool deselectNewHiddenObjects_ = false;
 

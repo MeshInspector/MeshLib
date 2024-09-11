@@ -4,6 +4,7 @@
 #include "MRVoxels/MRVoxelsLoad.h"
 #include "MRVoxels/MRVDBFloatGrid.h"
 #include "MRVoxels/MRVDBConversions.h"
+// NOTE: see the disclaimer in the header file
 #include "MRPython/MRPython.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRAffineXf3.h"

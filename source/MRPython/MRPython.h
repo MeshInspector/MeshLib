@@ -1,5 +1,13 @@
 #pragma once
 
+/**
+ * NOTE: Include this header AFTER any OpenVDB header; otherwise it will break MSVC debug builds.
+ *
+ * External links:
+ * - https://github.com/pybind/pybind11/blob/v2.9.2/include/pybind11/detail/common.h#L161
+ * - https://github.com/oneapi-src/oneTBB/blob/v2021.9.0/include/oneapi/tbb/detail/_config.h#L105
+ */
+
 #include "exports.h"
 #include "MRPybind11.h"
 

@@ -14,6 +14,7 @@
 #include "MRVoxels/MRVDBFloatGrid.h"
 #endif
 
+// NOTE: see the disclaimer in the header file
 #include "MRPython/MRPython.h"
 
 namespace

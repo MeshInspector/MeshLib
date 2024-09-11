@@ -7,8 +7,8 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshSave.h>
-#include <MRMesh/MROffset.h>
 #include <MRMesh/MRRegionBoundary.h>
+#include <MRVoxels/MROffset.h>
 
 int main()
 {

@@ -25,6 +25,8 @@ foreach(TARGET ${EXAMPLES})
   target_include_directories(${TARGET} PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
   target_link_libraries(${TARGET} PRIVATE MeshLib::MRMesh TBB::tbb)
 endforeach()
+# MeshOffset additionally depends on MRVoxels
+target_link_libraries(MeshOffset PRIVATE MeshLib::MRVoxels)
 
 find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)

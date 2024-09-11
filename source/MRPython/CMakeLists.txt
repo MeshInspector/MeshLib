@@ -11,10 +11,19 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 # TODO: find Python independently
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-  MRMesh
-  Python::Python
-)
+IF(APPLE)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    Python::Python
+    spdlog
+  )
+ELSE()
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    MRMesh
+    Python::Python
+    spdlog::spdlog
+  )
+ENDIF()
 
 IF(WIN32 AND MINGW)
   target_compile_definitions(${PROJECT_NAME} PRIVATE MRPYTHON_EXPORT)

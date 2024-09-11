@@ -1,7 +1,6 @@
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRObjectLinesHolder.h"
 #include "MRMesh/MRDistanceMap.h"
-#include "MRPython/MRPython.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRPointCloud.h"
@@ -18,6 +17,8 @@
 #include "MRVoxels/MRObjectVoxels.h"
 #include "MRVoxels/MRVDBFloatGrid.h"
 #endif
+
+#include "MRPython/MRPython.h"
 
 namespace MR
 {

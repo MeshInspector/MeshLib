@@ -1,10 +1,10 @@
 #ifndef MESHLIB_NO_VOXELS
-#include "MRPython/MRPython.h"
 #include "MRVoxels/MRVoxelsVolume.h"
 #include "MRVoxels/MRVoxelsSave.h"
 #include "MRVoxels/MRVoxelsLoad.h"
 #include "MRVoxels/MRVDBFloatGrid.h"
 #include "MRVoxels/MRVDBConversions.h"
+#include "MRPython/MRPython.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRExpected.h"
@@ -16,7 +16,6 @@
 #pragma warning(disable: 4464) // relative include path contains '..'
 #include <pybind11/stl/filesystem.h>
 #pragma warning(pop)
-
 
 #define MR_ADD_PYTHON_VOXELS_VOLUME( Type, TypeText ) \
 MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, Type, MR::Type ) \

@@ -265,6 +265,11 @@
       "Name": "Rotator",
       "Tooltip": "Permanently rotates the scene around vertical axis.",
       "Icon": "\uF2F1"
+    },
+    {
+      "Name": "Object Info",
+      "Tooltip": "Show information about currently selected object.",
+      "Icon": "\uF05A"
     }
   ]
 }

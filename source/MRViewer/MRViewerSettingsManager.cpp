@@ -42,7 +42,6 @@ const std::string cMSAA = "multisampleAntiAliasing";
 const std::string cncMachineSettingsKey = "CNCMachineSettings";
 const std::string cTouchpadSettings = "touchpadSettings";
 const std::string cEnableSavedDialogPositions = "enableSavedDialogPositions";
-const std::string cShowInfoInObjectTree = "showInfoInObjectTree";
 const std::string cAutoClosePlugins = "autoClosePlugins";
 const std::string cShowExperimentalFeatures = "showExperimentalFeatures";
 const std::string cAmbientCoefSelectedObj = "ambientCoefSelectedObj";
@@ -54,7 +53,6 @@ const bool orthographic = true;
 const bool saveDialogPositions = false;
 const bool topPanelPinned = true;
 const bool autoClosePlugins = true;
-const bool showInfoInObjectTree = false;
 const bool showSelectedObjects = false;
 const bool deselectNewHiddenObjects = false;
 const bool closeContextOnChange = false;
@@ -109,7 +107,6 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
         auto sceneObjectsList = ribbonMenu->getSceneObjectsList();
         if ( sceneObjectsList )
         {
-            sceneObjectsList->setShowInfoInObjectTree( cfg.getBool( cShowInfoInObjectTree, Defaults::showInfoInObjectTree ) );
             sceneObjectsList->setShowNewSelectedObjects( Defaults::showSelectedObjects );
             sceneObjectsList->setDeselectNewHiddenObjects( Defaults::deselectNewHiddenObjects );
 
@@ -154,7 +151,6 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         auto sceneObjectsList = ribbonMenu->getSceneObjectsList();
         if ( sceneObjectsList )
         {
-            sceneObjectsList->setShowInfoInObjectTree( cfg.getBool( cShowInfoInObjectTree, Defaults::showInfoInObjectTree ) );
             if ( cfg.hasBool( cShowSelectedObjects ) )
                 sceneObjectsList->setShowNewSelectedObjects( cfg.getBool( cShowSelectedObjects, Defaults::showSelectedObjects ) );
             if ( cfg.hasBool( cDeselectNewHiddenObjects ) )
@@ -394,7 +390,6 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         auto sceneObjectsList = ribbonMenu->getSceneObjectsList();
         if ( sceneObjectsList )
         {
-            cfg.setBool( cShowInfoInObjectTree, sceneObjectsList->getShowInfoInObjectTree() );
             cfg.setBool( cShowSelectedObjects, sceneObjectsList->getShowNewSelectedObjects() );
             cfg.setBool( cDeselectNewHiddenObjects, sceneObjectsList->getDeselectNewHiddenObjects() );
 

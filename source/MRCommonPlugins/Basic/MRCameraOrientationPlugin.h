@@ -1,5 +1,6 @@
 #pragma once
-#include "MRMesh//MRMeshFwd.h"
+
+#include "MRMesh/MRMeshFwd.h"
 #include "MRViewer/MRStatePlugin.h"
 #include "MRMesh/MRVector3.h"
 

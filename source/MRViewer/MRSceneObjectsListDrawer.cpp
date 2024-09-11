@@ -374,45 +374,6 @@ void SceneObjectsListDrawer::drawObjectsList_()
                 const float drawPropertiesHeight = drawCustomTreeObjectProperties_( object, true );
                 if ( drawPropertiesHeight > 0.f )
                     skippableRenderer.draw( drawPropertiesHeight, itemSpacingY, [&] { drawCustomTreeObjectProperties_( object, false ); } );
-
-                bool infoOpen = false;
-                auto lines = object.getInfoLines();
-                if ( showInfoInObjectTree_ && hasRealChildren && !lines.empty() )
-                {
-                    auto infoId = std::string( "Info: ##" ) + uniqueStr;
-                    skippableRenderer.draw( frameHeight, itemSpacingY,
-                        [&] { infoOpen = collapsingHeader_( infoId, ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed ); },
-                        [&] { infoOpen = ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( infoId.c_str() ), ImGuiTreeNodeFlags_None ); } );
-                }
-
-                if ( infoOpen || !hasRealChildren )
-                {
-                    const ImVec2 smallItemSpacing( ImGui::GetStyle().ItemSpacing.x, 2.f * menuScaling_ );
-                    const ImVec2 framePadding( ImGui::GetStyle().FramePadding.x, 2.f * menuScaling_ );
-
-                    ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( 0, 0, 0, 0 ) );
-                    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding );
-                    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-                    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, smallItemSpacing );
-                    ImGui::PushStyleVar( ImGuiStyleVar_IndentSpacing, cItemInfoIndent * menuScaling_ );
-                    ImGui::Indent();
-
-                    const float infoFrameHeight = ImGui::GetFrameHeight();
-
-                    for ( const auto& str : lines )
-                    {
-                        skippableRenderer.draw( infoFrameHeight, smallItemSpacing.y, [&]
-                        {
-                            ImGui::TreeNodeEx( str.c_str(), ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_DefaultOpen |
-                                               ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_Framed );
-                            ImGui::TreePop();
-                        } );
-                    }
-
-                    ImGui::Unindent();
-                    ImGui::PopStyleVar( 4 );
-                    ImGui::PopStyleColor();
-                }
             }
             else
                 collapsedHeaderDepth = curentDepth;
@@ -481,10 +442,15 @@ bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const 
 
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
 
-    const bool isOpen = collapsingHeader_( ( object.name() + "##" + uniqueStr ).c_str(),
-                                           ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_OpenOnArrow |
-                                           ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) |
-                                           ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
+    const bool isOpen = hasRealChildren ?
+        collapsingHeader_( ( object.name() + "##" + uniqueStr ).c_str(),
+        ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen |
+        ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) )
+        :
+        // overridden collapsingHeader_ cannot draw leaf dots
+        SceneObjectsListDrawer::collapsingHeader_( ( object.name() + "##" + uniqueStr ).c_str(),
+        ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet |
+        ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
 
     ImGui::PopStyleColor( isSelected ? 2 : 1 );
     ImGui::PopStyleVar();

@@ -69,6 +69,9 @@
     <ClCompile Include="ViewerButtons\MRRotatorPlugin.cpp">
       <Filter>ViewerButtons</Filter>
     </ClCompile>
+    <ClCompile Include="Basic\MRObjectInfo.cpp">
+      <Filter>Basic</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />

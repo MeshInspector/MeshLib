@@ -1,6 +1,7 @@
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRPythonAppendCommand.h"
 #include "MRViewer/MRCommandLoop.h"
+#include "MRViewer/MRMouseController.h"
 #include "MRViewer/MRViewport.h"
 #include "MRViewer/MRSetupViewer.h"
 #include "MRPython/MRPython.h"
@@ -75,6 +76,27 @@ public:
     void setupBasePlugins( Viewer* ) const override {}
     void setupExtendedLibraries() const override {}
     void unloadExtendedLibraries() const override {}
+
+    void setupConfiguration( Viewer* viewer ) const override
+    {
+        viewer->resetSettingsFunction = [base = viewer->resetSettingsFunction] ( Viewer* viewer )
+        {
+            base( viewer );
+            resetSettings_( viewer );
+        };
+        viewer->resetSettingsFunction( viewer );
+    }
+
+private:
+    static void resetSettings_( Viewer* viewer )
+    {
+        viewer->glPickRadius = 3;
+
+        auto& mouseController = viewer->mouseController();
+        mouseController.setMouseControl( { MouseButton::Right, 0 }, MouseMode::Translation );
+        mouseController.setMouseControl( { MouseButton::Middle, 0 }, MouseMode::Rotation );
+        mouseController.setMouseControl( { MouseButton::Middle, GLFW_MOD_CONTROL }, MouseMode::Roll );
+    }
 };
 
 } // namespace

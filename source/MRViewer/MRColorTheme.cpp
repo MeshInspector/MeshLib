@@ -197,8 +197,13 @@ void ColorTheme::serializeCurrentToJson( Json::Value& root )
 
 void ColorTheme::apply()
 {
+    if ( !ColorTheme::isInitialized() )
+    {
+        spdlog::warn( "Color theme is not initialized" );
+        return;
+    }
+
     spdlog::info( "Apply color theme." );
-    assert( ColorTheme::isInitialized() );
 
     const auto& instance = ColorTheme::instance();
 

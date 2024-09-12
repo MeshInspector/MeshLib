@@ -24,6 +24,9 @@ namespace MR
 
 void SaveOnClosePlugin::preDraw_()
 {
+    if ( !initialized_ )
+        return;
+
     float scaling = 1.0f;    
     if ( auto menuInstance = getViewerInstance().getMenuPlugin() )
         scaling = menuInstance->menu_scaling();
@@ -155,18 +158,25 @@ void SaveOnClosePlugin::init( Viewer* _viewer )
 {
     if ( !_viewer )
         return;
+    if ( auto menu = std::dynamic_pointer_cast<ImGuiMenu>( _viewer->getMenuPlugin() ); !menu )
+        return;
     viewer = _viewer;
     connect( viewer );
+    initialized_ = true;
 }
 
 void SaveOnClosePlugin::shutdown()
 {
+    if ( !initialized_ )
+        return;
     disconnect();
     viewer = nullptr;
 }
 
 bool SaveOnClosePlugin::interruptClose_()
 {
+    if ( !initialized_ )
+        return false;
     if ( shouldClose_ )
         return false;
     activeModalHighlightTimer_ = 2.0f;

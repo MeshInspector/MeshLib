@@ -91,12 +91,12 @@ private:
 
 void pythonLaunch( const MR::Viewer::LaunchParams& params, const MinimalViewerSetup& setup )
 {
-    std::thread lauchThread = std::thread( [=] ()
+    std::thread launchThread { [=]
     {
         MR::SetCurrentThreadName( "PythonAppLaunchThread" );
         MR::launchDefaultViewer( params, setup );
-    } );
-    lauchThread.detach();
+    } };
+    launchThread.detach();
 }
 
 } // namespace

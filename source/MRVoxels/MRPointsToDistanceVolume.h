@@ -24,6 +24,9 @@ struct PointsToDistanceVolumeParams : DistanceVolumeParams
 /// makes SimpleVolume filled with signed distances to points with normals
 [[nodiscard]] MRVOXELS_API Expected<SimpleVolume> pointsToDistanceVolume( const PointCloud & cloud, const PointsToDistanceVolumeParams& params );
 
+/// makes FunctionVolume representing signed distances to points with normals
+[[nodiscard]] MRVOXELS_API FunctionVolume pointsToDistanceFunctionVolume( const PointCloud & cloud, const PointsToDistanceVolumeParams& params );
+
 /// given
 /// \param cloud      a point cloud
 /// \param colors     colors of each point in the cloud

@@ -158,7 +158,7 @@ void SaveOnClosePlugin::init( Viewer* _viewer )
 {
     if ( !_viewer )
         return;
-    if ( auto menu = std::dynamic_pointer_cast<ImGuiMenu>( _viewer->getMenuPlugin() ); !menu )
+    if ( !bool( _viewer->getMenuPlugin() ) )
         return;
     viewer = _viewer;
     connect( viewer );

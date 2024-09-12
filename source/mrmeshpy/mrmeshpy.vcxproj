@@ -23,6 +23,9 @@
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">
       <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\MRPython\MRPython.vcxproj">
+      <Project>{90bc6971-76ca-4ecd-92e0-585fe3bd6672}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\MRSymbolMesh\MRSymbolMesh.vcxproj">
       <Project>{eaa47dfb-ecea-4d46-90be-718b190f06c4}</Project>
     </ProjectReference>

@@ -37,9 +37,6 @@
     <Filter Include="Source Files\Render">
       <UniqueIdentifier>{63cd613f-62f1-4c45-a91b-3417a018a563}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Python">
-      <UniqueIdentifier>{95252bd3-f30e-416e-98f8-1e76c2c7fff4}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\PointCloud">
       <UniqueIdentifier>{c300f0c9-5a9b-44ee-98c2-1ac7dad01b16}</UniqueIdentifier>
     </Filter>
@@ -345,9 +342,6 @@
     <ClInclude Include="MRPointsInBall.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
-    <ClInclude Include="MRPython.h">
-      <Filter>Source Files\Python</Filter>
-    </ClInclude>
     <ClInclude Include="MRSceneRoot.h">
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
@@ -521,9 +515,6 @@
     </ClInclude>
     <ClInclude Include="MRChangeNameAction.h">
       <Filter>Source Files\History</Filter>
-    </ClInclude>
-    <ClInclude Include="MREmbeddedPython.h">
-      <Filter>Source Files\Python</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineEdgeIterator.h">
       <Filter>Source Files\Polyline</Filter>
@@ -1382,9 +1373,6 @@
     <ClCompile Include="MRPointsInBall.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
-    <ClCompile Include="MRPython.cpp">
-      <Filter>Source Files\Python</Filter>
-    </ClCompile>
     <ClCompile Include="MRSceneRoot.cpp">
       <Filter>Source Files\DataModel</Filter>
     </ClCompile>
@@ -1525,9 +1513,6 @@
     </ClCompile>
     <ClCompile Include="MRRectIndexer.cpp">
       <Filter>Source Files\DistanceMap</Filter>
-    </ClCompile>
-    <ClCompile Include="MREmbeddedPython.cpp">
-      <Filter>Source Files\Python</Filter>
     </ClCompile>
     <ClCompile Include="MRLine3.cpp">
       <Filter>Source Files\Math</Filter>
@@ -2030,10 +2015,5 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />
-  </ItemGroup>
-  <ItemGroup>
-    <CopyFileToFolders Include="$(ProjectDir)..\..\thirdparty\python\python$(PythonVersion).zip">
-      <Filter>Source Files\Python</Filter>
-    </CopyFileToFolders>
   </ItemGroup>
 </Project>

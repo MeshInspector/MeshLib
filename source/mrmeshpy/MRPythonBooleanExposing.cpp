@@ -1,4 +1,4 @@
-#include "MRMesh/MRPython.h"
+#include "MRPython/MRPython.h"
 #include "MRMesh/MRContoursCut.h"
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRMeshBoolean.h"

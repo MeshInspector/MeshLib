@@ -132,7 +132,7 @@ void ViewerSetup::setupExtendedLibraries() const
                 assert( false );
             }
 #else
-            lm.module = dlopen( utf8string( pluginPath ).c_str(), RTLD_LAZY );
+            lm.module = dlopen( utf8string( pluginPath ).c_str(), RTLD_NOW | RTLD_GLOBAL );
             if ( !lm.module )
             {
                 success = false;

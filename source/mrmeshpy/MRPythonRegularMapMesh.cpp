@@ -1,4 +1,4 @@
-#include "MRMesh/MRPython.h"
+#include "MRPython/MRPython.h"
 #include "MRMesh/MRRegularMapMesher.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRPointsLoad.h"

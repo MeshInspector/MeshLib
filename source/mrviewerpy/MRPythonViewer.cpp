@@ -3,7 +3,7 @@
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRViewport.h"
 #include "MRViewer/MRSetupViewer.h"
-#include "MRMesh/MRPython.h"
+#include "MRPython/MRPython.h"
 #include "MRMesh/MRViewportId.h"
 #include "MRMesh/MRLine3.h"
 #include "MRMesh/MRSystem.h"

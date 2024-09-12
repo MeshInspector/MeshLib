@@ -1,4 +1,4 @@
-#include "MRMesh/MRPython.h"
+#include "MRPython/MRPython.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshIntersect.h"
 #include "MRMesh/MRMeshThickness.h"

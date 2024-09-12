@@ -215,9 +215,11 @@ void ColorTheme::apply()
 
     CommandLoop::appendCommand( [&] ()
     {
-        resetImGuiStyle();
-
         auto& viewer = getViewerInstance();
+
+        if ( viewer.getMenuPlugin() )
+            resetImGuiStyle();
+
         for ( auto& vp : viewer.viewport_list )
         {
             auto params = vp.getParameters();

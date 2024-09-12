@@ -50,8 +50,10 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     vmParams.cb = subprogress( params.progress, p2vParams.ptNormals ? 0.65f : 0.5f, ( params.ptColors && params.vColors ) ? 0.9f : 1.0f );
     vmParams.lessInside = true;
 
-    auto res = ( params.createVolumeCallback ?
-        params.createVolumeCallback( cloud, p2vParams ) : pointsToDistanceVolume( cloud, p2vParams ) ).and_then( [&vmParams] ( SimpleVolume&& volume )
+    Expected<Mesh> res;
+    if ( params.createVolumeCallback )
+    {
+        res = params.createVolumeCallback( cloud, p2vParams ).and_then( [&vmParams] ( SimpleVolume&& volume )
         {
             vmParams.freeVolume = [&volume]
             {
@@ -60,6 +62,9 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
             };
             return marchingCubes( volume, vmParams );
         } );
+    }
+    else
+        res = marchingCubes( pointsToDistanceFunctionVolume( cloud, p2vParams ), vmParams );
 
     if ( res && params.ptColors && params.vColors )
     {

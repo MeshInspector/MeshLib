@@ -35,14 +35,14 @@ static void pythonCaptureScreenShot( MR::Viewer* viewer, const char* path )
     } );
 }
 
-static void pythonLaunch( const MR::Viewer::LaunchParams& params, const MR::ViewerSetup& setup )
+static void pythonLaunch( const MR::Viewer::LaunchParams& params, const std::shared_ptr<MR::ViewerSetup>& setup )
 {
-    std::thread lauchThread = std::thread( [=] ()
+    std::thread launchThread { [=]
     {
         MR::SetCurrentThreadName( "PythonAppLaunchThread" );
-        MR::launchDefaultViewer( params, setup );
-    } );
-    lauchThread.detach();
+        MR::launchDefaultViewer( params, *setup );
+    } };
+    launchThread.detach();
 }
 
 static void pythonSkipFrames( MR::Viewer* viewer, int frames )
@@ -57,20 +57,35 @@ static void pythonSkipFrames( MR::Viewer* viewer, int frames )
 
 namespace
 {
-    enum class PythonKeyMod
-    {
-        Empty = 0,
-        Ctrl = GLFW_MOD_CONTROL,
-        Shift = GLFW_MOD_SHIFT,
-        Alt = GLFW_MOD_ALT,
-    };
-    MR_MAKE_FLAG_OPERATORS( PythonKeyMod )
-}
+
+using namespace MR;
+
+enum class PythonKeyMod
+{
+    Empty = 0,
+    Ctrl = GLFW_MOD_CONTROL,
+    Shift = GLFW_MOD_SHIFT,
+    Alt = GLFW_MOD_ALT,
+};
+MR_MAKE_FLAG_OPERATORS( PythonKeyMod )
+
+class MinimalViewerSetup final : public ViewerSetup
+{
+public:
+    void setupBasePlugins( Viewer* ) const override {}
+    void setupExtendedLibraries() const override {}
+    void unloadExtendedLibraries() const override {}
+};
+
+} // namespace
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::ViewerSetup>( m, "ViewerSetup" ).
-        def( pybind11::init<>() );
+    pybind11::class_<MR::ViewerSetup, std::shared_ptr<MR::ViewerSetup>>( m, "ViewerSetup" ).
+        def( pybind11::init( [] { return std::make_shared<MR::ViewerSetup>(); } ) );
+
+    pybind11::class_<MinimalViewerSetup, std::shared_ptr<MinimalViewerSetup>, MR::ViewerSetup>( m, "MinimalViewerSetup" ).
+        def( pybind11::init( [] { return std::make_shared<MinimalViewerSetup>(); } ) );
 
     pybind11::enum_<MR::Viewer::LaunchParams::WindowMode>( m, "ViewerLaunchParamsMode" ).
         value( "Hide", MR::Viewer::LaunchParams::WindowMode::Hide, "Don't show window" ).
@@ -218,6 +233,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
 
     m.def( "launch", &pythonLaunch,
         pybind11::arg_v( "params", MR::Viewer::LaunchParams(), "ViewerLaunchParams()" ),
-        pybind11::arg_v( "setup", MR::ViewerSetup(), "ViewerSetup()" ),
+        pybind11::arg_v( "setup", std::make_shared<MinimalViewerSetup>(), "MinimalViewerSetup()" ),
         "starts default viewer with given params and setup" );
 } )

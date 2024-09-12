@@ -8,6 +8,7 @@ enum class NotificationType
     Error,
     Warning,
     Info,
+    Time,
     Count
 };
 

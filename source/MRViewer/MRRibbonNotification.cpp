@@ -10,6 +10,7 @@
 #include "MRPch/MRWasm.h"
 #include "MRProgressBar.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRRibbonMenu.h"
 #include <imgui_internal.h>
 
 namespace
@@ -20,7 +21,8 @@ constexpr std::array< std::pair<const char*, ImU32>, int( MR::NotificationType::
 {
     std::pair<const char*, ImU32> { "\xef\x81\xaa", ::MR::Color( 217, 0, 0 ).getUInt32() },
     std::pair<const char*, ImU32> { "\xef\x81\xb1", ::MR::Color( 255, 146, 0 ).getUInt32() },
-    std::pair<const char*, ImU32> { "\xef\x83\xb3", ::MR::Color( 39, 119, 214 ).getUInt32() }
+    std::pair<const char*, ImU32> { "\xef\x83\xb3", ::MR::Color( 39, 119, 214 ).getUInt32() },
+    std::pair<const char*, ImU32> { "\xef\x8b\xb2", ::MR::Color( 255, 146, 0 ).getUInt32() }
 };
 
 }
@@ -46,10 +48,13 @@ void RibbonNotifier::pushNotification( const RibbonNotification& notification )
 
 void RibbonNotifier::drawNotifications( float scaling )
 {
-    Vector2f currentPos = Vector2f( getViewerInstance().framebufferSize );
+    float notificationsPosX = 0.f;
+    if ( auto menu = getViewerInstance().getMenuPluginAs<RibbonMenu>() )
+        notificationsPosX = float( menu->getSceneSize().x );
+    Vector2f currentPos = Vector2f( notificationsPosX, float ( getViewerInstance().framebufferSize.y ) - 25.f * scaling );
     const Vector2f padding = Vector2f( 0.0f, 20.0f * scaling );
     const float width = 337.0f * scaling;
-    currentPos.x -= padding.y;
+    currentPos.x += padding.y;
 
     int numInvalid = -1;
     for ( int i = 0; i < notifications_.size(); ++i )
@@ -57,7 +62,7 @@ void RibbonNotifier::drawNotifications( float scaling )
         currentPos -= padding;
         auto& [notification, timer,counter] = notifications_[i];
 
-        ImGui::SetNextWindowPos( currentPos, ImGuiCond_Always, ImVec2( 1.0f, 1.0f ) );
+        ImGui::SetNextWindowPos( currentPos, ImGuiCond_Always, ImVec2( 0.f, 1.0f ) );
         ImGui::SetNextWindowSize( ImVec2( width, -1 ), ImGuiCond_Always );
         ImGuiWindowFlags flags =
             ImGuiWindowFlags_AlwaysAutoResize |

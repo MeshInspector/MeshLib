@@ -1605,9 +1605,10 @@ bool ImGuiMenu::drawAdvancedOptions( const std::vector<std::shared_ptr<VisualObj
             return data->getRenderDiscretization();
         }, [&] ( ObjectPointsHolder* data, const int val )
         {
-            data->setMaxRenderingPoints( val == 1 ?
+            const auto AbsoluteMaxRenderingPoints = 1 << 25; // about 33M, rendering of more points will be slow anyway
+            data->setMaxRenderingPoints( std::min( AbsoluteMaxRenderingPoints, val == 1 ?
                 std::max( ObjectPointsHolder::MaxRenderingPointsDefault, int( data->numValidPoints() ) ) :
-                int( data->numValidPoints() + val - 1 ) / val );
+                int( data->numValidPoints() + val - 1 ) / val ) );
         } );
     }
 
@@ -2330,7 +2331,7 @@ void ImGuiMenu::make_points_discretization( std::vector<std::shared_ptr<VisualOb
     const auto valueConstForComparation = value;
 
     ImGui::SetNextItemWidth( 50 * menu_scaling() );
-    UI::drag<NoUnit>( label, value, 0.1f, 1, 256, {}, UI::defaultSliderFlags, 0, 0 );
+    UI::drag<NoUnit>( label, value, 0.1f, 1, 9999, {}, UI::defaultSliderFlags, 0, 0 );
 
     if ( value != valueConstForComparation )
         for ( const auto& data : selectedVisualObjs )

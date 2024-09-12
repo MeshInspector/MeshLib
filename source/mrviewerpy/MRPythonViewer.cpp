@@ -60,6 +60,8 @@ enum class PythonKeyMod
 };
 MR_MAKE_FLAG_OPERATORS( PythonKeyMod )
 
+/// viewer setup class for minimal configuration
+/// only loads config file (if available) and configures the scene and mouse controls
 class MinimalViewerSetup final : public ViewerSetup
 {
 public:

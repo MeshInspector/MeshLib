@@ -36,16 +36,6 @@ static void pythonCaptureScreenShot( MR::Viewer* viewer, const char* path )
     } );
 }
 
-static void pythonLaunch( const MR::Viewer::LaunchParams& params, const std::shared_ptr<MR::ViewerSetup>& setup )
-{
-    std::thread launchThread { [=]
-    {
-        MR::SetCurrentThreadName( "PythonAppLaunchThread" );
-        MR::launchDefaultViewer( params, *setup );
-    } };
-    launchThread.detach();
-}
-
 static void pythonSkipFrames( MR::Viewer* viewer, int frames )
 {
     (void)viewer;
@@ -99,15 +89,22 @@ private:
     }
 };
 
+void pythonLaunch( const MR::Viewer::LaunchParams& params, const MinimalViewerSetup& setup )
+{
+    std::thread lauchThread = std::thread( [=] ()
+    {
+        MR::SetCurrentThreadName( "PythonAppLaunchThread" );
+        MR::launchDefaultViewer( params, setup );
+    } );
+    lauchThread.detach();
+}
+
 } // namespace
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::ViewerSetup, std::shared_ptr<MR::ViewerSetup>>( m, "ViewerSetup" ).
-        def( pybind11::init( [] { return std::make_shared<MR::ViewerSetup>(); } ) );
-
-    pybind11::class_<MinimalViewerSetup, std::shared_ptr<MinimalViewerSetup>, MR::ViewerSetup>( m, "MinimalViewerSetup" ).
-        def( pybind11::init( [] { return std::make_shared<MinimalViewerSetup>(); } ) );
+    pybind11::class_<MinimalViewerSetup>( m, "ViewerSetup" ).
+        def( pybind11::init<>() );
 
     pybind11::enum_<MR::Viewer::LaunchParams::WindowMode>( m, "ViewerLaunchParamsMode" ).
         value( "Hide", MR::Viewer::LaunchParams::WindowMode::Hide, "Don't show window" ).
@@ -255,6 +252,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
 
     m.def( "launch", &pythonLaunch,
         pybind11::arg_v( "params", MR::Viewer::LaunchParams(), "ViewerLaunchParams()" ),
-        pybind11::arg_v( "setup", std::make_shared<MinimalViewerSetup>(), "MinimalViewerSetup()" ),
+        pybind11::arg_v( "setup", MinimalViewerSetup(), "ViewerSetup()" ),
         "starts default viewer with given params and setup" );
 } )

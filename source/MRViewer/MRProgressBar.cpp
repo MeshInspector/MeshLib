@@ -128,8 +128,11 @@ void ProgressBar::setup( float scaling )
         {
             if ( instance.isOrdered_ )
             {
-                instance.lastOperationTimeSec_ = float( ( std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::system_clock::now() - instance.operationStartTime_ ) ).count() ) * 1e-3f;
-                spdlog::info( "Operation \"{}\" time  - {} sec", instance.title_, instance.lastOperationTimeSec_);
+                const float time = float( ( std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::system_clock::now() - instance.operationStartTime_ ) ).count() ) * 1e-3f;
+                instance.lastOperationTimeSec_ = time;
+                spdlog::info( "Operation \"{}\" time  - {} sec", instance.title_, instance.lastOperationTimeSec_ );
+                pushNotification( { .header = fmt::format( "{:.1f} sec", time < 5.e-3f ? 0.f : time ),
+                                    .text = instance.title_, .type = NotificationType::Time } );
             }
             if ( instance.onFinish_ )
             {
@@ -342,8 +345,6 @@ void ProgressBar::finish()
     auto& instance = instance_();
     instance.finished_ = true;
     instance.frameRequest_.requestFrame();
-    pushNotification( { .header = fmt::format( "{:.1f} sec", instance.lastOperationTimeSec_ < 1.e-3f ? 0.f : instance.lastOperationTimeSec_ ),
-                        .text = instance.title_, .type = NotificationType::Time } );
 }
 
 bool ProgressBar::isOrdered()

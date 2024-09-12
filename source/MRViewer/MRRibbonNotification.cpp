@@ -115,7 +115,7 @@ void RibbonNotifier::drawNotifications( float scaling )
 
         ImGui::TableNextColumn();
 
-        if ( !notification.header.empty() && notification.type != NotificationType::Time )
+        if ( !notification.header.empty() )
         {
             auto boldFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::BigSemiBold );
             if ( boldFont )
@@ -137,16 +137,7 @@ void RibbonNotifier::drawNotifications( float scaling )
         ImGui::SetCursorPosX( 40.0f * scaling );
         if ( notification.onButtonClick )
             ImGui::SetCursorPosY( ImGui::GetCursorPosY() + style.FramePadding.y * 0.5f );
-        if ( notification.type != NotificationType::Time )
-            ImGui::TextWrapped( "%s", notification.text.c_str() );
-        else
-        {
-            ImGui::TextWrapped( "%s", notification.header.c_str() );
-            ImGui::SameLine();
-            ImGui::PushStyleColor( ImGuiCol_Text, ImGui::GetColorU32( ImGuiCol_Text, 0.7f ) );
-            ImGui::TextWrapped( "%s", notification.text.c_str() );
-            ImGui::PopStyleColor();
-        }
+        ImGui::TextWrapped( "%s", notification.text.c_str() );
         
         if ( bigFont )
             ImGui::PopFont();

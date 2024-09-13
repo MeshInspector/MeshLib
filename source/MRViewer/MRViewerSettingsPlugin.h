@@ -57,6 +57,12 @@ public:
     /// delete external settings with UI combo box
     MRVIEWER_API void delComboSettings( const TabType tab, const ExternalSettings * settings );
 
+    /// returns instance of this plugin if it is registered
+    /// nullptr otherwise
+    MRVIEWER_API static ViewerSettingsPlugin* instance();
+
+    /// changes active tab
+    MRVIEWER_API void setActiveTab( TabType tab );
 private:
     virtual bool onEnable_() override;
     virtual bool onDisable_() override;
@@ -111,6 +117,7 @@ private:
     TouchpadParameters touchpadParameters_;
 
     TabType activeTab_ = TabType::Quick;
+    TabType orderdTab_ = TabType::Count; // invalid
 
     std::array<std::vector<std::shared_ptr<ExternalSettings>>, size_t(TabType::Count)> comboSettings_;
 };

@@ -117,7 +117,7 @@ private:
     TouchpadParameters touchpadParameters_;
 
     TabType activeTab_ = TabType::Quick;
-    TabType orderdTab_ = TabType::Count; // invalid
+    TabType orderedTab_ = TabType::Count; // invalid
 
     std::array<std::vector<std::shared_ptr<ExternalSettings>>, size_t(TabType::Count)> comboSettings_;
 };

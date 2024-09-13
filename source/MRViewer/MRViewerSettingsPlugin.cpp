@@ -104,11 +104,11 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     continue;
             }
             auto tab = TabType( i );
-            bool neetToSelect = orderdTab_ == tab;
+            bool neetToSelect = orderedTab_ == tab;
             if ( UI::beginTabItem( getViewerSettingTabName( tab ), nullptr, neetToSelect ? ImGuiTabItemFlags_SetSelected : 0 ) )
             {
                 if ( neetToSelect )
-                    orderdTab_ = TabType::Count;
+                    orderedTab_ = TabType::Count;
                 activeTab_ = tab;
                 drawTab_( menuWidth, menuScaling );
                 drawCustomSettings_( "Tools", true, menuScaling );
@@ -187,7 +187,7 @@ ViewerSettingsPlugin* ViewerSettingsPlugin::instance()
 
 void ViewerSettingsPlugin::setActiveTab( TabType tab )
 {
-    orderdTab_ = tab;
+    orderedTab_ = tab;
 }
 
 bool ViewerSettingsPlugin::onEnable_()
@@ -1203,7 +1203,7 @@ void ViewerSettingsPlugin::drawSeparator_( const std::string& separatorName, flo
 
 void ViewerSettingsPlugin::updateDialog_()
 {
-    orderdTab_ = TabType::Count;
+    orderedTab_ = TabType::Count;
     updateThemes();
 
     spaceMouseParams_ = viewer->getSpaceMouseParameters();

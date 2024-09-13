@@ -175,14 +175,13 @@ void ViewerSettingsPlugin::delComboSettings( const TabType tab, const ExternalSe
 
 ViewerSettingsPlugin* ViewerSettingsPlugin::instance()
 {
-    static ViewerSettingsPlugin* self{ nullptr };
-    if ( self )
-        return self;
-
-    auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
-    if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
-        return nullptr;
-    self = dynamic_cast< ViewerSettingsPlugin* >( viewerSettingsIt->second.item.get() );
+    static ViewerSettingsPlugin* self = [&]()->ViewerSettingsPlugin*
+    {
+      auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
+      if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
+          return nullptr;
+      return dynamic_cast< ViewerSettingsPlugin* >( viewerSettingsIt->second.item.get() );
+      }();
     return self;
 }
 

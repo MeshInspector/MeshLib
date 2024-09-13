@@ -1,22 +1,12 @@
 #include "MRGcodeLoad.h"
 #include "MRStringConvert.h"
 #include "MRTimer.h"
+#include "MRIOFormatsRegistry.h"
 #include <fstream>
 #include <sstream>
 
-namespace MR
+namespace MR::GcodeLoad
 {
-
-namespace GcodeLoad
-{
-
-const IOFilters Filters =
-{
-    {"G-code", "*.gcode"},
-    {"Numerical Control", "*.nc"},
-    {"Text file", "*.txt"}
-};
-
 Expected<GcodeSource> fromGcode( const std::filesystem::path& file, ProgressCallback callback /*= {} */ )
 {
     std::ifstream filestream( file );
@@ -61,6 +51,8 @@ Expected<MR::GcodeSource> fromAnySupportedFormat( std::istream& in, const std::s
     return res;
 }
 
-}
+MR_ADD_GCODE_LOADER( IOFilter( "G-code", "*.gcode" ), fromGcode )
+MR_ADD_GCODE_LOADER( IOFilter( "Numerical Control", "*.nc" ), fromGcode )
+MR_ADD_GCODE_LOADER( IOFilter( "Text file", "*.txt" ), fromGcode )
 
 }

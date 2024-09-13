@@ -100,4 +100,11 @@ MR_FORMAT_REGISTRY_IMPL( SceneSaver )
 
 } // namespace SceneSave
 
+namespace GcodeLoad
+{
+
+MR_FORMAT_REGISTRY_IMPL( GcodeLoader )
+
+} // namespace GcodeLoad
+
 } // namespace MR

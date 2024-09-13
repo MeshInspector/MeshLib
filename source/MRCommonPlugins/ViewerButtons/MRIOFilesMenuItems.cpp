@@ -112,7 +112,7 @@ extern "C" {
 EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename )
 {
     using namespace MR;
-    auto filters = MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() | DistanceMapLoad::Filters | GcodeLoad::Filters
+    auto filters = MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() | DistanceMapLoad::Filters | GcodeLoad::getFilters()
 #ifndef MRMESH_NO_OPENVDB
         | VoxelsLoad::getFilters()
 #endif
@@ -174,7 +174,7 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
 #ifndef __EMSCRIPTEN__
             AllFilter |
 #endif
-            MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneSave::getFilters() | DistanceMapLoad::Filters | GcodeLoad::Filters | ObjectLoad::getFilters();
+            MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneSave::getFilters() | DistanceMapLoad::Filters | GcodeLoad::getFilters() | ObjectLoad::getFilters();
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
         filters_ = filters_ | AsyncObjectLoad::getFilters();
 #endif

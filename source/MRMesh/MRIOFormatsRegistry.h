@@ -358,5 +358,24 @@ MR_ON_INIT { using namespace MR::SceneSave; setSceneSaver( filter, saver, priori
 
 } // namespace SceneSave
 
+namespace GcodeLoad
+{
+
+using GcodeFileLoader = Expected<GcodeSource>( * )( const std::filesystem::path&, ProgressCallback );
+using GcodeStreamLoader = Expected<GcodeSource>( * )( std::istream&, ProgressCallback );
+
+struct GcodeLoader
+{
+    GcodeFileLoader fileLoad{ nullptr };
+    GcodeStreamLoader streamLoad{ nullptr };
+};
+
+MR_FORMAT_REGISTRY_DECL( GcodeLoader )
+
+#define MR_ADD_GCODE_LOADER( filter, loader ) \
+MR_ON_INIT { using namespace MR::GcodeLoad; setGcodeLoader( filter, { static_cast<GcodeFileLoader>( loader ), static_cast<GcodeStreamLoader>( loader ) } ); };
+
+} // namespace GcodeLoad
+
 } // namespace MR
 #endif

@@ -76,12 +76,18 @@ void RibbonNotifier::drawNotifications( float scaling )
         ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, { 0, 0 } );
         ImGui::PushStyleColor( ImGuiCol_WindowBg, MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::FrameBackground ).getUInt32() );
 
+        auto activeModal = ImGui::GetTopMostPopupModal();
+
         if ( i + 1 == cNotificationNumberLimit )
             ImGui::SetNextWindowBgAlpha( 0.5f );
         ImGui::Begin( name.c_str(), nullptr, flags );
-        ImGui::BringWindowToDisplayFront( ImGui::GetCurrentWindow() );
-        if ( ImGui::IsWindowAppearing() && !ProgressBar::isOrdered() )
-            ImGui::SetWindowFocus();
+
+        if ( ImGui::IsWindowAppearing() )
+        {
+            ImGui::BringWindowToDisplayFront( ImGui::GetCurrentWindow() );
+            if ( !ProgressBar::isOrdered() && !activeModal )
+                ImGui::SetWindowFocus();
+        }
         const int columnCount = 2;
         const float firstColumnWidth = 28.0f * scaling;
         auto& style = ImGui::GetStyle();
@@ -151,10 +157,19 @@ void RibbonNotifier::drawNotifications( float scaling )
         ImGui::EndTable();       
 
         auto window = ImGui::GetCurrentContext()->CurrentWindow;
-        const bool isHovered = ImGui::IsWindowHovered();
+        bool isHovered = false;
+        if ( activeModal )
+        {
+            auto mousePos = ImGui::GetMousePos();
+            isHovered = window->Rect().Contains( mousePos ) && !activeModal->Rect().Contains( mousePos );
+        }
+        else
+        {
+            isHovered = ImGui::IsWindowHovered();
+        }
         if ( !isHovered )
             timer += ImGui::GetIO().DeltaTime;
-        
+
         if ( notification.type == NotificationType::Error || notification.type == NotificationType::Warning || isHovered )
         {
             auto drawList = window->DrawList;

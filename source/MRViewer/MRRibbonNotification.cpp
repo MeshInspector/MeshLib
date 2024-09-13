@@ -82,12 +82,17 @@ void RibbonNotifier::drawNotifications( float scaling )
             ImGui::SetNextWindowBgAlpha( 0.5f );
         ImGui::Begin( name.c_str(), nullptr, flags );
 
+        auto window = ImGui::GetCurrentContext()->CurrentWindow;
+
         if ( ImGui::IsWindowAppearing() )
         {
-            ImGui::BringWindowToDisplayFront( ImGui::GetCurrentWindow() ); // bring to front to be over modal background
+            if ( !activeModal || std::string_view( activeModal->Name ) != " Error##modal" )
+                ImGui::BringWindowToDisplayFront( window ); // bring to front to be over modal background (but not over menu modal)
+
             if ( !ProgressBar::isOrdered() && !activeModal ) // do not focus window, not to close modal on appearing
                 ImGui::SetWindowFocus();
         }
+
         const int columnCount = 2;
         const float firstColumnWidth = 28.0f * scaling;
         auto& style = ImGui::GetStyle();
@@ -156,7 +161,6 @@ void RibbonNotifier::drawNotifications( float scaling )
         }
         ImGui::EndTable();       
 
-        auto window = ImGui::GetCurrentContext()->CurrentWindow;
         bool isHovered = false;
         if ( activeModal )
         {

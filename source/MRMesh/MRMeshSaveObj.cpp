@@ -34,7 +34,7 @@ VoidOrErrStr sceneToObj( const std::vector<NamedXfMesh> & objects, std::ostream 
         auto saveRes = toObj( *o.mesh, out, { .colors = colors, .xf = &xf }, firstVertId );
         if ( !saveRes.has_value() )
             return saveRes; //error
-        firstVertId += o.mesh->topology.lastValidVert() + 1;
+        firstVertId += o.mesh->topology.numValidVerts();
     }
     return {}; //success
 }

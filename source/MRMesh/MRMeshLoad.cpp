@@ -194,6 +194,8 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
     }
 
     auto res = Mesh::fromFaceSoup( std::move( pointsBlocks ), flatPolygonIndices, faces, { .skippedFaceCount = settings.skippedFaceCount } );
+    if ( res.topology.lastValidVert() + 1 > res.points.size() )
+        return unexpected( "vertex id is larger than total point coordinates" );
     return res;
 }
 
@@ -556,6 +558,8 @@ Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings /*= {
 
             int mySkippedFaceCount = 0;
             res.topology = MeshBuilder::fromTriangles( tris, { .skippedFaceCount = settings.skippedFaceCount ? &mySkippedFaceCount : nullptr }, partedProgressCb );
+            if ( res.topology.lastValidVert() + 1 > res.points.size() )
+                return unexpected( "vertex id is larger than total point coordinates" );
             if ( settings.skippedFaceCount )
                 *settings.skippedFaceCount += mySkippedFaceCount;
             if ( settings.callback && ( !settings.callback( float( posCurent - posStart ) / streamSize ) || isCanceled ) )

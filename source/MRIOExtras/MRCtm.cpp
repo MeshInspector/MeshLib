@@ -146,7 +146,8 @@ Expected<Mesh> fromCtm( std::istream& in, const MeshLoadSettings& settings /*= {
         t.push_back( { VertId( (int)indices[3*i] ), VertId( (int)indices[3*i+1] ), VertId( (int)indices[3*i+2] ) } );
 
     mesh.topology = MeshBuilder::fromTriangles( t, { .skippedFaceCount = settings.skippedFaceCount } );
-
+    if ( mesh.topology.lastValidVert() + 1 > mesh.points.size() )
+        return unexpected( "vertex id is larger than total point coordinates" );
     return mesh;
 }
 

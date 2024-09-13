@@ -78,7 +78,7 @@ Expected<TeethMaskToDirectionVolumeConvertor>
     for ( int i : additionalIds )
         ids.insert( i );
 
-    HashSet<int> present; //  also, 48 is the max tooth id in FDI
+    HashSet<int> present;
     HashMap<int, Box3i> bounds;
     forEachInSimpleVolume( res.mask_, [&ids, &present, &bounds] ( const Vector3i& pos, float val )
     {

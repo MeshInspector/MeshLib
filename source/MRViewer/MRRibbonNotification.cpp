@@ -84,8 +84,8 @@ void RibbonNotifier::drawNotifications( float scaling )
 
         if ( ImGui::IsWindowAppearing() )
         {
-            ImGui::BringWindowToDisplayFront( ImGui::GetCurrentWindow() );
-            if ( !ProgressBar::isOrdered() && !activeModal )
+            ImGui::BringWindowToDisplayFront( ImGui::GetCurrentWindow() ); // bring to front to be over modal background
+            if ( !ProgressBar::isOrdered() && !activeModal ) // do not focus window, not to close modal on appearing
                 ImGui::SetWindowFocus();
         }
         const int columnCount = 2;
@@ -160,6 +160,7 @@ void RibbonNotifier::drawNotifications( float scaling )
         bool isHovered = false;
         if ( activeModal )
         {
+            // workaround to be able to hover notification even if modal is present
             auto mousePos = ImGui::GetMousePos();
             isHovered = window->Rect().Contains( mousePos ) && !activeModal->Rect().Contains( mousePos );
         }

@@ -160,7 +160,14 @@ public:
         return res;
     }
 
-    /// expands min and max to their closest representable value
+    /// decreases min and increased max on given value
+    Box expanded( const V & expansion ) const
+    {
+        assert( valid() );
+        return Box( min - expansion, max + expansion );
+    }
+
+    /// decreases min and increases max to their closest representable value
     Box insignificantlyExpanded() const
     {
         assert( valid() );

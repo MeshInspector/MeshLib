@@ -47,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRBoolean.h" />
+    <ClInclude Include="MRCalcDims.h" />
     <ClInclude Include="MRChangeVoxelsAction.h" />
     <ClInclude Include="MRChangeVoxelSelectionAction.h" />
     <ClInclude Include="MRComputeVolume.h" />

@@ -6,13 +6,6 @@
 namespace MR
 {
 
-struct TransformVdbVolumeResult
-{
-    VdbVolume volume;
-    Vector3f fixer; // the additional vector that "fixes" the volume (see parameter `fixBox` of \ref transformVdbVolume)
-};
-
-
 /// Transform volume
 /// @param volume Volume to transform
 /// @param xf The transformation

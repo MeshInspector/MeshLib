@@ -10,17 +10,17 @@ namespace MR
 
 // projecting the vertex attributes of the old onto the new one
 template<typename F>
-void projectVertAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, ProgressCallback progressCb );
+bool projectVertAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, ProgressCallback progressCb );
 
 // projecting the face attributes of the old onto the new one
 template<typename F>
-void projectFaceAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, ProgressCallback progressCb );
+bool projectFaceAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, ProgressCallback progressCb );
 
 
 template<typename F>
-void projectVertAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, ProgressCallback progressCb )
+bool projectVertAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, ProgressCallback progressCb )
 {
-    BitSetParallelFor( newMesh.topology.getValidVerts(), [&] ( VertId id )
+    return BitSetParallelFor( newMesh.topology.getValidVerts(), [&] ( VertId id )
         {
             auto projectionResult = findProjection( newMesh.points[id], oldMesh );
             auto res = projectionResult.mtp;
@@ -33,9 +33,9 @@ void projectVertAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, P
 }
 
 template<typename F>
-void projectFaceAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, ProgressCallback progressCb )
+bool projectFaceAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, ProgressCallback progressCb )
 {
-    BitSetParallelFor( newMesh.topology.getValidFaces(), [&] ( FaceId newFaceId )
+    return BitSetParallelFor( newMesh.topology.getValidFaces(), [&] ( FaceId newFaceId )
     {
         auto projectionResult = findProjection( newMesh.triCenter( newFaceId ), oldMesh );
         func( newFaceId, projectionResult );

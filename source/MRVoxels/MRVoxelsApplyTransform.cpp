@@ -2,6 +2,7 @@
 #include "MRVoxels/MRVDBFloatGrid.h"
 #include "MRMesh/MRMatrix4.h"
 #include "MRVDBConversions.h"
+#include "MRObjectVoxels.h"
 
 #include <openvdb/math/Maps.h>
 #include <openvdb/tools/GridTransformer.h>
@@ -11,8 +12,9 @@ namespace MR
 {
 
 
-VdbVolume transformVdbVolume( const VdbVolume& volume, AffineXf3f xf, bool fixBox, const Box3f& box )
+VdbVolume transformVdbVolume( const VdbVolume& volume, const AffineXf3f& xf0, bool fixBox, const Box3f& box )
 {
+    AffineXf3f xf = xf0;
     Box3f newBox;
     {
         Box3f pseudoBox;

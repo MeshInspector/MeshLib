@@ -1,6 +1,3 @@
-//
-// Created by Andrey Aralov on 9/15/24.
-//
 #include "MRVoxelsApplyTransform.h"
 #include "MRVoxels/MRVDBFloatGrid.h"
 #include "MRMesh/MRMatrix4.h"

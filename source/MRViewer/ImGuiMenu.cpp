@@ -1262,29 +1262,7 @@ float ImGuiMenu::drawSelectionInformation_()
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, smallItemSpacingY } );
     MR_FINALLY{ ImGui::PopStyleVar(); };
 
-    auto drawPrimitivesInfo = [this]( std::string title, size_t value, size_t selected = 0, std::optional<ImVec4> textColorForSelected = {} )
-    {
-        if ( value )
-        {
-            std::string valueStr;
-            std::string labelStr;
-            if ( selected )
-            {
-                valueStr = valueToString<NoUnit>( selected ) + " / ";
-                labelStr = "Selected / ";
-            }
-            valueStr += valueToString<NoUnit>( value );
-            labelStr += title;
-
-            UI::inputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x, selected ? textColorForSelected : std::optional<ImVec4>{} );
-        }
-    };
-
-    if ( selectedObjs.size() > 1 )
-    {
-        drawPrimitivesInfo( "Objects", selectedObjs.size() );
-    }
-    else if ( selectedObjs.size() == 1 )
+    if ( selectedObjs.size() == 1 )
     {
         auto pObj = selectedObjs.front();
         auto lastRenameObj = lastRenameObj_.lock();
@@ -1343,9 +1321,47 @@ float ImGuiMenu::drawSelectionInformation_()
         }
     }
     else
+    {
         lastRenameObj_.reset();
+    }
 
-    const float itemWidth = getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x;
+    const ImVec2 customInputPadding {
+        3.f * menu_scaling(),
+        3.f * menu_scaling(),
+    };
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, customInputPadding );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
+    ImGui::PushStyleColor( ImGuiCol_FrameBg, ImGui::GetStyleColorVec4( ImGuiCol_WindowBg ) );
+    MR_FINALLY { ImGui::PopStyleVar( 2 ); ImGui::PopStyleColor( 1 ); };
+
+    const float itemWidth = getSceneInfoItemWidth_( 3 ) * 3 + ImGui::GetStyle().ItemInnerSpacing.x * 2;
+
+    auto textColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+    auto labelColor = textColor;
+    labelColor.w *= 0.5f;
+
+    auto drawPrimitivesInfo = [&]( std::string title, size_t value, size_t selected = 0, std::optional<ImVec4> textColorForSelected = {} )
+    {
+        if ( value )
+        {
+            std::string valueStr;
+            std::string labelStr;
+            if ( selected )
+            {
+                valueStr = valueToString<NoUnit>( selected ) + " / ";
+                labelStr = "Selected / ";
+            }
+            valueStr += valueToString<NoUnit>( value );
+            labelStr += title;
+
+            UI::inputTextCenteredReadOnly( labelStr.c_str(), valueStr, itemWidth, selected ? textColorForSelected : textColor, labelColor );
+        }
+    };
+
+    if ( selectedObjs.size() > 1 )
+    {
+        drawPrimitivesInfo( "Objects", selectedObjs.size() );
+    }
 
     if ( totalFaces || totalVerts || totalEdges || totalPoints )
     {
@@ -1361,7 +1377,7 @@ float ImGuiMenu::drawSelectionInformation_()
     }
 
     if ( selectedObjs.size() == 1 && totalPoints )
-        UI::inputTextCenteredReadOnly( "Points with Normals", pointsHaveNormals ? "Yes" : "No", itemWidth );
+        UI::inputTextCenteredReadOnly( "Points with Normals", pointsHaveNormals ? "Yes" : "No", itemWidth, textColor, labelColor );
 
     if ( totalFaces )
     {
@@ -1372,13 +1388,13 @@ float ImGuiMenu::drawSelectionInformation_()
             #if __GNUC__ >= 12 && __GNUC__ <= 14 // `totalVolume` may be used uninitialized. False positive in GCC
             #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
             #endif
-            UI::readOnlyValue<VolumeUnit>( "Volume", *totalVolume );
+            UI::readOnlyValue<VolumeUnit>( "Volume", *totalVolume, textColor, labelColor );
             MR_SUPPRESS_WARNING_POP
             ImGui::PopItemWidth();
         }
         else
         {
-            UI::inputTextCenteredReadOnly( "Volume", "Mesh is not closed", itemWidth );
+            UI::inputTextCenteredReadOnly( "Volume", "Mesh is not closed", itemWidth, textColor, labelColor );
         }
 
         if ( selectedObjs.size() == 1 )
@@ -1386,13 +1402,13 @@ float ImGuiMenu::drawSelectionInformation_()
             // TODO: show selected area
             (void)totalSelectedArea;
             ImGui::PushItemWidth( itemWidth );
-            UI::readOnlyValue<AreaUnit>( "Area", totalArea );
+            UI::readOnlyValue<AreaUnit>( "Area", totalArea, textColor, labelColor );
             ImGui::PopItemWidth();
 
             if ( selectedObjs.size() == 1 )
             {
                 ImGui::PushItemWidth( itemWidth );
-                UI::readOnlyValue<LengthUnit>( "Avg Edge Length", avgEdgeLen );
+                UI::readOnlyValue<LengthUnit>( "Avg Edge Length", avgEdgeLen, textColor, labelColor );
                 ImGui::PopItemWidth();
             }
 
@@ -1404,7 +1420,7 @@ float ImGuiMenu::drawSelectionInformation_()
     }
 
     bool firstField = true;
-    auto drawDimensionsVec3 = [this, &firstField]<class Units>( const char* label, const auto& value )
+    auto drawDimensionsVec3 = [&]<class Units>( const char* label, const auto& value )
     {
         if ( firstField )
         {
@@ -1416,7 +1432,7 @@ float ImGuiMenu::drawSelectionInformation_()
         ImGui::PushItemWidth( getSceneInfoItemWidth_() );
         MR_FINALLY{ ImGui::PopItemWidth(); };
 
-        UI::readOnlyValue<Units>( label, value );
+        UI::readOnlyValue<Units>( label, value, textColor, labelColor );
     };
 
 #ifndef MRVIEWER_NO_VOXELS
@@ -1436,11 +1452,11 @@ float ImGuiMenu::drawSelectionInformation_()
         }
         ImGui::PushItemWidth( itemWidth );
         if ( isValidVoxelsInfo( voxelMinValue, FLT_MAX ) )
-            UI::readOnlyValue<NoUnit>( "Voxels Min", *voxelMinValue );
+            UI::readOnlyValue<NoUnit>( "Voxels Min", *voxelMinValue, textColor, labelColor );
         if ( isValidVoxelsInfo( voxelIsoValue, FLT_MAX ) )
-            UI::readOnlyValue<NoUnit>( "Voxels Iso", *voxelIsoValue );
+            UI::readOnlyValue<NoUnit>( "Voxels Iso", *voxelIsoValue, textColor, labelColor );
         if ( isValidVoxelsInfo( voxelMaxValue, FLT_MAX ) )
-            UI::readOnlyValue<NoUnit>( "Voxels Max", *voxelMaxValue );
+            UI::readOnlyValue<NoUnit>( "Voxels Max", *voxelMaxValue, textColor, labelColor );
         ImGui::PopItemWidth();
     }
 #endif
@@ -1464,25 +1480,20 @@ float ImGuiMenu::drawSelectionInformation_()
     // Value for a dimension object.
     if ( selectedObjs.size() == 1 )
     {
-        auto setWidgetWidth = [&]
-        {
-            ImGui::SetNextItemWidth( getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x );
-        };
-
         if ( auto distance = dynamic_cast<DistanceMeasurementObject *>( selectedObjs.front().get() ) )
         {
-            setWidgetWidth();
-            UI::readOnlyValue<LengthUnit>( "Distance", distance->computeDistance() );
+            ImGui::SetNextItemWidth( itemWidth );
+            UI::readOnlyValue<LengthUnit>( "Distance", distance->computeDistance(), textColor, labelColor );
         }
         else if ( auto angle = dynamic_cast<AngleMeasurementObject *>( selectedObjs.front().get() ) )
         {
-            setWidgetWidth();
-            UI::readOnlyValue<AngleUnit>( "Angle", angle->computeAngle() );
+            ImGui::SetNextItemWidth( itemWidth );
+            UI::readOnlyValue<AngleUnit>( "Angle", angle->computeAngle(), textColor, labelColor );
         }
         else if ( auto radius = dynamic_cast<RadiusMeasurementObject *>( selectedObjs.front().get() ) )
         {
-            setWidgetWidth();
-            UI::readOnlyValue<LengthUnit>( radius->getDrawAsDiameter() ? "Diameter" : "Radius", radius->computeRadiusOrDiameter() );
+            ImGui::SetNextItemWidth( itemWidth );
+            UI::readOnlyValue<LengthUnit>( radius->getDrawAsDiameter() ? "Diameter" : "Radius", radius->computeRadiusOrDiameter(), textColor, labelColor );
         }
     }
 

@@ -7,6 +7,9 @@ include_package_data = True
 
 [options.package_data]
 meshlib = $PACKAGE_DATA
+share =
+    MRDarkTheme.json
+    MRLightTheme.json
 
 [bdist_wheel]
 python_tag = $PYTHON_TAG

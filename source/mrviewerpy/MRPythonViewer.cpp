@@ -8,6 +8,7 @@
 #include "MRMesh/MRViewportId.h"
 #include "MRMesh/MRLine3.h"
 #include "MRMesh/MRSystem.h"
+#include "MRMesh/MRSystemPath.h"
 #include "MRMesh/MRLog.h"
 #include "MRMesh/MRImageSave.h"
 #include "MRMesh/MRImage.h"
@@ -65,9 +66,15 @@ MR_MAKE_FLAG_OPERATORS( PythonKeyMod )
 class MinimalViewerSetup final : public ViewerSetup
 {
 public:
-    void setupBasePlugins( Viewer* ) const override {}
     void setupExtendedLibraries() const override {}
     void unloadExtendedLibraries() const override {}
+
+    void setupBasePlugins( Viewer* ) const override
+    {
+        // override system paths
+        if ( const auto libDir = SystemPath::getLibraryDirectory() )
+            SystemPath::overrideDirectory( SystemPath::Directory::Resources, *libDir / ".." / "share" );
+    }
 
     void setupConfiguration( Viewer* viewer ) const override
     {

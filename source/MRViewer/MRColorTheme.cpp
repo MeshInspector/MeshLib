@@ -436,7 +436,7 @@ void ColorTheme::resetImGuiStyle()
     Vector4f tabBg = Vector4f( getRibbonColor( RibbonColorsType::DialogTab ) );
     Vector4f tabBgActive = Vector4f( getRibbonColor( RibbonColorsType::DialogTabActive ) );
     Vector4f tabBgHovered = Vector4f( getRibbonColor( RibbonColorsType::DialogTabActiveHovered ) );
-    Vector4f buttonActive = Vector4f( getRibbonColor( RibbonColorsType::RibbonButtonActive ) );
+    Vector4f buttonActive = Vector4f( getRibbonColor( RibbonColorsType::RibbonButtonActiveClicked ) );
 
     style.Colors[ImGuiCol_WindowBg] = ImVec4( bg.x, bg.y, bg.z, bg.w );
     style.Colors[ImGuiCol_Text] = ImVec4( text.x, text.y, text.z, text.w );

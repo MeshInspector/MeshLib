@@ -59,6 +59,8 @@ MR_ADD_PYTHON_VEC( mrmeshpy, vectorVdbVolume, MR::VdbVolume )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
 {
+    pybind11::implicitly_convertible< MR::SimpleVolumeMinMax, MR::SimpleVolume >();
+
     MR_PYTHON_CUSTOM_CLASS( FloatGrid ).doc() =
         "Smart pointer to OpenVdbFloatGrid";
     MR_PYTHON_CUSTOM_CLASS( FloatGrid ).
@@ -74,7 +76,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         "Does not require closed surface, resulting grid cannot be used for boolean operations.\n"
         "SurfaceOffset - the number voxels around surface to calculate distance in (should be positive)." );
 
-    m.def( "simpleVolumeToDenseGrid", ( MR::FloatGrid( * )( const MR::SimpleVolume&, MR::ProgressCallback ) )& MR::simpleVolumeToDenseGrid,
+    m.def( "simpleVolumeToDenseGrid", &MR::simpleVolumeToDenseGrid,
         pybind11::arg( "simpleVolume" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
         "Make FloatGrid from SimpleVolume. Make copy of data.\n"
         "Grid can be used to make iso-surface later with gridToMesh function." );

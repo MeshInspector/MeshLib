@@ -429,18 +429,25 @@ void ColorTheme::resetImGuiStyle()
     Vector4f text = Vector4f( getRibbonColor( RibbonColorsType::Text ) );
     Vector4f border = Vector4f( getRibbonColor( RibbonColorsType::Borders ) );
     Vector4f frameBg = Vector4f( getRibbonColor( RibbonColorsType::FrameBackground ) );
+    Vector4f frameBgHovered = Vector4f( getRibbonColor( RibbonColorsType::RibbonButtonActiveHovered ) );
     Vector4f headerBg = Vector4f( getRibbonColor( RibbonColorsType::CollapseHeaderBackground ) );
     Vector4f textSelBg = Vector4f( getRibbonColor( RibbonColorsType::TextSelectedBg ) );
     Vector4f popupBg = Vector4f( getRibbonColor( RibbonColorsType::ModalBackground ) );
     Vector4f tabBg = Vector4f( getRibbonColor( RibbonColorsType::DialogTab ) );
     Vector4f tabBgActive = Vector4f( getRibbonColor( RibbonColorsType::DialogTabActive ) );
     Vector4f tabBgHovered = Vector4f( getRibbonColor( RibbonColorsType::DialogTabActiveHovered ) );
+    Vector4f buttonActive = Vector4f( getRibbonColor( RibbonColorsType::RibbonButtonActive ) );
 
     style.Colors[ImGuiCol_WindowBg] = ImVec4( bg.x, bg.y, bg.z, bg.w );
     style.Colors[ImGuiCol_Text] = ImVec4( text.x, text.y, text.z, text.w );
     style.Colors[ImGuiCol_Border] = ImVec4( border.x, border.y, border.z, border.w );
     style.Colors[ImGuiCol_FrameBg] = ImVec4( frameBg.x, frameBg.y, frameBg.z, frameBg.w );
+    style.Colors[ImGuiCol_FrameBgHovered] = ImVec4( frameBgHovered.x, frameBgHovered.y, frameBgHovered.z, 102.0f / 255.0f );
+    style.Colors[ImGuiCol_FrameBgActive] = ImVec4( frameBgHovered.x, frameBgHovered.y, frameBgHovered.z, 171.0f / 255.0f );
     style.Colors[ImGuiCol_Header] = ImVec4( headerBg.x, headerBg.y, headerBg.z, headerBg.w );
+    style.Colors[ImGuiCol_HeaderHovered] = ImVec4( frameBgHovered.x, frameBgHovered.y, frameBgHovered.z, 204.0f / 255.0f );
+    style.Colors[ImGuiCol_ButtonHovered] = ImVec4( frameBgHovered.x, frameBgHovered.y, frameBgHovered.z, frameBgHovered.w );
+    style.Colors[ImGuiCol_ButtonActive] = ImVec4( buttonActive.x, buttonActive.y, buttonActive.z, buttonActive.w );
     style.Colors[ImGuiCol_TextSelectedBg] = ImVec4( textSelBg.x, textSelBg.y, textSelBg.z, textSelBg.w );
     style.Colors[ImGuiCol_ScrollbarBg] = ImVec4( 0, 0, 0, 0 );
     style.Colors[ImGuiCol_PopupBg] = ImVec4( popupBg.x, popupBg.y, popupBg.z, popupBg.w );

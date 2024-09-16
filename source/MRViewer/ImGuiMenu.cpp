@@ -1160,6 +1160,7 @@ float ImGuiMenu::drawSelectionInformation_()
     std::optional<float> voxelMinValue = FLT_MAX;
     std::optional<float> voxelIsoValue = FLT_MAX;
     std::optional<float> voxelMaxValue = FLT_MAX;
+    // store shared parameter value: if all objects have identical parameter value, it will be displayed, otherwise it'll be hidden
     auto updateVoxelsInfo = [] <typename T, typename U> ( std::optional<T>& store, U&& value, T def = {} )
     {
         if ( store.has_value() )

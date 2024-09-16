@@ -94,7 +94,7 @@ MRMESH_API MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const V
 /// \param uniteOnlyBd if true then only boundary vertices can be united, all internal vertices (even close ones) will remain
 /// \return the number of vertices united, 0 means no change in the mesh
 MRMESH_API int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd = true,
-    VertMap * optionalVertOldToNew = nullptr );
+    VertMap* optionalVertOldToNew = nullptr, ProgressCallback progressCb = {} );
 
 } //namespace MeshBuilder
 

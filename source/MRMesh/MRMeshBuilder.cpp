@@ -842,7 +842,7 @@ Mesh fromPointTriples( const std::vector<Triangle3f> & posTriples )
     return Mesh::fromPointTriples( posTriples, false );
 }
 
-int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd, VertMap * optionalVertOldToNew )
+int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd, VertMap * optionalVertOldToNew, ProgressCallback progressCb )
 {
     MR_TIMER
     VertBitSet bdVerts;
@@ -850,8 +850,8 @@ int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd, VertMap 
         bdVerts = mesh.topology.findBoundaryVerts();
 
     const VertMap vertOldToNew = uniteOnlyBd ? 
-        *findSmallestCloseVertices( mesh.points, closeDist, &bdVerts ) :
-        *findSmallestCloseVertices( mesh, closeDist );
+        *findSmallestCloseVertices( mesh.points, closeDist, &bdVerts, progressCb ) :
+        *findSmallestCloseVertices( mesh, closeDist, progressCb );
     int numChanged = 0;
     for ( auto v = 0_v; v < vertOldToNew.size(); ++v )
         if ( v != vertOldToNew[v] )

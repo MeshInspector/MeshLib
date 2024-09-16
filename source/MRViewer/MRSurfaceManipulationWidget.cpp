@@ -200,6 +200,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             }
             obj_->setDirtyFlags( DIRTY_ALL );
 
+            init(obj_);
             // otherwise whole surface becomes red after patch and before mouse move
             updateRegion_( mousePos_ );
         }

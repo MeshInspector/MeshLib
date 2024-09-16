@@ -261,7 +261,7 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
     const auto menu = getViewerInstance().getMenuPlugin();
     const float scaling = menu ? menu->menu_scaling() : 1.f;
 
-    Color clearBlue( 0x1b, 0x83, 0xff, 0xff );
+    Color clearBlue = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame );
     Color bgColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background );
     Color textColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text );
 

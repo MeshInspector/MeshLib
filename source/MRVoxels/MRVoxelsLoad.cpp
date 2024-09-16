@@ -571,7 +571,7 @@ Expected<DicomVolume> loadSingleDicomFolder( std::vector<std::filesystem::path>&
     if ( files.empty() )
         return unexpected( "loadDCMFolder: there is no dcm file" );
 
-    SimpleVolume data;
+    SimpleVolumeMinMax data;
     data.voxelSize = Vector3f();
     data.dims = Vector3i::diagonal( 0 );
 
@@ -812,7 +812,7 @@ Expected<DicomVolume> loadDicomFile( const std::filesystem::path& path, const Pr
     if ( !reportProgress( cb, 0.0f ) )
         return unexpected( "Loading canceled" );
 
-    SimpleVolume simpleVolume;
+    SimpleVolumeMinMax simpleVolume;
     simpleVolume.voxelSize = Vector3f();
     simpleVolume.dims.z = 1;
     auto fileRes = loadSingleFile( path, simpleVolume, 0 );
@@ -1171,7 +1171,7 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
 
     auto& tp = *tpExp;
 
-    SimpleVolume outVolume;
+    SimpleVolumeMinMax outVolume;
     outVolume.dims = { tp.imageSize.x, tp.imageSize.y, int( files.size() ) };
     outVolume.min = FLT_MAX;
     outVolume.max = FLT_MIN;
@@ -1290,7 +1290,7 @@ Expected<VdbVolume> fromRaw( std::istream& in, const RawParameters& params,  con
         return unexpected( "Wrong scalar type parameter value" );
     }
 
-    SimpleVolume outVolume;
+    SimpleVolumeMinMax outVolume;
     outVolume.dims = params.dimensions;
     outVolume.voxelSize = params.voxelSize;
     outVolume.data.resize( size_t( outVolume.dims.x ) * outVolume.dims.y * outVolume.dims.z );

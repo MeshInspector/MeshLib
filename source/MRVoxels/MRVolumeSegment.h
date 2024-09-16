@@ -100,7 +100,7 @@ public:
 private:
     const VdbVolume& volume_;
 
-    SimpleVolume volumePart_;
+    SimpleVolumeMinMax volumePart_;
 
     Vector3i minVoxel_;
     Vector3i maxVoxel_;

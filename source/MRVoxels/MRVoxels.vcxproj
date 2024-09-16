@@ -67,7 +67,6 @@
     <ClInclude Include="MRPointsToDistanceVolume.h" />
     <ClInclude Include="MRPointsToMeshFusion.h" />
     <ClInclude Include="MRRebuildMesh.h" />
-    <ClInclude Include="MRSimpleVolume.h" />
     <ClInclude Include="MRTeethMaskToDirectionVolume.h" />
     <ClInclude Include="MRToolPath.h" />
     <ClInclude Include="MRVDBConversions.h" />

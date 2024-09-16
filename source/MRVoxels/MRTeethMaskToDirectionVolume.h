@@ -73,7 +73,7 @@ public:
     MRVOXELS_API const HashMap<int, Box3i>& getObjectBounds() const;
 
     /// See \ref meshToDirectionVolume for details
-    using DirectionVolume = std::array<SimpleVolume, 3>;
+    using DirectionVolume = std::array<SimpleVolumeMinMax, 3>;
     struct ProcessResult
     {
         DirectionVolume volume;
@@ -95,7 +95,7 @@ private:
 
 
 /// A shortcut for \ref TeethMaskToDirectionVolumeConvertor::create and \ref TeethMaskToDirectionVolumeConvertor::convertAll
-MRVOXELS_API Expected<std::array<SimpleVolume, 3>> teethMaskToDirectionVolume( const VdbVolume& volume, const std::vector<int>& additionalIds = {} );
+MRVOXELS_API Expected<std::array<SimpleVolumeMinMax, 3>> teethMaskToDirectionVolume( const VdbVolume& volume, const std::vector<int>& additionalIds = {} );
 
 
 }

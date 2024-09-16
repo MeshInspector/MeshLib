@@ -57,9 +57,9 @@ struct MarchingCubesParams
     std::function<void()> freeVolume;
 };
 
-// makes Mesh from SimpleVolume with given settings using Marching Cubes algorithm
-MRVOXELS_API Expected<Mesh> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params = {} );
-MRVOXELS_API Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolume& volume, const MarchingCubesParams& params = {} );
+// makes Mesh from SimpleVolumeMinMax with given settings using Marching Cubes algorithm
+MRVOXELS_API Expected<Mesh> marchingCubes( const SimpleVolumeMinMax& volume, const MarchingCubesParams& params = {} );
+MRVOXELS_API Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolumeMinMax& volume, const MarchingCubesParams& params = {} );
 
 // makes Mesh from VdbVolume with given settings using Marching Cubes algorithm
 MRVOXELS_API Expected<Mesh> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params = {} );

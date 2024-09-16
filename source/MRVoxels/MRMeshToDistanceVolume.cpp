@@ -51,7 +51,7 @@ std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p
     return dist;
 }
 
-Expected<SimpleVolume> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& cParams /*= {} */ )
+Expected<SimpleVolumeMinMax> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& cParams /*= {} */ )
 {
     MR_TIMER
     auto params = cParams;
@@ -59,7 +59,7 @@ Expected<SimpleVolume> meshToDistanceVolume( const MeshPart& mp, const MeshToDis
 
     if ( params.dist.signMode == SignDetectionMode::HoleWindingRule )
     {
-        SimpleVolume res;
+        SimpleVolumeMinMax res;
         res.voxelSize = params.vol.voxelSize;
         res.dims = params.vol.dimensions;
         VolumeIndexer indexer( res.dims );
@@ -102,7 +102,7 @@ FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDis
     };
 }
 
-Expected<SimpleVolume> meshRegionToIndicatorVolume( const Mesh& mesh, const FaceBitSet& region,
+Expected<SimpleVolumeMinMax> meshRegionToIndicatorVolume( const Mesh& mesh, const FaceBitSet& region,
     float offset, const DistanceVolumeParams& params )
 {
     MR_TIMER
@@ -112,7 +112,7 @@ Expected<SimpleVolume> meshRegionToIndicatorVolume( const Mesh& mesh, const Face
         return unexpected( "empty region" );
     }
 
-    SimpleVolume res;
+    SimpleVolumeMinMax res;
     res.voxelSize = params.voxelSize;
     res.dims = params.dimensions;
     VolumeIndexer indexer( res.dims );
@@ -146,9 +146,7 @@ Expected<SimpleVolume> meshRegionToIndicatorVolume( const Mesh& mesh, const Face
     return res;
 }
 
-
-
-Expected<std::array<SimpleVolume, 3>> meshToDirectionVolume( const MeshToDirectionVolumeParams& params )
+Expected<std::array<SimpleVolumeMinMax, 3>> meshToDirectionVolume( const MeshToDirectionVolumeParams& params )
 {
     MR_TIMER
     VolumeIndexer indexer( params.vol.dimensions );
@@ -169,7 +167,7 @@ Expected<std::array<SimpleVolume, 3>> meshToDirectionVolume( const MeshToDirecti
         params.projector->findProjections( projs, points );
     }
 
-    std::array<SimpleVolume, 3> res;
+    std::array<SimpleVolumeMinMax, 3> res;
     for ( auto& v : res )
     {
         v.voxelSize = params.vol.voxelSize;

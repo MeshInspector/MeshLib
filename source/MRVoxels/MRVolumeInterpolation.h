@@ -95,12 +95,12 @@ private:
 
 /// sample function that resamples the voxel volume using interpolating accessor
 template <typename Accessor>
-SimpleVolume resampleVolumeByInterpolation(
+SimpleVolumeMinMax resampleVolumeByInterpolation(
     const typename Accessor::VolumeType &volume,
     const Accessor &accessor,
     const Vector3f &newVoxelSize )
 {
-    SimpleVolume res{
+    SimpleVolumeMinMax res{
         { .voxelSize{ newVoxelSize } },
         volume.min,
         volume.max

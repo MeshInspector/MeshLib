@@ -813,14 +813,14 @@ Expected<TriMesh> volumeToMeshHelper1( const V& volume, const MarchingCubesParam
         } );
 }
 
-Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolume& volume, const MarchingCubesParams& params /*= {} */ )
+Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolumeMinMax& volume, const MarchingCubesParams& params /*= {} */ )
 {
     if ( params.iso <= volume.min || params.iso >= volume.max )
         return TriMesh{};
     return volumeToMeshHelper1( volume, params );
 }
 
-Expected<Mesh> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params )
+Expected<Mesh> marchingCubes( const SimpleVolumeMinMax& volume, const MarchingCubesParams& params )
 {
     MR_TIMER
     auto p = params;

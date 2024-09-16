@@ -276,7 +276,7 @@ FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,
     return MakeFloatGrid( std::move( grid ) );
 }
 
-VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, ProgressCallback cb /*= {} */ )
+VdbVolume simpleVolumeToVdbVolume( const SimpleVolumeMinMax& simpleVolume, ProgressCallback cb /*= {} */ )
 {
     VdbVolume res;
     res.data = simpleVolumeToDenseGrid( simpleVolume, cb );
@@ -348,17 +348,17 @@ Expected<VoxelsVolumeMinMax<std::vector<T>>> vdbVolumeToSimpleVolumeImpl(
     return res;
 }
 
-Expected<SimpleVolume> vdbVolumeToSimpleVolume( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
+Expected<SimpleVolumeMinMax> vdbVolumeToSimpleVolume( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
 {
     return vdbVolumeToSimpleVolumeImpl<float, false>( vdbVolume, activeBox, cb );
 }
 
-Expected<MR::SimpleVolume> vdbVolumeToSimpleVolumeNorm( const VdbVolume& vdbVolume, const Box3i& activeBox /*= Box3i()*/, ProgressCallback cb /*= {} */ )
+Expected<SimpleVolumeMinMax> vdbVolumeToSimpleVolumeNorm( const VdbVolume& vdbVolume, const Box3i& activeBox /*= Box3i()*/, ProgressCallback cb /*= {} */ )
 {
     return vdbVolumeToSimpleVolumeImpl<float, true>( vdbVolume, activeBox, cb );
 }
 
-Expected<SimpleVolumeU16> vdbVolumeToSimpleVolumeU16( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
+Expected<SimpleVolumeMinMaxU16> vdbVolumeToSimpleVolumeU16( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
 {
     return vdbVolumeToSimpleVolumeImpl<uint16_t, true>( vdbVolume, activeBox, cb );
 }

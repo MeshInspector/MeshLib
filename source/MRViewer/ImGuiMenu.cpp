@@ -1325,6 +1325,7 @@ float ImGuiMenu::drawSelectionInformation_()
         lastRenameObj_.reset();
     }
 
+    // customize input text widget design
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, Vector2f { 3.f, 3.f } * menu_scaling() );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
     ImGui::PushStyleColor( ImGuiCol_FrameBg, ImGui::GetStyleColorVec4( ImGuiCol_WindowBg ) );

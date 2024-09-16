@@ -35,7 +35,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Type, [] ( pybind11::module_& ) \
 MR_ADD_PYTHON_VOXELS_VOLUME( SimpleVolume, "vector of float" )
 
 #define MR_ADD_PYTHON_VOXELS_VOLUME_MINMAX( Type, TypeText ) \
-MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, Type, MR::Type ) \
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, Type, MR::Type, MR::Type::VoxelsVolume ) \
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Type, [] ( pybind11::module_& ) \
 {                                                     \
     MR_PYTHON_CUSTOM_CLASS( Type ).doc() =                                       \
@@ -59,8 +59,6 @@ MR_ADD_PYTHON_VEC( mrmeshpy, vectorVdbVolume, MR::VdbVolume )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
 {
-    pybind11::implicitly_convertible< const MR::SimpleVolumeMinMax&, MR::SimpleVolume >();
-
     MR_PYTHON_CUSTOM_CLASS( FloatGrid ).doc() =
         "Smart pointer to OpenVdbFloatGrid";
     MR_PYTHON_CUSTOM_CLASS( FloatGrid ).

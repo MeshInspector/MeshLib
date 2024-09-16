@@ -1139,7 +1139,7 @@ float ImGuiMenu::drawSelectionInformation_()
     // Points info
     size_t totalPoints = 0;
     size_t totalSelectedPoints = 0;
-    size_t pointsHaveNormals = false;
+    bool pointsHaveNormals = false;
     // Meshes and lines info
     size_t totalFaces = 0;
     size_t totalSelectedFaces = 0;

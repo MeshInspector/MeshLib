@@ -33,8 +33,10 @@ override load_file = $(subst $(lf), ,$(file <$1))
 # Are we on Windows?
 ifeq ($(OS),Windows_NT)
 IS_WINDOWS := 1
-else
+IS_MACOS := 0
+else ifeq ($(shell uname -s),Darwin)
 IS_WINDOWS := 0
+IS_MACOS := 1
 endif
 override IS_WINDOWS := $(filter-out 0,$(IS_WINDOWS))
 
@@ -194,13 +196,32 @@ ifeq ($(VS_MODE),Debug)
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrtd -D_DEBUG
 # Override to match meshlib:
 COMPILER_FLAGS += -D_ITERATOR_DEBUG_LEVEL=0
-else
+else # VS_MODE == Release
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrt
 endif
-else # Linux:
+else # Linux or MacOS:
 COMPILER += -fPIC
+# MacOS rpath is quirky: 1. Must use `-rpath,` instead of `-rpath=`. 2. Must specify the flag several times, apparently can't use
+#   `:` or `;` as a separators inside of one big flag. 3. As you've noticed, it uses `@loader_path` instead of `$ORIGIN`.
+rpath_origin := $(if $(IS_MACOS),@loader_path,$$ORIGIN)
+LINKER_FLAGS += -Wl,-rpath,$(rpath_origin) -Wl,-rpath,$(rpath_origin)/..
+ifneq ($(IS_MACOS),)
+# Hmm.
+COMPILER_FLAGS_LIBCLANG += -resource-dir=$(strip $(call safe_shell,$(CXX) -print-resource-dir))
+# Our dependencies are here.
+COMPILER_FLAGS += -I/opt/homebrew/include
+# Boost.stacktrace complains otherwise.
+COMPILER_FLAGS += -D_GNU_SOURCE
+LINKER_FLAGS += -L/opt/homebrew/lib
+LINKER_FLAGS += -ltbb
+# MacOS rpath quirks:
+# 1. `-rpath=` fails, must use `-rpath,`.
+# 2. Must specify the flag several times to add several directries, can't use `:` or `;` as separators.
+# 3. `@loader_path` instead of
+else # Linux:
 COMPILER_FLAGS += -I/usr/include/jsoncpp -isystem/usr/include/freetype2 -isystem/usr/include/gdcm-3.0
 LINKER_FLAGS += -Wl,-rpath='$$ORIGIN/..:$$ORIGIN'
+endif
 endif
 
 

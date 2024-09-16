@@ -32,18 +32,127 @@ namespace MR
 
 void RibbonNotifier::pushNotification( const RibbonNotification& notification )
 {
-    if ( !notifications_.empty() && notifications_.front().notification == notification )
+    addNotification_( notifications_, notification );
+    addNotification_( notificationsHistory_, notification );
+
+    highestNotification_ = NotificationType::Count;
+    for ( const auto& nwt : notificationsHistory_ )
     {
-        notifications_.front().sameCounter++;
-        notifications_.front().timer = 0.0f;
+        if ( int( nwt.notification.type ) < int( highestNotification_ ) )
+            highestNotification_ = nwt.notification.type;
+    }
+    
+    requestClosestRedraw_();
+}
+
+void RibbonNotifier::drawNotificationHistoryButton( float scaling )
+{
+    if ( !notifications_.empty() || notificationsHistory_.empty() )
+        return;
+
+    float notificationsPosX = 0.f;
+    if ( auto menu = getViewerInstance().getMenuPluginAs<RibbonMenu>() )
+        notificationsPosX = float( menu->getSceneSize().x );
+    Vector2f currentPos = Vector2f( notificationsPosX, float( getViewerInstance().framebufferSize.y ) - 25.f * scaling );
+    const Vector2f padding = Vector2f( 0.0f, 20.0f * scaling );
+
+    
+    auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
+    if ( iconsFont )
+    {
+        iconsFont->Scale = 0.7f;
+        ImGui::PushFont( iconsFont );
+    }
+    const float size = ImGui::GetTextLineHeight() + 10.f * scaling * 2.f;
+    if ( iconsFont )
+    {
+        iconsFont->Scale = 1.0f;
+        ImGui::PopFont();
+    }
+    
+    currentPos.x += padding.y;
+
+    currentPos -= padding;
+
+    ImGui::SetNextWindowPos( currentPos, ImGuiCond_Always, ImVec2( 0.f, 1.0f ) );
+    ImGui::SetNextWindowSize( ImVec2( size, size ), ImGuiCond_Always );
+    ImGuiWindowFlags flags =
+        ImGuiWindowFlags_AlwaysAutoResize |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoMove;
+    std::string name = "##NotificationButton";
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 0.0f );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, 4.0f * scaling );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 10.0f * scaling, 10.0f * scaling ) );
+    ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, { 0, 0 } );
+    ImGui::PushStyleColor( ImGuiCol_WindowBg, MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::FrameBackground ).getUInt32() );
+
+    auto activeModal = ImGui::GetTopMostPopupModal();
+
+    ImGui::Begin( name.c_str(), nullptr, flags );
+
+    if ( ImGui::IsWindowAppearing() )
+    {
+        if ( !activeModal )
+            ImGui::BringWindowToDisplayFront( ImGui::GetCurrentWindow() ); // bring to front to be over modal background
+        if ( !ProgressBar::isOrdered() && !activeModal ) // do not focus window, not to close modal on appearing
+            ImGui::SetWindowFocus();
+    }
+
+    iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
+    if ( iconsFont )
+    {
+        iconsFont->Scale = 0.7f;
+        ImGui::PushFont( iconsFont );
+    }
+
+    ImGui::PushStyleColor( ImGuiCol_Text, notificationParams[int( highestNotification_ )].second );
+    ImGui::Text( "%s", notificationParams[int( highestNotification_ )].first );
+    ImGui::PopStyleColor();
+
+    if ( iconsFont )
+    {
+        iconsFont->Scale = 1.0f;
+        ImGui::PopFont();
+    }
+
+    auto window = ImGui::GetCurrentContext()->CurrentWindow;
+    bool isHovered = false;
+    if ( activeModal )
+    {
+        // workaround to be able to hover notification even if modal is present
+        auto mousePos = ImGui::GetMousePos();
+        isHovered = window->Rect().Contains( mousePos ) && !activeModal->Rect().Contains( mousePos );
     }
     else
     {
-        if ( notifications_.size() == cNotificationNumberLimit )
-            notifications_.erase( notifications_.end() - 1 );
-        notifications_.insert( notifications_.begin(), NotificationWithTimer{ notification } );
+        isHovered = ImGui::IsWindowHovered();
     }
-    requestClosestRedraw_();
+
+    if ( isHovered )
+    {
+        if ( ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
+        {
+            for ( int i = int( notificationsHistory_.size() ) - 1; i >= 0; --i )
+            {
+                const auto& nwt = notificationsHistory_[i];
+                for ( int j = 0; j < nwt.sameCounter; ++j )
+                    addNotification_( notifications_, nwt.notification );
+            }
+            requestClosestRedraw_();
+        }
+
+        auto drawList = window->DrawList;
+        drawList->PushClipRectFullScreen();
+        const ImU32 color = ImGui::GetColorU32( ImGuiCol_Text );
+        drawList->AddRect( window->Rect().Min, window->Rect().Max, color, 4.0f * scaling, 0, 2.0f * scaling );
+        drawList->PopClipRect();
+    }
+
+    ImGui::End();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar( 4 );
 }
 
 void RibbonNotifier::drawNotifications( float scaling )
@@ -210,6 +319,21 @@ void RibbonNotifier::drawNotifications( float scaling )
         currentPos.y -= window->Size.y;
     }
     filterInvalid_( numInvalid );
+}
+
+void RibbonNotifier::addNotification_( std::vector<NotificationWithTimer>& store, const RibbonNotification& notification )
+{
+    if ( !store.empty() && store.front().notification == notification )
+    {
+        store.front().sameCounter++;
+        store.front().timer = 0.0f;
+    }
+    else
+    {
+        if ( store.size() == cNotificationNumberLimit )
+            store.erase( store.end() - 1 );
+        store.insert( store.begin(), NotificationWithTimer{ notification } );
+    }
 }
 
 void RibbonNotifier::filterInvalid_( int numInvalid )

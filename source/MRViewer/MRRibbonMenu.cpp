@@ -108,6 +108,7 @@ void RibbonMenu::init( MR::Viewer* _viewer )
 
         draw_helpers();
         drawVersionWindow_();
+        notifier_.drawNotificationHistoryButton( menu_scaling() );
         notifier_.drawNotifications( menu_scaling() );
         prevFrameSelectedObjectsCache_ = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
     };

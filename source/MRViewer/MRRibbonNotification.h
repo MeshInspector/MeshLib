@@ -35,6 +35,7 @@ class RibbonNotifier
 public:
     // adds new notification for drawing
     void pushNotification( const RibbonNotification& notification );
+    void drawNotificationHistoryButton( float scaling );
     // draws all present notifications
     void drawNotifications( float scaling );
 private:
@@ -45,6 +46,9 @@ private:
         int sameCounter = 1;
     };
     std::vector<NotificationWithTimer> notifications_;
+    std::vector<NotificationWithTimer> notificationsHistory_;
+    NotificationType highestNotification_ = NotificationType::Count;
+    void addNotification_( std::vector<NotificationWithTimer>& store, const RibbonNotification& notification );
     void filterInvalid_( int numInvalid = -1 );
 #ifndef __EMSCRIPTEN__
     Time requestedTime_{ Time::max() };

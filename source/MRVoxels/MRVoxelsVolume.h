@@ -50,12 +50,11 @@ struct VoxelsVolume
 template <typename T>
 struct VoxelsVolumeMinMax : VoxelsVolume<T>
 {
-    using VoxelsVolume = VoxelsVolume<T>;
-    using typename VoxelsVolume::ValueType;
-    using VoxelsVolume::data;
-    using VoxelsVolume::dims;
-    using VoxelsVolume::voxelSize;
-    using VoxelsVolume::heapBytes;
+    using typename VoxelsVolume<T>::ValueType;
+    using VoxelsVolume<T>::data;
+    using VoxelsVolume<T>::dims;
+    using VoxelsVolume<T>::voxelSize;
+    using VoxelsVolume<T>::heapBytes;
 
     ValueType min = std::numeric_limits<ValueType>::max();
     ValueType max = std::numeric_limits<ValueType>::lowest();

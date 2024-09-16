@@ -1139,14 +1139,42 @@ float ImGuiMenu::drawSelectionInformation_()
     // Points info
     size_t totalPoints = 0;
     size_t totalSelectedPoints = 0;
+    bool pointsHaveNormals = false;
     // Meshes and lines info
     size_t totalFaces = 0;
     size_t totalSelectedFaces = 0;
     size_t totalVerts = 0;
+    size_t totalEdges = 0;
+    size_t totalSelectedEdges = 0;
     std::optional<float> totalVolume = 0.0f;
+    double totalArea = 0.;
+    double totalSelectedArea = 0.;
+    float avgEdgeLen = 0.f;
+    size_t holes = 0;
+    size_t components = 0;
 #ifndef MRVIEWER_NO_VOXELS
     // Voxels info
-    Vector3i dimensions;
+    std::optional<Vector3i> voxelDims = Vector3i{};
+    std::optional<Vector3f> voxelSize = Vector3f{};
+    std::optional<Box3i> voxelActiveBox = Box3i{};
+    std::optional<float> voxelMinValue = FLT_MAX;
+    std::optional<float> voxelIsoValue = FLT_MAX;
+    std::optional<float> voxelMaxValue = FLT_MAX;
+    // store shared parameter value: if all objects have identical parameter value, it will be displayed, otherwise it'll be hidden
+    auto updateVoxelsInfo = [] <typename T, typename U> ( std::optional<T>& store, U&& value, T def = {} )
+    {
+        if ( store.has_value() )
+        {
+            if ( store.value() == def )
+                store.emplace( std::forward<U>( value ) );
+            else if ( store.value() != value )
+                store.reset();
+        }
+    };
+    auto isValidVoxelsInfo = [] <typename T> ( const std::optional<T>& store, T def = {} )
+    {
+        return store.has_value() && store.value() != def;
+    };
 #endif
     // Scene info
     Vector3f bsize;
@@ -1172,6 +1200,8 @@ float ImGuiMenu::drawSelectionInformation_()
         {
             totalPoints += pObj->numValidPoints();
             totalSelectedPoints += pObj->numSelectedPoints();
+            if ( auto pointCloud = pObj->pointCloud() )
+                pointsHaveNormals |= pointCloud->hasNormals();
         }
         else if ( auto mObj = obj->asType<ObjectMesh>() )
         {
@@ -1180,6 +1210,8 @@ float ImGuiMenu::drawSelectionInformation_()
                 totalFaces += mesh->topology.numValidFaces();
                 totalSelectedFaces += mObj->numSelectedFaces();
                 totalVerts += mesh->topology.numValidVerts();
+                totalEdges += mesh->topology.computeNotLoneUndirectedEdges();
+                totalSelectedEdges += mObj->numSelectedEdges();
                 if ( totalVolume && mObj->isMeshClosed() )
                 {
                     *totalVolume += float( mObj->volume() );
@@ -1188,6 +1220,11 @@ float ImGuiMenu::drawSelectionInformation_()
                 {
                     totalVolume = std::nullopt;
                 }
+                totalArea += mObj->totalArea();
+                totalSelectedArea += mObj->selectedArea();
+                avgEdgeLen = mObj->avgEdgeLen();
+                holes += mObj->numHoles();
+                components += mObj->numComponents();
             }
         }
         else if ( auto lObj = obj->asType<ObjectLines>() )
@@ -1200,15 +1237,12 @@ float ImGuiMenu::drawSelectionInformation_()
 #ifndef MRVIEWER_NO_VOXELS
         else if ( auto vObj = obj->asType<ObjectVoxels>() )
         {
-            auto newDims = vObj->dimensions();
-            if ( dimensions == Vector3i() )
-            {
-                dimensions = newDims;
-            }
-            else if ( dimensions != newDims )
-            {
-                dimensions = Vector3i::diagonal( -1 );
-            }
+            updateVoxelsInfo( voxelDims, vObj->dimensions() );
+            updateVoxelsInfo( voxelSize, vObj->voxelSize() );
+            updateVoxelsInfo( voxelActiveBox, vObj->getActiveBounds() );
+            updateVoxelsInfo( voxelMinValue, vObj->vdbVolume().min, FLT_MAX );
+            updateVoxelsInfo( voxelIsoValue, vObj->getIsoValue(), FLT_MAX );
+            updateVoxelsInfo( voxelMaxValue, vObj->vdbVolume().max, FLT_MAX );
         }
 #endif
     }
@@ -1311,39 +1345,61 @@ float ImGuiMenu::drawSelectionInformation_()
     else
         lastRenameObj_.reset();
 
-    if ( totalFaces || totalVerts || totalPoints )
+    const float itemWidth = getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x;
+
+    if ( totalFaces || totalVerts || totalEdges || totalPoints )
     {
         ImGui::Spacing();
         ImGui::Spacing();
 
         const ImVec4 textColorForSelected = { 0.886f, 0.267f, 0.267f, 1.0f };
-        drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces, textColorForSelected );
+        drawPrimitivesInfo( "Triangles", totalFaces, totalSelectedFaces, textColorForSelected );
         drawPrimitivesInfo( "Vertices", totalVerts );
+        if ( selectedObjs.size() == 1 )
+            drawPrimitivesInfo( "Edges", totalEdges, totalSelectedEdges, textColorForSelected );
         drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints, textColorForSelected );
+    }
 
-        if ( totalFaces )
+    if ( selectedObjs.size() == 1 && totalPoints )
+        UI::inputTextCenteredReadOnly( "Points with Normals", pointsHaveNormals ? "Yes" : "No", itemWidth );
+
+    if ( totalFaces )
+    {
+        if ( totalVolume )
         {
-            const float itemWidth = getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x;
-            if ( totalVolume )
+            ImGui::PushItemWidth( itemWidth );
+            MR_SUPPRESS_WARNING_PUSH
+            #if __GNUC__ >= 12 && __GNUC__ <= 14 // `totalVolume` may be used uninitialized. False positive in GCC
+            #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+            #endif
+            UI::readOnlyValue<VolumeUnit>( "Volume", *totalVolume );
+            MR_SUPPRESS_WARNING_POP
+            ImGui::PopItemWidth();
+        }
+        else
+        {
+            UI::inputTextCenteredReadOnly( "Volume", "Mesh is not closed", itemWidth );
+        }
+
+        if ( selectedObjs.size() == 1 )
+        {
+            // TODO: show selected area
+            (void)totalSelectedArea;
+            ImGui::PushItemWidth( itemWidth );
+            UI::readOnlyValue<AreaUnit>( "Area", totalArea );
+            ImGui::PopItemWidth();
+
+            if ( selectedObjs.size() == 1 )
             {
                 ImGui::PushItemWidth( itemWidth );
-
-#if __GNUC__ >= 12 && __GNUC__ <= 14 // `totalVolume` may be used uninitialized. False positive in GCC
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-
-                UI::readOnlyValue<VolumeUnit>( "Volume", *totalVolume );
-                MR_FINALLY{ ImGui::PopItemWidth(); };
-
-#if __GNUC__ >= 12 && __GNUC__ <= 14
-#pragma GCC diagnostic pop
-#endif
+                UI::readOnlyValue<LengthUnit>( "Avg Edge Length", avgEdgeLen );
+                ImGui::PopItemWidth();
             }
-            else
-            {
-                UI::inputTextCenteredReadOnly( "Volume", "Mesh is not closed", itemWidth );
-            }
+
+            if ( holes > 0 )
+                drawPrimitivesInfo( "Holes", holes );
+            if ( components > 1 )
+                drawPrimitivesInfo( "Components", components );
         }
     }
 
@@ -1364,11 +1420,31 @@ float ImGuiMenu::drawSelectionInformation_()
     };
 
 #ifndef MRVIEWER_NO_VOXELS
-    if ( dimensions.x > 0 && dimensions.y > 0 && dimensions.z > 0 )
+    if ( isValidVoxelsInfo( voxelDims ) )
+        drawDimensionsVec3.template operator()<NoUnit>( "Voxels Dims", *voxelDims );
+    if ( selectedObjs.size() == 1 )
     {
-        drawDimensionsVec3.template operator()<NoUnit>( "Dimensions", dimensions );
+        if ( isValidVoxelsInfo( voxelSize ) )
+            drawDimensionsVec3.template operator()<NoUnit>( "Voxel Size", *voxelSize );
+        if ( isValidVoxelsInfo( voxelActiveBox ) )
+        {
+            if ( voxelDims && ( voxelActiveBox->min != Vector3i{} || voxelActiveBox->max != voxelDims ) )
+            {
+                drawDimensionsVec3.template operator()<NoUnit>( "Active Box Min", voxelActiveBox->min );
+                drawDimensionsVec3.template operator()<NoUnit>( "Active Box Max", voxelActiveBox->max );
+            }
+        }
+        ImGui::PushItemWidth( itemWidth );
+        if ( isValidVoxelsInfo( voxelMinValue, FLT_MAX ) )
+            UI::readOnlyValue<NoUnit>( "Voxels Min", *voxelMinValue );
+        if ( isValidVoxelsInfo( voxelIsoValue, FLT_MAX ) )
+            UI::readOnlyValue<NoUnit>( "Voxels Iso", *voxelIsoValue );
+        if ( isValidVoxelsInfo( voxelMaxValue, FLT_MAX ) )
+            UI::readOnlyValue<NoUnit>( "Voxels Max", *voxelMaxValue );
+        ImGui::PopItemWidth();
     }
 #endif
+
     // Feature object properties.
     bool haveFeatureProperties = false;
     if ( selectedObjs.size() == 1 )

@@ -59,8 +59,7 @@ MR_ADD_PYTHON_VEC( mrmeshpy, vectorVdbVolume, MR::VdbVolume )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
 {
-    pybind11::implicitly_convertible< MR::SimpleVolumeMinMax, MR::SimpleVolume >();
-    pybind11::implicitly_convertible< const MR::SimpleVolumeMinMax&, const MR::SimpleVolume& >();
+    pybind11::implicitly_convertible< const MR::SimpleVolumeMinMax&, MR::SimpleVolume >();
 
     MR_PYTHON_CUSTOM_CLASS( FloatGrid ).doc() =
         "Smart pointer to OpenVdbFloatGrid";

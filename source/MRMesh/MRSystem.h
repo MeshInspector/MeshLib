@@ -11,22 +11,27 @@ namespace MR
 MRMESH_API void SetCurrentThreadName( const char * name );
 
 // returns path of current exe directory
+[[deprecated( "Use SystemPath::getExecutableDirectory() instead" )]]
 [[nodiscard]] MRMESH_API std::filesystem::path GetExeDirectory();
 
 // returns path of resource files directory
 // .json and .png files
+[[deprecated( "Use SystemPath::getResourcesDirectory() instead" )]]
 [[nodiscard]] MRMESH_API std::filesystem::path GetResourcesDirectory();
 
 // returns path of font files directory
 // .ttf files
+[[deprecated( "Use SystemPath::getFontsDirectory() instead" )]]
 [[nodiscard]] MRMESH_API std::filesystem::path GetFontsDirectory();
 
 // returns path of lib files directory
 // .dll .so files
+[[deprecated( "Use SystemPath::getPluginsDirectory() instead" )]]
 [[nodiscard]] MRMESH_API std::filesystem::path GetLibsDirectory();
 
 // returns path of embedded python modules files directory
 // .dll .so files
+[[deprecated( "Use SystemPath::getPythonModulesDirectory() instead" )]]
 [[nodiscard]] MRMESH_API std::filesystem::path GetEmbeddedPythonDirectory();
 
 // return path to the folder with user config file(s)

@@ -3,7 +3,7 @@
 #include "imgui.h"
 #include "MRRibbonMenu.h"
 #include "MRViewer.h"
-#include "MRMesh/MRSystem.h"
+#include "MRMesh/MRSystemPath.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRDirectory.h"
@@ -431,7 +431,7 @@ std::vector<std::filesystem::path> RibbonSchemaLoader::getStructureFiles_( const
 {
     std::vector<std::filesystem::path> files;
     std::error_code ec;
-    for ( auto entry : Directory{ GetResourcesDirectory(), ec } )
+    for ( auto entry : Directory{ SystemPath::getResourcesDirectory(), ec } )
     {
         auto filename = entry.path().filename().u8string();
         for ( auto& c : filename )

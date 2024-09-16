@@ -5,6 +5,7 @@
 #include "MRDirectory.h"
 #include "MRRestoringStreamsSink.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRPch/MRSuppressWarning.h"
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -181,7 +182,10 @@ std::filesystem::path GetExeDirectory()
 
 std::filesystem::path GetResourcesDirectory()
 {
+    MR_SUPPRESS_WARNING_PUSH
+    MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
     auto exePath = GetExeDirectory();
+    MR_SUPPRESS_WARNING_POP
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
@@ -201,7 +205,10 @@ std::filesystem::path GetResourcesDirectory()
 
 std::filesystem::path GetFontsDirectory()
 {
+    MR_SUPPRESS_WARNING_PUSH
+    MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
     auto exePath = GetExeDirectory();
+    MR_SUPPRESS_WARNING_POP
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
@@ -217,7 +224,10 @@ std::filesystem::path GetFontsDirectory()
 
 std::filesystem::path GetLibsDirectory()
 {
+    MR_SUPPRESS_WARNING_PUSH
+    MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
     auto exePath = GetExeDirectory();
+    MR_SUPPRESS_WARNING_POP
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
@@ -237,7 +247,10 @@ std::filesystem::path GetLibsDirectory()
 
 std::filesystem::path GetEmbeddedPythonDirectory()
 {
+    MR_SUPPRESS_WARNING_PUSH
+    MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
     auto exePath = GetExeDirectory();
+    MR_SUPPRESS_WARNING_POP
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     return exePath;
 #else
@@ -333,7 +346,10 @@ std::filesystem::path GetHomeDirectory()
 std::string GetMRVersionString()
 {
 #ifndef __EMSCRIPTEN__
+    MR_SUPPRESS_WARNING_PUSH
+    MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
     auto directory = GetResourcesDirectory();
+    MR_SUPPRESS_WARNING_POP
     auto versionFilePath = directory / "mr.version";
     std::error_code ec;
     std::string configPrefix = "";

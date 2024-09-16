@@ -29,13 +29,28 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Type, [] ( pybind11::module_& ) \
         def( pybind11::init<>() ).\
         def_readwrite( "data", &MR::Type::data ).\
         def_readwrite( "dims", &MR::Type::dims, "Size of voxels space" ).\
+        def_readwrite( "voxelSize", &MR::Type::voxelSize );\
+} )
+
+MR_ADD_PYTHON_VOXELS_VOLUME( SimpleVolume, "vector of float" )
+
+#define MR_ADD_PYTHON_VOXELS_VOLUME_MINMAX( Type, TypeText ) \
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, Type, MR::Type ) \
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Type, [] ( pybind11::module_& ) \
+{                                                     \
+    MR_PYTHON_CUSTOM_CLASS( Type ).doc() =                                       \
+        "Voxels representation as " #TypeText;        \
+    MR_PYTHON_CUSTOM_CLASS( Type ).                                              \
+        def( pybind11::init<>() ).\
+        def_readwrite( "data", &MR::Type::data ).\
+        def_readwrite( "dims", &MR::Type::dims, "Size of voxels space" ).\
         def_readwrite( "voxelSize", &MR::Type::voxelSize ).\
         def_readwrite( "min", &MR::Type::min, "Minimum value from all voxels" ).\
         def_readwrite( "max", &MR::Type::max, "Maximum value from all voxels" );\
 } )
 
-MR_ADD_PYTHON_VOXELS_VOLUME( VdbVolume, "VDB FloatGrid" )
-MR_ADD_PYTHON_VOXELS_VOLUME( SimpleVolume, "vector of float" )
+MR_ADD_PYTHON_VOXELS_VOLUME_MINMAX( VdbVolume, "VDB FloatGrid" )
+MR_ADD_PYTHON_VOXELS_VOLUME_MINMAX( SimpleVolumeMinMax, "vector of float" )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, FloatGrid, MR::OpenVdbFloatGrid, MR::FloatGrid )
 MR_ADD_PYTHON_CUSTOM_CLASS_INST( mrmeshpy, FloatGrid )

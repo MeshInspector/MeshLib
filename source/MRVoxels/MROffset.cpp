@@ -173,7 +173,7 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         }
         else
         {
-            return meshToDistanceVolume( mp, msParams ).and_then( [&vmParams] ( SimpleVolume&& volume )
+            return meshToDistanceVolume( mp, msParams ).and_then( [&vmParams] ( SimpleVolumeMinMax&& volume )
             {
                 vmParams.freeVolume = [&volume]
                 {

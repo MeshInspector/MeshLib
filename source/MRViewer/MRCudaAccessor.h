@@ -26,7 +26,7 @@ public:
     using CudaMeshProjectorConstructor = std::function<std::unique_ptr<IPointsToMeshProjector>()>;
 
 #ifndef MRVIEWER_NO_VOXELS
-    using CudaPointsToDistanceVolumeCallback = std::function<Expected<SimpleVolume>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )>;
+    using CudaPointsToDistanceVolumeCallback = std::function<Expected<SimpleVolumeMinMax>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )>;
 #endif
 
     // setup functions

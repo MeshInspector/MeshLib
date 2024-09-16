@@ -29,7 +29,7 @@ MR_ADD_CLASS_FACTORY( ObjectVoxels )
 
 constexpr size_t cVoxelsHistogramBinsNumber = 256;
 
-void ObjectVoxels::construct( const SimpleVolume& volume, ProgressCallback cb )
+void ObjectVoxels::construct( const SimpleVolumeMinMax& volume, ProgressCallback cb )
 {
     mesh_.reset();
     activeVoxels_.reset();

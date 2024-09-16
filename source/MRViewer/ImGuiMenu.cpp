@@ -1354,11 +1354,12 @@ float ImGuiMenu::drawSelectionInformation_()
         const ImVec4 textColorForSelected = { 0.886f, 0.267f, 0.267f, 1.0f };
         drawPrimitivesInfo( "Triangles", totalFaces, totalSelectedFaces, textColorForSelected );
         drawPrimitivesInfo( "Vertices", totalVerts );
-        drawPrimitivesInfo( "Edges", totalEdges, totalSelectedEdges, textColorForSelected );
+        if ( selectedObjs.size() == 1 )
+            drawPrimitivesInfo( "Edges", totalEdges, totalSelectedEdges, textColorForSelected );
         drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints, textColorForSelected );
     }
 
-    if ( totalPoints )
+    if ( selectedObjs.size() == 1 && totalPoints )
         UI::inputTextCenteredReadOnly( "Points with Normals", pointsHaveNormals ? "Yes" : "No", itemWidth );
 
     if ( totalFaces )
@@ -1379,23 +1380,26 @@ float ImGuiMenu::drawSelectionInformation_()
             UI::inputTextCenteredReadOnly( "Volume", "Mesh is not closed", itemWidth );
         }
 
-        // TODO: show selected area
-        (void)totalSelectedArea;
-        ImGui::PushItemWidth( itemWidth );
-        UI::readOnlyValue<AreaUnit>( "Area", totalArea );
-        ImGui::PopItemWidth();
-
         if ( selectedObjs.size() == 1 )
         {
+            // TODO: show selected area
+            (void)totalSelectedArea;
             ImGui::PushItemWidth( itemWidth );
-            UI::readOnlyValue<LengthUnit>( "Avg Edge Length", avgEdgeLen );
+            UI::readOnlyValue<AreaUnit>( "Area", totalArea );
             ImGui::PopItemWidth();
-        }
 
-        if ( holes > 0 )
-            drawPrimitivesInfo( "Holes", holes );
-        if ( components > 1 )
-            drawPrimitivesInfo( "Components", components );
+            if ( selectedObjs.size() == 1 )
+            {
+                ImGui::PushItemWidth( itemWidth );
+                UI::readOnlyValue<LengthUnit>( "Avg Edge Length", avgEdgeLen );
+                ImGui::PopItemWidth();
+            }
+
+            if ( holes > 0 )
+                drawPrimitivesInfo( "Holes", holes );
+            if ( components > 1 )
+                drawPrimitivesInfo( "Components", components );
+        }
     }
 
     bool firstField = true;
@@ -1417,24 +1421,27 @@ float ImGuiMenu::drawSelectionInformation_()
 #ifndef MRVIEWER_NO_VOXELS
     if ( isValidVoxelsInfo( voxelDims ) )
         drawDimensionsVec3.template operator()<NoUnit>( "Voxels Dims", *voxelDims );
-    if ( isValidVoxelsInfo( voxelSize ) )
-        drawDimensionsVec3.template operator()<NoUnit>( "Voxel Size", *voxelSize );
-    if ( isValidVoxelsInfo( voxelActiveBox ) )
+    if ( selectedObjs.size() == 1 )
     {
-        if ( voxelDims && ( voxelActiveBox->min != Vector3i{} || voxelActiveBox->max != voxelDims ) )
+        if ( isValidVoxelsInfo( voxelSize ) )
+            drawDimensionsVec3.template operator()<NoUnit>( "Voxel Size", *voxelSize );
+        if ( isValidVoxelsInfo( voxelActiveBox ) )
         {
-            drawDimensionsVec3.template operator()<NoUnit>( "Active Box Min", voxelActiveBox->min );
-            drawDimensionsVec3.template operator()<NoUnit>( "Active Box Max", voxelActiveBox->max );
+            if ( voxelDims && ( voxelActiveBox->min != Vector3i{} || voxelActiveBox->max != voxelDims ) )
+            {
+                drawDimensionsVec3.template operator()<NoUnit>( "Active Box Min", voxelActiveBox->min );
+                drawDimensionsVec3.template operator()<NoUnit>( "Active Box Max", voxelActiveBox->max );
+            }
         }
+        ImGui::PushItemWidth( itemWidth );
+        if ( isValidVoxelsInfo( voxelMinValue, FLT_MAX ) )
+            UI::readOnlyValue<NoUnit>( "Voxels Min", *voxelMinValue );
+        if ( isValidVoxelsInfo( voxelIsoValue, FLT_MAX ) )
+            UI::readOnlyValue<NoUnit>( "Voxels Iso", *voxelIsoValue );
+        if ( isValidVoxelsInfo( voxelMaxValue, FLT_MAX ) )
+            UI::readOnlyValue<NoUnit>( "Voxels Max", *voxelMaxValue );
+        ImGui::PopItemWidth();
     }
-    ImGui::PushItemWidth( itemWidth );
-    if ( isValidVoxelsInfo( voxelMinValue, FLT_MAX ) )
-        UI::readOnlyValue<NoUnit>( "Voxels Min", *voxelMinValue );
-    if ( isValidVoxelsInfo( voxelIsoValue, FLT_MAX ) )
-        UI::readOnlyValue<NoUnit>( "Voxels Iso", *voxelIsoValue );
-    if ( isValidVoxelsInfo( voxelMaxValue, FLT_MAX ) )
-        UI::readOnlyValue<NoUnit>( "Voxels Max", *voxelMaxValue );
-    ImGui::PopItemWidth();
 #endif
 
     // Feature object properties.

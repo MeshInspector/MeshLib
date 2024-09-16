@@ -1176,8 +1176,6 @@ float ImGuiMenu::drawSelectionInformation_()
         return store.has_value() && store.value() != def;
     };
 #endif
-    // Feature info
-    bool hasFeatures = false;
     // Scene info
     Vector3f bsize;
     Vector3f wbsize;
@@ -1247,11 +1245,6 @@ float ImGuiMenu::drawSelectionInformation_()
             updateVoxelsInfo( voxelMaxValue, vObj->vdbVolume().max, FLT_MAX );
         }
 #endif
-        else if ( auto fObj = obj->asType<FeatureObject>() )
-        {
-            (void)fObj;
-            hasFeatures = true;
-        }
     }
 
     if ( selectionBbox_.valid() && selectionWorldBox_.valid() )
@@ -1377,7 +1370,7 @@ float ImGuiMenu::drawSelectionInformation_()
     }
 
     // Bounding box.
-    if ( selectionBbox_.valid() && !( selectedObjs.size() == 1 && hasFeatures ) )
+    if ( selectionBbox_.valid() && !( selectedObjs.size() == 1 && selectedObjs.front()->asType<FeatureObject>() ) )
     {
         ImGui::Spacing();
         ImGui::Spacing();

@@ -9,10 +9,12 @@ namespace MR
 {
 
 // projecting the vertex attributes of the old onto the new one
+// returns false if canceled by progress bar
 template<typename F>
 bool projectVertAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, ProgressCallback progressCb );
 
 // projecting the face attributes of the old onto the new one
+// returns false if canceled by progress bar
 template<typename F>
 bool projectFaceAttribute( const Mesh& newMesh, const Mesh& oldMesh, F&& func, ProgressCallback progressCb );
 

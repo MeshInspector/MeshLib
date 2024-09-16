@@ -62,6 +62,6 @@ struct VoxelsVolumeMinMax : VoxelsVolume<T>
 
 
 /// converts function volume into simple volume
-MRVOXELS_API Expected<SimpleVolume> functionVolumeToSimpleVolume( const FunctionVolume& volume, const ProgressCallback& callback = {} );
+MRVOXELS_API Expected<SimpleVolumeMinMax> functionVolumeToSimpleVolume( const FunctionVolume& volume, const ProgressCallback& callback = {} );
 
 } //namespace MR

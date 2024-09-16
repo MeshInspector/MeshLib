@@ -55,7 +55,7 @@ public:
     virtual std::string getClassName() const override { return "Voxels"; }
 
     /// Clears all internal data and then creates grid and calculates histogram (surface is not built, call \ref updateHistogramAndSurface)
-    MRVOXELS_API void construct( const SimpleVolume& simpleVolume, ProgressCallback cb = {} );
+    MRVOXELS_API void construct( const SimpleVolumeMinMax& simpleVolume, ProgressCallback cb = {} );
     /// Clears all internal data and calculates histogram
     MRVOXELS_API void construct( const FloatGrid& grid, const Vector3f& voxelSize, ProgressCallback cb = {} );
     /// Clears all internal data and calculates histogram

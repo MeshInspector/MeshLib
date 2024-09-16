@@ -113,7 +113,7 @@ Expected<TeethMaskToDirectionVolumeConvertor::ProcessResult> TeethMaskToDirectio
 
     const VolumeIndexer maskIndexer( mask_.dims );
 
-    SimpleVolume toothMask;
+    SimpleVolumeMinMax toothMask;
     toothMask.dims = box.size();
     toothMask.voxelSize = mask_.voxelSize;
     toothMask.data.resize( box.volume() );
@@ -190,7 +190,7 @@ Expected<TeethMaskToDirectionVolumeConvertor::ProcessResult> TeethMaskToDirectio
             return unexpected( std::move( maybeRes.error() ) );
     }
 
-    std::array<SimpleVolume, 3> res;
+    std::array<SimpleVolumeMinMax, 3> res;
     for ( int i = 0; i < 3; ++i )
     {
         auto& r = res[i];
@@ -219,7 +219,7 @@ Expected<TeethMaskToDirectionVolumeConvertor::ProcessResult> TeethMaskToDirectio
     };
 }
 
-Expected<std::array<SimpleVolume, 3>> teethMaskToDirectionVolume( const VdbVolume& volume, const std::vector<int>& additionalIds )
+Expected<std::array<SimpleVolumeMinMax, 3>> teethMaskToDirectionVolume( const VdbVolume& volume, const std::vector<int>& additionalIds )
 {
     return TeethMaskToDirectionVolumeConvertor::create( volume, additionalIds )
             .and_then( &TeethMaskToDirectionVolumeConvertor::convertAll )

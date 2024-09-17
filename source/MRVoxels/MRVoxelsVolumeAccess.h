@@ -53,10 +53,10 @@ private:
 
 /// VoxelsVolumeAccessor specialization for simple volumes
 template <typename T>
-class VoxelsVolumeAccessor<VoxelsVolumeMinMax<std::vector<T>>>
+class VoxelsVolumeAccessor<VoxelsVolume<std::vector<T>>>
 {
 public:
-    using VolumeType = VoxelsVolumeMinMax<std::vector<T>>;
+    using VolumeType = VoxelsVolume<std::vector<T>>;
     using ValueType = typename VolumeType::ValueType;
     static constexpr bool cacheEffective = false; ///< caching results of this accessor does not make any sense since it returns values from a simple container
 
@@ -81,6 +81,18 @@ public:
 private:
     const std::vector<T>& data_;
     VolumeIndexer indexer_;
+};
+
+/// VoxelsVolumeAccessor specialization for simple volumes with min/max
+template <typename T>
+class VoxelsVolumeAccessor<VoxelsVolumeMinMax<std::vector<T>>> : public VoxelsVolumeAccessor<VoxelsVolume<std::vector<T>>>
+{
+public:
+    using VolumeType = VoxelsVolumeMinMax<std::vector<T>>;
+    using ValueType = typename VolumeType::ValueType;
+    using Base = VoxelsVolumeAccessor<VolumeType>;
+    using Base::cacheEffective;
+    using Base::Base;
 };
 
 /// VoxelsVolumeAccessor specialization for value getters

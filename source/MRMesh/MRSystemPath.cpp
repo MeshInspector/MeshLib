@@ -5,8 +5,11 @@
 #include <libloaderapi.h>
 #elif !defined( __EMSCRIPTEN__ )
 #include <dlfcn.h>
+#include <unistd.h>
 #if defined( __APPLE__ )
 #include <mach-o/dyld.h>
+#else
+#include <linux/limits.h>
 #endif
 #endif
 

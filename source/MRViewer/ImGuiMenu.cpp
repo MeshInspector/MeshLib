@@ -1331,7 +1331,7 @@ float ImGuiMenu::drawSelectionInformation_()
         ImGui::Spacing();
         ImGui::Spacing();
 
-        ImGui::PushItemWidth( getSceneInfoItemWidth_( 1 ) ); // ??
+        ImGui::PushItemWidth( getSceneInfoItemWidth_( 1 ) );
         drawFeaturePropertiesEditor_( selectedObjs.front() );
         ImGui::PopItemWidth();
     }

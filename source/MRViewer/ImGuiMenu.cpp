@@ -1371,13 +1371,13 @@ float ImGuiMenu::drawSelectionInformation_()
     auto drawUnitInfo = [&] <class Units> ( const char* label, auto&& value, Units )
     {
         ImGui::SetNextItemWidth( itemWidth );
-        UI::readOnlyValue<Units>( label, value, textColor, labelColor );
+        UI::readOnlyValue<Units>( label, value, textColor, {}, labelColor );
     };
 
     auto drawDimensionsVec3 = [&] <class Units> ( const char* label, auto&& value, Units )
     {
         ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
-        UI::readOnlyValue<Units>( label, value, textColor, labelColor );
+        UI::readOnlyValue<Units>( label, value, textColor, {}, labelColor );
     };
 
     if ( selectedObjs.size() > 1 )
@@ -1416,7 +1416,14 @@ float ImGuiMenu::drawSelectionInformation_()
     if ( totalFaces )
     {
         if ( totalVolume )
+        {
+            MR_SUPPRESS_WARNING_PUSH
+            #if __GNUC__ >= 12 && __GNUC__ <= 14 // `totalVolume` may be used uninitialized. False positive in GCC
+            #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+            #endif
             drawUnitInfo( "Volume", *totalVolume, VolumeUnit{} );
+            MR_SUPPRESS_WARNING_POP
+        }
 
         if ( selectedObjs.size() == 1 )
         {

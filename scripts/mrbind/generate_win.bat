@@ -1,4 +1,4 @@
-@echo on
+@echo off
 
 rem This script generates the bindings by running `make -f scripts/mrbind/generate.mk -B` in MSYS2 shell.
 rem Must run this inside of the Visual Studio developer command prompt!

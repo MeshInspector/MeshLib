@@ -90,7 +90,7 @@ FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDis
 
     return FunctionVolume
     {
-        .data = [params, mp = MeshPart( mp.mesh )] ( const Vector3i& pos ) -> float
+        .data = [params, mp] ( const Vector3i& pos ) -> float
         {
             const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
             const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );

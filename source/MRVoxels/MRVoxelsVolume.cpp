@@ -4,15 +4,13 @@
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRParallelFor.h"
 
-
-
 namespace MR
 {
 
-Expected<SimpleVolume> functionVolumeToSimpleVolume( const FunctionVolume& volume, const ProgressCallback& cb )
+Expected<SimpleVolumeMinMax> functionVolumeToSimpleVolume( const FunctionVolume& volume, const ProgressCallback& cb )
 {
     MR_TIMER
-    SimpleVolume res;
+    SimpleVolumeMinMax res;
     res.voxelSize = volume.voxelSize;
     res.dims = volume.dims;
     VolumeIndexer indexer( res.dims );

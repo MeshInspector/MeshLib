@@ -1660,7 +1660,7 @@ bool inputTextCentered( const char* label, std::string& str, float width /*= 0.0
     return inputText( label, str, flags, callback, user_data );
 }
 
-void inputTextCenteredReadOnly( const char* label, const std::string& str, float width /*= 0.0f*/, const std::optional<ImVec4>& textColor /*= {} */ )
+void inputTextCenteredReadOnly( const char* label, const std::string& str, float width /*= 0.0f*/, const std::optional<ImVec4>& textColor /*= {} */, const std::optional<ImVec4>& labelColor /*= {}*/ )
 {
     const auto& style = ImGui::GetStyle();
     const auto estimatedSize = ImGui::CalcTextSize( str.c_str() );
@@ -1690,7 +1690,11 @@ void inputTextCenteredReadOnly( const char* label, const std::string& str, float
     if ( endOfLabel > 0 )
     {
         ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
+        if ( labelColor )
+            ImGui::PushStyleColor( ImGuiCol_Text, *labelColor );
         ImGui::TextUnformatted( label, endOfLabel != std::string_view::npos ? label + endOfLabel : nullptr );
+        if ( labelColor )
+            ImGui::PopStyleColor();
     }
 }
 

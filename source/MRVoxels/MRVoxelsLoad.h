@@ -24,7 +24,7 @@ MRVOXELS_API void sortFilesByName( std::vector<std::filesystem::path>& scans );
 #ifndef MRVOXELS_NO_DICOM
 struct DicomVolume
 {
-    SimpleVolume vol;
+    SimpleVolumeMinMax vol;
     std::string name;
     AffineXf3f xf;
 };

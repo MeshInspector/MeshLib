@@ -25,8 +25,8 @@ struct OpenVdbFloatGrid;
 using FloatGrid = std::shared_ptr<OpenVdbFloatGrid>;
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), VoxelsVolumeMinMax,
-    ( SimpleVolume, VoxelsVolumeMinMax<std::vector<float>> )
-    ( SimpleVolumeU16, VoxelsVolumeMinMax<std::vector<uint16_t>> )
+    ( SimpleVolumeMinMax, VoxelsVolumeMinMax<std::vector<float>> )
+    ( SimpleVolumeMinMaxU16, VoxelsVolumeMinMax<std::vector<uint16_t>> )
     ( VdbVolume, VoxelsVolumeMinMax<FloatGrid> )
 )
 
@@ -36,6 +36,8 @@ using VoxelValueGetter = std::function<T ( const Vector3i& )>;
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), VoxelsVolume,
     ( FunctionVolume, VoxelsVolume<VoxelValueGetter<float>> )
     ( FunctionVolumeU8, VoxelsVolume<VoxelValueGetter<uint8_t>> )
+    ( SimpleVolume, VoxelsVolume<std::vector<float>> )
+    ( SimpleVolumeU16, VoxelsVolume<std::vector<uint16_t>> )
 )
 
 } // namespace MR

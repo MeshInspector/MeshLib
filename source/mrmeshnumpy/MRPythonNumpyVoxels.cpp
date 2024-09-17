@@ -1,15 +1,16 @@
 #ifndef MESHLIB_NO_VOXELS
 #include "MRPython/MRPython.h"
-#include "MRVoxels/MRVoxelsVolume.h"
 #include "MRMesh/MRVector3.h"
+#include "MRMesh/MRParallelFor.h"
+#include "MRVoxels/MRVoxelsVolume.h"
 
-MR::SimpleVolume simpleVolumeFrom3Darray( const pybind11::buffer& voxelsArray )
+MR::SimpleVolumeMinMax simpleVolumeFrom3Darray( const pybind11::buffer& voxelsArray )
 {
     pybind11::buffer_info info = voxelsArray.request();
     if ( info.ndim != 3 )
         throw std::runtime_error( "shape of input python vector 'voxelsArray' should be (x,y,z)" );
 
-    MR::SimpleVolume res;
+    MR::SimpleVolumeMinMax res;
     res.dims = MR::Vector3i( int( info.shape[0] ), int( info.shape[1] ), int( info.shape[2] ) );
     size_t countPoints = res.dims.x * res.dims.y * res.dims.z;
     res.data.resize( countPoints );
@@ -40,6 +41,7 @@ MR::SimpleVolume simpleVolumeFrom3Darray( const pybind11::buffer& voxelsArray )
     else
         throw std::runtime_error( "dtype of input python vector should be float32 or float64" );
 
+    std::tie( res.min, res.max ) = MR::parallelMinMax( res.data );
     return res;
 }
 

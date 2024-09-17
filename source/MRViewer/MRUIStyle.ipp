@@ -430,27 +430,16 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
 }
 
 template <UnitEnum E, detail::VectorOrScalar T>
-void readOnlyValue( const char* label, const T& v, std::optional<ImVec4> textColor, UnitToStringParams<E> unitParams )
+void readOnlyValue( const char* label, const T& v, std::optional<ImVec4> textColor, UnitToStringParams<E> unitParams, std::optional<ImVec4> labelColor )
 {
     (void)detail::unitWidget( label, const_cast<T&>( v ), unitParams,
         [&]( const char* elemLabel, auto& elemVal, int i )
         {
             (void)i;
-            inputTextCenteredReadOnly( elemLabel, valueToString<E>( elemVal, unitParams ), ImGui::CalcItemWidth(), textColor );
+            inputTextCenteredReadOnly( elemLabel, valueToString<E>( elemVal, unitParams ), ImGui::CalcItemWidth(), textColor, labelColor );
             return false;
         } );
 }
 
-template <UnitEnum E, detail::VectorOrScalar T>
-void readOnlyValue( const char* label, const T& v, std::optional<ImVec4> textColor, std::optional<ImVec4> labelColor, UnitToStringParams<E> unitParams )
-{
-    (void)detail::unitWidget( label, const_cast<T&>( v ), unitParams,
-    [&]( const char* elemLabel, auto& elemVal, int i )
-    {
-        (void)i;
-        inputTextCenteredReadOnly( elemLabel, valueToString<E>( elemVal, unitParams ), ImGui::CalcItemWidth(), textColor, labelColor );
-        return false;
-    } );
-}
 
 }

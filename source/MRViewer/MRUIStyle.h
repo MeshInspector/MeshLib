@@ -341,10 +341,8 @@ bool drag( const char* label, T& v, SpeedType vSpeed = detail::getDefaultDragSpe
 // By default, for angles `v` will be converted to degrees for display, while length and unit-less values will be left as is.
 // This can be customized in `unitParams` or globally (see `MRUnits.h`).
 template <UnitEnum E, detail::VectorOrScalar T>
-void readOnlyValue( const char* label, const T& v, std::optional<ImVec4> textColor = {}, UnitToStringParams<E> unitParams = {} );
+void readOnlyValue( const char* label, const T& v, std::optional<ImVec4> textColor = {}, UnitToStringParams<E> unitParams = {}, std::optional<ImVec4> labelColor = {} );
 
-template <UnitEnum E, detail::VectorOrScalar T>
-void readOnlyValue( const char* label, const T& v, std::optional<ImVec4> textColor, std::optional<ImVec4> labelColor, UnitToStringParams<E> unitParams = {} );
 
 /// similar to ImGui::Text but use current text color with alpha channel = 0.5
 MRVIEWER_API void transparentText( const char* fmt, ... );

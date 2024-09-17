@@ -1371,13 +1371,13 @@ float ImGuiMenu::drawSelectionInformation_()
     auto drawUnitInfo = [&] <class Units> ( const char* label, auto&& value, Units )
     {
         ImGui::SetNextItemWidth( itemWidth );
-        UI::readOnlyValue<Units>( label, value, textColor, labelColor );
+        UI::readOnlyValue<Units>( label, value, textColor, {}, labelColor );
     };
 
     auto drawDimensionsVec3 = [&] <class Units> ( const char* label, auto&& value, Units )
     {
         ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
-        UI::readOnlyValue<Units>( label, value, textColor, labelColor );
+        UI::readOnlyValue<Units>( label, value, textColor, {}, labelColor );
     };
 
     if ( selectedObjs.size() > 1 )

@@ -1391,9 +1391,9 @@ float ImGuiMenu::drawSelectionInformation_()
         ImGui::Spacing();
         ImGui::Spacing();
 
+        drawDimensionsVec3( "Box Size", bsize, LengthUnit{} );
         drawDimensionsVec3( "Box Min", selectionBbox_.min, LengthUnit{} );
         drawDimensionsVec3( "Box Max", selectionBbox_.max, LengthUnit{} );
-        drawDimensionsVec3( "Box Size", bsize, LengthUnit{} );
 
         if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
             drawDimensionsVec3( "World Box Size", wbsize, LengthUnit{} );

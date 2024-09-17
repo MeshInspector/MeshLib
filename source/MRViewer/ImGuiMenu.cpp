@@ -1210,7 +1210,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 totalFaces += mesh->topology.numValidFaces();
                 totalSelectedFaces += mObj->numSelectedFaces();
                 totalVerts += mesh->topology.numValidVerts();
-                totalEdges += mesh->topology.computeNotLoneUndirectedEdges();
+                totalEdges += mObj->numUndirectedEdges();
                 totalSelectedEdges += mObj->numSelectedEdges();
                 if ( totalVolume && mObj->isMeshClosed() )
                 {

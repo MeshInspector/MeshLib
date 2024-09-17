@@ -1416,7 +1416,14 @@ float ImGuiMenu::drawSelectionInformation_()
     if ( totalFaces )
     {
         if ( totalVolume )
+        {
+            MR_SUPPRESS_WARNING_PUSH
+            #if __GNUC__ >= 12 && __GNUC__ <= 14 // `totalVolume` may be used uninitialized. False positive in GCC
+            #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+            #endif
             drawUnitInfo( "Volume", *totalVolume, VolumeUnit{} );
+            MR_SUPPRESS_WARNING_POP
+        }
 
         if ( selectedObjs.size() == 1 )
         {

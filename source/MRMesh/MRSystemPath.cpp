@@ -112,7 +112,7 @@ std::filesystem::path defaultPythonModulesDirectory()
 #endif
 }
 
-}
+} // namespace
 
 namespace MR
 {

@@ -87,10 +87,10 @@ private:
 template <typename T>
 class VoxelsVolumeAccessor<VoxelsVolumeMinMax<std::vector<T>>> : public VoxelsVolumeAccessor<VoxelsVolume<std::vector<T>>>
 {
+    using Base = VoxelsVolumeAccessor<VoxelsVolume<std::vector<T>>>;
 public:
     using VolumeType = VoxelsVolumeMinMax<std::vector<T>>;
     using ValueType = typename VolumeType::ValueType;
-    using Base = VoxelsVolumeAccessor<VolumeType>;
     using Base::cacheEffective;
     using Base::Base;
 };

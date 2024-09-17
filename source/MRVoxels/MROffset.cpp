@@ -153,8 +153,8 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         msParams.vol.origin = origin;
         msParams.vol.voxelSize = Vector3f::diagonal( params.voxelSize );
         msParams.vol.dimensions = dimensions;
-        msParams.dist.maxDistSq = sqr( absOffset + params.voxelSize );
-        msParams.dist.minDistSq = sqr( std::max( absOffset - params.voxelSize, 0.0f ) );
+        msParams.dist.maxDistSq = sqr( absOffset + 1.001f * params.voxelSize ); // we multiply by 1.001f to be sure not to have rounding errors (which may lead to unexpected NaN values )
+        msParams.dist.minDistSq = sqr( std::max( absOffset - 1.001f * params.voxelSize, 0.0f ) ); // we multiply by 1.001f to be sure not to have rounding errors (which may lead to unexpected NaN values )
         msParams.dist.signMode = params.signDetectionMode;
         msParams.dist.windingNumberThreshold = params.windingNumberThreshold;
         msParams.dist.windingNumberBeta = params.windingNumberBeta;

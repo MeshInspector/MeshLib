@@ -11,6 +11,7 @@ namespace MR
 class SystemPath
 {
 public:
+#ifndef MR_PARSING_FOR_PB11_BINDINGS
     /// get the current executable's file path
     MRMESH_API static Expected<std::filesystem::path> getExecutablePath();
 
@@ -22,6 +23,7 @@ public:
 
     /// get the MRMesh binary's directory path
     MRMESH_API static Expected<std::filesystem::path> getLibraryDirectory();
+#endif
 
     /// directory category
     enum class Directory

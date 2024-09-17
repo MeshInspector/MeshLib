@@ -1184,7 +1184,7 @@ float ImGuiMenu::drawSelectionInformation_()
     selectionBbox_ = Box3f{};
     selectionWorldBox_ = {};
 
-    for ( auto obj : selectedObjs )
+    for ( const auto& obj : selectedObjs )
     {
         // Scene info update
         if ( auto vObj = obj->asType<VisualObject>() )
@@ -1262,29 +1262,7 @@ float ImGuiMenu::drawSelectionInformation_()
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, smallItemSpacingY } );
     MR_FINALLY{ ImGui::PopStyleVar(); };
 
-    auto drawPrimitivesInfo = [this]( std::string title, size_t value, size_t selected = 0, std::optional<ImVec4> textColorForSelected = {} )
-    {
-        if ( value )
-        {
-            std::string valueStr;
-            std::string labelStr;
-            if ( selected )
-            {
-                valueStr = valueToString<NoUnit>( selected ) + " / ";
-                labelStr = "Selected / ";
-            }
-            valueStr += valueToString<NoUnit>( value );
-            labelStr += title;
-
-            UI::inputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x, selected ? textColorForSelected : std::optional<ImVec4>{} );
-        }
-    };
-
-    if ( selectedObjs.size() > 1 )
-    {
-        drawPrimitivesInfo( "Objects", selectedObjs.size() );
-    }
-    else if ( selectedObjs.size() == 1 )
+    if ( selectedObjs.size() == 1 )
     {
         auto pObj = selectedObjs.front();
         auto lastRenameObj = lastRenameObj_.lock();
@@ -1343,161 +1321,157 @@ float ImGuiMenu::drawSelectionInformation_()
         }
     }
     else
+    {
         lastRenameObj_.reset();
+    }
 
-    const float itemWidth = getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x;
+    // Feature object properties.
+    if ( selectedObjs.size() == 1 && selectedObjs.front()->asType<FeatureObject>() )
+    {
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        ImGui::PushItemWidth( getSceneInfoItemWidth_( 1 ) );
+        drawFeaturePropertiesEditor_( selectedObjs.front() );
+        ImGui::PopItemWidth();
+    }
+    else
+    {
+        editedFeatureObject_.reset();
+    }
+
+    // customize input text widget design
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, Vector2f { 3.f, 3.f } * menu_scaling() );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
+    ImGui::PushStyleColor( ImGuiCol_FrameBg, ImGui::GetStyleColorVec4( ImGuiCol_WindowBg ) );
+    MR_FINALLY { ImGui::PopStyleVar( 2 ); ImGui::PopStyleColor( 1 ); };
+
+    const float itemWidth = getSceneInfoItemWidth_( 3 ) * 3 + ImGui::GetStyle().ItemInnerSpacing.x * 2;
+
+    const auto textColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+    auto labelColor = textColor;
+    labelColor.w *= 0.5f;
+    const ImVec4 selectedTextColor { 0.886f, 0.267f, 0.267f, 1.0f };
+
+    auto drawPrimitivesInfo = [&] ( const char* label, size_t value, size_t selected = 0 )
+    {
+        if ( value )
+        {
+            std::string valueStr;
+            if ( selected )
+                valueStr = valueToString<NoUnit>( selected ) + " / ";
+            valueStr += valueToString<NoUnit>( value );
+
+            UI::inputTextCenteredReadOnly( label, valueStr, itemWidth, selected ? selectedTextColor : textColor, labelColor );
+            if ( selected )
+                UI::setTooltipIfHovered( "Selected / Total", menu_scaling() );
+        }
+    };
+
+    auto drawUnitInfo = [&] <class Units> ( const char* label, auto&& value, Units )
+    {
+        ImGui::SetNextItemWidth( itemWidth );
+        UI::readOnlyValue<Units>( label, value, textColor, labelColor );
+    };
+
+    auto drawDimensionsVec3 = [&] <class Units> ( const char* label, auto&& value, Units )
+    {
+        ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
+        UI::readOnlyValue<Units>( label, value, textColor, labelColor );
+    };
+
+    if ( selectedObjs.size() > 1 )
+    {
+        drawPrimitivesInfo( "Objects", selectedObjs.size() );
+    }
+
+    // Bounding box.
+    if ( selectionBbox_.valid() && !( selectedObjs.size() == 1 && selectedObjs.front()->asType<FeatureObject>() ) )
+    {
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        drawDimensionsVec3( "Box Min", selectionBbox_.min, LengthUnit{} );
+        drawDimensionsVec3( "Box Max", selectionBbox_.max, LengthUnit{} );
+        drawDimensionsVec3( "Box Size", bsize, LengthUnit{} );
+
+        if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
+            drawDimensionsVec3( "World Box Size", wbsize, LengthUnit{} );
+    }
 
     if ( totalFaces || totalVerts || totalEdges || totalPoints )
     {
         ImGui::Spacing();
         ImGui::Spacing();
 
-        const ImVec4 textColorForSelected = { 0.886f, 0.267f, 0.267f, 1.0f };
-        drawPrimitivesInfo( "Triangles", totalFaces, totalSelectedFaces, textColorForSelected );
+        drawPrimitivesInfo( "Triangles", totalFaces, totalSelectedFaces );
         drawPrimitivesInfo( "Vertices", totalVerts );
-        if ( selectedObjs.size() == 1 )
-            drawPrimitivesInfo( "Edges", totalEdges, totalSelectedEdges, textColorForSelected );
-        drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints, textColorForSelected );
+        drawPrimitivesInfo( "Edges", totalEdges, totalSelectedEdges );
+        drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints );
     }
 
     if ( selectedObjs.size() == 1 && totalPoints )
-        UI::inputTextCenteredReadOnly( "Points with Normals", pointsHaveNormals ? "Yes" : "No", itemWidth );
+        UI::inputTextCenteredReadOnly( "Point Normals", pointsHaveNormals ? "Yes" : "No", itemWidth, textColor, labelColor );
 
     if ( totalFaces )
     {
         if ( totalVolume )
-        {
-            ImGui::PushItemWidth( itemWidth );
-            MR_SUPPRESS_WARNING_PUSH
-            #if __GNUC__ >= 12 && __GNUC__ <= 14 // `totalVolume` may be used uninitialized. False positive in GCC
-            #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-            #endif
-            UI::readOnlyValue<VolumeUnit>( "Volume", *totalVolume );
-            MR_SUPPRESS_WARNING_POP
-            ImGui::PopItemWidth();
-        }
-        else
-        {
-            UI::inputTextCenteredReadOnly( "Volume", "Mesh is not closed", itemWidth );
-        }
+            drawUnitInfo( "Volume", *totalVolume, VolumeUnit{} );
 
         if ( selectedObjs.size() == 1 )
         {
             // TODO: show selected area
             (void)totalSelectedArea;
-            ImGui::PushItemWidth( itemWidth );
-            UI::readOnlyValue<AreaUnit>( "Area", totalArea );
-            ImGui::PopItemWidth();
+            drawUnitInfo( "Area", totalArea, AreaUnit{} );
 
-            if ( selectedObjs.size() == 1 )
-            {
-                ImGui::PushItemWidth( itemWidth );
-                UI::readOnlyValue<LengthUnit>( "Avg Edge Length", avgEdgeLen );
-                ImGui::PopItemWidth();
-            }
+            drawUnitInfo( "Avg Edge Length", avgEdgeLen, LengthUnit{} );
 
-            if ( holes > 0 )
-                drawPrimitivesInfo( "Holes", holes );
+            drawPrimitivesInfo( "Holes", holes );
             if ( components > 1 )
                 drawPrimitivesInfo( "Components", components );
         }
     }
 
-    bool firstField = true;
-    auto drawDimensionsVec3 = [this, &firstField]<class Units>( const char* label, const auto& value )
-    {
-        if ( firstField )
-        {
-            firstField = false;
-            ImGui::Spacing();
-            ImGui::Spacing();
-        }
-
-        ImGui::PushItemWidth( getSceneInfoItemWidth_() );
-        MR_FINALLY{ ImGui::PopItemWidth(); };
-
-        UI::readOnlyValue<Units>( label, value );
-    };
-
 #ifndef MRVIEWER_NO_VOXELS
-    if ( isValidVoxelsInfo( voxelDims ) )
-        drawDimensionsVec3.template operator()<NoUnit>( "Voxels Dims", *voxelDims );
-    if ( selectedObjs.size() == 1 )
+    if ( selectedObjs.size() == 1 && selectedObjs.front()->asType<ObjectVoxels>() )
     {
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        if ( isValidVoxelsInfo( voxelDims ) )
+            drawDimensionsVec3( "Voxels Dims", *voxelDims, NoUnit{} );
         if ( isValidVoxelsInfo( voxelSize ) )
-            drawDimensionsVec3.template operator()<NoUnit>( "Voxel Size", *voxelSize );
+            drawDimensionsVec3( "Voxel Size", *voxelSize, LengthUnit{} );
         if ( isValidVoxelsInfo( voxelActiveBox ) )
         {
             if ( voxelDims && ( voxelActiveBox->min != Vector3i{} || voxelActiveBox->max != voxelDims ) )
             {
-                drawDimensionsVec3.template operator()<NoUnit>( "Active Box Min", voxelActiveBox->min );
-                drawDimensionsVec3.template operator()<NoUnit>( "Active Box Max", voxelActiveBox->max );
+                drawDimensionsVec3( "Active Box Min", voxelActiveBox->min, NoUnit{} );
+                drawDimensionsVec3( "Active Box Max", voxelActiveBox->max, NoUnit{} );
             }
         }
-        ImGui::PushItemWidth( itemWidth );
-        if ( isValidVoxelsInfo( voxelMinValue, FLT_MAX ) )
-            UI::readOnlyValue<NoUnit>( "Voxels Min", *voxelMinValue );
         if ( isValidVoxelsInfo( voxelIsoValue, FLT_MAX ) )
-            UI::readOnlyValue<NoUnit>( "Voxels Iso", *voxelIsoValue );
+            drawUnitInfo( "Iso Value", *voxelIsoValue, NoUnit{} );
+        if ( isValidVoxelsInfo( voxelMinValue, FLT_MAX ) )
+            drawUnitInfo( "Min Value", *voxelMinValue, NoUnit{} );
         if ( isValidVoxelsInfo( voxelMaxValue, FLT_MAX ) )
-            UI::readOnlyValue<NoUnit>( "Voxels Max", *voxelMaxValue );
-        ImGui::PopItemWidth();
+            drawUnitInfo( "Max Value", *voxelMaxValue, NoUnit{} );
     }
 #endif
 
-    // Feature object properties.
-    bool haveFeatureProperties = false;
-    if ( selectedObjs.size() == 1 )
-    {
-        if ( dynamic_cast<FeatureObject *>( selectedObjs.front().get() ) )
-        {
-            ImGui::PushItemWidth( getSceneInfoItemWidth_( 1 ) ); // ??
-            MR_FINALLY{ ImGui::PopItemWidth(); };
-
-            haveFeatureProperties = true;
-            drawFeaturePropertiesEditor_( selectedObjs.front() );
-        }
-    }
-    if ( !haveFeatureProperties )
-        editedFeatureObject_.reset();
-
     // Value for a dimension object.
-    if ( selectedObjs.size() == 1 )
+    if ( selectedObjs.size() == 1 && selectedObjs.front()->asType<MeasurementObject>() )
     {
-        auto setWidgetWidth = [&]
-        {
-            ImGui::SetNextItemWidth( getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x );
-        };
+        ImGui::Spacing();
+        ImGui::Spacing();
 
-        if ( auto distance = dynamic_cast<DistanceMeasurementObject *>( selectedObjs.front().get() ) )
-        {
-            setWidgetWidth();
-            UI::readOnlyValue<LengthUnit>( "Distance", distance->computeDistance() );
-        }
-        else if ( auto angle = dynamic_cast<AngleMeasurementObject *>( selectedObjs.front().get() ) )
-        {
-            setWidgetWidth();
-            UI::readOnlyValue<AngleUnit>( "Angle", angle->computeAngle() );
-        }
-        else if ( auto radius = dynamic_cast<RadiusMeasurementObject *>( selectedObjs.front().get() ) )
-        {
-            setWidgetWidth();
-            UI::readOnlyValue<LengthUnit>( radius->getDrawAsDiameter() ? "Diameter" : "Radius", radius->computeRadiusOrDiameter() );
-        }
-    }
-
-    // Bounding box.
-    if ( selectionBbox_.valid()
-        // We were asked to hide the bounding box for features.
-        && !haveFeatureProperties
-    )
-    {
-        drawDimensionsVec3.template operator()<LengthUnit>( "Box min", selectionBbox_.min );
-        drawDimensionsVec3.template operator()<LengthUnit>( "Box max", selectionBbox_.max );
-        drawDimensionsVec3.template operator()<LengthUnit>( "Box size", bsize );
-
-        if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
-            drawDimensionsVec3.template operator()<LengthUnit>( "World box size", wbsize );
+        auto* obj = selectedObjs.front().get();
+        if ( auto* distance = obj->asType<DistanceMeasurementObject>() )
+            drawUnitInfo( "Distance", distance->computeDistance(), LengthUnit{} );
+        else if ( auto* angle = obj->asType<AngleMeasurementObject>() )
+            drawUnitInfo( "Angle", angle->computeAngle(), AngleUnit{} );
+        else if ( auto* radius = obj->asType<RadiusMeasurementObject>() )
+            drawUnitInfo( radius->getDrawAsDiameter() ? "Diameter" : "Radius", radius->computeRadiusOrDiameter(), LengthUnit{} );
     }
 
     // This looks a bit better.

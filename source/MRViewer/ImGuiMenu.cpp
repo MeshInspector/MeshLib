@@ -1325,6 +1325,21 @@ float ImGuiMenu::drawSelectionInformation_()
         lastRenameObj_.reset();
     }
 
+    // Feature object properties.
+    if ( selectedObjs.size() == 1 && selectedObjs.front()->asType<FeatureObject>() )
+    {
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        ImGui::PushItemWidth( getSceneInfoItemWidth_( 1 ) ); // ??
+        drawFeaturePropertiesEditor_( selectedObjs.front() );
+        ImGui::PopItemWidth();
+    }
+    else
+    {
+        editedFeatureObject_.reset();
+    }
+
     // customize input text widget design
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, Vector2f { 3.f, 3.f } * menu_scaling() );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
@@ -1443,21 +1458,6 @@ float ImGuiMenu::drawSelectionInformation_()
             drawUnitInfo( "Max Value", *voxelMaxValue, NoUnit{} );
     }
 #endif
-
-    // Feature object properties.
-    if ( selectedObjs.size() == 1 && selectedObjs.front()->asType<FeatureObject>() )
-    {
-        ImGui::Spacing();
-        ImGui::Spacing();
-
-        ImGui::PushItemWidth( getSceneInfoItemWidth_( 1 ) ); // ??
-        drawFeaturePropertiesEditor_( selectedObjs.front() );
-        ImGui::PopItemWidth();
-    }
-    else
-    {
-        editedFeatureObject_.reset();
-    }
 
     // Value for a dimension object.
     if ( selectedObjs.size() == 1 && selectedObjs.front()->asType<MeasurementObject>() )

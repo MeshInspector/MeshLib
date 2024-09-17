@@ -17,7 +17,7 @@ del _init_patch
 # Manually define some aliases. It's recommended to avoid those.
 
 def _init_patch():
-    from meshlib2 import mrmeshpy
+    from . import mrmeshpy
     mrmeshpy.BooleanResMapObj = mrmeshpy.BooleanResultMapper_MapObject
     mrmeshpy.copyMesh = mrmeshpy.Mesh
     mrmeshpy.FaceMap.vec = mrmeshpy.FaceMap.vec_

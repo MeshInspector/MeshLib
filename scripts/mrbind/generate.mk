@@ -33,8 +33,10 @@ override load_file = $(subst $(lf), ,$(file <$1))
 # Are we on Windows?
 ifeq ($(OS),Windows_NT)
 IS_WINDOWS := 1
-else
+IS_MACOS := 0
+else ifeq ($(shell uname -s),Darwin)
 IS_WINDOWS := 0
+IS_MACOS := 1
 endif
 override IS_WINDOWS := $(filter-out 0,$(IS_WINDOWS))
 
@@ -123,9 +125,6 @@ $(if $(PYTHON_PKGCONF_NAME),$(info Using Python version: $(PYTHON_PKGCONF_NAME:-
 PYTHON_CONFIG := $(subst -,,$(PYTHON_PKGCONF_NAME:-embed=))-config
 
 # Python compilation flags.
-PYTHON_CFLAGS :=
-PYTHON_LDFLAGS :=
-ifeq ($(PYTHON_CFLAGS)$(PYTHON_LDFLAGS),)
 ifneq ($(IS_WINDOWS),)
 # Intentionally using non-debug Python even in Debug builds, to mimic what MeshLib does. Unsure why we do this.
 PYTHON_CFLAGS := $(call safe_shell,PKG_CONFIG_PATH=$(call quote,$(DEPS_BASE_DIR)/lib/pkgconfig) PKG_CONFIG_LIBDIR=- pkg-config --cflags $(PYTHON_PKGCONF_NAME))
@@ -134,13 +133,12 @@ else
 PYTHON_CFLAGS := $(call safe_shell,pkg-config --cflags $(PYTHON_PKGCONF_NAME))
 PYTHON_LDFLAGS := $(call safe_shell,pkg-config --libs $(PYTHON_PKGCONF_NAME))
 endif
-endif
 
 # Python module suffix.
 ifneq ($(IS_WINDOWS),)
 PYTHON_MODULE_SUFFIX := .pyd
 else
-# This is a bit sketchy, because it does
+# `.so` also works here.
 PYTHON_MODULE_SUFFIX := $(call safe_shell,$(PYTHON_CONFIG) --extension-suffix)
 endif
 $(info Using Python module suffix: $(PYTHON_MODULE_SUFFIX))
@@ -170,7 +168,8 @@ COMPILER_FLAGS_LIBCLANG := $(call load_file,$(makefile_dir)/parser_only_flags.tx
 COMPILER := $(CXX) $(subst $(lf), ,$(call load_file,$(makefile_dir)/compiler_only_flags.txt)) -I$(MRBIND_SOURCE)/include
 LINKER_OUTPUT := $(MODULE_OUTPUT_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
 LINKER := $(CXX) -fuse-ld=lld
-LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(DEPS_LIB_DIR) $(PYTHON_LDFLAGS) -L$(MESHLIB_SHLIB_DIR) -lMRMesh -lMRIOExtras -lMRSymbolMesh -lMRPython -lMRVoxels -shared $(call load_file,$(makefile_dir)/linker_flags.txt)
+# Unsure if `-dynamiclib` vs `-shared` makes any difference on MacOS. I'm using the former because that's what CMake does.
+LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(DEPS_LIB_DIR) $(PYTHON_LDFLAGS) -L$(MESHLIB_SHLIB_DIR) -lMRMesh -lMRIOExtras -lMRSymbolMesh -lMRPython -lMRVoxels $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)/linker_flags.txt)
 NUM_FRAGMENTS := 4
 EXTRA_INPUT_SOURCES := $(makefile_dir)/helpers.cpp
 
@@ -194,13 +193,36 @@ ifeq ($(VS_MODE),Debug)
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrtd -D_DEBUG
 # Override to match meshlib:
 COMPILER_FLAGS += -D_ITERATOR_DEBUG_LEVEL=0
-else
+else # VS_MODE == Release
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrt
 endif
-else # Linux:
+else # Linux or MacOS:
 COMPILER += -fPIC
+COMPILER += -fvisibility=hidden
+# MacOS rpath is quirky: 1. Must use `-rpath,` instead of `-rpath=`. 2. Must specify the flag several times, apparently can't use
+#   `:` or `;` as a separators inside of one big flag. 3. As you've noticed, it uses `@loader_path` instead of `$ORIGIN`.
+rpath_origin := $(if $(IS_MACOS),@loader_path,$$ORIGIN)
+LINKER_FLAGS += -Wl,-rpath,'$(rpath_origin)' -Wl,-rpath,'$(rpath_origin)/..'
+ifneq ($(IS_MACOS),)
+# Hmm.
+COMPILER_FLAGS_LIBCLANG += -resource-dir=$(strip $(call safe_shell,$(CXX) -print-resource-dir))
+# Our dependencies are here.
+COMPILER_FLAGS += -I/opt/homebrew/include
+# Boost.stacktrace complains otherwise.
+COMPILER_FLAGS += -D_GNU_SOURCE
+LINKER_FLAGS += -L/opt/homebrew/lib
+LINKER_FLAGS += -ltbb
+# This fixes an error during wheel creation:
+#   /Library/Developer/CommandLineTools/usr/bin/install_name_tool: changing install names or rpaths can't be redone for: /private/var/folders/c2/_t7lgq_s3zb_r01vy_1qd6nh0000gs/T/tmpatczljnu/wheel/meshlib/mrmeshpy.so (for architecture arm64) because larger updated load commands do not fit (the program must be relinked, and you may need to use -headerpad or -headerpad_max_install_names)
+# Apparently there's not enough space in the binary to fit longer library paths, and this pads it to have to up MAXPATHLEN space for each path.
+LINKER_FLAGS += -Wl,-headerpad_max_install_names
+# Those fix a segfault when importing the emodule, that only happens for wheels, not raw binaries.
+# Pybind manual says you must use those.
+# Also note that this is one long flag (`-undefined dynamic_lookup`), not two independent fones.
+LINKER_FLAGS += -Xlinker -undefined -Xlinker dynamic_lookup
+else # Linux:
 COMPILER_FLAGS += -I/usr/include/jsoncpp -isystem/usr/include/freetype2 -isystem/usr/include/gdcm-3.0
-LINKER_FLAGS += -Wl,-rpath='$$ORIGIN/..:$$ORIGIN'
+endif
 endif
 
 

@@ -35,6 +35,7 @@ class RibbonNotifier
 public:
     // adds new notification for drawing
     void pushNotification( const RibbonNotification& notification );
+    // draw button to show last notifications
     void drawNotificationHistoryButton( float scaling );
     // draws all present notifications
     void drawNotifications( float scaling );

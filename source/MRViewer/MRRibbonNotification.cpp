@@ -88,17 +88,7 @@ void RibbonNotifier::drawNotificationHistoryButton( float scaling )
     ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, { 0, 0 } );
     ImGui::PushStyleColor( ImGuiCol_WindowBg, MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::FrameBackground ).getUInt32() );
 
-    auto activeModal = ImGui::GetTopMostPopupModal();
-
     ImGui::Begin( name.c_str(), nullptr, flags );
-
-    if ( ImGui::IsWindowAppearing() )
-    {
-        if ( !activeModal )
-            ImGui::BringWindowToDisplayFront( ImGui::GetCurrentWindow() ); // bring to front to be over modal background
-        if ( !ProgressBar::isOrdered() && !activeModal ) // do not focus window, not to close modal on appearing
-            ImGui::SetWindowFocus();
-    }
 
     iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
     if ( iconsFont )
@@ -119,16 +109,7 @@ void RibbonNotifier::drawNotificationHistoryButton( float scaling )
 
     auto window = ImGui::GetCurrentContext()->CurrentWindow;
     bool isHovered = false;
-    if ( activeModal )
-    {
-        // workaround to be able to hover notification even if modal is present
-        auto mousePos = ImGui::GetMousePos();
-        isHovered = window->Rect().Contains( mousePos ) && !activeModal->Rect().Contains( mousePos );
-    }
-    else
-    {
-        isHovered = ImGui::IsWindowHovered();
-    }
+    isHovered = ImGui::IsWindowHovered();
 
     if ( isHovered )
     {

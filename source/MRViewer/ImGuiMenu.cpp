@@ -1348,9 +1348,9 @@ float ImGuiMenu::drawSelectionInformation_()
 
     const float itemWidth = getSceneInfoItemWidth_( 3 ) * 3 + ImGui::GetStyle().ItemInnerSpacing.x * 2;
 
-    const auto textColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+    auto textColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
     auto labelColor = textColor;
-    labelColor.w *= 0.5f;
+    textColor.w *= 0.5f;
     const ImVec4 selectedTextColor { 0.886f, 0.267f, 0.267f, 1.0f };
 
     auto drawPrimitivesInfo = [&] ( const char* label, size_t value, size_t selected = 0 )
@@ -1391,9 +1391,9 @@ float ImGuiMenu::drawSelectionInformation_()
         ImGui::Spacing();
         ImGui::Spacing();
 
+        drawDimensionsVec3( "Box Size", bsize, LengthUnit{} );
         drawDimensionsVec3( "Box Min", selectionBbox_.min, LengthUnit{} );
         drawDimensionsVec3( "Box Max", selectionBbox_.max, LengthUnit{} );
-        drawDimensionsVec3( "Box Size", bsize, LengthUnit{} );
 
         if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
             drawDimensionsVec3( "World Box Size", wbsize, LengthUnit{} );

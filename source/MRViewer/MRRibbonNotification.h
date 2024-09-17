@@ -49,6 +49,7 @@ private:
     std::vector<NotificationWithTimer> notifications_;
     std::vector<NotificationWithTimer> notificationsHistory_;
     NotificationType highestNotification_ = NotificationType::Count;
+    bool requestRedraw_ = false;
     void addNotification_( std::vector<NotificationWithTimer>& store, const RibbonNotification& notification );
     void filterInvalid_( int numInvalid = -1 );
 #ifndef __EMSCRIPTEN__

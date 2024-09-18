@@ -4,8 +4,6 @@
 
 set -euxo pipefail
 
-brew install git
-
 MRBIND_DIR=~/mrbind
 
 # Read the Clang version from `preferred_clang_version.txt`. `xargs` trims the whitespace.
@@ -14,6 +12,8 @@ CLANG_VER="$(cat $SCRIPT_DIR/preferred_clang_version.txt | xargs)"
 [[ $CLANG_VER ]] || (echo "Not sure what version of Clang to use." && false)
 
 # Clone mrbind, or pull the latest version.
+# We don't install our own Git for this, because there's an official installer and the Brew package,
+#   and I'm unsure what to choose. The user can choose that themselves.
 if [[ -d $MRBIND_DIR ]]; then
     cd "$MRBIND_DIR"
     git checkout master

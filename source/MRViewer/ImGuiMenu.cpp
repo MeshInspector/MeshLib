@@ -1457,8 +1457,13 @@ float ImGuiMenu::drawSelectionInformation_()
                 drawDimensionsVec3( "Active Box Max", voxelActiveBox->max, NoUnit{} );
             }
         }
+        MR_SUPPRESS_WARNING_PUSH
+        #if __GNUC__ >= 12 && __GNUC__ <= 14 // False positive in GCC
+        #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+        #endif
         if ( voxelMinValue && voxelIsoValue && voxelMaxValue )
             drawDimensionsVec3( "Min,Iso,Max", Vector3f{ *voxelMinValue, *voxelIsoValue, *voxelMaxValue }, NoUnit{} );
+        MR_SUPPRESS_WARNING_POP
     }
 #endif
 

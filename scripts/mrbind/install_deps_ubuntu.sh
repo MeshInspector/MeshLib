@@ -3,6 +3,8 @@
 # Installs everything needed to generate and build MRBind bindings.
 # NOTE: On old Ubuntu this will build a newer GNU Make from source and install it to `/usr/local/bin`.
 
+# Must run this as root.
+
 set -euxo pipefail
 
 # Read the Clang version from `preferred_clang_version.txt`.`

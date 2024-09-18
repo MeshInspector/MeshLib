@@ -347,7 +347,7 @@ Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformationsFixFirst( Progres
         return res;
 
     const auto xf0 = objs_[ObjId( 0 )].xf;
-    res = calculateTransformationsFixFirst( cb );
+    res = calculateTransformations( cb );
 
     /// apply the same (updateXf) to all objects to restore transformation of first object,
     /// and make relative position of others the same

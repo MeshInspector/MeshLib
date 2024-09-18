@@ -62,6 +62,8 @@ def _init_patch():
     mrmeshpy.VertCoords.vec = mrmeshpy.VertCoords.vec_
     mrmeshpy.VertScalars.vec = mrmeshpy.VertScalars.vec_
     mrmeshpy.VoxelsSaveSavingSettings = mrmeshpy.VoxelsSave_SavingSettings
+    mrmeshpy.TriangulationHelpersSettings = mrmeshpy.TriangulationHelpers_Settings
+    mrmeshpy.buildUnitedLocalTriangulations = mrmeshpy.TriangulationHelpers_buildUnitedLocalTriangulations
 
 _init_patch()
 del _init_patch

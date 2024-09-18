@@ -77,3 +77,12 @@ def test_box():
     b5 = mrmesh.Box2f()
     b5.min = v1
     b5.max = v2
+
+def test_densebox():
+    mesh = mrmesh.makeSphere(mrmesh.SphereParams())
+    mesh.transform( mrmesh.AffineXf3f.linear(mrmesh.Matrix3f.rotation(mrmesh.Vector3f(1,0,0),mrmesh.Vector3f(1,1,1)))* mrmesh.AffineXf3f.linear(mrmesh.Matrix3f.scale(1,2,3)) )
+    denseBox = mrmesh.DenseBox(mesh)
+    denseCube = mrmesh.makeCube(denseBox.box().size(),denseBox.box().min)
+    denseCube.transform(denseBox.basisXf())
+
+    assert denseCube.volume() < mesh.computeBoundingBox().volume()

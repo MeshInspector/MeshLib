@@ -13,6 +13,7 @@
 #include "MRGTest.h"
 #include <limits>
 #include "MRMeshSave.h"
+#include "MRFillContour.h"
 
 namespace MR
 {
@@ -135,19 +136,29 @@ VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresen
     if ( paths.size() != newPaths.size() )
         return unexpected( "Patch surface borders size different from original mesh borders size" );
 
-    std::vector<int> invalidHoles;
-    invalidHoles.reserve( newPaths.size() );
-    for ( int i = int( paths.size() ) - 1; i >= 0; --i )
+    std::vector<EdgePath> invertedHoles;
+    invertedHoles.reserve( newPaths.size() );
+    for ( int i = 0; i < paths.size(); ++i )
     {
         if ( paths[i].size() != newPaths[i].size() )
             return unexpected( "Patch surface borders size different from original mesh borders size" );
 
-        // invalid holes, we could either skip them or fill other way or return error
+        // degenerate holes might invert sometimes (it is expected as far as planar triangulation does not now about input topology)
         if ( newPaths[i].empty() || patchMesh.topology.right( newPaths[i].front() ) )
-        {
-            paths.erase( paths.begin() + i );
-            newPaths.erase( newPaths.begin() + i );
-        }
+            if ( !newPaths[i].empty() )
+                MR::reverse( invertedHoles.emplace_back( newPaths[i] ) );
+    }
+    if ( !invertedHoles.empty() )
+    {
+        auto invertedParts = fillContourLeft( patchMesh.topology, invertedHoles );
+        auto invertedEdges = getIncidentEdges( patchMesh.topology, invertedParts );
+        patchMesh.topology.flipOrientation( &invertedEdges );
+
+        // validate one more time
+        for ( int i = 0; i < paths.size(); ++i )
+            if ( newPaths[i].empty() || patchMesh.topology.right( newPaths[i].front() ) )
+                if ( !newPaths[i].empty() )
+                    return unexpected( "Patch surface borders are incompatible with mesh borders" );
     }
 
     // move patch surface border points to original position (according original mesh)

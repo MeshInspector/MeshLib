@@ -1058,25 +1058,25 @@ void SweepLineQueue::removeMultipleAfterMerge_()
 
         if ( outBoundaries_ )
         {
-            auto& bunds = *outBoundaries_;
-            auto getBoundId = [&bunds] ( EdgeId e )->std::pair<int, int>
+            auto& bounds = *outBoundaries_;
+            auto getBoundId = [&bounds] ( EdgeId e )->std::pair<int, int>
             {
                 int i0 = 0;
                 auto i1 = int( e.undirected() );
-                while ( i1 >= bunds[i0].size() )
+                while ( i1 >= bounds[i0].size() )
                 {
                     ++i0;
-                    i1 -= int( bunds[i0].size() );
+                    i1 -= int( bounds[i0].size() );
                 }
-                assert( e.undirected() == bunds[i0][i1].undirected() );
+                assert( e.undirected() == bounds[i0][i1].undirected() );
                 return { i0,i1 };
             };
             auto [bf0, bf1] = getBoundId( multiplesFromThis.front() );
-            auto bf = bunds[bf0][bf1];
+            auto bf = bounds[bf0][bf1];
             for ( int i = 1; i < multiplesFromThis.size(); ++i )
             {
                 auto [bi0, bi1] = getBoundId( multiplesFromThis[i] );
-                auto& bi = bunds[bi0][bi1];
+                auto& bi = bounds[bi0][bi1];
                 bi = multiplesFromThis[i] == bi ? bf : bf.sym();
             }
         }

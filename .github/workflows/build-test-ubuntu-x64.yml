@@ -155,7 +155,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu24' }}
         env:
           CXX: ${{matrix.cxx-compiler}}
-        run: make -f scripts/mrbind/generate.mk
+        run: make -f scripts/mrbind/generate.mk MODE=none
 
       - name: Sanity check MRBind bindings
         if: ${{ matrix.os == 'ubuntu24' }}

@@ -39,11 +39,11 @@ jobs:
         py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         include:
           - platform: "x86_64"
-            docker-image: "meshlib/meshlib-ubuntu20:latest"
+            docker-image: "meshlib/meshlib-ubuntu20:mrbind-ci"
             container-options: "--user root"
             runner: ubuntu-latest
           - platform: "aarch64"
-            docker-image: "meshlib/meshlib-ubuntu-arm64:latest"
+            docker-image: "meshlib/meshlib-ubuntu-arm64:mrbind-ci"
             container-options: "--user root"
             runner: [ 'self-hosted', 'linux-arm64' ]
           - py-version: "3.8"
@@ -99,6 +99,14 @@ jobs:
             -DMRMESH_OPENCASCADE_USE_XDE=OFF
           # not realy needed
           CMAKE_C_COMPILER: /usr/bin/clang-11
+
+      - name: Build MRBind
+        run: ./scripts/install_mrbind_ubuntu.sh
+
+      - name: Generate and build MRBind bindings
+        env:
+          CXX: ${{matrix.cxx-compiler}}
+        run: make -f scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib
 
       - name: Run Tests
         run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd

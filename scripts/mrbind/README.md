@@ -30,9 +30,12 @@ Run those once:
   ```sh
   git clone https://github.com/MeshInspector/mrbind ~/mrbind
   cd ~/mrbind
-  CC=clang CXX=clang++ cmake -B build -DCMAKE_PREFIX_PATH=/opt/homebrew/opt/llvm
+  CC=clang CXX=clang++ cmake -B build
   cmake --build build
   ```
+  You must include homebrew's Clang in PATH as was expained above.
+
+  Also, while it doesn't seem to be necessary if you build with homebrew Clang, you can pass `-DCMAKE_PREFIX_PATH=/opt/homebrew/opt/llvm` to specify the location of libclang (e.g. if you build with Apple Clang rather than homebrew Clang?).
 
 ### Linux prerequisites:
 

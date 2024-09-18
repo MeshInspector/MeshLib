@@ -85,7 +85,13 @@ public:
 
     /// runs ICP algorithm given input objects, transformations, and parameters;
     /// \return adjusted transformations of all objects to reach registered state
+    /// the transformation of the last object is fixed and does not change here
     [[nodiscard]] MRMESH_API Vector<AffineXf3f, ObjId> calculateTransformations( ProgressCallback cb = {} );
+
+    /// runs ICP algorithm given input objects, transformations, and parameters;
+    /// \return adjusted transformations of all objects to reach registered state
+    /// the transformation of the first object is fixed and does not change here
+    [[nodiscard]] MRMESH_API Vector<AffineXf3f, ObjId> calculateTransformationsFixFirst( ProgressCallback cb = {} );
 
     /// select pairs with origin samples on all objects
     MRMESH_API bool resamplePoints( const MultiwayICPSamplingParameters& samplingParams );

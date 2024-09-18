@@ -1457,12 +1457,8 @@ float ImGuiMenu::drawSelectionInformation_()
                 drawDimensionsVec3( "Active Box Max", voxelActiveBox->max, NoUnit{} );
             }
         }
-        if ( isValidVoxelsInfo( voxelIsoValue, FLT_MAX ) )
-            drawUnitInfo( "Iso Value", *voxelIsoValue, NoUnit{} );
-        if ( isValidVoxelsInfo( voxelMinValue, FLT_MAX ) )
-            drawUnitInfo( "Min Value", *voxelMinValue, NoUnit{} );
-        if ( isValidVoxelsInfo( voxelMaxValue, FLT_MAX ) )
-            drawUnitInfo( "Max Value", *voxelMaxValue, NoUnit{} );
+        if ( voxelMinValue && voxelIsoValue && voxelMaxValue )
+            drawDimensionsVec3( "Min,Iso,Max", Vector3f{ *voxelMinValue, *voxelIsoValue, *voxelMaxValue }, NoUnit{} );
     }
 #endif
 

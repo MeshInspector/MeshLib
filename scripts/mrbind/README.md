@@ -4,7 +4,7 @@
 
 Run those once:
 
-* `scripts/mrbind/install_msys2_tools.bat` to install MSYS2 with Clang and libclang. Re-run to update to the latest version.
+* `scripts/mrbind/install_deps_windows_msys2.bat` to install MSYS2 with Clang and libclang. Re-run to update to the latest version.
 
 * `scripts/mrbind/install_mrbind_windows_msys2.bat` to download and compile MRBind. Re-run to update to the latest version.
 

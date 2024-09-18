@@ -1,7 +1,7 @@
 @echo off
 
 rem Downloads the source code for MRBind and builds it, at `C:\msys64_meshlib_mrbind\home\username\mrbind\build`.
-rem Before running this, run `install_msys2_tools.bat`.
+rem Before running this, run `install_deps_windows_msys2.bat`.
 
 set MSYS2_DIR=C:\msys64_meshlib_mrbind
 
@@ -11,7 +11,7 @@ rem Preserve the current directory. We'll do `popd` at the end...
 pushd .
 
 if not exist %MSYS2_DIR% (
-    echo MSYS2 was NOT found at `%MSYS2_DIR%`. Run `install_msys2_tools.bat` to build it.
+    echo MSYS2 was NOT found at `%MSYS2_DIR%`. Run `install_deps_windows_msys2.bat` to build it.
 ) else (
     echo Fount MSYS2 at `%MSYS2_DIR%`.
 

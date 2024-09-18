@@ -102,6 +102,20 @@ endif
 EXTRA_CFLAGS :=
 EXTRA_LDLAGS :=
 
+# Flag presets.
+MODE := release
+ifeq ($(MODE),release)
+override EXTRA_CFLAGS += -Oz -flto=thin
+override EXTRA_LDFLAGS += -Oz -flto=thin $(if $(IS_MACOS),,-s)# No `-s` on macos. It seems to have no effect, and the linker warns about it.
+else ifeq ($(MODE),debug)
+override EXTRA_CFLAGS += -g
+override EXTRA_LDFLAGS += -g
+else ifeq ($(MODE),none)
+# Nothing.
+else
+$(error Unknown MODE=$(MODE))
+endif
+
 # Look for MeshLib  dependencies relative to this. On Linux should point to the project root, because that's where `./include` and `./lib` are.
 ifneq ($(IS_WINDOWS),)
 DEPS_BASE_DIR := $(VCPKG_DIR)/installed/x64-windows-meshlib
@@ -138,8 +152,8 @@ endif
 ifneq ($(IS_WINDOWS),)
 PYTHON_MODULE_SUFFIX := .pyd
 else
-# `.so` also works here.
-PYTHON_MODULE_SUFFIX := $(call safe_shell,$(PYTHON_CONFIG) --extension-suffix)
+PYTHON_MODULE_SUFFIX := .so
+# PYTHON_MODULE_SUFFIX := $(call safe_shell,$(PYTHON_CONFIG) --extension-suffix)
 endif
 $(info Using Python module suffix: $(PYTHON_MODULE_SUFFIX))
 
@@ -148,8 +162,8 @@ $(info Using Python module suffix: $(PYTHON_MODULE_SUFFIX))
 
 
 
-
-MODULE_OUTPUT_DIR := $(MESHLIB_SHLIB_DIR)/meshlib2
+PACKAGE_NAME := meshlib2
+MODULE_OUTPUT_DIR := $(MESHLIB_SHLIB_DIR)/$(PACKAGE_NAME)
 
 # Those variables are for mrbind/scripts/apply_to_files.mk
 INPUT_DIRS := $(addprefix $(makefile_dir)/../../source/,MRMesh MRIOExtras MRPython MRSymbolMesh MRVoxels) $(makefile_dir)
@@ -260,7 +274,7 @@ $(MRMESHNUMPY_MODULE): | $(MODULE_OUTPUT_DIR)
 		-o $@ \
 		$(makefile_dir)/../../source/mrmeshnumpy/*.cpp \
 		$(COMPILER_FLAGS) $(LINKER_FLAGS) \
-		-DMRMESHNUMPY_PARENT_MODULE_NAME=$(notdir $(MODULE_OUTPUT_DIR))
+		-DMRMESHNUMPY_PARENT_MODULE_NAME=$(PACKAGE_NAME)
 
 # The init script.
 INIT_SCRIPT := $(MODULE_OUTPUT_DIR)/__init__.py

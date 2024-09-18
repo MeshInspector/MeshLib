@@ -34,22 +34,56 @@ Run those once:
   cmake --build build
   ```
 
+### Linux prerequisites:
+
+* **Install Clang 18 and libclang:**
+
+  **On Ubuntu 24.04**, install directly from official repos:
+  ```
+  VER=18
+  sudo apt install clang-$VER lld-$VER clang-tools-$VER libclang-$VER-dev llvm-$VER-dev
+  ```
+  **On older Ubuntu** this version is not in the official repos, must install from LLVM ones:
+  ```
+  VER=18
+  wget https://apt.llvm.org/llvm.sh
+  chmod +x llvm.sh
+  sudo ./llvm.sh $VER
+  rm llvm.sh
+  sudo apt install clang-$VER lld-$VER clang-tools-$VER libclang-$VER-dev llvm-$VER-dev
+  ```
+
+* **Build MRBind:**
+  ```sh
+  git clone https://github.com/MeshInspector/mrbind ~/mrbind
+  cd ~/mrbind
+  CC=clang CXX=clang++ cmake -B build -DClang_DIR=/usr/lib/cmake/clang-18
+  cmake --build build
+  ```
+  `Clang_DIR` is needed if you have more than one version of libclang installed, otherwise CMake might pick the wrong one (not even necessarily the newest one).
+
 
 ### Creating the bindings:
 
 You need to run:
-* On Windows: `scripts/mrbind/generate_win.bat` from VS developer command prompt (x64).
-* On Linux and MacOS: `make -f scripts/mrbind/generate.mk`
-
-You must pass some additional flags.
+* On Windows: `scripts/mrbind/generate_win.bat ....` from VS developer command prompt (x64).
+* On Linux and MacOS: `make -f scripts/mrbind/generate.mk ....`
 
 Here are some example configurations, but read the docs below for details.
 
-* Windows: `scripts/mrbind/generate_win.bat -B --trace VS_MODE=Release` (or `=Debug`)
+Note that we build in release mode by default, pass `MODE=none` or `MODE=debug` for faster build times.
 
-* MacOS: `make -f scripts/mrbind/generate.mk -B --trace CXX='clang++ -fclang-abi-compat=17' MRBIND_SOURCE=/Users/user/repos/mrbind MESHLIB_SHLIB_DIR=build/RelWithDebugInfo/bin PYTHON_PKGCONF_NAME=python-3.10-embed`
+* **Windows:** `scripts/mrbind/generate_win.bat -B --trace VS_MODE=Release` (or `=Debug`)
 
-* Ubuntu: `make -f scripts/mrbind/generate.mk -B --trace CXX='clang++-18 -fclang-abi-compat=17' MRBIND_SOURCE=/home/user/repos/mrbind MESHLIB_SHLIB_DIR=build/RelWithDebugInfo/bin` (drop `-fclang-abi-compat=17` on Ubuntu 24.04 and newer).
+  The current directory matters, will look for MeshLib build in `./source/x64/$VS_MODE`.
+
+* **MacOS:** `make -f scripts/mrbind/generate.mk -B --trace CXX='clang++ -fclang-abi-compat=17' MRBIND_SOURCE=/Users/user/repos/mrbind MESHLIB_SHLIB_DIR=build/RelWithDebugInfo/bin PYTHON_PKGCONF_NAME=python-3.10-embed`
+
+  The current directory affects where the temprary files will be stored (in `./build`).
+
+* **Ubuntu:** `make -f scripts/mrbind/generate.mk -B --trace CXX='clang++-18 -fclang-abi-compat=17' MRBIND_SOURCE=/home/user/repos/mrbind MESHLIB_SHLIB_DIR=build/RelWithDebugInfo/bin` (drop `-fclang-abi-compat=17` on Ubuntu 24.04 and newer).
+
+  The current directory affects where the temprary files will be stored (in `./build`).
 
 #### Selecting MeshLib build
 
@@ -63,6 +97,16 @@ On Linux and MacOS:
 
 * Must pass `MESHLIB_SHLIB_DIR=...` (as a Make flag, not env variable) pointing to your build `bin` directory, e.g. `build/RelWithDebugInfo/bin`.
 
+  The current directory only affects where the temporary files will be stored.
+
+#### Compiler settings
+
+By default we use `MODE=release`, which enables optimization and disables debug symbols.
+
+Pass `MODE=none` for faster builds (but without debug symbols), or `MODE=debug` for builds with debug symbols.
+
+Alternatively you can set `EXTRA_CFLAGS=... EXTRA_LDFLAGS=...` for fully custom compiler and linker flags.
+
 #### Full vs incremental build
 
 `-B` forces a full rebuild. Removing this flag in theory performs an incremental build, but changing anything in MeshLib headers requires a full rebuild anyway. Removing this flag is only useful for rebuilding auxiliary parts of the module (copying `__init__.py` again, and so on).
@@ -74,14 +118,6 @@ On Windows, if you used `install_mrbind.bat`, you don't need to worry about this
 On Other platforms, you must pass `MRBIND_SOURCE=path/to/mrbind` to Make (note, not as an env variable), pointing to the MRBind source directory.
 
 If MRBind is not at `$MRBIND_SOURCE/build/mrbind`, must also pass `MRBIND_EXE` pointing to the executable.
-
-#### Compiler settings
-
-By default the bindings are built without optimizations and without debug symbols.
-
-To enable optimizations: `.../generate_win.bat EXTRA_CFLAGS="-Oz -flto=thin" EXTRA_LDFLAGS="-Oz -flto=thin -s"`. (Omit `-s` on MacOS, it seems to have no effect, and the linker warns you shouldn't use it.)
-
-To enable debug symbols: `.../generate_win.bat EXTRA_CFLAGS=-g EXTRA_LDFLAGS=-g`.
 
 #### Selecting compiler
 
@@ -104,6 +140,12 @@ The default value is `4`, which is good for 16 GB of RAM.
 On Windows you don't need to care about this, we guess the version from the Vcpkg contents.
 
 On Linux and Mac, you can pass e.g. `PYTHON_PKGCONF_NAME=python-3.10-embed` to force Python 3.10. The default is `python3-embed`, which uses some default Python version on Linux, and the latest one on Mac.
+
+#### Selecting python package name
+
+We currently default to `PACKAGE_NAME=meshlib2`, which is how the Python package will be called (`from meshlib2 import mrmeshpy`, etc).
+
+You might want to set this to `PACKAGE_NAME=meshlib`.
 
 #### Other useful flags
 

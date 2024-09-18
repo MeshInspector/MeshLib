@@ -83,9 +83,9 @@ endif
 
 # Source directory of MRBind.
 ifneq ($(IS_WINDOWS),)
-MRBIND_SOURCE := $(HOME)/_mrbind
+MRBIND_SOURCE := $(HOME)/mrbind
 else
-MRBIND_SOURCE := _mrbind
+MRBIND_SOURCE := ~/mrbind
 endif
 
 # MRBind executable .

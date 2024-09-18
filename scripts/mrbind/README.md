@@ -6,7 +6,7 @@ Run those once:
 
 * `scripts/mrbind/install_msys2_tools.bat` to install MSYS2 with Clang and libclang. Re-run to update to the latest version.
 
-* `scripts/mrbind/install_mrbind.bat` to download and compile MRBind. Re-run to update to the latest version.
+* `scripts/mrbind/install_mrbind_windows_msys2.bat` to download and compile MRBind. Re-run to update to the latest version.
 
   Note that this downloads the latest `master`, while CI might be pointing to a specific commit. But it's simple to manually build a specific commit.
 
@@ -116,7 +116,7 @@ Alternatively you can set `EXTRA_CFLAGS=... EXTRA_LDFLAGS=...` for fully custom 
 
 #### Selecting MRBind installation
 
-On Windows, if you used `install_mrbind.bat`, you don't need to worry about this.
+On Windows, if you used `install_mrbind_windows_msys2.bat`, you don't need to worry about this.
 
 On Other platforms, you must pass `MRBIND_SOURCE=path/to/mrbind` to Make (note, not as an env variable), pointing to the MRBind source directory.
 

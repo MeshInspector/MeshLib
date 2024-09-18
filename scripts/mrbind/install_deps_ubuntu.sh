@@ -7,12 +7,14 @@
 
 set -euxo pipefail
 
-# Read the Clang version from `preferred_clang_version.txt`.`
-SCRIPT_DIR="$(realpath "$(dirname "$BASH_SOURCE")")"
-CLANG_VER="$(cat $SCRIPT_DIR/preferred_clang_version.txt)"
-[[ $CLANG_VER ]] || (echo "Not sure what version of Clang to use." && false)
-
 apt update
+# Install `xargs` because we need it below.
+apt install -y findutils
+
+# Read the Clang version from `preferred_clang_version.txt`. `xargs` trims the whitespace.
+SCRIPT_DIR="$(realpath "$(dirname "$BASH_SOURCE")")"
+CLANG_VER="$(cat $SCRIPT_DIR/preferred_clang_version.txt | xargs)"
+[[ $CLANG_VER ]] || (echo "Not sure what version of Clang to use." && false)
 
 # Add LLVM repositories if the required package is not accessible right now.
 # If it's accessible, either we have already added the same repos, or the version of Ubuntu is new enough to have it in the official repos.
@@ -31,6 +33,7 @@ if ! apt-get install -s clang-$CLANG_VER >/dev/null 2>/dev/null; then
 fi
 
 # Install the packages.
+# Could also add `sudo` here for `install_mrbind_ubuntu.sh`, but I think the user can do that themselves.
 apt install -y make cmake ninja-build gawk clang-$CLANG_VER lld-$CLANG_VER clang-tools-$CLANG_VER libclang-$CLANG_VER-dev llvm-$CLANG_VER-dev
 
 # Build Make from source, if ours is too old. It gets installed to `/usr/local/bin`.

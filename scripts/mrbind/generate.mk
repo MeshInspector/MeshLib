@@ -93,9 +93,12 @@ MRBIND_EXE := $(MRBIND_SOURCE)/build/mrbind
 
 # The C++ compiler.
 ifneq ($(IS_WINDOWS),)
-CXX = clang++
+CXX := clang++
+else ifneq ($(IS_MACOS),)
+CXX := clang++
 else
-CXX ?= $(error Must set `CXX=...`)
+# Only on Ubuntu we don't want the default Clang version, as it can be outdated. Use the suffixed one.
+CXX := clang++-$(file <$(makefile_dir)/preferred_clang_version.txt)
 endif
 
 # Extra compiler and linker flags.

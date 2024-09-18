@@ -122,7 +122,7 @@ $(info ABI check: $(CXX_FOR_ABI) DOESN'T mangle C++20 constraints into the funct
 ABI_COMPAT_FLAG := -fclang-abi-compat=17
 endif
 endif
-$(error $(ABI_COMPAT_FLAG))
+
 
 # Extra compiler and linker flags.
 EXTRA_CFLAGS :=

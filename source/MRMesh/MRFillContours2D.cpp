@@ -12,6 +12,7 @@
 #include "MRPlane3.h"
 #include "MRGTest.h"
 #include <limits>
+#include "MRMeshSave.h"
 
 namespace MR
 {
@@ -117,8 +118,10 @@ VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresen
 
     auto holeVertIds = std::make_unique<PlanarTriangulation::HolesVertIds>(
         PlanarTriangulation::findHoleVertIdsByHoleEdges( mesh.topology, paths ) );
+
+    std::vector<EdgePath> newPaths;
     // make patch surface
-    auto fillResult = PlanarTriangulation::triangulateDisjointContours( contours2f, holeVertIds.get() );
+    auto fillResult = PlanarTriangulation::triangulateDisjointContours( contours2f, holeVertIds.get(), &newPaths );
     holeVertIds.reset();
     if ( !fillResult )
         return unexpected( "Cannot triangulate contours with self-intersections" );
@@ -129,22 +132,22 @@ VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresen
     for ( auto& point : patchMeshPoints )
         point = planeXf( point );
 
-    // make 
-    auto newPaths = findLeftBoundary( patchMesh.topology );
-
-    // check that patch surface borders size equal original mesh borders size
     if ( paths.size() != newPaths.size() )
         return unexpected( "Patch surface borders size different from original mesh borders size" );
 
-    // need to rotate to min edge to be consistent with original paths (for addPartByMask)
-    for ( auto& newPath : newPaths )
-        std::rotate( newPath.begin(), std::min_element( newPath.begin(), newPath.end() ), newPath.end() );
-    std::sort( newPaths.begin(), newPaths.end(), [] ( const EdgeLoop& l, const EdgeLoop& r ) { return l[0] < r[0]; } );
-
-    for ( int i = 0; i < paths.size(); ++i )
+    std::vector<int> invalidHoles;
+    invalidHoles.reserve( newPaths.size() );
+    for ( int i = int( paths.size() ) - 1; i >= 0; --i )
     {
         if ( paths[i].size() != newPaths[i].size() )
             return unexpected( "Patch surface borders size different from original mesh borders size" );
+
+        // invalid holes, we could either skip them or fill other way or return error
+        if ( newPaths[i].empty() || patchMesh.topology.right( newPaths[i].front() ) )
+        {
+            paths.erase( paths.begin() + i );
+            newPaths.erase( newPaths.begin() + i );
+        }
     }
 
     // move patch surface border points to original position (according original mesh)

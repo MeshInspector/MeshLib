@@ -10,6 +10,8 @@ $(call)
 $(call)
 endef
 
+override lparen := )
+
 # This function encloses $1 in quotes. We also replace newlines with spaces.
 override quote = '$(subst ','"'"',$(subst $(lf), ,$1))'
 
@@ -21,9 +23,14 @@ else
 override safe_shell = $(shell $1)$(if $(filter-out 0,$(.SHELLSTATUS)),$(error Unable to execute `$1`, exit code $(.SHELLSTATUS)))
 endif
 
+# Same as `safe_shell`, but discards the output.
+override safe_shell_exec = $(call,$(call safe_shell,$1))
+
 # Loads the contents of file $1, replacing newlines with spaces.
 override load_file = $(subst $(lf), ,$(file <$1))
 
+# Compare version numbers: A <= B
+override version_leq = $(shell printf '%s\n' $1 $2 | sort -CV)$(filter 0,$(.SHELLSTATUS))
 
 
 
@@ -51,7 +58,7 @@ endif
 # Windows-only vars: [
 
 # For Windows, set this to Debug or Release. This controls which MeshLib build we'll be using.
-VS_MODE := Debug
+VS_MODE := Release
 
 # Vcpkg installation directory. We try to auto-detect it.
 ifneq ($(IS_WINDOWS),)
@@ -93,13 +100,29 @@ MRBIND_EXE := $(MRBIND_SOURCE)/build/mrbind
 
 # The C++ compiler.
 ifneq ($(IS_WINDOWS),)
-CXX := clang++
+CXX_FOR_BINDINGS := clang++
 else ifneq ($(IS_MACOS),)
-CXX := clang++
+CXX_FOR_BINDINGS := clang++
 else
 # Only on Ubuntu we don't want the default Clang version, as it can be outdated. Use the suffixed one.
-CXX := clang++-$(file <$(makefile_dir)/preferred_clang_version.txt)
+CXX_FOR_BINDINGS := clang++-$(file <$(makefile_dir)/preferred_clang_version.txt)
 endif
+
+# Which C++ compiler we should try to match for ABI.
+# Ignored on Windows.
+CXX_FOR_ABI := $(CXX)
+ABI_COMPAT_FLAG :=
+# On Linux and MacOS, check if this compiler mangles C++20 constraints into function names. If not (old compilers), pass `-fclang-abi-compat=17` to prevent Clang 18 from mangling those.
+ifeq ($(IS_WINDOWS),)# If not on Windows:
+$(call safe_shell_exec,which $(CXX_FOR_ABI) >/dev/null 2>/dev/null)# Make sure this compiler exists.
+ifneq ($(shell echo "template <typename T> void foo() requires true {} template void foo<int>();" | $(CXX_FOR_ABI) -xc++ - -std=c++20 -S -o - | grep -m1 '\b_Z3fooIiEvvQLb1E\b')$(filter 0,$(.SHELLSTATUS)),)
+$(info ABI check: $(CXX_FOR_ABI) DOES mangle C++20 constraints into the function names.)
+else
+$(info ABI check: $(CXX_FOR_ABI) DOESN'T mangle C++20 constraints into the function names, enabling `-fclang-abi-compat=17`)
+ABI_COMPAT_FLAG := -fclang-abi-compat=17
+endif
+endif
+$(error $(ABI_COMPAT_FLAG))
 
 # Extra compiler and linker flags.
 EXTRA_CFLAGS :=
@@ -182,9 +205,9 @@ MRBIND_FLAGS := $(call load_file,$(makefile_dir)/mrbind_flags.txt)
 MRBIND_FLAGS_FOR_EXTRA_INPUTS := $(call load_file,$(makefile_dir)/mrbind_flags_for_helpers.txt)
 COMPILER_FLAGS := $(EXTRA_CFLAGS) $(call load_file,$(makefile_dir)/common_compiler_parser_flags.txt) $(PYTHON_CFLAGS) -I. -I$(DEPS_INCLUDE_DIR) -I$(makefile_dir)/../../source
 COMPILER_FLAGS_LIBCLANG := $(call load_file,$(makefile_dir)/parser_only_flags.txt)
-COMPILER := $(CXX) $(subst $(lf), ,$(call load_file,$(makefile_dir)/compiler_only_flags.txt)) -I$(MRBIND_SOURCE)/include
+COMPILER := $(CXX_FOR_BINDINGS) $(subst $(lf), ,$(call load_file,$(makefile_dir)/compiler_only_flags.txt)) -I$(MRBIND_SOURCE)/include
 LINKER_OUTPUT := $(MODULE_OUTPUT_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
-LINKER := $(CXX) -fuse-ld=lld
+LINKER := $(CXX_FOR_BINDINGS) -fuse-ld=lld
 # Unsure if `-dynamiclib` vs `-shared` makes any difference on MacOS. I'm using the former because that's what CMake does.
 LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(DEPS_LIB_DIR) $(PYTHON_LDFLAGS) -L$(MESHLIB_SHLIB_DIR) -lMRMesh -lMRIOExtras -lMRSymbolMesh -lMRPython -lMRVoxels $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)/linker_flags.txt)
 NUM_FRAGMENTS := 4
@@ -196,7 +219,7 @@ COMPILER_FLAGS += --target=x86_64-pc-windows-msvc
 LINKER_FLAGS += --target=x86_64-pc-windows-msvc
 # Set resource directory. Otherwise e.g. `offsetof` becomes non-constexpr,
 #   because the header override with it being constexpr is in this resource directory.
-COMPILER_FLAGS += -resource-dir=$(strip $(call safe_shell,$(CXX) -print-resource-dir))
+COMPILER_FLAGS += -resource-dir=$(strip $(call safe_shell,$(CXX_FOR_BINDINGS) -print-resource-dir))
 # This seems to be undocumented?! MSYS2 CLANG64 needs it to successfully cross-compile, because the default `-rtlib=compiler-rt` causes it to choke.
 # For some reason MIGNW64 and UCRT64 correctly guess the right default.
 LINKER_FLAGS += -rtlib=platform
@@ -222,7 +245,7 @@ rpath_origin := $(if $(IS_MACOS),@loader_path,$$ORIGIN)
 LINKER_FLAGS += -Wl,-rpath,'$(rpath_origin)' -Wl,-rpath,'$(rpath_origin)/..'
 ifneq ($(IS_MACOS),)
 # Hmm.
-COMPILER_FLAGS_LIBCLANG += -resource-dir=$(strip $(call safe_shell,$(CXX) -print-resource-dir))
+COMPILER_FLAGS_LIBCLANG += -resource-dir=$(strip $(call safe_shell,$(CXX_FOR_BINDINGS) -print-resource-dir))
 # Our dependencies are here.
 COMPILER_FLAGS += -I/opt/homebrew/include
 # Boost.stacktrace complains otherwise.

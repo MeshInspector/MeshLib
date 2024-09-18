@@ -11,7 +11,7 @@ namespace MR
 class MRPYTHON_CLASS EmbeddedPython
 {
 public:
-    static MRPYTHON_API void init();
+    static MRPYTHON_API bool init();
 
     static MRPYTHON_API bool isAvailable();
 

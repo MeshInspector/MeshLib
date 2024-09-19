@@ -75,7 +75,18 @@ endif
 else
 VCPKG_DIR = $(error We're only using vcpkg on Windows)
 endif
+# ]
 
+# MacOS-only vars: [
+ifneq ($(IS_MACOS),)
+# This seems to be the default locations, but on our github runners this seems to be `/usr/local`.
+# So we try to guess the location.
+HOMEBREW_DIR := /opt/homebrew
+ifeq ($(wildcard $(HOMEBREW_DIR)),)
+HOMEBREW_DIR := /usr/local
+endif
+$(info Using homebrew at: $(HOMEBREW_DIR))
+endif
 # ]
 
 
@@ -108,7 +119,7 @@ endif
 
 # Which C++ compiler we should try to match for ABI.
 # Ignored on Windows.
-CXX_FOR_ABI := $(CXX)
+CXX_FOR_ABI := $(if $(CXX),$(CXX),g++)
 ABI_COMPAT_FLAG :=
 # On Linux and MacOS, check if this compiler mangles C++20 constraints into function names. If not (old compilers), pass `-fclang-abi-compat=17` to prevent Clang 18 from mangling those.
 ifeq ($(IS_WINDOWS),)# If not on Windows:
@@ -247,10 +258,10 @@ ifneq ($(IS_MACOS),)
 # Hmm.
 COMPILER_FLAGS_LIBCLANG += -resource-dir=$(strip $(call safe_shell,$(CXX_FOR_BINDINGS) -print-resource-dir))
 # Our dependencies are here.
-COMPILER_FLAGS += -I/opt/homebrew/include
+COMPILER_FLAGS += -I$(HOMEBREW_DIR)/include
 # Boost.stacktrace complains otherwise.
 COMPILER_FLAGS += -D_GNU_SOURCE
-LINKER_FLAGS += -L/opt/homebrew/lib
+LINKER_FLAGS += -L$(HOMEBREW_DIR)/lib
 LINKER_FLAGS += -ltbb
 # This fixes an error during wheel creation:
 #   /Library/Developer/CommandLineTools/usr/bin/install_name_tool: changing install names or rpaths can't be redone for: /private/var/folders/c2/_t7lgq_s3zb_r01vy_1qd6nh0000gs/T/tmpatczljnu/wheel/meshlib/mrmeshpy.so (for architecture arm64) because larger updated load commands do not fit (the program must be relinked, and you may need to use -headerpad or -headerpad_max_install_names)

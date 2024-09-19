@@ -26,13 +26,18 @@ fi
 
 rm -rf build
 
+# This seems to be the default location, but on our github runners it seems to instead install to `/usr/local`.
+# So we try to guess the directory.
+HOMEBREW_DIR=/opt/homebrew
+[[ -d $HOMEBREW_DIR ]] || HOMEBREW_DIR=/usr/local
+
 # Add `make` to PATH.
-export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
+export PATH="$HOMEBREW_DIR/opt/make/libexec/gnubin:$PATH"
 # Add Clang to PATH.
-export PATH="/opt/homebrew/opt/llvm@$CLANG_VER/bin:$PATH"
-ls "/opt/homebrew/opt" || true
-ls "/opt/homebrew/opt/llvm@$CLANG_VER" || true
-ls "/opt/homebrew/opt/llvm@$CLANG_VER/bin" || true
+export PATH="$HOMEBREW_DIR/opt/llvm@$CLANG_VER/bin:$PATH"
+ls "$HOMEBREW_DIR/opt" || true
+ls "$HOMEBREW_DIR/opt/llvm@$CLANG_VER" || true
+ls "$HOMEBREW_DIR/opt/llvm@$CLANG_VER/bin" || true
 
 CC=clang CXX=clang++ cmake -B build
 cmake --build build -j4

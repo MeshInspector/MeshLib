@@ -385,7 +385,7 @@ jobs:
         run: ./scripts/mrbind/install_mrbind_macos.sh
 
       - name: Generate and build MRBind bindings
-        run: make -f ./scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib
+        run: make -f ./scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib HOMEBREW_DIR=/usr/local
 
       - name: Unit Tests
         run: ./build/Release/bin/MRTest

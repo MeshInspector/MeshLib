@@ -29,7 +29,12 @@ rm -rf build
 # Add `make` to PATH.
 export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
 # Add Clang to PATH.
-export PATH="/opt/homebrew/opt/llvm@$CLANG_VER/bin:$PATH"
+# I'm not entirely sure why this directory sometimes doesn't exit. It exists on the Mac I tested on, but not on our github runner. Hmm.
+if [[ -d "/opt/homebrew/opt/llvm@$CLANG_VER/bin" ]]; then
+    export PATH="/opt/homebrew/opt/llvm@$CLANG_VER/bin:$PATH"
+else
+    export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+fi
 
 CC=clang CXX=clang++ cmake -B build
 cmake --build build -j4

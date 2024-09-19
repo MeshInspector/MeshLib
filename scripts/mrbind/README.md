@@ -1,28 +1,113 @@
-## Generating the bindings
+# Generating the bindings
 
-### Windows prerequisites:
+## Installing prerequisites
 
-Run those once:
+Run **`scripts/mrbind/install_deps_<platform>`** to install the dependencies (on Linux and MacOS - as root), then **`scripts/mrbind/install_mrbind_<platform>`** to build MRBind (not at root).
 
-* `scripts/mrbind/install_deps_windows_msys2.bat` to install MSYS2 with Clang and libclang. Re-run to update to the latest version.
+You can re-run those scripts to update the dependencies and/or MRBind itself.
 
-* `scripts/mrbind/install_mrbind_windows_msys2.bat` to download and compile MRBind. Re-run to update to the latest version.
+There's no rocket science in those, and you can do it manually instead of running the scripts (especially building MRBind yourself), see below.
 
-  Note that this downloads the latest `master`, while CI might be pointing to a specific commit. But it's simple to manually build a specific commit.
+Among other things, the scripts can do following:
+
+* On Linux and MacOS, create `~/mrbind` to build MRBind in.
+
+* On Ubuntu, add [the LLVM repository](https://apt.llvm.org/) to install the latest Clang and libclang from.
+
+* On Windows, install MSYS2 to `C:\msys64_meshlib_mrbind`.
+
+* On Ubuntu 20.04, build GNU Make from source and install it to `/usr/local`, because the default one is outdated.
+
+**More details and manual instructions:**
+
+<details><summary><b>Windows</b></summary>
+
+* **Installing dependencies:**
+
+    On Windows we use MSYS2, because it provides prebuilt libclang and provides GNU Make to run our makefile.
+
+    MSYS2 is a package manager, roughly speaking. They provide a bunch of MinGW-related packages (compilers and prebuilt libraries). Luckily Clang can always cross-compile, so MSYS2's MinGW Clang can produce MSVC-compatible executables with the correct flags. You still need to have VS installed though, since it will use its libraries.
+
+    We use [MSYS2 CLANG64](https://www.msys2.org/docs/environments/) environment. Consult `install_deps_windows_msys2.bat` for the list of packages we install in it.
+
+    Notably on Windows we don't have control over the Clang version, since MSYS2 only supports installing the latest one.
+
+* **Building MRBind:**
+
+    MRBind source code is at https://github.com/MeshInspector/mrbind/.
+
+    We build MRBind at `C:\msys64_meshlib_mrbind\home\username\mrbind`, but you can build it elsewhere manually.
+
+    We build in [MSYS2 CLANG64](https://www.msys2.org/docs/environments/) environment, using MSYS2's Clang. Other compilers are not guaranteed to work.
+
+
+</details>
+
+<details><summary><b>Ubuntu</b></summary>
+
+* **Installing dependencies:**
+
+    We want a certain version of Clang (see `preferred_clang_version.txt`), and since older versions of Ubuntu don't have it, we add Clang's repository: https://apt.llvm.org
+
+    Also we need a certain version of GNU Make, so on Ubuntu 20.04 we build it from source and install to `/usr/local`.
+
+    And obviously we install some packages, see `install_deps_ubuntu.sh` for the list.
+
+* **Building MRBind:**
+
+    MRBind source code is at https://github.com/MeshInspector/mrbind/.
+
+    We build MRBind at `~/mrbind`, but you can build it elsewhere manually.
+
+    You might want to pass `-DClang_DIR=/usr/lib/cmake/clang-VERSION` (where `VERSION` is the one mentioned in `preferred_clang_version.txt`) if you have several versions of libclang installed, because otherwise CMake might pick an arbitrary one (apparently it picks the first one returned by globbing `clang-*`, which might not be the latest one).
+
+    Use `CC=clang-VERSION CXX=clang++-VERSION cmake ....` to build using Clang. Other compilers might work, but that's not guaranteed.
+
+</details>
+
+<details><summary><b>MacOS</b></summary>
+
+* **Installing dependencies:**
+
+    Homebrew must already be installed.
+
+    We install a certain version of Clang and libclang from it (see `preferred_clang_version.txt`), and also GNU Make and Gawk. MacOS has its own Make, but it's outdated. It seems to have Gawk, but we install our own just in case.
+
+    What we install from Brew is the regular Clang, not Apple Clang (Apple's fork for Clang), because that is based on an outdated branch of Clang.
+
+    You must run following to add the installed things to your PATH:
+    ```sh
+    export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
+    export PATH="/opt/homebrew/opt/llvm/bin@VERSION:$PATH" # See the correct VERSION in `preferred_clang_version.txt`.
+    ```
+
+* **Building MRBind:**
+
+    MRBind source code is at https://github.com/MeshInspector/mrbind/.
+
+    We build MRBind at `~/mrbind`, but you can build it elsewhere manually.
+
+    Make sure your PATH is correct, as explained in the previous step.
+
+    Use `CC=clang-VERSION CXX=clang++-VERSION cmake ....` to build using the Clang we've installed. It might build using Apple Clang as well (if you don't set your PATH as explained above), but that's not guaranteed to work. (If you want to try it, you must pass `-DCMAKE_PREFIX_PATH=/opt/homebrew/opt/llvm` for it to find our libclang.)
+
+    You might want to pass `-DClang_DIR=/usr/lib/cmake/clang-VERSION` (where `VERSION` is the one mentioned in `preferred_clang_version.txt`) if you have several versions of libclang installed, because otherwise CMake might pick an arbitrary one (apparently it picks the first one returned by globbing `clang-*`, which might not be the latest one).
+
+
+</details>
 
 ### MacOS prerequisites:
 
 * **Install some helper tools:**
   ```sh
   brew install make gawk
-  export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
   ```
   If already installed, only run the second line to add it to PATH.
 
 * **Install LLVM/Clang:**
   ```sh
   brew install llvm
-  export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+
   ```
   If already installed, only run the second line to add it to PATH.
 
@@ -35,7 +120,7 @@ Run those once:
   ```
   You must include homebrew's Clang in PATH as was expained above.
 
-  Also, while it doesn't seem to be necessary if you build with homebrew Clang, you can pass `-DCMAKE_PREFIX_PATH=/opt/homebrew/opt/llvm` to specify the location of libclang (e.g. if you build with Apple Clang rather than homebrew Clang?).
+  Also, while it doesn't seem to be necessary if you build with homebrew Clang, you can pass  to specify the location of libclang (e.g. if you build with Apple Clang rather than homebrew Clang?).
 
 ### Linux prerequisites:
 

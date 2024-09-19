@@ -9,6 +9,8 @@
 // helper macro to make code cleaner
 #define floatT real_parser<T>{}
 
+static constexpr int MaxErrorStringLen = 80;
+
 namespace MR
 {
 
@@ -173,7 +175,7 @@ VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3<T>& v, Vec
         );
     }
     if ( !r )
-        return unexpected( "Failed to parse vertex: " + std::string( removeSuffixWithNewline( str, 80 ) ) );
+        return unexpected( "Failed to parse vertex: " + std::string( trimRight( str.substr( 0, MaxErrorStringLen ) ) ) );
 
     return {};
 }
@@ -200,7 +202,7 @@ VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Col
         ascii::space
     );
     if ( !r )
-        return unexpected( "Failed to parse vertex: " + std::string( removeSuffixWithNewline( str, 80 ) ) );
+        return unexpected( "Failed to parse vertex: " + std::string( trimRight( str.substr( 0, MaxErrorStringLen ) ) ) );
 
     return {};
 }

@@ -97,10 +97,10 @@ void replaceInplace( std::string& target, std::string_view from, std::string_vie
     target = replace( std::move( target ), from, to );
 }
 
-std::string_view removeSuffixWithNewline( const std::string_view & str, size_t maxLen )
+std::string_view trimRight( std::string_view str )
 {
-    auto l = std::min( str.size(), maxLen );
-    while ( l > 0 && ( str[l-1] == '\n' || str[l-1] == '\r' ) )
+    auto l = str.size();
+    while ( l > 0 && ( str[l-1] == ' ' || str[l-1] == '\t' || str[l-1] == '\n' || str[l-1] == '\r' ) )
         --l;
     return str.substr( 0, l );
 }

@@ -193,8 +193,10 @@ namespace
                 ( lit( "vt" ) >> float_[coord] >> -( float_[coord] >> -( float_[coord] ) ) ),
                 ascii::space
         );
+
+        static constexpr int MaxErrorStringLen = 80;
         if ( !r )
-            return unexpected( "Failed to parse vertex in OBJ-file: " + std::string( removeSuffixWithNewline( str, 80 ) ) );
+            return unexpected( "Failed to parse vertex in OBJ-file: " + std::string( trimRight( str.substr( 0, MaxErrorStringLen ) ) ) );
 
         vt = { coords[0], coords[1] };
         return {};

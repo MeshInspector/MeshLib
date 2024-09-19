@@ -262,23 +262,19 @@ jobs:
           # Matching the location that `install_deps_windows_msys2.bat` uses, because that's what `install_mrbind_windows_msys2.bat` expects.
           location: C:\msys64_meshlib_mrbind
 
-      - name: Checkout MRBind
-        uses: actions/checkout@v4
-        with:
-          repository: MeshInspector/mrbind
-          path: C:\msys64_meshlib_mrbind\home\${{env.USERNAME}}\mrbind
+        # Move `C:\msys64_meshlib_mrbind\msys64\*` to the parent directory, that's what our .bat files expect.
+      - name: Adjust MSYS2 installation directory
+        shell: cmd
+        run: |
+          for %%a in ("C:\msys64_meshlib_mrbind\msys64\*") do move /y "%%~fa" C:\msys64_meshlib_mrbind
+          for /d %%a in ("C:\msys64_meshlib_mrbind\msys64\*") do move /y "%%~fa" C:\msys64_meshlib_mrbind
+          rmdir C:\msys64_meshlib_mrbind\msys64
 
-        # For some reason MSYS2's github action doesn't install `msys2_shell.cmd`, so we can't use our `install_mrbind_windows_msys2.bat`. Weird.
-        # Instead we build manually.
       - name: Build MRBind
-        shell: msys2 {0}
-        working-directory: C:\msys64_meshlib_mrbind\home\${{env.USERNAME}}\mrbind
-        run: cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebugInfo && cmake --build build
+        run: ./scripts/mrbind/install_mrbind_windows_msys2.bat
 
-        # Same problem with `msys2_shell.cmd` here.
       - name: Generate and build MRBind bindings
-        shell: msys2 {0}
-        run: make -f ./scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib
+        run: ./scripts/mrbind/generate_win.bat -B PACKAGE_NAME=meshlib
 
       - name: Run Test
         working-directory: source\x64\Release

@@ -35,10 +35,8 @@ class RibbonNotifier
 public:
     // adds new notification for drawing
     void pushNotification( const RibbonNotification& notification );
-    // draw button to show last notifications
-    void drawNotificationHistoryButton( float scaling );
-    // draws all present notifications
-    void drawNotifications( float scaling );
+    // main draw function
+    void draw( float scaling );
 private:
     struct NotificationWithTimer
     {
@@ -50,12 +48,22 @@ private:
     std::vector<NotificationWithTimer> notificationsHistory_;
     NotificationType highestNotification_ = NotificationType::Count;
     bool requestRedraw_ = false;
-    void addNotification_( std::vector<NotificationWithTimer>& store, const RibbonNotification& notification );
-    void filterInvalid_( int numInvalid = -1 );
+    bool historyMode_ = false;
+    float historyBtnPosY_ = 0.f;
+
 #ifndef __EMSCRIPTEN__
     Time requestedTime_{ Time::max() };
     AsyncRequest asyncRequest_;
 #endif
+
+    // draw button to show last notifications
+    void drawHistoryButton_( float scaling );
+    // draw notification history
+    void drawHistory_( float scaling );
+    // draws all present notifications
+    void drawNotifications_( float scaling );
+    void addNotification_( std::vector<NotificationWithTimer>& store, const RibbonNotification& notification );
+    void filterInvalid_( int numInvalid = -1 );
     void requestClosestRedraw_();
 };
 

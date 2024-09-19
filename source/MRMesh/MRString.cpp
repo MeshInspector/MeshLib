@@ -100,7 +100,7 @@ void replaceInplace( std::string& target, std::string_view from, std::string_vie
 std::string_view trimRight( std::string_view str )
 {
     auto l = str.size();
-    while ( l > 0 && ( str[l-1] == ' ' || str[l-1] == '\t' || str[l-1] == '\n' || str[l-1] == '\r' ) )
+    while ( l > 0 && std::isspace( str[l - 1] ) )
         --l;
     return str.substr( 0, l );
 }

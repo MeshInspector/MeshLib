@@ -156,10 +156,11 @@ void RibbonNotifier::drawHistory_( float scaling )
     auto window = ImGui::GetCurrentContext()->CurrentWindow;
     ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, firstColumnWidth );
     ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, width - firstColumnWidth );
-    for ( int i = 0; i < notificationsHistory_.size(); ++i )
+    const int notificationsHistorySize = int( notificationsHistory_.size() );
+    for ( int i = 0; i < notificationsHistorySize; ++i )
     {
         const float beginCursorPosY = ImGui::GetCursorPosY();
-        auto& [notification, timer, counter] = notificationsHistory_[i];        
+        auto& [notification, timer, counter] = notificationsHistory_[notificationsHistorySize - 1 - i];
         auto& style = ImGui::GetStyle();
 
         ImGui::TableNextColumn();

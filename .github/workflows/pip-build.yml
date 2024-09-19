@@ -274,6 +274,7 @@ jobs:
         run: ./scripts/mrbind/install_mrbind_windows_msys2.bat
 
       - name: Generate and build MRBind bindings
+        uses: ilammy/msvc-dev-cmd@v1
         run: ./scripts/mrbind/generate_win.bat -B PACKAGE_NAME=meshlib
 
       - name: Run Test

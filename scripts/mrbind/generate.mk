@@ -46,6 +46,7 @@ IS_WINDOWS := 0
 IS_MACOS := 1
 endif
 override IS_WINDOWS := $(filter-out 0,$(IS_WINDOWS))
+override IS_MACOS := $(filter-out 0,$(IS_MACOS))
 
 # On Windows, check that we are in the VS prompt, or at least that `VCToolsInstallDir` is defined (which is what Clang needs).
 # Otherwise Clang may or may not choose some weird system libraries.
@@ -89,11 +90,7 @@ $(warning MeshLib build directory `$(abspath $(MESHLIB_SHLIB_DIR))` doesn't exis
 endif
 
 # Source directory of MRBind.
-ifneq ($(IS_WINDOWS),)
-MRBIND_SOURCE := $(HOME)/mrbind
-else
 MRBIND_SOURCE := ~/mrbind
-endif
 
 # MRBind executable .
 MRBIND_EXE := $(MRBIND_SOURCE)/build/mrbind
@@ -206,7 +203,8 @@ MRBIND_FLAGS := $(call load_file,$(makefile_dir)/mrbind_flags.txt)
 MRBIND_FLAGS_FOR_EXTRA_INPUTS := $(call load_file,$(makefile_dir)/mrbind_flags_for_helpers.txt)
 COMPILER_FLAGS := $(EXTRA_CFLAGS) $(call load_file,$(makefile_dir)/common_compiler_parser_flags.txt) $(PYTHON_CFLAGS) -I. -I$(DEPS_INCLUDE_DIR) -I$(makefile_dir)/../../source
 COMPILER_FLAGS_LIBCLANG := $(call load_file,$(makefile_dir)/parser_only_flags.txt)
-COMPILER := $(CXX_FOR_BINDINGS) $(subst $(lf), ,$(call load_file,$(makefile_dir)/compiler_only_flags.txt)) -I$(MRBIND_SOURCE)/include
+# Need whitespace before `$(MRBIND_SOURCE)` to handle `~` correctly.
+COMPILER := $(CXX_FOR_BINDINGS) $(subst $(lf), ,$(call load_file,$(makefile_dir)/compiler_only_flags.txt)) -I $(MRBIND_SOURCE)/include
 LINKER_OUTPUT := $(MODULE_OUTPUT_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
 LINKER := $(CXX_FOR_BINDINGS) -fuse-ld=lld
 # Unsure if `-dynamiclib` vs `-shared` makes any difference on MacOS. I'm using the former because that's what CMake does.
@@ -230,6 +228,7 @@ LINKER_FLAGS += -Wl,-noimplib
 COMPILER_FLAGS += -isystem $(makefile_dir)/../../thirdparty/pybind11/include
 COMPILER_FLAGS += -isystem $(makefile_dir)/../../thirdparty/parallel-hashmap
 COMPILER_FLAGS += -D_DLL -D_MT
+COMPILER_FLAGS += -DNOMINMAX
 ifeq ($(VS_MODE),Debug)
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrtd -D_DEBUG
 # Override to match meshlib:

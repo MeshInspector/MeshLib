@@ -44,4 +44,4 @@ call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -c "pacman -Syu --noconfirm"
 call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -c "pacman -Syu --noconfirm"
 
 rem ------ Install needed packages
-call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -c "pacman -S --noconfirm --needed make $MINGW_PACKAGE_PREFIX-{clang,clang-tools-extra,cmake}"
+call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -clang64 -c "pacman -S --noconfirm --needed make $MINGW_PACKAGE_PREFIX-{clang,clang-tools-extra,cmake}"

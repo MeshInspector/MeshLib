@@ -253,6 +253,7 @@ jobs:
         run: msbuild -m  source\MeshLib.sln -p:Configuration=Release -p:PythonVersion=${{matrix.py-short-version}} -p:PythonLibPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\libs\${{matrix.py-file}}.lib -p:PythonDllPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\${{matrix.py-file}}.dll -p:PythonIncludePath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\include\
 
         # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Local uses should use that bat file.
+        # There's no particular reason for not using our bat file, I'm just assuming the official action is somehow better.
       - name: Install MSYS2 for MRBind
         uses: msys2/setup-msys2@v2
         with:

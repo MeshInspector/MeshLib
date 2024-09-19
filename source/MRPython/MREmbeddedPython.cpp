@@ -16,6 +16,12 @@ bool EmbeddedPython::init()
     if ( !instance_().available_ || isInitialized() )
         return true;
 
+    if ( !instance_().pythonHome_.empty() )
+    {
+        const auto pythonHomeW = utf8ToWide( instance_().pythonHome_.c_str() );
+        Py_SetPythonHome( pythonHomeW.c_str() );
+    }
+
     for ( const auto& mod : PythonExport::instance().modules() )
         PyImport_AppendInittab( mod.first.c_str(), mod.second.initFncPointer );
 
@@ -48,6 +54,11 @@ void EmbeddedPython::finalize()
     if ( !instance_().available_ )
         return;
     pybind11::finalize_interpreter();
+}
+
+void EmbeddedPython::setPythonHome( std::string pythonHome )
+{
+    instance_().pythonHome_ = std::move( pythonHome );
 }
 
 bool EmbeddedPython::setupArgv( int argc, char** argv )

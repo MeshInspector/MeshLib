@@ -19,6 +19,8 @@ public:
 
     static MRPYTHON_API void finalize();
 
+    static MRPYTHON_API void setPythonHome( std::string pythonHome );
+
     static MRPYTHON_API bool setupArgv( int argc, char** argv );
 
     static MRPYTHON_API bool runString( const std::string& pythonString );
@@ -32,6 +34,7 @@ private:
 
     static EmbeddedPython& instance_();
     bool available_{ false };
+    std::string pythonHome_;
 };
 
 } //namespace MR

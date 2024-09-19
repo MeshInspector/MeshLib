@@ -119,7 +119,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu24' }}
         with:
           repository: MeshInspector/mrbind
-          path: _mrbind
+          path: mrbind
           token: ${{ secrets.BUILD_MACHINE_TOKEN }}
           ref: 04ee1e3832d9c2ed9c9b076f69c57b02dfd6d087
 

@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 # Downloads the source code for MRBind and builds it at `~/mrbind/build`.
 

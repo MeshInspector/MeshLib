@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 # Installs everything needed to generate and build MRBind bindings.
 # We assume `brew` is already installed. Automatic its installation is too much,

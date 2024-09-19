@@ -101,12 +101,10 @@ jobs:
           CMAKE_C_COMPILER: /usr/bin/clang-11
 
       - name: Build MRBind
-        run: ./scripts/install_mrbind_ubuntu.sh
+        run: ./scripts/mrbind/install_mrbind_ubuntu.sh
 
       - name: Generate and build MRBind bindings
-        env:
-          CXX: ${{matrix.cxx-compiler}}
-        run: make -f scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib
+        run: make -f scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib CXX_FOR_ABI=${{matrix.cxx-compiler}}
 
       - name: Run Tests
         run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
@@ -254,6 +252,20 @@ jobs:
       - name: Build
         run: msbuild -m  source\MeshLib.sln -p:Configuration=Release -p:PythonVersion=${{matrix.py-short-version}} -p:PythonLibPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\libs\${{matrix.py-file}}.lib -p:PythonDllPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\${{matrix.py-file}}.dll -p:PythonIncludePath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\include\
 
+        # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Local uses should use that bat file.
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: clang64
+          install: make mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-clang-tools-extra mingw-w64-clang-x86_64-cmake
+          # Matching the location that `install_deps_windows_msys2.bat` uses, because that's what `install_mrbind_windows_msys2.bat` expects.
+          location: C:\msys64_meshlib_mrbind
+
+      - name: Build MRBind
+        run: ./scripts/mrbind/install_mrbind_windows_msys2.bat
+
+      - name: Generate and build MRBind bindings
+        run: ./scripts/mrbind/generate_win.bat -B PACKAGE_NAME=meshlib
+
       - name: Run Test
         working-directory: source\x64\Release
         run: .\MeshViewer.exe -tryHidden -noEventLoop
@@ -352,6 +364,15 @@ jobs:
           CMAKE_CXX_COMPILER: /usr/bin/clang++
           # not realy needed
           CMAKE_C_COMPILER: /usr/bin/clang
+
+      - name: Install MRBind requirements
+        run: ./scripts/mrbind/install_deps_macos.sh
+
+      - name: Build MRBind
+        run: ./scripts/mrbind/install_mrbind_macos.sh
+
+      - name: Generate and build MRBind bindings
+        run: make -f ./scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib
 
       - name: Unit Tests
         run: ./build/Release/bin/MRTest

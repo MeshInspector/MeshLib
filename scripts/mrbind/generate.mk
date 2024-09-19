@@ -99,6 +99,7 @@ endif
 MRBIND_EXE := $(MRBIND_SOURCE)/build/mrbind
 
 # The C++ compiler.
+# Note that on Windows we don't have control over the Clang version, and ignore `preferred_clang_version.txt`.
 ifneq ($(IS_WINDOWS),)
 CXX_FOR_BINDINGS := clang++
 else ifneq ($(IS_MACOS),)

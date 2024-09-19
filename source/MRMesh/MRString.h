@@ -52,4 +52,7 @@ bool split( std::string_view str, std::string_view sep, F&& func )
 /// Replaces \param from with \param to in \param target (in-place), zero or more times.
 MRMESH_API void replaceInplace( std::string& target, std::string_view from, std::string_view to );
 
+/// Removes all end-of-line chars at the end and limits the length to given value
+[[nodiscard]] MRMESH_API std::string_view removeSuffixWithNewline( const std::string_view & str, size_t maxLen );
+
 } //namespace MR

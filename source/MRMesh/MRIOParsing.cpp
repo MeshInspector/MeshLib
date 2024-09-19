@@ -1,7 +1,8 @@
 #include "MRIOParsing.h"
-#include "MRPch/MRTBB.h"
 #include "MRVector3.h"
 #include "MRColor.h"
+#include "MRString.h"
+#include "MRPch/MRTBB.h"
 
 #include <boost/spirit/home/x3.hpp>
 
@@ -172,7 +173,7 @@ VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3<T>& v, Vec
         );
     }
     if ( !r )
-        return unexpected( "Failed to parse vertex" );
+        return unexpected( "Failed to parse vertex: " + std::string( removeSuffixWithNewline( str, 80 ) ) );
 
     return {};
 }
@@ -199,7 +200,7 @@ VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Col
         ascii::space
     );
     if ( !r )
-        return unexpected( "Failed to parse vertex" );
+        return unexpected( "Failed to parse vertex: " + std::string( removeSuffixWithNewline( str, 80 ) ) );
 
     return {};
 }

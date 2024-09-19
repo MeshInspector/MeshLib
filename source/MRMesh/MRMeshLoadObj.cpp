@@ -11,6 +11,7 @@
 #include "MRStringConvert.h"
 #include "MRTimer.h"
 #include "MRphmap.h"
+#include "MRString.h"
 #include "MRPch/MRFmt.h"
 #include "MRPch/MRTBB.h"
 
@@ -193,7 +194,7 @@ namespace
                 ascii::space
         );
         if ( !r )
-            return unexpected( "Failed to parse vertex in OBJ-file" );
+            return unexpected( "Failed to parse vertex in OBJ-file: " + std::string( removeSuffixWithNewline( str, 80 ) ) );
 
         vt = { coords[0], coords[1] };
         return {};

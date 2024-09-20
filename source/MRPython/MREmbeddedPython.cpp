@@ -19,10 +19,18 @@ bool EmbeddedPython::init()
     if ( !instance_().available_ || isInitialized() )
         return true;
 
+    PyConfig config;
+    PyConfig_InitPythonConfig( &config );
+
+    config.parse_argv = 0;
+    config.install_signal_handlers = 0;
+    config.site_import = instance_().siteImport_ ? 1 : 0;
+
+    std::wstring pythonHomeW;
     if ( !instance_().pythonHome_.empty() )
     {
-        const auto pythonHomeW = utf8ToWide( instance_().pythonHome_.c_str() );
-        Py_SetPythonHome( pythonHomeW.c_str() );
+        pythonHomeW = utf8ToWide( instance_().pythonHome_.c_str() );
+        config.home = const_cast<wchar_t*>( pythonHomeW.c_str() );
     }
 
     for ( const auto& mod : PythonExport::instance().modules() )
@@ -30,7 +38,7 @@ bool EmbeddedPython::init()
 
     try
     {
-        pybind11::initialize_interpreter( false );
+        pybind11::initialize_interpreter( &config, 0, NULL, false );
         return true;
     }
     catch ( const std::exception& exc )
@@ -57,6 +65,11 @@ void EmbeddedPython::finalize()
     if ( !instance_().available_ )
         return;
     pybind11::finalize_interpreter();
+}
+
+void EmbeddedPython::setSiteImport( bool siteImport )
+{
+    instance_().siteImport_ = siteImport;
 }
 
 void EmbeddedPython::setPythonHome( std::string pythonHome )

@@ -19,6 +19,8 @@ public:
 
     static MRPYTHON_API void finalize();
 
+    static MRPYTHON_API void setSiteImport( bool siteImport );
+
     static MRPYTHON_API void setPythonHome( std::string pythonHome );
 
     static MRPYTHON_API bool setupArgv( int argc, char** argv );
@@ -34,6 +36,7 @@ private:
 
     static EmbeddedPython& instance_();
     bool available_{ false };
+    bool siteImport_{ true };
     std::string pythonHome_;
 };
 

@@ -1,11 +1,14 @@
 #include "MREmbeddedPython.h"
-
 #include "MRPython.h"
-#include "MRMesh/MRStringConvert.h"
-#include "MRPch/MRSpdlog.h"
+
+#include "MRMesh/MRFinally.h"
 #include "MRMesh/MRString.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
+#include "MRPch/MRSpdlog.h"
+
 #include <pybind11/embed.h>
+
 #include <fstream>
 
 namespace MR
@@ -68,17 +71,26 @@ bool EmbeddedPython::setupArgv( int argc, char** argv )
     PyStatus status;
 
     PyConfig config;
-    PyConfig_InitPythonConfig(&config);
+    PyConfig_InitPythonConfig( &config );
+    MR_FINALLY { PyConfig_Clear( &config ); };
+
     config.isolated = 1;
 
     // Implicitly preinitialize Python (in isolated mode)
-    status = PyConfig_SetBytesArgv(&config, argc, argv);
-    if (PyStatus_Exception(status))
+    status = PyConfig_SetBytesArgv( &config, argc, argv );
+    if ( PyStatus_Exception( status ) )
+    {
+        spdlog::error( status.err_msg );
         return false;
+    }
 
-    status = Py_InitializeFromConfig(&config);
-    if (PyStatus_Exception(status))
+    status = Py_InitializeFromConfig( &config );
+    if ( PyStatus_Exception( status ) )
+    {
+        spdlog::error( status.err_msg );
         return false;
+    }
+
     return true;
 }
 

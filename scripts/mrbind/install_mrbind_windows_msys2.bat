@@ -1,5 +1,4 @@
-@echo on
-rem TODO: ^ change that back to off
+@echo off
 
 rem Downloads the source code for MRBind and builds it, at `C:\msys64_meshlib_mrbind\home\username\mrbind\build`.
 rem Before running this, run `install_deps_windows_msys2.bat`.

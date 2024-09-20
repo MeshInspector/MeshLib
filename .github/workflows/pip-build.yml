@@ -277,7 +277,9 @@ jobs:
         shell: cmd
         run: |
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
-          ./scripts/mrbind/generate_win.bat -B PACKAGE_NAME=meshlib PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed
+          ./scripts/mrbind/generate_win.bat -B PACKAGE_NAME=meshlib \
+              PYTHON_CFLAGS=-IC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/include \
+              PYTHON_LDFLAGS=-LC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/libs -l${{matrix.py-file}}
 
       - name: Run Test
         working-directory: source\x64\Release

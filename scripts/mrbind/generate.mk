@@ -161,17 +161,16 @@ endif
 DEPS_INCLUDE_DIR := $(DEPS_BASE_DIR)/include
 
 # Pkg-config name for Python.
+ifneq ($(and $(value PYTHON_CFLAGS),$(value PYTHON_LDFLAGS)),)
+$(info Using custom Python flags.)
+else
 ifneq ($(IS_WINDOWS),)
-$(info Following Python pkg-config files are available: $(wildcard $(DEPS_BASE_DIR)/lib/pkgconfig/python*))
 PYTHON_PKGCONF_NAME := $(basename $(notdir $(lastword $(sort $(wildcard $(DEPS_BASE_DIR)/lib/pkgconfig/python-*-embed.pc)))))
 else
 PYTHON_PKGCONF_NAME := python3-embed
 endif
 $(if $(PYTHON_PKGCONF_NAME),$(info Using Python version: $(PYTHON_PKGCONF_NAME:-embed=)),$(error Can't find the Python package in vcpkg))
-
-# Python-config executable. Currently not used on Windows.
-# Returns `python3-config`, or `python-3.XX-config`.
-PYTHON_CONFIG := $(subst -,,$(PYTHON_PKGCONF_NAME:-embed=))-config
+endif
 
 # Python compilation flags.
 ifneq ($(IS_WINDOWS),)
@@ -188,6 +187,8 @@ ifneq ($(IS_WINDOWS),)
 PYTHON_MODULE_SUFFIX := .pyd
 else
 PYTHON_MODULE_SUFFIX := .so
+# # Python-config executable. Returns `python3-config`, or `python-3.XX-config`.
+# PYTHON_CONFIG := $(subst -,,$(PYTHON_PKGCONF_NAME:-embed=))-config
 # PYTHON_MODULE_SUFFIX := $(call safe_shell,$(PYTHON_CONFIG) --extension-suffix)
 endif
 $(info Using Python module suffix: $(PYTHON_MODULE_SUFFIX))

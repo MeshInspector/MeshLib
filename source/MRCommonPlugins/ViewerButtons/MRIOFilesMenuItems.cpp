@@ -343,7 +343,7 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
                     std::shared_ptr<ObjectVoxels> obj = std::make_shared<ObjectVoxels>();
                     obj->setName( res->name );
                     ProgressBar::nextTask( "Construct ObjectVoxels" );
-                    obj->construct( res->vdbVolume, ProgressBar::callBackSetProgress );
+                    obj->construct( res->vdbVolume );
                     if ( ProgressBar::isCanceled() )
                     {
                         errors = getCancelMessage( directory );

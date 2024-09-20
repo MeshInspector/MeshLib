@@ -14,7 +14,7 @@
 namespace MR
 {
 
-bool EmbeddedPython::init()
+bool EmbeddedPython::init( const Config& config_ )
 {
     if ( !instance_().available_ || isInitialized() )
         return true;
@@ -24,12 +24,12 @@ bool EmbeddedPython::init()
 
     config.parse_argv = 0;
     config.install_signal_handlers = 0;
-    config.site_import = instance_().siteImport_ ? 1 : 0;
+    config.site_import = config_.siteImport ? 1 : 0;
 
-    if ( !instance_().pythonHome_.empty() )
+    if ( !config_.home.empty() )
     {
-        const auto pythonHomeW = utf8ToWide( instance_().pythonHome_.c_str() );
-        PyConfig_SetString( &config, &config.home, pythonHomeW.c_str() );
+        const auto homeW = utf8ToWide( config_.home.c_str() );
+        PyConfig_SetString( &config, &config.home, homeW.c_str() );
     }
 
     for ( const auto& mod : PythonExport::instance().modules() )
@@ -64,16 +64,6 @@ void EmbeddedPython::finalize()
     if ( !instance_().available_ )
         return;
     pybind11::finalize_interpreter();
-}
-
-void EmbeddedPython::setSiteImport( bool siteImport )
-{
-    instance_().siteImport_ = siteImport;
-}
-
-void EmbeddedPython::setPythonHome( std::string pythonHome )
-{
-    instance_().pythonHome_ = std::move( pythonHome );
 }
 
 bool EmbeddedPython::setupArgv( int argc, char** argv )

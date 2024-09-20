@@ -11,17 +11,18 @@ namespace MR
 class MRPYTHON_CLASS EmbeddedPython
 {
 public:
-    static MRPYTHON_API bool init();
+    struct Config
+    {
+        bool siteImport{ true };
+        std::string home;
+    };
+    static MRPYTHON_API bool init( const Config& config );
 
     static MRPYTHON_API bool isAvailable();
 
     static MRPYTHON_API bool isInitialized();
 
     static MRPYTHON_API void finalize();
-
-    static MRPYTHON_API void setSiteImport( bool siteImport );
-
-    static MRPYTHON_API void setPythonHome( std::string pythonHome );
 
     static MRPYTHON_API bool setupArgv( int argc, char** argv );
 
@@ -36,8 +37,6 @@ private:
 
     static EmbeddedPython& instance_();
     bool available_{ false };
-    bool siteImport_{ true };
-    std::string pythonHome_;
 };
 
 } //namespace MR

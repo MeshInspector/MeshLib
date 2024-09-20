@@ -27,7 +27,7 @@ jobs:
 
   manylinux-pip-build:
     needs: setup
-    timeout-minutes: 40
+    timeout-minutes: 80
     runs-on: ${{ matrix.runner }}
     container:
       image: ${{ matrix.docker-image }}
@@ -276,7 +276,7 @@ jobs:
       - name: Generate and build MRBind bindings
         shell: cmd
         run: |
-          "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\Tools\VsDevCmd.bat" -arch=amd64
+          "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
           ./scripts/mrbind/generate_win.bat -B PACKAGE_NAME=meshlib
 
       - name: Run Test
@@ -385,7 +385,9 @@ jobs:
         run: ./scripts/mrbind/install_mrbind_macos.sh
 
       - name: Generate and build MRBind bindings
-        run: make -f ./scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib HOMEBREW_DIR=/usr/local
+        env:
+          PATH: /usr/local/opt/make/libexec/gnubin:${{env.PATH}}
+        run: make --version && make -f ./scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib HOMEBREW_DIR=/usr/local
 
       - name: Unit Tests
         run: ./build/Release/bin/MRTest

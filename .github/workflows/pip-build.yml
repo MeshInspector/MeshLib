@@ -386,7 +386,8 @@ jobs:
 
       - name: Generate and build MRBind bindings
         env:
-          PATH: /usr/local/opt/make/libexec/gnubin:${{env.PATH}}
+          # Arm Macs use `/opt/homebrew`, while x86 Macs use `/usr/local`. Add both for simplicity.
+          PATH: /opt/homebrew/opt/make/libexec/gnubin:/usr/local/opt/make/libexec/gnubin:${{env.PATH}}
         run: make --version && make -f ./scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib HOMEBREW_DIR=/usr/local
 
       - name: Unit Tests

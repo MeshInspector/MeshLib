@@ -25,6 +25,18 @@ public:
         Count
     };
 
+    // Unique fonts that are used for different FontTypes
+    enum class UniqueFont
+    {
+        Regular,
+        SemiBold,
+        Monospace,
+        Icons,
+        Count
+    };
+
+    MRVIEWER_API RibbonFontManager();
+
     /// load all fonts using in ribbon menu
     MRVIEWER_API void loadAllFonts( ImWchar* charRanges, float scaling );
 
@@ -46,17 +58,21 @@ public:
 
 private:
     std::array<ImFont*, size_t( FontType::Count )> fonts_{ nullptr,nullptr,nullptr,nullptr };
-
-    /// get ribbon latin menu font path
-    std::filesystem::path getMenuLatinSemiBoldFontPath_() const;
+    std::array<std::filesystem::path, size_t( UniqueFont::Count )> fontPaths_;
+    std::array<UniqueFont, size_t( FontType::Count )> fontTypeMap_{ 
+        UniqueFont::Regular, 
+        UniqueFont::Regular, 
+        UniqueFont::SemiBold, 
+        UniqueFont::Icons,
+        UniqueFont::Regular, 
+        UniqueFont::SemiBold,
+        UniqueFont::SemiBold,
+        UniqueFont::Monospace };
 
     /// get pointer to instance of this class (if it exists)
     static RibbonFontManager*& getFontManagerInstance_();
 
     void loadFont_( FontType type, const ImWchar* ranges, float scaling );
-
-    /// load default font (droid_sans)
-    void loadDefaultFont_( float fontSize, float yOffset = 0.0f );
 
     struct CustomGlyph
     {

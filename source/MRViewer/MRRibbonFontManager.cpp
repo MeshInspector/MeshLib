@@ -24,6 +24,21 @@ static void loadFontChecked( const char* filename, float size_pixels, const ImFo
     }
 }
 
+RibbonFontManager::RibbonFontManager()
+{
+    fontPaths_ =
+    {
+#ifndef __EMSCRIPTEN__
+    GetFontsDirectory() / "NotoSansSC-Regular.otf",
+#else
+    GetFontsDirectory() / "NotoSans-Regular.ttf",
+#endif
+    GetFontsDirectory() / "NotoSans-SemiBold.ttf",
+    GetFontsDirectory() / "NotoSansMono-Regular.ttf",
+    GetFontsDirectory() / "fa-solid-900.ttf"
+    };
+}
+
 void RibbonFontManager::loadAllFonts( ImWchar* charRanges, float scaling )
 {
     fonts_ = {};
@@ -80,11 +95,7 @@ float RibbonFontManager::getFontSizeByType( FontType type )
 
 std::filesystem::path RibbonFontManager::getMenuFontPath() const
 {
-#ifndef __EMSCRIPTEN__
-    return  GetFontsDirectory() / "NotoSansSC-Regular.otf";
-#else
-    return  GetFontsDirectory() / "NotoSans-Regular.ttf";
-#endif
+    return fontPaths_[int( UniqueFont::Regular )];
 }
 
 ImFont* RibbonFontManager::getFontByTypeStatic( FontType type )
@@ -100,11 +111,6 @@ void RibbonFontManager::initFontManagerInstance( RibbonFontManager* ribbonFontMa
     getFontManagerInstance_() = ribbonFontManager;
 }
 
-std::filesystem::path RibbonFontManager::getMenuLatinSemiBoldFontPath_() const
-{
-    return getMenuFontPath().parent_path() / "NotoSans-SemiBold.ttf";
-}
-
 MR::RibbonFontManager*& RibbonFontManager::getFontManagerInstance_()
 {
     static RibbonFontManager* instance{ nullptr };
@@ -114,10 +120,10 @@ MR::RibbonFontManager*& RibbonFontManager::getFontManagerInstance_()
 void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float scaling )
 {
     float fontSize = getFontSizeByType( type ) * scaling;
+    auto fontPath = fontPaths_[int( fontTypeMap_[int( type )] )];
 
     if ( type == FontType::Default )
     {
-        auto fontPath = getMenuFontPath();
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
 #ifndef __EMSCRIPTEN__
@@ -134,13 +140,11 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
     {
         ImFontConfig config;
         config.GlyphMinAdvanceX = fontSize; // Use if you want to make the icon monospaced
-        auto fontPath = GetFontsDirectory() / "fa-solid-900.ttf";
         loadFontChecked( utf8string( fontPath ).c_str(), fontSize, &config, ranges );
         fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
     }
     else if ( type == FontType::Small )
     {
-        auto fontPath = getMenuFontPath();
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
 #ifndef __EMSCRIPTEN__
@@ -155,7 +159,6 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
     }
     else if ( type == FontType::SemiBold )
     {
-        auto fontPath = getMenuLatinSemiBoldFontPath_();
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
         // "- 3 * scaling" eliminates shift of the font in order to render this font in text fields properly
@@ -167,7 +170,6 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
     }
     else if ( type == FontType::Big )
     {
-        auto fontPath = getMenuFontPath();
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
         config.GlyphOffset = ImVec2( 0, -4 * scaling );
@@ -178,7 +180,6 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
     }
     else if ( type == FontType::BigSemiBold )
     {
-        auto fontPath = getMenuLatinSemiBoldFontPath_();
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
         config.GlyphOffset = ImVec2( 0, -4 * scaling );
@@ -189,7 +190,6 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
     }
     else if ( type == FontType::Headline )
     {
-        auto fontPath = getMenuLatinSemiBoldFontPath_();
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
         config.GlyphOffset = ImVec2( 0, -4 * scaling );
@@ -200,7 +200,6 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
     }
     else if ( type == FontType::Monospace )
     {
-        auto fontPath = GetFontsDirectory() / "NotoSansMono-Regular.ttf";
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
         config.GlyphOffset = ImVec2( 1 * scaling, -2 * scaling );
@@ -209,19 +208,6 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
             &config, ranges );
         fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
     }
-}
-
-void RibbonFontManager::loadDefaultFont_( float fontSize, float yOffset )
-{
-    ImFontConfig config;
-    config.GlyphOffset = ImVec2( 0, yOffset );
-#ifndef __EMSCRIPTEN__
-    config.OversampleH = 7;
-    config.OversampleV = 7;
-#endif
-    ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
-                                                          droid_sans_compressed_size, fontSize,
-                                                          &config);
 }
 
 void RibbonFontManager::addCustomGlyphs_( FontType font, float scaling, std::vector<CustomGlyph>& glyphs )

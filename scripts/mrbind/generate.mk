@@ -79,10 +79,9 @@ endif
 
 # MacOS-only vars: [
 ifneq ($(IS_MACOS),)
-# This seems to be the default locations, but on our github runners this seems to be `/usr/local`.
-# So we try to guess the location.
 HOMEBREW_DIR := /opt/homebrew
 ifeq ($(wildcard $(HOMEBREW_DIR)),)
+# Apparently x86 Macs don't use `/opt/homebrew`, but rather `/usr/local`.
 HOMEBREW_DIR := /usr/local
 endif
 $(info Using homebrew at: $(HOMEBREW_DIR))
@@ -114,7 +113,7 @@ else ifneq ($(IS_MACOS),)
 CXX_FOR_BINDINGS := clang++
 else
 # Only on Ubuntu we don't want the default Clang version, as it can be outdated. Use the suffixed one.
-CXX_FOR_BINDINGS := clang++-$(file <$(makefile_dir)/preferred_clang_version.txt)
+CXX_FOR_BINDINGS := clang++-$(strip $(file <$(makefile_dir)/preferred_clang_version.txt))
 endif
 
 # Which C++ compiler we should try to match for ABI.
@@ -194,6 +193,16 @@ $(info Using Python module suffix: $(PYTHON_MODULE_SUFFIX))
 
 # --- End of configuration variables.
 
+
+
+# Adjust PATH on Macs to include Homebrew Clang, if not already included.
+ifneq ($(IS_MACOS),)
+override homebrew_clang_dir := $(HOMEBREW_DIR)/opt/llvm/bin@$(strip $(file <$(makefile_dir)/preferred_clang_version.txt))
+ifeq ($(findstring $(homebrew_clang_dir):,$(PATH)),)
+export PATH=$(homebrew_clang_dir):$(PATH)
+$(info Adjusting PATH to include Homebrew Clang: $(homebrew_clang_dir))
+endif
+endif
 
 
 

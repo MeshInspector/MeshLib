@@ -26,8 +26,7 @@ fi
 
 rm -rf build
 
-# This seems to be the default location, but on our github runners it seems to instead install to `/usr/local`.
-# So we try to guess the directory.
+# This seems to be the default location on Arm Macs, while x86 Macs use `/usr/local`.
 HOMEBREW_DIR=/opt/homebrew
 [[ -d $HOMEBREW_DIR ]] || HOMEBREW_DIR=/usr/local
 

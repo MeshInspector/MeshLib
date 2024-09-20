@@ -276,7 +276,7 @@ jobs:
       - name: Generate and build MRBind bindings
         shell: cmd
         run: |
-          "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
           ./scripts/mrbind/generate_win.bat -B PACKAGE_NAME=meshlib
 
       - name: Run Test

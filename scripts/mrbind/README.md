@@ -75,11 +75,12 @@ Among other things, the scripts can do following:
 
     What we install from Brew is the regular Clang, not Apple Clang (Apple's fork for Clang), because that is based on an outdated branch of Clang.
 
-    You must run following to add the installed things to your PATH:
+    You must run following to add the installed things to your PATH. On Arm Macs:
     ```sh
     export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
     export PATH="/opt/homebrew/opt/llvm/bin@VERSION:$PATH" # See the correct VERSION in `preferred_clang_version.txt`.
     ```
+    And on x86 Macs the installation directory seems to be `/usr/local/...` instead of `/opt/homebrew/...`.
 
 * **Building MRBind:**
 
@@ -108,7 +109,7 @@ Then generate the bindings:
 
   This will look for MeshLib in `./build/Release/bin`. Pass `MESHLIB_SHLIB_DIR=path/to/bin` for a different directory.
 
-  MacOS users must run `export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"` before that to make sure they use a version of Make installed in Homebrew, because the default one can be outdated. Confirm the version with `make --version`, must be 4.x or newer. Sometimes the path is `/usr/local/...` instead of `/opt/homebrew/...` (on github runners?).
+  MacOS users must adjust their PATH before running this. On Arm Macs: `export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"`, and on x86 Macs `/usr/local/...` instead of `/opt/homebrew/...`. This adds the version of Make installed in Homebrew to PATH, because the default one is outdated. Confirm the version with `make --version`, must be 4.x or newer.
 
 ### Some common flags:
 

@@ -1157,9 +1157,16 @@ float ImGuiMenu::drawSelectionInformation_()
     std::optional<Vector3i> voxelDims = Vector3i{};
     std::optional<Vector3f> voxelSize = Vector3f{};
     std::optional<Box3i> voxelActiveBox = Box3i{};
+
+    MR_SUPPRESS_WARNING_PUSH
+    #if __GNUC__ >= 12 && __GNUC__ <= 14 // False positive in GCC
+    #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+    #endif
     std::optional<float> voxelMinValue = FLT_MAX;
     std::optional<float> voxelIsoValue = FLT_MAX;
     std::optional<float> voxelMaxValue = FLT_MAX;
+    MR_SUPPRESS_WARNING_POP
+
     // store shared parameter value: if all objects have identical parameter value, it will be displayed, otherwise it'll be hidden
     auto updateVoxelsInfo = [] <typename T, typename U> ( std::optional<T>& store, U&& value, T def = {} )
     {
@@ -1210,7 +1217,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 totalFaces += mesh->topology.numValidFaces();
                 totalSelectedFaces += mObj->numSelectedFaces();
                 totalVerts += mesh->topology.numValidVerts();
-                totalEdges += mesh->topology.computeNotLoneUndirectedEdges();
+                totalEdges += mObj->numUndirectedEdges();
                 totalSelectedEdges += mObj->numSelectedEdges();
                 if ( totalVolume && mObj->isMeshClosed() )
                 {
@@ -1457,12 +1464,15 @@ float ImGuiMenu::drawSelectionInformation_()
                 drawDimensionsVec3( "Active Box Max", voxelActiveBox->max, NoUnit{} );
             }
         }
-        if ( isValidVoxelsInfo( voxelIsoValue, FLT_MAX ) )
-            drawUnitInfo( "Iso Value", *voxelIsoValue, NoUnit{} );
-        if ( isValidVoxelsInfo( voxelMinValue, FLT_MAX ) )
-            drawUnitInfo( "Min Value", *voxelMinValue, NoUnit{} );
-        if ( isValidVoxelsInfo( voxelMaxValue, FLT_MAX ) )
-            drawUnitInfo( "Max Value", *voxelMaxValue, NoUnit{} );
+        if ( voxelMinValue && voxelIsoValue && voxelMaxValue )
+        {
+            MR_SUPPRESS_WARNING_PUSH
+            #if __GNUC__ >= 12 && __GNUC__ <= 14 // `voxelMaxValue` may be used uninitialized. False positive in GCC
+            #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+            #endif
+            drawDimensionsVec3( "Min,Iso,Max", Vector3f{ *voxelMinValue, *voxelIsoValue, *voxelMaxValue }, NoUnit{} );
+            MR_SUPPRESS_WARNING_POP
+        }
     }
 #endif
 

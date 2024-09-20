@@ -75,10 +75,11 @@ MRMESH_API Mesh triangulateContours( const Contours2f& contours, const HolesVert
  * @brief triangulate 2d contours
  * only closed contours are allowed (first point of each contour should be the same as last point of the contour)
  * @param holeVertsIds if set merge only points with same vertex id, otherwise merge all points with same coordinates
+ * @param outBoundaries optional output EdgePaths that correspond to initial contours
  * @return std::optional<Mesh> : if some contours intersect return false, otherwise return created mesh
  */
-MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, const HolesVertIds* holeVertsIds = nullptr );
-MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, const HolesVertIds* holeVertsIds = nullptr );
+MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, const HolesVertIds* holeVertsIds = nullptr, std::vector<EdgePath>* outBoundaries = nullptr );
+MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, const HolesVertIds* holeVertsIds = nullptr, std::vector<EdgePath>* outBoundaries = nullptr );
 
 }
 }

@@ -286,6 +286,7 @@ MultiwayICP::MultiwayICP( const ICPObjects& objects, const MultiwayICPSamplingPa
 
 Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformations( ProgressCallback cb )
 {
+    MR_TIMER
     float minDist = std::numeric_limits<float>::max();
     int badIterCount = 0;
     resultType_ = ICPExitType::MaxIterations;
@@ -336,6 +337,29 @@ Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformations( ProgressCallbac
     res.resize( objs_.size() );
     for ( int i = 0; i < objs_.size(); ++i )
         res[ObjId( i )] = objs_[ObjId( i )].xf;
+    return res;
+}
+
+Vector<AffineXf3f, ObjId> MultiwayICP::calculateTransformationsFixFirst( ProgressCallback cb )
+{
+    Vector<AffineXf3f, ObjId> res;
+    if ( objs_.empty() )
+        return res;
+
+    const auto xf0 = objs_[ObjId( 0 )].xf;
+    res = calculateTransformations( cb );
+
+    /// apply the same (updateXf) to all objects to restore transformation of first object,
+    /// and make relative position of others the same
+    assert( res[ObjId( 0 )] == objs_[ObjId( 0 )].xf );
+    const auto updateXf = xf0 * res[ObjId( 0 )].inverse();
+    res[ObjId( 0 )] = objs_[ObjId( 0 )].xf = xf0;
+    for ( int i = 1; i < objs_.size(); ++i )
+    {
+        assert( res[ObjId( i )] == objs_[ObjId( i )].xf );
+        res[ObjId( i )] = objs_[ObjId( i )].xf = updateXf * res[ObjId( i )];
+    }
+
     return res;
 }
 

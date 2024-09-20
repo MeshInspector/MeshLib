@@ -6,6 +6,9 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRPointCloudDistance.h"
 #include "MRMesh/MRExpected.h"
+#include "MRMesh/MRLocalTriangulations.h"
+#include "MRMesh/MRPointCloudTriangulationHelpers.h"
+#include "MRMesh/MRPointCloudMakeNormals.h"
 #include <pybind11/stl.h>
 #include <pybind11/functional.h>
 
@@ -64,6 +67,45 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, PointCloud, [] ( pybind11::module_& m )
         "returns the squared Hausdorff distance between two point clouds, that is the maximum of squared distances from each point to the other cloud (in both directions)\n"
         "\trigidB2A - rigid transformation from B-cloud space to A-cloud space, nullptr considered as identity transformation\n"
         "\tmaxDistanceSq - upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq" );
+
+    pybind11::class_<TriangulationHelpers::Settings>( m, "TriangulationHelpersSettings" ).
+        def( pybind11::init<>() ).
+        def_readwrite( "radius", &TriangulationHelpers::Settings::radius,
+            "initial radius of search for neighbours, it can be increased automatically;\n"
+            "if radius is positive then numNeis must be zero" ).
+        def_readwrite( "numNeis", &TriangulationHelpers::Settings::numNeis,
+            "initially selects given number of nearest neighbours;\n"
+            "if numNeis is positive then radius must be zero" ).
+        def_readwrite( "critAngle", &TriangulationHelpers::Settings::critAngle, "max allowed angle for triangles in fan" ).
+        def_readwrite( "boundaryAngle", &TriangulationHelpers::Settings::boundaryAngle, "the vertex is considered as boundary if its neighbor ring has angle more than this value" );
+
+    pybind11::class_<AllLocalTriangulations>( m, "AllLocalTriangulations",
+        "triangulations for all points, with easy access by VertId\n"
+        "used to pass into `makeNormals` functions" ).
+        def( pybind11::init<>() );
+    
+    m.def( "buildUnitedLocalTriangulations", &TriangulationHelpers::buildUnitedLocalTriangulations,
+        pybind11::arg( "cloud" ), pybind11::arg( "settings" ), pybind11::arg( "progress" ) = ProgressCallback{},
+        "computes local triangulations of all points in the cloud united in one struct" );
+    
+    pybind11::enum_<OrientNormals>( m, "OrientNormals", "the method how to choose between two opposite normal orientations" ).
+        value( "TowardOrigin", OrientNormals::TowardOrigin ).
+        value( "AwayFromOrigin", OrientNormals::AwayFromOrigin ).
+        value( "Smart", OrientNormals::Smart );
+    
+    m.def( "makeUnorientedNormals", ( std::optional<VertNormals>( * )( const PointCloud&, const AllLocalTriangulations&, const ProgressCallback&, OrientNormals ) )& makeUnorientedNormals,
+        pybind11::arg( "pointCloud" ), pybind11::arg( "triangs" ), pybind11::arg( "progress" ) = ProgressCallback{}, pybind11::arg( "orient" ) = OrientNormals::Smart,
+        "Makes normals for valid points of given point cloud by averaging neighbor triangle normals weighted by triangle's angle\n"
+        "\ttriangs - triangulation neighbours of each point\n"
+        "\torient - OrientNormals::Smart here means orientation from normals of neigbour triangles\n"
+        "\treturn nullopt if progress returned false" );
+    
+    m.def( "makeOrientedNormals", ( std::optional<VertNormals>( * )( const PointCloud&, AllLocalTriangulations&, const ProgressCallback& ) )& makeOrientedNormals,
+        pybind11::arg( "pointCloud" ), pybind11::arg( "triangs" ), pybind11::arg( "progress" ) = ProgressCallback{}, 
+        "Makes normals for valid points of given point cloud; directions of close points are selected to be consistent;\n"
+        "\ttriangs - triangulation neighbours of each point, which are oriented during the call as well"
+        "\treturn nullopt if progress returned false" );
+
 } )
 
 #ifndef MESHLIB_NO_VOXELS

@@ -50,13 +50,23 @@ public:
         if ( !res.has_value() )
         {
             // TODO: user-defined error format
-            errorSummary_ << ( !isEmpty( errorSummary_ ) ? "\n\n" : "" ) << fileName << ":\n" << res.error() << "\n";
+            if ( !isEmpty( errorSummary_ ) )
+                errorSummary_ << "\n\n";
+            if ( res.error().find( fileName ) == std::string::npos )
+                errorSummary_ << fileName << ":\n" << res.error() << "\n";
+            else
+                errorSummary_ << res.error() << "\n";
             return;
         }
         if ( !warningText.empty() )
         {
             // TODO: user-defined warning format
-            warningSummary_ << ( !isEmpty( warningSummary_ ) ? "\n\n" : "" ) << fileName << ":\n" << warningText << "\n";
+            if ( !isEmpty( warningSummary_ ) )
+                warningSummary_ << "\n\n";
+            if ( warningText.find( fileName ) == std::string::npos )
+                warningSummary_ << fileName << ":\n" << warningText << "\n";
+            else
+                warningSummary_ << warningText << "\n";
         }
 
         const auto prevObjectCount = loadedObjects_.size();

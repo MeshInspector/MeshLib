@@ -52,4 +52,7 @@ bool split( std::string_view str, std::string_view sep, F&& func )
 /// Replaces \param from with \param to in \param target (in-place), zero or more times.
 MRMESH_API void replaceInplace( std::string& target, std::string_view from, std::string_view to );
 
+/// Removes all whitespace character (detected by std::isspace) at the end of string view
+[[nodiscard]] MRMESH_API std::string_view trimRight( std::string_view str );
+
 } //namespace MR

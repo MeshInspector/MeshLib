@@ -1,25 +1,56 @@
 #include "MREmbeddedPython.h"
-
 #include "MRPython.h"
-#include "MRMesh/MRStringConvert.h"
-#include "MRPch/MRSpdlog.h"
+
+#include "MRMesh/MRFinally.h"
 #include "MRMesh/MRString.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystemPath.h"
+#include "MRPch/MRSpdlog.h"
+
 #include <pybind11/embed.h>
+
 #include <fstream>
 
 namespace MR
 {
 
-void EmbeddedPython::init()
+bool EmbeddedPython::init( const Config& config_ )
 {
     if ( !instance_().available_ || isInitialized() )
-        return;
+        return true;
+
+    PyConfig config;
+    PyConfig_InitPythonConfig( &config );
+    MR_FINALLY { PyConfig_Clear( &config ); };
+
+    config.parse_argv = 0;
+    config.install_signal_handlers = 0;
+    config.site_import = config_.siteImport ? 1 : 0;
+
+    if ( !config_.home.empty() )
+    {
+        const auto homeW = utf8ToWide( config_.home.c_str() );
+        PyConfig_SetString( &config, &config.home, homeW.c_str() );
+    }
 
     for ( const auto& mod : PythonExport::instance().modules() )
         PyImport_AppendInittab( mod.first.c_str(), mod.second.initFncPointer );
 
-    pybind11::initialize_interpreter( false );
+    auto status = PyConfig_SetBytesArgv( &config, 0, NULL );
+    if ( PyStatus_Exception( status ) )
+    {
+        spdlog::error( status.err_msg );
+        return false;
+    }
+
+    status = Py_InitializeFromConfig( &config );
+    if ( PyStatus_Exception( status ) )
+    {
+        spdlog::error( status.err_msg );
+        return false;
+    }
+
+    return true;
 }
 
 bool EmbeddedPython::isAvailable()
@@ -48,17 +79,26 @@ bool EmbeddedPython::setupArgv( int argc, char** argv )
     PyStatus status;
 
     PyConfig config;
-    PyConfig_InitPythonConfig(&config);
+    PyConfig_InitPythonConfig( &config );
+    MR_FINALLY { PyConfig_Clear( &config ); };
+
     config.isolated = 1;
 
     // Implicitly preinitialize Python (in isolated mode)
-    status = PyConfig_SetBytesArgv(&config, argc, argv);
-    if (PyStatus_Exception(status))
+    status = PyConfig_SetBytesArgv( &config, argc, argv );
+    if ( PyStatus_Exception( status ) )
+    {
+        spdlog::error( status.err_msg );
         return false;
+    }
 
-    status = Py_InitializeFromConfig(&config);
-    if (PyStatus_Exception(status))
+    status = Py_InitializeFromConfig( &config );
+    if ( PyStatus_Exception( status ) )
+    {
+        spdlog::error( status.err_msg );
         return false;
+    }
+
     return true;
 }
 

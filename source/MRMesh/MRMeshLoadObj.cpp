@@ -11,6 +11,7 @@
 #include "MRStringConvert.h"
 #include "MRTimer.h"
 #include "MRphmap.h"
+#include "MRString.h"
 #include "MRPch/MRFmt.h"
 #include "MRPch/MRTBB.h"
 
@@ -192,8 +193,10 @@ namespace
                 ( lit( "vt" ) >> float_[coord] >> -( float_[coord] >> -( float_[coord] ) ) ),
                 ascii::space
         );
+
+        static constexpr int MaxErrorStringLen = 80;
         if ( !r )
-            return unexpected( "Failed to parse vertex in OBJ-file" );
+            return unexpected( "Failed to parse vertex in OBJ-file: " + std::string( trimRight( str.substr( 0, MaxErrorStringLen ) ) ) );
 
         vt = { coords[0], coords[1] };
         return {};

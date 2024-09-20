@@ -108,6 +108,8 @@ Then generate the bindings:
 
   This will look for MeshLib in `./build/Release/bin`. Pass `MESHLIB_SHLIB_DIR=path/to/bin` for a different directory.
 
+  MacOS users must run `export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"` before that to make sure they use a version of Make installed in Homebrew, because the default one can be outdated. Confirm the version with `make --version`, must be 4.x or newer. Sometimes the path is `/usr/local/...` instead of `/opt/homebrew/...` (on github runners?).
+
 ### Some common flags:
 
 * **`--trace` - enable verbose logs.**

@@ -38,26 +38,34 @@ public:
     };
 
     Laplacian( Mesh & mesh ) : mesh_( mesh ) { }
+
     // initialize Laplacian for the region being deformed, here region properties are remembered and precomputed;
     // \param freeVerts must not include all vertices of a mesh connected component
     MRMESH_API void init( const VertBitSet & freeVerts, EdgeWeights weights, RememberShape rem = Laplacian::RememberShape::Yes );
+
     // notify Laplacian that given vertex has changed after init and must be fixed during apply;
     // \param smooth whether to make the surface smooth in this vertex (sharp otherwise)
     MRMESH_API void fixVertex( VertId v, bool smooth = true );
+
     // sets position of given vertex after init and it must be fixed during apply (THIS METHOD CHANGES THE MESH);
     // \param smooth whether to make the surface smooth in this vertex (sharp otherwise)
     MRMESH_API void fixVertex( VertId v, const Vector3f & fixedPos, bool smooth = true );
+
     // if you manually call this method after initialization and fixing vertices then next apply call will be much faster
     MRMESH_API void updateSolver();
+
     // given fixed vertices, computes positions of remaining region vertices
     MRMESH_API void apply();
+
     // given a pre-resized scalar field with set values in fixed vertices, computes the values in free vertices
     MRMESH_API void applyToScalar( VertScalars & scalarField );
 
-    // return all initially free vertices and the first layer around the them
+    // return all initially free vertices and the first layer of vertices around them
     const VertBitSet & region() const { return region_; }
+
     // return currently free vertices
     const VertBitSet & freeVerts() const { return freeVerts_; }
+
     // return fixed vertices from the first layer around free vertices
     VertBitSet firstLayerFixedVerts() const { assert( solverValid_ ); return firstLayerFixedVerts_; }
 
@@ -66,14 +74,16 @@ public:
 private:
     // updates solver_ only
     void updateSolver_();
+
     // updates rhs_ only
     void updateRhs_();
+
     template <typename I, typename G, typename S>
     void prepareRhs_( I && iniRhs, G && g, S && s );
 
     Mesh & mesh_;
 
-    // all initially free vertices and the first layer around the them
+    // all initially free vertices and the first layer of vertices around them
     VertBitSet region_;
 
     // currently free vertices

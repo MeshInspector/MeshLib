@@ -64,7 +64,7 @@ void RibbonNotifier::drawHistoryButton_( float scaling, float scenePosX )
         return;
 
     float notificationsPosX = cWindowSpacing * scaling + scenePosX;
-    Vector2f windowPos = Vector2f( notificationsPosX, historyBtnPosY_ );
+    Vector2f windowPos = Vector2f( notificationsPosX, float( getViewerInstance().framebufferSize.y ) - 40.f * scaling );
     const float windowPadding = cWindowPadding * scaling;
 
     
@@ -75,9 +75,8 @@ void RibbonNotifier::drawHistoryButton_( float scaling, float scenePosX )
         ImGui::PushFont( iconsFont );
     }
     const float size = ImGui::GetTextLineHeight() + windowPadding * 2.f;
-    const float sizeShift = historyMode_ ? cWindowRounding * 2 * scaling : 0;
-    ImGui::SetNextWindowPos( windowPos + Vector2f( 0, sizeShift ), ImGuiCond_Always, ImVec2(0.f, 1.0f));
-    ImGui::SetNextWindowSize( ImVec2( size, size + sizeShift ), ImGuiCond_Always );
+    ImGui::SetNextWindowPos( windowPos, ImGuiCond_Always, ImVec2(0.f, 1.0f));
+    ImGui::SetNextWindowSize( ImVec2( size, size ), ImGuiCond_Always );
     ImGuiWindowFlags flags =
         ImGuiWindowFlags_AlwaysAutoResize |
         ImGuiWindowFlags_NoResize |
@@ -132,7 +131,7 @@ void RibbonNotifier::drawHistory_( float scaling, float scenePosX )
     const float cWindowExpansion = cWindowPadding;
 
     float windowPosX = ( cWindowSpacing  - cWindowExpansion ) * scaling + +scenePosX;
-    Vector2f windowPos = Vector2f( windowPosX, float( getViewerInstance().framebufferSize.y ) - ( 55.f - cWindowExpansion ) * scaling );
+    Vector2f windowPos = Vector2f( windowPosX, float( getViewerInstance().framebufferSize.y ) - ( cWindowsPosY + cWindowExpansion ) * scaling );
     const float width = ( 337.0f + cWindowExpansion * 2 )* scaling;
 
     ImGui::SetNextWindowPos( windowPos, ImGuiCond_Always, ImVec2( 0.f, 1.0f ) );
@@ -232,9 +231,9 @@ void RibbonNotifier::drawHistory_( float scaling, float scenePosX )
             rect.Min.y = windRect.Min.y + ( beginCursorPosY + ImGui::GetCursorPosY() ) / 2.f;
             rect.Min -= size * 0.5f;
             rect.Max = rect.Min + size;
-            //drawList->AddRectFilled( rect.Min, rect.Max, color, cWindowRounding * scaling, 0 );
+            drawList->AddRectFilled( rect.Min, rect.Max, color, cWindowRounding * scaling, 0 );
             drawList->AddText( rect.Min + ImGui::GetStyle().FramePadding, textColor, countText.c_str() );
-            //drawList->PopClipRect();
+            drawList->PopClipRect();
         }
 
         if ( i + 1 < notificationsHistory_.size() )
@@ -248,14 +247,13 @@ void RibbonNotifier::drawHistory_( float scaling, float scenePosX )
     ImGui::End();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar( 4 );
-    historyBtnPosY_ = windowPos.y - window->Size.y;
 }
 
 void RibbonNotifier::drawNotifications_( float scaling, float scenePosX )
 {
     using namespace StyleConsts::Notification;
     float notificationsPosX = +scenePosX;
-    Vector2f currentPos = Vector2f( notificationsPosX, float ( getViewerInstance().framebufferSize.y ) - 35.f * scaling );
+    Vector2f currentPos = Vector2f( notificationsPosX, float ( getViewerInstance().framebufferSize.y ) - cWindowsPosY * scaling );
     const Vector2f padding = Vector2f( 0.0f, cWindowSpacing * scaling );
     const float width = 337.0f * scaling;
     currentPos.x += padding.y;
@@ -412,8 +410,6 @@ void RibbonNotifier::drawNotifications_( float scaling, float scenePosX )
         ImGui::PopStyleVar( 4 );
         currentPos.y -= window->Size.y;
     }
-
-    historyBtnPosY_ = currentPos.y - cWindowPadding * scaling;
 }
 
 void RibbonNotifier::addNotification_( std::vector<NotificationWithTimer>& store, const RibbonNotification& notification )

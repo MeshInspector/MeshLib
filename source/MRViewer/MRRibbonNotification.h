@@ -49,7 +49,6 @@ private:
     NotificationType highestNotification_ = NotificationType::Count;
     bool requestRedraw_ = false;
     bool historyMode_ = false;
-    float historyBtnPosY_ = 0.f;
 
 #ifndef __EMSCRIPTEN__
     Time requestedTime_{ Time::max() };

@@ -711,5 +711,29 @@
     <Image Include="resource\icons\X3\Ribbon Scene Show all.png">
       <Filter>resource\icons\X3</Filter>
     </Image>
+    <Image Include="resource\icons\X0_5\Object Info.png">
+      <Filter>resource\icons\X0_5</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_5\Rotator.png">
+      <Filter>resource\icons\X0_5</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_75\Object Info.png">
+      <Filter>resource\icons\X0_75</Filter>
+    </Image>
+    <Image Include="resource\icons\X0_75\Rotator.png">
+      <Filter>resource\icons\X0_75</Filter>
+    </Image>
+    <Image Include="resource\icons\X1\Object Info.png">
+      <Filter>resource\icons\X1</Filter>
+    </Image>
+    <Image Include="resource\icons\X1\Rotator.png">
+      <Filter>resource\icons\X1</Filter>
+    </Image>
+    <Image Include="resource\icons\X3\Object Info.png">
+      <Filter>resource\icons\X3</Filter>
+    </Image>
+    <Image Include="resource\icons\X3\Rotator.png">
+      <Filter>resource\icons\X3</Filter>
+    </Image>
   </ItemGroup>
 </Project>

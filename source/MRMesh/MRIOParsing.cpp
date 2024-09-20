@@ -1,12 +1,15 @@
 #include "MRIOParsing.h"
-#include "MRPch/MRTBB.h"
 #include "MRVector3.h"
 #include "MRColor.h"
+#include "MRString.h"
+#include "MRPch/MRTBB.h"
 
 #include <boost/spirit/home/x3.hpp>
 
 // helper macro to make code cleaner
 #define floatT real_parser<T>{}
+
+static constexpr int MaxErrorStringLen = 80;
 
 namespace MR
 {
@@ -172,7 +175,7 @@ VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3<T>& v, Vec
         );
     }
     if ( !r )
-        return unexpected( "Failed to parse vertex" );
+        return unexpected( "Failed to parse vertex: " + std::string( trimRight( str.substr( 0, MaxErrorStringLen ) ) ) );
 
     return {};
 }
@@ -199,7 +202,7 @@ VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Col
         ascii::space
     );
     if ( !r )
-        return unexpected( "Failed to parse vertex" );
+        return unexpected( "Failed to parse vertex: " + std::string( trimRight( str.substr( 0, MaxErrorStringLen ) ) ) );
 
     return {};
 }

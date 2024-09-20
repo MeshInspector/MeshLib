@@ -30,7 +30,7 @@ struct RibbonNotification
 };
 
 // class to hold and operate with notifications
-class RibbonNotifier
+class MRVIEWER_CLASS RibbonNotifier
 {
 public:
     // adds new notification for drawing

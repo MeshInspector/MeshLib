@@ -1157,9 +1157,16 @@ float ImGuiMenu::drawSelectionInformation_()
     std::optional<Vector3i> voxelDims = Vector3i{};
     std::optional<Vector3f> voxelSize = Vector3f{};
     std::optional<Box3i> voxelActiveBox = Box3i{};
+
+    MR_SUPPRESS_WARNING_PUSH
+    #if __GNUC__ >= 12 && __GNUC__ <= 14 // False positive in GCC
+    #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+    #endif
     std::optional<float> voxelMinValue = FLT_MAX;
     std::optional<float> voxelIsoValue = FLT_MAX;
     std::optional<float> voxelMaxValue = FLT_MAX;
+    MR_SUPPRESS_WARNING_POP
+
     // store shared parameter value: if all objects have identical parameter value, it will be displayed, otherwise it'll be hidden
     auto updateVoxelsInfo = [] <typename T, typename U> ( std::optional<T>& store, U&& value, T def = {} )
     {
@@ -1210,7 +1217,7 @@ float ImGuiMenu::drawSelectionInformation_()
                 totalFaces += mesh->topology.numValidFaces();
                 totalSelectedFaces += mObj->numSelectedFaces();
                 totalVerts += mesh->topology.numValidVerts();
-                totalEdges += mesh->topology.computeNotLoneUndirectedEdges();
+                totalEdges += mObj->numUndirectedEdges();
                 totalSelectedEdges += mObj->numSelectedEdges();
                 if ( totalVolume && mObj->isMeshClosed() )
                 {
@@ -1348,9 +1355,9 @@ float ImGuiMenu::drawSelectionInformation_()
 
     const float itemWidth = getSceneInfoItemWidth_( 3 ) * 3 + ImGui::GetStyle().ItemInnerSpacing.x * 2;
 
-    const auto textColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+    auto textColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
     auto labelColor = textColor;
-    labelColor.w *= 0.5f;
+    textColor.w *= 0.5f;
     const ImVec4 selectedTextColor { 0.886f, 0.267f, 0.267f, 1.0f };
 
     auto drawPrimitivesInfo = [&] ( const char* label, size_t value, size_t selected = 0 )
@@ -1371,13 +1378,13 @@ float ImGuiMenu::drawSelectionInformation_()
     auto drawUnitInfo = [&] <class Units> ( const char* label, auto&& value, Units )
     {
         ImGui::SetNextItemWidth( itemWidth );
-        UI::readOnlyValue<Units>( label, value, textColor, labelColor );
+        UI::readOnlyValue<Units>( label, value, textColor, {}, labelColor );
     };
 
     auto drawDimensionsVec3 = [&] <class Units> ( const char* label, auto&& value, Units )
     {
         ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
-        UI::readOnlyValue<Units>( label, value, textColor, labelColor );
+        UI::readOnlyValue<Units>( label, value, textColor, {}, labelColor );
     };
 
     if ( selectedObjs.size() > 1 )
@@ -1391,9 +1398,9 @@ float ImGuiMenu::drawSelectionInformation_()
         ImGui::Spacing();
         ImGui::Spacing();
 
+        drawDimensionsVec3( "Box Size", bsize, LengthUnit{} );
         drawDimensionsVec3( "Box Min", selectionBbox_.min, LengthUnit{} );
         drawDimensionsVec3( "Box Max", selectionBbox_.max, LengthUnit{} );
-        drawDimensionsVec3( "Box Size", bsize, LengthUnit{} );
 
         if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
             drawDimensionsVec3( "World Box Size", wbsize, LengthUnit{} );
@@ -1416,7 +1423,14 @@ float ImGuiMenu::drawSelectionInformation_()
     if ( totalFaces )
     {
         if ( totalVolume )
+        {
+            MR_SUPPRESS_WARNING_PUSH
+            #if __GNUC__ >= 12 && __GNUC__ <= 14 // `totalVolume` may be used uninitialized. False positive in GCC
+            #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+            #endif
             drawUnitInfo( "Volume", *totalVolume, VolumeUnit{} );
+            MR_SUPPRESS_WARNING_POP
+        }
 
         if ( selectedObjs.size() == 1 )
         {
@@ -1450,12 +1464,8 @@ float ImGuiMenu::drawSelectionInformation_()
                 drawDimensionsVec3( "Active Box Max", voxelActiveBox->max, NoUnit{} );
             }
         }
-        if ( isValidVoxelsInfo( voxelIsoValue, FLT_MAX ) )
-            drawUnitInfo( "Iso Value", *voxelIsoValue, NoUnit{} );
-        if ( isValidVoxelsInfo( voxelMinValue, FLT_MAX ) )
-            drawUnitInfo( "Min Value", *voxelMinValue, NoUnit{} );
-        if ( isValidVoxelsInfo( voxelMaxValue, FLT_MAX ) )
-            drawUnitInfo( "Max Value", *voxelMaxValue, NoUnit{} );
+        if ( voxelMinValue && voxelIsoValue && voxelMaxValue )
+            drawDimensionsVec3( "Min,Iso,Max", Vector3f{ *voxelMinValue, *voxelIsoValue, *voxelMaxValue }, NoUnit{} );
     }
 #endif
 

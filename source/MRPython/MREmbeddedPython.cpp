@@ -11,15 +11,24 @@
 namespace MR
 {
 
-void EmbeddedPython::init()
+bool EmbeddedPython::init()
 {
     if ( !instance_().available_ || isInitialized() )
-        return;
+        return true;
 
     for ( const auto& mod : PythonExport::instance().modules() )
         PyImport_AppendInittab( mod.first.c_str(), mod.second.initFncPointer );
 
-    pybind11::initialize_interpreter( false );
+    try
+    {
+        pybind11::initialize_interpreter( false );
+        return true;
+    }
+    catch ( const std::exception& exc )
+    {
+        spdlog::error( exc.what() );
+        return false;
+    }
 }
 
 bool EmbeddedPython::isAvailable()

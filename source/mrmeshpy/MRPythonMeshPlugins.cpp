@@ -32,6 +32,7 @@
 #include "MRMesh/MRMovementBuildBody.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRFixSelfIntersections.h"
+#include "MRMesh/MRDenseBox.h"
 #include <pybind11/functional.h>
 #pragma warning(push)
 #pragma warning(disable: 4464) // relative include path contains '..'
@@ -566,6 +567,26 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ConvexHull, [] ( pybind11::module_& m )
         pybind11::arg( "pointCloud" ),
         "Computes the Mesh of convex hull from given input `PointCloud`" );
 } )
+
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, DenseBox, [] ( pybind11::module_& m )
+{
+    pybind11::class_<DenseBox>( m, "DenseBox",
+        "Structure to hold and work with dense box\n"
+        "Scalar operations that are not provided in this struct can be called via `box()`\n"
+        "For example `box().size()`, `box().diagonal()` or `box().volume()`\n"
+        "Non const operations are not allowed for dense box because it can spoil density" ).
+        def( pybind11::init<const std::vector<Vector3f>&, const AffineXf3f*>(), pybind11::arg( "points" ), pybind11::arg( "xf" ) = nullptr, "Include given points into this dense box" ).
+        def( pybind11::init<const std::vector<Vector3f>&, const std::vector<float>&, const AffineXf3f*>(), pybind11::arg( "points" ), pybind11::arg( "weights" ), pybind11::arg( "xf" ) = nullptr, "Include given weighed points into this dense box" ).
+        def( pybind11::init<const MeshPart&, const AffineXf3f*>(), pybind11::arg( "meshPart" ), pybind11::arg( "xf" ) = nullptr, "Include mesh part into this dense box" ).
+        def( pybind11::init<const PointCloud&, const AffineXf3f*>(), pybind11::arg( "points" ), pybind11::arg( "xf" ) = nullptr, "Include point into this dense box" ).
+        def( pybind11::init<const Polyline3&, const AffineXf3f*>(), pybind11::arg( "line" ), pybind11::arg( "xf" ) = nullptr, "Include line into this dense box" ).
+        def( "center", &DenseBox::center, "returns center of dense box" ).
+        def( "contains", &DenseBox::contains, "returns true if dense box contains given point" ).
+        def( "box", &DenseBox::box, "return box in its space" ).
+        def( "basisXf", &DenseBox::basisXf, "transform box space to world space" ).
+        def( "basisXfInv", &DenseBox::basisXfInv, "transform world space to box space" );
+} )
+
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ContourStitch, [] ( pybind11::module_& m )
 {

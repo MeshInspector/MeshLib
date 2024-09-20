@@ -62,7 +62,7 @@ void ObjectVoxels::construct( const SimpleVolumeMinMax& simpleVolumeMinMax, Prog
     construct( simpleVolumeMinMax, Vector2f( simpleVolumeMinMax.min, simpleVolumeMinMax.max ), cb, normalPlusGrad );
 }
 
-void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, const std::optional<Vector2f> & minmax, ProgressCallback cb )
+void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, const std::optional<Vector2f> & minmax )
 {
     assert( grid );
     if ( !grid )
@@ -89,9 +89,9 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
         dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
 }
 
-void ObjectVoxels::construct( const VdbVolume& volume, ProgressCallback cb )
+void ObjectVoxels::construct( const VdbVolume& volume )
 {
-    construct( volume.data, volume.voxelSize, Vector2f( volume.min, volume.max ), cb );
+    construct( volume.data, volume.voxelSize, Vector2f( volume.min, volume.max ) );
 }
 
 void ObjectVoxels::updateHistogramAndSurface( ProgressCallback cb )

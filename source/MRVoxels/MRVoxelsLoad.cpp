@@ -1062,23 +1062,9 @@ Expected<std::vector<std::shared_ptr<ObjectVoxels>>> toObjectVoxels( const std::
         const std::string name = i > 1 ? fmt::format( "{} {}", utf8string( file.stem() ), (int)i ) : utf8string( file.stem() );
         obj->setName( name );
 
-        bool callbackRes = true;
-        auto redirectProgress = [] ( const ProgressCallback& cb, bool& result ) -> ProgressCallback
-        {
-            return [cb, &result] ( float v )
-            {
-                return ( result = cb( v ) );
-            };
-        };
-
-        auto cb1 = redirectProgress( subprogress( cb, 0.00f, 0.50f ), callbackRes );
-        obj->construct( volume, cb1 );
-        if ( !callbackRes )
-            return unexpected( getCancelMessage( file ) );
-
-        auto cb2 = redirectProgress( subprogress( cb, 0.50f, 1.00f ), callbackRes );
-        obj->setIsoValue( ( volume.min + volume.max ) / 2.f, cb2 );
-        if ( !callbackRes )
+        obj->construct( volume );
+        obj->setIsoValue( ( volume.min + volume.max ) / 2.f, cb );
+        if ( !reportProgress( cb, 1.0f ) )
             return unexpected( getCancelMessage( file ) );
 
         res.emplace_back( obj );

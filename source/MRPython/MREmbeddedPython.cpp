@@ -26,11 +26,10 @@ bool EmbeddedPython::init()
     config.install_signal_handlers = 0;
     config.site_import = instance_().siteImport_ ? 1 : 0;
 
-    std::wstring pythonHomeW;
     if ( !instance_().pythonHome_.empty() )
     {
-        pythonHomeW = utf8ToWide( instance_().pythonHome_.c_str() );
-        config.home = const_cast<wchar_t*>( pythonHomeW.c_str() );
+        const auto pythonHomeW = utf8ToWide( instance_().pythonHome_.c_str() );
+        PyConfig_SetString( &config, &config.home, pythonHomeW.c_str() );
     }
 
     for ( const auto& mod : PythonExport::instance().modules() )

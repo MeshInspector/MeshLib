@@ -71,9 +71,6 @@ public:
     /// reset quick access menu items list to default
     MRVIEWER_API void resetQuickAccessList();
 
-    /// get access to Ribbon font manager
-    const RibbonFontManager& getFontManager() { return fontManager_; };
-
     /// get Scene List window size
     Vector2i getSceneSize() { return Vector2i( int( sceneSize_.x ), int( sceneSize_.y ) ); };
 
@@ -91,9 +88,21 @@ public:
     /// returns index of active tab in RibbonSchemaHolder::schema().tabsOrder
     int getActiveTabIndex() const { return activeTabIndex_; }
 
-    const RibbonButtonDrawer& getRibbonButtonDrawer() { return buttonDrawer_; }
+
+    /// get access to Ribbon font manager
+    RibbonFontManager& getFontManager() { return fontManager_; };
+
+    /// get access to Ribbon button drawer
+    RibbonButtonDrawer& getRibbonButtonDrawer() { return buttonDrawer_; }
+
+    /// get access to Ribbon Toolbar
     Toolbar& getToolbar() { return toolbar_; }
+
+    /// get access to Ribbon notifier
+    RibbonNotifier& getRibbonNotifier() { return notifier_; };
+
     void setActiveListPos( const ImVec2& pos ) { activeListPos_ = pos; }
+    
     /// set active plugins list showed
     void showActiveList() { activeListPressed_ = true; };
 
@@ -137,7 +146,7 @@ protected:
     };
     using DrawTabConfig = std::vector<DrawGroupConfig>;
     // draw group of items
-    MRVIEWER_API virtual DrawTabConfig setupItemsGroupConfig_( const std::vector<std::string>& groupsInTab, const std::string& tabName );
+    MRVIEWER_API virtual DrawTabConfig setupItemsGroupConfig_( const std::vector<std::string>& groupsInTab, const std::string& tabName, bool centerItems );
     MRVIEWER_API virtual void setupItemsGroup_( const std::vector<std::string>& groupsInTab, const std::string& tabName );
     MRVIEWER_API virtual void drawItemsGroup_( const std::string& tabName, const std::string& groupName,
                                                DrawGroupConfig config );
@@ -164,7 +173,7 @@ protected:
     MRVIEWER_API virtual void drawItemDialog_( DialogItemPtr& itemPtr );
 
     // Draw ribbon top panel
-    MRVIEWER_API virtual void drawTopPanel_();
+    MRVIEWER_API virtual void drawTopPanel_( bool drawTabs = true, bool centerItems = false );
     // Draw scene list window with content
     MRVIEWER_API virtual void drawRibbonSceneList_();
     // Draw vertical line at the right border of scene to enable resize of scene list
@@ -182,10 +191,6 @@ protected:
 
     MRVIEWER_API virtual void setupShortcuts_() override;
 
-    // override this function to draw your custom version window somewhere
-    virtual void drawVersionWindow_()
-    {};
-
     MRVIEWER_API virtual void drawShortcutsWindow_() override;
     // reads files with panel description
     MRVIEWER_API virtual void readMenuItemsStructure_();
@@ -199,11 +204,11 @@ protected:
     // draw scene list buttons
     MRVIEWER_API virtual void drawSceneListButtons_();
 
-    // draw welcome screen
-    MRVIEWER_API virtual void drawWelcomeWindow_();
-
     // updates viewport sizes with respect to ribbon top and left panels
     MRVIEWER_API virtual void fixViewportsSize_( int w, int h );
+    
+    // need to be called if you override windows pipeline and use ActiveListPlugin
+    MRVIEWER_API void drawActiveList_();
 private:
     void changeTab_( int newTab );
 
@@ -223,11 +228,10 @@ private:
 
     ImVec2 activeListPos_{ 0,0 };
     bool activeListPressed_{ false };
-    void drawActiveList_();
 
     void beginTopPanel_();
     void endTopPanel_();
-    void drawTopPanelOpened_();
+    void drawTopPanelOpened_( bool drawTabs, bool centerItems );
 
     std::string transformClipboardText_;
 

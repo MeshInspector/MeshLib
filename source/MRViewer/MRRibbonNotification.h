@@ -30,13 +30,13 @@ struct RibbonNotification
 };
 
 // class to hold and operate with notifications
-class RibbonNotifier
+class MRVIEWER_CLASS RibbonNotifier
 {
 public:
     // adds new notification for drawing
-    void pushNotification( const RibbonNotification& notification );
+    MRVIEWER_API void pushNotification( const RibbonNotification& notification );
     // draws all present notifications
-    void drawNotifications( float scaling );
+    MRVIEWER_API void drawNotifications( float scaling );
 private:
     struct NotificationWithTimer
     {

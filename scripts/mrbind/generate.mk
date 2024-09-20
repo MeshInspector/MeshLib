@@ -248,7 +248,9 @@ LINKER_FLAGS += -Wl,-noimplib
 COMPILER_FLAGS += -isystem $(makefile_dir)/../../thirdparty/pybind11/include
 COMPILER_FLAGS += -isystem $(makefile_dir)/../../thirdparty/parallel-hashmap
 COMPILER_FLAGS += -D_DLL -D_MT
+# Only seems to matter on VS2022 and not on VS2019, for some reason.
 COMPILER_FLAGS += -DNOMINMAX
+COMPILER_FLAGS += -D_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS
 ifeq ($(VS_MODE),Debug)
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrtd -D_DEBUG
 # Override to match meshlib:

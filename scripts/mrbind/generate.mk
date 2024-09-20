@@ -201,7 +201,7 @@ PACKAGE_NAME := meshlib2
 MODULE_OUTPUT_DIR := $(MESHLIB_SHLIB_DIR)/$(PACKAGE_NAME)
 
 # Those variables are for mrbind/scripts/apply_to_files.mk
-INPUT_DIRS := $(addprefix $(makefile_dir)/../../source/,MRMesh MRIOExtras MRPython MRSymbolMesh MRVoxels) $(makefile_dir)
+INPUT_DIRS := $(addprefix $(makefile_dir)/../../source/,MRMesh MRIOExtras MRPython MRSymbolMesh MRVoxels) $(makefile_dir)/extra_headers
 INPUT_FILES_BLACKLIST := $(call load_file,$(makefile_dir)/input_file_blacklist.txt)
 ifneq ($(IS_WINDOWS),)
 OUTPUT_DIR := source/TempOutput/PythonBindings/x64/$(VS_MODE)
@@ -215,7 +215,7 @@ MRBIND_FLAGS_FOR_EXTRA_INPUTS := $(call load_file,$(makefile_dir)/mrbind_flags_f
 COMPILER_FLAGS := $(EXTRA_CFLAGS) $(call load_file,$(makefile_dir)/common_compiler_parser_flags.txt) $(PYTHON_CFLAGS) -I. -I$(DEPS_INCLUDE_DIR) -I$(makefile_dir)/../../source
 COMPILER_FLAGS_LIBCLANG := $(call load_file,$(makefile_dir)/parser_only_flags.txt)
 # Need whitespace before `$(MRBIND_SOURCE)` to handle `~` correctly.
-COMPILER := $(CXX_FOR_BINDINGS) $(subst $(lf), ,$(call load_file,$(makefile_dir)/compiler_only_flags.txt)) -I $(MRBIND_SOURCE)/include
+COMPILER := $(CXX_FOR_BINDINGS) $(subst $(lf), ,$(call load_file,$(makefile_dir)/compiler_only_flags.txt)) -I $(MRBIND_SOURCE)/include -I$(makefile_dir)
 LINKER_OUTPUT := $(MODULE_OUTPUT_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
 LINKER := $(CXX_FOR_BINDINGS) -fuse-ld=lld
 # Unsure if `-dynamiclib` vs `-shared` makes any difference on MacOS. I'm using the former because that's what CMake does.

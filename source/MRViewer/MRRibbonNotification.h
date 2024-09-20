@@ -34,9 +34,9 @@ class MRVIEWER_CLASS RibbonNotifier
 {
 public:
     // adds new notification for drawing
-    void pushNotification( const RibbonNotification& notification );
+    MRVIEWER_API void pushNotification( const RibbonNotification& notification );
     // main draw function. draw actual notification or history, and history button
-    void draw( float scaling, float scenePosX );
+    MRVIEWER_API void draw( float scaling, float scenePosX );
 private:
     struct NotificationWithTimer
     {

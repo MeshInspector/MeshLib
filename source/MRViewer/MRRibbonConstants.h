@@ -95,6 +95,16 @@ constexpr Vector2f framePadding{ 13, 8 };
 
 } // CustomCombo
 
+namespace Notification
+{
+constexpr float cWindowRounding = 4.f;
+constexpr float cWindowSpacing = 20.f;
+constexpr float cWindowBorderWidth = 2.f;
+constexpr float cWindowPadding = 10.f;
+constexpr float cNotificationWindowPaddingX = 10.f;
+constexpr float cNotificationWindowPaddingY = 12.f;
+} // Notification
+
 } // MRStyle
 
 }

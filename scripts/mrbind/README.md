@@ -1,5 +1,7 @@
 # Generating the bindings
 
+[Installing prerequisites](#installing-prerequisites) — [Generating bindings](#generating-bindings) — [Troubleshooting](#troubleshooting)
+
 ## Installing prerequisites
 
 Run **`scripts/mrbind/install_deps_<platform>`** to install the dependencies (on Linux and MacOS - as root), then **`scripts/mrbind/install_mrbind_<platform>`** to build MRBind (not at root).
@@ -99,29 +101,29 @@ Among other things, the scripts can do following:
 First, build MeshLib as usual.
 
 Then generate the bindings:
-* **On Windows:** `scripts/mrbind/generate_win.bat -B --trace MODE=none` from VS developer command prompt (x64).
+* **On Windows:** `scripts/mrbind/generate_win.bat -B --trace MODE=none` from VS developer command prompt (use the `x64 Native` one!).
 
   This will look for MeshLib in `./source/x64/Release` (so the current directory matters). Add `VS_MODE=Debug` at the end if you built MeshLib in debug mode.
 
   The `generate_win.bat` file merely calls `generate.mk` (see below) inside of MSYS2 shell. You can use that directly if you want.
 
-* **On Linux and MacOS:** `make -f scripts/mrbind/generate.mk -B --trace MODE=none`
+* **On Linux:** `make -f scripts/mrbind/generate.mk -B --trace MODE=none`
 
   This will look for MeshLib in `./build/Release/bin`. Pass `MESHLIB_SHLIB_DIR=path/to/bin` for a different directory.
 
-  MacOS users must adjust their PATH before running this. On Arm Macs: `export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"`, and on x86 Macs `/usr/local/...` instead of `/opt/homebrew/...`. This adds the version of Make installed in Homebrew to PATH, because the default one is outdated. Confirm the version with `make --version`, must be 4.x or newer.
+* **On MacOS:** Same as on Linux, but before that must adjust the PATH. On Arm Macs: `export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"`, and on x86 Macs `/usr/local/...` instead of `/opt/homebrew/...`. This adds the version of Make installed in Homebrew to PATH, because the default one is outdated. Confirm the version with `make --version`, must be 4.x or newer.
 
 ### Some common flags:
 
-* **`--trace` - enable verbose logs.**
+* **`--trace` — enable verbose logs.**
 
-* **`MODE=none` - disable optimization** for faster build times. The default is `MODE=release`. To enable debug symbols, use `MODE=debug`. To set completely custom compiler flags, set `EXTRA_CFLAGS` and `EXTRA_LDFLAGS`.
+* **`MODE=none` — disable optimization** for faster build times. The default is `MODE=release`. To enable debug symbols, use `MODE=debug`. To set completely custom compiler flags, set `EXTRA_CFLAGS` and `EXTRA_LDFLAGS`.
 
-* **`-B` - force a full rebuild of the bindings.** Incremental builds are not very useful, because they're not perfect and can miss changes. Use incremental builds e.g. when you're fixing linker errors.
+* **`-B` — force a full rebuild of the bindings.** Incremental builds are not very useful, because they're not perfect and can miss changes. Use incremental builds e.g. when you're fixing linker errors.
 
-* **`NUM_FRAGMENTS=??` - adjust RAM usage vs build speed tradeoff.** `4` is the default, good for 16 GB of RAM. Use `2` if you have 32 GB of RAM to build ~2 times faster. Less fragments = faster builds but more RAM usage.
+* **`NUM_FRAGMENTS=??` — adjust RAM usage vs build speed tradeoff.** `4` is the default, good for 16 GB of RAM. Use `2` if you have 32 GB of RAM to build ~2 times faster. Less fragments = faster builds but more RAM usage.
 
-* **`PYTHON_PKGCONF_NAME=python-3.??-embed` - select Python version.** We try to guess this one. You can set this to `python3-embed` to use whatever the OS considers to be the default version.
+* **`PYTHON_PKGCONF_NAME=python-3.??-embed` — select Python version.** We try to guess this one. You can set this to `python3-embed` to use whatever the OS considers to be the default version.
 
 ### Selecting the compiler:
 
@@ -136,3 +138,17 @@ For simplicity, we compile the bindings with the same Clang that we use for pars
     Additionally, if the MRBind binary is not at `$MRBIND_SOURCE/build/mrbind`, you must pass `MRBIND_EXE=...` (path to the executable itself, not its directory).
 
 You can find some undocumented flags/variables in `generate.mk`.
+
+## Troubleshooting
+
+* **`could not open 'MRMesh.lib': No such file or directory`**
+
+  * MeshLib wasn't built, or `VS_MODE` is set incorrectly.
+
+* **`machine type x86 conflicts with x64`**
+
+  * You opened `x86 ...` VS developer command prompt, but we need `x64 Native`. Rebuild the bindings in x64 prompt.
+
+* **`undefined symbol: void __cdecl std::_Literal_zero_is_expected(void)`**
+
+  * Update your VS 2022.

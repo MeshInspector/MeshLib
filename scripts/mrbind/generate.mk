@@ -110,7 +110,7 @@ MRBIND_EXE := $(MRBIND_SOURCE)/build/mrbind
 ifneq ($(IS_WINDOWS),)
 CXX_FOR_BINDINGS := clang++
 else ifneq ($(IS_MACOS),)
-CXX_FOR_BINDINGS := clang++
+CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/opt/llvm@$(strip $(file <$(makefile_dir)/preferred_clang_version.txt))/bin/clang++
 else
 # Only on Ubuntu we don't want the default Clang version, as it can be outdated. Use the suffixed one.
 CXX_FOR_BINDINGS := clang++-$(strip $(file <$(makefile_dir)/preferred_clang_version.txt))
@@ -162,6 +162,7 @@ DEPS_INCLUDE_DIR := $(DEPS_BASE_DIR)/include
 
 # Pkg-config name for Python.
 ifneq ($(IS_WINDOWS),)
+$(info Following Python pkg-config files are available: $(wildcard $(DEPS_BASE_DIR)/lib/pkgconfig/python*))
 PYTHON_PKGCONF_NAME := $(basename $(notdir $(lastword $(sort $(wildcard $(DEPS_BASE_DIR)/lib/pkgconfig/python-*-embed.pc)))))
 else
 PYTHON_PKGCONF_NAME := python3-embed
@@ -193,16 +194,6 @@ $(info Using Python module suffix: $(PYTHON_MODULE_SUFFIX))
 
 # --- End of configuration variables.
 
-
-
-# Adjust PATH on Macs to include Homebrew Clang, if not already included.
-ifneq ($(IS_MACOS),)
-override homebrew_clang_dir := $(HOMEBREW_DIR)/opt/llvm@$(strip $(file <$(makefile_dir)/preferred_clang_version.txt))/bin
-ifeq ($(findstring $(homebrew_clang_dir):,$(PATH)),)
-export PATH := $(homebrew_clang_dir):$(PATH)
-$(info Adjusting PATH to include Homebrew Clang: $(homebrew_clang_dir))
-endif
-endif
 
 
 

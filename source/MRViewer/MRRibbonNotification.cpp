@@ -131,10 +131,12 @@ void RibbonNotifier::drawHistory_( float scaling, float scenePosX )
     const float cWindowExpansion = cWindowPadding;
 
     float windowPosX = ( cWindowSpacing  - cWindowExpansion ) * scaling + +scenePosX;
-    Vector2f windowPos = Vector2f( windowPosX, float( getViewerInstance().framebufferSize.y ) - ( cWindowsPosY + cWindowExpansion ) * scaling );
+    const float windowPosShiftY = ( cWindowsPosY + cWindowExpansion ) * scaling;
+    Vector2f windowPos = Vector2f( windowPosX, float( getViewerInstance().framebufferSize.y ) - windowPosShiftY );
     const float width = ( 337.0f + cWindowExpansion * 2 )* scaling;
 
     ImGui::SetNextWindowPos( windowPos, ImGuiCond_Always, ImVec2( 0.f, 1.0f ) );
+    ImGui::SetNextWindowSizeConstraints( ImVec2( width, 1 ), ImVec2( width, float( getViewerInstance().framebufferSize.y ) - windowPosShiftY ) );
     ImGui::SetNextWindowSize( ImVec2( width, -1 ), ImGuiCond_Always );
     ImGuiWindowFlags flags =
         ImGuiWindowFlags_AlwaysAutoResize |
@@ -216,21 +218,23 @@ void RibbonNotifier::drawHistory_( float scaling, float scenePosX )
         ImRect rect;
         ImVec2 size = ImVec2( window->Size.x - cWindowExpansion * 2 * scaling, ImGui::GetCursorPosY() - beginCursorPosY - ImGui::GetStyle().ItemSpacing.y + cWindowPadding * 2 * scaling );
         rect.Min.x = windRect.Min.x + cWindowExpansion * scaling;
-        rect.Min.y = windRect.Min.y + beginCursorPosY - cWindowPadding * scaling;
+        rect.Min.y = windRect.Min.y + beginCursorPosY - cWindowPadding * scaling - ImGui::GetScrollY();
         rect.Max = rect.Min + size;
+        drawList->PushClipRect( windRect.Min, windRect.Max );
         drawList->AddRect( rect.Min, rect.Max, color, cWindowRounding * scaling, 0, cWindowBorderWidth * scaling );
+        drawList->PopClipRect();
 
         if ( counter > 1 )
         {
-            drawList->PushClipRectFullScreen();
             const ImU32 textColor = ImGui::GetColorU32( ImGuiCol_WindowBg );
             auto countText = std::to_string( counter );
             auto textWidth = ImGui::CalcTextSize( countText.c_str() ).x;
             size = ImVec2( textWidth + ImGui::GetStyle().FramePadding.x * 2, ImGui::GetFrameHeight() );
-            rect.Min.x = windRect.Max.x;
-            rect.Min.y = windRect.Min.y + ( beginCursorPosY + ImGui::GetCursorPosY() ) / 2.f;
+            rect.Min.x = windRect.Max.x - cWindowExpansion * scaling;
+            rect.Min.y = windRect.Min.y + ImGui::GetCursorPosY() - ImGui::GetScrollY();
             rect.Min -= size * 0.5f;
             rect.Max = rect.Min + size;
+            drawList->PushClipRectFullScreen();
             drawList->AddRectFilled( rect.Min, rect.Max, color, cWindowRounding * scaling, 0 );
             drawList->AddText( rect.Min + ImGui::GetStyle().FramePadding, textColor, countText.c_str() );
             drawList->PopClipRect();

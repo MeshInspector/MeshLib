@@ -11,7 +11,12 @@ namespace MR
 class MRPYTHON_CLASS EmbeddedPython
 {
 public:
-    static MRPYTHON_API bool init();
+    struct Config
+    {
+        bool siteImport{ true };
+        std::string home;
+    };
+    static MRPYTHON_API bool init( const Config& config );
 
     static MRPYTHON_API bool isAvailable();
 

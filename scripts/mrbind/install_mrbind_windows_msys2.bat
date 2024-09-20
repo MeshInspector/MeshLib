@@ -24,6 +24,8 @@ if not exist %MSYS2_DIR% (
         git pull
     ) else (
         echo Didn't find MRBind sources at `%MRBIND_DIR%`, cloning...
+        rem Create the target directory first. On Windows, mkdir always behaves as if with `-p` (at least if "command extensions" are enabled, and they seem to be enabled by default?).
+        mkdir %MRBIND_DIR%
         git clone https://github.com/MeshInspector/mrbind %MRBIND_DIR%
         cd %MRBIND_DIR%
     )

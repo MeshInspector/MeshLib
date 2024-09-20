@@ -199,7 +199,7 @@ $(info Using Python module suffix: $(PYTHON_MODULE_SUFFIX))
 ifneq ($(IS_MACOS),)
 override homebrew_clang_dir := $(HOMEBREW_DIR)/opt/llvm/bin@$(strip $(file <$(makefile_dir)/preferred_clang_version.txt))
 ifeq ($(findstring $(homebrew_clang_dir):,$(PATH)),)
-export PATH=$(homebrew_clang_dir):$(PATH)
+export PATH := $(homebrew_clang_dir):$(PATH)
 $(info Adjusting PATH to include Homebrew Clang: $(homebrew_clang_dir))
 endif
 endif
@@ -306,17 +306,18 @@ override mrbind_vars = $(subst $,$$$$, \
 
 # Generated mrmeshpy.
 $(LINKER_OUTPUT): | $(MODULE_OUTPUT_DIR)
-	$(MAKE) -f $(MRBIND_SOURCE)/scripts/apply_to_files.mk $(mrbind_vars)
+	@$(MAKE) -f $(MRBIND_SOURCE)/scripts/apply_to_files.mk $(mrbind_vars)
 
 # Only generate mrmeshpy, but don't compile.
 .PHONY: only-generate
 only-generate:
-	$(MAKE) -f $(MRBIND_SOURCE)/scripts/apply_to_files.mk generate $(mrbind_vars)
+	@$(MAKE) -f $(MRBIND_SOURCE)/scripts/apply_to_files.mk generate $(mrbind_vars)
 
 # Handwritten mrmeshnumpy.
 MRMESHNUMPY_MODULE := $(MODULE_OUTPUT_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX)
 $(MRMESHNUMPY_MODULE): | $(MODULE_OUTPUT_DIR)
-	$(COMPILER) \
+	@echo $(call quote,[Compiling] mrmeshnumpy)
+	@$(COMPILER) \
 		-o $@ \
 		$(makefile_dir)/../../source/mrmeshnumpy/*.cpp \
 		$(COMPILER_FLAGS) $(LINKER_FLAGS) \
@@ -325,9 +326,9 @@ $(MRMESHNUMPY_MODULE): | $(MODULE_OUTPUT_DIR)
 # The init script.
 INIT_SCRIPT := $(MODULE_OUTPUT_DIR)/__init__.py
 $(INIT_SCRIPT): $(makefile_dir)/__init__.py
-	cp $< $@
+	@cp $< $@
 ifeq ($(IS_WINDOWS),) # If not on Windows, strip the windows-only part.
-	gawk -i inplace '/### windows-only: \[/{x=1} {if (!x) print} x && /### \]/{x=0}' $@
+	@gawk -i inplace '/### windows-only: \[/{x=1} {if (!x) print} x && /### \]/{x=0}' $@
 endif
 
 # All modules.
@@ -337,4 +338,4 @@ all: $(LINKER_OUTPUT) $(MRMESHNUMPY_MODULE) $(INIT_SCRIPT)
 
 # The directory for the modules.
 $(MODULE_OUTPUT_DIR):
-	mkdir -p $@
+	@mkdir -p $@

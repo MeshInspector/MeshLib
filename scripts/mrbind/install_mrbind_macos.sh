@@ -20,6 +20,7 @@ if [[ -d $MRBIND_DIR ]]; then
     git checkout master
     git pull
 else
+    mkdir -p "$MRBIND_DIR"
     git clone https://github.com/MeshInspector/mrbind "$MRBIND_DIR"
     cd "$MRBIND_DIR"
 fi

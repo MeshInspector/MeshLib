@@ -87,6 +87,9 @@ public:
     /// draw custom styled button
     MRVIEWER_API bool drawTabArrawButton( const char* icon, const ImVec2& size, float iconSize );
 
+    /// if set color then instead of multicolored icons will be drawn with this color
+    MRVIEWER_API void setMonochrome( const std::optional<Color>& color );
+
     /// set reaction on press item button
     void setOnPressAction( std::function<void( std::shared_ptr<RibbonMenuItem>, bool )> action ) { onPressAction_ = action; };
     /// set function to get requirements for activate item
@@ -108,6 +111,8 @@ private:
     std::function<std::string( std::shared_ptr<RibbonMenuItem> )> getRequirements_ = []( std::shared_ptr<RibbonMenuItem> ) { return std::string(); };
     RibbonMenu* menu_ = nullptr;
     const ShortcutManager* shortcutManager_ = nullptr;
+
+    std::optional<Color> monochrome_;
 
     float scaling_ = 1.f;
     static std::vector<std::unique_ptr<MR::ImGuiImage>> textures_;

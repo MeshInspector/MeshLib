@@ -76,7 +76,6 @@
     <ClInclude Include="MRVolumeSegment.h" />
     <ClInclude Include="MRVoxelGraphCut.h" />
     <ClInclude Include="MRVoxelPath.h" />
-    <ClInclude Include="MRVoxelsConversions.h" />
     <ClInclude Include="MRVoxelsConversionsByParts.h" />
     <ClInclude Include="MRVoxelsFwd.h" />
     <ClInclude Include="MRVoxelsLoad.h" />

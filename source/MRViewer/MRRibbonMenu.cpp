@@ -104,10 +104,7 @@ void RibbonMenu::init( MR::Viewer* _viewer )
 
         drawActiveList_();
 
-        drawWelcomeWindow_();
-
         draw_helpers();
-        drawVersionWindow_();
         notifier_.drawNotifications( menu_scaling() );
         prevFrameSelectedObjectsCache_ = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
     };
@@ -1137,7 +1134,7 @@ void RibbonMenu::drawSmallButtonsSet_( const std::vector<std::string>& group, in
 
 
 RibbonMenu::DrawTabConfig RibbonMenu::setupItemsGroupConfig_( const std::vector<std::string>& groupsInTab,
-                                                              const std::string& tabName )
+                                                              const std::string& tabName, bool centerItems )
 {
     DrawTabConfig res( groupsInTab.size() );
     const auto& style = ImGui::GetStyle();
@@ -1247,6 +1244,10 @@ RibbonMenu::DrawTabConfig RibbonMenu::setupItemsGroupConfig_( const std::vector<
             sumWidth += groupWidths[i];
         }
     }
+
+    if ( centerItems && sumWidth < screenWidth )
+        ImGui::SetCursorPosX( 0.5f * ( screenWidth - sumWidth ) );
+
     return res;
 }
 
@@ -1460,10 +1461,6 @@ void RibbonMenu::drawSceneListButtons_()
     ImGui::GetCurrentContext()->CurrentWindow->DrawList->AddLine( ImVec2( 0, separateLinePos ), ImVec2( float( sceneSize_.x ), separateLinePos ),
                                                                   ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ).getUInt32() );
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ImGui::GetStyle().ItemSpacing.y + 1.0f * menuScaling );
-}
-
-void RibbonMenu::drawWelcomeWindow_()
-{
 }
 
 void RibbonMenu::readMenuItemsStructure_()
@@ -1974,9 +1971,9 @@ void RibbonMenu::setupShortcuts_()
                 data->setVisible( !atLeastOne, viewportid );
     } } );
     shortcutManager_->setShortcut( { GLFW_KEY_F1,0 }, { ShortcutManager::Category::Info, "Show this help with hot keys",[this] ()
-   {
-       showShortcuts_ = !showShortcuts_;
-   } } );
+    {
+        showShortcuts_ = !showShortcuts_;
+    } } );
     shortcutManager_->setShortcut( { GLFW_KEY_D,0 }, { ShortcutManager::Category::Info, "Toggle statistics window",[this] ()
     {
         showStatistics_ = !showStatistics_;
@@ -2301,8 +2298,21 @@ void RibbonMenu::endTopPanel_()
     ImGui::PopStyleVar( 3 );
 }
 
-void RibbonMenu::drawTopPanel_()
+void RibbonMenu::drawTopPanel_( bool drawTabs, bool centerItems )
 {
+    if ( drawTabs )
+    {
+        currentTopPanelHeight_ = 113;
+        topPanelOpenedHeight_ = 113;
+        topPanelHiddenHeight_ = 33;
+    }
+    else
+    {
+        currentTopPanelHeight_ = 113 - 33;
+        topPanelOpenedHeight_ = 113 - 33;
+        topPanelHiddenHeight_ = 33 - 33;
+    }
+
     switch ( collapseState_ )
     {
         case MR::RibbonMenu::CollapseState::Closed:
@@ -2318,10 +2328,10 @@ void RibbonMenu::drawTopPanel_()
             }
             break;
     }
-    drawTopPanelOpened_();
+    drawTopPanelOpened_( drawTabs, centerItems );
 }
 
-void RibbonMenu::drawTopPanelOpened_()
+void RibbonMenu::drawTopPanelOpened_( bool drawTabs, bool centerItems )
 {
     beginTopPanel_();
 
@@ -2333,11 +2343,15 @@ void RibbonMenu::drawTopPanelOpened_()
     auto framePadding = style.FramePadding;
     framePadding.x = 0.0f;
 
-    drawHeaderPannel_();
+    if ( drawTabs )
+        drawHeaderPannel_();
 
     // tab content position
     ImGui::SetCursorPosX( style.CellPadding.x * 2 );
-    ImGui::SetCursorPosY( ( cTabYOffset + cTabHeight ) * menu_scaling() + 2 );
+    if ( drawTabs )
+        ImGui::SetCursorPosY( ( cTabYOffset + cTabHeight ) * menu_scaling() + 2 );
+    else
+        ImGui::SetCursorPosY( 2 );
 
     ImGuiTableFlags tableFlags = ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV;
 
@@ -2354,10 +2368,10 @@ void RibbonMenu::drawTopPanelOpened_()
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, framePadding ); // frame padding cause horizontal scrollbar which is not needed
             ImGui::PushStyleVar( ImGuiStyleVar_ScrollbarSize, cScrollBarSize * menu_scaling() );
+            auto config = setupItemsGroupConfig_( tabIt->second, tab, centerItems );
             if ( ImGui::BeginTable( ( tab + "##table" ).c_str(), int( tabIt->second.size() + 1 ), tableFlags ) )
             {
                 setupItemsGroup_( tabIt->second, tab );
-                auto config = setupItemsGroupConfig_( tabIt->second, tab );
                 ImGui::TableNextRow();
                 UI::TestEngine::pushTree( "Ribbon" );
                 for ( int i = 0; i < tabIt->second.size(); ++i )

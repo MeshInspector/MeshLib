@@ -197,7 +197,7 @@ $(info Using Python module suffix: $(PYTHON_MODULE_SUFFIX))
 
 # Adjust PATH on Macs to include Homebrew Clang, if not already included.
 ifneq ($(IS_MACOS),)
-override homebrew_clang_dir := $(HOMEBREW_DIR)/opt/llvm/bin@$(strip $(file <$(makefile_dir)/preferred_clang_version.txt))
+override homebrew_clang_dir := $(HOMEBREW_DIR)/opt/llvm@$(strip $(file <$(makefile_dir)/preferred_clang_version.txt))/bin
 ifeq ($(findstring $(homebrew_clang_dir):,$(PATH)),)
 export PATH := $(homebrew_clang_dir):$(PATH)
 $(info Adjusting PATH to include Homebrew Clang: $(homebrew_clang_dir))

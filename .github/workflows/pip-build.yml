@@ -104,7 +104,7 @@ jobs:
         run: ./scripts/mrbind/install_mrbind_ubuntu.sh
 
       - name: Generate and build MRBind bindings
-        run: make -f scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib CXX_FOR_ABI=/usr/bin/clang++-11
+        run: make -f scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib CXX_FOR_ABI=/usr/bin/clang++-11 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed
 
       - name: Run Tests
         run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
@@ -277,7 +277,7 @@ jobs:
         shell: cmd
         run: |
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
-          ./scripts/mrbind/generate_win.bat -B PACKAGE_NAME=meshlib
+          ./scripts/mrbind/generate_win.bat -B PACKAGE_NAME=meshlib PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed
 
       - name: Run Test
         working-directory: source\x64\Release
@@ -388,7 +388,7 @@ jobs:
         env:
           # Arm Macs use `/opt/homebrew`, while x86 Macs use `/usr/local`. Add both for simplicity.
           PATH: /opt/homebrew/opt/make/libexec/gnubin:/usr/local/opt/make/libexec/gnubin:${{env.PATH}}
-        run: make --version && make -f ./scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib HOMEBREW_DIR=/usr/local
+        run: make --version && make -f ./scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed
 
       - name: Unit Tests
         run: ./build/Release/bin/MRTest

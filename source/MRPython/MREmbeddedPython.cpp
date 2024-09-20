@@ -21,6 +21,7 @@ bool EmbeddedPython::init( const Config& config_ )
 
     PyConfig config;
     PyConfig_InitPythonConfig( &config );
+    MR_FINALLY { PyConfig_Clear( &config ); };
 
     config.parse_argv = 0;
     config.install_signal_handlers = 0;
@@ -35,16 +36,21 @@ bool EmbeddedPython::init( const Config& config_ )
     for ( const auto& mod : PythonExport::instance().modules() )
         PyImport_AppendInittab( mod.first.c_str(), mod.second.initFncPointer );
 
-    try
+    auto status = PyConfig_SetBytesArgv( &config, 0, NULL );
+    if ( PyStatus_Exception( status ) )
     {
-        pybind11::initialize_interpreter( &config, 0, NULL, false );
-        return true;
-    }
-    catch ( const std::exception& exc )
-    {
-        spdlog::error( exc.what() );
+        spdlog::error( status.err_msg );
         return false;
     }
+
+    status = Py_InitializeFromConfig( &config );
+    if ( PyStatus_Exception( status ) )
+    {
+        spdlog::error( status.err_msg );
+        return false;
+    }
+
+    return true;
 }
 
 bool EmbeddedPython::isAvailable()

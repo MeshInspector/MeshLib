@@ -191,9 +191,9 @@ std::pair<gdcm::PixelFormat::ScalarType, gdcm::Tag> getGDCMTypeAndTag()
 
 VoidOrErrStr toDCM( const VdbVolume& vdbVolume, const std::filesystem::path& path, ProgressCallback cb )
 {
-    auto simpleVolume = vdbVolumeToSimpleVolumeU16( vdbVolume );
+    auto simpleVolume = vdbVolumeToSimpleVolumeU16( vdbVolume, {}, subprogress( cb, 0.f, 0.5f ) );
     if ( simpleVolume )
-        return toDCM( *simpleVolume, path, cb );
+        return toDCM( *simpleVolume, path, subprogress( cb, 0.5f, 1.f ) );
     else
         return unexpected( simpleVolume.error() );
 }
@@ -219,32 +219,11 @@ VoidOrErrStr toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::files
     image.SetSpacing( 2, volume.voxelSize.z );
 
     gdcm::DataElement data( gdcmTag );
+    // copies full volume
     data.SetByteValue( reinterpret_cast<const char*>( volume.data.data() ), ( uint32_t )volume.data.size() * sizeof( T ) );
-
+    if ( !reportProgress( cb, 0.5f ) )
+        return unexpected( "Loading canceled" );
     image.SetDataElement( data );
-
-//    auto& file = iw.GetFile();
-//    auto& ds = file.GetDataSet();
-//
-//    auto insertStringVal = [&ds] ( gdcm::Tag tag, const std::string& val )
-//    {
-//        gdcm::DataElement el( tag );
-//        el.SetByteValue( val.c_str(), val.size() );
-//        ds.Insert( el );
-//    };
-
-//    insertStringVal( gdcm::Tag(0x0020, 0x000D), "1.2.840.113619.2.1.1.1" );
-//    insertStringVal( gdcm::Tag(0x0020, 0x0011), "1.2.840.113619.2.1.1.2" );
-
-//    ds.Insert( gdcm::DataElement(  ) )
-//    ds.Set(gdcm::Tag(0x0010, 0x0010), "PatientName"); // PatientName (optional)
-//    ds.Set(gdcm::Tag(0x0010, 0x0020), "PatientID"); // PatientID (optional)
-//    ds.Set(gdcm::Tag(0x0020, 0x000D), "StudyInstanceUID", "1.2.840.113619.2.1.1.1"); // StudyInstanceUID (required)
-//    ds.Set(gdcm::Tag(0x0020, 0x0011), "SeriesInstanceUID", "1.2.840.113619.2.1.1.2"); // SeriesInstanceUID (required)
-//    ds.Set(gdcm::Tag(0x0020, 0x000E), "SeriesNumber", "1"); // Series Number (optional)
-//    ds.Set(gdcm::Tag(0x0020, 0x0010), "StudyDate", "20231123"); // StudyDate (optional)
-//    ds.Set(gdcm::Tag(0x0020, 0x0011), "StudyTime", "123456"); // StudyTime (optional)
-//    ds.Set(gdcm::Tag(0x0020, 0x0037), "ImagePositionPatient", "0\\0\\0"); // ImagePositionPatient (optional)
 
     iw.SetImage( image );
     iw.SetFileName( path.native().c_str() );
@@ -254,8 +233,7 @@ VoidOrErrStr toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::files
     return {};
 }
 
-template VoidOrErrStr toDCM<float>( const SimpleVolume& volume, const std::filesystem::path& path, ProgressCallback cb );
-//template VoidOrErrStr toDCM<uint16_t>( const SimpleVolumeU16& volume, const std::filesystem::path& path, ProgressCallback cb );
+template VoidOrErrStr toDCM<uint16_t>( const SimpleVolumeU16& volume, const std::filesystem::path& path, ProgressCallback cb );
 
 
 MR_FORMAT_REGISTRY_IMPL( VoxelsSaver )

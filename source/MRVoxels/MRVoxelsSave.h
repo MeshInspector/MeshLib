@@ -32,6 +32,12 @@ MRVOXELS_API VoidOrErrStr toGav( const VdbVolume& vdbVolume, std::ostream & out,
 MRVOXELS_API VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& file,
                                ProgressCallback callback = {} );
 
+/// Save voxels objet to a single 3d DICOM file
+MRVOXELS_API VoidOrErrStr toDCM( const VdbVolume& vdbVolume, const std::filesystem::path& path, ProgressCallback cb = {} );
+template <typename T>
+MRVOXELS_API VoidOrErrStr toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::filesystem::path& path, ProgressCallback cb = {} );
+
+
 /// Saves voxels in a file, detecting the format from file extension
 MRVOXELS_API VoidOrErrStr toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesystem::path& file,
                                               ProgressCallback callback = {} );

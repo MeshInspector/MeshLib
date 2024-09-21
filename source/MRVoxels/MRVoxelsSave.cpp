@@ -15,7 +15,14 @@
 #include "MRVDBConversions.h"
 
 #include <openvdb/io/Stream.h>
+
+#pragma warning(push)
+#pragma warning(disable: 4515)
+#if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
+#pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
+#endif
 #include <gdcmImageWriter.h>
+#pragma warning(pop)
 
 #include <fstream>
 #include <filesystem>

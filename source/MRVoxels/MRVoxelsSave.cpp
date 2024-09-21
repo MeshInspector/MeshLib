@@ -180,10 +180,8 @@ std::pair<gdcm::PixelFormat::ScalarType, gdcm::Tag> getGDCMTypeAndTag()
     // https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.6.3.html
     // https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.6.25.html
 
-    if constexpr ( std::same_as<T, float> )
-        return { gdcm::PixelFormat::ScalarType::FLOAT32, gdcm::Tag( 0x7FE0, 0x0008 ) };
-    else if constexpr ( std::same_as<T, double> )
-        return { gdcm::PixelFormat::ScalarType::FLOAT64, gdcm::Tag( 0x7FE0, 0x0009 ) };
+    if constexpr ( std::floating_point<T> )
+        static_assert( dependent_false<T>, "GDCM doesn't support floating point DICOMs" );
     else if constexpr ( std::same_as<T, uint16_t> )
         return { gdcm::PixelFormat::ScalarType::UINT16, gdcm::Tag( 0x7FE0, 0x0010 ) };
     else

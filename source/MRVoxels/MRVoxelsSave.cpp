@@ -214,9 +214,9 @@ VoidOrErrStr toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::files
     image.SetDimension( 2, volume.dims.z );
     image.SetPixelFormat( gdcm::PixelFormat( gdcmScalar ) );
     image.SetPhotometricInterpretation( gdcm::PhotometricInterpretation::MONOCHROME2 );
-    image.SetSpacing( 0, volume.voxelSize.x );
-    image.SetSpacing( 1, volume.voxelSize.y );
-    image.SetSpacing( 2, volume.voxelSize.z );
+    image.SetSpacing( 0, volume.voxelSize.x * 1000.f );
+    image.SetSpacing( 1, volume.voxelSize.y * 1000.f );
+    image.SetSpacing( 2, volume.voxelSize.z * 1000.f );
 
     gdcm::DataElement data( gdcmTag );
     // copies full volume

@@ -54,6 +54,9 @@ MRVOXELS_API Expected<DicomVolume> loadDicomFolder( const std::filesystem::path&
 MRVOXELS_API std::vector<Expected<LoadDCMResult>> loadDCMFolderTree( const std::filesystem::path& path,
                                                         unsigned maxNumThreads = 4, const ProgressCallback& cb = {} );
 
+/// converts LoadDCMResult in ObjectVoxels
+MRVOXELS_API Expected<std::shared_ptr<ObjectVoxels>> createObjectVoxels( const LoadDCMResult & dcm, const ProgressCallback & cb );
+
 /// Loads 3D volumetric data from a single DICOM file
 MRVOXELS_API Expected<DicomVolume> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb = {} );
 #endif // MRVOXELS_NO_DICOM

@@ -806,6 +806,24 @@ std::vector<Expected<LoadDCMResult>> loadDCMFolderTree( const std::filesystem::p
     return res;
 }
 
+Expected<std::shared_ptr<ObjectVoxels>> createObjectVoxels( const LoadDCMResult & dcm, const ProgressCallback & cb )
+{
+    MR_TIMER
+    std::shared_ptr<ObjectVoxels> obj = std::make_shared<ObjectVoxels>();
+    obj->setName( dcm.name );
+    obj->construct( dcm.vdbVolume );
+
+    auto bins = obj->histogram().getBins();
+    auto minMax = obj->histogram().getBinMinMax( bins.size() / 3 );
+    auto isoRes = obj->setIsoValue( minMax.first, cb );
+    if ( !isoRes )
+        return unexpected( std::move( isoRes.error() ) );
+
+    obj->select( true );
+    obj->setXf( dcm.xf );
+    return obj;
+}
+
 Expected<DicomVolume> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb )
 {
     MR_TIMER

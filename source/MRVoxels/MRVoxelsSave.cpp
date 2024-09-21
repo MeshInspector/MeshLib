@@ -226,8 +226,10 @@ VoidOrErrStr toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::files
     image.SetDataElement( data );
 
     iw.SetImage( image );
-    iw.SetFileName( path.native().c_str() );
-    if ( !iw.Write() )
+
+    std::ofstream fout( path );
+    iw.SetStream( fout );
+    if ( !fout || !iw.Write() )
         return unexpected( "Cannot write DICOM file" );
 
     return {};

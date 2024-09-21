@@ -12,8 +12,10 @@
 #include "MRPch/MRJson.h"
 #include "MRPch/MRFmt.h"
 #include "MRMesh/MRObjectsAccess.h"
+#include "MRVDBConversions.h"
 
 #include <openvdb/io/Stream.h>
+#include <gdcmImageWriter.h>
 
 #include <fstream>
 #include <filesystem>
@@ -170,6 +172,94 @@ VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& fil
     return {};
 }
 
+
+template <typename T>
+std::pair<gdcm::PixelFormat::ScalarType, gdcm::Tag> getGDCMTypeAndTag()
+{
+    // https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.6.24.html
+    // https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.6.3.html
+    // https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.6.25.html
+
+    if constexpr ( std::same_as<T, float> )
+        return { gdcm::PixelFormat::ScalarType::FLOAT32, gdcm::Tag( 0x7FE0, 0x0008 ) };
+    else if constexpr ( std::same_as<T, double> )
+        return { gdcm::PixelFormat::ScalarType::FLOAT64, gdcm::Tag( 0x7FE0, 0x0009 ) };
+    else if constexpr ( std::same_as<T, uint16_t> )
+        return { gdcm::PixelFormat::ScalarType::UINT16, gdcm::Tag( 0x7FE0, 0x0010 ) };
+    else
+        static_assert( dependent_false<T>, "Unsupported type T" );
+}
+
+
+VoidOrErrStr toDCM( const VdbVolume& vdbVolume, const std::filesystem::path& path, ProgressCallback cb )
+{
+    auto simpleVolume = vdbVolumeToSimpleVolumeU16( vdbVolume );
+    if ( simpleVolume )
+        return toDCM( *simpleVolume, path, cb );
+    else
+        return unexpected( simpleVolume.error() );
+}
+
+template <typename T>
+VoidOrErrStr toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::filesystem::path& path, ProgressCallback cb )
+{
+    if ( !reportProgress( cb, 0.0f ) )
+        return unexpected( "Loading canceled" );
+
+    auto [gdcmScalar, gdcmTag] = getGDCMTypeAndTag<T>();
+
+    gdcm::ImageWriter iw;
+    auto& image = iw.GetImage();
+    image.SetNumberOfDimensions( 3 );
+    image.SetDimension( 0, volume.dims.x );
+    image.SetDimension( 1, volume.dims.y );
+    image.SetDimension( 2, volume.dims.z );
+    image.SetPixelFormat( gdcm::PixelFormat( gdcmScalar ) );
+    image.SetPhotometricInterpretation( gdcm::PhotometricInterpretation::MONOCHROME2 );
+    image.SetSpacing( 0, volume.voxelSize.x );
+    image.SetSpacing( 1, volume.voxelSize.y );
+    image.SetSpacing( 2, volume.voxelSize.z );
+
+    gdcm::DataElement data( gdcmTag );
+    data.SetByteValue( reinterpret_cast<const char*>( volume.data.data() ), ( uint32_t )volume.data.size() * sizeof( T ) );
+
+    image.SetDataElement( data );
+
+//    auto& file = iw.GetFile();
+//    auto& ds = file.GetDataSet();
+//
+//    auto insertStringVal = [&ds] ( gdcm::Tag tag, const std::string& val )
+//    {
+//        gdcm::DataElement el( tag );
+//        el.SetByteValue( val.c_str(), val.size() );
+//        ds.Insert( el );
+//    };
+
+//    insertStringVal( gdcm::Tag(0x0020, 0x000D), "1.2.840.113619.2.1.1.1" );
+//    insertStringVal( gdcm::Tag(0x0020, 0x0011), "1.2.840.113619.2.1.1.2" );
+
+//    ds.Insert( gdcm::DataElement(  ) )
+//    ds.Set(gdcm::Tag(0x0010, 0x0010), "PatientName"); // PatientName (optional)
+//    ds.Set(gdcm::Tag(0x0010, 0x0020), "PatientID"); // PatientID (optional)
+//    ds.Set(gdcm::Tag(0x0020, 0x000D), "StudyInstanceUID", "1.2.840.113619.2.1.1.1"); // StudyInstanceUID (required)
+//    ds.Set(gdcm::Tag(0x0020, 0x0011), "SeriesInstanceUID", "1.2.840.113619.2.1.1.2"); // SeriesInstanceUID (required)
+//    ds.Set(gdcm::Tag(0x0020, 0x000E), "SeriesNumber", "1"); // Series Number (optional)
+//    ds.Set(gdcm::Tag(0x0020, 0x0010), "StudyDate", "20231123"); // StudyDate (optional)
+//    ds.Set(gdcm::Tag(0x0020, 0x0011), "StudyTime", "123456"); // StudyTime (optional)
+//    ds.Set(gdcm::Tag(0x0020, 0x0037), "ImagePositionPatient", "0\\0\\0"); // ImagePositionPatient (optional)
+
+    iw.SetImage( image );
+    iw.SetFileName( path.native().c_str() );
+    if ( !iw.Write() )
+        return unexpected( "Cannot write DICOM file" );
+
+    return {};
+}
+
+template VoidOrErrStr toDCM<float>( const SimpleVolume& volume, const std::filesystem::path& path, ProgressCallback cb );
+//template VoidOrErrStr toDCM<uint16_t>( const SimpleVolumeU16& volume, const std::filesystem::path& path, ProgressCallback cb );
+
+
 MR_FORMAT_REGISTRY_IMPL( VoxelsSaver )
 
 VoidOrErrStr toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesystem::path& file,
@@ -213,6 +303,7 @@ MR_ON_INIT {                                                   \
 MR_ADD_VOXELS_SAVER( IOFilter( "Raw (.raw)", "*.raw" ), toRawAutoname )
 MR_ADD_VOXELS_SAVER( IOFilter( "Micro CT (.gav)", "*.gav" ), toGav )
 MR_ADD_VOXELS_SAVER( IOFilter( "OpenVDB (.vdb)", "*.vdb" ), toVdb )
+MR_ADD_VOXELS_SAVER( IOFilter( "Dicom (.dcm)", "*.dcm" ), toDCM )
 
 VoidOrErrStr saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlane& slicePlain, int sliceNumber, ProgressCallback callback )
 {

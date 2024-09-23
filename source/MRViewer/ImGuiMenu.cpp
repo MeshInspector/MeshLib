@@ -1465,7 +1465,14 @@ float ImGuiMenu::drawSelectionInformation_()
             }
         }
         if ( voxelMinValue && voxelIsoValue && voxelMaxValue )
+        {
+            MR_SUPPRESS_WARNING_PUSH
+            #if __GNUC__ >= 12 && __GNUC__ <= 14 // `voxelMaxValue` may be used uninitialized. False positive in GCC
+            #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+            #endif
             drawDimensionsVec3( "Min,Iso,Max", Vector3f{ *voxelMinValue, *voxelIsoValue, *voxelMaxValue }, NoUnit{} );
+            MR_SUPPRESS_WARNING_POP
+        }
     }
 #endif
 

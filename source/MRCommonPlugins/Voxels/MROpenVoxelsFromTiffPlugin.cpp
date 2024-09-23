@@ -94,7 +94,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
             voxelsObject->setName( std::move( name ) );
             ProgressBar::setTaskCount( 2 );
             ProgressBar::nextTask( "Construct ObjectVoxels" );
-            voxelsObject->construct( *loadRes, ProgressBar::callBackSetProgress );
+            voxelsObject->construct( *loadRes );
             if ( ProgressBar::isCanceled() || !loadRes.has_value() )
                 return returnError;
 

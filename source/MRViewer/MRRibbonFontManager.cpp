@@ -33,13 +33,13 @@ RibbonFontManager::RibbonFontManager()
     fontPaths_ =
     {
 #ifndef __EMSCRIPTEN__
-    GetFontsDirectory() / "NotoSansSC-Regular.otf",
+    SystemPath::getFontsDirectory() / "NotoSansSC-Regular.otf",
 #else
-    GetFontsDirectory() / "NotoSans-Regular.ttf",
+    SystemPath::getFontsDirectory() / "NotoSans-Regular.ttf",
 #endif
-    GetFontsDirectory() / "NotoSans-SemiBold.ttf",
-    GetFontsDirectory() / "NotoSansMono-Regular.ttf",
-    GetFontsDirectory() / "fa-solid-900.ttf"
+    SystemPath::getFontsDirectory() / "NotoSans-SemiBold.ttf",
+    SystemPath::getFontsDirectory() / "NotoSansMono-Regular.ttf",
+    SystemPath::getFontsDirectory() / "fa-solid-900.ttf"
     };
 }
 

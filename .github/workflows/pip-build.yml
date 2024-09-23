@@ -112,7 +112,8 @@ jobs:
         run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests
-        run: ./build/Release/bin/MRTest
+        # Using `cd` here fixes weird library loading issues.
+        run: cd ./build/Release/bin/ && ./MRTest
 
       - name: Python Tests
         working-directory: ./build/Release/bin
@@ -279,7 +280,7 @@ jobs:
         shell: cmd
         run: |
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
-          ./scripts/mrbind/generate_win.bat -B --trace PACKAGE_NAME=meshlib PYTHON_CFLAGS=-IC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/include PYTHON_LDFLAGS="-LC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/libs -l${{matrix.py-file}}"
+          ./scripts/mrbind/generate_win.bat -B --trace PACKAGE_NAME=meshlib PYTHON_PKGCONF_NAME= PYTHON_CFLAGS=-IC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/include PYTHON_LDFLAGS="-LC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/libs -l${{matrix.py-file}}"
           xcopy /Y source\x64\Release\meshlib\*.pyd source\x64\Release
 
       - name: Run Test
@@ -397,7 +398,8 @@ jobs:
           make --version && make -f ./scripts/mrbind/generate.mk -B --trace PACKAGE_NAME=meshlib MACOS_MIN_VER=12.7 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed
 
       - name: Unit Tests
-        run: ./build/Release/bin/MRTest
+        # Using `cd` here fixes weird library loading issues.
+        run: cd ./build/Release/bin/ && ./MRTest
 
       - name: Python Tests
         working-directory: ./build/Release/bin

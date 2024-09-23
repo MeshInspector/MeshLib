@@ -179,8 +179,8 @@ endif
 # Python compilation flags.
 ifneq ($(IS_WINDOWS),)
 # Intentionally using non-debug Python even in Debug builds, to mimic what MeshLib does. Unsure why we do this.
-PYTHON_CFLAGS := $(call safe_shell,PKG_CONFIG_PATH=$(call quote,$(DEPS_BASE_DIR)/lib/pkgconfig) PKG_CONFIG_LIBDIR=- pkg-config --cflags $(PYTHON_PKGCONF_NAME))
-PYTHON_LDFLAGS := $(call safe_shell,PKG_CONFIG_PATH=$(call quote,$(DEPS_BASE_DIR)/lib/pkgconfig) PKG_CONFIG_LIBDIR=- pkg-config --libs $(PYTHON_PKGCONF_NAME))
+PYTHON_CFLAGS := $(if $(PYTHON_PKGCONF_NAME),$(call safe_shell,PKG_CONFIG_PATH=$(call quote,$(DEPS_BASE_DIR)/lib/pkgconfig) PKG_CONFIG_LIBDIR=- pkg-config --cflags $(PYTHON_PKGCONF_NAME)))
+PYTHON_LDFLAGS := $(if $(PYTHON_PKGCONF_NAME),$(call safe_shell,PKG_CONFIG_PATH=$(call quote,$(DEPS_BASE_DIR)/lib/pkgconfig) PKG_CONFIG_LIBDIR=- pkg-config --libs $(PYTHON_PKGCONF_NAME)))
 else
 PYTHON_CFLAGS := $(call safe_shell,pkg-config --cflags $(PYTHON_PKGCONF_NAME))
 PYTHON_LDFLAGS := $(call safe_shell,pkg-config --libs $(PYTHON_PKGCONF_NAME))

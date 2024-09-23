@@ -130,7 +130,7 @@ void RibbonNotifier::drawHistory_( float scaling, float scenePosX )
     using namespace StyleConsts::Notification;
     const float cWindowExpansion = cWindowPadding;
 
-    float windowPosX = ( cWindowSpacing  - cWindowExpansion ) * scaling + +scenePosX;
+    float windowPosX = ( cWindowSpacing  - cWindowExpansion ) * scaling + scenePosX;
     const float windowPosShiftY = ( cWindowsPosY + cWindowExpansion ) * scaling;
     Vector2f windowPos = Vector2f( windowPosX, float( getViewerInstance().framebufferSize.y ) - windowPosShiftY );
     const float width = ( 337.0f + cWindowExpansion * 2 )* scaling;
@@ -256,7 +256,7 @@ void RibbonNotifier::drawHistory_( float scaling, float scenePosX )
 void RibbonNotifier::drawNotifications_( float scaling, float scenePosX )
 {
     using namespace StyleConsts::Notification;
-    float notificationsPosX = +scenePosX;
+    float notificationsPosX = scenePosX;
     Vector2f currentPos = Vector2f( notificationsPosX, float ( getViewerInstance().framebufferSize.y ) - cWindowsPosY * scaling );
     const Vector2f padding = Vector2f( 0.0f, cWindowSpacing * scaling );
     const float width = 337.0f * scaling;

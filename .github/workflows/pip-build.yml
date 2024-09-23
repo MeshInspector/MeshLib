@@ -105,7 +105,9 @@ jobs:
         run: ./scripts/mrbind/install_mrbind_ubuntu.sh
 
       - name: Generate and build MRBind bindings
-        run: make -f scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib CXX_FOR_ABI=/usr/bin/clang++-11 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed
+        run: |
+          make -f scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib CXX_FOR_ABI=/usr/bin/clang++-11 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed
+          cp build/Release/bin/meshlib/*.so build/Release/bin
 
       - name: Run Tests
         run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
@@ -281,6 +283,7 @@ jobs:
           ./scripts/mrbind/generate_win.bat -B --trace -r -d PACKAGE_NAME=meshlib \
               PYTHON_CFLAGS=-IC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/include \
               PYTHON_LDFLAGS="-LC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/libs -l${{matrix.py-file}}"
+          xcopy /Y source\x64\Release\meshlib\*.pyd source\x64\Release
 
       - name: Run Test
         working-directory: source\x64\Release
@@ -393,7 +396,9 @@ jobs:
           PATH: /opt/homebrew/opt/make/libexec/gnubin:/usr/local/opt/make/libexec/gnubin:${{env.PATH}}
         # `MACOS_MIN_VER` picked arbitrarily to match what Apple Clang uses when building MeshLib.
         # Not setting this or setting a different value cases a warning when linking the bindings, and you can get the correct (?) value from those warnings.
-        run: make --version && make -f ./scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib MACOS_MIN_VER=12.7 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed
+        run: |
+          make --version && make -f ./scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib MACOS_MIN_VER=12.7 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed
+          cp build/Release/bin/meshlib/*.so build/Release/bin
 
       - name: Unit Tests
         run: ./build/Release/bin/MRTest

@@ -133,6 +133,7 @@ $(info ABI check: $(CXX_FOR_ABI) DOESN'T mangle C++20 constraints into the funct
 ABI_COMPAT_FLAG := -fclang-abi-compat=17
 endif
 endif
+override CXX_FOR_BINDINGS += $(ABI_COMPAT_FLAG)
 
 
 # Extra compiler and linker flags.
@@ -259,7 +260,7 @@ COMPILER += -fvisibility=hidden
 # MacOS rpath is quirky: 1. Must use `-rpath,` instead of `-rpath=`. 2. Must specify the flag several times, apparently can't use
 #   `:` or `;` as a separators inside of one big flag. 3. As you've noticed, it uses `@loader_path` instead of `$ORIGIN`.
 rpath_origin := $(if $(IS_MACOS),@loader_path,$$ORIGIN)
-LINKER_FLAGS += -Wl,-rpath,'$(rpath_origin)' -Wl,-rpath,'$(rpath_origin)/..'
+LINKER_FLAGS += -Wl,-rpath,'$(rpath_origin)' -Wl,-rpath,'$(rpath_origin)/..' -Wl,-rpath,$(call quote,$(abspath $(MODULE_OUTPUT_DIR))) -Wl,-rpath,$(call quote,$(abspath $(MESHLIB_SHLIB_DIR))) -Wl,-rpath,$(call quote,$(abspath $(DEPS_LIB_DIR)))
 ifneq ($(IS_MACOS),)
 # Hmm.
 COMPILER_FLAGS_LIBCLANG += -resource-dir=$(strip $(call safe_shell,$(CXX_FOR_BINDINGS) -print-resource-dir))

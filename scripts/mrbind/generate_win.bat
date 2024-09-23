@@ -4,6 +4,10 @@ rem This script generates the bindings by running `make -f scripts/mrbind/genera
 rem Must run this inside of the Visual Studio developer command prompt!
 rem Any additional arguments are forwarded to that makefile.
 
+rem This can be a bit glitchy sometimes when quotes are involved. If it happens, make sure the last argument doesn't end with quotes.
+rem If that still doesn't work, run `make -f generate.mk` manually from MSYS2 shell,
+rem   but make sure you start that MSYS2 shell from the VS developer command prompt using `C:\msys64_meshlib_mrbind\msys2_shell.cmd -no-start -defterm -full-path -clang64`.
+
 set MSYS2_DIR=C:\msys64_meshlib_mrbind
 
 set MRBIND_DIR=%MSYS2_DIR%\home\%USERNAME%\mrbind

@@ -12,19 +12,21 @@ using namespace MR;
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SystemPath, [] ( pybind11::module_& m )
 {
-    pybind11::enum_<SystemPath::Directory>( m, "SystemPathDirectory" )
+    auto clsSystemPath = pybind11::class_<SystemPath>( m, "SystemPath" );
+
+    pybind11::enum_<SystemPath::Directory>( clsSystemPath, "Directory" )
         .value( "Resources", SystemPath::Directory::Resources )
         .value( "Fonts", SystemPath::Directory::Fonts )
         .value( "Plugins", SystemPath::Directory::Plugins )
         .value( "PythonModules", SystemPath::Directory::PythonModules )
     ;
 
-    pybind11::class_<MR::SystemPath>( m, "SystemPath" )
-        .def_static( "getDirectory", &MR::SystemPath::getDirectory,
+    clsSystemPath
+        .def_static( "getDirectory", &SystemPath::getDirectory,
             pybind11::arg( "dir" ),
             "get the directory path for specified category"
         )
-        .def_static( "overrideDirectory", &MR::SystemPath::overrideDirectory,
+        .def_static( "overrideDirectory", &SystemPath::overrideDirectory,
             pybind11::arg( "dir" ), pybind11::arg( "path" ),
             "override the directory path for specified category, useful for custom configurations"
         )

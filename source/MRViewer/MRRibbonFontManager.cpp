@@ -46,14 +46,14 @@ RibbonFontManager::RibbonFontManager()
 void RibbonFontManager::loadAllFonts( ImWchar* charRanges, float scaling )
 {
     fonts_ = {
-        FontData{.uniqueFontType = UniqueFont::Regular},
-        FontData{.uniqueFontType = UniqueFont::Regular},
-        FontData{.uniqueFontType = UniqueFont::SemiBold},
-        FontData{.uniqueFontType = UniqueFont::Icons},
-        FontData{.uniqueFontType = UniqueFont::Regular},
-        FontData{.uniqueFontType = UniqueFont::SemiBold},
-        FontData{.uniqueFontType = UniqueFont::SemiBold},
-        FontData{.uniqueFontType = UniqueFont::Monospace}
+        FontData{.fontFile = FontFile::Regular},
+        FontData{.fontFile = FontFile::Regular},
+        FontData{.fontFile = FontFile::SemiBold},
+        FontData{.fontFile = FontFile::Icons},
+        FontData{.fontFile = FontFile::Regular},
+        FontData{.fontFile = FontFile::SemiBold},
+        FontData{.fontFile = FontFile::SemiBold},
+        FontData{.fontFile = FontFile::Monospace}
     };
 
     updateFontsScaledOffset_( scaling );
@@ -110,10 +110,10 @@ float RibbonFontManager::getFontSizeByType( FontType type )
 
 std::filesystem::path RibbonFontManager::getMenuFontPath() const
 {
-    return fontPaths_[int( UniqueFont::Regular )];
+    return fontPaths_[int( FontFile::Regular )];
 }
 
-void RibbonFontManager::setNewFontPaths( const UniqueFontPaths& paths )
+void RibbonFontManager::setNewFontPaths( const FontFilePaths& paths )
 {
     fontPaths_ = paths;
     if ( auto menu = getViewerInstance().getMenuPlugin() )
@@ -148,12 +148,12 @@ MR::RibbonFontManager*& RibbonFontManager::getFontManagerInstance_()
 void RibbonFontManager::updateFontsScaledOffset_( float scaling )
 {
     ImGuiIO& io = ImGui::GetIO();
-    const ImWchar wRange[] = { 0x0057, 0x0057, 0 };
+    const ImWchar wRange[] = { 0x0057, 0x0057, 0 }; // `W` symbol
     std::array<ImFont*, int( FontType::Count )> localFonts;
     for ( int i = 0; i < int( FontType::Count ); ++i )
     {
         auto& font = fonts_[int( i )];
-        auto fontPath = fontPaths_[int( font.uniqueFontType )];
+        auto fontPath = fontPaths_[int( font.fontFile )];
 
         ImFontConfig config;
         if ( i != int( FontType::Icons ) )
@@ -177,7 +177,6 @@ void RibbonFontManager::updateFontsScaledOffset_( float scaling )
         Box2f box;
         box.include( Vector2f( glyph.X0, glyph.Y0 ) );
         box.include( Vector2f( glyph.X1, glyph.Y1 ) );
-        auto size = box.size();
         fontRef.scaledOffset = 0.5f * ( Vector2f::diagonal( fontSize ) - box.size() ) - box.min;
         fontRef.scaledOffset.x = std::floor( fontRef.scaledOffset.x );
         fontRef.scaledOffset.y = std::round( fontRef.scaledOffset.y );
@@ -189,7 +188,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
 {
     float fontSize = getFontSizeByType( type ) * scaling;
     auto& font = fonts_[int( type )];
-    auto fontPath = fontPaths_[int( font.uniqueFontType )];
+    auto fontPath = fontPaths_[int( font.fontFile )];
 
     ImFontConfig config;
     if ( type == FontType::Icons )

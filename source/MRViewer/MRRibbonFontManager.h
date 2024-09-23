@@ -26,7 +26,7 @@ public:
     };
 
     // Unique fonts that are used for different FontTypes
-    enum class UniqueFont
+    enum class FontFile
     {
         Regular,
         SemiBold,
@@ -35,7 +35,7 @@ public:
         Count
     };
 
-    using UniqueFontPaths = std::array<std::filesystem::path, size_t( UniqueFont::Count )>;
+    using FontFilePaths = std::array<std::filesystem::path, size_t( FontFile::Count )>;
 
     MRVIEWER_API RibbonFontManager();
 
@@ -51,11 +51,11 @@ public:
     MRVIEWER_API std::filesystem::path getMenuFontPath() const;
 
     /// returns list of all font paths
-    const UniqueFontPaths& getAllFontPaths() const { return fontPaths_; }
+    const FontFilePaths& getAllFontPaths() const { return fontPaths_; }
 
     /// sets new fonts paths
     /// note that it will trigger reload font
-    MRVIEWER_API void setNewFontPaths( const UniqueFontPaths& paths );
+    MRVIEWER_API void setNewFontPaths( const FontFilePaths& paths );
 
     /// get font by font type
     /// (need to avoid dynamic cast menu to ribbon menu)
@@ -66,12 +66,12 @@ public:
     MRVIEWER_API static void initFontManagerInstance( RibbonFontManager* ribbonFontManager );
 
 private:
-    UniqueFontPaths fontPaths_;
+    FontFilePaths fontPaths_;
     struct FontData
     {
-        UniqueFont uniqueFontType{ UniqueFont::Regular };
-        Vector2f scaledOffset;
-        ImFont* fontPtr{ nullptr };
+        FontFile fontFile{ FontFile::Regular }; // what file type to use for this font
+        Vector2f scaledOffset; // offset that is used for each glyph while creating atlas (updates in `updateFontsScaledOffset_`), should respect font size with scaling
+        ImFont* fontPtr{ nullptr }; // pointer to loaded font, nullptr means that font was not loaded
     };
     std::array<FontData, size_t( FontType::Count )> fonts_;
 

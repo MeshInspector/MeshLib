@@ -7,7 +7,7 @@
 #include "MRGladGlfw.h"
 #include "MRMesh/MRConfig.h"
 #include "MRMesh/MRStringConvert.h"
-#include "MRMesh/MRSystem.h"
+#include "MRMesh/MRSystemPath.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
@@ -86,7 +86,7 @@ void ViewerSetup::setupExtendedLibraries() const
     // get library names and their loading priority from *.ui.json files
     std::vector<std::pair<std::string, int>> lib2priority;
     std::error_code ec;
-    for ( auto entry : Directory{ GetResourcesDirectory(), ec } )
+    for ( auto entry : Directory{ SystemPath::getResourcesDirectory(), ec } )
     {
         if ( entry.path().u8string().ends_with( asU8String( ".ui.json" ) ) )
         {
@@ -110,7 +110,7 @@ void ViewerSetup::setupExtendedLibraries() const
     std::sort( lib2priority.begin(), lib2priority.end(), []( auto& lhv, auto& rhv) { return lhv.second < rhv.second; } );
 
     for (const auto& [libName, priority] : lib2priority) {
-        std::filesystem::path pluginPath = GetLibsDirectory();
+        std::filesystem::path pluginPath = SystemPath::getPluginsDirectory();
 #if _WIN32
         pluginPath /= libName + ".dll" ;
 #elif defined __APPLE__

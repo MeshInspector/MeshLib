@@ -212,6 +212,7 @@
     <ClInclude Include="MRSphere.h" />
     <ClInclude Include="MRStacktrace.h" />
     <ClInclude Include="MRSymMatrix4.h" />
+    <ClInclude Include="MRSystemPath.h" />
     <ClInclude Include="MRTiffIO.h" />
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
@@ -559,6 +560,7 @@
     <ClCompile Include="MRSeparationPoint.cpp" />
     <ClCompile Include="MRSolarRadiation.cpp" />
     <ClCompile Include="MRStacktrace.cpp" />
+    <ClCompile Include="MRSystemPath.cpp" />
     <ClCompile Include="MRTiffIO.cpp" />
     <ClCompile Include="MRRectIndexer.cpp" />
     <ClCompile Include="MRSceneColors.cpp" />

@@ -9,6 +9,7 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MR2DContoursTriangulation.h"
 #include "MRMesh/MRString.h"
+#include "MRMesh/MRSystemPath.h"
 #include "MRMesh/MRTimer.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRAsyncLaunchType.h"
@@ -52,9 +53,9 @@ ObjectLabel::ObjectLabel()
 
     // set default path to font if available
 #ifndef __EMSCRIPTEN__
-    pathToFont_ = GetFontsDirectory() / "NotoSansSC-Regular.otf";
+    pathToFont_ = SystemPath::getFontsDirectory() / "NotoSansSC-Regular.otf";
 #else
-    pathToFont_ = GetFontsDirectory() / "NotoSans-Regular.ttf";
+    pathToFont_ = SystemPath::getFontsDirectory() / "NotoSans-Regular.ttf";
 #endif
     std::error_code ec;
     if ( !std::filesystem::is_regular_file( pathToFont_, ec ) )

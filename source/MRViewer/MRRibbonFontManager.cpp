@@ -1,7 +1,7 @@
 #include "MRRibbonFontManager.h"
 #include "misc/freetype/imgui_freetype.h"
 #include "MRMesh/MRStringConvert.h"
-#include "MRMesh/MRSystem.h"
+#include "MRMesh/MRSystemPath.h"
 #include "MRRibbonConstants.h"
 #include "imgui_fonts_droid_sans.h"
 #include "MRViewerInstance.h"

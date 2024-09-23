@@ -62,8 +62,9 @@ jobs:
             py-tag: "cp312"
             py-cmd: "python3.12"
     steps:
+        # Work around some weird permission errors in the runner.
       - name: Git - add safe directory
-        run: git config --global --add safe.directory ${{github.workspace}}/*
+        run: git config --global --add safe.directory '*'
 
       - name: Checkout
         uses: actions/checkout@v4

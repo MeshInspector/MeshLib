@@ -155,7 +155,7 @@ namespace MR::Extra
     }
 }
 
-#if !MR_PARSING_FOR_PB11_BINDINGS && MB_DEFINE_IMPLEMENTATION
+#if !MR_PARSING_FOR_PB11_BINDINGS
 namespace MR
 {
     // This is something the old `mrmeshpy` library exported, presumably to have something to link against, to help load the shared library. Hmm.

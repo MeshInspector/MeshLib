@@ -74,7 +74,11 @@ def setup_workspace(version, modules, plat_name):
     shutil.copy(SOURCE_DIR / "LICENSE", WHEEL_ROOT_DIR)
     shutil.copy(SOURCE_DIR / "readme.md", WHEEL_ROOT_DIR)
 
-    shutil.copy(WHEEL_SCRIPT_DIR / "init.py", WHEEL_SRC_DIR / "__init__.py")
+    init_file = LIB_DIR / "__init__.py"
+    if init_file.exists():
+        shutil.copy(init_file, WHEEL_SRC_DIR / "__init__.py")
+    else:
+        shutil.copy(WHEEL_SCRIPT_DIR / "init.py", WHEEL_SRC_DIR / "__init__.py")
 
     print(f"Copying {SYSTEM} files...")
     for module in modules:

@@ -1,6 +1,11 @@
-import pathlib as _pathlib
+def _override_resources_dir():
+    """
+    override resources directory to the package's dir
+    """
+    import pathlib
+    from . import mrmeshpy as mr
 
-import meshlib.mrmeshpy as _mr
+    mr.SystemPath.overrideDirectory(mr.SystemPath.Directory.Resources, pathlib.Path(__file__).parent.resolve())
 
-# override resources directory to the package's dir
-_mr.SystemPath.overrideDirectory(_mr.SystemPath.Directory.Resources, _pathlib.Path(__file__).parent.resolve())
+_override_resources_dir()
+del _override_resources_dir

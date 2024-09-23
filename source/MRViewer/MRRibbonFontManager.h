@@ -35,6 +35,8 @@ public:
         Count
     };
 
+    using UniqueFontPaths = std::array<std::filesystem::path, size_t( UniqueFont::Count )>;
+
     MRVIEWER_API RibbonFontManager();
 
     /// load all fonts using in ribbon menu
@@ -48,6 +50,13 @@ public:
     /// get ribbon menu font path
     MRVIEWER_API std::filesystem::path getMenuFontPath() const;
 
+    /// returns list of all font paths
+    const UniqueFontPaths& getAllFontPaths() const { return fontPaths_; }
+
+    /// sets new fonts paths
+    /// note that it will trigger reload font
+    MRVIEWER_API void setNewFontPaths( const UniqueFontPaths& paths );
+
     /// get font by font type
     /// (need to avoid dynamic cast menu to ribbon menu)
     MRVIEWER_API static ImFont* getFontByTypeStatic( FontType type );
@@ -57,20 +66,20 @@ public:
     MRVIEWER_API static void initFontManagerInstance( RibbonFontManager* ribbonFontManager );
 
 private:
-    std::array<ImFont*, size_t( FontType::Count )> fonts_{ nullptr,nullptr,nullptr,nullptr };
-    std::array<std::filesystem::path, size_t( UniqueFont::Count )> fontPaths_;
-    std::array<UniqueFont, size_t( FontType::Count )> fontTypeMap_{ 
-        UniqueFont::Regular, 
-        UniqueFont::Regular, 
-        UniqueFont::SemiBold, 
-        UniqueFont::Icons,
-        UniqueFont::Regular, 
-        UniqueFont::SemiBold,
-        UniqueFont::SemiBold,
-        UniqueFont::Monospace };
+    UniqueFontPaths fontPaths_;
+    struct FontData
+    {
+        UniqueFont uniqueFontType{ UniqueFont::Regular };
+        Vector2f scaledOffset;
+        ImFont* fontPtr{ nullptr };
+    };
+    std::array<FontData, size_t( FontType::Count )> fonts_;
 
     /// get pointer to instance of this class (if it exists)
     static RibbonFontManager*& getFontManagerInstance_();
+
+    /// calculates font glyph shift
+    void updateFontsScaledOffset_( float scaling );
 
     void loadFont_( FontType type, const ImWchar* ranges, float scaling );
 

@@ -113,8 +113,10 @@ protected:
     MRVIEWER_API void sortFilesByOrder_( std::vector<std::filesystem::path>& files ) const;
     // appends one menu items json info
     MRVIEWER_API void readItemsJson_( const std::filesystem::path& path ) const;
+    MRVIEWER_API void readItemsJson_( const Json::Value& root ) const;
     // appends one ui json info
     MRVIEWER_API void readUIJson_( const std::filesystem::path& path ) const;
+    MRVIEWER_API void readUIJson_( const Json::Value& root ) const;
 };
 
 

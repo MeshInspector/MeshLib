@@ -8,6 +8,7 @@
 namespace MR
 {
 
+/// system directory path manager
 class SystemPath
 {
 public:
@@ -30,11 +31,11 @@ public:
     {
         /// resources (.json, .png)
         Resources,
-        /// fonts (.ttf)
+        /// fonts (.ttf, .otf)
         Fonts,
-        /// plugins (.dll, .so)
+        /// plugins (.dll, .so, .dylib)
         Plugins,
-        /// Python modules (.pyd, .pyi)
+        /// Python modules (.pyd, .so, .dylib, .pyi)
         PythonModules,
         Count
     };

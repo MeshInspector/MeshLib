@@ -94,6 +94,9 @@ public:
 
     // if action with given name is present in shortcut list - returns it
     MRVIEWER_API std::optional<ShortcutKey> findShortcutByName( const std::string& name ) const;
+
+    // clear all saved shortcuts
+    MRVIEWER_API void clear();
 protected:
     // returns simple map key from key with modifier (alt, ctrl, shift, etc.)
     // if respectKeyboard is set, key will be mapped using local keyboard settings (only if it is mapped to latin symbol)

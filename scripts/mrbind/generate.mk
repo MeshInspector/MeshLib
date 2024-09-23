@@ -308,12 +308,12 @@ override mrbind_vars = $(subst $,$$$$, \
 
 # Generated mrmeshpy.
 $(LINKER_OUTPUT): | $(MODULE_OUTPUT_DIR)
-	@$(MAKE) -f $(MRBIND_SOURCE)/scripts/apply_to_files.mk -r -d --trace $(mrbind_vars)
+	@$(MAKE) -f $(MRBIND_SOURCE)/scripts/apply_to_files.mk $(mrbind_vars)
 
 # Only generate mrmeshpy, but don't compile.
 .PHONY: only-generate
 only-generate:
-	@$(MAKE) -f $(MRBIND_SOURCE)/scripts/apply_to_files.mk -r -d --trace generate $(mrbind_vars)
+	@$(MAKE) -f $(MRBIND_SOURCE)/scripts/apply_to_files.mk generate $(mrbind_vars)
 
 # Handwritten mrmeshnumpy.
 MRMESHNUMPY_MODULE := $(MODULE_OUTPUT_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX)

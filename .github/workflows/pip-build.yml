@@ -280,7 +280,7 @@ jobs:
         shell: cmd
         run: |
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
-          ./scripts/mrbind/generate_win.bat -B --trace -r -d PACKAGE_NAME=meshlib \
+          ./scripts/mrbind/generate_win.bat -B --trace PACKAGE_NAME=meshlib \
               PYTHON_CFLAGS=-IC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/include \
               PYTHON_LDFLAGS="-LC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/libs -l${{matrix.py-file}}"
           xcopy /Y source\x64\Release\meshlib\*.pyd source\x64\Release

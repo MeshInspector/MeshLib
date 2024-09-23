@@ -86,6 +86,9 @@ HOMEBREW_DIR := /usr/local
 endif
 $(info Using homebrew at: $(HOMEBREW_DIR))
 endif
+
+# Min version. Not setting this seems to cause warnings when linking against MeshLib built with Apple Clang, which seems to have different defaults.
+MACOS_MIN_VER :=
 # ]
 
 
@@ -274,6 +277,11 @@ LINKER_FLAGS += -Wl,-headerpad_max_install_names
 # Pybind manual says you must use those.
 # Also note that this is one long flag (`-undefined dynamic_lookup`), not two independent fones.
 LINKER_FLAGS += -Xlinker -undefined -Xlinker dynamic_lookup
+# The min version. We override it to avoid incompatibility warnings against Apple Clang when linking.
+ifneq ($(MACOS_MIN_VER),)
+COMPILER_FLAGS += -mmacosx-version-min=$(MACOS_MIN_VER)
+LINKER_FLAGS += -mmacosx-version-min=$(MACOS_MIN_VER)
+endif
 else # Linux:
 COMPILER_FLAGS += -I/usr/include/jsoncpp -isystem/usr/include/freetype2 -isystem/usr/include/gdcm-3.0
 endif

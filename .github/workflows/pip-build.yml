@@ -279,7 +279,7 @@ jobs:
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
           ./scripts/mrbind/generate_win.bat -B PACKAGE_NAME=meshlib \
               PYTHON_CFLAGS=-IC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/include \
-              PYTHON_LDFLAGS=-LC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/libs -l${{matrix.py-file}}
+              PYTHON_LDFLAGS="-LC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/libs -l${{matrix.py-file}}"
 
       - name: Run Test
         working-directory: source\x64\Release
@@ -390,7 +390,9 @@ jobs:
         env:
           # Arm Macs use `/opt/homebrew`, while x86 Macs use `/usr/local`. Add both for simplicity.
           PATH: /opt/homebrew/opt/make/libexec/gnubin:/usr/local/opt/make/libexec/gnubin:${{env.PATH}}
-        run: make --version && make -f ./scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed
+        # `MACOS_MIN_VER` picked arbitrarily to match what Apple Clang uses when building MeshLib.
+        # Not setting this or setting a different value cases a warning when linking the bindings, and you can get the correct (?) value from those warnings.
+        run: make --version && make -f ./scripts/mrbind/generate.mk -B PACKAGE_NAME=meshlib MACOS_MIN_VER=12.7 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed
 
       - name: Unit Tests
         run: ./build/Release/bin/MRTest

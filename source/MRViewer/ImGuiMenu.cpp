@@ -1139,14 +1139,49 @@ float ImGuiMenu::drawSelectionInformation_()
     // Points info
     size_t totalPoints = 0;
     size_t totalSelectedPoints = 0;
+    bool pointsHaveNormals = false;
     // Meshes and lines info
     size_t totalFaces = 0;
     size_t totalSelectedFaces = 0;
     size_t totalVerts = 0;
+    size_t totalEdges = 0;
+    size_t totalSelectedEdges = 0;
     std::optional<float> totalVolume = 0.0f;
+    double totalArea = 0.;
+    double totalSelectedArea = 0.;
+    float avgEdgeLen = 0.f;
+    size_t holes = 0;
+    size_t components = 0;
 #ifndef MRVIEWER_NO_VOXELS
     // Voxels info
-    Vector3i dimensions;
+    std::optional<Vector3i> voxelDims = Vector3i{};
+    std::optional<Vector3f> voxelSize = Vector3f{};
+    std::optional<Box3i> voxelActiveBox = Box3i{};
+
+    MR_SUPPRESS_WARNING_PUSH
+    #if __GNUC__ >= 12 && __GNUC__ <= 14 // False positive in GCC
+    #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+    #endif
+    std::optional<float> voxelMinValue = FLT_MAX;
+    std::optional<float> voxelIsoValue = FLT_MAX;
+    std::optional<float> voxelMaxValue = FLT_MAX;
+    MR_SUPPRESS_WARNING_POP
+
+    // store shared parameter value: if all objects have identical parameter value, it will be displayed, otherwise it'll be hidden
+    auto updateVoxelsInfo = [] <typename T, typename U> ( std::optional<T>& store, U&& value, T def = {} )
+    {
+        if ( store.has_value() )
+        {
+            if ( store.value() == def )
+                store.emplace( std::forward<U>( value ) );
+            else if ( store.value() != value )
+                store.reset();
+        }
+    };
+    auto isValidVoxelsInfo = [] <typename T> ( const std::optional<T>& store, T def = {} )
+    {
+        return store.has_value() && store.value() != def;
+    };
 #endif
     // Scene info
     Vector3f bsize;
@@ -1156,7 +1191,7 @@ float ImGuiMenu::drawSelectionInformation_()
     selectionBbox_ = Box3f{};
     selectionWorldBox_ = {};
 
-    for ( auto obj : selectedObjs )
+    for ( const auto& obj : selectedObjs )
     {
         // Scene info update
         if ( auto vObj = obj->asType<VisualObject>() )
@@ -1172,6 +1207,8 @@ float ImGuiMenu::drawSelectionInformation_()
         {
             totalPoints += pObj->numValidPoints();
             totalSelectedPoints += pObj->numSelectedPoints();
+            if ( auto pointCloud = pObj->pointCloud() )
+                pointsHaveNormals |= pointCloud->hasNormals();
         }
         else if ( auto mObj = obj->asType<ObjectMesh>() )
         {
@@ -1180,6 +1217,8 @@ float ImGuiMenu::drawSelectionInformation_()
                 totalFaces += mesh->topology.numValidFaces();
                 totalSelectedFaces += mObj->numSelectedFaces();
                 totalVerts += mesh->topology.numValidVerts();
+                totalEdges += mObj->numUndirectedEdges();
+                totalSelectedEdges += mObj->numSelectedEdges();
                 if ( totalVolume && mObj->isMeshClosed() )
                 {
                     *totalVolume += float( mObj->volume() );
@@ -1188,6 +1227,11 @@ float ImGuiMenu::drawSelectionInformation_()
                 {
                     totalVolume = std::nullopt;
                 }
+                totalArea += mObj->totalArea();
+                totalSelectedArea += mObj->selectedArea();
+                avgEdgeLen = mObj->avgEdgeLen();
+                holes += mObj->numHoles();
+                components += mObj->numComponents();
             }
         }
         else if ( auto lObj = obj->asType<ObjectLines>() )
@@ -1200,15 +1244,12 @@ float ImGuiMenu::drawSelectionInformation_()
 #ifndef MRVIEWER_NO_VOXELS
         else if ( auto vObj = obj->asType<ObjectVoxels>() )
         {
-            auto newDims = vObj->dimensions();
-            if ( dimensions == Vector3i() )
-            {
-                dimensions = newDims;
-            }
-            else if ( dimensions != newDims )
-            {
-                dimensions = Vector3i::diagonal( -1 );
-            }
+            updateVoxelsInfo( voxelDims, vObj->dimensions() );
+            updateVoxelsInfo( voxelSize, vObj->voxelSize() );
+            updateVoxelsInfo( voxelActiveBox, vObj->getActiveBounds() );
+            updateVoxelsInfo( voxelMinValue, vObj->vdbVolume().min, FLT_MAX );
+            updateVoxelsInfo( voxelIsoValue, vObj->getIsoValue(), FLT_MAX );
+            updateVoxelsInfo( voxelMaxValue, vObj->vdbVolume().max, FLT_MAX );
         }
 #endif
     }
@@ -1228,29 +1269,7 @@ float ImGuiMenu::drawSelectionInformation_()
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, smallItemSpacingY } );
     MR_FINALLY{ ImGui::PopStyleVar(); };
 
-    auto drawPrimitivesInfo = [this]( std::string title, size_t value, size_t selected = 0, std::optional<ImVec4> textColorForSelected = {} )
-    {
-        if ( value )
-        {
-            std::string valueStr;
-            std::string labelStr;
-            if ( selected )
-            {
-                valueStr = valueToString<NoUnit>( selected ) + " / ";
-                labelStr = "Selected / ";
-            }
-            valueStr += valueToString<NoUnit>( value );
-            labelStr += title;
-
-            UI::inputTextCenteredReadOnly( labelStr.c_str(), valueStr, getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x, selected ? textColorForSelected : std::optional<ImVec4>{} );
-        }
-    };
-
-    if ( selectedObjs.size() > 1 )
-    {
-        drawPrimitivesInfo( "Objects", selectedObjs.size() );
-    }
-    else if ( selectedObjs.size() == 1 )
+    if ( selectedObjs.size() == 1 )
     {
         auto pObj = selectedObjs.front();
         auto lastRenameObj = lastRenameObj_.lock();
@@ -1309,119 +1328,167 @@ float ImGuiMenu::drawSelectionInformation_()
         }
     }
     else
-        lastRenameObj_.reset();
-
-    if ( totalFaces || totalVerts || totalPoints )
     {
-        ImGui::Spacing();
-        ImGui::Spacing();
-
-        const ImVec4 textColorForSelected = { 0.886f, 0.267f, 0.267f, 1.0f };
-        drawPrimitivesInfo( "Faces", totalFaces, totalSelectedFaces, textColorForSelected );
-        drawPrimitivesInfo( "Vertices", totalVerts );
-        drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints, textColorForSelected );
-
-        if ( totalFaces )
-        {
-            const float itemWidth = getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x;
-            if ( totalVolume )
-            {
-                ImGui::PushItemWidth( itemWidth );
-
-#if __GNUC__ >= 12 && __GNUC__ <= 14 // `totalVolume` may be used uninitialized. False positive in GCC
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-
-                UI::readOnlyValue<VolumeUnit>( "Volume", *totalVolume );
-                MR_FINALLY{ ImGui::PopItemWidth(); };
-
-#if __GNUC__ >= 12 && __GNUC__ <= 14
-#pragma GCC diagnostic pop
-#endif
-            }
-            else
-            {
-                UI::inputTextCenteredReadOnly( "Volume", "Mesh is not closed", itemWidth );
-            }
-        }
+        lastRenameObj_.reset();
     }
 
-    bool firstField = true;
-    auto drawDimensionsVec3 = [this, &firstField]<class Units>( const char* label, const auto& value )
+    // Feature object properties.
+    if ( selectedObjs.size() == 1 && selectedObjs.front()->asType<FeatureObject>() )
     {
-        if ( firstField )
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        ImGui::PushItemWidth( getSceneInfoItemWidth_( 1 ) );
+        drawFeaturePropertiesEditor_( selectedObjs.front() );
+        ImGui::PopItemWidth();
+    }
+    else
+    {
+        editedFeatureObject_.reset();
+    }
+
+    // customize input text widget design
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, Vector2f { 3.f, 3.f } * menu_scaling() );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
+    ImGui::PushStyleColor( ImGuiCol_FrameBg, ImGui::GetStyleColorVec4( ImGuiCol_WindowBg ) );
+    MR_FINALLY { ImGui::PopStyleVar( 2 ); ImGui::PopStyleColor( 1 ); };
+
+    const float itemWidth = getSceneInfoItemWidth_( 3 ) * 3 + ImGui::GetStyle().ItemInnerSpacing.x * 2;
+
+    auto textColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+    auto labelColor = textColor;
+    textColor.w *= 0.5f;
+    const ImVec4 selectedTextColor { 0.886f, 0.267f, 0.267f, 1.0f };
+
+    auto drawPrimitivesInfo = [&] ( const char* label, size_t value, size_t selected = 0 )
+    {
+        if ( value )
         {
-            firstField = false;
-            ImGui::Spacing();
-            ImGui::Spacing();
+            std::string valueStr;
+            if ( selected )
+                valueStr = valueToString<NoUnit>( selected ) + " / ";
+            valueStr += valueToString<NoUnit>( value );
+
+            UI::inputTextCenteredReadOnly( label, valueStr, itemWidth, selected ? selectedTextColor : textColor, labelColor );
+            if ( selected )
+                UI::setTooltipIfHovered( "Selected / Total", menu_scaling() );
         }
-
-        ImGui::PushItemWidth( getSceneInfoItemWidth_() );
-        MR_FINALLY{ ImGui::PopItemWidth(); };
-
-        UI::readOnlyValue<Units>( label, value );
     };
 
-#ifndef MRVIEWER_NO_VOXELS
-    if ( dimensions.x > 0 && dimensions.y > 0 && dimensions.z > 0 )
+    auto drawUnitInfo = [&] <class Units> ( const char* label, auto&& value, Units )
     {
-        drawDimensionsVec3.template operator()<NoUnit>( "Dimensions", dimensions );
-    }
-#endif
-    // Feature object properties.
-    bool haveFeatureProperties = false;
-    if ( selectedObjs.size() == 1 )
+        ImGui::SetNextItemWidth( itemWidth );
+        UI::readOnlyValue<Units>( label, value, textColor, {}, labelColor );
+    };
+
+    auto drawDimensionsVec3 = [&] <class Units> ( const char* label, auto&& value, Units )
     {
-        if ( dynamic_cast<FeatureObject *>( selectedObjs.front().get() ) )
-        {
-            ImGui::PushItemWidth( getSceneInfoItemWidth_( 1 ) ); // ??
-            MR_FINALLY{ ImGui::PopItemWidth(); };
+        ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
+        UI::readOnlyValue<Units>( label, value, textColor, {}, labelColor );
+    };
 
-            haveFeatureProperties = true;
-            drawFeaturePropertiesEditor_( selectedObjs.front() );
-        }
-    }
-    if ( !haveFeatureProperties )
-        editedFeatureObject_.reset();
-
-    // Value for a dimension object.
-    if ( selectedObjs.size() == 1 )
+    if ( selectedObjs.size() > 1 )
     {
-        auto setWidgetWidth = [&]
-        {
-            ImGui::SetNextItemWidth( getSceneInfoItemWidth_( 3 ) * 2 + ImGui::GetStyle().ItemInnerSpacing.x );
-        };
-
-        if ( auto distance = dynamic_cast<DistanceMeasurementObject *>( selectedObjs.front().get() ) )
-        {
-            setWidgetWidth();
-            UI::readOnlyValue<LengthUnit>( "Distance", distance->computeDistance() );
-        }
-        else if ( auto angle = dynamic_cast<AngleMeasurementObject *>( selectedObjs.front().get() ) )
-        {
-            setWidgetWidth();
-            UI::readOnlyValue<AngleUnit>( "Angle", angle->computeAngle() );
-        }
-        else if ( auto radius = dynamic_cast<RadiusMeasurementObject *>( selectedObjs.front().get() ) )
-        {
-            setWidgetWidth();
-            UI::readOnlyValue<LengthUnit>( radius->getDrawAsDiameter() ? "Diameter" : "Radius", radius->computeRadiusOrDiameter() );
-        }
+        drawPrimitivesInfo( "Objects", selectedObjs.size() );
     }
 
     // Bounding box.
-    if ( selectionBbox_.valid()
-        // We were asked to hide the bounding box for features.
-        && !haveFeatureProperties
-    )
+    if ( selectionBbox_.valid() && !( selectedObjs.size() == 1 && selectedObjs.front()->asType<FeatureObject>() ) )
     {
-        drawDimensionsVec3.template operator()<LengthUnit>( "Box min", selectionBbox_.min );
-        drawDimensionsVec3.template operator()<LengthUnit>( "Box max", selectionBbox_.max );
-        drawDimensionsVec3.template operator()<LengthUnit>( "Box size", bsize );
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        drawDimensionsVec3( "Box Size", bsize, LengthUnit{} );
+        drawDimensionsVec3( "Box Min", selectionBbox_.min, LengthUnit{} );
+        drawDimensionsVec3( "Box Max", selectionBbox_.max, LengthUnit{} );
 
         if ( selectionWorldBox_.valid() && bsizeStr != wbsizeStr )
-            drawDimensionsVec3.template operator()<LengthUnit>( "World box size", wbsize );
+            drawDimensionsVec3( "World Box Size", wbsize, LengthUnit{} );
+    }
+
+    if ( totalFaces || totalVerts || totalEdges || totalPoints )
+    {
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        drawPrimitivesInfo( "Triangles", totalFaces, totalSelectedFaces );
+        drawPrimitivesInfo( "Vertices", totalVerts );
+        drawPrimitivesInfo( "Edges", totalEdges, totalSelectedEdges );
+        drawPrimitivesInfo( "Points", totalPoints, totalSelectedPoints );
+    }
+
+    if ( selectedObjs.size() == 1 && totalPoints )
+        UI::inputTextCenteredReadOnly( "Point Normals", pointsHaveNormals ? "Yes" : "No", itemWidth, textColor, labelColor );
+
+    if ( totalFaces )
+    {
+        if ( totalVolume )
+        {
+            MR_SUPPRESS_WARNING_PUSH
+            #if __GNUC__ >= 12 && __GNUC__ <= 14 // `totalVolume` may be used uninitialized. False positive in GCC
+            #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+            #endif
+            drawUnitInfo( "Volume", *totalVolume, VolumeUnit{} );
+            MR_SUPPRESS_WARNING_POP
+        }
+
+        if ( selectedObjs.size() == 1 )
+        {
+            // TODO: show selected area
+            (void)totalSelectedArea;
+            drawUnitInfo( "Area", totalArea, AreaUnit{} );
+
+            drawUnitInfo( "Avg Edge Length", avgEdgeLen, LengthUnit{} );
+
+            drawPrimitivesInfo( "Holes", holes );
+            if ( components > 1 )
+                drawPrimitivesInfo( "Components", components );
+        }
+    }
+
+#ifndef MRVIEWER_NO_VOXELS
+    if ( selectedObjs.size() == 1 && selectedObjs.front()->asType<ObjectVoxels>() )
+    {
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        if ( isValidVoxelsInfo( voxelDims ) )
+            drawDimensionsVec3( "Voxels Dims", *voxelDims, NoUnit{} );
+        if ( isValidVoxelsInfo( voxelSize ) )
+            drawDimensionsVec3( "Voxel Size", *voxelSize, LengthUnit{} );
+        if ( isValidVoxelsInfo( voxelActiveBox ) )
+        {
+            if ( voxelDims && ( voxelActiveBox->min != Vector3i{} || voxelActiveBox->max != voxelDims ) )
+            {
+                drawDimensionsVec3( "Active Box Min", voxelActiveBox->min, NoUnit{} );
+                drawDimensionsVec3( "Active Box Max", voxelActiveBox->max, NoUnit{} );
+            }
+        }
+        if ( voxelMinValue && voxelIsoValue && voxelMaxValue )
+        {
+            MR_SUPPRESS_WARNING_PUSH
+            #if __GNUC__ >= 12 && __GNUC__ <= 14 // `voxelMaxValue` may be used uninitialized. False positive in GCC
+            #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+            #endif
+            drawDimensionsVec3( "Min,Iso,Max", Vector3f{ *voxelMinValue, *voxelIsoValue, *voxelMaxValue }, NoUnit{} );
+            MR_SUPPRESS_WARNING_POP
+        }
+    }
+#endif
+
+    // Value for a dimension object.
+    if ( selectedObjs.size() == 1 && selectedObjs.front()->asType<MeasurementObject>() )
+    {
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        auto* obj = selectedObjs.front().get();
+        if ( auto* distance = obj->asType<DistanceMeasurementObject>() )
+            drawUnitInfo( "Distance", distance->computeDistance(), LengthUnit{} );
+        else if ( auto* angle = obj->asType<AngleMeasurementObject>() )
+            drawUnitInfo( "Angle", angle->computeAngle(), AngleUnit{} );
+        else if ( auto* radius = obj->asType<RadiusMeasurementObject>() )
+            drawUnitInfo( radius->getDrawAsDiameter() ? "Diameter" : "Radius", radius->computeRadiusOrDiameter(), LengthUnit{} );
     }
 
     // This looks a bit better.
@@ -1605,9 +1672,10 @@ bool ImGuiMenu::drawAdvancedOptions( const std::vector<std::shared_ptr<VisualObj
             return data->getRenderDiscretization();
         }, [&] ( ObjectPointsHolder* data, const int val )
         {
-            data->setMaxRenderingPoints( val == 1 ?
+            const auto AbsoluteMaxRenderingPoints = 1 << 25; // about 33M, rendering of more points will be slow anyway
+            data->setMaxRenderingPoints( std::min( AbsoluteMaxRenderingPoints, val == 1 ?
                 std::max( ObjectPointsHolder::MaxRenderingPointsDefault, int( data->numValidPoints() ) ) :
-                int( data->numValidPoints() + val - 1 ) / val );
+                int( data->numValidPoints() + val - 1 ) / val ) );
         } );
     }
 
@@ -2330,7 +2398,7 @@ void ImGuiMenu::make_points_discretization( std::vector<std::shared_ptr<VisualOb
     const auto valueConstForComparation = value;
 
     ImGui::SetNextItemWidth( 50 * menu_scaling() );
-    UI::drag<NoUnit>( label, value, 0.1f, 1, 256, {}, UI::defaultSliderFlags, 0, 0 );
+    UI::drag<NoUnit>( label, value, 0.1f, 1, 9999, {}, UI::defaultSliderFlags, 0, 0 );
 
     if ( value != valueConstForComparation )
         for ( const auto& data : selectedVisualObjs )

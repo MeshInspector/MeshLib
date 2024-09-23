@@ -30,13 +30,13 @@ struct RibbonNotification
 };
 
 // class to hold and operate with notifications
-class RibbonNotifier
+class MRVIEWER_CLASS RibbonNotifier
 {
 public:
     // adds new notification for drawing
-    void pushNotification( const RibbonNotification& notification );
-    // draws all present notifications
-    void drawNotifications( float scaling );
+    MRVIEWER_API void pushNotification( const RibbonNotification& notification );
+    // main draw function. draw actual notification or history, and history button
+    MRVIEWER_API void draw( float scaling, float scenePosX );
 private:
     struct NotificationWithTimer
     {
@@ -45,11 +45,24 @@ private:
         int sameCounter = 1;
     };
     std::vector<NotificationWithTimer> notifications_;
-    void filterInvalid_( int numInvalid = -1 );
+    std::vector<NotificationWithTimer> notificationsHistory_;
+    NotificationType highestNotification_ = NotificationType::Count;
+    bool requestRedraw_ = false;
+    bool historyMode_ = false;
+
 #ifndef __EMSCRIPTEN__
     Time requestedTime_{ Time::max() };
     AsyncRequest asyncRequest_;
 #endif
+
+    // draw button to show last notifications
+    void drawHistoryButton_( float scaling, float scenePosX );
+    // draw notification history
+    void drawHistory_( float scaling, float scenePosX );
+    // draws all present notifications
+    void drawNotifications_( float scaling, float scenePosX );
+    void addNotification_( std::vector<NotificationWithTimer>& store, const RibbonNotification& notification );
+    void filterInvalid_( int numInvalid = -1 );
     void requestClosestRedraw_();
 };
 

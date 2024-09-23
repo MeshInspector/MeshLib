@@ -278,7 +278,7 @@ Expected<std::vector<std::shared_ptr<Object>>> loadObjectFromE57( const std::fil
         for ( int i = 0; i < objects.size(); ++i )
         {
             auto objectPoints = std::make_shared<ObjectPoints>();
-            if ( nclouds[i].name.empty() )
+            if ( nclouds[i].name.empty() || nclouds.size() <= 1 ) // if only one cloud in file, then take name from file
                 objectPoints->setName( utf8string( path.stem() ) );
             else
                 objectPoints->setName( std::move( nclouds[i].name ) );

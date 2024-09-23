@@ -56,19 +56,19 @@ MRVOXELS_API VdbVolume floatGridToVdbVolume( FloatGrid grid );
 // make copy of data
 // grid can be used to make iso-surface later with gridToMesh function
 MRVOXELS_API FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume, ProgressCallback cb = {} );
-MRVOXELS_API VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, ProgressCallback cb = {} );
+MRVOXELS_API VdbVolume simpleVolumeToVdbVolume( const SimpleVolumeMinMax& simpleVolume, ProgressCallback cb = {} );
 
 // make SimpleVolume from VdbVolume
 // make copy of data
-MRVOXELS_API Expected<SimpleVolume> vdbVolumeToSimpleVolume(
+MRVOXELS_API Expected<SimpleVolumeMinMax> vdbVolumeToSimpleVolume(
     const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} );
 // make normalized SimpleVolume from VdbVolume
 // make copy of data
-MRVOXELS_API Expected<SimpleVolume> vdbVolumeToSimpleVolumeNorm(
+MRVOXELS_API Expected<SimpleVolumeMinMax> vdbVolumeToSimpleVolumeNorm(
     const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} );
 // make SimpleVolumeU16 from VdbVolume
 // performs mapping from [vdbVolume.min, vdbVolume.max] to nonnegative range of uint16_t
-MRVOXELS_API Expected<SimpleVolumeU16> vdbVolumeToSimpleVolumeU16(
+MRVOXELS_API Expected<SimpleVolumeMinMaxU16> vdbVolumeToSimpleVolumeU16(
     const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} );
 
 /// parameters of OpenVDB Grid to Mesh conversion using Dual Marching Cubes algorithm

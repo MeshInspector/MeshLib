@@ -1,19 +1,19 @@
 #include "MRObjectVoxels.h"
-
-#include "MRMesh/MRObjectFactory.h"
-#include "MRMesh/MRMesh.h"
 #include "MRVDBConversions.h"
 #include "MRVDBFloatGrid.h"
 #include "MRFloatGrid.h"
 #include "MRVoxelsSave.h"
 #include "MRVoxelsLoad.h"
+#include "MROpenVDBHelper.h"
+
+#include "MRMesh/MRObjectFactory.h"
+#include "MRMesh/MRMesh.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRMeshNormals.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRStringConvert.h"
-#include "MROpenVDBHelper.h"
-#include "MRVoxelsConversions.h"
+#include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRJson.h"
@@ -29,47 +29,69 @@ MR_ADD_CLASS_FACTORY( ObjectVoxels )
 
 constexpr size_t cVoxelsHistogramBinsNumber = 256;
 
-void ObjectVoxels::construct( const SimpleVolume& volume, ProgressCallback cb )
+void ObjectVoxels::construct( const SimpleVolume& simpleVolume, const std::optional<Vector2f> & minmax, ProgressCallback cb, bool normalPlusGrad )
 {
     mesh_.reset();
     activeVoxels_.reset();
     activeBounds_.reset();
-    vdbVolume_.data = simpleVolumeToDenseGrid( volume, cb );
-    vdbVolume_.dims = volume.dims;
-    vdbVolume_.voxelSize = volume.voxelSize;
+    vdbVolume_.data = simpleVolumeToDenseGrid( simpleVolume, cb );
+    vdbVolume_.dims = simpleVolume.dims;
+    vdbVolume_.voxelSize = simpleVolume.voxelSize;
+    if ( minmax )
+    {
+        vdbVolume_.min = minmax->x;
+        vdbVolume_.max = minmax->y;
+    }
+    else
+        std::tie( vdbVolume_.min, vdbVolume_.max ) = parallelMinMax( simpleVolume.data );
     indexer_ = VolumeIndexer( vdbVolume_.dims );
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
 
+    if ( normalPlusGrad )
+        vdbVolume_.data->setGridClass( openvdb::GRID_LEVEL_SET );
+
     volumeRenderActiveVoxels_.clear();
 
-    updateHistogram_( volume.min, volume.max );
+    updateHistogram_( vdbVolume_.min, vdbVolume_.max );
     if ( volumeRendering_ )
         dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
 }
 
-void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, ProgressCallback cb )
+void ObjectVoxels::construct( const SimpleVolumeMinMax& simpleVolumeMinMax, ProgressCallback cb, bool normalPlusGrad )
 {
+    construct( simpleVolumeMinMax, Vector2f( simpleVolumeMinMax.min, simpleVolumeMinMax.max ), cb, normalPlusGrad );
+}
+
+void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, const std::optional<Vector2f> & minmax )
+{
+    assert( grid );
     if ( !grid )
         return;
     activeVoxels_.reset();
     activeBounds_.reset();
     vdbVolume_.data = grid;
-
     vdbVolume_.dims = fromVdb( vdbVolume_.data->evalActiveVoxelDim() );
     indexer_ = VolumeIndexer( vdbVolume_.dims );
     vdbVolume_.voxelSize = voxelSize;
+    if ( minmax )
+    {
+        vdbVolume_.min = minmax->x;
+        vdbVolume_.max = minmax->y;
+    }
+    else
+        evalGridMinMax( vdbVolume_.data, vdbVolume_.min, vdbVolume_.max );
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
 
     volumeRenderActiveVoxels_.clear();
 
-    updateHistogramAndSurface( cb );
+    updateHistogram_( vdbVolume_.min, vdbVolume_.max );
     if ( volumeRendering_ )
         dirty_ |= ( DIRTY_PRIMITIVES | DIRTY_TEXTURE | DIRTY_SELECTION );
 }
 
-void ObjectVoxels::construct( const VdbVolume& volume, ProgressCallback cb )
+void ObjectVoxels::construct( const VdbVolume& volume )
 {
-    construct( volume.data, volume.voxelSize, cb );
+    construct( volume.data, volume.voxelSize, Vector2f( volume.min, volume.max ) );
 }
 
 void ObjectVoxels::updateHistogramAndSurface( ProgressCallback cb )
@@ -660,7 +682,7 @@ VoidOrErrStr ObjectVoxels::deserializeModel_( const std::filesystem::path& path,
         return unexpected( "No voxels found in file: " + utf8string( modelPath ) );
     assert( res->size() == 1 );
 
-    construct( (*res).front().data, (*res).front().voxelSize );
+    construct( (*res).front() );
     if ( !vdbVolume_.data )
         return unexpected( "No grid loaded" );
 

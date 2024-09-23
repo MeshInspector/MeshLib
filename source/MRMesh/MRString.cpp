@@ -97,4 +97,12 @@ void replaceInplace( std::string& target, std::string_view from, std::string_vie
     target = replace( std::move( target ), from, to );
 }
 
+std::string_view trimRight( std::string_view str )
+{
+    auto l = str.size();
+    while ( l > 0 && std::isspace( str[l - 1] ) )
+        --l;
+    return str.substr( 0, l );
+}
+
 }

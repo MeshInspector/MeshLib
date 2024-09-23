@@ -11,6 +11,7 @@
 #include "MRMesh/MRExpected.h"
 #include "MRVoxels/MRMeshToDistanceVolume.h"
 #include "MRVoxels/MRTeethMaskToDirectionVolume.h"
+#include "MRVoxels/MRVoxelsApplyTransform.h"
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
 #pragma warning(push)
@@ -28,13 +29,30 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Type, [] ( pybind11::module_& ) \
         def( pybind11::init<>() ).\
         def_readwrite( "data", &MR::Type::data ).\
         def_readwrite( "dims", &MR::Type::dims, "Size of voxels space" ).\
+        def_readwrite( "voxelSize", &MR::Type::voxelSize );\
+} )
+
+MR_ADD_PYTHON_VOXELS_VOLUME( SimpleVolume, "vector of float" )
+
+#define MR_ADD_PYTHON_VOXELS_VOLUME_MINMAX( Type, TypeText ) \
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Type, [] ( pybind11::module_& ) \
+{                                                     \
+    MR_PYTHON_CUSTOM_CLASS( Type ).doc() =                                       \
+        "Voxels representation as " #TypeText;        \
+    MR_PYTHON_CUSTOM_CLASS( Type ).                                              \
+        def( pybind11::init<>() ).\
+        def_readwrite( "data", &MR::Type::data ).\
+        def_readwrite( "dims", &MR::Type::dims, "Size of voxels space" ).\
         def_readwrite( "voxelSize", &MR::Type::voxelSize ).\
         def_readwrite( "min", &MR::Type::min, "Minimum value from all voxels" ).\
         def_readwrite( "max", &MR::Type::max, "Maximum value from all voxels" );\
 } )
 
-MR_ADD_PYTHON_VOXELS_VOLUME( VdbVolume, "VDB FloatGrid" )
-MR_ADD_PYTHON_VOXELS_VOLUME( SimpleVolume, "vector of float" )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, VdbVolume, MR::VdbVolume )
+MR_ADD_PYTHON_VOXELS_VOLUME_MINMAX( VdbVolume, "VDB FloatGrid" )
+
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, SimpleVolumeMinMax, MR::SimpleVolumeMinMax, MR::SimpleVolume )
+MR_ADD_PYTHON_VOXELS_VOLUME_MINMAX( SimpleVolumeMinMax, "vector of float" )
 
 MR_ADD_PYTHON_CUSTOM_CLASS_DECL( mrmeshpy, FloatGrid, MR::OpenVdbFloatGrid, MR::FloatGrid )
 MR_ADD_PYTHON_CUSTOM_CLASS_INST( mrmeshpy, FloatGrid )
@@ -58,13 +76,13 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         "Does not require closed surface, resulting grid cannot be used for boolean operations.\n"
         "SurfaceOffset - the number voxels around surface to calculate distance in (should be positive)." );
 
-    m.def( "simpleVolumeToDenseGrid", ( MR::FloatGrid( * )( const MR::SimpleVolume&, MR::ProgressCallback ) )& MR::simpleVolumeToDenseGrid,
+    m.def( "simpleVolumeToDenseGrid", &MR::simpleVolumeToDenseGrid,
         pybind11::arg( "simpleVolume" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
         "Make FloatGrid from SimpleVolume. Make copy of data.\n"
         "Grid can be used to make iso-surface later with gridToMesh function." );
-    m.def( "simpleVolumeToVdbVolume", ( MR::VdbVolume( * )( const MR::SimpleVolume&, MR::ProgressCallback ) )& MR::simpleVolumeToVdbVolume,
-        pybind11::arg( "simpleVolume" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
-        "Make VdbVolume from SimpleVolume. Make copy of data.\n"
+    m.def( "simpleVolumeToVdbVolume", &MR::simpleVolumeToVdbVolume,
+        pybind11::arg( "simpleVolumeMinMax" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
+        "Make VdbVolume from SimpleVolumeMinMax. Make copy of data.\n"
         "Grid can be used to make iso-surface later with gridToMesh function." );
     m.def( "vdbVolumeToSimpleVolume",
         MR::decorateExpected(
@@ -225,7 +243,10 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         pybind11::arg( "mesh" ), pybind11::arg_v( "params", MR::MeshToDistanceVolumeParams(), "MeshToDistanceVolumeParams()" ),
         "makes SimpleVolume filled with (signed or unsigned) distances from Mesh with given settings" );
 
+    m.def( "transformVdbVolume", &MR::transformVdbVolume,
+           pybind11::arg( "volume" ), pybind11::arg( "xf" ), pybind11::arg_v( "fixBox", false ), pybind11::arg_v( "box", MR::Box3f{} ) );
+
     m.def( "teethMaskToDirectionVolume", MR::decorateExpected( &MR::teethMaskToDirectionVolume ),
-           pybind11::arg( "volume" ), "Convert 3d teeth mask into directional volume" );
+           pybind11::arg( "volume" ), pybind11::arg_v( "additional ids", std::vector<int>{} ), "Convert 3d teeth mask into directional volume" );
 } )
 #endif

@@ -17,8 +17,9 @@ private:
     virtual void preDraw_() override;
     virtual bool interruptClose_() override;
 
-    bool shouldClose_{false};
-    bool showCloseModal_{false};
+    bool initialized_{ false };
+    bool shouldClose_{ false };
+    bool showCloseModal_{ false };
     // how long active modal will blink in seconds
     float activeModalHighlightTimer_{ 0.0f };
 };

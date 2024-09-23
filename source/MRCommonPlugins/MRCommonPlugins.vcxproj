@@ -78,8 +78,10 @@
     <Image Include="resource\icons\X0_5\BestFit Plane.png" />
     <Image Include="resource\icons\X0_5\BestFit Point.png" />
     <Image Include="resource\icons\X0_5\BestFit Sphere.png" />
+    <Image Include="resource\icons\X0_5\Object Info.png" />
     <Image Include="resource\icons\X0_5\Ribbon Scene Hide all.png" />
     <Image Include="resource\icons\X0_5\Ribbon Scene Show all.png" />
+    <Image Include="resource\icons\X0_5\Rotator.png" />
     <Image Include="resource\icons\X0_5\Show_Hide Global Basis.png" />
     <Image Include="resource\icons\X0_75\Active Plugins List.png" />
     <Image Include="resource\icons\X0_75\BestFit Circle.png" />
@@ -89,8 +91,10 @@
     <Image Include="resource\icons\X0_75\BestFit Plane.png" />
     <Image Include="resource\icons\X0_75\BestFit Point.png" />
     <Image Include="resource\icons\X0_75\BestFit Sphere.png" />
+    <Image Include="resource\icons\X0_75\Object Info.png" />
     <Image Include="resource\icons\X0_75\Ribbon Scene Hide all.png" />
     <Image Include="resource\icons\X0_75\Ribbon Scene Show all.png" />
+    <Image Include="resource\icons\X0_75\Rotator.png" />
     <Image Include="resource\icons\X0_75\Show_Hide Global Basis.png" />
     <Image Include="resource\icons\X1\Active Plugins List.png" />
     <Image Include="resource\icons\X1\BestFit Circle.png" />
@@ -100,8 +104,10 @@
     <Image Include="resource\icons\X1\BestFit Plane.png" />
     <Image Include="resource\icons\X1\BestFit Point.png" />
     <Image Include="resource\icons\X1\BestFit Sphere.png" />
+    <Image Include="resource\icons\X1\Object Info.png" />
     <Image Include="resource\icons\X1\Ribbon Scene Hide all.png" />
     <Image Include="resource\icons\X1\Ribbon Scene Show all.png" />
+    <Image Include="resource\icons\X1\Rotator.png" />
     <Image Include="resource\icons\X1\Show_Hide Global Basis.png" />
     <Image Include="resource\icons\X3\Active Plugins List.png" />
     <Image Include="resource\icons\X3\BestFit Circle.png" />
@@ -243,6 +249,7 @@
     <Image Include="resource\icons\X3\Left View.png" />
     <Image Include="resource\icons\X3\Move object.png" />
     <Image Include="resource\icons\X3\New.png" />
+    <Image Include="resource\icons\X3\Object Info.png" />
     <Image Include="resource\icons\X3\Open DICOMs.png" />
     <Image Include="resource\icons\X3\Open directory.png" />
     <Image Include="resource\icons\X3\Open files.png" />
@@ -259,6 +266,7 @@
     <Image Include="resource\icons\X3\Ribbon Scene Sort by name.png" />
     <Image Include="resource\icons\X3\Ribbon Scene Unselect all.png" />
     <Image Include="resource\icons\X3\Right View.png" />
+    <Image Include="resource\icons\X3\Rotator.png" />
     <Image Include="resource\icons\X3\Save object.png" />
     <Image Include="resource\icons\X3\Save Scene As.png" />
     <Image Include="resource\icons\X3\Save Scene.png" />

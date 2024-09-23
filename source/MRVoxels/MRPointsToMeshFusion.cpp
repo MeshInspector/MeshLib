@@ -1,11 +1,12 @@
 #include "MRPointsToMeshFusion.h"
+#include "MRCalcDims.h"
+#include "MRMarchingCubes.h"
+#include "MRPointsToDistanceVolume.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRMesh.h"
-#include "MRMarchingCubes.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRTimer.h"
-#include "MRPointsToDistanceVolume.h"
 #include "MRMesh/MRLocalTriangulations.h"
 #include "MRMesh/MRPointCloudTriangulationHelpers.h"
 #include "MRMesh/MRPointCloudMakeNormals.h"
@@ -36,11 +37,11 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     }
 
     p2vParams.cb = p2vParams.ptNormals ? subprogress( params.progress, 0.4f, 0.65f ) : subprogress( params.progress, 0.0f, 0.5f );
-    auto box = cloud.getBoundingBox();
-    auto expansion = Vector3f::diagonal( 2 * params.voxelSize );
-    p2vParams.origin = box.min - expansion;
+    const auto box = cloud.getBoundingBox();
+    const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
+    p2vParams.origin = origin;
     p2vParams.voxelSize = Vector3f::diagonal( params.voxelSize );
-    p2vParams.dimensions = Vector3i( ( box.max + expansion - p2vParams.origin ) / params.voxelSize ) + Vector3i::diagonal( 1 );
+    p2vParams.dimensions = dimensions;
     p2vParams.sigma = params.sigma;
     p2vParams.minWeight = params.minWeight;
 
@@ -53,7 +54,7 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     Expected<Mesh> res;
     if ( params.createVolumeCallback )
     {
-        res = params.createVolumeCallback( cloud, p2vParams ).and_then( [&vmParams] ( SimpleVolume&& volume )
+        res = params.createVolumeCallback( cloud, p2vParams ).and_then( [&vmParams] ( SimpleVolumeMinMax&& volume )
         {
             vmParams.freeVolume = [&volume]
             {

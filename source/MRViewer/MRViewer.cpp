@@ -57,6 +57,8 @@
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRPch/MRWasm.h"
+#include "MRMesh/MRGcodeLoad.h"
+#include "MRSceneCache.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -123,7 +125,6 @@ EMSCRIPTEN_KEEPALIVE void emsForceSettingsSave()
 
 }
 #endif
-#include "MRSceneCache.h"
 
 static void glfw_mouse_press( GLFWwindow* /*window*/, int button, int action, int modifier )
 {
@@ -1169,6 +1170,11 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
             return true;
     }
     for ( auto& filter : ObjectLoad::getFilters() )
+    {
+        if ( filter.extensions.find( ext ) != std::string::npos )
+            return true;
+    }
+    for ( auto& filter : GcodeLoad::Filters )
     {
         if ( filter.extensions.find( ext ) != std::string::npos )
             return true;

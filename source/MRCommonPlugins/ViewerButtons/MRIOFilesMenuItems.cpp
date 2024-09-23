@@ -174,7 +174,7 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
 #ifndef __EMSCRIPTEN__
             AllFilter |
 #endif
-            MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneSave::getFilters() | DistanceMapLoad::Filters | GcodeLoad::Filters | ObjectLoad::getFilters();
+            MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() | DistanceMapLoad::Filters | GcodeLoad::Filters | ObjectLoad::getFilters();
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
         filters_ = filters_ | AsyncObjectLoad::getFilters();
 #endif
@@ -340,34 +340,19 @@ void sOpenDICOMs( const std::filesystem::path & directory, const std::string & s
             {
                 if ( res.has_value() )
                 {
-                    std::shared_ptr<ObjectVoxels> obj = std::make_shared<ObjectVoxels>();
-                    obj->setName( res->name );
                     ProgressBar::nextTask( "Construct ObjectVoxels" );
-                    obj->construct( res->vdbVolume, ProgressBar::callBackSetProgress );
+                    auto expObj = createObjectVoxels( *res, ProgressBar::callBackSetProgress );
                     if ( ProgressBar::isCanceled() )
                     {
                         errors = getCancelMessage( directory );
                         break;
                     }
-
-                    auto bins = obj->histogram().getBins();
-                    auto minMax = obj->histogram().getBinMinMax( bins.size() / 3 );
-                    ProgressBar::nextTask( "Create ISO surface" );
-                    auto isoRes = obj->setIsoValue( minMax.first, ProgressBar::callBackSetProgress );
-                    if ( ProgressBar::isCanceled() )
+                    if ( !expObj )
                     {
-                        errors = getCancelMessage( directory );
+                        errors += ( !errors.empty() ? "\n" : "" ) + expObj.error();
                         break;
                     }
-                    else if ( !isoRes.has_value() )
-                    {
-                        errors += ( !errors.empty() ? "\n" : "" ) + std::string( isoRes.error() );
-                        break;
-                    }
-
-                    obj->select( true );
-                    obj->setXf( res->xf );
-                    voxelObjects.push_back( obj );
+                    voxelObjects.push_back( *expObj );
                 }
                 else if ( ProgressBar::isCanceled() )
                 {

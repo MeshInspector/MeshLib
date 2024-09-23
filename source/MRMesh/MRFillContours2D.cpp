@@ -12,6 +12,8 @@
 #include "MRPlane3.h"
 #include "MRGTest.h"
 #include <limits>
+#include "MRMeshSave.h"
+#include "MRFillContour.h"
 
 namespace MR
 {
@@ -117,8 +119,10 @@ VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresen
 
     auto holeVertIds = std::make_unique<PlanarTriangulation::HolesVertIds>(
         PlanarTriangulation::findHoleVertIdsByHoleEdges( mesh.topology, paths ) );
+
+    std::vector<EdgePath> newPaths;
     // make patch surface
-    auto fillResult = PlanarTriangulation::triangulateDisjointContours( contours2f, holeVertIds.get() );
+    auto fillResult = PlanarTriangulation::triangulateDisjointContours( contours2f, holeVertIds.get(), &newPaths );
     holeVertIds.reset();
     if ( !fillResult )
         return unexpected( "Cannot triangulate contours with self-intersections" );
@@ -129,22 +133,32 @@ VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresen
     for ( auto& point : patchMeshPoints )
         point = planeXf( point );
 
-    // make 
-    auto newPaths = findLeftBoundary( patchMesh.topology );
-
-    // check that patch surface borders size equal original mesh borders size
     if ( paths.size() != newPaths.size() )
         return unexpected( "Patch surface borders size different from original mesh borders size" );
 
-    // need to rotate to min edge to be consistent with original paths (for addPartByMask)
-    for ( auto& newPath : newPaths )
-        std::rotate( newPath.begin(), std::min_element( newPath.begin(), newPath.end() ), newPath.end() );
-    std::sort( newPaths.begin(), newPaths.end(), [] ( const EdgeLoop& l, const EdgeLoop& r ) { return l[0] < r[0]; } );
-
+    std::vector<EdgePath> invertedHoles;
+    invertedHoles.reserve( newPaths.size() );
     for ( int i = 0; i < paths.size(); ++i )
     {
         if ( paths[i].size() != newPaths[i].size() )
             return unexpected( "Patch surface borders size different from original mesh borders size" );
+
+        // degenerate holes might invert sometimes (it is expected as far as planar triangulation does not now about input topology)
+        if ( newPaths[i].empty() || patchMesh.topology.right( newPaths[i].front() ) )
+            if ( !newPaths[i].empty() )
+                MR::reverse( invertedHoles.emplace_back( newPaths[i] ) );
+    }
+    if ( !invertedHoles.empty() )
+    {
+        auto invertedParts = fillContourLeft( patchMesh.topology, invertedHoles );
+        auto invertedEdges = getIncidentEdges( patchMesh.topology, invertedParts );
+        patchMesh.topology.flipOrientation( &invertedEdges );
+
+        // validate one more time
+        for ( int i = 0; i < paths.size(); ++i )
+            if ( newPaths[i].empty() || patchMesh.topology.right( newPaths[i].front() ) )
+                if ( !newPaths[i].empty() )
+                    return unexpected( "Patch surface borders are incompatible with mesh borders" );
     }
 
     // move patch surface border points to original position (according original mesh)

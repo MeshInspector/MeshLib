@@ -44,9 +44,11 @@
     <ClCompile Include="MRVoxelsLoadGav.cpp" />
     <ClCompile Include="MRVoxelsSave.cpp" />
     <ClCompile Include="MRVoxelsVolume.cpp" />
+    <ClCompile Include="MRVoxelsApplyTransform.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRBoolean.h" />
+    <ClInclude Include="MRCalcDims.h" />
     <ClInclude Include="MRChangeVoxelsAction.h" />
     <ClInclude Include="MRChangeVoxelSelectionAction.h" />
     <ClInclude Include="MRComputeVolume.h" />
@@ -65,7 +67,6 @@
     <ClInclude Include="MRPointsToDistanceVolume.h" />
     <ClInclude Include="MRPointsToMeshFusion.h" />
     <ClInclude Include="MRRebuildMesh.h" />
-    <ClInclude Include="MRSimpleVolume.h" />
     <ClInclude Include="MRTeethMaskToDirectionVolume.h" />
     <ClInclude Include="MRToolPath.h" />
     <ClInclude Include="MRVDBConversions.h" />
@@ -75,13 +76,14 @@
     <ClInclude Include="MRVolumeSegment.h" />
     <ClInclude Include="MRVoxelGraphCut.h" />
     <ClInclude Include="MRVoxelPath.h" />
-    <ClInclude Include="MRVoxelsConversions.h" />
     <ClInclude Include="MRVoxelsConversionsByParts.h" />
     <ClInclude Include="MRVoxelsFwd.h" />
     <ClInclude Include="MRVoxelsLoad.h" />
     <ClInclude Include="MRVoxelsSave.h" />
     <ClInclude Include="MRVoxelsVolume.h" />
     <ClInclude Include="MRVoxelsVolumeAccess.h" />
+    <ClInclude Include="MRVoxelsApplyTransform.h" />
+    <ClInclude Include="MRVoxelsVolumeCachingAccessor.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
@@ -133,7 +135,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -158,7 +160,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

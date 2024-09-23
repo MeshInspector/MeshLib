@@ -65,35 +65,37 @@ class TeethMaskToDirectionVolumeConvertor
 {
 public:
     /// Initialize class
-    MRVOXELS_API static Expected<TeethMaskToDirectionVolumeConvertor> create( const VdbVolume& volume );
+    /// @param volume Voxel mask
+    /// @param additionalIds List of additional ids (besides teeth) to convert
+    MRVOXELS_API static Expected<TeethMaskToDirectionVolumeConvertor> create( const VdbVolume& volume, const std::vector<int>& additionalIds = {} );
 
-    /// Returns all the teeth present in volume and corresponding bounding boxes
-    MRVOXELS_API const HashMap<DentalId, Box3i>& getToothBounds() const;
+    /// Returns all the objects present in volume and corresponding bounding boxes
+    MRVOXELS_API const HashMap<int, Box3i>& getObjectBounds() const;
 
     /// See \ref meshToDirectionVolume for details
-    using DirectionVolume = std::array<SimpleVolume, 3>;
+    using DirectionVolume = std::array<SimpleVolumeMinMax, 3>;
     struct ProcessResult
     {
         DirectionVolume volume;
         AffineXf3f xf;
     };
 
-    /// Converts single tooth into direction volume
-    MRVOXELS_API Expected<ProcessResult> convertTooth( DentalId id ) const;
+    /// Converts single object into direction volume
+    MRVOXELS_API Expected<ProcessResult> convertObject( int id ) const;
 
-    /// Converts all the teeth into direction volume
+    /// Converts all the objects into direction volume
     MRVOXELS_API Expected<ProcessResult> convertAll() const;
 
 private:
     MRVOXELS_API TeethMaskToDirectionVolumeConvertor();
 
-    HashMap<DentalId, Box3i> presentTeeth_;
+    HashMap<int, Box3i> presentObjects_;
     SimpleVolume mask_;
 };
 
 
 /// A shortcut for \ref TeethMaskToDirectionVolumeConvertor::create and \ref TeethMaskToDirectionVolumeConvertor::convertAll
-MRVOXELS_API Expected<std::array<SimpleVolume, 3>> teethMaskToDirectionVolume( const VdbVolume& volume );
+MRVOXELS_API Expected<std::array<SimpleVolumeMinMax, 3>> teethMaskToDirectionVolume( const VdbVolume& volume, const std::vector<int>& additionalIds = {} );
 
 
 }

@@ -1,13 +1,15 @@
 #include "MROffset.h"
-#include "MRMesh/MRMesh.h"
-#include "MRMesh/MRBox.h"
+#include "MRCalcDims.h"
 #include "MRFloatGrid.h"
 #include "MRVDBConversions.h"
+#include "MRMarchingCubes.h"
+#include "MRMeshToDistanceVolume.h"
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRBox.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRMeshFillHole.h"
 #include "MRMesh/MRRegionBoundary.h"
-#include "MRVoxelsConversions.h"
 #include "MRMesh/MRSharpenMarchingCubesMesh.h"
 #include "MRMesh/MRFastWindingNumber.h"
 #include "MRMesh/MRVolumeIndexer.h"
@@ -15,7 +17,6 @@
 #include "MRMesh/MRMeshFixer.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRRingIterator.h"
-#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -99,11 +100,7 @@ Expected<Mesh> offsetMesh( const MeshPart & mp, float offset, const OffsetParame
 
 Expected<Mesh> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params /*= {} */ )
 {
-    MR_TIMER
-    if ( params.signDetectionMode == SignDetectionMode::Unsigned )
-    {
-        spdlog::warn( "Cannot use shell for double offset, using offset mode instead." );
-    }
+    assert ( params.signDetectionMode != SignDetectionMode::Unsigned );
     return doubleOffsetVdb( mp,
     {
         .voxelSize = params.voxelSize,
@@ -151,14 +148,14 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         MeshToDistanceVolumeParams msParams;
         if ( !funcVolume )
             msParams.vol.cb = meshToLSCb;
-        auto box = mp.mesh.computeBoundingBox( mp.region );
         auto absOffset = std::abs( offset );
-        auto expansion = Vector3f::diagonal( 2 * params.voxelSize + absOffset );
-        msParams.vol.origin = box.min - expansion;
+        const auto box = mp.mesh.computeBoundingBox( mp.region ).expanded( Vector3f::diagonal( absOffset ) );
+        const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
+        msParams.vol.origin = origin;
         msParams.vol.voxelSize = Vector3f::diagonal( params.voxelSize );
-        msParams.vol.dimensions = Vector3i( ( box.max + expansion - msParams.vol.origin ) / params.voxelSize ) + Vector3i::diagonal( 1 );
-        msParams.dist.maxDistSq = sqr( absOffset + params.voxelSize );
-        msParams.dist.minDistSq = sqr( std::max( absOffset - params.voxelSize, 0.0f ) );
+        msParams.vol.dimensions = dimensions;
+        msParams.dist.maxDistSq = sqr( absOffset + 1.001f * params.voxelSize ); // we multiply by 1.001f to be sure not to have rounding errors (which may lead to unexpected NaN values )
+        msParams.dist.minDistSq = sqr( std::max( absOffset - 1.001f * params.voxelSize, 0.0f ) ); // we multiply by 1.001f to be sure not to have rounding errors (which may lead to unexpected NaN values )
         msParams.dist.signMode = params.signDetectionMode;
         msParams.dist.windingNumberThreshold = params.windingNumberThreshold;
         msParams.dist.windingNumberBeta = params.windingNumberBeta;
@@ -177,7 +174,7 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         }
         else
         {
-            return meshToDistanceVolume( mp, msParams ).and_then( [&vmParams] ( SimpleVolume&& volume )
+            return meshToDistanceVolume( mp, msParams ).and_then( [&vmParams] ( SimpleVolumeMinMax&& volume )
             {
                 vmParams.freeVolume = [&volume]
                 {
@@ -197,12 +194,12 @@ Expected<Mesh> mcShellMeshRegion( const Mesh& mesh, const FaceBitSet& region, fl
 
     DistanceVolumeParams dvParams;
     dvParams.cb = subprogress( params.callBack, 0.0f, 0.5f );
-    auto box = mesh.getBoundingBox();
     auto absOffset = std::abs( offset );
-    auto expansion = Vector3f::diagonal( 2 * params.voxelSize + absOffset );
-    dvParams.origin = box.min - expansion;
+    const auto box = mesh.getBoundingBox().expanded( Vector3f::diagonal( absOffset ) );
+    const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
+    dvParams.origin = origin;
     dvParams.voxelSize = Vector3f::diagonal( params.voxelSize );
-    dvParams.dimensions = Vector3i( ( box.max + expansion - dvParams.origin ) / params.voxelSize ) + Vector3i::diagonal( 1 );
+    dvParams.dimensions = dimensions;
 
     auto volume = meshRegionToIndicatorVolume( mesh, region, offset, dvParams );
     if ( !volume )

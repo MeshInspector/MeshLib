@@ -1,18 +1,17 @@
 #include "MRVoxelsConversionsByParts.h"
+#include "MRVoxelsVolume.h"
+#include "MRVDBConversions.h"
+#include "MRVDBFloatGrid.h"
+#include "MRMarchingCubes.h"
 
 #include "MRMesh/MREdgePaths.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshTrimWithPlane.h"
 #include "MRMesh/MRPlane3.h"
-#include "MRVoxelsVolume.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRTimer.h"
-#include "MRVDBConversions.h"
 #include "MRMesh/MRVolumeIndexer.h"
-#include "MRVoxelsConversions.h"
-
 #include "MRMesh/MRGTest.h"
-#include "MRVDBFloatGrid.h"
 
 #include "MRPch/MRFmt.h"
 
@@ -72,14 +71,14 @@ mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume
             .isoValue = 0.f,
         } );
     }
-    else if constexpr ( std::is_same_v<Volume, SimpleVolume> )
+    else if constexpr ( std::is_same_v<Volume, SimpleVolumeMinMax> )
     {
         res = marchingCubes( volume, {
             .iso = 0.f,
             .lessInside = true,
             .freeVolume = [&volume]
             {
-                Timer t( "~SimpleVolume" );
+                Timer t( "~SimpleVolumeMinMax" );
                 volume = {};
             }
         } );
@@ -277,9 +276,9 @@ TEST( MRMesh, volumeToMeshByParts )
         };
     };
 
-    VolumePartBuilder<SimpleVolume> simpleBuilder = [&] ( int begin, int end, std::optional<Vector3i>& offset )
+    VolumePartBuilder<SimpleVolumeMinMax> simpleBuilder = [&] ( int begin, int end, std::optional<Vector3i>& offset )
     {
-        SimpleVolume result {
+        SimpleVolumeMinMax result {
             {
                 .dims = { end - begin, dimensions.y, dimensions.z },
                 .voxelSize = Vector3f::diagonal( voxelSize )
@@ -354,11 +353,11 @@ TEST( MRMesh, volumeToMeshByParts )
     EXPECT_NEAR( expectedVolume, functionMesh->volume(), 0.001f );
 }
 
-template MRVOXELS_API VoidOrErrStr mergeVolumePart<SimpleVolume>( Mesh&, std::vector<EdgePath>&, SimpleVolume&&, float, float, const MergeVolumePartSettings& );
+template MRVOXELS_API VoidOrErrStr mergeVolumePart<SimpleVolumeMinMax>( Mesh&, std::vector<EdgePath>&, SimpleVolumeMinMax&&, float, float, const MergeVolumePartSettings& );
 template MRVOXELS_API VoidOrErrStr mergeVolumePart<VdbVolume>( Mesh&, std::vector<EdgePath>&, VdbVolume&&, float, float, const MergeVolumePartSettings& );
 template MRVOXELS_API VoidOrErrStr mergeVolumePart<FunctionVolume>( Mesh&, std::vector<EdgePath>&, FunctionVolume&&, float, float, const MergeVolumePartSettings& );
 
-template MRVOXELS_API Expected<Mesh> volumeToMeshByParts<SimpleVolume>( const VolumePartBuilder<SimpleVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
+template MRVOXELS_API Expected<Mesh> volumeToMeshByParts<SimpleVolumeMinMax>( const VolumePartBuilder<SimpleVolumeMinMax>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
 template MRVOXELS_API Expected<Mesh> volumeToMeshByParts<VdbVolume>( const VolumePartBuilder<VdbVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
 template MRVOXELS_API Expected<Mesh> volumeToMeshByParts<FunctionVolume>( const VolumePartBuilder<FunctionVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
 

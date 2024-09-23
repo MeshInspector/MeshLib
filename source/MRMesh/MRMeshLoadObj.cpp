@@ -11,6 +11,7 @@
 #include "MRStringConvert.h"
 #include "MRTimer.h"
 #include "MRphmap.h"
+#include "MRString.h"
 #include "MRPch/MRFmt.h"
 #include "MRPch/MRTBB.h"
 
@@ -192,8 +193,10 @@ namespace
                 ( lit( "vt" ) >> float_[coord] >> -( float_[coord] >> -( float_[coord] ) ) ),
                 ascii::space
         );
+
+        static constexpr int MaxErrorStringLen = 80;
         if ( !r )
-            return unexpected( "Failed to parse vertex in OBJ-file" );
+            return unexpected( "Failed to parse vertex in OBJ-file: " + std::string( trimRight( str.substr( 0, MaxErrorStringLen ) ) ) );
 
         vt = { coords[0], coords[1] };
         return {};
@@ -442,7 +445,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
     additions[0] = 0;
     int originalPointCount = 0;
 
-    auto finishObject = [&]() 
+    auto finishObject = [&]() -> Expected<void>
     {
         MR_NAMED_TIMER( "finish object" )
         if ( !triangulation.empty() )
@@ -457,6 +460,8 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
                 minV = std::min( { minV, vs[0], vs[1], vs[2] } );
                 maxV = std::max( { maxV, vs[0], vs[1], vs[2] } );
             }
+            if ( maxV >= points.endId() )
+                return unexpected( "vertex id is larger than total point coordinates" );
             for ( auto & vs : triangulation )
             {
                 for ( int i = 0; i < 3; ++i )
@@ -553,6 +558,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
             }
         }
         currentObjName.clear();
+        return {};
     };
 
     Timer timer( "split by lines" );
@@ -789,18 +795,20 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
         }
     };
 
-    auto parseObject = [&] ( size_t, size_t end, std::string& )
+    auto parseObject = [&] ( size_t, size_t end, std::string& ) -> Expected<void>
     {
         if ( combineAllObjects )
-            return;
+            return {};
 
         // finish previous object
-        finishObject();
-
-        const auto li = end - 1;
-        std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
-        currentObjName = line.substr( strlen( "o" ), std::string_view::npos );
-        boost::trim( currentObjName );
+        return finishObject().and_then( [&]() -> Expected<void>
+        {
+            const auto li = end - 1;
+            std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li + 0] );
+            currentObjName = line.substr( strlen( "o" ), std::string_view::npos );
+            boost::trim( currentObjName );
+            return {};
+        } );
     };
 
     auto parseMaterialLibrary = [&] ( size_t, size_t end, std::string& )
@@ -846,7 +854,8 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
             parseFaces( group.begin, group.end, parseError );
             break;
         case ObjElement::Object:
-            parseObject( group.begin, group.end, parseError );
+            if ( auto exp = parseObject( group.begin, group.end, parseError ); !exp )
+                return unexpected( std::move( exp.error() ) );
             break;
         case ObjElement::TextureVertex:
             parseTextureVertices( group.begin, group.end, parseError );
@@ -865,7 +874,8 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
             return unexpected( "Loading canceled" );
     }
 
-    finishObject();
+    if ( auto exp = finishObject(); !exp )
+        return unexpected( std::move( exp.error() ) );
 
     return res;
 }

@@ -106,13 +106,18 @@ void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::
         postImportObject( child, filename );
 }
 
-} // namespace
+IOFilters getAllFilters()
+{
+    return
+        SceneLoad::getFilters()
+        | ObjectLoad::getFilters()
+        | MeshLoad::getFilters()
+        | LinesLoad::getFilters()
+        | PointsLoad::getFilters()
+    ;
+}
 
-const IOFilters allFilters = SceneLoad::getFilters()
-                             | ObjectLoad::getFilters()
-                             | MeshLoad::getFilters()
-                             | LinesLoad::getFilters()
-                             | PointsLoad::getFilters();
+} // namespace
 
 Expected<ObjectMesh> makeObjectMeshFromFile( const std::filesystem::path& file, const MeshLoadInfo& info /*= {}*/ )
 {
@@ -446,6 +451,8 @@ Expected<std::vector<std::shared_ptr<MR::Object>>> loadObjectFromFile( const std
 
 bool isSupportedFileInSubfolders( const std::filesystem::path& folder )
 {
+    const auto allFilters = getAllFilters();
+
     std::vector<std::filesystem::path> filesList;
     filesList.push_back( folder );
 

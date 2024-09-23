@@ -571,7 +571,7 @@ Expected<DicomVolume> loadSingleDicomFolder( std::vector<std::filesystem::path>&
     if ( files.empty() )
         return unexpected( "loadDCMFolder: there is no dcm file" );
 
-    SimpleVolume data;
+    SimpleVolumeMinMax data;
     data.voxelSize = Vector3f();
     data.dims = Vector3i::diagonal( 0 );
 
@@ -806,13 +806,31 @@ std::vector<Expected<LoadDCMResult>> loadDCMFolderTree( const std::filesystem::p
     return res;
 }
 
+Expected<std::shared_ptr<ObjectVoxels>> createObjectVoxels( const LoadDCMResult & dcm, const ProgressCallback & cb )
+{
+    MR_TIMER
+    std::shared_ptr<ObjectVoxels> obj = std::make_shared<ObjectVoxels>();
+    obj->setName( dcm.name );
+    obj->construct( dcm.vdbVolume );
+
+    auto bins = obj->histogram().getBins();
+    auto minMax = obj->histogram().getBinMinMax( bins.size() / 3 );
+    auto isoRes = obj->setIsoValue( minMax.first, cb );
+    if ( !isoRes )
+        return unexpected( std::move( isoRes.error() ) );
+
+    obj->select( true );
+    obj->setXf( dcm.xf );
+    return obj;
+}
+
 Expected<DicomVolume> loadDicomFile( const std::filesystem::path& path, const ProgressCallback& cb )
 {
     MR_TIMER
     if ( !reportProgress( cb, 0.0f ) )
         return unexpected( "Loading canceled" );
 
-    SimpleVolume simpleVolume;
+    SimpleVolumeMinMax simpleVolume;
     simpleVolume.voxelSize = Vector3f();
     simpleVolume.dims.z = 1;
     auto fileRes = loadSingleFile( path, simpleVolume, 0 );
@@ -1062,23 +1080,9 @@ Expected<std::vector<std::shared_ptr<ObjectVoxels>>> toObjectVoxels( const std::
         const std::string name = i > 1 ? fmt::format( "{} {}", utf8string( file.stem() ), (int)i ) : utf8string( file.stem() );
         obj->setName( name );
 
-        bool callbackRes = true;
-        auto redirectProgress = [] ( const ProgressCallback& cb, bool& result ) -> ProgressCallback
-        {
-            return [cb, &result] ( float v )
-            {
-                return ( result = cb( v ) );
-            };
-        };
-
-        auto cb1 = redirectProgress( subprogress( cb, 0.00f, 0.50f ), callbackRes );
-        obj->construct( volume, cb1 );
-        if ( !callbackRes )
-            return unexpected( getCancelMessage( file ) );
-
-        auto cb2 = redirectProgress( subprogress( cb, 0.50f, 1.00f ), callbackRes );
-        obj->setIsoValue( ( volume.min + volume.max ) / 2.f, cb2 );
-        if ( !callbackRes )
+        obj->construct( volume );
+        obj->setIsoValue( ( volume.min + volume.max ) / 2.f, cb );
+        if ( !reportProgress( cb, 1.0f ) )
             return unexpected( getCancelMessage( file ) );
 
         res.emplace_back( obj );
@@ -1171,7 +1175,7 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
 
     auto& tp = *tpExp;
 
-    SimpleVolume outVolume;
+    SimpleVolumeMinMax outVolume;
     outVolume.dims = { tp.imageSize.x, tp.imageSize.y, int( files.size() ) };
     outVolume.min = FLT_MAX;
     outVolume.max = FLT_MIN;
@@ -1290,7 +1294,7 @@ Expected<VdbVolume> fromRaw( std::istream& in, const RawParameters& params,  con
         return unexpected( "Wrong scalar type parameter value" );
     }
 
-    SimpleVolume outVolume;
+    SimpleVolumeMinMax outVolume;
     outVolume.dims = params.dimensions;
     outVolume.voxelSize = params.voxelSize;
     outVolume.data.resize( size_t( outVolume.dims.x ) * outVolume.dims.y * outVolume.dims.z );

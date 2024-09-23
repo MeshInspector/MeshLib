@@ -104,8 +104,11 @@ void ViewerSettingsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     continue;
             }
             auto tab = TabType( i );
-            if ( UI::beginTabItem( getViewerSettingTabName( tab ) ) )
+            bool neetToSelect = orderedTab_ == tab;
+            if ( UI::beginTabItem( getViewerSettingTabName( tab ), nullptr, neetToSelect ? ImGuiTabItemFlags_SetSelected : 0 ) )
             {
+                if ( neetToSelect )
+                    orderedTab_ = TabType::Count;
                 activeTab_ = tab;
                 drawTab_( menuWidth, menuScaling );
                 drawCustomSettings_( "Tools", true, menuScaling );
@@ -168,6 +171,23 @@ void ViewerSettingsPlugin::delComboSettings( const TabType tab, const ExternalSe
 {
     [[maybe_unused]] auto c = std::erase_if( comboSettings_[size_t( tab )], [settings]( const auto & v ) { return v.get() == settings; } );
     assert( c == 1 );
+}
+
+ViewerSettingsPlugin* ViewerSettingsPlugin::instance()
+{
+    static ViewerSettingsPlugin* self = [&]()->ViewerSettingsPlugin*
+    {
+      auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
+      if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
+          return nullptr;
+      return dynamic_cast< ViewerSettingsPlugin* >( viewerSettingsIt->second.item.get() );
+      }();
+    return self;
+}
+
+void ViewerSettingsPlugin::setActiveTab( TabType tab )
+{
+    orderedTab_ = tab;
 }
 
 bool ViewerSettingsPlugin::onEnable_()
@@ -1183,6 +1203,7 @@ void ViewerSettingsPlugin::drawSeparator_( const std::string& separatorName, flo
 
 void ViewerSettingsPlugin::updateDialog_()
 {
+    orderedTab_ = TabType::Count;
     updateThemes();
 
     spaceMouseParams_ = viewer->getSpaceMouseParameters();

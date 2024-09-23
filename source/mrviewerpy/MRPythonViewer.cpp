@@ -1,6 +1,7 @@
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRPythonAppendCommand.h"
 #include "MRViewer/MRCommandLoop.h"
+#include "MRViewer/MRMouseController.h"
 #include "MRViewer/MRViewport.h"
 #include "MRViewer/MRSetupViewer.h"
 #include "MRPython/MRPython.h"
@@ -35,16 +36,6 @@ static void pythonCaptureScreenShot( MR::Viewer* viewer, const char* path )
     } );
 }
 
-static void pythonLaunch( const MR::Viewer::LaunchParams& params, const MR::ViewerSetup& setup )
-{
-    std::thread lauchThread = std::thread( [=] ()
-    {
-        MR::SetCurrentThreadName( "PythonAppLaunchThread" );
-        MR::launchDefaultViewer( params, setup );
-    } );
-    lauchThread.detach();
-}
-
 static void pythonSkipFrames( MR::Viewer* viewer, int frames )
 {
     (void)viewer;
@@ -57,19 +48,64 @@ static void pythonSkipFrames( MR::Viewer* viewer, int frames )
 
 namespace
 {
-    enum class PythonKeyMod
+
+using namespace MR;
+
+enum class PythonKeyMod
+{
+    Empty = 0,
+    Ctrl = GLFW_MOD_CONTROL,
+    Shift = GLFW_MOD_SHIFT,
+    Alt = GLFW_MOD_ALT,
+};
+MR_MAKE_FLAG_OPERATORS( PythonKeyMod )
+
+/// viewer setup class for minimal configuration
+/// only loads config file (if available) and configures the scene and mouse controls
+class MinimalViewerSetup final : public ViewerSetup
+{
+public:
+    void setupBasePlugins( Viewer* ) const override {}
+    void setupExtendedLibraries() const override {}
+    void unloadExtendedLibraries() const override {}
+
+    void setupConfiguration( Viewer* viewer ) const override
     {
-        Empty = 0,
-        Ctrl = GLFW_MOD_CONTROL,
-        Shift = GLFW_MOD_SHIFT,
-        Alt = GLFW_MOD_ALT,
-    };
-    MR_MAKE_FLAG_OPERATORS( PythonKeyMod )
+        viewer->resetSettingsFunction = [base = viewer->resetSettingsFunction] ( Viewer* viewer )
+        {
+            base( viewer );
+            resetSettings_( viewer );
+        };
+        viewer->resetSettingsFunction( viewer );
+    }
+
+private:
+    static void resetSettings_( Viewer* viewer )
+    {
+        viewer->glPickRadius = 3;
+
+        auto& mouseController = viewer->mouseController();
+        mouseController.setMouseControl( { MouseButton::Right, 0 }, MouseMode::Translation );
+        mouseController.setMouseControl( { MouseButton::Middle, 0 }, MouseMode::Rotation );
+        mouseController.setMouseControl( { MouseButton::Middle, GLFW_MOD_CONTROL }, MouseMode::Roll );
+    }
+};
+
+void pythonLaunch( const MR::Viewer::LaunchParams& params, const MinimalViewerSetup& setup )
+{
+    std::thread launchThread { [=]
+    {
+        MR::SetCurrentThreadName( "PythonAppLaunchThread" );
+        MR::launchDefaultViewer( params, setup );
+    } };
+    launchThread.detach();
 }
+
+} // namespace
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MR::ViewerSetup>( m, "ViewerSetup" ).
+    pybind11::class_<MinimalViewerSetup>( m, "ViewerSetup" ).
         def( pybind11::init<>() );
 
     pybind11::enum_<MR::Viewer::LaunchParams::WindowMode>( m, "ViewerLaunchParamsMode" ).
@@ -218,6 +254,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
 
     m.def( "launch", &pythonLaunch,
         pybind11::arg_v( "params", MR::Viewer::LaunchParams(), "ViewerLaunchParams()" ),
-        pybind11::arg_v( "setup", MR::ViewerSetup(), "ViewerSetup()" ),
+        pybind11::arg_v( "setup", MinimalViewerSetup(), "ViewerSetup()" ),
         "starts default viewer with given params and setup" );
 } )

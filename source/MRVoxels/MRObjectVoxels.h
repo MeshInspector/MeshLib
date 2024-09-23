@@ -55,11 +55,21 @@ public:
     virtual std::string getClassName() const override { return "Voxels"; }
 
     /// Clears all internal data and then creates grid and calculates histogram (surface is not built, call \ref updateHistogramAndSurface)
-    MRVOXELS_API void construct( const SimpleVolume& simpleVolume, ProgressCallback cb = {} );
-    /// Clears all internal data and calculates histogram
-    MRVOXELS_API void construct( const FloatGrid& grid, const Vector3f& voxelSize, ProgressCallback cb = {} );
-    /// Clears all internal data and calculates histogram
-    MRVOXELS_API void construct( const VdbVolume& vdbVolume, ProgressCallback cb = {} );
+    /// \param normalPlusGrad true means that iso-surface normals will be along gradient, false means opposite direction
+    /// \param minmax optional data about known min and max values
+    MRVOXELS_API void construct( const SimpleVolume& simpleVolume, const std::optional<Vector2f> & minmax = {}, ProgressCallback cb = {}, bool normalPlusGrad = false );
+
+    /// Clears all internal data and then creates grid and calculates histogram (surface is not built, call \ref updateHistogramAndSurface)
+    /// \param normalPlusGrad true means that iso-surface normals will be along gradient, false means opposite direction
+    MRVOXELS_API void construct( const SimpleVolumeMinMax& simpleVolumeMinMax, ProgressCallback cb = {}, bool normalPlusGrad = false );
+
+    /// Clears all internal data and then remembers grid and calculates histogram (surface is not built, call \ref updateHistogramAndSurface)
+    /// \param minmax optional data about known min and max values
+    MRVOXELS_API void construct( const FloatGrid& grid, const Vector3f& voxelSize, const std::optional<Vector2f> & minmax = {} );
+
+    /// Clears all internal data and then creates grid and calculates histogram (surface is not built, call \ref updateHistogramAndSurface)
+    MRVOXELS_API void construct( const VdbVolume& vdbVolume );
+
     /// Updates histogram, by stored grid (evals min and max values from grid)
     /// rebuild iso surface if it is present
     MRVOXELS_API void updateHistogramAndSurface( ProgressCallback cb = {} );

@@ -55,12 +55,14 @@ int DentalId::fdi() const
 
 TeethMaskToDirectionVolumeConvertor::TeethMaskToDirectionVolumeConvertor() = default;
 
-const HashMap<DentalId, Box3i>& TeethMaskToDirectionVolumeConvertor::getToothBounds() const
+const HashMap<int, Box3i>& TeethMaskToDirectionVolumeConvertor::getObjectBounds() const
 {
-    return presentTeeth_;
+    return presentObjects_;
 }
 
-Expected<TeethMaskToDirectionVolumeConvertor> TeethMaskToDirectionVolumeConvertor::create( const MR::VdbVolume& volume )
+Expected<TeethMaskToDirectionVolumeConvertor>
+    TeethMaskToDirectionVolumeConvertor::create( const MR::VdbVolume& volume,
+                                                 const std::vector<int>& additionalIds )
 {
     auto maybeSimpleVolume = vdbVolumeToSimpleVolume( volume );
     if ( !maybeSimpleVolume )
@@ -69,44 +71,49 @@ Expected<TeethMaskToDirectionVolumeConvertor> TeethMaskToDirectionVolumeConverto
     TeethMaskToDirectionVolumeConvertor res;
     res.mask_ = std::move( *maybeSimpleVolume );
 
-    std::vector<bool> unique( 49, false ); //  also, 48 is the max tooth id in FDI
-    std::vector<Box3i> bounds( 49 );
-    forEachInSimpleVolume( res.mask_, [&unique, &bounds] ( const Vector3i& pos, float val )
+    HashSet<int> ids;
+    for ( int i = 0; i < 49; ++i )
+        if ( DentalId::fromFDI( i ) )
+            ids.insert( i );
+    for ( int i : additionalIds )
+        ids.insert( i );
+
+    HashSet<int> present;
+    HashMap<int, Box3i> bounds;
+    forEachInSimpleVolume( res.mask_, [&ids, &present, &bounds] ( const Vector3i& pos, float val )
     {
-        if ( val >= 0 && val <= 49 )
+        const int vali = static_cast<int>( val );
+        if ( ids.contains( vali ) )
         {
-            unique[size_t( val )] = true;
-            bounds[size_t( val )].include( pos );
+            present.insert( vali );
+            bounds[vali].include( pos );
         }
     } );
 
-    for ( int i = 0; i < 49; ++i )
+    for ( int i : ids )
     {
-        if ( unique[i] )
+        if ( present.contains( i ) )
         {
-            if ( auto maybeToothId = DentalId::fromFDI( i ) )
-            {
-                res.presentTeeth_[*maybeToothId] = bounds[i];
-            }
+            res.presentObjects_[i] = bounds[i];
         }
     }
 
     return res;
 }
 
-Expected<TeethMaskToDirectionVolumeConvertor::ProcessResult> TeethMaskToDirectionVolumeConvertor::convertTooth( DentalId id ) const
+Expected<TeethMaskToDirectionVolumeConvertor::ProcessResult> TeethMaskToDirectionVolumeConvertor::convertObject( int id ) const
 {
     Box3i box;
 
-    if ( auto it = presentTeeth_.find( id ); it == presentTeeth_.end() )
-        return unexpected( fmt::format( "The mask does not contain specified tooth: {}", id.fdi() ) );
+    if ( auto it = presentObjects_.find( id ); it == presentObjects_.end() )
+        return unexpected( fmt::format( "The mask does not contain specified object: {}", id ) );
     else
         box = it->second;
 
 
     const VolumeIndexer maskIndexer( mask_.dims );
 
-    SimpleVolume toothMask;
+    SimpleVolumeMinMax toothMask;
     toothMask.dims = box.size();
     toothMask.voxelSize = mask_.voxelSize;
     toothMask.data.resize( box.volume() );
@@ -114,8 +121,8 @@ Expected<TeethMaskToDirectionVolumeConvertor::ProcessResult> TeethMaskToDirectio
     forEachInSimpleVolume( toothMask, [&box, &fullMask = mask_, &maskIndexer, &id] ( const auto& pt, float& v )
     {
         const auto fullPt = pt + box.min;
-        if ( fullMask.data[maskIndexer.toVoxelId( fullPt )] == id.fdi() )
-            v = ( float )id.fdi();
+        if ( fullMask.data[maskIndexer.toVoxelId( fullPt )] == id )
+            v = ( float )id;
         else
             v = 0;
     } );
@@ -127,7 +134,7 @@ Expected<TeethMaskToDirectionVolumeConvertor::ProcessResult> TeethMaskToDirectio
     return
         gridToMesh( toothMaskVdb.data, GridToMeshSettings{
             .voxelSize = toothMask.voxelSize,
-            .isoValue = static_cast<float>( id.fdi() ) - 0.001f
+            .isoValue = static_cast<float>( id ) - 0.001f
         } )
             .and_then( [voxelSize = toothMask.voxelSize, boxV = box] ( Mesh&& mesh )
             {
@@ -172,9 +179,9 @@ Expected<TeethMaskToDirectionVolumeConvertor::ProcessResult> TeethMaskToDirectio
 {
     std::vector<ProcessResult> teeth;
     std::vector<Box3i> toothBoxes;
-    for ( const auto& [k, v] : presentTeeth_ )
+    for ( const auto& [k, v] : presentObjects_ )
     {
-        if ( auto maybeRes = convertTooth( k ) )
+        if ( auto maybeRes = convertObject( k ) )
         {
             teeth.push_back( std::move( *maybeRes ) );
             toothBoxes.push_back( v );
@@ -183,7 +190,7 @@ Expected<TeethMaskToDirectionVolumeConvertor::ProcessResult> TeethMaskToDirectio
             return unexpected( std::move( maybeRes.error() ) );
     }
 
-    std::array<SimpleVolume, 3> res;
+    std::array<SimpleVolumeMinMax, 3> res;
     for ( int i = 0; i < 3; ++i )
     {
         auto& r = res[i];
@@ -212,9 +219,9 @@ Expected<TeethMaskToDirectionVolumeConvertor::ProcessResult> TeethMaskToDirectio
     };
 }
 
-Expected<std::array<SimpleVolume, 3>> teethMaskToDirectionVolume( const VdbVolume& volume )
+Expected<std::array<SimpleVolumeMinMax, 3>> teethMaskToDirectionVolume( const VdbVolume& volume, const std::vector<int>& additionalIds )
 {
-    return TeethMaskToDirectionVolumeConvertor::create( volume )
+    return TeethMaskToDirectionVolumeConvertor::create( volume, additionalIds )
             .and_then( &TeethMaskToDirectionVolumeConvertor::convertAll )
             .transform( [] ( auto&& x ) { return x.volume; } );
 }

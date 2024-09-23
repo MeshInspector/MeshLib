@@ -263,7 +263,7 @@ MRVIEWER_API bool inputTextIntoArrayMultilineFullyScrollable( CachedTextSize& ca
 MRVIEWER_API bool inputTextCentered( const char* label, std::string& str, float width = 0.0f, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
 
 /// draw read-only text box with text aligned by center
-MRVIEWER_API void inputTextCenteredReadOnly( const char* label, const std::string& str, float width = 0.0f, const std::optional<ImVec4>& textColor = {} );
+MRVIEWER_API void inputTextCenteredReadOnly( const char* label, const std::string& str, float width = 0.0f, const std::optional<ImVec4>& textColor = {}, const std::optional<ImVec4>& labelColor = {} );
 
 
 namespace detail
@@ -341,7 +341,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed = detail::getDefaultDragSpe
 // By default, for angles `v` will be converted to degrees for display, while length and unit-less values will be left as is.
 // This can be customized in `unitParams` or globally (see `MRUnits.h`).
 template <UnitEnum E, detail::VectorOrScalar T>
-void readOnlyValue( const char* label, const T& v, std::optional<ImVec4> textColor = {}, UnitToStringParams<E> unitParams = {} );
+void readOnlyValue( const char* label, const T& v, std::optional<ImVec4> textColor = {}, UnitToStringParams<E> unitParams = {}, std::optional<ImVec4> labelColor = {} );
 
 
 /// similar to ImGui::Text but use current text color with alpha channel = 0.5

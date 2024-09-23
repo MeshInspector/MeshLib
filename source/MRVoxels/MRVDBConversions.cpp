@@ -276,7 +276,7 @@ FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,
     return MakeFloatGrid( std::move( grid ) );
 }
 
-VdbVolume simpleVolumeToVdbVolume( const SimpleVolume& simpleVolume, ProgressCallback cb /*= {} */ )
+VdbVolume simpleVolumeToVdbVolume( const SimpleVolumeMinMax& simpleVolume, ProgressCallback cb /*= {} */ )
 {
     VdbVolume res;
     res.data = simpleVolumeToDenseGrid( simpleVolume, cb );
@@ -348,17 +348,17 @@ Expected<VoxelsVolumeMinMax<std::vector<T>>> vdbVolumeToSimpleVolumeImpl(
     return res;
 }
 
-Expected<SimpleVolume> vdbVolumeToSimpleVolume( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
+Expected<SimpleVolumeMinMax> vdbVolumeToSimpleVolume( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
 {
     return vdbVolumeToSimpleVolumeImpl<float, false>( vdbVolume, activeBox, cb );
 }
 
-Expected<MR::SimpleVolume> vdbVolumeToSimpleVolumeNorm( const VdbVolume& vdbVolume, const Box3i& activeBox /*= Box3i()*/, ProgressCallback cb /*= {} */ )
+Expected<SimpleVolumeMinMax> vdbVolumeToSimpleVolumeNorm( const VdbVolume& vdbVolume, const Box3i& activeBox /*= Box3i()*/, ProgressCallback cb /*= {} */ )
 {
     return vdbVolumeToSimpleVolumeImpl<float, true>( vdbVolume, activeBox, cb );
 }
 
-Expected<SimpleVolumeU16> vdbVolumeToSimpleVolumeU16( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
+Expected<SimpleVolumeMinMaxU16> vdbVolumeToSimpleVolumeU16( const VdbVolume& vdbVolume, const Box3i& activeBox, ProgressCallback cb )
 {
     return vdbVolumeToSimpleVolumeImpl<uint16_t, true>( vdbVolume, activeBox, cb );
 }
@@ -464,6 +464,36 @@ VoidOrErrStr makeSignedByWindingNumber( FloatGrid& grid, const Vector3f& voxelSi
     return {};
 }
 
+static FloatGrid meshToUnsignedDistanceField_(
+    const std::vector<openvdb::Vec3s> & points, std::vector<openvdb::Vec3I> & tris, const std::vector<openvdb::Vec4I> & quads,
+    float surfaceOffset, const ProgressCallback & cb )
+{
+    assert ( surfaceOffset > 0 );
+    MR_TIMER
+    openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
+    ProgressInterrupter interrupter( cb );
+    auto resGrid = MakeFloatGrid( openvdb::tools::meshToUnsignedDistanceField<openvdb::FloatGrid, ProgressInterrupter>
+        ( interrupter, *xform, points, tris, quads, surfaceOffset ) );
+    if ( interrupter.getWasInterrupted() )
+        return {};
+    return resGrid;
+}
+
+static FloatGrid meshToLevelSet_(
+    const std::vector<openvdb::Vec3s> & points, std::vector<openvdb::Vec3I> & tris, const std::vector<openvdb::Vec4I> & quads,
+    float surfaceOffset, const ProgressCallback & cb )
+{
+    assert ( surfaceOffset > 0 );
+    MR_TIMER
+    openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
+    ProgressInterrupter interrupter( cb );
+    auto resGrid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, ProgressInterrupter>
+        ( interrupter, *xform, points, tris, quads, surfaceOffset ) );
+    if ( interrupter.getWasInterrupted() )
+        return {};
+    return resGrid;
+}
+
 Expected<Mesh> doubleOffsetVdb( const MeshPart& mp, const DoubleOffsetSettings & settings )
 {
     MR_TIMER
@@ -476,7 +506,6 @@ Expected<Mesh> doubleOffsetVdb( const MeshPart& mp, const DoubleOffsetSettings &
 
     std::vector<openvdb::Vec3s> points;
     std::vector<openvdb::Vec3I> tris;
-    std::vector<openvdb::Vec4I> quads;
     convertToVDMMesh( mp, AffineXf3f(), Vector3f::diagonal( settings.voxelSize ), points, tris );
 
     if ( !reportProgress( settings.progress, 0.1f ) )
@@ -485,16 +514,11 @@ Expected<Mesh> doubleOffsetVdb( const MeshPart& mp, const DoubleOffsetSettings &
     const bool needSignUpdate = !mp.mesh.topology.isClosed( mp.region );
 
     auto sp = subprogress( settings.progress, 0.1f, needSignUpdate ? 0.2f : 0.3f );
-    openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
-    ProgressInterrupter interrupter1( sp );
-    auto grid = MakeFloatGrid( 
-        needSignUpdate ?
-        openvdb::tools::meshToUnsignedDistanceField<openvdb::FloatGrid, ProgressInterrupter>
-        ( interrupter1, *xform, points, tris, {}, std::abs( offsetInVoxelsA ) + 1 ) :
-        openvdb::tools::meshToLevelSet<openvdb::FloatGrid, ProgressInterrupter>
-        ( interrupter1, *xform, points, tris, std::abs( offsetInVoxelsA ) + 1 ) );
+    auto grid = needSignUpdate ?
+        meshToUnsignedDistanceField_( points, tris, {}, std::abs( offsetInVoxelsA ) + 1, sp ) :
+        meshToLevelSet_( points, tris, {}, std::abs( offsetInVoxelsA ) + 1, sp );
 
-    if ( interrupter1.getWasInterrupted() )
+    if ( !grid || !reportProgress( sp, 1.0f ) )
         return unexpectedOperationCanceled();
 
     if ( needSignUpdate )
@@ -510,17 +534,18 @@ Expected<Mesh> doubleOffsetVdb( const MeshPart& mp, const DoubleOffsetSettings &
             return unexpected( signRes.error() );
     }
 
-    openvdb::tools::volumeToMesh( *grid, points, tris, quads, offsetInVoxelsA, settings.adaptivity );
+    std::vector<openvdb::Vec4I> quads;
+    {
+        Timer t( "volumeToMesh" );
+        openvdb::tools::volumeToMesh( *grid, points, tris, quads, offsetInVoxelsA, settings.adaptivity );
+    }
 
     if ( !reportProgress( settings.progress, 0.5f ) )
         return unexpectedOperationCanceled();
-    sp = subprogress( settings.progress, 0.5f, 0.7f );
+    sp = subprogress( settings.progress, 0.5f, 0.9f );
 
-    ProgressInterrupter interrupter2( sp );
-    grid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, ProgressInterrupter>
-        ( interrupter2, *xform, points, tris, quads, std::abs( offsetInVoxelsB ) + 1 ) );
-
-    if ( interrupter2.getWasInterrupted() || !reportProgress( settings.progress, 0.9f ) )
+    grid = meshToLevelSet_( points, tris, quads, std::abs( offsetInVoxelsB ) + 1, sp );
+    if ( !grid || !reportProgress( sp, 1.0f ) )
         return unexpectedOperationCanceled();
 
     auto expTriMesh = gridToTriMesh( *grid, GridToMeshSettings{

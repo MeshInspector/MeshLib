@@ -113,7 +113,7 @@ jobs:
 
       - name: Unit Tests
         # Using `cd` here fixes weird library loading issues.
-        run: cd ./build/Release/bin/ && ./MRTest
+        run: cd ./build/Release/bin/meshlib && ../MRTest
 
       - name: Python Tests
         working-directory: ./build/Release/bin
@@ -273,8 +273,9 @@ jobs:
           for /d %%a in ("C:\msys64_meshlib_mrbind\msys64\*") do move /y "%%~fa" C:\msys64_meshlib_mrbind
           rmdir C:\msys64_meshlib_mrbind\msys64
 
+        # For reason `./scripts/mrbind/install_mrbind_windows_msys2.bat` doesn't work here in CI, build manually.
       - name: Build MRBind
-        run: ./scripts/mrbind/install_mrbind_windows_msys2.bat
+        run: C:\msys64_meshlib_mrbind\msys2_shell.cmd -defterm -no-start -clang64 -full-path -c "cd ~ && git clone https://github.com/MeshInspector/mrbind && cmake cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebugInfo && cmake --build build"
 
       - name: Generate and build MRBind bindings
         shell: cmd
@@ -399,7 +400,7 @@ jobs:
 
       - name: Unit Tests
         # Using `cd` here fixes weird library loading issues.
-        run: cd ./build/Release/bin/ && ./MRTest
+        run: cd ./build/Release/bin/meshlib && ../MRTest
 
       - name: Python Tests
         working-directory: ./build/Release/bin

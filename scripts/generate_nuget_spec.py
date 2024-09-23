@@ -3,7 +3,8 @@ import shutil
 import sys
 
 base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'..')
-path_to_objects = base_path
+path_to_objects = os.path.join( base_path, "source/x64/Release/" )
+print( path_to_objects )
 path_to_spec = os.path.join(base_path, 'Package.nuspec')
 print( path_to_spec )
 print('\n')

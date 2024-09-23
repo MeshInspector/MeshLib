@@ -1,7 +1,7 @@
 #include "MRRibbonFontManager.h"
 #include "misc/freetype/imgui_freetype.h"
 #include "MRMesh/MRStringConvert.h"
-#include "MRMesh/MRSystem.h"
+#include "MRMesh/MRSystemPath.h"
 #include "MRRibbonConstants.h"
 #include "imgui_fonts_droid_sans.h"
 #include "MRViewerInstance.h"
@@ -81,9 +81,9 @@ float RibbonFontManager::getFontSizeByType( FontType type )
 std::filesystem::path RibbonFontManager::getMenuFontPath() const
 {
 #ifndef __EMSCRIPTEN__
-    return  GetFontsDirectory() / "NotoSansSC-Regular.otf";
+    return SystemPath::getFontsDirectory() / "NotoSansSC-Regular.otf";
 #else
-    return  GetFontsDirectory() / "NotoSans-Regular.ttf";
+    return SystemPath::getFontsDirectory() / "NotoSans-Regular.ttf";
 #endif
 }
 
@@ -134,7 +134,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
     {
         ImFontConfig config;
         config.GlyphMinAdvanceX = fontSize; // Use if you want to make the icon monospaced
-        auto fontPath = GetFontsDirectory() / "fa-solid-900.ttf";
+        auto fontPath = SystemPath::getFontsDirectory() / "fa-solid-900.ttf";
         loadFontChecked( utf8string( fontPath ).c_str(), fontSize, &config, ranges );
         fonts_[int( type )] = ImGui::GetIO().Fonts->Fonts.back();
     }
@@ -200,7 +200,7 @@ void RibbonFontManager::loadFont_( FontType type, const ImWchar* ranges, float s
     }
     else if ( type == FontType::Monospace )
     {
-        auto fontPath = GetFontsDirectory() / "NotoSansMono-Regular.ttf";
+        auto fontPath = SystemPath::getFontsDirectory() / "NotoSansMono-Regular.ttf";
         ImFontConfig config;
         config.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bitmap;
         config.GlyphOffset = ImVec2( 1 * scaling, -2 * scaling );

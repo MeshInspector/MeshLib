@@ -4,7 +4,7 @@
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRString.h"
 #include "MRMesh/MRStringConvert.h"
-#include "MRMesh/MRSystem.h"
+#include "MRMesh/MRSystemPath.h"
 #include "MRPch/MRSpdlog.h"
 
 #include <pybind11/embed.h>
@@ -110,7 +110,7 @@ bool EmbeddedPython::runString( const std::string& pythonString )
     bool success = true;
     try
     {
-        auto libDir = GetEmbeddedPythonDirectory();
+        auto libDir = SystemPath::getPythonModulesDirectory();
         auto libDirStr = utf8string( libDir );
         MR::replaceInplace( libDirStr, "\\", "\\\\" ); // double protect first for C++ second for Python
         // Create an empty dictionary that will function as a namespace.

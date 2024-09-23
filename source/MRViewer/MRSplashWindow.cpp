@@ -5,6 +5,7 @@
 #include "ImGuiMenu.h"
 #include "MRMesh/MRImage.h"
 #include "MRMesh/MRImageLoad.h"
+#include "MRMesh/MRSystemPath.h"
 #include "MRImGuiImage.h"
 #include "MRPch/MRSpdlog.h"
 #include <backends/imgui_impl_glfw.h>
@@ -174,7 +175,7 @@ void DefaultSplashWindow::setup_() const
 
 void DefaultSplashWindow::postInit_()
 {
-    auto imgRes = ImageLoad::fromPng( GetResourcesDirectory() / "MRSplash.png" );
+    auto imgRes = ImageLoad::fromPng( SystemPath::getResourcesDirectory() / "MRSplash.png" );
     if ( !imgRes )
     {
         spdlog::error( "No splash image found" );

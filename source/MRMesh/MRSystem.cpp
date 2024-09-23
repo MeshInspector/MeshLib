@@ -1,10 +1,12 @@
 #include "MRSystem.h"
 #include "MRStringConvert.h"
+#include "MRSystemPath.h"
 #include "MRConfig.h"
 #include "MRStacktrace.h"
 #include "MRDirectory.h"
 #include "MRRestoringStreamsSink.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRPch/MRSuppressWarning.h"
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -89,16 +91,6 @@ void removeOldLogs( const std::filesystem::path& dir, int hours = 24 )
 namespace MR
 {
 
-#if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
-// If true, the resources should be loaded from the executable directory, rather than from the system directories.
-[[nodiscard]] static bool resourcesAreNearExe()
-{
-    auto opt = std::getenv("MR_LOCAL_RESOURCES");
-    return opt && std::string_view(opt) == "1";
-}
-#endif
-
-
 void SetCurrentThreadName( const char * name )
 {
 #ifdef _MSC_VER
@@ -142,117 +134,27 @@ void SetCurrentThreadName( const char * name )
 
 std::filesystem::path GetExeDirectory()
 {
-#ifdef _WIN32
-    HMODULE hm = GetModuleHandleA( "MRMesh.dll" );
-    wchar_t szPath[MAX_PATH];
-    GetModuleFileNameW( hm, szPath, MAX_PATH );
-#else
-    #ifdef __EMSCRIPTEN__
-        return "/";
-    #endif
-    char szPath[PATH_MAX];
-    #ifdef __APPLE__
-          uint32_t size = PATH_MAX + 1;
-
-          if (_NSGetExecutablePath(szPath, &size) != 0) {
-            // Buffer size is too small.
-            spdlog::error( "Executable directory is too long" );
-            return {};
-          }
-          szPath[size] = '\0';
-    #else
-        ssize_t count = readlink( "/proc/self/exe", szPath, PATH_MAX );
-        if( count < 0 )
-        {
-            spdlog::error( "Executable directory was not found" );
-            return {};
-        }
-        if( count >= PATH_MAX )
-        {
-            spdlog::error( "Executable directory is too long" );
-            return {};
-        }
-        szPath[count] = '\0';
-    #endif
-#endif
-    auto res = std::filesystem::path{ szPath }.parent_path() / "";
-    return res;
+    return SystemPath::getExecutableDirectory().value_or( std::filesystem::path{} );
 }
 
 std::filesystem::path GetResourcesDirectory()
 {
-    auto exePath = GetExeDirectory();
-#if defined(_WIN32) || defined(__EMSCRIPTEN__)
-    return exePath;
-#else
-    if ( resourcesAreNearExe() )
-        return exePath;
-    #ifdef __APPLE__
-        #ifdef MR_FRAMEWORK
-    return "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/Resources/";
-        #else
-    return "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/Resources/";
-        #endif
-    #else
-    return "/usr/local/etc/" + std::string( MR_PROJECT_NAME ) + "/";
-    #endif
-#endif
+    return SystemPath::getResourcesDirectory();
 }
 
 std::filesystem::path GetFontsDirectory()
 {
-    auto exePath = GetExeDirectory();
-#if defined(_WIN32) || defined(__EMSCRIPTEN__)
-    return exePath;
-#else
-    if ( resourcesAreNearExe() )
-        return exePath;
-    #ifdef __APPLE__
-    return GetResourcesDirectory() / "fonts/";
-    #else
-    return "/usr/local/share/fonts/";
-    #endif
-#endif
+    return SystemPath::getFontsDirectory();
 }
 
 std::filesystem::path GetLibsDirectory()
 {
-    auto exePath = GetExeDirectory();
-#if defined(_WIN32) || defined(__EMSCRIPTEN__)
-    return exePath;
-#else
-    if ( resourcesAreNearExe() )
-        return exePath;
-    #ifdef __APPLE__
-        #ifdef MR_FRAMEWORK
-    return "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/lib/";
-        #else
-    return "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/libs/";
-        #endif
-    #else
-    return "/usr/local/lib/" + std::string( MR_PROJECT_NAME ) + "/";
-    #endif
-#endif
+    return SystemPath::getPluginsDirectory();
 }
 
 std::filesystem::path GetEmbeddedPythonDirectory()
 {
-    auto exePath = GetExeDirectory();
-#if defined(_WIN32) || defined(__EMSCRIPTEN__)
-    return exePath;
-#else
-    if ( resourcesAreNearExe() )
-        return exePath;
-#ifdef __APPLE__
-#ifdef MR_FRAMEWORK
-    return "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/Frameworks/";
-#else
-    return "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/Frameworks/";
-#endif
-#else
-    return "/usr/local/lib/" + std::string( MR_PROJECT_NAME ) + "/";
-#endif
-#endif
+    return SystemPath::getPythonModulesDirectory();
 }
 
 std::filesystem::path getUserConfigDir()
@@ -333,7 +235,10 @@ std::filesystem::path GetHomeDirectory()
 std::string GetMRVersionString()
 {
 #ifndef __EMSCRIPTEN__
+    MR_SUPPRESS_WARNING_PUSH
+    MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
     auto directory = GetResourcesDirectory();
+    MR_SUPPRESS_WARNING_POP
     auto versionFilePath = directory / "mr.version";
     std::error_code ec;
     std::string configPrefix = "";

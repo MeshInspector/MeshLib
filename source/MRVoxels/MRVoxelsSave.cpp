@@ -12,8 +12,17 @@
 #include "MRPch/MRJson.h"
 #include "MRPch/MRFmt.h"
 #include "MRMesh/MRObjectsAccess.h"
+#include "MRVDBConversions.h"
 
 #include <openvdb/io/Stream.h>
+
+#pragma warning(push)
+#pragma warning(disable: 4515)
+#if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
+#pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
+#endif
+#include <gdcmImageWriter.h>
+#pragma warning(pop)
 
 #include <fstream>
 #include <filesystem>
@@ -170,6 +179,72 @@ VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& fil
     return {};
 }
 
+
+template <typename T>
+std::pair<gdcm::PixelFormat::ScalarType, gdcm::Tag> getGDCMTypeAndTag()
+{
+    // https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.6.24.html
+    // https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.6.3.html
+    // https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.6.25.html
+
+    if constexpr ( std::floating_point<T> )
+        static_assert( dependent_false<T>, "GDCM doesn't support floating point DICOMs" );
+    else if constexpr ( std::same_as<T, uint16_t> )
+        return { gdcm::PixelFormat::ScalarType::UINT16, gdcm::Tag( 0x7FE0, 0x0010 ) };
+    else
+        static_assert( dependent_false<T>, "Unsupported type T" );
+}
+
+
+VoidOrErrStr toDCM( const VdbVolume& vdbVolume, const std::filesystem::path& path, ProgressCallback cb )
+{
+    auto simpleVolume = vdbVolumeToSimpleVolumeU16( vdbVolume, {}, subprogress( cb, 0.f, 0.5f ) );
+    if ( simpleVolume )
+        return toDCM( *simpleVolume, path, subprogress( cb, 0.5f, 1.f ) );
+    else
+        return unexpected( simpleVolume.error() );
+}
+
+template <typename T>
+VoidOrErrStr toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::filesystem::path& path, ProgressCallback cb )
+{
+    if ( !reportProgress( cb, 0.0f ) )
+        return unexpected( "Loading canceled" );
+
+    auto [gdcmScalar, gdcmTag] = getGDCMTypeAndTag<T>();
+
+    gdcm::ImageWriter iw;
+    auto& image = iw.GetImage();
+    image.SetNumberOfDimensions( 3 );
+    image.SetDimension( 0, volume.dims.x );
+    image.SetDimension( 1, volume.dims.y );
+    image.SetDimension( 2, volume.dims.z );
+    image.SetPixelFormat( gdcm::PixelFormat( gdcmScalar ) );
+    image.SetPhotometricInterpretation( gdcm::PhotometricInterpretation::MONOCHROME2 );
+    image.SetSpacing( 0, volume.voxelSize.x * 1000.f );
+    image.SetSpacing( 1, volume.voxelSize.y * 1000.f );
+    image.SetSpacing( 2, volume.voxelSize.z * 1000.f );
+
+    gdcm::DataElement data( gdcmTag );
+    // copies full volume
+    data.SetByteValue( reinterpret_cast<const char*>( volume.data.data() ), ( uint32_t )volume.data.size() * sizeof( T ) );
+    if ( !reportProgress( cb, 0.5f ) )
+        return unexpected( "Loading canceled" );
+    image.SetDataElement( data );
+
+    iw.SetImage( image );
+
+    std::ofstream fout( path );
+    iw.SetStream( fout );
+    if ( !fout || !iw.Write() )
+        return unexpected( "Cannot write DICOM file" );
+
+    return {};
+}
+
+template VoidOrErrStr toDCM<uint16_t>( const SimpleVolumeU16& volume, const std::filesystem::path& path, ProgressCallback cb );
+
+
 MR_FORMAT_REGISTRY_IMPL( VoxelsSaver )
 
 VoidOrErrStr toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesystem::path& file,
@@ -213,6 +288,7 @@ MR_ON_INIT {                                                   \
 MR_ADD_VOXELS_SAVER( IOFilter( "Raw (.raw)", "*.raw" ), toRawAutoname )
 MR_ADD_VOXELS_SAVER( IOFilter( "Micro CT (.gav)", "*.gav" ), toGav )
 MR_ADD_VOXELS_SAVER( IOFilter( "OpenVDB (.vdb)", "*.vdb" ), toVdb )
+MR_ADD_VOXELS_SAVER( IOFilter( "Dicom (.dcm)", "*.dcm" ), toDCM )
 
 VoidOrErrStr saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlane& slicePlain, int sliceNumber, ProgressCallback callback )
 {

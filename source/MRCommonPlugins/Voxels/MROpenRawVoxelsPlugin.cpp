@@ -104,7 +104,7 @@ void OpenRawVoxelsPlugin::drawDialog( float menuScaling, ImGuiContext* )
                     ProgressBar::nextTask( "Create object" );
                     std::shared_ptr<ObjectVoxels> object = std::make_shared<ObjectVoxels>();
                     object->setName( utf8string( path.stem() ) );
-                    object->construct( res->data, res->voxelSize, ProgressBar::callBackSetProgress );
+                    object->construct( *res );
                     auto bins = object->histogram().getBins();
                     auto minMax = object->histogram().getBinMinMax( bins.size() / 3 );
 

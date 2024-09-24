@@ -44,14 +44,14 @@ std::string getMeshVerticesShader()
 )";
 }
 
-std::string getMeshFragmentShader( bool gl4, bool alphaSort )
+std::string getMeshFragmentShader( bool gl4, bool alphaSort, bool msaaEnabled )
 {
     return
         getFragmentShaderHeaderBlock( gl4, alphaSort ) +
         getMeshFragmentShaderArgumetsBlock() +
         getShaderMainBeginBlock() +
         getFragmentShaderClippingBlock() +
-        getFragmentShaderOnlyOddBlock( gl4 && !alphaSort ) +
+        getFragmentShaderOnlyOddBlock( gl4 && msaaEnabled && !alphaSort ) + // alphaSort disable MSAA without changing current number of samples
         getMeshFragmentShaderColoringBlock() +
         getFragmentShaderEndBlock( alphaSort );
 }

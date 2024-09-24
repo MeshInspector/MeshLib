@@ -122,7 +122,10 @@ void GLStaticHolder::createShader_( ShaderType type )
         bool gl4 = major >= 4 && ( major != 4 || minor >= 3 );
         bool alphaSort = type == TransparentMesh;
         
-        fragmentShader = getMeshFragmentShader( gl4, alphaSort );
+        int curSamples = 0;
+        GL_EXEC( glGetIntegerv( GL_SAMPLES, &curSamples ) );
+        
+        fragmentShader = getMeshFragmentShader( gl4, alphaSort, curSamples > 1 );
     }
     else if ( type == Lines || type == LinesJoint || type == TransparentLines )
     {

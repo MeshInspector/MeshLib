@@ -33,7 +33,7 @@ inline auto unexpected( E &&e )
 namespace MR
 {
 
-#if ( __cpp_lib_expected >= 202211  ||  defined( MR_DOT_NET_BUILD ) )
+#if ( !defined( MR_USE_STD_EXPECTED ) && ( __cpp_lib_expected >= 202211  ||  defined( MR_DOT_NET_BUILD ) ) ) || MR_USE_STD_EXPECTED
 
 template<class T, class E = std::string>
 using Expected = std::expected<T, E>;

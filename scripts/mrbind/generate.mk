@@ -136,7 +136,7 @@ endif
 override CXX_FOR_BINDINGS += $(ABI_COMPAT_FLAG)
 
 
-# Extra compiler and linker flags.
+# Extra compiler and linker flags. `EXTRA_CFLAGS` also affect the parser.
 EXTRA_CFLAGS :=
 EXTRA_LDLAGS :=
 

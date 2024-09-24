@@ -318,8 +318,9 @@ jobs:
         py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         include:
           - platform: "x86"
-            plat-name: macosx_12_0_x86_64
-            instance: macos-12
+            # On 12.0 `brew` doesn't have binary packages for Clang.
+            plat-name: macosx_13_0_x86_64
+            instance: macos-13
           - platform: "arm64"
             plat-name: macosx_12_0_arm64
             instance: macos-arm-build
@@ -397,7 +398,7 @@ jobs:
         # `MACOS_MIN_VER` picked arbitrarily to match what Apple Clang uses when building MeshLib.
         # Not setting this or setting a different value cases a warning when linking the bindings, and you can get the correct (?) value from those warnings.
         run: |
-          make --version && make -f ./scripts/mrbind/generate.mk -B --trace PACKAGE_NAME=meshlib MACOS_MIN_VER=12.7 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed EXTRA_CFLAGS=-DMB_PB11_DEBUG_NAMES
+          make --version && make -f ./scripts/mrbind/generate.mk -B --trace PACKAGE_NAME=meshlib MACOS_MIN_VER=12.7 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0'
 
       - name: Unit Tests
         # Using `cd` here fixes weird library loading issues.
@@ -535,8 +536,9 @@ jobs:
         py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         include:
           - platform: "x86"
-            plat-name: macosx_12_0_x86_64
-            instance: macos-12
+            # On 12.0 `brew` doesn't have binary packages for Clang.
+            plat-name: macosx_13_0_x86_64
+            instance: macos-13
           - platform: "arm64"
             plat-name: macosx_12_0_arm64
             instance: macos-arm-build

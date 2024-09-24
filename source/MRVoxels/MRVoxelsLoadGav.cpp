@@ -44,19 +44,19 @@ Expected<VdbVolume> fromGav( std::istream& in, const ProgressCallback& cb )
 
     const std::string valueType = headerJson["ValueType"].asString();
     if ( valueType == "UChar" )
-        params.scalarType = RawParameters::ScalarType::UInt8;
+        params.scalarType = ScalarType::UInt8;
     else if( valueType == "UInt16" )
-        params.scalarType = RawParameters::ScalarType::UInt16;
+        params.scalarType = ScalarType::UInt16;
     else if ( valueType == "UInt32" )
-        params.scalarType = RawParameters::ScalarType::UInt32;
+        params.scalarType = ScalarType::UInt32;
     else if ( valueType == "Char" )
-        params.scalarType = RawParameters::ScalarType::Int8;
+        params.scalarType = ScalarType::Int8;
     else if ( valueType == "Int16" )
-        params.scalarType = RawParameters::ScalarType::Int16;
+        params.scalarType = ScalarType::Int16;
     else if ( valueType == "Int32" )
-        params.scalarType = RawParameters::ScalarType::Int32;
+        params.scalarType = ScalarType::Int32;
     else if ( valueType == "Float" )
-        params.scalarType = RawParameters::ScalarType::Float32;
+        params.scalarType = ScalarType::Float32;
     else
         return unexpected( "Gav-header ValueType has unknown value: " + valueType );
 

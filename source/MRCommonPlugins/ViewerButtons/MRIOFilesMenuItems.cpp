@@ -48,6 +48,9 @@
 #include "MRVoxels/MRObjectVoxels.h"
 #include "MRVoxels/MRVoxelsLoad.h"
 #include "MRVoxels/MRVoxelsSave.h"
+#ifndef MRVOXELS_NO_DICOM
+#include "MRVoxels/MRDicom.h"
+#endif
 #endif
 
 #ifndef __EMSCRIPTEN__

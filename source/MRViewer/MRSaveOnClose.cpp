@@ -103,7 +103,7 @@ void SaveOnClosePlugin::preDraw_()
             {
                 auto savePath = SceneRoot::getScenePath();
                 if ( savePath.empty() )
-                    savePath = saveFileDialog( { {}, {}, SceneSave::getFilters() } );
+                    savePath = saveFileDialog( { .filters = SceneSave::getFilters() } );
 
                 ImGui::CloseCurrentPopup();
                 if ( !savePath.empty() )

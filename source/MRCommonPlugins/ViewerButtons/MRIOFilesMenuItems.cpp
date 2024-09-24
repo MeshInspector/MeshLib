@@ -199,7 +199,7 @@ bool OpenFilesMenuItem::action()
             return;
         }
         getViewerInstance().loadFiles( filenames );
-    }, { {}, {}, filters_ } );
+    }, { .filters = filters_ } );
     return false;
 }
 
@@ -619,7 +619,10 @@ bool SaveObjectMenuItem::action()
                     getViewerInstance().recentFilesStore().storeFile( sp );
             };
         } );
-    }, { objs[0]->name(), {}, std::move( filters ) } );
+    }, {
+        .fileName = objs[0]->name(),
+        .filters = std::move( filters ),
+    } );
     return false;
 }
 
@@ -660,7 +663,7 @@ bool SaveSelectedMenuItem::action()
     if ( selectedMeshes.size() == selectedObjs.size() )
         filters = filters | IOFilters{ IOFilter{"OBJ meshes (.obj)","*.obj"} };
 
-    auto savePath = saveFileDialog( { {},{},filters } );
+    auto savePath = saveFileDialog( { .filters = filters } );
     if ( savePath.empty() )
         return false;
 
@@ -737,7 +740,7 @@ bool SaveSceneAsMenuItem::action()
     {
         if ( !savePath.empty() )
             saveScene_( savePath );
-    }, { {}, {}, SceneSave::getFilters() } );
+    }, { .filters = SceneSave::getFilters() } );
     return false;
 }
 
@@ -757,7 +760,7 @@ bool SaveSceneMenuItem::action()
 {
     auto savePath = SceneRoot::getScenePath();
     if ( savePath.empty() )
-        savePath = saveFileDialog( { {}, {}, SceneSave::getFilters() } );
+        savePath = saveFileDialog( { .filters = SceneSave::getFilters() } );
     if ( !savePath.empty() )
         saveScene_( savePath );
     return false;
@@ -787,7 +790,10 @@ void CaptureScreenshotMenuItem::drawDialog( float menuScaling, ImGuiContext* )
         std::time_t t = std::chrono::system_clock::to_time_t( now );
         auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", fmt::localtime( t ) );
 
-        auto savePath = saveFileDialog( { name, {}, ImageSave::getFilters() } );
+        auto savePath = saveFileDialog( {
+            .fileName = name,
+            .filters = ImageSave::getFilters(),
+        } );
         if ( !savePath.empty() )
         {
             std::vector<Color> backgroundBackup;
@@ -834,7 +840,10 @@ bool CaptureUIScreenshotMenuItem::action()
         std::time_t t = std::chrono::system_clock::to_time_t( now );
         auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", fmt::localtime( t ) );
 
-        auto savePath = saveFileDialog( { name, {}, ImageSave::getFilters() });
+        auto savePath = saveFileDialog( {
+            .fileName = name,
+            .filters = ImageSave::getFilters(),
+        } );
         if ( !savePath.empty() )
         {
             auto res = ImageSave::toAnySupportedFormat( image, savePath );

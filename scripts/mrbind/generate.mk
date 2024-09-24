@@ -334,10 +334,25 @@ ifeq ($(IS_WINDOWS),) # If not on Windows, strip the windows-only part.
 	@gawk -i inplace '/### windows-only: \[/{x=1} {if (!x) print} x && /### \]/{x=0}' $@
 endif
 
+ALL_OUTPUTS := $(LINKER_OUTPUT) $(MRMESHNUMPY_MODULE) $(INIT_SCRIPT)
+
+# Copying modules next to the exe on Windows.
+ifneq ($(IS_WINDOWS),)
+ALL_OUTPUTS += $(MESHLIB_SHLIB_DIR)/__init__.py
+$(MESHLIB_SHLIB_DIR)/__init__.py: $(INIT_SCRIPT)
+	@cp $< $@
+ALL_OUTPUTS += $(MESHLIB_SHLIB_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
+$(MESHLIB_SHLIB_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX): $(MODULE_OUTPUT_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
+	@cp $< $@
+ALL_OUTPUTS += $(MESHLIB_SHLIB_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX)
+$(MESHLIB_SHLIB_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX): $(MODULE_OUTPUT_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX)
+	@cp $< $@
+endif
+
 # All modules.
 .DEFAULT_GOAL := all
 .PHONY: all
-all: $(LINKER_OUTPUT) $(MRMESHNUMPY_MODULE) $(INIT_SCRIPT)
+all: $(ALL_OUTPUTS)
 
 # The directory for the modules.
 $(MODULE_OUTPUT_DIR):

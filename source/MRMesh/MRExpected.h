@@ -8,7 +8,7 @@
 #if __cpp_lib_expected >= 202211
 #define MR_USE_STD_EXPECTED 1
 #else
-#define MR_USE_STD_EXPECTED 1
+#define MR_USE_STD_EXPECTED 0
 #endif
 #endif
 

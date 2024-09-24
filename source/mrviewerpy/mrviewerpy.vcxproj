@@ -15,7 +15,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRPythonScene.cpp" />
-    <ClCompile Include="MRPythonSystemPath.cpp" />
     <ClCompile Include="MRPythonViewer.cpp" />
     <ClCompile Include="MRPythonUiInteraction.cpp" />
   </ItemGroup>

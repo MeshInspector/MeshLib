@@ -25,6 +25,20 @@ public:
         Count
     };
 
+    // Unique fonts that are used for different FontTypes
+    enum class FontFile
+    {
+        Regular,
+        SemiBold,
+        Monospace,
+        Icons,
+        Count
+    };
+
+    using FontFilePaths = std::array<std::filesystem::path, size_t( FontFile::Count )>;
+
+    MRVIEWER_API RibbonFontManager();
+
     /// load all fonts using in ribbon menu
     MRVIEWER_API void loadAllFonts( ImWchar* charRanges, float scaling );
 
@@ -36,6 +50,13 @@ public:
     /// get ribbon menu font path
     MRVIEWER_API std::filesystem::path getMenuFontPath() const;
 
+    /// returns list of all font paths
+    const FontFilePaths& getAllFontPaths() const { return fontPaths_; }
+
+    /// sets new fonts paths
+    /// note that it will trigger reload font
+    MRVIEWER_API void setNewFontPaths( const FontFilePaths& paths );
+
     /// get font by font type
     /// (need to avoid dynamic cast menu to ribbon menu)
     MRVIEWER_API static ImFont* getFontByTypeStatic( FontType type );
@@ -45,18 +66,22 @@ public:
     MRVIEWER_API static void initFontManagerInstance( RibbonFontManager* ribbonFontManager );
 
 private:
-    std::array<ImFont*, size_t( FontType::Count )> fonts_{ nullptr,nullptr,nullptr,nullptr };
-
-    /// get ribbon latin menu font path
-    std::filesystem::path getMenuLatinSemiBoldFontPath_() const;
+    FontFilePaths fontPaths_;
+    struct FontData
+    {
+        FontFile fontFile{ FontFile::Regular }; // what file type to use for this font
+        Vector2f scaledOffset; // offset that is used for each glyph while creating atlas (updates in `updateFontsScaledOffset_`), should respect font size with scaling
+        ImFont* fontPtr{ nullptr }; // pointer to loaded font, nullptr means that font was not loaded
+    };
+    std::array<FontData, size_t( FontType::Count )> fonts_;
 
     /// get pointer to instance of this class (if it exists)
     static RibbonFontManager*& getFontManagerInstance_();
 
-    void loadFont_( FontType type, const ImWchar* ranges, float scaling );
+    /// calculates font glyph shift
+    void updateFontsScaledOffset_( float scaling );
 
-    /// load default font (droid_sans)
-    void loadDefaultFont_( float fontSize, float yOffset = 0.0f );
+    void loadFont_( FontType type, const ImWchar* ranges, float scaling );
 
     struct CustomGlyph
     {

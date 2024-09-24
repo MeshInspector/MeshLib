@@ -152,6 +152,13 @@ std::optional<ShortcutManager::ShortcutKey> ShortcutManager::findShortcutByName(
     return kayAndModFromMapKey( it->second );
 }
 
+void ShortcutManager::clear()
+{
+    map_.clear();
+    backMap_.clear();
+    listCache_ = {};
+}
+
 int ShortcutManager::mapKeyFromKeyAndMod( const ShortcutKey& key, [[maybe_unused]] bool respectKeyboard )
 {
     int upperKey = key.key;

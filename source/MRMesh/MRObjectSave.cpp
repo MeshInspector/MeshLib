@@ -24,21 +24,6 @@ namespace
 
 using namespace MR;
 
-std::string toLower( std::string str )
-{
-    for ( auto& ch : str )
-        ch = (char)std::tolower( ch );
-    return str;
-}
-
-bool hasExtension( const MR::IOFilters& filters, const std::string& extension )
-{
-    return filters.end() != std::find_if( filters.begin(), filters.end(), [&extension] ( const IOFilter& filter )
-    {
-        return std::string::npos != filter.extensions.find( extension );
-    } );
-}
-
 Mesh mergeToMesh( const Object& object )
 {
     Mesh result;
@@ -155,32 +140,32 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
     // NOTE: single-char string literal may break due to the GCC bug:
     // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
     const auto extension = '*' + toLower( utf8string( file.extension() ) );
-    if ( hasExtension( SceneSave::getFilters(), extension ) )
+    if ( findFilter( SceneSave::getFilters(), extension ) )
     {
         return toAnySupportedSceneFormat( object, file, callback );
     }
-    else if ( hasExtension( ObjectSave::getFilters(), extension ) )
+    else if ( findFilter( ObjectSave::getFilters(), extension ) )
     {
         auto saver = ObjectSave::getObjectSaver( extension );
         assert( saver );
         return saver( object, file, callback );
     }
-    else if ( hasExtension( MeshSave::getFilters(), extension ) )
+    else if ( findFilter( MeshSave::getFilters(), extension ) )
     {
         const auto mesh = mergeToMesh( object );
         return MeshSave::toAnySupportedFormat( mesh, file, { .progress = callback } );
     }
-    else if ( hasExtension( PointsSave::getFilters(), extension ) )
+    else if ( findFilter( PointsSave::getFilters(), extension ) )
     {
         const auto pointCloud = mergeToPoints( object );
         return PointsSave::toAnySupportedFormat( pointCloud, file, { .progress = callback } );
     }
-    else if ( hasExtension( LinesSave::getFilters(), extension ) )
+    else if ( findFilter( LinesSave::getFilters(), extension ) )
     {
         const auto polyline = mergeToLines( object );
         return LinesSave::toAnySupportedFormat( polyline, file, { .progress = callback } );
     }
-    else if ( hasExtension( DistanceMapSave::Filters, extension ) )
+    else if ( findFilter( DistanceMapSave::Filters, extension ) )
     {
         const auto objDmaps = getAllObjectsInTree<ObjectDistanceMap>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable );
         if ( objDmaps.empty() )

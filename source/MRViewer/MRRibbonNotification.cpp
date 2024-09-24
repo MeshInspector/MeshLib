@@ -262,6 +262,7 @@ void RibbonNotifier::drawNotifications_( float scaling, float scenePosX )
     const float width = 337.0f * scaling;
     currentPos.x += padding.y;
 
+    int filteredNumber = -1;
     for ( int i = 0; i < notifications_.size(); ++i )
     {
         currentPos -= padding;
@@ -389,10 +390,42 @@ void RibbonNotifier::drawNotifications_( float scaling, float scenePosX )
             drawList->PopClipRect();
         }
 
+        if ( !activeModal )
+        {
+            if ( iconsFont )
+            {
+                iconsFont->Scale = 0.7f;
+                ImGui::PushFont( iconsFont );
+            }
+            ImGui::PushStyleColor( ImGuiCol_Border, 0 );
+            ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetColorU32( ImGuiCol_WindowBg ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetColorU32( ImGuiCol_WindowBg ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetColorU32( ImGuiCol_WindowBg ) );
+            ImGui::PushStyleColor( ImGuiCol_Text, Color::red().getUInt32() );
+            std::string crossText = "\xef\x80\x8d";
+            auto textWidth = ImGui::CalcTextSize( crossText.c_str() ).x;
+            auto windRect = window->Rect();
+            ImRect rect;
+            ImVec2 size = ImVec2( textWidth + ImGui::GetStyle().FramePadding.x * 2, ImGui::GetFrameHeight() );
+            rect.Min.x = windRect.Max.x - size.x;
+            rect.Min.y = windRect.Min.y;
+            auto cursorPos = ImGui::GetCursorPos();
+            ImGui::SetCursorPos( ImVec2( width - size.x - cWindowBorderWidth * scaling, cWindowBorderWidth * scaling ) );
+            if ( ImGui::Button( crossText.c_str(), size ) )
+                filteredNumber = i;
+            ImGui::SetCursorPos( cursorPos );
+            ImGui::Dummy( ImVec2( 0, 0 ) );
+            ImGui::PopStyleColor( 5 );
+            if ( iconsFont )
+            {
+                iconsFont->Scale = 1.0f;
+                ImGui::PopFont();
+            }
+        }
+
         if ( counter > 1 )
         {
             auto drawList = window->DrawList;
-            drawList->PushClipRectFullScreen();
             const ImU32 color = isHovered ? ImGui::GetColorU32( ImGuiCol_Text ) : notificationParams[int( notification.type )].second;
             const ImU32 textColor = ImGui::GetColorU32( ImGuiCol_WindowBg );
             auto countText = std::to_string( counter );
@@ -401,9 +434,10 @@ void RibbonNotifier::drawNotifications_( float scaling, float scenePosX )
             ImRect rect;
             ImVec2 size = ImVec2( textWidth + ImGui::GetStyle().FramePadding.x * 2, ImGui::GetFrameHeight() );
             rect.Min.x = windRect.Max.x;
-            rect.Min.y = windRect.Min.y;
+            rect.Min.y = windRect.Max.y;
             rect.Min -= size * 0.5f;
             rect.Max = rect.Min + size;
+            drawList->PushClipRectFullScreen();
             drawList->AddRectFilled( rect.Min, rect.Max, color, 4.0f * scaling, 0 );
             drawList->AddText( rect.Min + ImGui::GetStyle().FramePadding, textColor, countText.c_str() );
             drawList->PopClipRect();
@@ -414,6 +448,8 @@ void RibbonNotifier::drawNotifications_( float scaling, float scenePosX )
         ImGui::PopStyleVar( 4 );
         currentPos.y -= window->Size.y;
     }
+    if ( filteredNumber  > -1 )
+        filterInvalid_( filteredNumber );
 }
 
 void RibbonNotifier::addNotification_( std::vector<NotificationWithTimer>& store, const RibbonNotification& notification )

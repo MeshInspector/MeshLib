@@ -422,7 +422,7 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
     size_t dicomFileCount = 0;
     size_t otherSupportedFileCount = 0;
     const auto supportedFormats = SceneLoad::getFilters() | ObjectLoad::getFilters() | MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters();
-    for ( const auto& entry : Directory( directory, ec ) )
+    for ( const auto& entry : Directory { directory, ec } )
     {
         if ( entry.is_regular_file( ec ) || entry.is_symlink( ec ) )
         {

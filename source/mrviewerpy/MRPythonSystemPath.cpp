@@ -10,7 +10,7 @@
 
 using namespace MR;
 
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SystemPath, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, SystemPath, [] ( pybind11::module_& m )
 {
     auto clsSystemPath = pybind11::class_<SystemPath>( m, "SystemPath" );
 

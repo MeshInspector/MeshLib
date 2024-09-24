@@ -52,7 +52,6 @@
     <ClCompile Include="MRPythonVoxels.cpp" />
     <ClCompile Include="MRPythonScene.cpp" />
     <ClCompile Include="MRPythonDistanceMap.cpp" />
-    <ClCompile Include="MRPythonSystemPath.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />

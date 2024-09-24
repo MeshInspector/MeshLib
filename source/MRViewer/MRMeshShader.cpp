@@ -51,7 +51,7 @@ std::string getMeshFragmentShader( bool gl4, bool alphaSort, bool msaaEnabled )
         getMeshFragmentShaderArgumetsBlock() +
         getShaderMainBeginBlock() +
         getFragmentShaderClippingBlock() +
-        getFragmentShaderOnlyOddBlock( gl4 && msaaEnabled && !alphaSort ) + // alphaSort disable MSAA without changing current number of samples
+        getFragmentShaderOnlyOddBlock( gl4 && msaaEnabled ) + // alphaSort disable MSAA without changing current number of samples
         getMeshFragmentShaderColoringBlock() +
         getFragmentShaderEndBlock( alphaSort );
 }

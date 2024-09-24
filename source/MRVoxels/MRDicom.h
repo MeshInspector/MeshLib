@@ -15,6 +15,9 @@ namespace MR
 namespace VoxelsLoad
 {
 
+/// check if file is a valid DICOM dataset file
+MRVOXELS_API bool isDicomFile( const std::filesystem::path& path, std::string* seriesUid = nullptr );
+
 struct DicomVolume
 {
     SimpleVolumeMinMax vol;

@@ -77,7 +77,7 @@ namespace MR
 namespace VoxelsLoad
 {
 
-bool isDICOMFile( const std::filesystem::path& path, std::string& seriesUid )
+bool isDicomFile( const std::filesystem::path& path, std::string* seriesUid )
 {
     std::ifstream ifs( path, std::ios_base::binary );
 
@@ -143,14 +143,17 @@ bool isDICOMFile( const std::filesystem::path& path, std::string& seriesUid )
         return false;
     }
 
-    const gdcm::DataSet& ds = ir.GetFile().GetDataSet();
-    if ( ds.FindDataElement( gdcm::Keywords::SeriesInstanceUID::GetTag() ) )
+    if ( seriesUid )
     {
-        const gdcm::DataElement& de = ds.GetDataElement( gdcm::Keywords::SeriesInstanceUID::GetTag() );
-        gdcm::Keywords::SeriesInstanceUID uid;
-        uid.SetFromDataElement( de );
-        auto uidVal = uid.GetValue();
-        seriesUid = uidVal;
+        const auto& ds = ir.GetFile().GetDataSet();
+        if ( ds.FindDataElement( gdcm::Keywords::SeriesInstanceUID::GetTag() ) )
+        {
+            const auto& de = ds.GetDataElement( gdcm::Keywords::SeriesInstanceUID::GetTag() );
+            gdcm::Keywords::SeriesInstanceUID uid;
+            uid.SetFromDataElement( de );
+            auto uidVal = uid.GetValue();
+            *seriesUid = uidVal;
+        }
     }
 
     return true;
@@ -569,7 +572,7 @@ Expected<SeriesMap,std::string> extractDCMSeries( const std::filesystem::path& p
         ++fCounter;
         auto filePath = entry.path();
         std::string uid;
-        if ( entry.is_regular_file( ec ) && isDICOMFile( filePath, uid ) )
+        if ( entry.is_regular_file( ec ) && isDicomFile( filePath, &uid ) )
             seriesMap[uid].push_back( filePath );
         if ( !reportProgress( cb, float( fCounter ) / float( filesNum ) ) )
             return { unexpected( "Loading canceled" ) };

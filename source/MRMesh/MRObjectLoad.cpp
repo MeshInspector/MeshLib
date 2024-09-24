@@ -32,18 +32,6 @@ namespace MR
 namespace
 {
 
-std::optional<MR::IOFilter> findFilter( const MR::IOFilters& filters, const std::string& extension )
-{
-    const auto it = std::find_if( filters.begin(), filters.end(), [&extension] ( const MR::IOFilter& filter )
-    {
-        return std::string::npos != filter.extensions.find( extension );
-    } );
-    if ( it != filters.end() )
-        return *it;
-    else
-        return std::nullopt;
-}
-
 /// finds if given mesh has enough sharp edges (>25 degrees) to recommend flat shading
 bool detectFlatShading( const Mesh& mesh )
 {
@@ -478,8 +466,7 @@ bool isSupportedFileInSubfolders( const std::filesystem::path& folder )
                 if ( ext.empty() )
                     continue;
 
-                if ( std::find_if( allFilters.begin(), allFilters.end(), [&ext] ( const IOFilter& f )
-                    { return f.extensions.find( ext ) != std::string::npos; }) != allFilters.end() )
+                if ( findFilter( allFilters, ext ) )
                     return true;
             }
         }
@@ -504,12 +491,8 @@ Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder,
     FilePathNode filesTree;
     filesTree.path = folder;
 
-
-    // Global variable is not correctly initialized in emscripten build
-    const IOFilters filters = SceneLoad::getFilters() | ObjectLoad::getFilters() | MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters();
-
     std::function<void( FilePathNode& )> fillFilesTree = {};
-    fillFilesTree = [&fillFilesTree, &filters] ( FilePathNode& node )
+    fillFilesTree = [&fillFilesTree, filters = getAllFilters()] ( FilePathNode& node )
     {
         std::error_code ec;
         for ( auto entry : Directory{ node.path, ec } )
@@ -529,10 +512,7 @@ Expected<Object> makeObjectTreeFromFolder( const std::filesystem::path & folder,
                 if ( ext.empty() )
                     continue;
 
-                if ( std::find_if( filters.begin(), filters.end(), [&ext] ( const IOFilter& f )
-                {
-                    return f.extensions.find( ext ) != std::string::npos;
-                } ) != filters.end() )
+                if ( findFilter( filters, ext ) )
                     node.files.push_back( { .path = path } );
             }
         }

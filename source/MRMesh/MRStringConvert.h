@@ -109,4 +109,7 @@ inline std::string getCancelMessage( const std::filesystem::path& path )
     return "Loading canceled: " + utf8string( path );
 }
 
+/// return a copy of the string with all alphabetic characters replaced with upper-case variants
+MRMESH_API std::string toLower( std::string str );
+
 }

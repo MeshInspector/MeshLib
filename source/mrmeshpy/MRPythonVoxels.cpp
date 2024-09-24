@@ -244,7 +244,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         "makes SimpleVolume filled with (signed or unsigned) distances from Mesh with given settings" );
 
     m.def( "transformVdbVolume", &MR::transformVdbVolume,
-           pybind11::arg( "volume" ), pybind11::arg( "xf" ), pybind11::arg_v( "fixBox", false ), pybind11::arg_v( "box", MR::Box3f{} ) );
+           pybind11::arg( "volume" ), pybind11::arg( "xf" ), pybind11::arg_v( "fixBox", false ), pybind11::arg_v( "box", MR::Box3f{}, "Box3f()" ) );
 
     m.def( "teethMaskToDirectionVolume", MR::decorateExpected( &MR::teethMaskToDirectionVolume ),
            pybind11::arg( "volume" ), pybind11::arg_v( "additional ids", std::vector<int>{} ), "Convert 3d teeth mask into directional volume" );

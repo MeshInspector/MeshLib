@@ -1,5 +1,4 @@
 import functools
-import itertools
 import os
 import platform
 import shutil
@@ -75,9 +74,11 @@ def setup_workspace(version, modules, plat_name):
     shutil.copy(SOURCE_DIR / "LICENSE", WHEEL_ROOT_DIR)
     shutil.copy(SOURCE_DIR / "readme.md", WHEEL_ROOT_DIR)
 
-    # create empty file
-    with open(WHEEL_SRC_DIR / "__init__.py", 'w'):
-        pass
+    init_file = LIB_DIR / "__init__.py"
+    if init_file.exists():
+        shutil.copy(init_file, WHEEL_SRC_DIR / "__init__.py")
+    else:
+        shutil.copy(WHEEL_SCRIPT_DIR / "init.py", WHEEL_SRC_DIR / "__init__.py")
 
     print(f"Copying {SYSTEM} files...")
     for module in modules:
@@ -85,13 +86,22 @@ def setup_workspace(version, modules, plat_name):
         print(lib)
         shutil.copy(lib, WHEEL_SRC_DIR)
 
+    print("Copying resource files...")
+    shutil.copy(SOURCE_DIR / "source" / "MRViewer" / "MRDarkTheme.json", WHEEL_SRC_DIR)
+    shutil.copy(SOURCE_DIR / "source" / "MRViewer" / "MRLightTheme.json", WHEEL_SRC_DIR)
+
     shutil.copy(WHEEL_SCRIPT_DIR / "pyproject.toml", WHEEL_ROOT_DIR)
 
     # generate setup.cfg
-    package_files = itertools.chain.from_iterable(
-        [f"{module}{LIB_EXTENSION}", f"{module}.pyi"]
-        for module in modules
-    )
+    package_files = [
+        "MRDarkTheme.json",
+        "MRLightTheme.json",
+    ]
+    for module in modules:
+        package_files += [
+            f"{module}{LIB_EXTENSION}",
+            f"{module}.pyi",
+        ]
     with open(WHEEL_SCRIPT_DIR / "setup.cfg.in", 'r') as config_template_file:
         config = Template(config_template_file.read()).substitute(
             VERSION=version,

@@ -2,6 +2,7 @@
 #ifndef MRIOEXTRAS_NO_JPEG
 #include <MRMesh/MRBuffer.h>
 #include <MRMesh/MRIOFormatsRegistry.h>
+#include <MRMesh/MRIOParsing.h>
 #include <MRMesh/MRStringConvert.h>
 
 #include <turbojpeg.h>
@@ -61,16 +62,12 @@ Expected<Image> fromJpeg( const std::filesystem::path& path )
 
 Expected<Image> fromJpeg( std::istream& in )
 {
-    in.seekg( 0, std::ios::end );
-    size_t fileSize = in.tellg();
-    in.seekg( 0 );
-
-    Buffer<char> buffer( fileSize );
-    in.read( buffer.data(), ( ptrdiff_t )buffer.size() );
-    if ( !in )
-        return unexpected( "Cannot read file" );
-
-    return fromJpeg( buffer.data(), buffer.size() );
+    return
+        readCharBuffer( in )
+        .and_then( [] ( auto&& buffer )
+        {
+            return fromJpeg( buffer.data(), buffer.size() );
+        } );
 }
 
 Expected<Image> fromJpeg( const char* data, size_t size )

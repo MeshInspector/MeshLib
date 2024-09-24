@@ -2,6 +2,7 @@
 #if defined( __EMSCRIPTEN__ ) || !defined( MRMESH_NO_CPR )
 #include "MRCommandLoop.h"
 
+#include "MRMesh/MRIOParsing.h"
 #include "MRMesh/MRProgressCallback.h"
 #include "MRPch/MRWasm.h"
 #include "MRPch/MRSpdlog.h"
@@ -276,7 +277,7 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         }
     }
 
-    auto sendLambda = [ctxId, ctx, tm, body, params, headers, multipart, method = method_, url = urlP] () -> cpr::Response
+    auto sendLambda = [logName, ctxId, ctx, tm, body, params, headers, multipart, method = method_, url = urlP] () -> cpr::Response
     {
         cpr::Session session;
         session.SetUrl( url );
@@ -287,14 +288,14 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         if ( ctx->input.has_value() )
         {
             // C++ Requests library doesn't support uploading from stream
-            auto& in = *ctx->input;
-            in.seekg( 0, std::ios::end );
-            std::string buffer;
-            buffer.resize( in.tellg() );
-            in.seekg( 0, std::ios::beg );
-            in.read( buffer.data(), buffer.size() );
-            ctx->input.reset();
-            session.SetBody( std::move( buffer ) );
+            if ( auto res = readString( *ctx->input ) )
+            {
+                session.SetBody( std::move( *res ) );
+            }
+            else
+            {
+                spdlog::error( "WebResponse {}: Failed to read input file: {}", logName, res.error() );
+            }
         }
         else if ( !multipart.parts.empty() )
         {

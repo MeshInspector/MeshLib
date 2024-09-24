@@ -314,14 +314,11 @@ namespace
         if ( !mtlIn.is_open() )
             return unexpected( "unable to open MTL file" );
 
-        const auto posStart = mtlIn.tellg();
-        mtlIn.seekg( 0, std::ios_base::end );
-        const auto posEnd = mtlIn.tellg();
-        mtlIn.seekg( posStart );
-        const auto mtlSize = posEnd - posStart;
-        std::string mtlContent( mtlSize, '\0' );
-        const auto data = mtlContent.data();
-        mtlIn.read( data, mtlSize );
+        const auto mtlContent = readCharBuffer( mtlIn );
+        if ( !mtlContent )
+            return unexpected( "Unable to open MTL file: " + mtlContent.error() );
+        const auto* data = mtlContent->data();
+        const auto mtlSize = mtlContent->size();
 
         const auto newlines = splitByLines( data, mtlSize );
 

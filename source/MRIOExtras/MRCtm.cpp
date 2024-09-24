@@ -4,6 +4,7 @@
 #include <MRMesh/MRColor.h>
 #include <MRMesh/MRFinally.h>
 #include <MRMesh/MRIOFormatsRegistry.h>
+#include <MRMesh/MRIOParsing.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRPointCloud.h>
@@ -72,15 +73,13 @@ Expected<Mesh> fromCtm( std::istream& in, const MeshLoadSettings& settings /*= {
     loadData.stream = &in;
 
     const auto posStart = in.tellg();
-    in.seekg( 0, std::ios_base::end );
-    const auto posEnd = in.tellg();
-    in.seekg( posStart );
+    const auto streamSize = getStreamSize( in );
 
     if ( settings.callback )
     {
-        loadData.callbackFn = [callback = settings.callback, posStart, sizeAll = float( posEnd - posStart ), &in] ( float )
+        loadData.callbackFn = [callback = settings.callback, posStart, streamSize, &in] ( float )
         {
-            float progress = float( in.tellg() - posStart ) / sizeAll;
+            float progress = float( in.tellg() - posStart ) / float( streamSize );
             return callback( progress );
         };
     }
@@ -369,15 +368,13 @@ Expected<MR::PointCloud> fromCtm( std::istream& in, const PointsLoadSettings& se
     loadData.stream = &in;
 
     const auto posStart = in.tellg();
-    in.seekg( 0, std::ios_base::end );
-    const auto posEnd = in.tellg();
-    in.seekg( posStart );
+    const auto streamSize = getStreamSize( in );
 
     if ( settings.callback )
     {
-        loadData.callbackFn = [cb = settings.callback, posStart, sizeAll = float( posEnd - posStart ), &in]( float )
+        loadData.callbackFn = [cb = settings.callback, posStart, streamSize, &in]( float )
         {
-            float progress = float( in.tellg() - posStart ) / sizeAll;
+            float progress = float( in.tellg() - posStart ) / float( streamSize );
             return cb( progress );
         };
     }

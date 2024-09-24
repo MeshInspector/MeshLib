@@ -516,7 +516,7 @@ bool PolylineTopology::read( std::istream & s )
         return false;
 
     const auto streamSize = getStreamSize( s );
-    if ( streamSize < numEdges * sizeof(HalfEdgeRecord) )
+    if ( size_t( streamSize ) < numEdges * sizeof(HalfEdgeRecord) )
         return false; // stream is too short
 
     edges_.resize( numEdges );

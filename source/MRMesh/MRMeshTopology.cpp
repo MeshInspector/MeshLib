@@ -2115,7 +2115,7 @@ VoidOrErrStr MeshTopology::read( std::istream & s, ProgressCallback callback )
         return unexpected( std::string( "Stream reading error" ) );
 
     const auto streamSize = getStreamSize( s );
-    if ( streamSize < numEdges * sizeof( HalfEdgeRecord ) )
+    if ( size_t( streamSize ) < numEdges * sizeof( HalfEdgeRecord ) )
         return unexpected( std::string( "Stream reading error: stream is too short" ) ); // stream is too short
 
     edges_.resize( numEdges );

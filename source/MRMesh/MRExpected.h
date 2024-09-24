@@ -4,7 +4,15 @@
 #include "MRPch/MRBindingMacros.h"
 
 #include <version>
+#ifndef MR_USE_STD_EXPECTED
 #if __cpp_lib_expected >= 202211
+#define MR_USE_STD_EXPECTED 1
+#else
+#define MR_USE_STD_EXPECTED 1
+#endif
+#endif
+
+#if MR_USE_STD_EXPECTED
 #include <expected>
 #else
 #include <tl/expected.hpp>
@@ -33,7 +41,7 @@ inline auto unexpected( E &&e )
 namespace MR
 {
 
-#if ( !defined( MR_USE_STD_EXPECTED ) && ( __cpp_lib_expected >= 202211  ||  defined( MR_DOT_NET_BUILD ) ) ) || MR_USE_STD_EXPECTED
+#if MR_USE_STD_EXPECTED || defined(MR_DOT_NET_BUILD)
 
 template<class T, class E = std::string>
 using Expected = std::expected<T, E>;

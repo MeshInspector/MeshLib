@@ -42,7 +42,7 @@ void putScanFileNameInZ( const std::vector<std::filesystem::path>& scans, std::v
     } );
 }
 
-void sortFilesByName( std::vector<std::filesystem::path>& scans )
+void sortScanFilesByName( std::vector<std::filesystem::path>& scans )
 {
     const auto sz = scans.size();
     std::vector<SliceInfo> zOrder( sz );

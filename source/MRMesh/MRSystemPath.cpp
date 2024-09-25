@@ -51,7 +51,8 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
     if ( resourcesAreNearExe() )
         return SystemPath::getExecutableDirectory().value_or( "/" );
 
-    const std::filesystem::path installDir ( "/usr/local/" );
+    const auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
+    const auto installDir = libDir / ".." / "..";
     switch ( dir )
     {
         case Directory::Resources:

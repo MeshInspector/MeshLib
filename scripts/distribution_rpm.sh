@@ -4,15 +4,15 @@
 MR_THIRDPARTY_DIR="thirdparty/"
 
 if [ ! -f "./lib/libcpr.so" ]; then
- printf "Thirdparty build was not found. Building...\n"
- ./scripts/build_thirdparty.sh
+  echo "Thirdparty build was not found. Building..."
+  ./scripts/build_thirdparty.sh
 fi
 
 if [ ! -f "./build/Release/bin/libMRMesh.so" ]; then
- printf "Project release build was not found. Building...\n"
- export MESHLIB_BUILD_RELEASE="ON"
- export MESHLIB_BUILD_DEBUG="OFF"
- ./scripts/build_source.sh
+  echo "Project release build was not found. Building..."
+  export MESHLIB_BUILD_RELEASE="ON"
+  export MESHLIB_BUILD_DEBUG="OFF"
+  ./scripts/build_source.sh
 fi
 
 #modify rpm spec file and mr.version

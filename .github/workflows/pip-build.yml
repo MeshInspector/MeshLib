@@ -97,7 +97,7 @@ jobs:
           CMAKE_CXX_COMPILER: /usr/bin/clang++-11
           # FIXME: OpenGL libraries are included to wheel packages when the XDE module is used
           MR_CMAKE_OPTIONS: >
-            -DMRMESH_OPENCASCADE_USE_XDE=OFF
+            -DMRIOEXTRAS_OPENCASCADE_USE_XDE=OFF
           # not realy needed
           CMAKE_C_COMPILER: /usr/bin/clang-11
 

@@ -93,6 +93,7 @@
 #include <variant>
 #include <vector>
 
+#ifndef _MSC_VER
 #include "MRMesh/MRIOFilters.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRObject.h"
@@ -110,6 +111,7 @@
 #include "MRViewer/MRViewport.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRUIStyle.h"
+#endif
 #endif
 
 #pragma warning(pop)

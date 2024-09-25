@@ -1,6 +1,5 @@
 #include "MRFloatGrid.h"
 
-#include "MROpenVDB.h"
 #include "MRVDBFloatGrid.h"
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRBitSet.h"

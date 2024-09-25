@@ -93,25 +93,4 @@
 #include <variant>
 #include <vector>
 
-#ifndef _MSC_VER
-#include "MRMesh/MRIOFilters.h"
-#include "MRMesh/MRMesh.h"
-#include "MRMesh/MRObject.h"
-#include "MRMesh/MRObjectMesh.h"
-#include "MRMesh/MRObjectsAccess.h"
-#include "MRMesh/MRPolyline.h"
-#include "MRMesh/MRStringConvert.h"
-#include "MRMesh/MRTimer.h"
-#include "MRMesh/MRVisualObject.h"
-
-#ifndef MESHLIB_NO_VIEWER
-#include "MRViewer/MRAppendHistory.h"
-#include "MRViewer/MRRibbonMenu.h"
-#include "MRViewer/MRStatePlugin.h"
-#include "MRViewer/MRViewport.h"
-#include "MRViewer/MRViewer.h"
-#include "MRViewer/MRUIStyle.h"
-#endif
-#endif
-
 #pragma warning(pop)

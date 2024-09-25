@@ -160,6 +160,11 @@ ELSE()
   set(MR_CONFIG_DIR "${MR_ROOT}/Resources/cmake")
 ENDIF()
 
+IF(MESHLIB_BUILD_MRVIEWER)
+  set(IMGUI_DIR ${MESHLIB_THIRDPARTY_ROOT_DIR}/include/imgui)
+  include_directories(${IMGUI_DIR})
+ENDIF()
+
 # MRMesh library is always built
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRPch ./MRPch)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
@@ -177,9 +182,6 @@ IF(MESHLIB_BUILD_VOXELS)
 ENDIF()
 
 IF(MESHLIB_BUILD_MRVIEWER)
-  set(IMGUI_DIR ${MESHLIB_THIRDPARTY_ROOT_DIR}/include/imgui)
-  include_directories(${IMGUI_DIR})
-
   IF(NOT MR_EMSCRIPTEN)
     find_package(glfw3 CONFIG REQUIRED)
     pkg_check_modules(GTKMM gtkmm-3.0)

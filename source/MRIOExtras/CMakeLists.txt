@@ -126,6 +126,7 @@ IF(MR_EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE
     MRMesh
     spdlog
+    tbb
     ${MRIOEXTRAS_DEPENDENCIES}
   )
 ELSEIF(APPLE)
@@ -133,6 +134,7 @@ ELSEIF(APPLE)
     MRMesh
     fmt
     spdlog
+    tbb
     ${MRIOEXTRAS_DEPENDENCIES}
   )
 ELSE()
@@ -140,6 +142,7 @@ ELSE()
     MRMesh
     fmt::fmt
     spdlog::spdlog
+    tbb
     ${MRIOEXTRAS_DEPENDENCIES}
   )
 ENDIF()

@@ -45,7 +45,7 @@ jobs:
           - platform: "aarch64"
             docker-image: "meshlib/meshlib-ubuntu-arm64:mrbind-ci"
             container-options: "--user root"
-            runner: self-hosted
+            runner: [ 'self-hosted', 'linux-arm64' ]
           - py-version: "3.8"
             py-tag: "cp38"
             py-cmd: "python3.8"

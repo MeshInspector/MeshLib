@@ -363,6 +363,8 @@ jobs:
 
       - name: Create virtualenv
         run: |
+          # Remove from PATH anything with the word `anaconda` in it, as Anaconda's Python can cause conflicts.
+          export PATH="$(echo "$PATH" | perl -pe 's/[^:]*anaconda[^:]*//g;s/::|^:|:$//g')"
           ${{ matrix.py-cmd }} -m venv .venv
           . .venv/bin/activate
           echo PATH=$PATH >> $GITHUB_ENV
@@ -565,6 +567,8 @@ jobs:
 
       - name: Create virtualenv
         run: |
+          # Remove from PATH anything with the word `anaconda` in it, as Anaconda's Python can cause conflicts.
+          export PATH="$(echo "$PATH" | perl -pe 's/[^:]*anaconda[^:]*//g;s/::|^:|:$//g')"
           ${{ matrix.py-cmd }} -m venv .venv
           . .venv/bin/activate
           echo PATH=$PATH >> $GITHUB_ENV

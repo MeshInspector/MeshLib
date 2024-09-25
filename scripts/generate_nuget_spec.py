@@ -3,14 +3,21 @@ import shutil
 import sys
 
 base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'..')
-path_to_objects = base_path
+path_to_objects = os.path.join( base_path, "source/x64/Release/" )
+print( path_to_objects )
 path_to_spec = os.path.join(base_path, 'Package.nuspec')
+path_to_targets = os.path.join(base_path, 'MeshLib.targets')
 print( path_to_spec )
 print('\n')
 
-excluded_modules = ['MRCommonPlugins', 'MRCuda', 'MRMeshC', 'MRViewer', 'MRMeshViewer', 'MRTest', 'MRTestC']
+excluded_modules = ['MRCommonPlugins', 'MRCuda', 'MRMeshC', 'MRViewer', 'MRMeshViewer', 'MRTest', 'MRTestC', 'MRDotNet', 'MRDotNetTest']
 path_to_copyright_header = os.path.join(os.path.dirname(os.path.abspath(__file__)),'copyright_header.txt')
 copyright_header = open(path_to_copyright_header,'r').read()[3:]
+
+fTargets = open(path_to_targets, 'w')
+fTargets.write('<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">\n')
+fTargets.write('\t<ItemGroup>\n')
+
 
 f = open(path_to_spec, 'w')
 f.write('<?xml version="1.0" encoding="utf-8"?>\n')
@@ -41,12 +48,36 @@ f.write('\t<files>\n')
 folder = os.walk(path_to_objects)
 for address, dirs, files in folder:
 	for file in files:
-		if ((file.endswith('.dll') and not any(map(file.startswith, excluded_modules)))):
+		if file.startswith('nunit'):
+			continue
+            
+		if (file.endswith('.dll') and not any(map(file.startswith, excluded_modules)) and not file.startswith('System')):
+			src = os.path.join(address,file)
+			print(src)
+			f.write('\t\t<file src="./source/x64/Release/')
+			f.write(file)
+			f.write('" target="runtimes/win-x64/native/"></file>\n')
+			fTargets.write('\t\t<None Include="$(MSBuildThisFileDirectory)\\..\\runtimes\\win-x64\\native\\')
+			fTargets.write(file)
+			fTargets.write('">\n')
+			fTargets.write('\t\t\t<Link>')
+			fTargets.write(file)
+			fTargets.write('</Link>\n')
+			fTargets.write('\t\t\t<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>\n')
+			fTargets.write('\t\t</None>\n')
+		elif file == 'MRDotNet.dll' or file.startswith('System'):
 			src = os.path.join(address,file)
 			print(src)
 			f.write('\t\t<file src="./source/x64/Release/')
 			f.write(file)
 			f.write('" target="lib/net471/"></file>\n')
+            
+fTargets.write('\t</ItemGroup>\n')
+fTargets.write('</Project>\n')
+fTargets.close()
+
+f.write('\t\t<file src="./MeshLib.targets" target="build/"></file>')
+
             
 f.write('\t</files>\n')
 f.write('</package>\n')

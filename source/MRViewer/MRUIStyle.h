@@ -400,8 +400,9 @@ MRVIEWER_API void alignTextToCheckBox( float scaling );
 /// Specialization of \ref alignTextToFramePadding for \ref UI::button with default height
 MRVIEWER_API void alignTextToButton( float scaling );
 
-/// Highlight the background of current window's bottom part, starting from current position
-/// Some padding is added
+/// Select the background of the part of the current window from min to max.
+/// If the min is not set, then the current position is taken.If max is not set, then the end of the window is taken.
+/// Added some indentation if min or max is not set.
 MRVIEWER_API void highlightWindowBottom( float scaling, ImVec2* min = nullptr, ImVec2* max = nullptr );
 
 } // namespace UI

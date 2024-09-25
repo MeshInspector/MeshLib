@@ -101,8 +101,11 @@ jobs:
           # not realy needed
           CMAKE_C_COMPILER: /usr/bin/clang-11
 
+        # Also print the amount of RAM. Not doing it in the same step as building the bindings, because when that fails, the logs are sometimes lost.
       - name: Build MRBind
-        run: ./scripts/mrbind/install_mrbind_ubuntu.sh
+        run: |
+          ./scripts/mrbind/install_mrbind_ubuntu.sh
+          free -h
 
       - name: Generate and build MRBind bindings
         run: |
@@ -308,7 +311,7 @@ jobs:
 
   macos-pip-build:
     needs: setup
-    timeout-minutes: 60
+    timeout-minutes: 80
     runs-on: ${{ matrix.instance }}
     strategy:
       fail-fast: false
@@ -397,7 +400,6 @@ jobs:
         # `MACOS_MIN_VER` picked arbitrarily to match what Apple Clang uses when building MeshLib.
         # Not setting this or setting a different value cases a warning when linking the bindings, and you can get the correct (?) value from those warnings.
         run: |
-          free -h
           make --version
           make -f ./scripts/mrbind/generate.mk -B --trace PACKAGE_NAME=meshlib MACOS_MIN_VER=12.7 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0'
 

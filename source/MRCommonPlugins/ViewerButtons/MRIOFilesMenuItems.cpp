@@ -3,6 +3,7 @@
 #include "MRViewer/MRMouseController.h"
 #include "MRViewer/MRRecentFilesStore.h"
 #include "MRViewer/MRViewport.h"
+#include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRLinesLoad.h"
 #include "MRMesh/MRPointsLoad.h"
@@ -92,18 +93,14 @@ bool isMobileBrowser()
 
 bool checkPaths( const std::vector<std::filesystem::path>& paths, const MR::IOFilters& filters )
 {
-    for ( const auto& path : paths )
+    return std::any_of( paths.begin(), paths.end(), [&] ( auto&& path )
     {
-        std::string fileExt = utf8string( path.extension() );
-        for ( auto& c : fileExt )
-            c = ( char ) std::tolower( c );
-        if ( std::any_of( filters.begin(), filters.end(), [&fileExt] ( const auto& filter )
+        const auto ext = toLower( utf8string( path.extension() ) );
+        return std::any_of( filters.begin(), filters.end(), [&ext] ( auto&& filter )
         {
-            return filter.extensions.find( fileExt ) != std::string::npos;
-        } ) )
-            return true;
-    }
-    return false;
+            return filter.isSupportedExtension( ext );
+        } );
+    } );
 }
 
 }
@@ -419,6 +416,31 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
     if ( directory.empty() )
         return;
 
+#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
+    // check if the directory can be opened as a DICOM archive
+    std::error_code ec;
+    size_t dicomFileCount = 0;
+    size_t otherSupportedFileCount = 0;
+    const auto supportedFormats = SceneLoad::getFilters() | ObjectLoad::getFilters() | MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters();
+    for ( const auto& entry : Directory { directory, ec } )
+    {
+        if ( entry.is_regular_file( ec ) || entry.is_symlink( ec ) )
+        {
+            const auto& path = entry.path();
+            const auto ext = utf8string( path.extension() );
+            if ( ext == ".dcm" && VoxelsLoad::isDicomFile( path ) )
+                dicomFileCount += 1;
+            else if ( findFilter( supportedFormats, ext ) )
+                otherSupportedFileCount += 1;
+        }
+    }
+    if ( dicomFileCount > 0 && otherSupportedFileCount == 0 )
+    {
+        sOpenDICOMs( directory, "No supported files can be open from the directory:\n" + utf8string( directory ) );
+        return;
+    }
+#endif
+
     bool isAnySupportedFiles = isSupportedFileInSubfolders( directory );
     if ( isAnySupportedFiles )
     {
@@ -449,12 +471,6 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
             }
         } );
     }
-#if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
-    else
-    {
-        sOpenDICOMs( directory, "No supported files can be open from the directory:\n" + utf8string( directory ) );
-    }
-#endif
 }
 
 #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )

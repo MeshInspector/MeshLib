@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <compare>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -24,6 +25,11 @@ struct IOFilter
     std::string extensions; // "*.ext" or "*.ext1;*.ext2;*.ext3"
 
     std::partial_ordering operator <=>( const IOFilter& ) const = default;
+
+    [[nodiscard]] inline bool isSupportedExtension( const std::string& ext ) const
+    {
+        return extensions.find( ext ) != std::string::npos;
+    }
 };
 
 using IOFilters = std::vector<IOFilter>;
@@ -40,6 +46,19 @@ inline IOFilters operator | ( const IOFilters& a, const IOFilters& b )
             copy.push_back( bElem );
     }
     return copy;
+}
+
+/// find a corresponding filter for a given extension
+inline std::optional<IOFilter> findFilter( const IOFilters& filters, const std::string& extension )
+{
+    const auto it = std::find_if( filters.begin(), filters.end(), [&extension] ( auto&& filter )
+    {
+        return filter.isSupportedExtension( extension );
+    } );
+    if ( it != filters.end() )
+        return *it;
+    else
+        return std::nullopt;
 }
 
 /// \}

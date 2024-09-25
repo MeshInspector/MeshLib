@@ -15,6 +15,10 @@ namespace MR
 namespace VoxelsLoad
 {
 
+/// check if file is a valid DICOM dataset file
+/// \param seriesUid - if set, the extracted series instance UID is copied to the variable
+MRVOXELS_API bool isDicomFile( const std::filesystem::path& path, std::string* seriesUid = nullptr );
+
 struct DicomVolume
 {
     SimpleVolumeMinMax vol;

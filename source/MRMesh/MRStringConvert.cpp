@@ -171,4 +171,11 @@ double roundToPrecision( double v, int precision )
     return n >= 0 ? std::atof( buf ) : v;
 }
 
+std::string toLower( std::string str )
+{
+    for ( auto& ch : str )
+        ch = (char)std::tolower( ch );
+    return str;
+}
+
 }

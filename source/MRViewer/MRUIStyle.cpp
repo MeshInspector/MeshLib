@@ -1998,7 +1998,6 @@ void highlightWindowBottom( float scaling, ImVec2* min, ImVec2* max )
     {
         boxMin = ImGui::GetCurrentWindowRead()->DC.CursorPos;
         boxMin.x -= style.WindowPadding.x;
-        boxMin.y -= style.WindowPadding.y;
     }
     else
     {
@@ -2014,7 +2013,7 @@ void highlightWindowBottom( float scaling, ImVec2* min, ImVec2* max )
     }
     else
     {
-        boxMin = *max;
+        boxMax = *max;
     }
 
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cSeparateBlocksSpacing * scaling );

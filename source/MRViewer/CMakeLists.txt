@@ -37,10 +37,7 @@ IF(NOT MRVIEWER_NO_VOXELS)
 ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
-  pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
-  if(GTKMM_FOUND)
-    target_include_directories( ${PROJECT_NAME} PRIVATE ${GTKMM_INCLUDE_DIRS})
-  endif()
+  pkg_check_modules(gtkmm REQUIRED IMPORTED_TARGET gtkmm-3.0)
 ENDIF() # NOT MR_EMSCRIPTEN
 
 file(GLOB JSONS "*.json")
@@ -78,13 +75,10 @@ ELSE() # NOT MR_EMSCRIPTEN
       spdlog
       jsoncpp
       cpr
-      sigc-3.0
-      glib-2.0
-      glibmm-2.4
+      PkgConfig::gtkmm
       imgui
       glad
       glfw
-      gtkmm-3.0
       hidapi
       clip
       ${APPKIT_LIBRARY}
@@ -103,10 +97,7 @@ ELSE() # NOT MR_EMSCRIPTEN
       imgui
       glad
       glfw
-      gtkmm-3.0
-      glib-2.0
-      glibmm-2.4
-      sigc-2.0
+      PkgConfig::gtkmm
       hidapi-hidraw
       jsoncpp
       spdlog

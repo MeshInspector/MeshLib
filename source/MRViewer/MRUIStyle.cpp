@@ -1990,7 +1990,7 @@ void alignTextToButton( float scaling )
 }
 
 
-void highlightWindowBottom( float scaling, const ImVec2& min, const ImVec2& max )
+void highlightWindowArea( float scaling, const ImVec2& min, const ImVec2& max )
 {
     const ImGuiStyle& style = ImGui::GetStyle();
     ImVec2 boxMin;

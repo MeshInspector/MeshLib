@@ -403,7 +403,7 @@ MRVIEWER_API void alignTextToButton( float scaling );
 /// Select the background of the part of the current window from min to max.
 /// If the min is not set, then the current position is taken.If max is not set, then the end of the window is taken.
 /// Added some indentation if min or max is not set.
-MRVIEWER_API void highlightWindowBottom( float scaling, const ImVec2& min = {-1.0f, -1.0f}, const ImVec2& max = { -1.0f, -1.0f } );
+MRVIEWER_API void highlightWindowArea( float scaling, const ImVec2& min = {-1.0f, -1.0f}, const ImVec2& max = { -1.0f, -1.0f } );
 
 } // namespace UI
 

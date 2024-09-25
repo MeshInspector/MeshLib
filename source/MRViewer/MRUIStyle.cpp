@@ -1990,16 +1990,35 @@ void alignTextToButton( float scaling )
 }
 
 
-void highlightWindowBottom( float scaling )
+void highlightWindowBottom( float scaling, ImVec2* min, ImVec2* max )
 {
     const ImGuiStyle& style = ImGui::GetStyle();
-    ImVec2 boxMin = ImGui::GetCurrentWindowRead()->DC.CursorPos;
-    boxMin.x -= style.WindowPadding.x;
-    ImVec2 boxMax = ImGui::GetWindowPos();
-    boxMax.x += ImGui::GetContentRegionMax().x + style.WindowPadding.x * 2.f;
-    boxMax.y += ImGui::GetContentRegionMax().y + ImGui::GetScrollMaxY() + style.WindowPadding.y * 2.f;
+    ImVec2 boxMin;
+    if ( !min )
+    {
+        boxMin = ImGui::GetCurrentWindowRead()->DC.CursorPos;
+        boxMin.x -= style.WindowPadding.x;
+        boxMin.y -= style.WindowPadding.y;
+    }
+    else
+    {
+        boxMin = *min;
+    }
+
+    ImVec2 boxMax;
+    if ( !max )
+    {
+        boxMax = ImGui::GetWindowPos();
+        boxMax.x += ImGui::GetContentRegionMax().x + style.WindowPadding.x * 2.f;
+        boxMax.y += ImGui::GetContentRegionMax().y + ImGui::GetScrollMaxY() + style.WindowPadding.y * 2.f;
+    }
+    else
+    {
+        boxMin = *max;
+    }
+
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cSeparateBlocksSpacing * scaling );
-    ImGui::GetCurrentWindow()->DrawList->AddRectFilled( boxMin, boxMax, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::CollapseHeaderBackground ).getUInt32() );
+    ImGui::GetCurrentWindow()->DrawList->AddRectFilled( boxMin, boxMax, Color( ImGui::GetStyleColorVec4( ImGuiCol_Header ) ).getUInt32() );
 }
 
 } // namespace UI

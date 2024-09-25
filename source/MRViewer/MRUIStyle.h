@@ -402,7 +402,7 @@ MRVIEWER_API void alignTextToButton( float scaling );
 
 /// Highlight the background of current window's bottom part, starting from current position
 /// Some padding is added
-MRVIEWER_API void highlightWindowBottom( float scaling );
+MRVIEWER_API void highlightWindowBottom( float scaling, ImVec2* min = nullptr, ImVec2* max = nullptr );
 
 } // namespace UI
 

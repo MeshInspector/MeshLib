@@ -25,17 +25,6 @@ namespace
 }
 #endif
 
-#if defined( __APPLE__ )
-std::filesystem::path macosPackageLibPath()
-{
-#ifdef MR_FRAMEWORK
-    return "/Library/Frameworks/" + std::string( MR_PROJECT_NAME ) + ".framework/Versions/Current/lib";
-#else
-    return "/Applications/" + std::string( MR_PROJECT_NAME ) + ".app/Contents/libs";
-#endif
-}
-#endif
-
 std::filesystem::path defaultResourcesDirectory()
 {
 #if defined( __EMSCRIPTEN__ )
@@ -46,7 +35,7 @@ std::filesystem::path defaultResourcesDirectory()
     // TODO: use getLibraryDirectory()
     if ( resourcesAreNearExe() )
         return MR::SystemPath::getExecutableDirectory().value_or( "/" );
-    return macosPackageLibPath() / ".." / "Resources";
+    return MR::SystemPath::getLibraryDirectory().value_or( "/" ) / ".." / "Resources";
 #else
     // TODO: use getLibraryDirectory()
     if ( resourcesAreNearExe() )
@@ -65,7 +54,7 @@ std::filesystem::path defaultFontsDirectory()
     // TODO: use getLibraryDirectory()
     if ( resourcesAreNearExe() )
         return MR::SystemPath::getExecutableDirectory().value_or( "/" );
-    return macosPackageLibPath() / ".." / "Resources" / "fonts";
+    return MR::SystemPath::getLibraryDirectory().value_or( "/" ) / ".." / "Resources" / "fonts";
 #else
     // TODO: use getLibraryDirectory()
     if ( resourcesAreNearExe() )
@@ -84,7 +73,7 @@ std::filesystem::path defaultPluginsDirectory()
     // TODO: use getLibraryDirectory()
     if ( resourcesAreNearExe() )
         return MR::SystemPath::getExecutableDirectory().value_or( "/" );
-    return macosPackageLibPath();
+    return MR::SystemPath::getLibraryDirectory().value_or( "/" );
 #else
     // TODO: use getLibraryDirectory()
     if ( resourcesAreNearExe() )
@@ -103,7 +92,7 @@ std::filesystem::path defaultPythonModulesDirectory()
     // TODO: use getLibraryDirectory()
     if ( resourcesAreNearExe() )
         return MR::SystemPath::getExecutableDirectory().value_or( "/" );
-    return macosPackageLibPath() / ".." / "Frameworks";
+    return MR::SystemPath::getLibraryDirectory().value_or( "/" ) / ".." / "Frameworks";
 #else
     // TODO: use getLibraryDirectory()
     if ( resourcesAreNearExe() )

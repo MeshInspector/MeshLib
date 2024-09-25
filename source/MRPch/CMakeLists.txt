@@ -6,6 +6,10 @@ project(MRPch CXX)
 
 file(GLOB HEADERS "*.h")
 
+IF(NOT MESHLIB_BUILD_MRVIEWER)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VIEWER)
+ENDIF()
+
 install(
   FILES ${HEADERS}
   DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}"

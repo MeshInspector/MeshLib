@@ -103,4 +103,16 @@
 #include <variant>
 #include <vector>
 
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRObject.h"
+#include "MRMesh/MRObjectMesh.h"
+#include "MRMesh/MRVisualObject.h"
+
+#ifndef MESHLIB_NO_VIEWER
+#include "MRViewer/MRRibbonMenu.h"
+#include "MRViewer/MRStatePlugin.h"
+#include "MRViewer/MRViewer.h"
+#include "MRViewer/MRUIStyle.h"
+#endif
+
 #pragma warning(pop)

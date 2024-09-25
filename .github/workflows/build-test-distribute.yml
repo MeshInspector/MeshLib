@@ -96,8 +96,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with: 
-          submodules: true
 
       - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
         working-directory: C:\vcpkg
@@ -171,9 +169,7 @@ jobs:
     steps:
      - name: Checkout
        uses: actions/checkout@v4
-       with: 
-         submodules: true
-         
+
      - name: Download .NET Binaries Archive
        uses: actions/download-artifact@v4
        with:
@@ -216,11 +212,6 @@ jobs:
       - macos-build-test
       - versioning-and-release-url
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: true
-
       - name: Download All Developer Distributives
         uses: actions/download-artifact@v4
         with:

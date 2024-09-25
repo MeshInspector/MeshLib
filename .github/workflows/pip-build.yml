@@ -68,8 +68,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: true
           ref: ${{needs.setup.outputs.version_tag}}
+
+      - name: Checkout third-party submodules
+        run: |
+          git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap
 
       - name: Python setup
         if: ${{ matrix.py-version != '3.8' }}

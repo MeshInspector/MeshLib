@@ -97,8 +97,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: true
+
+      - name: Checkout third-party submodules
+        run: |
+          git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap
 
       - name: Install thirdparty libs
         run: |

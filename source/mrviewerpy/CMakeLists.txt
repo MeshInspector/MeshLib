@@ -21,6 +21,7 @@ if(APPLE)
     MRMesh
     MRPython
     fmt
+    glfw
     spdlog
     pybind11::module
   )
@@ -30,6 +31,7 @@ ELSE()
     MRMesh
     MRPython
     fmt
+    glfw
     spdlog
     tbb
     Python::Python

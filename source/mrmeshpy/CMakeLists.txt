@@ -39,9 +39,17 @@ ELSE()
 ENDIF()
 
 IF(MESHLIB_BUILD_VOXELS)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRVoxels
-  )
+  IF(APPLE)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+      MRVoxels
+      OpenVDB
+    )
+  ELSE()
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+      MRVoxels
+      openvdb
+    )
+  ENDIF()
 ELSE()
   target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VOXELS)
 ENDIF()

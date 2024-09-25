@@ -1990,22 +1990,22 @@ void alignTextToButton( float scaling )
 }
 
 
-void highlightWindowBottom( float scaling, ImVec2* min, ImVec2* max )
+void highlightWindowBottom( float scaling, const ImVec2& min, const ImVec2& max )
 {
     const ImGuiStyle& style = ImGui::GetStyle();
     ImVec2 boxMin;
-    if ( !min )
+    if ( min.x < 0.0f || min.y < 0.0f )
     {
         boxMin = ImGui::GetCurrentWindowRead()->DC.CursorPos;
         boxMin.x -= style.WindowPadding.x;
     }
     else
     {
-        boxMin = *min;
+        boxMin = ImGui::GetWindowPos() + min;
     }
 
     ImVec2 boxMax;
-    if ( !max )
+    if ( max.x < 0.0f || max.y < 0.0f )
     {
         boxMax = ImGui::GetWindowPos();
         boxMax.x += ImGui::GetContentRegionMax().x + style.WindowPadding.x * 2.f;
@@ -2013,7 +2013,7 @@ void highlightWindowBottom( float scaling, ImVec2* min, ImVec2* max )
     }
     else
     {
-        boxMax = *max;
+        boxMax = ImGui::GetWindowPos() + max;
     }
 
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cSeparateBlocksSpacing * scaling );

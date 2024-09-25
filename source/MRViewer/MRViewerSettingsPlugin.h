@@ -100,7 +100,9 @@ private:
     int storedSamples_{ 0 };
     int maxSamples_{ 0 };
     bool needReset_{ false };
+#ifndef __EMSCRIPTEN__
     bool gpuOverridesMSAA_{ false };
+#endif
 
     Vector4f backgroundColor_;
 

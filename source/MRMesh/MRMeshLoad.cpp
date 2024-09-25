@@ -280,11 +280,8 @@ Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings
     if ( !in )
         return unexpected( std::string( "Error reading the number of triangles from STL-file" ) );
 
-    auto posCur = in.tellg();
-    in.seekg( 0, std::ios_base::end );
-    auto posEnd = in.tellg();
-    in.seekg( posCur );
-    if ( posEnd - posCur < 50 * std::istream::pos_type( numTris ) )
+    const auto streamSize = getStreamSize( in );
+    if ( streamSize < 50 * std::istream::pos_type( numTris ) )
         return unexpected( std::string( "Binary STL-file is too short" ) );
 
     MeshBuilder::VertexIdentifier vi;
@@ -311,7 +308,7 @@ Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings
 
     size_t decodedBytes = 0;
     // 0.5 because fromTrianglesDuplicatingNonManifoldVertices takes at least half of time
-    const float rStreamSize = 0.5f * sizeof( StlTriangle ) / float( posEnd - posCur );
+    const float rStreamSize = 0.5f * sizeof( StlTriangle ) / float( streamSize );
 
     while ( !buffer.empty() )
     {
@@ -395,10 +392,7 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
     bool solidFound = false;
 
     const auto posStart = in.tellg();
-    in.seekg( 0, std::ios_base::end );
-    const auto posEnd = in.tellg();
-    in.seekg( posStart );
-    const float streamSize = float( posEnd - posStart );
+    const auto streamSize = getStreamSize( in );
 
     for ( int i = 0; std::getline( in, line ); ++i )
     {
@@ -443,7 +437,7 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
         }
         if ( settings.callback && !( i & 0x3FF ) )
         {
-            const float progress = float( in.tellg() - posStart ) / streamSize;
+            const float progress = float( in.tellg() - posStart ) / float( streamSize );
             if ( !settings.callback( progress ) )
                 return unexpected( std::string( "Loading canceled" ) );
         }
@@ -451,9 +445,6 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
 
     if ( !solidFound )
         return unexpected( std::string( "Failed to find 'solid' prefix in ascii STL" ) );
-
-
-
 
     std::vector<MeshBuilder::VertDuplication> dups;
     std::vector<MeshBuilder::VertDuplication>* dupsPtr = nullptr;
@@ -599,9 +590,8 @@ Expected<Mesh> fromDxf( const std::filesystem::path& path, const MeshLoadSetting
 Expected<Mesh> fromDxf( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     // find size
-    in.seekg( 0, std::ios_base::end );
-    const size_t size = in.tellg();
-    in.seekg( 0 );
+    const auto posStart = in.tellg();
+    const auto size = getStreamSize( in );
 
     std::vector<Triangle3f> triangles;
     std::string str;
@@ -615,7 +605,7 @@ Expected<Mesh> fromDxf( std::istream& in, const MeshLoadSettings& settings /*= {
 
     for ( int i = 0; !in.eof(); ++i )
     {
-        if ( i % 1024 == 0 && !reportProgress( settings.callback, float( in.tellg() ) / size ) )
+        if ( i % 1024 == 0 && !reportProgress( settings.callback, float( in.tellg() - posStart ) / float( size ) ) )
             return unexpectedOperationCanceled();
         
         std::getline( in, str );

@@ -1,5 +1,6 @@
 #include "MRZip.h"
 #include "MRDirectory.h"
+#include "MRIOParsing.h"
 #include "MRStringConvert.h"
 #include "MRTimer.h"
 
@@ -144,13 +145,9 @@ zip_int64_t istreamZipSourceCallback( void *istream, void *data, zip_uint64_t le
             zip_stat_t* zipStat = (zip_stat_t*)data;
             zip_stat_init(zipStat);
 
-            const auto posCur = is.tellg();
-            is.seekg( 0, std::ios::end );
-            const auto posEnd = is.tellg();
-            is.seekg( posCur );
-            assert( !is.fail() );
-            zipStat->size = posEnd - posCur; // or just posEnd?
+            zipStat->size = getStreamSize( is );
             zipStat->valid |= ZIP_STAT_SIZE;
+            assert( !is.fail() );
 
             return sizeof(zip_stat_t);
         }

@@ -1,8 +1,9 @@
 #include "MRPolylineTopology.h"
-#include "MRParallelFor.h"
-#include "MRMapEdge.h"
-#include "MRTimer.h"
 #include "MRGTest.h"
+#include "MRIOParsing.h"
+#include "MRMapEdge.h"
+#include "MRParallelFor.h"
+#include "MRTimer.h"
 
 namespace MR
 {
@@ -514,11 +515,8 @@ bool PolylineTopology::read( std::istream & s )
     if ( !s )
         return false;
 
-    auto posCur = s.tellg();
-    s.seekg( 0, std::ios_base::end );
-    const auto posEnd = s.tellg();
-    s.seekg( posCur );
-    if ( size_t( posEnd - posCur ) < numEdges * sizeof(HalfEdgeRecord) )
+    const auto streamSize = getStreamSize( s );
+    if ( size_t( streamSize ) < numEdges * sizeof(HalfEdgeRecord) )
         return false; // stream is too short
 
     edges_.resize( numEdges );

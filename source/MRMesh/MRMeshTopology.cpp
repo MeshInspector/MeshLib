@@ -13,6 +13,7 @@
 #include "MRGridSettings.h"
 #include "MRPch/MRTBB.h"
 #include "MRParallelFor.h"
+#include "MRIOParsing.h"
 #include <atomic>
 #include <initializer_list>
 
@@ -2113,11 +2114,8 @@ VoidOrErrStr MeshTopology::read( std::istream & s, ProgressCallback callback )
     if ( !s )
         return unexpected( std::string( "Stream reading error" ) );
 
-    auto posCur = s.tellg();
-    s.seekg( 0, std::ios_base::end );
-    const auto posEnd = s.tellg();
-    s.seekg( posCur );
-    if ( size_t( posEnd - posCur ) < numEdges * sizeof( HalfEdgeRecord ) )
+    const auto streamSize = getStreamSize( s );
+    if ( size_t( streamSize ) < numEdges * sizeof( HalfEdgeRecord ) )
         return unexpected( std::string( "Stream reading error: stream is too short" ) ); // stream is too short
 
     edges_.resize( numEdges );

@@ -10,6 +10,12 @@ namespace MR
 // returns offsets for each new line in monolith char block
 MRMESH_API std::vector<size_t> splitByLines( const char* data, size_t size );
 
+// get the size of the remaining data in the input stream
+MRMESH_API std::streamoff getStreamSize( std::istream& in );
+
+// reads input stream to string
+MRMESH_API Expected<std::string> readString( std::istream& in );
+
 // reads input stream to monolith char block
 MRMESH_API Expected<Buffer<char>> readCharBuffer( std::istream& in );
 

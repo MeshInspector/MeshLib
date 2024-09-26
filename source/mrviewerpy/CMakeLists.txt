@@ -21,6 +21,7 @@ if(APPLE)
     MRMesh
     MRPython
     fmt
+    glfw
     spdlog
     pybind11::module
   )
@@ -30,10 +31,27 @@ ELSE()
     MRMesh
     MRPython
     fmt
+    glfw
     spdlog
     tbb
     Python::Python
   )
+ENDIF()
+
+IF(MESHLIB_BUILD_VOXELS)
+  IF(APPLE)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+      MRVoxels
+      OpenVDB
+    )
+  ELSE()
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+      MRVoxels
+      openvdb
+    )
+  ENDIF()
+ELSE()
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VOXELS)
 ENDIF()
 
 install(TARGETS ${PROJECT_NAME} DESTINATION "${MR_PY_LIB_DIR}")

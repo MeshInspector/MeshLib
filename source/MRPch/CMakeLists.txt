@@ -33,6 +33,7 @@ IF(MR_PCH)
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
     IF(APPLE)
+      # fix Boost.Stacktrace
       target_compile_definitions(${PROJECT_NAME} PRIVATE
         _GNU_SOURCE
       )

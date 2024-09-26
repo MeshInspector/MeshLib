@@ -10,7 +10,7 @@ path_to_targets = os.path.join(base_path, 'MeshLib.targets')
 print( path_to_spec )
 print('\n')
 
-excluded_modules = ['MRCommonPlugins', 'MRCuda', 'MRMeshC', 'MRViewer', 'MRMeshViewer', 'MRTest', 'MRTestC', 'MRDotNet', 'MRDotNetTest']
+excluded_modules = ['MRCommonPlugins', 'MRCuda', 'MRMeshC', 'MRViewer', 'MRMeshViewer', 'MRTest', 'MRTestC']
 path_to_copyright_header = os.path.join(os.path.dirname(os.path.abspath(__file__)),'copyright_header.txt')
 copyright_header = open(path_to_copyright_header,'r').read()[3:]
 
@@ -41,6 +41,12 @@ f.write('\t\t<copyright>')
 f.write(copyright_header)
 f.write('</copyright>\n')
 
+f.write('\t\t<dependencies>\n')
+f.write('\t\t\t<group targetFramework="net6.0"/>\n')
+f.write('\t\t\t<group targetFramework="net8.0"/>\n')
+f.write('\t\t\t<group targetFramework=".NETFramework4.7.1"/>\n')
+f.write('\t\t</dependencies>\n')
+
 f.write('\t</metadata>\n')
 
 f.write('\t<files>\n')
@@ -51,7 +57,7 @@ for address, dirs, files in folder:
 		if file.startswith('nunit'):
 			continue
             
-		if (file.endswith('.dll') and not any(map(file.startswith, excluded_modules)) and not file.startswith('System')):
+		if (file.endswith('.dll') and not any(map(file.startswith, excluded_modules)) and not file.startswith('System') and not file.startswith('MRDotNet')):
 			src = os.path.join(address,file)
 			print(src)
 			f.write('\t\t<file src="./source/x64/Release/')
@@ -65,12 +71,20 @@ for address, dirs, files in folder:
 			fTargets.write('</Link>\n')
 			fTargets.write('\t\t\t<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>\n')
 			fTargets.write('\t\t</None>\n')
-		elif file == 'MRDotNet.dll' or file.startswith('System'):
+		elif file == 'MRDotNet.dll':
 			src = os.path.join(address,file)
 			print(src)
 			f.write('\t\t<file src="./source/x64/Release/')
 			f.write(file)
 			f.write('" target="lib/net471/"></file>\n')
+		elif file == 'MRDotNet8.dll':
+			f.write('\t\t<file src="./source/x64/Release/')
+			f.write(file)
+			f.write('" target="lib/net8.0/"></file>\n')
+		elif file == 'MRDotNet6.dll':
+			f.write('\t\t<file src="./source/x64/Release/')
+			f.write(file)
+			f.write('" target="lib/net6.0/"></file>\n')
             
 fTargets.write('\t</ItemGroup>\n')
 fTargets.write('</Project>\n')

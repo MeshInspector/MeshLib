@@ -25,601 +25,601 @@ jobs:
       - uses: actions-ecosystem/action-get-latest-tag@v1
         id: get-latest-tag
 
-  manylinux-pip-build:
-    needs: setup
-    timeout-minutes: 80
-    runs-on: ${{ matrix.runner }}
-    container:
-      image: ${{ matrix.docker-image }}
-      options: ${{ matrix.container-options }}
-    strategy:
-      fail-fast: false
-      matrix:
-        platform: ["x86_64", "aarch64"]
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
-        include:
-          - platform: "x86_64"
-            docker-image: "meshlib/meshlib-ubuntu20:mrbind-ci"
-            container-options: "--user root"
-            runner: ubuntu-latest
-          - platform: "aarch64"
-            docker-image: "meshlib/meshlib-ubuntu-arm64:mrbind-ci"
-            container-options: "--user root"
-            runner: [ 'self-hosted', 'linux-arm64' ]
-          - py-version: "3.8"
-            py-tag: "cp38"
-            py-cmd: "python3.8"
-          - py-version: "3.9"
-            py-tag: "cp39"
-            py-cmd: "python3.9"
-          - py-version: "3.10"
-            py-tag: "cp310"
-            py-cmd: "python3.10"
-          - py-version: "3.11"
-            py-tag: "cp311"
-            py-cmd: "python3.11"
-          - py-version: "3.12"
-            py-tag: "cp312"
-            py-cmd: "python3.12"
-    steps:
-        # Work around some weird permission errors in the runner.
-      - name: Git - add safe directory
-        run: git config --global --add safe.directory '*'
-
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-
-      - name: Checkout third-party submodules
-        run: |
-          # have to checkout selective submodules by our own
-          # related issue: https://github.com/actions/checkout/issues/1779
-          export HOME=${RUNNER_TEMP}
-          git config --global --add safe.directory ${GITHUB_WORKSPACE}
-          git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap
-
-      - name: Python setup
-        if: ${{ matrix.py-version != '3.8' }}
-        run: |
-          apt -y update && apt -y upgrade && apt -y install software-properties-common
-          add-apt-repository -y ppa:deadsnakes/ppa && apt -y install ${{ matrix.py-cmd }}-dev ${{ matrix.py-cmd }}-distutils
-
-      - name: Pip setup
-        run: |
-          curl -sS https://bootstrap.pypa.io/get-pip.py | ${{ matrix.py-cmd }}
-          ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
-          ${{ matrix.py-cmd }} -m pip install pytest
-
-      - name: Install thirdparty libs
-        run: |
-          ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
-          ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
-
-      - name: Build
-        run: ./scripts/build_source.sh
-        env:
-          MESHLIB_PYTHON_VERSION: ${{matrix.py-version}}
-          MESHLIB_BUILD_RELEASE: "ON"
-          MESHLIB_BUILD_DEBUG: "OFF"
-          CMAKE_CXX_COMPILER: /usr/bin/clang++-11
-          # FIXME: OpenGL libraries are included to wheel packages when the XDE module is used
-          MR_CMAKE_OPTIONS: >
-            -DMRIOEXTRAS_OPENCASCADE_USE_XDE=OFF
-          # not realy needed
-          CMAKE_C_COMPILER: /usr/bin/clang-11
-
-        # Also print the amount of RAM. Not doing it in the same step as building the bindings, because when that fails, the logs are sometimes lost.
-      - name: Build MRBind
-        run: |
-          ./scripts/mrbind/install_mrbind_ubuntu.sh
-          free -h
-
-      - name: Generate and build MRBind bindings
-        run: |
-          make -f scripts/mrbind/generate.mk -B --trace PACKAGE_NAME=meshlib CXX_FOR_ABI=/usr/bin/clang++-11 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed
-
-      - name: Run Tests
-        run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
-
-      - name: Unit Tests
-        # Using `cd` here fixes weird library loading issues.
-        run: cd ./build/Release/bin/meshlib && ../MRTest
-
-      - name: Python Tests
-        working-directory: ./build/Release/bin
-        run: ${{ matrix.py-cmd }} ./../../../scripts/run_python_test_script.py -cmd ${{ matrix.py-cmd }}
-
-      - name: Create and fix Wheel
-        run: |
-          ${{ matrix.py-cmd }} ./scripts/wheel/build_wheel.py --version ${{needs.setup.outputs.version_tag}}
-
-      - name: Upload to Test Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ManyLinux-${{matrix.py-cmd}}-${{matrix.platform}}
-          path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
-          retention-days: 1
-
-  # windows-pip-build:
+  # manylinux-pip-build:
   #   needs: setup
-  #   timeout-minutes: 90
-  #   runs-on: windows-2019
+  #   timeout-minutes: 80
+  #   runs-on: ${{ matrix.runner }}
+  #   container:
+  #     image: ${{ matrix.docker-image }}
+  #     options: ${{ matrix.container-options }}
   #   strategy:
   #     fail-fast: false
   #     matrix:
+  #       platform: ["x86_64", "aarch64"]
   #       py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
   #       include:
+  #         - platform: "x86_64"
+  #           docker-image: "meshlib/meshlib-ubuntu20:mrbind-ci"
+  #           container-options: "--user root"
+  #           runner: ubuntu-latest
+  #         - platform: "aarch64"
+  #           docker-image: "meshlib/meshlib-ubuntu-arm64:mrbind-ci"
+  #           container-options: "--user root"
+  #           runner: [ 'self-hosted', 'linux-arm64' ]
   #         - py-version: "3.8"
   #           py-tag: "cp38"
-  #           py-short-version: "38"
-  #           py-dir: "Python38"
-  #           py-file: "python38"
-  #           embed-version: "3.8.9"
+  #           py-cmd: "python3.8"
   #         - py-version: "3.9"
   #           py-tag: "cp39"
-  #           py-short-version: "39"
-  #           py-dir: "Python39"
-  #           py-file: "python39"
-  #           embed-version: "3.9.9"
+  #           py-cmd: "python3.9"
   #         - py-version: "3.10"
   #           py-tag: "cp310"
-  #           py-short-version: "310"
-  #           py-dir: "Python310"
-  #           py-file: "python310"
-  #           embed-version: "3.10.0"
+  #           py-cmd: "python3.10"
   #         - py-version: "3.11"
   #           py-tag: "cp311"
-  #           py-short-version: "311"
-  #           py-dir: "Python311"
-  #           py-file: "python311"
-  #           embed-version: "3.11.0"
+  #           py-cmd: "python3.11"
   #         - py-version: "3.12"
   #           py-tag: "cp312"
-  #           py-short-version: "312"
-  #           py-dir: "Python312"
-  #           py-file: "python312"
-  #           embed-version: "3.12.0"
-  #   permissions:
-  #     id-token: write # This is required for requesting the JWT
-  #     contents: read  # This is required for actions/checkout
+  #           py-cmd: "python3.12"
   #   steps:
+  #       # Work around some weird permission errors in the runner.
+  #     - name: Git - add safe directory
+  #       run: git config --global --add safe.directory '*'
+
   #     - name: Checkout
   #       uses: actions/checkout@v4
   #       with:
-  #         submodules: recursive
 
-  #     - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
-  #       working-directory: C:\vcpkg
+  #     - name: Checkout third-party submodules
   #       run: |
-  #         git fetch
-  #         git checkout ${{env.VCPKG-VERSION}}
+  #         # have to checkout selective submodules by our own
+  #         # related issue: https://github.com/actions/checkout/issues/1779
+  #         export HOME=${RUNNER_TEMP}
+  #         git config --global --add safe.directory ${GITHUB_WORKSPACE}
+  #         git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap
 
-  #     - name: Restore Vcpkg Cache
-  #       uses: actions/cache@v4
-  #       id: vcpkg-cache
-  #       with:
-  #         key: vcpkg-cache-${{env.VCPKG-VERSION}}
-  #         path: |
-  #           C:\vcpkg\*
-
-  #     - name: Configure AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
-  #         aws-region: us-east-1
-
-  #     - name: Update vcpkg packages
+  #     - name: Python setup
+  #       if: ${{ matrix.py-version != '3.8' }}
   #       run: |
-  #         .\thirdparty\install.bat --write-s3
+  #         apt -y update && apt -y upgrade && apt -y install software-properties-common
+  #         add-apt-repository -y ppa:deadsnakes/ppa && apt -y install ${{ matrix.py-cmd }}-dev ${{ matrix.py-cmd }}-distutils
 
-  #     - name: Vcpkg integrate install
-  #       working-directory: C:\vcpkg
-  #       run: C:\vcpkg\vcpkg.exe integrate install
-
-  #     - uses: actions/setup-python@v5
-  #       id: setup-python
-  #       with:
-  #         python-version: ${{matrix.py-version}}
-
-  #     - name: Setup python
-  #       working-directory: C:\vcpkg\installed\x64-windows-meshlib
+  #     - name: Pip setup
   #       run: |
-  #         py -${{matrix.py-version}} -m pip install --upgrade pip
-  #         py -${{matrix.py-version}} -m pip install --upgrade -r ${{ github.workspace }}\requirements\python.txt
-  #         py -${{matrix.py-version}} -m pip install pytest
+  #         curl -sS https://bootstrap.pypa.io/get-pip.py | ${{ matrix.py-cmd }}
+  #         ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
+  #         ${{ matrix.py-cmd }} -m pip install pytest
 
-  #     - name: Setup thirdparty
-  #       working-directory: ${{ github.workspace }}\thirdparty\python
+  #     - name: Install thirdparty libs
   #       run: |
-  #         curl https://www.python.org/ftp/python/${{matrix.embed-version}}/python-${{matrix.embed-version}}-embed-amd64.zip --output python-embed.zip
-  #         tar -xf python-embed.zip ${{matrix.py-file}}.zip
-
-  #     - name: Restore CUDA Cache
-  #       uses: actions/cache@v4
-  #       id: cuda-cache
-  #       with:
-  #         key: cuda-${{env.CUDA-VERSION}}
-  #         path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA*
-
-  #     - name: Install CUDA
-  #       if: steps.cuda-cache.outputs.cache-hit != 'true'
-  #       run: choco install cuda --version=${{env.CUDA-VERSION}} --confirm
-
-  #     - name: Setup CUDA
-  #       shell: bash
-  #       run: |
-  #         echo "CUDA_PATH=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
-  #         echo "CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
-  #         echo "CUDA_PATH_VX_Y=CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
-  #         echo "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}\\bin" >> $GITHUB_PATH
-
-  #     - name: Install Visual Studio Integration
-  #       run: |
-  #         $x = (dir $env:CUDA_PATH -dir -recurse -depth 2).where({$_.name -eq 'visual_studio_integration'}).fullname
-  #         $y = (dir $x -dir -recurse).where({$_.name -eq 'MSBuildExtensions'}).fullname + '\*'
-  #         (gi 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
-
-  #     - name: Add msbuild to PATH
-  #       uses: microsoft/setup-msbuild@v2
+  #         ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
+  #         ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
 
   #     - name: Build
-  #       run: msbuild -m  source\MeshLib.sln -p:Configuration=Release -p:PythonVersion=${{matrix.py-short-version}} -p:PythonLibPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\libs\${{matrix.py-file}}.lib -p:PythonDllPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\${{matrix.py-file}}.dll -p:PythonIncludePath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\include\
+  #       run: ./scripts/build_source.sh
+  #       env:
+  #         MESHLIB_PYTHON_VERSION: ${{matrix.py-version}}
+  #         MESHLIB_BUILD_RELEASE: "ON"
+  #         MESHLIB_BUILD_DEBUG: "OFF"
+  #         CMAKE_CXX_COMPILER: /usr/bin/clang++-11
+  #         # FIXME: OpenGL libraries are included to wheel packages when the XDE module is used
+  #         MR_CMAKE_OPTIONS: >
+  #           -DMRIOEXTRAS_OPENCASCADE_USE_XDE=OFF
+  #         # not realy needed
+  #         CMAKE_C_COMPILER: /usr/bin/clang-11
 
-  #       # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Local uses should use that bat file.
-  #       # There's no particular reason for not using our bat file, I'm just assuming the official action is somehow better.
-  #     - name: Install MSYS2 for MRBind
-  #       uses: msys2/setup-msys2@v2
-  #       with:
-  #         msystem: clang64
-  #         install: make mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-clang-tools-extra mingw-w64-clang-x86_64-cmake
-  #         # Matching the location that `install_deps_windows_msys2.bat` uses, because that's what `install_mrbind_windows_msys2.bat` expects.
-  #         location: C:\msys64_meshlib_mrbind
-
-  #       # Move `C:\msys64_meshlib_mrbind\msys64\*` to the parent directory, that's what our .bat files expect.
-  #     - name: Adjust MSYS2 installation directory
-  #       shell: cmd
-  #       run: |
-  #         for %%a in ("C:\msys64_meshlib_mrbind\msys64\*") do move /y "%%~fa" C:\msys64_meshlib_mrbind
-  #         for /d %%a in ("C:\msys64_meshlib_mrbind\msys64\*") do move /y "%%~fa" C:\msys64_meshlib_mrbind
-  #         rmdir C:\msys64_meshlib_mrbind\msys64
-
-  #       # For some reason `./scripts/mrbind/install_mrbind_windows_msys2.bat` doesn't work here in CI, build manually.
+  #       # Also print the amount of RAM. Not doing it in the same step as building the bindings, because when that fails, the logs are sometimes lost.
   #     - name: Build MRBind
-  #       run: C:\msys64_meshlib_mrbind\msys2_shell.cmd -defterm -no-start -clang64 -full-path -c "cd ~ && git clone https://github.com/MeshInspector/mrbind && cd mrbind && cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebugInfo && cmake --build build"
+  #       run: |
+  #         ./scripts/mrbind/install_mrbind_ubuntu.sh
+  #         free -h
 
   #     - name: Generate and build MRBind bindings
-  #       shell: cmd
-  #       # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
   #       run: |
-  #         call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
-  #         call ./scripts/mrbind/generate_win.bat -B --trace PACKAGE_NAME=meshlib PYTHON_PKGCONF_NAME= PYTHON_CFLAGS=-IC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/include PYTHON_LDFLAGS="-LC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/libs -l${{matrix.py-file}}"
+  #         make -f scripts/mrbind/generate.mk -B --trace PACKAGE_NAME=meshlib CXX_FOR_ABI=/usr/bin/clang++-11 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed
 
-  #     - name: Run Test
-  #       working-directory: source\x64\Release
-  #       run: .\MeshViewer.exe -tryHidden -noEventLoop
+  #     - name: Run Tests
+  #       run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
   #     - name: Unit Tests
-  #       run: py -${{matrix.py-version}} scripts\run_unit_test_script.py Release
+  #       # Using `cd` here fixes weird library loading issues.
+  #       run: cd ./build/Release/bin/meshlib && ../MRTest
 
   #     - name: Python Tests
-  #       working-directory: source\x64\Release
-  #       run: py -${{matrix.py-version}} ..\..\..\scripts\run_python_test_script.py -cmd "py -${{matrix.py-version}}"
+  #       working-directory: ./build/Release/bin
+  #       run: ${{ matrix.py-cmd }} ./../../../scripts/run_python_test_script.py -cmd ${{ matrix.py-cmd }}
 
   #     - name: Create and fix Wheel
   #       run: |
-  #         py -${{matrix.py-version}} .\scripts\wheel\build_wheel.py --plat-name=win-amd64 --version ${{needs.setup.outputs.version_tag}}
+  #         ${{ matrix.py-cmd }} ./scripts/wheel/build_wheel.py --version ${{needs.setup.outputs.version_tag}}
 
   #     - name: Upload to Test Artifacts
   #       uses: actions/upload-artifact@v4
   #       with:
-  #         name: Windows-python${{ matrix.py-version }}
-  #         path: wheelhouse\meshlib-*.whl
+  #         name: ManyLinux-${{matrix.py-cmd}}-${{matrix.platform}}
+  #         path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
   #         retention-days: 1
 
-  macos-pip-build:
+  windows-pip-build:
     needs: setup
-    timeout-minutes: 80
-    runs-on: ${{ matrix.instance }}
+    timeout-minutes: 90
+    runs-on: windows-2019
     strategy:
       fail-fast: false
       matrix:
-        platform: ["x86", "arm64"]
         py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         include:
-          - platform: "x86"
-            # On 12.0 `brew` doesn't have binary packages for Clang.
-            plat-name: macosx_13_0_x86_64
-            instance: macos-13
-          - platform: "arm64"
-            plat-name: macosx_12_0_arm64
-            instance: macos-arm-build
           - py-version: "3.8"
             py-tag: "cp38"
-            py-cmd: "python3.8"
+            py-short-version: "38"
+            py-dir: "Python38"
+            py-file: "python38"
+            embed-version: "3.8.9"
           - py-version: "3.9"
             py-tag: "cp39"
-            py-cmd: "python3.9"
+            py-short-version: "39"
+            py-dir: "Python39"
+            py-file: "python39"
+            embed-version: "3.9.9"
           - py-version: "3.10"
             py-tag: "cp310"
-            py-cmd: "python3.10"
+            py-short-version: "310"
+            py-dir: "Python310"
+            py-file: "python310"
+            embed-version: "3.10.0"
           - py-version: "3.11"
             py-tag: "cp311"
-            py-cmd: "python3.11"
+            py-short-version: "311"
+            py-dir: "Python311"
+            py-file: "python311"
+            embed-version: "3.11.0"
           - py-version: "3.12"
             py-tag: "cp312"
-            py-cmd: "python3.12"
+            py-short-version: "312"
+            py-dir: "Python312"
+            py-file: "python312"
+            embed-version: "3.12.0"
+    permissions:
+      id-token: write # This is required for requesting the JWT
+      contents: read  # This is required for actions/checkout
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
 
-      - name: Fix links x86
-        if: ${{ matrix.platform == 'x86' }}
+      - name: Checkout Vcpkg ${{env.VCPKG-VERSION}}
+        working-directory: C:\vcpkg
         run: |
-          find /usr/local/bin -lname '*/Library/Frameworks/Python.framework/*' -delete
-          sudo rm -rf /Library/Frameworks/Python.framework/
-          brew install --force python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew link --overwrite python@${{ matrix.py-version }}
+          git fetch
+          git checkout ${{env.VCPKG-VERSION}}
 
-      - name: Fix links ARM
-        if: ${{ matrix.platform == 'arm64' }}
+      - name: Restore Vcpkg Cache
+        uses: actions/cache@v4
+        id: vcpkg-cache
+        with:
+          key: vcpkg-cache-${{env.VCPKG-VERSION}}
+          path: |
+            C:\vcpkg\*
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+          aws-region: us-east-1
+
+      - name: Update vcpkg packages
         run: |
-          find /opt/homebrew/bin -lname '*/Library/Frameworks/Python.framework/*' -delete
-          rm -rf /Library/Frameworks/Python.framework/
-          brew install --force python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew link --overwrite python@${{ matrix.py-version }}
+          .\thirdparty\install.bat --write-s3
 
-      - name: Create virtualenv
+      - name: Vcpkg integrate install
+        working-directory: C:\vcpkg
+        run: C:\vcpkg\vcpkg.exe integrate install
+
+      - uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: ${{matrix.py-version}}
+
+      - name: Setup python
+        working-directory: C:\vcpkg\installed\x64-windows-meshlib
         run: |
-          # Remove from PATH anything with the word `anaconda` in it, as Anaconda's Python can cause conflicts.
-          export PATH="$(echo "$PATH" | perl -pe 's/[^:]*anaconda[^:]*//g;s/::|^:|:$//g')"
-          ${{ matrix.py-cmd }} -m venv .venv
-          . .venv/bin/activate
-          echo PATH=$PATH >> $GITHUB_ENV
+          py -${{matrix.py-version}} -m pip install --upgrade pip
+          py -${{matrix.py-version}} -m pip install --upgrade -r ${{ github.workspace }}\requirements\python.txt
+          py -${{matrix.py-version}} -m pip install pytest
 
-      - name: Python setup
+      - name: Setup thirdparty
+        working-directory: ${{ github.workspace }}\thirdparty\python
         run: |
-          curl -sS https://bootstrap.pypa.io/get-pip.py | ${{ matrix.py-cmd }}
-          ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
-          ${{ matrix.py-cmd }} -m pip install pytest
-          ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
+          curl https://www.python.org/ftp/python/${{matrix.embed-version}}/python-${{matrix.embed-version}}-embed-amd64.zip --output python-embed.zip
+          tar -xf python-embed.zip ${{matrix.py-file}}.zip
 
-      - name: Install thirdparty libs
-        run: ./scripts/build_thirdparty.sh
+      - name: Restore CUDA Cache
+        uses: actions/cache@v4
+        id: cuda-cache
+        with:
+          key: cuda-${{env.CUDA-VERSION}}
+          path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA*
+
+      - name: Install CUDA
+        if: steps.cuda-cache.outputs.cache-hit != 'true'
+        run: choco install cuda --version=${{env.CUDA-VERSION}} --confirm
+
+      - name: Setup CUDA
+        shell: bash
+        run: |
+          echo "CUDA_PATH=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
+          echo "CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
+          echo "CUDA_PATH_VX_Y=CUDA_PATH_V${{ env.CUDA-MAJOR }}_${{ env.CUDA-MINOR }}" >> $GITHUB_ENV
+          echo "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v${{ env.CUDA-MAJOR }}.${{ env.CUDA-MINOR }}\\bin" >> $GITHUB_PATH
+
+      - name: Install Visual Studio Integration
+        run: |
+          $x = (dir $env:CUDA_PATH -dir -recurse -depth 2).where({$_.name -eq 'visual_studio_integration'}).fullname
+          $y = (dir $x -dir -recurse).where({$_.name -eq 'MSBuildExtensions'}).fullname + '\*'
+          (gi 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Microsoft\VC\*\BuildCustomizations').fullname.foreach({cp $y $_})
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v2
 
       - name: Build
-        run: ./scripts/build_source.sh
-        env:
-          MESHLIB_PYTHON_VERSION: ${{matrix.py-version}}
-          MESHLIB_BUILD_RELEASE: "ON"
-          MESHLIB_BUILD_DEBUG: "OFF"
-          CMAKE_CXX_COMPILER: /usr/bin/clang++
-          # not realy needed
-          CMAKE_C_COMPILER: /usr/bin/clang
+        run: msbuild -m  source\MeshLib.sln -p:Configuration=Release -p:PythonVersion=${{matrix.py-short-version}} -p:PythonLibPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\libs\${{matrix.py-file}}.lib -p:PythonDllPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\${{matrix.py-file}}.dll -p:PythonIncludePath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\include\
 
-      - name: Install MRBind requirements
-        run: ./scripts/mrbind/install_deps_macos.sh
+        # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Local uses should use that bat file.
+        # There's no particular reason for not using our bat file, I'm just assuming the official action is somehow better.
+      - name: Install MSYS2 for MRBind
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: clang64
+          install: make mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-clang-tools-extra mingw-w64-clang-x86_64-cmake
+          # Matching the location that `install_deps_windows_msys2.bat` uses, because that's what `install_mrbind_windows_msys2.bat` expects.
+          location: C:\msys64_meshlib_mrbind
 
+        # Move `C:\msys64_meshlib_mrbind\msys64\*` to the parent directory, that's what our .bat files expect.
+      - name: Adjust MSYS2 installation directory
+        shell: cmd
+        run: |
+          for %%a in ("C:\msys64_meshlib_mrbind\msys64\*") do move /y "%%~fa" C:\msys64_meshlib_mrbind
+          for /d %%a in ("C:\msys64_meshlib_mrbind\msys64\*") do move /y "%%~fa" C:\msys64_meshlib_mrbind
+          rmdir C:\msys64_meshlib_mrbind\msys64
+
+        # For some reason `./scripts/mrbind/install_mrbind_windows_msys2.bat` doesn't work here in CI, build manually.
       - name: Build MRBind
-        run: ./scripts/mrbind/install_mrbind_macos.sh
+        run: C:\msys64_meshlib_mrbind\msys2_shell.cmd -defterm -no-start -clang64 -full-path -c "cd ~ && git clone https://github.com/MeshInspector/mrbind && cd mrbind && cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebugInfo && cmake --build build"
 
       - name: Generate and build MRBind bindings
-        env:
-          # Arm Macs use `/opt/homebrew`, while x86 Macs use `/usr/local`. Add both for simplicity.
-          PATH: /opt/homebrew/opt/make/libexec/gnubin:/usr/local/opt/make/libexec/gnubin:${{env.PATH}}
-        # `MACOS_MIN_VER` picked arbitrarily to match what Apple Clang uses when building MeshLib.
-        # Not setting this or setting a different value cases a warning when linking the bindings, and you can get the correct (?) value from those warnings.
+        shell: cmd
+        # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
-          make --version
-          make -f ./scripts/mrbind/generate.mk -B --trace PACKAGE_NAME=meshlib MACOS_MIN_VER=12.7 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0'
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
+          call ./scripts/mrbind/generate_win.bat -B --trace PACKAGE_NAME=meshlib PYTHON_PKGCONF_NAME= PYTHON_CFLAGS=-IC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/include PYTHON_LDFLAGS="-LC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/libs -l${{matrix.py-file}}"
+
+      - name: Run Test
+        working-directory: source\x64\Release
+        run: .\MeshViewer.exe -tryHidden -noEventLoop
 
       - name: Unit Tests
-        # Using `cd` here fixes weird library loading issues.
-        run: cd ./build/Release/bin/meshlib && ../MRTest
+        run: py -${{matrix.py-version}} scripts\run_unit_test_script.py Release
 
       - name: Python Tests
-        working-directory: ./build/Release/bin
-        run: ${{ matrix.py-cmd }} ./../../../scripts/run_python_test_script.py -cmd ${{ matrix.py-cmd }}
+        working-directory: source\x64\Release
+        run: py -${{matrix.py-version}} ..\..\..\scripts\run_python_test_script.py -cmd "py -${{matrix.py-version}}"
 
       - name: Create and fix Wheel
         run: |
-          ${{ matrix.py-cmd }} ./scripts/wheel/build_wheel.py --plat-name=${{matrix.plat-name}} --version ${{needs.setup.outputs.version_tag}}
+          py -${{matrix.py-version}} .\scripts\wheel\build_wheel.py --plat-name=win-amd64 --version ${{needs.setup.outputs.version_tag}}
 
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Macos-${{matrix.py-cmd}}-${{matrix.platform}}
-          path: meshlib-*.whl
+          name: Windows-python${{ matrix.py-version }}
+          path: wheelhouse\meshlib-*.whl
           retention-days: 1
 
-  manylinux-pip-test:
-    needs: [manylinux-pip-build]
-    timeout-minutes: 20
-    runs-on: ${{ matrix.runner }}
-    container:
-      image: ${{matrix.container-prefix}}${{matrix.os}}
-      options: ${{ matrix.container-options }}
-    strategy:
-      fail-fast: false
-      matrix:
-        platform: ["x86_64", "aarch64"]
-        os: ["ubuntu:20.04", "ubuntu:22.04", "debian:11-slim", "fedora:37", "fedora:39"]
-        include:
-          - platform: "x86_64"
-            runner: ubuntu-latest
-            container-options: "--user root"
-            container-prefix: " "
-          - platform: "aarch64"
-            runner: [ 'self-hosted', 'linux-arm64' ]
-            container-options: "--user root"
-            container-prefix: "arm64v8/"
-          - os: "ubuntu:20.04"
-            py-version: "3.8"
-            py-cmd: "python3.8"
-          - os: "debian:11-slim"
-            py-version: "3.9"
-            py-cmd: "python3.9"
-          - os: "ubuntu:22.04"
-            py-version: "3.10"
-            py-cmd: "python3.10"
-          - os: "fedora:37"
-            py-version: "3.11"
-            py-cmd: "python3.11"
-          - os: "fedora:39"
-            py-version: "3.12"
-            py-cmd: "python3.12"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Ubuntu system setup
-        if: ${{ matrix.os == 'ubuntu:20.04' || matrix.os == 'ubuntu:22.04' || matrix.os == 'debian:11-slim' }}
-        run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
-
-      - name: Fedora 37 system setup
-        if: ${{matrix.os == 'fedora:37' || matrix.os == 'fedora:39'}}
-        run: dnf -y install python3 pip
-
-      - name: Pip setup
-        run: |
-          ${{ matrix.py-cmd }} -m pip install --upgrade pip
-          ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
-          ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
-          ${{ matrix.py-cmd }} -m pip install pytest
-
-      - name: Download Meshlib wheel from Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ManyLinux-${{matrix.py-cmd}}-${{matrix.platform}}
-          merge-multiple: true
-
-      - name: Meshlib wheel install
-        run: ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} ./meshlib-*.whl
-
-      - name: Run Python tests
-        working-directory: test_python
-        run: ${{ matrix.py-cmd }} -m pytest -s -v
-
-  # windows-pip-test:
-  #   needs: [windows-pip-build]
-  #   timeout-minutes: 20
-  #   runs-on: windows-latest
+  # macos-pip-build:
+  #   needs: setup
+  #   timeout-minutes: 80
+  #   runs-on: ${{ matrix.instance }}
   #   strategy:
   #     fail-fast: false
   #     matrix:
+  #       platform: ["x86", "arm64"]
   #       py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+  #       include:
+  #         - platform: "x86"
+  #           # On 12.0 `brew` doesn't have binary packages for Clang.
+  #           plat-name: macosx_13_0_x86_64
+  #           instance: macos-13
+  #         - platform: "arm64"
+  #           plat-name: macosx_12_0_arm64
+  #           instance: macos-arm-build
+  #         - py-version: "3.8"
+  #           py-tag: "cp38"
+  #           py-cmd: "python3.8"
+  #         - py-version: "3.9"
+  #           py-tag: "cp39"
+  #           py-cmd: "python3.9"
+  #         - py-version: "3.10"
+  #           py-tag: "cp310"
+  #           py-cmd: "python3.10"
+  #         - py-version: "3.11"
+  #           py-tag: "cp311"
+  #           py-cmd: "python3.11"
+  #         - py-version: "3.12"
+  #           py-tag: "cp312"
+  #           py-cmd: "python3.12"
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #       with:
+  #         submodules: true
+
+  #     - name: Fix links x86
+  #       if: ${{ matrix.platform == 'x86' }}
+  #       run: |
+  #         find /usr/local/bin -lname '*/Library/Frameworks/Python.framework/*' -delete
+  #         sudo rm -rf /Library/Frameworks/Python.framework/
+  #         brew install --force python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew link --overwrite python@${{ matrix.py-version }}
+
+  #     - name: Fix links ARM
+  #       if: ${{ matrix.platform == 'arm64' }}
+  #       run: |
+  #         find /opt/homebrew/bin -lname '*/Library/Frameworks/Python.framework/*' -delete
+  #         rm -rf /Library/Frameworks/Python.framework/
+  #         brew install --force python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew unlink python@${{ matrix.py-version }} && brew link --overwrite python@${{ matrix.py-version }}
+
+  #     - name: Create virtualenv
+  #       run: |
+  #         # Remove from PATH anything with the word `anaconda` in it, as Anaconda's Python can cause conflicts.
+  #         export PATH="$(echo "$PATH" | perl -pe 's/[^:]*anaconda[^:]*//g;s/::|^:|:$//g')"
+  #         ${{ matrix.py-cmd }} -m venv .venv
+  #         . .venv/bin/activate
+  #         echo PATH=$PATH >> $GITHUB_ENV
+
+  #     - name: Python setup
+  #       run: |
+  #         curl -sS https://bootstrap.pypa.io/get-pip.py | ${{ matrix.py-cmd }}
+  #         ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
+  #         ${{ matrix.py-cmd }} -m pip install pytest
+  #         ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
+
+  #     - name: Install thirdparty libs
+  #       run: ./scripts/build_thirdparty.sh
+
+  #     - name: Build
+  #       run: ./scripts/build_source.sh
+  #       env:
+  #         MESHLIB_PYTHON_VERSION: ${{matrix.py-version}}
+  #         MESHLIB_BUILD_RELEASE: "ON"
+  #         MESHLIB_BUILD_DEBUG: "OFF"
+  #         CMAKE_CXX_COMPILER: /usr/bin/clang++
+  #         # not realy needed
+  #         CMAKE_C_COMPILER: /usr/bin/clang
+
+  #     - name: Install MRBind requirements
+  #       run: ./scripts/mrbind/install_deps_macos.sh
+
+  #     - name: Build MRBind
+  #       run: ./scripts/mrbind/install_mrbind_macos.sh
+
+  #     - name: Generate and build MRBind bindings
+  #       env:
+  #         # Arm Macs use `/opt/homebrew`, while x86 Macs use `/usr/local`. Add both for simplicity.
+  #         PATH: /opt/homebrew/opt/make/libexec/gnubin:/usr/local/opt/make/libexec/gnubin:${{env.PATH}}
+  #       # `MACOS_MIN_VER` picked arbitrarily to match what Apple Clang uses when building MeshLib.
+  #       # Not setting this or setting a different value cases a warning when linking the bindings, and you can get the correct (?) value from those warnings.
+  #       run: |
+  #         make --version
+  #         make -f ./scripts/mrbind/generate.mk -B --trace PACKAGE_NAME=meshlib MACOS_MIN_VER=12.7 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0'
+
+  #     - name: Unit Tests
+  #       # Using `cd` here fixes weird library loading issues.
+  #       run: cd ./build/Release/bin/meshlib && ../MRTest
+
+  #     - name: Python Tests
+  #       working-directory: ./build/Release/bin
+  #       run: ${{ matrix.py-cmd }} ./../../../scripts/run_python_test_script.py -cmd ${{ matrix.py-cmd }}
+
+  #     - name: Create and fix Wheel
+  #       run: |
+  #         ${{ matrix.py-cmd }} ./scripts/wheel/build_wheel.py --plat-name=${{matrix.plat-name}} --version ${{needs.setup.outputs.version_tag}}
+
+  #     - name: Upload to Test Artifacts
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: Macos-${{matrix.py-cmd}}-${{matrix.platform}}
+  #         path: meshlib-*.whl
+  #         retention-days: 1
+
+  # manylinux-pip-test:
+  #   needs: [manylinux-pip-build]
+  #   timeout-minutes: 20
+  #   runs-on: ${{ matrix.runner }}
+  #   container:
+  #     image: ${{matrix.container-prefix}}${{matrix.os}}
+  #     options: ${{ matrix.container-options }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       platform: ["x86_64", "aarch64"]
+  #       os: ["ubuntu:20.04", "ubuntu:22.04", "debian:11-slim", "fedora:37", "fedora:39"]
+  #       include:
+  #         - platform: "x86_64"
+  #           runner: ubuntu-latest
+  #           container-options: "--user root"
+  #           container-prefix: " "
+  #         - platform: "aarch64"
+  #           runner: [ 'self-hosted', 'linux-arm64' ]
+  #           container-options: "--user root"
+  #           container-prefix: "arm64v8/"
+  #         - os: "ubuntu:20.04"
+  #           py-version: "3.8"
+  #           py-cmd: "python3.8"
+  #         - os: "debian:11-slim"
+  #           py-version: "3.9"
+  #           py-cmd: "python3.9"
+  #         - os: "ubuntu:22.04"
+  #           py-version: "3.10"
+  #           py-cmd: "python3.10"
+  #         - os: "fedora:37"
+  #           py-version: "3.11"
+  #           py-cmd: "python3.11"
+  #         - os: "fedora:39"
+  #           py-version: "3.12"
+  #           py-cmd: "python3.12"
   #   steps:
   #     - name: Checkout
   #       uses: actions/checkout@v4
 
+  #     - name: Ubuntu system setup
+  #       if: ${{ matrix.os == 'ubuntu:20.04' || matrix.os == 'ubuntu:22.04' || matrix.os == 'debian:11-slim' }}
+  #       run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-distutils python3-pip
+
+  #     - name: Fedora 37 system setup
+  #       if: ${{matrix.os == 'fedora:37' || matrix.os == 'fedora:39'}}
+  #       run: dnf -y install python3 pip
+
+  #     - name: Pip setup
+  #       run: |
+  #         ${{ matrix.py-cmd }} -m pip install --upgrade pip
+  #         ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
+  #         ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
+  #         ${{ matrix.py-cmd }} -m pip install pytest
+
   #     - name: Download Meshlib wheel from Artifact
   #       uses: actions/download-artifact@v4
   #       with:
-  #         name: Windows-python${{matrix.py-version}}
+  #         name: ManyLinux-${{matrix.py-cmd}}-${{matrix.platform}}
   #         merge-multiple: true
 
-  #     - name: Python setup
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: ${{ matrix.py-version }}
-
-  #     - name: Setup pip
-  #       run: |
-  #         py -${{matrix.py-version}} -m pip install --upgrade pip
-  #         py -${{matrix.py-version}} -m pip uninstall -y meshlib
-  #         py -${{matrix.py-version}} -m pip install --upgrade -r ./requirements/python.txt
-  #         py -${{matrix.py-version}} -m pip install pytest
-
-  #     - name: Install Meshlib wheel
-  #       shell: pwsh
-  #       run: $wheel_file=Get-ChildItem -Filter meshlib*win*.whl; py -${{matrix.py-version}} -m pip install $wheel_file
+  #     - name: Meshlib wheel install
+  #       run: ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} ./meshlib-*.whl
 
   #     - name: Run Python tests
   #       working-directory: test_python
-  #       run: py -${{matrix.py-version}} -m pytest -s -v
+  #       run: ${{ matrix.py-cmd }} -m pytest -s -v
 
-  macos-pip-test:
-    needs: [macos-pip-build]
+  windows-pip-test:
+    needs: [windows-pip-build]
     timeout-minutes: 20
-    runs-on: ${{ matrix.instance }}
+    runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
-        platform: ["arm64", "x86"]
         py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
-        include:
-          - platform: "x86"
-            # On 12.0 `brew` doesn't have binary packages for Clang.
-            plat-name: macosx_13_0_x86_64
-            instance: macos-13
-          - platform: "arm64"
-            plat-name: macosx_12_0_arm64
-            instance: macos-arm-build
-          - py-version: "3.8"
-            py-cmd: "python3.8"
-          - py-version: "3.9"
-            py-cmd: "python3.9"
-          - py-version: "3.10"
-            py-cmd: "python3.10"
-          - py-version: "3.11"
-            py-cmd: "python3.11"
-          - py-version: "3.12"
-            py-cmd: "python3.12"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Python setup
-        if: ${{ !(matrix.platform == 'x86' && ( matrix.py-version == '3.11' || matrix.py-version == '3.12' ) ) }}
-        run: brew install python@${{matrix.py-version}}
-
-      - name: Create virtualenv
-        run: |
-          # Remove from PATH anything with the word `anaconda` in it, as Anaconda's Python can cause conflicts.
-          export PATH="$(echo "$PATH" | perl -pe 's/[^:]*anaconda[^:]*//g;s/::|^:|:$//g')"
-          ${{ matrix.py-cmd }} -m venv .venv
-          . .venv/bin/activate
-          echo PATH=$PATH >> $GITHUB_ENV
-
-      - name: Pip setup
-        run: |
-          ${{ matrix.py-cmd }} -m pip install --upgrade pip
-          ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
-          ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
-          ${{ matrix.py-cmd }} -m pip install pytest
-
       - name: Download Meshlib wheel from Artifact
         uses: actions/download-artifact@v4
         with:
-          name: Macos-${{matrix.py-cmd}}-${{matrix.platform}}
+          name: Windows-python${{matrix.py-version}}
           merge-multiple: true
 
-      - name: Meshlib wheel install
-        run: ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} ./meshlib-*${{matrix.platform}}*.whl
+      - name: Python setup
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.py-version }}
+
+      - name: Setup pip
+        run: |
+          py -${{matrix.py-version}} -m pip install --upgrade pip
+          py -${{matrix.py-version}} -m pip uninstall -y meshlib
+          py -${{matrix.py-version}} -m pip install --upgrade -r ./requirements/python.txt
+          py -${{matrix.py-version}} -m pip install pytest
+
+      - name: Install Meshlib wheel
+        shell: pwsh
+        run: $wheel_file=Get-ChildItem -Filter meshlib*win*.whl; py -${{matrix.py-version}} -m pip install $wheel_file
 
       - name: Run Python tests
         working-directory: test_python
-        run: ${{ matrix.py-cmd }} -m pytest -s -v
+        run: py -${{matrix.py-version}} -m pytest -s -v
 
-  delete-artifacts:
-    timeout-minutes: 5
-    runs-on: ubuntu-20.04
-    needs: [manylinux-pip-test, macos-pip-test] # windows-pip-test
-    if: always()
-    steps:
-      - name: Delete all ManyLinux
-        uses: geekyeggo/delete-artifact@v5
-        with:
-          name: ManyLinux-*
-          failOnError: false
+  # macos-pip-test:
+  #   needs: [macos-pip-build]
+  #   timeout-minutes: 20
+  #   runs-on: ${{ matrix.instance }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       platform: ["arm64", "x86"]
+  #       py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+  #       include:
+  #         - platform: "x86"
+  #           # On 12.0 `brew` doesn't have binary packages for Clang.
+  #           plat-name: macosx_13_0_x86_64
+  #           instance: macos-13
+  #         - platform: "arm64"
+  #           plat-name: macosx_12_0_arm64
+  #           instance: macos-arm-build
+  #         - py-version: "3.8"
+  #           py-cmd: "python3.8"
+  #         - py-version: "3.9"
+  #           py-cmd: "python3.9"
+  #         - py-version: "3.10"
+  #           py-cmd: "python3.10"
+  #         - py-version: "3.11"
+  #           py-cmd: "python3.11"
+  #         - py-version: "3.12"
+  #           py-cmd: "python3.12"
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
 
-      - name: Delete all Windows
-        uses: geekyeggo/delete-artifact@v5
-        with:
-          name: Windows-*
-          failOnError: false
+  #     - name: Python setup
+  #       if: ${{ !(matrix.platform == 'x86' && ( matrix.py-version == '3.11' || matrix.py-version == '3.12' ) ) }}
+  #       run: brew install python@${{matrix.py-version}}
 
-      - name: Delete all Macos
-        uses: geekyeggo/delete-artifact@v5
-        with:
-          name: Macos-*
-          failOnError: false
+  #     - name: Create virtualenv
+  #       run: |
+  #         # Remove from PATH anything with the word `anaconda` in it, as Anaconda's Python can cause conflicts.
+  #         export PATH="$(echo "$PATH" | perl -pe 's/[^:]*anaconda[^:]*//g;s/::|^:|:$//g')"
+  #         ${{ matrix.py-cmd }} -m venv .venv
+  #         . .venv/bin/activate
+  #         echo PATH=$PATH >> $GITHUB_ENV
+
+  #     - name: Pip setup
+  #       run: |
+  #         ${{ matrix.py-cmd }} -m pip install --upgrade pip
+  #         ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
+  #         ${{ matrix.py-cmd }} -m pip install --upgrade -r ./requirements/python.txt
+  #         ${{ matrix.py-cmd }} -m pip install pytest
+
+  #     - name: Download Meshlib wheel from Artifact
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: Macos-${{matrix.py-cmd}}-${{matrix.platform}}
+  #         merge-multiple: true
+
+  #     - name: Meshlib wheel install
+  #       run: ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }} ./meshlib-*${{matrix.platform}}*.whl
+
+  #     - name: Run Python tests
+  #       working-directory: test_python
+  #       run: ${{ matrix.py-cmd }} -m pytest -s -v
+
+  # delete-artifacts:
+  #   timeout-minutes: 5
+  #   runs-on: ubuntu-20.04
+  #   needs: [manylinux-pip-test, macos-pip-test] # windows-pip-test
+  #   if: always()
+  #   steps:
+  #     - name: Delete all ManyLinux
+  #       uses: geekyeggo/delete-artifact@v5
+  #       with:
+  #         name: ManyLinux-*
+  #         failOnError: false
+
+  #     - name: Delete all Windows
+  #       uses: geekyeggo/delete-artifact@v5
+  #       with:
+  #         name: Windows-*
+  #         failOnError: false
+
+  #     - name: Delete all Macos
+  #       uses: geekyeggo/delete-artifact@v5
+  #       with:
+  #         name: Macos-*
+  #         failOnError: false

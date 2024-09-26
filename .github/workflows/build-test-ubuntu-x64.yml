@@ -125,7 +125,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu24' }}
         with:
           repository: MeshInspector/mrbind
-          path: _mrbind
+          path: mrbind
           token: ${{ secrets.BUILD_MACHINE_TOKEN }}
           ref: f426a147c9c4e3335e32f9c62f24d4c3f571bf1d
 
@@ -161,7 +161,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu24' }}
         env:
           CXX: ${{matrix.cxx-compiler}}
-        run: make -f scripts/mrbind/generate.mk
+        run: make -f scripts/mrbind/generate.mk MODE=none
 
       - name: Sanity check MRBind bindings
         if: ${{ matrix.os == 'ubuntu24' }}

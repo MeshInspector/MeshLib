@@ -3,7 +3,15 @@
 // this header includes the whole OpenVDB, so please include it from .cpp files only
 #include "MRMesh/MRVector3.h"
 
-#include "MROpenVDB.h"
+#include <openvdb/Grid.h>
+
+namespace openvdb
+{
+
+using FloatTree = openvdb::tree::Tree4<float>::Type;
+using FloatGrid = openvdb::Grid<FloatTree>;
+
+} // namespace openvdb
 
 namespace MR
 {

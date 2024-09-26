@@ -147,7 +147,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        py-version: ["3.12"]
         include:
           - py-version: "3.8"
             py-tag: "cp38"
@@ -506,7 +506,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        py-version: ["3.12"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -3,7 +3,7 @@
 #include "imgui.h"
 #include "MRRibbonMenu.h"
 #include "MRViewer.h"
-#include "MRMesh/MRSystem.h"
+#include "MRMesh/MRSystemPath.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRDirectory.h"
@@ -431,7 +431,7 @@ std::vector<std::filesystem::path> RibbonSchemaLoader::getStructureFiles_( const
 {
     std::vector<std::filesystem::path> files;
     std::error_code ec;
-    for ( auto entry : Directory{ GetResourcesDirectory(), ec } )
+    for ( auto entry : Directory{ SystemPath::getResourcesDirectory(), ec } )
     {
         auto filename = entry.path().filename().u8string();
         for ( auto& c : filename )
@@ -476,7 +476,12 @@ void RibbonSchemaLoader::readItemsJson_( const std::filesystem::path& path ) con
         assert( false );
         return;
     }
-    auto items = itemsStructRes.value()["Items"];
+    readItemsJson_( *itemsStructRes );
+}
+
+void RibbonSchemaLoader::readItemsJson_( const Json::Value& itemsStruct ) const
+{
+    auto items = itemsStruct["Items"];
     if ( !items.isArray() )
     {
         spdlog::warn( "\"Items\" field is not valid or not present" );
@@ -549,7 +554,12 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
         assert( false );
         return;
     }
-    auto tabs = itemsStructRes.value()["Tabs"];
+    readUIJson_( *itemsStructRes );
+}
+
+void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure ) const
+{
+    auto tabs = itemsStructure["Tabs"];
     if ( !tabs.isArray() )
     {
         spdlog::warn( "\"Tabs\" field is not valid or not present" );
@@ -658,10 +668,10 @@ void RibbonSchemaLoader::readUIJson_( const std::filesystem::path& path ) const
 
     auto loadQuickAccess = [&] ( const std::string& key, MenuItemsList& oldList )
     {
-        if ( itemsStructRes.value().isMember( key ) )
+        if ( itemsStructure.isMember( key ) )
         {
             MenuItemsList newDefaultList;
-            readMenuItemsList( itemsStructRes.value()[key], newDefaultList );
+            readMenuItemsList( itemsStructure[key], newDefaultList );
             // move items of `newDefaultList` that are not preset in `oldList` to the end of `oldList`
             std::copy_if(
                 std::make_move_iterator( newDefaultList.begin() ),

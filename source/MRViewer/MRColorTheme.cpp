@@ -12,6 +12,7 @@
 #include "MRViewport.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRSystem.h"
+#include "MRMesh/MRSystemPath.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
 #include "MRPch/MRSuppressWarning.h"
@@ -287,14 +288,14 @@ void ColorTheme::setupDefaultDark()
 {
     spdlog::info( "Setup dark color theme." );
     instance().themeName_ = getPresetName( Preset::Dark );
-    setupFromFile( MR::GetResourcesDirectory() / "MRDarkTheme.json", Type::Default );
+    setupFromFile( SystemPath::getResourcesDirectory() / "MRDarkTheme.json", Type::Default );
 }
 
 void ColorTheme::setupDefaultLight()
 {
     spdlog::info( "Setup light color theme." );
     instance().themeName_ = getPresetName( Preset::Light );
-    setupFromFile( MR::GetResourcesDirectory() / "MRLightTheme.json", Type::Default );
+    setupFromFile( SystemPath::getResourcesDirectory() / "MRLightTheme.json", Type::Default );
 }
 
 void ColorTheme::setupUserTheme( const std::string& themeName )

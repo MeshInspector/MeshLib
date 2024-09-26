@@ -1,5 +1,6 @@
 #include "MRLinesLoad.h"
 #include "MRIOFormatsRegistry.h"
+#include "MRIOParsing.h"
 #include "MRPolyline.h"
 #include "MRTimer.h"
 #include "MRStringConvert.h"
@@ -64,10 +65,7 @@ Expected<MR::Polyline3> fromPts( std::istream& in, ProgressCallback callback /*=
     int pointCount = 0;
 
     const auto posStart = in.tellg();
-    in.seekg( 0, std::ios_base::end );
-    const auto posEnd = in.tellg();
-    in.seekg( posStart );
-    const float streamSize = float( posEnd - posStart );
+    const auto streamSize = getStreamSize( in );
 
     bool isPolylineBlock{ false };
 
@@ -110,7 +108,7 @@ Expected<MR::Polyline3> fromPts( std::istream& in, ProgressCallback callback /*=
 
         if ( callback && !( pointCount & 0x3FF ) )
         {
-            const float progress = float( in.tellg() - posStart ) / streamSize;
+            const float progress = float( in.tellg() - posStart ) / float( streamSize );
             if ( !callback( progress ) )
                 return unexpected( std::string( "Loading canceled" ) );
         }

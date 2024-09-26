@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="MRBoolean.cpp" />
     <ClCompile Include="MRComputeVolume.cpp" />
+    <ClCompile Include="MRDicom.cpp" />
     <ClCompile Include="MRFixUndercuts.cpp" />
     <ClCompile Include="MRFloatGrid.cpp" />
     <ClCompile Include="MRFloatGridComponents.cpp" />
@@ -33,6 +34,8 @@
     <ClCompile Include="MRPointsToDistanceVolume.cpp" />
     <ClCompile Include="MRPointsToMeshFusion.cpp" />
     <ClCompile Include="MRRebuildMesh.cpp" />
+    <ClCompile Include="MRScalarConvert.cpp" />
+    <ClCompile Include="MRScanHelpers.cpp" />
     <ClCompile Include="MRTeethMaskToDirectionVolume.cpp" />
     <ClCompile Include="MRToolPath.cpp" />
     <ClCompile Include="MRVDBConversions.cpp" />
@@ -52,6 +55,7 @@
     <ClInclude Include="MRChangeVoxelsAction.h" />
     <ClInclude Include="MRChangeVoxelSelectionAction.h" />
     <ClInclude Include="MRComputeVolume.h" />
+    <ClInclude Include="MRDicom.h" />
     <ClInclude Include="MRDistanceVolumeParams.h" />
     <ClInclude Include="MRFixUndercuts.h" />
     <ClInclude Include="MRFloatGrid.h" />
@@ -67,6 +71,8 @@
     <ClInclude Include="MRPointsToDistanceVolume.h" />
     <ClInclude Include="MRPointsToMeshFusion.h" />
     <ClInclude Include="MRRebuildMesh.h" />
+    <ClInclude Include="MRScalarConvert.h" />
+    <ClInclude Include="MRScanHelpers.h" />
     <ClInclude Include="MRTeethMaskToDirectionVolume.h" />
     <ClInclude Include="MRToolPath.h" />
     <ClInclude Include="MRVDBConversions.h" />

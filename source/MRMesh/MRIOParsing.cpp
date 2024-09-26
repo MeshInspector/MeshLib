@@ -9,7 +9,30 @@
 // helper macro to make code cleaner
 #define floatT real_parser<T>{}
 
-static constexpr int MaxErrorStringLen = 80;
+namespace
+{
+
+using namespace MR;
+
+constexpr int MaxErrorStringLen = 80;
+
+template <typename T>
+Expected<void> readFromStream( std::istream& in, T& out )
+{
+    const auto streamSize = getStreamSize( in );
+    if ( !in )
+        return unexpected( std::string( "File read error" ) );
+
+    out.resize( streamSize );
+    // important on Windows: in stream must be open in binary mode, otherwise next will fail
+    in.read( out.data(), (ptrdiff_t)out.size() );
+    if ( !in )
+        return unexpected( std::string( "File read error" ) );
+
+    return {};
+}
+
+} // namespace
 
 namespace MR
 {
@@ -73,21 +96,29 @@ std::vector<size_t> splitByLines( const char* data, size_t size )
     return newlines;
 }
 
-Expected<MR::Buffer<char>> readCharBuffer( std::istream& in )
+std::streamoff getStreamSize( std::istream& in )
 {
     const auto posStart = in.tellg();
-    in.seekg( 0, std::ios_base::end );
+    in.seekg( 0, std::ios::end );
     const auto posEnd = in.tellg();
     in.seekg( posStart );
-    const auto streamSize = posEnd - posStart;
+    return posEnd - posStart;
+}
 
-    Buffer<char> data( streamSize );
-    // important on Windows: in stream must be open in binary mode, otherwise next will fail
-    in.read( data.data(), ( ptrdiff_t )data.size() );
-    if ( !in )
-        return unexpected( std::string( "File read error" ) );
+Expected<std::string> readString( std::istream& in )
+{
+    std::string str;
+    if ( auto result = readFromStream( in, str ); !result )
+        return unexpected( std::move( result.error() ) );
+    return str;
+}
 
-    return data;
+Expected<Buffer<char>> readCharBuffer( std::istream& in )
+{
+    Buffer<char> buf;
+    if ( auto result = readFromStream( in, buf ); !result )
+        return unexpected( std::move( result.error() ) );
+    return buf;
 }
 
 template <typename T>

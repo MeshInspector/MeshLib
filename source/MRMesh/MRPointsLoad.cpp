@@ -278,10 +278,7 @@ Expected<MR::PointCloud> fromObj( std::istream& in, const PointsLoadSettings& se
     PointCloud cloud;
 
     const auto posStart = in.tellg();
-    in.seekg( 0, std::ios_base::end );
-    const auto posEnd = in.tellg();
-    in.seekg( posStart );
-    const auto streamSize = float( posEnd - posStart );
+    const auto streamSize = getStreamSize( in );
 
     for ( int i = 0;; ++i )
     {
@@ -306,7 +303,7 @@ Expected<MR::PointCloud> fromObj( std::istream& in, const PointsLoadSettings& se
 
         if ( settings.callback && !( i & 0x3FF ) )
         {
-            const float progress = float( in.tellg() - posStart ) / streamSize;
+            const float progress = float( in.tellg() - posStart ) / float( streamSize );
             if ( !settings.callback( progress ) )
                 return unexpected( std::string( "Loading canceled" ) );
         }
@@ -330,10 +327,7 @@ Expected<MR::PointCloud> fromDxf( std::istream& in, const PointsLoadSettings& se
     PointCloud cloud;
 
     const auto posStart = in.tellg();
-    in.seekg( 0, std::ios_base::end );
-    const auto posEnd = in.tellg();
-    in.seekg( posStart );
-    const auto streamSize = float( posEnd - posStart );
+    const auto streamSize = getStreamSize( in );
 
     std::string str;
     std::getline( in, str );
@@ -346,7 +340,7 @@ Expected<MR::PointCloud> fromDxf( std::istream& in, const PointsLoadSettings& se
 
     for ( int i = 0; !in.eof(); ++i )
     {
-        if ( i % 1024 == 0 && !reportProgress( settings.callback, float( in.tellg() ) / streamSize ) )
+        if ( i % 1024 == 0 && !reportProgress( settings.callback, float( in.tellg() - posStart ) / float( streamSize ) ) )
             return unexpectedOperationCanceled();
 
         std::getline( in, str );

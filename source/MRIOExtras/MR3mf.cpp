@@ -2,6 +2,7 @@
 #ifndef MRIOEXTRAS_NO_3MF
 
 #include "MRMesh/MRIOFormatsRegistry.h"
+#include "MRMesh/MRIOParsing.h"
 #include "MRMesh/MRMeshBuilder.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRObjectMesh.h"
@@ -232,17 +233,13 @@ Expected<std::unique_ptr<tinyxml2::XMLDocument>> ThreeMFLoader::loadXml_( const 
         return nullptr;
 
     in.seekg( 0 );
-    // Read file contents to char vector
-    in.seekg( 0, std::ios_base::end );
-    size_t size = in.tellg();
-    in.seekg( 0 );
-    std::vector<char> docStr( size + 1 );
-    in.read( docStr.data(), size );
-    if ( in.fail() || in.bad() )
+    // Read file contents to char buffer
+    auto docBuf = readCharBuffer( in );
+    if ( !docBuf )
         return unexpected( std::string( "3DF model file read error" ) + utf8string( file ) );
     // Parse XML
     auto doc = std::make_unique<tinyxml2::XMLDocument>();
-    if ( tinyxml2::XML_SUCCESS != doc->Parse( docStr.data(), docStr.size() ) ||
+    if ( tinyxml2::XML_SUCCESS != doc->Parse( docBuf->data(), docBuf->size() ) ||
          doc->FirstChildElement() == nullptr )
         return unexpected( std::string( "3DF model file parse error" ) + utf8string( file ) );
 

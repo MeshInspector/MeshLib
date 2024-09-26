@@ -1840,7 +1840,10 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
 
     if ( UI::button( "Save to file", Vector2f( buttonSize, 0 ) ) )
     {
-        auto filename = saveFileDialog( { "Transform", {}, { {"JSON (.json)", "*.json"} } } );
+        auto filename = saveFileDialog( {
+            .fileName = "Transform",
+            .filters = { {"JSON (.json)", "*.json"} },
+        } );
         if ( !filename.empty() )
         {
             Json::Value root;
@@ -1858,7 +1861,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
 
     if ( UI::button( "Load from file", Vector2f( buttonSize, 0 ) ) )
     {
-        auto filename = openFileDialog( { "", {}, { {"JSON (.json)", "*.json"} } } );
+        auto filename = openFileDialog( { .filters = { { "JSON (.json)", "*.json" } } } );
         std::string errorString;
         if ( !filename.empty() )
         {

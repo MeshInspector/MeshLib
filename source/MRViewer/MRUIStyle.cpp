@@ -1990,16 +1990,36 @@ void alignTextToButton( float scaling )
 }
 
 
-void highlightWindowBottom( float scaling )
+void highlightWindowArea( float scaling, const ImVec2& min, const ImVec2& max )
 {
     const ImGuiStyle& style = ImGui::GetStyle();
-    ImVec2 boxMin = ImGui::GetCurrentWindowRead()->DC.CursorPos;
-    boxMin.x -= style.WindowPadding.x;
-    ImVec2 boxMax = ImGui::GetWindowPos();
-    boxMax.x += ImGui::GetContentRegionMax().x + style.WindowPadding.x * 2.f;
-    boxMax.y += ImGui::GetContentRegionMax().y + ImGui::GetScrollMaxY() + style.WindowPadding.y * 2.f;
+    ImVec2 boxMin;
+    auto windowPos = ImGui::GetWindowPos();
+    if ( min.x < 0.0f || min.y < 0.0f )
+    {
+        boxMin = ImGui::GetCurrentWindowRead()->DC.CursorPos;
+        boxMin.x -= style.WindowPadding.x;
+    }
+    else
+    {
+        boxMin = windowPos + min;
+    }
+
+    ImVec2 boxMax;
+    if ( max.x < 0.0f || max.y < 0.0f )
+    {
+        auto region = ImGui::GetContentRegionMax();
+        boxMax = windowPos;
+        boxMax.x += region.x + style.WindowPadding.x * 2.f;
+        boxMax.y += region.y + ImGui::GetScrollMaxY() + style.WindowPadding.y * 2.f;
+    }
+    else
+    {
+        boxMax = windowPos + max;
+    }
+
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cSeparateBlocksSpacing * scaling );
-    ImGui::GetCurrentWindow()->DrawList->AddRectFilled( boxMin, boxMax, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::CollapseHeaderBackground ).getUInt32() );
+    ImGui::GetCurrentWindow()->DrawList->AddRectFilled( boxMin, boxMax, Color( ImGui::GetStyleColorVec4( ImGuiCol_Header ) ).getUInt32() );
 }
 
 } // namespace UI

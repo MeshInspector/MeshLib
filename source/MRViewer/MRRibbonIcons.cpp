@@ -4,6 +4,7 @@
 #include "MRMesh/MRImageLoad.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
+#include "MRMesh/MRSystemPath.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
@@ -46,25 +47,25 @@ const ImGuiImage* RibbonIcons::findByName( const std::string& name, float width,
 RibbonIcons::RibbonIcons()
 {
     data_[size_t( IconType::RibbonItemIcon )] = {
-        GetResourcesDirectory() / "resource" / "icons",
+        SystemPath::getResourcesDirectory() / "resource" / "icons",
         std::make_pair( Sizes::X0_5, Sizes::X3 ),
         IconTypeData::AvailableColor::White | IconTypeData::AvailableColor::Colored,
     };
 
     data_[size_t( IconType::ObjectTypeIcon )] = {
-        GetResourcesDirectory() / "resource" / "object_icons",
+        SystemPath::getResourcesDirectory() / "resource" / "object_icons",
         std::make_pair( Sizes::X1, Sizes::X3 ),
         IconTypeData::AvailableColor::White,
     };
 
     data_[size_t( IconType::IndependentIcons )] = {
-        GetResourcesDirectory() / "resource" / "independent_icons",
+        SystemPath::getResourcesDirectory() / "resource" / "independent_icons",
         std::make_pair( Sizes::X1, Sizes::X3 ),
         IconTypeData::AvailableColor::White,
     };
 
     data_[size_t( IconType::Logos )] = {
-        GetResourcesDirectory() / "resource" / "logos",
+        SystemPath::getResourcesDirectory() / "resource" / "logos",
         std::make_pair( Sizes::X1, Sizes::X3 ),
         IconTypeData::AvailableColor::Colored,
     };

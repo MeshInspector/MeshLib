@@ -2585,7 +2585,7 @@ void ImGuiMenu::draw_mr_menu()
         float p = ImGui::GetStyle().FramePadding.x;
         if ( ImGui::Button( "Load##Main", ImVec2( ( w - p ) / 2.f - p - ImGui::GetFrameHeight(), 0 ) ) )
         {
-            auto filenames = openFilesDialog( { {}, {}, AllFilter | MeshLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() } );
+            auto filenames = openFilesDialog( { .filters = AllFilter | MeshLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() } );
             viewer->loadFiles( filenames );
         }
         ImGui::SameLine( 0, p );
@@ -2607,7 +2607,7 @@ void ImGuiMenu::draw_mr_menu()
                 | VoxelsSave::getFilters()
 #endif
             ;
-            auto savePath = saveFileDialog( { {}, {}, filters } );
+            auto savePath = saveFileDialog( { .filters = filters } );
             if ( !savePath.empty() )
                 viewer->saveToFile( savePath );
         }
@@ -2615,7 +2615,7 @@ void ImGuiMenu::draw_mr_menu()
 
         if ( ImGui::Button( "Save Scene##Main", ImVec2( ( w - p ) / 2.f, 0 ) ) )
         {
-            auto savePath = saveFileDialog( { {}, {}, SceneSave::getFilters() } );
+            auto savePath = saveFileDialog( { .filters = SceneSave::getFilters() } );
 
             if ( !savePath.empty() )
                 ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [savePath, &root = SceneRoot::get()]()->std::function<void()>
@@ -2642,7 +2642,10 @@ void ImGuiMenu::draw_mr_menu()
             std::time_t t = std::chrono::system_clock::to_time_t( now );
             auto name = fmt::format( "Screenshot_{:%Y-%m-%d_%H-%M-%S}", fmt::localtime( t ) );
 
-            auto savePath = saveFileDialog( { name, {}, ImageSave::getFilters() } );
+            auto savePath = saveFileDialog( {
+                .fileName = name,
+                .filters = ImageSave::getFilters(),
+            } );
             if ( !savePath.empty() )
             {
                 auto image = viewer->captureSceneScreenShot();

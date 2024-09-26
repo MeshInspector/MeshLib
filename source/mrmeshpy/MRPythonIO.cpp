@@ -29,6 +29,9 @@
 #ifndef MESHLIB_NO_VOXELS
 #include "MRVoxels/MRVoxelsSave.h"
 #include "MRVoxels/MRVoxelsLoad.h"
+#ifndef MRVOXELS_NO_DICOM
+#include "MRVoxels/MRDicom.h"
+#endif
 #endif
 
 using namespace MR;

@@ -280,8 +280,9 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
 
     auto imageRequiredSize = std::round( 32.0f * fontScale * scaling_ );
     ImVec2 iconRealSize = ImVec2( imageRequiredSize, imageRequiredSize );
-    bool needWhiteIcon = !requirements.empty() || item.item->isActive() || params.rootType != DrawButtonParams::Ribbon || monochrome_.has_value();
-    auto* imageIcon = RibbonIcons::findByName( item.item->name(), iconRealSize.x, needWhiteIcon ?
+    bool needTextColor = !requirements.empty() || item.item->isActive() || params.rootType != DrawButtonParams::Ribbon;
+    bool needChangeColor = needTextColor || monochrome_.has_value();
+    auto* imageIcon = RibbonIcons::findByName( item.item->name(), iconRealSize.x, needChangeColor ?
                                                RibbonIcons::ColorType::White : RibbonIcons::ColorType::Colored,
                                                customParam.iconType );
 
@@ -312,16 +313,16 @@ void RibbonButtonDrawer::drawCustomButtonItem( const MenuItemInfo& item, const C
 
     if ( !imageIcon )
     {
-        monochrome_.has_value() ?
+        ( !needTextColor && monochrome_.has_value() ) ?
             ImGui::TextColored( ImVec4( Vector4f( *monochrome_ ) ), "%s", item.icon.c_str() ) :
             ImGui::Text( "%s", item.icon.c_str() );
     }
     else
     {
         ImVec4 multColor = ImVec4( 1, 1, 1, 1 );
-        if ( needWhiteIcon )
+        if ( needChangeColor )
         {
-            multColor = monochrome_.has_value() ?
+            multColor = ( !needTextColor && monochrome_.has_value() ) ?
                 ImVec4( Vector4f( *monochrome_ ) ) :
                 ImGui::GetStyleColorVec4( ImGuiCol_Text );
         }
@@ -396,8 +397,9 @@ void RibbonButtonDrawer::drawButtonIcon( const MenuItemInfo& item, const DrawBut
 
     auto imageRequiredSize = std::round( 32.0f * fontScale * scaling_ );
     ImVec2 iconRealSize = ImVec2( imageRequiredSize, imageRequiredSize );
-    bool needWhiteIcon = params.rootType != DrawButtonParams::Ribbon || monochrome_.has_value();
-    auto* imageIcon = RibbonIcons::findByName( item.item->name(), iconRealSize.x, needWhiteIcon ?
+    bool needTextColor = params.rootType != DrawButtonParams::Ribbon;
+    bool needChangeColor = needTextColor || monochrome_.has_value();
+    auto* imageIcon = RibbonIcons::findByName( item.item->name(), iconRealSize.x, needChangeColor ?
                                                RibbonIcons::ColorType::White : RibbonIcons::ColorType::Colored,
                                                RibbonIcons::IconType::RibbonItemIcon );
 
@@ -411,16 +413,16 @@ void RibbonButtonDrawer::drawButtonIcon( const MenuItemInfo& item, const DrawBut
 
     if ( !imageIcon )
     {
-        monochrome_.has_value() ? 
+        ( !needTextColor && monochrome_.has_value() ) ? 
             ImGui::TextColored( ImVec4( Vector4f( *monochrome_ ) ), "%s", item.icon.c_str() ) : 
             ImGui::Text( "%s", item.icon.c_str() );
     }
     else
     {
         ImVec4 multColor = ImVec4( 1, 1, 1, 1 );
-        if ( needWhiteIcon )
+        if ( needChangeColor )
         {
-            multColor = monochrome_.has_value() ?
+            multColor = ( !needTextColor && monochrome_.has_value() ) ?
                 ImVec4( Vector4f( *monochrome_ ) ) :
                 ImGui::GetStyleColorVec4( ImGuiCol_Text );
         }

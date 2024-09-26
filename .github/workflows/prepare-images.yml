@@ -28,6 +28,15 @@ jobs:
       need_windows_rebuild: ${{ steps.need-rebuild.outputs.need_windows_rebuild }}
       matrix: ${{ steps.matrix-set.outputs.matrix}}
     steps:
+      - name: Work-around possible permission issues
+        run: |
+          # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
+          # Related issue: https://github.com/actions/runner/issues/2058
+          if test -d $GITHUB_WORKSPACE; then
+            rm -rf ${GITHUB_WORKSPACE} || mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
+            mkdir ${GITHUB_WORKSPACE}
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -43,7 +52,7 @@ jobs:
               - 'docker/fedora**'
               - 'docker/emscripten**'
               - 'requirements/!(windows.txt|macos.txt|python.txt|Brewfile)'
-              - 'scripts/build_thirdparty.sh'    
+              - 'scripts/build_thirdparty.sh'
               - 'scripts/install_apt_requirements.sh'
               - 'scripts/install_dnf_requirements.sh'
               - 'thirdparty/!(install.bat|vcpkg/**)'

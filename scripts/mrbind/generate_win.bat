@@ -4,9 +4,13 @@ rem This script generates the bindings by running `make -f scripts/mrbind/genera
 rem Must run this inside of the Visual Studio developer command prompt!
 rem Any additional arguments are forwarded to that makefile.
 
+rem This can be a bit glitchy sometimes when quotes are involved. If it happens, make sure the last argument doesn't end with quotes.
+rem If that still doesn't work, run `make -f generate.mk` manually from MSYS2 shell,
+rem   but make sure you start that MSYS2 shell from the VS developer command prompt using `C:\msys64_meshlib_mrbind\msys2_shell.cmd -no-start -defterm -full-path -clang64`.
+
 set MSYS2_DIR=C:\msys64_meshlib_mrbind
 
-set MRBIND_DIR=%MSYS2_DIR%\home\%USERNAME%\_mrbind
+set MRBIND_DIR=%MSYS2_DIR%\home\%USERNAME%\mrbind
 
 rem Here we save all additional arguments to a variable, and then apply string replacement to it to escape `"` as `""`.
 rem Note that this variable must be here and not in `(...)` below. If moved there, for some reason it's new value is not respected until
@@ -14,8 +18,8 @@ rem   the script is restarted, which makes your flags lag behind.
 set args=%*
 
 if not exist %MSYS2_DIR% (
-    echo MSYS2 was NOT found at `%MSYS2_DIR%`. Run `install_msys2_tools.bat` to build it.
+    echo MSYS2 was NOT found at `%MSYS2_DIR%`. Run `install_deps_windows_msys2.bat` to build it.
 ) else (
     echo Fount MSYS2 at `%MSYS2_DIR%`.
-    call %MSYS2_DIR%\msys2_shell -no-start -defterm -full-path -here -clang64 -c "time make -f '%~dp0generate.mk' %args:"=""% "
+    call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -full-path -here -clang64 -c "time make -f '%~dp0generate.mk' %args:"=""% "
 )

@@ -27,6 +27,9 @@ struct FillHoleNicelySettings
     /// Whether to make patch over the hole smooth both inside and on its boundary with existed surface
     bool smoothCurvature = true;
 
+    /// adds vertices adjacent to the hole boundary for further smoothing
+    bool naturalSmooth = false;
+
     /// edge weighting scheme for smoothCurvature mode
     EdgeWeights edgeWeights = EdgeWeights::Cotan;
 

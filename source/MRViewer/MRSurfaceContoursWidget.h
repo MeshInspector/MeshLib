@@ -83,7 +83,7 @@ public:
     );
 
     // clear temp internal variables.
-    MRVIEWER_API void clear();
+    MRVIEWER_API void clear( bool writeHistory = true );
 
     // reset widget, clear internal variables and detach from signals.
     MRVIEWER_API void reset();

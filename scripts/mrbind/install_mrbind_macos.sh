@@ -4,7 +4,7 @@
 
 set -euxo pipefail
 
-[[ -v MRBIND_DIR ]] || MRBIND_DIR=~/mrbind
+[[ ${MRBIND_DIR:=} ]] || MRBIND_DIR=~/mrbind
 
 # Read the Clang version from `preferred_clang_version.txt`. `xargs` trims the whitespace.
 # Some versions of MacOS seem to lack `realpath`, so not using it here.

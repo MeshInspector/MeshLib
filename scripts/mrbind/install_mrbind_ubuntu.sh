@@ -4,7 +4,7 @@
 
 set -euxo pipefail
 
-[[ $MRBIND_DIR ]] || MRBIND_DIR=~/mrbind
+[[ -v MRBIND_DIR ]] || MRBIND_DIR=~/mrbind
 
 # Read the Clang version from `preferred_clang_version.txt`. `xargs` trims the whitespace.
 SCRIPT_DIR="$(realpath "$(dirname "$BASH_SOURCE")")"

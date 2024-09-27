@@ -5,6 +5,8 @@
 #include "MRColor.h"
 #include "MRPositionVertsSmoothly.h"
 #include "MRTimer.h"
+#include "MRRegionBoundary.h"
+#include "MRExpandShrink.h"
 
 namespace MR
 {
@@ -60,7 +62,17 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
         subdivideMesh( mesh, subset );
 
         if ( settings.smoothCurvature )
+        {
             positionVertsSmoothly( mesh, newVerts, settings.edgeWeights );
+            if ( settings.naturalSmooth )
+            {
+                auto undirectedEdgeBitSet = findRegionBoundaryUndirectedEdgesInsideMesh( mesh.topology, newFaces );
+                auto incidentVerts = getIncidentVerts( mesh.topology, undirectedEdgeBitSet );
+                expand( mesh.topology, incidentVerts, 3 );
+                positionVertsSmoothly( mesh, incidentVerts, settings.edgeWeights );
+            }
+        }
+
     }
 
     return newFaces;

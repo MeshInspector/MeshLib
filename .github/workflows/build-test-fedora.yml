@@ -35,6 +35,10 @@ jobs:
         compiler: [Clang 17]
         full_config_build:
           - ${{fromJSON(inputs.full_config_build)}}
+        include:
+          - compiler: Clang 17
+            cxx-compiler: /usr/bin/clang++-17
+            c-compiler: /usr/bin/clang-17
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout

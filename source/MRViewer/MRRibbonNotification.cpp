@@ -285,6 +285,11 @@ void RibbonNotifier::drawNotifications_( float scaling, float scenePosX )
 
         auto activeModal = ImGui::GetTopMostPopupModal();
 
+        const float closeBtnSize = 16 * scaling;
+        const float closeBtnPadding = 12 * scaling;
+        const bool hasCloseBtn = !activeModal;
+        const bool hasCounter = counter > 1;
+
         if ( i + 1 == cNotificationNumberLimit )
             ImGui::SetNextWindowBgAlpha( 0.5f );
         ImGui::Begin( name.c_str(), nullptr, flags );
@@ -312,19 +317,26 @@ void RibbonNotifier::drawNotifications_( float scaling, float scenePosX )
         cirlcePos.y += bigFontSize * 0.5f + radius;
         drawList->AddCircleFilled( cirlcePos, 3.0f * scaling, notificationParams[int( notification.type )].second );
 
+        const bool changeHeaderColor = notification.type == NotificationType::Error || notification.type == NotificationType::Warning;
+
         const ImVec2 contentShift = ImVec2( 26.0f * scaling, radius );
+        auto boldFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::SemiBold );
         if ( !notification.header.empty() )
         {
-            auto boldFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::SemiBold );
             if ( boldFont )
                 ImGui::PushFont( boldFont );
             
             ImGui::SetCursorPosX( contentShift.x );
             ImGui::SetCursorPosY( ImGui::GetCursorPosY() + contentShift.y );
-            bool changeHeaderColor = notification.type == NotificationType::Error || notification.type == NotificationType::Warning;
             if ( changeHeaderColor )
-                ImGui::PushStyleColor( ImGuiCol_Text, notificationParams[int( notification.type )].second );    
+                ImGui::PushStyleColor( ImGuiCol_Text, notificationParams[int( notification.type )].second );
+
+            const auto backupWorkRect = window->WorkRect.Max;
+            if ( hasCloseBtn || hasCounter )
+                window->WorkRect.Max.x -= ( closeBtnSize + closeBtnPadding );
             ImGui::TextWrapped( "%s", notification.header.c_str() );
+            window->WorkRect.Max = backupWorkRect;
+
             if ( changeHeaderColor )
                 ImGui::PopStyleColor();
 
@@ -336,7 +348,11 @@ void RibbonNotifier::drawNotifications_( float scaling, float scenePosX )
         {
             ImGui::SetCursorPosX( contentShift.x );
             ImGui::SetCursorPosY( ImGui::GetCursorPosY() + contentShift.y );
+            const auto backupWorkRect = window->WorkRect.Max;
+            if ( hasCloseBtn || hasCounter )
+                window->WorkRect.Max.x -= ( closeBtnSize + closeBtnPadding );
             UI::transparentTextWrapped( "%s", notification.text.c_str() );
+            window->WorkRect.Max = backupWorkRect;
         }
 
         if ( notification.onButtonClick )
@@ -371,57 +387,60 @@ void RibbonNotifier::drawNotifications_( float scaling, float scenePosX )
             drawList->PopClipRect();
         }
 
-        if ( !activeModal )
+
+        if ( hasCloseBtn )
         {
-            auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
-            if ( iconsFont )
-            {
-                iconsFont->Scale = 0.7f;
-                ImGui::PushFont( iconsFont );
-            }
-            ImGui::PushStyleColor( ImGuiCol_Border, 0 );
-            ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetColorU32( ImGuiCol_WindowBg ) );
-            ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetColorU32( ImGuiCol_WindowBg ) );
-            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetColorU32( ImGuiCol_WindowBg ) );
-            ImGui::PushStyleColor( ImGuiCol_Text, Color::red().getUInt32() );
-            std::string crossText = "\xef\x80\x8d";
-            auto textWidth = ImGui::CalcTextSize( crossText.c_str() ).x;
-            auto windRect = window->Rect();
-            ImRect rect;
-            ImVec2 size = ImVec2( textWidth + ImGui::GetStyle().FramePadding.x * 2, ImGui::GetFrameHeight() );
-            rect.Min.x = windRect.Max.x - size.x;
-            rect.Min.y = windRect.Min.y;
-            auto cursorPos = ImGui::GetCursorPos();
-            ImGui::SetCursorPos( ImVec2( width - size.x - cWindowBorderWidth * scaling, cWindowBorderWidth * scaling ) );
-            if ( ImGui::Button( crossText.c_str(), size ) )
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
+            ImGui::PushStyleColor( ImGuiCol_Button, 0 );
+            ImGui::PushStyleColor( ImGuiCol_ButtonActive, 0 );
+            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.5, 0.5, 0.5, 0.5 ) );
+            ImGui::SetCursorPos( ImVec2( width - closeBtnPadding - closeBtnSize, closeBtnPadding ) );
+            auto screenPos = ImGui::GetCursorScreenPos();
+            if ( ImGui::Button( "##closeNotification", ImVec2( closeBtnSize, closeBtnSize ) ) )
                 filteredNumber = i;
-            ImGui::SetCursorPos( cursorPos );
-            ImGui::Dummy( ImVec2( 0, 0 ) );
-            ImGui::PopStyleColor( 5 );
-            if ( iconsFont )
-            {
-                iconsFont->Scale = 1.0f;
-                ImGui::PopFont();
-            }
+            const float innerCrossPadding = 4 * scaling;
+            drawList->AddLine(
+                ImVec2( screenPos.x + innerCrossPadding - 1, screenPos.y + innerCrossPadding - 1 ),
+                ImVec2( screenPos.x + closeBtnSize - innerCrossPadding, screenPos.y + closeBtnSize - innerCrossPadding ),
+                Color::gray().getUInt32(), scaling );
+            drawList->AddLine(
+                ImVec2( screenPos.x + closeBtnSize - innerCrossPadding, screenPos.y + innerCrossPadding - 1 ),
+                ImVec2( screenPos.x + innerCrossPadding - 1, screenPos.y + closeBtnSize - innerCrossPadding ),
+                Color::gray().getUInt32(), scaling );
+            ImGui::PopStyleColor( 3 );
+            ImGui::PopStyleVar();
         }
 
-        if ( counter > 1 )
+        if ( hasCounter )
         {
-            const ImU32 color = isHovered ? ImGui::GetColorU32( ImGuiCol_Text ) : notificationParams[int( notification.type )].second;
-            const ImU32 textColor = ImGui::GetColorU32( ImGuiCol_WindowBg );
+            if ( boldFont )
+                ImGui::PushFont( boldFont );
             auto countText = std::to_string( counter );
-            auto textWidth = ImGui::CalcTextSize( countText.c_str() ).x;
+            const auto textSize = ImGui::CalcTextSize( countText.c_str() );
+
             auto windRect = window->Rect();
-            ImRect rect;
-            ImVec2 size = ImVec2( textWidth + ImGui::GetStyle().FramePadding.x * 2, ImGui::GetFrameHeight() );
-            rect.Min.x = windRect.Max.x;
-            rect.Min.y = windRect.Max.y;
-            rect.Min -= size * 0.5f;
-            rect.Max = rect.Min + size;
+            const float minCounterPosY = hasCloseBtn ? windRect.Min.y + closeBtnPadding + closeBtnSize + 6 * scaling : closeBtnPadding;
+
+            const auto counterRadius = 12 * scaling;
+            auto counterPos = windRect.Max - ImVec2( closeBtnPadding + closeBtnSize, closeBtnPadding + closeBtnSize );
+            if ( counterPos.y < minCounterPosY )
+            {
+                counterPos.y = minCounterPosY;
+                ImGui::SetCursorScreenPos( counterPos );
+                ImGui::Dummy( ImVec2( closeBtnSize, closeBtnSize ) );
+            }
+            const auto counterCenter = ImVec2( counterPos.x + closeBtnSize * 0.5f, counterPos.y + closeBtnSize * 0.5f );
             drawList->PushClipRectFullScreen();
-            drawList->AddRectFilled( rect.Min, rect.Max, color, 4.0f * scaling, 0 );
-            drawList->AddText( rect.Min + ImGui::GetStyle().FramePadding, textColor, countText.c_str() );
+            drawList->AddCircleFilled( counterCenter, counterRadius, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
+            if ( changeHeaderColor )
+                ImGui::PushStyleColor( ImGuiCol_Text, notificationParams[int( notification.type )].second );
+            drawList->AddText( counterCenter - textSize * 0.5f, ImGui::GetColorU32( ImGuiCol_Text ), countText.c_str() );
+            if ( changeHeaderColor )
+                ImGui::PopStyleColor();
             drawList->PopClipRect();
+
+            if ( boldFont )
+                ImGui::PopFont();
         }
 
         ImGui::End();

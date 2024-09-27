@@ -123,8 +123,9 @@ jobs:
         run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests
-        # Using `cd` here fixes weird library loading issues.
-        run: cd ./build/Release/bin/meshlib && ../MRTest
+        # Setting the working directory fixes weird library loading issues.
+        working-directory: ./build/Release/bin/meshlib
+        run: ../MRTest
 
       - name: Python Tests
         working-directory: ./build/Release/bin
@@ -287,7 +288,7 @@ jobs:
 
         # For some reason `./scripts/mrbind/install_mrbind_windows_msys2.bat` doesn't work here in CI, build manually.
       - name: Build MRBind
-        run: C:\msys64_meshlib_mrbind\msys2_shell.cmd -defterm -no-start -clang64 -full-path -c "cd ~ && git clone https://github.com/MeshInspector/mrbind && cd mrbind && cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebugInfo && cmake --build build"
+        run: C:\msys64_meshlib_mrbind\msys2_shell.cmd -defterm -no-start -clang64 -full-path -c "cd ~ && git clone https://github.com/MeshInspector/mrbind && cd mrbind && cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build"
 
       - name: Generate and build MRBind bindings
         shell: cmd
@@ -417,8 +418,9 @@ jobs:
           make -f ./scripts/mrbind/generate.mk -B --trace PACKAGE_NAME=meshlib MACOS_MIN_VER=12.7 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0'
 
       - name: Unit Tests
-        # Using `cd` here fixes weird library loading issues.
-        run: cd ./build/Release/bin/meshlib && ../MRTest
+        # Setting the working directory fixes weird library loading issues.
+        working-directory: ./build/Release/bin/meshlib
+        run: ../MRTest
 
       - name: Python Tests
         working-directory: ./build/Release/bin

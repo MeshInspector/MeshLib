@@ -162,7 +162,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu24' }}
         env:
           CXX: ${{matrix.cxx-compiler}}
-        run: make -f scripts/mrbind/generate.mk MODE=none PACKAGE_NAME=meshlib
+        run: make -f scripts/mrbind/generate.mk MODE=none PACKAGE_NAME=meshlib -B --trace
 
       - name: Test MRBind bindings
         if: ${{ matrix.os == 'ubuntu24' }}

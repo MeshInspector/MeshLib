@@ -18,8 +18,6 @@ Among other things, the scripts can do following:
 
 * On Windows, install MSYS2 to `C:\msys64_meshlib_mrbind`.
 
-* On Ubuntu 20.04, build GNU Make from source and install it to `/usr/local`, because the default one is outdated.
-
 **More details and manual instructions:**
 
 <details><summary><b>Windows</b></summary>
@@ -50,8 +48,6 @@ Among other things, the scripts can do following:
 * **Installing dependencies:**
 
     We want a certain version of Clang (see `preferred_clang_version.txt`), and since older versions of Ubuntu don't have it, we add Clang's repository: https://apt.llvm.org
-
-    Also we need a certain version of GNU Make, so on Ubuntu 20.04 we build it from source and install to `/usr/local`.
 
     And obviously we install some packages, see `install_deps_ubuntu.sh` for the list.
 

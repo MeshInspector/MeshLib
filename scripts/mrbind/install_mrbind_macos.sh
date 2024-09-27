@@ -4,7 +4,7 @@
 
 set -euxo pipefail
 
-MRBIND_DIR=~/mrbind
+[[ $MRBIND_DIR ]] ||MRBIND_DIR=~/mrbind
 
 # Read the Clang version from `preferred_clang_version.txt`. `xargs` trims the whitespace.
 # Some versions of MacOS seem to lack `realpath`, so not using it here.
@@ -35,9 +35,17 @@ HOMEBREW_DIR=/opt/homebrew
 export PATH="$HOMEBREW_DIR/opt/make/libexec/gnubin:$PATH"
 # Add Clang to PATH.
 export PATH="$HOMEBREW_DIR/opt/llvm@$CLANG_VER/bin:$PATH"
-ls "$HOMEBREW_DIR/opt" || true
-ls "$HOMEBREW_DIR/opt/llvm@$CLANG_VER" || true
-ls "$HOMEBREW_DIR/opt/llvm@$CLANG_VER/bin" || true
+
+
+# Guess the number of build threads.
+if [[ ! -v JOBS || $JOBS == "" ]]; then
+    if command -v nproc >/dev/null 2>/dev/null; then
+        JOBS=$(nproc)
+    else
+        # Some default.
+        JOBS=4
+    fi
+fi
 
 CC=clang CXX=clang++ cmake -B build
-cmake --build build -j4
+cmake --build build -j$(JOBS)

@@ -268,8 +268,8 @@ jobs:
       - name: Build
         run: msbuild -m  source\MeshLib.sln -p:Configuration=Release -p:PythonVersion=${{matrix.py-short-version}} -p:PythonLibPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\libs\${{matrix.py-file}}.lib -p:PythonDllPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\${{matrix.py-file}}.dll -p:PythonIncludePath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\include\
 
-        # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Local uses should use that bat file.
-        # There's no particular reason for not using our bat file, I'm just assuming the official action is somehow better.
+        # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Locally users should use that bat file.
+        # I'm expecting the official action to be better suited for CI needs (e.g. they promise some form of caching in the readme), but I didn't perform a proper comparison.
       - name: Install MSYS2 for MRBind
         uses: msys2/setup-msys2@v2
         with:
@@ -278,20 +278,16 @@ jobs:
           # Matching the location that `install_deps_windows_msys2.bat` uses, because that's what `install_mrbind_windows_msys2.bat` expects.
           location: C:\msys64_meshlib_mrbind
 
-        # Move `C:\msys64_meshlib_mrbind\msys64\*` to the parent directory, that's what our .bat files expect.
-      - name: Adjust MSYS2 installation directory
-        shell: cmd
-        run: |
-          for %%a in ("C:\msys64_meshlib_mrbind\msys64\*") do move /y "%%~fa" C:\msys64_meshlib_mrbind
-          for /d %%a in ("C:\msys64_meshlib_mrbind\msys64\*") do move /y "%%~fa" C:\msys64_meshlib_mrbind
-          rmdir C:\msys64_meshlib_mrbind\msys64
-
         # For some reason `./scripts/mrbind/install_mrbind_windows_msys2.bat` doesn't work here in CI, build manually.
       - name: Build MRBind
         run: C:\msys64_meshlib_mrbind\msys2_shell.cmd -defterm -no-start -clang64 -full-path -c "cd ~ && git clone https://github.com/MeshInspector/mrbind && cd mrbind && cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build"
 
       - name: Generate and build MRBind bindings
         shell: cmd
+        env:
+          # Need this env variable because our .bat files assume msys2 installed directly to `C:\msys64_meshlib_mrbind`,
+          #   and the setup-msys2 action always adds the `...\msys64` component at the end, and it's a tiny bit wasteful to move it around when running in the CI.
+          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64

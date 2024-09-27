@@ -7,7 +7,7 @@ rem We create a separate copy of MSYS2 at C:\msys64_meshlib_mrbind for simplicit
 rem If you don't like that, you can manually install all dependencies into
 rem some other MSYS2 copy.
 
-set MSYS2_DIR=C:\msys64_meshlib_mrbind
+if "%MSYS2_DIR%" == "" set MSYS2_DIR=C:\msys64_meshlib_mrbind
 
 rem ------ Ensure MSYS2 is installed
 

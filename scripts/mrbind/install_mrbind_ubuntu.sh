@@ -4,9 +4,7 @@
 
 set -euxo pipefail
 
-sudo apt install -y git
-
-MRBIND_DIR=~/mrbind
+[[ $MRBIND_DIR ]] || MRBIND_DIR=~/mrbind
 
 # Read the Clang version from `preferred_clang_version.txt`. `xargs` trims the whitespace.
 SCRIPT_DIR="$(realpath "$(dirname "$BASH_SOURCE")")"
@@ -26,7 +24,18 @@ fi
 
 rm -rf build
 
+
+# Guess the number of build threads.
+if [[ ! -v JOBS || $JOBS == "" ]]; then
+    if command -v nproc >/dev/null 2>/dev/null; then
+        JOBS=$(nproc)
+    else
+        # Some default.
+        JOBS=4
+    fi
+fi
+
 # `Clang_DIR` is needed when several versions of libclang are installed.
 # By default CMake picks an arbitrary one. Supposedly whatever globbing `clang-*` returns first.
 CC=clang-$CLANG_VER CXX=clang++-$CLANG_VER cmake -B build -DClang_DIR=/usr/lib/cmake/clang-$CLANG_VER
-cmake --build build -j4
+cmake --build build -j$(JOBS)

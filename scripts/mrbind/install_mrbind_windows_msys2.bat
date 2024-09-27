@@ -3,9 +3,9 @@
 rem Downloads the source code for MRBind and builds it, at `C:\msys64_meshlib_mrbind\home\username\mrbind\build`.
 rem Before running this, run `install_deps_windows_msys2.bat`.
 
-set MSYS2_DIR=C:\msys64_meshlib_mrbind
+if "%MSYS2_DIR%" == "" set MSYS2_DIR=C:\msys64_meshlib_mrbind
 
-set MRBIND_DIR=%MSYS2_DIR%\home\%USERNAME%\mrbind
+if "%MRBIND_DIR%" == "" set MRBIND_DIR=%MSYS2_DIR%\home\%USERNAME%\mrbind
 
 rem Preserve the current directory. We'll do `popd` at the end...
 pushd .

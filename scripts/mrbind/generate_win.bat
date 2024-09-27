@@ -4,9 +4,9 @@ rem This script generates the bindings by running `make -f scripts/mrbind/genera
 rem Must run this inside of the Visual Studio developer command prompt!
 rem Any additional arguments are forwarded to that makefile.
 
-set MSYS2_DIR=C:\msys64_meshlib_mrbind
+if "%MSYS2_DIR%" == "" set MSYS2_DIR=C:\msys64_meshlib_mrbind
 
-set MRBIND_DIR=%MSYS2_DIR%\home\%USERNAME%\mrbind
+if "%MRBIND_DIR%" == "" set MRBIND_DIR=%MSYS2_DIR%\home\%USERNAME%\mrbind
 
 rem Here we save all additional arguments to a variable, and then apply string replacement to it to escape `"` as `""`.
 rem Note that this variable must be here and not in `(...)` below. If moved there, for some reason it's new value is not respected until

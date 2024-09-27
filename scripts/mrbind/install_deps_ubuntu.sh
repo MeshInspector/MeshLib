@@ -35,29 +35,3 @@ fi
 # Install the packages.
 # Could also add `sudo` here for `install_mrbind_ubuntu.sh`, but I think the user can do that themselves.
 apt install -y make cmake ninja-build gawk clang-$CLANG_VER lld-$CLANG_VER clang-tools-$CLANG_VER libclang-$CLANG_VER-dev llvm-$CLANG_VER-dev
-
-# Build Make from source, if ours is too old. It gets installed to `/usr/local/bin`.
-# Not exactly sure what versions are good for our purposes. I know that 4.3 is ok and 3.81 isn't.
-MIN_MAKE_VER=4.3
-MAKE_VER="$(make --version | grep -m1 -Po '(?<=GNU Make ).*')"
-
-if ! printf '%s\n' "$MIN_MAKE_VER" "$MAKE_VER" | sort -CV; then
-    apt install -y wget tar gcc
-
-    # Attempt to figure out the most recent available GNU Make.
-    LATEST_MAKE_VER="$(wget https://ftpmirror.gnu.org/make/ -O - 2>/dev/null | grep -Po '(?<=<a href=")make-[0-9\.]*(?=\.tar.gz")' | sort -rV | head -1)"
-    [[ $LATEST_MAKE_VER ]] || (echo "Can't determine the version of Make to download!" && false)
-
-    DIR="$(mktemp -d)"
-    pushd $DIR
-
-    wget "https://ftpmirror.gnu.org/make/$LATEST_MAKE_VER.tar.gz"
-    tar -xf "$LATEST_MAKE_VER.tar.gz"
-    cd "$LATEST_MAKE_VER"
-    ./configure
-    make -j4
-    make install
-
-    popd
-    rm -rf "$DIR"
-fi

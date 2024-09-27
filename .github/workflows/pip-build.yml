@@ -112,8 +112,8 @@ jobs:
         # Also print the amount of RAM. Not doing it in the same step as building the bindings, because when that fails, the logs are sometimes lost.
       - name: Build MRBind
         run: |
-          ./scripts/mrbind/install_mrbind_ubuntu.sh
           free -h
+          ./scripts/mrbind/install_mrbind_ubuntu.sh
 
       - name: Generate and build MRBind bindings
         run: |

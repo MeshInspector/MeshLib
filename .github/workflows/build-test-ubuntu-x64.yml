@@ -131,9 +131,10 @@ jobs:
 
       - name: Compile MRBind
         if: ${{ matrix.os == 'ubuntu24' }}
+        # Also print the amount of RAM. Not doing it in the same step as building the bindings, because when that fails, the logs are sometimes lost.
         run: |
-          CC=${{matrix.c-compiler}} CXX=${{matrix.cxx-compiler}} cmake -S _mrbind -B _mrbind/build -DCMAKE_BUILD_TYPE=Release
-          cmake --build _mrbind/build
+          free -h
+          ./scripts/mrbind/install_mrbind_ubuntu.sh
 
       - name: Generate MRBind bindings
         if: ${{ matrix.os == 'ubuntu24' }}

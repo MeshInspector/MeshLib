@@ -7,6 +7,7 @@
 #include "MRTimer.h"
 #include "MRRegionBoundary.h"
 #include "MRExpandShrink.h"
+#include "MRMeshComponents.h"
 
 namespace MR
 {
@@ -69,7 +70,9 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
                 auto undirectedEdgeBitSet = findRegionBoundaryUndirectedEdgesInsideMesh( mesh.topology, newFaces );
                 auto incidentVerts = getIncidentVerts( mesh.topology, undirectedEdgeBitSet );
                 expand( mesh.topology, incidentVerts, 3 );
-                positionVertsSmoothly( mesh, incidentVerts, settings.edgeWeights );
+                MeshComponents::excludeFullySelectedComponents( mesh, incidentVerts );
+                if ( incidentVerts.any() )
+                    positionVertsSmoothly( mesh, incidentVerts, settings.edgeWeights );
             }
         }
 

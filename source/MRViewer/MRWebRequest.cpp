@@ -240,6 +240,9 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         ctx = it->second.get();
     }
 
+    ctx->uploadCallback = uploadCallback_;
+    ctx->downloadCallback = downloadCallback_;
+
 #ifndef __EMSCRIPTEN__
     cpr::Timeout tm = cpr::Timeout{ timeout_ };
     cpr::Body body = cpr::Body( body_ );
@@ -415,8 +418,6 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
     if ( !urlP.empty() && urlP.back() == '/' )
         urlP = urlP.substr( 0, int( urlP.size() ) - 1 );
 
-    ctx->uploadCallback = uploadCallback_;
-    ctx->downloadCallback = downloadCallback_;
     ctx->responseCallback = callback;
 
     if ( outputPath_.empty() )

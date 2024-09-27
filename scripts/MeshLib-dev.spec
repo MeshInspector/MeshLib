@@ -41,7 +41,7 @@ cp build/Release/bin/mr.version "${MR_INSTALL_RES_DIR}"
 echo "MR version copy done"
 
 # copy udev rules
-mkdir -p "${RPM_BUILD_ROOT}/usr/local/lib/udev/rules.d/"
+mkdir -p "${RPM_BUILD_ROOT}/usr/local/lib64/udev/rules.d/"
 cp "./scripts/70-space-mouse-meshlib.rules" "${RPM_BUILD_ROOT}/usr/local/lib64/udev/rules.d/"
 
 cd "${RPM_BUILD_ROOT}"

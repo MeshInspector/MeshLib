@@ -56,9 +56,9 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
     switch ( dir )
     {
         case Directory::Resources:
-            return installDir / "etc" / MR_PROJECT_NAME;
+            return installDir / "share" / MR_PROJECT_NAME;
         case Directory::Fonts:
-            return installDir / "share" / "fonts";
+            return installDir / "share" / MR_PROJECT_NAME / "fonts";
         case Directory::Plugins:
         case Directory::PythonModules:
             return installDir / "lib" / MR_PROJECT_NAME;

@@ -1230,6 +1230,9 @@
     <ClInclude Include="MRSystemPath.h">
       <Filter>Source Files\System</Filter>
     </ClInclude>
+    <ClInclude Include="MRScopedValue.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRObject.cpp">

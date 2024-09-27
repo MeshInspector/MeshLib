@@ -1,5 +1,7 @@
 #pragma once
 
+#include "MRMacros.h"
+
 #ifdef __cpp_exceptions
 #include <exception>
 #endif
@@ -26,10 +28,7 @@
 #endif // If no exceptions.
 
 #define DETAIL_MR_FINALLY( type_ ) \
-    auto DETAIL_MR_FINALLY_CAT( _mrScopeGuard, __COUNTER__ ) = ::MR::detail::MakeScopeGuard<::MR::detail::type_>{} ->* [&]() -> void
-
-#define DETAIL_MR_FINALLY_CAT( x, y ) DETAIL_MR_FINALLY_CAT_( x, y )
-#define DETAIL_MR_FINALLY_CAT_( x, y ) x##y
+    auto MR_CONCAT( _mrScopeGuard, __COUNTER__ ) = ::MR::detail::MakeScopeGuard<::MR::detail::type_>{} ->* [&]() -> void
 
 namespace MR::detail
 {

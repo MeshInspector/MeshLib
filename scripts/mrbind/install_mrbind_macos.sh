@@ -39,7 +39,7 @@ export PATH="$HOMEBREW_DIR/opt/llvm@$CLANG_VER/bin:$PATH"
 
 # Guess the number of build threads.
 if [[ ! -v JOBS || $JOBS == "" ]]; then
-    JOBS=$(sysctl -n hw.physicalcpu)
+    JOBS=$(sysctl -n hw.ncpu)
 fi
 
 CC=clang CXX=clang++ cmake -B build

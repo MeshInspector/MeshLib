@@ -45,9 +45,6 @@ jobs:
             compiler: GCC 13
             config: Debug
         include:
-          - compiler: Clang 17
-            cxx-compiler: /usr/bin/clang++-17
-            c-compiler: /usr/bin/clang-17
           - compiler: GCC 13
             cxx-compiler: /usr/bin/g++
             c-compiler: /usr/bin/gcc

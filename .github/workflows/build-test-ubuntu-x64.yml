@@ -56,23 +56,11 @@ jobs:
             c-compiler: /usr/bin/clang-11
             use-cpp-23: "OFF"
             build_mrcuda: "ON"
-          - os: ubuntu20
-            compiler: GCC
-            cxx-compiler: /usr/bin/g++-10
-            c-compiler: /usr/bin/gcc-10
-            use-cpp-23: "OFF"
-            build_mrcuda: "ON"
           - os: ubuntu22
             compiler: Clang
             cxx-compiler: /usr/bin/clang++-14
             c-compiler: /usr/bin/clang-14
             use-cpp-23: "OFF"
-            build_mrcuda: "ON"
-          - os: ubuntu22
-            compiler: GCC
-            cxx-compiler: /usr/bin/g++-12
-            c-compiler: /usr/bin/gcc-12
-            use-cpp-23: "ON"
             build_mrcuda: "ON"
           - os: ubuntu24
             compiler: Clang
@@ -120,27 +108,6 @@ jobs:
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python.txt
 
-      - name: Checkout MRBind
-        uses: actions/checkout@v4
-        if: ${{ matrix.os == 'ubuntu24' }}
-        with:
-          repository: MeshInspector/mrbind
-          path: _mrbind
-          token: ${{ secrets.BUILD_MACHINE_TOKEN }}
-          ref: f426a147c9c4e3335e32f9c62f24d4c3f571bf1d
-
-      - name: Compile MRBind
-        if: ${{ matrix.os == 'ubuntu24' }}
-        run: |
-          CC=${{matrix.c-compiler}} CXX=${{matrix.cxx-compiler}} cmake -S _mrbind -B _mrbind/build -DCMAKE_BUILD_TYPE=Release
-          cmake --build _mrbind/build
-
-      - name: Generate MRBind bindings
-        if: ${{ matrix.os == 'ubuntu24' }}
-        env:
-          CXX: ${{matrix.cxx-compiler}}
-        run: make -f scripts/mrbind/generate.mk only-generate
-
       - name: Build
         run: ./scripts/build_source.sh
         env:
@@ -156,27 +123,6 @@ jobs:
                       -DMESHLIB_BUILD_MRCUDA=${{ matrix.build_mrcuda }}
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
-
-      - name: Compile and link MRBind bindings
-        if: ${{ matrix.os == 'ubuntu24' }}
-        env:
-          CXX: ${{matrix.cxx-compiler}}
-        run: make -f scripts/mrbind/generate.mk
-
-      - name: Sanity check MRBind bindings
-        if: ${{ matrix.os == 'ubuntu24' }}
-        env:
-          LD_LIBRARY_PATH: .
-        working-directory: build/Release/bin
-        run: python3 -c 'from meshlib2 import mrmeshpy; from meshlib2 import mrmeshnumpy'
-
-      - name: Test MRBind bindings
-        if: ${{ matrix.os == 'ubuntu24' }}
-        env:
-          LD_LIBRARY_PATH: .
-          USE_MESHLIB2_PY: 1
-        working-directory: build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.compiler}}"
@@ -246,7 +192,7 @@ jobs:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
         run: |
-          ./scripts/distribution.sh ${{inputs.app_version}}
+          ./scripts/distribution_deb.sh ${{inputs.app_version}}
           mv ./distr/meshlib-dev.deb meshlib_${{matrix.os}}-dev.deb
 
       - name: Upload Ubuntu Developer Distribution

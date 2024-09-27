@@ -171,7 +171,7 @@ jobs:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
         run: |
-          ./scripts/distribution.sh ${{inputs.app_version}}
+          ./scripts/distribution_deb.sh ${{inputs.app_version}}
           mv ./distr/meshlib-dev.deb meshlib_${{matrix.os}}-arm64-dev.deb
 
       - name: Upload Ubuntu Developer Distribution

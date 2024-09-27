@@ -26,9 +26,7 @@ rm -rf build
 
 
 # Guess the number of build threads.
-if [[ ! -v JOBS || $JOBS == "" ]]; then
-    JOBS=$(nproc)
-fi
+[[ ${JOBS:=} ]] || JOBS=$(nproc)
 
 # `Clang_DIR` is needed when several versions of libclang are installed.
 # By default CMake picks an arbitrary one. Supposedly whatever globbing `clang-*` returns first.

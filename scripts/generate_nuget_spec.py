@@ -43,7 +43,6 @@ f.write('</copyright>\n')
 
 f.write('\t\t<dependencies>\n')
 f.write('\t\t\t<group targetFramework="net6.0"/>\n')
-f.write('\t\t\t<group targetFramework="net8.0"/>\n')
 f.write('\t\t\t<group targetFramework=".NETFramework4.7.1"/>\n')
 f.write('\t\t</dependencies>\n')
 
@@ -77,10 +76,6 @@ for address, dirs, files in folder:
 			f.write('\t\t<file src="./source/x64/Release/')
 			f.write(file)
 			f.write('" target="lib/net471/"></file>\n')
-		elif file == 'MRDotNet8.dll':
-			f.write('\t\t<file src="./source/x64/Release/')
-			f.write(file)
-			f.write('" target="lib/net8.0/"></file>\n')
 		elif file == 'MRDotNet6.dll':
 			f.write('\t\t<file src="./source/x64/Release/')
 			f.write(file)

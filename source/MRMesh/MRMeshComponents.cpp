@@ -728,14 +728,37 @@ bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection )
     auto unionFindStruct = getUnionFindStructureVerts( mesh );   
     const auto& allRoots = unionFindStruct.roots();
     auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, mesh.topology.getValidVerts() );
-    for ( auto sv : selection )
-        uniqueRootsMap[sv] = RegionId{};// mark invalid
-    RegionBitSet presentBitSets( k );
-    for ( auto rId : uniqueRootsMap )
-        if ( rId )
-            presentBitSets.set( rId );
+    RegionBitSet remainKeysBitSets( k );
+    for ( VertId v( 0 ); v < uniqueRootsMap.size(); ++v )
+    {
+        if ( selection.test( v ) )
+            continue;
+        if ( auto rId = uniqueRootsMap[v] )
+            remainKeysBitSets.set( rId );
+    }
+    return remainKeysBitSets.count() != remainKeysBitSets.size();
+}
 
-    return presentBitSets.count() != presentBitSets.size();
+void excludeFullySelectedComponents( const Mesh& mesh, VertBitSet& selection )
+{
+    MR_TIMER;
+
+    auto unionFindStruct = getUnionFindStructureVerts( mesh );
+    const auto& allRoots = unionFindStruct.roots();
+    auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, mesh.topology.getValidVerts() );
+    RegionBitSet remainKeysBitSets( k );
+    for ( VertId v( 0 ); v < uniqueRootsMap.size(); ++v )
+    {
+        if ( selection.test( v ) )
+            continue;
+        if ( auto rId = uniqueRootsMap[v] )
+            remainKeysBitSets.set( rId );
+    }
+    for ( auto v : selection )
+    {
+        if ( !remainKeysBitSets.test( uniqueRootsMap[v] ) )
+            selection.reset( v );
+    }
 }
 
 UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgePredicate & isCompBd )

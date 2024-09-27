@@ -88,8 +88,8 @@ void RibbonNotifier::drawHistoryButton_( float scaling, float scenePosX )
 
     auto fontSize = ImGui::GetFontSize();
     ImGui::SetCursorPos( 0.5f * ( windowSzie - ImVec2( fontSize, fontSize ) ) );
-    ImGui::PushStyleColor( ImGuiCol_Text, notificationParams[int( notificationsHistory_.back().notification.type )].second );
-    ImGui::Text( "%s", notificationParams[int( notificationsHistory_.back().notification.type )].first );
+    ImGui::PushStyleColor( ImGuiCol_Text, notificationParams[int( notificationsHistory_.front().notification.type )].second );
+    ImGui::Text( "%s", notificationParams[int( notificationsHistory_.front().notification.type )].first );
     ImGui::PopStyleColor();
 
     if ( iconsFont )

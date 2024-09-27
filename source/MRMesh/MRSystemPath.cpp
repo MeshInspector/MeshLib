@@ -32,17 +32,17 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
     if ( resourcesAreNearExe() )
         return SystemPath::getExecutableDirectory().value_or( "/" );
 
-    const auto libPath = SystemPath::getLibraryDirectory().value_or( "/" );
+    const auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
     switch ( dir )
     {
         case Directory::Resources:
-            return libPath / ".." / "Resources";
+            return libDir / ".." / "Resources";
         case Directory::Fonts:
-            return libPath / ".." / "Resources" / "fonts";
+            return libDir / ".." / "Resources" / "fonts";
         case Directory::Plugins:
-            return libPath;
+            return libDir;
         case Directory::PythonModules:
-            return libPath / ".." / "Frameworks";
+            return libDir / ".." / "Frameworks";
         case Directory::Count:
             MR_UNREACHABLE
     }

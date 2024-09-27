@@ -139,7 +139,7 @@ struct LargeByAreaComponentsSettings
 /// returns true if all vertices of a mesh connected component are present in selection
 [[nodiscard]] MRMESH_API bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection );
 
-/// excludes vertices from VertBitSet if it is present with all connected component
+/// if all vertices of a mesh connected component are present in selection exludes these vertices
 MRMESH_API void excludeFullySelectedComponents( const Mesh& mesh, VertBitSet& selection );
 
 /// gets union-find structure for faces with different options of face-connectivity

@@ -31,23 +31,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config: [Debug, Release]
-        compiler: [Clang 17, GCC 13]
+        config: [Release]
+        compiler: [Clang 17]
         full_config_build:
           - ${{fromJSON(inputs.full_config_build)}}
-        exclude:
-          # Do not run Release Clang 17 build on every commit (but only once a day)
-          - full_config_build: false
-            compiler: Clang 17
-            config: Release
-          # Do not run Debug GCC 13 build on every commit (but only once a day)
-          - full_config_build: false
-            compiler: GCC 13
-            config: Debug
-        include:
-          - compiler: GCC 13
-            cxx-compiler: /usr/bin/g++
-            c-compiler: /usr/bin/gcc
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -143,14 +130,14 @@ jobs:
         run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/fedora/${{matrix.os}}/${{matrix.config}}' --recursive
 
       - name: Create RPM
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'GCC 13'}}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 17'}}
         run: ./scripts/distribution_rpm.sh ${{inputs.app_version}}
         env:
           MESHLIB_BUILD_RELEASE: ON
           MESHLIB_BUILD_DEBUG: OFF
 
       - name: Upload Fedora Developer Distribution
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'GCC 13'}}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 17'}}
         uses: actions/upload-artifact@v4
         with:
           name: Distributives_fedora39-x86

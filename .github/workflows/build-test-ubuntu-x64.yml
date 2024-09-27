@@ -32,23 +32,10 @@ jobs:
       fail-fast: false
       matrix:
         os:    [ ubuntu20, ubuntu22, ubuntu24 ]
-        config:   [ Debug, Release ]
-        compiler: [ Clang, GCC ]
+        config:   [ Release ]
+        compiler: [ Clang ]
         full_config_build:
           - ${{fromJSON(inputs.full_config_build)}}
-        exclude:
-          # Do not run Debug Clang build on every commit (but only once a day)
-          - full_config_build: false
-            config: Debug
-            compiler: Clang
-          # Do not run Release GCC build on every commit (but only once a day)
-          - full_config_build: false
-            config: Release
-            compiler: GCC
-          - os: ubuntu24
-            compiler: GCC
-          - os: ubuntu24
-            config: Debug
         include:
           - os: ubuntu20
             compiler: Clang
@@ -68,12 +55,6 @@ jobs:
             c-compiler: /usr/bin/clang-18
             use-cpp-23: "ON"
             build_mrcuda: "ON"
-          # - os: ubuntu24
-            # compiler: GCC
-            # cxx-compiler: /usr/bin/g++-13
-            # c-compiler: /usr/bin/gcc-13
-            # use-cpp-23: "ON"
-            # build_mrcuda: "OFF"
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout

@@ -75,7 +75,10 @@ void RibbonNotifier::drawHistoryButton_( float scaling, float scenePosX )
     ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 0.0f );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, cWindowRounding * scaling );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 0, 0 ) );
-    ImGui::PushStyleColor( ImGuiCol_WindowBg, MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::FrameBackground ).scaledAlpha( 0.6f ).getUInt32() );
+    auto windowBgColor = MR::ColorTheme::getViewportColor( MR::ColorTheme::ViewportColorsType::Borders );
+    if ( ColorTheme::getPreset() == ColorTheme::Preset::Dark )
+        windowBgColor = windowBgColor.scaledAlpha( 0.5f );
+    ImGui::PushStyleColor( ImGuiCol_WindowBg, windowBgColor.scaledAlpha( 0.6f ).getUInt32() );
 
     ImGui::Begin( name.c_str(), nullptr, flags );
 
@@ -141,7 +144,7 @@ void RibbonNotifier::drawHistory_( float scaling, float scenePosX, float topPane
     ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 0.0f );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, cWindowRounding * scaling );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( cNotificationWindowPaddingX * scaling, cNotificationWindowPaddingY * scaling ) );
-    ImGui::PushStyleColor( ImGuiCol_WindowBg, MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::ProgressBarBackground ).scaledAlpha( 0.4f ).getUInt32() );
+    ImGui::PushStyleColor( ImGuiCol_WindowBg, MR::ColorTheme::getViewportColor( MR::ColorTheme::ViewportColorsType::Borders ).scaledAlpha( 0.4f ).getUInt32() );
     ImGui::Begin( "NotificationsHistory", nullptr, flags );
 
     const float padding = cWindowPadding * scaling;
@@ -224,7 +227,10 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
     ImGui::PushStyleVar( settings.historyMode ? ImGuiStyleVar_ChildBorderSize : ImGuiStyleVar_WindowBorderSize, 0.0f );
     ImGui::PushStyleVar( settings.historyMode ? ImGuiStyleVar_ChildRounding : ImGuiStyleVar_WindowRounding, cWindowRounding * scaling );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( cNotificationWindowPaddingX * scaling, cNotificationWindowPaddingY * scaling ) );
-    ImGui::PushStyleColor( settings.historyMode ? ImGuiCol_ChildBg : ImGuiCol_WindowBg, MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::ProgressBarBackground ).scaledAlpha( 0.6f ).getUInt32() );
+    auto windowBgColor = MR::ColorTheme::getViewportColor( MR::ColorTheme::ViewportColorsType::Borders );
+    if ( ColorTheme::getPreset() == ColorTheme::Preset::Dark )
+        windowBgColor = windowBgColor.scaledAlpha( 0.6f );
+    ImGui::PushStyleColor( settings.historyMode ? ImGuiCol_ChildBg : ImGuiCol_WindowBg, windowBgColor.getUInt32() );
 
     auto activeModal = settings.historyMode ? nullptr : ImGui::GetTopMostPopupModal();
 
@@ -385,6 +391,7 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
         drawList->AddCircleFilled( counterCenter, counterRadius, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
         if ( changeHeaderColor )
             ImGui::PushStyleColor( ImGuiCol_Text, notificationParams[int( notification.type )].second );
+        drawList->AddCircle( counterCenter, counterRadius, ImGui::GetColorU32( ImGuiCol_Text ), 0, scaling );
         drawList->AddText( counterCenter - textSize * 0.5f, ImGui::GetColorU32( ImGuiCol_Text ), countText.c_str() );
         if ( changeHeaderColor )
             ImGui::PopStyleColor();

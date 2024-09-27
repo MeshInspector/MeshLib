@@ -1,7 +1,7 @@
-# exit if any command failed
-#set -eo pipefail
+#!/bin/bash
 
-MR_THIRDPARTY_DIR="thirdparty/"
+# exit if any command failed
+set -eo pipefail
 
 if [ ! -f "./lib/libcpr.so" ]; then
   echo "Thirdparty build was not found. Building..."
@@ -15,7 +15,7 @@ if [ ! -f "./build/Release/bin/libMRMesh.so" ]; then
   ./scripts/build_source.sh
 fi
 
-#modify rpm spec file and mr.version
+# modify rpm spec file and mr.version
 version=0.0.0.0
 if [ ${1} ]; then
   version=${1:1} #v1.2.3.4 -> 1.2.3.4
@@ -23,28 +23,17 @@ fi
 echo $version > build/Release/bin/mr.version
 
 VERSION_LINE_FIND="Version:"
-VERSION_LINE="Version:        ${version}"
-sed -i "s/$VERSION_LINE_FIND/$VERSION_LINE/" ./scripts/MeshLib-dev.spec
+VERSION_LINE_REPL="Version:        ${version}"
+sed -i "s/$VERSION_LINE_FIND/$VERSION_LINE_REPL/" ./scripts/MeshLib-dev.spec
 
-
-REQUIRES_LINE="Requires:"
-req_counter=0
 BASEDIR=$(dirname "$0")
 requirements_file="$BASEDIR"/../requirements/fedora.txt
-for req in `cat $requirements_file`
-do
-  if [ $req_counter -le 0 ]; then
-  	REQUIRES_LINE="${REQUIRES_LINE} ${req}"
-  else
-  	REQUIRES_LINE="${REQUIRES_LINE}, ${req}"
-  fi
-  ((req_counter=req_counter+1))
-done
+# convert multi-line file to comma-separated string
+REQUIRES_LINE=$(cat $requirements_file | tr '\n' ',' | sed -e "s/,$//" -e "s/,/, /g")
 
-REQUIRES_LINE_FIND="Requires:"
-sed -i "s/$REQUIRES_LINE_FIND/$REQUIRES_LINE/" ./scripts/MeshLib-dev.spec
+sed -i "s/Requires:/Requires:       ${REQUIRES_LINE}/" ./scripts/MeshLib-dev.spec
 
-#create distr dirs
+# create distr dirs
 if [ -d "./rpmbuild/" ]; then
  rm -rf rpmbuild
 fi

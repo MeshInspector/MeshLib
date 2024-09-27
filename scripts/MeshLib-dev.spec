@@ -21,7 +21,7 @@ cd ../..
 echo $PWD
 
 MR_INSTALL_INCLUDE_DIR="$RPM_BUILD_ROOT/usr/local/include/MeshLib/"
-MR_INSTALL_LIB_DIR="$RPM_BUILD_ROOT/usr/local/lib/MeshLib/"
+MR_INSTALL_LIB_DIR="$RPM_BUILD_ROOT/usr/local/lib64/MeshLib/"
 MR_INSTALL_RES_DIR="$RPM_BUILD_ROOT/usr/local/share/MeshLib/"
 
 cmake --install build/Release/ --prefix "$RPM_BUILD_ROOT/usr/local/"
@@ -42,7 +42,7 @@ echo "MR version copy done"
 
 # copy udev rules
 mkdir -p "${RPM_BUILD_ROOT}/usr/local/lib/udev/rules.d/"
-cp "./scripts/70-space-mouse-meshlib.rules" "${RPM_BUILD_ROOT}/usr/local/lib/udev/rules.d/"
+cp "./scripts/70-space-mouse-meshlib.rules" "${RPM_BUILD_ROOT}/usr/local/lib64/udev/rules.d/"
 
 cd "${RPM_BUILD_ROOT}"
 exit
@@ -50,8 +50,9 @@ exit
 %files
 /usr/local/bin/
 /usr/local/include/MeshLib/
-/usr/local/lib/MeshLib/
-/usr/local/lib/udev/rules.d/70-space-mouse-meshlib.rules
+/usr/local/lib64/MeshLib/
+/usr/local/lib64/cmake/MeshLib/
+/usr/local/lib64/udev/rules.d/70-space-mouse-meshlib.rules
 /usr/local/share/MeshLib/
 
 %post
@@ -62,8 +63,8 @@ fi
 
 echo "Updating ldconfig"
 cat <<EOF > /etc/ld.so.conf.d/meshlib_libs.conf
-/usr/local/lib/MeshLib
-/usr/local/lib/MeshLib/lib
+/usr/local/lib64/MeshLib
+/usr/local/lib64/MeshLib/lib
 EOF
 ldconfig
 

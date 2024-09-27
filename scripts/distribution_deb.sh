@@ -8,12 +8,12 @@
 set -eo pipefail
 
 if [ ! -f "./lib/libcpr.so" ]; then
-  printf "Thirdparty build was not found. Building...\n"
+  echo "Thirdparty build was not found. Building..."
   ./scripts/build_thirdparty.sh
 fi
 
 if [ ! -f "./build/Release/bin/libMRMesh.so" ]; then
-  printf "Project release build was not found. Building...\n"
+  echo "Project release build was not found. Building..."
   export MESHLIB_BUILD_RELEASE="ON"
   export MESHLIB_BUILD_DEBUG="OFF"
   ./scripts/build_source.sh
@@ -41,7 +41,7 @@ echo ${MR_VERSION} > distr/meshlib-dev${MR_INSTALL_RES_DIR}/mr.version
 BASEDIR=$(dirname "$0")
 requirements_file="$BASEDIR"/../requirements/ubuntu.txt
 # convert multi-line file to comma-separated string
-DEPENDS_LINE=$(cat $requirements_file | tee '\n' ',' | sed -e "s/,$//" -e "s/,/, /g")
+DEPENDS_LINE=$(cat $requirements_file | tr '\n' ',' | sed -e "s/,$//" -e "s/,/, /g")
 
 mkdir -p distr/meshlib-dev/DEBIAN
 CONTROL_FILE="./distr/meshlib-dev/DEBIAN/control"

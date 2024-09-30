@@ -14,4 +14,4 @@ With a comprehensive set of advanced algorithms, MeshLib integrates seamlessly i
 
 For more details on MeshLib's features, visit our [Features Page](https://meshlib.meshinspector.com/features-meshlib/).
 
- .NET functionality may be limited. For more information contact support@meshinspector.com.
+ .NET functionality may be limited. For more information contact [support@meshinspector.com].

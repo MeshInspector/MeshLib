@@ -159,7 +159,7 @@ dotnet add package MeshLib
 - Select MeshLib package and press the *Install* button
 
 ## Installation of downloaded .nupkg file
-- Open [NuGet website*(https://www.nuget.org/packages/MeshLib/)
+- Open [NuGet website](https://www.nuget.org/packages/MeshLib/)
 - Click on *Download package*
 - In Visual Studio go to Tools -> NuGet Package Manager -> Package Manager Settings
 - Proceed to the *Package Sources* tab

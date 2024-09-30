@@ -307,8 +307,7 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
     if ( notification.onButtonClick )
     {
         UI::TestEngine::pushTree( "Notification" + std::to_string( settings.index ) );
-        if ( notification.header.empty() && notification.text.empty() )
-            ImGui::SetCursorPosX( contentShift.x );
+        ImGui::SetCursorPosX( contentShift.x );
         if ( UI::buttonCommonSize( notification.buttonName.c_str(), { buttonWidth, 0 } ) )
             notification.onButtonClick();
         UI::TestEngine::popTree();

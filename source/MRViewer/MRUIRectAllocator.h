@@ -82,9 +82,9 @@ private:
 
     enum class AllocationState
     {
-        None, // Means that this window is not longer present on screen
-        Requested, // Allocation requested for next frame
-        Set // Position set and window is present on screen
+        None, // This window wasn't yet drawn during this frame. If it's not drawn until the end of frame, it will be deleted from this map.
+        Requested, // This window has just appeared and a free position will be selected for it in the next frame
+        Set // This window has set position and was already drawn in this frame
     };
 
     struct WindowEntry

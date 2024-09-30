@@ -7,6 +7,7 @@
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include "MRMesh/MRSceneLoad.h"
 #include "MRMesh/MRSceneRoot.h"
+#include "MRPython/MRPython.h"
 #include "MRVoxels/MRBoolean.h"
 
 // Only the functions that should be exported should be in `MR::Extra`. Place everything else somewhere outside.
@@ -165,3 +166,7 @@ namespace MR
     #endif
     void loadMRMeshPyModule() {}
 }
+
+// This stuff makes it so that `MRTest` and our other apps can use the module directly, without having to add it to `PYTHONPATH`.
+extern "C" PyObject *PyInit_mrmeshpy();
+static MR::PythonFunctionAdder initMrmeshpyModule( "mrmeshpy", &PyInit_mrmeshpy );

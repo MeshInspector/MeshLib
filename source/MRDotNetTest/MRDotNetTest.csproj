@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MRDotNet\MRDotNet.vcxproj" />
+    <ProjectReference Include="..\MRDotNet\MRDotNetFramework471.vcxproj" />
   </ItemGroup>
   
   <PropertyGroup>

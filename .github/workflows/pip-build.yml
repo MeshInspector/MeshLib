@@ -62,21 +62,20 @@ jobs:
             py-tag: "cp312"
             py-cmd: "python3.12"
     steps:
-        # Work around some weird permission errors in the runner.
-      - name: Git - add safe directory
-        run: git config --global --add safe.directory '*'
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Checkout third-party submodules
+        # Some of those safe.directory rules could be redudant.
         run: |
           # have to checkout selective submodules by our own
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}/'*'
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/'*'
           git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap
 
       - name: Python setup
@@ -412,7 +411,6 @@ jobs:
           make -f ./scripts/mrbind/generate.mk -B --trace PACKAGE_NAME=meshlib MACOS_MIN_VER=12.7 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0'
 
       - name: Unit Tests
-        working-directory: ./build/Release/bin/meshlib
         run: build/Release/bin/MRTest
 
       - name: Python Tests

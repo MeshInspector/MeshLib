@@ -1,110 +1,156 @@
-## Generating the bindings
+# Generating the bindings
 
-### Windows prerequisites:
+[Installing prerequisites](#installing-prerequisites) — [Generating bindings](#generating-bindings) — [Troubleshooting](#troubleshooting)
 
-Run those once:
+## Installing prerequisites
 
-* `scripts/mrbind/install_msys2_tools.bat` to install MSYS2 with Clang and libclang. Re-run to update to the latest version.
+Run **`scripts/mrbind/install_deps_<platform>`** to install the dependencies (on Linux and MacOS - as root), then **`scripts/mrbind/install_mrbind_<platform>`** to build MRBind (not at root).
 
-* `scripts/mrbind/install_mrbind.bat` to download and compile MRBind. Re-run to update to the latest version.
+You can re-run those scripts to update the dependencies and/or MRBind itself.
 
-  Note that this downloads the latest `master`, while CI might be pointing to a specific commit. But it's simple to manually build a specific commit.
+There's no rocket science in those, and you can do it manually instead of running the scripts (especially building MRBind yourself), see below.
 
-### MacOS prerequisites:
+Among other things, the scripts can do following:
 
-* **Install some helper tools:**
-  ```sh
-  brew install make gawk
-  export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
-  ```
-  If already installed, only run the second line to add it to PATH.
+* On Linux and MacOS, create `~/mrbind` to build MRBind in.
 
-* **Install LLVM/Clang:**
-  ```sh
-  brew install llvm
-  export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
-  ```
-  If already installed, only run the second line to add it to PATH.
+* On Ubuntu, add [the LLVM repository](https://apt.llvm.org/) to install the latest Clang and libclang from.
 
-* **Build MRBind:**
-  ```sh
-  git clone https://github.com/MeshInspector/mrbind ~/mrbind
-  cd ~/mrbind
-  CC=clang CXX=clang++ cmake -B build -DCMAKE_PREFIX_PATH=/opt/homebrew/opt/llvm
-  cmake --build build
-  ```
+* On Windows, install MSYS2 to `C:\msys64_meshlib_mrbind`.
+
+**More details and manual instructions:**
+
+<details><summary><b>Windows</b></summary>
+
+* **Installing dependencies:**
+
+    On Windows we use MSYS2, because it provides prebuilt libclang and provides GNU Make to run our makefile.
+
+    MSYS2 is a package manager, roughly speaking. They provide a bunch of MinGW-related packages (compilers and prebuilt libraries). Luckily Clang can always cross-compile, so MSYS2's MinGW Clang can produce MSVC-compatible executables with the correct flags. You still need to have VS installed though, since it will use its libraries.
+
+    We use [MSYS2 CLANG64](https://www.msys2.org/docs/environments/) environment. Consult `install_deps_windows_msys2.bat` for the list of packages we install in it.
+
+    Notably on Windows we don't have control over the Clang version, since MSYS2 only supports installing the latest one.
+
+* **Building MRBind:**
+
+    MRBind source code is at https://github.com/MeshInspector/mrbind/.
+
+    We build MRBind at `C:\msys64_meshlib_mrbind\home\username\mrbind`, but you can build it elsewhere manually.
+
+    We build in [MSYS2 CLANG64](https://www.msys2.org/docs/environments/) environment, using MSYS2's Clang. Other compilers are not guaranteed to work.
 
 
-### Creating the bindings:
+</details>
 
-You need to run:
-* On Windows: `scripts/mrbind/generate_win.bat` from VS developer command prompt (x64).
-* On Linux and MacOS: `make -f scripts/mrbind/generate.mk`
+<details><summary><b>Ubuntu</b></summary>
 
-You must pass some additional flags.
+* **Installing dependencies:**
 
-Here are some example configurations, but read the docs below for details.
+    We want a certain version of Clang (see `preferred_clang_version.txt`), and since older versions of Ubuntu don't have it, we add Clang's repository: https://apt.llvm.org
 
-* Windows: `scripts/mrbind/generate_win.bat -B --trace VS_MODE=Release` (or `=Debug`)
+    And obviously we install some packages, see `install_deps_ubuntu.sh` for the list.
 
-* MacOS: `make -f scripts/mrbind/generate.mk -B --trace CXX='clang++ -fclang-abi-compat=17' MRBIND_SOURCE=/Users/user/repos/mrbind MESHLIB_SHLIB_DIR=build/RelWithDebugInfo/bin PYTHON_PKGCONF_NAME=python-3.10-embed`
+* **Building MRBind:**
 
-* Ubuntu: `make -f scripts/mrbind/generate.mk -B --trace CXX='clang++-18 -fclang-abi-compat=17' MRBIND_SOURCE=/home/user/repos/mrbind MESHLIB_SHLIB_DIR=build/RelWithDebugInfo/bin` (drop `-fclang-abi-compat=17` on Ubuntu 24.04 and newer).
+    MRBind source code is at https://github.com/MeshInspector/mrbind/.
 
-#### Selecting MeshLib build
+    We build MRBind at `~/mrbind`, but you can build it elsewhere manually.
 
-On Windows:
+    You might want to pass `-DClang_DIR=/usr/lib/cmake/clang-VERSION` (where `VERSION` is the one mentioned in `preferred_clang_version.txt`) if you have several versions of libclang installed, because otherwise CMake might pick an arbitrary one (apparently it picks the first one returned by globbing `clang-*`, which might not be the latest one).
 
-* The current directory matters. We look for MeshLib in `./source/x64/$VS_MODE` relative to the current directory.
+    Use `CC=clang-VERSION CXX=clang++-VERSION cmake ....` to build using Clang. Other compilers might work, but that's not guaranteed.
 
-  By default `VS_MODE=Debug`. You can pass `VS_MODE=Release` as a flag to Make (note, not as an env variable).
+</details>
 
-On Linux and MacOS:
+<details><summary><b>MacOS</b></summary>
 
-* Must pass `MESHLIB_SHLIB_DIR=...` (as a Make flag, not env variable) pointing to your build `bin` directory, e.g. `build/RelWithDebugInfo/bin`.
+* **Installing dependencies:**
 
-#### Full vs incremental build
+    Homebrew must already be installed.
 
-`-B` forces a full rebuild. Removing this flag in theory performs an incremental build, but changing anything in MeshLib headers requires a full rebuild anyway. Removing this flag is only useful for rebuilding auxiliary parts of the module (copying `__init__.py` again, and so on).
+    We install a certain version of Clang and libclang from it (see `preferred_clang_version.txt`), and also GNU Make and Gawk. MacOS has its own Make, but it's outdated. It seems to have Gawk, but we install our own just in case.
 
-#### Selecting MRBind installation
+    What we install from Brew is the regular Clang, not Apple Clang (Apple's fork for Clang), because that is based on an outdated branch of Clang.
 
-On Windows, if you used `install_mrbind.bat`, you don't need to worry about this.
+    You must run following to add the installed things to your PATH. On Arm Macs:
+    ```sh
+    export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
+    export PATH="/opt/homebrew/opt/llvm/bin@VERSION:$PATH" # See the correct VERSION in `preferred_clang_version.txt`.
+    ```
+    And on x86 Macs the installation directory seems to be `/usr/local/...` instead of `/opt/homebrew/...`.
 
-On Other platforms, you must pass `MRBIND_SOURCE=path/to/mrbind` to Make (note, not as an env variable), pointing to the MRBind source directory.
+* **Building MRBind:**
 
-If MRBind is not at `$MRBIND_SOURCE/build/mrbind`, must also pass `MRBIND_EXE` pointing to the executable.
+    MRBind source code is at https://github.com/MeshInspector/mrbind/.
 
-#### Compiler settings
+    We build MRBind at `~/mrbind`, but you can build it elsewhere manually.
 
-By default the bindings are built without optimizations and without debug symbols.
+    Make sure your PATH is correct, as explained in the previous step.
 
-To enable optimizations: `.../generate_win.bat EXTRA_CFLAGS="-Oz -flto=thin" EXTRA_LDFLAGS="-Oz -flto=thin -s"`. (Omit `-s` on MacOS, it seems to have no effect, and the linker warns you shouldn't use it.)
+    Use `CC=clang-VERSION CXX=clang++-VERSION cmake ....` to build using the Clang we've installed. It might build using Apple Clang as well (if you don't set your PATH as explained above), but that's not guaranteed to work. (If you want to try it, you must pass `-DCMAKE_PREFIX_PATH=/opt/homebrew/opt/llvm` for it to find our libclang.)
 
-To enable debug symbols: `.../generate_win.bat EXTRA_CFLAGS=-g EXTRA_LDFLAGS=-g`.
+</details>
 
-#### Selecting compiler
+## Generating bindings
 
-On Windows you can ignore this.
+First, build MeshLib as usual.
 
-On Linux and MacOS, must set `CXX` to a compiler. It should be Clang 18. (So usually `CXX=clang++` or `CXX=clang++-18`.)
+Then generate the bindings:
+* **On Windows:** `scripts/mrbind/generate_win.bat -B --trace MODE=none` from VS developer command prompt (use the `x64 Native` one!).
 
-There can be some ABI issues: if the MeshLib itself was built with GCC 13 or older or Clang 17 or older (note that Apple Clang uses a [different version numbering scheme](https://en.wikipedia.org/wiki/Xcode#Xcode_15.0_-_(since_visionOS_support)_2)), you must also append `-fclang-abi-compat=17` (always `17`) to the compiler string, e.g. `CXX='clang++ -fclang-abi-compat=17'`. Failure to do this will lead to undefined references to functions that have `requires ...` in their demangled names (demangle with `llvm-cxxfilt-18` if needed). This flag excludes `requires ...` from mangling, for compatibility with older compilers.
+  This will look for MeshLib in `./source/x64/Release` (so the current directory matters). Add `VS_MODE=Debug` at the end if you built MeshLib in debug mode.
 
-#### RAM usage vs build speed
+  The `generate_win.bat` file merely calls `generate.mk` (see below) inside of MSYS2 shell. You can use that directly if you want.
 
-There's a `NUM_FRAGMENTS=...` setting that lets you adjust compilation time vs RAM usage tradeoff.
+* **On Linux:** `make -f scripts/mrbind/generate.mk -B --trace MODE=none`
 
-Less fragments is faster, but requires more RAM.
+  This will look for MeshLib in `./build/Release/bin`. Pass `MESHLIB_SHLIB_DIR=path/to/bin` for a different directory.
 
-The default value is `4`, which is good for 16 GB of RAM.
+* **On MacOS:** Same as on Linux, but before that must adjust the PATH. On Arm Macs: `export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"`, and on x86 Macs `/usr/local/...` instead of `/opt/homebrew/...`. This adds the version of Make installed in Homebrew to PATH, because the default one is outdated. Confirm the version with `make --version`, must be 4.x or newer.
 
-#### Selecting Python version
+### Some common flags:
 
-On Windows you don't need to care about this, we guess the version from the Vcpkg contents.
+* **`--trace` — enable verbose logs.**
 
-On Linux and Mac, you can pass e.g. `PYTHON_PKGCONF_NAME=python-3.10-embed` to force Python 3.10. The default is `python3-embed`, which uses some default Python version on Linux, and the latest one on Mac.
+* **`MODE=none` — disable optimization** for faster build times. The default is `MODE=release`. To enable debug symbols, use `MODE=debug`. To set completely custom compiler flags, set `EXTRA_CFLAGS` and `EXTRA_LDFLAGS`.
 
-#### Other useful flags
+* **`-B` — force a full rebuild of the bindings.** Incremental builds are not very useful, because they're not perfect and can miss changes. Use incremental builds e.g. when you're fixing linker errors.
 
-`--trace` flag will show all invoked shell commands. In general, all flags are forwarded to GNU Make that runs the makefile, which is what controls the generation.
+* **`NUM_FRAGMENTS=??` — adjust RAM usage vs build speed tradeoff.** `4` is the default, good for 16 GB of RAM. Use `2` if you have 32 GB of RAM to build ~2 times faster. Less fragments = faster builds but more RAM usage.
+
+* **`PYTHON_PKGCONF_NAME=python-3.??-embed` — select Python version.** We try to guess this one. You can set this to `python3-embed` to use whatever the OS considers to be the default version.
+
+### Selecting the compiler:
+
+For simplicity, we compile the bindings with the same Clang that we use for parsing the code. (Consult `preferred_clang_version.txt` for the current version.) But you can override this using `CXX_FOR_BINDINGS`.
+
+**ABI compatibility:** Since MeshLib is compiled using a different compiler, we must ensure the two use the same ABI. `CXX_FOR_ABI` should be set to the compiler the ABI of which we're trying to match. (Defaults to `CXX` environment variable, or `g++` if not set.) At the moment, if `CXX_FOR_ABI` is GCC 13 or older or Clang 17 or older (note that Apple Clang uses a [different version numbering scheme](https://en.wikipedia.org/wiki/Xcode#Xcode_15.0_-_(since_visionOS_support)_2)), we pass `-fclang-abi-compat=17` to our Clang 18 or newer. This flag *disables* mangling `requires` constraints into function names. If we guess incorrectly, you'll get undefined references to functions with `requires` constraints on them.
+
+### Less common flags:
+
+* **Selecting MRBind installation:** if you installed MRBind to a non-default location (`~/mrbind` on Linux and MacOS, `C:\msys64_meshlib_mrbind\home\username\mrbind` on Windows), you must pass this location to `MRBIND_SOURCE=path/to/mrbind`.
+
+    Additionally, if the MRBind binary is not at `$MRBIND_SOURCE/build/mrbind`, you must pass `MRBIND_EXE=...` (path to the executable itself, not its directory).
+
+You can find some undocumented flags/variables in `generate.mk`.
+
+## Troubleshooting
+
+* **`could not open 'MRMesh.lib': No such file or directory`**
+
+  * MeshLib wasn't built, or `VS_MODE` is set incorrectly.
+
+* **`machine type x86 conflicts with x64`**
+
+  * You opened `x86 ...` VS developer command prompt, but we need `x64 Native`. Rebuild the bindings in x64 prompt.
+
+* **`undefined symbol: void __cdecl std::_Literal_zero_is_expected(void)`**
+
+  * Update your VS 2022.
+
+* **Importing the wheel segfaults on MacOS**
+
+  * Make sure you're not linking against Python **and** do use `-Xlinker -undefined -Xlinker dynamic_lookup` linker flags. The `generate.mk` should already do it correctly, just keep this in mind. Also transitively linking Python seems to be fine (`-lMRPython` is fine).
+
+    Failure to do this will have no effect when importing the module directly, but will segfault when importing it as a wheel, **or** when using a wrong Python version even without the wheel.

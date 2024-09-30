@@ -32,6 +32,8 @@ RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
 WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
 
 COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh
+COPY scripts/mrbind/install_deps_ubuntu.sh scripts/mrbind/install_deps_ubuntu.sh
+COPY scripts/mrbind/preferred_clang_version.txt scripts/mrbind/preferred_clang_version.txt
 COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
 COPY scripts/patches scripts/patches
 COPY requirements requirements
@@ -42,10 +44,6 @@ COPY --from=build /home/MeshLib/include /usr/local/lib/meshlib-thirdparty-lib/in
 ENV MR_STATE=DOCKER_BUILD
 
 # update and install req
-# clang-tools-18 libclang-18-dev llvm-18-dev are libclang libs, they are needed to compile mrbind.
-# clang-18 is needed to compile bindings produced by mrbind (didn't port to other compilers yet, at the time of writing)
-# lld-18 is for linking the bindings, it works marginally faster than LD.
-# gawk is needed for binding generation
 RUN export DEBIAN_FRONTEND=noninteractive; \
     export DEBCONF_NONINTERACTIVE_SEEN=true; \
     echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
@@ -54,10 +52,11 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
  && apt-get install -qqy --no-install-recommends \
         tzdata git sudo time python3-pip xvfb curl wget unzip \
  && ./scripts/install_apt_requirements.sh \
+ && ./scripts/mrbind/install_deps_ubuntu.sh \
  && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
  && apt-get update -y \
- && apt-get install -y gh g++-13 clang-18 lld-18 clang-tools-18 libclang-18-dev llvm-18-dev ninja-build gawk \
+ && apt-get install -y gh g++-13 clang-18 \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 

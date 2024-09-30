@@ -123,9 +123,7 @@ jobs:
         run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests
-        # Setting the working directory fixes weird library loading issues.
-        working-directory: ./build/Release/bin/meshlib
-        run: ../MRTest
+        run: build/Release/bin/MRTest
 
       - name: Python Tests
         working-directory: ./build/Release/bin
@@ -414,9 +412,8 @@ jobs:
           make -f ./scripts/mrbind/generate.mk -B --trace PACKAGE_NAME=meshlib MACOS_MIN_VER=12.7 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0'
 
       - name: Unit Tests
-        # Setting the working directory fixes weird library loading issues.
         working-directory: ./build/Release/bin/meshlib
-        run: ../MRTest
+        run: build/Release/bin/MRTest
 
       - name: Python Tests
         working-directory: ./build/Release/bin

@@ -91,9 +91,12 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install pytest
 
       - name: Install thirdparty libs
+        # Also print the amount of RAM. If there's not enough RAM, building MRBind bindings can fail. Not doing it in that step, because OOM fails can erase logs from the current step.
         run: |
           ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
           ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
+          ./scripts/mrbind/install_mrbind_ubuntu.sh
+          free -h
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -107,12 +110,6 @@ jobs:
             -DMRIOEXTRAS_OPENCASCADE_USE_XDE=OFF
           # not realy needed
           CMAKE_C_COMPILER: /usr/bin/clang-11
-
-        # Also print the amount of RAM. Not doing it in the same step as building the bindings, because when that fails, the logs are sometimes lost.
-      - name: Build MRBind
-        run: |
-          free -h
-          ./scripts/mrbind/install_mrbind_ubuntu.sh
 
       - name: Generate and build MRBind bindings
         run: |
@@ -383,6 +380,8 @@ jobs:
 
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh
+        run: ./scripts/mrbind/install_deps_macos.sh
+        run: ./scripts/mrbind/install_mrbind_macos.sh
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -393,12 +392,6 @@ jobs:
           CMAKE_CXX_COMPILER: /usr/bin/clang++
           # not realy needed
           CMAKE_C_COMPILER: /usr/bin/clang
-
-      - name: Install MRBind requirements
-        run: ./scripts/mrbind/install_deps_macos.sh
-
-      - name: Build MRBind
-        run: ./scripts/mrbind/install_mrbind_macos.sh
 
       - name: Generate and build MRBind bindings
         env:

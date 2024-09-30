@@ -11,6 +11,7 @@
 #include "MRProgressBar.h"
 #include "MRViewer/MRImGuiVectorOperators.h"
 #include "MRRibbonMenu.h"
+#include "MRUITestEngine.h"
 #include <imgui_internal.h>
 
 namespace
@@ -19,12 +20,11 @@ constexpr int cNotificationNumberLimit = 10;
 
 constexpr std::array< std::pair<const char*, ImU32>, int( MR::NotificationType::Count )> notificationParams
 {
-    std::pair<const char*, ImU32> { "\xef\x81\xaa", ::MR::Color( 217, 0, 0 ).getUInt32() },
-    std::pair<const char*, ImU32> { "\xef\x81\xb1", ::MR::Color( 255, 146, 0 ).getUInt32() },
-    std::pair<const char*, ImU32> { "\xef\x83\xb3", ::MR::Color( 39, 119, 214 ).getUInt32() },
-    std::pair<const char*, ImU32> { "\xef\x8b\xb2", ::MR::Color( 255, 146, 0 ).getUInt32() }
+    std::pair<const char*, ImU32> { "\xef\x81\xaa", 0xff4444e2 },
+    std::pair<const char*, ImU32> { "\xef\x81\xb1", 0xff0092ff },
+    std::pair<const char*, ImU32> { "\xef\x83\xb3", 0xffff831b },
+    std::pair<const char*, ImU32> { "\xef\x8b\xb2", 0xff0092ff }
 };
-
 
 }
 
@@ -37,22 +37,16 @@ void RibbonNotifier::pushNotification( const RibbonNotification& notification )
         addNotification_( notifications_, notification );
     addNotification_( notificationsHistory_, notification );
 
-    highestNotification_ = NotificationType::Count;
-    for ( const auto& nwt : notificationsHistory_ )
-    {
-        if ( int( nwt.notification.type ) < int( highestNotification_ ) )
-            highestNotification_ = nwt.notification.type;
-    }
-    
+    scrollDownNeeded_ = true;    
     requestClosestRedraw_();
 }
 
-void RibbonNotifier::draw( float scaling, float scenePosX )
+void RibbonNotifier::draw( float scaling, float scenePosX, float topPanelHeight )
 {
     if ( historyMode_ )
-        drawHistory_( scaling, scenePosX );
+        drawHistory_( scaling, scenePosX, topPanelHeight );
     else
-        drawNotifications_( scaling, scenePosX );
+        drawFloating_( scaling, scenePosX );
     drawHistoryButton_( scaling, scenePosX );
     filterInvalid_( -1 );
 }
@@ -63,36 +57,42 @@ void RibbonNotifier::drawHistoryButton_( float scaling, float scenePosX )
     if ( notificationsHistory_.empty() )
         return;
 
-    float notificationsPosX = cWindowSpacing * scaling + scenePosX;
-    Vector2f windowPos = Vector2f( notificationsPosX, float( getViewerInstance().framebufferSize.y ) - 40.f * scaling );
-    const float windowPadding = cWindowPadding * scaling;
+    const float cWindowExpansion = cWindowPadding;
+    const float windowPosShiftY = ( cWindowsPosY - cWindowExpansion ) * scaling;
+    Vector2f windowPos = Vector2f( scenePosX, float( getViewerInstance().framebufferSize.y ) - windowPosShiftY );
+    const auto windowSzie = ImVec2( 36, 28 ) * scaling;
 
-    
-    auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
-    if ( iconsFont )
-    {
-        iconsFont->Scale = 0.7f;
-        ImGui::PushFont( iconsFont );
-    }
-    const float size = ImGui::GetTextLineHeight() + windowPadding * 2.f;
-    ImGui::SetNextWindowPos( windowPos, ImGuiCond_Always, ImVec2(0.f, 1.0f));
-    ImGui::SetNextWindowSize( ImVec2( size, size ), ImGuiCond_Always );
+    ImGui::SetNextWindowPos( windowPos, ImGuiCond_Always );
+    ImGui::SetNextWindowSize( windowSzie, ImGuiCond_Always );
     ImGuiWindowFlags flags =
         ImGuiWindowFlags_AlwaysAutoResize |
         ImGuiWindowFlags_NoResize |
         ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_NoMove;
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoFocusOnAppearing |
+        ImGuiWindowFlags_NoBringToFrontOnFocus;
     std::string name = "##NotificationButton";
     ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 0.0f );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, cWindowRounding * scaling );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( windowPadding, windowPadding ) );
-    ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, { 0, 0 } );
-    ImGui::PushStyleColor( ImGuiCol_WindowBg, MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::FrameBackground ).getUInt32() );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 0, 0 ) );
+    auto windowBgColor = MR::ColorTheme::getViewportColor( MR::ColorTheme::ViewportColorsType::Borders );
+    if ( ColorTheme::getPreset() == ColorTheme::Preset::Dark )
+        windowBgColor = windowBgColor.scaledAlpha( 0.5f );
+    ImGui::PushStyleColor( ImGuiCol_WindowBg, windowBgColor.scaledAlpha( 0.6f ).getUInt32() );
 
     ImGui::Begin( name.c_str(), nullptr, flags );
 
-    ImGui::PushStyleColor( ImGuiCol_Text, notificationParams[int( highestNotification_ )].second );
-    ImGui::Text( "%s", notificationParams[int( highestNotification_ )].first );
+    auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
+    if ( iconsFont )
+    {
+        iconsFont->Scale = 0.65f;
+        ImGui::PushFont( iconsFont );
+    }
+
+    auto fontSize = ImGui::GetFontSize();
+    ImGui::SetCursorPos( 0.5f * ( windowSzie - ImVec2( fontSize, fontSize ) ) );
+    ImGui::PushStyleColor( ImGuiCol_Text, notificationParams[int( notificationsHistory_.front().notification.type )].second );
+    ImGui::Text( "%s", notificationParams[int( notificationsHistory_.front().notification.type )].first );
     ImGui::PopStyleColor();
 
     if ( iconsFont )
@@ -101,16 +101,17 @@ void RibbonNotifier::drawHistoryButton_( float scaling, float scenePosX )
         ImGui::PopFont();
     }
 
-    auto window = ImGui::GetCurrentContext()->CurrentWindow;
-    bool isHovered = ImGui::IsWindowHovered();
-
-    if ( isHovered )
+    if ( ImGui::IsWindowHovered() )
     {
+        auto window = ImGui::GetCurrentContext()->CurrentWindow;
         if ( ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
         {
             historyMode_ = !historyMode_;
             if ( historyMode_ )
+            {
                 notifications_.clear();
+                scrollDownNeeded_ = true;
+            }
         }
 
         auto drawList = window->DrawList;
@@ -122,21 +123,18 @@ void RibbonNotifier::drawHistoryButton_( float scaling, float scenePosX )
 
     ImGui::End();
     ImGui::PopStyleColor();
-    ImGui::PopStyleVar( 4 );
+    ImGui::PopStyleVar( 3 );
 }
 
-void RibbonNotifier::drawHistory_( float scaling, float scenePosX )
+void RibbonNotifier::drawHistory_( float scaling, float scenePosX, float topPanelHeight )
 {
     using namespace StyleConsts::Notification;
-    const float cWindowExpansion = cWindowPadding;
-
-    float windowPosX = ( cWindowSpacing  - cWindowExpansion ) * scaling + scenePosX;
-    const float windowPosShiftY = ( cWindowsPosY + cWindowExpansion ) * scaling;
-    Vector2f windowPos = Vector2f( windowPosX, float( getViewerInstance().framebufferSize.y ) - windowPosShiftY );
-    const float width = ( 337.0f + cWindowExpansion * 2 )* scaling;
+    const float windowPosShiftY = ( cWindowsPosY - cWindowPadding ) * scaling;
+    Vector2f windowPos = Vector2f( scenePosX, float( getViewerInstance().framebufferSize.y ) - windowPosShiftY );
+    const float width = 351.0f * scaling;
 
     ImGui::SetNextWindowPos( windowPos, ImGuiCond_Always, ImVec2( 0.f, 1.0f ) );
-    ImGui::SetNextWindowSizeConstraints( ImVec2( width, 1 ), ImVec2( width, float( getViewerInstance().framebufferSize.y ) - windowPosShiftY ) );
+    ImGui::SetNextWindowSizeConstraints( ImVec2( width, 1 ), ImVec2( width, float( getViewerInstance().framebufferSize.y ) - windowPosShiftY - topPanelHeight ) );
     ImGui::SetNextWindowSize( ImVec2( width, -1 ), ImGuiCond_Always );
     ImGuiWindowFlags flags =
         ImGuiWindowFlags_AlwaysAutoResize |
@@ -145,311 +143,282 @@ void RibbonNotifier::drawHistory_( float scaling, float scenePosX )
         ImGuiWindowFlags_NoMove;
     ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 0.0f );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, cWindowRounding * scaling );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( ( cNotificationWindowPaddingX + cWindowExpansion ) * scaling,
-        ( cNotificationWindowPaddingY + cWindowExpansion ) * scaling ) );
-    ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, { 0, 0 } );
-    ImGui::PushStyleColor( ImGuiCol_WindowBg, MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::FrameBackground ).getUInt32() );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( cNotificationWindowPaddingX * scaling, cNotificationWindowPaddingY * scaling ) );
+    ImGui::PushStyleColor( ImGuiCol_WindowBg, MR::ColorTheme::getViewportColor( MR::ColorTheme::ViewportColorsType::Borders ).scaledAlpha( 0.4f ).getUInt32() );
     ImGui::Begin( "NotificationsHistory", nullptr, flags );
 
-    const float firstColumnWidth = 28.0f * scaling;
-    ImGui::BeginTable( "##NotificationTable", 2, ImGuiTableFlags_SizingFixedFit );
-    auto window = ImGui::GetCurrentContext()->CurrentWindow;
-    ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, firstColumnWidth );
-    ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, width - firstColumnWidth );
-    const int notificationsHistorySize = int( notificationsHistory_.size() );
-    for ( int i = 0; i < notificationsHistorySize; ++i )
+    const float padding = cWindowPadding * scaling;
+    Vector2f currentPos = Vector2f( scenePosX + padding, float( getViewerInstance().framebufferSize.y ) - cWindowsPosY * scaling + padding );
+    const float notWidth = 319.0f * scaling;
+    for ( int i = 0; i < notificationsHistory_.size(); ++i )
     {
-        const float beginCursorPosY = ImGui::GetCursorPosY();
-        auto& [notification, timer, counter] = notificationsHistory_[notificationsHistorySize - 1 - i];
-        auto& style = ImGui::GetStyle();
-
-        ImGui::TableNextColumn();
-        auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
-        if ( iconsFont )
-        {
-            iconsFont->Scale = 0.7f;
-            ImGui::PushFont( iconsFont );
-        }
-
-        ImGui::PushStyleColor( ImGuiCol_Text, notificationParams[int( notification.type )].second );
-        if ( notification.onButtonClick )
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + style.FramePadding.y * 0.5f );
-        ImGui::Text( "%s", notificationParams[int( notification.type )].first );
-        ImGui::PopStyleColor();
-
-        if ( iconsFont )
-        {
-            iconsFont->Scale = 1.0f;
-            ImGui::PopFont();
-        }
-        
-        ImGui::TableNextColumn();
-
-        if ( !notification.header.empty() )
-        {
-            auto boldFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::BigSemiBold );
-            if ( boldFont )
-                ImGui::PushFont( boldFont );
-
-            ImGui::SetCursorPosX( 50.0f * scaling );
-            if ( notification.onButtonClick )
-                ImGui::SetCursorPosY( ImGui::GetCursorPosY() + style.FramePadding.y * 0.5f );
-            ImGui::TextWrapped( "%s", notification.header.c_str() );
-
-            if ( boldFont )
-                ImGui::PopFont();
-        }
-
-        auto bigFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Big );
-        if ( bigFont )
-            ImGui::PushFont( bigFont );
-
-        ImGui::SetCursorPosX( 50.0f * scaling );
-        if ( notification.onButtonClick )
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + style.FramePadding.y * 0.5f );
-        ImGui::TextWrapped( "%s", notification.text.c_str() );
-
-        if ( bigFont )
-            ImGui::PopFont();
-
-        const ImU32 color = notificationParams[int( notification.type )].second;
-        auto drawList = window->DrawList;
-        auto windRect = window->Rect();
-        ImRect rect;
-        ImVec2 size = ImVec2( window->Size.x - cWindowExpansion * 2 * scaling, ImGui::GetCursorPosY() - beginCursorPosY - ImGui::GetStyle().ItemSpacing.y + cWindowPadding * 2 * scaling );
-        rect.Min.x = windRect.Min.x + cWindowExpansion * scaling;
-        rect.Min.y = windRect.Min.y + beginCursorPosY - cWindowPadding * scaling - ImGui::GetScrollY();
-        rect.Max = rect.Min + size;
-        drawList->PushClipRect( windRect.Min, windRect.Max );
-        drawList->AddRect( rect.Min, rect.Max, color, cWindowRounding * scaling, 0, cWindowBorderWidth * scaling );
-        drawList->PopClipRect();
-
-        if ( counter > 1 )
-        {
-            const ImU32 textColor = ImGui::GetColorU32( ImGuiCol_WindowBg );
-            auto countText = std::to_string( counter );
-            auto textWidth = ImGui::CalcTextSize( countText.c_str() ).x;
-            size = ImVec2( textWidth + ImGui::GetStyle().FramePadding.x * 2, ImGui::GetFrameHeight() );
-            rect.Min.x = windRect.Max.x - cWindowExpansion * scaling;
-            rect.Min.y = windRect.Min.y + ImGui::GetCursorPosY() - ImGui::GetScrollY();
-            rect.Min -= size * 0.5f;
-            rect.Max = rect.Min + size;
-            drawList->PushClipRectFullScreen();
-            drawList->AddRectFilled( rect.Min, rect.Max, color, cWindowRounding * scaling, 0 );
-            drawList->AddText( rect.Min + ImGui::GetStyle().FramePadding, textColor, countText.c_str() );
-            drawList->PopClipRect();
-        }
-
-        if ( i + 1 < notificationsHistory_.size() )
-        {
-            ImGui::TableNextRow( ImGuiTableRowFlags_None, ( cWindowSpacing + cNotificationWindowPaddingY * 2.f ) * scaling );
-            ImGui::TableNextRow();
-        }
+        currentPos.y -= padding;
+        drawNotification_( { .index = i,.scalig = scaling,.width = notWidth,.historyMode = true,.currentPos = &currentPos } );
     }
-    ImGui::EndTable();
+
+    auto window = ImGui::GetCurrentContext()->CurrentWindow;
+    if ( scrollDownNeeded_ || prevHistoryScrollMax_ != window->ScrollMax.y )
+    {
+        
+        window->ScrollTargetCenterRatio.y = 0.0f;
+        window->ScrollTarget.y = window->ScrollMax.y;
+        scrollDownNeeded_ = false;
+        prevHistoryScrollMax_ = window->ScrollMax.y;
+    }
 
     ImGui::End();
     ImGui::PopStyleColor();
-    ImGui::PopStyleVar( 4 );
+    ImGui::PopStyleVar( 3 );
 }
 
-void RibbonNotifier::drawNotifications_( float scaling, float scenePosX )
+void RibbonNotifier::drawFloating_( float scaling, float scenePosX )
 {
     using namespace StyleConsts::Notification;
-    float notificationsPosX = scenePosX;
-    Vector2f currentPos = Vector2f( notificationsPosX, float ( getViewerInstance().framebufferSize.y ) - cWindowsPosY * scaling );
-    const Vector2f padding = Vector2f( 0.0f, cWindowSpacing * scaling );
-    const float width = 337.0f * scaling;
-    currentPos.x += padding.y;
+    const float padding = cWindowPadding * scaling;
+    Vector2f currentPos = Vector2f( scenePosX + padding, float( getViewerInstance().framebufferSize.y ) - cWindowsPosY * scaling + padding );
+    const float width = 319.0f * scaling;
 
     int filteredNumber = -1;
     for ( int i = 0; i < notifications_.size(); ++i )
     {
-        currentPos -= padding;
-        auto& [notification, timer,counter] = notifications_[i];
-
-        ImGui::SetNextWindowPos( currentPos, ImGuiCond_Always, ImVec2( 0.f, 1.0f ) );
-        ImGui::SetNextWindowSize( ImVec2( width, -1 ), ImGuiCond_Always );
-        ImGuiWindowFlags flags =
-            ImGuiWindowFlags_AlwaysAutoResize |
-            ImGuiWindowFlags_NoResize |
-            ImGuiWindowFlags_NoTitleBar |
-            ImGuiWindowFlags_NoMove;
-        std::string name = "##notification" + std::to_string( i );
-        ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 0.0f );
-        ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, cWindowRounding * scaling );
-        ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( cNotificationWindowPaddingX * scaling, cNotificationWindowPaddingY * scaling ) );
-        ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, { 0, 0 } );
-        ImGui::PushStyleColor( ImGuiCol_WindowBg, MR::ColorTheme::getRibbonColor( MR::ColorTheme::RibbonColorsType::FrameBackground ).getUInt32() );
-
-        auto activeModal = ImGui::GetTopMostPopupModal();
-
-        if ( i + 1 == cNotificationNumberLimit )
-            ImGui::SetNextWindowBgAlpha( 0.5f );
-        ImGui::Begin( name.c_str(), nullptr, flags );
-
-        auto window = ImGui::GetCurrentContext()->CurrentWindow;
-
-        if ( ImGui::IsWindowAppearing() )
-        {
-            if ( !activeModal || std::string_view( activeModal->Name ) != " Error##modal" )
-                ImGui::BringWindowToDisplayFront( window ); // bring to front to be over modal background (but not over menu modal)
-
-            if ( !ProgressBar::isOrdered() && !activeModal ) // do not focus window, not to close modal on appearing
-                ImGui::SetWindowFocus();
-        }
-
-        const int columnCount = 2;
-        const float firstColumnWidth = 28.0f * scaling;
-        auto& style = ImGui::GetStyle();
-        const float buttonWidth = notification.onButtonClick ?
-            ImGui::CalcTextSize( notification.buttonName.c_str() ).x + 2.0f * style.FramePadding.x + 2.0f * style.WindowPadding.x : 0;
-
-        ImGui::BeginTable( "##NotificationTable", columnCount, ImGuiTableFlags_SizingFixedFit );
-
-        ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, firstColumnWidth );
-        ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, width - firstColumnWidth );
-
-        ImGui::TableNextColumn();
-        auto iconsFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
-        if ( iconsFont )
-        {
-            iconsFont->Scale = 0.7f;
-            ImGui::PushFont( iconsFont );
-        }
-
-        ImGui::PushStyleColor( ImGuiCol_Text, notificationParams[int(notification.type)].second );
-        if ( notification.onButtonClick )
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + style.FramePadding.y * 0.5f );
-        ImGui::Text( "%s", notificationParams[int(notification.type)].first );
-        ImGui::PopStyleColor();
-
-        if ( iconsFont )
-        {
-            iconsFont->Scale = 1.0f;
-            ImGui::PopFont();
-        }
-        
-        ImGui::TableNextColumn();
-
-        if ( !notification.header.empty() )
-        {
-            auto boldFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::BigSemiBold );
-            if ( boldFont )
-                ImGui::PushFont( boldFont );
-            
-            ImGui::SetCursorPosX( 40.0f * scaling );
-            if ( notification.onButtonClick )
-                ImGui::SetCursorPosY( ImGui::GetCursorPosY() + style.FramePadding.y * 0.5f );
-            ImGui::TextWrapped( "%s", notification.header.c_str() );
-
-            if ( boldFont )
-                ImGui::PopFont();
-        }
-
-        auto bigFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Big );
-        if ( bigFont )
-            ImGui::PushFont( bigFont );
-        
-        ImGui::SetCursorPosX( 40.0f * scaling );
-        if ( notification.onButtonClick )
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + style.FramePadding.y * 0.5f );
-        ImGui::TextWrapped( "%s", notification.text.c_str() );
-        
-        if ( bigFont )
-            ImGui::PopFont();
-
-        if ( notification.onButtonClick )
-        {
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cSeparateBlocksSpacing * scaling );
-            if ( UI::buttonCommonSize( notification.buttonName.c_str(), { buttonWidth, 0 } ) )
-                notification.onButtonClick();
-        }
-        ImGui::EndTable();       
-
-        bool isHovered = false;
-        if ( activeModal )
-        {
-            // workaround to be able to hover notification even if modal is present
-            auto mousePos = ImGui::GetMousePos();
-            isHovered = window->Rect().Contains( mousePos ) && !activeModal->Rect().Contains( mousePos );
-        }
-        else
-        {
-            isHovered = ImGui::IsWindowHovered();
-        }
-        if ( !isHovered )
-            timer += ImGui::GetIO().DeltaTime;
-
-        if ( notification.type == NotificationType::Error || notification.type == NotificationType::Warning || isHovered )
-        {
-            auto drawList = window->DrawList;
-            drawList->PushClipRectFullScreen();
-            const ImU32 color = isHovered ? ImGui::GetColorU32( ImGuiCol_Text ) : notificationParams[int( notification.type )].second;
-            drawList->AddRect( window->Rect().Min, window->Rect().Max, color, 4.0f * scaling, 0, 2.0f * scaling );
-            drawList->PopClipRect();
-        }
-
-        if ( !activeModal )
-        {
-            if ( iconsFont )
-            {
-                iconsFont->Scale = 0.7f;
-                ImGui::PushFont( iconsFont );
-            }
-            ImGui::PushStyleColor( ImGuiCol_Border, 0 );
-            ImGui::PushStyleColor( ImGuiCol_Button, ImGui::GetColorU32( ImGuiCol_WindowBg ) );
-            ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImGui::GetColorU32( ImGuiCol_WindowBg ) );
-            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImGui::GetColorU32( ImGuiCol_WindowBg ) );
-            ImGui::PushStyleColor( ImGuiCol_Text, Color::red().getUInt32() );
-            std::string crossText = "\xef\x80\x8d";
-            auto textWidth = ImGui::CalcTextSize( crossText.c_str() ).x;
-            auto windRect = window->Rect();
-            ImRect rect;
-            ImVec2 size = ImVec2( textWidth + ImGui::GetStyle().FramePadding.x * 2, ImGui::GetFrameHeight() );
-            rect.Min.x = windRect.Max.x - size.x;
-            rect.Min.y = windRect.Min.y;
-            auto cursorPos = ImGui::GetCursorPos();
-            ImGui::SetCursorPos( ImVec2( width - size.x - cWindowBorderWidth * scaling, cWindowBorderWidth * scaling ) );
-            if ( ImGui::Button( crossText.c_str(), size ) )
-                filteredNumber = i;
-            ImGui::SetCursorPos( cursorPos );
-            ImGui::Dummy( ImVec2( 0, 0 ) );
-            ImGui::PopStyleColor( 5 );
-            if ( iconsFont )
-            {
-                iconsFont->Scale = 1.0f;
-                ImGui::PopFont();
-            }
-        }
-
-        if ( counter > 1 )
-        {
-            auto drawList = window->DrawList;
-            const ImU32 color = isHovered ? ImGui::GetColorU32( ImGuiCol_Text ) : notificationParams[int( notification.type )].second;
-            const ImU32 textColor = ImGui::GetColorU32( ImGuiCol_WindowBg );
-            auto countText = std::to_string( counter );
-            auto textWidth = ImGui::CalcTextSize( countText.c_str() ).x;
-            auto windRect = window->Rect();
-            ImRect rect;
-            ImVec2 size = ImVec2( textWidth + ImGui::GetStyle().FramePadding.x * 2, ImGui::GetFrameHeight() );
-            rect.Min.x = windRect.Max.x;
-            rect.Min.y = windRect.Max.y;
-            rect.Min -= size * 0.5f;
-            rect.Max = rect.Min + size;
-            drawList->PushClipRectFullScreen();
-            drawList->AddRectFilled( rect.Min, rect.Max, color, 4.0f * scaling, 0 );
-            drawList->AddText( rect.Min + ImGui::GetStyle().FramePadding, textColor, countText.c_str() );
-            drawList->PopClipRect();
-        }
-
-        ImGui::End();
-        ImGui::PopStyleColor();
-        ImGui::PopStyleVar( 4 );
-        currentPos.y -= window->Size.y;
+        currentPos.y -= padding;
+        if ( !drawNotification_( { .index = i,.scalig = scaling,.width = width,.historyMode = false,.currentPos = &currentPos } ) )
+            filteredNumber = i;
     }
-    if ( filteredNumber  > -1 )
+    if ( filteredNumber > -1 )
         filterInvalid_( filteredNumber );
+}
+
+bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings )
+{
+    using namespace StyleConsts::Notification;
+    auto& [notification, timer, counter] = settings.historyMode ? notificationsHistory_[settings.index] : notifications_[settings.index];
+
+    assert( settings.currentPos );
+    if ( !settings.currentPos )
+        return false;
+
+    const auto scaling = settings.scalig;
+
+    ImGuiWindow* parentWindow{ nullptr };
+    if ( settings.historyMode )
+        parentWindow = ImGui::GetCurrentContext()->CurrentWindow;
+
+    if ( settings.historyMode )
+    {
+        // hack to correct calculate size of parent window
+        //ImGui::Button( "1", ImVec2( settings.width, 1 ) ); // DEBUG line, might be useful to change correction if needed
+        ImGui::Dummy( ImVec2( settings.width, 1 ) );
+    }
+
+    auto windowPos = *settings.currentPos;
+    if ( settings.historyMode )
+        windowPos.y += ( parentWindow->ScrollMax.y - parentWindow->Scroll.y );
+
+    ImGui::SetNextWindowPos( windowPos, ImGuiCond_Always, ImVec2( 0.f, 1.0f ) );
+    ImGui::SetNextWindowSize( ImVec2( settings.width, -1 ), ImGuiCond_Always );
+
+    ImGuiWindowFlags flags =
+        ImGuiWindowFlags_AlwaysAutoResize |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoTitleBar | ( settings.historyMode ? ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_AlwaysUseWindowPadding : 0 ) |
+        ImGuiWindowFlags_NoMove;
+    std::string name = "##notification" + std::to_string( settings.index );
+    ImGui::PushStyleVar( settings.historyMode ? ImGuiStyleVar_ChildBorderSize : ImGuiStyleVar_WindowBorderSize, 0.0f );
+    ImGui::PushStyleVar( settings.historyMode ? ImGuiStyleVar_ChildRounding : ImGuiStyleVar_WindowRounding, cWindowRounding * scaling );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( cNotificationWindowPaddingX * scaling, cNotificationWindowPaddingY * scaling ) );
+    auto windowBgColor = MR::ColorTheme::getViewportColor( MR::ColorTheme::ViewportColorsType::Borders );
+    if ( ColorTheme::getPreset() == ColorTheme::Preset::Dark )
+        windowBgColor = windowBgColor.scaledAlpha( 0.6f );
+    ImGui::PushStyleColor( settings.historyMode ? ImGuiCol_ChildBg : ImGuiCol_WindowBg, windowBgColor.getUInt32() );
+
+    auto activeModal = settings.historyMode ? nullptr : ImGui::GetTopMostPopupModal();
+
+    const float closeBtnSize = 16 * scaling;
+    const float closeBtnPadding = 12 * scaling;
+    const bool hasCloseBtn = !settings.historyMode && !activeModal;
+    const bool hasCounter = counter > 1;
+
+    if ( !settings.historyMode && settings.index + 1 == cNotificationNumberLimit )
+        ImGui::SetNextWindowBgAlpha( 0.5f );
+    ImGui::Begin( name.c_str(), nullptr, flags );
+
+    auto window = ImGui::GetCurrentContext()->CurrentWindow;
+
+    if ( !settings.historyMode && ImGui::IsWindowAppearing() )
+    {
+        if ( !activeModal || std::string_view( activeModal->Name ) != " Error##modal" )
+            ImGui::BringWindowToDisplayFront( window ); // bring to front to be over modal background (but not over menu modal)
+
+        if ( !ProgressBar::isOrdered() && !activeModal ) // do not focus window, not to close modal on appearing
+            ImGui::SetWindowFocus();
+    }
+
+    auto& style = ImGui::GetStyle();
+    const float buttonWidth = notification.onButtonClick ?
+        ImGui::CalcTextSize( notification.buttonName.c_str() ).x + 2.0f * style.FramePadding.x + 2.0f * style.WindowPadding.x : 0;
+
+    auto drawList = window->DrawList;
+    auto cirlcePos = ImGui::GetCursorScreenPos();
+    const auto radius = 3 * scaling;
+    const auto bigFontSize = RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::SemiBold ) * scaling;
+    cirlcePos.x += radius;
+    cirlcePos.y += bigFontSize * 0.5f + radius;
+    drawList->AddCircleFilled( cirlcePos, 3.0f * scaling, notificationParams[int( notification.type )].second );
+
+    const bool changeHeaderColor = notification.type == NotificationType::Error || notification.type == NotificationType::Warning;
+
+    const ImVec2 contentShift = ImVec2( 26.0f * scaling, radius );
+    auto boldFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::SemiBold );
+    if ( !notification.header.empty() )
+    {
+        if ( boldFont )
+            ImGui::PushFont( boldFont );
+
+        ImGui::SetCursorPosX( contentShift.x );
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + contentShift.y );
+        if ( changeHeaderColor )
+            ImGui::PushStyleColor( ImGuiCol_Text, notificationParams[int( notification.type )].second );
+
+        const auto backupWorkRect = window->WorkRect.Max;
+        if ( hasCloseBtn || hasCounter )
+            window->WorkRect.Max.x -= ( closeBtnSize + closeBtnPadding );
+        ImGui::TextWrapped( "%s", notification.header.c_str() );
+        window->WorkRect.Max = backupWorkRect;
+
+        if ( changeHeaderColor )
+            ImGui::PopStyleColor();
+
+        if ( boldFont )
+            ImGui::PopFont();
+    }
+
+    if ( !notification.text.empty() )
+    {
+        ImGui::SetCursorPosX( contentShift.x );
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + contentShift.y );
+        const auto backupWorkRect = window->WorkRect.Max;
+        if ( hasCloseBtn || hasCounter )
+            window->WorkRect.Max.x -= ( closeBtnSize + closeBtnPadding );
+        UI::transparentTextWrapped( "%s", notification.text.c_str() );
+        window->WorkRect.Max = backupWorkRect;
+    }
+
+    if ( notification.onButtonClick )
+    {
+        UI::TestEngine::pushTree( "Notification" + std::to_string( settings.index ) );
+        if ( notification.header.empty() && notification.text.empty() )
+            ImGui::SetCursorPosX( contentShift.x );
+        if ( UI::buttonCommonSize( notification.buttonName.c_str(), { buttonWidth, 0 } ) )
+            notification.onButtonClick();
+        UI::TestEngine::popTree();
+    }
+
+    bool isHovered = false;
+    if ( activeModal )
+    {
+        // workaround to be able to hover notification even if modal is present
+        auto mousePos = ImGui::GetMousePos();
+        isHovered = window->Rect().Contains( mousePos ) && !activeModal->Rect().Contains( mousePos );
+    }
+    else
+    {
+        isHovered = ImGui::IsWindowHovered();
+    }
+    if ( !isHovered )
+        timer += ImGui::GetIO().DeltaTime;
+
+    if ( isHovered )
+    {
+        auto windRect = window->Rect();
+        if ( settings.historyMode )
+            drawList->PushClipRect( parentWindow->InnerClipRect.Min, parentWindow->InnerClipRect.Max );
+        else
+            drawList->PushClipRectFullScreen();
+        const ImU32 color = isHovered ? ImGui::GetColorU32( ImGuiCol_Text ) : notificationParams[int( notification.type )].second;
+        drawList->AddRect( windRect.Min, windRect.Max, color, 4.0f * scaling, 0, 2.0f * scaling );
+        drawList->PopClipRect();
+    }
+
+    bool returnValue = true;
+
+    if ( hasCloseBtn )
+    {
+        ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
+        ImGui::PushStyleColor( ImGuiCol_Button, 0 );
+        ImGui::PushStyleColor( ImGuiCol_ButtonActive, 0 );
+        ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.5, 0.5, 0.5, 0.5 ) );
+        ImGui::SetCursorPos( ImVec2( settings.width - closeBtnPadding - closeBtnSize, closeBtnPadding ) );
+        auto screenPos = ImGui::GetCursorScreenPos();
+        if ( ImGui::Button( "##closeNotification", ImVec2( closeBtnSize, closeBtnSize ) ) )
+            returnValue = false;
+        const float innerCrossPadding = 4 * scaling;
+        drawList->AddLine(
+            ImVec2( screenPos.x + innerCrossPadding - 1, screenPos.y + innerCrossPadding - 1 ),
+            ImVec2( screenPos.x + closeBtnSize - innerCrossPadding, screenPos.y + closeBtnSize - innerCrossPadding ),
+            Color::gray().getUInt32(), scaling );
+        drawList->AddLine(
+            ImVec2( screenPos.x + closeBtnSize - innerCrossPadding, screenPos.y + innerCrossPadding - 1 ),
+            ImVec2( screenPos.x + innerCrossPadding - 1, screenPos.y + closeBtnSize - innerCrossPadding ),
+            Color::gray().getUInt32(), scaling );
+        ImGui::PopStyleColor( 3 );
+        ImGui::PopStyleVar();
+    }
+
+    if ( hasCounter )
+    {
+        if ( boldFont )
+            ImGui::PushFont( boldFont );
+        auto countText = std::to_string( counter );
+        const auto textSize = ImGui::CalcTextSize( countText.c_str() );
+
+        auto windRect = window->Rect();
+        const float minCounterPosY = hasCloseBtn ? windRect.Min.y + closeBtnPadding + closeBtnSize + 6 * scaling : windRect.Min.y + closeBtnPadding;
+
+        const auto counterRadius = 12 * scaling;
+        auto counterPos = windRect.Max - ImVec2( closeBtnPadding + closeBtnSize, closeBtnPadding + closeBtnSize );
+        if ( counterPos.y < minCounterPosY )
+        {
+            counterPos.y = minCounterPosY;
+            ImGui::SetCursorScreenPos( counterPos );
+            ImGui::Dummy( ImVec2( closeBtnSize, closeBtnSize ) );
+        }
+        const auto counterCenter = ImVec2( counterPos.x + closeBtnSize * 0.5f, counterPos.y + closeBtnSize * 0.5f );
+        if ( settings.historyMode )
+            drawList->PushClipRect( parentWindow->InnerClipRect.Min, parentWindow->InnerClipRect.Max );
+        else
+            drawList->PushClipRectFullScreen();
+        drawList->AddCircleFilled( counterCenter, counterRadius, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
+        if ( changeHeaderColor )
+            ImGui::PushStyleColor( ImGuiCol_Text, notificationParams[int( notification.type )].second );
+        drawList->AddCircle( counterCenter, counterRadius, ImGui::GetColorU32( ImGuiCol_Text ), 0, scaling );
+        drawList->AddText( counterCenter - textSize * 0.5f, ImGui::GetColorU32( ImGuiCol_Text ), countText.c_str() );
+        if ( changeHeaderColor )
+            ImGui::PopStyleColor();
+        drawList->PopClipRect();
+
+        if ( boldFont )
+            ImGui::PopFont();
+    }
+
+    if ( settings.historyMode )
+        ImGui::EndChild();
+    else
+        ImGui::End();
+
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar( 3 );
+
+    if ( settings.historyMode )
+    {
+        // hack to correct calculate size of parent window
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() - 1 - 3 * scaling ); // correction
+        //ImGui::Button( "2", ImVec2( settings.width, 1 ) ); // DEBUG line, might be useful to change correction if needed
+        ImGui::Dummy( ImVec2( settings.width, 1 ) );
+    }
+
+    settings.currentPos->y -= window->Size.y;
+    return returnValue;
 }
 
 void RibbonNotifier::addNotification_( std::vector<NotificationWithTimer>& store, const RibbonNotification& notification )

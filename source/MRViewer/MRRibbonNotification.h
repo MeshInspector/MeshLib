@@ -36,7 +36,7 @@ public:
     // adds new notification for drawing
     MRVIEWER_API void pushNotification( const RibbonNotification& notification );
     // main draw function. draw actual notification or history, and history button
-    MRVIEWER_API void draw( float scaling, float scenePosX );
+    MRVIEWER_API void draw( float scaling, float scenePosX, float topPanelHeight );
 private:
     struct NotificationWithTimer
     {
@@ -46,7 +46,6 @@ private:
     };
     std::vector<NotificationWithTimer> notifications_;
     std::vector<NotificationWithTimer> notificationsHistory_;
-    NotificationType highestNotification_ = NotificationType::Count;
     bool requestRedraw_ = false;
     bool historyMode_ = false;
 
@@ -58,9 +57,24 @@ private:
     // draw button to show last notifications
     void drawHistoryButton_( float scaling, float scenePosX );
     // draw notification history
-    void drawHistory_( float scaling, float scenePosX );
-    // draws all present notifications
-    void drawNotifications_( float scaling, float scenePosX );
+    void drawHistory_( float scaling, float scenePosX, float topPanelHeight );
+    // draw floating notifications
+    void drawFloating_( float scaling, float scenePosX );
+    
+    // set this true on open history and on new notification added
+    bool scrollDownNeeded_ = false;
+    float prevHistoryScrollMax_ = 0.0f;
+    struct DrawNotificationSettings
+    {
+        int index{ 0 };
+        float scalig{ 1.0f };
+        float width{ 0.0f };
+        bool historyMode{ false };
+        Vector2f* currentPos{ nullptr };
+    };
+    // draws one notification
+    // returns false if need to close
+    bool drawNotification_( const DrawNotificationSettings& settings );
     void addNotification_( std::vector<NotificationWithTimer>& store, const RibbonNotification& notification );
     void filterInvalid_( int numInvalid = -1 );
     void requestClosestRedraw_();

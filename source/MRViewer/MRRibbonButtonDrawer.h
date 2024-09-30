@@ -63,6 +63,9 @@ public:
     MRVIEWER_API bool GradientCheckboxItem( const MenuItemInfo& item, bool* value ) const;
 
 
+    // draw object collapsing header
+    //MRVIEWER_API static bool CustomCollapsingHeader( const char* label, ImGuiTreeNodeFlags flags = 0, int issueCount = 0 );
+
     /// draw custom collapsing header
     /// if issueCount is greater than zero, so many red dots will be displayed after text
     MRVIEWER_API static bool CustomCollapsingHeader( const char* label, ImGuiTreeNodeFlags flags = 0, int issueCount = 0 );

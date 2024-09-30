@@ -21,10 +21,14 @@ protected:
     MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& obj ) override;
     MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected, const std::string& uniqueStr ) override;
     MRVIEWER_API virtual bool collapsingHeader_( const std::string& uniqueName, ImGuiTreeNodeFlags flags ) override;
+    MRVIEWER_API virtual bool drawObject_( Object& object, const std::string& uniqueStr ) override;
 
 private:
     // return icon (now it is symbol in icons font) based on typename
     MRVIEWER_API virtual const char* getSceneItemIconByTypeName_( const std::string& typeName ) const;
+    bool drawCollapsingArrow_( const std::string& uniqueId );
+    void drawObjectIconAndName_( Object& object, const std::string& uniqueId );
+    void drawVisibleButton_( Object& object, const std::string& uniqueId );
 
     RibbonMenu* ribbonMenu_ = nullptr;
     bool closeContextOnChange_ = true;

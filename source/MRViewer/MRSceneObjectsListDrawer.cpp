@@ -424,7 +424,6 @@ void SceneObjectsListDrawer::drawObjectVisibilityCheckbox_( Object& object, cons
 
 bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const std::string& uniqueStr, bool hasRealChildren )
 {
-    const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
     const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
     const bool isSelected = object.isSelected();
 
@@ -459,24 +458,8 @@ bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const 
     makeDragDropTarget_( object, false, false, "0" );
 
     if ( ImGui::IsItemHovered() )
-    {
-        if ( ImGui::IsMouseDoubleClicked( 0 ) )
-        {
-            if ( auto menu = getViewerInstance().getMenuPlugin() )
-                menu->tryRenameSelectedObject();
-        }
+        updateObjectByClick_( object );
 
-        bool pressed = !isSelected && ( ImGui::IsMouseClicked( 0 ) || ImGui::IsMouseClicked( 1 ) );
-        bool released = isSelected && !dragTrigger_ && !clickTrigger_ && ImGui::IsMouseReleased( 0 );
-
-        if ( pressed )
-            clickTrigger_ = true;
-        if ( isSelected && clickTrigger_ && ImGui::IsMouseReleased( 0 ) )
-            clickTrigger_ = false;
-
-        if ( pressed || released )
-            updateSelection_( &object, selected, all );
-    }
     return isOpen;
 }
 
@@ -759,8 +742,10 @@ std::vector<Object*> SceneObjectsListDrawer::getPreSelection_( Object* meshclick
     return res;
 }
 
-void SceneObjectsListDrawer::updateSelection_( Object* objPtr, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all )
+void SceneObjectsListDrawer::updateSelection_( Object* objPtr )
 {
+    const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
     auto newSelection = getPreSelection_( objPtr, ImGui::GetIO().KeyShift, ImGui::GetIO().KeyCtrl, selected, all );
     if ( ImGui::GetIO().KeyCtrl )
     {
@@ -787,6 +772,27 @@ void SceneObjectsListDrawer::updateSelection_( Object* objPtr, const std::vector
                 sel->setGlobalVisibility( true );
         }
     }
+}
+
+void SceneObjectsListDrawer::updateObjectByClick_( Object& object )
+{
+    if ( ImGui::IsMouseDoubleClicked( 0 ) )
+    {
+        if ( auto menu = getViewerInstance().getMenuPlugin() )
+            menu->tryRenameSelectedObject();
+    }
+
+    const bool isSelected = object.isSelected();
+    bool pressed = !isSelected && ( ImGui::IsMouseClicked( 0 ) || ImGui::IsMouseClicked( 1 ) );
+    bool released = isSelected && !dragTrigger_ && !clickTrigger_ && ImGui::IsMouseReleased( 0 );
+
+    if ( pressed )
+        clickTrigger_ = true;
+    if ( isSelected && clickTrigger_ && ImGui::IsMouseReleased( 0 ) )
+        clickTrigger_ = false;
+
+    if ( pressed || released )
+        updateSelection_( &object );
 }
 
 }

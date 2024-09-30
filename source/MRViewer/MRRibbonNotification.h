@@ -62,14 +62,14 @@ private:
     void drawFloating_( float scaling, float scenePosX );
     
     // set this true on open history and on new notification added
-    bool scrollDownNeeded_ = 0;
+    bool scrollDownNeeded_ = false;
     float prevHistoryScrollMax_ = 0.0f;
     struct DrawNotificationSettings
     {
-        int index;
-        float scalig;
-        float width;
-        bool historyMode;
+        int index{ 0 };
+        float scalig{ 1.0f };
+        float width{ 0.0f };
+        bool historyMode{ false };
         Vector2f* currentPos{ nullptr };
     };
     // draws one notification

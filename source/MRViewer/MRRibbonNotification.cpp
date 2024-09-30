@@ -207,7 +207,7 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
     if ( settings.historyMode )
     {
         // hack to correct calculate size of parent window
-        //ImGui::Button( "1", ImVec2( settings.width, 1 ) );
+        //ImGui::Button( "1", ImVec2( settings.width, 1 ) ); // DEBUG line, might be useful to change correction if needed
         ImGui::Dummy( ImVec2( settings.width, 1 ) );
     }
 
@@ -413,7 +413,7 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
     {
         // hack to correct calculate size of parent window
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() - 1 - 3 * scaling ); // correction
-        //ImGui::Button( "2", ImVec2( settings.width, 1 ) );
+        //ImGui::Button( "2", ImVec2( settings.width, 1 ) ); // DEBUG line, might be useful to change correction if needed
         ImGui::Dummy( ImVec2( settings.width, 1 ) );
     }
 

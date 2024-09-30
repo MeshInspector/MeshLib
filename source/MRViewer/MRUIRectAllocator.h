@@ -80,9 +80,16 @@ public:
 private:
     int lastFrameCount_ = -1;
 
+    enum class AllocationState
+    {
+        None, // Means that this window is not longer present on screen
+        Requested, // Allocation requested for next frame
+        Set // Position set and window is present on screen
+    };
+
     struct WindowEntry
     {
-        bool visitedThisFrame = true;
+        AllocationState state_{ AllocationState::None };
     };
     phmap::flat_hash_map<std::string, WindowEntry> windows_;
 };

@@ -10,6 +10,9 @@ path_to_targets = os.path.join(base_path, 'MeshLib.targets')
 print( path_to_spec )
 print('\n')
 
+path_to_license = os.path.join(base_path, 'LICENSE')
+shutil.copy(path_to_license, path_to_license + '.txt')
+
 excluded_modules = ['MRCommonPlugins', 'MRCuda', 'MRMeshC', 'MRViewer', 'MRMeshViewer', 'MRTest', 'MRTestC']
 path_to_copyright_header = os.path.join(os.path.dirname(os.path.abspath(__file__)),'copyright_header.txt')
 copyright_header = open(path_to_copyright_header,'r').read()[3:]
@@ -46,10 +49,15 @@ f.write('\t\t\t<group targetFramework="net6.0"/>\n')
 f.write('\t\t\t<group targetFramework=".NETFramework4.7.1"/>\n')
 f.write('\t\t</dependencies>\n')
 
+f.write('\t\t<icon>images/icon.jpg</icon>\n')
+f.write('\t\t<license type="file">LICENSE.txt</license>\n')
+f.write('\t\t<readme>docs/readme_dotnet.md</readme>\n')
 f.write('\t</metadata>\n')
 
 f.write('\t<files>\n')
-
+f.write('\t\t<file src="./icon.jpg" target="images/"></file>\n')
+f.write('\t\t<file src="./LICENSE.txt" target=""></file>\n')
+f.write('\t\t<file src="./readme_dotnet.md" target="docs/"></file>\n')
 folder = os.walk(path_to_objects)
 for address, dirs, files in folder:
 	for file in files:
@@ -85,7 +93,7 @@ fTargets.write('\t</ItemGroup>\n')
 fTargets.write('</Project>\n')
 fTargets.close()
 
-f.write('\t\t<file src="./MeshLib.targets" target="build/"></file>')
+f.write('\t\t<file src="./MeshLib.targets" target="build/"></file>\n')
 
             
 f.write('\t</files>\n')

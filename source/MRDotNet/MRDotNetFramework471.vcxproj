@@ -68,8 +68,10 @@
     <ClInclude Include="MRMeshBoolean.h" />
     <ClInclude Include="MRMeshCollidePrecise.h" />
     <ClInclude Include="MRMeshDecimate.h" />
+    <ClInclude Include="MRMeshLoad.h" />
     <ClInclude Include="MRMeshNormals.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
+    <ClInclude Include="MRMeshSave.h" />
     <ClInclude Include="MRMeshTriPoint.h" />
     <ClInclude Include="MRMultiwayICP.h" />
     <ClInclude Include="MROffset.h" />
@@ -92,8 +94,10 @@
     <ClCompile Include="MRMeshBoolean.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
+    <ClCompile Include="MRMeshLoad.cpp" />
     <ClCompile Include="MRMeshNormals.cpp" />
     <ClCompile Include="MRMeshOrPoints.cpp" />
+    <ClCompile Include="MRMeshSave.cpp" />
     <ClCompile Include="MRMeshTriPoint.cpp" />
     <ClCompile Include="MRMultiwayICP.cpp" />
     <ClCompile Include="MROffset.cpp" />

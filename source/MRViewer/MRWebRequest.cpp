@@ -315,21 +315,32 @@ void WebRequest::send( std::string urlP, const std::string & logName, ResponseCa
         if ( ctx->uploadCallback || ctx->downloadCallback )
             session.SetProgressCallback( { &progressCallback, ctxId } );
 
+        cpr::Response r;
         switch ( method )
         {
             case Method::Get:
-                return session.Get();
+                r = session.Get();
+                break;
             case Method::Post:
-                return session.Post();
+                r = session.Post();
+                break;
             case Method::Patch:
-                return session.Patch();
+                r = session.Patch();
+                break;
             case Method::Put:
-                return session.Put();
+                r = session.Put();
+                break;
             case Method::Delete:
-                return session.Delete();
+                r = session.Delete();
+                break;
         }
 
-        MR_UNREACHABLE
+        if ( ctx->output )
+            ctx->output->close();
+        if ( ctx->input )
+            ctx->input->close();
+
+        return r;
     };
     clear();
     if ( !async )

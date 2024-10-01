@@ -43,7 +43,7 @@ jobs:
               - 'docker/fedora**'
               - 'docker/emscripten**'
               - 'requirements/!(windows.txt|macos.txt|python.txt|Brewfile)'
-              - 'scripts/build_thirdparty.sh'    
+              - 'scripts/build_thirdparty.sh'
               - 'scripts/install_apt_requirements.sh'
               - 'scripts/install_dnf_requirements.sh'
               - 'thirdparty/!(install.bat|vcpkg/**)'

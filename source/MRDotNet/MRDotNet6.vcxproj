@@ -12,10 +12,11 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
-    <ProjectGuid>{47B482C5-80DF-41BB-9936-19A2C11511B2}</ProjectGuid>
-    <Keyword>ManagedCProj</Keyword>
+    <ProjectGuid>{E2B7C0B7-0787-4178-AFF3-35113AE63129}</ProjectGuid>
+    <Keyword>NetCoreCProj</Keyword>
     <RootNamespace>MeshLibDotNet</RootNamespace>
-    <ProjectName>MRDotNet</ProjectName>
+    <ProjectName>MRDotNet6</ProjectName>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -29,27 +30,27 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <CLRSupport>NetCore</CLRSupport>
     <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
+    <CLRSupport>NetCore</CLRSupport>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <Import Project="$(ProjectDir)\..\platform.props" />
   <Import Project="$(ProjectDir)\..\common.props" />
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ClCompile>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions);MR_DOT_NET_BUILD;</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\;$(ProjectDir)..\..\thirdparty\parallel-hashmap\;</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp20</LanguageStandard>
-    </ClCompile>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions);MR_DOT_NET_BUILD;</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\;$(ProjectDir)..\..\thirdparty\parallel-hashmap\;</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions);MR_DOT_NET_BUILD;</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\;$(ProjectDir)..\..\thirdparty\parallel-hashmap\;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
@@ -68,6 +69,7 @@
     <ClInclude Include="MRMeshBoolean.h" />
     <ClInclude Include="MRMeshCollidePrecise.h" />
     <ClInclude Include="MRMeshDecimate.h" />
+    <ClInclude Include="MRMeshFwd.h" />
     <ClInclude Include="MRMeshNormals.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
     <ClInclude Include="MRMeshTriPoint.h" />
@@ -75,11 +77,10 @@
     <ClInclude Include="MROffset.h" />
     <ClInclude Include="MRPointCloud.h" />
     <ClInclude Include="MRVector3.h" />
-    <ClInclude Include="MRMeshFwd.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MRAffineXf.cpp" />
     <ClCompile Include="AssemblyInfo.cpp" />
+    <ClCompile Include="MRAffineXf.cpp" />
     <ClCompile Include="MRBitSet.cpp" />
     <ClCompile Include="MRBooleanResultMapper.cpp" />
     <ClCompile Include="MRBox3.cpp" />

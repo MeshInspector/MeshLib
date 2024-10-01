@@ -126,7 +126,7 @@ void SurfaceContoursWidget::enable( bool isEnabled )
 {
     isPickerActive_ = isEnabled;
     if ( !isPickerActive_ )
-        clear();
+        clear( false );
 }
 
 std::shared_ptr<SurfacePointWidget> SurfaceContoursWidget::createPickWidget_( const std::shared_ptr<MR::VisualObject>& obj, const PickedPoint& pt )
@@ -534,17 +534,16 @@ void SurfaceContoursWidget::create(
     onPointRemove_ = std::move( onPointRemove );
     isObjectValidToPick_ = std::move( isObjectValidToPick );
 
-    clear();
+    clear( false );
 
     // 10 group to imitate plugins behavior
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
 }
 
-void SurfaceContoursWidget::clear()
+void SurfaceContoursWidget::clear( bool writeHistory )
 {
-    // FIXME: don't record on every call
-    //if ( params.writeHistory )
-    //    AppendHistory<SurfaceContoursWidgetClearAction>( "Clear " + params.historySpecification, *this );
+    if ( params.writeHistory && writeHistory )
+        AppendHistory<SurfaceContoursWidgetClearAction>( "Clear " + params.historySpecification, *this );
 
     pickedPoints_.clear();
     surfacePointWidgetCache_.clear();
@@ -555,7 +554,7 @@ void SurfaceContoursWidget::clear()
 
 void SurfaceContoursWidget::reset()
 {
-    clear();
+    clear( false );
     enable( false );
 
     if ( ( params.writeHistory ) && ( params.filterHistoryonReset ) )

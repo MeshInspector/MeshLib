@@ -137,7 +137,8 @@ Expected<MR::PointCloud> fromPts( std::istream& in, const PointsLoadSettings& se
     Vector3f testFirstLine;
     if ( parseTextCoordinate( numPointsLine, testFirstLine ).has_value() )
     {
-        // text pts format
+        // asc-like pts file
+        in.clear();
         in.seekg( startPos );
         return fromText( in, settings );
     }

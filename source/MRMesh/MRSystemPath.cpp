@@ -24,8 +24,10 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
 {
     using Directory = SystemPath::Directory;
 #if defined( __EMSCRIPTEN__ )
+    (void)dir;
     return "/";
 #elif defined( _WIN32 )
+    (void)dir;
     return SystemPath::getExecutableDirectory().value_or( "\\" );
 #elif defined( __APPLE__ )
     // TODO: use getLibraryDirectory()

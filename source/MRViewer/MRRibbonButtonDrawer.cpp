@@ -108,7 +108,7 @@ bool RibbonButtonDrawer::GradientCheckboxItem( const MenuItemInfo& item, bool* v
 
 bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNodeFlags flags, int issueCount )
 {
-    const bool buletMode = bool( flags & ImGuiTreeNodeFlags_Bullet );
+    const bool bulletMode = bool( flags & ImGuiTreeNodeFlags_Bullet );
     const auto& style = ImGui::GetStyle();
     auto pos = ImGui::GetCursorScreenPos();
     pos.x += style.FramePadding.x;
@@ -165,7 +165,7 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
     const auto vertIndent = height * 7.5f / 20.0f;
     const auto halfHeight = height * 0.5f;
     const auto halfWidth = width * 0.5f;
-    if ( buletMode )
+    if ( bulletMode )
     {
         const ImVec2 center{ pos.x + halfWidth,pos.y + halfHeight };
         drawList->AddCircleFilled( center, thickness * 1.5f, ImGui::GetColorU32( ImGuiCol_Text ) );

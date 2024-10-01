@@ -445,7 +445,7 @@ bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const 
     const ImGuiTreeNodeFlags flags = 
         ImGuiTreeNodeFlags_SpanAvailWidth | 
         ImGuiTreeNodeFlags_Framed | 
-        ( hasRealChildren ? ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen : /*ImGuiTreeNodeFlags_Leaf |*/ ImGuiTreeNodeFlags_Bullet ) |
+        ( hasRealChildren ? ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_Bullet ) |
         ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 );
 
     const bool isOpen = collapsingHeader_( ( object.name() + "##" + uniqueStr ).c_str(), flags );

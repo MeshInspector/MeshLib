@@ -12,6 +12,7 @@ public value struct NamedMeshXf
 public ref class MeshSave
 {
 public:
+    /// saves a number of named meshes in .obj file
     static void SceneToObj( List<NamedMeshXf>^ meshes, System::String^ path );
 };
 

@@ -14,13 +14,6 @@ install(
 )
 
 IF(MR_PCH)
-  IF(MR_PCH_USE_EXTRA_HEADERS)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE MR_PCH_USE_EXTRA_HEADERS)
-  ENDIF()
-  IF(NOT MESHLIB_BUILD_MRVIEWER)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VIEWER)
-  ENDIF()
-
   IF(MR_EMSCRIPTEN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
 
@@ -52,6 +45,13 @@ IF(MR_PCH)
       jsoncpp
       tbb
     )
+  ENDIF()
+
+  IF(MR_PCH_USE_EXTRA_HEADERS)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE MR_PCH_USE_EXTRA_HEADERS)
+  ENDIF()
+  IF(NOT MESHLIB_BUILD_MRVIEWER)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VIEWER)
   ENDIF()
 
   target_precompile_headers(${PROJECT_NAME} PRIVATE

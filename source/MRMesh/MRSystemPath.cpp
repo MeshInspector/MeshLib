@@ -29,7 +29,6 @@ using namespace MR;
 
 std::filesystem::path defaultDirectory( SystemPath::Directory dir )
 {
-    using Directory = SystemPath::Directory;
 #if defined( __EMSCRIPTEN__ )
     (void)dir;
     return "/";
@@ -42,6 +41,7 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
         return SystemPath::getExecutableDirectory().value_or( "/" );
 
     const auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
+    using Directory = SystemPath::Directory;
     switch ( dir )
     {
         case Directory::Resources:
@@ -55,12 +55,14 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
         case Directory::Count:
             MR_UNREACHABLE
     }
+    MR_UNREACHABLE
 #else
     // TODO: use getLibraryDirectory()
     if ( resourcesAreNearExe() )
         return SystemPath::getExecutableDirectory().value_or( "/" );
 
     const std::filesystem::path installDir ( "/usr/local/" );
+    using Directory = SystemPath::Directory;
     switch ( dir )
     {
         case Directory::Resources:
@@ -73,8 +75,8 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
         case Directory::Count:
             MR_UNREACHABLE
     }
-#endif
     MR_UNREACHABLE
+#endif
 }
 
 } // namespace

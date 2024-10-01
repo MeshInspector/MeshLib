@@ -82,6 +82,7 @@ void RibbonSceneObjectsListDrawer::drawSceneContextMenu_( const std::vector<std:
             wasAction |= ribbonMenu_->drawGroupUngroupButton( selected );
             wasAction |= ribbonMenu_->drawSelectSubtreeButton( selected );
             wasAction |= ribbonMenu_->drawCloneButton( selected );
+            wasAction |= ribbonMenu_->drawMergeSubtreeButton( selected );
         }
         else if ( ImGui::BeginTable( "##DrawOptions", 2, ImGuiTableFlags_BordersInnerV ) )
         {
@@ -97,6 +98,7 @@ void RibbonSceneObjectsListDrawer::drawSceneContextMenu_( const std::vector<std:
             wasAction |= ribbonMenu_->drawSelectSubtreeButton( selected );
             wasAction |= ribbonMenu_->drawCloneButton( selected );
             wasAction |= ribbonMenu_->drawCloneSelectionButton( selected );
+            wasAction |= ribbonMenu_->drawMergeSubtreeButton( selected );
             ImGui::EndTable();
         }
         ImGui::PopStyleVar();

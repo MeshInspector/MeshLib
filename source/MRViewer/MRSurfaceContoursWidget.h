@@ -82,7 +82,8 @@ public:
             PickerPointObjectChecker isObjectValidToPick
     );
 
-    // clear temp internal variables.
+    /// clear temp internal variables.
+    /// \param writeHistory - add history action (item in undo/redo). Set to false if you call the method as a part of another action.
     MRVIEWER_API void clear( bool writeHistory = true );
 
     // reset widget, clear internal variables and detach from signals.

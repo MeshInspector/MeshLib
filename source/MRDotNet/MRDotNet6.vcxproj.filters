@@ -78,9 +78,15 @@
     <ClInclude Include="MRVector3.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshLoad.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshSave.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-   <ClCompile Include="AssemblyInfo.cpp">
+    <ClCompile Include="AssemblyInfo.cpp">
       <Filter>Resource Files</Filter>
     </ClCompile>
     <ClCompile Include="MRAffineXf.cpp">
@@ -141,6 +147,12 @@
       <Filter>Resource Files</Filter>
     </ClCompile>
     <ClCompile Include="MRVector3.cpp">
+      <Filter>Resource Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshLoad.cpp">
+      <Filter>Resource Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshSave.cpp">
       <Filter>Resource Files</Filter>
     </ClCompile>
   </ItemGroup>

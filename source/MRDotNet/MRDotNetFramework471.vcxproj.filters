@@ -74,6 +74,12 @@
     <ClInclude Include="MRMeshNormals.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshLoad.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshSave.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssemblyInfo.cpp">
@@ -137,6 +143,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshNormals.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshLoad.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshSave.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

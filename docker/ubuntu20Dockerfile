@@ -32,6 +32,8 @@ RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
 WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
 
 COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh
+COPY scripts/mrbind/install_deps_ubuntu.sh scripts/mrbind/install_deps_ubuntu.sh
+COPY scripts/mrbind/preferred_clang_version.txt scripts/mrbind/preferred_clang_version.txt
 COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
 COPY scripts/patches scripts/patches
 COPY requirements requirements
@@ -50,6 +52,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
  && apt-get install -qqy --no-install-recommends \
         tzdata git sudo time python3-pip xvfb curl unzip \
  && ./scripts/install_apt_requirements.sh \
+ && ./scripts/mrbind/install_deps_ubuntu.sh \
  && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
  && apt-get update -y \

@@ -621,12 +621,12 @@ EdgeBitSet MeshTopology::findBoundaryEdges() const
     return res;
 }
 
-FaceBitSet MeshTopology::findBoundaryFaces() const
+FaceBitSet MeshTopology::findBoundaryFaces( const FaceBitSet * region ) const
 {
     MR_TIMER
-    assert( updateValids_ );
-    FaceBitSet res( faceSize() );
-    BitSetParallelFor( validFaces_, [&]( FaceId f )
+    const auto & fs = getFaceIds( region );
+    FaceBitSet res( fs.size() );
+    BitSetParallelFor( fs, [&]( FaceId f )
     {
         for ( EdgeId e : leftRing( *this, f ) )
         {
@@ -640,12 +640,12 @@ FaceBitSet MeshTopology::findBoundaryFaces() const
     return res;
 }
 
-VertBitSet MeshTopology::findBoundaryVerts() const
+VertBitSet MeshTopology::findBoundaryVerts( const VertBitSet * region ) const
 {
     MR_TIMER
-    assert( updateValids_ );
-    VertBitSet res( vertSize() );
-    BitSetParallelFor( validVerts_, [&]( VertId v )
+    const auto & vs = getVertIds( region );
+    VertBitSet res( vs.size() );
+    BitSetParallelFor( vs, [&]( VertId v )
     {
         for ( EdgeId e : orgRing( *this, v ) )
         {

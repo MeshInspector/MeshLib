@@ -125,15 +125,16 @@ jobs:
         if: ${{ matrix.os == 'ubuntu24' }}
         with:
           repository: MeshInspector/mrbind
-          path: _mrbind
+          path: mrbind
           token: ${{ secrets.BUILD_MACHINE_TOKEN }}
           ref: f426a147c9c4e3335e32f9c62f24d4c3f571bf1d
 
       - name: Compile MRBind
         if: ${{ matrix.os == 'ubuntu24' }}
+        # Also print the amount of RAM. Not doing it in the same step as building the bindings, because when that fails, the logs are sometimes lost.
         run: |
-          CC=${{matrix.c-compiler}} CXX=${{matrix.cxx-compiler}} cmake -S _mrbind -B _mrbind/build -DCMAKE_BUILD_TYPE=Release
-          cmake --build _mrbind/build
+          free -h
+          ./scripts/mrbind/install_mrbind_ubuntu.sh
 
       - name: Generate MRBind bindings
         if: ${{ matrix.os == 'ubuntu24' }}
@@ -161,20 +162,10 @@ jobs:
         if: ${{ matrix.os == 'ubuntu24' }}
         env:
           CXX: ${{matrix.cxx-compiler}}
-        run: make -f scripts/mrbind/generate.mk
-
-      - name: Sanity check MRBind bindings
-        if: ${{ matrix.os == 'ubuntu24' }}
-        env:
-          LD_LIBRARY_PATH: .
-        working-directory: build/Release/bin
-        run: python3 -c 'from meshlib2 import mrmeshpy; from meshlib2 import mrmeshnumpy'
+        run: make -f scripts/mrbind/generate.mk MODE=none PACKAGE_NAME=meshlib -B --trace
 
       - name: Test MRBind bindings
         if: ${{ matrix.os == 'ubuntu24' }}
-        env:
-          LD_LIBRARY_PATH: .
-          USE_MESHLIB2_PY: 1
         working-directory: build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 
@@ -197,10 +188,6 @@ jobs:
       - name: C Unit Tests
         run: ./build/${{ matrix.config }}/bin/MRTestC
 
-      - name: Python Sanity Tests
-        working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
-
       - name: Configure AWS Credentials
         if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' || env.INTERNAL_BUILD == 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
@@ -221,17 +208,9 @@ jobs:
         if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' || env.INTERNAL_BUILD == 'true' }}
         run: aws s3 sync ${{inputs.autotest_data_s3_url}} ./test_data --delete --no-sign-request --size-only
 
-      - name: Python Regression Tests
-        env:
-          SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
-        if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' || env.INTERNAL_BUILD == 'true' }}
-        working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}}
-
       - name: Python Regression Tests (MRBind)
         env:
           SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
-          USE_MESHLIB2_PY: 1
         if: ${{ matrix.os == 'ubuntu24' }}
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}}

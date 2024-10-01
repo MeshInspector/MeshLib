@@ -259,6 +259,11 @@ Expected<PointCloud> process( lazperf::reader::basic_file& reader, const PointsL
         offset -= center;
     }
 
+    auto colorsHave16Bits = false;
+    std::optional<VertColors> colorsHi;
+    if ( settings.colors )
+        colorsHi.emplace();
+
     for ( auto i = 0; i < pointCount; ++i )
     {
         if ( i % 4096 == 0 )
@@ -278,17 +283,36 @@ Expected<PointCloud> process( lazperf::reader::basic_file& reader, const PointsL
             if ( hasColorChannels( pointFormat ) )
             {
                 const auto colorChannels = *getColorChannels( buf.data(), pointFormat );
-                settings.colors->emplace_back(
-                    colorChannels.red,
-                    colorChannels.green,
-                    colorChannels.blue
-                );
+                // LAS stores color data in 16-bit per channel format, but most programs use 8-bit per channel.
+                // Some of them convert color values to the 16-bit format (by multiplying by 256), some save them as is.
+                // We have to support both approaches.
+                const Color colorLo {
+                    colorChannels.red % 0x100,
+                    colorChannels.green % 0x100,
+                    colorChannels.blue % 0x100,
+                };
+                const Color colorHi {
+                    colorChannels.red >> 8,
+                    colorChannels.green >> 8,
+                    colorChannels.blue >> 8,
+                };
+                colorsHave16Bits |= ( colorHi.r || colorHi.g || colorHi.b );
+                settings.colors->emplace_back( colorLo );
+                colorsHi->emplace_back( colorHi );
             }
             else
             {
-                settings.colors->emplace_back( getColor( getClassification( buf.data(), pointFormat ) ) );
+                const auto color = getColor( getClassification( buf.data(), pointFormat ) );
+                settings.colors->emplace_back( color );
+                colorsHi->emplace_back( color );
             }
         }
+    }
+
+    if ( settings.colors && colorsHave16Bits )
+    {
+        std::swap( *settings.colors, *colorsHi );
+        colorsHi.reset();
     }
 
     result.validPoints.resize( result.points.size(), true );

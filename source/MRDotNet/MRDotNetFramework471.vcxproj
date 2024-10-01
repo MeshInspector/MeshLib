@@ -15,21 +15,21 @@
     <ProjectGuid>{47B482C5-80DF-41BB-9936-19A2C11511B2}</ProjectGuid>
     <Keyword>ManagedCProj</Keyword>
     <RootNamespace>MeshLibDotNet</RootNamespace>
-    <ProjectName>MRDotNet</ProjectName>
-    <TargetFramework>net6.0</TargetFramework>
+    <ProjectName>MRDotNetFramework471</ProjectName>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
-    <CLRSupport>NetCore</CLRSupport>
+    <CLRSupport>true</CLRSupport>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <CLRSupport>NetCore</CLRSupport>
+    <CLRSupport>true</CLRSupport>
     <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -68,8 +68,10 @@
     <ClInclude Include="MRMeshBoolean.h" />
     <ClInclude Include="MRMeshCollidePrecise.h" />
     <ClInclude Include="MRMeshDecimate.h" />
+    <ClInclude Include="MRMeshLoad.h" />
     <ClInclude Include="MRMeshNormals.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
+    <ClInclude Include="MRMeshSave.h" />
     <ClInclude Include="MRMeshTriPoint.h" />
     <ClInclude Include="MRMultiwayICP.h" />
     <ClInclude Include="MROffset.h" />
@@ -92,8 +94,10 @@
     <ClCompile Include="MRMeshBoolean.cpp" />
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
+    <ClCompile Include="MRMeshLoad.cpp" />
     <ClCompile Include="MRMeshNormals.cpp" />
     <ClCompile Include="MRMeshOrPoints.cpp" />
+    <ClCompile Include="MRMeshSave.cpp" />
     <ClCompile Include="MRMeshTriPoint.cpp" />
     <ClCompile Include="MRMultiwayICP.cpp" />
     <ClCompile Include="MROffset.cpp" />

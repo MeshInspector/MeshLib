@@ -11,17 +11,17 @@ IF(NOT MESHLIB_BUILD_VOXELS)
 ENDIF()
 
 file(GLOB HEADERS "*.h")
+file(GLOB SOURCES "*.cpp")
+set(OBJCPP_SOURCES "")
 IF(APPLE)
-  file(GLOB SOURCES "*.cpp" "*.mm")
-ELSE()
-  file(GLOB SOURCES "*.cpp")
+  file(GLOB OBJCPP_SOURCES "*.mm")
 ENDIF()
 
 IF(MR_EMSCRIPTEN)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
 ENDIF() # MR_EMSCRIPTEN
 
-add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
+add_library(${PROJECT_NAME} SHARED ${SOURCES} ${OBJCPP_SOURCES} ${HEADERS})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
@@ -60,7 +60,10 @@ IF(MR_EMSCRIPTEN)
   )
 ELSE() # NOT MR_EMSCRIPTEN
   IF(APPLE)
-    add_definitions("-x objective-c++")
+    set_source_files_properties(${OBJCPP_SOURCES} PROPERTIES
+      COMPILE_FLAGS "-x objective-c++"
+      SKIP_PRECOMPILE_HEADERS ON
+    )
     find_library(APPKIT_LIBRARY AppKit REQUIRED)
     target_compile_definitions(${PROJECT_NAME} PRIVATE
       _GNU_SOURCE

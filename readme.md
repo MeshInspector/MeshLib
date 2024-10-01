@@ -137,11 +137,39 @@ See Python Basic Examples [here](https://doc.meshinspector.com/HowToBasic.html) 
 
 # .NET integration
 
-Also you can integrate MeshLib into your .NET project via NuGet. The package can be installed from .NET CLI, VisualStudio UI, or downloaded from [NuGet website](https://www.nuget.org/packages/MeshLib/).
-* Installation via .NET CLI
+Also you can integrate MeshLib into your .NET project via NuGet. The package can be installed from .NET command-line interface, VisualStudio, or downloaded from [NuGet website](https://www.nuget.org/packages/MeshLib/).
+## Installation via .NET command-line interface
 ```
+# Create a new directory for your project
+mkdir TestProject
+# Move to the directory
+cd TestProject
+# Create a new console project
+dotnet new console
+# Install MeshLib package
 dotnet add package MeshLib
 ```
+## Installation via VisualStudio
+- Create a new .NET project (File -> New -> Project...)
+- Select a project template. Note that MeshLib supports both classic .NET Framework and new .NET platform.
+- Specify the target .NET version. Minimal supported versions are .NET Framework 4.7.1 and .NET 6.
+- Right-click on your project in Solution Explorer and select *Manage NuGet Packages*
+- Select *nuget.org* as package source
+- Go to the *Browse* tab and type "MeshLib" in the *Search* field
+- Select MeshLib package and press the *Install* button
+
+## Installation of downloaded .nupkg file
+- Open [NuGet website](https://www.nuget.org/packages/MeshLib/)
+- Click on *Download package*
+- In Visual Studio go to Tools -> NuGet Package Manager -> Package Manager Settings
+- Proceed to the *Package Sources* tab
+- Look which directory is used for Microsoft Visual Studio Offline Packages
+- Copy the downloaded package to that directory
+- Create a new .NET Project as described above
+- In the *Manage NuGet Packages* dialog select *Microsoft Visual Studio Offline Packages* as package source
+- Select MeshLib package and press the *Install* button
+
+> **_NOTE:_** MeshLib package is built for x64 architecture, so make sure that your solution platform is x64. Correct working for other platforms is not guaranteed.
 
 # Build
 ## Windows

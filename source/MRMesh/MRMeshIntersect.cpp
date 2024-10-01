@@ -10,6 +10,7 @@
 #include "MRMakeSphereMesh.h"
 #include "MRGTest.h"
 #include "MRMeshBuilder.h"
+#include "MRParallelFor.h"
 #include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 #include "MRPch/MRSpdlog.h"
@@ -144,6 +145,70 @@ MeshIntersectionResult rayMeshIntersect( const MeshPart& meshPart, const Line3d&
         const IntersectionPrecomputes<double> precNew( line.d );
         return meshRayIntersect_<double>( meshPart, line, rayStart, rayEnd, precNew, closestIntersect, validFaces );
     }
+}
+
+void multiRayMeshIntersect(
+    const MeshPart& meshPart,
+    const std::vector<Vector3f>& origins,
+    const std::vector<Vector3f>& dirs,
+    const MultiRayMeshIntersectResult& result,
+    float rayStart, float rayEnd,
+    bool closestIntersect,
+    const FacePredicate & validFaces
+)
+{
+    MR_TIMER
+
+    const auto sz = origins.size();
+    assert( dirs.size() == sz );
+    if ( result.intersectingRays )
+    {
+        result.intersectingRays->clear();
+        result.intersectingRays->resize( sz, false );
+    }
+    constexpr float cQuietNan = std::numeric_limits<float>::quiet_NaN();
+    if ( result.rayParams )
+    {
+        result.rayParams->clear();
+        result.rayParams->resize( sz, cQuietNan );
+    }
+    if ( result.isectFaces )
+    {
+        result.isectFaces->clear();
+        result.isectFaces->resize( sz );
+    }
+    if ( result.isectBary )
+    {
+        result.isectBary->clear();
+        result.isectBary->resize( sz, TriPointf( cQuietNan, cQuietNan ) );
+    }
+    if ( result.isectPts )
+    {
+        result.isectPts->clear();
+        result.isectPts->resize( sz, Vector3f( cQuietNan, cQuietNan, cQuietNan ) );
+    }
+
+    meshPart.mesh.getAABBTree(); // prepare tree before parallel region
+
+    auto processRay = [&]( size_t i )
+    {
+        auto res = rayMeshIntersect( meshPart, Line3f( origins[i], dirs[i] ), rayStart, rayEnd, nullptr, closestIntersect, validFaces );
+        if ( !res )
+            return;
+        if ( result.intersectingRays )
+            result.intersectingRays->set( i );
+        if ( result.isectFaces )
+            (*result.isectFaces)[i] = res.proj.face;
+        if ( result.isectBary )
+            (*result.isectBary)[i] = res.mtp.bary;
+        if ( result.isectPts )
+            (*result.isectPts)[i] = res.proj.point;
+    };
+
+    if ( result.intersectingRays )
+        BitSetParallelForAll( *result.intersectingRays, processRay );
+    else
+        ParallelFor( size_t( 0 ), sz, processRay );
 }
 
 template<typename T>

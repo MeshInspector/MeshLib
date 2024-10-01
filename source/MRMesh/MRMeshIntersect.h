@@ -46,6 +46,31 @@ struct MeshIntersectionResult
     double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr, bool closestIntersect = true,
     const FacePredicate & validFaces = {} );
 
+struct MultiRayMeshIntersectResult
+{
+    // outputs (each one if optional) for every ray:
+    BitSet * intersectingRays = nullptr;         ///< true if the ray has intersection with mesh part, false otherwise
+    std::vector<float> * rayParams = nullptr;    ///< distance along each ray till the intersection point or NaN if no intersection
+    std::vector<FaceId> * isectFaces = nullptr;  ///< intersected triangles from mesh
+    std::vector<TriPointf> * isectBary = nullptr;///< barycentric coordinates of the intersection point within intersected triangle or NaNs if no intersection
+    std::vector<Vector3f> * isectPts = nullptr;  ///< intersection points or NaNs if no intersection
+};
+
+/// Finds intersections between a mesh and multiple rays in parallel (in float-precision).
+/// \p rayStart and \p rayEnd define the interval on all rays to detect an intersection.
+/// \p vadidFaces if given then all faces for which false is returned will be skipped
+MRMESH_API void multiRayMeshIntersect(
+    // input:
+    const MeshPart& meshPart, ///< mesh (or its part) to find intersections with
+    const std::vector<Vector3f>& origins, ///< origin point of every ray
+    const std::vector<Vector3f>& dirs,    ///< direction of every ray
+    const MultiRayMeshIntersectResult& result, ///< output data for every ray
+    // advanced options:
+    float rayStart = 0.0f, float rayEnd = FLT_MAX,
+    bool closestIntersect = true, ///< finds the closest to ray origin intersection (or any intersection for better performance if \p !closestIntersect)
+    const FacePredicate & validFaces = {} ///< if given then all faces for which false is returned will be skipped
+);
+
 struct MultiMeshIntersectionResult : MeshIntersectionResult
 {
     /// the intersection found in this mesh

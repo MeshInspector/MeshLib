@@ -108,6 +108,7 @@ bool RibbonButtonDrawer::GradientCheckboxItem( const MenuItemInfo& item, bool* v
 
 bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNodeFlags flags, int issueCount )
 {
+    const bool buletMode = bool( flags & ImGuiTreeNodeFlags_Bullet );
     const auto& style = ImGui::GetStyle();
     auto pos = ImGui::GetCursorScreenPos();
     pos.x += style.FramePadding.x;
@@ -158,35 +159,36 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
         1.0f
     };
 
-
     drawList->AddRectFilled( pos, { pos.x + width, pos.y + height }, ImGui::GetColorU32( blendedHeaderColor ) );
-
     const float thickness = ImMax( height * 0.15f, 1.0f );
-    if ( res )
+    const auto horIndent = height * 0.25f;
+    const auto vertIndent = height * 7.5f / 20.0f;
+    const auto halfHeight = height * 0.5f;
+    const auto halfWidth = width * 0.5f;
+    if ( buletMode )
     {
-        const auto halfWidth = width * 0.5f;
-        const auto horIndent = height * 0.25f;
-        const auto vertIndent = height * 7.5f / 20.0f;
-
-        const ImVec2 startPoint { pos.x + horIndent, pos.y + vertIndent };
-        const ImVec2 midPoint{ pos.x + halfWidth, pos.y + height - vertIndent };
-        const ImVec2 endPoint{ pos.x + width - horIndent, pos.y + vertIndent };
-
-        DrawCustomArrow( drawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
+        const ImVec2 center{ pos.x + halfWidth,pos.y + halfHeight };
+        drawList->AddCircleFilled( center, thickness * 1.5f, ImGui::GetColorU32( ImGuiCol_Text ) );
     }
     else
     {
-        const auto halfHeight = height * 0.5f;
-        const auto horIndent = width * 7.5f / 20.0f;
-        const auto vertIndent = height * 0.25f;
+        if ( res )
+        {
+            const ImVec2 startPoint{ pos.x + horIndent, pos.y + vertIndent };
+            const ImVec2 midPoint{ pos.x + halfWidth, pos.y + height - vertIndent };
+            const ImVec2 endPoint{ pos.x + width - horIndent, pos.y + vertIndent };
 
-        const ImVec2 startPoint{ pos.x + horIndent, pos.y + vertIndent };
-        const ImVec2 midPoint{ pos.x + width - horIndent, pos.y + halfHeight };
-        const ImVec2 endPoint{ pos.x + horIndent, pos.y + height - vertIndent };
+            DrawCustomArrow( drawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
+        }
+        else
+        {
+            const ImVec2 startPoint{ pos.x + horIndent, pos.y + vertIndent };
+            const ImVec2 midPoint{ pos.x + width - horIndent, pos.y + halfHeight };
+            const ImVec2 endPoint{ pos.x + horIndent, pos.y + height - vertIndent };
 
-        DrawCustomArrow( drawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
+            DrawCustomArrow( drawList, startPoint, midPoint, endPoint, ImGui::GetColorU32( ImGuiCol_Text ), thickness );
+        }
     }
-
     return res;
 }
 

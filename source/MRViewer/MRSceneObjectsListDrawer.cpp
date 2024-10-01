@@ -442,21 +442,19 @@ bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const 
 
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
 
-    const bool isOpen = hasRealChildren ?
-        collapsingHeader_( ( object.name() + "##" + uniqueStr ).c_str(),
-        ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen |
-        ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) )
-        :
-        // overridden collapsingHeader_ cannot draw leaf dots
-        SceneObjectsListDrawer::collapsingHeader_( ( object.name() + "##" + uniqueStr ).c_str(),
-        ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet |
-        ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 ) );
+    const ImGuiTreeNodeFlags flags = 
+        ImGuiTreeNodeFlags_SpanAvailWidth | 
+        ImGuiTreeNodeFlags_Framed | 
+        ( hasRealChildren ? ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen : /*ImGuiTreeNodeFlags_Leaf |*/ ImGuiTreeNodeFlags_Bullet ) |
+        ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 );
+
+    const bool isOpen = collapsingHeader_( ( object.name() + "##" + uniqueStr ).c_str(), flags );
 
     ImGui::PopStyleColor( isSelected ? 2 : 1 );
     ImGui::PopStyleVar();
 
     makeDragDropSource_( selected );
-    makeDragDropTarget_( object, false, false, "0" );
+    makeDragDropTarget_( object, false, false, uniqueStr );
 
     if ( ImGui::IsItemHovered() )
     {
@@ -535,6 +533,7 @@ void SceneObjectsListDrawer::makeDragDropTarget_( Object& target, bool before, b
         {
             ImGui::SetCursorPos( curPos );
             auto width = ImGui::GetContentRegionAvail().x;
+            spdlog::debug( "TARGET: {}", target.name() );
             ImGui::ColorButton( ( "##ColoredInternalDragDropArea" + uniqueStr ).c_str(),
                 ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered],
                 0, ImVec2( width, 4 * menuScaling_ ) );

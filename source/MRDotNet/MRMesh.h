@@ -56,6 +56,9 @@ public:
     /// packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices
     void PackOptimally();
 
+    double Volume();
+    double Volume( FaceBitSet^ region );
+
     /// creates mesh from point coordinates and triangulation
     static Mesh^ FromTriangles( VertCoords^ points, MR::DotNet::Triangulation^ triangles );
     /// creates mesh from point coordinates and triangulation. If some vertices are not manifold, they will be duplicated

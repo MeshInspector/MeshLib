@@ -1,3 +1,4 @@
+#pragma once
 #include "MRMeshFwd.h"
 
 MR_DOTNET_NAMESPACE_BEGIN

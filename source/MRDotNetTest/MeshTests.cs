@@ -171,5 +171,21 @@ namespace MR.DotNet.Test
             Assert.That(loadedObjs[1].xf.B.X == -2.0f);
         }
 
+        [Test]
+        public void TestCalculatingVolume()
+        {
+            var cubeMesh = Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
+            Assert.That(cubeMesh.Volume(), Is.EqualTo( 1.0 ).Within( 1e-6 ) );
+
+            var validPoints = new BitSet(8);
+            validPoints.Set(0);
+            validPoints.Set(1);
+            validPoints.Set(3);
+            validPoints.Set(4);
+            validPoints.Set(5);
+            validPoints.Set(7);
+
+            Assert.That( cubeMesh.Volume(validPoints), Is.EqualTo( 0.5 ).Within( 1e-6 ) );
+        }
     }
 }

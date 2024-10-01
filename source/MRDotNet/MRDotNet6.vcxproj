@@ -61,6 +61,7 @@
     <ClInclude Include="MRBooleanResultMapper.h" />
     <ClInclude Include="MRBox3.h" />
     <ClInclude Include="MRContoursCut.h" />
+    <ClInclude Include="MRConvexHull.h" />
     <ClInclude Include="MRCoordinateConverters.h" />
     <ClInclude Include="MRICP.h" />
     <ClInclude Include="MRIntersectionContour.h" />
@@ -87,6 +88,7 @@
     <ClCompile Include="MRBooleanResultMapper.cpp" />
     <ClCompile Include="MRBox3.cpp" />
     <ClCompile Include="MRContoursCut.cpp" />
+    <ClCompile Include="MRConvexHull.cpp" />
     <ClCompile Include="MRCoordinateConverters.cpp" />
     <ClCompile Include="MRICP.cpp" />
     <ClCompile Include="MRIntersectionContour.cpp" />

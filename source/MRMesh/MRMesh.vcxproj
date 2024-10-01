@@ -384,6 +384,7 @@
     <ClInclude Include="MRUniqueTemporaryFolder.h" />
     <ClInclude Include="MROnInit.h" />
     <ClInclude Include="MRPointsLoadSettings.h" />
+    <ClInclude Include="MRScopedValue.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MR2DContoursTriangulation.cpp" />

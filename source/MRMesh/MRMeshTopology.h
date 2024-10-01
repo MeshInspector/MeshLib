@@ -343,11 +343,13 @@ public:
     /// returns all boundary edges, where each edge does not have valid left face
     [[nodiscard]] MRMESH_API EdgeBitSet findBoundaryEdges() const;
 
-    /// returns all boundary faces, having at least one boundary edge
-    [[nodiscard]] MRMESH_API FaceBitSet findBoundaryFaces() const;
+    /// returns all boundary faces, having at least one boundary edge;
+    /// \param region if given then search among faces there otherwise among all valid faces
+    [[nodiscard]] MRMESH_API FaceBitSet findBoundaryFaces( const FaceBitSet * region = nullptr ) const;
 
-    /// returns all boundary vertices, incident to at least one boundary edge
-    [[nodiscard]] MRMESH_API VertBitSet findBoundaryVerts() const;
+    /// returns all boundary vertices, incident to at least one boundary edge;
+    /// \param region if given then search among vertices there otherwise among all valid vertices
+    [[nodiscard]] MRMESH_API VertBitSet findBoundaryVerts( const VertBitSet * region = nullptr ) const;
 
 
     /// returns all vertices incident to path edges

@@ -15,14 +15,18 @@ public value struct NamedMesh
 {
     System::String^ name;
     Mesh^ mesh;
+    /// transform of the loaded mesh, not identity only if ObjLoadSettings.customXf
     AffineXf3f^ xf;
+    /// counter of skipped faces (faces than can't be created), not zero only if ObjLoadSettings.countSkippedFaces
     int skippedFaceCount;
+    /// counter of duplicated vertices (that created for resolve non-manifold geometry)
     int duplicatedVertexCount;
 };
 
 public ref class MeshLoad
 {
 public:
+    /// loads meshes from .obj file
     static List<NamedMesh>^ FromSceneObjFile( System::String^ path, bool combineAllObjects, ObjLoadSettings settings );
 };
 

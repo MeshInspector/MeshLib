@@ -1,9 +1,16 @@
 #include "MRSystemPath.h"
 #include "MROnInit.h"
 
-#ifndef __EMSCRIPTEN__
-#define BOOST_DLL_USE_STD_FS
-#include <boost/dll/runtime_symbol_info.hpp>
+#if defined( _WIN32 )
+#include <libloaderapi.h>
+#elif !defined( __EMSCRIPTEN__ )
+#include <dlfcn.h>
+#include <unistd.h>
+#if defined( __APPLE__ )
+#include <mach-o/dyld.h>
+#else
+#include <linux/limits.h>
+#endif
 #endif
 
 namespace
@@ -77,27 +84,60 @@ namespace MR
 
 Expected<std::filesystem::path> SystemPath::getExecutablePath()
 {
-#ifndef __EMSCRIPTEN__
-    std::error_code ec;
-    auto result = boost::dll::program_location( ec );
-    if ( ec )
-        return unexpected( "Failed to get executable path: " + ec.message() );
-    return result;
-#else
+#if defined( __EMSCRIPTEN__ )
     return unexpected( "Not supported on Wasm" );
+#elif defined( _WIN32 )
+    wchar_t path[MAX_PATH];
+    if ( auto size = GetModuleFileNameW( NULL, path, MAX_PATH ); size == 0 )
+        return unexpected( "Failed to get executable path" );
+    else if ( size == MAX_PATH )
+        return unexpected( "Executable path is too long" );
+    return std::filesystem::path { path };
+#elif defined( __APPLE__ )
+    char path[PATH_MAX];
+    uint32_t size = PATH_MAX + 1;
+    if ( _NSGetExecutablePath( path, &size ) != 0 )
+        return unexpected( "Executable path is too long" );
+    path[size] = '\0';
+    return std::filesystem::path { path };
+#else
+    char path[PATH_MAX];
+    if ( auto size = readlink( "/proc/self/exe", path, PATH_MAX ); size < 0 )
+        return unexpected( "Failed to get executable path" );
+    else if ( size >= PATH_MAX )
+        return unexpected( "Executable path is too long" );
+    else
+        path[size] = '\0';
+    return std::filesystem::path { path };
 #endif
 }
 
 Expected<std::filesystem::path> SystemPath::getLibraryPath()
 {
-#ifndef __EMSCRIPTEN__
-    std::error_code ec;
-    auto result = boost::dll::this_line_location( ec );
-    if ( ec )
-        return unexpected( "Failed to get library path: " + ec.message() );
-    return result;
-#else
+#if defined( __EMSCRIPTEN__ )
     return unexpected( "Not supported on Wasm" );
+#elif defined( _WIN32 )
+    HMODULE module = NULL;
+    auto rc = GetModuleHandleExW(
+        GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        (LPCTSTR)MR::SystemPath::getLibraryPath,
+        &module
+    );
+    if ( !rc )
+        return unexpected( "Failed to get library path" );
+
+    wchar_t path[MAX_PATH];
+    if ( auto size = GetModuleFileNameW( module, path, MAX_PATH ); size == 0 )
+        return unexpected( "Failed to get library path" );
+    else if ( size == MAX_PATH )
+        return unexpected( "Library path is too long" );
+
+    return std::filesystem::path { path };
+#else
+    Dl_info info;
+    if ( !dladdr( (void*)MR::SystemPath::getLibraryPath, &info ) )
+        return unexpected( "Failed to get library path" );
+    return std::filesystem::path { info.dli_fname };
 #endif
 }
 

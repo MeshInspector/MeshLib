@@ -16,6 +16,8 @@
 namespace
 {
 
+using namespace MR;
+
 #if !defined( _WIN32 ) && !defined( __EMSCRIPTEN__ )
 // If true, the resources should be loaded from the executable directory, rather than from the system directories.
 [[nodiscard]] bool resourcesAreNearExe()
@@ -25,79 +27,55 @@ namespace
 }
 #endif
 
-std::filesystem::path defaultResourcesDirectory()
+std::filesystem::path defaultDirectory( SystemPath::Directory dir )
 {
 #if defined( __EMSCRIPTEN__ )
+    (void)dir;
     return "/";
 #elif defined( _WIN32 )
-    return MR::SystemPath::getExecutableDirectory().value_or( "\\" );
+    (void)dir;
+    return SystemPath::getExecutableDirectory().value_or( "\\" );
 #elif defined( __APPLE__ )
     // TODO: use getLibraryDirectory()
     if ( resourcesAreNearExe() )
-        return MR::SystemPath::getExecutableDirectory().value_or( "/" );
-    return MR::SystemPath::getLibraryDirectory().value_or( "/" ) / ".." / "Resources";
-#else
-    // TODO: use getLibraryDirectory()
-    if ( resourcesAreNearExe() )
-        return MR::SystemPath::getExecutableDirectory().value_or( "/" );
-    return "/usr/local/etc/" + std::string( MR_PROJECT_NAME ) + "/";
-#endif
-}
+        return SystemPath::getExecutableDirectory().value_or( "/" );
 
-std::filesystem::path defaultFontsDirectory()
-{
-#if defined( __EMSCRIPTEN__ )
-    return "/";
-#elif defined( _WIN32 )
-    return MR::SystemPath::getExecutableDirectory().value_or( "\\" );
-#elif defined( __APPLE__ )
-    // TODO: use getLibraryDirectory()
-    if ( resourcesAreNearExe() )
-        return MR::SystemPath::getExecutableDirectory().value_or( "/" );
-    return MR::SystemPath::getLibraryDirectory().value_or( "/" ) / ".." / "Resources" / "fonts";
+    const auto libDir = SystemPath::getLibraryDirectory().value_or( "/" );
+    using Directory = SystemPath::Directory;
+    switch ( dir )
+    {
+        case Directory::Resources:
+            return libDir / ".." / "Resources";
+        case Directory::Fonts:
+            return libDir / ".." / "Resources" / "fonts";
+        case Directory::Plugins:
+            return libDir;
+        case Directory::PythonModules:
+            return libDir / ".." / "Frameworks";
+        case Directory::Count:
+            MR_UNREACHABLE
+    }
+    MR_UNREACHABLE
 #else
     // TODO: use getLibraryDirectory()
     if ( resourcesAreNearExe() )
-        return MR::SystemPath::getExecutableDirectory().value_or( "/" );
-    return "/usr/local/share/fonts/";
-#endif
-}
+        return SystemPath::getExecutableDirectory().value_or( "/" );
 
-std::filesystem::path defaultPluginsDirectory()
-{
-#if defined( __EMSCRIPTEN__ )
-    return "/";
-#elif defined( _WIN32 )
-    return MR::SystemPath::getExecutableDirectory().value_or( "\\" );
-#elif defined( __APPLE__ )
-    // TODO: use getLibraryDirectory()
-    if ( resourcesAreNearExe() )
-        return MR::SystemPath::getExecutableDirectory().value_or( "/" );
-    return MR::SystemPath::getLibraryDirectory().value_or( "/" );
-#else
-    // TODO: use getLibraryDirectory()
-    if ( resourcesAreNearExe() )
-        return MR::SystemPath::getExecutableDirectory().value_or( "/" );
-    return "/usr/local/lib/" + std::string( MR_PROJECT_NAME ) + "/";
-#endif
-}
-
-std::filesystem::path defaultPythonModulesDirectory()
-{
-#if defined( __EMSCRIPTEN__ )
-    return "/";
-#elif defined( _WIN32 )
-    return MR::SystemPath::getExecutableDirectory().value_or( "\\" );
-#elif defined( __APPLE__ )
-    // TODO: use getLibraryDirectory()
-    if ( resourcesAreNearExe() )
-        return MR::SystemPath::getExecutableDirectory().value_or( "/" );
-    return MR::SystemPath::getLibraryDirectory().value_or( "/" ) / ".." / "Frameworks";
-#else
-    // TODO: use getLibraryDirectory()
-    if ( resourcesAreNearExe() )
-        return MR::SystemPath::getExecutableDirectory().value_or( "/" );
-    return "/usr/local/lib/" + std::string( MR_PROJECT_NAME ) + "/";
+    const std::filesystem::path installDir ( "/usr/local/" );
+    using Directory = SystemPath::Directory;
+    switch ( dir )
+    {
+        case Directory::Resources:
+            return installDir / "etc" / MR_PROJECT_NAME;
+        case Directory::Fonts:
+            return installDir / "share" / "fonts";
+        case Directory::Plugins:
+        case Directory::PythonModules:
+            return installDir / "lib" / MR_PROJECT_NAME;
+        case Directory::Count:
+            MR_UNREACHABLE
+    }
+    MR_UNREACHABLE
 #endif
 }
 
@@ -195,8 +173,7 @@ void SystemPath::overrideDirectory( SystemPath::Directory dir, const std::filesy
 
 MR_ON_INIT
 {
-    MR::SystemPath::overrideDirectory( MR::SystemPath::Directory::Resources, defaultResourcesDirectory() );
-    MR::SystemPath::overrideDirectory( MR::SystemPath::Directory::Fonts, defaultFontsDirectory() );
-    MR::SystemPath::overrideDirectory( MR::SystemPath::Directory::Plugins, defaultPluginsDirectory() );
-    MR::SystemPath::overrideDirectory( MR::SystemPath::Directory::PythonModules, defaultPythonModulesDirectory() );
+    using namespace MR;
+    for ( auto dir = 0; dir < (int)SystemPath::Directory::Count; ++dir )
+        SystemPath::overrideDirectory( SystemPath::Directory( dir ), defaultDirectory( SystemPath::Directory( dir ) ) );
 };

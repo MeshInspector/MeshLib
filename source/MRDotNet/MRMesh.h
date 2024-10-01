@@ -56,7 +56,9 @@ public:
     /// packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices
     void PackOptimally();
 
+    /// returns volume of whole mesh
     double Volume();
+    /// returns volume of closed mesh region, if region is not closed DBL_MAX is returned
     double Volume( FaceBitSet^ region );
 
     /// creates mesh from point coordinates and triangulation

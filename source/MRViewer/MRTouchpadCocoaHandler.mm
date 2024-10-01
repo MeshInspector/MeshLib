@@ -7,6 +7,8 @@
 #define GLFW_EXPOSE_NATIVE_COCOA
 #include <GLFW/glfw3native.h>
 
+#include <AppKit/AppKit.h>
+
 #include <objc/objc-runtime.h>
 
 #include <atomic>
@@ -90,37 +92,66 @@ std::optional<MR::TouchpadController::Handler::GestureState> convert( NSEventPha
 namespace MR
 {
 
+class TouchpadCocoaHandler::Impl
+{
+public:
+    Impl( GLFWwindow* window, TouchpadCocoaHandler* handler );
+    ~Impl();
+
+    static void onMagnificationGestureEvent( NSView* view, SEL cmd, NSMagnificationGestureRecognizer* recognizer );
+    static void onRotationGestureEvent( NSView* view, SEL cmd, NSRotationGestureRecognizer* recognizer );
+    static void onScrollEvent( NSView* view, SEL cmd, NSEvent* event );
+
+private:
+    NSView* view_;
+
+    NSMagnificationGestureRecognizer* magnificationGestureRecognizer_;
+    NSRotationGestureRecognizer* rotationGestureRecognizer_;
+    IMP previousScrollWheelMethod_;
+};
+
 TouchpadCocoaHandler::TouchpadCocoaHandler( GLFWwindow* window )
+    : impl_( std::make_unique<Impl>( window, this ) )
+{
+    //
+}
+
+TouchpadCocoaHandler::~TouchpadCocoaHandler()
+{
+    //
+}
+
+TouchpadCocoaHandler::Impl::Impl(GLFWwindow *window, TouchpadCocoaHandler *handler)
     : view_( ( (NSWindow*)glfwGetCocoaWindow( window ) ).contentView )
 {
     Class cls = [view_ class];
 
     magnificationGestureRecognizer_ = [[NSMagnificationGestureRecognizer alloc] initWithTarget:view_ action:@selector(handleMagnificationGesture:)];
     if ( !class_respondsToSelector( cls, @selector(handleMagnificationGesture:) ) )
-        class_addMethod( cls, @selector(handleMagnificationGesture:), (IMP)TouchpadCocoaHandler::onMagnificationGestureEvent, "v@:@" );
+        class_addMethod( cls, @selector(handleMagnificationGesture:), (IMP)Impl::onMagnificationGestureEvent, "v@:@" );
     [view_ addGestureRecognizer:magnificationGestureRecognizer_];
 
     rotationGestureRecognizer_ = [[NSRotationGestureRecognizer alloc] initWithTarget:view_ action:@selector(handleRotationGesture:)];
     if ( !class_respondsToSelector( cls, @selector(handleRotationGesture:) ) )
-        class_addMethod( cls, @selector(handleRotationGesture:), (IMP)TouchpadCocoaHandler::onRotationGestureEvent, "v@:@" );
+        class_addMethod( cls, @selector(handleRotationGesture:), (IMP)Impl::onRotationGestureEvent, "v@:@" );
     [view_ addGestureRecognizer:rotationGestureRecognizer_];
 
     // NOTE: GLFW scroll handler is replaced here
     if ( !class_respondsToSelector( cls, @selector(scrollWheel:) ) )
     {
         previousScrollWheelMethod_ = nil;
-        class_addMethod( cls, @selector(scrollWheel:), (IMP)TouchpadCocoaHandler::onScrollEvent, "v@:@" );
+        class_addMethod( cls, @selector(scrollWheel:), (IMP)Impl::onScrollEvent, "v@:@" );
     }
     else
     {
         previousScrollWheelMethod_ = (IMP)[view_ methodForSelector:@selector(scrollWheel:)];
-        class_replaceMethod( cls, @selector(scrollWheel:), (IMP)TouchpadCocoaHandler::onScrollEvent, "v@:@" );
+        class_replaceMethod( cls, @selector(scrollWheel:), (IMP)Impl::onScrollEvent, "v@:@" );
     }
 
-    TouchpadCocoaHandlerRegistry::instance().add( view_, this );
+    TouchpadCocoaHandlerRegistry::instance().add( view_, handler );
 }
 
-TouchpadCocoaHandler::~TouchpadCocoaHandler()
+TouchpadCocoaHandler::Impl::~Impl()
 {
     if ( previousScrollWheelMethod_ != nil )
     {
@@ -131,7 +162,7 @@ TouchpadCocoaHandler::~TouchpadCocoaHandler()
     [magnificationGestureRecognizer_ release];
 }
 
-void TouchpadCocoaHandler::onMagnificationGestureEvent( NSView* view, SEL, NSMagnificationGestureRecognizer* recognizer )
+void TouchpadCocoaHandler::Impl::onMagnificationGestureEvent( NSView* view, SEL, NSMagnificationGestureRecognizer* recognizer )
 {
     auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
     if ( !handler )
@@ -142,7 +173,7 @@ void TouchpadCocoaHandler::onMagnificationGestureEvent( NSView* view, SEL, NSMag
         handler->zoom( 1.f + recognizer.magnification, false, *state );
 }
 
-void TouchpadCocoaHandler::onRotationGestureEvent( NSView* view, SEL, NSRotationGestureRecognizer* recognizer )
+void TouchpadCocoaHandler::Impl::onRotationGestureEvent( NSView* view, SEL, NSRotationGestureRecognizer* recognizer )
 {
     auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
     if ( !handler )
@@ -153,7 +184,7 @@ void TouchpadCocoaHandler::onRotationGestureEvent( NSView* view, SEL, NSRotation
         handler->rotate( recognizer.rotation, *state );
 }
 
-void TouchpadCocoaHandler::onScrollEvent( NSView* view, SEL, NSEvent* event )
+void TouchpadCocoaHandler::Impl::onScrollEvent( NSView* view, SEL, NSEvent* event )
 {
     auto* handler = TouchpadCocoaHandlerRegistry::instance().find( view );
     if ( !handler )

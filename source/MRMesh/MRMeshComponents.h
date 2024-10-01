@@ -136,10 +136,11 @@ struct LargeByAreaComponentsSettings
 /// gets all connected components where difference between the highest and the lowest point is less than \param zTolerance
 [[nodiscard]] MRMESH_API std::vector<FaceBitSet> getAllFlatComponents( const MeshPart& meshPart, float zTolerance );
 
-
 /// returns true if all vertices of a mesh connected component are present in selection
 [[nodiscard]] MRMESH_API bool hasFullySelectedComponent( const Mesh& mesh, const VertBitSet & selection );
 
+/// if all vertices of a mesh connected component are present in selection exludes these vertices
+MRMESH_API void excludeFullySelectedComponents( const Mesh& mesh, VertBitSet& selection );
 
 /// gets union-find structure for faces with different options of face-connectivity
 [[nodiscard]] MRMESH_API UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgePredicate & isCompBd = {} );

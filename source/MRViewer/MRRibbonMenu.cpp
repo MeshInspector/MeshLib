@@ -105,7 +105,8 @@ void RibbonMenu::init( MR::Viewer* _viewer )
         drawActiveList_();
 
         draw_helpers();
-        notifier_.draw( menu_scaling(), sceneSize_.x );
+        auto scaling = menu_scaling();
+        notifier_.draw( scaling, sceneSize_.x, currentTopPanelHeight_ * scaling );
         prevFrameSelectedObjectsCache_ = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
     };
 

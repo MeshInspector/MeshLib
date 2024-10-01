@@ -1,9 +1,18 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRPch/MRBindingMacros.h"
 
 #include <version>
+#ifndef MR_USE_STD_EXPECTED
 #if __cpp_lib_expected >= 202211
+#define MR_USE_STD_EXPECTED 1
+#else
+#define MR_USE_STD_EXPECTED 0
+#endif
+#endif
+
+#if MR_USE_STD_EXPECTED
 #include <expected>
 #else
 #include <tl/expected.hpp>
@@ -32,13 +41,13 @@ inline auto unexpected( E &&e )
 namespace MR
 {
 
-#if ( __cpp_lib_expected >= 202211  ||  defined( MR_DOT_NET_BUILD ) )
+#if MR_USE_STD_EXPECTED || defined(MR_DOT_NET_BUILD)
 
 template<class T, class E = std::string>
 using Expected = std::expected<T, E>;
 
 template <class E>
-inline auto unexpected( E &&e )
+MR_BIND_IGNORE inline auto unexpected( E &&e )
 {
     return std::unexpected( std::forward<E>( e ) );
 }
@@ -49,7 +58,7 @@ template<class T, class E = std::string>
 using Expected = tl::expected<T, E>;
 
 template <class E>
-inline auto unexpected( E &&e )
+MR_BIND_IGNORE inline auto unexpected( E &&e )
 {
     return tl::make_unexpected( std::forward<E>( e ) );
 }
@@ -60,13 +69,13 @@ inline auto unexpected( E &&e )
 using VoidOrErrStr = Expected<void>;
 
 /// Common operation canceled line for all
-inline std::string stringOperationCanceled()
+MR_BIND_IGNORE inline std::string stringOperationCanceled()
 {
     return "Operation was canceled";
 }
 
 /// Returns Expected error with `stringOperationCanceled()`
-inline auto unexpectedOperationCanceled()
+MR_BIND_IGNORE inline auto unexpectedOperationCanceled()
 {
     return MR::unexpected(stringOperationCanceled());
 }

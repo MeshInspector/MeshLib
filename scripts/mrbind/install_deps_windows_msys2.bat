@@ -7,7 +7,7 @@ rem We create a separate copy of MSYS2 at C:\msys64_meshlib_mrbind for simplicit
 rem If you don't like that, you can manually install all dependencies into
 rem some other MSYS2 copy.
 
-set MSYS2_DIR=C:\msys64_meshlib_mrbind
+if "%MSYS2_DIR%" == "" set MSYS2_DIR=C:\msys64_meshlib_mrbind
 
 rem ------ Ensure MSYS2 is installed
 
@@ -40,8 +40,8 @@ rem ------ Update MSYS2
 rem Note that we're running the update twice, because MSYS2 can close itself during the initial update,
 rem   and requires re-running the same command to finish the update.
 rem It's not entirely optimal to run the command twice even if the first one finishes successfully, but I'm not sure how to check that it failed.
-call %MSYS2_DIR%\msys2_shell -no-start -defterm -c "pacman -Syu --noconfirm"
-call %MSYS2_DIR%\msys2_shell -no-start -defterm -c "pacman -Syu --noconfirm"
+call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -c "pacman -Syu --noconfirm"
+call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -c "pacman -Syu --noconfirm"
 
 rem ------ Install needed packages
-call %MSYS2_DIR%\msys2_shell -no-start -defterm -c "pacman -S --noconfirm --needed make $MINGW_PACKAGE_PREFIX-{clang,clang-tools-extra,cmake}"
+call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -clang64 -c "pacman -S --noconfirm --needed make $MINGW_PACKAGE_PREFIX-{clang,clang-tools-extra,cmake}"

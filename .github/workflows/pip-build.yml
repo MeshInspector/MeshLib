@@ -27,7 +27,7 @@ jobs:
 
   manylinux-pip-build:
     needs: setup
-    timeout-minutes: 40
+    timeout-minutes: 80
     runs-on: ${{ matrix.runner }}
     container:
       image: ${{ matrix.docker-image }}
@@ -62,20 +62,20 @@ jobs:
             py-tag: "cp312"
             py-cmd: "python3.12"
     steps:
-      - name: Git - add safe directory
-        run: git config --global --add safe.directory ${{github.workspace}}/*
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Checkout third-party submodules
+        # Some of those safe.directory rules could be redudant.
         run: |
           # have to checkout selective submodules by our own
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}/'*'
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/'*'
           git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap
 
       - name: Python setup
@@ -91,9 +91,12 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install pytest
 
       - name: Install thirdparty libs
+        # Also print the amount of RAM. If there's not enough RAM, building MRBind bindings can fail. Not doing it in that step, because OOM fails can erase logs from the current step.
         run: |
           ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
           ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
+          ./scripts/mrbind/install_mrbind_ubuntu.sh
+          free -h
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -104,15 +107,19 @@ jobs:
           CMAKE_CXX_COMPILER: /usr/bin/clang++-11
           # FIXME: OpenGL libraries are included to wheel packages when the XDE module is used
           MR_CMAKE_OPTIONS: >
-            -DMRMESH_OPENCASCADE_USE_XDE=OFF
+            -DMRIOEXTRAS_OPENCASCADE_USE_XDE=OFF
           # not realy needed
           CMAKE_C_COMPILER: /usr/bin/clang-11
+
+      - name: Generate and build MRBind bindings
+        run: |
+          make -f scripts/mrbind/generate.mk -B --trace PACKAGE_NAME=meshlib CXX_FOR_ABI=/usr/bin/clang++-11 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed
 
       - name: Run Tests
         run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Unit Tests
-        run: ./build/Release/bin/MRTest
+        run: build/Release/bin/MRTest
 
       - name: Python Tests
         working-directory: ./build/Release/bin
@@ -255,6 +262,31 @@ jobs:
       - name: Build
         run: msbuild -m  source\MeshLib.sln -p:Configuration=Release -p:PythonVersion=${{matrix.py-short-version}} -p:PythonLibPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\libs\${{matrix.py-file}}.lib -p:PythonDllPath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\${{matrix.py-file}}.dll -p:PythonIncludePath=c:\hostedtoolcache\windows\python\${{steps.setup-python.outputs.python-version}}\x64\include\
 
+        # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Locally users should use that bat file.
+        # I'm expecting the official action to be better suited for CI needs (e.g. they promise some form of caching in the readme), but I didn't perform a proper comparison.
+      - name: Install MSYS2 for MRBind
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: clang64
+          install: make mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-clang-tools-extra mingw-w64-clang-x86_64-cmake
+          # Matching the location that `install_deps_windows_msys2.bat` uses, because that's what `install_mrbind_windows_msys2.bat` expects.
+          location: C:\msys64_meshlib_mrbind
+
+        # For some reason `./scripts/mrbind/install_mrbind_windows_msys2.bat` doesn't work here in CI, build manually.
+      - name: Build MRBind
+        run: C:\msys64_meshlib_mrbind\msys64\msys2_shell.cmd -defterm -no-start -clang64 -full-path -c "cd ~ && git clone https://github.com/MeshInspector/mrbind && cd mrbind && cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build"
+
+      - name: Generate and build MRBind bindings
+        shell: cmd
+        env:
+          # Need this env variable because our .bat files assume msys2 installed directly to `C:\msys64_meshlib_mrbind`,
+          #   and the setup-msys2 action always adds the `...\msys64` component at the end, and it's a tiny bit wasteful to move it around when running in the CI.
+          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
+        # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
+        run: |
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
+          call ./scripts/mrbind/generate_win.bat -B --trace PACKAGE_NAME=meshlib PYTHON_PKGCONF_NAME= PYTHON_CFLAGS=-IC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/include PYTHON_LDFLAGS="-LC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/libs -l${{matrix.py-file}}"
+
       - name: Run Test
         working-directory: source\x64\Release
         run: .\MeshViewer.exe -tryHidden -noEventLoop
@@ -279,7 +311,7 @@ jobs:
 
   macos-pip-build:
     needs: setup
-    timeout-minutes: 60
+    timeout-minutes: 80
     runs-on: ${{ matrix.instance }}
     strategy:
       fail-fast: false
@@ -288,8 +320,9 @@ jobs:
         py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         include:
           - platform: "x86"
-            plat-name: macosx_12_0_x86_64
-            instance: macos-12
+            # On 12.0 x86 `brew` doesn't have binary packages for Clang.
+            plat-name: macosx_13_0_x86_64
+            instance: macos-13
           - platform: "arm64"
             plat-name: macosx_12_0_arm64
             instance: macos-arm-build
@@ -331,6 +364,9 @@ jobs:
 
       - name: Create virtualenv
         run: |
+          # Remove from PATH anything with the word `anaconda` in it.
+          # Even if Anaconda's Python works, it's probably a good idea to avoid it for consistency (because without this line only one specific Python version gets taken from Anaconda.)
+          export PATH="$(echo "$PATH" | perl -pe 's/[^:]*anaconda[^:]*//g;s/::|^:|:$//g')"
           ${{ matrix.py-cmd }} -m venv .venv
           . .venv/bin/activate
           echo PATH=$PATH >> $GITHUB_ENV
@@ -344,6 +380,8 @@ jobs:
 
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh
+        run: ./scripts/mrbind/install_deps_macos.sh
+        run: ./scripts/mrbind/install_mrbind_macos.sh
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -355,8 +393,18 @@ jobs:
           # not realy needed
           CMAKE_C_COMPILER: /usr/bin/clang
 
+      - name: Generate and build MRBind bindings
+        env:
+          # Arm Macs use `/opt/homebrew`, while x86 Macs use `/usr/local`. Add both for simplicity.
+          PATH: /opt/homebrew/opt/make/libexec/gnubin:/usr/local/opt/make/libexec/gnubin:${{env.PATH}}
+        # `MACOS_MIN_VER` picked arbitrarily to match what Apple Clang uses when building MeshLib.
+        # Not setting this or setting a different value cases a warning when linking the bindings, and you can get the correct (?) value from those warnings.
+        run: |
+          make --version
+          make -f ./scripts/mrbind/generate.mk -B --trace PACKAGE_NAME=meshlib MACOS_MIN_VER=12.7 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0'
+
       - name: Unit Tests
-        run: ./build/Release/bin/MRTest
+        run: build/Release/bin/MRTest
 
       - name: Python Tests
         working-directory: ./build/Release/bin
@@ -374,7 +422,7 @@ jobs:
           retention-days: 1
 
   manylinux-pip-test:
-    needs: [setup, manylinux-pip-build]
+    needs: [manylinux-pip-build]
     timeout-minutes: 20
     runs-on: ${{ matrix.runner }}
     container:
@@ -444,7 +492,7 @@ jobs:
         run: ${{ matrix.py-cmd }} -m pytest -s -v
 
   windows-pip-test:
-    needs: [setup, windows-pip-build]
+    needs: [windows-pip-build]
     timeout-minutes: 20
     runs-on: windows-latest
     strategy:
@@ -484,7 +532,7 @@ jobs:
         run: py -${{matrix.py-version}} -m pytest -s -v
 
   macos-pip-test:
-    needs: [setup, macos-pip-build]
+    needs: [macos-pip-build]
     timeout-minutes: 20
     runs-on: ${{ matrix.instance }}
     strategy:
@@ -494,8 +542,9 @@ jobs:
         py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         include:
           - platform: "x86"
-            plat-name: macosx_12_0_x86_64
-            instance: macos-12
+            # On 12.0 x86 `brew` doesn't have binary packages for Clang.
+            plat-name: macosx_13_0_x86_64
+            instance: macos-13
           - platform: "arm64"
             plat-name: macosx_12_0_arm64
             instance: macos-arm-build
@@ -521,6 +570,9 @@ jobs:
 
       - name: Create virtualenv
         run: |
+          # Remove from PATH anything with the word `anaconda` in it.
+          # Even if Anaconda's Python works, it's probably a good idea to avoid it for consistency (because without this line only one specific Python version gets taken from Anaconda.)
+          export PATH="$(echo "$PATH" | perl -pe 's/[^:]*anaconda[^:]*//g;s/::|^:|:$//g')"
           ${{ matrix.py-cmd }} -m venv .venv
           . .venv/bin/activate
           echo PATH=$PATH >> $GITHUB_ENV

@@ -12,12 +12,13 @@ if (
     sys.path.insert(0, os.environ["MeshLibPyModulesPath"])
     working_directory = os.environ["MeshLibPyModulesPath"]
 
-is_new_binding = False
+is_new_binding = True
 
 if os.environ.get('USE_MESHLIB2_PY', '0') != '0':
-    is_new_binding = True
     from meshlib2 import mrmeshpy as mrmesh
     from meshlib2 import mrmeshnumpy
 else:
+    if os.environ.get('OLD_MESHLIB_BINDINGS', '0') != '0':
+        is_new_binding = False
     import meshlib.mrmeshpy as mrmesh
     import meshlib.mrmeshnumpy as mrmeshnumpy

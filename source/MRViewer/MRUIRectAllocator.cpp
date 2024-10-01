@@ -135,11 +135,13 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
 
         for ( auto it = windows_.begin(); it != windows_.end(); )
         {
-            if ( !std::exchange( it->second.visitedThisFrame, false ) )
+            if ( it->second.state_ == AllocationState::None )
             {
                 it = windows_.erase( it );
                 continue;
             }
+            else if ( it->second.state_ == AllocationState::Set )
+                it->second.state_ = AllocationState::None; // we will validate that this window is still present in next block
 
             ++it;
         }
@@ -156,12 +158,18 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
             auto [iter, isNew] = windows_.try_emplace( expectedWindowName );
             if ( isNew )
             {
-                findLocation = true;
-                defaultPos = window->Pos;
+                // if new window, request position calculation in next frame
+                // to be sure that this frame action will not affect it (for example closing window that is present in this frame)
+                iter->second.state_ = AllocationState::Requested;
             }
             else
             {
-                iter->second.visitedThisFrame = true;
+                if ( iter->second.state_ == AllocationState::Requested )
+                {
+                    findLocation = true;
+                    defaultPos = window->Pos;
+                }
+                iter->second.state_ = AllocationState::Set; // validate that window is still present
             }
         }
     }

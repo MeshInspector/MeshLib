@@ -4,8 +4,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(MRPch CXX)
 
+option(MR_PCH_USE_EXTRA_HEADERS "Add frequently used MeshLib headers to the precompiled header" OFF)
+
 file(GLOB HEADERS "*.h")
 
+IF(MR_PCH_USE_EXTRA_HEADERS)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MR_PCH_USE_EXTRA_HEADERS)
+ENDIF()
 IF(NOT MESHLIB_BUILD_MRVIEWER)
   target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VIEWER)
 ENDIF()

@@ -105,7 +105,10 @@ jobs:
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
-          MR_USE_CPP_23: ${{ matrix.use-cpp-23 }}
+          # options to be passed to cmake
+          MR_CMAKE_OPTIONS: >
+            -DMR_USE_CPP_23=${{ matrix.use-cpp-23 }}
+            -DMR_PCH_USE_EXTRA_HEADERS=ON
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}}-arm64 ${{matrix.config}} "${{matrix.compiler}}"

@@ -149,12 +149,11 @@ jobs:
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
-          MR_USE_CPP_23: ${{ matrix.use-cpp-23 }}
-          MESHLIB_BUILD_MRCUDA: ${{ matrix.build_mrcuda }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
-                      -DMR_USE_CPP_23=${{ matrix.use-cpp-23 }}
-                      -DMESHLIB_BUILD_MRCUDA=${{ matrix.build_mrcuda }}
+            -DMR_USE_CPP_23=${{ matrix.use-cpp-23 }}
+            -DMESHLIB_BUILD_MRCUDA=${{ matrix.build_mrcuda }}
+            -DMR_PCH_USE_EXTRA_HEADERS=ON
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
 

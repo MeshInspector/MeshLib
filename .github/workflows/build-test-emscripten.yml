@@ -52,7 +52,10 @@ jobs:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
           MR_EMSCRIPTEN_SINGLE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Singlethreaded'] }}
-          MR_USE_CPP_23: "OFF"
+          # options to be passed to cmake
+          MR_CMAKE_OPTIONS: >
+            -DMR_USE_CPP_23=OFF
+            -DMR_PCH_USE_EXTRA_HEADERS=ON
         run: ./scripts/build_source.sh
 
       - name: Test

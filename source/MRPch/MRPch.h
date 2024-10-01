@@ -93,7 +93,7 @@
 #include <variant>
 #include <vector>
 
-#ifndef _MSC_VER
+#ifdef MR_PCH_USE_EXTRA_HEADERS
 #include "MRMesh/MRIOFilters.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRObject.h"

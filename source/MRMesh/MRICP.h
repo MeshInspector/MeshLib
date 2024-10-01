@@ -197,9 +197,11 @@ public:
     MRMESH_API void setFarDistFactor(const float factor);
 
     /// select pairs with origin samples on floating object
+    MRMESH_API void setFltSamples( const VertBitSet& fltSamples );
     MRMESH_API void sampleFltPoints( float samplingVoxelSize );
 
     /// select pairs with origin samples on reference object
+    MRMESH_API void setRefSamples( const VertBitSet& refSamples );
     MRMESH_API void sampleRefPoints( float samplingVoxelSize );
 
     /// select pairs with origin samples on both objects

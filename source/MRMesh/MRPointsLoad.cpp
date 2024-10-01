@@ -129,9 +129,19 @@ Expected<MR::PointCloud> fromPts( const std::filesystem::path& file, const Point
 Expected<MR::PointCloud> fromPts( std::istream& in, const PointsLoadSettings& settings )
 {
     MR_TIMER;
+    auto startPos = in.tellg();
     std::string numPointsLine;
     if ( !std::getline( in, numPointsLine ) )
         return unexpected( "Cannot read header line" );
+
+    Vector3f testFirstLine;
+    if ( parseTextCoordinate( numPointsLine, testFirstLine ).has_value() )
+    {
+        // text pts format
+        in.seekg( startPos );
+        return fromText( in, settings );
+    }
+
     auto numPoints = std::atoll( numPointsLine.c_str() );
     if ( numPoints == 0 )
         return unexpected( "Empty pts file" );

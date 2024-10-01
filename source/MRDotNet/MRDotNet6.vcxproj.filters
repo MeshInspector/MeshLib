@@ -84,6 +84,9 @@
     <ClInclude Include="MRMeshSave.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MRConvexHull.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssemblyInfo.cpp">
@@ -153,6 +156,9 @@
       <Filter>Resource Files</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshSave.cpp">
+      <Filter>Resource Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRConvexHull.cpp">
       <Filter>Resource Files</Filter>
     </ClCompile>
   </ItemGroup>

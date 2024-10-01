@@ -191,6 +191,19 @@ Box3f^ Mesh::BoundingBox::get()
     return boundingBox_;
 }
 
+double Mesh::Volume()
+{
+    return mesh_->volume();
+}
+
+double Mesh::Volume( FaceBitSet^ region )
+{
+    if ( !region )
+        throw gcnew System::ArgumentNullException( "region" );
+
+    MR::FaceBitSet nativeRegion( region->bitSet()->m_bits.begin(), region->bitSet()->m_bits.end() );
+    return mesh_->volume( &nativeRegion );
+}
 
 bool Mesh::operator==( Mesh^ a, Mesh^ b )
 {

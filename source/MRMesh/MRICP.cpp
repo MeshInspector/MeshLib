@@ -91,14 +91,24 @@ AffineXf3f ICP::autoSelectFloatXf()
     return bestFltXf;
 }
 
+void ICP::setFltSamples( const VertBitSet& fltSamples )
+{
+    setupPairs( flt2refPairs_, fltSamples );
+}
+
 void ICP::sampleFltPoints( float samplingVoxelSize )
 {
-    setupPairs( flt2refPairs_, *flt_.obj.pointsGridSampling( samplingVoxelSize ) );
+    setFltSamples( *flt_.obj.pointsGridSampling( samplingVoxelSize ) );
+}
+
+void ICP::setRefSamples( const VertBitSet& refSamples )
+{
+    setupPairs( ref2fltPairs_, refSamples );
 }
 
 void ICP::sampleRefPoints( float samplingVoxelSize )
 {
-    setupPairs( ref2fltPairs_, *ref_.obj.pointsGridSampling( samplingVoxelSize ) );
+    setRefSamples( *ref_.obj.pointsGridSampling( samplingVoxelSize ) );
 }
 
 void ICP::updatePointPairs()

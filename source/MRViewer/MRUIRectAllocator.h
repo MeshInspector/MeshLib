@@ -80,9 +80,16 @@ public:
 private:
     int lastFrameCount_ = -1;
 
+    enum class AllocationState
+    {
+        None, // This window wasn't yet drawn during this frame. If it's not drawn until the end of frame, it will be deleted from this map.
+        Requested, // This window has just appeared and a free position will be selected for it in the next frame
+        Set // This window has set position and was already drawn in this frame
+    };
+
     struct WindowEntry
     {
-        bool visitedThisFrame = true;
+        AllocationState state_{ AllocationState::None };
     };
     phmap::flat_hash_map<std::string, WindowEntry> windows_;
 };

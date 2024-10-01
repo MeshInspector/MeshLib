@@ -4,6 +4,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(MRPch CXX)
 
+option(MR_PCH_USE_EXTRA_HEADERS "Add frequently used MeshLib headers to the precompiled header" OFF)
+
 file(GLOB HEADERS "*.h")
 
 install(
@@ -13,7 +15,6 @@ install(
 
 IF(MR_PCH)
   IF(MR_EMSCRIPTEN)
-
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
 
     add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
@@ -22,9 +23,7 @@ IF(MR_PCH)
       jsoncpp
       tbb
     )
-
   ELSE()
-
     find_package(Boost COMPONENTS REQUIRED)
     find_package(TBB REQUIRED)
     pkg_check_modules(JSONCPP jsoncpp)
@@ -48,8 +47,14 @@ IF(MR_PCH)
     )
   ENDIF()
 
-  TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} PRIVATE
+  IF(MR_PCH_USE_EXTRA_HEADERS)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE MR_PCH_USE_EXTRA_HEADERS)
+  ENDIF()
+  IF(NOT MESHLIB_BUILD_MRVIEWER)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VIEWER)
+  ENDIF()
+
+  target_precompile_headers(${PROJECT_NAME} PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRPch.h>"
   )
-
 ENDIF()

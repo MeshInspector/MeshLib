@@ -90,8 +90,10 @@ jobs:
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
-          MR_USE_CPP_23: "ON"
-          MR_CMAKE_OPTIONS: ${{ matrix.MR_CMAKE_OPTIONS }}
+          # options to be passed to cmake
+          MR_CMAKE_OPTIONS: >
+            -DMR_USE_CPP_23=ON
+            -DMR_PCH_USE_EXTRA_HEADERS=ON
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh fedora39 ${{matrix.config}} "${{matrix.compiler}}"

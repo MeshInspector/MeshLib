@@ -23,7 +23,13 @@
 #include "MRViewerInstance.h"
 #include "MRViewer.h"
 #include "MRSceneCache.h"
-#include "imgui.h"
+#include "MRUIStyle.h"
+#include "MRRibbonConstants.h"
+#include "MRImGuiVectorOperators.h"
+#include "MRColorTheme.h"
+#include "MRViewport.h"
+#include "MRImGuiImage.h"
+#include "imgui_internal.h"
 
 #ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
@@ -32,6 +38,20 @@
 namespace MR
 {
 
+void RibbonSceneObjectsListDrawer::draw( float height, float scaling )
+{
+    currentObjectLineCounter_ = 0;
+    lastDrawnSiblingMap_.clear();
+    SceneObjectsListDrawer::draw( height, scaling );
+}
+
+void RibbonSceneObjectsListDrawer::initRibbonMenu( RibbonMenu* ribbonMenu )
+{
+    // lets assume that will not have depth more than 32 most times
+    lastDrawnSiblingMap_.reserve( 32 );
+    ribbonMenu_ = ribbonMenu;
+}
+
 void RibbonSceneObjectsListDrawer::drawCustomObjectPrefixInScene_( const Object& obj )
 {
     if ( !ribbonMenu_ )
@@ -39,7 +59,7 @@ void RibbonSceneObjectsListDrawer::drawCustomObjectPrefixInScene_( const Object&
 
     const auto& fontManager = ribbonMenu_->getFontManager();
 
-    auto imageSize = ImGui::GetFrameHeight();
+    auto imageSize = ImGui::GetFrameHeight() - 2 * menuScaling_;
     auto* imageIcon = RibbonIcons::findByName( obj.typeName(), imageSize,
                                                RibbonIcons::ColorType::White,
                                                RibbonIcons::IconType::ObjectTypeIcon );
@@ -117,6 +137,24 @@ bool RibbonSceneObjectsListDrawer::collapsingHeader_( const std::string& uniqueN
     return RibbonButtonDrawer::CustomCollapsingHeader( uniqueName.c_str(), flags );
 }
 
+bool RibbonSceneObjectsListDrawer::drawObject_( Object& object, const std::string& uniqueStr, int depth )
+{
+    const bool hasRealChildren = objectHasSelectableChildren( object );
+    
+    auto res = drawTreeOpenedState_( object, !hasRealChildren, uniqueStr, depth );
+    ImGui::SameLine();
+    drawObjectLine_( object, uniqueStr );
+
+
+    // update last sibling
+    if ( lastDrawnSiblingMap_.size() <= depth )
+        lastDrawnSiblingMap_.resize( depth + 1 );
+    lastDrawnSiblingMap_[depth] = currentObjectLineCounter_;
+    ++currentObjectLineCounter_;
+
+    return res;
+}
+
 const char* RibbonSceneObjectsListDrawer::getSceneItemIconByTypeName_( const std::string& typeName ) const
 {
     if ( typeName == ObjectMesh::TypeName() )
@@ -142,6 +180,178 @@ const char* RibbonSceneObjectsListDrawer::getSceneItemIconByTypeName_( const std
         )
         return "\xef\x98\x9f";
     return "\xef\x88\xad";
+}
+
+bool RibbonSceneObjectsListDrawer::drawTreeOpenedState_( Object& object, bool leaf, const std::string& uniqueStr, int depth )
+{
+    auto openCommandIt = sceneOpenCommands_.find( &object );
+    if ( openCommandIt != sceneOpenCommands_.end() )
+        ImGui::SetNextItemOpen( openCommandIt->second );
+
+    ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( 0, 0, 0, 0 ) );
+    if ( leaf )
+    {
+        ImGui::PushStyleColor( ImGuiCol_HeaderHovered, ImVec4( 0, 0, 0, 0 ) );
+        ImGui::PushStyleColor( ImGuiCol_HeaderActive, ImVec4( 0, 0, 0, 0 ) );
+    }
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
+
+    const ImGuiTreeNodeFlags flags =
+        ImGuiTreeNodeFlags_AllowOverlap |
+        ( !leaf ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_Bullet );
+
+
+    auto startScreenPos = ImGui::GetCursorScreenPos();
+
+    const float cFrameHeight = ImGui::GetFrameHeight();
+    // window->WorkRect.Max.x hardcoded inside ImGui as limit of width, so manual change it here
+    auto window = ImGui::GetCurrentContext()->CurrentWindow;
+    float storedWorkRectMaxX = window->WorkRect.Max.x;
+    window->WorkRect.Max.x = window->DC.CursorPos.x + cFrameHeight - 2 * menuScaling_;
+    const bool isOpen = collapsingHeader_( ( "##OpenState_" + object.name() + "_" + uniqueStr ).c_str(), flags );
+    window->WorkRect.Max.x = storedWorkRectMaxX;
+
+    ImGui::PopStyleColor( leaf ? 3 : 1 );
+    ImGui::PopStyleVar();
+
+    // draw hierarchy lines
+    if ( depth > 0 )
+    {
+        int numSteps = 0;
+        if ( lastDrawnSiblingMap_.size() > depth && lastDrawnSiblingMap_[depth - 1] + 1 != currentObjectLineCounter_ )
+        {
+            // otherwise it first child
+            numSteps = currentObjectLineCounter_ - lastDrawnSiblingMap_[depth];
+        }
+
+        auto drawList = window->DrawList;
+        auto pos0 = ImVec2( startScreenPos.x - ImGui::GetStyle().FramePadding.x * 0.75f, startScreenPos.y + cFrameHeight * 0.5f );
+        auto pos1 = ImVec2( startScreenPos.x - ( cFrameHeight - 2 * menuScaling_ ) * 0.5f, pos0.y );
+        auto pos2 = ImVec2( pos1.x, pos1.y );
+        if ( numSteps > 0 )
+            pos2.y -= numSteps * ( cFrameHeight + ImGui::GetStyle().ItemSpacing.y + 1 );
+        else
+            pos2.y -= cFrameHeight * 0.5f;
+        drawList->AddLine( pos0, pos1, Color::gray().getUInt32(), menuScaling_ );
+        drawList->AddLine( pos1, pos2, Color::gray().getUInt32(), menuScaling_ );
+    }
+
+    return isOpen;
+}
+
+void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::string& uniqueStr )
+{
+    const bool isSelected = object.isSelected();
+
+    const auto& style = ImGui::GetStyle();
+    const float cFrameHeight = ImGui::GetFrameHeight();
+
+    auto window = ImGui::GetCurrentContext()->CurrentWindow;
+    auto drawList = window->DrawList;
+
+    auto startPos = ImGui::GetCursorPos();
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
+    ImGui::PushStyleColor( ImGuiCol_Button, isSelected ? ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame ) : ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ) );
+    UI::ButtonCustomizationParams params;
+    params.forceImGuiBackground = true;
+    UI::buttonEx( ( "##SelectBtn_" + object.name() + "_" + uniqueStr ).c_str(), true, Vector2f( -1, cFrameHeight ), ImGuiButtonFlags_AllowOverlap, params );
+    if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) && needDragDropTarget_() )
+    {
+        auto startCorner = window->Pos + startPos;
+        auto stopCorner = ImVec2( window->WorkRect.Max.x, startCorner.y + cFrameHeight );
+        drawList->PushClipRect( window->InnerRect.Min, window->InnerRect.Max );
+        drawList->AddRect( startCorner, stopCorner, ImGui::GetColorU32( ImGuiCol_ButtonHovered ), style.FrameRounding, 0, 2 * menuScaling_ );
+        drawList->PopClipRect();
+
+    }
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar();
+    auto endPos = ImGui::GetCursorPos();
+    
+    const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
+
+    makeDragDropSource_( selected );
+    makeDragDropTarget_( object, false, false, uniqueStr );
+
+    ImGui::GetCurrentContext()->LastItemData.InFlags |= ImGuiItemFlags_AllowOverlap; // needed so hover check respect overlap
+
+    bool frameHovered = ImGui::IsItemHovered();
+    if ( frameHovered )
+        processItemClick_( object, selected );
+
+    // draw text
+    if ( isSelected || frameHovered )
+        ImGui::PushStyleColor( ImGuiCol_Text, 0xffffffff );
+    drawList->PushClipRect( window->InnerClipRect.Min, window->InnerClipRect.Max - ImVec2( cFrameHeight, 0 ) );
+    ImGui::SetCursorPos( startPos + ImVec2( style.FramePadding.x, 0 ) );
+    drawCustomObjectPrefixInScene_( object );
+    ImGui::SetCursorPosY( startPos.y + style.FramePadding.y );
+    ImGui::Text( "%s", object.name().c_str() );
+    drawList->PopClipRect();
+
+    // draw visibility button
+    ImGui::SetCursorPos( ImVec2( window->InnerClipRect.Max.x - window->Pos.x - cFrameHeight - style.FramePadding.x, startPos.y ) );
+    drawEyeButton_( object, uniqueStr, frameHovered );
+    if ( isSelected || frameHovered )
+        ImGui::PopStyleColor();
+}
+
+void RibbonSceneObjectsListDrawer::drawEyeButton_( Object& object, const std::string& uniqueStr, bool frameHovered )
+{
+    auto& viewer = getViewerInstance();
+    auto& vp = viewer.viewport();
+    bool isVisible = object.isVisible( vp.id );
+
+    const float cFrameHeight = ImGui::GetFrameHeight();
+    const float cImageHeight = 24 * menuScaling_;
+    auto* imageIcon = RibbonIcons::findByName( isVisible ? "Ribbon Scene Show all" : "Ribbon Scene Hide all", cFrameHeight, RibbonIcons::ColorType::White, RibbonIcons::IconType::RibbonItemIcon );
+    if ( !imageIcon )
+    {
+        drawObjectVisibilityCheckbox_( object, uniqueStr );
+        ImGui::NewLine();
+        return;
+    }
+
+    auto btnScreenPos = ImGui::GetCursorScreenPos();
+    UI::ButtonCustomizationParams params;
+    params.forceImGuiBackground = true;
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
+    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0, 0, 0, 0 ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4( 0, 0, 0, 0 ) );
+    bool changed = UI::buttonEx( ( "##VisibilityBtn_" + object.name() + "_" + uniqueStr ).c_str(), true, ImVec2( -1, cFrameHeight ), 0, params );
+    ImGui::PopStyleColor( 3 );
+    ImGui::PopStyleVar();
+
+    bool isHovered = ImGui::IsItemHovered();
+
+    Color imageColor = Color( ImGui::GetStyleColorVec4( ImGuiCol_Text ) );
+    if ( !isHovered && !frameHovered )
+    {
+        if ( isVisible )
+        {
+            bool globalVisible = object.globalVisibility( vp.id );
+            if ( !globalVisible )
+                imageColor = imageColor.scaledAlpha( 0.5f );
+            else if ( !object.isSelected() )
+                imageColor = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame );
+        }
+        else
+            imageColor = imageColor.scaledAlpha( 0.5f );
+    }
+
+    auto window = ImGui::GetCurrentContext()->CurrentWindow;
+    auto drawList = window->DrawList;
+
+    auto pos = btnScreenPos + ImVec2( 1, 1 ) * ( cFrameHeight - cImageHeight ) * 0.5f;
+    drawList->AddImage( imageIcon->getImTextureId(), pos, pos + ImVec2( 1, 1 ) * cImageHeight, ImVec2( 0, 1 ), ImVec2( 1, 0 ), imageColor.getUInt32() );
+
+    if ( changed )
+    {
+        object.setVisible( !isVisible, vp.id );
+        if ( deselectNewHiddenObjects_ && !object.isVisible( viewer.getPresentViewports() ) )
+            object.select( false );
+    }
 }
 
 }

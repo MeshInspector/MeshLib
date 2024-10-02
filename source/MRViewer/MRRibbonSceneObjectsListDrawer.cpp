@@ -266,7 +266,6 @@ void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::s
     }
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
-    auto endPos = ImGui::GetCursorPos();
     
     const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
 

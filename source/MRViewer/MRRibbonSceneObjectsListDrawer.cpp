@@ -279,6 +279,8 @@ void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::s
     if ( frameHovered )
         processItemClick_( object, selected );
 
+    auto lineObjectData = ImGui::GetCurrentContext()->LastItemData;
+
     // draw text
     if ( isSelected || frameHovered )
         ImGui::PushStyleColor( ImGuiCol_Text, 0xffffffff );
@@ -294,6 +296,9 @@ void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::s
     drawEyeButton_( object, uniqueStr, frameHovered );
     if ( isSelected || frameHovered )
         ImGui::PopStyleColor();
+
+    // set back last item as if it was main line for furher checks
+    ImGui::GetCurrentContext()->LastItemData = lineObjectData;
 }
 
 void RibbonSceneObjectsListDrawer::drawEyeButton_( Object& object, const std::string& uniqueStr, bool frameHovered )

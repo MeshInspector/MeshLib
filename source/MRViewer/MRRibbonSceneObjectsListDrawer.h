@@ -24,6 +24,8 @@ protected:
     MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected, const std::string& uniqueStr ) override;
     MRVIEWER_API virtual bool collapsingHeader_( const std::string& uniqueName, ImGuiTreeNodeFlags flags ) override;
 
+    MRVIEWER_API virtual std::string objectLineStrId_( const Object& object, const std::string& uniqueStr ) override;
+
     MRVIEWER_API virtual bool drawObject_( Object& object, const std::string& uniqueStr, int depth ) override;
 private:
     // return icon (now it is symbol in icons font) based on typename

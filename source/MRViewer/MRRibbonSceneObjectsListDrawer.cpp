@@ -137,6 +137,11 @@ bool RibbonSceneObjectsListDrawer::collapsingHeader_( const std::string& uniqueN
     return RibbonButtonDrawer::CustomCollapsingHeader( uniqueName.c_str(), flags );
 }
 
+std::string RibbonSceneObjectsListDrawer::objectLineStrId_( const Object& object, const std::string& uniqueStr )
+{
+    return "##OpenState_" + object.name() + "_" + uniqueStr;
+}
+
 bool RibbonSceneObjectsListDrawer::drawObject_( Object& object, const std::string& uniqueStr, int depth )
 {
     const bool hasRealChildren = objectHasSelectableChildren( object );
@@ -208,7 +213,7 @@ bool RibbonSceneObjectsListDrawer::drawTreeOpenedState_( Object& object, bool le
     auto window = ImGui::GetCurrentContext()->CurrentWindow;
     float storedWorkRectMaxX = window->WorkRect.Max.x;
     window->WorkRect.Max.x = window->DC.CursorPos.x + cFrameHeight - 2 * menuScaling_;
-    const bool isOpen = collapsingHeader_( ( "##OpenState_" + object.name() + "_" + uniqueStr ).c_str(), flags );
+    const bool isOpen = collapsingHeader_( objectLineStrId_( object, uniqueStr ).c_str(), flags );
     window->WorkRect.Max.x = storedWorkRectMaxX;
 
     ImGui::PopStyleColor( leaf ? 3 : 1 );
@@ -218,20 +223,32 @@ bool RibbonSceneObjectsListDrawer::drawTreeOpenedState_( Object& object, bool le
     if ( depth > 0 )
     {
         int numSteps = 0;
-        if ( lastDrawnSiblingMap_.size() > depth && lastDrawnSiblingMap_[depth - 1] + 1 != currentObjectLineCounter_ )
+        if ( lastDrawnSiblingMap_.size() > depth   + 1 != currentObjectLineCounter_ )
         {
-            // otherwise it first child
-            numSteps = currentObjectLineCounter_ - lastDrawnSiblingMap_[depth];
+            auto lastParent = lastDrawnSiblingMap_[depth - 1];
+            if ( lastParent == 0 )
+            {
+                // parent was skipped, so it is over the screen
+                numSteps = -1;
+            }
+            else if ( lastParent + 1 != currentObjectLineCounter_ )
+            {
+                // otherwise it first child
+                numSteps = currentObjectLineCounter_ - lastDrawnSiblingMap_[depth];
+            }
         }
 
         auto drawList = window->DrawList;
         auto pos0 = ImVec2( startScreenPos.x - ImGui::GetStyle().FramePadding.x * 0.75f, startScreenPos.y + cFrameHeight * 0.5f );
         auto pos1 = ImVec2( startScreenPos.x - ( cFrameHeight - 2 * menuScaling_ ) * 0.5f, pos0.y );
         auto pos2 = ImVec2( pos1.x, pos1.y );
-        if ( numSteps > 0 )
-            pos2.y -= numSteps * ( cFrameHeight + ImGui::GetStyle().ItemSpacing.y + 1 );
-        else
+        if ( numSteps < 0 )
+            pos2.y = 0.0f;
+        else if ( numSteps == 0 )
             pos2.y -= cFrameHeight * 0.5f;
+        else
+            pos2.y -= numSteps * ( cFrameHeight + ImGui::GetStyle().ItemSpacing.y + 1 );
+            
         drawList->AddLine( pos0, pos1, Color::gray().getUInt32(), menuScaling_ );
         drawList->AddLine( pos1, pos2, Color::gray().getUInt32(), menuScaling_ );
     }
@@ -246,7 +263,8 @@ void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::s
     const auto& style = ImGui::GetStyle();
     const float cFrameHeight = ImGui::GetFrameHeight();
 
-    auto window = ImGui::GetCurrentContext()->CurrentWindow;
+    auto context = ImGui::GetCurrentContext();
+    auto window = context->CurrentWindow;
     auto drawList = window->DrawList;
 
     auto startPos = ImGui::GetCursorPos();
@@ -257,10 +275,9 @@ void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::s
     UI::buttonEx( ( "##SelectBtn_" + object.name() + "_" + uniqueStr ).c_str(), true, Vector2f( -1, cFrameHeight ), ImGuiButtonFlags_AllowOverlap, params );
     if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) && needDragDropTarget_() )
     {
-        auto startCorner = window->Pos + startPos;
-        auto stopCorner = ImVec2( window->WorkRect.Max.x, startCorner.y + cFrameHeight );
+        auto rect = context->LastItemData.Rect;
         drawList->PushClipRect( window->InnerRect.Min, window->InnerRect.Max );
-        drawList->AddRect( startCorner, stopCorner, ImGui::GetColorU32( ImGuiCol_ButtonHovered ), style.FrameRounding, 0, 2 * menuScaling_ );
+        drawList->AddRect( rect.Min, rect.Max, ImGui::GetColorU32( ImGuiCol_ButtonHovered ), style.FrameRounding, 0, 2 * menuScaling_ );
         drawList->PopClipRect();
 
     }
@@ -272,13 +289,13 @@ void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::s
     makeDragDropSource_( selected );
     makeDragDropTarget_( object, false, false, uniqueStr );
 
-    ImGui::GetCurrentContext()->LastItemData.InFlags |= ImGuiItemFlags_AllowOverlap; // needed so hover check respect overlap
+    context->LastItemData.InFlags |= ImGuiItemFlags_AllowOverlap; // needed so hover check respect overlap
 
     bool frameHovered = ImGui::IsItemHovered();
     if ( frameHovered )
         processItemClick_( object, selected );
 
-    auto lineObjectData = ImGui::GetCurrentContext()->LastItemData;
+    auto lineObjectData = context->LastItemData;
 
     // draw text
     if ( isSelected || frameHovered )
@@ -296,8 +313,8 @@ void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::s
     if ( isSelected || frameHovered )
         ImGui::PopStyleColor();
 
-    // set back last item as if it was main line for furher checks
-    ImGui::GetCurrentContext()->LastItemData = lineObjectData;
+    // set back last item as if it was main line for further checks
+    context->LastItemData = lineObjectData;
 }
 
 void RibbonSceneObjectsListDrawer::drawEyeButton_( Object& object, const std::string& uniqueStr, bool frameHovered )

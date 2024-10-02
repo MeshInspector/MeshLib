@@ -72,6 +72,8 @@ protected:
     /// override this to customize CollapsingHeader draw
     MRVIEWER_API virtual bool collapsingHeader_( const std::string& uniqueName, ImGuiTreeNodeFlags flags );
 
+    MRVIEWER_API virtual std::string objectLineStrId_( const Object& object, const std::string& uniqueStr );
+
     /// override this to customize whole object line
     MRVIEWER_API virtual bool drawObject_( Object& object, const std::string& uniqueStr, int depth );
 

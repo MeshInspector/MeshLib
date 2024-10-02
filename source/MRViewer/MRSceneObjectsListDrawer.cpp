@@ -112,6 +112,11 @@ bool SceneObjectsListDrawer::collapsingHeader_( const std::string& uniqueName, I
     return ImGui::CollapsingHeader( uniqueName.c_str(), flags );
 }
 
+std::string SceneObjectsListDrawer::objectLineStrId_( const Object& object, const std::string& uniqueStr )
+{
+    return object.name() + "##" + uniqueStr;
+}
+
 void SceneObjectsListDrawer::changeSelection( bool isDown, bool isShift )
 {
     const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
@@ -350,7 +355,7 @@ void SceneObjectsListDrawer::drawObjectsList_()
             [&] { isOpen = drawObject_( object, uniqueStr, curentDepth ); },
             [&]
             {
-                isOpen = ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( ( object.name() + "##" + uniqueStr ).c_str() ),
+                isOpen = ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( objectLineStrId_( object, uniqueStr ).c_str() ),
                     ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) );
             } );
 
@@ -447,7 +452,7 @@ bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const 
         ( hasRealChildren ? ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_Bullet ) |
         ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 );
 
-    const bool isOpen = collapsingHeader_( ( object.name() + "##" + uniqueStr ).c_str(), flags );
+    const bool isOpen = collapsingHeader_( objectLineStrId_( object, uniqueStr ).c_str(), flags );
 
     ImGui::PopStyleColor( isSelected ? 2 : 1 );
     ImGui::PopStyleVar();

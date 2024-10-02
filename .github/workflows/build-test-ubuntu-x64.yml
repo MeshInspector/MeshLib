@@ -127,7 +127,7 @@ jobs:
           repository: MeshInspector/mrbind
           path: mrbind
           token: ${{ secrets.BUILD_MACHINE_TOKEN }}
-          ref: e53dca9c96d10163345b038b0ac11b7574d39cba
+          ref: fb84f8017ad8ab2b8e8a8bd3949700551ca867b2
 
       - name: Compile MRBind
         if: ${{ matrix.os == 'ubuntu24' }}

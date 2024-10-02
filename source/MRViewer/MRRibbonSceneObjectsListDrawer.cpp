@@ -40,7 +40,7 @@ namespace MR
 
 void RibbonSceneObjectsListDrawer::draw( float height, float scaling )
 {
-    currentObjectLineCounter_ = 0;
+    currentObjectLineCounter_ = 1;
     lastDrawnSiblingMap_.clear();
     SceneObjectsListDrawer::draw( height, scaling );
 }

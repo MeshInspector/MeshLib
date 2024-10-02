@@ -223,7 +223,7 @@ bool RibbonSceneObjectsListDrawer::drawTreeOpenedState_( Object& object, bool le
     if ( depth > 0 )
     {
         int numSteps = 0;
-        if ( lastDrawnSiblingMap_.size() > depth   + 1 != currentObjectLineCounter_ )
+        if ( lastDrawnSiblingMap_.size() > depth )
         {
             auto lastParent = lastDrawnSiblingMap_[depth - 1];
             if ( lastParent == 0 )

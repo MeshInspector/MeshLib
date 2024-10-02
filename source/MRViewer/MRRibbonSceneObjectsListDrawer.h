@@ -10,7 +10,9 @@ class RibbonMenu;
 class MRVIEWER_CLASS RibbonSceneObjectsListDrawer : public SceneObjectsListDrawer
 {
 public:
-    void initRibbonMenu( RibbonMenu* ribbonMenu ) { ribbonMenu_ = ribbonMenu; };
+    MRVIEWER_API virtual void draw( float height, float scaling ) override;
+
+    MRVIEWER_API void initRibbonMenu( RibbonMenu* ribbonMenu );
     
     /// set closing scene context menu on any change
     void setCloseContextOnChange( bool deselect ) { closeContextOnChange_ = deselect; }
@@ -22,10 +24,19 @@ protected:
     MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected, const std::string& uniqueStr ) override;
     MRVIEWER_API virtual bool collapsingHeader_( const std::string& uniqueName, ImGuiTreeNodeFlags flags ) override;
 
+    MRVIEWER_API virtual std::string objectLineStrId_( const Object& object, const std::string& uniqueStr ) override;
+
+    MRVIEWER_API virtual bool drawObject_( Object& object, const std::string& uniqueStr, int depth ) override;
 private:
     // return icon (now it is symbol in icons font) based on typename
     MRVIEWER_API virtual const char* getSceneItemIconByTypeName_( const std::string& typeName ) const;
 
+    bool drawTreeOpenedState_( Object& object, bool leaf, const std::string& uniqueStr, int depth );
+    void drawObjectLine_( Object& object, const std::string& uniqueStr );
+    void drawEyeButton_( Object& object, const std::string& uniqueStr, bool frameHovered );
+
+    int currentObjectLineCounter_{ 0 };
+    std::vector<int> lastDrawnSiblingMap_;
     RibbonMenu* ribbonMenu_ = nullptr;
     bool closeContextOnChange_ = true;
 };

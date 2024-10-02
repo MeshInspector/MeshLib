@@ -18,7 +18,7 @@ public:
 
     /// Main method for drawing all
     /// \detail Not creat window. Use in window block (between ImGui::Begin and ImGui::End)
-    MRVIEWER_API void draw( float height, float scaling );
+    MRVIEWER_API virtual void draw( float height, float scaling );
     
     /// set flag of the object visibility activation after selection
     void setShowNewSelectedObjects( bool show ) { showNewSelectedObjects_ = show; };
@@ -72,20 +72,36 @@ protected:
     /// override this to customize CollapsingHeader draw
     MRVIEWER_API virtual bool collapsingHeader_( const std::string& uniqueName, ImGuiTreeNodeFlags flags );
 
-private:
-    void drawObjectsList_();
-    bool drawObject_( Object& object, const std::string& uniqueStr );
-    void drawObjectVisibilityCheckbox_( Object& object, const std::string& uniqueStr );
-    bool drawObjectCollapsingHeader_( Object& object, const std::string& uniqueStr, bool hasRealChildren );
+    MRVIEWER_API virtual std::string objectLineStrId_( const Object& object, const std::string& uniqueStr );
+
+    /// override this to customize whole object line
+    MRVIEWER_API virtual bool drawObject_( Object& object, const std::string& uniqueStr, int depth );
+
+    /// function that draws collapsing header and process click on it
+    MRVIEWER_API bool drawObjectCollapsingHeader_( Object& object, const std::string& uniqueStr, bool hasRealChildren );
+
+    /// function that do click logic on object line (select/deselect/rename/open context)
+    MRVIEWER_API void processItemClick_( Object& object, const std::vector<std::shared_ptr<Object>>& selected );
 
     /// payload object will be moved
-    void makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload );
+    MRVIEWER_API void makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload );
+
     /// checking the need to draw a target
-    bool needDragDropTarget_();
+    MRVIEWER_API bool needDragDropTarget_();
+
     /// "target" and "before" are "to" and "before" of SceneReorder struct
     /// betweenLine - if true requires to draw line (between two objects in tree, for ImGui to have target)
     /// counter - unique number of object in tree (needed for ImGui to differ new lines)
-    void makeDragDropTarget_( Object& target, bool before, bool betweenLine, const std::string& uniqueStr );
+    MRVIEWER_API void makeDragDropTarget_( Object& target, bool before, bool betweenLine, const std::string& uniqueStr );
+
+    // draw visibility checkbox and call ImGui::SameLine at the end
+    MRVIEWER_API void drawObjectVisibilityCheckbox_( Object& object, const std::string& uniqueStr );
+
+    bool showNewSelectedObjects_ = true;
+    bool deselectNewHiddenObjects_ = false;
+private:
+    void drawObjectsList_();
+
     float getDrawDropTargetHeight_() const { return 4.f * menuScaling_; }
     void reorderSceneIfNeeded_();
 
@@ -97,11 +113,6 @@ private:
                                            const std::vector<std::shared_ptr<Object>>& selected,
                                            const std::vector<std::shared_ptr<Object>>& all );
     void updateSelection_( Object* objPtr, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all );
-
-    float menuScaling_ = 1.f;
-
-    bool showNewSelectedObjects_ = true;
-    bool deselectNewHiddenObjects_ = false;
 
     bool dragTrigger_ = false;
     bool clickTrigger_ = false;
@@ -136,6 +147,8 @@ private:
     // flag to know if we are dragging objects now or not
     bool dragObjectsMode_{ false };
 
+protected:
+    float menuScaling_ = 1.f;
     std::unordered_map<const Object*, bool> sceneOpenCommands_;
 };
 

@@ -112,6 +112,11 @@ bool SceneObjectsListDrawer::collapsingHeader_( const std::string& uniqueName, I
     return ImGui::CollapsingHeader( uniqueName.c_str(), flags );
 }
 
+std::string SceneObjectsListDrawer::objectLineStrId_( const Object& object, const std::string& uniqueStr )
+{
+    return object.name() + "##" + uniqueStr;
+}
+
 void SceneObjectsListDrawer::changeSelection( bool isDown, bool isShift )
 {
     const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
@@ -347,10 +352,10 @@ void SceneObjectsListDrawer::drawObjectsList_()
             }
 
             skippableRenderer.draw( frameHeight, itemSpacingY,
-            [&] { isOpen = drawObject_( object, uniqueStr ); },
+            [&] { isOpen = drawObject_( object, uniqueStr, curentDepth ); },
             [&]
             {
-                isOpen = ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( ( object.name() + "##" + uniqueStr ).c_str() ),
+                isOpen = ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( objectLineStrId_( object, uniqueStr ).c_str() ),
                     ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) );
             } );
 
@@ -392,7 +397,7 @@ void SceneObjectsListDrawer::drawObjectsList_()
     skippableRenderer.endDraw();
 }
 
-bool SceneObjectsListDrawer::drawObject_( Object& object, const std::string& uniqueStr )
+bool SceneObjectsListDrawer::drawObject_( Object& object, const std::string& uniqueStr, int /*depth*/ )
 {
     const bool hasRealChildren = objectHasSelectableChildren( object );
 
@@ -424,7 +429,6 @@ void SceneObjectsListDrawer::drawObjectVisibilityCheckbox_( Object& object, cons
 
 bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const std::string& uniqueStr, bool hasRealChildren )
 {
-    const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
     const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
     const bool isSelected = object.isSelected();
 
@@ -448,7 +452,7 @@ bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const 
         ( hasRealChildren ? ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_Bullet ) |
         ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 );
 
-    const bool isOpen = collapsingHeader_( ( object.name() + "##" + uniqueStr ).c_str(), flags );
+    const bool isOpen = collapsingHeader_( objectLineStrId_( object, uniqueStr ).c_str(), flags );
 
     ImGui::PopStyleColor( isSelected ? 2 : 1 );
     ImGui::PopStyleVar();
@@ -457,25 +461,32 @@ bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const 
     makeDragDropTarget_( object, false, false, uniqueStr );
 
     if ( ImGui::IsItemHovered() )
-    {
-        if ( ImGui::IsMouseDoubleClicked( 0 ) )
-        {
-            if ( auto menu = getViewerInstance().getMenuPlugin() )
-                menu->tryRenameSelectedObject();
-        }
+        processItemClick_( object, selected );    
 
-        bool pressed = !isSelected && ( ImGui::IsMouseClicked( 0 ) || ImGui::IsMouseClicked( 1 ) );
-        bool released = isSelected && !dragTrigger_ && !clickTrigger_ && ImGui::IsMouseReleased( 0 );
-
-        if ( pressed )
-            clickTrigger_ = true;
-        if ( isSelected && clickTrigger_ && ImGui::IsMouseReleased( 0 ) )
-            clickTrigger_ = false;
-
-        if ( pressed || released )
-            updateSelection_( &object, selected, all );
-    }
     return isOpen;
+}
+
+void SceneObjectsListDrawer::processItemClick_( Object& object, const std::vector<std::shared_ptr<Object>>& selected )
+{
+    const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    auto isSelected = object.isSelected();
+
+    if ( ImGui::IsMouseDoubleClicked( 0 ) )
+    {
+        if ( auto menu = getViewerInstance().getMenuPlugin() )
+            menu->tryRenameSelectedObject();
+    }
+
+    bool pressed = !isSelected && ( ImGui::IsMouseClicked( 0 ) || ImGui::IsMouseClicked( 1 ) );
+    bool released = isSelected && !dragTrigger_ && !clickTrigger_ && ImGui::IsMouseReleased( 0 );
+
+    if ( pressed )
+        clickTrigger_ = true;
+    if ( isSelected && clickTrigger_ && ImGui::IsMouseReleased( 0 ) )
+        clickTrigger_ = false;
+
+    if ( pressed || released )
+        updateSelection_( &object, selected, all );
 }
 
 void SceneObjectsListDrawer::makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload )
@@ -486,7 +497,7 @@ void SceneObjectsListDrawer::makeDragDropSource_( const std::vector<std::shared_
     if ( std::any_of( payload.begin(), payload.end(), std::mem_fn( &Object::isParentLocked ) ) )
         return; // Those objects don't want their parents to be changed.
 
-    if ( ImGui::BeginDragDropSource( ImGuiDragDropFlags_AcceptNoDrawDefaultRect ) )
+    if ( ImGui::BeginDragDropSource( ImGuiDragDropFlags_AcceptNoDrawDefaultRect | ImGuiDragDropFlags_SourceNoDisableHover ) )
     {
         dragTrigger_ = true;
 
@@ -533,7 +544,6 @@ void SceneObjectsListDrawer::makeDragDropTarget_( Object& target, bool before, b
         {
             ImGui::SetCursorPos( curPos );
             auto width = ImGui::GetContentRegionAvail().x;
-            spdlog::debug( "TARGET: {}", target.name() );
             ImGui::ColorButton( ( "##ColoredInternalDragDropArea" + uniqueStr ).c_str(),
                 ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered],
                 0, ImVec2( width, 4 * menuScaling_ ) );

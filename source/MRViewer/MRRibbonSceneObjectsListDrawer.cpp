@@ -52,7 +52,7 @@ void RibbonSceneObjectsListDrawer::initRibbonMenu( RibbonMenu* ribbonMenu )
     ribbonMenu_ = ribbonMenu;
 }
 
-void RibbonSceneObjectsListDrawer::drawCustomObjectPrefixInScene_( const Object& obj )
+void RibbonSceneObjectsListDrawer::drawCustomObjectPrefixInScene_( const Object& obj, bool opened )
 {
     if ( !ribbonMenu_ )
         return;
@@ -60,7 +60,10 @@ void RibbonSceneObjectsListDrawer::drawCustomObjectPrefixInScene_( const Object&
     const auto& fontManager = ribbonMenu_->getFontManager();
 
     auto imageSize = ImGui::GetFrameHeight() - 2 * menuScaling_;
-    auto* imageIcon = RibbonIcons::findByName( obj.typeName(), imageSize,
+    std::string name = obj.typeName();
+    if ( opened && name == Object::TypeName() )
+        name += "_open";
+    auto* imageIcon = RibbonIcons::findByName( name, imageSize,
                                                RibbonIcons::ColorType::White,
                                                RibbonIcons::IconType::ObjectTypeIcon );
 
@@ -146,9 +149,9 @@ bool RibbonSceneObjectsListDrawer::drawObject_( Object& object, const std::strin
 {
     const bool hasRealChildren = objectHasSelectableChildren( object );
 
-    auto res = drawTreeOpenedState_( object, !hasRealChildren, uniqueStr, depth );
+    auto isOpened = drawTreeOpenedState_( object, !hasRealChildren, uniqueStr, depth );
     ImGui::SameLine();
-    drawObjectLine_( object, uniqueStr );
+    drawObjectLine_( object, uniqueStr, isOpened );
 
     // update last sibling
     if ( lastDrawnSibling_.size() <= depth )
@@ -156,7 +159,7 @@ bool RibbonSceneObjectsListDrawer::drawObject_( Object& object, const std::strin
     lastDrawnSibling_[depth] = { ImGui::GetCursorScreenPos().y,currentElementId_ };
     ++currentElementId_;
 
-    return res;
+    return isOpened;
 }
 
 bool RibbonSceneObjectsListDrawer::drawSkippedObject_( Object& object, const std::string& uniqueStr, int depth )
@@ -231,7 +234,7 @@ bool RibbonSceneObjectsListDrawer::drawTreeOpenedState_( Object& object, bool le
     return isOpen;
 }
 
-void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::string& uniqueStr )
+void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::string& uniqueStr, bool opened )
 {
     const bool isSelected = object.isSelected();
 
@@ -245,6 +248,8 @@ void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::s
     auto startPos = ImGui::GetCursorPos();
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
     ImGui::PushStyleColor( ImGuiCol_Button, isSelected ? ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame ) : ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ) );
+    if ( !isSelected )
+        ImGui::PushStyleColor( ImGuiCol_ButtonHovered, Color::gray().scaledAlpha( 0.2f ).getUInt32() );
     UI::ButtonCustomizationParams params;
     params.forceImGuiBackground = true;
     UI::buttonEx( ( "##SelectBtn_" + object.name() + "_" + uniqueStr ).c_str(), true, Vector2f( -1, cFrameHeight ), ImGuiButtonFlags_AllowOverlap, params );
@@ -252,11 +257,11 @@ void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::s
     {
         auto rect = context->LastItemData.Rect;
         drawList->PushClipRect( window->InnerRect.Min, window->InnerRect.Max );
-        drawList->AddRect( rect.Min, rect.Max, ImGui::GetColorU32( ImGuiCol_ButtonHovered ), style.FrameRounding, 0, 2 * menuScaling_ );
+        drawList->AddRect( rect.Min, rect.Max, ImGui::GetColorU32( ImGuiCol_ButtonActive ), style.FrameRounding, 0, 2 * menuScaling_ );
         drawList->PopClipRect();
 
     }
-    ImGui::PopStyleColor();
+    ImGui::PopStyleColor( !isSelected ? 2 : 1 );
     ImGui::PopStyleVar();
     
     const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
@@ -273,11 +278,11 @@ void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::s
     auto lineObjectData = context->LastItemData;
 
     // draw text
-    if ( isSelected || frameHovered )
+    if ( isSelected )
         ImGui::PushStyleColor( ImGuiCol_Text, 0xffffffff );
     drawList->PushClipRect( window->InnerClipRect.Min, window->InnerClipRect.Max - ImVec2( cFrameHeight, 0 ) );
     ImGui::SetCursorPos( startPos + ImVec2( style.FramePadding.x, 0 ) );
-    drawCustomObjectPrefixInScene_( object );
+    drawCustomObjectPrefixInScene_( object, opened );
     ImGui::SetCursorPosY( startPos.y + style.FramePadding.y );
     ImGui::Text( "%s", object.name().c_str() );
     drawList->PopClipRect();
@@ -285,7 +290,7 @@ void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::s
     // draw visibility button
     ImGui::SetCursorPos( ImVec2( window->InnerClipRect.Max.x - window->Pos.x - cFrameHeight - style.FramePadding.x, startPos.y ) );
     drawEyeButton_( object, uniqueStr, frameHovered );
-    if ( isSelected || frameHovered )
+    if ( isSelected )
         ImGui::PopStyleColor();
 
     // set back last item as if it was main line for further checks

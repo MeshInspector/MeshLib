@@ -1,4 +1,5 @@
 #pragma once
+#include "MRMesh/MRMeshFwd.h"
 #include "MRSceneObjectsListDrawer.h"
 
 namespace MR
@@ -27,6 +28,7 @@ protected:
     MRVIEWER_API virtual std::string objectLineStrId_( const Object& object, const std::string& uniqueStr ) override;
 
     MRVIEWER_API virtual bool drawObject_( Object& object, const std::string& uniqueStr, int depth ) override;
+    MRVIEWER_API virtual bool drawSkippedObject_( Object& object, const std::string& uniqueStr, int depth ) override;
 private:
     // return icon (now it is symbol in icons font) based on typename
     MRVIEWER_API virtual const char* getSceneItemIconByTypeName_( const std::string& typeName ) const;
@@ -35,8 +37,16 @@ private:
     void drawObjectLine_( Object& object, const std::string& uniqueStr );
     void drawEyeButton_( Object& object, const std::string& uniqueStr, bool frameHovered );
 
-    int currentObjectLineCounter_{ 0 };
-    std::vector<int> lastDrawnSiblingMap_;
+    void drawHierarhyLine_( const Vector2f& startScreenPos, int depth, bool skipped );
+    
+    struct LastDepthInfo
+    {
+        float screenPosY{ 0.0f };
+        int id{ 0 };
+    };
+    // depth -> pos Y of last element of this depth
+    std::vector<LastDepthInfo> lastDrawnSibling_;
+    int currentElementId_{ 0 };
     RibbonMenu* ribbonMenu_ = nullptr;
     bool closeContextOnChange_ = true;
 };

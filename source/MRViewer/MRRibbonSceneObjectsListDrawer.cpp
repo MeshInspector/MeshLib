@@ -40,15 +40,15 @@ namespace MR
 
 void RibbonSceneObjectsListDrawer::draw( float height, float scaling )
 {
-    currentObjectLineCounter_ = 1;
-    lastDrawnSiblingMap_.clear();
+    currentElementId_ = 1;
+    lastDrawnSibling_.clear();
     SceneObjectsListDrawer::draw( height, scaling );
 }
 
 void RibbonSceneObjectsListDrawer::initRibbonMenu( RibbonMenu* ribbonMenu )
 {
     // lets assume that will not have depth more than 32 most times
-    lastDrawnSiblingMap_.reserve( 32 );
+    lastDrawnSibling_.reserve( 32 );
     ribbonMenu_ = ribbonMenu;
 }
 
@@ -145,19 +145,25 @@ std::string RibbonSceneObjectsListDrawer::objectLineStrId_( const Object& object
 bool RibbonSceneObjectsListDrawer::drawObject_( Object& object, const std::string& uniqueStr, int depth )
 {
     const bool hasRealChildren = objectHasSelectableChildren( object );
-    
+
     auto res = drawTreeOpenedState_( object, !hasRealChildren, uniqueStr, depth );
     ImGui::SameLine();
     drawObjectLine_( object, uniqueStr );
 
-
     // update last sibling
-    if ( lastDrawnSiblingMap_.size() <= depth )
-        lastDrawnSiblingMap_.resize( depth + 1 );
-    lastDrawnSiblingMap_[depth] = currentObjectLineCounter_;
-    ++currentObjectLineCounter_;
+    if ( lastDrawnSibling_.size() <= depth )
+        lastDrawnSibling_.resize( depth + 1 );
+    lastDrawnSibling_[depth] = { ImGui::GetCursorScreenPos().y,currentElementId_ };
+    ++currentElementId_;
 
     return res;
+}
+
+bool RibbonSceneObjectsListDrawer::drawSkippedObject_( Object& object, const std::string& uniqueStr, int depth )
+{
+    auto startScreenPos = ImGui::GetCursorScreenPos();
+    drawHierarhyLine_( startScreenPos, depth, true );
+    return SceneObjectsListDrawer::drawSkippedObject_( object, uniqueStr, depth );
 }
 
 const char* RibbonSceneObjectsListDrawer::getSceneItemIconByTypeName_( const std::string& typeName ) const
@@ -220,38 +226,7 @@ bool RibbonSceneObjectsListDrawer::drawTreeOpenedState_( Object& object, bool le
     ImGui::PopStyleVar();
 
     // draw hierarchy lines
-    if ( depth > 0 )
-    {
-        int numSteps = 0;
-        if ( lastDrawnSiblingMap_.size() > depth )
-        {
-            auto lastParent = lastDrawnSiblingMap_[depth - 1];
-            if ( lastParent == 0 )
-            {
-                // parent was skipped, so it is over the screen
-                numSteps = -1;
-            }
-            else if ( lastParent + 1 != currentObjectLineCounter_ )
-            {
-                // otherwise it first child
-                numSteps = currentObjectLineCounter_ - lastDrawnSiblingMap_[depth];
-            }
-        }
-
-        auto drawList = window->DrawList;
-        auto pos0 = ImVec2( startScreenPos.x - ImGui::GetStyle().FramePadding.x * 0.75f, startScreenPos.y + cFrameHeight * 0.5f );
-        auto pos1 = ImVec2( startScreenPos.x - ( cFrameHeight - 2 * menuScaling_ ) * 0.5f, pos0.y );
-        auto pos2 = ImVec2( pos1.x, pos1.y );
-        if ( numSteps < 0 )
-            pos2.y = 0.0f;
-        else if ( numSteps == 0 )
-            pos2.y -= cFrameHeight * 0.5f;
-        else
-            pos2.y -= numSteps * ( cFrameHeight + ImGui::GetStyle().ItemSpacing.y + 1 );
-            
-        drawList->AddLine( pos0, pos1, Color::gray().getUInt32(), menuScaling_ );
-        drawList->AddLine( pos1, pos2, Color::gray().getUInt32(), menuScaling_ );
-    }
+    drawHierarhyLine_( startScreenPos, depth, false );
 
     return isOpen;
 }
@@ -373,6 +348,53 @@ void RibbonSceneObjectsListDrawer::drawEyeButton_( Object& object, const std::st
         if ( deselectNewHiddenObjects_ && !object.isVisible( viewer.getPresentViewports() ) )
             object.select( false );
     }
+}
+
+void RibbonSceneObjectsListDrawer::drawHierarhyLine_( const Vector2f& startScreenPos, int depth, bool skipped )
+{
+    if ( depth <= 0 )
+        return;
+
+    auto numDepths = lastDrawnSibling_.size();
+
+    if ( skipped && numDepths < depth )
+        return;
+
+    int numSteps = 0;
+    if ( numDepths > depth )
+    {
+        auto lastParent = lastDrawnSibling_[depth - 1].id;
+        if ( lastParent == 0 )
+        {
+            // parent was skipped, so it is over the screen
+            numSteps = -1;
+        }
+        else if ( lastParent + 1 != currentElementId_ )
+        {
+            // otherwise it first child
+            numSteps = currentElementId_ - lastDrawnSibling_[depth].id;
+        }
+    }
+
+    const float cFrameHeight = ImGui::GetFrameHeight();
+    auto drawList = ImGui::GetWindowDrawList();
+
+    auto pos0 = ImVec2( startScreenPos.x - ImGui::GetStyle().FramePadding.x * 0.75f, startScreenPos.y + cFrameHeight * 0.5f );
+    auto pos1 = ImVec2( startScreenPos.x - cFrameHeight * 0.5f, pos0.y );
+    auto pos2 = ImVec2( pos1.x, pos1.y );
+    if ( numSteps < 0 )
+        pos2.y = 0.0f;
+    else if ( numSteps == 0 )
+        pos2.y = numDepths < depth ? ( pos2.y - cFrameHeight * 0.5f ) : lastDrawnSibling_[depth - 1].screenPosY - cFrameHeight * 0.25f;
+    else
+        pos2.y = lastDrawnSibling_[depth].screenPosY - cFrameHeight;
+
+    drawList->AddLine( pos0, pos1, Color::gray().getUInt32(), menuScaling_ );
+    drawList->AddLine( pos1, pos2, Color::gray().getUInt32(), menuScaling_ );
+
+    if ( skipped )
+        lastDrawnSibling_.resize( depth - 1 );
+
 }
 
 }

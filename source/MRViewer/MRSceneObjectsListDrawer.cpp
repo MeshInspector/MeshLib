@@ -331,7 +331,6 @@ void SceneObjectsListDrawer::drawObjectsList_()
 
         {
             std::string uniqueStr = std::to_string( intptr_t( &object ) );
-            bool hasRealChildren = objectHasSelectableChildren( object );
             bool isOpen{ false };
 
             if ( needDragDropTarget_() )
@@ -353,11 +352,7 @@ void SceneObjectsListDrawer::drawObjectsList_()
 
             skippableRenderer.draw( frameHeight, itemSpacingY,
             [&] { isOpen = drawObject_( object, uniqueStr, curentDepth ); },
-            [&]
-            {
-                isOpen = ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( objectLineStrId_( object, uniqueStr ).c_str() ),
-                    ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) );
-            } );
+            [&] { isOpen = drawSkippedObject_( object, uniqueStr, curentDepth ); } );
 
             if ( object.isSelected() )
                 previousWasSelected = true;
@@ -404,6 +399,13 @@ bool SceneObjectsListDrawer::drawObject_( Object& object, const std::string& uni
     drawObjectVisibilityCheckbox_( object, uniqueStr );
     drawCustomObjectPrefixInScene_( object );
     return drawObjectCollapsingHeader_( object, uniqueStr, hasRealChildren );
+}
+
+bool SceneObjectsListDrawer::drawSkippedObject_( Object& object, const std::string& uniqueStr, int )
+{
+    bool hasRealChildren = objectHasSelectableChildren( object );
+    return ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( objectLineStrId_( object, uniqueStr ).c_str() ),
+                    ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) );
 }
 
 void SceneObjectsListDrawer::drawObjectVisibilityCheckbox_( Object& object, const std::string& uniqueStr )

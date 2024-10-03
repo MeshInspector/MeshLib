@@ -12,6 +12,7 @@
 #include "MRViewer/MRImGuiVectorOperators.h"
 #include "MRRibbonMenu.h"
 #include "MRUITestEngine.h"
+#include "MRMouseController.h"
 #include <imgui_internal.h>
 
 namespace
@@ -43,11 +44,11 @@ void RibbonNotifier::pushNotification( const RibbonNotification& notification )
 
 void RibbonNotifier::draw( float scaling, float scenePosX, float topPanelHeight )
 {
+    drawHistoryButton_( scaling, scenePosX );
     if ( historyMode_ )
         drawHistory_( scaling, scenePosX, topPanelHeight );
     else
         drawFloating_( scaling, scenePosX );
-    drawHistoryButton_( scaling, scenePosX );
     filterInvalid_( -1 );
 }
 
@@ -166,6 +167,27 @@ void RibbonNotifier::drawHistory_( float scaling, float scenePosX, float topPane
         prevHistoryScrollMax_ = window->ScrollMax.y;
     }
 
+    auto lostFoucsClickCheck = [] ()->bool
+    {
+        if ( ImGui::IsWindowAppearing() )
+            return false;
+        if ( ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows ) )
+            return false;
+        if ( ImGui::IsMouseClicked( ImGuiMouseButton_Left ) || ImGui::IsMouseClicked( ImGuiMouseButton_Right ) || ImGui::IsMouseClicked( ImGuiMouseButton_Right ) )
+            return true;
+        if ( ImGui::GetIO().WantCaptureMouse )
+            return false;
+        const auto& mCtrl = getViewerInstance().mouseController();
+        if ( mCtrl.isPressed( MouseButton::Left ) || mCtrl.isPressed( MouseButton::Right ) || mCtrl.isPressed( MouseButton::Middle ) )
+            return true;
+        return false;
+    };
+
+    if ( lostFoucsClickCheck() )
+    {
+        historyMode_ = false;
+    }
+
     ImGui::End();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar( 3 );
@@ -216,6 +238,7 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
         windowPos.y += ( parentWindow->ScrollMax.y - parentWindow->Scroll.y );
 
     ImGui::SetNextWindowPos( windowPos, ImGuiCond_Always, ImVec2( 0.f, 1.0f ) );
+    ImGui::SetNextWindowSizeConstraints( ImVec2( settings.width, 1 ), ImVec2( settings.width, settings.width ) );
     ImGui::SetNextWindowSize( ImVec2( settings.width, -1 ), ImGuiCond_Always );
 
     ImGuiWindowFlags flags =
@@ -264,6 +287,7 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
     const auto bigFontSize = RibbonFontManager::getFontSizeByType( RibbonFontManager::FontType::SemiBold ) * scaling;
     cirlcePos.x += radius;
     cirlcePos.y += bigFontSize * 0.5f + radius;
+    cirlcePos.y += window->Scroll.y;
     drawList->AddCircleFilled( cirlcePos, 3.0f * scaling, notificationParams[int( notification.type )].second );
 
     const bool changeHeaderColor = notification.type == NotificationType::Error || notification.type == NotificationType::Warning;
@@ -343,11 +367,16 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
 
     if ( hasCloseBtn )
     {
+        if ( settings.historyMode )
+            drawList->PushClipRect( parentWindow->InnerClipRect.Min, parentWindow->InnerClipRect.Max );
+        else
+            drawList->PushClipRectFullScreen();
+
         ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
         ImGui::PushStyleColor( ImGuiCol_Button, 0 );
         ImGui::PushStyleColor( ImGuiCol_ButtonActive, 0 );
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.5, 0.5, 0.5, 0.5 ) );
-        ImGui::SetCursorPos( ImVec2( settings.width - closeBtnPadding - closeBtnSize, closeBtnPadding ) );
+        ImGui::SetCursorPos( ImVec2( settings.width - closeBtnPadding - closeBtnSize, closeBtnPadding ) + window->Scroll );
         auto screenPos = ImGui::GetCursorScreenPos();
         if ( ImGui::Button( "##closeNotification", ImVec2( closeBtnSize, closeBtnSize ) ) )
             returnValue = false;
@@ -362,6 +391,7 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
             Color::gray().getUInt32(), scaling );
         ImGui::PopStyleColor( 3 );
         ImGui::PopStyleVar();
+        drawList->PopClipRect();
     }
 
     if ( hasCounter )

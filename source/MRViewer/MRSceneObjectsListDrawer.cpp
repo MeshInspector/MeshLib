@@ -397,7 +397,7 @@ bool SceneObjectsListDrawer::drawObject_( Object& object, const std::string& uni
     const bool hasRealChildren = objectHasSelectableChildren( object );
 
     drawObjectVisibilityCheckbox_( object, uniqueStr );
-    drawCustomObjectPrefixInScene_( object );
+    drawCustomObjectPrefixInScene_( object, false );
     return drawObjectCollapsingHeader_( object, uniqueStr, hasRealChildren );
 }
 

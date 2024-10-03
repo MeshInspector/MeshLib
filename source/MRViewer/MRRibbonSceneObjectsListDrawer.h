@@ -21,7 +21,7 @@ public:
     bool getCloseContextOnChange() { return closeContextOnChange_; }
 
 protected:
-    MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& obj ) override;
+    MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& obj, bool opened ) override;
     MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected, const std::string& uniqueStr ) override;
     MRVIEWER_API virtual bool collapsingHeader_( const std::string& uniqueName, ImGuiTreeNodeFlags flags ) override;
 
@@ -34,7 +34,7 @@ private:
     MRVIEWER_API virtual const char* getSceneItemIconByTypeName_( const std::string& typeName ) const;
 
     bool drawTreeOpenedState_( Object& object, bool leaf, const std::string& uniqueStr, int depth );
-    void drawObjectLine_( Object& object, const std::string& uniqueStr );
+    void drawObjectLine_( Object& object, const std::string& uniqueStr, bool opened );
     void drawEyeButton_( Object& object, const std::string& uniqueStr, bool frameHovered );
 
     void drawHierarhyLine_( const Vector2f& startScreenPos, int depth, bool skipped );

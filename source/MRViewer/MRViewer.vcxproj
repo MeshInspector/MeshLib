@@ -345,6 +345,7 @@
     <Image Include="resource\object_icons\X1\ObjectMesh.png" />
     <Image Include="resource\object_icons\X1\ObjectPoints.png" />
     <Image Include="resource\object_icons\X1\ObjectVoxels.png" />
+    <Image Include="resource\object_icons\X1\Object_open.png" />
     <Image Include="resource\object_icons\X1\PlaneObject.png" />
     <Image Include="resource\object_icons\X1\PointObject.png" />
     <Image Include="resource\object_icons\X1\RadiusMeasurementObject.png" />
@@ -363,6 +364,7 @@
     <Image Include="resource\object_icons\X3\ObjectMesh.png" />
     <Image Include="resource\object_icons\X3\ObjectPoints.png" />
     <Image Include="resource\object_icons\X3\ObjectVoxels.png" />
+    <Image Include="resource\object_icons\X3\Object_open.png" />
     <Image Include="resource\object_icons\X3\PlaneObject.png" />
     <Image Include="resource\object_icons\X3\PointObject.png" />
     <Image Include="resource\object_icons\X3\RadiusMeasurementObject.png" />

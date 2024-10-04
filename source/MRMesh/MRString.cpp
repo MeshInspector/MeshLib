@@ -18,10 +18,28 @@ size_t findSubstringCaseInsensitive( const std::string& string, const std::strin
 }
 
 int calcDamerauLevenshteinDistance( const std::string& stringA, const std::string& stringB,
-    bool caseSensitive )
+    bool caseSensitive, int* outLeftRightAddition )
 {
-    std::vector<int> map( ( stringA.size() + 1 ) * ( stringB.size() + 1 ) );
-    auto at = [&map, width = int( stringA.size() + 1 )] ( int i, int j )->int&
+    enum class PatchType
+    {
+        None = -1,
+        Deletion,
+        Insertion,
+        Substitution,
+        Transposition,
+        Count
+    };
+    struct SumPatchWeight
+    {
+        PatchType type{ PatchType::None };
+        int prevI{ 0 };
+        int prevJ{ 0 };
+        int w{ 0 };
+    };
+
+    std::vector<SumPatchWeight> map( ( stringA.size() + 1 ) * ( stringB.size() + 1 ) );
+
+    auto at = [&map, width = int( stringA.size() + 1 )] ( int i, int j )->SumPatchWeight&
     {
         return map[i + j * width];
     };
@@ -39,25 +57,88 @@ int calcDamerauLevenshteinDistance( const std::string& stringA, const std::strin
         for ( int j = 0; j < stringB.size() + 1; ++j )
         {
             if ( i == 0 || j == 0 )
-                at( i, j ) = std::max( i, j );
-            else if ( i > 1 && j > 1 && copm( i, j - 1 ) && copm( i - 1, j ) )
             {
-                at( i, j ) = std::min( {
-                    at( i - 1,j ) + 1,
-                    at( i ,j - 1 ) + 1,
-                    at( i - 1,j - 1 ) + ( copm( i, j ) ? 0 : 1 ),
-                    at( i - 2,j - 2 ) + 1 } );
+                auto& sw = at( i, j );
+                if ( i < j )
+                {
+                    sw.prevJ = j - 1;
+                    sw.type = PatchType::Insertion;
+                }
+                else if ( j < i )
+                {
+                    sw.prevI = i - 1;
+                    sw.type = PatchType::Deletion;
+                }
+                sw.w = std::max( i, j );
             }
             else
             {
-                at( i, j ) = std::min( {
-                    at( i - 1,j ) + 1,
-                    at( i ,j - 1 ) + 1,
-                    at( i - 1,j - 1 ) + ( copm( i, j ) ? 0 : 1 ) } );
+                std::array<int, int( PatchType::Count )> candidates = { INT_MAX ,INT_MAX ,INT_MAX ,INT_MAX };
+                candidates[int( PatchType::Deletion )] = at( i - 1, j ).w + 1; // deletion
+                candidates[int( PatchType::Insertion )] = at( i, j - 1 ).w + 1; // insertion
+                candidates[int( PatchType::Substitution )] = at( i - 1, j - 1 ).w + ( copm( i, j ) ? 0 : 1 ); // substitution
+                if ( i > 1 && j > 1 && copm( i, j - 1 ) && copm( i - 1, j ) )
+                    candidates[int( PatchType::Transposition )] = at( i - 2, j - 2 ).w + 1; // transposition
+
+                auto minE = std::min_element( candidates.begin(), candidates.end() );
+                auto& sw = at( i, j );
+                sw.type = PatchType( std::distance( candidates.begin(), minE ) );
+                sw.w = *minE;
+                if ( sw.type == PatchType::Deletion )
+                {
+                    sw.prevI = i - 1;
+                    sw.prevJ = j;
+                }
+                else if ( sw.type == PatchType::Insertion )
+                {
+                    sw.prevI = i;
+                    sw.prevJ = j - 1;
+                }
+                else if ( sw.type == PatchType::Substitution )
+                {
+                    sw.prevI = i - 1;
+                    sw.prevJ = j - 1;
+                }
+                else if ( sw.type == PatchType::Transposition )
+                {
+                    sw.prevI = i - 2;
+                    sw.prevJ = j - 2;
+                }
             }
         }
     }
-    return at( int( stringA.size() ), int( stringB.size() ) );
+    if ( outLeftRightAddition )
+    {
+        *outLeftRightAddition = 0;
+        PatchType lastPatch = PatchType::Count;
+        bool firstStrike = true;
+        int i = int( stringA.size() );
+        int j = int( stringB.size() );
+        int currentInsertionStrike = 0;
+        for ( ;; )
+        {
+            const auto& sw = at( i, j );
+            lastPatch = sw.type;
+            if ( lastPatch == PatchType::None )
+                break;
+            if ( lastPatch == PatchType::Insertion )
+            {
+                if ( firstStrike )
+                    ( *outLeftRightAddition )++;
+                else
+                    ++currentInsertionStrike;
+            }
+            else
+            {
+                firstStrike = false;
+                currentInsertionStrike = 0;
+            }
+            i = sw.prevI;
+            j = sw.prevJ;
+        }
+        ( *outLeftRightAddition ) += currentInsertionStrike;
+    }
+    return at( int( stringA.size() ), int( stringB.size() ) ).w;
 }
 
 std::vector<std::string> split( const std::string& string, const std::string& delimiter )

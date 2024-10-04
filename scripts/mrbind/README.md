@@ -152,3 +152,7 @@ You can find some undocumented flags/variables in `generate.mk`.
   * Make sure you're not linking against Python **and** do use `-Xlinker -undefined -Xlinker dynamic_lookup` linker flags. The `generate.mk` should already do it correctly, just keep this in mind. Also transitively linking Python seems to be fine (`-lMRPython` is fine).
 
     Failure to do this will have no effect when importing the module directly, but will segfault when importing it as a wheel, **or** when using a wrong Python version even without the wheel.
+
+* **`cannot initialize type "expected_...": an object with that name is already defined`**
+
+  Likely a conflict between `std::expected` and `tl::expected` (usually MRMesh using the latter while MRBind is using the former). Try `EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0'` to make MRBind switch to `tl::expected.

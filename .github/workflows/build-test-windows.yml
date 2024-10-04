@@ -158,6 +158,7 @@ jobs:
 
       - name: Build MRBind
         if: ${{inputs.mrbind}}
+        shell: cmd
         env:
           # Need this env variable because our .bat files assume msys2 installed directly to `C:\msys64_meshlib_mrbind`,
           #   and the setup-msys2 action always adds the `...\msys64` component at the end, and it's a tiny bit wasteful to move it around when running in the CI.

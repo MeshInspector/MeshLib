@@ -12,13 +12,12 @@ if (
     sys.path.insert(0, os.environ["MeshLibPyModulesPath"])
     working_directory = os.environ["MeshLibPyModulesPath"]
 
+# Check if we're using the new parsed bindings.
 is_new_binding = True
+try:
+    mrmesh.UniformSamplingSettings
+except NameError:
+    is_new_binding = False
 
-if os.environ.get('USE_MESHLIB2_PY', '0') != '0':
-    from meshlib2 import mrmeshpy as mrmesh
-    from meshlib2 import mrmeshnumpy
-else:
-    if os.environ.get('OLD_MESHLIB_BINDINGS', '0') != '0':
-        is_new_binding = False
-    import meshlib.mrmeshpy as mrmesh
-    import meshlib.mrmeshnumpy as mrmeshnumpy
+import meshlib.mrmeshpy as mrmesh
+import meshlib.mrmeshnumpy as mrmeshnumpy

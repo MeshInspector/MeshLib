@@ -14,6 +14,10 @@ on:
       UPLOAD_ARTIFACTS:
         required: true
         type: boolean
+      mrbind:
+        default: true
+        required: false
+        type: boolean
 
 env:
   VCPKG-VERSION: '2024.07.12'
@@ -141,6 +145,34 @@ jobs:
         if:   matrix.runner == 'windows-2022'
         run: msbuild -m source\MeshLibDotNet.sln -p:Configuration=${{ matrix.config }}
 
+        # Install MSYS2 using their github action instead of ours `install_deps_windows_msys2.bat`. Locally users should use that bat file.
+        # I'm expecting the official action to be better suited for CI needs (e.g. they promise some form of caching in the readme), but I didn't perform a proper comparison.
+      - name: Install MSYS2 for MRBind
+        uses: msys2/setup-msys2@v2
+        if: ${{inputs.mrbind}}
+        with:
+          msystem: clang64
+          install: make mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-clang-tools-extra mingw-w64-clang-x86_64-cmake
+          # Matching the location that `install_deps_windows_msys2.bat` uses, because that's what `install_mrbind_windows_msys2.bat` expects.
+          location: C:\msys64_meshlib_mrbind
+
+      - name: Build MRBind
+        if: ${{inputs.mrbind}}
+        env:
+          # Need this env variable because our .bat files assume msys2 installed directly to `C:\msys64_meshlib_mrbind`,
+          #   and the setup-msys2 action always adds the `...\msys64` component at the end, and it's a tiny bit wasteful to move it around when running in the CI.
+          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
+        run: calls ./scripts/mrbind/install_mrbind_windows_msys2.bat
+
+      - name: Generate and build MRBind bindings
+        shell: cmd
+        env:
+          MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64
+        # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
+        run: |
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
+          call ./scripts/mrbind/generate_win.bat -B --trace MODE=none
+
       - name: Run Start-and-Exit Tests
         working-directory: source\x64\${{ matrix.config }}
         run: .\MeshViewer.exe -tryHidden -noEventLoop -unloadPluginsAtEnd
@@ -158,8 +190,6 @@ jobs:
 
       - name: Python Sanity Tests
         working-directory: source\x64\${{ matrix.config }}
-        env:
-          OLD_MESHLIB_BINDINGS: 1
         run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_python'
 
       # cache managment: https://github.com/MeshInspector/MeshLib/actions/caches
@@ -178,7 +208,6 @@ jobs:
       - name: Python Regression Tests
         env:
           SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
-          OLD_MESHLIB_BINDINGS: 1
         if: ${{ env.INTERNAL_BUILD == 'true' }}
         working-directory: source\x64\${{ matrix.config }}
         run: py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_regression' -s ${{env.SMOKE}}

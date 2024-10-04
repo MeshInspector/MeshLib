@@ -28,6 +28,13 @@ cd ./build/Release
 cmake --install . --prefix "../../distr/meshlib-dev"
 cd -
 
+# Install the generated bindings, if needed.
+if [ ! -f "distr/meshlib-dev/bin/meshlib/mrmeshpy.so" ] && [ -f "build/Release/bin/meshlib/mrmeshpy.so" ]; then
+ printf "Installing the generated bindings...\n"
+ install -Dt distr/meshlib-dev/bin/meshlib build/Release/bin/meshlib/{mrmeshpy.so,__init__.py}
+ patchelf --set-rpath '' build/Release/bin/meshlib/mrmeshpy.so
+fi
+
 MR_INSTALL_LIB_DIR="/usr/local/lib/MeshLib"
 MR_INSTALL_INCLUDE_DIR="/usr/local/include/MeshLib"
 MR_INSTALL_RES_DIR="/usr/local/etc/MeshLib"

@@ -12,8 +12,6 @@ There's no rocket science in those, and you can do it manually instead of runnin
 
 Among other things, the scripts can do following:
 
-* On Linux and MacOS, create `~/mrbind` to build MRBind in.
-
 * On Ubuntu, add [the LLVM repository](https://apt.llvm.org/) to install the latest Clang and libclang from.
 
 * On Windows, install MSYS2 to `C:\msys64_meshlib_mrbind`.
@@ -36,7 +34,7 @@ Among other things, the scripts can do following:
 
     MRBind source code is at https://github.com/MeshInspector/mrbind/.
 
-    We build MRBind at `C:\msys64_meshlib_mrbind\home\username\mrbind`, but you can build it elsewhere manually.
+    We build MRBind at `MeshLib/mrbind`, but you can build it elsewhere manually.
 
     We build in [MSYS2 CLANG64](https://www.msys2.org/docs/environments/) environment, using MSYS2's Clang. Other compilers are not guaranteed to work.
 
@@ -55,7 +53,7 @@ Among other things, the scripts can do following:
 
     MRBind source code is at https://github.com/MeshInspector/mrbind/.
 
-    We build MRBind at `~/mrbind`, but you can build it elsewhere manually.
+    We build MRBind at `MeshLib/mrbind`, but you can build it elsewhere manually.
 
     You might want to pass `-DClang_DIR=/usr/lib/cmake/clang-VERSION` (where `VERSION` is the one mentioned in `preferred_clang_version.txt`) if you have several versions of libclang installed, because otherwise CMake might pick an arbitrary one (apparently it picks the first one returned by globbing `clang-*`, which might not be the latest one).
 
@@ -84,7 +82,7 @@ Among other things, the scripts can do following:
 
     MRBind source code is at https://github.com/MeshInspector/mrbind/.
 
-    We build MRBind at `~/mrbind`, but you can build it elsewhere manually.
+    We build MRBind at `MeshLib/mrbind`, but you can build it elsewhere manually.
 
     Make sure your PATH is correct, as explained in the previous step.
 
@@ -129,7 +127,7 @@ For simplicity, we compile the bindings with the same Clang that we use for pars
 
 ### Less common flags:
 
-* **Selecting MRBind installation:** if you installed MRBind to a non-default location (`~/mrbind` on Linux and MacOS, `C:\msys64_meshlib_mrbind\home\username\mrbind` on Windows), you must pass this location to `MRBIND_SOURCE=path/to/mrbind`.
+* **Selecting MRBind installation:** if you installed MRBind to a non-default location (`MeshLib/mrbind`), you must pass this location to `MRBIND_SOURCE=path/to/mrbind`.
 
     Additionally, if the MRBind binary is not at `$MRBIND_SOURCE/build/mrbind`, you must pass `MRBIND_EXE=...` (path to the executable itself, not its directory).
 

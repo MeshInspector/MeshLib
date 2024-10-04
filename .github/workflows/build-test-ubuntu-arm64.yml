@@ -109,6 +109,7 @@ jobs:
           MR_CMAKE_OPTIONS: >
             -DMR_USE_CPP_23=${{ matrix.use-cpp-23 }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
+            -DMESHLIB_BUILD_MRMESH_PY_LEGACY=ON
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}}-arm64 ${{matrix.config}} "${{matrix.compiler}}"
@@ -131,8 +132,6 @@ jobs:
 
       - name: Python Sanity Tests
         working-directory: ./build/${{ matrix.config }}/bin
-        env:
-          OLD_MESHLIB_BINDINGS: 1
         run: |
           . ./../../../.venv/bin/activate
           python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
@@ -160,7 +159,6 @@ jobs:
       - name: Python Regression Tests
         env:
           SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
-          OLD_MESHLIB_BINDINGS: 1
         if: ${{ env.INTERNAL_BUILD == 'true' }}
         working-directory: ./build/${{ matrix.config }}/bin
         run: |

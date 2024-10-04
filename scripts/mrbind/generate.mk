@@ -101,7 +101,7 @@ $(warning MeshLib build directory `$(abspath $(MESHLIB_SHLIB_DIR))` doesn't exis
 endif
 
 # Source directory of MRBind.
-MRBIND_SOURCE := ~/mrbind
+MRBIND_SOURCE := $(makefile_dir)../../mrbind
 
 # MRBind executable .
 MRBIND_EXE := $(MRBIND_SOURCE)/build/mrbind
@@ -208,8 +208,8 @@ INPUT_PROJECTS := MRMesh MRIOExtras MRSymbolMesh MRVoxels
 
 
 
-
-PACKAGE_NAME := meshlib2
+# You can change this to something else to rename the module, to have it side-by-side with the legacy one.
+PACKAGE_NAME := meshlib
 MODULE_OUTPUT_DIR := $(MESHLIB_SHLIB_DIR)/$(PACKAGE_NAME)
 
 # Those variables are for mrbind/scripts/apply_to_files.mk
@@ -267,7 +267,7 @@ COMPILER += -fvisibility=hidden
 # MacOS rpath is quirky: 1. Must use `-rpath,` instead of `-rpath=`. 2. Must specify the flag several times, apparently can't use
 #   `:` or `;` as a separators inside of one big flag. 3. As you've noticed, it uses `@loader_path` instead of `$ORIGIN`.
 rpath_origin := $(if $(IS_MACOS),@loader_path,$$ORIGIN)
-LINKER_FLAGS += -Wl,-rpath,'$(rpath_origin)' -Wl,-rpath,'$(rpath_origin)/..' -Wl,-rpath,$(call quote,$(abspath $(MODULE_OUTPUT_DIR))) -Wl,-rpath,$(call quote,$(abspath $(DEPS_LIB_DIR))) -Wl,-rpath,$(call quote,$(abspath $(MESHLIB_SHLIB_DIR)))
+LINKER_FLAGS += -Wl,-rpath,'$(rpath_origin)' -Wl,-rpath,'$(rpath_origin)/..' -Wl,-rpath,$(call quote,$(abspath $(MODULE_OUTPUT_DIR))) -Wl,-rpath,$(call quote,$(abspath $(MESHLIB_SHLIB_DIR))) -Wl,-rpath,$(call quote,$(abspath $(DEPS_LIB_DIR)))
 ifneq ($(IS_MACOS),)
 # Hmm.
 COMPILER_FLAGS_LIBCLANG += -resource-dir=$(strip $(call safe_shell,$(CXX_FOR_BINDINGS) -print-resource-dir))
@@ -324,8 +324,13 @@ $(LINKER_OUTPUT): | $(MODULE_OUTPUT_DIR)
 only-generate:
 	@$(MAKE) -f $(MRBIND_SOURCE)/scripts/apply_to_files.mk generate $(mrbind_vars)
 
-# Handwritten mrmeshnumpy.
+# Handwritten mrmeshnumpy. But only if we can't reuse it from the default build.
+ifeq ($(PACKAGE_NAME),meshlib)
+MRMESHNUMPY_MODULE :=
+else
 MRMESHNUMPY_MODULE := $(MODULE_OUTPUT_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX)
+endif
+ifneq ($(MRMESHNUMPY_MODULE),)
 $(MRMESHNUMPY_MODULE): | $(MODULE_OUTPUT_DIR)
 	@echo $(call quote,[Compiling] mrmeshnumpy)
 	@$(COMPILER) \
@@ -333,6 +338,7 @@ $(MRMESHNUMPY_MODULE): | $(MODULE_OUTPUT_DIR)
 		$(makefile_dir)/../../source/mrmeshnumpy/*.cpp \
 		$(COMPILER_FLAGS) $(LINKER_FLAGS) \
 		-DMRMESHNUMPY_PARENT_MODULE_NAME=$(PACKAGE_NAME)
+endif
 
 # The init script.
 INIT_SCRIPT := $(MODULE_OUTPUT_DIR)/__init__.py
@@ -352,9 +358,11 @@ $(MESHLIB_SHLIB_DIR)/__init__.py: $(INIT_SCRIPT)
 ALL_OUTPUTS += $(MESHLIB_SHLIB_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
 $(MESHLIB_SHLIB_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX): $(MODULE_OUTPUT_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
 	@cp $< $@
+ifneq ($(MRMESHNUMPY_MODULE),)
 ALL_OUTPUTS += $(MESHLIB_SHLIB_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX)
 $(MESHLIB_SHLIB_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX): $(MODULE_OUTPUT_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX)
 	@cp $< $@
+endif
 endif
 
 # All modules.

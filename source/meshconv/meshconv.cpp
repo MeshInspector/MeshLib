@@ -9,6 +9,7 @@
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRIOExtras/MRIOExtras.h"
 #pragma warning(push)
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
 #pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
@@ -87,6 +88,8 @@ bool doCommand( const boost::program_options::option& option, MR::Mesh& mesh )
 // can throw
 static int mainInternal( int argc, char **argv )
 {
+    MR::loadIOExtras();
+
     std::filesystem::path inFilePath;
     std::filesystem::path outFilePath;
 

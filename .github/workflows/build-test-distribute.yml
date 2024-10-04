@@ -252,7 +252,6 @@ jobs:
       release_id: ${{needs.versioning-and-release-url.outputs.release_id}}
 
   update-dev-documentation:
-    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
     runs-on: ubuntu-latest
     container:
       image: alpine:3.20

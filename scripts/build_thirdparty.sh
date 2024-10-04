@@ -8,7 +8,8 @@ set -eo pipefail
 
 dt=$(date '+%d-%m-%Y_%H:%M:%S');
 logfile="`pwd`/install_thirdparty_${dt}.log"
-printf "Thirdparty build script started.\nYou could find output in ${logfile}\n"
+echo "Thirdparty build script started."
+echo "You could find output in ${logfile}"
 
 # NOTE: realpath is not supported on older macOS versions
 BASE_DIR=$( cd "$( dirname "$0" )"/.. ; pwd -P )
@@ -76,7 +77,15 @@ for SUBDIR in lib include ; do
   mkdir -p "${MESHLIB_THIRDPARTY_ROOT_DIR}"/${SUBDIR}
 done
 
-MR_CMAKE_OPTIONS=""
+MR_CMAKE_OPTIONS="\
+  -D CMAKE_INSTALL_PREFIX=${MESHLIB_THIRDPARTY_ROOT_DIR} \
+  -D CMAKE_BUILD_TYPE=Release \
+"
+
+if command -v ninja >/dev/null 2>&1 ; then
+  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -G Ninja"
+fi
+
 if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   if [ -z "${EMSDK}" ] ; then
     echo "Emscripten SDK not found"
@@ -85,9 +94,10 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   EMSCRIPTEN_ROOT="${EMSDK}/upstream/emscripten"
 
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
-    -D CMAKE_FIND_ROOT_PATH=${MESHLIB_THIRDPARTY_ROOT_DIR} \
-    -D CMAKE_INSTALL_PREFIX=${MESHLIB_THIRDPARTY_ROOT_DIR} \
     -D CMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN_ROOT}/cmake/Modules/Platform/Emscripten.cmake \
+    -D CMAKE_FIND_ROOT_PATH=${MESHLIB_THIRDPARTY_ROOT_DIR} \
+    -D MR_EMSCRIPTEN=1 \
+    -D MR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} \
   "
   if [[ ${MR_EMSCRIPTEN_SINGLETHREAD} == 0 ]] ; then
     MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
@@ -97,6 +107,12 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   fi
 fi
 
+if [[ $OSTYPE == 'darwin'* ]]; then
+  NPROC=$(sysctl -n hw.logicalcpu)
+else
+  NPROC=$(nproc)
+fi
+
 # build
 echo "Starting build..."
 pushd "${MESHLIB_THIRDPARTY_BUILD_DIR}"
@@ -104,15 +120,15 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   # build libjpeg-turbo separately
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/libjpeg-turbo.sh ${MESHLIB_THIRDPARTY_DIR}/libjpeg-turbo
 
-  emcmake cmake -DMR_EMSCRIPTEN=1 -DMR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} ${MESHLIB_THIRDPARTY_DIR} -DCMAKE_INSTALL_PREFIX=${MESHLIB_THIRDPARTY_ROOT_DIR}
-  emmake make -j `nproc` #VERBOSE=1
-  make install
+  cmake -S ${MESHLIB_THIRDPARTY_DIR} -B .
+  cmake --build . -j ${NPROC}
+  cmake --install .
 
   # build OpenVDB separately
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/openvdb.sh ${MESHLIB_THIRDPARTY_DIR}/openvdb/v10/openvdb
 else
-  cmake ${MESHLIB_THIRDPARTY_DIR} -DCMAKE_INSTALL_PREFIX=${MESHLIB_THIRDPARTY_ROOT_DIR} -DCMAKE_BUILD_TYPE=Release
-  cmake --build . -j `nproc`  #VERBOSE=1
+  cmake -S ${MESHLIB_THIRDPARTY_DIR} -B .
+  cmake --build . -j ${NPROC}
   cmake --install .
 fi
 popd

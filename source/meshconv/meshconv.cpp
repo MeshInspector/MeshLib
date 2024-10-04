@@ -18,6 +18,16 @@
 #include <boost/exception/diagnostic_information.hpp>
 #include <iostream>
 
+// Fix parsing std::filesystem::path with spaces (see https://github.com/boostorg/program_options/issues/69)
+namespace boost
+{
+template <>
+inline std::filesystem::path lexical_cast<std::filesystem::path, std::string>( const std::string &arg )
+{
+    return std::filesystem::path( arg );
+}
+} //namespace boost
+
 bool doCommand( const boost::program_options::option& option, MR::Mesh& mesh )
 {
     namespace po = boost::program_options;

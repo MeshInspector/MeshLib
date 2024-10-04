@@ -23,7 +23,8 @@ struct RibbonNotification
     // Type of notification
     NotificationType type{ NotificationType::Info };
     // Time that notification stays visible
-    float lifeTimeSec = 10.0f;
+    // negative value means to use default one
+    float lifeTimeSec = -1.0f;
     // if notifications are equal to last one added, it just increment counter
     // note that if there is present `onButtonClick` this function always returns false
     bool operator==( const RibbonNotification& other ) const;
@@ -34,9 +35,13 @@ class MRVIEWER_CLASS RibbonNotifier
 {
 public:
     // adds new notification for drawing
+    // note that `lifeTimeSec` will be overridden with `defaultNotificationLifeTimeSeconds` even while `notification` is const
     MRVIEWER_API void pushNotification( const RibbonNotification& notification );
     // main draw function. draw actual notification or history, and history button
     MRVIEWER_API void draw( float scaling, float scenePosX, float topPanelHeight );
+
+    // this value is used as notification `lifeTimeSec` if negative values passed
+    float defaultNotificationLifeTimeSeconds = 5.0f;
 private:
     struct NotificationWithTimer
     {

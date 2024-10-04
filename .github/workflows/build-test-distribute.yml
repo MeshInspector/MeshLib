@@ -258,12 +258,6 @@ jobs:
       image: alpine:3.20
     needs:
       - versioning-and-release-url
-      - windows-build-test
-      - ubuntu-x64-build-test
-      - ubuntu-arm64-build-test
-      - fedora-build-test
-      - emscripten-build-test
-      - macos-build-test
     steps:
       - name: Install Git
         run: |

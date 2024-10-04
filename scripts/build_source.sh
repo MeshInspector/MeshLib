@@ -141,7 +141,7 @@ fi
 # build Debug
 if [ "${MESHLIB_BUILD_DEBUG}" = "ON" ]; then
   if [ "${MESHLIB_KEEP_BUILD}" != "ON" ]; then
-    mkdir build/Debug
+    mkdir -p build/Debug
   fi
   cd build/Debug
     cmake -S ../.. -B . -D CMAKE_BUILD_TYPE=Debug ${MR_CMAKE_OPTIONS} | tee ${logfile}

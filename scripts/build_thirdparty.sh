@@ -120,14 +120,14 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   # build libjpeg-turbo separately
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/libjpeg-turbo.sh ${MESHLIB_THIRDPARTY_DIR}/libjpeg-turbo
 
-  cmake -S ${MESHLIB_THIRDPARTY_DIR} -B .
+  cmake -S ${MESHLIB_THIRDPARTY_DIR} -B . ${MR_CMAKE_OPTIONS}
   cmake --build . -j ${NPROC}
   cmake --install .
 
   # build OpenVDB separately
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/openvdb.sh ${MESHLIB_THIRDPARTY_DIR}/openvdb/v10/openvdb
 else
-  cmake -S ${MESHLIB_THIRDPARTY_DIR} -B .
+  cmake -S ${MESHLIB_THIRDPARTY_DIR} -B . ${MR_CMAKE_OPTIONS}
   cmake --build . -j ${NPROC}
   cmake --install .
 fi

@@ -1,5 +1,6 @@
 #include "MRString.h"
 #include <algorithm>
+#include <limits>
 
 namespace MR
 {

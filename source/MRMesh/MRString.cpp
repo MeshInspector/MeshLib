@@ -74,7 +74,9 @@ int calcDamerauLevenshteinDistance( const std::string& stringA, const std::strin
             }
             else
             {
-                std::array<int, int( PatchType::Count )> candidates = { INT_MAX ,INT_MAX ,INT_MAX ,INT_MAX };
+                std::array<int, int( PatchType::Count )> candidates = {
+                    std::numeric_limits<int>::max(), std::numeric_limits<int>::max() ,
+                    std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
                 candidates[int( PatchType::Deletion )] = at( i - 1, j ).w + 1; // deletion
                 candidates[int( PatchType::Insertion )] = at( i, j - 1 ).w + 1; // insertion
                 candidates[int( PatchType::Substitution )] = at( i - 1, j - 1 ).w + ( copm( i, j ) ? 0 : 1 ); // substitution

@@ -424,7 +424,7 @@ void OpenDirectoryMenuItem::openDirectory( const std::filesystem::path& director
         if ( entry.is_regular_file( ec ) || entry.is_symlink( ec ) )
         {
             const auto& path = entry.path();
-            const auto ext = utf8string( path.extension() );
+            const auto ext = toLower( utf8string( path.extension() ) );
             if ( ext == ".dcm" && VoxelsLoad::isDicomFile( path ) )
             {
                 sOpenDICOMs( directory, "No supported files can be open from the directory:\n" + utf8string( directory ) );

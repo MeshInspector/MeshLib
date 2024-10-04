@@ -47,14 +47,14 @@ MRVector3f mrVector3fMul( const MRVector3f* a_, float b )
     return *reinterpret_cast<const MRVector3f*>( &res );
 }
 
-float mrVector3LengthSq( const MRVector3f* v_ )
+float mrVector3fLengthSq( const MRVector3f* v_ )
 {
     const auto& v = *reinterpret_cast<const Vector3f*>( v_ );
 
     return v.lengthSq();
 }
 
-float mrVector3Length( const MRVector3f* v_ )
+float mrVector3fLength( const MRVector3f* v_ )
 {
     const auto& v = *reinterpret_cast<const Vector3f*>( v_ );
 

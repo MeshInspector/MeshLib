@@ -12,5 +12,5 @@ try:
 except NameError:
     is_new_binding = False
 
-import meshlib.mrmeshpy as mrmesh
+import meshlib.mrmeshpy as mrmeshpy
 import meshlib.mrmeshnumpy as mrmeshnumpy

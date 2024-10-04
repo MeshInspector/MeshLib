@@ -2,6 +2,26 @@
 #include <algorithm>
 #include <limits>
 
+namespace
+{
+enum class PatchType : int
+{
+    None = -1,
+    Deletion,
+    Insertion,
+    Substitution,
+    Transposition,
+    Count
+};
+struct SumPatchWeight
+{
+    PatchType type{ PatchType::None };
+    int prevI{ 0 };
+    int prevJ{ 0 };
+    int w{ 0 };
+};
+}
+
 namespace MR
 {
 
@@ -21,23 +41,6 @@ size_t findSubstringCaseInsensitive( const std::string& string, const std::strin
 int calcDamerauLevenshteinDistance( const std::string& stringA, const std::string& stringB,
     bool caseSensitive, int* outLeftRightAddition )
 {
-    enum class PatchType : int
-    {
-        None = -1,
-        Deletion,
-        Insertion,
-        Substitution,
-        Transposition,
-        Count
-    };
-    struct SumPatchWeight
-    {
-        PatchType type{ PatchType::None };
-        int prevI{ 0 };
-        int prevJ{ 0 };
-        int w{ 0 };
-    };
-
     std::vector<SumPatchWeight> map( ( stringA.size() + 1 ) * ( stringB.size() + 1 ) );
 
     auto at = [&map, width = int( stringA.size() + 1 )] ( int i, int j )->SumPatchWeight&

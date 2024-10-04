@@ -452,11 +452,6 @@ bool RibbonNotifier::drawNotification_( const DrawNotificationSettings& settings
 
 void RibbonNotifier::addNotification_( std::vector<NotificationWithTimer>& store, const RibbonNotification& notification )
 {
-    if ( notification.lifeTimeSec < 0.0f )
-    {
-        // override notification.lifeTimeSec with default value if needed
-        const_cast< float& >( notification.lifeTimeSec ) = std::abs( defaultNotificationLifeTimeSeconds );
-    }
     if ( !store.empty() && store.front().notification == notification )
     {
         store.front().sameCounter++;
@@ -467,6 +462,8 @@ void RibbonNotifier::addNotification_( std::vector<NotificationWithTimer>& store
         if ( store.size() == cNotificationNumberLimit )
             store.erase( store.end() - 1 );
         store.insert( store.begin(), NotificationWithTimer{ notification } );
+        if ( store.front().notification.lifeTimeSec < 0.0f )
+            store.front().notification.lifeTimeSec = defaultNotificationLifeTimeSeconds;
     }
 }
 

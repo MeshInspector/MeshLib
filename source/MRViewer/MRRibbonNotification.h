@@ -35,7 +35,6 @@ class MRVIEWER_CLASS RibbonNotifier
 {
 public:
     // adds new notification for drawing
-    // note that `lifeTimeSec` will be overridden with `defaultNotificationLifeTimeSeconds` even while `notification` is const
     MRVIEWER_API void pushNotification( const RibbonNotification& notification );
     // main draw function. draw actual notification or history, and history button
     MRVIEWER_API void draw( float scaling, float scenePosX, float topPanelHeight );

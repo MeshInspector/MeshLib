@@ -12,12 +12,12 @@ if (
     sys.path.insert(0, os.environ["MeshLibPyModulesPath"])
     working_directory = os.environ["MeshLibPyModulesPath"]
 
+import meshlib.mrmeshpy as mrmesh
+import meshlib.mrmeshnumpy as mrmeshnumpy
+
 # Check if we're using the new parsed bindings.
 is_new_binding = True
 try:
     mrmesh.UniformSamplingSettings
 except NameError:
     is_new_binding = False
-
-import meshlib.mrmeshpy as mrmesh
-import meshlib.mrmeshnumpy as mrmeshnumpy

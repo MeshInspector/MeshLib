@@ -97,7 +97,7 @@ jobs:
           PATH: /opt/homebrew/opt/make/libexec/gnubin:/usr/local/opt/make/libexec/gnubin:${{env.PATH}}
         run: |
           make --version
-          make -f scripts/mrbind/generate.mk -B --trace
+          make -f scripts/mrbind/generate.mk -B --trace PYTHON_PKGCONF_NAME=python-3.10-embed
 
       - name: Run Start-and-Exit Tests
         if: ${{ matrix.os == 'arm' }}

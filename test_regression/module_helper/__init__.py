@@ -12,5 +12,5 @@ import meshlib.mrmeshnumpy as mrmeshnumpy
 is_new_binding = True
 try:
     mrmeshpy.UniformSamplingSettings
-except NameError:
+except AttributeError:
     is_new_binding = False

@@ -21,7 +21,7 @@ size_t findSubstringCaseInsensitive( const std::string& string, const std::strin
 int calcDamerauLevenshteinDistance( const std::string& stringA, const std::string& stringB,
     bool caseSensitive, int* outLeftRightAddition )
 {
-    enum class PatchType
+    enum class PatchType : int
     {
         None = -1,
         Deletion,

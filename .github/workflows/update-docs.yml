@@ -36,7 +36,10 @@ jobs:
         working-directory: MeshInspector.github.io
         run: |
           scripts/pre.sh
-          doxygen Doxyfile
+          (
+            cat Doxyfile
+            echo "OUTPUT_DIRECTORY=MeshLib/dev"
+          ) | doxygen -
           scripts/post.sh
 
       - name: Commit and push changes

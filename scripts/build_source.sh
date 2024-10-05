@@ -29,7 +29,7 @@ else
     MR_EMSCRIPTEN="OFF"
   fi
 fi
-printf "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}\n"
+echo "Emscripten ${MR_EMSCRIPTEN}, singlethread ${MR_EMSCRIPTEN_SINGLETHREAD}"
 
 if [ $MR_EMSCRIPTEN == "ON" ]; then
   if [[ $MR_EMSCRIPTEN_SINGLE == "ON" ]]; then
@@ -45,7 +45,7 @@ if [ ! -n "$MESHLIB_BUILD_RELEASE" ]; then
   else
     MESHLIB_BUILD_RELEASE="ON"
   fi
-  printf "Release ${MESHLIB_BUILD_RELEASE}\n"
+  echo "Release ${MESHLIB_BUILD_RELEASE}"
 fi
 
 if [ ! -n "$MESHLIB_BUILD_DEBUG" ]; then
@@ -56,7 +56,7 @@ if [ ! -n "$MESHLIB_BUILD_DEBUG" ]; then
   else
     MESHLIB_BUILD_DEBUG="OFF"
   fi
-  printf "Debug ${MESHLIB_BUILD_DEBUG}\n"
+  echo "Debug ${MESHLIB_BUILD_DEBUG}"
 fi
 
 # add env options to cmake

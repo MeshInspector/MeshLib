@@ -9,6 +9,7 @@
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRIOExtras/MRIOExtras.h"
 #pragma warning(push)
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
 #pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
@@ -17,6 +18,16 @@
 #pragma warning(pop)
 #include <boost/exception/diagnostic_information.hpp>
 #include <iostream>
+
+// Fix parsing std::filesystem::path with spaces (see https://github.com/boostorg/program_options/issues/69)
+namespace boost
+{
+template <>
+inline std::filesystem::path lexical_cast<std::filesystem::path, std::string>( const std::string &arg )
+{
+    return std::filesystem::path( arg );
+}
+} //namespace boost
 
 bool doCommand( const boost::program_options::option& option, MR::Mesh& mesh )
 {
@@ -77,6 +88,8 @@ bool doCommand( const boost::program_options::option& option, MR::Mesh& mesh )
 // can throw
 static int mainInternal( int argc, char **argv )
 {
+    MR::loadIOExtras();
+
     std::filesystem::path inFilePath;
     std::filesystem::path outFilePath;
 

@@ -5,7 +5,7 @@ import pytest
 from helper import *
 
 
-def test_numpy_conversoin():
+def test_numpy_conversions():
     faces = np.ndarray(
         shape=(2, 3),
         dtype=np.int32,
@@ -33,5 +33,8 @@ def test_numpy_conversoin():
     vertNormsNp = mrmeshnumpy.toNumpyArray(vertNorms)
     faceNormsNp = mrmeshnumpy.toNumpyArray(faceNorms)
 
+    vertNormsFromNp = mrmeshnumpy.fromNumpyArray(vertNormsNp)
+
+    assert len(vertNormsFromNp) == len(vertNorms.vec)
     assert vertNormsNp.shape[0] == len(vertNorms.vec)
     assert faceNormsNp.shape[0] == len(faceNorms.vec)

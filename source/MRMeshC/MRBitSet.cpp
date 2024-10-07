@@ -51,3 +51,41 @@ size_t mrBitSetCount( const MRBitSet* bs_ )
 
     return bs.count();
 }
+
+size_t mrBitSetFindFirst( const MRBitSet* bs_ )
+{
+    const auto& bs = *reinterpret_cast<const BitSet*>( bs_ );
+
+    return bs.find_first();
+}
+
+size_t mrBitSetFindLast( const MRBitSet* bs_ )
+{
+    const auto& bs = *reinterpret_cast<const BitSet*>( bs_ );
+
+    return bs.find_last();
+}
+
+void mrBitSetResize( MRBitSet* bs_, size_t size, bool value )
+{
+    auto& bs = *reinterpret_cast<BitSet*>( bs_ );
+
+    bs.resize( size, value );
+}
+
+void mrBitSetAutoResizeSet( MRBitSet* bs_, size_t pos, bool value )
+{
+    auto& bs = *reinterpret_cast<BitSet*>( bs_ );
+
+    bs.autoResizeSet( pos, value );
+}
+
+MRBitSet* mrBitSetSub( const MRBitSet* a_, const MRBitSet* b_ )
+{
+    const auto& a = *reinterpret_cast<const BitSet*>( a_ );
+    const auto& b = *reinterpret_cast<const BitSet*>( b_ );
+
+    auto result = a - b;
+
+    return reinterpret_cast<MRBitSet*>( new BitSet( std::move( result ) ) );
+}

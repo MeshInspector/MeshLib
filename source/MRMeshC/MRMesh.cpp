@@ -154,3 +154,11 @@ MREdgePath* mrMeshFindHoleRepresentiveEdges( const MRMesh* mesh )
 {
     return mrMeshTopologyFindHoleRepresentiveEdges( mrMeshTopology( mesh ) );
 }
+
+double mrMeshVolume( const MRMesh* mesh_, const MRFaceBitSet* region_ )
+{
+    const auto& mesh = *reinterpret_cast<const Mesh*>( mesh_ );
+    const auto* region = reinterpret_cast<const FaceBitSet*>( region_ );
+
+    return mesh.volume( region );
+}

@@ -80,3 +80,14 @@ size_t mrMeshTopologyFaceSize( const MRMeshTopology* top_ )
 
     return top.faceSize();
 }
+
+void mrMeshTopologyGetLeftTriVerts( const MRMeshTopology* top_, MREdgeId a_, MRVertId* v0_, MRVertId* v1_, MRVertId* v2_ )
+{
+    const auto& top = *reinterpret_cast<const MeshTopology*>( top_ );
+    auto a = *reinterpret_cast<EdgeId*>( &a_ );
+    auto& v0 = *reinterpret_cast<VertId*>( v0_ );
+    auto& v1 = *reinterpret_cast<VertId*>( v1_ );
+    auto& v2 = *reinterpret_cast<VertId*>( v2_ );
+
+    top.getLeftTriVerts( a, v0, v1, v2 );
+}

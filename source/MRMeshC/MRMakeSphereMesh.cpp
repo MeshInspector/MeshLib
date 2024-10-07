@@ -1,24 +1,26 @@
 #include "MRMakeSphereMesh.h"
 
+#include "detail/TypeCast.h"
+
 #include "MRMesh/MRMakeSphereMesh.h"
 
 using namespace MR;
+
+REGISTER_AUTO_CAST( Mesh )
+REGISTER_AUTO_CAST( SphereParams )
 
 static_assert( sizeof( MRSphereParams ) == sizeof( SphereParams ) );
 
 MRSphereParams mrSphereParamsNew( void )
 {
-    SphereParams result;
-    return reinterpret_cast<const MRSphereParams&>( result );
+    static const SphereParams result;
+    RETURN( result );
 }
 
 MRMesh* mrMakeSphere( const MRSphereParams* params_ )
 {
-    const auto& params = *reinterpret_cast<const SphereParams*>( params_ );
-
-    auto result = makeSphere( params );
-
-    return reinterpret_cast<MRMesh*>( new Mesh( std::move( result ) ) );
+    ARG( params );
+    RETURN_NEW( makeSphere( params ) );
 }
 
 MRMakeUVSphereParameters mrMakeUvSphereParametersNew( void )
@@ -32,7 +34,9 @@ MRMakeUVSphereParameters mrMakeUvSphereParametersNew( void )
 
 MRMesh* mrMakeUVSphere( const MRMakeUVSphereParameters* params )
 {
-    auto result = makeUVSphere( params->radius, params->horizontalResolution, params->verticalResolution );
-
-    return reinterpret_cast<MRMesh*>( new Mesh( std::move( result ) ) );
+    RETURN_NEW( makeUVSphere(
+        params->radius,
+        params->horizontalResolution,
+        params->verticalResolution
+    ) );
 }

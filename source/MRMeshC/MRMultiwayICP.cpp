@@ -1,10 +1,20 @@
 #include "MRMultiwayICP.h"
 
+#include "detail/TypeCast.h"
+
 #include "MRMesh/MRMultiwayICP.h"
 
 #include <span>
 
 using namespace MR;
+
+REGISTER_AUTO_CAST( ICPMethod )
+REGISTER_AUTO_CAST( ICPMode )
+REGISTER_AUTO_CAST( MeshOrPointsXf )
+REGISTER_AUTO_CAST( MultiwayICP )
+REGISTER_AUTO_CAST( Vector3f )
+REGISTER_AUTO_CAST2( MultiwayICPSamplingParameters::CascadeMode, MRMultiwayICPSamplingParametersCascadeMode )
+REGISTER_AUTO_CAST2( std::vector<AffineXf3f>, MRVectorAffineXf3f )
 
 #define COPY_FROM( obj, field ) . field = ( obj ). field ,
 
@@ -14,14 +24,14 @@ MRMultiwayICPSamplingParameters mrMultiwayIcpSamplingParametersNew( void )
     return {
         COPY_FROM( def, samplingVoxelSize )
         COPY_FROM( def, maxGroupSize )
-        .cascadeMode = static_cast<MRMultiwayICPSamplingParametersCascadeMode>( def.cascadeMode ),
+        .cascadeMode = auto_cast( def.cascadeMode ),
         .cb = nullptr,
     };
 }
 
 MRMultiwayICP* mrMultiwayICPNew( const MRMeshOrPointsXf* objects_, size_t objectsNum, const MRMultiwayICPSamplingParameters* samplingParams_ )
 {
-    std::span objects { reinterpret_cast<const MeshOrPointsXf*>( objects_ ), objectsNum };
+    std::span objects { auto_cast( objects_ ), objectsNum };
 
     // TODO: cast instead of copying
     ICPObjects objectsVec( objects.begin(), objects.end() );
@@ -38,20 +48,18 @@ MRMultiwayICP* mrMultiwayICPNew( const MRMeshOrPointsXf* objects_, size_t object
         };
     }
 
-    return reinterpret_cast<MRMultiwayICP*>( new MultiwayICP( objectsVec, samplingParams ) );
+    RETURN_NEW( MultiwayICP( objectsVec, samplingParams ) );
 }
 
 MRVectorAffineXf3f* mrMultiwayICPCalculateTransformations( MRMultiwayICP* mwicp_, MRProgressCallback cb )
 {
-    auto& mwicp = *reinterpret_cast<MultiwayICP*>( mwicp_ );
-
-    auto res = mwicp.calculateTransformations( cb );
-    return reinterpret_cast<MRVectorAffineXf3f*>( new std::vector<AffineXf3f>( std::move( res.vec_ ) ) );
+    ARG( mwicp );
+    RETURN_NEW( mwicp.calculateTransformations( cb ).vec_ );
 }
 
 bool mrMultiwayICPResamplePoints( MRMultiwayICP* mwicp_, const MRMultiwayICPSamplingParameters* samplingParams_ )
 {
-    auto& mwicp = *reinterpret_cast<MultiwayICP*>( mwicp_ );
+    ARG( mwicp );
 
     MultiwayICPSamplingParameters samplingParams;
     if ( samplingParams_ )
@@ -60,7 +68,7 @@ bool mrMultiwayICPResamplePoints( MRMultiwayICP* mwicp_, const MRMultiwayICPSamp
         samplingParams = {
             COPY_FROM( src, samplingVoxelSize )
             COPY_FROM( src, maxGroupSize )
-            .cascadeMode = static_cast<MultiwayICPSamplingParameters::CascadeMode>( src.cascadeMode ),
+            .cascadeMode = auto_cast( src.cascadeMode ),
             COPY_FROM( src, cb )
         };
     }
@@ -70,24 +78,23 @@ bool mrMultiwayICPResamplePoints( MRMultiwayICP* mwicp_, const MRMultiwayICPSamp
 
 bool mrMultiwayICPUpdateAllPointPairs( MRMultiwayICP* mwicp_, MRProgressCallback cb )
 {
-    auto& mwicp = *reinterpret_cast<MultiwayICP*>( mwicp_ );
-
+    ARG( mwicp );
     return mwicp.updateAllPointPairs( cb );
 }
 
 void mrMultiwayICPSetParams( MRMultiwayICP* mwicp_, const MRICPProperties* prop_ )
 {
-    auto& mwicp = *reinterpret_cast<MultiwayICP*>( mwicp_ );
+    ARG( mwicp );
 
     const ICPProperties prop {
-        .method = static_cast<ICPMethod>( prop_->method ),
+        .method = auto_cast( prop_->method ),
         COPY_FROM( *prop_, p2plAngleLimit )
         COPY_FROM( *prop_, p2plScaleLimit )
         COPY_FROM( *prop_, cosThreshold )
         COPY_FROM( *prop_, distThresholdSq )
         COPY_FROM( *prop_, farDistFactor )
-        .icpMode = static_cast<ICPMode>( prop_->icpMode ),
-        .fixedRotationAxis = reinterpret_cast<const Vector3f&>( prop_->fixedRotationAxis ),
+        .icpMode = auto_cast( prop_->icpMode ),
+        .fixedRotationAxis = auto_cast( prop_->fixedRotationAxis ),
         COPY_FROM( *prop_, iterLimit )
         COPY_FROM( *prop_, badIterStopCount )
         COPY_FROM( *prop_, exitVal )
@@ -99,33 +106,30 @@ void mrMultiwayICPSetParams( MRMultiwayICP* mwicp_, const MRICPProperties* prop_
 
 float mrMultiWayICPGetMeanSqDistToPoint( const MRMultiwayICP* mwicp_, double* value )
 {
-    const auto& mwicp = *reinterpret_cast<const MultiwayICP*>( mwicp_ );
-
+    ARG( mwicp );
     return mwicp.getMeanSqDistToPoint( value );
 }
 
 float mrMultiWayICPGetMeanSqDistToPlane( const MRMultiwayICP* mwicp_, double* value )
 {
-    const auto& mwicp = *reinterpret_cast<const MultiwayICP*>( mwicp_ );
-
+    ARG( mwicp );
     return mwicp.getMeanSqDistToPlane( value );
 }
 
 size_t mrMultiWayICPGetNumSamples( const MRMultiwayICP* mwicp_ )
 {
-    const auto& mwicp = *reinterpret_cast<const MultiwayICP*>( mwicp_ );
-
+    ARG( mwicp );
     return mwicp.getNumSamples();
 }
 
 size_t mrMultiWayICPGetNumActivePairs( const MRMultiwayICP* mwicp_ )
 {
-    const auto& mwicp = *reinterpret_cast<const MultiwayICP*>( mwicp_ );
-
+    ARG( mwicp );
     return mwicp.getNumActivePairs();
 }
 
-void mrMultiwayICPFree( MRMultiwayICP* mwicp )
+void mrMultiwayICPFree( MRMultiwayICP* mwicp_ )
 {
-    delete reinterpret_cast<MultiwayICP*>( mwicp );
+    ARG_PTR( mwicp );
+    delete mwicp;
 }

@@ -1,5 +1,7 @@
 #include "MRPointCloud.h"
 
+#include "detail/TypeCast.h"
+
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRPointCloud.h"
 
@@ -7,81 +9,76 @@
 
 using namespace MR;
 
+REGISTER_AUTO_CAST( AffineXf3f )
+REGISTER_AUTO_CAST( Box3f )
+REGISTER_AUTO_CAST( PointCloud )
+REGISTER_AUTO_CAST( Vector3f )
+REGISTER_AUTO_CAST( VertId )
+
 MRPointCloud* mrPointCloudNew( void )
 {
-    return reinterpret_cast<MRPointCloud*>( new PointCloud );
+    RETURN_NEW( PointCloud() );
 }
 
 MRPointCloud* mrPointCloudFromPoints( const MRVector3f* points_, size_t pointsNum )
 {
-    std::span points { reinterpret_cast<const Vector3f*>( points_ ), pointsNum };
+    std::span points { auto_cast( points_ ), pointsNum };
 
     PointCloud res;
     res.points = { points.begin(), points.end() };
-    return reinterpret_cast<MRPointCloud*>( new PointCloud( std::move( res ) ) );
+    RETURN_NEW( std::move( res ) );
 }
 
 const MRVector3f* mrPointCloudPoints( const MRPointCloud* pc_ )
 {
-    const auto& pc = *reinterpret_cast<const PointCloud*>( pc_ );
-
-    return reinterpret_cast<const MRVector3f*>( pc.points.data() );
+    ARG( pc );
+    RETURN( pc.points.data() );
 }
 
 MRVector3f* mrPointCloudPointsRef( MRPointCloud* pc_ )
 {
-    auto& pc = *reinterpret_cast<PointCloud*>( pc_ );
-
-    return reinterpret_cast<MRVector3f*>( pc.points.data() );
+    ARG( pc );
+    RETURN( pc.points.data() );
 }
 
 size_t mrPointCloudPointsNum( const MRPointCloud* pc_ )
 {
-    const auto& pc = *reinterpret_cast<const PointCloud*>( pc_ );
-
+    ARG( pc );
     return pc.points.size();
 }
 
 const MRVector3f* mrPointCloudNormals( const MRPointCloud* pc_ )
 {
-    const auto& pc = *reinterpret_cast<const PointCloud*>( pc_ );
-
-    return reinterpret_cast<const MRVector3f*>( pc.normals.data() );
+    ARG( pc );
+    RETURN( pc.normals.data() );
 }
 
 size_t mrPointCloudNormalsNum( const MRPointCloud* pc_ )
 {
-    const auto& pc = *reinterpret_cast<const PointCloud*>( pc_ );
-
+    ARG( pc );
     return pc.normals.size();
 }
 
 const MRVertBitSet* mrPointCloudValidPoints( const MRPointCloud* pc_ )
 {
-    const auto& pc = *reinterpret_cast<const PointCloud*>( pc_ );
-
-    return reinterpret_cast<const MRVertBitSet*>( &pc.validPoints );
+    ARG( pc );
+    return cast_to<MRVertBitSet>( &pc.validPoints );
 }
 
 MRBox3f mrPointCloudComputeBoundingBox( const MRPointCloud* pc_, const MRAffineXf3f* toWorld_ )
 {
-    const auto& pc = *reinterpret_cast<const PointCloud*>( pc_ );
-    const auto* toWorld = reinterpret_cast<const AffineXf3f*>( toWorld_ );
-
-    const auto res = pc.computeBoundingBox( toWorld );
-    return reinterpret_cast<const MRBox3f&>( res );
+    ARG( pc ); ARG_PTR( toWorld );
+    RETURN( pc.computeBoundingBox( toWorld ) );
 }
 
 MRVertId mrPointCloudAddPoint( MRPointCloud* pc_, const MRVector3f* point_ )
 {
-    auto& pc = *reinterpret_cast<PointCloud*>( pc_ );
-    const auto& point = *reinterpret_cast<const Vector3f*>( point_ );
-
-    const auto res = pc.addPoint( point );
-    return reinterpret_cast<const MRVertId&>( res );
+    ARG( pc ); ARG( point );
+    RETURN( pc.addPoint( point ) );
 }
 
-void mrPointCloudFree( MRPointCloud* pc )
+void mrPointCloudFree( MRPointCloud* pc_ )
 {
-    delete reinterpret_cast<PointCloud*>( pc );
+    ARG_PTR( pc );
+    delete pc;
 }

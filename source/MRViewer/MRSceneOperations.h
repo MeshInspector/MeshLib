@@ -31,4 +31,8 @@ struct TypedFlatTree
 /// TODO: optional predicate to ignore insignificant objects (non-visual objects, ancillary objects, etc.)
 MRVIEWER_API std::vector<FlatTree> getFlatSubtrees( const std::vector<std::shared_ptr<Object>>& objs );
 
+/// merge objects of same type in the object tree
+MRVIEWER_API void mergeSubtree( TypedFlatTree subtree );
+MRVIEWER_API void mergeSubtree( std::shared_ptr<Object> rootObj );
+
 } // namespace MR

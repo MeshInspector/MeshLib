@@ -1087,90 +1087,9 @@ bool RibbonMenu::drawMergeSubtreeButton( const std::vector<std::shared_ptr<Objec
     if ( !UI::button( "Merge Subtree", Vector2f( -1, 0 ) ) )
         return false;
 
-    MR_TIMER
-
     SCOPED_HISTORY( "Merge Objects" );
-
     for ( auto& subtree : subtrees )
-    {
-        auto& rootObj = subtree.root;
-        assert( rootObj->parent() );
-
-        auto& objsMesh = subtree.objsMesh;
-        auto& objsLines = subtree.objsLines;
-        auto& objsPoints = subtree.objsPoints;
-        const auto objCount = objsMesh.size() + objsLines.size() + objsPoints.size();
-        if ( objCount == 0 )
-            continue;
-
-        if ( !objsMesh.empty() )
-        {
-            if ( auto rootObjMesh = std::dynamic_pointer_cast<ObjectMesh>( rootObj ) )
-                objsMesh.insert( objsMesh.begin(), rootObjMesh );
-
-            auto newObjMesh = merge( objsMesh );
-            assert( newObjMesh );
-            newObjMesh->setName( objsMesh.size() == objCount ? rootObj->name() : rootObj->name() + " (meshes)" );
-            newObjMesh->select( true );
-
-            AppendHistory<ChangeSceneAction>( "Add Object", newObjMesh, ChangeSceneAction::Type::AddObject );
-            rootObj->parent()->addChild( newObjMesh );
-        }
-
-        if ( !objsLines.empty() )
-        {
-            if ( auto rootObjLines = std::dynamic_pointer_cast<ObjectLines>( rootObj ) )
-                objsLines.insert( objsLines.begin(), rootObjLines );
-
-            auto newObjLines = merge( objsLines );
-            assert( newObjLines );
-            newObjLines->setName( objsLines.size() == objCount ? rootObj->name() : rootObj->name() + " (polylines)" );
-            newObjLines->select( true );
-
-            AppendHistory<ChangeSceneAction>( "Add Object", newObjLines, ChangeSceneAction::Type::AddObject );
-            rootObj->parent()->addChild( newObjLines );
-        }
-
-        if ( !objsPoints.empty() )
-        {
-            if ( auto rootObjPoints = std::dynamic_pointer_cast<ObjectPoints>( rootObj ) )
-                objsPoints.insert( objsPoints.begin(), rootObjPoints );
-
-            auto newObjPoints = merge( objsPoints );
-            assert( newObjPoints );
-            newObjPoints->setName( objsPoints.size() == objCount ? rootObj->name() : rootObj->name() + " (point clouds)" );
-            newObjPoints->select( true );
-
-            const auto hadNormals = std::any_of( objsPoints.begin(), objsPoints.end(), [] ( auto&& objPoints )
-            {
-                assert( objPoints );
-                assert( objPoints->pointCloud() );
-                return objPoints->pointCloud()->hasNormals();
-            } );
-            assert( newObjPoints->pointCloud() );
-            if ( !newObjPoints->pointCloud()->hasNormals() && hadNormals )
-            {
-                pushNotification( {
-                    .text = "Some input point have normals and some others do not, all normals are lost",
-                    .type = NotificationType::Warning,
-                } );
-            }
-            if ( newObjPoints->getRenderDiscretization() > 1 )
-            {
-                pushNotification( {
-                    .text = "Too many points in PointCloud:\nVisualization is simplified (only part of the points is drawn)",
-                    .type = NotificationType::Info,
-                } );
-            }
-
-            AppendHistory<ChangeSceneAction>( "Add Object", newObjPoints, ChangeSceneAction::Type::AddObject );
-            rootObj->parent()->addChild( newObjPoints );
-        }
-
-        AppendHistory<ChangeSceneAction>( "Remove Object", rootObj, ChangeSceneAction::Type::RemoveObject );
-        rootObj->parent()->removeChild( rootObj );
-        rootObj->detachFromParent();
-    }
+        mergeSubtree( std::move( subtree ) );
 
     return true;
 }

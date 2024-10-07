@@ -1,9 +1,15 @@
 #include "MRSceneOperations.h"
 
+#include "MRAppendHistory.h"
+#include "MRRibbonMenu.h"
+
+#include "MRMesh/MRChangeSceneAction.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectsAccess.h"
+#include "MRMesh/MRPointCloud.h"
+#include "MRMesh/MRTimer.h"
 
 #include <unordered_set>
 
@@ -55,6 +61,96 @@ std::vector<FlatTree> getFlatSubtrees( const std::vector<std::shared_ptr<Object>
             results.emplace_back( FlatTree { obj, std::move( subobjs ) } );
     }
     return results;
+}
+
+void mergeSubtree( TypedFlatTree subtree )
+{
+    MR_TIMER
+
+    SCOPED_HISTORY( "Merge Objects" );
+
+    auto& rootObj = subtree.root;
+    assert( rootObj->parent() );
+
+    auto& objsMesh = subtree.objsMesh;
+    auto& objsLines = subtree.objsLines;
+    auto& objsPoints = subtree.objsPoints;
+    const auto objCount = objsMesh.size() + objsLines.size() + objsPoints.size();
+    if ( objCount == 0 )
+        return;
+
+    if ( !objsMesh.empty() )
+    {
+        if ( auto rootObjMesh = std::dynamic_pointer_cast<ObjectMesh>( rootObj ) )
+            objsMesh.insert( objsMesh.begin(), rootObjMesh );
+
+        auto newObjMesh = merge( objsMesh );
+        assert( newObjMesh );
+        newObjMesh->setName( objsMesh.size() == objCount ? rootObj->name() : rootObj->name() + " (meshes)" );
+        newObjMesh->select( true );
+
+        AppendHistory<ChangeSceneAction>( "Add Object", newObjMesh, ChangeSceneAction::Type::AddObject );
+        rootObj->parent()->addChild( newObjMesh );
+    }
+
+    if ( !objsLines.empty() )
+    {
+        if ( auto rootObjLines = std::dynamic_pointer_cast<ObjectLines>( rootObj ) )
+            objsLines.insert( objsLines.begin(), rootObjLines );
+
+        auto newObjLines = merge( objsLines );
+        assert( newObjLines );
+        newObjLines->setName( objsLines.size() == objCount ? rootObj->name() : rootObj->name() + " (polylines)" );
+        newObjLines->select( true );
+
+        AppendHistory<ChangeSceneAction>( "Add Object", newObjLines, ChangeSceneAction::Type::AddObject );
+        rootObj->parent()->addChild( newObjLines );
+    }
+
+    if ( !objsPoints.empty() )
+    {
+        if ( auto rootObjPoints = std::dynamic_pointer_cast<ObjectPoints>( rootObj ) )
+            objsPoints.insert( objsPoints.begin(), rootObjPoints );
+
+        auto newObjPoints = merge( objsPoints );
+        assert( newObjPoints );
+        newObjPoints->setName( objsPoints.size() == objCount ? rootObj->name() : rootObj->name() + " (point clouds)" );
+        newObjPoints->select( true );
+
+        const auto hadNormals = std::any_of( objsPoints.begin(), objsPoints.end(), [] ( auto&& objPoints )
+        {
+            assert( objPoints );
+            assert( objPoints->pointCloud() );
+            return objPoints->pointCloud()->hasNormals();
+        } );
+        assert( newObjPoints->pointCloud() );
+        if ( !newObjPoints->pointCloud()->hasNormals() && hadNormals )
+        {
+            pushNotification( {
+                .text = "Some input point have normals and some others do not, all normals are lost",
+                .type = NotificationType::Warning,
+            } );
+        }
+        if ( newObjPoints->getRenderDiscretization() > 1 )
+        {
+            pushNotification( {
+                .text = "Too many points in PointCloud:\nVisualization is simplified (only part of the points is drawn)",
+                .type = NotificationType::Info,
+            } );
+        }
+
+        AppendHistory<ChangeSceneAction>( "Add Object", newObjPoints, ChangeSceneAction::Type::AddObject );
+        rootObj->parent()->addChild( newObjPoints );
+    }
+
+    AppendHistory<ChangeSceneAction>( "Remove Object", rootObj, ChangeSceneAction::Type::RemoveObject );
+    rootObj->parent()->removeChild( rootObj );
+    rootObj->detachFromParent();
+}
+
+void mergeSubtree( std::shared_ptr<Object> rootObj )
+{
+    return mergeSubtree( TypedFlatTree::fromFlatTree( FlatTree { rootObj, getAllObjectsInTree( *rootObj ) } ) );
 }
 
 } // namespace MR

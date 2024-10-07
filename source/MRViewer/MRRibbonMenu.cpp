@@ -1103,15 +1103,15 @@ bool RibbonMenu::drawMergeSubtreeButton( const std::vector<std::shared_ptr<Objec
     if ( subtreeRoots.empty() )
         return false;
 
-    size_t totalCount = 0;
+    size_t totalObjCount = 0;
     for ( const auto& rootObj : subtreeRoots )
     {
         const auto objsMesh = getAllObjectsInTree<ObjectMesh>( rootObj.get() );
         const auto objsLines = getAllObjectsInTree<ObjectLines>( rootObj.get() );
         const auto objsPoints = getAllObjectsInTree<ObjectPoints>( rootObj.get() );
-        totalCount += objsMesh.size() + objsLines.size() + objsPoints.size();
+        totalObjCount += objsMesh.size() + objsLines.size() + objsPoints.size();
     }
-    if ( totalCount == 0 )
+    if ( totalObjCount == 0 )
         return false;
 
     if ( !UI::button( "Merge Subtree", Vector2f( -1, 0 ) ) )
@@ -1126,6 +1126,9 @@ bool RibbonMenu::drawMergeSubtreeButton( const std::vector<std::shared_ptr<Objec
         auto objsMesh = getAllObjectsInTree<ObjectMesh>( rootObj.get() );
         auto objsLines = getAllObjectsInTree<ObjectLines>( rootObj.get() );
         auto objsPoints = getAllObjectsInTree<ObjectPoints>( rootObj.get() );
+        const auto objCount = objsMesh.size() + objsLines.size() + objsPoints.size();
+        if ( objCount == 0 )
+            continue;
 
         if ( !objsMesh.empty() )
         {
@@ -1134,7 +1137,7 @@ bool RibbonMenu::drawMergeSubtreeButton( const std::vector<std::shared_ptr<Objec
 
             auto newObjMesh = merge( objsMesh );
             assert( newObjMesh );
-            newObjMesh->setName( objsMesh.size() == totalCount ? rootObj->name() : rootObj->name() + " (meshes)" );
+            newObjMesh->setName( objsMesh.size() == objCount ? rootObj->name() : rootObj->name() + " (meshes)" );
             newObjMesh->select( true );
 
             AppendHistory<ChangeSceneAction>( "Add Object", newObjMesh, ChangeSceneAction::Type::AddObject );
@@ -1148,7 +1151,7 @@ bool RibbonMenu::drawMergeSubtreeButton( const std::vector<std::shared_ptr<Objec
 
             auto newObjLines = merge( objsLines );
             assert( newObjLines );
-            newObjLines->setName( objsLines.size() == totalCount ? rootObj->name() : rootObj->name() + " (polylines)" );
+            newObjLines->setName( objsLines.size() == objCount ? rootObj->name() : rootObj->name() + " (polylines)" );
             newObjLines->select( true );
 
             AppendHistory<ChangeSceneAction>( "Add Object", newObjLines, ChangeSceneAction::Type::AddObject );
@@ -1162,7 +1165,7 @@ bool RibbonMenu::drawMergeSubtreeButton( const std::vector<std::shared_ptr<Objec
 
             auto newObjPoints = merge( objsPoints );
             assert( newObjPoints );
-            newObjPoints->setName( objsPoints.size() == totalCount ? rootObj->name() : rootObj->name() + " (point clouds)" );
+            newObjPoints->setName( objsPoints.size() == objCount ? rootObj->name() : rootObj->name() + " (point clouds)" );
             newObjPoints->select( true );
 
             const auto hadNormals = std::any_of( objsPoints.begin(), objsPoints.end(), [] ( auto&& objPoints )

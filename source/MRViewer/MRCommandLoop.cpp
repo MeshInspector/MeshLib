@@ -85,10 +85,11 @@ void CommandLoop::processCommands()
         cmdToNotify->callerThreadCV.notify_one();
 }
 
-void CommandLoop::removeCommands()
+void CommandLoop::removeCommands( bool closeLoop )
 {
     auto& inst = instance_();
     std::unique_lock<std::mutex> lock( inst.mutex_ );
+    inst.queueClosed_ = closeLoop;
     while ( !inst.commands_.empty() )
         inst.commands_.pop();
     spdlog::debug( "CommandLoop::removeCommands(): queue size={}", inst.commands_.size() );
@@ -125,6 +126,11 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition
     cmd->func = func;
     cmd->threadId = std::this_thread::get_id();
     std::unique_lock<std::mutex> lock( inst.mutex_ );
+    if ( inst.queueClosed_ )
+    {
+        spdlog::debug( "CommandLoop::addCommand_: cannot accept new command because it is closed" );
+        return;
+    }
     inst.commands_.push( cmd );
 
     getViewerInstance().postEmptyEvent();

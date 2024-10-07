@@ -18,8 +18,13 @@ bundle_dylib() {
 
     local search_paths_args=""
     for path in "${search_paths[@]}"; do
-        search_paths_args+=" --search-path \"$path\""
+        search_paths_args+=" --search-path $path"
     done
+
+    local install_path_arg=""
+    if [[ -n "$use_install_path" ]]; then
+        install_path_arg="--install-path @executable_path/../thirdparty-libs"
+    fi
 
     echo "Fixing MeshLib executable @rpath"
 
@@ -30,7 +35,7 @@ bundle_dylib() {
                   --fix-file ${fix_file} \
                   --dest-dir ${dest_dir} \
                   ${MISSED_LIBS} \
-                  ${search_paths_args} "
+                  ${install_path_arg} "
 
     dylibbundler \
         --bundle-deps \
@@ -38,8 +43,8 @@ bundle_dylib() {
         --overwrite-files \
         --fix-file "${fix_file}" \
         --dest-dir "${dest_dir}" \
-        ${MISSED_LIBS} \
-        ${search_paths_args}
+        ${search_paths_args} \
+        --install-path @executable_path/../libs
 }
 
 echo "Installing required brew pkgs"
@@ -53,15 +58,18 @@ cd ./build/Release
 cmake --install . --prefix=../..
 cd -
 
+
 MR_VERSION=$(ls ./Library/Frameworks/MeshLib.framework/Versions/)
 MR_PREFIX="./Library/Frameworks/MeshLib.framework/Versions/${MR_VERSION}"
 
 echo "version: ${MR_VERSION}"
 echo "prefix: ${MR_PREFIX}"
 
-cp -rL ./lib/ "${MR_PREFIX}/libs/"
-cp -rL ./include "${MR_PREFIX}/"
 
+mkdir -p "${MR_PREFIX}/thirdparty-libs/"
+
+cp -L ./lib/*.dylib "${MR_PREFIX}/thirdparty-libs/"
+cp -rL ./include "${MR_PREFIX}/"
 cp ./LICENSE ./macos/Resources
 
 mkdir "${MR_PREFIX}"/requirements/
@@ -70,9 +78,6 @@ cp ./requirements/distribution_python.txt "${MR_PREFIX}"/requirements/python.txt
 
 mkdir "${MR_PREFIX}"/share/
 cp -r "$(brew --prefix)"/share/glib-2.0 "${MR_PREFIX}"/share
-
-ln -s "./Library/Frameworks/MeshLib.framework/Versions/${MR_VERSION}" "./Library/Frameworks/MeshLib.framework/Versions/Current"
-ln -s "./Library/Frameworks/MeshLib.framework/Resources" "./Library/Frameworks/MeshLib.framework/Versions/${MR_VERSION}/Resources"
 
 echo "Embedded python: processing requirements"
 if [ -f "python.py" ];
@@ -103,39 +108,34 @@ NEW_PYTHON_PATH="@rpath/../python/_internal/Python.framework/Versions/3.10/Pytho
 echo "old: $PYTHON_PATH, new: $NEW_PYTHON_PATH"
 install_name_tool -change "$PYTHON_PATH" "$NEW_PYTHON_PATH" ./build/Release/bin/libMRMesh.dylib
 echo "Done"
-#otool -L ./build/Release/bin/libMRMesh.dylib
 
-echo "Fixing main libs @rpath"
-MISSED_LIBS=""
-# no MRCommonPlugins because MRPlugins will handle it
-# no MRCUDAPlugins because it is not built for mac
-for LIB_NAME in ./build/Release/bin/libMRCommonPlugins.dylib
-do
-  LIB_NAME="${LIB_NAME##*/}"
-  echo "$LIB_NAME"
-  # cp ./build/Release/bin/"${LIB_NAME}" ${APPNAME}/Contents/libs/
-  MISSED_LIBS="${MISSED_LIBS} -x ${MR_PREFIX}/libs/${LIB_NAME}"
-done
-# python modules
-for LIB_NAME in ${MR_PREFIX}/libs/meshlib/*.so
-do
-  LIB_NAME="${LIB_NAME##*/}"
-  echo "$LIB_NAME"
-  MISSED_LIBS="${MISSED_LIBS} -x ${MR_PREFIX}/libs/meshlib/${LIB_NAME}"
-done
-
-echo "$MISSED_LIBS"
+cd ./Library/Frameworks/MeshLib.framework/Versions/
+ln -s ${MR_VERSION} Current
+cd -
 
 echo "Fixing MeshLib executable @rpath" -x ${MR_PREFIX}/bin/meshconv
-# dylibbundler -b -cd -of -x ${MR_PREFIX}/bin/MeshViewer  -s ./build/Release/bin/ -s ./lib -s ./dist/python -d ${MR_PREFIX}/lib/ ${MISSED_LIBS}
 
-bin_dir="${MR_PREFIX}/bin/"
-dest_dir="${MR_PREFIX}/libs/"
-search_paths=("./build/Release/bin/" "./lib/" "./dist/python/" "$dest_dir")
+bin_dir="/Users/maxraiskii/CLionProjects/MeshLib/Library/Frameworks/MeshLib.framework/Versions/0.0.0/bin/"
+lib_dir="./Library/Frameworks/MeshLib.framework/Versions/0.0.0/libs"
+dest_dir="./Library/Frameworks/MeshLib.framework/Versions/0.0.0/libs"
+search_paths=("${dest_dir}" "/Users/maxraiskii/CLionProjects/MeshLib/lib/" "./dist/python")
+
 
 for binary in "$bin_dir"*; do
-    if [[ -x "$binary" && -f "$binary" ]]; then
+    if [[ -x "$binary" && -f "$lib" ]]; then
         bundle_dylib "$binary" "$dest_dir" "${search_paths[@]}"
+    fi
+done
+
+for lib in "$lib_dir"*; do
+    if [[ -x "$lib" && -f "$lib" ]]; then
+        bundle_dylib "$lib" "$dest_dir" "${search_paths[@]}"
+    fi
+done
+
+for lib in "$lib_dir"/meshlib/*; do
+    if [[ -x "$lib" && -f "$lib" ]]; then
+        bundle_dylib "$lib" "$dest_dir" "${search_paths[@]}"
     fi
 done
 
@@ -145,7 +145,7 @@ deactivate
 pkgbuild \
             --root Library \
             --identifier com.MeshInspector.MeshLib \
-            --install-location  /Library \
+            --install-location /Library \
             MeshLib.pkg
 
 

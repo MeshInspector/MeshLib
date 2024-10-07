@@ -72,18 +72,58 @@ using namespace MR;
 
 constexpr auto cTransformContextName = "TransformContextWindow";
 
-/// get list of objects presenting in the given list for which one of the following statements are valid:
-///  - all the object's subtree elements (children, grandchildren, etc.) are present in the list
-///  - all the object's subtree elements are absent in the list
+/// flat representation of an object tree
+/// useful for caching
+struct FlatTree
+{
+    std::shared_ptr<Object> root;
+    std::vector<std::shared_ptr<Object>> subobjects;
+};
+
+/// flat representation of an object tree with objects being grouped by their types
+/// to keep the class reasonably simple and useful, only mesh, polyline, and point cloud objects are grouped
+struct TypedFlatTree
+{
+    std::shared_ptr<Object> root;
+    std::vector<std::shared_ptr<ObjectMesh>> objsMesh;
+    std::vector<std::shared_ptr<ObjectLines>> objsLines;
+    std::vector<std::shared_ptr<ObjectPoints>> objsPoints;
+
+    static TypedFlatTree fromFlatTree( const FlatTree& tree )
+    {
+        std::vector<std::shared_ptr<ObjectMesh>> objsMesh;
+        std::vector<std::shared_ptr<ObjectLines>> objsLines;
+        std::vector<std::shared_ptr<ObjectPoints>> objsPoints;
+        for ( const auto& subobj : tree.subobjects )
+        {
+            if ( auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( subobj ) )
+                objsMesh.emplace_back( std::move( objMesh ) );
+            else if ( auto objLines = std::dynamic_pointer_cast<ObjectLines>( subobj ) )
+                objsLines.emplace_back( std::move( objLines ) );
+            else if ( auto objPoints = std::dynamic_pointer_cast<ObjectPoints>( subobj ) )
+                objsPoints.emplace_back( std::move( objPoints ) );
+        }
+        return {
+            .root = tree.root,
+            .objsMesh = std::move( objsMesh ),
+            .objsLines = std::move( objsLines ),
+            .objsPoints = std::move( objsPoints ),
+        };
+    }
+};
+
+/// get list of subtrees satisfying any of the following rules:
+///  - all the subtree elements are present in the given object list
+///  - only the subtree's root element is present in the given object list
 /// TODO: optional predicate to ignore insignificant objects (non-visual objects, ancillary objects, etc.)
-std::vector<std::shared_ptr<Object>> findSubtreeRoots( const std::vector<std::shared_ptr<Object>>& objs )
+std::vector<FlatTree> getFlatSubtrees( const std::vector<std::shared_ptr<Object>>& objs )
 {
     std::unordered_set<Object *> objSet;
     objSet.reserve( objs.size() );
     for ( const auto& obj : objs )
         objSet.emplace( obj.get() );
 
-    std::vector<std::shared_ptr<Object>> results;
+    std::vector<FlatTree> results;
     for ( const auto& obj : objs )
     {
         // ignore if the object is a child of another object from the list
@@ -91,12 +131,12 @@ std::vector<std::shared_ptr<Object>> findSubtreeRoots( const std::vector<std::sh
             if ( objSet.contains( parent ) )
                 continue;
 
-        const auto subtree = getAllObjectsInTree( *obj );
+        auto subobjs = getAllObjectsInTree( *obj );
         size_t found = 0;
-        for ( const auto& subobj : subtree )
+        for ( const auto& subobj : subobjs )
             found += int( objSet.contains( subobj.get() ) );
-        if ( found == 0 || found == subtree.size() )
-            results.emplace_back( obj );
+        if ( found == 0 || found == subobjs.size() )
+            results.emplace_back( obj, std::move( subobjs ) );
     }
     return results;
 }
@@ -1100,20 +1140,20 @@ bool RibbonMenu::drawCloneSelectionButton( const std::vector<std::shared_ptr<Obj
 
 bool RibbonMenu::drawMergeSubtreeButton( const std::vector<std::shared_ptr<Object>>& selected )
 {
-    const auto subtreeRoots = findSubtreeRoots( selected );
-    if ( subtreeRoots.empty() )
+    std::vector<TypedFlatTree> subtrees;
+    for ( const auto& subtree : getFlatSubtrees( selected ) )
+        subtrees.emplace_back( TypedFlatTree::fromFlatTree( subtree ) );
+    if ( subtrees.empty() )
         return false;
 
     bool needToMerge = false;
-    for ( const auto& rootObj : subtreeRoots )
+    for ( const auto& subtree : subtrees )
     {
-        const auto objsMesh = getAllObjectsInTree<ObjectMesh>( rootObj.get() );
-        const auto objsLines = getAllObjectsInTree<ObjectLines>( rootObj.get() );
-        const auto objsPoints = getAllObjectsInTree<ObjectPoints>( rootObj.get() );
+        const auto& rootObj = subtree.root;
         needToMerge = needToMerge
-            || ( objsMesh.size() + int( rootObj->asType<ObjectMesh>() != nullptr ) > 1 )
-            || ( objsLines.size() + int( rootObj->asType<ObjectLines>() != nullptr ) > 1 )
-            || ( objsPoints.size() + int( rootObj->asType<ObjectPoints>() != nullptr ) > 1 );
+            || ( subtree.objsMesh.size() + int( rootObj->asType<ObjectMesh>() != nullptr ) > 1 )
+            || ( subtree.objsLines.size() + int( rootObj->asType<ObjectLines>() != nullptr ) > 1 )
+            || ( subtree.objsPoints.size() + int( rootObj->asType<ObjectPoints>() != nullptr ) > 1 );
     }
     if ( !needToMerge )
         return false;
@@ -1125,13 +1165,14 @@ bool RibbonMenu::drawMergeSubtreeButton( const std::vector<std::shared_ptr<Objec
 
     SCOPED_HISTORY( "Merge Objects" );
 
-    for ( const auto& rootObj : subtreeRoots )
+    for ( auto& subtree : subtrees )
     {
+        auto& rootObj = subtree.root;
         assert( rootObj->parent() );
 
-        auto objsMesh = getAllObjectsInTree<ObjectMesh>( rootObj.get() );
-        auto objsLines = getAllObjectsInTree<ObjectLines>( rootObj.get() );
-        auto objsPoints = getAllObjectsInTree<ObjectPoints>( rootObj.get() );
+        auto& objsMesh = subtree.objsMesh;
+        auto& objsLines = subtree.objsLines;
+        auto& objsPoints = subtree.objsPoints;
         const auto objCount = objsMesh.size() + objsLines.size() + objsPoints.size();
         if ( objCount == 0 )
             continue;

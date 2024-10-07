@@ -35,8 +35,16 @@ struct auto_cast_trait { };
 template <typename U>
 auto auto_cast( U&& from )
 {
-    using T = typename auto_cast_trait<std::remove_const_t<std::remove_pointer_t<std::remove_reference_t<U>>>>::target_type;
-    return cast_to<T>( std::forward<U&&>( from ) );
+    using Base = std::remove_const_t<std::remove_pointer_t<std::remove_reference_t<U>>>;
+    if constexpr ( std::is_arithmetic_v<Base> )
+    {
+        return from;
+    }
+    else
+    {
+        using T = typename auto_cast_trait<Base>::target_type;
+        return cast_to<T>( std::forward<U&&>( from ) );
+    }
 }
 
 #define ADD_AUTO_CAST( From, To ) \

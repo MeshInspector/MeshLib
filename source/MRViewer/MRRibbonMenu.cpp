@@ -36,6 +36,7 @@
 #include <MRMesh/MRObjectDistanceMap.h>
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRMesh.h>
+#include <MRMesh/MRTimer.h>
 #include <MRPch/MRJson.h>
 #include <MRPch/MRSpdlog.h>
 #include <MRPch/MRWasm.h>
@@ -1119,6 +1120,8 @@ bool RibbonMenu::drawMergeSubtreeButton( const std::vector<std::shared_ptr<Objec
 
     if ( !UI::button( "Merge Subtree", Vector2f( -1, 0 ) ) )
         return false;
+
+    MR_TIMER
 
     SCOPED_HISTORY( "Merge Objects" );
 

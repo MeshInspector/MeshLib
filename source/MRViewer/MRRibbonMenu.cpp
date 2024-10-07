@@ -1107,11 +1107,12 @@ bool RibbonMenu::drawMergeSubtreeButton( const std::vector<std::shared_ptr<Objec
     for ( const auto& rootObj : subtreeRoots )
     {
         const auto objsMesh = getAllObjectsInTree<ObjectMesh>( rootObj.get() );
-        needToMerge |= ( objsMesh.size() + int( rootObj->asType<ObjectMesh>() != nullptr ) > 1 );
         const auto objsLines = getAllObjectsInTree<ObjectLines>( rootObj.get() );
-        needToMerge |= ( objsLines.size() + int( rootObj->asType<ObjectLines>() != nullptr ) > 1 );
         const auto objsPoints = getAllObjectsInTree<ObjectPoints>( rootObj.get() );
-        needToMerge |= ( objsPoints.size() + int( rootObj->asType<ObjectPoints>() != nullptr ) > 1 );
+        needToMerge = needToMerge
+            || ( objsMesh.size() + int( rootObj->asType<ObjectMesh>() != nullptr ) > 1 )
+            || ( objsLines.size() + int( rootObj->asType<ObjectLines>() != nullptr ) > 1 )
+            || ( objsPoints.size() + int( rootObj->asType<ObjectPoints>() != nullptr ) > 1 );
     }
     if ( !needToMerge )
         return false;

@@ -44,7 +44,8 @@ public:
     MRVIEWER_API static void processCommands();
 
     // Clears the queue without executing the commands
-    MRVIEWER_API static void removeCommands();
+    // if closeLoop is true, does not accept any new commands
+    MRVIEWER_API static void removeCommands( bool closeLoop );
 
 private:
     CommandLoop() = default;
@@ -64,6 +65,8 @@ private:
 
     StartPosition state_{ StartPosition::AfterWindowInit };
 
+    // if set then cannot accept new commands
+    bool queueClosed_{ false }; // marked true in `removeCommands`
     std::thread::id mainThreadId_;
     std::queue<std::shared_ptr<Command>> commands_;
     std::mutex mutex_;

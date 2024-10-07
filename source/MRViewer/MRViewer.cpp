@@ -602,7 +602,7 @@ int Viewer::launch( const LaunchParams& params )
     }
     if ( params.close )
         launchShut();
-    CommandLoop::removeCommands();
+    CommandLoop::removeCommands( true );
     return EXIT_SUCCESS;
 }
 

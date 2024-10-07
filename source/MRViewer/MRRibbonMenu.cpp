@@ -18,6 +18,7 @@
 #include "MRMouseController.h"
 #include "MRRibbonSceneObjectsListDrawer.h"
 #include "MRClipboard.h"
+#include "MRSceneOperations.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include <MRMesh/MRString.h>
 #include <MRMesh/MRSystem.h>
@@ -42,9 +43,7 @@
 #include <MRPch/MRWasm.h>
 #include <imgui_internal.h> // needed here to fix items dialogs windows positions
 #include <misc/freetype/imgui_freetype.h> // for proper font loading
-
 #include <regex>
-#include <unordered_set>
 
 #if defined(__APPLE__) && defined(__clang__)
 #pragma clang diagnostic push
@@ -67,81 +66,8 @@
 
 namespace
 {
-
-using namespace MR;
-
 constexpr auto cTransformContextName = "TransformContextWindow";
-
-/// flat representation of an object tree
-/// useful for caching
-struct FlatTree
-{
-    std::shared_ptr<Object> root;
-    std::vector<std::shared_ptr<Object>> subobjects;
-};
-
-/// flat representation of an object tree with objects being grouped by their types
-/// to keep the class reasonably simple and useful, only mesh, polyline, and point cloud objects are grouped
-struct TypedFlatTree
-{
-    std::shared_ptr<Object> root;
-    std::vector<std::shared_ptr<ObjectMesh>> objsMesh;
-    std::vector<std::shared_ptr<ObjectLines>> objsLines;
-    std::vector<std::shared_ptr<ObjectPoints>> objsPoints;
-
-    static TypedFlatTree fromFlatTree( const FlatTree& tree )
-    {
-        std::vector<std::shared_ptr<ObjectMesh>> objsMesh;
-        std::vector<std::shared_ptr<ObjectLines>> objsLines;
-        std::vector<std::shared_ptr<ObjectPoints>> objsPoints;
-        for ( const auto& subobj : tree.subobjects )
-        {
-            if ( auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( subobj ) )
-                objsMesh.emplace_back( std::move( objMesh ) );
-            else if ( auto objLines = std::dynamic_pointer_cast<ObjectLines>( subobj ) )
-                objsLines.emplace_back( std::move( objLines ) );
-            else if ( auto objPoints = std::dynamic_pointer_cast<ObjectPoints>( subobj ) )
-                objsPoints.emplace_back( std::move( objPoints ) );
-        }
-        return {
-            .root = tree.root,
-            .objsMesh = std::move( objsMesh ),
-            .objsLines = std::move( objsLines ),
-            .objsPoints = std::move( objsPoints ),
-        };
-    }
-};
-
-/// get list of subtrees satisfying any of the following rules:
-///  - all the subtree elements are present in the given object list
-///  - only the subtree's root element is present in the given object list
-/// TODO: optional predicate to ignore insignificant objects (non-visual objects, ancillary objects, etc.)
-std::vector<FlatTree> getFlatSubtrees( const std::vector<std::shared_ptr<Object>>& objs )
-{
-    std::unordered_set<Object *> objSet;
-    objSet.reserve( objs.size() );
-    for ( const auto& obj : objs )
-        objSet.emplace( obj.get() );
-
-    std::vector<FlatTree> results;
-    for ( const auto& obj : objs )
-    {
-        // ignore if the object is a child of another object from the list
-        for ( auto parent = obj->parent(); parent != nullptr; parent = parent->parent() )
-            if ( objSet.contains( parent ) )
-                continue;
-
-        auto subobjs = getAllObjectsInTree( *obj );
-        size_t found = 0;
-        for ( const auto& subobj : subobjs )
-            found += int( objSet.contains( subobj.get() ) );
-        if ( found == 0 || found == subobjs.size() )
-            results.emplace_back( FlatTree { obj, std::move( subobjs ) } );
-    }
-    return results;
 }
-
-} // namespace
 
 namespace MR
 {

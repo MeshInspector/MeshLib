@@ -136,7 +136,7 @@ std::vector<FlatTree> getFlatSubtrees( const std::vector<std::shared_ptr<Object>
         for ( const auto& subobj : subobjs )
             found += int( objSet.contains( subobj.get() ) );
         if ( found == 0 || found == subobjs.size() )
-            results.emplace_back( obj, std::move( subobjs ) );
+            results.emplace_back( FlatTree { obj, std::move( subobjs ) } );
     }
     return results;
 }

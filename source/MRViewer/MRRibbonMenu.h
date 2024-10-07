@@ -130,6 +130,7 @@ public:
     bool drawCloneButton( const std::vector<std::shared_ptr<Object>>& selected );
     bool drawCustomCheckBox( const std::vector<std::shared_ptr<Object>>& selected, SelectedTypesMask selectedMask );
     bool drawCloneSelectionButton( const std::vector<std::shared_ptr<Object>>& selected );
+    bool drawMergeSubtreeButton( const std::vector<std::shared_ptr<Object>>& selected );
 protected:
     // draw single item
     MRVIEWER_API virtual void drawBigButtonItem_( const MenuItemInfo& item );

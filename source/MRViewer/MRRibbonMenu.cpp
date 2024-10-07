@@ -18,6 +18,7 @@
 #include "MRMouseController.h"
 #include "MRRibbonSceneObjectsListDrawer.h"
 #include "MRClipboard.h"
+#include "MRSceneOperations.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include <MRMesh/MRString.h>
 #include <MRMesh/MRSystem.h>
@@ -36,6 +37,7 @@
 #include <MRMesh/MRObjectDistanceMap.h>
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRMesh.h>
+#include <MRMesh/MRTimer.h>
 #include <MRPch/MRJson.h>
 #include <MRPch/MRSpdlog.h>
 #include <MRPch/MRWasm.h>
@@ -1060,6 +1062,36 @@ bool RibbonMenu::drawCloneSelectionButton( const std::vector<std::shared_ptr<Obj
     }
 
     return someChanges;
+}
+
+bool RibbonMenu::drawMergeSubtreeButton( const std::vector<std::shared_ptr<Object>>& selected )
+{
+    std::vector<TypedFlatTree> subtrees;
+    for ( const auto& subtree : getFlatSubtrees( selected ) )
+        subtrees.emplace_back( TypedFlatTree::fromFlatTree( subtree ) );
+    if ( subtrees.empty() )
+        return false;
+
+    bool needToMerge = false;
+    for ( const auto& subtree : subtrees )
+    {
+        const auto& rootObj = subtree.root;
+        needToMerge = needToMerge
+            || ( subtree.objsMesh.size() + int( rootObj->asType<ObjectMesh>() != nullptr ) > 1 )
+            || ( subtree.objsLines.size() + int( rootObj->asType<ObjectLines>() != nullptr ) > 1 )
+            || ( subtree.objsPoints.size() + int( rootObj->asType<ObjectPoints>() != nullptr ) > 1 );
+    }
+    if ( !needToMerge )
+        return false;
+
+    if ( !UI::button( "Merge Subtree", Vector2f( -1, 0 ) ) )
+        return false;
+
+    SCOPED_HISTORY( "Merge Objects" );
+    for ( auto& subtree : subtrees )
+        mergeSubtree( std::move( subtree ) );
+
+    return true;
 }
 
 void RibbonMenu::drawBigButtonItem_( const MenuItemInfo& item )

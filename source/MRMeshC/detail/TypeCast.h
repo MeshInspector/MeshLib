@@ -26,7 +26,7 @@ auto cast_to( U& from )
 template <typename T, typename U>
 auto cast_to( U&& from )
 {
-    return reinterpret_cast<T&>( from );
+    return reinterpret_cast<T&&>( from );
 }
 
 template <typename T>

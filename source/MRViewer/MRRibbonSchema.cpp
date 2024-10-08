@@ -93,9 +93,10 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
             {
                 if ( busyWord[j] )
                     continue;
-                int error = calcDamerauLevenshteinDistance( words[i], sourceWords[j], false );
+                int cornersInsertions = 0;
+                int error = calcDamerauLevenshteinDistance( words[i], sourceWords[j], false, &cornersInsertions );
                 if ( i == words.size() - 1 )
-                    error -= std::max( int( sourceWords[j].size() ) - int( words[i].size() ), 0 );
+                    error -= cornersInsertions;
                 if ( error < minError )
                 {
                     minError = error;

@@ -385,16 +385,13 @@ bool buttonIconEx(
     const ButtonIconCustomizationParams& params )
 {
     ImGui::BeginGroup();
-    const auto scrollX = ImGui::GetScrollX();
-    const auto scrollY = ImGui::GetScrollY();
+    const auto scroll = ImVec2( ImGui::GetScrollX(), ImGui::GetScrollY() );
     const auto startButtonPos = ImGui::GetCursorPos();
-    ImVec2 endButtonPos( startButtonPos.x + buttonSize.x, startButtonPos.y );
-    const ImVec2 startButtonPosWindow( startButtonPos.x - scrollX, startButtonPos.y - scrollY );
+    ImVec2 endButtonPos( startButtonPos.x + buttonSize.x, startButtonPos.y + buttonSize.y );
     const auto winPos = ImGui::GetWindowPos();
     const auto& style = ImGui::GetStyle();
-    const auto padding = ImGui::GetStyle().FramePadding;
 
-    ImVec2 minClip( winPos.x + startButtonPosWindow.x, winPos.y + startButtonPosWindow.y );
+    ImVec2 minClip = winPos + startButtonPos - scroll;
     ImVec2 maxClip( minClip.x + buttonSize.x, minClip.y + buttonSize.y );
 
     std::string buttonText = "##" + text;
@@ -413,10 +410,9 @@ bool buttonIconEx(
 
     ImGui::GetWindowDrawList()->PushClipRect( minClip, maxClip, true );
 
+    const auto cFontSize = ImGui::GetFontSize();
     const char* startWord = 0;
     const char* endWord = 0;
-    ImVec2 curTextSize;
-    bool printText = false;
 
     struct StringDetail
     {
@@ -426,55 +422,68 @@ bool buttonIconEx(
     };
     std::vector<StringDetail> vecDetail;
 
-    StringDetail previosDetail;
     StringDetail curDetail;
     curDetail.start = text.data();
     auto endText = std::string_view( text ).end();
+    float maxLineLength = 0.0f;
+    auto printLine = [&] ( const StringDetail& strDetail )
+    {
+        vecDetail.push_back( strDetail );
+        if ( strDetail.lenght > maxLineLength )
+            maxLineLength = strDetail.lenght;
+    };
+
+    const float cLineAvailableWidth = params.textUnderImage ? buttonSize.x : buttonSize.x - iconSize.x;
 
     split( text, " ", [&] ( std::string_view str )
     {
         startWord = str.data();
         endWord = &str.back() + 1;
         bool forcePrint = endText == str.end();
-        curTextSize = ImGui::CalcTextSize( startWord, endWord );
-        if ( curDetail.lenght + curTextSize.x > buttonSize.x )
+        auto curTextSize = ImGui::CalcTextSize( startWord, endWord );
+        if ( curDetail.lenght + curTextSize.x > cLineAvailableWidth )
         {
-            printText = true;
             curDetail.end = startWord;
             if ( curDetail.lenght == 0 )
             {
                 curDetail.end = endWord;
-                curDetail.lenght += curTextSize.x;
+                curDetail.lenght += curTextSize.x; // should add " " size?
             }
-            previosDetail = curDetail;
+            printLine( curDetail );
             curDetail = { curTextSize.x, startWord, endWord };
         }
         else if ( forcePrint )
         {
-            printText = true;
             curDetail.end = endWord;
             curDetail.lenght += curTextSize.x;
-            previosDetail = curDetail;
+            printLine( curDetail );
         }
         else
         {
             curDetail.lenght += curTextSize.x;
         }
         startWord = endWord;
-
-        if ( printText )
-        {
-            printText = false;
-            vecDetail.push_back( previosDetail );
-        }
         return false;
     } );
 
-    float localPadding = ( buttonSize.y - vecDetail.size() * curTextSize.y - iconSize.y ) / 3.0f;
-    localPadding = std::max( localPadding, style.FramePadding.y );
-
-    ImVec2 posIcon( ( endButtonPos.x + startButtonPos.x - iconSize.x ) / 2.0f, startButtonPos.y + localPadding );
-    ImGui::SetCursorPos( posIcon );
+    float localPadding = 0.0f;
+    ImVec2 startPosIcon;
+    ImVec2 startPosText;
+    if ( params.textUnderImage )
+    {
+        localPadding = ( buttonSize.y - iconSize.y - vecDetail.size() * cFontSize ) / 3.0f;
+        localPadding = std::max( localPadding, style.FramePadding.y );
+        startPosIcon = ImVec2( ( startButtonPos.x + endButtonPos.x - iconSize.x ) / 2.0f, startButtonPos.y + localPadding );
+        startPosText = ImVec2( ( startButtonPos.x + endButtonPos.x ) / 2.0f, startPosIcon.y + iconSize.y + localPadding );
+    }
+    else
+    {
+        localPadding = ( buttonSize.x - iconSize.x - maxLineLength ) / 3.0f;
+        localPadding = std::max( localPadding, style.FramePadding.x );
+        startPosIcon = ImVec2( startButtonPos.x + localPadding, ( startButtonPos.y + endButtonPos.y - iconSize.y ) / 2.0f );
+        startPosText = ImVec2( startPosIcon.x + iconSize.x + localPadding + maxLineLength * 0.5f, ( startButtonPos.y + endButtonPos.y - vecDetail.size() * cFontSize ) / 2.0f );
+    }
+    ImGui::SetCursorPos( startPosIcon );
 
     const float maxSize = std::max( iconSize.x, iconSize.y );
     auto icon = RibbonIcons::findByName( name, maxSize, RibbonIcons::ColorType::White, RibbonIcons::IconType::IndependentIcons );
@@ -492,25 +501,22 @@ bool buttonIconEx(
 
     const auto font = ImGui::GetFont();
     const ImU32 color = ImGui::GetColorU32( style.Colors[ImGuiCol_Text] );
-    const auto fontSize = ImGui::GetFontSize();
 
-    ImVec2 startPosText( winPos.x + ( endButtonPos.x + startButtonPosWindow.x ) / 2.0f, winPos.y + startButtonPosWindow.y );
-    startPosText.y += localPadding * 2 + iconSize.y;
     size_t numStr = 0;
     for ( const auto& detail : vecDetail )
     {
-        ImVec2 pos;
-        pos.x = startPosText.x - previosDetail.lenght / 2.0f;
-        pos.y = startPosText.y + ( padding.y + curTextSize.y ) * numStr;
+        ImVec2 screenPos = winPos - scroll;
+        screenPos.x += startPosText.x - detail.lenght / 2.0f;
+        screenPos.y += startPosText.y + ( style.FramePadding.y + cFontSize ) * numStr;
         ImGui::GetWindowDrawList()->AddText(
                 font,
-                fontSize,
-                pos,
+                cFontSize,
+                screenPos,
                 color,
                 detail.start,
                 detail.end );
         if ( numStr == 0 && params.underlineFirstLetter )
-            ImGui::GetWindowDrawList()->AddText( font, fontSize, pos, color, "_" );
+            ImGui::GetWindowDrawList()->AddText( font, cFontSize, screenPos, color, "_" );
 
         numStr++;
     }

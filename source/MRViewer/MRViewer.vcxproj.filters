@@ -430,6 +430,9 @@
     <ClCompile Include="MRObjectImGuiLabel.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="MRSceneOperations.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -839,6 +842,9 @@
     <ClInclude Include="MRObjectImGuiLabel.h">
       <Filter>Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="MRSceneOperations.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />
@@ -1015,6 +1021,12 @@
     </Image>
     <Image Include="resource\independent_icons\X3\Plane YZ.png">
       <Filter>resource\independent_icons\X3</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X1\Object_open.png">
+      <Filter>resource\object_icons\X1</Filter>
+    </Image>
+    <Image Include="resource\object_icons\X3\Object_open.png">
+      <Filter>resource\object_icons\X3</Filter>
     </Image>
   </ItemGroup>
 </Project>

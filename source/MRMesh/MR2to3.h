@@ -11,7 +11,7 @@ namespace MR
 
 /// \defgroup MathGroup Math group
 
-/// Conversion functions from lower-dimensional data to higher-dimensional put 0 in the additional dimensions
+/// Conversion functions from lower-dimensional data to higher-dimensional put 0 in additional dimensions of vectors or identity elements in matrix
 /// Conversion functions from higher-dimensional data to lower-dimensional just omit additional dimensions
 /// \defgroup ConversionBetween2and3dimGroup 2d <-> 3d conversion
 /// \ingroup MathGroup
@@ -32,7 +32,7 @@ template <typename T>
 template <typename T>
 [[nodiscard]] inline Matrix3<T> to3dim( const Matrix2<T> & m )
 {
-    return { to3dim( m.x ), to3dim( m.y ), Vector3<T>{} };
+    return { to3dim( m.x ), to3dim( m.y ), Vector3<T>::plusZ() };
 }
 
 template <typename T>

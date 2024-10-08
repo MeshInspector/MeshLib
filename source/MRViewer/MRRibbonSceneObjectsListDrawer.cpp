@@ -40,19 +40,19 @@ namespace MR
 
 void RibbonSceneObjectsListDrawer::draw( float height, float scaling )
 {
-    currentObjectLineCounter_ = 1;
-    lastDrawnSiblingMap_.clear();
+    currentElementId_ = 1;
+    lastDrawnSibling_.clear();
     SceneObjectsListDrawer::draw( height, scaling );
 }
 
 void RibbonSceneObjectsListDrawer::initRibbonMenu( RibbonMenu* ribbonMenu )
 {
     // lets assume that will not have depth more than 32 most times
-    lastDrawnSiblingMap_.reserve( 32 );
+    lastDrawnSibling_.reserve( 32 );
     ribbonMenu_ = ribbonMenu;
 }
 
-void RibbonSceneObjectsListDrawer::drawCustomObjectPrefixInScene_( const Object& obj )
+void RibbonSceneObjectsListDrawer::drawCustomObjectPrefixInScene_( const Object& obj, bool opened )
 {
     if ( !ribbonMenu_ )
         return;
@@ -60,7 +60,10 @@ void RibbonSceneObjectsListDrawer::drawCustomObjectPrefixInScene_( const Object&
     const auto& fontManager = ribbonMenu_->getFontManager();
 
     auto imageSize = ImGui::GetFrameHeight() - 2 * menuScaling_;
-    auto* imageIcon = RibbonIcons::findByName( obj.typeName(), imageSize,
+    std::string name = obj.typeName();
+    if ( opened && name == Object::TypeName() )
+        name += "_open";
+    auto* imageIcon = RibbonIcons::findByName( name, imageSize,
                                                RibbonIcons::ColorType::White,
                                                RibbonIcons::IconType::ObjectTypeIcon );
 
@@ -102,6 +105,7 @@ void RibbonSceneObjectsListDrawer::drawSceneContextMenu_( const std::vector<std:
             wasAction |= ribbonMenu_->drawGroupUngroupButton( selected );
             wasAction |= ribbonMenu_->drawSelectSubtreeButton( selected );
             wasAction |= ribbonMenu_->drawCloneButton( selected );
+            wasAction |= ribbonMenu_->drawMergeSubtreeButton( selected );
         }
         else if ( ImGui::BeginTable( "##DrawOptions", 2, ImGuiTableFlags_BordersInnerV ) )
         {
@@ -117,6 +121,7 @@ void RibbonSceneObjectsListDrawer::drawSceneContextMenu_( const std::vector<std:
             wasAction |= ribbonMenu_->drawSelectSubtreeButton( selected );
             wasAction |= ribbonMenu_->drawCloneButton( selected );
             wasAction |= ribbonMenu_->drawCloneSelectionButton( selected );
+            wasAction |= ribbonMenu_->drawMergeSubtreeButton( selected );
             ImGui::EndTable();
         }
         ImGui::PopStyleVar();
@@ -145,19 +150,25 @@ std::string RibbonSceneObjectsListDrawer::objectLineStrId_( const Object& object
 bool RibbonSceneObjectsListDrawer::drawObject_( Object& object, const std::string& uniqueStr, int depth )
 {
     const bool hasRealChildren = objectHasSelectableChildren( object );
-    
-    auto res = drawTreeOpenedState_( object, !hasRealChildren, uniqueStr, depth );
-    ImGui::SameLine();
-    drawObjectLine_( object, uniqueStr );
 
+    auto isOpened = drawTreeOpenedState_( object, !hasRealChildren, uniqueStr, depth );
+    ImGui::SameLine();
+    drawObjectLine_( object, uniqueStr, isOpened );
 
     // update last sibling
-    if ( lastDrawnSiblingMap_.size() <= depth )
-        lastDrawnSiblingMap_.resize( depth + 1 );
-    lastDrawnSiblingMap_[depth] = currentObjectLineCounter_;
-    ++currentObjectLineCounter_;
+    if ( lastDrawnSibling_.size() <= depth )
+        lastDrawnSibling_.resize( depth + 1 );
+    lastDrawnSibling_[depth] = { ImGui::GetCursorScreenPos().y,currentElementId_ };
+    ++currentElementId_;
 
-    return res;
+    return isOpened;
+}
+
+bool RibbonSceneObjectsListDrawer::drawSkippedObject_( Object& object, const std::string& uniqueStr, int depth )
+{
+    auto startScreenPos = ImGui::GetCursorScreenPos();
+    drawHierarhyLine_( startScreenPos, depth, true );
+    return SceneObjectsListDrawer::drawSkippedObject_( object, uniqueStr, depth );
 }
 
 const char* RibbonSceneObjectsListDrawer::getSceneItemIconByTypeName_( const std::string& typeName ) const
@@ -220,43 +231,12 @@ bool RibbonSceneObjectsListDrawer::drawTreeOpenedState_( Object& object, bool le
     ImGui::PopStyleVar();
 
     // draw hierarchy lines
-    if ( depth > 0 )
-    {
-        int numSteps = 0;
-        if ( lastDrawnSiblingMap_.size() > depth )
-        {
-            auto lastParent = lastDrawnSiblingMap_[depth - 1];
-            if ( lastParent == 0 )
-            {
-                // parent was skipped, so it is over the screen
-                numSteps = -1;
-            }
-            else if ( lastParent + 1 != currentObjectLineCounter_ )
-            {
-                // otherwise it first child
-                numSteps = currentObjectLineCounter_ - lastDrawnSiblingMap_[depth];
-            }
-        }
-
-        auto drawList = window->DrawList;
-        auto pos0 = ImVec2( startScreenPos.x - ImGui::GetStyle().FramePadding.x * 0.75f, startScreenPos.y + cFrameHeight * 0.5f );
-        auto pos1 = ImVec2( startScreenPos.x - ( cFrameHeight - 2 * menuScaling_ ) * 0.5f, pos0.y );
-        auto pos2 = ImVec2( pos1.x, pos1.y );
-        if ( numSteps < 0 )
-            pos2.y = 0.0f;
-        else if ( numSteps == 0 )
-            pos2.y -= cFrameHeight * 0.5f;
-        else
-            pos2.y -= numSteps * ( cFrameHeight + ImGui::GetStyle().ItemSpacing.y + 1 );
-            
-        drawList->AddLine( pos0, pos1, Color::gray().getUInt32(), menuScaling_ );
-        drawList->AddLine( pos1, pos2, Color::gray().getUInt32(), menuScaling_ );
-    }
+    drawHierarhyLine_( startScreenPos, depth, false );
 
     return isOpen;
 }
 
-void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::string& uniqueStr )
+void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::string& uniqueStr, bool opened )
 {
     const bool isSelected = object.isSelected();
 
@@ -270,6 +250,8 @@ void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::s
     auto startPos = ImGui::GetCursorPos();
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0 );
     ImGui::PushStyleColor( ImGuiCol_Button, isSelected ? ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame ) : ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ) );
+    if ( !isSelected )
+        ImGui::PushStyleColor( ImGuiCol_ButtonHovered, Color::gray().scaledAlpha( 0.2f ).getUInt32() );
     UI::ButtonCustomizationParams params;
     params.forceImGuiBackground = true;
     UI::buttonEx( ( "##SelectBtn_" + object.name() + "_" + uniqueStr ).c_str(), true, Vector2f( -1, cFrameHeight ), ImGuiButtonFlags_AllowOverlap, params );
@@ -277,11 +259,11 @@ void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::s
     {
         auto rect = context->LastItemData.Rect;
         drawList->PushClipRect( window->InnerRect.Min, window->InnerRect.Max );
-        drawList->AddRect( rect.Min, rect.Max, ImGui::GetColorU32( ImGuiCol_ButtonHovered ), style.FrameRounding, 0, 2 * menuScaling_ );
+        drawList->AddRect( rect.Min, rect.Max, ImGui::GetColorU32( ImGuiCol_ButtonActive ), style.FrameRounding, 0, 2 * menuScaling_ );
         drawList->PopClipRect();
 
     }
-    ImGui::PopStyleColor();
+    ImGui::PopStyleColor( !isSelected ? 2 : 1 );
     ImGui::PopStyleVar();
     
     const auto& selected = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>();
@@ -298,11 +280,11 @@ void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::s
     auto lineObjectData = context->LastItemData;
 
     // draw text
-    if ( isSelected || frameHovered )
+    if ( isSelected )
         ImGui::PushStyleColor( ImGuiCol_Text, 0xffffffff );
     drawList->PushClipRect( window->InnerClipRect.Min, window->InnerClipRect.Max - ImVec2( cFrameHeight, 0 ) );
     ImGui::SetCursorPos( startPos + ImVec2( style.FramePadding.x, 0 ) );
-    drawCustomObjectPrefixInScene_( object );
+    drawCustomObjectPrefixInScene_( object, opened );
     ImGui::SetCursorPosY( startPos.y + style.FramePadding.y );
     ImGui::Text( "%s", object.name().c_str() );
     drawList->PopClipRect();
@@ -310,7 +292,7 @@ void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::s
     // draw visibility button
     ImGui::SetCursorPos( ImVec2( window->InnerClipRect.Max.x - window->Pos.x - cFrameHeight - style.FramePadding.x, startPos.y ) );
     drawEyeButton_( object, uniqueStr, frameHovered );
-    if ( isSelected || frameHovered )
+    if ( isSelected )
         ImGui::PopStyleColor();
 
     // set back last item as if it was main line for further checks
@@ -373,6 +355,53 @@ void RibbonSceneObjectsListDrawer::drawEyeButton_( Object& object, const std::st
         if ( deselectNewHiddenObjects_ && !object.isVisible( viewer.getPresentViewports() ) )
             object.select( false );
     }
+}
+
+void RibbonSceneObjectsListDrawer::drawHierarhyLine_( const Vector2f& startScreenPos, int depth, bool skipped )
+{
+    if ( depth <= 0 )
+        return;
+
+    auto numDepths = lastDrawnSibling_.size();
+
+    if ( skipped && numDepths < depth )
+        return;
+
+    int numSteps = 0;
+    if ( numDepths > depth )
+    {
+        auto lastParent = lastDrawnSibling_[depth - 1].id;
+        if ( lastParent == 0 )
+        {
+            // parent was skipped, so it is over the screen
+            numSteps = -1;
+        }
+        else if ( lastParent + 1 != currentElementId_ )
+        {
+            // otherwise it first child
+            numSteps = currentElementId_ - lastDrawnSibling_[depth].id;
+        }
+    }
+
+    const float cFrameHeight = ImGui::GetFrameHeight();
+    auto drawList = ImGui::GetWindowDrawList();
+
+    auto pos0 = ImVec2( startScreenPos.x - ImGui::GetStyle().FramePadding.x * 0.75f, startScreenPos.y + cFrameHeight * 0.5f );
+    auto pos1 = ImVec2( startScreenPos.x - cFrameHeight * 0.5f, pos0.y );
+    auto pos2 = ImVec2( pos1.x, pos1.y );
+    if ( numSteps < 0 )
+        pos2.y = 0.0f;
+    else if ( numSteps == 0 )
+        pos2.y = numDepths < depth ? ( pos2.y - cFrameHeight * 0.5f ) : lastDrawnSibling_[depth - 1].screenPosY - cFrameHeight * 0.25f;
+    else
+        pos2.y = lastDrawnSibling_[depth].screenPosY - cFrameHeight;
+
+    drawList->AddLine( pos0, pos1, Color::gray().getUInt32(), menuScaling_ );
+    drawList->AddLine( pos1, pos2, Color::gray().getUInt32(), menuScaling_ );
+
+    if ( skipped )
+        lastDrawnSibling_.resize( depth - 1 );
+
 }
 
 }

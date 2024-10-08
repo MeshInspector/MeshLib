@@ -15,10 +15,11 @@ namespace MR
 
 /**
  * Calculates Damerau-Levenshtein distance between to strings
+ * \param outLeftRightAddition if provided return amount of insertions to the left and to the right
  * \ingroup BasicGroup
  */
 [[nodiscard]] MRMESH_API int calcDamerauLevenshteinDistance( const std::string& stringA, const std::string& stringB,
-    bool caseSensitive = true );
+    bool caseSensitive = true, int* outLeftRightAddition = nullptr );
 
 /**
  * Splits given string by delimiter.

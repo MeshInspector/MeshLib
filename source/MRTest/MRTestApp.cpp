@@ -105,6 +105,6 @@ int main( int argc, char** argv )
 #endif
 
     ::testing::InitGoogleTest(&argc, argv);
-    MR::CommandLoop::removeCommands(); // that are added there by plugin constructors
+    MR::CommandLoop::removeCommands( false ); // that are added there by plugin constructors
     return RUN_ALL_TESTS();
 }

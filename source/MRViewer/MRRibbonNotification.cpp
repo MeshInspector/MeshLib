@@ -462,6 +462,8 @@ void RibbonNotifier::addNotification_( std::vector<NotificationWithTimer>& store
         if ( store.size() == cNotificationNumberLimit )
             store.erase( store.end() - 1 );
         store.insert( store.begin(), NotificationWithTimer{ notification } );
+        if ( store.front().notification.lifeTimeSec < 0.0f )
+            store.front().notification.lifeTimeSec = defaultNotificationLifeTimeSeconds;
     }
 }
 

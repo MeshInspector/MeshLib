@@ -56,7 +56,7 @@ protected:
     /// override this to customize prefix for objects in scene
     /// \detail height should be less or equal ImGui::GetFrameHeight()
     /// method should save ImGui::CursorPosY
-    MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& )
+    MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object&, bool )
     {}
     /// override this add custom context menu for selected objects
     /// uniqueStr need to identify who call context menu
@@ -76,6 +76,8 @@ protected:
 
     /// override this to customize whole object line
     MRVIEWER_API virtual bool drawObject_( Object& object, const std::string& uniqueStr, int depth );
+    /// draw dummy container for skipped object
+    MRVIEWER_API virtual bool drawSkippedObject_( Object& object, const std::string& uniqueStr, int depth );
 
     /// function that draws collapsing header and process click on it
     MRVIEWER_API bool drawObjectCollapsingHeader_( Object& object, const std::string& uniqueStr, bool hasRealChildren );

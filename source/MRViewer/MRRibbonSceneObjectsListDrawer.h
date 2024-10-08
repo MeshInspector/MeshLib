@@ -1,4 +1,5 @@
 #pragma once
+#include "MRMesh/MRMeshFwd.h"
 #include "MRSceneObjectsListDrawer.h"
 
 namespace MR
@@ -20,23 +21,32 @@ public:
     bool getCloseContextOnChange() { return closeContextOnChange_; }
 
 protected:
-    MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& obj ) override;
+    MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& obj, bool opened ) override;
     MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected, const std::string& uniqueStr ) override;
     MRVIEWER_API virtual bool collapsingHeader_( const std::string& uniqueName, ImGuiTreeNodeFlags flags ) override;
 
     MRVIEWER_API virtual std::string objectLineStrId_( const Object& object, const std::string& uniqueStr ) override;
 
     MRVIEWER_API virtual bool drawObject_( Object& object, const std::string& uniqueStr, int depth ) override;
+    MRVIEWER_API virtual bool drawSkippedObject_( Object& object, const std::string& uniqueStr, int depth ) override;
 private:
     // return icon (now it is symbol in icons font) based on typename
     MRVIEWER_API virtual const char* getSceneItemIconByTypeName_( const std::string& typeName ) const;
 
     bool drawTreeOpenedState_( Object& object, bool leaf, const std::string& uniqueStr, int depth );
-    void drawObjectLine_( Object& object, const std::string& uniqueStr );
+    void drawObjectLine_( Object& object, const std::string& uniqueStr, bool opened );
     void drawEyeButton_( Object& object, const std::string& uniqueStr, bool frameHovered );
 
-    int currentObjectLineCounter_{ 0 };
-    std::vector<int> lastDrawnSiblingMap_;
+    void drawHierarhyLine_( const Vector2f& startScreenPos, int depth, bool skipped );
+    
+    struct LastDepthInfo
+    {
+        float screenPosY{ 0.0f };
+        int id{ 0 };
+    };
+    // depth -> pos Y of last element of this depth
+    std::vector<LastDepthInfo> lastDrawnSibling_;
+    int currentElementId_{ 0 };
     RibbonMenu* ribbonMenu_ = nullptr;
     bool closeContextOnChange_ = true;
 };

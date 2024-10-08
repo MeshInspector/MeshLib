@@ -31,6 +31,20 @@ namespace MR.DotNet.Test
         }
 
         [Test]
+        public void TestSaveLoadCtm()
+        {
+            var cubeMesh = Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
+            var tempFile = Path.GetTempFileName() + ".ctm";
+            Mesh.ToAnySupportedFormat(cubeMesh, tempFile);
+
+            var readMesh = Mesh.FromAnySupportedFormat(tempFile);
+            Assert.That( readMesh.Points.Count == 8 );
+            Assert.That( readMesh.Triangulation.Count == 12 );
+
+            File.Delete(tempFile);
+        }
+
+        [Test]
         public void TestFromTriangles()
         {
             List<Vector3f> points = new List<Vector3f>();

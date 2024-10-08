@@ -426,14 +426,23 @@ bool buttonIconEx(
     curDetail.start = text.data();
     auto endText = std::string_view( text ).end();
     float maxLineLength = 0.0f;
+
+    const float cLineAvailableWidth = params.textUnderImage ? buttonSize.x : buttonSize.x - iconSize.x;
+    const float cSpaceWidth = ImGui::CalcTextSize( " " ).x;
+
     auto printLine = [&] ( const StringDetail& strDetail )
     {
         vecDetail.push_back( strDetail );
         if ( strDetail.lenght > maxLineLength )
             maxLineLength = strDetail.lenght;
     };
-
-    const float cLineAvailableWidth = params.textUnderImage ? buttonSize.x : buttonSize.x - iconSize.x;
+    auto sumLength = [&] ( float oldLength, float additionalLength )
+    {
+        if ( oldLength == 0 )
+            return additionalLength;
+        else
+            return oldLength + cSpaceWidth + additionalLength;
+    };
 
     split( text, " ", [&] ( std::string_view str )
     {
@@ -441,13 +450,13 @@ bool buttonIconEx(
         endWord = &str.back() + 1;
         bool forcePrint = endText == str.end();
         auto curTextSize = ImGui::CalcTextSize( startWord, endWord );
-        if ( curDetail.lenght + curTextSize.x > cLineAvailableWidth )
+        if ( sumLength( curDetail.lenght, curTextSize.x ) > cLineAvailableWidth )
         {
             curDetail.end = startWord;
             if ( curDetail.lenght == 0 )
             {
                 curDetail.end = endWord;
-                curDetail.lenght += curTextSize.x; // should add " " size?
+                curDetail.lenght = curTextSize.x;
             }
             printLine( curDetail );
             curDetail = { curTextSize.x, startWord, endWord };
@@ -455,12 +464,12 @@ bool buttonIconEx(
         else if ( forcePrint )
         {
             curDetail.end = endWord;
-            curDetail.lenght += curTextSize.x;
+            curDetail.lenght = sumLength( curDetail.lenght, curTextSize.x );
             printLine( curDetail );
         }
         else
         {
-            curDetail.lenght += curTextSize.x;
+            curDetail.lenght = sumLength( curDetail.lenght, curTextSize.x );
         }
         startWord = endWord;
         return false;
@@ -478,10 +487,11 @@ bool buttonIconEx(
     }
     else
     {
-        localPadding = ( buttonSize.x - iconSize.x - maxLineLength ) / 3.0f;
+        maxLineLength += cSpaceWidth; // to compensate icon inner spacing
+        localPadding = ( buttonSize.x - iconSize.x - maxLineLength - style.ItemInnerSpacing.x ) / 2.0f;
         localPadding = std::max( localPadding, style.FramePadding.x );
         startPosIcon = ImVec2( startButtonPos.x + localPadding, ( startButtonPos.y + endButtonPos.y - iconSize.y ) / 2.0f );
-        startPosText = ImVec2( startPosIcon.x + iconSize.x + localPadding + maxLineLength * 0.5f, ( startButtonPos.y + endButtonPos.y - vecDetail.size() * cFontSize ) / 2.0f );
+        startPosText = ImVec2( startPosIcon.x + iconSize.x + style.ItemInnerSpacing.x + maxLineLength * 0.5f, ( startButtonPos.y + endButtonPos.y - vecDetail.size() * cFontSize ) / 2.0f );
     }
     ImGui::SetCursorPos( startPosIcon );
 

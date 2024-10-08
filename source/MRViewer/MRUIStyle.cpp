@@ -427,7 +427,7 @@ bool buttonIconEx(
     auto endText = std::string_view( text ).end();
     float maxLineLength = 0.0f;
 
-    const float cLineAvailableWidth = params.textUnderImage ? buttonSize.x : buttonSize.x - iconSize.x;
+    const float cLineAvailableWidth = params.textUnderImage ? buttonSize.x : buttonSize.x - iconSize.x - style.ItemInnerSpacing.x;
     const float cSpaceWidth = ImGui::CalcTextSize( " " ).x;
 
     auto printLine = [&] ( const StringDetail& strDetail )

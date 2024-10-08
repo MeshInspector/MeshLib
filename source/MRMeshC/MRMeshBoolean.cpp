@@ -1,38 +1,42 @@
 #include "MRMeshBoolean.h"
 
+#include "detail/TypeCast.h"
+
 #include "MRMesh/MRMeshBoolean.h"
 
 using namespace MR;
+
+REGISTER_AUTO_CAST( AffineXf3f )
+REGISTER_AUTO_CAST( Mesh )
+REGISTER_AUTO_CAST( BooleanOperation )
+REGISTER_AUTO_CAST2( std::string, MRString )
 
 MRBooleanParameters mrBooleanParametersNew( void )
 {
     static const BooleanParameters def;
     return {
-        .rigidB2A = reinterpret_cast<const MRAffineXf3f*>( def.rigidB2A ),
+        .rigidB2A = auto_cast( def.rigidB2A ),
         .mergeAllNonIntersectingComponents = def.mergeAllNonIntersectingComponents,
         .cb = nullptr,
     };
 }
 
-MRBooleanResult mrBoolean( const MRMesh* meshA, const MRMesh* meshB, MRBooleanOperation operation, const MRBooleanParameters* params_ )
+MRBooleanResult mrBoolean( const MRMesh* meshA_, const MRMesh* meshB_, MRBooleanOperation operation_, const MRBooleanParameters* params_ )
 {
+    ARG( meshA ); ARG( meshB ); ARG_VAL( operation );
+
     BooleanParameters params;
     if ( params_ )
     {
         params = {
-            .rigidB2A = reinterpret_cast<const AffineXf3f*>( params_->rigidB2A ),
+            .rigidB2A = auto_cast( params_->rigidB2A ),
             .mergeAllNonIntersectingComponents = params_->mergeAllNonIntersectingComponents,
             .cb = params_->cb,
         };
     }
-    auto res = MR::boolean(
-        *reinterpret_cast<const Mesh*>( meshA ),
-        *reinterpret_cast<const Mesh*>( meshB ),
-        static_cast<BooleanOperation>(operation),
-        params
-    );
+    auto res = MR::boolean( meshA, meshB, operation, params );
     return {
-        .mesh = reinterpret_cast<MRMesh*>( new Mesh( std::move( res.mesh ) ) ),
-        .errorString = reinterpret_cast<MRString*>( new std::string( std::move( res.errorString ) ) ),
+        .mesh = auto_cast( new_from( std::move( res.mesh ) ) ),
+        .errorString = auto_cast( new_from( std::move( res.errorString ) ) ),
     };
 }

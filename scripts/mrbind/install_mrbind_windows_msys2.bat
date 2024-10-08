@@ -36,7 +36,7 @@ if not exist %MSYS2_DIR% (
         cd %MRBIND_DIR%
     )
 
-
+    git checkout %MRBIND_COMMIT%
 
     rem --- Build MRBind
     rmdir /S /Q build

@@ -763,7 +763,7 @@ VoidOrErrStr toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::files
 
     iw.SetImage( image );
 
-    std::ofstream fout( path );
+    std::ofstream fout( path, std::ios_base::binary );
     iw.SetStream( fout );
     if ( !fout || !iw.Write() )
         return unexpected( "Cannot write DICOM file" );

@@ -325,11 +325,11 @@ only-generate:
 	@$(MAKE) -f $(MRBIND_SOURCE)/scripts/apply_to_files.mk generate $(mrbind_vars)
 
 # Handwritten mrmeshnumpy. But only if we can't reuse it from the default build.
-ifeq ($(PACKAGE_NAME),meshlib)
-MRMESHNUMPY_MODULE :=
-else
+# ifeq ($(PACKAGE_NAME),meshlib)
+# MRMESHNUMPY_MODULE :=
+# else
 MRMESHNUMPY_MODULE := $(MODULE_OUTPUT_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX)
-endif
+# endif
 ifneq ($(MRMESHNUMPY_MODULE),)
 $(MRMESHNUMPY_MODULE): | $(MODULE_OUTPUT_DIR)
 	@echo $(call quote,[Compiling] mrmeshnumpy)

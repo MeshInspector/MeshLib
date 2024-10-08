@@ -267,8 +267,8 @@ COMPILER += -fvisibility=hidden
 # MacOS rpath is quirky: 1. Must use `-rpath,` instead of `-rpath=`. 2. Must specify the flag several times, apparently can't use
 #   `:` or `;` as a separators inside of one big flag. 3. As you've noticed, it uses `@loader_path` instead of `$ORIGIN`.
 rpath_origin := $(if $(IS_MACOS),@loader_path,$$ORIGIN)
-LINKER_FLAGS += -Wl,-rpath,'$(rpath_origin)' -Wl,-rpath,'$(rpath_origin)/..' -Wl,-rpath,$(call quote,$(abspath $(MODULE_OUTPUT_DIR))) -Wl,-rpath,$(call quote,$(abspath $(MESHLIB_SHLIB_DIR))) -Wl,-rpath,$(call quote,$(abspath $(DEPS_LIB_DIR)))
 ifneq ($(IS_MACOS),)
+LINKER_FLAGS += -Wl,-rpath,'$(rpath_origin)' -Wl,-rpath,'$(rpath_origin)/..' -Wl,-rpath,$(call quote,$(abspath $(MODULE_OUTPUT_DIR))) -Wl,-rpath,$(call quote,$(abspath $(MESHLIB_SHLIB_DIR))) -Wl,-rpath,$(call quote,$(abspath $(DEPS_LIB_DIR)))
 # Hmm.
 COMPILER_FLAGS_LIBCLANG += -resource-dir=$(strip $(call safe_shell,$(CXX_FOR_BINDINGS) -print-resource-dir))
 # Our dependencies are here.
@@ -292,6 +292,7 @@ COMPILER_FLAGS += -mmacosx-version-min=$(MACOS_MIN_VER)
 LINKER_FLAGS += -mmacosx-version-min=$(MACOS_MIN_VER)
 endif
 else # Linux:
+LINKER_FLAGS += -Wl,-rpath=$(call quote,$(abspath $(DEPS_LIB_DIR)):$(abspath $(MESHLIB_SHLIB_DIR)):)
 COMPILER_FLAGS += -I/usr/include/jsoncpp -isystem/usr/include/freetype2 -isystem/usr/include/gdcm-3.0
 endif
 endif

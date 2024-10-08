@@ -222,6 +222,9 @@ OUTPUT_DIR := build/binds
 endif
 INPUT_GLOBS := *.h
 MRBIND := $(MRBIND_EXE)
+# Note that we're ignoring `operator<=>` in `mrbind_flags.txt` because it causes errors on VS2022:
+# `undefined symbol: void __cdecl std::_Literal_zero_is_expected(void)`,
+# `referenced by source/TempOutput/PythonBindings/x64/Release/binding.0.o:(public: __cdecl std::_Literal_zero::_Literal_zero<int>(int))`.
 MRBIND_FLAGS := $(call load_file,$(makefile_dir)/mrbind_flags.txt)
 MRBIND_FLAGS_FOR_EXTRA_INPUTS := $(call load_file,$(makefile_dir)/mrbind_flags_for_helpers.txt)
 COMPILER_FLAGS := $(EXTRA_CFLAGS) $(call load_file,$(makefile_dir)/common_compiler_parser_flags.txt) $(PYTHON_CFLAGS) -I. -I$(DEPS_INCLUDE_DIR) -I$(makefile_dir)/../../source

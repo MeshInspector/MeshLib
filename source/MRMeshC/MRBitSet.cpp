@@ -1,53 +1,92 @@
 #include "MRBitSet.h"
 
+#include "detail/TypeCast.h"
+
 #include "MRMesh/MRBitSet.h"
 
 using namespace MR;
 
-const uint64_t* mrBitSetBlocks( const MRBitSet* bs )
+REGISTER_AUTO_CAST( BitSet )
+
+const uint64_t* mrBitSetBlocks( const MRBitSet* bs_ )
 {
-    return reinterpret_cast<const BitSet*>( bs )->m_bits.data();
+    ARG( bs );
+    return bs.m_bits.data();
 }
 
-size_t mrBitSetBlocksNum( const MRBitSet* bs )
+size_t mrBitSetBlocksNum( const MRBitSet* bs_ )
 {
-    return reinterpret_cast<const BitSet*>( bs )->m_bits.size();
+    ARG( bs );
+    return bs.m_bits.size();
 }
 
-size_t mrBitSetSize( const MRBitSet* bs )
+size_t mrBitSetSize( const MRBitSet* bs_ )
 {
-    return reinterpret_cast<const BitSet*>( bs )->size();
+    ARG( bs );
+    return bs.size();
 }
 
-void mrBitSetFree( MRBitSet* bs )
+void mrBitSetFree( MRBitSet* bs_ )
 {
-    delete reinterpret_cast<BitSet*>( bs );
+    ARG_PTR( bs );
+    delete bs;
 }
 
-MRFaceBitSet* mrFaceBitSetCopy( const MRFaceBitSet* fbs )
+MRFaceBitSet* mrFaceBitSetCopy( const MRFaceBitSet* fbs_ )
 {
-    auto* res = new FaceBitSet( *reinterpret_cast<const FaceBitSet*>( fbs ) );
-    return reinterpret_cast<MRFaceBitSet*>( res );
+    auto&& fbs = *cast_to<FaceBitSet>( fbs_ );
+    return cast_to<MRFaceBitSet>( new FaceBitSet( fbs ) );
 }
 
-void mrFaceBitSetFree( MRFaceBitSet* fbs )
+void mrFaceBitSetFree( MRFaceBitSet* fbs_ )
 {
-    delete reinterpret_cast<FaceBitSet*>( fbs );
+    auto&& fbs = cast_to<FaceBitSet>( fbs_ );
+    delete fbs;
 }
 
-bool mrBitSetEq( const MRBitSet* a, const MRBitSet* b )
+bool mrBitSetEq( const MRBitSet* a_, const MRBitSet* b_ )
 {
-    return *reinterpret_cast<const BitSet*>( a ) == *reinterpret_cast<const BitSet*>( b );
+    ARG( a ); ARG( b );
+    return a == b;
 }
 
 MRFaceBitSet* mrFaceBitSetNew( void )
 {
-    return reinterpret_cast<MRFaceBitSet*>( new FaceBitSet );
+    return cast_to<MRFaceBitSet>( new FaceBitSet );
 }
 
 size_t mrBitSetCount( const MRBitSet* bs_ )
 {
-    const auto& bs = *reinterpret_cast<const BitSet*>( bs_ );
-
+    ARG( bs );
     return bs.count();
+}
+
+size_t mrBitSetFindFirst( const MRBitSet* bs_ )
+{
+    ARG( bs );
+    return bs.find_first();
+}
+
+size_t mrBitSetFindLast( const MRBitSet* bs_ )
+{
+    ARG( bs );
+    return bs.find_last();
+}
+
+void mrBitSetResize( MRBitSet* bs_, size_t size, bool value )
+{
+    ARG( bs );
+    bs.resize( size, value );
+}
+
+void mrBitSetAutoResizeSet( MRBitSet* bs_, size_t pos, bool value )
+{
+    ARG( bs );
+    bs.autoResizeSet( pos, value );
+}
+
+MRBitSet* mrBitSetSub( const MRBitSet* a_, const MRBitSet* b_ )
+{
+    ARG( a ); ARG( b );
+    RETURN_NEW( a - b );
 }

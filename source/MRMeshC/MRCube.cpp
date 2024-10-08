@@ -1,15 +1,17 @@
 #include "MRCube.h"
 
+#include "detail/TypeCast.h"
+
 #include "MRMesh/MRCube.h"
 #include "MRMesh/MRMesh.h"
 
 using namespace MR;
 
+REGISTER_AUTO_CAST( Mesh )
+REGISTER_AUTO_CAST( Vector3f )
+
 MRMesh* mrMakeCube( const MRVector3f* size_, const MRVector3f* base_ )
 {
-    const auto& size = *reinterpret_cast<const Vector3f*>( size_ );
-    const auto& base = *reinterpret_cast<const Vector3f*>( base_ );
-
-    auto res = makeCube( size, base );
-    return reinterpret_cast<MRMesh*>( new Mesh( std::move( res ) ) );
+    ARG( size ); ARG( base );
+    RETURN_NEW( makeCube( size, base ) );
 }

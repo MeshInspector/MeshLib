@@ -33,6 +33,9 @@ MRMESHC_API size_t mrMeshTopologyFaceSize( const MRMeshTopology* top );
 /// returns one edge with no valid left face for every boundary in the mesh
 MRMESHC_API MREdgePath* mrMeshTopologyFindHoleRepresentiveEdges( const MRMeshTopology* top );
 
+/// ...
+MRMESHC_API void mrMeshTopologyGetLeftTriVerts( const MRMeshTopology* top, MREdgeId a, MRVertId* v0, MRVertId* v1, MRVertId* v2 );
+
 /// gets read-only access to the edges of the edge path
 MRMESHC_API const MREdgeId* mrEdgePathData( const MREdgePath* ep );
 

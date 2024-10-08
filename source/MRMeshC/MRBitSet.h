@@ -19,6 +19,21 @@ MRMESHC_API size_t mrBitSetCount( const MRBitSet* bs );
 /// checks if two bitsets are equal (have the same length and identical bit values)
 MRMESHC_API bool mrBitSetEq( const MRBitSet* a, const MRBitSet* b );
 
+/// ...
+MRMESHC_API size_t mrBitSetFindFirst( const MRBitSet* bs );
+
+/// ...
+MRMESHC_API size_t mrBitSetFindLast( const MRBitSet* bs );
+
+/// ...
+MRMESHC_API void mrBitSetResize( MRBitSet* bs, size_t size, bool value );
+
+/// ...
+MRMESHC_API void mrBitSetAutoResizeSet( MRBitSet* bs, size_t pos, bool value );
+
+/// ...
+MRMESHC_API MRBitSet* mrBitSetSub( const MRBitSet* a, const MRBitSet* b );
+
 /// deallocates a BitSet object
 MRMESHC_API void mrBitSetFree( MRBitSet* bs );
 

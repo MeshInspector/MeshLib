@@ -379,9 +379,10 @@ jobs:
           ${{ matrix.py-cmd }} -m pip uninstall -y meshlib
 
       - name: Install thirdparty libs
-        run: ./scripts/build_thirdparty.sh
-        run: ./scripts/mrbind/install_deps_macos.sh
-        run: ./scripts/mrbind/install_mrbind_macos.sh
+        run: |
+          ./scripts/build_thirdparty.sh
+          ./scripts/mrbind/install_deps_macos.sh
+          ./scripts/mrbind/install_mrbind_macos.sh
 
       - name: Build
         run: ./scripts/build_source.sh

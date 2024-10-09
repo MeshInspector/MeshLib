@@ -903,7 +903,7 @@ struct MarchingCubesByParts::Impl
 };
 
 MarchingCubesByParts::MarchingCubesByParts( const Vector3i & dims, const MarchingCubesParams& params )
-    : impl_( std::make_unique<Impl>( VolumeMesher( dims, params ) ) )
+    : impl_( new Impl{ VolumeMesher( dims, params ) } )
 {
 }
 

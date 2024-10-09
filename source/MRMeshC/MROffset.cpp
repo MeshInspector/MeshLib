@@ -7,6 +7,7 @@
 
 using namespace MR;
 
+REGISTER_AUTO_CAST( FaceBitSet )
 REGISTER_AUTO_CAST( Mesh )
 REGISTER_AUTO_CAST( SignDetectionMode )
 REGISTER_AUTO_CAST2( std::string, MRString )
@@ -20,7 +21,7 @@ MeshPart cast( MRMeshPart mp )
 {
     return {
         *auto_cast( mp.mesh ),
-        cast_to<FaceBitSet>( mp.region )
+        auto_cast( mp.region )
     };
 }
 
@@ -121,7 +122,7 @@ MRMesh* mrMcOffsetMesh( MRMeshPart mp, float offset, const MROffsetParameters* p
 
 MRMesh* mrMcShellMeshRegion( const MRMesh* mesh_, const MRFaceBitSet* region_, float offset, const MROffsetParameters* params_, MRString** errorString )
 {
-    ARG( mesh ); ARG_OF( FaceBitSet, region );
+    ARG( mesh ); ARG( region );
 
     OffsetParameters params;
     if ( params_ )

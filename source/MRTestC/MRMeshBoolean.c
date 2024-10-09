@@ -107,7 +107,7 @@ void testBooleanMultipleEdgePropogationSort( void )
 
         const MRMeshTopology* meshATopology = mrMeshTopology( meshA );
         MREdgePath* meshAHoles = mrMeshTopologyFindHoleRepresentiveEdges( meshATopology );
-        MREdgeLoop* border = mrTrackRightBoundaryLoop( meshATopology, mrEdgePathData( meshAHoles )[0], NULL );
+        MREdgeLoop* border = mrTrackRightBoundaryLoop( meshATopology, meshAHoles->data[0], NULL );
 
         const MRFaceBitSet* meshASupFaces = mrMeshTopologyGetValidFaces( mrMeshTopology( meshASup ) );
         const MRMeshAddPartByMaskParameters params = {

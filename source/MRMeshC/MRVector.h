@@ -2,23 +2,22 @@
 
 #include "MRMeshFwd.h"
 #include "MRAffineXf.h"
+#include "detail/Concat.h"
 
 MR_EXTERN_C_BEGIN
 
-typedef struct MRVectorAffineXf3f MRVectorAffineXf3f;
+#define MR_VECTOR_LIKE_DECL( ClassName, Type ) \
+typedef struct MR_CONCAT( MR, ClassName )      \
+{                                              \
+    MR_CONCAT( MR, Type )* data;               \
+    size_t size;                               \
+} MR_CONCAT( MR, ClassName );                  \
+MRMESHC_API void MR_CONCAT( MR_CONCAT( mr, ClassName ), Invalidate )( MR_CONCAT( MR, ClassName )* ); \
+MRMESHC_API void MR_CONCAT( MR_CONCAT( mr, ClassName ), Free )( MR_CONCAT( MR, ClassName )* );
 
-MRMESHC_API const MRAffineXf3f* mrVectorAffineXf3fData( const MRVectorAffineXf3f* vec );
+#define MR_VECTOR_DECL( Type ) MR_VECTOR_LIKE_DECL( MR_CONCAT( Vector, Type ), Type )
 
-MRMESHC_API size_t mrVectorAffineXf3fSize( const MRVectorAffineXf3f* vec );
-
-MRMESHC_API void mrVectorAffineXf3fFree( MRVectorAffineXf3f* vec );
-
-typedef struct MRVectorVector3f MRVectorVector3f;
-
-MRMESHC_API const MRVector3f* mrVectorVector3fData( const MRVectorVector3f* vec );
-
-MRMESHC_API size_t mrVectorVector3fSize( const MRVectorVector3f* vec );
-
-MRMESHC_API void mrVectorVector3fFree( MRVectorVector3f* vec );
+MR_VECTOR_DECL( AffineXf3f )
+MR_VECTOR_DECL( Vector3f )
 
 MR_EXTERN_C_END

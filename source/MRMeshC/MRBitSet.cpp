@@ -7,6 +7,10 @@
 using namespace MR;
 
 REGISTER_AUTO_CAST( BitSet )
+REGISTER_AUTO_CAST( EdgeBitSet )
+REGISTER_AUTO_CAST( FaceBitSet )
+REGISTER_AUTO_CAST( UndirectedEdgeBitSet )
+REGISTER_AUTO_CAST( VertBitSet )
 
 const uint64_t* mrBitSetBlocks( const MRBitSet* bs_ )
 {
@@ -34,13 +38,13 @@ void mrBitSetFree( MRBitSet* bs_ )
 
 MRFaceBitSet* mrFaceBitSetCopy( const MRFaceBitSet* fbs_ )
 {
-    auto&& fbs = *cast_to<FaceBitSet>( fbs_ );
-    return cast_to<MRFaceBitSet>( new FaceBitSet( fbs ) );
+    ARG( fbs );
+    RETURN_NEW( fbs );
 }
 
 void mrFaceBitSetFree( MRFaceBitSet* fbs_ )
 {
-    auto&& fbs = cast_to<FaceBitSet>( fbs_ );
+    ARG_PTR( fbs );
     delete fbs;
 }
 
@@ -50,9 +54,9 @@ bool mrBitSetEq( const MRBitSet* a_, const MRBitSet* b_ )
     return a == b;
 }
 
-MRFaceBitSet* mrFaceBitSetNew( void )
+MRFaceBitSet* mrFaceBitSetNew( size_t numBits, bool fillValue )
 {
-    return cast_to<MRFaceBitSet>( new FaceBitSet );
+    RETURN_NEW( FaceBitSet( numBits, fillValue ) );
 }
 
 size_t mrBitSetCount( const MRBitSet* bs_ )
@@ -89,4 +93,60 @@ MRBitSet* mrBitSetSub( const MRBitSet* a_, const MRBitSet* b_ )
 {
     ARG( a ); ARG( b );
     RETURN_NEW( a - b );
+}
+
+MRBitSet* mrBitSetNew( size_t numBits, bool fillValue )
+{
+    RETURN_NEW( BitSet( numBits, fillValue ) );
+}
+
+MREdgeBitSet* mrEdgeBitSetNew( size_t numBits, bool fillValue )
+{
+    RETURN_NEW( EdgeBitSet( numBits, fillValue ) );
+}
+
+MREdgeBitSet* mrEdgeBitSetCopy( const MREdgeBitSet* ebs_ )
+{
+    ARG( ebs );
+    RETURN_NEW( ebs );
+}
+
+void mrEdgeBitSetFree( MREdgeBitSet* ebs_ )
+{
+    ARG_PTR( ebs );
+    delete ebs;
+}
+
+MRVertBitSet* mrVertBitSetNew( size_t numBits, bool fillValue )
+{
+    RETURN_NEW( VertBitSet( numBits, fillValue ) );
+}
+
+MRVertBitSet* mrVertBitSetCopy( const MRVertBitSet* vbs_ )
+{
+    ARG( vbs );
+    RETURN_NEW( vbs );
+}
+
+void mrVertBitSetFree( MRVertBitSet* vbs_ )
+{
+    ARG_PTR( vbs );
+    delete vbs;
+}
+
+MRUndirectedEdgeBitSet* mrUndirectedEdgeBitSetNew( size_t numBits, bool fillValue )
+{
+    RETURN_NEW( UndirectedEdgeBitSet( numBits, fillValue ) );
+}
+
+MRUndirectedEdgeBitSet* mrUndirectedEdgeBitSetCopy( const MRUndirectedEdgeBitSet* uebs_ )
+{
+    ARG( uebs );
+    RETURN_NEW( uebs );
+}
+
+void mrUndirectedEdgeBitSetFree( MRUndirectedEdgeBitSet* uebs_ )
+{
+    ARG_PTR( uebs );
+    delete uebs;
 }

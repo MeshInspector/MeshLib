@@ -46,7 +46,9 @@
     <ClInclude Include="MRTorus.h" />
     <ClInclude Include="MRVector.h" />
     <ClInclude Include="MRVector3.h" />
+    <ClInclude Include="detail\Concat.h" />
     <ClInclude Include="detail\TypeCast.h" />
+    <ClInclude Include="detail\Vector.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRAffineXf.cpp" />

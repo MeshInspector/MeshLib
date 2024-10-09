@@ -4,6 +4,7 @@
 #include "MRAffineXf.h"
 #include "MRBox.h"
 #include "MRId.h"
+#include "MRMeshTopology.h"
 
 MR_EXTERN_C_BEGIN
 

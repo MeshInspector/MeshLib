@@ -8,6 +8,7 @@
 using namespace MR;
 
 REGISTER_AUTO_CAST( EdgeId )
+REGISTER_AUTO_CAST( FaceBitSet )
 REGISTER_AUTO_CAST( FillHoleMetric )
 REGISTER_AUTO_CAST( Mesh )
 REGISTER_AUTO_CAST( VertId )
@@ -37,7 +38,7 @@ void mrFillHoleMetricFree( MRFillHoleMetric* metric_ )
 
 double mrCalcCombinedFillMetric( const MRMesh* mesh_, const MRFaceBitSet* filledRegion_, const MRFillHoleMetric* metric_ )
 {
-    ARG( mesh ); ARG_OF( FaceBitSet, filledRegion ); ARG( metric );
+    ARG( mesh ); ARG( filledRegion ); ARG( metric );
     return calcCombinedFillMetric( mesh, filledRegion, metric );
 }
 

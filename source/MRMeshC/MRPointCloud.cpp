@@ -13,6 +13,7 @@ REGISTER_AUTO_CAST( AffineXf3f )
 REGISTER_AUTO_CAST( Box3f )
 REGISTER_AUTO_CAST( PointCloud )
 REGISTER_AUTO_CAST( Vector3f )
+REGISTER_AUTO_CAST( VertBitSet )
 REGISTER_AUTO_CAST( VertId )
 
 MRPointCloud* mrPointCloudNew( void )
@@ -62,7 +63,7 @@ size_t mrPointCloudNormalsNum( const MRPointCloud* pc_ )
 const MRVertBitSet* mrPointCloudValidPoints( const MRPointCloud* pc_ )
 {
     ARG( pc );
-    return cast_to<MRVertBitSet>( &pc.validPoints );
+    RETURN( &pc.validPoints );
 }
 
 MRBox3f mrPointCloudComputeBoundingBox( const MRPointCloud* pc_, const MRAffineXf3f* toWorld_ )

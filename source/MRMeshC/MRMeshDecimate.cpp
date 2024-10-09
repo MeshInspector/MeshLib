@@ -12,6 +12,7 @@ MR_SUPPRESS_WARNING_POP
 using namespace MR;
 
 REGISTER_AUTO_CAST( DecimateStrategy )
+REGISTER_AUTO_CAST( FaceBitSet )
 REGISTER_AUTO_CAST( Mesh )
 
 #define COPY_FROM( obj, field ) . field = ( obj ). field ,
@@ -134,7 +135,7 @@ bool mrResolveMeshDegenerations( MRMesh* mesh_, const MRResolveMeshDegenSettings
             COPY_FROM( src, maxAngleChange )
             COPY_FROM( src, criticalAspectRatio )
             COPY_FROM( src, stabilizer )
-            .region = cast_to<FaceBitSet>( src.region ),
+            .region = auto_cast( src.region ),
         };
     }
 
@@ -179,7 +180,7 @@ bool mrRemesh( MRMesh* mesh_, const MRRemeshSettings* settings_ )
             COPY_FROM( src, useCurvature )
             COPY_FROM( src, finalRelaxIters )
             COPY_FROM( src, finalRelaxNoShrinkage )
-            .region = cast_to<FaceBitSet>( src.region ),
+            .region = auto_cast( src.region ),
             // TODO: notFlippable
             COPY_FROM( src, packMesh )
             COPY_FROM( src, projectOnOriginalMesh )

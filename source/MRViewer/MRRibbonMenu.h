@@ -22,7 +22,7 @@ enum class RibbonLayoutMode
 {
     None, // no menu present
     SceneTree, // only scene tree is present
-    All // both scene tree and top panel is present
+    All // both scene tree and top panel are present
 };
 
 // Class to control and render ribbon-style menu

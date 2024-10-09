@@ -3,7 +3,7 @@
 
 In this section we provide the same samples with python code
 
-\section Python Modules v < 3.0.0.0
+\section Python Modules (prior to version 3)
 
 \subpage ExamplePythonMeshLoadSave
 
@@ -32,7 +32,7 @@ Please note that this sample has differences in V2 and V3
 
 \subpage ExamplePythonMeshExtrude
 
-\section Python Modules v >= 3.0.0.0
+\section Python Modules (version 3 and later)
 
 \subpage ExamplePythonTriangulationV3
 

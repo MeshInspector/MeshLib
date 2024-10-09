@@ -55,10 +55,7 @@ static void pythonShowSceneTree( MR::Viewer* viewer, bool show )
     {
         if ( auto ribbonMenu = viewer->getMenuPluginAs<MR::RibbonMenu>() )
         {
-            if ( show )
-                ribbonMenu->setLayoutMode( MR::RibbonLayoutMode::SceneTree );
-            else
-                ribbonMenu->setLayoutMode( MR::RibbonLayoutMode::None );
+            ribbonMenu->setLayoutMode( show ? MR::RibbonLayoutMode::SceneTree : MR::RibbonLayoutMode::None );
             viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
         }
     } );

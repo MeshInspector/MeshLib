@@ -94,8 +94,10 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     // Draw additional windows
     callback_draw_custom_window = [&] ()
     {
-        if ( layoutMode_ == RibbonLayoutMode::All )
+        auto scaling = menu_scaling();
+        switch ( layoutMode_ )
         {
+        case MR::RibbonLayoutMode::All:
             drawTopPanel_();
 
             drawActiveBlockingDialog_();
@@ -103,24 +105,23 @@ void RibbonMenu::init( MR::Viewer* _viewer )
 
             toolbar_.drawToolbar();
             toolbar_.drawCustomize();
-        }
-        if ( layoutMode_ != RibbonLayoutMode::None )
+
             drawRibbonSceneList_();
-        if ( layoutMode_ == RibbonLayoutMode::All )
-        {
             drawRibbonViewportsLabels_();
 
             drawActiveList_();
-        }
-        if ( layoutMode_ != RibbonLayoutMode::None )
             draw_helpers();
-        if ( layoutMode_ == RibbonLayoutMode::All )
-        {
-            auto scaling = menu_scaling();
             notifier_.draw( scaling, sceneSize_.x, currentTopPanelHeight_ * scaling );
             prevFrameSelectedObjectsCache_ = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
+            break;
+        case MR::RibbonLayoutMode::SceneTree:
+            drawRibbonSceneList_();
+            draw_helpers();
+            break;
+        case MR::RibbonLayoutMode::None:
+        default:
+            break;
         }
-
     };
 
     buttonDrawer_.setMenu( this );

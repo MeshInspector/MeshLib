@@ -18,6 +18,13 @@ namespace MR
 class Object;
 
 
+enum class RibbonLayoutMode
+{
+    None, // no menu present
+    SceneTree, // only scene tree is present
+    All // both scene tree and top panel is present
+};
+
 // Class to control and render ribbon-style menu
 // stores menu items,
 // menu structure is provided by `menuItemsStructure.json` file (parsed on init)
@@ -124,6 +131,11 @@ public:
     /// sets flag defining if closing plugin on opening another one is enabled or not
     void setAutoCloseBlockingPlugins( bool value ) { autoCloseBlockingPlugins_ = value; }
 
+    /// returns current layout mode of menu (find more in RibbonLayoutMode comments)
+    RibbonLayoutMode getLayoutMode() const { return layoutMode_; }
+    /// sets new layout mode for menu, will be applied in next frame (find more in RibbonLayoutMode comments)
+    MRVIEWER_API virtual void setLayoutMode( RibbonLayoutMode mode );
+
     // ======== selected objects options drawing
     bool drawGroupUngroupButton( const std::vector<std::shared_ptr<Object>>& selected );
     bool drawSelectSubtreeButton( const std::vector<std::shared_ptr<Object>>& selected );
@@ -210,6 +222,8 @@ protected:
     
     // need to be called if you override windows pipeline and use ActiveListPlugin
     MRVIEWER_API void drawActiveList_();
+
+    RibbonLayoutMode layoutMode_{ RibbonLayoutMode::All };
 private:
     void changeTab_( int newTab );
 

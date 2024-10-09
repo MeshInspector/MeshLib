@@ -316,13 +316,12 @@ jobs:
         with:
           name: WindowsArchive*
           failOnError: false
-       # .NET   
-     - name: Delete .NET Binaries Archive artifact
-       uses: geekyeggo/delete-artifact@v5
-       with:
-         name: DotNetArchive*
-         failOnError: false
-
+        # .NET
+      - name: Delete .NET Binaries Archive artifact
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: DotNetArchive*
+          failOnError: false
       # Distributives
       - name: Delete Distribution
         uses: geekyeggo/delete-artifact@v5

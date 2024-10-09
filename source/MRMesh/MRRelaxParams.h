@@ -25,13 +25,11 @@ struct RelaxParams
     /// maximum distance between a point and its position before relaxation, ignored if limitNearInitial = false
     float maxInitialDist = 0;
 
-    #if !defined(__clang__) && defined(__GNUC__) && __GNUC__ <= 12 // If GCC 12 or older, and not Clang...
     // Fixes ABI incompatibility. Without this GCC 12+ warns here with `-Wabi=16`.
     // Read our `cmake/Modules/CompilerOptions.cmake` (the part about `-Wabi=16`) for details.
     // This is enabled for GCC 11 and older because they're buggy, and for GCC 12 because for it we enable the warning to catch other similar cases.
     // For other compilers it's disabled for clarity, but should have no effect on struct layout.
     MR_BIND_IGNORE int _padding;
-    #endif
 };
 
 enum class RelaxApproxType

@@ -34,7 +34,7 @@ Among other things, the scripts can do following:
 
     MRBind source code is at https://github.com/MeshInspector/mrbind/.
 
-    We build MRBind at `MeshLib/mrbind`, but you can build it elsewhere manually.
+    We build MRBind at `MeshLib/mrbind`, but you can build it [elsewhere](#less-common-flags) manually.
 
     We build in [MSYS2 CLANG64](https://www.msys2.org/docs/environments/) environment, using MSYS2's Clang. Other compilers are not guaranteed to work.
 
@@ -53,7 +53,7 @@ Among other things, the scripts can do following:
 
     MRBind source code is at https://github.com/MeshInspector/mrbind/.
 
-    We build MRBind at `MeshLib/mrbind`, but you can build it elsewhere manually.
+    We build MRBind at `MeshLib/mrbind`, but you can build it [elsewhere](#less-common-flags) manually.
 
     You might want to pass `-DClang_DIR=/usr/lib/cmake/clang-VERSION` (where `VERSION` is the one mentioned in `preferred_clang_version.txt`) if you have several versions of libclang installed, because otherwise CMake might pick an arbitrary one (apparently it picks the first one returned by globbing `clang-*`, which might not be the latest one).
 
@@ -82,7 +82,7 @@ Among other things, the scripts can do following:
 
     MRBind source code is at https://github.com/MeshInspector/mrbind/.
 
-    We build MRBind at `MeshLib/mrbind`, but you can build it elsewhere manually.
+    We build MRBind at `MeshLib/mrbind`, but you can build it [elsewhere](#less-common-flags) manually.
 
     Make sure your PATH is correct, as explained in the previous step.
 
@@ -95,7 +95,7 @@ Among other things, the scripts can do following:
 First, build MeshLib as usual.
 
 Then generate the bindings:
-* **On Windows:** `scripts/mrbind/generate_win.bat -B --trace MODE=none` from VS developer command prompt (use the `x64 Native` one!).
+* **On Windows:** `scripts\mrbind\generate_win.bat -B --trace MODE=none` from VS developer command prompt (use the `x64 Native` one!).
 
   This will look for MeshLib in `./source/x64/Release` (so the current directory matters). Add `VS_MODE=Debug` at the end if you built MeshLib in debug mode.
 
@@ -105,7 +105,7 @@ Then generate the bindings:
 
   This will look for MeshLib in `./build/Release/bin`. Pass `MESHLIB_SHLIB_DIR=path/to/bin` for a different directory.
 
-* **On MacOS:** Same as on Linux, but before that must adjust the PATH. On Arm Macs: `export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"`, and on x86 Macs `/usr/local/...` instead of `/opt/homebrew/...`. This adds the version of Make installed in Homebrew to PATH, because the default one is outdated. Confirm the version with `make --version`, must be 4.x or newer.
+* **On MacOS:** Same as on Linux, but before running that you must adjust the PATH. On Arm Macs: `export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"`, and on x86 Macs `/usr/local/...` instead of `/opt/homebrew/...`. This adds the version of Make installed in Homebrew to PATH, because the default one is outdated. Confirm the version with `make --version`, must be 4.x or newer.
 
 ### Some common flags:
 

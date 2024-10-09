@@ -330,8 +330,8 @@ class VolumeMesher
 {
 public:
     /// performs everything inside to convert volume into trimesh
-    template<typename V, typename Positioner>
-    static Expected<TriMesh> run( const V& volume, const MarchingCubesParams& params, Positioner&& positioner );
+    template<typename V>
+    static Expected<TriMesh> run( const V& volume, const MarchingCubesParams& params );
 
 public: // custom interface
     /// prepares convention for given volume dimensions and given parameters
@@ -339,11 +339,15 @@ public: // custom interface
 
     /// adds one more part of volume into consideration,
     /// the first z-layer in next block must be the same as the last z-layer in previous block
-    template<typename V, typename Positioner>
-    Expected<void> addPart( const V& volume, Positioner&& positioner, int volumeFirstZ = 0 );
+    template<typename V>
+    Expected<void> addPart( const V& volume, int volumeFirstZ = 0 );
 
     /// finishes processing and outputs produced trimesh
     Expected<TriMesh> finilize();
+
+private:
+    template<typename V, typename Positioner>
+    Expected<void> addPart_( const V& volume, Positioner&& positioner, int volumeFirstZ );
 
 private:
     VolumeIndexer indexer_;
@@ -358,15 +362,15 @@ private:
     SeparationPointStorage sepStorage_;
 };
 
-template<typename V, typename Positioner>
-Expected<TriMesh> VolumeMesher::run( const V& volume, const MarchingCubesParams& params, Positioner&& positioner )
+template<typename V>
+Expected<TriMesh> VolumeMesher::run( const V& volume, const MarchingCubesParams& params )
 {
     if ( volume.dims.x <= 0 || volume.dims.y <= 0 || volume.dims.z <= 0 )
         return TriMesh{};
     MR_TIMER
 
     VolumeMesher mesher( volume.dims, params );
-    return mesher.addPart( volume, std::forward<Positioner>( positioner ) ).and_then( [&]
+    return mesher.addPart( volume ).and_then( [&]
     {
         // free input volume, since it will not be used below any more
         if ( params.freeVolume )
@@ -396,8 +400,25 @@ VolumeMesher::VolumeMesher( const Vector3i & dims, const MarchingCubesParams& pa
     assert( indexer_.size() <= blockSize * blockCount_ );
 }
 
+template<typename V>
+Expected<void> VolumeMesher::addPart( const V& volume, int volumeFirstZ )
+{
+    constexpr auto defaultPositioner = []( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
+    {
+        assert( v0 != v1 );
+        const auto ratio = ( iso - v0 ) / ( v1 - v0 );
+        assert( ratio >= 0 && ratio <= 1 );
+        return ( 1.0f - ratio ) * pos0 + ratio * pos1;
+    };
+
+    if ( params_.positioner )
+        return addPart_( volume, params_.positioner, volumeFirstZ );
+    else
+        return addPart_( volume, defaultPositioner, volumeFirstZ );
+}
+
 template<typename V, typename Positioner>
-Expected<void> VolumeMesher::addPart( const V& volume, Positioner&& positioner, int volumeFirstZ )
+Expected<void> VolumeMesher::addPart_( const V& volume, Positioner&& positioner, int volumeFirstZ )
 {
     MR_TIMER
 
@@ -808,26 +829,9 @@ Expected<TriMesh> VolumeMesher::finilize()
 
 } // anonymous namespace
 
-constexpr auto defaultPositioner = []( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
-    {
-        assert( v0 != v1 );
-        const auto ratio = ( iso - v0 ) / ( v1 - v0 );
-        assert( ratio >= 0 && ratio <= 1 );
-        return ( 1.0f - ratio ) * pos0 + ratio * pos1;
-    };
-
-template <typename V>
-Expected<TriMesh> volumeToMeshHelper1( const V& volume, const MarchingCubesParams& params )
-{
-    if ( params.positioner )
-        return VolumeMesher::run( volume, params, params.positioner );
-    else
-        return VolumeMesher::run( volume, params, defaultPositioner );
-}
-
 Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {
-    return volumeToMeshHelper1( volume, params );
+    return VolumeMesher::run( volume, params );
 }
 
 Expected<Mesh> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params )
@@ -845,7 +849,7 @@ Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolumeMinMax& volume, cons
 {
     if ( params.iso <= volume.min || params.iso >= volume.max )
         return TriMesh{};
-    return volumeToMeshHelper1( volume, params );
+    return VolumeMesher::run( volume, params );
 }
 
 Expected<Mesh> marchingCubes( const SimpleVolumeMinMax& volume, const MarchingCubesParams& params )
@@ -865,7 +869,7 @@ Expected<TriMesh> marchingCubesAsTriMesh( const VdbVolume& volume, const Marchin
         return unexpected( "No volume data." );
     if ( params.iso <= volume.min || params.iso >= volume.max )
         return TriMesh{};
-    return volumeToMeshHelper1( volume, params );
+    return VolumeMesher::run( volume, params );
 }
 
 Expected<Mesh> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params /*= {} */ )
@@ -883,7 +887,7 @@ Expected<TriMesh> marchingCubesAsTriMesh( const FunctionVolume& volume, const Ma
 {
     if ( !volume.data )
         return unexpected( "Getter function is not specified." );
-    return volumeToMeshHelper1( volume, params );
+    return VolumeMesher::run( volume, params );
 }
 
 Expected<Mesh> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params )
@@ -911,14 +915,15 @@ MarchingCubesByParts::~MarchingCubesByParts() = default;
 MarchingCubesByParts::MarchingCubesByParts( MarchingCubesByParts && s ) noexcept = default;
 MarchingCubesByParts & MarchingCubesByParts::operator=( MarchingCubesByParts && s ) noexcept = default;
 
-/*Expected<void> MarchingCubesByParts::addPart( const SimpleVolume& volume, int volumeFirstZ )
+Expected<void> MarchingCubesByParts::addPart( const SimpleVolume& volume, int volumeFirstZ )
 {
-    if ( params.positioner )
-        return impl_( volume, params, params.positioner );
-    else
-        return VolumeMesher::run( volume, params, defaultPositioner );
-    return
-}*/
+    return impl_->mesher.addPart( volume, volumeFirstZ );
+}
+
+Expected<TriMesh> MarchingCubesByParts::finilize()
+{
+    return impl_->mesher.finilize();
+}
 
 // global variables with external visibility to avoid compile-time optimizations
 float gTestNaN = cQuietNan;

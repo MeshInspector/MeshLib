@@ -79,7 +79,7 @@ MRVOXELS_API Expected<TriMesh> marchingCubesAsTriMesh( const FunctionVolume& vol
 /// x.addPart( part0, 0 );
 /// ...
 /// x.addPart( parnN, z );
-/// auto mesh = x.finilize();
+/// Mesh mesh = Mesh::fromTriMesh( *x.finilize() );
 class MarchingCubesByParts
 {
     /// prepares convention for given volume dimensions and given parameters
@@ -94,8 +94,7 @@ class MarchingCubesByParts
     MRVOXELS_API Expected<void> addPart( const SimpleVolume& volume, int volumeFirstZ );
 
     /// finishes processing and outputs produced trimesh
-    MRVOXELS_API Expected<Mesh> finilize();
-    MRVOXELS_API Expected<TriMesh> finilizeAsTriMesh();
+    MRVOXELS_API Expected<TriMesh> finilize();
 
 private:
     struct Impl;

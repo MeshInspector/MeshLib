@@ -94,33 +94,22 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     // Draw additional windows
     callback_draw_custom_window = [&] ()
     {
-        if ( layoutMode_ == RibbonLayoutMode::All )
-        {
-            drawTopPanel_();
+        drawTopPanel_();
 
-            drawActiveBlockingDialog_();
-            drawActiveNonBlockingDialogs_();
+        drawActiveBlockingDialog_();
+        drawActiveNonBlockingDialogs_();
 
-            toolbar_.drawToolbar();
-            toolbar_.drawCustomize();
-        }
-        if ( layoutMode_ != RibbonLayoutMode::None )
-            drawRibbonSceneList_();
-        if ( layoutMode_ == RibbonLayoutMode::All )
-        {
-            drawRibbonViewportsLabels_();
+        toolbar_.drawToolbar();
+        toolbar_.drawCustomize();
+        drawRibbonSceneList_();
+        drawRibbonViewportsLabels_();
 
-            drawActiveList_();
-        }
-        if ( layoutMode_ != RibbonLayoutMode::None )
-            draw_helpers();
-        if ( layoutMode_ == RibbonLayoutMode::All )
-        {
-            auto scaling = menu_scaling();
-            notifier_.draw( scaling, sceneSize_.x, currentTopPanelHeight_ * scaling );
-            prevFrameSelectedObjectsCache_ = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
-        }
+        drawActiveList_();
 
+        draw_helpers();
+        auto scaling = menu_scaling();
+        notifier_.draw( scaling, sceneSize_.x, currentTopPanelHeight_ * scaling );
+        prevFrameSelectedObjectsCache_ = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
     };
 
     buttonDrawer_.setMenu( this );
@@ -854,12 +843,6 @@ void RibbonMenu::drawActiveList_()
     ImGui::PopStyleVar();
 }
 
-void RibbonMenu::setLayoutMode( RibbonLayoutMode mode )
-{
-    layoutMode_ = mode;
-    fixViewportsSize_( Viewer::instanceRef().framebufferSize.x, Viewer::instanceRef().framebufferSize.y );
-}
-
 bool RibbonMenu::drawGroupUngroupButton( const std::vector<std::shared_ptr<Object>>& selected )
 {
     bool someChanges = false;
@@ -1586,16 +1569,11 @@ void RibbonMenu::drawRibbonSceneList_()
     const auto scaling = menu_scaling();
     // Define next window position + size
     auto& viewerRef = Viewer::instanceRef();
-
-    float topShift = 0.0f;
-    if ( layoutMode_ == RibbonLayoutMode::All )
-        topShift = float( currentTopPanelHeight_ );
-
-    ImGui::SetWindowPos( "RibbonScene", ImVec2( 0.f, topShift * scaling - 1 ), ImGuiCond_Always );
+    ImGui::SetWindowPos( "RibbonScene", ImVec2( 0.f, float( currentTopPanelHeight_ ) * scaling - 1 ), ImGuiCond_Always );
     const float cMinSceneWidth = 100 * scaling;
     const float cMaxSceneWidth = std::max( cMinSceneWidth, std::round( viewerRef.framebufferSize.x * 0.5f ) );
     sceneSize_.x = std::max( sceneSize_.x, cMinSceneWidth );
-    sceneSize_.y = std::round( viewerRef.framebufferSize.y - ( topShift - 2.0f ) * scaling );
+    sceneSize_.y = std::round( viewerRef.framebufferSize.y - float( currentTopPanelHeight_ - 2.0f ) * scaling );
     ImGui::SetWindowSize( "RibbonScene", sceneSize_, ImGuiCond_Always );
     ImGui::SetNextWindowSizeConstraints( ImVec2( cMinSceneWidth, -1.f ), ImVec2( cMaxSceneWidth, -1.f ) ); // TODO take out limits to special place
     ImGui::PushStyleVar( ImGuiStyleVar_Alpha, 1.f );
@@ -1608,8 +1586,7 @@ void RibbonMenu::drawRibbonSceneList_()
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoResize
     );
-    if ( layoutMode_ == RibbonLayoutMode::All )
-        drawSceneListButtons_();
+    drawSceneListButtons_();
     sceneObjectsList_->draw( -( informationHeight_ + transformHeight_ ), menu_scaling() );
     drawRibbonSceneInformation_( selectedObjs );
 
@@ -2458,20 +2435,14 @@ void RibbonMenu::fixViewportsSize_( int width, int height )
     auto viewportsBounds = viewer->getViewportsBounds();
     auto minMaxDiff = viewportsBounds.max - viewportsBounds.min;
 
-    float topPanelHeightScaled = 0.0f;
-    if ( layoutMode_ == RibbonLayoutMode::All )
-    {
-        topPanelHeightScaled =
-            ( collapseState_ == CollapseState::Pinned ? topPanelOpenedHeight_ : topPanelHiddenHeight_ ) *
-            menu_scaling();
-    }
+    const float topPanelHeightScaled =
+        ( collapseState_ == CollapseState::Pinned ? topPanelOpenedHeight_ : topPanelHiddenHeight_ ) *
+        menu_scaling();
     for ( auto& vp : viewer->viewport_list )
     {
         auto rect = vp.getViewportRect();
 
-        float sceneWidth = 0.0f;
-        if ( layoutMode_ != RibbonLayoutMode::None )
-            sceneWidth = sceneSize_.x;
+        const float sceneWidth = sceneSize_.x;
 
         auto widthRect = MR::width( rect );
         auto heightRect = MR::height( rect );

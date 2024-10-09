@@ -74,7 +74,6 @@ void RibbonSceneObjectsListDrawer::drawCustomObjectPrefixInScene_( const Object&
             fontManager.getFontSizeByType( RibbonFontManager::FontType::Icons );
         ImGui::PushFont( font );
 
-        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( imageSize - ImGui::GetFontSize() ) * 0.5f );
         ImGui::Text( "%s", getSceneItemIconByTypeName_( obj.typeName() ) );
 
         ImGui::PopFont();

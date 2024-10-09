@@ -12,7 +12,6 @@
 #include "MRMesh/MRImageSave.h"
 #include "MRMesh/MRImage.h"
 #include "MRViewer/MRGladGlfw.h"
-#include "MRViewer/MRRibbonMenu.h"
 #include <pybind11/stl.h>
 #include <memory>
 
@@ -47,23 +46,6 @@ static void pythonSkipFrames( MR::Viewer* viewer, int frames )
     }
 }
 
-static void pythonShowSceneTree( MR::Viewer* viewer, bool show )
-{
-    if ( !viewer )
-        return;
-    MR::CommandLoop::runCommandFromGUIThread( [viewer,show]
-    {
-        if ( auto ribbonMenu = viewer->getMenuPluginAs<MR::RibbonMenu>() )
-        {
-            if ( show )
-                ribbonMenu->setLayoutMode( MR::RibbonLayoutMode::SceneTree );
-            else
-                ribbonMenu->setLayoutMode( MR::RibbonLayoutMode::None );
-            viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
-        }
-    } );
-}
-
 namespace
 {
 
@@ -83,12 +65,7 @@ MR_MAKE_FLAG_OPERATORS( PythonKeyMod )
 class MinimalViewerSetup final : public ViewerSetup
 {
 public:
-    void setupBasePlugins( Viewer* viewer ) const override
-    {
-        auto menu = std::make_shared<RibbonMenu>();
-        menu->setLayoutMode( RibbonLayoutMode::None ); // no scene tree by default
-        viewer->setMenuPlugin( menu );
-    }
+    void setupBasePlugins( Viewer* ) const override {}
     void setupExtendedLibraries() const override {}
     void unloadExtendedLibraries() const override {}
 
@@ -273,8 +250,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
             "Get the current mouse position."
         ).
         // Coord projections:
-        def( "viewportToScreen", &MR::Viewer::viewportToScreen, "Convert viewport coordinates to to screen coordinates" ).
-        def( "showSceneTree", &pythonShowSceneTree, pybind11::arg( "show" ), "Shows or hide scene tree" );
+        def( "viewportToScreen", &MR::Viewer::viewportToScreen, "Convert viewport coordinates to to screen coordinates" );
 
     m.def( "launch", &pythonLaunch,
         pybind11::arg_v( "params", MR::Viewer::LaunchParams(), "ViewerLaunchParams()" ),

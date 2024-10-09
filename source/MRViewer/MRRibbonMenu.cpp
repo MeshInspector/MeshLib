@@ -119,7 +119,6 @@ void RibbonMenu::init( MR::Viewer* _viewer )
             draw_helpers();
             break;
         case MR::RibbonLayoutMode::None:
-        default:
             break;
         }
     };

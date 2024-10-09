@@ -92,6 +92,7 @@ jobs:
           MR_CMAKE_OPTIONS: -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
 
       - name: Generate and build MRBind bindings
+        if: ${{inputs.mrbind}}
         env:
           # Add updated Make from homebrew to PATH. Arm Macs use `/opt/homebrew`, while x86 Macs use `/usr/local`. Add both for simplicity.
           PATH: /opt/homebrew/opt/make/libexec/gnubin:/usr/local/opt/make/libexec/gnubin:${{env.PATH}}

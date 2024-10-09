@@ -166,6 +166,7 @@ jobs:
         run: call ./scripts/mrbind/install_mrbind_windows_msys2.bat
 
       - name: Generate and build MRBind bindings
+        if: ${{inputs.mrbind}}
         shell: cmd
         env:
           MSYS2_DIR: C:\msys64_meshlib_mrbind\msys64

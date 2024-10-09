@@ -329,22 +329,28 @@ const std::array<OutEdge, size_t( NeighborDir::Count )> cPlusOutEdges { OutEdge:
 class VolumeMesher
 {
 public:
+    /// performs everything inside to convert volume into trimesh
     template<typename V, typename Positioner>
     static Expected<TriMesh> run( const V& volume, const MarchingCubesParams& params, Positioner&& positioner );
 
-private:
+public: // custom interface
+    /// prepares convention for given volume dimensions and given parameters
     explicit VolumeMesher( const Vector3i & dims, const MarchingCubesParams& params );
 
+    /// adds one more part of volume into consideration,
+    /// the first z-layer in next block must be the same as the last z-layer in previous block
     template<typename V, typename Positioner>
-    Expected<void> firstPass_( const V& volume, Positioner&& positioner );
+    Expected<void> addPart( const V& volume, Positioner&& positioner, int volumeFirstZ = 0 );
 
-    Expected<TriMesh> secondPass_();
+    /// finishes processing and outputs produced trimesh
+    Expected<TriMesh> finilize();
 
 private:
     VolumeIndexer indexer_;
     const MarchingCubesParams& params_;
     int blockCount_ = 0;
     int layerPerBlockCount_ = 0;
+    int lastBlockZ_ = 0;
 
     std::vector<BitSet> invalids_; ///< invalid voxels in each layer
     std::vector<BitSet> lowerIso_; ///< voxels with the values lower then params.iso
@@ -360,13 +366,13 @@ Expected<TriMesh> VolumeMesher::run( const V& volume, const MarchingCubesParams&
     MR_TIMER
 
     VolumeMesher mesher( volume.dims, params );
-    return mesher.firstPass_( volume, std::forward<Positioner>( positioner ) ).and_then( [&]
+    return mesher.addPart( volume, std::forward<Positioner>( positioner ) ).and_then( [&]
     {
         // free input volume, since it will not be used below any more
         if ( params.freeVolume )
             params.freeVolume();
             
-        return mesher.secondPass_();
+        return mesher.finilize();
     } );
 }
 
@@ -391,10 +397,15 @@ VolumeMesher::VolumeMesher( const Vector3i & dims, const MarchingCubesParams& pa
 }
 
 template<typename V, typename Positioner>
-Expected<void> VolumeMesher::firstPass_( const V& volume, Positioner&& positioner )
+Expected<void> VolumeMesher::addPart( const V& volume, Positioner&& positioner, int volumeFirstZ )
 {
     MR_TIMER
 
+    assert( lastBlockZ_ == volumeFirstZ );
+    assert( volume.dims.x > 0 && volume.dims.y > 0 && volume.dims.z > 0 );
+    assert( volume.dims.x == indexer_.dims().x );
+    assert( volume.dims.y == indexer_.dims().y );
+    assert( volumeFirstZ + volume.dims.z <= indexer_.dims().z );
     const int layerCount = indexer_.dims().z;
     const auto layerSize = indexer_.sizeXY();
     const auto blockSize = layerPerBlockCount_ * layerSize;
@@ -527,10 +538,11 @@ Expected<void> VolumeMesher::firstPass_( const V& volume, Positioner&& positione
     if ( params_.cb && !keepGoing )
         return unexpectedOperationCanceled();
 
+    lastBlockZ_ = volumeFirstZ + volume.dims.z - 1;
     return {};
 }
 
-Expected<TriMesh> VolumeMesher::secondPass_()
+Expected<TriMesh> VolumeMesher::finilize()
 {
     MR_TIMER
 
@@ -796,20 +808,21 @@ Expected<TriMesh> VolumeMesher::secondPass_()
 
 } // anonymous namespace
 
+constexpr auto defaultPositioner = []( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
+    {
+        assert( v0 != v1 );
+        const auto ratio = ( iso - v0 ) / ( v1 - v0 );
+        assert( ratio >= 0 && ratio <= 1 );
+        return ( 1.0f - ratio ) * pos0 + ratio * pos1;
+    };
+
 template <typename V>
 Expected<TriMesh> volumeToMeshHelper1( const V& volume, const MarchingCubesParams& params )
 {
     if ( params.positioner )
         return VolumeMesher::run( volume, params, params.positioner );
-
-    return VolumeMesher::run( volume, params,
-        []( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
-        {
-            assert( v0 != v1 );
-            const auto ratio = ( iso - v0 ) / ( v1 - v0 );
-            assert( ratio >= 0 && ratio <= 1 );
-            return ( 1.0f - ratio ) * pos0 + ratio * pos1;
-        } );
+    else
+        return VolumeMesher::run( volume, params, defaultPositioner );
 }
 
 Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolume& volume, const MarchingCubesParams& params /*= {} */ )
@@ -883,6 +896,29 @@ Expected<Mesh> marchingCubes( const FunctionVolume& volume, const MarchingCubesP
         return Mesh::fromTriMesh( std::move( tm ), {}, subprogress( params.cb, 0.9f, 1.0f ) );
     } );
 }
+
+struct MarchingCubesByParts::Impl
+{
+    VolumeMesher mesher;
+};
+
+MarchingCubesByParts::MarchingCubesByParts( const Vector3i & dims, const MarchingCubesParams& params )
+    : impl_( std::make_unique<Impl>( VolumeMesher( dims, params ) ) )
+{
+}
+
+MarchingCubesByParts::~MarchingCubesByParts() = default;
+MarchingCubesByParts::MarchingCubesByParts( MarchingCubesByParts && s ) noexcept = default;
+MarchingCubesByParts & MarchingCubesByParts::operator=( MarchingCubesByParts && s ) noexcept = default;
+
+/*Expected<void> MarchingCubesByParts::addPart( const SimpleVolume& volume, int volumeFirstZ )
+{
+    if ( params.positioner )
+        return impl_( volume, params, params.positioner );
+    else
+        return VolumeMesher::run( volume, params, defaultPositioner );
+    return
+}*/
 
 // global variables with external visibility to avoid compile-time optimizations
 float gTestNaN = cQuietNan;

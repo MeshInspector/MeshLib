@@ -1,4 +1,4 @@
-## \page ExamplePythonTriangulation Simple triangulation
+## \page ExamplePythonTriangulationV2 Simple triangulation V2
 ##
 ## Simple triangulation
 ##

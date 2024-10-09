@@ -46,7 +46,9 @@ ENDIF()
 #   MR_BIND_IGNORE to hide from the bindings) to make sure there's no trailing padding. This affects only those bases that are aggregates and have default
 #   member initializers.
 # We can remove this flag when we stop supporting platforms that use GCC 11 and older (which includes Ubuntu 20.04 and Ubuntu 22.04).
-IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+# We only enable this on GCC 12, because the next versions introduce more ABI changes that warn here, and we don't care about them (about much newer GCCs being
+#   incompatible with GCC 11.)
+IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 12 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wabi=16")
 ENDIF()
 

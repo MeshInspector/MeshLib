@@ -175,6 +175,12 @@ jobs:
        with:
          pattern: DotNetArchive*
          merge-multiple: true
+         
+     - name: Delete .NET Binaries Archive artifact
+       uses: geekyeggo/delete-artifact@v5
+       with:
+         name: DotNetArchive*
+         failOnError: false
 
      - name: Extract Windows Binaries
        run: |

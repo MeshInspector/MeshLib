@@ -18,7 +18,17 @@ namespace PointsSave
 /// \ingroup IOGroup
 /// \{
 
-/// save valid points with normals in textual .asc file
+/// save points without normals in textual .xyz file;
+/// each output line contains [x, y, z], where x, y, z are point coordinates
+MRMESH_API VoidOrErrStr toXyz( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings = {} );
+MRMESH_API VoidOrErrStr toXyz( const PointCloud& points, std::ostream& out, const SaveSettings& settings = {} );
+
+/// save points with normals in textual .xyzn file;
+/// each output line contains [x, y, z, nx, ny, nz], where x, y, z are point coordinates and nx, ny, nz are the components of point normal
+MRMESH_API VoidOrErrStr toXyzn( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings = {} );
+MRMESH_API VoidOrErrStr toXyzn( const PointCloud& points, std::ostream& out, const SaveSettings& settings = {} );
+
+/// save points with normals in .xyzn format, and save points without normals in .xyz format
 MRMESH_API VoidOrErrStr toAsc( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings = {} );
 MRMESH_API VoidOrErrStr toAsc( const PointCloud& points, std::ostream& out, const SaveSettings& settings = {} );
 

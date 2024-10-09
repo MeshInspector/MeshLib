@@ -39,6 +39,88 @@ private:
 
 } //anonymous namespace
 
+VoidOrErrStr toXyz( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
+{
+    std::ofstream out( file, std::ofstream::binary );
+    if ( !out )
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+
+    return toXyz( points, out, settings );
+}
+
+VoidOrErrStr toXyz( const PointCloud& cloud, std::ostream& out, const SaveSettings& settings )
+{
+    MR_TIMER
+    const size_t totalPoints = settings.saveValidOnly ? cloud.validPoints.count() : cloud.points.size();
+    size_t numSaved = 0;
+
+    NormalXfMatrix normXf( settings.xf );
+    for ( auto v = 0_v; v < cloud.points.size(); ++v )
+    {
+        if ( settings.saveValidOnly && !cloud.validPoints.test( v ) )
+            continue;
+        auto saveVertex = [&]( auto && p )
+        {
+            out << fmt::format( "{} {} {}\n", p.x, p.y, p.z );
+        };
+        if ( settings.xf )
+            saveVertex( applyDouble( settings.xf, cloud.points[v] ) );
+        else
+            saveVertex( cloud.points[v] );
+        ++numSaved;
+        if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / totalPoints ) )
+            return unexpectedOperationCanceled();
+    }
+
+    if ( !out )
+        return unexpected( std::string( "Stream write error" ) );
+
+    reportProgress( settings.progress, 1.f );
+    return {};
+}
+
+VoidOrErrStr toXyzn( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
+{
+    std::ofstream out( file, std::ofstream::binary );
+    if ( !out )
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+
+    return toXyzn( points, out, settings );
+}
+
+VoidOrErrStr toXyzn( const PointCloud& cloud, std::ostream& out, const SaveSettings& settings )
+{
+    MR_TIMER
+    if ( !cloud.hasNormals() )
+        return unexpected( std::string( "Point cloud does not have normal data" ) );
+    const size_t totalPoints = settings.saveValidOnly ? cloud.validPoints.count() : cloud.points.size();
+    size_t numSaved = 0;
+
+    NormalXfMatrix normXf( settings.xf );
+    for ( auto v = 0_v; v < cloud.points.size(); ++v )
+    {
+        if ( settings.saveValidOnly && !cloud.validPoints.test( v ) )
+            continue;
+        auto saveVertex = [&]( auto && p, auto && n )
+        {
+            out << fmt::format( "{} {} {} {} {} {}\n", p.x, p.y, p.z, n.x, n.y, n.z );
+        };
+        if ( settings.xf )
+            saveVertex( applyDouble( settings.xf, cloud.points[v] ), applyDouble( normXf, cloud.normals[v] ) );
+        else
+            saveVertex( cloud.points[v], cloud.normals[v] );
+        ++numSaved;
+        if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / totalPoints ) )
+            return unexpectedOperationCanceled();
+    }
+
+    if ( !out )
+        return unexpected( std::string( "Stream write error" ) );
+
+    reportProgress( settings.progress, 1.f );
+    return {};
+}
+
 VoidOrErrStr toAsc( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
 {
     std::ofstream out( file, std::ofstream::binary );
@@ -50,47 +132,10 @@ VoidOrErrStr toAsc( const PointCloud& points, const std::filesystem::path& file,
 
 VoidOrErrStr toAsc( const PointCloud& cloud, std::ostream& out, const SaveSettings& settings )
 {
-    MR_TIMER
-    const bool saveNormals = cloud.points.size() <= cloud.normals.size();
-    const size_t totalPoints = settings.saveValidOnly ? cloud.validPoints.count() : cloud.points.size();
-    size_t numSaved = 0;
-
-    NormalXfMatrix normXf( settings.xf );
-    for ( auto v = 0_v; v < cloud.points.size(); ++v )
-    {
-        if ( settings.saveValidOnly && !cloud.validPoints.test( v ) )
-            continue;
-        auto saveVertex = [&]( auto && p )
-        {
-            out << fmt::format( "{} {} {}", p.x, p.y, p.z );
-        };
-        auto saveNormal = [&]( auto && n )
-        {
-            out << fmt::format( " {} {} {}", n.x, n.y, n.z );
-        };
-        if ( settings.xf )
-        {
-            saveVertex( applyDouble( settings.xf, cloud.points[v] ) );
-            if ( saveNormals )
-                saveNormal( applyDouble( normXf, cloud.normals[v] ) );
-        }
-        else
-        {
-            saveVertex( cloud.points[v] );
-            if ( saveNormals )
-                saveNormal( cloud.normals[v] );
-        }
-        out << '\n';
-        ++numSaved;
-        if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / totalPoints ) )
-            return unexpectedOperationCanceled();
-    }
-
-    if ( !out )
-        return unexpected( std::string( "Error saving in ASC-format" ) );
-
-    reportProgress( settings.progress, 1.f );
-    return {};
+    if ( cloud.hasNormals() )
+        return toXyzn( cloud, out, settings );
+    else
+        return toXyz( cloud, out, settings );
 }
 
 VoidOrErrStr toPly( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
@@ -184,6 +229,8 @@ VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::string& 
     return saver.streamSave( points, out, settings );
 }
 
+MR_ADD_POINTS_SAVER( IOFilter( "XYZ (.xyz)", "*.xyz" ), toXyz )
+MR_ADD_POINTS_SAVER( IOFilter( "XYZN (.xyzn)", "*.xyzn" ), toXyzn )
 MR_ADD_POINTS_SAVER( IOFilter( "ASC (.asc)", "*.asc" ), toAsc )
 MR_ADD_POINTS_SAVER( IOFilter( "PLY (.ply)", "*.ply" ), toPly )
 

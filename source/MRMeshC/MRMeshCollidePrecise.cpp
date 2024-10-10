@@ -14,6 +14,7 @@ REGISTER_AUTO_CAST( EdgeTri )
 REGISTER_AUTO_CAST( FaceBitSet )
 REGISTER_AUTO_CAST( Mesh )
 REGISTER_AUTO_CAST( PreciseCollisionResult )
+REGISTER_VECTOR_LIKE( MRVectorEdgeTri, EdgeTri )
 
 namespace
 {
@@ -38,20 +39,16 @@ bool mrEdgeTriEq( const MREdgeTri* a_, const MREdgeTri* b_ )
 
 MR_VECTOR_IMPL( EdgeTri )
 
-MRPreciseCollisionResult mrFindCollidingEdgeTrisPrecise( const MRMeshPart* a, const MRMeshPart* b, const MRConvertToIntVector* conv_, const MRAffineXf3f* rigidB2A_, bool anyIntersection )
+MRPreciseCollisionResult* mrFindCollidingEdgeTrisPrecise( const MRMeshPart* a, const MRMeshPart* b, const MRConvertToIntVector* conv_, const MRAffineXf3f* rigidB2A_, bool anyIntersection )
 {
     ARG( conv ); ARG_PTR( rigidB2A );
-    auto result = findCollidingEdgeTrisPrecise(
+    RETURN_NEW( findCollidingEdgeTrisPrecise(
         cast( *a ),
         cast( *b ),
         conv,
         rigidB2A,
         anyIntersection
-    );
-    return {
-        .edgesAtrisB = cast_to<MRVectorEdgeTri>( new vector_wrapper( std::move( result.edgesAtrisB ) ) ),
-        .edgesBtrisA = cast_to<MRVectorEdgeTri>( new vector_wrapper( std::move( result.edgesBtrisA ) ) ),
-    };
+    ) );
 }
 
 MRCoordinateConverters mrGetVectorConverters( const MRMeshPart* a, const MRMeshPart* b, const MRAffineXf3f* rigidB2A_ )
@@ -62,4 +59,22 @@ MRCoordinateConverters mrGetVectorConverters( const MRMeshPart* a, const MRMeshP
         .toInt = auto_cast( new_from( std::move( result.toInt ) ) ),
         .toFloat = auto_cast( new_from( std::move( result.toFloat ) ) ),
     };
+}
+
+const MRVectorEdgeTri mrPreciseCollisionResultEdgesAtrisB( const MRPreciseCollisionResult* result_ )
+{
+    ARG( result );
+    RETURN_VECTOR( result.edgesAtrisB );
+}
+
+const MRVectorEdgeTri mrPreciseCollisionResultEdgesBtrisA( const MRPreciseCollisionResult* result_ )
+{
+    ARG( result );
+    RETURN_VECTOR( result.edgesBtrisA );
+}
+
+void mrPreciseCollisionResultFree( MRPreciseCollisionResult* result_ )
+{
+    ARG_PTR( result );
+    delete result;
 }

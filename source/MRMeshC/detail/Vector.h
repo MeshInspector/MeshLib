@@ -91,6 +91,11 @@ void MR_CONCAT( MR_CONCAT( mr, ClassName ), Free )( MR_CONCAT( MR, ClassName )* 
 #define VECTOR_WRAPPER( Type ) vector_wrapper<typename Type::value_type>
 #define VECTOR_REF_WRAPPER( Type ) vector_ref_wrapper<typename Type::value_type>
 
+#define REGISTER_VECTOR_LIKE( ClassName, Type )       \
+ADD_AUTO_CAST( ClassName, vector_ref_wrapper<Type> ); \
+ADD_AUTO_CAST( vector_ref_wrapper<Type>, ClassName ); \
+ADD_AUTO_CAST( vector_wrapper<Type>, ClassName );
+
 #define REGISTER_VECTOR( Type )                                     \
 ADD_AUTO_CAST( MR_CONCAT( MR, Type ), VECTOR_REF_WRAPPER( Type ) ); \
 ADD_AUTO_CAST( VECTOR_REF_WRAPPER( Type ), MR_CONCAT( MR, Type ) ); \

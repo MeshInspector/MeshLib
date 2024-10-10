@@ -9,7 +9,8 @@ using namespace MR;
 
 REGISTER_AUTO_CAST( AffineXf3f )
 REGISTER_AUTO_CAST( ContinuousContours )
-REGISTER_AUTO_CAST( CoordinateConverters )
+REGISTER_AUTO_CAST( ConvertToFloatVector )
+REGISTER_AUTO_CAST( ConvertToIntVector )
 REGISTER_AUTO_CAST( Mesh )
 REGISTER_AUTO_CAST( OneMeshContours )
 
@@ -39,6 +40,10 @@ void mrOneMeshContoursFree( MROneMeshContours* contours_ )
 
 MROneMeshContours* mrGetOneMeshIntersectionContours( const MRMesh* meshA_, const MRMesh* meshB_, const MRContinuousContours* contours_, bool getMeshAIntersections, const MRCoordinateConverters* converters_, const MRAffineXf3f* rigidB2A_ )
 {
-    ARG( meshA ); ARG( meshB ); ARG( contours ); ARG( converters ); ARG_PTR( rigidB2A );
+    ARG( meshA ); ARG( meshB ); ARG( contours ); ARG_PTR( rigidB2A );
+    const CoordinateConverters converters {
+        .toInt = *auto_cast( converters_->toInt ),
+        .toFloat = *auto_cast( converters_->toFloat ),
+    };
     RETURN_NEW( getOneMeshIntersectionContours( meshA, meshB, contours, getMeshAIntersections, converters, rigidB2A ) );
 }

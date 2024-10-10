@@ -21,17 +21,22 @@ MRMESHC_API bool mrEdgeTriEq( const MREdgeTri* a, const MREdgeTri* b );
 MR_VECTOR_DECL( EdgeTri )
 
 /// ...
-typedef struct MRPreciseCollisionResult
-{
-    MRVectorEdgeTri* edgesAtrisB;
-    MRVectorEdgeTri* edgesBtrisA;
-} MRPreciseCollisionResult;
+typedef struct MRPreciseCollisionResult MRPreciseCollisionResult;
 
 /// ...
-MRMESHC_API MRPreciseCollisionResult mrFindCollidingEdgeTrisPrecise( const MRMeshPart* a, const MRMeshPart* b,
-                                                                     const MRConvertToIntVector* conv,
-                                                                     const MRAffineXf3f* rigidB2A,
-                                                                     bool anyIntersection );
+MRMESHC_API const MRVectorEdgeTri mrPreciseCollisionResultEdgesAtrisB( const MRPreciseCollisionResult* result );
+
+/// ...
+MRMESHC_API const MRVectorEdgeTri mrPreciseCollisionResultEdgesBtrisA( const MRPreciseCollisionResult* result );
+
+/// ...
+MRMESHC_API void mrPreciseCollisionResultFree( MRPreciseCollisionResult* result );
+
+/// ...
+MRMESHC_API MRPreciseCollisionResult* mrFindCollidingEdgeTrisPrecise( const MRMeshPart* a, const MRMeshPart* b,
+                                                                      const MRConvertToIntVector* conv,
+                                                                      const MRAffineXf3f* rigidB2A,
+                                                                      bool anyIntersection );
 
 /// ...
 MRMESHC_API MRCoordinateConverters mrGetVectorConverters( const MRMeshPart* a, const MRMeshPart* b,

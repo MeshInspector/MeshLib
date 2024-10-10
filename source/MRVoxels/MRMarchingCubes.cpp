@@ -329,22 +329,34 @@ const std::array<OutEdge, size_t( NeighborDir::Count )> cPlusOutEdges { OutEdge:
 class VolumeMesher
 {
 public:
-    template<typename V, typename Positioner>
-    static Expected<TriMesh> run( const V& volume, const MarchingCubesParams& params, Positioner&& positioner );
+    /// performs everything inside to convert volume into trimesh
+    /// \param layersPerBlock all z-slices of the volume will be partitioned on blocks of given size to process in parallel (0 means auto-select layersPerBlock)
+    template<typename V>
+    static Expected<TriMesh> run( const V& volume, const MarchingCubesParams& params, int layersPerBlock = 0 );
+
+public: // custom interface
+    /// prepares convention for given volume dimensions and given parameters
+    /// \param layersPerBlock all z-slices of the volume will be partitioned on blocks of given size to process in parallel (0 means auto-select layersPerBlock)
+    explicit VolumeMesher( const Vector3i & dims, const MarchingCubesParams& params, int layersPerBlock );
+
+    /// adds one more part of volume into consideration,
+    /// \param partFirstZ the first z-layer in next part (must be the same as the last z-layer in previous part), partFirstZ must be a multiple of layersPerBlock
+    template<typename V>
+    Expected<void> addPart( const V& part, int partFirstZ = 0 );
+
+    /// finishes processing and outputs produced trimesh
+    Expected<TriMesh> finilize();
 
 private:
-    explicit VolumeMesher( const Vector3i & dims, const MarchingCubesParams& params );
-
     template<typename V, typename Positioner>
-    Expected<void> firstPass_( const V& volume, Positioner&& positioner );
-
-    Expected<TriMesh> secondPass_();
+    Expected<void> addPart_( const V& volume, Positioner&& positioner, int volumeFirstZ );
 
 private:
     VolumeIndexer indexer_;
-    const MarchingCubesParams& params_;
+    const MarchingCubesParams params_;
     int blockCount_ = 0;
-    int layerPerBlockCount_ = 0;
+    int layersPerBlock_ = 0;
+    int partLastZ_ = 0;
 
     std::vector<BitSet> invalids_; ///< invalid voxels in each layer
     std::vector<BitSet> lowerIso_; ///< voxels with the values lower then params.iso
@@ -352,25 +364,25 @@ private:
     SeparationPointStorage sepStorage_;
 };
 
-template<typename V, typename Positioner>
-Expected<TriMesh> VolumeMesher::run( const V& volume, const MarchingCubesParams& params, Positioner&& positioner )
+template<typename V>
+Expected<TriMesh> VolumeMesher::run( const V& volume, const MarchingCubesParams& params, int layersPerBlock )
 {
     if ( volume.dims.x <= 0 || volume.dims.y <= 0 || volume.dims.z <= 0 )
         return TriMesh{};
     MR_TIMER
 
-    VolumeMesher mesher( volume.dims, params );
-    return mesher.firstPass_( volume, std::forward<Positioner>( positioner ) ).and_then( [&]
+    VolumeMesher mesher( volume.dims, params, layersPerBlock );
+    return mesher.addPart( volume ).and_then( [&]
     {
         // free input volume, since it will not be used below any more
         if ( params.freeVolume )
             params.freeVolume();
             
-        return mesher.secondPass_();
+        return mesher.finilize();
     } );
 }
 
-VolumeMesher::VolumeMesher( const Vector3i & dims, const MarchingCubesParams& params ) : indexer_( dims ), params_( params )
+VolumeMesher::VolumeMesher( const Vector3i & dims, const MarchingCubesParams& params, int layersPerBlock ) : indexer_( dims ), params_( params )
 {
     int threadCount = tbb::global_control::parameter( tbb::global_control::max_allowed_parallelism );
     if ( threadCount == 0 )
@@ -384,23 +396,53 @@ VolumeMesher::VolumeMesher( const Vector3i & dims, const MarchingCubesParams& pa
 
     // more blocks than threads is recommended for better work distribution among threads since
     // every block demands unique amount of processing
-    blockCount_ = std::min( layerCount, threadCount > 1 ? 4 * threadCount : 1 );
-    layerPerBlockCount_ = (int)std::ceil( (float)layerCount / (float)blockCount_ );
-    [[maybe_unused]] const auto blockSize = layerPerBlockCount_ * layerSize;
+    if ( layersPerBlock <= 0 )
+    {
+        const auto approxBlockCount = std::min( layerCount, threadCount > 1 ? 4 * threadCount : 1 );
+        layersPerBlock = (int)std::ceil( (float)layerCount / (float)approxBlockCount );
+    }
+    layersPerBlock_ = layersPerBlock;
+    blockCount_ = ( layerCount + layersPerBlock_ - 1 ) / layersPerBlock_;
+    const auto blockSize = layersPerBlock_ * layerSize;
     assert( indexer_.size() <= blockSize * blockCount_ );
-}
 
-template<typename V, typename Positioner>
-Expected<void> VolumeMesher::firstPass_( const V& volume, Positioner&& positioner )
-{
-    MR_TIMER
-
-    const int layerCount = indexer_.dims().z;
-    const auto layerSize = indexer_.sizeXY();
-    const auto blockSize = layerPerBlockCount_ * layerSize;
+    sepStorage_.resize( blockCount_, blockSize );
 
     invalids_.resize( layerCount );
     lowerIso_.resize( layerCount );
+}
+
+template<typename V>
+Expected<void> VolumeMesher::addPart( const V& part, int partFirstZ )
+{
+    constexpr auto defaultPositioner = []( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
+    {
+        assert( v0 != v1 );
+        const auto ratio = ( iso - v0 ) / ( v1 - v0 );
+        assert( ratio >= 0 && ratio <= 1 );
+        return ( 1.0f - ratio ) * pos0 + ratio * pos1;
+    };
+
+    if ( params_.positioner )
+        return addPart_( part, params_.positioner, partFirstZ );
+    else
+        return addPart_( part, defaultPositioner, partFirstZ );
+}
+
+template<typename V, typename Positioner>
+Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner, int partFirstZ )
+{
+    MR_TIMER
+
+    assert( partLastZ_ == partFirstZ );
+    assert( part.dims.x > 0 && part.dims.y > 0 && part.dims.z > 1 );
+    assert( part.dims.x == indexer_.dims().x );
+    assert( part.dims.y == indexer_.dims().y );
+    assert( partFirstZ + part.dims.z <= indexer_.dims().z );
+    const int layerCount = indexer_.dims().z;
+    const auto layerSize = indexer_.sizeXY();
+    const auto partFirstId = layerSize * partFirstZ;
+    const VolumeIndexer partIndexer( part.dims );
 
     auto cachingMode = params_.cachingMode;
     if ( cachingMode == MarchingCubesParams::CachingMode::Automatic )
@@ -410,8 +452,6 @@ Expected<void> VolumeMesher::firstPass_( const V& volume, Positioner&& positione
         else
             cachingMode = MarchingCubesParams::CachingMode::None;
     }
-
-    sepStorage_.resize( blockCount_, blockSize );
 
     const auto callingThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };
@@ -427,32 +467,38 @@ Expected<void> VolumeMesher::firstPass_( const V& volume, Positioner&& positione
     static_assert( sizeof(S) == hardware_destructive_interference_size );
 
     auto currentSubprogress = subprogress( params_.cb, 0.0f, 0.3f );
-    ParallelFor( 0, blockCount_, [&] ( int blockIndex )
+    const int firstBlock = partFirstZ / layersPerBlock_;
+    partLastZ_ = partFirstZ + part.dims.z - 1;
+    const bool lastPart = partLastZ_ + 1 == indexer_.dims().z;
+    const int lastLayer = lastPart ? partLastZ_ : partLastZ_ - 1;
+    assert( lastLayer < layerCount );
+    const int lastBlock = lastLayer / layersPerBlock_;
+    ParallelFor( firstBlock, lastBlock + 1, [&] ( int blockIndex )
     {
+        const int layerBegin = std::max( blockIndex * layersPerBlock_, partFirstZ );
+        if ( layerBegin >= layerCount )
+            return;
+        /*const*/ auto layerEnd = std::min( ( blockIndex + 1 ) * layersPerBlock_, lastLayer + 1 );
+
         auto & block = sepStorage_.getBlock( blockIndex );
         const bool report = currentSubprogress && std::this_thread::get_id() == callingThreadId;
 
-        const int layerBegin = blockIndex * layerPerBlockCount_;
-        if ( layerBegin >= layerCount )
-            return;
-        const auto layerEnd = std::min( ( blockIndex + 1 ) * layerPerBlockCount_, layerCount );
-
-        const VoxelsVolumeAccessor<V> acc( volume );
+        const VoxelsVolumeAccessor<V> acc( part );
         /// grid point with integer coordinates (0,0,0) will be shifted to this position in 3D space
-        const Vector3f zeroPoint = params_.origin + mult( acc.shift(), volume.voxelSize );
+        const Vector3f zeroPoint = params_.origin + mult( acc.shift() + Vector3f( 0, 0, (float)partFirstZ ), part.voxelSize );
 
         std::optional<VoxelsVolumeCachingAccessor<V>> cache;
         if ( cachingMode == MarchingCubesParams::CachingMode::Normal )
         {
             using Parameters = typename VoxelsVolumeCachingAccessor<V>::Parameters;
-            cache.emplace( acc, indexer_, Parameters {
+            cache.emplace( acc, partIndexer, Parameters {
                 .preloadedLayerCount = 2,
             } );
-            cache->preloadLayer( layerBegin );
+            cache->preloadLayer( layerBegin - partFirstZ );
         }
 
-        VoxelLocation loc = indexer_.toLoc( Vector3i( 0, 0, layerBegin ) );
-        for ( ; loc.pos.z < layerEnd; ++loc.pos.z )
+        VoxelLocation loc = partIndexer.toLoc( Vector3i( 0, 0, layerBegin - partFirstZ ) );
+        for ( ; loc.pos.z + partFirstZ < layerEnd; ++loc.pos.z )
         {
             if ( cache && loc.pos.z != cache->currentLayer() )
             {
@@ -462,11 +508,11 @@ Expected<void> VolumeMesher::firstPass_( const V& volume, Positioner&& positione
             BitSet layerInvalids( layerSize );
             BitSet layerLowerIso( layerSize );
             size_t inLayerPos = 0;
-            for ( loc.pos.y = 0; loc.pos.y < volume.dims.y; ++loc.pos.y )
+            for ( loc.pos.y = 0; loc.pos.y < part.dims.y; ++loc.pos.y )
             {
-                for ( loc.pos.x = 0; loc.pos.x < volume.dims.x; ++loc.pos.x, ++loc.id, ++inLayerPos )
+                for ( loc.pos.x = 0; loc.pos.x < part.dims.x; ++loc.pos.x, ++loc.id, ++inLayerPos )
                 {
-                    assert( indexer_.toVoxelId( loc.pos ) == loc.id );
+                    assert( partIndexer.toVoxelId( loc.pos ) == loc.id );
                     if ( params_.cb && !keepGoing.load( std::memory_order_relaxed ) )
                         return;
 
@@ -479,12 +525,12 @@ Expected<void> VolumeMesher::firstPass_( const V& volume, Positioner&& positione
                         layerInvalids.set( inLayerPos );
                     else
                     {
-                        const auto coords = zeroPoint + mult( volume.voxelSize, Vector3f( loc.pos ) );
+                        const auto coords = zeroPoint + mult( part.voxelSize, Vector3f( loc.pos ) );
                         layerLowerIso.set( inLayerPos, lower );
 
                         for ( int n = int( NeighborDir::X ); n < int( NeighborDir::Count ); ++n )
                         {
-                            auto nextLoc = indexer_.getNeighbor( loc, cPlusOutEdges[n] );
+                            auto nextLoc = partIndexer.getNeighbor( loc, cPlusOutEdges[n] );
                             if ( !nextLoc )
                                 continue;
                             const float nextValue = cache ? cache->get( nextLoc ) : acc.get( nextLoc );
@@ -500,7 +546,7 @@ Expected<void> VolumeMesher::firstPass_( const V& volume, Positioner&& positione
                             }
 
                             auto nextCoords = coords;
-                            nextCoords[n] += volume.voxelSize[n];
+                            nextCoords[n] += part.voxelSize[n];
                             Vector3f pos = positioner( coords, nextCoords, value, nextValue, params_.iso );
                             set[n] = block.nextVid();
                             block.coords.push_back( pos );
@@ -511,13 +557,13 @@ Expected<void> VolumeMesher::firstPass_( const V& volume, Positioner&& positione
                     if ( !atLeastOneOk )
                         continue;
 
-                    block.smap.insert( { loc.id, set } );
+                    block.smap.insert( { loc.id + partFirstId, set } );
                 }
             }
             if ( layerInvalids.any() )
-                invalids_[loc.pos.z] = std::move( layerInvalids );
+                invalids_[loc.pos.z + partFirstZ] = std::move( layerInvalids );
             if ( layerLowerIso.any() )
-                lowerIso_[loc.pos.z] = std::move( layerLowerIso );
+                lowerIso_[loc.pos.z + partFirstZ] = std::move( layerLowerIso );
             const auto numProcessedLayers = cacheLineStorage.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
             if ( report && !reportProgress( currentSubprogress, float( numProcessedLayers ) / layerCount ) )
                 keepGoing.store( false, std::memory_order_relaxed );
@@ -530,9 +576,10 @@ Expected<void> VolumeMesher::firstPass_( const V& volume, Positioner&& positione
     return {};
 }
 
-Expected<TriMesh> VolumeMesher::secondPass_()
+Expected<TriMesh> VolumeMesher::finilize()
 {
     MR_TIMER
+    assert( partLastZ_ + 1 == indexer_.dims().z );
 
     const auto totalVertices = sepStorage_.makeUniqueVids();
     if ( totalVertices > params_.maxVertices )
@@ -577,10 +624,10 @@ Expected<TriMesh> VolumeMesher::secondPass_()
         auto & block = sepStorage_.getBlock( blockIndex );
         const bool report = currentSubprogress && std::this_thread::get_id() == callingThreadId;
 
-        const int layerBegin = blockIndex * layerPerBlockCount_;
+        const int layerBegin = blockIndex * layersPerBlock_;
         if ( layerBegin >= layerCount )
             return;
-        const auto layerEnd = std::min( ( blockIndex + 1 ) * layerPerBlockCount_, layerCount - 1 ); // skip last layer since no data from next layer
+        const auto layerEnd = std::min( ( blockIndex + 1 ) * layersPerBlock_, layerCount - 1 ); // skip last layer since no data from next layer
 
         // cell data
         std::array<const SeparationPointSet*, 7> neis;
@@ -796,25 +843,9 @@ Expected<TriMesh> VolumeMesher::secondPass_()
 
 } // anonymous namespace
 
-template <typename V>
-Expected<TriMesh> volumeToMeshHelper1( const V& volume, const MarchingCubesParams& params )
-{
-    if ( params.positioner )
-        return VolumeMesher::run( volume, params, params.positioner );
-
-    return VolumeMesher::run( volume, params,
-        []( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
-        {
-            assert( v0 != v1 );
-            const auto ratio = ( iso - v0 ) / ( v1 - v0 );
-            assert( ratio >= 0 && ratio <= 1 );
-            return ( 1.0f - ratio ) * pos0 + ratio * pos1;
-        } );
-}
-
 Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {
-    return volumeToMeshHelper1( volume, params );
+    return VolumeMesher::run( volume, params );
 }
 
 Expected<Mesh> marchingCubes( const SimpleVolume& volume, const MarchingCubesParams& params )
@@ -832,7 +863,7 @@ Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolumeMinMax& volume, cons
 {
     if ( params.iso <= volume.min || params.iso >= volume.max )
         return TriMesh{};
-    return volumeToMeshHelper1( volume, params );
+    return VolumeMesher::run( volume, params );
 }
 
 Expected<Mesh> marchingCubes( const SimpleVolumeMinMax& volume, const MarchingCubesParams& params )
@@ -852,7 +883,7 @@ Expected<TriMesh> marchingCubesAsTriMesh( const VdbVolume& volume, const Marchin
         return unexpected( "No volume data." );
     if ( params.iso <= volume.min || params.iso >= volume.max )
         return TriMesh{};
-    return volumeToMeshHelper1( volume, params );
+    return VolumeMesher::run( volume, params );
 }
 
 Expected<Mesh> marchingCubes( const VdbVolume& volume, const MarchingCubesParams& params /*= {} */ )
@@ -870,7 +901,7 @@ Expected<TriMesh> marchingCubesAsTriMesh( const FunctionVolume& volume, const Ma
 {
     if ( !volume.data )
         return unexpected( "Getter function is not specified." );
-    return volumeToMeshHelper1( volume, params );
+    return VolumeMesher::run( volume, params );
 }
 
 Expected<Mesh> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params )
@@ -882,6 +913,30 @@ Expected<Mesh> marchingCubes( const FunctionVolume& volume, const MarchingCubesP
     {
         return Mesh::fromTriMesh( std::move( tm ), {}, subprogress( params.cb, 0.9f, 1.0f ) );
     } );
+}
+
+struct MarchingCubesByParts::Impl
+{
+    VolumeMesher mesher;
+};
+
+MarchingCubesByParts::MarchingCubesByParts( const Vector3i & dims, const MarchingCubesParams& params, int layersPerBlock )
+    : impl_( new Impl{ VolumeMesher( dims, params, layersPerBlock ) } )
+{
+}
+
+MarchingCubesByParts::~MarchingCubesByParts() = default;
+MarchingCubesByParts::MarchingCubesByParts( MarchingCubesByParts && s ) noexcept = default;
+MarchingCubesByParts & MarchingCubesByParts::operator=( MarchingCubesByParts && s ) noexcept = default;
+
+Expected<void> MarchingCubesByParts::addPart( const SimpleVolume& part, int partFirstZ )
+{
+    return impl_->mesher.addPart( part, partFirstZ );
+}
+
+Expected<TriMesh> MarchingCubesByParts::finilize()
+{
+    return impl_->mesher.finilize();
 }
 
 // global variables with external visibility to avoid compile-time optimizations

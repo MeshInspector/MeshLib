@@ -21,6 +21,11 @@
 #include <MRMesh/MRTorus.h>
 #include <MRMesh/MRCylinder.h>
 
+#include <MRMesh/MROnInit.h>
+#include <MRIOExtras/MRIOExtras.h>
+// force load MRIOExtras library to load extra file formats
+MR_ON_INIT{ MR::loadIOExtras(); };
+
 #pragma managed( pop )
 
 #include <msclr/marshal_cppstd.h>

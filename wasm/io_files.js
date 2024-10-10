@@ -183,7 +183,7 @@ var save_file = function (filename) {
     if (!FS.analyzePath(filename).exists) {
       setTimeout(() => {
         checkPath(filename);
-      }, 0);
+      }, 200);
       return;
     }
     var size = FS.stat(filename).size;
@@ -191,7 +191,7 @@ var save_file = function (filename) {
       prevSize = size;
       setTimeout(() => {
         checkPath(filename);
-      }, 0);
+      }, 200);
       return;
     }
     let content = FS.readFile(filename);

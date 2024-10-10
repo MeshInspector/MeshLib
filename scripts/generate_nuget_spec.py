@@ -78,7 +78,7 @@ for address, dirs, files in folder:
 			fTargets.write('</Link>\n')
 			fTargets.write('\t\t\t<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>\n')
 			fTargets.write('\t\t</None>\n')
-		elif file == 'MRDotNet.dll':
+		elif file == 'MRDotNetFramework471.dll':
 			src = os.path.join(address,file)
 			print(src)
 			f.write('\t\t<file src="./source/x64/Release/')

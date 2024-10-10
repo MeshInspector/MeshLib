@@ -353,7 +353,7 @@ private:
 
 private:
     VolumeIndexer indexer_;
-    const MarchingCubesParams& params_;
+    const MarchingCubesParams params_;
     int blockCount_ = 0;
     int layersPerBlock_ = 0;
     int lastBlockZ_ = 0;
@@ -398,14 +398,11 @@ VolumeMesher::VolumeMesher( const Vector3i & dims, const MarchingCubesParams& pa
     // every block demands unique amount of processing
     if ( layersPerBlock <= 0 )
     {
-        blockCount_ = std::min( layerCount, threadCount > 1 ? 4 * threadCount : 1 );
-        layersPerBlock_ = (int)std::ceil( (float)layerCount / (float)blockCount_ );
+        const auto approxBlockCount = std::min( layerCount, threadCount > 1 ? 4 * threadCount : 1 );
+        layersPerBlock = (int)std::ceil( (float)layerCount / (float)approxBlockCount );
     }
-    else
-    {
-        blockCount_ = ( layerCount + layersPerBlock - 1 ) / layersPerBlock;
-        layersPerBlock_ = layersPerBlock;
-    }
+    layersPerBlock_ = layersPerBlock;
+    blockCount_ = ( layerCount + layersPerBlock_ - 1 ) / layersPerBlock_;
     const auto blockSize = layersPerBlock_ * layerSize;
     assert( indexer_.size() <= blockSize * blockCount_ );
 
@@ -469,19 +466,17 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner, i
     static_assert( sizeof(S) == hardware_destructive_interference_size );
 
     auto currentSubprogress = subprogress( params_.cb, 0.0f, 0.3f );
-    assert( partFirstZ % layersPerBlock_ == 0 );
-    assert( ( part.dims.z - 1 ) % layersPerBlock_ == 0 );
     const int firstBlock = partFirstZ / layersPerBlock_;
-    const int lastBlock = firstBlock + ( part.dims.z - 1 ) / layersPerBlock_;
-    ParallelFor( firstBlock, lastBlock, [&] ( int blockIndex )
+    const int lastBlock = ( partFirstZ + part.dims.z - 1 ) / layersPerBlock_;
+    ParallelFor( firstBlock, lastBlock + 1, [&] ( int blockIndex )
     {
-        auto & block = sepStorage_.getBlock( blockIndex );
-        const bool report = currentSubprogress && std::this_thread::get_id() == callingThreadId;
-
         const int layerBegin = blockIndex * layersPerBlock_;
         if ( layerBegin >= layerCount )
             return;
         const auto layerEnd = std::min( ( blockIndex + 1 ) * layersPerBlock_, layerCount );
+
+        auto & block = sepStorage_.getBlock( blockIndex );
+        const bool report = currentSubprogress && std::this_thread::get_id() == callingThreadId;
 
         const VoxelsVolumeAccessor<V> acc( part );
         /// grid point with integer coordinates (0,0,0) will be shifted to this position in 3D space

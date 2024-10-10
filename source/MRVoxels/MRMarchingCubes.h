@@ -82,6 +82,7 @@ MRVOXELS_API Expected<TriMesh> marchingCubesAsTriMesh( const FunctionVolume& vol
 /// Mesh mesh = Mesh::fromTriMesh( *x.finilize() );
 class MarchingCubesByParts
 {
+public:
     /// prepares convention for given volume dimensions and given parameters
     /// \param layersPerBlock all z-slices of the volume will be partitioned on blocks of given size to process in parallel
     MRVOXELS_API explicit MarchingCubesByParts( const Vector3i & dims, const MarchingCubesParams& params, int layersPerBlock = 1 );

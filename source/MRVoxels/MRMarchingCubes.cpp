@@ -406,8 +406,10 @@ VolumeMesher::VolumeMesher( const Vector3i & dims, const MarchingCubesParams& pa
         blockCount_ = ( layerCount + layersPerBlock - 1 ) / layersPerBlock;
         layersPerBlock_ = layersPerBlock;
     }
-    [[maybe_unused]] const auto blockSize = layersPerBlock_ * layerSize;
+    const auto blockSize = layersPerBlock_ * layerSize;
     assert( indexer_.size() <= blockSize * blockCount_ );
+
+    sepStorage_.resize( blockCount_, blockSize );
 
     invalids_.resize( layerCount );
     lowerIso_.resize( layerCount );
@@ -435,15 +437,14 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner, i
 {
     MR_TIMER
 
-    assert( partFirstZ % layersPerBlock_ == 0 );
     assert( lastBlockZ_ == partFirstZ );
-    assert( part.dims.x > 0 && part.dims.y > 0 && part.dims.z > 0 );
+    assert( part.dims.x > 0 && part.dims.y > 0 && part.dims.z > 1 );
     assert( part.dims.x == indexer_.dims().x );
     assert( part.dims.y == indexer_.dims().y );
     assert( partFirstZ + part.dims.z <= indexer_.dims().z );
     const int layerCount = indexer_.dims().z;
     const auto layerSize = indexer_.sizeXY();
-    const auto blockSize = layersPerBlock_ * layerSize;
+    const auto partFirstId = layerSize * partFirstZ;
 
     auto cachingMode = params_.cachingMode;
     if ( cachingMode == MarchingCubesParams::CachingMode::Automatic )
@@ -453,8 +454,6 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner, i
         else
             cachingMode = MarchingCubesParams::CachingMode::None;
     }
-
-    sepStorage_.resize( blockCount_, blockSize );
 
     const auto callingThreadId = std::this_thread::get_id();
     std::atomic<bool> keepGoing{ true };
@@ -470,7 +469,11 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner, i
     static_assert( sizeof(S) == hardware_destructive_interference_size );
 
     auto currentSubprogress = subprogress( params_.cb, 0.0f, 0.3f );
-    ParallelFor( 0, blockCount_, [&] ( int blockIndex )
+    assert( partFirstZ % layersPerBlock_ == 0 );
+    assert( ( part.dims.z - 1 ) % layersPerBlock_ == 0 );
+    const int firstBlock = partFirstZ / layersPerBlock_;
+    const int lastBlock = firstBlock + ( part.dims.z - 1 ) / layersPerBlock_;
+    ParallelFor( firstBlock, lastBlock, [&] ( int blockIndex )
     {
         auto & block = sepStorage_.getBlock( blockIndex );
         const bool report = currentSubprogress && std::this_thread::get_id() == callingThreadId;
@@ -482,7 +485,7 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner, i
 
         const VoxelsVolumeAccessor<V> acc( part );
         /// grid point with integer coordinates (0,0,0) will be shifted to this position in 3D space
-        const Vector3f zeroPoint = params_.origin + mult( acc.shift(), part.voxelSize );
+        const Vector3f zeroPoint = params_.origin + mult( acc.shift() + Vector3f( 0, 0, (float)partFirstZ ), part.voxelSize );
 
         std::optional<VoxelsVolumeCachingAccessor<V>> cache;
         if ( cachingMode == MarchingCubesParams::CachingMode::Normal )
@@ -491,10 +494,10 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner, i
             cache.emplace( acc, indexer_, Parameters {
                 .preloadedLayerCount = 2,
             } );
-            cache->preloadLayer( layerBegin );
+            cache->preloadLayer( layerBegin - partFirstZ );
         }
 
-        VoxelLocation loc = indexer_.toLoc( Vector3i( 0, 0, layerBegin ) );
+        VoxelLocation loc = indexer_.toLoc( Vector3i( 0, 0, layerBegin - partFirstZ ) );
         for ( ; loc.pos.z < layerEnd; ++loc.pos.z )
         {
             if ( cache && loc.pos.z != cache->currentLayer() )
@@ -554,13 +557,13 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner, i
                     if ( !atLeastOneOk )
                         continue;
 
-                    block.smap.insert( { loc.id, set } );
+                    block.smap.insert( { loc.id + partFirstId, set } );
                 }
             }
             if ( layerInvalids.any() )
-                invalids_[loc.pos.z] = std::move( layerInvalids );
+                invalids_[loc.pos.z + partFirstZ] = std::move( layerInvalids );
             if ( layerLowerIso.any() )
-                lowerIso_[loc.pos.z] = std::move( layerLowerIso );
+                lowerIso_[loc.pos.z + partFirstZ] = std::move( layerLowerIso );
             const auto numProcessedLayers = cacheLineStorage.numProcessedLayers.fetch_add( 1, std::memory_order_relaxed );
             if ( report && !reportProgress( currentSubprogress, float( numProcessedLayers ) / layerCount ) )
                 keepGoing.store( false, std::memory_order_relaxed );

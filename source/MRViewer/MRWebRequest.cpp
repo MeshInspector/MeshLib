@@ -229,7 +229,8 @@ void WebRequest::setLogName( std::string logName )
     logName_ = std::move( logName );
 }
 
-void WebRequest::send( std::string urlP, const std::string & logName, ResponseCallback callback, bool async /*= true */ )
+// do not pass logName by reference, since logName_ can be passed and logName_ is cleared here
+void WebRequest::send( std::string urlP, std::string logName, ResponseCallback callback, bool async /*= true */ )
 {
     int ctxId;
     RequestContext* ctx;

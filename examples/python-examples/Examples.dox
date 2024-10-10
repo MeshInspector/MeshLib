@@ -1,7 +1,9 @@
 /**
-\page PythonCodeExamples Python Basic Examples
+\page PythonCodeExamples Python Samples
 
-In this section we provide the same examples but with python code
+In this section we provide the same samples with python code
+
+\section PythonV2 Python Modules (prior to version 3)
 
 \subpage ExamplePythonMeshLoadSave
 
@@ -9,7 +11,8 @@ In this section we provide the same examples but with python code
 
 \subpage ExamplePythonMeshModification
 
-\subpage ExamplePythonTriangulation
+Please note that this sample has differences in V2 and V3
+\subpage ExamplePythonTriangulationV2
 
 \subpage ExamplePythonNumpyTriangulation
 
@@ -28,6 +31,14 @@ In this section we provide the same examples but with python code
 \subpage ExamplePythonMeshStitchHole
 
 \subpage ExamplePythonMeshExtrude
+
+\section PythonV3 Python Modules (version 3 and later)
+
+\subpage ExamplePythonTriangulationV3
+
+\subpage ExamplePythonFreeForm
+
+\subpage ExamplePythonViewer
 
 \sa \ref EmbeddedPythonOverview
 */

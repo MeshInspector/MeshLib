@@ -84,8 +84,8 @@ class MarchingCubesByParts
 {
 public:
     /// prepares convention for given volume dimensions and given parameters
-    /// \param layersPerBlock all z-slices of the volume will be partitioned on blocks of given size to process in parallel
-    MRVOXELS_API explicit MarchingCubesByParts( const Vector3i & dims, const MarchingCubesParams& params, int layersPerBlock = 1 );
+    /// \param layersPerBlock all z-slices of the volume will be partitioned on blocks of given size to process in parallel (0 means auto-select layersPerBlock)
+    MRVOXELS_API explicit MarchingCubesByParts( const Vector3i & dims, const MarchingCubesParams& params, int layersPerBlock = 0 );
 
     MRVOXELS_API ~MarchingCubesByParts();
     MRVOXELS_API MarchingCubesByParts( MarchingCubesByParts && s ) noexcept;

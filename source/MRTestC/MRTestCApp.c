@@ -10,6 +10,7 @@ int main( void )
     testBitSet();
     testMeshBoolean();
     testBooleanMultipleEdgePropogationSort();
+    testBooleanMapper();
     testMeshCollidePrecise();
     testMeshDecimate();
     testMeshFillHole();

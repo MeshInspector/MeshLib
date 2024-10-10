@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRBitSet.c" />
     <ClCompile Include="MRMeshBoolean.c" />
     <ClCompile Include="MRMeshCollidePrecise.c" />
     <ClCompile Include="MRMeshDecimate.c" />
@@ -24,6 +25,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRBitSet.h" />
     <ClInclude Include="MRMeshBoolean.h" />
     <ClInclude Include="MRMeshCollidePrecise.h" />
     <ClInclude Include="MRMeshDecimate.h" />

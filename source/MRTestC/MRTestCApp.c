@@ -1,3 +1,4 @@
+#include "MRBitSet.h"
 #include "MRMeshBoolean.h"
 #include "MRMeshCollidePrecise.h"
 #include "MRMeshDecimate.h"
@@ -6,6 +7,7 @@
 
 int main( void )
 {
+    testBitSet();
     testMeshBoolean();
     testBooleanMultipleEdgePropogationSort();
     testMeshCollidePrecise();

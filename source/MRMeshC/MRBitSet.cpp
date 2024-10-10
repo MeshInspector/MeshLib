@@ -150,3 +150,15 @@ void mrUndirectedEdgeBitSetFree( MRUndirectedEdgeBitSet* uebs_ )
     ARG_PTR( uebs );
     delete uebs;
 }
+
+bool mrBitSetTest( const MRBitSet* bs_, size_t index )
+{
+    ARG( bs );
+    return bs.test( index );
+}
+
+void mrBitSetSet( MRBitSet* bs_, size_t index, bool value )
+{
+    ARG( bs );
+    bs.set( index, value );
+}

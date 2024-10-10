@@ -52,7 +52,7 @@ void testMeshCollidePrecise( void )
     TEST_ASSERT( mrOneMeshContoursSize( meshAContours ) == 4 )
     TEST_ASSERT( mrOneMeshContoursSize( meshBContours ) == 4 )
 
-    int posCount = 0;
+    size_t posCount = 0;
     for ( size_t i = 0; i < mrOneMeshContoursSize( meshAContours ); ++i )
         posCount += mrOneMeshContoursGet( meshAContours, i ).intersections.size;
     TEST_ASSERT( posCount == 156 )

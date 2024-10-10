@@ -1,6 +1,9 @@
 #include "MRMesh.h"
 #include "MRMeshTopology.h"
 
+#include "detail/TypeCast.h"
+#include "detail/Vector.h"
+
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRBuffer.h"
 #include "MRMesh/MRMesh.h"
@@ -9,96 +12,103 @@
 
 using namespace MR;
 
-MRMesh* mrMeshCopy( const MRMesh* mesh )
+REGISTER_AUTO_CAST( AffineXf3f )
+REGISTER_AUTO_CAST( Box3f )
+REGISTER_AUTO_CAST( EdgeId )
+REGISTER_AUTO_CAST( FaceBitSet )
+REGISTER_AUTO_CAST( Mesh )
+REGISTER_AUTO_CAST( MeshTopology )
+REGISTER_AUTO_CAST( ThreeVertIds )
+REGISTER_AUTO_CAST( Triangle3f )
+REGISTER_AUTO_CAST( Vector3f )
+REGISTER_AUTO_CAST( VertBitSet )
+REGISTER_VECTOR( EdgePath )
+
+MRMesh* mrMeshCopy( const MRMesh* mesh_ )
 {
-    return reinterpret_cast<MRMesh*>( new Mesh( *reinterpret_cast<const Mesh*>( mesh ) ) );
+    ARG( mesh );
+    RETURN_NEW( mesh );
 }
 
 MRMesh* mrMeshFromTriangles( const MRVector3f* vertexCoordinates_, size_t vertexCoordinatesNum, const MRThreeVertIds* t_, size_t tNum )
 {
-    std::span vertexCoordinates { reinterpret_cast<const Vector3f*>( vertexCoordinates_ ), vertexCoordinatesNum };
-    std::span t { reinterpret_cast<const ThreeVertIds*>( t_ ), tNum };
+    std::span vertexCoordinates { auto_cast( vertexCoordinates_ ), vertexCoordinatesNum };
+    std::span t { auto_cast( t_ ), tNum };
 
     // TODO: cast instead of copying
     VertCoords vertexCoordinatesVec( vertexCoordinates.begin(), vertexCoordinates.end() );
     Triangulation tVec( t.begin(), t.end() );
 
-    auto* mesh = new Mesh( Mesh::fromTriangles( vertexCoordinatesVec, tVec ) );
-    return reinterpret_cast<MRMesh*>( mesh );
+    RETURN_NEW( Mesh::fromTriangles( vertexCoordinatesVec, tVec ) );
 }
 
 MRMesh* mrMeshFromTrianglesDuplicatingNonManifoldVertices( const MRVector3f* vertexCoordinates_, size_t vertexCoordinatesNum, const MRThreeVertIds* t_, size_t tNum )
 {
-    std::span vertexCoordinates { reinterpret_cast<const Vector3f*>( vertexCoordinates_ ), vertexCoordinatesNum };
-    std::span t { reinterpret_cast<const ThreeVertIds*>( t_ ), tNum };
+    std::span vertexCoordinates { auto_cast( vertexCoordinates_ ), vertexCoordinatesNum };
+    std::span t { auto_cast( t_ ), tNum };
 
     // TODO: cast instead of copying
     VertCoords vertexCoordinatesVec( vertexCoordinates.begin(), vertexCoordinates.end() );
     Triangulation tVec( t.begin(), t.end() );
 
-    auto* mesh = new Mesh( Mesh::fromTrianglesDuplicatingNonManifoldVertices( vertexCoordinatesVec, tVec ) );
-    return reinterpret_cast<MRMesh*>( mesh );
+    RETURN_NEW( Mesh::fromTrianglesDuplicatingNonManifoldVertices( vertexCoordinatesVec, tVec ) );
 }
 
 MRMesh* mrMeshNewFromPointTriples( const MRTriangle3f* posTriangles_, size_t posTrianglesNum, bool duplicateNonManifoldVertices )
 {
-    std::span posTriangles { reinterpret_cast<const Triangle3f*>( posTriangles_ ), posTrianglesNum };
+    std::span posTriangles { auto_cast( posTriangles_ ), posTrianglesNum };
 
     // TODO: cast instead of copying
     std::vector<Triangle3f> posTrianglesVec( posTriangles.begin(), posTriangles.end() );
 
-    auto* mesh = new Mesh( Mesh::fromPointTriples( posTrianglesVec, duplicateNonManifoldVertices ) );
-    return reinterpret_cast<MRMesh*>( mesh );
+    RETURN_NEW( Mesh::fromPointTriples( posTrianglesVec, duplicateNonManifoldVertices ) );
 }
 
-const MRVector3f* mrMeshPoints( const MRMesh* mesh )
+const MRVector3f* mrMeshPoints( const MRMesh* mesh_ )
 {
-    return reinterpret_cast<const MRVector3f*>( reinterpret_cast<const Mesh*>( mesh )->points.data() );
+    ARG( mesh );
+    RETURN( mesh.points.data() );
 }
 
-MRVector3f* mrMeshPointsRef( MRMesh* mesh )
+MRVector3f* mrMeshPointsRef( MRMesh* mesh_ )
 {
-    return reinterpret_cast<MRVector3f*>( reinterpret_cast<Mesh*>( mesh )->points.data() );
+    ARG( mesh );
+    RETURN( mesh.points.data() );
 }
 
-size_t mrMeshPointsNum( const MRMesh* mesh )
+size_t mrMeshPointsNum( const MRMesh* mesh_ )
 {
-    return reinterpret_cast<const Mesh*>( mesh )->points.size();
+    ARG( mesh );
+    return mesh.points.size();
 }
 
-const MRMeshTopology* mrMeshTopology( const MRMesh* mesh )
+const MRMeshTopology* mrMeshTopology( const MRMesh* mesh_ )
 {
-    return reinterpret_cast<const MRMeshTopology*>( &reinterpret_cast<const Mesh*>( mesh )->topology );
+    ARG( mesh );
+    RETURN( &mesh.topology );
 }
 
-MRMeshTopology* mrMeshTopologyRef( MRMesh* mesh )
+MRMeshTopology* mrMeshTopologyRef( MRMesh* mesh_ )
 {
-    return reinterpret_cast<MRMeshTopology*>( &reinterpret_cast<Mesh*>( mesh )->topology );
+    ARG( mesh );
+    RETURN( &mesh.topology );
 }
 
 MRBox3f mrMeshComputeBoundingBox( const MRMesh* mesh_, const MRAffineXf3f* toWorld_ )
 {
-    const auto& mesh = *reinterpret_cast<const Mesh*>( mesh_ );
-    const auto* toWorld = reinterpret_cast<const AffineXf3f*>( toWorld_ );
-
-    const auto res = mesh.computeBoundingBox( toWorld );
-    return reinterpret_cast<const MRBox3f&>( res );
+    ARG( mesh ); ARG_PTR( toWorld );
+    RETURN( mesh.computeBoundingBox( toWorld ) );
 }
 
 void mrMeshTransform( MRMesh* mesh_, const MRAffineXf3f* xf_, const MRVertBitSet* region_ )
 {
-    auto& mesh = *reinterpret_cast<Mesh*>( mesh_ );
-    const auto& xf = *reinterpret_cast<const AffineXf3f*>( xf_ );
-    const auto* region = reinterpret_cast<const VertBitSet*>( region_ );
-
+    ARG( mesh ); ARG( xf ); ARG_PTR( region );
     mesh.transform( xf, region );
 }
 
 void mrMeshAddPartByMask( MRMesh* mesh_, const MRMesh* from_, const MRFaceBitSet* fromFaces_, const MRMeshAddPartByMaskParameters* params )
 {
-    auto& mesh = *reinterpret_cast<Mesh*>( mesh_ );
-    const auto& from = *reinterpret_cast<const Mesh*>( from_ );
-    const auto& fromFaces = *reinterpret_cast<const FaceBitSet*>( fromFaces_ );
+    ARG( mesh ); ARG( from ); ARG( fromFaces );
 
     bool flipOrientation = false;
     // TODO: cast instead of copying
@@ -108,8 +118,8 @@ void mrMeshAddPartByMask( MRMesh* mesh_, const MRMesh* from_, const MRFaceBitSet
     if ( params )
     {
         flipOrientation = params->flipOrientation;
-        std::span thisContours { reinterpret_cast<const EdgePath*>( params->thisContours ), params->thisContoursNum };
-        std::span fromContours { reinterpret_cast<const EdgePath*>( params->fromContours ), params->fromContoursNum };
+        std::span thisContours { auto_cast( params->thisContours ), params->thisContoursNum };
+        std::span fromContours { auto_cast( params->fromContours ), params->fromContoursNum };
         thisContoursVec.assign( thisContours.begin(), thisContours.end() );
         fromContoursVec.assign( fromContours.begin(), fromContours.end() );
     }
@@ -117,31 +127,27 @@ void mrMeshAddPartByMask( MRMesh* mesh_, const MRMesh* from_, const MRFaceBitSet
     mesh.addPartByMask( from, fromFaces, flipOrientation, thisContoursVec, fromContoursVec );
 }
 
-void mrMeshFree( MRMesh* mesh )
+void mrMeshFree( MRMesh* mesh_ )
 {
-    delete reinterpret_cast<Mesh*>( mesh );
+    ARG_PTR( mesh );
+    delete mesh;
 }
 
 MRVector3f mrMeshHoleDirArea( const MRMesh* mesh_, MREdgeId e_ )
 {
-    const auto& mesh = *reinterpret_cast<const Mesh*>( mesh_ );
-    auto e = *reinterpret_cast<EdgeId*>( &e_ );
-
-    const auto res = (Vector3f)mesh.holeDirArea( e );
-    return reinterpret_cast<const MRVector3f&>( res );
+    ARG( mesh ); ARG_VAL( e );
+    RETURN( (Vector3f)mesh.holeDirArea( e ) );
 }
 
 void mrMeshPack( MRMesh* mesh_, bool rearrangeTriangles )
 {
-    auto& mesh = *reinterpret_cast<Mesh*>( mesh_ );
-
+    ARG( mesh );
     mesh.pack( nullptr, nullptr, nullptr, rearrangeTriangles );
 }
 
 void mrMeshPackOptimally( MRMesh* mesh_, bool preserveAABBTree )
 {
-    auto& mesh = *reinterpret_cast<Mesh*>( mesh_ );
-
+    ARG( mesh );
     mesh.packOptimally( preserveAABBTree );
 }
 
@@ -153,4 +159,10 @@ MRTriangulation* mrMeshGetTriangulation( const MRMesh* mesh )
 MREdgePath* mrMeshFindHoleRepresentiveEdges( const MRMesh* mesh )
 {
     return mrMeshTopologyFindHoleRepresentiveEdges( mrMeshTopology( mesh ) );
+}
+
+double mrMeshVolume( const MRMesh* mesh_, const MRFaceBitSet* region_ )
+{
+    ARG( mesh ); ARG_PTR( region );
+    return mesh.volume( region );
 }

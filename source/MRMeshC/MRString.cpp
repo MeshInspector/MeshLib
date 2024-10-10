@@ -1,18 +1,25 @@
 #include "MRString.h"
 
+#include "detail/TypeCast.h"
+
 #include <string>
 
-const char* mrStringData( const MRString* str )
+REGISTER_AUTO_CAST2( std::string, MRString )
+
+const char* mrStringData( const MRString* str_ )
 {
-    return reinterpret_cast<const std::string*>( str )->data();
+    ARG( str );
+    return str.data();
 }
 
-size_t mrStringSize( const MRString* str )
+size_t mrStringSize( const MRString* str_ )
 {
-    return reinterpret_cast<const std::string*>( str )->size();
+    ARG( str );
+    return str.size();
 }
 
-void mrStringFree( MRString* str )
+void mrStringFree( MRString* str_ )
 {
-    delete reinterpret_cast<std::string*>( str );
+    ARG_PTR( str );
+    delete str;
 }

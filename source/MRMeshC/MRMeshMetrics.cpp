@@ -1,94 +1,79 @@
 #include "MRMeshMetrics.h"
 
+#include "detail/TypeCast.h"
+
 #include "MRMesh/MRMeshMetrics.h"
 #include "MRMesh/MRId.h"
 
 using namespace MR;
 
+REGISTER_AUTO_CAST( EdgeId )
+REGISTER_AUTO_CAST( FaceBitSet )
+REGISTER_AUTO_CAST( FillHoleMetric )
+REGISTER_AUTO_CAST( Mesh )
+REGISTER_AUTO_CAST( VertId )
+
 MRFillHoleMetric* mrFillHoleMetricNew( MRFillTriangleMetric triangleMetric, MRFillEdgeMetric edgeMetric, MRFillCombineMetric combineMetric )
 {
-    FillHoleMetric res {
+    RETURN_NEW( FillHoleMetric {
         .triangleMetric = [triangleMetric] ( VertId v1_, VertId v2_, VertId v3_ ) -> double
         {
-            const auto& v1 = reinterpret_cast<MRVertId&>( v1_ );
-            const auto& v2 = reinterpret_cast<MRVertId&>( v2_ );
-            const auto& v3 = reinterpret_cast<MRVertId&>( v3_ );
+            ARG_VAL( v1 ); ARG_VAL( v2 ); ARG_VAL( v3 );
             return triangleMetric( v1, v2, v3 );
         },
         .edgeMetric = [edgeMetric] ( VertId v1_, VertId v2_, VertId v3_, VertId v4_ ) -> double
         {
-            const auto& v1 = reinterpret_cast<MRVertId&>( v1_ );
-            const auto& v2 = reinterpret_cast<MRVertId&>( v2_ );
-            const auto& v3 = reinterpret_cast<MRVertId&>( v3_ );
-            const auto& v4 = reinterpret_cast<MRVertId&>( v4_ );
+            ARG_VAL( v1 ); ARG_VAL( v2 ); ARG_VAL( v3 ); ARG_VAL( v4 );
             return edgeMetric( v1, v2, v3, v4 );
         },
         .combineMetric = combineMetric,
-    };
-    return reinterpret_cast<MRFillHoleMetric*>( new FillHoleMetric( std::move( res ) ) );
+    } );
 }
 
-void mrFillHoleMetricFree( MRFillHoleMetric* metric )
+void mrFillHoleMetricFree( MRFillHoleMetric* metric_ )
 {
-    delete reinterpret_cast<FillHoleMetric*>( metric );
+    ARG_PTR( metric );
+    delete metric;
 }
 
 double mrCalcCombinedFillMetric( const MRMesh* mesh_, const MRFaceBitSet* filledRegion_, const MRFillHoleMetric* metric_ )
 {
-    const auto& mesh = *reinterpret_cast<const Mesh*>( mesh_ );
-    const auto& filledRegion = *reinterpret_cast<const FaceBitSet*>( filledRegion_ );
-    const auto& metric = *reinterpret_cast<const FillHoleMetric*>( metric_ );
-
+    ARG( mesh ); ARG( filledRegion ); ARG( metric );
     return calcCombinedFillMetric( mesh, filledRegion, metric );
 }
 
 MRFillHoleMetric* mrGetCircumscribedMetric( const MRMesh* mesh_ )
 {
-    const auto& mesh = *reinterpret_cast<const Mesh*>( mesh_ );
-
-    auto res = getCircumscribedMetric( mesh );
-    return reinterpret_cast<MRFillHoleMetric*>( new FillHoleMetric( std::move( res ) ) );
+    ARG( mesh );
+    RETURN_NEW( getCircumscribedMetric( mesh ) );
 }
 
 MRFillHoleMetric* mrGetPlaneFillMetric( const MRMesh* mesh_, MREdgeId e_ )
 {
-    const auto& mesh = *reinterpret_cast<const Mesh*>( mesh_ );
-    const auto& e = reinterpret_cast<const EdgeId&>( e_ );
-
-    auto res = getPlaneFillMetric( mesh, e );
-    return reinterpret_cast<MRFillHoleMetric*>( new FillHoleMetric( std::move( res ) ) );
+    ARG( mesh ); ARG_VAL( e );
+    RETURN_NEW( getPlaneFillMetric( mesh, e ) );
 }
 
 MRFillHoleMetric* mrGetPlaneNormalizedFillMetric( const MRMesh* mesh_, MREdgeId e_ )
 {
-    const auto& mesh = *reinterpret_cast<const Mesh*>( mesh_ );
-    const auto& e = reinterpret_cast<const EdgeId&>( e_ );
-
-    auto res = getPlaneNormalizedFillMetric( mesh, e );
-    return reinterpret_cast<MRFillHoleMetric*>( new FillHoleMetric( std::move( res ) ) );
+    ARG( mesh ); ARG_VAL( e );
+    RETURN_NEW( getPlaneNormalizedFillMetric( mesh, e ) );
 }
 
 MRFillHoleMetric* mrGetComplexFillMetric( const MRMesh* mesh_, MREdgeId e_ )
 {
-    const auto& mesh = *reinterpret_cast<const Mesh*>( mesh_ );
-    const auto& e = reinterpret_cast<const EdgeId&>( e_ );
-
-    auto res = getComplexFillMetric( mesh, e );
-    return reinterpret_cast<MRFillHoleMetric*>( new FillHoleMetric( std::move( res ) ) );
+    ARG( mesh ); ARG_VAL( e );
+    RETURN_NEW( getComplexFillMetric( mesh, e ) );
 }
 
 MRFillHoleMetric* mrGetUniversalMetric( const MRMesh* mesh_ )
 {
-    const auto& mesh = *reinterpret_cast<const Mesh*>( mesh_ );
-
-    auto res = getUniversalMetric( mesh );
-    return reinterpret_cast<MRFillHoleMetric*>( new FillHoleMetric( std::move( res ) ) );
+    ARG( mesh );
+    RETURN_NEW( getUniversalMetric( mesh ) );
 }
 
 MRFillHoleMetric* mrGetMinAreaMetric( const MRMesh* mesh_ )
 {
-    const auto& mesh = *reinterpret_cast<const Mesh*>( mesh_ );
-
-    auto res = getMinAreaMetric( mesh );
-    return reinterpret_cast<MRFillHoleMetric*>( new FillHoleMetric( std::move( res ) ) );
+    ARG( mesh );
+    RETURN_NEW( getMinAreaMetric( mesh ) );
 }

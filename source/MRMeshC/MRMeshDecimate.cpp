@@ -1,5 +1,7 @@
 #include "MRMeshDecimate.h"
 
+#include "detail/TypeCast.h"
+
 #include "MRPch/MRSuppressWarning.h"
 
 MR_SUPPRESS_WARNING_PUSH
@@ -9,13 +11,17 @@ MR_SUPPRESS_WARNING_POP
 
 using namespace MR;
 
+REGISTER_AUTO_CAST( DecimateStrategy )
+REGISTER_AUTO_CAST( FaceBitSet )
+REGISTER_AUTO_CAST( Mesh )
+
 #define COPY_FROM( obj, field ) . field = ( obj ). field ,
 
 MRDecimateSettings mrDecimateSettingsNew()
 {
     static const DecimateSettings def;
     return {
-        .strategy = static_cast<MRDecimateStrategy>( def.strategy ),
+        .strategy = auto_cast( def.strategy ),
         COPY_FROM( def, maxError )
         COPY_FROM( def, maxEdgeLen )
         COPY_FROM( def, maxBdShift )
@@ -49,14 +55,16 @@ MRDecimateSettings mrDecimateSettingsNew()
 #undef COPY
 }
 
-MRDecimateResult mrDecimateMesh( MRMesh* mesh, const MRDecimateSettings* settings_ )
+MRDecimateResult mrDecimateMesh( MRMesh* mesh_, const MRDecimateSettings* settings_ )
 {
+    ARG( mesh );
+
     DecimateSettings settings;
     if ( settings_ )
     {
         auto& src = *settings_;
         settings = {
-            .strategy = static_cast<DecimateStrategy>( settings_->strategy ),
+            .strategy = auto_cast( settings_->strategy ),
             COPY_FROM( src, maxError )
             COPY_FROM( src, maxEdgeLen )
             COPY_FROM( src, maxBdShift )
@@ -89,10 +97,7 @@ MRDecimateResult mrDecimateMesh( MRMesh* mesh, const MRDecimateSettings* setting
         };
     }
 
-    const auto res = decimateMesh(
-        *reinterpret_cast<Mesh*>( mesh ),
-        settings
-    );
+    const auto res = decimateMesh( mesh, settings );
     // TODO: reinterpret_cast?
     // NOTE: C bool != C++ bool
     return {
@@ -116,8 +121,10 @@ MRResolveMeshDegenSettings mrResolveMeshDegenSettingsNew()
     };
 }
 
-bool mrResolveMeshDegenerations( MRMesh* mesh, const MRResolveMeshDegenSettings* settings_ )
+bool mrResolveMeshDegenerations( MRMesh* mesh_, const MRResolveMeshDegenSettings* settings_ )
 {
+    ARG( mesh );
+
     ResolveMeshDegenSettings settings;
     if ( settings_ )
     {
@@ -128,14 +135,11 @@ bool mrResolveMeshDegenerations( MRMesh* mesh, const MRResolveMeshDegenSettings*
             COPY_FROM( src, maxAngleChange )
             COPY_FROM( src, criticalAspectRatio )
             COPY_FROM( src, stabilizer )
-            .region = reinterpret_cast<FaceBitSet*>( src.region ),
+            .region = auto_cast( src.region ),
         };
     }
 
-    return resolveMeshDegenerations(
-        *reinterpret_cast<Mesh*>( mesh ),
-        settings
-    );
+    return resolveMeshDegenerations( mesh, settings );
 }
 
 MRRemeshSettings mrRemeshSettingsNew()
@@ -160,8 +164,10 @@ MRRemeshSettings mrRemeshSettingsNew()
     };
 }
 
-bool mrRemesh( MRMesh* mesh, const MRRemeshSettings* settings_ )
+bool mrRemesh( MRMesh* mesh_, const MRRemeshSettings* settings_ )
 {
+    ARG( mesh );
+
     RemeshSettings settings;
     if ( settings_ )
     {
@@ -174,7 +180,7 @@ bool mrRemesh( MRMesh* mesh, const MRRemeshSettings* settings_ )
             COPY_FROM( src, useCurvature )
             COPY_FROM( src, finalRelaxIters )
             COPY_FROM( src, finalRelaxNoShrinkage )
-            .region = reinterpret_cast<FaceBitSet*>( src.region ),
+            .region = auto_cast( src.region ),
             // TODO: notFlippable
             COPY_FROM( src, packMesh )
             COPY_FROM( src, projectOnOriginalMesh )
@@ -185,8 +191,5 @@ bool mrRemesh( MRMesh* mesh, const MRRemeshSettings* settings_ )
         };
     }
 
-    return remesh(
-        *reinterpret_cast<Mesh*>( mesh ),
-        settings
-    );
+    return remesh( mesh, settings );
 }

@@ -11,7 +11,8 @@ typedef struct MRBooleanParameters
 {
     /// Transform from mesh `B` space to mesh `A` space
     const MRAffineXf3f* rigidB2A;
-    // TODO: mapper
+    /// Optional output structure to map mesh `A` and mesh `B` topology to result mesh topology
+    MRBooleanResultMapper* mapper;
     // TODO: outPreCutA
     // TODO: outPreCutB
     // TODO: outCutEdges

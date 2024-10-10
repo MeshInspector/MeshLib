@@ -1,5 +1,7 @@
 #include "MRMeshFillHole.h"
 
+#include "detail/TypeCast.h"
+
 #include "MRMesh/MRId.h"
 #include "MRMesh/MRMeshFillHole.h"
 
@@ -7,13 +9,19 @@
 
 using namespace MR;
 
+REGISTER_AUTO_CAST( EdgeId )
+REGISTER_AUTO_CAST( FaceBitSet )
+REGISTER_AUTO_CAST( FillHoleMetric )
+REGISTER_AUTO_CAST2( FillHoleParams::MultipleEdgesResolveMode, MRFillHoleMetricMultipleEdgesResolveMode )
+REGISTER_AUTO_CAST( Mesh )
+
 MRFillHoleParams mrFillHoleParamsNew( void )
 {
     static const FillHoleParams def;
     return {
-        .metric = reinterpret_cast<const MRFillHoleMetric*>( &def.metric ),
-        .outNewFaces = reinterpret_cast<MRFaceBitSet*>( def.outNewFaces ),
-        .multipleEdgesResolveMode = static_cast<MRFillHoleParamsMultipleEdgesResolveMode>( def.multipleEdgesResolveMode ),
+        .metric = auto_cast( &def.metric ),
+        .outNewFaces = auto_cast( def.outNewFaces ),
+        .multipleEdgesResolveMode = auto_cast( def.multipleEdgesResolveMode ),
         .makeDegenerateBand = def.makeDegenerateBand,
         .maxPolygonSubdivisions = def.maxPolygonSubdivisions,
         .stopBeforeBadTriangulation = def.stopBeforeBadTriangulation,
@@ -22,16 +30,15 @@ MRFillHoleParams mrFillHoleParamsNew( void )
 
 void mrFillHole( MRMesh* mesh_, MREdgeId a_, const MRFillHoleParams* params_ )
 {
-    auto& mesh = *reinterpret_cast<Mesh*>( mesh_ );
-    const auto& a = reinterpret_cast<EdgeId&>( a_ );
+    ARG( mesh ); ARG_VAL( a );
 
     FillHoleParams params;
     if ( params_ )
     {
         params = {
-            .metric = params_->metric ? *reinterpret_cast<const FillHoleMetric*>( params_->metric ) : FillHoleMetric {},
-            .outNewFaces = reinterpret_cast<FaceBitSet*>( params_->outNewFaces ),
-            .multipleEdgesResolveMode = static_cast<FillHoleParams::MultipleEdgesResolveMode>( params_->multipleEdgesResolveMode ),
+            .metric = params_->metric ? *auto_cast( params_->metric ) : FillHoleMetric {},
+            .outNewFaces = auto_cast( params_->outNewFaces ),
+            .multipleEdgesResolveMode = auto_cast( params_->multipleEdgesResolveMode ),
             .makeDegenerateBand = params_->makeDegenerateBand,
             .maxPolygonSubdivisions = params_->maxPolygonSubdivisions,
             .stopBeforeBadTriangulation = params_->stopBeforeBadTriangulation,
@@ -43,9 +50,9 @@ void mrFillHole( MRMesh* mesh_, MREdgeId a_, const MRFillHoleParams* params_ )
 
 void mrFillHoles( MRMesh* mesh_, const MREdgeId* as_, size_t asNum, const MRFillHoleParams* params_ )
 {
-    auto& mesh = *reinterpret_cast<Mesh*>( mesh_ );
+    ARG( mesh );
 
-    std::span as { reinterpret_cast<const EdgeId*>( as_ ), asNum };
+    std::span as { auto_cast( as_ ), asNum };
 
     // TODO: cast instead of copying
     std::vector<EdgeId> asVec( as.begin(), as.end() );
@@ -54,9 +61,9 @@ void mrFillHoles( MRMesh* mesh_, const MREdgeId* as_, size_t asNum, const MRFill
     if ( params_ )
     {
         params = {
-            .metric = params_->metric ? *reinterpret_cast<const FillHoleMetric*>( params_->metric ) : FillHoleMetric {},
-            .outNewFaces = reinterpret_cast<FaceBitSet*>( params_->outNewFaces ),
-            .multipleEdgesResolveMode = static_cast<FillHoleParams::MultipleEdgesResolveMode>( params_->multipleEdgesResolveMode ),
+            .metric = params_->metric ? *auto_cast( params_->metric ) : FillHoleMetric {},
+            .outNewFaces = auto_cast( params_->outNewFaces ),
+            .multipleEdgesResolveMode = auto_cast( params_->multipleEdgesResolveMode ),
             .makeDegenerateBand = params_->makeDegenerateBand,
             .maxPolygonSubdivisions = params_->maxPolygonSubdivisions,
             .stopBeforeBadTriangulation = params_->stopBeforeBadTriangulation,

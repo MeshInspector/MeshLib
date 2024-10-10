@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRVector.h"
 
 MR_EXTERN_C_BEGIN
 
@@ -26,5 +27,55 @@ typedef enum MRBooleanOperation
     /// not a valid operation
     MRBooleanOperationCount
 } MRBooleanOperation;
+
+/// ...
+typedef enum MRBooleanResultMapperMapObject
+{
+    MRBooleanResultMapperMapObjectA,
+    MRBooleanResultMapperMapObjectB,
+    MRBooleanResultMapperMapObjectCount
+} MRBooleanResultMapperMapObject;
+
+/// ...
+typedef struct MRBooleanResultMapper MRBooleanResultMapper;
+
+/// ...
+typedef struct MRBooleanResultMapperMaps MRBooleanResultMapperMaps;
+
+/// ...
+MRMESHC_API MRBooleanResultMapper* mrBooleanResultMapperNew( void );
+
+/// ...
+MRMESHC_API MRFaceBitSet* mrBooleanResultMapperMapFaces( const MRBooleanResultMapper* mapper, const MRFaceBitSet* oldBS, MRBooleanResultMapperMapObject obj );
+
+/// ...
+MRMESHC_API MRVertBitSet* mrBooleanResultMapperMapVerts( const MRBooleanResultMapper* mapper, const MRVertBitSet* oldBS, MRBooleanResultMapperMapObject obj );
+
+/// ...
+MRMESHC_API MREdgeBitSet* mrBooleanResultMapperMapEdges( const MRBooleanResultMapper* mapper, const MREdgeBitSet* oldBS, MRBooleanResultMapperMapObject obj );
+
+/// ...
+MRMESHC_API MRFaceBitSet* mrBooleanResultMapperNewFaces( const MRBooleanResultMapper* mapper );
+
+/// ...
+MRMESHC_API MRFaceBitSet* mrBooleanResultMapperFilteredOldFaceBitSet( MRBooleanResultMapper* mapper, const MRFaceBitSet* oldBS, MRBooleanResultMapperMapObject obj );
+
+/// ...
+MRMESHC_API const MRBooleanResultMapperMaps* mrBooleanResultMapperGetMaps( const MRBooleanResultMapper* mapper, MRBooleanResultMapperMapObject index );
+
+/// ...
+MRMESHC_API const MRFaceMap mrBooleanResultMapperMapsCut2origin( const MRBooleanResultMapperMaps* maps );
+
+/// ...
+MRMESHC_API const MRFaceMap mrBooleanResultMapperMapsCut2newFaces( const MRBooleanResultMapperMaps* maps );
+
+/// ...
+MRMESHC_API const MRWholeEdgeMap mrBooleanResultMapperMapsOld2newEdges( const MRBooleanResultMapperMaps* maps );
+
+/// ...
+MRMESHC_API const MRVertMap mrBooleanResultMapperMapsOld2NewVerts( const MRBooleanResultMapperMaps* maps );
+
+/// ...
+MRMESHC_API bool mrBooleanResultMapperMapsIdentity( const MRBooleanResultMapperMaps* maps );
 
 MR_EXTERN_C_END

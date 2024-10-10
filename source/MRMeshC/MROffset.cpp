@@ -1,11 +1,31 @@
 #include "MROffset.h"
 
+#include "detail/TypeCast.h"
+
 #include "MRMesh/MRMesh.h"
 #include "MRVoxels/MROffset.h"
 
 using namespace MR;
 
+REGISTER_AUTO_CAST( FaceBitSet )
+REGISTER_AUTO_CAST( Mesh )
+REGISTER_AUTO_CAST( SignDetectionMode )
+REGISTER_AUTO_CAST2( std::string, MRString )
+
 #define COPY_FROM( obj, field ) . field = ( obj ). field
+
+namespace
+{
+
+MeshPart cast( MRMeshPart mp )
+{
+    return {
+        *auto_cast( mp.mesh ),
+        auto_cast( mp.region )
+    };
+}
+
+} // namespace
 
 MROffsetParameters mrOffsetParametersNew()
 {
@@ -13,20 +33,14 @@ MROffsetParameters mrOffsetParametersNew()
     return {
         COPY_FROM( def, voxelSize ),
         .callBack = nullptr,
-        .signDetectionMode = static_cast<MRSignDetectionMode>( def.signDetectionMode ),
+        .signDetectionMode = auto_cast( def.signDetectionMode ),
         COPY_FROM( def, memoryEfficient ),
     };
 }
 
 float mrSuggestVoxelSize( MRMeshPart mp, float approxNumVoxels )
 {
-    return suggestVoxelSize(
-        MeshPart {
-            *reinterpret_cast<const Mesh*>( mp.mesh ),
-            reinterpret_cast<const FaceBitSet*>( mp.region ),
-        },
-        approxNumVoxels
-    );
+    return suggestVoxelSize( cast( mp ), approxNumVoxels );
 }
 
 #ifndef MRMESH_NO_OPENVDB
@@ -38,29 +52,21 @@ MRMesh* mrOffsetMesh( MRMeshPart mp, float offset, const MROffsetParameters* par
         const auto& src = *params_;
         params COPY_FROM( src, voxelSize );
         params COPY_FROM( src, callBack );
-        params.signDetectionMode = static_cast<SignDetectionMode>( src.signDetectionMode );
+        params.signDetectionMode = auto_cast( src.signDetectionMode );
         params COPY_FROM( src, memoryEfficient );
     }
 
-    auto res = offsetMesh(
-        MeshPart {
-            *reinterpret_cast<const Mesh*>( mp.mesh ),
-            reinterpret_cast<const FaceBitSet*>( mp.region ),
-        },
-        offset,
-        params
-    );
+    auto res = offsetMesh( cast( mp ), offset, params );
     if ( res )
     {
-        auto* resMesh = new Mesh( std::move( *res ) );
-        return reinterpret_cast<MRMesh*>( resMesh );
+        RETURN_NEW( std::move( *res ) );
     }
-    if ( errorString != nullptr )
+    else
     {
-        auto* str = new std::string( std::move( res.error() ) );
-        *errorString = reinterpret_cast<MRString*>( str );
+        if ( errorString != nullptr )
+            *errorString = auto_cast( new_from( std::move( res.error() ) ) );
+        return nullptr;
     }
-    return nullptr;
 }
 
 MRMesh* mrDoubleOffsetMesh( MRMeshPart mp, float offsetA, float offsetB, const MROffsetParameters* params_, MRString** errorString )
@@ -71,30 +77,21 @@ MRMesh* mrDoubleOffsetMesh( MRMeshPart mp, float offsetA, float offsetB, const M
         const auto& src = *params_;
         params COPY_FROM( src, voxelSize );
         params COPY_FROM( src, callBack );
-        params.signDetectionMode = static_cast<SignDetectionMode>( src.signDetectionMode );
+        params.signDetectionMode = auto_cast( src.signDetectionMode );
         params COPY_FROM( src, memoryEfficient );
     }
 
-    auto res = doubleOffsetMesh(
-        MeshPart {
-            *reinterpret_cast<const Mesh*>( mp.mesh ),
-            reinterpret_cast<const FaceBitSet*>( mp.region ),
-        },
-        offsetA,
-        offsetB,
-        params
-    );
+    auto res = doubleOffsetMesh( cast( mp ), offsetA, offsetB, params );
     if ( res )
     {
-        auto* resMesh = new Mesh( std::move( *res ) );
-        return reinterpret_cast<MRMesh*>( resMesh );
+        RETURN_NEW( std::move( *res ) );
     }
-    if ( errorString != nullptr )
+    else
     {
-        auto* str = new std::string( std::move( res.error() ) );
-        *errorString = reinterpret_cast<MRString*>( str );
+        if ( errorString != nullptr )
+            *errorString = auto_cast( new_from( std::move( res.error() ) ) );
+        return nullptr;
     }
-    return nullptr;
 }
 #endif
 
@@ -110,56 +107,44 @@ MRMesh* mrMcOffsetMesh( MRMeshPart mp, float offset, const MROffsetParameters* p
         params COPY_FROM( src, memoryEfficient );
     }
 
-    auto res = mcOffsetMesh(
-        MeshPart {
-            *reinterpret_cast<const Mesh*>( mp.mesh ),
-            reinterpret_cast<const FaceBitSet*>( mp.region ),
-        },
-        offset,
-        params
-    );
+    auto res = mcOffsetMesh( cast( mp ), offset, params );
     if ( res )
     {
-        auto* resMesh = new Mesh( std::move( *res ) );
-        return reinterpret_cast<MRMesh*>( resMesh );
+        RETURN_NEW( std::move( *res ) );
     }
-    if ( errorString != nullptr )
+    else
     {
-        auto* str = new std::string( std::move( res.error() ) );
-        *errorString = reinterpret_cast<MRString*>( str );
+        if ( errorString != nullptr )
+            *errorString = auto_cast( new_from( std::move( res.error() ) ) );
+        return nullptr;
     }
-    return nullptr;
 }
 
-MRMesh* mrMcShellMeshRegion( const MRMesh* mesh, const MRFaceBitSet* region, float offset, const MROffsetParameters* params_, MRString** errorString )
+MRMesh* mrMcShellMeshRegion( const MRMesh* mesh_, const MRFaceBitSet* region_, float offset, const MROffsetParameters* params_, MRString** errorString )
 {
+    ARG( mesh ); ARG( region );
+
     OffsetParameters params;
     if ( params_ )
     {
         const auto& src = *params_;
         params COPY_FROM( src, voxelSize );
         params COPY_FROM( src, callBack );
-        params.signDetectionMode = static_cast<SignDetectionMode>( src.signDetectionMode );
+        params.signDetectionMode = auto_cast( src.signDetectionMode );
         params COPY_FROM( src, memoryEfficient );
     }
 
-    auto res = mcShellMeshRegion(
-        *reinterpret_cast<const Mesh*>( mesh ),
-        *reinterpret_cast<const FaceBitSet*>( region ),
-        offset,
-        params
-    );
+    auto res = mcShellMeshRegion( mesh, region, offset, params );
     if ( res )
     {
-        auto* resMesh = new Mesh( std::move( *res ) );
-        return reinterpret_cast<MRMesh*>( resMesh );
+        RETURN_NEW( std::move( *res ) );
     }
-    if ( errorString != nullptr )
+    else
     {
-        auto* str = new std::string( std::move( res.error() ) );
-        *errorString = reinterpret_cast<MRString*>( str );
+        if ( errorString != nullptr )
+            *errorString = auto_cast( new_from( std::move( res.error() ) ) );
+        return nullptr;
     }
-    return nullptr;
 }
 
 MRGeneralOffsetParameters mrGeneralOffsetParametersNew()
@@ -194,25 +179,17 @@ MRMesh* mrSharpOffsetMesh( MRMeshPart mp, float offset, const MROffsetParameters
         params COPY_FROM( src, maxOldVertPosCorrection );
     }
 
-    auto res = sharpOffsetMesh(
-        MeshPart {
-            *reinterpret_cast<const Mesh*>( mp.mesh ),
-            reinterpret_cast<const FaceBitSet*>( mp.region ),
-        },
-        offset,
-        params
-    );
+    auto res = sharpOffsetMesh( cast( mp ), offset, params );
     if ( res )
     {
-        auto* resMesh = new Mesh( std::move( *res ) );
-        return reinterpret_cast<MRMesh*>( resMesh );
+        RETURN_NEW( std::move( *res ) );
     }
-    if ( errorString != nullptr )
+    else
     {
-        auto* str = new std::string( std::move( res.error() ) );
-        *errorString = reinterpret_cast<MRString*>( str );
+        if ( errorString != nullptr )
+            *errorString = auto_cast( new_from( std::move( res.error() ) ) );
+        return nullptr;
     }
-    return nullptr;
 }
 
 MRMesh* mrGeneralOffsetMesh( MRMeshPart mp, float offset, const MROffsetParameters* params_, const MRGeneralOffsetParameters* generalParams_, MRString** errorString )
@@ -235,29 +212,23 @@ MRMesh* mrGeneralOffsetMesh( MRMeshPart mp, float offset, const MROffsetParamete
         params COPY_FROM( src, maxOldVertPosCorrection );
     }
 
-    auto res = generalOffsetMesh(
-        MeshPart {
-            *reinterpret_cast<const Mesh*>( mp.mesh ),
-            reinterpret_cast<const FaceBitSet*>( mp.region ),
-        },
-        offset,
-        params
-    );
+    auto res = generalOffsetMesh( cast( mp ), offset, params );
     if ( res )
     {
-        auto* resMesh = new Mesh( std::move( *res ) );
-        return reinterpret_cast<MRMesh*>( resMesh );
+        RETURN_NEW( std::move( *res ) );
     }
-    if ( errorString != nullptr )
+    else
     {
-        auto* str = new std::string( std::move( res.error() ) );
-        *errorString = reinterpret_cast<MRString*>( str );
+        if ( errorString != nullptr )
+            *errorString = auto_cast( new_from( std::move( res.error() ) ) );
+        return nullptr;
     }
-    return nullptr;
 }
 
-MRMesh* mrThickenMesh( const MRMesh* mesh, float offset, const MROffsetParameters* params_, const MRGeneralOffsetParameters* generalParams_, MRString** errorString )
+MRMesh* mrThickenMesh( const MRMesh* mesh_, float offset, const MROffsetParameters* params_, const MRGeneralOffsetParameters* generalParams_, MRString** errorString )
 {
+    ARG( mesh );
+
     GeneralOffsetParameters params;
     if ( params_ )
     {
@@ -276,20 +247,15 @@ MRMesh* mrThickenMesh( const MRMesh* mesh, float offset, const MROffsetParameter
         params COPY_FROM( src, maxOldVertPosCorrection );
     }
 
-    auto res = thickenMesh(
-        *reinterpret_cast<const Mesh*>( mesh ),
-        offset,
-        params
-    );
+    auto res = thickenMesh( mesh, offset, params );
     if ( res )
     {
-        auto* resMesh = new Mesh( std::move( *res ) );
-        return reinterpret_cast<MRMesh*>( resMesh );
+        RETURN_NEW( std::move( *res ) );
     }
-    if ( errorString != nullptr )
+    else
     {
-        auto* str = new std::string( std::move( res.error() ) );
-        *errorString = reinterpret_cast<MRString*>( str );
+        if ( errorString != nullptr )
+            *errorString = auto_cast( new_from( std::move( res.error() ) ) );
+        return nullptr;
     }
-    return nullptr;
 }

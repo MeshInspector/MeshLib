@@ -27,17 +27,17 @@ void testMeshFillHole( void )
     MRMesh* mesh = mrMeshFromTriangles( points, 6, (const MRThreeVertIds*)t, 5 );
 
     MREdgePath* oldBdEdges = mrMeshTopologyFindHoleRepresentiveEdges( mrMeshTopology( mesh ) );
-    TEST_ASSERT( mrEdgePathSize( oldBdEdges ) == 2 );
+    TEST_ASSERT( oldBdEdges->size == 2 );
 
     MRFillHoleParams params = mrFillHoleParamsNew();
-    MRFaceBitSet* newFaces = mrFaceBitSetNew();
+    MRFaceBitSet* newFaces = mrFaceBitSetNew( 0, false );
     params.outNewFaces = newFaces;
-    mrFillHoles( mesh, mrEdgePathData( oldBdEdges ), mrEdgePathSize( oldBdEdges ), &params );
+    mrFillHoles( mesh, oldBdEdges->data, oldBdEdges->size, &params );
 
-    TEST_ASSERT( mrBitSetCount( newFaces ) == 3 )
+    TEST_ASSERT( mrBitSetCount( (MRBitSet*)newFaces ) == 3 )
 
     MREdgePath* newBdEdges = mrMeshTopologyFindHoleRepresentiveEdges( mrMeshTopology( mesh ) );
-    TEST_ASSERT( mrEdgePathSize( newBdEdges ) == 0 );
+    TEST_ASSERT( newBdEdges->size == 0 );
 
     mrEdgePathFree( newBdEdges );
     mrFaceBitSetFree( newFaces );

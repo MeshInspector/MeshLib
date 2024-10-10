@@ -32,19 +32,15 @@ MR_EXTERN_C_BEGIN
 typedef struct MRString MRString;
 
 typedef struct MRBitSet MRBitSet;
-typedef MRBitSet MREdgeBitSet;
-typedef MRBitSet MRFaceBitSet;
-typedef MRBitSet MRVertBitSet;
+typedef struct MREdgeBitSet MREdgeBitSet;
+typedef struct MRUndirectedEdgeBitSet MRUndirectedEdgeBitSet;
+typedef struct MRFaceBitSet MRFaceBitSet;
+typedef struct MRVertBitSet MRVertBitSet;
 
 typedef struct MRVector3f MRVector3f;
 
 typedef struct MRMeshTopology MRMeshTopology;
 typedef struct MRMesh MRMesh;
-
-typedef struct MRTriangulation MRTriangulation;
-
-typedef struct MREdgePath MREdgePath;
-typedef MREdgePath MREdgeLoop;
 
 typedef struct MRPointCloud MRPointCloud;
 

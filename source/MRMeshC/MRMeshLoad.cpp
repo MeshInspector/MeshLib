@@ -1,22 +1,25 @@
 #include "MRMeshLoad.h"
 
+#include "detail/TypeCast.h"
+
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshLoad.h"
 
 using namespace MR;
+
+REGISTER_AUTO_CAST( Mesh )
+REGISTER_AUTO_CAST2( std::string, MRString )
 
 MRMesh* mrMeshLoadFromAnySupportedFormat( const char* file, MRString** errorStr )
 {
     auto res = MeshLoad::fromAnySupportedFormat( file );
     if ( res )
     {
-        auto* mesh = new Mesh( std::move( *res ) );
-        return reinterpret_cast<MRMesh*>( mesh );
+        RETURN_NEW( std::move( *res ) );
     }
     if ( errorStr )
     {
-        auto* str = new std::string( std::move( res.error() ) );
-        *errorStr = reinterpret_cast<MRString*>( str );
+        *errorStr = auto_cast( new_from( std::move( res.error() ) ) );
     }
     return nullptr;
 }

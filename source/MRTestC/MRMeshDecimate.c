@@ -32,7 +32,7 @@ void testMeshDecimate( void )
     MRDecimateResult decimateResults = mrDecimateMesh( meshCylinder, &decimateSettings );
 
     // compare regions and deleted vertices and faces
-    TEST_ASSERT( !mrBitSetEq( regionSaved, regionForDecimation ) )
+    TEST_ASSERT( !mrBitSetEq( (MRBitSet*)regionSaved, (MRBitSet*)regionForDecimation ) )
     TEST_ASSERT( decimateResults.vertsDeleted > 0 )
     TEST_ASSERT( decimateResults.facesDeleted > 0 )
 

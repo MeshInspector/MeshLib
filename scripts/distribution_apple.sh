@@ -21,21 +21,7 @@ bundle_dylib() {
         search_paths_args+=" --search-path $path"
     done
 
-    local install_path_arg=""
-    if [[ -n "$use_install_path" ]]; then
-        install_path_arg="--install-path @executable_path/../thirdparty-libs"
-    fi
-
     echo "Fixing MeshLib executable @rpath"
-
-    echo "dylibbundler \
-                  --bundle-deps \
-                  --create-dir \
-                  --overwrite-files \
-                  --fix-file ${fix_file} \
-                  --dest-dir ${dest_dir} \
-                  ${MISSED_LIBS} \
-                  ${install_path_arg} "
 
     dylibbundler \
         --bundle-deps \
@@ -66,9 +52,8 @@ echo "version: ${MR_VERSION}"
 echo "prefix: ${MR_PREFIX}"
 
 
-mkdir -p "${MR_PREFIX}/thirdparty-libs/"
+mkdir -p "${MR_PREFIX}/libs/"
 
-cp -L ./lib/*.dylib "${MR_PREFIX}/thirdparty-libs/"
 cp -rL ./include "${MR_PREFIX}/"
 cp ./LICENSE ./macos/Resources
 
@@ -110,19 +95,19 @@ install_name_tool -change "$PYTHON_PATH" "$NEW_PYTHON_PATH" ./build/Release/bin/
 echo "Done"
 
 cd ./Library/Frameworks/MeshLib.framework/Versions/
-ln -s ${MR_VERSION} Current
+ln -s "${MR_VERSION}" Current
 cd -
 
 echo "Fixing MeshLib executable @rpath" -x ${MR_PREFIX}/bin/meshconv
 
-bin_dir="/Users/maxraiskii/CLionProjects/MeshLib/Library/Frameworks/MeshLib.framework/Versions/0.0.0/bin/"
-lib_dir="./Library/Frameworks/MeshLib.framework/Versions/0.0.0/libs"
-dest_dir="./Library/Frameworks/MeshLib.framework/Versions/0.0.0/libs"
-search_paths=("${dest_dir}" "/Users/maxraiskii/CLionProjects/MeshLib/lib/" "./dist/python")
+bin_dir="${MR_PREFIX}/bin/"
+lib_dir="${MR_PREFIX}/libs"
+dest_dir="${MR_PREFIX}/libs"
+search_paths=("${dest_dir}" "./lib/" "./dist/python")
 
 
 for binary in "$bin_dir"*; do
-    if [[ -x "$binary" && -f "$lib" ]]; then
+    if [[ -x "$binary" && -f "$binary" ]]; then
         bundle_dylib "$binary" "$dest_dir" "${search_paths[@]}"
     fi
 done

@@ -156,17 +156,6 @@ namespace MR::Extra
     }
 }
 
-namespace MR
-{
-    // This is something the old `mrmeshpy` library exported, presumably to have something to link against, to help load the shared library. Hmm.
-    #ifdef _WIN32
-    __declspec(dllexport)
-    #else
-    __attribute__((__visibility__("default")))
-    #endif
-    void loadMRMeshPyModule() {}
-}
-
 // This stuff makes it so that `MRTest` and our other apps can use the module directly, without having to add it to `PYTHONPATH`.
 extern "C" PyObject *PyInit_mrmeshpy();
 static MR::PythonFunctionAdder initMrmeshpyModule( "mrmeshpy", &PyInit_mrmeshpy );

@@ -34,7 +34,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MRLoadModule.cpp" />
     <ClCompile Include="MRPythonBaseExposing.cpp" />
     <ClCompile Include="MRPythonBooleanExposing.cpp" />
     <ClCompile Include="MRPythonDecimate.cpp" />
@@ -56,7 +55,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
-    <ClInclude Include="MRLoadModule.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

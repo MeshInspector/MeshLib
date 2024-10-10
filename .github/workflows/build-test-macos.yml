@@ -13,6 +13,10 @@ on:
       UPLOAD_ARTIFACTS:
         required: true
         type: boolean
+      mrbind:
+        default: true
+        required: false
+        type: boolean
 
 jobs:
   macos-build-test:
@@ -29,7 +33,7 @@ jobs:
             c-compiler: /usr/bin/clang
           - os: x64
             # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
-            runner: macos-12 # github hosted
+            runner: macos-13 # github hosted
             config: Release
           - os: github-arm
             runner: macos-latest  # github hosted
@@ -57,6 +61,12 @@ jobs:
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh
 
+      - name: Install thirdparty libs (MRBind)
+        if: ${{inputs.mrbind}}
+        run: |
+          ./scripts/mrbind/install_deps_macos.sh
+          ./scripts/mrbind/install_mrbind_macos.sh
+
       - name: Create virtualenv
         run: |
           python3 -m venv .venv
@@ -79,6 +89,16 @@ jobs:
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
           MR_USE_CPP_23: "ON"
+          MR_CMAKE_OPTIONS: -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
+
+      - name: Generate and build MRBind bindings
+        if: ${{inputs.mrbind}}
+        env:
+          # Add updated Make from homebrew to PATH. Arm Macs use `/opt/homebrew`, while x86 Macs use `/usr/local`. Add both for simplicity.
+          PATH: /opt/homebrew/opt/make/libexec/gnubin:/usr/local/opt/make/libexec/gnubin:${{env.PATH}}
+        run: |
+          make --version
+          make -f scripts/mrbind/generate.mk -B --trace PYTHON_PKGCONF_NAME=python-3.10-embed EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0' MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 
       - name: Run Start-and-Exit Tests
         if: ${{ matrix.os == 'arm' }}
@@ -92,8 +112,6 @@ jobs:
 
       - name: Python Sanity Tests
         working-directory: ./build/${{ matrix.config }}/bin
-        env:
-          OLD_MESHLIB_BINDINGS: 1
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
 
       - name: Configure AWS Credentials
@@ -119,7 +137,6 @@ jobs:
       - name: Python Regression Tests
         env:
           SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
-          OLD_MESHLIB_BINDINGS: 1
         if: ${{ env.INTERNAL_BUILD == 'true' }}
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 ./../../../scripts/run_python_test_script.py -d '../test_regression' -s ${{env.SMOKE}}

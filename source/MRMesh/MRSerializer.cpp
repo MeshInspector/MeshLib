@@ -18,6 +18,8 @@
 #include "MRStringConvert.h"
 #include "MRMeshTexture.h"
 #include "MRDirectory.h"
+#include "MRMeshLoad.h"
+#include "MRMeshSave.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRJson.h"
 
@@ -509,6 +511,31 @@ void deserializeFromJson( const Json::Value& root, std::vector<Color>& colors )
         colors.resize( size );
         std::copy( ( Color* )bin.data(), ( Color* )( bin.data() ) + size, colors.data() );
     }
+}
+
+VoidOrErrStr serializeToJson( const Mesh& mesh, Json::Value& root )
+{
+    std::ostringstream out;
+    auto res = MeshSave::toPly( mesh, out );
+    if ( res )
+    {
+        auto binString = out.str();
+        root["ply"] = encode64( (const std::uint8_t*) binString.data(), binString.size() );
+    }
+    return res;
+}
+
+Expected<Mesh> deserializeFromJson( const Json::Value& root, VertColors* colors )
+{
+    if ( !root.isObject() )
+        return unexpected( std::string{ "deserialize mesh: json value is not an object" } );
+
+    if ( !root["ply"].isString() )
+        return unexpected( std::string{ "deserialize mesh: json value does not have 'ply' string"} );
+
+    auto bin = decode64( root["ply"].asString() );
+    std::istringstream in( std::string( (const char *)bin.data(), bin.size() ) );
+    return MeshLoad::fromPly( in, { .colors = colors } );
 }
 
 } // namespace MR

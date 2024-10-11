@@ -38,6 +38,8 @@ void testMeshCollidePrecise( void )
     // FIXME: the results are platform-dependent
     //TEST_ASSERT( edgesAtrisB.size == 80 )
     //TEST_ASSERT( edgesBtrisA.size == 72 )
+    TEST_ASSERT( edgesAtrisB.size != 0 )
+    TEST_ASSERT( edgesBtrisA.size != 0 )
 
     const MRMeshTopology* meshATop = mrMeshTopology( meshA );
     const MRMeshTopology* meshBTop = mrMeshTopology( meshB );

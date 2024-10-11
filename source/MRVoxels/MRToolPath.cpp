@@ -1341,7 +1341,7 @@ std::vector<GCommand> replaceLineSegmentsWithCircularArcs( const std::span<GComm
     return res;
 }
 
-VoidOrErrStr interpolateArcs( std::vector<GCommand>& commands, const ArcInterpolationParams& params, Axis axis )
+Expected<void> interpolateArcs( std::vector<GCommand>& commands, const ArcInterpolationParams& params, Axis axis )
 {
     const ArcPlane arcPlane = ( axis == Axis::X ) ? ArcPlane::YZ :
         ( axis == Axis::Y ) ? ArcPlane::XZ :
@@ -1500,7 +1500,7 @@ std::vector<GCommand> replaceStraightSegmentsWithOneLine( const std::span<GComma
     return res;
 }
 
-VoidOrErrStr interpolateLines( std::vector<GCommand>& commands, const LineInterpolationParams& params, Axis axis )
+Expected<void> interpolateLines( std::vector<GCommand>& commands, const LineInterpolationParams& params, Axis axis )
 {
     size_t startIndex = 0u;
 

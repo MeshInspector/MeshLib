@@ -45,10 +45,10 @@ struct CtmSaveOptions : SaveSettings
 };
 
 /// saves in .ctm file
-MRIOEXTRAS_API VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions & options );
-MRIOEXTRAS_API VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions & options );
-MRIOEXTRAS_API VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
-MRIOEXTRAS_API VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
+MRIOEXTRAS_API Expected<void> toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions & options );
+MRIOEXTRAS_API Expected<void> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions & options );
+MRIOEXTRAS_API Expected<void> toCtm( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
+MRIOEXTRAS_API Expected<void> toCtm( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
 
 } // namespace MeshSave
 
@@ -73,10 +73,10 @@ struct CtmSavePointsOptions : SaveSettings
 };
 
 /// saves in .ctm file
-MRIOEXTRAS_API VoidOrErrStr toCtm( const PointCloud& points, const std::filesystem::path& file, const CtmSavePointsOptions& options );
-MRIOEXTRAS_API VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const CtmSavePointsOptions& options );
-MRIOEXTRAS_API VoidOrErrStr toCtm( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings = {} );
-MRIOEXTRAS_API VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const SaveSettings& settings = {} );
+MRIOEXTRAS_API Expected<void> toCtm( const PointCloud& points, const std::filesystem::path& file, const CtmSavePointsOptions& options );
+MRIOEXTRAS_API Expected<void> toCtm( const PointCloud& points, std::ostream& out, const CtmSavePointsOptions& options );
+MRIOEXTRAS_API Expected<void> toCtm( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings = {} );
+MRIOEXTRAS_API Expected<void> toCtm( const PointCloud& points, std::ostream& out, const SaveSettings& settings = {} );
 
 } // namespace PointsSave
 

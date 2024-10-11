@@ -168,7 +168,7 @@ constexpr float channelMax()
         return float( std::numeric_limits<ChannelType>::max() );
 }
 
-VoidOrErrStr fillVertsColorMap( VertColors& vertsColorMap, int vertexCount, const std::vector<Material>& materials, int materialIndex, const tinygltf::Model& model, const tinygltf::Primitive& primitive )
+Expected<void> fillVertsColorMap( VertColors& vertsColorMap, int vertexCount, const std::vector<Material>& materials, int materialIndex, const tinygltf::Model& model, const tinygltf::Primitive& primitive )
 {
     const VertId startPos = VertId( vertsColorMap.size() );
     vertsColorMap.resize( vertsColorMap.size() + vertexCount );
@@ -555,7 +555,7 @@ Expected<std::shared_ptr<Object>> deserializeObjectTreeFromGltf( const std::file
     return scene;
 }
 
-VoidOrErrStr serializeObjectTreeToGltf( const Object& root, const std::filesystem::path& file, ProgressCallback callback )
+Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesystem::path& file, ProgressCallback callback )
 {
     tinygltf::Model model;
     model.asset.generator = "MeshLib";

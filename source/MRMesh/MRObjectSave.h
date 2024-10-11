@@ -35,9 +35,9 @@ MRMESH_API Expected<void> toAnySupportedFormat( const Object& object, const std:
  * if preCompress is set, it is called before compression
  * saving is controlled with Object::serializeModel_ and Object::serializeFields_
  */
-MRMESH_API VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::path& path,
+MRMESH_API Expected<void> serializeObjectTree( const Object& object, const std::filesystem::path& path,
                                              ProgressCallback progress, FolderCallback preCompress );
-MRMESH_API VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::path& path,
+MRMESH_API Expected<void> serializeObjectTree( const Object& object, const std::filesystem::path& path,
                                              ProgressCallback progress = {} );
 
 } // namespace MR

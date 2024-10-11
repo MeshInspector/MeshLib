@@ -23,7 +23,7 @@ struct SaveObjectSettings
  * \brief save visual object (mesh, lines, points or voxels) to file
  * \return empty string if no error or error text
  */
-MRVIEWER_API VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& filename,
+MRVIEWER_API Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path& filename,
     const SaveObjectSettings & settings = {} );
 
 } //namespace MR

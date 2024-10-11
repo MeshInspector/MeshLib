@@ -65,6 +65,6 @@ struct DenoiseViaNormalsSettings
 
 /// Reduces noise in given mesh,
 /// see the article "Mesh Denoising via a Novel Mumford-Shah Framework"
-MRMESH_API VoidOrErrStr meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings = {} );
+MRMESH_API Expected<void> meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings = {} );
 
 } //namespace MR

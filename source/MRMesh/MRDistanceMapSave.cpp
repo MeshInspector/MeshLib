@@ -17,7 +17,7 @@ const IOFilters Filters =
     {"MRDistanceMap (.mrdistancemap)","*.mrdistancemap"}
 };
 
-VoidOrErrStr toRAW( const std::filesystem::path& path, const DistanceMap& dmap )
+Expected<void> toRAW( const std::filesystem::path& path, const DistanceMap& dmap )
 {
     if ( path.empty() )
         return unexpected( "Path is empty" );
@@ -57,7 +57,7 @@ VoidOrErrStr toRAW( const std::filesystem::path& path, const DistanceMap& dmap )
     return {};
 }
 
-VoidOrErrStr toMrDistanceMap( const std::filesystem::path& path, const DistanceMap& dmap, const DistanceMapToWorld& params )
+Expected<void> toMrDistanceMap( const std::filesystem::path& path, const DistanceMap& dmap, const DistanceMapToWorld& params )
 {
     if ( path.empty() )
         return unexpected( "Path is empty" );
@@ -100,7 +100,7 @@ VoidOrErrStr toMrDistanceMap( const std::filesystem::path& path, const DistanceM
     return {};
 }
 
-VoidOrErrStr toAnySupportedFormat( const std::filesystem::path& path, const DistanceMap& dmap, const AffineXf3f * xf )
+Expected<void> toAnySupportedFormat( const std::filesystem::path& path, const DistanceMap& dmap, const AffineXf3f * xf )
 {
     auto ext = utf8string( path.extension() );
     for ( auto& c : ext )

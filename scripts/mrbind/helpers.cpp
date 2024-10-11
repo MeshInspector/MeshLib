@@ -139,7 +139,7 @@ namespace MR::Extra
     // minimum (close): 1.0 (white)
     // maximum (far): threshold
     // invalid (infinity): 0.0 (black)
-    VoidOrErrStr saveDistanceMapToImage( const DistanceMap& distMap, const std::filesystem::path& filename, float threshold = 1.f / 255 )
+    Expected<void> saveDistanceMapToImage( const DistanceMap& distMap, const std::filesystem::path& filename, float threshold = 1.f / 255 )
     {
         const auto image = convertDistanceMapToImage( distMap, threshold );
         return ImageSave::toAnySupportedFormat( image, filename );

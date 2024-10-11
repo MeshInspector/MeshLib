@@ -37,7 +37,7 @@ if [ ! -f "distr/meshlib-dev$MR_INSTALL_LIB_DIR/meshlib/mrmeshpy.so" ] && [ -f "
  printf "Installing the generated bindings...\n"
  install -Dt "distr/meshlib-dev$MR_INSTALL_LIB_DIR/meshlib" build/Release/bin/meshlib/{mrmeshpy.so,mrmeshnumpy.so,__init__.py}
  install -Dt "distr/meshlib-dev$MR_INSTALL_LIB_DIR"         build/Release/bin/meshlib/{mrmeshpy.so,mrmeshnumpy.so}
- patchelf --set-rpath '' build/Release/bin/{,meshlib/}{mrmeshpy.so,mrmeshnumpy.so}
+ patchelf --set-rpath '' "distr/meshlib-dev$MR_INSTALL_LIB_DIR/"{,meshlib/}{mrmeshpy.so,mrmeshnumpy.so}
 fi
 
 mkdir -p distr/meshlib-dev${MR_INSTALL_RES_DIR}

@@ -340,23 +340,25 @@ public: // custom interface
     explicit VolumeMesher( const Vector3i & dims, const MarchingCubesParams& params, int layersPerBlock );
 
     /// adds one more part of volume into consideration,
-    /// \param partFirstZ the first z-layer in next part (must be the same as the last z-layer in previous part), partFirstZ must be a multiple of layersPerBlock
     template<typename V>
-    Expected<void> addPart( const V& part, int partFirstZ = 0 );
+    Expected<void> addPart( const V& part );
 
     /// finishes processing and outputs produced trimesh
-    Expected<TriMesh> finilize();
+    Expected<TriMesh> finalize();
+
+    int layersPerBlock() const { return layersPerBlock_; }
+    int nextZ() const { return nextZ_; }
 
 private:
     template<typename V, typename Positioner>
-    Expected<void> addPart_( const V& volume, Positioner&& positioner, int volumeFirstZ );
+    Expected<void> addPart_( const V& volume, Positioner&& positioner );
 
 private:
     VolumeIndexer indexer_;
     const MarchingCubesParams params_;
     int blockCount_ = 0;
     int layersPerBlock_ = 0;
-    int partLastZ_ = 0;
+    int nextZ_ = 0;
 
     std::vector<BitSet> invalids_; ///< invalid voxels in each layer
     std::vector<BitSet> lowerIso_; ///< voxels with the values lower then params.iso
@@ -378,7 +380,7 @@ Expected<TriMesh> VolumeMesher::run( const V& volume, const MarchingCubesParams&
         if ( params.freeVolume )
             params.freeVolume();
             
-        return mesher.finilize();
+        return mesher.finalize();
     } );
 }
 
@@ -413,7 +415,7 @@ VolumeMesher::VolumeMesher( const Vector3i & dims, const MarchingCubesParams& pa
 }
 
 template<typename V>
-Expected<void> VolumeMesher::addPart( const V& part, int partFirstZ )
+Expected<void> VolumeMesher::addPart( const V& part )
 {
     constexpr auto defaultPositioner = []( const Vector3f& pos0, const Vector3f& pos1, float v0, float v1, float iso )
     {
@@ -424,21 +426,23 @@ Expected<void> VolumeMesher::addPart( const V& part, int partFirstZ )
     };
 
     if ( params_.positioner )
-        return addPart_( part, params_.positioner, partFirstZ );
+        return addPart_( part, params_.positioner );
     else
-        return addPart_( part, defaultPositioner, partFirstZ );
+        return addPart_( part, defaultPositioner );
 }
 
 template<typename V, typename Positioner>
-Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner, int partFirstZ )
+Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner )
 {
     MR_TIMER
 
-    assert( partLastZ_ == partFirstZ );
-    assert( part.dims.x > 0 && part.dims.y > 0 && part.dims.z > 1 );
-    assert( part.dims.x == indexer_.dims().x );
-    assert( part.dims.y == indexer_.dims().y );
-    assert( partFirstZ + part.dims.z <= indexer_.dims().z );
+    const int partFirstZ = nextZ_;
+    if ( part.dims.x != indexer_.dims().x || part.dims.y != indexer_.dims().y )
+        return unexpected( "XY dimensions of a part must be equal to XY dimensions of whole volume" );
+    if ( part.dims.z <= 1 )
+        return unexpected( "a part must have at least two Z slices" );
+    if ( partFirstZ + part.dims.z > indexer_.dims().z )
+        return unexpected( "a part exceeds whole volume in Z dimension" );
     const int layerCount = indexer_.dims().z;
     const auto layerSize = indexer_.sizeXY();
     const auto partFirstId = layerSize * partFirstZ;
@@ -468,9 +472,9 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner, i
 
     auto currentSubprogress = subprogress( params_.cb, 0.0f, 0.3f );
     const int firstBlock = partFirstZ / layersPerBlock_;
-    partLastZ_ = partFirstZ + part.dims.z - 1;
-    const bool lastPart = partLastZ_ + 1 == indexer_.dims().z;
-    const int lastLayer = lastPart ? partLastZ_ : partLastZ_ - 1;
+    nextZ_ = partFirstZ + part.dims.z - 1;
+    const bool lastPart = nextZ_ + 1 == indexer_.dims().z;
+    const int lastLayer = lastPart ? nextZ_ : nextZ_ - 1;
     assert( lastLayer < layerCount );
     const int lastBlock = lastLayer / layersPerBlock_;
     ParallelFor( firstBlock, lastBlock + 1, [&] ( int blockIndex )
@@ -478,13 +482,13 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner, i
         const int layerBegin = std::max( blockIndex * layersPerBlock_, partFirstZ );
         if ( layerBegin >= layerCount )
             return;
-        /*const*/ auto layerEnd = std::min( ( blockIndex + 1 ) * layersPerBlock_, lastLayer + 1 );
+        const int layerEnd = std::min( ( blockIndex + 1 ) * layersPerBlock_, lastLayer + 1 );
 
         auto & block = sepStorage_.getBlock( blockIndex );
         const bool report = currentSubprogress && std::this_thread::get_id() == callingThreadId;
 
         const VoxelsVolumeAccessor<V> acc( part );
-        /// grid point with integer coordinates (0,0,0) will be shifted to this position in 3D space
+        /// grid point of this part with integer coordinates (0,0,0) will be shifted to this position in 3D space
         const Vector3f zeroPoint = params_.origin + mult( acc.shift() + Vector3f( 0, 0, (float)partFirstZ ), part.voxelSize );
 
         std::optional<VoxelsVolumeCachingAccessor<V>> cache;
@@ -576,10 +580,11 @@ Expected<void> VolumeMesher::addPart_( const V& part, Positioner&& positioner, i
     return {};
 }
 
-Expected<TriMesh> VolumeMesher::finilize()
+Expected<TriMesh> VolumeMesher::finalize()
 {
     MR_TIMER
-    assert( partLastZ_ + 1 == indexer_.dims().z );
+    if ( nextZ_ + 1 != indexer_.dims().z )
+        return unexpected( "Provided parts do not cover whole volume" );
 
     const auto totalVertices = sepStorage_.makeUniqueVids();
     if ( totalVertices > params_.maxVertices )
@@ -929,14 +934,24 @@ MarchingCubesByParts::~MarchingCubesByParts() = default;
 MarchingCubesByParts::MarchingCubesByParts( MarchingCubesByParts && s ) noexcept = default;
 MarchingCubesByParts & MarchingCubesByParts::operator=( MarchingCubesByParts && s ) noexcept = default;
 
-Expected<void> MarchingCubesByParts::addPart( const SimpleVolume& part, int partFirstZ )
+int MarchingCubesByParts::layersPerBlock() const
 {
-    return impl_->mesher.addPart( part, partFirstZ );
+    return impl_->mesher.layersPerBlock();
 }
 
-Expected<TriMesh> MarchingCubesByParts::finilize()
+int MarchingCubesByParts::nextZ() const
 {
-    return impl_->mesher.finilize();
+    return impl_->mesher.nextZ();
+}
+
+Expected<void> MarchingCubesByParts::addPart( const SimpleVolume& part )
+{
+    return impl_->mesher.addPart( part );
+}
+
+Expected<TriMesh> MarchingCubesByParts::finalize()
+{
+    return impl_->mesher.finalize();
 }
 
 // global variables with external visibility to avoid compile-time optimizations

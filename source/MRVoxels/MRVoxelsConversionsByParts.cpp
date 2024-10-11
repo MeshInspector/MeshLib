@@ -355,15 +355,16 @@ TEST( MRMesh, volumeToMeshByParts )
     EXPECT_NEAR( expectedVolume, functionMesh->volume(), 0.001f );
 
     MarchingCubesByParts mc( dimensions, { .iso = 0.f, .lessInside = true } );
+    constexpr int zLayersInPart = 2;
     SimpleVolume part
     {
-        .dims = { dimensions.x, dimensions.y, 2 },
+        .dims = { dimensions.x, dimensions.y, zLayersInPart },
         .voxelSize = Vector3f::diagonal( voxelSize )
     };
-    part.data.resize( 2 * size_t( dimensions.x ) * dimensions.y );
-    for ( int iz = 0; iz + 1 < dimensions.z; ++iz )
+    part.data.resize( zLayersInPart * size_t( dimensions.x ) * dimensions.y );
+    for ( int iz = 0; iz + zLayersInPart <= dimensions.z; ++iz )
     {
-        ParallelFor( 0, 2, [&]( int l )
+        ParallelFor( 0, zLayersInPart, [&]( int l )
         {
             size_t i = l * size_t( dimensions.x ) * dimensions.y;
             for ( auto y = 0; y < dimensions.y; ++y )
@@ -376,9 +377,9 @@ TEST( MRMesh, volumeToMeshByParts )
                 }
             }
         } );
-        mc.addPart( part, iz );
+        mc.addPart( part );
     }
-    Mesh mesh = Mesh::fromTriMesh( *mc.finilize() );
+    Mesh mesh = Mesh::fromTriMesh( *mc.finalize() );
     EXPECT_NEAR( expectedVolume, mesh.volume(), 0.001f );
 }
 

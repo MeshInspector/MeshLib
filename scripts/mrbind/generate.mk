@@ -101,7 +101,7 @@ $(warning MeshLib build directory `$(abspath $(MESHLIB_SHLIB_DIR))` doesn't exis
 endif
 
 # Source directory of MRBind.
-MRBIND_SOURCE := ~/mrbind
+MRBIND_SOURCE := $(makefile_dir)../../mrbind
 
 # MRBind executable .
 MRBIND_EXE := $(MRBIND_SOURCE)/build/mrbind
@@ -204,12 +204,21 @@ $(info Using Python module suffix: $(PYTHON_MODULE_SUFFIX))
 
 INPUT_PROJECTS := MRMesh MRIOExtras MRSymbolMesh MRVoxels
 
+# 1 or 0. Whether to build mrmeshnumpy (if false you should build it with CMake with the rest of MeshLib).
+# Currently defaults to 1 because otherwise we get an incompatibility on Ubuntu x86 20.04 and 22.04 when MeshLib is built in debug mode,
+#   resulting in this error: `ImportError: arg(): could not convert default argument 'settings: MR::MeshBuilder::BuildSettings' in function 'meshFromFacesVerts' into a Python object`.
+# If you fix this and want to change the default: 1. Remove this line and uncomment the one below. 2. In `distribution.sh` stop calling patchelf for `mrmeshnumpy.so`. 3. In `MeshLib/CMakeLists.txt`, move `mrmeshnumpy` out from `MESHLIB_BUILD_MRMESH_PY_LEGACY`
+BUILD_MRMESHNUMPY := 1
+# Defaults to 0, but only if if `PACKAGE_NAME == meshlib`.
+# BUILD_MRMESHNUMPY := $(if $(filter $(PACKAGE_NAME),meshlib),1)
+override BUILD_MRMESHNUMPY := $(filter-out 0,$(BUILD_MRMESHNUMPY))
+
 # --- End of configuration variables.
 
 
 
-
-PACKAGE_NAME := meshlib2
+# You can change this to something else to rename the module, to have it side-by-side with the legacy one.
+PACKAGE_NAME := meshlib
 MODULE_OUTPUT_DIR := $(MESHLIB_SHLIB_DIR)/$(PACKAGE_NAME)
 
 # Those variables are for mrbind/scripts/apply_to_files.mk
@@ -222,6 +231,9 @@ OUTPUT_DIR := build/binds
 endif
 INPUT_GLOBS := *.h
 MRBIND := $(MRBIND_EXE)
+# Note that we're ignoring `operator<=>` in `mrbind_flags.txt` because it causes errors on VS2022:
+# `undefined symbol: void __cdecl std::_Literal_zero_is_expected(void)`,
+# `referenced by source/TempOutput/PythonBindings/x64/Release/binding.0.o:(public: __cdecl std::_Literal_zero::_Literal_zero<int>(int))`.
 MRBIND_FLAGS := $(call load_file,$(makefile_dir)/mrbind_flags.txt)
 MRBIND_FLAGS_FOR_EXTRA_INPUTS := $(call load_file,$(makefile_dir)/mrbind_flags_for_helpers.txt)
 COMPILER_FLAGS := $(EXTRA_CFLAGS) $(call load_file,$(makefile_dir)/common_compiler_parser_flags.txt) $(PYTHON_CFLAGS) -I. -I$(DEPS_INCLUDE_DIR) -I$(makefile_dir)/../../source
@@ -267,8 +279,8 @@ COMPILER += -fvisibility=hidden
 # MacOS rpath is quirky: 1. Must use `-rpath,` instead of `-rpath=`. 2. Must specify the flag several times, apparently can't use
 #   `:` or `;` as a separators inside of one big flag. 3. As you've noticed, it uses `@loader_path` instead of `$ORIGIN`.
 rpath_origin := $(if $(IS_MACOS),@loader_path,$$ORIGIN)
-ifneq ($(IS_MACOS),)
 LINKER_FLAGS += -Wl,-rpath,'$(rpath_origin)' -Wl,-rpath,'$(rpath_origin)/..' -Wl,-rpath,$(call quote,$(abspath $(MODULE_OUTPUT_DIR))) -Wl,-rpath,$(call quote,$(abspath $(MESHLIB_SHLIB_DIR))) -Wl,-rpath,$(call quote,$(abspath $(DEPS_LIB_DIR)))
+ifneq ($(IS_MACOS),)
 # Hmm.
 COMPILER_FLAGS_LIBCLANG += -resource-dir=$(strip $(call safe_shell,$(CXX_FOR_BINDINGS) -print-resource-dir))
 # Our dependencies are here.
@@ -292,7 +304,6 @@ COMPILER_FLAGS += -mmacosx-version-min=$(MACOS_MIN_VER)
 LINKER_FLAGS += -mmacosx-version-min=$(MACOS_MIN_VER)
 endif
 else # Linux:
-LINKER_FLAGS += -Wl,-rpath=$(call quote,$(abspath $(DEPS_LIB_DIR)):$(abspath $(MESHLIB_SHLIB_DIR)):)
 COMPILER_FLAGS += -I/usr/include/jsoncpp -isystem/usr/include/freetype2 -isystem/usr/include/gdcm-3.0
 endif
 endif
@@ -325,8 +336,13 @@ $(LINKER_OUTPUT): | $(MODULE_OUTPUT_DIR)
 only-generate:
 	@$(MAKE) -f $(MRBIND_SOURCE)/scripts/apply_to_files.mk generate $(mrbind_vars)
 
-# Handwritten mrmeshnumpy.
+# Handwritten mrmeshnumpy. But only if we can't reuse it from the default build.
+ifneq ($(BUILD_MRMESHNUMPY),)
 MRMESHNUMPY_MODULE := $(MODULE_OUTPUT_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX)
+else
+MRMESHNUMPY_MODULE :=
+endif
+ifneq ($(MRMESHNUMPY_MODULE),)
 $(MRMESHNUMPY_MODULE): | $(MODULE_OUTPUT_DIR)
 	@echo $(call quote,[Compiling] mrmeshnumpy)
 	@$(COMPILER) \
@@ -334,6 +350,7 @@ $(MRMESHNUMPY_MODULE): | $(MODULE_OUTPUT_DIR)
 		$(makefile_dir)/../../source/mrmeshnumpy/*.cpp \
 		$(COMPILER_FLAGS) $(LINKER_FLAGS) \
 		-DMRMESHNUMPY_PARENT_MODULE_NAME=$(PACKAGE_NAME)
+endif
 
 # The init script.
 INIT_SCRIPT := $(MODULE_OUTPUT_DIR)/__init__.py
@@ -353,9 +370,11 @@ $(MESHLIB_SHLIB_DIR)/__init__.py: $(INIT_SCRIPT)
 ALL_OUTPUTS += $(MESHLIB_SHLIB_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
 $(MESHLIB_SHLIB_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX): $(MODULE_OUTPUT_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
 	@cp $< $@
+ifneq ($(MRMESHNUMPY_MODULE),)
 ALL_OUTPUTS += $(MESHLIB_SHLIB_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX)
 $(MESHLIB_SHLIB_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX): $(MODULE_OUTPUT_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX)
 	@cp $< $@
+endif
 endif
 
 # All modules.

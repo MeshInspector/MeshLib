@@ -124,6 +124,7 @@ jobs:
           MR_CMAKE_OPTIONS: >
             -DMR_USE_CPP_23=${{ matrix.use-cpp-23 }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
+            -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
 
       - name: Generate MRBind bindings
         if: ${{inputs.mrbind}}

@@ -20,6 +20,8 @@
 #include "MRDirectory.h"
 #include "MRMeshLoad.h"
 #include "MRMeshSave.h"
+#include "MRObjectMesh.h"
+#include "MRObjectSave.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRJson.h"
 
@@ -536,6 +538,17 @@ Expected<Mesh> deserializeFromJson( const Json::Value& root, VertColors* colors 
     auto bin = decode64( root["ply"].asString() );
     std::istringstream in( std::string( (const char *)bin.data(), bin.size() ) );
     return MeshLoad::fromPly( in, { .colors = colors } );
+}
+
+VoidOrErrStr serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection, const char * saveMeshFormat )
+{
+    ObjectMesh obj;
+    obj.setSaveMeshFormat( saveMeshFormat );
+    obj.setMesh( std::make_shared<Mesh>( mesh ) );
+    if ( selection )
+        obj.selectFaces( *selection );
+    obj.setName( utf8string( path.stem() ) );
+    return serializeObjectTree( obj, path );
 }
 
 } // namespace MR

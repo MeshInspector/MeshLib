@@ -1,6 +1,6 @@
 #pragma once
 
-#include <MRMesh/MRMacros.h>
+#include "Concat.h"
 
 #include <type_traits>
 #include <utility>

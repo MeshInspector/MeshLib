@@ -2,6 +2,7 @@
 #include "MRMeshTopology.h"
 
 #include "detail/TypeCast.h"
+#include "detail/Vector.h"
 
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRBuffer.h"
@@ -14,11 +15,14 @@ using namespace MR;
 REGISTER_AUTO_CAST( AffineXf3f )
 REGISTER_AUTO_CAST( Box3f )
 REGISTER_AUTO_CAST( EdgeId )
+REGISTER_AUTO_CAST( FaceBitSet )
 REGISTER_AUTO_CAST( Mesh )
 REGISTER_AUTO_CAST( MeshTopology )
 REGISTER_AUTO_CAST( ThreeVertIds )
 REGISTER_AUTO_CAST( Triangle3f )
 REGISTER_AUTO_CAST( Vector3f )
+REGISTER_AUTO_CAST( VertBitSet )
+REGISTER_VECTOR( EdgePath )
 
 MRMesh* mrMeshCopy( const MRMesh* mesh_ )
 {
@@ -98,13 +102,13 @@ MRBox3f mrMeshComputeBoundingBox( const MRMesh* mesh_, const MRAffineXf3f* toWor
 
 void mrMeshTransform( MRMesh* mesh_, const MRAffineXf3f* xf_, const MRVertBitSet* region_ )
 {
-    ARG( mesh ); ARG( xf ); ARG_PTR_OF( VertBitSet, region );
+    ARG( mesh ); ARG( xf ); ARG_PTR( region );
     mesh.transform( xf, region );
 }
 
 void mrMeshAddPartByMask( MRMesh* mesh_, const MRMesh* from_, const MRFaceBitSet* fromFaces_, const MRMeshAddPartByMaskParameters* params )
 {
-    ARG( mesh ); ARG( from ); ARG_OF( FaceBitSet, fromFaces );
+    ARG( mesh ); ARG( from ); ARG( fromFaces );
 
     bool flipOrientation = false;
     // TODO: cast instead of copying
@@ -114,8 +118,8 @@ void mrMeshAddPartByMask( MRMesh* mesh_, const MRMesh* from_, const MRFaceBitSet
     if ( params )
     {
         flipOrientation = params->flipOrientation;
-        std::span thisContours { reinterpret_cast<const EdgePath*>( params->thisContours ), params->thisContoursNum };
-        std::span fromContours { reinterpret_cast<const EdgePath*>( params->fromContours ), params->fromContoursNum };
+        std::span thisContours { auto_cast( params->thisContours ), params->thisContoursNum };
+        std::span fromContours { auto_cast( params->fromContours ), params->fromContoursNum };
         thisContoursVec.assign( thisContours.begin(), thisContours.end() );
         fromContoursVec.assign( fromContours.begin(), fromContours.end() );
     }
@@ -159,6 +163,6 @@ MREdgePath* mrMeshFindHoleRepresentiveEdges( const MRMesh* mesh )
 
 double mrMeshVolume( const MRMesh* mesh_, const MRFaceBitSet* region_ )
 {
-    ARG( mesh ); ARG_PTR_OF( FaceBitSet, region );
+    ARG( mesh ); ARG_PTR( region );
     return mesh.volume( region );
 }

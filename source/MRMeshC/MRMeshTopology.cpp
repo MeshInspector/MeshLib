@@ -1,17 +1,21 @@
 #include "MRMeshTopology.h"
 
 #include "detail/TypeCast.h"
+#include "detail/Vector.h"
 
 #include "MRMesh/MRMeshTopology.h"
 
 using namespace MR;
 
+REGISTER_AUTO_CAST( EdgeBitSet )
 REGISTER_AUTO_CAST( EdgeId )
-REGISTER_AUTO_CAST( EdgePath )
+REGISTER_AUTO_CAST( FaceBitSet )
 REGISTER_AUTO_CAST( MeshTopology )
 REGISTER_AUTO_CAST( ThreeVertIds )
-REGISTER_AUTO_CAST( Triangulation )
+REGISTER_AUTO_CAST( VertBitSet )
 REGISTER_AUTO_CAST( VertId )
+REGISTER_VECTOR( Triangulation )
+REGISTER_VECTOR( EdgePath )
 
 void mrMeshTopologyPack( MRMeshTopology* top_ )
 {
@@ -22,66 +26,34 @@ void mrMeshTopologyPack( MRMeshTopology* top_ )
 const MRVertBitSet* mrMeshTopologyGetValidVerts( const MRMeshTopology* top_ )
 {
     ARG( top );
-    return cast_to<MRVertBitSet>( &top.getValidVerts() );
+    RETURN( &top.getValidVerts() );
 }
 
 const MRFaceBitSet* mrMeshTopologyGetValidFaces( const MRMeshTopology* top_ )
 {
     ARG( top );
-    return cast_to<MRFaceBitSet>( &top.getValidFaces() );
+    RETURN( &top.getValidFaces() );
 }
+
+MR_VECTOR_LIKE_IMPL( Triangulation, ThreeVertIds )
 
 MRTriangulation* mrMeshTopologyGetTriangulation( const MRMeshTopology* top_ )
 {
     ARG( top );
-    RETURN_NEW( top.getTriangulation() );
+    RETURN_NEW_VECTOR( top.getTriangulation() );
 }
 
-const MRThreeVertIds* mrTriangulationData( const MRTriangulation* tris_ )
-{
-    ARG( tris );
-    RETURN( tris.data() );
-}
-
-size_t mrTriangulationSize( const MRTriangulation* tris_ )
-{
-    ARG( tris );
-    return tris.size();
-}
-
-void mrTriangulationFree( MRTriangulation* tris_ )
-{
-    ARG_PTR( tris );
-    delete tris;
-}
+MR_VECTOR_LIKE_IMPL( EdgePath, EdgeId )
 
 MREdgePath* mrMeshTopologyFindHoleRepresentiveEdges( const MRMeshTopology* top_ )
 {
     ARG( top );
-    RETURN_NEW( top.findHoleRepresentiveEdges() );
-}
-
-const MREdgeId* mrEdgePathData( const MREdgePath* ep_ )
-{
-    ARG( ep );
-    RETURN( ep.data() );
-}
-
-size_t mrEdgePathSize( const MREdgePath* ep_ )
-{
-    ARG( ep );
-    return ep.size();
-}
-
-void mrEdgePathFree( MREdgePath* ep_ )
-{
-    ARG_PTR( ep );
-    delete ep;
+    RETURN_NEW_VECTOR( top.findHoleRepresentiveEdges() );
 }
 
 int mrMeshTopologyFindNumHoles( const MRMeshTopology* top_, MREdgeBitSet* holeRepresentativeEdges_ )
 {
-    ARG( top ); ARG_PTR_OF( EdgeBitSet, holeRepresentativeEdges );
+    ARG( top ); ARG_PTR( holeRepresentativeEdges );
     return top.findNumHoles( holeRepresentativeEdges );
 }
 

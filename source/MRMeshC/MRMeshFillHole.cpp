@@ -10,6 +10,7 @@
 using namespace MR;
 
 REGISTER_AUTO_CAST( EdgeId )
+REGISTER_AUTO_CAST( FaceBitSet )
 REGISTER_AUTO_CAST( FillHoleMetric )
 REGISTER_AUTO_CAST2( FillHoleParams::MultipleEdgesResolveMode, MRFillHoleMetricMultipleEdgesResolveMode )
 REGISTER_AUTO_CAST( Mesh )
@@ -19,7 +20,7 @@ MRFillHoleParams mrFillHoleParamsNew( void )
     static const FillHoleParams def;
     return {
         .metric = auto_cast( &def.metric ),
-        .outNewFaces = cast_to<MRFaceBitSet>( def.outNewFaces ),
+        .outNewFaces = auto_cast( def.outNewFaces ),
         .multipleEdgesResolveMode = auto_cast( def.multipleEdgesResolveMode ),
         .makeDegenerateBand = def.makeDegenerateBand,
         .maxPolygonSubdivisions = def.maxPolygonSubdivisions,
@@ -36,7 +37,7 @@ void mrFillHole( MRMesh* mesh_, MREdgeId a_, const MRFillHoleParams* params_ )
     {
         params = {
             .metric = params_->metric ? *auto_cast( params_->metric ) : FillHoleMetric {},
-            .outNewFaces = cast_to<FaceBitSet>( params_->outNewFaces ),
+            .outNewFaces = auto_cast( params_->outNewFaces ),
             .multipleEdgesResolveMode = auto_cast( params_->multipleEdgesResolveMode ),
             .makeDegenerateBand = params_->makeDegenerateBand,
             .maxPolygonSubdivisions = params_->maxPolygonSubdivisions,
@@ -61,7 +62,7 @@ void mrFillHoles( MRMesh* mesh_, const MREdgeId* as_, size_t asNum, const MRFill
     {
         params = {
             .metric = params_->metric ? *auto_cast( params_->metric ) : FillHoleMetric {},
-            .outNewFaces = cast_to<FaceBitSet>( params_->outNewFaces ),
+            .outNewFaces = auto_cast( params_->outNewFaces ),
             .multipleEdgesResolveMode = auto_cast( params_->multipleEdgesResolveMode ),
             .makeDegenerateBand = params_->makeDegenerateBand,
             .maxPolygonSubdivisions = params_->maxPolygonSubdivisions,

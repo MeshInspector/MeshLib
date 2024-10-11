@@ -1,5 +1,8 @@
 #include "TestMacros.h"
 
+#include "MRMeshBoolean.h"
+
+#include <MRMeshC/MRBitSet.h>
 #include <MRMeshC/MRCube.h>
 #include <MRMeshC/MRMesh.h>
 #include <MRMeshC/MRMeshBoolean.h>
@@ -107,7 +110,7 @@ void testBooleanMultipleEdgePropogationSort( void )
 
         const MRMeshTopology* meshATopology = mrMeshTopology( meshA );
         MREdgePath* meshAHoles = mrMeshTopologyFindHoleRepresentiveEdges( meshATopology );
-        MREdgeLoop* border = mrTrackRightBoundaryLoop( meshATopology, mrEdgePathData( meshAHoles )[0], NULL );
+        MREdgeLoop* border = mrTrackRightBoundaryLoop( meshATopology, meshAHoles->data[0], NULL );
 
         const MRFaceBitSet* meshASupFaces = mrMeshTopologyGetValidFaces( mrMeshTopology( meshASup ) );
         const MRMeshAddPartByMaskParameters params = {
@@ -145,6 +148,77 @@ void testBooleanMultipleEdgePropogationSort( void )
         mrStringFree( resultAB.errorString );
         mrMeshFree( resultAB.mesh );
     }
+
+    mrMeshFree( meshB );
+    mrMeshFree( meshA );
+}
+
+void testBooleanMapper( void )
+{
+    MRMakeTorusParameters paramsA = { 1.1f, 0.5f, 8, 8 };
+    MRMesh* meshA = mrMakeTorus( &paramsA );
+
+    MRMakeTorusParameters paramsB = { 1.0f, 0.2f, 8, 8 };
+    MRMesh* meshB = mrMakeTorus( &paramsB );
+    {
+        const MRVector3f plusZ = mrVector3fPlusZ();
+        const MRVector3f plusY = mrVector3fPlusY();
+        const MRMatrix3f rot = mrMatrix3fRotationVector( &plusZ, &plusY );
+        const MRAffineXf3f xf = mrAffineXf3fLinear( &rot );
+        mrMeshTransform( meshB, &xf, NULL );
+    }
+
+    MRBooleanResultMapper* mapper = mrBooleanResultMapperNew();
+    MRBooleanParameters parameters = {
+        .mapper = mapper,
+    };
+    MRBooleanResult result = mrBoolean( meshA, meshB, MRBooleanOperationUnion, &parameters );
+    TEST_ASSERT( mrStringSize( result.errorString ) == 0 )
+
+    const MRVertBitSet* meshAValidPoints = mrMeshTopologyGetValidVerts( mrMeshTopology( meshA ) );
+    const MRVertBitSet* meshBValidPoints = mrMeshTopologyGetValidVerts( mrMeshTopology( meshB ) );
+    MRVertBitSet* vMapA = mrBooleanResultMapperMapVerts( mapper, meshAValidPoints, MRBooleanResultMapperMapObjectA );
+    MRVertBitSet* vMapB = mrBooleanResultMapperMapVerts( mapper, meshBValidPoints, MRBooleanResultMapperMapObjectB );
+    TEST_ASSERT( mrBitSetSize( (MRBitSet*)vMapA ) == 60 )
+    TEST_ASSERT( mrBitSetSize( (MRBitSet*)vMapB ) == 204 )
+    TEST_ASSERT( mrBitSetCount( (MRBitSet*)vMapA ) == 60 )
+    TEST_ASSERT( mrBitSetCount( (MRBitSet*)vMapB ) == 48 )
+
+    const MRFaceBitSet* meshAValidFaces = mrMeshTopologyGetValidFaces( mrMeshTopology( meshA ) );
+    const MRFaceBitSet* meshBValidFaces = mrMeshTopologyGetValidFaces( mrMeshTopology( meshB ) );
+    MRFaceBitSet* fMapA = mrBooleanResultMapperMapFaces( mapper, meshAValidFaces, MRBooleanResultMapperMapObjectA );
+    MRFaceBitSet* fMapB = mrBooleanResultMapperMapFaces( mapper, meshBValidFaces, MRBooleanResultMapperMapObjectB );
+    TEST_ASSERT( mrBitSetSize( (MRBitSet*)fMapA ) == 224 )
+    TEST_ASSERT( mrBitSetSize( (MRBitSet*)fMapB ) == 416 )
+    TEST_ASSERT( mrBitSetCount( (MRBitSet*)fMapA ) == 224 )
+    TEST_ASSERT( mrBitSetCount( (MRBitSet*)fMapB ) == 192 )
+
+    MRFaceBitSet* newFaces = mrBooleanResultMapperNewFaces( mapper );
+    TEST_ASSERT( mrBitSetSize( (MRBitSet*)newFaces ) == 416 )
+    TEST_ASSERT( mrBitSetCount( (MRBitSet*)newFaces ) == 252 )
+
+    const MRBooleanResultMapperMaps* mapsA = mrBooleanResultMapperGetMaps( mapper, MRBooleanResultMapperMapObjectA );
+    TEST_ASSERT( !mrBooleanResultMapperMapsIdentity( mapsA ) )
+    TEST_ASSERT( mrBooleanResultMapperMapsOld2NewVerts( mapsA ).size == 160 )
+    TEST_ASSERT( mrBooleanResultMapperMapsCut2newFaces( mapsA ).size == 348 )
+    TEST_ASSERT( mrBooleanResultMapperMapsCut2origin( mapsA ).size == 348 )
+
+    const MRBooleanResultMapperMaps* mapsB = mrBooleanResultMapperGetMaps( mapper, MRBooleanResultMapperMapObjectB );
+    TEST_ASSERT( !mrBooleanResultMapperMapsIdentity( mapsB ) )
+    TEST_ASSERT( mrBooleanResultMapperMapsOld2NewVerts( mapsB ).size == 160 )
+    TEST_ASSERT( mrBooleanResultMapperMapsCut2newFaces( mapsB ).size == 384 )
+    TEST_ASSERT( mrBooleanResultMapperMapsCut2origin( mapsB ).size == 384 )
+
+    mrFaceBitSetFree( newFaces );
+
+    mrFaceBitSetFree( fMapB );
+    mrFaceBitSetFree( fMapA );
+
+    mrVertBitSetFree( vMapB );
+    mrVertBitSetFree( vMapA );
+
+    mrStringFree( result.errorString );
+    mrMeshFree( result.mesh );
 
     mrMeshFree( meshB );
     mrMeshFree( meshA );

@@ -4,6 +4,9 @@
 
 #include <MRMesh/MRVector.h>
 
+/// helper class to represent std::vector data as a pointer+length pair
+/// NOTE: changing the source vector might invalidate the data pointer
+//        it's your responsibility to update it by calling invalidate() after the vector's change, explicit or implicit
 template <typename T>
 struct vector_wrapper_base
 {

@@ -204,6 +204,11 @@ $(info Using Python module suffix: $(PYTHON_MODULE_SUFFIX))
 
 INPUT_PROJECTS := MRMesh MRIOExtras MRSymbolMesh MRVoxels
 
+# 1 or 0. Whether to build mrmeshnumpy (if false you should build it with CMake with the rest of MeshLib).
+# Defaults to 0, but only if if `PACKAGE_NAME == meshlib`.
+BUILD_MRMESHNUMPY := $(if $(filter $(PACKAGE_NAME),meshlib),1)
+override BUILD_MRMESHNUMPY := $(filter-out 0,$(BUILD_MRMESHNUMPY))
+
 # --- End of configuration variables.
 
 
@@ -328,11 +333,11 @@ only-generate:
 	@$(MAKE) -f $(MRBIND_SOURCE)/scripts/apply_to_files.mk generate $(mrbind_vars)
 
 # Handwritten mrmeshnumpy. But only if we can't reuse it from the default build.
-# ifeq ($(PACKAGE_NAME),meshlib)
-# MRMESHNUMPY_MODULE :=
-# else
+ifneq ($(BUILD_MRMESHNUMPY),)
 MRMESHNUMPY_MODULE := $(MODULE_OUTPUT_DIR)/mrmeshnumpy$(PYTHON_MODULE_SUFFIX)
-# endif
+else
+MRMESHNUMPY_MODULE :=
+endif
 ifneq ($(MRMESHNUMPY_MODULE),)
 $(MRMESHNUMPY_MODULE): | $(MODULE_OUTPUT_DIR)
 	@echo $(call quote,[Compiling] mrmeshnumpy)

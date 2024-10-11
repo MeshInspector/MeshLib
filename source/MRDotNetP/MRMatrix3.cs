@@ -36,6 +36,7 @@ namespace MR.DotNet
         private static extern MRVector3f mrMatrix3fMulVector(ref MRMatrix3f a, ref MRVector3f b);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool mrMatrix3fEqual(ref MRMatrix3f a, ref MRMatrix3f b);
 
         internal MRMatrix3f mat_;

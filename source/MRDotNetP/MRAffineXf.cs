@@ -75,6 +75,6 @@ namespace MR.DotNet
         }
 
         public Matrix3f A { get { return A_; } set { A_ = value; xf_.A = value.mat_; } }
-        public Vector3f b { get { return b_; } set { b_ = value; xf_.b = value.vec_; } }
+        public Vector3f B { get { return b_; } set { b_ = value; xf_.b = value.vec_; } }
     }
 }

@@ -12,6 +12,12 @@ REGISTER_AUTO_CAST( FaceBitSet )
 REGISTER_AUTO_CAST( UndirectedEdgeBitSet )
 REGISTER_AUTO_CAST( VertBitSet )
 
+MRBitSet* mrBitSetCopy( const MRBitSet* bs_ )
+{
+    ARG( bs );
+    RETURN_NEW( bs );
+}
+
 const uint64_t* mrBitSetBlocks( const MRBitSet* bs_ )
 {
     ARG( bs );

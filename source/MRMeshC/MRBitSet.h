@@ -7,6 +7,9 @@ MR_EXTERN_C_BEGIN
 /// ...
 MRMESHC_API MRBitSet* mrBitSetNew( size_t numBits, bool fillValue );
 
+/// creates a copy of a BitSet object
+MRMESHC_API MRBitSet* mrBitSetCopy( const MRBitSet* bs );
+
 /// gets read-only access to the underlying blocks of a bitset
 MRMESHC_API const uint64_t* mrBitSetBlocks( const MRBitSet* bs );
 

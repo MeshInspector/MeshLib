@@ -27,6 +27,9 @@ MRMESHC_API MRVector3f mrVector3fPlusZ( void );
 /// adds two vectors
 MRMESHC_API MRVector3f mrVector3fAdd( const MRVector3f* a, const MRVector3f* b );
 
+/// subtracts two vectors
+MRMESHC_API MRVector3f mrVector3fSub( const MRVector3f* a, const MRVector3f* b );
+
 /// multiplies a vector by a scalar value
 MRMESHC_API MRVector3f mrVector3fMulScalar( const MRVector3f* a, float b );
 

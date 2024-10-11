@@ -21,8 +21,8 @@
 #ifdef _WIN32
 #include <excpt.h>
 #endif
-
-#if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
+#if defined( __EMSCRIPTEN__ )
+#if  !defined( __EMSCRIPTEN_PTHREADS__ )
 namespace
 {
 std::function<void()> staticTaskForLaterCall;
@@ -31,6 +31,14 @@ void asyncCallTask( void * )
     if ( staticTaskForLaterCall )
         staticTaskForLaterCall();
     staticTaskForLaterCall = {};
+}
+}
+#endif
+extern "C" {
+
+EMSCRIPTEN_KEEPALIVE bool emsIsProgressBarOrdered()
+{
+    return MR::ProgressBar::isOrdered();
 }
 }
 #endif

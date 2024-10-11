@@ -17,6 +17,6 @@ struct NoiseSettings
 };
 
 // Adds noise to the points, using a normal distribution
-MRMESH_API VoidOrErrStr addNoise( VertCoords& points, const VertBitSet& validVerts, NoiseSettings settings );
+MRMESH_API Expected<void> addNoise( VertCoords& points, const VertBitSet& validVerts, NoiseSettings settings );
 
 }

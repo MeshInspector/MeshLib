@@ -35,10 +35,10 @@ MR_INIT_PYTHON_MODULE( mrmeshpy )
 
 MR_ADD_PYTHON_VEC( mrmeshpy, vectorFloat, float )
 
-MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, ExpectedVoid, MR::VoidOrErrStr )
+MR_ADD_PYTHON_CUSTOM_CLASS( mrmeshpy, ExpectedVoid, MR::Expected<void> )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, ExpectedVoid, [] ( pybind11::module_& )
 {
-    using expectedType = MR::VoidOrErrStr;
+    using expectedType = MR::Expected<void>;
     MR_PYTHON_CUSTOM_CLASS( ExpectedVoid ).
         def( "has_value", &expectedType::has_value ).
         def( "error", ( const std::string& ( expectedType::* )( )const& )& expectedType::error );

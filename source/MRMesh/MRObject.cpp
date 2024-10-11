@@ -417,7 +417,7 @@ void Object::swapSignals_( Object& other )
     std::swap( worldXfChangedSignal, other.worldXfChangedSignal );
 }
 
-Expected<std::future<VoidOrErrStr>> Object::serializeModel_( const std::filesystem::path& ) const
+Expected<std::future<Expected<void>>> Object::serializeModel_( const std::filesystem::path& ) const
 {
     return {};
 }
@@ -437,7 +437,7 @@ void Object::serializeFields_( Json::Value& root ) const
     root["Type"].append( Object::TypeName() ); // will be appended in derived calls
 }
 
-VoidOrErrStr Object::deserializeModel_( const std::filesystem::path&, ProgressCallback progressCb )
+Expected<void> Object::deserializeModel_( const std::filesystem::path&, ProgressCallback progressCb )
 {
     if ( progressCb && !progressCb( 1.f ) )
         return unexpected( std::string( "Loading canceled" ) );
@@ -518,14 +518,14 @@ std::vector<std::string> Object::getInfoLines() const
     return res;
 }
 
-Expected<std::vector<std::future<VoidOrErrStr>>> Object::serializeRecursive( const std::filesystem::path& path, Json::Value& root, int childId ) const
+Expected<std::vector<std::future<Expected<void>>>> Object::serializeRecursive( const std::filesystem::path& path, Json::Value& root, int childId ) const
 {
     std::error_code ec;
     if ( !std::filesystem::is_directory( path, ec ) )
         if ( !std::filesystem::create_directories( path, ec ) )
             return unexpected( "Cannot create directories " + utf8string( path ) );
 
-    std::vector<std::future<VoidOrErrStr>> res;
+    std::vector<std::future<Expected<void>>> res;
 
     // the key must be unique among all children of same parent
     std::string key = std::to_string( childId ) + "_" + replaceProhibitedChars( name_ );
@@ -561,7 +561,7 @@ Expected<std::vector<std::future<VoidOrErrStr>>> Object::serializeRecursive( con
     return res;
 }
 
-VoidOrErrStr Object::deserializeRecursive( const std::filesystem::path& path, const Json::Value& root,
+Expected<void> Object::deserializeRecursive( const std::filesystem::path& path, const Json::Value& root,
         ProgressCallback progressCb, int* objCounter )
 {
     std::string key = root["Key"].isString() ? root["Key"].asString() : root["Name"].asString();

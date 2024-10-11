@@ -26,13 +26,13 @@ Expected<FaceBitSet> getFaces( const Mesh& mesh, ProgressCallback cb )
 }
 
 // Helper function to fix self-intersections on part of mesh
-static VoidOrErrStr doFix( Mesh& mesh, FaceBitSet& part, const Settings& settings,
+static Expected<void> doFix( Mesh& mesh, FaceBitSet& part, const Settings& settings,
     int expandSize,
     FaceBitSet& accumBadFaces,
     ProgressCallback cb );
 
 // TODO: finish implementation
-VoidOrErrStr fixOld( Mesh& mesh, const Settings& settings )
+Expected<void> fixOld( Mesh& mesh, const Settings& settings )
 {
     Settings currentSettings = settings;
     if ( currentSettings.subdivideEdgeLen <= 0.0f )
@@ -104,7 +104,7 @@ VoidOrErrStr fixOld( Mesh& mesh, const Settings& settings )
     return {};
 }
 
-VoidOrErrStr fix( Mesh& mesh, const Settings& settings )
+Expected<void> fix( Mesh& mesh, const Settings& settings )
 {
     MR_TIMER;
 
@@ -237,7 +237,7 @@ static Expected<FaceBitSet> findSelfCollidingTrianglesBSForPart( Mesh& mesh, con
     return result;
 }
 
-static VoidOrErrStr doFix( Mesh &mesh, FaceBitSet &part, const Settings & settings,
+static Expected<void> doFix( Mesh &mesh, FaceBitSet &part, const Settings & settings,
     int expandSize,
     FaceBitSet& accumBadFaces,
     ProgressCallback cb )

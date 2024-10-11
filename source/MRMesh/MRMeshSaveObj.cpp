@@ -9,7 +9,7 @@ namespace MR
 namespace MeshSave
 {
 
-VoidOrErrStr sceneToObj( const std::vector<NamedXfMesh> & objects, const std::filesystem::path & file,
+Expected<void> sceneToObj( const std::vector<NamedXfMesh> & objects, const std::filesystem::path & file,
                          VertColors* colors )
 {
     // although .obj is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
@@ -20,7 +20,7 @@ VoidOrErrStr sceneToObj( const std::vector<NamedXfMesh> & objects, const std::fi
     return sceneToObj( objects, out, colors );
 }
 
-VoidOrErrStr sceneToObj( const std::vector<NamedXfMesh> & objects, std::ostream & out, VertColors* colors )
+Expected<void> sceneToObj( const std::vector<NamedXfMesh> & objects, std::ostream & out, VertColors* colors )
 {
     out << "# MeshInspector.com\n";
     int firstVertId = 1;

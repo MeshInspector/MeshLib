@@ -1,5 +1,7 @@
 #pragma once
 
+#include "MRMeshFwd.h"
+
 #include <limits>
 
 namespace MR

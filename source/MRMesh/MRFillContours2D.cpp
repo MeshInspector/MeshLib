@@ -69,7 +69,7 @@ AffineXf3f getXfFromOxyPlane( const Contours3f& contours )
     return AffineXf3f( c.getXf() );
 }
 
-VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
+Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
 {
     MR_TIMER
     // check input

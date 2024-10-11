@@ -1,6 +1,6 @@
 ## \page ExamplePythonFreeForm FreeFormDeformer Example
 ##
-## Example of using Viewer
+## Example of using Free From deformation of the mesh
 ##
 ## \code
 from meshlib import mrmeshpy as mm

@@ -15,7 +15,7 @@ namespace MR
 namespace LinesSave
 {
 
-VoidOrErrStr toMrLines( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings )
+Expected<void> toMrLines( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -24,7 +24,7 @@ VoidOrErrStr toMrLines( const Polyline3& polyline, const std::filesystem::path& 
     return toMrLines( polyline, out, settings );
 }
 
-VoidOrErrStr toMrLines( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings )
+Expected<void> toMrLines( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings )
 {
     MR_TIMER;
     polyline.topology.write( out );
@@ -47,7 +47,7 @@ VoidOrErrStr toMrLines( const Polyline3& polyline, std::ostream& out, const Save
     return {};
 }
 
-VoidOrErrStr toPts( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings )
+Expected<void> toPts( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -56,7 +56,7 @@ VoidOrErrStr toPts( const Polyline3& polyline, const std::filesystem::path& file
     return toPts( polyline, out, settings );
 }
 
-VoidOrErrStr toPts( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings )
+Expected<void> toPts( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings )
 {
     float pointsNum{ 0.f };
     auto contours = polyline.contours();
@@ -91,7 +91,7 @@ VoidOrErrStr toPts( const Polyline3& polyline, std::ostream& out, const SaveSett
     return {};
 }
 
-VoidOrErrStr toDxf( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings )
+Expected<void> toDxf( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -100,7 +100,7 @@ VoidOrErrStr toDxf( const Polyline3& polyline, const std::filesystem::path& file
     return toDxf( polyline, out, settings );
 }
 
-VoidOrErrStr toDxf( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings )
+Expected<void> toDxf( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings )
 {
     out << "0\nSECTION\n";
     out << "2\nENTITIES\n";
@@ -154,7 +154,7 @@ VoidOrErrStr toDxf( const Polyline3& polyline, std::ostream& out, const SaveSett
     return {};
 }
 
-VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings )
+Expected<void> toAnySupportedFormat( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings )
 {
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
@@ -168,7 +168,7 @@ VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, const std::filesys
     return saver.fileSave( polyline, file, settings );
 }
 
-VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, const std::string& extension, std::ostream& out, const SaveSettings & settings )
+Expected<void> toAnySupportedFormat( const Polyline3& polyline, const std::string& extension, std::ostream& out, const SaveSettings & settings )
 {
     auto ext = extension;
     for ( auto& c : ext )

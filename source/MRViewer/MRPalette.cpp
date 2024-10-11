@@ -691,7 +691,7 @@ bool PalettePresets::loadPreset( const std::string& name, Palette& palette )
     return palette.loadFromJson( res.value() );
 }
 
-VoidOrErrStr PalettePresets::savePreset( const std::string& name, const Palette& palette )
+Expected<void> PalettePresets::savePreset( const std::string& name, const Palette& palette )
 {
     Json::Value root;
     palette.saveCurrentToJson( root );

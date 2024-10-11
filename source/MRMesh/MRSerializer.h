@@ -31,7 +31,7 @@ MRMESH_API Expected<Json::Value> deserializeJsonValue( const std::filesystem::pa
 /// saves mesh with optional selection to mru format;
 /// this is very convenient for saving intermediate states during algorithm debugging;
 /// ".mrmesh" save mesh format is not space efficient, but guaranties no changes in the topology after loading
-MRMESH_API VoidOrErrStr serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection = nullptr,
+MRMESH_API Expected<void> serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection = nullptr,
     const char * saveMeshFormat = ".mrmesh" );
 
 /// saves an object into json value
@@ -48,7 +48,7 @@ MRMESH_API void serializeToJson( const Matrix3f& matrix, Json::Value& root, bool
 MRMESH_API void serializeToJson( const AffineXf2f& xf, Json::Value& root, bool skipIdentity = true );
 MRMESH_API void serializeToJson( const AffineXf3f& xf, Json::Value& root, bool skipIdentity = true );
 MRMESH_API void serializeToJson( const BitSet& bitset, Json::Value& root );
-MRMESH_API VoidOrErrStr serializeToJson( const Mesh& mesh, Json::Value& root );
+MRMESH_API Expected<void> serializeToJson( const Mesh& mesh, Json::Value& root );
 MRMESH_API void serializeToJson( const Plane3f& plane, Json::Value& root );
 MRMESH_API void serializeToJson( const TriPointf& tp, Json::Value& root );
 MRMESH_API void serializeToJson( const MeshTexture& texture, Json::Value& root );

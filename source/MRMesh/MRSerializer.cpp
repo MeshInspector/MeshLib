@@ -515,7 +515,7 @@ void deserializeFromJson( const Json::Value& root, std::vector<Color>& colors )
     }
 }
 
-VoidOrErrStr serializeToJson( const Mesh& mesh, Json::Value& root )
+Expected<void> serializeToJson( const Mesh& mesh, Json::Value& root )
 {
     std::ostringstream out;
     auto res = MeshSave::toPly( mesh, out );
@@ -540,7 +540,7 @@ Expected<Mesh> deserializeFromJson( const Json::Value& root, VertColors* colors 
     return MeshLoad::fromPly( in, { .colors = colors } );
 }
 
-VoidOrErrStr serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection, const char * saveMeshFormat )
+Expected<void> serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection, const char * saveMeshFormat )
 {
     ObjectMesh obj;
     obj.setSaveMeshFormat( saveMeshFormat );

@@ -18,13 +18,13 @@ typedef struct MRObjId { int id; } MRObjId;
 /// a set of 3 vertices; useful for representing a face via its vertex indices
 typedef MRVertId MRThreeVertIds[3];
 
-/// ...
+/// creates an edge id from the corresponding undirected one
 MRMESHC_API MREdgeId mrEdgeIdFromUndirectedEdgeId( MRUndirectedEdgeId u );
 
-/// ...
+// returns identifier of the edge with same ends but opposite orientation
 MRMESHC_API MREdgeId mrEdgeIdSym( MREdgeId e );
 
-/// ...
+// returns unique identifier of the edge ignoring its direction
 MRMESHC_API MRUndirectedEdgeId mrEdgeIdUndirected( MREdgeId e );
 
 MR_EXTERN_C_END

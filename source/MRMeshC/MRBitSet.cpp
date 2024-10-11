@@ -162,3 +162,8 @@ void mrBitSetSet( MRBitSet* bs_, size_t index, bool value )
     ARG( bs );
     bs.set( index, value );
 }
+
+size_t mrBitSetNpos( void )
+{
+    return BitSet::npos;
+}

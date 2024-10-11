@@ -88,3 +88,9 @@ bool mrBooleanResultMapperMapsIdentity( const MRBooleanResultMapperMaps* maps_ )
     ARG( maps );
     return maps.identity;
 }
+
+void mrBooleanResultMapperFree( MRBooleanResultMapper* mapper_ )
+{
+    ARG_PTR( mapper );
+    delete mapper;
+}

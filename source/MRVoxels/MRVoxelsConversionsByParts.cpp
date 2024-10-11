@@ -5,12 +5,14 @@
 #include "MRMarchingCubes.h"
 
 #include "MRMesh/MREdgePaths.h"
+#include "MRMesh/MRTriMesh.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshTrimWithPlane.h"
 #include "MRMesh/MRPlane3.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRVolumeIndexer.h"
+#include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRGTest.h"
 
 #include "MRPch/MRFmt.h"
@@ -351,6 +353,34 @@ TEST( MRMesh, volumeToMeshByParts )
     EXPECT_NEAR( expectedVolume, vdbMesh->volume(), 0.001f );
     EXPECT_NEAR( expectedVolume, simpleMesh->volume(), 0.001f );
     EXPECT_NEAR( expectedVolume, functionMesh->volume(), 0.001f );
+
+    MarchingCubesByParts mc( dimensions, { .iso = 0.f, .lessInside = true } );
+    constexpr int zLayersInPart = 2;
+    SimpleVolume part
+    {
+        .dims = { dimensions.x, dimensions.y, zLayersInPart },
+        .voxelSize = Vector3f::diagonal( voxelSize )
+    };
+    part.data.resize( zLayersInPart * size_t( dimensions.x ) * dimensions.y );
+    for ( int iz = 0; iz + zLayersInPart <= dimensions.z; ++iz )
+    {
+        ParallelFor( 0, zLayersInPart, [&]( int l )
+        {
+            size_t i = l * size_t( dimensions.x ) * dimensions.y;
+            for ( auto y = 0; y < dimensions.y; ++y )
+            {
+                for ( auto x = 0; x < dimensions.x; ++x, ++i )
+                {
+                    const Vector3f pos( (float)x, (float)y, (float)( iz + l ) );
+                    const auto dist = ( center - pos ).length();
+                    part.data[i] = dist - radius;
+                }
+            }
+        } );
+        mc.addPart( part );
+    }
+    Mesh mesh = Mesh::fromTriMesh( *mc.finalize() );
+    EXPECT_NEAR( expectedVolume, mesh.volume(), 0.001f );
 }
 
 template MRVOXELS_API VoidOrErrStr mergeVolumePart<SimpleVolumeMinMax>( Mesh&, std::vector<EdgePath>&, SimpleVolumeMinMax&&, float, float, const MergeVolumePartSettings& );

@@ -1441,8 +1441,7 @@ float ImGuiMenu::drawSelectionInformation_()
             drawUnitInfo( "Avg Edge Length", avgEdgeLen, LengthUnit{} );
 
             drawPrimitivesInfo( "Holes", holes );
-            if ( components > 1 )
-                drawPrimitivesInfo( "Components", components );
+            drawPrimitivesInfo( "Components", components );
         }
     }
 

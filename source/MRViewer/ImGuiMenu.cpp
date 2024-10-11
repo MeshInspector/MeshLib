@@ -1387,7 +1387,11 @@ float ImGuiMenu::drawSelectionInformation_()
         UI::readOnlyValue<Units>( label, value, textColor, {}, labelColor );
     };
 
-    if ( selectedObjs.size() > 1 )
+    if ( selectedObjs.size() == 1 )
+    {
+        UI::inputTextCenteredReadOnly( "Object Type", selectedObjs.front()->getClassName(), itemWidth, textColor, labelColor );
+    }
+    else if ( selectedObjs.size() > 1 )
     {
         drawPrimitivesInfo( "Objects", selectedObjs.size() );
     }

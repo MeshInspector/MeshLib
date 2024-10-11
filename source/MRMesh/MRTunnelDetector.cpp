@@ -27,7 +27,7 @@ class BasisTunnelsDetector
 {
 public:
     BasisTunnelsDetector( const MeshPart & mp, EdgeMetric metric );
-    VoidOrErrStr prepare( ProgressCallback cb );
+    Expected<void> prepare( ProgressCallback cb );
     // after prepare(...) region can only shrink, not become larger
     Expected<std::vector<EdgeLoop>> detect( ProgressCallback cb );
 
@@ -48,7 +48,7 @@ BasisTunnelsDetector::BasisTunnelsDetector( const MeshPart & mp, EdgeMetric metr
     assert( metric_ );
 }
 
-VoidOrErrStr BasisTunnelsDetector::prepare( ProgressCallback cb )
+Expected<void> BasisTunnelsDetector::prepare( ProgressCallback cb )
 {
     MR_TIMER
 

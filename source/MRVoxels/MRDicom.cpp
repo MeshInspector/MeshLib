@@ -725,7 +725,7 @@ Expected<DicomVolume> loadDicomFile( const std::filesystem::path& path, const Pr
 namespace VoxelsSave
 {
 
-VoidOrErrStr toDCM( const VdbVolume& vdbVolume, const std::filesystem::path& path, ProgressCallback cb )
+Expected<void> toDCM( const VdbVolume& vdbVolume, const std::filesystem::path& path, ProgressCallback cb )
 {
     auto simpleVolume = vdbVolumeToSimpleVolumeU16( vdbVolume, {}, subprogress( cb, 0.f, 0.5f ) );
     if ( simpleVolume )
@@ -735,7 +735,7 @@ VoidOrErrStr toDCM( const VdbVolume& vdbVolume, const std::filesystem::path& pat
 }
 
 template <typename T>
-VoidOrErrStr toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::filesystem::path& path, ProgressCallback cb )
+Expected<void> toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::filesystem::path& path, ProgressCallback cb )
 {
     if ( !reportProgress( cb, 0.0f ) )
         return unexpected( "Loading canceled" );
@@ -771,7 +771,7 @@ VoidOrErrStr toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::files
     return {};
 }
 
-template VoidOrErrStr toDCM<uint16_t>( const SimpleVolumeU16& volume, const std::filesystem::path& path, ProgressCallback cb );
+template Expected<void> toDCM<uint16_t>( const SimpleVolumeU16& volume, const std::filesystem::path& path, ProgressCallback cb );
 
 MR_ON_INIT
 {

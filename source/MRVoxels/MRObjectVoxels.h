@@ -257,9 +257,9 @@ protected:
 
     MRVOXELS_API void deserializeFields_( const Json::Value& root ) override;
 
-    MRVOXELS_API VoidOrErrStr deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
+    MRVOXELS_API Expected<void> deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
 
-    MRVOXELS_API virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& path ) const override;
+    MRVOXELS_API virtual Expected<std::future<Expected<void>>> serializeModel_( const std::filesystem::path& path ) const override;
 };
 
 

@@ -59,7 +59,7 @@ namespace MR
 {
 
 template <typename Volume>
-VoidOrErrStr
+Expected<void>
 mergeVolumePart( Mesh &mesh, std::vector<EdgePath> &cutContours, Volume &&volume,
                float leftCutPosition, float rightCutPosition, const MergeVolumePartSettings &settings )
 {
@@ -383,9 +383,9 @@ TEST( MRMesh, volumeToMeshByParts )
     EXPECT_NEAR( expectedVolume, mesh.volume(), 0.001f );
 }
 
-template MRVOXELS_API VoidOrErrStr mergeVolumePart<SimpleVolumeMinMax>( Mesh&, std::vector<EdgePath>&, SimpleVolumeMinMax&&, float, float, const MergeVolumePartSettings& );
-template MRVOXELS_API VoidOrErrStr mergeVolumePart<VdbVolume>( Mesh&, std::vector<EdgePath>&, VdbVolume&&, float, float, const MergeVolumePartSettings& );
-template MRVOXELS_API VoidOrErrStr mergeVolumePart<FunctionVolume>( Mesh&, std::vector<EdgePath>&, FunctionVolume&&, float, float, const MergeVolumePartSettings& );
+template MRVOXELS_API Expected<void> mergeVolumePart<SimpleVolumeMinMax>( Mesh&, std::vector<EdgePath>&, SimpleVolumeMinMax&&, float, float, const MergeVolumePartSettings& );
+template MRVOXELS_API Expected<void> mergeVolumePart<VdbVolume>( Mesh&, std::vector<EdgePath>&, VdbVolume&&, float, float, const MergeVolumePartSettings& );
+template MRVOXELS_API Expected<void> mergeVolumePart<FunctionVolume>( Mesh&, std::vector<EdgePath>&, FunctionVolume&&, float, float, const MergeVolumePartSettings& );
 
 template MRVOXELS_API Expected<Mesh> volumeToMeshByParts<SimpleVolumeMinMax>( const VolumePartBuilder<SimpleVolumeMinMax>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );
 template MRVOXELS_API Expected<Mesh> volumeToMeshByParts<VdbVolume>( const VolumePartBuilder<VdbVolume>&, const Vector3i&, const Vector3f&, const VolumeToMeshByPartsSettings&, const MergeVolumePartSettings& );

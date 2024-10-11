@@ -31,7 +31,9 @@ struct vector_wrapper_base
 protected:
     explicit vector_wrapper_base( std::vector<T>* vec )
         : vec_( vec )
-    { }
+    {
+        invalidate();
+    }
 
     std::vector<T>* vec_;
 };
@@ -43,9 +45,7 @@ struct vector_wrapper : vector_wrapper_base<T>
 
     explicit vector_wrapper( std::vector<T>&& vec )
         : base( new std::vector<T>( std::move( vec ) ) )
-    {
-        base::invalidate();
-    }
+    { }
 
     template <typename I>
     explicit vector_wrapper( MR::Vector<T, I>&& vec )
@@ -65,9 +65,7 @@ struct vector_ref_wrapper : public vector_wrapper_base<T>
 
     explicit vector_ref_wrapper( const std::vector<T>& vec )
         : base( const_cast<std::vector<T>*>( &vec ) )
-    {
-        base::invalidate();
-    }
+    { }
 
     template <typename I>
     explicit vector_ref_wrapper( const MR::Vector<T, I>& vec )

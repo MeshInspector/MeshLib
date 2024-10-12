@@ -51,7 +51,7 @@ public:
     MRMESH_API static const std::filesystem::path& getScenePath();
 
 private:
-    static SceneRoot& instace_();
+    static SceneRoot& instance_();
     SceneRoot();
 
     std::shared_ptr<SceneRootObject> root_;

@@ -53,6 +53,10 @@ public:
     static std::filesystem::path getPluginsDirectory() { return getDirectory( Directory::Plugins ); }
     /// get the Python modules' binaries' directory path
     static std::filesystem::path getPythonModulesDirectory() { return getDirectory( Directory::PythonModules ); }
+    /// get name all system fonts
+    static std::vector<std::string> getAllSystemFonts();
+    /// get name all system fonts that have italics, bold, bold italics
+    static std::vector<std::string> getSystemFonts();
 
 private:
     static SystemPath& instance_();

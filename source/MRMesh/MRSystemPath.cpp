@@ -169,6 +169,71 @@ void SystemPath::overrideDirectory( SystemPath::Directory dir, const std::filesy
     instance_().directories_[(size_t)dir] = path;
 }
 
+std::vector<std::string> SystemPath::getAllSystemFonts()
+{
+    static std::vector<std::string> allFonts;
+    if ( !allFonts.empty() )
+    {
+        return allFonts;
+    }
+
+    std::string path;
+#if defined(__EMSCRIPTEN__)
+    path = "/usr/share/fonts";
+#else 
+    path = "C:/Windows/Fonts";
+    // for MacOS
+    // Library/Fonts
+#endif
+    for ( auto& p : std::filesystem::directory_iterator( path ) )
+    {
+        allFonts.push_back( p.path().stem().string() );
+    }
+
+    return allFonts;
+}
+
+std::vector<std::string> SystemPath::getSystemFonts()
+{
+    static std::vector<std::string> fonts;
+    if ( !fonts.empty() )
+    {
+        return fonts;
+    }
+    std::vector<std::string> allFonts = getAllSystemFonts();
+
+    std::string name;
+    size_t n = 0;
+    for ( const auto& font : allFonts )
+    {
+        if ( name.empty() )
+        {
+            name = font;
+            continue;
+        }
+        if ( font.find( name ) == std::string::npos )
+        {
+            name = font;
+            continue;
+        }
+        if ( font == name + "b" || font == name + "B" ||
+             font == name + "i" || font == name + "I" ||
+             font == name + "bi" || font == name + "BI" )
+        {
+            n++;
+        }
+
+        if ( n == 3 )
+        {
+            fonts.push_back( name );
+            name.clear();
+            n = 0;
+        }
+    }
+
+    return fonts;
+}
+
 } // namespace MR
 
 MR_ON_INIT

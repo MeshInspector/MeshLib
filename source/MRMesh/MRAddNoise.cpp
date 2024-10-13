@@ -8,7 +8,7 @@
 namespace MR
 {
 
-VoidOrErrStr addNoise( VertCoords& points, const VertBitSet& validVerts, NoiseSettings settings )
+Expected<void> addNoise( VertCoords& points, const VertBitSet& validVerts, NoiseSettings settings )
 {
     if ( validVerts.count() > 1000 )
     {

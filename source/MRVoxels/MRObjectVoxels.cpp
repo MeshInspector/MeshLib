@@ -618,7 +618,7 @@ void ObjectVoxels::serializeFields_( Json::Value& root ) const
     root["Type"].append( ObjectVoxels::TypeName() );
 }
 
-Expected<std::future<VoidOrErrStr>> ObjectVoxels::serializeModel_( const std::filesystem::path& path ) const
+Expected<std::future<Expected<void>>> ObjectVoxels::serializeModel_( const std::filesystem::path& path ) const
 {
     if ( ancillary_ || !vdbVolume_.data )
         return {};
@@ -663,7 +663,7 @@ void ObjectVoxels::deserializeFields_( const Json::Value& root )
         setDefaultSceneProperties_();
 }
 
-VoidOrErrStr ObjectVoxels::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
+Expected<void> ObjectVoxels::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     // in case of raw file, we need to find its full name with suffix
     auto modelPath = pathFromUtf8( utf8string( path ) + ".raw" );

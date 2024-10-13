@@ -406,7 +406,7 @@ Expected<Mesh> gridToMesh( FloatGrid&& grid, const GridToMeshSettings & settings
     return res;
 }
 
-VoidOrErrStr makeSignedByWindingNumber( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh, const MakeSignedByWindingNumberSettings & settings )
+Expected<void> makeSignedByWindingNumber( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh, const MakeSignedByWindingNumberSettings & settings )
 {
     MR_TIMER
 

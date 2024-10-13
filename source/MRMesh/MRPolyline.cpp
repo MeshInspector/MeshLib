@@ -179,6 +179,22 @@ EdgePoint Polyline<V>::toEdgePoint( EdgeId e, const V & p ) const
 }
 
 template<typename V>
+Vector3f MR::Polyline<V>::loopDirArea( EdgeId e0 ) const
+{
+    Vector3f area;
+    auto e = e0;
+    for ( ;; )
+    {
+        area += cross( Vector3f( orgPnt( e ) ), Vector3f( destPnt( e ) ) );
+        e = topology.next( e.sym() );
+        if ( e == e0 )
+            return area;
+        else if ( e == e0.sym() )
+            return Vector3f( 0.0f, 0.0f, FLT_MAX );
+    }
+}
+
+template<typename V>
 float Polyline<V>::totalLength() const
 {
     MR_TIMER
@@ -398,6 +414,24 @@ TEST( MRMesh, Polyline2 )
             EXPECT_NEAR( v1[1], v2[1], 1e-8 );
         }
     }
+}
+
+TEST( MRMesh, Polyline2LoopDir )
+{
+    Contour2f cont;
+    cont.push_back( Vector2f( 0.f, 0.f ) );
+    cont.push_back( Vector2f( 1.f, 0.f ) );
+    cont.push_back( Vector2f( 1.f, 1.f ) );
+    cont.push_back( Vector2f( 0.f, 1.f ) );
+
+    Polyline2 plNotClosed( { cont } );
+    EXPECT_TRUE( plNotClosed.loopDirArea( 0_e ).z == FLT_MAX );
+
+    cont.push_back( Vector2f( 0.f, 0.f ) );
+
+    Polyline2 plClosed( { cont } );
+    EXPECT_TRUE( plClosed.loopDirArea( 0_e ).z > 0.0f );
+    EXPECT_TRUE( plClosed.loopDirArea( 1_e ).z < 0.0f );
 }
 
 TEST( MRMesh, Polyline3 )

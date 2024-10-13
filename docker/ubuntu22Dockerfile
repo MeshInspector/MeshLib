@@ -7,7 +7,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time python3-pip \
+        tzdata git sudo time python3-pip ninja-build \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
@@ -50,7 +50,7 @@ RUN export DEBIAN_FRONTEND=noninteractive; \
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
     apt-get update -qqy \
  && apt-get install -qqy --no-install-recommends \
-        tzdata git sudo time python3-pip xvfb curl wget unzip \
+        tzdata git sudo time python3-pip xvfb curl wget unzip ninja-build patchelf \
  && ./scripts/install_apt_requirements.sh \
  && ./scripts/mrbind/install_deps_ubuntu.sh \
  && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \

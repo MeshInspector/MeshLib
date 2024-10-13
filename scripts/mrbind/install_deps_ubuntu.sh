@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Installs everything needed to generate and build MRBind bindings.
-# NOTE: On old Ubuntu (20.04?) this will build a newer GNU Make from source and install it to `/usr/local/bin`.
 
 # Must run this as root.
 

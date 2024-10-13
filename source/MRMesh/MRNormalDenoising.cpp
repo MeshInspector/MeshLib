@@ -207,7 +207,7 @@ void updateIndicatorFast( const MeshTopology & topology, Vector<float, Undirecte
     } );
 }
 
-VoidOrErrStr meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings )
+Expected<void> meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings )
 {
     MR_TIMER
     if ( settings.normalIters <= 0 || settings.pointIters <= 0 )

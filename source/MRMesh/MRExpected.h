@@ -66,7 +66,7 @@ MR_BIND_IGNORE inline auto unexpected( E &&e )
 #endif
 
 /// return type for a void function that can produce an error string
-using VoidOrErrStr = Expected<void>;
+using VoidOrErrStr [[deprecated]] = Expected<void>;
 
 /// Common operation canceled line for all
 MR_BIND_IGNORE inline std::string stringOperationCanceled()

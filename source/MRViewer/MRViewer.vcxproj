@@ -129,6 +129,7 @@
     <ClCompile Include="MRUINonOverlappingLabels.cpp" />
     <ClCompile Include="MRRenderImGuiLabelObject.cpp" />
     <ClCompile Include="MRCPRTests.cpp" />
+    <ClCompile Include="MRSceneOperations.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlphaSortGL.h" />
@@ -270,6 +271,7 @@
     <ClInclude Include="MRUIRectAllocator.h" />
     <ClInclude Include="MRUINonOverlappingLabels.h" />
     <ClInclude Include="MRRenderImGuiLabelObject.h" />
+    <ClInclude Include="MRSceneOperations.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

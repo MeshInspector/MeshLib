@@ -74,6 +74,7 @@ void RibbonSceneObjectsListDrawer::drawCustomObjectPrefixInScene_( const Object&
             fontManager.getFontSizeByType( RibbonFontManager::FontType::Icons );
         ImGui::PushFont( font );
 
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( imageSize - ImGui::GetFontSize() ) * 0.5f );
         ImGui::Text( "%s", getSceneItemIconByTypeName_( obj.typeName() ) );
 
         ImGui::PopFont();
@@ -105,6 +106,7 @@ void RibbonSceneObjectsListDrawer::drawSceneContextMenu_( const std::vector<std:
             wasAction |= ribbonMenu_->drawGroupUngroupButton( selected );
             wasAction |= ribbonMenu_->drawSelectSubtreeButton( selected );
             wasAction |= ribbonMenu_->drawCloneButton( selected );
+            wasAction |= ribbonMenu_->drawMergeSubtreeButton( selected );
         }
         else if ( ImGui::BeginTable( "##DrawOptions", 2, ImGuiTableFlags_BordersInnerV ) )
         {
@@ -120,6 +122,7 @@ void RibbonSceneObjectsListDrawer::drawSceneContextMenu_( const std::vector<std:
             wasAction |= ribbonMenu_->drawSelectSubtreeButton( selected );
             wasAction |= ribbonMenu_->drawCloneButton( selected );
             wasAction |= ribbonMenu_->drawCloneSelectionButton( selected );
+            wasAction |= ribbonMenu_->drawMergeSubtreeButton( selected );
             ImGui::EndTable();
         }
         ImGui::PopStyleVar();

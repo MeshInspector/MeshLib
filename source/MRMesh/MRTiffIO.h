@@ -72,10 +72,10 @@ struct RawTiffOutput
 };
 
 // load values from tiff to ouput.data
-MRMESH_API VoidOrErrStr readRawTiff( const std::filesystem::path& path, RawTiffOutput& output );
+MRMESH_API Expected<void> readRawTiff( const std::filesystem::path& path, RawTiffOutput& output );
 
 // writes bytes to tiff file
-MRMESH_API VoidOrErrStr writeRawTiff( const uint8_t* bytes, const std::filesystem::path& path,
+MRMESH_API Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& path,
     const BaseTiffParameters& params );
 
 }

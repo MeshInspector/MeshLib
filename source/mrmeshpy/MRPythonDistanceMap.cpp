@@ -15,7 +15,7 @@ namespace
 
 using namespace MR;
 
-VoidOrErrStr saveDistanceMapToImage( const DistanceMap& dm, const std::filesystem::path& filename, float threshold /*= 1.f / 255*/ )
+Expected<void> saveDistanceMapToImage( const DistanceMap& dm, const std::filesystem::path& filename, float threshold /*= 1.f / 255*/ )
 {
     const auto image = convertDistanceMapToImage( dm, threshold );
     return ImageSave::toAnySupportedFormat( image, filename );

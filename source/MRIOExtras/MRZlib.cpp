@@ -44,7 +44,7 @@ std::string zlibToString( int code )
 namespace MR
 {
 
-VoidOrErrStr zlibCompressStream( std::istream& in, std::ostream& out, int level )
+Expected<void> zlibCompressStream( std::istream& in, std::ostream& out, int level )
 {
     Buffer<char> inChunk( cChunkSize ), outChunk( cChunkSize );
     z_stream stream {
@@ -89,7 +89,7 @@ VoidOrErrStr zlibCompressStream( std::istream& in, std::ostream& out, int level 
     return {};
 }
 
-VoidOrErrStr zlibDecompressStream( std::istream& in, std::ostream& out )
+Expected<void> zlibDecompressStream( std::istream& in, std::ostream& out )
 {
     Buffer<char> inChunk( cChunkSize ), outChunk( cChunkSize );
     z_stream stream {

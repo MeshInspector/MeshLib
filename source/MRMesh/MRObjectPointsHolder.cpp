@@ -248,13 +248,13 @@ Box3f ObjectPointsHolder::computeBoundingBox_() const
     return bb;
 }
 
-Expected<std::future<VoidOrErrStr>> ObjectPointsHolder::serializeModel_( const std::filesystem::path& path ) const
+Expected<std::future<Expected<void>>> ObjectPointsHolder::serializeModel_( const std::filesystem::path& path ) const
 {
     if ( ancillary_ || !points_ )
         return {};
 
     if ( points_->points.empty() ) // some formats (e.g. .ctm) require at least one point in the vector
-        return std::async( getAsyncLaunchType(), []{ return VoidOrErrStr{}; } );
+        return std::async( getAsyncLaunchType(), []{ return Expected<void>{}; } );
 
     SaveSettings saveSettings;
     saveSettings.saveValidOnly = false;
@@ -279,7 +279,7 @@ Expected<std::future<VoidOrErrStr>> ObjectPointsHolder::serializeModel_( const s
     return std::async( getAsyncLaunchType(), save );
 }
 
-VoidOrErrStr ObjectPointsHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
+Expected<void> ObjectPointsHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     auto modelPath = pathFromUtf8( utf8string( path ) + ".ctm" ); //quick path for most used format
     std::error_code ec;

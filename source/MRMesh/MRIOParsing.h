@@ -21,26 +21,26 @@ MRMESH_API Expected<Buffer<char>> readCharBuffer( std::istream& in );
 
 // read coordinates to `v` separated by space
 template<typename T>
-VoidOrErrStr parseTextCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* n = nullptr, Color* c = nullptr );
+Expected<void> parseTextCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* n = nullptr, Color* c = nullptr );
 template<typename T>
-VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* c = nullptr );
+Expected<void> parseObjCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* c = nullptr );
 template<typename T>
-VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Color& c );
+Expected<void> parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Color& c );
 
 // reads the first integer number in the line
-MRMESH_API VoidOrErrStr parseFirstNum( const std::string_view& str, int& num );
+MRMESH_API Expected<void> parseFirstNum( const std::string_view& str, int& num );
 // reads the polygon points and optional number of polygon points
 // example
 // N vertex0 vertex1 ... vertexN
-MRMESH_API VoidOrErrStr parsePolygon( const std::string_view& str, VertId* vertId, int* numPoints );
+MRMESH_API Expected<void> parsePolygon( const std::string_view& str, VertId* vertId, int* numPoints );
 
 template<typename T>
 [[deprecated( "use parseTextCoordinate() instead")]]
-VoidOrErrStr parseAscCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* n = nullptr, Color* c = nullptr );
+Expected<void> parseAscCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* n = nullptr, Color* c = nullptr );
 
 
 
 template<typename T>
-VoidOrErrStr parseSingleNumber( const std::string_view& str, T& num );
+Expected<void> parseSingleNumber( const std::string_view& str, T& num );
 
 }

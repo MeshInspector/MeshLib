@@ -463,7 +463,7 @@ public:
 
     /// loads from binary stream
     /// \return text of error if any
-    MRMESH_API VoidOrErrStr read( std::istream& s, ProgressCallback callback = {} );
+    MRMESH_API Expected<void> read( std::istream& s, ProgressCallback callback = {} );
 
     /// compare that two topologies are exactly the same
     [[nodiscard]] MRMESH_API bool operator ==( const MeshTopology & b ) const;

@@ -191,7 +191,7 @@ public:
     /// returns true if load was succeed
     MRVIEWER_API static bool loadPreset( const std::string& name, Palette& palette );
     /// saves given palette to preset with given name
-    MRVIEWER_API static VoidOrErrStr savePreset( const std::string& name, const Palette& palette );
+    MRVIEWER_API static Expected<void> savePreset( const std::string& name, const Palette& palette );
     /// returns path to presets folder
     MRVIEWER_API static std::filesystem::path getPalettePresetsFolder();
 private:

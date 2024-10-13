@@ -187,7 +187,7 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
 
 } // namespace ObjectSave
 
-VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::path& path,
+Expected<void> serializeObjectTree( const Object& object, const std::filesystem::path& path,
                                   ProgressCallback progressCb, FolderCallback preCompress )
 {
     MR_TIMER;
@@ -250,7 +250,7 @@ VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::p
     return compressZip( path, scenePath, {}, nullptr, subprogress( progressCb, 0.9f, 1.0f ) );
 }
 
-VoidOrErrStr serializeObjectTree( const Object& object, const std::filesystem::path& path, ProgressCallback progress )
+Expected<void> serializeObjectTree( const Object& object, const std::filesystem::path& path, ProgressCallback progress )
 {
     return serializeObjectTree( object, path, std::move( progress ), {} );
 }

@@ -17,27 +17,27 @@ namespace VoxelsSave
 /// \{
 
 /// Save raw voxels file, writing parameters in file name
-MRVOXELS_API VoidOrErrStr toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::path& file,
+MRVOXELS_API Expected<void> toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::path& file,
                                        ProgressCallback callback = {} );
 
 /// Save voxels in raw format with each value as 32-bit float in given binary stream
-MRVOXELS_API VoidOrErrStr toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback = {} );
+MRVOXELS_API Expected<void> toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback = {} );
 
 /// Save voxels in Gav-format in given file
-MRVOXELS_API VoidOrErrStr toGav( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback = {} );
+MRVOXELS_API Expected<void> toGav( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback = {} );
 /// Save voxels in Gav-format in given binary stream
-MRVOXELS_API VoidOrErrStr toGav( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback = {} );
+MRVOXELS_API Expected<void> toGav( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback = {} );
 
 /// Save voxels file in OpenVDB format
-MRVOXELS_API VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& file,
+MRVOXELS_API Expected<void> toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& file,
                                ProgressCallback callback = {} );
 
 /// Saves voxels in a file, detecting the format from file extension
-MRVOXELS_API VoidOrErrStr toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesystem::path& file,
+MRVOXELS_API Expected<void> toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesystem::path& file,
                                               ProgressCallback callback = {} );
 
 /// save the slice by the active plane through the sliceNumber to an image file
-MRVOXELS_API VoidOrErrStr saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlane& slicePlain, int sliceNumber, ProgressCallback callback = {} );
+MRVOXELS_API Expected<void> saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlane& slicePlain, int sliceNumber, ProgressCallback callback = {} );
 
 // stores together all data for save voxel object as a group of images
 struct SavingSettings
@@ -53,7 +53,7 @@ struct SavingSettings
 };
 
 /// save all slices by the active plane through all voxel planes along the active axis to an image file
-MRVOXELS_API VoidOrErrStr saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSettings& settings );
+MRVOXELS_API Expected<void> saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSettings& settings );
 
 /// \}
 

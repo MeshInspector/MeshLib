@@ -73,4 +73,40 @@ MRVOXELS_API Expected<TriMesh> marchingCubesAsTriMesh( const VdbVolume& volume, 
 MRVOXELS_API Expected<Mesh> marchingCubes( const FunctionVolume& volume, const MarchingCubesParams& params = {} );
 MRVOXELS_API Expected<TriMesh> marchingCubesAsTriMesh( const FunctionVolume& volume, const MarchingCubesParams& params = {} );
 
+/// converts volume split on parts by planes z=const into mesh,
+/// last z-layer of previous part must be repeated as first z-layer of next part
+/// usage:
+/// MarchingCubesByParts x( dims, params);
+/// x.addPart( part1 );
+/// ...
+/// x.addPart( partN );
+/// Mesh mesh = Mesh::fromTriMesh( *x.finalize() );
+class MarchingCubesByParts
+{
+public:
+    /// prepares convention for given volume dimensions and given parameters
+    /// \param layersPerBlock all z-slices of the volume will be partitioned on blocks of given size to process blocks in parallel (0 means auto-select layersPerBlock)
+    MRVOXELS_API explicit MarchingCubesByParts( const Vector3i & dims, const MarchingCubesParams& params, int layersPerBlock = 0 );
+
+    MRVOXELS_API ~MarchingCubesByParts();
+    MRVOXELS_API MarchingCubesByParts( MarchingCubesByParts && s ) noexcept;
+    MRVOXELS_API MarchingCubesByParts & operator=( MarchingCubesByParts && s ) noexcept;
+
+    /// the number of z-slices of the volume in the blocks
+    MRVOXELS_API int layersPerBlock() const;
+
+    /// the last z-layer of the previous part and the first z-layer of the next part
+    MRVOXELS_API int nextZ() const;
+
+    /// adds one more part of volume into consideration, with first z=nextZ()
+    MRVOXELS_API Expected<void> addPart( const SimpleVolume& part );
+
+    /// finishes processing and outputs produced trimesh
+    MRVOXELS_API Expected<TriMesh> finalize();
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
+};
+
 } //namespace MR

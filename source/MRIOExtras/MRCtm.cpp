@@ -157,7 +157,7 @@ MR_ADD_MESH_LOADER( IOFilter( "Compact triangle-based mesh (.ctm)", "*.ctm" ), f
 namespace MeshSave
 {
 
-VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions& options )
+Expected<void> toCtm( const Mesh & mesh, const std::filesystem::path & file, const CtmSaveOptions& options )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -166,7 +166,7 @@ VoidOrErrStr toCtm( const Mesh & mesh, const std::filesystem::path & file, const
     return toCtm( mesh, out, options );
 }
 
-VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions& options )
+Expected<void> toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions& options )
 {
     MR_TIMER
 
@@ -326,12 +326,12 @@ VoidOrErrStr toCtm( const Mesh & mesh, std::ostream & out, const CtmSaveOptions&
     return {};
 }
 
-VoidOrErrStr toCtm( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings& settings )
+Expected<void> toCtm( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings& settings )
 {
     return toCtm( mesh, file, CtmSaveOptions { settings } );
 }
 
-VoidOrErrStr toCtm( const Mesh& mesh, std::ostream& out, const SaveSettings& settings )
+Expected<void> toCtm( const Mesh& mesh, std::ostream& out, const SaveSettings& settings )
 {
     return toCtm( mesh, out, CtmSaveOptions { settings } );
 }
@@ -436,7 +436,7 @@ MR_ADD_POINTS_LOADER( IOFilter( "CTM (.ctm)", "*.ctm" ), fromCtm )
 namespace PointsSave
 {
 
-VoidOrErrStr toCtm( const PointCloud& points, const std::filesystem::path& file, const CtmSavePointsOptions& options )
+Expected<void> toCtm( const PointCloud& points, const std::filesystem::path& file, const CtmSavePointsOptions& options )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -445,7 +445,7 @@ VoidOrErrStr toCtm( const PointCloud& points, const std::filesystem::path& file,
     return toCtm( points, out, options );
 }
 
-VoidOrErrStr toCtm( const PointCloud& cloud, std::ostream& out, const CtmSavePointsOptions& options )
+Expected<void> toCtm( const PointCloud& cloud, std::ostream& out, const CtmSavePointsOptions& options )
 {
     MR_TIMER
 
@@ -590,12 +590,12 @@ VoidOrErrStr toCtm( const PointCloud& cloud, std::ostream& out, const CtmSavePoi
     return {};
 }
 
-VoidOrErrStr toCtm( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
+Expected<void> toCtm( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
 {
     return toCtm( points, file, CtmSavePointsOptions{ settings } );
 }
 
-VoidOrErrStr toCtm( const PointCloud& points, std::ostream& out, const SaveSettings& settings )
+Expected<void> toCtm( const PointCloud& points, std::ostream& out, const SaveSettings& settings )
 {
     return toCtm( points, out, CtmSavePointsOptions{ settings } );
 }

@@ -169,7 +169,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         value( "None", MR::SlicePlane::None, "None" );
 
     m.def( "saveSliceToImage",
-        MR::decorateExpected( ( MR::VoidOrErrStr( * )( const std::filesystem::path&, const MR::VdbVolume&, const MR::SlicePlane&, int, MR::ProgressCallback ) )& MR::VoxelsSave::saveSliceToImage ),
+        MR::decorateExpected( ( MR::Expected<void>( * )( const std::filesystem::path&, const MR::VdbVolume&, const MR::SlicePlane&, int, MR::ProgressCallback ) )& MR::VoxelsSave::saveSliceToImage ),
         pybind11::arg( "path" ), pybind11::arg( "vdbVolume" ), pybind11::arg( "slicePlane" ), pybind11::arg( "sliceNumber" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
         "Save the slice by the active plane through the sliceNumber to an image file.\n" );
 

@@ -26,7 +26,7 @@ namespace MR
 namespace VoxelsSave
 {
 
-VoidOrErrStr toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback )
+Expected<void> toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback )
 {
     MR_TIMER
     const auto& grid = vdbVolume.data;
@@ -56,7 +56,7 @@ VoidOrErrStr toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, Progres
     return {};
 }
 
-VoidOrErrStr toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback )
+Expected<void> toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback )
 {
     MR_TIMER
     if ( file.empty() )
@@ -98,7 +98,7 @@ VoidOrErrStr toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::p
     return addFileNameInError( toRawFloat( vdbVolume, out, callback ), outPath );
 }
 
-VoidOrErrStr toGav( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback )
+Expected<void> toGav( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback )
 {
     MR_TIMER
     std::ofstream out( file, std::ofstream::binary );
@@ -108,7 +108,7 @@ VoidOrErrStr toGav( const VdbVolume& vdbVolume, const std::filesystem::path& fil
     return addFileNameInError( toGav( vdbVolume, out, callback ), file );
 }
 
-VoidOrErrStr toGav( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback )
+Expected<void> toGav( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback )
 {
     MR_TIMER
     Json::Value headerJson;
@@ -147,7 +147,7 @@ VoidOrErrStr toGav( const VdbVolume& vdbVolume, std::ostream & out, ProgressCall
     return toRawFloat( vdbVolume, out, callback );
 }
 
-VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& filename, ProgressCallback /*callback*/ )
+Expected<void> toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& filename, ProgressCallback /*callback*/ )
 {
     MR_TIMER
     openvdb::FloatGrid::Ptr gridPtr = std::make_shared<openvdb::FloatGrid>();
@@ -173,7 +173,7 @@ VoidOrErrStr toVdb( const VdbVolume& vdbVolume, const std::filesystem::path& fil
 
 MR_FORMAT_REGISTRY_IMPL( VoxelsSaver )
 
-VoidOrErrStr toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesystem::path& file,
+Expected<void> toAnySupportedFormat( const VdbVolume& vdbVolume, const std::filesystem::path& file,
                                    ProgressCallback callback /*= {} */ )
 {
     auto ext = utf8string( file.extension() );
@@ -215,7 +215,7 @@ MR_ADD_VOXELS_SAVER( IOFilter( "Raw (.raw)", "*.raw" ), toRawAutoname )
 MR_ADD_VOXELS_SAVER( IOFilter( "Micro CT (.gav)", "*.gav" ), toGav )
 MR_ADD_VOXELS_SAVER( IOFilter( "OpenVDB (.vdb)", "*.vdb" ), toVdb )
 
-VoidOrErrStr saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlane& slicePlain, int sliceNumber, ProgressCallback callback )
+Expected<void> saveSliceToImage( const std::filesystem::path& path, const VdbVolume& vdbVolume, const SlicePlane& slicePlain, int sliceNumber, ProgressCallback callback )
 {
     const auto& dims = vdbVolume.dims;
     const int textureWidth = dims[( slicePlain + 1 ) % 3];
@@ -276,7 +276,7 @@ VoidOrErrStr saveSliceToImage( const std::filesystem::path& path, const VdbVolum
     return {};
 }
 
-VoidOrErrStr saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSettings& settings )
+Expected<void> saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSettings& settings )
 {
     int numSlices{ 0 };
     switch ( settings.slicePlane )

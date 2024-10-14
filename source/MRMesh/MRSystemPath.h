@@ -53,10 +53,12 @@ public:
     static std::filesystem::path getPluginsDirectory() { return getDirectory( Directory::Plugins ); }
     /// get the Python modules' binaries' directory path
     static std::filesystem::path getPythonModulesDirectory() { return getDirectory( Directory::PythonModules ); }
+    /// get the system font files' directory path
+    MRMESH_API static std::filesystem::path getSystemFontsDirectory();
     /// get name all system fonts
-    static std::vector<std::string> getAllSystemFonts();
+    MRMESH_API static const std::vector<std::string>& getAllSystemFonts();
     /// get name all system fonts that have italics, bold, bold italics
-    static std::vector<std::string> getSystemFonts();
+    MRMESH_API static const std::vector<std::string>& getSystemFonts();
 
 private:
     static SystemPath& instance_();

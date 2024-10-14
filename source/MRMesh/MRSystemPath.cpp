@@ -169,7 +169,20 @@ void SystemPath::overrideDirectory( SystemPath::Directory dir, const std::filesy
     instance_().directories_[(size_t)dir] = path;
 }
 
-std::vector<std::string> SystemPath::getAllSystemFonts()
+std::filesystem::path SystemPath::getSystemFontsDirectory()
+{
+    std::filesystem::path path;
+#if defined(__EMSCRIPTEN__)
+    path = "/usr/share/fonts";
+#elif defined(__APPLE__)
+    path = "Library/Fonts"
+#else
+    path = "C:/Windows/Fonts";
+#endif
+    return path;
+}
+
+const std::vector<std::string>& SystemPath::getAllSystemFonts()
 {
     static std::vector<std::string> allFonts;
     if ( !allFonts.empty() )
@@ -177,14 +190,7 @@ std::vector<std::string> SystemPath::getAllSystemFonts()
         return allFonts;
     }
 
-    std::string path;
-#if defined(__EMSCRIPTEN__)
-    path = "/usr/share/fonts";
-#else 
-    path = "C:/Windows/Fonts";
-    // for MacOS
-    // Library/Fonts
-#endif
+    auto path = getSystemFontsDirectory();
     for ( auto& p : std::filesystem::directory_iterator( path ) )
     {
         allFonts.push_back( p.path().stem().string() );
@@ -193,7 +199,7 @@ std::vector<std::string> SystemPath::getAllSystemFonts()
     return allFonts;
 }
 
-std::vector<std::string> SystemPath::getSystemFonts()
+const std::vector<std::string>& SystemPath::getSystemFonts()
 {
     static std::vector<std::string> fonts;
     if ( !fonts.empty() )

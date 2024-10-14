@@ -1,6 +1,6 @@
-## \page ExamplePythonFreeForm FreeFormDeformer Example
+## \page ExamplePythonFreeForm Free Form Deformation Example
 ##
-## Example of using Free From deformation of the mesh
+## Example of using Free Form deformation of the mesh
 ##
 ## \code
 from meshlib import mrmeshpy as mm

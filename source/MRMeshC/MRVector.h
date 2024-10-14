@@ -3,9 +3,12 @@
 #include "MRMeshFwd.h"
 #include "MRAffineXf.h"
 #include "MRId.h"
-#include "detail/Concat.h"
 
 MR_EXTERN_C_BEGIN
+
+/// concat tokens
+#define MR_CONCAT( a, b ) MR_CONCAT_( a, b )
+#define MR_CONCAT_( a, b ) a ## b
 
 /// To simplify access to C++ array containers (aka std::vector), we use std::span-like structs to store
 /// a pointer to data and array length. There are two important notes about using these structs:
@@ -31,5 +34,8 @@ MR_VECTOR_DECL( Vector3f )
 MR_VECTOR_LIKE_DECL( FaceMap, FaceId )
 MR_VECTOR_LIKE_DECL( WholeEdgeMap, EdgeId )
 MR_VECTOR_LIKE_DECL( VertMap, VertId )
+
+#undef MR_CONCAT_
+#undef MR_CONCAT
 
 MR_EXTERN_C_END

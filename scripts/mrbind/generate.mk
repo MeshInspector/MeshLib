@@ -4,6 +4,13 @@
 # Not entirely sure why I need to adjust `\` to `/` on Windows, since non-mingw32 Make should already operate on Linux-style paths?
 override makefile_dir := $(patsubst ./,.,$(subst \,/,$(dir $(firstword $(MAKEFILE_LIST)))))
 
+# A string of all single-letter Make flags, without spaces.
+override single_letter_makeflags := $(filter-out -%,$(firstword $(MAKEFLAGS)))
+# Non-empty if this is a dry run with `-n`.
+override dry_run := $(findstring n,$(single_letter_makeflags))
+# Non-empty if `--trace` is present.
+override tracing := $(filter --trace,$(MAKEFLAGS))
+
 # A newline.
 override define lf :=
 $(call)
@@ -14,12 +21,8 @@ endef
 override quote = '$(subst ','"'"',$(subst $(lf), ,$1))'
 
 # Same as `$(shell ...)`, but triggers an error on failure.
-override safe_shell =
-ifneq ($(filter --trace,$(MAKEFLAGS)),)
-override safe_shell = $(info Shell command: $1)$(shell $1)$(if $(filter-out 0,$(.SHELLSTATUS)),$(error Unable to execute `$1`, exit code $(.SHELLSTATUS)))
-else
-override safe_shell = $(shell $1)$(if $(filter-out 0,$(.SHELLSTATUS)),$(error Unable to execute `$1`, exit code $(.SHELLSTATUS)))
-endif
+# Same as `$(shell )`, but triggers an error if the command fails.
+override safe_shell = $(if $(dry_run),$(warning Would run command: $1),$(if $(tracing),$(warning Running command: $1))$(shell $1)$(if $(tracing),$(warning Command returned $(.SHELLSTATUS)))$(if $(filter 0,$(.SHELLSTATUS)),,$(error Command failed with exit code $(.SHELLSTATUS): `$1`)))
 
 # Same as `safe_shell`, but discards the output.
 override safe_shell_exec = $(call,$(call safe_shell,$1))
@@ -29,6 +32,14 @@ override load_file = $(subst $(lf), ,$(file <$1))
 
 # Compare version numbers: A <= B
 override version_leq = $(shell printf '%s\n' $1 $2 | sort -CV)$(filter 0,$(.SHELLSTATUS))
+
+# Recursive wildcard function. $1 is a list of directories, $2 is a list of wildcards.
+override rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
+
+# Assign to a variable safely, e.g. `$(call var,foo := 42)`.
+override var = $(eval override $(subst $,$$$$,$1))
+
+
 
 
 
@@ -131,7 +142,6 @@ $(info ABI check: $(CXX_FOR_ABI) DOESN'T mangle C++20 constraints into the funct
 ABI_COMPAT_FLAG := -fclang-abi-compat=17
 endif
 endif
-override CXX_FOR_BINDINGS += $(ABI_COMPAT_FLAG)
 
 
 # Extra compiler and linker flags. `EXTRA_CFLAGS` also affect the parser.
@@ -213,7 +223,29 @@ BUILD_MRMESHNUMPY := 1
 # BUILD_MRMESHNUMPY := $(if $(filter $(PACKAGE_NAME),meshlib),1)
 override BUILD_MRMESHNUMPY := $(filter-out 0,$(BUILD_MRMESHNUMPY))
 
+# Enable PCH.
+ENABLE_PCH := 1
+override ENABLE_PCH := $(filter-out 0,$(ENABLE_PCH))
+
+# If this isn't empty, those are passed when compiling the PCH, and then the PCH is compiled to an object file and linked into the final result.
+PCH_CODEGEN_FLAGS :=
+# Those don't work at the moment. The `-fpch-instantiate-templates` flag is optional.
+# PCH_CODEGEN_FLAGS := -fpch-codegen -fpch-debuginfo -fpch-instantiate-templates
+
+# How many translation units to use for the bindings. Bigger value = less RAM usage, but usually slower build speed.
+# When changing this, update the default value for `-j` above.
+NUM_FRAGMENTS := 64
+
+# The default number of jobs. Override with `-jN`.
+MAKEFLAGS += -j8
+
 # --- End of configuration variables.
+
+
+
+
+.DELETE_ON_ERROR: # Delete output on command failure. Otherwise you'll get incomplete bindings.
+
 
 
 
@@ -221,22 +253,21 @@ override BUILD_MRMESHNUMPY := $(filter-out 0,$(BUILD_MRMESHNUMPY))
 PACKAGE_NAME := meshlib
 MODULE_OUTPUT_DIR := $(MESHLIB_SHLIB_DIR)/$(PACKAGE_NAME)
 
-# Those variables are for mrbind/scripts/apply_to_files.mk
 INPUT_DIRS := $(addprefix $(makefile_dir)/../../source/,$(INPUT_PROJECTS)) $(makefile_dir)/extra_headers
 INPUT_FILES_BLACKLIST := $(call load_file,$(makefile_dir)/input_file_blacklist.txt)
+INPUT_FILES_WHITELIST := %
 ifneq ($(IS_WINDOWS),)
-OUTPUT_DIR := source/TempOutput/PythonBindings/x64/$(VS_MODE)
+TEMP_OUTPUT_DIR := source/TempOutput/PythonBindings/x64/$(VS_MODE)
 else
-OUTPUT_DIR := build/binds
+TEMP_OUTPUT_DIR := build/binds
 endif
 INPUT_GLOBS := *.h
-MRBIND := $(MRBIND_EXE)
 # Note that we're ignoring `operator<=>` in `mrbind_flags.txt` because it causes errors on VS2022:
 # `undefined symbol: void __cdecl std::_Literal_zero_is_expected(void)`,
 # `referenced by source/TempOutput/PythonBindings/x64/Release/binding.0.o:(public: __cdecl std::_Literal_zero::_Literal_zero<int>(int))`.
 MRBIND_FLAGS := $(call load_file,$(makefile_dir)/mrbind_flags.txt)
 MRBIND_FLAGS_FOR_EXTRA_INPUTS := $(call load_file,$(makefile_dir)/mrbind_flags_for_helpers.txt)
-COMPILER_FLAGS := $(EXTRA_CFLAGS) $(call load_file,$(makefile_dir)/common_compiler_parser_flags.txt) $(PYTHON_CFLAGS) -I. -I$(DEPS_INCLUDE_DIR) -I$(makefile_dir)/../../source
+COMPILER_FLAGS := $(ABI_COMPAT_FLAG) $(EXTRA_CFLAGS) $(call load_file,$(makefile_dir)/common_compiler_parser_flags.txt) $(PYTHON_CFLAGS) -I. -I$(DEPS_INCLUDE_DIR) -I$(makefile_dir)/../../source
 COMPILER_FLAGS_LIBCLANG := $(call load_file,$(makefile_dir)/parser_only_flags.txt)
 # Need whitespace before `$(MRBIND_SOURCE)` to handle `~` correctly.
 COMPILER := $(CXX_FOR_BINDINGS) $(subst $(lf), ,$(call load_file,$(makefile_dir)/compiler_only_flags.txt)) -I $(MRBIND_SOURCE)/include -I$(makefile_dir)
@@ -244,8 +275,9 @@ LINKER_OUTPUT := $(MODULE_OUTPUT_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
 LINKER := $(CXX_FOR_BINDINGS) -fuse-ld=lld
 # Unsure if `-dynamiclib` vs `-shared` makes any difference on MacOS. I'm using the former because that's what CMake does.
 LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(DEPS_LIB_DIR) $(PYTHON_LDFLAGS) -L$(MESHLIB_SHLIB_DIR) $(addprefix -l,$(INPUT_PROJECTS)) -lMRPython $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)/linker_flags.txt)
-NUM_FRAGMENTS := 4
 EXTRA_INPUT_SOURCES := $(makefile_dir)/helpers.cpp
+COMBINED_HEADER_OUTPUT := $(TEMP_OUTPUT_DIR)/combined.hpp
+GENERATED_SOURCE_OUTPUT := $(TEMP_OUTPUT_DIR)/binding.cpp
 
 ifneq ($(IS_WINDOWS),)
 # "Cross"-compile to MSVC.
@@ -274,8 +306,8 @@ else # VS_MODE == Release
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrt
 endif
 else # Linux or MacOS:
-COMPILER += -fPIC
 COMPILER += -fvisibility=hidden
+COMPILER_FLAGS += -fPIC
 # MacOS rpath is quirky: 1. Must use `-rpath,` instead of `-rpath=`. 2. Must specify the flag several times, apparently can't use
 #   `:` or `;` as a separators inside of one big flag. 3. As you've noticed, it uses `@loader_path` instead of `$ORIGIN`.
 rpath_origin := $(if $(IS_MACOS),@loader_path,$$ORIGIN)
@@ -308,33 +340,71 @@ COMPILER_FLAGS += -I/usr/include/jsoncpp -isystem/usr/include/freetype2 -isystem
 endif
 endif
 
+# PCH.
+PCH_IMPORT_FLAG :=
+PCH_OBJECT :=
+ifneq ($(ENABLE_PCH),)
+COMPILED_PCH_FILE := $(TEMP_OUTPUT_DIR)/combined_pch.hpp.gch
+PCH_IMPORT_FLAG := -include$(COMPILED_PCH_FILE:.gch=)
+$(COMPILED_PCH_FILE): $(COMBINED_HEADER_OUTPUT)
+	@echo $(call quote,[Compiling PCH] $@)
+	@$(COMPILER) -o $@ -xc++-header $< $(COMPILER_FLAGS) $(PCH_CODEGEN_FLAGS)
+# PCH object file, if enabled.
+ifneq ($(PCH_CODEGEN_FLAGS),)
+PCH_OBJECT := $(TEMP_OUTPUT_DIR)/combined_pch.hpp.o
+$(PCH_OBJECT): $(COMPILED_PCH_FILE)
+	@echo $(call quote,[Compiling PCH object] $@)
+	@$(filter-out -isystem% -I%,$(subst -isystem ,-isystem,$(subst -I ,-I,$(COMPILER) $(COMPILER_FLAGS)))) -c -o $@ $(COMPILED_PCH_FILE)
+endif
+endif
 
-override mrbind_vars = $(subst $,$$$$, \
-	INPUT_DIRS=$(call quote,$(INPUT_DIRS)) \
-	INPUT_FILES_BLACKLIST=$(call quote,$(INPUT_FILES_BLACKLIST)) \
-	OUTPUT_DIR=$(call quote,$(OUTPUT_DIR)) \
-	INPUT_GLOBS=$(call quote,$(INPUT_GLOBS)) \
-	MRBIND=$(call quote,$(MRBIND)) \
-	MRBIND_FLAGS=$(call quote,$(MRBIND_FLAGS)) \
-	MRBIND_FLAGS_FOR_EXTRA_INPUTS=$(call quote,$(MRBIND_FLAGS_FOR_EXTRA_INPUTS)) \
-	COMPILER_FLAGS=$(call quote,$(COMPILER_FLAGS)) \
-	COMPILER_FLAGS_LIBCLANG=$(call quote,$(COMPILER_FLAGS_LIBCLANG)) \
-	COMPILER=$(call quote,$(COMPILER)) \
-	LINKER_OUTPUT=$(call quote,$(LINKER_OUTPUT)) \
-	LINKER=$(call quote,$(LINKER)) \
-	LINKER_FLAGS=$(call quote,$(LINKER_FLAGS)) \
-	NUM_FRAGMENTS=$(call quote,$(NUM_FRAGMENTS)) \
-	EXTRA_INPUT_SOURCES=$(call quote,$(EXTRA_INPUT_SOURCES)) \
-)
 
-# Generated mrmeshpy.
-$(LINKER_OUTPUT): | $(MODULE_OUTPUT_DIR)
-	@$(MAKE) -f $(MRBIND_SOURCE)/scripts/apply_to_files.mk $(mrbind_vars)
+# Directories:
+# Temporary output.
+$(TEMP_OUTPUT_DIR):
+	@mkdir -p $(call quote,$@)
+# Module output.
+$(MODULE_OUTPUT_DIR):
+	@mkdir -p $(call quote,$@)
 
-# Only generate mrmeshpy, but don't compile.
+# The single header including all target headers.
+override input_files := $(filter-out $(INPUT_FILES_BLACKLIST),$(filter $(INPUT_FILES_WHITELIST),$(call rwildcard,$(INPUT_DIRS),$(INPUT_GLOBS))))
+$(COMBINED_HEADER_OUTPUT): $(input_files) | $(TEMP_OUTPUT_DIR)
+	$(file >$@,)
+	$(foreach f,$(input_files),$(file >>$@,#include "$f"$(lf)))
+# The generated binding source.
+# Note, this DOESN'T use the PCH, because the macros are different (PCH enables `-DMR_COMPILING_PB11_BINDINGS`, but this needs `-DMR_PARSING_FOR_PB11_BINDINGS`).
 .PHONY: only-generate
-only-generate:
-	@$(MAKE) -f $(MRBIND_SOURCE)/scripts/apply_to_files.mk generate $(mrbind_vars)
+only-generate: $(GENERATED_SOURCE_OUTPUT)
+$(GENERATED_SOURCE_OUTPUT): $(COMBINED_HEADER_OUTPUT) | $(TEMP_OUTPUT_DIR)
+	@echo $(call quote,[Generating] binding.cpp)
+	@$(MRBIND_EXE) $(MRBIND_FLAGS) $(call quote,$<) -o $(call quote,$@) -- $(COMPILER_FLAGS_LIBCLANG) $(COMPILER_FLAGS)
+# The object files for all fragments of the generated source.
+override object_files := $(PCH_OBJECT) $(patsubst %,$(TEMP_OUTPUT_DIR)/binding.%.o,$(call safe_shell,bash -c $(call quote,echo {0..$(call safe_shell,bash -c 'echo $$(($(strip $(NUM_FRAGMENTS))-1))')})))
+$(TEMP_OUTPUT_DIR)/binding.%.o: $(GENERATED_SOURCE_OUTPUT) $(COMPILED_PCH_FILE) | $(TEMP_OUTPUT_DIR)
+	@echo $(call quote,[Compiling] $< (fragment $*))
+	@$(COMPILER) $(call quote,$<) -c -o $(call quote,$@) $(COMPILER_FLAGS) $(PCH_IMPORT_FLAG) -DMB_NUM_FRAGMENTS=$(strip $(NUM_FRAGMENTS)) -DMB_FRAGMENT=$* $(if $(filter 0,$*),-DMB_DEFINE_IMPLEMENTATION)
+# Generate and compile extra files.
+override define extra_file_snippet =
+$(call var,_generated := $(TEMP_OUTPUT_DIR)/binding_extra.$(basename $(notdir $1)).cpp)
+$(call var,_object := $(_generated:.cpp=.o))
+$(call var,object_files += $(_object))
+only-generate: $(_generated)
+$(_generated): $1 | $(TEMP_OUTPUT_DIR)
+	@echo $(call quote,[Generating] $(notdir $(_generated)))
+	@$(MRBIND_EXE) $(MRBIND_FLAGS_FOR_EXTRA_INPUTS) $(call quote,$1) -o $(call quote,$(_generated)) -- $(COMPILER_FLAGS_LIBCLANG) $(COMPILER_FLAGS)
+$(_object): $(_generated) | $(TEMP_OUTPUT_DIR)
+	@echo $(call quote,[Compiling] $(_generated))
+	@$(COMPILER) $(call quote,$(_generated)) -c -o $(call quote,$(_object)) $(COMPILER_FLAGS)
+endef
+# Linking the primary module.
+$(foreach s,$(EXTRA_INPUT_SOURCES),$(eval $(call extra_file_snippet,$s)))
+$(LINKER_OUTPUT): $(object_files) | $(MODULE_OUTPUT_DIR)
+	@echo $(call quote,[Linking] $@)
+	@$(LINKER) $^ -o $(call quote,$@) $(LINKER_FLAGS)
+
+
+
 
 # Handwritten mrmeshnumpy. But only if we can't reuse it from the default build.
 ifneq ($(BUILD_MRMESHNUMPY),)
@@ -381,7 +451,3 @@ endif
 .DEFAULT_GOAL := all
 .PHONY: all
 all: $(ALL_OUTPUTS)
-
-# The directory for the modules.
-$(MODULE_OUTPUT_DIR):
-	@mkdir -p $@

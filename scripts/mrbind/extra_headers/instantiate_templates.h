@@ -1,3 +1,5 @@
+#pragma once
+
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRVector3.h"
 

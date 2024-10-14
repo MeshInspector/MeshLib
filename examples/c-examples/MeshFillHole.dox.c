@@ -41,7 +41,7 @@ int main( int argc, char* argv[] )
 
     // get list of existing holes; each hole is represented by a single edge lying on the hole's border
     MREdgePath* holes = mrMeshFindHoleRepresentiveEdges( mesh );
-    if ( mrEdgePathSize( holes ) == 0 )
+    if ( holes->size == 0 )
     {
         printf( "Mesh doesn't have any holes" );
         goto out_holes;
@@ -54,7 +54,7 @@ int main( int argc, char* argv[] )
     MRFillHoleMetric* metric = mrGetUniversalMetric( mesh );
     params.metric = metric;
     // optionally get the bitset of created faces
-    MRFaceBitSet* newFaces = mrFaceBitSetNew();
+    MRFaceBitSet* newFaces = mrFaceBitSetNew( 0, false );
     params.outNewFaces = newFaces;
 
     // you can either fill all holes at once or one by one
@@ -62,7 +62,7 @@ int main( int argc, char* argv[] )
     size_t newFaceCount = 0;
 #define FILL_ALL_HOLES 1
 #if FILL_ALL_HOLES
-    mrFillHoles( mesh, mrEdgePathData( holes ), mrEdgePathSize( holes ), &params );
+    mrFillHoles( mesh, holes->data, holes->size, &params );
     newFaceCount = mrBitSetCount( newFaces );
 #else
     for ( int i = 0; i < mrEdgePathSize( holes ); i++ )

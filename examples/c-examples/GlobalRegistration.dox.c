@@ -115,7 +115,7 @@ int main( int argc, char* argv[] )
     MRPointCloud* output = mrPointCloudNew();
     for ( int i = 0; i < inputNum; i++ )
     {
-        const MRAffineXf3f* xf = mrVectorAffineXf3fData( xfs ) + i;
+        const MRAffineXf3f* xf = xfs->data + i;
         for ( int j = 0; j < mrPointCloudPointsNum( inputs[i] ); j++ )
         {
             MRVector3f* point = mrPointCloudPointsRef( inputs[i] ) + j;

@@ -118,7 +118,11 @@ EMSCRIPTEN_KEEPALIVE int emsCallDownloadCallback( double v, int ctxId )
 namespace
 {
 
+#if CPR_VERSION_MAJOR >= 2 || ( CPR_VERSION_MAJOR == 1 && CPR_VERSION_MINOR >= 11 )
+bool downloadFileCallback( const std::string_view& data, intptr_t userdata )
+#else
 bool downloadFileCallback( std::string data, intptr_t userdata )
+#endif
 {
     const auto ctxId = (int)userdata;
     auto& ctx = sRequestContextMap.at( ctxId );

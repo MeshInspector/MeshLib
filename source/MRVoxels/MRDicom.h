@@ -63,9 +63,9 @@ namespace VoxelsSave
 {
 
 /// Save voxels objet to a single 3d DICOM file
-MRVOXELS_API VoidOrErrStr toDCM( const VdbVolume& vdbVolume, const std::filesystem::path& path, ProgressCallback cb = {} );
+MRVOXELS_API Expected<void> toDCM( const VdbVolume& vdbVolume, const std::filesystem::path& path, ProgressCallback cb = {} );
 template <typename T>
-MRVOXELS_API VoidOrErrStr toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::filesystem::path& path, ProgressCallback cb = {} );
+MRVOXELS_API Expected<void> toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::filesystem::path& path, ProgressCallback cb = {} );
 
 } // namespace VoxelsSave
 

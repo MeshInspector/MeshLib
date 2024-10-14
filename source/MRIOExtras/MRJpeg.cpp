@@ -98,7 +98,7 @@ MR_ADD_IMAGE_LOADER_WITH_PRIORITY( IOFilter( "JPEG (.jpg,.jpeg)", "*.jpg;*.jpeg"
 namespace ImageSave
 {
 
-VoidOrErrStr toJpeg( const Image& image, const std::filesystem::path& path )
+Expected<void> toJpeg( const Image& image, const std::filesystem::path& path )
 {
     unsigned long jpegSize = 0;
     JpegWriter writer;

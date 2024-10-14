@@ -209,12 +209,12 @@ public:
     ///   models in the folder by given path and
     ///   fields in given JSON
     /// \param childId is its ordinal number within the parent
-    MRMESH_API Expected<std::vector<std::future<VoidOrErrStr>>> serializeRecursive( const std::filesystem::path& path, Json::Value& root, int childId ) const;
+    MRMESH_API Expected<std::vector<std::future<Expected<void>>>> serializeRecursive( const std::filesystem::path& path, Json::Value& root, int childId ) const;
 
     /// loads subtree into this Object
     ///   models from the folder by given path and
     ///   fields from given JSON
-    MRMESH_API VoidOrErrStr deserializeRecursive( const std::filesystem::path& path, const Json::Value& root,
+    MRMESH_API Expected<void> deserializeRecursive( const std::filesystem::path& path, const Json::Value& root,
         ProgressCallback progressCb = {}, int* objCounter = nullptr );
 
     /// swaps this object with other
@@ -260,14 +260,14 @@ protected:
 
     /// Creates future to save object model (e.g. mesh) in given file
     /// path is full filename without extension
-    MRMESH_API virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& path ) const;
+    MRMESH_API virtual Expected<std::future<Expected<void>>> serializeModel_( const std::filesystem::path& path ) const;
 
     /// Write parameters to given Json::Value,
     /// \note if you override this method, please call Base::serializeFields_(root) in the beginning
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const;
 
     /// Reads model from file
-    MRMESH_API virtual VoidOrErrStr deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} );
+    MRMESH_API virtual Expected<void> deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} );
 
     /// Reads parameters from json value
     /// \note if you override this method, please call Base::deserializeFields_(root) in the beginning

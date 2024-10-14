@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRId.h"
+#include "MRVector.h"
 
 MR_EXTERN_C_BEGIN
 
@@ -14,33 +15,24 @@ MRMESHC_API const MRVertBitSet* mrMeshTopologyGetValidVerts( const MRMeshTopolog
 /// returns cached set of all valid faces
 MRMESHC_API const MRFaceBitSet* mrMeshTopologyGetValidFaces( const MRMeshTopology* top );
 
+MR_VECTOR_LIKE_DECL( Triangulation, ThreeVertIds )
+
 /// returns three vertex ids for valid triangles (which can be accessed by FaceId),
 /// vertex ids for invalid triangles are undefined, and shall not be read
 MRMESHC_API MRTriangulation* mrMeshTopologyGetTriangulation( const MRMeshTopology* top );
 
-/// gets read-only access to the vertex triples of the triangulation
-MRMESHC_API const MRThreeVertIds* mrTriangulationData( const MRTriangulation* tris );
-
-/// gets total count of the vertex triples of the triangulation
-MRMESHC_API size_t mrTriangulationSize( const MRTriangulation* tris );
-
-/// deallocates the Triangulation object
-MRMESHC_API void mrTriangulationFree( MRTriangulation* tris );
-
 /// returns the number of face records including invalid ones
 MRMESHC_API size_t mrMeshTopologyFaceSize( const MRMeshTopology* top );
+
+MR_VECTOR_LIKE_DECL( EdgePath, EdgeId )
+typedef MREdgePath MREdgeLoop;
 
 /// returns one edge with no valid left face for every boundary in the mesh
 MRMESHC_API MREdgePath* mrMeshTopologyFindHoleRepresentiveEdges( const MRMeshTopology* top );
 
-/// gets read-only access to the edges of the edge path
-MRMESHC_API const MREdgeId* mrEdgePathData( const MREdgePath* ep );
-
-/// gets total count of the edges of the edge path
-MRMESHC_API size_t mrEdgePathSize( const MREdgePath* ep );
-
-/// deallocates the EdgePath object
-MRMESHC_API void mrEdgePathFree( MREdgePath* ep );
+/// gets 3 vertices of given triangular face;
+/// the vertices are returned in counter-clockwise order if look from mesh outside
+MRMESHC_API void mrMeshTopologyGetLeftTriVerts( const MRMeshTopology* top, MREdgeId a, MRVertId* v0, MRVertId* v1, MRVertId* v2 );
 
 /// returns the number of hole loops in the mesh;
 /// \param holeRepresentativeEdges optional output of the smallest edge id with no valid left face in every hole

@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRId.h"
+#include "MRMeshTopology.h"
 
 MR_EXTERN_C_BEGIN
 

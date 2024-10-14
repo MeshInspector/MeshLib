@@ -257,13 +257,13 @@ protected:
     /// pls call Parent::swapSignals_ first when overriding this function
     MRMESH_API virtual void swapSignals_( Object& other ) override;
 
-    MRMESH_API virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& path ) const override;
+    MRMESH_API virtual Expected<std::future<Expected<void>>> serializeModel_( const std::filesystem::path& path ) const override;
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
-    MRMESH_API VoidOrErrStr deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
+    MRMESH_API Expected<void> deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
 
     /// set all visualize properties masks
     MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;

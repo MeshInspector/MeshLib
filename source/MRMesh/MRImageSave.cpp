@@ -38,7 +38,7 @@ struct BMPHeader
 };
 #pragma pack(pop)
 
-VoidOrErrStr toBmp( const Image& image, const std::filesystem::path& file )
+Expected<void> toBmp( const Image& image, const std::filesystem::path& file )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -68,7 +68,7 @@ VoidOrErrStr toBmp( const Image& image, const std::filesystem::path& file )
 #ifndef __EMSCRIPTEN__
 
 #ifndef MRMESH_NO_TIFF
-VoidOrErrStr toTiff( const Image& image, const std::filesystem::path& path )
+Expected<void> toTiff( const Image& image, const std::filesystem::path& path )
 {
     BaseTiffParameters btParams;
     btParams.bytesPerSample = 1;
@@ -81,7 +81,7 @@ VoidOrErrStr toTiff( const Image& image, const std::filesystem::path& path )
 
 #endif
 
-VoidOrErrStr toAnySupportedFormat( const Image& image, const std::filesystem::path& file )
+Expected<void> toAnySupportedFormat( const Image& image, const std::filesystem::path& file )
 {
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )

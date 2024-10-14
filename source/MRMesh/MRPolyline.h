@@ -89,6 +89,10 @@ public:
     /// returns squared Euclidean length of the edge (faster to compute than length)
     [[nodiscard]] float edgeLengthSq( EdgeId e ) const { return edgeVector( e ).lengthSq(); }
 
+    /// calculates directed loop area if iterating in `e` direction
+    /// .z = FLT_MAX if `e` does not represent a loop
+    [[nodiscard]] MRMESH_API Vector3f loopDirArea( EdgeId e ) const;
+
     /// returns total length of the polyline
     [[nodiscard]] MRMESH_API float totalLength() const;
 

@@ -652,7 +652,7 @@ std::filesystem::path getStepTemporaryDirectory()
 std::mutex cOpenCascadeTempFileMutex = {};
 #endif
 
-VoidOrErrStr readFromFile( STEPControl_Reader& reader, const std::filesystem::path& path )
+Expected<void> readFromFile( STEPControl_Reader& reader, const std::filesystem::path& path )
 {
     MR_TIMER
 
@@ -662,7 +662,7 @@ VoidOrErrStr readFromFile( STEPControl_Reader& reader, const std::filesystem::pa
     return {};
 }
 
-VoidOrErrStr readFromStream( STEPControl_Reader& reader, std::istream& in )
+Expected<void> readFromStream( STEPControl_Reader& reader, std::istream& in )
 {
     MR_TIMER
 
@@ -692,7 +692,7 @@ VoidOrErrStr readFromStream( STEPControl_Reader& reader, std::istream& in )
 }
 
 #if !STEP_READER_FIXED
-VoidOrErrStr repairStepFile( STEPControl_Reader& reader )
+Expected<void> repairStepFile( STEPControl_Reader& reader )
 {
     const auto model = reader.StepModel();
     const auto protocol = Handle( StepData_Protocol )::DownCast( model->Protocol() );
@@ -736,7 +736,7 @@ VoidOrErrStr repairStepFile( STEPControl_Reader& reader )
 
 std::mutex cOpenCascadeMutex = {};
 
-Expected<Mesh> fromStepImpl( const std::function<VoidOrErrStr ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
+Expected<Mesh> fromStepImpl( const std::function<Expected<void> ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
 {
     MR_TIMER
 
@@ -767,7 +767,7 @@ Expected<Mesh> fromStepImpl( const std::function<VoidOrErrStr ( STEPControl_Read
 }
 
 #ifndef MRIOEXTRAS_OPENCASCADE_USE_XDE
-Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<VoidOrErrStr ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
+Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Expected<void> ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
 {
     MR_TIMER
 
@@ -792,7 +792,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Voi
 #endif
 
 #ifdef MRIOEXTRAS_OPENCASCADE_USE_XDE
-Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<VoidOrErrStr ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
+Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Expected<void> ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
 {
     MR_TIMER
 

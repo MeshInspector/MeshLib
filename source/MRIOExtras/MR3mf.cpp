@@ -124,13 +124,13 @@ class Node
 {
 private:    
 
-    VoidOrErrStr loadColorGroup_( const tinyxml2::XMLElement* xmlNode );
-    VoidOrErrStr loadBaseMaterials_( const tinyxml2::XMLElement* xmlNode );
-    VoidOrErrStr loadObject_( const tinyxml2::XMLElement* xmlNode, ProgressCallback callback );    
-    VoidOrErrStr loadBuildData_( const tinyxml2::XMLElement* xmlNode );
-    VoidOrErrStr loadTexture2d_( const tinyxml2::XMLElement* xmlNode );
-    VoidOrErrStr loadTexture2dGroup_( const tinyxml2::XMLElement* xmlNode );
-    VoidOrErrStr loadMultiproperties_( const tinyxml2::XMLElement* xmlNode );
+    Expected<void> loadColorGroup_( const tinyxml2::XMLElement* xmlNode );
+    Expected<void> loadBaseMaterials_( const tinyxml2::XMLElement* xmlNode );
+    Expected<void> loadObject_( const tinyxml2::XMLElement* xmlNode, ProgressCallback callback );    
+    Expected<void> loadBuildData_( const tinyxml2::XMLElement* xmlNode );
+    Expected<void> loadTexture2d_( const tinyxml2::XMLElement* xmlNode );
+    Expected<void> loadTexture2dGroup_( const tinyxml2::XMLElement* xmlNode );
+    Expected<void> loadMultiproperties_( const tinyxml2::XMLElement* xmlNode );
     
     Expected<Mesh> loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCallback callback );
 
@@ -171,7 +171,7 @@ public:
     {
     }
 
-    VoidOrErrStr load();
+    Expected<void> load();
 
     friend class ThreeMFLoader;
 };
@@ -190,11 +190,11 @@ class ThreeMFLoader
 
     Expected<std::unique_ptr<tinyxml2::XMLDocument>> loadXml_( const std::filesystem::path& file );
     // Load and parse all XML .model files
-    VoidOrErrStr loadXmls_( const std::vector<std::filesystem::path>& files );
+    Expected<void> loadXmls_( const std::vector<std::filesystem::path>& files );
 
     // Load object tree from loaded XML files
-    VoidOrErrStr loadTree_( ProgressCallback callback );
-    VoidOrErrStr loadDocument_( std::unique_ptr<tinyxml2::XMLDocument>& doc, ProgressCallback callback );
+    Expected<void> loadTree_( ProgressCallback callback );
+    Expected<void> loadDocument_( std::unique_ptr<tinyxml2::XMLDocument>& doc, ProgressCallback callback );
 
     int duplicatedVertexCountAccum = 0;
     int skippedFaceCountAccum = 0;    
@@ -246,7 +246,7 @@ Expected<std::unique_ptr<tinyxml2::XMLDocument>> ThreeMFLoader::loadXml_( const 
     return doc;
 }
 
-VoidOrErrStr ThreeMFLoader::loadXmls_( const std::vector<std::filesystem::path>& files )
+Expected<void> ThreeMFLoader::loadXmls_( const std::vector<std::filesystem::path>& files )
 {
     for ( std::filesystem::path file : files )
     {
@@ -262,7 +262,7 @@ VoidOrErrStr ThreeMFLoader::loadXmls_( const std::vector<std::filesystem::path>&
     return {};
 }
 
-VoidOrErrStr ThreeMFLoader::loadDocument_( std::unique_ptr<tinyxml2::XMLDocument>& doc, ProgressCallback callback )
+Expected<void> ThreeMFLoader::loadDocument_( std::unique_ptr<tinyxml2::XMLDocument>& doc, ProgressCallback callback )
 {
     auto xmlNode = doc->FirstChildElement();
     if ( std::string( xmlNode->Name() ) != "model" ) //maybe another xml, just skip
@@ -286,7 +286,7 @@ VoidOrErrStr ThreeMFLoader::loadDocument_( std::unique_ptr<tinyxml2::XMLDocument
     return {};
 }
 
-VoidOrErrStr ThreeMFLoader::loadTree_( ProgressCallback callback )
+Expected<void> ThreeMFLoader::loadTree_( ProgressCallback callback )
 {
     roots_.reserve( documents_.size() );
     Node::loader = this;
@@ -384,7 +384,7 @@ Expected<std::shared_ptr<Object>> ThreeMFLoader::load( const std::vector<std::fi
     return objRes->children().size() > 1 ? objRes : objRes->children().front();
 }
 
-VoidOrErrStr Node::loadObject_( const tinyxml2::XMLElement* xmlNode, ProgressCallback callback )
+Expected<void> Node::loadObject_( const tinyxml2::XMLElement* xmlNode, ProgressCallback callback )
 {
     if ( auto refNode = pNode; refNode && ( refNode->nodeType == NodeType::ColorGroup || refNode->nodeType == NodeType::BaseMaterials ) )
     {
@@ -464,7 +464,7 @@ VoidOrErrStr Node::loadObject_( const tinyxml2::XMLElement* xmlNode, ProgressCal
     return unexpected( "Object has no mesh" );
 }
 
-VoidOrErrStr Node::loadBuildData_( const tinyxml2::XMLElement* xmlNode )
+Expected<void> Node::loadBuildData_( const tinyxml2::XMLElement* xmlNode )
 {
     for ( auto itemNode = xmlNode->FirstChildElement( "item" ); itemNode; itemNode = itemNode->NextSiblingElement( "item" ) )
     {
@@ -513,7 +513,7 @@ VoidOrErrStr Node::loadBuildData_( const tinyxml2::XMLElement* xmlNode )
     return {};
 }
 
-VoidOrErrStr Node::load()
+Expected<void> Node::load()
 {
     if ( auto it = nodeTypeMap.find( nodeName ); it != nodeTypeMap.end() )
         nodeType = it->second;
@@ -580,7 +580,7 @@ VoidOrErrStr Node::load()
     return {};
 }
 
-VoidOrErrStr Node::loadBaseMaterials_( const tinyxml2::XMLElement* xmlNode )
+Expected<void> Node::loadBaseMaterials_( const tinyxml2::XMLElement* xmlNode )
 {
     for ( auto materialNode = xmlNode->FirstChildElement( "base" ); materialNode; materialNode = materialNode->NextSiblingElement() )
     {
@@ -595,7 +595,7 @@ VoidOrErrStr Node::loadBaseMaterials_( const tinyxml2::XMLElement* xmlNode )
     return {};
 }
 
-VoidOrErrStr Node::loadColorGroup_( const tinyxml2::XMLElement* xmlNode )
+Expected<void> Node::loadColorGroup_( const tinyxml2::XMLElement* xmlNode )
 {
     for ( auto colorNode = xmlNode->FirstChildElement( "m:color" ); colorNode; colorNode = colorNode->NextSiblingElement( "m:color" ) )
     {
@@ -610,7 +610,7 @@ VoidOrErrStr Node::loadColorGroup_( const tinyxml2::XMLElement* xmlNode )
     return {};
 }
 
-VoidOrErrStr Node::loadTexture2d_( const tinyxml2::XMLElement* xmlNode )
+Expected<void> Node::loadTexture2d_( const tinyxml2::XMLElement* xmlNode )
 {
     std::string innerPath = "./" + std::string(xmlNode->Attribute("path"));
     if ( innerPath.size() == 2 )
@@ -632,7 +632,7 @@ VoidOrErrStr Node::loadTexture2d_( const tinyxml2::XMLElement* xmlNode )
     return {};
 }
 
-VoidOrErrStr Node::loadTexture2dGroup_( const tinyxml2::XMLElement* xmlNode )
+Expected<void> Node::loadTexture2dGroup_( const tinyxml2::XMLElement* xmlNode )
 {
     if ( tinyxml2::XML_SUCCESS != xmlNode->QueryIntAttribute( "texid", &texId ) )
         return unexpected( std::string( "3DF model texture2d group node does not have 'texid' attribute" ) );
@@ -915,7 +915,7 @@ Expected<Mesh> Node::loadMesh_( const tinyxml2::XMLElement* meshNode, ProgressCa
     return res;
 }
 
-VoidOrErrStr Node::loadMultiproperties_( const tinyxml2::XMLElement* xmlNode )
+Expected<void> Node::loadMultiproperties_( const tinyxml2::XMLElement* xmlNode )
 {
     std::string attr( xmlNode->Attribute( "pids" ) );
     auto intsOrErr = parseInts( attr );

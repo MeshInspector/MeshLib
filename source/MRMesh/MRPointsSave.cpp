@@ -39,7 +39,7 @@ private:
 
 } //anonymous namespace
 
-VoidOrErrStr toXyz( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
+Expected<void> toXyz( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -48,7 +48,7 @@ VoidOrErrStr toXyz( const PointCloud& points, const std::filesystem::path& file,
     return toXyz( points, out, settings );
 }
 
-VoidOrErrStr toXyz( const PointCloud& cloud, std::ostream& out, const SaveSettings& settings )
+Expected<void> toXyz( const PointCloud& cloud, std::ostream& out, const SaveSettings& settings )
 {
     MR_TIMER
     const size_t totalPoints = settings.saveValidOnly ? cloud.validPoints.count() : cloud.points.size();
@@ -79,7 +79,7 @@ VoidOrErrStr toXyz( const PointCloud& cloud, std::ostream& out, const SaveSettin
     return {};
 }
 
-VoidOrErrStr toXyzn( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
+Expected<void> toXyzn( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -88,7 +88,7 @@ VoidOrErrStr toXyzn( const PointCloud& points, const std::filesystem::path& file
     return toXyzn( points, out, settings );
 }
 
-VoidOrErrStr toXyzn( const PointCloud& cloud, std::ostream& out, const SaveSettings& settings )
+Expected<void> toXyzn( const PointCloud& cloud, std::ostream& out, const SaveSettings& settings )
 {
     MR_TIMER
     if ( !cloud.hasNormals() )
@@ -121,7 +121,7 @@ VoidOrErrStr toXyzn( const PointCloud& cloud, std::ostream& out, const SaveSetti
     return {};
 }
 
-VoidOrErrStr toAsc( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
+Expected<void> toAsc( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -130,7 +130,7 @@ VoidOrErrStr toAsc( const PointCloud& points, const std::filesystem::path& file,
     return toAsc( points, out, settings );
 }
 
-VoidOrErrStr toAsc( const PointCloud& cloud, std::ostream& out, const SaveSettings& settings )
+Expected<void> toAsc( const PointCloud& cloud, std::ostream& out, const SaveSettings& settings )
 {
     if ( cloud.hasNormals() )
         return toXyzn( cloud, out, settings );
@@ -138,7 +138,7 @@ VoidOrErrStr toAsc( const PointCloud& cloud, std::ostream& out, const SaveSettin
         return toXyz( cloud, out, settings );
 }
 
-VoidOrErrStr toPly( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
+Expected<void> toPly( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -147,7 +147,7 @@ VoidOrErrStr toPly( const PointCloud& points, const std::filesystem::path& file,
     return toPly( points, out, settings );
 }
 
-VoidOrErrStr toPly( const PointCloud& cloud, std::ostream& out, const SaveSettings& settings )
+Expected<void> toPly( const PointCloud& cloud, std::ostream& out, const SaveSettings& settings )
 {
     MR_TIMER
     const size_t totalPoints = settings.saveValidOnly ? cloud.validPoints.count() : cloud.points.size();
@@ -203,7 +203,7 @@ VoidOrErrStr toPly( const PointCloud& cloud, std::ostream& out, const SaveSettin
     return {};
 }
 
-VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
+Expected<void> toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
 {
     auto ext = utf8string( file.extension() );
     for ( auto& c : ext )
@@ -216,7 +216,7 @@ VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::filesyst
 
     return saver.fileSave( points, file, settings );
 }
-VoidOrErrStr toAnySupportedFormat( const PointCloud& points, const std::string& extension, std::ostream& out, const SaveSettings& settings )
+Expected<void> toAnySupportedFormat( const PointCloud& points, const std::string& extension, std::ostream& out, const SaveSettings& settings )
 {
     auto ext = extension;
     for ( auto& c : ext )

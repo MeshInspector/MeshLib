@@ -162,7 +162,7 @@ zip_int64_t istreamZipSourceCallback( void *istream, void *data, zip_uint64_t le
     return -1;
 }
 
-VoidOrErrStr decompressZip_( zip_t * zip, const std::filesystem::path& targetFolder, const char * password )
+Expected<void> decompressZip_( zip_t * zip, const std::filesystem::path& targetFolder, const char * password )
 {
     assert( zip );
 
@@ -224,7 +224,7 @@ VoidOrErrStr decompressZip_( zip_t * zip, const std::filesystem::path& targetFol
 
 } // anonymous namespace
 
-VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder,
+Expected<void> compressZip( const std::filesystem::path& zipFile, const std::filesystem::path& sourceFolder,
     const std::vector<std::filesystem::path>& excludeFiles, const char * password, ProgressCallback cb )
 {
     MR_TIMER
@@ -316,7 +316,7 @@ VoidOrErrStr compressZip( const std::filesystem::path& zipFile, const std::files
     return {};
 }
 
-VoidOrErrStr decompressZip( const std::filesystem::path& zipFile, const std::filesystem::path& targetFolder, const char * password )
+Expected<void> decompressZip( const std::filesystem::path& zipFile, const std::filesystem::path& targetFolder, const char * password )
 {
     MR_TIMER
     int err;
@@ -327,7 +327,7 @@ VoidOrErrStr decompressZip( const std::filesystem::path& zipFile, const std::fil
     return decompressZip_( zip, targetFolder, password );
 }
 
-VoidOrErrStr decompressZip( std::istream& zipStream, const std::filesystem::path& targetFolder, const char * password )
+Expected<void> decompressZip( std::istream& zipStream, const std::filesystem::path& targetFolder, const char * password )
 {
     MR_TIMER
 

@@ -49,7 +49,7 @@ void ObjectMeshHolder::setSelectedEdgesColor( const Color& color, ViewportId id 
     needRedraw_ = true;
 }
 
-Expected<std::future<VoidOrErrStr>> ObjectMeshHolder::serializeModel_( const std::filesystem::path& path ) const
+Expected<std::future<Expected<void>>> ObjectMeshHolder::serializeModel_( const std::filesystem::path& path ) const
 {
     if ( ancillary_ || !mesh_ )
         return {};
@@ -242,7 +242,7 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
         setDefaultSceneProperties_();
 }
 
-VoidOrErrStr ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
+Expected<void> ObjectMeshHolder::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     vertsColorMap_.clear();
     auto modelPath = pathFromUtf8( utf8string( path ) + ".ctm" ); //quick path for most used format

@@ -54,10 +54,10 @@ protected:
 
     MRMESH_API virtual void serializeFields_( Json::Value& root ) const override;
 
-    virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& ) const override
+    virtual Expected<std::future<Expected<void>>> serializeModel_( const std::filesystem::path& ) const override
         { return {}; }
 
-    virtual VoidOrErrStr deserializeModel_( const std::filesystem::path&, ProgressCallback ) override
+    virtual Expected<void> deserializeModel_( const std::filesystem::path&, ProgressCallback ) override
         { return {}; }
 
     MRMESH_API void setupRenderObject_() const override;

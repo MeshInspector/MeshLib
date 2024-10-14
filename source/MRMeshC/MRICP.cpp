@@ -1,8 +1,20 @@
 #include "MRICP.h"
 
+#include "detail/TypeCast.h"
+
 #include "MRMesh/MRICP.h"
 
 using namespace MR;
+
+REGISTER_AUTO_CAST( AffineXf3f )
+REGISTER_AUTO_CAST( ICP )
+REGISTER_AUTO_CAST( ICPMethod )
+REGISTER_AUTO_CAST( ICPMode )
+REGISTER_AUTO_CAST( ICPPairData )
+REGISTER_AUTO_CAST( IPointPairs )
+REGISTER_AUTO_CAST( MeshOrPointsXf )
+REGISTER_AUTO_CAST( Vector3f )
+REGISTER_AUTO_CAST2( std::string, MRString )
 
 static_assert( sizeof( MRICPPairData ) == sizeof( MR::ICPPairData ) );
 
@@ -12,30 +24,28 @@ static_assert( sizeof( MRPointPair ) == sizeof( MR::PointPair ) );
 
 const MRICPPairData* mrIPointPairsGet( const MRIPointPairs* pp_, size_t idx )
 {
-    const auto& pp = *reinterpret_cast<const IPointPairs*>( pp_ );
-    const auto& res = pp[idx];
-    return reinterpret_cast<const MRICPPairData*>( &res );
+    ARG( pp );
+    RETURN( &pp[idx] );
 }
 
 MRICPPairData* mrIPointPairsGetRef( MRIPointPairs* pp_, size_t idx )
 {
-    auto& pp = *reinterpret_cast<IPointPairs*>( pp_ );
-    auto& res = pp[idx];
-    return reinterpret_cast<MRICPPairData*>( &res );
+    ARG( pp );
+    RETURN( &pp[idx] );
 }
 
 MRICPProperties mrICPPropertiesNew( void )
 {
     static const ICPProperties def;
     return {
-        .method = static_cast<MRICPMethod>( def.method ),
+        .method = auto_cast( def.method ),
         COPY_FROM( def, p2plAngleLimit )
         COPY_FROM( def, p2plScaleLimit )
         COPY_FROM( def, cosThreshold )
         COPY_FROM( def, distThresholdSq )
         COPY_FROM( def, farDistFactor )
-        .icpMode = static_cast<MRICPMode>( def.icpMode ),
-        .fixedRotationAxis = reinterpret_cast<const MRVector3f&>( def.fixedRotationAxis ),
+        .icpMode = auto_cast( def.icpMode ),
+        .fixedRotationAxis = auto_cast( def.fixedRotationAxis ),
         COPY_FROM( def, iterLimit )
         COPY_FROM( def, badIterStopCount )
         COPY_FROM( def, exitVal )
@@ -45,25 +55,22 @@ MRICPProperties mrICPPropertiesNew( void )
 
 MRICP* mrICPNew( const MRMeshOrPointsXf* flt_, const MRMeshOrPointsXf* ref_, float samplingVoxelSize )
 {
-    const auto& flt = *reinterpret_cast<const MeshOrPointsXf*>( flt_ );
-    const auto& ref = *reinterpret_cast<const MeshOrPointsXf*>( ref_ );
-
-    return reinterpret_cast<MRICP*>( new ICP( flt, ref, samplingVoxelSize ) );
+    ARG( flt ); ARG( ref );
+    RETURN_NEW( ICP( flt, ref, samplingVoxelSize ) );
 }
 
 void mrICPSetParams( MRICP* icp_, const MRICPProperties* prop_ )
 {
-    auto& icp = *reinterpret_cast<ICP*>( icp_ );
-
+    ARG( icp );
     const ICPProperties prop {
-        .method = static_cast<ICPMethod>( prop_->method ),
+        .method = auto_cast( prop_->method ),
         COPY_FROM( *prop_, p2plAngleLimit )
         COPY_FROM( *prop_, p2plScaleLimit )
         COPY_FROM( *prop_, cosThreshold )
         COPY_FROM( *prop_, distThresholdSq )
         COPY_FROM( *prop_, farDistFactor )
-        .icpMode = static_cast<ICPMode>( prop_->icpMode ),
-        .fixedRotationAxis = reinterpret_cast<const Vector3f&>( prop_->fixedRotationAxis ),
+        .icpMode = auto_cast( prop_->icpMode ),
+        .fixedRotationAxis = auto_cast( prop_->fixedRotationAxis ),
         COPY_FROM( *prop_, iterLimit )
         COPY_FROM( *prop_, badIterStopCount )
         COPY_FROM( *prop_, exitVal )
@@ -75,84 +82,72 @@ void mrICPSetParams( MRICP* icp_, const MRICPProperties* prop_ )
 
 void mrICPSamplePoints( MRICP* icp_, float samplingVoxelSize )
 {
-    auto& icp = *reinterpret_cast<ICP*>( icp_ );
-
+    ARG( icp );
     icp.samplePoints( samplingVoxelSize );
 }
 
 MRAffineXf3f mrICPAutoSelectFloatXf( MRICP* icp_ )
 {
-    auto& icp = *reinterpret_cast<ICP*>( icp_ );
-
-    const auto res = icp.autoSelectFloatXf();
-    return reinterpret_cast<const MRAffineXf3f&>( res );
+    ARG( icp );
+    RETURN( icp.autoSelectFloatXf() );
 }
 
 void mrICPUpdatePointPairs( MRICP* icp_ )
 {
-    auto& icp = *reinterpret_cast<ICP*>( icp_ );
-
+    ARG( icp );
     icp.updatePointPairs();
 }
 
 MRString* mrICPGetStatusInfo( const MRICP* icp_ )
 {
-    const auto& icp = *reinterpret_cast<const ICP*>( icp_ );
-
-    return reinterpret_cast<MRString*>( new std::string( icp.getStatusInfo() ) );
+    ARG( icp );
+    RETURN_NEW( icp.getStatusInfo() );
 }
 
 size_t mrICPGetNumSamples( const MRICP* icp_ )
 {
-    const auto& icp = *reinterpret_cast<const ICP*>( icp_ );
-
+    ARG( icp );
     return icp.getNumSamples();
 }
 
 size_t mrICPGetNumActivePairs( const MRICP* icp_ )
 {
-    const auto& icp = *reinterpret_cast<const ICP*>( icp_ );
-
+    ARG( icp );
     return icp.getNumActivePairs();
 }
 
 float mrICPGetMeanSqDistToPoint( const MRICP* icp_ )
 {
-    const auto& icp = *reinterpret_cast<const ICP*>( icp_ );
-
+    ARG( icp );
     return icp.getMeanSqDistToPoint();
 }
 
 float mrICPGetMeanSqDistToPlane( const MRICP* icp_ )
 {
-    const auto& icp = *reinterpret_cast<const ICP*>( icp_ );
-
+    ARG( icp );
     return icp.getMeanSqDistToPlane();
 }
 
 const MRIPointPairs* mrICPGetFlt2RefPairs( const MRICP* icp_ )
 {
-    const auto& icp = *reinterpret_cast<const ICP*>( icp_ );
-
-    return reinterpret_cast<const MRIPointPairs*>( &icp.getFlt2RefPairs() );
+    ARG( icp );
+    return cast_to<MRIPointPairs>( &icp.getFlt2RefPairs() );
 }
 
 const MRIPointPairs* mrICPGetRef2FltPairs( const MRICP* icp_ )
 {
-    const auto& icp = *reinterpret_cast<const ICP*>( icp_ );
-
-    return reinterpret_cast<const MRIPointPairs*>( &icp.getRef2FltPairs() );
+    ARG( icp );
+    return cast_to<MRIPointPairs>( &icp.getRef2FltPairs() );
 }
 
 MRAffineXf3f mrICPCalculateTransformation( MRICP* icp_ )
 {
-    auto& icp = *reinterpret_cast<ICP*>( icp_ );
-
-    const auto res = icp.calculateTransformation();
-    return reinterpret_cast<const MRAffineXf3f&>( res );
+    ARG( icp );
+    RETURN( icp.calculateTransformation() );
 }
 
-void mrICPFree( MRICP* icp )
+void mrICPFree( MRICP* icp_ )
 {
-    delete reinterpret_cast<ICP*>( icp );
+    ARG_PTR( icp );
+    delete icp;
 }

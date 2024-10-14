@@ -47,8 +47,8 @@ int main( int argc, char* argv[] )
 
     // extract faces
     MRTriangulation* t = mrMeshGetTriangulation( mesh1 );
-    const MRThreeVertIds* faces = mrTriangulationData( t );
-    size_t facesNum = mrTriangulationSize( t );
+    const MRThreeVertIds* faces = t->data;
+    size_t facesNum = t->size;
     // faces are stored as vertex id triples...
     if ( facesNum > 0 )
         printf( "The first face's vertex ids: %d, %d, %d", faces[0][0].id, faces[0][1].id, faces[0][2].id );

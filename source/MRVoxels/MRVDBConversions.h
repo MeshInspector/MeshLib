@@ -116,7 +116,7 @@ struct MakeSignedByWindingNumberSettings
 };
 
 /// set signs for unsigned distance field grid using generalized winding number computed at voxel grid point from refMesh
-MRVOXELS_API VoidOrErrStr makeSignedByWindingNumber( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh,
+MRVOXELS_API Expected<void> makeSignedByWindingNumber( FloatGrid& grid, const Vector3f& voxelSize, const Mesh& refMesh,
     const MakeSignedByWindingNumberSettings & settings );
 
 struct DoubleOffsetSettings

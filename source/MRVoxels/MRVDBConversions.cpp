@@ -319,10 +319,10 @@ Expected<VoxelsVolumeMinMax<std::vector<T>>> vdbVolumeToSimpleVolumeImpl(
         res.min = 0;
         res.max = std::numeric_limits<T>::max();
     }
-    [[maybe_unused]] const float oMin = float( res.min );
-    [[maybe_unused]] const float oMax = float( res.max );
-    [[maybe_unused]] const float k =
-        vdbVolume.max > vdbVolume.min ? ( oMax - oMin ) / ( vdbVolume.max - vdbVolume.min ) : 0.0f;
+    [[maybe_unused]] const float targetMin = float( res.min );
+    [[maybe_unused]] const float targetMax = float( res.max );
+    // voxels are scaled to [0; 1] when loaded
+    [[maybe_unused]] const float k = targetMax - targetMin;
 
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size() );
@@ -342,7 +342,7 @@ Expected<VoxelsVolumeMinMax<std::vector<T>>> vdbVolumeToSimpleVolumeImpl(
         if constexpr ( isFloat && !Norm )
             res.data[i] = T( value );
         else
-            res.data[i] = T( std::clamp( ( value - vdbVolume.min ) * k + oMin, oMin, oMax ) );
+            res.data[i] = T( std::clamp( value * k + targetMin, targetMin, targetMax ) );
     }, cb ) )
         return unexpectedOperationCanceled();
     return res;

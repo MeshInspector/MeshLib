@@ -1,9 +1,13 @@
 #include "MRCylinder.h"
 
+#include "detail/TypeCast.h"
+
 #include "MRMesh/MRCylinder.h"
 #include "MRMesh/MRMesh.h"
 
 using namespace MR;
+
+REGISTER_AUTO_CAST( Mesh )
 
 MRMakeCylinderAdvancedParameters mrMakeCylinderAdvancedParametersNew()
 {
@@ -19,7 +23,7 @@ MRMakeCylinderAdvancedParameters mrMakeCylinderAdvancedParametersNew()
 
 MRMesh* mrMakeCylinderAdvanced( const MRMakeCylinderAdvancedParameters* params )
 {
-    auto* res = new Mesh( makeCylinderAdvanced(
+    RETURN_NEW( makeCylinderAdvanced(
         params->radius0,
         params->radius1,
         params->startAngle,
@@ -27,5 +31,4 @@ MRMesh* mrMakeCylinderAdvanced( const MRMakeCylinderAdvancedParameters* params )
         params->length,
         params->resolution
     ) );
-    return reinterpret_cast<MRMesh*>( res );
 }

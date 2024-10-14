@@ -160,6 +160,12 @@ install(
 )
 
 install(
+  FILES ${HEADERS}
+  DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}"
+)
+
+
+install(
   FILES ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}Config.cmake
   DESTINATION ${MR_CONFIG_DIR}
 )

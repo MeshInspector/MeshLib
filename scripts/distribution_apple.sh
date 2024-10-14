@@ -101,8 +101,8 @@ cd -
 echo "Fixing MeshLib executable @rpath" -x ${MR_PREFIX}/bin/meshconv
 
 bin_dir="${MR_PREFIX}/bin/"
-lib_dir="${MR_PREFIX}/libs"
-dest_dir="${MR_PREFIX}/libs"
+lib_dir="${MR_PREFIX}/libs/"
+dest_dir="${lib_dir}"
 search_paths=("${dest_dir}" "./lib/" "./dist/python")
 
 

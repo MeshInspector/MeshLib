@@ -232,12 +232,21 @@ PCH_CODEGEN_FLAGS :=
 # Those don't work at the moment. The `-fpch-instantiate-templates` flag is optional.
 # PCH_CODEGEN_FLAGS := -fpch-codegen -fpch-debuginfo -fpch-instantiate-templates
 
+# How many translation units to use for the bindings. Bigger value = less RAM usage, but usually slower build speed.
+# When changing this, update the default value for `-j` above.
+NUM_FRAGMENTS := 64
+
+# The default number of jobs. Override with `-jN`.
+MAKEFLAGS += -j8
+
 # --- End of configuration variables.
 
 
 
 
 .DELETE_ON_ERROR: # Delete output on command failure. Otherwise you'll get incomplete bindings.
+
+
 
 
 # You can change this to something else to rename the module, to have it side-by-side with the legacy one.
@@ -266,7 +275,6 @@ LINKER_OUTPUT := $(MODULE_OUTPUT_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
 LINKER := $(CXX_FOR_BINDINGS) -fuse-ld=lld
 # Unsure if `-dynamiclib` vs `-shared` makes any difference on MacOS. I'm using the former because that's what CMake does.
 LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(DEPS_LIB_DIR) $(PYTHON_LDFLAGS) -L$(MESHLIB_SHLIB_DIR) $(addprefix -l,$(INPUT_PROJECTS)) -lMRPython $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)/linker_flags.txt)
-NUM_FRAGMENTS := 4
 EXTRA_INPUT_SOURCES := $(makefile_dir)/helpers.cpp
 COMBINED_HEADER_OUTPUT := $(TEMP_OUTPUT_DIR)/combined.hpp
 GENERATED_SOURCE_OUTPUT := $(TEMP_OUTPUT_DIR)/binding.cpp

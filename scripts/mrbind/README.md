@@ -115,7 +115,7 @@ Then generate the bindings:
 
 * **`-B` — force a full rebuild of the bindings.** Incremental builds are not very useful, because they're not perfect and can miss changes. Use incremental builds e.g. when you're fixing linker errors.
 
-* **`NUM_FRAGMENTS=??` — adjust RAM usage vs build speed tradeoff.** `4` is the default, good for 16 GB of RAM. Use `2` if you have 32 GB of RAM to build ~2 times faster. Less fragments = faster builds but more RAM usage.
+* **`NUM_FRAGMENTS=?? -j??` — adjust RAM usage vs build speed tradeoff.** `NUM_FRAGMENTS=64 -j8` is the default, good for 16 GB of RAM. Less fragments and more threads (`-j`) = usually faster builds but more RAM usage.
 
 * **`PYTHON_PKGCONF_NAME=python-3.??-embed` — select Python version.** We try to guess this one. You can set this to `python3-embed` to use whatever the OS considers to be the default version.
 

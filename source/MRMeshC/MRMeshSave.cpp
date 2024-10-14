@@ -1,16 +1,21 @@
 #include "MRMeshSave.h"
 
+#include "detail/TypeCast.h"
+
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshSave.h"
 
 using namespace MR;
 
-void mrMeshSaveToAnySupportedFormat( const MRMesh* mesh, const char* file, MRString** errorStr )
+REGISTER_AUTO_CAST( Mesh )
+REGISTER_AUTO_CAST2( std::string, MRString )
+
+void mrMeshSaveToAnySupportedFormat( const MRMesh* mesh_, const char* file, MRString** errorStr )
 {
-    auto res = MeshSave::toAnySupportedFormat( *reinterpret_cast<const Mesh*>( mesh ), file );
+    ARG( mesh );
+    auto res = MeshSave::toAnySupportedFormat( mesh, file );
     if ( !res && errorStr )
     {
-        auto* str = new std::string( res.error() );
-        *errorStr = reinterpret_cast<MRString*>( str );
+        *errorStr = auto_cast( new_from( std::move( res.error() ) ) );
     }
 }

@@ -1,15 +1,19 @@
 #include "MRRegionBoundary.h"
 
+#include "detail/TypeCast.h"
+#include "detail/Vector.h"
+
 #include "MRMesh/MRRegionBoundary.h"
 
 using namespace MR;
 
+REGISTER_AUTO_CAST( EdgeId )
+REGISTER_AUTO_CAST( FaceBitSet )
+REGISTER_AUTO_CAST( MeshTopology )
+REGISTER_VECTOR( EdgeLoop )
+
 MREdgeLoop* mrTrackRightBoundaryLoop( const MRMeshTopology* topology_, MREdgeId e0_, const MRFaceBitSet* region_ )
 {
-    const auto& topology = *reinterpret_cast<const MeshTopology*>( topology_ );
-    auto e0 = *reinterpret_cast<EdgeId*>( &e0_ );
-    const auto* region = reinterpret_cast<const FaceBitSet*>( region_ );
-
-    auto res = trackRightBoundaryLoop( topology, e0, region );
-    return reinterpret_cast<MREdgeLoop*>( new EdgeLoop( std::move( res ) ) );
+    ARG( topology ); ARG_VAL( e0 ); ARG_PTR( region );
+    RETURN_NEW_VECTOR( trackRightBoundaryLoop( topology, e0, region ) );
 }

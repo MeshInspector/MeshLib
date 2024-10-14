@@ -11,9 +11,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRBitSet.c" />
     <ClCompile Include="MRMeshBoolean.c" />
+    <ClCompile Include="MRMeshCollidePrecise.c" />
     <ClCompile Include="MRMeshDecimate.c" />
     <ClCompile Include="MRMeshFillHole.c" />
+    <ClCompile Include="MRMeshNormals.c" />
     <ClCompile Include="MRTestCApp.c" />
   </ItemGroup>
   <ItemGroup>
@@ -22,9 +25,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MRBitSet.h" />
     <ClInclude Include="MRMeshBoolean.h" />
+    <ClInclude Include="MRMeshCollidePrecise.h" />
     <ClInclude Include="MRMeshDecimate.h" />
     <ClInclude Include="MRMeshFillHole.h" />
+    <ClInclude Include="MRMeshNormals.h" />
     <ClInclude Include="TestMacros.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

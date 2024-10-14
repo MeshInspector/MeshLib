@@ -151,7 +151,7 @@ jobs:
           # not realy needed
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
 
-      - name: Generate MRBind bindings
+      - name: Generate and build MRBind bindings
         if: ${{inputs.mrbind}}
         env:
           CXX: ${{matrix.cxx-compiler}}

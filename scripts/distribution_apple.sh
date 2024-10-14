@@ -36,8 +36,8 @@ bundle_dylib() {
 echo "Installing required brew pkgs"
 brew install dylibbundler jq
 
-if [ -d "./Library" ];
-  then rm -rf "./Library";
+if [ -d "./MeshLib.framework" ];
+  then rm -rf "./MeshLib.framework";
 fi
 
 cd ./build/Release
@@ -45,8 +45,8 @@ cmake --install . --prefix=../..
 cd -
 
 
-MR_VERSION=$(ls ./Library/Frameworks/MeshLib.framework/Versions/)
-MR_PREFIX="./Library/Frameworks/MeshLib.framework/Versions/${MR_VERSION}"
+MR_VERSION=$(ls ./MeshLib.framework/Versions/)
+MR_PREFIX="./MeshLib.framework/Versions/${MR_VERSION}"
 
 echo "version: ${MR_VERSION}"
 echo "prefix: ${MR_PREFIX}"
@@ -55,6 +55,7 @@ echo "prefix: ${MR_PREFIX}"
 mkdir -p "${MR_PREFIX}/libs/"
 
 cp -rL ./include "${MR_PREFIX}/"
+cp ./macos/Info.plist ./macos/Resources
 cp ./LICENSE ./macos/Resources
 
 mkdir "${MR_PREFIX}"/requirements/
@@ -94,8 +95,8 @@ echo "old: $PYTHON_PATH, new: $NEW_PYTHON_PATH"
 install_name_tool -change "$PYTHON_PATH" "$NEW_PYTHON_PATH" ./build/Release/bin/libMRMesh.dylib
 echo "Done"
 
-cd ./Library/Frameworks/MeshLib.framework/Versions/
-ln -s "${MR_VERSION}" Current
+cd ./MeshLib.framework/Versions/
+ln -s "${MR_VERSION}" ./Current
 cd -
 
 echo "Fixing MeshLib executable @rpath" -x ${MR_PREFIX}/bin/meshconv
@@ -125,17 +126,3 @@ for lib in "$lib_dir"/meshlib/*; do
 done
 
 deactivate
-
-
-pkgbuild \
-            --root Library \
-            --identifier com.MeshInspector.MeshLib \
-            --install-location /Library \
-            MeshLib.pkg
-
-
-productbuild \
-          --distribution ./macos/Distribution.xml \
-          --package-path ./MeshLib.pkg \
-          --resources ./macos/Resources \
-          MeshLib_.pkg

@@ -40,6 +40,7 @@ public:
         Count
     };
 
+    // supported types of system fonts fonts
     enum class SystemFontType
     {
         Regular,

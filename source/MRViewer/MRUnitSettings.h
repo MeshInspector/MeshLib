@@ -29,14 +29,16 @@ MRVIEWER_API void setUiLengthUnit( std::optional<LengthUnit> unit );
 // Angle:
 
 [[nodiscard]] MRVIEWER_API DegreesMode getDegreesMode();
+// This also calls `setUiAnglePrecision()` to set a default precision depending on the mode.
 MRVIEWER_API void setDegreesMode( DegreesMode mode );
 
 // Precision:
 
+// Whether this means total number of digits or the number of digits after the decimal point depends
+//   on another setting (`getDefaultUnitParams().style`) that's currently not exposed in this file.
 [[nodiscard]] MRVIEWER_API int getUiLengthPrecision();
 MRVIEWER_API void setUiLengthPrecision( int precision );
 
-// This should be set to zero when `getDegreesMode() != degrees`, and we do that automatically.
 [[nodiscard]] MRVIEWER_API int getUiAnglePrecision();
 MRVIEWER_API void setUiAnglePrecision( int precision );
 

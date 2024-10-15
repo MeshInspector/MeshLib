@@ -319,6 +319,9 @@ jobs:
       matrix:
         platform: ["x86", "arm64"]
         py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        exclude: # python 3.8 disabled on x86 macOS since 2024-10-14
+          - platform: "x86"
+            py-version: "3.8"
         include:
           - platform: "x86"
             # On 12.0 x86 `brew` doesn't have binary packages for Clang.
@@ -542,6 +545,9 @@ jobs:
       matrix:
         platform: ["arm64", "x86"]
         py-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        exclude: # python 3.8 disabled on x86 macOS since 2024-10-14
+          - platform: "x86"
+            py-version: "3.8"
         include:
           - platform: "x86"
             # On 12.0 x86 `brew` doesn't have binary packages for Clang.

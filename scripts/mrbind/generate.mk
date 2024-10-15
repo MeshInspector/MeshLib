@@ -28,7 +28,7 @@ override safe_shell = $(if $(dry_run),$(warning Would run command: $1),$(if $(tr
 override safe_shell_exec = $(call,$(call safe_shell,$1))
 
 # Loads the contents of file $1, replacing newlines with spaces.
-override load_file = $(subst $(lf), ,$(file <$1))
+override load_file = $(strip $(file <$1))
 
 # Compare version numbers: A <= B
 override version_leq = $(shell printf '%s\n' $1 $2 | sort -CV)$(filter 0,$(.SHELLSTATUS))

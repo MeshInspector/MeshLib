@@ -89,8 +89,8 @@ def setup_workspace(version, modules, plat_name):
     print("Copying resource files...")
     shutil.copy(SOURCE_DIR / "source" / "MRViewer" / "MRDarkTheme.json", WHEEL_SRC_DIR)
     shutil.copy(SOURCE_DIR / "source" / "MRViewer" / "MRLightTheme.json", WHEEL_SRC_DIR)
-    shutil.copy(SOURCE_DIR / "source" / "MRViewer" / "fa-solid-900.ttf", WHEEL_SRC_DIR)
-    shutil.copy(SOURCE_DIR / "source" / "MRViewer" / "NotoSansSC-Regular.otf", WHEEL_SRC_DIR)
+    shutil.copy(SOURCE_DIR / "thirdparty" / "fontawesome-free" / "fa-solid-900.ttf", WHEEL_SRC_DIR)
+    shutil.copy(SOURCE_DIR / "thirdparty" / "Noto_Sans" / "NotoSansSC-Regular.otf", WHEEL_SRC_DIR)
 
     shutil.copy(WHEEL_SCRIPT_DIR / "pyproject.toml", WHEEL_ROOT_DIR)
 

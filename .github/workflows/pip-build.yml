@@ -83,7 +83,10 @@ jobs:
           # have to checkout selective submodules by our own
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
+          echo ${GITHUB_WORKSPACE}
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/imgui
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/parallel-hashmap
           git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap
 
       - name: Python setup

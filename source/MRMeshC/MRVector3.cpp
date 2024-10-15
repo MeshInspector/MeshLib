@@ -39,7 +39,13 @@ MRVector3f mrVector3fAdd( const MRVector3f* a_, const MRVector3f* b_ )
     RETURN( a + b );
 }
 
-MRVector3f mrVector3fMul( const MRVector3f* a_, float b )
+MRVector3f mrVector3fSub( const MRVector3f* a_, const MRVector3f* b_ )
+{
+    ARG( a ); ARG( b );
+    RETURN( a - b );
+}
+
+MRVector3f mrVector3fMulScalar( const MRVector3f* a_, float b )
 {
     ARG( a );
     RETURN( a * b );

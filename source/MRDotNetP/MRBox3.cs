@@ -18,6 +18,7 @@ namespace MR.DotNet
 
         /// true if the box contains at least one point
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool mrBox3fValid( ref MRBox3f box );
 
         /// computes size of the box in all dimensions
@@ -31,6 +32,10 @@ namespace MR.DotNet
         /// computes the volume of this box
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern float mrBox3fVolume(ref MRBox3f box);
+
+        /// ...
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        private static extern MRVector3f mrBox3fCenter( ref MRBox3f box );
 
         MRBox3f box_;
 
@@ -64,5 +69,9 @@ namespace MR.DotNet
         public Vector3f Size() => new Vector3f(mrBox3fSize(ref box_));
         public float Diagonal() => mrBox3fDiagonal(ref box_);
         public float Volume() => mrBox3fVolume(ref box_);
+        public Vector3f Center() => new Vector3f(mrBox3fCenter(ref box_));
+
+        public Vector3f Min { get { return min_; } set { min_ = value; box_.min = value.vec_; } }
+        public Vector3f Max { get { return max_; } set { max_ = value; box_.max = value.vec_; } }
     }
 }

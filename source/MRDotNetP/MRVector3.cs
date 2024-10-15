@@ -28,6 +28,9 @@ namespace MR.DotNet
         private static extern MRVector3f mrVector3fAdd(ref MRVector3f a, ref MRVector3f b);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        private static extern MRVector3f mrVector3fSub(ref MRVector3f a, ref MRVector3f b);
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern MRVector3f mrVector3fMulScalar(ref MRVector3f a, float b);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
@@ -76,6 +79,8 @@ namespace MR.DotNet
         }
 
         static public Vector3f operator +(Vector3f a, Vector3f b) => new Vector3f(mrVector3fAdd(ref a.vec_, ref b.vec_));
+
+        static public Vector3f operator -(Vector3f a, Vector3f b) => new Vector3f(mrVector3fSub(ref a.vec_, ref b.vec_));
 
         static public Vector3f operator *(Vector3f a, float b) => new Vector3f(mrVector3fMulScalar(ref a.vec_, b));
 

@@ -27,7 +27,7 @@ namespace MR.DotNet
         private static extern MRMatrix3f mrMatrix3fAdd(ref MRMatrix3f a, ref MRMatrix3f b);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        private static extern MRMatrix3f mrMatrix3fSubtract(ref MRMatrix3f a, ref MRMatrix3f b);
+        private static extern MRMatrix3f mrMatrix3fSub(ref MRMatrix3f a, ref MRMatrix3f b);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern MRMatrix3f mrMatrix3fMul( ref MRMatrix3f a, ref MRMatrix3f b );
@@ -36,6 +36,7 @@ namespace MR.DotNet
         private static extern MRVector3f mrMatrix3fMulVector(ref MRMatrix3f a, ref MRVector3f b);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool mrMatrix3fEqual(ref MRMatrix3f a, ref MRMatrix3f b);
 
         internal MRMatrix3f mat_;
@@ -89,7 +90,7 @@ namespace MR.DotNet
 
         public static Matrix3f operator -(Matrix3f a, Matrix3f b)
         {
-            return new Matrix3f(mrMatrix3fSubtract(ref a.mat_, ref b.mat_));
+            return new Matrix3f(mrMatrix3fSub(ref a.mat_, ref b.mat_));
         }
         public static Matrix3f operator *( Matrix3f a, Matrix3f b )
         {

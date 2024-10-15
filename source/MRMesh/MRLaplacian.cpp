@@ -66,6 +66,8 @@ void Laplacian::init( const VertBitSet & freeVerts, MR::EdgeWeights weights, Rem
             sumWPos -= w * Vector3d( mesh_.points[d] );
             sumW += w;
         }
+        if ( sumW == 0 )
+            continue;
         double a = 1;
         if ( weights == MR::EdgeWeights::CotanWithAreaEqWeight )
             if ( auto d = mesh_.dblArea( v ); d > 0 )

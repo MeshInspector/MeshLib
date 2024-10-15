@@ -148,7 +148,7 @@ void ObjectDistanceMap::deserializeFields_( const Json::Value& root )
     construct_( dmap_, dmap2local_ );
 }
 
-VoidOrErrStr ObjectDistanceMap::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
+Expected<void> ObjectDistanceMap::deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb )
 {
     auto modelPath = pathFromUtf8( utf8string( path ) + saveDistanceMapFormat_ );
     std::error_code ec;
@@ -167,7 +167,7 @@ VoidOrErrStr ObjectDistanceMap::deserializeModel_( const std::filesystem::path& 
     return {};
 }
 
-Expected<std::future<VoidOrErrStr>> ObjectDistanceMap::serializeModel_( const std::filesystem::path& path ) const
+Expected<std::future<Expected<void>>> ObjectDistanceMap::serializeModel_( const std::filesystem::path& path ) const
 {
     if ( !dmap_ )
         return {};

@@ -179,7 +179,7 @@ namespace
         return groups;
     }
 
-    VoidOrErrStr parseObjTextureVertex( const std::string_view& str, UVCoord& vt )
+    Expected<void> parseObjTextureVertex( const std::string_view& str, UVCoord& vt )
     {
         using namespace boost::spirit::x3;
 
@@ -209,7 +209,7 @@ namespace
         std::vector<int> normals;
     };
 
-    VoidOrErrStr parseObjFace( const std::string_view& str, ObjFace& f )
+    Expected<void> parseObjFace( const std::string_view& str, ObjFace& f )
     {
         using namespace boost::spirit::x3;
 
@@ -237,7 +237,7 @@ namespace
         return {};
     }
 
-    VoidOrErrStr parseMtlColor( const std::string_view& str, Vector3f& color )
+    Expected<void> parseMtlColor( const std::string_view& str, Vector3f& color )
     {
         using namespace boost::spirit::x3;
 
@@ -264,7 +264,7 @@ namespace
         return {};
     }
 
-    VoidOrErrStr parseMtlTexture( const std::string_view& str, std::string& textureFile )
+    Expected<void> parseMtlTexture( const std::string_view& str, std::string& textureFile )
     {
         using namespace boost::spirit::x3;
 

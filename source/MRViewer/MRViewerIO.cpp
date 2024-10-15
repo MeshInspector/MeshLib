@@ -30,7 +30,7 @@
 namespace MR
 {
 
-VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& filename, const SaveObjectSettings & settings )
+Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path& filename, const SaveObjectSettings & settings )
 {
     MR_TIMER
     if ( !reportProgress( settings.callback, 0.f ) )
@@ -55,7 +55,7 @@ VoidOrErrStr saveObjectToFile( const Object& obj, const std::filesystem::path& f
         .xf = ( xf == AffineXf3d() ) ? nullptr : &xf,
         .progress = settings.callback
     };
-    VoidOrErrStr result;
+    Expected<void> result;
 
     if ( auto objPoints = obj.asType<ObjectPoints>() )
     {

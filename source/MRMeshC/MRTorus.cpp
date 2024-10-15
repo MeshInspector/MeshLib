@@ -1,9 +1,13 @@
 #include "MRTorus.h"
 
+#include "detail/TypeCast.h"
+
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRTorus.h"
 
 using namespace MR;
+
+REGISTER_AUTO_CAST( Mesh )
 
 MRMakeTorusParameters mrMakeTorusParametersNew()
 {
@@ -18,12 +22,11 @@ MRMakeTorusParameters mrMakeTorusParametersNew()
 
 MRMesh* mrMakeTorus( const MRMakeTorusParameters* params )
 {
-    auto* res = new Mesh( makeTorus(
+    RETURN_NEW( makeTorus(
         params->primaryRadius,
         params->secondaryRadius,
         params->primaryResolution,
         params->secondaryResolution
         // TODO: points
     ) );
-    return reinterpret_cast<MRMesh*>( res );
 }

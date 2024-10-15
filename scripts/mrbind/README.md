@@ -12,8 +12,6 @@ There's no rocket science in those, and you can do it manually instead of runnin
 
 Among other things, the scripts can do following:
 
-* On Linux and MacOS, create `~/mrbind` to build MRBind in.
-
 * On Ubuntu, add [the LLVM repository](https://apt.llvm.org/) to install the latest Clang and libclang from.
 
 * On Windows, install MSYS2 to `C:\msys64_meshlib_mrbind`.
@@ -36,7 +34,7 @@ Among other things, the scripts can do following:
 
     MRBind source code is at https://github.com/MeshInspector/mrbind/.
 
-    We build MRBind at `C:\msys64_meshlib_mrbind\home\username\mrbind`, but you can build it elsewhere manually.
+    We build MRBind at `MeshLib/mrbind`, but you can build it [elsewhere](#less-common-flags) manually.
 
     We build in [MSYS2 CLANG64](https://www.msys2.org/docs/environments/) environment, using MSYS2's Clang. Other compilers are not guaranteed to work.
 
@@ -55,7 +53,7 @@ Among other things, the scripts can do following:
 
     MRBind source code is at https://github.com/MeshInspector/mrbind/.
 
-    We build MRBind at `~/mrbind`, but you can build it elsewhere manually.
+    We build MRBind at `MeshLib/mrbind`, but you can build it [elsewhere](#less-common-flags) manually.
 
     You might want to pass `-DClang_DIR=/usr/lib/cmake/clang-VERSION` (where `VERSION` is the one mentioned in `preferred_clang_version.txt`) if you have several versions of libclang installed, because otherwise CMake might pick an arbitrary one (apparently it picks the first one returned by globbing `clang-*`, which might not be the latest one).
 
@@ -84,7 +82,7 @@ Among other things, the scripts can do following:
 
     MRBind source code is at https://github.com/MeshInspector/mrbind/.
 
-    We build MRBind at `~/mrbind`, but you can build it elsewhere manually.
+    We build MRBind at `MeshLib/mrbind`, but you can build it [elsewhere](#less-common-flags) manually.
 
     Make sure your PATH is correct, as explained in the previous step.
 
@@ -97,7 +95,7 @@ Among other things, the scripts can do following:
 First, build MeshLib as usual.
 
 Then generate the bindings:
-* **On Windows:** `scripts/mrbind/generate_win.bat -B --trace MODE=none` from VS developer command prompt (use the `x64 Native` one!).
+* **On Windows:** `scripts\mrbind\generate_win.bat -B --trace MODE=none` from VS developer command prompt (use the `x64 Native` one!).
 
   This will look for MeshLib in `./source/x64/Release` (so the current directory matters). Add `VS_MODE=Debug` at the end if you built MeshLib in debug mode.
 
@@ -107,7 +105,7 @@ Then generate the bindings:
 
   This will look for MeshLib in `./build/Release/bin`. Pass `MESHLIB_SHLIB_DIR=path/to/bin` for a different directory.
 
-* **On MacOS:** Same as on Linux, but before that must adjust the PATH. On Arm Macs: `export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"`, and on x86 Macs `/usr/local/...` instead of `/opt/homebrew/...`. This adds the version of Make installed in Homebrew to PATH, because the default one is outdated. Confirm the version with `make --version`, must be 4.x or newer.
+* **On MacOS:** Same as on Linux, but before running that you must adjust the PATH. On Arm Macs: `export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"`, and on x86 Macs `/usr/local/...` instead of `/opt/homebrew/...`. This adds the version of Make installed in Homebrew to PATH, because the default one is outdated. Confirm the version with `make --version`, must be 4.x or newer.
 
 ### Some common flags:
 
@@ -117,7 +115,9 @@ Then generate the bindings:
 
 * **`-B` — force a full rebuild of the bindings.** Incremental builds are not very useful, because they're not perfect and can miss changes. Use incremental builds e.g. when you're fixing linker errors.
 
-* **`NUM_FRAGMENTS=??` — adjust RAM usage vs build speed tradeoff.** `4` is the default, good for 16 GB of RAM. Use `2` if you have 32 GB of RAM to build ~2 times faster. Less fragments = faster builds but more RAM usage.
+* **`NUM_FRAGMENTS=?? -j??` — adjust RAM usage vs build speed tradeoff.** `NUM_FRAGMENTS=??` is how many translation units the bindings are split into. `-j??` is the number of parallel build threads/processes. `NUM_FRAGMENTS=64 -j8` is the default, good for 16 GB of RAM.
+
+  Guessing the fastest combination isn't trivial. Usually less fragments and more threads lead to faster builds but more RAM usage, but not always; turns out `NUM_FRAGMENTS=1` isn't optimal even if you have enough RAM for it.
 
 * **`PYTHON_PKGCONF_NAME=python-3.??-embed` — select Python version.** We try to guess this one. You can set this to `python3-embed` to use whatever the OS considers to be the default version.
 
@@ -129,7 +129,7 @@ For simplicity, we compile the bindings with the same Clang that we use for pars
 
 ### Less common flags:
 
-* **Selecting MRBind installation:** if you installed MRBind to a non-default location (`~/mrbind` on Linux and MacOS, `C:\msys64_meshlib_mrbind\home\username\mrbind` on Windows), you must pass this location to `MRBIND_SOURCE=path/to/mrbind`.
+* **Selecting MRBind installation:** if you installed MRBind to a non-default location (`MeshLib/mrbind`), you must pass this location to `MRBIND_SOURCE=path/to/mrbind`.
 
     Additionally, if the MRBind binary is not at `$MRBIND_SOURCE/build/mrbind`, you must pass `MRBIND_EXE=...` (path to the executable itself, not its directory).
 
@@ -154,3 +154,7 @@ You can find some undocumented flags/variables in `generate.mk`.
   * Make sure you're not linking against Python **and** do use `-Xlinker -undefined -Xlinker dynamic_lookup` linker flags. The `generate.mk` should already do it correctly, just keep this in mind. Also transitively linking Python seems to be fine (`-lMRPython` is fine).
 
     Failure to do this will have no effect when importing the module directly, but will segfault when importing it as a wheel, **or** when using a wrong Python version even without the wheel.
+
+* **`cannot initialize type "expected_...": an object with that name is already defined`**
+
+  Likely a conflict between `std::expected` and `tl::expected` (probably MRMesh ended up using the latter while MRBind is using the former). Try `EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0'` to make MRBind switch to `tl::expected`.

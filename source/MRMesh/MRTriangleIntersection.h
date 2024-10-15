@@ -3,6 +3,8 @@
 #include "MRVector3.h"
 #include "MRIntersectionPrecomputes.h"
 #include "MRTriPoint.h"
+
+#include <algorithm>
 #include <optional>
 
 namespace MR
@@ -122,7 +124,7 @@ bool doTrianglesIntersectExt(
     // direction from center to center
     const auto dir = a + b + c - d - e - f;
 
-    return 
+    return
         !doesEdgeXySeparate( a, b, c, d, e, f, dir ) &&
         !doesEdgeXySeparate( b, c, a, d, e, f, dir ) &&
         !doesEdgeXySeparate( c, a, b, d, e, f, dir ) &&
@@ -132,7 +134,7 @@ bool doTrianglesIntersectExt(
 }
 
 /// checks whether triangle ABC and infinite line DE intersect
-template <typename T> 
+template <typename T>
 bool doTriangleLineIntersect(
     const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c,
     const Vector3<T> & d, const Vector3<T> & e
@@ -154,7 +156,7 @@ bool doTriangleLineIntersect(
 }
 
 /// checks whether triangle ABC and segment DE intersect
-template <typename T> 
+template <typename T>
 bool doTriangleSegmentIntersect(
     const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c,
     const Vector3<T> & d, const Vector3<T> & e

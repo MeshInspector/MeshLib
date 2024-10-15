@@ -120,7 +120,7 @@ public:
     /// constructs forest of paths reaching all voxels in the span
     void buildForest( Context & context, bool initial );
     /// performs min-cut segmentation in given span
-    VoidOrErrStr segment( Context & context );
+    Expected<void> segment( Context & context );
     /// obtain result of segmentation
     VoxelBitSet getResult( const VoxelBitSet & sourceSeeds ) const;
     /// visits all sources/sinks to find the amount of flow
@@ -616,7 +616,7 @@ void VoxelGraphCut::buildForest( Context & context, bool initial )
     //spdlog::info( "VoxelGraphCut: {} initial layers", layers );
 }
 
-VoidOrErrStr VoxelGraphCut::segment( Context & context )
+Expected<void> VoxelGraphCut::segment( Context & context )
 {
     MR_TIMER
     

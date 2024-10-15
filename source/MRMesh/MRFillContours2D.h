@@ -13,7 +13,7 @@ namespace MR
  * edges should have invalid left face (FaceId == -1)
  * @return Expected with has_value()=true if holes filled, otherwise - string error
  */
-MRMESH_API VoidOrErrStr fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges );
+MRMESH_API Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges );
 
 /// computes the transformation that maps
 /// O into center mass of contours' points

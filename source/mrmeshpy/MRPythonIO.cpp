@@ -161,7 +161,7 @@ Expected<MR::Mesh> pythonLoadMeshFromAnyFormat( pybind11::object fileHandle, con
     return MR::MeshLoad::fromAnySupportedFormat( ifs, extension );
 }
 
-VoidOrErrStr pythonSaveMeshToAnyFormat( const Mesh& mesh, const std::string& extension, pybind11::object fileHandle )
+Expected<void> pythonSaveMeshToAnyFormat( const Mesh& mesh, const std::string& extension, pybind11::object fileHandle )
 {
     if ( !( pybind11::hasattr( fileHandle, "write" ) && pybind11::hasattr( fileHandle, "flush" ) ) )
         return unexpected( "Argument is not file handle" );
@@ -170,7 +170,7 @@ VoidOrErrStr pythonSaveMeshToAnyFormat( const Mesh& mesh, const std::string& ext
     return MR::MeshSave::toAnySupportedFormat( mesh, extension, outfs );
 }
 
-VoidOrErrStr pythonSaveLinesToAnyFormat( const MR::Polyline3& lines, const std::string& extension, pybind11::object fileHandle )
+Expected<void> pythonSaveLinesToAnyFormat( const MR::Polyline3& lines, const std::string& extension, pybind11::object fileHandle )
 {
     if ( !( pybind11::hasattr( fileHandle, "write" ) && pybind11::hasattr( fileHandle, "flush" ) ) )
         return unexpected( "Argument is not file handle" );
@@ -188,7 +188,7 @@ Expected<Polyline3> pythonLoadLinesFromAnyFormat( pybind11::object fileHandle, c
     return MR::LinesLoad::fromAnySupportedFormat( ifs, extension );
 }
 
-VoidOrErrStr pythonSavePointCloudToAnyFormat( const PointCloud& points, const std::string& extension, pybind11::object fileHandle )
+Expected<void> pythonSavePointCloudToAnyFormat( const PointCloud& points, const std::string& extension, pybind11::object fileHandle )
 {
     if ( !( pybind11::hasattr( fileHandle, "write" ) && pybind11::hasattr( fileHandle, "flush" ) ) )
         return unexpected( "Argument is not file handle" );
@@ -218,7 +218,7 @@ Expected<std::shared_ptr<Object>> pythonLoadSceneObjectFromAnyFormat( const std:
         return result.scene->children().front();
 }
 
-VoidOrErrStr pythonSaveSceneObjectToAnySupportedFormat( const std::shared_ptr<Object>& object, const std::filesystem::path& path, ProgressCallback callback )
+Expected<void> pythonSaveSceneObjectToAnySupportedFormat( const std::shared_ptr<Object>& object, const std::filesystem::path& path, ProgressCallback callback )
 {
     return ObjectSave::toAnySupportedFormat( *object, path, std::move( callback ) );
 }
@@ -231,7 +231,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveMesh, [] ( pybind11::module_& m )
         pybind11::arg( "mesh" ), pybind11::arg( "path" ), pybind11::arg( "colors" ) = nullptr, pybind11::arg( "callback" ) = ProgressCallback{},
         "detects the format from file extension and save mesh to it" );
     m.def( "saveMesh",
-        MR::decorateExpected( ( VoidOrErrStr( * )( const MR::Mesh&, const std::string&, pybind11::object ) )& pythonSaveMeshToAnyFormat ),
+        MR::decorateExpected( ( Expected<void>( * )( const MR::Mesh&, const std::string&, pybind11::object ) )& pythonSaveMeshToAnyFormat ),
         pybind11::arg( "mesh" ), pybind11::arg( "extension" ), pybind11::arg( "fileHandle" ), "saves mesh in python file handler, second arg: extension (`*.ext` format)" );
 } )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadMesh, [] ( pybind11::module_& m )
@@ -263,7 +263,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveLines, [] ( pybind11::module_& m )
         pybind11::arg( "polyline" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "detects the format from file extension and saves polyline in it" );
     m.def( "saveLines",
-        MR::decorateExpected( ( VoidOrErrStr( * )( const MR::Polyline3&, const std::string&, pybind11::object ) )& pythonSaveLinesToAnyFormat ),
+        MR::decorateExpected( ( Expected<void>( * )( const MR::Polyline3&, const std::string&, pybind11::object ) )& pythonSaveLinesToAnyFormat ),
         pybind11::arg( "polyline" ), pybind11::arg( "extension" ), pybind11::arg( "fileHandle" ), "saves lines in python file handler, second arg: extension (`*.ext` format)" );
 } )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadLines, [] ( pybind11::module_& m )
@@ -285,7 +285,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SavePoints, [] ( pybind11::module_& m )
         pybind11::arg( "pointCloud" ), pybind11::arg( "path" ), pybind11::arg( "colors" ) = nullptr, pybind11::arg( "callback" ) = ProgressCallback{},
         "detects the format from file extension and save points to it" );
     m.def( "savePoints",
-        MR::decorateExpected( ( VoidOrErrStr( * )( const MR::PointCloud&, const std::string&, pybind11::object ) )& pythonSavePointCloudToAnyFormat ),
+        MR::decorateExpected( ( Expected<void>( * )( const MR::PointCloud&, const std::string&, pybind11::object ) )& pythonSavePointCloudToAnyFormat ),
         pybind11::arg( "pointCloud" ), pybind11::arg( "extension" ), pybind11::arg( "fileHandle" ), "saves point cloud in python file handler, second arg: extension (`*.ext` format)" );
 } )
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, LoadPoints, [] ( pybind11::module_& m )
@@ -317,7 +317,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveVoxels, [] ( pybind11::module_& m )
         pybind11::arg( "vdbVoxels" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "Save raw voxels file, writing parameters in name." );
     m.def( "saveVoxelsGav",
-        MR::decorateExpected( static_cast<VoidOrErrStr ( * )( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback )>( &MR::VoxelsSave::toGav ) ),
+        MR::decorateExpected( static_cast<Expected<void> ( * )( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback )>( &MR::VoxelsSave::toGav ) ),
         pybind11::arg( "vdbVoxels" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "Save Gav voxels file." );
     m.def( "saveVoxelsVdb",

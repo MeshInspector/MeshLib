@@ -18,6 +18,10 @@
 #include "MRStringConvert.h"
 #include "MRMeshTexture.h"
 #include "MRDirectory.h"
+#include "MRMeshLoad.h"
+#include "MRMeshSave.h"
+#include "MRObjectMesh.h"
+#include "MRObjectSave.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRJson.h"
 
@@ -509,6 +513,42 @@ void deserializeFromJson( const Json::Value& root, std::vector<Color>& colors )
         colors.resize( size );
         std::copy( ( Color* )bin.data(), ( Color* )( bin.data() ) + size, colors.data() );
     }
+}
+
+Expected<void> serializeToJson( const Mesh& mesh, Json::Value& root )
+{
+    std::ostringstream out;
+    auto res = MeshSave::toPly( mesh, out );
+    if ( res )
+    {
+        auto binString = out.str();
+        root["ply"] = encode64( (const std::uint8_t*) binString.data(), binString.size() );
+    }
+    return res;
+}
+
+Expected<Mesh> deserializeFromJson( const Json::Value& root, VertColors* colors )
+{
+    if ( !root.isObject() )
+        return unexpected( std::string{ "deserialize mesh: json value is not an object" } );
+
+    if ( !root["ply"].isString() )
+        return unexpected( std::string{ "deserialize mesh: json value does not have 'ply' string"} );
+
+    auto bin = decode64( root["ply"].asString() );
+    std::istringstream in( std::string( (const char *)bin.data(), bin.size() ) );
+    return MeshLoad::fromPly( in, { .colors = colors } );
+}
+
+Expected<void> serializeMesh( const Mesh& mesh, const std::filesystem::path& path, const FaceBitSet* selection, const char * saveMeshFormat )
+{
+    ObjectMesh obj;
+    obj.setSaveMeshFormat( saveMeshFormat );
+    obj.setMesh( std::make_shared<Mesh>( mesh ) );
+    if ( selection )
+        obj.selectFaces( *selection );
+    obj.setName( utf8string( path.stem() ) );
+    return serializeObjectTree( obj, path );
 }
 
 } // namespace MR

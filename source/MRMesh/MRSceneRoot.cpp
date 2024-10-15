@@ -11,12 +11,12 @@ namespace MR
 
 SceneRootObject& SceneRoot::get()
 {
-    return *instace_().root_;
+    return *instance_().root_;
 }
 
 std::shared_ptr<SceneRootObject>& SceneRoot::getSharedPtr()
 {
-    return instace_().root_;
+    return instance_().root_;
 }
 
 std::filesystem::path createNewFilePath( const std::filesystem::path& savePath )
@@ -54,12 +54,12 @@ void SceneRoot::setScenePath( const std::filesystem::path& scenePath )
         newPath.replace_extension( ".mru" );
         newPath = createNewFilePath( newPath );
     }
-    instace_().scenePath_ = newPath;
+    instance_().scenePath_ = newPath;
 }
 
 #endif
 
-SceneRoot& SceneRoot::instace_()
+SceneRoot& SceneRoot::instance_()
 {
     static SceneRoot scene;
     return scene;
@@ -72,17 +72,17 @@ SceneRoot::SceneRoot()
 
 const SceneRootObject& SceneRoot::constGet()
 {
-    return *instace_().root_;
+    return *instance_().root_;
 }
 
 std::shared_ptr<const SceneRootObject> SceneRoot::constGetSharedPtr()
 {
-    return std::const_pointer_cast<const SceneRootObject >( instace_().root_ );
+    return std::const_pointer_cast<const SceneRootObject >( instance_().root_ );
 }
 
 const std::filesystem::path& SceneRoot::getScenePath()
 {
-    return instace_().scenePath_;
+    return instance_().scenePath_;
 }
 
 MR_ADD_CLASS_FACTORY( SceneRootObject )

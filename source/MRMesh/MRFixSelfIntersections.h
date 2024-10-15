@@ -36,7 +36,7 @@ struct Settings
 MRMESH_API Expected<FaceBitSet> getFaces( const Mesh& mesh, ProgressCallback cb = {} );
 
 /// Finds and fixes self-intersections per component:
-MRMESH_API VoidOrErrStr fix( Mesh& mesh, const Settings& settings );
+MRMESH_API Expected<void> fix( Mesh& mesh, const Settings& settings );
 }
 
 }

@@ -11,12 +11,12 @@ static void forAllLengthUnits( auto&& func )
     func.template operator()<VolumeUnit>();
     func.template operator()<MovementSpeedUnit>();
     func.template operator()<InvLengthUnit>();
-};
+}
 static void forAllAngleUnits( auto&& func )
 {
     // All angle-related unit types must be listed here.
     func.template operator()<AngleUnit>();
-};
+}
 static void forAllUnits( auto&& func )
 {
     forAllLengthUnits( func );
@@ -26,7 +26,7 @@ static void forAllUnits( auto&& func )
     func.template operator()<TimeUnit>();
     func.template operator()<RatioUnit>();
     func.template operator()<PixelSizeUnit>();
-};
+}
 
 bool getShowLeadingZero()
 {

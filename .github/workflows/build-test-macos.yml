@@ -104,7 +104,7 @@ jobs:
             PYTHON_PKGCONF_NAME=python-3.10-embed \
             EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0' \
             MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin \
-            ${{ fromJSON('["-j8", "-j4"]')[inputs.mrbind] }}
+            ${{ fromJSON('["-j8", "-j4"]')[matrix.runner == 'macos-latest'] }}
 
       - name: Run Start-and-Exit Tests
         if: ${{ matrix.os == 'arm' }}

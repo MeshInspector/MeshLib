@@ -182,7 +182,7 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
 #ifdef _WIN32
     path = "C:/Windows/Fonts";
 #elif defined (__APPLE__)
-    path = "Library/Fonts"
+    path = "Library/Fonts";
 #else // linux and wasm
     path = "/usr/share/fonts";
 #endif

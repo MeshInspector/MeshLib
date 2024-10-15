@@ -178,31 +178,52 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
         return fonts;
     }
 
-    std::filesystem::path path;
+    std::filesystem::path systemFontspath;
 #ifdef _WIN32
-    path = "C:/Windows/Fonts";
+    //systemFontspath = "C:/Windows/Fonts";
+    systemFontspath = "C:/all/font";
+
 #elif defined (__APPLE__)
     path = "Library/Fonts";
 #else // linux and wasm
     path = "/usr/share/fonts";
+    static const std::vector<std::string> suffixes{
+            "bold",
+            "Bold",
+            "light",
+            "Light",
+            "medium",
+            "Medium",
+            "regular",
+            "Regular",
+            "SemiBold",
+            "BoldItalic",
+            "italic",
+            "Italic",
+            "LightItalic",
+            "MediumItalic",
+            "SemiBold",
+            "SemiBoldItalic",
+            "BoldOblique",
+            "oblique",
+            "Oblique"
+    };
 #endif
-
-    std::vector<std::filesystem::path> allFonts;
-    std::error_code ec;
-    for ( auto entry : MR::Directory{ path, ec } )
-    {
-        allFonts.push_back( entry );
-    }
-
     std::string firstFontName;
     std::string curName;
-    for ( const auto& font : allFonts )
+    std::error_code ec;
+
+    for ( auto entry : MR::Directory{ systemFontspath, ec } )
     {
+        std::filesystem::path font = entry;
         if ( font.extension() != ".ttf" )
         {
             continue;
         }
+        
         curName = font.stem().string();
+
+#ifdef _WIN32
         if ( firstFontName.empty() || curName.find( firstFontName ) == std::string::npos )
         {
             firstFontName = curName;
@@ -212,7 +233,7 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
         }
         if ( curName == firstFontName + "b" || curName == firstFontName + "B" )
         {
-            fonts.back()[(size_t)SystemFontType::Bold] = font;
+            fonts.back()[( size_t )SystemFontType::Bold] = font;
         }
         if ( curName == firstFontName + "i" || curName == firstFontName + "I" )
         {
@@ -222,6 +243,62 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
         {
             fonts.back()[( size_t )SystemFontType::BoldItalic] = font;
         }
+#elif defined (__APPLE__)
+        // TO DO
+#else // linux and wasm
+        if ( firstFontName.empty() || curName.find( firstFontName ) == std::string::npos )
+        {
+            bool findSuffix = false;
+            for ( const auto& suffix : suffixes )
+            {
+                auto pos = curName.find( "-" + suffix );
+                if ( pos != std::string::npos )
+                {
+                    firstFontName = std::string( curName.begin(), curName.begin() + pos );
+                    findSuffix = true;
+                    break;
+                }
+                pos = curName.find( suffix );
+                if ( pos != std::string::npos )
+                {
+                    firstFontName = std::string( curName.begin(), curName.begin() + pos );
+                    findSuffix = true;
+                    break;
+                }
+            }
+            if ( !findSuffix )
+            {
+                firstFontName = curName;
+            }
+
+            fonts.push_back( SystemFontPaths() );
+        }
+
+        if ( curName.find( "regular" ) != std::string::npos || curName.find( "-regular" ) != std::string::npos ||
+             curName.find( "Regular" ) != std::string::npos || curName.find( "-Regular" ) != std::string::npos )
+        {
+            fonts.back()[( size_t )SystemFontType::Regular] = font;
+        }
+        else if ( curName.find( "BoldItalic" ) != std::string::npos || curName.find( "-BoldItalic" ) != std::string::npos )
+        {
+            fonts.back()[( size_t )SystemFontType::BoldItalic] = font;
+        }
+        else if ( curName.find( "bold" ) != std::string::npos || curName.find( "-bold" ) != std::string::npos ||
+             curName.find( "Bold" ) != std::string::npos || curName.find( "-Bold" ) != std::string::npos )
+        {
+            fonts.back()[( size_t )SystemFontType::Bold] = font;
+        }
+        else if ( curName.find( "italic" ) != std::string::npos || curName.find( "-italic" ) != std::string::npos ||
+             curName.find( "Italic" ) != std::string::npos || curName.find( "-Italic" ) != std::string::npos )
+        {
+            fonts.back()[( size_t )SystemFontType::Italic] = font;
+        }
+        else if ( curName == firstFontName )
+        {
+            fonts.back()[( size_t )SystemFontType::Regular] = font;
+        }
+#endif
+        
     }
 
     return fonts;

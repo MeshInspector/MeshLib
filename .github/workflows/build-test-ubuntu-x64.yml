@@ -133,7 +133,7 @@ jobs:
         env:
           CXX: ${{matrix.cxx-compiler}}
         run: |
-          make -f scripts/mrbind/generate.mk only-generate
+          make -f scripts/mrbind/generate.mk only-generate MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 
       - name: Build
         run: ./scripts/build_source.sh

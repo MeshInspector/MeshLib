@@ -6,7 +6,7 @@
 
 MR_EXTERN_C_BEGIN
 
-/// ...
+// point located on some mesh face
 typedef struct MRPointOnFace
 {
     MRFaceId face;

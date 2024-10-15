@@ -4,6 +4,9 @@
 
 #include <MRMesh/MRVector.h>
 
+/// helper class to represent std::vector data as a pointer+length pair
+/// NOTE: changing the source vector might invalidate the data pointer
+//        it's your responsibility to update it by calling invalidate() after the vector's change, explicit or implicit
 template <typename T>
 struct vector_wrapper_base
 {
@@ -31,7 +34,9 @@ struct vector_wrapper_base
 protected:
     explicit vector_wrapper_base( std::vector<T>* vec )
         : vec_( vec )
-    { }
+    {
+        invalidate();
+    }
 
     std::vector<T>* vec_;
 };
@@ -43,9 +48,7 @@ struct vector_wrapper : vector_wrapper_base<T>
 
     explicit vector_wrapper( std::vector<T>&& vec )
         : base( new std::vector<T>( std::move( vec ) ) )
-    {
-        base::invalidate();
-    }
+    { }
 
     template <typename I>
     explicit vector_wrapper( MR::Vector<T, I>&& vec )
@@ -65,9 +68,7 @@ struct vector_ref_wrapper : public vector_wrapper_base<T>
 
     explicit vector_ref_wrapper( const std::vector<T>& vec )
         : base( const_cast<std::vector<T>*>( &vec ) )
-    {
-        base::invalidate();
-    }
+    { }
 
     template <typename I>
     explicit vector_ref_wrapper( const MR::Vector<T, I>& vec )

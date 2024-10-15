@@ -194,7 +194,7 @@ MR_ADD_IMAGE_LOADER_WITH_PRIORITY( IOFilter( "Portable Network Graphics (.png)",
 namespace ImageSave
 {
 
-VoidOrErrStr toPng( const Image& image, const std::filesystem::path& file )
+Expected<void> toPng( const Image& image, const std::filesystem::path& file )
 {
     std::ofstream fp( file, std::ios::binary );
     if ( !fp )
@@ -203,7 +203,7 @@ VoidOrErrStr toPng( const Image& image, const std::filesystem::path& file )
     return toPng( image, fp );
 }
 
-VoidOrErrStr toPng( const Image& image, std::ostream& os )
+Expected<void> toPng( const Image& image, std::ostream& os )
 {
     WritePng png;
     if ( !png.pngPtr )

@@ -30,7 +30,8 @@ typedef MREdgePath MREdgeLoop;
 /// returns one edge with no valid left face for every boundary in the mesh
 MRMESHC_API MREdgePath* mrMeshTopologyFindHoleRepresentiveEdges( const MRMeshTopology* top );
 
-/// ...
+/// gets 3 vertices of given triangular face;
+/// the vertices are returned in counter-clockwise order if look from mesh outside
 MRMESHC_API void mrMeshTopologyGetLeftTriVerts( const MRMeshTopology* top, MREdgeId a, MRVertId* v0, MRVertId* v1, MRVertId* v2 );
 
 /// returns the number of hole loops in the mesh;

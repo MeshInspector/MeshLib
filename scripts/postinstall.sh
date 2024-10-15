@@ -25,6 +25,7 @@ if [ -d /usr/lib/${PYTHON_VERSION} ]; then
  sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrmeshpy.so /usr/local/lib/${PYTHON_VERSION}/dist-packages/meshlib/mrmeshpy.so
  sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrmeshnumpy.so /usr/local/lib/${PYTHON_VERSION}/dist-packages/meshlib/mrmeshnumpy.so
  sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrviewerpy.so /usr/local/lib/${PYTHON_VERSION}/dist-packages/meshlib/mrviewerpy.so
+ sudo ln -sf /usr/local/lib/MeshLib/meshlib/__init__.py /usr/local/lib/${PYTHON_VERSION}/dist-packages/meshlib/__init__.py
  printf "Python3 has symlink to MR libs. Run 'sudo ln -sf /usr/local/lib/MeshLib/meshlib/mr<lib_name>py.so /<pathToPython>/dist-packages/meshlib/mr<lib_name>py.so' for custom python installations\n"
 else
  printf "\r${PYTHON_VERSION} was not found!                  \n"

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "MRMeshFwd.h"
 #include "MRCylinder3.h"
 #include "MRVector.h"
@@ -16,7 +18,7 @@
 #elif defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif 
+#endif
 
 #include <Eigen/Eigenvalues>
 
@@ -25,10 +27,10 @@
 #elif defined(__clang__)
 #elif defined(__GNUC__)
 #pragma GCC diagnostic pop
-#endif 
+#endif
 
 
-// https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf 
+// https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf
 
 namespace MR
 {
@@ -40,11 +42,11 @@ private:
 
     enum class CylinderFitterType
     {
-        // The algorithm implimentation needs an initial approximation to refine the cylinder axis. 
+        // The algorithm implimentation needs an initial approximation to refine the cylinder axis.
         // In this option, we sort through several possible options distributed over the hemisphere.
         HemisphereSearchFit,
 
-        // In this case, we assume that there is an external estimate for the cylinder axis. 
+        // In this case, we assume that there is an external estimate for the cylinder axis.
         // Therefore, we specify only the position that is given from the outside
         SpecificAxisFit
 
@@ -66,11 +68,11 @@ private:
     //Input data converted to Eigen format and normalized to the avgPoint position of all points in the cloud.
     std::vector<Eigen::Vector<T, 3>> normalizedPoints_ = {};
 
-    // Precalculated values for speed up. 
-    // In https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf page 35-36: 
-    // Text below is a direct copy from pdf file: 
-    // The sample application that used equation (94) directly was really slow. 
-    // On an Intel CoreTM i7-6700 CPU at 3.40 GHz, the single - threaded version for 10765 points required 129 seconds 
+    // Precalculated values for speed up.
+    // In https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf page 35-36:
+    // Text below is a direct copy from pdf file:
+    // The sample application that used equation (94) directly was really slow.
+    // On an Intel CoreTM i7-6700 CPU at 3.40 GHz, the single - threaded version for 10765 points required 129 seconds
     // and the multithreaded version using 8 hyperthreads required 22 seconds.The evaluation of G using the precomputed summations is much faster.
     // The single - threaded version required 85 milliseconds and the multithreaded version using 8 hyperthreads required 22 milliseconds.
 
@@ -95,7 +97,7 @@ public:
         precomputedF2_.setZero();
         normalizedPoints_.clear();
     };
-    // Solver for CylinderFitterType::HemisphereSearchFit type 
+    // Solver for CylinderFitterType::HemisphereSearchFit type
     // thetaResolution_, phiResolution_  must be positive and as large as it posible. Price is CPU time. (~ 100 gives good results).
     T solveGeneral( const std::vector<MR::Vector3<T>>& points, Cylinder3<T>& cylinder, size_t theta = 180, size_t phi = 90, bool isMultithread = true )
     {
@@ -110,8 +112,8 @@ public:
         return result;
     };
 
-    // Solver for CylinderFitterType::SpecificAxisFit type 
-    // Simplet way in case of we already know clinder axis 
+    // Solver for CylinderFitterType::SpecificAxisFit type
+    // Simplet way in case of we already know clinder axis
     T solveSpecificAxis( const std::vector<MR::Vector3<T>>& points, Cylinder3<T>& cylinder, MR::Vector3<T> const& cylinderAxis )
     {
 
@@ -123,7 +125,7 @@ public:
         return result;
     };
 private:
-    // main solver. 
+    // main solver.
     T solve( const std::vector<MR::Vector3<T>>& points, Cylinder3<T>& cylinder )
     {
         if ( points.size() < 6 )
@@ -137,7 +139,7 @@ private:
         cylinder = Cylinder3<T>();
         Vector3<T> avgPoint;
         Eigen::Vector<T, 3> bestPC;
-        Eigen::Vector<T, 3> bestW; // cylinder main axis 
+        Eigen::Vector<T, 3> bestW; // cylinder main axis
         T rootSquare = 0;
         T error = 0;
 
@@ -171,7 +173,7 @@ private:
         cylinder.radius = std::sqrt( rootSquare );
 
         // Calculate a max. possible length of a cylinder covered by dataset.
-        // Project point on a main cylinder axis 
+        // Project point on a main cylinder axis
         T hmin = std::numeric_limits<T>::max();
         T hmax = -std::numeric_limits<T>::max();
 
@@ -183,7 +185,7 @@ private:
         }
         T hmid = ( hmin + hmax ) / 2;
 
-        // Very tiny correct a cylinder center. 
+        // Very tiny correct a cylinder center.
         cylinder.center() = cylinder.center() + hmid * cylinder.direction();
         cylinder.length = hmax - hmin;
 
@@ -197,7 +199,7 @@ private:
         // Listing 15. page 37.
         normalizedPoints_.resize( points.size() );
 
-        // calculate avg point of dataset 
+        // calculate avg point of dataset
         average = Vector3<T>{};
         for ( size_t i = 0; i < points.size(); ++i )
             average += points[i];
@@ -259,8 +261,8 @@ private:
 
     // Core minimization function.
     // Functional that needs to be minimized to obtain the optimal value of W (i.e. the cylinder axis)
-    // General definition is formula 94, but for speed up we use formula 99. 
-    // https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf 
+    // General definition is formula 94, but for speed up we use formula 99.
+    // https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf
     T G( const Eigen::Vector<T, 3>& W, Eigen::Vector<T, 3>& PC, T& rsqr ) const
     {
         Eigen::Matrix<T, 3, 3> P = Eigen::Matrix<T, 3, 3>::Identity() - ( W * W.transpose() ); // P = I - W * W^T
@@ -360,7 +362,7 @@ private:
                 for ( size_t i = 0; i < thetaResolution_; ++i )
                 {
 
-                    T theta = theraStep * i; // [0 .. 2*pi)                    
+                    T theta = theraStep * i; // [0 .. 2*pi)
                     T cosTheta = std::cos( theta );
                     T sinTheta = std::sin( theta );
                     Eigen::Vector<T, 3> currW{ cosTheta * sinPhi, sinTheta * sinPhi, cosPhi };
@@ -402,7 +404,3 @@ private:
 };
 
 }
-
-
-
-

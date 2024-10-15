@@ -2091,6 +2091,8 @@ TEST( MRMesh, MeshCollidePrecise )
     for ( const auto& contour : meshAContours )
         posCount += contour.intersections.size();
     EXPECT_EQ( posCount, 156 );
+        posCount += contour.intersections.size();
+    EXPECT_EQ( posCount, 156 );
 }
 
 } //namespace MR

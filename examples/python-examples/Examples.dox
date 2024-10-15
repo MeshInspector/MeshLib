@@ -38,6 +38,10 @@ Please note that this sample has differences in V2 and V3
 
 \subpage ExamplePythonFreeForm
 
+\subpage ExamplePythonLaplacian
+
+\subpage ExamplePythonNoiseDenoise
+
 \subpage ExamplePythonViewer
 
 \sa \ref EmbeddedPythonOverview

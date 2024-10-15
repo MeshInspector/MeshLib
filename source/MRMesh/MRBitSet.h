@@ -4,6 +4,7 @@
 #include "MRId.h"
 #include "MRphmap.h"
 #include "MRVector.h"
+#include "MRPch/MRBindingMacros.h"
 #define BOOST_DYNAMIC_BITSET_DONT_USE_FRIENDS
 #pragma warning(push)
 #pragma warning(disable: 4643) //Forward declaring in namespace std is not permitted by the C++ Standard.
@@ -130,9 +131,8 @@ public:
     [[nodiscard]] bool test( IndexType n ) const { return base::test( n ); }
     [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return base::test_set( n, val ); }
 
-    #ifndef MR_PARSING_FOR_PB11_BINDINGS // Disable for python bindings, because MRBind chokes on `boost::dynamic_bitset::reference`.
-    [[nodiscard]] reference operator[]( IndexType pos ) { return base::operator[]( pos ); }
-    #endif
+    // Disable for python bindings, because MRBind chokes on `boost::dynamic_bitset::reference`.
+    [[nodiscard]] MR_BIND_IGNORE reference operator[]( IndexType pos ) { return base::operator[]( pos ); }
     [[nodiscard]] bool operator[]( IndexType pos ) const { return base::operator[]( pos ); }
 
     [[nodiscard]] IndexType find_first() const { return IndexType( base::find_first() ); }

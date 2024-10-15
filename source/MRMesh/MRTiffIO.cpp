@@ -129,7 +129,7 @@ void readRawTiff( TIFF* tiff, uint8_t* bytes, size_t size, const TiffParameters&
     }
 }
 
-VoidOrErrStr writeRawTiff( const uint8_t* bytes, const std::filesystem::path& path, const BaseTiffParameters& params )
+Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& path, const BaseTiffParameters& params )
 {
     TIFF* tif = TIFFOpen( MR::utf8string( path ).c_str(), "w" );
     if ( !tif )
@@ -279,7 +279,7 @@ Expected<TiffParameters> readTiffParameters( const std::filesystem::path& path )
     return addFileNameInError( readTifParameters( tif ), path );
 }
 
-VoidOrErrStr readRawTiff( const std::filesystem::path& path, RawTiffOutput& output )
+Expected<void> readRawTiff( const std::filesystem::path& path, RawTiffOutput& output )
 {
     assert( output.size != 0 );
     if ( output.size == 0 )

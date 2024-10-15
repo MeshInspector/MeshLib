@@ -18,23 +18,23 @@ namespace LinesSave
 
 /// saves in .mrlines file;
 /// SaveSettings::saveValidOnly = true is ignored
-MRMESH_API VoidOrErrStr toMrLines( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );
-MRMESH_API VoidOrErrStr toMrLines( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toMrLines( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toMrLines( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings = {} );
 
 /// saves in .pts file;
 /// SaveSettings::saveValidOnly = false is ignored
-MRMESH_API VoidOrErrStr toPts( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );
-MRMESH_API VoidOrErrStr toPts( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toPts( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toPts( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings = {} );
 
 /// saves in .dxf file;
 /// SaveSettings::saveValidOnly = false is ignored
-MRMESH_API VoidOrErrStr toDxf( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );
-MRMESH_API VoidOrErrStr toDxf( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toDxf( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toDxf( const Polyline3& polyline, std::ostream& out, const SaveSettings & settings = {} );
 
 /// detects the format from file extension and saves polyline in it
-MRMESH_API VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toAnySupportedFormat( const Polyline3& polyline, const std::filesystem::path& file, const SaveSettings & settings = {} );
 /// extension in `*.ext` format
-MRMESH_API VoidOrErrStr toAnySupportedFormat( const Polyline3& polyline, const std::string& extension, std::ostream& out, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toAnySupportedFormat( const Polyline3& polyline, const std::string& extension, std::ostream& out, const SaveSettings & settings = {} );
 
 } // namespace LinesSave
 

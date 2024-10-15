@@ -24,7 +24,7 @@ public:
     /// Sets directions Point Cloud
     MRMESH_API void setDirectionsPC( const std::shared_ptr<PointCloud>& directionsPC );
     /// Loads distances form distances file (1/distance)
-    MRMESH_API VoidOrErrStr loadDistances( int width, int height, const std::filesystem::path& path );
+    MRMESH_API Expected<void> loadDistances( int width, int height, const std::filesystem::path& path );
     /// Sets distances
     MRMESH_API void setDistances( int width, int height, const std::vector<float>& distances );
 

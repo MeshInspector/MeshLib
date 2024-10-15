@@ -220,6 +220,8 @@ void testBooleanMapper( void )
     mrStringFree( result.errorString );
     mrMeshFree( result.mesh );
 
+    mrBooleanResultMapperFree( mapper );
+
     mrMeshFree( meshB );
     mrMeshFree( meshA );
 }

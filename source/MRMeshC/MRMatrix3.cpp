@@ -29,38 +29,8 @@ MRMatrix3f mrMatrix3fRotationScalar( const MRVector3f* axis_, float angle )
     RETURN( Matrix3f::rotation( axis, angle ) );
 }
 
-MRMatrix3f mrMatrix3fAdd( const MRMatrix3f* a_, const MRMatrix3f* b_ )
-{
-    ARG( a ); ARG( b );
-    RETURN( a + b );
-}
-
-MRMatrix3f mrMatrix3fSub( const MRMatrix3f* a_, const MRMatrix3f* b_ )
-{
-    ARG( a ); ARG( b );
-    RETURN( a - b );
-}
-
 MRMatrix3f mrMatrix3fMul( const MRMatrix3f* a_, const MRMatrix3f* b_ )
 {
     ARG( a ); ARG( b );
     RETURN( a * b );
-}
-
-MRVector3f mrMatrix3fMulVector( const MRMatrix3f* a_, const MRVector3f* b_ )
-{
-    ARG( a ); ARG( b );
-    RETURN( a * b );
-}
-
-MRMatrix3f mrMatrix3fMulScalar( const MRMatrix3f* a_, float b_ )
-{
-    ARG( a );
-    RETURN( a * b_ );
-}
-
-bool mrMatrix3fEqual( const MRMatrix3f* a_, const MRMatrix3f* b_ )
-{
-    ARG( a ); ARG( b );
-    RETURN( a == b );
 }

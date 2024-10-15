@@ -5,7 +5,6 @@
 
 MR_EXTERN_C_BEGIN
 
-/// ...
 typedef struct MRMeshSaveNamedXfMesh
 {
     const char* name;
@@ -14,7 +13,7 @@ typedef struct MRMeshSaveNamedXfMesh
 }
 MRMeshSaveNamedXfMesh;
 
-/// ...
+/// saves a number of named meshes in .obj file
 // TODO: colors
 MRMESHC_API void mrMeshSaveSceneToObj( const MRMeshSaveNamedXfMesh* objects, size_t objectsNum, const char* file, MRString** errorString );
 

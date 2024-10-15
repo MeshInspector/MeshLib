@@ -66,9 +66,9 @@ protected:
 
     MRMESH_API void deserializeFields_( const Json::Value& root ) override;
 
-    MRMESH_API VoidOrErrStr deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
+    MRMESH_API Expected<void> deserializeModel_( const std::filesystem::path& path, ProgressCallback progressCb = {} ) override;
 
-    MRMESH_API virtual Expected<std::future<VoidOrErrStr>> serializeModel_( const std::filesystem::path& path ) const override;
+    MRMESH_API virtual Expected<std::future<Expected<void>>> serializeModel_( const std::filesystem::path& path ) const override;
 
 private:
     std::shared_ptr<DistanceMap> dmap_;

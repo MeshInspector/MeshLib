@@ -149,9 +149,9 @@ MRVOXELS_API Expected<ToolPathResult> constantCuspToolPath( const MeshPart& mp, 
 MRVOXELS_API std::shared_ptr<ObjectGcode> exportToolPathToGCode( const std::vector<GCommand>& commands );
 
 // interpolates several points lying on the same straight line with one move
-MRVOXELS_API VoidOrErrStr interpolateLines( std::vector<GCommand>& commands, const LineInterpolationParams& params, Axis axis );
+MRVOXELS_API Expected<void> interpolateLines( std::vector<GCommand>& commands, const LineInterpolationParams& params, Axis axis );
 // interpolates given path with arcs
-MRVOXELS_API VoidOrErrStr interpolateArcs( std::vector<GCommand>& commands, const ArcInterpolationParams& params, Axis axis );
+MRVOXELS_API Expected<void> interpolateArcs( std::vector<GCommand>& commands, const ArcInterpolationParams& params, Axis axis );
 
 // makes the given selection more smooth with shifthing a boundary of the selection outside and back. Input mesh is changed because we have to cut new edges along the new boundaries
 // \param expandOffset defines how much the boundary is expanded

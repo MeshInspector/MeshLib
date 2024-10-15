@@ -14,7 +14,7 @@ void RegularMapMesher::setDirectionsPC( const std::shared_ptr<PointCloud>& direc
     directionsPC_ = directionsPC;
 }
 
-VoidOrErrStr RegularMapMesher::loadDistances( int width, int height, const std::filesystem::path& path )
+Expected<void> RegularMapMesher::loadDistances( int width, int height, const std::filesystem::path& path )
 {
     width_ = width;
     height_ = height;

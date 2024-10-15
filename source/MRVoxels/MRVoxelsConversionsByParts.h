@@ -55,7 +55,7 @@ struct MergeVolumePartSettings
  * @return nothing if succeeds, an error string otherwise
  */
 template <typename Volume>
-VoidOrErrStr
+Expected<void>
 mergeVolumePart( Mesh& mesh, std::vector<EdgePath>& cutContours, Volume&& volume, float leftCutPosition, float rightCutPosition,
                  const MergeVolumePartSettings& settings = {} );
 

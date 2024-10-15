@@ -2,6 +2,7 @@
 
 #include "MRVector3.h"
 #include "MRVectorTraits.h"
+#include "MRPch/MRBindingMacros.h"
 #include <cassert>
 
 namespace MR
@@ -23,6 +24,12 @@ struct RelaxParams
 
     /// maximum distance between a point and its position before relaxation, ignored if limitNearInitial = false
     float maxInitialDist = 0;
+
+    // Fixes ABI incompatibility. Without this GCC 12+ warns here with `-Wabi=16`.
+    // Read our `cmake/Modules/CompilerOptions.cmake` (the part about `-Wabi=16`) for details.
+    // This is enabled for GCC 11 and older because they're buggy, and for GCC 12 because for it we enable the warning to catch other similar cases.
+    // For other compilers it's disabled for clarity, but should have no effect on struct layout.
+    MR_BIND_IGNORE int _padding;
 };
 
 enum class RelaxApproxType

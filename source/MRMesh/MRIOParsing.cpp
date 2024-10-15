@@ -122,7 +122,7 @@ Expected<Buffer<char>> readCharBuffer( std::istream& in )
 }
 
 template <typename T>
-VoidOrErrStr parseTextCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* n, Color* c )
+Expected<void> parseTextCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* n, Color* c )
 {
     using namespace boost::spirit::x3;
 
@@ -177,7 +177,7 @@ VoidOrErrStr parseTextCoordinate( const std::string_view& str, Vector3<T>& v, Ve
 }
 
 template <typename T>
-VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* c )
+Expected<void> parseObjCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* c )
 {
     using namespace boost::spirit::x3;
 
@@ -212,7 +212,7 @@ VoidOrErrStr parseObjCoordinate( const std::string_view& str, Vector3<T>& v, Vec
 }
 
 template<typename T>
-VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Color& c )
+Expected<void> parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Color& c )
 {
     using namespace boost::spirit::x3;
 
@@ -239,7 +239,7 @@ VoidOrErrStr parsePtsCoordinate( const std::string_view& str, Vector3<T>& v, Col
 }
 
 template<typename T>
-VoidOrErrStr parseSingleNumber( const std::string_view& str, T& num )
+Expected<void> parseSingleNumber( const std::string_view& str, T& num )
 {
     using namespace boost::spirit::x3;
 
@@ -272,7 +272,7 @@ VoidOrErrStr parseSingleNumber( const std::string_view& str, T& num )
     return {};
 }
 
-VoidOrErrStr parseFirstNum( const std::string_view& str, int& num )
+Expected<void> parseFirstNum( const std::string_view& str, int& num )
 {
     using namespace boost::spirit::x3;
 
@@ -294,7 +294,7 @@ VoidOrErrStr parseFirstNum( const std::string_view& str, int& num )
     return {};
 }
 
-VoidOrErrStr parsePolygon( const std::string_view& str, VertId* vertId, int* numPoints)
+Expected<void> parsePolygon( const std::string_view& str, VertId* vertId, int* numPoints)
 {
     using namespace boost::spirit::x3;
 
@@ -329,24 +329,24 @@ VoidOrErrStr parsePolygon( const std::string_view& str, VertId* vertId, int* num
 }
 
 template <typename T>
-VoidOrErrStr parseAscCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* n, Color* c )
+Expected<void> parseAscCoordinate( const std::string_view& str, Vector3<T>& v, Vector3<T>* n, Color* c )
 {
     return parseTextCoordinate( str, v, n, c );
 }
 
-template VoidOrErrStr parseSingleNumber<float>( const std::string_view& str, float& num );
-template VoidOrErrStr parseSingleNumber<int>( const std::string_view& str, int& num );
+template Expected<void> parseSingleNumber<float>( const std::string_view& str, float& num );
+template Expected<void> parseSingleNumber<int>( const std::string_view& str, int& num );
 
-template VoidOrErrStr parsePtsCoordinate<float>( const std::string_view& str, Vector3f& v, Color& c );
-template VoidOrErrStr parsePtsCoordinate<double>( const std::string_view& str, Vector3d& v, Color& c );
+template Expected<void> parsePtsCoordinate<float>( const std::string_view& str, Vector3f& v, Color& c );
+template Expected<void> parsePtsCoordinate<double>( const std::string_view& str, Vector3d& v, Color& c );
 
-template VoidOrErrStr parseTextCoordinate<float>( const std::string_view& str, Vector3f& v, Vector3f* n, Color* c );
-template VoidOrErrStr parseTextCoordinate<double>( const std::string_view& str, Vector3d& v, Vector3d* n, Color* c );
+template Expected<void> parseTextCoordinate<float>( const std::string_view& str, Vector3f& v, Vector3f* n, Color* c );
+template Expected<void> parseTextCoordinate<double>( const std::string_view& str, Vector3d& v, Vector3d* n, Color* c );
 
-template VoidOrErrStr parseObjCoordinate<float>( const std::string_view& str, Vector3f& v, Vector3f* c );
-template VoidOrErrStr parseObjCoordinate<double>( const std::string_view& str, Vector3d& v, Vector3d* c );
+template Expected<void> parseObjCoordinate<float>( const std::string_view& str, Vector3f& v, Vector3f* c );
+template Expected<void> parseObjCoordinate<double>( const std::string_view& str, Vector3d& v, Vector3d* c );
 
-template VoidOrErrStr parseAscCoordinate<float>( const std::string_view& str, Vector3f& v, Vector3f* n, Color* c );
-template VoidOrErrStr parseAscCoordinate<double>( const std::string_view& str, Vector3d& v, Vector3d* n, Color* c );
+template Expected<void> parseAscCoordinate<float>( const std::string_view& str, Vector3f& v, Vector3f* n, Color* c );
+template Expected<void> parseAscCoordinate<double>( const std::string_view& str, Vector3d& v, Vector3d* n, Color* c );
 
 }

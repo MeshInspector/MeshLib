@@ -37,7 +37,7 @@ public:
     /// <param name="dims">dimensions of the grid</param>
     /// <param name="gridToMeshXf">transform from integer grid locations to voxel's centers in mesh reference frame</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    virtual VoidOrErrStr calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb = {} ) = 0;
+    virtual Expected<void> calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb = {} ) = 0;
 
     /// <summary>
     /// calculates distances with the sign obtained from winding number in each point from a three-dimensional grid
@@ -47,7 +47,7 @@ public:
     /// <param name="gridToMeshXf">transform from integer grid locations to voxel's centers in mesh reference frame</param>
     /// <param name="windingNumberThreshold">positive distance if winding number below or equal this threshold</param>
     /// <param name="beta">determines the precision of the approximation: the more the better, recommended value 2 or more</param>
-    virtual VoidOrErrStr calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) = 0;
+    virtual Expected<void> calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) = 0;
 };
 
 /// the class for fast approximate computation of winding number for a mesh (using its AABB tree)
@@ -64,9 +64,9 @@ public:
     // see methods' descriptions in IFastWindingNumber
     MRMESH_API void calcFromVector( std::vector<float>& res, const std::vector<Vector3f>& points, float beta, FaceId skipFace = {} ) override;
     MRMESH_API bool calcSelfIntersections( FaceBitSet& res, float beta, ProgressCallback cb ) override;
-    MRMESH_API VoidOrErrStr calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb ) override;
+    MRMESH_API Expected<void> calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, ProgressCallback cb ) override;
     MRMESH_API float calcWithDistances( const Vector3f& p, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq );
-    MRMESH_API VoidOrErrStr calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) override;
+    MRMESH_API Expected<void> calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float windingNumberThreshold, float beta, float maxDistSq, float minDistSq, ProgressCallback cb ) override;
 
 private:
     [[nodiscard]] float calc_( const Vector3f & q, float beta, FaceId skipFace = {} ) const;

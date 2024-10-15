@@ -16,7 +16,7 @@ namespace MR
 namespace MeshSave
 {
 
-VoidOrErrStr toMrmesh( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+Expected<void> toMrmesh( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -25,7 +25,7 @@ VoidOrErrStr toMrmesh( const Mesh & mesh, const std::filesystem::path & file, co
     return toMrmesh( mesh, out, settings );
 }
 
-VoidOrErrStr toMrmesh( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
+Expected<void> toMrmesh( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
 {
     MR_TIMER
     mesh.topology.write( out );
@@ -46,7 +46,7 @@ VoidOrErrStr toMrmesh( const Mesh & mesh, std::ostream & out, const SaveSettings
     return {};
 }
 
-VoidOrErrStr toOff( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+Expected<void> toOff( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
     // although .off is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
     std::ofstream out( file, std::ofstream::binary );
@@ -56,7 +56,7 @@ VoidOrErrStr toOff( const Mesh & mesh, const std::filesystem::path & file, const
     return toOff( mesh, out, settings );
 }
 
-VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & settings )
+Expected<void> toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & settings )
 {
     MR_TIMER
 
@@ -108,7 +108,7 @@ VoidOrErrStr toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & se
 }
 
 
-VoidOrErrStr toObj( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, int firstVertId )
+Expected<void> toObj( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, int firstVertId )
 {
     // although .obj is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
     std::ofstream out( file, std::ofstream::binary );
@@ -136,7 +136,7 @@ VoidOrErrStr toObj( const Mesh & mesh, const std::filesystem::path & file, const
     return toObj( mesh, out, settings, firstVertId );
 }
 
-VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & settings, int firstVertId )
+Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & settings, int firstVertId )
 {
     MR_TIMER
     out << "# MeshInspector.com\n";
@@ -223,12 +223,12 @@ VoidOrErrStr toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & 
     return {};
 }
 
-VoidOrErrStr toObj( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings& settings )
+Expected<void> toObj( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings& settings )
 {
     return toObj( mesh, file, settings, 1 );
 }
 
-VoidOrErrStr toObj( const Mesh& mesh, std::ostream& out, const SaveSettings& settings )
+Expected<void> toObj( const Mesh& mesh, std::ostream& out, const SaveSettings& settings )
 {
     return toObj( mesh, out, settings, 1 );
 }
@@ -252,7 +252,7 @@ static FaceBitSet getNotDegenTris( const Mesh &mesh )
     return notDegenTris;
 }
 
-VoidOrErrStr toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+Expected<void> toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -261,7 +261,7 @@ VoidOrErrStr toBinaryStl( const Mesh & mesh, const std::filesystem::path & file,
     return toBinaryStl( mesh, out, settings );
 }
 
-VoidOrErrStr toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
+Expected<void> toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
 {
     MR_TIMER
 
@@ -307,7 +307,7 @@ VoidOrErrStr toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSetti
     return {};
 }
 
-VoidOrErrStr toAsciiStl( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings & settings )
+Expected<void> toAsciiStl( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -316,7 +316,7 @@ VoidOrErrStr toAsciiStl( const Mesh& mesh, const std::filesystem::path& file, co
     return toAsciiStl( mesh, out, settings );
 }
 
-VoidOrErrStr toAsciiStl( const Mesh& mesh, std::ostream& out, const SaveSettings & settings )
+Expected<void> toAsciiStl( const Mesh& mesh, std::ostream& out, const SaveSettings & settings )
 {
     MR_TIMER;
 
@@ -359,7 +359,7 @@ VoidOrErrStr toAsciiStl( const Mesh& mesh, std::ostream& out, const SaveSettings
     return {};
 }
 
-VoidOrErrStr toPly( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+Expected<void> toPly( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -368,7 +368,7 @@ VoidOrErrStr toPly( const Mesh & mesh, const std::filesystem::path & file, const
     return toPly( mesh, out, settings );
 }
 
-VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
+Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
 {
     MR_TIMER
 
@@ -444,7 +444,7 @@ VoidOrErrStr toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & 
     return {};
 }
 
-VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings & settings )
+Expected<void> toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings & settings )
 {
     auto ext = utf8string( file.extension() );
     for ( auto & c : ext )
@@ -458,7 +458,7 @@ VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path
     return saver.fileSave( mesh, file, settings );
 }
 
-VoidOrErrStr toAnySupportedFormat( const Mesh& mesh, const std::string& extension, std::ostream& out, const SaveSettings & settings )
+Expected<void> toAnySupportedFormat( const Mesh& mesh, const std::string& extension, std::ostream& out, const SaveSettings & settings )
 {
     auto ext = extension;
     for ( auto& c : ext )

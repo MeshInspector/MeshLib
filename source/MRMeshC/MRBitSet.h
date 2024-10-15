@@ -4,11 +4,8 @@
 
 MR_EXTERN_C_BEGIN
 
-/// ...
+/// creates bitset of given size filled with given value
 MRMESHC_API MRBitSet* mrBitSetNew( size_t numBits, bool fillValue );
-
-/// creates a copy of a BitSet object
-MRMESHC_API MRBitSet* mrBitSetCopy( const MRBitSet* bs );
 
 /// gets read-only access to the underlying blocks of a bitset
 MRMESHC_API const uint64_t* mrBitSetBlocks( const MRBitSet* bs );
@@ -25,25 +22,28 @@ MRMESHC_API size_t mrBitSetCount( const MRBitSet* bs );
 /// checks if two bitsets are equal (have the same length and identical bit values)
 MRMESHC_API bool mrBitSetEq( const MRBitSet* a, const MRBitSet* b );
 
-/// ...
+/// returns the value of the specified bit
 MRMESHC_API bool mrBitSetTest( const MRBitSet* bs, size_t index );
 
-/// ...
+/// sets the value of the specified bit
 MRMESHC_API void mrBitSetSet( MRBitSet* bs, size_t index, bool value );
 
-/// ...
+/// returns special value representing the non-existent index
+MRMESHC_API size_t mrBitSetNpos( void );
+
+/// return the lowest index i such as bit i is set, or npos if *this has no on bits.
 MRMESHC_API size_t mrBitSetFindFirst( const MRBitSet* bs );
 
-/// ...
+/// return the highest index i such as bit i is set, or npos if *this has no on bits.
 MRMESHC_API size_t mrBitSetFindLast( const MRBitSet* bs );
 
-/// ...
+/// resizes the bitset
 MRMESHC_API void mrBitSetResize( MRBitSet* bs, size_t size, bool value );
 
-/// ...
+/// sets element pos to given value, adjusting the size of the set to include new element if necessary
 MRMESHC_API void mrBitSetAutoResizeSet( MRBitSet* bs, size_t pos, bool value );
 
-/// ...
+/// creates a new bitset including a's bits and excluding b's bits
 MRMESHC_API MRBitSet* mrBitSetSub( const MRBitSet* a, const MRBitSet* b );
 
 /// deallocates a BitSet object

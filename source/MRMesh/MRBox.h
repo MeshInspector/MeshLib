@@ -23,8 +23,9 @@ template <typename V>
 struct Box
 {
 public:
-    using T = typename VectorTraits<V>::BaseType;
-    static constexpr int elements = VectorTraits<V>::size;
+    using VTraits = VectorTraits<V>;
+    using T = typename VTraits::BaseType;
+    static constexpr int elements = VTraits::size;
 
     V min, max;
 
@@ -33,7 +34,7 @@ public:
           V & operator []( int e )       { return *( &min + e ); }
 
     /// create invalid box by default
-    Box() : min{ VectorTraits<V>::diagonal( std::numeric_limits<T>::max() ) }, max{ VectorTraits<V>::diagonal( std::numeric_limits<T>::lowest() ) } { }
+    Box() : min{ VTraits::diagonal( std::numeric_limits<T>::max() ) }, max{ VTraits::diagonal( std::numeric_limits<T>::lowest() ) } { }
     explicit Box( NoInit ) : min{ noInit }, max{ noInit } { }
     Box( const V& min, const V& max ) : min{ min }, max{ max } { }
 
@@ -46,7 +47,7 @@ public:
     bool valid() const
     {
         for ( int i = 0; i < elements; ++i )
-            if ( min[i] > max[i] )
+            if ( VTraits::getElem( i, min ) > VTraits::getElem( i, max ) )
                 return false;
         return true;
     }
@@ -58,7 +59,7 @@ public:
     V size() const { assert( valid() ); return max - min; }
 
     /// computes length from min to max
-    T diagonal() const { return size().length(); }
+    T diagonal() const { return std::sqrt( sqr( size() ) ); }
 
     /// computes the volume of this box
     T volume() const
@@ -66,7 +67,7 @@ public:
         assert( valid() );
         T res{ 1 };
         for ( int i = 0; i < elements; ++i )
-            res *= max[i] - min[i];
+            res *= VTraits::getElem( i, max ) - VTraits::getElem( i, min );
         return res;
     }
 
@@ -75,8 +76,8 @@ public:
     {
         for ( int i = 0; i < elements; ++i )
         {
-            if ( pt[i] < min[i] ) min[i] = pt[i];
-            if ( pt[i] > max[i] ) max[i] = pt[i];
+            if ( VTraits::getElem( i, pt ) < VTraits::getElem( i, min ) ) VTraits::getElem( i, min ) = VTraits::getElem( i, pt );
+            if ( VTraits::getElem( i, pt ) > VTraits::getElem( i, max ) ) VTraits::getElem( i, max ) = VTraits::getElem( i, pt );
         }
     }
 
@@ -85,8 +86,8 @@ public:
     {
         for ( int i = 0; i < elements; ++i )
         {
-            if ( b.min[i] < min[i] ) min[i] = b.min[i];
-            if ( b.max[i] > max[i] ) max[i] = b.max[i];
+            if ( VTraits::getElem( i, b.min ) < VTraits::getElem( i, min ) ) VTraits::getElem( i, min ) = VTraits::getElem( i, b.min );
+            if ( VTraits::getElem( i, b.max ) > VTraits::getElem( i, max ) ) VTraits::getElem( i, max ) = VTraits::getElem( i, b.max );
         }
     }
 
@@ -94,7 +95,7 @@ public:
     bool contains( const V & pt ) const
     {
         for ( int i = 0; i < elements; ++i )
-            if ( min[i] > pt[i] || pt[i] > max[i] )
+            if ( VTraits::getElem( i, min ) > VTraits::getElem( i, pt ) || VTraits::getElem( i, pt ) > VTraits::getElem( i, max ) )
                 return false;
         return true;
     }
@@ -105,7 +106,7 @@ public:
         assert( valid() );
         V res;
         for ( int i = 0; i < elements; ++i )
-            res[i] = std::clamp( pt[i], min[i], max[i] );
+            VTraits::getElem( i, res ) = std::clamp( VTraits::getElem( i, pt ), VTraits::getElem( i, min ), VTraits::getElem( i, max ) );
         return res;
     }
 
@@ -114,7 +115,7 @@ public:
     {
         for ( int i = 0; i < elements; ++i )
         {
-            if ( b.max[i] < min[i] || b.min[i] > max[i] )
+            if ( VTraits::getElem( i, b.max ) < VTraits::getElem( i, min ) || VTraits::getElem( i, b.min ) > VTraits::getElem( i, max ) )
                 return false;
         }
         return true;
@@ -126,8 +127,8 @@ public:
         Box res;
         for ( int i = 0; i < elements; ++i )
         {
-            res.min[i] = std::max( min[i], b.min[i] );
-            res.max[i] = std::min( max[i], b.max[i] );
+            VTraits::getElem( i, res.min ) = std::max( VTraits::getElem( i, min ), VTraits::getElem( i, b.min ) );
+            VTraits::getElem( i, res.max ) = std::min( VTraits::getElem( i, max ), VTraits::getElem( i, b.max ) );
         }
         return res;
     }
@@ -140,8 +141,8 @@ public:
         auto ibox = intersection( b );
         T distSq = 0;
         for ( int i = 0; i < elements; ++i )
-            if ( ibox.min[i] > ibox.max[i] )
-                distSq += sqr( ibox.min[i] - ibox.max[i] );
+            if ( VTraits::getElem( i, ibox.min ) > VTraits::getElem( i, ibox.max ) )
+                distSq += sqr( VTraits::getElem( i, ibox.min ) - VTraits::getElem( i, ibox.max ) );
         return distSq;
     }
 
@@ -153,11 +154,11 @@ public:
         T res{};
         for ( int i = 0; i < elements; ++i )
         {
-            if ( pt[i] < min[i] )
-                res += sqr( pt[i] - min[i] );
+            if ( VTraits::getElem( i, pt ) < VTraits::getElem( i, min ) )
+                res += sqr( VTraits::getElem( i, pt ) - VTraits::getElem( i, min ) );
             else
-            if ( pt[i] > max[i] )
-                res += sqr( pt[i] - max[i] );
+            if ( VTraits::getElem( i, pt ) > VTraits::getElem( i, max ) )
+                res += sqr( VTraits::getElem( i, pt ) - VTraits::getElem( i, max ) );
         }
         return res;
     }
@@ -176,8 +177,8 @@ public:
         Box res;
         for ( int i = 0; i < elements; ++i )
         {
-            res.min[i] = std::nextafter( min[i], std::numeric_limits<T>::lowest() );
-            res.max[i] = std::nextafter( max[i], std::numeric_limits<T>::max() );
+            VTraits::getElem( i, res.min ) = std::nextafter( VTraits::getElem( i, min ), std::numeric_limits<T>::lowest() );
+            VTraits::getElem( i, res.max ) = std::nextafter( VTraits::getElem( i, max ), std::numeric_limits<T>::max() );
         }
         return res;
     }

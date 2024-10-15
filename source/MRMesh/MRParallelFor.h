@@ -130,8 +130,8 @@ inline auto ParallelFor( const Vector<T, I> & v, F &&... f )
 template<typename T>
 std::pair<T, T> parallelMinMax( const std::vector<T>& vec, const T * topExcluding = nullptr )
 {
-    auto minmax = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, vec.size() ), Box1<T>{},
-    [&] ( const tbb::blocked_range<size_t> range, Box1<T> curMinMax )
+    auto minmax = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, vec.size() ), MinMax<T>{},
+    [&] ( const tbb::blocked_range<size_t> range, MinMax<T> curMinMax )
     {
         for ( size_t i = range.begin(); i < range.end(); i++ )
         {
@@ -145,9 +145,9 @@ std::pair<T, T> parallelMinMax( const std::vector<T>& vec, const T * topExcludin
         }
         return curMinMax;
     },
-    [&] ( const Box1<T>& a, const Box1<T>& b )
+    [&] ( const MinMax<T>& a, const MinMax<T>& b )
     {
-        Box1<T> res;
+        MinMax<T> res;
         if ( a.min < b.min )
         {
             res.min = a.min;

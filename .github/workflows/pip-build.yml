@@ -74,8 +74,6 @@ jobs:
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
-          git config --global --add safe.directory ${GITHUB_WORKSPACE}/'*'
-          git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/'*'
           git submodule update --init --depth 1 thirdparty/imgui thirdparty/parallel-hashmap
 
       - name: Python setup

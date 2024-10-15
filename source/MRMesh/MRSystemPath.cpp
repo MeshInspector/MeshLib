@@ -1,5 +1,6 @@
 #include "MRSystemPath.h"
 #include "MROnInit.h"
+#include "MRDirectory.h"
 
 #if defined( _WIN32 )
 #include <libloaderapi.h>
@@ -169,71 +170,57 @@ void SystemPath::overrideDirectory( SystemPath::Directory dir, const std::filesy
     instance_().directories_[(size_t)dir] = path;
 }
 
-std::filesystem::path SystemPath::getSystemFontsDirectory()
+const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
 {
-    std::filesystem::path path;
-#if defined(__EMSCRIPTEN__)
-    path = "/usr/share/fonts";
-#elif defined(__APPLE__)
-    path = "Library/Fonts"
-#else
-    path = "C:/Windows/Fonts";
-#endif
-    return path;
-}
-
-const std::vector<std::string>& SystemPath::getAllSystemFonts()
-{
-    static std::vector<std::string> allFonts;
-    if ( !allFonts.empty() )
-    {
-        return allFonts;
-    }
-
-    auto path = getSystemFontsDirectory();
-    for ( auto& p : std::filesystem::directory_iterator( path ) )
-    {
-        allFonts.push_back( p.path().stem().string() );
-    }
-
-    return allFonts;
-}
-
-const std::vector<std::string>& SystemPath::getSystemFonts()
-{
-    static std::vector<std::string> fonts;
+    static std::vector<SystemPath::SystemFontPaths> fonts;
     if ( !fonts.empty() )
     {
         return fonts;
     }
-    std::vector<std::string> allFonts = getAllSystemFonts();
 
-    std::string name;
-    size_t n = 0;
+    std::filesystem::path path;
+#ifdef _WIN32
+    path = "C:/Windows/Fonts";
+#elif defined (__APPLE__)
+    path = "Library/Fonts"
+#else // linux and wasm
+    path = "/usr/share/fonts";
+#endif
+
+    std::vector<std::filesystem::path> allFonts;
+    std::error_code ec;
+    for ( auto entry : MR::Directory{ path, ec } )
+    {
+        allFonts.push_back( entry );
+    }
+
+    std::string firstFontName;
+    std::string curName;
     for ( const auto& font : allFonts )
     {
-        if ( name.empty() )
+        if ( font.extension() != ".ttf" )
         {
-            name = font;
             continue;
         }
-        if ( font.find( name ) == std::string::npos )
+        curName = font.stem().string();
+        if ( firstFontName.empty() || curName.find( firstFontName ) == std::string::npos )
         {
-            name = font;
+            firstFontName = curName;
+            fonts.push_back( SystemFontPaths() );
+            fonts.back()[( size_t )SystemFontType::Regular] = font;
             continue;
         }
-        if ( font == name + "b" || font == name + "B" ||
-             font == name + "i" || font == name + "I" ||
-             font == name + "bi" || font == name + "BI" )
+        if ( curName == firstFontName + "b" || curName == firstFontName + "B" )
         {
-            n++;
+            fonts.back()[(size_t)SystemFontType::Bold] = font;
         }
-
-        if ( n == 3 )
+        if ( curName == firstFontName + "i" || curName == firstFontName + "I" )
         {
-            fonts.push_back( name );
-            name.clear();
-            n = 0;
+            fonts.back()[( size_t )SystemFontType::Italic] = font;
+        }
+        if ( curName == firstFontName + "bi" || curName == firstFontName + "BI" )
+        {
+            fonts.back()[( size_t )SystemFontType::BoldItalic] = font;
         }
     }
 

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cassert>
 #include <limits>
+#include <type_traits>
 
 namespace MR
 {
@@ -35,8 +36,14 @@ public:
 
     /// create invalid box by default
     Box() : min{ VTraits::diagonal( std::numeric_limits<T>::max() ) }, max{ VTraits::diagonal( std::numeric_limits<T>::lowest() ) } { }
-    explicit Box( NoInit ) : min{ noInit }, max{ noInit } { }
     Box( const V& min, const V& max ) : min{ min }, max{ max } { }
+
+    /// skip initialization of min/max
+    template <typename VV = V, typename std::enable_if_t<VectorTraits<VV>::supportNoInit, int> = 0>
+    explicit Box( NoInit ) : min{ noInit }, max{ noInit } { }
+
+    template <typename VV = V, typename std::enable_if_t<!VectorTraits<VV>::supportNoInit, int> = 0>
+    explicit Box( NoInit ) { }
 
     template <typename U>
     explicit Box( const Box<U> & a ) : min{ a.min }, max{ a.max } { }

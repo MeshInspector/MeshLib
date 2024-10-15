@@ -26,6 +26,7 @@ struct VectorTraits
     template <typename U>
     [[nodiscard]] static constexpr auto&& getElem( int i, U&& value ) { (void)i; return value; }
 
+    static constexpr T diagonal( T v ) { return v; }
 };
 
 template <typename T>
@@ -44,7 +45,10 @@ struct VectorTraits<Vector2<T>>
         // GCC and Clang optimize both in the same manner.
         return ( &value.x )[i];
     }
+
+    static constexpr auto diagonal( T v ) { return Vector2<T>::diagonal( v ); }
 };
+
 template <typename T>
 struct VectorTraits<Vector3<T>>
 {
@@ -61,7 +65,10 @@ struct VectorTraits<Vector3<T>>
         // GCC and Clang optimize both in the same manner.
         return ( &value.x )[i];
     }
+
+    static constexpr auto diagonal( T v ) { return Vector3<T>::diagonal( v ); }
 };
+
 template <typename T>
 struct VectorTraits<Vector4<T>>
 {
@@ -78,6 +85,8 @@ struct VectorTraits<Vector4<T>>
         // GCC and Clang optimize both in the same manner.
         return ( &value.x )[i];
     }
+
+    static constexpr auto diagonal( T v ) { return Vector4<T>::diagonal( v ); }
 };
 
 }

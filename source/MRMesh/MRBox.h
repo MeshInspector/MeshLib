@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRAffineXf3.h"
+#include "MRVectorTraits.h"
 #include <algorithm>
 #include <cassert>
 #include <limits>
@@ -22,7 +23,8 @@ template <typename V>
 struct Box
 {
 public:
-    using T = typename V::ValueType;
+    using T = typename VectorTraits<V>::BaseType;
+    static constexpr int elements = VectorTraits<V>::size;
 
     V min, max;
 
@@ -31,7 +33,7 @@ public:
           V & operator []( int e )       { return *( &min + e ); }
 
     /// create invalid box by default
-    Box() : min{ V::diagonal( std::numeric_limits<T>::max() ) }, max{ V::diagonal( std::numeric_limits<T>::lowest() ) } { }
+    Box() : min{ VectorTraits<V>::diagonal( std::numeric_limits<T>::max() ) }, max{ VectorTraits<V>::diagonal( std::numeric_limits<T>::lowest() ) } { }
     explicit Box( NoInit ) : min{ noInit }, max{ noInit } { }
     Box( const V& min, const V& max ) : min{ min }, max{ max } { }
 
@@ -43,7 +45,7 @@ public:
     /// true if the box contains at least one point
     bool valid() const
     {
-        for ( int i = 0; i < V::elements; ++i )
+        for ( int i = 0; i < elements; ++i )
             if ( min[i] > max[i] )
                 return false;
         return true;
@@ -63,7 +65,7 @@ public:
     {
         assert( valid() );
         T res{ 1 };
-        for ( int i = 0; i < V::elements; ++i )
+        for ( int i = 0; i < elements; ++i )
             res *= max[i] - min[i];
         return res;
     }
@@ -71,7 +73,7 @@ public:
     /// minimally increases the box to include given point
     void include( const V & pt )
     {
-        for ( int i = 0; i < V::elements; ++i )
+        for ( int i = 0; i < elements; ++i )
         {
             if ( pt[i] < min[i] ) min[i] = pt[i];
             if ( pt[i] > max[i] ) max[i] = pt[i];
@@ -81,7 +83,7 @@ public:
     /// minimally increases the box to include another box
     void include( const Box & b )
     {
-        for ( int i = 0; i < V::elements; ++i )
+        for ( int i = 0; i < elements; ++i )
         {
             if ( b.min[i] < min[i] ) min[i] = b.min[i];
             if ( b.max[i] > max[i] ) max[i] = b.max[i];
@@ -91,7 +93,7 @@ public:
     /// checks whether given point is inside (including the surface) of the box
     bool contains( const V & pt ) const
     {
-        for ( int i = 0; i < V::elements; ++i )
+        for ( int i = 0; i < elements; ++i )
             if ( min[i] > pt[i] || pt[i] > max[i] )
                 return false;
         return true;
@@ -102,7 +104,7 @@ public:
     {
         assert( valid() );
         V res;
-        for ( int i = 0; i < V::elements; ++i )
+        for ( int i = 0; i < elements; ++i )
             res[i] = std::clamp( pt[i], min[i], max[i] );
         return res;
     }
@@ -110,7 +112,7 @@ public:
     /// checks whether this box intersects or touches given box
     bool intersects( const Box & b ) const
     {
-        for ( int i = 0; i < V::elements; ++i )
+        for ( int i = 0; i < elements; ++i )
         {
             if ( b.max[i] < min[i] || b.min[i] > max[i] )
                 return false;
@@ -122,7 +124,7 @@ public:
     Box intersection( const Box & b ) const
     {
         Box res;
-        for ( int i = 0; i < V::elements; ++i )
+        for ( int i = 0; i < elements; ++i )
         {
             res.min[i] = std::max( min[i], b.min[i] );
             res.max[i] = std::min( max[i], b.max[i] );
@@ -137,7 +139,7 @@ public:
     {
         auto ibox = intersection( b );
         T distSq = 0;
-        for ( int i = 0; i < V::elements; ++i )
+        for ( int i = 0; i < elements; ++i )
             if ( ibox.min[i] > ibox.max[i] )
                 distSq += sqr( ibox.min[i] - ibox.max[i] );
         return distSq;
@@ -149,7 +151,7 @@ public:
     {
         assert( valid() );
         T res{};
-        for ( int i = 0; i < V::elements; ++i )
+        for ( int i = 0; i < elements; ++i )
         {
             if ( pt[i] < min[i] )
                 res += sqr( pt[i] - min[i] );
@@ -172,7 +174,7 @@ public:
     {
         assert( valid() );
         Box res;
-        for ( int i = 0; i < V::elements; ++i )
+        for ( int i = 0; i < elements; ++i )
         {
             res.min[i] = std::nextafter( min[i], std::numeric_limits<T>::lowest() );
             res.max[i] = std::nextafter( max[i], std::numeric_limits<T>::max() );

@@ -6,8 +6,9 @@ project(MRMeshC CXX)
 
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
+file(GLOB DETAIL_HEADERS "detail/*.h" "detail/*.hpp")
 
-add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
+add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS} ${DETAIL_HEADERS})
 
 target_compile_options(${PROJECT_NAME} PRIVATE "-Wno-strict-aliasing")
 

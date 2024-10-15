@@ -1,3 +1,5 @@
+#pragma once
+
 #include "MRMeshFwd.h"
 #include "MRCone3.h"
 #include "MRToFromEigen.h"
@@ -12,12 +14,12 @@
 #pragma warning(disable: 4464) // relative include path contains '..'
 #pragma warning(disable: 4643) // Forward declaring 'tuple' in namespace std is not permitted by the C++ Standard.
 #pragma warning(disable: 5054) // operator '|': deprecated between enumerations of different types
-#pragma warning(disable: 4244) // casting float to double 
+#pragma warning(disable: 4244) // casting float to double
 #elif defined(__clang__)
 #elif defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif 
+#endif
 
 #include <unsupported/Eigen/NonLinearOptimization>
 #include <unsupported/Eigen/NumericalDiff>
@@ -28,7 +30,7 @@
 #elif defined(__clang__)
 #elif defined(__GNUC__)
 #pragma GCC diagnostic pop
-#endif 
+#endif
 
 
 // Main idea is here: https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf pages 45-51
@@ -39,8 +41,8 @@ namespace MR
 {
 
 // to use Levenberg-Marquardt minimization we need a special type of functor
-// to look1: https://github.com/cryos/eigen/blob/master/unsupported/test/NonLinearOptimization.cpp : lmder_functor  
-// to look2: https://eigen.tuxfamily.org/dox-devel/unsupported/group__NonLinearOptimization__Module.html  
+// to look1: https://github.com/cryos/eigen/blob/master/unsupported/test/NonLinearOptimization.cpp : lmder_functor
+// to look2: https://eigen.tuxfamily.org/dox-devel/unsupported/group__NonLinearOptimization__Module.html
 template <typename T>
 struct ConeFittingFunctor
 {
@@ -69,9 +71,9 @@ struct ConeFittingFunctor
         return static_cast< int > ( points.size() );
     }
 
-    // https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf formula 103 
-    // F[i](V,W) = D^T * (I - W * W^T) * D 
-    // where: D = V - X[i] and P = (V,W) 
+    // https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf formula 103
+    // F[i](V,W) = D^T * (I - W * W^T) * D
+    // where: D = V - X[i] and P = (V,W)
     int operator()( const InputType& x, ValueType& F ) const
     {
         Eigen::Vector3<T> V;
@@ -93,7 +95,7 @@ struct ConeFittingFunctor
         return 0;
     }
 
-    // Here we calculate a Jacobian. 
+    // Here we calculate a Jacobian.
     // function name requested by Eigen lib.
     int df( const InputType& x, JacobianType& J ) const
     {
@@ -146,9 +148,9 @@ struct Cone3ApproximationParams {
     int hemisphereSearchThetaResolution = 30;
 };
 
-// Class for approximation cloud point by cone. 
-// We will calculate the initial approximation of the cone and then use a minimizer to refine the parameters. 
-// minimizer is LevenbergMarquardt now. 
+// Class for approximation cloud point by cone.
+// We will calculate the initial approximation of the cone and then use a minimizer to refine the parameters.
+// minimizer is LevenbergMarquardt now.
 // TODO: Possible we could add GaussNewton in future.
 template <typename T>
 class Cone3Approximation
@@ -187,7 +189,7 @@ private:
     // cone fitter main params
     Cone3ApproximationParams params_;
 
-    // solver for single axis case. 
+    // solver for single axis case.
     T solveFixedAxis_( const std::vector<MR::Vector3<T>>& points,
         Cone3<T>& cone, bool useConeInputAsInitialGuess = false )
 
@@ -214,8 +216,8 @@ private:
         coneToFitParams_( cone, fittedParams );
         [[maybe_unused]] Eigen::LevenbergMarquardtSpace::Status result = lm.minimize( fittedParams );
 
-        // Looks like a bug in Eigen. Eigen::LevenbergMarquardtSpace::Status have error codes only. Not return value for Success minimization. 
-        // So just log status 
+        // Looks like a bug in Eigen. Eigen::LevenbergMarquardtSpace::Status have error codes only. Not return value for Success minimization.
+        // So just log status
 
         fitParamsToCone_( fittedParams, cone );
 
@@ -238,7 +240,7 @@ private:
         return solveFixedAxis_( points, cone, true );
     }
 
-    // brute force solver across hole hemisphere for cone axis original extimation. 
+    // brute force solver across hole hemisphere for cone axis original extimation.
     T solveHemisphereSearchFit_( const std::vector<MR::Vector3<T>>& points, Cone3<T>& cone )
     {
         Vector3<T> center = computeCenter_( points );
@@ -283,8 +285,8 @@ private:
                     lm.parameters.maxfev = params_.levenbergMarquardtMaxIteration;
                     [[maybe_unused]] Eigen::LevenbergMarquardtSpace::Status result = lm.minimize( fittedParams );
 
-                    // Looks like a bug in Eigen. Eigen::LevenbergMarquardtSpace::Status have error codes only. 
-                    // Not return value for Success minimization. 
+                    // Looks like a bug in Eigen. Eigen::LevenbergMarquardtSpace::Status have error codes only.
+                    // Not return value for Success minimization.
 
                     fitParamsToCone_( fittedParams, tmpCone );
 
@@ -318,7 +320,7 @@ private:
         return bestAppox->minError;
     }
 
-    // Calculate and return a length of cone based on set of initil points and inifinite cone surface given by cone param. 
+    // Calculate and return a length of cone based on set of initil points and inifinite cone surface given by cone param.
     T calculateConeHeight_( const std::vector<MR::Vector3<T>>& points, Cone3<T>& cone )
     {
         T length = static_cast< T > ( 0 );
@@ -344,7 +346,7 @@ private:
     MR::Vector3<T> computeCenter_( const std::vector<MR::Vector3<T>>& points )
     {
         // Compute the average of the sample points.
-        MR::Vector3<T> center;  // C in pdf  
+        MR::Vector3<T> center;  // C in pdf
         for ( auto i = 0; i < points.size(); ++i )
         {
             center += points[i];
@@ -359,7 +361,7 @@ private:
         center = computeCenter_( points );
 
         // The cone axis is estimated from ZZTZ (see the https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf, formula 120).
-        U = Vector3f();  // U in pdf 
+        U = Vector3f();  // U in pdf
         for ( auto i = 0; i < points.size(); ++i )
         {
             Vector3<T> Z = points[i] - center;
@@ -466,7 +468,7 @@ private:
         }
     }
 
-    // Convert data from Eigen minimizator representation to cone params. 
+    // Convert data from Eigen minimizator representation to cone params.
     void fitParamsToCone_( Eigen::Vector<T, Eigen::Dynamic>& fittedParams, Cone3<T>& cone )
     {
         cone.apex().x = fittedParams[0];
@@ -478,7 +480,7 @@ private:
         cone.direction().z = fittedParams[5];
     }
 
-    // Convert data from cone params to Eigen minimizator representation. 
+    // Convert data from cone params to Eigen minimizator representation.
     void coneToFitParams_( Cone3<T>& cone, Eigen::Vector<T, Eigen::Dynamic>& fittedParams )
     {
         // The fittedParams guess for the cone vertex.
@@ -497,7 +499,3 @@ private:
 };
 
 }
-
-
-
-

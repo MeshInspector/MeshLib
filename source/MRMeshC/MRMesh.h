@@ -4,6 +4,7 @@
 #include "MRAffineXf.h"
 #include "MRBox.h"
 #include "MRId.h"
+#include "MRMeshTopology.h"
 
 MR_EXTERN_C_BEGIN
 
@@ -72,6 +73,10 @@ MRMESHC_API void mrMeshPack( MRMesh* mesh, bool rearrangeTriangles );
 /// packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices
 /// \param preserveAABBTree whether to keep valid mesh's AABB tree after return (it will take longer to compute and it will occupy more memory)
 MRMESHC_API void mrMeshPackOptimally( MRMesh* mesh, bool preserveAABBTree );
+
+/// returns volume of closed mesh region, if region is not closed DBL_MAX is returned
+/// if region is NULL - whole mesh is region
+MRMESHC_API double mrMeshVolume( const MRMesh* mesh, const MRFaceBitSet* region );
 
 /// deallocates a Mesh object
 MRMESHC_API void mrMeshFree( MRMesh* mesh );

@@ -14,6 +14,7 @@
 #include "MRFillContour.h"
 #include "MRGTest.h"
 #include "MRMeshComponents.h"
+#include "MRTorus.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
 #include <parallel_hashmap/phmap.h>
@@ -2060,6 +2061,38 @@ TEST( MRMesh, BooleanIntersectionsSort )
 
     for ( auto f : meshA.topology.getValidFaces() )
         EXPECT_TRUE( dot( meshA.dirDblArea( f ), aNorm ) > 0.0f );
+}
+
+TEST( MRMesh, MeshCollidePrecise )
+{
+    const auto meshA = makeTorus( 1.1f, 0.5f, 8, 8 );
+    auto meshB = makeTorus( 1.1f, 0.5f, 8, 8 );
+    meshB.transform( AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), Vector3f { 0.1f, 0.8f, 0.2f } ) ) );
+
+    const auto conv = getVectorConverters( meshA, meshB );
+
+    const auto intersections = findCollidingEdgeTrisPrecise( meshA, meshB, conv.toInt );
+    // FIXME: the results are platform-dependent
+    //EXPECT_EQ( intersections.edgesAtrisB.size(), 76 );
+    //EXPECT_EQ( intersections.edgesBtrisA.size(), 76 );
+
+    const auto contours = orderIntersectionContours( meshA.topology, meshB.topology, intersections );
+    EXPECT_EQ( contours.size(), 4 );
+    // FIXME: the results are platform-dependent
+    //EXPECT_EQ( contours[0].size(), 71 );
+    //EXPECT_EQ( contours[1].size(), 71 );
+    //EXPECT_EQ( contours[2].size(), 7 );
+    //EXPECT_EQ( contours[3].size(), 7 );
+
+    const auto meshAContours = getOneMeshIntersectionContours( meshA, meshB, contours, true, conv );
+    const auto meshBContours = getOneMeshIntersectionContours( meshA, meshB, contours, false, conv );
+    EXPECT_EQ( meshAContours.size(), 4 );
+    EXPECT_EQ( meshBContours.size(), 4 );
+
+    size_t posCount = 0;
+    for ( const auto& contour : meshAContours )
+        posCount += contour.intersections.size();
+    EXPECT_EQ( posCount, 156 );
 }
 
 } //namespace MR

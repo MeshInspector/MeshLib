@@ -367,6 +367,9 @@
     <ClCompile Include="MRUnits.cpp">
       <Filter>UIStyle</Filter>
     </ClCompile>
+    <ClCompile Include="MRUnitSettings.cpp">
+      <Filter>UIStyle</Filter>
+    </ClCompile>
     <ClCompile Include="MRVisualSubfeatures.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
@@ -777,6 +780,9 @@
       <Filter>UIStyle</Filter>
     </ClInclude>
     <ClInclude Include="MRUnits.h">
+      <Filter>UIStyle</Filter>
+    </ClInclude>
+    <ClInclude Include="MRUnitSettings.h">
       <Filter>UIStyle</Filter>
     </ClInclude>
     <ClInclude Include="MRUIStyle.ipp">

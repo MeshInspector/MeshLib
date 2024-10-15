@@ -25,6 +25,7 @@
 #include <MRViewer/MRFileDialog.h>
 #include "MRMesh/MRObjectMesh.h"
 #include "MRViewer/MRRibbonSceneObjectsListDrawer.h"
+#include "MRViewer/MRUnitSettings.h"
 
 namespace
 {
@@ -487,52 +488,15 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 {
     (void)menuScaling;
 
-    auto paramsNoUnit = getDefaultUnitParams<NoUnit>();
-    auto paramsLen = getDefaultUnitParams<LengthUnit>();
-    auto paramsArea = getDefaultUnitParams<AreaUnit>();
-    auto paramsVol = getDefaultUnitParams<VolumeUnit>();
-    auto paramsMoveSpeed = getDefaultUnitParams<MovementSpeedUnit>();
-    auto paramsAngle = getDefaultUnitParams<AngleUnit>();
-    auto paramsTime = getDefaultUnitParams<TimeUnit>();
-    auto paramsRatio = getDefaultUnitParams<RatioUnit>();
-    auto paramsPixelSize = getDefaultUnitParams<PixelSizeUnit>();
-    auto paramsInvLen = getDefaultUnitParams<InvLengthUnit>();
-
-    auto forAllLengthParams = [&]( auto&& func )
-    {
-        func( paramsLen );
-        func( paramsArea );
-        func( paramsVol );
-        func( paramsMoveSpeed );
-        func( paramsInvLen );
-    };
-    auto forAllParams = [&]( auto&& func )
-    {
-        func( paramsNoUnit );
-        forAllLengthParams( func );
-        func( paramsAngle );
-        func( paramsTime );
-        func( paramsRatio );
-        func( paramsPixelSize );
-    };
-
-    auto applyParams = [&]
-    {
-        forAllParams( []( const auto& params ){ setDefaultUnitParams( params ); } );
-    };
-
-
     { // Common.
         drawSeparator_( "Common", menuScaling );
 
         // --- Leading zero
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
-        if ( UI::checkbox( "Leading zero", &paramsLen.leadingZero ) )
-        {
-            forAllParams( [&]( auto& params ){ params.leadingZero = paramsLen.leadingZero; } );
-            applyParams();
-        }
+        bool value = UnitSettings::getShowLeadingZero();
+        if ( UI::checkbox( "Leading zero", &value ) )
+            UnitSettings::setShowLeadingZero( value );
         ImGui::SetItemTooltip( "If disabled, remove the lone zeroes before the decimal point." );
         ImGui::PopStyleVar();
 
@@ -543,21 +507,13 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
             ImGui::PushItemWidth( 170.0f * menuScaling );
             MR_FINALLY{ ImGui::PopItemWidth(); };
 
-            char thouSep[2] = { frac ? paramsNoUnit.thousandsSeparatorFrac : paramsNoUnit.thousandsSeparator, '\0' };
+            char thouSep[2] = { UnitSettings::getThousandsSeparator( frac ), '\0' };
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( std::floor( ( ImGui::CalcItemWidth() - ImGui::CalcTextSize( thouSep ).x ) / 2 ), cButtonPadding * menuScaling ) );
             MR_FINALLY{ ImGui::PopStyleVar(); };
 
             if ( UI::inputTextIntoArray( frac ? "Thousands separator (fractional part)" : "Thousands separator", thouSep, sizeof thouSep, ImGuiInputTextFlags_AutoSelectAll ) )
-            {
-                forAllParams( [&]( auto& params )
-                {
-                    if ( frac )
-                        params.thousandsSeparatorFrac = thouSep[0];
-                    else
-                        params.thousandsSeparator = thouSep[0];
-                } );
-                applyParams();
-            }
+                UnitSettings::setThousandsSeparator( thouSep[0], frac );
+
             // If the separator is empty or a space, display a string explaining that on top of the textbox.
             if ( !ImGui::IsItemActive() )
             {
@@ -575,7 +531,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
             }
         };
         thousandsSeparator( false ); // Integral part.
-        // thousandsSeparator( true ); // Fractional part.
+        // thousandsSeparator( true ); // Fractional part. // I was told this doesn't deserve a setting.
     }
 
 
@@ -590,48 +546,29 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 
         static const std::vector<std::string> optionNames = []{
             std::vector<std::string> ret;
-            ret.reserve( std::size_t( LengthUnit::_count ) );
+            ret.reserve( std::size_t( LengthUnit::_count ) + 1 );
             for ( std::size_t i = 0; i < std::size_t( LengthUnit::_count ); i++ )
                 ret.push_back( std::string( getUnitInfo( LengthUnit( i ) ).prettyName ) );
+            ret.push_back( "No units" );
             return ret;
         }();
 
-        int option = int( paramsLen.targetUnit );
+        int option = int( UnitSettings::getUiLengthUnit().value_or( LengthUnit::_count ) );
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
         if ( UI::combo( "Unit##length", &option, optionNames ) )
         {
-            paramsLen.targetUnit = LengthUnit( option );
-
-            switch ( paramsLen.targetUnit )
-            {
-            case LengthUnit::mm:
-                forAllParams( [&]( auto&& params ){ params.leadingZero = true; } );
-                paramsArea.targetUnit = AreaUnit::mm2;
-                paramsVol.targetUnit = VolumeUnit::mm3;
-                paramsMoveSpeed.targetUnit = MovementSpeedUnit::mmPerSecond;
-                paramsInvLen.targetUnit = InvLengthUnit::inv_mm;
-                break;
-            case LengthUnit::inches:
-                forAllParams( [&]( auto&& params ){ params.leadingZero = false; } );
-                paramsArea.targetUnit = AreaUnit::inches2;
-                paramsVol.targetUnit = VolumeUnit::inches3;
-                paramsMoveSpeed.targetUnit = MovementSpeedUnit::inchesPerSecond;
-                paramsInvLen.targetUnit = InvLengthUnit::inv_inches;
-                break;
-            case LengthUnit::_count:; // MSVC warns otherwise.
-                break;
-            }
-
-            applyParams();
+            if ( option == int( LengthUnit::_count ) )
+                UnitSettings::setUiLengthUnit( {} );
+            else
+                UnitSettings::setUiLengthUnit( LengthUnit( option ) );
         }
 
         // --- Precision
-        if ( UI::drag<NoUnit>( "Precision##length", paramsLen.precision, 1, 0, 12 ) )
-        {
-            forAllLengthParams( [&]( auto& params ){ params.precision = paramsLen.precision; } );
-            applyParams();
-        }
+        int precision = UnitSettings::getUiLengthPrecision();
+        if ( UI::drag<NoUnit>( "Precision##length", precision, 1, 0, 12 ) )
+            UnitSettings::setUiLengthPrecision( precision );
+
         ImGui::PopStyleVar();
         ImGui::PopItemWidth();
     }
@@ -645,42 +582,23 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         static_assert( int( DegreesMode::degreesMinutes ) == 1 );
         static_assert( int( DegreesMode::degreesMinutesSeconds ) == 2 );
 
-        int flavorOption = int( paramsAngle.degreesMode );
+        int flavorOption = int( UnitSettings::getDegreesMode() );
 
         // Degree mode.
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
         if ( UI::combo( "Unit##angle", &flavorOption, flavorOptions ) )
-        {
-            DegreesMode newMode = DegreesMode( flavorOption );
-
-            if ( ( paramsAngle.degreesMode == DegreesMode::degrees ) != ( newMode == DegreesMode::degrees ) )
-            {
-                if ( newMode == DegreesMode::degrees )
-                {
-                    paramsAngle.style = NumberStyle::normal;
-                    paramsAngle.precision = 1;
-                }
-                else
-                {
-                    paramsAngle.style = NumberStyle::normal;
-                    paramsAngle.precision = 0;
-                }
-            }
-
-            paramsAngle.degreesMode = newMode;
-
-            applyParams();
-        }
+            UnitSettings::setDegreesMode( DegreesMode( flavorOption ) );
 
         // Degree-mode-specific options.
 
-        if ( paramsAngle.degreesMode == DegreesMode::degrees )
+        if ( getDefaultUnitParams<AngleUnit>().degreesMode == DegreesMode::degrees )
         {
             // --- Precision
 
-            if ( UI::drag<NoUnit>( "Precision##angle", paramsAngle.precision, 1, 0, 12 ) )
-                applyParams();
+            int precision = UnitSettings::getUiAnglePrecision();
+            if ( UI::drag<NoUnit>( "Precision##angle", precision, 1, 0, 12 ) )
+                UnitSettings::setUiAnglePrecision( precision );
         }
 
         ImGui::PopStyleVar();

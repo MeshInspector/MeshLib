@@ -262,6 +262,7 @@
     <ClInclude Include="MRRenderMeasurementObjects.h" />
     <ClInclude Include="MRVectorTraits.h" />
     <ClInclude Include="MRUnits.h" />
+    <ClInclude Include="MRUnitSettings.h" />
     <ClInclude Include="MRUIStyle.ipp" />
     <ClInclude Include="MRVisualSubfeatures.h" />
     <ClInclude Include="MRSignalCombiners.h" />

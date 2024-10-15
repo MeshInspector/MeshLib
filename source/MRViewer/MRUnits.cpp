@@ -201,6 +201,7 @@ const UnitInfo& getUnitInfo( LengthUnit length )
 {
     static const UnitInfo ret[] = {
         { .conversionFactor = 1, .prettyName = "Millimeters", .unitSuffix = " mm" },
+        { .conversionFactor = 1000, .prettyName = "Meters", .unitSuffix = " m" },
         { .conversionFactor = 25.4f, .prettyName = "Inches", .unitSuffix = " in"/* or "\"" */ },
     };
     static_assert( std::extent_v<decltype( ret )> == int( LengthUnit::_count ) );
@@ -249,7 +250,8 @@ template <>
 const UnitInfo& getUnitInfo( MovementSpeedUnit speed )
 {
     static const UnitInfo ret[] = {
-        { .conversionFactor = 1, .prettyName = "Mm per second", .unitSuffix = " mm/s" },
+        { .conversionFactor = 1, .prettyName = "Millimeters per second", .unitSuffix = " mm/s" },
+        { .conversionFactor = 1000, .prettyName = "Meters per second", .unitSuffix = " m/s" },
         { .conversionFactor = 25.4f, .prettyName = "Inches per second", .unitSuffix = " in/s" },
     };
     static_assert( std::extent_v<decltype( ret )> == int( MovementSpeedUnit::_count ) );
@@ -260,7 +262,8 @@ const UnitInfo& getUnitInfo( AreaUnit area )
 {
     static const UnitInfo ret[] = {
         // U+00B2 SUPERSCRIPT TWO
-        { .conversionFactor = 1, .prettyName = "Mm\xc2\xb2", .unitSuffix = " mm\xc2\xb2" },
+        { .conversionFactor = 1, .prettyName = "Millimeters\xc2\xb2", .unitSuffix = " mm\xc2\xb2" },
+        { .conversionFactor = 1000*1000, .prettyName = "Meters\xc2\xb2", .unitSuffix = " m\xc2\xb2" },
         { .conversionFactor = 25.4f*25.4f, .prettyName = "Inches\xc2\xb2", .unitSuffix = " in\xc2\xb2" },
     };
     static_assert( std::extent_v<decltype( ret )> == int( AreaUnit::_count ) );
@@ -271,7 +274,8 @@ const UnitInfo& getUnitInfo( VolumeUnit volume )
 {
     static const UnitInfo ret[] = {
         // U+00B3 SUPERSCRIPT THREE
-        { .conversionFactor = 1, .prettyName = "Mm\xc2\xb3", .unitSuffix = " mm\xc2\xb3" },
+        { .conversionFactor = 1, .prettyName = "Millimeters\xc2\xb3", .unitSuffix = " mm\xc2\xb3" },
+        { .conversionFactor = 1000*1000*1000, .prettyName = "Meters\xc2\xb3", .unitSuffix = " m\xc2\xb3" },
         { .conversionFactor = 25.4f*25.4f*25.4f, .prettyName = "Inches\xc2\xb3", .unitSuffix = " in\xc2\xb3" },
     };
     static_assert( std::extent_v<decltype( ret )> == int( VolumeUnit::_count ) );
@@ -282,8 +286,9 @@ const UnitInfo& getUnitInfo( InvLengthUnit length )
 {
     static const UnitInfo ret[] = {
         // U+207B SUPERSCRIPT MINUS, U+00B9 SUPERSCRIPT ONE
-        { .conversionFactor = 1, .prettyName = "Millimeters", .unitSuffix = " mm\u207B\u00B9" },
-        { .conversionFactor = 25.4f, .prettyName = "Inches", .unitSuffix = " in\u207B\u00B9" },
+        { .conversionFactor = 1, .prettyName = "Millimeters\u207B\u00B9", .unitSuffix = " mm\u207B\u00B9" },
+        { .conversionFactor = 1/1000.f, .prettyName = "Meters\u207B\u00B9", .unitSuffix = " m\u207B\u00B9" },
+        { .conversionFactor = 1/25.4f, .prettyName = "Inches\u207B\u00B9", .unitSuffix = " in\u207B\u00B9" },
     };
     static_assert( std::extent_v<decltype( ret )> == int( InvLengthUnit::_count ) );
     return ret[int( length )];
@@ -346,7 +351,7 @@ static std::string valueToStringImpl( T value, const UnitToStringParams<E>& para
 
     std::string_view unitSuffix;
     if ( params.unitSuffix )
-        unitSuffix = getUnitInfo( params.targetUnit ).unitSuffix;
+        unitSuffix = params.targetUnit ? getUnitInfo( *params.targetUnit ).unitSuffix : params.sourceUnit ? getUnitInfo( *params.sourceUnit ).unitSuffix : "";
     std::string ret;
 
     // Handle arcseconds/arcminutes.
@@ -530,7 +535,7 @@ template <UnitEnum E, detail::Units::Scalar T>
 std::string valueToString( T value, const UnitToStringParams<E>& params )
 {
     // Convert to the target unit.
-    if ( unitsAreEquivalent( params.sourceUnit.value_or( params.targetUnit ), params.targetUnit ) )
+    if ( unitsAreEquivalent( params.sourceUnit, params.targetUnit ) )
     {
         // This can be integral or floating-point.
         return valueToStringImpl( value, params );
@@ -538,7 +543,7 @@ std::string valueToString( T value, const UnitToStringParams<E>& params )
     else
     {
         // This is always floating-point.
-        return valueToStringImpl( convertUnits( *params.sourceUnit, params.targetUnit, value ), params );
+        return valueToStringImpl( convertUnits( params.sourceUnit, params.targetUnit, value ), params );
     }
 }
 

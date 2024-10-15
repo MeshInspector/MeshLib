@@ -779,6 +779,9 @@
     <ClInclude Include="MRUnits.h">
       <Filter>UIStyle</Filter>
     </ClInclude>
+    <ClInclude Include="MRUnitSettings.h">
+      <Filter>UIStyle</Filter>
+    </ClInclude>
     <ClInclude Include="MRUIStyle.ipp">
       <Filter>UIStyle</Filter>
     </ClInclude>

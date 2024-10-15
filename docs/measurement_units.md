@@ -52,7 +52,9 @@ Some useful parameters are:
 
     When null, assumed to be the same as `.targetUnit`, so no conversion is performed.
 
-* `.targetUnit` (of type `E`) - The output measurement unit.
+* `.targetUnit` (of type `std::optional<E>`) - The output measurement unit.
+
+    If this is null, no conversion is performed, and the unit name is taken from `sourceUnit` if any.
 
 See the definition of `UnitToStringParams<E>` in `<MRViewer/MRUnits.h>` for the full list of parameters.
 

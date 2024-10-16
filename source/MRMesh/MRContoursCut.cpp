@@ -2072,17 +2072,15 @@ TEST( MRMesh, MeshCollidePrecise )
     const auto conv = getVectorConverters( meshA, meshB );
 
     const auto intersections = findCollidingEdgeTrisPrecise( meshA, meshB, conv.toInt );
-    // FIXME: the results are platform-dependent
-    //EXPECT_EQ( intersections.edgesAtrisB.size(), 76 );
-    //EXPECT_EQ( intersections.edgesBtrisA.size(), 76 );
+    EXPECT_EQ( intersections.edgesAtrisB.size(), 76 );
+    EXPECT_EQ( intersections.edgesBtrisA.size(), 76 );
 
     const auto contours = orderIntersectionContours( meshA.topology, meshB.topology, intersections );
     EXPECT_EQ( contours.size(), 4 );
-    // FIXME: the results are platform-dependent
-    //EXPECT_EQ( contours[0].size(), 71 );
-    //EXPECT_EQ( contours[1].size(), 71 );
-    //EXPECT_EQ( contours[2].size(), 7 );
-    //EXPECT_EQ( contours[3].size(), 7 );
+    EXPECT_EQ( contours[0].size(), 71 );
+    EXPECT_EQ( contours[1].size(), 71 );
+    EXPECT_EQ( contours[2].size(), 7 );
+    EXPECT_EQ( contours[3].size(), 7 );
 
     const auto meshAContours = getOneMeshIntersectionContours( meshA, meshB, contours, true, conv );
     const auto meshBContours = getOneMeshIntersectionContours( meshA, meshB, contours, false, conv );
@@ -2091,6 +2089,8 @@ TEST( MRMesh, MeshCollidePrecise )
 
     size_t posCount = 0;
     for ( const auto& contour : meshAContours )
+        posCount += contour.intersections.size();
+    EXPECT_EQ( posCount, 156 );
         posCount += contour.intersections.size();
     EXPECT_EQ( posCount, 156 );
 }

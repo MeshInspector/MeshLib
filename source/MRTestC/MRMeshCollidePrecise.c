@@ -74,3 +74,5 @@ void testMeshCollidePrecise( void )
     mrMeshFree( meshB );
     mrMeshFree( meshA );
 }
+    mrMeshFree( meshA );
+}

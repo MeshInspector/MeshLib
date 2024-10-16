@@ -59,12 +59,16 @@ public:
     // mimum radius of editing area.
     MRVIEWER_API float getMinRadius() { return minRadius_; };
 
+    // get palette used for visualization point shifts
     Palette& palette() { return *palette_; }
+    // update texture used for colorize surface (use after change colorMap in palette)
     MRVIEWER_API void updateTexture();
+    // update texture uv coords used for colorize surface (use after change ranges in palette)
     MRVIEWER_API void updateUVs();
-    bool getDrawCompare() { return drawCompare_; }
+    // set visualization point shifts
     MRVIEWER_API void setDrawCompare( bool drawCompare );
-    Vector2f getMinMax() { return {realMinVal_, realMaxVal_}; }
+    // get min / max point shifts for (usefull for setup palette)
+    Vector2f getMinMax() { return { changesMaxVal_, changesMinVal_ }; }
 private:
     /// start modifying mesh surface
     MRVIEWER_API bool onMouseDown_( Viewer::MouseButton button, int modifiers ) override;
@@ -78,8 +82,6 @@ private:
     void initConnections_();
     void resetConnections_();
 
-    void updateColorTexture_();
-
     void changeSurface_();
     void updateUVmap_( bool set );
     void updateRegion_( const Vector2f& mousePos );
@@ -90,6 +92,7 @@ private:
 
     void updateVizualizeSelection_( const ObjAndPick& objAndPick );
 
+    void updateRegionUVs_( const VertBitSet& region );
     Settings settings_;
 
     std::shared_ptr<ObjectMesh> obj_;
@@ -126,8 +129,8 @@ private:
 
     std::shared_ptr<Palette> palette_;
     bool drawCompare_ = true;
-    float realMaxVal_ = 0.f;
-    float realMinVal_ = 0.f;
+    float changesMinVal_ = 0.f;
+    float changesMaxVal_ = 0.f;
 };
 
 }

@@ -53,8 +53,8 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
         palette_ = std::make_shared<Palette>( Palette::DefaultColors );
     const float rangeLength = settings_.editForce * ( Palette::DefaultColors.size() - 1 );
     palette_->setRangeMinMax( rangeLength * -0.5f, rangeLength * 0.5f );
-    realMinVal_ = 0.f;
-    realMaxVal_ = 0.f;
+    changesMaxVal_ = 0.f;
+    changesMinVal_ = 0.f;
 
     size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
     singleEditingRegion_.clear();
@@ -74,7 +74,7 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
     valueChanges_.clear();
     valueChanges_.resize( numV, 0.f );
 
-    updateColorTexture_();
+    updateTexture();
 
     obj_->setAncillaryUVCoords( VertUVCoords( numV, { 0.5f, 1.f } ) );
 
@@ -102,8 +102,8 @@ void SurfaceManipulationWidget::reset()
     resetConnections_();
     mousePressed_ = false;
 
-    realMinVal_ = 0.f;
-    realMaxVal_ = 0.f;
+    changesMaxVal_ = 0.f;
+    changesMinVal_ = 0.f;
 }
 
 void SurfaceManipulationWidget::setSettings( const Settings& settings )
@@ -122,27 +122,48 @@ void SurfaceManipulationWidget::setSettings( const Settings& settings )
 
 void SurfaceManipulationWidget::updateTexture()
 {
-    updateColorTexture_();
+    MeshTexture texture;
+    if ( drawCompare_ )
+    {
+        if ( palette_ )
+        {
+            MeshTexture palleteTexture = palette_->getTexture();
+            texture.filter = palleteTexture.filter;
+            texture.resolution = { palleteTexture.resolution.x, 2 };
+            texture.pixels.resize( texture.resolution.x * texture.resolution.y );
+            for ( int x = 0; x < palleteTexture.resolution.x; ++x )
+            {
+                texture.pixels[x] = Color( 255, 64, 64, 255 );
+                texture.pixels[x + palleteTexture.resolution.x] = palleteTexture.pixels[x];
+            }
+        }
+        else
+        {
+            texture.pixels = { Color( 255, 64, 64, 255 ), Color( 255, 64, 64, 255 ), Color( 255, 64, 64, 255 ),
+                Color::blue(), Color::green(), Color::red() };
+            texture.resolution = { 2, 2 };
+        }
+    }
+    else
+    {
+        texture.pixels = { Color( 255, 64, 64, 255 ), Color( 0, 0, 0, 0 ) };
+        texture.resolution = { 1, 2 };
+    }
+    obj_->setAncillaryTexture( texture );
 }
 
 void SurfaceManipulationWidget::updateUVs()
 {
-    VertUVCoords uvs;
-    obj_->updateAncillaryUVCoords( uvs );
-    uvs.resizeWithReserve( obj_->mesh()->points.size(), UVCoord{ 0.5f, 1 } );
-    BitSetParallelFor( changedRegion_, [&] ( VertId v )
-    {
-        uvs[v] = UVCoord( palette_->getUVcoord( valueChanges_[v], true ).x, 1.f );
-    } );
-    obj_->setAncillaryUVCoords( std::move( uvs ) );
+    updateRegionUVs_( changedRegion_ );
 }
 
 void SurfaceManipulationWidget::setDrawCompare( bool drawCompare )
 {
     if ( drawCompare_ == drawCompare )
         return;
-    drawCompare_ = drawCompare_;
+    drawCompare_ = drawCompare;
     updateTexture();
+    updateUVs();
 }
 
 bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int modifiers )
@@ -331,30 +352,6 @@ void SurfaceManipulationWidget::resetConnections_()
     disconnect();
 }
 
-void SurfaceManipulationWidget::updateColorTexture_()
-{
-    MeshTexture texture;
-    if ( palette_ )
-    {
-        MeshTexture palleteTexture = palette_->getTexture();
-        texture.filter = palleteTexture.filter;
-        texture.resolution = { palleteTexture.resolution.x, 2 };
-        texture.pixels.resize( texture.resolution.x * texture.resolution.y );
-        for ( int x = 0; x < palleteTexture.resolution.x; ++x )
-        {
-            texture.pixels[x] = Color( 255, 64, 64, 255 );
-            texture.pixels[x + palleteTexture.resolution.x] = palleteTexture.pixels[x];
-        }
-    }
-    else
-    {
-        texture.pixels = { Color( 255, 64, 64, 255 ), Color( 255, 64, 64, 255 ), 
-            Color::yellow(), Color::green() };
-        texture.resolution = { 2, 2 };
-    }
-    obj_->setAncillaryTexture( texture );
-}
-
 void SurfaceManipulationWidget::changeSurface_()
 {
     if ( !singleEditingRegion_.any() || badRegion_ )
@@ -416,10 +413,11 @@ void SurfaceManipulationWidget::changeSurface_()
         valueChanges_[v] += direction * pointShift;
     } );
     auto [minIt, maxIt] = std::minmax_element( begin( valueChanges_ ), end( valueChanges_ ) );
-    realMinVal_ = *minIt;
-    realMaxVal_ = *maxIt;
+    changesMaxVal_ = *minIt;
+    changesMinVal_ = *maxIt;
     generalEditingRegion_ |= singleEditingRegion_;
     changedRegion_ |= singleEditingRegion_;
+    updateRegionUVs_( singleEditingRegion_ );
     obj_->setDirtyFlags( DIRTY_POSITION );
 }
 
@@ -429,18 +427,12 @@ void SurfaceManipulationWidget::updateUVmap_( bool set )
     obj_->updateAncillaryUVCoords( uvs );
     uvs.resizeWithReserve( obj_->mesh()->points.size(), UVCoord{ 0.5f, 1 } );
     const float normalize = 0.5f / settings_.radius;
-    BitSetParallelFor( changedRegion_, [&] ( VertId v )
-    {
-        uvs[v] = UVCoord( palette_->getUVcoord( valueChanges_[v], true ).x, 1.f );
-    } );
     BitSetParallelFor( visualizationRegion_, [&] ( VertId v )
     {
         if ( set )
-            uvs[v] = UVCoord( palette_->getUVcoord( valueChanges_[v], true ).x, visualizationDistanceMap_[v] * normalize );
-        else if ( changedRegion_.test( v ) )
-            uvs[v] = UVCoord( palette_->getUVcoord( valueChanges_[v], true ).x, 1.f );
+            uvs[v] = UVCoord( palette_->getUVcoord( valueChanges_[v], true ).x, ( visualizationDistanceMap_[v] * normalize - 0.5f ) * 100 + 0.5f );
         else
-            uvs[v] = UVCoord( 0.5f, 1 );
+            uvs[v] = UVCoord( palette_->getUVcoord( valueChanges_[v], true ).x, 1.f );
     } );
     obj_->setAncillaryUVCoords( std::move( uvs ) );
 }
@@ -598,6 +590,18 @@ void SurfaceManipulationWidget::updateVizualizeSelection_( const ObjAndPick& obj
         if ( !badRegion_ )
             updateUVmap_( true );
     }
+}
+
+void SurfaceManipulationWidget::updateRegionUVs_( const VertBitSet& region )
+{
+    VertUVCoords uvs;
+    obj_->updateAncillaryUVCoords( uvs );
+    uvs.resizeWithReserve( obj_->mesh()->points.size(), UVCoord{ 0.5f, 1 } );
+    BitSetParallelFor( region, [&] ( VertId v )
+    {
+        uvs[v].x = palette_->getUVcoord( valueChanges_[v], true ).x;
+    } );
+    obj_->setAncillaryUVCoords( std::move( uvs ) );
 }
 
 }

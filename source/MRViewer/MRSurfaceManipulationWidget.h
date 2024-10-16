@@ -59,6 +59,12 @@ public:
     // mimum radius of editing area.
     MRVIEWER_API float getMinRadius() { return minRadius_; };
 
+    Palette& palette() { return *palette_; }
+    MRVIEWER_API void updateTexture();
+    MRVIEWER_API void updateUVs();
+    bool getDrawCompare() { return drawCompare_; }
+    MRVIEWER_API void setDrawCompare( bool drawCompare );
+    Vector2f getMinMax() { return {realMinVal_, realMaxVal_}; }
 private:
     /// start modifying mesh surface
     MRVIEWER_API bool onMouseDown_( Viewer::MouseButton button, int modifiers ) override;
@@ -71,6 +77,8 @@ private:
 
     void initConnections_();
     void resetConnections_();
+
+    void updateColorTexture_();
 
     void changeSurface_();
     void updateUVmap_( bool set );
@@ -94,6 +102,8 @@ private:
     VertScalars pointsShift_;
     VertScalars editingDistanceMap_;
     VertScalars visualizationDistanceMap_;
+    VertBitSet changedRegion_;
+    VertScalars valueChanges_;
     std::shared_ptr<ObjectMesh> oldMesh_;
     bool firstInit_ = true; // need to save settings in re-initial
     bool badRegion_ = false; // in selected region less than 3 points
@@ -113,6 +123,11 @@ private:
     std::unique_ptr<Laplacian> laplacian_;
     std::shared_ptr<HistoryAction> historyAction_; // this action is prepared beforehand for better responsiveness, but pushed only on mouse move
     bool appendHistoryAction_ = false;
+
+    std::shared_ptr<Palette> palette_;
+    bool drawCompare_ = true;
+    float realMaxVal_ = 0.f;
+    float realMinVal_ = 0.f;
 };
 
 }

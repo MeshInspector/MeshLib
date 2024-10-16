@@ -183,9 +183,9 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
     systemFontspath = "C:/Windows/Fonts";
 
 #elif defined (__APPLE__)
-    path = "Library/Fonts";
+    systemFontspath = "Library/Fonts";
 #else // linux and wasm
-    path = "/usr/share/fonts";
+    systemFontspath = "/usr/share/fonts";
     static const std::vector<std::string> suffixes{
             "bold",
             "Bold",

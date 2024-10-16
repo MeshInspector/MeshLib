@@ -292,7 +292,7 @@ VdbVolume simpleVolumeToVdbVolume( const SimpleVolumeMinMax& simpleVolume, Progr
 // nonnegative range of target type
 template<typename T, bool Norm>
 Expected<VoxelsVolumeMinMax<std::vector<T>>> vdbVolumeToSimpleVolumeImpl(
-    const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), std::optional<MinMaxf> sourceScale = {}, ProgressCallback cb = {} )
+    const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), std::optional<MinMaxf> maybeSourceScale = {}, ProgressCallback cb = {} )
 {
     constexpr bool isFloat = std::is_same_v<float, T> || std::is_same_v<double, T> || std::is_same_v<long double, T>;
 
@@ -301,8 +301,8 @@ Expected<VoxelsVolumeMinMax<std::vector<T>>> vdbVolumeToSimpleVolumeImpl(
     res.dims = !activeBox.valid() ? vdbVolume.dims : activeBox.size();
     Vector3i org = activeBox.valid() ? activeBox.min : Vector3i{};
     res.voxelSize = vdbVolume.voxelSize;
-    [[maybe_unused]] const auto [sourceMin, sourceMax] = sourceScale.value_or( MinMaxf{ vdbVolume.min, vdbVolume.max } );
-    float targetMin = sourceMin, targetMax = sourceMax;
+    [[maybe_unused]] const auto sourceScale = maybeSourceScale.value_or( MinMaxf{ vdbVolume.min, vdbVolume.max } );
+    float targetMin = sourceScale.min, targetMax = sourceScale.max;
     if constexpr ( isFloat )
     {
         if constexpr ( Norm )
@@ -321,9 +321,9 @@ Expected<VoxelsVolumeMinMax<std::vector<T>>> vdbVolumeToSimpleVolumeImpl(
         targetMin = 0;
         targetMax = std::numeric_limits<T>::max();
     }
-    [[maybe_unused]] const float k = ( targetMax - targetMin ) / ( sourceMax - sourceMin );
-    res.min = k * ( vdbVolume.min - sourceMin ) + targetMin;
-    res.max = k * ( vdbVolume.max - sourceMin ) + targetMin;
+    [[maybe_unused]] const float k = ( targetMax - targetMin ) / ( sourceScale.max - sourceScale.min );
+    res.min = k * ( vdbVolume.min - sourceScale.min ) + targetMin;
+    res.max = k * ( vdbVolume.max - sourceScale.min ) + targetMin;
 
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size() );
@@ -343,7 +343,7 @@ Expected<VoxelsVolumeMinMax<std::vector<T>>> vdbVolumeToSimpleVolumeImpl(
         if constexpr ( isFloat && !Norm )
             res.data[i] = T( value );
         else
-            res.data[i] = T( std::clamp( ( value - sourceMin ) * k + targetMin, targetMin, targetMax ) );
+            res.data[i] = T( std::clamp( ( value - sourceScale.min ) * k + targetMin, targetMin, targetMax ) );
     }, cb ) )
         return unexpectedOperationCanceled();
     return res;

@@ -71,10 +71,10 @@ RenderBufferRef<unsigned> RenderVolumeObject::loadActiveVoxelsTextureBuffer_()
         return glBuffer.prepareBuffer<unsigned>( activeVoxelsTextureSize_.x * activeVoxelsTextureSize_.y, false );
 
     const auto& dims = objVoxels_->vdbVolume().dims;
-    auto numV = dims.x * dims.y * dims.z;
+    auto numV = size_t( dims.x ) * dims.y * dims.z;
 
     auto size = numV / 32 + 1;
-    activeVoxelsTextureSize_ = calcTextureRes( size, maxTexSize_ );
+    activeVoxelsTextureSize_ = calcTextureRes( int( size ), maxTexSize_ );
     assert( activeVoxelsTextureSize_.x * activeVoxelsTextureSize_.y >= size );
     auto buffer = glBuffer.prepareBuffer<unsigned>( activeVoxelsTextureSize_.x * activeVoxelsTextureSize_.y );
 

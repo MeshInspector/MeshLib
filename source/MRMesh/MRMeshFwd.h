@@ -295,6 +295,10 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Plane3,
 )
 
 MR_CANONICAL_TYPEDEFS( (template <typename V> struct MRMESH_CLASS), Box,
+    ( Box1i,  Box<int>       )
+    ( Box1ll, Box<long long> )
+    ( Box1f,  Box<float>     )
+    ( Box1d,  Box<double>    )
     ( Box2i,  Box<Vector2<int>>       )
     ( Box2ll, Box<Vector2<long long>> )
     ( Box2f,  Box<Vector2<float>>     )
@@ -304,6 +308,11 @@ MR_CANONICAL_TYPEDEFS( (template <typename V> struct MRMESH_CLASS), Box,
     ( Box3f,  Box<Vector3<float>>     )
     ( Box3d,  Box<Vector3<double>>    )
 )
+template <typename T> using MinMax = Box<T>;
+using MinMaxf = MinMax<float>;
+using MinMaxd = MinMax<double>;
+
+template <typename T> using Box1 = Box<T>;
 template <typename T> using Box2 = Box<Vector2<T>>;
 template <typename T> using Box3 = Box<Vector3<T>>;
 

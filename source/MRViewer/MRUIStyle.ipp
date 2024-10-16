@@ -51,10 +51,7 @@ namespace detail
         // If the input is an integer and if no conversion is needed, we draw the widget directly for that integer.
         // If the input is an integer and we do need a conversion, we draw a floating-point slider, then round back.
 
-        const bool mustConvertUnits =
-            unitParams.sourceUnit &&
-            *unitParams.sourceUnit != unitParams.targetUnit &&
-            getUnitInfo( *unitParams.sourceUnit ).conversionFactor != getUnitInfo( unitParams.targetUnit ).conversionFactor;
+        const bool mustConvertUnits = !unitsAreEquivalent( unitParams.sourceUnit, unitParams.targetUnit );
 
         constexpr bool targetIsIntegral = std::is_integral_v<typename VectorTraits<T>::BaseType>;
 
@@ -66,7 +63,7 @@ namespace detail
                 {
                     // Convert back to source units.
                     if ( mustConvertUnits )
-                        VectorTraits<T>::getElem( i, value ) = convertUnits( unitParams.targetUnit, *originalSourceUnit, VectorTraits<T>::getElem( i, value ) );
+                        VectorTraits<T>::getElem( i, value ) = convertUnits( unitParams.targetUnit, originalSourceUnit, VectorTraits<T>::getElem( i, value ) );
 
                     if constexpr ( std::is_integral_v<typename VectorTraits<T>::BaseType> ) // aka `targetIsIntegral`, but MSVC 2019 chokes on that.
                     {
@@ -137,7 +134,7 @@ namespace detail
 
         if ( mustConvertUnits || targetIsIntegral )
         {
-            valueCopy = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, v );
+            valueCopy = convertUnits( unitParams.sourceUnit, unitParams.targetUnit, v );
             unitParams.sourceUnit.reset(); // To prevent the user from performing unnecessary conversions.
             return drawWidget( valueCopy );
         }
@@ -211,10 +208,10 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
             UI::TestEngine::popTree();
     };
 
-    auto fixedMin = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMin );
-    auto fixedMax = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMax );
+    auto fixedMin = convertUnits( unitParams.sourceUnit, unitParams.targetUnit, vMin );
+    auto fixedMax = convertUnits( unitParams.sourceUnit, unitParams.targetUnit, vMax );
 
-    if ( !unitsAreEquivalent( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit ) )
+    if ( !unitsAreEquivalent( unitParams.sourceUnit, unitParams.targetUnit ) )
     {
         // Without this flag the value changes slightly when you release the mouse.
         flags |= ImGuiSliderFlags_NoRoundToFormat;
@@ -282,13 +279,13 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
             UI::TestEngine::popTree();
     };
 
-    auto fixedSpeed = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vSpeed );
-    auto fixedMin = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMin );
-    auto fixedMax = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, vMax );
-    auto fixedStep = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, step );
-    auto fixedStepFast = convertUnits( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit, stepFast );
+    auto fixedSpeed = convertUnits( unitParams.sourceUnit, unitParams.targetUnit, vSpeed );
+    auto fixedMin = convertUnits( unitParams.sourceUnit, unitParams.targetUnit, vMin );
+    auto fixedMax = convertUnits( unitParams.sourceUnit, unitParams.targetUnit, vMax );
+    auto fixedStep = convertUnits( unitParams.sourceUnit, unitParams.targetUnit, step );
+    auto fixedStepFast = convertUnits( unitParams.sourceUnit, unitParams.targetUnit, stepFast );
 
-    if ( !unitsAreEquivalent( unitParams.sourceUnit.value_or( unitParams.targetUnit ), unitParams.targetUnit ) )
+    if ( !unitsAreEquivalent( unitParams.sourceUnit, unitParams.targetUnit ) )
     {
         // Without this flag the value changes slightly when you release the mouse.
         flags |= ImGuiSliderFlags_NoRoundToFormat;

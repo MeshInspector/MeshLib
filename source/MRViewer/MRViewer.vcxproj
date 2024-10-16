@@ -121,6 +121,7 @@
     <ClCompile Include="MRRenderDimensions.cpp" />
     <ClCompile Include="MRRenderMeasurementObjects.cpp" />
     <ClCompile Include="MRUnits.cpp" />
+    <ClCompile Include="MRUnitSettings.cpp" />
     <ClCompile Include="MRVisualSubfeatures.cpp" />
     <ClCompile Include="MRImGuiMenuListeners.cpp" />
     <ClCompile Include="MRUITestEngine.cpp" />
@@ -262,6 +263,7 @@
     <ClInclude Include="MRRenderMeasurementObjects.h" />
     <ClInclude Include="MRVectorTraits.h" />
     <ClInclude Include="MRUnits.h" />
+    <ClInclude Include="MRUnitSettings.h" />
     <ClInclude Include="MRUIStyle.ipp" />
     <ClInclude Include="MRVisualSubfeatures.h" />
     <ClInclude Include="MRSignalCombiners.h" />

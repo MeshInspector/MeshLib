@@ -305,7 +305,7 @@ This option requires you to [install third-party libraries](#vcpkg) via `vcpkg` 
 You can download [zip-archive](https://github.com/MeshInspector/MeshLib/releases) containing 
 * header files (.h),
 * library archives (.lib),
-* dynamic labraries (.dll)
+* dynamic libraries (.dll)
 
 of both MeshLib and dependant third-party libraries, and make them available during your project building and runtime execution as follows.
 

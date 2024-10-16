@@ -21,7 +21,6 @@ endef
 override quote = '$(subst ','"'"',$(subst $(lf), ,$1))'
 
 # Same as `$(shell ...)`, but triggers an error on failure.
-# Same as `$(shell )`, but triggers an error if the command fails.
 override safe_shell = $(if $(dry_run),$(warning Would run command: $1),$(if $(tracing),$(warning Running command: $1))$(shell $1)$(if $(tracing),$(warning Command returned $(.SHELLSTATUS)))$(if $(filter 0,$(.SHELLSTATUS)),,$(error Command failed with exit code $(.SHELLSTATUS): `$1`)))
 
 # Same as `safe_shell`, but discards the output.
@@ -162,7 +161,7 @@ else
 $(error Unknown MODE=$(MODE))
 endif
 
-# Look for MeshLib  dependencies relative to this. On Linux should point to the project root, because that's where `./include` and `./lib` are.
+# Look for MeshLib dependencies relative to this. On Linux should point to the project root, because that's where `./include` and `./lib` are.
 ifneq ($(IS_WINDOWS),)
 DEPS_BASE_DIR := $(VCPKG_DIR)/installed/x64-windows-meshlib
 DEPS_LIB_DIR := $(DEPS_BASE_DIR)/$(if $(filter Debug,$(VS_MODE)),debug/)lib
@@ -177,6 +176,7 @@ ifneq ($(and $(value PYTHON_CFLAGS),$(value PYTHON_LDFLAGS)),)
 $(info Using custom Python flags.)
 else
 ifneq ($(IS_WINDOWS),)
+# Note that we're not using `DEPS_LIB_DIR` here, to always use the release Python on Windows, because that's what MeshLib itself seems to do.
 PYTHON_PKGCONF_NAME := $(basename $(notdir $(lastword $(sort $(wildcard $(DEPS_BASE_DIR)/lib/pkgconfig/python-*-embed.pc)))))
 else
 PYTHON_PKGCONF_NAME := python3-embed
@@ -212,12 +212,13 @@ endif
 $(info Using Python module suffix: $(PYTHON_MODULE_SUFFIX))
 
 
+# Which MeshLib projects to bind.
 INPUT_PROJECTS := MRMesh MRIOExtras MRSymbolMesh MRVoxels
 
 # 1 or 0. Whether to build mrmeshnumpy (if false you should build it with CMake with the rest of MeshLib).
 # Currently defaults to 1 because otherwise we get an incompatibility on Ubuntu x86 20.04 and 22.04 when MeshLib is built in debug mode,
 #   resulting in this error: `ImportError: arg(): could not convert default argument 'settings: MR::MeshBuilder::BuildSettings' in function 'meshFromFacesVerts' into a Python object`.
-# If you fix this and want to change the default: 1. Remove this line and uncomment the one below. 2. In `distribution.sh` stop calling patchelf for `mrmeshnumpy.so`. 3. In `MeshLib/CMakeLists.txt`, move `mrmeshnumpy` out from `MESHLIB_BUILD_MRMESH_PY_LEGACY`
+# If you fix this and want to change the default: 1. Remove this line and uncomment the one below. 2. In `distribution.sh` stop calling patchelf for `mrmeshnumpy.so`. 3. In `MeshLib/CMakeLists.txt`, move `mrmeshnumpy` out from `MESHLIB_BUILD_MRMESH_PY_LEGACY`.
 BUILD_MRMESHNUMPY := 1
 # Defaults to 0, but only if if `PACKAGE_NAME == meshlib`.
 # BUILD_MRMESHNUMPY := $(if $(filter $(PACKAGE_NAME),meshlib),1)
@@ -245,8 +246,6 @@ MAKEFLAGS += -j8
 
 
 .DELETE_ON_ERROR: # Delete output on command failure. Otherwise you'll get incomplete bindings.
-
-
 
 
 # You can change this to something else to rename the module, to have it side-by-side with the legacy one.

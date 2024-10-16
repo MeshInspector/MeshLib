@@ -366,7 +366,7 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
     outVolume.max = FLT_MIN;
 
     outVolume.voxelSize = settings.voxelSize;
-    outVolume.data.resize( outVolume.dims.x * outVolume.dims.y * outVolume.dims.z );
+    outVolume.data.resize( size_t( outVolume.dims.x ) * outVolume.dims.y * outVolume.dims.z );
 
     TiffParameters localParams;
     RawTiffOutput output;
@@ -374,7 +374,7 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
     output.params = &localParams;
     output.min = &outVolume.min;
     output.max = &outVolume.max;
-    for ( int layerIndex = 0; layerIndex < files.size(); ++layerIndex )
+    for ( size_t layerIndex = 0; layerIndex < files.size(); ++layerIndex )
     {
         output.bytes = ( uint8_t* )( outVolume.data.data() + layerIndex * tp.imageSize.x * tp.imageSize.y );
         auto readRes = readRawTiff( files[layerIndex], output );

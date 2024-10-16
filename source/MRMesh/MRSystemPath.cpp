@@ -178,126 +178,151 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
         return fonts;
     }
 
-    std::filesystem::path systemFontspath;
+    std::vector<std::pair<std::filesystem::path, std::string>> allSystemFonts;
+    std::vector<std::filesystem::path> systemFontspath;
 #ifdef _WIN32
-    systemFontspath = "C:/Windows/Fonts";
+    //systemFontspath = "C:/Windows/Fonts";
+    systemFontspath = { "C:/all/font" };
 
 #elif defined (__APPLE__)
-    systemFontspath = "Library/Fonts";
+    systemFontspath = { "/Library/Fonts", "/System/Library/Fonts" };
 #else // linux and wasm
-    systemFontspath = "/usr/share/fonts";
+    systemFontspath = { "/usr/share/fonts" };
+#endif
+
     static const std::vector<std::string> suffixes{
-            "bold",
-            "Bold",
-            "light",
-            "Light",
-            "medium",
-            "Medium",
             "regular",
             "Regular",
+            "bd",
+            "BD",
             "SemiBold",
+            "bold",
+            "b",
+            "Bold",
+            "B",
             "BoldItalic",
-            "italic",
-            "Italic",
+            "bi",
+            "BI",
+            "z",
             "LightItalic",
             "MediumItalic",
-            "SemiBold",
             "SemiBoldItalic",
+            "li",
+            "LI"
+            "italic",
+            "i",
+            "Italic",
+            "I",
+            "light",
+            "Light",
+            "l",
+            "L",
+            "medium",
+            "Medium",
             "BoldOblique",
             "oblique",
             "Oblique"
     };
-#endif
-    std::string firstFontName;
-    std::string curName;
+
     std::error_code ec;
-
-    for ( auto entry : MR::Directory{ systemFontspath, ec } )
+    for ( auto& curPath : systemFontspath )
     {
-        std::filesystem::path font = entry;
-        if ( font.extension() != ".ttf" )
+        for ( auto entry : MR::DirectoryRecursive{ curPath, ec } )
         {
-            continue;
-        }
-        
-        curName = font.stem().string();
-
-#ifdef _WIN32
-        if ( firstFontName.empty() || curName.find( firstFontName ) == std::string::npos )
-        {
-            firstFontName = curName;
-            fonts.push_back( SystemFontPaths() );
-            fonts.back()[( size_t )SystemFontType::Regular] = font;
-            continue;
-        }
-        if ( curName == firstFontName + "b" || curName == firstFontName + "B" )
-        {
-            fonts.back()[( size_t )SystemFontType::Bold] = font;
-        }
-        if ( curName == firstFontName + "i" || curName == firstFontName + "I" )
-        {
-            fonts.back()[( size_t )SystemFontType::Italic] = font;
-        }
-        if ( curName == firstFontName + "bi" || curName == firstFontName + "BI" )
-        {
-            fonts.back()[( size_t )SystemFontType::BoldItalic] = font;
-        }
-#elif defined (__APPLE__)
-        // TO DO
-#else // linux and wasm
-        if ( firstFontName.empty() || curName.find( firstFontName ) == std::string::npos )
-        {
-            bool findSuffix = false;
-            for ( const auto& suffix : suffixes )
+            std::filesystem::path font = entry;
+            if ( font.extension() != ".ttf" )
             {
-                auto pos = curName.find( "-" + suffix );
-                if ( pos != std::string::npos )
-                {
-                    firstFontName = std::string( curName.begin(), curName.begin() + pos );
-                    findSuffix = true;
-                    break;
-                }
-                pos = curName.find( suffix );
-                if ( pos != std::string::npos )
-                {
-                    firstFontName = std::string( curName.begin(), curName.begin() + pos );
-                    findSuffix = true;
-                    break;
-                }
-            }
-            if ( !findSuffix )
-            {
-                firstFontName = curName;
+                continue;
             }
 
+            allSystemFonts.push_back( { font, font.filename().string() } );
+        }
+    }
+
+    std::sort( allSystemFonts.begin(), allSystemFonts.end(), 
+        [] ( std::pair<std::filesystem::path, std::string>& v1, std::pair<std::filesystem::path, std::string>& v2 )
+    {
+        return v1 < v2;
+    } );
+
+    for ( auto& [font, name] : allSystemFonts )
+    {
+        auto pos = name.find( "arial" );
+        std::string newName;
+        if ( pos != std::string::npos )
+        {
+            name = "arial-" + std::string(name.begin() + 5, name.end() );
+        }
+        pos = name.find( "calibri" );
+        if ( pos != std::string::npos )
+        {
+            name = "calibri-" + std::string( name.begin() + 7, name.end() );
+        }
+    }
+
+    std::string firstFontName;
+    bool newFont = false;
+    size_t numFont = 0;
+    for ( auto& [font, curName]: allSystemFonts )
+    {
+        if ( firstFontName.empty() || curName.find( firstFontName ) == std::string::npos )
+        {
             fonts.push_back( SystemFontPaths() );
+            newFont = true;
         }
 
-        if ( curName.find( "regular" ) != std::string::npos || curName.find( "-regular" ) != std::string::npos ||
-             curName.find( "Regular" ) != std::string::npos || curName.find( "-Regular" ) != std::string::npos )
+        int numSuffix = -1;
+        int n = 0;
+        for ( const auto& suffix : suffixes )
         {
-            fonts.back()[( size_t )SystemFontType::Regular] = font;
+            auto curFontName = font.stem().string();
+            auto posEndName = curName.find( "-" + suffix + ".ttf" );
+            if ( posEndName != std::string::npos && curFontName != firstFontName )
+            {
+                if ( newFont )
+                {
+                    firstFontName = std::string( curName.begin(), curName.begin() + posEndName );
+                    newFont = false;
+                }
+                numSuffix = n;
+                break;
+            }
+            posEndName = curName.find( suffix + ".ttf" );
+            if ( posEndName != std::string::npos && curFontName != firstFontName )
+            {
+                if ( newFont )
+                {
+                    firstFontName = std::string( curName.begin(), curName.begin() + posEndName );
+                    newFont = false;
+                }
+                numSuffix = n;
+                break;
+            }
+            n++;
         }
-        else if ( curName.find( "BoldItalic" ) != std::string::npos || curName.find( "-BoldItalic" ) != std::string::npos )
+
+        if ( numSuffix < 0)
         {
-            fonts.back()[( size_t )SystemFontType::BoldItalic] = font;
+            firstFontName = font.stem().string();
         }
-        else if ( curName.find( "bold" ) != std::string::npos || curName.find( "-bold" ) != std::string::npos ||
-             curName.find( "Bold" ) != std::string::npos || curName.find( "-Bold" ) != std::string::npos )
+
+        numFont = fonts.size() - 1;
+        if ( numSuffix < 2 )
         {
-            fonts.back()[( size_t )SystemFontType::Bold] = font;
+            fonts[numFont][( size_t )SystemFontType::Regular] = font;
         }
-        else if ( curName.find( "italic" ) != std::string::npos || curName.find( "-italic" ) != std::string::npos ||
-             curName.find( "Italic" ) != std::string::npos || curName.find( "-Italic" ) != std::string::npos )
+        else if ( 5 <= numSuffix && numSuffix < 9 )
         {
-            fonts.back()[( size_t )SystemFontType::Italic] = font;
+            fonts[numFont][( size_t )SystemFontType::Bold] = font;
         }
-        else if ( curName == firstFontName )
+        else if ( 18 <= numSuffix && numSuffix < 22 )
         {
-            fonts.back()[( size_t )SystemFontType::Regular] = font;
+            fonts[numFont][( size_t )SystemFontType::Italic] = font;
         }
-#endif
-        
+        else if ( 9 <= numSuffix && numSuffix < 13 )
+        {
+            fonts[numFont][( size_t )SystemFontType::BoldItalic] = font;
+        }
     }
 
     return fonts;

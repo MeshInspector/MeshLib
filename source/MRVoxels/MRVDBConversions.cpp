@@ -322,8 +322,8 @@ Expected<VoxelsVolumeMinMax<std::vector<T>>> vdbVolumeToSimpleVolumeImpl(
         targetMax = std::numeric_limits<T>::max();
     }
     [[maybe_unused]] const float k = ( targetMax - targetMin ) / ( sourceScale.max - sourceScale.min );
-    res.min = k * ( vdbVolume.min - sourceScale.min ) + targetMin;
-    res.max = k * ( vdbVolume.max - sourceScale.min ) + targetMin;
+    res.min = T( k * ( vdbVolume.min - sourceScale.min ) + targetMin );
+    res.max = T( k * ( vdbVolume.max - sourceScale.min ) + targetMin );
 
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size() );

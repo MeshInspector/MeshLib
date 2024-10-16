@@ -33,6 +33,7 @@ const std::string cMainWindowSize = "mainWindowSize";
 const std::string cMainWindowPos = "mainWindowPos";
 const std::string cMainWindowMaximized = "mainWindowMaximized";
 const std::string cRibbonLeftWindowSize = "ribbonLeftWindowSize";
+const std::string cRibbonNotificationAllowedTags = "ribbonNotificationAllowedTags";
 const std::string cShowSelectedObjects = "showSelectedObjects";
 const std::string cDeselectNewHiddenObjects = "deselectNewHiddenObjects";
 const std::string cCloseContextOnChange = "closeContextOnChange";
@@ -117,6 +118,7 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
         }
         ribbonMenu->setAutoCloseBlockingPlugins( cfg.getBool( cAutoClosePlugins, Defaults::autoClosePlugins ) );
         ribbonMenu->resetQuickAccessList();
+        ribbonMenu->getRibbonNotifier().allowedTagMask = NotificationTags::Default;
     }
 
 #if !defined(__EMSCRIPTEN__)
@@ -283,6 +285,9 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         if ( cfg.hasJsonValue( cQuickAccesListKey ) )
             ribbonMenu->readQuickAccessList( cfg.getJsonValue( cQuickAccesListKey ) );
 
+        if ( cfg.hasJsonValue( cRibbonNotificationAllowedTags ) )
+            ribbonMenu->getRibbonNotifier().allowedTagMask = NotificationTagMask( cfg.getJsonValue( cRibbonNotificationAllowedTags ).asUInt() );
+
         auto sceneSize = cfg.getVector2i( cRibbonLeftWindowSize, Vector2i{ int( 310 * ribbonMenu->menu_scaling() ), 0 } );
         // it is important to be called after `cMainWindowMaximized` block
         // as far as scene size is clamped by window size in each frame
@@ -435,6 +440,8 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         cfg.setJsonValue( cQuickAccesListKey, qaList );
 
         cfg.setVector2i( cRibbonLeftWindowSize, ribbonMenu->getSceneSize() );
+
+        cfg.setJsonValue( cRibbonNotificationAllowedTags, ribbonMenu->getRibbonNotifier().allowedTagMask );
     }
 
     Json::Value exts = Json::arrayValue;

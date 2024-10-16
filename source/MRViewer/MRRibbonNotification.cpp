@@ -34,7 +34,7 @@ namespace MR
 
 void RibbonNotifier::pushNotification( const RibbonNotification& notification )
 {
-    if ( !historyMode_ )
+    if ( !historyMode_ && bool( notification.tags & allowedTagMask ) )
         addNotification_( notifications_, notification );
     addNotification_( notificationsHistory_, notification );
 

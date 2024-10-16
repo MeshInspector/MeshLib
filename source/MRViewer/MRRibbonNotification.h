@@ -2,11 +2,30 @@
 #include "MRViewerFwd.h"
 #include "MRNotificationType.h"
 #include "MRAsyncTimer.h"
+#include "MRMesh/MRFlagOperators.h"
 #include <functional>
 #include <chrono>
 
 namespace MR
 {
+
+struct NotificationTags
+{
+    enum Tag : unsigned
+    {
+        None = 0b0000,
+        Report = 0b0001,
+        Recommendation = 0b0010,
+        ImplicitChanges = 0b0100,
+        Important = 0b1000,
+        Default = Important | ImplicitChanges,
+        All = Report | ImplicitChanges | Recommendation | Important,
+    };
+};
+MR_MAKE_FLAG_OPERATORS( NotificationTags::Tag )
+
+using NotificationTagMask = unsigned;
+
 struct RibbonNotification
 {
     // Callback for notification
@@ -25,6 +44,8 @@ struct RibbonNotification
     // Time that notification stays visible
     // negative value means to use default one
     float lifeTimeSec = -1.0f;
+    // it ANDs with RibbonNotifier allowed tags to see if notification should be displayed
+    NotificationTagMask tags = NotificationTags::All;
     // if notifications are equal to last one added, it just increment counter
     // note that if there is present `onButtonClick` this function always returns false
     bool operator==( const RibbonNotification& other ) const;
@@ -41,6 +62,9 @@ public:
 
     // this value is used as notification `lifeTimeSec` if negative values passed
     float defaultNotificationLifeTimeSeconds = 5.0f;
+
+    // this mask is used to control allowed notifications by filtering with tags
+    NotificationTagMask allowedTagMask = NotificationTags::Default;
 private:
     struct NotificationWithTimer
     {

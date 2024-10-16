@@ -1237,7 +1237,17 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
         if ( !result.errorSummary.empty() )
             showModal( result.errorSummary, NotificationType::Error );
         else if ( !result.warningSummary.empty() )
-            pushNotification( { .text = result.warningSummary, .type = NotificationType::Warning } );
+        {
+            NotificationTagMask mask = NotificationTags::None;
+            if ( result.warningSummary.find( "consider using" ) != std::string::npos )
+                mask |= NotificationTags::Recommendation;
+            if ( result.warningSummary.find( "were duplicated" ) != std::string::npos ||
+                result.warningSummary.find( "were skipped" ) != std::string::npos )
+                mask |= NotificationTags::ImplicitChanges;
+            if ( mask == NotificationTags::None )
+                mask = NotificationTags::ImplicitChanges;
+            pushNotification( { .text = result.warningSummary, .type = NotificationType::Warning,.tags = mask } );
+        }
     };
 
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )

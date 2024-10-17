@@ -421,8 +421,9 @@ Expected<PointCloud> fromLas( std::istream& in, const PointsLoadSettings& settin
     }
 }
 
+} // namespace MR::PointsLoad
+
 MR_ADD_POINTS_LOADER( IOFilter( "LAS (.las)", "*.las" ), fromLas )
 MR_ADD_POINTS_LOADER( IOFilter( "LASzip (.laz)", "*.laz" ), fromLas )
 
-} // namespace MR::PointsLoad
 #endif

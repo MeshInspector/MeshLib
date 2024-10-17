@@ -296,6 +296,10 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
                     break;
                 }
             }
+            if ( !suffixName.empty() )
+            {
+                break;
+            }
         }
 
         if ( suffixName.empty() )

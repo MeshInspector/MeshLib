@@ -511,8 +511,10 @@ float Palette::getRelativePos( float val ) const
         return ( val - parameters_.ranges[0] ) / ( parameters_.ranges[1] - parameters_.ranges[0] );
     else if ( parameters_.ranges.size() == 4 )
     {
-        if ( val >= parameters_.ranges[1] && val <= parameters_.ranges[2] )
-            return 0.5f;
+        float centralZoneSize = parameters_.ranges[2] - parameters_.ranges[1];
+        bool isInCentralZone = val >= parameters_.ranges[1] && val <= parameters_.ranges[2];
+        if ( isInCentralZone && ( texture_.filter == FilterType::Linear || centralZoneSize <= 0.0f ) )
+                return 0.5f;
 
         float uvRange = 0.5f;
         float uvCenterMax = 0.5f;
@@ -521,6 +523,9 @@ float Palette::getRelativePos( float val ) const
             auto realDiscretization = ( 2 * parameters_.discretization + 1 );
             uvRange = float( parameters_.discretization ) / realDiscretization;
             uvCenterMax = float( parameters_.discretization + 1 ) / realDiscretization;
+
+            if ( isInCentralZone )
+                return ( val - parameters_.ranges[1] ) / centralZoneSize * ( 1.0f / realDiscretization ) + uvRange;
         }
 
         if ( val < parameters_.ranges[1] )

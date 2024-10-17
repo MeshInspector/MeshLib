@@ -245,6 +245,7 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
         return v1 < v2;
     } );
 
+    //explicit search for fonts that conflict with style suffixes
     for ( auto& [font, name] : allSystemFonts )
     {
         auto pos = name.find( "arial" );

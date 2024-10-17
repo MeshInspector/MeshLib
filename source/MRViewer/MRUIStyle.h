@@ -145,8 +145,6 @@ inline bool buttonIconFlatBG( const std::string& name, const Vector2f& iconSize,
     return buttonIconEx( name, iconSize, text, buttonSize, params );
 }
 
-int buttonLineGroup( const std::vector<std::string>& name, const Vector2f& iconSize, const std::string& text, const ImVec2& buttonSize );
-
 /// draw gradient checkbox
 MRVIEWER_API bool checkbox( const char* label, bool* value );
 /// If `valueOverride` is specified, then the checkbox is disabled and that value is displayed instead of `value`.

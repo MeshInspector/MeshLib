@@ -18,6 +18,8 @@
 #include "MRMesh/MRRegionBoundary.h"
 #include "MRMesh/MRFillHoleNicely.h"
 #include "MRMesh/MRLaplacian.h"
+#include "MRMesh/MRMeshFwd.h"
+#include "MRPalette.h"
 
 namespace MR
 {
@@ -47,7 +49,12 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
         settings_.workMode = WorkMode::Add;
         firstInit_ = false;
     }
-
+    if ( !palette_ )
+        palette_ = std::make_shared<Palette>( Palette::DefaultColors );
+    const float rangeLength = settings_.editForce * ( Palette::DefaultColors.size() - 1 );
+    palette_->setRangeMinMax( rangeLength * -0.5f, rangeLength * 0.5f );
+    changesMaxVal_ = 0.f;
+    changesMinVal_ = 0.f;
 
     size_t numV = obj_->mesh()->topology.lastValidVert() + 1;
     singleEditingRegion_.clear();
@@ -62,9 +69,14 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
     editingDistanceMap_.resize( numV, 0.f );
     visualizationDistanceMap_.clear();
     visualizationDistanceMap_.resize( numV, 0.f );
+    changedRegion_.clear();
+    changedRegion_.resize( numV, false );
+    valueChanges_.clear();
+    valueChanges_.resize( numV, 0.f );
 
-    obj_->setAncillaryTexture( { { { Color { 255, 64, 64, 255 }, Color { 0, 0, 0, 0 } }, Vector2i { 1, 2 } } } );
-    obj_->setAncillaryUVCoords( VertUVCoords( numV, { 0, 1 } ) );
+    updateTexture();
+
+    obj_->setAncillaryUVCoords( VertUVCoords( numV, { 0.5f, 1.f } ) );
 
     initConnections_();
     mousePressed_ = false;
@@ -85,9 +97,13 @@ void SurfaceManipulationWidget::reset()
     pointsShift_.clear();
     editingDistanceMap_.clear();
     visualizationDistanceMap_.clear();
+    valueChanges_.clear();
 
     resetConnections_();
     mousePressed_ = false;
+
+    changesMaxVal_ = 0.f;
+    changesMinVal_ = 0.f;
 }
 
 void SurfaceManipulationWidget::setSettings( const Settings& settings )
@@ -102,6 +118,52 @@ void SurfaceManipulationWidget::setSettings( const Settings& settings )
     settings_.relaxForceAfterEdit = std::clamp( settings_.relaxForceAfterEdit, 0.f, 0.5f );
     settings_.sharpness = std::clamp( settings_.sharpness, 0.f, 100.f );
     updateRegion_( mousePos_ );
+}
+
+void SurfaceManipulationWidget::updateTexture()
+{
+    MeshTexture texture;
+    if ( enableDeviationTexture_ )
+    {
+        if ( palette_ )
+        {
+            MeshTexture palleteTexture = palette_->getTexture();
+            texture.filter = palleteTexture.filter;
+            texture.resolution = { palleteTexture.resolution.x, 2 };
+            texture.pixels.resize( texture.resolution.x * texture.resolution.y );
+            for ( int x = 0; x < palleteTexture.resolution.x; ++x )
+            {
+                texture.pixels[x] = Color( 255, 64, 64, 255 );
+                texture.pixels[x + palleteTexture.resolution.x] = palleteTexture.pixels[x];
+            }
+        }
+        else
+        {
+            texture.pixels = { Color( 255, 64, 64, 255 ), Color( 255, 64, 64, 255 ), Color( 255, 64, 64, 255 ),
+                Color::blue(), Color::green(), Color::red() };
+            texture.resolution = { 2, 2 };
+        }
+    }
+    else
+    {
+        texture.pixels = { Color( 255, 64, 64, 255 ), Color( 0, 0, 0, 0 ) };
+        texture.resolution = { 1, 2 };
+    }
+    obj_->setAncillaryTexture( texture );
+}
+
+void SurfaceManipulationWidget::updateUVs()
+{
+    updateRegionUVs_( changedRegion_ );
+}
+
+void SurfaceManipulationWidget::enableDeviationVisualization( bool enable )
+{
+    if ( enableDeviationTexture_ == enable )
+        return;
+    enableDeviationTexture_ = enable;
+    updateTexture();
+    updateUVs();
 }
 
 bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int modifiers )
@@ -348,8 +410,14 @@ void SurfaceManipulationWidget::changeSurface_()
         else
             return;
         points[v] += direction * pointShift * normal;
+        valueChanges_[v] += direction * pointShift;
     } );
+    auto [minIt, maxIt] = std::minmax_element( begin( valueChanges_ ), end( valueChanges_ ) );
+    changesMaxVal_ = *minIt;
+    changesMinVal_ = *maxIt;
     generalEditingRegion_ |= singleEditingRegion_;
+    changedRegion_ |= singleEditingRegion_;
+    updateRegionUVs_( singleEditingRegion_ );
     obj_->setDirtyFlags( DIRTY_POSITION );
 }
 
@@ -357,11 +425,14 @@ void SurfaceManipulationWidget::updateUVmap_( bool set )
 {
     VertUVCoords uvs;
     obj_->updateAncillaryUVCoords( uvs );
-    uvs.resizeWithReserve( obj_->mesh()->points.size(), UVCoord{ 0, 1 } );
+    uvs.resizeWithReserve( obj_->mesh()->points.size(), UVCoord{ 0.5f, 1 } );
     const float normalize = 0.5f / settings_.radius;
     BitSetParallelFor( visualizationRegion_, [&] ( VertId v )
     {
-        uvs[v] = set ? UVCoord{ 0, visualizationDistanceMap_[v] * normalize } : UVCoord{ 0, 1 };
+        if ( set )
+            uvs[v] = UVCoord( palette_->getUVcoord( valueChanges_[v], true ).x, ( visualizationDistanceMap_[v] * normalize - 0.5f ) * 100 + 0.5f );
+        else
+            uvs[v] = UVCoord( palette_->getUVcoord( valueChanges_[v], true ).x, 1.f );
     } );
     obj_->setAncillaryUVCoords( std::move( uvs ) );
 }
@@ -519,6 +590,18 @@ void SurfaceManipulationWidget::updateVizualizeSelection_( const ObjAndPick& obj
         if ( !badRegion_ )
             updateUVmap_( true );
     }
+}
+
+void SurfaceManipulationWidget::updateRegionUVs_( const VertBitSet& region )
+{
+    VertUVCoords uvs;
+    obj_->updateAncillaryUVCoords( uvs );
+    uvs.resizeWithReserve( obj_->mesh()->points.size(), UVCoord{ 0.5f, 1 } );
+    BitSetParallelFor( region, [&] ( VertId v )
+    {
+        uvs[v].x = palette_->getUVcoord( valueChanges_[v], true ).x;
+    } );
+    obj_->setAncillaryUVCoords( std::move( uvs ) );
 }
 
 }

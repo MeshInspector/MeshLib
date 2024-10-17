@@ -514,10 +514,19 @@ float Palette::getRelativePos( float val ) const
         if ( val >= parameters_.ranges[1] && val <= parameters_.ranges[2] )
             return 0.5f;
 
+        float uvRange = 0.5f;
+        float uvCenterMax = 0.5f;
+        if ( texture_.filter == FilterType::Discrete )
+        {
+            auto realDiscretization = ( 2 * parameters_.discretization + 1 );
+            uvRange = float( parameters_.discretization ) / realDiscretization;
+            uvCenterMax = float( parameters_.discretization + 1 ) / realDiscretization;
+        }
+
         if ( val < parameters_.ranges[1] )
-            return ( val - parameters_.ranges[0] ) / ( parameters_.ranges[1] - parameters_.ranges[0] ) * 0.5f;
+            return ( val - parameters_.ranges[0] ) / ( parameters_.ranges[1] - parameters_.ranges[0] ) * uvRange;
         else
-            return ( val - parameters_.ranges[2] ) / ( parameters_.ranges[3] - parameters_.ranges[2] ) * 0.5f + 0.5f;
+            return ( val - parameters_.ranges[2] ) / ( parameters_.ranges[3] - parameters_.ranges[2] ) * uvRange + uvCenterMax;
     }
     return 0.5f;
 }

@@ -395,11 +395,9 @@ bool buttonIconEx(
     ImVec2 maxClip( minClip.x + buttonSize.x, minClip.y + buttonSize.y );
 
     bool needText = text.find( "##" ) != 0;
-    std::string buttonText;
+    std::string buttonText = text;
     if ( needText )
         buttonText = "##" + text;
-    else
-        buttonText = text;
 
     bool res = false;
     if ( params.flatBackgroundColor )
@@ -502,7 +500,10 @@ bool buttonIconEx(
         maxLineLength += cSpaceWidth; // to compensate icon inner spacing
         localPadding = ( buttonSize.x - iconSize.x - maxLineLength - style.ItemInnerSpacing.x ) / 2.0f;
         localPadding = std::max( localPadding, style.FramePadding.x );
-        startPosIcon = ImVec2( startButtonPos.x + localPadding, ( startButtonPos.y + endButtonPos.y - iconSize.y ) / 2.0f );
+        if ( vecDetail.empty() )
+            startPosIcon = ImVec2( ( startButtonPos.x + endButtonPos.x - iconSize.x ) / 2.0f, ( startButtonPos.y + endButtonPos.y - iconSize.y ) / 2.0f );
+        else
+            startPosIcon = ImVec2( startButtonPos.x + localPadding, ( startButtonPos.y + endButtonPos.y - iconSize.y ) / 2.0f );
         startPosText = ImVec2( startPosIcon.x + iconSize.x + style.ItemInnerSpacing.x + maxLineLength * 0.5f, ( startButtonPos.y + endButtonPos.y - vecDetail.size() * cFontSize ) / 2.0f );
     }
     ImGui::SetCursorPos( startPosIcon );

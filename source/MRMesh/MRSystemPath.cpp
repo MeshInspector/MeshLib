@@ -273,6 +273,17 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
                     suffixName = curSuffixName;
                     break;
                 }
+                posEndName = curName.find( "_" + suffix + ".ttf");
+                if ( posEndName != std::string::npos && curFontName != firstFontName )
+                {
+                    if ( newFont )
+                    {
+                        firstFontName = std::string( curName.begin(), curName.begin() + posEndName );
+                        newFont = false;
+                    }
+                    suffixName = curSuffixName;
+                    break;
+                }
                 posEndName = curName.find( suffix + ".ttf" );
                 if ( posEndName != std::string::npos && curFontName != firstFontName )
                 {

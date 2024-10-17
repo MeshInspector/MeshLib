@@ -1,8 +1,9 @@
 #include "MRSystemPath.h"
 #include "MROnInit.h"
 #include "MRDirectory.h"
-
+#include "MRStringConvert.h"
 #include <algorithm>
+#include <map>
 
 #if defined( _WIN32 )
 #include <libloaderapi.h>
@@ -225,11 +226,7 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
     std::sort( allSystemFonts.begin(), allSystemFonts.end(), 
         [] ( std::pair<std::filesystem::path, std::string>& v1, std::pair<std::filesystem::path, std::string>& v2 )
     {
-        std::string tempV1 = v1.second;
-        std::transform( v1.second.begin(), v1.second.end(), tempV1.begin(), [](unsigned char c){ return ( char )std::tolower(c); } );
-        std::string tempV2 = v2.second;
-        std::transform( v2.second.begin(), v2.second.end(), tempV2.begin(), [](unsigned char c){ return ( char )std::tolower(c); } );
-        return tempV1 < tempV2;
+        return MR::toLower( v1.second ) < MR::toLower( v2.second );
     } );
 
     //explicit search for fonts that conflict with style suffixes
@@ -259,8 +256,8 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
             newFont = true;
         }
 
-        std::string syffixName;
-        for ( const auto& [curSyffixName, suffixes] : typeSuffixes )
+        std::string suffixName;
+        for ( const auto& [curSuffixName, suffixes] : typeSuffixes )
         {
             for ( const auto& suffix : suffixes )
             {
@@ -273,7 +270,7 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
                         firstFontName = std::string( curName.begin(), curName.begin() + posEndName );
                         newFont = false;
                     }
-                    syffixName = curSyffixName;
+                    suffixName = curSuffixName;
                     break;
                 }
                 posEndName = curName.find( suffix + ".ttf" );
@@ -284,31 +281,31 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
                         firstFontName = std::string( curName.begin(), curName.begin() + posEndName );
                         newFont = false;
                     }
-                    syffixName = curSyffixName;
+                    suffixName = curSuffixName;
                     break;
                 }
             }
         }
 
-        if ( syffixName.empty() )
+        if ( suffixName.empty() )
         {
             firstFontName = font.stem().string();
         }
 
         numFont = fonts.size() - 1;
-        if ( syffixName == "regular" )
+        if ( suffixName == "regular" )
         {
             fonts[numFont][( size_t )SystemFontType::Regular] = font;
         }
-        else if ( syffixName == "bold" )
+        else if ( suffixName == "bold" )
         {
             fonts[numFont][( size_t )SystemFontType::Bold] = font;
         }
-        else if ( syffixName == "italic" )
+        else if ( suffixName == "italic" )
         {
             fonts[numFont][( size_t )SystemFontType::Italic] = font;
         }
-        else if ( syffixName == "bolditalic" )
+        else if ( suffixName == "bolditalic" )
         {
             fonts[numFont][( size_t )SystemFontType::BoldItalic] = font;
         }

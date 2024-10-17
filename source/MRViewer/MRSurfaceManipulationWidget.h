@@ -66,7 +66,7 @@ public:
     // update texture uv coords used for colorize surface (use after change ranges in palette)
     MRVIEWER_API void updateUVs();
     // set visualization point shifts
-    MRVIEWER_API void setDrawCompare( bool drawCompare );
+    MRVIEWER_API void enableDeviationTexture( bool enable );
     // get min / max point shifts for (usefull for setup palette)
     Vector2f getMinMax() { return { changesMaxVal_, changesMinVal_ }; }
 private:
@@ -128,7 +128,7 @@ private:
     bool appendHistoryAction_ = false;
 
     std::shared_ptr<Palette> palette_;
-    bool drawCompare_ = true;
+    bool enableDeviationTexture_ = true;
     float changesMinVal_ = 0.f;
     float changesMaxVal_ = 0.f;
 };

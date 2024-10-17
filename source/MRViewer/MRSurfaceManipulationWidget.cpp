@@ -123,7 +123,7 @@ void SurfaceManipulationWidget::setSettings( const Settings& settings )
 void SurfaceManipulationWidget::updateTexture()
 {
     MeshTexture texture;
-    if ( drawCompare_ )
+    if ( enableDeviationTexture_ )
     {
         if ( palette_ )
         {
@@ -157,11 +157,11 @@ void SurfaceManipulationWidget::updateUVs()
     updateRegionUVs_( changedRegion_ );
 }
 
-void SurfaceManipulationWidget::setDrawCompare( bool drawCompare )
+void SurfaceManipulationWidget::enableDeviationTexture( bool enable )
 {
-    if ( drawCompare_ == drawCompare )
+    if ( enableDeviationTexture_ == enable )
         return;
-    drawCompare_ = drawCompare;
+    enableDeviationTexture_ = enable;
     updateTexture();
     updateUVs();
 }

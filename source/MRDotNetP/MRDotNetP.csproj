@@ -6,6 +6,8 @@
     <Platforms>x64</Platforms>
     <BaseOutputPath>..\..\source</BaseOutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <LangVersion>12</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

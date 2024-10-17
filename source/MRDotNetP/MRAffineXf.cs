@@ -1,6 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using static MR.DotNet.Vector3f;
 using static MR.DotNet.Matrix3f;
+using System;
 
 namespace MR.DotNet
 {
@@ -35,6 +36,12 @@ namespace MR.DotNet
         private static extern MRVector3f mrAffineXf3fApply( ref MRAffineXf3f xf, ref MRVector3f v );
 
         internal MRAffineXf3f xf_;
+
+        unsafe internal IntPtr XfAddr()
+        {
+            fixed ( MRAffineXf3f* p = &xf_ )
+            return new IntPtr( p );
+        }
 
         private Matrix3f A_;
         private Vector3f b_;

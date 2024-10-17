@@ -171,9 +171,8 @@ void SystemPath::overrideDirectory( SystemPath::Directory dir, const std::filesy
 
 } // namespace MR
 
-MR_ON_INIT
-{
+MR_ON_INIT( {
     using namespace MR;
     for ( auto dir = 0; dir < (int)SystemPath::Directory::Count; ++dir )
         SystemPath::overrideDirectory( SystemPath::Directory( dir ), defaultDirectory( SystemPath::Directory( dir ) ) );
-};
+} )

@@ -406,4 +406,4 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveSceneObject, [] ( pybind11::module_& m )
 } )
 
 // force load MRIOExtras library to load extra file formats
-MR_ON_INIT { MR::loadIOExtras(); };
+MR_ON_INIT( { MR::loadIOExtras(); } )

@@ -205,11 +205,11 @@ Expected<void> toVoxels( const Object& object, const std::filesystem::path& path
 }
 
 #define MR_ADD_VOXELS_SAVER( filter, saver )                   \
-MR_ON_INIT {                                                   \
+MR_ON_INIT( {                                                  \
     MR::VoxelsSave::setVoxelsSaver( filter, saver );           \
     /* additionally register the saver as an object saver */   \
     MR::ObjectSave::setObjectSaver( filter, toVoxels<saver> ); \
-};
+} )
 
 MR_ADD_VOXELS_SAVER( IOFilter( "Raw (.raw)", "*.raw" ), toRawAutoname )
 MR_ADD_VOXELS_SAVER( IOFilter( "Micro CT (.gav)", "*.gav" ), toGav )

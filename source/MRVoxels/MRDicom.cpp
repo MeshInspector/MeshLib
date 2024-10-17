@@ -773,13 +773,12 @@ Expected<void> toDCM( const VoxelsVolume<std::vector<T>>& volume, const std::fil
 
 template Expected<void> toDCM<uint16_t>( const SimpleVolumeU16& volume, const std::filesystem::path& path, ProgressCallback cb );
 
-MR_ON_INIT
-{
+MR_ON_INIT( {
     static const IOFilter filter( "Dicom (.dcm)", "*.dcm" );
     MR::VoxelsSave::setVoxelsSaver( filter, MR::VoxelsSave::toDCM );
     /* additionally register the general saver as an object saver for this format */
     MR::ObjectSave::setObjectSaver( filter, MR::saveObjectVoxelsToFile );
-};
+} )
 
 } // namespace VoxelsSave
 

@@ -296,11 +296,11 @@ Expected<std::vector<std::shared_ptr<Object>>> toObjectLoader( const std::filesy
 }
 
 #define MR_ADD_VOXELS_LOADER( filter, loader )                         \
-MR_ON_INIT {                                                           \
+MR_ON_INIT( {                                                          \
     MR::VoxelsLoad::setVoxelsLoader( filter, loader );                 \
     /* additionally register the loader as an object loader */         \
     MR::ObjectLoad::setObjectLoader( filter, toObjectLoader<loader> ); \
-};
+} )
 
 MR_ADD_VOXELS_LOADER( IOFilter( "Raw (.raw)", "*.raw" ), vecFromRaw )
 MR_ADD_VOXELS_LOADER( IOFilter( "Micro CT (.gav)", "*.gav" ), vecFromGav )

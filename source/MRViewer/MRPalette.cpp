@@ -511,27 +511,31 @@ float Palette::getRelativePos( float val ) const
         return ( val - parameters_.ranges[0] ) / ( parameters_.ranges[1] - parameters_.ranges[0] );
     else if ( parameters_.ranges.size() == 4 )
     {
-        float centralZoneSize = parameters_.ranges[2] - parameters_.ranges[1];
+        float centralZoneAbsRange = parameters_.ranges[2] - parameters_.ranges[1];
         bool isInCentralZone = val >= parameters_.ranges[1] && val <= parameters_.ranges[2];
-        if ( isInCentralZone && ( texture_.filter == FilterType::Linear || centralZoneSize <= 0.0f ) )
+        if ( isInCentralZone && ( texture_.filter == FilterType::Linear || centralZoneAbsRange <= 0.0f ) )
                 return 0.5f;
 
-        float uvRange = 0.5f;
-        float uvCenterMax = 0.5f;
+        float outerZoneRelativeRange = 0.5f;
+        float centerZoneRelativeMax = 0.5f;
         if ( texture_.filter == FilterType::Discrete )
         {
             auto realDiscretization = ( 2 * parameters_.discretization + 1 );
-            uvRange = float( parameters_.discretization ) / realDiscretization;
-            uvCenterMax = float( parameters_.discretization + 1 ) / realDiscretization;
+            outerZoneRelativeRange = float( parameters_.discretization ) / realDiscretization;
+            centerZoneRelativeMax = float( parameters_.discretization + 1 ) / realDiscretization;
 
             if ( isInCentralZone )
-                return ( val - parameters_.ranges[1] ) / centralZoneSize * ( 1.0f / realDiscretization ) + uvRange;
+            {
+                float centralZoneRelativeRange = 1.0f / realDiscretization;
+                float centralZoneRelativeMin = outerZoneRelativeRange;
+                return ( val - parameters_.ranges[1] ) / centralZoneAbsRange * centralZoneRelativeRange + centralZoneRelativeMin;
+            }
         }
 
         if ( val < parameters_.ranges[1] )
-            return ( val - parameters_.ranges[0] ) / ( parameters_.ranges[1] - parameters_.ranges[0] ) * uvRange;
+            return ( val - parameters_.ranges[0] ) / ( parameters_.ranges[1] - parameters_.ranges[0] ) * outerZoneRelativeRange;
         else
-            return ( val - parameters_.ranges[2] ) / ( parameters_.ranges[3] - parameters_.ranges[2] ) * uvRange + uvCenterMax;
+            return ( val - parameters_.ranges[2] ) / ( parameters_.ranges[3] - parameters_.ranges[2] ) * outerZoneRelativeRange + centerZoneRelativeMax;
     }
     return 0.5f;
 }

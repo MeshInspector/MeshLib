@@ -1,3 +1,4 @@
 #pragma once
 
+#cmakedefine MRVIEWER_NO_GTK
 #cmakedefine MRVIEWER_NO_VOXELS

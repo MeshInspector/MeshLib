@@ -1,4 +1,6 @@
 #include "MRFileDialog.h"
+#include "MRViewerFwd.h"
+#include "MRColorTheme.h"
 #include "MRCommandLoop.h"
 #include "MRViewer.h"
 #include "MRMesh/MRConfig.h"
@@ -6,12 +8,13 @@
 #include "MRMesh/MRSystem.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
-#include "MRColorTheme.h"
+
 #include <GLFW/glfw3.h>
+
 #include <clocale>
 
 #ifndef _WIN32
-  #ifndef __EMSCRIPTEN__
+  #ifndef MRVIEWER_NO_GTK
     #include <gtkmm.h>
   #endif
 #else
@@ -90,27 +93,7 @@ struct FileDialogParameters : MR::FileParameters
     bool saveDialog{false};   // true for save dialog, false for open
 };
 
-#if !defined( __EMSCRIPTEN__ ) && !defined( _WIN32 )
-const std::string cLastUsedDirKey = "lastUsedDir";
-
-std::string getCurrentFolder( const FileDialogParameters& params )
-{
-    if ( !params.baseFolder.empty() )
-        return MR::utf8string( params.baseFolder );
-
-    auto& cfg = MR::Config::instance();
-    if ( cfg.hasJsonValue( cLastUsedDirKey ) )
-    {
-        auto lastUsedDir = cfg.getJsonValue( cLastUsedDirKey );
-        if ( lastUsedDir.isString() )
-            return lastUsedDir.asString();
-    }
-
-    return MR::utf8string( MR::GetHomeDirectory() );
-}
-#endif
-
-#ifdef  _WIN32
+#if defined( _WIN32 )
 std::vector<std::filesystem::path> windowsDialog( const FileDialogParameters& params = {} )
 {
     std::vector<std::filesystem::path> res;
@@ -245,7 +228,25 @@ std::vector<std::filesystem::path> windowsDialog( const FileDialogParameters& pa
     return res;
 }
 #else
-#ifndef __EMSCRIPTEN__
+#ifndef MRVIEWER_NO_GTK
+const std::string cLastUsedDirKey = "lastUsedDir";
+
+std::string getCurrentFolder( const FileDialogParameters& params )
+{
+    if ( !params.baseFolder.empty() )
+        return MR::utf8string( params.baseFolder );
+
+    auto& cfg = MR::Config::instance();
+    if ( cfg.hasJsonValue( cLastUsedDirKey ) )
+    {
+        auto lastUsedDir = cfg.getJsonValue( cLastUsedDirKey );
+        if ( lastUsedDir.isString() )
+            return lastUsedDir.asString();
+    }
+
+    return MR::utf8string( MR::GetHomeDirectory() );
+}
+
 std::string gtkDialogTitle( Gtk::FileChooserAction action, bool multiple = false )
 {
     switch ( action )
@@ -368,7 +369,9 @@ std::vector<std::filesystem::path> gtkDialog( const FileDialogParameters& params
 
     return results;
 }
-#else
+#endif
+#endif
+#ifdef __EMSCRIPTEN__
 std::string webAccumFilter( const MR::IOFilters& filters )
 {
     std::string accumFilter;
@@ -389,7 +392,6 @@ std::string webAccumFilter( const MR::IOFilters& filters )
     return accumFilter;
 }
 #endif
-#endif
 }
 
 namespace MR
@@ -407,7 +409,7 @@ std::filesystem::path openFileDialog( const FileParameters& params )
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
-#elif !defined( __EMSCRIPTEN__ )
+#elif !defined( MRVIEWER_NO_GTK )
     results = gtkDialog( parameters );
 #endif
     if ( results.size() == 1 )
@@ -446,7 +448,7 @@ std::vector<std::filesystem::path> openFilesDialog( const FileParameters& params
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
-#elif !defined( __EMSCRIPTEN__ )
+#elif !defined( MRVIEWER_NO_GTK )
     results = gtkDialog( parameters );
 #endif
     return results;
@@ -481,7 +483,7 @@ std::filesystem::path openFolderDialog( std::filesystem::path baseFolder )
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
-#elif !defined( __EMSCRIPTEN__ )
+#elif !defined( MRVIEWER_NO_GTK )
     results = gtkDialog( parameters );
 #endif
     if ( results.size() == 1 )
@@ -522,7 +524,7 @@ std::vector<std::filesystem::path> openFoldersDialog( std::filesystem::path base
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
-#elif !defined( __EMSCRIPTEN__ )
+#elif !defined( MRVIEWER_NO_GTK )
     results = gtkDialog( parameters );
 #endif
     return results;
@@ -540,7 +542,7 @@ std::filesystem::path saveFileDialog( const FileParameters& params /*= {} */ )
     std::vector<std::filesystem::path> results;
 #if defined( _WIN32 )
     results = windowsDialog( parameters );
-#elif !defined( __EMSCRIPTEN__ )
+#elif !defined( MRVIEWER_NO_GTK )
     results = gtkDialog( parameters );
 #endif
     if ( results.size() == 1 )

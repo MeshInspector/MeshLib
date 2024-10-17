@@ -119,6 +119,7 @@ jobs:
           # FIXME: OpenGL libraries are included to wheel packages when the XDE module is used
           MR_CMAKE_OPTIONS: >
             -DMRIOEXTRAS_OPENCASCADE_USE_XDE=OFF
+            -DMRVIEWER_NO_GTK=ON
           # not realy needed
           CMAKE_C_COMPILER: /usr/bin/clang-11
 
@@ -406,6 +407,8 @@ jobs:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
           CMAKE_CXX_COMPILER: /usr/bin/clang++
+          MR_CMAKE_OPTIONS: >
+            -DMRVIEWER_NO_GTK=ON
           # not realy needed
           CMAKE_C_COMPILER: /usr/bin/clang
 

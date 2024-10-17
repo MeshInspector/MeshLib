@@ -2,6 +2,8 @@
 #include "MROnInit.h"
 #include "MRDirectory.h"
 
+#include <algorithm>
+
 #if defined( _WIN32 )
 #include <libloaderapi.h>
 #elif !defined( __EMSCRIPTEN__ )

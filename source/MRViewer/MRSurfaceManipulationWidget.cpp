@@ -157,7 +157,7 @@ void SurfaceManipulationWidget::updateUVs()
     updateRegionUVs_( changedRegion_ );
 }
 
-void SurfaceManipulationWidget::enableDeviationTexture( bool enable )
+void SurfaceManipulationWidget::enableDeviationVisualization( bool enable )
 {
     if ( enableDeviationTexture_ == enable )
         return;

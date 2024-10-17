@@ -65,8 +65,8 @@ public:
     MRVIEWER_API void updateTexture();
     // update texture uv coords used for colorize surface (use after change ranges in palette)
     MRVIEWER_API void updateUVs();
-    // set visualization point shifts
-    MRVIEWER_API void enableDeviationTexture( bool enable );
+    // enable visualization of mesh deviations
+    MRVIEWER_API void enableDeviationVisualization( bool enable );
     // get min / max point shifts for (usefull for setup palette)
     Vector2f getMinMax() { return { changesMaxVal_, changesMinVal_ }; }
 private:

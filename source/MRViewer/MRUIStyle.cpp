@@ -395,6 +395,7 @@ bool buttonIconEx(
     ImVec2 maxClip( minClip.x + buttonSize.x, minClip.y + buttonSize.y );
 
     std::string buttonText = "##" + text;
+
     bool res = false;
     if ( params.flatBackgroundColor )
     {
@@ -444,43 +445,49 @@ bool buttonIconEx(
             return oldLength + cSpaceWidth + additionalLength;
     };
 
-    split( text, " ", [&] ( std::string_view str )
+    if ( text.find( "##" ) != 0 )
     {
-        startWord = str.data();
-        endWord = &str.back() + 1;
-        bool forcePrint = endText == str.end();
-        auto curTextSize = ImGui::CalcTextSize( startWord, endWord );
-        if ( sumLength( curDetail.lenght, curTextSize.x ) > cLineAvailableWidth )
+        split( text, " ", [&] ( std::string_view str )
         {
-            curDetail.end = startWord;
-            if ( curDetail.lenght == 0 )
+            startWord = str.data();
+            endWord = &str.back() + 1;
+            bool forcePrint = endText == str.end();
+            auto curTextSize = ImGui::CalcTextSize( startWord, endWord );
+            if ( sumLength( curDetail.lenght, curTextSize.x ) > cLineAvailableWidth )
+            {
+                curDetail.end = startWord;
+                if ( curDetail.lenght == 0 )
+                {
+                    curDetail.end = endWord;
+                    curDetail.lenght = curTextSize.x;
+                }
+                printLine( curDetail );
+                curDetail = { curTextSize.x, startWord, endWord };
+            }
+            else if ( forcePrint )
             {
                 curDetail.end = endWord;
-                curDetail.lenght = curTextSize.x;
+                curDetail.lenght = sumLength( curDetail.lenght, curTextSize.x );
+                printLine( curDetail );
             }
-            printLine( curDetail );
-            curDetail = { curTextSize.x, startWord, endWord };
-        }
-        else if ( forcePrint )
-        {
-            curDetail.end = endWord;
-            curDetail.lenght = sumLength( curDetail.lenght, curTextSize.x );
-            printLine( curDetail );
-        }
-        else
-        {
-            curDetail.lenght = sumLength( curDetail.lenght, curTextSize.x );
-        }
-        startWord = endWord;
-        return false;
-    } );
+            else
+            {
+                curDetail.lenght = sumLength( curDetail.lenght, curTextSize.x );
+            }
+            startWord = endWord;
+            return false;
+        } );
+    }
 
     float localPadding = 0.0f;
     ImVec2 startPosIcon;
     ImVec2 startPosText;
     if ( params.textUnderImage )
     {
-        localPadding = ( buttonSize.y - iconSize.y - vecDetail.size() * cFontSize ) / 3.0f;
+        if( vecDetail.empty() )
+            localPadding = ( buttonSize.y - iconSize.y ) / 2.0f;
+        else
+            localPadding = ( buttonSize.y - iconSize.y - vecDetail.size() * cFontSize ) / 3.0f;
         localPadding = std::max( localPadding, style.FramePadding.y );
         startPosIcon = ImVec2( ( startButtonPos.x + endButtonPos.x - iconSize.x ) / 2.0f, startButtonPos.y + localPadding );
         startPosText = ImVec2( ( startButtonPos.x + endButtonPos.x ) / 2.0f, startPosIcon.y + iconSize.y + localPadding );
@@ -490,7 +497,10 @@ bool buttonIconEx(
         maxLineLength += cSpaceWidth; // to compensate icon inner spacing
         localPadding = ( buttonSize.x - iconSize.x - maxLineLength - style.ItemInnerSpacing.x ) / 2.0f;
         localPadding = std::max( localPadding, style.FramePadding.x );
-        startPosIcon = ImVec2( startButtonPos.x + localPadding, ( startButtonPos.y + endButtonPos.y - iconSize.y ) / 2.0f );
+        if ( vecDetail.empty() )
+            startPosIcon = ImVec2( ( startButtonPos.x + endButtonPos.x - iconSize.x ) / 2.0f, ( startButtonPos.y + endButtonPos.y - iconSize.y ) / 2.0f );
+        else
+            startPosIcon = ImVec2( startButtonPos.x + localPadding, ( startButtonPos.y + endButtonPos.y - iconSize.y ) / 2.0f );
         startPosText = ImVec2( startPosIcon.x + iconSize.x + style.ItemInnerSpacing.x + maxLineLength * 0.5f, ( startButtonPos.y + endButtonPos.y - vecDetail.size() * cFontSize ) / 2.0f );
     }
     ImGui::SetCursorPos( startPosIcon );

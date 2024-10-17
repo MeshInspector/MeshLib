@@ -181,9 +181,7 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
     std::vector<std::pair<std::filesystem::path, std::string>> allSystemFonts;
     std::vector<std::filesystem::path> systemFontspath;
 #ifdef _WIN32
-    //systemFontspath = "C:/Windows/Fonts";
-    systemFontspath = { "C:/all/font" };
-
+    systemFontspath = { "C:/Windows/Fonts" };
 #elif defined (__APPLE__)
     systemFontspath = { "/Library/Fonts", "/System/Library/Fonts" };
 #else // linux and wasm

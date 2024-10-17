@@ -28,4 +28,3 @@ tbb-devel
 time
 tinyxml2-devel
 turbojpeg-devel
-xerces-c-devel

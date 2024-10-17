@@ -43,7 +43,7 @@ Expected<MR::SimpleVolumeMinMax> pointsToDistanceVolume( const PointCloud& cloud
     cudaParams.dimensions.z = params.dimensions.z;
        
     DynamicArray<float> cudaVolume;
-    cudaVolume.resize( params.dimensions.x * params.dimensions.y * params.dimensions.z );
+    cudaVolume.resize( size_t( params.dimensions.x ) * params.dimensions.y * params.dimensions.z );
     if ( !pointsToDistanceVolumeKernel( cudaNodes.data(), cudaPoints.data(), cudaNormals.data(), cudaVolume.data(), cudaParams ) )
         return unexpected( "CUDA error occurred" );
 

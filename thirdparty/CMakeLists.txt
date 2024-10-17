@@ -151,9 +151,11 @@ ELSE() # not MR_EMSCRIPTEN
   set(CLIP_X11_WITH_PNG OFF)
   set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
   add_subdirectory(./clip)
-  add_subdirectory(./libE57Format)
   file(GLOB CLIP_HEADERS "clip/*.h")
   install(FILES ${CLIP_HEADERS} DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR}/clip)
+
+  set(E57_XML_PARSER TinyXML2 CACHE STRING "")
+  add_subdirectory(./libE57Format)
 ENDIF()
 
 set(GLAD_INSTALL ON)

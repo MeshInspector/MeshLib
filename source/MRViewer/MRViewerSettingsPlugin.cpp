@@ -331,18 +331,59 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth, float menuScali
 
     drawGlobalSettings_( btnHalfSizeX, menuScaling );
 
+    if ( ribbonMenu )
+    {
+        drawSeparator_( "Notifications", menuScaling );
+
+        UI::checkbox( "Time Reports", [&] ()
+        {
+            return bool( ribbonMenu->getRibbonNotifier().allowedTagMask & NotificationTags::Report );
+        }, [&] ( bool on )
+        {
+            if ( on )
+                ribbonMenu->getRibbonNotifier().allowedTagMask |= NotificationTags::Report;
+            else
+                ribbonMenu->getRibbonNotifier().allowedTagMask &= ~NotificationTags::Report;
+        } );
+        UI::setTooltipIfHovered( "Show duration of last operation of the application.", menuScaling );
+
+        UI::checkbox( "Recommendations", [&] ()
+        {
+            return bool( ribbonMenu->getRibbonNotifier().allowedTagMask & NotificationTags::Recommendation );
+        }, [&] ( bool on )
+        {
+            if ( on )
+                ribbonMenu->getRibbonNotifier().allowedTagMask |= NotificationTags::Recommendation;
+            else
+                ribbonMenu->getRibbonNotifier().allowedTagMask &= ~NotificationTags::Recommendation;
+        } );
+        UI::setTooltipIfHovered( "Show notifications with recommended actions.", menuScaling );
+
+        UI::checkbox( "Implicit Changes", [&] ()
+        {
+            return bool( ribbonMenu->getRibbonNotifier().allowedTagMask & NotificationTags::ImplicitChanges );
+        }, [&] ( bool on )
+        {
+            if ( on )
+                ribbonMenu->getRibbonNotifier().allowedTagMask |= NotificationTags::ImplicitChanges;
+            else
+                ribbonMenu->getRibbonNotifier().allowedTagMask &= ~NotificationTags::ImplicitChanges;
+        } );
+        UI::setTooltipIfHovered( "Notify when some changes were made implicitly by the application. (mostly appear on import of non-manifold models)", menuScaling );
+
+        UI::checkbox( "Important", [&] ()
+        {
+            return bool( ribbonMenu->getRibbonNotifier().allowedTagMask & NotificationTags::Important );
+        }, [&] ( bool on )
+        {
+            if ( on )
+                ribbonMenu->getRibbonNotifier().allowedTagMask |= NotificationTags::Important;
+            else
+                ribbonMenu->getRibbonNotifier().allowedTagMask &= ~NotificationTags::Important;
+        } );
+        UI::setTooltipIfHovered( "Show important messages about errors or warnings that could happen.", menuScaling );
+    }
 #if 0 // Hide unimplemented settings
-    if ( !viewer->experimentalFeatures )
-        return; // TODO
-
-    drawSeparator_( "Notifications", menuScaling );
-
-    static bool newVersion, importWarnings; // TODO
-    UI::checkbox( "New application version", &newVersion );
-    UI::setTooltipIfHovered( "Show when a new version of MeshInspector is available.", menuScaling );
-    UI::checkbox( "Import warnings", &importWarnings );
-    UI::setTooltipIfHovered( "Non-fatal warnings when importing a file", menuScaling );
-
 #ifndef __EMSCRIPTEN__
     drawSeparator_( "Files and Folders", menuScaling );
     // TODO

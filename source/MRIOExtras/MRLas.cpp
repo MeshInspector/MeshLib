@@ -238,6 +238,8 @@ Expected<PointCloud> process( lazperf::reader::basic_file& reader, const PointsL
     if ( buf.size() < header.point_record_length )
         return unexpected( fmt::format( "Unsupported LAS format version: {}.{}", header.version.major, header.version.minor ) );
 
+    const auto extraBytes = reader.vlrData( "LASF_Spec", 4 );
+
     PointCloud result;
     result.points.reserve( pointCount );
     if ( settings.colors )

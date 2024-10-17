@@ -394,10 +394,7 @@ bool buttonIconEx(
     ImVec2 minClip = winPos + startButtonPos - scroll;
     ImVec2 maxClip( minClip.x + buttonSize.x, minClip.y + buttonSize.y );
 
-    bool needText = text.find( "##" ) != 0;
-    std::string buttonText = text;
-    if ( needText )
-        buttonText = "##" + text;
+    std::string buttonText = "##" + text;
 
     bool res = false;
     if ( params.flatBackgroundColor )
@@ -448,7 +445,7 @@ bool buttonIconEx(
             return oldLength + cSpaceWidth + additionalLength;
     };
 
-    if ( needText )
+    if ( text.find( "##" ) != 0 )
     {
         split( text, " ", [&] ( std::string_view str )
         {

@@ -190,38 +190,21 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
     systemFontspath = { "/usr/share/fonts" };
 #endif
 
-    static const std::vector<std::string> suffixes{
-            "regular",
-            "Regular",
-            "bd",
-            "BD",
-            "SemiBold",
-            "bold",
-            "b",
-            "Bold",
-            "B",
-            "BoldItalic",
-            "bi",
-            "BI",
-            "z",
-            "LightItalic",
-            "MediumItalic",
-            "SemiBoldItalic",
-            "li",
-            "LI"
-            "italic",
-            "i",
-            "Italic",
-            "I",
-            "light",
-            "Light",
-            "l",
-            "L",
-            "medium",
-            "Medium",
-            "BoldOblique",
-            "oblique",
-            "Oblique"
+    static const std::map<std::string, std::vector<std::string>> typeSuffixes{
+        {"regular",{"regular", "Regular"}},
+        {"bd", {"bd", "BD"}},
+        {"semibold", {"SemiBold", "semibold"}},
+        {"bold", {"bold", "b", "Bold", "B"}},
+        {"boldbtalic", {"BoldItalic", "bolditalic", "bi", "BI", "z"}},
+        {"lightitalic", {"LightItalic"}},
+        {"mediumitalic", {"MediumItalic"}},
+        {"semibolditalic", {"SemiBoldItalic", "semibolditalic"}},
+        {"lightitalic", {"li", "LI", "LightItalic", "lightitalic"}},
+        {"italic", {"italic", "i", "Italic", "I"}},
+        {"light", {"light", "Light", "l", "L"}},
+        {"medium", {"medium", "Medium"}},
+        {"boldoblique", {"BoldOblique", "boldoblique"}},
+        {"oblique", {"oblique", "Oblique"}}
     };
 
     std::error_code ec;
@@ -242,7 +225,11 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
     std::sort( allSystemFonts.begin(), allSystemFonts.end(), 
         [] ( std::pair<std::filesystem::path, std::string>& v1, std::pair<std::filesystem::path, std::string>& v2 )
     {
-        return v1 < v2;
+        std::string tempV1 = v1.second;
+        std::transform( v1.second.begin(), v1.second.end(), tempV1.begin(), [](unsigned char c){ return ( char )std::tolower(c); } );
+        std::string tempV2 = v2.second;
+        std::transform( v2.second.begin(), v2.second.end(), tempV2.begin(), [](unsigned char c){ return ( char )std::tolower(c); } );
+        return tempV1 < tempV2;
     } );
 
     //explicit search for fonts that conflict with style suffixes
@@ -272,55 +259,56 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
             newFont = true;
         }
 
-        int numSuffix = -1;
-        int n = 0;
-        for ( const auto& suffix : suffixes )
+        std::string syffixName;
+        for ( const auto& [curSyffixName, suffixes] : typeSuffixes )
         {
-            auto curFontName = font.stem().string();
-            auto posEndName = curName.find( "-" + suffix + ".ttf" );
-            if ( posEndName != std::string::npos && curFontName != firstFontName )
+            for ( const auto& suffix : suffixes )
             {
-                if ( newFont )
+                auto curFontName = font.stem().string();
+                auto posEndName = curName.find( "-" + suffix + ".ttf" );
+                if ( posEndName != std::string::npos && curFontName != firstFontName )
                 {
-                    firstFontName = std::string( curName.begin(), curName.begin() + posEndName );
-                    newFont = false;
+                    if ( newFont )
+                    {
+                        firstFontName = std::string( curName.begin(), curName.begin() + posEndName );
+                        newFont = false;
+                    }
+                    syffixName = curSyffixName;
+                    break;
                 }
-                numSuffix = n;
-                break;
-            }
-            posEndName = curName.find( suffix + ".ttf" );
-            if ( posEndName != std::string::npos && curFontName != firstFontName )
-            {
-                if ( newFont )
+                posEndName = curName.find( suffix + ".ttf" );
+                if ( posEndName != std::string::npos && curFontName != firstFontName )
                 {
-                    firstFontName = std::string( curName.begin(), curName.begin() + posEndName );
-                    newFont = false;
+                    if ( newFont )
+                    {
+                        firstFontName = std::string( curName.begin(), curName.begin() + posEndName );
+                        newFont = false;
+                    }
+                    syffixName = curSyffixName;
+                    break;
                 }
-                numSuffix = n;
-                break;
             }
-            n++;
         }
 
-        if ( numSuffix < 0)
+        if ( syffixName.empty() )
         {
             firstFontName = font.stem().string();
         }
 
         numFont = fonts.size() - 1;
-        if ( numSuffix < 2 )
+        if ( syffixName == "regular" )
         {
             fonts[numFont][( size_t )SystemFontType::Regular] = font;
         }
-        else if ( 5 <= numSuffix && numSuffix < 9 )
+        else if ( syffixName == "bold" )
         {
             fonts[numFont][( size_t )SystemFontType::Bold] = font;
         }
-        else if ( 18 <= numSuffix && numSuffix < 22 )
+        else if ( syffixName == "italic" )
         {
             fonts[numFont][( size_t )SystemFontType::Italic] = font;
         }
-        else if ( 9 <= numSuffix && numSuffix < 13 )
+        else if ( syffixName == "bolditalic" )
         {
             fonts[numFont][( size_t )SystemFontType::BoldItalic] = font;
         }

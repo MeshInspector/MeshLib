@@ -193,10 +193,9 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
 
     static const std::map<std::string, std::vector<std::string>> typeSuffixes{
         {"regular",{"regular", "Regular"}},
-        {"bd", {"bd", "BD"}},
         {"semibold", {"SemiBold", "semibold"}},
-        {"bold", {"bold", "b", "Bold", "B"}},
-        {"boldbtalic", {"BoldItalic", "bolditalic", "bi", "BI", "z"}},
+        {"bold", {"bold", "b", "Bold", "B", "bd", "BD"}},
+        {"bolditalic", {"BoldItalic", "bolditalic", "bi", "BI", "z"}},
         {"lightitalic", {"LightItalic"}},
         {"mediumitalic", {"MediumItalic"}},
         {"semibolditalic", {"SemiBoldItalic", "semibolditalic"}},
@@ -215,16 +214,19 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
     {
         for ( auto entry : MR::DirectoryRecursive{ curPath, ec } )
         {
+            bool isFont = false;
             std::filesystem::path font = entry;
             for ( auto& format : supportFormat )
             {
-                if ( font.extension() != format )
+                if ( font.extension() == format )
                 {
-                    continue;
+                    isFont = true;
+                    break;
                 }
             }
 
-            allSystemFonts.push_back( { font, font.filename().string() } );
+            if( isFont )
+                allSystemFonts.push_back( { font, font.filename().string() } );
         }
     }
 
@@ -241,12 +243,18 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
         std::string newName;
         if ( pos != std::string::npos )
         {
-            name = "arial-" + std::string(name.begin() + 5, name.end() );
+            if( name[5] == '.' )
+                name = "arial-regular" + std::string( name.begin() + 5, name.end() );
+            else
+                name = "arial-" + std::string( name.begin() + 5, name.end() );
         }
         pos = name.find( "calibri" );
         if ( pos != std::string::npos )
         {
-            name = "calibri-" + std::string( name.begin() + 7, name.end() );
+            if ( name[7] == '.' )
+                name = "calibri-regular" + std::string( name.begin() + 7, name.end() );
+            else
+                name = "calibri-" + std::string( name.begin() + 7, name.end() );
         }
     }
 
@@ -316,7 +324,7 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
         }
 
         numFont = fonts.size() - 1;
-        if ( suffixName == "regular" )
+        if ( suffixName == "regular" || suffixName.empty() )
         {
             fonts[numFont][( size_t )SystemFontType::Regular] = font;
         }

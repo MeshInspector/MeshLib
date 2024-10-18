@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using static MR.DotNet.Vector3f;
 
 namespace MR.DotNet
@@ -190,15 +191,18 @@ namespace MR.DotNet
         public BitSet FaceMap( BitSet oldBS, MapObject obj)
         {
             if ( maps_ is null )
-                maps_ = new IntPtr[2];
+                maps_ = new IntPtr?[2];
 
-            
+            if ( maps_[(int)obj] is null )
+            {
+                maps_[(int)obj] = mrBooleanResultMapperMapFaces(mapper_, oldBS.bs, obj);
+            }
         }
         #endregion
         #region private fields
 
         IntPtr mapper_;
-        IntPtr[]? maps_;
+        IntPtr?[]? maps_;
         #endregion
     }
 }

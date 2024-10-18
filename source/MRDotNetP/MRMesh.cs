@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Data.Common;
-using System.Drawing;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using static MR.DotNet.AffineXf3f;
 using static MR.DotNet.Vector3f;
@@ -273,8 +269,8 @@ namespace MR.DotNet
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern void mrStringFree(IntPtr str);
 
-        [DllImport("MRIOExtras.dll", CharSet = CharSet.Ansi)]
-        private static extern void loadIOExtras();
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern void mrLoadIOExtras();
 
         #endregion
         #region Constructors
@@ -300,7 +296,6 @@ namespace MR.DotNet
                 {
                     int numPoints = (int)mrMeshPointsNum(mesh_);
                     points_ = new VertCoords(numPoints);
-                    //var pointsArray = new MRVector3f[numPoints];
                     int sizeOfVector3f = Marshal.SizeOf(typeof(MRVector3f));
 
                     var pointsPtr = mrMeshPoints(mesh_);
@@ -419,11 +414,13 @@ namespace MR.DotNet
         public void Transform(AffineXf3f xf)
         {
             mrMeshTransform(mesh_, ref xf.xf_, (IntPtr)null);
+            clearManagedResources();
         }
 
         public void Transform(AffineXf3f xf, BitSet region)
         {
             mrMeshTransform(mesh_, ref xf.xf_, region.bs_);
+            clearManagedResources();
         }
 
         public void PackOptimally()
@@ -448,7 +445,7 @@ namespace MR.DotNet
 
         public static Mesh FromTriangles(VertCoords points, Triangulation triangles)
         {
-            int sizeOfVector3f = Marshal.SizeOf(typeof(Vector3f));
+            int sizeOfVector3f = Marshal.SizeOf(typeof(MRVector3f));
             IntPtr nativePoints = Marshal.AllocHGlobal(points.Count * sizeOfVector3f);
 
             int sizeOfThreeVertIds = Marshal.SizeOf(typeof(ThreeVertIds));
@@ -458,7 +455,7 @@ namespace MR.DotNet
             {
                 for (int i = 0; i < points.Count; i++)
                 {
-                    Marshal.StructureToPtr(points[i], IntPtr.Add(nativePoints, i * sizeOfVector3f), false);
+                    Marshal.StructureToPtr(points[i].vec_, IntPtr.Add(nativePoints, i * sizeOfVector3f), false);
                 }
 
                 for (int i = 0; i < triangles.Count; i++)
@@ -506,6 +503,8 @@ namespace MR.DotNet
 
         unsafe public static Mesh FromAnySupportedFormat(string path)
         {
+            mrLoadIOExtras();
+
             IntPtr errString = new IntPtr();
             var mesh = mrMeshLoadFromAnySupportedFormat(path, &errString);
 
@@ -521,6 +520,8 @@ namespace MR.DotNet
 
         unsafe public static void ToAnySupportedFormat(Mesh mesh, string path)
         {
+            mrLoadIOExtras();
+
             IntPtr errString = new IntPtr();
             mrMeshSaveToAnySupportedFormat(mesh.mesh_, path, &errString);
             if (errString != IntPtr.Zero)
@@ -556,7 +557,7 @@ namespace MR.DotNet
 
         #endregion
         #region Find projection
-        public MeshProjectionResult FindProjection(Vector3f point, MeshPart meshPart, float maxDistanceSquared = float.MaxValue, AffineXf3f? xf = null, float minDistanceSquared = 0.0f )
+        static public MeshProjectionResult FindProjection(Vector3f point, MeshPart meshPart, float maxDistanceSquared = float.MaxValue, AffineXf3f? xf = null, float minDistanceSquared = 0.0f )
         {
             MRFindProjectionParameters mrParams = new MRFindProjectionParameters();
             mrParams.loDistLimitSq = minDistanceSquared;

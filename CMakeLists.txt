@@ -51,10 +51,14 @@ set(MESHLIB_THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
 
 set(MESHLIB_THIRDPARTY_ROOT_DIR "${PROJECT_SOURCE_DIR}" CACHE PATH "Thirdparty library location")
 IF(NOT MESHLIB_CUSTOM_INSTALL_PREFIX)
-  IF(NOT EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}")
+  IF(NOT EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/include" OR NOT EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib")
     message(FATAL_ERROR "thirdparty build directory not found! You can build thirdparty with ./scripts/build_thirdparty.sh")
   ENDIF()
+ENDIF()
+IF(EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/include")
   include_directories(${MESHLIB_THIRDPARTY_ROOT_DIR}/include)
+ENDIF()
+IF(EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib")
   link_directories(${MESHLIB_THIRDPARTY_ROOT_DIR}/lib)
 ENDIF()
 
@@ -262,3 +266,5 @@ install(
 
 set(CPACK_GENERATOR "DRAGNDROP")
 include(CPack)
+
+# vim: ts=2:sw=2

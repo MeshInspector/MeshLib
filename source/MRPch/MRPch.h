@@ -21,6 +21,9 @@
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
 #pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
 #endif
+#if __clang_major__ >= 18
+#pragma clang diagnostic ignored "-Wenum-constexpr-conversion"
+#endif
 #define BOOST_DYNAMIC_BITSET_DONT_USE_FRIENDS
 #include <boost/algorithm/string.hpp>
 #include <boost/archive/iterators/binary_from_base64.hpp>

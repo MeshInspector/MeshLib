@@ -1437,9 +1437,18 @@ float ImGuiMenu::drawSelectionInformation_()
 
         if ( selectedObjs.size() == 1 )
         {
-            // TODO: show selected area
-            (void)totalSelectedArea;
-            drawUnitInfo( "Area", totalArea, AreaUnit{} );
+            ImGui::SetNextItemWidth( itemWidth );
+            if ( totalSelectedArea > 0 )
+            {
+                UI::readOnlyValue<AreaUnit>( "Area", totalArea, selectedTextColor,
+                    { .decorationFormatString = valueToString<AreaUnit>( totalSelectedArea ) + " / {}" }, labelColor );
+                UI::setTooltipIfHovered( "Selected / Total surface area", menu_scaling() );
+            }
+            else
+            {
+                UI::readOnlyValue<AreaUnit>( "Area", totalArea, textColor, {}, labelColor );
+                UI::setTooltipIfHovered( "Total surface area", menu_scaling() );
+            }
 
             drawUnitInfo( "Avg Edge Length", avgEdgeLen, LengthUnit{} );
 

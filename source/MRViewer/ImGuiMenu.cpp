@@ -1440,7 +1440,7 @@ float ImGuiMenu::drawSelectionInformation_()
             ImGui::SetNextItemWidth( itemWidth );
             if ( totalSelectedArea > 0 )
             {
-                UI::readOnlyValue<AreaUnit>( "Area", totalArea, textColor,
+                UI::readOnlyValue<AreaUnit>( "Area", totalArea, selectedTextColor,
                     { .decorationFormatString = valueToString<AreaUnit>( totalSelectedArea ) + " / {}" }, labelColor );
                 UI::setTooltipIfHovered( "Selected / Total surface area", menu_scaling() );
             }

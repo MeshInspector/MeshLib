@@ -208,15 +208,20 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
         {"oblique", {"oblique", "Oblique"}}
     };
 
+    std::vector<std::string> supportFormat{".ttf", ".otf"};
+
     std::error_code ec;
     for ( auto& curPath : systemFontspath )
     {
         for ( auto entry : MR::DirectoryRecursive{ curPath, ec } )
         {
             std::filesystem::path font = entry;
-            if ( font.extension() != ".ttf" )
+            for ( auto& format : supportFormat )
             {
-                continue;
+                if ( font.extension() != format )
+                {
+                    continue;
+                }
             }
 
             allSystemFonts.push_back( { font, font.filename().string() } );
@@ -262,38 +267,41 @@ const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
             for ( const auto& suffix : suffixes )
             {
                 auto curFontName = font.stem().string();
-                auto posEndName = curName.find( "-" + suffix + ".ttf" );
-                if ( posEndName != std::string::npos && curFontName != firstFontName )
+                for ( auto& format : supportFormat )
                 {
-                    if ( newFont )
+                    auto posEndName = curName.find( "-" + suffix + format );
+                    if ( posEndName != std::string::npos && curFontName != firstFontName )
                     {
-                        firstFontName = std::string( curName.begin(), curName.begin() + posEndName );
-                        newFont = false;
+                        if ( newFont )
+                        {
+                            firstFontName = std::string( curName.begin(), curName.begin() + posEndName );
+                            newFont = false;
+                        }
+                        suffixName = curSuffixName;
+                        break;
                     }
-                    suffixName = curSuffixName;
-                    break;
-                }
-                posEndName = curName.find( "_" + suffix + ".ttf");
-                if ( posEndName != std::string::npos && curFontName != firstFontName )
-                {
-                    if ( newFont )
+                    posEndName = curName.find( "_" + suffix + format );
+                    if ( posEndName != std::string::npos && curFontName != firstFontName )
                     {
-                        firstFontName = std::string( curName.begin(), curName.begin() + posEndName );
-                        newFont = false;
+                        if ( newFont )
+                        {
+                            firstFontName = std::string( curName.begin(), curName.begin() + posEndName );
+                            newFont = false;
+                        }
+                        suffixName = curSuffixName;
+                        break;
                     }
-                    suffixName = curSuffixName;
-                    break;
-                }
-                posEndName = curName.find( suffix + ".ttf" );
-                if ( posEndName != std::string::npos && curFontName != firstFontName )
-                {
-                    if ( newFont )
+                    posEndName = curName.find( suffix + format );
+                    if ( posEndName != std::string::npos && curFontName != firstFontName )
                     {
-                        firstFontName = std::string( curName.begin(), curName.begin() + posEndName );
-                        newFont = false;
+                        if ( newFont )
+                        {
+                            firstFontName = std::string( curName.begin(), curName.begin() + posEndName );
+                            newFont = false;
+                        }
+                        suffixName = curSuffixName;
+                        break;
                     }
-                    suffixName = curSuffixName;
-                    break;
                 }
             }
             if ( !suffixName.empty() )

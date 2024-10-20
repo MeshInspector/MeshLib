@@ -95,3 +95,7 @@ IF(MR_EMSCRIPTEN)
   # FIXME: comment required
   add_compile_definitions(EIGEN_STACK_ALLOCATION_LIMIT=0)
 ENDIF() # MR_EMSCRIPTEN
+
+IF(APPLE)
+  set(MR_MIN_BOOST_VERSION "1.86.0")
+ENDIF()

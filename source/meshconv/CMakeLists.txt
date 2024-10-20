@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(meshconv CXX)
 
-find_package(Boost COMPONENTS program_options REQUIRED)
+find_package(Boost ${MR_MIN_BOOST_VERSION} COMPONENTS program_options REQUIRED)
 IF(Boost_PROGRAM_OPTIONS_FOUND)
   link_libraries(${Boost_PROGRAM_OPTIONS_LIBRARY})
 ENDIF()

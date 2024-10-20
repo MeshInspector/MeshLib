@@ -162,7 +162,7 @@ jobs:
         if: ${{ inputs.UPLOAD_ARTIFACTS && env.INTERNAL_BUILD == 'true' && matrix.config == 'Release'}}
         run: |
           ./scripts/distribution_apple_pkg.sh ${{matrix.codesign}}
-          mv MeshLib_signed.pkg meshlib_${{matrix.os}}.pkg
+          mv MeshLib.pkg meshlib_${{matrix.os}}.pkg
 
       - name: Upload Macos Distribution
         if: ${{ inputs.UPLOAD_ARTIFACTS && env.INTERNAL_BUILD == 'true'}}

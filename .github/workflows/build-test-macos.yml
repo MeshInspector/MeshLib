@@ -36,14 +36,17 @@ jobs:
             runner: macos-13 # github hosted
             config: Release
             brewpath: /usr/local
+            codesign: "--skip-sign"
           - os: github-arm
             runner: macos-latest  # github hosted
             config: Debug
             brewpath: /opt/homebrew
+            codesign: "--skip-sign"
           - os: arm
             runner: macos-arm-build # self-hosted
             config: Release
             brewpath: /opt/homebrew
+            codesign: ""
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -150,14 +153,19 @@ jobs:
         if: ${{ env.UPLOAD_TEST_ARTIFACTS == 'true' && env.INTERNAL_BUILD == 'true' && !cancelled() }}
         run: aws s3 cp ./pytest_temp 's3://test-artifacts-git/tests/${{github.run_id}}/macos/${{matrix.os}}' --recursive
 
-      - name: Create Pkg
-        if: ${{ inputs.UPLOAD_ARTIFACTS }}
+      - name: Create MeshLib.framework
+        if: ${{ inputs.UPLOAD_ARTIFACTS && env.INTERNAL_BUILD == 'true' && matrix.config == 'Release'}}
         run: |
-          ./scripts/distribution_apple.sh
-          mv MeshLib_.pkg meshlib_${{matrix.os}}.pkg
+          ./scripts/distribution_apple_framework.sh
+
+      - name: Codesign framework
+        if: ${{ inputs.UPLOAD_ARTIFACTS && env.INTERNAL_BUILD == 'true' && matrix.config == 'Release'}}
+        run: |
+          ./scripts/distribution_apple_pkg.sh ${{matrix.codesign}}
+          mv MeshLib_signed.pkg meshlib_${{matrix.os}}.pkg}
 
       - name: Upload Macos Distribution
-        if: ${{ inputs.UPLOAD_ARTIFACTS }}
+        if: ${{ inputs.UPLOAD_ARTIFACTS && env.INTERNAL_BUILD == 'true'}}
         uses: actions/upload-artifact@v4
         with:
           name: Distributives_macos-${{matrix.os}}

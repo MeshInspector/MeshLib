@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 bundle_dylib() {
     local fix_file="$1"
     local dest_dir="$2"
@@ -50,7 +49,6 @@ MR_PREFIX="./MeshLib.framework/Versions/${MR_VERSION}"
 
 echo "version: ${MR_VERSION}"
 echo "prefix: ${MR_PREFIX}"
-
 
 mkdir -p "${MR_PREFIX}/libs/"
 

@@ -104,6 +104,7 @@ def test_decimate(tmp_path, dec_params):
 
     # Setup decimate parameters
     settings = mrmeshpy.DecimateSettings()
+    settings.maxError = 0.001
     for key in dec_params["params"].keys():
         if key == "strategy":
             settings.strategy = mrmeshpy.DecimateStrategy.__members__[dec_params["params"]["strategy"]]

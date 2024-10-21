@@ -1156,8 +1156,19 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     return res;
 }
 
-DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings )
+DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings0 )
 {
+    auto settings = settings0;
+    if ( settings.maxError >= FLT_MAX &&
+         settings.maxEdgeLen >= FLT_MAX &&
+         settings.maxDeletedFaces >= INT_MAX &&
+         settings.maxDeletedVertices >= INT_MAX )
+    {
+        assert( false ); // below logic can be deleted in future
+        // if unexperienced user started decimation with default settings, then decimate half of faces
+        settings.maxDeletedFaces = int( settings.region ? settings.region->count() : mesh.topology.numValidFaces() ) / 2;
+    }
+
     if ( settings.subdivideParts > 1 )
         return decimateMeshParallelInplace( mesh, settings );
     else
@@ -1262,6 +1273,7 @@ TEST( MRMesh, MeshDecimate )
 
     // setup and run decimator
     DecimateSettings decimateSettings;
+    decimateSettings.maxError = 0.001f;
     decimateSettings.region = &regionForDecimation;
     decimateSettings.maxTriangleAspectRatio = 80.0f;
 

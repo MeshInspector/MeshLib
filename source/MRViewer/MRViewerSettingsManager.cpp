@@ -53,7 +53,7 @@ const std::string cUnitsLenUnit = "units.unitLength";
 const std::string cUnitsDegreesMode = "units.degreesMode";
 const std::string cUnitsPrecisionLen = "units.precisionLength";
 const std::string cUnitsPrecisionAngle = "units.precisionAngle";
-const std::string cUnitsNoUnit = "none"; // This isn't a config key, this is used as the unit name when "no units" is selected.
+const std::string cUnitsNoUnit = "No units"; // This isn't a config key, this is used as the unit name when "no units" is selected.
 }
 
 namespace Defaults

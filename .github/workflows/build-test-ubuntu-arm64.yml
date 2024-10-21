@@ -177,14 +177,10 @@ jobs:
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository}}
         run: aws s3 sync ${{inputs.autotest_data_s3_url}} ./test_data --delete --no-sign-request --size-only
 
-        # See the comment in the patch file for an explanation.
-      - name: Disable broken Python regression tests
-        if: ${{ matrix.os == 'ubuntu20' && inputs.mrbind }}
-        run: git am scripts/mrbind/0001-Disable-tests-that-seem-to-expose-an-ABI-incompatibility.patch
-
       - name: Python Regression Tests
         env:
           SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
+          MR_REGRESSION_TESTS_UBUNTUARM2004_MRBIND_ABI_ISSUES: ${{ matrix.os == 'ubuntu20' && inputs.mrbind }}
         if: ${{ env.INTERNAL_BUILD == 'true' }}
         working-directory: ./build/${{ matrix.config }}/bin
         run: |

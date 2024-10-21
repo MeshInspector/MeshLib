@@ -10,8 +10,6 @@
 namespace MR
 {
 
-
-
 template <typename MeshType>
 MeshOnVoxelsT<MeshType>::MeshOnVoxelsT( MeshType& mesh, const AffineXf3f& meshXf, const VdbVolume& volume, const AffineXf3f& volumeXf ):
     mesh_( mesh ), volume_( volume ),
@@ -241,27 +239,29 @@ VertBitSet adjustOneIter( MeshOnVoxels& mv, OneIterSettings s )
 
 }
 
-VertBitSet moveMeshToVoxelMaxDeriv(
-        Mesh& mesh, const AffineXf3f& meshXf,
-        const VdbVolume& volume, const AffineXf3f& volumeXf,
-        const MoveMeshToVoxelMaxDerivSettings& settings,
-        ProgressCallback callback
-    )
+Expected<VertBitSet> moveMeshToVoxelMaxDeriv(
+    Mesh& mesh, const AffineXf3f& meshXf,
+    const VdbVolume& volume, const AffineXf3f& volumeXf,
+    const MoveMeshToVoxelMaxDerivSettings& settings,
+    ProgressCallback callback
+)
 {
     MR_TIMER
-    MeshOnVoxels mv( mesh, meshXf, volume, volumeXf );
 
-    relax( mesh, { { .iterations = 1, .force = settings.preparationSmoothForce } } );
+    if ( !relax( mesh, { { .iterations = 1, .force = settings.preparationSmoothForce } }, subprogress( callback, 0.0f, 0.1f ) ) )
+        return unexpectedOperationCanceled();
+    callback = subprogress( callback, 0.1f, 1.0f );
 
     VertBitSet correctedPoints;
-    for ( int i = 0; i < settings.iters; ++i )
+    MeshOnVoxels mv( mesh, meshXf, volume, volumeXf );
+    for ( int i = 1; i <= settings.iters; ++i )
     {
         correctedPoints |= adjustOneIter( mv, settings );
         if ( !reportProgress( callback, (float)i / (float)settings.iters ) )
-            break;
+            return unexpectedOperationCanceled();
     }
 
     return correctedPoints;
 }
 
-}
+} //namespace MR

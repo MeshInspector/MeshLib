@@ -14,6 +14,7 @@ libsigc++
 libtiff
 libzip
 llvm@13
+ninja
 opencascade
 openssl@3
 openvdb

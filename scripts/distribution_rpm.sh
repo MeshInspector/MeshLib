@@ -26,13 +26,13 @@ REQUIRES_LINE="Requires:"
 BASEDIR=$(dirname "$0")
 requirements_file="$BASEDIR"/../requirements/fedora.txt
 # convert multi-line file to comma-separated string
-REQUIRES_LINE=$(cat ${REQUIREMENTS_FILE} | tr '\n' ',' | sed -e "s/,$//" -e "s/,/, /g")
+REQUIRES_LINE=$(cat $requirements_file | tr '\n' ',' | sed -e "s/,$//" -e "s/,/, /g")
 
 # modify rpm spec file
 sed -i \
   -e "s/Version:/Version:        ${version}/" \
   -e "s/Requires:/Requires:       ${REQUIRES_LINE}/" \
-  ${BASE_DIR}/scripts/MeshLib-dev.spec
+  ./scripts/MeshLib-dev.spec
 
 #create distr dirs
 if [ -d "./rpmbuild/" ]; then

@@ -42,10 +42,15 @@ jobs:
             docker-image: "meshlib/meshlib-ubuntu20:latest"
             container-options: "--user root"
             runner: ubuntu-latest
+            compiler: /usr/bin/clang++-11
           - platform: "aarch64"
             docker-image: "meshlib/meshlib-ubuntu-arm64:latest"
             container-options: "--user root"
             runner: [ 'self-hosted', 'linux-arm64' ]
+            # When using Clang 11 on Ubuntu Arm 20.04, we get some obscure ABI issues that fail some tests,
+            # see the comments in `test_regression/test_algorithms/test_decimate.py` for more details.
+            compiler: /usr/bin/clang++-18
+
           - py-version: "3.8"
             py-tag: "cp38"
             py-cmd: "python3.8"
@@ -115,17 +120,20 @@ jobs:
           MESHLIB_PYTHON_VERSION: ${{matrix.py-version}}
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
-          CMAKE_CXX_COMPILER: /usr/bin/clang++-11
+          # When using Clang 11 on Ubuntu Arm 20.04, we get some obscure ABI issues that fail some tests,
+          # see the comments in `test_regression/test_algorithms/test_decimate.py` for more details.
+          CMAKE_CXX_COMPILER: ${{matrix.compiler}}
           # FIXME: OpenGL libraries are included to wheel packages when the XDE module is used
+          # Disabling CUDA at least because Clang 18 is too new for it on Ubuntu 20.04, and we're using Clang 18 for reasons
+          # explained in `MeshLib/scripts/mrbind/0001-Disable-tests-that-seem-to-expose-an-ABI-incompatibility.patch`.
           MR_CMAKE_OPTIONS: >
             -DMRIOEXTRAS_OPENCASCADE_USE_XDE=OFF
             -DMRVIEWER_NO_GTK=ON
-          # not realy needed
-          CMAKE_C_COMPILER: /usr/bin/clang-11
+            -DMESHLIB_BUILD_MRCUDA=OFF
 
       - name: Generate and build MRBind bindings
         run: |
-          make -f scripts/mrbind/generate.mk -B --trace CXX_FOR_ABI=/usr/bin/clang++-11 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed
+          make -f scripts/mrbind/generate.mk -B --trace PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed CXX_FOR_ABI=${{matrix.compiler}}
 
       - name: Run Tests
         run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd

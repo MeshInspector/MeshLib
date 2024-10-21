@@ -550,7 +550,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( std::floor( ( ImGui::CalcItemWidth() - ImGui::CalcTextSize( thouSep ).x ) / 2 ), cButtonPadding * menuScaling ) );
         MR_FINALLY{ ImGui::PopStyleVar(); };
 
-        if ( UI::inputTextIntoArray( "Thousands separator", thouSep, sizeof thouSep, ImGuiInputTextFlags_AutoSelectAll ) )
+        if ( UI::inputTextIntoArray( "Thousands Separator", thouSep, sizeof thouSep, ImGuiInputTextFlags_AutoSelectAll ) )
             UnitSettings::setThousandsSeparator( thouSep[0] );
 
         // If the separator is empty or a space, display a string explaining that on top of the textbox.

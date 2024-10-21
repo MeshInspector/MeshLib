@@ -1,5 +1,9 @@
 #include "MRSystemPath.h"
 #include "MROnInit.h"
+#include "MRDirectory.h"
+#include "MRStringConvert.h"
+#include <algorithm>
+#include <map>
 
 #if defined( _WIN32 )
 #include <libloaderapi.h>
@@ -167,6 +171,178 @@ std::filesystem::path SystemPath::getDirectory( SystemPath::Directory dir )
 void SystemPath::overrideDirectory( SystemPath::Directory dir, const std::filesystem::path& path )
 {
     instance_().directories_[(size_t)dir] = path;
+}
+
+const std::vector<SystemPath::SystemFontPaths>& SystemPath::getSystemFonts()
+{
+    static std::vector<SystemPath::SystemFontPaths> fonts;
+    if ( !fonts.empty() )
+    {
+        return fonts;
+    }
+
+    std::vector<std::pair<std::filesystem::path, std::string>> allSystemFonts;
+    std::vector<std::filesystem::path> systemFontspath;
+#ifdef _WIN32
+    systemFontspath = { "C:/Windows/Fonts" };
+#elif defined (__APPLE__)
+    systemFontspath = { "/Library/Fonts", "/System/Library/Fonts" };
+#else // linux and wasm
+    systemFontspath = { "/usr/share/fonts" };
+#endif
+
+    static const std::map<std::string, std::vector<std::string>> typeSuffixes{
+        {"regular",{"regular", "Regular"}},
+        {"semibold", {"SemiBold", "semibold"}},
+        {"bold", {"bold", "b", "Bold", "B", "bd", "BD"}},
+        {"bolditalic", {"BoldItalic", "bolditalic", "bi", "BI", "z"}},
+        {"lightitalic", {"LightItalic"}},
+        {"mediumitalic", {"MediumItalic"}},
+        {"semibolditalic", {"SemiBoldItalic", "semibolditalic"}},
+        {"lightitalic", {"li", "LI", "LightItalic", "lightitalic"}},
+        {"italic", {"italic", "i", "Italic", "I"}},
+        {"light", {"light", "Light", "l", "L"}},
+        {"medium", {"medium", "Medium"}},
+        {"boldoblique", {"BoldOblique", "boldoblique"}},
+        {"oblique", {"oblique", "Oblique"}}
+    };
+
+    std::vector<std::string> supportFormat{".ttf", ".otf"};
+
+    std::error_code ec;
+    for ( auto& curPath : systemFontspath )
+    {
+        for ( auto entry : MR::DirectoryRecursive{ curPath, ec } )
+        {
+            bool isFont = false;
+            std::filesystem::path font = entry;
+            for ( auto& format : supportFormat )
+            {
+                if ( font.extension() == format )
+                {
+                    isFont = true;
+                    break;
+                }
+            }
+
+            if( isFont )
+                allSystemFonts.push_back( { font, font.filename().string() } );
+        }
+    }
+
+    std::sort( allSystemFonts.begin(), allSystemFonts.end(), 
+        [] ( std::pair<std::filesystem::path, std::string>& v1, std::pair<std::filesystem::path, std::string>& v2 )
+    {
+        return MR::toLower( v1.second ) < MR::toLower( v2.second );
+    } );
+
+    //explicit search for fonts that conflict with style suffixes
+    for ( auto& [font, name] : allSystemFonts )
+    {
+        auto pos = name.find( "arial" );
+        std::string newName;
+        if ( pos != std::string::npos )
+        {
+            if( name[5] == '.' )
+                name = "arial-regular" + std::string( name.begin() + 5, name.end() );
+            else
+                name = "arial-" + std::string( name.begin() + 5, name.end() );
+        }
+        pos = name.find( "calibri" );
+        if ( pos != std::string::npos )
+        {
+            if ( name[7] == '.' )
+                name = "calibri-regular" + std::string( name.begin() + 7, name.end() );
+            else
+                name = "calibri-" + std::string( name.begin() + 7, name.end() );
+        }
+    }
+
+    std::string firstFontName;
+    bool newFont = false;
+    size_t numFont = 0;
+    for ( auto& [font, curName]: allSystemFonts )
+    {
+        if ( firstFontName.empty() || curName.find( firstFontName ) == std::string::npos )
+        {
+            fonts.push_back( SystemFontPaths() );
+            newFont = true;
+        }
+
+        std::string suffixName;
+        for ( const auto& [curSuffixName, suffixes] : typeSuffixes )
+        {
+            for ( const auto& suffix : suffixes )
+            {
+                auto curFontName = font.stem().string();
+                for ( auto& format : supportFormat )
+                {
+                    auto posEndName = curName.find( "-" + suffix + format );
+                    if ( posEndName != std::string::npos && curFontName != firstFontName )
+                    {
+                        if ( newFont )
+                        {
+                            firstFontName = std::string( curName.begin(), curName.begin() + posEndName );
+                            newFont = false;
+                        }
+                        suffixName = curSuffixName;
+                        break;
+                    }
+                    posEndName = curName.find( "_" + suffix + format );
+                    if ( posEndName != std::string::npos && curFontName != firstFontName )
+                    {
+                        if ( newFont )
+                        {
+                            firstFontName = std::string( curName.begin(), curName.begin() + posEndName );
+                            newFont = false;
+                        }
+                        suffixName = curSuffixName;
+                        break;
+                    }
+                    posEndName = curName.find( suffix + format );
+                    if ( posEndName != std::string::npos && curFontName != firstFontName )
+                    {
+                        if ( newFont )
+                        {
+                            firstFontName = std::string( curName.begin(), curName.begin() + posEndName );
+                            newFont = false;
+                        }
+                        suffixName = curSuffixName;
+                        break;
+                    }
+                }
+            }
+            if ( !suffixName.empty() )
+            {
+                break;
+            }
+        }
+
+        if ( suffixName.empty() )
+        {
+            firstFontName = font.stem().string();
+        }
+
+        numFont = fonts.size() - 1;
+        if ( suffixName == "regular" || suffixName.empty() )
+        {
+            fonts[numFont][( size_t )SystemFontType::Regular] = font;
+        }
+        else if ( suffixName == "bold" )
+        {
+            fonts[numFont][( size_t )SystemFontType::Bold] = font;
+        }
+        else if ( suffixName == "italic" )
+        {
+            fonts[numFont][( size_t )SystemFontType::Italic] = font;
+        }
+        else if ( suffixName == "bolditalic" )
+        {
+            fonts[numFont][( size_t )SystemFontType::BoldItalic] = font;
+        }
+    }
+
+    return fonts;
 }
 
 } // namespace MR

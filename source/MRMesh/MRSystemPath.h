@@ -40,6 +40,18 @@ public:
         Count
     };
 
+    // supported types of system fonts fonts
+    enum class SystemFontType
+    {
+        Regular,
+        Bold,
+        Italic,
+        BoldItalic,
+        Count
+    };
+
+    using SystemFontPaths = std::array<std::filesystem::path, size_t( SystemFontType::Count )>;
+
     /// get the directory path for specified category
     MRMESH_API static std::filesystem::path getDirectory( Directory dir );
     /// override the directory path for specified category, useful for custom configurations
@@ -53,6 +65,8 @@ public:
     static std::filesystem::path getPluginsDirectory() { return getDirectory( Directory::Plugins ); }
     /// get the Python modules' binaries' directory path
     static std::filesystem::path getPythonModulesDirectory() { return getDirectory( Directory::PythonModules ); }
+    /// get name all system fonts that have italics, bold, bold italics
+    MRMESH_API static const std::vector<SystemFontPaths>& getSystemFonts();
 
 private:
     static SystemPath& instance_();

@@ -122,8 +122,6 @@ If you want to add a new unit to an existing enum: (say, add `LengthUnit::yards`
   * Add the respective units to all those enums (e.g. if you added `LengthUnit::yards`, add `VolumeUnit::yards3` and so on).
   * Add those units to `getDependentUnit()` in `MRUnitSettings.cpp`.
 
-* If you're updating `LengthUnit`, add it to `lengthUnitToString()` in `MRUnitSettings.cpp`.
-
 #### Creating a new unit enum
 
 If you want to create a new unit enum: (say, `EnergyUnit { joules, electronvolts, ... }`)

@@ -72,7 +72,7 @@ ELSE()
     set(USE_EXPLICIT_INSTANTIATION OFF)
 
     # Ubuntu 20.04 compatibility
-    find_package(Boost REQUIRED)
+    find_package(Boost ${MR_MIN_BOOST_VERSION} REQUIRED)
     find_package(TBB REQUIRED)
     IF(Boost_VERSION VERSION_LESS 1.73 OR TBB_VERSION VERSION_LESS 2020.2)
       add_subdirectory(./openvdb/v9/openvdb)

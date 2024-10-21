@@ -1,18 +1,9 @@
 #include "MRUnitSettings.h"
 
 #include "MRViewer/MRViewer.h"
-#include "MRViewer/MRViewerSettingsManager.h"
 
 namespace MR::UnitSettings
 {
-
-static const std::string
-    cSettingLeadingZero = "units.leadingZero",
-    cSettingThouSep = "units.thousandsSeparator",
-    cSettingUnitLen = "units.unitLength",
-    cSettingDegreesMode = "units.degreesMode",
-    cSettingPrecisionLen = "units.precisionLength",
-    cSettingPrecisionAngle = "units.precisionAngle";
 
 static void forAllLengthUnits( auto&& func )
 {
@@ -39,52 +30,12 @@ static void forAllUnits( auto&& func )
     func.template operator()<PixelSizeUnit>();
 }
 
-void loadFromViewerSettings()
+void resetToDefaults()
 {
-    auto& m = getViewerInstance().getViewerSettingsManager();
-    if ( !m )
-        return;
-
-    setShowLeadingZero( m->loadBool( cSettingLeadingZero, true ), WriteToSettings::no );
-
-    // The order here can be important, because setting the length automatically sets the preferred leading zero,
-    // and setting the degrees mode automatically sets the preferred angle precision.
-
-    { // Length unit.
-        static const std::unordered_map<std::string, LengthUnit> map = []{
-            std::unordered_map<std::string, LengthUnit> ret;
-            for ( int i = 0; i < int( LengthUnit::_count ); i++ )
-                ret.try_emplace( std::string( getUnitInfo( LengthUnit( i ) ).prettyName ), LengthUnit( i ) );
-            return ret;
-        }();
-        auto it = map.find( m->loadString( cSettingUnitLen, "" ) );
-        setUiLengthUnit( it != map.end() ? it->second : LengthUnit::mm, true, WriteToSettings::no );
-    }
-
-    { // Thousands separator.
-        std::string str = m->loadString( cSettingThouSep, " " );
-        if ( str.empty() )
-            setThousandsSeparator( 0, WriteToSettings::no );
-        else if ( str.size() == 1 )
-            setThousandsSeparator( str.front(), WriteToSettings::no );
-    }
-
-    { // Degrees mode.
-        static const std::unordered_map<std::string, DegreesMode> map = []{
-            std::unordered_map<std::string, DegreesMode> ret;
-            for ( int i = 0; i < int( DegreesMode::_count ); i++ )
-                ret.try_emplace( std::string( toString( DegreesMode( i ) ) ), DegreesMode( i ) );
-            return ret;
-        }();
-        auto it = map.find( m->loadString( cSettingDegreesMode, "" ) );
-        setDegreesMode( it != map.end() ? it->second : DegreesMode::degrees, true, WriteToSettings::no );
-    }
-
-    // Precision.
-    if ( int p = m->loadInt( cSettingPrecisionLen, -1 ); p >= 0 )
-        setUiLengthPrecision( p, WriteToSettings::no );
-    if ( int p = m->loadInt( cSettingPrecisionAngle, -1 ); p >= 0 )
-        setUiAnglePrecision( p, WriteToSettings::no );
+    UnitSettings::setThousandsSeparator( ' ' );
+    UnitSettings::setUiLengthUnit( LengthUnit::mm, true );
+    UnitSettings::setUiLengthPrecision( 3 );
+    UnitSettings::setDegreesMode( DegreesMode::degrees, true );
 }
 
 bool getShowLeadingZero()
@@ -93,7 +44,7 @@ bool getShowLeadingZero()
     return getDefaultUnitParams<LengthUnit>().leadingZero;
 }
 
-void setShowLeadingZero( bool show, WriteToSettings writeToSettings )
+void setShowLeadingZero( bool show )
 {
     forAllUnits( [&]<typename E>()
     {
@@ -101,12 +52,6 @@ void setShowLeadingZero( bool show, WriteToSettings writeToSettings )
         params.leadingZero = show;
         setDefaultUnitParams( params );
     } );
-
-    if ( bool( writeToSettings ) )
-    {
-        if ( auto &m = getViewerInstance().getViewerSettingsManager() )
-            m->saveBool( cSettingLeadingZero, show );
-    }
 }
 
 char getThousandsSeparator()
@@ -115,7 +60,7 @@ char getThousandsSeparator()
     return getDefaultUnitParams<LengthUnit>().thousandsSeparator;
 }
 
-void setThousandsSeparator( char ch, WriteToSettings writeToSettings )
+void setThousandsSeparator( char ch )
 {
     forAllUnits( [&]<typename E>()
     {
@@ -123,12 +68,6 @@ void setThousandsSeparator( char ch, WriteToSettings writeToSettings )
         params.thousandsSeparator = ch;
         setDefaultUnitParams( params );
     } );
-
-    if ( bool( writeToSettings ) )
-    {
-        if ( auto &m = getViewerInstance().getViewerSettingsManager() )
-            m->saveString( cSettingThouSep, std::string( 1, ch ) );
-    }
 }
 
 std::optional<LengthUnit> getUiLengthUnit()
@@ -136,11 +75,11 @@ std::optional<LengthUnit> getUiLengthUnit()
     return getDefaultUnitParams<LengthUnit>().targetUnit;
 }
 
-void setUiLengthUnit( std::optional<LengthUnit> unit, bool setPreferredLeadingZero, WriteToSettings writeToSettings )
+void setUiLengthUnit( std::optional<LengthUnit> unit, bool setPreferredLeadingZero )
 {
     // Override the leading zero. Everything except inches enables it.
     if ( setPreferredLeadingZero )
-        setShowLeadingZero( unit != LengthUnit::inches, writeToSettings );
+        setShowLeadingZero( unit != LengthUnit::inches );
 
     auto getDependentUnit = overloaded{
         // All length-related unit types must be listed here.
@@ -204,12 +143,6 @@ void setUiLengthUnit( std::optional<LengthUnit> unit, bool setPreferredLeadingZe
         params.targetUnit = unit ? std::optional( getDependentUnit.template operator()<E>( *unit ) ) : std::nullopt;
         setDefaultUnitParams( params );
     } );
-
-    if ( bool( writeToSettings ) )
-    {
-        if ( auto &m = getViewerInstance().getViewerSettingsManager() )
-            m->saveString( cSettingUnitLen, unit ? std::string( getUnitInfo( *unit ).prettyName ) : "none" );
-    }
 }
 
 DegreesMode getDegreesMode()
@@ -217,7 +150,7 @@ DegreesMode getDegreesMode()
     return getDefaultUnitParams<AngleUnit>().degreesMode;
 }
 
-void setDegreesMode( DegreesMode mode, bool setPreferredPrecision, WriteToSettings writeToSettings )
+void setDegreesMode( DegreesMode mode, bool setPreferredPrecision )
 {
     forAllAngleUnits( [&]<typename E>()
     {
@@ -237,12 +170,6 @@ void setDegreesMode( DegreesMode mode, bool setPreferredPrecision, WriteToSettin
 
         setDefaultUnitParams( params );
     } );
-
-    if ( bool( writeToSettings ) )
-    {
-        if ( auto &m = getViewerInstance().getViewerSettingsManager() )
-            m->saveString( cSettingDegreesMode, std::string( toString( mode ) ) );
-    }
 }
 
 int getUiLengthPrecision()
@@ -251,7 +178,7 @@ int getUiLengthPrecision()
     return getDefaultUnitParams<LengthUnit>().precision;
 }
 
-void setUiLengthPrecision( int precision, WriteToSettings writeToSettings )
+void setUiLengthPrecision( int precision )
 {
     forAllLengthUnits( [&]<typename E>()
     {
@@ -259,12 +186,6 @@ void setUiLengthPrecision( int precision, WriteToSettings writeToSettings )
         params.precision = precision;
         setDefaultUnitParams( params );
     } );
-
-    if ( bool( writeToSettings ) )
-    {
-        if ( auto &m = getViewerInstance().getViewerSettingsManager() )
-            m->saveInt( cSettingPrecisionLen, precision );
-    }
 }
 
 int getUiAnglePrecision()
@@ -272,7 +193,7 @@ int getUiAnglePrecision()
     return getDefaultUnitParams<AngleUnit>().precision;
 }
 
-void setUiAnglePrecision( int precision, WriteToSettings writeToSettings )
+void setUiAnglePrecision( int precision )
 {
     forAllAngleUnits( [&]<typename E>()
     {
@@ -280,12 +201,6 @@ void setUiAnglePrecision( int precision, WriteToSettings writeToSettings )
         params.precision = precision;
         setDefaultUnitParams( params );
     } );
-
-    if ( bool( writeToSettings ) )
-    {
-        if ( auto &m = getViewerInstance().getViewerSettingsManager() )
-            m->saveInt( cSettingPrecisionAngle, precision );
-    }
 }
 
 }

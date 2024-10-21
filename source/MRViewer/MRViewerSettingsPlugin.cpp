@@ -59,9 +59,6 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
             *maxSamples = std::max( std::min( *maxSamples, 16 ), *curSamples ); // there are some known issues with 32 MSAA
             *storedSamples = *curSamples;
         }
-
-        // Load measurement unit settings for the UI from the `IViewerSettingsManager`.
-        UnitSettings::loadFromViewerSettings();
     } );
 #ifndef __EMSCRIPTEN__
     CommandLoop::appendCommand( [&] ()
@@ -652,12 +649,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
     ImGui::Spacing();
 
     if ( UI::button( "Reset unit settings" ) )
-    {
-        UnitSettings::setThousandsSeparator( ' ' );
-        UnitSettings::setUiLengthUnit( LengthUnit::mm, true );
-        UnitSettings::setUiLengthPrecision( 3 );
-        UnitSettings::setDegreesMode( DegreesMode::degrees, true );
-    }
+        UnitSettings::resetToDefaults();
 }
 
 void ViewerSettingsPlugin::drawFeaturesTab_( float menuScaling )

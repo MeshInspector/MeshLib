@@ -8,23 +8,19 @@
 namespace MR::UnitSettings
 {
 
-// If true, the change will be written to `getViewerInstance().getViewerSettingsManager()`.
-enum class WriteToSettings { no, yes };
-
-// Load all settings from `getViewerInstance().getViewerSettingsManager()`.
-MRVIEWER_API void loadFromViewerSettings();
-
+// Reset to some sane default.
+MRVIEWER_API void resetToDefaults();
 
 // Common:
 
 // True: `0.1`, false: `.1`.
 [[nodiscard]] MRVIEWER_API bool getShowLeadingZero();
-MRVIEWER_API void setShowLeadingZero( bool show, WriteToSettings writeToSettings = WriteToSettings::yes );
+MRVIEWER_API void setShowLeadingZero( bool show );
 
 // Can be '\0' to indicate no separator.
 // `fractional == true` means to the right of the fractional point, if any.
 [[nodiscard]] MRVIEWER_API char getThousandsSeparator();
-void setThousandsSeparator( char ch, WriteToSettings writeToSettings = WriteToSettings::yes );
+void setThousandsSeparator( char ch );
 
 // Length:
 
@@ -32,21 +28,21 @@ void setThousandsSeparator( char ch, WriteToSettings writeToSettings = WriteToSe
 // This can be null to indicate "no unit".
 // If `setPreferredLeadingZero == true`, will call `setShowLeadingZero()` to match this unit (currently inches = false, everything else = true).
 [[nodiscard]] MRVIEWER_API std::optional<LengthUnit> getUiLengthUnit();
-MRVIEWER_API void setUiLengthUnit( std::optional<LengthUnit> unit, bool setPreferredLeadingZero, WriteToSettings writeToSettings = WriteToSettings::yes );
+MRVIEWER_API void setUiLengthUnit( std::optional<LengthUnit> unit, bool setPreferredLeadingZero );
 
 // Angle:
 
 [[nodiscard]] MRVIEWER_API DegreesMode getDegreesMode();
-MRVIEWER_API void setDegreesMode( DegreesMode mode, bool setPreferredPrecision, WriteToSettings writeToSettings = WriteToSettings::yes );
+MRVIEWER_API void setDegreesMode( DegreesMode mode, bool setPreferredPrecision );
 
 // Precision:
 
 // Whether this means total number of digits or the number of digits after the decimal point depends
 //   on another setting (`getDefaultUnitParams().style`) that's currently not exposed in this file.
 [[nodiscard]] MRVIEWER_API int getUiLengthPrecision();
-MRVIEWER_API void setUiLengthPrecision( int precision, WriteToSettings writeToSettings = WriteToSettings::yes );
+MRVIEWER_API void setUiLengthPrecision( int precision );
 
 [[nodiscard]] MRVIEWER_API int getUiAnglePrecision();
-MRVIEWER_API void setUiAnglePrecision( int precision, WriteToSettings writeToSettings = WriteToSettings::yes );
+MRVIEWER_API void setUiAnglePrecision( int precision );
 
 }

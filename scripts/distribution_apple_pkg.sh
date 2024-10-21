@@ -55,11 +55,11 @@ if [ "$SKIP_SIGN" = false ]; then
         --identifier com.MeshInspector.MeshLib \
         --sign "${DEVELOPER_ID_INSTALLER}" \
         --install-location /Library/Frameworks/MeshLib.framework \
-        MeshLib.pkg
+        meshlib.pkg
 
     productbuild \
         --distribution ./macos/Distribution.xml \
-        --package-path ./MeshLib.pkg \
+        --package-path ./meshlib.pkg \
         --resources ./macos/Resources \
         --sign "${DEVELOPER_ID_INSTALLER}" \
         MeshLib.pkg
@@ -68,18 +68,18 @@ else
         --root MeshLib.framework \
         --identifier com.MeshInspector.MeshLib \
         --install-location /Library/Frameworks/MeshLib.framework \
-        MeshLib.pkg
+        meshlib.pkg
 
     productbuild \
         --distribution ./macos/Distribution.xml \
-        --package-path ./MeshLib.pkg \
+        --package-path ./meshlib.pkg \
         --resources ./macos/Resources \
         MeshLib.pkg
 fi
 
 echo "Verifying package signature"
 if [ "$SKIP_SIGN" = false ]; then
-    spctl -a -t install -vvv --context context:primary-signature MeshLib_signed.pkg || true
+    spctl -a -t install -vvv --context context:primary-signature MeshLib.pkg || true
 else
     echo "Skipping signature verification because the package was not signed."
 fi

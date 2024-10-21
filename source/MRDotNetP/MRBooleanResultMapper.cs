@@ -191,18 +191,64 @@ namespace MR.DotNet
         public BitSet FaceMap( BitSet oldBS, MapObject obj)
         {
             if ( maps_ is null )
-                maps_ = new IntPtr?[2];
+                maps_ = new BooleanMaps?[2];
 
             if ( maps_[(int)obj] is null )
             {
-                maps_[(int)obj] = mrBooleanResultMapperMapFaces(mapper_, oldBS.bs, obj);
+                maps_[(int)obj] = new BooleanMaps( mrBooleanResultMapperGetMaps(mapper_, obj) );
             }
+
+            return new BitSet(mrBooleanResultMapperMapFaces(mapper_, oldBS.bs_, obj));
+        }
+
+        public BitSet VertMap( BitSet oldBS, MapObject obj)
+        {
+            if (maps_ is null)
+                maps_ = new BooleanMaps?[2];
+
+            if (maps_[(int)obj] is null)
+            {
+                maps_[(int)obj] = new BooleanMaps(mrBooleanResultMapperGetMaps(mapper_, obj));
+            }
+
+            return new BitSet(mrBooleanResultMapperMapVerts(mapper_, oldBS.bs_, obj));
+        }
+
+        public BitSet NewFaces()
+        {
+            return new BitSet(mrBooleanResultMapperNewFaces(mapper_));
+        }
+
+        public BooleanMaps GetMaps( MapObject obj)
+        {
+            if (maps_ is null)
+                maps_ = new BooleanMaps?[2];
+
+            if (maps_[(int)obj] is null)
+            {
+                maps_[(int)obj] = new BooleanMaps(mrBooleanResultMapperGetMaps(mapper_, obj));
+            }
+
+            return maps_[(int)obj];
+        }
+
+        public BitSet FilteredOldFaceBitSet( BitSet oldBS, MapObject obj)
+        {
+            if (maps_ is null)
+                maps_ = new BooleanMaps?[2];
+
+            if (maps_[(int)obj] is null)
+            {
+                maps_[(int)obj] = new BooleanMaps(mrBooleanResultMapperGetMaps(mapper_, obj));
+            }
+
+            return new BitSet(mrBooleanResultMapperFilteredOldFaceBitSet(mapper_, oldBS.bs_, obj));
         }
         #endregion
         #region private fields
 
         IntPtr mapper_;
-        IntPtr?[]? maps_;
+        BooleanMaps?[]? maps_;
         #endregion
     }
 }

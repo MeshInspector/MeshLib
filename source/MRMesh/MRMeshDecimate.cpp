@@ -1273,6 +1273,7 @@ TEST( MRMesh, MeshDecimate )
 
     // setup and run decimator
     DecimateSettings decimateSettings;
+    decimateSettings.maxError = 0.001f;
     decimateSettings.region = &regionForDecimation;
     decimateSettings.maxTriangleAspectRatio = 80.0f;
 

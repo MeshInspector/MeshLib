@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This dirty trick allows to fix default boost signals2 header for C++20 campatability
+# This dirty trick allows to fix default boost signals2 header for C++20 compatability
 # `distribution.sh` uses this script as preinstall
 
 # fix boost signal2 C++20 error in default version 1.71.0 from `apt`

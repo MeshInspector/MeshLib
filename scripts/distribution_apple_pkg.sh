@@ -55,11 +55,11 @@ if [ "$SKIP_SIGN" = false ]; then
         --identifier com.MeshInspector.MeshLib \
         --sign "${DEVELOPER_ID_INSTALLER}" \
         --install-location /Library/Frameworks/MeshLib.framework \
-        MeshLib_.pkg
+        MeshLib.pkg
 
     productbuild \
         --distribution ./macos/Distribution.xml \
-        --package-path ./MeshLib_.pkg \
+        --package-path ./MeshLib.pkg \
         --resources ./macos/Resources \
         --sign "${DEVELOPER_ID_INSTALLER}" \
         MeshLib.pkg
@@ -68,11 +68,11 @@ else
         --root MeshLib.framework \
         --identifier com.MeshInspector.MeshLib \
         --install-location /Library/Frameworks/MeshLib.framework \
-        MeshLib_.pkg
+        MeshLib.pkg
 
     productbuild \
         --distribution ./macos/Distribution.xml \
-        --package-path ./MeshLib_.pkg \
+        --package-path ./MeshLib.pkg \
         --resources ./macos/Resources \
         MeshLib.pkg
 fi

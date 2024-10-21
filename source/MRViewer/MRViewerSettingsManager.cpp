@@ -81,8 +81,39 @@ int ViewerSettingsManager::loadInt( const std::string& name, int def )
 
 void ViewerSettingsManager::saveInt( const std::string& name, int value )
 {
-    Json::Value val = value;
-    Config::instance().setJsonValue( name, val );
+    Config::instance().setJsonValue( name, value );
+}
+
+std::string ViewerSettingsManager::loadString( const std::string& name, const std::string& def )
+{
+    auto& cfg = Config::instance();
+    if ( !cfg.hasJsonValue( name ) )
+        return def;
+    const auto& value = cfg.getJsonValue( name );
+    if ( !value.isString() )
+        return def;
+    return value.asString();
+}
+
+void ViewerSettingsManager::saveString( const std::string& name, const std::string& value )
+{
+    Config::instance().setJsonValue( name, value );
+}
+
+bool ViewerSettingsManager::loadBool( const std::string& name, bool def )
+{
+    auto& cfg = Config::instance();
+    if ( !cfg.hasJsonValue( name ) )
+        return def;
+    const auto& value = cfg.getJsonValue( name );
+    if ( !value.isBool() )
+        return def;
+    return value.asBool();
+}
+
+void ViewerSettingsManager::saveBool( const std::string& name, bool value )
+{
+    Config::instance().setJsonValue( name, value );
 }
 
 void ViewerSettingsManager::resetSettings( Viewer& viewer )

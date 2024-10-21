@@ -552,7 +552,7 @@ bool SaveObjectMenuItem::action()
     const auto & baseFilters = info.baseFilters;
 
     int firstFilterNum = 0;
-    ViewerSettingsManager* settingsManager = dynamic_cast< ViewerSettingsManager* >( getViewerInstance().getViewportSettingsManager().get() );
+    ViewerSettingsManager* settingsManager = dynamic_cast< ViewerSettingsManager* >( getViewerInstance().getViewerSettingsManager().get() );
     if ( settingsManager )
     {
         const auto& lastExt = settingsManager->getLastExtention( objType );

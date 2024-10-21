@@ -93,7 +93,7 @@ bool getShowLeadingZero()
     return getDefaultUnitParams<LengthUnit>().leadingZero;
 }
 
-void setShowLeadingZero( bool show, WriteToSettings writeToConfig )
+void setShowLeadingZero( bool show, WriteToSettings writeToSettings )
 {
     forAllUnits( [&]<typename E>()
     {
@@ -102,7 +102,7 @@ void setShowLeadingZero( bool show, WriteToSettings writeToConfig )
         setDefaultUnitParams( params );
     } );
 
-    if ( bool( writeToConfig ) )
+    if ( bool( writeToSettings ) )
     {
         if ( auto &m = getViewerInstance().getViewerSettingsManager() )
             m->saveBool( cSettingLeadingZero, show );
@@ -115,7 +115,7 @@ char getThousandsSeparator()
     return getDefaultUnitParams<LengthUnit>().thousandsSeparator;
 }
 
-void setThousandsSeparator( char ch, WriteToSettings writeToConfig )
+void setThousandsSeparator( char ch, WriteToSettings writeToSettings )
 {
     forAllUnits( [&]<typename E>()
     {
@@ -124,7 +124,7 @@ void setThousandsSeparator( char ch, WriteToSettings writeToConfig )
         setDefaultUnitParams( params );
     } );
 
-    if ( bool( writeToConfig ) )
+    if ( bool( writeToSettings ) )
     {
         if ( auto &m = getViewerInstance().getViewerSettingsManager() )
             m->saveString( cSettingThouSep, std::string( 1, ch ) );
@@ -136,11 +136,11 @@ std::optional<LengthUnit> getUiLengthUnit()
     return getDefaultUnitParams<LengthUnit>().targetUnit;
 }
 
-void setUiLengthUnit( std::optional<LengthUnit> unit, bool setPreferredLeadingZero, WriteToSettings writeToConfig )
+void setUiLengthUnit( std::optional<LengthUnit> unit, bool setPreferredLeadingZero, WriteToSettings writeToSettings )
 {
     // Override the leading zero. Everything except inches enables it.
     if ( setPreferredLeadingZero )
-        setShowLeadingZero( unit != LengthUnit::inches, writeToConfig );
+        setShowLeadingZero( unit != LengthUnit::inches, writeToSettings );
 
     auto getDependentUnit = overloaded{
         // All length-related unit types must be listed here.
@@ -205,7 +205,7 @@ void setUiLengthUnit( std::optional<LengthUnit> unit, bool setPreferredLeadingZe
         setDefaultUnitParams( params );
     } );
 
-    if ( bool( writeToConfig ) )
+    if ( bool( writeToSettings ) )
     {
         if ( auto &m = getViewerInstance().getViewerSettingsManager() )
             m->saveString( cSettingUnitLen, unit ? std::string( getUnitInfo( *unit ).prettyName ) : "none" );
@@ -217,7 +217,7 @@ DegreesMode getDegreesMode()
     return getDefaultUnitParams<AngleUnit>().degreesMode;
 }
 
-void setDegreesMode( DegreesMode mode, bool setPreferredPrecision, WriteToSettings writeToConfig )
+void setDegreesMode( DegreesMode mode, bool setPreferredPrecision, WriteToSettings writeToSettings )
 {
     forAllAngleUnits( [&]<typename E>()
     {
@@ -238,7 +238,7 @@ void setDegreesMode( DegreesMode mode, bool setPreferredPrecision, WriteToSettin
         setDefaultUnitParams( params );
     } );
 
-    if ( bool( writeToConfig ) )
+    if ( bool( writeToSettings ) )
     {
         if ( auto &m = getViewerInstance().getViewerSettingsManager() )
             m->saveString( cSettingDegreesMode, std::string( toString( mode ) ) );
@@ -251,7 +251,7 @@ int getUiLengthPrecision()
     return getDefaultUnitParams<LengthUnit>().precision;
 }
 
-void setUiLengthPrecision( int precision, WriteToSettings writeToConfig )
+void setUiLengthPrecision( int precision, WriteToSettings writeToSettings )
 {
     forAllLengthUnits( [&]<typename E>()
     {
@@ -260,7 +260,7 @@ void setUiLengthPrecision( int precision, WriteToSettings writeToConfig )
         setDefaultUnitParams( params );
     } );
 
-    if ( bool( writeToConfig ) )
+    if ( bool( writeToSettings ) )
     {
         if ( auto &m = getViewerInstance().getViewerSettingsManager() )
             m->saveInt( cSettingPrecisionLen, precision );
@@ -272,7 +272,7 @@ int getUiAnglePrecision()
     return getDefaultUnitParams<AngleUnit>().precision;
 }
 
-void setUiAnglePrecision( int precision, WriteToSettings writeToConfig )
+void setUiAnglePrecision( int precision, WriteToSettings writeToSettings )
 {
     forAllAngleUnits( [&]<typename E>()
     {
@@ -281,7 +281,7 @@ void setUiAnglePrecision( int precision, WriteToSettings writeToConfig )
         setDefaultUnitParams( params );
     } );
 
-    if ( bool( writeToConfig ) )
+    if ( bool( writeToSettings ) )
     {
         if ( auto &m = getViewerInstance().getViewerSettingsManager() )
             m->saveInt( cSettingPrecisionAngle, precision );

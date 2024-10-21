@@ -65,7 +65,7 @@ ViewerSettingsPlugin::ViewerSettingsPlugin() :
     {
         auto& viewer = getViewerInstance();
         int samples = 0;
-        if ( auto& settingsManager = viewer.getViewportSettingsManager() )
+        if ( auto& settingsManager = viewer.getViewerSettingsManager() )
             samples = settingsManager->loadInt( "multisampleAntiAliasing", 8 );
         if ( viewer.isGLInitialized() && loadGL() )
         {
@@ -543,36 +543,31 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
 
         // --- Thousands separator
 
-        auto thousandsSeparator = [&]( bool frac )
+        ImGui::PushItemWidth( 170.0f * menuScaling );
+        MR_FINALLY{ ImGui::PopItemWidth(); };
+
+        char thouSep[2] = { UnitSettings::getThousandsSeparator(), '\0' };
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( std::floor( ( ImGui::CalcItemWidth() - ImGui::CalcTextSize( thouSep ).x ) / 2 ), cButtonPadding * menuScaling ) );
+        MR_FINALLY{ ImGui::PopStyleVar(); };
+
+        if ( UI::inputTextIntoArray( "Thousands Separator", thouSep, sizeof thouSep, ImGuiInputTextFlags_AutoSelectAll ) )
+            UnitSettings::setThousandsSeparator( thouSep[0] );
+
+        // If the separator is empty or a space, display a string explaining that on top of the textbox.
+        if ( !ImGui::IsItemActive() )
         {
-            ImGui::PushItemWidth( 170.0f * menuScaling );
-            MR_FINALLY{ ImGui::PopItemWidth(); };
+            const char* label = nullptr;
+            if ( thouSep[0] == 0 )
+                label = "None";
+            else if ( thouSep[0] == ' ' )
+                label = "Space";
 
-            char thouSep[2] = { UnitSettings::getThousandsSeparator( frac ), '\0' };
-            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( std::floor( ( ImGui::CalcItemWidth() - ImGui::CalcTextSize( thouSep ).x ) / 2 ), cButtonPadding * menuScaling ) );
-            MR_FINALLY{ ImGui::PopStyleVar(); };
-
-            if ( UI::inputTextIntoArray( frac ? "Thousands separator (fractional part)" : "Thousands separator", thouSep, sizeof thouSep, ImGuiInputTextFlags_AutoSelectAll ) )
-                UnitSettings::setThousandsSeparator( thouSep[0], frac );
-
-            // If the separator is empty or a space, display a string explaining that on top of the textbox.
-            if ( !ImGui::IsItemActive() )
+            if ( label )
             {
-                const char* label = nullptr;
-                if ( thouSep[0] == 0 )
-                    label = "None";
-                else if ( thouSep[0] == ' ' )
-                    label = "Space";
-
-                if ( label )
-                {
-                    ImVec2 textSize = ImGui::CalcTextSize( label );
-                    ImGui::GetWindowDrawList()->AddText( ImGui::GetItemRectMin() + ( ImVec2( ImGui::CalcItemWidth(), ImGui::GetItemRectSize().y ) - textSize ) / 2, ImGui::GetColorU32( ImGuiCol_TextDisabled ), label );
-                }
+                ImVec2 textSize = ImGui::CalcTextSize( label );
+                ImGui::GetWindowDrawList()->AddText( ImGui::GetItemRectMin() + ( ImVec2( ImGui::CalcItemWidth(), ImGui::GetItemRectSize().y ) - textSize ) / 2, ImGui::GetColorU32( ImGuiCol_TextDisabled ), label );
             }
-        };
-        thousandsSeparator( false ); // Integral part.
-        // thousandsSeparator( true ); // Fractional part. // I was told this doesn't deserve a setting.
+        }
     }
 
 
@@ -589,8 +584,8 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
             std::vector<std::string> ret;
             ret.reserve( std::size_t( LengthUnit::_count ) + 1 );
             for ( std::size_t i = 0; i < std::size_t( LengthUnit::_count ); i++ )
-                ret.push_back( std::string( getUnitInfo( LengthUnit( i ) ).prettyName ) );
-            ret.push_back( "No units" );
+                ret.emplace_back( getUnitInfo( LengthUnit( i ) ).prettyName );
+            ret.emplace_back( "No units" );
             return ret;
         }();
 
@@ -600,9 +595,9 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         if ( UI::combo( "Unit##length", &option, optionNames ) )
         {
             if ( option == int( LengthUnit::_count ) )
-                UnitSettings::setUiLengthUnit( {} );
+                UnitSettings::setUiLengthUnit( {}, true );
             else
-                UnitSettings::setUiLengthUnit( LengthUnit( option ) );
+                UnitSettings::setUiLengthUnit( LengthUnit( option ), true );
         }
 
         // --- Precision
@@ -618,10 +613,13 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         ImGui::PushItemWidth( 170.0f * menuScaling );
         drawSeparator_( "Angular", menuScaling );
 
-        static const std::vector<std::string> flavorOptions = { "Degrees", "Degrees, minutes", "Degrees, minutes, seconds" };
-        static_assert( int( DegreesMode::degrees ) == 0 );
-        static_assert( int( DegreesMode::degreesMinutes ) == 1 );
-        static_assert( int( DegreesMode::degreesMinutesSeconds ) == 2 );
+        static const std::vector<std::string> flavorOptions = []{
+            std::vector<std::string> ret;
+            ret.reserve( std::size_t( DegreesMode::_count ) );
+            for ( std::size_t i = 0; i < std::size_t( DegreesMode::_count ); i++ )
+                ret.emplace_back( toString( DegreesMode( i ) ) );
+            return ret;
+        }();
 
         int flavorOption = int( UnitSettings::getDegreesMode() );
 
@@ -629,7 +627,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
         if ( UI::combo( "Unit##angle", &flavorOption, flavorOptions ) )
-            UnitSettings::setDegreesMode( DegreesMode( flavorOption ) );
+            UnitSettings::setDegreesMode( DegreesMode( flavorOption ), true );
 
         // Degree-mode-specific options.
 
@@ -645,6 +643,13 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
         ImGui::PopStyleVar();
         ImGui::PopItemWidth();
     }
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    if ( UI::button( "Reset Unit Settings" ) )
+        UnitSettings::resetToDefaults();
 }
 
 void ViewerSettingsPlugin::drawFeaturesTab_( float menuScaling )
@@ -722,7 +727,7 @@ void ViewerSettingsPlugin::drawRenderOptions_( float menuScaling )
             }
             if ( backUpSamples != storedSamples_ )
             {
-                if ( auto& settingsManager = viewer->getViewportSettingsManager() )
+                if ( auto& settingsManager = viewer->getViewerSettingsManager() )
                     settingsManager->saveInt( "multisampleAntiAliasing", storedSamples_ );
 
                 needReset_ = storedSamples_ != curSamples_;
@@ -1179,7 +1184,7 @@ void ViewerSettingsPlugin::updateDialog_()
 
 void ViewerSettingsPlugin::resetSettings_()
 {
-    viewer->getViewportSettingsManager()->resetSettings( *viewer );
+    viewer->getViewerSettingsManager()->resetSettings( *viewer );
 
     for ( size_t tabType = size_t( 0 ); tabType < size_t( TabType::Count ); tabType++ )
         for ( auto& settings : comboSettings_[ tabType ] )
@@ -1191,7 +1196,7 @@ void ViewerSettingsPlugin::resetSettings_()
     } );
 
     storedSamples_ = 8;
-    if ( auto& settingsManager = viewer->getViewportSettingsManager() )
+    if ( auto& settingsManager = viewer->getViewerSettingsManager() )
         settingsManager->saveInt( "multisampleAntiAliasing", storedSamples_ );
     needReset_ = storedSamples_ != curSamples_;
 

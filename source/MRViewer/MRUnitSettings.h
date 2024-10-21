@@ -8,6 +8,9 @@
 namespace MR::UnitSettings
 {
 
+// Reset to some sane default.
+MRVIEWER_API void resetToDefaults();
+
 // Common:
 
 // True: `0.1`, false: `.1`.
@@ -16,21 +19,21 @@ MRVIEWER_API void setShowLeadingZero( bool show );
 
 // Can be '\0' to indicate no separator.
 // `fractional == true` means to the right of the fractional point, if any.
-[[nodiscard]] MRVIEWER_API char getThousandsSeparator( bool fractional );
-void setThousandsSeparator( char ch, bool fractional );
+[[nodiscard]] MRVIEWER_API char getThousandsSeparator();
+void setThousandsSeparator( char ch );
 
 // Length:
 
 // In addition to length, this also controls the units for speed, area, volume, etc.
 // This can be null to indicate "no unit".
+// If `setPreferredLeadingZero == true`, will call `setShowLeadingZero()` to match this unit (currently inches = false, everything else = true).
 [[nodiscard]] MRVIEWER_API std::optional<LengthUnit> getUiLengthUnit();
-MRVIEWER_API void setUiLengthUnit( std::optional<LengthUnit> unit );
+MRVIEWER_API void setUiLengthUnit( std::optional<LengthUnit> unit, bool setPreferredLeadingZero );
 
 // Angle:
 
 [[nodiscard]] MRVIEWER_API DegreesMode getDegreesMode();
-// This also calls `setUiAnglePrecision()` to set a default precision depending on the mode.
-MRVIEWER_API void setDegreesMode( DegreesMode mode );
+MRVIEWER_API void setDegreesMode( DegreesMode mode, bool setPreferredPrecision );
 
 // Precision:
 

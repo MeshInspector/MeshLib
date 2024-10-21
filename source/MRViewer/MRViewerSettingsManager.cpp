@@ -1,4 +1,5 @@
 #include "MRViewerSettingsManager.h"
+#include "MRViewer/MRUnitSettings.h"
 #include "MRViewport.h"
 #include "MRViewer.h"
 #include "MRColorTheme.h"
@@ -46,6 +47,13 @@ const std::string cEnableSavedDialogPositions = "enableSavedDialogPositions";
 const std::string cAutoClosePlugins = "autoClosePlugins";
 const std::string cShowExperimentalFeatures = "showExperimentalFeatures";
 const std::string cAmbientCoefSelectedObj = "ambientCoefSelectedObj";
+const std::string cUnitsLeadingZero = "units.leadingZero";
+const std::string cUnitsThouSep = "units.thousandsSeparator";
+const std::string cUnitsLenUnit = "units.unitLength";
+const std::string cUnitsDegreesMode = "units.degreesMode";
+const std::string cUnitsPrecisionLen = "units.precisionLength";
+const std::string cUnitsPrecisionAngle = "units.precisionAngle";
+const std::string cUnitsNoUnit = "No units"; // This isn't a config key, this is used as the unit name when "no units" is selected.
 }
 
 namespace Defaults
@@ -81,8 +89,39 @@ int ViewerSettingsManager::loadInt( const std::string& name, int def )
 
 void ViewerSettingsManager::saveInt( const std::string& name, int value )
 {
-    Json::Value val = value;
-    Config::instance().setJsonValue( name, val );
+    Config::instance().setJsonValue( name, value );
+}
+
+std::string ViewerSettingsManager::loadString( const std::string& name, const std::string& def )
+{
+    auto& cfg = Config::instance();
+    if ( !cfg.hasJsonValue( name ) )
+        return def;
+    const auto& value = cfg.getJsonValue( name );
+    if ( !value.isString() )
+        return def;
+    return value.asString();
+}
+
+void ViewerSettingsManager::saveString( const std::string& name, const std::string& value )
+{
+    Config::instance().setJsonValue( name, value );
+}
+
+bool ViewerSettingsManager::loadBool( const std::string& name, bool def )
+{
+    auto& cfg = Config::instance();
+    if ( !cfg.hasJsonValue( name ) )
+        return def;
+    const auto& value = cfg.getJsonValue( name );
+    if ( !value.isBool() )
+        return def;
+    return value.asBool();
+}
+
+void ViewerSettingsManager::saveBool( const std::string& name, bool value )
+{
+    Config::instance().setJsonValue( name, value );
 }
 
 void ViewerSettingsManager::resetSettings( Viewer& viewer )
@@ -373,6 +412,50 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         const auto& ambientCoefSelectedObj = cfg.getJsonValue( cAmbientCoefSelectedObj );
         SceneSettings::set( SceneSettings::FloatType::AmbientCoefSelectedObj, ambientCoefSelectedObj.asFloat() );
     }
+
+    { // Measurement units.
+        UnitSettings::setShowLeadingZero( loadBool( cUnitsLeadingZero, true ) );
+
+        // The order here can be important, because setting the length automatically sets the preferred leading zero,
+        // and setting the degrees mode automatically sets the preferred angle precision.
+
+        { // Length unit.
+            static const std::unordered_map<std::string, LengthUnit> map = []{
+                std::unordered_map<std::string, LengthUnit> ret;
+                for ( int i = 0; i < int( LengthUnit::_count ); i++ )
+                    ret.try_emplace( std::string( getUnitInfo( LengthUnit( i ) ).prettyName ), LengthUnit( i ) );
+                ret.try_emplace( cUnitsNoUnit, LengthUnit::_count );
+                return ret;
+            }();
+            auto it = map.find( loadString( cUnitsLenUnit, "" ) );
+            UnitSettings::setUiLengthUnit( it == map.end() ? LengthUnit::mm : it->second == LengthUnit::_count ? std::nullopt : std::optional( it->second ), true );
+        }
+
+        { // Thousands separator.
+            std::string str = loadString( cUnitsThouSep, " " );
+            if ( str.empty() )
+                UnitSettings::setThousandsSeparator( 0 );
+            else if ( str.size() == 1 )
+                UnitSettings::setThousandsSeparator( str.front() );
+        }
+
+        { // Degrees mode.
+            static const std::unordered_map<std::string, DegreesMode> map = []{
+                std::unordered_map<std::string, DegreesMode> ret;
+                for ( int i = 0; i < int( DegreesMode::_count ); i++ )
+                    ret.try_emplace( std::string( toString( DegreesMode( i ) ) ), DegreesMode( i ) );
+                return ret;
+            }();
+            auto it = map.find( loadString( cUnitsDegreesMode, "" ) );
+            UnitSettings::setDegreesMode( it != map.end() ? it->second : DegreesMode::degrees, true );
+        }
+
+        // Precision.
+        if ( int p = loadInt( cUnitsPrecisionLen, -1 ); p >= 0 )
+            UnitSettings::setUiLengthPrecision( p );
+        if ( int p = loadInt( cUnitsPrecisionAngle, -1 ); p >= 0 )
+            UnitSettings::setUiAnglePrecision( p );
+    }
 }
 
 void ViewerSettingsManager::saveSettings( const Viewer& viewer )
@@ -487,6 +570,15 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
 
     Json::Value ambientCoefSelectedObj = SceneSettings::get( SceneSettings::FloatType::AmbientCoefSelectedObj );
     cfg.setJsonValue( cAmbientCoefSelectedObj, ambientCoefSelectedObj);
+
+    { // Measurement units.
+        saveBool( cUnitsLeadingZero, UnitSettings::getShowLeadingZero() );
+        saveString( cUnitsLenUnit, UnitSettings::getUiLengthUnit() ? std::string( getUnitInfo( *UnitSettings::getUiLengthUnit() ).prettyName ) : cUnitsNoUnit );
+        saveString( cUnitsThouSep, std::string( 1, UnitSettings::getThousandsSeparator() ) );
+        saveString( cUnitsDegreesMode, std::string( toString( UnitSettings::getDegreesMode() ) ) );
+        saveInt( cUnitsPrecisionLen, UnitSettings::getUiLengthPrecision() );
+        saveInt( cUnitsPrecisionAngle, UnitSettings::getUiAnglePrecision() );
+    }
 }
 
 const std::string & ViewerSettingsManager::getLastExtention( ObjType objType )

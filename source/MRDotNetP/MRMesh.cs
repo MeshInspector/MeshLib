@@ -150,9 +150,22 @@ namespace MR.DotNet
 
     #endregion
 
-    public class Mesh
+    public interface MeshOrPoints
     {
+        public VertCoordsReadOnly Points { get; }
+        public BitSetReadOnly ValidPoints { get; }
+        public Box3f BoundingBox { get; }
+    };
 
+    /// holds together mesh/point cloud and its transformation
+    public struct MeshOrPointsXf
+    {
+        MeshOrPoints obj;
+        AffineXf3f xf;
+    }
+
+    public class Mesh : MeshOrPoints
+    {
         #region C_FUNCTIONS
 
         /// tightly packs all arrays eliminating lone edges and invalid faces and vertices
@@ -256,7 +269,7 @@ namespace MR.DotNet
 
         /// computes the closest point on mesh (or its region) to given point
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern MRMeshProjectionResult mrFindProjection( ref MRVector3f pt, ref MRMeshPart mp, ref MRFindProjectionParameters parameters );
+        private static extern MRMeshProjectionResult mrFindProjection(ref MRVector3f pt, ref MRMeshPart mp, ref MRFindProjectionParameters parameters);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrStringData(IntPtr str);
@@ -362,7 +375,7 @@ namespace MR.DotNet
                     for (int i = 0; i < triangulation_.Capacity; i++)
                     {
                         IntPtr currentTriangulationPtr = IntPtr.Add(triangulationPtr, i * sizeOfThreeVertIds);
-                        triangulation_.Add( Marshal.PtrToStructure<ThreeVertIds>(currentTriangulationPtr) );
+                        triangulation_.Add(Marshal.PtrToStructure<ThreeVertIds>(currentTriangulationPtr));
                     }
                 }
                 return triangulation_.AsReadOnly();
@@ -557,24 +570,24 @@ namespace MR.DotNet
 
         #endregion
         #region Find projection
-        static public MeshProjectionResult FindProjection(Vector3f point, MeshPart meshPart, float maxDistanceSquared = float.MaxValue, AffineXf3f? xf = null, float minDistanceSquared = 0.0f )
+        static public MeshProjectionResult FindProjection(Vector3f point, MeshPart meshPart, float maxDistanceSquared = float.MaxValue, AffineXf3f? xf = null, float minDistanceSquared = 0.0f)
         {
             MRFindProjectionParameters mrParams = new MRFindProjectionParameters();
             mrParams.loDistLimitSq = minDistanceSquared;
             mrParams.upDistLimitSq = maxDistanceSquared;
             mrParams.xf = xf is not null ? xf.XfAddr() : (IntPtr)null;
 
-            var mrRes = mrFindProjection( ref point.vec_, ref meshPart.mrMeshPart, ref mrParams);
+            var mrRes = mrFindProjection(ref point.vec_, ref meshPart.mrMeshPart, ref mrParams);
 
             MeshProjectionResult result = new MeshProjectionResult();
             result.distanceSquared = mrRes.distSq;
-            
+
             result.pointOnFace = new PointOnFace();
             result.pointOnFace.point = new Vector3f(mrRes.proj.point);
             result.pointOnFace.faceId = mrRes.proj.face.id;
 
             result.meshTriPoint = new MeshTriPoint();
-            result.meshTriPoint.edge = mrRes.mtp.e.id;
+            result.meshTriPoint.e = mrRes.mtp.e.id;
             result.meshTriPoint.bary.a = mrRes.mtp.bary.a;
             result.meshTriPoint.bary.b = mrRes.mtp.bary.b;
 
@@ -615,7 +628,7 @@ namespace MR.DotNet
         ///< b in [0,1], b=0 => point is on [v0,v1] edge, b=1 => point is in v2
         public float b;
         /// given three values in three vertices, computes interpolated value at this barycentric coordinates
-        public Vector3f Interpolate(Vector3f p0, Vector3f p1, Vector3f p2 )
+        public Vector3f Interpolate(Vector3f p0, Vector3f p1, Vector3f p2)
         {
             return p0 * (1 - a - b) + a * p1 + b * p2;
         }
@@ -623,7 +636,7 @@ namespace MR.DotNet
 
     public struct MeshTriPoint
     {
-        public EdgeId edge;
+        public EdgeId e;
         public TriPoint bary;
     }
 
@@ -631,7 +644,7 @@ namespace MR.DotNet
     {
         public FaceId faceId;
         public Vector3f point;
-};
+    };
 
     public struct MeshProjectionResult
     {
@@ -640,13 +653,13 @@ namespace MR.DotNet
         public float distanceSquared;
     };
 
-    public struct MeshPart
+    public class MeshPart
     {
         public Mesh mesh;
         public BitSet? region;
 
         internal MRMeshPart mrMeshPart;
-        public MeshPart(Mesh mesh, BitSet? region = null)           
+        public MeshPart(Mesh mesh, BitSet? region = null)
         {
             this.mesh = mesh;
             this.region = region;

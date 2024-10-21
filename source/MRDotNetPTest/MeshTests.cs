@@ -240,7 +240,7 @@ namespace MR.DotNet.Test
             Assert.That(projRes.pointOnFace.point.Y, Is.EqualTo(0.507).Within(1e-3));
             Assert.That(projRes.pointOnFace.point.Z, Is.EqualTo(0.803).Within(1e-3));
 
-            Assert.That(projRes.meshTriPoint.edge, Is.EqualTo(1640));
+            Assert.That(projRes.meshTriPoint.e, Is.EqualTo(1640));
             Assert.That(projRes.meshTriPoint.bary.a, Is.EqualTo(0.053).Within(1e-3));
             Assert.That(projRes.meshTriPoint.bary.b, Is.EqualTo(0.946).Within(1e-3));
 
@@ -252,7 +252,7 @@ namespace MR.DotNet.Test
             Assert.That(projRes.pointOnFace.point.Y, Is.EqualTo(1.439).Within(1e-3));
             Assert.That(projRes.pointOnFace.point.Z, Is.EqualTo(1.895).Within(1e-3));
 
-            Assert.That(projRes.meshTriPoint.edge, Is.EqualTo(1898));
+            Assert.That(projRes.meshTriPoint.e, Is.EqualTo(1898));
             Assert.That(projRes.meshTriPoint.bary.a, Is.EqualTo(0.5).Within(1e-3));
             Assert.That(projRes.meshTriPoint.bary.b, Is.EqualTo(0.0).Within(1e-3));
         }

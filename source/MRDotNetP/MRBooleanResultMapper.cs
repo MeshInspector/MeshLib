@@ -18,8 +18,9 @@ namespace MR.DotNet
 
     public enum MapObject
     {
-        ObjectA,
-        ObjectB
+        A = 0,
+        B = 1,
+        Count = 2
     };
 
     [StructLayout(LayoutKind.Sequential)]
@@ -244,6 +245,8 @@ namespace MR.DotNet
 
             return new BitSet(mrBooleanResultMapperFilteredOldFaceBitSet(mapper_, oldBS.bs_, obj));
         }
+
+        internal IntPtr Mapper { get { return mapper_; } }
         #endregion
         #region private fields
 

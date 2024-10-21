@@ -2,76 +2,107 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
+using static MR.DotNet.AffineXf3f;
+using static MR.DotNet.MeshBoolean;
 
 namespace MR.DotNet
 {
     /// Available CSG operations
-    enum BooleanOperation
+    public enum BooleanOperation
     {
         /// Part of mesh `A` that is inside of mesh `B`
-        InsideA,
+        InsideA = 0,
         /// Part of mesh `B` that is inside of mesh `A`
-        InsideB,
+        InsideB = 1,
         /// Part of mesh `A` that is outside of mesh `B`
-        OutsideA,
+        OutsideA = 2,
         /// Part of mesh `B` that is outside of mesh `A`
-        OutsideB,
+        OutsideB = 3,
         /// Union surface of two meshes (outside parts)
-        Union,
+        Union = 4,
         /// Intersection surface of two meshes (inside parts)
-        Intersection,
+        Intersection = 5,
         /// Surface of mesh `B` - surface of mesh `A` (outside `B` - inside `A`)
-        DifferenceBA,
+        DifferenceBA = 6,
         /// Surface of mesh `A` - surface of mesh `B` (outside `A` - inside `B`)
-        DifferenceAB
+        DifferenceAB = 7,
+        Count = 8
+    };/// optional parameters for \ref mrBoolean
+
+    public struct BooleanParameters
+    {
+        public BooleanResultMapper? mapper;
+    /// transform from mesh `B` space to mesh `A` space
+        public AffineXf3f? rigidB2A;
+    /// if set merge all non-intersecting components
+        public bool mergeAllNonIntersectingComponents;
     };
 
-/// Input object index enum
-
-
-    class MeshBoolean
+    /// output of boolean operation
+    public struct BooleanResult
     {
-        /// creates a new BooleanResultMapper object
+        public Mesh mesh;
+    };
+
+    public class MeshBoolean
+    {
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct MRBooleanParameters
+        {
+            public IntPtr rigidB2A;
+            public IntPtr mapper;
+            [MarshalAs(UnmanagedType.U1)]
+            public bool mergeAllNonIntersectingComponents;
+            public IntPtr cb;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct MRBooleanResult
+        {
+            public IntPtr mesh;
+            public IntPtr errorString;
+        }
+
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern IntPtr mrBooleanResultMapperNew();
+        private static extern MRBooleanParameters mrBooleanParametersNew();
 
-        /// Returns faces bitset of result mesh corresponding input one
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern IntPtr mrBooleanResultMapperMapFaces( IntPtr mapper, IntPtr oldBS, BooleanResultMapperMapObject obj );
+        private static extern MRBooleanResult mrBoolean( IntPtr meshA, IntPtr meshB, BooleanOperation operation, ref MRBooleanParameters parameters );
 
-        /// Returns vertices bitset of result mesh corresponding input one
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern IntPtr mrBooleanResultMapperMapVerts( IntPtr mapper, IntPtr oldBS, BooleanResultMapperMapObject obj );
+        private static extern IntPtr mrStringData(IntPtr str);
 
-        /// Returns edges bitset of result mesh corresponding input one
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern MREdgeBitSet* mrBooleanResultMapperMapEdges( const MRBooleanResultMapper* mapper, const MREdgeBitSet* oldBS, MRBooleanResultMapperMapObject obj );
+        public static BooleanResult Boolean(Mesh meshA, Mesh meshB, BooleanOperation op )
+        {
+            return Boolean(meshA, meshB, op, new BooleanParameters());
+        }
+        public static BooleanResult Boolean(Mesh meshA, Mesh meshB, BooleanOperation op, BooleanParameters parameters )
+        {
+            MRBooleanParameters mrParameters = mrBooleanParametersNew();
+            mrParameters.rigidB2A = parameters.rigidB2A is null ? (IntPtr)null : parameters.rigidB2A.XfAddr();
+            mrParameters.mapper = parameters.mapper is null ? (IntPtr)null : parameters.mapper.Mapper;
+            mrParameters.mergeAllNonIntersectingComponents = parameters.mergeAllNonIntersectingComponents;
+            mrParameters.cb = IntPtr.Zero;
 
-/// Returns only new faces that are created during boolean operation
-MRMESHC_API MRFaceBitSet* mrBooleanResultMapperNewFaces( const MRBooleanResultMapper* mapper );
+            MRBooleanResult mrResult = mrBoolean(meshA.mesh_, meshB.mesh_, op, ref mrParameters);
+            string errorMessage = string.Empty;
 
-        /// returns updated oldBS leaving only faces that has corresponding ones in result mesh
-        MRMESHC_API MRFaceBitSet* mrBooleanResultMapperFilteredOldFaceBitSet(MRBooleanResultMapper* mapper, const MRFaceBitSet* oldBS, MRBooleanResultMapperMapObject obj );
+            if ( mrResult.errorString != IntPtr.Zero )
+            {
+                var errData = mrStringData(mrResult.errorString);
+                errorMessage = Marshal.PtrToStringAnsi(errData);
+            }
 
-MRMESHC_API const MRBooleanResultMapperMaps* mrBooleanResultMapperGetMaps( const MRBooleanResultMapper* mapper, MRBooleanResultMapperMapObject index );
+            if ( !string.IsNullOrEmpty(errorMessage) )
+            {
+                throw new SystemException(errorMessage);
+            }
 
-/// "after cut" faces to "origin" faces
-/// this map is not 1-1, but N-1
-MRMESHC_API const MRFaceMap mrBooleanResultMapperMapsCut2origin( const MRBooleanResultMapperMaps* maps );
-
-        /// "after cut" faces to "after stitch" faces (1-1)
-        MRMESHC_API const MRFaceMap mrBooleanResultMapperMapsCut2newFaces( const MRBooleanResultMapperMaps* maps );
-
-        /// "origin" edges to "after stitch" edges (1-1)
-        MRMESHC_API const MRWholeEdgeMap mrBooleanResultMapperMapsOld2newEdges( const MRBooleanResultMapperMaps* maps );
-
-        /// "origin" vertices to "after stitch" vertices (1-1)
-        MRMESHC_API const MRVertMap mrBooleanResultMapperMapsOld2NewVerts( const MRBooleanResultMapperMaps* maps );
-
-        /// old topology indexes are valid if true
-        MRMESHC_API bool mrBooleanResultMapperMapsIdentity( const MRBooleanResultMapperMaps* maps );
-
-        /// deallocates a BooleanResultMapper object
-        MRMESHC_API void mrBooleanResultMapperFree(MRBooleanResultMapper* mapper);
-    }
+            return new BooleanResult
+            {
+                mesh = new Mesh(mrResult.mesh),
+            };
+        }
+    };
 }

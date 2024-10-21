@@ -648,7 +648,7 @@ void ViewerSettingsPlugin::drawMeasurementUnitsTab_( float menuScaling )
     ImGui::Separator();
     ImGui::Spacing();
 
-    if ( UI::button( "Reset unit settings" ) )
+    if ( UI::button( "Reset Unit Settings" ) )
         UnitSettings::resetToDefaults();
 }
 

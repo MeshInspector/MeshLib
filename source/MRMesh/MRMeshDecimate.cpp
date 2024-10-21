@@ -1156,7 +1156,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     return res;
 }
 
-DecimateResult decimateMesh( Mesh & mesh, DecimateSettings settings0 )
+DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings0 )
 {
     auto settings = settings0;
     if ( settings.maxError >= FLT_MAX &&

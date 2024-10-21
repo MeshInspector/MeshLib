@@ -187,7 +187,7 @@ struct DecimateResult
  * \sa \ref decimateParallelMesh
  * \sa \ref resolveMeshDegenerations
  */ 
-MRMESH_API DecimateResult decimateMesh( Mesh & mesh, DecimateSettings settings = {} );
+MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings = {} );
 
 /**
  * \brief Computes quadratic form at given vertex of the initial surface before decimation

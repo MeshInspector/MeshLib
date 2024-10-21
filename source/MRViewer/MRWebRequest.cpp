@@ -36,7 +36,7 @@ int sRequestContextCounter = 0;
 std::unordered_map<int, std::unique_ptr<RequestContext>> sRequestContextMap;
 
 #ifdef __EMSCRIPTEN__
-std::string toString( MR::WebRequest::Method method )
+std::string methodToString( MR::WebRequest::Method method )
 {
     using Method = MR::WebRequest::Method;
     switch ( method )
@@ -396,7 +396,7 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
     (void)logName;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
-    const auto method = toString( method_ );
+    const auto method = methodToString( method_ );
     MAIN_THREAD_EM_ASM( {
         web_req_clear();
         web_req_timeout = $0;
@@ -416,7 +416,7 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
 
     for ( const auto& [key, value] : params_ )
         MAIN_THREAD_EM_ASM( web_req_add_param( UTF8ToString( $0 ), UTF8ToString( $1 ) ), key.c_str(), value.c_str() );
-    
+
     for ( const auto& [key, value] : headers_ )
         MAIN_THREAD_EM_ASM( web_req_add_header( UTF8ToString( $0 ), UTF8ToString( $1 ) ), key.c_str(), value.c_str() );
 

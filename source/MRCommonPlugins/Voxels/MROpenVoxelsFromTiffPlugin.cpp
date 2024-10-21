@@ -10,14 +10,15 @@
 #include "MRViewer/MRFileDialog.h"
 #include "MRViewer/MRProgressBar.h"
 #include "MRViewer/MRViewport.h"
-#include "MRVoxels/MRObjectVoxels.h"
-#include "MRVoxels/MRVoxelsLoad.h"
-#include "MRMesh/MRStringConvert.h"
-#include "MRViewer/MRAppendHistory.h"
-#include "MRMesh/MRChangeSceneAction.h"
-#include <MRMesh/MRSceneRoot.h>
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRViewer.h"
+#include "MRViewer/MRAppendHistory.h"
+#include "MRVoxels/MRObjectVoxels.h"
+#include "MRVoxels/MRVoxelsLoad.h"
+#include "MRMesh/MRChangeSceneAction.h"
+#include <MRMesh/MRSceneRoot.h>
+#include "MRMesh/MRStringConvert.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -70,7 +71,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( float menuScaling, ImGuiContext* )
         ProgressBar::orderWithMainThreadPostProcessing( "Open Voxels From TIFF", [this, directory, viewer = Viewer::instance()]()->std::function<void()>
         {
             ProgressBar::nextTask( "Load TIFF Folder" );
-
+            spdlog::info( "Loading TIFF Folder: {}", utf8string( directory ) );
             auto loadRes = VoxelsLoad::loadTiffDir
             ( {
                 directory,

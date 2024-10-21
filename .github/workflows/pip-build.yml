@@ -115,7 +115,8 @@ jobs:
           MESHLIB_PYTHON_VERSION: ${{matrix.py-version}}
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
-          # See the comment in `scripts/mrbind/0001-Disable-tests-that-seem-to-expose-an-ABI-incompatibility.patch` for explanation.
+          # When using Clang 11 on Ubuntu Arm 20.04, we get some obscure ABI issues that fail some tests,
+          # see the comments in `test_regression/test_algorithms/test_decimate.py` for more details.
           CMAKE_CXX_COMPILER: ${{fromJSON('["/usr/bin/clang++-11", "/usr/bin/clang++-18"]')[matrix.platform == 'aarch64']}}
           # FIXME: OpenGL libraries are included to wheel packages when the XDE module is used
           # Disabling CUDA at least because Clang 18 is too new for it on Ubuntu 20.04, and we're using Clang 18 for reasons

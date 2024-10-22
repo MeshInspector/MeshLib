@@ -295,7 +295,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         obj_->setDirtyFlags( DIRTY_POSITION );
     }
 
-    updateValueChangesByDistance_( changedRegion_ );
+    updateValueChangesByDistance_();
 
     generalEditingRegion_.clear();
     generalEditingRegion_.resize( numV, false );
@@ -359,7 +359,7 @@ void SurfaceManipulationWidget::initConnections_()
         abortEdit_();
         init( obj_ );
         updateRegion_( Vector2f( getViewerInstance().mouseController().getMousePos() ) );
-        updateValueChangesByDistance_( changedRegion_ );
+        updateValueChangesByDistance_();
     } );
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
 }

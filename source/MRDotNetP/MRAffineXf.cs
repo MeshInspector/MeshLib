@@ -5,17 +5,15 @@ using System;
 
 namespace MR.DotNet
 {
-    public class AffineXf3f
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct MRAffineXf3f
     {
-        [StructLayout(LayoutKind.Sequential)]
-        internal struct MRAffineXf3f
-        {
-            public MRMatrix3f A;
-            public MRVector3f b;
-        };
+        public MRMatrix3f A;
+        public MRVector3f b;
+    };
 
-
-        /*[DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+    public class AffineXf3f
+    {/*[DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern MRAffineXf3f mrAffineXf3fNew();
 
         /// creates translation-only transformation (with identity linear component)

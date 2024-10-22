@@ -158,10 +158,39 @@ namespace MR.DotNet
     };
 
     /// holds together mesh/point cloud and its transformation
-    public struct MeshOrPointsXf
+    public class MeshOrPointsXf
     {
-        MeshOrPoints obj;
-        AffineXf3f xf;
+        public MeshOrPoints obj;
+        public AffineXf3f xf;
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern IntPtr mrMeshOrPointsXfFromMesh(IntPtr mesh, ref MRAffineXf3f xf );
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern IntPtr mrMeshOrPointsXfFromPointCloud(IntPtr pc, ref MRAffineXf3f xf );
+
+        /// destructs a MeshOrPointsXf object
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern void mrMeshOrPointsXfFree(IntPtr mp);
+
+        public MeshOrPointsXf(MeshOrPoints obj, AffineXf3f xf)
+        {
+            this.obj = obj;
+            this.xf = xf;
+
+            if ( obj is Mesh )
+                mrMeshOrPointsXf_ = mrMeshOrPointsXfFromMesh((obj as Mesh).mesh_, ref xf.xf_);
+
+            if ( obj is PointCloud )
+                mrMeshOrPointsXf_ = mrMeshOrPointsXfFromPointCloud((obj as PointCloud).pc_, ref xf.xf_);
+        }
+
+        ~MeshOrPointsXf()
+        {
+            mrMeshOrPointsXfFree(mrMeshOrPointsXf_);
+        }
+
+        internal IntPtr mrMeshOrPointsXf_;
     }
 
     public class Mesh : MeshOrPoints

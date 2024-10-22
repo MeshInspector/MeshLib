@@ -1,7 +1,11 @@
-# exit if any command failed
-#set -eo pipefail
+#!/bin/bash
 
-MR_THIRDPARTY_DIR="thirdparty/"
+# This script creates `*.rpm` packages with built thirdparty and project libs
+# usage: first argument - `v1.2.3.4` - version with "v" prefix
+# ./distribution_rpm.sh v1.2.3.4
+
+# exit if any command failed
+set -eo pipefail
 
 if [ ! -f "./lib/libcpr.so" ]; then
   echo "Thirdparty build was not found. Building..."
@@ -22,11 +26,10 @@ if [ ${1} ]; then
 fi
 echo $version > build/Release/bin/mr.version
 
-REQUIRES_LINE="Requires:"
-BASEDIR=$(dirname "$0")
-requirements_file="$BASEDIR"/../requirements/fedora.txt
+BASE_DIR=$(realpath $(dirname "$0")/..)
+REQUIREMENTS_FILE="${BASE_DIR}/requirements/fedora.txt"
 # convert multi-line file to comma-separated string
-REQUIRES_LINE=$(cat $requirements_file | tr '\n' ',' | sed -e "s/,$//" -e "s/,/, /g")
+REQUIRES_LINE=$(cat ${REQUIREMENTS_FILE} | tr '\n' ',' | sed -e "s/,\s*$//" -e "s/,/, /g")
 
 # modify rpm spec file
 sed -i \

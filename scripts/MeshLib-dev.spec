@@ -26,12 +26,7 @@ MR_INSTALL_INCLUDE_DIR="$RPM_BUILD_ROOT/usr/local/include/MeshLib/"
 
 cmake --install ./build/Release/ --prefix "$RPM_BUILD_ROOT/usr/local"
 
-#mkdirs
-mkdir -p "${MR_INSTALL_LIB_DIR}"
-mkdir -p "${MR_INSTALL_INCLUDE_DIR}"
-mkdir -p "${MR_INSTALL_RES_DIR}"
-
-#copy lib dir
+# copy lib dir
 cp -rL ./lib "${MR_INSTALL_LIB_DIR}"
 cp -rL ./include "${MR_INSTALL_INCLUDE_DIR}"
 echo "lib copy done"
@@ -48,7 +43,8 @@ cd "${RPM_BUILD_ROOT}"
 exit
 
 %files
-/usr/local/bin/
+/usr/local/bin/MeshViewer
+/usr/local/bin/meshconv
 /usr/local/include/MeshLib/
 /usr/local/lib64/MeshLib/
 /usr/local/lib64/cmake/MeshLib/

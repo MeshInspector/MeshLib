@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # This script creates `*.deb` packages with built thirdparty and project libs
-# usage: first argument - `*-dev.deb` package name, `*.deb` package name
-# ./distribution.sh /path/to/file/meshlib.deb
+# usage: first argument - `v1.2.3.4` - version with "v" prefix,
+# ./distribution.sh v1.2.3.4
 
 # exit if any command failed
 set -eo pipefail
@@ -38,17 +38,16 @@ if [ ! -f "distr/meshlib-dev$MR_INSTALL_LIB_DIR/meshlib/mrmeshpy.so" ] && [ -f "
   patchelf --set-rpath '' "distr/meshlib-dev$MR_INSTALL_LIB_DIR/"{,meshlib/}{mrmeshpy.so,mrmeshnumpy.so}
 fi
 
-mkdir -p distr/meshlib-dev${MR_INSTALL_RES_DIR}
 MR_VERSION="0.0.0.0"
 if [ "${1}" ]; then
   MR_VERSION="${1:1}"
 fi
 echo ${MR_VERSION} > distr/meshlib-dev${MR_INSTALL_RES_DIR}/mr.version
 
-BASEDIR=$(dirname "$0")
-requirements_file="$BASEDIR"/../requirements/ubuntu.txt
+BASE_DIR=$(realpath $(dirname "$0")/..)
+REQUIREMENTS_FILE="${BASE_DIR}/requirements/ubuntu.txt"
 # convert multi-line file to comma-separated string
-DEPENDS_LINE=$(cat $requirements_file | tr '\n' ',' | sed -e "s/,$//" -e "s/,/, /g")
+DEPENDS_LINE=$(cat ${REQUIREMENTS_FILE} | tr '\n' ',' | sed -e "s/,\s*$//" -e "s/,/, /g")
 
 #create control file
 mkdir -p distr/meshlib-dev/DEBIAN

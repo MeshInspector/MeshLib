@@ -274,9 +274,13 @@ LINKER_OUTPUT := $(MODULE_OUTPUT_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
 LINKER := $(CXX_FOR_BINDINGS) -fuse-ld=lld
 # Unsure if `-dynamiclib` vs `-shared` makes any difference on MacOS. I'm using the former because that's what CMake does.
 LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(DEPS_LIB_DIR) $(PYTHON_LDFLAGS) -L$(MESHLIB_SHLIB_DIR) $(addprefix -l,$(INPUT_PROJECTS)) -lMRPython $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)/linker_flags.txt)
-EXTRA_INPUT_SOURCES := $(makefile_dir)/helpers.cpp
 COMBINED_HEADER_OUTPUT := $(TEMP_OUTPUT_DIR)/combined.hpp
 GENERATED_SOURCE_OUTPUT := $(TEMP_OUTPUT_DIR)/binding.cpp
+
+# Those files are parsed and baked into the final bindings.
+EXTRA_INPUT_SOURCES := $(makefile_dir)helpers.cpp
+# Those files compiled as is and baked into the final bindings.
+EXTRA_GENERATED_SOURCES := $(makefile_dir)aliases.cpp
 
 ifneq ($(IS_WINDOWS),)
 # "Cross"-compile to MSVC.
@@ -398,6 +402,16 @@ $(_object): $(_generated) | $(TEMP_OUTPUT_DIR)
 endef
 # Linking the primary module.
 $(foreach s,$(EXTRA_INPUT_SOURCES),$(eval $(call extra_file_snippet,$s)))
+# Compile extra files that don't need generating.
+override define extra_pregen_file_snippet =
+$(call var,_object := $(TEMP_OUTPUT_DIR)/$(notdir $(1:.cpp=.o)))
+$(call var,object_files += $(_object))
+$(_object): $1 | $(TEMP_OUTPUT_DIR)
+	@echo $(call quote,[Compiling] $1)
+	@$(COMPILER) $(call quote,$1) -c -o $(call quote,$(_object)) $(COMPILER_FLAGS)
+endef
+$(foreach s,$(EXTRA_GENERATED_SOURCES),$(eval $(call extra_pregen_file_snippet,$s)))
+# Linking the primary module.
 $(LINKER_OUTPUT): $(object_files) | $(MODULE_OUTPUT_DIR)
 	@echo $(call quote,[Linking] $@)
 	@$(LINKER) $^ -o $(call quote,$@) $(LINKER_FLAGS)

@@ -28,7 +28,13 @@ struct IOFilter
 
     [[nodiscard]] inline bool isSupportedExtension( const std::string& ext ) const
     {
-        return extensions.find( ext ) != std::string::npos;
+        const auto pos = extensions.find( ext );
+        if ( pos == std::string::npos )
+            return false;
+        // check full match of the extension
+        const auto epos = pos + ext.size();
+        assert( epos <= extensions.size() );
+        return epos == extensions.size() || extensions[epos] == ';';
     }
 };
 

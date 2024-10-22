@@ -460,6 +460,7 @@
     <ClCompile Include="MRGcodeLoad.cpp" />
     <ClCompile Include="MRHistoryAction.cpp" />
     <ClCompile Include="MRImage.cpp" />
+    <ClCompile Include="MRIOFilters.cpp" />
     <ClCompile Include="MRIterativeSampling.cpp" />
     <ClCompile Include="MRLevelOfDetails.cpp" />
     <ClCompile Include="MRLocalTriangulations.cpp" />

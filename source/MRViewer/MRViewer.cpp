@@ -117,7 +117,7 @@ EMSCRIPTEN_KEEPALIVE void emsUpdateViewportBounds()
 EMSCRIPTEN_KEEPALIVE void emsForceSettingsSave()
 {
     auto& viewer = MR::getViewerInstance();
-    auto& settingsManager = viewer.getViewportSettingsManager();
+    auto& settingsManager = viewer.getViewerSettingsManager();
     if ( settingsManager )
         settingsManager->saveSettings( viewer );
     MR::Config::instance().writeToFile();

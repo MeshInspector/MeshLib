@@ -20,6 +20,8 @@
 #include "MRMesh/MRLaplacian.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRPalette.h"
+#include "MRMesh/MRPointsToMeshProjector.h"
+#include "MRMesh/MRRingIterator.h"
 
 namespace MR
 {
@@ -50,7 +52,10 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
         firstInit_ = false;
     }
     if ( !palette_ )
+    {
         palette_ = std::make_shared<Palette>( Palette::DefaultColors );
+        palette_->setFilterType( FilterType::Linear );
+    }
     const float rangeLength = settings_.editForce * ( Palette::DefaultColors.size() - 1 );
     palette_->setRangeMinMax( rangeLength * -0.5f, rangeLength * 0.5f );
     changesMaxVal_ = 0.f;
@@ -81,11 +86,17 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
     initConnections_();
     mousePressed_ = false;
     mousePos_ = { -1, -1 };
+    oldPoints_ = obj_->mesh()->points;
+    if ( firstSessionInit_ )
+    {
+        oldMesh_ = std::make_shared<Mesh>( obj_->mesh()->cloneRegion( obj_->mesh()->topology.getValidFaces() ) );
+        firstSessionInit_ = false;
+    }
 }
 
 void SurfaceManipulationWidget::reset()
 {
-    oldMesh_.reset();
+    oldObjMesh_.reset();
 
     obj_->clearAncillaryTexture();
     obj_->setPickable( true );
@@ -104,6 +115,10 @@ void SurfaceManipulationWidget::reset()
 
     changesMaxVal_ = 0.f;
     changesMinVal_ = 0.f;
+
+    oldMesh_.reset();
+
+    firstSessionInit_ = true;
 }
 
 void SurfaceManipulationWidget::setSettings( const Settings& settings )
@@ -193,8 +208,8 @@ bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int mo
         if ( settings_.workMode != WorkMode::Patch )
         {
             // in patch mode the mesh does not change till mouse up, and we always need to pick in it (before and right after patch)
-            oldMesh_ = std::dynamic_pointer_cast< ObjectMesh >( obj_->clone() );
-            oldMesh_->setAncillary( true );
+            oldObjMesh_ = std::dynamic_pointer_cast< ObjectMesh >( obj_->clone() );
+            oldObjMesh_->setAncillary( true );
             obj_->setPickable( false );
         }
         appendHistoryAction_ = true;
@@ -279,12 +294,15 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         relax( mesh, params );
         obj_->setDirtyFlags( DIRTY_POSITION );
     }
+
+    updateValueChangesByDistance_( changedRegion_ );
+
     generalEditingRegion_.clear();
     generalEditingRegion_.resize( numV, false );
 
     obj_->setPickable( true );
 
-    oldMesh_.reset();
+    oldObjMesh_.reset();
 
     return true;
 }
@@ -341,6 +359,7 @@ void SurfaceManipulationWidget::initConnections_()
         abortEdit_();
         init( obj_ );
         updateRegion_( Vector2f( getViewerInstance().mouseController().getMousePos() ) );
+        updateValueChangesByDistance_( changedRegion_ );
     } );
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
 }
@@ -380,11 +399,12 @@ void SurfaceManipulationWidget::changeSurface_()
         params.force = settings_.relaxForce;
         relax( *obj_->varMesh(), params );
         obj_->setDirtyFlags( DIRTY_POSITION );
+        updateValueChanges_( singleEditingRegion_ );
         return;
     }
 
     Vector3f normal;
-    auto objMeshPtr = oldMesh_ ? oldMesh_ : obj_;
+    auto objMeshPtr = oldObjMesh_ ? oldObjMesh_ : obj_;
     const auto& mesh = *objMeshPtr->mesh();
     for ( auto v : singleEditingRegion_ )
         normal += mesh.normal( v );
@@ -410,14 +430,10 @@ void SurfaceManipulationWidget::changeSurface_()
         else
             return;
         points[v] += direction * pointShift * normal;
-        valueChanges_[v] += direction * pointShift;
     } );
-    auto [minIt, maxIt] = std::minmax_element( begin( valueChanges_ ), end( valueChanges_ ) );
-    changesMaxVal_ = *minIt;
-    changesMinVal_ = *maxIt;
     generalEditingRegion_ |= singleEditingRegion_;
     changedRegion_ |= singleEditingRegion_;
-    updateRegionUVs_( singleEditingRegion_ );
+    updateValueChanges_( singleEditingRegion_ );
     obj_->setDirtyFlags( DIRTY_POSITION );
 }
 
@@ -459,18 +475,18 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
     }
     mousePos_ = mousePos;
 
-    auto objMeshPtr = oldMesh_ ? oldMesh_ : obj_;
+    auto objMeshPtr = oldObjMesh_ ? oldObjMesh_ : obj_;
     // to pick some object, it must have a parent object
     std::shared_ptr<Object> parent;
-    if ( oldMesh_ )
+    if ( oldObjMesh_ )
     {
         parent = std::make_shared<Object>();
-        parent->addChild( oldMesh_ );
+        parent->addChild( oldObjMesh_ );
     }
     std::vector<ObjAndPick> movedPosPick = getViewerInstance().viewport().multiPickObjects( std::array{ static_cast<VisualObject*>( objMeshPtr.get() ) }, viewportPoints );
-    if ( oldMesh_ )
+    if ( oldObjMesh_ )
     {
-        oldMesh_->detachFromParent();
+        oldObjMesh_->detachFromParent();
         parent.reset();
     }
 
@@ -524,7 +540,7 @@ void SurfaceManipulationWidget::abortEdit_()
     if ( !mousePressed_ )
         return;
     mousePressed_ = false;
-    oldMesh_.reset();
+    oldObjMesh_.reset();
     obj_->setPickable( true );
     obj_->clearAncillaryTexture();
     appendHistoryAction_ = false;
@@ -541,6 +557,7 @@ void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
     laplacian_ = std::make_unique<Laplacian>( *obj_->varMesh() );
     laplacian_->init( singleEditingRegion_, settings_.edgeWeights );
     historyAction_ = std::make_shared<ChangeMeshPointsAction>( "Brush: Deform", obj_ );
+    changedRegion_ |= singleEditingRegion_;
 }
 
 void SurfaceManipulationWidget::laplacianMoveVert_( const Vector2f& mousePos )
@@ -556,12 +573,13 @@ void SurfaceManipulationWidget::laplacianMoveVert_( const Vector2f& mousePos )
     laplacian_->fixVertex( touchVertId_, touchVertIniPos_ + move );
     laplacian_->apply();
     obj_->setDirtyFlags( DIRTY_POSITION );
+    updateValueChanges_( singleEditingRegion_ );
 }
 
 void SurfaceManipulationWidget::updateVizualizeSelection_( const ObjAndPick& objAndPick )
 {
     updateUVmap_( false );
-    auto objMeshPtr = oldMesh_ ? oldMesh_ : obj_;
+    auto objMeshPtr = oldObjMesh_ ? oldObjMesh_ : obj_;
     const auto& mesh = *objMeshPtr->mesh();
     visualizationRegion_.reset();
     badRegion_ = false;
@@ -602,6 +620,121 @@ void SurfaceManipulationWidget::updateRegionUVs_( const VertBitSet& region )
         uvs[v].x = palette_->getUVcoord( valueChanges_[v], true ).x;
     } );
     obj_->setAncillaryUVCoords( std::move( uvs ) );
+}
+
+void SurfaceManipulationWidget::updateValueChanges_( const VertBitSet& region )
+{
+    const auto& points = obj_->mesh()->points;
+    const auto& mesh = *obj_->mesh();
+    using MinMax = std::pair<float, float>;
+    tbb::enumerable_thread_specific<MinMax> threadMinMax{ std::numeric_limits<float>::max() , std::numeric_limits<float>::lowest() };
+    BitSetParallelFor( region, [&] ( VertId v )
+    {
+        const Vector3f shift = points[v] - oldPoints_[v];
+        const float sign = dot( shift, mesh.normal( v ) ) >= 0.f ? 1.f : -1.f;
+        valueChanges_[v] = shift.length() * sign;
+
+        auto& localMinMax = threadMinMax.local();
+        if ( valueChanges_[v] < localMinMax.first )
+            localMinMax.first = valueChanges_[v];
+        if ( valueChanges_[v] > localMinMax.second )
+            localMinMax.second = valueChanges_[v];
+    } );
+    MinMax minMax{ std::numeric_limits<float>::max() , std::numeric_limits<float>::lowest() };
+    for ( const auto& localMinMax : threadMinMax )
+    {
+        if ( localMinMax.first < minMax.first )
+            minMax.first = localMinMax.first;
+        if ( localMinMax.second > minMax.second )
+            minMax.second = localMinMax.second;
+    }
+    changesMinVal_ = minMax.first;
+    changesMaxVal_ = minMax.second;
+    updateRegionUVs_( region );
+}
+
+void SurfaceManipulationWidget::updateValueChangesByDistance_()
+{
+    const auto& mesh = obj_->mesh();
+    const auto& meshVerts = mesh->points;
+
+    std::vector<MeshProjectionResult> projResults;
+    float lastLimitDistSq = FLT_MAX;
+    PointsToMeshProjector cpuProjector;
+    cpuProjector.updateMeshData( oldMesh_.get() );
+    cpuProjector.findProjections( projResults, meshVerts.vec_, nullptr, nullptr , lastLimitDistSq, 0 );
+
+    unknownSign_.clear();
+    unknownSign_.resize( meshVerts.size(), false );
+    valueChanges_.clear();
+    valueChanges_.resize( meshVerts.size(), 0.f );
+
+    using MinMax = std::pair<float, float>;
+    tbb::enumerable_thread_specific<MinMax> threadMinMax{ std::numeric_limits<float>::max() , std::numeric_limits<float>::lowest() };
+
+    BitSetParallelFor( mesh->topology.getValidVerts(), [&] ( VertId v )
+    {
+        const auto& projRes = projResults[v];
+        auto res = projRes.distSq;
+        if ( projRes.mtp.e )
+            res = oldMesh_->signedDistance( meshVerts[VertId( v )], projRes );
+        else
+            res = std::sqrt( res );
+        
+        valueChanges_[v] = res;
+        if ( !projRes.mtp )
+        {
+            unknownSign_.set( v, true );
+            return;
+        }
+
+        auto& localMinMax = threadMinMax.local();
+        if ( valueChanges_[v] < localMinMax.first )
+            localMinMax.first = valueChanges_[v];
+        if ( valueChanges_[v] > localMinMax.second )
+            localMinMax.second = valueChanges_[v];
+    } );
+
+    MinMax minMax{ std::numeric_limits<float>::max() , std::numeric_limits<float>::lowest() };
+    for ( const auto& localMinMax : threadMinMax )
+    {
+        if ( localMinMax.first < minMax.first )
+            minMax.first = localMinMax.first;
+        if ( localMinMax.second > minMax.second )
+            minMax.second = localMinMax.second;
+    }
+
+    threadMinMax.clear();
+    BitSetParallelFor( unknownSign_, [&] ( VertId v )
+    {
+        float sumNeis = 0;
+        for ( EdgeId e : orgRing( mesh->topology, v ) )
+        {
+            auto d = mesh->topology.dest( e );
+            if ( !unknownSign_.test( d ) )
+                sumNeis += valueChanges_[d];
+        }
+        if ( sumNeis < 0 )
+            valueChanges_[v] = -valueChanges_[v];
+
+        auto& localMinMax = threadMinMax.local();
+        if ( valueChanges_[v] < localMinMax.first )
+            localMinMax.first = valueChanges_[v];
+        if ( valueChanges_[v] > localMinMax.second )
+            localMinMax.second = valueChanges_[v];
+    } );
+
+    for ( const auto& localMinMax : threadMinMax )
+    {
+        if ( localMinMax.first < minMax.first )
+            minMax.first = localMinMax.first;
+        if ( localMinMax.second > minMax.second )
+            minMax.second = localMinMax.second;
+    }
+
+    changesMinVal_ = minMax.first;
+    changesMaxVal_ = minMax.second;
+    updateRegionUVs_( mesh->topology.getValidVerts() );
 }
 
 }

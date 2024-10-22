@@ -93,6 +93,9 @@ private:
     void updateVizualizeSelection_( const ObjAndPick& objAndPick );
 
     void updateRegionUVs_( const VertBitSet& region );
+    void updateValueChanges_( const VertBitSet& region );
+    void updateValueChangesByDistance_();
+
     Settings settings_;
 
     std::shared_ptr<ObjectMesh> obj_;
@@ -107,8 +110,12 @@ private:
     VertScalars visualizationDistanceMap_;
     VertBitSet changedRegion_;
     VertScalars valueChanges_;
-    std::shared_ptr<ObjectMesh> oldMesh_;
+    VertCoords oldPoints_;
+    std::shared_ptr<Mesh> oldMesh_;
+    VertBitSet unknownSign_; ///< cached data to avoid reallocating memory
+    std::shared_ptr<ObjectMesh> oldObjMesh_;
     bool firstInit_ = true; // need to save settings in re-initial
+    bool firstSessionInit_ = true;
     bool badRegion_ = false; // in selected region less than 3 points
 
     bool mousePressed_ = false;

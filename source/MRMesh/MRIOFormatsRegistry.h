@@ -75,9 +75,12 @@ public:
         {
             const auto& [filter, _] = item;
             auto pos = filter.extensions.find( extension );
+            if ( pos == std::string::npos )
+                return false;
+            // check full match of the extension
             auto epos = pos + extension.size();
-            return pos != std::string::npos && 
-                ( epos >= filter.extensions.size() || filter.extensions[epos] == ';' ); // check full match of the extension
+            assert( epos <= filter.extensions.size() );
+            return epos >= filter.extensions.size() || filter.extensions[epos] == ';';
         } );
         if ( it != processors.end() )
             return it->second;

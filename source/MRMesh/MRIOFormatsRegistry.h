@@ -74,7 +74,10 @@ public:
         auto it = std::find_if( processors.begin(), processors.end(), [&extension] ( auto&& item )
         {
             const auto& [filter, _] = item;
-            return filter.extensions.find( extension ) != std::string::npos;
+            auto pos = filter.extensions.find( extension );
+            auto epos = pos + extension.size();
+            return pos != std::string::npos && 
+                ( epos >= filter.extensions.size() || filter.extensions[epos] == ';' ); // check full match of the extension
         } );
         if ( it != processors.end() )
             return it->second;

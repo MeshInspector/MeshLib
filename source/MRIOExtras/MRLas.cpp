@@ -114,6 +114,27 @@ struct LasPoint7 : public LasPoint6, public ColorChannels {};
 struct LasPoint8 : public LasPoint6, public ColorChannels, public NirChannel {};
 struct LasPoint9 : public LasPoint6, public WavePackets {};
 struct LasPoint10 : public LasPoint6, public ColorChannels, public NirChannel, public WavePackets {};
+
+struct ExtraBytes
+{
+    unsigned char reserved[2];
+    unsigned char data_type;
+    unsigned char options;
+    char name[32];
+    unsigned char unused[4];
+    char no_data[8];
+    unsigned char deprecated1[16];
+    char min[8];
+    unsigned char deprecated2[16];
+    char max[8];
+    unsigned char deprecated3[16];
+    double scale;
+    unsigned char deprecated4[16];
+    double offset;
+    unsigned char deprecated5[16];
+    char description[32];
+};
+
 #pragma pack(pop)
 
 static_assert( sizeof( LasPoint0 ) == 20, "Incorrect struct size" );
@@ -127,6 +148,22 @@ static_assert( sizeof( LasPoint7 ) == 36, "Incorrect struct size" );
 static_assert( sizeof( LasPoint8 ) == 38, "Incorrect struct size" );
 static_assert( sizeof( LasPoint9 ) == 59, "Incorrect struct size" );
 static_assert( sizeof( LasPoint10 ) == 67, "Incorrect struct size" );
+static_assert( sizeof( ExtraBytes ) == 192, "Incorrect struct size" );
+
+constexpr size_t LasPointSize[] =
+{
+    sizeof( LasPoint0 ),
+    sizeof( LasPoint1 ),
+    sizeof( LasPoint2 ),
+    sizeof( LasPoint3 ),
+    sizeof( LasPoint4 ),
+    sizeof( LasPoint5 ),
+    sizeof( LasPoint6 ),
+    sizeof( LasPoint7 ),
+    sizeof( LasPoint8 ),
+    sizeof( LasPoint9 ),
+    sizeof( LasPoint10 )
+};
 
 LasPoint getPoint( const char* buf, int )
 {
@@ -232,16 +269,41 @@ Expected<PointCloud> process( lazperf::reader::basic_file& reader, const PointsL
 
     const auto& header = reader.header();
     const auto pointFormat = header.pointFormat();
+    if ( pointFormat < 0 || pointFormat > 10 )
+        return unexpected( fmt::format( "Unsupported LAS point format: {}", pointFormat ) );
 
-    constexpr size_t maxPointRecordLength = sizeof( LasPoint10 );
-    std::array<char, maxPointRecordLength> buf { '\0' };
-    if ( buf.size() < header.point_record_length )
-        return unexpected( fmt::format( "Unsupported LAS format version: {}.{}", header.version.major, header.version.minor ) );
+    if ( LasPointSize[pointFormat] > header.point_record_length )
+        return unexpected( fmt::format( "Too short LAS point record length {} for point format {}, expected length {}",
+            header.point_record_length, pointFormat, LasPointSize[pointFormat] ) );
+
+    const auto extraBytesVlr = reader.vlrData( "LASF_Spec", 4 );
+    bool hasNormals = false;
+    if ( extraBytesVlr.size() == 3 * sizeof( ExtraBytes ) )
+    {
+        ExtraBytes extraBytes[3];
+        for ( int i = 0; i < 3; ++i )
+            std::memcpy( extraBytes + i, extraBytesVlr.data() + i * sizeof( ExtraBytes ), sizeof( ExtraBytes ) );
+        if ( extraBytes[0].data_type == 10 && extraBytes[1].data_type == 10 && extraBytes[2].data_type == 10 ) // all extra types are doubles
+        {
+            // https://github.com/ASPRSorg/LAS/issues/37#issuecomment-1695757865
+            // enough to check first field only
+            hasNormals = strcmp( extraBytes[0].name, "NormalX" ) == 0 ||
+                 strcmp( extraBytes[0].name, "nx" ) == 0 ||
+                 strcmp( extraBytes[0].name, "normal_x" ) == 0 ||
+                 strcmp( extraBytes[0].name, "normalx" ) == 0 ||
+                 strcmp( extraBytes[0].name, "normal x" ) == 0;
+        }
+    }
+    if ( hasNormals && LasPointSize[pointFormat] + 3 * sizeof( double ) > header.point_record_length )
+        return unexpected( fmt::format( "Too short LAS point+normal record length {} for point format {}, expected length {}",
+            header.point_record_length, pointFormat, LasPointSize[pointFormat] + 3 * sizeof( double ) ) );
 
     PointCloud result;
     result.points.reserve( pointCount );
     if ( settings.colors )
         settings.colors->reserve( pointCount );
+    if ( hasNormals )
+        result.normals.reserve( pointCount );
 
     Vector3d offset {
         header.offset.x,
@@ -264,6 +326,7 @@ Expected<PointCloud> process( lazperf::reader::basic_file& reader, const PointsL
     if ( settings.colors )
         colorsHi.emplace();
 
+    std::vector<char> buf( header.point_record_length, '\0' );
     for ( auto i = 0; i < pointCount; ++i )
     {
         if ( i % 4096 == 0 )
@@ -305,6 +368,13 @@ Expected<PointCloud> process( lazperf::reader::basic_file& reader, const PointsL
                 const auto color = getColor( getClassification( buf.data(), pointFormat ) );
                 settings.colors->emplace_back( color );
                 colorsHi->emplace_back( color );
+            }
+
+            if ( hasNormals )
+            {
+                Vector3d normal;
+                std::memcpy( &normal.x, buf.data() + LasPointSize[pointFormat], 3 * sizeof( double ) );
+                result.normals.push_back( Vector3f( normal ) );
             }
         }
     }

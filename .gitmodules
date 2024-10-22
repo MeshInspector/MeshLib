@@ -51,7 +51,7 @@
 	url = https://github.com/MeshInspector/libE57Format
 [submodule "thirdparty/laz-perf"]
 	path = thirdparty/laz-perf
-	url = https://github.com/hobuinc/laz-perf.git
+	url = https://github.com/MeshInspector/laz-perf
 [submodule "thirdparty/mbedtls"]
 	path = thirdparty/mbedtls
 	url = https://github.com/Mbed-TLS/mbedtls

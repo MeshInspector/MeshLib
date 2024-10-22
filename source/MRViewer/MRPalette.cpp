@@ -511,13 +511,31 @@ float Palette::getRelativePos( float val ) const
         return ( val - parameters_.ranges[0] ) / ( parameters_.ranges[1] - parameters_.ranges[0] );
     else if ( parameters_.ranges.size() == 4 )
     {
-        if ( val >= parameters_.ranges[1] && val <= parameters_.ranges[2] )
-            return 0.5f;
+        float centralZoneAbsRange = parameters_.ranges[2] - parameters_.ranges[1];
+        bool isInCentralZone = val >= parameters_.ranges[1] && val <= parameters_.ranges[2];
+        if ( isInCentralZone && ( texture_.filter == FilterType::Linear || centralZoneAbsRange <= 0.0f ) )
+                return 0.5f;
+
+        float outerZoneRelativeRange = 0.5f;
+        float centerZoneRelativeMax = 0.5f;
+        if ( texture_.filter == FilterType::Discrete )
+        {
+            auto realDiscretization = ( 2 * parameters_.discretization + 1 );
+            outerZoneRelativeRange = float( parameters_.discretization ) / realDiscretization;
+            centerZoneRelativeMax = float( parameters_.discretization + 1 ) / realDiscretization;
+
+            if ( isInCentralZone )
+            {
+                float centralZoneRelativeRange = 1.0f / realDiscretization;
+                float centralZoneRelativeMin = outerZoneRelativeRange;
+                return ( val - parameters_.ranges[1] ) / centralZoneAbsRange * centralZoneRelativeRange + centralZoneRelativeMin;
+            }
+        }
 
         if ( val < parameters_.ranges[1] )
-            return ( val - parameters_.ranges[0] ) / ( parameters_.ranges[1] - parameters_.ranges[0] ) * 0.5f;
+            return ( val - parameters_.ranges[0] ) / ( parameters_.ranges[1] - parameters_.ranges[0] ) * outerZoneRelativeRange;
         else
-            return ( val - parameters_.ranges[2] ) / ( parameters_.ranges[3] - parameters_.ranges[2] ) * 0.5f + 0.5f;
+            return ( val - parameters_.ranges[2] ) / ( parameters_.ranges[3] - parameters_.ranges[2] ) * outerZoneRelativeRange + centerZoneRelativeMax;
     }
     return 0.5f;
 }

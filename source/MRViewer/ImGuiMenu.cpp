@@ -62,7 +62,6 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRChangeSceneAction.h"
-#include "MRMesh/MRChangeNameAction.h"
 #include "MRHistoryStore.h"
 #include "ImGuiHelpers.h"
 #include "MRAppendHistory.h"
@@ -878,7 +877,7 @@ void ImGuiMenu::draw_helpers()
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
         if ( UI::button( "Ok", Vector2f( btnWidth, 0 ), ImGuiKey_Enter ) )
         {
-            AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", obj ) );
+            AppendHistory( std::make_shared<ChangeNameAction>( "Rename object from modal dialog", obj ) );
             obj->setName( popUpRenameBuffer_ );
             ImGui::CloseCurrentPopup();
         }
@@ -1288,7 +1287,7 @@ float ImGuiMenu::drawSelectionInformation_()
         }
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
-            AppendHistory( std::make_shared<ChangeNameAction>( "Rename object", pObj ) );
+            AppendHistory( std::make_shared<ChangeNameAction>( "Rename object from information", pObj ) );
             pObj->setName( renameBuffer_ );
             lastRenameObj_.reset();
         }
@@ -1438,9 +1437,18 @@ float ImGuiMenu::drawSelectionInformation_()
 
         if ( selectedObjs.size() == 1 )
         {
-            // TODO: show selected area
-            (void)totalSelectedArea;
-            drawUnitInfo( "Area", totalArea, AreaUnit{} );
+            ImGui::SetNextItemWidth( itemWidth );
+            if ( totalSelectedArea > 0 )
+            {
+                UI::readOnlyValue<AreaUnit>( "Area", totalArea, selectedTextColor,
+                    { .decorationFormatString = valueToString<AreaUnit>( totalSelectedArea ) + " / {}" }, labelColor );
+                UI::setTooltipIfHovered( "Selected / Total surface area", menu_scaling() );
+            }
+            else
+            {
+                UI::readOnlyValue<AreaUnit>( "Area", totalArea, textColor, {}, labelColor );
+                UI::setTooltipIfHovered( "Total surface area", menu_scaling() );
+            }
 
             drawUnitInfo( "Avg Edge Length", avgEdgeLen, LengthUnit{} );
 

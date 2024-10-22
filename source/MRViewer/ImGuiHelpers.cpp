@@ -581,9 +581,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         else if ( ribMenu )
             yPos = ( ribMenu->getTopPanelOpenedHeight() - 1.0f ) * menu->menu_scaling();
 
-        const std::string configKey = std::string( label ) + std::string( "_position" );
         auto& config = MR::Config::instance();
-
         if ( menu->isSavedDialogPositionsEnabled() && config.hasJsonValue( "DialogPositions" ) )
         {
             auto json = config.getJsonValue( "DialogPositions" )[label];
@@ -603,7 +601,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         }
     }
 
-    UI::getDefaultWindowRectAllocator().setFreeNextWindowPos( label, initialWindowPos, haveSavedWindowPos ? ImGuiCond_FirstUseEver : ImGuiCond_Appearing, params.pivot );
+    UI::getDefaultWindowRectAllocator().setFreeNextWindowPos( label, initialWindowPos, haveSavedWindowPos ? ImGuiCond_FirstUseEver : ImGuiCond_Appearing, haveSavedWindowPos ? ImVec2( 0, 0 ) : params.pivot );
 
     if ( params.changedSize )
     {
@@ -867,6 +865,14 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
             strippedLabel = strippedLabel.substr( 0, sep );
 
         UI::TestEngine::pushTree( strippedLabel );
+    }
+
+    if ( window )
+    {
+        auto& config = Config::instance();
+        auto dpJson = config.getJsonValue( "DialogPositions" );
+        serializeToJson( Vector2i{ int( window->Pos.x ), int( window->Pos.y ) }, dpJson[label] );
+        config.setJsonValue( "DialogPositions", dpJson );
     }
 
     return true;

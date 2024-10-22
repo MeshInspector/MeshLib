@@ -35,15 +35,15 @@ jobs:
             # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
             runner: macos-13 # github hosted
             config: Release
-            codesign: "--skip-sign"
+            codesign-options: "--skip-sign"
           - os: github-arm
             runner: macos-latest  # github hosted
             config: Debug
-            codesign: "--skip-sign"
+            codesign-options: "--skip-sign"
           - os: arm
             runner: macos-arm-build # self-hosted
             config: Release
-            codesign: ""
+            codesign-options: ""
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -153,7 +153,7 @@ jobs:
       - name: Codesign framework
         if: ${{ inputs.UPLOAD_ARTIFACTS && env.INTERNAL_BUILD == 'true' && matrix.config == 'Release'}}
         run: |
-          ./scripts/distribution_apple_pkg.sh ${{matrix.codesign}}
+          ./scripts/distribution_apple_pkg.sh ${{matrix.codesign-options}}
           mv meshlib.pkg meshlib_${{matrix.os}}.pkg
 
       - name: Upload Macos Distribution

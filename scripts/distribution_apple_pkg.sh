@@ -1,6 +1,6 @@
 #!/bin/bash
 
-APP_PATH="./MeshLib.framework/Versions/Current"
+FRAMEWORK_PATH="./Library/Frameworks/MeshLib.framework/Versions/Current"
 ENTITLEMENTS_PATH="./macos/entitlements.plist"
 
 DEVELOPER_ID_APPLICATION="Developer ID Application: ASGSoft LLC (465Q5Z6W45)"
@@ -24,15 +24,15 @@ sign_file() {
 
 if [ "$SKIP_SIGN" = false ]; then
     echo "Signing the main binaries MeshViewer and meshconv"
-    sign_file "${APP_PATH}/bin/MeshViewer"
-    sign_file "${APP_PATH}/bin/meshconv"
+    sign_file "${FRAMEWORK_PATH}/bin/MeshViewer"
+    sign_file "${FRAMEWORK_PATH}/bin/meshconv"
 
     echo "Verifying the signatures for MeshViewer and meshconv"
-    codesign --verify --verbose=2 "${APP_PATH}/MeshLib/MeshViewer"
-    codesign --verify --verbose=2 "${APP_PATH}/MeshLib/meshconv"
+    codesign --verify --verbose=2 "${FRAMEWORK_PATH}/MeshLib/MeshViewer"
+    codesign --verify --verbose=2 "${FRAMEWORK_PATH}/MeshLib/meshconv"
 
     echo "Signing additional libraries and components"
-    find "${APP_PATH}/libs" -type f \( -name "*.dylib" -o -name "*.so" -o -name "*.bundle" -o -name "*.plugin" \) | while read -r FILE; do
+    find "${FRAMEWORK_PATH}/libs" -type f \( -name "*.dylib" -o -name "*.so" -o -name "*.bundle" -o -name "*.plugin" \) | while read -r FILE; do
         sign_file "${FILE}"
     done
 
@@ -51,10 +51,10 @@ fi
 echo "Building package from .framework"
 if [ "$SKIP_SIGN" = false ]; then
     pkgbuild \
-        --root MeshLib.framework \
+        --root Library \
         --identifier com.MeshInspector.MeshLib \
         --sign "${DEVELOPER_ID_INSTALLER}" \
-        --install-location /Library/Frameworks/MeshLib.framework \
+        --install-location /Library \
         MeshLib.pkg
 
     productbuild \
@@ -65,9 +65,9 @@ if [ "$SKIP_SIGN" = false ]; then
         MeshLib_signed.pkg
 else
     pkgbuild \
-        --root MeshLib.framework \
+        --root Library \
         --identifier com.MeshInspector.MeshLib \
-        --install-location /Library/Frameworks/MeshLib.framework \
+        --install-location /Library \
         MeshLib.pkg
 
     productbuild \

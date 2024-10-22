@@ -33,19 +33,18 @@ bundle_dylib() {
 }
 
 echo "Installing required brew pkgs"
-brew install dylibbundler jq
+#brew install dylibbundler jq
 
-if [ -d "./MeshLib.framework" ];
-  then rm -rf "./MeshLib.framework";
+if [ -d "./Library" ];
+  then rm -rf "./Library";
 fi
 
 cd ./build/Release
 cmake --install . --prefix=../..
 cd -
 
-
-MR_VERSION=$(ls ./MeshLib.framework/Versions/)
-MR_PREFIX="./MeshLib.framework/Versions/${MR_VERSION}"
+MR_VERSION=$(ls ./Library/Frameworks/MeshLib.framework/Versions/)
+MR_PREFIX="./Library/Frameworks/MeshLib.framework/Versions/${MR_VERSION}"
 
 echo "version: ${MR_VERSION}"
 echo "prefix: ${MR_PREFIX}"
@@ -56,11 +55,11 @@ cp -rL ./include "${MR_PREFIX}/"
 cp ./macos/Info.plist ./macos/Resources
 cp ./LICENSE ./macos/Resources
 
-mkdir "${MR_PREFIX}"/requirements/
+mkdir -p "${MR_PREFIX}"/requirements/
 cp ./requirements/macos.txt "${MR_PREFIX}"/requirements/
 cp ./requirements/distribution_python.txt "${MR_PREFIX}"/requirements/python.txt
 
-mkdir "${MR_PREFIX}"/share/
+mkdir -p "${MR_PREFIX}"/share/
 cp -r "$(brew --prefix)"/share/glib-2.0 "${MR_PREFIX}"/share
 
 echo "Embedded python: processing requirements"
@@ -93,7 +92,7 @@ echo "old: $PYTHON_PATH, new: $NEW_PYTHON_PATH"
 install_name_tool -change "$PYTHON_PATH" "$NEW_PYTHON_PATH" ./build/Release/bin/libMRMesh.dylib
 echo "Done"
 
-cd ./MeshLib.framework/Versions/
+cd ./Library/Frameworks/MeshLib.framework/Versions/
 ln -s "${MR_VERSION}" ./Current
 cd -
 

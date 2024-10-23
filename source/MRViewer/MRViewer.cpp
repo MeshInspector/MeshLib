@@ -1205,7 +1205,27 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
             }
             else
             {
+                for ( const auto& file : result.loadedFiles )
+                    recentFilesStore().storeFile( file );
+
+                if ( wasSceneEmpty )
                 {
+                    // add objects to empty scene without undo
+                    const auto children = result.scene->children();
+                    result.scene->removeAllChildren();
+                    for ( const auto& obj : children )
+                        SceneRoot::get().addChild( obj );
+
+                    if ( result.loadedFiles.size() == 1 )
+                    {
+                        // name the scene after the only open file
+                        // inclusion in recent files store and extension change to .mru are done inside of onSceneSaved
+                        onSceneSaved( result.loadedFiles.front() );
+                    }
+                }
+                else
+                {
+                    // add objects to not-empty scene with undo
                     assert( result.loadedFiles.size() >= 1 );
                     SCOPED_HISTORY( result.loadedFiles.size() == 1 ? "Open file" : "Open files" );
 
@@ -1215,26 +1235,6 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
                     {
                         AppendHistory<ChangeSceneAction>( "add obj", obj, ChangeSceneAction::Type::AddObject );
                         SceneRoot::get().addChild( obj );
-                    }
-                }
-
-                for ( const auto& file : result.loadedFiles )
-                    recentFilesStore().storeFile( file );
-
-                // if the user just added files to empty scene, do not suggest saving them on exit
-                if ( wasSceneEmpty )
-                {
-                    if ( result.loadedFiles.size() == 1 )
-                    {
-                        // name the scene after the only open file
-                        // inclusion in recent files store and extension change to .mru are done inside of onSceneSaved
-                        onSceneSaved( result.loadedFiles.front() );
-                    }
-                    else if ( globalHistoryStore_ )
-                    {
-                        // keep empty scene name
-                        globalHistoryStore_->setSavedState();
-                        makeTitleFromSceneRootPath(); // remove asterisk from window's header
                     }
                 }
             }

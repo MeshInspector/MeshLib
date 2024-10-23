@@ -49,6 +49,7 @@
     <ClInclude Include="MRMeshAttributesToUpdate.h" />
     <ClInclude Include="MRMeshDecimateCallbacks.h" />
     <ClInclude Include="MRMeshLoadSettings.h" />
+    <ClInclude Include="MRMeshMeshDistance.h" />
     <ClInclude Include="MRMeshOrPoints.h" />
     <ClInclude Include="MRAggregateFlow.h" />
     <ClInclude Include="MRBasinVolume.h" />
@@ -488,6 +489,7 @@
     <ClCompile Include="MRMeshCollidePrecise.cpp" />
     <ClCompile Include="MRMeshDecimateCallbacks.cpp" />
     <ClCompile Include="MRMeshExtrude.cpp" />
+    <ClCompile Include="MRMeshMeshDistance.cpp" />
     <ClCompile Include="MRMeshOrPoints.cpp" />
     <ClCompile Include="MRMeshReplicate.cpp" />
     <ClCompile Include="MRMeshSubdivideCallbacks.cpp" />

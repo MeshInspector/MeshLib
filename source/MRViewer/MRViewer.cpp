@@ -1188,51 +1188,58 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
     if ( filesList.empty() )
         return false;
 
-    const auto postProcess = [] ( const SceneLoad::SceneLoadResult& result )
+    const auto postProcess = [this] ( const SceneLoad::SceneLoadResult& result )
     {
         if ( result.scene )
         {
-            const auto childCount = result.scene->children().size();
-            const auto isSceneEmpty = SceneRoot::get().children().empty();
-            if ( !result.isSceneConstructed || ( childCount == 1 && isSceneEmpty ) )
+            const auto wasSceneEmpty = SceneRoot::get().children().empty();
+            if ( !result.isSceneConstructed )
             {
                 AppendHistory<SwapRootAction>( "Load Scene File" );
                 auto newRoot = result.scene;
                 std::swap( newRoot, SceneRoot::getSharedPtr() );
-                getViewerInstance().setSceneDirty();
+                setSceneDirty();
 
                 assert( result.loadedFiles.size() == 1 );
-                auto filePath = result.loadedFiles.front();
-                if ( !result.isSceneConstructed )
-                {
-                    getViewerInstance().onSceneSaved( filePath );
-                }
-                else
-                {
-                    // for constructed scenes, add original file path to the recent files' list and set a new scene extension afterward
-                    getViewerInstance().recentFilesStore().storeFile( filePath );
-                    getViewerInstance().onSceneSaved( filePath, false );
-                }
+                onSceneSaved( result.loadedFiles.front() );
             }
             else
             {
-                std::string historyName = childCount == 1 ? "Open file" : "Open files";
-                SCOPED_HISTORY( historyName );
-
-                const auto children = result.scene->children();
-                result.scene->removeAllChildren();
-                for ( const auto& obj : children )
                 {
-                    AppendHistory<ChangeSceneAction>( "Load File", obj, ChangeSceneAction::Type::AddObject );
-                    SceneRoot::get().addChild( obj );
+                    assert( result.loadedFiles.size() >= 1 );
+                    SCOPED_HISTORY( result.loadedFiles.size() == 1 ? "Open file" : "Open files" );
+
+                    const auto children = result.scene->children();
+                    result.scene->removeAllChildren();
+                    for ( const auto& obj : children )
+                    {
+                        AppendHistory<ChangeSceneAction>( "add obj", obj, ChangeSceneAction::Type::AddObject );
+                        SceneRoot::get().addChild( obj );
+                    }
                 }
 
-                auto& viewerInst = getViewerInstance();
                 for ( const auto& file : result.loadedFiles )
-                    viewerInst.recentFilesStore().storeFile( file );
+                    recentFilesStore().storeFile( file );
+
+                // if the user just added files to empty scene, do not suggest saving them on exit
+                if ( wasSceneEmpty )
+                {
+                    if ( result.loadedFiles.size() == 1 )
+                    {
+                        // name the scene after the only open file
+                        // inclusion in recent files store and extension change to .mru are done inside of onSceneSaved
+                        onSceneSaved( result.loadedFiles.front() );
+                    }
+                    else if ( globalHistoryStore_ )
+                    {
+                        // keep empty scene name
+                        globalHistoryStore_->setSavedState();
+                        makeTitleFromSceneRootPath(); // remove asterisk from window's header
+                    }
+                }
             }
 
-            getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
+            viewport().preciseFitDataToScreenBorder( { 0.9f } );
         }
         if ( !result.errorSummary.empty() )
             showModal( result.errorSummary, NotificationType::Error );

@@ -1195,7 +1195,8 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
             const auto wasSceneEmpty = SceneRoot::get().children().empty();
             if ( !result.isSceneConstructed )
             {
-                AppendHistory<SwapRootAction>( "Load Scene File" );
+                if ( !wasSceneEmpty )
+                    AppendHistory<SwapRootAction>( "Load Scene File" );
                 auto newRoot = result.scene;
                 std::swap( newRoot, SceneRoot::getSharedPtr() );
                 setSceneDirty();

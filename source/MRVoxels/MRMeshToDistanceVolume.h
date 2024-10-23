@@ -4,7 +4,6 @@
 #include "MRVoxelsVolume.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRMeshDistance.h"
-#include <cfloat>
 #include <memory>
 
 namespace MR

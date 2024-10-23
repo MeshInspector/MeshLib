@@ -4,6 +4,7 @@
 
 #include "MRMeshPart.h"
 #include "MRSignDetectionMode.h"
+#include <cfloat>
 #include <functional>
 #include <optional>
 

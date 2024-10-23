@@ -7,7 +7,7 @@
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRMeshCollide.h"
-#include "MRMesh/MRMeshDistance.h"
+#include "MRMesh/MRMeshMeshDistance.h"
 #include "MRMesh/MRMeshRelax.h"
 #include "MRMesh/MRSurfacePath.h"
 #include "MRMesh/MRGeodesicPath.h"

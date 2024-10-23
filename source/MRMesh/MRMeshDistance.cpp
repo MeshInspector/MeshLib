@@ -14,14 +14,14 @@
 namespace MR
 {
 
-MeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float upDistLimitSq )
+MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float upDistLimitSq )
 {
     MR_TIMER;
 
     const AABBTree& aTree = a.mesh.getAABBTree();
     const AABBTree& bTree = b.mesh.getAABBTree();
 
-    MeshDistanceResult res;
+    MeshMeshDistanceResult res;
     res.distSq = upDistLimitSq;
     if ( aTree.nodes().empty() || bTree.nodes().empty() )
     {
@@ -207,7 +207,7 @@ InternalZoneWithProjections findSignedDistanceOneWay( const MeshPart & a, const 
     return res;
 }
 
-MeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshPart & b, const AffineXf3f* rigidB2A, float upDistLimitSq )
+MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshPart & b, const AffineXf3f* rigidB2A, float upDistLimitSq )
 {
     MR_TIMER;
 
@@ -223,7 +223,7 @@ MeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshPart 
     auto zoneAndDistancesAB = findSignedDistanceOneWay( a, b, collisions, false, rigidB2A );
     auto zoneAndDistancesBA = findSignedDistanceOneWay( a, b, collisions, true, rigidB2A );
 
-    MeshSignedDistanceResult signedRes;
+    MeshMeshSignedDistanceResult signedRes;
     signedRes.signedDist = FLT_MAX;
     auto triZoneA = getInnerFaces( a.mesh.topology, zoneAndDistancesAB.vertBS );
     auto triZoneB = getInnerFaces( b.mesh.topology, zoneAndDistancesBA.vertBS );
@@ -261,7 +261,7 @@ MeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshPart 
             signedRes.signedDist = dist;
         }
     }
-    return (signedRes.signedDist > 0.0f) ? MeshSignedDistanceResult{res.a, res.b, 0.0f} : signedRes;
+    return (signedRes.signedDist > 0.0f) ? MeshMeshSignedDistanceResult{res.a, res.b, 0.0f} : signedRes;
 }
 
 MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )

@@ -261,7 +261,7 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
             signedRes.signedDist = dist;
         }
     }
-    return (signedRes.signedDist > 0.0f) ? MeshSignedDistanceResult{res.a, res.b, 0.0f} : signedRes;
+    return (signedRes.signedDist > 0.0f) ? MeshMeshSignedDistanceResult{res.a, res.b, 0.0f} : signedRes;
 }
 
 MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )

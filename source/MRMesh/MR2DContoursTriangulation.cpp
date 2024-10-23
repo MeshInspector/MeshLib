@@ -121,7 +121,7 @@ public:
         bool abortWhenIntersect = false,
         WindingMode mode = WindingMode::NonZero,
         bool needOutline = false, // if set do not do real triangulation, just marks inside faces as present
-        bool allowMerge = true,
+        bool allowMerge = true, // one can disable merge for identical vertices, merge is useful on symbol contours
         std::vector<EdgePath>* outBoundaries = nullptr // optional out EdgePaths that corresponds to initial contours
         );
 

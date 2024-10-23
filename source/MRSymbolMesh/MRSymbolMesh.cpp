@@ -256,6 +256,9 @@ Expected<Contours2f> createSymbolContours( const SymbolMeshParams& params )
             c.push_back( c.front() );
     }
 
+    if ( decomposer.contours.empty() )
+        return {};
+
     auto res = PlanarTriangulation::getOutline( std::move( decomposer.contours ), { .baseParams = {.allowMerge = true,.innerType = PlanarTriangulation::WindingMode::NonZero} } );
 
     if ( params.symbolsThicknessOffsetModifier != 0.0f )

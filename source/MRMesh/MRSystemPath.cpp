@@ -77,7 +77,7 @@ std::filesystem::path defaultDirectory( SystemPath::Directory dir )
             return installDir / "share" / MR_PROJECT_NAME / "fonts";
         case Directory::Plugins:
         case Directory::PythonModules:
-            return installDir / "lib" / MR_PROJECT_NAME;
+            return libDir;
         case Directory::Count:
             MR_UNREACHABLE
     }

@@ -12,6 +12,7 @@
 #include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRBuffer.h"
+#include "MRMesh/MROffsetContours.h"
 #include "MRPch/MRSpdlog.h"
 
 #include <ft2build.h>
@@ -103,7 +104,7 @@ void OutlineDecomposer::clearLast()
     }
 }
 
-Expected<Contours2d> createSymbolContours( const SymbolMeshParams& params )
+Expected<Contours2f> createSymbolContours( const SymbolMeshParams& params )
 {
     MR_TIMER
 
@@ -255,49 +256,12 @@ Expected<Contours2d> createSymbolContours( const SymbolMeshParams& params )
             c.push_back( c.front() );
     }
 
+    auto res = PlanarTriangulation::getOutline( std::move( decomposer.contours ), { .baseParams = {.allowMerge = true,.innerType = PlanarTriangulation::WindingMode::NonZero} } );
+
     if ( params.symbolsThicknessOffsetModifier != 0.0f )
-    {
-        auto size = box.size();
-        auto absOffset = size.y / double( numSymbols.y ) * params.symbolsThicknessOffsetModifier;
-        Polyline2 polyline;
-        polyline.topology.buildFromContours( decomposer.contours,
-            [&points = polyline.points]( size_t sz )
-        {
-            points.reserve( sz );
-        },
-            [&points = polyline.points]( const Vector2d& p )
-        {
-            points.emplace_back( float( p.x ), float( p.y ) );
-            return points.backId();
-        }
-        );
-        ContourToDistanceMapParams dmParams;
-        dmParams.pixelSize = Vector2f::diagonal( float( size.y ) / float( numSymbols.y ) / 72.0f );
-        dmParams.orgPoint = Vector2f( box.min );
-        dmParams.resolution.x = int( std::ceil( size.x / dmParams.pixelSize.x ) ) + 1;
-        dmParams.resolution.y = int( std::ceil( size.y / dmParams.pixelSize.y ) ) + 1;
-        dmParams.withSign = true;
-        if ( absOffset > 0.0f )
-        {
-            int numPixelsOffset = int( std::ceil( absOffset / dmParams.pixelSize.x ) + 2 );
-            dmParams.orgPoint -= Vector2f::diagonal( numPixelsOffset * dmParams.pixelSize.x );
-            dmParams.resolution += Vector2i::diagonal( numPixelsOffset * 2 );
-        }
+        res = offsetContours( res, float( box.size().y / double( numSymbols.y ) * params.symbolsThicknessOffsetModifier ) );
 
-        auto distanceMap = distanceMapFromContours( polyline, dmParams );
-        auto offsettedContours = distanceMapTo2DIsoPolyline( distanceMap, dmParams, float( absOffset ) ).contours();
-        decomposer.contours.resize( offsettedContours.size() );
-        for ( int c = 0; c < offsettedContours.size(); ++c )
-        {
-            auto& doubleCount = decomposer.contours[c];
-            const auto& floatCount = offsettedContours[c];
-            doubleCount.resize( floatCount.size() );
-            for ( int i = 0; i < floatCount.size(); ++i )
-                doubleCount[i] = Vector2d( floatCount[i] );
-        }
-    }
-
-    return std::move( decomposer.contours );
+    return res;
 }
 
 Expected<Mesh> triangulateSymbolContours( const SymbolMeshParams& params )

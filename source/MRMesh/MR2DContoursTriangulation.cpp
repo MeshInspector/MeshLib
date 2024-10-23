@@ -120,8 +120,8 @@ public:
         const HolesVertIds* holesVertId = nullptr,
         bool abortWhenIntersect = false,
         WindingMode mode = WindingMode::NonZero,
-        bool needOutline = false, // if set do not do real triangulation, just marks inside faces as present,
-                                 // also does not merge same vertices
+        bool needOutline = false, // if set do not do real triangulation, just marks inside faces as present
+        bool allowMerge = true, // one can disable merge for identical vertices, merge is useful on symbol contours
         std::vector<EdgePath>* outBoundaries = nullptr // optional out EdgePaths that corresponds to initial contours
         );
 
@@ -145,6 +145,7 @@ private:
 // INITIALIZATION CLASS BLOCK
     // if set only marks inside faces as present (for further finding outline)
     bool needOutline_ = false;
+    bool allowMerge_ = true;
     // if set fails on first found intersection
     bool abortWhenIntersect_ = false;
     // optional out EdgePaths that corresponds to initial contours
@@ -282,8 +283,10 @@ SweepLineQueue::SweepLineQueue(
     bool abortWhenIntersect,
     WindingMode mode,
     bool needOutline,
+    bool allowMerge,
     std::vector<EdgePath>* outBoundaries ) :
     needOutline_{ needOutline },
+    allowMerge_{ allowMerge },
     abortWhenIntersect_{ abortWhenIntersect },
     outBoundaries_{ outBoundaries },
     windingMode_{ mode }
@@ -960,7 +963,7 @@ void SweepLineQueue::mergeSamePoints_( const HolesVertIds* holesVertId )
         } );
     }
 
-    if ( needOutline_ )
+    if ( !allowMerge_ )
     {
         windingInfo_.resize( tp_.undirectedEdgeSize() );
         return;
@@ -1265,10 +1268,9 @@ HolesVertIds findHoleVertIdsByHoleEdges( const MeshTopology& tp, const std::vect
     return res;
 }
 
-Mesh getOutlineMesh( const Contours2f& contours, IntersectionsMap* interMap )
+Mesh getOutlineMesh( const Contours2d& contsd, IntersectionsMap* interMap /*= nullptr */, const BaseOutlineParameters& params )
 {
-    const auto contsd = copyContours<Contours2d>( contours );
-    SweepLineQueue triangulator( contsd, nullptr, false, WindingMode::Negative, true );
+    SweepLineQueue triangulator( contsd, nullptr, false, params.innerType, true, params.allowMerge );
 
     if ( interMap )
         interMap->shift = triangulator.vertSize();
@@ -1281,10 +1283,16 @@ Mesh getOutlineMesh( const Contours2f& contours, IntersectionsMap* interMap )
     return *mesh;
 }
 
-Contours2f getOutline( const Contours2f& contours, ContoursIdMap* indicesMap )
+Mesh getOutlineMesh( const Contours2f& contours, IntersectionsMap* interMap /*= nullptr */, const BaseOutlineParameters& params )
+{
+    const auto contsd = copyContours<Contours2d>( contours );
+    return getOutlineMesh( contsd, interMap, params );
+}
+
+Contours2f getOutline( const Contours2d& contours, const OutlineParameters& params )
 {
     IntersectionsMap interMap;
-    auto mesh = getOutlineMesh( contours, indicesMap ? &interMap : nullptr );
+    auto mesh = getOutlineMesh( contours, params.indicesMap ? &interMap : nullptr, params.baseParams );
 
     // `getValidFaces` important to exclude lone boundaries
     auto bourndaries = findRightBoundary( mesh.topology, &mesh.topology.getValidFaces() );
@@ -1295,32 +1303,38 @@ Contours2f getOutline( const Contours2f& contours, ContoursIdMap* indicesMap )
         const auto& loop = bourndaries[i];
         res.push_back( {} );
         res.back().reserve( loop.size() + 1 );
-        if ( indicesMap )
+        if ( params.indicesMap )
         {
-            indicesMap->push_back( {} );
-            indicesMap->back().reserve( loop.size() + 1 );
+            params.indicesMap->push_back( {} );
+            params.indicesMap->back().reserve( loop.size() + 1 );
         }
 
         for ( auto e : loop )
         {
             VertId v = mesh.topology.org( e );
             res.back().push_back( to2dim( mesh.points[v] ) );
-            if ( indicesMap )
+            if ( params.indicesMap )
             {
                 if ( v < interMap.shift )
-                    indicesMap->back().push_back( { .lOrg = v } );
+                    params.indicesMap->back().push_back( { .lOrg = v } );
                 else
                 {
                     const auto& inter = interMap.map[int( v ) - interMap.shift];
-                    indicesMap->back().push_back( inter );
+                    params.indicesMap->back().push_back( inter );
                 }
             }
         }
         res.back().push_back( to2dim( mesh.destPnt( loop.back() ) ) );
-        if ( indicesMap )
-            indicesMap->back().push_back( indicesMap->back().front() );
+        if ( params.indicesMap )
+            params.indicesMap->back().push_back( params.indicesMap->back().front() );
     }
     return res;
+}
+
+Contours2f getOutline( const Contours2f& contours, const OutlineParameters& params )
+{
+    const auto contsd = copyContours<Contours2d>( contours );
+    return getOutline( contsd, params );
 }
 
 Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVertsIds /*= nullptr*/ )
@@ -1346,7 +1360,7 @@ std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, con
 {
     if ( contours.empty() )
         return Mesh();
-    SweepLineQueue triangulator( contours, holeVertsIds, true, WindingMode::NonZero, false, outBoundaries );
+    SweepLineQueue triangulator( contours, holeVertsIds, true, WindingMode::NonZero, false, true, outBoundaries );
     return triangulator.run();
 }
 

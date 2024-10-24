@@ -480,7 +480,8 @@ Color Palette::getColor( float val )
 {
     assert( val >= 0.f && val <= 1.f );
 
-    std::vector<Color>& colors = texture_.pixels;
+    // only the first row represents the actual palette colours; see `Palette::updateDiscretizatedColors_' for more info
+    const std::span colors { texture_.pixels.begin(), texture_.pixels.begin() + texture_.resolution.x };
     if ( val == 1.f )
         return colors.back();
 

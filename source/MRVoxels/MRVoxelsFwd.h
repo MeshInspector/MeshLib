@@ -41,3 +41,5 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), VoxelsVolume,
 )
 
 } // namespace MR
+
+#define IMATH_HALF_NO_LOOKUP_TABLE // fix for unresolved external symbol "imath_half_to_float_table"

@@ -1,17 +1,21 @@
 #include "MRVDBConversions.h"
 
 #include "MRVDBFloatGrid.h"
+#include "MRVDBProgressInterrupter.h"
+#include "MRVoxelsVolume.h"
+
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshBuilder.h"
 #include "MRMesh/MRTimer.h"
-#include "MRVoxelsVolume.h"
-#include "MROpenVDB.h"
 #include "MRMesh/MRFastWindingNumber.h"
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRRegionBoundary.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRTriMesh.h"
-#include "MRVDBProgressInterrupter.h"
+
+#include <openvdb/tools/Dense.h>
+#include <openvdb/tools/MeshToVolume.h>
+#include <openvdb/tools/VolumeToMesh.h>
 
 namespace MR
 {

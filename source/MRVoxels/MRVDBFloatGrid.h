@@ -1,10 +1,16 @@
 #pragma once
 #include "MRVoxelsFwd.h"
-// this header includes the whole OpenVDB, so please include it from .cpp files only
-#include "MRMesh/MRVector3.h"
 
-#include "MROpenVDB.h"
+#include "MRMesh/MRVector3.h"
 #include "MRPch/MRBindingMacros.h"
+
+#include <openvdb/Grid.h>
+
+namespace openvdb
+{
+    using FloatTree = tree::Tree4<float>::Type;
+    using FloatGrid = Grid<FloatTree>;
+}
 
 namespace MR
 {

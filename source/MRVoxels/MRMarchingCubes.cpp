@@ -1,6 +1,6 @@
 #include "MRMarchingCubes.h"
 #include "MRVoxelsVolumeCachingAccessor.h"
-#include "MROpenVDB.h"
+
 #include "MRMesh/MRSeparationPoint.h"
 #include "MRMesh/MRIsNaN.h"
 #include "MRMesh/MRMesh.h"

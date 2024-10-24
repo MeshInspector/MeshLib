@@ -1192,9 +1192,9 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
     {
         if ( result.scene )
         {
-            // whether both the scene and undo/redo were empty
-            const auto wasCompletelyEmpty = globalHistoryStore_ && !globalHistoryStore_->isSceneModified()
-                && SceneRoot::get().children().empty();
+            const auto wasCompletelyEmpty =
+                globalHistoryStore_ && globalHistoryStore_->getStackPointer() == 0 // there are no undo actions
+                && SceneRoot::get().children().empty(); // and the scene is empty
 
             if ( !result.isSceneConstructed )
             {

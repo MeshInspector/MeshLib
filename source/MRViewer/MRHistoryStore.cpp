@@ -2,7 +2,10 @@
 #include "MRViewer.h"
 #include "MRMesh/MRCombinedHistoryAction.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRSceneRoot.h"
 #include <cassert>
+#include <filesystem>
 
 namespace MR
 {
@@ -44,10 +47,24 @@ void HistoryStore::appendAction( const std::shared_ptr<HistoryAction>& action )
     {
         stack_.erase( stack_.begin(), stack_.begin() + numActionsToDelete );
         firstRedoIndex_ -= numActionsToDelete;
-        savedSceneIndex_ -= numActionsToDelete;
+        for ( auto& [_, savedSceneId] : savedSceneIndex_ )
+            savedSceneId -= numActionsToDelete;
     }
 
     changedSignal( *this, ChangeType::AppendAction );
+}
+
+bool HistoryStore::isSceneModified() const
+{
+    auto it = savedSceneIndex_.find( utf8string( SceneRoot::getScenePath() ) );
+    if ( it == savedSceneIndex_.end() )
+        return firstRedoIndex_ != 0;
+    return firstRedoIndex_ != it->second;
+}
+
+void HistoryStore::setSavedState()
+{
+    savedSceneIndex_[utf8string( SceneRoot::getScenePath() )] = firstRedoIndex_;
 }
 
 void HistoryStore::clear()
@@ -62,8 +79,14 @@ void HistoryStore::clear()
 
 void HistoryStore::filterStack( HistoryStackFilter filteringCondition, bool deepFiltering /*= true*/ )
 {
-    const auto [needSignal, redoDecrease] = filterHistoryActionsVector( stack_, filteringCondition, firstRedoIndex_, deepFiltering );
-    firstRedoIndex_ -= redoDecrease;
+    auto cpyFirstRedoId = firstRedoIndex_;
+    auto cpySceneSavedIdMap = savedSceneIndex_;
+    bool needSignal = filterHistoryActionsVector( stack_, filteringCondition, deepFiltering, [&] ( size_t id )
+    {
+        if ( id < cpyFirstRedoId ) --firstRedoIndex_;
+        for ( const auto& [name, sceneSavedId] : cpySceneSavedIdMap )
+            if ( id < sceneSavedId ) --savedSceneIndex_[name];
+    } );
     if ( needSignal )
         changedSignal( *this, ChangeType::Filter );
 }

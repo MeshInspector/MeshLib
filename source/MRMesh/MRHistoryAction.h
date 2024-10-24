@@ -32,11 +32,11 @@ using HistoryActionsVector = std::vector<std::shared_ptr<HistoryAction>>;
 
 /**
  * \brief Remove actions from history actions vector that match the condition
- * \param firstRedoIndex - set redo index for calculate how many actions removed before it
  * \param deepFiltering - filter actions into combined actions
+ * \param onFilter - callback that is called when element is filtered from the stack with id of filtered element as argument
  * \return pair (anything removed, how many removed before firstRedoIndex)
  */
-MRMESH_API std::pair<bool, int> filterHistoryActionsVector( HistoryActionsVector& historyVector,
-    HistoryStackFilter filteringCondition, size_t firstRedoIndex = 0, bool deepFiltering = true );
+MRMESH_API bool filterHistoryActionsVector( HistoryActionsVector& historyVector,
+    HistoryStackFilter filteringCondition, bool deepFiltering = true, std::function<void( size_t id )> onFilterCb = {} );
 
 } //namespace MR

@@ -30,7 +30,7 @@ void CombinedHistoryAction::action( HistoryAction::Type type )
 
 bool CombinedHistoryAction::filter( HistoryStackFilter filteringCondition )
 {
-    return filterHistoryActionsVector( actions_, filteringCondition ).first;
+    return filterHistoryActionsVector( actions_, filteringCondition );
 }
 
 size_t CombinedHistoryAction::heapBytes() const

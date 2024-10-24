@@ -212,7 +212,7 @@ public:
   ImGuiWindow* getLastFocusedPlugin() const { return prevFrameFocusPlugin_; };
 
   // opens Error / Warning / Info modal window with message text
-  MRVIEWER_API void showModalMessage( const std::string& msg, NotificationType msgType );
+  MRVIEWER_API virtual void showModalMessage( const std::string& msg, NotificationType msgType );
 
   MRVIEWER_API virtual std::filesystem::path getMenuFontPath() const;
 

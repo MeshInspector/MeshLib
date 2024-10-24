@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  VCPKG-VERSION: '2024.07.12'
+  VCPKG-VERSION: '2024.10.21'
   CUDA-VERSION: '11.4.2.47141'
   CUDA-MAJOR: '11'
   CUDA-MINOR: '4'

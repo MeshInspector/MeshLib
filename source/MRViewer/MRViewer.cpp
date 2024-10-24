@@ -1192,19 +1192,16 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
     {
         if ( result.scene )
         {
-            const auto wasCompletelyEmpty =
-                globalHistoryStore_ && globalHistoryStore_->getStackPointer() == 0 // there are no undo actions
-                && SceneRoot::get().children().empty(); // and the scene is empty
+            const bool wasEmptyScene = SceneRoot::get().children().empty();
+            const bool wasEmptyUndo = globalHistoryStore_ && globalHistoryStore_->getStackPointer() == 0;
 
-            if ( !result.isSceneConstructed )
+            if ( result.loadedFiles.size() == 1 && ( !result.isSceneConstructed || wasEmptyScene ) )
             {
-                // the scene is takes as is from a single file, replace the current scene with it
-                AppendHistory<SwapRootAction>( "Load Scene " + commonFilesName( result.loadedFiles ) );
+                // the scene is taken as is from a single file, replace the current scene with it
+                AppendHistory<SwapRootAction>( "Open " + commonFilesName( result.loadedFiles ) );
                 auto newRoot = result.scene;
                 std::swap( newRoot, SceneRoot::getSharedPtr() );
                 setSceneDirty();
-
-                assert ( result.loadedFiles.size() == 1 );
                 onSceneSaved( result.loadedFiles.front() );
             }
             else
@@ -1222,14 +1219,10 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
                     AppendHistory<ChangeSceneAction>( "add obj", obj, ChangeSceneAction::Type::AddObject );
                     SceneRoot::get().addChild( obj );
                 }
-
-                // name the scene after the only open file
-                if ( wasCompletelyEmpty && result.loadedFiles.size() == 1 )
-                    onSceneSaved( result.loadedFiles.front(), false ); // false since we already called recentFilesStore().storeFile( file );
             }
 
             // if the original state was empty, avoid user confusion when they undo opening and see empty modified scene
-            if ( wasCompletelyEmpty && globalHistoryStore_ )
+            if ( wasEmptyScene && wasEmptyUndo && globalHistoryStore_ )
             {
                 globalHistoryStore_->clear();
                 globalHistoryStore_->setSavedState();

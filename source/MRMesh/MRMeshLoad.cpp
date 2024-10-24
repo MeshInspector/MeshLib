@@ -78,27 +78,26 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
 {
     MR_TIMER
 
-    auto bufOrExpect = readCharBuffer( in );
-
-    if ( !bufOrExpect )
-        return unexpected( std::move( bufOrExpect.error() ) );
-
-    auto& buf = bufOrExpect.value();
-
-    auto splitLines = splitByLines( buf.data(), buf.size() );
-    in.seekg( 0);
     std::string header;
     in >> header;
     if ( !in || header != "OFF" )
         return unexpected( std::string( "File is not in OFF-format" ) );
+    // some options are not supported yet: http://www.geomview.org/docs/html/OFF.html
 
     int numPoints, numPolygons, numUnused;
     in >> numPoints >> numPolygons >> numUnused;
     if ( !in || numPoints <= 0 || numPolygons <= 0 || numUnused != 0 )
         return unexpected( std::string( "Unsupported OFF-format" ) );
 
-    size_t strHeader = 2;
-    for ( size_t i = 2; i < splitLines.size(); i++ )
+    auto bufOrExpect = readCharBuffer( in );
+    if ( !bufOrExpect )
+        return unexpected( std::move( bufOrExpect.error() ) );
+    auto& buf = bufOrExpect.value();
+
+    auto splitLines = splitByLines( buf.data(), buf.size() );
+
+    size_t strHeader = 0;
+    for ( size_t i = 0; i < splitLines.size(); i++ )
     {
         if ( splitLines[i + 1] - splitLines[i] > 2 )
         {
@@ -108,7 +107,6 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
     }
     
     size_t strBorder = 0;
-
     for ( size_t i = numPoints + strHeader; i < splitLines.size(); i++ )
     {
         if ( splitLines[i + 1] - splitLines[i] > 2 )

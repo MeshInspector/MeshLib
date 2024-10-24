@@ -5,6 +5,10 @@
 #include <cfloat>
 #include <optional>
 
+#ifdef MR_PARSING_FOR_PB11_BINDINGS
+#include "MRMesh/MRIntersectionPrecomputes2.h"
+#endif
+
 namespace MR
 {
 /// \addtogroup AABBTreeGroup

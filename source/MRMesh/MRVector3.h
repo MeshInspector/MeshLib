@@ -68,7 +68,7 @@ struct Vector3
     std::pair<Vector3, Vector3> perpendicular() const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> );
 
     /// returns this vector transformed by xf if it is
-    Vector3 transformed( const AffineXf3<T>* xf ) const MR_REQUIRES_IF_SUPPORTED( !std::same_as<T, bool> )
+    Vector3 transformed( const AffineXf3<T>* xf ) const MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> )
     {
         return xf ? ( *xf )( *this ) : *this;
     }

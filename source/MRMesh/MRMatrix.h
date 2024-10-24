@@ -50,7 +50,7 @@ public:
         {
             for( size_t c = 0; c < dims_.x; c++ )
             {
-                res(c, r) = data_[r][c];
+                res(c, r) = (*this)(r, c);
             }
         }
         return res;

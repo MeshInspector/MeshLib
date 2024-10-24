@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include <mutex>
 
 namespace MR
@@ -15,7 +16,7 @@ struct MutexOwner
     MutexOwner& operator =( const MutexOwner& ) noexcept { return *this; }
     MutexOwner& operator =( MutexOwner&& ) noexcept { return *this; }
 
-    std::mutex m;
+    MR_BIND_IGNORE std::mutex m;
 };
 
 } //namespace MR

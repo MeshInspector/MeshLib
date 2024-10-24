@@ -1196,7 +1196,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
             if ( !result.isSceneConstructed )
             {
                 if ( !wasSceneEmpty )
-                    AppendHistory<SwapRootAction>( "Load Scene File" );
+                    AppendHistory<SwapRootAction>( "Load Scene " + commonFilesName( result.loadedFiles ) );
                 auto newRoot = result.scene;
                 std::swap( newRoot, SceneRoot::getSharedPtr() );
                 setSceneDirty();
@@ -1228,7 +1228,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
                 {
                     // add objects to not-empty scene with undo
                     assert( result.loadedFiles.size() >= 1 );
-                    SCOPED_HISTORY( result.loadedFiles.size() == 1 ? "Open file" : "Open files" );
+                    SCOPED_HISTORY( "Open " + commonFilesName( result.loadedFiles ) );
 
                     const auto children = result.scene->children();
                     result.scene->removeAllChildren();

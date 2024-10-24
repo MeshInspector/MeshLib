@@ -19,6 +19,9 @@
 #include "MRPch/MRJson.h"
 #include "MRPch/MRAsyncLaunchType.h"
 #include "MRPch/MRFmt.h"
+
+#include <openvdb/tools/ValueTransformer.h>
+
 #include <filesystem>
 #include <thread>
 

@@ -65,7 +65,6 @@
     <ClInclude Include="MRMoveMeshToVoxelMaxDeriv.h" />
     <ClInclude Include="MRObjectVoxels.h" />
     <ClInclude Include="MROffset.h" />
-    <ClInclude Include="MROpenVDB.h" />
     <ClInclude Include="MROpenVDBHelper.h" />
     <ClInclude Include="MRPartialOffset.h" />
     <ClInclude Include="MRPointsToDistanceVolume.h" />

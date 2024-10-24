@@ -9,6 +9,9 @@
 #include "MRVDBProgressInterrupter.h"
 #include "MRMesh/MRBox.h"
 
+#include <openvdb/tools/Composite.h>
+#include <openvdb/tools/GridTransformer.h>
+
 namespace MR
 {
 

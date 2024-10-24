@@ -3,7 +3,9 @@
 #include "MRVoxelsFwd.h"
 
 #include "MRMesh/MRProgressCallback.h"
+
 #include <openvdb/util/NullInterrupter.h>
+
 #include <algorithm>
 #include <thread>
 

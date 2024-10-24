@@ -1192,52 +1192,48 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
     {
         if ( result.scene )
         {
-            const auto wasSceneEmpty = SceneRoot::get().children().empty();
+            // whether both the scene and undo/redo were empty
+            const auto wasCompletelyEmpty = globalHistoryStore_ && !globalHistoryStore_->isSceneModified()
+                && SceneRoot::get().children().empty();
+
             if ( !result.isSceneConstructed )
             {
-                if ( !wasSceneEmpty )
-                    AppendHistory<SwapRootAction>( "Load Scene " + commonFilesName( result.loadedFiles ) );
+                // the scene is takes as is from a single file, replace the current scene with it
+                AppendHistory<SwapRootAction>( "Load Scene " + commonFilesName( result.loadedFiles ) );
                 auto newRoot = result.scene;
                 std::swap( newRoot, SceneRoot::getSharedPtr() );
                 setSceneDirty();
 
-                assert( result.loadedFiles.size() == 1 );
+                assert ( result.loadedFiles.size() == 1 );
                 onSceneSaved( result.loadedFiles.front() );
             }
             else
             {
+                // not-scene file was open, or several scenes were open, append them to the current scene
                 for ( const auto& file : result.loadedFiles )
                     recentFilesStore().storeFile( file );
 
-                if ( wasSceneEmpty )
-                {
-                    // add objects to empty scene without undo
-                    const auto children = result.scene->children();
-                    result.scene->removeAllChildren();
-                    for ( const auto& obj : children )
-                        SceneRoot::get().addChild( obj );
+                SCOPED_HISTORY( "Open " + commonFilesName( result.loadedFiles ) );
 
-                    if ( result.loadedFiles.size() == 1 )
-                    {
-                        // name the scene after the only open file
-                        // inclusion in recent files store and extension change to .mru are done inside of onSceneSaved
-                        onSceneSaved( result.loadedFiles.front() );
-                    }
-                }
-                else
+                const auto children = result.scene->children();
+                result.scene->removeAllChildren();
+                for ( const auto& obj : children )
                 {
-                    // add objects to not-empty scene with undo
-                    assert( result.loadedFiles.size() >= 1 );
-                    SCOPED_HISTORY( "Open " + commonFilesName( result.loadedFiles ) );
-
-                    const auto children = result.scene->children();
-                    result.scene->removeAllChildren();
-                    for ( const auto& obj : children )
-                    {
-                        AppendHistory<ChangeSceneAction>( "add obj", obj, ChangeSceneAction::Type::AddObject );
-                        SceneRoot::get().addChild( obj );
-                    }
+                    AppendHistory<ChangeSceneAction>( "add obj", obj, ChangeSceneAction::Type::AddObject );
+                    SceneRoot::get().addChild( obj );
                 }
+
+                // name the scene after the only open file
+                if ( wasCompletelyEmpty && result.loadedFiles.size() == 1 )
+                    onSceneSaved( result.loadedFiles.front(), false ); // false since we already called recentFilesStore().storeFile( file );
+            }
+
+            // if the original state was empty, avoid user confusion when they undo opening and see empty modified scene
+            if ( wasCompletelyEmpty && globalHistoryStore_ )
+            {
+                globalHistoryStore_->clear();
+                globalHistoryStore_->setSavedState();
+                makeTitleFromSceneRootPath();
             }
 
             viewport().preciseFitDataToScreenBorder( { 0.9f } );

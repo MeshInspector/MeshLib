@@ -54,6 +54,7 @@ void HistoryStore::clear()
 {
     if ( stack_.empty() )
         return;
+    spdlog::info( "History store clear" );
     stack_.clear();
     firstRedoIndex_ = 0;
     changedSignal( *this, ChangeType::Clear );

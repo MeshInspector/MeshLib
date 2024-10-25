@@ -12,8 +12,10 @@
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRJson.h"
-#include <string>
+
 #include <fstream>
+#include <span>
+#include <string>
 
 namespace MR
 {

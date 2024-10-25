@@ -9,6 +9,42 @@ namespace MR.DotNet.Test
     internal class ICPTests
     {
         [Test]
+        public void TestMultiwayICP()
+        {            
+            int inputNum = 2;
+            List<MeshOrPointsXf> inputs = new List<MeshOrPointsXf>(2);
+            Box3f maxBBox = new Box3f();
+
+            inputs.Add( new MeshOrPointsXf(Mesh.MakeSphere(1.0f, 1000), new AffineXf3f()));
+            Box3f bbox = inputs[0].obj.BoundingBox;
+            if (!maxBBox.Valid() || bbox.Volume() > maxBBox.Volume())
+                maxBBox = bbox;
+
+            inputs.Add(new MeshOrPointsXf(Mesh.MakeSphere(1.0f, 1000), new AffineXf3f(Matrix3f.Rotation(Vector3f.PlusZ(), 0.1f))));
+            bbox = inputs[1].obj.BoundingBox;
+            if (!maxBBox.Valid() || bbox.Volume() > maxBBox.Volume())
+                maxBBox = bbox;
+
+            MultiwayICPSamplingParameters samplingParams = new MultiwayICPSamplingParameters();
+            samplingParams.samplingVoxelSize = maxBBox.Diagonal() * 0.03f;
+
+            MultiwayICP icp = new MultiwayICP(inputs, samplingParams);
+            ICPProperties iCPProperties = new ICPProperties();
+            icp.SetParams(iCPProperties);
+            icp.UpdateAllPointPairs();
+
+            Assert.That(icp.GetNumActivePairs(), Is.EqualTo(1748));
+            Assert.That(icp.GetNumSamples(), Is.EqualTo(1748));
+            Assert.That(icp.GetMeanSqDistToPoint(), Is.EqualTo(0.00254).Within(1e-5));
+
+            Console.WriteLine("Calculating transformations...");
+            var xfs = icp.CalculateTransformations();
+            Assert.That(icp.GetNumActivePairs(), Is.EqualTo(1748));
+            Assert.That(icp.GetNumSamples(), Is.EqualTo(1748));
+            Assert.That(icp.GetMeanSqDistToPoint(), Is.EqualTo(0.00226).Within(1e-5));
+        }
+
+        [Test]
         public void TestICP()
         {
             var torusRef = Mesh.MakeTorus(2, 1, 32, 32);
@@ -18,15 +54,10 @@ namespace MR.DotNet.Test
             var trans = new Vector3f(0.0f, 0.2f, 0.105f);
             var xf = new AffineXf3f(Matrix3f.Rotation(axis, 0.2f), trans);
 
-            MeshOrPointsXf flt = new MeshOrPointsXf();
-            flt.obj = torusMove;
-            flt.xf = xf;
+            MeshOrPointsXf flt = new MeshOrPointsXf(torusMove, xf );
+            MeshOrPointsXf refer = new MeshOrPointsXf( torusRef, new AffineXf3f());
 
-            MeshOrPointsXf refer = new MeshOrPointsXf();
-            refer.xf = new AffineXf3f();
-            refer.obj = torusRef;
-
-            var icp = new ICP(flt, refer, torusMove.ValidPoints as BitSet, torusRef.ValidPoints as BitSet );
+            var icp = new ICP(flt, refer, torusMove.ValidPoints as BitSet, torusRef.ValidPoints as BitSet);
 
             var newXf = icp.CalculateTransformation();
             Console.WriteLine(icp.GetStatusInfo());

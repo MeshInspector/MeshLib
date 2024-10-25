@@ -35,7 +35,7 @@ f.write('\t\t</version>\n')
 
 f.write('\t\t<authors>AMV Consulting</authors>\n')
 f.write('\t\t<owners>AMV Consulting</owners>\n')
-f.write('\t\t<projectUrl>https://meshinspector.com</projectUrl>\n')
+f.write('\t\t<projectUrl>https://meshlib.io</projectUrl>\n')
 f.write('\t\t<description>Mesh processing library</description>\n')
 
 f.write('\t\t<releaseNotes>https://github.com/MeshInspector/MeshLib/releases</releaseNotes>\n')
@@ -69,9 +69,6 @@ for address, dirs, files in folder:
 			f.write('\t\t<file src="./source/x64/Release/')
 			f.write(file)
 			f.write('" target="content/"></file>\n')
-			#f.write('\t\t<file src="./source/x64/Release/')
-			#f.write(file)
-			#f.write('" target="runtimes/win-x64/native/"></file>\n')
 			fTargets.write('\t\t<None Include="$(MSBuildThisFileDirectory)\\..\\content\\')
 			fTargets.write(file)
 			fTargets.write('">\n')
@@ -87,10 +84,6 @@ for address, dirs, files in folder:
 			f.write('\t\t<file src="./source/x64/Release/')
 			f.write(file)
 			f.write('" target="lib/netstandard2.0/"></file>\n')
-		#elif file == 'MRDotNet6.dll':
-		#	f.write('\t\t<file src="./source/x64/Release/')
-		#	f.write(file)
-		#	f.write('" target="lib/net6.0/"></file>\n')
             
 fTargets.write('\t</ItemGroup>\n')
 fTargets.write('</Project>\n')

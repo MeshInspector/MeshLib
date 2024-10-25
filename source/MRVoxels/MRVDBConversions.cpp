@@ -279,7 +279,7 @@ void simpleVolumeToDenseGrid(
         const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
     )
 {
-    simpleVolumeToDenseGrid( static_cast<openvdb::FloatGrid&>( *grid ), minCoord, simpleVolume, cb );
+    simpleVolumeToDenseGrid( *grid, minCoord, simpleVolume, cb );
 }
 
 FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,

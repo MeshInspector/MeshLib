@@ -405,7 +405,7 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
 
     res.data = std::move( grid );
     res.dims = outVolume.dims;
-    res.dims.z = files.size();
+    res.dims.z = static_cast<int>( files.size() );
     res.voxelSize = outVolume.voxelSize;
     res.min = outVolume.min;
     res.max = outVolume.max;

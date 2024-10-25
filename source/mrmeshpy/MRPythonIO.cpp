@@ -313,7 +313,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, SaveVoxels, [] ( pybind11::module_& m )
         pybind11::arg( "vdbVoxels" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "Saves voxels in a file, detecting the format from file extension." );
     m.def( "saveVoxelsRaw",
-        MR::decorateExpected( &MR::VoxelsSave::toRawAutoname ),
+        MR::decorateExpected( static_cast<Expected<void> ( * )( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback )>( &MR::VoxelsSave::toRawAutoname ) ),
         pybind11::arg( "vdbVoxels" ), pybind11::arg( "path" ), pybind11::arg( "callback" ) = ProgressCallback{},
         "Save raw voxels file, writing parameters in name." );
     m.def( "saveVoxelsGav",

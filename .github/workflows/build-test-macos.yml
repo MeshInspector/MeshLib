@@ -56,9 +56,6 @@ jobs:
           submodules: true
 
       - name: Install thirdparty libs
-        run: brew install tmux htop ninja
-
-      - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh
 
       - name: Install thirdparty libs (MRBind)

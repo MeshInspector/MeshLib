@@ -7,7 +7,7 @@
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRMeshCollide.h"
-#include "MRMesh/MRMeshDistance.h"
+#include "MRMesh/MRMeshMeshDistance.h"
 #include "MRMesh/MRMeshRelax.h"
 #include "MRMesh/MRSurfacePath.h"
 #include "MRMesh/MRGeodesicPath.h"
@@ -219,15 +219,15 @@ MR_ADD_PYTHON_VEC( mrmeshpy, SurfacePath, MR::EdgePoint )
 MR_ADD_PYTHON_VEC( mrmeshpy, SurfacePaths, MR::SurfacePath )
 
 // Signed Distance
-MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshSignedDistanceResult, [] ( pybind11::module_& m )
+MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, MeshMeshSignedDistanceResult, [] ( pybind11::module_& m )
 {
-    pybind11::class_<MeshSignedDistanceResult>( m, "MeshSignedDistanceResult" ).
+    pybind11::class_<MeshMeshSignedDistanceResult>( m, "MeshMeshSignedDistanceResult" ).
         def( pybind11::init<>() ).
-        def_readwrite( "a", &MeshSignedDistanceResult::a, "two closest points: from meshes A and B respectively" ).
-        def_readwrite( "b", &MeshSignedDistanceResult::b, "two closest points: from meshes A and B respectively" ).
-        def_readwrite( "signedDist", &MeshSignedDistanceResult::signedDist, "signed distance between a and b, positive if meshes do not collide" );
+        def_readwrite( "a", &MeshMeshSignedDistanceResult::a, "two closest points: from meshes A and B respectively" ).
+        def_readwrite( "b", &MeshMeshSignedDistanceResult::b, "two closest points: from meshes A and B respectively" ).
+        def_readwrite( "signedDist", &MeshMeshSignedDistanceResult::signedDist, "signed distance between a and b, positive if meshes do not collide" );
 
-    m.def( "findSignedDistance", ( MeshSignedDistanceResult( * )( const MeshPart&, const MeshPart&, const AffineXf3f*, float ) )& MR::findSignedDistance,
+    m.def( "findSignedDistance", ( MeshMeshSignedDistanceResult( * )( const MeshPart&, const MeshPart&, const AffineXf3f*, float ) )& MR::findSignedDistance,
         pybind11::arg( "a" ), pybind11::arg( "b" ), pybind11::arg( "rigidB2A" ) = nullptr, pybind11::arg( "upDistLimitSq" ) = FLT_MAX,
         "computes minimal distance between two meshes\n"
         "\trigidB2A - rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation\n"

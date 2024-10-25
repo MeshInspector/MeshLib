@@ -89,6 +89,8 @@ void PointsToMeshProjector::findProjections(
         xfPtr = &xf;
     }
 
+    meshData_->refXf = Matrix4();
+    meshData_->xf = Matrix4();
     if ( notRigidRefXf )
         meshData_->refXf = getCudaMatrix( *notRigidRefXf );
     if ( xfPtr )

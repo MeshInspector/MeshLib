@@ -1188,6 +1188,8 @@ PaletteChanges Palette(
             palette.setDiscretizationNumber( discretization );
             palette.resetLabels();
             changes |= PaletteChanges::Texture;
+            if ( params.ranges.size() == 4 )
+                changes |= PaletteChanges::Ranges;
             presetName.clear();
         }
         UI::setTooltipIfHovered( "Number of discrete levels", menuScaling );
@@ -1204,7 +1206,7 @@ PaletteChanges Palette(
     UI::combo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
     UI::setTooltipIfHovered( "If \"Central zone\" selected you can separately fit values which are higher or lower then central one. Otherwise only the whole scale can be fit", menuScaling );
     if ( oldPaletteRangeMode != paletteRangeMode )
-        changes |= PaletteChanges::Texture;
+        changes |= PaletteChanges::All;
     ImGui::PopItemWidth();
 
     ImGui::PushItemWidth( 0.5f * scaledWidth );

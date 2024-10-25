@@ -15,79 +15,56 @@ Advanced mesh modeling tools
 %define _rpmfilename %%{NAME}.rpm
 
 %prep
-printf "start prep\n"
+echo "start prep"
 echo "BUILDROOT = $RPM_BUILD_ROOT"
 cd ../..
 echo $PWD
 
-MR_INSTALL_LIB_DIR="$RPM_BUILD_ROOT/usr/local/lib/MeshLib/"
-MR_INSTALL_RES_DIR="$RPM_BUILD_ROOT/usr/local/etc/MeshLib/"
+MR_INSTALL_LIB_DIR="$RPM_BUILD_ROOT/usr/local/lib64/MeshLib/"
+MR_INSTALL_RES_DIR="$RPM_BUILD_ROOT/usr/local/share/MeshLib/"
 MR_INSTALL_INCLUDE_DIR="$RPM_BUILD_ROOT/usr/local/include/MeshLib/"
 
-cd ./build/Release
-cmake --install . --prefix "$RPM_BUILD_ROOT/"
-cd -
+cmake --install ./build/Release/ --prefix "$RPM_BUILD_ROOT/usr/local"
 
-#mkdirs
-mkdir -p "${MR_INSTALL_LIB_DIR}"
-mkdir -p "${MR_INSTALL_INCLUDE_DIR}"
-mkdir -p "${MR_INSTALL_RES_DIR}"
-
-#copy lib dir
-CURRENT_DIR="`pwd`"
+# copy lib dir
 cp -rL ./lib "${MR_INSTALL_LIB_DIR}"
 cp -rL ./include "${MR_INSTALL_INCLUDE_DIR}"
-printf "lib copy done\n"
+echo "lib copy done"
 
-#copy verison file
+# copy version file
 cp build/Release/bin/mr.version "${MR_INSTALL_RES_DIR}"
-printf "MR version copy done\n"
+echo "MR version copy done"
 
-mkdir -p "${RPM_BUILD_ROOT}/etc/udev/rules.d/"
-cp "./scripts/70-space-mouse-meshlib.rules" "${RPM_BUILD_ROOT}/etc/udev/rules.d/"
+# copy udev rules
+mkdir -p "${RPM_BUILD_ROOT}/usr/local/lib64/udev/rules.d/"
+cp "./scripts/70-space-mouse-meshlib.rules" "${RPM_BUILD_ROOT}/usr/local/lib64/udev/rules.d/"
 
 cd "${RPM_BUILD_ROOT}"
 exit
 
 %files
-/usr/local/bin/
+/usr/local/bin/MeshViewer
+/usr/local/bin/meshconv
 /usr/local/include/MeshLib/
-/usr/local/lib/MeshLib/
-/usr/local/etc/MeshLib/
-/usr/local/share/fonts/
-/etc/udev/rules.d/70-space-mouse-meshlib.rules
+/usr/local/lib64/MeshLib/
+/usr/local/lib64/cmake/MeshLib/
+/usr/local/lib64/udev/rules.d/70-space-mouse-meshlib.rules
+/usr/local/share/MeshLib/
 
 %post
-# This script adds MR libs symbolic links to python3
-# Expand ld search paths, if `/usr/local/lib` is not added to default
-
-# exit if any command failed
-set -eo pipefail
-
-#TODO: handle 'home' python installations (conda, ...)
-if [ -d /usr/lib/python3.12 ]; then
- printf "\rPython3.12 was found                       \n"
- if [ "$EUID" -ne 0 ]; then
-  printf "Root access required!\n"
-  RUN_AS_ROOT="NO"
- fi
- sudo mkdir -p /usr/lib/python3.12/site-packages/meshlib/
- sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrmeshpy.so /usr/lib/python3.12/site-packages/meshlib/mrmeshpy.so
- sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrmeshnumpy.so /usr/lib/python3.12/site-packages/meshlib/mrmeshnumpy.so
- sudo ln -sf /usr/local/lib/MeshLib/meshlib/mrviewerpy.so /usr/lib/python3.12/site-packages/meshlib/mrviewerpy.so
- printf "Python3 has symlink to MR libs. Run 'sudo ln -sf /usr/local/lib/MeshLib/mr<lib_name>py.so /<pathToPython>/site-packages/meshlib/mr<lib_name>py.so' for custom python installations\n"
+if command -v udevadm 2>&1 >/dev/null ; then
+  echo "Updating udev rules"
+  udevadm control --reload-rules && udevadm trigger
 fi
 
-printf "Updating udevadm control rules\n"
-sudo udevadm control --reload-rules && sudo udevadm trigger
-
-printf "Updating ldconfig for '/usr/local/lib/MeshLib'\n"
-echo "/usr/local/lib/MeshLib" | sudo tee /etc/ld.so.conf.d/meshlib_libs.conf
-echo "/usr/local/lib/MeshLib/lib" | sudo tee -a /etc/ld.so.conf.d/meshlib_libs.conf
-sudo ldconfig
+echo "Updating ldconfig"
+cat << EOF > /etc/ld.so.conf.d/meshlib_libs.conf
+/usr/local/lib64/MeshLib
+/usr/local/lib64/MeshLib/lib
+EOF
+ldconfig
 
 %clean
 rm -rf $RPM_BUILD_ROOT
-
 
 %changelog

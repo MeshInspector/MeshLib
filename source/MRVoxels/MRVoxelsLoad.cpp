@@ -361,12 +361,12 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
     auto& tp = *tpExp;
 
     SimpleVolumeMinMax outVolume;
-    outVolume.dims = { tp.imageSize.x, tp.imageSize.y, int( files.size() ) };
+    outVolume.dims = { tp.imageSize.x, tp.imageSize.y, 1 };
     outVolume.min = FLT_MAX;
     outVolume.max = FLT_MIN;
 
     outVolume.voxelSize = settings.voxelSize;
-    outVolume.data.resize( outVolume.dims.x * outVolume.dims.y * outVolume.dims.z );
+    outVolume.data.resize( outVolume.dims.x * outVolume.dims.y );
 
     TiffParameters localParams;
     RawTiffOutput output;
@@ -374,9 +374,10 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
     output.params = &localParams;
     output.min = &outVolume.min;
     output.max = &outVolume.max;
+    FloatGrid grid;
     for ( int layerIndex = 0; layerIndex < files.size(); ++layerIndex )
     {
-        output.bytes = ( uint8_t* )( outVolume.data.data() + layerIndex * tp.imageSize.x * tp.imageSize.y );
+        output.bytes = ( uint8_t* )( outVolume.data.data() );
         auto readRes = readRawTiff( files[layerIndex], output );
 
         if ( !readRes.has_value() )
@@ -385,6 +386,11 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
         if ( localParams != tp )
             return unexpected( "Inconsistent TIFF files" );
 
+        if ( !grid )
+            grid = simpleVolumeToDenseGrid( outVolume );
+        else
+            simpleVolumeToDenseGrid( grid, Vector3i{ 0, 0, (int)layerIndex }, outVolume );
+
         if ( settings.cb && !settings.cb( float( layerIndex ) / files.size() ) )
             return unexpected( "Loading was cancelled" );
     }
@@ -392,13 +398,14 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
     if ( settings.cb && !settings.cb( 1.0f ) )
         return unexpected( "Loading was cancelled" );
 
-    if ( outVolume.data.empty() )
+    if ( !grid )
         return unexpected( "No voxel data" );
 
     VdbVolume res;
 
-    res.data = simpleVolumeToDenseGrid( outVolume );
+    res.data = std::move( grid );
     res.dims = outVolume.dims;
+    res.dims.z = files.size();
     res.voxelSize = outVolume.voxelSize;
     res.min = outVolume.min;
     res.max = outVolume.max;

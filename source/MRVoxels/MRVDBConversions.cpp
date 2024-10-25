@@ -256,23 +256,39 @@ VdbVolume floatGridToVdbVolume( FloatGrid grid )
     return res;
 }
 
-FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,
-                                   ProgressCallback cb )
+void simpleVolumeToDenseGrid(
+        openvdb::FloatGrid& grid,
+        const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
+    )
 {
     MR_TIMER
     if ( cb )
         cb( 0.0f );
-    openvdb::math::Coord minCoord( 0, 0, 0 );
     openvdb::math::Coord dimsCoord( simpleVolume.dims.x, simpleVolume.dims.y, simpleVolume.dims.z );
-    openvdb::math::CoordBBox denseBBox( minCoord, minCoord + dimsCoord.offsetBy( -1 ) );
+    openvdb::math::CoordBBox denseBBox( toVdb( minCoord ), toVdb( minCoord ) + dimsCoord.offsetBy( -1 ) );
     openvdb::tools::Dense<float, openvdb::tools::LayoutXYZ> dense( denseBBox, const_cast< float* >( simpleVolume.data.data() ) );
     if ( cb )
         cb( 0.5f );
-    std::shared_ptr<openvdb::FloatGrid> grid = std::make_shared<openvdb::FloatGrid>( FLT_MAX );
-    openvdb::tools::copyFromDense( dense, *grid, denseVolumeToGridTolerance );
-    openvdb::tools::changeBackground( grid->tree(), 0.f );
+    openvdb::tools::copyFromDense( dense, grid, denseVolumeToGridTolerance );
     if ( cb )
-        cb( 1.0f );
+        cb( 1.f );
+}
+
+void simpleVolumeToDenseGrid(
+        FloatGrid& grid,
+        const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
+    )
+{
+    simpleVolumeToDenseGrid( static_cast<openvdb::FloatGrid&>( *grid ), minCoord, simpleVolume, cb );
+}
+
+FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,
+                                   ProgressCallback cb )
+{
+    MR_TIMER
+    std::shared_ptr<openvdb::FloatGrid> grid = std::make_shared<openvdb::FloatGrid>( FLT_MAX );
+    simpleVolumeToDenseGrid( *grid, { 0, 0, 0 }, simpleVolume, cb );
+    openvdb::tools::changeBackground( grid->tree(), 0.f );
     return MakeFloatGrid( std::move( grid ) );
 }
 

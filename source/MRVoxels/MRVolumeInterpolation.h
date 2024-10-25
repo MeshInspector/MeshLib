@@ -102,8 +102,7 @@ SimpleVolumeMinMax resampleVolumeByInterpolation(
 {
     SimpleVolumeMinMax res{
         { .voxelSize{ newVoxelSize } },
-        volume.min,
-        volume.max
+        { volume.min, volume.max }
     };
     res.dims.x = int( volume.dims.x * volume.voxelSize.x / res.voxelSize.x );
     res.dims.y = int( volume.dims.y * volume.voxelSize.y / res.voxelSize.y );

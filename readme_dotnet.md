@@ -12,6 +12,6 @@ With a comprehensive set of advanced algorithms, MeshLib integrates seamlessly i
 - **Voxel-Based Processing:** Convert mesh data to voxels and perform complex operations like volume segmentation and surface extraction.
 - **Point Cloud Processing:** Advanced algorithms for point cloud sampling, triangulation, and segmentation.
 
-For more details on MeshLib's features, visit our [Features Page](https://meshlib.meshinspector.com/features-meshlib/).
+For more details on MeshLib's features, visit our [Features Page](https://meshlib.io/features-meshlib/).
 
  .NET functionality may be limited. For more information contact support@meshinspector.com.

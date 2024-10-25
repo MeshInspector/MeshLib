@@ -26,43 +26,40 @@ namespace MR
 namespace VoxelsSave
 {
 
-Expected<void> toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback )
+Expected<void> toRawFloat( const SimpleVolume& simpleVolume, std::ostream & out, ProgressCallback callback )
 {
     MR_TIMER
-    const auto& grid = vdbVolume.data;
-    auto accessor = grid->getConstAccessor();
-    const auto& dims = vdbVolume.dims;
-
-    // this coping block allow us to write data to disk faster
-    std::vector<float> buffer( size_t( dims.x )*dims.y*dims.z );
-    size_t dimsXY = size_t( dims.x )*dims.y;
-
-    for ( int z = 0; z < dims.z; ++z )
-    {
-        for ( int y = 0; y < dims.y; ++y )
-        {
-            for ( int x = 0; x < dims.x; ++x )
-                {
-                buffer[z*dimsXY + y * dims.x + x] = accessor.getValue( {x,y,z} );
-            }
-        }
-    }
-
-    if ( !writeByBlocks( out, (const char*) buffer.data(), buffer.size() * sizeof( float ), callback ) )
+    if ( !writeByBlocks( out, (const char*) simpleVolume.data.data(), simpleVolume.data.size() * sizeof( float ), callback ) )
         return unexpected( std::string( "Saving canceled" ) );
     if ( !out )
         return unexpected( std::string( "Stream write error" ) );
-
     return {};
 }
 
-Expected<void> toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback )
+Expected<void> toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback )
 {
     MR_TIMER
+    return vdbVolumeToSimpleVolume( vdbVolume, {}, subprogress( callback, 0.0f, 0.2f ) ).and_then(
+        [&out, sp = subprogress( callback, 0.2f, 1.0f )]( auto && sv )
+        {
+            return toRawFloat( sv, out, sp );
+        }
+    );
+}
+
+namespace
+{
+
+struct NamedOutFileStream
+{
+    std::filesystem::path file;
+    std::ofstream out;
+};
+
+Expected<NamedOutFileStream> openRawAutonameStream( const Vector3i & dims, const Vector3f & voxSize, bool normalPlusGrad, const std::filesystem::path& file )
+{
     if ( file.empty() )
-    {
         return unexpected( "Filename is empty" );
-    }
 
     auto ext = utf8string( file.extension() );
     for ( auto & c : ext )
@@ -75,27 +72,50 @@ Expected<void> toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem:
         return unexpected( ss.str() );
     }
 
-    const auto& dims = vdbVolume.dims;
     if ( dims.x == 0 || dims.y == 0 || dims.z == 0 )
-    {
-        return unexpected( "VdbVolume is empty" );
-    }
+        return unexpected( "Volume is empty" );
 
     std::stringstream prefix;
     prefix.precision( 3 );
-    prefix << "W" << dims.x << "_H" << dims.y << "_S" << dims.z;    // dims
-    const auto& voxSize = vdbVolume.voxelSize;
+    prefix << "W" << dims.x << "_H" << dims.y << "_S" << dims.z;
     prefix << "_V" << voxSize.x * 1000.0f << "_" << voxSize.y * 1000.0f << "_" << voxSize.z * 1000.0f; // voxel size "_F" for float
-    prefix << "_G" << ( vdbVolume.data->getGridClass() == openvdb::GRID_LEVEL_SET ? "1" : "0" ) << "_F ";
-    prefix << utf8string( file.filename() );                        // name
+    prefix << "_G" << ( normalPlusGrad ? "1" : "0" ) << "_F ";
+    prefix << utf8string( file.filename() );
 
-    std::filesystem::path outPath = file;
-    outPath.replace_filename( prefix.str() );
-    std::ofstream out( outPath, std::ios::binary );
-    if ( !out )
-        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( outPath ) );
+    NamedOutFileStream res;
+    res.file = file;
+    res.file.replace_filename( prefix.str() );
+    res.out = std::ofstream( res.file, std::ios::binary );
+    if ( !res.out )
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( res.file ) );
 
-    return addFileNameInError( toRawFloat( vdbVolume, out, callback ), outPath );
+    return res;
+}
+
+} // anonymous namespace
+
+Expected<void> toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback )
+{
+    MR_TIMER
+
+    return openRawAutonameStream( vdbVolume.dims, vdbVolume.voxelSize, vdbVolume.data->getGridClass() == openvdb::GRID_LEVEL_SET, file ).and_then(
+        [&]( NamedOutFileStream && s )
+        {
+            return addFileNameInError( toRawFloat( vdbVolume, s.out, callback ), s.file );
+        }
+    );
+}
+
+Expected<void> toRawAutoname( const SimpleVolume& simpleVolume, const std::filesystem::path& file, ProgressCallback callback )
+{
+    MR_TIMER
+
+    return openRawAutonameStream( simpleVolume.dims, simpleVolume.voxelSize, false, file ).and_then(
+        [&]( NamedOutFileStream && s )
+        {
+            return addFileNameInError( toRawFloat( simpleVolume, s.out, callback ), s.file );
+        }
+    );
 }
 
 Expected<void> toGav( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback )

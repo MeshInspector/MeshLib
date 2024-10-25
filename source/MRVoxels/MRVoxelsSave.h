@@ -19,9 +19,12 @@ namespace VoxelsSave
 /// Save raw voxels file, writing parameters in file name
 MRVOXELS_API Expected<void> toRawAutoname( const VdbVolume& vdbVolume, const std::filesystem::path& file,
                                        ProgressCallback callback = {} );
+MRVOXELS_API Expected<void> toRawAutoname( const SimpleVolume& simpleVolume, const std::filesystem::path& file,
+                                       ProgressCallback callback = {} );
 
 /// Save voxels in raw format with each value as 32-bit float in given binary stream
 MRVOXELS_API Expected<void> toRawFloat( const VdbVolume& vdbVolume, std::ostream & out, ProgressCallback callback = {} );
+MRVOXELS_API Expected<void> toRawFloat( const SimpleVolume& simpleVolume, std::ostream & out, ProgressCallback callback = {} );
 
 /// Save voxels in Gav-format in given file
 MRVOXELS_API Expected<void> toGav( const VdbVolume& vdbVolume, const std::filesystem::path& file, ProgressCallback callback = {} );

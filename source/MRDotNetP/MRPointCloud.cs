@@ -13,7 +13,7 @@ namespace MR.DotNet
     using VertCoordsReadOnly = System.Collections.ObjectModel.ReadOnlyCollection<Vector3f>;
     using VertCoords = System.Collections.Generic.List<Vector3f>;
 
-    public class PointCloud : MeshOrPoints
+    public class PointCloud : MeshOrPoints, IDisposable
     {
         /// creates a new PointCloud object
         /// creates a new PointCloud object
@@ -81,6 +81,35 @@ namespace MR.DotNet
         internal PointCloud(IntPtr pc)
         {
             pc_ = pc;
+        }
+
+        private bool disposed = false;
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if ( disposing )
+            {
+                if ( validPoints_ is not null )
+                {
+                    validPoints_.Dispose();
+                    validPoints_ = null;
+                }
+            }
+
+            if (!disposed)
+            {
+                if (pc_ != IntPtr.Zero)
+                {
+                    mrPointCloudFree(pc_);
+                }
+
+                disposed = true;
+            }
         }
 
         ~PointCloud()

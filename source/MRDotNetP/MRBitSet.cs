@@ -81,7 +81,7 @@ namespace MR.DotNet
         }
     }
 
-    public class BitSet : BitSetReadOnly
+    public class BitSet : BitSetReadOnly, IDisposable
     {
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern IntPtr mrBitSetCopy(IntPtr bs);
@@ -125,11 +125,34 @@ namespace MR.DotNet
         public BitSet( int size, bool fillValue )
         {
             bs_ = mrBitSetNew((UInt64)size, fillValue);
-        }        
+            needDispose = true;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (needDispose)
+            {
+                if (bs_ != IntPtr.Zero)
+                {
+                    Console.WriteLine("mrBitSetFree start");
+                    mrBitSetFree(bs_);
+                    Console.WriteLine("mrBitSetFree end");
+                    bs_ = IntPtr.Zero;
+                }
+
+                needDispose = false;
+            }
+        }
 
         ~BitSet()
         {
-            mrBitSetFree(bs_);
+            Dispose(false);
         }
         public void Set(int index)
         {
@@ -169,5 +192,7 @@ namespace MR.DotNet
         {
             return new BitSet(mrBitSetSub(a.bs_, b.bs_));
         }
+
+        bool needDispose = false;
     }
 }

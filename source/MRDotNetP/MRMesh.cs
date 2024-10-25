@@ -193,7 +193,7 @@ namespace MR.DotNet
         internal IntPtr mrMeshOrPointsXf_;
     }
 
-    public class Mesh : MeshOrPoints
+    public class Mesh : MeshOrPoints, IDisposable
     {
         #region C_FUNCTIONS
 
@@ -323,9 +323,44 @@ namespace MR.DotNet
             meshTopology_ = mrMeshTopology(mesh);
         }
 
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed)
+            {
+                if (disposing)
+                {
+                    if ( validFaces_ is not null )
+                    {
+                        validFaces_.Dispose();
+                        validFaces_ = null;
+                    }
+
+                    if (validPoints_ is not null)
+                    {
+                        validPoints_.Dispose();
+                        validPoints_ = null;
+                    }
+                }
+
+                if (mesh_ != IntPtr.Zero)
+                {
+                    mrMeshFree(mesh_);
+                    mesh_ = IntPtr.Zero;
+                }
+
+                disposed = true;
+            }
+        }
+
         ~Mesh()
         {
-            mrMeshFree(mesh_);
+            Dispose(false);
         }
         #endregion
 
@@ -628,10 +663,20 @@ namespace MR.DotNet
         #region Private fields
 
         void clearManagedResources()
-        {
+        {            
+            if (validFaces_ is not null)
+            {
+                validFaces_.Dispose();
+                validFaces_ = null;
+            }
+
+            if (validPoints_ is not null)
+            {
+                validPoints_.Dispose();
+                validPoints_ = null;
+            }
+
             points_ = null;
-            validPoints_ = null;
-            validFaces_ = null;
             triangulation_ = null;
             holeRepresentiveEdges_ = null;
             boundingBox_ = null;
@@ -639,7 +684,8 @@ namespace MR.DotNet
 
 
         internal IntPtr mesh_;
-        private IntPtr meshTopology_;
+        internal IntPtr meshTopology_;
+        private bool disposed = false;
 
         private VertCoords? points_;
         private BitSet? validPoints_;

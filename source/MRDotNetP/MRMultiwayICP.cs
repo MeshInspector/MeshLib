@@ -59,7 +59,7 @@ namespace MR.DotNet
         /// runs ICP algorithm given input objects, transformations, and parameters;
         /// \return adjusted transformations of all objects to reach registered state
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        private static extern ref MRVectorAffineXf3f mrMultiwayICPCalculateTransformations(IntPtr mwicp, IntPtr cb);
+        unsafe private static extern MRVectorAffineXf3f* mrMultiwayICPCalculateTransformations(IntPtr mwicp, IntPtr cb);
 
         /// select pairs with origin samples on all objects
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
@@ -113,16 +113,36 @@ namespace MR.DotNet
                 mrParams.maxGroupSize = samplingParams.maxGroupSize;
                 mrParams.cascadeMode = samplingParams.cascadeMode;
                 mrParams.cb = IntPtr.Zero;
-                icp_ = mrMultiwayICPNew(*(IntPtr*)nativeObjs.ToPointer(), (ulong)objs.Count, ref mrParams);
+                icp_ = mrMultiwayICPNew(nativeObjs, (ulong)objs.Count, ref mrParams);
             }
             finally
             {
                 Marshal.FreeHGlobal(nativeObjs);
             }
         }
+
+        private bool disposed = false;
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed)
+            {
+                if (icp_ != IntPtr.Zero)
+                {
+                    mrMultiwayICPFree(icp_);
+                }
+
+                disposed = true;
+            }
+        }
         ~MultiwayICP()
         {
-            mrMultiwayICPFree(icp_);
+            Dispose(false);
         }
 
         /// runs ICP algorithm given input objects, transformations, and parameters;
@@ -130,7 +150,7 @@ namespace MR.DotNet
         unsafe public List<AffineXf3f> CalculateTransformations()
         {
             int sizeOfXf = Marshal.SizeOf(typeof(MRAffineXf3f));
-            var mrXfs = mrMultiwayICPCalculateTransformations(icp_, IntPtr.Zero);
+            var mrXfs = *mrMultiwayICPCalculateTransformations(icp_, IntPtr.Zero);
             List<AffineXf3f> xfs = new List<AffineXf3f>();
             for (int i = 0; i < (int)mrXfs.size; i++)
             {

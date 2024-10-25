@@ -20,6 +20,7 @@ struct ICPGroupPairs : public IPointPairs
 {
     virtual const ICPPairData& operator[]( size_t idx ) const override { return vec[idx]; }
     virtual ICPPairData& operator[]( size_t idx ) override { return vec[idx]; }
+    virtual size_t size() const override { return vec.size(); }
     std::vector<ICPGroupPair> vec;
 };
 

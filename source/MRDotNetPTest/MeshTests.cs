@@ -256,6 +256,18 @@ namespace MR.DotNet.Test
             Assert.That(projRes.meshTriPoint.bary.a, Is.EqualTo(0.5).Within(1e-3));
             Assert.That(projRes.meshTriPoint.bary.b, Is.EqualTo(0.0).Within(1e-3));
         }
+
+        [Test]
+        public void TestValidPoints()
+        {
+            Assert.DoesNotThrow(() =>
+            {
+                var mesh = Mesh.MakeSphere(1.0f, 3000);
+                var count = mesh.ValidPoints.Count();
+                Assert.That(count, Is.EqualTo(3000));
+                mesh.Dispose();
+            });
+        }
     }
 }
 

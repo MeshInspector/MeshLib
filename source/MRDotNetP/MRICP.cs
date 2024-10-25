@@ -168,7 +168,7 @@ namespace MR.DotNet
         }
     };
 
-    public class ICP
+    public class ICP : IDisposable
     {
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRICPPairData
@@ -226,11 +226,17 @@ namespace MR.DotNet
         private static extern ref MRICPPairData mrIPointPairsGet(IntPtr pp, ulong idx);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        private static extern ulong mrIPointPairsSize(IntPtr pp);
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern ref MRICPPairData mrIPointPairsGetRef(IntPtr pp, ulong idx);
 
         /// Constructs ICP framework with automatic points sampling on both objects
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern IntPtr mrICPNew(IntPtr fltObj, IntPtr refObj, float samplingVoxelSize);
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr mrICPNewFromSamples( IntPtr fltObj, IntPtr refObj, IntPtr fltSamples, IntPtr refSamples );
 
         /// tune algorithm params before run calculateTransformation()
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
@@ -294,9 +300,34 @@ namespace MR.DotNet
         /// \param flt floating object and transformation from floating object space to global space
         /// \param ref reference object and transformation from reference object space to global space
         /// \param samplingVoxelSize approximate distance between samples on each of two objects
-        ICP(MeshOrPointsXf fltObj, MeshOrPointsXf refObj, float samplingVoxelSize)
+        public ICP(MeshOrPointsXf fltObj, MeshOrPointsXf refObj, float samplingVoxelSize)
         {
             mrICP_ = mrICPNew(fltObj.mrMeshOrPointsXf_, refObj.mrMeshOrPointsXf_, samplingVoxelSize);
+        }
+
+        public ICP(MeshOrPointsXf fltObj, MeshOrPointsXf refObj, BitSet fltSamples, BitSet refSamples)
+        {
+            mrICP_ = mrICPNewFromSamples(fltObj.mrMeshOrPointsXf_, refObj.mrMeshOrPointsXf_, fltSamples.bs_, refSamples.bs_);
+        }
+
+        private bool disposed = false;
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed)
+            {
+                if (mrICP_ != IntPtr.Zero)
+                {
+                    mrICPFree(mrICP_);
+                }
+
+                disposed = true;
+            }
         }
 
         ~ICP()
@@ -355,7 +386,7 @@ namespace MR.DotNet
         public PointPairs GetFlt2RefPairs()
         {
             var mrPairs = mrICPGetFlt2RefPairs(mrICP_);
-            int numPairs = (int)mrICPGetNumSamples( mrICP_);
+            int numPairs = (int)mrIPointPairsSize(mrPairs);
 
             PointPairs res = new PointPairs();
             res.pairs = new List<PointPair>(numPairs);
@@ -381,7 +412,7 @@ namespace MR.DotNet
         public PointPairs GetRef2FltPairs()
         {
             var mrPairs = mrICPGetRef2FltPairs(mrICP_);
-            int numPairs = (int)mrICPGetNumSamples(mrICP_);
+            int numPairs = (int)mrIPointPairsSize(mrPairs);
 
             PointPairs res = new PointPairs();
             res.pairs = new List<PointPair>(numPairs);

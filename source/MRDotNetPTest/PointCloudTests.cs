@@ -36,6 +36,17 @@ namespace MR.DotNet.Test
         }
 
         [Test]
+        public void TestDisposing()
+        {
+            Assert.DoesNotThrow(() =>
+            {
+                var points = MakeCube();
+                Assert.That(points.ValidPoints.Count() == 8);
+                points.Dispose();
+            });
+        }
+
+        [Test]
         public void TestPointCloudNormals()
         {
             var points = new PointCloud();

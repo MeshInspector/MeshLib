@@ -140,7 +140,7 @@ namespace MR.DotNet
         FaceMap? cut2newFaces_;
         VertMap? old2newVerts_;
     }
-    public class BooleanResultMapper
+    public class BooleanResultMapper : IDisposable
     {
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrBooleanResultMapperNew();
@@ -177,14 +177,29 @@ namespace MR.DotNet
             mapper_ = mrBooleanResultMapperNew();
         }
 
-        public BooleanResultMapper(IntPtr mapper)
+        private bool disposed = false;
+        public void Dispose()
         {
-            mapper_ = mapper;
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed)
+            {
+                if (mapper_ != IntPtr.Zero)
+                {
+                    mrBooleanResultMapperFree(mapper_);
+                }
+
+                disposed = true;
+            }
         }
 
         ~BooleanResultMapper()
         {
-            mrBooleanResultMapperFree(mapper_);
+            Dispose(false);
         }
         #endregion
         #region properties

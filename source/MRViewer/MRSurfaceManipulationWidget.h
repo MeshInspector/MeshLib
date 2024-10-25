@@ -94,7 +94,7 @@ private:
 
     void updateRegionUVs_( const VertBitSet& region );
     void updateValueChanges_( const VertBitSet& region );
-    void updateValueChangesByDistance_();
+    void updateValueChangesByDistance_( const VertBitSet& region );
 
     Settings settings_;
 
@@ -110,12 +110,11 @@ private:
     VertScalars visualizationDistanceMap_;
     VertBitSet changedRegion_;
     VertScalars valueChanges_;
-    VertCoords oldPoints_;
-    std::shared_ptr<Mesh> oldMesh_;
+    VertScalars lastStableValueChanges_;
+    std::shared_ptr<Mesh> originalMesh_; ///< original input mesh
     VertBitSet unknownSign_; ///< cached data to avoid reallocating memory
-    std::shared_ptr<ObjectMesh> oldObjMesh_;
+    std::shared_ptr<ObjectMesh> lastStableObjMesh_;
     bool firstInit_ = true; // need to save settings in re-initial
-    bool firstSessionInit_ = true;
     bool badRegion_ = false; // in selected region less than 3 points
 
     bool mousePressed_ = false;

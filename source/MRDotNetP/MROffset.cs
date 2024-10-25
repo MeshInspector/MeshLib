@@ -78,62 +78,45 @@ namespace MR.DotNet
             public GeneralOffsetMode mode;
         };
 
-        /// computes size of a cubical voxel to get approximately given number of voxels during rasterization
+        ///
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern float mrSuggestVoxelSize(MRMeshPart mp, float approxNumVoxels);
 
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern IntPtr mrOffsetMesh(MRMeshPart mp, float offset, ref MROffsetParameters parameters, ref IntPtr errorString);
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern IntPtr mrDoubleOffsetMesh(MRMeshPart mp, float offsetA, float offsetB, ref MROffsetParameters parameters, ref IntPtr errorString);
+
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern IntPtr mrMcOffsetMesh(MRMeshPart mp, float offset, ref MROffsetParameters parameters, ref IntPtr errorString);
+
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern IntPtr mrMcShellMeshRegion(IntPtr mesh, IntPtr region, float offset, ref MROffsetParameters parameters, ref IntPtr errorString);
+
+
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern IntPtr mrSharpOffsetMesh(MRMeshPart mp, float offset, ref MROffsetParameters parameters, ref MRGeneralOffsetParameters generalParams, ref IntPtr errorString);
+
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern IntPtr mrGeneralOffsetMesh(MRMeshPart mp, float offset, ref MROffsetParameters parameters, ref MRGeneralOffsetParameters generalParams, ref IntPtr errorString);
+
+       [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern IntPtr mrThickenMesh(IntPtr mesh, float offset, ref MROffsetParameters parameters, ref MRGeneralOffsetParameters generalParams, ref IntPtr errorString);
+        
+        /// computes size of a cubical voxel to get approximately given number of voxels during rasterization
+        public static float SuggestVoxelSize(MeshPart mp, float approxNumVoxels) => mrSuggestVoxelSize(mp.mrMeshPart, approxNumVoxels);
 
         /// Offsets mesh by converting it to distance field in voxels using OpenVDB library,
         /// signDetectionMode = Unsigned(from OpenVDB) | OpenVDB | HoleWindingRule,
         /// and then converts back using OpenVDB library (dual marching cubes),
         /// so result mesh is always closed
         /// if an error has occurred and errorString is not NULL, returns NULL and allocates an error message to errorStr
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern IntPtr mrOffsetMesh(MRMeshPart mp, float offset, ref MROffsetParameters parameters, ref IntPtr errorString);
-
-        /// Offsets mesh by converting it to voxels and back two times
-        /// only closed meshes allowed (only Offset mode)
-        /// typically offsetA and offsetB have distinct signs
-        /// if an error has occurred and errorString is not NULL, returns NULL and allocates an error message to errorStr
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern IntPtr mrDoubleOffsetMesh(MRMeshPart mp, float offsetA, float offsetB, ref MROffsetParameters parameters, ref IntPtr errorString);
-
-
-        /// Offsets mesh by converting it to distance field in voxels (using OpenVDB library if SignDetectionMode::OpenVDB or our implementation otherwise)
-        /// and back using standard Marching Cubes, as opposed to Dual Marching Cubes in offsetMesh(...)
-        /// if an error has occurred and errorString is not NULL, returns NULL and allocates an error message to errorStr
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern IntPtr mrMcOffsetMesh(MRMeshPart mp, float offset, ref MROffsetParameters parameters, ref IntPtr errorString);
-
-        /// Constructs a shell around selected mesh region with the properties that every point on the shall must
-        ///  1. be located not further than given distance from selected mesh part,
-        ///  2. be located not closer to not-selected mesh part than to selected mesh part.
-        /// if an error has occurred and errorString is not NULL, returns NULL and allocates an error message to errorStr
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern IntPtr mrMcShellMeshRegion(IntPtr mesh, IntPtr region, float offset, ref MROffsetParameters parameters, ref IntPtr errorString);
-
-
-        /// Offsets mesh by converting it to voxels and back
-        /// post process result using reference mesh to sharpen features
-        /// if an error has occurred and errorString is not NULL, returns NULL and allocates an error message to errorStr
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern IntPtr mrSharpOffsetMesh(MRMeshPart mp, float offset, ref MROffsetParameters parameters, ref MRGeneralOffsetParameters generalParams, ref IntPtr errorString);
-
-        /// Offsets mesh by converting it to voxels and back using one of three modes specified in the parameters
-        /// if an error has occurred and errorString is not NULL, returns NULL and allocates an error message to errorStr
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern IntPtr mrGeneralOffsetMesh(MRMeshPart mp, float offset, ref MROffsetParameters parameters, ref MRGeneralOffsetParameters generalParams, ref IntPtr errorString);
-
-        /// in case of positive offset, returns the mesh consisting of offset mesh merged with inversed original mesh (thickening mode);
-        /// in case of negative offset, returns the mesh consisting of inversed offset mesh merged with original mesh (hollowing mode);
-        /// if your input mesh is open then please specify params.signDetectionMode = SignDetectionMode::Unsigned, and you will get open mesh (with several components) on output
-        /// if your input mesh is closed then please specify another sign detection mode, and you will get closed mesh (with several components) on output;
-        /// if an error has occurred and errorString is not NULL, returns NULL and allocates an error message to errorStr
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern IntPtr mrThickenMesh(IntPtr mesh, float offset, ref MROffsetParameters parameters, ref MRGeneralOffsetParameters generalParams, ref IntPtr errorString);
-
-        public static float SuggestVoxelSize(MeshPart mp, float approxNumVoxels) => mrSuggestVoxelSize(mp.mrMeshPart, approxNumVoxels);
-
         public static Mesh OffsetMesh(MeshPart mp, float offset, OffsetParameters parameters)
         {
             IntPtr errorStr = IntPtr.Zero;
@@ -152,7 +135,10 @@ namespace MR.DotNet
             }
             return new Mesh(res);
         }
-
+        /// Offsets mesh by converting it to voxels and back two times
+        /// only closed meshes allowed (only Offset mode)
+        /// typically offsetA and offsetB have distinct signs
+        /// if an error has occurred and errorString is not NULL, returns NULL and allocates an error message to errorStr
         public static Mesh DoubleOffsetMesh(MeshPart mp, float offsetA, float offsetB, OffsetParameters parameters)
         {
             IntPtr errorStr = IntPtr.Zero;
@@ -171,7 +157,9 @@ namespace MR.DotNet
             }
             return new Mesh(res);
         }
-
+        /// Offsets mesh by converting it to distance field in voxels (using OpenVDB library if SignDetectionMode::OpenVDB or our implementation otherwise)
+        /// and back using standard Marching Cubes, as opposed to Dual Marching Cubes in offsetMesh(...)
+        /// if an error has occurred and errorString is not NULL, returns NULL and allocates an error message to errorStr
         public static Mesh McOffsetMesh(MeshPart mp, float offset, OffsetParameters parameters)
         {
             IntPtr errorStr = IntPtr.Zero;
@@ -190,7 +178,10 @@ namespace MR.DotNet
             }
             return new Mesh(res);
         }
-
+        /// Constructs a shell around selected mesh region with the properties that every point on the shall must
+        ///  1. be located not further than given distance from selected mesh part,
+        ///  2. be located not closer to not-selected mesh part than to selected mesh part.
+        /// if an error has occurred and errorString is not NULL, returns NULL and allocates an error message to errorStr
         public static Mesh McShellMeshRegion(MeshPart mp, float offset, OffsetParameters parameters)
         {
             IntPtr errorStr = IntPtr.Zero;
@@ -214,7 +205,9 @@ namespace MR.DotNet
             }
             return new Mesh(res);
         }
-
+        /// Offsets mesh by converting it to voxels and back
+        /// post process result using reference mesh to sharpen features
+        /// if an error has occurred and errorString is not NULL, returns NULL and allocates an error message to errorStr
         public static Mesh SharpOffsetMesh(MeshPart mp, float offset, OffsetParameters parameters, GeneralOffsetParameters generalParams)
         {
             IntPtr errorStr = IntPtr.Zero;
@@ -240,7 +233,8 @@ namespace MR.DotNet
             }
             return new Mesh(res);
         }
-
+        /// Offsets mesh by converting it to voxels and back using one of three modes specified in the parameters
+        /// if an error has occurred and errorString is not NULL, returns NULL and allocates an error message to errorStr
         public static Mesh GeneralOffsetMesh(MeshPart mp, float offset, OffsetParameters parameters, GeneralOffsetParameters generalParams)
         {
             IntPtr errorStr = IntPtr.Zero;
@@ -266,6 +260,11 @@ namespace MR.DotNet
             }
             return new Mesh(res);
         }
+        /// in case of positive offset, returns the mesh consisting of offset mesh merged with inversed original mesh (thickening mode);
+        /// in case of negative offset, returns the mesh consisting of inversed offset mesh merged with original mesh (hollowing mode);
+        /// if your input mesh is open then please specify params.signDetectionMode = SignDetectionMode::Unsigned, and you will get open mesh (with several components) on output
+        /// if your input mesh is closed then please specify another sign detection mode, and you will get closed mesh (with several components) on output;
+        /// if an error has occurred and errorString is not NULL, returns NULL and allocates an error message to errorStr
 
         public static Mesh ThickenMesh(Mesh mesh, float offset, OffsetParameters parameters, GeneralOffsetParameters generalParams)
         {

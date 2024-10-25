@@ -1,18 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace MR.DotNet
 {
-    using VertId = int;
-
-
     using OneMeshContours = List<OneMeshContour>;
     using static MR.DotNet.CoordinateConverters;
     using static MR.DotNet.Vector3f;
-    using static MR.DotNet.ContoursCut;
-
+    /// represents primitive type
     public enum VariantIndex
     {
         Face,
@@ -33,10 +28,7 @@ namespace MR.DotNet
         public bool closed;
     };
 
-    
     /// list of contours on mesh
-
-
     public class ContoursCut
     {
         [StructLayout(LayoutKind.Sequential)]
@@ -55,7 +47,6 @@ namespace MR.DotNet
             public IntPtr reserved;
         };
 
-        // One contour on mesh
         [StructLayout(LayoutKind.Sequential)]
         internal struct MROneMeshContour
         {
@@ -69,25 +60,17 @@ namespace MR.DotNet
             public MREdgeId edge;
             public MRFaceId tri;
             public bool isEdgeATriB;
-        };
+        };       
 
-       
-
-        /// gets the contours' value at index
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern MROneMeshContour mrOneMeshContoursGet( IntPtr contours, ulong index );
 
-        /// gets the contours' size
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern ulong mrOneMeshContoursSize( IntPtr contours);
 
-        /// deallocates the OneMeshContours object
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern void mrOneMeshContoursFree(IntPtr contours);
 
-        // Converts ordered continuous contours of two meshes to OneMeshContours
-        // converters is required for better precision in case of degenerations
-        // note that contours should not have intersections
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern IntPtr mrGetOneMeshIntersectionContours( IntPtr meshA, IntPtr meshB,
                                                                      IntPtr continousContours,

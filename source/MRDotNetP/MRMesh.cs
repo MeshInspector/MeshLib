@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using static MR.DotNet.AffineXf3f;
 using static MR.DotNet.Vector3f;
-//using static MR.DotNet.Vector3f;
 
 namespace MR.DotNet
 {
-
     using VertId = int;
     using EdgeId = int;
     using FaceId = int;
@@ -137,8 +134,6 @@ namespace MR.DotNet
         public IntPtr xf;
         /// low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
         public float loDistLimitSq;
-        // TODO: validFaces
-        // TODO: validProjections
     };
     [StructLayout(LayoutKind.Sequential)]
     internal struct MRMeshPart
@@ -149,7 +144,7 @@ namespace MR.DotNet
 
 
     #endregion
-
+    /// represents a point cloud or a mesh
     public interface MeshOrPoints
     {
         public VertCoordsReadOnly Points { get; }
@@ -169,7 +164,6 @@ namespace MR.DotNet
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrMeshOrPointsXfFromPointCloud(IntPtr pc, ref MRAffineXf3f xf );
 
-        /// destructs a MeshOrPointsXf object
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern void mrMeshOrPointsXfFree(IntPtr mp);
 
@@ -363,7 +357,7 @@ namespace MR.DotNet
             Dispose(false);
         }
         #endregion
-
+        /// point coordinates
         #region Properties
         public VertCoordsReadOnly Points
         {
@@ -387,7 +381,7 @@ namespace MR.DotNet
                 return points_.AsReadOnly();
             }
         }
-
+        /// set of all valid vertices
         public BitSetReadOnly ValidPoints
         {
             get
@@ -412,7 +406,7 @@ namespace MR.DotNet
                 return boundingBox_;
             }
         }
-
+        /// set of all valid faces
         public BitSetReadOnly ValidFaces
         {
             get
@@ -424,7 +418,7 @@ namespace MR.DotNet
                 return validFaces_;
             }
         }
-
+        /// info about triangles
         public TriangulationReadOnly Triangulation
         {
             get
@@ -445,7 +439,7 @@ namespace MR.DotNet
                 return triangulation_.AsReadOnly();
             }
         }
-
+        /// edges with no valid left face for every boundary in the mesh
         public EdgePathReadOnly HoleRepresentiveEdges
         {
             get
@@ -469,7 +463,8 @@ namespace MR.DotNet
         }
         #endregion // Properties
         #region Methods
-
+        /// gets 3 vertices of the left face ( face-id may not exist, but the shape must be triangular)
+        /// the vertices are returned in counter-clockwise order if look from mesh outside
         public VertId[] GetLeftTriVerts(EdgeId edgeId)
         {
             VertId[] res = new VertId[3];
@@ -487,30 +482,30 @@ namespace MR.DotNet
 
             return res;
         }
-
+        /// transforms all points
         public void Transform(AffineXf3f xf)
         {
             mrMeshTransform(mesh_, ref xf.xf_, (IntPtr)null);
             clearManagedResources();
         }
-
+        /// transforms all points in the region
         public void Transform(AffineXf3f xf, BitSet region)
         {
             mrMeshTransform(mesh_, ref xf.xf_, region.bs_);
             clearManagedResources();
         }
-
+        /// packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices
         public void PackOptimally()
         {
             mrMeshPackOptimally(mesh_, true);
             clearManagedResources();
         }
-
+        /// returns volume of whole mesh
         public double Volume()
         {
             return mrMeshVolume(mesh_, (IntPtr)null);
         }
-
+        /// returns volume of closed mesh region, if region is not closed DBL_MAX is returned
         public double Volume(BitSet region)
         {
             return mrMeshVolume(mesh_, region.bs_);
@@ -519,7 +514,7 @@ namespace MR.DotNet
         #endregion
 
         #region Create
-
+        /// creates mesh from point coordinates and triangulation
         public static Mesh FromTriangles(VertCoords points, Triangulation triangles)
         {
             int sizeOfVector3f = Marshal.SizeOf(typeof(MRVector3f));
@@ -548,7 +543,7 @@ namespace MR.DotNet
                 Marshal.FreeHGlobal(nativeTriangles);
             }
         }
-
+        /// creates mesh from point coordinates and triangulation. If some vertices are not manifold, they will be duplicated
         public static Mesh FromTrianglesDuplicatingNonManifoldVertices(VertCoords points, Triangulation triangles)
         {
             int sizeOfVector3f = Marshal.SizeOf(typeof(Vector3f));
@@ -577,7 +572,7 @@ namespace MR.DotNet
                 Marshal.FreeHGlobal(nativeTriangles);
             }
         }
-
+        /// loads mesh from file of any supported format
         unsafe public static Mesh FromAnySupportedFormat(string path)
         {
             mrLoadIOExtras();
@@ -594,7 +589,7 @@ namespace MR.DotNet
 
             return new Mesh(mesh);
         }
-
+        /// saves mesh to file of any supported format
         unsafe public static void ToAnySupportedFormat(Mesh mesh, string path)
         {
             mrLoadIOExtras();
@@ -608,12 +603,12 @@ namespace MR.DotNet
                 throw new SystemException(errorMessage);
             }
         }
-
+        /// creates a parallelepiped with given sizes and base
         public static Mesh MakeCube(Vector3f size, Vector3f baseCoords)
         {
             return new Mesh(mrMakeCube(ref size.vec_, ref baseCoords.vec_));
         }
-
+        /// creates a sphere of given radius and vertex count
         public static Mesh MakeSphere(float radius, int vertexCount)
         {
             MRSphereParams mrSphereParams = new MRSphereParams();
@@ -621,7 +616,7 @@ namespace MR.DotNet
             mrSphereParams.numMeshVertices = vertexCount;
             return new Mesh(mrMakeSphere(ref mrSphereParams));
         }
-
+        /// creates a torus with given parameters
         public static Mesh MakeTorus(float primaryRadius, float secondaryRadius, int primaryResolution, int secondaryResolution)
         {
             MRMakeTorusParameters mrMakeTorusParameters = new MRMakeTorusParameters();
@@ -634,6 +629,7 @@ namespace MR.DotNet
 
         #endregion
         #region Find projection
+        /// computes the closest point on mesh (or its region) to given point
         static public MeshProjectionResult FindProjection(Vector3f point, MeshPart meshPart, float maxDistanceSquared = float.MaxValue, AffineXf3f? xf = null, float minDistanceSquared = 0.0f)
         {
             MRFindProjectionParameters mrParams = new MRFindProjectionParameters();
@@ -698,9 +694,9 @@ namespace MR.DotNet
     }
     public struct TriPoint
     {
-        ///< a in [0,1], a=0 => point is on [v2,v0] edge, a=1 => point is in v1
+        /// a in [0,1], a=0 => point is on [v2,v0] edge, a=1 => point is in v1
         public float a;
-        ///< b in [0,1], b=0 => point is on [v0,v1] edge, b=1 => point is in v2
+        /// b in [0,1], b=0 => point is on [v0,v1] edge, b=1 => point is in v2
         public float b;
         /// given three values in three vertices, computes interpolated value at this barycentric coordinates
         public Vector3f Interpolate(Vector3f p0, Vector3f p1, Vector3f p2)

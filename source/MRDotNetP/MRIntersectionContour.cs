@@ -2,15 +2,12 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace MR.DotNet
 {
     using EdgeId = int;
     using FaceId = int;
     using ContinousContour = List<VariableEdgeTri>;
-    using static MR.DotNet.ContoursCut;
-    using static MR.DotNet.ContinousContours;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct VariableEdgeTri

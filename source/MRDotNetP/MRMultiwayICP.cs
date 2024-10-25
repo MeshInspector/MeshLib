@@ -6,7 +6,7 @@ using static MR.DotNet.ICP;
 using static MR.DotNet.Vector3f;
 
 namespace MR.DotNet
-{
+{/// Parameters that are used for sampling of the MultiwayICP objects
     public struct MultiwayICPSamplingParameters
     {
         public enum CascadeMode
@@ -31,17 +31,12 @@ namespace MR.DotNet
 
     public class MultiwayICP
     {
-        /// Parameters that are used for sampling of the MultiwayICP objects
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRMultiwayICPSamplingParameters
         {
-            /// sampling size of each object
             public float samplingVoxelSize;
-            /// size of maximum icp group to work with
-            /// if number of objects exceeds this value, icp is applied in cascade mode
             public int maxGroupSize;
             public MultiwayICPSamplingParameters.CascadeMode cascadeMode;
-            /// callback for progress reports
             public IntPtr cb;
         };
 
@@ -56,43 +51,31 @@ namespace MR.DotNet
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern IntPtr mrMultiwayICPNew( IntPtr objects, ulong objectsNum, ref MRMultiwayICPSamplingParameters samplingParams );
 
-        /// runs ICP algorithm given input objects, transformations, and parameters;
-        /// \return adjusted transformations of all objects to reach registered state
+
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         unsafe private static extern MRVectorAffineXf3f* mrMultiwayICPCalculateTransformations(IntPtr mwicp, IntPtr cb);
 
-        /// select pairs with origin samples on all objects
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern bool mrMultiwayICPResamplePoints(IntPtr mwicp, ref MRMultiwayICPSamplingParameters samplingParams );
 
-        /// in each pair updates the target data and performs basic filtering (activation)
-        /// in cascade mode only useful for stats update
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern bool mrMultiwayICPUpdateAllPointPairs(IntPtr mwicp, IntPtr cb);
 
-        /// tune algorithm params before run calculateTransformations()
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern void mrMultiwayICPSetParams(IntPtr mwicp, ref MRICPProperties prop );
 
-        /// computes root-mean-square deviation between points
-        /// or the standard deviation from given value if present
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         unsafe private static extern float mrMultiWayICPGetMeanSqDistToPoint( IntPtr mwicp, double* value );
 
-        /// computes root-mean-square deviation from points to target planes
-        /// or the standard deviation from given value if present
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         unsafe private static extern float mrMultiWayICPGetMeanSqDistToPlane( IntPtr mwicp, double* value );
 
-        /// computes the number of samples able to form pairs
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern ulong mrMultiWayICPGetNumSamples( IntPtr mwicp );
 
-        /// computes the number of active point pairs
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern ulong mrMultiWayICPGetNumActivePairs( IntPtr mwicp );
 
-        /// deallocates a MultiwayICP object
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern void mrMultiwayICPFree(IntPtr mwicp);
 

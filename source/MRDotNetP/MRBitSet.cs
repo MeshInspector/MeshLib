@@ -5,66 +5,64 @@ using System.Text;
 
 namespace MR.DotNet
 {
+    /// container of bits with read-only access
     public abstract class BitSetReadOnly
     {
-        /// gets total length of a bitset
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        private static extern UInt64 mrBitSetSize( IntPtr bs );
+        private static extern ulong mrBitSetSize( IntPtr bs );
 
-        /// returns the number of bits in this bitset that are set
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        private static extern UInt64 mrBitSetCount( IntPtr bs );
+        private static extern ulong mrBitSetCount( IntPtr bs );
 
-        /// checks if two bitsets are equal (have the same length and identical bit values)
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool mrBitSetEq( IntPtr a, IntPtr b );
 
-        /// ...
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool mrBitSetTest( IntPtr bs, UInt64 index );       
+        private static extern bool mrBitSetTest( IntPtr bs, ulong index );       
 
-        /// ...
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        private static extern UInt64 mrBitSetFindFirst( IntPtr bs );
+        private static extern ulong mrBitSetFindFirst( IntPtr bs );
 
-        /// ...
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        private static extern UInt64 mrBitSetFindLast( IntPtr bs );
+        private static extern ulong mrBitSetFindLast( IntPtr bs );
 
         internal IntPtr bs_;
-
+        /// test if given bit is set
         public bool Test( int i )
         {
-            var result = mrBitSetTest( bs_, (UInt64)i );
+            var result = mrBitSetTest( bs_, (ulong)i );
             return result;
         }
+        /// returns index of the first set bit
         public int FindFirst()
         {
             return (int)mrBitSetFindFirst( bs_ );
         }
-
+        /// returns index of the last set bit
         public int FindLast()
         {
             return (int)mrBitSetFindLast( bs_ );
-        }        
+        }
+        /// returns total number of bits
         public int Size()
         {
             return (int)mrBitSetSize( bs_ );
         }
+        /// returns number of set bits
         public int Count()
         {
             return (int)mrBitSetCount( bs_ );
         }
-
+        /// returns a deep copy of the bitset
         public abstract BitSetReadOnly Clone();
-
+        /// checks if two bitsets are equal (have the same length and identical bit values)
         public static bool operator ==(BitSetReadOnly a, BitSetReadOnly b )
         {
             return mrBitSetEq( a.bs_, b.bs_ );
         }
-
+        /// checks if two bitsets are not equal
         public static bool operator !=(BitSetReadOnly a, BitSetReadOnly b )
         {
             return !mrBitSetEq( a.bs_, b.bs_ );
@@ -80,35 +78,31 @@ namespace MR.DotNet
             throw new NotImplementedException();
         }
     }
-
+    /// container of bits with full access
     public class BitSet : BitSetReadOnly, IDisposable
     {
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern IntPtr mrBitSetCopy(IntPtr bs);
-        /// ...
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        private static extern IntPtr mrBitSetNew(UInt64 numBits, bool fillValue);
 
-        /// ...
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        private static extern void mrBitSetSet(IntPtr bs, UInt64 index, bool value);
+        private static extern IntPtr mrBitSetNew(ulong numBits, bool fillValue);
 
-        /// ...
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        private static extern void mrBitSetResize(IntPtr bs, UInt64 size, bool value);
+        private static extern void mrBitSetSet(IntPtr bs, ulong index, bool value);
 
-        /// ...
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        private static extern void mrBitSetAutoResizeSet(IntPtr bs, UInt64 pos, bool value);
+        private static extern void mrBitSetResize(IntPtr bs, ulong size, bool value);
 
-        /// ...
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
+        private static extern void mrBitSetAutoResizeSet(IntPtr bs, ulong pos, bool value);
+
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern IntPtr mrBitSetSub(IntPtr a, IntPtr b);
 
-        /// deallocates a BitSet object
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern void mrBitSetFree(IntPtr bs);
 
+        /// creates empty bitset
         public BitSet() : this( 0, false )
         {
         }
@@ -117,14 +111,14 @@ namespace MR.DotNet
         {
             bs_ = bs;
         }
-
+        /// creates bitset with given size
         public BitSet( int size ) : this( size, false )
         {
         }
-
+        /// creates bitset with given size and fill value
         public BitSet( int size, bool fillValue )
         {
-            bs_ = mrBitSetNew((UInt64)size, fillValue);
+            bs_ = mrBitSetNew((ulong)size, fillValue);
             needDispose = true;
         }
 
@@ -154,40 +148,43 @@ namespace MR.DotNet
         {
             Dispose(false);
         }
+        /// sets the given bit to true
         public void Set(int index)
         {
-            mrBitSetSet(bs_, (UInt64)index, true);
+            mrBitSetSet(bs_, (ulong)index, true);
         }
+        /// sets the given bit to value
         public void Set( int index, bool value )
         {
-            mrBitSetSet( bs_, (UInt64)index, value );
+            mrBitSetSet( bs_, (ulong)index, value );
         }
-
+        /// changes the size of the bitset
         public void Resize( int size )
         {
-            mrBitSetResize( bs_, (UInt64)size, false );
+            mrBitSetResize( bs_, (ulong)size, false );
         }
-
+        /// changes the size of the bitset, sets new bits to value
         public void Resize( int size, bool value )
         {
-            mrBitSetResize( bs_, (UInt64)size, value );
+            mrBitSetResize( bs_, (ulong)size, value );
         }
-
+        /// sets element pos to given value, adjusting the size of the set to include new element if necessary
         public void AutoResizeSet( int pos )
         {
-            mrBitSetAutoResizeSet( bs_, (UInt64)pos, true );
+            mrBitSetAutoResizeSet( bs_, (ulong)pos, true );
         }
+        /// sets element pos to given value, adjusting the size of the set to include new element if necessary, sets new bits to value
         public void AutoResizeSet( int pos, bool value )
         {
-            mrBitSetAutoResizeSet( bs_, (UInt64)pos, value );
+            mrBitSetAutoResizeSet( bs_, (ulong)pos, value );
         }
-
+        /// returns a deep copy of the bitset
         public override BitSetReadOnly Clone()
         {
             IntPtr bsCopy = mrBitSetCopy( bs_ );
             return new BitSet(bsCopy);
         }
-
+        /// creates a new bitset including a's bits and excluding b's bits
         public static BitSet operator -(BitSet a, BitSet b)
         {
             return new BitSet(mrBitSetSub(a.bs_, b.bs_));

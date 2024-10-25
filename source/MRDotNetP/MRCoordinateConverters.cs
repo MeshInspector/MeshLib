@@ -6,6 +6,7 @@ using System.Text;
 
 namespace MR.DotNet
 {
+    /// this class contains coordinate converters float-int-float
     public class CoordinateConverters : IDisposable
     {
         [StructLayout(LayoutKind.Sequential)]
@@ -18,14 +19,13 @@ namespace MR.DotNet
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern MRCoordinateConverters mrGetVectorConverters(ref MRMeshPart a, ref MRMeshPart b, IntPtr rigidB2A);
 
-        /// deallocates the ConvertToIntVector object
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern void mrConvertToIntVectorFree(IntPtr conv);
 
-        /// deallocates the ConvertToFloatVector object
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern void mrConvertToFloatVectorFree(IntPtr conv);
 
+        /// creates new converters for given pair of meshes
         public CoordinateConverters( MeshPart meshA, MeshPart meshB)
         {
             conv_ = mrGetVectorConverters( ref meshA.mrMeshPart, ref meshB.mrMeshPart, IntPtr.Zero);

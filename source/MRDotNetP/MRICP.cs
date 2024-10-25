@@ -101,7 +101,6 @@ namespace MR.DotNet
 
     public struct PointPairs
     {
-        //PointPairs( const MR::PointPairs& pairs );
         public List<PointPair> pairs;
         public BitSet active;
     };
@@ -181,8 +180,7 @@ namespace MR.DotNet
             public float weight;
         };
 
-        /// Stores a pair of points: one samples on the source and the closest to it on the target
-        [StructLayout(LayoutKind.Sequential)]
+         [StructLayout(LayoutKind.Sequential)]
         internal struct MRPointPair
         {
             public MRICPPairData ICPPairData;
@@ -231,7 +229,7 @@ namespace MR.DotNet
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern ref MRICPPairData mrIPointPairsGetRef(IntPtr pp, ulong idx);
 
-        /// Constructs ICP framework with automatic points sampling on both objects
+
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern IntPtr mrICPNew(IntPtr fltObj, IntPtr refObj, float samplingVoxelSize);
 
@@ -297,14 +295,18 @@ namespace MR.DotNet
         private static extern IntPtr mrStringData(IntPtr str);
 
         /// Constructs ICP framework with given sample points on both objects
-        /// \param flt floating object and transformation from floating object space to global space
-        /// \param ref reference object and transformation from reference object space to global space
+        /// \param fltObj floating object and transformation from floating object space to global space
+        /// \param refObj reference object and transformation from reference object space to global space
         /// \param samplingVoxelSize approximate distance between samples on each of two objects
         public ICP(MeshOrPointsXf fltObj, MeshOrPointsXf refObj, float samplingVoxelSize)
         {
             mrICP_ = mrICPNew(fltObj.mrMeshOrPointsXf_, refObj.mrMeshOrPointsXf_, samplingVoxelSize);
         }
-
+        /// Constructs ICP framework with given sample points on both objects
+        /// \param fltObj floating object and transformation from floating object space to global space
+        /// \param refObj reference object and transformation from reference object space to global space
+        /// \param fltSamples samples on floating object to find projections on the reference object during the algorithm
+        /// \param refSamples samples on reference object to find projections on the floating object during the algorithm
         public ICP(MeshOrPointsXf fltObj, MeshOrPointsXf refObj, BitSet fltSamples, BitSet refSamples)
         {
             mrICP_ = mrICPNewFromSamples(fltObj.mrMeshOrPointsXf_, refObj.mrMeshOrPointsXf_, fltSamples.bs_, refSamples.bs_);
@@ -341,48 +343,50 @@ namespace MR.DotNet
             var icpProp = prop.ToNative();
             mrICPSetParams(mrICP_, ref icpProp);
         }
-
+        /// select pairs with origin samples on both objects
         public void SamplePoints(float sampleVoxelSize)
         {
             mrICPSamplePoints(mrICP_, sampleVoxelSize);
         }
-
+        /// automatically selects initial transformation for the floating object
+        /// based on covariance matrices of both floating and reference objects;
+        /// applies the transformation to the floating object and returns it
         public void AutoSelectFloatXf()
         {
             mrICPAutoSelectFloatXf(mrICP_);
         }
-
+        /// recompute point pairs after manual change of transformations or parameters
         public void UpdatePointPairs()
         {
             mrICPUpdatePointPairs(mrICP_);
         }
-
+        /// returns status info string
         public string GetStatusInfo()
         {
             var mrStr = mrICPGetStatusInfo(mrICP_);
             return Marshal.PtrToStringAnsi(mrStringData(mrStr));
         }
-
+        /// computes the number of samples able to form pairs
         public int GetNumSamples()
         {
             return (int)mrICPGetNumSamples(mrICP_);
         }
-
+        /// computes the number of active point pairs
         public int GetNumActivePairs()
         {
             return (int)mrICPGetNumActivePairs(mrICP_);
         }
-
+        /// computes root-mean-square deviation between points
         public float GetMeanSqDistToPoint()
         {
             return mrICPGetMeanSqDistToPoint(mrICP_);
         }
-
+        /// computes root-mean-square deviation from points to target planes
         public float GetMeanSqDistToPlane()
         {
             return mrICPGetMeanSqDistToPlane(mrICP_);
         }
-
+        /// returns current pairs formed from samples on floating object and projections on reference object
         public PointPairs GetFlt2RefPairs()
         {
             var mrPairs = mrICPGetFlt2RefPairs(mrICP_);
@@ -408,7 +412,7 @@ namespace MR.DotNet
 
             return res;
         }
-
+        /// returns current pairs formed from samples on reference object and projections on floating object
         public PointPairs GetRef2FltPairs()
         {
             var mrPairs = mrICPGetRef2FltPairs(mrICP_);
@@ -434,7 +438,8 @@ namespace MR.DotNet
 
             return res;
         }
-
+        /// runs ICP algorithm given input objects, transformations, and parameters;
+        /// \return adjusted transformation of the floating object to match reference object
         public AffineXf3f CalculateTransformation()
         {
             var mrXf = mrICPCalculateTransformation(mrICP_);

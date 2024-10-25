@@ -60,13 +60,14 @@ namespace MR.DotNet
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern void mrVectorMeshLoadNamedMeshFree(IntPtr vector);
 
-        /// loads meshes from .obj file
+
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrMeshLoadFromSceneObjFile( string file, bool combineAllObjects, ref MRMeshLoadObjLoadSettings settings, ref IntPtr errorString );
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrStringData(IntPtr str);
 
+        /// loads meshes from .obj file
         public static List<NamedMesh> FromSceneObjFile(string path, bool combineAllObjects, ObjLoadSettings settings)
         {
             var mrSettings = new MRMeshLoadObjLoadSettings();

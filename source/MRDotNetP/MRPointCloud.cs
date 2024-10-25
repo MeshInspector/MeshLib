@@ -15,7 +15,7 @@ namespace MR.DotNet
 
     public class PointCloud : MeshOrPoints, IDisposable
     {
-        /// creates a new PointCloud object
+        
         /// creates a new PointCloud object
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrPointCloudNew();
@@ -73,6 +73,7 @@ namespace MR.DotNet
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrStringData(IntPtr str);
 
+        /// creates a new PointCloud object
         public PointCloud()
         {
             pc_ = mrPointCloudNew();
@@ -116,7 +117,7 @@ namespace MR.DotNet
         {
             mrPointCloudFree(pc_);
         }
-
+        /// returns point coordinates
         public VertCoordsReadOnly Points 
         { 
             get
@@ -139,7 +140,7 @@ namespace MR.DotNet
                 return points_.AsReadOnly();
             } 
         }
-
+        /// set of all valid vertices
         public BitSetReadOnly ValidPoints
         {
             get
@@ -164,7 +165,7 @@ namespace MR.DotNet
                 return boundingBox_;
             }
         }
-
+        /// returns point normals
         public VertCoordsReadOnly Normals
         {
             get
@@ -187,7 +188,7 @@ namespace MR.DotNet
                 return normals_.AsReadOnly();
             }
         }
-
+        /// loads point cloud from file of any supported format
         unsafe public static PointCloud FromAnySupportedFormat(string path)
         {
             mrLoadIOExtras();
@@ -204,7 +205,7 @@ namespace MR.DotNet
 
             return new PointCloud(mesh);
         }
-
+        /// saves point cloud to file of any supported format
         unsafe public static void ToAnySupportedFormat(PointCloud pc, string path)
         {
             mrLoadIOExtras();
@@ -218,7 +219,7 @@ namespace MR.DotNet
                 throw new SystemException(errorMessage);
             }
         }
-
+        /// appends a point
         public void AddPoint(Vector3f point )
         {
             if (mrPointCloudNormalsNum(pc_) > 0)
@@ -226,7 +227,7 @@ namespace MR.DotNet
 
             mrPointCloudAddPoint(pc_, ref point.vec_);
         }
-
+        /// appends a point and a normal
         public void AddPoint(Vector3f point, Vector3f normal)
         {
             if (mrPointCloudNormalsNum(pc_) != mrPointCloudPointsNum(pc_))

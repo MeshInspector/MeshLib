@@ -2,6 +2,7 @@
 
 namespace MR.DotNet
 {
+    /// represents a 3-dimentional float-typed vector
     public class Vector3f
     {
         [StructLayout(LayoutKind.Sequential)]
@@ -40,7 +41,7 @@ namespace MR.DotNet
         private static extern float mrVector3fLengthSq(ref MRVector3f a);
 
         internal MRVector3f vec_;
-
+        /// creates a new vector with zero coordinates
         public Vector3f()
         {
             vec_ = mrVector3fDiagonal(0.0f);
@@ -50,14 +51,14 @@ namespace MR.DotNet
         {
             vec_ = vec;
         }
-
+        /// creates a new vector with specified coordinates
         public Vector3f(float x, float y, float z)
         {
             vec_.x = x;
             vec_.y = y;
             vec_.z = z;
         }
-
+        /// creates a new vector with same coordinates
         static public Vector3f Diagonal(float a)
         {
             return new Vector3f(mrVector3fDiagonal(a));

@@ -2,9 +2,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
-using static MR.DotNet.Vector3f;
 
 namespace MR.DotNet
 {
@@ -41,17 +38,13 @@ namespace MR.DotNet
 
     public class BooleanMaps
     {
-
-        /// "after cut" faces to "origin" faces
-        /// this map is not 1-1, but N-1
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern MRFaceMap mrBooleanResultMapperMapsCut2origin(IntPtr maps);
 
-        /// "after cut" faces to "after stitch" faces (1-1)
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern MRFaceMap mrBooleanResultMapperMapsCut2newFaces(IntPtr maps);
 
-        /// "origin" vertices to "after stitch" vertices (1-1)
+        
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern MRVertMap mrBooleanResultMapperMapsOld2NewVerts(IntPtr maps);
 
@@ -63,7 +56,9 @@ namespace MR.DotNet
         {
             maps_ = maps;
         }
-
+        /// "after cut" faces to "origin" faces
+        /// this map is not 1-1, but N-1.
+        /// This map can contain invalid faces (-1). Please check validity before use.
         public FaceMapReadOnly Cut2Origin
         {
             get
@@ -85,6 +80,7 @@ namespace MR.DotNet
             }
         }
 
+        /// "after cut" faces to "after stitch" faces (1-1). This map can contain invalid faces (-1). Please check validity before use.
         public FaceMapReadOnly Cut2NewFaces
         {
             get
@@ -106,6 +102,7 @@ namespace MR.DotNet
             }
         }
 
+        /// "origin" vertices to "after stitch" vertices (1-1). This map can contain invalid vertices (-1). Please check validity before use.
         public VertMapReadOnly Old2NewVerts
         {
             get
@@ -126,7 +123,7 @@ namespace MR.DotNet
                 return old2newVerts_.AsReadOnly();
             }
         }
-
+        /// old topology indices are valid if true
         public bool Identity
         {
             get
@@ -140,37 +137,33 @@ namespace MR.DotNet
         FaceMap? cut2newFaces_;
         VertMap? old2newVerts_;
     }
+    ///this class allows to map faces, vertices and edges of mesh `A` and mesh `B` input of MeshBoolean to result mesh topology primitives
     public class BooleanResultMapper : IDisposable
     {
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrBooleanResultMapperNew();
 
-        /// Returns faces bitset of result mesh corresponding input one
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrBooleanResultMapperMapFaces(IntPtr mapper, IntPtr oldBS, MapObject obj);
 
-        /// Returns vertices bitset of result mesh corresponding input one
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrBooleanResultMapperMapVerts(IntPtr mapper, IntPtr oldBS, MapObject obj);
 
 
-        /// Returns only new faces that are created during boolean operation
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrBooleanResultMapperNewFaces(IntPtr mapper);
 
-        /// returns updated oldBS leaving only faces that has corresponding ones in result mesh
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrBooleanResultMapperFilteredOldFaceBitSet(IntPtr mapper, IntPtr oldBS, MapObject obj);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrBooleanResultMapperGetMaps(IntPtr mapper, MapObject index);
 
-
-        /// deallocates a BooleanResultMapper object
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern void mrBooleanResultMapperFree(IntPtr mapper);
 
         #region constructor and destructor
+
 
         public BooleanResultMapper()
         {
@@ -204,6 +197,7 @@ namespace MR.DotNet
         #endregion
         #region properties
 
+        /// returns faces bitset of result mesh corresponding input one
         public BitSet FaceMap( BitSet oldBS, MapObject obj)
         {
             if ( maps_ is null )
@@ -216,7 +210,7 @@ namespace MR.DotNet
 
             return new BitSet(mrBooleanResultMapperMapFaces(mapper_, oldBS.bs_, obj));
         }
-
+        /// Returns vertices bitset of result mesh corresponding input one
         public BitSet VertMap( BitSet oldBS, MapObject obj)
         {
             if (maps_ is null)
@@ -229,7 +223,7 @@ namespace MR.DotNet
 
             return new BitSet(mrBooleanResultMapperMapVerts(mapper_, oldBS.bs_, obj));
         }
-
+        /// Returns only new faces that are created during boolean operation
         public BitSet NewFaces()
         {
             return new BitSet(mrBooleanResultMapperNewFaces(mapper_));
@@ -247,7 +241,7 @@ namespace MR.DotNet
 
             return maps_[(int)obj];
         }
-
+        /// returns updated oldBS leaving only faces that has corresponding ones in result mesh
         public BitSet FilteredOldFaceBitSet( BitSet oldBS, MapObject obj)
         {
             if (maps_ is null)

@@ -4,6 +4,7 @@ using static MR.DotNet.Vector3f;
 
 namespace MR.DotNet
 {
+    /// arbitrary row-major 3x3 matrix
     public class Matrix3f
     {
         [StructLayout(LayoutKind.Sequential)]
@@ -40,7 +41,7 @@ namespace MR.DotNet
         private static extern bool mrMatrix3fEqual(ref MRMatrix3f a, ref MRMatrix3f b);
 
         internal MRMatrix3f mat_;
-
+        /// creates the identity matrix
         public Matrix3f()
         {
             mat_ = mrMatrix3fIdentity();
@@ -57,7 +58,7 @@ namespace MR.DotNet
             y_ = new Vector3f(mat_.y);
             z_ = new Vector3f(mat_.z);
         }
-
+        /// creates matrix with given rows
         public Matrix3f( Vector3f x, Vector3f y, Vector3f z )
         {
             mat_.x = x.vec_;
@@ -68,17 +69,17 @@ namespace MR.DotNet
             y_ = y;
             z_ = z;
         }
-
+        /// creates zero matrix
         public static Matrix3f Zero()
         {
             return new Matrix3f( new Vector3f(), new Vector3f(), new Vector3f() );
         }
-
+        /// creates rotation matrix around given axis with given angle
         public static Matrix3f Rotation( Vector3f axis, float angle )
         {
             return new Matrix3f( mrMatrix3fRotationScalar(ref axis.vec_, angle) );
         }
-
+        /// creates rotation matrix from one vector to another
         public static Matrix3f Rotation( Vector3f from, Vector3f to )
         {
             return new Matrix3f( mrMatrix3fRotationVector(ref from.vec_, ref to.vec_) );
@@ -122,9 +123,11 @@ namespace MR.DotNet
         private Vector3f x_;
         private Vector3f y_;
         private Vector3f z_;
-
+        /// first row
         public Vector3f X { get { return x_; } set { mat_.x = value.vec_; x_ = value; } }
+        /// second row
         public Vector3f Y { get { return y_; } set { mat_.y = value.vec_; y_ = value; } }
+        /// third row
         public Vector3f Z { get { return z_; } set { mat_.z = value.vec_; z_ = value; } }
     }
 }

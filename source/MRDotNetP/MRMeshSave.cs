@@ -27,7 +27,7 @@ namespace MR.DotNet
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern void mrMeshSaveSceneToObj( IntPtr objects, ulong objectsNum, string file, ref IntPtr errorString );
-
+        /// saves a number of named meshes in .obj file
         public static void SceneToObj(List<NamedMeshXf> meshes, string file )
         {
             int sizeOfNamedXfMesh = Marshal.SizeOf(typeof(MRMeshSaveNamedXfMesh));

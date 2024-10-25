@@ -389,7 +389,7 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
         if ( !grid )
             grid = simpleVolumeToDenseGrid( outVolume );
         else
-            simpleVolumeToDenseGrid( grid, Vector3i{ 0, 0, (int)layerIndex }, outVolume );
+            putSimpleVolumeInDenseGrid( grid, Vector3i{0, 0, ( int ) layerIndex}, outVolume );
 
         if ( settings.cb && !settings.cb( float( layerIndex ) / files.size() ) )
             return unexpected( "Loading was cancelled" );

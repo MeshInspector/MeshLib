@@ -256,7 +256,7 @@ VdbVolume floatGridToVdbVolume( FloatGrid grid )
     return res;
 }
 
-void simpleVolumeToDenseGrid(
+void putSimpleVolumeInDenseGrid(
         openvdb::FloatGrid& grid,
         const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
     )
@@ -274,12 +274,12 @@ void simpleVolumeToDenseGrid(
         cb( 1.f );
 }
 
-void simpleVolumeToDenseGrid(
+void putSimpleVolumeInDenseGrid(
         FloatGrid& grid,
         const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
     )
 {
-    simpleVolumeToDenseGrid( *grid, minCoord, simpleVolume, cb );
+    putSimpleVolumeInDenseGrid( *grid, minCoord, simpleVolume, cb );
 }
 
 FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,
@@ -287,7 +287,7 @@ FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,
 {
     MR_TIMER
     std::shared_ptr<openvdb::FloatGrid> grid = std::make_shared<openvdb::FloatGrid>( FLT_MAX );
-    simpleVolumeToDenseGrid( *grid, { 0, 0, 0 }, simpleVolume, cb );
+    putSimpleVolumeInDenseGrid( *grid, { 0, 0, 0 }, simpleVolume, cb );
     openvdb::tools::changeBackground( grid->tree(), 0.f );
     return MakeFloatGrid( std::move( grid ) );
 }

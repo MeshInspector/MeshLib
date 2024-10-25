@@ -12,8 +12,10 @@
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRJson.h"
-#include <string>
+
 #include <fstream>
+#include <span>
+#include <string>
 
 namespace MR
 {
@@ -481,7 +483,7 @@ Color Palette::getColor( float val )
     assert( val >= 0.f && val <= 1.f );
 
     // only the first row represents the actual palette colours; see `Palette::updateDiscretizatedColors_' for more info
-    const std::span colors { texture_.pixels.begin(), texture_.pixels.begin() + texture_.resolution.x };
+    const std::span<Color> colors( texture_.pixels.data(), texture_.resolution.x );
     if ( val == 1.f )
         return colors.back();
 

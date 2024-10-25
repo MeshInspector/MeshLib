@@ -224,12 +224,13 @@ protected:
     MRVIEWER_API void drawActiveList_();
 
     RibbonLayoutMode layoutMode_{ RibbonLayoutMode::All };
+
+    RibbonMenuSearch searcher_;
 private:
     void changeTab_( int newTab );
 
     std::string getRequirements_( const std::shared_ptr<RibbonMenuItem>& item ) const;
 
-    RibbonMenuSearch searcher_;
     void drawSearchButton_();
     void drawCollapseButton_();
     void drawHelpButton_();

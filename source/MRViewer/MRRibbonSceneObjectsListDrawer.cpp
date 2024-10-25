@@ -95,6 +95,8 @@ void RibbonSceneObjectsListDrawer::drawSceneContextMenu_( const std::vector<std:
 
     if ( ImGui::BeginPopupContextItem( ( "##SceneContext" + uniqueStr ).c_str() ) )
     {
+        onDrawContextSignal();
+
         auto selectedMask = ribbonMenu_->calcSelectedTypesMask( selected );
         ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, ImGui::GetStyle().WindowPadding );
         [[maybe_unused]] bool wasChanged = false, wasAction = false;

@@ -128,9 +128,9 @@ inline auto ParallelFor( const Vector<T, I> & v, F &&... f )
 /// finds minimal and maximal elements in given vector in parallel;
 /// \param topExcluding if provided then all values in the array equal or larger by absolute value than it will be ignored
 template<typename T>
-MinMax<T> parallelMinMax( const std::vector<T>& vec, const T * topExcluding = nullptr )
+std::pair<T, T> parallelMinMax( const std::vector<T>& vec, const T * topExcluding = nullptr )
 {
-    return tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, vec.size() ), MinMax<T>{},
+    auto minmax = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, vec.size() ), MinMax<T>{},
     [&] ( const tbb::blocked_range<size_t> range, MinMax<T> curMinMax )
     {
         for ( size_t i = range.begin(); i < range.end(); i++ )
@@ -166,6 +166,8 @@ MinMax<T> parallelMinMax( const std::vector<T>& vec, const T * topExcluding = nu
         }
         return res;
     } );
+
+    return { minmax.min, minmax.max };
 }
 
 /// finds minimal and maximal elements and their indices in given vector in parallel;

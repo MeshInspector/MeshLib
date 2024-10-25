@@ -1,5 +1,7 @@
 #include "MRUnitSettings.h"
 
+#include "MRViewer/MRViewer.h"
+
 namespace MR::UnitSettings
 {
 
@@ -28,6 +30,14 @@ static void forAllUnits( auto&& func )
     func.template operator()<PixelSizeUnit>();
 }
 
+void resetToDefaults()
+{
+    UnitSettings::setThousandsSeparator( ' ' );
+    UnitSettings::setUiLengthUnit( LengthUnit::mm, true );
+    UnitSettings::setUiLengthPrecision( 3 );
+    UnitSettings::setDegreesMode( DegreesMode::degrees, true );
+}
+
 bool getShowLeadingZero()
 {
     // Use the flag from an arbitrary unit, they should normally be the same on all units.
@@ -44,18 +54,18 @@ void setShowLeadingZero( bool show )
     } );
 }
 
-char getThousandsSeparator( bool fractional )
+char getThousandsSeparator()
 {
     // Use the value from an arbitrary unit, they should normally be the same on all units.
-    return fractional ? getDefaultUnitParams<LengthUnit>().thousandsSeparatorFrac : getDefaultUnitParams<LengthUnit>().thousandsSeparator;
+    return getDefaultUnitParams<LengthUnit>().thousandsSeparator;
 }
 
-void setThousandsSeparator( char ch, bool fractional )
+void setThousandsSeparator( char ch )
 {
     forAllUnits( [&]<typename E>()
     {
         auto params = getDefaultUnitParams<E>();
-        ( fractional ? params.thousandsSeparatorFrac : params.thousandsSeparator ) = ch;
+        params.thousandsSeparator = ch;
         setDefaultUnitParams( params );
     } );
 }
@@ -65,10 +75,11 @@ std::optional<LengthUnit> getUiLengthUnit()
     return getDefaultUnitParams<LengthUnit>().targetUnit;
 }
 
-void setUiLengthUnit( std::optional<LengthUnit> unit )
+void setUiLengthUnit( std::optional<LengthUnit> unit, bool setPreferredLeadingZero )
 {
     // Override the leading zero. Everything except inches enables it.
-    setShowLeadingZero( unit != LengthUnit::inches );
+    if ( setPreferredLeadingZero )
+        setShowLeadingZero( unit != LengthUnit::inches );
 
     auto getDependentUnit = overloaded{
         // All length-related unit types must be listed here.
@@ -139,7 +150,7 @@ DegreesMode getDegreesMode()
     return getDefaultUnitParams<AngleUnit>().degreesMode;
 }
 
-void setDegreesMode( DegreesMode mode )
+void setDegreesMode( DegreesMode mode, bool setPreferredPrecision )
 {
     forAllAngleUnits( [&]<typename E>()
     {
@@ -147,10 +158,13 @@ void setDegreesMode( DegreesMode mode )
 
         params.degreesMode = mode;
 
-        if ( mode == DegreesMode::degrees )
-            params.precision = 1;
-        else
-            params.precision = 0;
+        if ( setPreferredPrecision )
+        {
+            if ( mode == DegreesMode::degrees )
+                params.precision = 1;
+            else
+                params.precision = 0;
+        }
 
         params.style = NumberStyle::normal; // Just in case.
 

@@ -41,7 +41,7 @@ struct MoveMeshToVoxelMaxDerivSettings
 /// Moves each vertex along its normal to the minimize (with sign, i.e. maximize the absolute value with negative sign) the derivative
 /// of voxels.
 /// @return Vertices that were moved by the algorithm
-MRVOXELS_API VertBitSet moveMeshToVoxelMaxDeriv(
+MRVOXELS_API Expected<VertBitSet> moveMeshToVoxelMaxDeriv(
         Mesh& mesh, const AffineXf3f& meshXf,
         const VdbVolume& volume, const AffineXf3f& volumeXf,
         const MoveMeshToVoxelMaxDerivSettings& settings,

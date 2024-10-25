@@ -9,6 +9,7 @@
 #include "MRMesh/MRBox.h"
 #include <climits>
 #include <string>
+#include <optional>
 
 namespace MR
 {
@@ -66,14 +67,20 @@ MRVOXELS_API void simpleVolumeToDenseGrid(
 // make copy of data
 MRVOXELS_API Expected<SimpleVolumeMinMax> vdbVolumeToSimpleVolume(
     const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} );
-// make normalized SimpleVolume from VdbVolume
-// make copy of data
+/// Makes normalized SimpleVolume from VdbVolume
+/// Normalisation consist of scaling values linearly from the source scale to the interval [0;1]
+/// @note Makes copy of data
+/// @param sourceScale if specified, defines the initial scale of voxels.
+///     If not specified, it is estimated as min. and max. values from the voxels
 MRVOXELS_API Expected<SimpleVolumeMinMax> vdbVolumeToSimpleVolumeNorm(
-    const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} );
-// make SimpleVolumeU16 from VdbVolume
-// performs mapping from [vdbVolume.min, vdbVolume.max] to nonnegative range of uint16_t
+    const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), std::optional<MinMaxf> sourceScale = {}, ProgressCallback cb = {} );
+/// Makes SimpleVolumeU16 from VdbVolume
+/// Values are linearly scaled from the source scale to the range corresponding to uint16_t
+/// @note Makes copy of data
+/// @param sourceScale if specified, defines the initial scale of voxels.
+///     If not specified, it is estimated as min. and max. values from the voxels
 MRVOXELS_API Expected<SimpleVolumeMinMaxU16> vdbVolumeToSimpleVolumeU16(
-    const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), ProgressCallback cb = {} );
+    const VdbVolume& vdbVolume, const Box3i& activeBox = Box3i(), std::optional<MinMaxf> sourceScale = {}, ProgressCallback cb = {} );
 
 /// parameters of OpenVDB Grid to Mesh conversion using Dual Marching Cubes algorithm
 struct GridToMeshSettings

@@ -59,6 +59,16 @@ public:
     // mimum radius of editing area.
     MRVIEWER_API float getMinRadius() { return minRadius_; };
 
+    // get palette used for visualization point shifts
+    Palette& palette() { return *palette_; }
+    // update texture used for colorize surface (use after change colorMap in palette)
+    MRVIEWER_API void updateTexture();
+    // update texture uv coords used for colorize surface (use after change ranges in palette)
+    MRVIEWER_API void updateUVs();
+    // enable visualization of mesh deviations
+    MRVIEWER_API void enableDeviationVisualization( bool enable );
+    // get min / max point shifts for (usefull for setup palette)
+    Vector2f getMinMax() { return { changesMaxVal_, changesMinVal_ }; }
 private:
     /// start modifying mesh surface
     MRVIEWER_API bool onMouseDown_( Viewer::MouseButton button, int modifiers ) override;
@@ -82,6 +92,7 @@ private:
 
     void updateVizualizeSelection_( const ObjAndPick& objAndPick );
 
+    void updateRegionUVs_( const VertBitSet& region );
     Settings settings_;
 
     std::shared_ptr<ObjectMesh> obj_;
@@ -94,6 +105,8 @@ private:
     VertScalars pointsShift_;
     VertScalars editingDistanceMap_;
     VertScalars visualizationDistanceMap_;
+    VertBitSet changedRegion_;
+    VertScalars valueChanges_;
     std::shared_ptr<ObjectMesh> oldMesh_;
     bool firstInit_ = true; // need to save settings in re-initial
     bool badRegion_ = false; // in selected region less than 3 points
@@ -113,6 +126,11 @@ private:
     std::unique_ptr<Laplacian> laplacian_;
     std::shared_ptr<HistoryAction> historyAction_; // this action is prepared beforehand for better responsiveness, but pushed only on mouse move
     bool appendHistoryAction_ = false;
+
+    std::shared_ptr<Palette> palette_;
+    bool enableDeviationTexture_ = true;
+    float changesMinVal_ = 0.f;
+    float changesMaxVal_ = 0.f;
 };
 
 }

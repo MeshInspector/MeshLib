@@ -1,62 +1,18 @@
 #pragma once
 
-#include "MRPointOnFace.h"
+// distance queries to one mesh only, please see MRMeshMeshDistance.h for queries involving two meshes
+
 #include "MRMeshPart.h"
+#include "MRSignDetectionMode.h"
 #include <cfloat>
 #include <functional>
+#include <optional>
 
 namespace MR
 {
 
 /// \addtogroup AABBTreeGroup
 /// \{
-
-struct MeshDistanceResult
-{
-    /// two closest points: from meshes A and B respectively
-    PointOnFace a, b;
-    /// squared distance between a and b
-    float distSq = 0;
-};
-
-struct MeshSignedDistanceResult
-{
-    /// two closest points: from meshes A and B respectively
-    PointOnFace a, b;
-    /// signed distance between a and b, positive if meshes do not collide
-    float signedDist = 0;
-};
-
-/**
- * \brief computes minimal distance between two meshes or two mesh regions
- * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
- * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger than the function exists returning upDistLimitSq and no valid points
- */
-MRMESH_API MeshDistanceResult findDistance( const MeshPart & a, const MeshPart & b,
-    const AffineXf3f * rigidB2A = nullptr, float upDistLimitSq = FLT_MAX );
-
-/**
- * \brief computes minimal distance between two meshes
- * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
- * \param upDistLimitSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning upDistLimitSq and no valid points
- */
-MRMESH_API MeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshPart & b,
-    const AffineXf3f* rigidB2A = nullptr, float upDistLimitSq = FLT_MAX );
-
-/**
- * \brief returns the maximum of the squared distances from each B-mesh vertex to A-mesh
- * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
- * \param maxDistanceSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq
- */
-MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A = nullptr, float maxDistanceSq = FLT_MAX );
-
-/**
- * \brief returns the squared Hausdorff distance between two meshes, that is
-          the maximum of squared distances from each mesh vertex to the other mesh (in both directions)
- * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
- * \param maxDistanceSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq
- */
-MRMESH_API float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A = nullptr, float maxDistanceSq = FLT_MAX );
 
 enum class ProcessOneResult : bool
 {
@@ -75,6 +31,31 @@ using TriangleCallback = std::function<ProcessOneResult( const Vector3f & p, Fac
 /// invokes given callback for all triangles from given mesh part located not further than
 /// given squared distance from t-triangle
 MRMESH_API void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rangeSq, const TriangleCallback & call );
+
+struct DistanceToMeshOptions
+{
+    /// minimum squared distance from a point to mesh
+    float minDistSq{ 0 };
+
+    /// maximum squared distance from a point to mesh
+    float maxDistSq{ FLT_MAX };
+
+    /// the method to compute distance sign
+    SignDetectionMode signMode{ SignDetectionMode::ProjectionNormal };
+
+    /// only for SignDetectionMode::HoleWindingRule:
+    /// positive distance if winding number below or equal this threshold;
+    /// ideal threshold: 0.5 for closed meshes; 0.0 for planar meshes
+    float windingNumberThreshold = 0.5f;
+
+    /// only for SignDetectionMode::HoleWindingRule:
+    /// determines the precision of fast approximation: the more the better, minimum value is 1
+    float windingNumberBeta = 2;
+};
+
+/// computes signed distance from point (p) to mesh part (mp) following options (op);
+/// returns std::nullopt if distance is smaller than op.minDist or larger than op.maxDist (except for op.signMode == HoleWindingRule)
+[[nodiscard]] MRMESH_API std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p, const DistanceToMeshOptions& op );
 
 /// \}
 

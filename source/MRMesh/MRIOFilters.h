@@ -1,6 +1,6 @@
 #pragma once
 
-#include <algorithm>
+#include "MRMeshFwd.h"
 #include <compare>
 #include <optional>
 #include <string>
@@ -26,40 +26,16 @@ struct IOFilter
 
     std::partial_ordering operator <=>( const IOFilter& ) const = default;
 
-    [[nodiscard]] inline bool isSupportedExtension( const std::string& ext ) const
-    {
-        return extensions.find( ext ) != std::string::npos;
-    }
+    [[nodiscard]] MRMESH_API bool isSupportedExtension( const std::string& ext ) const;
 };
 
 using IOFilters = std::vector<IOFilter>;
 
-inline IOFilters operator | ( const IOFilters& a, const IOFilters& b )
-{
-    IOFilters copy = a;
-    for ( const auto& bElem : b )
-    {
-        if ( std::find_if( a.begin(), a.end(), [&] ( const IOFilter& aF )
-        {
-            return aF.extensions == bElem.extensions;
-        } ) == a.end() )
-            copy.push_back( bElem );
-    }
-    return copy;
-}
+/// returns union of input filters
+[[nodiscard]] MRMESH_API IOFilters operator | ( const IOFilters& a, const IOFilters& b );
 
 /// find a corresponding filter for a given extension
-inline std::optional<IOFilter> findFilter( const IOFilters& filters, const std::string& extension )
-{
-    const auto it = std::find_if( filters.begin(), filters.end(), [&extension] ( auto&& filter )
-    {
-        return filter.isSupportedExtension( extension );
-    } );
-    if ( it != filters.end() )
-        return *it;
-    else
-        return std::nullopt;
-}
+[[nodiscard]] MRMESH_API std::optional<IOFilter> findFilter( const IOFilters& filters, const std::string& extension );
 
 /// \}
 

@@ -180,6 +180,7 @@ jobs:
       - name: Python Regression Tests
         env:
           SMOKE: ${{ env.INTERNAL_BUILD == 'true' && inputs.full_config_build == false && matrix.config == 'Debug' }}
+          MR_REGRESSION_TESTS_UBUNTUARM2004_MRBIND_ABI_ISSUES: ${{ fromJSON('[0,1]')[matrix.os == 'ubuntu20' && inputs.mrbind] }}
         if: ${{ env.INTERNAL_BUILD == 'true' }}
         working-directory: ./build/${{ matrix.config }}/bin
         run: |

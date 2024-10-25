@@ -74,7 +74,7 @@ public:
         auto it = std::find_if( processors.begin(), processors.end(), [&extension] ( auto&& item )
         {
             const auto& [filter, _] = item;
-            return filter.extensions.find( extension ) != std::string::npos;
+            return filter.isSupportedExtension( extension );
         } );
         if ( it != processors.end() )
             return it->second;

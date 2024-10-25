@@ -36,7 +36,7 @@ struct DecimateSettings
     ///   stop the decimation as soon as the estimated distance deviation from the original mesh is more than this value
     /// for DecimateStrategy::ShortestEdgeFirst only:
     ///   stop the decimation as soon as the shortest edge in the mesh is greater than this value
-    float maxError = 0.001f;
+    float maxError = FLT_MAX;
 
     /// Maximal possible edge length created during decimation
     float maxEdgeLen = FLT_MAX;

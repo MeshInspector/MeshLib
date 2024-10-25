@@ -54,13 +54,26 @@ struct IntersectionsMap
     ContourIdMap map;
 };
 
+struct BaseOutlineParameters
+{
+    bool allowMerge{ false }; ///< allow to merge vertices with same coordinates
+    WindingMode innerType{ WindingMode::Negative }; ///< what to mark as inner part
+};
+
 /// returns Mesh with boundaries representing outline if input contours
 /// interMap optional output intersection map
-MRMESH_API Mesh getOutlineMesh( const Contours2f& contours, IntersectionsMap* interMap = nullptr );
+MRMESH_API Mesh getOutlineMesh( const Contours2f& contours, IntersectionsMap* interMap = nullptr, const BaseOutlineParameters& params = {} );
+MRMESH_API Mesh getOutlineMesh( const Contours2d& contours, IntersectionsMap* interMap = nullptr, const BaseOutlineParameters& params = {} );
+
+struct OutlineParameters
+{
+    ContoursIdMap* indicesMap{ nullptr }; ///< optional output from result contour ids to input ones
+    BaseOutlineParameters baseParams;
+};
 
 /// returns Contour representing outline if input contours
-/// indicesMap optional output from result contour ids to input ones
-MRMESH_API Contours2f getOutline( const Contours2f& contours, ContoursIdMap* indicesMap = nullptr );
+MRMESH_API Contours2f getOutline( const Contours2f& contours, const OutlineParameters& params = {} );
+MRMESH_API Contours2f getOutline( const Contours2d& contours, const OutlineParameters& params = {} );
 
 /**
  * @brief triangulate 2d contours

@@ -250,7 +250,9 @@ enum class DegreesMode
     degrees, // Fractional degrees.
     degreesMinutes, // Integral degrees, fractional arcminutes.
     degreesMinutesSeconds, // Integral degrees and minutes, fractional arcseconds.
+    _count [[maybe_unused]],
 };
+[[nodiscard]] MRVIEWER_API std::string_view toString( DegreesMode mode );
 
 // Controls how a value with a unit is converted to a string.
 template <UnitEnum E>

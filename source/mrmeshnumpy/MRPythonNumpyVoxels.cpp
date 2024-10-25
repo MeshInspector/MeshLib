@@ -12,7 +12,7 @@ MR::SimpleVolumeMinMax simpleVolumeFrom3Darray( const pybind11::buffer& voxelsAr
 
     MR::SimpleVolumeMinMax res;
     res.dims = MR::Vector3i( int( info.shape[0] ), int( info.shape[1] ), int( info.shape[2] ) );
-    size_t countPoints = res.dims.x * res.dims.y * res.dims.z;
+    size_t countPoints = size_t( res.dims.x ) * res.dims.y * res.dims.z;
     res.data.resize( countPoints );
 
     auto strideX = info.strides[0] / info.itemsize;
@@ -49,7 +49,7 @@ pybind11::array_t<double> getNumpy3Darray( const MR::SimpleVolume& simpleVolume 
 {
     using namespace MR;
     // Allocate and initialize some data;
-    const size_t size = simpleVolume.dims.x * simpleVolume.dims.y * simpleVolume.dims.z;
+    const size_t size = size_t( simpleVolume.dims.x ) * simpleVolume.dims.y * simpleVolume.dims.z;
     double* data = new double[size];
 
     const size_t cX = simpleVolume.dims.x;

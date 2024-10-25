@@ -108,7 +108,7 @@ SimpleVolumeMinMax resampleVolumeByInterpolation(
     res.dims.x = int( volume.dims.x * volume.voxelSize.x / res.voxelSize.x );
     res.dims.y = int( volume.dims.y * volume.voxelSize.y / res.voxelSize.y );
     res.dims.z = int( volume.dims.z * volume.voxelSize.z / res.voxelSize.z );
-    res.data.resize( res.dims.x * res.dims.y * res.dims.z );
+    res.data.resize( size_t( res.dims.x ) * res.dims.y * res.dims.z );
     VolumeIndexer indexer( res.dims );
 
     VoxelsVolumeInterpolatedAccessor<Accessor> interpolator( volume, accessor );

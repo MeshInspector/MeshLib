@@ -1,5 +1,12 @@
 #include "MRMenu.h"
 #include "MRFileDialog.h"
+#include "MRHistoryStore.h"
+#include "ImGuiHelpers.h"
+#include "MRAppendHistory.h"
+#include "MRCommandLoop.h"
+#include "MRRibbonButtonDrawer.h"
+#include "MRColorTheme.h"
+#include "MRShortcutManager.h"
 
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRObjectLoad.h>
@@ -20,21 +27,12 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRChangeSceneAction.h"
-#include "MRMesh/MRChangeNameAction.h"
-#include "MRHistoryStore.h"
-#include "ImGuiHelpers.h"
-#include "MRAppendHistory.h"
 #include "MRMesh/MRCombinedHistoryAction.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRToFromEigen.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRTimer.h"
-
 #include "MRMesh/MRSceneSettings.h"
-#include "MRCommandLoop.h"
-#include "MRRibbonButtonDrawer.h"
-#include "MRColorTheme.h"
-#include "MRShortcutManager.h"
 #include <GLFW/glfw3.h>
 
 #ifndef __EMSCRIPTEN__

@@ -366,7 +366,7 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
     outVolume.max = FLT_MIN;
 
     outVolume.voxelSize = settings.voxelSize;
-    outVolume.data.resize( outVolume.dims.x * outVolume.dims.y );
+    outVolume.data.resize( size_t( outVolume.dims.x ) * outVolume.dims.y );
 
     TiffParameters localParams;
     RawTiffOutput output;
@@ -375,7 +375,7 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
     output.min = &outVolume.min;
     output.max = &outVolume.max;
     FloatGrid grid;
-    for ( int layerIndex = 0; layerIndex < files.size(); ++layerIndex )
+    for ( size_t layerIndex = 0; layerIndex < files.size(); ++layerIndex )
     {
         output.bytes = ( uint8_t* )( outVolume.data.data() );
         auto readRes = readRawTiff( files[layerIndex], output );

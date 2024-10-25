@@ -352,7 +352,7 @@ public:
     // Sets manager of viewer settings which loads user personal settings on beginning of app
     // and saves it in app's ending
     MRVIEWER_API void setViewportSettingsManager( std::unique_ptr<IViewerSettingsManager> mng );
-    MRVIEWER_API const std::unique_ptr<IViewerSettingsManager>& getViewportSettingsManager() const { return settingsMng_; }
+    MRVIEWER_API const std::unique_ptr<IViewerSettingsManager>& getViewerSettingsManager() const { return settingsMng_; }
 
     using PointInAllSpaces = MR::PointInAllSpaces;
     // Finds point in all spaces from screen space pixel point

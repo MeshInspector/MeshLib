@@ -25,6 +25,7 @@
 #include "MRMesh/MRTimer.h"
 #include "ImGuiHelpers.h"
 #include "MRAppendHistory.h"
+#include "MRShowModal.h"
 #include "MRMesh/MRChangeNameAction.h"
 #include "MRMesh/MRChangeSceneAction.h"
 ////////////////////////////////////////////////////////////////////////////////

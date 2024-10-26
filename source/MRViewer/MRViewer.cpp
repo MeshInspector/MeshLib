@@ -11,7 +11,6 @@
 #include "MRSplashWindow.h"
 #include "MRViewerSettingsManager.h"
 #include "MRGladGlfw.h"
-#include "ImGuiMenu.h"
 #include "MRRibbonMenu.h"
 #include "MRGetSystemInfoJson.h"
 #include "MRSpaceMouseHandler.h"
@@ -28,6 +27,7 @@
 #include "MRFrameCounter.h"
 #include "MRColorTheme.h"
 #include "MRHistoryStore.h"
+#include "MRShowModal.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>

@@ -22,7 +22,7 @@
 #include "MRMesh/MRSceneSettings.h"
 #include "MRMesh/MRDirectory.h"
 #include <MRMesh/MRSceneRoot.h>
-#include <MRFileDialog.h>
+#include "MRFileDialog.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRRibbonSceneObjectsListDrawer.h"
 #include "MRUnitSettings.h"

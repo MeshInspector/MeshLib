@@ -2,7 +2,7 @@
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRUIStyle.h"
-#include "MRViewer/MRViewer.h"
+#include "MRViewer/MRViewerInstance.h"
 #include "MRViewer/MRViewport.h"
 #include "MRMesh/MRLine3.h"
 #include <chrono>
@@ -63,7 +63,7 @@ void RotatorPlugin::preDraw_()
     if ( lastDrawTime_ )
     {
         auto timePassed = std::chrono::duration<float>( *lastDrawTime_ - now ).count();
-        auto & viewport = getViewerInstance().viewport();
+        auto & viewport = MR::viewport();
         Vector3f sceneCenter;
         if ( auto sceneBox = viewport.getSceneBox(); sceneBox.valid() )
             sceneCenter = sceneBox.center();
@@ -73,7 +73,7 @@ void RotatorPlugin::preDraw_()
             timePassed * rotationSpeed_ );
     }
     lastDrawTime_ = now;
-    getViewerInstance().incrementForceRedrawFrames();
+    incrementForceRedrawFrames();
 }
 
 MR_REGISTER_RIBBON_ITEM( RotatorPlugin )

@@ -166,11 +166,11 @@ jobs:
         uses: robinraju/release-downloader@v1.11
         with:
           releaseId: ${{inputs.release_id}}
-          fileName: "*${{matrix.runner}}.pkg"
+          fileName: "*${{matrix.os}}.pkg"
 
       - name: Install Pkg
         run: |
-          sudo installer -pkg meshlib_*${{matrix.runner}}.pkg  -target /
+          sudo installer -pkg meshlib_*${{matrix.os}}.pkg  -target /
           xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
 
       # [error] NSGL: Failed to find a suitable pixel format

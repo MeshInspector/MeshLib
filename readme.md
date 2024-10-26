@@ -25,7 +25,7 @@ The goal which we set when designing MeshLib was to value simplicity and perform
 
 * [MeshInspector YouTube channel](https://www.youtube.com/channel/UCv9bNhwoVDPaLPPyWJeVPNg)
 
-* [MeshLib Documentation](https://doc.meshinspector.com/)
+* [MeshLib Documentation](https://meshlib.io/documentation/)
 
 * [Email us](mailto:support@meshinspector.com)
 
@@ -116,6 +116,9 @@ We plan to add computed-tomography reconstruction in MeshLib (already present in
 Although MeshLib is written in C++, all functions are exposed to Python as well. Python code can be executed both from within a MeshLib-based C++ application (embedded mode) and from python interpreter directly, which imports MeshLib modules.
 
 Moreover, the latest MeshLib released version can be easily installed as a Python 3.8 - 3.12 package using `pip install`:
+
+Latest version of meshlib in python has almost all c++ functionality, but also can have slightly different signatures from old versions. One can install it if specify version explicitly `pip install meshlib==3.0.0.40`  
+> **_NOTE:_** we have no available Python3.8 package on macOS x86
 * On Windows via
 ```
 py -3 -m pip install --upgrade pip
@@ -133,7 +136,7 @@ pip install --upgrade pip
 pip install --upgrade meshlib
 ```
 
-See Python Basic Examples [here](https://doc.meshinspector.com/HowToBasic.html) or search for more complex ones on [stackoverflow.com](https://stackoverflow.com/).
+See Python Basic Examples [here](https://meshlib.io/documentation/HowToBasic.html) or search for more complex ones on [stackoverflow.com](https://stackoverflow.com/).
 
 # .NET integration
 
@@ -305,7 +308,7 @@ This option requires you to [install third-party libraries](#vcpkg) via `vcpkg` 
 You can download [zip-archive](https://github.com/MeshInspector/MeshLib/releases) containing 
 * header files (.h),
 * library archives (.lib),
-* dynamic labraries (.dll)
+* dynamic libraries (.dll)
 
 of both MeshLib and dependant third-party libraries, and make them available during your project building and runtime execution as follows.
 

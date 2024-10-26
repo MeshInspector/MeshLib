@@ -20,6 +20,7 @@ def handler(event, context):
 
     mesh = mrmeshpy.loadMesh("/tmp/my.stl")
     settings = mrmeshpy.DecimateSettings()
+    settings.maxError = 0.001
     result = mrmeshpy.decimateMesh(mesh, settings)
 
     with open("/tmp/res.stl", "wb") as fout:

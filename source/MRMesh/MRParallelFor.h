@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRVector.h"
+#include "MRBox.h"
 #include "MRProgressCallback.h"
 #include "MRParallel.h"
 #include <atomic>
@@ -129,14 +130,8 @@ inline auto ParallelFor( const Vector<T, I> & v, F &&... f )
 template<typename T>
 std::pair<T, T> parallelMinMax( const std::vector<T>& vec, const T * topExcluding = nullptr )
 {
-    struct MinMax
-    {
-        T min = std::numeric_limits<T>::max();
-        T max = std::numeric_limits<T>::lowest();
-    };
-
-    auto minmax = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, vec.size() ), MinMax{},
-    [&] ( const tbb::blocked_range<size_t> range, MinMax curMinMax )
+    auto minmax = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, vec.size() ), MinMax<T>{},
+    [&] ( const tbb::blocked_range<size_t> range, MinMax<T> curMinMax )
     {
         for ( size_t i = range.begin(); i < range.end(); i++ )
         {
@@ -150,9 +145,9 @@ std::pair<T, T> parallelMinMax( const std::vector<T>& vec, const T * topExcludin
         }
         return curMinMax;
     },
-    [&] ( const MinMax& a, const MinMax& b )
+    [&] ( const MinMax<T>& a, const MinMax<T>& b )
     {
-        MinMax res;
+        MinMax<T> res;
         if ( a.min < b.min )
         {
             res.min = a.min;

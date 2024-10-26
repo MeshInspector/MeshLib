@@ -4,10 +4,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(MRViewer CXX)
 
+option(MRVIEWER_NO_GTK "Disable GTK support (affects file dialog support on Linux and macOS)" OFF)
 option(MRVIEWER_NO_VOXELS "Disable voxels support" OFF)
 
 IF(NOT MESHLIB_BUILD_VOXELS)
   set(MRVIEWER_NO_VOXELS ON)
+ENDIF()
+
+IF(WIN32 OR MR_EMSCRIPTEN)
+  set(MRVIEWER_NO_GTK ON)
 ENDIF()
 
 file(GLOB HEADERS "*.h")
@@ -36,9 +41,10 @@ IF(NOT MRVIEWER_NO_VOXELS)
   ENDIF()
 ENDIF()
 
-IF(NOT MR_EMSCRIPTEN)
+IF(NOT MRVIEWER_NO_GTK)
   pkg_check_modules(gtkmm REQUIRED IMPORTED_TARGET gtkmm-3.0)
-ENDIF() # NOT MR_EMSCRIPTEN
+  list(APPEND MRVIEWER_OPTIONAL_DEPENDENCIES PkgConfig::gtkmm)
+ENDIF()
 
 file(GLOB JSONS "*.json")
 IF(MR_EMSCRIPTEN)
@@ -78,7 +84,6 @@ ELSE() # NOT MR_EMSCRIPTEN
       spdlog
       jsoncpp
       cpr
-      PkgConfig::gtkmm
       imgui
       glad
       glfw
@@ -100,7 +105,6 @@ ELSE() # NOT MR_EMSCRIPTEN
       imgui
       glad
       glfw
-      PkgConfig::gtkmm
       hidapi-hidraw
       jsoncpp
       spdlog

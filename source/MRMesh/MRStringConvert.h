@@ -88,6 +88,12 @@ inline Expected<T> addFileNameInError( Expected<T> v, const std::filesystem::pat
     return v;
 }
 
+/// in case of empty vector, returns "Empty"
+/// in case of single input file.ext, returns ".EXT"
+/// in case of multiple files with same extension, returns ".EXTs"
+/// otherwise returns "Files"
+MRMESH_API std::string commonFilesName( const std::vector<std::filesystem::path> & files );
+
 /// returns printf-format for floating-point value in decimal notation with given precision in digits
 /// and without trailing zeros after the decimal point
 /// \param fmt       preallocated buffer of 5 bytes

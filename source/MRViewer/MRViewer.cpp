@@ -117,7 +117,7 @@ EMSCRIPTEN_KEEPALIVE void emsUpdateViewportBounds()
 EMSCRIPTEN_KEEPALIVE void emsForceSettingsSave()
 {
     auto& viewer = MR::getViewerInstance();
-    auto& settingsManager = viewer.getViewportSettingsManager();
+    auto& settingsManager = viewer.getViewerSettingsManager();
     if ( settingsManager )
         settingsManager->saveSettings( viewer );
     MR::Config::instance().writeToFile();
@@ -1188,56 +1188,63 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
     if ( filesList.empty() )
         return false;
 
-    const auto postProcess = [] ( const SceneLoad::SceneLoadResult& result )
+    const auto postProcess = [this] ( const SceneLoad::SceneLoadResult& result )
     {
         if ( result.scene )
         {
-            const auto childCount = result.scene->children().size();
-            const auto isSceneEmpty = SceneRoot::get().children().empty();
-            if ( !result.isSceneConstructed || ( childCount == 1 && isSceneEmpty ) )
+            const bool wasEmptyScene = SceneRoot::get().children().empty();
+            const bool wasEmptyUndo = globalHistoryStore_ && globalHistoryStore_->getStackPointer() == 0;
+
+            if ( result.loadedFiles.size() == 1 && ( !result.isSceneConstructed || wasEmptyScene ) )
             {
-                AppendHistory<SwapRootAction>( "Load Scene File" );
+                // the scene is taken as is from a single file, replace the current scene with it
+                AppendHistory<SwapRootAction>( "Open " + commonFilesName( result.loadedFiles ) );
                 auto newRoot = result.scene;
                 std::swap( newRoot, SceneRoot::getSharedPtr() );
-                getViewerInstance().setSceneDirty();
-
-                assert( result.loadedFiles.size() == 1 );
-                auto filePath = result.loadedFiles.front();
-                if ( !result.isSceneConstructed )
-                {
-                    getViewerInstance().onSceneSaved( filePath );
-                }
-                else
-                {
-                    // for constructed scenes, add original file path to the recent files' list and set a new scene extension afterward
-                    getViewerInstance().recentFilesStore().storeFile( filePath );
-                    getViewerInstance().onSceneSaved( filePath, false );
-                }
+                setSceneDirty();
+                onSceneSaved( result.loadedFiles.front() );
             }
             else
             {
-                std::string historyName = childCount == 1 ? "Open file" : "Open files";
-                SCOPED_HISTORY( historyName );
+                // not-scene file was open, or several scenes were open, append them to the current scene
+                for ( const auto& file : result.loadedFiles )
+                    recentFilesStore().storeFile( file );
+
+                SCOPED_HISTORY( "Open " + commonFilesName( result.loadedFiles ) );
 
                 const auto children = result.scene->children();
                 result.scene->removeAllChildren();
                 for ( const auto& obj : children )
                 {
-                    AppendHistory<ChangeSceneAction>( "Load File", obj, ChangeSceneAction::Type::AddObject );
+                    AppendHistory<ChangeSceneAction>( "add obj", obj, ChangeSceneAction::Type::AddObject );
                     SceneRoot::get().addChild( obj );
                 }
-
-                auto& viewerInst = getViewerInstance();
-                for ( const auto& file : result.loadedFiles )
-                    viewerInst.recentFilesStore().storeFile( file );
             }
 
-            getViewerInstance().viewport().preciseFitDataToScreenBorder( { 0.9f } );
+            // if the original state was empty, avoid user confusion when they undo opening and see empty modified scene
+            if ( wasEmptyScene && wasEmptyUndo && globalHistoryStore_ )
+            {
+                globalHistoryStore_->clear();
+                globalHistoryStore_->setSavedState();
+                makeTitleFromSceneRootPath();
+            }
+
+            viewport().preciseFitDataToScreenBorder( { 0.9f } );
         }
         if ( !result.errorSummary.empty() )
             showModal( result.errorSummary, NotificationType::Error );
         else if ( !result.warningSummary.empty() )
-            pushNotification( { .text = result.warningSummary, .type = NotificationType::Warning } );
+        {
+            NotificationTagMask mask = NotificationTags::None;
+            if ( result.warningSummary.find( "consider using" ) != std::string::npos )
+                mask |= NotificationTags::Recommendation;
+            if ( result.warningSummary.find( "were duplicated" ) != std::string::npos ||
+                result.warningSummary.find( "were skipped" ) != std::string::npos )
+                mask |= NotificationTags::ImplicitChanges;
+            if ( mask == NotificationTags::None )
+                mask = NotificationTags::ImplicitChanges;
+            pushNotification( { .text = result.warningSummary, .type = NotificationType::Warning,.tags = mask } );
+        }
     };
 
 #if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )

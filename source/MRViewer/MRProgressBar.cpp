@@ -140,7 +140,7 @@ void ProgressBar::setup( float scaling )
                 instance.lastOperationTimeSec_ = time;
                 spdlog::info( "Operation \"{}\" time  - {} sec", instance.title_, instance.lastOperationTimeSec_ );
                 pushNotification( { .header = fmt::format( "{:.1f} sec", time < 5.e-3f ? 0.f : time ),
-                                    .text = instance.title_, .type = NotificationType::Time } );
+                                    .text = instance.title_, .type = NotificationType::Time,.tags = NotificationTags::Report } );
             }
             if ( instance.onFinish_ )
             {

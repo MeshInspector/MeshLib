@@ -16,6 +16,7 @@ struct VectorTraits
 
     using BaseType = T;
     static constexpr int size = 1;
+    static constexpr bool supportNoInit = false;
 
     // Changes the vector element type. For scalars, replaces the whole type.
     template <typename U>
@@ -26,6 +27,7 @@ struct VectorTraits
     template <typename U>
     [[nodiscard]] static constexpr auto&& getElem( int i, U&& value ) { (void)i; return value; }
 
+    static constexpr T diagonal( T v ) { return v; }
 };
 
 template <typename T>
@@ -33,6 +35,7 @@ struct VectorTraits<Vector2<T>>
 {
     using BaseType = T;
     static constexpr int size = 2;
+    static constexpr bool supportNoInit = true;
 
     template <typename U>
     using ChangeBaseType = Vector2<U>;
@@ -44,12 +47,16 @@ struct VectorTraits<Vector2<T>>
         // GCC and Clang optimize both in the same manner.
         return ( &value.x )[i];
     }
+
+    static constexpr auto diagonal( T v ) { return Vector2<T>::diagonal( v ); }
 };
+
 template <typename T>
 struct VectorTraits<Vector3<T>>
 {
     using BaseType = T;
     static constexpr int size = 3;
+    static constexpr bool supportNoInit = true;
 
     template <typename U>
     using ChangeBaseType = Vector3<U>;
@@ -61,12 +68,16 @@ struct VectorTraits<Vector3<T>>
         // GCC and Clang optimize both in the same manner.
         return ( &value.x )[i];
     }
+
+    static constexpr auto diagonal( T v ) { return Vector3<T>::diagonal( v ); }
 };
+
 template <typename T>
 struct VectorTraits<Vector4<T>>
 {
     using BaseType = T;
     static constexpr int size = 4;
+    static constexpr bool supportNoInit = true;
 
     template <typename U>
     using ChangeBaseType = Vector4<U>;
@@ -78,6 +89,8 @@ struct VectorTraits<Vector4<T>>
         // GCC and Clang optimize both in the same manner.
         return ( &value.x )[i];
     }
+
+    static constexpr auto diagonal( T v ) { return Vector4<T>::diagonal( v ); }
 };
 
 }

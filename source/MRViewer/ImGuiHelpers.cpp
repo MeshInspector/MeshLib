@@ -581,9 +581,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         else if ( ribMenu )
             yPos = ( ribMenu->getTopPanelOpenedHeight() - 1.0f ) * menu->menu_scaling();
 
-        const std::string configKey = std::string( label ) + std::string( "_position" );
         auto& config = MR::Config::instance();
-
         if ( menu->isSavedDialogPositionsEnabled() && config.hasJsonValue( "DialogPositions" ) )
         {
             auto json = config.getJsonValue( "DialogPositions" )[label];
@@ -603,7 +601,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         }
     }
 
-    UI::getDefaultWindowRectAllocator().setFreeNextWindowPos( label, initialWindowPos, haveSavedWindowPos ? ImGuiCond_FirstUseEver : ImGuiCond_Appearing, params.pivot );
+    UI::getDefaultWindowRectAllocator().setFreeNextWindowPos( label, initialWindowPos, haveSavedWindowPos ? ImGuiCond_FirstUseEver : ImGuiCond_Appearing, haveSavedWindowPos ? ImVec2( 0, 0 ) : params.pivot );
 
     if ( params.changedSize )
     {
@@ -867,6 +865,14 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
             strippedLabel = strippedLabel.substr( 0, sep );
 
         UI::TestEngine::pushTree( strippedLabel );
+    }
+
+    if ( window )
+    {
+        auto& config = Config::instance();
+        auto dpJson = config.getJsonValue( "DialogPositions" );
+        serializeToJson( Vector2i{ int( window->Pos.x ), int( window->Pos.y ) }, dpJson[label] );
+        config.setJsonValue( "DialogPositions", dpJson );
     }
 
     return true;
@@ -1182,6 +1188,8 @@ PaletteChanges Palette(
             palette.setDiscretizationNumber( discretization );
             palette.resetLabels();
             changes |= PaletteChanges::Texture;
+            if ( params.ranges.size() == 4 )
+                changes |= PaletteChanges::Ranges;
             presetName.clear();
         }
         UI::setTooltipIfHovered( "Number of discrete levels", menuScaling );
@@ -1198,7 +1206,7 @@ PaletteChanges Palette(
     UI::combo( "Palette Type", &paletteRangeMode, { "Even Space", "Central Zone" } );
     UI::setTooltipIfHovered( "If \"Central zone\" selected you can separately fit values which are higher or lower then central one. Otherwise only the whole scale can be fit", menuScaling );
     if ( oldPaletteRangeMode != paletteRangeMode )
-        changes |= PaletteChanges::Texture;
+        changes |= PaletteChanges::All;
     ImGui::PopItemWidth();
 
     ImGui::PushItemWidth( 0.5f * scaledWidth );

@@ -23,5 +23,4 @@ python@3.10
 spdlog
 tbb
 tinyxml2
-xerces-c
 zlib

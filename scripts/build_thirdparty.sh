@@ -124,6 +124,8 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   cmake --build . -j ${NPROC}
   cmake --install .
 
+  # build libE57Format separately
+  CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/libE57Format.sh ${MESHLIB_THIRDPARTY_DIR}/libE57Format
   # build OpenVDB separately
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/openvdb.sh ${MESHLIB_THIRDPARTY_DIR}/openvdb/v10/openvdb
 else

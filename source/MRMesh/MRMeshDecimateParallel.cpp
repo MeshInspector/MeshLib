@@ -26,6 +26,15 @@ DecimateResult decimateParallelMesh( MR::Mesh & mesh, const DecimateParallelSett
     seqSettings.region = settings.region;
     seqSettings.touchNearBdEdges = settings.touchNearBdEdges;
     seqSettings.maxAngleChange = settings.maxAngleChange;
+
+    if ( seqSettings.maxError >= FLT_MAX &&
+         seqSettings.maxEdgeLen >= FLT_MAX )
+    {
+        assert( false ); // below logic can be deleted in future
+        // if unexperienced user started decimation with default settings, then set sum realistic limits
+        seqSettings.maxError = 0.001f * mesh.computeBoundingBox( seqSettings.region ).diagonal();
+    }
+
     if ( settings.preCollapse )
     {
         seqSettings.preCollapse = [&mesh, cb = settings.preCollapse]( MR::EdgeId edgeToCollapse, const MR::Vector3f & newEdgeOrgPos ) -> bool

@@ -273,8 +273,10 @@ TEST( MRMesh, volumeToMeshByParts )
                 .dims = { end - begin, dimensions.y, dimensions.z },
                 .voxelSize = Vector3f::diagonal( voxelSize )
             },
-            -radius, //min
-            +radius  //max
+            {
+                -radius, //min
+                +radius  //max
+            }
         };
     };
 
@@ -285,8 +287,10 @@ TEST( MRMesh, volumeToMeshByParts )
                 .dims = { end - begin, dimensions.y, dimensions.z },
                 .voxelSize = Vector3f::diagonal( voxelSize )
             },
-            -radius, //min
-            +radius  //max
+            {
+                -radius, //min
+                +radius  //max
+            }
         };
 
         VolumeIndexer indexer( result.dims );

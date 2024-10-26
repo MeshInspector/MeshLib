@@ -23,6 +23,7 @@
     <ClInclude Include="MRICP.h" />
     <ClInclude Include="MRId.h" />
     <ClInclude Include="MRIntersectionContour.h" />
+    <ClInclude Include="MRIOExtras.h" />
     <ClInclude Include="MRMakeSphereMesh.h" />
     <ClInclude Include="MRMatrix3.h" />
     <ClInclude Include="MRMeshBoolean.h" />
@@ -73,6 +74,7 @@
     <ClCompile Include="MRICP.cpp" />
     <ClCompile Include="MRId.cpp" />
     <ClCompile Include="MRIntersectionContour.cpp" />
+    <ClCompile Include="MRIOExtras.cpp" />
     <ClCompile Include="MRMakeSphereMesh.cpp" />
     <ClCompile Include="MRMatrix3.cpp" />
     <ClCompile Include="MRMesh.cpp" />
@@ -105,6 +107,9 @@
     <ClCompile Include="MRVector3.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\MRIOExtras\MRIOExtras.vcxproj">
+      <Project>{99eb9674-abbf-47cd-a8d5-ee122eb5da0c}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">
       <Project>{c7780500-ca0e-4f5f-8423-d7ab06078b14}</Project>
     </ProjectReference>

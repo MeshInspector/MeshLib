@@ -7,6 +7,8 @@ namespace MR
 {
 
 // verifies that template can be instantiated with typical parameters
+template struct Box<float>;
+template struct Box<double>;
 template struct Box<Vector2f>;
 template struct Box<Vector2d>;
 template struct Box<Vector3f>;

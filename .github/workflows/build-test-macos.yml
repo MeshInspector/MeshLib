@@ -96,9 +96,15 @@ jobs:
         env:
           # Add updated Make from homebrew to PATH. Arm Macs use `/opt/homebrew`, while x86 Macs use `/usr/local`. Add both for simplicity.
           PATH: /opt/homebrew/opt/make/libexec/gnubin:/usr/local/opt/make/libexec/gnubin:${{env.PATH}}
+        # Using 4 threads on github runners, because they have only 8G of RAM.
         run: |
           make --version
-          make -f scripts/mrbind/generate.mk -B --trace PYTHON_PKGCONF_NAME=python-3.10-embed EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0' MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
+          make -f scripts/mrbind/generate.mk \
+            -B --trace \
+            PYTHON_PKGCONF_NAME=python-3.10-embed \
+            EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0' \
+            MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin \
+            ${{ fromJSON('["-j8", "-j4"]')[matrix.os == 'github-arm'] }}
 
       - name: Run Start-and-Exit Tests
         if: ${{ matrix.os == 'arm' }}

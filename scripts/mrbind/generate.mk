@@ -21,14 +21,13 @@ endef
 override quote = '$(subst ','"'"',$(subst $(lf), ,$1))'
 
 # Same as `$(shell ...)`, but triggers an error on failure.
-# Same as `$(shell )`, but triggers an error if the command fails.
 override safe_shell = $(if $(dry_run),$(warning Would run command: $1),$(if $(tracing),$(warning Running command: $1))$(shell $1)$(if $(tracing),$(warning Command returned $(.SHELLSTATUS)))$(if $(filter 0,$(.SHELLSTATUS)),,$(error Command failed with exit code $(.SHELLSTATUS): `$1`)))
 
 # Same as `safe_shell`, but discards the output.
 override safe_shell_exec = $(call,$(call safe_shell,$1))
 
 # Loads the contents of file $1, replacing newlines with spaces.
-override load_file = $(subst $(lf), ,$(file <$1))
+override load_file = $(strip $(file <$1))
 
 # Compare version numbers: A <= B
 override version_leq = $(shell printf '%s\n' $1 $2 | sort -CV)$(filter 0,$(.SHELLSTATUS))
@@ -162,7 +161,7 @@ else
 $(error Unknown MODE=$(MODE))
 endif
 
-# Look for MeshLib  dependencies relative to this. On Linux should point to the project root, because that's where `./include` and `./lib` are.
+# Look for MeshLib dependencies relative to this. On Linux should point to the project root, because that's where `./include` and `./lib` are.
 ifneq ($(IS_WINDOWS),)
 DEPS_BASE_DIR := $(VCPKG_DIR)/installed/x64-windows-meshlib
 DEPS_LIB_DIR := $(DEPS_BASE_DIR)/$(if $(filter Debug,$(VS_MODE)),debug/)lib
@@ -177,6 +176,7 @@ ifneq ($(and $(value PYTHON_CFLAGS),$(value PYTHON_LDFLAGS)),)
 $(info Using custom Python flags.)
 else
 ifneq ($(IS_WINDOWS),)
+# Note that we're not using `DEPS_LIB_DIR` here, to always use the release Python on Windows, because that's what MeshLib itself seems to do.
 PYTHON_PKGCONF_NAME := $(basename $(notdir $(lastword $(sort $(wildcard $(DEPS_BASE_DIR)/lib/pkgconfig/python-*-embed.pc)))))
 else
 PYTHON_PKGCONF_NAME := python3-embed
@@ -212,12 +212,13 @@ endif
 $(info Using Python module suffix: $(PYTHON_MODULE_SUFFIX))
 
 
+# Which MeshLib projects to bind.
 INPUT_PROJECTS := MRMesh MRIOExtras MRSymbolMesh MRVoxels
 
 # 1 or 0. Whether to build mrmeshnumpy (if false you should build it with CMake with the rest of MeshLib).
 # Currently defaults to 1 because otherwise we get an incompatibility on Ubuntu x86 20.04 and 22.04 when MeshLib is built in debug mode,
 #   resulting in this error: `ImportError: arg(): could not convert default argument 'settings: MR::MeshBuilder::BuildSettings' in function 'meshFromFacesVerts' into a Python object`.
-# If you fix this and want to change the default: 1. Remove this line and uncomment the one below. 2. In `distribution.sh` stop calling patchelf for `mrmeshnumpy.so`. 3. In `MeshLib/CMakeLists.txt`, move `mrmeshnumpy` out from `MESHLIB_BUILD_MRMESH_PY_LEGACY`
+# If you fix this and want to change the default: 1. Remove this line and uncomment the one below. 2. In `distribution.sh` stop calling patchelf for `mrmeshnumpy.so`. 3. In `MeshLib/CMakeLists.txt`, move `mrmeshnumpy` out from `MESHLIB_BUILD_MRMESH_PY_LEGACY`.
 BUILD_MRMESHNUMPY := 1
 # Defaults to 0, but only if if `PACKAGE_NAME == meshlib`.
 # BUILD_MRMESHNUMPY := $(if $(filter $(PACKAGE_NAME),meshlib),1)
@@ -247,8 +248,6 @@ MAKEFLAGS += -j8
 .DELETE_ON_ERROR: # Delete output on command failure. Otherwise you'll get incomplete bindings.
 
 
-
-
 # You can change this to something else to rename the module, to have it side-by-side with the legacy one.
 PACKAGE_NAME := meshlib
 MODULE_OUTPUT_DIR := $(MESHLIB_SHLIB_DIR)/$(PACKAGE_NAME)
@@ -275,9 +274,13 @@ LINKER_OUTPUT := $(MODULE_OUTPUT_DIR)/mrmeshpy$(PYTHON_MODULE_SUFFIX)
 LINKER := $(CXX_FOR_BINDINGS) -fuse-ld=lld
 # Unsure if `-dynamiclib` vs `-shared` makes any difference on MacOS. I'm using the former because that's what CMake does.
 LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(DEPS_LIB_DIR) $(PYTHON_LDFLAGS) -L$(MESHLIB_SHLIB_DIR) $(addprefix -l,$(INPUT_PROJECTS)) -lMRPython $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)/linker_flags.txt)
-EXTRA_INPUT_SOURCES := $(makefile_dir)/helpers.cpp
 COMBINED_HEADER_OUTPUT := $(TEMP_OUTPUT_DIR)/combined.hpp
 GENERATED_SOURCE_OUTPUT := $(TEMP_OUTPUT_DIR)/binding.cpp
+
+# Those files are parsed and baked into the final bindings.
+EXTRA_INPUT_SOURCES := $(makefile_dir)helpers.cpp
+# Those files compiled as is and baked into the final bindings.
+EXTRA_GENERATED_SOURCES := $(makefile_dir)aliases.cpp
 
 ifneq ($(IS_WINDOWS),)
 # "Cross"-compile to MSVC.
@@ -399,6 +402,16 @@ $(_object): $(_generated) | $(TEMP_OUTPUT_DIR)
 endef
 # Linking the primary module.
 $(foreach s,$(EXTRA_INPUT_SOURCES),$(eval $(call extra_file_snippet,$s)))
+# Compile extra files that don't need generating.
+override define extra_pregen_file_snippet =
+$(call var,_object := $(TEMP_OUTPUT_DIR)/$(notdir $(1:.cpp=.o)))
+$(call var,object_files += $(_object))
+$(_object): $1 | $(TEMP_OUTPUT_DIR)
+	@echo $(call quote,[Compiling] $1)
+	@$(COMPILER) $(call quote,$1) -c -o $(call quote,$(_object)) $(COMPILER_FLAGS)
+endef
+$(foreach s,$(EXTRA_GENERATED_SOURCES),$(eval $(call extra_pregen_file_snippet,$s)))
+# Linking the primary module.
 $(LINKER_OUTPUT): $(object_files) | $(MODULE_OUTPUT_DIR)
 	@echo $(call quote,[Linking] $@)
 	@$(LINKER) $^ -o $(call quote,$@) $(LINKER_FLAGS)

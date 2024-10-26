@@ -2,6 +2,7 @@
 #include "MRViewerFwd.h"
 #include "MRMesh/MRVector2.h"
 #include "MRRibbonSchema.h"
+#include "MRMesh/MRSignal.h"
 #include <string>
 #include <functional>
 
@@ -42,6 +43,11 @@ public:
 
     // activate search from outside (i.e. shortcut)
     MRVIEWER_API void activate();
+
+    // this signal is emitted when search bar is focused
+    Signal<void()> onFocusSignal;
+    // this signal is emitted when tool is activated within search
+    Signal<void( std::shared_ptr<RibbonMenuItem> )> onToolActivateSignal;
 private:
     bool smallSearchButton_( const Parameters& params );
 
@@ -63,6 +69,7 @@ private:
 
     bool isSmallUI_ = false;
     bool active_ = false;
+    bool prevFrameActive_ = false;
     bool isSmallUILast_ = false;
     bool mainInputFocused_ = false;
     bool blockSearchBtn_ = false;

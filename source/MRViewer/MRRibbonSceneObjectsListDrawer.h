@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMesh/MRMeshFwd.h"
 #include "MRSceneObjectsListDrawer.h"
+#include "MRMesh/MRSignal.h"
 
 namespace MR
 {
@@ -20,6 +21,8 @@ public:
     /// get flag closing scene context menu on any change
     bool getCloseContextOnChange() { return closeContextOnChange_; }
 
+    /// this signal is emitted each frame inside scene context window
+    Signal<void()> onDrawContextSignal;
 protected:
     MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object& obj, bool opened ) override;
     MRVIEWER_API virtual void drawSceneContextMenu_( const std::vector<std::shared_ptr<Object>>& selected, const std::string& uniqueStr ) override;

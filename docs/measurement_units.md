@@ -52,7 +52,9 @@ Some useful parameters are:
 
     When null, assumed to be the same as `.targetUnit`, so no conversion is performed.
 
-* `.targetUnit` (of type `E`) - The output measurement unit.
+* `.targetUnit` (of type `std::optional<E>`) - The output measurement unit.
+
+    If this is null, no conversion is performed, and the unit name is taken from `sourceUnit` if any.
 
 See the definition of `UnitToStringParams<E>` in `<MRViewer/MRUnits.h>` for the full list of parameters.
 
@@ -115,6 +117,11 @@ If you want to add a new unit to an existing enum: (say, add `LengthUnit::yards`
 
 * In `MRViewer/MRUnits.cpp`, in the `getUnitInfo()` specialization for your unit, add an array element with information about your unit.
 
+* If you're updating `LengthUnit` or anything that depends on length (such as `VolumeUnit`):
+
+  * Add the respective units to all those enums (e.g. if you added `LengthUnit::yards`, add `VolumeUnit::yards3` and so on).
+  * Add those units to `getDependentUnit()` in `MRUnitSettings.cpp`.
+
 #### Creating a new unit enum
 
 If you want to create a new unit enum: (say, `EnergyUnit { joules, electronvolts, ... }`)
@@ -127,4 +134,6 @@ If you want to create a new unit enum: (say, `EnergyUnit { joules, electronvolts
 
 * Add a specialization of `getUnitInfo()` to `MRViewer/MRUnits.cpp` for your enum, next to the other ones.
 
-* Add your enum to `forAllParams()` in `source/MRCommonPlugins/ViewerButtons/MRViewerSettingsPlugin.cpp`.
+* Add your enum to `forAll...Params()` in `MRUnitSettings.cpp` (choose `...` accordingly).
+
+* If your enum depends on length (e.g. `VolumeUnit`), all units in your enum must have a respective unit in `LengthUnit`, and vice versa (e.g. `LengthUnit::mm` <-> `VolumeUnit::mm3`, `LengthUnit::meters` <-> `VolumeUnit::meters3`, etc). Then you must also update `getDependentUnit()` in `MRUnitSettings.cpp`.

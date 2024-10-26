@@ -1,48 +1,41 @@
-# exit if any command failed
-#set -eo pipefail
+#!/bin/bash
 
-MR_THIRDPARTY_DIR="thirdparty/"
+# This script creates `*.rpm` packages with built thirdparty and project libs
+# usage: first argument - `v1.2.3.4` - version with "v" prefix
+# ./distribution_rpm.sh v1.2.3.4
+
+# exit if any command failed
+set -eo pipefail
 
 if [ ! -f "./lib/libcpr.so" ]; then
- printf "Thirdparty build was not found. Building...\n"
- ./scripts/build_thirdparty.sh
+  echo "Thirdparty build was not found. Building..."
+  ./scripts/build_thirdparty.sh
 fi
 
 if [ ! -f "./build/Release/bin/libMRMesh.so" ]; then
- printf "Project release build was not found. Building...\n"
- export MESHLIB_BUILD_RELEASE="ON"
- export MESHLIB_BUILD_DEBUG="OFF"
- ./scripts/build_source.sh
+  echo "Project release build was not found. Building..."
+  export MESHLIB_BUILD_RELEASE="ON"
+  export MESHLIB_BUILD_DEBUG="OFF"
+  ./scripts/build_source.sh
 fi
 
-#modify rpm spec file and mr.version
+#modify mr.version
 version=0.0.0.0
 if [ ${1} ]; then
   version=${1:1} #v1.2.3.4 -> 1.2.3.4
 fi
 echo $version > build/Release/bin/mr.version
 
-VERSION_LINE_FIND="Version:"
-VERSION_LINE="Version:        ${version}"
-sed -i "s/$VERSION_LINE_FIND/$VERSION_LINE/" ./scripts/MeshLib-dev.spec
+BASE_DIR=$(realpath $(dirname "$0")/..)
+REQUIREMENTS_FILE="${BASE_DIR}/requirements/fedora.txt"
+# convert multi-line file to comma-separated string
+REQUIRES_LINE=$(cat ${REQUIREMENTS_FILE} | tr '\n' ',' | sed -e "s/,\s*$//" -e "s/,/, /g")
 
-
-REQUIRES_LINE="Requires:"
-req_counter=0
-BASEDIR=$(dirname "$0")
-requirements_file="$BASEDIR"/../requirements/fedora.txt
-for req in `cat $requirements_file`
-do
-  if [ $req_counter -le 0 ]; then
-  	REQUIRES_LINE="${REQUIRES_LINE} ${req}"
-  else
-  	REQUIRES_LINE="${REQUIRES_LINE}, ${req}"
-  fi
-  ((req_counter=req_counter+1))
-done
-
-REQUIRES_LINE_FIND="Requires:"
-sed -i "s/$REQUIRES_LINE_FIND/$REQUIRES_LINE/" ./scripts/MeshLib-dev.spec
+# modify rpm spec file
+sed -i \
+  -e "s/Version:/Version:        ${version}/" \
+  -e "s/Requires:/Requires:       ${REQUIRES_LINE}/" \
+  ./scripts/MeshLib-dev.spec
 
 #create distr dirs
 if [ -d "./rpmbuild/" ]; then

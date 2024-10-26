@@ -168,7 +168,10 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
             const bool pluginActive = foundItem.item->item->isActive();
             params.btnDrawer.drawButtonItem( *foundItem.item, dbParams );
             if ( foundItem.item->item->isActive() != pluginActive )
+            {
+                onToolActivateSignal( foundItem.item->item );
                 deactivateSearch_();
+            }
 #ifndef NDEBUG
             if ( showResultWeight_ && !searchLine_.empty() )
             {
@@ -241,9 +244,13 @@ void RibbonMenuSearch::drawMenuUI( const Parameters& params )
         }
     }
 
+    if ( !prevFrameActive_ && active_ )
+        onFocusSignal();
+
     if ( active_ )
         drawWindow_( params );
 
+    prevFrameActive_ = active_;
     isSmallUILast_ = isSmallUI_;
 }
 

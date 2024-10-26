@@ -7,7 +7,7 @@ namespace Cuda
 {
     __global__ void kernel( const Node3* nodes, const OrderedPoint* orderedPoints, const float3* normals, float* volume, PointsToDistanceVolumeParams params )
     {
-        const int size = params.dimensions.x * params.dimensions.y * params.dimensions.z;
+        const size_t size = size_t( params.dimensions.x ) * params.dimensions.y * params.dimensions.z;
         if ( size == 0 )
         {
             assert( false );
@@ -21,7 +21,7 @@ namespace Cuda
         const unsigned char quietNan[4] = { 0x00 , 0x00, 0xc0, 0x7f };
         volume[id] = *( float* ) quietNan;
 
-        const int sizeXY = params.dimensions.x * params.dimensions.y;
+        const size_t sizeXY = size_t( params.dimensions.x ) * params.dimensions.y;
         float3 coord;
         coord.z = int( id / sizeXY ) + 0.5f;
         int sumZ = int( id % sizeXY );
@@ -86,11 +86,11 @@ namespace Cuda
     bool pointsToDistanceVolumeKernel( const Node3* nodes, const OrderedPoint* points, const float3* normals, float* volume, PointsToDistanceVolumeParams params )
     {
         constexpr int maxThreadsPerBlock = 640;
-        const int size = params.dimensions.x * params.dimensions.y * params.dimensions.z;
+        const size_t size = size_t( params.dimensions.x ) * params.dimensions.y * params.dimensions.z;
 
-        int numBlocks = (int( size ) + maxThreadsPerBlock - 1) / maxThreadsPerBlock;
-        kernel << < numBlocks, maxThreadsPerBlock >> > ( nodes, points, normals, volume, params);
+        auto numBlocks = (unsigned int)( ( size_t( size ) + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
+        kernel << < numBlocks, maxThreadsPerBlock >> > ( nodes, points, normals, volume, params );
         return ( cudaGetLastError() == cudaSuccess );
     }
-}
-}
+} // namespace Cuda
+} // namespace MR

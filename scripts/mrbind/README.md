@@ -158,3 +158,8 @@ You can find some undocumented flags/variables in `generate.mk`.
 * **`cannot initialize type "expected_...": an object with that name is already defined`**
 
   Likely a conflict between `std::expected` and `tl::expected` (probably MRMesh ended up using the latter while MRBind is using the former). Try `EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0'` to make MRBind switch to `tl::expected`.
+
+* **`lld-link: error: undefined symbol: void __cdecl std::_Literal_zero_is_expected(void)`**,
+`>>> referenced by source/TempOutput/PythonBindings/x64/Release/binding.0.o:(public: __cdecl std::_Literal_zero::_Literal_zero<int>(int))`
+
+  * This seems to be a VS2022 bug that's triggered by trying to bind `operator<=>` (taking its address?). We work around this by banning all `operator<=>`s with `--ignore`, see `mrbind_flags.txt`.

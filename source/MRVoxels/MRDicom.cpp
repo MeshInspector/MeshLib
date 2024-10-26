@@ -727,7 +727,7 @@ namespace VoxelsSave
 
 Expected<void> toDCM( const VdbVolume& vdbVolume, const std::filesystem::path& path, ProgressCallback cb )
 {
-    auto simpleVolume = vdbVolumeToSimpleVolumeU16( vdbVolume, {}, subprogress( cb, 0.f, 0.5f ) );
+    auto simpleVolume = vdbVolumeToSimpleVolumeU16( vdbVolume, {}, { MinMaxf{ 0.f, 1.f } }, subprogress( cb, 0.f, 0.5f ) );
     if ( simpleVolume )
         return toDCM( *simpleVolume, path, subprogress( cb, 0.5f, 1.f ) );
     else

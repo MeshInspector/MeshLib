@@ -166,7 +166,7 @@ bool RibbonButtonDrawer::CustomCollapsingHeader( const char* label, ImGuiTreeNod
     if ( bulletMode )
     {
         const ImVec2 center{ pos.x + halfWidth,pos.y + halfHeight };
-        drawList->AddCircleFilled( center, thickness * 1.5f, ImGui::GetColorU32( ImGuiCol_Text ) );
+        drawList->AddCircleFilled( center, thickness * 1.0f, ImGui::GetColorU32( ImGuiCol_Text ) );
     }
     else
     {

@@ -23,6 +23,7 @@ enum class NoUnit
 enum class LengthUnit
 {
     mm,
+    meters,
     inches,
     _count [[maybe_unused]],
 };
@@ -62,6 +63,7 @@ enum class TimeUnit
 enum class MovementSpeedUnit
 {
     mmPerSecond,
+    metersPerSecond,
     inchesPerSecond,
     _count [[maybe_unused]],
 };
@@ -70,6 +72,7 @@ enum class MovementSpeedUnit
 enum class AreaUnit
 {
     mm2,
+    meters2,
     inches2,
     _count [[maybe_unused]],
 };
@@ -78,6 +81,7 @@ enum class AreaUnit
 enum class VolumeUnit
 {
     mm3,
+    meters3,
     inches3,
     _count [[maybe_unused]],
 };
@@ -86,6 +90,7 @@ enum class VolumeUnit
 enum class InvLengthUnit
 {
     inv_mm, // mm^-1
+    inv_meters, // meters^-1
     inv_inches, // inches^-1
     _count [[maybe_unused]],
 };
@@ -138,6 +143,12 @@ template <UnitEnum E>
 [[nodiscard]] bool unitsAreEquivalent( E a, E b )
 {
     return a == b || getUnitInfo( a ).conversionFactor == getUnitInfo( b ).conversionFactor;
+}
+// This version also returns true if `a` or `b` is null.
+template <UnitEnum E>
+[[nodiscard]] bool unitsAreEquivalent( const std::optional<E> &a, const std::optional<E> &b )
+{
+    return !a || !b || unitsAreEquivalent( *a, *b );
 }
 
 namespace detail::Units
@@ -193,6 +204,16 @@ template <UnitEnum E, typename T>
     return ret;
 }
 
+// This version is a no-op if `from` or `to` is null.
+template <UnitEnum E, typename T>
+[[nodiscard]] detail::Units::MakeFloatingPoint<T> convertUnits( const std::optional<E> &from, const std::optional<E> &to, const T& value )
+{
+    if ( from && to )
+        return convertUnits( *from, *to, value );
+    else
+        return detail::Units::MakeFloatingPoint<T>( value );
+}
+
 // ---
 
 template <UnitEnum E>
@@ -229,7 +250,9 @@ enum class DegreesMode
     degrees, // Fractional degrees.
     degreesMinutes, // Integral degrees, fractional arcminutes.
     degreesMinutesSeconds, // Integral degrees and minutes, fractional arcseconds.
+    _count [[maybe_unused]],
 };
+[[nodiscard]] MRVIEWER_API std::string_view toString( DegreesMode mode );
 
 // Controls how a value with a unit is converted to a string.
 template <UnitEnum E>
@@ -241,13 +264,10 @@ struct UnitToStringParams
 
     // --- Units:
 
-    // The measurement unit of the input.
-    // If null, assumed to be the same as `targetUnit`, and no conversion is performed.
-    // If not null, the value is converted from this unit to `targetUnit`.
+    // The measurement unit of the input value. If null, no conversion is performed.
     std::optional<E> sourceUnit = getDefaultUnitParams<E>().sourceUnit;
-
-    // The measurement unit of the result.
-    E targetUnit = getDefaultUnitParams<E>().targetUnit;
+    // The measurement unit of the resulting string. If null, no conversion is performed, and the unit name is taken from `sourceUnit` if any.
+    std::optional<E> targetUnit = getDefaultUnitParams<E>().targetUnit;
 
     // Whether to show the unit suffix.
     bool unitSuffix = getDefaultUnitParams<E>().unitSuffix;

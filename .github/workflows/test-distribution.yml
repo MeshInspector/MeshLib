@@ -145,8 +145,17 @@ jobs:
 
 
   macos-test:
-    runs-on: macos-13
     timeout-minutes: 30
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ x64, arm]
+        include:
+          - os: x64
+            runner: macos-13 # github hosted
+          - os: arm
+            runner: macos-latest  # github hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -157,16 +166,17 @@ jobs:
         uses: robinraju/release-downloader@v1.11
         with:
           releaseId: ${{inputs.release_id}}
-          fileName: "*x64.pkg"
+          fileName: "*${{matrix.runner}}.pkg"
 
       - name: Install Pkg
         run: |
-          sudo installer -pkg meshlib_*x64.pkg  -target /
+          sudo installer -pkg meshlib_*${{matrix.runner}}.pkg  -target /
+          xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
 
       # [error] NSGL: Failed to find a suitable pixel format
-      #- name: Run MeshViewer
-        #if: always()
-        #run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
+      - name: Run MeshViewer
+        if: always()
+        run: /Library/Frameworks/MeshLib.framework/Versions/Current/bin/MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Show meshconv help
         if: always()

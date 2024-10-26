@@ -13,6 +13,7 @@
 #include "MRRibbonMenu.h"
 #include "MRImGuiImage.h"
 #include "MRRenderLinesObject.h"
+#include "MRShowModal.h"
 #include "MRViewer/MRRibbonFontManager.h"
 #include "MRViewer/MRPlaneWidget.h"
 #include "MRViewer/MRViewer.h"

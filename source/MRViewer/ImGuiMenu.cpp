@@ -25,6 +25,7 @@
 #include "MRMesh/MRTimer.h"
 #include "ImGuiHelpers.h"
 #include "MRAppendHistory.h"
+#include "MRShowModal.h"
 #include "MRMesh/MRChangeNameAction.h"
 #include "MRMesh/MRChangeSceneAction.h"
 ////////////////////////////////////////////////////////////////////////////////
@@ -3167,21 +3168,6 @@ bool ImGuiMenu::UiRenderManagerImpl::canConsumeEvent( BasicUiRenderTask::Interac
     return
         !bool( consumedInteractions & BasicUiRenderTask::InteractionMask::mouseHover ) ||
         bool( consumedInteractions & event );
-}
-
-void showModal( const std::string& msg, NotificationType type )
-{
-    if ( auto menu = getViewerInstance().getMenuPlugin() )
-        menu->showModalMessage( msg, type );
-    else
-    {
-        if ( type == NotificationType::Error )
-            spdlog::error( "Show Error: {}", msg );
-        else if ( type == NotificationType::Warning )
-            spdlog::warn( "Show Warning: {}", msg );
-        else //if ( type == MessageType::Info )
-            spdlog::info( "Show Info: {}", msg );
-    }
 }
 
 } // end namespace

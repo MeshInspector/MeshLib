@@ -33,7 +33,7 @@
 #include "MRViewer/MRSceneCache.h"
 #include "MRMesh/MRMeshSaveObj.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRViewer/ImGuiMenu.h"
+#include "MRViewer/MRShowModal.h"
 #include "MRViewer/MRViewerIO.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewerInstance.h"

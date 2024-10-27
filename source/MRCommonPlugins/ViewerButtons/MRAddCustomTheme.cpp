@@ -1,6 +1,6 @@
 #include "MRAddCustomTheme.h"
 #include "MRViewer/MRRibbonSchema.h"
-#include "MRViewer/ImGuiMenu.h"
+#include "MRViewer/MRShowModal.h"
 #include "MRViewer/MRRibbonFontManager.h"
 #include "MRViewer/MRViewerInstance.h"
 #include "MRMesh/MRSceneColors.h"

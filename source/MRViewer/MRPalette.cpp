@@ -362,7 +362,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
 
     const auto& style = ImGui::GetStyle();
     const auto menu = ImGuiMenu::instance();
-    const auto& windowSize = MR::viewport().getViewportRect();
+    const auto& windowSize = Viewport::get().getViewportRect();
 
     ImGui::SetNextWindowPos( pose, ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( size, ImGuiCond_Appearing );

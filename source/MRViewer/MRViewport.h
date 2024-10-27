@@ -50,6 +50,10 @@ class Viewport
 public:
     using ViewportRectangle = MR::ViewportRectangle;
 
+    /// Return the current viewport, or the viewport corresponding to a given unique identifier from ViewerInstance()
+    /// \param viewportId unique identifier corresponding to the desired viewport (current viewport if 0)
+    MRVIEWER_API static Viewport& get( ViewportId viewportId = {} );
+
     MRVIEWER_API Viewport();
     MRVIEWER_API ~Viewport();
 

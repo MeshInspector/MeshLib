@@ -157,7 +157,7 @@ void RenderNameObject::renderUi( const UiRenderParams& params )
     task_.text = getObjectNameString( *task_.object, params.viewportId );
     task_.textSize = ImGui::CalcTextSize( task_.text.c_str() );
 
-    Viewport& viewportRef = MR::viewport( params.viewportId );
+    Viewport& viewportRef = Viewport::get( params.viewportId );
 
     ImVec2 viewportCornerA( float( params.viewport.x ), float( ImGui::GetIO().DisplaySize.y - params.viewport.y - params.viewport.w ) );
     ImVec2 viewportCornerB( float( params.viewport.x + params.viewport.z ), float( ImGui::GetIO().DisplaySize.y - params.viewport.y ) );

@@ -63,6 +63,11 @@ void getPickerDataVector( Object& obj, ViewportMask id, const Viewport::PickRend
 namespace MR
 {
 
+Viewport& Viewport::get( ViewportId viewportId )
+{
+    return getViewerInstance().viewport( viewportId );
+}
+
 Viewport::Viewport()
 {
     cameraLookAlong( Vector3f( -1.f, -1.f, -1.f ), Vector3f( -1, -1, 2 ) );

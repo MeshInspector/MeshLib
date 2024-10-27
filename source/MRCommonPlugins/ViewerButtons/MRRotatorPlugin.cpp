@@ -63,7 +63,7 @@ void RotatorPlugin::preDraw_()
     if ( lastDrawTime_ )
     {
         auto timePassed = std::chrono::duration<float>( *lastDrawTime_ - now ).count();
-        auto & viewport = MR::viewport();
+        auto & viewport = Viewport::get();
         Vector3f sceneCenter;
         if ( auto sceneBox = viewport.getSceneBox(); sceneBox.valid() )
             sceneCenter = sceneBox.center();

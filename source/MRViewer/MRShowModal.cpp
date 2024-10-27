@@ -1,6 +1,7 @@
 #include "MRShowModal.h"
 #include "MRViewer.h"
 #include "ImGuiMenu.h"
+#include <MRPch/MRSpdlog.h>
 
 namespace MR
 {

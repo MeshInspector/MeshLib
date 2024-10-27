@@ -1,28 +1,26 @@
 #include "ImGuiHelpers.h"
-#include "MRViewer/MRUIRectAllocator.h"
-#include "MRViewer/MRUITestEngine.h"
-#include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRUIRectAllocator.h"
+#include "MRUITestEngine.h"
+#include "MRImGuiVectorOperators.h"
 #include "imgui_internal.h"
 #include "MRMesh/MRBitSet.h"
-#include "MRPch/MRSpdlog.h"
 #include "MRRibbonButtonDrawer.h"
 #include "MRPalette.h"
 #include "MRViewerInstance.h"
-#include "MRViewer.h"
 #include "MRRibbonConstants.h"
 #include "MRRibbonMenu.h"
 #include "MRImGuiImage.h"
 #include "MRRenderLinesObject.h"
 #include "MRShowModal.h"
-#include "MRViewer/MRRibbonFontManager.h"
-#include "MRViewer/MRPlaneWidget.h"
-#include "MRViewer/MRViewer.h"
+#include "MRRibbonFontManager.h"
+#include "MRPlaneWidget.h"
 #include "MRColorTheme.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRConfig.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRUIStyle.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace ImGui
 {
@@ -37,7 +35,7 @@ void drawCursorArrow()
     auto mousePos = ImGui::GetMousePos();
     mousePos.x += 5.f;
 
-    const auto menuPlugin = MR::getViewerInstance().getMenuPlugin();
+    const auto menuPlugin = ImGuiMenu::instance();
     const float scale = menuPlugin ? menuPlugin->menu_scaling() : 1.f;
 
     const float spaceX = 10 * scale;
@@ -530,8 +528,7 @@ bool BeginStatePlugin( const char* label, bool* open, float width )
     if ( !window )
     {
         float yPos = 0.0f;
-        auto menu = MR::getViewerInstance().getMenuPluginAs<MR::RibbonMenu>();
-        if ( menu )
+        if ( auto menu = RibbonMenu::instance() )
             yPos = menu->getTopPanelOpenedHeight() * menu->menu_scaling();
         SetNextWindowPos( ImVec2( GetIO().DisplaySize.x - width, yPos ), ImGuiCond_FirstUseEver );
         SetNextWindowSize( ImVec2( width, 0 ), ImGuiCond_FirstUseEver );
@@ -565,7 +562,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 12 * params.menuScaling, 8 * params.menuScaling ) );
 
     ImGuiWindow* window = FindWindowByName( label );
-    auto menu = MR::getViewerInstance().getMenuPlugin();
+    auto menu = ImGuiMenu::instance();
     ImVec2 initialWindowPos;
     bool haveSavedWindowPos = false;
     bool windowIsInactive = window && !window->WasActive;
@@ -958,7 +955,7 @@ bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWi
     const auto backupPos = ImGui::GetCursorPos();
 
     float menuScaling = 1.0f;
-    if ( auto menu = MR::getViewerInstance().getMenuPlugin() )
+    if ( auto menu = ImGuiMenu::instance() )
         menuScaling = menu->menu_scaling();
 
     ImGui::PushClipRect( { window->Pos.x, window->Pos.y }, { window->Pos.x + window->Size.x, window->Pos.y + window->Size.y }, false );
@@ -1579,7 +1576,7 @@ void Spinner( float radius, float scaling )
 
     SetCursorPosY( GetCursorPosY() + radius );
     ImGui::Dummy( ImVec2( 0, 0 ) );
-    MR::getViewerInstance().incrementForceRedrawFrames();
+    incrementForceRedrawFrames();
 }
 
 bool ModalBigTitle( const char* title, float scaling )

@@ -4,8 +4,6 @@
 #include "MRMesh/MRSystemPath.h"
 #include "MRRibbonConstants.h"
 #include "imgui_fonts_droid_sans.h"
-#include "MRViewerInstance.h"
-#include "MRViewer.h"
 #include "MRRibbonMenu.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRCommandLoop.h"
@@ -116,7 +114,7 @@ std::filesystem::path RibbonFontManager::getMenuFontPath() const
 void RibbonFontManager::setNewFontPaths( const FontFilePaths& paths )
 {
     fontPaths_ = paths;
-    if ( auto menu = getViewerInstance().getMenuPlugin() )
+    if ( auto menu = ImGuiMenu::instance() )
     {
         CommandLoop::appendCommand( [menu] ()
         {

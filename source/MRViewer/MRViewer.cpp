@@ -2594,6 +2594,11 @@ const std::shared_ptr<ImGuiMenu>& Viewer::getMenuPlugin() const
     return menuPlugin_;
 }
 
+std::shared_ptr<RibbonMenu> Viewer::getRibbonMenu() const
+{
+    return std::dynamic_pointer_cast<RibbonMenu>( getMenuPlugin() );
+}
+
 void Viewer::setMenuPlugin( std::shared_ptr<ImGuiMenu> menu )
 {
     assert( !menuPlugin_ );

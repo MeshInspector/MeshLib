@@ -1,5 +1,4 @@
 #include "MRPalette.h"
-#include "MRViewer.h"
 #include "ImGuiMenu.h"
 #include "imgui_internal.h"
 #include "MRViewport.h"
@@ -362,9 +361,8 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
     }
 
     const auto& style = ImGui::GetStyle();
-    const auto& viewer = getViewerInstance();
-    const auto menu = viewer.getMenuPlugin();
-    const auto& windowSize = viewer.viewport().getViewportRect();
+    const auto menu = ImGuiMenu::instance();
+    const auto& windowSize = MR::viewport().getViewportRect();
 
     ImGui::SetNextWindowPos( pose, ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( size, ImGuiCond_Appearing );

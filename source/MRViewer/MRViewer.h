@@ -1,30 +1,17 @@
 #pragma once
 
-#include "MRMesh/MRRenderModelParameters.h"
 #include "MRViewerInstance.h"
 #include "MRMouse.h"
+#include "MRSignalCombiners.h"
+#include "MRMakeSlot.h"
 #include <MRMesh/MRVector2.h>
 #include <MRMesh/MRViewportId.h>
 #include "MRMesh/MRSignal.h"
-#include "MRViewer/MRSignalCombiners.h"
+#include "MRMesh/MRRenderModelParameters.h"
 #include <cstdint>
 #include <filesystem>
 
 struct GLFWwindow;
-
-template<typename MemberFuncPtr, typename BaseClass>
-auto bindSlotCallback( BaseClass* base, MemberFuncPtr func )
-{
-    static_assert( !( std::is_move_assignable_v<BaseClass> || std::is_move_constructible_v<BaseClass> ),
-                   "MAKE_SLOT requires a non-movable type" );
-    return[base, func] ( auto&&... args )
-    {
-        return ( base->*func )( std::forward<decltype( args )>( args )... );
-    };
-}
-
-// you will not be able to move your struct after using this macro
-#define MAKE_SLOT(func) bindSlotCallback(this,func)
 
 /// helper macros to add an `MR::Viewer` method call to the event queue
 #define ENQUEUE_VIEWER_METHOD( NAME, METHOD ) MR::getViewerInstance().emplaceEvent( NAME, [] { \
@@ -400,6 +387,9 @@ public:
     // Get/Set menu plugin (which is separated from other plugins to be inited first before splash window starts)
     MRVIEWER_API const std::shared_ptr<ImGuiMenu>& getMenuPlugin() const;
     MRVIEWER_API void setMenuPlugin( std::shared_ptr<ImGuiMenu> menu );
+
+    // get menu plugin casted in RibbonMenu
+    MRVIEWER_API std::shared_ptr<RibbonMenu> getRibbonMenu() const;
 
     // Get the menu plugin casted in given type
     template <typename T>

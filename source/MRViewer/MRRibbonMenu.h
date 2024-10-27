@@ -42,6 +42,9 @@ class MRVIEWER_CLASS RibbonMenu : public ImGuiMenu
     };
 
 public:
+    // returns RibonMenu from ViewerInstance()
+    MRVIEWER_API static std::shared_ptr<RibbonMenu> instance();
+
     // adds a custom checkBox to the context menu
     // it is applied to the selected objects
     MRVIEWER_API void setCustomContextCheckbox(

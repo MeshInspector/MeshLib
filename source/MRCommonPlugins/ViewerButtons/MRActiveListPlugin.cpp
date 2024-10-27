@@ -2,7 +2,6 @@
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRCommandLoop.h"
-#include "MRViewer/MRViewer.h"
 
 namespace MR
 {
@@ -16,7 +15,7 @@ public:
     }
     virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const override
     {
-        auto menu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
+        auto menu = RibbonMenu::instance();
         if ( !menu )
             return "No menu present";
         if ( !menu->hasAnyActiveItem() )
@@ -26,7 +25,7 @@ public:
 
     virtual bool action() override
     {
-        auto menu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
+        auto menu = RibbonMenu::instance();
         if ( !menu )
             return false;
         menu->showActiveList();

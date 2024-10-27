@@ -1,5 +1,4 @@
 #include "MRShowModal.h"
-#include "MRViewer.h"
 #include "ImGuiMenu.h"
 #include <MRPch/MRSpdlog.h>
 
@@ -8,7 +7,7 @@ namespace MR
 
 void showModal( const std::string& msg, NotificationType type )
 {
-    if ( auto menu = getViewerInstance().getMenuPlugin() )
+    if ( auto menu = ImGuiMenu::instance() )
         menu->showModalMessage( msg, type );
     else
     {

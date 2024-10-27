@@ -1,6 +1,5 @@
 #pragma once
 
-#include "MRViewer.h"
 #include "MRViewerEventsListener.h"
 #include "MRViewport.h"
 #include "MRMesh/MRMeshFwd.h"
@@ -133,7 +132,7 @@ public:
     SurfaceContoursWidgetParams params;
 private:
 
-    MRVIEWER_API bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
+    MRVIEWER_API bool onMouseDown_( MouseButton button, int modifier ) override;
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
 
     // creates point widget for add to contour.

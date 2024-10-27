@@ -1,6 +1,7 @@
 #include "MRMeshBoundarySelectionWidget.h"
 
 #include "MRAppendHistory.h"
+#include "MRViewer.h"
 #include "MRViewport.h"
 #include "MRViewerInstance.h"
 #include "MRPickHoleBorderElement.h"

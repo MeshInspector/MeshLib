@@ -2,7 +2,6 @@
 #include "MRViewerFwd.h"
 #include "MRViewerEventsListener.h"
 #include "MRMesh/MRMeshFwd.h"
-#include "MRViewer.h"
 #include "MRMesh/MRChangeMeshAction.h"
 #include "MRMesh/MREnums.h"
 #include "MRViewer/MRViewport.h"
@@ -71,9 +70,9 @@ public:
     Vector2f getMinMax() { return { changesMaxVal_, changesMinVal_ }; }
 private:
     /// start modifying mesh surface
-    MRVIEWER_API bool onMouseDown_( Viewer::MouseButton button, int modifiers ) override;
+    MRVIEWER_API bool onMouseDown_( MouseButton button, int modifiers ) override;
     /// stop modifying mesh surface, generate history action
-    MRVIEWER_API bool onMouseUp_( Viewer::MouseButton button, int modifiers ) override;
+    MRVIEWER_API bool onMouseUp_( MouseButton button, int modifiers ) override;
     /// update
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
     /// need to visualize bad region (draw grey circle)

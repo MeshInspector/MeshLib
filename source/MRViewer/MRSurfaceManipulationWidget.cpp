@@ -3,7 +3,7 @@
 #include "MRViewport.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRMesh.h"
-#include "MRViewerInstance.h"
+#include "MRViewer.h"
 #include "MRAppendHistory.h"
 #include "MRMouse.h"
 #include "MRViewer/MRGladGlfw.h"
@@ -166,7 +166,7 @@ void SurfaceManipulationWidget::enableDeviationVisualization( bool enable )
     updateUVs();
 }
 
-bool SurfaceManipulationWidget::onMouseDown_( Viewer::MouseButton button, int modifiers )
+bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers )
 {
     if ( button != MouseButton::Left || modifiers != 0 )
         return false;

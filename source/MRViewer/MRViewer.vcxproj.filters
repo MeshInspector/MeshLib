@@ -857,6 +857,9 @@
     <ClInclude Include="MRShowModal.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="MRMakeSlot.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

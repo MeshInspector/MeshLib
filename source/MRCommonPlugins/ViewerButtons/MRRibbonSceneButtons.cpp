@@ -58,7 +58,7 @@ std::string RibbonSceneSelectAll::isAvailable( const std::vector<std::shared_ptr
 
 bool RibbonSceneSelectAll::action()
 {
-    if ( auto menu = RibbonMenu::instance() )
+    if ( auto menu = ImGuiMenu::instance() )
     {
         if ( auto sceneList = menu->getSceneObjectsList() )
             sceneList->selectAllObjects();
@@ -92,7 +92,7 @@ std::string RibbonSceneShowAll::isAvailable( const std::vector<std::shared_ptr<c
 
 bool RibbonSceneShowAll::action()
 {
-    if ( auto menu = RibbonMenu::instance() )
+    if ( auto menu = ImGuiMenu::instance() )
     {
         if ( auto sceneList = menu->getSceneObjectsList() )
             sceneList->setLeavesVisibility( true );
@@ -113,7 +113,7 @@ std::string RibbonSceneHideAll::isAvailable( const std::vector<std::shared_ptr<c
 
 bool RibbonSceneHideAll::action()
 {
-    if ( auto menu = RibbonMenu::instance() )
+    if ( auto menu = ImGuiMenu::instance() )
     {
         if ( auto sceneList = menu->getSceneObjectsList() )
             sceneList->setLeavesVisibility( false );
@@ -135,7 +135,7 @@ std::string RibbonSceneShowOnlyPrev::isAvailable( const std::vector<std::shared_
 
 bool RibbonSceneShowOnlyPrev::action()
 {
-    auto menu = RibbonMenu::instance();
+    auto menu = ImGuiMenu::instance();
     if ( menu )
     {
         if ( auto sceneList = menu->getSceneObjectsList() )
@@ -158,7 +158,7 @@ std::string RibbonSceneShowOnlyNext::isAvailable( const std::vector<std::shared_
 
 bool RibbonSceneShowOnlyNext::action()
 {
-    auto menu = RibbonMenu::instance();
+    auto menu = ImGuiMenu::instance();
     if ( menu )
     {
         if ( auto sceneList = menu->getSceneObjectsList() )
@@ -174,7 +174,7 @@ RibbonSceneRename::RibbonSceneRename() :
 
 bool RibbonSceneRename::action()
 {
-    RibbonMenu::instance()->tryRenameSelectedObject();
+    ImGuiMenu::instance()->tryRenameSelectedObject();
     return false;
 }
 
@@ -186,7 +186,7 @@ RibbonSceneRemoveSelected::RibbonSceneRemoveSelected() :
 std::string RibbonSceneRemoveSelected::isAvailable( const std::vector<std::shared_ptr<const Object>>& objs ) const
 {
     auto res = SceneStateAtLeastCheck<1, Object, NoModelCheck>::isAvailable( objs );
-    auto allowRemoval = RibbonMenu::instance()->checkPossibilityObjectRemoval();
+    auto allowRemoval = ImGuiMenu::instance()->checkPossibilityObjectRemoval();
     if ( !allowRemoval )
     {
         if ( !res.empty() )
@@ -198,7 +198,7 @@ std::string RibbonSceneRemoveSelected::isAvailable( const std::vector<std::share
 
 bool RibbonSceneRemoveSelected::action()
 {
-    if ( auto menu = RibbonMenu::instance() )
+    if ( auto menu = ImGuiMenu::instance() )
         if ( !menu->checkPossibilityObjectRemoval() )
             return false;
 

@@ -1,6 +1,7 @@
 #include "MRPlaneWidget.h"
 #include "MRMouseController.h"
 #include "MRViewport.h"
+#include "MRViewer.h"
 #include "MRMesh/MR2to3.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRMesh/MRObjectsAccess.h"

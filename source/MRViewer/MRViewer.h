@@ -401,6 +401,9 @@ public:
     MRVIEWER_API const std::shared_ptr<ImGuiMenu>& getMenuPlugin() const;
     MRVIEWER_API void setMenuPlugin( std::shared_ptr<ImGuiMenu> menu );
 
+    // get menu plugin casted in RibbonMenu
+    MRVIEWER_API std::shared_ptr<RibbonMenu> getRibbonMenu() const;
+
     // Get the menu plugin casted in given type
     template <typename T>
     std::shared_ptr<T> getMenuPluginAs() const { return std::dynamic_pointer_cast<T>( getMenuPlugin() ); }

@@ -63,7 +63,7 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
     
     if ( !originalMesh_ )
     {
-        originalMesh_ = std::make_shared<Mesh>( Mesh( *obj_->mesh() ) );
+        originalMesh_ = std::make_shared<Mesh>( *obj_->mesh() );
 
         const float rangeLength = settings_.editForce * ( Palette::DefaultColors.size() - 1 );
         palette_->setRangeMinMax( rangeLength * -0.5f, rangeLength * 0.5f );
@@ -262,7 +262,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
 
             VertBitSet newVerts = mesh.topology.getValidVerts();
             newVerts -= stableVerts;
-            reallocData_( mesh.topology.getValidVerts().find_last() + 1 );
+            reallocData_( mesh.topology.lastValidVert() + 1 );
             updateValueChangesByDistance_( newVerts );
             obj_->setDirtyFlags( DIRTY_ALL );
 
@@ -367,7 +367,7 @@ void SurfaceManipulationWidget::initConnections_()
             return;
         }
         abortEdit_();
-        reallocData_( obj_->mesh()->topology.getValidVerts().find_last() + 1);
+        reallocData_( obj_->mesh()->topology.lastValidVert() + 1 );
         updateValueChangesByDistance_( obj_->mesh()->topology.getValidVerts() );
         updateRegion_( Vector2f( getViewerInstance().mouseController().getMousePos() ) );
     } );
@@ -585,7 +585,6 @@ void SurfaceManipulationWidget::laplacianMoveVert_( const Vector2f& mousePos )
     laplacian_->apply();
     obj_->setDirtyFlags( DIRTY_POSITION );
     updateValueChanges_( singleEditingRegion_ );
-    //updateValueChangesByDistance_( obj_->mesh()->topology.getValidVerts() );
 }
 
 void SurfaceManipulationWidget::updateVizualizeSelection_( const ObjAndPick& objAndPick )
@@ -661,7 +660,7 @@ void SurfaceManipulationWidget::updateValueChangesByDistance_( const VertBitSet&
     std::vector<MeshProjectionResult> projResults( meshVerts.size() );
     BitSetParallelFor( region, [&] ( VertId v )
     {
-        projResults[v] = findProjection( meshVerts[v], *originalMesh_, FLT_MAX, nullptr, -FLT_MAX );
+        projResults[v] = findProjection( meshVerts[v], *originalMesh_, FLT_MAX, nullptr, 0 );
     } );
 
     unknownSign_.clear();

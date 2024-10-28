@@ -93,9 +93,9 @@ void ObjectPointsHolder::swapSignals_( Object& other )
         assert( false );
 }
 
-void ObjectPointsHolder::selectPoints( VertBitSet newSelection )
+void ObjectPointsHolder::updateSelectedPoints( VertBitSet& selection )
 {
-    selectedPoints_ = std::move( newSelection );
+    std::swap( selectedPoints_, selection );
     numSelectedPoints_.reset();
     pointsSelectionChangedSignal();
     dirty_ |= DIRTY_SELECTION;

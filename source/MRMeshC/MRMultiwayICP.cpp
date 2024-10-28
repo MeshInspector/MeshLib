@@ -30,12 +30,13 @@ MRMultiwayICPSamplingParameters mrMultiwayIcpSamplingParametersNew( void )
     };
 }
 
-MRMultiwayICP* mrMultiwayICPNew( const MRMeshOrPointsXf* objects_, size_t objectsNum, const MRMultiwayICPSamplingParameters* samplingParams_ )
+MRMultiwayICP* mrMultiwayICPNew( const MRMeshOrPointsXf** objects_, size_t objectsNum, const MRMultiwayICPSamplingParameters* samplingParams_ )
 {
-    std::span objects { auto_cast( objects_ ), objectsNum };
+    ICPObjects objectsVec;
+    objectsVec.reserve( objectsNum );
 
-    // TODO: cast instead of copying
-    ICPObjects objectsVec( objects.begin(), objects.end() );
+    for ( auto i = 0; i < objectsNum; ++i )
+        objectsVec.push_back( auto_cast( *objects_[i] ) );
 
     MultiwayICPSamplingParameters samplingParams;
     if ( samplingParams_ )

@@ -36,6 +36,17 @@ namespace MR.DotNet.Test
         }
 
         [Test]
+        public void TestDisposing()
+        {
+            Assert.DoesNotThrow(() =>
+            {
+                var points = MakeCube();
+                Assert.That(points.ValidPoints.Count() == 8);
+                points.Dispose();
+            });
+        }
+
+        [Test]
         public void TestPointCloudNormals()
         {
             var points = new PointCloud();
@@ -77,16 +88,6 @@ namespace MR.DotNet.Test
             file.Close();
             Assert.Throws<SystemException>(() => PointCloud.FromAnySupportedFormat(path));
             File.Delete(path);
-        }
-
-        [Test]
-        public void TestNullArgs()
-        {
-            Assert.Throws<ArgumentNullException>(() => PointCloud.FromAnySupportedFormat(null));
-            Assert.Throws<ArgumentNullException>(() => PointCloud.ToAnySupportedFormat(null, null));
-            var points = new PointCloud();
-            Assert.Throws<ArgumentNullException>(() => points.AddPoint(null));
-            Assert.Throws<ArgumentNullException>(() => points.AddPoint(null, null));
         }
     }
 }

@@ -13,7 +13,7 @@ print('\n')
 path_to_license = os.path.join(base_path, 'LICENSE')
 shutil.copy(path_to_license, path_to_license + '.txt')
 
-excluded_modules = ['MRCommonPlugins', 'MRCuda', 'MRMeshC', 'MRViewer', 'MRMeshViewer', 'MRTest', 'MRTestC']
+excluded_modules = ['MRCommonPlugins', 'MRCuda', 'MRViewer', 'MRMeshViewer', 'MRTest', 'MRTestC']
 path_to_copyright_header = os.path.join(os.path.dirname(os.path.abspath(__file__)),'copyright_header.txt')
 copyright_header = open(path_to_copyright_header,'r').read()[3:]
 
@@ -35,7 +35,7 @@ f.write('\t\t</version>\n')
 
 f.write('\t\t<authors>AMV Consulting</authors>\n')
 f.write('\t\t<owners>AMV Consulting</owners>\n')
-f.write('\t\t<projectUrl>https://meshinspector.com</projectUrl>\n')
+f.write('\t\t<projectUrl>https://meshlib.io</projectUrl>\n')
 f.write('\t\t<description>Mesh processing library</description>\n')
 
 f.write('\t\t<releaseNotes>https://github.com/MeshInspector/MeshLib/releases</releaseNotes>\n')
@@ -45,8 +45,7 @@ f.write(copyright_header)
 f.write('</copyright>\n')
 
 f.write('\t\t<dependencies>\n')
-f.write('\t\t\t<group targetFramework="net6.0"/>\n')
-f.write('\t\t\t<group targetFramework=".NETFramework4.7.1"/>\n')
+f.write('\t\t\t<group targetFramework="netstandard2.0"/>\n')
 f.write('\t\t</dependencies>\n')
 
 f.write('\t\t<icon>images/MeshInspector_icon.png</icon>\n')
@@ -69,25 +68,22 @@ for address, dirs, files in folder:
 			print(src)
 			f.write('\t\t<file src="./source/x64/Release/')
 			f.write(file)
-			f.write('" target="runtimes/win-x64/native/"></file>\n')
-			fTargets.write('\t\t<None Include="$(MSBuildThisFileDirectory)\\..\\runtimes\\win-x64\\native\\')
+			f.write('" target="content/"></file>\n')
+			fTargets.write('\t\t<None Include="$(MSBuildThisFileDirectory)\\..\\content\\')
 			fTargets.write(file)
 			fTargets.write('">\n')
 			fTargets.write('\t\t\t<Link>')
 			fTargets.write(file)
 			fTargets.write('</Link>\n')
+			fTargets.write('\t\t\t<Visible>false</Visible>\n')
 			fTargets.write('\t\t\t<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>\n')
 			fTargets.write('\t\t</None>\n')
-		elif file == 'MRDotNetFramework471.dll':
+		elif file == 'MRDotNetP.dll':
 			src = os.path.join(address,file)
 			print(src)
 			f.write('\t\t<file src="./source/x64/Release/')
 			f.write(file)
-			f.write('" target="lib/net471/"></file>\n')
-		elif file == 'MRDotNet6.dll':
-			f.write('\t\t<file src="./source/x64/Release/')
-			f.write(file)
-			f.write('" target="lib/net6.0/"></file>\n')
+			f.write('" target="lib/netstandard2.0/"></file>\n')
             
 fTargets.write('\t</ItemGroup>\n')
 fTargets.write('</Project>\n')

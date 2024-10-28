@@ -67,6 +67,7 @@ struct IPointPairs
 
     virtual const ICPPairData& operator[]( size_t ) const = 0;
     virtual ICPPairData& operator[]( size_t ) = 0;
+    virtual size_t size() const = 0;
     BitSet active; ///< whether corresponding pair from vec must be considered during minimization
 };
 
@@ -74,6 +75,7 @@ struct PointPairs : public IPointPairs
 {
     virtual const ICPPairData& operator[]( size_t idx ) const override { return vec[idx]; }
     virtual ICPPairData& operator[]( size_t idx ) override { return vec[idx]; }
+    virtual size_t size() const override { return vec.size(); }
     std::vector<PointPair> vec; ///< vector of all point pairs both active and not
 };
 

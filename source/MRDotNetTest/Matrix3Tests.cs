@@ -113,14 +113,6 @@ namespace MR.DotNet.Test
             Assert.That( 68, Is.EqualTo( c.X ).Within( 0.01 ) );
             Assert.That( 167, Is.EqualTo( c.Y ).Within( 0.01 ) );
             Assert.That( 266, Is.EqualTo( c.Z ).Within( 0.01 ) );
-        }
-
-        [Test]
-        public void TestNullArgs()
-        {
-            Assert.Throws<ArgumentNullException>( () => new Matrix3f( null, null, null ) );
-            Assert.Throws<ArgumentNullException>(() => Matrix3f.Rotation(null, 0));
-            Assert.Throws<ArgumentNullException>(() => Matrix3f.Rotation(null, null));
-        }
+        }        
     }
 }

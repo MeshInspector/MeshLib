@@ -373,7 +373,7 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
 
     if ( paletteWindow )
     {
-        const auto currentPos = paletteWindow->Pos;
+        auto currentPos = paletteWindow->Pos;
         auto currentSize = paletteWindow->Size;
         constexpr float cornerSize = 50.0f;
         const auto ctx = ImGui::GetCurrentContext();
@@ -394,6 +394,8 @@ void Palette::draw( const std::string& windowName, const ImVec2& pose, const ImV
         {
             currentSize.x += ( maxTextSize - prevMaxLabelWidth_ );
             ImGui::SetNextWindowSize( currentSize, ImGuiCond_Always );
+            currentPos.x -= ( maxTextSize - prevMaxLabelWidth_ );
+            ImGui::SetNextWindowPos( currentPos, ImGuiCond_Always );
             prevMaxLabelWidth_ = maxTextSize;
         }
     }

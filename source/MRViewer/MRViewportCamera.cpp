@@ -458,7 +458,7 @@ void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, boo
 
     params_.cameraTranslation = -sceneCenter;
     params_.cameraViewAngle = 45.0f;
-    params_.objectScale = sceneObjsBox.diagonal(); // we should not take global basis into account here
+    params_.objectScale = sceneObjsBox.valid() ? sceneObjsBox.diagonal() : 1.0f; // we should not take global basis into account here
     if ( params_.objectScale == 0.0f )
         params_.objectScale = 1.0f;
 

@@ -405,6 +405,18 @@ void Viewport::preciseFitDataToScreenBorder( const FitDataParams& fitParams )
     {
         const auto type = fitParams.mode == FitMode::SelectedObjects ? ObjectSelectivityType::Selected : ObjectSelectivityType::Any;
         allObj = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), type );
+        if ( type == ObjectSelectivityType::Any && getViewerInstance().globalBasisAxes )
+        {
+            std::shared_ptr<ObjectPoints> globalBasisPoints = std::make_shared<ObjectPoints>();
+            globalBasisPoints->setPointCloud( std::make_shared<PointCloud>() );
+            globalBasisPoints->varPointCloud()->addPoint( Vector3f() );
+            globalBasisPoints->varPointCloud()->addPoint( Vector3f::plusX() );
+            globalBasisPoints->varPointCloud()->addPoint( Vector3f::plusY() );
+            globalBasisPoints->varPointCloud()->addPoint( Vector3f::plusZ() );
+            globalBasisPoints->setXfsForAllViewports( getViewerInstance().globalBasisAxes->xfsForAllViewports() );
+            globalBasisPoints->setVisibilityMask( getViewerInstance().globalBasisAxes->visibilityMask() );
+            allObj.emplace_back( std::move( globalBasisPoints ) );
+        }
     }
 
     preciseFitToScreenBorder_( [&] ( bool zoomFov )
@@ -535,7 +547,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
         if( obj->globalVisibility( id ) )
         {
             // object space to camera space
-            auto xf = obj->worldXf();
+            auto xf = obj->worldXf( id );
             if ( space != Space::World )
                 xf = xfV * xf;
             VertId lastValidVert;

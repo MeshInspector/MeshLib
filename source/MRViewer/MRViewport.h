@@ -552,7 +552,7 @@ private:
     // fit view and proj matrices to match the screen size with boxes returned by getBoxFn
     // getBoxFn( true ) - always camera space (respecting projection)
     // getBoxFn( false ) - if orthographic - camera space, otherwise - world space
-    void preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV )> getBoxFn, const BaseFitParams& params );
+    void preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, bool globalBasis )> getBoxFn, const BaseFitParams& params );
 
     bool rotation_{ false };
     Vector3f rotationPivot_;

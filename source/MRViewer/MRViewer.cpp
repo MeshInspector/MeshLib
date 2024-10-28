@@ -1929,7 +1929,7 @@ void Viewer::initGlobalBasisAxesObject_()
         Vector3f( 0.0f, 0.0f, 1.0f )};
 
     Mesh mesh;
-    globalBasisAxes = std::make_unique<ObjectMesh>();
+    globalBasisAxes = std::make_shared<ObjectMesh>();
     globalBasisAxes->setName( "World Global Basis" );
     std::vector<Color> vertsColors;
     auto translate = AffineXf3f::translation(Vector3f( 0.0f, 0.0f, 0.9f ));
@@ -1985,7 +1985,7 @@ void Viewer::initBasisAxesObject_()
     // store basis axes in the corner
     const float size = 0.8f;
     std::shared_ptr<Mesh> basisAxesMesh = std::make_shared<Mesh>( makeBasisAxes( size ) );
-    basisAxes = std::make_unique<ObjectMesh>();
+    basisAxes = std::make_shared<ObjectMesh>();
     basisAxes->setMesh( basisAxesMesh );
     basisAxes->setName("Basis axes mesh");
     basisAxes->setFlatShading( true );
@@ -2031,7 +2031,7 @@ void Viewer::initBasisAxesObject_()
 void Viewer::initClippingPlaneObject_()
 {
     std::shared_ptr<Mesh> plane = std::make_shared<Mesh>( makePlane() );
-    clippingPlaneObject = std::make_unique<ObjectMesh>();
+    clippingPlaneObject = std::make_shared<ObjectMesh>();
     clippingPlaneObject->setMesh( plane );
     clippingPlaneObject->setName( "Clipping plane obj" );
     clippingPlaneObject->setVisible( false );
@@ -2043,7 +2043,7 @@ void Viewer::initRotationCenterObject_()
 {
     constexpr Color color = Color( 0, 127, 0, 255 );
     auto mesh = makeUVSphere();
-    rotationSphere = std::make_unique<ObjectMesh>();
+    rotationSphere = std::make_shared<ObjectMesh>();
     rotationSphere->setFrontColor( color, false );
     rotationSphere->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
     rotationSphere->setAncillary( true );

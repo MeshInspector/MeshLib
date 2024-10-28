@@ -205,7 +205,8 @@ std::string FitDataMenuItem::isAvailable( const std::vector<std::shared_ptr<cons
     for ( const auto& obj : allObjs )
         if ( obj->globalVisibility() )
             return "";
-
+    if ( getViewerInstance().globalBasisAxes && getViewerInstance().globalBasisAxes->isVisible() )
+        return "";
     return "There are no visible objects.";
 }
 

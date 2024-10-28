@@ -453,11 +453,11 @@ public:
     // command arguments, each parsed arg should be erased from here not to affect other parsers
     std::vector<std::string> commandArgs;
 
-    std::unique_ptr<ObjectMesh> basisAxes;
-    std::unique_ptr<ObjectMesh> globalBasisAxes;
-    std::unique_ptr<ObjectMesh> rotationSphere;
+    std::shared_ptr<ObjectMesh> basisAxes;
+    std::shared_ptr<ObjectMesh> globalBasisAxes;
+    std::shared_ptr<ObjectMesh> rotationSphere;
     // Stores clipping plane mesh
-    std::unique_ptr<ObjectMesh> clippingPlaneObject;
+    std::shared_ptr<ObjectMesh> clippingPlaneObject;
 
     // the window title that should be always displayed
     std::string defaultWindowTitle;

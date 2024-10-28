@@ -406,17 +406,7 @@ void Viewport::preciseFitDataToScreenBorder( const FitDataParams& fitParams )
         const auto type = fitParams.mode == FitMode::SelectedObjects ? ObjectSelectivityType::Selected : ObjectSelectivityType::Any;
         allObj = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), type );
         if ( type == ObjectSelectivityType::Any && getViewerInstance().globalBasisAxes )
-        {
-            std::shared_ptr<ObjectPoints> globalBasisPoints = std::make_shared<ObjectPoints>();
-            globalBasisPoints->setPointCloud( std::make_shared<PointCloud>() );
-            globalBasisPoints->varPointCloud()->addPoint( Vector3f() );
-            globalBasisPoints->varPointCloud()->addPoint( Vector3f::plusX() );
-            globalBasisPoints->varPointCloud()->addPoint( Vector3f::plusY() );
-            globalBasisPoints->varPointCloud()->addPoint( Vector3f::plusZ() );
-            globalBasisPoints->setXfsForAllViewports( getViewerInstance().globalBasisAxes->xfsForAllViewports() );
-            globalBasisPoints->setVisibilityMask( getViewerInstance().globalBasisAxes->visibilityMask() );
-            allObj.emplace_back( std::move( globalBasisPoints ) );
-        }
+            allObj.emplace_back( getViewerInstance().globalBasisAxes );
     }
 
     preciseFitToScreenBorder_( [&] ( bool zoomFov )

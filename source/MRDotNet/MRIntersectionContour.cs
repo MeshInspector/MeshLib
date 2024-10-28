@@ -5,8 +5,6 @@ using System.Runtime.InteropServices;
 
 namespace MR.DotNet
 {
-    using EdgeId = int;
-    using FaceId = int;
     using ContinousContour = List<VariableEdgeTri>;
 
     [StructLayout(LayoutKind.Sequential)]

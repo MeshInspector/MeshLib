@@ -5,13 +5,11 @@ using System.Runtime.InteropServices;
 
 namespace MR.DotNet
 {
-    using VertId = int;    
-    using FaceId = int;
-    using VertMap = List<int>;
-    using VertMapReadOnly = ReadOnlyCollection<int>;
+    using VertMap = List<VertId>;
+    using VertMapReadOnly = ReadOnlyCollection<VertId>;
 
-    using FaceMap = List<int>;
-    using FaceMapReadOnly = ReadOnlyCollection<int>;
+    using FaceMap = List<FaceId>;
+    using FaceMapReadOnly = ReadOnlyCollection<FaceId>;
 
     public enum MapObject
     {
@@ -72,7 +70,7 @@ namespace MR.DotNet
                     {
                         IntPtr currentFacePtr = IntPtr.Add(mrMap.data, i * sizeOfFaceId);
                         var face = Marshal.PtrToStructure<MRFaceId>(currentFacePtr);
-                        cut2origin_.Add(face.id);
+                        cut2origin_.Add(new FaceId(face.id));
                     }
                 }
 
@@ -94,7 +92,7 @@ namespace MR.DotNet
                     {
                         IntPtr currentFacePtr = IntPtr.Add(mrMap.data, i * sizeOfFaceId);
                         var face = Marshal.PtrToStructure<MRFaceId>(currentFacePtr);
-                        cut2newFaces_.Add(face.id);
+                        cut2newFaces_.Add(new FaceId(face.id));
                     }
                 }
 
@@ -116,7 +114,7 @@ namespace MR.DotNet
                     {
                         IntPtr currentVertPtr = IntPtr.Add(mrMap.data, i * sizeOfVertId);
                         var vert = Marshal.PtrToStructure<MRVertId>(currentVertPtr);
-                        old2newVerts_.Add(vert.id);
+                        old2newVerts_.Add(new VertId(vert.id));
                     }
                 }
 

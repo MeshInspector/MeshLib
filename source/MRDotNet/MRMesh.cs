@@ -4,16 +4,12 @@ using static MR.DotNet.Vector3f;
 
 namespace MR.DotNet
 {
-    using VertId = int;
-    using EdgeId = int;
-    using FaceId = int;
-
     using VertCoordsReadOnly = System.Collections.ObjectModel.ReadOnlyCollection<Vector3f>;
     using VertCoords = System.Collections.Generic.List<Vector3f>;
     using TriangulationReadOnly = System.Collections.ObjectModel.ReadOnlyCollection<ThreeVertIds>;
     using Triangulation = System.Collections.Generic.List<ThreeVertIds>;
-    using EdgePathReadOnly = System.Collections.ObjectModel.ReadOnlyCollection<int>;
-    using EdgePath = System.Collections.Generic.List<int>;
+    using EdgePathReadOnly = System.Collections.ObjectModel.ReadOnlyCollection<EdgeId>;
+    using EdgePath = System.Collections.Generic.List<EdgeId>;
 
     public struct ThreeVertIds
     {
@@ -26,6 +22,13 @@ namespace MR.DotNet
             v0 = v0_;
             v1 = v1_;
             v2 = v2_;
+        }
+
+        public ThreeVertIds(int v0_, int v1_, int v2_)
+        {
+            v0 = new VertId( v0_ ); 
+            v1 = new VertId(v1_);
+            v2 = new VertId(v2_);
         }
     };
 
@@ -473,12 +476,12 @@ namespace MR.DotNet
             MRVertId v2 = new MRVertId();
 
             MREdgeId mrEdgeId = new MREdgeId();
-            mrEdgeId.id = edgeId;
+            mrEdgeId.id = edgeId.Id;
 
             mrMeshTopologyGetLeftTriVerts(meshTopology_, mrEdgeId, ref v0, ref v1, ref v2);
-            res[0] = (VertId)v0.id;
-            res[1] = (VertId)v1.id;
-            res[2] = (VertId)v2.id;
+            res[0].Id = v0.id;
+            res[1].Id = v1.id;
+            res[2].Id = v2.id;
 
             return res;
         }
@@ -644,10 +647,10 @@ namespace MR.DotNet
 
             result.pointOnFace = new PointOnFace();
             result.pointOnFace.point = new Vector3f(mrRes.proj.point);
-            result.pointOnFace.faceId = mrRes.proj.face.id;
+            result.pointOnFace.faceId.Id = mrRes.proj.face.id;
 
             result.meshTriPoint = new MeshTriPoint();
-            result.meshTriPoint.e = mrRes.mtp.e.id;
+            result.meshTriPoint.e.Id = mrRes.mtp.e.id;
             result.meshTriPoint.bary.a = mrRes.mtp.bary.a;
             result.meshTriPoint.bary.b = mrRes.mtp.bary.b;
 

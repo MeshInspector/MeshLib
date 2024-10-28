@@ -156,15 +156,15 @@ namespace MR.DotNet.Test
         public void TestLeftTriVerts()
         {
             var cubeMesh = Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
-            var triVerts = cubeMesh.GetLeftTriVerts(0);
-            Assert.That(triVerts[0], Is.EqualTo(0));
-            Assert.That(triVerts[1], Is.EqualTo(1));
-            Assert.That(triVerts[2], Is.EqualTo(2));
+            var triVerts = cubeMesh.GetLeftTriVerts(new EdgeId(0));
+            Assert.That(triVerts[0].Id, Is.EqualTo(0));
+            Assert.That(triVerts[1].Id, Is.EqualTo(1));
+            Assert.That(triVerts[2].Id, Is.EqualTo(2));
 
-            triVerts = cubeMesh.GetLeftTriVerts(6);
-            Assert.That(triVerts[0], Is.EqualTo(2));
-            Assert.That(triVerts[1], Is.EqualTo(3));
-            Assert.That(triVerts[2], Is.EqualTo(0));
+            triVerts = cubeMesh.GetLeftTriVerts(new EdgeId(6));
+            Assert.That(triVerts[0].Id, Is.EqualTo(2));
+            Assert.That(triVerts[1].Id, Is.EqualTo(3));
+            Assert.That(triVerts[2].Id, Is.EqualTo(0));
         }
 
          [Test]
@@ -235,24 +235,24 @@ namespace MR.DotNet.Test
             var projRes = Mesh.FindProjection(p, mp);
             Assert.That(projRes.distanceSquared, Is.EqualTo(7.529f).Within(1e-3));
 
-            Assert.That(projRes.pointOnFace.faceId, Is.EqualTo(904));
+            Assert.That(projRes.pointOnFace.faceId.Id, Is.EqualTo(904));
             Assert.That(projRes.pointOnFace.point.X, Is.EqualTo(0.310).Within(1e-3));
             Assert.That(projRes.pointOnFace.point.Y, Is.EqualTo(0.507).Within(1e-3));
             Assert.That(projRes.pointOnFace.point.Z, Is.EqualTo(0.803).Within(1e-3));
 
-            Assert.That(projRes.meshTriPoint.e, Is.EqualTo(1640));
+            Assert.That(projRes.meshTriPoint.e.Id, Is.EqualTo(1640));
             Assert.That(projRes.meshTriPoint.bary.a, Is.EqualTo(0.053).Within(1e-3));
             Assert.That(projRes.meshTriPoint.bary.b, Is.EqualTo(0.946).Within(1e-3));
 
             var xf = new AffineXf3f(Vector3f.Diagonal(1.0f));
             projRes = Mesh.FindProjection(p, mp, float.MaxValue, xf);
 
-            Assert.That(projRes.pointOnFace.faceId, Is.EqualTo(632));
+            Assert.That(projRes.pointOnFace.faceId.Id, Is.EqualTo(632));
             Assert.That(projRes.pointOnFace.point.X, Is.EqualTo(1.000).Within(1e-3));
             Assert.That(projRes.pointOnFace.point.Y, Is.EqualTo(1.439).Within(1e-3));
             Assert.That(projRes.pointOnFace.point.Z, Is.EqualTo(1.895).Within(1e-3));
 
-            Assert.That(projRes.meshTriPoint.e, Is.EqualTo(1898));
+            Assert.That(projRes.meshTriPoint.e.Id, Is.EqualTo(1898));
             Assert.That(projRes.meshTriPoint.bary.a, Is.EqualTo(0.5).Within(1e-3));
             Assert.That(projRes.meshTriPoint.bary.b, Is.EqualTo(0.0).Within(1e-3));
         }

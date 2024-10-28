@@ -7,7 +7,6 @@ namespace MR.DotNet
 {
     using static MR.DotNet.ICP;
     using static MR.DotNet.Vector3f;
-    using VertId = int;
     public enum ICPMethod
     {
         Combined = 0,     /// PointToPoint for the first 2 iterations, and PointToPlane for the remaining iterations
@@ -83,10 +82,10 @@ namespace MR.DotNet
             pairData.weight = weight;
 
             MRVertId mrSrcVertId = new MRVertId();
-            mrSrcVertId.id = srcVertId;
+            mrSrcVertId.id = srcVertId.Id;
 
             MRVertId mrTgtCloseVert = new MRVertId();
-            mrTgtCloseVert.id = tgtCloseVert;
+            mrTgtCloseVert.id = tgtCloseVert.Id;
 
             return new MRPointPair
             {

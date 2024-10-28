@@ -6,8 +6,6 @@ using System.Text;
 
 namespace MR.DotNet
 {
-    using EdgeId = int;
-    using FaceId = int;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct EdgeTri

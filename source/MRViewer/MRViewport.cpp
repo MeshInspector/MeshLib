@@ -659,15 +659,14 @@ void Viewport::draw_global_basis() const
     if ( !viewer.globalBasisAxes->isVisible( id ) )
         return;
 
-    AffineXf3f gbXf = params_.globalBasisScaleMode == Parameters::GlobalBasisScaleMode::Auto ?
-        AffineXf3f::linear( Matrix3f::scale( params_.objectScale * 0.5f ) ) :
-        viewer.globalBasisAxes->xf( id );
-
-    draw( *viewer.globalBasisAxes, gbXf );
+    if ( params_.globalBasisScaleMode == Parameters::GlobalBasisScaleMode::Auto )
+        viewer.globalBasisAxes->setXf( AffineXf3f::linear( Matrix3f::scale( params_.objectScale * 0.5f ) ), id );
+    auto xf = viewer.globalBasisAxes->xf( id );
+    draw( *viewer.globalBasisAxes, xf );
     for ( const auto& child : viewer.globalBasisAxes->children() )
     {
         if ( auto visualChild = child->asType<VisualObject>() )
-            draw( *visualChild, gbXf );
+            draw( *visualChild, xf );
     }
 }
 

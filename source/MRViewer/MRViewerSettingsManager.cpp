@@ -192,7 +192,12 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     {
         auto val = cfg.getJsonValue( cGlobalBasisKey );
         if ( val[cGlobalBasisVisibleKey].isBool() )
-            viewer.globalBasisAxes->setVisible( val[cGlobalBasisVisibleKey].asBool() );
+        {
+            auto visible = val[cGlobalBasisVisibleKey].asBool();
+            viewer.globalBasisAxes->setVisible( visible );
+            if ( visible )
+                CommandLoop::appendCommand( [&] () { viewer.preciseFitDataViewport(ViewportMask::all(),{0.9f}); });
+        }
         if ( val[cGlobalBasisScaleKey].isString() && val[cGlobalBasisScaleKey].asString() == "Auto" )
             params.globalBasisScaleMode = Viewport::Parameters::GlobalBasisScaleMode::Auto;
         else if ( val[cGlobalBasisScaleKey].isDouble() )

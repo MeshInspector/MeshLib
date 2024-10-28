@@ -67,7 +67,7 @@ public:
     // enable visualization of mesh deviations
     MRVIEWER_API void enableDeviationVisualization( bool enable );
     // get min / max point shifts for (usefull for setup palette)
-    Vector2f getMinMax() { return { changesMinVal_, changesMaxVal_ }; }
+    MRVIEWER_API Vector2f getMinMax();
 private:
     /// start modifying mesh surface
     MRVIEWER_API bool onMouseDown_( MouseButton button, int modifiers ) override;
@@ -136,8 +136,6 @@ private:
 
     std::shared_ptr<Palette> palette_;
     bool enableDeviationTexture_ = true;
-    float changesMinVal_ = 0.f;
-    float changesMaxVal_ = 0.f;
 };
 
 }

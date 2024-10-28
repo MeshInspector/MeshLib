@@ -1214,7 +1214,19 @@ PaletteChanges Palette(
     if ( paletteRangeMode == 1 )
     {
         if ( paletteRangeModeBackUp == 0 )
+        {
             ranges[1] = ranges[2] = ( ranges[0] + ranges[3] ) * 0.5f;
+            if ( ranges[1] )
+            {
+                ranges[1] *= 1.f - std::numeric_limits<float>::epsilon() * 10.f;
+                ranges[2] *= 1.f + std::numeric_limits<float>::epsilon() * 10.f;
+            }
+            else
+            {
+                ranges[1] -= std::numeric_limits<float>::epsilon() * 10.f;
+                ranges[2] += std::numeric_limits<float>::epsilon() * 10.f;
+            }
+        }
         else
         {
             ranges[1] = params.ranges[1];
@@ -1230,7 +1242,7 @@ PaletteChanges Palette(
             if ( ranges[3] < 0.0f )
                 ranges[3] = 0.0f;
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * menuScaling } );
-            rangesChanged |= UI::drag<NoUnit>( "Min/Max", ranges[3], speed, 0.0f, max );
+            rangesChanged |= UI::drag<NoUnit>( "Min/Max", ranges[3], speed, 0.f, max );
             ImGui::PopStyleVar();
             ranges[0] = -ranges[3];
         }
@@ -1279,7 +1291,7 @@ PaletteChanges Palette(
         int next = i + orderStep;
         if ( next >= 4 )
             break;
-        if ( ranges[i] > ranges[next] )
+        if ( ranges[i] >= ranges[next] )
         {
             correctOrder = false;
             break;

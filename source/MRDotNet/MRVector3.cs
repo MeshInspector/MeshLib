@@ -8,9 +8,10 @@ namespace MR.DotNet
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRVector3f
         {
-            public float x;
-            public float y;
-            public float z;
+            public float x = 0.0f;
+            public float y = 0.0f;
+            public float z = 0.0f;
+            public MRVector3f() { }
         };
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
@@ -63,30 +64,30 @@ namespace MR.DotNet
         {
             return new Vector3f(mrVector3fDiagonal(a));
         }
-
+        /// returns a new vector with (1, 0, 0) coordinates
         static public Vector3f PlusX()
         {
             return new Vector3f(mrVector3fPlusX());
         }
-
+        /// returns a new vector with (0, 1, 0) coordinates
         static public Vector3f PlusY()
         {
             return new Vector3f(mrVector3fPlusY());
         }
-
+        /// returns a new vector with (0, 0, 1) coordinates
         static public Vector3f PlusZ()
         {
             return new Vector3f(mrVector3fPlusZ());
         }
-
+        ///returns sum of two vectors
         static public Vector3f operator +(Vector3f a, Vector3f b) => new Vector3f(mrVector3fAdd(ref a.vec_, ref b.vec_));
-
+        ///returns difference of two vectors
         static public Vector3f operator -(Vector3f a, Vector3f b) => new Vector3f(mrVector3fSub(ref a.vec_, ref b.vec_));
-
+        ///returns product of vector and scalar
         static public Vector3f operator *(Vector3f a, float b) => new Vector3f(mrVector3fMulScalar(ref a.vec_, b));
-
+        ///returns product of vector and scalar
         static public Vector3f operator *(float a, Vector3f b) => new Vector3f(mrVector3fMulScalar(ref b.vec_, a));
-
+        
         static public bool operator ==(Vector3f a, Vector3f b) => a.vec_.x == b.vec_.x && a.vec_.y == b.vec_.y && a.vec_.z == b.vec_.z;
         static public bool operator !=(Vector3f a, Vector3f b) => a.vec_.x != b.vec_.x || a.vec_.y != b.vec_.y || a.vec_.z != b.vec_.z;
 
@@ -96,13 +97,15 @@ namespace MR.DotNet
         }
 
         public override int GetHashCode() => vec_.x.GetHashCode() ^ vec_.y.GetHashCode() ^ vec_.z.GetHashCode();
-
+        /// returns first coordinate
         public float X { get => vec_.x; set => vec_.x = value; }
+        /// returns second coordinate
         public float Y { get => vec_.y; set => vec_.y = value; }
+        /// returns third coordinate
         public float Z { get => vec_.z; set => vec_.z = value; }
-
+        /// returns Euclidean length of the vector
         public float Length() => mrVector3fLength(ref vec_);
-
+        /// returns squared Euclidean length of the vector
         public float LengthSq() => mrVector3fLengthSq(ref vec_);
 
     }

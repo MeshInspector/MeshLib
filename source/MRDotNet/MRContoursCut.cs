@@ -20,12 +20,25 @@ namespace MR.DotNet
         public VariantIndex variantIndex;
         public int index;
         public Vector3f coordinate;
+
+        public OneMeshIntersection(VariantIndex variantIndex, int index, Vector3f coordinate) 
+        { 
+            this.variantIndex = variantIndex; 
+            this.index = index; 
+            this.coordinate = coordinate; 
+        }
     };
     /// one contour on mesh
     public struct OneMeshContour
     {
         public List<OneMeshIntersection> intersections;
         public bool closed;
+
+        public OneMeshContour(List<OneMeshIntersection> intersections, bool closed)
+        {
+            this.intersections = intersections;
+            this.closed = closed;
+        }
     };
 
     /// list of contours on mesh
@@ -34,32 +47,36 @@ namespace MR.DotNet
         [StructLayout(LayoutKind.Sequential)]
         internal struct MROneMeshIntersection
         {
-            public int primitiveId;
-            public byte primitiveIdIndex;
+            public int primitiveId = 0;
+            public byte primitiveIdIndex = 0;
             public MRVector3f coordinate;
+            public MROneMeshIntersection() { }
         };
 
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRVectorOneMeshIntersection
         {
-            public IntPtr data;
-            public ulong size;
-            public IntPtr reserved;
+            public IntPtr data = IntPtr.Zero;
+            public ulong size = 0;
+            public IntPtr reserved = IntPtr.Zero;
+            public MRVectorOneMeshIntersection() { }
         };
 
         [StructLayout(LayoutKind.Sequential)]
         internal struct MROneMeshContour
         {
             public MRVectorOneMeshIntersection intersections;
-            public bool closed;
+            public bool closed = false;
+            public MROneMeshContour() { }
         };
 
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRVariableEdgeTri
         {
-            public MREdgeId edge;
-            public MRFaceId tri;
-            public bool isEdgeATriB;
+            public EdgeId edge = new EdgeId();
+            public FaceId tri = new FaceId();
+            public bool isEdgeATriB = false;
+            public MRVariableEdgeTri() { }
         };       
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]

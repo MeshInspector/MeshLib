@@ -12,8 +12,9 @@ namespace MR.DotNet
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRCoordinateConverters
         {
-            public IntPtr toInt;
-            public IntPtr toFloat;
+            public IntPtr toInt = IntPtr.Zero;
+            public IntPtr toFloat = IntPtr.Zero;
+            public MRCoordinateConverters() { }
         }
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]

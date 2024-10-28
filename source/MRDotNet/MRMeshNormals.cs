@@ -13,9 +13,10 @@ namespace MR.DotNet
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRFaceNormals
         {
-            public IntPtr data;
-            public ulong size;
-            public IntPtr reserved;
+            public IntPtr data = IntPtr.Zero;
+            public ulong size = 0;
+            public IntPtr reserved = IntPtr.Zero;
+            public MRFaceNormals() { }
         }
 
         /// returns a vector with face-normal in every element for valid mesh faces

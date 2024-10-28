@@ -80,38 +80,40 @@ namespace MR.DotNet
     public struct DecimateResult
     {
         /// Number deleted verts. Same as the number of performed collapses
-        public int vertsDeleted;
+        public int vertsDeleted = 0;
         /// Number deleted faces
-        public int facesDeleted;
+        public int facesDeleted = 0;
         /// for DecimateStrategy::MinimizeError:
         ///    estimated distance deviation of decimated mesh from the original mesh
         /// for DecimateStrategy::ShortestEdgeFirst:
         ///    the shortest remaining edge in the mesh
-        public float errorIntroduced;
+        public float errorIntroduced = 0;
+        public DecimateResult() {}
     };
     public struct MRDecimateParameters
     {
-        public DecimateStrategy strategy;
-        public float maxError;
-        public float maxEdgeLen;
-        public float maxBdShift;
-        public float maxTriangleAspectRatio;
-        public float criticalTriAspectRatio;
-        public float tinyEdgeLength;
-        public float stabilizer;
-        public bool optimizeVertexPos;
-        public int maxDeletedVertices;
-        public int maxDeletedFaces;
-        public IntPtr region;
-        public bool collapseNearNotFlippable;
-        public bool touchNearBdEdges;
-        public bool touchBdVerts;
-        public float maxAngleChange;
-        public bool packMesh;
-        public IntPtr progressCallback;
-        public int subdivideParts;
-        public bool decimateBetweenParts;
-        public int minFacesInPart;
+        public DecimateStrategy strategy = DecimateStrategy.MinimizeError;
+        public float maxError = 0.001f;
+        public float maxEdgeLen = float.MaxValue;
+        public float maxBdShift = float.MaxValue;
+        public float maxTriangleAspectRatio = 20.0f;
+        public float criticalTriAspectRatio = float.MaxValue;
+        public float tinyEdgeLength = -1;
+        public float stabilizer = 0.001f;
+        public bool optimizeVertexPos = true;
+        public int maxDeletedVertices = int.MaxValue;
+        public int maxDeletedFaces = int.MaxValue;
+        public IntPtr region = IntPtr.Zero;
+        public bool collapseNearNotFlippable = false;
+        public bool touchNearBdEdges = true;
+        public bool touchBdVerts = true;
+        public float maxAngleChange = -1;
+        public bool packMesh = false;
+        public IntPtr progressCallback = IntPtr.Zero;
+        public int subdivideParts = 1;
+        public bool decimateBetweenParts = true;
+        public int minFacesInPart = 0;
+        public MRDecimateParameters() {}
     };
 
     public class MeshDecimate

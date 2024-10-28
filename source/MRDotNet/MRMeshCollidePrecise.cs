@@ -21,9 +21,10 @@ namespace MR.DotNet
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRVectorEdgeTri
         {
-            public IntPtr data;
-            public ulong size;
-            public IntPtr reserved;
+            public IntPtr data = IntPtr.Zero;
+            public ulong size = 0;
+            public IntPtr reserved = IntPtr.Zero;
+            public MRVectorEdgeTri() { }
         };
 
         /// each edge is directed to have its origin inside and its destination outside of the other mesh

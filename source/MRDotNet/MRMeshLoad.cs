@@ -8,45 +8,51 @@ namespace MR.DotNet
     public struct ObjLoadSettings
     {
         /// if true then vertices will be returned relative to some transformation to avoid precision loss
-        public bool customXf;
+        public bool customXf = false;
         /// if true, the number of skipped faces (faces than can't be created) will be counted
-        public bool countSkippedFaces;
+        public bool countSkippedFaces = false;
+        public ObjLoadSettings() { }
     };
 
     public struct NamedMesh
     {
-        public string name;
-        public Mesh mesh;
+        public string name = "";
+        public Mesh? mesh = null;
         /// transform of the loaded mesh, not identity only if ObjLoadSettings.customXf
-        public AffineXf3f xf;
+        public AffineXf3f? xf = null;
         /// counter of skipped faces (faces than can't be created), not zero only if ObjLoadSettings.countSkippedFaces
-        public int skippedFaceCount;
+        public int skippedFaceCount = 0;
         /// counter of duplicated vertices (that created for resolve non-manifold geometry)
-        public int duplicatedVertexCount;
+        public int duplicatedVertexCount = 0;
+
+        public NamedMesh() { }
     };
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct MRMeshLoadObjLoadSettings
     {
         /// if true then vertices will be returned relative to some transformation to avoid precision loss
-        public bool customXf;
+        public bool customXf = false;
         /// if true, the number of skipped faces (faces than can't be created) will be counted
-        public bool countSkippedFaces;
+        public bool countSkippedFaces = false;
         /// callback for set progress and stop process
-        public IntPtr callback;
+        public IntPtr callback = IntPtr.Zero;
+
+        public MRMeshLoadObjLoadSettings() { }
     };
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct MRMeshLoadNamedMesh
     {
-        public IntPtr name;
-        public IntPtr mesh;
+        public IntPtr name = IntPtr.Zero;
+        public IntPtr mesh = IntPtr.Zero;
         /// transform of the loaded mesh, not identity only if ObjLoadSettings.customXf
         public MRAffineXf3f xf;
         /// counter of skipped faces (faces than can't be created), not zero only if ObjLoadSettings.countSkippedFaces
-        public int skippedFaceCount;
+        public int skippedFaceCount = 0;
         /// counter of duplicated vertices (that created for resolve non-manifold geometry)
-        public int duplicatedVertexCount;
+        public int duplicatedVertexCount = 0;
+        public MRMeshLoadNamedMesh() { }
     };
 
     public class MeshLoad
@@ -66,6 +72,29 @@ namespace MR.DotNet
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrStringData(IntPtr str);
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        unsafe private static extern IntPtr mrMeshLoadFromAnySupportedFormat(string file, IntPtr* errorStr);
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern void mrLoadIOExtras();
+        /// loads mesh from file of any supported format
+        unsafe public static Mesh FromAnySupportedFormat(string path)
+        {
+            mrLoadIOExtras();
+
+            IntPtr errString = new IntPtr();
+            var mesh = mrMeshLoadFromAnySupportedFormat(path, &errString);
+
+            if (errString != IntPtr.Zero)
+            {
+                var errData = mrStringData(errString);
+                string errorMessage = Marshal.PtrToStringAnsi(errData);
+                throw new SystemException(errorMessage);
+            }
+
+            return new Mesh(mesh);
+        }
 
         /// loads meshes from .obj file
         public static List<NamedMesh> FromSceneObjFile(string path, bool combineAllObjects, ObjLoadSettings settings)

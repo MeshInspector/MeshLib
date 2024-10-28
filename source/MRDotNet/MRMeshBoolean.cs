@@ -31,11 +31,12 @@ namespace MR.DotNet
 
     public struct BooleanParameters
     {
-        public BooleanResultMapper? mapper;
+        public BooleanResultMapper? mapper = null;
     /// transform from mesh `B` space to mesh `A` space
-        public AffineXf3f? rigidB2A;
+        public AffineXf3f? rigidB2A = null;
     /// if set merge all non-intersecting components
-        public bool mergeAllNonIntersectingComponents;
+        public bool mergeAllNonIntersectingComponents = false;
+        public BooleanParameters() { }
     };
 
     /// output of boolean operation
@@ -50,18 +51,20 @@ namespace MR.DotNet
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRBooleanParameters
         {
-            public IntPtr rigidB2A;
-            public IntPtr mapper;
+            public IntPtr rigidB2A = IntPtr.Zero;
+            public IntPtr mapper = IntPtr.Zero;
             [MarshalAs(UnmanagedType.U1)]
-            public bool mergeAllNonIntersectingComponents;
-            public IntPtr cb;
+            public bool mergeAllNonIntersectingComponents = false;
+            public IntPtr cb = IntPtr.Zero;
+            public MRBooleanParameters() { }
         }
 
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRBooleanResult
         {
-            public IntPtr mesh;
-            public IntPtr errorString;
+            public IntPtr mesh = IntPtr.Zero;
+            public IntPtr errorString = IntPtr.Zero;
+            public MRBooleanResult() { }
         }
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
@@ -73,10 +76,19 @@ namespace MR.DotNet
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern IntPtr mrStringData(IntPtr str);
 
+        /// Makes new mesh - result of boolean operation on mesh `A` and mesh `B`
+        /// \param meshA Input mesh `A`
+        /// \param meshB Input mesh `B`
+        /// \param operation CSG operation to perform
         public static BooleanResult Boolean(Mesh meshA, Mesh meshB, BooleanOperation op )
         {
             return Boolean(meshA, meshB, op, new BooleanParameters());
         }
+        /// Makes new mesh - result of boolean operation on mesh `A` and mesh `B`
+        /// \param meshA Input mesh `A`
+        /// \param meshB Input mesh `B`
+        /// \param operation CSG operation to perform <summary>
+        /// \param parameters optional parameters
         public static BooleanResult Boolean(Mesh meshA, Mesh meshB, BooleanOperation op, BooleanParameters parameters )
         {
             MRBooleanParameters mrParameters = mrBooleanParametersNew();

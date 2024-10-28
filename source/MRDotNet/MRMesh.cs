@@ -33,64 +33,51 @@ namespace MR.DotNet
     };
 
     #region C_STRUCTS
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct MRVertId
-    {
-        public int id;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct MREdgeId
-    {
-        public int id;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct MRFaceId
-    {
-        public int id;
-    }
 
     /// parameters for \ref mrMakeTorus
     [StructLayout(LayoutKind.Sequential)]
     internal struct MRMakeTorusParameters
     {
-        public float primaryRadius;
-        public float secondaryRadius;
-        public int primaryResolution;
-        public int secondaryResolution;
-        // TODO: points
+        public float primaryRadius = 1.0f;
+        public float secondaryRadius = 0.5f;
+        public int primaryResolution = 32;
+        public int secondaryResolution = 32;
+        public MRMakeTorusParameters() { }
     };
 
     /// parameters for \ref mrMakeSphere
     [StructLayout(LayoutKind.Sequential)]
     internal struct MRSphereParams
     {
-        public float radius;
-        public int numMeshVertices;
+        public float radius = 1.0f;
+        public int numMeshVertices = 100;
+        public MRSphereParams() { }
     };
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct MRTriangulation
     {
-        public IntPtr data;
-        public ulong size;
-        public IntPtr reserved;
+        public IntPtr data = IntPtr.Zero;
+        public ulong size = 0;
+        public IntPtr reserved = IntPtr.Zero;
+        public MRTriangulation() { }
     }
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct MREdgePath
     {
-        public IntPtr data;
-        public ulong size;
-        public IntPtr reserved;
+        public IntPtr data = IntPtr.Zero;
+        public ulong size = 0;
+        public IntPtr reserved = IntPtr.Zero;
+        public MREdgePath() { }
     }
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct MRPointOnFace
     {
-        public MRFaceId face;
+        public FaceId face;
         public MRVector3f point;
+        public MRPointOnFace() { }
     };
 
     [StructLayout(LayoutKind.Sequential)]
@@ -99,21 +86,24 @@ namespace MR.DotNet
         /// barycentric coordinates:
         /// a+b in [0,1], a+b=0 => point is in v0, a+b=1 => point is on [v1,v2] edge
         /// a in [0,1], a=0 => point is on [v2,v0] edge, a=1 => point is in v1
-        public float a;
+        public float a = 0.0f;
         /// b in [0,1], b=0 => point is on [v0,v1] edge, b=1 => point is in v2
-        public float b;
+        public float b = 0.0f;
+        public MRTriPointf() { }
     };
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct MRMeshTriPoint
     {
         /// left face of this edge is considered
-        public MREdgeId e;
+        public EdgeId e;
         /// barycentric coordinates
         /// \details a in [0,1], a=0 => point is on next( e ) edge, a=1 => point is in dest( e )
         /// b in [0,1], b=0 => point is on e edge, b=1 => point is in dest( next( e ) )
         /// a+b in [0,1], a+b=0 => point is in org( e ), a+b=1 => point is on prev( e.sym() ) edge
         public MRTriPointf bary;
+
+        public MRMeshTriPoint() { }
     };
 
     [StructLayout(LayoutKind.Sequential)]
@@ -124,7 +114,8 @@ namespace MR.DotNet
         /// its barycentric representation
         public MRMeshTriPoint mtp;
         /// squared distance from pt to proj
-        public float distSq;
+        public float distSq = 0.0f;
+        public MRMeshProjectionResult() { }
     };
 
     /// optional parameters for \ref mrFindProjection
@@ -132,17 +123,20 @@ namespace MR.DotNet
     internal struct MRFindProjectionParameters
     {
         /// upper limit on the distance in question, if the real distance is larger than the function exits returning upDistLimitSq and no valid point
-        public float upDistLimitSq;
+        public float upDistLimitSq = float.MaxValue;
         /// mesh-to-point transformation, if not specified then identity transformation is assumed
-        public IntPtr xf;
+        public IntPtr xf = IntPtr.Zero;
         /// low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
-        public float loDistLimitSq;
+        public float loDistLimitSq = 0.0f;
+
+        public MRFindProjectionParameters() { }
     };
     [StructLayout(LayoutKind.Sequential)]
     internal struct MRMeshPart
     {
-        public IntPtr mesh;
-        public IntPtr region;
+        public IntPtr mesh = IntPtr.Zero;
+        public IntPtr region = IntPtr.Zero;
+        public MRMeshPart() { }
     };
 
 
@@ -222,7 +216,7 @@ namespace MR.DotNet
         /// gets 3 vertices of given triangular face;
         /// the vertices are returned in counter-clockwise order if look from mesh outside
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern void mrMeshTopologyGetLeftTriVerts(IntPtr top, MREdgeId a, ref MRVertId v0, ref MRVertId v1, ref MRVertId v2);
+        private static extern void mrMeshTopologyGetLeftTriVerts(IntPtr top, EdgeId a, ref VertId v0, ref VertId v1, ref VertId v2);
 
         /// returns the number of hole loops in the mesh;
         /// \param holeRepresentativeEdges optional output of the smallest edge id with no valid left face in every hole
@@ -281,13 +275,7 @@ namespace MR.DotNet
         private static extern IntPtr mrMeshTopology(IntPtr mesh);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern void mrMeshFree(IntPtr mesh);
-
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        unsafe private static extern IntPtr mrMeshLoadFromAnySupportedFormat(string file, IntPtr* errorStr);
-
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        unsafe private static extern void mrMeshSaveToAnySupportedFormat(IntPtr mesh, string file, IntPtr* errorStr);
+        private static extern void mrMeshFree(IntPtr mesh);       
 
         /// creates a default instance
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
@@ -307,9 +295,6 @@ namespace MR.DotNet
         /// deallocates the string object
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern void mrStringFree(IntPtr str);
-
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern void mrLoadIOExtras();
 
         #endregion
         #region Constructors
@@ -471,17 +456,17 @@ namespace MR.DotNet
         public VertId[] GetLeftTriVerts(EdgeId edgeId)
         {
             VertId[] res = new VertId[3];
-            MRVertId v0 = new MRVertId();
-            MRVertId v1 = new MRVertId();
-            MRVertId v2 = new MRVertId();
+            VertId v0 = new VertId();
+            VertId v1 = new VertId();
+            VertId v2 = new VertId();
 
-            MREdgeId mrEdgeId = new MREdgeId();
-            mrEdgeId.id = edgeId.Id;
+            EdgeId mrEdgeId = new EdgeId();
+            mrEdgeId.Id = edgeId.Id;
 
             mrMeshTopologyGetLeftTriVerts(meshTopology_, mrEdgeId, ref v0, ref v1, ref v2);
-            res[0].Id = v0.id;
-            res[1].Id = v1.id;
-            res[2].Id = v2.id;
+            res[0].Id = v0.Id;
+            res[1].Id = v1.Id;
+            res[2].Id = v2.Id;
 
             return res;
         }
@@ -574,38 +559,9 @@ namespace MR.DotNet
                 Marshal.FreeHGlobal(nativePoints);
                 Marshal.FreeHGlobal(nativeTriangles);
             }
-        }
-        /// loads mesh from file of any supported format
-        unsafe public static Mesh FromAnySupportedFormat(string path)
-        {
-            mrLoadIOExtras();
-
-            IntPtr errString = new IntPtr();
-            var mesh = mrMeshLoadFromAnySupportedFormat(path, &errString);
-
-            if (errString != IntPtr.Zero)
-            {
-                var errData = mrStringData(errString);
-                string errorMessage = Marshal.PtrToStringAnsi(errData);
-                throw new SystemException(errorMessage);
-            }
-
-            return new Mesh(mesh);
-        }
-        /// saves mesh to file of any supported format
-        unsafe public static void ToAnySupportedFormat(Mesh mesh, string path)
-        {
-            mrLoadIOExtras();
-
-            IntPtr errString = new IntPtr();
-            mrMeshSaveToAnySupportedFormat(mesh.mesh_, path, &errString);
-            if (errString != IntPtr.Zero)
-            {
-                var errData = mrStringData(errString);
-                string errorMessage = Marshal.PtrToStringAnsi(errData);
-                throw new SystemException(errorMessage);
-            }
-        }
+        }        
+       
+       
         /// creates a parallelepiped with given sizes and base
         public static Mesh MakeCube(Vector3f size, Vector3f baseCoords)
         {
@@ -647,10 +603,10 @@ namespace MR.DotNet
 
             result.pointOnFace = new PointOnFace();
             result.pointOnFace.point = new Vector3f(mrRes.proj.point);
-            result.pointOnFace.faceId.Id = mrRes.proj.face.id;
+            result.pointOnFace.faceId.Id = mrRes.proj.face.Id;
 
             result.meshTriPoint = new MeshTriPoint();
-            result.meshTriPoint.e.Id = mrRes.mtp.e.id;
+            result.meshTriPoint.e.Id = mrRes.mtp.e.Id;
             result.meshTriPoint.bary.a = mrRes.mtp.bary.a;
             result.meshTriPoint.bary.b = mrRes.mtp.bary.b;
 

@@ -21,17 +21,19 @@ namespace MR.DotNet
     [StructLayout(LayoutKind.Sequential)]
     internal struct MRFaceMap
     {
-        public IntPtr data;
-        public ulong size;
-        public IntPtr reserved;
+        public IntPtr data = IntPtr.Zero;
+        public ulong size = 0;
+        public IntPtr reserved = IntPtr.Zero;
+        public MRFaceMap(){}
     }
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct MRVertMap
     {
-        public IntPtr data;
-        public ulong size;
-        public IntPtr reserved;
+        public IntPtr data = IntPtr.Zero;
+        public ulong size = 0;
+        public IntPtr reserved = IntPtr.Zero;
+        public MRVertMap() { }
     };
 
     public class BooleanMaps
@@ -65,12 +67,12 @@ namespace MR.DotNet
                 {
                     var mrMap = mrBooleanResultMapperMapsCut2origin(maps_);
                     cut2origin_ = new List<FaceId>( (int)mrMap.size );
-                    int sizeOfFaceId= Marshal.SizeOf(typeof(MRFaceId));
+                    int sizeOfFaceId= Marshal.SizeOf(typeof(FaceId));
                     for ( int i = 0; i < (int)mrMap.size; i++ )
                     {
                         IntPtr currentFacePtr = IntPtr.Add(mrMap.data, i * sizeOfFaceId);
-                        var face = Marshal.PtrToStructure<MRFaceId>(currentFacePtr);
-                        cut2origin_.Add(new FaceId(face.id));
+                        var face = Marshal.PtrToStructure<FaceId>(currentFacePtr);
+                        cut2origin_.Add(new FaceId(face.Id));
                     }
                 }
 
@@ -87,12 +89,12 @@ namespace MR.DotNet
                 {
                     var mrMap = mrBooleanResultMapperMapsCut2newFaces(maps_);
                     cut2newFaces_ = new List<FaceId>( (int)mrMap.size );
-                    int sizeOfFaceId= Marshal.SizeOf(typeof(MRFaceId));
+                    int sizeOfFaceId= Marshal.SizeOf(typeof(FaceId));
                     for ( int i = 0; i < (int)mrMap.size; i++ )
                     {
                         IntPtr currentFacePtr = IntPtr.Add(mrMap.data, i * sizeOfFaceId);
-                        var face = Marshal.PtrToStructure<MRFaceId>(currentFacePtr);
-                        cut2newFaces_.Add(new FaceId(face.id));
+                        var face = Marshal.PtrToStructure<FaceId>(currentFacePtr);
+                        cut2newFaces_.Add(new FaceId(face.Id));
                     }
                 }
 
@@ -109,12 +111,12 @@ namespace MR.DotNet
                 {
                     var mrMap = mrBooleanResultMapperMapsOld2NewVerts(maps_);
                     old2newVerts_ = new List<VertId>( (int)mrMap.size );
-                    int sizeOfVertId= Marshal.SizeOf(typeof(MRVertId));
+                    int sizeOfVertId= Marshal.SizeOf(typeof(VertId));
                     for ( int i = 0; i < (int)mrMap.size; i++ )
                     {
                         IntPtr currentVertPtr = IntPtr.Add(mrMap.data, i * sizeOfVertId);
-                        var vert = Marshal.PtrToStructure<MRVertId>(currentVertPtr);
-                        old2newVerts_.Add(new VertId(vert.id));
+                        var vert = Marshal.PtrToStructure<VertId>(currentVertPtr);
+                        old2newVerts_.Add(new VertId(vert.Id));
                     }
                 }
 

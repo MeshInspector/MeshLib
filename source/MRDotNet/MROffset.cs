@@ -62,20 +62,23 @@ namespace MR.DotNet
         [StructLayout(LayoutKind.Sequential)]
         internal struct MROffsetParameters
         {
-            public float voxelSize;
-            public IntPtr callBack;
-            public SignDetectionMode signDetectionMode;
-            public bool memoryEfficient;
+            public float voxelSize = 0.0f;
+            public IntPtr callBack = IntPtr.Zero;
+            public SignDetectionMode signDetectionMode = SignDetectionMode.OpenVDB;
+            public bool memoryEfficient = false;
+            public MROffsetParameters() { }
         };
 
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRGeneralOffsetParameters
         {
-            public float minNewVertDev;
-            public float maxNewRank2VertDev;
-            public float maxNewRank3VertDev;
-            public float maxOldVertPosCorrection;
-            public GeneralOffsetMode mode;
+            public float minNewVertDev = 1.0f / 25;
+            public float maxNewRank2VertDev = 5;
+            public float maxNewRank3VertDev = 2;
+            public float maxOldVertPosCorrection = 0.5f;
+            public GeneralOffsetMode mode = GeneralOffsetMode.Standard;
+
+            public MRGeneralOffsetParameters() { }
         };
 
         ///

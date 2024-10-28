@@ -9,7 +9,6 @@ using static MR.DotNet.Vector3f;
 
 namespace MR.DotNet
 {
-    using VertId = int;
     using VertCoordsReadOnly = System.Collections.ObjectModel.ReadOnlyCollection<Vector3f>;
     using VertCoords = System.Collections.Generic.List<Vector3f>;
 
@@ -52,10 +51,10 @@ namespace MR.DotNet
 
         /// appends a point and returns its VertId
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern MRVertId mrPointCloudAddPoint(IntPtr pc, ref MRVector3f point );
+        private static extern VertId mrPointCloudAddPoint(IntPtr pc, ref MRVector3f point );
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern MRVertId mrPointCloudAddPointWithNormal(IntPtr pc, ref MRVector3f point, ref MRVector3f normal );
+        private static extern VertId mrPointCloudAddPointWithNormal(IntPtr pc, ref MRVector3f point, ref MRVector3f normal );
 
         /// deallocates a PointCloud object
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]

@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Text;
 using static MR.DotNet.ICP;
-using static MR.DotNet.Vector3f;
 
 namespace MR.DotNet
 {/// Parameters that are used for sampling of the MultiwayICP objects
@@ -34,18 +32,20 @@ namespace MR.DotNet
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRMultiwayICPSamplingParameters
         {
-            public float samplingVoxelSize;
-            public int maxGroupSize;
-            public MultiwayICPSamplingParameters.CascadeMode cascadeMode;
-            public IntPtr cb;
+            public float samplingVoxelSize = 0.0f;
+            public int maxGroupSize = 64;
+            public MultiwayICPSamplingParameters.CascadeMode cascadeMode = MultiwayICPSamplingParameters.CascadeMode.AABBTreeBased;
+            public IntPtr cb = IntPtr.Zero;
+            public MRMultiwayICPSamplingParameters() { }
         };
 
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRVectorAffineXf3f
         {
-            public IntPtr data;
-            public ulong size;
-            public IntPtr reserved;
+            public IntPtr data = IntPtr.Zero;
+            public ulong size = 0;
+            public IntPtr reserved = IntPtr.Zero;
+            public MRVectorAffineXf3f() { }
         }
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]

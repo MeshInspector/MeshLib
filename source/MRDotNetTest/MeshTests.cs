@@ -22,9 +22,9 @@ namespace MR.DotNet.Test
         {
             var cubeMesh = Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
             var tempFile = Path.GetTempFileName() + ".mrmesh";
-            Mesh.ToAnySupportedFormat(cubeMesh, tempFile);
+            MeshSave.ToAnySupportedFormat(cubeMesh, tempFile);
 
-            var readMesh = Mesh.FromAnySupportedFormat(tempFile);
+            var readMesh = MeshLoad.FromAnySupportedFormat(tempFile);
             Assert.That(cubeMesh.Points.Count == readMesh.Points.Count);
             Assert.That(cubeMesh.Triangulation.Count == readMesh.Triangulation.Count);
 
@@ -39,7 +39,7 @@ namespace MR.DotNet.Test
 
             try
             {
-                Mesh.ToAnySupportedFormat(cubeMesh, tempFile);
+                MeshSave.ToAnySupportedFormat(cubeMesh, tempFile);
             }
             catch (System.Exception e)
             {
@@ -48,7 +48,7 @@ namespace MR.DotNet.Test
 
             try
             {
-                Mesh.FromAnySupportedFormat(tempFile);
+                MeshLoad.FromAnySupportedFormat(tempFile);
             }
             catch (System.Exception e)
             {
@@ -61,9 +61,9 @@ namespace MR.DotNet.Test
         {
             var cubeMesh = Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
             var tempFile = Path.GetTempFileName() + ".ctm";
-            Mesh.ToAnySupportedFormat(cubeMesh, tempFile);
+            MeshSave.ToAnySupportedFormat(cubeMesh, tempFile);
 
-            var readMesh = Mesh.FromAnySupportedFormat(tempFile);
+            var readMesh = MeshLoad.FromAnySupportedFormat(tempFile);
             Assert.That(readMesh.Points.Count == 8);
             Assert.That(readMesh.Triangulation.Count == 12);
 
@@ -108,7 +108,7 @@ namespace MR.DotNet.Test
             string path = Path.GetTempFileName() + ".mrmesh";
             var file = File.Create(path);
             file.Close();
-            Assert.Throws<SystemException>(() => Mesh.FromAnySupportedFormat(path));
+            Assert.Throws<SystemException>(() => MeshLoad.FromAnySupportedFormat(path));
             File.Delete(path);
         }
 

@@ -7,17 +7,20 @@ namespace MR.DotNet
 {
     public struct NamedMeshXf
     {
-        public string name;
-        public AffineXf3f toWorld;
-        public Mesh mesh;
+        public string name = "";
+        public AffineXf3f toWorld = new AffineXf3f();
+        public Mesh? mesh = null;
+        public NamedMeshXf() { }
     }
 
     [StructLayout(LayoutKind.Sequential)]
     struct MRMeshSaveNamedXfMesh
     {
-        public string name;
+        public string name = "";
         public MRAffineXf3f toWorld;
-        public IntPtr mesh;
+        public IntPtr mesh = IntPtr.Zero;
+
+        public MRMeshSaveNamedXfMesh() { }
     }
 
     public class MeshSave
@@ -27,6 +30,28 @@ namespace MR.DotNet
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern void mrMeshSaveSceneToObj( IntPtr objects, ulong objectsNum, string file, ref IntPtr errorString );
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern void mrLoadIOExtras();
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        unsafe private static extern void mrMeshSaveToAnySupportedFormat(IntPtr mesh, string file, IntPtr* errorStr);
+
+        /// saves mesh to file of any supported format
+        unsafe public static void ToAnySupportedFormat(Mesh mesh, string path)
+        {
+            mrLoadIOExtras();
+
+            IntPtr errString = new IntPtr();
+            mrMeshSaveToAnySupportedFormat(mesh.mesh_, path, &errString);
+            if (errString != IntPtr.Zero)
+            {
+                var errData = mrStringData(errString);
+                string errorMessage = Marshal.PtrToStringAnsi(errData);
+                throw new SystemException(errorMessage);
+            }
+        }
+
         /// saves a number of named meshes in .obj file
         public static void SceneToObj(List<NamedMeshXf> meshes, string file )
         {

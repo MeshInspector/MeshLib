@@ -81,17 +81,11 @@ namespace MR.DotNet
             pairData.distSq = distSq;
             pairData.weight = weight;
 
-            MRVertId mrSrcVertId = new MRVertId();
-            mrSrcVertId.id = srcVertId.Id;
-
-            MRVertId mrTgtCloseVert = new MRVertId();
-            mrTgtCloseVert.id = tgtCloseVert.Id;
-
             return new MRPointPair
             {
                 ICPPairData = pairData,
-                srcVertId = mrSrcVertId,
-                tgtCloseVert = mrTgtCloseVert,
+                srcVertId = srcVertId,
+                tgtCloseVert = tgtCloseVert,
                 normalsAngleCos = normalsAngleCos,
                 tgtOnBd = tgtOnBd
             };
@@ -175,48 +169,52 @@ namespace MR.DotNet
             public MRVector3f srcNorm;
             public MRVector3f tgtPoint;
             public MRVector3f tgtNorm;
-            public float distSq;
-            public float weight;
+            public float distSq = 0.0f;
+            public float weight = 0.0f;
+            public MRICPPairData() { }
         };
 
          [StructLayout(LayoutKind.Sequential)]
         internal struct MRPointPair
         {
             public MRICPPairData ICPPairData;
-            public MRVertId srcVertId;
-            public MRVertId tgtCloseVert;
-            public float normalsAngleCos;
-            public bool tgtOnBd;
+            public VertId srcVertId;
+            public VertId tgtCloseVert;
+            public float normalsAngleCos = 0.0f;
+            public bool tgtOnBd = false;
+
+            public MRPointPair() { }
         };
 
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRICPProperties
         {
             /// The method how to update transformation from point pairs
-            public ICPMethod method;
+            public ICPMethod method = ICPMethod.PointToPlane;
             /// Rotation angle during one iteration of PointToPlane will be limited by this value
-            public float p2plAngleLimit;
+            public float p2plAngleLimit = (float)System.Math.PI / 6.0f;
             /// Scaling during one iteration of PointToPlane will be limited by this value
-            public float p2plScaleLimit;
+            public float p2plScaleLimit = 2.0f;
             /// Points pair will be counted only if cosine between surface normals in points is higher
-            public float cosThreshold;
+            public float cosThreshold = 0.7f;
             /// Points pair will be counted only if squared distance between points is lower than
-            public float distThresholdSq;
+            public float distThresholdSq = 1.0f;
             /// Points pair will be counted only if distance between points is lower than
             /// root-mean-square distance times this factor
-            public float farDistFactor;
+            public float farDistFactor = 3.0f;
             /// Finds only translation. Rotation part is identity matrix
-            public ICPMode icpMode;
+            public ICPMode icpMode = ICPMode.AnyRigidXf;
             /// If this vector is not zero then rotation is allowed relative to this axis only
             public MRVector3f fixedRotationAxis;
             /// maximum iterations
-            public int iterLimit;
+            public int iterLimit = 10;
             /// maximum iterations without improvements
-            public int badIterStopCount;
+            public int badIterStopCount = 3;
             /// Algorithm target root-mean-square distance. As soon as it is reached, the algorithm stops.
-            public float exitVal;
+            public float exitVal = 0.0f;
             /// a pair of points is formed only if both points in the pair are mutually closest (reciprocity test passed)
-            public bool mutualClosest;
+            public bool mutualClosest = false;
+            public MRICPProperties() { }
         };
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]

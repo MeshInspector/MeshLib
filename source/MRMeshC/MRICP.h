@@ -131,7 +131,7 @@ typedef struct MRICP MRICP;
 
 /// Constructs ICP framework with automatic points sampling on both objects
 MRMESHC_API MRICP* mrICPNew( const MRMeshOrPointsXf* flt, const MRMeshOrPointsXf* ref, float samplingVoxelSize );
-
+/// Constructs ICP framework with given sample points on both objects
 MRMESHC_API MRICP* mrICPNewFromSamples( const MRMeshOrPointsXf* flt, const MRMeshOrPointsXf* ref, const MRVertBitSet* fltSamples, const MRVertBitSet* refSamples );
 
 /// tune algorithm params before run calculateTransformation()

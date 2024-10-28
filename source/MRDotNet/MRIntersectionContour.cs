@@ -10,9 +10,10 @@ namespace MR.DotNet
     [StructLayout(LayoutKind.Sequential)]
     public struct VariableEdgeTri
     {
-        public EdgeId edge;
-        public FaceId tri;
-        public bool isEdgeATriB;
+        public EdgeId edge = new EdgeId();
+        public FaceId tri = new FaceId();
+        public bool isEdgeATriB = false;
+        public VariableEdgeTri() { }
     };
 
     public class ContinousContours : IDisposable
@@ -20,9 +21,10 @@ namespace MR.DotNet
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRContinuousContour
         {
-            public IntPtr data;
-            public ulong size;
-            public IntPtr reserved;
+            public IntPtr data = IntPtr.Zero;
+            public ulong size = 0;
+            public IntPtr reserved = IntPtr.Zero;
+            public MRContinuousContour() { }
         }
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]

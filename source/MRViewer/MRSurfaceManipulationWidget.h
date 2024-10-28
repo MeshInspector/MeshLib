@@ -68,7 +68,7 @@ public:
     // enable visualization of mesh deviations
     MRVIEWER_API void enableDeviationVisualization( bool enable );
     // get min / max point shifts for (usefull for setup palette)
-    Vector2f getMinMax() { return { changesMaxVal_, changesMinVal_ }; }
+    Vector2f getMinMax() { return { changesMinVal_, changesMaxVal_ }; }
 private:
     /// start modifying mesh surface
     MRVIEWER_API bool onMouseDown_( Viewer::MouseButton button, int modifiers ) override;
@@ -78,6 +78,9 @@ private:
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
     /// need to visualize bad region (draw grey circle)
     MRVIEWER_API void postDraw_() override;
+
+    void reallocData_( size_t size );
+    void clearData_();
 
     void initConnections_();
     void resetConnections_();
@@ -99,7 +102,6 @@ private:
     Settings settings_;
 
     std::shared_ptr<ObjectMesh> obj_;
-    float diagonal_ = 1.f;
     float minRadius_ = 1.f;
     Vector2f mousePos_; ///< mouse position of last updateRegion_
     VertBitSet singleEditingRegion_;  ///< current (under the cursor) region of tool application

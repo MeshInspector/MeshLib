@@ -17,6 +17,7 @@
 #include "MRMesh/MRSerializer.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRRibbonSceneObjectsListDrawer.h"
+#include "MRMesh/MRObjectMesh.h"
 
 namespace
 {
@@ -54,6 +55,9 @@ const std::string cUnitsDegreesMode = "units.degreesMode";
 const std::string cUnitsPrecisionLen = "units.precisionLength";
 const std::string cUnitsPrecisionAngle = "units.precisionAngle";
 const std::string cUnitsNoUnit = "No units"; // This isn't a config key, this is used as the unit name when "no units" is selected.
+const std::string cGlobalBasisKey = "globalBasis";
+const std::string cGlobalBasisVisibleKey = "globalBasisVisible";
+const std::string cGlobalBasisScaleKey = "globalBasusScale";
 }
 
 namespace Defaults
@@ -66,6 +70,8 @@ const bool showSelectedObjects = false;
 const bool deselectNewHiddenObjects = false;
 const bool closeContextOnChange = false;
 const bool showExperimentalFeatures = false;
+const bool globalBasisEnabled = false;
+const MR::Viewport::Parameters::GlobalBasisScaleMode globalBasisScaleMode = MR::Viewport::Parameters::GlobalBasisScaleMode::Auto;
 }
 
 namespace MR
@@ -130,11 +136,15 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
 
     viewer.resetSettingsFunction( &viewer );
 
+    if ( viewer.globalBasisAxes )
+        viewer.globalBasisAxes->setVisible( Defaults::globalBasisEnabled );
+
     for ( ViewportId id : viewer.getPresentViewports() )
     {
         auto& viewport = viewer.viewport( id );
         auto params = viewport.getParameters();
         params.orthographic = Defaults::orthographic;
+        params.globalBasisScaleMode = Defaults::globalBasisScaleMode;
         viewport.setParameters( params );
     }
 
@@ -178,6 +188,19 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     auto params = viewport.getParameters();
     auto& cfg = Config::instance();
     params.orthographic = cfg.getBool( cOrthogrphicParamKey, params.orthographic );
+    if ( cfg.hasJsonValue( cGlobalBasisKey ) && viewer.globalBasisAxes )
+    {
+        auto val = cfg.getJsonValue( cGlobalBasisKey );
+        if ( val[cGlobalBasisVisibleKey].isBool() )
+            viewer.globalBasisAxes->setVisible( val[cGlobalBasisVisibleKey].asBool() );
+        if ( val[cGlobalBasisScaleKey].isString() && val[cGlobalBasisScaleKey].asString() == "Auto" )
+            params.globalBasisScaleMode = Viewport::Parameters::GlobalBasisScaleMode::Auto;
+        else if ( val[cGlobalBasisScaleKey].isDouble() )
+        {
+            params.globalBasisScaleMode = Viewport::Parameters::GlobalBasisScaleMode::Fixed;
+            viewer.globalBasisAxes->setXf( AffineXf3f::linear( Matrix3f::scale( val[cGlobalBasisScaleKey].asFloat() ) ) );
+        }
+    }
     viewport.setParameters( params );
 
     viewer.glPickRadius = uint16_t( loadInt( cGLPickRadiusParamKey, viewer.glPickRadius ) );
@@ -464,6 +487,17 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     const auto& params = viewport.getParameters();
     auto& cfg = Config::instance();
     cfg.setBool( cOrthogrphicParamKey, params.orthographic );
+    if ( viewer.globalBasisAxes )
+    {
+        Json::Value globalBasis;
+        globalBasis[cGlobalBasisVisibleKey] = viewer.globalBasisAxes->isVisible( viewport.id );
+        if ( params.globalBasisScaleMode == Viewport::Parameters::GlobalBasisScaleMode::Auto )
+            globalBasis[cGlobalBasisScaleKey] = "Auto";
+        else
+            globalBasis[cGlobalBasisScaleKey] = viewer.globalBasisAxes->xf( viewport.id ).A.x.x;
+        cfg.setJsonValue( cGlobalBasisKey, globalBasis );
+    }
+
 
     saveInt( cGLPickRadiusParamKey, viewer.glPickRadius );
 

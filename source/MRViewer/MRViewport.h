@@ -288,6 +288,12 @@ public:
         bool depthTest{true};
         bool orthographic{true};
 
+        enum class GlobalBasisScaleMode
+        {
+            Auto, // uses current scene size 
+            Fixed // uses global basis object internal size (one can change it with globalBasisAxes->setXf( AffineXf3f::linear( Matrix3f::scale( size ) ) ) )
+        } globalBasisScaleMode{ GlobalBasisScaleMode::Auto };
+
         // Caches the two-norm between the min/max point of the bounding box
         float objectScale{1.0f};
 
@@ -296,12 +302,6 @@ public:
         std::string label;
 
         Plane3f clippingPlane{Vector3f::plusX(), 0.0f};
-
-         // xf representing scale of global basis in this viewport
-        AffineXf3f globalBasisAxesXf() const
-        {
-            return AffineXf3f::linear( Matrix3f::scale( objectScale * 0.5f ) );
-        }
 
         enum class RotationCenterMode
         {
@@ -313,7 +313,7 @@ public:
         // this flag allows viewport to be selected by user
         bool selectable{true};
 
-        bool operator==( const Viewport::Parameters& other ) const;
+        bool operator==( const Viewport::Parameters& other ) const = default;
     };
 
     // Starts or stop rotation

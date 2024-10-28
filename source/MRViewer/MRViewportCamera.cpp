@@ -371,7 +371,7 @@ void Viewport::preciseFitBoxToScreenBorder( const FitBoxParams& fitParams )
     preciseFitToScreenBorder_( [&] ( bool zoomFov, bool globalBasis )->Box3f
     {
         if ( globalBasis )
-            return {};
+            return {}; // do not take global basis into account for box fitting (only fit given box)
         Space space = Space::CameraOrthographic;
         if ( !params_.orthographic )
         {
@@ -434,7 +434,7 @@ void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, boo
     Box3f sceneObjsBox = getBoxFn( false, false );
     Box3f unitedBox;
     if ( getViewerInstance().globalBasisAxes && getViewerInstance().globalBasisAxes->isVisible( id ) )
-        unitedBox = getBoxFn( false, true );
+        unitedBox = getBoxFn( false, true ); // calculate box of global basis separately, not to interfere with actual scene size
     unitedBox.include( sceneObjsBox );
 
     if ( !unitedBox.valid() )

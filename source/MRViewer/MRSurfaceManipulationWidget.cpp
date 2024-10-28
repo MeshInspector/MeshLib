@@ -72,9 +72,6 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
         obj_->setAncillaryUVCoords( VertUVCoords( numV, { 0.5f, 1.f } ) );
     }
 
-    changesMaxVal_ = 0.f;
-    changesMinVal_ = 0.f;
-
     reallocData_( numV );
 
     updateTexture();
@@ -99,9 +96,6 @@ void SurfaceManipulationWidget::reset()
 
     resetConnections_();
     mousePressed_ = false;
-
-    changesMaxVal_ = 0.f;
-    changesMinVal_ = 0.f;
 }
 
 void SurfaceManipulationWidget::setSettings( const Settings& settings )
@@ -162,6 +156,12 @@ void SurfaceManipulationWidget::enableDeviationVisualization( bool enable )
     enableDeviationTexture_ = enable;
     updateTexture();
     updateUVs();
+}
+
+Vector2f SurfaceManipulationWidget::getMinMax()
+{
+    const float rangeLength = settings_.editForce * ( Palette::DefaultColors.size() - 1 );
+    return { rangeLength * -0.5f, rangeLength * 0.5f };
 }
 
 bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers )
@@ -645,10 +645,6 @@ void SurfaceManipulationWidget::updateValueChanges_( const VertBitSet& region )
         valueChanges_[v] = lastStableValueChanges_[v] + shift.length() * sign;
     } );
 
-    const auto& [min, max] = parallelMinMax( valueChanges_.vec_ );
-    changesMinVal_ = min;
-    changesMaxVal_ = max;
-
     updateRegionUVs_( region );
 }
 
@@ -692,10 +688,6 @@ void SurfaceManipulationWidget::updateValueChangesByDistance_( const VertBitSet&
         if ( sumNeis < 0 )
             valueChanges_[v] = -valueChanges_[v];
     } );
-
-    const auto& [min, max] = parallelMinMax( valueChanges_.vec_ );
-    changesMinVal_ = min;
-    changesMaxVal_ = max;
 
     updateRegionUVs_( region );
 }

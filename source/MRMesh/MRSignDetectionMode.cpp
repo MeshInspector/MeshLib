@@ -1,4 +1,5 @@
 #include "MRSignDetectionMode.h"
+#include <cassert>
 
 namespace MR
 {

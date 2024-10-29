@@ -146,7 +146,7 @@ void SurfaceManipulationWidget::updateTexture()
 
 void SurfaceManipulationWidget::updateUVs()
 {
-    updateRegionUVs_( changedRegion_ );
+    updateRegionUVs_( obj_->mesh()->topology.getValidVerts() );
 }
 
 void SurfaceManipulationWidget::enableDeviationVisualization( bool enable )

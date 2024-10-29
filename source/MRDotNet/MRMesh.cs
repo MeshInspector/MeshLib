@@ -501,7 +501,7 @@ namespace MR.DotNet
         {
             return mrMeshVolume(mesh_, region.bs_);
         }
-
+        /// creates a deep copy of the mesh
         public Mesh Clone()
         {
             IntPtr clonedMesh = mrMeshCopy(mesh_);

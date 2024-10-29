@@ -268,6 +268,18 @@ namespace MR.DotNet.Test
                 mesh.Dispose();
             });
         }
+
+        [Test]
+        public void TestClone()
+        {
+            var mesh = Mesh.MakeSphere(1.0f, 3000);
+            var clone = mesh.Clone();
+            Assert.That(clone, Is.Not.SameAs(mesh));
+            Assert.That(clone.Points.Count, Is.EqualTo(mesh.Points.Count) );
+            Assert.That(clone.Triangulation.Count, Is.EqualTo(mesh.Triangulation.Count));
+            mesh.Dispose();
+            clone.Dispose();
+        }
     }
 }
 

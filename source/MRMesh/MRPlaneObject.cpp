@@ -137,33 +137,36 @@ Matrix3f rotateBasis( Matrix3f initialBasis, Matrix3f finalBasis )
 
 void PlaneObject::orientateFollowMainAxis_( ViewportId id /*= {}*/ )
 {
+    const auto n = getNormal( id ).normalized();
+    auto planeVectorInXY = cross( Vector3f::plusZ(), n );
 
-    auto axis = Vector3f::plusZ();
-    auto n = getNormal( id );
-    auto planeVectorInXY = cross( axis, n );
-
-    // if plane approx. parallel to XY plane, orentate it using XZ plane
-    constexpr float parallelVectorsSinusAngleLimit = 9e-2f; // ~5 degree
-    if ( planeVectorInXY.length() < parallelVectorsSinusAngleLimit )
+    // if plane approx. parallel to XY plane, orientate it using XZ plane
+    constexpr float parallelVectorsSinusAngleLimitSq = sqr( 9e-2f ); // ~5 degree
+    if ( planeVectorInXY.lengthSq() < parallelVectorsSinusAngleLimitSq )
     {
-        axis = Vector3f::plusY();
-        planeVectorInXY = cross( axis, n );
+        planeVectorInXY = cross( Vector3f::plusY(), n );
+        assert( planeVectorInXY.lengthSq() >= parallelVectorsSinusAngleLimitSq );
     }
 
-    planeVectorInXY = planeVectorInXY.normalized();
-
-    auto Y = cross( n, planeVectorInXY );
     Matrix3f bestPlaneBasis;
-    bestPlaneBasis.x = Y.normalized();
+    bestPlaneBasis.x = cross( planeVectorInXY, n ).normalized();
     bestPlaneBasis.y = planeVectorInXY.normalized();
-    bestPlaneBasis.z = n.normalized();
+    bestPlaneBasis.z = n;
+    assert( bestPlaneBasis.det() > 0 );
 
     auto currentPlaneBasis = calcLocalBasis();
+    assert( currentPlaneBasis.det() > 0 );
+
     auto A = rotateBasis( currentPlaneBasis, bestPlaneBasis );
-    const Matrix3f& r = r_.get( id ), s = s_.get( id );
+    assert( A.det() > 0 );
+
+    const Matrix3f& r = r_.get( id ), &s = s_.get( id );
+    assert( r.det() > 0 );
+    assert( s.det() > 0 );
 
     auto currXf = xf( id );
     currXf.A = r * A * s;
+    assert( currXf.A.det() > 0 );
     setXf( currXf, id );
 }
 

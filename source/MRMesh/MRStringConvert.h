@@ -31,8 +31,8 @@ namespace MR
 
 #if defined __cpp_lib_char8_t
 
-[[nodiscard]] inline constexpr std::string asString( const std::u8string & s ) { return { s.begin(), s.end() }; }
-[[nodiscard]] inline constexpr std::u8string asU8String( const std::string & s ) { return { s.begin(), s.end() }; }
+[[nodiscard]] inline std::string asString( const std::u8string & s ) { return { s.begin(), s.end() }; }
+[[nodiscard]] inline std::u8string asU8String( const std::string & s ) { return { s.begin(), s.end() }; }
 
 #if defined( _LIBCPP_VERSION ) && _LIBCPP_VERSION < 12000
 [[nodiscard]] inline std::filesystem::path pathFromUtf8( const std::string & s ) { return std::filesystem::path( s ); }
@@ -44,11 +44,11 @@ namespace MR
 
 #else // std::u8string is not defined
 
-[[nodiscard]] inline constexpr const std::string & asString( const std::string & s ) { return s; }
-[[nodiscard]] inline constexpr const std::string & asU8String( const std::string & s ) { return s; }
+[[nodiscard]] inline const std::string & asString( const std::string & s ) { return s; }
+[[nodiscard]] inline const std::string & asU8String( const std::string & s ) { return s; }
 
-[[nodiscard]] inline constexpr std::string asString( std::string && s ) { return std::move( s ); }
-[[nodiscard]] inline constexpr std::string asU8String( std::string && s ) { return std::move( s ); }
+[[nodiscard]] inline std::string asString( std::string && s ) { return std::move( s ); }
+[[nodiscard]] inline std::string asU8String( std::string && s ) { return std::move( s ); }
 
 [[nodiscard]] inline std::filesystem::path pathFromUtf8( const std::string & s ) { return std::filesystem::u8path( s ); }
 [[nodiscard]] inline std::filesystem::path pathFromUtf8( const char * s ) { return std::filesystem::u8path( s ); }

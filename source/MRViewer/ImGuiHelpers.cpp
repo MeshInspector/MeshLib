@@ -1214,19 +1214,7 @@ PaletteChanges Palette(
     if ( paletteRangeMode == 1 )
     {
         if ( paletteRangeModeBackUp == 0 )
-        {
             ranges[1] = ranges[2] = ( ranges[0] + ranges[3] ) * 0.5f;
-            if ( ranges[1] )
-            {
-                ranges[1] *= 1.f - std::numeric_limits<float>::epsilon() * 10.f;
-                ranges[2] *= 1.f + std::numeric_limits<float>::epsilon() * 10.f;
-            }
-            else
-            {
-                ranges[1] -= std::numeric_limits<float>::epsilon() * 10.f;
-                ranges[2] += std::numeric_limits<float>::epsilon() * 10.f;
-            }
-        }
         else
         {
             ranges[1] = params.ranges[1];
@@ -1291,7 +1279,7 @@ PaletteChanges Palette(
         int next = i + orderStep;
         if ( next >= 4 )
             break;
-        if ( ranges[i] >= ranges[next] )
+        if ( ranges[i] > ranges[next] )
         {
             correctOrder = false;
             break;

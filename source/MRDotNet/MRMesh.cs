@@ -275,6 +275,9 @@ namespace MR.DotNet
         private static extern IntPtr mrMeshTopology(IntPtr mesh);
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern IntPtr mrMeshCopy( IntPtr mesh );
+
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern void mrMeshFree(IntPtr mesh);       
 
         /// creates a default instance
@@ -497,6 +500,12 @@ namespace MR.DotNet
         public double Volume(BitSet region)
         {
             return mrMeshVolume(mesh_, region.bs_);
+        }
+        /// creates a deep copy of the mesh
+        public Mesh Clone()
+        {
+            IntPtr clonedMesh = mrMeshCopy(mesh_);
+            return new Mesh(clonedMesh);
         }
 
         #endregion

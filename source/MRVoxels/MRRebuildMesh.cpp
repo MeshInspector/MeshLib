@@ -15,20 +15,38 @@ Expected<Mesh> rebuildMesh( const MeshPart& mp, const RebuildMeshSettings& setti
     MR_TIMER
     GeneralOffsetParameters genOffsetParams;
 
-    if ( mp.mesh.topology.isClosed( mp.region ) )
+    switch ( settings.signMode )
     {
-        auto expSelfy = findSelfCollidingTriangles( mp, nullptr, subprogress( settings.progress, 0.0f, 0.1f ) );
-        if ( !expSelfy )
-            return unexpected( std::move( expSelfy.error() ) );
-        if ( *expSelfy )
-            genOffsetParams.signDetectionMode = SignDetectionMode::HoleWindingRule;
-        else if ( settings.offsetMode == OffsetMode::Smooth )
-            genOffsetParams.signDetectionMode = SignDetectionMode::OpenVDB;
+    default:
+        assert( false );
+        [[fallthrough]];
+    case SignDetectionModeShort::Auto:
+        if ( mp.mesh.topology.isClosed( mp.region ) )
+        {
+            auto expSelfy = findSelfCollidingTriangles( mp, nullptr, subprogress( settings.progress, 0.0f, 0.1f ) );
+            if ( !expSelfy )
+                return unexpected( std::move( expSelfy.error() ) );
+            if ( *expSelfy )
+                genOffsetParams.signDetectionMode = SignDetectionMode::HoleWindingRule;
+            else if ( settings.offsetMode == OffsetMode::Smooth )
+                genOffsetParams.signDetectionMode = SignDetectionMode::OpenVDB;
+            else
+                genOffsetParams.signDetectionMode = SignDetectionMode::ProjectionNormal;
+        }
         else
-            genOffsetParams.signDetectionMode = SignDetectionMode::ProjectionNormal;
-    }
-    else
+            genOffsetParams.signDetectionMode = SignDetectionMode::HoleWindingRule;
+        break;
+
+    case SignDetectionModeShort::HoleWindingNumber:
         genOffsetParams.signDetectionMode = SignDetectionMode::HoleWindingRule;
+        break;
+
+    case SignDetectionModeShort::ProjectionNormal:
+        genOffsetParams.signDetectionMode = SignDetectionMode::ProjectionNormal;
+        break;
+    }
+    if ( settings.onSignDetectionModeSelected )
+        settings.onSignDetectionModeSelected( genOffsetParams.signDetectionMode );
 
     genOffsetParams.voxelSize = settings.voxelSize;
     genOffsetParams.mode = settings.offsetMode;

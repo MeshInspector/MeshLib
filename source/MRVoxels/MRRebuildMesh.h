@@ -4,6 +4,7 @@
 #include "MRMesh/MRMeshPart.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MREnums.h"
+#include "MRMesh/MRSignDetectionMode.h"
 
 namespace MR
 {
@@ -13,6 +14,8 @@ struct RebuildMeshSettings
     /// Size of voxel in grid conversions;
     /// The user is responsible for setting some positive value here
     float voxelSize = 0;
+
+    SignDetectionModeShort signMode = SignDetectionModeShort::Auto;
 
     OffsetMode offsetMode = OffsetMode::Standard;
 
@@ -41,6 +44,10 @@ struct RebuildMeshSettings
 
     /// To report algorithm's progress and cancel it on user demand
     ProgressCallback progress;
+
+    /// this callback is invoked when SignDetectionMode is determined (useful if signMode = SignDetectionModeShort::Auto),
+    /// but before actual work begins
+    std::function<void(SignDetectionMode)> onSignDetectionModeSelected;
 };
 
 /// fixes all types of issues in input mesh (degenerations, holes, self-intersections, etc.)

@@ -296,6 +296,7 @@ FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume,
 VdbVolume simpleVolumeToVdbVolume( const SimpleVolumeMinMax& simpleVolume, ProgressCallback cb /*= {} */ )
 {
     VdbVolume res;
+    // use min value as background
     res.data = simpleVolumeToDenseGrid( simpleVolume, simpleVolume.min, cb );
     res.dims = simpleVolume.dims;
     res.voxelSize = simpleVolume.voxelSize;

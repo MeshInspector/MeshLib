@@ -34,9 +34,6 @@ void ObjectVoxels::construct( const SimpleVolume& simpleVolume, const std::optio
     mesh_.reset();
     activeVoxels_.reset();
     activeBounds_.reset();
-    vdbVolume_.data = simpleVolumeToDenseGrid( simpleVolume, 0.0f, cb );
-    vdbVolume_.dims = simpleVolume.dims;
-    vdbVolume_.voxelSize = simpleVolume.voxelSize;
     if ( minmax )
     {
         vdbVolume_.min = minmax->x;
@@ -44,6 +41,10 @@ void ObjectVoxels::construct( const SimpleVolume& simpleVolume, const std::optio
     }
     else
         std::tie( vdbVolume_.min, vdbVolume_.max ) = parallelMinMax( simpleVolume.data );
+    vdbVolume_.data = simpleVolumeToDenseGrid( simpleVolume, normalPlusGrad ? vdbVolume_.max : vdbVolume_.min, cb );
+    vdbVolume_.dims = simpleVolume.dims;
+    vdbVolume_.voxelSize = simpleVolume.voxelSize;
+
     indexer_ = VolumeIndexer( vdbVolume_.dims );
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
 

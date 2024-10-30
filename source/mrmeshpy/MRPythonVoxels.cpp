@@ -77,7 +77,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Voxels, []( pybind11::module_& m )
         "SurfaceOffset - the number voxels around surface to calculate distance in (should be positive)." );
 
     m.def( "simpleVolumeToDenseGrid", &MR::simpleVolumeToDenseGrid,
-        pybind11::arg( "simpleVolume" ), pybind11::arg( "cb" ) = MR::ProgressCallback{},
+        pybind11::arg( "simpleVolume" ), pybind11::arg( "background" ) = 0.0f, pybind11::arg("cb") = MR::ProgressCallback{},
         "Make FloatGrid from SimpleVolume. Make copy of data.\n"
         "Grid can be used to make iso-surface later with gridToMesh function." );
     m.def( "simpleVolumeToVdbVolume", &MR::simpleVolumeToVdbVolume,

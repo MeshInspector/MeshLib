@@ -34,7 +34,7 @@ void ObjectVoxels::construct( const SimpleVolume& simpleVolume, const std::optio
     mesh_.reset();
     activeVoxels_.reset();
     activeBounds_.reset();
-    vdbVolume_.data = simpleVolumeToDenseGrid( simpleVolume, cb );
+    vdbVolume_.data = simpleVolumeToDenseGrid( simpleVolume, 0.0f, cb );
     vdbVolume_.dims = simpleVolume.dims;
     vdbVolume_.voxelSize = simpleVolume.voxelSize;
     if ( minmax )

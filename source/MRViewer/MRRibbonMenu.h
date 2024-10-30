@@ -42,6 +42,9 @@ class MRVIEWER_CLASS RibbonMenu : public ImGuiMenu
     };
 
 public:
+    // returns RibonMenu from ViewerInstance()
+    MRVIEWER_API static std::shared_ptr<RibbonMenu> instance();
+
     // adds a custom checkBox to the context menu
     // it is applied to the selected objects
     MRVIEWER_API void setCustomContextCheckbox(
@@ -115,7 +118,7 @@ public:
 
     /// adds new notification to notifier list
     /// draws it first
-    MRVIEWER_API void pushNotification( const RibbonNotification& notification );
+    MRVIEWER_API virtual void pushNotification( const RibbonNotification& notification );
 
     /// clones given objects with sub-objects (except for ancillary and unrecognized children) and undo
     MRVIEWER_API static void cloneTree( const std::vector<std::shared_ptr<Object>>& selectedObjects );
@@ -224,12 +227,13 @@ protected:
     MRVIEWER_API void drawActiveList_();
 
     RibbonLayoutMode layoutMode_{ RibbonLayoutMode::All };
+
+    RibbonMenuSearch searcher_;
 private:
     void changeTab_( int newTab );
 
     std::string getRequirements_( const std::shared_ptr<RibbonMenuItem>& item ) const;
 
-    RibbonMenuSearch searcher_;
     void drawSearchButton_();
     void drawCollapseButton_();
     void drawHelpButton_();

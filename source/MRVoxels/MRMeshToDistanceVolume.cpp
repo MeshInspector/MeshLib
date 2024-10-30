@@ -4,8 +4,6 @@
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRFastWindingNumber.h"
-#include "MRMesh/MRLine3.h"
-#include "MRMesh/MRMeshIntersect.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
@@ -13,43 +11,6 @@
 
 namespace MR
 {
-
-std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p, const DistanceToMeshOptions& op )
-{
-    assert( op.signMode != SignDetectionMode::OpenVDB );
-    const auto proj = findProjection( p, mp, op.maxDistSq, nullptr, op.minDistSq );
-    if ( op.signMode != SignDetectionMode::HoleWindingRule // for HoleWindingRule the sign can change even for too small or too large distances
-        && ( proj.distSq < op.minDistSq || proj.distSq >= op.maxDistSq ) ) // note that proj.distSq == op.minDistSq (e.g. == 0) is a valid situation
-        return {}; // distance is too small or too large, discard them
-
-    float dist = std::sqrt( proj.distSq );
-    switch ( op.signMode )
-    {
-    case SignDetectionMode::ProjectionNormal:
-        if ( !mp.mesh.isOutsideByProjNorm( p, proj, mp.region ) )
-            dist = -dist;
-        break;
-
-    case SignDetectionMode::WindingRule:
-    {
-        const Line3d ray( Vector3d( p ), Vector3d::plusX() );
-        int count = 0;
-        rayMeshIntersectAll( mp, ray, [&count] ( auto&& ) { ++count; return true; } );
-        if ( count % 2 == 1 ) // inside
-            dist = -dist;
-        break;
-    }
-
-    case SignDetectionMode::HoleWindingRule:
-        assert( !mp.region );
-        if ( !mp.mesh.isOutside( p, op.windingNumberThreshold, op.windingNumberBeta ) )
-            dist = -dist;
-        break;
-
-    default: ; //nothing
-    }
-    return dist;
-}
 
 Expected<SimpleVolumeMinMax> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& cParams /*= {} */ )
 {

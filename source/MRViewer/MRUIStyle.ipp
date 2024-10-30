@@ -3,8 +3,8 @@
 // A template implementation file for `MRUIStyle.h`. Include that file.
 
 #include "MRUIStyle.h" // To help intellisense.
-#include "MRViewer/MRUITestEngine.h"
-#include "MRViewer.h"
+#include "MRUITestEngine.h"
+#include "MRViewerInstance.h"
 
 namespace MR::UI
 {
@@ -255,7 +255,7 @@ bool slider( const char* label, T& v, const U& vMin, const U& vMax, UnitToString
             );
 
             if ( ret ) // it is needed if we in drag mode to update frame with changed value after moving mouse
-                getViewerInstance().incrementForceRedrawFrames();
+                incrementForceRedrawFrames();
 
             // Test engine stuff:
             if ( auto opt = TestEngine::createValue( detail::Scalar<T> ? label : detail::getTestEngineLabelForVecElem( i ), elemVal, *elemMin, *elemMax ) )
@@ -364,7 +364,7 @@ bool drag( const char* label, T& v, SpeedType vSpeed, const U& vMin, const U& vM
                     elemVal = std::clamp( elemVal, *elemMin, *elemMax );
 
                 // it is needed if we in drag mode to update frame with changed value after moving mouse
-                getViewerInstance().incrementForceRedrawFrames();
+                incrementForceRedrawFrames();
             }
             auto dragId = ImGui::GetItemID();
 

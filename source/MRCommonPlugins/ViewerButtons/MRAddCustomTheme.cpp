@@ -1,8 +1,8 @@
 #include "MRAddCustomTheme.h"
 #include "MRViewer/MRRibbonSchema.h"
-#include "MRViewer/ImGuiMenu.h"
+#include "MRViewer/MRShowModal.h"
 #include "MRViewer/MRRibbonFontManager.h"
-#include "MRViewer/MRViewer.h"
+#include "MRViewer/MRViewerInstance.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRMesh/MRSerializer.h"
@@ -86,7 +86,7 @@ void AddCustomThemePlugin::drawDialog( float menuScaling, ImGuiContext* )
         if ( std::filesystem::is_regular_file( saveDir, ec ) )
         {
             ImGui::OpenPopup( "File already exists" );
-            getViewerInstance().incrementForceRedrawFrames();
+            incrementForceRedrawFrames();
         }
         else
         {

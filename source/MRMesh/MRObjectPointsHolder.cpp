@@ -93,9 +93,9 @@ void ObjectPointsHolder::swapSignals_( Object& other )
         assert( false );
 }
 
-void ObjectPointsHolder::selectPoints( VertBitSet newSelection )
+void ObjectPointsHolder::updateSelectedPoints( VertBitSet& selection )
 {
-    selectedPoints_ = std::move( newSelection );
+    std::swap( selectedPoints_, selection );
     numSelectedPoints_.reset();
     pointsSelectionChangedSignal();
     dirty_ |= DIRTY_SELECTION;
@@ -302,7 +302,7 @@ Expected<void> ObjectPointsHolder::deserializeModel_( const std::filesystem::pat
         setColoringType( ColoringType::VertsColorMap );
 
     points_ = std::make_shared<PointCloud>( std::move( res.value() ) );
-    updateRenderDiscretization_();
+    //updateRenderDiscretization_(); must be called later after valid points are deserialized
     return {};
 }
 
@@ -329,7 +329,11 @@ void ObjectPointsHolder::deserializeFields_( const Json::Value& root )
 
     deserializeFromJson( root["SelectionVertBitSet"], selectedPoints_ );
     if ( points_ )
+    {
         deserializeFromJson( root["ValidVertBitSet"], points_->validPoints );
+        numValidPoints_.reset();
+    }
+    updateRenderDiscretization_();
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
         setDefaultSceneProperties_();

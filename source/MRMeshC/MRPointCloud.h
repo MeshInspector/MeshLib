@@ -35,6 +35,8 @@ MRMESHC_API MRBox3f mrPointCloudComputeBoundingBox( const MRPointCloud* pc, cons
 /// appends a point and returns its VertId
 MRMESHC_API MRVertId mrPointCloudAddPoint( MRPointCloud* pc, const MRVector3f* point_ );
 
+MRMESHC_API MRVertId mrPointCloudAddPointWithNormal( MRPointCloud* pc, const MRVector3f* point_, const MRVector3f* normal_ );
+
 /// deallocates a PointCloud object
 MRMESHC_API void mrPointCloudFree( MRPointCloud* pc );
 

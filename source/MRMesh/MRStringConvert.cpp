@@ -122,6 +122,31 @@ std::string replaceProhibitedChars( const std::string& line, char replacement /*
     return res;
 }
 
+std::string commonFilesName( const std::vector<std::filesystem::path> & files )
+{
+    if ( files.empty() )
+        return "Empty";
+
+    auto getUpperExt = []( const std::filesystem::path & file )
+    {
+        auto ext = utf8string( file.extension() );
+        for ( auto& c : ext )
+            c = ( char )toupper( c );
+        return ext;
+    };
+
+    auto commonExt = getUpperExt( files[0] );
+    if ( files.size() == 1 )
+        return commonExt;
+
+    for ( int i = 1; i < files.size(); ++i )
+        if ( commonExt != getUpperExt( files[i] ) )
+            return "Files";
+
+    commonExt += 's';
+    return commonExt;
+}
+
 char * formatNoTrailingZeros( char * fmt, double v, int digitsAfterPoint, int precision )
 {
     assert( precision > 0 );

@@ -208,7 +208,7 @@ public:
         return rootObj_;
     }
 
-    void loadModelStructure( STEPControl_Reader& reader, [[maybe_unused]] const ProgressCallback& callback )
+    [[nodiscard]] Expected<void> loadModelStructure( STEPControl_Reader& reader, [[maybe_unused]] const ProgressCallback& callback )
     {
         MR_TIMER
 
@@ -224,7 +224,7 @@ public:
         }
 
         if ( !reportProgress( callback, 0.80f ) )
-            return;
+            return unexpectedOperationCanceled();
 
         std::deque<TopoDS_Shape> shapes;
         for ( auto shi = 1; shi <= reader.NbShapes(); ++shi )
@@ -267,6 +267,7 @@ public:
 
             meshTriangulationContexts_.emplace_back( shape, objMesh, std::nullopt, std::nullopt );
         }
+        return {};
     }
 
 #ifdef MRIOEXTRAS_OPENCASCADE_USE_XDE
@@ -753,7 +754,8 @@ Expected<Mesh> fromStepImpl( const std::function<Expected<void> ( STEPControl_Re
         return unexpectedOperationCanceled();
 
     StepLoader loader;
-    loader.loadModelStructure( reader, subprogress( settings.callback, 0.50f, 1.00f ) );
+    if ( auto exp = loader.loadModelStructure( reader, subprogress( settings.callback, 0.50f, 1.00f ) ); !exp )
+        return unexpected( std::move( exp.error() ) );
     loader.loadMeshes();
 
     Mesh result;
@@ -784,7 +786,8 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Exp
         return unexpectedOperationCanceled();
 
     StepLoader loader;
-    loader.loadModelStructure( reader, subprogress( settings.callback, 0.50f, 1.00f ) );
+    if ( auto exp = loader.loadModelStructure( reader, subprogress( settings.callback, 0.50f, 1.00f ) ); !exp )
+        return unexpected( std::move( exp.error() ) );
     loader.loadMeshes();
 
     return loader.rootObject();

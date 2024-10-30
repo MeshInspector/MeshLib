@@ -72,6 +72,11 @@ constexpr auto cTransformContextName = "TransformContextWindow";
 namespace MR
 {
 
+std::shared_ptr<RibbonMenu> RibbonMenu::instance()
+{
+    return getViewerInstance().getRibbonMenu();
+}
+
 void RibbonMenu::setCustomContextCheckbox(
     const std::string& name,
     CustomContextMenuCheckbox customContextMenuCheckbox )

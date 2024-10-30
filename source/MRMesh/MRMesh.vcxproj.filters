@@ -756,9 +756,6 @@
     <ClInclude Include="MRChangeVertsColorMapAction.h">
       <Filter>Source Files\History</Filter>
     </ClInclude>
-    <ClInclude Include="MRSignDetectionMode.h">
-      <Filter>Source Files\Voxels</Filter>
-    </ClInclude>
     <ClInclude Include="MRGridSettings.h">
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
@@ -1229,6 +1226,12 @@
     </ClInclude>
     <ClInclude Include="MRScopedValue.h">
       <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshMeshDistance.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSignDetectionMode.h">
+      <Filter>Source Files\Mesh</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2017,6 +2020,15 @@
     </ClCompile>
     <ClCompile Include="MRSystemPath.cpp">
       <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="MRIOFilters.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshMeshDistance.cpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRSignDetectionMode.cpp">
+      <Filter>Source Files\Mesh</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

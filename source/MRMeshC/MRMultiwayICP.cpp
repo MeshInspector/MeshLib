@@ -1,6 +1,7 @@
 #include "MRMultiwayICP.h"
 
 #include "detail/TypeCast.h"
+#include "detail/Vector.h"
 
 #include "MRMesh/MRMultiwayICP.h"
 
@@ -14,7 +15,7 @@ REGISTER_AUTO_CAST( MeshOrPointsXf )
 REGISTER_AUTO_CAST( MultiwayICP )
 REGISTER_AUTO_CAST( Vector3f )
 REGISTER_AUTO_CAST2( MultiwayICPSamplingParameters::CascadeMode, MRMultiwayICPSamplingParametersCascadeMode )
-REGISTER_AUTO_CAST2( std::vector<AffineXf3f>, MRVectorAffineXf3f )
+REGISTER_VECTOR_LIKE( MRVectorAffineXf3f, AffineXf3f )
 
 #define COPY_FROM( obj, field ) . field = ( obj ). field ,
 
@@ -29,12 +30,13 @@ MRMultiwayICPSamplingParameters mrMultiwayIcpSamplingParametersNew( void )
     };
 }
 
-MRMultiwayICP* mrMultiwayICPNew( const MRMeshOrPointsXf* objects_, size_t objectsNum, const MRMultiwayICPSamplingParameters* samplingParams_ )
+MRMultiwayICP* mrMultiwayICPNew( const MRMeshOrPointsXf** objects_, size_t objectsNum, const MRMultiwayICPSamplingParameters* samplingParams_ )
 {
-    std::span objects { auto_cast( objects_ ), objectsNum };
+    ICPObjects objectsVec;
+    objectsVec.reserve( objectsNum );
 
-    // TODO: cast instead of copying
-    ICPObjects objectsVec( objects.begin(), objects.end() );
+    for ( auto i = 0; i < objectsNum; ++i )
+        objectsVec.push_back( auto_cast( *objects_[i] ) );
 
     MultiwayICPSamplingParameters samplingParams;
     if ( samplingParams_ )
@@ -54,7 +56,7 @@ MRMultiwayICP* mrMultiwayICPNew( const MRMeshOrPointsXf* objects_, size_t object
 MRVectorAffineXf3f* mrMultiwayICPCalculateTransformations( MRMultiwayICP* mwicp_, MRProgressCallback cb )
 {
     ARG( mwicp );
-    RETURN_NEW( mwicp.calculateTransformations( cb ).vec_ );
+    RETURN_NEW_VECTOR( mwicp.calculateTransformations( cb ).vec_ );
 }
 
 bool mrMultiwayICPResamplePoints( MRMultiwayICP* mwicp_, const MRMultiwayICPSamplingParameters* samplingParams_ )

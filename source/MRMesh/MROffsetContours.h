@@ -77,13 +77,13 @@ struct OffsetContoursParams
 };
 
 /// offsets 2d contours in plane
-[[nodiscard]] MRMESH_API Expected<Contours2f> offsetContours( const Contours2f& contours, float offset,
+[[nodiscard]] MRMESH_API Contours2f offsetContours( const Contours2f& contours, float offset,
     const OffsetContoursParams& params = {} );
 
 
 using ContoursVariableOffset = std::function<float( int, int )>;
 /// offsets 2d contours in plane
-[[nodiscard]] MRMESH_API Expected<Contours2f> offsetContours( const Contours2f& contours, 
+[[nodiscard]] MRMESH_API Contours2f offsetContours( const Contours2f& contours, 
     ContoursVariableOffset offset, const OffsetContoursParams& params = {} );
 
 /// Parameters of restoring Z coordinate of XY offset 3d contours
@@ -98,11 +98,11 @@ struct OffsetContoursRestoreZParams
 };
 
 /// offsets 3d contours in XY plane
-[[nodiscard]] MRMESH_API Expected<Contours3f> offsetContours( const Contours3f& contours, float offset,
+[[nodiscard]] MRMESH_API Contours3f offsetContours( const Contours3f& contours, float offset,
     const OffsetContoursParams& params = {}, const OffsetContoursRestoreZParams& zParmas = {} );
 
 /// offsets 3d contours in XY plane
-[[nodiscard]] MRMESH_API Expected<Contours3f> offsetContours( const Contours3f& contours,
+[[nodiscard]] MRMESH_API Contours3f offsetContours( const Contours3f& contours,
     ContoursVariableOffset offset, const OffsetContoursParams& params = {}, const OffsetContoursRestoreZParams& zParmas = {} );
 
 }

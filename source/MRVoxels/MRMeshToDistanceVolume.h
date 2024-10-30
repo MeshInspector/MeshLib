@@ -1,39 +1,13 @@
 #pragma once
 
 #include "MRDistanceVolumeParams.h"
-#include "MRMesh/MRSignDetectionMode.h"
 #include "MRVoxelsVolume.h"
 #include "MRMesh/MRExpected.h"
-#include <cfloat>
+#include "MRMesh/MRMeshDistance.h"
 #include <memory>
-#include <optional>
 
 namespace MR
 {
-
-struct DistanceToMeshOptions
-{
-    /// minimum squared distance from a point to mesh
-    float minDistSq{ 0 };
-
-    /// maximum squared distance from a point to mesh
-    float maxDistSq{ FLT_MAX };
-
-    /// the method to compute distance sign
-    SignDetectionMode signMode{ SignDetectionMode::ProjectionNormal };
-
-    /// only for SignDetectionMode::HoleWindingRule:
-    /// positive distance if winding number below or equal this threshold;
-    /// ideal threshold: 0.5 for closed meshes; 0.0 for planar meshes
-    float windingNumberThreshold = 0.5f;
-
-    /// only for SignDetectionMode::HoleWindingRule:
-    /// determines the precision of fast approximation: the more the better, minimum value is 1
-    float windingNumberBeta = 2;
-};
-
-/// computes signed distance from point (p) to mesh part (mp) following options (op)
-[[nodiscard]] MRVOXELS_API std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p, const DistanceToMeshOptions& op );
 
 struct MeshToDistanceVolumeParams
 {

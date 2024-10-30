@@ -2,7 +2,6 @@
 #include "MRViewerFwd.h"
 #include "MRViewerEventsListener.h"
 #include "MRMesh/MRMeshFwd.h"
-#include "MRViewer.h"
 #include "MRMesh/MRChangeMeshAction.h"
 #include "MRMesh/MREnums.h"
 #include "MRViewer/MRViewport.h"
@@ -68,16 +67,19 @@ public:
     // enable visualization of mesh deviations
     MRVIEWER_API void enableDeviationVisualization( bool enable );
     // get min / max point shifts for (usefull for setup palette)
-    Vector2f getMinMax() { return { changesMaxVal_, changesMinVal_ }; }
+    MRVIEWER_API Vector2f getMinMax();
 private:
     /// start modifying mesh surface
-    MRVIEWER_API bool onMouseDown_( Viewer::MouseButton button, int modifiers ) override;
+    MRVIEWER_API bool onMouseDown_( MouseButton button, int modifiers ) override;
     /// stop modifying mesh surface, generate history action
-    MRVIEWER_API bool onMouseUp_( Viewer::MouseButton button, int modifiers ) override;
+    MRVIEWER_API bool onMouseUp_( MouseButton button, int modifiers ) override;
     /// update
     MRVIEWER_API bool onMouseMove_( int mouse_x, int mouse_y ) override;
     /// need to visualize bad region (draw grey circle)
     MRVIEWER_API void postDraw_() override;
+
+    void reallocData_( size_t size );
+    void clearData_();
 
     void initConnections_();
     void resetConnections_();
@@ -93,10 +95,12 @@ private:
     void updateVizualizeSelection_( const ObjAndPick& objAndPick );
 
     void updateRegionUVs_( const VertBitSet& region );
+    void updateValueChanges_( const VertBitSet& region );
+    void updateValueChangesByDistance_( const VertBitSet& region );
+
     Settings settings_;
 
     std::shared_ptr<ObjectMesh> obj_;
-    float diagonal_ = 1.f;
     float minRadius_ = 1.f;
     Vector2f mousePos_; ///< mouse position of last updateRegion_
     VertBitSet singleEditingRegion_;  ///< current (under the cursor) region of tool application
@@ -107,7 +111,10 @@ private:
     VertScalars visualizationDistanceMap_;
     VertBitSet changedRegion_;
     VertScalars valueChanges_;
-    std::shared_ptr<ObjectMesh> oldMesh_;
+    VertScalars lastStableValueChanges_;
+    std::shared_ptr<Mesh> originalMesh_; ///< original input mesh
+    VertBitSet unknownSign_; ///< cached data to avoid reallocating memory
+    std::shared_ptr<ObjectMesh> lastStableObjMesh_;
     bool firstInit_ = true; // need to save settings in re-initial
     bool badRegion_ = false; // in selected region less than 3 points
 
@@ -129,8 +136,6 @@ private:
 
     std::shared_ptr<Palette> palette_;
     bool enableDeviationTexture_ = true;
-    float changesMinVal_ = 0.f;
-    float changesMaxVal_ = 0.f;
 };
 
 }

@@ -59,6 +59,12 @@ MRVOXELS_API VdbVolume floatGridToVdbVolume( FloatGrid grid );
 MRVOXELS_API FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume, ProgressCallback cb = {} );
 MRVOXELS_API VdbVolume simpleVolumeToVdbVolume( const SimpleVolumeMinMax& simpleVolume, ProgressCallback cb = {} );
 
+/// Copy given \p simpleVolume into the \p grid, starting at \p minCoord
+MRVOXELS_API void putSimpleVolumeInDenseGrid(
+        FloatGrid& grid,
+        const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb = {}
+    );
+
 // make SimpleVolume from VdbVolume
 // make copy of data
 MRVOXELS_API Expected<SimpleVolumeMinMax> vdbVolumeToSimpleVolume(

@@ -9,6 +9,7 @@
 #include "MRRibbonConstants.h"
 #include "MRUIStyle.h"
 #include "MRSceneCache.h"
+#include "MRShowModal.h"
 #include <MRMesh/MRIOFormatsRegistry.h>
 #include <MRMesh/MRSerializer.h>
 #include <MRMesh/MRObjectSave.h>

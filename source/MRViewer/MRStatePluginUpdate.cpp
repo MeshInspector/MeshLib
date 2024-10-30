@@ -1,6 +1,5 @@
 #include "MRStatePluginUpdate.h"
 #include "ImGuiMenu.h"
-#include "MRViewer.h"
 
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
@@ -106,7 +105,7 @@ bool PluginCloseOnChangePointCloud::shouldClose_() const
 bool PluginCloseOnEscPressed::shouldClose_() const
 {
     // ignore if there are opened dialogs
-    if ( const auto& menu = Viewer::constInstanceRef().getMenuPlugin() )
+    if ( const auto& menu = ImGuiMenu::instance() )
         if ( menu->getLastFocusedPlugin() )
             return false;
 

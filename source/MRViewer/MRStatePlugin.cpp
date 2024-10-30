@@ -2,7 +2,6 @@
 #include "MRMesh/MRString.h"
 #include "MRRibbonMenu.h"
 #include "MRMesh/MRSystem.h"
-#include "MRViewer.h"
 #include "MRCommandLoop.h"
 #include "MRMesh/MRConfig.h"
 #include "imgui/imgui.h"
@@ -76,8 +75,7 @@ bool StateBasePlugin::enable( bool on )
     }
     if ( res )
     {
-        auto ribbonMenu = getViewerInstance().getMenuPluginAs<RibbonMenu>();
-        if ( ribbonMenu )
+        if ( auto ribbonMenu = RibbonMenu::instance() )
             ribbonMenu->updateItemStatus( name() );
     }
     return res;

@@ -1,9 +1,10 @@
 #include "MRDirectionWidget.h"
+#include "MRViewport.h"
+#include "MRViewer.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRArrow.h"
 #include "MRMesh/MRSceneRoot.h"
-#include "MRViewer/MRViewport.h"
 #include "MRMesh/MRMatrix3Decompose.h"
 
 namespace MR

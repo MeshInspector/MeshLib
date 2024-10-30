@@ -25,6 +25,7 @@
 #include "MRMesh/MRTimer.h"
 #include "ImGuiHelpers.h"
 #include "MRAppendHistory.h"
+#include "MRShowModal.h"
 #include "MRMesh/MRChangeNameAction.h"
 #include "MRMesh/MRChangeSceneAction.h"
 ////////////////////////////////////////////////////////////////////////////////
@@ -1797,9 +1798,9 @@ bool ImGuiMenu::drawDrawOptionsCheckboxes( const std::vector<std::shared_ptr<Vis
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Edges", MeshVisualizePropertyType::Edges, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Points", MeshVisualizePropertyType::Points, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Selected Edges", MeshVisualizePropertyType::SelectedEdges, viewportid );
-        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Selected Faces", MeshVisualizePropertyType::SelectedFaces, viewportid );
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Selected Tri-s", MeshVisualizePropertyType::SelectedFaces, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Borders", MeshVisualizePropertyType::BordersHighlight, viewportid );
-        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Faces", MeshVisualizePropertyType::Faces, viewportid );
+        someChanges |= make_visualize_checkbox( selectedVisualObjs, "Triangles", MeshVisualizePropertyType::Faces, viewportid );
         someChanges |= make_visualize_checkbox( selectedVisualObjs, "Transparency", MeshVisualizePropertyType::OnlyOddFragments, viewportid );
         bool allHaveTexture = true;
         for ( const auto& visObj : selectedVisualObjs )
@@ -1987,7 +1988,7 @@ MR_SUPPRESS_WARNING_POP
         {
             data->setPointsColor( Color( color ), selectedViewport_ );
         } );
-        make_color_selector<ObjectMeshHolder>( selectedMeshObjs, "Selected Faces color", [&] ( const ObjectMeshHolder* data )
+        make_color_selector<ObjectMeshHolder>( selectedMeshObjs, "Selected Tri-s color", [&] ( const ObjectMeshHolder* data )
         {
             return Vector4f( data->getSelectedFacesColor( selectedViewport_ ) );
         }, [&] ( ObjectMeshHolder* data, const Vector4f& color )
@@ -3167,21 +3168,6 @@ bool ImGuiMenu::UiRenderManagerImpl::canConsumeEvent( BasicUiRenderTask::Interac
     return
         !bool( consumedInteractions & BasicUiRenderTask::InteractionMask::mouseHover ) ||
         bool( consumedInteractions & event );
-}
-
-void showModal( const std::string& msg, NotificationType type )
-{
-    if ( auto menu = getViewerInstance().getMenuPlugin() )
-        menu->showModalMessage( msg, type );
-    else
-    {
-        if ( type == NotificationType::Error )
-            spdlog::error( "Show Error: {}", msg );
-        else if ( type == NotificationType::Warning )
-            spdlog::warn( "Show Warning: {}", msg );
-        else //if ( type == MessageType::Info )
-            spdlog::info( "Show Info: {}", msg );
-    }
 }
 
 } // end namespace

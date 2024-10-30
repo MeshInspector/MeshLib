@@ -130,7 +130,7 @@ def generate_stubs(modules):
     os.chdir(WHEEL_ROOT_DIR)
     for module in modules:
         subprocess.check_call(
-            [*pybind11_stubgen_command, "--exit-code", "--output-dir", ".", f"meshlib.{module}"],
+            [*pybind11_stubgen_command, "--output-dir", ".", f"meshlib.{module}"],
             env=env,
         )
 

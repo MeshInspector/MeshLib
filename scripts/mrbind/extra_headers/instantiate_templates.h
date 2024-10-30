@@ -1,5 +1,8 @@
 #pragma once
 
+#include "MRMesh/MRDistanceMap.h"
+#include "MRMesh/MRMesh.h"
+#include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRVector3.h"
 
@@ -61,4 +64,16 @@ VEC2(double)
 VEC2(int)
 
 }
+
 #undef VEC3
+#undef VEC2
+
+// Those are needed for mrviewerpy:
+
+#define FORCE_INSTANTIATE_TYPE(...) using MR_CONCAT(_mrbind_inst_,__LINE__) __attribute__((__annotate__("mrbind::instantiate_only"))) = __VA_ARGS__
+FORCE_INSTANTIATE_TYPE( std::vector<MR::DistanceMap> );
+FORCE_INSTANTIATE_TYPE( std::vector<MR::Mesh> );
+FORCE_INSTANTIATE_TYPE( std::vector<std::shared_ptr<MR::Object>> );
+FORCE_INSTANTIATE_TYPE( std::vector<MR::PointCloud> );
+FORCE_INSTANTIATE_TYPE( std::vector<MR::Polyline3> );
+#undef FORCE_INSTANTIATE_TYPE

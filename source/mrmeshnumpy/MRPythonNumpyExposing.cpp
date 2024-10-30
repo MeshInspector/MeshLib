@@ -417,7 +417,7 @@ pybind11::array_t<double> getNumpyVerts( const MR::Mesh& mesh )
     return toNumpyArray( mesh.points );
 }
 
-pybind11::array_t<bool> getNumpyBitSet( const boost::dynamic_bitset<std::uint64_t>& bitSet )
+pybind11::array_t<bool> getNumpyBitSet( const MR::BitSet& bitSet )
 {
     using namespace MR;
     // Allocate and initialize some data;

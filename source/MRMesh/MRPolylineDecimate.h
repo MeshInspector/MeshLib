@@ -5,11 +5,6 @@
 #include <climits>
 #include <functional>
 
-#ifdef MR_PARSING_FOR_PB11_BINDINGS
-#include "MRMesh/MRQuadraticForm.h"
-#include "MRMesh/MRVector.h"
-#endif
-
 namespace MR
 {
 

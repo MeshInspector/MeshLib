@@ -7,11 +7,6 @@
 #include <climits>
 #include <functional>
 
-#ifdef MR_PARSING_FOR_PB11_BINDINGS
-#include "MRVector.h"
-#include "MRQuadraticForm.h"
-#endif
-
 namespace MR
 {
 /**

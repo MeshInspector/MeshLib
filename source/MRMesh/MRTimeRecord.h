@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRLog.h"
+#include "MRPch/MRBindingMacros.h"
 #include <chrono>
 #include <map>
 #include <string>
@@ -12,14 +13,14 @@ namespace MR
 /// \addtogroup BasicGroup
 /// \{
 
-struct SimpleTimeRecord
+struct MR_BIND_IGNORE SimpleTimeRecord
 {
     int count = 0;
     std::chrono::nanoseconds time = {};
     double seconds() const { return time.count() * 1e-9; }
 };
 
-struct TimeRecord : SimpleTimeRecord
+struct MR_BIND_IGNORE TimeRecord : SimpleTimeRecord
 {
     TimeRecord* parent = nullptr;
     std::map<std::string, TimeRecord> children;
@@ -31,7 +32,7 @@ struct TimeRecord : SimpleTimeRecord
     double mySeconds() const { return myTime().count() * 1e-9; }
 };
 
-struct ThreadRootTimeRecord : TimeRecord
+struct MR_BIND_IGNORE ThreadRootTimeRecord : TimeRecord
 {
     const char * threadName = nullptr;
     std::chrono::time_point<std::chrono::high_resolution_clock> started = std::chrono::high_resolution_clock::now();
@@ -45,10 +46,10 @@ struct ThreadRootTimeRecord : TimeRecord
 };
 
 /// installs given record in the current thread (no record must be installed before)
-MRMESH_API void registerThreadRootTimeRecord( ThreadRootTimeRecord & root );
+MR_BIND_IGNORE MRMESH_API void registerThreadRootTimeRecord( ThreadRootTimeRecord & root );
 
 /// un-installs given record in the current thread
-MRMESH_API void unregisterThreadRootTimeRecord( ThreadRootTimeRecord & root );
+MR_BIND_IGNORE MRMESH_API void unregisterThreadRootTimeRecord( ThreadRootTimeRecord & root );
 
 /// \}
 

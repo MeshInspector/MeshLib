@@ -27,7 +27,8 @@ struct VectorTraits
     template <typename U>
     [[nodiscard]] static constexpr auto&& getElem( int i, U&& value ) { (void)i; return value; }
 
-    static constexpr T diagonal( T v ) { return v; }
+    template <typename U = T> // Adding a template parameter to allow instantiating the rest of the class with `T == void`.
+    static constexpr U diagonal( U v ) { return v; }
 };
 
 template <typename T>

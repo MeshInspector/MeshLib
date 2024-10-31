@@ -25,6 +25,9 @@ struct VectorTraits<ImVec2>
         // GCC and Clang optimize both in the same manner.
         return ( &value.x )[i];
     }
+
+    template <typename U = ImVec2> // Adding a template parameter to avoid including the whole `imgui.h`.
+    static constexpr U diagonal( float v ) { return U( v, v ); }
 };
 
 template <>
@@ -44,6 +47,9 @@ struct VectorTraits<ImVec4>
         // GCC and Clang optimize both in the same manner.
         return ( &value.x )[i];
     }
+
+    template <typename U = ImVec4> // Adding a template parameter to avoid including the whole `imgui.h`.
+    static constexpr U diagonal( float v ) { return U( v, v, v, v ); }
 };
 
 }

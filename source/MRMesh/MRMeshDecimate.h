@@ -25,14 +25,14 @@ enum DecimateStrategy
  * \struct MR::DecimateSettings
  * \brief Parameters structure for MR::decimateMesh
  * \ingroup DecimateGroup
- * 
+ *
  * \sa \ref decimateMesh
  */
 struct DecimateSettings
-{  
+{
     DecimateStrategy strategy = DecimateStrategy::MinimizeError;
 
-    /// for DecimateStrategy::MinimizeError: 
+    /// for DecimateStrategy::MinimizeError:
     ///   stop the decimation as soon as the estimated distance deviation from the original mesh is more than this value
     /// for DecimateStrategy::ShortestEdgeFirst only:
     ///   stop the decimation as soon as the shortest edge in the mesh is greater than this value
@@ -158,7 +158,7 @@ struct DecimateSettings
  * \struct MR::DecimateResult
  * \brief Results of MR::decimateMesh
  * \ingroup DecimateGroup
- * 
+ *
  * \sa \ref decimateMesh
  * \sa \ref decimateParallelMesh
  * \sa \ref resolveMeshDegenerations
@@ -183,10 +183,10 @@ struct DecimateResult
  *
  * \image html decimate/decimate_before.png "Before" width = 350cm
  * \image html decimate/decimate_after.png "After" width = 350cm
- * 
+ *
  * \sa \ref decimateParallelMesh
  * \sa \ref resolveMeshDegenerations
- */ 
+ */
 MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings = {} );
 
 /**
@@ -233,7 +233,7 @@ struct ResolveMeshDegenSettings
  * \details This function performs decimation, so it can affect topology
  * \ingroup DecimateGroup
  * \return true if the mesh has been changed
- * 
+ *
  * \sa \ref decimateMesh
  */
 MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings = {} );

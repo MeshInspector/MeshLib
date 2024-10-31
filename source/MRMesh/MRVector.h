@@ -2,6 +2,7 @@
 
 #include "MRMacros.h"
 #include "MRMeshFwd.h"
+#include "MRPch/MRBindingMacros.h"
 #include <cassert>
 #include <vector>
 
@@ -86,7 +87,7 @@ public:
     void autoResizeSet( I pos, size_t len, T val )
     {
         assert( pos );
-        const int p{ pos };
+        const size_t p = pos;
         if ( const auto sz = size(); p + len > sz )
         {
             resizeWithReserve( p + len, val );
@@ -138,19 +139,19 @@ public:
 };
 
 template <typename T, typename I>
-[[nodiscard]] inline auto begin( const Vector<T, I> & a )
+[[nodiscard]] MR_BIND_IGNORE inline auto begin( const Vector<T, I> & a )
     { return a.vec_.begin(); }
 
 template <typename T, typename I>
-[[nodiscard]] inline auto begin( Vector<T, I> & a )
+[[nodiscard]] MR_BIND_IGNORE inline auto begin( Vector<T, I> & a )
     { return a.vec_.begin(); }
 
 template <typename T, typename I>
-[[nodiscard]] inline auto end( const Vector<T, I> & a )
+[[nodiscard]] MR_BIND_IGNORE inline auto end( const Vector<T, I> & a )
     { return a.vec_.end(); }
 
 template <typename T, typename I>
-[[nodiscard]] inline auto end( Vector<T, I> & a )
+[[nodiscard]] MR_BIND_IGNORE inline auto end( Vector<T, I> & a )
     { return a.vec_.end(); }
 
 /// given some Vector and a key, returns the value associated with the key, or default value if key is invalid or outside the Vector

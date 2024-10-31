@@ -545,6 +545,33 @@ bool buttonIconEx(
     return res;
 }
 
+bool buttonUniqueIconFlatBG( 
+    const std::string& iconName, 
+    const Vector2f& iconSize, 
+    const std::string& text, 
+    const ImVec2& buttonSize, 
+    int value, 
+    int& ownValue )
+{
+    StyleParamHolder sh;
+    if ( value == ownValue )
+    {
+        sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ) );
+        sh.addColor( ImGuiCol_Button, ColorTheme::instance().getRibbonColor( ColorTheme::RibbonColorsType::RibbonButtonActive ) );
+    }
+    else
+    {
+        sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActiveText ) );
+        sh.addColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ) );
+    }
+    auto res = UI::buttonIconFlatBG( iconName, iconSize, text, buttonSize );
+    if ( res )
+        ownValue = value;
+
+    res = res && ownValue == value;
+    return res;
+}
+
 static bool checkboxWithoutTestEngine( const char* label, bool* value )
 {
     const ImGuiStyle& style = ImGui::GetStyle();

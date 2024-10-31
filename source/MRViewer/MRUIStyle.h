@@ -145,27 +145,14 @@ inline bool buttonIconFlatBG( const std::string& name, const Vector2f& iconSize,
     params.forceImguiTextColor = true;
     return buttonIconEx( name, iconSize, text, buttonSize, params );
 }
-
-template <typename T>
-bool radioButtonIconFlatBG(
-    const std::string& iconName,
-    const Vector2f& iconSize,
-    const std::string& text,
-    const ImVec2& buttonSize,
-    T buttonValue,
-    T& curValue )
-{
-    if ( buttonValue == curValue )
-        ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ) );
-    else
-        ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActiveText ) );
-    auto res = UI::buttonIconFlatBG( iconName, iconSize, text, buttonSize );
-    if ( res )
-        curValue = buttonValue;
-    ImGui::PopStyleColor();
-    res = res && curValue == buttonValue;
-    return res;
-}
+/// draw button with icon same logic as radioButton
+MRVIEWER_API bool buttonUniqueIconFlatBG( 
+    const std::string& iconName, 
+    const Vector2f& iconSize, 
+    const std::string& text, 
+    const ImVec2& buttonSize, 
+    int value, 
+    int& ownValue );
 
 /// draw gradient checkbox
 MRVIEWER_API bool checkbox( const char* label, bool* value );

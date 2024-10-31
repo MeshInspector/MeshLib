@@ -51,8 +51,10 @@ ENDIF()
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 12 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wabi=16")
 ENDIF()
-# complitely ignore "maybe-uninitialized" for GCC11 because of false positives
-IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12)
+# complitely ignore "maybe-uninitialized" for GCC because of false positives
+# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=109561
+# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=116090
+IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-maybe-uninitialized")
 ENDIF()
 

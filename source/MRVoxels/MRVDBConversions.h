@@ -55,8 +55,10 @@ MRVOXELS_API VdbVolume floatGridToVdbVolume( FloatGrid grid );
 
 // make FloatGrid from SimpleVolume
 // make copy of data
+// background - the new background value for FloatGrid
 // grid can be used to make iso-surface later with gridToMesh function
-MRVOXELS_API FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume, ProgressCallback cb = {} );
+MRVOXELS_API FloatGrid simpleVolumeToDenseGrid( const SimpleVolume& simpleVolume, float background = 0.0f, ProgressCallback cb = {} );
+// set the simpleVolume.min as the background value
 MRVOXELS_API VdbVolume simpleVolumeToVdbVolume( const SimpleVolumeMinMax& simpleVolume, ProgressCallback cb = {} );
 
 /// Copy given \p simpleVolume into the \p grid, starting at \p minCoord

@@ -5,6 +5,7 @@
 #include "MRViewer/MRVectorTraits.h"
 #include "exports.h"
 #include "imgui.h"
+#include "MRColorTheme.h"
 #include <span>
 #include <string>
 #include <optional>
@@ -143,6 +144,27 @@ inline bool buttonIconFlatBG( const std::string& name, const Vector2f& iconSize,
     params.flatBackgroundColor = true;
     params.forceImguiTextColor = true;
     return buttonIconEx( name, iconSize, text, buttonSize, params );
+}
+
+template <typename T>
+bool radioButtonIconFlatBG(
+    const std::string& iconName,
+    const Vector2f& iconSize,
+    const std::string& text,
+    const ImVec2& buttonSize,
+    T buttonValue,
+    T& curValue )
+{
+    if ( buttonValue == curValue )
+        ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ) );
+    else
+        ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActiveText ) );
+    auto res = UI::buttonIconFlatBG( iconName, iconSize, text, buttonSize );
+    if ( res )
+        curValue = buttonValue;
+    ImGui::PopStyleColor();
+    res = res && curValue == buttonValue;
+    return res;
 }
 
 /// draw gradient checkbox

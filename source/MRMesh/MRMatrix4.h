@@ -34,6 +34,8 @@ struct Matrix4
         w = Vector4<T>( 0, 0, 0, 1 );
     }
 
+    // Currently `AffineXf3<long long>` doesn't seem to compile, so we disable this constructor for `Matrix4<long long>`, because otherwise
+    // mrbind instantiates the entire `AffineXf3<long long>` and chokes on it.
     constexpr Matrix4( const AffineXf3<T>& xf ) MR_REQUIRES_IF_SUPPORTED( std::floating_point<T> ) : Matrix4( xf.A, xf.b ) {}
 
     template <typename U>

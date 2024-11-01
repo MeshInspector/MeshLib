@@ -302,11 +302,15 @@ namespace MR.DotNet
         #endregion
         #region Constructors
 
-        internal Mesh(IntPtr mesh, bool needToDispose = true)
+        internal Mesh(IntPtr mesh)
         {
             mesh_ = mesh;
             meshTopology_ = mrMeshTopology(mesh);
-            needToDispose_ = needToDispose;
+        }
+
+        internal void SkipDisposingAtFinalize()
+        {
+            needToDispose_ = false;
         }
 
         public void Dispose()

@@ -163,7 +163,8 @@ namespace MR.DotNet
                 var mrNamedMesh = mrVectorMeshLoadNamedMeshGet(vector, (ulong)i);
                 var namedMesh = new NamedMesh();
                 namedMesh.name = Marshal.PtrToStringAnsi(mrNamedMesh.name);
-                namedMesh.mesh = new Mesh(mrNamedMesh.mesh, false);
+                namedMesh.mesh = new Mesh(mrNamedMesh.mesh);
+                namedMesh.mesh.SkipDisposingAtFinalize();
                 namedMesh.xf = new AffineXf3f(mrNamedMesh.xf);
                 namedMesh.skippedFaceCount = mrNamedMesh.skippedFaceCount;
                 namedMesh.duplicatedVertexCount = mrNamedMesh.duplicatedVertexCount;

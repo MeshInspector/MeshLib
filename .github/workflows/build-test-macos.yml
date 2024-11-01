@@ -58,7 +58,7 @@ jobs:
       - name: Install thirdparty libs
         run: ./scripts/build_thirdparty.sh
 
-      - name: Install thirdparty libs (MRBind)
+      - name: Install MRBind
         if: ${{inputs.mrbind}}
         run: |
           ./scripts/mrbind/install_deps_macos.sh

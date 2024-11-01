@@ -114,7 +114,7 @@ namespace MR.DotNet
                 for (int j = 0; j < (int)mrOneMeshContour.intersections.size; j++)
                 {
                     var mrOneMeshIntersectionData = mrOneMeshContour.intersections.data;
-                    int sizeOfOneMeshIntersection = Marshal.SizeOf(typeof(OneMeshIntersection));
+                    int sizeOfOneMeshIntersection = Marshal.SizeOf(typeof(MROneMeshIntersection));
                     var mrOneMeshIntersection = (MROneMeshIntersection)Marshal.PtrToStructure(IntPtr.Add(mrOneMeshIntersectionData, j * sizeOfOneMeshIntersection), typeof(MROneMeshIntersection));
                     var oneMeshIntersection = new OneMeshIntersection();
                     oneMeshIntersection.variantIndex = (VariantIndex)mrOneMeshIntersection.primitiveIdIndex;

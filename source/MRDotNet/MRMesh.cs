@@ -543,7 +543,7 @@ namespace MR.DotNet
         /// creates mesh from point coordinates and triangulation. If some vertices are not manifold, they will be duplicated
         public static Mesh FromTrianglesDuplicatingNonManifoldVertices(VertCoords points, Triangulation triangles)
         {
-            int sizeOfVector3f = Marshal.SizeOf(typeof(Vector3f));
+            int sizeOfVector3f = Marshal.SizeOf(typeof(MRVector3f));
             IntPtr nativePoints = Marshal.AllocHGlobal(points.Count * sizeOfVector3f);
 
             int sizeOfThreeVertIds = Marshal.SizeOf(typeof(ThreeVertIds));

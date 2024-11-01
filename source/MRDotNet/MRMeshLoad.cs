@@ -8,8 +8,10 @@ namespace MR.DotNet
     public struct ObjLoadSettings
     {
         /// if true then vertices will be returned relative to some transformation to avoid precision loss
+        [MarshalAs(UnmanagedType.U1)] 
         public bool customXf = false;
         /// if true, the number of skipped faces (faces than can't be created) will be counted
+        [MarshalAs(UnmanagedType.U1)] 
         public bool countSkippedFaces = false;
         public ObjLoadSettings() { }
     };
@@ -70,10 +72,8 @@ namespace MR.DotNet
     internal struct MRMeshLoadObjLoadSettings
     {
         /// if true then vertices will be returned relative to some transformation to avoid precision loss
-        [MarshalAs(UnmanagedType.U1)] 
         public bool customXf = false;
         /// if true, the number of skipped faces (faces than can't be created) will be counted
-        [MarshalAs(UnmanagedType.U1)] 
         public bool countSkippedFaces = false;
         /// callback for set progress and stop process
         public IntPtr callback = IntPtr.Zero;

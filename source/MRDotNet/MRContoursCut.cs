@@ -54,13 +54,20 @@ namespace MR.DotNet
         };
 
         [StructLayout(LayoutKind.Sequential)]
-        internal struct MROneMeshContour
+        internal struct MRVectorOneMeshIntersection
         {
             public IntPtr data = IntPtr.Zero;
             public ulong size = 0;
             public IntPtr reserved = IntPtr.Zero;
-            [MarshalAs(UnmanagedType.U1)]
-            public bool closed = false;
+            public MRVectorOneMeshIntersection() { }
+        };
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct MROneMeshContour
+        {
+            public MRVectorOneMeshIntersection intersections;
+            //size of bool in C is 1, so use byte
+            public byte closed = 0;
             public MROneMeshContour() { }
         };
 
@@ -69,13 +76,12 @@ namespace MR.DotNet
         {
             public EdgeId edge = new EdgeId();
             public FaceId tri = new FaceId();
-            [MarshalAs(UnmanagedType.U1)]
             public bool isEdgeATriB = false;
             public MRVariableEdgeTri() { }
         };       
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
-        private static extern void mrOneMeshContoursGet( IntPtr contours, ulong index, out MROneMeshContour outContour );
+        private static extern MROneMeshContour mrOneMeshContoursGet( IntPtr contours, ulong index );
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Auto)]
         private static extern ulong mrOneMeshContoursSize( IntPtr contours);
@@ -100,16 +106,16 @@ namespace MR.DotNet
             var oneMeshContours = new OneMeshContours( contoursSize );
             for ( int i = 0; i < contoursSize; i++ )
             {
-                MROneMeshContour mrOneMeshContour;
-                mrOneMeshContoursGet(mrOneMeshContours, (ulong)i, out mrOneMeshContour);
+                var mrOneMeshContour = mrOneMeshContoursGet(mrOneMeshContours, (ulong)i);
                 var oneMeshContour = new OneMeshContour
                 {
-                    intersections = new List<OneMeshIntersection>( (int)mrOneMeshContour.size ),
-                    closed = mrOneMeshContour.closed
+                    intersections = new List<OneMeshIntersection>((int)mrOneMeshContour.intersections.size),
+                    closed = mrOneMeshContour.closed > 0
                 };
-                for (int j = 0; j < (int)mrOneMeshContour.size; j++)
+
+                for (int j = 0; j < (int)mrOneMeshContour.intersections.size; j++)
                 {
-                    var mrOneMeshIntersectionData = mrOneMeshContour.data;
+                    var mrOneMeshIntersectionData = mrOneMeshContour.intersections.data;
                     int sizeOfOneMeshIntersection = Marshal.SizeOf(typeof(MROneMeshIntersection));
                     var mrOneMeshIntersection = (MROneMeshIntersection)Marshal.PtrToStructure(IntPtr.Add(mrOneMeshIntersectionData, j * sizeOfOneMeshIntersection), typeof(MROneMeshIntersection));
                     var oneMeshIntersection = new OneMeshIntersection();

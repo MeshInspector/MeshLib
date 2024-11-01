@@ -51,12 +51,11 @@ namespace MR.DotNet
         [StructLayout(LayoutKind.Sequential)]
         internal struct MRBooleanParameters
         {
-            public IntPtr rigidB2A = IntPtr.Zero;
-            public IntPtr mapper = IntPtr.Zero;
-            [MarshalAs(UnmanagedType.U1)]
-            public bool mergeAllNonIntersectingComponents = false;
-            public IntPtr cb = IntPtr.Zero;
-            public MRBooleanParameters() { }
+            public IntPtr rigidB2A;
+            public IntPtr mapper;
+            //size of bool in C is 1, so use byte
+            public byte mergeAllNonIntersectingComponents;
+            public IntPtr cb;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -91,7 +90,7 @@ namespace MR.DotNet
             MRBooleanParameters mrParameters;
             mrParameters.rigidB2A = parameters.rigidB2A is null ? (IntPtr)null : parameters.rigidB2A.XfAddr();
             mrParameters.mapper = parameters.mapper is null ? (IntPtr)null : parameters.mapper.Mapper;
-            mrParameters.mergeAllNonIntersectingComponents = parameters.mergeAllNonIntersectingComponents;
+            mrParameters.mergeAllNonIntersectingComponents = parameters.mergeAllNonIntersectingComponents ? (byte)1 : (byte)0;
             mrParameters.cb = IntPtr.Zero;
 
             MRBooleanResult mrResult = mrBoolean(meshA.mesh_, meshB.mesh_, op, ref mrParameters);

@@ -329,6 +329,8 @@ endif
 else # Linux or MacOS:
 COMPILER += -fvisibility=hidden
 COMPILER_FLAGS += -fPIC
+# Override Pybind ABI identifiers to force compatibility with `mrviewerpy` (which is compiled with some other compiler, but is also made to define those).
+COMPILER_FLAGS += -DPYBIND11_COMPILER_TYPE='"_meshlib"' -DPYBIND11_BUILD_ABI='"_meshlib"'
 ifneq ($(MESHLIB_IS_DEBUG),) # Pass some debug flags to match mrviewerpy.
 COMPILER_FLAGS += -D_DEBUG -DDEBUG
 endif

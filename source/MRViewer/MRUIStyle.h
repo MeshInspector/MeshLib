@@ -146,7 +146,8 @@ inline bool buttonIconFlatBG( const std::string& name, const Vector2f& iconSize,
     return buttonIconEx( name, iconSize, text, buttonSize, params );
 }
 /// draw button with icon same logic as radioButton
-MRVIEWER_API bool buttonUniqueIconFlatBG( 
+/// the colors of the internal style are used
+MRVIEWER_API bool buttonUniqueIcon( 
     const std::string& iconName, 
     const Vector2f& iconSize, 
     const std::string& text, 

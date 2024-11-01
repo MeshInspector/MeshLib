@@ -548,7 +548,7 @@ bool buttonIconEx(
     return res;
 }
 
-bool buttonUniqueIconFlatBG( 
+bool buttonUniqueIcon( 
     const std::string& iconName, 
     const Vector2f& iconSize, 
     const std::string& text, 
@@ -560,7 +560,7 @@ bool buttonUniqueIconFlatBG(
     if ( value == ownValue )
     {
         sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ) );
-        sh.addColor( ImGuiCol_Button, ColorTheme::instance().getRibbonColor( ColorTheme::RibbonColorsType::RibbonButtonActive ) );
+        sh.addColor( ImGuiCol_Button, ColorTheme::instance().getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame ) );
     }
     else
     {

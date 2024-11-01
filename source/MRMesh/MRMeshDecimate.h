@@ -119,9 +119,9 @@ struct DecimateSettings
      */
     std::function<void( UndirectedEdgeId ue, float & collapseErrorSq, Vector3f & collapsePos )> adjustCollapse;
 
-    /// this function is called each time edge (e) is deleted;
-    /// if valid (e1) is given then dest(e) = dest(e1) and their origins are in different ends of collapsing edge, e1 shall take the place of e
-    std::function<void(EdgeId e, EdgeId e1)> onEdgeDel;
+    /// this function is called each time edge (del) is deleted;
+    /// if valid (rem) is given then dest(del) = dest(rem) and their origins are in different ends of collapsing edge, (rem) shall take the place of (del)
+    std::function<void( EdgeId del, EdgeId rem )> onEdgeDel;
 
     /**
      * \brief  If not null, then vertex quadratic forms are stored there;

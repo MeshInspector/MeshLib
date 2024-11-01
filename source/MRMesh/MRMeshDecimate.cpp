@@ -25,27 +25,14 @@ namespace MR
 /// updates notFlippable/twinMap removing deleted edges from there, and adding the edges that shall replace them;
 /// calls onEdgeDel for every deleted edge;
 /// returns prev( e ) if it is valid
-EdgeId collapseEdge( MeshTopology & topology, const EdgeId e, UndirectedEdgeBitSet* notFlippable, UndirectedEdgeHashMap * twinMap,
-    const std::function<void(EdgeId e, EdgeId e1)> & onEdgeDel )
+EdgeId collapseEdge( MeshTopology & topology, const EdgeId e, UndirectedEdgeBitSet* notFlippable,
+    const std::function<void( EdgeId del, EdgeId rem )> & onEdgeDel )
 {
     auto delEdge = [&]( EdgeId del )
     {
         assert( del );
         if ( notFlippable )
             notFlippable->reset( del.undirected() );
-        if ( twinMap )
-        {
-            auto itDel = twinMap->find( del );
-            if ( itDel != twinMap->end() )
-            {
-                auto tgt = itDel->second;
-                auto itTgt = twinMap->find( tgt );
-                assert( itTgt != twinMap->end() );
-                assert( itTgt->second == del.undirected() );
-                twinMap->erase( itDel );
-                twinMap->erase( itTgt );
-            }
-        }
         if ( onEdgeDel )
             onEdgeDel( del, {} );
     };
@@ -56,21 +43,6 @@ EdgeId collapseEdge( MeshTopology & topology, const EdgeId e, UndirectedEdgeBitS
         {
             if ( notFlippable->test_set( del.undirected(), false ) )
                 notFlippable->autoResizeSet( rem.undirected() );
-        }
-        if ( twinMap )
-        {
-            auto itDel = twinMap->find( del );
-            if ( itDel != twinMap->end() )
-            {
-                auto tgt = itDel->second;
-                auto itTgt = twinMap->find( tgt );
-                assert( itTgt != twinMap->end() );
-                assert( itTgt->second == del.undirected() );
-                twinMap->erase( itDel );
-                assert( twinMap->count( rem ) == 0 );
-                (*twinMap)[rem] = tgt;
-                itTgt->second = rem;
-            }
         }
         if ( onEdgeDel )
             onEdgeDel( del, rem );
@@ -750,7 +722,32 @@ VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & co
         if ( r )
             settings_.region->reset( r );
     }
-    auto eo = collapseEdge( topology, edgeToCollapse, settings_.notFlippable, settings_.twinMap, settings_.onEdgeDel );
+    auto eo = collapseEdge( topology, edgeToCollapse, settings_.notFlippable,
+        [twinMap = settings_.twinMap, onEdgeDel = settings_.onEdgeDel]( EdgeId del, EdgeId rem )
+    {
+        if ( twinMap )
+        {
+            auto itDel = twinMap->find( del );
+            if ( itDel != twinMap->end() )
+            {
+                auto tgt = itDel->second;
+                auto itTgt = twinMap->find( tgt );
+                assert( itTgt != twinMap->end() );
+                assert( itTgt->second == del.undirected() );
+                twinMap->erase( itDel );
+                if ( rem )
+                {
+                    assert( twinMap->count( rem ) == 0 );
+                    (*twinMap)[rem] = tgt;
+                    itTgt->second = rem;
+                }
+                else
+                    twinMap->erase( itTgt );
+            }
+        }
+        if ( onEdgeDel )
+            onEdgeDel( del, rem );
+    } );
     if ( !eo )
         return {};
 

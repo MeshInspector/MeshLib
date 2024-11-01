@@ -559,12 +559,12 @@ bool buttonUniqueIcon(
     StyleParamHolder sh;
     if ( value == ownValue )
     {
-        sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabText ) );
+        sh.addColor( ImGuiCol_Text, Color::white() );
         sh.addColor( ImGuiCol_Button, ColorTheme::instance().getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame ) );
     }
     else
     {
-        sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActiveText ) );
+        sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text ) );
         sh.addColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ) );
     }
     return UI::buttonIconFlatBG( iconName, iconSize, text, buttonSize );

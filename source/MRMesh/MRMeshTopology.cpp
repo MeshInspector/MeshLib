@@ -210,6 +210,104 @@ void MeshTopology::splice( EdgeId a, EdgeId b )
     }
 }
 
+EdgeId MeshTopology::collapseEdge( const EdgeId e, const std::function<void( EdgeId del, EdgeId rem )> & onEdgeDel )
+{
+    auto delEdge = [&]( EdgeId del )
+    {
+        assert( del );
+        if ( onEdgeDel )
+            onEdgeDel( del, {} );
+    };
+    auto replaceEdge = [&]( EdgeId del, EdgeId rem )
+    {
+        assert( del && rem );
+        if ( onEdgeDel )
+            onEdgeDel( del, rem );
+    };
+
+    setLeft( e, FaceId() );
+    setLeft( e.sym(), FaceId() );
+
+    delEdge( e );
+
+    if ( next( e ) == e )
+    {
+        setOrg( e, VertId() );
+        const EdgeId b = prev( e.sym() );
+        if ( b == e.sym() )
+            setOrg( e.sym(), VertId() );
+        else
+            splice( b, e.sym() );
+
+        assert( isLoneEdge( e ) );
+        return EdgeId();
+    }
+
+    setOrg( e.sym(), VertId() );
+
+    const EdgeId ePrev = prev( e );
+    const EdgeId eNext = next( e );
+    if ( ePrev != e )
+        splice( ePrev, e );
+
+    const EdgeId a = next( e.sym() );
+    if ( a == e.sym() )
+    {
+        assert( isLoneEdge( e ) );
+        return ePrev != e ? ePrev : EdgeId();
+    }
+    const EdgeId b = prev( e.sym() );
+
+    splice( b, e.sym() );
+    assert( isLoneEdge( e ) );
+
+    assert( next( b ) == a );
+    assert( next( ePrev ) == eNext );
+    splice( b, ePrev );
+    assert( next( b ) == eNext );
+    assert( next( ePrev ) == a );
+
+    if ( next( a.sym() ) == ePrev.sym() )
+    {
+        splice( ePrev, a );
+        splice( prev( a.sym() ), a.sym() );
+        assert( isLoneEdge( a ) );
+        if ( !left( ePrev ) && !right( ePrev ) )
+        {
+            splice( prev( ePrev ), ePrev );
+            splice( prev( ePrev.sym() ), ePrev.sym() );
+            setOrg( ePrev, {} );
+            setOrg( ePrev.sym(), {} );
+            assert( isLoneEdge( ePrev ) );
+            delEdge( a );
+            delEdge( ePrev );
+        }
+        else
+            replaceEdge( a, ePrev );
+    }
+
+    if ( next( eNext.sym() ) == b.sym() )
+    {
+        splice( eNext.sym(), b.sym() );
+        splice( prev( b ), b );
+        assert( isLoneEdge( b ) );
+        if ( !left( eNext ) && !right( eNext ) )
+        {
+            splice( prev( eNext ), eNext );
+            splice( prev( eNext.sym() ), eNext.sym() );
+            setOrg( eNext, {} );
+            setOrg( eNext.sym(), {} );
+            assert( isLoneEdge( eNext ) );
+            delEdge( b );
+            delEdge( eNext );
+        }
+        else
+            replaceEdge( b, eNext );
+    }
+
+    return ePrev != e ? ePrev : EdgeId();
+}
+
 bool MeshTopology::fromSameOriginRing( EdgeId a, EdgeId b ) const
 {
     assert( a.valid() && b.valid() );

@@ -14,6 +14,9 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/meshlib"
 )
 
+# This allows us to force pybind compatibility across compilers.
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DPYBIND11_COMPILER_TYPE=meshlib -DPYBIND11_BUILD_ABI=meshlib")
+
 if(APPLE)
   set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
   target_link_libraries(${PROJECT_NAME} PRIVATE

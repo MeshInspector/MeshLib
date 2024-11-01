@@ -181,6 +181,7 @@ namespace MR.DotNet
             public VertId srcVertId;
             public VertId tgtCloseVert;
             public float normalsAngleCos = 0.0f;
+            [MarshalAs(UnmanagedType.U1)]
             public bool tgtOnBd = false;
 
             public MRPointPair() { }
@@ -213,6 +214,7 @@ namespace MR.DotNet
             /// Algorithm target root-mean-square distance. As soon as it is reached, the algorithm stops.
             public float exitVal = 0.0f;
             /// a pair of points is formed only if both points in the pair are mutually closest (reciprocity test passed)
+            [MarshalAs(UnmanagedType.U1)]
             public bool mutualClosest = false;
             public MRICPProperties() { }
         };

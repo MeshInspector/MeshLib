@@ -100,17 +100,23 @@ namespace MR.DotNet
         public float criticalTriAspectRatio = float.MaxValue;
         public float tinyEdgeLength = -1;
         public float stabilizer = 0.001f;
+        [MarshalAs(UnmanagedType.U1)]
         public bool optimizeVertexPos = true;
         public int maxDeletedVertices = int.MaxValue;
         public int maxDeletedFaces = int.MaxValue;
         public IntPtr region = IntPtr.Zero;
+        [MarshalAs(UnmanagedType.U1)]
         public bool collapseNearNotFlippable = false;
+        [MarshalAs(UnmanagedType.U1)]
         public bool touchNearBdEdges = true;
+        [MarshalAs(UnmanagedType.U1)]
         public bool touchBdVerts = true;
         public float maxAngleChange = -1;
+        [MarshalAs(UnmanagedType.U1)]
         public bool packMesh = false;
         public IntPtr progressCallback = IntPtr.Zero;
         public int subdivideParts = 1;
+        [MarshalAs(UnmanagedType.U1)]
         public bool decimateBetweenParts = true;
         public int minFacesInPart = 0;
         public MRDecimateParameters() {}

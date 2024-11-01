@@ -65,6 +65,7 @@ namespace MR.DotNet
             public float voxelSize = 0.0f;
             public IntPtr callBack = IntPtr.Zero;
             public SignDetectionMode signDetectionMode = SignDetectionMode.OpenVDB;
+            [MarshalAs(UnmanagedType.U1)] 
             public bool memoryEfficient = false;
             public MROffsetParameters() { }
         };

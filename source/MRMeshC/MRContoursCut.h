@@ -42,7 +42,7 @@ MROneMeshContour;
 typedef struct MROneMeshContours MROneMeshContours;
 
 /// gets the contours' value at index
-MRMESHC_API const MROneMeshContour mrOneMeshContoursGet( const MROneMeshContours* contours, size_t index );
+MRMESHC_API void mrOneMeshContoursGet( const MROneMeshContours* contours, size_t index, MROneMeshContour* outContour );
 
 /// gets the contours' size
 MRMESHC_API size_t mrOneMeshContoursSize( const MROneMeshContours* contours );

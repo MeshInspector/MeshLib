@@ -16,14 +16,15 @@ REGISTER_AUTO_CAST( OneMeshContours )
 
 static_assert( sizeof( MROneMeshIntersection ) == sizeof( OneMeshIntersection ) );
 
-const MROneMeshContour mrOneMeshContoursGet( const MROneMeshContours* contours_, size_t index )
+void mrOneMeshContoursGet( const MROneMeshContours* contours_, size_t index, MROneMeshContour* outContour )
 {
+    if ( !outContour )
+        return;
+
     ARG( contours );
     const auto& result = contours[index];
-    return {
-        .intersections = cast_to<MRVectorOneMeshIntersection>( vector_ref_wrapper( result.intersections ) ),
-        .closed = result.closed,
-    };
+    outContour->intersections = cast_to<MRVectorOneMeshIntersection>( vector_ref_wrapper( result.intersections ) );
+    outContour->closed = result.closed;
 }
 
 size_t mrOneMeshContoursSize( const MROneMeshContours* contours_ )

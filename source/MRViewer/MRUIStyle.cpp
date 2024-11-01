@@ -275,7 +275,11 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
     params.forceImguiTextColor = true;
     params.underlineFirstLetter = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( label, 1 );
 
-    return buttonEx( label, true, ImVec2( size.x, size.y ), 0, params ) || checkKey( key );
+    auto res = buttonEx( label, true, ImVec2( size.x, size.y ), 0, params ) || checkKey( key );
+    if ( res )
+        value[0] = ownValue;
+
+    return res;
 }
 
 void drawPoltHorizontalAxis( float menuScaling, const PlotAxis& plotAxis )
@@ -567,7 +571,11 @@ bool buttonUniqueIcon(
         sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text ) );
         sh.addColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ) );
     }
-    return UI::buttonIconFlatBG( iconName, iconSize, text, buttonSize );
+    auto res = UI::buttonIconFlatBG( iconName, iconSize, text, buttonSize );
+    if ( res )
+        value[0] = ownValue;
+
+    return res;
 }
 
 static bool checkboxWithoutTestEngine( const char* label, bool* value )

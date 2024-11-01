@@ -66,6 +66,15 @@ public:
     /// the cut in rings in both cases is made after a and b
     MRMESH_API void splice( EdgeId a, EdgeId b );
 
+    /// collapses given edge in a vertex and deletes
+    /// 1) faces: left( e ) and right( e );
+    /// 2) vertex org( e )/dest( e ) if given edge was their only edge, otherwise only dest( e );
+    /// 3) edges: e, next( e.sym() ), prev( e.sym() ), and optionally next( e ), prev( e ) if their left and right triangles are deleted;
+    /// calls onEdgeDel for every deleted edge (del);
+    /// if valid (rem) is given then dest(del) = dest(rem) and their origins are in different ends of collapsing edge, (rem) shall take the place of (del)
+    /// \return prev( e ) if it is still valid
+    MRMESH_API EdgeId collapseEdge( EdgeId e, const std::function<void( EdgeId del, EdgeId rem )> & onEdgeDel );
+
 
     /// next (counter clock wise) half-edge in the origin ring
     [[nodiscard]] EdgeId next( EdgeId he ) const { assert(he.valid()); return edges_[he].next; }

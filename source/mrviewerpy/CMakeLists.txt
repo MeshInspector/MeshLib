@@ -15,8 +15,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 # This allows us to force pybind compatibility across compilers.
-add_compile_definitions(PYBIND11_COMPILER_TYPE=\"meshlib\")
-add_compile_definitions(PYBIND11_BUILD_ABI=\"meshlib\")
+add_compile_definitions(PYBIND11_COMPILER_TYPE=\"_meshlib\")
+add_compile_definitions(PYBIND11_BUILD_ABI=\"_meshlib\")
 
 if(APPLE)
   set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")

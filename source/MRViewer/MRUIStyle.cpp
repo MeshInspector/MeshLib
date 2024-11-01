@@ -556,7 +556,7 @@ bool buttonUniqueIconFlatBG(
     const std::string& text, 
     const ImVec2& buttonSize, 
     int value, 
-    int& ownValue )
+    int ownValue )
 {
     StyleParamHolder sh;
     if ( value == ownValue )
@@ -569,12 +569,7 @@ bool buttonUniqueIconFlatBG(
         sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TabActiveText ) );
         sh.addColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ) );
     }
-    auto res = UI::buttonIconFlatBG( iconName, iconSize, text, buttonSize );
-    if ( res )
-        ownValue = value;
-
-    res = res && ownValue == value;
-    return res;
+    return UI::buttonIconFlatBG( iconName, iconSize, text, buttonSize );
 }
 
 static bool checkboxWithoutTestEngine( const char* label, bool* value )

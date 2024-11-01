@@ -67,14 +67,25 @@ $(error Must run this in Visual Studio developer command prompt, or at least cop
 endif
 endif
 
-# Windows-only vars: [
-
 # Set to 1 if you're planning to make a wheel from this module.
 FOR_WHEEL := 0
 override FOR_WHEEL := $(filter-out 0,$(FOR_WHEEL))
 
+# Set to 1 if MeshLib was built in debug mode. Ignore this on Windows.
+# If true, we're going to pass `-D_DEBUG -DDEBUG`, which seems to be necessary for mrviewerpy to find our bindings?
+# By default we're trying to guess this based on the CMake cache.
+MESHLIB_IS_DEBUG :=
+ifeq ($(IS_WINDOWS),)
+MESHLIB_IS_DEBUG := $(if $(filter Debug,$(shell cmake -L $(MESHLIB_SHLIB_DIR)/.. 2>/dev/null | grep -Po '(?<=CMAKE_BUILD_TYPE:STRING=).*')),1)
+$(info MeshLib built in debug mode? $(if $(filter-out 0,$(MESHLIB_IS_DEBUG)),YES,NO))
+endif
+override MESHLIB_IS_DEBUG := $(filter-out 0,$(MESHLIB_IS_DEBUG))
+
+
+# ---- Windows-only vars: [
+
 # For Windows, set this to Debug or Release. This controls which MeshLib build we'll be using.
-VS_MODE := Release
+VS_MODE := $(if $(MESHLIB_IS_DEBUG),Debug,Release)
 
 # Vcpkg installation directory. We try to auto-detect it.
 ifneq ($(IS_WINDOWS),)
@@ -90,9 +101,9 @@ endif
 else
 VCPKG_DIR = $(error We're only using vcpkg on Windows)
 endif
-# ]
+# ] ----
 
-# MacOS-only vars: [
+# ---- MacOS-only vars: [
 ifneq ($(IS_MACOS),)
 HOMEBREW_DIR := /opt/homebrew
 ifeq ($(wildcard $(HOMEBREW_DIR)),)
@@ -104,7 +115,7 @@ endif
 
 # Min version. Not setting this seems to cause warnings when linking against MeshLib built with Apple Clang, which seems to have different defaults.
 MACOS_MIN_VER :=
-# ]
+# ] ----
 
 
 # Where to find MeshLib.
@@ -309,7 +320,7 @@ COMPILER_FLAGS += -D_DLL -D_MT
 COMPILER_FLAGS += -DNOMINMAX
 COMPILER_FLAGS += -D_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS
 ifeq ($(VS_MODE),Debug)
-COMPILER_FLAGS += -Xclang --dependent-lib=msvcrtd -D_DEBUG
+COMPILER_FLAGS += -Xclang --dependent-lib=msvcrtd -D_DEBUG -DDEBUG
 # Override to match meshlib:
 COMPILER_FLAGS += -D_ITERATOR_DEBUG_LEVEL=0
 else # VS_MODE == Release
@@ -318,6 +329,9 @@ endif
 else # Linux or MacOS:
 COMPILER += -fvisibility=hidden
 COMPILER_FLAGS += -fPIC
+ifneq ($(MESHLIB_IS_DEBUG),) # Pass some debug flags to match mrviewerpy.
+COMPILER_FLAGS += -D_DEBUG -DDEBUG
+endif
 # MacOS rpath is quirky: 1. Must use `-rpath,` instead of `-rpath=`. 2. Must specify the flag several times, apparently can't use
 #   `:` or `;` as a separators inside of one big flag. 3. As you've noticed, it uses `@loader_path` instead of `$ORIGIN`.
 rpath_origin := $(if $(IS_MACOS),@loader_path,$$ORIGIN)

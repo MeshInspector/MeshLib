@@ -15,7 +15,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 # This allows us to force pybind compatibility across compilers.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DPYBIND11_COMPILER_TYPE=meshlib -DPYBIND11_BUILD_ABI=meshlib")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DPYBIND11_COMPILER_TYPE=\"meshlib\" -DPYBIND11_BUILD_ABI=\"meshlib\"")
 
 if(APPLE)
   set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")

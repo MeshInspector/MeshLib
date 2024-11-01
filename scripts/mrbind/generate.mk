@@ -45,13 +45,16 @@ override var = $(eval override $(subst $,$$$$,$1))
 # --- Configuration variables start here:
 
 
-# Are we on Windows?
+# What OS?
 ifeq ($(OS),Windows_NT)
 IS_WINDOWS := 1
 IS_MACOS := 0
-else ifeq ($(shell uname -s),Darwin)
+else
+UNAME := $(shell uname -s)
+ifeq ($(UNAME),Darwin)
 IS_WINDOWS := 0
 IS_MACOS := 1
+endif
 endif
 override IS_WINDOWS := $(filter-out 0,$(IS_WINDOWS))
 override IS_MACOS := $(filter-out 0,$(IS_MACOS))

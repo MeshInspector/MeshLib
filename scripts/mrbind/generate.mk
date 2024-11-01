@@ -66,6 +66,10 @@ endif
 
 # Windows-only vars: [
 
+# Set to 1 if you're planning to make a wheel from this module.
+FOR_WHEEL := 0
+override FOR_WHEEL := $(filter-out 0,$(FOR_WHEEL))
+
 # For Windows, set this to Debug or Release. This controls which MeshLib build we'll be using.
 VS_MODE := Release
 
@@ -441,6 +445,9 @@ $(INIT_SCRIPT): $(makefile_dir)/__init__.py
 	@cp $< $@
 ifeq ($(IS_WINDOWS),) # If not on Windows, strip the windows-only part.
 	@gawk -i inplace '/### windows-only: \[/{x=1} {if (!x) print} x && /### \]/{x=0}' $@
+endif
+ifeq ($(FOR_WHEEL),) # If not on building a wheel, strip the wheel-only part.
+	@gawk -i inplace '/### wheel-only: \[/{x=1} {if (!x) print} x && /### \]/{x=0}' $@
 endif
 
 ALL_OUTPUTS := $(LINKER_OUTPUT) $(MRMESHNUMPY_MODULE) $(INIT_SCRIPT)

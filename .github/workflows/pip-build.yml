@@ -133,7 +133,7 @@ jobs:
 
       - name: Generate and build MRBind bindings
         run: |
-          make -f scripts/mrbind/generate.mk -B --trace PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed CXX_FOR_ABI=${{matrix.compiler}}
+          make -f scripts/mrbind/generate.mk -B --trace FOR_WHEEL=1 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed CXX_FOR_ABI=${{matrix.compiler}}
 
       - name: Run Tests
         run: MR_LOCAL_RESOURCES=1 xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
@@ -428,7 +428,7 @@ jobs:
         # Not setting this or setting a different value cases a warning when linking the bindings, and you can get the correct (?) value from those warnings.
         run: |
           make --version
-          make -f scripts/mrbind/generate.mk -B --trace MACOS_MIN_VER=12.7 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0'
+          make -f scripts/mrbind/generate.mk -B --trace FOR_WHEEL=1 MACOS_MIN_VER=12.7 PYTHON_PKGCONF_NAME=python-${{matrix.py-version}}-embed EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0'
 
       - name: Unit Tests
         run: build/Release/bin/MRTest

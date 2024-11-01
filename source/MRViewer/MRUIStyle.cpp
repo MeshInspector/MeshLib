@@ -462,10 +462,12 @@ bool buttonIconEx(
                 printLine( curDetail );
                 curDetail = { curTextSize.x, startWord, endWord };
             }
-            else if ( forcePrint )
+
+            if ( forcePrint )
             {
                 curDetail.end = endWord;
-                curDetail.lenght = sumLength( curDetail.lenght, curTextSize.x );
+                if( vecDetail.empty() )
+                    curDetail.lenght = sumLength( curDetail.lenght, curTextSize.x );
                 printLine( curDetail );
             }
             else
@@ -473,13 +475,9 @@ bool buttonIconEx(
                 curDetail.lenght = sumLength( curDetail.lenght, curTextSize.x );
             }
             startWord = endWord;
+
             return false;
         } );
-
-        if ( vecDetail.back().start != curDetail.start && vecDetail.back().end != curDetail.end )
-        {
-            printLine( curDetail );
-        }
     }
 
     float localPadding = 0.0f;

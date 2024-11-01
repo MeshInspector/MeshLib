@@ -16,6 +16,8 @@
 #include <pybind11/stl.h>
 #include <memory>
 
+#pragma message("mrviewerpy pybind internals magic: " PYBIND11_INTERNALS_ID)
+
 MR_INIT_PYTHON_MODULE_PRECALL( mrviewerpy, [] ()
 {
     try

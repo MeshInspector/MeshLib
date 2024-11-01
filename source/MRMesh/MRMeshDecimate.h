@@ -78,8 +78,9 @@ struct DecimateSettings
     /// which can move vertices of notFlippable edges unless they are fixed
     bool collapseNearNotFlippable = false;
 
-    /// If pointer is not null, then only edges from here can be collapsed (and some nearby edges can disappear)
-    const UndirectedEdgeBitSet * edgesToCollapse = nullptr;
+    /// If pointer is not null, then only edges from here can be collapsed (and some nearby edges can disappear);
+    /// the algorithm updates this map during collapses, removing or replacing elements
+    UndirectedEdgeBitSet * edgesToCollapse = nullptr;
 
     /// if an edge present as a key in this map is flipped or collapsed, then same happens to the value-edge (with same collapse position);
     /// the algorithm updates this map during collapses, removing or replacing elements

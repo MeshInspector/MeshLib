@@ -10,8 +10,7 @@ namespace MR.DotNet.Test
     {
         [Test]
         public void TestMultiwayICP()
-        {            
-            int inputNum = 2;
+        {
             List<MeshOrPointsXf> inputs = new List<MeshOrPointsXf>(2);
             Box3f maxBBox = new Box3f();
 

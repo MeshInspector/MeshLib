@@ -68,9 +68,6 @@ namespace MR.DotNet
         }
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern MRBooleanParameters mrBooleanParametersNew();
-
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern MRBooleanResult mrBoolean( IntPtr meshA, IntPtr meshB, BooleanOperation operation, ref MRBooleanParameters parameters );
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
@@ -91,7 +88,7 @@ namespace MR.DotNet
         /// \param parameters optional parameters
         public static BooleanResult Boolean(Mesh meshA, Mesh meshB, BooleanOperation op, BooleanParameters parameters )
         {
-            MRBooleanParameters mrParameters = mrBooleanParametersNew();
+            MRBooleanParameters mrParameters;
             mrParameters.rigidB2A = parameters.rigidB2A is null ? (IntPtr)null : parameters.rigidB2A.XfAddr();
             mrParameters.mapper = parameters.mapper is null ? (IntPtr)null : parameters.mapper.Mapper;
             mrParameters.mergeAllNonIntersectingComponents = parameters.mergeAllNonIntersectingComponents;

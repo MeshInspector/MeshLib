@@ -1936,7 +1936,7 @@ bool ImGuiMenu::drawDrawOptionsColors( const std::vector<std::shared_ptr<VisualO
     {
         data->setFrontColor( Color( color ), false, selectedViewport_ );
     } );
-    make_color_selector<VisualObject>( selectedVisualObjs, "Back Faces color", [&] ( const VisualObject* data )
+    make_color_selector<VisualObject>( selectedVisualObjs, "Back Triangles color", [&] ( const VisualObject* data )
     {
         return Vector4f( data->getBackColor( selectedViewport_ ) );
     }, [&] ( VisualObject* data, const Vector4f& color )

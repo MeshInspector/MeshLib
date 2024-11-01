@@ -5,6 +5,7 @@
 #include "MRViewer/MRVectorTraits.h"
 #include "exports.h"
 #include "imgui.h"
+#include "MRColorTheme.h"
 #include <span>
 #include <string>
 #include <optional>
@@ -144,6 +145,15 @@ inline bool buttonIconFlatBG( const std::string& name, const Vector2f& iconSize,
     params.forceImguiTextColor = true;
     return buttonIconEx( name, iconSize, text, buttonSize, params );
 }
+/// draw button with icon same logic as radioButton
+/// the colors of the internal style are used
+MRVIEWER_API bool buttonUniqueIcon( 
+    const std::string& iconName, 
+    const Vector2f& iconSize, 
+    const std::string& text, 
+    const ImVec2& buttonSize, 
+    int* value, 
+    int ownValue );
 
 /// draw gradient checkbox
 MRVIEWER_API bool checkbox( const char* label, bool* value );

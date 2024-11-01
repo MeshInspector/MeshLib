@@ -461,13 +461,13 @@ bool buttonIconEx(
                 }
                 printLine( curDetail );
                 curDetail = { curTextSize.x, startWord, endWord };
+                if ( forcePrint && vecDetail.back().end != endWord )
+                    printLine( curDetail );
             }
-
-            if ( forcePrint )
+            else if ( forcePrint )
             {
                 curDetail.end = endWord;
-                if( vecDetail.empty() )
-                    curDetail.lenght = sumLength( curDetail.lenght, curTextSize.x );
+                curDetail.lenght = sumLength( curDetail.lenght, curTextSize.x );
                 printLine( curDetail );
             }
             else
@@ -553,11 +553,11 @@ bool buttonUniqueIcon(
     const Vector2f& iconSize, 
     const std::string& text, 
     const ImVec2& buttonSize, 
-    int value, 
+    int* value, 
     int ownValue )
 {
     StyleParamHolder sh;
-    if ( value == ownValue )
+    if ( *value == ownValue )
     {
         sh.addColor( ImGuiCol_Text, Color::white() );
         sh.addColor( ImGuiCol_Button, ColorTheme::instance().getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame ) );

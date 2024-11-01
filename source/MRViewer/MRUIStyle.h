@@ -152,7 +152,7 @@ MRVIEWER_API bool buttonUniqueIcon(
     const Vector2f& iconSize, 
     const std::string& text, 
     const ImVec2& buttonSize, 
-    int value, 
+    int* value, 
     int ownValue );
 
 /// draw gradient checkbox

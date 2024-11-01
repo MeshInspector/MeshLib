@@ -167,47 +167,54 @@ namespace MR.DotNet.Test
             Assert.That(triVerts[2].Id, Is.EqualTo(0));
         }
 
-         [Test]
-         public void TestSaveLoadToObj()
-         {
-             var objects = new List<NamedMeshXf>();
-             var obj = new NamedMeshXf();
-             obj.mesh = Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
-             obj.name = "Cube";
-             obj.toWorld = new AffineXf3f(Vector3f.Diagonal(1));
-             objects.Add(obj);
+        [Test]
+        public void TestSaveLoadToObj()
+        {
+            Assert.DoesNotThrow(() =>
+            {
+                var objects = new List<NamedMeshXf>();
+                var obj = new NamedMeshXf();
+                obj.mesh = Mesh.MakeCube(Vector3f.Diagonal(1), Vector3f.Diagonal(-0.5f));
+                obj.name = "Cube";
+                obj.toWorld = new AffineXf3f(Vector3f.Diagonal(1));
+                objects.Add(obj);
 
-             obj.mesh = Mesh.MakeSphere(1.0f, 100);
-             obj.name = "Sphere";
-             obj.toWorld = new AffineXf3f(Vector3f.Diagonal(-2));
-             objects.Add(obj);
+                obj.mesh = Mesh.MakeSphere(1.0f, 100);
+                obj.name = "Sphere";
+                obj.toWorld = new AffineXf3f(Vector3f.Diagonal(-2));
+                objects.Add(obj);
 
-             var tempFile = Path.GetTempFileName() + ".obj";
-             MeshSave.SceneToObj(objects, tempFile);
+                var tempFile = Path.GetTempFileName() + ".obj";
+                MeshSave.SceneToObj(objects, tempFile);
 
-             var settings = new ObjLoadSettings();
-             var loadedObjs = MeshLoad.FromSceneObjFile(tempFile, false, settings);
-             Assert.That( loadedObjs.Count == 2 );
+                var settings = new ObjLoadSettings();
+                var loadedObjs = MeshLoad.FromSceneObjFile(tempFile, false, settings);
+                Assert.That(loadedObjs.Count == 2);
 
-             Assert.That( loadedObjs[0].mesh.Points.Count == 8 );
-             Assert.That(loadedObjs[0].name == "Cube");
-             Assert.That(loadedObjs[0].xf.B.X == 0.0f);
+                Assert.That(loadedObjs[0].mesh.Points.Count == 8);
+                Assert.That(loadedObjs[0].name == "Cube");
+                Assert.That(loadedObjs[0].xf.B.X == 0.0f);
 
-             Assert.That( loadedObjs[1].mesh.Points.Count == 100 );
-             Assert.That(loadedObjs[1].name == "Sphere");
-             Assert.That(loadedObjs[1].xf.B.X == 0.0f);
+                Assert.That(loadedObjs[1].mesh.Points.Count == 100);
+                Assert.That(loadedObjs[1].name == "Sphere");
+                Assert.That(loadedObjs[1].xf.B.X == 0.0f);
 
-            settings.customXf = true;
-            loadedObjs = MeshLoad.FromSceneObjFile(tempFile, false, settings);
-            Assert.That(loadedObjs.Count == 2);
+                settings.customXf = true;
+                loadedObjs = MeshLoad.FromSceneObjFile(tempFile, false, settings);
+                Assert.That(loadedObjs.Count == 2);
 
-            Assert.That(loadedObjs[0].mesh.Points.Count == 8);
-            Assert.That(loadedObjs[0].name == "Cube");
-            Assert.That(loadedObjs[0].xf.B.X == 1.0f);
+                Assert.That(loadedObjs[0].mesh.Points.Count == 8);
+                Assert.That(loadedObjs[0].name == "Cube");
+                Assert.That(loadedObjs[0].xf.B.X == 1.0f);
 
-            Assert.That(loadedObjs[1].mesh.Points.Count == 100);
-            Assert.That(loadedObjs[1].name == "Sphere");
-            Assert.That(loadedObjs[1].xf.B.X == -2.0f);
+                Assert.That(loadedObjs[1].mesh.Points.Count == 100);
+                Assert.That(loadedObjs[1].name == "Sphere");
+                Assert.That(loadedObjs[1].xf.B.X == -2.0f);
+
+                loadedObjs[0].mesh.Dispose();
+                loadedObjs[1].mesh.Dispose();
+                File.Delete(tempFile);
+            });
         }
 
         [Test]
@@ -275,7 +282,7 @@ namespace MR.DotNet.Test
             var mesh = Mesh.MakeSphere(1.0f, 3000);
             var clone = mesh.Clone();
             Assert.That(clone, Is.Not.SameAs(mesh));
-            Assert.That(clone.Points.Count, Is.EqualTo(mesh.Points.Count) );
+            Assert.That(clone.Points.Count, Is.EqualTo(mesh.Points.Count));
             Assert.That(clone.Triangulation.Count, Is.EqualTo(mesh.Triangulation.Count));
             mesh.Dispose();
             clone.Dispose();

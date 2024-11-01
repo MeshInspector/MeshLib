@@ -302,10 +302,11 @@ namespace MR.DotNet
         #endregion
         #region Constructors
 
-        internal Mesh(IntPtr mesh)
+        internal Mesh(IntPtr mesh, bool needToDispose = true)
         {
             mesh_ = mesh;
             meshTopology_ = mrMeshTopology(mesh);
+            needToDispose_ = needToDispose;
         }
 
         public void Dispose()
@@ -316,7 +317,7 @@ namespace MR.DotNet
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!disposed)
+            if (needToDispose_)
             {
                 if (disposing)
                 {
@@ -339,7 +340,7 @@ namespace MR.DotNet
                     mesh_ = IntPtr.Zero;
                 }
 
-                disposed = true;
+                needToDispose_ = false;
             }
         }
 
@@ -649,7 +650,7 @@ namespace MR.DotNet
 
         internal IntPtr mesh_;
         internal IntPtr meshTopology_;
-        private bool disposed = false;
+        private bool needToDispose_ = true;
 
         private VertCoords? points_;
         private BitSet? validPoints_;

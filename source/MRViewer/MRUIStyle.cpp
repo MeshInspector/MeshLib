@@ -426,7 +426,7 @@ bool buttonIconEx(
     auto endText = std::string_view( text ).end();
     float maxLineLength = 0.0f;
 
-    const float cLineAvailableWidth = params.textUnderImage ? buttonSize.x : buttonSize.x - iconSize.x - style.ItemInnerSpacing.x;
+    const float cLineAvailableWidth = params.textUnderImage ? buttonSize.x - 2.0f * style.FramePadding.x : buttonSize.x - iconSize.x - style.ItemInnerSpacing.x;
     const float cSpaceWidth = ImGui::CalcTextSize( " " ).x;
 
     auto printLine = [&] ( const StringDetail& strDetail )
@@ -475,6 +475,11 @@ bool buttonIconEx(
             startWord = endWord;
             return false;
         } );
+
+        if ( vecDetail.back().start != curDetail.start && vecDetail.back().end != curDetail.end )
+        {
+            printLine( curDetail );
+        }
     }
 
     float localPadding = 0.0f;

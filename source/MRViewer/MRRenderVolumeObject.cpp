@@ -88,7 +88,7 @@ RenderBufferRef<unsigned> RenderVolumeObject::loadActiveVoxelsTextureBuffer_()
         } );
         return buffer;
     }
-    const auto& activeVoxels = objVoxels_->getVolumeRenderActiveVoxels().m_bits;
+    const auto& activeVoxels = objVoxels_->getVolumeRenderActiveVoxels().bits();
     const unsigned* activeVoxelsData = ( unsigned* )activeVoxels.data();
     tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
     {

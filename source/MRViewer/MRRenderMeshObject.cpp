@@ -1052,7 +1052,7 @@ RenderBufferRef<unsigned> RenderMeshObject::loadFaceSelectionTextureBuffer_()
     assert( faceSelectionTextureSize_.x * faceSelectionTextureSize_.y >= size );
     auto buffer = glBuffer.prepareBuffer<unsigned>( faceSelectionTextureSize_.x * faceSelectionTextureSize_.y );
 
-    const auto& selection = objMesh_->getSelectedFaces().m_bits;
+    const auto& selection = objMesh_->getSelectedFaces().bits();
     const unsigned* selectionData = ( unsigned* )selection.data();
     tbb::parallel_for( tbb::blocked_range<int>( 0, (int)buffer.size() ), [&] ( const tbb::blocked_range<int>& range )
     {

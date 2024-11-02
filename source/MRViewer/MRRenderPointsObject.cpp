@@ -459,9 +459,9 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
     auto buffer = glBuffer.prepareBuffer<unsigned>( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y );
 
     const auto& selectedPoints = objPoints_->getSelectedPoints();
-    const size_t selectionSize = selectedPoints.m_bits.size();
+    const size_t selectionSize = selectedPoints.bits().size();
     
-    const unsigned* selectionData = ( unsigned* )selectedPoints.m_bits.data();    
+    auto selectionData = ( const unsigned* )selectedPoints.bits().data();
 
     ParallelFor( 0, ( int )buffer.size(), [&]( int r )
     {

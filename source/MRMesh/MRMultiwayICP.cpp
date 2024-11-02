@@ -167,12 +167,8 @@ public:
     {
         assert( l > 0 );
         if ( l == 1 )
-        {
-            const auto& leaves = leavesPerLayer_[l - 1][eId];
-            ICPElementBitSet els;
-            els.init_from_block_range( leaves.m_bits.begin(), leaves.m_bits.end() );
-            return els;
-        }
+            return ICPElementBitSet( leavesPerLayer_[l - 1][eId] );
+
         if ( l - 2 < nodesPerLayer_.size() )
             return nodesPerLayer_[l - 2][eId];
 

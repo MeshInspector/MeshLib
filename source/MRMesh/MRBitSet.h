@@ -131,7 +131,7 @@ public:
     using IndexType = Id<T>;
 
     /// copies all bits from another BitSet (or a descending class, e.g. TaggedBitSet<U>)
-    explicit TaggedBitSet( const BitSet & src ) { init_from_block_range( src.bits().begin(), src.bits().end() ); }
+    explicit TaggedBitSet( const BitSet & src ) : BitSet( src ) {}
 
     TaggedBitSet & set( IndexType n, size_type len, bool val ) { base::set( n, len, val ); return * this; }
     TaggedBitSet & set( IndexType n, bool val = true ) { base::set( n, val ); return * this; }

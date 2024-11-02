@@ -36,6 +36,7 @@ public:
     // all bits after size() we silently consider as not-set
     [[nodiscard]] bool test( IndexType n ) const { return n < size() && base::test( n ); }
     [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return ( val || n < size() ) ? base::test_set( n, val ) : false; }
+
     BitSet & set( IndexType n, size_type len, bool val ) { base::set( n, len, val ); return * this; }
     BitSet & set( IndexType n, bool val = true ) { base::set( n, val ); return * this; }
     BitSet & set() { base::set(); return * this; }
@@ -46,15 +47,20 @@ public:
     BitSet & flip( IndexType n ) { base::flip( n ); return * this; }
     BitSet & flip() { base::flip(); return * this; }
 
+    /// read-only access to all bits stored as a vector of uint64 blocks
+    const auto & bits() const { return m_bits; }
+
     MRMESH_API BitSet & operator &= ( const BitSet & b );
     MRMESH_API BitSet & operator |= ( const BitSet & b );
     MRMESH_API BitSet & operator ^= ( const BitSet & b );
+
     MRMESH_API BitSet & operator -= ( const BitSet & b );
     /// subtracts b from this, considering that bits in b are shifted right on bShiftInBlocks*bits_per_block
     MRMESH_API BitSet & subtract( const BitSet & b, int bShiftInBlocks );
 
     /// return the highest index i such as bit i is set, or npos if *this has no on bits.
     [[nodiscard]] MRMESH_API IndexType find_last() const;
+
     /// returns the location of nth set bit (where the first bit corresponds to n=0) or npos if there are less bit set
     [[nodiscard]] MRMESH_API size_t nthSetBit( size_t n ) const;
 
@@ -108,6 +114,11 @@ public:
     void push_back( bool bit ) { dynamic_bitset::push_back( bit ); }
     void pop_back() { dynamic_bitset::pop_back(); }
     #endif
+
+private:
+    using base::m_highest_block;
+    using base::m_bits;
+    using base::m_num_bits;
 };
 
 /// container of bits representing specific indices (faces, verts or edges)
@@ -118,6 +129,9 @@ class TaggedBitSet : public BitSet
 public:
     using base::base;
     using IndexType = Id<T>;
+
+    /// copies all bits from another BitSet (or a descending class, e.g. TaggedBitSet<U>)
+    explicit TaggedBitSet( const BitSet & src ) { init_from_block_range( src.bits().begin(), src.bits().end() ); }
 
     TaggedBitSet & set( IndexType n, size_type len, bool val ) { base::set( n, len, val ); return * this; }
     TaggedBitSet & set( IndexType n, bool val = true ) { base::set( n, val ); return * this; }

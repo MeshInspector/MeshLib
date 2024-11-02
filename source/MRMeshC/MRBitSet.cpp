@@ -21,13 +21,13 @@ MRBitSet* mrBitSetCopy( const MRBitSet* bs_ )
 const uint64_t* mrBitSetBlocks( const MRBitSet* bs_ )
 {
     ARG( bs );
-    return bs.m_bits.data();
+    return bs.bits().data();
 }
 
 size_t mrBitSetBlocksNum( const MRBitSet* bs_ )
 {
     ARG( bs );
-    return bs.m_bits.size();
+    return bs.bits().size();
 }
 
 size_t mrBitSetSize( const MRBitSet* bs_ )

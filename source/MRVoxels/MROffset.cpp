@@ -263,44 +263,11 @@ Expected<Mesh> generalOffsetMesh( const MeshPart& mp, float offset, const Genera
 Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters& params )
 {
     MR_TIMER
-    const bool unsignedOffset = params.signDetectionMode == SignDetectionMode::Unsigned;
-    auto res = generalOffsetMesh( mesh, unsignedOffset ? std::abs( offset ) : offset, params );
+    auto res = offsetOpenMesh( mesh, offset, params );
     if ( !res )
         return res;
 
     auto & resMesh = res.value();
-
-    if ( unsignedOffset )
-    {
-        // delete shell faces from resMesh that project on wrong side of input mesh
-
-        // do not trust degenerate faces with huge aspect ratios
-        auto badFaces = findDegenerateFaces( mesh, 1000 ).value();
-        // do not trust only boundary degenerate faces (excluding touching the boundary only by short edge)
-        BitSetParallelFor( badFaces, [&] ( FaceId f )
-        {
-            float perimeter = 0;
-            float bdLen = 0;
-            for ( EdgeId e : leftRing( mesh.topology, f ) )
-            {
-                auto elen = mesh.edgeLength( e );
-                perimeter += elen;
-                if ( mesh.topology.isBdEdge( e ) )
-                    bdLen += elen;
-            }
-            if ( perimeter * 0.1f >= bdLen )
-                badFaces.reset( f );
-        } );
-        const auto goodFaces = mesh.topology.getValidFaces() - badFaces;
-
-        // for open input mesh, let us find only necessary portion on the shell
-        auto innerFaces = findInnerShellFacesWithSplits( MeshPart{ mesh, &goodFaces }, resMesh,
-            {
-                .side = offset > 0 ? Side::Positive : Side::Negative
-            } );
-        resMesh.topology.deleteFaces( resMesh.topology.getValidFaces() - innerFaces );
-        resMesh.pack();
-    }
 
     if ( offset >= 0 )
     {
@@ -309,7 +276,7 @@ Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetP
     }
     else
     {
-        if ( !unsignedOffset ) // in case of unsigned offset (bidirectional shell), resMesh already has opposite normals
+        if ( params.signDetectionMode != SignDetectionMode::Unsigned ) // in case of unsigned offset (bidirectional shell), resMesh already has opposite normals
             resMesh.topology.flipOrientation();
         // add original mesh to the result without flipping
         resMesh.addPart( mesh );
@@ -317,6 +284,51 @@ Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetP
 
     resMesh.invalidateCaches();
     return res;
+}
+
+Expected<Mesh> offsetOpenMesh( const MeshPart& mp, float offset, const GeneralOffsetParameters& params /*= {} */ )
+{
+    MR_TIMER
+    const bool unsignedOffset = params.signDetectionMode == SignDetectionMode::Unsigned;
+    auto res = generalOffsetMesh( mp, unsignedOffset ? std::abs( offset ) : offset, params );
+    if ( !res )
+        return res;
+
+    auto& resMesh = res.value();
+
+    if ( unsignedOffset )
+    {
+        // delete shell faces from resMesh that project on wrong side of input mesh
+
+        // do not trust degenerate faces with huge aspect ratios
+        auto badFaces = findDegenerateFaces( mp, 1000 ).value();
+        // do not trust only boundary degenerate faces (excluding touching the boundary only by short edge)
+        BitSetParallelFor( badFaces, [&] ( FaceId f )
+        {
+            float perimeter = 0;
+            float bdLen = 0;
+            for ( EdgeId e : leftRing( mp.mesh.topology, f ) )
+            {
+                auto elen = mp.mesh.edgeLength( e );
+                perimeter += elen;
+                if ( mp.mesh.topology.isBdEdge( e, mp.region ) )
+                    bdLen += elen;
+            }
+            if ( perimeter * 0.1f >= bdLen )
+                badFaces.reset( f );
+        } );
+        const auto goodFaces = mp.mesh.topology.getFaceIds( mp.region ) - badFaces;
+
+        // for open input mesh, let us find only necessary portion on the shell
+        auto innerFaces = findInnerShellFacesWithSplits( MeshPart{ mp.mesh, &goodFaces }, resMesh,
+            {
+                .side = offset > 0 ? Side::Positive : Side::Negative
+            } );
+        resMesh.topology.deleteFaces( resMesh.topology.getValidFaces() - innerFaces );
+        resMesh.pack();
+    }
+
+    return resMesh;
 }
 
 Expected<Mesh> offsetPolyline( const Polyline3& polyline, float offset, const OffsetParameters& params /*= {} */ )

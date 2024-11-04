@@ -8,8 +8,10 @@ namespace MR.DotNet
     public struct ObjLoadSettings
     {
         /// if true then vertices will be returned relative to some transformation to avoid precision loss
+        [MarshalAs(UnmanagedType.U1)] 
         public bool customXf = false;
         /// if true, the number of skipped faces (faces than can't be created) will be counted
+        [MarshalAs(UnmanagedType.U1)] 
         public bool countSkippedFaces = false;
         public ObjLoadSettings() { }
     };
@@ -27,6 +29,44 @@ namespace MR.DotNet
 
         public NamedMesh() { }
     };
+
+    // inherits List<NamedMesh> and correctly disposes native resource
+    public class NamedMeshList : List<NamedMesh>, IDisposable
+    {
+        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
+        private static extern void mrVectorMeshLoadNamedMeshFree(IntPtr vector);
+
+        internal NamedMeshList(IntPtr nativeList) : base()
+        { nativeList_ = nativeList; }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed_)
+            {
+                if (nativeList_ != IntPtr.Zero)
+                {
+                    mrVectorMeshLoadNamedMeshFree(nativeList_);
+                    nativeList_ = IntPtr.Zero;
+                }
+
+                disposed_ = true;
+            }
+        }
+
+        ~NamedMeshList()
+        {
+            Dispose( false );
+        }        
+
+        private IntPtr nativeList_;
+        private bool disposed_ = false;
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct MRMeshLoadObjLoadSettings
@@ -63,8 +103,7 @@ namespace MR.DotNet
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
         private static extern ulong mrVectorMeshLoadNamedMeshSize( IntPtr vector );
 
-        [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
-        private static extern void mrVectorMeshLoadNamedMeshFree(IntPtr vector);
+
 
 
         [DllImport("MRMeshC.dll", CharSet = CharSet.Ansi)]
@@ -97,7 +136,7 @@ namespace MR.DotNet
         }
 
         /// loads meshes from .obj file
-        public static List<NamedMesh> FromSceneObjFile(string path, bool combineAllObjects, ObjLoadSettings settings)
+        public static NamedMeshList FromSceneObjFile(string path, bool combineAllObjects, ObjLoadSettings settings)
         {
             var mrSettings = new MRMeshLoadObjLoadSettings();
             mrSettings.customXf = settings.customXf;
@@ -117,7 +156,7 @@ namespace MR.DotNet
             }
 
             int size = (int)mrVectorMeshLoadNamedMeshSize(vector);
-            List<NamedMesh> meshes = new List<NamedMesh>(size);
+            var meshes = new NamedMeshList(vector);
 
             for (int i = 0; i < size; i++)
             {
@@ -125,6 +164,7 @@ namespace MR.DotNet
                 var namedMesh = new NamedMesh();
                 namedMesh.name = Marshal.PtrToStringAnsi(mrNamedMesh.name);
                 namedMesh.mesh = new Mesh(mrNamedMesh.mesh);
+                namedMesh.mesh.SkipDisposingAtFinalize();
                 namedMesh.xf = new AffineXf3f(mrNamedMesh.xf);
                 namedMesh.skippedFaceCount = mrNamedMesh.skippedFaceCount;
                 namedMesh.duplicatedVertexCount = mrNamedMesh.duplicatedVertexCount;

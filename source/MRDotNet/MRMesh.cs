@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using System.Threading;
 using static MR.DotNet.Vector3f;
 
 namespace MR.DotNet
@@ -169,11 +170,13 @@ namespace MR.DotNet
             this.obj = obj;
             this.xf = xf;
 
-            if ( obj is Mesh )
-                mrMeshOrPointsXf_ = mrMeshOrPointsXfFromMesh((obj as Mesh).mesh_, ref xf.xf_);
+            var mesh = obj as Mesh;
+            if ( mesh != null) 
+                mrMeshOrPointsXf_ = mrMeshOrPointsXfFromMesh(mesh.mesh_, ref xf.xf_);
 
-            if ( obj is PointCloud )
-                mrMeshOrPointsXf_ = mrMeshOrPointsXfFromPointCloud((obj as PointCloud).pc_, ref xf.xf_);
+            var pc = obj as PointCloud;
+            if ( pc != null )
+                mrMeshOrPointsXf_ = mrMeshOrPointsXfFromPointCloud(pc.pc_, ref xf.xf_);
         }
 
         ~MeshOrPointsXf()
@@ -308,6 +311,11 @@ namespace MR.DotNet
             meshTopology_ = mrMeshTopology(mesh);
         }
 
+        internal void SkipDisposingAtFinalize()
+        {
+            needToDispose_ = false;
+        }
+
         public void Dispose()
         {
             Dispose(true);
@@ -316,7 +324,7 @@ namespace MR.DotNet
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!disposed)
+            if (needToDispose_)
             {
                 if (disposing)
                 {
@@ -339,7 +347,7 @@ namespace MR.DotNet
                     mesh_ = IntPtr.Zero;
                 }
 
-                disposed = true;
+                needToDispose_ = false;
             }
         }
 
@@ -649,7 +657,7 @@ namespace MR.DotNet
 
         internal IntPtr mesh_;
         internal IntPtr meshTopology_;
-        private bool disposed = false;
+        private bool needToDispose_ = true;
 
         private VertCoords? points_;
         private BitSet? validPoints_;

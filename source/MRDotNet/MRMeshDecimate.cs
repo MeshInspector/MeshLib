@@ -90,7 +90,9 @@ namespace MR.DotNet
         public float errorIntroduced = 0;
         public DecimateResult() {}
     };
-    public struct MRDecimateParameters
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct MRDecimateParameters
     {
         public DecimateStrategy strategy = DecimateStrategy.MinimizeError;
         public float maxError = 0.001f;
@@ -100,18 +102,18 @@ namespace MR.DotNet
         public float criticalTriAspectRatio = float.MaxValue;
         public float tinyEdgeLength = -1;
         public float stabilizer = 0.001f;
-        public bool optimizeVertexPos = true;
+        public byte optimizeVertexPos = 1;
         public int maxDeletedVertices = int.MaxValue;
         public int maxDeletedFaces = int.MaxValue;
         public IntPtr region = IntPtr.Zero;
-        public bool collapseNearNotFlippable = false;
-        public bool touchNearBdEdges = true;
-        public bool touchBdVerts = true;
+        public byte collapseNearNotFlippable = 1;
+        public byte touchNearBdEdges = 1;
+        public byte touchBdVerts = 1;
         public float maxAngleChange = -1;
-        public bool packMesh = false;
+        public byte packMesh = 0;
         public IntPtr progressCallback = IntPtr.Zero;
         public int subdivideParts = 1;
-        public bool decimateBetweenParts = true;
+        public byte decimateBetweenParts = 1;
         public int minFacesInPart = 0;
         public MRDecimateParameters() {}
     };
@@ -134,17 +136,17 @@ namespace MR.DotNet
             mrParameters.criticalTriAspectRatio = settings.criticalTriAspectRatio;
             mrParameters.tinyEdgeLength = settings.tinyEdgeLength;
             mrParameters.stabilizer = settings.stabilizer;
-            mrParameters.optimizeVertexPos = settings.optimizeVertexPos;
+            mrParameters.optimizeVertexPos = settings.optimizeVertexPos ? (byte)1 : (byte)0;
             mrParameters.maxDeletedVertices = settings.maxDeletedVertices;
             mrParameters.maxDeletedFaces = settings.maxDeletedFaces;
             mrParameters.region = settings.region is null ? (IntPtr)null : settings.region.bs_;
-            mrParameters.collapseNearNotFlippable = settings.collapseNearNotFlippable;
-            mrParameters.touchNearBdEdges = settings.touchNearBdEdges;
-            mrParameters.touchBdVerts = settings.touchBdVerts;
+            mrParameters.collapseNearNotFlippable = settings.collapseNearNotFlippable ? (byte)1 : (byte)0;
+            mrParameters.touchNearBdEdges = settings.touchNearBdEdges ? (byte)1 : (byte)0;
+            mrParameters.touchBdVerts = settings.touchBdVerts ? (byte)1 : (byte)0;
             mrParameters.maxAngleChange = settings.maxAngleChange;
-            mrParameters.packMesh = settings.packMesh;
+            mrParameters.packMesh = settings.packMesh ? (byte)1 : (byte)0;
             mrParameters.subdivideParts = settings.subdivideParts;
-            mrParameters.decimateBetweenParts = settings.decimateBetweenParts;
+            mrParameters.decimateBetweenParts = settings.decimateBetweenParts ? (byte)1 : (byte)0;            
             mrParameters.progressCallback = IntPtr.Zero;
             mrParameters.minFacesInPart = settings.minFacesInPart;
 

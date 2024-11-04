@@ -65,7 +65,7 @@ namespace MR.DotNet
             public float voxelSize = 0.0f;
             public IntPtr callBack = IntPtr.Zero;
             public SignDetectionMode signDetectionMode = SignDetectionMode.OpenVDB;
-            public bool memoryEfficient = false;
+            public byte memoryEfficient = 0;
             public MROffsetParameters() { }
         };
 
@@ -126,7 +126,7 @@ namespace MR.DotNet
 
             MROffsetParameters mrParameters = new MROffsetParameters();
             mrParameters.callBack = IntPtr.Zero;
-            mrParameters.memoryEfficient = parameters.memoryEfficient;
+            mrParameters.memoryEfficient = parameters.memoryEfficient ? (byte)1 : (byte)0;
             mrParameters.signDetectionMode = parameters.signDetectionMode;
             mrParameters.voxelSize = parameters.voxelSize;
 
@@ -148,7 +148,7 @@ namespace MR.DotNet
 
             MROffsetParameters mrParameters = new MROffsetParameters();
             mrParameters.callBack = IntPtr.Zero;
-            mrParameters.memoryEfficient = parameters.memoryEfficient;
+            mrParameters.memoryEfficient = parameters.memoryEfficient ? (byte)1 : (byte)0;
             mrParameters.signDetectionMode = parameters.signDetectionMode;
             mrParameters.voxelSize = parameters.voxelSize;
 
@@ -169,7 +169,7 @@ namespace MR.DotNet
 
             MROffsetParameters mrParameters = new MROffsetParameters();
             mrParameters.callBack = IntPtr.Zero;
-            mrParameters.memoryEfficient = parameters.memoryEfficient;
+            mrParameters.memoryEfficient = parameters.memoryEfficient ? (byte)1 : (byte)0;
             mrParameters.signDetectionMode = parameters.signDetectionMode;
             mrParameters.voxelSize = parameters.voxelSize;
 
@@ -191,7 +191,7 @@ namespace MR.DotNet
 
             MROffsetParameters mrParameters = new MROffsetParameters();
             mrParameters.callBack = IntPtr.Zero;
-            mrParameters.memoryEfficient = parameters.memoryEfficient;
+            mrParameters.memoryEfficient = parameters.memoryEfficient ? (byte)1 : (byte)0;
             mrParameters.signDetectionMode = parameters.signDetectionMode;
             mrParameters.voxelSize = parameters.voxelSize;
 
@@ -217,7 +217,7 @@ namespace MR.DotNet
 
             MROffsetParameters mrParameters = new MROffsetParameters();
             mrParameters.callBack = IntPtr.Zero;
-            mrParameters.memoryEfficient = parameters.memoryEfficient;
+            mrParameters.memoryEfficient = parameters.memoryEfficient ? (byte)1 : (byte)0;
             mrParameters.signDetectionMode = parameters.signDetectionMode;
             mrParameters.voxelSize = parameters.voxelSize;
 
@@ -244,7 +244,7 @@ namespace MR.DotNet
 
             MROffsetParameters mrParameters = new MROffsetParameters();
             mrParameters.callBack = IntPtr.Zero;
-            mrParameters.memoryEfficient = parameters.memoryEfficient;
+            mrParameters.memoryEfficient = parameters.memoryEfficient ? (byte)1 : (byte)0;
             mrParameters.signDetectionMode = parameters.signDetectionMode;
             mrParameters.voxelSize = parameters.voxelSize;
 
@@ -275,7 +275,7 @@ namespace MR.DotNet
 
             MROffsetParameters mrParameters = new MROffsetParameters();
             mrParameters.callBack = IntPtr.Zero;
-            mrParameters.memoryEfficient = parameters.memoryEfficient;
+            mrParameters.memoryEfficient = parameters.memoryEfficient ? (byte)1 : (byte)0;
             mrParameters.signDetectionMode = parameters.signDetectionMode;
             mrParameters.voxelSize = parameters.voxelSize;
 

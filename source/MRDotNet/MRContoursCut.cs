@@ -66,7 +66,8 @@ namespace MR.DotNet
         internal struct MROneMeshContour
         {
             public MRVectorOneMeshIntersection intersections;
-            public bool closed = false;
+            //size of bool in C is 1, so use byte
+            public byte closed = 0;
             public MROneMeshContour() { }
         };
 
@@ -108,9 +109,10 @@ namespace MR.DotNet
                 var mrOneMeshContour = mrOneMeshContoursGet(mrOneMeshContours, (ulong)i);
                 var oneMeshContour = new OneMeshContour
                 {
-                    intersections = new List<OneMeshIntersection>( (int)mrOneMeshContour.intersections.size ),
-                    closed = mrOneMeshContour.closed
+                    intersections = new List<OneMeshIntersection>((int)mrOneMeshContour.intersections.size),
+                    closed = mrOneMeshContour.closed > 0
                 };
+
                 for (int j = 0; j < (int)mrOneMeshContour.intersections.size; j++)
                 {
                     var mrOneMeshIntersectionData = mrOneMeshContour.intersections.data;

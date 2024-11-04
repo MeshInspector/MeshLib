@@ -87,7 +87,7 @@ namespace MR.DotNet
                 srcVertId = srcVertId,
                 tgtCloseVert = tgtCloseVert,
                 normalsAngleCos = normalsAngleCos,
-                tgtOnBd = tgtOnBd
+                tgtOnBd = tgtOnBd ? (byte)1 : (byte)0
             };
         }
     };
@@ -155,7 +155,7 @@ namespace MR.DotNet
                 iterLimit = iterLimit,
                 badIterStopCount = badIterStopCount,
                 exitVal = exitVal,
-                mutualClosest = mutualClosest
+                mutualClosest = mutualClosest ? (byte)1 : (byte)0
             };
         }
     };
@@ -181,7 +181,7 @@ namespace MR.DotNet
             public VertId srcVertId;
             public VertId tgtCloseVert;
             public float normalsAngleCos = 0.0f;
-            public bool tgtOnBd = false;
+            public byte tgtOnBd = 0;
 
             public MRPointPair() { }
         };
@@ -213,7 +213,7 @@ namespace MR.DotNet
             /// Algorithm target root-mean-square distance. As soon as it is reached, the algorithm stops.
             public float exitVal = 0.0f;
             /// a pair of points is formed only if both points in the pair are mutually closest (reciprocity test passed)
-            public bool mutualClosest = false;
+            public byte mutualClosest = 0;
             public MRICPProperties() { }
         };
 

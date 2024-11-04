@@ -263,7 +263,7 @@ Expected<Mesh> generalOffsetMesh( const MeshPart& mp, float offset, const Genera
 Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters& params )
 {
     MR_TIMER
-    auto res = offsetOpenMesh( mesh, offset, params );
+    auto res = offsetOneDirection( mesh, offset, params );
     if ( !res )
         return res;
 
@@ -276,8 +276,8 @@ Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetP
     }
     else
     {
-        if ( params.signDetectionMode != SignDetectionMode::Unsigned ) // in case of unsigned offset (bidirectional shell), resMesh already has opposite normals
-            resMesh.topology.flipOrientation();
+        // resMesh already has opposite normals
+        resMesh.topology.flipOrientation();
         // add original mesh to the result without flipping
         resMesh.addPart( mesh );
     }
@@ -286,7 +286,7 @@ Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetP
     return res;
 }
 
-Expected<Mesh> offsetOpenMesh( const MeshPart& mp, float offset, const GeneralOffsetParameters& params /*= {} */ )
+Expected<Mesh> offsetOneDirection( const MeshPart& mp, float offset, const GeneralOffsetParameters& params /*= {} */ )
 {
     MR_TIMER
     const bool unsignedOffset = params.signDetectionMode == SignDetectionMode::Unsigned;
@@ -326,6 +326,9 @@ Expected<Mesh> offsetOpenMesh( const MeshPart& mp, float offset, const GeneralOf
             } );
         resMesh.topology.deleteFaces( resMesh.topology.getValidFaces() - innerFaces );
         resMesh.pack();
+
+        if ( offset < 0 )
+            resMesh.topology.flipOrientation();
     }
 
     return resMesh;

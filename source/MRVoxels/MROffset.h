@@ -108,12 +108,11 @@ struct GeneralOffsetParameters : SharpOffsetParameters
 /// if your input mesh is closed then please specify another sign detection mode, and you will get closed mesh (with several components) on output;
 [[nodiscard]] MRVOXELS_API Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters & params = {} );
 
-/// in case of positive offset, returns the mesh consisting of offset mesh
-/// in case of negative offset, returns the mesh consisting of inversed offset mesh
+/// offsets given MeshPart in one direction only (positive or negative)
 /// if your input mesh is open then please specify params.signDetectionMode = SignDetectionMode::Unsigned
-/// if your input mesh is closed this function is equivalent to `generalOffsetMesh`
+/// if your input mesh is closed this function is equivalent to `generalOffsetMesh`, but in SignDetectionMode::Unsigned mode it will only keep one side (just like for open mesh)
 /// unlike `thickenMesh` this functions does not keep original mesh in result
-[[nodiscard]] MRVOXELS_API Expected<Mesh> offsetOpenMesh( const MeshPart& mp, float offset, const GeneralOffsetParameters& params = {} );
+[[nodiscard]] MRVOXELS_API Expected<Mesh> offsetOneDirection( const MeshPart& mp, float offset, const GeneralOffsetParameters& params = {} );
 
 /// Offsets polyline by converting it to voxels and building iso-surface
 /// do offset in all directions

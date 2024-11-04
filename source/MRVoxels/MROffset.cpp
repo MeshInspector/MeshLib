@@ -276,13 +276,10 @@ Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetP
     }
     else
     {
-        // resMesh already has opposite normals
-        resMesh.topology.flipOrientation();
+        resMesh.topology.flipOrientation(); // flip to have inversed offset
         // add original mesh to the result without flipping
         resMesh.addPart( mesh );
     }
-
-    resMesh.invalidateCaches();
     return res;
 }
 

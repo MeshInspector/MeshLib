@@ -347,9 +347,11 @@ jobs:
             # On 12.0 x86 `brew` doesn't have binary packages for Clang.
             plat-name: macosx_13_0_x86_64
             instance: macos-13
+            brewpath: /usr/local
           - platform: "arm64"
             plat-name: macosx_12_0_arm64
             instance: macos-arm-build
+            brewpath: /opt/homebrew
           - py-version: "3.8"
             py-tag: "cp38"
             py-cmd: "python3.8"
@@ -422,8 +424,7 @@ jobs:
 
       - name: Generate and build MRBind bindings
         env:
-          # Add updated Make from homebrew to PATH. Arm Macs use `/opt/homebrew`, while x86 Macs use `/usr/local`. Add both for simplicity.
-          PATH: /opt/homebrew/opt/make/libexec/gnubin:/usr/local/opt/make/libexec/gnubin:${{env.PATH}}
+          PATH: $${matrix.brewpath}/opt/make/libexec/gnubin:$${matrix.brewpath}/opt/grep/libexec/gnubin:$${env.PATH}
         # `MACOS_MIN_VER` picked arbitrarily to match what Apple Clang uses when building MeshLib.
         # Not setting this or setting a different value cases a warning when linking the bindings, and you can get the correct (?) value from those warnings.
         run: |

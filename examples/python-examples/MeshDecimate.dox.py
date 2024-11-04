@@ -18,9 +18,9 @@ settings = mrmeshpy.DecimateSettings()
 settings.maxDeletedFaces = 1000 # Number of faces to be deleted
 settings.maxError = 0.05 # Maximum error when decimation stops
 
-# Number of parts to simultaneous processing, greatly improves performance by cost of minor quality loss
-# Recommended to set to number of CPU cores available for the best performance
-settings.subdivideParts = 8
+# Number of parts to simultaneous processing, greatly improves performance by cost of minor quality loss.
+# Recommended to set to number of CPU cores or more available for the best performance
+settings.subdivideParts = 64
 
 # Decimate mesh
 mrmeshpy.decimateMesh(mesh, settings)

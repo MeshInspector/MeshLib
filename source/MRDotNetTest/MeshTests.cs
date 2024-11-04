@@ -191,28 +191,62 @@ namespace MR.DotNet.Test
                 var loadedObjs = MeshLoad.FromSceneObjFile(tempFile, false, settings);
                 Assert.That(loadedObjs.Count == 2);
 
-                Assert.That(loadedObjs[0].mesh.Points.Count == 8);
-                Assert.That(loadedObjs[0].name == "Cube");
-                Assert.That(loadedObjs[0].xf.B.X == 0.0f);
+                var loadedMesh = loadedObjs[0].mesh;
+                var loadedXf = loadedObjs[0].xf;
+                Assert.That(loadedMesh is not null);
+                Assert.That(loadedXf is not null);
+                if ( loadedMesh is null || loadedXf is null)
+                    return;
 
-                Assert.That(loadedObjs[1].mesh.Points.Count == 100);
+                Assert.That(loadedMesh.Points.Count == 8);
+                Assert.That(loadedObjs[0].name == "Cube");
+                Assert.That(loadedXf.B.X == 0.0f);
+
+                loadedMesh = loadedObjs[1].mesh;
+                loadedXf = loadedObjs[1].xf;
+                Assert.That(loadedMesh is not null);
+                Assert.That(loadedXf is not null);
+                if (loadedMesh is null || loadedXf is null)
+                    return;
+
+                Assert.That(loadedMesh.Points.Count == 100);
                 Assert.That(loadedObjs[1].name == "Sphere");
-                Assert.That(loadedObjs[1].xf.B.X == 0.0f);
+                Assert.That(loadedXf.B.X == 0.0f);
 
                 settings.customXf = true;
                 loadedObjs = MeshLoad.FromSceneObjFile(tempFile, false, settings);
                 Assert.That(loadedObjs.Count == 2);
 
-                Assert.That(loadedObjs[0].mesh.Points.Count == 8);
+                loadedMesh = loadedObjs[0].mesh;
+                loadedXf = loadedObjs[0].xf;
+                Assert.That(loadedMesh is not null);
+                Assert.That(loadedXf is not null);
+                if (loadedMesh is null || loadedXf is null)
+                    return;
+
+                Assert.That(loadedMesh.Points.Count == 8);
                 Assert.That(loadedObjs[0].name == "Cube");
-                Assert.That(loadedObjs[0].xf.B.X == 1.0f);
+                Assert.That(loadedXf.B.X == 1.0f);
 
-                Assert.That(loadedObjs[1].mesh.Points.Count == 100);
+                loadedMesh = loadedObjs[1].mesh;
+                loadedXf = loadedObjs[1].xf;
+                Assert.That(loadedMesh is not null);
+                Assert.That(loadedXf is not null);
+                if (loadedMesh is null || loadedXf is null)
+                    return;
+
+                Assert.That(loadedMesh.Points.Count == 100);
                 Assert.That(loadedObjs[1].name == "Sphere");
-                Assert.That(loadedObjs[1].xf.B.X == -2.0f);
+                Assert.That(loadedXf.B.X == -2.0f);
 
-                loadedObjs[0].mesh.Dispose();
-                loadedObjs[1].mesh.Dispose();
+                loadedMesh = loadedObjs[0].mesh;
+                if (loadedMesh is not null) 
+                    loadedMesh.Dispose();
+
+                loadedMesh = loadedObjs[1].mesh;
+                if (loadedMesh is not null)
+                    loadedMesh.Dispose();
+
                 File.Delete(tempFile);
             });
         }

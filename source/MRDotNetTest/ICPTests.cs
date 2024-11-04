@@ -56,7 +56,15 @@ namespace MR.DotNet.Test
             MeshOrPointsXf flt = new MeshOrPointsXf(torusMove, xf );
             MeshOrPointsXf refer = new MeshOrPointsXf( torusRef, new AffineXf3f());
 
-            var icp = new ICP(flt, refer, torusMove.ValidPoints as BitSet, torusRef.ValidPoints as BitSet);
+            var fltSamples = torusMove.ValidPoints as BitSet;
+            var referSamples = torusRef.ValidPoints as BitSet;
+            Assert.That(fltSamples is not null);
+            Assert.That(referSamples is not null);
+
+            if (fltSamples is null || referSamples is null)
+                return;
+
+            var icp = new ICP(flt, refer, fltSamples, referSamples);
 
             var newXf = icp.CalculateTransformation();
             Console.WriteLine(icp.GetStatusInfo());

@@ -21,7 +21,7 @@ namespace MR.DotNet.Test
             parameters.maxTriangleAspectRatio = 80;
 
             var decimateResult = MeshDecimate.Decimate(sphere, parameters);
-            Assert.That(parameters.region != savedRegion );
+            Assert.That(parameters.region is not null && parameters.region != savedRegion );
             Assert.That(decimateResult.facesDeleted > 0);
             Assert.That(decimateResult.vertsDeleted > 0);
         }

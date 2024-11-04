@@ -59,20 +59,31 @@ namespace MR.DotNet.Test
             parameters.mapper = new BooleanResultMapper();
             var booleanResult = MeshBoolean.Boolean(meshA, meshB, BooleanOperation.Union, parameters );
             var validPointsA = meshA.ValidPoints as BitSet;
-            var aSize = validPointsA.Size();
             var validPointsB = meshB.ValidPoints as BitSet;
-            var bSize = validPointsB.Size();
+            var validFacesA = meshA.ValidFaces as BitSet;
+            var validFacesB = meshB.ValidFaces as BitSet;
+
+            Assert.That(validPointsA is not null);
+            Assert.That(validPointsB is not null);
+            Assert.That(validFacesA is not null);
+            Assert.That(validFacesB is not null);
+
+            if (validPointsA is null || validPointsB is null || validFacesA is null || validFacesB is null)
+                return;
+
             var old2NewVerts = parameters.mapper.GetMaps(MapObject.A).Old2NewVerts;
             var vMapA = parameters.mapper.VertMap(validPointsA, MapObject.A);
             var vMapB = parameters.mapper.VertMap(validPointsB, MapObject.B);
-            
+
             Assert.That(vMapA.Size(), Is.EqualTo(60) );
             Assert.That(vMapA.Count(), Is.EqualTo(60));
             Assert.That(vMapB.Size(), Is.EqualTo(204) );
             Assert.That(vMapB.Count(), Is.EqualTo(48));
 
-            var fMapA = parameters.mapper.FaceMap(meshA.ValidFaces as BitSet, MapObject.A);
-            var fMapB = parameters.mapper.FaceMap(meshB.ValidFaces as BitSet, MapObject.B);
+
+            var fMapA = parameters.mapper.FaceMap(validFacesA, MapObject.A);
+            var fMapB = parameters.mapper.FaceMap(validFacesB, MapObject.B);
+
             Assert.That(fMapA.Size(), Is.EqualTo(224) );
             Assert.That(fMapA.Count(), Is.EqualTo(224));
             Assert.That(fMapB.Size(), Is.EqualTo(416) );

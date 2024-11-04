@@ -234,12 +234,13 @@ namespace MR.DotNet
             if (maps_ is null)
                 maps_ = new BooleanMaps?[2];
 
-            if (maps_[(int)obj] is null)
+            var res = maps_[(int)obj];
+            if (res is null)
             {
-                maps_[(int)obj] = new BooleanMaps(mrBooleanResultMapperGetMaps(mapper_, obj));
+                res = maps_[(int)obj] = new BooleanMaps(mrBooleanResultMapperGetMaps(mapper_, obj));
             }
 
-            return maps_[(int)obj];
+            return res;
         }
         /// returns updated oldBS leaving only faces that has corresponding ones in result mesh
         public BitSet FilteredOldFaceBitSet( BitSet oldBS, MapObject obj)

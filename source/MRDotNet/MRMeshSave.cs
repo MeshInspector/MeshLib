@@ -65,7 +65,9 @@ namespace MR.DotNet
                     MRMeshSaveNamedXfMesh mrMesh = new MRMeshSaveNamedXfMesh();
                     mrMesh.name = meshes[i].name;
                     mrMesh.toWorld = meshes[i].toWorld.xf_;
-                    mrMesh.mesh = meshes[i].mesh.mesh_;
+                    var mesh = meshes[i].mesh;
+                    if ( mesh != null )
+                        mrMesh.mesh = mesh.mesh_;
 
                     Marshal.StructureToPtr(mrMesh, IntPtr.Add(nativeMeshes, i * sizeOfNamedXfMesh), false);
                 }

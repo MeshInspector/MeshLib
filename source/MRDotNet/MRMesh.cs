@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using System.Threading;
 using static MR.DotNet.Vector3f;
 
 namespace MR.DotNet
@@ -169,11 +170,13 @@ namespace MR.DotNet
             this.obj = obj;
             this.xf = xf;
 
-            if ( obj is Mesh )
-                mrMeshOrPointsXf_ = mrMeshOrPointsXfFromMesh((obj as Mesh).mesh_, ref xf.xf_);
+            var mesh = obj as Mesh;
+            if ( mesh != null) 
+                mrMeshOrPointsXf_ = mrMeshOrPointsXfFromMesh(mesh.mesh_, ref xf.xf_);
 
-            if ( obj is PointCloud )
-                mrMeshOrPointsXf_ = mrMeshOrPointsXfFromPointCloud((obj as PointCloud).pc_, ref xf.xf_);
+            var pc = obj as PointCloud;
+            if ( pc != null )
+                mrMeshOrPointsXf_ = mrMeshOrPointsXfFromPointCloud(pc.pc_, ref xf.xf_);
         }
 
         ~MeshOrPointsXf()

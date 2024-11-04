@@ -134,21 +134,21 @@ jobs:
           $directoryPath = "./source/TempOutput/"
           if (Test-Path -Path $directoryPath) { Remove-Item -Path $directoryPath -Recurse -Force }
         
-      - name: Download NuGet Executable
-        if:   matrix.runner == 'windows-2022'
-        run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe
-        
       - name: Download .NET Framework
         if:   matrix.runner == 'windows-2022'
         run:  curl https://go.microsoft.com/fwlink/?linkid=863265 -o net472.exe
 
       - name: Install .NET
         if:   matrix.runner == 'windows-2022'
-        run: net472.exe /quiet /norestart
+        run: .\net472.exe /quiet /norestart
+        
+      - name: Download NuGet Executable
+        if:   matrix.runner == 'windows-2022'
+        run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe
 
       - name: Restore Dependencies
         if:   matrix.runner == 'windows-2022'
-        run: nuget.exe restore source/MeshLibDotNet.sln
+        run: .\nuget.exe restore source/MeshLibDotNet.sln
 
       - name: Build
         run: msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}

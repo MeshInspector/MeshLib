@@ -94,7 +94,7 @@ jobs:
       - name: Generate and build MRBind bindings
         if: ${{inputs.mrbind}}
         env:
-          PATH: $${matrix.brewpath}/opt/make/libexec/gnubin:$${matrix.brewpath}/opt/grep/libexec/gnubin:$${env.PATH}
+          PATH: ${{matrix.brewpath}}/opt/make/libexec/gnubin:${{matrix.brewpath}}/opt/grep/libexec/gnubin:${{env.PATH}}
         # Using 4 threads on github runners, because they have only 8G of RAM.
         run: |
           make --version

@@ -424,7 +424,7 @@ jobs:
 
       - name: Generate and build MRBind bindings
         env:
-          PATH: $${matrix.brewpath}/opt/make/libexec/gnubin:$${matrix.brewpath}/opt/grep/libexec/gnubin:$${env.PATH}
+          PATH: ${{matrix.brewpath}}/opt/make/libexec/gnubin:${{matrix.brewpath}}/opt/grep/libexec/gnubin:${{env.PATH}}
         # `MACOS_MIN_VER` picked arbitrarily to match what Apple Clang uses when building MeshLib.
         # Not setting this or setting a different value cases a warning when linking the bindings, and you can get the correct (?) value from those warnings.
         run: |

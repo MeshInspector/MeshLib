@@ -141,8 +141,8 @@ jobs:
       - name: Clean temp files
         if:   matrix.runner == 'windows-2022'
         run: |
-          rmdir ./source/x64/
-          rmdir ./source/TempOutput/
+          if exist ".\source\x64\" rmdir ./source/x64/
+          if exist ".\source\TempOutput\" rmdir ./source/TempOutput/
 
       - name: Build
         run: msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }}

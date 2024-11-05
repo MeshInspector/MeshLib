@@ -319,8 +319,7 @@ COMPILER_FLAGS += -D_DLL -D_MT
 COMPILER_FLAGS += -DNOMINMAX
 COMPILER_FLAGS += -D_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS
 ifeq ($(VS_MODE),Debug)
-# Here I believe `_DEBUG` is actually necessary, while `DEBUG` is just there to match MeshLib, and removing the latter probably wouldn't change anything.
-COMPILER_FLAGS += -Xclang --dependent-lib=msvcrtd -D_DEBUG -DDEBUG
+COMPILER_FLAGS += -Xclang --dependent-lib=msvcrtd -D_DEBUG
 # Override to match meshlib:
 COMPILER_FLAGS += -D_ITERATOR_DEBUG_LEVEL=0
 else # VS_MODE == Release

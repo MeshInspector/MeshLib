@@ -13,7 +13,7 @@
 int main()
 {
     // Load mesh
-    MR::Mesh mesh = *MR::MeshLoad::fromAnySupportedFormat("mesh.stl");
+    MR::Mesh mesh = *MR::MeshLoad::fromAnySupportedFormat( "mesh.stl" );
 
     // Repack mesh optimally.
     // It's not necessary but highly recommended to achieve the best performance in parallel processing
@@ -32,9 +32,9 @@ int main()
     settings.subdivideParts = 64;
 
     // Decimate mesh
-    MR::decimateMesh(mesh, settings);
+    MR::decimateMesh( mesh, settings );
 
     // Save result
-    MR::MeshSave::toAnySupportedFormat(mesh, "decimatedMesh.stl");
+    MR::MeshSave::toAnySupportedFormat( mesh, "decimatedMesh.stl" );
 }
 /// \endcode

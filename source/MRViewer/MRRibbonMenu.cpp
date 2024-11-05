@@ -131,9 +131,9 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     buttonDrawer_.setMenu( this );
     buttonDrawer_.setShortcutManager( getShortcutManager().get() );
     buttonDrawer_.setScaling( menu_scaling() );
-    buttonDrawer_.setOnPressAction( [&] ( std::shared_ptr<RibbonMenuItem> item, bool available )
+    buttonDrawer_.setOnPressAction( [&] ( std::shared_ptr<RibbonMenuItem> item, const std::string& req )
     {
-        itemPressed_( item, available );
+        itemPressed_( item, req );
     } );
     buttonDrawer_.setGetterRequirements( [&] ( std::shared_ptr<RibbonMenuItem> item )
     {
@@ -225,7 +225,7 @@ void RibbonMenu::updateItemStatus( const std::string& itemName )
         {
             // disable old blocking first
             if ( activeBlockingItem_.item && activeBlockingItem_.item != item )
-                itemPressed_( activeBlockingItem_.item, true );
+                itemPressed_( activeBlockingItem_.item );
             activeBlockingItem_ = { item,false };
         }
         else
@@ -850,10 +850,10 @@ void RibbonMenu::drawActiveList_()
         ImGui::EndPopup();
 
         if ( closeBlocking )
-            itemPressed_( activeBlockingItem_.item, true );
+            itemPressed_( activeBlockingItem_.item );
         for ( int i = 0; i < activeNonBlockingItems_.size(); ++i )
             if ( closeNonBlocking[i] )
-                itemPressed_( activeNonBlockingItems_[i].item, true );
+                itemPressed_( activeNonBlockingItems_[i].item );
     }
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
@@ -1367,8 +1367,9 @@ void RibbonMenu::drawItemsGroup_( const std::string& tabName, const std::string&
     ImGui::PopStyleVar( 2 );
 }
 
-void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool available )
+bool RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, const std::string& requiremetnsHint )
 {
+    bool available = requiremetnsHint.empty();
     bool wasActive = item->isActive();
     // take name before, because item can become invalid during `action`
     auto name = item->name();
@@ -1382,9 +1383,10 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
         if ( !closed )
         {
             blockingHighlightTimer_ = 2.0f;
-            return pushNotification( {
+            pushNotification( {
                 .text = "Unable to close this plugin",
                 .type = NotificationType::Warning } );
+            return false;
         }
 
         if ( !autoCloseBlockingPlugins_ )
@@ -1393,10 +1395,10 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
             spdlog::info( "Cannot activate item: \"{}\", Active: \"{}\"", name, blockingItemName );
             static bool alreadyShown = false;
             if ( alreadyShown )
-                return;
+                return false;
 
             alreadyShown = true;
-            return pushNotification( {
+            pushNotification( {
                 .onButtonClick = []
                 {
                     auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
@@ -1408,6 +1410,7 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
                 .buttonName = "Open Settings",
                 .text = "Unable to activate this tool because another blocking tool is already active.\nIt can be changed in the Settings.",
                 .type = NotificationType::Info } );
+            return false;
         }
         else
         {
@@ -1430,10 +1433,15 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
                 .text = "That tool was closed due to other tool start.\nIt can be changed in the Settings.",
                 .type = NotificationType::Info } );
             }
+            return true;
         }
     }
     if ( !wasActive && !available )
-        return;
+    {
+        if ( !requiremetnsHint.empty() )
+            showModal( requiremetnsHint, NotificationType::Info );
+        return false;
+    }
     ImGui::CloseCurrentPopup();
     int conflicts = getViewerInstance().mouseController().getMouseConflicts();
     bool stateChanged = item->action();
@@ -1444,7 +1452,7 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
 
     if ( !wasActive )
     {
-        onItemActivated_( item );
+        searcher_.pushRecentItem( item );
         if ( stateChanged && getViewerInstance().mouseController().getMouseConflicts() > conflicts )
         {
             pushNotification( {
@@ -1455,11 +1463,7 @@ void RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool
                 .lifeTimeSec = 3.0f } );
         }
     }
-}
-
-void RibbonMenu::onItemActivated_( const std::shared_ptr<RibbonMenuItem>& item )
-{
-    searcher_.pushRecentItem( item );
+    return true;
 }
 
 void RibbonMenu::changeTab_( int newTab )
@@ -1556,7 +1560,7 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
     // ImGui::Image( textId ) // with removed texture in deferred render calls
     if ( !statePlugin->dialogIsOpen() )
     {
-        itemPressed_( itemPtr.item, true );
+        itemPressed_( itemPtr.item );
         if ( !itemPtr.item )
             return; // do not proceed if we closed dialog in this call
     }
@@ -1579,7 +1583,7 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
     }
 
     if ( !statePlugin->dialogIsOpen() ) // still need to check here we ordered to close dialog in `drawDialog`
-        itemPressed_( itemPtr.item, true );
+        itemPressed_( itemPtr.item );
     else if ( prevFrameSelectedObjectsCache_ != SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() )
         statePlugin->updateSelection( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() );
 }
@@ -1999,7 +2003,7 @@ void RibbonMenu::addRibbonItemShortcut_( const std::string& itemName, const Shor
         auto caption = itemIt->second.caption.empty() ? itemIt->first : itemIt->second.caption;
         shortcutManager_->setShortcut( key, { category, caption,[item = itemIt->second.item, this]()
         {
-            itemPressed_( item, getRequirements_( item ).empty() );
+            itemPressed_( item, getRequirements_( item ) );
         } } );
     }
 #ifndef __EMSCRIPTEN__

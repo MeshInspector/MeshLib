@@ -2188,7 +2188,7 @@ float ImGuiMenu::drawTransform_()
 
             if ( xf != data.xf() && !xfHistUpdated_ )
             {
-                AppendHistory<ChangeXfAction>( "Change XF", selected[0] );
+                AppendHistory<ChangeXfAction>( "Manual Change Transform", selected[0] );
                 xfHistUpdated_ = true;
             }
             data.setXf( xf );

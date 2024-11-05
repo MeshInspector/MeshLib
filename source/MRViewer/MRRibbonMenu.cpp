@@ -1787,7 +1787,7 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
 
         if ( ImGui::Button( "\xef\x80\x8d", smallBtnSize ) ) // X(cross) icon for reset
         {
-            AppendHistory<ChangeXfAction>( "Reset XF", obj );
+            AppendHistory<ChangeXfAction>( "Reset Transform", obj );
             obj->setXf( AffineXf3f() );
         }
         if ( iconsFont )
@@ -1980,7 +1980,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::shared_ptr<Object>& selec
 
         if ( UI::button( "Reset", Vector2f( buttonSize, 0 ) ) )
         {
-            AppendHistory<ChangeXfAction>( "Reset XF", selected );
+            AppendHistory<ChangeXfAction>( "Reset Transform (context menu)", selected );
             selected->setXf( AffineXf3f() );
             ImGui::CloseCurrentPopup();
         }

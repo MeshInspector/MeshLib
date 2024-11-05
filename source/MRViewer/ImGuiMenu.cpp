@@ -1549,7 +1549,7 @@ void ImGuiMenu::drawFeaturePropertiesEditor_( const std::shared_ptr<Object>& obj
                 // Temporarily roll back the xf to write to the history.
                 auto newXf = object->xf();
                 object->setXf( editedFeatureObjectOldXf_ );
-                AppendHistory<ChangeXfAction>( object->name() + " change feature prop", object );
+                AppendHistory<ChangeXfAction>( "Change Feature Transform", object );
                 object->setXf( newXf );
             }
 

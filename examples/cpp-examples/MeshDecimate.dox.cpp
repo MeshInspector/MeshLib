@@ -28,7 +28,7 @@ int main()
     settings.maxError = 0.05f; // Maximum error when decimation stops
 
     // Number of parts to simultaneous processing, greatly improves performance by cost of minor quality loss.
-    // Recommended to set to number of CPU cores or more available for the best performance
+    // Recommended to set to the number of available CPU cores or more for the best performance
     settings.subdivideParts = 64;
 
     // Decimate mesh

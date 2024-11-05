@@ -167,10 +167,9 @@ protected:
     MRVIEWER_API virtual void drawItemsGroup_( const std::string& tabName, const std::string& groupName,
                                                DrawGroupConfig config );
     // ribbon menu item pressed
-    MRVIEWER_API virtual void itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, bool available );
-    // this function is called when ribbon item is activated
-    // this implementation only updates `searcher_`
-    MRVIEWER_API virtual void onItemActivated_( const std::shared_ptr<RibbonMenuItem>& item );
+    // requiremetnsHint - text that is showed if tool is unavailable (if empty then tool is available)
+    // returns true if item was actually activated or deactivated with press action
+    MRVIEWER_API virtual bool itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, const std::string& requiremetnsHint = {} );
 
     MRVIEWER_API virtual void drawActiveBlockingDialog_();
     MRVIEWER_API virtual void drawActiveNonBlockingDialogs_();

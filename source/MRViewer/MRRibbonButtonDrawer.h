@@ -91,7 +91,7 @@ public:
     MRVIEWER_API void setMonochrome( const std::optional<Color>& color );
 
     /// set reaction on press item button
-    void setOnPressAction( std::function<void( std::shared_ptr<RibbonMenuItem>, bool )> action ) { onPressAction_ = action; };
+    void setOnPressAction( std::function<void( std::shared_ptr<RibbonMenuItem>, const std::string& )> action ) { onPressAction_ = action; };
     /// set function to get requirements for activate item
     void setGetterRequirements( std::function<std::string( std::shared_ptr<RibbonMenuItem> )> getterRequirements ) { getRequirements_ = getterRequirements; };
 
@@ -107,7 +107,7 @@ private:
     // returns num of pushed colors
     int pushRibbonButtonColors_( bool enabled, bool active, bool forceHovered, DrawButtonParams::RootType rootType ) const;
 
-    std::function<void( std::shared_ptr<RibbonMenuItem>, bool )> onPressAction_ = []( std::shared_ptr<RibbonMenuItem>, bool ) {};
+    std::function<void( std::shared_ptr<RibbonMenuItem>, const std::string& )> onPressAction_ = []( std::shared_ptr<RibbonMenuItem>, const std::string& ) {};
     std::function<std::string( std::shared_ptr<RibbonMenuItem> )> getRequirements_ = []( std::shared_ptr<RibbonMenuItem> ) { return std::string(); };
     RibbonMenu* menu_ = nullptr;
     const ShortcutManager* shortcutManager_ = nullptr;

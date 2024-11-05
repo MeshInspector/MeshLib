@@ -71,21 +71,20 @@ endif
 FOR_WHEEL := 0
 override FOR_WHEEL := $(filter-out 0,$(FOR_WHEEL))
 
-# Set to 1 if MeshLib was built in debug mode. Ignore this on Windows.
-# If true, we're going to pass `-D_DEBUG -DDEBUG`, which seems to be necessary for mrviewerpy to find our bindings?
-# By default we're trying to guess this based on the CMake cache.
-MESHLIB_IS_DEBUG :=
-ifeq ($(IS_WINDOWS),)
-MESHLIB_IS_DEBUG := $(if $(filter Debug,$(shell cmake -L $(MESHLIB_SHLIB_DIR)/.. 2>/dev/null | grep -Po '(?<=CMAKE_BUILD_TYPE:STRING=).*')),1)
-$(info MeshLib built in debug mode? $(if $(filter-out 0,$(MESHLIB_IS_DEBUG)),YES,NO))
-endif
-override MESHLIB_IS_DEBUG := $(filter-out 0,$(MESHLIB_IS_DEBUG))
+# Set to 1 if MeshLib was built in debug mode. Ignore this on Windows. By default we're trying to guess this based on the CMake cache.
+# Currently this isn't needed for anything, hence commented out.
+# MESHLIB_IS_DEBUG :=
+# ifeq ($(IS_WINDOWS),)
+# MESHLIB_IS_DEBUG := $(if $(filter Debug,$(shell cmake -L $(MESHLIB_SHLIB_DIR)/.. 2>/dev/null | grep -Po '(?<=CMAKE_BUILD_TYPE:STRING=).*')),1)
+# $(info MeshLib built in debug mode? $(if $(filter-out 0,$(MESHLIB_IS_DEBUG)),YES,NO))
+# endif
+# override MESHLIB_IS_DEBUG := $(filter-out 0,$(MESHLIB_IS_DEBUG))
 
 
 # ---- Windows-only vars: [
 
 # For Windows, set this to Debug or Release. This controls which MeshLib build we'll be using.
-VS_MODE := $(if $(MESHLIB_IS_DEBUG),Debug,Release)
+VS_MODE := Release
 
 # Vcpkg installation directory. We try to auto-detect it.
 ifneq ($(IS_WINDOWS),)
@@ -320,6 +319,7 @@ COMPILER_FLAGS += -D_DLL -D_MT
 COMPILER_FLAGS += -DNOMINMAX
 COMPILER_FLAGS += -D_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS
 ifeq ($(VS_MODE),Debug)
+# Here I believe `_DEBUG` is actually necessary, while `DEBUG` is just there to match MeshLib, and removing the latter probably wouldn't change anything.
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrtd -D_DEBUG -DDEBUG
 # Override to match meshlib:
 COMPILER_FLAGS += -D_ITERATOR_DEBUG_LEVEL=0
@@ -331,9 +331,6 @@ COMPILER += -fvisibility=hidden
 COMPILER_FLAGS += -fPIC
 # Override Pybind ABI identifiers to force compatibility with `mrviewerpy` (which is compiled with some other compiler, but is also made to define those).
 COMPILER_FLAGS += -DPYBIND11_COMPILER_TYPE='"_meshlib"' -DPYBIND11_BUILD_ABI='"_meshlib"'
-ifneq ($(MESHLIB_IS_DEBUG),) # Pass some debug flags to match mrviewerpy.
-COMPILER_FLAGS += -D_DEBUG -DDEBUG
-endif
 # MacOS rpath is quirky: 1. Must use `-rpath,` instead of `-rpath=`. 2. Must specify the flag several times, apparently can't use
 #   `:` or `;` as a separators inside of one big flag. 3. As you've noticed, it uses `@loader_path` instead of `$ORIGIN`.
 rpath_origin := $(if $(IS_MACOS),@loader_path,$$ORIGIN)

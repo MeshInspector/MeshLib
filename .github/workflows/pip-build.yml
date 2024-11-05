@@ -306,7 +306,7 @@ jobs:
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         run: |
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64
-          call ./scripts/mrbind/generate_win.bat -B --trace PYTHON_PKGCONF_NAME= PYTHON_CFLAGS=-IC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/include PYTHON_LDFLAGS="-LC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/libs -l${{matrix.py-file}}"
+          call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1 PYTHON_PKGCONF_NAME= PYTHON_CFLAGS=-IC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/include PYTHON_LDFLAGS="-LC:/hostedtoolcache/windows/python/${{steps.setup-python.outputs.python-version}}/x64/libs -l${{matrix.py-file}}"
 
       - name: Run Test
         working-directory: source\x64\Release

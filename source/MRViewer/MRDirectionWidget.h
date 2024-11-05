@@ -21,7 +21,7 @@ public:
     {
     public:
         ChangeDirAction( DirectionWidget& widget ) :
-            ChangeXfAction( "Change Dir", static_pointer_cast<Object>( widget.directionObj_ ) ),
+            ChangeXfAction( "Change Direction", static_pointer_cast<Object>( widget.directionObj_ ) ),
             widget_{ widget },
             dir_{ widget.dir_ }
         {}

@@ -40,7 +40,7 @@ if not exist %MSYS2_DIR% (
 
     rem --- Build MRBind
     rmdir /S /Q build
-    call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -here -clang64 -c "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebugInfo && cmake --build build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+    call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -here -clang64 -c "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebugInfo && cmake --build build"
 )
 
 rem Restore the original directory.

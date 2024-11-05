@@ -13,7 +13,7 @@ del _init_patch
 ### ]
 
 
-# manually appended from scripts/wheel/init.py
+### wheel-only: [
 
 def _override_resources_dir():
     """
@@ -27,3 +27,5 @@ def _override_resources_dir():
 
 _override_resources_dir()
 del _override_resources_dir
+
+### ]

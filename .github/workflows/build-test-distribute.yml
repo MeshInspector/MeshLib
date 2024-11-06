@@ -270,6 +270,7 @@ jobs:
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib/dev
+    secrets: inherit
 
   update-artifacts:
     timeout-minutes: 15

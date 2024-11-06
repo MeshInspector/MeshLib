@@ -32,7 +32,7 @@ void saveSceneDialog( float scaling, const std::string& name, const std::string&
 
         const auto headerWidth = ImGui::CalcTextSize( label.c_str() ).x;
         ImGui::SetCursorPosX( ( windowSize.x - headerWidth ) * 0.5f );
-        ImGui::Text( label.c_str() );
+        ImGui::Text( "%s", label.c_str() );
 
         if ( headerFont )
             ImGui::PopFont();

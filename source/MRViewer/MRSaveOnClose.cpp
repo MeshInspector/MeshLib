@@ -17,6 +17,7 @@
 #include <MRMesh/MRVisualObject.h>
 #include "ImGuiHelpers.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRSaveDialog.h"
 #include <imgui_internal.h>
 #include <GLFW/glfw3.h>
 
@@ -65,94 +66,12 @@ void SaveOnClosePlugin::preDraw_()
             showCloseModal_ = false;
         }
     }
-    const ImVec2 windowSize{ MR::cModalWindowWidth * scaling, -1 };
-	ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * scaling, cModalWindowPaddingY * scaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * scaling, 3.0f * cDefaultItemSpacing * scaling } );
-    if ( ImGui::BeginModalNoAnimation( "Application close##modal", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
+    
+    MPSaveDialog::saveDialog( scaling, "Application close##modal", "Application close", [this] () 
     {
-        auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
-        if ( headerFont )
-            ImGui::PushFont( headerFont );
-
-        const auto headerWidth = ImGui::CalcTextSize( "Application Close" ).x;
-
-        ImGui::SetCursorPosX( ( windowSize.x - headerWidth ) * 0.5f );
-        ImGui::Text( "Application Close" );
-
-        if ( headerFont )
-            ImGui::PopFont();
-
-        // do not suggest saving empty scene
-        const bool showSave = !SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>().empty();
-        if ( showSave )
-        {
-            const char* text = "Save your changes?";
-            ImGui::SetCursorPosX( ( windowSize.x - ImGui::CalcTextSize( text ).x ) * 0.5f );
-            ImGui::Text( "%s", text );
-        }
-
-        const auto style = ImGui::GetStyle();
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * scaling } );
-
-        const float p = ImGui::GetStyle().ItemSpacing.x;
-        const Vector2f btnSize{ showSave ? ( ImGui::GetContentRegionAvail().x - p * 2 ) / 3.f : ( ImGui::GetContentRegionAvail().x - p ) / 2.f, 0 };
-
-        if ( showSave )
-        {
-            if ( UI::button( "Save", btnSize, ImGuiKey_Enter ) )
-            {
-                auto savePath = SceneRoot::getScenePath();
-                if ( savePath.empty() )
-                    savePath = saveFileDialog( { .filters = SceneSave::getFilters() } );
-
-                ImGui::CloseCurrentPopup();
-                if ( !savePath.empty() )
-                    ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [&shouldClose = shouldClose_, savePath, &root = SceneRoot::get()]()->std::function<void()>
-                    {
-                        auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
-
-                        return[&shouldClose = shouldClose, savePath, res]()
-                        {
-                            if ( res )
-                            {
-                                getViewerInstance().onSceneSaved( savePath );
-                                glfwSetWindowShouldClose( Viewer::instance()->window, true );
-                                shouldClose = true;
-                            }
-                            else
-                                showError( "Error saving scene: " + res.error() );
-                        };
-                    } );
-            }
-            UI::setTooltipIfHovered( "Save the current scene and close the application", scaling );
-            ImGui::SameLine( 0, p );
-        }
-
-        if ( UI::button( showSave ? "Don't Save" : "Close", btnSize, ImGuiKey_N ) )
-        {
-            glfwSetWindowShouldClose( Viewer::instance()->window, true );
-            shouldClose_ = true;
-            ImGui::CloseCurrentPopup();
-        }
-        UI::setTooltipIfHovered( "Close the application without saving", scaling );
-
-        ImGui::SameLine( 0, p );
-        if ( UI::button( "Cancel", btnSize, ImGuiKey_Escape ) )
-        {
-            ImGui::CloseCurrentPopup();
-        }
-        UI::setTooltipIfHovered( "Do not close the application", scaling );
-
-        if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
-            ImGui::CloseCurrentPopup();
-
-        ImGui::PopStyleVar();
-        ImGui::EndPopup();
-    }
-
-    ImGui::PopStyleVar( 2 );
-
+        glfwSetWindowShouldClose( Viewer::instance()->window, true );
+        shouldClose_ = true; 
+    });
 }
 
 void SaveOnClosePlugin::init( Viewer* _viewer )

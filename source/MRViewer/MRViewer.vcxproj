@@ -171,6 +171,7 @@
     <ClInclude Include="MRPointsShader.h" />
     <ClInclude Include="MRRibbonNotification.h" />
     <ClInclude Include="MRRibbonSceneObjectsListDrawer.h" />
+    <ClInclude Include="MRSaveDialog.h" />
     <ClInclude Include="MRSceneCache.h" />
     <ClInclude Include="MRSceneObjectsListDrawer.h" />
     <ClInclude Include="MRSelectCurvaturePreference.h" />

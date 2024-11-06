@@ -860,6 +860,9 @@
     <ClInclude Include="MRMakeSlot.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="MRSaveDialog.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\MeshLib\source\.editorconfig" />

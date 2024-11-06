@@ -5,6 +5,13 @@ on:
     types: [ published ]
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      output_folder:
+        required: false
+        type: string
+        default: "MeshLib"
+
 
 jobs:
   update-documentation:
@@ -35,7 +42,7 @@ jobs:
       - name: Run Doxygen
         working-directory: MeshInspector.github.io
         run: |
-          scripts/pre.sh
+          scripts/pre.sh ${{ inputs.full_config_build }}
           doxygen Doxyfile
           scripts/post.sh
 

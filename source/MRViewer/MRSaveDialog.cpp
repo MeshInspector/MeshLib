@@ -8,9 +8,11 @@
 #include "MRProgressBar.h"
 #include "MRShowModal.h"
 #include "MRViewer.h"
+#include "MRSceneCache.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRObjectSave.h"
+#include "MRMesh/MRVisualObject.h"
 
 namespace MR
 {

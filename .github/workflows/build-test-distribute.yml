@@ -146,7 +146,7 @@ jobs:
         run: py -3.10 scripts\make_install_folder_dotnet.py ${{needs.versioning-and-release-url.outputs.app_version}}
 
       - name: Distribute
-        run: py -3.10 scripts\zip_distribution.py install MeshLibDist.zip
+        run: py -3.10 scripts\zip_distribution.py install example_plugin MeshLibDist.zip
 
       - name: Distribute .NET
         run: py -3.10 scripts\zip_distribution.py install_dotnet MeshLibDotNetDist.zip

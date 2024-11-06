@@ -83,7 +83,8 @@ void saveChangesPopup( const char* str_id, const SaveChangesPopupSettings& setti
                     };
                 } );
             }
-            UI::setTooltipIfHovered( "Save current scene and then remove all objects", settings.scaling );
+            if( !settings.saveTooltip.empty() )
+                UI::setTooltipIfHovered( settings.saveTooltip.c_str(), settings.scaling );
             ImGui::SameLine();
         }
 
@@ -93,12 +94,14 @@ void saveChangesPopup( const char* str_id, const SaveChangesPopupSettings& setti
             if ( settings.onOk )
                 settings.onOk();
         }
-        UI::setTooltipIfHovered( "Remove all objects without saving and ability to restore them", settings.scaling );
+        if ( !settings.dontSaveTooltip.empty() )
+            UI::setTooltipIfHovered( settings.dontSaveTooltip.c_str(), settings.scaling );
         ImGui::SameLine();
         if ( UI::buttonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
             ImGui::CloseCurrentPopup();
 
-        UI::setTooltipIfHovered( "Do not remove any objects, return back", settings.scaling );
+        if ( !settings.canselTooltip.empty() )
+        UI::setTooltipIfHovered( settings.canselTooltip.c_str(), settings.scaling);
 
         if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
             ImGui::CloseCurrentPopup();

@@ -22,7 +22,7 @@ struct SaveChangesPopupSettings
 
     std::string saveTooltip = "Save current scene";
     std::string dontSaveTooltip = "Donh't save current scene";
-    std::string canselTooltip = "";
+    std::string cancelTooltip = "Cansel";
     // header that is used in dialog
     std::string header;
     // if not empty this function is called on "save" and "not save" options( if succeed )

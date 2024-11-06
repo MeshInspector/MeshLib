@@ -72,7 +72,7 @@ void SaveOnClosePlugin::preDraw_()
     settings.header = "Application Close";
     settings.saveTooltip = "Save the current scene and close the application";
     settings.dontSaveTooltip = "Close the application without saving";
-    settings.canselTooltip = "Do not close the application";
+    settings.cancelTooltip = "Do not close the application";
     settings.onOk = [this] ()
     {
         glfwSetWindowShouldClose( Viewer::instance()->window, true );

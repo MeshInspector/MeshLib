@@ -100,11 +100,11 @@ void ResetSceneMenuItem::preDraw_()
 
     UI::SaveChangesPopupSettings settings;
     settings.scaling = scaling;
-    settings.header = "New scene";
+    settings.header = "New Scene";
     settings.shortCloseText = "New";
     settings.saveTooltip = "Save current scene and then remove all objects";
     settings.dontSaveTooltip = "Remove all objects without saving and ability to restore them";
-    settings.canselTooltip = "Do not remove any objects, return back";
+    settings.cancelTooltip = "Do not remove any objects, return back";
     settings.onOk =  [this] () { resetScene_(); };
     UI::saveChangesPopup( "New scene##new scene", settings );
 }

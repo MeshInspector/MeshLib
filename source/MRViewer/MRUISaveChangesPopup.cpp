@@ -100,8 +100,8 @@ void saveChangesPopup( const char* str_id, const SaveChangesPopupSettings& setti
         if ( UI::buttonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
             ImGui::CloseCurrentPopup();
 
-        if ( !settings.canselTooltip.empty() )
-        UI::setTooltipIfHovered( settings.canselTooltip.c_str(), settings.scaling);
+        if ( !settings.cancelTooltip.empty() )
+        UI::setTooltipIfHovered( settings.cancelTooltip.c_str(), settings.scaling);
 
         if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
             ImGui::CloseCurrentPopup();

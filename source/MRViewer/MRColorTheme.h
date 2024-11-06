@@ -170,7 +170,7 @@ public:
     MRVIEWER_API static void resetImGuiStyle();
 
     /// Connects given slot to receive signal on every Color Theme change, triggered in apply
-    MRVIEWER_API boost::signals2::connection onChanged( const boost::function<void()> & slot, boost::signals2::connect_position position = boost::signals2::at_back );
+    MRVIEWER_API static boost::signals2::connection onChanged( std::function<void()> slot, boost::signals2::connect_position position = boost::signals2::at_back );
 
 private:
     ColorTheme() = default;

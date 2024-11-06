@@ -508,9 +508,9 @@ std::vector<std::string> ColorTheme::foundUserThemes()
     return instance.foundUserThemes_;
 }
 
-boost::signals2::connection ColorTheme::onChanged( const boost::function<void()> & slot, boost::signals2::connect_position position )
+boost::signals2::connection ColorTheme::onChanged( std::function<void()> slot, boost::signals2::connect_position position )
 {
-    return changedSignal_.connect( slot, position );
+    return ColorTheme::instance().changedSignal_.connect( slot, position );
 }
 
 } //namespace MR

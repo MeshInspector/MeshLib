@@ -1739,7 +1739,7 @@ bool ImGuiMenu::drawRemoveButton( const std::vector<std::shared_ptr<Object>>& se
         someChanges |= true;
         if ( allowRemoval_ )
         {
-            SCOPED_HISTORY( "Remove objects" );
+            SCOPED_HISTORY( "Remove Objects (context)" );
             for ( int i = ( int )selectedObjs.size() - 1; i >= 0; --i )
                 if ( selectedObjs[i] )
                 {

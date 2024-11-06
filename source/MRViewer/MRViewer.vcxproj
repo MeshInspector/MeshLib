@@ -42,7 +42,7 @@
     <ClCompile Include="MRRenderDefaultObjects.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
     <ClCompile Include="MRRibbonSceneObjectsListDrawer.cpp" />
-    <ClCompile Include="MRSaveDialog.cpp" />
+    <ClCompile Include="MRUISaveChangesPopup.cpp" />
     <ClCompile Include="MRSceneCache.cpp" />
     <ClCompile Include="MRSceneObjectsListDrawer.cpp" />
     <ClCompile Include="MRSelectCurvaturePreference.cpp" />
@@ -172,7 +172,7 @@
     <ClInclude Include="MRPointsShader.h" />
     <ClInclude Include="MRRibbonNotification.h" />
     <ClInclude Include="MRRibbonSceneObjectsListDrawer.h" />
-    <ClInclude Include="MRSaveDialog.h" />
+    <ClInclude Include="MRUISaveChangesPopup.h" />
     <ClInclude Include="MRSceneCache.h" />
     <ClInclude Include="MRSceneObjectsListDrawer.h" />
     <ClInclude Include="MRSelectCurvaturePreference.h" />

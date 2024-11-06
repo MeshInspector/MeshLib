@@ -17,7 +17,7 @@
 #include <MRMesh/MRVisualObject.h>
 #include "ImGuiHelpers.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRSaveDialog.h"
+#include "MRUISaveChangesPopup.h"
 #include <imgui_internal.h>
 #include <GLFW/glfw3.h>
 
@@ -67,7 +67,7 @@ void SaveOnClosePlugin::preDraw_()
         }
     }
     
-    saveSceneDialog( scaling, "Application close##modal", "Application close", [this] ()
+    UI::saveChangesPopup( scaling, "Application close##modal", "Application close", [this] ()
     {
         glfwSetWindowShouldClose( Viewer::instance()->window, true );
         shouldClose_ = true; 

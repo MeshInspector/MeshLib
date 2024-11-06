@@ -21,7 +21,7 @@
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRViewer/MRUIStyle.h"
 #include "MRViewer/MRSceneCache.h"
-#include "MRViewer/MRSaveDialog.h"
+#include "MRViewer/MRUISaveChangesPopup.h"
 #include <array>
 
 namespace
@@ -98,7 +98,7 @@ void ResetSceneMenuItem::preDraw_()
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     popupId_ = ImGui::GetID( "New scene##new scene" );
 
-    saveSceneDialog( scaling, "New scene##new scene", "New scene", [this] () { resetScene_(); });
+    UI::saveChangesPopup( scaling, "New scene##new scene", "New scene", [this] () { resetScene_(); });
 }
 
 void ResetSceneMenuItem::resetScene_()

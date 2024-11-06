@@ -1,4 +1,4 @@
-#include "MRSaveDialog.h"
+#include "MRUISaveChangesPopup.h"
 
 #include "MRRibbonConstants.h"
 #include "MRUIStyle.h"
@@ -17,7 +17,10 @@
 namespace MR
 {
 
-void saveSceneDialog( float scaling, const std::string& name, const std::string& label, const std::function<void()>& customFunction )
+namespace UI
+{
+
+void saveChangesPopup( float scaling, const std::string& name, const std::string& label, const std::function<void()>& customFunction )
 {
     const ImVec2 windowSize{ cModalWindowWidth * scaling, -1 };
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
@@ -100,6 +103,8 @@ void saveSceneDialog( float scaling, const std::string& name, const std::string&
         ImGui::EndPopup();
     }
     ImGui::PopStyleVar( 2 );
+}
+
 }
 
 }

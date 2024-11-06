@@ -42,6 +42,7 @@
     <ClCompile Include="MRRenderDefaultObjects.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
     <ClCompile Include="MRRibbonSceneObjectsListDrawer.cpp" />
+    <ClCompile Include="MRSaveDialog.cpp" />
     <ClCompile Include="MRSceneCache.cpp" />
     <ClCompile Include="MRSceneObjectsListDrawer.cpp" />
     <ClCompile Include="MRSelectCurvaturePreference.cpp" />

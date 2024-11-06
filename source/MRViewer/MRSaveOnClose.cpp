@@ -67,7 +67,7 @@ void SaveOnClosePlugin::preDraw_()
         }
     }
     
-    MPSaveDialog::saveDialog( scaling, "Application close##modal", "Application close", [this] () 
+    saveSceneDialog( scaling, "Application close##modal", "Application close", [this] ()
     {
         glfwSetWindowShouldClose( Viewer::instance()->window, true );
         shouldClose_ = true; 

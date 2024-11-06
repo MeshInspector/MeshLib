@@ -231,24 +231,17 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
         return false;
     }
 
-    SCOPED_HISTORY( "Drag and drop files" );
+    FileLoadOptions options{ .undoPrefix = "Drop " };
     if ( menu )
     {
         auto sceneBoxSize = menu->getSceneSize();
         auto mousePos = viewerRef.mouseController().getMousePos();
         auto headerHeight = viewerRef.framebufferSize.y - sceneBoxSize.y;
         if ( mousePos.x > sceneBoxSize.x || mousePos.y < headerHeight )
-        {
-            auto children = SceneRoot::get().children();
-            for ( auto child : children )
-            {
-                AppendHistory<ChangeSceneAction>( "Remove object", child, ChangeSceneAction::Type::RemoveObject );
-                child->detachFromParent();
-            }
-        }
+            options.forceReplaceScene = true;
     }
 
-    viewerRef.loadFiles( paths );
+    viewerRef.loadFiles( paths, options );
     return true;
 }
 

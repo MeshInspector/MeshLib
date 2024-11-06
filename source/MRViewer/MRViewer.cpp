@@ -1183,7 +1183,7 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
     return false;
 }
 
-bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, const LoadOptions & options )
+bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, const FileLoadOptions & options )
 {
     if ( filesList.empty() )
         return false;

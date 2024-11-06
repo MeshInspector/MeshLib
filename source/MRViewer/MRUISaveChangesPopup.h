@@ -11,22 +11,25 @@ namespace MR
 namespace UI
 {
 
-struct SettingsSaveChangesPopup
+struct SaveChangesPopupSettings
 {
     // menu scaling
     float scaling = 1.0f;
-    // the text for the button, if you need to exit the application
-    std::string out = "Sign out";
-    // text for button if need save scene
-    std::string dontSave = "Don't Save";
+    // text that is shown if we have nothing to save
+    std::string shortCloseText = "Close";
+    // text that is shown if we have changes but don't want to save them
+    std::string dontSaveText = "Don't Save";
+    // header that is used in dialog
+    std::string header;
+    // if not empty this function is called on "save" and "not save" options( if succeed )
+    std::function<void()> onOk = {};
 };
 // Shows ImGui popup that suggests user to save changes,
 // user need to call ImGui::OpenPopup( str_id ) to open this popup.
 // It has 3 options: save, don't save, cancel
 //     str_id - ImGui string id for the popup window
-//     header - header that is used in dialog
-//     onOk - if not empty this function is called on "save" and "not save" options (if succeed)
-MRVIEWER_API void saveChangesPopup( const char* str_id, const char* header, std::function<void()> onOk = {}, const SettingsSaveChangesPopup& settings = {} );
+//     settings - settings for diaog
+MRVIEWER_API void saveChangesPopup( const char* str_id, const SaveChangesPopupSettings& settings = {} );
 }
 
 }

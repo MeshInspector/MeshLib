@@ -98,9 +98,12 @@ void ResetSceneMenuItem::preDraw_()
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     popupId_ = ImGui::GetID( "New scene##new scene" );
 
-    UI::SettingsSaveChangesPopup settings;
+    UI::SaveChangesPopupSettings settings;
     settings.scaling = scaling;
-    UI::saveChangesPopup( "New scene##new scene", "New scene", [this] () { resetScene_(); }, settings );
+    settings.header = "New scene";
+    settings.shortCloseText = "Sign out";
+    settings.onOk =  [this] () { resetScene_(); };
+    UI::saveChangesPopup( "New scene##new scene", settings );
 }
 
 void ResetSceneMenuItem::resetScene_()

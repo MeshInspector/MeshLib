@@ -21,7 +21,7 @@ namespace MR
 namespace UI
 {
 
-void saveChangesPopup( const char* str_id, const char* header, std::function<void()> onOk, const SettingsSaveChangesPopup& settings )
+void saveChangesPopup( const char* str_id, const SaveChangesPopupSettings& settings )
 {
     const ImVec2 windowSize{ cModalWindowWidth * settings.scaling, -1 };
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
@@ -34,9 +34,9 @@ void saveChangesPopup( const char* str_id, const char* header, std::function<voi
         if ( headerFont )
             ImGui::PushFont( headerFont );
 
-        const auto headerWidth = ImGui::CalcTextSize( header ).x;
+        const auto headerWidth = ImGui::CalcTextSize( settings.header.c_str() ).x;
         ImGui::SetCursorPosX( ( windowSize.x - headerWidth ) * 0.5f );
-        ImGui::Text( "%s", header );
+        ImGui::Text( "%s", settings.header.c_str() );
 
         if ( headerFont )
             ImGui::PopFont();
@@ -66,7 +66,7 @@ void saveChangesPopup( const char* str_id, const char* header, std::function<voi
 
                 ImGui::CloseCurrentPopup();
                 if ( !savePath.empty() )
-                    ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [customFunction = onOk, savePath, &root = SceneRoot::get()] ()->std::function<void()>
+                    ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [customFunction = settings.onOk, savePath, &root = SceneRoot::get()] ()->std::function<void()>
                 {
                     auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
 
@@ -87,11 +87,11 @@ void saveChangesPopup( const char* str_id, const char* header, std::function<voi
             ImGui::SameLine();
         }
 
-        if ( UI::buttonCommonSize( showSave ? settings.dontSave.c_str() : settings.out.c_str(), btnSize, ImGuiKey_N) )
+        if ( UI::buttonCommonSize( showSave ? settings.dontSaveText.c_str() : settings.shortCloseText.c_str(), btnSize, ImGuiKey_N) )
         {
             ImGui::CloseCurrentPopup();
-            if ( onOk )
-                onOk();
+            if ( settings.onOk )
+                settings.onOk();
         }
         UI::setTooltipIfHovered( "Remove all objects without saving and ability to restore them", settings.scaling );
         ImGui::SameLine();

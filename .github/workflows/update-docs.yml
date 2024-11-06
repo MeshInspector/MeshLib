@@ -35,6 +35,7 @@ jobs:
           repository: 'MeshInspector/MeshInspector.github.io'
           path: 'MeshInspector.github.io/'
           token: ${{ secrets.MESHINSPECTOR_BOT_TOKEN }}
+          submodules: recursive
 
       - name: Install Doxygen
         run: apk add doxygen

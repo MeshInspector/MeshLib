@@ -21,18 +21,13 @@ namespace MR
 namespace UI
 {
 
-void saveChangesPopup( const char* str_id, const char* header, std::function<void()> onOk = {} )
+void saveChangesPopup( const char* str_id, const char* header, std::function<void()> onOk, const SettingsSaveChangesPopup& settings )
 {
-    auto menuInstance = getViewerInstance().getMenuPlugin();
-    if ( !menuInstance )
-        return;
-    const auto scaling = menuInstance->menu_scaling();
-
-    const ImVec2 windowSize{ cModalWindowWidth * scaling, -1 };
+    const ImVec2 windowSize{ cModalWindowWidth * settings.scaling, -1 };
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
 
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * scaling, 3.0f * cDefaultItemSpacing * scaling } );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * scaling, cModalWindowPaddingY * scaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * settings.scaling, 3.0f * cDefaultItemSpacing * settings.scaling } );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * settings.scaling, cModalWindowPaddingY * settings.scaling } );
     if ( ImGui::BeginModalNoAnimation( str_id, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
         auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
@@ -56,7 +51,7 @@ void saveChangesPopup( const char* str_id, const char* header, std::function<voi
         }
 
         const auto style = ImGui::GetStyle();
-        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * scaling } );
+        ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * settings.scaling } );
 
         const float p = ImGui::GetStyle().ItemSpacing.x;
         const Vector2f btnSize{ showSave ? ( ImGui::GetContentRegionAvail().x - p * 2 ) / 3.f : ( ImGui::GetContentRegionAvail().x - p ) / 2.f, 0 };
@@ -80,28 +75,30 @@ void saveChangesPopup( const char* str_id, const char* header, std::function<voi
                         if ( res )
                         {
                             getViewerInstance().onSceneSaved( savePath );
-                            customFunction();
+                            if ( customFunction )
+                                customFunction();
                         }
                         else
                             showError( "Error saving scene: " + res.error() );
                     };
                 } );
             }
-            UI::setTooltipIfHovered( "Save current scene and then remove all objects", scaling );
+            UI::setTooltipIfHovered( "Save current scene and then remove all objects", settings.scaling );
             ImGui::SameLine();
         }
 
-        if ( UI::buttonCommonSize( showSave ? "Don't Save" : "Sign out", btnSize, ImGuiKey_N ) )
+        if ( UI::buttonCommonSize( showSave ? settings.dontSave.c_str() : settings.out.c_str(), btnSize, ImGuiKey_N) )
         {
             ImGui::CloseCurrentPopup();
-            onOk();
+            if ( onOk )
+                onOk();
         }
-        UI::setTooltipIfHovered( "Remove all objects without saving and ability to restore them", scaling );
+        UI::setTooltipIfHovered( "Remove all objects without saving and ability to restore them", settings.scaling );
         ImGui::SameLine();
         if ( UI::buttonCommonSize( "Cancel", btnSize, ImGuiKey_Escape ) )
             ImGui::CloseCurrentPopup();
 
-        UI::setTooltipIfHovered( "Do not remove any objects, return back", scaling );
+        UI::setTooltipIfHovered( "Do not remove any objects, return back", settings.scaling );
 
         if ( ImGui::IsMouseClicked( 0 ) && !( ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered( ImGuiHoveredFlags_AnyWindow ) ) )
             ImGui::CloseCurrentPopup();

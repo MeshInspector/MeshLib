@@ -58,7 +58,7 @@ void SaveOnClosePlugin::preDraw_()
         }
         else if ( noModalWasPresent )
         {
-            ImGui::OpenPopup( "Application close##modal" );
+            ImGui::OpenPopup( "Application Close##modal" );
             showCloseModal_ = false;
         }
         else
@@ -66,12 +66,19 @@ void SaveOnClosePlugin::preDraw_()
             showCloseModal_ = false;
         }
     }
-    
-    UI::saveChangesPopup( "Application close##modal", "Application close", [this] ()
-    {
-        glfwSetWindowShouldClose( Viewer::instance()->window, true );
-        shouldClose_ = true; 
-    });
+
+    UI::SettingsSaveChangesPopup settings;
+    settings.out = "Close";
+    settings.scaling = scaling;
+    UI::saveChangesPopup( 
+        "Application Close##modal", 
+        "Application Close", 
+        [this] ()
+        {
+            glfwSetWindowShouldClose( Viewer::instance()->window, true );
+            shouldClose_ = true; 
+        },
+        settings );
 }
 
 void SaveOnClosePlugin::init( Viewer* _viewer )

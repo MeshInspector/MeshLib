@@ -8,6 +8,7 @@
 #include "MRProgressBar.h"
 #include "MRShowModal.h"
 #include "MRViewer.h"
+#include "ImGuiMenu.h"
 #include "MRSceneCache.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
@@ -20,22 +21,27 @@ namespace MR
 namespace UI
 {
 
-void saveChangesPopup( float scaling, const std::string& name, const std::string& label, const std::function<void()>& customFunction )
+void saveChangesPopup( const char* str_id, const char* header, std::function<void()> onOk = {} )
 {
+    auto menuInstance = getViewerInstance().getMenuPlugin();
+    if ( !menuInstance )
+        return;
+    const auto scaling = menuInstance->menu_scaling();
+
     const ImVec2 windowSize{ cModalWindowWidth * scaling, -1 };
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
 
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { 2.0f * cDefaultItemSpacing * scaling, 3.0f * cDefaultItemSpacing * scaling } );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, { cModalWindowPaddingX * scaling, cModalWindowPaddingY * scaling } );
-    if ( ImGui::BeginModalNoAnimation( name.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
+    if ( ImGui::BeginModalNoAnimation( str_id, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
         auto headerFont = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Headline );
         if ( headerFont )
             ImGui::PushFont( headerFont );
 
-        const auto headerWidth = ImGui::CalcTextSize( label.c_str() ).x;
+        const auto headerWidth = ImGui::CalcTextSize( header ).x;
         ImGui::SetCursorPosX( ( windowSize.x - headerWidth ) * 0.5f );
-        ImGui::Text( "%s", label.c_str() );
+        ImGui::Text( "%s", header );
 
         if ( headerFont )
             ImGui::PopFont();
@@ -65,16 +71,16 @@ void saveChangesPopup( float scaling, const std::string& name, const std::string
 
                 ImGui::CloseCurrentPopup();
                 if ( !savePath.empty() )
-                    ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [customFunction_ = customFunction, savePath, &root = SceneRoot::get()] ()->std::function<void()>
+                    ProgressBar::orderWithMainThreadPostProcessing( "Saving scene", [customFunction = onOk, savePath, &root = SceneRoot::get()] ()->std::function<void()>
                 {
                     auto res = ObjectSave::toAnySupportedSceneFormat( root, savePath, ProgressBar::callBackSetProgress );
 
-                    return[customFunction_ = customFunction_, savePath, res] ()
+                    return[customFunction = customFunction, savePath, res] ()
                     {
                         if ( res )
                         {
                             getViewerInstance().onSceneSaved( savePath );
-                            customFunction_();
+                            customFunction();
                         }
                         else
                             showError( "Error saving scene: " + res.error() );
@@ -88,7 +94,7 @@ void saveChangesPopup( float scaling, const std::string& name, const std::string
         if ( UI::buttonCommonSize( showSave ? "Don't Save" : "Sign out", btnSize, ImGuiKey_N ) )
         {
             ImGui::CloseCurrentPopup();
-            customFunction();
+            onOk();
         }
         UI::setTooltipIfHovered( "Remove all objects without saving and ability to restore them", scaling );
         ImGui::SameLine();

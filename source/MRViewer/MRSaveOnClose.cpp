@@ -67,7 +67,7 @@ void SaveOnClosePlugin::preDraw_()
         }
     }
     
-    UI::saveChangesPopup( scaling, "Application close##modal", "Application close", [this] ()
+    UI::saveChangesPopup( "Application close##modal", "Application close", [this] ()
     {
         glfwSetWindowShouldClose( Viewer::instance()->window, true );
         shouldClose_ = true; 

@@ -98,7 +98,7 @@ void ResetSceneMenuItem::preDraw_()
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     popupId_ = ImGui::GetID( "New scene##new scene" );
 
-    UI::saveChangesPopup( scaling, "New scene##new scene", "New scene", [this] () { resetScene_(); });
+    UI::saveChangesPopup( "New scene##new scene", "New scene", [this] () { resetScene_(); });
 }
 
 void ResetSceneMenuItem::resetScene_()

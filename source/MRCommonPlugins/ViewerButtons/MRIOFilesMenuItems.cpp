@@ -231,17 +231,17 @@ bool OpenFilesMenuItem::dragDrop_( const std::vector<std::filesystem::path>& pat
         return false;
     }
 
-    bool forceReplaceScene = false;
+    Viewer::LoadOptions options{ .undoPrefix = "Drop " };
     if ( menu )
     {
         auto sceneBoxSize = menu->getSceneSize();
         auto mousePos = viewerRef.mouseController().getMousePos();
         auto headerHeight = viewerRef.framebufferSize.y - sceneBoxSize.y;
         if ( mousePos.x > sceneBoxSize.x || mousePos.y < headerHeight )
-            forceReplaceScene = true;
+            options.forceReplaceScene = true;
     }
 
-    viewerRef.loadFiles( paths, "Drop ", forceReplaceScene );
+    viewerRef.loadFiles( paths, options );
     return true;
 }
 

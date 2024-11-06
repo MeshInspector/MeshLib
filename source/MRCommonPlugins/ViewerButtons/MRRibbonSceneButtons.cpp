@@ -203,7 +203,7 @@ bool RibbonSceneRemoveSelected::action()
             return false;
 
     const auto selected = getAllObjectsInTree( &SceneRoot::get(), ObjectSelectivityType::Selected );
-    SCOPED_HISTORY( "Remove objects" );
+    SCOPED_HISTORY( "Remove Objects" );
     for ( int i = (int) selected.size() - 1; i >= 0; --i )
         if ( selected[i] )
         {

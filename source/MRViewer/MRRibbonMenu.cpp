@@ -951,7 +951,7 @@ void RibbonMenu::pushNotification( const RibbonNotification& notification )
 void RibbonMenu::cloneTree( const std::vector<std::shared_ptr<Object>>& selectedObjects )
 {
     const std::regex pattern( R"(.* Clone(?:| \([0-9]+\))$)" );
-    SCOPED_HISTORY( "Clone objects" );
+    SCOPED_HISTORY( "Clone" );
     for ( const auto& obj : selectedObjects )
     {
         if ( !obj )

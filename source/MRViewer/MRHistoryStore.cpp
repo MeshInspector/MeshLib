@@ -27,6 +27,7 @@ void HistoryStore::appendAction( const std::shared_ptr<HistoryAction>& action )
         return;
     }
     spdlog::info( "History action append: \"{}\"", action->name() );
+    assert( !action->name().empty() );
 
     stack_.resize( firstRedoIndex_ + 1 );
     stack_[firstRedoIndex_] = action;

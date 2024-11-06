@@ -13,8 +13,11 @@ namespace UI
 
 struct SettingsSaveChangesPopup
 {
+    // menu scaling
     float scaling = 1.0f;
+    // the text for the button, if you need to exit the application
     std::string out = "Sign out";
+    // text for button if need save scene
     std::string dontSave = "Don't Save";
 };
 // Shows ImGui popup that suggests user to save changes,

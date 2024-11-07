@@ -16,6 +16,6 @@ set args=%*
 if not exist %MSYS2_DIR% (
     echo MSYS2 was NOT found at `%MSYS2_DIR%`. Run `install_deps_windows_msys2.bat` to build it.
 ) else (
-    echo Fount MSYS2 at `%MSYS2_DIR%`.
+    echo Found MSYS2 at `%MSYS2_DIR%`.
     call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -full-path -here -clang64 -c "time make -f '%~dp0generate.mk' %args:"=""% "
 )

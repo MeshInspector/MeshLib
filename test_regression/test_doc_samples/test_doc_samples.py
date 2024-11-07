@@ -10,7 +10,7 @@ from pytest_check import check
 
 import shutil
 
-SAMPLES_FOLDER = Path("..\\examples\\python-examples")
+SAMPLES_FOLDER = Path("../examples/python-examples")
 
 @pytest.mark.parametrize("doc_case",
          [
@@ -33,7 +33,7 @@ SAMPLES_FOLDER = Path("..\\examples\\python-examples")
              pytest.param({'sample': "Triangulation_v2.dox.py", 'input_meshes': [], 'output_meshes': []}, id="Triangulation_v2.dox.py"),
          ])
 @pytest.mark.smoke
-def test_conversion_from_mrmesh(tmp_path, doc_case):
+def test_python_doc_samples(tmp_path, doc_case):
     """
     Test copies python files from examples to tmp_path, and executes them.
     :param tmp_path: pytest fixture for temporary directory

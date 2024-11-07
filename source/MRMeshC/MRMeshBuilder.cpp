@@ -35,10 +35,10 @@ MRVertMap mrMeshBuilderVertMapNew( void )
 
 void mrMeshBuilderVertMapFree( MRVertMap* vertOldToNew )
 {
-    if ( !vertOldToNew )
-        return;
-
-    delete[] vertOldToNew->data;
-    vertOldToNew->data = nullptr;
-    vertOldToNew->size = 0;
+    if ( vertOldToNew->data != nullptr )
+    {
+        delete[] vertOldToNew->data;
+        vertOldToNew->data = nullptr;
+        vertOldToNew->size = 0;
+    }
 }

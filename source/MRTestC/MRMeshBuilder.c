@@ -13,12 +13,12 @@ void testUniteCloseVertices( void )
     params.numMeshVertices = 3000;
 
     MRMesh* mesh = mrMakeSphere( &params );
-    MRVertMap vertMap = mrMeshBuilderVertMapNew();
+    MRVertMap* vertMap = mrVertMapNew();
 
-    int unitedCount = mrMeshBuilderUniteCloseVertices( mesh, 0.1f, false, &vertMap );
+    int unitedCount = mrMeshBuilderUniteCloseVertices( mesh, 0.1f, false, vertMap );
     TEST_ASSERT( unitedCount == 2230 );
-    TEST_ASSERT( vertMap.data[1000].id == 42 );
+    TEST_ASSERT( vertMap->data[1000].id == 42 );
 
-    mrMeshBuilderVertMapFree( &vertMap );
+    mrVertMapFree( vertMap );
     mrMeshFree( mesh );
 }

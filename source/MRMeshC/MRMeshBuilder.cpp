@@ -23,22 +23,3 @@ int mrMeshBuilderUniteCloseVertices( MRMesh* mesh_, float closeDist, bool uniteO
     }
     return res;
 }
-
-MRVertMap mrMeshBuilderVertMapNew( void )
-{
-    MRVertMap res;
-    res.size = 0;
-    res.data = nullptr;
-    res.reserved1 = nullptr;
-    return res;
-}
-
-void mrMeshBuilderVertMapFree( MRVertMap* vertOldToNew )
-{
-    if ( vertOldToNew->data != nullptr )
-    {
-        delete[] vertOldToNew->data;
-        vertOldToNew->data = nullptr;
-        vertOldToNew->size = 0;
-    }
-}

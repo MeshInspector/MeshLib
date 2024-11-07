@@ -11,9 +11,4 @@ MR_EXTERN_C_BEGIN
 /// \return the number of vertices united, 0 means no change in the mesh
 MRMESHC_API int mrMeshBuilderUniteCloseVertices( MRMesh* mesh, float closeDist, bool uniteOnlyBd, MRVertMap* optionalVertOldToNew );
 
-/// creates new instance of mapping from old to new vertices
-MRMESHC_API MRVertMap mrMeshBuilderVertMapNew( void );
-/// deletes the mapping
-MRMESHC_API void mrMeshBuilderVertMapFree( MRVertMap* vertOldToNew );
-
 MR_EXTERN_C_END

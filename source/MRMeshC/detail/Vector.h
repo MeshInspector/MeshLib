@@ -85,6 +85,10 @@ void MR_CONCAT( MR_CONCAT( mr, ClassName ), Invalidate )( MR_CONCAT( MR, ClassNa
 void MR_CONCAT( MR_CONCAT( mr, ClassName ), Free )( MR_CONCAT( MR, ClassName )* vec )        \
 {                                                                                            \
     delete reinterpret_cast<vector_wrapper<Type>*>( vec );                                   \
+}                                                                                            \
+MR_CONCAT( MR, ClassName )* MR_CONCAT( MR_CONCAT( mr, ClassName ), New )(void)               \
+{                                                                                            \
+    return reinterpret_cast<MR_CONCAT( MR, ClassName )*>( new vector_wrapper<Type>( std::vector<Type>() ) ); \
 }
 
 #define MR_VECTOR_IMPL( Type ) MR_VECTOR_LIKE_IMPL( MR_CONCAT( Vector, Type ), Type )

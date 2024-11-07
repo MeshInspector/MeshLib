@@ -11,12 +11,12 @@
 
 using namespace MR;
 
-namespace
-{
-
 REGISTER_AUTO_CAST( Mesh )
 REGISTER_AUTO_CAST( FaceBitSet )
 REGISTER_VECTOR( Face2RegionMap )
+
+namespace
+{
 
 MeshPart cast( MRMeshPart mp )
 {

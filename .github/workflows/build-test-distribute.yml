@@ -145,6 +145,9 @@ jobs:
       - name: Make Install Folder .NET
         run: py -3.10 scripts\make_install_folder_dotnet.py ${{needs.versioning-and-release-url.outputs.app_version}}
 
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
       - name: Test Example Plugin
         run: |
           msbuild -m example_plugin\example_plugin.sln -p:Configuration=Debug

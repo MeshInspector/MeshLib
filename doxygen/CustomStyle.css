@@ -2,10 +2,6 @@ div#nav-tree-contents > ul > li > div.item {
   display:none;
 }
 
-img[alt="Logo"] {
-  width: 64px;
-}
-
 div#nav-tree-contents > div#nav-sync {
   display:none;
 }

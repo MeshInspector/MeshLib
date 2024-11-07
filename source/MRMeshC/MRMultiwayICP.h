@@ -36,7 +36,7 @@ MRMESHC_API MRMultiwayICPSamplingParameters mrMultiwayIcpSamplingParametersNew( 
 /// Iterative Closest Points (ICP) point-to-point or point-to-plane algorithms
 typedef struct MRMultiwayICP MRMultiwayICP;
 
-MRMESHC_API MRMultiwayICP* mrMultiwayICPNew( const MRMeshOrPointsXf* objects, size_t objectsNum, const MRMultiwayICPSamplingParameters* samplingParams );
+MRMESHC_API MRMultiwayICP* mrMultiwayICPNew( const MRMeshOrPointsXf** objects, size_t objectsNum, const MRMultiwayICPSamplingParameters* samplingParams );
 
 /// runs ICP algorithm given input objects, transformations, and parameters;
 /// \return adjusted transformations of all objects to reach registered state

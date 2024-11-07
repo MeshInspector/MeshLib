@@ -42,6 +42,7 @@
     <ClCompile Include="MRRenderDefaultObjects.cpp" />
     <ClCompile Include="MRRibbonNotification.cpp" />
     <ClCompile Include="MRRibbonSceneObjectsListDrawer.cpp" />
+    <ClCompile Include="MRUISaveChangesPopup.cpp" />
     <ClCompile Include="MRSceneCache.cpp" />
     <ClCompile Include="MRSceneObjectsListDrawer.cpp" />
     <ClCompile Include="MRSelectCurvaturePreference.cpp" />
@@ -50,6 +51,7 @@
     <ClCompile Include="MRObjectPointsHistory.cpp" />
     <ClCompile Include="MRRibbonMenuSearch.cpp" />
     <ClCompile Include="MRSceneTextureGL.cpp" />
+    <ClCompile Include="MRShowModal.cpp" />
     <ClCompile Include="MRSurfaceContoursWidget.cpp" />
     <ClCompile Include="MRToolsLibrary.cpp" />
     <ClCompile Include="MRLinesShader.cpp" />
@@ -160,6 +162,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="MRMakeSlot.h" />
     <ClInclude Include="MRMarkedVoxelSlice.h" />
     <ClInclude Include="MRMeshBoundarySelectionWidget.h" />
     <ClInclude Include="MRFrameCounter.h" />
@@ -169,6 +172,7 @@
     <ClInclude Include="MRPointsShader.h" />
     <ClInclude Include="MRRibbonNotification.h" />
     <ClInclude Include="MRRibbonSceneObjectsListDrawer.h" />
+    <ClInclude Include="MRUISaveChangesPopup.h" />
     <ClInclude Include="MRSceneCache.h" />
     <ClInclude Include="MRSceneObjectsListDrawer.h" />
     <ClInclude Include="MRSelectCurvaturePreference.h" />
@@ -178,6 +182,7 @@
     <ClInclude Include="MRObjectPointsHistory.h" />
     <ClInclude Include="MRRibbonMenuSearch.h" />
     <ClInclude Include="MRSceneTextureGL.h" />
+    <ClInclude Include="MRShowModal.h" />
     <ClInclude Include="MRSpaceMouseParameters.h" />
     <ClInclude Include="MRSurfaceContoursWidget.h" />
     <ClInclude Include="MRToolsLibrary.h" />

@@ -20,19 +20,9 @@
 namespace MR
 {
 
-void SelectScreenLasso::addPoint( int mouseX, int mouseY )
+BitSet calculateSelectedPixelsInsidePolygon( const Contour2f & screenPoints )
 {
-    float mx = float( mouseX );
-    float my = float( mouseY );
-    if ( screenPoints_.empty() || screenPoints_.back().x != mx || screenPoints_.back().y != my )
-    {
-        screenPoints_.push_back( { mx, my } );
-    }
-}
-
-BitSet SelectScreenLasso::calculateSelectedPixelsInsidePolygon()
-{
-    if ( screenPoints_.empty() )
+    if ( screenPoints.empty() )
         return {};
 
     Viewer& viewer = getViewerInstance();
@@ -40,11 +30,11 @@ BitSet SelectScreenLasso::calculateSelectedPixelsInsidePolygon()
     const auto& vpRect = viewer.viewport().getViewportRect();
 
     // convert polygon
-    Contour2f contour( screenPoints_.size() + 1 );
+    Contour2f contour( screenPoints.size() + 1 );
     
     auto viewportId = viewer.viewport().id;
-    for ( int i = 0; i < screenPoints_.size(); i++ )
-        contour[i] = to2dim( viewer.screenToViewport( { screenPoints_[i].x, screenPoints_[i].y,0.f }, viewportId ) );
+    for ( int i = 0; i < screenPoints.size(); i++ )
+        contour[i] = to2dim( viewer.screenToViewport( { screenPoints[i].x, screenPoints[i].y, 0.f }, viewportId ) );
     contour.back() = contour.front();
 
     Polyline2 polygon( { std::move( contour ) } );
@@ -76,9 +66,9 @@ BitSet SelectScreenLasso::calculateSelectedPixelsInsidePolygon()
     return resBS;
 }
 
-BitSet SelectScreenLasso::calculateSelectedPixelsNearPolygon( float radiusPix )
+BitSet calculateSelectedPixelsNearPolygon( const Contour2f & screenPoints, float radiusPix )
 {
-    if ( screenPoints_.empty() )
+    if ( screenPoints.empty() )
         return {};
 
     Viewer& viewer = getViewerInstance();
@@ -86,11 +76,11 @@ BitSet SelectScreenLasso::calculateSelectedPixelsNearPolygon( float radiusPix )
     const auto& vpRect = viewer.viewport().getViewportRect();
 
     // convert polygon
-    Contour2f contour( screenPoints_.size() );
+    Contour2f contour( screenPoints.size() );
 
     auto viewportId = viewer.viewport().id;
-    for ( int i = 0; i < screenPoints_.size(); i++ )
-        contour[i] = to2dim( viewer.screenToViewport( { screenPoints_[i].x, screenPoints_[i].y,0.f }, viewportId ) );
+    for ( int i = 0; i < screenPoints.size(); i++ )
+        contour[i] = to2dim( viewer.screenToViewport( { screenPoints[i].x, screenPoints[i].y,0.f }, viewportId ) );
     if ( contour.size() == 1 )
         contour.emplace_back( contour.front() );
 

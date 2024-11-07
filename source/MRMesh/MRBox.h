@@ -48,7 +48,7 @@ public:
     template <typename U>
     explicit Box( const Box<U> & a ) : min{ a.min }, max{ a.max } { }
 
-    static Box fromMinAndSize( const V& min, const V& size ) { return Box{ min,min + size }; }
+    static Box fromMinAndSize( const V& min, const V& size ) { return Box{ min, V( min + size ) }; }
 
     /// true if the box contains at least one point
     bool valid() const
@@ -263,6 +263,23 @@ inline auto depth( const Box<V>& box )
     return box.max.z - box.min.z;
 }
 
+/// get<0> returns min, get<1> returns max
+template<size_t I, typename V>
+constexpr const V& get( const Box<V>& box ) noexcept { return box[int( I )]; }
+template<size_t I, typename V>
+constexpr       V& get(       Box<V>& box ) noexcept { return box[int( I )]; }
+
 /// \}
 
 } // namespace MR
+
+namespace std
+{
+
+template<size_t I, typename V>
+struct tuple_element<I, MR::Box<V>> { using type = V; };
+
+template <typename V> 
+struct tuple_size<MR::Box<V>> : integral_constant<size_t, 2> {};
+
+} //namespace std

@@ -1,31 +1,32 @@
 #include "MRViewerSettingsPlugin.h"
-#include "MRViewer/MRRibbonMenu.h"
-#include "MRViewer/ImGuiHelpers.h"
-#include "MRViewer/MRColorTheme.h"
-#include "MRViewer/ImGuiHelpers.h"
-#include "MRViewer/MRMouseController.h"
-#include "MRViewer/MRViewport.h"
+#include "MRRibbonMenu.h"
+#include "ImGuiHelpers.h"
+#include "MRColorTheme.h"
+#include "ImGuiHelpers.h"
+#include "MRMouseController.h"
+#include "MRViewport.h"
 #include "MRMesh/MRObjectsAccess.h"
-#include "MRViewer/MRCommandLoop.h"
-#include "MRViewer/MRViewerSettingsManager.h"
-#include "MRViewer/MRGLMacro.h"
-#include "MRViewer/MRGladGlfw.h"
-#include "MRViewer/MRRibbonConstants.h"
-#include "MRViewer/MRViewer.h"
-#include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRCommandLoop.h"
+#include "MRViewerSettingsManager.h"
+#include "MRGLMacro.h"
+#include "MRGladGlfw.h"
+#include "MRRibbonConstants.h"
+#include "MRViewer.h"
+#include "MRImGuiVectorOperators.h"
 #include "MRMesh/MRSystem.h"
-#include "MRViewer/MRSpaceMouseHandlerHidapi.h"
+#include "MRSpaceMouseHandlerHidapi.h"
 #include "MRMesh/MRLog.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRViewer/MRUIStyle.h"
+#include "MRUIStyle.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSceneSettings.h"
 #include "MRMesh/MRDirectory.h"
 #include <MRMesh/MRSceneRoot.h>
-#include <MRViewer/MRFileDialog.h>
+#include "MRFileDialog.h"
 #include "MRMesh/MRObjectMesh.h"
-#include "MRViewer/MRRibbonSceneObjectsListDrawer.h"
-#include "MRViewer/MRUnitSettings.h"
+#include "MRRibbonSceneObjectsListDrawer.h"
+#include "MRUnitSettings.h"
+#include "MRShowModal.h"
 
 namespace
 {
@@ -425,13 +426,14 @@ void ViewerSettingsPlugin::drawControlTab_( float menuWidth, float menuScaling )
 
 void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling )
 {
-    const auto& viewportParameters = viewer->viewport().getParameters();
+    auto& viewport = viewer->viewport();
+    const auto& viewportParameters = viewport.getParameters();
     const auto& style = ImGui::GetStyle();
 
     drawSeparator_( "Viewport", menuScaling );
 
     if ( viewer->viewport_list.size() > 1 )
-        ImGui::Text( "Current viewport: %d", viewer->viewport().id.value() );
+        ImGui::Text( "Current viewport: %d", viewport.id.value() );
 
     ImGui::SetNextItemWidth( 170.0f * menuScaling );
     auto rotMode = viewportParameters.rotationMode;
@@ -440,24 +442,49 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
 
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
     UI::combo( "Rotation Mode", ( int* )&rotMode, { "Scene Center", "Pick / Scene Center", "Pick" } );
-    viewer->viewport().rotationCenterMode( rotMode );
+    viewport.rotationCenterMode( rotMode );
     ImGui::PopStyleVar();
 
     ImGui::PushItemWidth( 80 * menuScaling );
 
-    bool showAxes = viewer->basisAxes->isVisible( viewer->viewport().id );
+    bool showAxes = viewer->basisAxes->isVisible( viewport.id );
     UI::checkbox( "Show Axes", &showAxes );
-    viewer->viewport().showAxes( showAxes );
+    viewport.showAxes( showAxes );
     ImGui::SameLine();
 
     ImGui::SetCursorPosX( 155.0f * menuScaling );
-    bool showGlobalBasis = viewer->globalBasisAxes->isVisible( viewer->viewport().id );
+    bool showGlobalBasis = viewer->globalBasisAxes->isVisible( viewport.id );
     UI::checkbox( "Show Global Basis", &showGlobalBasis );
-    viewer->viewport().showGlobalBasis( showGlobalBasis );
+    viewport.showGlobalBasis( showGlobalBasis );
 
-    bool showRotCenter = viewer->rotationSphere->isVisible( viewer->viewport().id );
+    ImGui::PushItemWidth( 170 * menuScaling );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
+    bool isAutoGlobalBasisSize = viewportParameters.globalBasisScaleMode == Viewport::Parameters::GlobalBasisScaleMode::Auto;
+    if ( isAutoGlobalBasisSize )
+    {
+        UI::readOnlyValue<LengthUnit>( "Global Basis Scale", viewportParameters.objectScale * 0.5f );
+    }
+    else
+    {
+        auto size = viewer->globalBasisAxes->xf( viewport.id ).A.x.x;
+        UI::drag<LengthUnit>( "Global Basis Scale", size, viewportParameters.objectScale * 0.01f, 1e-9f );
+        viewer->globalBasisAxes->setXf( AffineXf3f::linear( Matrix3f::scale( size ) ), viewport.id );
+    }
+    ImGui::PopStyleVar();
+    ImGui::SameLine();
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( cButtonPadding - cCheckboxPadding ) * menuScaling );
+    if ( UI::checkbox( "Auto", &isAutoGlobalBasisSize ) )
+    {
+        auto paramsCpy = viewportParameters;
+        paramsCpy.globalBasisScaleMode = isAutoGlobalBasisSize ?
+            Viewport::Parameters::GlobalBasisScaleMode::Auto :
+            Viewport::Parameters::GlobalBasisScaleMode::Fixed;
+        viewport.setParameters( paramsCpy );
+    }
+
+    bool showRotCenter = viewer->rotationSphere->isVisible( viewport.id );
     UI::checkbox( "Show Rotation Center", &showRotCenter );
-    viewer->viewport().showRotationCenter( showRotCenter );
+    viewport.showRotationCenter( showRotCenter );
 
     ImGui::PopItemWidth();
     ImGui::PopStyleVar();
@@ -486,7 +513,7 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
     if ( showClippingPlane )
     {
         auto plane = viewportParameters.clippingPlane;
-        auto showPlane = viewer->clippingPlaneObject->isVisible( viewer->viewport().id );
+        auto showPlane = viewer->clippingPlaneObject->isVisible( viewport.id );
         plane.n = plane.n.normalized();
         auto w = ImGui::GetContentRegionAvail().x;
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * menuScaling } );
@@ -498,8 +525,8 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth, float menuScaling 
         ImGui::PopStyleVar();
         ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( cButtonPadding - cCheckboxPadding ) * menuScaling );
         UI::checkbox( "Show##ClippingPlane", &showPlane );
-        viewer->viewport().setClippingPlane( plane );
-        viewer->viewport().showClippingPlane( showPlane );
+        viewport.setClippingPlane( plane );
+        viewport.showClippingPlane( showPlane );
     }
 
     drawSeparator_( "Options", menuScaling );

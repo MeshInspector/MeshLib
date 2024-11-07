@@ -74,6 +74,8 @@ typedef struct MRPointPairs MRPointPairs;
 
 MRMESHC_API const MRICPPairData* mrIPointPairsGet( const MRIPointPairs* pp, size_t idx );
 
+MRMESHC_API size_t mrIPointPairsSize( const MRIPointPairs* pp );
+
 MRMESHC_API MRICPPairData* mrIPointPairsGetRef( MRIPointPairs* pp, size_t idx );
 
 /// types of exit conditions in calculation
@@ -129,6 +131,8 @@ typedef struct MRICP MRICP;
 
 /// Constructs ICP framework with automatic points sampling on both objects
 MRMESHC_API MRICP* mrICPNew( const MRMeshOrPointsXf* flt, const MRMeshOrPointsXf* ref, float samplingVoxelSize );
+/// Constructs ICP framework with given sample points on both objects
+MRMESHC_API MRICP* mrICPNewFromSamples( const MRMeshOrPointsXf* flt, const MRMeshOrPointsXf* ref, const MRVertBitSet* fltSamples, const MRVertBitSet* refSamples );
 
 /// tune algorithm params before run calculateTransformation()
 MRMESHC_API void mrICPSetParams( MRICP* icp, const MRICPProperties* prop );

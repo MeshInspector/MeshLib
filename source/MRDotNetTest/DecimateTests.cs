@@ -12,16 +12,16 @@ namespace MR.DotNet.Test
         [Test]
         public void TestDecimate()
         {
-            var cylinder = Mesh.MakeCylinder( 0.5f, 0.0f, 20.0f / 180.0f * (float)Math.PI, 1.0f);
+            var sphere = Mesh.MakeSphere( 0.5f, 30000 );
 
-            BitSetReadOnly savedRegion = cylinder.ValidFaces.Clone();
+            BitSetReadOnly savedRegion = sphere.ValidFaces.Clone();
 
             var parameters = new DecimateParameters();
-            parameters.region = cylinder.ValidFaces.Clone() as BitSet;
+            parameters.region = sphere.ValidFaces.Clone() as BitSet;
             parameters.maxTriangleAspectRatio = 80;
 
-            var decimateResult = MeshDecimate.Decimate(cylinder, parameters);
-            Assert.That(parameters.region != savedRegion );
+            var decimateResult = MeshDecimate.Decimate(sphere, parameters);
+            Assert.That(parameters.region is not null && parameters.region != savedRegion );
             Assert.That(decimateResult.facesDeleted > 0);
             Assert.That(decimateResult.vertsDeleted > 0);
         }

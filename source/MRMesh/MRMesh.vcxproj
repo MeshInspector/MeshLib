@@ -171,7 +171,6 @@
     <ClInclude Include="MRMeshCollidePrecise.h" />
     <ClInclude Include="MRMeshTrimWithPlane.h" />
     <ClInclude Include="MRMeshDecimate.h" />
-    <ClInclude Include="MRMeshDecimateParallel.h" />
     <ClInclude Include="MRMeshSaveObj.h" />
     <ClInclude Include="MRObjectLinesHolder.h" />
     <ClInclude Include="MRObjectMeshHolder.h" />
@@ -511,7 +510,6 @@
     <ClCompile Include="MRPointsToMeshProjector.cpp" />
     <ClCompile Include="MRMeshTrimWithPlane.cpp" />
     <ClCompile Include="MRMeshDecimate.cpp" />
-    <ClCompile Include="MRMeshDecimateParallel.cpp" />
     <ClCompile Include="MRMeshDirMax.cpp" />
     <ClCompile Include="MRMeshSaveObj.cpp" />
     <ClCompile Include="MRObjectLinesHolder.cpp" />
@@ -561,6 +559,7 @@
     <ClCompile Include="MRSaveSettings.cpp" />
     <ClCompile Include="MRSceneLoad.cpp" />
     <ClCompile Include="MRSeparationPoint.cpp" />
+    <ClCompile Include="MRSignDetectionMode.cpp" />
     <ClCompile Include="MRSolarRadiation.cpp" />
     <ClCompile Include="MRStacktrace.cpp" />
     <ClCompile Include="MRSystemPath.cpp" />

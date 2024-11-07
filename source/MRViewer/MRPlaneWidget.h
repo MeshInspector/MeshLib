@@ -3,7 +3,7 @@
 #include "MRViewerEventsListener.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRPlane3.h"
-#include "MRViewer/MRViewer.h"
+#include "MRMesh/MRVector2.h"
 
 namespace MR
 {
@@ -74,8 +74,8 @@ public:
 private:
     MRVIEWER_API void updateWidget_( bool updateCameraRotation = true );
 
-    MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
-    MRVIEWER_API virtual bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;
+    MRVIEWER_API virtual bool onMouseDown_( MouseButton button, int modifier ) override;
+    MRVIEWER_API virtual bool onMouseUp_( MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseMove_( int mouse_x, int mouse_y ) override;
 };
 }

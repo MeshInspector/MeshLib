@@ -2,6 +2,8 @@ namespace MR {
 
 /** \mainpage Overview
 
+\tableofcontents
+
 \section WhatAreMeshLib MeshLib
 MeshLib is 3D geometry library that allows you to make your applications based on it or perform some 3D operations using it as application or library with c++ or python
 

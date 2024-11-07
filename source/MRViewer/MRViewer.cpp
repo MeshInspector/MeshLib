@@ -11,7 +11,6 @@
 #include "MRSplashWindow.h"
 #include "MRViewerSettingsManager.h"
 #include "MRGladGlfw.h"
-#include "ImGuiMenu.h"
 #include "MRRibbonMenu.h"
 #include "MRGetSystemInfoJson.h"
 #include "MRSpaceMouseHandler.h"
@@ -28,6 +27,7 @@
 #include "MRFrameCounter.h"
 #include "MRColorTheme.h"
 #include "MRHistoryStore.h"
+#include "MRShowModal.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -1183,22 +1183,22 @@ bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
     return false;
 }
 
-bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
+bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, const FileLoadOptions & options )
 {
     if ( filesList.empty() )
         return false;
 
-    const auto postProcess = [this] ( const SceneLoad::SceneLoadResult& result )
+    const auto postProcess = [this, options] ( const SceneLoad::SceneLoadResult& result )
     {
         if ( result.scene )
         {
             const bool wasEmptyScene = SceneRoot::get().children().empty();
             const bool wasEmptyUndo = globalHistoryStore_ && globalHistoryStore_->getStackPointer() == 0;
 
-            if ( result.loadedFiles.size() == 1 && ( !result.isSceneConstructed || wasEmptyScene ) )
+            if ( options.forceReplaceScene || ( result.loadedFiles.size() == 1 && ( !result.isSceneConstructed || wasEmptyScene ) ) )
             {
                 // the scene is taken as is from a single file, replace the current scene with it
-                AppendHistory<SwapRootAction>( "Open " + commonFilesName( result.loadedFiles ) );
+                AppendHistory<SwapRootAction>( options.undoPrefix + commonFilesName( result.loadedFiles ) );
                 auto newRoot = result.scene;
                 std::swap( newRoot, SceneRoot::getSharedPtr() );
                 setSceneDirty();
@@ -1210,7 +1210,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
                 for ( const auto& file : result.loadedFiles )
                     recentFilesStore().storeFile( file );
 
-                SCOPED_HISTORY( "Open " + commonFilesName( result.loadedFiles ) );
+                SCOPED_HISTORY( options.undoPrefix + commonFilesName( result.loadedFiles ) );
 
                 const auto children = result.scene->children();
                 result.scene->removeAllChildren();
@@ -1929,7 +1929,7 @@ void Viewer::initGlobalBasisAxesObject_()
         Vector3f( 0.0f, 0.0f, 1.0f )};
 
     Mesh mesh;
-    globalBasisAxes = std::make_unique<ObjectMesh>();
+    globalBasisAxes = std::make_shared<ObjectMesh>();
     globalBasisAxes->setName( "World Global Basis" );
     std::vector<Color> vertsColors;
     auto translate = AffineXf3f::translation(Vector3f( 0.0f, 0.0f, 0.9f ));
@@ -1985,7 +1985,7 @@ void Viewer::initBasisAxesObject_()
     // store basis axes in the corner
     const float size = 0.8f;
     std::shared_ptr<Mesh> basisAxesMesh = std::make_shared<Mesh>( makeBasisAxes( size ) );
-    basisAxes = std::make_unique<ObjectMesh>();
+    basisAxes = std::make_shared<ObjectMesh>();
     basisAxes->setMesh( basisAxesMesh );
     basisAxes->setName("Basis axes mesh");
     basisAxes->setFlatShading( true );
@@ -2031,7 +2031,7 @@ void Viewer::initBasisAxesObject_()
 void Viewer::initClippingPlaneObject_()
 {
     std::shared_ptr<Mesh> plane = std::make_shared<Mesh>( makePlane() );
-    clippingPlaneObject = std::make_unique<ObjectMesh>();
+    clippingPlaneObject = std::make_shared<ObjectMesh>();
     clippingPlaneObject->setMesh( plane );
     clippingPlaneObject->setName( "Clipping plane obj" );
     clippingPlaneObject->setVisible( false );
@@ -2043,7 +2043,7 @@ void Viewer::initRotationCenterObject_()
 {
     constexpr Color color = Color( 0, 127, 0, 255 );
     auto mesh = makeUVSphere();
-    rotationSphere = std::make_unique<ObjectMesh>();
+    rotationSphere = std::make_shared<ObjectMesh>();
     rotationSphere->setFrontColor( color, false );
     rotationSphere->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
     rotationSphere->setAncillary( true );
@@ -2592,6 +2592,11 @@ void Viewer::onSceneSaved( const std::filesystem::path& savePath, bool storeInRe
 const std::shared_ptr<ImGuiMenu>& Viewer::getMenuPlugin() const
 {
     return menuPlugin_;
+}
+
+std::shared_ptr<RibbonMenu> Viewer::getRibbonMenu() const
+{
+    return std::dynamic_pointer_cast<RibbonMenu>( getMenuPlugin() );
 }
 
 void Viewer::setMenuPlugin( std::shared_ptr<ImGuiMenu> menu )

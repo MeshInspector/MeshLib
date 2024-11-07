@@ -1,6 +1,7 @@
 #include "MRObjectTransformWidget.h"
 #include "MRMouseController.h"
 #include "MRViewport.h"
+#include "MRViewer.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRBox.h"

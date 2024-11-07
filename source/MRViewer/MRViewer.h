@@ -1,30 +1,17 @@
 #pragma once
 
-#include "MRMesh/MRRenderModelParameters.h"
 #include "MRViewerInstance.h"
 #include "MRMouse.h"
+#include "MRSignalCombiners.h"
+#include "MRMakeSlot.h"
 #include <MRMesh/MRVector2.h>
 #include <MRMesh/MRViewportId.h>
 #include "MRMesh/MRSignal.h"
-#include "MRViewer/MRSignalCombiners.h"
+#include "MRMesh/MRRenderModelParameters.h"
 #include <cstdint>
 #include <filesystem>
 
 struct GLFWwindow;
-
-template<typename MemberFuncPtr, typename BaseClass>
-auto bindSlotCallback( BaseClass* base, MemberFuncPtr func )
-{
-    static_assert( !( std::is_move_assignable_v<BaseClass> || std::is_move_constructible_v<BaseClass> ),
-                   "MAKE_SLOT requires a non-movable type" );
-    return[base, func] ( auto&&... args )
-    {
-        return ( base->*func )( std::forward<decltype( args )>( args )... );
-    };
-}
-
-// you will not be able to move your struct after using this macro
-#define MAKE_SLOT(func) bindSlotCallback(this,func)
 
 /// helper macros to add an `MR::Viewer` method call to the event queue
 #define ENQUEUE_VIEWER_METHOD( NAME, METHOD ) MR::getViewerInstance().emplaceEvent( NAME, [] { \
@@ -75,6 +62,15 @@ struct LaunchParams
     std::shared_ptr<SplashWindow> splashWindow; // if present will show this window while initializing plugins (after menu initialization)
 };
 
+struct FileLoadOptions
+{
+    /// first part of undo name
+    const char * undoPrefix = "Open ";
+
+    // true here will replace existing scene even if more than one file is open
+    bool forceReplaceScene = false;
+};
+
 // GLFW-based mesh viewer
 class MRVIEWER_CLASS Viewer
 {
@@ -123,9 +119,11 @@ public:
     // Mesh IO
     // Check the supported file format
     MRVIEWER_API bool isSupportedFormat( const std::filesystem::path& file_name );
+
     // Load objects / scenes from files
     // Note! load files with progress bar in next frame if it possible, otherwise load directly inside this function
-    MRVIEWER_API bool loadFiles( const std::vector< std::filesystem::path>& filesList );
+    MRVIEWER_API bool loadFiles( const std::vector< std::filesystem::path>& filesList, const FileLoadOptions & options = {} );
+
     // Save first selected objects to file
     MRVIEWER_API bool saveToFile( const std::filesystem::path & mesh_file_name );
 
@@ -401,6 +399,9 @@ public:
     MRVIEWER_API const std::shared_ptr<ImGuiMenu>& getMenuPlugin() const;
     MRVIEWER_API void setMenuPlugin( std::shared_ptr<ImGuiMenu> menu );
 
+    // get menu plugin casted in RibbonMenu
+    MRVIEWER_API std::shared_ptr<RibbonMenu> getRibbonMenu() const;
+
     // Get the menu plugin casted in given type
     template <typename T>
     std::shared_ptr<T> getMenuPluginAs() const { return std::dynamic_pointer_cast<T>( getMenuPlugin() ); }
@@ -463,11 +464,11 @@ public:
     // command arguments, each parsed arg should be erased from here not to affect other parsers
     std::vector<std::string> commandArgs;
 
-    std::unique_ptr<ObjectMesh> basisAxes;
-    std::unique_ptr<ObjectMesh> globalBasisAxes;
-    std::unique_ptr<ObjectMesh> rotationSphere;
+    std::shared_ptr<ObjectMesh> basisAxes;
+    std::shared_ptr<ObjectMesh> globalBasisAxes;
+    std::shared_ptr<ObjectMesh> rotationSphere;
     // Stores clipping plane mesh
-    std::unique_ptr<ObjectMesh> clippingPlaneObject;
+    std::shared_ptr<ObjectMesh> clippingPlaneObject;
 
     // the window title that should be always displayed
     std::string defaultWindowTitle;

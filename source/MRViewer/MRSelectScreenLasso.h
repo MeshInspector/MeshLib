@@ -7,37 +7,18 @@ namespace MR
 {
 
 /**
- * Class for selection area on screen
- */
-class MRVIEWER_CLASS SelectScreenLasso
-{
-public:
-    /// add point to contour
-    MRVIEWER_API void addPoint( int mouseX, int mouseY );
+    * calculate area on screen that is inside of closed contour given by screen points.
+    * 
+    * return the matrix of pixels (in local space of active viewport) belonging selected area
+    */
+MRVIEWER_API BitSet calculateSelectedPixelsInsidePolygon( const Contour2f & screenPoints );
 
-    /// get current points in contour
-    const Contour2f& getScreenPoints() const { return screenPoints_; };
-    
-    /// clean contour
-    void cleanScreenPoints() { screenPoints_.clear(); };
-
-    /**
-     * calculate area on screen that are inside of closed contour.
-     * 
-     * return the matrix of pixels (in local space of active viewport) belonging selected area
-     */
-    MRVIEWER_API BitSet calculateSelectedPixelsInsidePolygon();
-
-    /**
-     * calculate area on screen that near open contour.
-     *
-     * return the matrix of pixels (in local space of active viewport) belonging selected area
-     */
-    MRVIEWER_API BitSet calculateSelectedPixelsNearPolygon( float radiusPix );
-
-private:
-    Contour2f screenPoints_;
-};
+/**
+    * calculate area on screen that is near to open contour given by screen points.
+    *
+    * return the matrix of pixels (in local space of active viewport) belonging selected area
+    */
+MRVIEWER_API BitSet calculateSelectedPixelsNearPolygon( const Contour2f & screenPoints, float radiusPix );
 
 /**
  * get faces ids of object located in selected area on viewport

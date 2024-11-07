@@ -4,9 +4,7 @@
 #include "MRColorTheme.h"
 #include "MRRibbonConstants.h"
 #include "MRViewer/MRUITestEngine.h"
-#include "MRViewerInstance.h"
 #include "MRRibbonFontManager.h"
-#include "MRViewer.h"
 #include "ImGuiHelpers.h"
 #include "ImGuiMenu.h"
 #include "imgui_internal.h"
@@ -67,7 +65,7 @@ private:
 
 bool checkKey( ImGuiKey passedKey )
 {
-    if ( passedKey == ImGuiKey_None || ImGui::GetIO().KeyMods != ImGuiMod_None )
+    if ( passedKey == ImGuiKey_None || ImGui::GetIO().KeyMods != ImGuiMod_None || ImGui::GetIO().WantCaptureKeyboard )
         return false;
 
     reserveKeyEvent( passedKey );
@@ -241,7 +239,7 @@ bool buttonEx( const char* label, bool active, const Vector2f& size_arg /*= Vect
 bool button( const char* label, bool active, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None */ )
 {
     const ImGuiStyle& style = ImGui::GetStyle();
-    const auto menu = getViewerInstance().getMenuPlugin();
+    const auto menu = ImGuiMenu::instance();
     const float scaling = menu ? menu->menu_scaling() : 1.f;
     StyleParamHolder sh;
     sh.addVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, cGradientButtonFramePadding * scaling ) );
@@ -258,7 +256,7 @@ bool buttonCommonSize( const char* label, const Vector2f& size /*= Vector2f( 0, 
 
 bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& size /*= Vector2f( 0, 0 )*/, ImGuiKey key /*= ImGuiKey_None*/ )
 {
-    const auto menu = getViewerInstance().getMenuPlugin();
+    const auto menu = ImGuiMenu::instance();
     const float scaling = menu ? menu->menu_scaling() : 1.f;
 
     Color clearBlue = ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame );
@@ -277,7 +275,11 @@ bool buttonUnique( const char* label, int* value, int ownValue, const Vector2f& 
     params.forceImguiTextColor = true;
     params.underlineFirstLetter = std::string_view( ImGui::GetKeyName( key ) ) == std::string_view( label, 1 );
 
-    return buttonEx( label, true, ImVec2( size.x, size.y ), 0, params ) || checkKey( key );
+    auto res = buttonEx( label, true, ImVec2( size.x, size.y ), 0, params ) || checkKey( key );
+    if ( res )
+        value[0] = ownValue;
+
+    return res;
 }
 
 void drawPoltHorizontalAxis( float menuScaling, const PlotAxis& plotAxis )
@@ -428,7 +430,7 @@ bool buttonIconEx(
     auto endText = std::string_view( text ).end();
     float maxLineLength = 0.0f;
 
-    const float cLineAvailableWidth = params.textUnderImage ? buttonSize.x : buttonSize.x - iconSize.x - style.ItemInnerSpacing.x;
+    const float cLineAvailableWidth = params.textUnderImage ? buttonSize.x - 2.0f * style.FramePadding.x : buttonSize.x - iconSize.x - style.ItemInnerSpacing.x;
     const float cSpaceWidth = ImGui::CalcTextSize( " " ).x;
 
     auto printLine = [&] ( const StringDetail& strDetail )
@@ -463,6 +465,8 @@ bool buttonIconEx(
                 }
                 printLine( curDetail );
                 curDetail = { curTextSize.x, startWord, endWord };
+                if ( forcePrint && vecDetail.back().end != endWord )
+                    printLine( curDetail );
             }
             else if ( forcePrint )
             {
@@ -475,6 +479,7 @@ bool buttonIconEx(
                 curDetail.lenght = sumLength( curDetail.lenght, curTextSize.x );
             }
             startWord = endWord;
+
             return false;
         } );
     }
@@ -547,11 +552,37 @@ bool buttonIconEx(
     return res;
 }
 
+bool buttonUniqueIcon( 
+    const std::string& iconName, 
+    const Vector2f& iconSize, 
+    const std::string& text, 
+    const ImVec2& buttonSize, 
+    int* value, 
+    int ownValue )
+{
+    StyleParamHolder sh;
+    if ( *value == ownValue )
+    {
+        sh.addColor( ImGuiCol_Text, Color::white() );
+        sh.addColor( ImGuiCol_Button, ColorTheme::instance().getRibbonColor( ColorTheme::RibbonColorsType::SelectedObjectFrame ) );
+    }
+    else
+    {
+        sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text ) );
+        sh.addColor( ImGuiCol_Button, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ) );
+    }
+    auto res = UI::buttonIconFlatBG( iconName, iconSize, text, buttonSize );
+    if ( res )
+        value[0] = ownValue;
+
+    return res;
+}
+
 static bool checkboxWithoutTestEngine( const char* label, bool* value )
 {
     const ImGuiStyle& style = ImGui::GetStyle();
 
-    const auto menu = getViewerInstance().getMenuPlugin();
+    const auto menu = ImGuiMenu::instance();
     const float scaling = menu ? menu->menu_scaling() : 1.f;
 
     StyleParamHolder sh;
@@ -773,8 +804,8 @@ bool checkboxOrModifier( const char* label, CheckboxOrModifierState& value, int 
     { // Modifiers hint.
         std::string modsText = modifiersToString( modifiers );
         ImGui::SameLine();
-        // ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cCheckboxPadding * getViewerInstance().getMenuPlugin()->menu_scaling() );
-        // alignTextToCheckBox( getViewerInstance().getMenuPlugin()->menu_scaling() );
+        // ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cCheckboxPadding * ImGuiMenu::instance()->menu_scaling() );
+        // alignTextToCheckBox( ImGuiMenu::instance()->menu_scaling() );
         // Neither of above is needed, the UI::checkbox... functions align the following text automatically
         ImGui::TextDisabled( "[%s]", modsText.c_str() );
     }
@@ -794,7 +825,7 @@ bool radioButton( const char* label, int* value, int valButton )
 {
     const ImGuiStyle& style = ImGui::GetStyle();
 
-    const auto menu = getViewerInstance().getMenuPlugin();
+    const auto menu = ImGuiMenu::instance();
     const float scaling = menu ? menu->menu_scaling() : 1.f;
 
     StyleParamHolder sh;
@@ -839,7 +870,7 @@ bool radioButton( const char* label, int* value, int valButton )
         const ImGuiID id = window->GetID( label );
         const ImVec2 label_size = ImGui::CalcTextSize( label, NULL, true );
 
-        const auto menu = getViewerInstance().getMenuPlugin();
+        const auto menu = ImGuiMenu::instance();
         const ImVec2 pos = window->DC.CursorPos;
         const ImRect check_bb( pos, ImVec2( pos.x + clickSize, pos.y + clickSize ) );
         const ImRect total_bb( pos, ImVec2( pos.x + clickSize + ( label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f ), pos.y + label_size.y + style.FramePadding.y * 2.0f ) );
@@ -1266,7 +1297,7 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
     }
 
     StyleParamHolder sh;
-    const float menuScaling = Viewer::instanceRef().getMenuPlugin()->menu_scaling();
+    const float menuScaling = ImGuiMenu::instance()->menu_scaling();
     sh.addVar( ImGuiStyleVar_FramePadding, menuScaling * StyleConsts::CustomCombo::framePadding );
 
     auto context = ImGui::GetCurrentContext();
@@ -1489,7 +1520,7 @@ static void drawDragCursor()
     auto mousePos = ImGui::GetMousePos();
     mousePos.x += 5.f;
 
-    const auto menuPlugin = MR::getViewerInstance().getMenuPlugin();
+    const auto menuPlugin = MR::ImGuiMenu::instance();
     const float scale = menuPlugin ? menuPlugin->menu_scaling() : 1.f;
 
     const float spaceX = 10 * scale;
@@ -1672,9 +1703,9 @@ bool inputTextCentered( const char* label, std::string& str, float width /*= 0.0
     ImGuiInputTextFlags flags /*= 0*/, ImGuiInputTextCallback callback /*= nullptr*/, void* user_data /*= nullptr */ )
 {
     const auto& style = ImGui::GetStyle();
-    const auto& viewer = MR::Viewer::instanceRef();
+    const auto& menu = ImGuiMenu::instance();
     const auto estimatedSize = ImGui::CalcTextSize( str.c_str() );
-    const float scaling = viewer.getMenuPlugin() ? viewer.getMenuPlugin()->menu_scaling() : 1.0f;
+    const float scaling = menu ? menu->menu_scaling() : 1.0f;
     const ImVec2 padding{ 2 * style.FramePadding.x * scaling , 2 * style.FramePadding.y * scaling };
     const auto actualWidth = ( width == 0.0f ) ? estimatedSize.x + padding.x : width;
 

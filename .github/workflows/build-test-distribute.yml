@@ -146,7 +146,7 @@ jobs:
         run: py -3.10 scripts\make_install_folder_dotnet.py ${{needs.versioning-and-release-url.outputs.app_version}}
 
       - name: Distribute
-        run: py -3.10 scripts\zip_distribution.py install MeshLibDist.zip
+        run: py -3.10 scripts\zip_distribution.py install example_plugin MeshLibDist.zip
 
       - name: Distribute .NET
         run: py -3.10 scripts\zip_distribution.py install_dotnet MeshLibDotNetDist.zip
@@ -259,9 +259,6 @@ jobs:
 
   update-dev-documentation:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'full-ci') }}
-    runs-on: ubuntu-latest
-    container:
-      image: alpine:3.20
     needs:
       - versioning-and-release-url
       - windows-build-test
@@ -270,45 +267,10 @@ jobs:
       - fedora-build-test
       - emscripten-build-test
       - macos-build-test
-    steps:
-      - name: Install Git
-        run: |
-          apk update
-          apk add git
-
-      - name: Checkout MeshLib
-        uses: actions/checkout@v4
-        with:
-          path: 'MeshLib/'
-
-      - name: Checkout documentation site
-        uses: actions/checkout@v4
-        with:
-          repository: 'MeshInspector/MeshInspector.github.io'
-          path: 'MeshInspector.github.io/'
-          token: ${{ secrets.MESHINSPECTOR_BOT_TOKEN }}
-
-      - name: Install Doxygen
-        run: apk add doxygen
-
-      - name: Run Doxygen
-        working-directory: MeshInspector.github.io
-        run: |
-          scripts/pre.sh
-          (
-            cat Doxyfile
-            echo "OUTPUT_DIRECTORY=MeshLib/dev"
-          ) | doxygen -
-          scripts/post.sh
-
-      - name: Commit and push changes
-        working-directory: MeshInspector.github.io
-        run: |
-          git config user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
-          git config user.name "meshinspector-bot"
-          git add -A
-          git commit --allow-empty -m "Auto update docs" -a
-          git push
+    uses: ./.github/workflows/update-docs.yml
+    with:
+      output_folder: MeshLib/dev
+    secrets: inherit
 
   update-artifacts:
     timeout-minutes: 15

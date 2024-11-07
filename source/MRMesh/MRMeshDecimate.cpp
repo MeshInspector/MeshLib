@@ -18,147 +18,6 @@
 namespace MR
 {
 
-/// collapses given edge and deletes
-/// 1) faces: left( e ) and right( e );
-/// 2) vertex org( e )/dest( e ) if given edge was their only edge, otherwise only dest( e );
-/// 3) edges: e, next( e.sym() ), prev( e.sym() ), and optionally next( e ), prev( e ) if their left and right triangles are deleted;
-/// updates notFlippable/twinMap removing deleted edges from there, and adding the edges that shall replace them;
-/// calls onEdgeDel for every deleted edge;
-/// returns prev( e ) if it is valid
-EdgeId collapseEdge( MeshTopology & topology, const EdgeId e, UndirectedEdgeBitSet* notFlippable, UndirectedEdgeHashMap * twinMap,
-    const std::function<void(EdgeId e, EdgeId e1)> & onEdgeDel )
-{
-    auto delEdge = [&]( EdgeId del )
-    {
-        assert( del );
-        if ( notFlippable )
-            notFlippable->reset( del.undirected() );
-        if ( twinMap )
-        {
-            auto itDel = twinMap->find( del );
-            if ( itDel != twinMap->end() )
-            {
-                auto tgt = itDel->second;
-                auto itTgt = twinMap->find( tgt );
-                assert( itTgt != twinMap->end() );
-                assert( itTgt->second == del.undirected() );
-                twinMap->erase( itDel );
-                twinMap->erase( itTgt );
-            }
-        }
-        if ( onEdgeDel )
-            onEdgeDel( del, {} );
-    };
-    auto replaceEdge = [&]( EdgeId del, EdgeId rem )
-    {
-        assert( del && rem );
-        if ( notFlippable )
-        {
-            if ( notFlippable->test_set( del.undirected(), false ) )
-                notFlippable->autoResizeSet( rem.undirected() );
-        }
-        if ( twinMap )
-        {
-            auto itDel = twinMap->find( del );
-            if ( itDel != twinMap->end() )
-            {
-                auto tgt = itDel->second;
-                auto itTgt = twinMap->find( tgt );
-                assert( itTgt != twinMap->end() );
-                assert( itTgt->second == del.undirected() );
-                twinMap->erase( itDel );
-                assert( twinMap->count( rem ) == 0 );
-                (*twinMap)[rem] = tgt;
-                itTgt->second = rem;
-            }
-        }
-        if ( onEdgeDel )
-            onEdgeDel( del, rem );
-    };
-
-    topology.setLeft( e, FaceId() );
-    topology.setLeft( e.sym(), FaceId() );
-
-    delEdge( e );
-
-    if ( topology.next( e ) == e )
-    {
-        topology.setOrg( e, VertId() );
-        const EdgeId b = topology.prev( e.sym() );
-        if ( b == e.sym() )
-            topology.setOrg( e.sym(), VertId() );
-        else
-            topology.splice( b, e.sym() );
-
-        assert( topology.isLoneEdge( e ) );
-        return EdgeId();
-    }
-
-    topology.setOrg( e.sym(), VertId() );
-
-    const EdgeId ePrev = topology.prev( e );
-    const EdgeId eNext = topology.next( e );
-    if ( ePrev != e )
-        topology.splice( ePrev, e );
-
-    const EdgeId a = topology.next( e.sym() );
-    if ( a == e.sym() )
-    {
-        assert( topology.isLoneEdge( e ) );
-        return ePrev != e ? ePrev : EdgeId();
-    }
-    const EdgeId b = topology.prev( e.sym() );
-
-    topology.splice( b, e.sym() );
-    assert( topology.isLoneEdge( e ) );
-
-    assert( topology.next( b ) == a );
-    assert( topology.next( ePrev ) == eNext );
-    topology.splice( b, ePrev );
-    assert( topology.next( b ) == eNext );
-    assert( topology.next( ePrev ) == a );
-
-    if ( topology.next( a.sym() ) == ePrev.sym() )
-    {
-        topology.splice( ePrev, a );
-        topology.splice( topology.prev( a.sym() ), a.sym() );
-        assert( topology.isLoneEdge( a ) );
-        if ( !topology.left( ePrev ) && !topology.right( ePrev ) )
-        {
-            topology.splice( topology.prev( ePrev ), ePrev );
-            topology.splice( topology.prev( ePrev.sym() ), ePrev.sym() );
-            topology.setOrg( ePrev, {} );
-            topology.setOrg( ePrev.sym(), {} );
-            assert( topology.isLoneEdge( ePrev ) );
-            delEdge( a );
-            delEdge( ePrev );
-        }
-        else
-            replaceEdge( a, ePrev );
-    }
-
-    if ( topology.next( eNext.sym() ) == b.sym() )
-    {
-        topology.splice( eNext.sym(), b.sym() );
-        topology.splice( topology.prev( b ), b );
-        assert( topology.isLoneEdge( b ) );
-        if ( !topology.left( eNext ) && !topology.right( eNext ) )
-        {
-            topology.splice( topology.prev( eNext ), eNext );
-            topology.splice( topology.prev( eNext.sym() ), eNext.sym() );
-            topology.setOrg( eNext, {} );
-            topology.setOrg( eNext.sym(), {} );
-            assert( topology.isLoneEdge( eNext ) );
-            delEdge( b );
-            delEdge( eNext );
-        }
-        else
-            replaceEdge( b, eNext );
-    }
-
-    return ePrev != e ? ePrev : EdgeId();
-}
-
 class MeshDecimator
 {
 public:
@@ -175,6 +34,7 @@ private:
     UndirectedEdgeBitSet regionEdges_;
     VertBitSet myBdVerts_;
     const VertBitSet * pBdVerts_ = nullptr;
+    std::function<void( EdgeId del, EdgeId rem )> onEdgeDel_;
 
     enum class EdgeOp : unsigned int
     {
@@ -264,6 +124,47 @@ MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings )
         .region = settings.region }
     , maxErrorSq_( sqr( settings.maxError ) )
 {
+    if ( settings_.notFlippable || settings_.edgesToCollapse || settings_.twinMap || settings_.onEdgeDel )
+    {
+        onEdgeDel_ =
+        [
+            notFlippable = settings_.notFlippable,
+            edgesToCollapse = settings_.edgesToCollapse,
+            twinMap = settings_.twinMap,
+            onEdgeDel = settings_.onEdgeDel
+        ] ( EdgeId del, EdgeId rem )
+        {
+            if ( notFlippable && notFlippable->test_set( del.undirected(), false ) && rem )
+                notFlippable->autoResizeSet( rem.undirected() );
+
+            if ( edgesToCollapse && edgesToCollapse->test_set( del.undirected(), false ) && rem )
+                edgesToCollapse->autoResizeSet( rem.undirected() );
+
+            if ( twinMap )
+            {
+                auto itDel = twinMap->find( del );
+                if ( itDel != twinMap->end() )
+                {
+                    auto tgt = itDel->second;
+                    auto itTgt = twinMap->find( tgt );
+                    assert( itTgt != twinMap->end() );
+                    assert( itTgt->second == del.undirected() );
+                    twinMap->erase( itDel );
+                    if ( rem )
+                    {
+                        assert( twinMap->count( rem ) == 0 );
+                        (*twinMap)[rem] = tgt;
+                        itTgt->second = rem;
+                    }
+                    else
+                        twinMap->erase( itTgt );
+                }
+            }
+
+            if ( onEdgeDel )
+                onEdgeDel( del, rem );
+        };
+    }
 }
 
 class MeshDecimator::EdgeMetricCalc 
@@ -750,7 +651,7 @@ VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & co
         if ( r )
             settings_.region->reset( r );
     }
-    auto eo = collapseEdge( topology, edgeToCollapse, settings_.notFlippable, settings_.twinMap, settings_.onEdgeDel );
+    auto eo = topology.collapseEdge( edgeToCollapse, onEdgeDel_ );
     if ( !eo )
         return {};
 

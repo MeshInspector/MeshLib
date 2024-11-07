@@ -62,6 +62,8 @@ std::string methodToString( MR::WebRequest::Method method )
 extern "C"
 {
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
 EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool async, int ctxId )
 {
     using namespace MR;
@@ -79,6 +81,7 @@ EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool asy
 
             std::unique_lock lock( sRequestContextMutex );
             sRequestContextMap.erase( ctxId );
+            MAIN_THREAD_EM_ASM( web_req_clear( $0 ), ctxId );
         }
         else
         {
@@ -89,6 +92,7 @@ EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool asy
 
                 std::unique_lock lock( sRequestContextMutex );
                 sRequestContextMap.erase( ctxId );
+                MAIN_THREAD_EM_ASM( web_req_clear( $0 ), ctxId );
             } );
         }
     }
@@ -98,6 +102,7 @@ EMSCRIPTEN_KEEPALIVE int emsCallResponseCallback( const char* response, bool asy
     }
     return 1;
 }
+#pragma clang diagnostic pop
 
 EMSCRIPTEN_KEEPALIVE int emsCallUploadCallback( double v, int ctxId )
 {
@@ -398,36 +403,38 @@ void WebRequest::send( std::string urlP, std::string logName, ResponseCallback c
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
     const auto method = methodToString( method_ );
     MAIN_THREAD_EM_ASM( {
-        web_req_clear();
-        web_req_timeout = $0;
-        web_req_body = UTF8ToString( $1 );
-        web_req_filename = UTF8ToString( $2 );
-        web_req_method = UTF8ToString( $3 );
-        web_req_use_upload_callback = $4;
-        web_req_use_download_callback = $5;
+        create_web_ctx_if_needed($6);
+        web_req_ctxs[$6].timeout = $0;
+        web_req_ctxs[$6].body = UTF8ToString( $1 );
+        web_req_ctxs[$6].filename = UTF8ToString( $2 );
+        web_req_ctxs[$6].method = UTF8ToString( $3 );
+        web_req_ctxs[$6].use_upload_callback = $4;
+        web_req_ctxs[$6].use_download_callback = $5;
     },
         timeout_,
         body_.c_str(),
         inputPath_.c_str(),
         method.c_str(),
         (bool)uploadCallback_,
-        (bool)downloadCallback_
+        (bool)downloadCallback_,
+        ctxId
     );
 
     for ( const auto& [key, value] : params_ )
-        MAIN_THREAD_EM_ASM( web_req_add_param( UTF8ToString( $0 ), UTF8ToString( $1 ) ), key.c_str(), value.c_str() );
+        MAIN_THREAD_EM_ASM( web_req_add_param( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ), key.c_str(), value.c_str(), ctxId );
 
     for ( const auto& [key, value] : headers_ )
-        MAIN_THREAD_EM_ASM( web_req_add_header( UTF8ToString( $0 ), UTF8ToString( $1 ) ), key.c_str(), value.c_str() );
+        MAIN_THREAD_EM_ASM( web_req_add_header( UTF8ToString( $0 ), UTF8ToString( $1 ), $2 ), key.c_str(), value.c_str(), ctxId );
 
     for ( const auto& formData : formData_ )
     {
         MAIN_THREAD_EM_ASM(
-            web_req_add_formdata( UTF8ToString( $0 ), UTF8ToString( $1 ), UTF8ToString( $2 ), UTF8ToString( $3 ) ),
+            web_req_add_formdata( UTF8ToString( $0 ), UTF8ToString( $1 ), UTF8ToString( $2 ), UTF8ToString( $3 ), $4 ),
             formData.path.c_str(),
             formData.contentType.c_str(),
             formData.name.c_str(),
-            formData.fileName.c_str()
+            formData.fileName.c_str(),
+            ctxId
         );
     }
 

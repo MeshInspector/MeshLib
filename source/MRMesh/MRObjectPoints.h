@@ -61,4 +61,9 @@ protected:
 /// does not copy selection
 [[nodiscard]] MRMESH_API std::shared_ptr<ObjectPoints> cloneRegion( const std::shared_ptr<ObjectPoints>& objPoints, const VertBitSet& region );
 
+/// constructs new ObjectPoints containing the packed version of input points,
+/// \param newValidVerts if given, then use them instead of valid points from pts
+/// \return nullptr if the operation was cancelled
+[[nodiscard]] MRMESH_API std::shared_ptr<ObjectPoints> pack( const ObjectPoints& pts, Reorder reorder, VertBitSet* newValidVerts = nullptr, const ProgressCallback & cb = {} );
+
 } //namespace MR

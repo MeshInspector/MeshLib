@@ -265,7 +265,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshpy, Mesh, [] ( pybind11::module_& m )
         def( "pack", &Mesh::pack, pybind11::arg( "outFmap" ) = nullptr, pybind11::arg( "outVmap" ) = nullptr, pybind11::arg( "outEmap" ) = nullptr, pybind11::arg( "rearrangeTriangles" ) = false,
             "tightly packs all arrays eliminating lone edges and invalid face, verts and points,\n"
             "optionally returns mappings: old.id -> new.id" ).
-        def( "packOptimally", &Mesh::packOptimally, pybind11::arg( "preserveAABBTree" ) = true,
+        def( "packOptimally", ( PackMapping( Mesh::* )( bool ) ) &Mesh::packOptimally, pybind11::arg( "preserveAABBTree" ) = true,
             "packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices\n"
             "\tpreserveAABBTree whether to keep valid mesh's AABB tree after return (it will take longer to compute and it will occupy more memory)" ).
         def( "deleteFaces", &Mesh::deleteFaces, pybind11::arg( "fs" ), pybind11::arg( "keepEdges" ) = nullptr,

@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
 #include "MRId.h"
+#include "MRMesh/MRVector.h"
 #include <optional>
 
 namespace MR
@@ -36,6 +37,8 @@ struct ObjVertId
 {
     ObjId objId;
     VertId vId;
+
+    friend bool operator==( const ObjVertId&, const ObjVertId& ) = default;
 };
 
 using MultiObjsSamples = std::vector<ObjVertId>;

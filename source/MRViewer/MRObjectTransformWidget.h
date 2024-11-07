@@ -1,6 +1,5 @@
 #pragma once
 
-#include "MRViewer.h"
 #include "MRViewerEventsListener.h"
 #include "MRMesh/MRFlagOperators.h"
 #include "MRMesh/MRMeshFwd.h"
@@ -300,8 +299,8 @@ public:
         std::string name_;
     };
 private:
-    MRVIEWER_API virtual bool onMouseDown_( Viewer::MouseButton button, int modifier ) override;
-    MRVIEWER_API virtual bool onMouseUp_( Viewer::MouseButton button, int modifier ) override;
+    MRVIEWER_API virtual bool onMouseDown_( MouseButton button, int modifier ) override;
+    MRVIEWER_API virtual bool onMouseUp_( MouseButton button, int modifier ) override;
     MRVIEWER_API virtual bool onMouseMove_( int mouse_x, int mouse_y ) override;
     MRVIEWER_API virtual void preDraw_() override;
     MRVIEWER_API virtual void postDraw_() override;

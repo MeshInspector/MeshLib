@@ -156,7 +156,7 @@ void serializeToJson( const BitSet& bitset, Json::Value& root )
 {
     std::vector<std::uint8_t> data;
     root["size"] = Json::UInt( bitset.size() );
-    root["bits"] = encode64( (const std::uint8_t*) bitset.m_bits.data(), bitset.num_blocks() * sizeof( BitSet::block_type ) );
+    root["bits"] = encode64( (const std::uint8_t*) bitset.bits().data(), bitset.num_blocks() * sizeof( BitSet::block_type ) );
 }
 
 void serializeToJson( const MeshTexture& texture, Json::Value& root )
@@ -447,7 +447,7 @@ void deserializeFromJson( const Json::Value& root, BitSet& bitset )
         bitset.resize( root["size"].asInt() );
         auto bin = decode64( root["bits"].asString() );
         auto bytes = std::min( bin.size(), bitset.num_blocks() * sizeof( BitSet::block_type ) );
-        std::copy( bin.begin(), bin.begin() + bytes, (std::uint8_t*) bitset.m_bits.data() );
+        std::copy( bin.begin(), bin.begin() + bytes, (std::uint8_t*) bitset.bits().data() );
     }
 }
 

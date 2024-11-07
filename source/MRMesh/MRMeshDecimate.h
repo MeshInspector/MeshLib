@@ -25,14 +25,14 @@ enum DecimateStrategy
  * \struct MR::DecimateSettings
  * \brief Parameters structure for MR::decimateMesh
  * \ingroup DecimateGroup
- * 
+ *
  * \sa \ref decimateMesh
  */
 struct DecimateSettings
-{  
+{
     DecimateStrategy strategy = DecimateStrategy::MinimizeError;
 
-    /// for DecimateStrategy::MinimizeError: 
+    /// for DecimateStrategy::MinimizeError:
     ///   stop the decimation as soon as the estimated distance deviation from the original mesh is more than this value
     /// for DecimateStrategy::ShortestEdgeFirst only:
     ///   stop the decimation as soon as the shortest edge in the mesh is greater than this value
@@ -78,8 +78,9 @@ struct DecimateSettings
     /// which can move vertices of notFlippable edges unless they are fixed
     bool collapseNearNotFlippable = false;
 
-    /// If pointer is not null, then only edges from here can be collapsed (and some nearby edges can disappear)
-    const UndirectedEdgeBitSet * edgesToCollapse = nullptr;
+    /// If pointer is not null, then only edges from here can be collapsed (and some nearby edges can disappear);
+    /// the algorithm updates this map during collapses, removing or replacing elements
+    UndirectedEdgeBitSet * edgesToCollapse = nullptr;
 
     /// if an edge present as a key in this map is flipped or collapsed, then same happens to the value-edge (with same collapse position);
     /// the algorithm updates this map during collapses, removing or replacing elements
@@ -119,9 +120,9 @@ struct DecimateSettings
      */
     std::function<void( UndirectedEdgeId ue, float & collapseErrorSq, Vector3f & collapsePos )> adjustCollapse;
 
-    /// this function is called each time edge (e) is deleted;
-    /// if valid (e1) is given then dest(e) = dest(e1) and their origins are in different ends of collapsing edge, e1 shall take the place of e
-    std::function<void(EdgeId e, EdgeId e1)> onEdgeDel;
+    /// this function is called each time edge (del) is deleted;
+    /// if valid (rem) is given then dest(del) = dest(rem) and their origins are in different ends of collapsing edge, (rem) shall take the place of (del)
+    std::function<void( EdgeId del, EdgeId rem )> onEdgeDel;
 
     /**
      * \brief  If not null, then vertex quadratic forms are stored there;
@@ -137,7 +138,6 @@ struct DecimateSettings
     ProgressCallback progressCallback;
 
     /// If this value is more than 1, then virtually subdivides the mesh on given number of parts to process them in parallel (using many threads);
-    /// unlike \ref decimateParallelMesh it does not create copies of mesh regions, so may take less memory to operate;
     /// IMPORTANT: please call mesh.packOptimally() before calling decimating with subdivideParts > 1, otherwise performance will be bad
     int subdivideParts = 1;
 
@@ -158,7 +158,7 @@ struct DecimateSettings
  * \struct MR::DecimateResult
  * \brief Results of MR::decimateMesh
  * \ingroup DecimateGroup
- * 
+ *
  * \sa \ref decimateMesh
  * \sa \ref decimateParallelMesh
  * \sa \ref resolveMeshDegenerations
@@ -183,10 +183,10 @@ struct DecimateResult
  *
  * \image html decimate/decimate_before.png "Before" width = 350cm
  * \image html decimate/decimate_after.png "After" width = 350cm
- * 
+ *
  * \sa \ref decimateParallelMesh
  * \sa \ref resolveMeshDegenerations
- */ 
+ */
 MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings = {} );
 
 /**
@@ -233,7 +233,7 @@ struct ResolveMeshDegenSettings
  * \details This function performs decimation, so it can affect topology
  * \ingroup DecimateGroup
  * \return true if the mesh has been changed
- * 
+ *
  * \sa \ref decimateMesh
  */
 MRMESH_API bool resolveMeshDegenerations( Mesh& mesh, const ResolveMeshDegenSettings & settings = {} );

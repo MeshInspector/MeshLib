@@ -10,4 +10,9 @@ Viewer& getViewerInstance()
     return viewer;
 }
 
+void incrementForceRedrawFrames( int i, bool swapOnLastOnly )
+{
+    getViewerInstance().incrementForceRedrawFrames( i, swapOnLastOnly );
+}
+
 } //namespace MR

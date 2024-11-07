@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include "MRVector.h"
 #include "MRId.h"
 #include "MRConstants.h"
@@ -95,7 +96,8 @@ struct TriangulatedFanData
     FewSmallest<PointsProjectionResult> nearesetPoints;
 
     /// the queue to optimize local triangulation, here to avoid allocations for each point
-    std::priority_queue<FanOptimizerQueueElement> queue;
+    /// Removed from the bindings because we don't have bindings for `std::priority_queue` at the moment.
+    MR_BIND_IGNORE std::priority_queue<FanOptimizerQueueElement> queue;
 };
 
 struct Settings
